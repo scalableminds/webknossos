@@ -84,7 +84,7 @@ export default class SegmentMeshController {
     bufferGeometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
 
     bufferGeometry = mergeVertices(bufferGeometry);
-    bufferGeometry.computeVertexNormals();
+    // bufferGeometry.computeVertexNormals();
 
     this.addMeshFromGeometry(
       bufferGeometry as BufferGeometryWithInfo,
@@ -103,10 +103,19 @@ export default class SegmentMeshController {
     geometry: BufferGeometryWithInfo,
   ): MeshSceneNode {
     const color = this.getColorObjectForSegment(segmentId, layerName);
-    const meshMaterial = new THREE.MeshLambertMaterial({
-      color,
+    // const meshMaterial = new THREE.MeshLambertMaterial({
+    //   color,
+    // });
+
+    const meshMaterial = new THREE.MeshStandardMaterial({
+      color, // A soft blue color
+      metalness: 0.5, // Slight metallic effect
+      roughness: 1, // Some surface roughness for a natural look
+      side: THREE.DoubleSide, // Render both sides
+      flatShading: false, // Ensures smooth shading with computed normals
     });
-    meshMaterial.side = THREE.FrontSide;
+
+    // meshMaterial.side = THREE.FrontSide;
     meshMaterial.transparent = true;
 
     // mesh.parent is still null at this moment, but when the mesh is
@@ -114,8 +123,8 @@ export default class SegmentMeshController {
     // this detail for now via the casting.
     const mesh = new THREE.Mesh(geometry, meshMaterial) as any as MeshSceneNode;
 
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
+    // mesh.castShadow = true;
+    // mesh.receiveShadow = true;
     const tweenAnimation = new TWEEN.Tween({
       opacity: 0,
     });
@@ -180,6 +189,7 @@ export default class SegmentMeshController {
         meshChunk.translateY(offset[1]);
         meshChunk.translateZ(offset[2]);
       }
+      geometry.computeVertexNormals();
       return meshChunk;
     });
     const group = new THREE.Group() as SceneGroupForMeshes;
@@ -301,33 +311,28 @@ export default class SegmentMeshController {
   addLights(): void {
     // Note that the PlaneView also attaches a directional light directly to the TD camera,
     // so that the light moves along the cam.
-    const AMBIENT_INTENSITY = 30;
-    const DIRECTIONAL_INTENSITY = 5;
-    const POINT_INTENSITY = 5;
-
-    const ambientLight = new THREE.AmbientLight(2105376, AMBIENT_INTENSITY);
-
-    const directionalLight = new THREE.DirectionalLight(16777215, DIRECTIONAL_INTENSITY);
-    directionalLight.position.x = 1;
-    directionalLight.position.y = 1;
-    directionalLight.position.z = 1;
-    directionalLight.position.normalize();
-
-    const directionalLight2 = new THREE.DirectionalLight(16777215, DIRECTIONAL_INTENSITY);
-    directionalLight2.position.x = -1;
-    directionalLight2.position.y = -1;
-    directionalLight2.position.z = -1;
-    directionalLight2.position.normalize();
-
-    const pointLight = new THREE.PointLight(16777215, POINT_INTENSITY);
-    pointLight.position.x = 0;
-    pointLight.position.y = -25;
-    pointLight.position.z = 10;
-
-    this.meshesLODRootGroup.add(ambientLight);
-    this.meshesLODRootGroup.add(directionalLight);
-    this.meshesLODRootGroup.add(directionalLight2);
-    this.meshesLODRootGroup.add(pointLight);
+    // const AMBIENT_INTENSITY = 3;
+    // const DIRECTIONAL_INTENSITY = 5;
+    // const POINT_INTENSITY = 5;
+    // const ambientLight = new THREE.AmbientLight(2105376, AMBIENT_INTENSITY);
+    // const directionalLight = new THREE.DirectionalLight(16777215, DIRECTIONAL_INTENSITY);
+    // directionalLight.position.x = 1;
+    // directionalLight.position.y = 1;
+    // directionalLight.position.z = 1;
+    // directionalLight.position.normalize();
+    // const directionalLight2 = new THREE.DirectionalLight(16777215, DIRECTIONAL_INTENSITY);
+    // directionalLight2.position.x = -1;
+    // directionalLight2.position.y = -1;
+    // directionalLight2.position.z = -1;
+    // directionalLight2.position.normalize();
+    // const pointLight = new THREE.PointLight(16777215, POINT_INTENSITY);
+    // pointLight.position.x = 0;
+    // pointLight.position.y = -25;
+    // pointLight.position.z = 10;
+    // this.meshesLODRootGroup.add(ambientLight);
+    // this.meshesLODRootGroup.add(directionalLight);
+    // this.meshesLODRootGroup.add(directionalLight2);
+    // this.meshesLODRootGroup.add(pointLight);
   }
 
   getMeshGroupsByLOD(

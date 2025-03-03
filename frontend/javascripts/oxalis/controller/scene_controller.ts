@@ -1,9 +1,11 @@
 import app from "app";
 import type Maybe from "data.maybe";
 import { V3 } from "libs/mjs";
+import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import window from "libs/window";
 import _ from "lodash";
+
 import type {
   BoundingBoxType,
   OrthoView,
@@ -45,11 +47,295 @@ import { getVoxelPerUnit } from "oxalis/model/scaleinfo";
 import { Model } from "oxalis/singletons";
 import type { OxalisState, SkeletonTracing, UserBoundingBox } from "oxalis/store";
 import Store from "oxalis/store";
+import PCA from "pca-js";
 import * as THREE from "three";
 import SegmentMeshController from "./segment_mesh_controller";
 
 const CUBE_COLOR = 0x999999;
 const LAYER_CUBE_COLOR = 0xffff99;
+
+// import Delaunator from "delaunator";
+import TPS3D from "libs/thin_plate_spline";
+
+type EigenData = { eigenvalue: number; vector: number[] };
+
+function createPointCloud(points: Vector3[], color: string) {
+  // Convert points to Three.js geometry
+  const geometry = new THREE.BufferGeometry();
+  const vertices = new Float32Array(_.flatten(points));
+  geometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
+
+  // Create point material and add to objects list
+  const material = new THREE.PointsMaterial({ color, size: 5 });
+
+  const pointCloud = new THREE.Points(geometry, material);
+  return pointCloud;
+}
+
+const rows = 100;
+const cols = 100;
+function computeBentSurface(points: Vector3[]): THREE.Object3D[] {
+  const eigenData: EigenData[] = PCA.getEigenVectors(points);
+  const objects: THREE.Object3D[] = [];
+
+  const adData = PCA.computeAdjustedData(points, eigenData[0], eigenData[1]);
+  const compressed = adData.formattedAdjustedData;
+  const uncompressed = PCA.computeOriginalData(compressed, adData.selectedVectors, adData.avgData);
+  console.log("uncompressed", uncompressed);
+
+  const projectedPoints: Vector3[] = uncompressed.originalData;
+
+  // objects.push(createPointCloud(points, "red"));
+  // objects.push(createPointCloud(projectedPoints, "blue"));
+
+  // todop: adapt scale
+  const scale = [1, 1, 1] as Vector3;
+  const tps = new TPS3D(projectedPoints, points, scale);
+
+  // Align the plane with the principal components
+  const normal = new THREE.Vector3(...eigenData[2].vector);
+  const quaternion = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
+  const quaternionInv = quaternion.clone().invert();
+
+  // Transform projectedPoints into the plane’s local coordinate system
+  const projectedLocalPoints = projectedPoints.map((p) => {
+    const worldPoint = new THREE.Vector3(...p);
+    return worldPoint.applyQuaternion(quaternionInv); // Move to local plane space
+  });
+
+  const mean = points.reduce(
+    (acc, p) => acc.add(new THREE.Vector3(...p).divideScalar(points.length)),
+    new THREE.Vector3(0, 0, 0),
+  );
+  const projectedMean = mean.clone().applyQuaternion(quaternionInv);
+
+  // Compute min/max bounds in local plane space
+  let minX = Number.POSITIVE_INFINITY,
+    maxX = Number.NEGATIVE_INFINITY,
+    minY = Number.POSITIVE_INFINITY,
+    maxY = Number.NEGATIVE_INFINITY;
+  projectedLocalPoints.forEach((p) => {
+    minX = Math.min(minX, p.x);
+    maxX = Math.max(maxX, p.x);
+    minY = Math.min(minY, p.y);
+    maxY = Math.max(maxY, p.y);
+  });
+
+  // Compute exact plane size based on bounds
+  const planeSizeX = 2 * Math.max(maxX - projectedMean.x, projectedMean.x - minX);
+  const planeSizeY = 2 * Math.max(maxY - projectedMean.y, projectedMean.y - minY);
+
+  // Define the plane using the first two principal components
+  // const planeSizeX = Math.sqrt(eigenData[0].eigenvalue) * 10;
+  // const planeSizeY = Math.sqrt(eigenData[1].eigenvalue) * 10;
+
+  const planeGeometry = new THREE.PlaneGeometry(planeSizeX, planeSizeY);
+  const planeMaterial = new THREE.MeshBasicMaterial({
+    color: 0x00ff00,
+    side: THREE.DoubleSide,
+    opacity: 0.5,
+    transparent: true,
+  });
+  const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+
+  plane.setRotationFromQuaternion(quaternion);
+
+  // const centerLocal = new THREE.Vector3((minX + maxX) / 2, (minY + maxY) / 2, 0);
+  // centerLocal.applyMatrix4(plane.matrixWorld);
+  plane.position.copy(mean);
+
+  plane.updateMatrixWorld();
+
+  // objects.push(plane);
+
+  const gridPoints = generatePlanePoints(plane);
+  const bentSurfacePoints = gridPoints.map((point) => tps.transform(...point));
+
+  // objects.push(createPointCloud(gridPoints, "purple"));
+  // objects.push(createPointCloud(bentSurfacePoints, "orange"));
+
+  const bentMesh = createBentSurfaceGeometry(bentSurfacePoints, rows, cols);
+  objects.push(bentMesh);
+
+  // const light = new THREE.DirectionalLight(0xffffff, 1);
+  // light.position.set(100, 150, 100); // Above and slightly in front of the points
+  // light.lookAt(60, 60, 75); // Aim at the center of the point set
+  // light.updateMatrixWorld();
+
+  // const lightHelper = new THREE.DirectionalLightHelper(light, 10, 0xff0000); // The size of the helper
+
+  // const arrowHelper = new THREE.ArrowHelper(
+  //   light.position
+  //     .clone()
+  //     .normalize(), // Direction
+  //   new THREE.Vector3(60, 60, 75), // Start position (light target)
+  //   20, // Arrow length
+  //   0xff0000, // Color (red)
+  // );
+
+  // light.castShadow = true;
+
+  // objects.push(light, lightHelper, arrowHelper);
+
+  // createNormalsVisualization(bentMesh.geometry, objects);
+
+  return objects;
+}
+
+// function createNormalsVisualization(geometry: THREE.BufferGeometry, objects: THREE.Object3D[]) {
+//   const positions = geometry.attributes.position.array;
+//   const normals = geometry.attributes.normal.array;
+//   const normalLines: number[] = [];
+
+//   for (let i = 0; i < positions.length; i += 3) {
+//     const v = new THREE.Vector3(positions[i], positions[i + 1], positions[i + 2]);
+//     const n = new THREE.Vector3(normals[i], normals[i + 1], normals[i + 2]);
+
+//     const vEnd = v.clone().add(n.multiplyScalar(5)); // Scale normals for visibility
+
+//     normalLines.push(v.x, v.y, v.z, vEnd.x, vEnd.y, vEnd.z);
+//   }
+
+//   const normalGeometry = new THREE.BufferGeometry();
+//   normalGeometry.setAttribute("position", new THREE.Float32BufferAttribute(normalLines, 3));
+
+//   const normalMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 }); // Red for visibility
+//   const normalLinesMesh = new THREE.LineSegments(normalGeometry, normalMaterial);
+
+//   objects.push(normalLinesMesh); // Add to objects list instead of scene.add()
+// }
+
+function generatePlanePoints(planeMesh: THREE.Mesh<THREE.PlaneGeometry, any>): Vector3[] {
+  const points: THREE.Vector3[] = [];
+  const width = planeMesh.geometry.parameters.width;
+  const height = planeMesh.geometry.parameters.height;
+
+  // Use the full transformation matrix of the plane
+  const planeMatrix = planeMesh.matrixWorld.clone();
+
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      const x = (i / (rows - 1) - 0.5) * width;
+      const y = (j / (cols - 1) - 0.5) * height;
+      let point = new THREE.Vector3(x, y, 0);
+
+      point = point.applyMatrix4(planeMatrix);
+      points.push(point);
+    }
+  }
+  return points.map((vec) => [vec.x, vec.y, vec.z]);
+}
+
+function createBentSurfaceGeometry(points: Vector3[], rows: number, cols: number): THREE.Mesh {
+  const geometry = new THREE.BufferGeometry();
+
+  // Flattened position array
+  const positions = new Float32Array(points.length * 3);
+  points.forEach((p, i) => {
+    positions[i * 3] = p[0];
+    positions[i * 3 + 1] = p[1];
+    positions[i * 3 + 2] = p[2];
+  });
+
+  // Create indices for two triangles per quad
+  const indices: number[] = [];
+  for (let i = 0; i < rows - 1; i++) {
+    for (let j = 0; j < cols - 1; j++) {
+      const a = i * cols + j;
+      const b = i * cols + (j + 1);
+      const c = (i + 1) * cols + j;
+      const d = (i + 1) * cols + (j + 1);
+
+      // Two triangles per quad
+      indices.push(a, b, d);
+      indices.push(a, d, c);
+    }
+  }
+
+  // Apply to geometry
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals(); // Generate normals for lighting
+
+  const material = new THREE.MeshStandardMaterial({
+    color: 0x0077ff, // A soft blue color
+    metalness: 0.5, // Slight metallic effect
+    roughness: 1, // Some surface roughness for a natural look
+    side: THREE.DoubleSide, // Render both sides
+    flatShading: false, // Ensures smooth shading with computed normals
+  });
+
+  // const material = new THREE.MeshLambertMaterial({
+  //   color: "blue",
+  //   emissive: "green",
+  //   side: THREE.DoubleSide,
+  //   transparent: true,
+  // });
+
+  // const material = new THREE.MeshPhysicalMaterial({
+  //   color: 0x0077ff,
+  //   metalness: 0.3,
+  //   roughness: 0.5,
+  //   clearcoat: 0.5, // Adds extra reflection
+  //   side: THREE.DoubleSide,
+  // });
+
+  // const material = new THREE.MeshNormalMaterial({ side: THREE.DoubleSide });
+
+  // material.transparent = true;
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.receiveShadow = true;
+  mesh.castShadow = true;
+  return mesh;
+}
+
+function generateTPSMesh(points, scale, resolution = 20) {
+  if (points.length < 3) {
+    throw new Error("At least 3 points are needed to define a surface.");
+  }
+
+  const sourcePoints = points.map(projectToPlane);
+  const targetPoints = points.map((p) => [p[0], p[1], p[2]]);
+
+  // Step 3: Create the TPS transformation
+  const tps = new TPS3D(sourcePoints, targetPoints, scale);
+
+  // Step 4: Generate a grid of points in the base plane
+  const minX = Math.min(...sourcePoints.map((p) => p[0]));
+  const maxX = Math.max(...sourcePoints.map((p) => p[0]));
+  const minY = Math.min(...sourcePoints.map((p) => p[1]));
+  const maxY = Math.max(...sourcePoints.map((p) => p[1]));
+
+  const gridPoints = [];
+  for (let i = 0; i <= resolution; i++) {
+    for (let j = 0; j <= resolution; j++) {
+      const x = minX + (i / resolution) * (maxX - minX);
+      const y = minY + (j / resolution) * (maxY - minY);
+      const transformed = tps.transform(x, y, 0);
+      gridPoints.push(new THREE.Vector3(transformed[0], transformed[1], transformed[2]));
+    }
+  }
+
+  // Step 5: Perform Delaunay triangulation to create faces
+  const delaunay = Delaunator.from(gridPoints.map((p) => [p.x, p.y]));
+  const indices = delaunay.triangles;
+
+  // Step 6: Convert data into THREE.BufferGeometry
+  const geometry = new THREE.BufferGeometry();
+  const positions = new Float32Array(gridPoints.length * 3);
+
+  gridPoints.forEach((p, i) => {
+    positions[i * 3] = p.x;
+    positions[i * 3 + 1] = p.y;
+    positions[i * 3 + 2] = p.z;
+  });
+
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  geometry.setIndex(new THREE.BufferAttribute(new Uint16Array(indices), 1));
+  geometry.computeVertexNormals(); // Smooth shading
+
+  return geometry;
+}
 
 class SceneController {
   skeletons: Record<number, Skeleton> = {};
@@ -74,7 +360,7 @@ class SceneController {
   scene!: THREE.Scene;
   rootGroup!: THREE.Object3D;
   // Group for all meshes including a light.
-  meshesRootGroup!: THREE.Object3D;
+  // meshesRootGroup!: THREE.Object3D;
   segmentMeshController: SegmentMeshController;
   storePropertyUnsubscribers: Array<() => void>;
 
@@ -94,6 +380,7 @@ class SceneController {
   }
 
   initialize() {
+    // this.meshesRootGroup = new THREE.Group();
     this.renderer = getRenderer();
     this.createMeshes();
     this.bindToEvents();
@@ -106,7 +393,6 @@ class SceneController {
     this.rootGroup = new THREE.Object3D();
     this.rootGroup.add(this.getRootNode());
 
-    this.meshesRootGroup = new THREE.Group();
     this.highlightedBBoxId = null;
     // The dimension(s) with the highest mag will not be distorted
     this.rootGroup.scale.copy(
@@ -115,8 +401,36 @@ class SceneController {
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.rootGroup);
     this.scene.add(this.segmentMeshController.meshesLODRootGroup);
-    this.scene.add(this.meshesRootGroup);
-    this.rootGroup.add(new THREE.DirectionalLight());
+    // this.scene.add(this.meshesRootGroup);
+
+    /* Scene
+     * - rootGroup
+     *   - DirectionalLight
+     *   - surfaceGroup
+     * - meshesLODRootGroup
+     *   - DirectionalLight
+     */
+
+    const dir1 = new THREE.DirectionalLight(undefined, 3 * 0.25);
+    dir1.position.set(1, 1, 1);
+    // const dir2 = new THREE.DirectionalLight(undefined, 3 * 0.25);
+    // dir2.position.set(-1, -1, -1);
+    const dir3 = new THREE.AmbientLight(undefined, 3 * 0.25);
+
+    this.rootGroup.add(dir1);
+    // this.rootGroup.add(dir2);
+    this.rootGroup.add(dir3);
+
+    const dir4 = new THREE.DirectionalLight(undefined, 3 * 0.25);
+    dir4.position.set(1, 1, 1);
+    // const dir5 = new THREE.DirectionalLight(undefined, 10);
+    // dir5.position.set(-1, -1, -1);
+    const dir6 = new THREE.AmbientLight(undefined, 3 * 0.25);
+
+    this.segmentMeshController.meshesLODRootGroup.add(dir4);
+    // this.segmentMeshController.meshesLODRootGroup.add(dir5);
+    this.segmentMeshController.meshesLODRootGroup.add(dir6);
+    this.rootGroup.add(new THREE.AmbientLight(2105376, 3 * 10));
     this.setupDebuggingMethods();
   }
 
@@ -257,6 +571,40 @@ class SceneController {
     this.stopPlaneMode();
   }
 
+  addBentSurface(points: Vector3[]) {
+    // const meshGeometry = generateTPSMesh(points, [1, 1, 1], 30);
+    // // const material = new THREE.MeshStandardMaterial({ color: 0x88ccff, wireframe: true });
+    // const material = new THREE.MeshLambertMaterial({
+    //   color: "green",
+    //   wireframe: true,
+    // });
+    // material.side = THREE.FrontSide;
+    // // material.transparent = true;
+    // const surfaceMesh = new THREE.Mesh(meshGeometry, material);
+    // this.rootNode.add(surfaceMesh);
+
+    let objs;
+    try {
+      objs = computeBentSurface(points);
+    } catch (exc) {
+      console.error(exc);
+      Toast.error("Could not compute surface");
+      return () => {};
+    }
+
+    const surfaceGroup = new THREE.Group();
+    for (const obj of objs) {
+      surfaceGroup.add(obj);
+    }
+
+    this.rootGroup.add(surfaceGroup);
+    // surfaceGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.dataSource.scale.factor));
+
+    return () => {
+      this.rootGroup.remove(surfaceGroup);
+    };
+  }
+
   addSkeleton(
     skeletonTracingSelector: (arg0: OxalisState) => Maybe<SkeletonTracing>,
     supportsPicking: boolean,
@@ -322,6 +670,7 @@ class SceneController {
     this.taskBoundingBox?.updateForCam(id);
 
     this.segmentMeshController.meshesLODRootGroup.visible = id === OrthoViews.TDView;
+    // this.segmentMeshController.meshesLODRootGroup.visible = false;
     this.annotationToolsGeometryGroup.visible = id !== OrthoViews.TDView;
     this.lineMeasurementGeometry.updateForCam(id);
 

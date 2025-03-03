@@ -158,6 +158,7 @@ const float bucketSize = <%= bucketSize %>;
 
 export default function getMainFragmentShader(params: Params) {
   const hasSegmentation = params.segmentationLayerNames.length > 0;
+  // return "";
   return _.template(`
 precision highp float;
 
@@ -414,6 +415,7 @@ void main() {
 
 export function getMainVertexShader(params: Params) {
   const hasSegmentation = params.segmentationLayerNames.length > 0;
+  // return "";
   return _.template(`
 precision highp float;
 

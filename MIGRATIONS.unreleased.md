@@ -10,4 +10,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 
 ### Postgres Evolutions:
-- [126-job-resumed-by-super-user.sql](conf/evolutions/126-job-resumed-by-super-user.sql)
+- [126-job-retried-by-super-user.sql](conf/evolutions/126-job-retried-by-super-user.sql)

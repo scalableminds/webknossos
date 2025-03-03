@@ -112,12 +112,12 @@ class JobController @Inject()(jobDAO: JobDAO,
     } yield Ok(js)
   }
 
-  def resume(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def retry(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- bool2Fox(wkconf.Features.jobsEnabled) ?~> "job.disabled"
       _ <- userService.assertIsSuperUser(request.identity) ?~> "notAllowed" ~> FORBIDDEN
       job <- jobDAO.findOne(id)
-      _ <- jobDAO.resumeOne(id)
+      _ <- jobDAO.retryOne(id)
       js <- jobService.publicWrites(job)
     } yield Ok(js)
   }

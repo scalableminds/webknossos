@@ -74,8 +74,8 @@ export async function cancelJob(jobId: string): Promise<APIJob> {
   });
 }
 
-export async function resumeJob(jobId: string): Promise<APIJob> {
-  return Request.receiveJSON(`/api/jobs/${jobId}/resume`, {
+export async function retryJob(jobId: string): Promise<APIJob> {
+  return Request.receiveJSON(`/api/jobs/${jobId}/retry`, {
     method: "PATCH",
   });
 }

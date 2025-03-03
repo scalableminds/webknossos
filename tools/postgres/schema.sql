@@ -472,7 +472,7 @@ CREATE TABLE webknossos.jobs(
   _voxelytics_workflowHash VARCHAR(512),
   latestRunId VARCHAR(1024),
   returnValue Text,
-  resumedBySuperUser BOOLEAN NOT NULL DEFAULT false,
+  retriedBySuperUser BOOLEAN NOT NULL DEFAULT false,
   started TIMESTAMPTZ,
   ended TIMESTAMPTZ,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),

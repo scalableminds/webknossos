@@ -29,7 +29,7 @@ case class Job(
     _voxelyticsWorkflowHash: Option[String] = None,
     latestRunId: Option[String] = None,
     returnValue: Option[String] = None,
-    resumedBySuperUser: Boolean = false,
+    retriedBySuperUser: Boolean = false,
     started: Option[Long] = None,
     ended: Option[Long] = None,
     created: Instant = Instant.now,
@@ -127,7 +127,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         r._VoxelyticsWorkflowhash,
         r.latestrunid,
         r.returnvalue,
-        r.resumedbysuperuser,
+        r.retriedbysuperuser,
         r.started.map(_.getTime),
         r.ended.map(_.getTime),
         Instant.fromSql(r.created),
@@ -255,11 +255,11 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       _ <- run(q"""UPDATE webknossos.jobs SET manualState = $manualState WHERE _id = $id""".asUpdate)
     } yield ()
 
-  def resumeOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def retryOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
       _ <- run(q"""UPDATE webknossos.jobs
-             SET state = 'PENDING', resumedBySuperUser = true
+             SET state = 'PENDING', retriedBySuperUser = true
              WHERE _id = $id
              AND state = 'FAILURE'""".asUpdate)
     } yield ()

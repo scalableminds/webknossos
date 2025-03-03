@@ -63,7 +63,7 @@ class JobService @Inject()(wkConf: WkConf,
         s"Failed job$superUserLabel",
         msg
       )
-      _ = if (!jobAfterChange.resumedBySuperUser) sendFailedEmailNotification(user, jobAfterChange)
+      _ = if (!jobAfterChange.retriedBySuperUser) sendFailedEmailNotification(user, jobAfterChange)
     } yield ()
     ()
   }

@@ -4,7 +4,7 @@ do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 1
 
 DROP VIEW webknossos.jobs_;
 
-ALTER TABLE webknossos.jobs DROP column resumedBySuperUser;
+ALTER TABLE webknossos.jobs DROP column retriedBySuperUser;
 UPDATE webknossos.releaseInformation SET schemaVersion = 125;
 
 CREATE VIEW webknossos.jobs_ AS SELECT * FROM webknossos.jobs WHERE NOT isDeleted;

@@ -268,7 +268,7 @@ POST          /jobs/run/findLargestSegmentId/:datasetId                         
 POST          /jobs/run/renderAnimation/:datasetId                                              controllers.JobController.runRenderAnimationJob(datasetId: ObjectId)
 GET           /jobs/:id                                                                         controllers.JobController.get(id: ObjectId)
 PATCH         /jobs/:id/cancel                                                                  controllers.JobController.cancel(id: ObjectId)
-PATCH         /jobs/:id/resume                                                                  controllers.JobController.resume(id: ObjectId)
+PATCH         /jobs/:id/retry                                                                   controllers.JobController.retry(id: ObjectId)
 POST          /jobs/:id/status                                                                  controllers.WKRemoteWorkerController.updateJobStatus(key: String, id: ObjectId)
 POST          /jobs/:id/attachVoxelyticsWorkflow                                                controllers.WKRemoteWorkerController.attachVoxelyticsWorkflow(key: String, id: ObjectId)
 POST          /jobs/:id/attachDatasetToInference                                                controllers.WKRemoteWorkerController.attachDatasetToInference(key: String, id: ObjectId)

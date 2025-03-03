@@ -11,7 +11,7 @@ import {
   QuestionCircleTwoTone,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
-import { cancelJob, getJobs, resumeJob } from "admin/admin_rest_api";
+import { cancelJob, getJobs, retryJob } from "admin/admin_rest_api";
 import { Input, Modal, Spin, Table, Tooltip, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
@@ -308,7 +308,7 @@ function JobListView() {
           href="#"
           title="Restarts the workflow from the failed task, skipping and reusing artifacts from preceding tasks that were already successful."
           onClick={async () => {
-            resumeJob(job.id).then(() => fetchData());
+            retryJob(job.id).then(() => fetchData());
           }}
           icon={<PlayCircleOutlined className="icon-margin-right" />}
         >

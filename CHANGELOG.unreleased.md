@@ -11,7 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/25.02.1...HEAD)
 
 ### Added
-- Failed jobs may be resumed by super-users. [#8377](https://github.com/scalableminds/webknossos/pull/8377)
+- Failed jobs may be retried by super-users. [#8377](https://github.com/scalableminds/webknossos/pull/8377)
 
 ### Changed
 - When using a zarr link to a wk-served data layer as another layer’s source, the user’s token is used to access the data. [#8322](https://github.com/scalableminds/webknossos/pull/8322/)

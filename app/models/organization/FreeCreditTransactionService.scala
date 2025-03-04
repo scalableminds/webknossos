@@ -32,7 +32,7 @@ class FreeCreditTransactionService @Inject()(creditTransactionDAO: CreditTransac
       _ = logger.info("Starting revoking expired credits...")
       _ <- revokeExpiredCredits()
       _ = logger.info("Finished revoking expired credits.")
-      _ = logger.info("Staring handing out free monthly credits.")
+      _ = logger.info("Starting handing out free monthly credits.")
       _ <- handOutMonthlyFreeCredits()
       _ = logger.info("Finished handing out free monthly credits.")
     } yield ()

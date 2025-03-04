@@ -336,13 +336,10 @@ export function getSupportedValueRangeForElementClass(
       return [-maxDoubleValue, maxDoubleValue];
     }
 
-    // Int64 types are only supported for segmentations (which don't need to call this
-    // function as there will be no histogram). Still, for the record: 2 ** 53 - 1
-    // is currently the maximum supported "64-bit" segment id due to JS Number.
     case "uint64":
+      return [0, 2 ** 53 - 1];
     case "int64":
-    default:
-      return [0, 255];
+      return [-(2 ** 53 - 1), 2 ** 53 - 1];
   }
 }
 

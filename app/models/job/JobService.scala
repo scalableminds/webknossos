@@ -1,7 +1,7 @@
 package models.job
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -10,8 +10,9 @@ import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
 import models.dataset.DatasetDAO
 import models.job.JobCommand.JobCommand
-import models.organization.OrganizationDAO
+import models.organization.{CreditTransactionService, OrganizationDAO, OrganizationService}
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
+import net.liftweb.common.Full
 import org.apache.pekko.actor.ActorSystem
 import play.api.libs.json.{JsObject, Json}
 import security.WkSilhouetteEnvironment
@@ -20,6 +21,7 @@ import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
+import scala.math.BigDecimal.RoundingMode
 
 class JobService @Inject()(wkConf: WkConf,
                            actorSystem: ActorSystem,
@@ -33,11 +35,16 @@ class JobService @Inject()(wkConf: WkConf,
                            defaultMails: DefaultMails,
                            analyticsService: AnalyticsService,
                            userService: UserService,
+                           organizationService: OrganizationService,
+                           creditTransactionService: CreditTransactionService,
                            wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                            slackNotificationService: SlackNotificationService)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging
     with Formatter {
+
+  private val MINIMUM_COST_PER_JOB = BigDecimal(0.0001)
+  private val ONE_GIGAVOXEL = BigDecimal(math.pow(2, 30))
 
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
@@ -206,6 +213,30 @@ class JobService @Inject()(wkConf: WkConf,
       _ = analyticsService.track(RunJobEvent(owner, command))
     } yield job
 
+  def submitPaidJob(command: JobCommand,
+                    commandArgs: JsObject,
+                    jobBoundingBox: BoundingBox,
+                    creditTransactionComment: String,
+                    user: User,
+                    datastoreName: String)(implicit ctx: DBAccessContext): Fox[JsObject] =
+    for {
+      costsInCredits <- calculateJobCosts(jobBoundingBox, command)
+      _ <- organizationService.assertOrganizationHasPaidPlan(user._organization) ?~> "job.paidJob.notAllowed.noPaidPlan"
+      _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(user._organization, costsInCredits)) ?~> "job.notEnoughCredits"
+      creditTransaction <- creditTransactionService.reserveCredits(user._organization,
+                                                                   costsInCredits,
+                                                                   creditTransactionComment)
+      job <- submitJob(command, commandArgs, user, datastoreName).futureBox.flatMap {
+        case Full(job) => Fox.successful(job)
+        case _ =>
+          creditTransactionService
+            .refundTransactionWhenStartingJobFailed(creditTransaction)
+            .flatMap(_ => Fox.failure("job.couldNotRunAlignSections"))
+      }.toFox
+      _ <- creditTransactionService.addJobIdToTransaction(creditTransaction, job._id)
+      js <- publicWrites(job)
+    } yield js
+
   def jobsSupportedByAvailableWorkers(dataStoreName: String): Fox[Set[JobCommand]] =
     for {
       workers <- workerDAO.findAllByDataStore(dataStoreName)
@@ -219,11 +250,24 @@ class JobService @Inject()(wkConf: WkConf,
 
   def assertBoundingBoxLimits(boundingBox: String, mag: Option[String]): Fox[Unit] =
     for {
-      parsedBoundingBox <- BoundingBox.fromLiteral(boundingBox).toFox ?~> "job.invalidBoundingBox"
-      parsedMag <- Vec3Int.fromMagLiteral(mag.getOrElse("1-1-1"), allowScalar = true) ?~> "job.invalidMag"
-      boundingBoxInMag = parsedBoundingBox / parsedMag
+      boundingBoxInMag <- BoundingBox.fromLiteralWithMagOpt(boundingBox, mag) ?~> "job.invalidBoundingBoxOrMag"
       _ <- bool2Fox(boundingBoxInMag.volume <= wkConf.Features.exportTiffMaxVolumeMVx * 1024 * 1024) ?~> "job.volumeExceeded"
       _ <- bool2Fox(boundingBoxInMag.size.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx) ?~> "job.edgeLengthExceeded"
     } yield ()
+
+  private def getJobCostsPerGVx(jobCommand: JobCommand): Fox[BigDecimal] =
+    jobCommand match {
+      case JobCommand.infer_neurons      => Fox.successful(wkConf.Features.neuronInferralCostPerGVx)
+      case JobCommand.infer_mitochondria => Fox.successful(wkConf.Features.mitochondriaInferralCostPerGVx)
+      case JobCommand.align_sections     => Fox.successful(wkConf.Features.alignmentCostPerGVx)
+      case _                             => Fox.failure(s"Unsupported job command $jobCommand")
+    }
+
+  def calculateJobCosts(boundingBoxInTargetMag: BoundingBox, jobCommand: JobCommand): Fox[BigDecimal] =
+    getJobCostsPerGVx(jobCommand).map(costsPerGVx => {
+      val volumeInGVx = BigDecimal(boundingBoxInTargetMag.volume) / ONE_GIGAVOXEL
+      val costs = volumeInGVx * costsPerGVx
+      if (costs < MINIMUM_COST_PER_JOB) MINIMUM_COST_PER_JOB else costs.setScale(4, RoundingMode.HALF_UP)
+    })
 
 }

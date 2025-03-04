@@ -649,6 +649,7 @@ export type APIOrganization = APIOrganizationCompact & {
   readonly includedStorageBytes: number;
   readonly usedStorageBytes: number;
   readonly ownerName?: string;
+  readonly creditBalance: number | null | undefined;
 };
 export type APIPricingPlanStatus = {
   readonly pricingPlan: PricingPlanEnum;
@@ -704,6 +705,9 @@ export type APIFeatureToggles = {
   readonly allowDeleteDatasets: boolean;
   readonly jobsEnabled: boolean;
   readonly voxelyticsEnabled: boolean;
+  readonly neuronInferralCostPerGVx: number;
+  readonly mitochondriaInferralCostPerGVx: number;
+  readonly alignmentCostPerGVx: number;
   readonly publicDemoDatasetUrl: string;
   readonly exportTiffMaxVolumeMVx: number;
   readonly exportTiffMaxEdgeLengthVx: number;

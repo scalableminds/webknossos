@@ -110,6 +110,12 @@ object BoundingBox {
     else
       None
 
+  def fromLiteralWithMagOpt(boundingBox: String, mag: Option[String]): Option[BoundingBox] =
+    for {
+      parsedBoundingBox <- BoundingBox.fromLiteral(boundingBox)
+      parsedMag <- Vec3Int.fromMagLiteral(mag.getOrElse("1-1-1"), allowScalar = true)
+    } yield parsedBoundingBox / parsedMag
+
   def union(bbs: List[BoundingBox]): BoundingBox =
     bbs match {
       case head :: tail =>

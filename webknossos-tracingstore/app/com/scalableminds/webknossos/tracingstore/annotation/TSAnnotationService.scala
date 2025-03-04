@@ -210,7 +210,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       _ = Instant.logSince(
         before,
         s"Reverting annotation $annotationId from v${annotationWithTracings.version} to v${revertAction.sourceVersion}")
-    } yield sourceAnnotation
+    } yield sourceAnnotation.markAllTreeBodiesAsChanged
 
   private def resetToBase(annotationId: String, annotationWithTracings: AnnotationWithTracings, newVersion: Long)(
       implicit ec: ExecutionContext,
@@ -222,7 +222,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       sourceAnnotation: AnnotationWithTracings <- getWithTracings(annotationId, Some(sourceVersion))
       _ <- revertDistributedElements(annotationId, annotationWithTracings, sourceAnnotation, sourceVersion, newVersion)
       _ = Instant.logSince(before, s"Resetting annotation $annotationId to base (v$sourceVersion)")
-    } yield sourceAnnotation
+    } yield sourceAnnotation.markAllTreeBodiesAsChanged
   }
 
   def saveAnnotationProto(annotationId: String,
@@ -409,8 +409,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       volumeTracingsMap: Map[String, Either[(SkeletonTracing, Set[Int]), VolumeTracing]] = volumeTracingIds
         .zip(volumeTracings.map(versioned => Right[(SkeletonTracing, Set[Int]), VolumeTracing](versioned.value)))
         .toMap
-    } yield
-      AnnotationWithTracings(annotation, skeletonTracingsMap ++ volumeTracingsMap, Map.empty, skeletonTracingService)
+    } yield AnnotationWithTracings(annotation, skeletonTracingsMap ++ volumeTracingsMap, Map.empty)
   }
 
   private def findEditableMappingsForAnnotation(
@@ -657,7 +656,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
               .get[TreeBody](s"$tracingId/${tree.treeId}", version)(fromProtoBytes[TreeBody])
             treeBody <- treeBodyKeyValuePair.value
           } yield {
-            // note: hasExternalTreeBody is untouched here, to mark which trees are already stored in skeletonTreeBodies. This inforamtion is used when flushing again.
+            // note: hasExternalTreeBody is untouched here, to mark which trees are already stored in skeletonTreeBodies. This information is used when flushing again.
             tree.copy(nodes = treeBody.nodes, edges = treeBody.edges)
           }
         } else Fox.successful(tree)

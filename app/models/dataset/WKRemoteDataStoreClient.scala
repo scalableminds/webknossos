@@ -91,7 +91,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       _ <- rpc(s"${dataStore.url}/data/datasets/$organizationId/$datasetName")
         .addQueryString("token" -> userToken)
         .addQueryStringOptional("folderId", folderId.map(_.toString))
-        .putJson(dataSource)
+        .postJson(dataSource)
     } yield ()
 
   def hasSegmentIndexFile(organizationId: String, datasetName: String, layerName: String)(

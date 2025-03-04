@@ -327,7 +327,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       _ <- Fox.runOptional(totalFileSizeInBytesOpt) { maxFileSize =>
         tryo(FileUtils.sizeOfDirectoryAsBigInteger(uploadDir.toFile).longValue).map(actualFileSize =>
           if (actualFileSize > maxFileSize.toLong) {
-            cleanUpUploadedDataset(uploadDir, uploadId)
+            cleanUpDatasetExceedingSize(uploadDir, uploadId)
             Fox.failure(s"Uploaded dataset exceeds the maximum allowed size of $maxFileSize bytes")
           } else Fox.successful(()))
       }

@@ -340,6 +340,8 @@ export function getSupportedValueRangeForElementClass(
       return [0, 2 ** 53 - 1];
     case "int64":
       return [-(2 ** 53 - 1), 2 ** 53 - 1];
+    default:
+      throw new Error("Unknown elementClass: " + elementClass);
   }
 }
 

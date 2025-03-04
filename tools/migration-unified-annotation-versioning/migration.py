@@ -444,7 +444,6 @@ class Migration:
     def migrate_segment_index(self, tracing_id, layer_version_mapping):
         put_buffer_size = 10
         get_keys_page_size = 10
-        get_keys_version_batch_size = 1000
         get_keys_version_batch_size = 10000
         if self.args.small_batch_sizes:
             get_keys_page_size = 1

@@ -663,12 +663,6 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 
   private def removeFromRedis(uploadId: String): Fox[Unit] =
     for {
-      fileNames <- runningUploadMetadataStore.findSet(redisKeyForFileNameSet(uploadId))
-      _ <- Fox.serialCombined(fileNames.toList) { fileName =>
-        runningUploadMetadataStore
-          .remove(redisKeyForFileChunkCount(uploadId, fileName))
-          .flatMap(_ => runningUploadMetadataStore.remove(redisKeyForFileChunkSet(uploadId, fileName)))
-      }
       _ <- runningUploadMetadataStore.remove(redisKeyForFileCount(uploadId))
       fileNames <- runningUploadMetadataStore.findSet(redisKeyForFileNameSet(uploadId))
       _ <- Fox.serialCombined(fileNames.toList) { fileName =>

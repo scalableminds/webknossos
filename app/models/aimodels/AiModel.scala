@@ -45,16 +45,25 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
                                                            ctx: DBAccessContext): Fox[JsObject] =
     for {
       dataStore <- dataStoreDAO.findOneByName(aiModel._dataStore)
-      user <- userDAO.findOne(aiModel._user).futureBox.flatMap {
-        case Full(user) => Fox.successful(Some(user))
-        case _ => Fox.successful(None)
-      }.toFox
+      user <- userDAO
+        .findOne(aiModel._user)
+        .futureBox
+        .flatMap {
+          case Full(user) => Fox.successful(Some(user))
+          case _          => Fox.successful(None)
+        }
+        .toFox
       userJs <- Fox.runOptional(user)(userService.compactWrites)
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
-      trainingJobOpt <- Fox.runOptional(aiModel._trainingJob)(jobDAO.findOne(_).futureBox.flatMap {
-        case Full(job) => Fox.successful(Some(job))
-        case _ => Fox.successful(None)
-      }.toFox)
+      trainingJobOpt <- Fox.runOptional(aiModel._trainingJob)(
+        jobDAO
+          .findOne(_)
+          .futureBox
+          .flatMap {
+            case Full(job) => Fox.successful(Some(job))
+            case _         => Fox.successful(None)
+          }
+          .toFox)
       trainingJobJsOpt <- Fox.runOptional(trainingJobOpt.flatten)(jobService.publicWrites)
       isOwnedByUsersOrganization = aiModel._owningOrganization == requestingUser._organization
       sharedOrganizationIds = if (isOwnedByUsersOrganization) Some(aiModel._organizations) else None

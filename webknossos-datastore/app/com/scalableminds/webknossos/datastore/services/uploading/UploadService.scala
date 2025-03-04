@@ -199,21 +199,23 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   def addUploadIdsToUnfinishedUploads(
       unfinishedUploadsWithoutIds: List[UnfinishedUpload]): Fox[List[UnfinishedUpload]] =
     for {
-      maybeUnfinishedUploads: List[Box[UnfinishedUpload]] <- Fox.sequence(
+      maybeUnfinishedUploads: List[Box[Option[UnfinishedUpload]]] <- Fox.sequence(
         unfinishedUploadsWithoutIds.map(
           unfinishedUpload => {
             for {
               uploadIdOpt <- runningUploadMetadataStore.find(redisKeyForUploadId(unfinishedUpload.dataSourceId))
-              maybeUpdateUpload = uploadIdOpt
-                .map(uploadId => unfinishedUpload.copy(uploadId = uploadId))
-                .getOrElse(unfinishedUpload)
-              filePathsStringOpt <- runningUploadMetadataStore.find(redisKeyForFilePaths(maybeUpdateUpload.uploadId))
-              filePathsOpt <- filePathsStringOpt.map(JsonHelper.parseAndValidateJson[List[String]])
-              uploadUpdated <- filePathsOpt.map(filePaths => maybeUpdateUpload.copy(filePaths = Some(filePaths)))
-            } yield uploadUpdated
+              updateUploadOpt = uploadIdOpt.map(uploadId => unfinishedUpload.copy(uploadId = uploadId))
+              updateUploadOpt <- Fox.runOptional(updateUploadOpt)(updatedUpload =>
+                for {
+                  filePathsStringOpt <- runningUploadMetadataStore.find(redisKeyForFilePaths(updatedUpload.uploadId))
+                  filePathsOpt <- filePathsStringOpt.map(JsonHelper.parseAndValidateJson[List[String]])
+                  uploadUpdatedWithFilePaths <- filePathsOpt.map(filePaths =>
+                    updatedUpload.copy(filePaths = Some(filePaths)))
+                } yield uploadUpdatedWithFilePaths)
+            } yield updateUploadOpt
           }
         ))
-      foundUnfinishedUploads = maybeUnfinishedUploads.flatten
+      foundUnfinishedUploads = maybeUnfinishedUploads.flatten.flatten
     } yield foundUnfinishedUploads
 
   private def isOutsideUploadDir(uploadDir: Path, filePath: String): Boolean =

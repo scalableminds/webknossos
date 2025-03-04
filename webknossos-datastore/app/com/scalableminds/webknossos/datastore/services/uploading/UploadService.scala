@@ -652,6 +652,13 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     removeFromRedis(uploadId)
   }
 
+  private def cleanUpDatasetExceedingSize(uploadDir: Path, uploadId: String): Fox[Unit] =
+    for {
+      dataSourceId <- getDataSourceIdByUploadId(uploadId)
+      _ <- cleanUpUploadedDataset(uploadDir, uploadId)
+      _ <- dataSourceRepository.cleanUpDataSource(dataSourceId)
+    } yield ()
+
   private def removeFromRedis(uploadId: String): Fox[Unit] =
     for {
       fileNames <- runningUploadMetadataStore.findSet(redisKeyForFileNameSet(uploadId))
@@ -661,9 +668,22 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
           .flatMap(_ => runningUploadMetadataStore.remove(redisKeyForFileChunkSet(uploadId, fileName)))
       }
       _ <- runningUploadMetadataStore.remove(redisKeyForFileCount(uploadId))
+      fileNames <- runningUploadMetadataStore.findSet(redisKeyForFileNameSet(uploadId))
+      _ <- Fox.serialCombined(fileNames.toList) { fileName =>
+        for {
+          _ <- runningUploadMetadataStore.remove(redisKeyForFileChunkCount(uploadId, fileName))
+          _ <- runningUploadMetadataStore.remove(redisKeyForFileChunkSet(uploadId, fileName))
+        } yield ()
+      }
       _ <- runningUploadMetadataStore.remove(redisKeyForFileNameSet(uploadId))
       _ <- runningUploadMetadataStore.remove(redisKeyForTotalFileSizeInBytes(uploadId))
       _ <- runningUploadMetadataStore.remove(redisKeyForCurrentUploadedTotalFileSizeInBytes(uploadId))
+      dataSourceId <- getDataSourceIdByUploadId(uploadId)
+      _ <- runningUploadMetadataStore.remove(redisKeyForDataSourceId(uploadId))
+      _ <- runningUploadMetadataStore.remove(redisKeyForLinkedLayerIdentifier(uploadId))
+      _ <- runningUploadMetadataStore.remove(redisKeyForUploadId(dataSourceId))
+      _ <- runningUploadMetadataStore.remove(redisKeyForFilePaths(uploadId))
+
     } yield ()
 
   private def cleanUpOrphanUploads(): Fox[Unit] =

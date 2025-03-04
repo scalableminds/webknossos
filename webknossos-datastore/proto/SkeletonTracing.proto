@@ -38,10 +38,15 @@ enum TreeTypeProto {
   AGGLOMERATE = 1;
 }
 
-message Tree {
-  required int32 treeId = 1;
+message TreeBody {
   repeated Node nodes = 2;
   repeated Edge edges = 3;
+}
+
+message Tree {
+  required int32 treeId = 1;
+  repeated Node nodes = 2; // empty for trees with hasExternalTreeBody=true
+  repeated Edge edges = 3; // empty for trees with hasExternalTreeBody=true
   optional ColorProto color = 4;
   repeated BranchPoint branchPoints = 5;
   repeated Comment comments = 6;
@@ -52,6 +57,7 @@ message Tree {
   optional TreeTypeProto type = 11;
   optional bool edgesAreVisible = 12; // `None` means `true`
   repeated MetadataEntryProto metadata = 13;
+  optional bool hasExternalTreeBody = 14;
 }
 
 message TreeGroup {

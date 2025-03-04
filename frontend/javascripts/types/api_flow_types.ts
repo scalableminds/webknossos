@@ -766,8 +766,10 @@ export type APIJob = {
 export type AiModel = {
   id: string;
   name: string;
+  isOwnedByUsersOrganization: boolean;
+  sharedOrganizationIds: string[] | null | undefined;
   dataStore: APIDataStore;
-  user: APIUser;
+  user: APIUser | null | undefined;
   comment: string;
   created: number;
   trainingJob: APIJob | null;

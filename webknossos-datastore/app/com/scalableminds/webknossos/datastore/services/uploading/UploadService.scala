@@ -171,10 +171,10 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       _ <- Fox.runOptional(reserveUploadInfo.totalFileSizeInBytes) { fileSize =>
         Fox.combined(
           List(
-            runningUploadMetadataStore.insert(redisKeyForTotalFileSizeInBytes(reserveUploadInfo.uploadId),
-                                              String.valueOf(fileSize)),
+            runningUploadMetadataStore.insertLong(redisKeyForTotalFileSizeInBytes(reserveUploadInfo.uploadId),
+                                                  fileSize),
             runningUploadMetadataStore
-              .insert(redisKeyForCurrentUploadedTotalFileSizeInBytes(reserveUploadInfo.uploadId), "0")
+              .insertLong(redisKeyForCurrentUploadedTotalFileSizeInBytes(reserveUploadInfo.uploadId), 0L)
           ))
       }
       _ <- runningUploadMetadataStore.insert(
@@ -253,13 +253,13 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       dataSourceId <- getDataSourceIdByUploadId(uploadId)
       (filePath, uploadDir) <- getFilePathAndDirOfUploadId(uploadFileId)
       isFileKnown <- runningUploadMetadataStore.contains(redisKeyForFileChunkCount(uploadId, filePath))
-      totalFileSizeInBytesOpt <- runningUploadMetadataStore.find(redisKeyForTotalFileSizeInBytes(uploadId))
+      totalFileSizeInBytesOpt <- runningUploadMetadataStore.findLong(redisKeyForTotalFileSizeInBytes(uploadId))
       _ <- Fox.runOptional(totalFileSizeInBytesOpt) { maxFileSize =>
         runningUploadMetadataStore
-          .find(redisKeyForCurrentUploadedTotalFileSizeInBytes(uploadId))
-          .flatMap(alreadyUploadedAmountOfBytes => {
-            if (alreadyUploadedAmountOfBytes.getOrElse("0").toLong + chunkSize > maxFileSize.toLong) {
-              cleanUpUploadedDataset(uploadDir, uploadId).flatMap(_ =>
+          .increaseBy(redisKeyForCurrentUploadedTotalFileSizeInBytes(uploadId), chunkSize)
+          .flatMap(newTotalFileSizeInBytesOpt => {
+            if (newTotalFileSizeInBytesOpt.getOrElse(0L) > maxFileSize) {
+              cleanUpDatasetExceedingSize(uploadDir, uploadId).flatMap(_ =>
                 Fox.failure("dataset.upload.moreBytesThanReserved"))
             } else {
               Fox.successful(())

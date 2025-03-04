@@ -50,6 +50,7 @@ export function* bentSurfaceSaga(): Saga<void> {
       "DELETE_NODE",
       "SET_TREE_VISIBILITY",
       "TOGGLE_TREE",
+      "SET_NODE_POSITION",
     ],
     createBentSurface,
   );

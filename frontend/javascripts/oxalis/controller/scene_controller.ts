@@ -57,6 +57,7 @@ const LAYER_CUBE_COLOR = 0xffff99;
 import Delaunator from "delaunator";
 import TPS3D from "libs/thin_plate_spline";
 import { WkDevFlags } from "oxalis/api/wk_dev";
+import { enforceConsistentDirection, orderPointsMST } from "./splitting_stuff";
 
 type EigenData = { eigenvalue: number; vector: number[] };
 
@@ -263,6 +264,18 @@ function computeBentSurfaceSplines(points: Vector3[]): THREE.Object3D[] {
 
   // Generate grid of points
   const gridPoints = curves.map((curve) => curve.getPoints(numPoints - 1));
+
+  for (let curveIdx = 1; curveIdx < gridPoints.length; curveIdx++) {
+    const currentCurvePoints = gridPoints[curveIdx];
+    const prevCurvePoints = gridPoints[curveIdx - 1];
+    const distActual = currentCurvePoints[0].distanceTo(prevCurvePoints[0]);
+    const distFlipped = currentCurvePoints.at(-1).distanceTo(prevCurvePoints[0]);
+
+    const shouldFlip = distFlipped < distActual;
+    if (shouldFlip) {
+      gridPoints[curveIdx].reverse();
+    }
+  }
 
   // Flatten into a single array of vertices
   const vertices: number[] = [];
@@ -724,7 +737,7 @@ class SceneController {
     // this.rootNode.add(surfaceMesh);
 
     if (points.length === 0) {
-      return;
+      return () => {};
     }
 
     let objs: THREE.Object3D[] = [];

@@ -14,12 +14,13 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayerLike => DataLayer
 }
 import com.scalableminds.webknossos.datastore.rpc.RPC
+import com.scalableminds.webknossos.datastore.services.DataSourcePathInfo
 import com.typesafe.scalalogging.LazyLogging
 import models.folder.FolderDAO
 import models.organization.{Organization, OrganizationDAO}
 import models.team._
 import models.user.{User, UserService}
-import net.liftweb.common.{Box, Full}
+import net.liftweb.common.{Box, Empty, EmptyBox, Full}
 import play.api.libs.json.{JsObject, Json}
 import security.RandomIDGenerator
 import utils.WkConf
@@ -33,6 +34,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                dataStoreDAO: DataStoreDAO,
                                datasetLastUsedTimesDAO: DatasetLastUsedTimesDAO,
                                datasetDataLayerDAO: DatasetLayerDAO,
+                               datasetMagsDAO: DatasetMagsDAO,
                                teamDAO: TeamDAO,
                                folderDAO: FolderDAO,
                                dataStoreService: DataStoreService,
@@ -334,6 +336,38 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- bool2Fox(dataset._uploader.isEmpty) ?~> "dataset.uploader.notEmpty"
       _ <- datasetDAO.updateUploader(dataset._id, Some(_uploader)) ?~> "dataset.uploader.forbidden"
     } yield ()
+
+  private def updateRealPath(pathInfo: DataSourcePathInfo)(implicit ctx: DBAccessContext): Fox[Unit] =
+    if (pathInfo.magPathInfos.isEmpty) {
+      Fox.successful(())
+    } else {
+      val dataset = datasetDAO.findOneByDataSourceId(pathInfo.dataSourceId).futureBox
+      dataset.flatMap {
+        case Full(dataset) => datasetMagsDAO.updateMagPathsForDataset(dataset._id, pathInfo.magPathInfos)
+        case Empty => // Dataset reported but ignored (non-existing/forbidden org)
+          Fox.successful(())
+        case e: EmptyBox =>
+          Fox.failure("dataset.notFound", e)
+      }
+    }
+
+  def updateRealPaths(pathInfos: List[DataSourcePathInfo])(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- Fox.serialCombined(pathInfos)(updateRealPath)
+    } yield ()
+
+  def getPathsForDataLayer(datasetId: ObjectId, layerName: String): Fox[List[(DatasetMagInfo, List[DatasetMagInfo])]] =
+    for {
+      magInfos <- datasetMagsDAO.findPathsForDatasetAndDatalayer(datasetId, layerName)
+      magInfosAndLinkedMags <- Fox.serialCombined(magInfos)(magInfo =>
+        magInfo.realPath match {
+          case Some(realPath) =>
+            for {
+              pathInfos <- datasetMagsDAO.findAllByRealPath(realPath)
+            } yield (magInfo, pathInfos.filter(!_.equals(magInfo)))
+          case None => Fox.successful((magInfo, List()))
+      })
+    } yield magInfosAndLinkedMags
 
   def publicWrites(dataset: Dataset,
                    requestingUserOpt: Option[User],

@@ -119,6 +119,7 @@ class VolumeTracingService @Inject()(
         remoteDatastoreClient,
         fallbackLayerOpt,
         AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),
+        temporaryTracingService,
         tc
       )
       _ <- Fox.serialCombined(updateActions) {
@@ -262,13 +263,16 @@ class VolumeTracingService @Inject()(
 
     for {
       fallbackLayer <- getFallbackLayer(annotationId, tracingBeforeRevert)
-      segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId,
-                                                        volumeSegmentIndexClient,
-                                                        newVersion,
-                                                        remoteDatastoreClient,
-                                                        fallbackLayer,
-                                                        dataLayer.additionalAxes,
-                                                        tc)
+      segmentIndexBuffer = new VolumeSegmentIndexBuffer(
+        tracingId,
+        volumeSegmentIndexClient,
+        newVersion,
+        remoteDatastoreClient,
+        fallbackLayer,
+        dataLayer.additionalAxes,
+        temporaryTracingService,
+        tc
+      )
       mappingName <- getMappingNameUnlessEditable(sourceTracing)
       _ <- Fox.serialCombined(bucketStreamBeforeRevert) {
         case (bucketPosition, dataBeforeRevert, version) =>
@@ -361,6 +365,7 @@ class VolumeTracingService @Inject()(
                 remoteDatastoreClient,
                 fallbackLayer,
                 AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),
+                temporaryTracingService,
                 tc
               )
               _ <- mergedVolume.withMergedBuckets { (bucketPosition, bytes) =>
@@ -403,6 +408,7 @@ class VolumeTracingService @Inject()(
           remoteDatastoreClient,
           fallbackLayer,
           AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),
+          temporaryTracingService,
           tc
         )
         _ <- withBucketsFromZip(initialData) { (bucketPosition, bytes) =>
@@ -563,6 +569,7 @@ class VolumeTracingService @Inject()(
         remoteDatastoreClient,
         fallbackLayer,
         AdditionalAxis.fromProtosAsOpt(sourceTracing.additionalAxes),
+        temporaryTracingService,
         tc
       )
       mappingName <- getMappingNameUnlessEditable(sourceTracing)
@@ -795,13 +802,17 @@ class VolumeTracingService @Inject()(
         firstTracing <- volumeTracingLayers.headOption.map(_.tracing) ?~> "merge.noTracings"
         firstVolumeAnnotationId <- firstVolumeAnnotationIdOpt.toFox
         fallbackLayer <- getFallbackLayer(firstVolumeAnnotationId, firstTracing)
-        segmentIndexBuffer = new VolumeSegmentIndexBuffer(newVolumeTracingId,
-                                                          volumeSegmentIndexClient,
-                                                          newVersion,
-                                                          remoteDatastoreClient,
-                                                          fallbackLayer,
-                                                          mergedAdditionalAxes,
-                                                          tc)
+        segmentIndexBuffer = new VolumeSegmentIndexBuffer(
+          newVolumeTracingId,
+          volumeSegmentIndexClient,
+          newVersion,
+          remoteDatastoreClient,
+          fallbackLayer,
+          mergedAdditionalAxes,
+          temporaryTracingService,
+          tc,
+          toTemporaryStore
+        )
         _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
           for {
             _ <- saveBucket(newVolumeTracingId,
@@ -861,13 +872,16 @@ class VolumeTracingService @Inject()(
           fallbackLayer <- getFallbackLayer(annotationId, tracing)
           mappingName <- getMappingNameUnlessEditable(tracing)
           segmentIndexBuffer <- Fox.successful(
-            new VolumeSegmentIndexBuffer(tracingId,
-                                         volumeSegmentIndexClient,
-                                         tracing.version + 1,
-                                         remoteDatastoreClient,
-                                         fallbackLayer,
-                                         volumeLayer.additionalAxes,
-                                         tc))
+            new VolumeSegmentIndexBuffer(
+              tracingId,
+              volumeSegmentIndexClient,
+              tracing.version + 1,
+              remoteDatastoreClient,
+              fallbackLayer,
+              volumeLayer.additionalAxes,
+              temporaryTracingService,
+              tc
+            ))
           _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
             for {
               _ <- saveBucket(volumeLayer, bucketPosition, bucketBytes, tracing.version + 1)

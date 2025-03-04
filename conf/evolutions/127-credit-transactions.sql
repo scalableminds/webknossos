@@ -17,7 +17,7 @@ CREATE TABLE webknossos.credit_transactions (
     -- The state of the transaction.
     transaction_state webknossos.credit_transaction_state NOT NULL,
     -- The state of the credits of this transaction.
-    credit_state webknossos.credit_transaction_state NOT NULL,
+    credit_state webknossos.credit_state NOT NULL,
     expiration_date TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

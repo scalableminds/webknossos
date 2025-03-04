@@ -234,7 +234,7 @@ class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
       """.asUpdate
       setToRefunded = q"""UPDATE webknossos.credit_transactions
           SET transaction_state = ${CreditTransactionState.Complete}, credit_state = ${CreditState.Refunded}, updated_at = NOW()
-          WHERE _id = $transactionId AND state = ${CreditTransactionState.Pending}
+          WHERE _id = $transactionId AND transaction_state = ${CreditTransactionState.Pending}
           AND credit_change < 0
           """.asUpdate
       updatedRows <- run(DBIO.sequence(List(insertRefundTransaction, setToRefunded)).transactionally)
@@ -302,7 +302,7 @@ class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
       freeCreditsAvailable = freeCreditsAvailableResult.headOption.getOrElse(BigDecimal(0))
 
       _ <- if (freeCreditsAvailable <= 0) {
-        // Fully spent, update state to 'Spent'
+        // Fully spent, update credit_state to 'Spent'
         q"""
         UPDATE webknossos.credit_transactions
         SET credit_state = ${CreditState.Spent}, updated_at = NOW()
@@ -325,7 +325,7 @@ class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
         for {
           _ <- q"""
             UPDATE webknossos.credit_transactions
-            SET state = $creditStateOfExpiredTransaction, updated_at = NOW()
+            SET credit_state = $creditStateOfExpiredTransaction, updated_at = NOW()
             WHERE _id = ${transaction._id}
           """.asUpdate
           _ <- insertRevokingTransaction(revokingTransaction)

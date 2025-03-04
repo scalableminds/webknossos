@@ -54,8 +54,9 @@ import SegmentMeshController from "./segment_mesh_controller";
 const CUBE_COLOR = 0x999999;
 const LAYER_CUBE_COLOR = 0xffff99;
 
-// import Delaunator from "delaunator";
+import Delaunator from "delaunator";
 import TPS3D from "libs/thin_plate_spline";
+import { WkDevFlags } from "oxalis/api/wk_dev";
 
 type EigenData = { eigenvalue: number; vector: number[] };
 
@@ -74,9 +75,39 @@ function createPointCloud(points: Vector3[], color: string) {
 
 const rows = 100;
 const cols = 100;
-function computeBentSurface(points: Vector3[]): THREE.Object3D[] {
-  const eigenData: EigenData[] = PCA.getEigenVectors(points);
+
+function computeBentSurfaceDelauny(points3D: Vector3[]): THREE.Object3D[] {
   const objects: THREE.Object3D[] = [];
+  // Your precomputed 2D projection (same order as points3D)
+
+  const { projectedLocalPoints } = projectPoints(points3D);
+
+  // Compute Delaunay triangulation on the projected 2D points
+  const delaunay = Delaunator.from(projectedLocalPoints.map((vec) => [vec.x, vec.y]));
+  const indices = delaunay.triangles; // Triangle indices
+
+  // Flatten 3D vertex positions for BufferGeometry
+  const vertices = points3D.flat();
+
+  // Create BufferGeometry
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
+  geometry.setIndex(Array.from(indices));
+  geometry.computeVertexNormals(); // Compute normals for shading
+
+  const material = new THREE.MeshLambertMaterial({
+    color: "green",
+    wireframe: false,
+  });
+  material.side = THREE.DoubleSide;
+  // material.transparent = true;
+  const surfaceMesh = new THREE.Mesh(geometry, material);
+  objects.push(surfaceMesh);
+  return objects;
+}
+
+function projectPoints(points: Vector3[]) {
+  const eigenData: EigenData[] = PCA.getEigenVectors(points);
 
   const adData = PCA.computeAdjustedData(points, eigenData[0], eigenData[1]);
   const compressed = adData.formattedAdjustedData;
@@ -84,13 +115,6 @@ function computeBentSurface(points: Vector3[]): THREE.Object3D[] {
   console.log("uncompressed", uncompressed);
 
   const projectedPoints: Vector3[] = uncompressed.originalData;
-
-  // objects.push(createPointCloud(points, "red"));
-  // objects.push(createPointCloud(projectedPoints, "blue"));
-
-  // todop: adapt scale
-  const scale = [1, 1, 1] as Vector3;
-  const tps = new TPS3D(projectedPoints, points, scale);
 
   // Align the plane with the principal components
   const normal = new THREE.Vector3(...eigenData[2].vector);
@@ -102,6 +126,23 @@ function computeBentSurface(points: Vector3[]): THREE.Object3D[] {
     const worldPoint = new THREE.Vector3(...p);
     return worldPoint.applyQuaternion(quaternionInv); // Move to local plane space
   });
+  return { projectedPoints, projectedLocalPoints, eigenData };
+}
+
+function computeBentSurfaceTPS(points: Vector3[]): THREE.Object3D[] {
+  const objects: THREE.Object3D[] = [];
+  const { projectedPoints, projectedLocalPoints, eigenData } = projectPoints(points);
+  // objects.push(createPointCloud(points, "red"));
+  // objects.push(createPointCloud(projectedPoints, "blue"));
+
+  // todop: adapt scale
+  const scale = [1, 1, 1] as Vector3;
+  const tps = new TPS3D(projectedPoints, points, scale);
+
+  // Align the plane with the principal components
+  const normal = new THREE.Vector3(...eigenData[2].vector);
+  const quaternion = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
+  const quaternionInv = quaternion.clone().invert();
 
   const mean = points.reduce(
     (acc, p) => acc.add(new THREE.Vector3(...p).divideScalar(points.length)),
@@ -179,6 +220,105 @@ function computeBentSurface(points: Vector3[]): THREE.Object3D[] {
 
   // createNormalsVisualization(bentMesh.geometry, objects);
 
+  return objects;
+}
+
+function computeBentSurfaceSplines(points: Vector3[]): THREE.Object3D[] {
+  const objects: THREE.Object3D[] = [];
+  console.log("fresh!");
+
+  const pointsByZ = _.groupBy(points, (p) => p[2]);
+
+  const zValues = Object.keys(pointsByZ)
+    .map((el) => Number(el))
+    .sort();
+
+  const curves = _.compact(
+    zValues.map((zValue) => {
+      const points2D = pointsByZ[zValue].map((p) => new THREE.Vector3(p[0], p[1], p[2]));
+
+      if (points2D.length < 2) {
+        return null;
+      }
+
+      console.log("points2D", points2D);
+
+      // Use CatmullRomCurve3 for a smooth 3D spline
+      const curve = new THREE.CatmullRomCurve3(points2D);
+
+      const curvePoints = curve.getPoints(50); // Generate more points along the curve
+      const geometry = new THREE.BufferGeometry().setFromPoints(curvePoints);
+
+      const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
+
+      // Create the final object to add to the scene
+      const splineObject = new THREE.Line(geometry, material);
+      objects.push(splineObject);
+      return curve;
+    }),
+  );
+
+  // Number of points per curve
+  const numPoints = 50;
+
+  // Generate grid of points
+  const gridPoints = curves.map((curve) => curve.getPoints(numPoints - 1));
+
+  // Flatten into a single array of vertices
+  const vertices: number[] = [];
+  const indices = [];
+
+  gridPoints.forEach((row) => {
+    row.forEach((point) => {
+      vertices.push(point.x, point.y, point.z); // Store as flat array for BufferGeometry
+    });
+  });
+
+  // Connect vertices with triangles
+  // console.group("Computing indices");
+  for (let i = 0; i < curves.length - 1; i++) {
+    // console.group("Curve i=" + i);
+    for (let j = 0; j < numPoints - 1; j++) {
+      // console.group("Point j=" + j);
+      let current = i * numPoints + j;
+      let next = (i + 1) * numPoints + j;
+
+      // const printFace = (x, y, z) => {
+      //   return [vertices[3 * x], vertices[3 * y], vertices[3 * z]];
+      // };
+
+      // console.log("Creating faces with", { current, next });
+      // console.log("First face:", printFace(current, next, current + 1));
+      // console.log("Second face:", printFace(next, next + 1, current + 1));
+      // Two triangles per quad
+      indices.push(current, next, current + 1);
+      indices.push(next, next + 1, current + 1);
+      // console.groupEnd();
+    }
+    // console.groupEnd();
+  }
+  // console.groupEnd();
+
+  // Convert to Three.js BufferGeometry
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals(); // Smooth shading
+
+  // Material and Mesh
+  const material = new THREE.MeshStandardMaterial({
+    color: 0x0077ff, // A soft blue color
+    metalness: 0.5, // Slight metallic effect
+    roughness: 1, // Some surface roughness for a natural look
+    side: THREE.DoubleSide, // Render both sides
+    flatShading: false, // Ensures smooth shading with computed normals
+    opacity: 0.8,
+    transparent: true,
+    wireframe: false,
+  });
+  const surfaceMesh = new THREE.Mesh(geometry, material);
+
+  objects.push(surfaceMesh);
   return objects;
 }
 
@@ -583,9 +723,22 @@ class SceneController {
     // const surfaceMesh = new THREE.Mesh(meshGeometry, material);
     // this.rootNode.add(surfaceMesh);
 
-    let objs;
+    if (points.length === 0) {
+      return;
+    }
+
+    let objs: THREE.Object3D[] = [];
     try {
-      objs = computeBentSurface(points);
+      if (WkDevFlags.splittingStrategy === "tps") {
+        objs = computeBentSurfaceTPS(points);
+      } else if (WkDevFlags.splittingStrategy === "splines") {
+        objs = computeBentSurfaceSplines(points);
+      } else if (WkDevFlags.splittingStrategy === "delauny") {
+        objs = computeBentSurfaceDelauny(points);
+      } else {
+        Toast.error("Unknown splitting strategy. Use tps or splines or delauny");
+        return () => {};
+      }
     } catch (exc) {
       console.error(exc);
       Toast.error("Could not compute surface");

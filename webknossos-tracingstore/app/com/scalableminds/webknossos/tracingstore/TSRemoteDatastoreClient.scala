@@ -157,12 +157,12 @@ class TSRemoteDatastoreClient @Inject()(
         .postJsonWithBytesResponse(fullMeshRequest)
     } yield result
 
-  def voxelSizeForTracingWithCache(tracingId: String)(implicit tc: TokenContext): Fox[VoxelSize] =
-    voxelSizeCache.getOrLoad(tracingId, tId => voxelSizeForTracing(tId))
+  def voxelSizeForAnnotationWithCache(annotationId: String)(implicit tc: TokenContext): Fox[VoxelSize] =
+    voxelSizeCache.getOrLoad(annotationId, aId => voxelSizeForAnnotation(aId))
 
-  private def voxelSizeForTracing(tracingId: String)(implicit tc: TokenContext): Fox[VoxelSize] =
+  private def voxelSizeForAnnotation(annotationId: String)(implicit tc: TokenContext): Fox[VoxelSize] =
     for {
-      dataSourceId <- remoteWebknossosClient.getDataSourceIdForTracing(tracingId)
+      dataSourceId <- remoteWebknossosClient.getDataSourceIdForAnnotation(annotationId)
       dataStoreUri <- dataStoreUriWithCache(dataSourceId.organizationId, dataSourceId.directoryName)
       result <- rpc(
         s"$dataStoreUri/data/datasets/${dataSourceId.organizationId}/${dataSourceId.directoryName}/readInboxDataSource").withTokenFromContext

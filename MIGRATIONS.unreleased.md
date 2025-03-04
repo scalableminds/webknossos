@@ -10,4 +10,5 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 
 ### Postgres Evolutions:
-- [126-allow-ai-model-sharing.sql](conf/evolutions/126-allow-ai-model-sharing.sql)
+- [126-mag-real-paths.sql](conf/evolutions/126-mag-real-paths.sql)
+- [127-allow-ai-model-sharing.sql](conf/evolutions/127-allow-ai-model-sharing.sql)

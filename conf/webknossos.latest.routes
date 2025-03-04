@@ -108,6 +108,7 @@ DELETE        /folders/:id                                                      
 GET           /datastores                                                                       controllers.DataStoreController.list()
 PUT           /datastores/:name/datasource                                                      controllers.WKRemoteDataStoreController.updateOne(name: String, key: String)
 PUT           /datastores/:name/datasources                                                     controllers.WKRemoteDataStoreController.updateAll(name: String, key: String)
+PUT           /datastores/:name/datasources/paths                                               controllers.WKRemoteDataStoreController.updatePaths(name: String, key: String)
 PATCH         /datastores/:name/status                                                          controllers.WKRemoteDataStoreController.statusUpdate(name: String, key: String)
 POST          /datastores/:name/reserveUpload                                                   controllers.WKRemoteDataStoreController.reserveDatasetUpload(name: String, key: String, token: String)
 GET           /datastores/:name/getUnfinishedUploadsForUser                                     controllers.WKRemoteDataStoreController.getUnfinishedUploadsForUser(name: String, key: String, token: String, organizationName: String)
@@ -123,14 +124,14 @@ PUT           /datastores/:name                                                 
 # Tracingstores
 GET           /tracingstore                                                                     controllers.TracingStoreController.listOne()
 POST          /tracingstores/:name/handleTracingUpdateReport                                    controllers.WKRemoteTracingStoreController.handleTracingUpdateReport(name: String, key: String)
-POST          /tracingstores/:name/updateAnnotation                                             controllers.WKRemoteTracingStoreController.updateAnnotation(name: String, key: String, annotationId: String)
+POST          /tracingstores/:name/updateAnnotation                                             controllers.WKRemoteTracingStoreController.updateAnnotation(name: String, key: String, annotationId: ObjectId)
 POST          /tracingstores/:name/validateUserAccess                                           controllers.UserTokenController.validateAccessViaTracingstore(name: String, key: String, token: Option[String])
 PUT           /tracingstores/:name                                                              controllers.TracingStoreController.update(name: String)
-GET           /tracingstores/:name/dataSource                                                   controllers.WKRemoteTracingStoreController.dataSourceForTracing(name: String, key: String, tracingId: String)
-GET           /tracingstores/:name/dataSourceId                                                 controllers.WKRemoteTracingStoreController.dataSourceIdForTracing(name: String, key: String, tracingId: String)
+GET           /tracingstores/:name/dataSource                                                   controllers.WKRemoteTracingStoreController.dataSourceForAnnotation(name: String, key: String, annotationId: ObjectId)
+GET           /tracingstores/:name/dataSourceId                                                 controllers.WKRemoteTracingStoreController.dataSourceIdForAnnotation(name: String, key: String, annotationId: ObjectId)
 GET           /tracingstores/:name/annotationId                                                 controllers.WKRemoteTracingStoreController.annotationIdForTracing(name: String, key: String, tracingId: String)
 GET           /tracingstores/:name/dataStoreUri/:datasetDirectoryName                           controllers.WKRemoteTracingStoreController.dataStoreUriForDataset(name: String, key: String, organizationId: Option[String], datasetDirectoryName: String)
-POST          /tracingstores/:name/createTracing                                                controllers.WKRemoteTracingStoreController.createTracing(name: String, key: String, annotationId: String, previousVersion: Long)
+POST          /tracingstores/:name/createTracing                                                controllers.WKRemoteTracingStoreController.createTracing(name: String, key: String, annotationId: ObjectId, previousVersion: Long)
 
 # User access tokens for datastore authentication
 POST          /userToken/generate                                                               controllers.UserTokenController.generateTokenForDataStore()

@@ -14,12 +14,11 @@ import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import slick.sql.SqlAction
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.Fox.{bool2Fox, futureBox2Fox}
+import com.scalableminds.util.tools.Fox.futureBox2Fox
 import net.liftweb.common.Full
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject
-import scala.:+
 import scala.concurrent.ExecutionContext
 
 case class AiModel(_id: ObjectId,

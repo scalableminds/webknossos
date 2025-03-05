@@ -583,7 +583,9 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       updatedTreeIds <- annotationWithTracings.getUpdatedTreeBodyIdsForSkeleton(skeletonTracingId).toFox
       // All tree bodies that were previously not stored externally need to be stored
       treeBodyIdsToMigrate = skeletonTracing.trees.filter(!_.getHasExternalTreeBody).map(_.treeId).toSet
-      _ <- Fox.serialCombined(updatedTreeIds.union(treeBodyIdsToMigrate)) { treeId =>
+      nowPresentTrees = skeletonTracing.trees.map(_.treeId).toSet
+      treeIdsToFlush = nowPresentTrees.intersect(updatedTreeIds.union(treeBodyIdsToMigrate))
+      _ <- Fox.serialCombined(treeIdsToFlush) { treeId =>
         for {
           treeBody <- skeletonTracingService.extractTreeBody(skeletonTracing, treeId)
           _ <- tracingDataStore.skeletonTreeBodies.put(f"$skeletonTracingId/$treeId", skeletonTracing.version, treeBody)

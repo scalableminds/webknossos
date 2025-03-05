@@ -1,7 +1,7 @@
 import { message } from "antd";
 import window, { document } from "libs/window";
-import rootSaga from "oxalis/model/sagas/root_saga";
-import UnthrottledStore, { startSagas } from "oxalis/store";
+import { warnIfEmailIsUnverified } from "oxalis/model/sagas/user_saga";
+import UnthrottledStore, { startSaga } from "oxalis/store";
 import { createRoot } from "react-dom/client";
 import { Provider } from "react-redux";
 
@@ -16,12 +16,10 @@ import checkBrowserFeatures from "libs/browser_feature_check";
 import ErrorHandling from "libs/error_handling";
 import UserLocalStorage from "libs/user_local_storage";
 import { compress, decompress } from "lz-string";
-import { setupApi } from "oxalis/api/internal_api";
-import Model from "oxalis/model";
 import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
 import { setHasOrganizationsAction, setThemeAction } from "oxalis/model/actions/ui_actions";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
-import { setModel, setStore } from "oxalis/singletons";
+import { setStore } from "oxalis/singletons";
 import Store from "oxalis/throttled_store";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
@@ -30,13 +28,16 @@ import Router from "router";
 import "../stylesheets/main.less";
 import GlobalThemeProvider, { getThemeFromUser } from "theme";
 
+console.log(
+  "ENTRYPOINT MAIN.TSX",
+  window.performance.timeOrigin + window.performance.now() - window.performance.timing.connectStart,
+);
+
 // Suppress warning emitted by Olvy because it tries to eagerly initialize
 window.OlvyConfig = null;
 
-setModel(Model);
 setStore(UnthrottledStore);
-setupApi();
-startSagas(rootSaga);
+startSaga(warnIfEmailIsUnverified);
 
 const reactQueryClient = new QueryClient({
   defaultOptions: {

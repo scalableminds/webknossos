@@ -11,6 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/25.02.1...HEAD)
 
 ### Added
+- An organization can now share its trained AI models with other organizations. [#8418](https://github.com/scalableminds/webknossos/pull/8418)
 
 ### Changed
 - When using a zarr link to a wk-served data layer as another layer’s source, the user’s token is used to access the data. [#8322](https://github.com/scalableminds/webknossos/pull/8322/)

@@ -22,6 +22,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed the alignment of the button that allows restricting floodfill operations to a bounding box. [#8388](https://github.com/scalableminds/webknossos/pull/8388) 
 - Fixed rare bug where saving got stuck. [#8409](https://github.com/scalableminds/webknossos/pull/8409)
 - Fixed a bug where reverting annotations could get stuck if some of its layers had been deleted in the meantime. [#8405](https://github.com/scalableminds/webknossos/pull/8405)
+- When removing a segment from the segment list, a corresponding precomputed mesh was not removed automatically. [#8428](https://github.com/scalableminds/webknossos/pull/8428)
 
 ### Removed
 

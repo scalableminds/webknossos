@@ -146,6 +146,7 @@ datasetNames.map(async (datasetName) => {
 
 annotationSpecs.map(async (annotationSpec) => {
   const [datasetName, fallbackLayerName] = annotationSpec;
+  const fallbackLabel = fallbackLayerName ?? "without_fallback";
 
   test.serial(
     `It should render an annotation for ${datasetName} with fallback_layer=${fallbackLayerName} correctly`,
@@ -172,7 +173,7 @@ annotationSpecs.map(async (annotationSpec) => {
             width,
             height,
             SCREENSHOTS_BASE_PATH,
-            `annotation_${datasetName}_${fallbackLayerName}`,
+            `annotation_${datasetName}_${fallbackLabel}`,
           );
           await page.close();
           return isPixelEquivalent(changedPixels, width, height);

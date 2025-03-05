@@ -200,19 +200,20 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       unfinishedUploadsWithoutIds: List[UnfinishedUpload]): Fox[List[UnfinishedUpload]] =
     for {
       maybeUnfinishedUploads: List[Box[Option[UnfinishedUpload]]] <- Fox.sequence(
+        // Filter out unfinished uploads that do not have entries in the redis store and adds the uploadId and filePaths to those that have an entry.
         unfinishedUploadsWithoutIds.map(
           unfinishedUpload => {
             for {
               uploadIdOpt <- runningUploadMetadataStore.find(redisKeyForUploadId(unfinishedUpload.dataSourceId))
-              updateUploadOpt = uploadIdOpt.map(uploadId => unfinishedUpload.copy(uploadId = uploadId))
-              updateUploadOpt <- Fox.runOptional(updateUploadOpt)(updatedUpload =>
+              updatedUploadOpt = uploadIdOpt.map(uploadId => unfinishedUpload.copy(uploadId = uploadId))
+              updatedUploadWithFilePathsOpt <- Fox.runOptional(updatedUploadOpt)(updatedUpload =>
                 for {
                   filePathsStringOpt <- runningUploadMetadataStore.find(redisKeyForFilePaths(updatedUpload.uploadId))
                   filePathsOpt <- filePathsStringOpt.map(JsonHelper.parseAndValidateJson[List[String]])
                   uploadUpdatedWithFilePaths <- filePathsOpt.map(filePaths =>
                     updatedUpload.copy(filePaths = Some(filePaths)))
                 } yield uploadUpdatedWithFilePaths)
-            } yield updateUploadOpt
+            } yield updatedUploadWithFilePathsOpt
           }
         ))
       foundUnfinishedUploads = maybeUnfinishedUploads.flatten.flatten

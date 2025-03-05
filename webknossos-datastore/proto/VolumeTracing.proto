@@ -23,6 +23,10 @@ message VolumeTracing {
     uint24 = 3;
     uint32 = 4;
     uint64 = 8;
+    int8 = 11;
+    int16 = 12;
+    int32 = 14;
+    int64 = 18;
   }
 
   optional int64 activeSegmentId = 1;

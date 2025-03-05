@@ -110,14 +110,30 @@ object ElementClass extends ExtendedEnumeration {
     case ElementClass.int64  => 8
   }
 
+  def volumeTracingElementClassProtoId(elementClass: ElementClass.Value): Int = elementClass match {
+    case ElementClass.uint8  => 1
+    case ElementClass.uint16 => 2
+    case ElementClass.uint24 => 3
+    case ElementClass.uint32 => 4
+    case ElementClass.uint64 => 8
+    case ElementClass.int8   => 11
+    case ElementClass.int16  => 12
+    case ElementClass.int32  => 14
+    case ElementClass.int64  => 18
+  }
+
   /* ambiguous, we will always guess the unsigned integer options */
-  def guessFromBytesPerElement(bytesPerElement: Int): Option[ElementClass.Value] = bytesPerElement match {
-    case 1 => Some(ElementClass.uint8)
-    case 2 => Some(ElementClass.uint16)
-    case 3 => Some(ElementClass.uint24)
-    case 4 => Some(ElementClass.uint32)
-    case 8 => Some(ElementClass.uint64)
-    case _ => None
+  def fromVolumeTracingElementClassProtoId(protoEnumId: Int): Option[ElementClass.Value] = protoEnumId match {
+    case 1  => Some(ElementClass.uint8)
+    case 2  => Some(ElementClass.uint16)
+    case 3  => Some(ElementClass.uint24)
+    case 4  => Some(ElementClass.uint32)
+    case 8  => Some(ElementClass.uint64)
+    case 11 => Some(ElementClass.int8)
+    case 12 => Some(ElementClass.int16)
+    case 14 => Some(ElementClass.int32)
+    case 18 => Some(ElementClass.int64)
+    case _  => None
   }
 
   /* only used for segmentation layers, so only unsigned integers 8 16 32 64 */

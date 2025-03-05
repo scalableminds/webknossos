@@ -12,13 +12,14 @@ import {
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 import { cancelJob, getJobs, retryJob } from "admin/admin_rest_api";
-import { Input, Modal, Spin, Table, Tooltip, Typography, message } from "antd";
+import { Input, Modal, Spin, Table, Tooltip, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import { confirmAsync } from "dashboard/dataset/helper_components";
 import { formatWkLibsNdBBox } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import { useInterval } from "libs/react_helpers";
+import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
@@ -311,10 +312,10 @@ function JobListView() {
               try {
                 await retryJob(job.id);
                 await fetchData();
-                message.success("Job is being retried");
+                Toast.success("Job is being retried");
               } catch (e) {
                 console.error("Could not retry job", e);
-                message.error("Failed to start retrying the job");
+                Toast.error("Failed to start retrying the job");
               }
             }}
             icon={<PlayCircleOutlined className="icon-margin-right" />}

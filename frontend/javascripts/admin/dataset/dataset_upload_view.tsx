@@ -1009,7 +1009,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   validator: syncValidator(
                     (files: FileWithPath[]) => {
                       const fileSize = getFileSize(files);
-                      return getLeftOverStorageBytes(this.props.organization) > fileSize;
+                      return getLeftOverStorageBytes(this.props.organization) >= fileSize;
                     },
                     `The uploaded files exceed the available storage of your organization. Please ${
                       isActiveUserAdmin

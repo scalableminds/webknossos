@@ -156,10 +156,10 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def insertOne(a: AiModel): Fox[Unit] = {
     val insertModelQuery =
-      q"""INSERT INTO webknossos.aiModels(
+      q"""INSERT INTO webknossos.aiModels (
                       _id, _owningOrganization, _dataStore, _user, _trainingJob, name,
                        comment, category, created, modified, isDeleted
-                    ) VALUES(
+                    ) VALUES (
                       ${a._id}, ${a._owningOrganization}, ${a._dataStore}, ${a._user}, ${a._trainingJob}, ${a.name},
                       ${a.comment}, ${a.category}, ${a.created}, ${a.modified}, ${a.isDeleted}
                     )
@@ -182,7 +182,7 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   private def insertTrainingAnnotationIdQuery(aiModelId: ObjectId,
                                               annotationId: ObjectId): SqlAction[Int, NoStream, Effect] =
-    q"""INSERT INTO webknossos.aiModel_trainingAnnotations(_aiModel, _annotation)
+    q"""INSERT INTO webknossos.aiModel_trainingAnnotations (_aiModel, _annotation)
             VALUES($aiModelId, $annotationId)""".asUpdate
 
   private def findTrainingAnnotationIdsFor(aiModelId: ObjectId): Fox[List[ObjectId]] =
@@ -193,18 +193,14 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield rows.toList
 
   private def insertOrganizationQuery(aiModelId: ObjectId,
-                                      organizationIds: List[String]): List[SqlAction[Int, NoStream, Effect]] = {
-    println("--------------------------------------------------------------------------------")
-    println(s"insertOrganizationQuery($aiModelId, ${organizationIds.mkString(",")})")
-    println("--------------------------------------------------------------------------------")
+                                      organizationIds: List[String]): List[SqlAction[Int, NoStream, Effect]] =
     organizationIds.map { organizationId =>
       insertOrganizationQuery(aiModelId, organizationId)
     }
-  }
 
   private def insertOrganizationQuery(aiModelId: ObjectId, organizationId: String): SqlAction[Int, NoStream, Effect] =
-    q"""INSERT INTO webknossos.aiModel_organizations(_aiModel, _organization)
-            VALUES($aiModelId, $organizationId)""".asUpdate
+    q"""INSERT INTO webknossos.aiModel_organizations (_aiModel, _organization)
+            VALUES ($aiModelId, $organizationId)""".asUpdate
 
   private def findOrganizationsFor(aiModelId: ObjectId): Fox[List[String]] =
     for {
@@ -230,7 +226,7 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     val deleteQuery =
       q"DELETE FROM webknossos.aiModel_organizations WHERE _aiModel = $aiModelId".asUpdate
     val insertQueries = sharedOrganizations.map(organizationId =>
-      q"INSERT INTO webknossos.aiModel_organizations(_aiModel, _organization) VALUES($aiModelId, $organizationId)".asUpdate)
+      q"INSERT INTO webknossos.aiModel_organizations (_aiModel, _organization) VALUES ($aiModelId, $organizationId)".asUpdate)
     run(DBIO.sequence(deleteQuery +: insertQueries).transactionally).map(_ => ())
   }
 

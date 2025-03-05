@@ -12,7 +12,7 @@ import {
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 import { cancelJob, getJobs, retryJob } from "admin/admin_rest_api";
-import { Input, Modal, Spin, Table, Tooltip, Typography } from "antd";
+import { Input, Modal, Spin, Table, Tooltip, Typography, message } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import { confirmAsync } from "dashboard/dataset/helper_components";
@@ -304,16 +304,24 @@ function JobListView() {
       );
     } else if (job.state === "FAILURE" && isCurrentUserSuperUser) {
       return (
-        <AsyncLink
-          href="#"
-          title="Restarts the workflow from the failed task, skipping and reusing artifacts from preceding tasks that were already successful."
-          onClick={async () => {
-            retryJob(job.id).then(() => fetchData());
-          }}
-          icon={<PlayCircleOutlined className="icon-margin-right" />}
-        >
-          Retry
-        </AsyncLink>
+        <Tooltip title="Restarts the workflow from the failed task, skipping and reusing artifacts from preceding tasks that were already successful.">
+          <AsyncLink
+            href="#"
+            onClick={async () => {
+              try {
+                await retryJob(job.id);
+                await fetchData();
+                message.success("Job is being retried");
+              } catch (e) {
+                console.error("Could not retry job", e);
+                message.error("Failed to start retrying the job");
+              }
+            }}
+            icon={<PlayCircleOutlined className="icon-margin-right" />}
+          >
+            Retry
+          </AsyncLink>
+        </Tooltip>
       );
     } else if (
       job.type === APIJobType.CONVERT_TO_WKW ||

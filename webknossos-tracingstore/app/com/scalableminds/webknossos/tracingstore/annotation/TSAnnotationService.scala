@@ -271,9 +271,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     for {
       volumeTracing <- annotationWithTracings.getVolume(action.actionTracingId).toFox
       _ <- assertMappingIsNotLocked(volumeTracing)
-      baseMappingName <- volumeTracing.mappingName.toFox ?~> "makeEditable.failed.noBaseMapping"
       _ <- bool2Fox(volumeTracingService.volumeBucketsAreEmpty(action.actionTracingId)) ?~> "annotation.volumeBucketsNotEmpty"
-      editableMappingInfo = editableMappingService.create(baseMappingName)
+      editableMappingInfo = editableMappingService.create(volumeTracing.mappingName)
       updater <- editableMappingUpdaterFor(annotationId,
                                            action.actionTracingId,
                                            volumeTracing,
@@ -616,7 +615,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     if (tracing.getHasEditableMapping)
       for {
         editableMappingInfo <- findEditableMappingInfo(annotationId, tracingId)
-      } yield Some(editableMappingInfo.baseMappingName)
+      } yield editableMappingInfo.baseMappingName
     else Fox.successful(tracing.mappingName)
 
   def findVolumeRaw(tracingId: String, version: Option[Long] = None): Fox[VersionedKeyValuePair[VolumeTracing]] =

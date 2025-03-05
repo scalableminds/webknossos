@@ -17,6 +17,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   FossilDBClient,
   KeyValueStoreImplicits,
   RemoteFallbackLayer,
+  TemporaryTracingService,
   TracingDataStore
 }
 import com.typesafe.scalalogging.LazyLogging
@@ -39,7 +40,8 @@ object VolumeSegmentIndexService {
 // key: tracing id, segment id, mag – value: list of buckets
 // used for calculating segment statistics
 class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore,
-                                          remoteDatastoreClient: TSRemoteDatastoreClient)
+                                          remoteDatastoreClient: TSRemoteDatastoreClient,
+                                          temporaryTracingService: TemporaryTracingService)
     extends KeyValueStoreImplicits
     with ProtoGeometryImplicits
     with VolumeBucketCompression
@@ -224,7 +226,14 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
           getSegmentToBucketIndexFromFile(fallbackLayer, segmentId, mag, mappingName, editableMappingTracingId) // additional coordinates not supported, see #7556
         case _ => Fox.successful(Seq.empty)
       }
-      combined = fromMutableIndex.values.map(vec3IntFromProto) ++ fromFileIndex
+      isTemporaryTracing <- temporaryTracingService.isTemporaryTracing(tracingId)
+      fromTemporaryIndex <- Fox.runIf(isTemporaryTracing)(
+        temporaryTracingService.getVolumeSegmentIndexBufferForKey(
+          segmentIndexKey(tracingId, segmentId, mag, additionalCoordinates, additionalAxes)))
+      combined = fromMutableIndex.values.map(vec3IntFromProto) ++ fromFileIndex ++ fromTemporaryIndex
+        .getOrElse(ListOfVec3IntProto())
+        .values
+        .map(vec3IntFromProto)
     } yield ListOfVec3IntProto(combined.map(vec3IntToProto))
 
   private def getSegmentToBucketIndexFromFossilDB(

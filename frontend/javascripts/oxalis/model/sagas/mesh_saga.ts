@@ -1170,15 +1170,9 @@ function* downloadMeshCells(action: TriggerMeshesDownloadAction): Saga<void> {
 }
 
 function* handleRemoveSegment(action: RemoveSegmentAction) {
-  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
-  const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
-  const { layerName, segmentId } = action;
-  if (adhocMeshesMapByLayer[additionalCoordKey]?.[layerName]?.get(segmentId) != null) {
-    // The dispatched action will make sure that the mesh entry is removed from the
-    // store **and** from the scene. Otherwise, the store will still contain a reference
-    // to the mesh even though it's not in the scene, anymore.
-    yield* put(removeMeshAction(action.layerName, action.segmentId));
-  }
+  // The dispatched action will make sure that the mesh entry is removed from the
+  // store and from the scene.
+  yield* put(removeMeshAction(action.layerName, action.segmentId));
 }
 
 function* removeMesh(action: RemoveMeshAction, removeFromScene: boolean = true): Saga<void> {

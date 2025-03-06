@@ -45,7 +45,7 @@ class CreditTransactionController @Inject()(organizationService: OrganizationSer
       _ <- organizationService.assertOrganizationHasPaidPlan(organizationId)
       expirationDateOpt <- Fox.runOptional(expiresAt)(Instant.fromString)
       _ <- Fox
-        .runOptional(expirationDateOpt)(expirationDate => bool2Fox(Instant.now < expirationDate)) ?~> "Expiration date must be in the future"
+        .runOptional(expirationDateOpt)(expirationDate => bool2Fox(!expirationDate.isPast)) ?~> "Expiration date must be in the future"
       chargeUpTransaction = CreditTransaction(
         ObjectId.generate,
         organizationId,

@@ -77,6 +77,7 @@ export async function cancelJob(jobId: string): Promise<APIJob> {
 export type JobCostInfo = {
   costInCredits: string;
   hasEnoughCredits: boolean;
+  // The organizations credits used during calculation whether the organization has enough credits for the job.
   organizationCredits: string;
 };
 
@@ -85,7 +86,7 @@ export async function getJobCost(command: string, boundingBoxInMag: Vector6): Pr
     command,
     boundingBoxInMag: boundingBoxInMag.join(","),
   });
-  return await Request.receiveJSON(`/api/jobs/getCosts?${params}`);
+  return await Request.receiveJSON(`/api/jobs/getCost?${params}`);
 }
 
 export async function startConvertToWkwJob(

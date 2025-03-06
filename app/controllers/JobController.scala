@@ -518,7 +518,7 @@ class JobController @Inject()(
       } yield Redirect(uri, Map(("token", Seq(userAuthToken.id))))
     }
 
-  def getJobCosts(command: String, boundingBoxInMag: String): Action[AnyContent] =
+  def getJobCost(command: String, boundingBoxInMag: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         boundingBox <- BoundingBox.fromLiteral(boundingBoxInMag).toFox

@@ -1,5 +1,6 @@
 package models.organization
 
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.typesafe.scalalogging.LazyLogging
@@ -13,13 +14,11 @@ import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 class FreeCreditTransactionService @Inject()(creditTransactionDAO: CreditTransactionDAO,
                                              val lifecycle: ApplicationLifecycle,
-                                             val system: ActorSystem)(implicit val ec: ExecutionContext)
+                                             val actorSystem: ActorSystem)(implicit val ec: ExecutionContext)
     extends Controller
     with FoxImplicits
     with LazyLogging
     with IntervalScheduler {
-
-  override protected def actorSystem: ActorSystem = system
 
   def revokeExpiredCredits(): Fox[Unit] = creditTransactionDAO.runRevokeExpiredCredits()
   def handOutMonthlyFreeCredits(): Fox[Unit] = creditTransactionDAO.handOutMonthlyFreeCredits()
@@ -28,13 +27,10 @@ class FreeCreditTransactionService @Inject()(creditTransactionDAO: CreditTransac
 
   override protected def tick(): Fox[Unit] =
     for {
-      _ <- Fox.successful(())
-      _ = logger.info("Starting revoking expired credits...")
+      before <- Instant.nowFox
       _ <- revokeExpiredCredits()
-      _ = logger.info("Finished revoking expired credits.")
-      _ = logger.info("Starting handing out free monthly credits.")
       _ <- handOutMonthlyFreeCredits()
-      _ = logger.info("Finished handing out free monthly credits.")
+      _ = Instant.logSince(before, "Finished revoking and handing out free monthly credits.")
     } yield ()
 
 }

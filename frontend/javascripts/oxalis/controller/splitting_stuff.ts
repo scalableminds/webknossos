@@ -79,11 +79,32 @@ function traverseMST_DFS(mst: number[][], startIdx = 0): number[] {
   return orderedPoints;
 }
 
+function computePathLength(points: THREE.Vector3[], order: number[]): number {
+  let length = 0;
+  for (let i = 0; i < order.length - 1; i++) {
+    length += points[order[i]].distanceTo(points[order[i + 1]]);
+  }
+  return length;
+}
+
 export function orderPointsMST(points: THREE.Vector3[]): THREE.Vector3[] {
   if (points.length === 0) return [];
+
   const mst = computeMST(points);
-  const dfsOrder = traverseMST_DFS(mst);
-  return enforceConsistentDirection(dfsOrder.map((index) => points[index]));
+  let bestOrder: number[] = [];
+  let minLength = Number.POSITIVE_INFINITY;
+
+  for (let startIdx = 0; startIdx < points.length; startIdx++) {
+    const order = traverseMST_DFS(mst, startIdx);
+    const length = computePathLength(points, order);
+
+    if (length < minLength) {
+      minLength = length;
+      bestOrder = order;
+    }
+  }
+
+  return bestOrder.map((index) => points[index]);
 }
 
 export function enforceConsistentDirection(points: THREE.Vector3[]): THREE.Vector3[] {

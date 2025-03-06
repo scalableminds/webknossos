@@ -59,6 +59,23 @@ import TPS3D from "libs/thin_plate_spline";
 import { WkDevFlags } from "oxalis/api/wk_dev";
 import { enforceConsistentDirection, orderPointsMST } from "./splitting_stuff";
 
+import {
+  computeBoundsTree,
+  disposeBoundsTree,
+  computeBatchedBoundsTree,
+  disposeBatchedBoundsTree,
+  acceleratedRaycast,
+} from "three-mesh-bvh";
+
+// Add the extension functions
+THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
+THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
+THREE.Mesh.prototype.raycast = acceleratedRaycast;
+
+THREE.BatchedMesh.prototype.computeBoundsTree = computeBatchedBoundsTree;
+THREE.BatchedMesh.prototype.disposeBoundsTree = disposeBatchedBoundsTree;
+THREE.BatchedMesh.prototype.raycast = acceleratedRaycast;
+
 type EigenData = { eigenvalue: number; vector: number[] };
 
 function createPointCloud(points: Vector3[], color: string) {
@@ -228,33 +245,50 @@ function computeBentSurfaceSplines(points: Vector3[]): THREE.Object3D[] {
   const objects: THREE.Object3D[] = [];
   console.log("fresh!");
 
-  const pointsByZ = _.groupBy(points, (p) => p[2]);
+  const unfilteredPointsByZ = _.groupBy(points, (p) => p[2]);
+  const pointsByZ = _.omitBy(unfilteredPointsByZ, (value) => value.length < 2);
 
   const zValues = Object.keys(pointsByZ)
     .map((el) => Number(el))
     .sort();
 
+  const minZ = Math.min(...zValues);
+  const maxZ = Math.max(...zValues);
+
+  const curvesByZ: Record<number, THREE.CatmullRomCurve3> = {};
+
+  // Create curves for existing z-values
   const curves = _.compact(
-    zValues.map((zValue) => {
-      const points2D = pointsByZ[zValue].map((p) => new THREE.Vector3(p[0], p[1], p[2]));
+    zValues.map((zValue, curveIdx) => {
+      let adaptedZ = zValue;
+      if (zValue === minZ) {
+        adaptedZ -= 0.5;
+      } else if (zValue === maxZ) {
+        adaptedZ += 0.5;
+      }
+      const points2D = orderPointsMST(
+        pointsByZ[zValue].map((p) => new THREE.Vector3(p[0], p[1], adaptedZ)),
+      );
 
       if (points2D.length < 2) {
         return null;
       }
 
-      console.log("points2D", points2D);
+      if (curveIdx > 0) {
+        const currentCurvePoints = points2D;
+        const prevCurvePoints = curvesByZ[zValues[curveIdx - 1]].points;
 
-      // Use CatmullRomCurve3 for a smooth 3D spline
+        const distActual = currentCurvePoints[0].distanceTo(prevCurvePoints[0]);
+        const distFlipped = currentCurvePoints.at(-1).distanceTo(prevCurvePoints[0]);
+
+        const shouldFlip = distFlipped < distActual;
+        if (shouldFlip) {
+          points2D.reverse();
+        }
+      }
+
       const curve = new THREE.CatmullRomCurve3(points2D);
-
-      const curvePoints = curve.getPoints(50); // Generate more points along the curve
-      const geometry = new THREE.BufferGeometry().setFromPoints(curvePoints);
-
-      const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
-
-      // Create the final object to add to the scene
-      const splineObject = new THREE.Line(geometry, material);
-      objects.push(splineObject);
+      curvesByZ[zValue] = curve;
       return curve;
     }),
   );
@@ -262,20 +296,53 @@ function computeBentSurfaceSplines(points: Vector3[]): THREE.Object3D[] {
   // Number of points per curve
   const numPoints = 50;
 
+  // Sort z-values for interpolation
+  const sortedZValues = Object.keys(curvesByZ)
+    .map(Number)
+    .sort((a, b) => a - b);
+
+  // Interpolate missing z-values
+  for (let z = minZ; z <= maxZ; z++) {
+    if (curvesByZ[z]) continue; // Skip if curve already exists
+
+    // Find nearest lower and upper z-values
+    const lowerZ = Math.max(...sortedZValues.filter((v) => v < z));
+    const upperZ = Math.min(...sortedZValues.filter((v) => v > z));
+
+    if (lowerZ === Number.NEGATIVE_INFINITY || upperZ === Number.POSITIVE_INFINITY) continue;
+
+    // Get the two adjacent curves and sample 50 points from each
+    const lowerCurvePoints = curvesByZ[lowerZ].getPoints(numPoints);
+    const upperCurvePoints = curvesByZ[upperZ].getPoints(numPoints);
+
+    // Interpolate between corresponding points
+    const interpolatedPoints = lowerCurvePoints.map((lowerPoint, i) => {
+      const upperPoint = upperCurvePoints[i];
+      const alpha = (z - lowerZ) / (upperZ - lowerZ); // Interpolation factor
+
+      return new THREE.Vector3(
+        THREE.MathUtils.lerp(lowerPoint.x, upperPoint.x, alpha),
+        THREE.MathUtils.lerp(lowerPoint.y, upperPoint.y, alpha),
+        z,
+      );
+    });
+
+    // Create the interpolated curve
+    const interpolatedCurve = new THREE.CatmullRomCurve3(interpolatedPoints);
+    curvesByZ[z] = interpolatedCurve;
+  }
+
+  // Generate and display all curves
+  Object.values(curvesByZ).forEach((curve) => {
+    const curvePoints = curve.getPoints(50);
+    const geometry = new THREE.BufferGeometry().setFromPoints(curvePoints);
+    const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
+    const splineObject = new THREE.Line(geometry, material);
+    objects.push(splineObject);
+  });
+
   // Generate grid of points
   const gridPoints = curves.map((curve) => curve.getPoints(numPoints - 1));
-
-  for (let curveIdx = 1; curveIdx < gridPoints.length; curveIdx++) {
-    const currentCurvePoints = gridPoints[curveIdx];
-    const prevCurvePoints = gridPoints[curveIdx - 1];
-    const distActual = currentCurvePoints[0].distanceTo(prevCurvePoints[0]);
-    const distFlipped = currentCurvePoints.at(-1).distanceTo(prevCurvePoints[0]);
-
-    const shouldFlip = distFlipped < distActual;
-    if (shouldFlip) {
-      gridPoints[curveIdx].reverse();
-    }
-  }
 
   // Flatten into a single array of vertices
   const vertices: number[] = [];
@@ -317,6 +384,9 @@ function computeBentSurfaceSplines(points: Vector3[]): THREE.Object3D[] {
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
   geometry.setIndex(indices);
   geometry.computeVertexNormals(); // Smooth shading
+  geometry.computeBoundsTree();
+
+  window.bentGeometry = geometry;
 
   // Material and Mesh
   const material = new THREE.MeshStandardMaterial({
@@ -330,6 +400,7 @@ function computeBentSurfaceSplines(points: Vector3[]): THREE.Object3D[] {
     wireframe: false,
   });
   const surfaceMesh = new THREE.Mesh(geometry, material);
+  window.bentMesh = surfaceMesh;
 
   objects.push(surfaceMesh);
   return objects;
@@ -544,6 +615,7 @@ class SceneController {
     // For some reason, all objects have to be put into a group object. Changing
     // scene.scale does not have an effect.
     this.rootGroup = new THREE.Object3D();
+    window.rootGroup = this.rootGroup;
     this.rootGroup.add(this.getRootNode());
 
     this.highlightedBBoxId = null;
@@ -836,6 +908,10 @@ class SceneController {
     this.taskBoundingBox?.updateForCam(id);
 
     this.segmentMeshController.meshesLODRootGroup.visible = id === OrthoViews.TDView;
+    // todop
+    if (window.bentMesh != null) {
+      window.bentMesh.visible = id === OrthoViews.TDView;
+    }
     // this.segmentMeshController.meshesLODRootGroup.visible = false;
     this.annotationToolsGeometryGroup.visible = id !== OrthoViews.TDView;
     this.lineMeasurementGeometry.updateForCam(id);

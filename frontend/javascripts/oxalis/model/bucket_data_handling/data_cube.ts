@@ -35,6 +35,7 @@ import Store from "oxalis/store";
 import type { AdditionalAxis, BucketDataArray, ElementClass } from "types/api_flow_types";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 import type { MagInfo } from "../helpers/mag_info";
+import * as THREE from "three";
 
 const warnAboutTooManyAllocations = _.once(() => {
   const msg =
@@ -700,7 +701,12 @@ class DataCube {
 
       // Iterating over all neighbours from the initialAddress.
       while (!neighbourVoxelStackUvw.isEmpty()) {
-        const neighbours = neighbourVoxelStackUvw.getVoxelAndGetNeighbors();
+        const { origin, neighbors: neighbours } = neighbourVoxelStackUvw.getVoxelAndGetNeighbors();
+
+        const originGlobalPosition = V3.add(
+          currentGlobalBucketPosition,
+          V3.scale3(origin, currentMag),
+        );
 
         for (let neighbourIndex = 0; neighbourIndex < neighbours.length; ++neighbourIndex) {
           const neighbourVoxelUvw = neighbours[neighbourIndex];
@@ -719,7 +725,23 @@ class DataCube {
             // Add the bucket to the list of buckets to flood fill.
             const neighbourBucket = this.getOrCreateBucket(neighbourBucketAddress);
 
-            if (neighbourBucket.type !== "null") {
+            let shouldSkip = false;
+            if (window.bentGeometry) {
+              const currentGlobalPosition = V3.add(
+                currentGlobalBucketPosition,
+                V3.scale3(neighbourVoxelXyz, currentMag),
+              );
+              const intersects = checkLineIntersection(
+                window.bentGeometry,
+                originGlobalPosition,
+                currentGlobalPosition,
+              );
+
+              shouldSkip = intersects;
+            }
+
+            // console.log("reached bucket border. early abort for debugging");
+            if (!shouldSkip && neighbourBucket.type !== "null") {
               bucketsWithXyzSeedsToFill.push([neighbourBucket, adjustedNeighbourVoxelXyz]);
             }
           } else {
@@ -735,7 +757,25 @@ class DataCube {
               max: V3.add(currentGlobalPosition, currentMag),
             });
 
-            if (bucketData[neighbourVoxelIndex] === sourceSegmentId) {
+            let shouldSkip = false;
+            if (window.bentGeometry) {
+              // const target = {};
+              // window.bentGeometry.boundsTree.closestPointToPoint(
+              //   new THREE.Vector3(...currentGlobalPosition),
+              //   target,
+              // );
+
+              const intersects = checkLineIntersection(
+                window.bentGeometry,
+                originGlobalPosition,
+                currentGlobalPosition,
+              );
+
+              // const { distance } = target;
+              shouldSkip = intersects;
+            }
+
+            if (!shouldSkip && bucketData[neighbourVoxelIndex] === sourceSegmentId) {
               if (floodfillBoundingBox.intersectedWith(voxelBoundingBoxInMag1).getVolume() > 0) {
                 bucketData[neighbourVoxelIndex] = segmentId;
                 markUvwInSliceAsLabeled(neighbourVoxelUvw);
@@ -996,3 +1036,56 @@ class DataCube {
 }
 
 export default DataCube;
+
+window.test = (point: Vector3) => {
+  const geometry = window.bentGeometry;
+  let target = {};
+  const retVal = geometry.boundsTree.closestPointToPoint(new THREE.Vector3(...point), target);
+
+  console.log("retVal", retVal);
+  console.log("target", target);
+  // closestPointToPoint(
+  //   point : Vector3,
+  //   target : Object = {},
+  //   minThreshold : Number = 0,
+  //   maxThreshold : Number = Infinity
+  // )
+};
+
+let rayHelper;
+// Function to check intersection
+function checkLineIntersection(geometry, _pointA: Vector3, _pointB: Vector3) {
+  // Create BVH from geometry if not already built
+  if (!geometry.boundsTree) {
+    geometry.computeBoundsTree();
+  }
+  const mul = (vec) => [11.24 * vec[0], 11.24 * vec[1], 28 * vec[2]];
+  // geometry.boundsTree = undefined;
+  const pointA = new THREE.Vector3(...mul(_pointA));
+  const pointB = new THREE.Vector3(...mul(_pointB));
+
+  // Create a ray from A to B
+  const ray = new THREE.Ray();
+  ray.origin.copy(pointA);
+  ray.direction.subVectors(pointB, pointA).normalize();
+
+  // Perform raycast
+  const raycaster = new THREE.Raycaster();
+  raycaster.ray = ray;
+  raycaster.far = pointA.distanceTo(pointB); // Limit to segment length
+  raycaster.firstHitOnly = true;
+
+  // if (rayHelper != null) {
+  //   window.rootGroup.remove(rayHelper);
+  // }
+
+  // rayHelper = new THREE.ArrowHelper(ray.direction, ray.origin, raycaster.far, 0xff0000);
+  // window.rootGroup.add(rayHelper);
+
+  const intersects = raycaster.intersectObject(window.bentMesh, true);
+  const retval = intersects.length > 0; // Returns true if an intersection is found
+
+  return retval;
+}
+
+window.checkLineIntersection = checkLineIntersection;

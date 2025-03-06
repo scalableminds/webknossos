@@ -30,7 +30,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume._
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Full}
-import org.checkerframework.checker.units.qual.N
 import play.api.libs.json.{JsObject, JsValue, Json}
 
 import javax.inject.Inject
@@ -555,7 +554,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     for {
       _ <- Fox.serialCombined(annotationWithTracings.getVolumes) {
         case (volumeTracingId, volumeTracing) if allMayHaveUpdates || tracingIdsWithUpdates.contains(volumeTracingId) =>
-          tracingDataStore.volumes.put(volumeTracingId, volumeTracing.version, volumeTracing)
+          volumeTracingService.saveVolume(volumeTracingId, volumeTracing.version, volumeTracing)
         case _ => Fox.successful(())
       }
       _ <- Fox.serialCombined(annotationWithTracings.getSkeletons) {
@@ -874,7 +873,6 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       sourceTracing <- findVolume(sourceAnnotationId, sourceTracingId, Some(sourceVersion))
       newTracing <- volumeTracingService.adaptVolumeForDuplicate(
         sourceAnnotationId,
-        sourceTracingId,
         newTracingId,
         sourceTracing,
         isFromTask,
@@ -885,7 +883,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         editRotation,
         newVersion
       )
-      _ <- tracingDataStore.volumes.put(newTracingId, newVersion, newTracing)
+      _ <- volumeTracingService.saveVolume(newTracingId, newVersion, newTracing)
       _ <- Fox.runIf(!newTracing.getHasEditableMapping)(
         volumeTracingService.duplicateVolumeData(sourceAnnotationId,
                                                  sourceTracingId,

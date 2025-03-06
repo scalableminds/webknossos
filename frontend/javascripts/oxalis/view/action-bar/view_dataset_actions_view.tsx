@@ -6,7 +6,7 @@ import {
   VideoCameraOutlined,
 } from "@ant-design/icons";
 import { Dropdown, type MenuProps } from "antd";
-import type { ItemType, MenuItemType, SubMenuType } from "antd/lib/menu/interface";
+import type { MenuItemType, SubMenuType } from "antd/lib/menu/interface";
 import {
   setPythonClientModalVisibilityAction,
   setRenderAnimationModalVisibilityAction,
@@ -39,26 +39,26 @@ export const renderAnimationMenuItem: MenuItemType = {
   },
 };
 
-export const getViewDatasetMenu = (layoutMenu: SubMenuType<MenuItemType> | null) => {
-  const items: Array<ItemType> = [
-    {
-      key: "share-button",
-      onClick: () => Store.dispatch(setShareModalVisibilityAction(true)),
-      icon: <ShareAltOutlined />,
-      label: "Share",
-    },
-    screenshotMenuItem,
-    renderAnimationMenuItem,
-    {
-      key: "python-client-button",
-      onClick: () => Store.dispatch(setPythonClientModalVisibilityAction(true)),
-      icon: <DownloadOutlined />,
-      label: "Download",
-    },
-  ];
-  if (layoutMenu != null) items.push(layoutMenu);
-  return { items };
+const shareModalMenuItem: MenuItemType = {
+  key: "share-button",
+  onClick: () => Store.dispatch(setShareModalVisibilityAction(true)),
+  icon: <ShareAltOutlined />,
+  label: "Share",
 };
+
+const pythonClientMenuItem: MenuItemType = {
+  key: "python-client-button",
+  onClick: () => Store.dispatch(setPythonClientModalVisibilityAction(true)),
+  icon: <DownloadOutlined />,
+  label: "Download",
+};
+
+export const viewDatasetMenu = [
+  shareModalMenuItem,
+  screenshotMenuItem,
+  renderAnimationMenuItem,
+  pythonClientMenuItem,
+];
 
 export default function ViewDatasetActionsView(props: Props) {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
@@ -84,7 +84,7 @@ export default function ViewDatasetActionsView(props: Props) {
       onClose={() => Store.dispatch(setPythonClientModalVisibilityAction(false))}
     />
   );
-  const overlayMenu: MenuProps = getViewDatasetMenu(props.layoutMenu);
+  const overlayMenu: MenuProps = { items: [...viewDatasetMenu, props.layoutMenu] };
 
   const renderAnimationModal = (
     <CreateAnimationModal

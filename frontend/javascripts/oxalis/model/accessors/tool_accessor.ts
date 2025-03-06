@@ -3,7 +3,6 @@ import {
   getFeatureNotAvailableInPlanMessage,
   isFeatureAllowedByPricingPlan,
 } from "admin/organization/pricing_plan_utils";
-import { capitalize } from "libs/utils";
 import memoizeOne from "memoize-one";
 import { type AnnotationTool, IdentityTransform } from "oxalis/constants";
 import { AnnotationToolEnum } from "oxalis/constants";
@@ -21,6 +20,22 @@ import type { APIOrganization, APIUser } from "types/api_flow_types";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 import { getTransformsPerLayer } from "./dataset_layer_transformation_accessor";
 import { isSkeletonLayerTransformed } from "./skeletontracing_accessor";
+
+export const TOOL_NAMES = {
+  MOVE: "Move",
+  SKELETON: "Skeleton",
+  BRUSH: "Brush",
+  ERASE_BRUSH: "Erase (via Brush)",
+  TRACE: "Trace",
+  ERASE_TRACE: "Erase",
+  FILL_CELL: "Fill Tool",
+  PICK_CELL: "Segment Picker",
+  QUICK_SELECT: "Quick Select Tool",
+  BOUNDING_BOX: "Bounding Box Tool",
+  PROOFREAD: "Proofreading Tool",
+  LINE_MEASUREMENT: "Measurement Tool",
+  AREA_MEASUREMENT: "Area Measurement Tool",
+};
 
 const zoomInToUseToolMessage =
   "Please zoom in further to use this tool. If you want to edit volume data on this zoom level, create an annotation with restricted magnifications from the extended annotation menu in the dashboard.";
@@ -412,8 +427,5 @@ export function adaptActiveToolToShortcuts(
 }
 
 export const getLabelForTool = (tool: AnnotationTool) => {
-  return tool
-    .split("_")
-    .map((word) => capitalize(word.toLowerCase()))
-    .join(" ");
+  return TOOL_NAMES[tool];
 };

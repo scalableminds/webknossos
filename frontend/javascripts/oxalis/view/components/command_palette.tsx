@@ -15,39 +15,39 @@ import { useSelector } from "react-redux";
 import { getThemeFromUser } from "theme";
 import {
   type TracingViewMenuProps,
-  getTracingViewModalsAndMenuItems,
+  getTracingViewMenuItems,
 } from "../action-bar/tracing_actions_view";
-import { getViewDatasetMenu } from "../action-bar/view_dataset_actions_view";
+import { viewDatasetMenu } from "../action-bar/view_dataset_actions_view";
 import { commandPaletteDarkTheme, commandPaletteLightTheme } from "./command_palette_theme";
 
-const getLabelForAction = (action: ItemType) => {
-  if (action == null) return "";
+type CommandWithoutId = Omit<Command, "id">;
+
+const commandEntryColor = "#5660ff";
+
+const getLabelForAction = (action: NonNullable<ItemType>) => {
   if ("title" in action && action.title != null) {
     return action.title;
   }
   if ("label" in action && action.label != null) {
     return action.label.toString();
   }
-  return "";
+  throw new Error("No label found for action");
 };
 
-const mapMenuActionsToCommands = (menuActions: Array<ItemType>): Command[] => {
-  if (menuActions == null) return [];
-  return menuActions
-    .filter((action) => action != null && getLabelForAction(action) != null)
-    .map((action, counter) => {
-      // the typechecker is not able to infer that action is not null here, probably because of the type ItemType
-      const onClickAction =
-        action != null && "onClick" in action && action["onClick"] != null
-          ? action["onClick"]
-          : _.noop;
+const mapMenuActionsToCommands = (menuActions: Array<ItemType>): CommandWithoutId[] => {
+  return _.compact(
+    menuActions.map((action) => {
+      if (action == null) {
+        return null;
+      }
+      const onClickAction = "onClick" in action && action.onClick != null ? action.onClick : _.noop;
       return {
         name: getLabelForAction(action),
         command: onClickAction,
-        color: "#5660ff",
-        id: counter,
+        color: commandEntryColor,
       };
-    });
+    }),
+  );
 };
 
 const getLabelForPath = (key: string) =>
@@ -62,49 +62,69 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
     (state: OxalisState) => state.uiInformation.isInAnnotationView,
   );
 
-  const props: TracingViewMenuProps = useSelector((state: OxalisState) => {
-    return {
-      restrictions: state.tracing.restrictions,
-      task: state.task,
-      annotationType: state.tracing.annotationType,
-      annotationId: state.tracing.annotationId,
-      activeUser: state.activeUser,
-      isAnnotationLockedByUser: state.tracing.isLockedByOwner,
-      annotationOwner: state.tracing.owner,
-      isDownloadModalOpen: state.uiInformation.showDownloadModal,
-      isRenderAnimationModalOpen: state.uiInformation.showRenderAnimationModal,
-      isShareModalOpen: state.uiInformation.showShareModal,
-      isMergeModalOpen: state.uiInformation.showMergeAnnotationModal,
-      isZarrPrivateLinksModalOpen: state.uiInformation.showZarrPrivateLinksModal,
-      isUserScriptsModalOpen: state.uiInformation.showAddScriptModal,
-    };
-  });
+  const restrictions = useSelector((state: OxalisState) => state.tracing.restrictions);
+  const task = useSelector((state: OxalisState) => state.task);
+  const annotationType = useSelector((state: OxalisState) => state.tracing.annotationType);
+  const annotationId = useSelector((state: OxalisState) => state.tracing.annotationId);
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const isAnnotationLockedByUser = useSelector(
+    (state: OxalisState) => state.tracing.isLockedByOwner,
+  );
+  const annotationOwner = useSelector((state: OxalisState) => state.tracing.owner);
+  const isDownloadModalOpen = useSelector(
+    (state: OxalisState) => state.uiInformation.showDownloadModal,
+  );
+  const isRenderAnimationModalOpen = useSelector(
+    (state: OxalisState) => state.uiInformation.showRenderAnimationModal,
+  );
+  const isShareModalOpen = useSelector((state: OxalisState) => state.uiInformation.showShareModal);
+  const isMergeModalOpen = useSelector(
+    (state: OxalisState) => state.uiInformation.showMergeAnnotationModal,
+  );
+  const isZarrPrivateLinksModalOpen = useSelector(
+    (state: OxalisState) => state.uiInformation.showZarrPrivateLinksModal,
+  );
+  const isUserScriptsModalOpen = useSelector(
+    (state: OxalisState) => state.uiInformation.showAddScriptModal,
+  );
 
-  const { activeUser, restrictions } = props;
+  const props: TracingViewMenuProps = {
+    restrictions,
+    task,
+    annotationType,
+    annotationId,
+    activeUser,
+    isAnnotationLockedByUser,
+    annotationOwner,
+    isDownloadModalOpen,
+    isRenderAnimationModalOpen,
+    isShareModalOpen,
+    isMergeModalOpen,
+    isZarrPrivateLinksModalOpen,
+    isUserScriptsModalOpen,
+  };
 
   const theme = getThemeFromUser(activeUser);
 
   const getMenuActions = (isViewMode: boolean) => {
     if (!isInTracingView) return [];
     if (isViewMode) {
-      const { items } = getViewDatasetMenu(null);
-      return items;
+      return viewDatasetMenu;
     }
-    const { menuItems } = getTracingViewModalsAndMenuItems(props, null);
+    const menuItems = getTracingViewMenuItems(props, null);
     return menuItems;
   };
 
   const getTabsAndSettingsMenuItems = () => {
     if (!isInTracingView) return [];
-    const commands: Command[] = [];
+    const commands: CommandWithoutId[] = [];
 
-    (Object.keys(userConfig) as [keyof UserConfiguration]).forEach((key, counter) => {
+    (Object.keys(userConfig) as [keyof UserConfiguration]).forEach((key) => {
       if (typeof userConfig[key] === "boolean") {
         commands.push({
-          id: counter,
           name: `Toggle ${getPhraseFromCamelCaseString(key)}`,
           command: () => Store.dispatch(updateUserSettingAction(key, !userConfig[key])),
-          color: "#5660ff",
+          color: commandEntryColor,
         });
       }
     });
@@ -113,7 +133,7 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
 
   const getNavigationEntries = () => {
     if (activeUser == null) return [];
-    const commands: Command[] = [];
+    const commands: CommandWithoutId[] = [];
     const basicNavigationEntries = [
       { name: "Tasks (Dashboard)", path: "/dashboard/tasks" },
       { name: "Annotations", path: "/dashboard/annotations" },
@@ -122,10 +142,12 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
     ];
 
     const adminMenu = getAdministrationSubMenu(false, activeUser);
-    const adminCommands: Array<{ name: string; path: string }> = [];
-    adminMenu?.children.map((entry: { key: string }) => {
-      adminCommands.push({ name: getLabelForPath(entry.key), path: entry.key });
-    });
+    const adminCommands =
+      adminMenu == null
+        ? []
+        : adminMenu.children.map((entry: { key: string }) => {
+            return { name: getLabelForPath(entry.key), path: entry.key };
+          });
 
     const statisticsCommands = Utils.isUserAdminOrManager(activeUser)
       ? [
@@ -142,14 +164,13 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
 
     const navigationEntries = [...basicNavigationEntries, ...adminCommands, ...statisticsCommands];
 
-    navigationEntries.forEach((entry, counter) => {
+    navigationEntries.forEach((entry) => {
       commands.push({
-        id: counter,
         name: `Navigate to ${entry.name}`,
         command: () => {
           window.location.href = entry.path;
         },
-        color: "#5660ff",
+        color: commandEntryColor,
       });
     });
 
@@ -158,17 +179,16 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
 
   const getToolEntries = () => {
     if (!isInTracingView) return [];
-    const commands: Command[] = [];
+    const commands: CommandWithoutId[] = [];
     let availableTools = Object.keys(AnnotationToolEnum) as [keyof typeof AnnotationToolEnum];
     if (isViewMode || !restrictions.allowUpdate) {
       availableTools = AvailableToolsInViewMode as [keyof typeof AnnotationToolEnum];
     }
-    availableTools.forEach((tool, counter) => {
+    availableTools.forEach((tool) => {
       commands.push({
-        id: counter,
         name: `Switch to ${getLabelForTool(tool)} Tool`,
         command: () => Store.dispatch(setToolAction(tool)),
-        color: "#5660ff",
+        color: commandEntryColor,
       });
     });
     return commands;

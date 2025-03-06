@@ -200,7 +200,8 @@ class TSAnnotationController @Inject()(
             mergedSkeletonOpt <- Fox.runIf(skeletonTracings.nonEmpty)(
               skeletonTracingService.merge(skeletonTracings, newVersion = newTargetVersion).toFox)
             _ <- Fox.runOptional(mergedSkeletonOpt)(
-              skeletonTracingService.saveSkeleton(_, newSkeletonId, version = newTargetVersion, toTemporaryStore))
+              skeletonTracingService
+                .saveSkeleton(newSkeletonId, version = newTargetVersion, _, toTemporaryStore = toTemporaryStore))
             mergedSkeletonLayerOpt = mergedSkeletonOpt.map(
               _ =>
                 AnnotationLayerProto(name = mergedSkeletonName,

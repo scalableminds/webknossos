@@ -30,6 +30,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume._
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Full}
+import org.checkerframework.checker.units.qual.N
 import play.api.libs.json.{JsObject, JsValue, Json}
 
 import javax.inject.Inject
@@ -581,18 +582,10 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     for {
       // All tree bodies that were changed by the update actions need to be stored
       updatedTreeIds <- annotationWithTracings.getUpdatedTreeBodyIdsForSkeleton(skeletonTracingId).toFox
-      // All tree bodies that were previously not stored externally need to be stored
-      treeBodyIdsToMigrate = skeletonTracing.trees.filter(!_.getHasExternalTreeBody).map(_.treeId).toSet
-      nowPresentTrees = skeletonTracing.trees.map(_.treeId).toSet
-      treeIdsToFlush = nowPresentTrees.intersect(updatedTreeIds.union(treeBodyIdsToMigrate))
-      _ <- Fox.serialCombined(treeIdsToFlush) { treeId =>
-        for {
-          treeBody <- skeletonTracingService.extractTreeBody(skeletonTracing, treeId)
-          _ <- tracingDataStore.skeletonTreeBodies.put(f"$skeletonTracingId/$treeId", skeletonTracing.version, treeBody)
-        } yield ()
-      }
-      skeletonWithoutExtraTreeInfo = skeletonTracingService.stripTreeBodies(skeletonTracing)
-      _ <- tracingDataStore.skeletons.put(skeletonTracingId, skeletonTracing.version, skeletonWithoutExtraTreeInfo)
+      _ <- skeletonTracingService.saveSkeleton(skeletonTracingId,
+                                               skeletonTracing.version,
+                                               skeletonTracing,
+                                               flushOnlyTheseTreeIds = Some(updatedTreeIds))
     } yield ()
 
   private def flushAnnotationInfo(annotationId: String, annotationWithTracings: AnnotationWithTracings) =
@@ -657,7 +650,6 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
               .get[TreeBody](s"$tracingId/${tree.treeId}", version)(fromProtoBytes[TreeBody])
             treeBody <- treeBodyKeyValuePair.value
           } yield {
-            // note: hasExternalTreeBody is untouched here, to mark which trees are already stored in skeletonTreeBodies. This information is used when flushing again.
             tree.copy(nodes = treeBody.nodes, edges = treeBody.edges)
           }
         } else Fox.successful(tree)
@@ -938,7 +930,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                                                                          editRotation,
                                                                          boundingBox,
                                                                          newVersion)
-      _ <- tracingDataStore.skeletons.put(newTracingId, newVersion, adaptedSkeleton)
+      _ <- skeletonTracingService.saveSkeleton(newTracingId, newVersion, adaptedSkeleton)
     } yield ()
 
 }

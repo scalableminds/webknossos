@@ -30,7 +30,7 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
 
   def requestJobs(key: String): Action[AnyContent] = Action.async { implicit request =>
     for {
-      worker <- workerDAO.findOneByKey(key) ?~> "jobs.worker.notFound"
+      worker <- workerDAO.findOneByKey(key) ?~> "job.worker.notFound"
       _ = workerDAO.updateHeartBeat(worker._id)
       _ <- reserveNextJobs(worker, pendingIterationCount = 10)
       assignedUnfinishedJobs: List[Job] <- jobDAO.findAllUnfinishedByWorker(worker._id)
@@ -77,12 +77,12 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
   def updateJobStatus(key: String, id: ObjectId): Action[JobStatus] = Action.async(validateJson[JobStatus]) {
     implicit request =>
       for {
-        _ <- workerDAO.findOneByKey(key) ?~> "jobs.worker.notFound"
+        _ <- workerDAO.findOneByKey(key) ?~> "job.worker.notFound"
         jobBeforeChange <- jobDAO.findOne(id)(GlobalAccessContext)
         _ <- jobDAO.updateStatus(id, request.body)
-        jobAfterChange <- jobDAO.findOne(id)(GlobalAccessContext)
+        jobAfterChange <- jobDAO.findOne(id)(GlobalAccessContext) ?~> "job.notFound"
         _ = jobService.trackStatusChange(jobBeforeChange, jobAfterChange)
-        _ <- jobService.cleanUpIfFailed(jobAfterChange)
+        _ <- jobService.cleanUpIfFailed(jobAfterChange) ?~> "job.cleanup.failed"
         _ <- Fox.runIf(request.body.state == JobState.SUCCESS) {
           creditTransactionService.completeTransactionOfJob(jobAfterChange._id)(GlobalAccessContext)
         }
@@ -96,7 +96,7 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
   def attachVoxelyticsWorkflow(key: String, id: ObjectId): Action[String] = Action.async(validateJson[String]) {
     implicit request =>
       for {
-        _ <- workerDAO.findOneByKey(key) ?~> "jobs.worker.notFound"
+        _ <- workerDAO.findOneByKey(key) ?~> "job.worker.notFound"
         _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
         organizationId <- jobDAO.organizationIdForJobId(id) ?~> "job.notFound"
         workflowHash = request.body
@@ -114,7 +114,7 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
     Action.async(validateJson[String]) { implicit request =>
       implicit val ctx: DBAccessContext = GlobalAccessContext
       for {
-        _ <- workerDAO.findOneByKey(key) ?~> "jobs.worker.notFound"
+        _ <- workerDAO.findOneByKey(key) ?~> "job.worker.notFound"
         organizationId <- jobDAO.organizationIdForJobId(id) ?~> "job.notFound"
         dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(request.body, organizationId)
         aiInference <- aiInferenceDAO.findOneByJobId(id) ?~> "aiInference.notFound"

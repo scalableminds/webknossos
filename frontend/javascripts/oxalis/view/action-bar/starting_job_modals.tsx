@@ -400,7 +400,7 @@ function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) {
           <Space align="center">
             <Radio.Button
               className="aIJobSelection"
-              checked={aIJobModalState === "infer_neurons"}
+              checked={aIJobModalState === APIJobType.INFER_NEURONS}
               onClick={() => dispatch(setAIJobModalStateAction(APIJobType.INFER_NEURONS))}
             >
               <Card bordered={false}>
@@ -420,7 +420,7 @@ function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) {
               <Radio.Button
                 className="aIJobSelection"
                 disabled={!isSuperUser}
-                checked={aIJobModalState === "infer_mitochondria"}
+                checked={aIJobModalState === APIJobType.INFER_MITOCHONDRIA}
                 onClick={() => dispatch(setAIJobModalStateAction(APIJobType.INFER_MITOCHONDRIA))}
               >
                 <Card bordered={false}>
@@ -441,7 +441,7 @@ function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) {
               <Radio.Button
                 className="aIJobSelection"
                 disabled
-                checked={aIJobModalState === "infer_nuclei"}
+                checked={aIJobModalState === APIJobType.INFER_NUCLEI}
                 onClick={() => dispatch(setAIJobModalStateAction(APIJobType.INFER_NUCLEI))}
               >
                 <Card bordered={false}>
@@ -459,10 +459,12 @@ function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) {
               </Radio.Button>
             </Tooltip>
           </Space>
-          {aIJobModalState === "infer_neurons" ? <NeuronSegmentationForm /> : null}
-          {aIJobModalState === "infer_nuclei" ? <NucleiDetectionForm /> : null}
-          {aIJobModalState === "infer_mitochondria" ? <MitochondriaSegmentationForm /> : null}
-          {aIJobModalState === "align_sections" ? <AlignSectionsForm /> : null}
+          {aIJobModalState === APIJobType.INFER_NEURONS ? <NeuronSegmentationForm /> : null}
+          {aIJobModalState === APIJobType.INFER_NUCLEI ? <NucleiDetectionForm /> : null}
+          {aIJobModalState === APIJobType.INFER_MITOCHONDRIA ? (
+            <MitochondriaSegmentationForm />
+          ) : null}
+          {aIJobModalState === APIJobType.ALIGN_SECTIONS ? <AlignSectionsForm /> : null}
         </>
       )}
     </Space>

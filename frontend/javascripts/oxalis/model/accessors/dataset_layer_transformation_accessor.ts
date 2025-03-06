@@ -191,6 +191,10 @@ export function isLayerWithoutTransformationConfigSupport(layer: APIDataLayer | 
   );
 }
 
+function toIdentityTransformMaybe(transform: Transform | null): Transform {
+  return transform && !isIdentityTransform(transform) ? transform : IdentityTransform;
+}
+
 function _getTransformsForLayerOrNull(
   dataset: APIDataset,
   layer: APIDataLayer | APISkeletonLayer,
@@ -210,7 +214,7 @@ function _getTransformsForLayerOrNull(
   const layerTransforms = getOriginalTransformsForLayerOrNull(dataset, layer as APIDataLayer);
   if (nativelyRenderedLayerName == null) {
     // No layer is requested to be rendered natively. -> We can use the layer's transforms as is.
-    return layerTransforms;
+    return toIdentityTransformMaybe(layerTransforms);
   }
 
   // Apply the inverse of the layer that should be rendered natively
@@ -221,11 +225,11 @@ function _getTransformsForLayerOrNull(
   if (transformsOfNativeLayer == null) {
     // The inverse of no transforms, are no transforms. Leave the layer
     // transforms untouched.
-    return layerTransforms;
+    return toIdentityTransformMaybe(layerTransforms);
   }
 
   const inverseNativeTransforms = invertTransform(transformsOfNativeLayer);
-  return chainTransforms(layerTransforms, inverseNativeTransforms);
+  return toIdentityTransformMaybe(chainTransforms(layerTransforms, inverseNativeTransforms));
 }
 
 export const getTransformsForLayerOrNull = memoizeWithThreeKeys(_getTransformsForLayerOrNull);
@@ -239,7 +243,7 @@ export function getTransformsForLayer(
   );
 }
 
-export function isIdentityTransform(transform: Transform) {
+function isIdentityTransform(transform: Transform) {
   return transform.type === "affine" && _.isEqual(transform.affineMatrix, Identity4x4);
 }
 

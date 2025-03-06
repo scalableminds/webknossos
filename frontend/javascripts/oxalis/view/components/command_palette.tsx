@@ -12,12 +12,13 @@ import type { OxalisState, UserConfiguration } from "oxalis/store";
 import type { Command } from "react-command-palette";
 import ReactCommandPalette from "react-command-palette";
 import { useSelector } from "react-redux";
+import { getThemeFromUser } from "theme";
 import {
   type TracingViewMenuProps,
   getTracingViewModalsAndMenuItems,
 } from "../action-bar/tracing_actions_view";
 import { getViewDatasetMenu } from "../action-bar/view_dataset_actions_view";
-import command_palette_theme from "./command_palette_theme";
+import { commandPaletteDarkTheme, commandPaletteLightTheme } from "./command_palette_theme";
 
 const getLabelForAction = (action: ItemType) => {
   if (action == null) return "";
@@ -80,6 +81,8 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
   });
 
   const { activeUser, restrictions } = props;
+
+  const theme = getThemeFromUser(activeUser);
 
   const getMenuActions = (isViewMode: boolean) => {
     if (!isInTracingView) return [];
@@ -193,7 +196,7 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
         closeOnSelect
         resetInputOnOpen
         maxDisplayed={100}
-        theme={command_palette_theme}
+        theme={theme === "light" ? commandPaletteLightTheme : commandPaletteDarkTheme}
       />
     </div>
   );

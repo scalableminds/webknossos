@@ -17,6 +17,7 @@ import {
   getTracingViewModalsAndMenuItems,
 } from "../action-bar/tracing_actions_view";
 import { getViewDatasetMenu } from "../action-bar/view_dataset_actions_view";
+import command_palette_theme from "./command_palette_theme";
 
 const getLabelForAction = (action: ItemType) => {
   if (action == null) return "";
@@ -192,6 +193,7 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
         closeOnSelect
         resetInputOnOpen
         maxDisplayed={100}
+        theme={command_palette_theme}
       />
     </div>
   );

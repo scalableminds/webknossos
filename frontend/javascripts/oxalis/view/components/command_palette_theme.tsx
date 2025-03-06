@@ -1,0 +1,18 @@
+export default {
+  modal: "command-palette-modal",
+  overlay: "command-palette-overlay",
+  container: "command-palette-container",
+  content: "command-palette-content",
+  containerOpen: "command-palette-containerOpen",
+  input: "command-palette-input",
+  inputOpen: "command-palette-inputOpen",
+  inputFocused: "command-palette-inputFocused",
+  spinner: "command-palette-spinner",
+  suggestionsContainer: "command-palette-suggestionsContainer",
+  suggestionsContainerOpen: "command-palette-suggestionsContainerOpen",
+  suggestionsList: "command-palette-suggestionsList",
+  suggestion: "command-palette-suggestion",
+  suggestionFirst: "command-palette-suggestionFirst",
+  suggestionHighlighted: "command-palette-suggestionHighlighted",
+  trigger: "command-palette-trigger",
+};

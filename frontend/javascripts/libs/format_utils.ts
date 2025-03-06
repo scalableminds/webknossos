@@ -561,3 +561,7 @@ export function formatCreditsString(credits: string): string {
     .replace(/(\.\d*?[1-9])0+$/g, "$1") // Remove trailing zeros after decimal
     .replace(/\.0*$/g, ""); // Remove the decimal point if no digits remain
 }
+
+export function formatCurrency(amount: number, currency: string): string {
+  return `${amount.toFixed(2)}${ThinSpace}${currency}`;
+}

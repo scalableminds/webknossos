@@ -23,6 +23,7 @@ import type { APIOrganization } from "types/api_flow_types";
 import { TeamAndPowerPlanUpgradeCards } from "./organization_cards";
 import { powerPlanFeatures, teamPlanFeatures } from "./pricing_plan_utils";
 import { PricingPlanEnum } from "./pricing_plan_utils";
+import { formatCurrency } from "libs/format_utils";
 
 const ModalInformationFooter = (
   <>
@@ -308,8 +309,8 @@ const CREDIT_COST_USD = 5.75;
 
 function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
   const userInputRef = useRef<HTMLInputElement | null>(null);
-  const [costsAsString, setCostsAsString] = useState<string>("5€/5.75$");
-  const recalculateCosts = (newCosts: number | null) => {
+  const [costAsString, setCostsAsString] = useState<string>("5€/5.75$");
+  const recalculateCost = (newCosts: number | null) => {
     // TODOM: Remove magic numbers. E.g. put them into application configuration.
     if (newCosts == null) {
       return;
@@ -331,8 +332,8 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
 
   return (
     <Modal
-      title={<>Buy more WEBKNOSSOS Credits</>}
-      okText={`Buy more WEBKNOSSOS Credits for ${costsAsString}`}
+      title="Buy more WEBKNOSSOS Credits"
+      okText={`Buy more WEBKNOSSOS Credits for ${costAsString}`}
       onOk={handleOrderCredits}
       onCancel={destroy}
       width={800}
@@ -341,7 +342,7 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
       <div className="drawing-upgrade-users">
         <p style={{ marginRight: "30%" }}>
           You can buy new WEBKNOSSOS credits to pay for premium jobs and services. Each credit costs
-          5€ or 5.75$.
+          {formatCurrency(5, "€")} or {formatCurrency(5.75, "$")}.
         </p>
         <div>Amount of credits to order:</div>
         <div>
@@ -351,15 +352,15 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
             step={1}
             ref={userInputRef}
             size="large"
-            onChange={recalculateCosts}
+            onChange={recalculateCost}
           />
         </div>
-        Total resulting costs: {costsAsString}
+        Total resulting cost: {costAsString}
         <>
           <Divider style={{ marginTop: 40 }} />
           <p style={{ color: "#aaa", fontSize: 12 }}>
             Ordering WEBKNOSSOS credits for your organization will send an email to the WEBKNOSSOS
-            sales team. They will top up your accound with the requested amount of credits and send
+            sales team. They will top up your account with the requested amount of credits and send
             you an invoice with the required costs. We typically respond within one business day.
             See our <a href="https://webknossos.org/faq">FAQ</a> for more information.
           </p>

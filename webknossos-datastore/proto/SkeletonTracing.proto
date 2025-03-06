@@ -57,7 +57,6 @@ message Tree {
   optional TreeTypeProto type = 11;
   optional bool edgesAreVisible = 12; // `None` means `true`
   repeated MetadataEntryProto metadata = 13;
-  optional bool hasExternalTreeBody = 14;
 }
 
 message TreeGroup {

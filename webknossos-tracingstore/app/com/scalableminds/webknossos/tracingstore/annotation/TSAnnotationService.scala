@@ -643,8 +643,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     for {
       skeletonRawKeyValuePair <- findSkeletonRaw(tracingId, version)
       skeletonRaw = skeletonRawKeyValuePair.value
-      newTrees: Seq[Tree] <- Fox.serialCombined(skeletonRaw.trees) { tree =>
-        if (tree.getHasExternalTreeBody) {
+      newTrees: Seq[Tree] <- if (skeletonRaw.getStoredWithExternalTreeBodies) {
+        Fox.serialCombined(skeletonRaw.trees) { tree =>
           for {
             treeBodyKeyValuePair <- tracingDataStore.skeletonTreeBodies
               .get[TreeBody](s"$tracingId/${tree.treeId}", version)(fromProtoBytes[TreeBody])
@@ -652,8 +652,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
           } yield {
             tree.copy(nodes = treeBody.nodes, edges = treeBody.edges)
           }
-        } else Fox.successful(tree)
-      }
+        }
+      } else Fox.successful(skeletonRaw.trees)
       newSkeletonRaw = skeletonRaw.copy(trees = newTrees)
     } yield skeletonRawKeyValuePair.copy(value = newSkeletonRaw)
 

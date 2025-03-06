@@ -14,6 +14,7 @@ import {
 import { Button, Divider, InputNumber, Modal } from "antd";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import dayjs from "dayjs";
+import { formatCurrency } from "libs/format_utils";
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -23,7 +24,6 @@ import type { APIOrganization } from "types/api_flow_types";
 import { TeamAndPowerPlanUpgradeCards } from "./organization_cards";
 import { powerPlanFeatures, teamPlanFeatures } from "./pricing_plan_utils";
 import { PricingPlanEnum } from "./pricing_plan_utils";
-import { formatCurrency } from "libs/format_utils";
 
 const ModalInformationFooter = (
   <>

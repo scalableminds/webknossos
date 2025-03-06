@@ -1,0 +1,133 @@
+// adapted from react-command-palette package
+// https://github.com/asabaylus/react-command-palette/blob/main/src/themes/atom.css
+
+@import "_variables.less";
+
+.command-palette-modal,
+.command-palette-overlay,
+.command-palette-container.command-palette-containerOpen,
+.command-palette-content.command-palette-header,
+.command-palette-input,
+.command-palette-inputFocused,
+.command-palette-suggestionsContainer,
+.command-palette-suggestionsContainerOpen,
+.command-palette-suggestionsList,
+.command-palette-suggestion,
+.command-palette-suggestionFirst,
+.command-palette-suggestionHighlighted {
+  --box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.1);
+  --color-bg: var(--color-dark-grey);
+  --color-border: var(--color-grey-spotlight);
+  --color-text: var(--color-light-grey);
+  --color-caret: var(--color-wk-blue);
+  --color-highlight: var(--color-grey-spotlight);
+  .light-theme {
+    --color-bg: var(--color-white);
+    --color-text: var(--color-black);
+    --color-highlight: var(--color-light-grey-spotlight);
+    --color-border: var(--color-light-grey-spotlight);
+  }
+}
+
+.command-palette-modal {
+  width: 605px;
+  position: absolute;
+  top: 80px;
+  left: 50%;
+  right: auto;
+  bottom: auto;
+  border: 0px none;
+  background: var(--color-bg);
+  overflow: hidden;
+  border-radius: 4px;
+  outline: none;
+  padding: 10px;
+  box-shadow: var(--box-shadow);
+  margin-right: -50%;
+  transform: translate(-50%, 0px);
+}
+
+.command-palette-overlay {
+  position: fixed;
+  top: 0px;
+  left: 0px;
+  right: 0px;
+  bottom: 0px;
+  background-color: rgba(0, 0, 0, 0.75);
+}
+
+.command-palette-header {
+  color: var(--color-text);
+}
+
+.command-palette-content {
+  box-shadow: var(--box-shadow);
+  position: absolute;
+  top: 80px;
+  left: 50%;
+  right: auto;
+  bottom: auto;
+  margin-right: -50%;
+  transform: translate(-50%, 0);
+  border: 0px none;
+  background: var(--color-bg);
+  overflow: hidden;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 4px;
+  outline: none;
+  padding: 10px;
+  min-width: 600px;
+}
+
+.command-palette-container {
+  font-size: 14px;
+}
+
+.command-palette-input {
+  font-size: 14px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  width: 590px;
+  padding: 6px;
+  outline: none;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  caret-color: var(--color-text);
+}
+
+.command-palette-inputFocused {
+  border: 1px solid var(--color-caret);
+  background-color: var(--color-bg);
+}
+
+.command-palette-suggestionsContainerOpen {
+  overflow: hidden;
+  border: 1px solid var(--color-bg);
+  max-height: 315px;
+  margin-top: 10px;
+}
+
+.command-palette-suggestionsList {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 0;
+  margin-top: 0;
+}
+
+.command-palette-suggestion {
+  color: var(--color-text);
+  border: 1px solid var(--color-bg);
+  border-top: 0px none;
+  background-color: var(--color-bg);
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.command-palette-suggestion b {
+  color: var(--color-caret);
+}
+
+.command-palette-suggestionHighlighted {
+  color: var(--color-text);
+  background-color: var(--color-highlight);
+}

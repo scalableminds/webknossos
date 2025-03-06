@@ -17,7 +17,7 @@ import com.scalableminds.webknossos.datastore.models.annotation.{
 }
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.tracingstore.tracings.TracingType
+import com.scalableminds.webknossos.tracingstore.tracings.{TracingId, TracingType}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   VolumeDataZipFormat,
@@ -28,7 +28,6 @@ import com.typesafe.scalalogging.LazyLogging
 
 import javax.inject.Inject
 import net.liftweb.common.Empty
-
 import models.analytics.{AnalyticsService, DownloadAnnotationEvent, UploadAnnotationEvent}
 import models.annotation.AnnotationState._
 import models.annotation._
@@ -129,7 +128,9 @@ class AnnotationIOController @Inject()(
           usableDataSource <- dataSource.toUsable.toFox ?~> Messages("dataset.notImported", dataset.name)
           volumeLayersGrouped <- adaptVolumeTracingsToFallbackLayer(volumeLayersGroupedRaw, dataset, usableDataSource)
           tracingStoreClient <- tracingStoreService.clientFor(dataset)
-          mergedVolumeLayers <- mergeAndSaveVolumeLayers(volumeLayersGrouped,
+          newAnnotationId = ObjectId.generate
+          mergedVolumeLayers <- mergeAndSaveVolumeLayers(newAnnotationId,
+                                                         volumeLayersGrouped,
                                                          tracingStoreClient,
                                                          parsedFiles.otherFiles,
                                                          usableDataSource)
@@ -158,7 +159,8 @@ class AnnotationIOController @Inject()(
       }
   }
 
-  private def mergeAndSaveVolumeLayers(volumeLayersGrouped: Seq[List[UploadedVolumeLayer]],
+  private def mergeAndSaveVolumeLayers(newAnnotationId: ObjectId,
+                                       volumeLayersGrouped: Seq[List[UploadedVolumeLayer]],
                                        client: WKRemoteTracingStoreClient,
                                        otherFiles: Map[String, File],
                                        dataSource: DataSourceLike): Fox[List[AnnotationLayer]] =
@@ -170,13 +172,16 @@ class AnnotationIOController @Inject()(
       Fox.serialCombined(volumeLayersGrouped.toList.flatten.zipWithIndex) { volumeLayerWithIndex =>
         val uploadedVolumeLayer = volumeLayerWithIndex._1
         val idx = volumeLayerWithIndex._2
+        val newTracingId = TracingId.generate
         for {
-          savedTracingId <- client.saveVolumeTracing(uploadedVolumeLayer.tracing,
-                                                     uploadedVolumeLayer.getDataZipFrom(otherFiles),
-                                                     dataSource = Some(dataSource))
+          _ <- client.saveVolumeTracing(newAnnotationId,
+                                        newTracingId,
+                                        uploadedVolumeLayer.tracing,
+                                        uploadedVolumeLayer.getDataZipFrom(otherFiles),
+                                        dataSource = Some(dataSource))
         } yield
           AnnotationLayer(
-            savedTracingId,
+            newTracingId,
             AnnotationLayerType.Volume,
             uploadedVolumeLayer.name.getOrElse(AnnotationLayer.defaultVolumeLayerName + idx.toString),
             AnnotationLayerStatistics.unknown
@@ -184,8 +189,11 @@ class AnnotationIOController @Inject()(
       }
     } else { // Multiple annotations with volume layers (but at most one each) was uploaded merge those volume layers into one
       val uploadedVolumeLayersFlat = volumeLayersGrouped.toList.flatten
+      val newTracingId = TracingId.generate
       for {
-        mergedTracingId <- client.mergeVolumeTracingsByContents(
+        _ <- client.mergeVolumeTracingsByContents(
+          newAnnotationId,
+          newTracingId,
           VolumeTracings(uploadedVolumeLayersFlat.map(v => VolumeTracingOpt(Some(v.tracing)))),
           dataSource,
           uploadedVolumeLayersFlat.map(v => v.getDataZipFrom(otherFiles))
@@ -193,7 +201,7 @@ class AnnotationIOController @Inject()(
       } yield
         List(
           AnnotationLayer(
-            mergedTracingId,
+            newTracingId,
             AnnotationLayerType.Volume,
             AnnotationLayer.defaultVolumeLayerName,
             AnnotationLayerStatistics.unknown
@@ -205,12 +213,14 @@ class AnnotationIOController @Inject()(
     if (skeletonTracings.isEmpty)
       Fox.successful(List())
     else {
+      val newTracingId = TracingId.generate
       for {
-        mergedTracingId <- tracingStoreClient.mergeSkeletonTracingsByContents(
+        _ <- tracingStoreClient.mergeSkeletonTracingsByContents(
+          newTracingId,
           SkeletonTracings(skeletonTracings.map(t => SkeletonTracingOpt(Some(t)))))
       } yield
         List(
-          AnnotationLayer(mergedTracingId,
+          AnnotationLayer(newTracingId,
                           AnnotationLayerType.Skeleton,
                           AnnotationLayer.defaultSkeletonLayerName,
                           AnnotationLayerStatistics.unknown))

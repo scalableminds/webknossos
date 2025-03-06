@@ -110,30 +110,25 @@ object ElementClass extends ExtendedEnumeration {
     case ElementClass.int64  => 8
   }
 
-  def volumeTracingElementClassProtoId(elementClass: ElementClass.Value): Int = elementClass match {
-    case ElementClass.uint8  => 1
-    case ElementClass.uint16 => 2
-    case ElementClass.uint24 => 3
-    case ElementClass.uint32 => 4
-    case ElementClass.uint64 => 8
-    case ElementClass.int8   => 11
-    case ElementClass.int16  => 12
-    case ElementClass.int32  => 14
-    case ElementClass.int64  => 18
+  private val protoFieldNumberToElementClass: Map[Int, ElementClass.Value] = Map(
+    1 -> ElementClass.uint8,
+    2 -> ElementClass.uint16,
+    3 -> ElementClass.uint24,
+    4 -> ElementClass.uint32,
+    8 -> ElementClass.uint64,
+    11 -> ElementClass.int8,
+    12 -> ElementClass.int16,
+    14 -> ElementClass.int32,
+    18 -> ElementClass.int64
+  )
+
+
+  def volumeTracingElementClassProtoFieldNumber(elementClass: ElementClass.Value): Int ={
+    protoFieldNumberToElementClass.find(_._2 == elementClass).get._1
   }
 
-  /* ambiguous, we will always guess the unsigned integer options */
-  def fromVolumeTracingElementClassProtoId(protoEnumId: Int): Option[ElementClass.Value] = protoEnumId match {
-    case 1  => Some(ElementClass.uint8)
-    case 2  => Some(ElementClass.uint16)
-    case 3  => Some(ElementClass.uint24)
-    case 4  => Some(ElementClass.uint32)
-    case 8  => Some(ElementClass.uint64)
-    case 11 => Some(ElementClass.int8)
-    case 12 => Some(ElementClass.int16)
-    case 14 => Some(ElementClass.int32)
-    case 18 => Some(ElementClass.int64)
-    case _  => None
+  def fromVolumeTracingElementClassProtoFieldNumber(protoEnumFieldNumber: Int): Option[ElementClass.Value] = {
+    protoFieldNumberToElementClass.get(protoEnumFieldNumber)
   }
 
   /* only used for segmentation layers, so only unsigned integers 8 16 32 64 */

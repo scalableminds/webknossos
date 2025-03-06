@@ -427,5 +427,9 @@ export function adaptActiveToolToShortcuts(
 }
 
 export const getLabelForTool = (tool: AnnotationTool) => {
-  return TOOL_NAMES[tool];
+  const toolName = TOOL_NAMES[tool];
+  if (toolName.endsWith("Tool")) {
+    return toolName;
+  }
+  return `${toolName} Tool`;
 };

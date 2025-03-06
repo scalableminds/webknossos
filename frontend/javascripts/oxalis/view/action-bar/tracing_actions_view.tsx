@@ -448,7 +448,7 @@ export const getTracingViewMenuItems = (
     });
   }
 
-  menuItems.push(layoutMenu);
+  layoutMenu != null && menuItems.push(layoutMenu);
 
   if (restrictions.allowSave && !task) {
     menuItems.push({

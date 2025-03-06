@@ -165,7 +165,7 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
     }
     availableTools.forEach((tool) => {
       commands.push({
-        name: `Switch to ${getLabelForTool(tool)} Tool`,
+        name: `Switch to ${getLabelForTool(tool)}`,
         command: () => Store.dispatch(setToolAction(tool)),
         color: commandEntryColor,
       });

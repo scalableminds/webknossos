@@ -289,19 +289,18 @@ class AnnotationService @Inject()(
       _ <- tracingStoreClient.saveAnnotationProto(annotationId, annotationProto)
     } yield newAnnotationLayers
 
-  def createExplorationalFor(user: User,
-                             datasetId: ObjectId,
-                             annotationLayerParameters: List[AnnotationLayerParameters])(
+  def createExplorationalFor(user: User, dataset: Dataset, annotationLayerParameters: List[AnnotationLayerParameters])(
       implicit ctx: DBAccessContext,
-      m: MessagesProvider): Fox[Annotation] =
+      m: MessagesProvider): Fox[Annotation] = {
+    val newAnnotationId = ObjectId.generate
+    val datasetId = dataset._id
     for {
-      dataset <- datasetDAO.findOne(datasetId) ?~> "dataset.noAccessById"
-      newAnnotationId = ObjectId.generate
       annotationLayers <- createLayersForExplorational(dataset, newAnnotationId, annotationLayerParameters) ?~> "annotation.createTracings.failed"
       teamId <- selectSuitableTeam(user, dataset) ?~> "annotation.create.forbidden"
       annotation = Annotation(newAnnotationId, datasetId, None, teamId, user._id, annotationLayers)
       _ <- annotationDAO.insertOne(annotation)
     } yield annotation
+  }
 
   // WARNING: needs to be repeatable, might be called multiple times for an annotation
   def finish(annotation: Annotation, user: User, restrictions: AnnotationRestrictions)(

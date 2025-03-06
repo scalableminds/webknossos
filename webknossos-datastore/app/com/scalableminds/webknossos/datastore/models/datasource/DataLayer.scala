@@ -43,7 +43,7 @@ object Category extends ExtendedEnumeration {
 object ElementClass extends ExtendedEnumeration {
   val uint8, uint16, uint24, uint32, uint64, float, double, int8, int16, int32, int64 = Value
 
-  def segmentationElementClasses: Set[Value] = Set(uint8, uint16, uint32, uint64)
+  def segmentationElementClasses: Set[Value] = Set(uint8, uint16, uint32, uint64, int8, int16, int32, int64)
 
   def encodeAsByte(elementClass: ElementClass.Value): Byte = {
     val asInt = elementClass match {
@@ -62,6 +62,40 @@ object ElementClass extends ExtendedEnumeration {
     asInt.toByte
   }
 
+  def isSigned(elementClass: ElementClass.Value): Boolean =
+    elementClass match {
+      case ElementClass.uint8  => false
+      case ElementClass.uint16 => false
+      case ElementClass.uint24 => false
+      case ElementClass.uint32 => false
+      case ElementClass.uint64 => false
+      case ElementClass.float  => true
+      case ElementClass.double => true
+      case ElementClass.int8   => true
+      case ElementClass.int16  => true
+      case ElementClass.int32  => true
+      case ElementClass.int64  => true
+    }
+
+  def defaultIntensityRange(elementClass: ElementClass.Value): (Double, Double) = elementClass match {
+    case ElementClass.uint8  => (0.0, math.pow(2, 8) - 1)
+    case ElementClass.uint16 => (0.0, math.pow(2, 16) - 1)
+    case ElementClass.uint24 => (0.0, math.pow(2, 8) - 1) // Assume uint24 rgb color data
+    case ElementClass.uint32 => (0.0, math.pow(2, 32) - 1)
+    case ElementClass.float  => (-3.40282347e+38, 3.40282347e+38)
+    case ElementClass.double => (-1.7976931348623157e+308, 1.7976931348623157e+308)
+    case ElementClass.int8   => (-math.pow(2, 7), math.pow(2, 7) - 1)
+    case ElementClass.int16  => (-math.pow(2, 15), math.pow(2, 15) - 1)
+    case ElementClass.int32  => (-math.pow(2, 31), math.pow(2, 31) - 1)
+
+    // Int64 types are only supported for segmentations (which don't need to call this
+    // function as there will be no histogram / color data). Still, for the record:
+    // The frontend only supports number in range of 2 ** 53 - 1 which is currently
+    // the maximum supported "64-bit" segment id due to JS Number limitations (frontend).
+    case ElementClass.uint64 | ElementClass.int64 => (0.0, math.pow(2, 8) - 1)
+    case _                                        => (0.0, 255.0)
+  }
+
   def bytesPerElement(elementClass: ElementClass.Value): Int = elementClass match {
     case ElementClass.uint8  => 1
     case ElementClass.uint16 => 2
@@ -76,14 +110,25 @@ object ElementClass extends ExtendedEnumeration {
     case ElementClass.int64  => 8
   }
 
-  /* ambiguous, we will always guess the unsigned integer options */
-  def guessFromBytesPerElement(bytesPerElement: Int): Option[ElementClass.Value] = bytesPerElement match {
-    case 1 => Some(ElementClass.uint8)
-    case 2 => Some(ElementClass.uint16)
-    case 3 => Some(ElementClass.uint24)
-    case 4 => Some(ElementClass.uint32)
-    case 8 => Some(ElementClass.uint64)
-    case _ => None
+  private val protoFieldNumberToElementClass: Map[Int, ElementClass.Value] = Map(
+    1 -> ElementClass.uint8,
+    2 -> ElementClass.uint16,
+    3 -> ElementClass.uint24,
+    4 -> ElementClass.uint32,
+    8 -> ElementClass.uint64,
+    11 -> ElementClass.int8,
+    12 -> ElementClass.int16,
+    14 -> ElementClass.int32,
+    18 -> ElementClass.int64
+  )
+
+
+  def volumeTracingElementClassProtoFieldNumber(elementClass: ElementClass.Value): Int ={
+    protoFieldNumberToElementClass.find(_._2 == elementClass).get._1
+  }
+
+  def fromVolumeTracingElementClassProtoFieldNumber(protoEnumFieldNumber: Int): Option[ElementClass.Value] = {
+    protoFieldNumberToElementClass.get(protoEnumFieldNumber)
   }
 
   /* only used for segmentation layers, so only unsigned integers 8 16 32 64 */

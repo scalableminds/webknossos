@@ -24,7 +24,6 @@ import type { PartialUrlManagerState, UrlStateByLayer } from "oxalis/controller/
 import UrlManager from "oxalis/controller/url_manager";
 import {
   determineAllowedModes,
-  getBitDepth,
   getDataLayers,
   getDatasetBoundingBox,
   getDatasetCenter,
@@ -299,7 +298,6 @@ function validateSpecsForLayers(dataset: APIDataset, requiredBucketCapacity: num
   const setupDetails = computeDataTexturesSetup(
     specs,
     layers,
-    (layer) => getBitDepth(layer) >> 3,
     hasSegmentation(dataset),
     requiredBucketCapacity,
   );
@@ -316,8 +314,6 @@ function maybeWarnAboutUnsupportedLayers(layers: Array<APIDataLayer>): void {
       });
     } else if (layer.category === "segmentation" && layer.elementClass === "uint24") {
       Toast.error(messages["dataset.unsupported_segmentation_class_uint24"]);
-    } else if (layer.category === "segmentation" && layer.elementClass === "int64") {
-      Toast.error(messages["dataset.unsupported_segmentation_class_int64"]);
     }
   }
 }

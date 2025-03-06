@@ -60,8 +60,8 @@ const expectBucket = (
 };
 
 test("TextureBucketManager: basic functionality", (t) => {
-  const tbm = new TextureBucketManager(2048, 1, 1, "uint8");
-  tbm.setupDataTextures(1, new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
+  const tbm = new TextureBucketManager(2048, 1, "uint8");
+  tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
   const activeBuckets = [
     buildBucket([1, 1, 1, 0], 100),
     buildBucket([1, 1, 2, 0], 101),
@@ -74,8 +74,8 @@ test("TextureBucketManager: basic functionality", (t) => {
 });
 
 test("TextureBucketManager: changing active buckets", (t) => {
-  const tbm = new TextureBucketManager(2048, 2, 1, "uint8");
-  tbm.setupDataTextures(1, new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
+  const tbm = new TextureBucketManager(2048, 2, "uint8");
+  tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
   const activeBuckets = [
     buildBucket([0, 0, 0, 0], 100),
     buildBucket([0, 0, 1, 0], 101),

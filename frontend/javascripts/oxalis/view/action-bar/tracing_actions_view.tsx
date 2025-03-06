@@ -94,12 +94,15 @@ type StateProps = {
   hasTracing: boolean;
   busyBlockingInfo: BusyBlockingInfo;
   annotationTags: string[];
-} & TracingViewMenuProps;
-type Props = OwnProps & StateProps;
-export type TracingViewMenuProps = {
   isRenderAnimationModalOpen: boolean;
   isShareModalOpen: boolean;
   isDownloadModalOpen: boolean;
+  isMergeModalOpen: boolean;
+  isUserScriptsModalOpen: boolean;
+  isZarrPrivateLinksModalOpen: boolean;
+} & TracingViewMenuProps;
+type Props = OwnProps & StateProps;
+export type TracingViewMenuProps = {
   restrictions: RestrictionsAndSettings;
   task: Task | null | undefined;
   annotationType: APIAnnotationType;
@@ -107,9 +110,6 @@ export type TracingViewMenuProps = {
   activeUser: APIUser | null | undefined;
   isAnnotationLockedByUser: boolean;
   annotationOwner: APIUserBase | null | undefined;
-  isMergeModalOpen: boolean;
-  isUserScriptsModalOpen: boolean;
-  isZarrPrivateLinksModalOpen: boolean;
 };
 type State = {
   isReopenAllowed: boolean;
@@ -361,74 +361,6 @@ const handleDuplicate = async (annotationId: string, annotationType: APIAnnotati
   window.open(`/annotations/${newAnnotation.id}`, "_blank", "noopener,noreferrer");
 };
 
-const getTracingViewModals = (props: TracingViewMenuProps) => {
-  const { viewMode } = Store.getState().temporaryConfiguration;
-  const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
-  const {
-    restrictions,
-    annotationType,
-    annotationId,
-    activeUser,
-    isZarrPrivateLinksModalOpen,
-    isUserScriptsModalOpen,
-    isMergeModalOpen,
-  } = props;
-  const modals = [];
-
-  modals.push(
-    <ShareModalView
-      key="share-modal"
-      isOpen={props.isShareModalOpen}
-      onOk={handleShareClose}
-      annotationType={annotationType}
-      annotationId={annotationId}
-    />,
-  );
-  modals.push(
-    <PrivateLinksModal
-      key="private-links-modal"
-      isOpen={isZarrPrivateLinksModalOpen}
-      onOk={handleZarrLinksClose}
-      annotationId={annotationId}
-    />,
-  );
-
-  modals.push(
-    <CreateAnimationModal
-      key="render-animation-modal"
-      isOpen={props.isRenderAnimationModalOpen}
-      onClose={() => Store.dispatch(setRenderAnimationModalVisibilityAction(false))}
-    />,
-  );
-
-  modals.push(
-    <UserScriptsModalView
-      key="user-scripts-modal"
-      isOpen={isUserScriptsModalOpen}
-      onOK={handleUserScriptsClose}
-    />,
-  );
-
-  if (restrictions.allowDownload) {
-    modals.push(
-      <DownloadModalView
-        key="download-modal"
-        isAnnotation
-        isOpen={props.isDownloadModalOpen}
-        onClose={handleDownloadClose}
-      />,
-    );
-  }
-
-  if (restrictions.allowSave && isSkeletonMode && activeUser != null) {
-    modals.push(
-      <MergeModalView key="merge-modal" isOpen={isMergeModalOpen} onOk={handleMergeClose} />,
-    );
-  }
-
-  return modals;
-};
-
 export const getTracingViewMenuItems = (
   props: TracingViewMenuProps,
   layoutMenu: SubMenuType | null,
@@ -663,6 +595,77 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     }
   };
 
+  getTracingViewModals() {
+    const { viewMode } = Store.getState().temporaryConfiguration;
+    const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
+    const {
+      restrictions,
+      annotationType,
+      annotationId,
+      activeUser,
+      isZarrPrivateLinksModalOpen,
+      isUserScriptsModalOpen,
+      isMergeModalOpen,
+      isShareModalOpen,
+      isRenderAnimationModalOpen,
+      isDownloadModalOpen,
+    } = this.props;
+    const modals = [];
+
+    modals.push(
+      <ShareModalView
+        key="share-modal"
+        isOpen={isShareModalOpen}
+        onOk={handleShareClose}
+        annotationType={annotationType}
+        annotationId={annotationId}
+      />,
+    );
+    modals.push(
+      <PrivateLinksModal
+        key="private-links-modal"
+        isOpen={isZarrPrivateLinksModalOpen}
+        onOk={handleZarrLinksClose}
+        annotationId={annotationId}
+      />,
+    );
+
+    modals.push(
+      <CreateAnimationModal
+        key="render-animation-modal"
+        isOpen={isRenderAnimationModalOpen}
+        onClose={() => Store.dispatch(setRenderAnimationModalVisibilityAction(false))}
+      />,
+    );
+
+    modals.push(
+      <UserScriptsModalView
+        key="user-scripts-modal"
+        isOpen={isUserScriptsModalOpen}
+        onOK={handleUserScriptsClose}
+      />,
+    );
+
+    if (restrictions.allowDownload) {
+      modals.push(
+        <DownloadModalView
+          key="download-modal"
+          isAnnotation
+          isOpen={isDownloadModalOpen}
+          onClose={handleDownloadClose}
+        />,
+      );
+    }
+
+    if (restrictions.allowSave && isSkeletonMode && activeUser != null) {
+      modals.push(
+        <MergeModalView key="merge-modal" isOpen={isMergeModalOpen} onOk={handleMergeClose} />,
+      );
+    }
+
+    return modals;
+  }
+
   render() {
     const {
       hasTracing,
@@ -772,7 +775,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       </ButtonComponent>
     ) : null;
 
-    const modals = getTracingViewModals(this.props);
+    const modals = this.getTracingViewModals();
     const menuItems = getTracingViewMenuItems(this.props, layoutMenu);
     return (
       <>

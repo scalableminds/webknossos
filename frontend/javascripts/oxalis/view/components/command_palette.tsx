@@ -71,22 +71,6 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
     (state: OxalisState) => state.tracing.isLockedByOwner,
   );
   const annotationOwner = useSelector((state: OxalisState) => state.tracing.owner);
-  const isDownloadModalOpen = useSelector(
-    (state: OxalisState) => state.uiInformation.showDownloadModal,
-  );
-  const isRenderAnimationModalOpen = useSelector(
-    (state: OxalisState) => state.uiInformation.showRenderAnimationModal,
-  );
-  const isShareModalOpen = useSelector((state: OxalisState) => state.uiInformation.showShareModal);
-  const isMergeModalOpen = useSelector(
-    (state: OxalisState) => state.uiInformation.showMergeAnnotationModal,
-  );
-  const isZarrPrivateLinksModalOpen = useSelector(
-    (state: OxalisState) => state.uiInformation.showZarrPrivateLinksModal,
-  );
-  const isUserScriptsModalOpen = useSelector(
-    (state: OxalisState) => state.uiInformation.showAddScriptModal,
-  );
 
   const props: TracingViewMenuProps = {
     restrictions,
@@ -96,12 +80,6 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
     activeUser,
     isAnnotationLockedByUser,
     annotationOwner,
-    isDownloadModalOpen,
-    isRenderAnimationModalOpen,
-    isShareModalOpen,
-    isMergeModalOpen,
-    isZarrPrivateLinksModalOpen,
-    isUserScriptsModalOpen,
   };
 
   const theme = getThemeFromUser(activeUser);
@@ -120,7 +98,8 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
     const commands: CommandWithoutId[] = [];
 
     (Object.keys(userConfig) as [keyof UserConfiguration]).forEach((key) => {
-      if (typeof userConfig[key] === "boolean") {
+      if (typeof userConfig[key] === "boolean" && key !== "renderWatermark") {
+        // removing the watermark is a paid feature
         commands.push({
           name: `Toggle ${getPhraseFromCamelCaseString(key)}`,
           command: () => Store.dispatch(updateUserSettingAction(key, !userConfig[key])),

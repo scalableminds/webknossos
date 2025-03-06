@@ -4,6 +4,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.Full
 import play.api.libs.json.{JsObject, Json}
 
 import javax.inject.Inject
@@ -67,6 +68,12 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
   def addJobIdToTransaction(creditTransaction: CreditTransaction, jobId: ObjectId)(
       implicit ctx: DBAccessContext): Fox[Unit] =
     creditTransactionDAO.addJobIdToTransaction(creditTransaction, jobId)
+
+  def findTransactionOfJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Option[CreditTransaction]] =
+    creditTransactionDAO.findTransactionForJob(jobId).futureBox.flatMap {
+      case Full(transaction) => Fox.successful(Some(transaction))
+      case _                 => Fox.successful(None)
+    }
 
   def publicWrites(transaction: CreditTransaction): Fox[JsObject] =
     Fox.successful(

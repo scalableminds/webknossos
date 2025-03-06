@@ -174,6 +174,7 @@ class JobService @Inject()(wkConf: WkConf,
       organization <- organizationDAO.findOne(owner._organization) ?~> "organization.notFound"
       resultLink = job.resultLink(organization._id)
       ownerJson <- userService.compactWrites(owner)
+      creditTransactionOpt <- creditTransactionService.findTransactionOfJob(job._id)
     } yield {
       Json.obj(
         "id" -> job._id.id,
@@ -189,6 +190,7 @@ class JobService @Inject()(wkConf: WkConf,
         "created" -> job.created,
         "started" -> job.started,
         "ended" -> job.ended,
+        "cost" -> creditTransactionOpt.map(t => t.creditChange * -1)
       )
     }
 

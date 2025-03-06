@@ -38,6 +38,7 @@ function transformBackendJobToAPIJob(job: any): APIJob {
     resultLink: job.resultLink,
     createdAt: job.created,
     voxelyticsWorkflowHash: job.voxelyticsWorkflowHash,
+    cost: job.cost,
   };
 }
 

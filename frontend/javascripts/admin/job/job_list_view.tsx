@@ -459,6 +459,7 @@ function JobListView() {
             render={renderState}
             sorter={Utils.localeCompareBy<APIJob>((job) => job.state)}
           />
+          <Column title="Cost in Credits" key="cost" render={(job) => job.cost || "-"} />
           <Column title="Action" key="actions" fixed="right" width={150} render={renderActions} />
         </Table>
       </Spin>

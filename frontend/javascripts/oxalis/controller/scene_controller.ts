@@ -389,16 +389,56 @@ function computeBentSurfaceSplines(points: Vector3[]): THREE.Object3D[] {
   window.bentGeometry = geometry;
 
   // Material and Mesh
-  const material = new THREE.MeshStandardMaterial({
-    color: 0x0077ff, // A soft blue color
-    metalness: 0.5, // Slight metallic effect
-    roughness: 1, // Some surface roughness for a natural look
-    side: THREE.DoubleSide, // Render both sides
-    flatShading: false, // Ensures smooth shading with computed normals
-    opacity: 0.8,
-    transparent: true,
-    wireframe: false,
+  // const material = new THREE.MeshStandardMaterial({
+  //   color: 0x0077ff, // A soft blue color
+  //   metalness: 0.5, // Slight metallic effect
+  //   roughness: 1, // Some surface roughness for a natural look
+  //   side: THREE.DoubleSide, // Render both sides
+  //   flatShading: false, // Ensures smooth shading with computed normals
+  //   opacity: 0.8,
+  //   transparent: true,
+  //   wireframe: false,
+  // });
+
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      lightDirection1: { value: new THREE.Vector3(1, 1, 1).normalize() },
+      lightDirection2: { value: new THREE.Vector3(-1, 1, 0).normalize() }, // Second light from the opposite side
+      color: { value: new THREE.Color("#00c3ff") }, // Base color
+    },
+    vertexShader: `
+    varying vec3 vNormal;
+    void main() {
+      vNormal = normalize(normalMatrix * normal);
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+    fragmentShader: `
+    uniform vec3 lightDirection1;
+    uniform vec3 lightDirection2;
+    uniform vec3 color;
+    varying vec3 vNormal;
+
+    void main() {
+      vec3 normal = normalize(vNormal);
+
+      // Half-Lambert shading for both lights
+      float diff1 = max(dot(normal, normalize(lightDirection1)), 0.0);
+      diff1 = diff1 * 0.5 + 0.5; // Shift and scale to avoid harsh shadows
+
+      float diff2 = max(dot(normal, normalize(lightDirection2)), 0.0);
+      diff2 = diff2 * 0.5 + 0.5; // Secondary light contribution
+
+      // Combine both light contributions
+      float diff = (diff1 + diff2) * 0.5; // Average both lights
+
+      vec3 finalColor = color * diff;
+      gl_FragColor = vec4(finalColor, 1.0);
+    }
+  `,
   });
+
+  material.side = THREE.DoubleSide; // Render both sides
   const surfaceMesh = new THREE.Mesh(geometry, material);
   window.bentMesh = surfaceMesh;
 
@@ -634,26 +674,7 @@ class SceneController {
      *   - DirectionalLight
      */
 
-    const dir1 = new THREE.DirectionalLight(undefined, 3 * 0.25);
-    dir1.position.set(1, 1, 1);
-    // const dir2 = new THREE.DirectionalLight(undefined, 3 * 0.25);
-    // dir2.position.set(-1, -1, -1);
-    const dir3 = new THREE.AmbientLight(undefined, 3 * 0.25);
-
-    this.rootGroup.add(dir1);
-    // this.rootGroup.add(dir2);
-    this.rootGroup.add(dir3);
-
-    const dir4 = new THREE.DirectionalLight(undefined, 3 * 0.25);
-    dir4.position.set(1, 1, 1);
-    // const dir5 = new THREE.DirectionalLight(undefined, 10);
-    // dir5.position.set(-1, -1, -1);
-    const dir6 = new THREE.AmbientLight(undefined, 3 * 0.25);
-
-    this.segmentMeshController.meshesLODRootGroup.add(dir4);
-    // this.segmentMeshController.meshesLODRootGroup.add(dir5);
-    this.segmentMeshController.meshesLODRootGroup.add(dir6);
-    this.rootGroup.add(new THREE.AmbientLight(2105376, 3 * 10));
+    this.rootGroup.add(new THREE.DirectionalLight());
     this.setupDebuggingMethods();
   }
 

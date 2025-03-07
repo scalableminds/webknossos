@@ -22,6 +22,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
                                     multiUserDAO: MultiUserDAO,
                                     userDAO: UserDAO,
                                     teamDAO: TeamDAO,
+                                    creditTransactionDAO: CreditTransactionDAO,
                                     dataStoreDAO: DataStoreDAO,
                                     folderDAO: FolderDAO,
                                     folderService: FolderService,
@@ -37,7 +38,8 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       "name" -> organization.name
     )
 
-  def publicWrites(organization: Organization, requestingUser: Option[User] = None): Fox[JsObject] = {
+  def publicWrites(organization: Organization, requestingUser: Option[User] = None)(
+      implicit ctx: DBAccessContext): Fox[JsObject] = {
 
     val adminOnlyInfo = if (requestingUser.exists(_.isAdminOf(organization._id))) {
       Json.obj(
@@ -49,6 +51,9 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     for {
       usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
       ownerBox <- userDAO.findOwnerByOrg(organization._id).futureBox
+
+      creditBalanceOpt <- Fox.runIf(requestingUser.exists(_._organization == organization._id))(
+        creditTransactionDAO.getCreditBalance(organization._id))
       ownerNameOpt = ownerBox.toOption.map(o => s"${o.firstName} ${o.lastName}")
     } yield
       Json.obj(
@@ -62,7 +67,8 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         "includedUsers" -> organization.includedUsers,
         "includedStorageBytes" -> organization.includedStorageBytes,
         "usedStorageBytes" -> usedStorageBytes,
-        "ownerName" -> ownerNameOpt
+        "ownerName" -> ownerNameOpt,
+        "creditBalance" -> creditBalanceOpt
       ) ++ adminOnlyInfo
   }
 
@@ -176,4 +182,9 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       _ <- organizationDAO.acceptTermsOfService(organizationId, version, Instant.now)
     } yield ()
 
+  def assertOrganizationHasPaidPlan(organizationId: String): Fox[Unit] =
+    for {
+      organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext)
+      _ <- bool2Fox(PricingPlan.isPaidPlan(organization.pricingPlan)) ?~> "creditTransaction.notPaidPlan"
+    } yield ()
 }

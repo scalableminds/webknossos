@@ -9,6 +9,7 @@ import models.job.JobCommand.JobCommand
 
 import javax.inject.Inject
 import models.job._
+import models.organization.CreditTransactionService
 import models.voxelytics.VoxelyticsDAO
 import net.liftweb.common.{Empty, Failure, Full}
 import play.api.libs.json.Json
@@ -20,6 +21,7 @@ import scala.concurrent.ExecutionContext
 class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
                                          jobService: JobService,
                                          workerDAO: WorkerDAO,
+                                         creditTransactionService: CreditTransactionService,
                                          voxelyticsDAO: VoxelyticsDAO,
                                          aiInferenceDAO: AiInferenceDAO,
                                          datasetDAO: DatasetDAO,
@@ -81,6 +83,13 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
         jobAfterChange <- jobDAO.findOne(id)(GlobalAccessContext) ?~> "job.notFound"
         _ = jobService.trackStatusChange(jobBeforeChange, jobAfterChange)
         _ <- jobService.cleanUpIfFailed(jobAfterChange) ?~> "job.cleanup.failed"
+        _ <- Fox.runIf(request.body.state == JobState.SUCCESS) {
+          creditTransactionService.completeTransactionOfJob(jobAfterChange._id)(GlobalAccessContext)
+        }
+        _ <- Fox.runIf(
+          jobAfterChange.state != request.body.state && (request.body.state == JobState.FAILURE || request.body.state == JobState.CANCELLED)) {
+          creditTransactionService.refundTransactionForJob(jobAfterChange._id)(GlobalAccessContext)
+        }
       } yield Ok
   }
 

@@ -609,9 +609,7 @@ function JobCreditCostInformation({
               {
                 validator: (_rule, _checked) => {
                   if (jobCreditCostPerGVx != null && currentBoundingBoxVolume == null) {
-                    return Promise.reject(
-                      "This is a paid job which needs a selected bounding box.",
-                    );
+                    return Promise.reject("This is a requires a selected bounding box.");
                   } else if (jobCreditCostPerGVx != null && !orgaHasEnoughCredits) {
                     return Promise.reject(
                       "Your organization does not have enough credits to start this job.",
@@ -809,11 +807,9 @@ function StartJobForm(props: StartJobFormProps) {
   );
 
   useEffect(() => {
-    const orgaCreditsAsNumber = jobCreditCostInfo
-      ? Number.parseFloat(jobCreditCostInfo.organizationCredits)
-      : undefined;
-    if (orgaCreditsAsNumber && organizationCredits !== orgaCreditsAsNumber) {
-      dispatch(setActiveOrganizationsCreditBalance(orgaCreditsAsNumber));
+    const newAmountOfCredits = jobCreditCostInfo?.organizationCredits;
+    if (newAmountOfCredits && organizationCredits !== newAmountOfCredits) {
+      dispatch(setActiveOrganizationsCreditBalance(newAmountOfCredits));
     }
   }, [jobCreditCostInfo, dispatch, organizationCredits]);
 

@@ -11,7 +11,7 @@ export const setActiveOrganizationAction = (organization: APIOrganization) =>
     organization,
   }) as const;
 
-export const setActiveOrganizationsCreditBalance = (creditBalance: number) => {
+export const setActiveOrganizationsCreditBalance = (creditBalance: string) => {
   return {
     type: "SET_ACTIVE_ORGANIZATIONS_CREDIT_BALANCE",
     creditBalance,

@@ -517,16 +517,16 @@ class JobController @Inject()(
       } yield Redirect(uri, Map(("token", Seq(userAuthToken.id))))
     }
 
-  def getJobCost(command: String, boundingBoxInMag: String): Action[AnyContent] =
+  def getJobCreditCost(command: String, boundingBoxInMag: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         boundingBox <- BoundingBox.fromLiteral(boundingBoxInMag).toFox
         jobCommand <- JobCommand.fromString(command).toFox
-        jobCosts <- jobService.calculateJobCosts(boundingBox, jobCommand)
+        jobCostsInCredits <- jobService.calculateJobCostInCredits(boundingBox, jobCommand)
         organizationCreditBalance <- creditTransactionDAO.getCreditBalance(request.identity._organization)
-        hasEnoughCredits = jobCosts <= organizationCreditBalance
+        hasEnoughCredits = jobCostsInCredits <= organizationCreditBalance
         js = Json.obj(
-          "costInCredits" -> jobCosts.toString(),
+          "costInCredits" -> jobCostsInCredits.toString(),
           "hasEnoughCredits" -> hasEnoughCredits,
           "organizationCredits" -> organizationCreditBalance.toString(),
         )

@@ -1,8 +1,8 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import {
-  type JobCostInfo,
+  type JobCreditCostInfo,
   getAiModels,
-  getJobCost,
+  getJobCreditCost,
   getOrganization,
   runInferenceJob,
   startAlignSectionsJob,
@@ -548,14 +548,14 @@ function ShouldUseTreesFormItem() {
   );
 }
 
-function JobCostInformation({
-  jobCostInfo,
+function JobCreditCostInformation({
+  jobCreditCostInfo,
   jobCreditCostPerGVx,
   isBoundingBoxConfigurable,
   boundingBoxForJob,
   isOrganizationOwner,
 }: {
-  jobCostInfo: JobCostInfo | undefined;
+  jobCreditCostInfo: JobCreditCostInfo | undefined;
   jobCreditCostPerGVx: number;
   isBoundingBoxConfigurable: boolean;
   boundingBoxForJob: UserBoundingBox | undefined;
@@ -565,30 +565,34 @@ function JobCostInformation({
     (state: OxalisState) => state.activeOrganization?.creditBalance || 0,
   );
   const organizationCredits =
-    jobCostInfo?.organizationCredits || organizationCreditsFromStore.toString();
+    jobCreditCostInfo?.organizationCredits || organizationCreditsFromStore.toString();
   const currentBoundingBoxVolume = boundingBoxForJob?.boundingBox
     ? new BoundingBox(boundingBoxForJob?.boundingBox).getVolume()
     : null;
-  const orgaHasEnoughCredits = jobCostInfo?.hasEnoughCredits || false;
-  const jobCost = jobCostInfo?.costInCredits;
+  const orgaHasEnoughCredits = jobCreditCostInfo?.hasEnoughCredits || false;
+  const jobCreditCost = jobCreditCostInfo?.costInCredits;
+  const jobCostInfoString =
+    jobCreditCost != null
+      ? `This job costs ${formatCreditsString(jobCreditCost)} credits.`
+      : currentBoundingBoxVolume == null
+        ? isBoundingBoxConfigurable
+          ? "Please select a bounding box to see the job costs."
+          : "Please select a layer to see the costs."
+        : "";
   return (
     <>
       <Row style={{ display: "grid", marginBottom: 16 }}>
         <Alert
           message={
             <>
-              This is a credit-based paid job. The costs depend on the{" "}
-              {isBoundingBoxConfigurable
-                ? "selected bounding box."
-                : "bounding box of the selected dataset."}
+              {jobCostInfoString}
+              Your organization currently has {formatCreditsString(organizationCredits)} WEBKNOSSOS
+              credits. The cost of this job are derived from processed bounding box size and costs
+              {jobCreditCostPerGVx} WEBKNOSSOS credits per Gigavoxel.
               <br />
-              This job costs {jobCreditCostPerGVx} WEBKNOSSOS credits per Gigavoxel. Your
-              organization currently has {formatCreditsString(organizationCredits)} WEBKNOSSOS
-              credits.
-              <br />
-              {currentBoundingBoxVolume != null && jobCost != null
+              {currentBoundingBoxVolume != null && jobCreditCost != null
                 ? `${isBoundingBoxConfigurable ? "The selected bounding box" : "This dataset"} has a volume of
-                  ${formatVoxels(currentBoundingBoxVolume)} resulting in costs of ${formatCreditsString(jobCost)} WEBKNOSSOS credits.`
+                  ${formatVoxels(currentBoundingBoxVolume)} resulting in costs of ${formatCreditsString(jobCreditCost)} WEBKNOSSOS credits.`
                 : "You do not have a bounding box selected."}
             </>
           }
@@ -596,7 +600,7 @@ function JobCostInformation({
           showIcon
         />
       </Row>
-      {jobCost != null && !orgaHasEnoughCredits ? (
+      {jobCreditCost != null && !orgaHasEnoughCredits ? (
         <div style={{ marginBottom: 42 }}>
           <Form.Item
             name="requireBoundingBoxForPaidJobs"
@@ -623,8 +627,8 @@ function JobCostInformation({
                 message={
                   isOrganizationOwner ? (
                     <>
-                      Your organization does not have enough credits to start this job. You can
-                      order more credits{" "}
+                      Your organization does not have enough credits to start this job. You can buy
+                      more credits{" "}
                       <Link
                         to=""
                         onClick={(evt) => {
@@ -637,7 +641,7 @@ function JobCostInformation({
                       .
                     </>
                   ) : (
-                    "Your organization does not have enough credits to start this job. Please contact the organization owner to purchase more WEBKNOSSOS credits."
+                    "Your organization does not have enough credits to start this job. Please contact the organization owner to buy more WEBKNOSSOS credits."
                   )
                 }
                 type="error"
@@ -792,23 +796,26 @@ function StartJobForm(props: StartJobFormProps) {
     form,
     isBoundingBoxConfigurable,
   );
-  const jobCostInfo = useFetch<JobCostInfo | undefined>(
+  const jobCreditCostInfo = useFetch<JobCreditCostInfo | undefined>(
     async () =>
       boundingBoxForJob
-        ? await getJobCost(jobName, computeArrayFromBoundingBox(boundingBoxForJob.boundingBox))
+        ? await getJobCreditCost(
+            jobName,
+            computeArrayFromBoundingBox(boundingBoxForJob.boundingBox),
+          )
         : undefined,
     undefined,
     [boundingBoxForJob, jobName],
   );
 
   useEffect(() => {
-    const orgaCreditsAsNumber = jobCostInfo
-      ? Number.parseFloat(jobCostInfo.organizationCredits)
+    const orgaCreditsAsNumber = jobCreditCostInfo
+      ? Number.parseFloat(jobCreditCostInfo.organizationCredits)
       : undefined;
     if (orgaCreditsAsNumber && organizationCredits !== orgaCreditsAsNumber) {
       dispatch(setActiveOrganizationsCreditBalance(orgaCreditsAsNumber));
     }
-  }, [jobCostInfo, dispatch, organizationCredits]);
+  }, [jobCreditCostInfo, dispatch, organizationCredits]);
 
   const startJob = async ({
     layerName,
@@ -925,10 +932,10 @@ function StartJobForm(props: StartJobFormProps) {
         />
       ) : null}
       {jobCreditCostPerGVx != null ? (
-        <JobCostInformation
+        <JobCreditCostInformation
           jobCreditCostPerGVx={jobCreditCostPerGVx}
           isBoundingBoxConfigurable={isBoundingBoxConfigurable}
-          jobCostInfo={jobCostInfo}
+          jobCreditCostInfo={jobCreditCostInfo}
           boundingBoxForJob={boundingBoxForJob}
           isOrganizationOwner={isActiveUserSuperUser}
         />
@@ -936,8 +943,8 @@ function StartJobForm(props: StartJobFormProps) {
       <div style={{ textAlign: "center" }}>
         <Button type="primary" size="large" htmlType="submit">
           {props.buttonLabel ? props.buttonLabel : title}
-          {jobCostInfo?.costInCredits != null
-            ? ` for ${formatCreditsString(jobCostInfo?.costInCredits)} credits`
+          {jobCreditCostInfo?.costInCredits != null
+            ? ` for ${formatCreditsString(jobCreditCostInfo?.costInCredits)} credits`
             : ""}
         </Button>
       </div>

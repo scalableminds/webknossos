@@ -190,7 +190,7 @@ class JobService @Inject()(wkConf: WkConf,
         "created" -> job.created,
         "started" -> job.started,
         "ended" -> job.ended,
-        "cost" -> creditTransactionOpt.map(t => t.creditChange * -1)
+        "creditCost" -> creditTransactionOpt.map(t => t.creditChange * -1)
       )
     }
 
@@ -223,7 +223,7 @@ class JobService @Inject()(wkConf: WkConf,
                     user: User,
                     datastoreName: String)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
-      costsInCredits <- calculateJobCosts(jobBoundingBox, command)
+      costsInCredits <- calculateJobCostInCredits(jobBoundingBox, command)
       _ <- organizationService.assertOrganizationHasPaidPlan(user._organization) ?~> "job.paidJob.notAllowed.noPaidPlan"
       _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(user._organization, costsInCredits)) ?~> "job.notEnoughCredits"
       creditTransaction <- creditTransactionService.reserveCredits(user._organization,
@@ -258,7 +258,7 @@ class JobService @Inject()(wkConf: WkConf,
       _ <- bool2Fox(boundingBoxInMag.size.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx) ?~> "job.edgeLengthExceeded"
     } yield ()
 
-  private def getJobCostsPerGVx(jobCommand: JobCommand): Fox[BigDecimal] =
+  private def getJobCostPerGVx(jobCommand: JobCommand): Fox[BigDecimal] =
     jobCommand match {
       case JobCommand.infer_neurons      => Fox.successful(wkConf.Features.neuronInferralCostPerGVx)
       case JobCommand.infer_mitochondria => Fox.successful(wkConf.Features.mitochondriaInferralCostPerGVx)
@@ -266,11 +266,11 @@ class JobService @Inject()(wkConf: WkConf,
       case _                             => Fox.failure(s"Unsupported job command $jobCommand")
     }
 
-  def calculateJobCosts(boundingBoxInTargetMag: BoundingBox, jobCommand: JobCommand): Fox[BigDecimal] =
-    getJobCostsPerGVx(jobCommand).map(costsPerGVx => {
+  def calculateJobCostInCredits(boundingBoxInTargetMag: BoundingBox, jobCommand: JobCommand): Fox[BigDecimal] =
+    getJobCostPerGVx(jobCommand).map(costPerGVx => {
       val volumeInGVx = BigDecimal(boundingBoxInTargetMag.volume) / ONE_GIGAVOXEL
-      val costs = volumeInGVx * costsPerGVx
-      if (costs < MINIMUM_COST_PER_JOB) MINIMUM_COST_PER_JOB else costs.setScale(4, RoundingMode.HALF_UP)
+      val costInCredits = volumeInGVx * costPerGVx
+      if (costInCredits < MINIMUM_COST_PER_JOB) MINIMUM_COST_PER_JOB else costInCredits.setScale(4, RoundingMode.HALF_UP)
     })
 
 }

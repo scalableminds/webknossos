@@ -1,6 +1,7 @@
 // @ts-nocheck
 import app from "app";
 import window, { document } from "libs/window";
+import { WkDevFlags } from "oxalis/api/wk_dev";
 
 export default {
   addBucketManagers(textureBucketManager) {
@@ -243,6 +244,6 @@ window._setupShaderReporting = () => {
   };
 };
 
-if (process.env.NODE_ENV !== "production") {
+if (process.env.NODE_ENV !== "production" && WkDevFlags.setupShaderReporting) {
   window._setupShaderReporting();
 }

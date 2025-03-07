@@ -25,6 +25,7 @@ export const WkDevFlags = {
     // This variable is only respected during shader compilation. Therefore,
     // it needs to be set to true before the rendering is initialized.
     disableLayerNameSanitization: false,
+    setupShaderReporting: false,
   },
   meshing: {
     marchingCubeSizeInTargetMag: [64, 64, 64] as Vector3,
@@ -32,7 +33,7 @@ export const WkDevFlags = {
   datasetComposition: {
     allowThinPlateSplines: false,
   },
-  splittingStrategy: "splines",
+  splittingStrategy: "splines" as "tps" | "splines" | "delauny",
 };
 
 export default class WkDev {

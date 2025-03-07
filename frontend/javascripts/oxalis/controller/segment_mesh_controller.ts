@@ -306,7 +306,7 @@ export default class SegmentMeshController {
     directionalLight2.position.y = -1;
     directionalLight2.position.z = -1;
     directionalLight2.position.normalize();
-    const pointLight = new THREE.PointLight(16777215, POINT_INTENSITY);
+    const pointLight = new THREE.PointLight(16777215, POINT_INTENSITY, undefined, 1);
     pointLight.position.x = 0;
     pointLight.position.y = -25;
     pointLight.position.z = 10;

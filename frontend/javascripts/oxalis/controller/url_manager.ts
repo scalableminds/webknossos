@@ -130,7 +130,13 @@ class UrlManager {
   };
 
   parseUrlHash(): PartialUrlManagerState {
-    const urlHash = decodeURIComponent(location.hash.slice(1));
+    // const urlHash = decodeURIComponent(location.hash.slice(1));
+
+    const urlHash = decodeURIComponent(
+      "%7B%22position%22:%5B1799,1656,1840%5D,%22mode%22:%22orthogonal%22,%22zoomStep%22:0.165,%22additionalCoordinates%22:%5B%5D,%22activeNode%22:64,%22stateByLayer%22:%7B%228f880687-6ada-4a47-b69b-2788ea1bc1a5%22:%7B%22meshInfo%22:%7B%22meshFileName%22:%22meshfile_4-4-2%22,%22meshes%22:%5B%7B%22segmentId%22:2417470,%22seedPosition%22:%5B1753,1648,1840%5D,%22isPrecomputed%22:true,%22meshFileName%22:%22meshfile_4-4-2%22%7D,%7B%22segmentId%22:2417731,%22seedPosition%22:%5B1827,1644,1840%5D,%22isPrecomputed%22:true,%22meshFileName%22:%22meshfile_4-4-2%22%7D,%7B%22segmentId%22:2419096,%22seedPosition%22:%5B1846,1687,1840%5D,%22isPrecomputed%22:true,%22meshFileName%22:%22meshfile_4-4-2%22%7D%5D%7D,%22isDisabled%22:false%7D,%22color%22:%7B%22isDisabled%22:false%7D,%22Skeleton%22:%7B%22isDisabled%22:false%7D%7D%7D",
+    );
+
+    console.log("urlHash", urlHash);
 
     if (urlHash.includes("{")) {
       // The hash is in json format

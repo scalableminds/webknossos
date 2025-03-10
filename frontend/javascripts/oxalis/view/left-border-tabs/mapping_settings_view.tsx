@@ -25,7 +25,6 @@ import {
 import type { EditableMapping, Mapping, MappingType, OxalisState } from "oxalis/store";
 import { SwitchSetting } from "oxalis/view/components/setting_input_views";
 import React from "react";
-import debounceRender from "react-debounce-render";
 import { connect } from "react-redux";
 import type { APISegmentationLayer } from "types/api_flow_types";
 
@@ -155,11 +154,11 @@ class MappingSettingsView extends React.Component<Props, State> {
     const selectValueProp =
       mappingName != null
         ? {
-          value:
-            editableMapping != null
-              ? `${editableMapping.baseMappingName} (${mappingName})`
-              : mappingName,
-        }
+            value:
+              editableMapping != null
+                ? `${editableMapping.baseMappingName} (${mappingName})`
+                : mappingName,
+          }
         : {};
 
     const renderCategoryOptions = (optionStrings: string[], category: MappingType) => {

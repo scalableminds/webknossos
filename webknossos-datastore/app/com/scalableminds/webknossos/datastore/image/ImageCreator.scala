@@ -106,13 +106,14 @@ object ImageCreator extends LazyLogging {
   private def toRGBArray(b: Array[Byte],
                          elementClass: ElementClass.Value,
                          isSegmentation: Boolean,
-                         intensityRange: Option[(Double, Double)],
+                         intensityRangeOpt: Option[(Double, Double)],
                          color: Option[Color],
                          invertColor: Boolean) = {
     val bytesPerElement = ElementClass.bytesPerElement(elementClass)
     val colored = new Array[Int](b.length / bytesPerElement)
     var idx = 0
     val l = b.length
+    val intensityRange = intensityRangeOpt.getOrElse(ElementClass.defaultIntensityRange(elementClass))
     while (idx + bytesPerElement <= l) {
       colored(idx / bytesPerElement) = {
         if (isSegmentation)
@@ -121,23 +122,52 @@ object ImageCreator extends LazyLogging {
           val colorRed = applyColor(color.map(_.r).getOrElse(1d), invertColor)
           val colorGreen = applyColor(color.map(_.g).getOrElse(1d), invertColor)
           val colorBlue = applyColor(color.map(_.b).getOrElse(1d), invertColor)
-          elementClass match {
+          val grayNormalized = elementClass match {
             case ElementClass.uint8 =>
-              val grayNormalized = normalizeIntensityUint8(intensityRange, b(idx))
-              (0xFF << 24) | (colorRed(grayNormalized) << 16) | (colorGreen(grayNormalized) << 8) | (colorBlue(
-                grayNormalized) << 0)
+              normalizeIntensityUint8(intensityRange, b(idx))
+            case ElementClass.int8 =>
+              normalizeIntensityInt8(intensityRange, b(idx))
             case ElementClass.uint16 =>
-              val grayNormalized = normalizeIntensityUint16(intensityRange, b(idx), b(idx + 1))
-              (0xFF << 24) | (colorRed(grayNormalized) << 16) | (colorGreen(grayNormalized) << 8) | (colorBlue(
-                grayNormalized) << 0)
+              normalizeIntensityUint16(intensityRange, b(idx), b(idx + 1))
+            case ElementClass.int16 =>
+              normalizeIntensityInt16(intensityRange, b(idx), b(idx + 1))
             case ElementClass.uint24 => // assume uint24 rgb color data
-              (0xFF << 24) | ((b(idx) & 0xFF) << 16) | ((b(idx + 1) & 0xFF) << 8) | ((b(idx + 2) & 0xFF) << 0)
+              b(idx).toInt // The color data is handled below
+            case ElementClass.uint32 =>
+              normalizeIntensityUint32(intensityRange, b(idx), b(idx + 1), b(idx + 2), b(idx + 3))
+            case ElementClass.int32 =>
+              normalizeIntensityInt32(intensityRange, b(idx), b(idx + 1), b(idx + 2), b(idx + 3))
+            case ElementClass.uint64 =>
+              normalizeIntensityUint64(intensityRange,
+                                       b(idx),
+                                       b(idx + 1),
+                                       b(idx + 2),
+                                       b(idx + 3),
+                                       b(idx + 4),
+                                       b(idx + 5),
+                                       b(idx + 6),
+                                       b(idx + 7))
+            case ElementClass.int64 =>
+              normalizeIntensityInt64(intensityRange,
+                                      b(idx),
+                                      b(idx + 1),
+                                      b(idx + 2),
+                                      b(idx + 3),
+                                      b(idx + 4),
+                                      b(idx + 5),
+                                      b(idx + 6),
+                                      b(idx + 7))
             case ElementClass.float =>
-              val grayNormalized = normalizeIntensityFloat(intensityRange, b(idx), b(idx + 1), b(idx + 2), b(idx + 3))
-              (0xFF << 24) | (colorRed(grayNormalized) << 16) | (colorGreen(grayNormalized) << 8) | (colorBlue(
-                grayNormalized) << 0)
+              normalizeIntensityFloat(intensityRange, b(idx), b(idx + 1), b(idx + 2), b(idx + 3))
             case _ =>
               throw new Exception(s"Unsupported ElementClass for color layer thumbnail: $elementClass")
+          }
+          elementClass match {
+            case ElementClass.uint24 => // assume uint24 rgb color data
+              (0xFF << 24) | ((b(idx) & 0xFF) << 16) | ((b(idx + 1) & 0xFF) << 8) | ((b(idx + 2) & 0xFF) << 0)
+            case _ =>
+              (0xFF << 24) | (colorRed(grayNormalized) << 16) | (colorGreen(grayNormalized) << 8) | (colorBlue(
+                grayNormalized) << 0)
           }
         }
       }
@@ -152,30 +182,78 @@ object ImageCreator extends LazyLogging {
     else
       (valueByte: Int) => (valueByte * colorFactor).toInt & 0xFF
 
-  private def normalizeIntensityUint8(intensityRangeOpt: Option[(Double, Double)], grayByte: Byte): Int =
-    intensityRangeOpt match {
-      case None => grayByte & 0xFF
-      case Some(intensityRange) =>
-        val grayInt = grayByte & 0xFF
-        normalizeIntensityImpl(grayInt.toDouble, intensityRange)
-    }
+  private def normalizeIntensityUint8(intensityRange: (Double, Double), grayByte: Byte): Int =
+    normalizeIntensityImpl((grayByte & 0xFF).toDouble, intensityRange)
 
-  private def normalizeIntensityUint16(intensityRangeOpt: Option[(Double, Double)],
+  private def normalizeIntensityInt8(intensityRange: (Double, Double), grayByte: Byte): Int =
+    normalizeIntensityImpl(grayByte.toDouble, intensityRange)
+
+  private def normalizeIntensityUint16(intensityRange: (Double, Double),
                                        grayLowerByte: Byte,
-                                       grayUpperByte: Byte): Int =
-    intensityRangeOpt match {
-      case None => grayUpperByte & 0xFF
-      case Some(intensityRange) =>
-        val grayInt = ((grayUpperByte & 0xFF) << 8) | (grayLowerByte & 0xFF)
-        normalizeIntensityImpl(grayInt.toDouble, intensityRange)
-    }
+                                       grayUpperByte: Byte): Int = {
+    val grayInt = ((grayUpperByte & 0xFF) << 8) | (grayLowerByte & 0xFF)
+    normalizeIntensityImpl(grayInt.toDouble, intensityRange)
+  }
 
-  private def normalizeIntensityFloat(intensityRangeOpt: Option[(Double, Double)],
+  private def normalizeIntensityInt16(intensityRange: (Double, Double),
+                                      grayLowerByte: Byte,
+                                      grayUpperByte: Byte): Int = {
+    val grayInt = ((grayUpperByte << 8) | (grayLowerByte & 0xFF)).toShort.toInt
+    normalizeIntensityImpl(grayInt.toDouble, intensityRange)
+  }
+
+  private def normalizeIntensityUint32(intensityRange: (Double, Double),
+                                       byte0: Byte,
+                                       byte1: Byte,
+                                       byte2: Byte,
+                                       byte3: Byte): Int = {
+    val grayLong = ((byte3 & 0xFFL) << 24) | ((byte2 & 0xFFL) << 16) | ((byte1 & 0xFFL) << 8) | (byte0 & 0xFFL)
+    normalizeIntensityImpl(grayLong.toDouble, intensityRange)
+
+  }
+
+  private def normalizeIntensityInt32(intensityRange: (Double, Double),
                                       byte0: Byte,
                                       byte1: Byte,
                                       byte2: Byte,
                                       byte3: Byte): Int = {
-    val intensityRange = intensityRangeOpt.getOrElse((0.0, 255.0))
+    val grayInt = ((byte3 & 0xFF) << 24) | ((byte2 & 0xFF) << 16) | ((byte1 & 0xFF) << 8) | (byte0 & 0xFF)
+    normalizeIntensityImpl(grayInt.toDouble, intensityRange)
+  }
+  private def normalizeIntensityUint64(intensityRange: (Double, Double),
+                                       byte0: Byte,
+                                       byte1: Byte,
+                                       byte2: Byte,
+                                       byte3: Byte,
+                                       byte4: Byte,
+                                       byte5: Byte,
+                                       byte6: Byte,
+                                       byte7: Byte): Int = {
+    val graySignedLong = ((byte7 & 0xFFL) << 56) | ((byte6 & 0xFFL) << 48) | ((byte5 & 0xFFL) << 40) | ((byte4 & 0xFFL) << 32) | ((byte3 & 0xFFL) << 24) | ((byte2 & 0xFFL) << 16) | ((byte1 & 0xFFL) << 8) | (byte0 & 0xFFL)
+    val grayUnsignedDouble =
+      if (graySignedLong >= 0) graySignedLong.toDouble
+      else (graySignedLong & 0x7FFFFFFFFFFFFFFFL).toDouble + 0x8000000000000000L.toDouble
+    normalizeIntensityImpl(grayUnsignedDouble, intensityRange)
+  }
+
+  private def normalizeIntensityInt64(intensityRange: (Double, Double),
+                                      byte0: Byte,
+                                      byte1: Byte,
+                                      byte2: Byte,
+                                      byte3: Byte,
+                                      byte4: Byte,
+                                      byte5: Byte,
+                                      byte6: Byte,
+                                      byte7: Byte): Int = {
+    val graySignedLong = ((byte7 & 0xFFL) << 56) | ((byte6 & 0xFFL) << 48) | ((byte5 & 0xFFL) << 40) | ((byte4 & 0xFFL) << 32) | ((byte3 & 0xFFL) << 24) | ((byte2 & 0xFFL) << 16) | ((byte1 & 0xFFL) << 8) | (byte0 & 0xFFL)
+    normalizeIntensityImpl(graySignedLong.toDouble, intensityRange)
+  }
+
+  private def normalizeIntensityFloat(intensityRange: (Double, Double),
+                                      byte0: Byte,
+                                      byte1: Byte,
+                                      byte2: Byte,
+                                      byte3: Byte): Int = {
     val grayInt = ((byte3 & 0xFF) << 24) | ((byte2 & 0xFF) << 16) | ((byte1 & 0xFF) << 8) | (byte0 & 0xFF)
     normalizeIntensityImpl(java.lang.Float.intBitsToFloat(grayInt).toDouble, intensityRange)
   }

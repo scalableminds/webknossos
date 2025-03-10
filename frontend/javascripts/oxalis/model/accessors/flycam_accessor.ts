@@ -45,6 +45,37 @@ import { getTransformsForLayer, invertAndTranspose } from "./dataset_layer_trans
 
 export const ZOOM_STEP_INTERVAL = 1.1;
 
+function estimateTotalBucketCountForZoomLevel(
+  mag: Vector3,
+  zoomFactor: number,
+  viewportRects: OrthoViewRects,
+  voxelSizeFactor: Vector3,
+) {
+  const voxelSizeSmallest = Math.min(...voxelSizeFactor);
+  const viewportSizeX = viewportRects["PLANE_XY"].width;
+  const viewportSizeY = viewportRects["PLANE_XY"].height;
+  const viewportSizeZ = viewportRects["PLANE_YZ"].width;
+
+  const numBucketsX =
+    2 + (((zoomFactor * voxelSizeSmallest) / voxelSizeFactor[0]) * viewportSizeX) / mag[0] / 32;
+  const numBucketsY =
+    2 + (((zoomFactor * voxelSizeSmallest) / voxelSizeFactor[1]) * viewportSizeY) / mag[1] / 32;
+  const numBucketsZ =
+    2 + (((zoomFactor * voxelSizeSmallest) / voxelSizeFactor[2]) * viewportSizeZ) / mag[2] / 32;
+
+  const thickness = 3; // load a bucket slice behind and in front of the visible one for smooth transitions.
+
+  const numBuckets =
+    numBucketsX * numBucketsY * thickness +
+    numBucketsY * numBucketsZ * thickness +
+    numBucketsX * numBucketsZ * thickness -
+    numBucketsX * thickness ** 2 -
+    numBucketsY * thickness ** 2 -
+    numBucketsZ * thickness ** 2;
+
+  return numBuckets;
+}
+
 function calculateTotalBucketCountForZoomLevel(
   viewMode: ViewMode,
   loadingStrategy: LoadingStrategy,
@@ -166,19 +197,30 @@ export function _getMaximumZoomForAllMags(
 
   while (currentIterationCount < maximumIterationCount && currentMagIndex < mags.length) {
     const nextZoomValue = currentMaxZoomValue * ZOOM_STEP_INTERVAL;
-    const nextCapacity = calculateTotalBucketCountForZoomLevel(
-      viewMode,
-      loadingStrategy,
-      mags,
-      currentMagIndex,
-      nextZoomValue,
-      viewportRects,
-      unzoomedMatrix,
-      // The bucket picker will stop after reaching the maximum capacity.
-      // Increment the limit by one, so that rendering is still possible
-      // when exactly meeting the limit.
-      maximumCapacity + 1,
-    );
+
+    let nextCapacity;
+    if (viewMode === "orthogonal") {
+      nextCapacity = estimateTotalBucketCountForZoomLevel(
+        mags[currentMagIndex],
+        nextZoomValue,
+        viewportRects,
+        voxelSizeFactor,
+      );
+    } else {
+      nextCapacity = calculateTotalBucketCountForZoomLevel(
+        viewMode,
+        loadingStrategy,
+        mags,
+        currentMagIndex,
+        nextZoomValue,
+        viewportRects,
+        unzoomedMatrix,
+        // The bucket picker will stop after reaching the maximum capacity.
+        // Increment the limit by one, so that rendering is still possible
+        // when exactly meeting the limit.
+        maximumCapacity + 1,
+      );
+    }
 
     if (nextCapacity > maximumCapacity) {
       maxZoomValueThresholds.push(currentMaxZoomValue);

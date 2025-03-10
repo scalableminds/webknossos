@@ -1,4 +1,3 @@
-import React from "react";
 import Toast from "./toast";
 
 export default function checkBrowserFeatures() {
@@ -9,6 +8,7 @@ export default function checkBrowserFeatures() {
     Object.fromEntries([]);
     new BigUint64Array(1);
     "hello".replaceAll("l", "k");
+    [].at(0);
   } catch (exception) {
     Toast.warning(
       <div>

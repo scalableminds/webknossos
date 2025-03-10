@@ -1,5 +1,11 @@
-import type { ServerSkeletonTracing, APIAnnotation } from "types/api_flow_types";
+import {
+  type ServerSkeletonTracing,
+  type APIAnnotation,
+  AnnotationLayerEnum,
+  type APITracingStoreAnnotation,
+} from "types/api_flow_types";
 
+const TRACING_ID = "e90133de-b2db-4912-8261-8b6f84f7edab";
 export const tracing: ServerSkeletonTracing = {
   typ: "Skeleton",
   trees: [
@@ -20,7 +26,7 @@ export const tracing: ServerSkeletonTracing = {
           },
           radius: 120,
           viewport: 1,
-          resolution: 1,
+          mag: 1,
           bitDepth: 0,
           interpolation: false,
           createdTimestamp: 1528811979356,
@@ -59,15 +65,16 @@ export const tracing: ServerSkeletonTracing = {
   },
   additionalAxes: [],
   zoomLevel: 2,
-  version: 0,
   id: "e90133de-b2db-4912-8261-8b6f84f7edab",
 };
 export const annotation: APIAnnotation = {
+  datasetId: "66f3c82966010034942e9740",
   modified: 1529066010230,
   state: "Active",
   id: "5b1fd1cf97000027049c67ee",
   name: "",
   description: "",
+  stats: {},
   typ: "Task",
   task: {
     id: "5b1fd1cb97000027049c67ec",
@@ -86,12 +93,13 @@ export const annotation: APIAnnotation = {
         somaClickingAllowed: true,
         volumeInterpolationAllowed: false,
         mergerMode: false,
-        resolutionRestrictions: {},
+        magRestrictions: {},
       },
       recommendedConfiguration: null,
       tracingType: "skeleton",
     },
-    dataSet: "ROI2017_wkw",
+    datasetId: "66f3c82966010034942e9740",
+    datasetName: "ROI2017_wkw",
     neededExperience: {
       domain: "oxalis",
       value: 1,
@@ -118,8 +126,8 @@ export const annotation: APIAnnotation = {
   annotationLayers: [
     {
       name: "Skeleton",
-      tracingId: "e90133de-b2db-4912-8261-8b6f84f7edab",
-      typ: "Skeleton",
+      tracingId: TRACING_ID,
+      typ: AnnotationLayerEnum.Skeleton,
       stats: {},
     },
   ],
@@ -128,7 +136,6 @@ export const annotation: APIAnnotation = {
   dataStore: {
     name: "localhost",
     url: "http://localhost:9000",
-    isScratch: false,
     allowsUpload: true,
     jobsEnabled: false,
     jobsSupportedByAvailableWorkers: [],
@@ -144,7 +151,7 @@ export const annotation: APIAnnotation = {
     somaClickingAllowed: true,
     volumeInterpolationAllowed: false,
     mergerMode: false,
-    resolutionRestrictions: {},
+    magRestrictions: {},
   },
   tracingTime: null,
   tags: ["ROI2017_wkw", "skeleton"],
@@ -172,6 +179,18 @@ export const annotation: APIAnnotation = {
       id: "5b1e45f9a00000a000abc2c3",
       name: "Connectomics department",
       organization: "Connectomics department",
+    },
+  ],
+};
+export const annotationProto: APITracingStoreAnnotation = {
+  description: "task-annotation-description",
+  version: 1,
+  earliestAccessibleVersion: 0,
+  annotationLayers: [
+    {
+      tracingId: TRACING_ID,
+      name: "Skeleton",
+      typ: AnnotationLayerEnum.Skeleton,
     },
   ],
 };

@@ -1,5 +1,4 @@
 import type TPS3D from "libs/thin_plate_spline";
-import _ from "lodash";
 import { formatNumberAsGLSLFloat } from "./utils.glsl";
 
 export function generateTpsInitialization(

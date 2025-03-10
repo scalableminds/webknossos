@@ -1,19 +1,19 @@
-@(name: String, datasetName: String)
+@(name: String, datasetName: String, additionalFooter: String)
 
-@emailBaseTemplate() {
+@emailBaseTemplate(additionalFooter) {
 <p>Hi @{name},</p>
 
 <p>
-  oops, unfortunately WEBKNOSSOS could not upload and convert your dataset <i>@{datasetName}</i> automatically. 
+  oops, unfortunately WEBKNOSSOS could not upload and convert your dataset <i>@{datasetName}</i> automatically.
   This should not have happened and we are sorry about the inconvenience. Our engineers will investigate and fix the
   problem as soon as possible.
 </p>
 
 <p>Here are some tips for uploading and converting datasets:
 <ul>
-  <li><a href="https://docs.webknossos.org/webknossos/data_formats.html">See the document on supported files formats</a></li>
+  <li><a href="https://docs.webknossos.org/webknossos/data/index.html">See the document on supported files formats</a></li>
   <li><a href="https://docs.webknossos.org/webknossos-py/index.html">Try our Python library for uploading datasets</a></li>
-  <li><a href="https://docs.webknossos.org/webknossos/datasets.html#working-with-zarr-neuroglancer-precomputed-and-n5-datasets">Try streaming your data as Zarr, Neuroglancer, or N5 files instead of uploading</a></li>
+  <li><a href="https://docs.webknossos.org/webknossos/data/streaming.html">Try streaming your data as Zarr, Neuroglancer, or N5 files instead of uploading</a></li>
 </ul>
 </p>
 

@@ -1,44 +1,44 @@
-import { useDispatch, useSelector } from "react-redux";
-import React, { useCallback, useState } from "react";
-import { WarningOutlined, MoreOutlined, DownloadOutlined } from "@ant-design/icons";
+import { DownloadOutlined, MoreOutlined, WarningOutlined } from "@ant-design/icons";
+import FastTooltip from "components/fast_tooltip";
+import { formatCountToDataAmountUnit } from "libs/format_utils";
+import { V3 } from "libs/mjs";
+import { useInterval } from "libs/react_helpers";
+import { useKeyPress } from "libs/react_hooks";
+import message from "messages";
+import messages from "messages";
 import type { Vector3 } from "oxalis/constants";
 import { AltOrOptionKey, MappingStatusEnum, OrthoViews } from "oxalis/constants";
-import {
-  getMappingInfoOrNull,
-  getVisibleSegmentationLayer,
-  hasVisibleUint64Segmentation,
-} from "oxalis/model/accessors/dataset_accessor";
-import { NumberInputPopoverSetting } from "oxalis/view/components/setting_input_views";
-import { useKeyPress } from "libs/react_hooks";
-import { getActiveResolutionInfo } from "oxalis/model/accessors/flycam_accessor";
-import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
-import {
-  setActiveNodeAction,
-  setActiveTreeAction,
-} from "oxalis/model/actions/skeletontracing_actions";
-import { formatCountToDataAmountUnit } from "libs/format_utils";
-import message from "messages";
 import {
   type ActionDescriptor,
   getToolClassForAnnotationTool,
 } from "oxalis/controller/combinations/tool_controls";
 import {
+  getMappingInfoOrNull,
+  getVisibleSegmentationLayer,
+  hasVisibleUint64Segmentation,
+} from "oxalis/model/accessors/dataset_accessor";
+import { getActiveMagInfo } from "oxalis/model/accessors/flycam_accessor";
+import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
+import {
   calculateGlobalPos,
   isPlaneMode as getIsPlaneMode,
 } from "oxalis/model/accessors/view_mode_accessor";
-import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
-import { V3 } from "libs/mjs";
-import type { OxalisState } from "oxalis/store";
 import {
   getActiveSegmentationTracing,
   getReadableNameForLayerName,
 } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  setActiveNodeAction,
+  setActiveTreeAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
-import { useInterval } from "libs/react_helpers";
-import _ from "lodash";
-import type { AdditionalCoordinate } from "types/api_flow_types";
-import FastTooltip from "components/fast_tooltip";
 import { Store } from "oxalis/singletons";
+import type { OxalisState } from "oxalis/store";
+import { NumberInputPopoverSetting } from "oxalis/view/components/setting_input_views";
+import React, { useCallback, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = {
@@ -169,7 +169,7 @@ function ShortcutsInfo() {
   const moreShortcutsLink = (
     <a
       target="_blank"
-      href="https://docs.webknossos.org/webknossos/keyboard_shortcuts.html"
+      href="https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html"
       rel="noopener noreferrer"
       style={moreLinkStyle}
     >
@@ -472,7 +472,7 @@ function Infos() {
           />
         </span>
       ) : null}
-      <ResolutionInfo />
+      <MagnificationInfo />
     </React.Fragment>
   );
 }
@@ -499,18 +499,17 @@ function DownloadSpeedometer() {
   );
 }
 
-function ResolutionInfo() {
-  const { representativeResolution, isActiveResolutionGlobal } =
-    useSelector(getActiveResolutionInfo);
+function MagnificationInfo() {
+  const { representativeMag, isActiveMagGlobal } = useSelector(getActiveMagInfo);
 
   const renderMagTooltipContent = useCallback(() => {
     const state = Store.getState();
-    const { activeMagOfEnabledLayers } = getActiveResolutionInfo(state);
+    const { activeMagOfEnabledLayers } = getActiveMagInfo(state);
     const dataset = state.dataset;
     const tracing = state.tracing;
 
     return (
-      <>
+      <div style={{ width: 200 }}>
         Rendered magnification per layer:
         <ul>
           {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
@@ -523,11 +522,12 @@ function ResolutionInfo() {
             );
           })}
         </ul>
-      </>
+        {messages["dataset.mag_explanation"]}
+      </div>
     );
   }, []);
 
-  if (representativeResolution == null) {
+  if (representativeMag == null) {
     return null;
   }
 
@@ -535,12 +535,12 @@ function ResolutionInfo() {
     <span className="info-element">
       <img
         src="/assets/images/icon-statusbar-downsampling.svg"
-        className="resolution-status-bar-icon"
-        alt="Resolution"
+        className="mag-status-bar-icon"
+        alt="Magnification"
       />{" "}
       <FastTooltip dynamicRenderer={renderMagTooltipContent} placement="top">
-        {representativeResolution.join("-")}
-        {isActiveResolutionGlobal ? "" : "*"}{" "}
+        {representativeMag.join("-")}
+        {isActiveMagGlobal ? "" : "*"}{" "}
       </FastTooltip>
     </span>
   );

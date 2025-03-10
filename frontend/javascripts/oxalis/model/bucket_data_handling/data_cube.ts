@@ -1,40 +1,40 @@
-import _ from "lodash";
-import { createNanoEvents, type Emitter } from "nanoevents";
-import type { Bucket, BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
-import { DataBucket, NULL_BUCKET, NullBucket } from "oxalis/model/bucket_data_handling/bucket";
-import type { AdditionalAxis, ElementClass } from "types/api_flow_types";
-import type { ProgressCallback } from "libs/progress_callback";
+import ErrorHandling from "libs/error_handling";
 import { V3 } from "libs/mjs";
-import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "oxalis/model/volumetracing/volumelayer";
+import type { ProgressCallback } from "libs/progress_callback";
+import Toast from "libs/toast";
 import {
   areBoundingBoxesOverlappingOrTouching,
   castForArrayType,
   isNumberMap,
   union,
 } from "libs/utils";
-import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
-import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
-import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import type { DimensionMap } from "oxalis/model/dimensions";
-import Dimensions from "oxalis/model/dimensions";
-import ErrorHandling from "libs/error_handling";
-import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
-import type PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
-import type { Mapping } from "oxalis/store";
-import Store from "oxalis/store";
-import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
-import Toast from "libs/toast";
+import _ from "lodash";
+import { type Emitter, createNanoEvents } from "nanoevents";
 import type {
-  Vector3,
   BoundingBoxType,
-  LabelMasksByBucketAndW,
   BucketAddress,
+  LabelMasksByBucketAndW,
+  Vector3,
 } from "oxalis/constants";
 import constants, { MappingStatusEnum } from "oxalis/constants";
-import type { ResolutionInfo } from "../helpers/resolution_info";
+import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
+import type { Bucket, BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
+import { DataBucket, NULL_BUCKET, NullBucket } from "oxalis/model/bucket_data_handling/bucket";
+import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
+import type PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
+import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
+import type { DimensionMap } from "oxalis/model/dimensions";
+import Dimensions from "oxalis/model/dimensions";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
+import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "oxalis/model/volumetracing/volumelayer";
+import type { Mapping } from "oxalis/store";
+import Store from "oxalis/store";
+import type { AdditionalAxis, ElementClass } from "types/api_flow_types";
 import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { MagInfo } from "../helpers/mag_info";
 
 const warnAboutTooManyAllocations = _.once(() => {
   const msg =
@@ -82,7 +82,7 @@ class DataCube {
   temporalBucketManager: TemporalBucketManager;
   isSegmentation: boolean;
   elementClass: ElementClass;
-  resolutionInfo: ResolutionInfo;
+  magInfo: MagInfo;
   layerName: string;
   emitter: Emitter;
   lastRequestForValueSet: number | null = null;
@@ -106,14 +106,14 @@ class DataCube {
   constructor(
     layerBBox: BoundingBox,
     additionalAxes: AdditionalAxis[],
-    resolutionInfo: ResolutionInfo,
+    magInfo: MagInfo,
     elementClass: ElementClass,
     isSegmentation: boolean,
     layerName: string,
   ) {
     this.elementClass = elementClass;
     this.isSegmentation = isSegmentation;
-    this.resolutionInfo = resolutionInfo;
+    this.magInfo = magInfo;
     this.layerName = layerName;
     this.additionalAxes = _.keyBy(additionalAxes, "name");
     this.emitter = createNanoEvents();
@@ -213,7 +213,7 @@ class DataCube {
       return false;
     }
 
-    return this.boundingBox.containsBucket([x, y, z, zoomStep], this.resolutionInfo);
+    return this.boundingBox.containsBucket([x, y, z, zoomStep], this.magInfo);
   }
 
   getBucketIndexAndCube([x, y, z, zoomStep, coords]: BucketAddress): [
@@ -239,8 +239,8 @@ class DataCube {
   ): CubeEntry | null {
     const cubeKey = this.getCubeKey(zoomStep, coords);
     if (this.cubes[cubeKey] == null) {
-      const resolution = this.resolutionInfo.getResolutionByIndex(zoomStep);
-      if (resolution == null) {
+      const mag = this.magInfo.getMagByIndex(zoomStep);
+      if (mag == null) {
         return null;
       }
 
@@ -254,9 +254,9 @@ class DataCube {
       }
 
       const zoomedCubeBoundary: Vector3 = [
-        Math.ceil(this.boundingBox.max[0] / (constants.BUCKET_WIDTH * resolution[0])) + 1,
-        Math.ceil(this.boundingBox.max[1] / (constants.BUCKET_WIDTH * resolution[1])) + 1,
-        Math.ceil(this.boundingBox.max[2] / (constants.BUCKET_WIDTH * resolution[2])) + 1,
+        Math.ceil(this.boundingBox.max[0] / (constants.BUCKET_WIDTH * mag[0])) + 1,
+        Math.ceil(this.boundingBox.max[1] / (constants.BUCKET_WIDTH * mag[1])) + 1,
+        Math.ceil(this.boundingBox.max[2] / (constants.BUCKET_WIDTH * mag[2])) + 1,
       ];
       this.cubes[cubeKey] = new CubeEntry(zoomedCubeBoundary);
     }
@@ -342,7 +342,7 @@ class DataCube {
             {
               elementClass: this.elementClass,
               isSegmentation: this.isSegmentation,
-              resolutionInfo: this.resolutionInfo,
+              magInfo: this.magInfo,
             },
             "warning",
           );
@@ -433,13 +433,13 @@ class DataCube {
     // Please make use of a LabeledVoxelsMap instead.
     const promises = [];
 
-    for (const [resolutionIndex] of this.resolutionInfo.getResolutionsWithIndices()) {
+    for (const [magIndex] of this.magInfo.getMagsWithIndices()) {
       promises.push(
         this._labelVoxelInResolution_DEPRECATED(
           voxel,
           additionalCoordinates,
           label,
-          resolutionIndex,
+          magIndex,
           activeSegmentId,
         ),
       );
@@ -487,7 +487,7 @@ class DataCube {
     additionalCoordinates: AdditionalCoordinate[] | null,
     segmentIdNumber: number,
     dimensionIndices: DimensionMap,
-    floodfillBoundingBox: BoundingBoxType,
+    _floodfillBoundingBox: BoundingBoxType,
     zoomStep: number,
     progressCallback: ProgressCallback,
     use3D: boolean,
@@ -498,14 +498,17 @@ class DataCube {
   }> {
     // This flood-fill algorithm works in two nested levels and uses a list of buckets to flood fill.
     // On the inner level a bucket is flood-filled  and if the iteration of the buckets data
-    // reaches an neighbour bucket, this bucket is added to this list of buckets to flood fill.
+    // reaches a neighbour bucket, this bucket is added to this list of buckets to flood fill.
     // The outer level simply iterates over all  buckets in the list and triggers the bucket-wise flood fill.
     // Additionally a map is created that saves all labeled voxels for each bucket. This map is returned at the end.
     //
-    // Note: It is possible that a bucket is multiple times added to the list of buckets. This is intended
+    // Note: It is possible that a bucket is added multiple times to the list of buckets. This is intended
     // because a border of the "neighbour volume shape" might leave the neighbour bucket and enter it somewhere else.
     // If it would not be possible to have the same neighbour bucket in the list multiple times,
     // not all of the target area in the neighbour bucket might be filled.
+
+    const floodfillBoundingBox = new BoundingBox(_floodfillBoundingBox);
+
     // Helper function to convert between xyz and uvw (both directions)
     const transpose = (voxel: Vector3): Vector3 =>
       Dimensions.transDimWithIndices(voxel, dimensionIndices);
@@ -517,12 +520,12 @@ class DataCube {
       zoomStep,
     );
     const seedBucket = this.getOrCreateBucket(seedBucketAddress);
-    let coveredBBoxMin: Vector3 = [
+    const coveredBBoxMin: Vector3 = [
       Number.POSITIVE_INFINITY,
       Number.POSITIVE_INFINITY,
       Number.POSITIVE_INFINITY,
     ];
-    let coveredBBoxMax: Vector3 = [0, 0, 0];
+    const coveredBBoxMax: Vector3 = [0, 0, 0];
 
     if (seedBucket.type === "null") {
       return {
@@ -535,9 +538,9 @@ class DataCube {
       };
     }
 
-    if (!this.resolutionInfo.hasIndex(zoomStep)) {
+    if (!this.magInfo.hasIndex(zoomStep)) {
       throw new Error(
-        `DataCube.floodFill was called with a zoomStep of ${zoomStep} which does not exist for the current resolution.`,
+        `DataCube.floodFill was called with a zoomStep of ${zoomStep} which does not exist for the current magnification.`,
       );
     }
 
@@ -630,16 +633,14 @@ class DataCube {
       const currentLabeledVoxelMap =
         bucketsWithLabeledVoxelsMap.get(currentBucket.zoomedAddress) || new Map();
 
-      const currentResolution = this.resolutionInfo.getResolutionByIndexOrThrow(
-        currentBucket.zoomedAddress[3],
-      );
+      const currentMag = this.magInfo.getMagByIndexOrThrow(currentBucket.zoomedAddress[3]);
 
       const markUvwInSliceAsLabeled = ([firstCoord, secondCoord, thirdCoord]: Vector3) => {
         // Convert bucket local W coordinate to global W (both mag-dependent)
         const w = dimensionIndices[2];
         thirdCoord += currentBucket.getTopLeftInMag()[w];
         // Convert mag-dependent W to mag-independent W
-        thirdCoord *= currentResolution[w];
+        thirdCoord *= currentMag[w];
 
         if (!currentLabeledVoxelMap.has(thirdCoord)) {
           currentLabeledVoxelMap.set(
@@ -691,35 +692,42 @@ class DataCube {
           } else {
             // Label the current neighbour and add it to the neighbourVoxelStackUvw to iterate over its neighbours.
             const neighbourVoxelIndex = this.getVoxelIndexByVoxelOffset(neighbourVoxelXyz);
+            const currentGlobalPosition = V3.add(
+              currentGlobalBucketPosition,
+              V3.scale3(adjustedNeighbourVoxelXyz, currentMag),
+            );
+            // When flood filling in a coarser mag, a voxel in the coarse mag is more than one voxel in mag 1
+            const voxelBoundingBoxInMag1 = new BoundingBox({
+              min: currentGlobalPosition,
+              max: V3.add(currentGlobalPosition, currentMag),
+            });
 
             if (bucketData[neighbourVoxelIndex] === sourceSegmentId) {
-              bucketData[neighbourVoxelIndex] = segmentId;
-              markUvwInSliceAsLabeled(neighbourVoxelUvw);
-              neighbourVoxelStackUvw.pushVoxel(neighbourVoxelUvw);
-              labeledVoxelCount++;
-              const currentGlobalPosition = V3.add(
-                currentGlobalBucketPosition,
-                V3.scale3(adjustedNeighbourVoxelXyz, currentResolution),
-              );
-              coveredBBoxMin = [
-                Math.min(coveredBBoxMin[0], currentGlobalPosition[0]),
-                Math.min(coveredBBoxMin[1], currentGlobalPosition[1]),
-                Math.min(coveredBBoxMin[2], currentGlobalPosition[2]),
-              ];
-              // The maximum is exclusive which is why we add 1 to the position
-              coveredBBoxMax = [
-                Math.max(coveredBBoxMax[0], currentGlobalPosition[0] + 1),
-                Math.max(coveredBBoxMax[1], currentGlobalPosition[1] + 1),
-                Math.max(coveredBBoxMax[2], currentGlobalPosition[2] + 1),
-              ];
+              if (floodfillBoundingBox.intersectedWith(voxelBoundingBoxInMag1).getVolume() > 0) {
+                bucketData[neighbourVoxelIndex] = segmentId;
+                markUvwInSliceAsLabeled(neighbourVoxelUvw);
+                neighbourVoxelStackUvw.pushVoxel(neighbourVoxelUvw);
+                labeledVoxelCount++;
 
-              if (labeledVoxelCount % 1000000 === 0) {
-                console.log(`Labeled ${labeledVoxelCount} Vx. Continuing...`);
+                coveredBBoxMin[0] = Math.min(coveredBBoxMin[0], voxelBoundingBoxInMag1.min[0]);
+                coveredBBoxMin[1] = Math.min(coveredBBoxMin[1], voxelBoundingBoxInMag1.min[1]);
+                coveredBBoxMin[2] = Math.min(coveredBBoxMin[2], voxelBoundingBoxInMag1.min[2]);
 
-                await progressCallback(
-                  false,
-                  `Labeled ${labeledVoxelCount / 1000000} MVx. Continuing...`,
-                );
+                // The maximum is exclusive which is why we add 1 to the position
+                coveredBBoxMax[0] = Math.max(coveredBBoxMax[0], voxelBoundingBoxInMag1.max[0] + 1);
+                coveredBBoxMax[1] = Math.max(coveredBBoxMax[1], voxelBoundingBoxInMag1.max[1] + 1);
+                coveredBBoxMax[2] = Math.max(coveredBBoxMax[2], voxelBoundingBoxInMag1.max[2] + 1);
+
+                if (labeledVoxelCount % 1000000 === 0) {
+                  console.log(`Labeled ${labeledVoxelCount} Vx. Continuing...`);
+
+                  await progressCallback(
+                    false,
+                    `Labeled ${labeledVoxelCount / 1000000} MVx. Continuing...`,
+                  );
+                }
+              } else {
+                wasBoundingBoxExceeded = true;
               }
             }
           }
@@ -785,7 +793,7 @@ class DataCube {
     additionalCoordinates: AdditionalCoordinate[] | null,
     zoomStep: number = 0,
   ): boolean {
-    // When this method returns false, this means that the next resolution (if it exists)
+    // When this method returns false, this means that the next mag (if it exists)
     // needs to be examined for rendering.
     const bucket = this.getBucket(
       this.positionToZoomedAddress(voxel, additionalCoordinates, zoomStep),
@@ -823,12 +831,12 @@ class DataCube {
     additionalCoordinates: AdditionalCoordinate[] | null,
     zoomStep: number,
   ): number {
-    const resolutions = this.resolutionInfo.getDenseResolutions();
+    const mags = this.magInfo.getDenseMags();
     let usableZoomStep = zoomStep;
 
     while (
       position &&
-      usableZoomStep < resolutions.length - 1 &&
+      usableZoomStep < mags.length - 1 &&
       !this.isZoomStepCurrentlyRenderableForVoxel(position, additionalCoordinates, usableZoomStep)
     ) {
       usableZoomStep++;
@@ -842,12 +850,12 @@ class DataCube {
     additionalCoordinates: AdditionalCoordinate[] | null,
     zoomStep: number,
   ): Promise<number> {
-    const resolutions = this.resolutionInfo.getDenseResolutions();
+    const mags = this.magInfo.getDenseMags();
     let usableZoomStep = zoomStep;
 
     while (
       position &&
-      usableZoomStep < resolutions.length - 1 &&
+      usableZoomStep < mags.length - 1 &&
       !(await this.isZoomStepUltimatelyRenderableForVoxel(
         position,
         additionalCoordinates,
@@ -866,7 +874,7 @@ class DataCube {
     mapping: Mapping | null | undefined,
     zoomStep: number = 0,
   ): number {
-    if (!this.resolutionInfo.hasIndex(zoomStep)) {
+    if (!this.magInfo.hasIndex(zoomStep)) {
       return 0;
     }
 
@@ -922,10 +930,10 @@ class DataCube {
   getVoxelOffset(voxel: Vector3, zoomStep: number = 0): Vector3 {
     // No `map` for performance reasons
     const voxelOffset: Vector3 = [0, 0, 0];
-    const resolution = this.resolutionInfo.getResolutionByIndexOrThrow(zoomStep);
+    const mag = this.magInfo.getMagByIndexOrThrow(zoomStep);
 
     for (let i = 0; i < 3; i++) {
-      voxelOffset[i] = Math.floor(voxel[i] / resolution[i]) % constants.BUCKET_WIDTH;
+      voxelOffset[i] = Math.floor(voxel[i] / mag[i]) % constants.BUCKET_WIDTH;
     }
 
     return voxelOffset;
@@ -944,7 +952,7 @@ class DataCube {
     // return the bucket a given voxel lies in
     return globalPositionToBucketPosition(
       position,
-      this.resolutionInfo.getDenseResolutions(),
+      this.magInfo.getDenseMags(),
       zoomStep,
       additionalCoordinates,
     );

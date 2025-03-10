@@ -1,11 +1,11 @@
-import { Spin, Table, Card, Typography, Tooltip, Tag } from "antd";
-import React, { useState } from "react";
-import type { APIAvailableTasksReport } from "types/api_flow_types";
+import { InfoCircleOutlined } from "@ant-design/icons";
 import { getAvailableTasksReport } from "admin/admin_rest_api";
+import { Card, Spin, Table, Tag, Tooltip, Typography } from "antd";
 import { handleGenericError } from "libs/error_handling";
 import * as Utils from "libs/utils";
+import { useState } from "react";
+import type { APIAvailableTasksReport } from "types/api_flow_types";
 import TeamSelectionForm from "./team_selection_form";
-import { InfoCircleOutlined } from "@ant-design/icons";
 
 const { Column } = Table;
 
@@ -45,7 +45,7 @@ function AvailableTasksReportView() {
         available to multiple users here, but each will only be handed to the first user to request
         it.
         <a
-          href="https://docs.webknossos.org/webknossos/tasks.html"
+          href="https://docs.webknossos.org/webknossos/tasks_projects/index.html"
           target="_blank"
           rel="noopener noreferrer"
         >

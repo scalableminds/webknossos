@@ -1,5 +1,4 @@
-import * as React from "react";
-import { Modal, Button, Spin, Tooltip } from "antd";
+import { Button, Modal, Spin, Tooltip } from "antd";
 
 type Props = {
   isCloseable: boolean;

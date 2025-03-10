@@ -1,10 +1,10 @@
-import * as React from "react";
-import _ from "lodash";
 import { WarningOutlined } from "@ant-design/icons";
-import { getUnrenderableLayerInfosForCurrentZoom } from "oxalis/model/accessors/flycam_accessor";
-import { usePolledState } from "libs/react_helpers";
-import type { SmallerOrHigherInfo } from "oxalis/model/helpers/resolution_info";
 import FastTooltip from "components/fast_tooltip";
+import { usePolledState } from "libs/react_helpers";
+import _ from "lodash";
+import { getUnrenderableLayerInfosForCurrentZoom } from "oxalis/model/accessors/flycam_accessor";
+import type { SmallerOrHigherInfo } from "oxalis/model/helpers/mag_info";
+import * as React from "react";
 
 const { useState } = React;
 type UnrenderableLayerNamesInfo = {

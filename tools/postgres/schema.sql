@@ -20,7 +20,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(120);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(126);
 COMMIT TRANSACTION;
 
 
@@ -56,7 +56,7 @@ CREATE TABLE webknossos.annotation_layers(
   _annotation CHAR(24) NOT NULL,
   tracingId CHAR(36) NOT NULL UNIQUE,
   typ webknossos.ANNOTATION_LAYER_TYPE NOT NULL,
-  name VARCHAR(256) NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\.]+$'),
+  name VARCHAR(256) NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\.\$]+$'),
   statistics JSONB NOT NULL,
   UNIQUE (name, _annotation),
   PRIMARY KEY (_annotation, tracingId),
@@ -113,10 +113,10 @@ CREATE TABLE webknossos.datasets(
   defaultViewConfiguration JSONB,
   adminViewConfiguration JSONB,
   description TEXT,
-  displayName VARCHAR(256),
+  name VARCHAR(256) NOT NULL,
   isPublic BOOLEAN NOT NULL DEFAULT false,
   isUsable BOOLEAN NOT NULL DEFAULT false,
-  name VARCHAR(256) NOT NULL,
+  directoryName VARCHAR(256) NOT NULL,
   voxelSizeFactor webknossos.VECTOR3,
   voxelSizeUnit webknossos.LENGTH_UNIT,
   status VARCHAR(1024) NOT NULL DEFAULT '',
@@ -127,7 +127,7 @@ CREATE TABLE webknossos.datasets(
   tags VARCHAR(256)[] NOT NULL DEFAULT '{}',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  UNIQUE (name, _organization),
+  UNIQUE (directoryName, _organization),
   CONSTRAINT defaultViewConfigurationIsJsonObject CHECK(jsonb_typeof(defaultViewConfiguration) = 'object'),
   CONSTRAINT adminViewConfigurationIsJsonObject CHECK(jsonb_typeof(adminViewConfiguration) = 'object'),
   CONSTRAINT metadataIsJsonArray CHECK(jsonb_typeof(metadata) = 'array')
@@ -174,11 +174,14 @@ CREATE TABLE webknossos.dataset_allowedTeams(
   PRIMARY KEY (_dataset, _team)
 );
 
-CREATE TABLE webknossos.dataset_resolutions(
+CREATE TABLE webknossos.dataset_mags(
   _dataset CHAR(24) NOT NULL,
   dataLayerName VARCHAR(256),
-  resolution webknossos.VECTOR3 NOT NULL,
-  PRIMARY KEY (_dataset, dataLayerName, resolution)
+  mag webknossos.VECTOR3 NOT NULL,
+  path TEXT,
+  realPath TEXT,
+  hasLocalData BOOLEAN NOT NULL DEFAULT false,
+  PRIMARY KEY (_dataset, dataLayerName, mag)
 );
 
 CREATE TABLE webknossos.dataset_lastUsedTimes(
@@ -260,8 +263,8 @@ CREATE TABLE webknossos.taskTypes(
   settings_somaClickingAllowed BOOLEAN NOT NULL,
   settings_volumeInterpolationAllowed BOOLEAN NOT NULL DEFAULT false,
   settings_mergerMode BOOLEAN NOT NULL DEFAULT false,
-  settings_resolutionRestrictions_min INT DEFAULT NULL,
-  settings_resolutionRestrictions_max INT DEFAULT NULL,
+  settings_magRestrictions_min INT DEFAULT NULL,
+  settings_magRestrictions_max INT DEFAULT NULL,
   recommendedConfiguration JSONB,
   tracingType webknossos.TASKTYPE_TRACINGTYPES NOT NULL DEFAULT 'skeleton',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -447,6 +450,7 @@ CREATE TABLE webknossos.maintenances(
 CREATE TABLE webknossos.workers(
   _id CHAR(24) PRIMARY KEY,
   _dataStore VARCHAR(256) NOT NULL,
+  name VARCHAR(256) NOT NULL DEFAULT 'Unnamed Worker',
   key VARCHAR(1024) NOT NULL UNIQUE,
   maxParallelHighPriorityJobs INT NOT NULL DEFAULT 1,
   maxParallelLowPriorityJobs INT NOT NULL DEFAULT 1,
@@ -545,7 +549,7 @@ CREATE TABLE webknossos.emailVerificationKeys(
   isUsed BOOLEAN NOT NULL DEFAULT false
 );
 
-CREATE TYPE webknossos.AI_MODEL_CATEGORY AS ENUM ('em_neurons', 'em_nuclei');
+CREATE TYPE webknossos.AI_MODEL_CATEGORY AS ENUM ('em_neurons', 'em_nuclei', 'em_synapses', 'em_neuron_types', 'em_cell_organelles');
 
 CREATE TABLE webknossos.aiModels(
   _id CHAR(24) PRIMARY KEY,
@@ -740,7 +744,7 @@ CREATE INDEX ON webknossos.annotations(typ, state, isDeleted);
 CREATE INDEX ON webknossos.annotations(_user, _task, isDeleted);
 CREATE INDEX ON webknossos.annotations(_task, typ, isDeleted);
 CREATE INDEX ON webknossos.annotations(typ, isDeleted);
-CREATE INDEX ON webknossos.datasets(name);
+CREATE INDEX ON webknossos.datasets(directoryName);
 CREATE INDEX ON webknossos.datasets(_folder);
 CREATE INDEX ON webknossos.tasks(_project);
 CREATE INDEX ON webknossos.tasks(isDeleted);
@@ -786,7 +790,7 @@ ALTER TABLE webknossos.dataset_layers
 ALTER TABLE webknossos.dataset_allowedTeams
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) ON DELETE CASCADE DEFERRABLE,
   ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE DEFERRABLE;
-ALTER TABLE webknossos.dataset_resolutions
+ALTER TABLE webknossos.dataset_mags
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.projects
   ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) DEFERRABLE,

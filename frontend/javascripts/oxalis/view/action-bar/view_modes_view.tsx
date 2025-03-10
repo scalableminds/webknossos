@@ -1,16 +1,16 @@
 import { Button, Dropdown, type MenuProps, Space } from "antd";
-import { connect } from "react-redux";
-import type { Dispatch } from "redux";
-import React, { PureComponent } from "react";
-import {
-  setViewModeAction,
-  setFlightmodeRecordingAction,
-} from "oxalis/model/actions/settings_actions";
-import type { OxalisState, AllowedMode } from "oxalis/store";
-import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 import { type ViewMode, ViewModeValues } from "oxalis/constants";
 import constants from "oxalis/constants";
+import {
+  setFlightmodeRecordingAction,
+  setViewModeAction,
+} from "oxalis/model/actions/settings_actions";
+import type { AllowedMode, OxalisState } from "oxalis/store";
+import Store from "oxalis/store";
+import { PureComponent } from "react";
+import { connect } from "react-redux";
+import type { Dispatch } from "redux";
 import type { EmptyObject } from "types/globals";
 
 type StateProps = {

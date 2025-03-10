@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.explore
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.layers.{
@@ -24,11 +25,11 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
 
   override def name: String = "WEBKNOSSOS-based Zarr"
 
-  override def explore(remotePath: VaultPath,
-                       credentialId: Option[String]): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+  override def explore(remotePath: VaultPath, credentialId: Option[String])(
+      implicit tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     for {
       dataSourcePropertiesPath <- Fox.successful(remotePath / GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
-      dataSource <- parseJsonFromPath[DataSource](dataSourcePropertiesPath)
+      dataSource <- dataSourcePropertiesPath.parseAsJson[DataSource]
       zarrLayers <- Fox.serialCombined(dataSource.dataLayers) {
         case l: Zarr3SegmentationLayer =>
           for {
@@ -54,15 +55,14 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
   private def adaptMags(mags: List[MagLocator],
                         remoteLayerPath: VaultPath,
                         headerFilename: String,
-                        credentialId: Option[String]): Fox[List[MagLocator]] =
+                        credentialId: Option[String])(implicit tc: TokenContext): Fox[List[MagLocator]] =
     Fox.serialCombined(mags)(m =>
       for {
         magPath <- fixRemoteMagPath(m, remoteLayerPath, headerFilename)
       } yield m.copy(path = magPath, credentialId = credentialId))
 
-  private def fixRemoteMagPath(mag: MagLocator,
-                               remoteLayerPath: VaultPath,
-                               headerFilename: String): Fox[Option[String]] =
+  private def fixRemoteMagPath(mag: MagLocator, remoteLayerPath: VaultPath, headerFilename: String)(
+      implicit tc: TokenContext): Fox[Option[String]] =
     mag.path match {
       case Some(path) => Fox.successful(Some(path))
       case None       =>

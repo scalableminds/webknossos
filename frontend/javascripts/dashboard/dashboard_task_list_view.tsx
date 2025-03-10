@@ -1,4 +1,3 @@
-import { Button, Modal, Tag, Card, Row, Col, List, Tooltip } from "antd";
 import {
   CheckCircleOutlined,
   DeleteOutlined,
@@ -9,37 +8,32 @@ import {
   TeamOutlined,
   UserAddOutlined,
 } from "@ant-design/icons";
-import { Link } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
-import { connect } from "react-redux";
+import { Button, Card, Col, List, Modal, Row, Tag, Tooltip } from "antd";
 import Markdown from "libs/markdown_adapter";
 import * as React from "react";
+import { connect } from "react-redux";
+import { Link } from "react-router-dom";
 
+import { deleteAnnotation, downloadAnnotation, resetAnnotation } from "admin/admin_rest_api";
+import { finishTask, peekNextTasks, requestTask } from "admin/api/tasks";
 import classNames from "classnames";
-import type { APITaskWithAnnotation, APIUser, APIAnnotation } from "types/api_flow_types";
 import { AsyncButton, AsyncLink } from "components/async_clickables";
-import type { OxalisState } from "oxalis/store";
-import {
-  deleteAnnotation,
-  resetAnnotation,
-  finishTask,
-  requestTask,
-  peekNextTasks,
-  downloadAnnotation,
-} from "admin/admin_rest_api";
-import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import { getSkeletonDescriptor } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
-import { handleGenericError } from "libs/error_handling";
 import FormattedDate from "components/formatted_date";
 import LinkButton from "components/link_button";
+import TransferTaskModal from "dashboard/transfer_task_modal";
+import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
 import Request from "libs/request";
 import Toast from "libs/toast";
-import TransferTaskModal from "dashboard/transfer_task_modal";
 import * as Utils from "libs/utils";
 import messages from "messages";
+import { getSkeletonDescriptor } from "oxalis/model/accessors/skeletontracing_accessor";
+import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
+import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
+import type { OxalisState } from "oxalis/store";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
+import type { APIAnnotation, APITaskWithAnnotation, APIUser } from "types/api_flow_types";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 
 const pageLength: number = 1000;
@@ -414,7 +408,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
                         as part of the WEBKNOSSOS project management.{" "}
                       </p>
                       <a
-                        href="https://docs.webknossos.org/webknossos/tasks.html"
+                        href="https://docs.webknossos.org/webknossos/tasks_projects/index.html"
                         rel="noopener noreferrer"
                         target="_blank"
                       >

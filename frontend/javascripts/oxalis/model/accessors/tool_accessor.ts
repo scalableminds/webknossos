@@ -1,30 +1,28 @@
+import {
+  PricingPlanEnum,
+  getFeatureNotAvailableInPlanMessage,
+  isFeatureAllowedByPricingPlan,
+} from "admin/organization/pricing_plan_utils";
 import memoizeOne from "memoize-one";
 import { type AnnotationTool, IdentityTransform } from "oxalis/constants";
 import { AnnotationToolEnum } from "oxalis/constants";
-import type { OxalisState } from "oxalis/store";
+import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
+import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
 import {
   type AgglomerateState,
   getActiveSegmentationTracing,
-  getRenderableResolutionForSegmentationTracing,
+  getRenderableMagForSegmentationTracing,
   hasAgglomerateMapping,
   isVolumeAnnotationDisallowedForZoom,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import {
-  getTransformsPerLayer,
-  getVisibleSegmentationLayer,
-} from "oxalis/model/accessors/dataset_accessor";
-import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
+import type { OxalisState } from "oxalis/store";
 import type { APIOrganization, APIUser } from "types/api_flow_types";
-import {
-  getFeatureNotAvailableInPlanMessage,
-  isFeatureAllowedByPricingPlan,
-  PricingPlanEnum,
-} from "admin/organization/pricing_plan_utils";
-import { isSkeletonLayerTransformed } from "./skeletontracing_accessor";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
+import { getTransformsPerLayer } from "./dataset_layer_transformation_accessor";
+import { isSkeletonLayerTransformed } from "./skeletontracing_accessor";
 
 const zoomInToUseToolMessage =
-  "Please zoom in further to use this tool. If you want to edit volume data on this zoom level, create an annotation with restricted resolutions from the extended annotation menu in the dashboard.";
+  "Please zoom in further to use this tool. If you want to edit volume data on this zoom level, create an annotation with restricted magnifications from the extended annotation menu in the dashboard.";
 
 const getExplanationForDisabledVolume = (
   isSegmentationTracingVisible: boolean,
@@ -36,7 +34,7 @@ const getExplanationForDisabledVolume = (
   isJSONMappingActive: boolean,
 ) => {
   if (!isSegmentationTracingVisible) {
-    return "Volume annotation is disabled since no segmentation tracing layer is enabled. Enable it in the left settings sidebar.";
+    return "Volume annotation is disabled since no segmentation tracing layer is enabled. Enable one in the left settings sidebar or make a segmentation layer editable via the lock icon.";
   }
 
   if (isZoomInvalidForTracing) {
@@ -274,11 +272,8 @@ function getDisabledVolumeInfo(state: OxalisState) {
   const hasVolume = state.tracing.volumes.length > 0;
   const hasSkeleton = state.tracing.skeleton != null;
   const segmentationTracingLayer = getActiveSegmentationTracing(state);
-  const labeledResolution = getRenderableResolutionForSegmentationTracing(
-    state,
-    segmentationTracingLayer,
-  )?.resolution;
-  const isSegmentationTracingVisibleForMag = labeledResolution != null;
+  const labeledMag = getRenderableMagForSegmentationTracing(state, segmentationTracingLayer)?.mag;
+  const isSegmentationTracingVisibleForMag = labeledMag != null;
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
   const isSegmentationTracingTransformed =
     segmentationTracingLayer != null &&
@@ -353,18 +348,16 @@ export const getDisabledInfoForTools = reuseInstanceOnEquality(_getDisabledInfoF
 export function adaptActiveToolToShortcuts(
   activeTool: AnnotationTool,
   isShiftPressed: boolean,
-  isControlPressed: boolean,
+  isControlOrMetaPressed: boolean,
   isAltPressed: boolean,
 ): AnnotationTool {
-  if (!isShiftPressed && !isControlPressed && !isAltPressed) {
+  if (!isShiftPressed && !isControlOrMetaPressed && !isAltPressed) {
     // No modifier is pressed
     return activeTool;
   }
 
   if (
     activeTool === AnnotationToolEnum.MOVE ||
-    activeTool === AnnotationToolEnum.ERASE_BRUSH ||
-    activeTool === AnnotationToolEnum.ERASE_TRACE ||
     activeTool === AnnotationToolEnum.QUICK_SELECT ||
     activeTool === AnnotationToolEnum.PROOFREAD ||
     activeTool === AnnotationToolEnum.LINE_MEASUREMENT ||
@@ -372,28 +365,39 @@ export function adaptActiveToolToShortcuts(
   ) {
     // These tools do not have any modifier-related behavior currently (except for ALT
     // which is already handled below)
+  } else if (
+    activeTool === AnnotationToolEnum.ERASE_BRUSH ||
+    activeTool === AnnotationToolEnum.ERASE_TRACE
+  ) {
+    if (isShiftPressed) {
+      if (isControlOrMetaPressed) {
+        return AnnotationToolEnum.FILL_CELL;
+      } else {
+        return AnnotationToolEnum.PICK_CELL;
+      }
+    }
   } else {
     if (activeTool === AnnotationToolEnum.SKELETON) {
       // The "skeleton" tool is not changed right now (since actions such as moving a node
       // don't have a dedicated tool). The only exception is "Alt" which switches to the move tool.
-      if (isAltPressed && !isControlPressed && !isShiftPressed) {
+      if (isAltPressed && !isControlOrMetaPressed && !isShiftPressed) {
         return AnnotationToolEnum.MOVE;
       }
 
       return activeTool;
     }
 
-    if (isShiftPressed && !isControlPressed && !isAltPressed) {
-      // Only shift is pressed. Switch to the picker
-      return AnnotationToolEnum.PICK_CELL;
-    }
-
-    if (isControlPressed && isShiftPressed && !isAltPressed) {
-      // Control and shift switch to the eraser
-      if (activeTool === AnnotationToolEnum.BRUSH) {
-        return AnnotationToolEnum.ERASE_BRUSH;
-      } else if (activeTool === AnnotationToolEnum.TRACE) {
-        return AnnotationToolEnum.ERASE_TRACE;
+    if (isShiftPressed && !isAltPressed) {
+      if (!isControlOrMetaPressed) {
+        // Only shift is pressed. Switch to the picker
+        return AnnotationToolEnum.PICK_CELL;
+      } else {
+        // Control and shift switch to the eraser
+        if (activeTool === AnnotationToolEnum.BRUSH) {
+          return AnnotationToolEnum.ERASE_BRUSH;
+        } else if (activeTool === AnnotationToolEnum.TRACE) {
+          return AnnotationToolEnum.ERASE_TRACE;
+        }
       }
     }
   }

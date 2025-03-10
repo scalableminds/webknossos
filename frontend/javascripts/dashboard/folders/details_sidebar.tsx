@@ -1,30 +1,30 @@
 import {
+  EditOutlined,
   FileOutlined,
   FolderOpenOutlined,
-  SearchOutlined,
-  EditOutlined,
   LoadingOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
+import { useQuery } from "@tanstack/react-query";
+import { getOrganization } from "admin/admin_rest_api";
 import { Result, Spin, Tag, Tooltip } from "antd";
-import { stringToColor, formatCountToDataAmountUnit } from "libs/format_utils";
+import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
+import Markdown from "libs/markdown_adapter";
 import { pluralize } from "libs/utils";
 import _ from "lodash";
+import type { OxalisState } from "oxalis/store";
 import {
   DatasetExtentRow,
   OwningOrganizationRow,
   VoxelSizeRow,
 } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
-import React, { useEffect } from "react";
+import { useEffect } from "react";
+import { useSelector } from "react-redux";
 import type { APIDatasetCompact, Folder } from "types/api_flow_types";
 import { DatasetLayerTags, DatasetTags, TeamTags } from "../advanced_dataset/dataset_table";
 import { useDatasetCollectionContext } from "../dataset/dataset_collection_context";
 import { SEARCH_RESULTS_LIMIT, useDatasetQuery, useFolderQuery } from "../dataset/queries";
-import { useSelector } from "react-redux";
-import type { OxalisState } from "oxalis/store";
-import { getOrganization } from "admin/admin_rest_api";
-import { useQuery } from "@tanstack/react-query";
 import MetadataTable from "./metadata_table";
-import Markdown from "libs/markdown_adapter";
 
 export function DetailsSidebar({
   selectedDatasets,
@@ -90,12 +90,7 @@ function getMaybeSelectMessage(datasetCount: number) {
 
 function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompact }) {
   const context = useDatasetCollectionContext();
-  // exactDatasetId is needed to prevent refetching when some dataset property of selectedDataset was changed.
-  const exactDatasetId = {
-    owningOrganization: selectedDataset.owningOrganization,
-    name: selectedDataset.name,
-  };
-  const { data: fullDataset, isFetching } = useDatasetQuery(exactDatasetId);
+  const { data: fullDataset, isFetching } = useDatasetQuery(selectedDataset.id);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const { data: owningOrganization } = useQuery(
     ["organizations", selectedDataset.owningOrganization],
@@ -127,7 +122,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
         ) : (
           <FileOutlined style={{ marginRight: 4 }} />
         )}{" "}
-        {selectedDataset.displayName || selectedDataset.name}
+        {selectedDataset.name}
       </h4>
       {renderOrganization()}
       <Spin spinning={fullDataset == null}>
@@ -187,10 +182,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
 
         {fullDataset && (
           /* The key is crucial to enforce rerendering when the dataset changes. This is necessary for the MetadataTable to work correctly. */
-          <MetadataTable
-            datasetOrFolder={fullDataset}
-            key={`${fullDataset.dataSource.id.name}#dataset`}
-          />
+          <MetadataTable datasetOrFolder={fullDataset} key={`${fullDataset.id}#dataset`} />
         )}
       </Spin>
 

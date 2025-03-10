@@ -1,18 +1,19 @@
-import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { select } from "oxalis/model/sagas/effect-generators";
-import { call, take, takeEvery, put } from "typed-redux-saga";
+import { getHistogramForLayer } from "admin/admin_rest_api";
+import type { Vector2 } from "oxalis/constants";
 import {
+  type ReloadHistogramAction,
   setHistogramDataForLayerAction,
   updateLayerSettingAction,
-  type ReloadHistogramAction,
 } from "oxalis/model/actions/settings_actions";
-import { getHistogramForLayer } from "admin/admin_rest_api";
 import type DataLayer from "oxalis/model/data_layer";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
+import { select } from "oxalis/model/sagas/effect-generators";
 import { Model } from "oxalis/singletons";
-import type { Vector2 } from "oxalis/constants";
+import { call, put, takeEvery } from "typed-redux-saga";
+import { ensureWkReady } from "./ready_sagas";
 
 export default function* loadHistogramDataSaga(): Saga<void> {
-  yield* take("WK_READY");
+  yield* call(ensureWkReady);
   yield* takeEvery("RELOAD_HISTOGRAM", reloadHistogramForLayer);
 
   const dataLayers: Array<DataLayer> = yield* call([Model, Model.getColorLayers]);

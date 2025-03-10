@@ -1,13 +1,13 @@
-import type { ViewMode, ControlMode } from "oxalis/constants";
+import Deferred from "libs/async/deferred";
+import type { ControlMode, ViewMode } from "oxalis/constants";
 import type {
-  UserConfiguration,
   DatasetConfiguration,
   DatasetLayerConfiguration,
-  TemporaryConfiguration,
   Mapping,
   MappingType,
+  TemporaryConfiguration,
+  UserConfiguration,
 } from "oxalis/store";
-import Deferred from "libs/async/deferred";
 import type { APIHistogramData } from "types/api_flow_types";
 
 export type UpdateUserSettingAction = ReturnType<typeof updateUserSettingAction>;
@@ -199,13 +199,20 @@ export type OptionalMappingProperties = {
   mappingColors?: Array<number>;
   hideUnmappedIds?: boolean;
   showLoadingIndicator?: boolean;
+  isMergerModeMapping?: boolean;
 };
 
 export const setMappingAction = (
   layerName: string,
   mappingName: string | null | undefined,
   mappingType: MappingType = "JSON",
-  { mapping, mappingColors, hideUnmappedIds, showLoadingIndicator }: OptionalMappingProperties = {},
+  {
+    mapping,
+    mappingColors,
+    hideUnmappedIds,
+    showLoadingIndicator,
+    isMergerModeMapping,
+  }: OptionalMappingProperties = {},
 ) =>
   ({
     type: "SET_MAPPING",
@@ -216,6 +223,7 @@ export const setMappingAction = (
     mappingColors,
     hideUnmappedIds,
     showLoadingIndicator,
+    isMergerModeMapping,
   }) as const;
 
 export const setMappingNameAction = (

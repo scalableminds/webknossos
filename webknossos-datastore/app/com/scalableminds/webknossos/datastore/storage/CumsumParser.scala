@@ -2,10 +2,11 @@ package com.scalableminds.webknossos.datastore.storage
 
 import com.google.gson.JsonParseException
 import com.google.gson.stream.JsonReader
+import com.scalableminds.util.time.Instant
 import com.typesafe.scalalogging.LazyLogging
+
 import java.io._
 import java.util
-
 import scala.annotation.tailrec
 import scala.collection.mutable
 
@@ -17,7 +18,7 @@ object CumsumParser extends LazyLogging {
   def parseImpl(f: File,
                 maxReaderRange: Long,
                 initialBoundingBoxList: List[(Long, Long, Long, Long, Long, Long)],
-                start: Long): BoundingBoxCache = {
+                before: Instant): BoundingBoxCache = {
     val r = new FileReader(f)
     try {
       val jsonReader = new JsonReader(r)
@@ -48,16 +49,13 @@ object CumsumParser extends LazyLogging {
       jsonReader.endObject()
 
       if (!correctOrder) {
-        r.close()
-        return parseImpl(f, maxReaderRange, boundingBoxList, start)
+        parseImpl(f, maxReaderRange, boundingBoxList, before)
+      } else {
+        Instant.logSince(before, s"Cumsum JSON parsing", logger)
+        new BoundingBoxCache(cache,
+                             BoundingBoxFinder(positionSets._1, positionSets._2, positionSets._3, minBoundingBox),
+                             maxReaderRange)
       }
-
-      val end = System.currentTimeMillis()
-      logger.info(s"Cumsum parsing took ${end - start} ms")
-
-      new BoundingBoxCache(cache,
-                           BoundingBoxFinder(positionSets._1, positionSets._2, positionSets._3, minBoundingBox),
-                           maxReaderRange)
     } catch {
       case e: JsonParseException =>
         logger.error(s"Parse exception while parsing cumsum: ${e.getMessage}.")
@@ -68,7 +66,7 @@ object CumsumParser extends LazyLogging {
   }
 
   def parse(f: File, maxReaderRange: Long): BoundingBoxCache =
-    parseImpl(f, maxReaderRange, List(), System.currentTimeMillis())
+    parseImpl(f, maxReaderRange, List(), Instant.now)
 
   private def parseBoundingBoxes(reader: JsonReader): List[(Long, Long, Long, Long, Long, Long)] = {
     val formRx = "([0-9]+)_([0-9]+)_([0-9]+)_([0-9]+)_([0-9]+)_([0-9]+)".r

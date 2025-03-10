@@ -1,6 +1,3 @@
-import { Link } from "react-router-dom";
-import { PropTypes } from "@scalableminds/prop-types";
-import { Tag, Spin, Button, Input, Modal, Card, Alert, App, type TableProps } from "antd";
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -13,32 +10,35 @@ import {
   PlusOutlined,
   UserAddOutlined,
 } from "@ant-design/icons";
-import type React from "react";
-import { useEffect, useState } from "react";
-import _ from "lodash";
-import features from "features";
-import { AsyncLink } from "components/async_clickables";
-import type { APITask, APITaskType, TaskStatus } from "types/api_flow_types";
+import { PropTypes } from "@scalableminds/prop-types";
+import { downloadAnnotation as downloadAnnotationAPI } from "admin/admin_rest_api";
 import {
+  assignTaskToUser as assignTaskToUserAPI,
   deleteTask as deleteTaskAPI,
   getTasks,
-  downloadAnnotation as downloadAnnotationAPI,
-  assignTaskToUser as assignTaskToUserAPI,
-} from "admin/admin_rest_api";
-import { formatTuple, formatSeconds } from "libs/format_utils";
-import { handleGenericError } from "libs/error_handling";
-import FormattedDate from "components/formatted_date";
-import Persistence from "libs/persistence";
+} from "admin/api/tasks";
 import TaskAnnotationView from "admin/task/task_annotation_view";
-import LinkButton from "components/link_button";
 import { downloadTasksAsCSV } from "admin/task/task_create_form_view";
 import type { QueryObject, TaskFormFieldValues } from "admin/task/task_search_form";
 import TaskSearchForm from "admin/task/task_search_form";
+import UserSelectionComponent from "admin/user/user_selection_component";
+import { Alert, App, Button, Card, Input, Modal, Spin, type TableProps, Tag } from "antd";
+import { AsyncLink } from "components/async_clickables";
+import FixedExpandableTable from "components/fixed_expandable_table";
+import FormattedDate from "components/formatted_date";
+import LinkButton from "components/link_button";
+import features from "features";
+import { handleGenericError } from "libs/error_handling";
+import { formatSeconds, formatTuple } from "libs/format_utils";
+import Persistence from "libs/persistence";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
+import _ from "lodash";
 import messages from "messages";
-import FixedExpandableTable from "components/fixed_expandable_table";
-import UserSelectionComponent from "admin/user/user_selection_component";
+import type React from "react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import type { APITask, APITaskType, TaskStatus } from "types/api_flow_types";
 
 const { Search, TextArea } = Input;
 
@@ -158,7 +158,7 @@ function TaskListView({ initialFieldValues }: Props) {
         "team",
         "projectName",
         "id",
-        "dataSet",
+        "datasetName",
         "created",
         "type",
         (task) => task.neededExperience.domain,
@@ -222,7 +222,7 @@ function TaskListView({ initialFieldValues }: Props) {
         <p>
           To learn more about the task system in WEBKNOSSOS,{" "}
           <a
-            href="https://docs.webknossos.org/webknossos/tasks.html"
+            href="https://docs.webknossos.org/webknossos/tasks_projects/index.html"
             rel="noopener noreferrer"
             target="_blank"
           >
@@ -267,9 +267,9 @@ function TaskListView({ initialFieldValues }: Props) {
     },
     {
       title: "Dataset",
-      dataIndex: "dataSet",
-      key: "dataSet",
-      sorter: Utils.localeCompareBy<APITask>((task) => task.dataSet),
+      dataIndex: "datasetName",
+      key: "datasetName",
+      sorter: Utils.localeCompareBy<APITask>((task) => task.datasetName),
     },
     {
       title: "Stats",

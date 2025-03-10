@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
 import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
@@ -15,14 +16,14 @@ trait MeshMappingHelper {
 
   protected def segmentIdsForAgglomerateIdIfNeeded(
       organizationId: String,
-      datasetName: String,
+      datasetDirectoryName: String,
       dataLayerName: String,
       targetMappingName: Option[String],
       editableMappingTracingId: Option[String],
       agglomerateId: Long,
       mappingNameForMeshFile: Option[String],
-      omitMissing: Boolean, // If true, failing lookups in the agglomerate file will just return empty list.
-      token: Option[String])(implicit ec: ExecutionContext): Fox[List[Long]] =
+      omitMissing: Boolean // If true, failing lookups in the agglomerate file will just return empty list.
+  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Long]] =
     (targetMappingName, editableMappingTracingId) match {
       case (None, None) =>
         // No mapping selected, assume id matches meshfile
@@ -39,7 +40,7 @@ trait MeshMappingHelper {
             .segmentIdsForAgglomerateId(
               AgglomerateFileKey(
                 organizationId,
-                datasetName,
+                datasetDirectoryName,
                 dataLayerName,
                 mappingName
               ),
@@ -58,8 +59,7 @@ trait MeshMappingHelper {
           tracingstoreUri <- dsRemoteWebknossosClient.getTracingstoreUri
           segmentIdsResult <- dsRemoteTracingstoreClient.getEditableMappingSegmentIdsForAgglomerate(tracingstoreUri,
                                                                                                     tracingId,
-                                                                                                    agglomerateId,
-                                                                                                    token)
+                                                                                                    agglomerateId)
           segmentIds <- if (segmentIdsResult.agglomerateIdIsPresent)
             Fox.successful(segmentIdsResult.segmentIds)
           else // the agglomerate id is not present in the editable mapping. Fetch its info from the base mapping.
@@ -68,7 +68,7 @@ trait MeshMappingHelper {
               localSegmentIds <- agglomerateService.segmentIdsForAgglomerateId(
                 AgglomerateFileKey(
                   organizationId,
-                  datasetName,
+                  datasetDirectoryName,
                   dataLayerName,
                   mappingName
                 ),

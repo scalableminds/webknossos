@@ -10,7 +10,7 @@ import models.job.{JobDAO, JobService}
 import models.user.{User, UserDAO, UserService}
 import play.api.libs.json.{JsObject, Json}
 import slick.lifted.Rep
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject

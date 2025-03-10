@@ -1,15 +1,16 @@
-import { Store } from "oxalis/singletons";
-import type { Vector3 } from "oxalis/constants";
+import showFpsMeter from "libs/fps_meter";
 import { V3 } from "libs/mjs";
 import { roundTo, sleep } from "libs/utils";
-import type ApiLoader from "./api_loader";
-import type { ApiInterface } from "./api_latest";
-import showFpsMeter from "libs/fps_meter";
 import _ from "lodash";
+import type { Vector3 } from "oxalis/constants";
+import { Store } from "oxalis/singletons";
+import type { ApiInterface } from "./api_latest";
+import type ApiLoader from "./api_loader";
 
 // Can be accessed via window.webknossos.DEV.flags. Only use this
 // for debugging or one off scripts.
 export const WkDevFlags = {
+  logActions: false,
   sam: {
     useLocalMask: true,
   },

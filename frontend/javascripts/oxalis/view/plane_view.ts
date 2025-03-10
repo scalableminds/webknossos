@@ -1,23 +1,23 @@
-import * as THREE from "three";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
-import TWEEN from "tween.js";
-import _ from "lodash";
-import { getGroundTruthLayoutRect } from "oxalis/view/layouting/default_layout_configs";
-import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
-import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
-import type { OrthoViewMap, Vector3, Viewport } from "oxalis/constants";
-import Constants, { OrthoViewColors, OrthoViewValues, OrthoViews } from "oxalis/constants";
-import Store from "oxalis/store";
 import app from "app";
-import getSceneController from "oxalis/controller/scene_controller_provider";
-import window from "libs/window";
-import { clearCanvas, setupRenderArea } from "oxalis/view/rendering_utils";
 import VisibilityAwareRaycaster, {
   type RaycastIntersection,
 } from "libs/visibility_aware_raycaster";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import window from "libs/window";
+import _ from "lodash";
+import type { OrthoViewMap, Vector3, Viewport } from "oxalis/constants";
+import Constants, { OrthoViewColors, OrthoViewValues, OrthoViews } from "oxalis/constants";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 import type { MeshSceneNode, SceneGroupForMeshes } from "oxalis/controller/segment_mesh_controller";
+import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
+import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import Store from "oxalis/store";
+import { getGroundTruthLayoutRect } from "oxalis/view/layouting/default_layout_configs";
+import { clearCanvas, setupRenderArea } from "oxalis/view/rendering_utils";
+import * as THREE from "three";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
+import TWEEN from "tween.js";
 
 const createDirLight = (
   position: Vector3,

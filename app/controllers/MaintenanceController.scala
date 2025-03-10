@@ -7,7 +7,7 @@ import models.user.UserService
 import play.api.libs.json.{JsObject, Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import slick.lifted.Rep
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient}
 
 import javax.inject.Inject
@@ -33,30 +33,27 @@ class MaintenanceController @Inject()(
     } yield Ok(Json.toJson(js))
   }
 
-  def readOne(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def readOne(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- userService.assertIsSuperUser(request.identity) ?~> "notAllowed" ~> FORBIDDEN
-      idValidated <- ObjectId.fromString(id)
-      maintenance <- maintenanceDAO.findOne(idValidated)
+      maintenance <- maintenanceDAO.findOne(id)
     } yield Ok(maintenanceService.publicWrites(maintenance))
   }
 
-  def update(id: String): Action[MaintenanceParameters] = sil.SecuredAction.async(validateJson[MaintenanceParameters]) {
-    implicit request =>
+  def update(id: ObjectId): Action[MaintenanceParameters] =
+    sil.SecuredAction.async(validateJson[MaintenanceParameters]) { implicit request =>
       for {
         _ <- userService.assertIsSuperUser(request.identity) ?~> "notAllowed" ~> FORBIDDEN
-        idValidated <- ObjectId.fromString(id)
-        _ <- maintenanceDAO.findOne(idValidated) ?~> "maintenance.notFound"
-        _ <- maintenanceDAO.updateOne(idValidated, request.body)
-        updated <- maintenanceDAO.findOne(idValidated)
+        _ <- maintenanceDAO.findOne(id) ?~> "maintenance.notFound"
+        _ <- maintenanceDAO.updateOne(id, request.body)
+        updated <- maintenanceDAO.findOne(id)
       } yield Ok(maintenanceService.publicWrites(updated))
-  }
+    }
 
-  def delete(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def delete(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- userService.assertIsSuperUser(request.identity) ?~> "notAllowed" ~> FORBIDDEN
-      idValidated <- ObjectId.fromString(id)
-      _ <- maintenanceDAO.deleteOne(idValidated)
+      _ <- maintenanceDAO.deleteOne(id)
     } yield Ok
   }
 

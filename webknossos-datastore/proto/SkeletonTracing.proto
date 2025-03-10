@@ -11,7 +11,7 @@ message Node {
   required Vec3DoubleProto rotation = 3;
   required float radius = 4;
   required int32 viewport = 5;
-  required int32 resolution = 6;
+  required int32 mag = 6;
   required int32 bitDepth = 7;
   required bool interpolation = 8;
   required int64 createdTimestamp = 9;
@@ -85,4 +85,14 @@ message SkeletonTracingOpt {
 
 message SkeletonTracings {
   repeated SkeletonTracingOpt tracings = 1;
+}
+
+message StringOpt {
+  optional string stringValue = 1;
+}
+
+message SkeletonTracingsWithIds {
+  repeated SkeletonTracingOpt tracings = 1;
+  repeated StringOpt annotationId = 2;
+  repeated StringOpt tracingId = 3;
 }

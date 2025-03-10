@@ -10,6 +10,8 @@ import test from "ava";
 import type { Vector3 } from "oxalis/constants";
 import type { OxalisState } from "oxalis/store";
 import { tracing, annotation } from "../fixtures/skeletontracing_server_objects";
+import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reducers/reducer_helpers";
+import { batchedAnnotationInitializationAction } from "oxalis/model/actions/annotation_actions";
 
 mockRequire("app", {
   currentUser: {
@@ -35,11 +37,15 @@ const { initializeAnnotationAction } = mockRequire.reRequire(
 test.before((t) => {
   const rotation = [0.5, 0.5, 0.5];
   const viewport = 0;
-  const resolution = 0;
+  const mag = 0;
   tracing.trees = [];
   delete tracing.activeNodeId;
-  Store.dispatch(initializeAnnotationAction(annotation));
-  Store.dispatch(initializeSkeletonTracingAction(tracing));
+  Store.dispatch(
+    batchedAnnotationInitializationAction([
+      initializeAnnotationAction(convertServerAnnotationToFrontendAnnotation(annotation, 0, 0)),
+      initializeSkeletonTracingAction(tracing),
+    ]),
+  );
 
   // Create 20 trees with 100 nodes each
   for (let i = 0; i < 2000; i++) {
@@ -47,7 +53,7 @@ test.before((t) => {
       Store.dispatch(createTreeAction());
     }
 
-    Store.dispatch(createNodeAction([i, i, i], null, rotation, viewport, resolution));
+    Store.dispatch(createNodeAction([i, i, i], null, rotation, viewport, mag));
   }
 
   getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {

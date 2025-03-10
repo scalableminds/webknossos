@@ -1,21 +1,21 @@
-import { createNanoEvents, type Emitter } from "nanoevents";
-import * as THREE from "three";
-import _ from "lodash";
-import type { ElementClass } from "types/api_flow_types";
-import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
-import type { MaybeUnmergedBucketLoadedPromise } from "oxalis/model/actions/volumetracing_actions";
-import { addBucketToUndoAction } from "oxalis/model/actions/volumetracing_actions";
-import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
+import ErrorHandling from "libs/error_handling";
 import { castForArrayType, mod } from "libs/utils";
+import window from "libs/window";
+import _ from "lodash";
+import { type Emitter, createNanoEvents } from "nanoevents";
 import type { BoundingBoxType, BucketAddress, Vector3 } from "oxalis/constants";
 import Constants from "oxalis/constants";
+import type { MaybeUnmergedBucketLoadedPromise } from "oxalis/model/actions/volumetracing_actions";
+import { addBucketToUndoAction } from "oxalis/model/actions/volumetracing_actions";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import ErrorHandling from "libs/error_handling";
-import Store from "oxalis/store";
+import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
 import type TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
-import window from "libs/window";
-import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
+import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
+import Store from "oxalis/store";
+import * as THREE from "three";
+import type { ElementClass } from "types/api_flow_types";
 import type { AdditionalCoordinate } from "types/api_flow_types";
+import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 
 export enum BucketStateEnum {
   UNREQUESTED = "UNREQUESTED",
@@ -37,6 +37,10 @@ const warnMergeWithoutPendingOperations = _.throttle(() => {
   ErrorHandling.notify(
     new Error("Bucket.merge() was called with an empty list of pending operations."),
   );
+}, WARNING_THROTTLE_THRESHOLD);
+
+const warnAwaitedMissingBucket = _.throttle(() => {
+  ErrorHandling.notify(new Error("Awaited missing bucket"));
 }, WARNING_THROTTLE_THRESHOLD);
 
 export function assertNonNullBucket(bucket: Bucket): asserts bucket is DataBucket {
@@ -187,14 +191,12 @@ export class DataBucket {
   }
 
   getBoundingBox(): BoundingBoxType {
-    const min = bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.resolutionInfo);
-    const bucketResolution = this.cube.resolutionInfo.getResolutionByIndexOrThrow(
-      this.zoomedAddress[3],
-    );
+    const min = bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.magInfo);
+    const bucketMag = this.cube.magInfo.getMagByIndexOrThrow(this.zoomedAddress[3]);
     const max: Vector3 = [
-      min[0] + Constants.BUCKET_WIDTH * bucketResolution[0],
-      min[1] + Constants.BUCKET_WIDTH * bucketResolution[1],
-      min[2] + Constants.BUCKET_WIDTH * bucketResolution[2],
+      min[0] + Constants.BUCKET_WIDTH * bucketMag[0],
+      min[1] + Constants.BUCKET_WIDTH * bucketMag[1],
+      min[2] + Constants.BUCKET_WIDTH * bucketMag[2],
     ];
     return {
       min,
@@ -203,7 +205,7 @@ export class DataBucket {
   }
 
   getGlobalPosition(): Vector3 {
-    return bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.resolutionInfo);
+    return bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.magInfo);
   }
 
   getTopLeftInMag(): Vector3 {
@@ -523,7 +525,7 @@ export class DataBucket {
           const voxelToLabel = out;
           voxelToLabel[thirdDimensionIndex] =
             (voxelToLabel[thirdDimensionIndex] + sliceCount) % Constants.BUCKET_WIDTH;
-          // The voxelToLabel is already within the bucket and in the correct resolution.
+          // The voxelToLabel is already within the bucket and in the correct magnification.
           const voxelAddress = this.cube.getVoxelIndexByVoxelOffset(voxelToLabel);
           const currentSegmentId = Number(data[voxelAddress]);
 
@@ -709,9 +711,9 @@ export class DataBucket {
     if (this.zoomedAddress[3] === zoomStep) {
       // @ts-ignore
       this.visualizedMesh = window.addBucketMesh(
-        bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.resolutionInfo),
+        bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.magInfo),
         this.zoomedAddress[3],
-        this.cube.resolutionInfo.getResolutionByIndex(this.zoomedAddress[3]),
+        this.cube.magInfo.getMagByIndex(this.zoomedAddress[3]),
         colors[this.zoomedAddress[3]] || this.visualizationColor,
       );
     }
@@ -775,7 +777,7 @@ export class DataBucket {
       // In the past, ensureLoaded() never returned if the bucket
       // was MISSING. This log might help to discover potential
       // bugs which could arise in combination with MISSING buckets.
-      console.warn("Awaited missing bucket.");
+      warnAwaitedMissingBucket();
     }
   }
 }

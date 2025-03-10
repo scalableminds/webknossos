@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.helpers
 
-import com.scalableminds.util.geometry.{Vec3Int, Vec3Double}
+import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Node, SkeletonTracing}
 
 object SkeletonTracingDefaults extends ProtoGeometryImplicits {
@@ -34,11 +34,11 @@ object NodeDefaults extends ProtoGeometryImplicits {
   val position: Vec3Int = Vec3Int.zeros
   val radius: Float = 1.0f
   val viewport: Int = 1
-  val resolution: Int = 1
+  val mag: Int = 1
   val bitDepth: Int = 0
   val interpolation: Boolean = false
   def createdTimestamp: Long = System.currentTimeMillis()
 
   def createInstance: Node =
-    Node(id, position, rotation, radius, viewport, resolution, bitDepth, interpolation, createdTimestamp)
+    Node(id, position, rotation, radius, viewport, mag, bitDepth, interpolation, createdTimestamp)
 }

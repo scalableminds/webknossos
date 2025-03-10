@@ -1,9 +1,9 @@
-import React, { useRef, useState } from "react";
 import { Popover } from "antd";
-import * as Utils from "libs/utils";
-import { HexColorInput, HexColorPicker } from "react-colorful";
 import useThrottledCallback from "beautiful-react-hooks/useThrottledCallback";
+import * as Utils from "libs/utils";
 import type { Vector3 } from "oxalis/constants";
+import { useRef, useState } from "react";
+import { HexColorInput, HexColorPicker } from "react-colorful";
 
 export const ThrottledColorPicker = ({
   color,

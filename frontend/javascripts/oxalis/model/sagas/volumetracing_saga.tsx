@@ -1,41 +1,27 @@
-import { message } from "antd";
 import { diffDiffableMaps } from "libs/diffable_map";
 import { V3 } from "libs/mjs";
-import createProgressCallback from "libs/progress_callback";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type {
   AnnotationTool,
-  BoundingBoxType,
   ContourMode,
-  LabeledVoxelsMap,
   OrthoView,
   OverwriteMode,
   Vector3,
 } from "oxalis/constants";
-import Constants, {
+import {
   AnnotationToolEnum,
   ContourModeEnum,
-  FillModeEnum,
   OrthoViews,
-  Unicode,
   OverwriteModeEnum,
 } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "oxalis/geometries/helper_geometries";
 
-import {
-  getDatasetBoundingBox,
-  getMaximumSegmentIdForLayer,
-  getResolutionInfo,
-} from "oxalis/model/accessors/dataset_accessor";
-import {
-  getPosition,
-  getActiveMagIndexForLayer,
-  getRotation,
-} from "oxalis/model/accessors/flycam_accessor";
+import messages from "messages";
+import { getMaximumSegmentIdForLayer } from "oxalis/model/accessors/dataset_accessor";
+import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import {
   isBrushTool,
   isTraceTool,
@@ -46,7 +32,7 @@ import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracing,
   getMaximumBrushSize,
-  getRenderableResolutionForSegmentationTracing,
+  getRenderableMagForSegmentationTracing,
   getRequestedOrVisibleSegmentationLayer,
   getSegmentsForLayer,
   isVolumeAnnotationDisallowedForZoom,
@@ -56,7 +42,6 @@ import type {
   AddAdHocMeshAction,
   AddPrecomputedMeshAction,
 } from "oxalis/model/actions/annotation_actions";
-import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import {
   updateTemporarySettingAction,
   updateUserSettingAction,
@@ -64,9 +49,9 @@ import {
 import { setBusyBlockingInfoAction, setToolAction } from "oxalis/model/actions/ui_actions";
 import type {
   ClickSegmentAction,
-  SetActiveCellAction,
   CreateCellAction,
   DeleteSegmentDataAction,
+  SetActiveCellAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
   finishAnnotationStrokeAction,
@@ -74,51 +59,43 @@ import {
   setSelectedSegmentsOrGroupAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { markVolumeTransactionEnd } from "oxalis/model/bucket_data_handling/bucket";
-import Dimensions from "oxalis/model/dimensions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select, take } from "oxalis/model/sagas/effect-generators";
 import listenToMinCut from "oxalis/model/sagas/min_cut_saga";
 import listenToQuickSelect from "oxalis/model/sagas/quick_select_saga";
 import {
-  ensureMaybeActiveMappingIsLocked,
+  requestBucketModificationInVolumeTracing,
   takeEveryUnlessBusy,
+  takeWithBatchActionSupport,
 } from "oxalis/model/sagas/saga_helpers";
 import {
-  deleteSegmentDataVolumeAction,
-  type UpdateAction,
-  updateSegmentGroups,
-} from "oxalis/model/sagas/update_actions";
-import {
+  type UpdateActionWithoutIsolationRequirement,
   createSegmentVolumeAction,
+  deleteSegmentDataVolumeAction,
   deleteSegmentVolumeAction,
   removeFallbackLayer,
-  updateSegmentVolumeAction,
-  updateUserBoundingBoxes,
-  updateVolumeTracing,
   updateMappingName,
+  updateSegmentGroups,
+  updateSegmentVolumeAction,
+  updateUserBoundingBoxesInVolumeTracing,
+  updateVolumeTracing,
 } from "oxalis/model/sagas/update_actions";
 import type VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import { Model, api } from "oxalis/singletons";
 import type { Flycam, SegmentMap, VolumeTracing } from "oxalis/store";
-import React from "react";
-import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
-import {
-  applyLabeledVoxelMapToAllMissingResolutions,
-  createVolumeLayer,
-  labelWithVoxelBuffer2D,
-  type BooleanBox,
-} from "./volume/helpers";
-import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
-import messages from "messages";
-import { pushSaveQueueTransaction } from "../actions/save_actions";
 import type { ActionPattern } from "redux-saga/effects";
+import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
+import { pushSaveQueueTransaction } from "../actions/save_actions";
+import { ensureWkReady } from "./ready_sagas";
+import { floodFill } from "./volume/floodfill_saga";
+import { type BooleanBox, createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
+import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
 
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 
 export function* watchVolumeTracingAsync(): Saga<void> {
-  yield* take("WK_READY");
+  yield* call(ensureWkReady);
   yield* takeEveryUnlessBusy(
     "INTERPOLATE_SEGMENTATION_LAYER",
     maybeInterpolateSegmentationLayer,
@@ -152,7 +129,7 @@ function* warnOfTooLowOpacity(): Saga<void> {
 }
 
 function* warnTooLargeSegmentId(): Saga<void> {
-  yield* take("INITIALIZE_VOLUMETRACING");
+  yield* takeWithBatchActionSupport("INITIALIZE_VOLUMETRACING");
   while (true) {
     const action = (yield* take(["SET_ACTIVE_CELL", "CREATE_CELL"]) as any) as
       | SetActiveCellAction
@@ -176,7 +153,9 @@ function* warnTooLargeSegmentId(): Saga<void> {
 }
 
 export function* editVolumeLayerAsync(): Saga<any> {
-  yield* take("INITIALIZE_VOLUMETRACING");
+  // Waiting for the initialization is important. Otherwise, allowUpdate would be
+  // false and the saga would terminate.
+  yield* takeWithBatchActionSupport("INITIALIZE_VOLUMETRACING");
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
 
   while (allowUpdate) {
@@ -213,22 +192,22 @@ export function* editVolumeLayerAsync(): Saga<any> {
       continue;
     }
 
-    const maybeLabeledResolutionWithZoomStep = yield* select((state) =>
-      getRenderableResolutionForSegmentationTracing(state, volumeTracing),
+    const maybeLabeledMagWithZoomStep = yield* select((state) =>
+      getRenderableMagForSegmentationTracing(state, volumeTracing),
     );
 
-    if (!maybeLabeledResolutionWithZoomStep) {
+    if (!maybeLabeledMagWithZoomStep) {
       // Volume data is currently not rendered. Don't annotate anything.
       continue;
     }
 
     const activeCellId = yield* select((state) => enforceActiveVolumeTracing(state).activeCellId);
     // As changes to the volume layer will be applied, the potentially existing mapping should be locked to ensure a consistent state.
-    const { isMappingLockedIfNeeded } = yield* call(
-      ensureMaybeActiveMappingIsLocked,
+    const isModificationAllowed = yield* call(
+      requestBucketModificationInVolumeTracing,
       volumeTracing,
     );
-    if (!isMappingLockedIfNeeded) {
+    if (!isModificationAllowed) {
       continue;
     }
 
@@ -252,13 +231,12 @@ export function* editVolumeLayerAsync(): Saga<any> {
         volumeTracing.tracingId,
       ),
     );
-    const { zoomStep: labeledZoomStep, resolution: labeledResolution } =
-      maybeLabeledResolutionWithZoomStep;
+    const { zoomStep: labeledZoomStep, mag: labeledMag } = maybeLabeledMagWithZoomStep;
     const currentLayer = yield* call(
       createVolumeLayer,
       volumeTracing,
       startEditingAction.planeId,
-      labeledResolution,
+      labeledMag,
     );
     const initialViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
 
@@ -372,212 +350,6 @@ export function* editVolumeLayerAsync(): Saga<any> {
   }
 }
 
-function* getBoundingBoxForFloodFill(
-  position: Vector3,
-  currentViewport: OrthoView,
-): Saga<BoundingBoxType> {
-  const fillMode = yield* select((state) => state.userConfiguration.fillMode);
-  const halfBoundingBoxSizeUVW = V3.scale(Constants.FLOOD_FILL_EXTENTS[fillMode], 0.5);
-  const currentViewportBounding = {
-    min: V3.sub(position, halfBoundingBoxSizeUVW),
-    max: V3.add(position, halfBoundingBoxSizeUVW),
-  };
-
-  if (fillMode === FillModeEnum._2D) {
-    // Only use current plane
-    const thirdDimension = Dimensions.thirdDimensionForPlane(currentViewport);
-    const numberOfSlices = 1;
-    currentViewportBounding.min[thirdDimension] = position[thirdDimension];
-    currentViewportBounding.max[thirdDimension] = position[thirdDimension] + numberOfSlices;
-  }
-
-  const datasetBoundingBox = yield* select((state) => getDatasetBoundingBox(state.dataset));
-  const { min: clippedMin, max: clippedMax } = new BoundingBox(
-    currentViewportBounding,
-  ).intersectedWith(datasetBoundingBox);
-  return {
-    min: clippedMin,
-    max: clippedMax,
-  };
-}
-
-const FLOODFILL_PROGRESS_KEY = "FLOODFILL_PROGRESS_KEY";
-export function* floodFill(): Saga<void> {
-  yield* take("INITIALIZE_VOLUMETRACING");
-  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
-
-  while (allowUpdate) {
-    const floodFillAction = yield* take("FLOOD_FILL");
-
-    if (floodFillAction.type !== "FLOOD_FILL") {
-      throw new Error("Unexpected action. Satisfy typescript.");
-    }
-
-    const { position: positionFloat, planeId } = floodFillAction;
-    const volumeTracing = yield* select(enforceActiveVolumeTracing);
-    if (volumeTracing.hasEditableMapping) {
-      const message = "Volume modification is not allowed when an editable mapping is active.";
-      Toast.error(message);
-      console.error(message);
-      continue;
-    }
-    const segmentationLayer = yield* call(
-      [Model, Model.getSegmentationTracingLayer],
-      volumeTracing.tracingId,
-    );
-    const { cube } = segmentationLayer;
-    const seedPosition = Dimensions.roundCoordinate(positionFloat);
-    const activeCellId = volumeTracing.activeCellId;
-    const dimensionIndices = Dimensions.getIndices(planeId);
-    const requestedZoomStep = yield* select((state) =>
-      getActiveMagIndexForLayer(state, segmentationLayer.name),
-    );
-    const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
-    const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
-    const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
-    const oldSegmentIdAtSeed = cube.getDataValue(
-      seedPosition,
-      additionalCoordinates,
-      null,
-      labeledZoomStep,
-    );
-
-    if (activeCellId === oldSegmentIdAtSeed) {
-      Toast.warning("The clicked voxel's id is already equal to the active segment id.");
-      continue;
-    }
-
-    const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
-
-    if (busyBlockingInfo.isBusy) {
-      console.warn(`Ignoring floodfill request (reason: ${busyBlockingInfo.reason || "unknown"})`);
-      continue;
-    }
-    // As the flood fill will be applied to the volume layer,
-    // the potentially existing mapping should be locked to ensure a consistent state.
-    const { isMappingLockedIfNeeded } = yield* call(
-      ensureMaybeActiveMappingIsLocked,
-      volumeTracing,
-    );
-    if (!isMappingLockedIfNeeded) {
-      continue;
-    }
-    yield* put(setBusyBlockingInfoAction(true, "Floodfill is being computed."));
-    const boundingBoxForFloodFill = yield* call(getBoundingBoxForFloodFill, seedPosition, planeId);
-    const progressCallback = createProgressCallback({
-      pauseDelay: 200,
-      successMessageDelay: 2000,
-      // Since only one floodfill operation can be active at any time,
-      // a hardcoded key is sufficient.
-      key: "FLOODFILL_PROGRESS_KEY",
-    });
-    yield* call(progressCallback, false, "Performing floodfill...");
-    console.time("cube.floodFill");
-    const fillMode = yield* select((state) => state.userConfiguration.fillMode);
-
-    const {
-      bucketsWithLabeledVoxelsMap: labelMasksByBucketAndW,
-      wasBoundingBoxExceeded,
-      coveredBoundingBox,
-    } = yield* call(
-      { context: cube, fn: cube.floodFill },
-      seedPosition,
-      additionalCoordinates,
-      activeCellId,
-      dimensionIndices,
-      boundingBoxForFloodFill,
-      labeledZoomStep,
-      progressCallback,
-      fillMode === FillModeEnum._3D,
-    );
-    console.timeEnd("cube.floodFill");
-    yield* call(progressCallback, false, "Finalizing floodfill...");
-    const indexSet: Set<number> = new Set();
-
-    for (const labelMaskByIndex of labelMasksByBucketAndW.values()) {
-      for (const zIndex of labelMaskByIndex.keys()) {
-        indexSet.add(zIndex);
-      }
-    }
-
-    console.time("applyLabeledVoxelMapToAllMissingResolutions");
-
-    for (const indexZ of indexSet) {
-      const labeledVoxelMapFromFloodFill: LabeledVoxelsMap = new Map();
-
-      for (const [bucketAddress, labelMaskByIndex] of labelMasksByBucketAndW.entries()) {
-        const map = labelMaskByIndex.get(indexZ);
-
-        if (map != null) {
-          labeledVoxelMapFromFloodFill.set(bucketAddress, map);
-        }
-      }
-
-      applyLabeledVoxelMapToAllMissingResolutions(
-        labeledVoxelMapFromFloodFill,
-        labeledZoomStep,
-        dimensionIndices,
-        resolutionInfo,
-        cube,
-        activeCellId,
-        indexZ,
-        true,
-      );
-    }
-
-    yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
-    yield* put(
-      updateSegmentAction(
-        volumeTracing.activeCellId,
-        {
-          somePosition: seedPosition,
-          someAdditionalCoordinates: additionalCoordinates || undefined,
-        },
-        volumeTracing.tracingId,
-      ),
-    );
-
-    console.timeEnd("applyLabeledVoxelMapToAllMissingResolutions");
-
-    if (wasBoundingBoxExceeded) {
-      yield* call(
-        progressCallback,
-        true,
-        <>
-          Floodfill is done, but terminated since the labeled volume got too large. A bounding box
-          <br />
-          that represents the labeled volume was added.{Unicode.NonBreakingSpace}
-          <a href="#" onClick={() => message.destroy(FLOODFILL_PROGRESS_KEY)}>
-            Close
-          </a>
-        </>,
-        {
-          successMessageDelay: 10000,
-        },
-      );
-      yield* put(
-        addUserBoundingBoxAction({
-          boundingBox: coveredBoundingBox,
-          name: `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
-            ",",
-          )}, timestamp=${new Date().getTime()})`,
-          color: Utils.getRandomColor(),
-          isVisible: true,
-        }),
-      );
-    } else {
-      yield* call(progressCallback, true, "Floodfill done.");
-    }
-
-    cube.triggerPushQueue();
-    yield* put(setBusyBlockingInfoAction(false));
-
-    if (floodFillAction.callback != null) {
-      floodFillAction.callback();
-    }
-  }
-}
-
 export function* finishLayer(
   layer: VolumeLayer,
   activeTool: AnnotationTool,
@@ -605,17 +377,18 @@ export function* finishLayer(
 
   yield* put(registerLabelPointAction(layer.getUnzoomedCentroid()));
 }
-export function* ensureToolIsAllowedInResolution(): Saga<any> {
-  yield* take("INITIALIZE_VOLUMETRACING");
+
+export function* ensureToolIsAllowedInMag(): Saga<void> {
+  yield* takeWithBatchActionSupport("INITIALIZE_VOLUMETRACING");
 
   while (true) {
     yield* take(["ZOOM_IN", "ZOOM_OUT", "ZOOM_BY_DELTA", "SET_ZOOM_STEP"]);
-    const isResolutionTooLow = yield* select((state) => {
+    const isMagTooLow = yield* select((state) => {
       const { activeTool } = state.uiInformation;
       return isVolumeAnnotationDisallowedForZoom(activeTool, state);
     });
 
-    if (isResolutionTooLow) {
+    if (isMagTooLow) {
       yield* put(setToolAction(AnnotationToolEnum.MOVE));
     }
   }
@@ -635,14 +408,15 @@ function updateTracingPredicate(
 }
 
 export const cachedDiffSegmentLists = memoizeOne(
-  (prevSegments: SegmentMap, newSegments: SegmentMap) =>
-    Array.from(uncachedDiffSegmentLists(prevSegments, newSegments)),
+  (tracingId: string, prevSegments: SegmentMap, newSegments: SegmentMap) =>
+    Array.from(uncachedDiffSegmentLists(tracingId, prevSegments, newSegments)),
 );
 
 function* uncachedDiffSegmentLists(
+  tracingId: string,
   prevSegments: SegmentMap,
   newSegments: SegmentMap,
-): Generator<UpdateAction, void, void> {
+): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   const {
     onlyA: deletedSegmentIds,
     onlyB: addedSegmentIds,
@@ -650,7 +424,7 @@ function* uncachedDiffSegmentLists(
   } = diffDiffableMaps(prevSegments, newSegments);
 
   for (const segmentId of deletedSegmentIds) {
-    yield deleteSegmentVolumeAction(segmentId);
+    yield deleteSegmentVolumeAction(segmentId, tracingId);
   }
 
   for (const segmentId of addedSegmentIds) {
@@ -662,6 +436,7 @@ function* uncachedDiffSegmentLists(
       segment.color,
       segment.groupId,
       segment.metadata,
+      tracingId,
     );
   }
 
@@ -678,6 +453,7 @@ function* uncachedDiffSegmentLists(
         segment.color,
         segment.groupId,
         segment.metadata,
+        tracingId,
         segment.creationTime,
       );
     }
@@ -688,7 +464,7 @@ export function* diffVolumeTracing(
   volumeTracing: VolumeTracing,
   prevFlycam: Flycam,
   flycam: Flycam,
-): Generator<UpdateAction, void, void> {
+): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (updateTracingPredicate(prevVolumeTracing, volumeTracing, prevFlycam, flycam)) {
     yield updateVolumeTracing(
       volumeTracing,
@@ -700,12 +476,16 @@ export function* diffVolumeTracing(
   }
 
   if (!_.isEqual(prevVolumeTracing.userBoundingBoxes, volumeTracing.userBoundingBoxes)) {
-    yield updateUserBoundingBoxes(volumeTracing.userBoundingBoxes);
+    yield updateUserBoundingBoxesInVolumeTracing(
+      volumeTracing.userBoundingBoxes,
+      volumeTracing.tracingId,
+    );
   }
 
   if (prevVolumeTracing !== volumeTracing) {
     if (prevVolumeTracing.segments !== volumeTracing.segments) {
       for (const action of cachedDiffSegmentLists(
+        volumeTracing.tracingId,
         prevVolumeTracing.segments,
         volumeTracing.segments,
       )) {
@@ -714,11 +494,11 @@ export function* diffVolumeTracing(
     }
 
     if (prevVolumeTracing.segmentGroups !== volumeTracing.segmentGroups) {
-      yield updateSegmentGroups(volumeTracing.segmentGroups);
+      yield updateSegmentGroups(volumeTracing.segmentGroups, volumeTracing.tracingId);
     }
 
     if (prevVolumeTracing.fallbackLayer != null && volumeTracing.fallbackLayer == null) {
-      yield removeFallbackLayer();
+      yield removeFallbackLayer(volumeTracing.tracingId);
     }
 
     if (
@@ -731,6 +511,7 @@ export function* diffVolumeTracing(
         volumeTracing.mappingName || null,
         volumeTracing.hasEditableMapping || null,
         volumeTracing.mappingIsLocked,
+        volumeTracing.tracingId,
       );
       yield action;
     }
@@ -948,11 +729,7 @@ function* handleDeleteSegmentData(): Saga<void> {
 
     yield* put(setBusyBlockingInfoAction(true, "Segment is being deleted."));
     yield* put(
-      pushSaveQueueTransaction(
-        [deleteSegmentDataVolumeAction(action.segmentId)],
-        "volume",
-        action.layerName,
-      ),
+      pushSaveQueueTransaction([deleteSegmentDataVolumeAction(action.segmentId, action.layerName)]),
     );
     yield* call([Model, Model.ensureSavedState]);
 
@@ -970,7 +747,7 @@ function* handleDeleteSegmentData(): Saga<void> {
 export default [
   editVolumeLayerAsync,
   handleDeleteSegmentData,
-  ensureToolIsAllowedInResolution,
+  ensureToolIsAllowedInMag,
   floodFill,
   watchVolumeTracingAsync,
   maintainSegmentsMap,

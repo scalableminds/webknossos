@@ -1,5 +1,4 @@
-import React from "react";
-import { Button, Result, Col, Row } from "antd";
+import { Button, Col, Result, Row } from "antd";
 import { Link } from "react-router-dom";
 
 export function PageNotAvailableToNormalUser() {

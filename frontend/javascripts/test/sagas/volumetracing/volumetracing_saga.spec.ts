@@ -40,7 +40,10 @@ mockRequire("libs/toast", {
 const { setupSavingForTracingType } = require("oxalis/model/sagas/save_saga");
 
 const { editVolumeLayerAsync, finishLayer } = require("oxalis/model/sagas/volumetracing_saga");
-const { ensureMaybeActiveMappingIsLocked } = require("oxalis/model/sagas/saga_helpers");
+const {
+  requestBucketModificationInVolumeTracing,
+  ensureMaybeActiveMappingIsLocked,
+} = require("oxalis/model/sagas/saga_helpers");
 
 const VolumeLayer = require("oxalis/model/volumetracing/volumelayer").default;
 
@@ -53,7 +56,6 @@ const serverVolumeTracing: ServerVolumeTracing = {
   id: "tracingId",
   elementClass: "uint32",
   createdTimestamp: 0,
-  version: 0,
   boundingBox: {
     topLeft: {
       x: 0,
@@ -144,7 +146,6 @@ test("VolumeTracingSaga shouldn't do anything if unchanged (saga test)", (t) => 
   const saga = setupSavingForTracingType(
     VolumeTracingActions.initializeVolumeTracingAction(serverVolumeTracing),
   );
-  saga.next(); // forking pushSaveQueueAsync
 
   saga.next();
   saga.next(initialState.tracing.volumes[0]);
@@ -165,7 +166,6 @@ test("VolumeTracingSaga should do something if changed (saga test)", (t) => {
   const saga = setupSavingForTracingType(
     VolumeTracingActions.initializeVolumeTracingAction(serverVolumeTracing),
   );
-  saga.next(); // forking pushSaveQueueAsync
 
   saga.next();
   saga.next(initialState.tracing.volumes[0]);
@@ -179,11 +179,7 @@ test("VolumeTracingSaga should do something if changed (saga test)", (t) => {
   const items = execCall(t, saga.next(newState.viewModeData.plane.tdCamera));
   t.is(withoutUpdateTracing(items).length, 0);
   t.true(items[0].value.activeSegmentId === ACTIVE_CELL_ID);
-  expectValueDeepEqual(
-    t,
-    saga.next(items),
-    put(pushSaveQueueTransaction(items, "volume", volumeTracing.tracingId)),
-  );
+  expectValueDeepEqual(t, saga.next(items), put(pushSaveQueueTransaction(items)));
 });
 
 test("VolumeTracingSaga should create a volume layer (saga test)", (t) => {
@@ -199,9 +195,9 @@ test("VolumeTracingSaga should create a volume layer (saga test)", (t) => {
   saga.next(OverwriteModeEnum.OVERWRITE_ALL);
   saga.next(AnnotationToolEnum.BRUSH);
   saga.next(false);
-  // pass labeled resolution
+  // pass labeled mag
   saga.next({
-    resolution: [1, 1, 1],
+    mag: [1, 1, 1],
     zoomStep: 0,
   });
   saga.next(ACTIVE_CELL_ID); // pass active cell id
@@ -241,9 +237,9 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", (t) => {
   saga.next(AnnotationToolEnum.TRACE);
   saga.next(false);
   saga.next({
-    resolution: [1, 1, 1],
+    mag: [1, 1, 1],
     zoomStep: 0,
-  }); // pass labeled resolution
+  }); // pass labeled mag
 
   saga.next(ACTIVE_CELL_ID); // pass active cell id
   saga.next(ensureMaybeMappingIsLockedReturnValueDummy);
@@ -292,9 +288,9 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", (t) => {
   saga.next(AnnotationToolEnum.TRACE);
   saga.next(false);
   saga.next({
-    resolution: [1, 1, 1],
+    mag: [1, 1, 1],
     zoomStep: 0,
-  }); // pass labeled resolution
+  }); // pass labeled mag
 
   saga.next(ACTIVE_CELL_ID); // pass active cell id
   saga.next(ensureMaybeMappingIsLockedReturnValueDummy);
@@ -355,9 +351,9 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
   saga.next(AnnotationToolEnum.TRACE);
   saga.next(false);
   saga.next({
-    resolution: [1, 1, 1],
+    mag: [1, 1, 1],
     zoomStep: 0,
-  }); // pass labeled resolution
+  }); // pass labeled mag
   saga.next(ACTIVE_CELL_ID); // pass active cell id
   saga.next(ensureMaybeMappingIsLockedReturnValueDummy);
   expectValueDeepEqual(
@@ -432,16 +428,16 @@ test("VolumeTracingSaga should lock an active mapping upon first volume annotati
   saga.next(OverwriteModeEnum.OVERWRITE_ALL);
   saga.next(AnnotationToolEnum.BRUSH);
   saga.next(false);
-  // pass labeled resolution
+  // pass labeled mag
   saga.next({
-    resolution: [1, 1, 1],
+    mag: [1, 1, 1],
     zoomStep: 0,
   });
-  // Test whether nested saga ensureMaybeActiveMappingIsLocked is called.
+  // Test whether nested saga requestBucketModificationInVolumeTracing is called.
   expectValueDeepEqual(
     t,
     saga.next(ACTIVE_CELL_ID),
-    call(ensureMaybeActiveMappingIsLocked, volumeTracing),
+    call(requestBucketModificationInVolumeTracing, volumeTracing),
   );
 });
 
@@ -460,7 +456,11 @@ test("ensureMaybeActiveMappingIsLocked should lock an existing mapping to the an
 test("ensureMaybeActiveMappingIsLocked should lock 'no mapping' in case no mapping is active.", (t) => {
   const saga = ensureMaybeActiveMappingIsLocked(volumeTracing);
   saga.next();
-  expectValueDeepEqual(t, saga.next({}), put(VolumeTracingActions.setMappingIsLockedAction()));
+  expectValueDeepEqual(
+    t,
+    saga.next({}),
+    put(VolumeTracingActions.setMappingIsLockedAction(volumeTracing.tracingId)),
+  );
   t.true(saga.next().done);
 });
 
@@ -471,7 +471,7 @@ test("ensureMaybeActiveMappingIsLocked should lock 'no mapping' in case a mappin
   expectValueDeepEqual(
     t,
     saga.next({ [volumeTracing.tracingId]: jsonDummyMapping }),
-    put(VolumeTracingActions.setMappingIsLockedAction()),
+    put(VolumeTracingActions.setMappingIsLockedAction(volumeTracing.tracingId)),
   );
   t.true(saga.next().done);
 });
@@ -483,7 +483,7 @@ test("ensureMaybeActiveMappingIsLocked should lock 'no mapping' in case a JSON m
   expectValueDeepEqual(
     t,
     saga.next({ [volumeTracing.tracingId]: jsonDummyMapping }),
-    put(VolumeTracingActions.setMappingIsLockedAction()),
+    put(VolumeTracingActions.setMappingIsLockedAction(volumeTracing.tracingId)),
   );
   t.true(saga.next().done);
 });

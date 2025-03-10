@@ -46,7 +46,7 @@ WEBKNOSSOS is an open-source tool for annotating and exploring large 3D image da
 ## Installation
 WEBKNOSSOS is open-source, so you can install it on your own server.
 
-[Check out the documentation](https://docs.webknossos.org/webknossos/installation.html) for a tutorial on how to install WEBKNOSSOS on your own server.
+[Check out the documentation](https://docs.webknossos.org/webknossos/open_source/installation.html) for a tutorial on how to install WEBKNOSSOS on your own server.
 
 For development installations, please see `DEV_INSTALL.md` file.
 

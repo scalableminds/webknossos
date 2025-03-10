@@ -1,6 +1,3 @@
-import { Link } from "react-router-dom";
-import { PropTypes } from "@scalableminds/prop-types";
-import { Table, Spin, Button, Input, Tooltip, App } from "antd";
 import {
   DeleteOutlined,
   DownloadOutlined,
@@ -13,38 +10,41 @@ import {
   ScheduleOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
-import { connect } from "react-redux";
-import React, { useEffect, useState } from "react";
-import _ from "lodash";
-import { AsyncLink } from "components/async_clickables";
+import { PropTypes } from "@scalableminds/prop-types";
 import {
-  type APIProjectWithStatus,
+  deleteProject as deleteProjectAPI,
+  downloadAnnotation,
+  getProjectsForTaskType,
+  getProjectsWithStatus,
+  getTaskType,
+  increaseProjectTaskInstances as increaseProjectTaskInstancesAPI,
+  pauseProject,
+  resumeProject,
+} from "admin/admin_rest_api";
+import { getTasks } from "admin/api/tasks";
+import TransferAllTasksModal from "admin/project/transfer_all_tasks_modal";
+import { App, Button, Input, Spin, Table, Tooltip } from "antd";
+import { AsyncLink } from "components/async_clickables";
+import FormattedDate from "components/formatted_date";
+import { handleGenericError } from "libs/error_handling";
+import Persistence from "libs/persistence";
+import { useEffectOnlyOnce } from "libs/react_hooks";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import _ from "lodash";
+import messages from "messages";
+import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
+import type { OxalisState } from "oxalis/store";
+import React, { useEffect, useState } from "react";
+import { connect } from "react-redux";
+import { Link } from "react-router-dom";
+import {
   type APIProject,
+  type APIProjectWithStatus,
   type APIUser,
   type APIUserBase,
   TracingTypeEnum,
 } from "types/api_flow_types";
-import type { OxalisState } from "oxalis/store";
-import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import {
-  getProjectsWithStatus,
-  getProjectsForTaskType,
-  increaseProjectTaskInstances as increaseProjectTaskInstancesAPI,
-  deleteProject as deleteProjectAPI,
-  pauseProject,
-  resumeProject,
-  downloadAnnotation,
-  getTasks,
-  getTaskType,
-} from "admin/admin_rest_api";
-import Toast from "libs/toast";
-import { handleGenericError } from "libs/error_handling";
-import Persistence from "libs/persistence";
-import TransferAllTasksModal from "admin/project/transfer_all_tasks_modal";
-import * as Utils from "libs/utils";
-import messages from "messages";
-import FormattedDate from "components/formatted_date";
-import { useEffectOnlyOnce } from "libs/react_hooks";
 
 const { Column } = Table;
 const { Search } = Input;

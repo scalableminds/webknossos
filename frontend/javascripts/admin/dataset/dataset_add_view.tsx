@@ -1,19 +1,20 @@
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
-import { Tabs, Modal, Button, Layout, type TabsProps } from "antd";
 import { CopyOutlined, DatabaseOutlined, UploadOutlined } from "@ant-design/icons";
-import React, { useState } from "react";
-import { connect, useSelector } from "react-redux";
-import type { APIDataStore } from "types/api_flow_types";
-import type { OxalisState } from "oxalis/store";
-import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
+import { getDatastores } from "admin/admin_rest_api";
 import DatasetAddRemoteView from "admin/dataset/dataset_add_remote_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
+import { Button, Layout, Modal, Tabs, type TabsProps } from "antd";
 import features from "features";
-import { getDatastores } from "admin/admin_rest_api";
-import { useFetch } from "libs/react_helpers";
-import DatasetAddComposeView from "./dataset_add_compose_view";
 import type { History } from "history";
+import { useFetch } from "libs/react_helpers";
+import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
+import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
+import type { OxalisState } from "oxalis/store";
+import React, { useState } from "react";
+import { connect, useSelector } from "react-redux";
+import type { RouteComponentProps } from "react-router-dom";
+import { withRouter } from "react-router-dom";
+import type { APIDataStore } from "types/api_flow_types";
+import DatasetAddComposeView from "./dataset_add_compose_view";
 
 const { Content, Sider } = Layout;
 
@@ -33,24 +34,24 @@ const addTypeToVerb: Record<DatasetAddType, string> = {
 
 function DatasetAddView({ history }: RouteComponentProps) {
   const datastores = useFetch<APIDataStore[]>(getDatastores, [], []);
-  const [datasetName, setDatasetName] = useState("");
-  const [organization, setOrganization] = useState("");
+  const [datasetId, setDatasetId] = useState("");
+  const [uploadedDatasetName, setUploadedDatasetName] = useState("");
   const [datasetNeedsConversion, setDatasetNeedsConversion] = useState(false);
   const [datasetAddType, setImportType] = useState<DatasetAddType>(DatasetAddType.UPLOAD);
 
   const handleDatasetAdded = async (
     datasetAddType: DatasetAddType,
-    datasetOrganization: string,
-    uploadedDatasetName: string,
+    datasetId: string,
+    datasetName: string,
     needsConversion: boolean | null | undefined,
   ): Promise<void> => {
-    setOrganization(datasetOrganization);
-    setDatasetName(uploadedDatasetName);
+    setDatasetId(datasetId);
     setImportType(datasetAddType);
+    setUploadedDatasetName(datasetName);
     if (needsConversion != null) setDatasetNeedsConversion(needsConversion);
   };
 
-  const showAfterUploadContent = datasetName !== "";
+  const showAfterUploadContent = datasetId !== "";
 
   const getAfterUploadModalContent = () => {
     if (!showAfterUploadContent) {
@@ -60,9 +61,9 @@ function DatasetAddView({ history }: RouteComponentProps) {
     return getPostUploadModal(
       datasetNeedsConversion,
       datasetAddType,
-      organization,
-      datasetName,
-      setDatasetName,
+      datasetId,
+      uploadedDatasetName,
+      setDatasetId,
       history,
     );
   };
@@ -183,7 +184,7 @@ const alignBanner = (
     />
     <p>
       <a
-        href="https://docs.webknossos.org/webknossos/automated_analysis.html"
+        href="https://docs.webknossos.org/webknossos/automation/alignment.html"
         target="_blank"
         rel="noopener noreferrer"
       >
@@ -270,9 +271,9 @@ export default connector(withRouter(DatasetAddView));
 const getPostUploadModal = (
   datasetNeedsConversion: boolean,
   datasetAddType: DatasetAddType,
-  organization: string,
-  datasetName: string,
-  setDatasetName: (arg0: string) => void,
+  datasetId: string,
+  uploadedDatasetName: string,
+  setDatasetId: (arg0: string) => void,
   history: History<unknown>,
 ) => {
   return (
@@ -291,8 +292,8 @@ const getPostUploadModal = (
           display: "none",
         },
       }}
-      onCancel={() => setDatasetName("")}
-      onOk={() => setDatasetName("")}
+      onCancel={() => setDatasetId("")}
+      onOk={() => setDatasetId("")}
       width={580}
     >
       <div
@@ -306,40 +307,42 @@ const getPostUploadModal = (
         {datasetNeedsConversion ? " and a conversion job was started" : null}.
         <br />
         <div
+          className="centered-items"
           style={{
-            display: "flex",
+            marginTop: 10,
           }}
         >
-          <div
-            className="centered-items"
-            style={{
-              marginTop: 10,
-            }}
-          >
-            {datasetNeedsConversion ? (
-              <React.Fragment>
-                <Button type="primary" onClick={() => history.push("/jobs")}>
-                  View the Jobs Queue
-                </Button>
-                <Button onClick={() => history.push("/dashboard/datasets")}>Go to Dashboard</Button>
-              </React.Fragment>
-            ) : (
-              <React.Fragment>
-                <Button
-                  type="primary"
-                  onClick={() => history.push(`/datasets/${organization}/${datasetName}/view`)}
-                >
-                  View the Dataset
-                </Button>
-                <Button
-                  onClick={() => history.push(`/datasets/${organization}/${datasetName}/edit`)}
-                >
-                  Go to Dataset Settings
-                </Button>
-                <Button onClick={() => history.push("/dashboard/datasets")}>Go to Dashboard</Button>
-              </React.Fragment>
-            )}
-          </div>
+          {datasetNeedsConversion ? (
+            <React.Fragment>
+              <Button type="primary" onClick={() => history.push("/jobs")}>
+                View the Jobs Queue
+              </Button>
+              <Button onClick={() => history.push("/dashboard/datasets")}>Go to Dashboard</Button>
+            </React.Fragment>
+          ) : (
+            <React.Fragment>
+              <Button
+                type="primary"
+                onClick={() =>
+                  history.push(
+                    `/datasets/${getReadableURLPart({ name: uploadedDatasetName, id: datasetId })}/view`,
+                  )
+                }
+              >
+                View the Dataset
+              </Button>
+              <Button
+                onClick={() =>
+                  history.push(
+                    `/datasets/${getReadableURLPart({ name: uploadedDatasetName, id: datasetId })}/edit`,
+                  )
+                }
+              >
+                Go to Dataset Settings
+              </Button>
+              <Button onClick={() => history.push("/dashboard/datasets")}>Go to Dashboard</Button>
+            </React.Fragment>
+          )}
         </div>
       </div>{" "}
     </Modal>

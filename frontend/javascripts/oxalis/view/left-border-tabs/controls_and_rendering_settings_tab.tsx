@@ -1,35 +1,36 @@
-import { Collapse, type CollapseProps } from "antd";
-import type { Dispatch } from "redux";
-import { connect } from "react-redux";
-import React, { PureComponent } from "react";
-import _ from "lodash";
-import type { APIDataset, APIUser } from "types/api_flow_types";
-import {
-  LogSliderSetting,
-  NumberSliderSetting,
-  SwitchSetting,
-  DropdownSetting,
-} from "oxalis/view/components/setting_input_views";
-import type { UserConfiguration, OxalisState, DatasetConfiguration } from "oxalis/store";
+import { ExclamationCircleOutlined } from "@ant-design/icons";
 import { clearCache } from "admin/admin_rest_api";
+import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import { Collapse, type CollapseProps } from "antd";
+import FastTooltip from "components/fast_tooltip";
+import { PricingEnforcedSwitchSetting } from "components/pricing_enforcers";
+import Toast from "libs/toast";
+import _ from "lodash";
+import messages, { settingsTooltips, settings as settingsLabels } from "messages";
+import type { ViewMode } from "oxalis/constants";
+import Constants, { BLEND_MODES } from "oxalis/constants";
+import defaultState from "oxalis/default_state";
 import { getValidZoomRangeForUser } from "oxalis/model/accessors/flycam_accessor";
+import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import {
   updateDatasetSettingAction,
   updateUserSettingAction,
 } from "oxalis/model/actions/settings_actions";
 import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
-import messages, { settingsTooltips, settings as settingsLabels } from "messages";
-import { userSettings } from "types/schemas/user_settings.schema";
-import type { ViewMode } from "oxalis/constants";
-import Constants, { BLEND_MODES } from "oxalis/constants";
 import { api } from "oxalis/singletons";
-import Toast from "libs/toast";
-import { ExclamationCircleOutlined } from "@ant-design/icons";
-import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import { PricingEnforcedSwitchSetting } from "components/pricing_enforcers";
+import type { DatasetConfiguration, OxalisState, UserConfiguration } from "oxalis/store";
+import {
+  DropdownSetting,
+  LogSliderSetting,
+  NumberSliderSetting,
+  SwitchSetting,
+} from "oxalis/view/components/setting_input_views";
+import React, { PureComponent } from "react";
+import { connect } from "react-redux";
+import type { Dispatch } from "redux";
+import type { APIDataset, APIUser } from "types/api_flow_types";
 import type { ArrayElement } from "types/globals";
-import FastTooltip from "components/fast_tooltip";
+import { userSettings } from "types/schemas/user_settings.schema";
 
 type ControlsAndRenderingSettingsTabProps = {
   activeUser: APIUser | null | undefined;
@@ -93,6 +94,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               max={this.props.validZoomRange[1]}
               value={this.props.zoomStep}
               onChange={this.props.onChangeZoomStep}
+              defaultValue={defaultState.flycam.zoomStep}
             />
             <NumberSliderSetting
               label={
@@ -105,6 +107,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               step={0.001}
               value={this.props.userConfiguration.mouseRotateValue}
               onChange={this.onChangeUser.mouseRotateValue}
+              defaultValue={defaultState.userConfiguration.mouseRotateValue}
             />
             <NumberSliderSetting
               label={
@@ -117,6 +120,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               step={0.001}
               value={this.props.userConfiguration.rotateValue}
               onChange={this.onChangeUser.rotateValue}
+              defaultValue={defaultState.userConfiguration.rotateValue}
             />
             <NumberSliderSetting
               label={
@@ -129,6 +133,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               step={0.01}
               value={this.props.userConfiguration.crosshairSize}
               onChange={this.onChangeUser.crosshairSize}
+              defaultValue={defaultState.userConfiguration.crosshairSize}
             />
             <NumberSliderSetting
               label={
@@ -141,6 +146,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               step={1}
               value={this.props.userConfiguration.sphericalCapRadius}
               onChange={this.onChangeUser.sphericalCapRadius}
+              defaultValue={defaultState.userConfiguration.sphericalCapRadius}
             />
             <SwitchSetting
               label={
@@ -167,6 +173,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               max={this.props.validZoomRange[1]}
               value={this.props.zoomStep}
               onChange={this.props.onChangeZoomStep}
+              defaultValue={defaultState.flycam.zoomStep}
             />
             <SwitchSetting
               label={
@@ -241,6 +248,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
         step={10}
         value={this.props.userConfiguration.moveValue3d}
         onChange={this.onChangeUser.moveValue3d}
+        defaultValue={defaultState.userConfiguration.moveValue3d}
       />
     ) : (
       <NumberSliderSetting
@@ -252,6 +260,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
         step={10}
         value={this.props.userConfiguration.moveValue}
         onChange={this.onChangeUser.moveValue}
+        defaultValue={defaultState.userConfiguration.moveValue}
       />
     );
 
@@ -271,6 +280,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               max={userSettings.keyboardDelay.maximum}
               value={this.props.userConfiguration.keyboardDelay}
               onChange={this.onChangeUser.keyboardDelay}
+              defaultValue={defaultState.userConfiguration.keyboardDelay}
             />
             {moveValueSetting}
             <SwitchSetting

@@ -1,19 +1,19 @@
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
-import TWEEN from "tween.js";
-import * as THREE from "three";
 import app from "app";
 import { mergeVertices } from "libs/BufferGeometryUtils";
 import _ from "lodash";
 import type { Vector3 } from "oxalis/constants";
 import CustomLOD from "oxalis/controller/custom_lod";
+import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
 import {
   getActiveSegmentationTracing,
   getSegmentColorAsHSLA,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { NO_LOD_MESH_INDEX } from "oxalis/model/sagas/mesh_saga";
 import Store from "oxalis/store";
+import * as THREE from "three";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
+import TWEEN from "tween.js";
 import type { AdditionalCoordinate } from "types/api_flow_types";
-import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
 import { MeshBVH, MeshBVHHelper, acceleratedRaycast, getBVHExtremes } from "three-mesh-bvh";
 
 // Add the raycast function. Assumes the BVH is available on

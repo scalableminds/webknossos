@@ -1,17 +1,4 @@
 import {
-  Row,
-  Col,
-  Slider,
-  InputNumber,
-  Switch,
-  Input,
-  Select,
-  Popover,
-  type PopoverProps,
-  Dropdown,
-  type MenuProps,
-} from "antd";
-import {
   BorderInnerOutlined,
   DeleteOutlined,
   DownloadOutlined,
@@ -20,19 +7,30 @@ import {
   InfoCircleOutlined,
   ScanOutlined,
 } from "@ant-design/icons";
-import * as React from "react";
-import _ from "lodash";
-import type { Vector3, Vector6 } from "oxalis/constants";
-import * as Utils from "libs/utils";
-import messages from "messages";
-import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
-import { connect } from "react-redux";
-import type { OxalisState } from "oxalis/store";
-import type { APISegmentationLayer } from "types/api_flow_types";
-import { api } from "oxalis/singletons";
+import {
+  Col,
+  Input,
+  InputNumber,
+  type MenuProps,
+  Popover,
+  type PopoverProps,
+  Row,
+  Select,
+  Switch,
+} from "antd";
 import FastTooltip from "components/fast_tooltip";
+import { Slider } from "components/slider";
 import Toast from "libs/toast";
-import { handleGenericError } from "libs/error_handling";
+import * as Utils from "libs/utils";
+import _ from "lodash";
+import messages from "messages";
+import type { Vector3, Vector6 } from "oxalis/constants";
+import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
+import { api } from "oxalis/singletons";
+import type { OxalisState } from "oxalis/store";
+import * as React from "react";
+import { connect } from "react-redux";
+import type { APISegmentationLayer } from "types/api_flow_types";
 
 const ROW_GUTTER = 1;
 
@@ -57,6 +55,8 @@ type NumberSliderSettingProps = {
   step: number;
   disabled: boolean;
   spans: Vector3;
+  defaultValue?: number;
+  wheelFactor?: number;
 };
 export class NumberSliderSetting extends React.PureComponent<NumberSliderSettingProps> {
   static defaultProps = {
@@ -76,7 +76,17 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
     _.isNumber(_value) && _value >= this.props.min && _value <= this.props.max;
 
   render() {
-    const { value: originalValue, label, max, min, step, onChange, disabled } = this.props;
+    const {
+      value: originalValue,
+      label,
+      max,
+      min,
+      step,
+      onChange,
+      disabled,
+      defaultValue,
+      wheelFactor: stepSize,
+    } = this.props;
     // Validate the provided value. If it's not valid, fallback to the midpoint between min and max.
     // This check guards against broken settings which could be introduced before this component
     // checked more thoroughly against invalid values.
@@ -94,6 +104,8 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
             value={value}
             step={step}
             disabled={disabled}
+            defaultValue={defaultValue}
+            wheelFactor={stepSize}
           />
         </Col>
         <Col span={this.props.spans[2]}>
@@ -126,6 +138,7 @@ type LogSliderSettingProps = {
   disabled?: boolean;
   spans: Vector3;
   precision?: number;
+  defaultValue?: number;
 };
 
 const LOG_SLIDER_MIN = -100;
@@ -181,8 +194,13 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
     return Math.round(scaleValue);
   };
 
+  resetToDefaultValue = () => {
+    if (this.props.defaultValue == null) return;
+    this.onChangeInput(this.props.defaultValue);
+  };
+
   render() {
-    const { label, roundTo, value, min, max, disabled } = this.props;
+    const { label, roundTo, value, min, max, disabled, defaultValue } = this.props;
     return (
       <Row align="middle" gutter={ROW_GUTTER}>
         <Col span={this.props.spans[0]}>
@@ -196,6 +214,8 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
             onChange={this.onChangeSlider}
             value={this.getSliderValue()}
             disabled={disabled}
+            defaultValue={defaultValue}
+            onResetToDefault={this.resetToDefaultValue}
           />
         </Col>
         <Col span={this.props.spans[2]}>
@@ -540,7 +560,6 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
       isLockedByOwner,
       isOwner,
     );
-    const isDeleteEnabled = !disabled && this.props.visibleSegmentationLayer != null;
 
     const getContextMenu = () => {
       const items: MenuProps["items"] = [
@@ -576,13 +595,13 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
         },
         {
           key: "delete",
-          label: isDeleteEnabled ? (
+          label: !disabled ? (
             deleteButton
           ) : (
             <FastTooltip title={editingDisallowedExplanation}>{deleteButton}</FastTooltip>
           ),
           onClick: onDelete,
-          disabled: !isDeleteEnabled,
+          disabled,
         },
       ];
 

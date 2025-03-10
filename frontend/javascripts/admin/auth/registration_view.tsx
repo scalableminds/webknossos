@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from "react";
-import { Link, useHistory } from "react-router-dom";
-import { Spin, Row, Col, Card } from "antd";
-import messages from "messages";
-import Toast from "libs/toast";
 import { getDefaultOrganization } from "admin/admin_rest_api";
-import features from "features";
-import RegistrationFormWKOrg from "admin/auth/registration_form_wkorg";
 import RegistrationFormGeneric from "admin/auth/registration_form_generic";
+import RegistrationFormWKOrg from "admin/auth/registration_form_wkorg";
+import { Card, Col, Row, Spin } from "antd";
+import features from "features";
+import Toast from "libs/toast";
+import messages from "messages";
+import { useEffect, useState } from "react";
+import { Link, useHistory } from "react-router-dom";
 import type { APIOrganization } from "types/api_flow_types";
 
 function RegistrationViewGeneric() {

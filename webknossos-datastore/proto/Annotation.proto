@@ -1,0 +1,23 @@
+syntax = "proto2";
+
+package com.scalableminds.webknossos.datastore;
+
+enum AnnotationLayerTypeProto {
+  Skeleton = 1;
+  Volume = 2;
+}
+
+message AnnotationProto {
+  required string description = 1; // empty string encodes no description
+  required int64 version = 2;
+  repeated AnnotationLayerProto annotationLayers = 3;
+  required int64 earliestAccessibleVersion = 4;
+  optional bool skeletonMayHavePendingUpdates = 5; // relevant only for annotations migrated by https://github.com/scalableminds/webknossos/pull/7917
+  optional bool editableMappingsMayHavePendingUpdates = 6; // relevant only for annotations migrated by https://github.com/scalableminds/webknossos/pull/7917
+}
+
+message AnnotationLayerProto {
+  required string tracingId = 1;
+  required string name = 2;
+  required AnnotationLayerTypeProto typ = 3;
+}

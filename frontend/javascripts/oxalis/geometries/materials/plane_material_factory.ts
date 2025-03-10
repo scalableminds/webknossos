@@ -1,58 +1,60 @@
-import * as THREE from "three";
+import app from "app";
+import { CuckooTableVec3 } from "libs/cuckoo/cuckoo_table_vec3";
+import { V3 } from "libs/mjs";
+import type TPS3D from "libs/thin_plate_spline";
+import * as Utils from "libs/utils";
 import _ from "lodash";
 import { BLEND_MODES, Identity4x4, type OrthoView, type Vector3 } from "oxalis/constants";
 import {
-  ViewModeValues,
+  AnnotationToolEnum,
+  MappingStatusEnum,
   OrthoViewValues,
   OrthoViews,
-  MappingStatusEnum,
-  AnnotationToolEnum,
+  ViewModeValues,
 } from "oxalis/constants";
-import { calculateGlobalPos, getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
-import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import {
-  getActiveCellId,
-  getActiveSegmentationTracing,
-  getActiveSegmentPosition,
-  getBucketRetrievalSourceFn,
-  needsLocalHdf5Mapping,
-} from "oxalis/model/accessors/volumetracing_accessor";
-import { getPackingDegree } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import {
+  getByteCount,
   getColorLayers,
   getDataLayers,
-  getByteCount,
-  getElementClass,
   getDatasetBoundingBox,
+  getElementClass,
   getEnabledLayers,
-  getSegmentationLayerWithMappingSupport,
-  getMappingInfoForSupportedLayer,
-  getVisibleSegmentationLayer,
   getLayerByName,
-  invertAndTranspose,
-  getTransformsForLayer,
-  getResolutionInfoByLayer,
-  getResolutionInfo,
-  getTransformsPerLayer,
+  getMagInfo,
+  getMagInfoByLayer,
+  getMappingInfoForSupportedLayer,
+  getSegmentationLayerWithMappingSupport,
+  getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getTransformsForLayer,
+  getTransformsPerLayer,
+  invertAndTranspose,
+} from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndicesForLayers,
   getUnrenderableLayerInfosForCurrentZoom,
   getZoomValue,
 } from "oxalis/model/accessors/flycam_accessor";
+import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
+import { calculateGlobalPos, getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
+import {
+  getActiveCellId,
+  getActiveSegmentPosition,
+  getActiveSegmentationTracing,
+  getBucketRetrievalSourceFn,
+  needsLocalHdf5Mapping,
+} from "oxalis/model/accessors/volumetracing_accessor";
+import { getPackingDegree } from "oxalis/model/bucket_data_handling/data_rendering_logic";
+import { getGlobalLayerIndexForLayerName } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import shaderEditor from "oxalis/model/helpers/shader_editor";
+import getMainFragmentShader, { getMainVertexShader } from "oxalis/shaders/main_data_shaders.glsl";
 import { Model } from "oxalis/singletons";
 import type { DatasetLayerConfiguration } from "oxalis/store";
 import Store from "oxalis/store";
-import * as Utils from "libs/utils";
-import app from "app";
-import getMainFragmentShader, { getMainVertexShader } from "oxalis/shaders/main_data_shaders.glsl";
-import shaderEditor from "oxalis/model/helpers/shader_editor";
+import * as THREE from "three";
 import type { ElementClass } from "types/api_flow_types";
-import { CuckooTableVec3 } from "libs/cuckoo/cuckoo_table_vec3";
-import { getGlobalLayerIndexForLayerName } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
-import { V3 } from "libs/mjs";
-import type TPS3D from "libs/thin_plate_spline";
 
 type ShaderMaterialOptions = {
   polygonOffset?: boolean;
@@ -145,6 +147,9 @@ class PlaneMaterialFactory {
       },
       selectiveVisibilityInProofreading: {
         value: true,
+      },
+      selectiveSegmentVisibility: {
+        value: false,
       },
       is3DViewBeingRendered: {
         value: true,
@@ -242,8 +247,7 @@ class PlaneMaterialFactory {
     this.uniforms.activeMagIndices = {
       value: Object.values(activeMagIndices),
     };
-    const nativelyRenderedLayerName =
-      Store.getState().datasetConfiguration.nativelyRenderedLayerName;
+    const { nativelyRenderedLayerName } = Store.getState().datasetConfiguration;
     const dataset = Store.getState().dataset;
     for (const dataLayer of Model.getAllLayers()) {
       const layerName = sanitizeName(dataLayer.name);
@@ -484,14 +488,12 @@ class PlaneMaterialFactory {
           const state = Store.getState();
           for (const [layerName, activeMagIndex] of Object.entries(activeMagIndices)) {
             const layer = getLayerByName(state.dataset, layerName);
-            const resolutionInfo = getResolutionInfo(layer.resolutions);
+            const magInfo = getMagInfo(layer.resolutions);
             // If the active mag doesn't exist, a fallback mag is likely rendered. Use that
             // to determine a representative mag.
-            const suitableMagIndex = resolutionInfo.getIndexOrClosestHigherIndex(activeMagIndex);
+            const suitableMagIndex = magInfo.getIndexOrClosestHigherIndex(activeMagIndex);
             const suitableMag =
-              suitableMagIndex != null
-                ? resolutionInfo.getResolutionByIndex(suitableMagIndex)
-                : null;
+              suitableMagIndex != null ? magInfo.getMagByIndex(suitableMagIndex) : null;
 
             const hasTransform = !_.isEqual(
               getTransformsForLayer(
@@ -564,27 +566,38 @@ class PlaneMaterialFactory {
         true,
       ),
     );
+
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        (storeState) => getResolutionInfoByLayer(storeState.dataset),
-        (resolutionInfosByLayer) => {
-          const allDenseResolutions = Object.values(resolutionInfosByLayer).map((resInfo) =>
-            resInfo.getDenseResolutions(),
+        (storeState) => storeState.datasetConfiguration.selectiveSegmentVisibility,
+        (selectiveSegmentVisibility) => {
+          this.uniforms.selectiveSegmentVisibility.value = selectiveSegmentVisibility;
+        },
+        true,
+      ),
+    );
+
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        (storeState) => getMagInfoByLayer(storeState.dataset),
+        (magInfosByLayer) => {
+          const allDenseMags = Object.values(magInfosByLayer).map((magInfo) =>
+            magInfo.getDenseMags(),
           );
-          const flatResolutions = _.flattenDeep(allDenseResolutions);
-          this.uniforms.allResolutions = {
-            value: flatResolutions,
+          const flatMags = _.flattenDeep(allDenseMags);
+          this.uniforms.allMagnifications = {
+            value: flatMags,
           };
 
           let cumSum = 0;
-          const resolutionCountCumSum = [cumSum];
-          for (const denseResolutions of allDenseResolutions) {
-            cumSum += denseResolutions.length;
-            resolutionCountCumSum.push(cumSum);
+          const magCountCumSum = [cumSum];
+          for (const denseMags of allDenseMags) {
+            cumSum += denseMags.length;
+            magCountCumSum.push(cumSum);
           }
 
-          this.uniforms.resolutionCountCumSum = {
-            value: resolutionCountCumSum,
+          this.uniforms.magnificationCountCumSum = {
+            value: magCountCumSum,
           };
         },
         true,
@@ -1101,7 +1114,7 @@ class PlaneMaterialFactory {
       colorLayerNames,
       segmentationLayerNames,
       textureLayerInfos,
-      resolutionsCount: this.getTotalResolutionCount(),
+      magnificationsCount: this.getTotalMagCount(),
       voxelSizeFactor,
       isOrthogonal: this.isOrthogonal,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
@@ -1112,13 +1125,13 @@ class PlaneMaterialFactory {
     ];
   }
 
-  getTotalResolutionCount(): number {
+  getTotalMagCount(): number {
     const storeState = Store.getState();
-    const allDenseResolutions = Object.values(getResolutionInfoByLayer(storeState.dataset)).map(
-      (resInfo) => resInfo.getDenseResolutions(),
+    const allDenseMags = Object.values(getMagInfoByLayer(storeState.dataset)).map((magInfo) =>
+      magInfo.getDenseMags(),
     );
-    const flatResolutions = _.flatten(allDenseResolutions);
-    return flatResolutions.length;
+    const flatMags = _.flatten(allDenseMags);
+    return flatMags.length;
   }
 
   getVertexShader(): string {
@@ -1136,7 +1149,7 @@ class PlaneMaterialFactory {
       colorLayerNames,
       segmentationLayerNames,
       textureLayerInfos,
-      resolutionsCount: this.getTotalResolutionCount(),
+      magnificationsCount: this.getTotalMagCount(),
       voxelSizeFactor,
       isOrthogonal: this.isOrthogonal,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,

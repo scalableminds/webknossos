@@ -1,5 +1,4 @@
-import { Input, Col, Row, DatePicker } from "antd";
-import React from "react";
+import { Col, DatePicker, Input, Row } from "antd";
 import { FormItemWithInfo } from "./helper_components";
 
 export default function DatasetSettingsMetadataTab() {

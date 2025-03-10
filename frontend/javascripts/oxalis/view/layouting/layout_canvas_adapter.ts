@@ -1,5 +1,5 @@
-import type { Rect } from "oxalis/constants";
 import { document } from "libs/window";
+import type { Rect } from "oxalis/constants";
 
 export default function makeRectRelativeToCanvas(rect: Rect): Rect {
   const layoutContainerDOM = document.getElementById("render-canvas");

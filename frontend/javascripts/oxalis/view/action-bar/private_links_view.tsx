@@ -1,18 +1,24 @@
-import React from "react";
+import {
+  CopyOutlined,
+  DeleteOutlined,
+  DownOutlined,
+  EditOutlined,
+  InfoCircleOutlined,
+  PlusOutlined,
+} from "@ant-design/icons";
+import {
+  useIsFetching,
+  useIsMutating,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   createPrivateLink,
   deletePrivateLink,
   getPrivateLinksByAnnotation,
   updatePrivateLink,
 } from "admin/admin_rest_api";
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-  useIsFetching,
-  useIsMutating,
-} from "@tanstack/react-query";
-import Toast from "libs/toast";
 import {
   Button,
   DatePicker,
@@ -27,24 +33,17 @@ import {
   Table,
   Tooltip,
 } from "antd";
-import {
-  CopyOutlined,
-  DeleteOutlined,
-  DownOutlined,
-  EditOutlined,
-  InfoCircleOutlined,
-  PlusOutlined,
-} from "@ant-design/icons";
-import type { ZarrPrivateLink } from "types/api_flow_types";
-import { AsyncButton, AsyncIconButton } from "components/async_clickables";
-import dayjs from "dayjs";
-import FormattedDate from "components/formatted_date";
 import type { ColumnsType } from "antd/lib/table";
+import { AsyncButton, AsyncIconButton } from "components/async_clickables";
+import FormattedDate from "components/formatted_date";
+import dayjs from "dayjs";
 import { makeComponentLazy } from "libs/react_helpers";
-import type { OxalisState } from "oxalis/store";
-import { useSelector } from "react-redux";
+import Toast from "libs/toast";
 import { getDataLayers } from "oxalis/model/accessors/dataset_accessor";
 import { getReadableNameByVolumeTracingId } from "oxalis/model/accessors/volumetracing_accessor";
+import type { OxalisState } from "oxalis/store";
+import { useSelector } from "react-redux";
+import type { ZarrPrivateLink } from "types/api_flow_types";
 
 // TODO Remove explicit (error) type declaration when updating to tanstack/query >= 5
 // https://github.com/TanStack/query/pull/4706
@@ -146,7 +145,7 @@ export function useZarrLinkMenu(maybeAccessToken: string | null) {
 
   const baseUrl = maybeAccessToken
     ? `${dataStoreURL}/data/annotations/zarr/${maybeAccessToken}`
-    : `${dataStoreURL}/data/zarr/${dataset.owningOrganization}/${dataset.name}`;
+    : `${dataStoreURL}/data/zarr/${dataset.owningOrganization}/${dataset.directoryName}`;
 
   const copyTokenToClipboard = async ({ key: layerName }: { key: string }) => {
     await navigator.clipboard.writeText(`${baseUrl}/${layerName}`);

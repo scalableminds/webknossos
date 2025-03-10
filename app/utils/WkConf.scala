@@ -1,15 +1,29 @@
 package utils
 
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.ConfigReader
+import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
 import play.api.Configuration
+import security.CertificateValidationService
 
-import java.time.Instant
 import javax.inject.Inject
 import scala.concurrent.duration._
+import scala.jdk.CollectionConverters._
 
-class WkConf @Inject()(configuration: Configuration) extends ConfigReader with LazyLogging {
-  override def raw: Configuration = configuration
+class WkConf @Inject()(configuration: Configuration, certificateValidationService: CertificateValidationService)
+    extends ConfigReader
+    with LazyLogging {
+  lazy val featureOverrides: Map[String, Boolean] = certificateValidationService.getFeatureOverrides
+  override val raw: Configuration = {
+    // Applying feature overwrites to the configuration.
+    Configuration(
+      ConfigFactory
+        .parseMap(featureOverrides.map {
+          case (k, v) => s"features.$k" -> Boolean.box(v && configuration.underlying.getBoolean(s"features.$k"))
+        }.asJava)
+        .withFallback(configuration.underlying))
+  }
 
   object Http {
     val uri: String = get[String]("http.uri")
@@ -121,6 +135,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     val exportTiffMaxVolumeMVx: Long = get[Long]("features.exportTiffMaxVolumeMVx")
     val exportTiffMaxEdgeLengthVx: Long = get[Long]("features.exportTiffMaxEdgeLengthVx")
     val openIdConnectEnabled: Boolean = get[Boolean]("features.openIdConnectEnabled")
+    val editableMappingsEnabled: Boolean = get[Boolean]("features.editableMappingsEnabled")
     val segmentAnythingEnabled: Boolean = get[Boolean]("features.segmentAnythingEnabled")
   }
 
@@ -128,7 +143,6 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     val key: String = get[String]("datastore.key")
     val name: String = get[String]("datastore.name")
     val publicUri: Option[String] = getOptional[String]("datastore.publicUri")
-    val localFolderWhitelist: List[String] = getList[String]("datastore.localFolderWhitelist")
   }
 
   object Tracingstore {
@@ -137,9 +151,9 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     val publicUri: Option[String] = getOptional[String]("tracingstore.publicUri")
   }
 
-  object Proxy {
-    val prefix: String = get[String]("proxy.prefix")
-    val routes: List[String] = getList[String]("proxy.routes")
+  object AboutPageRedirect {
+    val prefix: String = get[String]("aboutPageRedirect.prefix")
+    val routes: List[String] = getList[String]("aboutPageRedirect.routes")
   }
 
   object Mail {
@@ -155,6 +169,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     }
 
     val defaultSender: String = get[String]("mail.defaultSender")
+    def additionalFooter: String = get[String]("mail.additionalFooter")
 
     object Mailchimp {
       val host: String = get[String]("mail.mailchimp.host")
@@ -198,10 +213,6 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     val projectID: String = get[String]("airbrake.projectID")
     val projectKey: String = get[String]("airbrake.projectKey")
     val environment: String = get[String]("airbrake.environment")
-  }
-
-  object GoogleAnalytics {
-    val trackingId: String = get[String]("googleAnalytics.trackingId")
   }
 
   object SlackNotifications {
@@ -254,12 +265,11 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       Features,
       Tracingstore,
       Datastore,
-      Proxy,
+      AboutPageRedirect,
       Mail,
       Silhouette,
       Jobs,
       Airbrake,
-      GoogleAnalytics,
       BackendAnalytics,
       Slick,
       Voxelytics,

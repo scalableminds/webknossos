@@ -1,4 +1,4 @@
-import { Input, InputNumber, type InputNumberProps, type InputProps } from "antd";
+import { Input, type InputProps } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { useCallback, useEffect, useState } from "react";
 

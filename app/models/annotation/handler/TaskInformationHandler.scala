@@ -8,7 +8,7 @@ import models.task.TaskDAO
 import models.user.{User, UserService}
 import models.annotation.AnnotationState._
 import models.project.ProjectDAO
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 
@@ -32,7 +32,7 @@ class TaskInformationHandler @Inject()(taskDAO: TaskDAO,
       project <- projectDAO.findOne(task._project)
       datasetId <- finishedAnnotations.headOption.map(_._dataset).toFox
       mergedAnnotation <- annotationMerger.mergeN(task._id,
-                                                  persistTracing = false,
+                                                  toTemporaryStore = true,
                                                   user._id,
                                                   datasetId,
                                                   project._team,

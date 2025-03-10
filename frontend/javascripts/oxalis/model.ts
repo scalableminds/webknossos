@@ -1,26 +1,25 @@
+import { isDatasetAccessibleBySwitching } from "admin/admin_rest_api";
+import * as Utils from "libs/utils";
 import _ from "lodash";
 import type { Vector3 } from "oxalis/constants";
-import type { Versions } from "oxalis/view/version_view";
-import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
-import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
 import {
-  getSegmentationLayerWithMappingSupport,
   getLayerByName,
+  getSegmentationLayerWithMappingSupport,
   isLayerVisible,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getTotalSaveQueueLength } from "oxalis/model/reducers/save_reducer";
-import { isBusy } from "oxalis/model/accessors/save_accessor";
-import { isDatasetAccessibleBySwitching } from "admin/admin_rest_api";
+import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
+import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import type DataLayer from "oxalis/model/data_layer";
 import type LayerRenderingManager from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
+import type DataLayer from "oxalis/model/data_layer";
+import { getTotalSaveQueueLength } from "oxalis/model/reducers/save_reducer";
 import type { TraceOrViewCommand } from "oxalis/store";
 import Store from "oxalis/store";
-import * as Utils from "libs/utils";
 import type { APICompoundType } from "types/api_flow_types";
 
+import { globalToLayerTransformedPosition } from "./model/accessors/dataset_layer_transformation_accessor";
 import { initialize } from "./model_initialization";
 
 // TODO: Non-reactive
@@ -33,14 +32,14 @@ export class OxalisModel {
     initialMaybeCompoundType: APICompoundType | null,
     initialCommandType: TraceOrViewCommand,
     initialFetch: boolean,
-    versions?: Versions,
+    version?: number | undefined | null,
   ) {
     try {
       const initializationInformation = await initialize(
         initialMaybeCompoundType,
         initialCommandType,
         initialFetch,
-        versions,
+        version,
       );
 
       if (initializationInformation) {
@@ -224,8 +223,15 @@ export class OxalisModel {
     );
 
     const getIdForPos = (pos: Vector3, usableZoomStep: number) => {
-      const additionalCoordinates = Store.getState().flycam.additionalCoordinates;
-      const id = cube.getDataValue(pos, additionalCoordinates, null, usableZoomStep);
+      const state = Store.getState();
+      const additionalCoordinates = state.flycam.additionalCoordinates;
+      const posInLayerSpace = globalToLayerTransformedPosition(
+        pos,
+        segmentationLayer.name,
+        "segmentation",
+        state,
+      );
+      const id = cube.getDataValue(posInLayerSpace, additionalCoordinates, null, usableZoomStep);
       return {
         // Note that this id can be an unmapped id even when
         // a mapping is active, if it is a HDF5 mapping that is partially loaded
@@ -283,8 +289,7 @@ export class OxalisModel {
 
   stateSaved() {
     const state = Store.getState();
-    const storeStateSaved =
-      !isBusy(state.save.isBusyInfo) && getTotalSaveQueueLength(state.save.queue) === 0;
+    const storeStateSaved = !state.save.isBusy && getTotalSaveQueueLength(state.save.queue) === 0;
 
     const pushQueuesSaved = _.reduce(
       this.dataLayers,
@@ -341,7 +346,7 @@ export class OxalisModel {
       // The dispatch of the saveNowAction IN the while loop is deliberate.
       // Otherwise if an update action is pushed to the save queue during the Utils.sleep,
       // the while loop would continue running until the next save would be triggered.
-      if (!isBusy(Store.getState().save.isBusyInfo)) {
+      if (!Store.getState().save.isBusy) {
         Store.dispatch(saveNowAction());
       }
 

@@ -1,10 +1,9 @@
-import React from "react";
 import { Button, notification } from "antd";
-import { useSelector } from "react-redux";
 import features from "features";
+import { useEffectOnlyOnce } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
 import type { OxalisState } from "oxalis/store";
-import { useEffectOnlyOnce } from "libs/react_hooks";
+import { useSelector } from "react-redux";
 
 function showWelcomeToast() {
   notification.open({

@@ -8,15 +8,15 @@ import {
 } from "../dataset/dataset_collection_context";
 
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
-import { Dropdown, Modal, type MenuProps, Tree } from "antd";
-import Toast from "libs/toast";
-import type { AntTreeNodeSelectedEvent, DataNode, DirectoryTreeProps } from "antd/lib/tree";
-import memoizeOne from "memoize-one";
-import classNames from "classnames";
-import type { FolderItem } from "types/api_flow_types";
-import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import { AntTreeNodeBaseEvent } from "antd/es/tree/Tree";
+import { Dropdown, type MenuProps, Modal, Tree } from "antd";
+import type { DataNode, DirectoryTreeProps } from "antd/lib/tree";
+import classNames from "classnames";
+import { PricingEnforcedSpan } from "components/pricing_enforcers";
+import Toast from "libs/toast";
+import memoizeOne from "memoize-one";
+import type { FolderItem } from "types/api_flow_types";
+import type { ArbitraryObject } from "types/globals";
 
 const { DirectoryTree } = Tree;
 
@@ -287,6 +287,10 @@ function generateTitle(
     </Dropdown>
   );
 }
+
+export type DnDDropItemProps = {
+  datasetId: string;
+} & ArbitraryObject;
 export function useDatasetDrop(
   folderId: string,
   canDrop: boolean,
@@ -300,9 +304,7 @@ export function useDatasetDrop(
   const context = useDatasetCollectionContext();
   const { selectedDatasets, setSelectedDatasets } = context;
   const [collectedProps, drop] = useDrop<
-    Partial<{
-      datasetName: string;
-    }>,
+    DnDDropItemProps,
     void,
     {
       canDrop: boolean;
@@ -310,7 +312,7 @@ export function useDatasetDrop(
     }
   >({
     accept: DraggableDatasetType,
-    drop: (item: Partial<{ datasetName: string }>) => {
+    drop: (item: DnDDropItemProps) => {
       if (selectedDatasets.length > 1) {
         if (selectedDatasets.every((ds) => ds.folderId === folderId)) {
           Toast.warning(
@@ -331,7 +333,7 @@ export function useDatasetDrop(
         let successCounter = 0;
         Promise.all(
           selectedDatasets.map((ds) =>
-            context.queries.updateDatasetMutation.mutateAsync([ds, { folderId }]).then(() => {
+            context.queries.updateDatasetMutation.mutateAsync([ds.id, { folderId }]).then(() => {
               successCounter++;
               modal.update({
                 content: `Already moved ${successCounter} of ${selectedDatasets.length} datasets.`,
@@ -355,10 +357,10 @@ export function useDatasetDrop(
             modal.destroy();
           });
       } else {
-        const dataset = context.datasets.find((ds) => ds.name === item.datasetName);
+        const dataset = context.datasets.find((ds) => ds.id === item.datasetId);
 
         if (dataset) {
-          context.queries.updateDatasetMutation.mutateAsync([dataset, { folderId }]);
+          context.queries.updateDatasetMutation.mutateAsync([dataset.id, { folderId }]);
         } else {
           Toast.error("Could not move dataset. Please try again.");
         }

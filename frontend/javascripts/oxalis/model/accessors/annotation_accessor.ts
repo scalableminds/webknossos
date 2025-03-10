@@ -1,7 +1,5 @@
 import _ from "lodash";
 import type { OxalisState, Tracing } from "oxalis/store";
-import { getVolumeTracingById } from "./volumetracing_accessor";
-import type { APIAnnotationInfo } from "types/api_flow_types";
 import type { EmptyObject } from "types/globals";
 
 export function mayEditAnnotationProperties(state: OxalisState) {
@@ -24,6 +22,12 @@ export function isAnnotationOwner(state: OxalisState) {
   return !!(activeUser && owner?.id === activeUser.id);
 }
 
+export function isAnnotationFromDifferentOrganization(state: OxalisState) {
+  const activeUser = state.activeUser;
+
+  return !!(activeUser && activeUser?.organization !== state.tracing.organization);
+}
+
 export type SkeletonTracingStats = {
   treeCount: number;
   nodeCount: number;
@@ -35,102 +39,48 @@ export type VolumeTracingStats = {
   segmentCount: number;
 };
 
-export type TracingStats = SkeletonTracingStats | VolumeTracingStats;
-type TracingStatsHelper = {
-  treeCount?: number;
-  nodeCount?: number;
-  edgeCount?: number;
-  branchPointCount?: number;
-  segmentCount?: number;
-};
+export type TracingStats = Record<string, SkeletonTracingStats | VolumeTracingStats | EmptyObject>;
 
-// biome-ignore lint/complexity/noBannedTypes: {} should be avoided actually
-export type CombinedTracingStats = (SkeletonTracingStats | {}) & (VolumeTracingStats | {});
-
-export function getStats(
-  tracing: Tracing,
-  saveQueueType: "skeleton" | "volume" | "mapping",
-  tracingId: string,
-): TracingStats | null {
-  switch (saveQueueType) {
-    case "skeleton": {
-      if (!tracing.skeleton) {
-        return null;
-      }
-      const trees = tracing.skeleton.trees;
-      return {
-        treeCount: _.size(trees),
-        nodeCount: _.reduce(trees, (sum, tree) => sum + tree.nodes.size(), 0),
-        edgeCount: _.reduce(trees, (sum, tree) => sum + tree.edges.size(), 0),
-        branchPointCount: _.reduce(trees, (sum, tree) => sum + _.size(tree.branchPoints), 0),
-      };
-    }
-    case "volume": {
-      const volumeTracing = getVolumeTracingById(tracing, tracingId);
-      return {
-        segmentCount: volumeTracing.segments.size(),
-      };
-    }
-    default:
-      return null;
+export function getStats(tracing: Tracing): TracingStats {
+  const stats: TracingStats = {};
+  const { skeleton, volumes } = tracing;
+  for (const volumeTracing of volumes) {
+    stats[volumeTracing.tracingId] = { segmentCount: volumeTracing.segments.size() };
   }
+  if (skeleton) {
+    stats[skeleton.tracingId] = {
+      treeCount: _.size(skeleton.trees),
+      nodeCount: _.reduce(skeleton.trees, (sum, tree) => sum + tree.nodes.size(), 0),
+      edgeCount: _.reduce(skeleton.trees, (sum, tree) => sum + tree.edges.size(), 0),
+      branchPointCount: _.reduce(skeleton.trees, (sum, tree) => sum + _.size(tree.branchPoints), 0),
+    };
+  }
+  return stats;
 }
 
-export function getCombinedStats(tracing: Tracing): CombinedTracingStats {
-  const aggregatedStats: TracingStatsHelper = {};
-
-  if (tracing.skeleton) {
-    const skeletonStats = getStats(tracing, "skeleton", tracing.skeleton.tracingId);
-    if (skeletonStats && "treeCount" in skeletonStats) {
-      const { treeCount, nodeCount, edgeCount, branchPointCount } = skeletonStats;
-      aggregatedStats.treeCount = treeCount;
-      aggregatedStats.nodeCount = nodeCount;
-      aggregatedStats.edgeCount = edgeCount;
-      aggregatedStats.branchPointCount = branchPointCount;
-    }
-  }
-
+export function getCreationTimestamp(tracing: Tracing) {
+  let timestamp = tracing.skeleton?.createdTimestamp;
   for (const volumeTracing of tracing.volumes) {
-    const volumeStats = getStats(tracing, "volume", volumeTracing.tracingId);
-    if (volumeStats && "segmentCount" in volumeStats) {
-      if (aggregatedStats.segmentCount == null) {
-        aggregatedStats.segmentCount = 0;
-      }
-      aggregatedStats.segmentCount += volumeStats.segmentCount;
+    if (!timestamp || volumeTracing.createdTimestamp < timestamp) {
+      timestamp = volumeTracing.createdTimestamp;
     }
   }
-
-  return aggregatedStats;
+  return timestamp || 0;
 }
 
-export function getCombinedStatsFromServerAnnotation(
-  annotation: APIAnnotationInfo,
-): CombinedTracingStats {
-  return aggregateStatsForAllLayers(
-    annotation.annotationLayers.map((annotation) => annotation.stats),
-  );
-}
-
-export function aggregateStatsForAllLayers(
-  stats: Array<TracingStats | EmptyObject>,
-): CombinedTracingStats {
-  const aggregatedStats: TracingStatsHelper = {};
-
-  for (const annotationLayerStats of stats) {
-    if ("treeCount" in annotationLayerStats) {
-      const { treeCount, nodeCount, edgeCount, branchPointCount } = annotationLayerStats;
-      aggregatedStats.treeCount = treeCount;
-      aggregatedStats.nodeCount = nodeCount;
-      aggregatedStats.edgeCount = edgeCount;
-      aggregatedStats.branchPointCount = branchPointCount;
-    } else if ("segmentCount" in annotationLayerStats) {
-      if (aggregatedStats.segmentCount == null) {
-        aggregatedStats.segmentCount = 0;
-      }
-
-      aggregatedStats.segmentCount += annotationLayerStats.segmentCount;
+export function getSkeletonStats(stats: TracingStats): SkeletonTracingStats | undefined {
+  for (const tracingId in stats) {
+    if ("treeCount" in stats[tracingId]) {
+      // TS thinks the return value could be EmptyObject even though
+      // we just checked that treeCount is a property.
+      return stats[tracingId] as SkeletonTracingStats;
     }
   }
+  return undefined;
+}
 
-  return aggregatedStats;
+export function getVolumeStats(stats: TracingStats): [string, VolumeTracingStats][] {
+  return Array.from(Object.entries(stats)).filter(
+    ([_tracingId, stat]) => "segmentCount" in stat,
+  ) as [string, VolumeTracingStats][];
 }

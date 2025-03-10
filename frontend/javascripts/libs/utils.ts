@@ -1,21 +1,21 @@
 import Maybe from "data.maybe";
-import _ from "lodash";
+import dayjs from "dayjs";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'java... Remove this comment to see the full error message
 import naturalSort from "javascript-natural-sort";
-import type { APIDataset, APIUser } from "types/api_flow_types";
-import type { BoundingBoxObject, NumberLike } from "oxalis/store";
+import window, { document, location } from "libs/window";
+import _ from "lodash";
 import type {
+  BoundingBoxType,
+  ColorObject,
+  Point3,
+  TypedArray,
   Vector3,
   Vector4,
   Vector6,
-  BoundingBoxType,
-  Point3,
-  ColorObject,
-  TypedArray,
 } from "oxalis/constants";
-import window, { document, location } from "libs/window";
+import type { BoundingBoxObject, NumberLike } from "oxalis/store";
+import type { APIDataset, APIUser } from "types/api_flow_types";
 import type { ArbitraryObject, Comparator } from "types/globals";
-import dayjs from "dayjs";
 
 type UrlParams = Record<string, string>;
 // Fix JS modulo bug
@@ -1239,7 +1239,7 @@ export function notEmpty<TValue>(value: TValue | null | undefined): value is TVa
 
 export function isNumberMap(x: Map<NumberLike, NumberLike>): x is Map<number, number> {
   const { value } = x.entries().next();
-  return value && typeof value[0] === "number";
+  return Boolean(value && typeof value[0] === "number");
 }
 
 export function isBigInt(x: NumberLike): x is bigint {

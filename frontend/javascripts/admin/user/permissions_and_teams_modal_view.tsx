@@ -1,12 +1,12 @@
-import { Modal, Radio, Col, Row, Checkbox, Divider, type RadioChangeEvent, App } from "antd";
 import { InfoCircleOutlined } from "@ant-design/icons";
-import React, { type Key, useEffect, useState } from "react";
-import _ from "lodash";
-import type { APIUser, APITeam, APITeamMembership } from "types/api_flow_types";
-import { updateUser, getEditableTeams } from "admin/admin_rest_api";
-import messages from "messages";
-import * as Utils from "libs/utils";
+import { getEditableTeams, updateUser } from "admin/admin_rest_api";
+import { App, Checkbox, Col, Divider, Modal, Radio, type RadioChangeEvent, Row } from "antd";
 import { useFetch } from "libs/react_helpers";
+import * as Utils from "libs/utils";
+import _ from "lodash";
+import messages from "messages";
+import React, { type Key, useEffect, useState } from "react";
+import type { APITeam, APITeamMembership, APIUser } from "types/api_flow_types";
 const RadioButton = Radio.Button;
 const RadioGroup = Radio.Group;
 
@@ -243,7 +243,7 @@ function PermissionsAndTeamsModalView({
         <h4>
           Organization Permissions{" "}
           <a
-            href="https://docs.webknossos.org/webknossos/users.html"
+            href="https://docs.webknossos.org/webknossos/users/index.html"
             target="_blank"
             rel="noopener noreferrer"
           >

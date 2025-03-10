@@ -1,14 +1,14 @@
-import React, { useState } from "react";
-import { Modal, Tooltip, Table, InputNumber, Tag, Badge } from "antd";
 import { CloseOutlined, DeleteOutlined, RollbackOutlined } from "@ant-design/icons";
-import _ from "lodash";
-import type { APIUser, ExperienceDomainList } from "types/api_flow_types";
-import { handleGenericError } from "libs/error_handling";
 import { updateUser } from "admin/admin_rest_api";
+import { Badge, InputNumber, Modal, Table, Tag, Tooltip } from "antd";
 import HighlightableRow from "components/highlightable_row";
 import SelectExperienceDomain from "components/select_experience_domain";
+import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
+import _ from "lodash";
+import { useState } from "react";
+import type { APIUser, ExperienceDomainList } from "types/api_flow_types";
 
 const { Column } = Table;
 

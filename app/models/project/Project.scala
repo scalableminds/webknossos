@@ -13,7 +13,7 @@ import net.liftweb.common.Full
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import slick.lifted.Rep
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient}
 
 import javax.inject.Inject

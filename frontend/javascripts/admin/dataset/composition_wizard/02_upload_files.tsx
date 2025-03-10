@@ -2,21 +2,20 @@ import { FileExcelOutlined } from "@ant-design/icons";
 import { Button, Upload } from "antd";
 import type { UploadChangeParam, UploadFile } from "antd/lib/upload";
 import { AsyncButton } from "components/async_clickables";
+import ErrorHandling from "libs/error_handling";
 import { readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
 import { SoftError } from "libs/utils";
+import * as Utils from "libs/utils";
 import _ from "lodash";
 import type { Vector3 } from "oxalis/constants";
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
-import React from "react";
 import {
-  tryToFetchDatasetsByName,
+  type FileList,
   type WizardComponentProps,
   type WizardContext,
-  type FileList,
+  tryToFetchDatasetsByNameOrId,
 } from "./common";
-import ErrorHandling from "libs/error_handling";
-import * as Utils from "libs/utils";
 
 const EXPECTED_VALUE_COUNT_PER_CSV_LINE = 8;
 
@@ -167,10 +166,12 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
     throw new SoftError("NML files should not be empty.");
   }
 
-  const { trees: trees1, datasetName: datasetName1 } = await parseNml(nmlString1);
-  const { trees: trees2, datasetName: datasetName2 } = await parseNml(nmlString2);
+  // TODO: Now the datasetName stored in the nml is interpreted as the path of the dataset. -> call to legacy route is necessary.
+  //  Discussion: how to handle this better?
+  const { trees: trees1, datasetName: datasetDirectoryName1 } = await parseNml(nmlString1);
+  const { trees: trees2, datasetName: datasetDirectoryName2 } = await parseNml(nmlString2);
 
-  if (!datasetName1 || !datasetName2) {
+  if (!datasetDirectoryName1 || !datasetDirectoryName2) {
     throw new SoftError("Could not extract dataset names.");
   }
 
@@ -206,8 +207,9 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
     throw new SoftError("Each file should contain at least 3 nodes.");
   }
 
-  const datasets = await tryToFetchDatasetsByName(
-    [datasetName1, datasetName2],
+  const datasets = await tryToFetchDatasetsByNameOrId(
+    [datasetDirectoryName1, datasetDirectoryName2], // fetch by name
+    [],
     "Could not derive datasets from NML. Please specify these manually.",
   );
 

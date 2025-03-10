@@ -1,64 +1,67 @@
-import React, { useState } from "react";
-import type { APIJob, APIDataLayer } from "types/api_flow_types";
+import { InfoCircleOutlined } from "@ant-design/icons";
 import {
-  Modal,
-  Select,
-  Button,
-  Form,
-  Slider,
-  Row,
-  Space,
-  Radio,
-  Card,
-  Tooltip,
-  Alert,
-  Tabs,
-  Switch,
-  type FormInstance,
-  Checkbox,
-} from "antd";
-import {
-  startNucleiInferralJob,
-  startMaterializingVolumeAnnotationJob,
-  startNeuronInferralJob,
-  startMitochondriaInferralJob,
+  getAiModels,
   runInferenceJob,
   startAlignSectionsJob,
-  getAiModels,
+  startMaterializingVolumeAnnotationJob,
+  startMitochondriaInferralJob,
+  startNeuronInferralJob,
+  startNucleiInferralJob,
 } from "admin/admin_rest_api";
-import { useDispatch, useSelector } from "react-redux";
 import { DatasetNameFormItem } from "admin/dataset/dataset_components";
-import { getColorLayers, getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
 import {
-  getActiveSegmentationTracingLayer,
-  getReadableNameOfVolumeLayer,
-} from "oxalis/model/accessors/volumetracing_accessor";
-import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
+  Alert,
+  Button,
+  Card,
+  Checkbox,
+  Col,
+  Collapse,
+  Form,
+  type FormInstance,
+  InputNumber,
+  Modal,
+  Radio,
+  Row,
+  Select,
+  Space,
+  Switch,
+  Tabs,
+  Tooltip,
+} from "antd";
+import { LayerSelectionFormItem } from "components/layer_selection";
+import { Slider } from "components/slider";
+import features from "features";
+import { V3 } from "libs/mjs";
+import { useGuardedFetch } from "libs/react_helpers";
 import Toast from "libs/toast";
-import type { OxalisState, UserBoundingBox } from "oxalis/store";
-import { ControlModeEnum, Unicode, type Vector3 } from "oxalis/constants";
-import { Model, Store } from "oxalis/singletons";
 import {
   clamp,
   computeArrayFromBoundingBox,
   computeBoundingBoxFromBoundingBoxObject,
   rgbToHex,
 } from "libs/utils";
-import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
-import { V3 } from "libs/mjs";
-import type { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
-import { isBoundingBoxExportable } from "./download_modal_view";
-import features from "features";
+import _ from "lodash";
+import { ControlModeEnum, Unicode, type Vector3 } from "oxalis/constants";
+import { getColorLayers, getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
+import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
+import {
+  getActiveSegmentationTracingLayer,
+  getReadableNameOfVolumeLayer,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
-import { InfoCircleOutlined } from "@ant-design/icons";
+import type { MagInfo } from "oxalis/model/helpers/mag_info";
+import { Model, Store } from "oxalis/singletons";
+import type { OxalisState, UserBoundingBox } from "oxalis/store";
+import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import React, { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import type { APIDataLayer, APIJob } from "types/api_flow_types";
 import {
   CollapsibleWorkflowYamlEditor,
   TrainAiModelFromAnnotationTab,
 } from "../jobs/train_ai_model";
-import { LayerSelectionFormItem } from "components/layer_selection";
-import { useGuardedFetch } from "libs/react_helpers";
-import _ from "lodash";
 import DEFAULT_PREDICT_WORKFLOW from "./default-predict-workflow-template";
+import { isBoundingBoxExportable } from "./download_modal_view";
 
 const { ThinSpace } = Unicode;
 
@@ -98,6 +101,7 @@ type StartJobFormProps = Props & {
   jobApiCall: (arg0: JobApiCallArgsType, form: FormInstance<any>) => Promise<void | APIJob>;
   jobName: keyof typeof jobNameToImagePath;
   description: React.ReactNode;
+  jobSpecificInputFields?: React.ReactNode | undefined;
   isBoundingBoxConfigurable?: boolean;
   chooseSegmentationLayer?: boolean;
   suggestedDatasetSuffix: string;
@@ -111,6 +115,7 @@ type StartJobFormProps = Props & {
 type BoundingBoxSelectionProps = {
   isBoundingBoxConfigurable?: boolean;
   userBoundingBoxes: UserBoundingBox[];
+  isSuperUser: boolean;
   onChangeSelectedBoundingBox: (bBoxId: number | null) => void;
   value: number | null;
 };
@@ -183,6 +188,7 @@ export function BoundingBoxSelection({
 function BoundingBoxSelectionFormItem({
   isBoundingBoxConfigurable,
   userBoundingBoxes,
+  isSuperUser,
   onChangeSelectedBoundingBox,
   value: selectedBoundingBoxId,
 }: BoundingBoxSelectionProps): JSX.Element {
@@ -218,7 +224,7 @@ function BoundingBoxSelectionFormItem({
           },
           {
             validator: (_rule, value) => {
-              if (!isBoundingBoxConfigurable) return Promise.resolve();
+              if (!isBoundingBoxConfigurable || isSuperUser) return Promise.resolve();
 
               const selectedBoundingBox = userBoundingBoxes.find((bbox) => bbox.id === value);
               let rejectionReason = "";
@@ -252,16 +258,16 @@ function BoundingBoxSelectionFormItem({
 }
 
 export function MagSlider({
-  resolutionInfo,
+  magnificationInfo,
   value,
   onChange,
 }: {
-  resolutionInfo: ResolutionInfo;
+  magnificationInfo: MagInfo;
   value: Vector3;
   onChange: (v: Vector3) => void;
 }) {
-  // Use `getResolutionsWithIndices` because returns a sorted list
-  const allMags = resolutionInfo.getResolutionsWithIndices();
+  // Use `getMagsWithIndices` because returns a sorted list
+  const allMags = magnificationInfo.getMagsWithIndices();
 
   return (
     <Slider
@@ -277,6 +283,7 @@ export function MagSlider({
         allMags.length - 1,
       )}
       onChange={(value) => onChange(allMags[value][1])}
+      onWheelDisabled
     />
   );
 }
@@ -520,11 +527,92 @@ function ShouldUseTreesFormItem() {
   );
 }
 
+type SplitMergerEvaluationSettings = {
+  useSparseTracing?: boolean;
+  maxEdgeLength?: number;
+  sparseTubeThresholdInNm?: number;
+  minimumMergerPathLengthInNm?: number;
+};
+
+function CollapsibleSplitMergerEvaluationSettings({
+  isActive = false,
+  setActive,
+}: { isActive: boolean; setActive: (active: boolean) => void }) {
+  return (
+    <Collapse
+      style={{ marginBottom: 8 }}
+      onChange={() => setActive(!isActive)}
+      expandIcon={() => <Checkbox checked={isActive} />}
+      items={[
+        {
+          key: "evaluation",
+          label: "Evaluation Settings",
+          children: (
+            <Row>
+              <Col style={{ width: "100%" }}>
+                <Form.Item
+                  layout="horizontal"
+                  label="Use sparse ground truth tracing"
+                  name={["splitMergerEvaluationSettings", "useSparseTracing"]}
+                  valuePropName="checked"
+                  initialValue={true}
+                  tooltip="The evaluation mode can either be `dense`
+    in case all processes in the volume are annotated in the ground-truth.
+    If not, use the `sparse` mode."
+                >
+                  <Checkbox style={{ width: "100%" }} />
+                </Form.Item>
+                <Form.Item
+                  label="Max edge length in nm"
+                  name={["splitMergerEvaluationSettings", "maxEdgeLength"]}
+                  tooltip="Ground truth tracings can be densified so that
+    nodes are at most max_edge_length nm apart.
+    However, this can also introduce wrong nodes in curved processes."
+                >
+                  <InputNumber style={{ width: "100%" }} placeholder="None" />
+                </Form.Item>
+                <Form.Item
+                  label="Sparse tube threshold in nm"
+                  name={["splitMergerEvaluationSettings", "sparseTubeThresholdInNm"]}
+                  tooltip="Tube threshold for sparse evaluation,
+    determining if a process is too far from the ground-truth."
+                >
+                  <InputNumber style={{ width: "100%" }} placeholder="1000" />
+                </Form.Item>
+                <Form.Item
+                  label="Sparse minimum merger path length in nm"
+                  name={["splitMergerEvaluationSettings", "minimumMergerPathLengthInNm"]}
+                  tooltip="Minimum ground truth path length of a merger component
+    to be counted as a relevant merger (for sparse evaluation).
+    Note, the path length to neighboring nodes of a component is included for this comparison. This optimistic path length
+    estimation makes sure no relevant mergers are ignored."
+                >
+                  <InputNumber style={{ width: "100%" }} placeholder="800" />
+                </Form.Item>
+                <Form.Item name="useAnnotation" initialValue={true} hidden />
+              </Col>
+            </Row>
+          ),
+        },
+      ]}
+      activeKey={isActive ? "evaluation" : []}
+    />
+  );
+}
+
 function StartJobForm(props: StartJobFormProps) {
   const isBoundingBoxConfigurable = props.isBoundingBoxConfigurable || false;
   const isSkeletonSelectable = props.isSkeletonSelectable || false;
   const chooseSegmentationLayer = props.chooseSegmentationLayer || false;
-  const { handleClose, jobName, jobApiCall, fixedSelectedLayer, title, description } = props;
+  const {
+    handleClose,
+    jobName,
+    jobApiCall,
+    fixedSelectedLayer,
+    title,
+    description,
+    jobSpecificInputFields,
+  } = props;
   const [form] = Form.useForm();
   const rawUserBoundingBoxes = useSelector((state: OxalisState) =>
     getUserBoundingBoxesFromState(state),
@@ -532,6 +620,7 @@ function StartJobForm(props: StartJobFormProps) {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const isActiveUserSuperUser = activeUser?.isSuperUser || false;
   const colorLayers = getColorLayers(dataset);
   const layers = chooseSegmentationLayer ? getSegmentationLayers(dataset) : colorLayers;
   const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
@@ -642,9 +731,11 @@ function StartJobForm(props: StartJobFormProps) {
       <BoundingBoxSelectionFormItem
         isBoundingBoxConfigurable={isBoundingBoxConfigurable}
         userBoundingBoxes={userBoundingBoxes}
+        isSuperUser={isActiveUserSuperUser}
         onChangeSelectedBoundingBox={(bBoxId) => form.setFieldsValue({ boundingBoxId: bBoxId })}
         value={form.getFieldValue("boundingBoxId")}
       />
+      {jobSpecificInputFields}
       {isSkeletonSelectable && <ShouldUseTreesFormItem />}
       {props.showWorkflowYaml ? (
         <CollapsibleWorkflowYamlEditor
@@ -672,12 +763,7 @@ export function NucleiDetectionForm() {
       title="AI Nuclei Segmentation"
       suggestedDatasetSuffix="with_nuclei"
       jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer }) =>
-        startNucleiInferralJob(
-          dataset.owningOrganization,
-          dataset.name,
-          colorLayer.name,
-          newDatasetName,
-        )
+        startNucleiInferralJob(dataset.id, colorLayer.name, newDatasetName)
       }
       description={
         <>
@@ -689,9 +775,9 @@ export function NucleiDetectionForm() {
           <p>
             <b>
               Note that this feature is still experimental. Nuclei detection currently only works
-              with EM data and a resolution of approximately 200{ThinSpace}nm per voxel. The
+              with EM data and a magnification of approximately 200{ThinSpace}nm per voxel. The
               segmentation process will automatically use the magnification that matches that
-              resolution best.
+              magnification best.
             </b>
           </p>
         </>
@@ -701,7 +787,9 @@ export function NucleiDetectionForm() {
 }
 export function NeuronSegmentationForm() {
   const dataset = useSelector((state: OxalisState) => state.dataset);
+  const hasSkeletonAnnotation = useSelector((state: OxalisState) => state.tracing.skeleton != null);
   const dispatch = useDispatch();
+  const [doSplitMergerEvaluation, setDoSplitMergerEvaluation] = React.useState(false);
   return (
     <StartJobForm
       handleClose={() => dispatch(setAIJobModalStateAction("invisible"))}
@@ -710,18 +798,41 @@ export function NeuronSegmentationForm() {
       title="AI Neuron Segmentation"
       suggestedDatasetSuffix="with_reconstructed_neurons"
       isBoundingBoxConfigurable
-      jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer, selectedBoundingBox }) => {
-        if (!selectedBoundingBox) {
+      jobApiCall={async (
+        { newDatasetName, selectedLayer: colorLayer, selectedBoundingBox, annotationId },
+        form: FormInstance<any>,
+      ) => {
+        const splitMergerEvaluationSettings = form.getFieldValue(
+          "splitMergerEvaluationSettings",
+        ) as SplitMergerEvaluationSettings;
+        if (
+          !selectedBoundingBox ||
+          (doSplitMergerEvaluation && splitMergerEvaluationSettings == null)
+        ) {
           return;
         }
 
         const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
+        if (!doSplitMergerEvaluation) {
+          return startNeuronInferralJob(
+            dataset.id,
+            colorLayer.name,
+            bbox,
+            newDatasetName,
+            doSplitMergerEvaluation,
+          );
+        }
         return startNeuronInferralJob(
-          dataset.owningOrganization,
-          dataset.name,
+          dataset.id,
           colorLayer.name,
           bbox,
           newDatasetName,
+          doSplitMergerEvaluation,
+          annotationId,
+          splitMergerEvaluationSettings.useSparseTracing,
+          splitMergerEvaluationSettings.maxEdgeLength,
+          splitMergerEvaluationSettings.sparseTubeThresholdInNm,
+          splitMergerEvaluationSettings.minimumMergerPathLengthInNm,
         );
       }}
       description={
@@ -736,6 +847,14 @@ export function NeuronSegmentationForm() {
             </Row>
           </Space>
         </>
+      }
+      jobSpecificInputFields={
+        hasSkeletonAnnotation && (
+          <CollapsibleSplitMergerEvaluationSettings
+            isActive={doSplitMergerEvaluation}
+            setActive={setDoSplitMergerEvaluation}
+          />
+        )
       }
     />
   );
@@ -758,13 +877,7 @@ export function MitochondriaSegmentationForm() {
         }
 
         const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
-        return startMitochondriaInferralJob(
-          dataset.owningOrganization,
-          dataset.name,
-          colorLayer.name,
-          bbox,
-          newDatasetName,
-        );
+        return startMitochondriaInferralJob(dataset.id, colorLayer.name, bbox, newDatasetName);
       }}
       description={
         <>
@@ -827,7 +940,8 @@ function CustomAiModelInferenceForm() {
           ...maybeAnnotationId,
           aiModelId: form.getFieldValue("aiModel"),
           workflowYaml: useCustomWorkflow ? form.getFieldValue("workflowYaml") : undefined,
-          datasetName: dataset.name,
+          datasetDirectoryName: dataset.directoryName,
+          organizationId: dataset.owningOrganization,
           colorLayerName: colorLayer.name,
           boundingBox,
           newDatasetName: newDatasetName,
@@ -871,13 +985,7 @@ export function AlignSectionsForm() {
       isBoundingBoxConfigurable={false}
       isSkeletonSelectable={true}
       jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer, annotationId }) =>
-        startAlignSectionsJob(
-          dataset.owningOrganization,
-          dataset.name,
-          colorLayer.name,
-          newDatasetName,
-          annotationId,
-        )
+        startAlignSectionsJob(dataset.id, colorLayer.name, newDatasetName, annotationId)
       }
       description={
         <Space direction="vertical" size="middle">
@@ -908,6 +1016,7 @@ export function MaterializeVolumeAnnotationModal({
 }: MaterializeVolumeAnnotationModalProps) {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const tracing = useSelector((state: OxalisState) => state.tracing);
+  let includesEditableMapping = false;
   const activeSegmentationTracingLayer = useSelector(getActiveSegmentationTracingLayer);
   const fixedSelectedLayer = selectedVolumeLayer || activeSegmentationTracingLayer;
   const readableVolumeLayerName =
@@ -942,6 +1051,10 @@ export function MaterializeVolumeAnnotationModal({
         output dataset and the output segmentation layer.
       </p>
     );
+  } else if (fixedSelectedLayer && "tracingId" in fixedSelectedLayer) {
+    includesEditableMapping =
+      tracing.volumes.find((volume) => volume.tracingId === fixedSelectedLayer.tracingId)
+        ?.hasEditableMapping === true;
   }
   const jobImage =
     jobNameToImagePath[jobName] != null ? (
@@ -971,8 +1084,13 @@ export function MaterializeVolumeAnnotationModal({
         jobName={"materialize_volume_annotation"}
         suggestedDatasetSuffix="with_merged_segmentation"
         chooseSegmentationLayer
+        isBoundingBoxConfigurable={includesEditableMapping}
         fixedSelectedLayer={fixedSelectedLayer}
-        jobApiCall={async ({ newDatasetName, selectedLayer: segmentationLayer }) => {
+        jobApiCall={async ({
+          newDatasetName,
+          selectedLayer: segmentationLayer,
+          selectedBoundingBox,
+        }) => {
           // There are 3 cases for the value assignments to volumeLayerName and baseSegmentationName for the job:
           // 1. There is a volume annotation with a fallback layer. volumeLayerName will reference the volume layer
           // and baseSegmentationName will reference the fallback layer. The job will merge those layers.
@@ -985,15 +1103,19 @@ export function MaterializeVolumeAnnotationModal({
               ? getReadableNameOfVolumeLayer(segmentationLayer, tracing)
               : null;
           const baseSegmentationName = getBaseSegmentationName(segmentationLayer);
+          const bbox = selectedBoundingBox?.boundingBox
+            ? computeArrayFromBoundingBox(selectedBoundingBox.boundingBox)
+            : undefined;
           return startMaterializingVolumeAnnotationJob(
-            dataset.owningOrganization,
-            dataset.name,
+            dataset.id,
             baseSegmentationName,
             volumeLayerName,
             newDatasetName,
             tracing.annotationId,
             tracing.annotationType,
             isMergerModeEnabled,
+            includesEditableMapping,
+            bbox,
           );
         }}
         description={

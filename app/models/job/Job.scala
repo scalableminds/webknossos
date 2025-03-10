@@ -11,7 +11,7 @@ import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -51,22 +51,32 @@ case class Job(
 
   def datasetName: Option[String] = argAsStringOpt("dataset_name")
 
+  def datasetId: Option[String] = argAsStringOpt("dataset_id")
+
   private def argAsStringOpt(key: String) = (commandArgs \ key).toOption.flatMap(_.asOpt[String])
+  private def argAsBooleanOpt(key: String) = (commandArgs \ key).toOption.flatMap(_.asOpt[Boolean])
 
   def resultLink(organizationId: String): Option[String] =
     if (effectiveState != JobState.SUCCESS) None
     else {
       command match {
         case JobCommand.convert_to_wkw | JobCommand.compute_mesh_file =>
-          datasetName.map { dsName =>
-            s"/datasets/$organizationId/$dsName/view"
-          }
+          datasetId.map { datasetId =>
+            val datasetNameMaybe = datasetName.map(name => s"$name-").getOrElse("")
+            Some(s"/datasets/$datasetNameMaybe$datasetId/view")
+          }.getOrElse(datasetName.map(name => s"datasets/$organizationId/$name/view"))
         case JobCommand.export_tiff | JobCommand.render_animation =>
           Some(s"/api/jobs/${this._id}/export")
+        case JobCommand.infer_neurons if this.argAsBooleanOpt("do_evaluation").getOrElse(false) =>
+          returnValue.map { resultAnnotationLink =>
+            resultAnnotationLink
+          }
         case JobCommand.infer_nuclei | JobCommand.infer_neurons | JobCommand.materialize_volume_annotation |
             JobCommand.infer_with_model | JobCommand.infer_mitochondria | JobCommand.align_sections =>
-          returnValue.map { resultDatasetName =>
-            s"/datasets/$organizationId/$resultDatasetName/view"
+          // Old jobs before the dataset renaming changes returned the output dataset name.
+          // New jobs return the directory name. Thus, the resulting link should be
+          returnValue.map { resultDatasetDirectoryName =>
+            s"/datasets/$organizationId/$resultDatasetDirectoryName/view"
           }
         case _ => None
       }
@@ -141,7 +151,9 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
      """
 
   private def listAccessQ(requestingUserId: ObjectId) =
-    q"""_owner = $requestingUserId"""
+    q"""_owner = $requestingUserId OR
+       ((SELECT u._organization FROM webknossos.users_ u WHERE u._id = _owner) IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin))
+     """
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Job]] =
     for {

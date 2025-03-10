@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.explore
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
@@ -16,11 +17,12 @@ class N5ArrayExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExpl
 
   override def name: String = "N5 Array"
 
-  override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(N5Layer, VoxelSize)]] =
+  override def explore(remotePath: VaultPath, credentialId: Option[String])(
+      implicit tc: TokenContext): Fox[List[(N5Layer, VoxelSize)]] =
     for {
       headerPath <- Fox.successful(remotePath / N5Header.FILENAME_ATTRIBUTES_JSON)
       name = guessNameFromPath(remotePath)
-      n5Header <- parseJsonFromPath[N5Header](headerPath) ?~> s"failed to read n5 header at $headerPath"
+      n5Header <- headerPath.parseAsJson[N5Header] ?~> s"failed to read n5 header at $headerPath"
       elementClass <- n5Header.elementClass ?~> "failed to read element class from n5 header"
       guessedAxisOrder = AxisOrder.asZyxFromRank(n5Header.rank)
       boundingBox <- n5Header.boundingBox(guessedAxisOrder) ?~> "failed to read bounding box from zarr header. Make sure data is in (T/C)ZYX format"

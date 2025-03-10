@@ -1,43 +1,50 @@
-import type { Dispatch } from "redux";
-import { Typography, Tag } from "antd";
-import { SettingOutlined, InfoCircleOutlined, EditOutlined } from "@ant-design/icons";
-import { connect } from "react-redux";
+import { EditOutlined, InfoCircleOutlined, SettingOutlined } from "@ant-design/icons";
+import { Tag, Typography } from "antd";
+import { formatNumberToVolume, formatScale, formatVoxels } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
-import React, { type CSSProperties } from "react";
-import { Link } from "react-router-dom";
-import type { APIDataset, APIUser } from "types/api_flow_types";
-import { ControlModeEnum } from "oxalis/constants";
-import { formatScale } from "libs/format_utils";
+import { ControlModeEnum, LongUnitToShortUnitMap } from "oxalis/constants";
 import {
-  getDatasetExtentAsString,
-  getResolutionUnion,
-} from "oxalis/model/accessors/dataset_accessor";
-import { getActiveResolutionInfo } from "oxalis/model/accessors/flycam_accessor";
-import {
-  getCombinedStats,
-  type CombinedTracingStats,
+  type TracingStats,
+  getSkeletonStats,
+  getStats,
+  getVolumeStats,
 } from "oxalis/model/accessors/annotation_accessor";
 import {
-  setAnnotationNameAction,
+  getDatasetExtentAsString,
+  getDatasetExtentInUnitAsProduct,
+  getDatasetExtentInVoxelAsProduct,
+  getMagnificationUnion,
+  getReadableURLPart,
+} from "oxalis/model/accessors/dataset_accessor";
+import { getActiveMagInfo } from "oxalis/model/accessors/flycam_accessor";
+import {
   setAnnotationDescriptionAction,
+  setAnnotationNameAction,
 } from "oxalis/model/actions/annotation_actions";
+import React, { type CSSProperties } from "react";
+import { connect } from "react-redux";
+import { Link } from "react-router-dom";
+import type { Dispatch } from "redux";
+import type { APIDataset, APIUser } from "types/api_flow_types";
 
 import type { OxalisState, Task, Tracing } from "oxalis/store";
 
-import { formatUserName } from "oxalis/model/accessors/user_accessor";
-import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_accessor";
-import { mayUserEditDataset, pluralize, safeNumberToStr } from "libs/utils";
-import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracing_accessor";
 import { getOrganization } from "admin/admin_rest_api";
-import { MarkdownModal } from "../components/markdown_modal";
 import FastTooltip from "components/fast_tooltip";
+import { mayUserEditDataset, pluralize, safeNumberToStr } from "libs/utils";
+import messages from "messages";
+import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_accessor";
+import { formatUserName } from "oxalis/model/accessors/user_accessor";
+import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracing_accessor";
+import type { EmptyObject } from "types/globals";
+import { MarkdownModal } from "../components/markdown_modal";
 
 type StateProps = {
   annotation: Tracing;
   dataset: APIDataset;
   task: Task | null | undefined;
   activeUser: APIUser | null | undefined;
-  activeResolutionInfo: ReturnType<typeof getActiveResolutionInfo>;
+  activeMagInfo: ReturnType<typeof getActiveMagInfo>;
   isDatasetViewMode: boolean;
   mayEditAnnotation: boolean;
 };
@@ -125,9 +132,27 @@ const shortcuts = [
 export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
   const extentInVoxel = getDatasetExtentAsString(dataset, true);
   const extentInLength = getDatasetExtentAsString(dataset, false);
+  const extentProductInVx = getDatasetExtentInVoxelAsProduct(dataset);
+  const extentProductInUnit = getDatasetExtentInUnitAsProduct(dataset);
+  const formattedExtentInUnit = formatNumberToVolume(
+    extentProductInUnit,
+    LongUnitToShortUnitMap[dataset.dataSource.scale.unit],
+  );
+
+  const renderDSExtentTooltip = () => {
+    return (
+      <div>
+        Dataset extent:
+        <br />
+        {formatVoxels(extentProductInVx)}
+        <br />
+        {formattedExtentInUnit}
+      </div>
+    );
+  };
 
   return (
-    <FastTooltip title="Dataset extent" placement="left" wrapper="tr">
+    <FastTooltip dynamicRenderer={renderDSExtentTooltip} placement="left" wrapper="tr">
       <td
         style={{
           paddingRight: 20,
@@ -181,14 +206,18 @@ export function AnnotationStats({
   asInfoBlock,
   withMargin,
 }: {
-  stats: CombinedTracingStats;
+  stats: TracingStats | EmptyObject;
   asInfoBlock: boolean;
   withMargin?: boolean | null | undefined;
 }) {
+  if (!stats || Object.keys(stats).length === 0) return null;
   const formatLabel = (str: string) => (asInfoBlock ? str : "");
   const useStyleWithMargin = withMargin != null ? withMargin : true;
   const styleWithLargeMarginBottom = { marginBottom: 14 };
   const styleWithSmallMargin = { margin: 2 };
+  const skeletonStats = getSkeletonStats(stats);
+  const volumeStats = getVolumeStats(stats);
+  const totalSegmentCount = volumeStats.reduce((sum, [_, volume]) => sum + volume.segmentCount, 0);
 
   return (
     <div
@@ -198,14 +227,14 @@ export function AnnotationStats({
       {asInfoBlock && <p className="sidebar-label">Statistics</p>}
       <table className={asInfoBlock ? "annotation-stats-table" : "annotation-stats-table-slim"}>
         <tbody>
-          {"treeCount" in stats ? (
+          {skeletonStats ? (
             <FastTooltip
               placement="left"
               html={`
-                  <p>Trees: ${safeNumberToStr(stats.treeCount)}</p>
-                  <p>Nodes: ${safeNumberToStr(stats.nodeCount)}</p>
-                  <p>Edges: ${safeNumberToStr(stats.edgeCount)}</p>
-                  <p>Branchpoints: ${safeNumberToStr(stats.branchPointCount)}</p>
+                  <p>Trees: ${safeNumberToStr(skeletonStats.treeCount)}</p>
+                  <p>Nodes: ${safeNumberToStr(skeletonStats.nodeCount)}</p>
+                  <p>Edges: ${safeNumberToStr(skeletonStats.edgeCount)}</p>
+                  <p>Branchpoints: ${safeNumberToStr(skeletonStats.branchPointCount)}</p>
                 `}
               wrapper="tr"
             >
@@ -217,17 +246,18 @@ export function AnnotationStats({
                 />
               </td>
               <td>
-                {stats.treeCount} {formatLabel(pluralize("Tree", stats.treeCount))}
+                {skeletonStats.treeCount} {formatLabel(pluralize("Tree", skeletonStats.treeCount))}
               </td>
             </FastTooltip>
           ) : null}
-          {"segmentCount" in stats ? (
+          {volumeStats.length > 0 ? (
             <FastTooltip
               placement="left"
-              title={`${stats.segmentCount} ${pluralize("Segment", stats.segmentCount)} – Only segments that were manually registered (either brushed or
-                                      interacted with) are counted in this statistic. Segmentation layers
-                                      created from automated workflows (also known as fallback layers) are not
-                                      considered currently.`}
+              html={`${totalSegmentCount}
+                      Only segments that were manually registered (either brushed or
+                      interacted with) are counted in this statistic. Segmentation layers
+                      created from automated workflows (also known as fallback layers) are not
+                      considered currently.`}
               wrapper="tr"
             >
               <td>
@@ -238,7 +268,7 @@ export function AnnotationStats({
                 />
               </td>
               <td>
-                {stats.segmentCount} {formatLabel(pluralize("Segment", stats.segmentCount))}
+                {totalSegmentCount} {formatLabel(pluralize("Segment", totalSegmentCount))}
               </td>
             </FastTooltip>
           ) : null}
@@ -272,7 +302,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   getAnnotationStatistics() {
     if (this.props.isDatasetViewMode) return null;
 
-    return <AnnotationStats stats={getCombinedStats(this.props.annotation)} asInfoBlock />;
+    return <AnnotationStats stats={getStats(this.props.annotation)} asInfoBlock />;
   }
 
   getKeyboardShortcuts() {
@@ -283,7 +313,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
           Find the complete list of shortcuts in the{" "}
           <a
             target="_blank"
-            href="https://docs.webknossos.org/webknossos/keyboard_shortcuts.html"
+            href="https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html"
             rel="noopener noreferrer"
           >
             documentation
@@ -311,19 +341,14 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   }
 
   getDatasetName() {
-    const {
-      name: datasetName,
-      displayName,
-      description: datasetDescription,
-      owningOrganization,
-    } = this.props.dataset;
+    const { name: datasetName, description: datasetDescription } = this.props.dataset;
     const { activeUser } = this.props;
 
     const getEditSettingsIcon = () =>
       mayUserEditDataset(activeUser, this.props.dataset) ? (
         <FastTooltip title="Edit dataset settings">
           <Link
-            to={`/datasets/${owningOrganization}/${datasetName}/edit`}
+            to={`/datasets/${getReadableURLPart(this.props.dataset)}/edit`}
             style={{ paddingLeft: 3 }}
           >
             <Typography.Text type="secondary">
@@ -342,7 +367,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
             }}
           >
             <Typography.Title level={5} style={{ display: "initial" }}>
-              {displayName || datasetName}
+              {datasetName}
             </Typography.Title>
             {getEditSettingsIcon()}
           </div>
@@ -363,7 +388,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
       <div className="info-tab-block">
         <p className="sidebar-label">Dataset {getEditSettingsIcon()}</p>
         <Link
-          to={`/datasets/${owningOrganization}/${datasetName}/view`}
+          to={`/datasets/${getReadableURLPart(this.props.dataset)}/view`}
           title={`Click to view dataset ${datasetName} without annotation`}
           style={{
             wordWrap: "break-word",
@@ -436,7 +461,9 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
             <Typography.Text>
               {description}
               <FastTooltip title="Edit">
+                {/* biome-ignore lint/a11y/useFocusableInteractive: <explanation> */}
                 <div
+                  // biome-ignore lint/a11y/useSemanticElements: <explanation>
                   role="button"
                   className="ant-typography-edit"
                   style={{
@@ -527,12 +554,12 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     );
   }
 
-  renderResolutionsTooltip = () => {
-    const { dataset, annotation, activeResolutionInfo } = this.props;
-    const { activeMagOfEnabledLayers } = activeResolutionInfo;
-    const resolutionUnion = getResolutionUnion(dataset);
+  renderMagsTooltip = () => {
+    const { dataset, annotation, activeMagInfo } = this.props;
+    const { activeMagOfEnabledLayers } = activeMagInfo;
+    const magUnion = getMagnificationUnion(dataset);
     return (
-      <div>
+      <div style={{ width: 200 }}>
         Rendered magnification per layer:
         <ul>
           {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
@@ -545,22 +572,23 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
             );
           })}
         </ul>
-        Available resolutions:
+        Available magnifications:
         <ul>
-          {resolutionUnion.map((mags) => (
+          {magUnion.map((mags) => (
             <li key={mags[0].join()}>{mags.map((mag) => mag.join("-")).join(", ")}</li>
           ))}
         </ul>
+        {messages["dataset.mag_explanation"]}
       </div>
     );
   };
 
-  getResolutionInfo() {
-    const { activeResolutionInfo } = this.props;
-    const { representativeResolution, isActiveResolutionGlobal } = activeResolutionInfo;
+  getMagInfo() {
+    const { activeMagInfo } = this.props;
+    const { representativeMag, isActiveMagGlobal } = activeMagInfo;
 
-    return representativeResolution != null ? (
-      <FastTooltip dynamicRenderer={this.renderResolutionsTooltip} placement="left" wrapper="tr">
+    return representativeMag != null ? (
+      <FastTooltip dynamicRenderer={this.renderMagsTooltip} placement="left" wrapper="tr">
         <td
           style={{
             paddingRight: 4,
@@ -570,7 +598,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
           <img
             className="info-tab-icon"
             src="/assets/images/icon-downsampling.svg"
-            alt="Resolution"
+            alt="Magnification"
           />
         </td>
         <td
@@ -579,8 +607,8 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
             paddingTop: 8,
           }}
         >
-          {representativeResolution.join("-")}
-          {isActiveResolutionGlobal ? "" : "*"}{" "}
+          {representativeMag.join("-")}
+          {isActiveMagGlobal ? "" : "*"}{" "}
         </td>
       </FastTooltip>
     ) : null;
@@ -608,7 +636,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
             <tbody>
               <VoxelSizeRow dataset={dataset} />
               <DatasetExtentRow dataset={dataset} />
-              {this.getResolutionInfo()}
+              {this.getMagInfo()}
             </tbody>
           </table>
         </div>
@@ -626,7 +654,7 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   task: state.task,
   activeUser: state.activeUser,
   isDatasetViewMode: state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
-  activeResolutionInfo: getActiveResolutionInfo(state),
+  activeMagInfo: getActiveMagInfo(state),
   mayEditAnnotation: mayEditAnnotationProperties(state),
 });
 

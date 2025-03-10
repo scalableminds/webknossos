@@ -1,5 +1,4 @@
 import { Button, type ButtonProps } from "antd";
-import * as React from "react";
 
 // This component should be used instead of <a href="#" onClick={} />.
 // One advantage of this component is that clicking the link button won't scroll

@@ -20,6 +20,14 @@ case class NgffMultiscalesItemV0_5(
 
 object NgffMultiscalesItemV0_5 {
   implicit val jsonFormat: OFormat[NgffMultiscalesItemV0_5] = Json.format[NgffMultiscalesItemV0_5]
+
+  def asV0_4(multiscalesItemV0_5: NgffMultiscalesItemV0_5): NgffMultiscalesItem =
+    NgffMultiscalesItem(
+      version = "0.5",
+      name = multiscalesItemV0_5.name,
+      axes = multiscalesItemV0_5.axes,
+      datasets = multiscalesItemV0_5.datasets
+    )
 }
 
 case class NgffMetadataV0_5(version: String,
@@ -36,8 +44,10 @@ object NgffMetadataV0_5 {
       mag =>
         NgffDataset(
           path = mag.toMagLiteral(allowScalar = true),
-          List(NgffCoordinateTransformation(
-            scale = Some(List[Double](1.0) ++ (dataSourceVoxelSize.factor * Vec3Double(mag)).toList)))
+          List(
+            NgffCoordinateTransformation(
+              scale = Some(List[Double](1.0) ++ (dataSourceVoxelSize.factor * Vec3Double(mag)).toList),
+              translation = None))
       ))
     val lengthUnitStr = dataSourceVoxelSize.unit.toString
     val axes = List(NgffAxis(name = "c", `type` = "channel")) ++ additionalAxes

@@ -7,7 +7,7 @@ import datasetServerObject from "test/fixtures/dataset_server_object";
 import mockRequire from "mock-require";
 import runAsync from "test/helpers/run-async";
 import sinon from "sinon";
-import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import { MagInfo } from "oxalis/model/helpers/mag_info";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import { assertNonNullBucket, type DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
@@ -69,11 +69,11 @@ test.beforeEach((t) => {
       [32, 32, 32],
     ] as Vector3[],
   };
-  const resolutionInfo = new ResolutionInfo(mockedLayer.resolutions);
+  const magInfo = new MagInfo(mockedLayer.resolutions);
   const cube = new DataCube(
     new BoundingBox({ min: [0, 0, 0], max: [100, 100, 100] }),
     [],
-    resolutionInfo,
+    magInfo,
     "uint32",
     false,
     "layerName",

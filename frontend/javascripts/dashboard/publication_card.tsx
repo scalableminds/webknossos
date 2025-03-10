@@ -1,19 +1,19 @@
-import { Card, Button, Tooltip } from "antd";
 import { LinkOutlined } from "@ant-design/icons";
-import Markdown from "libs/markdown_adapter";
-import type React from "react";
-import { useState } from "react";
+import { Button, Card, Tooltip } from "antd";
 import classNames from "classnames";
-import { Link } from "react-router-dom";
-import type { APIDataset, APIPublication, APIPublicationAnnotation } from "types/api_flow_types";
 import { formatScale } from "libs/format_utils";
+import Markdown from "libs/markdown_adapter";
+import { compareBy } from "libs/utils";
 import {
+  getDatasetExtentAsString,
+  getSegmentationThumbnailURL,
   getThumbnailURL,
   hasSegmentation,
-  getSegmentationThumbnailURL,
-  getDatasetExtentAsString,
 } from "oxalis/model/accessors/dataset_accessor";
-import { compareBy } from "libs/utils";
+import type React from "react";
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import type { APIDataset, APIPublication, APIPublicationAnnotation } from "types/api_flow_types";
 
 type DatasetDetails = {
   species?: string;
@@ -47,9 +47,7 @@ function getDisplayName(item: PublicationItem): string {
       ? "Unnamed annotation"
       : item.annotation.name;
   }
-  return item.dataset.displayName == null || item.dataset.displayName === ""
-    ? item.dataset.name
-    : item.dataset.displayName;
+  return item.dataset.name;
 }
 
 function getExtendedDetails(item: PublicationItem): ExtendedDatasetDetails {
@@ -71,7 +69,7 @@ function getExtendedDetails(item: PublicationItem): ExtendedDatasetDetails {
 function getUrl(item: PublicationItem): string {
   return item.type === PublicationItemType.ANNOTATION
     ? `/annotations/${item.annotation.id}`
-    : `/datasets/${item.dataset.owningOrganization}/${item.dataset.name}`;
+    : `/datasets/${item.dataset.id}`;
 }
 
 function ThumbnailOverlay({ details }: { details: ExtendedDatasetDetails }) {
@@ -194,13 +192,13 @@ function PublicationCard({ publication, showDetailedLink }: Props) {
       .filter((dataset) => dataset.isActive)
       .map((dataset) => ({ type: PublicationItemType.DATASET, dataset }) as PublicationItem),
     ...publication.annotations
-      .filter((annotation) => annotation.dataSet.isActive)
+      .filter((annotation) => annotation.dataset.isActive)
       .map(
         (annotation) =>
           ({
             type: PublicationItemType.ANNOTATION,
             annotation,
-            dataset: annotation.dataSet,
+            dataset: annotation.dataset,
           }) as PublicationItem,
       ),
   ];

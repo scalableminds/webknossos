@@ -1,10 +1,9 @@
-import React from "react";
-import _ from "lodash";
+import ErrorHandling from "libs/error_handling";
+import Toast from "libs/toast";
 import { document } from "libs/window";
+import _ from "lodash";
 import constants from "oxalis/constants";
 import type { ElementClass } from "types/api_flow_types";
-import Toast from "libs/toast";
-import ErrorHandling from "libs/error_handling";
 
 type GpuSpecs = {
   supportedTextureSize: number;

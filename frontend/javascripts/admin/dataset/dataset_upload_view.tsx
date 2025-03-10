@@ -1,76 +1,76 @@
 import {
-  Popover,
-  Avatar,
-  Form,
-  Button,
-  Col,
-  Row,
-  Modal,
-  Progress,
-  Alert,
-  List,
-  Spin,
-  Select,
-  Tooltip,
-} from "antd";
-import type { Location as HistoryLocation, Action as HistoryAction } from "history";
-import {
-  InfoCircleOutlined,
   FileOutlined,
   FolderOutlined,
-  InboxOutlined,
   HourglassOutlined,
+  InboxOutlined,
+  InfoCircleOutlined,
+  LoadingOutlined,
 } from "@ant-design/icons";
-import { connect } from "react-redux";
-import React from "react";
+import {
+  Alert,
+  Avatar,
+  Button,
+  Col,
+  Form,
+  List,
+  Modal,
+  Popover,
+  Progress,
+  Row,
+  Select,
+  Space,
+  Spin,
+  Tooltip,
+} from "antd";
 import dayjs from "dayjs";
+import type { Action as HistoryAction, Location as HistoryLocation } from "history";
+import React from "react";
+import { connect } from "react-redux";
 
-import classnames from "classnames";
-import _ from "lodash";
-import { useDropzone, type FileWithPath } from "react-dropzone";
-import ErrorHandling from "libs/error_handling";
-import { Link, type RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
 import {
-  type APITeam,
-  type APIDataStore,
-  type APIUser,
-  type APIDatasetId,
-  type APIOrganization,
-  APIJobType,
-} from "types/api_flow_types";
-import type { OxalisState } from "oxalis/store";
-import {
-  reserveDatasetUpload,
-  finishDatasetUpload,
+  type UnfinishedUpload,
   cancelDatasetUpload,
   createResumableUpload,
-  startConvertToWkwJob,
+  finishDatasetUpload,
+  getUnfinishedUploads,
+  reserveDatasetUpload,
   sendAnalyticsEvent,
   sendFailedRequestAnalyticsEvent,
-  getUnfinishedUploads,
-  type UnfinishedUpload,
+  startConvertToWkwJob,
 } from "admin/admin_rest_api";
-import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import messages from "messages";
-import { trackAction } from "oxalis/model/helpers/analytics";
-import Zip from "libs/zipjs_wrapper";
 import {
   AllowedTeamsFormItem,
   CardContainer,
   DatasetNameFormItem,
   DatastoreFormItem,
 } from "admin/dataset/dataset_components";
-import { Vector3Input } from "libs/vector_input";
-import features from "features";
-import { syncValidator } from "types/validation";
-import type { FormInstance } from "antd/lib/form";
-import { AllUnits, UnitLong, LongUnitToShortUnitMap, type Vector3 } from "oxalis/constants";
-import { FormItemWithInfo, confirmAsync } from "../../dashboard/dataset/helper_components";
-import FolderSelection from "dashboard/folders/folder_selection";
 import { hasPricingPlanExceededStorage } from "admin/organization/pricing_plan_utils";
+import type { FormInstance } from "antd/lib/form";
+import classnames from "classnames";
+import FolderSelection from "dashboard/folders/folder_selection";
+import features from "features";
+import ErrorHandling from "libs/error_handling";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import { Vector3Input } from "libs/vector_input";
+import Zip from "libs/zipjs_wrapper";
+import _ from "lodash";
+import messages from "messages";
+import { AllUnits, LongUnitToShortUnitMap, UnitLong, type Vector3 } from "oxalis/constants";
 import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
+import type { OxalisState } from "oxalis/store";
+import { type FileWithPath, useDropzone } from "react-dropzone";
+import { Link, type RouteComponentProps } from "react-router-dom";
+import { withRouter } from "react-router-dom";
+import {
+  type APIDataStore,
+  APIJobType,
+  type APIOrganization,
+  type APITeam,
+  type APIUser,
+} from "types/api_flow_types";
+import { syncValidator } from "types/validation";
+import { FormItemWithInfo, confirmAsync } from "../../dashboard/dataset/helper_components";
 
 const FormItem = Form.Item;
 const REPORT_THROTTLE_THRESHOLD = 1 * 60 * 1000; // 1 min
@@ -82,7 +82,11 @@ const logRetryToAnalytics = _.throttle((datasetName: string) => {
 type OwnProps = {
   datastores: Array<APIDataStore>;
   withoutCard?: boolean;
-  onUploaded: (arg0: string, arg1: string, arg2: boolean) => Promise<void> | void;
+  onUploaded: (
+    datasetId: string,
+    datasetName: string,
+    needsConversion: boolean,
+  ) => Promise<void> | void;
 };
 type StateProps = {
   activeUser: APIUser | null | undefined;
@@ -177,6 +181,20 @@ type UploadFormFieldTypes = {
   datastoreUrl: string;
 };
 
+export const dataPrivacyInfo = (
+  <Space direction="horizontal" size={4}>
+    Per default, imported data is private and only visible within your organization.
+    <a
+      style={{ color: "var(--ant-color-primary)" }}
+      href="https://docs.webknossos.org/webknossos/datasets/settings.html#sharing-permissions-tab"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      Read more
+    </a>
+  </Space>
+);
+
 class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   state: State = {
     isUploading: false,
@@ -268,9 +286,9 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       return;
     }
 
-    Toast.info("Uploading dataset");
     this.setState({
       isUploading: true,
+      uploadProgress: 0,
     });
 
     const beforeUnload = (
@@ -302,24 +320,23 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     this.unblock = this.props.history.block(beforeUnload);
     // @ts-ignore
     window.onbeforeunload = beforeUnload;
-    const datasetId: APIDatasetId = {
-      name: formValues.name,
-      owningOrganization: activeUser.organization,
-    };
 
     const getRandomString = () => {
       const randomBytes = window.crypto.getRandomValues(new Uint8Array(6));
       return Array.from(randomBytes, (byte) => `0${byte.toString(16)}`.slice(-2)).join("");
     };
+    const newDatasetName = formValues.name;
 
     const uploadId = unfinishedUploadToContinue
       ? unfinishedUploadToContinue.uploadId
-      : `${dayjs(Date.now()).format("YYYY-MM-DD_HH-mm")}__${datasetId.name}__${getRandomString()}`;
+      : `${dayjs(Date.now()).format("YYYY-MM-DD_HH-mm")}__${newDatasetName}__${getRandomString()}`;
     const filePaths = formValues.zipFile.map((file) => file.path || "");
     const reserveUploadInformation = {
       uploadId,
-      organization: datasetId.owningOrganization,
-      name: datasetId.name,
+      name: newDatasetName,
+      directoryName: "<filled by backend>",
+      newDatasetId: "<filled by backend>",
+      organization: activeUser.organization,
       totalFileCount: formValues.zipFile.length,
       filePaths: filePaths,
       layersToLink: [],
@@ -349,9 +366,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         isFinishing: true,
       });
       finishDatasetUpload(datastoreUrl, uploadInfo).then(
-        async () => {
-          trackAction("Upload dataset");
-          Toast.success(messages["dataset.upload_success"]);
+        async ({ newDatasetId }) => {
           let maybeError;
 
           if (this.state.needsConversion) {
@@ -363,8 +378,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               }
 
               await startConvertToWkwJob(
-                formValues.name,
-                activeUser.organization,
+                newDatasetId,
                 formValues.voxelSizeFactor,
                 formValues.voxelSizeUnit,
               );
@@ -372,25 +386,12 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               maybeError = error;
             }
 
-            if (maybeError == null) {
-              Toast.info(
-                <React.Fragment>
-                  The conversion for the uploaded dataset was started.
-                  <br />
-                  See{" "}
-                  <a target="_blank" href="/jobs" rel="noopener noreferrer">
-                    Processing Jobs
-                  </a>{" "}
-                  for an overview of running jobs.
-                </React.Fragment>,
-              );
-            } else {
+            if (maybeError != null) {
               Toast.error(
-                "The conversion for the uploaded dataset could not be started. Please try again or contact us if this issue occurs again.",
+                "The upload was successful, but the conversion for the dataset could not be started. Please try again or contact us if this issue occurs again.",
               );
             }
           }
-
           this.setState({
             isUploading: false,
             isFinishing: false,
@@ -403,16 +404,12 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               name: "",
               zipFile: [],
             });
-            this.props.onUploaded(
-              activeUser.organization,
-              formValues.name,
-              this.state.needsConversion,
-            );
+            this.props.onUploaded(newDatasetId, newDatasetName, this.state.needsConversion);
           }
         },
         (error) => {
           sendFailedRequestAnalyticsEvent("finish_dataset_upload", error, {
-            dataset_name: datasetId.name,
+            dataset_name: newDatasetName,
           });
           Toast.error(messages["dataset.upload_failed"]);
           this.setState({
@@ -442,7 +439,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       });
     });
     resumableUpload.on("fileRetry", () => {
-      logRetryToAnalytics(datasetId.name);
+      logRetryToAnalytics(newDatasetName);
       this.setState({
         isRetrying: true,
       });
@@ -514,26 +511,34 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             flexDirection: "column",
           }}
         >
-          <Spin spinning={isFinishing} style={{ marginTop: 4 }} tip="Processing uploaded files …">
-            <FolderOutlined
-              style={{
-                fontSize: 50,
-              }}
-            />
-            <br />
-            {isRetrying
-              ? `Upload of dataset ${form.getFieldValue("name")} froze.`
-              : `Uploading Dataset ${form.getFieldValue("name")}.`}
-            <br />
-            {isRetrying ? "Retrying to continue the upload …" : null}
-            <br />
-            <Progress
-              // Round to 1 digit after the comma, but use floor
-              // to avoid that 100% are displayed even though the progress is lower.
-              percent={Math.floor(uploadProgress * 1000) / 10}
-              status="active"
-            />
-          </Spin>
+          {isFinishing ? (
+            <>
+              <Spin indicator={<LoadingOutlined style={{ fontSize: 48 }} spin />} />
+              <br />
+              Processing uploaded files …
+            </>
+          ) : (
+            <>
+              <FolderOutlined
+                style={{
+                  fontSize: 50,
+                  marginBottom: 8,
+                }}
+              />
+              {isRetrying
+                ? `Upload of dataset ${form.getFieldValue("name")} froze.`
+                : `Uploading Dataset ${form.getFieldValue("name")}.`}
+              <br />
+              {isRetrying ? "Retrying to continue the upload …" : null}
+              <br />
+              <Progress
+                // Round to 1 digit after the comma, but use floor
+                // to avoid that 100% are displayed even though the progress is lower.
+                percent={Math.floor(uploadProgress * 1000) / 10}
+                status="active"
+              />
+            </>
+          )}
         </div>
       </Modal>
     );
@@ -717,7 +722,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           padding: 5,
         }}
       >
-        <CardContainer withoutCard={withoutCard} title="Upload Dataset">
+        <CardContainer withoutCard={withoutCard} title="Upload Dataset" subtitle={dataPrivacyInfo}>
           {hasPricingPlanExceededStorage(this.props.organization) ? (
             <Alert
               type="error"
@@ -754,7 +759,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 >
                   {unfinishedAndNotSelectedUploads.map((unfinishedUpload) => (
                     <Row key={unfinishedUpload.uploadId} gutter={16}>
-                      <Col span={8}>{unfinishedUpload.datasetId.name}</Col>
+                      <Col span={8}>{unfinishedUpload.datasetName}</Col>
                       <Col span={8}>
                         <Button
                           type="link"
@@ -764,7 +769,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                               return;
                             }
                             currentFormRef.setFieldsValue({
-                              name: unfinishedUpload.datasetId.name,
+                              name: unfinishedUpload.datasetName,
                               targetFolderId: unfinishedUpload.folderId,
                               initialTeams: this.state.possibleTeams.filter((team) =>
                                 unfinishedUpload.allowedTeams.includes(team.id),
@@ -830,7 +835,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 <DatasetNameFormItem
                   activeUser={activeUser}
                   disabled={continuingUnfinishedUpload}
-                  allowDuplicate={continuingUnfinishedUpload}
+                  allowDuplicate
                 />
               </Col>
               <Col span={12}>
@@ -1243,7 +1248,7 @@ function FileUploadArea({
                     <Popover
                       content={
                         <a
-                          href="https://docs.webknossos.org/webknossos/zarr.html"
+                          href="https://docs.webknossos.org/webknossos/data/zarr.html"
                           target="_blank"
                           rel="noreferrer"
                           onClick={(e) => e.stopPropagation()}
@@ -1265,7 +1270,7 @@ function FileUploadArea({
                     <Popover
                       content={
                         <a
-                          href="https://docs.webknossos.org/webknossos/neuroglancer_precomputed.html"
+                          href="https://docs.webknossos.org/webknossos/data/neuroglancer_precomputed.html"
                           target="_blank"
                           rel="noreferrer"
                           onClick={(e) => e.stopPropagation()}
@@ -1287,7 +1292,7 @@ function FileUploadArea({
                     <Popover
                       content={
                         <a
-                          href="https://docs.webknossos.org/webknossos/n5.html"
+                          href="https://docs.webknossos.org/webknossos/data/n5.html"
                           target="_blank"
                           rel="noreferrer"
                           onClick={(e) => e.stopPropagation()}
@@ -1309,7 +1314,7 @@ function FileUploadArea({
                 </ul>
                 Have a look at{" "}
                 <a
-                  href="https://docs.webknossos.org/webknossos/data_formats.html"
+                  href="https://docs.webknossos.org/webknossos/data/image_stacks.html"
                   onClick={(e) => e.stopPropagation()}
                 >
                   our documentation

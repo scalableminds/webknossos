@@ -20,7 +20,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.math.Ordering.Implicits.infixOrderingOps
 
-class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(implicit ec: ExecutionContext)
+class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val actorSystem: ActorSystem)(implicit ec: ExecutionContext)
     extends LazyLogging
     with MimeTypes {
 
@@ -43,7 +43,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
   private def pollUntilServerStartedUp(until: Instant): Fox[Unit] = {
     def waitAndRecurse(until: Instant): Fox[Unit] =
       for {
-        _ <- after(POLLING_INTERVAL, using = system.scheduler)(Future.successful(()))
+        _ <- after(POLLING_INTERVAL, using = actorSystem.scheduler)(Future.successful(()))
         _ <- bool2Fox(!until.isPast) ?~> s"Loki did not become ready within ${conf.startupTimeout}."
         _ <- pollUntilServerStartedUp(until)
       } yield ()
@@ -204,7 +204,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
                 for {
                   timestampString <- tryo((entry \ "@timestamp").as[String]).toFox
                   timestamp <- if (timestampString.endsWith("Z"))
-                    Instant.fromString(timestampString)
+                    Instant.fromString(timestampString).toFox
                   else
                     Instant.fromLocalTimeString(timestampString)
                   values <- tryo(
@@ -248,7 +248,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
             ))
         _ <- rpc(s"${conf.uri}/loki/api/v1/push").silent
           .addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType)
-          .post[JsValue](Json.obj("streams" -> streams))
+          .postJson[JsValue](Json.obj("streams" -> streams))
       } yield ()
     } else {
       Fox.successful(())

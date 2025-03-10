@@ -1,44 +1,49 @@
+import { DeleteOutlined } from "@ant-design/icons";
+import { startFindLargestSegmentIdJob } from "admin/admin_rest_api";
+import { getDatasetNameRules, layerNameRules } from "admin/dataset/dataset_components";
+import { useStartAndPollJob } from "admin/job/job_hooks";
 import {
-  List,
-  Input,
-  Form,
-  InputNumber,
+  Button,
   Col,
-  Row,
-  Switch,
-  Tooltip,
+  Form,
   type FormInstance,
+  Input,
+  InputNumber,
+  List,
+  Row,
   Select,
   Space,
-  Button,
+  Switch,
+  Tooltip,
 } from "antd";
-import * as React from "react";
-import { Vector3Input, BoundingBoxInput } from "libs/vector_input";
-import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
-import { validateDatasourceJSON, isValidJSON, syncValidator } from "types/validation";
-import type { BoundingBoxObject, OxalisState } from "oxalis/store";
 import {
-  Hideable,
   FormItemWithInfo,
+  Hideable,
   RetryingErrorBoundary,
   jsonEditStyle,
 } from "dashboard/dataset/helper_components";
-import { startFindLargestSegmentIdJob } from "admin/admin_rest_api";
-import { jsonStringify, parseMaybe } from "libs/utils";
-import type { DataLayer } from "types/schemas/datasource.types";
-import { getDatasetNameRules, layerNameRules } from "admin/dataset/dataset_components";
-import { useSelector } from "react-redux";
-import { DeleteOutlined } from "@ant-design/icons";
-import { type APIDataLayer, type APIDataset, APIJobType } from "types/api_flow_types";
-import { useStartAndPollJob } from "admin/job/job_hooks";
-import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "oxalis/constants";
 import Toast from "libs/toast";
+import { jsonStringify, parseMaybe } from "libs/utils";
+import { BoundingBoxInput, Vector3Input } from "libs/vector_input";
+import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "oxalis/constants";
+import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
+import type { BoundingBoxObject, OxalisState } from "oxalis/store";
+import * as React from "react";
+import { useSelector } from "react-redux";
+import { type APIDataLayer, type APIDataset, APIJobType } from "types/api_flow_types";
+import type { ArbitraryObject } from "types/globals";
+import type { DataLayer } from "types/schemas/datasource.types";
+import { isValidJSON, syncValidator, validateDatasourceJSON } from "types/validation";
+import { AxisRotationSettingForDataset } from "./dataset_rotation_form_item";
 
 const FormItem = Form.Item;
 
 export const syncDataSourceFields = (
   form: FormInstance,
   syncTargetTabKey: "simple" | "advanced",
+  // Syncing the dataset name is optional as this is needed for the add remote view, but not for the edit view.
+  // In the edit view, the datasource.id fields should never be changed and the backend will automatically ignore all changes to the id field.
+  syncDatasetName = false,
 ): void => {
   if (!form) {
     return;
@@ -47,12 +52,25 @@ export const syncDataSourceFields = (
   if (syncTargetTabKey === "advanced") {
     // Copy from simple to advanced: update json
     const dataSourceFromSimpleTab = form.getFieldValue("dataSource");
+    if (syncDatasetName && dataSourceFromSimpleTab) {
+      dataSourceFromSimpleTab.id ??= {};
+      dataSourceFromSimpleTab.id.name = form.getFieldValue(["dataset", "name"]);
+    }
     form.setFieldsValue({
       dataSourceJson: jsonStringify(dataSourceFromSimpleTab),
     });
   } else {
-    const dataSourceFromAdvancedTab = parseMaybe(form.getFieldValue("dataSourceJson"));
+    const dataSourceFromAdvancedTab = parseMaybe(
+      form.getFieldValue("dataSourceJson"),
+    ) as ArbitraryObject | null;
     // Copy from advanced to simple: update form values
+    if (syncDatasetName && dataSourceFromAdvancedTab?.id?.name) {
+      form.setFieldsValue({
+        dataset: {
+          name: dataSourceFromAdvancedTab.id.name,
+        },
+      });
+    }
     form.setFieldsValue({
       dataSource: dataSourceFromAdvancedTab,
     });
@@ -60,13 +78,11 @@ export const syncDataSourceFields = (
 };
 
 export default function DatasetSettingsDataTab({
-  allowRenamingDataset,
   form,
   activeDataSourceEditMode,
   onChange,
   dataset,
 }: {
-  allowRenamingDataset: boolean;
   form: FormInstance;
   activeDataSourceEditMode: "simple" | "advanced";
   onChange: (arg0: "simple" | "advanced") => void;
@@ -78,6 +94,9 @@ export default function DatasetSettingsDataTab({
   // Then, the newest value can be retrieved with getFieldValue
   const dataSource = form.getFieldValue("dataSource");
   const dataSourceJson = Form.useWatch("dataSourceJson", form);
+  const datasetStoredLocationInfo = dataset
+    ? ` (as stored on datastore ${dataset?.dataStore.name} at ${dataset?.owningOrganization}/${dataset?.directoryName})`
+    : "";
 
   const isJSONValid = isValidJSON(dataSourceJson);
 
@@ -113,19 +132,14 @@ export default function DatasetSettingsDataTab({
 
       <Hideable hidden={activeDataSourceEditMode !== "simple"}>
         <RetryingErrorBoundary>
-          <SimpleDatasetForm
-            dataset={dataset}
-            allowRenamingDataset={allowRenamingDataset}
-            form={form}
-            dataSource={dataSource}
-          />
+          <SimpleDatasetForm dataset={dataset} form={form} dataSource={dataSource} />
         </RetryingErrorBoundary>
       </Hideable>
 
       <Hideable hidden={activeDataSourceEditMode !== "advanced"}>
         <FormItem
           name="dataSourceJson"
-          label="Dataset Configuration"
+          label={"Dataset Configuration" + datasetStoredLocationInfo}
           hasFeedback
           rules={[
             {
@@ -145,12 +159,10 @@ export default function DatasetSettingsDataTab({
 }
 
 function SimpleDatasetForm({
-  allowRenamingDataset,
   dataSource,
   form,
   dataset,
 }: {
-  allowRenamingDataset: boolean;
   dataSource: Record<string, any>;
   form: FormInstance;
   dataset: APIDataset | null | undefined;
@@ -190,15 +202,15 @@ function SimpleDatasetForm({
             <Row gutter={48}>
               <Col span={24} xl={12}>
                 <FormItemWithInfo
-                  name={["dataSource", "id", "name"]}
+                  // The dataset name is not synced with the datasource.id.name in the advanced settings, because datasource.id represents a DataSourceId
+                  // where datasource.id.name represents the dataset's directoryName and not the dataset's name.
+                  name={["dataset", "name"]}
                   label="Name"
                   info="The name of the dataset"
                   validateFirst
-                  rules={getDatasetNameRules(activeUser, allowRenamingDataset)}
+                  rules={getDatasetNameRules(activeUser)}
                 >
                   <Input
-                    // Renaming an existing DS is not supported right now
-                    disabled={!allowRenamingDataset}
                     style={{
                       width: 408,
                     }}
@@ -254,6 +266,12 @@ function SimpleDatasetForm({
                     }))}
                   />
                 </FormItemWithInfo>
+              </Col>
+            </Row>
+            <Row gutter={48}>
+              <Col span={24} xl={12} />
+              <Col span={24} xl={6}>
+                <AxisRotationSettingForDataset form={form} />
               </Col>
             </Row>
           </div>
@@ -339,7 +357,7 @@ function SimpleLayerForm({
     },
     initialJobKeyExtractor: (job) =>
       job.type === "find_largest_segment_id" && job.datasetName === dataset?.name
-        ? job.datasetName ?? "largest_segment_id"
+        ? (job.datasetName ?? "largest_segment_id")
         : null,
   });
   const activeJob = runningJobs[0];
@@ -347,11 +365,7 @@ function SimpleLayerForm({
   const startJobFn =
     dataset != null
       ? async () => {
-          const job = await startFindLargestSegmentIdJob(
-            dataset.name,
-            dataset.owningOrganization,
-            layer.name,
-          );
+          const job = await startFindLargestSegmentIdJob(dataset.id, layer.name);
           Toast.info(
             "A job was scheduled to compute the largest segment ID. It will be automatically updated for the dataset. You may close this tab now.",
           );
@@ -391,8 +405,9 @@ function SimpleLayerForm({
               {
                 validator: syncValidator(
                   (value: string) =>
-                    dataLayers.filter((someLayer: APIDataLayer) => someLayer.name === value)
-                      .length <= 1,
+                    form
+                      .getFieldValue(["dataSource", "dataLayers"])
+                      .filter((someLayer: APIDataLayer) => someLayer.name === value).length <= 1,
                   "Layer names must be unique.",
                 ),
               },

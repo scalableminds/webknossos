@@ -2,27 +2,31 @@ package com.scalableminds.webknossos.datastore.datavault
 
 import com.aayushatharva.brotli4j.Brotli4jLoader
 import com.aayushatharva.brotli4j.decoder.BrotliInputStream
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.io.ZipIO
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.box2Fox
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
 import org.apache.commons.lang3.builder.HashCodeBuilder
+import play.api.libs.json.Reads
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, IOException}
 import java.net.URI
+import java.nio.charset.StandardCharsets
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
 class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging {
 
-  def readBytes(range: Option[NumericRange[Long]] = None)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+  def readBytes(range: Option[NumericRange[Long]] = None)(implicit ec: ExecutionContext,
+                                                          tc: TokenContext): Fox[Array[Byte]] =
     for {
       bytesAndEncoding <- dataVault.readBytesAndEncoding(this, RangeSpecifier.fromRangeOpt(range)) ?=> "Failed to read from vault path"
       decoded <- decode(bytesAndEncoding) ?~> s"Failed to decode ${bytesAndEncoding._2}-encoded response."
     } yield decoded
 
-  def readLastBytes(byteCount: Int)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+  def readLastBytes(byteCount: Int)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       bytesAndEncoding <- dataVault.readBytesAndEncoding(this, SuffixLength(byteCount)) ?=> "Failed to read from vault path"
       decoded <- decode(bytesAndEncoding) ?~> s"Failed to decode ${bytesAndEncoding._2}-encoded response."
@@ -90,4 +94,11 @@ class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging {
 
   override def hashCode(): Int =
     new HashCodeBuilder(17, 31).append(uri.toString).append(dataVault).toHashCode
+
+  def parseAsJson[T: Reads](implicit ec: ExecutionContext, tc: TokenContext): Fox[T] =
+    for {
+      fileBytes <- this.readBytes().toFox
+      fileAsString <- tryo(new String(fileBytes, StandardCharsets.UTF_8)).toFox
+      parsed <- JsonHelper.parseAndValidateJson[T](fileAsString)
+    } yield parsed
 }

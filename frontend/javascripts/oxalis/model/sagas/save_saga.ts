@@ -1,4 +1,4 @@
-import { doWithToken, getNewestVersionForTracing } from "admin/admin_rest_api";
+import { doWithToken, getNewestVersionForAnnotation } from "admin/admin_rest_api";
 import Date from "libs/date";
 import ErrorHandling from "libs/error_handling";
 import type { RequestOptionsWithData } from "libs/request";
@@ -7,14 +7,12 @@ import Toast from "libs/toast";
 import { sleep } from "libs/utils";
 import window, { alert, document, location } from "libs/window";
 import _ from "lodash";
+import memoizeOne from "memoize-one";
 import messages from "messages";
 import { ControlModeEnum } from "oxalis/constants";
-import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
-import { selectQueue } from "oxalis/model/accessors/save_accessor";
+import { getMagInfo } from "oxalis/model/accessors/dataset_accessor";
 import { selectTracing } from "oxalis/model/accessors/tracing_accessor";
-import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
-import type { SaveQueueType } from "oxalis/model/actions/save_actions";
 import {
   pushSaveQueueTransaction,
   setLastSaveTimestampAction,
@@ -26,7 +24,6 @@ import type { InitializeSkeletonTracingAction } from "oxalis/model/actions/skele
 import { SkeletonTracingSaveRelevantActions } from "oxalis/model/actions/skeletontracing_actions";
 import { ViewModeSaveRelevantActions } from "oxalis/model/actions/view_mode_actions";
 import {
-  type InitializeEditableMappingAction,
   type InitializeVolumeTracingAction,
   VolumeTracingSaveRelevantActions,
 } from "oxalis/model/actions/volumetracing_actions";
@@ -35,6 +32,7 @@ import compactUpdateActions from "oxalis/model/helpers/compaction/compact_update
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
+import { ensureWkReady } from "oxalis/model/sagas/ready_sagas";
 import {
   MAXIMUM_ACTION_COUNT_PER_SAVE,
   MAX_SAVE_RETRY_WAITING_TIME,
@@ -42,10 +40,11 @@ import {
   SAVE_RETRY_WAITING_TIME,
 } from "oxalis/model/sagas/save_saga_constants";
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import { updateTdCamera } from "oxalis/model/sagas/update_actions";
+import {
+  type UpdateActionWithoutIsolationRequirement,
+  updateTdCamera,
+} from "oxalis/model/sagas/update_actions";
 import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
-import { ensureWkReady } from "oxalis/model/sagas/wk_ready_saga";
 import { Model } from "oxalis/singletons";
 import type {
   CameraData,
@@ -54,22 +53,23 @@ import type {
   SkeletonTracing,
   VolumeTracing,
 } from "oxalis/store";
-import { call, delay, fork, put, race, take, takeEvery } from "typed-redux-saga";
+import { call, delay, fork, put, race, take } from "typed-redux-saga";
+import { takeEveryWithBatchActionSupport } from "./saga_helpers";
 
 const ONE_YEAR_MS = 365 * 24 * 3600 * 1000;
 
-export function* pushSaveQueueAsync(saveQueueType: SaveQueueType, tracingId: string): Saga<void> {
+export function* pushSaveQueueAsync(): Saga<never> {
   yield* call(ensureWkReady);
 
-  yield* put(setLastSaveTimestampAction(saveQueueType, tracingId));
+  yield* put(setLastSaveTimestampAction());
   let loopCounter = 0;
 
   while (true) {
     loopCounter++;
     let saveQueue;
     // Check whether the save queue is actually empty, the PUSH_SAVE_QUEUE_TRANSACTION action
-    // could have been triggered during the call to sendRequestToServer
-    saveQueue = yield* select((state) => selectQueue(state, saveQueueType, tracingId));
+    // could have been triggered during the call to sendSaveRequestToServer
+    saveQueue = yield* select((state) => state.save.queue);
 
     if (saveQueue.length === 0) {
       if (loopCounter % 100 === 0) {
@@ -86,9 +86,9 @@ export function* pushSaveQueueAsync(saveQueueType: SaveQueueType, tracingId: str
       timeout: delay(PUSH_THROTTLE_TIME),
       forcePush: take("SAVE_NOW"),
     });
-    yield* put(setSaveBusyAction(true, saveQueueType, tracingId));
+    yield* put(setSaveBusyAction(true));
 
-    // Send (parts) of the save queue to the server.
+    // Send (parts of) the save queue to the server.
     // There are two main cases:
     // 1) forcePush is true
     //    The user explicitly requested to save an annotation.
@@ -101,26 +101,25 @@ export function* pushSaveQueueAsync(saveQueueType: SaveQueueType, tracingId: str
     //    The auto-save interval was reached at time T. The following code
     //    will determine how many items are in the save queue at this time T.
     //    Exactly that many items will be sent to the server.
-    //    New items that might be added to the save queue during saving, will
+    //    New items that might be added to the save queue during saving, will be
     //    ignored (they will be picked up in the next iteration of this loop).
     //    Otherwise, the risk of a high number of save-requests (see case 1)
     //    would be present here, too (note the risk would be greater, because the
-    //    user didn't use the save button which is usually accompanied a small pause).
+    //    user didn't use the save button which is usually accompanied by a small pause).
     const itemCountToSave = forcePush
       ? Number.POSITIVE_INFINITY
-      : yield* select((state) => selectQueue(state, saveQueueType, tracingId).length);
+      : yield* select((state) => state.save.queue.length);
     let savedItemCount = 0;
     while (savedItemCount < itemCountToSave) {
-      saveQueue = yield* select((state) => selectQueue(state, saveQueueType, tracingId));
+      saveQueue = yield* select((state) => state.save.queue);
 
       if (saveQueue.length > 0) {
-        savedItemCount += yield* call(sendRequestToServer, saveQueueType, tracingId);
+        savedItemCount += yield* call(sendSaveRequestToServer);
       } else {
         break;
       }
     }
-
-    yield* put(setSaveBusyAction(false, saveQueueType, tracingId));
+    yield* put(setSaveBusyAction(false));
   }
 }
 export function sendRequestWithToken(
@@ -132,17 +131,14 @@ export function sendRequestWithToken(
 
 // This function returns the first n batches of the provided array, so that the count of
 // all actions in these n batches does not exceed MAXIMUM_ACTION_COUNT_PER_SAVE
-function sliceAppropriateBatchCount(
-  batches: Array<SaveQueueEntry>,
-  saveQueueType: SaveQueueType,
-): Array<SaveQueueEntry> {
+function sliceAppropriateBatchCount(batches: Array<SaveQueueEntry>): Array<SaveQueueEntry> {
   const slicedBatches = [];
   let actionCount = 0;
 
   for (const batch of batches) {
     const newActionCount = actionCount + batch.actions.length;
 
-    if (newActionCount <= MAXIMUM_ACTION_COUNT_PER_SAVE[saveQueueType]) {
+    if (newActionCount <= MAXIMUM_ACTION_COUNT_PER_SAVE) {
       actionCount = newActionCount;
       slicedBatches.push(batch);
     } else {
@@ -162,22 +158,18 @@ function getRetryWaitTime(retryCount: number) {
 // at any time, because the browser page is reloaded after the message is shown, anyway.
 let didShowFailedSimultaneousTracingError = false;
 
-export function* sendRequestToServer(
-  saveQueueType: SaveQueueType,
-  tracingId: string,
-): Saga<number> {
+export function* sendSaveRequestToServer(): Saga<number> {
   /*
    * Saves a reasonably-sized part of the save queue (that corresponds to the
    * tracingId) to the server (plus retry-mechanism).
    * The saga returns the number of save queue items that were saved.
    */
 
-  const fullSaveQueue = yield* select((state) => selectQueue(state, saveQueueType, tracingId));
-  const saveQueue = sliceAppropriateBatchCount(fullSaveQueue, saveQueueType);
+  const fullSaveQueue = yield* select((state) => state.save.queue);
+  const saveQueue = sliceAppropriateBatchCount(fullSaveQueue);
   let compactedSaveQueue = compactSaveQueue(saveQueue);
-  const { version, type } = yield* select((state) =>
-    selectTracing(state, saveQueueType, tracingId),
-  );
+  const version = yield* select((state) => state.tracing.version);
+  const annotationId = yield* select((state) => state.tracing.annotationId);
   const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
   let versionIncrement;
   [compactedSaveQueue, versionIncrement] = addVersionNumbers(compactedSaveQueue, version);
@@ -191,11 +183,14 @@ export function* sendRequestToServer(
       const startTime = Date.now();
       yield* call(
         sendRequestWithToken,
-        `${tracingStoreUrl}/tracings/${type}/${tracingId}/update?token=`,
+        `${tracingStoreUrl}/tracings/annotation/${annotationId}/update?token=`,
         {
           method: "POST",
           data: compactedSaveQueue,
           compress: process.env.NODE_ENV === "production",
+          // Suppressing error toast, as the doWithToken retry with personal token functionality should not show an error.
+          // Instead the error is logged and toggleErrorHighlighting should take care of showing an error to the user.
+          showErrorToast: false,
         },
       );
       const endTime = Date.now();
@@ -209,19 +204,17 @@ export function* sendRequestToServer(
         );
       }
 
-      yield* put(setVersionNumberAction(version + versionIncrement, saveQueueType, tracingId));
-      yield* put(setLastSaveTimestampAction(saveQueueType, tracingId));
-      yield* put(shiftSaveQueueAction(saveQueue.length, saveQueueType, tracingId));
+      yield* put(setVersionNumberAction(version + versionIncrement));
+      yield* put(setLastSaveTimestampAction());
+      yield* put(shiftSaveQueueAction(saveQueue.length));
 
-      if (saveQueueType === "volume") {
-        try {
-          yield* call(markBucketsAsNotDirty, compactedSaveQueue, tracingId);
-        } catch (error) {
-          // If markBucketsAsNotDirty fails some reason, wk cannot recover from this error.
-          console.warn("Error when marking buckets as clean. No retry possible. Error:", error);
-          exceptionDuringMarkBucketsAsNotDirty = true;
-          throw error;
-        }
+      try {
+        yield* call(markBucketsAsNotDirty, compactedSaveQueue);
+      } catch (error) {
+        // If markBucketsAsNotDirty fails some reason, wk cannot recover from this error.
+        console.warn("Error when marking buckets as clean. No retry possible. Error:", error);
+        exceptionDuringMarkBucketsAsNotDirty = true;
+        throw error;
       }
 
       yield* call(toggleErrorHighlighting, false);
@@ -286,33 +279,36 @@ export function* sendRequestToServer(
   }
 }
 
-function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>, tracingId: string) {
-  const segmentationLayer = Model.getSegmentationTracingLayer(tracingId);
-  const segmentationResolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
+function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>) {
+  const getLayerAndMagInfoForTracingId = memoizeOne((tracingId: string) => {
+    const segmentationLayer = Model.getSegmentationTracingLayer(tracingId);
+    const segmentationMagInfo = getMagInfo(segmentationLayer.mags);
+    return [segmentationLayer, segmentationMagInfo] as const;
+  });
+  for (const saveEntry of saveQueue) {
+    for (const updateAction of saveEntry.actions) {
+      if (updateAction.name === "updateBucket") {
+        const { actionTracingId: tracingId } = updateAction.value;
+        const [segmentationLayer, segmentationMagInfo] = getLayerAndMagInfoForTracingId(tracingId);
 
-  if (segmentationLayer != null) {
-    for (const saveEntry of saveQueue) {
-      for (const updateAction of saveEntry.actions) {
-        if (updateAction.name === "updateBucket") {
-          const { position, mag, additionalCoordinates } = updateAction.value;
-          const resolutionIndex = segmentationResolutionInfo.getIndexByResolution(mag);
-          const zoomedBucketAddress = globalPositionToBucketPosition(
-            position,
-            segmentationResolutionInfo.getDenseResolutions(),
-            resolutionIndex,
-            additionalCoordinates,
-          );
-          const bucket = segmentationLayer.cube.getOrCreateBucket(zoomedBucketAddress);
+        const { position, mag, additionalCoordinates } = updateAction.value;
+        const magIndex = segmentationMagInfo.getIndexByMag(mag);
+        const zoomedBucketAddress = globalPositionToBucketPosition(
+          position,
+          segmentationMagInfo.getDenseMags(),
+          magIndex,
+          additionalCoordinates,
+        );
+        const bucket = segmentationLayer.cube.getOrCreateBucket(zoomedBucketAddress);
 
-          if (bucket.type === "null") {
-            continue;
-          }
+        if (bucket.type === "null") {
+          continue;
+        }
 
-          bucket.dirtyCount--;
+        bucket.dirtyCount--;
 
-          if (bucket.dirtyCount === 0) {
-            bucket.markAsPushed();
-          }
+        if (bucket.dirtyCount === 0) {
+          bucket.markAsPushed();
         }
       }
     }
@@ -354,8 +350,8 @@ export function performDiffTracing(
   flycam: Flycam,
   prevTdCamera: CameraData,
   tdCamera: CameraData,
-): Array<UpdateAction> {
-  let actions: Array<UpdateAction> = [];
+): Array<UpdateActionWithoutIsolationRequirement> {
+  let actions: Array<UpdateActionWithoutIsolationRequirement> = [];
 
   if (prevTracing.type === "skeleton" && tracing.type === "skeleton") {
     actions = actions.concat(
@@ -377,37 +373,28 @@ export function performDiffTracing(
 }
 
 export function* saveTracingAsync(): Saga<void> {
-  yield* takeEvery("INITIALIZE_SKELETONTRACING", setupSavingForTracingType);
-  yield* takeEvery("INITIALIZE_VOLUMETRACING", setupSavingForTracingType);
-  yield* takeEvery("INITIALIZE_EDITABLE_MAPPING", setupSavingForEditableMapping);
+  yield* fork(pushSaveQueueAsync);
+  yield* takeEveryWithBatchActionSupport("INITIALIZE_SKELETONTRACING", setupSavingForTracingType);
+  yield* takeEveryWithBatchActionSupport("INITIALIZE_VOLUMETRACING", setupSavingForTracingType);
 }
 
-export function* setupSavingForEditableMapping(
-  initializeAction: InitializeEditableMappingAction,
-): Saga<void> {
-  // No diffing needs to be done for editable mappings as the saga pushes update actions
-  // to the respective save queues, itself
-  const volumeTracingId = initializeAction.mapping.tracingId;
-  yield* fork(pushSaveQueueAsync, "mapping", volumeTracingId);
-}
 export function* setupSavingForTracingType(
   initializeAction: InitializeSkeletonTracingAction | InitializeVolumeTracingAction,
-): Saga<void> {
+): Saga<never> {
   /*
     Listen to changes to the annotation and derive UpdateActions from the
     old and new state.
-     The actual push to the server is done by the forked pushSaveQueueAsync saga.
+    The actual push to the server is done by the forked pushSaveQueueAsync saga.
   */
   const saveQueueType =
     initializeAction.type === "INITIALIZE_SKELETONTRACING" ? "skeleton" : "volume";
   const tracingId = initializeAction.tracing.id;
-  yield* fork(pushSaveQueueAsync, saveQueueType, tracingId);
   let prevTracing = (yield* select((state) => selectTracing(state, saveQueueType, tracingId))) as
     | VolumeTracing
     | SkeletonTracing;
   let prevFlycam = yield* select((state) => state.flycam);
   let prevTdCamera = yield* select((state) => state.viewModeData.plane.tdCamera);
-  yield* take("WK_READY");
+  yield* call(ensureWkReady);
 
   while (true) {
     if (saveQueueType === "skeleton") {
@@ -453,7 +440,7 @@ export function* setupSavingForTracingType(
     );
 
     if (items.length > 0) {
-      yield* put(pushSaveQueueTransaction(items, saveQueueType, tracingId));
+      yield* put(pushSaveQueueTransaction(items));
     }
 
     prevTracing = tracing;
@@ -466,7 +453,7 @@ const VERSION_POLL_INTERVAL_COLLAB = 10 * 1000;
 const VERSION_POLL_INTERVAL_READ_ONLY = 60 * 1000;
 const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 30 * 1000;
 
-function* watchForSaveConflicts() {
+function* watchForSaveConflicts(): Saga<never> {
   function* checkForNewVersion() {
     const allowSave = yield* select(
       (state) => state.tracing.restrictions.allowSave && state.tracing.restrictions.allowUpdate,
@@ -495,32 +482,29 @@ function* watchForSaveConflicts() {
     const maybeSkeletonTracing = yield* select((state) => state.tracing.skeleton);
     const volumeTracings = yield* select((state) => state.tracing.volumes);
     const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
+    const annotationId = yield* select((state) => state.tracing.annotationId);
 
     const tracings: Array<SkeletonTracing | VolumeTracing> = _.compact([
       ...volumeTracings,
       maybeSkeletonTracing,
     ]);
 
-    for (const tracing of tracings) {
-      const versionOnServer = yield* call(
-        getNewestVersionForTracing,
-        tracingStoreUrl,
-        tracing.tracingId,
-        tracing.type,
-      );
+    if (tracings.length === 0) {
+      return;
+    }
 
+    const versionOnServer = yield* call(
+      getNewestVersionForAnnotation,
+      tracingStoreUrl,
+      annotationId,
+    );
+
+    for (const tracing of tracings) {
       // Read the tracing version again from the store, since the
       // old reference to tracing might be outdated now due to the
       // immutability.
       const versionOnClient = yield* select((state) => {
-        if (tracing.type === "volume") {
-          return getVolumeTracingById(state.tracing, tracing.tracingId).version;
-        }
-        const { skeleton } = state.tracing;
-        if (skeleton == null) {
-          throw new Error("Skeleton must exist at this point.");
-        }
-        return skeleton.version;
+        return state.tracing.version;
       });
 
       const toastKey = `save_conflicts_warning_${tracing.tracingId}`;
@@ -528,9 +512,7 @@ function* watchForSaveConflicts() {
         // The latest version on the server is greater than the most-recently
         // stored version.
 
-        const saveQueue = yield* select((state) =>
-          selectQueue(state, tracing.type, tracing.tracingId),
-        );
+        const saveQueue = yield* select((state) => state.save.queue);
 
         let msg = "";
         if (!allowSave) {
@@ -569,6 +551,8 @@ function* watchForSaveConflicts() {
     // The current user is the only one who can edit the annotation.
     return VERSION_POLL_INTERVAL_SINGLE_EDITOR;
   }
+
+  yield* call(ensureWkReady);
 
   while (true) {
     const interval = yield* call(getPollInterval);

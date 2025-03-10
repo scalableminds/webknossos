@@ -1,7 +1,7 @@
-import React from "react";
-import { JSONTree, type ShouldExpandNodeInitially, type LabelRenderer } from "react-json-tree";
 import { Progress, Tabs, type TabsProps, Tooltip } from "antd";
+import { formatNumber } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
+import { JSONTree, type LabelRenderer, type ShouldExpandNodeInitially } from "react-json-tree";
 import {
   type VoxelyticsArtifactConfig,
   VoxelyticsRunState,
@@ -13,7 +13,6 @@ import ArtifactsViewer from "./artifacts_view";
 import LogTab from "./log_tab";
 import StatisticsTab from "./statistics_tab";
 import { runStateToStatus, useTheme } from "./utils";
-import { formatNumber } from "libs/format_utils";
 
 const labelRenderer: LabelRenderer = function (_keyPath) {
   const keyPath = _keyPath.slice().reverse();

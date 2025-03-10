@@ -15,7 +15,7 @@ export default function generateDummyTrees(
   function generateDummyTree(): ServerSkeletonTracingTree {
     const nodes = [];
     const edges = [];
-    let counter = -1;
+    let counter = 0;
     const initialNodeId = currentNewNodeId;
 
     while (counter++ < nodeCount) {
@@ -34,7 +34,7 @@ export default function generateDummyTrees(
         },
         radius: 112.39999389648438,
         viewport: 1,
-        resolution: 1,
+        mag: 2,
         bitDepth: 4,
         interpolation: true,
         createdTimestamp: 1507550793899,
@@ -43,7 +43,7 @@ export default function generateDummyTrees(
 
     counter = 0;
 
-    while (counter++ < nodeCount) {
+    while (counter++ < nodeCount - 1) {
       edges.push({
         source: initialNodeId + counter,
         target: initialNodeId + counter - 1,

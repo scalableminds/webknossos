@@ -1,33 +1,33 @@
-import React, { useState } from "react";
-import { Form, Modal, Input, Button, Row, Col, Steps, Card, AutoComplete, Alert } from "antd";
 import {
-  CloudUploadOutlined,
-  TeamOutlined,
-  UserOutlined,
-  FileAddOutlined,
-  RocketOutlined,
   ClockCircleOutlined,
-  PlayCircleOutlined,
-  PaperClipOutlined,
+  CloudUploadOutlined,
   CodeOutlined,
   CustomerServiceOutlined,
+  FileAddOutlined,
+  PaperClipOutlined,
+  PlayCircleOutlined,
   PlusOutlined,
+  RocketOutlined,
+  TeamOutlined,
   UserAddOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
-import { Link, type RouteComponentProps, withRouter } from "react-router-dom";
-import { connect } from "react-redux";
-import type { APIUser, APIDataStore } from "types/api_flow_types";
+import { getDatastores, sendInvitesForOrganization } from "admin/admin_rest_api";
+import RegistrationFormGeneric from "admin/auth/registration_form_generic";
+import DatasetUploadView from "admin/dataset/dataset_upload_view";
+import { maxInludedUsersInBasicPlan } from "admin/organization/pricing_plan_utils";
+import { Alert, AutoComplete, Button, Card, Col, Form, Input, Modal, Row, Steps } from "antd";
+import CreditsFooter from "components/credits_footer";
+import LinkButton from "components/link_button";
+import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
+import features from "features";
+import Toast from "libs/toast";
 import type { OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
-import LinkButton from "components/link_button";
-import { getDatastores, sendInvitesForOrganization } from "admin/admin_rest_api";
-import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
-import DatasetUploadView from "admin/dataset/dataset_upload_view";
-import RegistrationFormGeneric from "admin/auth/registration_form_generic";
-import CreditsFooter from "components/credits_footer";
-import Toast from "libs/toast";
-import features from "features";
-import { maxInludedUsersInBasicPlan } from "admin/organization/pricing_plan_utils";
+import React, { useState } from "react";
+import { connect } from "react-redux";
+import { Link, type RouteComponentProps, withRouter } from "react-router-dom";
+import type { APIDataStore, APIUser } from "types/api_flow_types";
 
 const { Step } = Steps;
 const FormItem = Form.Item;
@@ -39,7 +39,7 @@ type State = {
   currentStep: number;
   datastores: Array<APIDataStore>;
   organizationId: string;
-  datasetNameToImport: string | null | undefined;
+  datasetIdToImport: string | null | undefined;
   isDatasetUploadModalVisible: boolean;
   isInviteModalVisible: boolean;
 };
@@ -395,7 +395,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
     organizationId: "",
     isDatasetUploadModalVisible: false,
     isInviteModalVisible: false,
-    datasetNameToImport: null,
+    datasetIdToImport: null,
   };
 
   componentDidMount() {
@@ -416,7 +416,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
       currentStep: prevState.currentStep + 1,
       isDatasetUploadModalVisible: false,
       isInviteModalVisible: false,
-      datasetNameToImport: null,
+      datasetIdToImport: null,
     }));
   };
   renderCreateOrganization = () => (
@@ -499,12 +499,12 @@ class OnboardingView extends React.PureComponent<Props, State> {
           <DatasetUploadView
             datastores={this.state.datastores}
             onUploaded={async (
-              _organization: string,
-              datasetName: string,
+              uploadedDatasetId: string,
+              _uploadedDatasetName: string,
               needsConversion: boolean,
             ) => {
               this.setState({
-                datasetNameToImport: datasetName,
+                datasetIdToImport: uploadedDatasetId,
                 isDatasetUploadModalVisible: false,
               });
 
@@ -517,14 +517,11 @@ class OnboardingView extends React.PureComponent<Props, State> {
           />
         </Modal>
       )}
-      {this.state.datasetNameToImport != null && (
+      {this.state.datasetIdToImport != null && (
         <Modal open width="85%" footer={null} maskClosable={false} onCancel={this.advanceStep}>
           <DatasetSettingsView
             isEditingMode={false}
-            datasetId={{
-              name: this.state.datasetNameToImport || "",
-              owningOrganization: this.state.organizationId || "",
-            }}
+            datasetId={this.state.datasetIdToImport}
             onComplete={this.advanceStep}
             onCancel={this.advanceStep}
           />
@@ -548,7 +545,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
           height={250}
         >
           You can also copy it directly onto the hosting server.{" "}
-          <a href="https://docs.webknossos.org/webknossos/data_formats.html">
+          <a href="https://docs.webknossos.org/webknossos/data/index.html">
             Learn more about supported data formats.
           </a>
         </OptionCard>
@@ -583,8 +580,8 @@ class OnboardingView extends React.PureComponent<Props, State> {
         </FeatureCard>
         <FeatureCard header="More Datasets" icon={<CloudUploadOutlined />}>
           <a href="/datasets/upload">Upload more of your datasets.</a>{" "}
-          <a href="https://docs.webknossos.org/webknossos/data_formats.html">Learn more</a> about
-          the formats and upload processes WEBKNOSSOS supports.
+          <a href="https://docs.webknossos.org/webknossos/data/index.html">Learn more</a> about the
+          formats and upload processes WEBKNOSSOS supports.
         </FeatureCard>
         <FeatureCard header="User & Team Management" icon={<TeamOutlined />}>
           <LinkButton

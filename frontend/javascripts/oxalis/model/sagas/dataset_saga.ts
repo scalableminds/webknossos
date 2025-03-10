@@ -1,28 +1,31 @@
-import { call, put, take, takeEvery, takeLatest } from "typed-redux-saga";
+import { V3 } from "libs/mjs";
+import Toast from "libs/toast";
+import { sleep } from "libs/utils";
 import { sum } from "lodash";
+import messages from "messages";
+import { Identity4x4 } from "oxalis/constants";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
-import { sleep } from "libs/utils";
-import Toast from "libs/toast";
-import messages from "messages";
+import { hasSegmentIndex } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import { call, put, takeEvery, takeLatest } from "typed-redux-saga";
 import {
   getEnabledLayers,
   getLayerByName,
+  getMagInfo,
   getMaybeSegmentIndexAvailability,
-  getResolutionInfo,
-  getTransformsForLayer,
-  invertAndTranspose,
   isLayerVisible,
 } from "../accessors/dataset_accessor";
-import { getCurrentResolution } from "../accessors/flycam_accessor";
+import {
+  getTransformsForLayer,
+  invertAndTranspose,
+} from "../accessors/dataset_layer_transformation_accessor";
+import { getCurrentMag } from "../accessors/flycam_accessor";
 import { getViewportExtents } from "../accessors/view_mode_accessor";
-import { V3 } from "libs/mjs";
-import { Identity4x4 } from "oxalis/constants";
-import { hasSegmentIndex } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import {
   type EnsureSegmentIndexIsLoadedAction,
   setLayerHasSegmentIndexAction,
 } from "../actions/dataset_actions";
+import { ensureWkReady } from "./ready_sagas";
 
 export function* watchMaximumRenderableLayers(): Saga<void> {
   function* warnMaybe(): Saga<void> {
@@ -105,15 +108,15 @@ export function* watchZ1Downsampling(): Saga<void> {
         scaleY = V3.length([matrix[1], matrix[5], matrix[9]]);
       }
 
-      const currentRes = yield* select((state) => getCurrentResolution(state, dataLayer.name));
+      const currentRes = yield* select((state) => getCurrentMag(state, dataLayer.name));
       if (currentRes == null) {
         // The layer cannot be rendered. For example, because the user zoomed out and there
         // is no appropriate mag for that layer.
         break;
       }
-      const resolutionInfo = getResolutionInfo(dataLayer.resolutions);
-      const bestExistingIndex = resolutionInfo.getFinestResolutionIndex();
-      const currentIndex = resolutionInfo.getIndexByResolution(currentRes);
+      const magInfo = getMagInfo(dataLayer.resolutions);
+      const bestExistingIndex = magInfo.getFinestMagIndex();
+      const currentIndex = magInfo.getIndexByMag(currentRes);
       if (currentIndex <= bestExistingIndex) {
         // There's no better mag to render the current layer in.
         continue;
@@ -148,7 +151,8 @@ export function* watchZ1Downsampling(): Saga<void> {
       Toast.close("DOWNSAMPLING_CAUSES_BAD_QUALITY");
     }
   }
-  yield* take("WK_READY");
+
+  yield* call(ensureWkReady);
   yield* call(maybeShowWarning);
   yield* takeLatest(
     ["ZOOM_IN", "ZOOM_OUT", "ZOOM_BY_DELTA", "SET_ZOOM_STEP", "SET_STORED_LAYOUTS"],

@@ -39,7 +39,7 @@ message VolumeTracing {
   optional BoundingBoxProto userBoundingBox = 12;
   repeated NamedBoundingBoxProto userBoundingBoxes = 13;
   optional string organizationId = 14; // used when parsing and handling nmls, not used in tracing store anymore, do not rely on correct values
-  repeated Vec3IntProto resolutions = 15;
+  repeated Vec3IntProto mags = 15;
   repeated Segment segments = 16;
   optional string mappingName = 17; // either a mapping present in the fallback layer, or an editable mapping on the tracingstore
   optional bool hasEditableMapping = 18; // the selected mapping is an editable mapping
@@ -48,6 +48,7 @@ message VolumeTracing {
   repeated AdditionalCoordinateProto editPositionAdditionalCoordinates = 21;
   repeated AdditionalAxisProto additionalAxes = 22; // Additional axes for which this tracing is defined
   optional bool mappingIsLocked = 23; // user may not select another mapping (e.g. because they have already mutated buckets)
+  optional bool volumeBucketDataHasChanged = 24; // The volume bucket data has been edited at least once
 }
 
 message SegmentGroup {

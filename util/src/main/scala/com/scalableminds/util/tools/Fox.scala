@@ -1,6 +1,6 @@
 package com.scalableminds.util.tools
 
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.common.{Box, Empty, Failure, Full, ParamFailure}
 import play.api.libs.json.{JsError, JsResult, JsSuccess}
 
 import scala.concurrent.duration._
@@ -68,6 +68,10 @@ object Fox extends FoxImplicits {
       implicit ec: ExecutionContext): Fox[Nothing] =
     new Fox(Future.successful(Failure(message, ex, chain)))
 
+  def paramFailure[T](message: String, ex: Box[Throwable] = Empty, chain: Box[Failure] = Empty, param: T)(
+      implicit ec: ExecutionContext): Fox[Nothing] =
+    new Fox(Future.successful(ParamFailure(message, ex, chain, param)))
+
   // run serially, fail on the first failure
   def serialSequence[A, B](l: List[A])(f: A => Future[B])(implicit ec: ExecutionContext): Future[List[B]] = {
     def runNext(remaining: List[A], results: List[B]): Future[List[B]] =
@@ -101,13 +105,14 @@ object Fox extends FoxImplicits {
   def sequence[T](l: List[Fox[T]])(implicit ec: ExecutionContext): Future[List[Box[T]]] =
     Future.sequence(l.map(_.futureBox))
 
-  def combined[T](l: List[Fox[T]])(implicit ec: ExecutionContext): Fox[List[T]] =
+  def combined[T](l: Seq[Fox[T]])(implicit ec: ExecutionContext): Fox[List[T]] =
     Fox(Future.sequence(l.map(_.futureBox)).map { results =>
       results.find(_.isEmpty) match {
         case Some(Empty)            => Empty
         case Some(failure: Failure) => failure
         case _ =>
-          Full(results.map(_.openOrThrowException("An exception should never be thrown, all boxes must be full")))
+          Full(
+            results.map(_.openOrThrowException("An exception should never be thrown, all boxes must be full")).toList)
       }
     })
 
@@ -133,7 +138,7 @@ object Fox extends FoxImplicits {
   }
 
   // Run serially, fail on the first failure
-  def serialCombined[A, B](l: List[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Fox[List[B]] =
+  def serialCombined[A, B](l: Iterable[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Fox[List[B]] =
     serialCombined(l.iterator)(f)
 
   // Run serially, fail on the first failure
@@ -149,6 +154,22 @@ object Fox extends FoxImplicits {
       }
 
     runNext(Nil)
+  }
+
+  def foldLeft[A, B](l: List[A], initial: B)(f: (B, A) => Fox[B])(implicit ec: ExecutionContext): Fox[List[B]] =
+    serialCombined(l.iterator)(a => f(initial, a))
+
+  def foldLeft[A, B](it: Iterator[A], initial: B)(f: (B, A) => Fox[B])(implicit ec: ExecutionContext): Fox[B] = {
+    def runNext(collectedResult: B): Fox[B] =
+      if (it.hasNext) {
+        for {
+          currentResult <- f(collectedResult, it.next())
+          results <- runNext(currentResult)
+        } yield results
+      } else {
+        Fox.successful(collectedResult)
+      }
+    runNext(initial)
   }
 
   // run in sequence, drop everything that isn’t full
@@ -234,22 +255,6 @@ object Fox extends FoxImplicits {
       }
     t =>
       runNext(functions, t)
-  }
-
-  def failureChainAsString(failure: Failure, includeStackTraces: Boolean = false): String = {
-    def formatStackTrace(failure: Failure) =
-      failure.exception match {
-        case Full(exception) if includeStackTraces => s" Stack trace: ${TextUtils.stackTraceAsString(exception)} "
-        case _                                     => ""
-      }
-
-    def formatChain(chain: Box[Failure]): String = chain match {
-      case Full(failure) =>
-        " <~ " + failure.msg + formatStackTrace(failure) + formatChain(failure.chain)
-      case _ => ""
-    }
-
-    failure.msg + formatStackTrace(failure) + formatChain(failure.chain)
   }
 
   def firstSuccess[T](foxes: Seq[Fox[T]])(implicit ec: ExecutionContext): Fox[T] = {

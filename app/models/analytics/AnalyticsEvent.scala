@@ -8,7 +8,7 @@ import models.job.JobCommand.JobCommand
 import models.organization.Organization
 import models.user.User
 import play.api.libs.json._
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 

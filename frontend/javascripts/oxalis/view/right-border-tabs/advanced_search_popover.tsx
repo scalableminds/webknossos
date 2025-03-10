@@ -1,16 +1,19 @@
-import { Input, Tooltip, Popover, Space, type InputRef } from "antd";
-import { DownOutlined, UpOutlined } from "@ant-design/icons";
-import * as React from "react";
+import { CheckSquareOutlined, DownOutlined, UpOutlined } from "@ant-design/icons";
+import { Input, type InputRef, Popover, Space, Tooltip } from "antd";
+import Shortcut from "libs/shortcut_component";
+import { mod } from "libs/utils";
 import memoizeOne from "memoize-one";
 import ButtonComponent from "oxalis/view/components/button_component";
-import Shortcut from "libs/shortcut_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
-import { mod } from "libs/utils";
+import * as React from "react";
+
+const PRIMARY_COLOR = "var(--ant-color-primary)";
 
 type Props<S> = {
   data: S[];
   searchKey: keyof S | ((item: S) => string);
   onSelect: (arg0: S) => void;
+  onSelectAllMatches?: (arg0: S[]) => void;
   children: React.ReactNode;
   provideShortcut?: boolean;
   targetId: string;
@@ -20,6 +23,7 @@ type State = {
   isVisible: boolean;
   searchQuery: string;
   currentPosition: number | null | undefined;
+  areAllMatchesSelected: boolean;
 };
 
 export default class AdvancedSearchPopover<
@@ -29,6 +33,7 @@ export default class AdvancedSearchPopover<
     isVisible: false,
     searchQuery: "",
     currentPosition: null,
+    areAllMatchesSelected: false,
   };
 
   getAvailableOptions = memoizeOne(
@@ -69,6 +74,7 @@ export default class AdvancedSearchPopover<
     currentPosition = mod(currentPosition + offset, numberOfAvailableOptions);
     this.setState({
       currentPosition,
+      areAllMatchesSelected: false,
     });
     this.props.onSelect(availableOptions[currentPosition]);
   };
@@ -101,7 +107,7 @@ export default class AdvancedSearchPopover<
 
   render() {
     const { data, searchKey, provideShortcut, children, targetId } = this.props;
-    const { searchQuery, isVisible } = this.state;
+    const { searchQuery, isVisible, areAllMatchesSelected } = this.state;
     let { currentPosition } = this.state;
     const availableOptions = this.getAvailableOptions(data, searchQuery, searchKey);
     const numberOfAvailableOptions = availableOptions.length;
@@ -109,13 +115,17 @@ export default class AdvancedSearchPopover<
     currentPosition =
       currentPosition == null ? -1 : Math.min(currentPosition, numberOfAvailableOptions - 1);
     const hasNoResults = numberOfAvailableOptions === 0;
-    const hasMultipleResults = numberOfAvailableOptions > 1;
+    const availableOptionsToSelectAllMatches = availableOptions.filter(
+      (result) => result.type === "Tree" || result.type === "segment",
+    );
+    const isSelectAllMatchesDisabled = availableOptionsToSelectAllMatches.length < 2;
     const additionalInputStyle =
       hasNoResults && searchQuery !== ""
         ? {
             color: "red",
           }
         : {};
+    const selectAllMatchesButtonColor = areAllMatchesSelected ? PRIMARY_COLOR : undefined;
     return (
       <React.Fragment>
         {provideShortcut ? (
@@ -171,9 +181,23 @@ export default class AdvancedSearchPopover<
                       this.setState({
                         searchQuery: evt.target.value,
                         currentPosition: null,
+                        areAllMatchesSelected: false,
                       })
                     }
-                    addonAfter={`${currentPosition + 1}/${numberOfAvailableOptions}`}
+                    addonAfter={
+                      <div
+                        style={{
+                          minWidth: 25,
+                          color: areAllMatchesSelected
+                            ? "var(--ant-color-text-disabled)"
+                            : undefined,
+                        }}
+                      >
+                        {areAllMatchesSelected
+                          ? "all"
+                          : `${currentPosition + 1}/${numberOfAvailableOptions}`}
+                      </div>
+                    }
                     ref={this.autoFocus}
                     autoFocus
                   />
@@ -183,7 +207,7 @@ export default class AdvancedSearchPopover<
                         width: 40,
                       }}
                       onClick={this.selectPreviousOption}
-                      disabled={!hasMultipleResults}
+                      disabled={hasNoResults}
                     >
                       <UpOutlined />
                     </ButtonComponent>
@@ -194,9 +218,30 @@ export default class AdvancedSearchPopover<
                         width: 40,
                       }}
                       onClick={this.selectNextOption}
-                      disabled={!hasMultipleResults}
+                      disabled={hasNoResults}
                     >
                       <DownOutlined />
+                    </ButtonComponent>
+                  </Tooltip>
+                  <Tooltip title="Select all matches (except groups)">
+                    <ButtonComponent
+                      style={{
+                        width: 40,
+                        color: selectAllMatchesButtonColor,
+                        borderColor: selectAllMatchesButtonColor,
+                      }}
+                      onClick={
+                        this.props.onSelectAllMatches != null
+                          ? () => {
+                              this.props.onSelectAllMatches!(availableOptionsToSelectAllMatches);
+                              if (!areAllMatchesSelected)
+                                this.setState({ areAllMatchesSelected: true });
+                            }
+                          : undefined
+                      }
+                      disabled={isSelectAllMatchesDisabled}
+                    >
+                      <CheckSquareOutlined />
                     </ButtonComponent>
                   </Tooltip>
                 </Space.Compact>

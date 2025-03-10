@@ -1,10 +1,9 @@
-import React from "react";
-import { type RouteComponentProps, withRouter } from "react-router-dom";
-import { Form, Input, Button, Col, Row, Card } from "antd";
 import { LockOutlined } from "@ant-design/icons";
+import { Button, Card, Col, Form, Input, Row } from "antd";
 import Request from "libs/request";
-import messages from "messages";
 import Toast from "libs/toast";
+import messages from "messages";
+import { type RouteComponentProps, withRouter } from "react-router-dom";
 const FormItem = Form.Item;
 const { Password } = Input;
 type Props = {

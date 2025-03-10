@@ -1,19 +1,18 @@
-import { useFetch } from "libs/react_helpers";
-import React from "react";
-import type { AnnotationTypeFilterEnum } from "./project_and_annotation_type_dropdown";
 import { getTimeTrackingForUserSummedPerAnnotation } from "admin/admin_rest_api";
-import dayjs from "dayjs";
 import { Col, Divider, Row } from "antd";
+import dayjs from "dayjs";
 import { formatMilliseconds } from "libs/format_utils";
+import { useFetch } from "libs/react_helpers";
 import _ from "lodash";
-import type { APITimeTrackingPerAnnotation } from "types/api_flow_types";
+import type { AnnotationStateFilterEnum, AnnotationTypeFilterEnum } from "oxalis/constants";
 import { AnnotationStats } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
-import { aggregateStatsForAllLayers } from "oxalis/model/accessors/annotation_accessor";
+import type { APITimeTrackingPerAnnotation } from "types/api_flow_types";
 
 type TimeTrackingDetailViewProps = {
   userId: string;
   dateRange: [number, number];
   annotationType: AnnotationTypeFilterEnum;
+  annotationState: AnnotationStateFilterEnum;
   projectIds: string[];
 };
 
@@ -40,7 +39,7 @@ const renderRow = (
           </Col>
           <Col span={STATISTICS_SPAN}>
             <AnnotationStats
-              stats={aggregateStatsForAllLayers(timeEntry.annotationLayerStats)}
+              stats={timeEntry.annotationLayerStats}
               asInfoBlock={false}
               withMargin={false}
             />
@@ -63,7 +62,7 @@ const renderRow = (
           </Col>
           <Col span={STATISTICS_SPAN}>
             <AnnotationStats
-              stats={aggregateStatsForAllLayers(timeEntry.annotationLayerStats)}
+              stats={timeEntry.annotationLayerStats}
               asInfoBlock={false}
               withMargin={false}
             />
@@ -85,6 +84,7 @@ function TimeTrackingDetailView(props: TimeTrackingDetailViewProps) {
         dayjs(props.dateRange[0]),
         dayjs(props.dateRange[1]),
         props.annotationType,
+        props.annotationState,
         props.projectIds,
       );
     },

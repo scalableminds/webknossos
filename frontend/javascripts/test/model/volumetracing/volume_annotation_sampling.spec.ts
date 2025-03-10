@@ -7,7 +7,7 @@ import anyTest, { type TestFn } from "ava";
 import datasetServerObject from "test/fixtures/dataset_server_object";
 import mockRequire from "mock-require";
 import sinon from "sinon";
-import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import { MagInfo } from "oxalis/model/helpers/mag_info";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type DataCubeType from "oxalis/model/bucket_data_handling/data_cube";
 import { assertNonNullBucket } from "oxalis/model/bucket_data_handling/bucket";
@@ -35,7 +35,7 @@ type LabeledVoxelsMapAsArray = Array<[Vector4, Uint8Array]>;
 const DataCube: typeof DataCubeType = mockRequire.reRequire(
   "oxalis/model/bucket_data_handling/data_cube",
 ).default;
-const { default: sampleVoxelMapToResolution, applyVoxelMap } = mockRequire.reRequire(
+const { default: sampleVoxelMapToMag, applyVoxelMap } = mockRequire.reRequire(
   "oxalis/model/volumetracing/volume_annotation_sampling",
 );
 
@@ -56,11 +56,11 @@ test.beforeEach((t) => {
       [32, 32, 32],
     ] as Vector3[],
   };
-  const resolutionInfo = new ResolutionInfo(mockedLayer.resolutions);
+  const magInfo = new MagInfo(mockedLayer.resolutions);
   const cube = new DataCube(
     new BoundingBox({ min: [0, 0, 0], max: [1024, 1024, 1024] }),
     [],
-    resolutionInfo,
+    magInfo,
     "uint32",
     false,
     "layerName",
@@ -125,7 +125,7 @@ test("Upsampling an annotation should work in the top left part of a bucket", (t
   const bucket = cube.getOrCreateBucket([0, 0, 0, 1]);
   assertNonNullBucket(bucket);
   const labeledVoxelsMap = new Map([[bucket.zoomedAddress, sourceVoxelMap]]);
-  const upsampledVoxelMapPerBucket = sampleVoxelMapToResolution(
+  const upsampledVoxelMapPerBucket = sampleVoxelMapToMag(
     labeledVoxelsMap,
     cube,
     [2, 2, 2],
@@ -187,7 +187,7 @@ test("Upsampling an annotation should work in the top right part of a bucket", (
   const bucket = cube.getOrCreateBucket([0, 0, 0, 1]);
   assertNonNullBucket(bucket);
   const labeledVoxelsMap = new Map([[bucket.zoomedAddress, sourceVoxelMap]]);
-  const upsampledVoxelMapPerBucket = sampleVoxelMapToResolution(
+  const upsampledVoxelMapPerBucket = sampleVoxelMapToMag(
     labeledVoxelsMap,
     cube,
     [2, 2, 2],
@@ -249,7 +249,7 @@ test("Upsampling an annotation should work in the bottom left part of a bucket",
   const bucket = cube.getOrCreateBucket([0, 0, 0, 1]);
   assertNonNullBucket(bucket);
   const labeledVoxelsMap = new Map([[bucket.zoomedAddress, sourceVoxelMap]]);
-  const upsampledVoxelMapPerBucket = sampleVoxelMapToResolution(
+  const upsampledVoxelMapPerBucket = sampleVoxelMapToMag(
     labeledVoxelsMap,
     cube,
     [2, 2, 2],
@@ -311,7 +311,7 @@ test("Upsampling an annotation should work in the bottom right part of a bucket"
   const bucket = cube.getOrCreateBucket([0, 0, 0, 1]);
   assertNonNullBucket(bucket);
   const labeledVoxelsMap = new Map([[bucket.zoomedAddress, sourceVoxelMap]]);
-  const upsampledVoxelMapPerBucket = sampleVoxelMapToResolution(
+  const upsampledVoxelMapPerBucket = sampleVoxelMapToMag(
     labeledVoxelsMap,
     cube,
     [2, 2, 2],
@@ -373,7 +373,7 @@ test("Upsampling an annotation where the annotation slice is in the lower part o
   const bucket = cube.getOrCreateBucket([0, 0, 0, 1]);
   assertNonNullBucket(bucket);
   const labeledVoxelsMap = new Map([[bucket.zoomedAddress, sourceVoxelMap]]);
-  const upsampledVoxelMapPerBucket = sampleVoxelMapToResolution(
+  const upsampledVoxelMapPerBucket = sampleVoxelMapToMag(
     labeledVoxelsMap,
     cube,
     [2, 2, 2],
@@ -402,7 +402,7 @@ test("Upsampling an annotation where the annotation slice is in the lower part o
     }
   }
 });
-test("Upsampling an annotation should work across more than one resolution", (t) => {
+test("Upsampling an annotation should work across more than one mag", (t) => {
   const { cube } = t.context;
   const sourceVoxelMap = getEmptyVoxelMap();
   [
@@ -423,7 +423,7 @@ test("Upsampling an annotation should work across more than one resolution", (t)
   const bucket = cube.getOrCreateBucket([0, 0, 0, 2]);
   assertNonNullBucket(bucket);
   const labeledVoxelsMap = new Map([[bucket.zoomedAddress, sourceVoxelMap]]);
-  const upsampledVoxelMapPerBucket = sampleVoxelMapToResolution(
+  const upsampledVoxelMapPerBucket = sampleVoxelMapToMag(
     labeledVoxelsMap,
     cube,
     [4, 4, 4],
@@ -504,7 +504,7 @@ test("Downsampling annotation of neighbour buckets should result in one downsamp
       labelVoxelInVoxelMap(firstDim + firstOffset, secondDim + secondOffset, goalVoxelMap);
     });
   });
-  const upsampledVoxelMapPerBucket = sampleVoxelMapToResolution(
+  const upsampledVoxelMapPerBucket = sampleVoxelMapToMag(
     labeledVoxelsMap,
     cube,
     [1, 1, 1],
@@ -537,7 +537,7 @@ test("Downsampling annotation of neighbour buckets should result in one downsamp
     }
   }
 });
-test("Downsampling annotation should work across more than one resolution", (t) => {
+test("Downsampling annotation should work across more than one mag", (t) => {
   const { cube } = t.context;
   const labeledVoxelsMap = new Map();
   (
@@ -589,7 +589,7 @@ test("Downsampling annotation should work across more than one resolution", (t) 
       labelVoxelInVoxelMap(firstDim + firstOffset, secondDim + secondOffset, goalVoxelMap);
     });
   });
-  const upsampledVoxelMapPerBucket = sampleVoxelMapToResolution(
+  const upsampledVoxelMapPerBucket = sampleVoxelMapToMag(
     labeledVoxelsMap,
     cube,
     [1, 1, 1],

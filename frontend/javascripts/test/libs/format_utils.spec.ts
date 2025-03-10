@@ -1,5 +1,4 @@
 import test from "ava";
-import _ from "lodash";
 import { UnitShort, Unicode } from "oxalis/constants";
 import { formatNumberToArea, formatNumberToLength, formatNumberToVolume } from "libs/format_utils";
 

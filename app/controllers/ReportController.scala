@@ -8,7 +8,7 @@ import models.user.{User, UserDAO, UserService}
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent}
 import security.WkEnv
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SimpleSQLDAO, SqlClient}
 
 import javax.inject.Inject
@@ -164,21 +164,19 @@ class ReportController @Inject()(reportDAO: ReportDAO,
     extends Controller
     with FoxImplicits {
 
-  def projectProgressReport(teamId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def projectProgressReport(teamId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      teamIdValidated <- ObjectId.fromString(teamId)
-      _ <- teamDAO.findOne(teamIdValidated) ?~> "team.notFound" ~> NOT_FOUND
-      entries <- reportDAO.projectProgress(teamIdValidated)
+      _ <- teamDAO.findOne(teamId) ?~> "team.notFound" ~> NOT_FOUND
+      entries <- reportDAO.projectProgress(teamId)
     } yield Ok(Json.toJson(entries))
   }
 
-  def availableTasksReport(teamId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def availableTasksReport(teamId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      teamIdValidated <- ObjectId.fromString(teamId)
-      team <- teamDAO.findOne(teamIdValidated) ?~> "team.notFound" ~> NOT_FOUND
+      team <- teamDAO.findOne(teamId) ?~> "team.notFound" ~> NOT_FOUND
       users <- userDAO.findAllByTeams(List(team._id))
       nonUnlistedUsers = users.filter(!_.isUnlisted)
-      nonAdminUsers <- Fox.filterNot(nonUnlistedUsers)(u => userService.isTeamManagerOrAdminOf(u, teamIdValidated))
+      nonAdminUsers <- Fox.filterNot(nonUnlistedUsers)(u => userService.isTeamManagerOrAdminOf(u, teamId))
       entries: List[AvailableTaskCountsEntry] <- getAvailableTaskCountsAndProjects(nonAdminUsers)
     } yield Ok(Json.toJson(entries))
   }

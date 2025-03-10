@@ -1,9 +1,8 @@
-import { Avatar, Button, List } from "antd";
 import {
   ArrowsAltOutlined,
   BackwardOutlined,
-  CodepenOutlined,
   CodeSandboxOutlined,
+  CodepenOutlined,
   DeleteOutlined,
   EditOutlined,
   EyeOutlined,
@@ -12,38 +11,47 @@ import {
   RocketOutlined,
   ShrinkOutlined,
 } from "@ant-design/icons";
-import * as React from "react";
+import { Avatar, Button, List } from "antd";
 import _ from "lodash";
+import * as React from "react";
 
 import classNames from "classnames";
+import FormattedDate from "components/formatted_date";
+import { formatUserName, getContributorById } from "oxalis/model/accessors/user_accessor";
+import { getReadableNameByVolumeTracingId } from "oxalis/model/accessors/volumetracing_accessor";
 import type {
-  ServerUpdateAction,
+  AddLayerToAnnotationUpdateAction,
+  AddSegmentIndexUpdateAction,
+  CreateEdgeUpdateAction,
   CreateNodeUpdateAction,
+  CreateSegmentUpdateAction,
+  DeleteAnnotationLayerUpdateAction,
+  DeleteEdgeUpdateAction,
   DeleteNodeUpdateAction,
-  UpdateTreeUpdateAction,
+  DeleteSegmentDataUpdateAction,
+  DeleteSegmentUpdateAction,
   DeleteTreeUpdateAction,
+  MergeAgglomerateUpdateAction,
+  MergeTreeUpdateAction,
+  MoveTreeComponentUpdateAction,
   RevertToVersionUpdateAction,
+  ServerUpdateAction,
+  SplitAgglomerateUpdateAction,
+  UpdateAnnotationLayerNameUpdateAction,
+  UpdateBucketUpdateAction,
+  UpdateMappingNameUpdateAction,
+  UpdateMetadataOfAnnotationUpdateAction,
   UpdateNodeUpdateAction,
-  UpdateTreeVisibilityUpdateAction,
+  UpdateSegmentGroupsUpdateAction,
+  UpdateSegmentUpdateAction,
   UpdateTreeEdgesVisibilityUpdateAction,
   UpdateTreeGroupVisibilityUpdateAction,
-  CreateEdgeUpdateAction,
-  DeleteEdgeUpdateAction,
-  SplitAgglomerateUpdateAction,
-  MergeAgglomerateUpdateAction,
-  CreateSegmentUpdateAction,
-  UpdateSegmentUpdateAction,
-  DeleteSegmentUpdateAction,
-  MoveTreeComponentUpdateAction,
-  MergeTreeUpdateAction,
-  UpdateMappingNameUpdateAction,
-  DeleteSegmentDataUpdateAction,
+  UpdateTreeUpdateAction,
+  UpdateTreeVisibilityUpdateAction,
 } from "oxalis/model/sagas/update_actions";
-import FormattedDate from "components/formatted_date";
-import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import type { HybridTracing, OxalisState } from "oxalis/store";
+import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { useSelector } from "react-redux";
-import type { OxalisState } from "oxalis/store";
-import { formatUserName, getContributorById } from "oxalis/model/accessors/user_accessor";
 type Description = {
   description: string;
   icon: React.ReactNode;
@@ -56,7 +64,10 @@ const updateTracingDescription = {
 // determines the order in which update actions are checked
 // to describe an update action batch. See also the comment
 // of the `getDescriptionForBatch` function.
-const descriptionFns: Record<ServerUpdateAction["name"], (...args: any) => Description> = {
+const descriptionFns: Record<
+  ServerUpdateAction["name"],
+  (firstAction: any, actionCount: number, tracing: HybridTracing) => Description
+> = {
   importVolumeTracing: (): Description => ({
     description: "Imported a volume tracing.",
     icon: <PlusOutlined />,
@@ -65,7 +76,11 @@ const descriptionFns: Record<ServerUpdateAction["name"], (...args: any) => Descr
     description: "Created the annotation.",
     icon: <RocketOutlined />,
   }),
-  updateUserBoundingBoxes: (): Description => ({
+  updateUserBoundingBoxesInSkeletonTracing: (): Description => ({
+    description: "Updated a bounding box.",
+    icon: <CodepenOutlined />,
+  }),
+  updateUserBoundingBoxesInVolumeTracing: (): Description => ({
     description: "Updated a bounding box.",
     icon: <CodepenOutlined />,
   }),
@@ -80,14 +95,32 @@ const descriptionFns: Record<ServerUpdateAction["name"], (...args: any) => Descr
         : "Deactivated the active mapping.",
     icon: <EyeOutlined />,
   }),
-  splitAgglomerate: (action: SplitAgglomerateUpdateAction): Description => ({
-    description: `Split agglomerate ${action.value.agglomerateId} by separating the segments at position ${action.value.segmentPosition1} and ${action.value.segmentPosition2}.`,
-    icon: <DeleteOutlined />,
-  }),
-  mergeAgglomerate: (action: MergeAgglomerateUpdateAction): Description => ({
-    description: `Merged agglomerates ${action.value.agglomerateId1} and ${action.value.agglomerateId2} by combining the segments at position ${action.value.segmentPosition1} and ${action.value.segmentPosition2}.`,
-    icon: <PlusOutlined />,
-  }),
+  splitAgglomerate: (action: SplitAgglomerateUpdateAction): Description => {
+    const segment1Description =
+      action.value.segmentPosition1 != null
+        ? `at position ${action.value.segmentPosition1}`
+        : (action.value.segmentId1 ?? "unknown");
+    const segment2Description =
+      action.value.segmentPosition2 ?? action.value.segmentId1 ?? "unknown";
+    const description = `Split agglomerate ${action.value.agglomerateId} by separating the segments ${segment1Description} and ${segment2Description}.`;
+    return {
+      description,
+      icon: <DeleteOutlined />,
+    };
+  },
+  mergeAgglomerate: (action: MergeAgglomerateUpdateAction): Description => {
+    const segment1Description =
+      action.value.segmentPosition1 != null
+        ? `at position ${action.value.segmentPosition1}`
+        : (action.value.segmentId1 ?? "unknown");
+    const segment2Description =
+      action.value.segmentPosition2 ?? action.value.segmentId1 ?? "unknown";
+    const description = `Merged agglomerates ${action.value.agglomerateId1} and ${action.value.agglomerateId2} by combining the segments  ${segment1Description} and ${segment2Description}.`;
+    return {
+      description,
+      icon: <PlusOutlined />,
+    };
+  },
   deleteTree: (action: DeleteTreeUpdateAction, count: number): Description => ({
     description:
       count > 1 ? `Deleted ${count} trees.` : `Deleted the tree with id ${action.value.id}.`,
@@ -118,14 +151,28 @@ const descriptionFns: Record<ServerUpdateAction["name"], (...args: any) => Descr
     description: `Updated the tree with id ${action.value.id}.`,
     icon: <EditOutlined />,
   }),
-  updateBucket: (): Description => ({
-    description: "Updated the segmentation.",
-    icon: <PictureOutlined />,
-  }),
-  updateSegmentGroups: (): Description => ({
-    description: "Updated the segment groups.",
-    icon: <EditOutlined />,
-  }),
+  updateBucket: (
+    firstAction: UpdateBucketUpdateAction,
+    _actionCount: number,
+    tracing: HybridTracing,
+  ): Description => {
+    const layerName = maybeGetReadableVolumeTracingName(tracing, firstAction.value.actionTracingId);
+    return {
+      description: `Updated the segmentation of layer ${layerName}.`,
+      icon: <PictureOutlined />,
+    };
+  },
+  updateSegmentGroups: (
+    firstAction: UpdateSegmentGroupsUpdateAction,
+    _actionCount: number,
+    tracing: HybridTracing,
+  ): Description => {
+    const layerName = maybeGetReadableVolumeTracingName(tracing, firstAction.value.actionTracingId);
+    return {
+      description: `Updated the segment groups of layer ${layerName}.`,
+      icon: <EditOutlined />,
+    };
+  },
   updateNode: (action: UpdateNodeUpdateAction): Description => ({
     description: `Updated the node with id ${action.value.id}.`,
     icon: <EditOutlined />,
@@ -156,26 +203,61 @@ const descriptionFns: Record<ServerUpdateAction["name"], (...args: any) => Descr
     description: "Updated the 3D view.",
     icon: <CodeSandboxOutlined />,
   }),
-  createSegment: (action: CreateSegmentUpdateAction): Description => ({
-    description: `Added the segment with id ${action.value.id} to the segments list.`,
-    icon: <PlusOutlined />,
-  }),
-  updateSegment: (action: UpdateSegmentUpdateAction): Description => ({
-    description: `Updated the segment with id ${action.value.id} in the segments list.`,
-    icon: <EditOutlined />,
-  }),
-  deleteSegment: (action: DeleteSegmentUpdateAction): Description => ({
-    description: `Deleted the segment with id ${action.value.id} from the segments list.`,
-    icon: <DeleteOutlined />,
-  }),
-  deleteSegmentData: (action: DeleteSegmentDataUpdateAction): Description => ({
-    description: `Deleted the data of segment ${action.value.id}. All voxels with that id were overwritten with 0.`,
-    icon: <DeleteOutlined />,
-  }),
-  addSegmentIndex: (): Description => ({
-    description: "Added segment index to enable segment statistics.",
-    icon: <EditOutlined />,
-  }),
+  createSegment: (
+    firstAction: CreateSegmentUpdateAction,
+    _actionCount: number,
+    tracing: HybridTracing,
+  ): Description => {
+    const layerName = maybeGetReadableVolumeTracingName(tracing, firstAction.value.actionTracingId);
+    return {
+      description: `Added the segment with id ${firstAction.value.id} to the segments list of layer ${layerName}.`,
+      icon: <PlusOutlined />,
+    };
+  },
+  updateSegment: (
+    firstAction: UpdateSegmentUpdateAction,
+    _actionCount: number,
+    tracing: HybridTracing,
+  ): Description => {
+    const layerName = maybeGetReadableVolumeTracingName(tracing, firstAction.value.actionTracingId);
+    return {
+      description: `Updated the segment with id ${firstAction.value.id} in the segments list  of layer ${layerName}.`,
+      icon: <EditOutlined />,
+    };
+  },
+  deleteSegment: (
+    firstAction: DeleteSegmentUpdateAction,
+    _actionCount: number,
+    tracing: HybridTracing,
+  ): Description => {
+    const layerName = maybeGetReadableVolumeTracingName(tracing, firstAction.value.actionTracingId);
+    return {
+      description: `Deleted the segment with id ${firstAction.value.id} from the segments list of layer ${layerName}.`,
+      icon: <DeleteOutlined />,
+    };
+  },
+  deleteSegmentData: (
+    firstAction: DeleteSegmentDataUpdateAction,
+    _actionCount: number,
+    tracing: HybridTracing,
+  ): Description => {
+    const layerName = maybeGetReadableVolumeTracingName(tracing, firstAction.value.actionTracingId);
+    return {
+      description: `Deleted the data of segment ${firstAction.value.id} of layer ${layerName}. All voxels with that id were overwritten with 0.`,
+      icon: <DeleteOutlined />,
+    };
+  },
+  addSegmentIndex: (
+    firstAction: AddSegmentIndexUpdateAction,
+    _actionCount: number,
+    tracing: HybridTracing,
+  ): Description => {
+    const layerName = maybeGetReadableVolumeTracingName(tracing, firstAction.value.actionTracingId);
+    return {
+      description: `Added segment index to layer ${layerName} to enable segment statistics.`,
+      icon: <EditOutlined />,
+    };
+  },
   // This should never be shown since currently this update action can only be triggered
   // by merging or splitting trees which is recognized separately, before this description
   // is accessed.
@@ -188,20 +270,47 @@ const descriptionFns: Record<ServerUpdateAction["name"], (...args: any) => Descr
     description: `Merged the trees with id ${action.value.sourceId} and ${action.value.targetId}.`,
     icon: <EditOutlined />,
   }),
-  updateTracing: (): Description => updateTracingDescription,
-};
+  updateSkeletonTracing: (): Description => updateTracingDescription,
+  updateVolumeTracing: (): Description => updateTracingDescription,
+  addLayerToAnnotation: (action: AddLayerToAnnotationUpdateAction): Description => ({
+    description: `Added the layer ${action.value.layerParameters.name} to the annotation.`,
+    icon: <PlusOutlined />,
+  }),
+  deleteLayerFromAnnotation: (action: DeleteAnnotationLayerUpdateAction): Description => ({
+    description: `Deleted the layer with id ${action.value.layerName} (${action.value.tracingId}) from the annotation.`,
+    icon: <DeleteOutlined />,
+  }),
+  updateLayerMetadata: (action: UpdateAnnotationLayerNameUpdateAction): Description => ({
+    description: `Updated the name of the layer with id ${action.value.tracingId} to ${action.value.layerName}.`,
+    icon: <EditOutlined />,
+  }),
+  updateMetadataOfAnnotation: (action: UpdateMetadataOfAnnotationUpdateAction): Description => {
+    return {
+      description: `Updated the description of the annotation to: ${action.value.description.slice(0, 100) || ""}`,
+      icon: <EditOutlined />,
+    };
+  },
+} as const;
+
+function maybeGetReadableVolumeTracingName(tracing: HybridTracing, tracingId: string): string {
+  const volumeTracing = tracing.volumes.find((volume) => volume.tracingId === tracingId);
+  return volumeTracing != null
+    ? getReadableNameByVolumeTracingId(tracing, volumeTracing.tracingId)
+    : "<unknown>";
+}
 
 function getDescriptionForSpecificBatch(
   actions: Array<ServerUpdateAction>,
   type: string,
+  tracing: HybridTracing,
 ): Description {
   const firstAction = actions[0];
 
   if (firstAction.name !== type) {
     throw new Error("Type constraint violated");
   }
-
-  return descriptionFns[type](firstAction, actions.length);
+  const fn = descriptionFns[type];
+  return fn(firstAction, actions.length, tracing);
 }
 
 // An update action batch can consist of more than one update action as a single user action
@@ -215,7 +324,10 @@ function getDescriptionForSpecificBatch(
 // "more expressive" update actions first and for more general ones later.
 // The order is determined by the order in which the update actions are added to the
 // `descriptionFns` object.
-function getDescriptionForBatch(actions: Array<ServerUpdateAction>): Description {
+function getDescriptionForBatch(
+  actions: Array<ServerUpdateAction>,
+  tracing: HybridTracing,
+): Description {
   const groupedUpdateActions = _.groupBy(actions, "name");
 
   const moveTreeComponentUAs = groupedUpdateActions.moveTreeComponent;
@@ -265,7 +377,7 @@ function getDescriptionForBatch(actions: Array<ServerUpdateAction>): Description
     const updateActions = groupedUpdateActions[key];
 
     if (updateActions != null) {
-      return getDescriptionForSpecificBatch(updateActions, key);
+      return getDescriptionForSpecificBatch(updateActions, key, tracing);
     }
   }
 
@@ -275,7 +387,7 @@ function getDescriptionForBatch(actions: Array<ServerUpdateAction>): Description
 
 type Props = {
   actions: Array<ServerUpdateAction>;
-  allowUpdate: boolean;
+  initialAllowUpdate: boolean;
   version: number;
   isNewest: boolean;
   isActive: boolean;
@@ -285,7 +397,7 @@ type Props = {
 };
 export default function VersionEntry({
   actions,
-  allowUpdate,
+  initialAllowUpdate,
   version,
   isNewest,
   isActive,
@@ -297,6 +409,7 @@ export default function VersionEntry({
   const contributors = useSelector((state: OxalisState) => state.tracing.contributors);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const owner = useSelector((state: OxalisState) => state.tracing.owner);
+  const tracing = useSelector((state: OxalisState) => state.tracing);
 
   const liClassName = classNames("version-entry", {
     "active-version-entry": isActive,
@@ -309,10 +422,10 @@ export default function VersionEntry({
       type="primary"
       onClick={() => onRestoreVersion(version)}
     >
-      {allowUpdate ? "Restore" : "Download"}
+      {initialAllowUpdate ? "Restore" : "Download"}
     </Button>
   );
-  const { description, icon } = getDescriptionForBatch(actions);
+  const { description, icon } = getDescriptionForBatch(actions, tracing);
 
   // In case the actionAuthorId is not set, the action was created before the multi-contributor
   // support. Default to the owner in that case.

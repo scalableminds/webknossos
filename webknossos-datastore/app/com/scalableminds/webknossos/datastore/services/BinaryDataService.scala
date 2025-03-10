@@ -22,7 +22,8 @@ class BinaryDataService(val dataBaseDir: Path,
                         val agglomerateServiceOpt: Option[AgglomerateService],
                         remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                         sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]],
-                        datasetErrorLoggingService: Option[DatasetErrorLoggingService])(implicit ec: ExecutionContext)
+                        datasetErrorLoggingService: Option[DatasetErrorLoggingService],
+                        val remoteWKClient: Option[DSRemoteWebknossosClient])(implicit ec: ExecutionContext)
     extends FoxImplicits
     with DatasetDeleter
     with LazyLogging {

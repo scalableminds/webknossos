@@ -107,24 +107,27 @@ export default class SegmentMeshController {
       color,
     });
 
+    // const meshMaterial = new THREE.MeshBasicMaterial({ color });
+
     // const meshMaterial = new THREE.MeshStandardMaterial({
     //   color, // A soft blue color
     //   metalness: 0.5, // Slight metallic effect
     //   roughness: 1, // Some surface roughness for a natural look
     //   side: THREE.DoubleSide, // Render both sides
-    //   flatShading: false, // Ensures smooth shading with computed normals
+    //   flatShading: true, // Ensures smooth shading with computed normals
     // });
 
     meshMaterial.side = THREE.FrontSide;
-    meshMaterial.transparent = true;
+    meshMaterial.transparent = false;
+    meshMaterial.blending = THREE.NormalBlending;
 
     // mesh.parent is still null at this moment, but when the mesh is
     // added to the group later, parent will be set. We'll ignore
     // this detail for now via the casting.
     const mesh = new THREE.Mesh(geometry, meshMaterial) as any as MeshSceneNode;
 
-    // mesh.castShadow = true;
-    // mesh.receiveShadow = true;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
     const tweenAnimation = new TWEEN.Tween({
       opacity: 0,
     });

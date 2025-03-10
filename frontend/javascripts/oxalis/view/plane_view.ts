@@ -20,7 +20,8 @@ import * as THREE from "three";
 import TWEEN from "tween.js";
 
 const settings = {
-  cameraLightIntensity: 10,
+  cameraLightIntensity1: 10,
+  cameraLightIntensity2: 10,
 };
 
 const createDirLight = (
@@ -28,8 +29,9 @@ const createDirLight = (
   target: Vector3,
   _intensity: number,
   camera: THREE.OrthographicCamera,
+  num: number,
 ) => {
-  const dirLight = new THREE.DirectionalLight(0x888888, settings.cameraLightIntensity);
+  const dirLight = new THREE.DirectionalLight(0x888888, settings["cameraLightIntensity" + num]);
   dirLight.position.set(...position);
   camera.add(dirLight);
   camera.add(dirLight.target);
@@ -39,7 +41,7 @@ const createDirLight = (
     window.gui = new GUI();
   }
   const gui = window.gui;
-  gui.add(settings, "cameraLightIntensity", 0, 10).onChange((value) => {
+  gui.add(settings, "cameraLightIntensity" + num, 0, 10).onChange((value) => {
     dirLight.intensity = value;
   });
 
@@ -80,7 +82,8 @@ class PlaneView {
     }
     this.cameras = cameras;
 
-    createDirLight([10, 10, 10], [0, 0, 10], 1 * Math.PI, this.cameras[OrthoViews.TDView]);
+    createDirLight([10, 10, 10], [0, 0, 10], 1 * Math.PI, this.cameras[OrthoViews.TDView], 1);
+    createDirLight([-10, 10, 10], [0, 0, 10], 1 * Math.PI, this.cameras[OrthoViews.TDView], 2);
     this.cameras[OrthoViews.PLANE_XY].position.z = -1;
     this.cameras[OrthoViews.PLANE_YZ].position.x = 1;
     this.cameras[OrthoViews.PLANE_XZ].position.y = 1;

@@ -103,7 +103,7 @@ class EditableMappingService @Inject()(
 
   val defaultSegmentToAgglomerateChunkSize: Int = 64 * 1024 // max. 1 MiB chunks (two 8-byte numbers per element)
 
-  val binaryDataService = new BinaryDataService(Paths.get(""), None, None, None, None)
+  val binaryDataService = new BinaryDataService(Paths.get(""), None, None, None, None, None)
 
   adHocMeshServiceHolder.tracingStoreAdHocMeshConfig = (binaryDataService, 30 seconds, 1)
   private val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.tracingStoreAdHocMeshService

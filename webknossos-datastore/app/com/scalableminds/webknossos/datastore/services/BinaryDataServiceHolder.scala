@@ -23,7 +23,8 @@ class BinaryDataServiceHolder @Inject()(
     config: DataStoreConfig,
     agglomerateService: AgglomerateService,
     remoteSourceDescriptorService: RemoteSourceDescriptorService,
-    datasetErrorLoggingService: DatasetErrorLoggingService)(implicit ec: ExecutionContext)
+    datasetErrorLoggingService: DatasetErrorLoggingService,
+    remoteWebknossosClient: DSRemoteWebknossosClient)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
   private lazy val sharedChunkContentsCache: AlfuCache[String, MultiArray] = {
@@ -46,7 +47,8 @@ class BinaryDataServiceHolder @Inject()(
     Some(agglomerateService),
     Some(remoteSourceDescriptorService),
     Some(sharedChunkContentsCache),
-    Some(datasetErrorLoggingService)
+    Some(datasetErrorLoggingService),
+    Some(remoteWebknossosClient)
   )
 
 }

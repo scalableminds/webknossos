@@ -38,6 +38,7 @@ function transformBackendJobToAPIJob(job: any): APIJob {
     resultLink: job.resultLink,
     createdAt: job.created,
     voxelyticsWorkflowHash: job.voxelyticsWorkflowHash,
+    creditCost: job.creditCost,
   };
 }
 
@@ -72,6 +73,24 @@ export async function cancelJob(jobId: string): Promise<APIJob> {
   return Request.receiveJSON(`/api/jobs/${jobId}/cancel`, {
     method: "PATCH",
   });
+}
+
+export type JobCreditCostInfo = {
+  costInCredits: string;
+  hasEnoughCredits: boolean;
+  // The organizations credits used during calculation whether the organization has enough credits for the job.
+  organizationCredits: string;
+};
+
+export async function getJobCreditCost(
+  command: string,
+  boundingBoxInMag: Vector6,
+): Promise<JobCreditCostInfo> {
+  const params = new URLSearchParams({
+    command,
+    boundingBoxInMag: boundingBoxInMag.join(","),
+  });
+  return await Request.receiveJSON(`/api/jobs/getCreditCost?${params}`);
 }
 
 export async function startConvertToWkwJob(

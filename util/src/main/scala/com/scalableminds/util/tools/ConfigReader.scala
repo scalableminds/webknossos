@@ -15,6 +15,11 @@ trait ConfigReader {
     }
   }
 
+  implicit val bigDecimalConfigLoader: ConfigLoader[BigDecimal] = (rootConfig: Config, path: String) => {
+    val literal = rootConfig.getString(path)
+    BigDecimal(literal)
+  }
+
   def get[A](path: String)(implicit loader: ConfigLoader[A]): A =
     raw.get[A](path)
 

@@ -12,6 +12,16 @@ function OrganizationReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "SET_ACTIVE_ORGANIZATIONS_CREDIT_BALANCE": {
+      return update(state, {
+        activeOrganization: {
+          creditBalance: {
+            $set: action.creditBalance,
+          },
+        },
+      });
+    }
+
     default:
       return state;
   }

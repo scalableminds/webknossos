@@ -15,13 +15,14 @@ import * as THREE from "three";
 import TWEEN from "tween.js";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 import { MeshBVH, MeshBVHHelper, acceleratedRaycast, getBVHExtremes } from "three-mesh-bvh";
+import GUI from "lil-gui";
 
 // Add the raycast function. Assumes the BVH is available on
 // the `boundsTree` variable
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
-const ACTIVATED_COLOR = [0.7, 0.5, 0.1] as const;
-const HOVERED_COLOR = [0.65, 0.5, 0.1] as const;
+const ACTIVATED_COLOR = [0.7, 0.6, 0.65] as const;
+const HOVERED_COLOR = [0.65, 0.6, 0.65] as const;
 
 type MeshMaterial = THREE.MeshLambertMaterial & { savedHex?: number };
 export type MeshSceneNode = THREE.Mesh<THREE.BufferGeometry, MeshMaterial> & {
@@ -110,13 +111,17 @@ export default class SegmentMeshController {
       color,
     });
     meshMaterial.side = THREE.FrontSide;
+    // todop: would it help to set it to false once the opacity is 1 ? hopefully not...
     meshMaterial.transparent = true;
+    // todop: necessary?
+    // meshMaterial.blending = THREE.NormalBlending;
 
     // mesh.parent is still null at this moment, but when the mesh is
     // added to the group later, parent will be set. We'll ignore
     // this detail for now via the casting.
     const mesh = new THREE.Mesh(geometry, meshMaterial) as any as MeshSceneNode;
 
+    // todop: test whether this changes sth? also test perf
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     const tweenAnimation = new TWEEN.Tween({
@@ -271,40 +276,84 @@ export default class SegmentMeshController {
 
   getColorObjectForSegment(segmentId: number, layerName: string) {
     const [hue, saturation, light] = getSegmentColorAsHSLA(Store.getState(), segmentId, layerName);
-    const color = new THREE.Color().setHSL(hue, 0.75 * saturation, light / 10);
+    const color = new THREE.Color().setHSL(hue, saturation, light);
+    color.convertSRGBToLinear();
     return color;
   }
 
+  getGui() {
+    if (!window.gui) {
+      window.gui = new GUI();
+    }
+    return window.gui;
+  }
+
   addLights(): void {
+    // const ambientLight2 = new THREE.AmbientLight(0x888888, 1.0 * Math.PI);
+    // // const directionalLight = new THREE.DirectionalLight(0x888888, 1.0 * Math.PI);
+    // this.meshesLODRootGroup.add(ambientLight2);
+    // // this.meshesLODRootGroup.add(directionalLight);
+
+    // return;
+
+    const settings = {
+      ambientIntensity: 0.41,
+      dirLight1Intensity: 0.54,
+      dirLight2Intensity: 0.29,
+      dirLight3Intensity: 0.29,
+      dirLight4Intensity: 0.17,
+      dirLight5Intensity: 1.03,
+      dirLight6Intensity: 0.29,
+      dirLight7Intensity: 0.17,
+      dirLight8Intensity: 0.54,
+    };
+
+    const gui = this.getGui();
+    gui.add(settings, "ambientIntensity", 0, 10);
+    gui.add(settings, "dirLight1Intensity", 0, 10);
+    gui.add(settings, "dirLight2Intensity", 0, 10);
+    gui.add(settings, "dirLight3Intensity", 0, 10);
+    gui.add(settings, "dirLight4Intensity", 0, 10);
+    gui.add(settings, "dirLight5Intensity", 0, 10);
+    gui.add(settings, "dirLight6Intensity", 0, 10);
+    gui.add(settings, "dirLight7Intensity", 0, 10);
+    gui.add(settings, "dirLight8Intensity", 0, 10);
+
     // Note that the PlaneView also attaches a directional light directly to the TD camera,
     // so that the light moves along the cam.
-    const AMBIENT_INTENSITY = 30;
-    const DIRECTIONAL_INTENSITY = 5;
-    const POINT_INTENSITY = 5;
-
-    const ambientLight = new THREE.AmbientLight(2105376, AMBIENT_INTENSITY);
-
-    const directionalLight = new THREE.DirectionalLight(16777215, DIRECTIONAL_INTENSITY);
-    directionalLight.position.x = 1;
-    directionalLight.position.y = 1;
-    directionalLight.position.z = 1;
-    directionalLight.position.normalize();
-
-    const directionalLight2 = new THREE.DirectionalLight(16777215, DIRECTIONAL_INTENSITY);
-    directionalLight2.position.x = -1;
-    directionalLight2.position.y = -1;
-    directionalLight2.position.z = -1;
-    directionalLight2.position.normalize();
-
-    const pointLight = new THREE.PointLight(16777215, POINT_INTENSITY);
-    pointLight.position.x = 0;
-    pointLight.position.y = -25;
-    pointLight.position.z = 10;
-
+    const ambientLight = new THREE.AmbientLight("white", settings.ambientIntensity);
     this.meshesLODRootGroup.add(ambientLight);
-    this.meshesLODRootGroup.add(directionalLight);
-    this.meshesLODRootGroup.add(directionalLight2);
-    this.meshesLODRootGroup.add(pointLight);
+
+    const lightPositions: Vector3[] = [
+      [1, 1, 1],
+      [-1, 1, 1],
+      [1, -1, 1],
+      [-1, -1, 1],
+      [1, 1, -1],
+      [-1, 1, -1],
+      [1, -1, -1],
+      [-1, -1, -1],
+    ];
+
+    const directionalLights: THREE.DirectionalLight[] = [];
+
+    lightPositions.forEach((pos, index) => {
+      const light = new THREE.DirectionalLight(
+        "white",
+        settings[`dirLight${index + 1}Intensity`] || 1,
+      );
+      light.position.set(...pos).normalize();
+      directionalLights.push(light);
+      this.meshesLODRootGroup.add(light);
+    });
+
+    gui.onChange(() => {
+      ambientLight.intensity = settings.ambientIntensity;
+      directionalLights.forEach((light, index) => {
+        light.intensity = settings[`dirLight${index + 1}Intensity`] || 1;
+      });
+      app.vent.emit("rerender");
+    });
   }
 
   getMeshGroupsByLOD(
@@ -409,14 +458,14 @@ export default class SegmentMeshController {
         const newColor: readonly [number, number, number] = mesh.isHovered
           ? HOVERED_COLOR
           : ACTIVATED_COLOR;
-        material.color = new THREE.Color().setHSL(...newColor);
+        material.color = new THREE.Color().setHSL(...newColor).convertSRGBToLinear();
         material.opacity = 1.0;
-        material.emissive.setHSL(...HOVERED_COLOR);
+        material.emissive.setHSL(...HOVERED_COLOR).convertSRGBToLinear();
       });
     } else {
       changeMaterial((material) => {
         // @ts-ignore
-        material.emissive.setHex("#FF00FF");
+        material.emissive.setHex("#FF00FF").convertSRGBToLinear();
         if (material.savedHex != null) {
           material.color.setHex(material.savedHex);
         }

@@ -191,8 +191,8 @@ export function isLayerWithoutTransformationConfigSupport(layer: APIDataLayer | 
   );
 }
 
-function toIdentityTransformMaybe(transform: Transform | null): Transform {
-  return transform && !equalsIdentityTransform(transform) ? transform : IdentityTransform;
+function toIdentityTransformMaybe(transform: Transform | null): Transform | null {
+  return transform && equalsIdentityTransform(transform) ? IdentityTransform : transform;
 }
 
 function _getTransformsForLayerOrNull(
@@ -206,7 +206,6 @@ function _getTransformsForLayerOrNull(
       nativelyRenderedLayerName,
     );
   }
-
   if (layer.name === nativelyRenderedLayerName) {
     // This layer should be rendered without any transforms.
     return null;
@@ -285,7 +284,7 @@ function _getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull(
     return null;
   }
 
-  return toIdentityTransformMaybe(invertTransform(transformsOfNativeLayer));
+  return invertTransform(transformsOfNativeLayer);
 }
 
 export const getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull = memoizeOne(

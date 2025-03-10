@@ -277,7 +277,7 @@ services:
     command:
       - fossildb
       - -c
-      - skeletons,volumes,volumeData,volumeSegmentIndex,editableMappingsInfo,editableMappingsAgglomerateToGraph,editableMappingsSegmentToAgglomerate,annotations,annotationUpdates
+      - skeletons,skeletonTreeBodies,volumes,volumeData,volumeSegmentIndex,editableMappingsInfo,editableMappingsAgglomerateToGraph,editableMappingsSegmentToAgglomerate,annotations,annotationUpdates
     user: ${USER_UID:-fossildb}:${USER_GID:-fossildb}
 
   fossildb-persisted:

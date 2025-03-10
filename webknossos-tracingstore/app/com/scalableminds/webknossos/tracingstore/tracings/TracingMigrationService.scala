@@ -21,7 +21,6 @@ trait ColorGenerator {
 trait TracingMigrationService[T <: GeneratedMessage] extends FoxImplicits {
   implicit protected def ec: ExecutionContext
 
-  // Each migration transforms a tracing and additionally returns whether the tracing was modified
   protected def migrations: List[T => Fox[T]]
 
   def migrateTracing(tracing: T): Fox[T] = {

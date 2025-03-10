@@ -40,7 +40,7 @@ import {
   settingsTooltips,
 } from "messages";
 import type { Vector3 } from "oxalis/constants";
-import Constants, { ControlModeEnum, IdentityTransform, MappingStatusEnum } from "oxalis/constants";
+import Constants, { ControlModeEnum, MappingStatusEnum } from "oxalis/constants";
 import defaultState from "oxalis/default_state";
 import {
   getDefaultValueRangeOfLayer,
@@ -55,6 +55,7 @@ import {
   getTransformsForLayer,
   getTransformsForLayerOrNull,
   hasDatasetTransforms,
+  isIdentityTransform,
   isLayerWithoutTransformationConfigSupport,
 } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import {
@@ -207,7 +208,7 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
   if (!showIcon) {
     return null;
   }
-  const isRenderedNatively = transform == null || transform === IdentityTransform;
+  const isRenderedNatively = transform == null || isIdentityTransform(transform);
 
   const typeToLabel = {
     affine: "an affine",

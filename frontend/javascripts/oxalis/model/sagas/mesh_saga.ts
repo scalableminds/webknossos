@@ -1,5 +1,5 @@
 import { saveAs } from "file-saver";
-import { mergeBufferGeometries } from "libs/BufferGeometryUtils";
+import { mergeGeometries } from "libs/BufferGeometryUtils";
 import Deferred from "libs/async/deferred";
 import ErrorHandling from "libs/error_handling";
 import { V3 } from "libs/mjs";
@@ -246,8 +246,8 @@ function* getInfoForMeshLoading(
     meshExtraInfo.preferredQuality != null
       ? meshExtraInfo.preferredQuality
       : yield* select(
-          (state) => state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
-        );
+        (state) => state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
+      );
   const zoomStep = magInfo.getClosestExistingIndex(preferredZoomStep);
   return {
     zoomStep,
@@ -365,14 +365,14 @@ function* loadFullAdHocMesh(
     visibleSegmentationLayer?.tracingId != null;
   let positionsToRequest = usePositionsFromSegmentIndex
     ? yield* getChunkPositionsFromSegmentIndex(
-        tracingStoreHost,
-        layer,
-        segmentId,
-        cubeSize,
-        mag,
-        clippedPosition,
-        additionalCoordinates,
-      )
+      tracingStoreHost,
+      layer,
+      segmentId,
+      cubeSize,
+      mag,
+      clippedPosition,
+      additionalCoordinates,
+    )
     : [clippedPosition];
 
   if (positionsToRequest.length === 0) {
@@ -467,9 +467,8 @@ function* maybeLoadMeshChunk(
   const owningOrganization = yield* select((state) => state.dataset.owningOrganization);
   const datasetDirectoryName = yield* select((state) => state.dataset.directoryName);
   const tracingStoreHost = yield* select((state) => state.tracing.tracingStore.url);
-  const dataStoreUrl = `${dataStoreHost}/data/datasets/${owningOrganization}/${datasetDirectoryName}/layers/${
-    layer.fallbackLayer != null ? layer.fallbackLayer : layer.name
-  }`;
+  const dataStoreUrl = `${dataStoreHost}/data/datasets/${owningOrganization}/${datasetDirectoryName}/layers/${layer.fallbackLayer != null ? layer.fallbackLayer : layer.name
+    }`;
   const tracingStoreUrl = `${tracingStoreHost}/tracings/volume/${layer.name}`;
 
   const mag = magInfo.getMagByIndexOrThrow(zoomStep);
@@ -835,7 +834,8 @@ function* loadPrecomputedMeshForSegmentId(
     return;
   }
 
-  const loadChunksTasks = _getLoadChunksTasks(
+  yield* call(
+    _getLoadChunksTasks,
     dataset,
     layerName,
     meshFile,
@@ -848,13 +848,6 @@ function* loadPrecomputedMeshForSegmentId(
     additionalCoordinates,
     mergeChunks,
   );
-
-  try {
-    yield* call(processTaskWithPool, loadChunksTasks, PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);
-  } catch (exception) {
-    Toast.warning(`Some mesh chunks could not be loaded for segment ${id}.`);
-    console.error(exception);
-  }
 
   yield* put(finishedLoadingMeshAction(layerName, id));
 }
@@ -940,7 +933,7 @@ function* _getChunkLoadingDescriptors(
   };
 }
 
-function _getLoadChunksTasks(
+function* _getLoadChunksTasks(
   dataset: APIDataset,
   layerName: string,
   meshFile: APIMeshFile,
@@ -956,123 +949,132 @@ function _getLoadChunksTasks(
   const { segmentMeshController } = getSceneController();
   const { meshFileName } = meshFile;
   const loader = getDracoLoader();
-  return _.compact(
-    _.flatten(
-      loadingOrder.map((lod) => {
-        if (availableChunksMap[lod] == null) {
-          return;
-        }
-        const availableChunks = availableChunksMap[lod];
-        // Sort the chunks by distance to the seedPosition, so that the mesh loads from the inside out
-        const sortedAvailableChunks = sortByDistanceTo(availableChunks, seedPosition);
+  for (const lod of loadingOrder) {
+    if (availableChunksMap[lod] == null) {
+      return;
+    }
+    const availableChunks = availableChunksMap[lod];
+    // Sort the chunks by distance to the seedPosition, so that the mesh loads from the inside out
+    const sortedAvailableChunks = sortByDistanceTo(availableChunks, seedPosition);
 
-        const batches = chunkDynamically(
-          sortedAvailableChunks as meshApi.MeshChunk[],
-          MIN_BATCH_SIZE_IN_BYTES,
-          (chunk) => chunk.byteSize,
-        );
+    const batches = chunkDynamically(
+      sortedAvailableChunks as meshApi.MeshChunk[],
+      MIN_BATCH_SIZE_IN_BYTES,
+      (chunk) => chunk.byteSize,
+    );
 
-        const tasks = batches.map(
-          (chunks) =>
-            function* loadChunks(): Saga<void> {
-              const dataForChunks = yield* call(
-                meshApi.getMeshfileChunkData,
-                dataset.dataStore.url,
-                dataset,
-                getBaseSegmentationName(segmentationLayer),
-                {
-                  meshFile: meshFileName,
-                  // Only extract the relevant properties
-                  requests: chunks.map(({ byteOffset, byteSize }) => ({ byteOffset, byteSize })),
-                },
-              );
-
-              const errorsWithDetails = [];
-
-              const chunksWithData = chunks.map((chunk, idx) => ({
-                ...chunk,
-                data: dataForChunks[idx],
-              }));
-              // Group chunks by position and merge meshes in the same chunk to keep the number
-              // of objects in the scene low for better performance. Ideally, more mesh geometries
-              // would be merged, but the meshes in different chunks need to be translated differently.
-              const chunksGroupedByPosition = _.groupBy(chunksWithData, "position");
-              for (const chunksForPosition of Object.values(chunksGroupedByPosition)) {
-                // All chunks in chunksForPosition have the same position
-                const position = chunksForPosition[0].position;
-
-                let bufferGeometries: BufferGeometryWithInfo[] = [];
-                for (let chunkIdx = 0; chunkIdx < chunksForPosition.length; chunkIdx++) {
-                  const chunk = chunksForPosition[chunkIdx];
-                  try {
-                    const bufferGeometry = (yield* call(
-                      loader.decodeDracoFileAsync,
-                      chunk.data,
-                    )) as BufferGeometryWithInfo;
-                    bufferGeometry.unmappedSegmentId = chunk.unmappedSegmentId;
-                    bufferGeometries.push(bufferGeometry);
-                  } catch (error) {
-                    errorsWithDetails.push({ error, chunk });
-                  }
-                }
-
-                if (mergeChunks) {
-                  const geometry = mergeBufferGeometries(bufferGeometries, true);
-
-                  // If mergeBufferGeometries does not succeed, the method logs the error to the console and returns null
-                  if (geometry == null) continue;
-                  (geometry as BufferGeometryWithInfo).isMerged = true;
-                  bufferGeometries = [geometry as BufferGeometryWithInfo];
-                }
-
-                // Compute vertex normals to achieve smooth shading
-                bufferGeometries.forEach((geometry) => geometry.computeVertexNormals());
-
-                // Check if the mesh scale is different to all supported mags of the active segmentation scaled by the dataset scale and warn in the console to make debugging easier in such a case.
-                // This hint at the mesh file being computed when the dataset scale was different than currently configured.
-                const segmentationLayerMags = yield* select(
-                  (state) => getVisibleSegmentationLayer(state)?.resolutions,
-                );
-                const datasetScaleFactor = dataset.dataSource.scale.factor;
-                if (segmentationLayerMags && scale) {
-                  const doesSomeSegmentMagMatchMeshScale = segmentationLayerMags.some((res) =>
-                    areVec3AlmostEqual(V3.scale3(datasetScaleFactor, res), scale),
-                  );
-                  if (!doesSomeSegmentMagMatchMeshScale) {
-                    console.warn(
-                      `Scale of mesh ${id} is different to dataset scale. Mesh scale: ${scale}, Dataset scale: ${dataset.dataSource.scale.factor}. This might lead to unexpected rendering results.`,
-                    );
-                  }
-                }
-
-                yield* call(
-                  {
-                    context: segmentMeshController,
-                    fn: segmentMeshController.addMeshFromGeometries,
-                  },
-                  bufferGeometries,
-                  id,
-                  position,
-                  // Apply the scale from the segment info, which includes dataset scale and mag
-                  scale,
-                  lod,
-                  layerName,
-                  additionalCoordinates,
-                );
-              }
-
-              if (errorsWithDetails.length > 0) {
-                console.warn("Errors occurred while decoding mesh chunks:", errorsWithDetails);
-                // Use first error as representative
-                throw errorsWithDetails[0].error;
-              }
+    let bufferGeometries: BufferGeometryWithInfo[] = [];
+    const tasks = batches.map(
+      (chunks) =>
+        function* loadChunks(): Saga<void> {
+          const dataForChunks = yield* call(
+            meshApi.getMeshfileChunkData,
+            dataset.dataStore.url,
+            dataset,
+            getBaseSegmentationName(segmentationLayer),
+            {
+              meshFile: meshFileName,
+              // Only extract the relevant properties
+              requests: chunks.map(({ byteOffset, byteSize }) => ({
+                byteOffset,
+                byteSize,
+              })),
             },
-        );
+          );
 
-        return tasks;
-      }),
-    ),
-  );
+          const errorsWithDetails = [];
+
+          const chunksWithData = chunks.map((chunk, idx) => ({
+            ...chunk,
+            data: dataForChunks[idx],
+          }));
+          // Group chunks by position and merge meshes in the same chunk to keep the number
+          // of objects in the scene low for better performance. Ideally, more mesh geometries
+          // would be merged, but the meshes in different chunks need to be translated differently.
+          const chunksGroupedByPosition = _.groupBy(chunksWithData, "position");
+          for (const chunksForPosition of Object.values(chunksGroupedByPosition)) {
+            // All chunks in chunksForPosition have the same position
+            const position = chunksForPosition[0].position;
+
+            for (let chunkIdx = 0; chunkIdx < chunksForPosition.length; chunkIdx++) {
+              const chunk = chunksForPosition[chunkIdx];
+              try {
+                const bufferGeometry = (yield* call(
+                  loader.decodeDracoFileAsync,
+                  chunk.data,
+                )) as BufferGeometryWithInfo;
+                bufferGeometry.unmappedSegmentId = chunk.unmappedSegmentId;
+
+                bufferGeometry.translate(position[0], position[1], position[2]);
+
+                bufferGeometries.push(bufferGeometry);
+              } catch (error) {
+                errorsWithDetails.push({ error, chunk });
+              }
+            }
+          }
+
+          if (errorsWithDetails.length > 0) {
+            console.warn("Errors occurred while decoding mesh chunks:", errorsWithDetails);
+            // Use first error as representative
+            throw errorsWithDetails[0].error;
+          }
+        },
+    );
+
+    try {
+      yield* call(processTaskWithPool, tasks, PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);
+    } catch (exception) {
+      Toast.warning(`Some mesh chunks could not be loaded for segment ${id}.`);
+      console.error(exception);
+    }
+
+    if (mergeChunks) {
+      const geometry = mergeGeometries(bufferGeometries, false);
+
+      // If mergeGeometries does not succeed, the method logs the error to the console and returns null
+      if (geometry == null) {
+        console.error("Merged geometry is null. Look at error above.");
+        return;
+      }
+      (geometry as BufferGeometryWithInfo).isMerged = true;
+      bufferGeometries = [geometry as BufferGeometryWithInfo];
+    }
+
+    // Compute vertex normals to achieve smooth shading
+    bufferGeometries.forEach((geometry) => geometry.computeVertexNormals());
+
+    // Check if the mesh scale is different to all supported mags of the active segmentation scaled by the dataset scale and warn in the console to make debugging easier in such a case.
+    // This hint at the mesh file being computed when the dataset scale was different than currently configured.
+    const segmentationLayerMags = yield* select(
+      (state) => getVisibleSegmentationLayer(state)?.resolutions,
+    );
+    const datasetScaleFactor = dataset.dataSource.scale.factor;
+    if (segmentationLayerMags && scale) {
+      const doesSomeSegmentMagMatchMeshScale = segmentationLayerMags.some((res) =>
+        areVec3AlmostEqual(V3.scale3(datasetScaleFactor, res), scale),
+      );
+      if (!doesSomeSegmentMagMatchMeshScale) {
+        console.warn(
+          `Scale of mesh ${id} is different to dataset scale. Mesh scale: ${scale}, Dataset scale: ${dataset.dataSource.scale.factor}. This might lead to unexpected rendering results.`,
+        );
+      }
+    }
+
+    yield* call(
+      {
+        context: segmentMeshController,
+        fn: segmentMeshController.addMeshFromGeometries,
+      },
+      bufferGeometries,
+      id,
+      // Apply the scale from the segment info, which includes dataset scale and mag
+      scale,
+      lod,
+      layerName,
+      additionalCoordinates,
+    );
+  }
 }
 
 function sortByDistanceTo(

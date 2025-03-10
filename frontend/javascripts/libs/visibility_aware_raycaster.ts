@@ -16,9 +16,10 @@ export default class VisibilityAwareRaycaster extends THREE.Raycaster {
     recursive?: boolean,
     intersects: THREE.Intersection<TIntersected>[] = [],
   ): THREE.Intersection<TIntersected>[] {
+    let duration = 0;
     for (let i = 0, l = objects.length; i < l; i++) {
       if (objects[i].visible) {
-        this.intersectObject(objects[i], recursive, intersects);
+        duration += this.intersectObject(objects[i], recursive, intersects);
       }
     }
 
@@ -30,9 +31,13 @@ export default class VisibilityAwareRaycaster extends THREE.Raycaster {
     object: THREE.Object3D,
     recursive?: boolean,
     intersects: THREE.Intersection<TIntersected>[] = [],
-  ): THREE.Intersection<TIntersected>[] {
+  ): number {
+    let duration = 0;
     if (object.layers.test(this.layers)) {
+      const before = performance.now();
       object.raycast(this, intersects);
+      const after = performance.now();
+      duration = after - before;
     }
 
     if (recursive === true) {
@@ -40,13 +45,13 @@ export default class VisibilityAwareRaycaster extends THREE.Raycaster {
 
       for (let i = 0, l = children.length; i < l; i++) {
         if (children[i].visible) {
-          this.intersectObject(children[i], true, intersects);
+          duration += this.intersectObject(children[i], true, intersects);
         }
       }
     }
 
     intersects.sort(ascSort);
 
-    return intersects;
+    return duration;
   }
 }

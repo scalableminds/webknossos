@@ -35,24 +35,16 @@ const createDirLight = (
 };
 
 const raycaster = new VisibilityAwareRaycaster();
+raycaster.firstHitOnly = true;
 let oldRaycasterHit: MeshSceneNode | null = null;
-const MESH_HOVER_THROTTLING_DELAY = 150;
 
 class PlaneView {
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
-  throttledPerformMeshHitTest: (
-    arg0: [number, number],
-  ) => RaycastIntersection<THREE.Object3D> | null | undefined;
-
   running: boolean;
   needsRerender: boolean;
   unsubscribeFunctions: Array<() => void> = [];
 
   constructor() {
-    this.throttledPerformMeshHitTest = _.throttle(
-      this.performMeshHitTest,
-      MESH_HOVER_THROTTLING_DELAY,
-    );
     this.running = false;
     const { scene } = getSceneController();
     // Initialize main THREE.js components
@@ -162,7 +154,9 @@ class PlaneView {
     const intersectableObjects = meshesLODRootGroup.children;
     // The second parameter of intersectObjects is set to true to ensure that
     // the groups which contain the actual meshes are traversed.
+    const before = performance.now();
     const intersections = raycaster.intersectObjects(intersectableObjects, true);
+    const after = performance.now();
     const hitObject = intersections.length > 0 ? (intersections[0].object as MeshSceneNode) : null;
 
     // Check whether we are hitting the same object as before, since we can return early
@@ -182,6 +176,7 @@ class PlaneView {
 
     // Highlight new hit
     if (hitObject?.parent != null) {
+      console.log("took", after - before, "ms");
       segmentMeshController.updateMeshAppearance(hitObject, true);
 
       Store.dispatch(

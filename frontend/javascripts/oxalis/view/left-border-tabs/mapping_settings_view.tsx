@@ -155,11 +155,11 @@ class MappingSettingsView extends React.Component<Props, State> {
     const selectValueProp =
       mappingName != null
         ? {
-            value:
-              editableMapping != null
-                ? `${editableMapping.baseMappingName} (${mappingName})`
-                : mappingName,
-          }
+          value:
+            editableMapping != null
+              ? `${editableMapping.baseMappingName} (${mappingName})`
+              : mappingName,
+        }
         : {};
 
     const renderCategoryOptions = (optionStrings: string[], category: MappingType) => {
@@ -289,12 +289,5 @@ function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
   };
 }
 
-const debounceTime = 100;
-const maxWait = 500;
-
 const connector = connect(mapStateToProps, mapDispatchToProps);
-export default connector(
-  debounceRender(MappingSettingsView, debounceTime, {
-    maxWait,
-  }),
-);
+export default connector(MappingSettingsView);

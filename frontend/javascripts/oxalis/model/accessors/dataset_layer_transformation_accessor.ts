@@ -192,7 +192,7 @@ export function isLayerWithoutTransformationConfigSupport(layer: APIDataLayer | 
 }
 
 function toIdentityTransformMaybe(transform: Transform | null): Transform {
-  return transform && !isIdentityTransform(transform) ? transform : IdentityTransform;
+  return transform && !equalsIdentityTransform(transform) ? transform : IdentityTransform;
 }
 
 function _getTransformsForLayerOrNull(
@@ -243,7 +243,7 @@ export function getTransformsForLayer(
   );
 }
 
-function isIdentityTransform(transform: Transform) {
+function equalsIdentityTransform(transform: Transform) {
   return transform.type === "affine" && _.isEqual(transform.affineMatrix, Identity4x4);
 }
 

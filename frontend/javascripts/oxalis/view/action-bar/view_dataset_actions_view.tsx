@@ -6,7 +6,7 @@ import {
   VideoCameraOutlined,
 } from "@ant-design/icons";
 import { Dropdown, type MenuProps } from "antd";
-import type { MenuItemType, SubMenuType } from "antd/es/menu/interface";
+import type { MenuItemType, SubMenuType } from "antd/lib/menu/interface";
 import {
   setPythonClientModalVisibilityAction,
   setRenderAnimationModalVisibilityAction,
@@ -39,6 +39,27 @@ export const renderAnimationMenuItem: MenuItemType = {
   },
 };
 
+const shareModalMenuItem: MenuItemType = {
+  key: "share-button",
+  onClick: () => Store.dispatch(setShareModalVisibilityAction(true)),
+  icon: <ShareAltOutlined />,
+  label: "Share",
+};
+
+const pythonClientMenuItem: MenuItemType = {
+  key: "python-client-button",
+  onClick: () => Store.dispatch(setPythonClientModalVisibilityAction(true)),
+  icon: <DownloadOutlined />,
+  label: "Download",
+};
+
+export const viewDatasetMenu = [
+  shareModalMenuItem,
+  screenshotMenuItem,
+  renderAnimationMenuItem,
+  pythonClientMenuItem,
+];
+
 export default function ViewDatasetActionsView(props: Props) {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const isShareModalOpen = useSelector((state: OxalisState) => state.uiInformation.showShareModal);
@@ -63,25 +84,7 @@ export default function ViewDatasetActionsView(props: Props) {
       onClose={() => Store.dispatch(setPythonClientModalVisibilityAction(false))}
     />
   );
-  const overlayMenu: MenuProps = {
-    items: [
-      {
-        key: "share-button",
-        onClick: () => Store.dispatch(setShareModalVisibilityAction(true)),
-        icon: <ShareAltOutlined />,
-        label: "Share",
-      },
-      screenshotMenuItem,
-      renderAnimationMenuItem,
-      {
-        key: "python-client-button",
-        onClick: () => Store.dispatch(setPythonClientModalVisibilityAction(true)),
-        icon: <DownloadOutlined />,
-        label: "Download",
-      },
-      props.layoutMenu,
-    ],
-  };
+  const overlayMenu: MenuProps = { items: [...viewDatasetMenu, props.layoutMenu] };
 
   const renderAnimationModal = (
     <CreateAnimationModal

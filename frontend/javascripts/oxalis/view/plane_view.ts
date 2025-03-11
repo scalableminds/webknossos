@@ -50,7 +50,8 @@ const createDirLight = (
 
 const raycaster = new VisibilityAwareRaycaster();
 raycaster.firstHitOnly = true;
-let oldRaycasterHit: MeshSceneNode | null = null;
+let oldRaycasterHit: { node: MeshSceneNode; face: THREE.Face; unmappedSegmentId: number } | null =
+  null;
 
 class PlaneView {
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
@@ -172,27 +173,44 @@ class PlaneView {
     const before = performance.now();
     const intersections = raycaster.intersectObjects(intersectableObjects, true);
     const after = performance.now();
+    const face = intersections.length > 0 ? intersections[0].face : null;
     const hitObject = intersections.length > 0 ? (intersections[0].object as MeshSceneNode) : null;
+    let unmappedSegmentId = 0;
+
+    if (hitObject && face) {
+      const unmappedSegmentIds = hitObject.geometry.attributes.unmappedSegmentId;
+      unmappedSegmentId = unmappedSegmentIds.array[face.a];
+    }
 
     // Check whether we are hitting the same object as before, since we can return early
     // in this case.
-    if (hitObject === oldRaycasterHit) {
+    if (unmappedSegmentId === oldRaycasterHit?.unmappedSegmentId) {
       return intersections.length > 0 ? intersections[0] : null;
     }
 
     // Undo highlighting of old hit
-    if (oldRaycasterHit?.parent != null) {
-      segmentMeshController.updateMeshAppearance(oldRaycasterHit, false);
+    if (oldRaycasterHit?.node.parent != null) {
+      console.time("updateMeshAppearance for old hit");
+      segmentMeshController.updateMeshAppearance(
+        oldRaycasterHit.node,
+        false,
+        undefined,
+        oldRaycasterHit.face,
+      );
+      console.timeEnd("updateMeshAppearance for old hit");
 
       oldRaycasterHit = null;
     }
 
-    oldRaycasterHit = hitObject;
+    oldRaycasterHit =
+      hitObject != null && face != null ? { node: hitObject, face, unmappedSegmentId } : null;
 
     // Highlight new hit
     if (hitObject?.parent != null) {
-      console.log("took", after - before, "ms");
-      segmentMeshController.updateMeshAppearance(hitObject, true);
+      console.log("raycast took", after - before, "ms");
+      console.time("updateMeshAppearance");
+      segmentMeshController.updateMeshAppearance(hitObject, true, undefined, face);
+      console.timeEnd("updateMeshAppearance");
 
       Store.dispatch(
         updateTemporarySettingAction(

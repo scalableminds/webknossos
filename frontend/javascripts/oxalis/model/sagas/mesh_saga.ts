@@ -6,6 +6,7 @@ import { V3 } from "libs/mjs";
 import { areVec3AlmostEqual, chunkDynamically, sleep } from "libs/utils";
 import _ from "lodash";
 import type { ActionPattern } from "redux-saga/effects";
+import * as THREE from "three";
 import type { APIDataset, APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
 
 import {
@@ -26,7 +27,10 @@ import { WkDevFlags } from "oxalis/api/wk_dev";
 import type { Vector3 } from "oxalis/constants";
 import { AnnotationToolEnum, MappingStatusEnum } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
-import type { BufferGeometryWithInfo } from "oxalis/controller/segment_mesh_controller";
+import {
+  PositionToSegmentId,
+  type BufferGeometryWithInfo,
+} from "oxalis/controller/segment_mesh_controller";
 import {
   getMagInfo,
   getMappingInfo,
@@ -246,8 +250,8 @@ function* getInfoForMeshLoading(
     meshExtraInfo.preferredQuality != null
       ? meshExtraInfo.preferredQuality
       : yield* select(
-        (state) => state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
-      );
+          (state) => state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
+        );
   const zoomStep = magInfo.getClosestExistingIndex(preferredZoomStep);
   return {
     zoomStep,
@@ -365,14 +369,14 @@ function* loadFullAdHocMesh(
     visibleSegmentationLayer?.tracingId != null;
   let positionsToRequest = usePositionsFromSegmentIndex
     ? yield* getChunkPositionsFromSegmentIndex(
-      tracingStoreHost,
-      layer,
-      segmentId,
-      cubeSize,
-      mag,
-      clippedPosition,
-      additionalCoordinates,
-    )
+        tracingStoreHost,
+        layer,
+        segmentId,
+        cubeSize,
+        mag,
+        clippedPosition,
+        additionalCoordinates,
+      )
     : [clippedPosition];
 
   if (positionsToRequest.length === 0) {
@@ -467,8 +471,9 @@ function* maybeLoadMeshChunk(
   const owningOrganization = yield* select((state) => state.dataset.owningOrganization);
   const datasetDirectoryName = yield* select((state) => state.dataset.directoryName);
   const tracingStoreHost = yield* select((state) => state.tracing.tracingStore.url);
-  const dataStoreUrl = `${dataStoreHost}/data/datasets/${owningOrganization}/${datasetDirectoryName}/layers/${layer.fallbackLayer != null ? layer.fallbackLayer : layer.name
-    }`;
+  const dataStoreUrl = `${dataStoreHost}/data/datasets/${owningOrganization}/${datasetDirectoryName}/layers/${
+    layer.fallbackLayer != null ? layer.fallbackLayer : layer.name
+  }`;
   const tracingStoreUrl = `${tracingStoreHost}/tracings/volume/${layer.name}`;
 
   const mag = magInfo.getMagByIndexOrThrow(zoomStep);
@@ -988,6 +993,8 @@ function* _getLoadChunksTasks(
             ...chunk,
             data: dataForChunks[idx],
           }));
+
+          // todop: partially obsolete comment
           // Group chunks by position and merge meshes in the same chunk to keep the number
           // of objects in the scene low for better performance. Ideally, more mesh geometries
           // would be merged, but the meshes in different chunks need to be translated differently.
@@ -1004,6 +1011,15 @@ function* _getLoadChunksTasks(
                   chunk.data,
                 )) as BufferGeometryWithInfo;
                 bufferGeometry.unmappedSegmentId = chunk.unmappedSegmentId;
+
+                const unmappedSegmentIdBuffer = new Float32Array(
+                  bufferGeometry.attributes.position.count,
+                );
+                unmappedSegmentIdBuffer.fill(chunk.unmappedSegmentId);
+                bufferGeometry.setAttribute(
+                  "unmappedSegmentId",
+                  new THREE.BufferAttribute(unmappedSegmentIdBuffer, 1),
+                );
 
                 bufferGeometry.translate(position[0], position[1], position[2]);
 
@@ -1029,14 +1045,21 @@ function* _getLoadChunksTasks(
       console.error(exception);
     }
 
-    if (mergeChunks) {
-      const geometry = mergeGeometries(bufferGeometries, false);
+    // todop: clean up
+    if (mergeChunks || true) {
+      const sortedBufferGeometries = _.sortBy(
+        bufferGeometries,
+        (geometryWithInfo) => geometryWithInfo.unmappedSegmentId,
+      );
+
+      const geometry = mergeGeometries(sortedBufferGeometries, false) as BufferGeometryWithInfo;
 
       // If mergeGeometries does not succeed, the method logs the error to the console and returns null
       if (geometry == null) {
         console.error("Merged geometry is null. Look at error above.");
         return;
       }
+      geometry.positionToSegmentId = new PositionToSegmentId(sortedBufferGeometries);
       (geometry as BufferGeometryWithInfo).isMerged = true;
       bufferGeometries = [geometry as BufferGeometryWithInfo];
     }

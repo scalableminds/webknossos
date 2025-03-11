@@ -1,7 +1,7 @@
 import app from "app";
 import { mergeVertices } from "libs/BufferGeometryUtils";
 import _ from "lodash";
-import type { Vector3 } from "oxalis/constants";
+import type { Vector2, Vector3 } from "oxalis/constants";
 import CustomLOD from "oxalis/controller/custom_lod";
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -21,10 +21,12 @@ import GUI from "lil-gui";
 // the `boundsTree` variable
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
-const ACTIVATED_COLOR = [0.7, 0.6, 0.65] as const;
-const HOVERED_COLOR = [0.65, 0.6, 0.65] as const;
+const hslToSRGB = (hsl: Vector3) => new THREE.Color().setHSL(...hsl).convertSRGBToLinear();
 
-type MeshMaterial = THREE.MeshLambertMaterial & { savedHex?: number };
+const ACTIVATED_COLOR = hslToSRGB([0.7, 0.9, 0.75]);
+const HOVERED_COLOR = hslToSRGB([0.65, 0.9, 0.75]);
+
+type MeshMaterial = THREE.MeshLambertMaterial & { savedHex?: Vector3 };
 export type MeshSceneNode = THREE.Mesh<THREE.BufferGeometry, MeshMaterial> & {
   unmappedSegmentId?: number | null;
   isMerged?: boolean;
@@ -33,9 +35,44 @@ export type MeshSceneNode = THREE.Mesh<THREE.BufferGeometry, MeshMaterial> & {
   parent: SceneGroupForMeshes;
 };
 export type SceneGroupForMeshes = THREE.Group & { segmentId: number; children: MeshSceneNode[] };
+
+export class PositionToSegmentId {
+  cumulativeStartPosition: number[];
+  unmappedSegmentIds: number[];
+  constructor(sortedBufferGeometries: BufferGeometryWithInfo[]) {
+    let cumsum = 0;
+    this.cumulativeStartPosition = [];
+    this.unmappedSegmentIds = [];
+
+    for (const bufferGeometry of sortedBufferGeometries) {
+      const isNewSegmentId =
+        this.unmappedSegmentIds.length === 0 ||
+        bufferGeometry.unmappedSegmentId !== this.unmappedSegmentIds.at(-1);
+
+      if (isNewSegmentId) {
+        this.unmappedSegmentIds.push(bufferGeometry.unmappedSegmentId);
+        this.cumulativeStartPosition.push(cumsum);
+      }
+      cumsum += bufferGeometry.attributes.position.count;
+    }
+    this.cumulativeStartPosition.push(cumsum);
+  }
+
+  getUnmappedSegmentIdForPosition(position: number) {
+    const index = _.sortedIndex(this.cumulativeStartPosition, position) - 1;
+    return this.unmappedSegmentIds[index];
+  }
+
+  getRangeForPosition(position: number): [number, number] {
+    const index = _.sortedIndex(this.cumulativeStartPosition, position) - 1;
+    return [this.cumulativeStartPosition[index], this.cumulativeStartPosition[index + 1]];
+  }
+}
+
 export type BufferGeometryWithInfo = THREE.BufferGeometry & {
   unmappedSegmentId: number;
   isMerged?: boolean;
+  positionToSegmentId?: PositionToSegmentId;
 };
 
 type GroupForLOD = THREE.Group & {
@@ -108,13 +145,22 @@ export default class SegmentMeshController {
   ): MeshSceneNode {
     const color = this.getColorObjectForSegment(segmentId, layerName);
     const meshMaterial = new THREE.MeshLambertMaterial({
-      color,
+      // color,
+      vertexColors: true,
     });
     meshMaterial.side = THREE.FrontSide;
     // todop: would it help to set it to false once the opacity is 1 ? hopefully not...
     meshMaterial.transparent = true;
     // todop: necessary?
     // meshMaterial.blending = THREE.NormalBlending;
+
+    // const colorArray: readonly [number, number, number] = HOVERED_COLOR;
+    const colorArray = color.convertSRGBToLinear().toArray();
+    const colorBuffer = new Float32Array(geometry.attributes.position.count * 3);
+    for (let i = 0; i < geometry.attributes.position.count; i++) {
+      colorBuffer.set(colorArray, i * 3);
+    }
+    geometry.setAttribute("color", new THREE.BufferAttribute(colorBuffer, 3));
 
     // mesh.parent is still null at this moment, but when the mesh is
     // added to the group later, parent will be set. We'll ignore
@@ -183,7 +229,7 @@ export default class SegmentMeshController {
     const meshChunks = geometries.map((geometry) => {
       const meshChunk = this.constructMesh(segmentId, layerName, geometry);
       meshChunk.geometry.boundsTree = new MeshBVH(meshChunk.geometry);
-      console.log(getBVHExtremes(meshChunk.geometry.boundsTree));
+      // console.log(getBVHExtremes(meshChunk.geometry.boundsTree));
       return meshChunk;
     });
     const group = new THREE.Group() as SceneGroupForMeshes;
@@ -396,6 +442,7 @@ export default class SegmentMeshController {
     mesh: MeshSceneNode,
     isHovered: boolean | undefined,
     isActiveUnmappedSegment?: boolean | undefined,
+    face?: THREE.Face | null | undefined,
   ) {
     let wasChanged = false;
     if (isHovered != null) {
@@ -429,49 +476,56 @@ export default class SegmentMeshController {
     // segment ID (in contrast to the color) so that the user can
     // see which other super voxels belong to the segment id of the
     // hovered super-voxel.
-    parent.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        child.material.opacity = targetOpacity;
-      }
-    });
+    // parent.traverse((child) => {
+    //   if (child instanceof THREE.Mesh) {
+    //     child.material.opacity = targetOpacity;
+    //   }
+    // });
     const isNotProofreadingMode = Store.getState().uiInformation.activeTool !== "PROOFREAD";
 
-    const changeMaterial = (fn: (material: MeshMaterial) => void) => {
-      if (mesh.isMerged || isNotProofreadingMode) {
-        // Update the material for all meshes that belong to the current
-        // segment ID.
-        parent.traverse((child) => {
-          if (child instanceof THREE.Mesh) {
-            fn(child.material);
-          }
-        });
-      } else {
-        // Only update the given mesh, because we only want to highlight
-        // that super-voxel.
-        fn(mesh.material);
+    let segmentId = 0;
+    let indexRange: Vector2 | null = null;
+    // let indices: number[] = [];
+    const unmappedSegmentIds = mesh.geometry.attributes.unmappedSegmentId;
+    // indices = _.range(0, unmappedSegmentIds.array.length);
+    if (face != null) {
+      const { a } = face;
+      segmentId = unmappedSegmentIds.array[a];
+
+      const positionToSegmentId = (mesh.geometry as BufferGeometryWithInfo).positionToSegmentId;
+
+      if (positionToSegmentId) {
+        indexRange = positionToSegmentId.getRangeForPosition(a);
       }
-    };
+    }
+
     if (mesh.isHovered || mesh.isActiveUnmappedSegment) {
-      changeMaterial((material) => {
-        if (material.savedHex == null) {
-          material.savedHex = material.color.getHex();
+      //   material.color = new THREE.Color().setHSL(...newColor).convertSRGBToLinear();
+
+      const newColor = mesh.isHovered ? HOVERED_COLOR : ACTIVATED_COLOR;
+      // mesh.material.emissive.set(HOVERED_COLOR);
+      if (indexRange != null) {
+        mesh.material.savedHex = mesh.geometry.attributes.color.array.slice(
+          3 * indexRange[0],
+          3 * (indexRange[0] + 1),
+        ) as Vector3;
+        for (let index = indexRange[0]; index < indexRange[1]; index++) {
+          mesh.geometry.attributes.color.set(newColor.toArray(), 3 * index);
         }
-        const newColor: readonly [number, number, number] = mesh.isHovered
-          ? HOVERED_COLOR
-          : ACTIVATED_COLOR;
-        material.color = new THREE.Color().setHSL(...newColor).convertSRGBToLinear();
-        material.opacity = 1.0;
-        material.emissive.setHSL(...HOVERED_COLOR).convertSRGBToLinear();
-      });
+      }
+      mesh.geometry.attributes.color.needsUpdate = true;
     } else {
-      changeMaterial((material) => {
-        // @ts-ignore
-        material.emissive.setHex("#FF00FF").convertSRGBToLinear();
-        if (material.savedHex != null) {
-          material.color.setHex(material.savedHex);
+      // mesh.material.emissive.setHex("#FF00FF").convertSRGBToLinear();
+      if (mesh.material.savedHex != null) {
+        if (indexRange != null) {
+          for (let index = indexRange[0]; index < indexRange[1]; index++) {
+            mesh.geometry.attributes.color.set(mesh.material.savedHex, 3 * index);
+          }
         }
-        material.savedHex = undefined;
-      });
+
+        mesh.geometry.attributes.color.needsUpdate = true;
+      }
+      mesh.material.savedHex = undefined;
     }
   }
 

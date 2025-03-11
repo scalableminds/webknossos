@@ -5,6 +5,7 @@ import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MagLocator, MappingProvider}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.dataformats.layers.{
   N5DataLayer,
   N5SegmentationLayer,
@@ -110,26 +111,29 @@ object ElementClass extends ExtendedEnumeration {
     case ElementClass.int64  => 8
   }
 
-  private val protoFieldNumberToElementClass: Map[Int, ElementClass.Value] = Map(
-    1 -> ElementClass.uint8,
-    2 -> ElementClass.uint16,
-    3 -> ElementClass.uint24,
-    4 -> ElementClass.uint32,
-    8 -> ElementClass.uint64,
-    11 -> ElementClass.int8,
-    12 -> ElementClass.int16,
-    14 -> ElementClass.int32,
-    18 -> ElementClass.int64
-  )
+  def fromProto(elementClassProto: ElementClassProto): ElementClass.Value =
+    elementClassProto match {
+      case ElementClassProto.uint8  => uint8
+      case ElementClassProto.uint16 => uint16
+      case ElementClassProto.uint32 => uint32
+      case ElementClassProto.uint64 => uint64
+      case ElementClassProto.int8   => int8
+      case ElementClassProto.int16  => int16
+      case ElementClassProto.int32  => int32
+      case ElementClassProto.int64  => int64
+    }
 
-
-  def volumeTracingElementClassProtoFieldNumber(elementClass: ElementClass.Value): Int ={
-    protoFieldNumberToElementClass.find(_._2 == elementClass).get._1
-  }
-
-  def fromVolumeTracingElementClassProtoFieldNumber(protoEnumFieldNumber: Int): Option[ElementClass.Value] = {
-    protoFieldNumberToElementClass.get(protoEnumFieldNumber)
-  }
+  def toProto(elementClass: ElementClass.Value): ElementClassProto =
+    elementClass match {
+      case ElementClass.uint8  => ElementClassProto.uint8
+      case ElementClass.uint16 => ElementClassProto.uint16
+      case ElementClass.uint32 => ElementClassProto.uint32
+      case ElementClass.uint64 => ElementClassProto.uint64
+      case ElementClass.int8   => ElementClassProto.int8
+      case ElementClass.int16  => ElementClassProto.int16
+      case ElementClass.int32  => ElementClassProto.int32
+      case ElementClass.int64  => ElementClassProto.int64
+    }
 
   /* only used for segmentation layers, so only unsigned integers 8 16 32 64 */
   private def maxSegmentIdValue(elementClass: ElementClass.Value): Long = elementClass match {

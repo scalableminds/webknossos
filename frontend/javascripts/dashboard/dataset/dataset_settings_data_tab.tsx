@@ -1,4 +1,4 @@
-import { CopyOutlined, DeleteOutlined, InfoCircleOutlined } from "@ant-design/icons";
+import { CopyOutlined, DeleteOutlined } from "@ant-design/icons";
 import { startFindLargestSegmentIdJob } from "admin/admin_rest_api";
 import { getDatasetNameRules, layerNameRules } from "admin/dataset/dataset_components";
 import { useStartAndPollJob } from "admin/job/job_hooks";
@@ -166,6 +166,9 @@ function copyDatasetID(datasetId: string | null | undefined) {
   Toast.success("Dataset ID copied.");
 }
 
+const LEFT_COLUMN_ITEMS_WIDTH = 408;
+const COPY_ICON_BUTTON_WIDTH = 32;
+
 function SimpleDatasetForm({
   dataSource,
   form,
@@ -220,33 +223,37 @@ function SimpleDatasetForm({
                 >
                   <Input
                     style={{
-                      width: 408,
+                      width: LEFT_COLUMN_ITEMS_WIDTH,
                     }}
                   />
                 </FormItemWithInfo>
                 <Space size="large" />
-                <Row>
-                  <span style={{ padding: "0 2px" }}>Dataset ID</span>
-                  <Tooltip title="The id used to identify the dataset. Needed for e.g. Task bulk creation.">
-                    <InfoCircleOutlined style={{ color: "gray", marginTop: -1.75 }} />
-                  </Tooltip>
-                </Row>
-                <Row>
-                  <Input
-                    value={dataset?.id}
-                    disabled
-                    style={{
-                      width: 408,
-                    }}
-                  />
-                  <span style={{ marginLeft: 16 }}>
+                <FormItemWithInfo
+                  name={["dataset", "id"]}
+                  label="Dataset ID"
+                  info="The id used to identify the dataset. Needed for e.g. Task bulk creation."
+                >
+                  <Space.Compact>
+                    <Input
+                      value={dataset?.id}
+                      style={{
+                        width: LEFT_COLUMN_ITEMS_WIDTH - COPY_ICON_BUTTON_WIDTH,
+                      }}
+                      readOnly
+                      disabled
+                    />
+                    <Tooltip title="Copy dataset ID">
+                      <Button onClick={() => copyDatasetID(dataset?.id)} icon={<CopyOutlined />} />
+                    </Tooltip>
+                  </Space.Compact>
+                </FormItemWithInfo>
+                {/*<span style={{ marginLeft: 16 }}>
                     <Tooltip title="Copy dataset ID">
                       <Button onClick={() => copyDatasetID(dataset?.id)}>
                         <CopyOutlined />
                       </Button>
                     </Tooltip>
-                  </span>
-                </Row>
+                  </span>*/}
               </Col>
               <Col span={24} xl={12}>
                 <FormItemWithInfo
@@ -449,7 +456,7 @@ function SimpleLayerForm({
               // editing the layer name for wkw.
               disabled={layer.dataFormat === "wkw"}
               style={{
-                width: 408,
+                width: LEFT_COLUMN_ITEMS_WIDTH,
               }}
             />
           </FormItemWithInfo>
@@ -504,7 +511,7 @@ function SimpleLayerForm({
               disabled
               allowClear
               value={getMags(layer).map((mag) => mag.toString())}
-              style={{ width: 408 }}
+              style={{ width: LEFT_COLUMN_ITEMS_WIDTH }}
             >
               {getMags(layer).map((mag) => (
                 <Select.Option key={mag.toString()} value={mag.toString()}>

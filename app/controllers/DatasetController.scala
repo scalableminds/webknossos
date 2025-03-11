@@ -71,6 +71,12 @@ object SegmentAnythingMaskParameters {
   implicit val jsonFormat: Format[SegmentAnythingMaskParameters] = Json.format[SegmentAnythingMaskParameters]
 }
 
+case class MagLinkInfo(mag: DatasetMagInfo, linkedMags: Seq[DatasetMagInfo])
+
+object MagLinkInfo {
+  implicit val jsonFormat: Format[MagLinkInfo] = Json.format[MagLinkInfo]
+}
+
 class DatasetController @Inject()(userService: UserService,
                                   userDAO: UserDAO,
                                   datasetService: DatasetService,

@@ -1,13 +1,15 @@
 package controllers
 
-import java.io.File
+import collections.SequenceUtils
 
+import java.io.File
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+
 import javax.inject.Inject
 import models.annotation._
 import models.annotation.nml.NmlResults.TracingBoxContainer
@@ -20,6 +22,7 @@ import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv
 import com.scalableminds.util.objectid.ObjectId
+import models.dataset.DatasetDAO
 
 import scala.concurrent.ExecutionContext
 
@@ -29,6 +32,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
                                taskTypeDAO: TaskTypeDAO,
                                userService: UserService,
                                taskDAO: TaskDAO,
+                               datasetDAO: DatasetDAO,
                                taskService: TaskService,
                                nmlService: AnnotationUploadService,
                                sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
@@ -46,19 +50,26 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
   def create: Action[List[TaskParameters]] =
     sil.SecuredAction.async(validateJson[List[TaskParameters]]) { implicit request =>
       for {
-        _ <- taskCreationService.assertBatchLimit(request.body.length, request.body.map(_.taskTypeId))
-        taskParameters <- taskCreationService.createTracingsFromBaseAnnotations(request.body,
-                                                                                request.identity._organization)
-        skeletonBaseOpts: List[Option[SkeletonTracing]] <- taskCreationService.createTaskSkeletonTracingBases(
-          taskParameters,
-          request.identity._organization)
+        _ <- bool2Box(request.body.nonEmpty) ?~> "task.create.noTasks"
+        taskTypeId <- SequenceUtils.findUniqueElement(request.body.map(_.taskTypeId)) ?~> "task.create.notOnSameTaskType"
+        taskType <- taskTypeDAO.findOne(taskTypeId) ?~> "taskType.notFound"
+        datasetId <- SequenceUtils.findUniqueElement(request.body.map(_.datasetId)) ?~> "task.create.notOnSameDataset"
+        dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId)
+        _ <- bool2Fox(dataset._organization == request.identity._organization) ?~> "task.create.datasetOfOtherOrga"
+        _ <- taskCreationService.assertBatchLimit(request.body.length, taskType)
+        taskParametersWithIds = taskCreationService.addNewIdsToTaskParameters(request.body, taskType)
+        taskParametersFull <- taskCreationService.createTracingsFromBaseAnnotations(taskParametersWithIds,
+                                                                                    taskType,
+                                                                                    dataset)
+        skeletonBaseOpts: List[Option[SkeletonTracing]] = taskCreationService.createTaskSkeletonTracingBases(
+          taskParametersFull)
         volumeBaseOpts: List[Option[(VolumeTracing, Option[File])]] <- taskCreationService.createTaskVolumeTracingBases(
-          taskParameters,
-          request.identity._organization)
-        paramsWithTracings = taskParameters.lazyZip(skeletonBaseOpts).lazyZip(volumeBaseOpts).map {
+          taskParametersFull,
+          taskType)
+        paramsWithTracings = taskParametersFull.lazyZip(skeletonBaseOpts).lazyZip(volumeBaseOpts).map {
           case (params, skeletonOpt, volumeOpt) => Full((params, skeletonOpt, volumeOpt))
         }
-        result <- taskCreationService.createTasks(paramsWithTracings, request.identity)
+        result <- taskCreationService.createTasks(paramsWithTracings, taskType, request.identity)
       } yield Ok(Json.toJson(result))
     }
 
@@ -83,9 +94,8 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
       jsonString <- body.dataParts.get("formJSON").flatMap(_.headOption) ?~> "format.json.missing"
       params <- JsonHelper.parseAndValidateJson[NmlTaskParameters](jsonString) ?~> "task.create.failed"
       userOrganizationId = request.identity._organization
-      _ <- taskCreationService.assertBatchLimit(inputFiles.length, List(params.taskTypeId))
-      taskTypeIdValidated <- ObjectId.fromString(params.taskTypeId) ?~> "taskType.id.invalid"
-      taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
+      taskType <- taskTypeDAO.findOne(params.taskTypeId) ?~> "taskType.notFound" ~> NOT_FOUND
+      _ <- taskCreationService.assertBatchLimit(inputFiles.length, taskType)
       project <- projectDAO
         .findOneByNameAndOrganization(params.projectName, request.identity._organization) ?~> "project.notFound" ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
@@ -97,16 +107,18 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
         extractedTracingBoxesRaw)
       fullParams: List[Box[TaskParameters]] = taskCreationService.buildFullParamsFromFiles(params,
                                                                                            extractedTracingBoxes)
+      fullParamsWithIds = taskCreationService.addNewIdsToTaskParametersBoxed(fullParams, taskType)
       (skeletonBases, volumeBases) <- taskCreationService.fillInMissingTracings(
         extractedTracingBoxes.map(_.skeleton),
         extractedTracingBoxes.map(_.volume),
-        fullParams,
-        taskType,
-        request.identity._organization
+        fullParamsWithIds,
+        taskType
       )
 
-      fullParamsWithTracings = taskCreationService.combineParamsWithTracings(fullParams, skeletonBases, volumeBases)
-      result <- taskCreationService.createTasks(fullParamsWithTracings, request.identity)
+      fullParamsWithTracings = taskCreationService.combineParamsWithTracings(fullParamsWithIds,
+                                                                             skeletonBases,
+                                                                             volumeBases)
+      result <- taskCreationService.createTasks(fullParamsWithTracings, taskType, request.identity)
     } yield Ok(Json.toJson(result))
   }
 

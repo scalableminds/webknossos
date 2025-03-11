@@ -7,7 +7,11 @@ import _ from "lodash";
 import type { OrthoViewMap, Vector3, Viewport } from "oxalis/constants";
 import Constants, { OrthoViewColors, OrthoViewValues, OrthoViews } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
-import type { MeshSceneNode, SceneGroupForMeshes } from "oxalis/controller/segment_mesh_controller";
+import type {
+  BufferGeometryWithInfo,
+  MeshSceneNode,
+  SceneGroupForMeshes,
+} from "oxalis/controller/segment_mesh_controller";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
@@ -18,11 +22,19 @@ import { clearCanvas, setupRenderArea } from "oxalis/view/rendering_utils";
 import * as THREE from "three";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
+import GUI from "lil-gui";
 
 const settings = {
   cameraLightIntensity1: 10,
   cameraLightIntensity2: 10,
 };
+
+type RaycasterHit = {
+  node: MeshSceneNode;
+  face: THREE.Face;
+  unmappedSegmentId: number;
+  point: Vector3;
+} | null;
 
 const createDirLight = (
   position: Vector3,
@@ -31,6 +43,7 @@ const createDirLight = (
   camera: THREE.OrthographicCamera,
   num: number,
 ) => {
+  // @ts-ignore
   const dirLight = new THREE.DirectionalLight(0x888888, settings["cameraLightIntensity" + num]);
   dirLight.position.set(...position);
   camera.add(dirLight);
@@ -41,7 +54,7 @@ const createDirLight = (
     window.gui = new GUI();
   }
   const gui = window.gui;
-  gui.add(settings, "cameraLightIntensity" + num, 0, 10).onChange((value) => {
+  gui.add(settings, "cameraLightIntensity" + num, 0, 10).onChange((value: number) => {
     dirLight.intensity = value;
   });
 
@@ -50,8 +63,25 @@ const createDirLight = (
 
 const raycaster = new VisibilityAwareRaycaster();
 raycaster.firstHitOnly = true;
-let oldRaycasterHit: { node: MeshSceneNode; face: THREE.Face; unmappedSegmentId: number } | null =
-  null;
+
+let oldRaycasterHit: RaycasterHit = null;
+
+function getIndexRangeForFace(mesh: MeshSceneNode, face: THREE.Face | null | undefined) {
+  if (face == null) {
+    return null;
+  }
+  const { a } = face;
+  // const unmappedSegmentIds = mesh.geometry.attributes.unmappedSegmentId;
+  // const segmentId = unmappedSegmentIds.array[a];
+
+  const positionToSegmentId = (mesh.geometry as BufferGeometryWithInfo).positionToSegmentId;
+
+  if (positionToSegmentId) {
+    const indexRange = positionToSegmentId.getRangeForPosition(a);
+    return indexRange;
+  }
+  return null;
+}
 
 class PlaneView {
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
@@ -139,9 +169,7 @@ class PlaneView {
     }
   }
 
-  performMeshHitTest(
-    mousePosition: [number, number],
-  ): RaycastIntersection<THREE.Object3D> | null | undefined {
+  performMeshHitTest(mousePosition: [number, number]): RaycasterHit {
     const storeState = Store.getState();
     const SceneController = getSceneController();
     const { segmentMeshController } = SceneController;
@@ -185,31 +213,33 @@ class PlaneView {
     // Check whether we are hitting the same object as before, since we can return early
     // in this case.
     if (unmappedSegmentId === oldRaycasterHit?.unmappedSegmentId) {
-      return intersections.length > 0 ? intersections[0] : null;
+      return oldRaycasterHit;
     }
 
     // Undo highlighting of old hit
     if (oldRaycasterHit?.node.parent != null) {
       console.time("updateMeshAppearance for old hit");
-      segmentMeshController.updateMeshAppearance(
-        oldRaycasterHit.node,
-        false,
-        undefined,
-        oldRaycasterHit.face,
-      );
+      segmentMeshController.updateMeshAppearance(oldRaycasterHit.node, false, undefined, null);
       console.timeEnd("updateMeshAppearance for old hit");
 
       oldRaycasterHit = null;
     }
 
     oldRaycasterHit =
-      hitObject != null && face != null ? { node: hitObject, face, unmappedSegmentId } : null;
+      hitObject != null && face != null
+        ? { node: hitObject, face, unmappedSegmentId, point: intersections[0].point.toArray() }
+        : null;
 
     // Highlight new hit
     if (hitObject?.parent != null) {
       console.log("raycast took", after - before, "ms");
       console.time("updateMeshAppearance");
-      segmentMeshController.updateMeshAppearance(hitObject, true, undefined, face);
+      segmentMeshController.updateMeshAppearance(
+        hitObject,
+        true,
+        undefined,
+        getIndexRangeForFace(hitObject, face),
+      );
       console.timeEnd("updateMeshAppearance");
 
       Store.dispatch(
@@ -218,7 +248,7 @@ class PlaneView {
           (hitObject.parent as SceneGroupForMeshes).segmentId,
         ),
       );
-      return intersections[0];
+      return oldRaycasterHit;
     } else {
       Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", null));
       return null;
@@ -305,7 +335,7 @@ class PlaneView {
         (activeUnmappedSegmentId) =>
           // Note that this code is responsible for highlighting the *active*
           // (not necessarily hovered) segment.
-          segmentMeshController.highlightUnmappedSegmentId(activeUnmappedSegmentId),
+          segmentMeshController.highlightActiveUnmappedSegmentId(activeUnmappedSegmentId),
         true,
       ),
     );

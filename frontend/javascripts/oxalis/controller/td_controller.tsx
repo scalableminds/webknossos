@@ -232,10 +232,7 @@ class TDController extends React.PureComponent<Props> {
         }
         const { hitPosition } = intersection;
 
-        const unscaledPosition = V3.divide3(
-          hitPosition.toArray() as Vector3,
-          this.props.voxelSize.factor,
-        );
+        const unscaledPosition = V3.divide3(hitPosition, this.props.voxelSize.factor);
 
         if (event.shiftKey) {
           Store.dispatch(setPositionAction(unscaledPosition));
@@ -276,16 +273,16 @@ class TDController extends React.PureComponent<Props> {
 
   getMeshIntersection(pos: Point2) {
     if (this.props.planeView == null) return null;
-    const intersection = this.props.planeView.performMeshHitTest([pos.x, pos.y]);
-    if (intersection == null) {
+    const hitResult = this.props.planeView.performMeshHitTest([pos.x, pos.y]);
+    if (hitResult == null) {
       return null;
     }
-    const meshId: number | null = intersection
-      ? _.get(intersection.object.parent, "segmentId", null)
+    const meshId: number | null = hitResult
+      ? _.get(hitResult.node.parent, "segmentId", null)
       : null;
-    const unmappedSegmentId: number | null = _.get(intersection?.object, "unmappedSegmentId", null);
-    const meshClickedPosition = intersection ? (intersection.point.toArray() as Vector3) : null;
-    return { meshId, unmappedSegmentId, meshClickedPosition, hitPosition: intersection.point };
+    const unmappedSegmentId: number | null = hitResult?.unmappedSegmentId || null;
+    const meshClickedPosition = hitResult ? hitResult.point : null;
+    return { meshId, unmappedSegmentId, meshClickedPosition, hitPosition: hitResult.point };
   }
 
   setTargetAndFixPosition = (position?: Vector3): void => {

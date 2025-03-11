@@ -5,7 +5,9 @@ import type { Vector2, Vector3 } from "oxalis/constants";
 import CustomLOD from "oxalis/controller/custom_lod";
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
 import {
+  getActiveCellId,
   getActiveSegmentationTracing,
+  getActiveSegmentationTracingLayer,
   getSegmentColorAsHSLA,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { NO_LOD_MESH_INDEX } from "oxalis/model/sagas/mesh_saga";
@@ -21,17 +23,22 @@ import GUI from "lil-gui";
 // the `boundsTree` variable
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
-const hslToSRGB = (hsl: Vector3) => new THREE.Color().setHSL(...hsl).convertSRGBToLinear();
+const hslToSRGB = (hsl: Vector3) =>
+  new THREE.Color()
+    .setHSL(...hsl)
+    .convertSRGBToLinear()
+    .toArray() as Vector3;
 
 const ACTIVATED_COLOR = hslToSRGB([0.7, 0.9, 0.75]);
 const HOVERED_COLOR = hslToSRGB([0.65, 0.9, 0.75]);
 
-type MeshMaterial = THREE.MeshLambertMaterial & { savedHex?: Vector3 };
+type MeshMaterial = THREE.MeshLambertMaterial & { originalColor: Vector3 };
 export type MeshSceneNode = THREE.Mesh<THREE.BufferGeometry, MeshMaterial> & {
   unmappedSegmentId?: number | null;
+  // todop: remove because it's always true now?
   isMerged?: boolean;
-  isActiveUnmappedSegment?: boolean;
-  isHovered?: boolean;
+  hoveredIndicesRange?: Vector2 | null;
+  activeIndicesRange?: Vector2 | null;
   parent: SceneGroupForMeshes;
 };
 export type SceneGroupForMeshes = THREE.Group & { segmentId: number; children: MeshSceneNode[] };
@@ -66,6 +73,18 @@ export class PositionToSegmentId {
   getRangeForPosition(position: number): [number, number] {
     const index = _.sortedIndex(this.cumulativeStartPosition, position) - 1;
     return [this.cumulativeStartPosition[index], this.cumulativeStartPosition[index + 1]];
+  }
+
+  getRangeForUnmappedSegmentId(segmentId: number): [number, number] | null {
+    const index = _.sortedIndexOf(this.unmappedSegmentIds, segmentId);
+    if (index === -1) {
+      return null;
+    }
+    return [this.cumulativeStartPosition[index], this.cumulativeStartPosition[index + 1]];
+  }
+
+  containsSegmentId(segmentId: number): boolean {
+    return _.sortedIndexOf(this.unmappedSegmentIds, segmentId) !== -1;
   }
 }
 
@@ -152,11 +171,12 @@ export default class SegmentMeshController {
     meshMaterial.side = THREE.FrontSide;
     // todop: would it help to set it to false once the opacity is 1 ? hopefully not...
     meshMaterial.transparent = true;
+    const colorArray = color.convertSRGBToLinear().toArray();
+    meshMaterial.originalColor = colorArray;
     // todop: necessary?
     // meshMaterial.blending = THREE.NormalBlending;
 
     // const colorArray: readonly [number, number, number] = HOVERED_COLOR;
-    const colorArray = color.convertSRGBToLinear().toArray();
     const colorBuffer = new Float32Array(geometry.attributes.position.count * 3);
     for (let i = 0; i < geometry.attributes.position.count; i++) {
       colorBuffer.set(colorArray, i * 3);
@@ -249,8 +269,8 @@ export default class SegmentMeshController {
     const segmentationTracing = getActiveSegmentationTracing(Store.getState());
     if (segmentationTracing != null) {
       // addMeshFromGeometries is often called multiple times for different sets of geometries.
-      // Therefore, used a throttled variant of the highlightUnmappedSegmentId method.
-      this.throttledHighlightUnmappedSegmentId(segmentationTracing.activeUnmappedSegmentId);
+      // Therefore, used a throttled variant of the highlightActiveUnmappedSegmentId method.
+      this.throttledHighlightActiveUnmappedSegmentId(segmentationTracing.activeUnmappedSegmentId);
     }
   }
 
@@ -309,13 +329,16 @@ export default class SegmentMeshController {
 
   setMeshColor(id: number, layerName: string): void {
     const color = this.getColorObjectForSegment(id, layerName);
+    const colorArray = color.toArray() as Vector3;
     // If in nd-dataset, set the color for all additional coordinates
     for (const recordsOfLayers of Object.values(this.meshesGroupsPerSegmentId)) {
       const meshDataForOneSegment = recordsOfLayers[layerName][id];
       if (meshDataForOneSegment != null) {
         for (const lodGroup of Object.values(meshDataForOneSegment)) {
           for (const meshGroup of lodGroup.children) {
-            meshGroup.children.forEach((child: MeshSceneNode) => (child.material.color = color));
+            meshGroup.children.forEach(
+              (child: MeshSceneNode) => (child.material.originalColor = colorArray),
+            );
           }
         }
       }
@@ -388,6 +411,7 @@ export default class SegmentMeshController {
     lightPositions.forEach((pos, index) => {
       const light = new THREE.DirectionalLight(
         "white",
+        // @ts-ignore
         settings[`dirLight${index + 1}Intensity`] || 1,
       );
       light.position.set(...pos).normalize();
@@ -398,6 +422,7 @@ export default class SegmentMeshController {
     gui.onChange(() => {
       ambientLight.intensity = settings.ambientIntensity;
       directionalLights.forEach((light, index) => {
+        // @ts-ignore
         light.intensity = settings[`dirLight${index + 1}Intensity`] || 1;
       });
       app.vent.emit("rerender");
@@ -443,18 +468,25 @@ export default class SegmentMeshController {
     mesh: MeshSceneNode,
     isHovered: boolean | undefined,
     isActiveUnmappedSegment?: boolean | undefined,
-    face?: THREE.Face | null | undefined,
+    indexRange?: Vector2 | null,
   ) {
     let wasChanged = false;
+    const rangesToReset: Vector2[] = [];
     if (isHovered != null) {
-      if (!!mesh.isHovered !== isHovered) {
-        mesh.isHovered = isHovered;
+      if (!_.isEqual(mesh.hoveredIndicesRange, indexRange)) {
+        if (mesh.hoveredIndicesRange != null) {
+          rangesToReset.push(mesh.hoveredIndicesRange);
+        }
+        mesh.hoveredIndicesRange = indexRange;
         wasChanged = true;
       }
     }
     if (isActiveUnmappedSegment != null) {
-      if (!!mesh.isActiveUnmappedSegment !== isActiveUnmappedSegment) {
-        mesh.isActiveUnmappedSegment = isActiveUnmappedSegment;
+      if (!_.isEqual(mesh.activeIndicesRange, indexRange)) {
+        if (mesh.activeIndicesRange != null) {
+          rangesToReset.push(mesh.activeIndicesRange);
+        }
+        mesh.activeIndicesRange = indexRange;
         wasChanged = true;
       }
     }
@@ -463,7 +495,7 @@ export default class SegmentMeshController {
       return;
     }
 
-    const targetOpacity = mesh.isHovered ? 0.8 : 1.0;
+    // const targetOpacity = mesh.hoveredIndicesRange ? 0.8 : 1.0;
 
     // mesh.parent contains all geometries that were loaded
     // for one chunk (if isMerged is true, this is only one geometry).
@@ -482,66 +514,68 @@ export default class SegmentMeshController {
     //     child.material.opacity = targetOpacity;
     //   }
     // });
-    const isNotProofreadingMode = Store.getState().uiInformation.activeTool !== "PROOFREAD";
+    // const isNotProofreadingMode = Store.getState().uiInformation.activeTool !== "PROOFREAD";
+    for (const rangeToReset of rangesToReset) {
+      const indexRange = rangeToReset;
 
-    let segmentId = 0;
-    let indexRange: Vector2 | null = null;
-    // let indices: number[] = [];
-    const unmappedSegmentIds = mesh.geometry.attributes.unmappedSegmentId;
-    // indices = _.range(0, unmappedSegmentIds.array.length);
-    if (face != null) {
-      const { a } = face;
-      segmentId = unmappedSegmentIds.array[a];
-
-      const positionToSegmentId = (mesh.geometry as BufferGeometryWithInfo).positionToSegmentId;
-
-      if (positionToSegmentId) {
-        indexRange = positionToSegmentId.getRangeForPosition(a);
-      }
-    }
-
-    if (mesh.isHovered || mesh.isActiveUnmappedSegment) {
-      //   material.color = new THREE.Color().setHSL(...newColor).convertSRGBToLinear();
-
-      const newColor = mesh.isHovered ? HOVERED_COLOR : ACTIVATED_COLOR;
-      // mesh.material.emissive.set(HOVERED_COLOR);
-      if (indexRange != null) {
-        mesh.material.savedHex = mesh.geometry.attributes.color.array.slice(
-          3 * indexRange[0],
-          3 * (indexRange[0] + 1),
-        ) as Vector3;
-        for (let index = indexRange[0]; index < indexRange[1]; index++) {
-          mesh.geometry.attributes.color.set(newColor.toArray(), 3 * index);
-        }
-      }
-      mesh.geometry.attributes.color.needsUpdate = true;
-    } else {
       // mesh.material.emissive.setHex("#FF00FF").convertSRGBToLinear();
-      if (mesh.material.savedHex != null) {
-        if (indexRange != null) {
-          for (let index = indexRange[0]; index < indexRange[1]; index++) {
-            mesh.geometry.attributes.color.set(mesh.material.savedHex, 3 * index);
-          }
+      if (mesh.material.originalColor != null) {
+        for (let index = indexRange[0]; index < indexRange[1]; index++) {
+          mesh.geometry.attributes.color.set(mesh.material.originalColor, 3 * index);
         }
-
-        mesh.geometry.attributes.color.needsUpdate = true;
       }
-      mesh.material.savedHex = undefined;
     }
+
+    const setRangeToColor = (indexRange: Vector2, color: Vector3) => {
+      for (let index = indexRange[0]; index < indexRange[1]; index++) {
+        mesh.geometry.attributes.color.set(color, 3 * index);
+      }
+    };
+
+    if (mesh.hoveredIndicesRange) {
+      const newColor = HOVERED_COLOR;
+      setRangeToColor(mesh.hoveredIndicesRange, newColor);
+    }
+    if (mesh.activeIndicesRange) {
+      const newColor = ACTIVATED_COLOR;
+      setRangeToColor(mesh.activeIndicesRange, newColor);
+    }
+    mesh.geometry.attributes.color.needsUpdate = true;
   }
 
-  highlightUnmappedSegmentId = (activeUnmappedSegmentId: number | null | undefined) => {
+  highlightActiveUnmappedSegmentId = (activeUnmappedSegmentId: number | null | undefined) => {
     const { meshesLODRootGroup } = this;
     meshesLODRootGroup.traverse((_obj) => {
+      if (!("geometry" in _obj)) {
+        return;
+      }
       // The cast is safe because MeshSceneNode adds only optional properties
       const obj = _obj as MeshSceneNode;
-      if (activeUnmappedSegmentId != null && obj.unmappedSegmentId === activeUnmappedSegmentId) {
-        this.updateMeshAppearance(obj, undefined, true);
-      } else if (obj.isActiveUnmappedSegment) {
-        this.updateMeshAppearance(obj, undefined, false);
+
+      const positionToSegmentId = (obj.geometry as BufferGeometryWithInfo).positionToSegmentId;
+
+      let indexRange = null;
+      let containsSegmentId = false;
+      if (positionToSegmentId && activeUnmappedSegmentId) {
+        containsSegmentId = positionToSegmentId.containsSegmentId(activeUnmappedSegmentId);
+        if (containsSegmentId) {
+          indexRange = positionToSegmentId.getRangeForUnmappedSegmentId(activeUnmappedSegmentId);
+        }
+      }
+
+      if (activeUnmappedSegmentId != null && containsSegmentId) {
+        // Highlight (parts of) the mesh as active
+        this.updateMeshAppearance(obj, undefined, true, indexRange);
+      } else if (obj.activeIndicesRange) {
+        // The mesh has an activeIndicesRange, but that id is no longer
+        // active. Therefore, clear it.
+        this.updateMeshAppearance(obj, undefined, false, null);
       }
     });
   };
 
-  throttledHighlightUnmappedSegmentId = _.throttle(this.highlightUnmappedSegmentId, 150);
+  throttledHighlightActiveUnmappedSegmentId = _.throttle(
+    this.highlightActiveUnmappedSegmentId,
+    150,
+  );
 }

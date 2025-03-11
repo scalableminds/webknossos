@@ -110,6 +110,7 @@ dataset.upload.noFiles=Tried to finish upload with no files. May be a retry of a
 dataset.upload.storageExceeded=Cannot upload dataset because the storage quota of the organization is exceeded.
 dataset.upload.finishFailed=Failed to finalize dataset upload.
 dataset.upload.moveToTarget.failed=Failed to move uploaded dataset to target directory.
+dataset.upload.moreBytesThanReserved=The uploaded dataset contains more bytes than originally reserved. Please make sure to reserve the correct amount of bytes.
 dataset.explore.failed.readFile=Failed to read remote file
 dataset.explore.magDtypeMismatch=Element class must be the same for all mags of a layer. Got {0}
 dataset.explore.autoAdd.failed=Failed to automatically import the explored dataset.

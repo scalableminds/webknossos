@@ -214,7 +214,11 @@ type TweenState = {
   top: number;
   bottom: number;
 };
-export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
+export function rotate3DViewTo(
+  id: OrthoView,
+  animate: boolean = true,
+  onComplete?: () => void,
+): void {
   const state = Store.getState();
   const { dataset } = state;
   const { tdCamera } = state.viewModeData.plane;
@@ -340,6 +344,9 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
         // However, for better type checking, we pass it as an explicit
         // parameter.
         updateCameraTDView(this, t);
+      })
+      .onComplete(() => {
+        onComplete?.();
       })
       .start();
   } else {

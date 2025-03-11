@@ -270,7 +270,8 @@ class JobService @Inject()(wkConf: WkConf,
     getJobCostPerGVx(jobCommand).map(costPerGVx => {
       val volumeInGVx = BigDecimal(boundingBoxInTargetMag.volume) / ONE_GIGAVOXEL
       val costInCredits = volumeInGVx * costPerGVx
-      if (costInCredits < MINIMUM_COST_PER_JOB) MINIMUM_COST_PER_JOB else costInCredits.setScale(4, RoundingMode.HALF_UP)
+      if (costInCredits < MINIMUM_COST_PER_JOB) MINIMUM_COST_PER_JOB
+      else costInCredits.setScale(4, RoundingMode.HALF_UP)
     })
 
 }

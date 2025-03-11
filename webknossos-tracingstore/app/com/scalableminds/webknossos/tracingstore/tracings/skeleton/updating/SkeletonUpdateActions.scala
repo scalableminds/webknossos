@@ -11,6 +11,8 @@ import play.api.libs.json._
 
 trait SkeletonUpdateAction extends LayerUpdateAction {
   def applyOn(tracing: SkeletonTracing): SkeletonTracing
+
+  def updatedTreeBodyIds: Set[Int] = Set.empty
 }
 
 case class CreateTreeSkeletonAction(id: Int,
@@ -56,6 +58,8 @@ case class CreateTreeSkeletonAction(id: Int,
     this.copy(actionAuthorId = authorId)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
+
+  override def updatedTreeBodyIds: Set[Int] = Set(id)
 }
 
 case class DeleteTreeSkeletonAction(id: Int,
@@ -74,6 +78,8 @@ case class DeleteTreeSkeletonAction(id: Int,
     this.copy(actionAuthorId = authorId)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
+
+  override def updatedTreeBodyIds: Set[Int] = Set(id)
 }
 
 case class UpdateTreeSkeletonAction(id: Int,
@@ -146,6 +152,8 @@ case class MergeTreeSkeletonAction(sourceId: Int,
     this.copy(actionAuthorId = authorId)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
+
+  override def updatedTreeBodyIds: Set[Int] = Set(sourceId, targetId)
 }
 
 case class MoveTreeComponentSkeletonAction(nodeIds: List[Int],
@@ -188,6 +196,8 @@ case class MoveTreeComponentSkeletonAction(nodeIds: List[Int],
     this.copy(actionAuthorId = authorId)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
+
+  override def updatedTreeBodyIds: Set[Int] = Set(sourceId, targetId)
 }
 
 case class CreateEdgeSkeletonAction(source: Int,
@@ -211,6 +221,8 @@ case class CreateEdgeSkeletonAction(source: Int,
     this.copy(actionAuthorId = authorId)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
+
+  override def updatedTreeBodyIds: Set[Int] = Set(treeId)
 }
 
 case class DeleteEdgeSkeletonAction(source: Int,
@@ -235,6 +247,7 @@ case class DeleteEdgeSkeletonAction(source: Int,
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 
+  override def updatedTreeBodyIds: Set[Int] = Set(treeId)
 }
 
 case class CreateNodeSkeletonAction(id: Int,
@@ -282,6 +295,8 @@ case class CreateNodeSkeletonAction(id: Int,
     this.copy(actionAuthorId = authorId)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
+
+  override def updatedTreeBodyIds: Set[Int] = Set(treeId)
 }
 
 case class UpdateNodeSkeletonAction(id: Int,
@@ -331,6 +346,8 @@ case class UpdateNodeSkeletonAction(id: Int,
     this.copy(actionAuthorId = authorId)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
+
+  override def updatedTreeBodyIds: Set[Int] = Set(treeId)
 }
 
 case class DeleteNodeSkeletonAction(nodeId: Int,
@@ -356,6 +373,8 @@ case class DeleteNodeSkeletonAction(nodeId: Int,
     this.copy(actionAuthorId = authorId)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
+
+  override def updatedTreeBodyIds: Set[Int] = Set(treeId)
 }
 
 case class UpdateTreeGroupsSkeletonAction(treeGroups: List[UpdateActionTreeGroup],

@@ -125,6 +125,7 @@ export default class SegmentMeshController {
     let bufferGeometry = new THREE.BufferGeometry();
     bufferGeometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
 
+    // todop: can this cause problems with PositionToSegmentId instances?
     bufferGeometry = mergeVertices(bufferGeometry);
     bufferGeometry.computeVertexNormals();
 

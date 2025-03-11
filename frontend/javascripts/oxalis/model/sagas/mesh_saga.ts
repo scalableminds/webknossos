@@ -1012,6 +1012,7 @@ function* _getLoadChunksTasks(
                 )) as BufferGeometryWithInfo;
                 bufferGeometry.unmappedSegmentId = chunk.unmappedSegmentId;
 
+                // todop: can we avoid this by using getUnmappedSegmentIdForPosition?
                 const unmappedSegmentIdBuffer = new Float32Array(
                   bufferGeometry.attributes.position.count,
                 );

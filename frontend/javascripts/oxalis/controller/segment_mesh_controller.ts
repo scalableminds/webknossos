@@ -35,8 +35,6 @@ const HOVERED_COLOR = hslToSRGB([0.65, 0.9, 0.75]);
 type MeshMaterial = THREE.MeshLambertMaterial & { originalColor: Vector3 };
 export type MeshSceneNode = THREE.Mesh<THREE.BufferGeometry, MeshMaterial> & {
   unmappedSegmentId?: number | null;
-  // todop: remove because it's always true now?
-  isMerged?: boolean;
   hoveredIndicesRange?: Vector2 | null;
   activeIndicesRange?: Vector2 | null;
   parent: SceneGroupForMeshes;
@@ -90,7 +88,6 @@ export class PositionToSegmentId {
 
 export type BufferGeometryWithInfo = THREE.BufferGeometry & {
   unmappedSegmentId: number;
-  isMerged?: boolean;
   positionToSegmentId?: PositionToSegmentId;
 };
 
@@ -209,9 +206,6 @@ export default class SegmentMeshController {
 
     if ("unmappedSegmentId" in geometry) {
       mesh.unmappedSegmentId = geometry.unmappedSegmentId as number | null;
-    }
-    if ("isMerged" in geometry) {
-      mesh.isMerged = geometry.isMerged;
     }
 
     return mesh;
@@ -497,9 +491,8 @@ export default class SegmentMeshController {
 
     // const targetOpacity = mesh.hoveredIndicesRange ? 0.8 : 1.0;
 
-    // mesh.parent contains all geometries that were loaded
-    // for one chunk (if isMerged is true, this is only one geometry).
-    // mesh.parent.parent contains all chunks for the current segment.
+    // mesh.parent.parent contains exactly one geometry (merged from all chunks
+    // for the current segment).
     const parent = mesh.parent.parent;
     if (parent == null) {
       // Satisfy TS

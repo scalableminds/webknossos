@@ -730,14 +730,7 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
 }
 
 function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
-  const {
-    segmentId,
-    seedPosition,
-    seedAdditionalCoordinates,
-    meshFileName,
-    layerName,
-    mergeChunks,
-  } = action;
+  const { segmentId, seedPosition, seedAdditionalCoordinates, meshFileName, layerName } = action;
   const layer = yield* select((state) =>
     layerName != null
       ? getSegmentationLayerByName(state.dataset, layerName)
@@ -756,7 +749,6 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
       seedAdditionalCoordinates,
       meshFileName,
       layer,
-      mergeChunks,
     ),
     cancel: take(
       ((otherAction: Action) =>
@@ -775,7 +767,6 @@ function* loadPrecomputedMeshForSegmentId(
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
   segmentationLayer: APISegmentationLayer,
-  mergeChunks: boolean,
 ): Saga<void> {
   const layerName = segmentationLayer.name;
   const mappingName = yield* call(getMappingName, segmentationLayer);
@@ -786,7 +777,6 @@ function* loadPrecomputedMeshForSegmentId(
       seedPosition,
       seedAdditionalCoordinates,
       meshFileName,
-      mergeChunks,
       mappingName,
     ),
   );
@@ -851,7 +841,6 @@ function* loadPrecomputedMeshForSegmentId(
     loadingOrder,
     scale,
     additionalCoordinates,
-    mergeChunks,
   );
 
   yield* put(finishedLoadingMeshAction(layerName, id));
@@ -949,7 +938,6 @@ function* _getLoadChunksTasks(
   loadingOrder: number[],
   scale: Vector3 | null,
   additionalCoordinates: AdditionalCoordinate[] | null,
-  mergeChunks: boolean,
 ) {
   const { segmentMeshController } = getSceneController();
   const { meshFileName } = meshFile;
@@ -1047,23 +1035,21 @@ function* _getLoadChunksTasks(
     }
 
     // todop: clean up
-    if (mergeChunks || true) {
-      const sortedBufferGeometries = _.sortBy(
-        bufferGeometries,
-        (geometryWithInfo) => geometryWithInfo.unmappedSegmentId,
-      );
+    // Merge Chunks
+    const sortedBufferGeometries = _.sortBy(
+      bufferGeometries,
+      (geometryWithInfo) => geometryWithInfo.unmappedSegmentId,
+    );
 
-      const geometry = mergeGeometries(sortedBufferGeometries, false) as BufferGeometryWithInfo;
+    const geometry = mergeGeometries(sortedBufferGeometries, false) as BufferGeometryWithInfo;
 
-      // If mergeGeometries does not succeed, the method logs the error to the console and returns null
-      if (geometry == null) {
-        console.error("Merged geometry is null. Look at error above.");
-        return;
-      }
-      geometry.positionToSegmentId = new PositionToSegmentId(sortedBufferGeometries);
-      (geometry as BufferGeometryWithInfo).isMerged = true;
-      bufferGeometries = [geometry as BufferGeometryWithInfo];
+    // If mergeGeometries does not succeed, the method logs the error to the console and returns null
+    if (geometry == null) {
+      console.error("Merged geometry is null. Look at error above.");
+      return;
     }
+    geometry.positionToSegmentId = new PositionToSegmentId(sortedBufferGeometries);
+    bufferGeometries = [geometry as BufferGeometryWithInfo];
 
     // Compute vertex normals to achieve smooth shading
     bufferGeometries.forEach((geometry) => geometry.computeVertexNormals());

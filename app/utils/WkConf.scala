@@ -129,6 +129,10 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     val isWkorgInstance: Boolean = get[Boolean]("features.isWkorgInstance")
     val jobsEnabled: Boolean = get[Boolean]("features.jobsEnabled")
     val voxelyticsEnabled: Boolean = get[Boolean]("features.voxelyticsEnabled")
+    val neuronInferralCostPerGVx: BigDecimal = get[BigDecimal]("features.neuronInferralCostPerGVx")
+    val mitochondriaInferralCostPerGVx: BigDecimal =
+      get[BigDecimal]("features.mitochondriaInferralCostPerGVx")
+    val alignmentCostPerGVx: BigDecimal = get[BigDecimal]("features.alignmentCostPerGVx")
     val taskReopenAllowed: FiniteDuration = get[Int]("features.taskReopenAllowedInSeconds") seconds
     val allowDeleteDatasets: Boolean = get[Boolean]("features.allowDeleteDatasets")
     val publicDemoDatasetUrl: String = get[String]("features.publicDemoDatasetUrl")
@@ -207,6 +211,7 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
 
   object Jobs {
     val workerLivenessTimeout: FiniteDuration = get[FiniteDuration]("jobs.workerLivenessTimeout")
+    val monthlyFreeCredits: Int = get[Int]("jobs.monthlyFreeCredits")
   }
 
   object Airbrake {

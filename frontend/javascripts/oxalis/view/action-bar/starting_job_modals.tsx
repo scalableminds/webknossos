@@ -573,11 +573,11 @@ function JobCreditCostInformation({
   const jobCreditCost = jobCreditCostInfo?.costInCredits;
   const jobCostInfoString =
     jobCreditCost != null
-      ? `This job costs ${formatCreditsString(jobCreditCost)} credits.`
+      ? `This job costs ${formatCreditsString(jobCreditCost)} credits. `
       : currentBoundingBoxVolume == null
         ? isBoundingBoxConfigurable
-          ? "Please select a bounding box to see the job costs."
-          : "Please select a layer to see the costs."
+          ? "Please select a bounding box to see the job costs. "
+          : "Please select a layer to see the costs. "
         : "";
   return (
     <>
@@ -587,7 +587,7 @@ function JobCreditCostInformation({
             <>
               {jobCostInfoString}
               Your organization currently has {formatCreditsString(organizationCredits)} WEBKNOSSOS
-              credits. The cost of this job are derived from processed bounding box size and costs
+              credits. The cost of this job are derived from processed bounding box size and costs{" "}
               {jobCreditCostPerGVx} WEBKNOSSOS credits per Gigavoxel.
               <br />
               {currentBoundingBoxVolume != null && jobCreditCost != null

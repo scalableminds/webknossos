@@ -23,14 +23,13 @@ import GUI from "lil-gui";
 // the `boundsTree` variable
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
-const hslToSRGB = (hsl: Vector3) =>
-  new THREE.Color()
-    .setHSL(...hsl)
-    .convertSRGBToLinear()
-    .toArray() as Vector3;
+const hslToSRGB = (hsl: Vector3) => new THREE.Color().setHSL(...hsl).convertSRGBToLinear();
 
+const WHITE = new THREE.Color(1, 1, 1);
 const ACTIVATED_COLOR = hslToSRGB([0.7, 0.9, 0.75]);
 const HOVERED_COLOR = hslToSRGB([0.65, 0.9, 0.75]);
+const ACTIVATED_COLOR_VEC3 = hslToSRGB([0.7, 0.9, 0.75]).toArray() as Vector3;
+const HOVERED_COLOR_VEC3 = hslToSRGB([0.65, 0.9, 0.75]).toArray() as Vector3;
 
 type MeshMaterial = THREE.MeshLambertMaterial & { originalColor: Vector3 };
 export type MeshSceneNode = THREE.Mesh<THREE.BufferGeometry, MeshMaterial> & {
@@ -173,7 +172,7 @@ export default class SegmentMeshController {
     // todop: necessary?
     // meshMaterial.blending = THREE.NormalBlending;
 
-    // const colorArray: readonly [number, number, number] = HOVERED_COLOR;
+    // const colorArray: readonly [number, number, number] = HOVERED_COLOR_VEC3;
     const colorBuffer = new Float32Array(geometry.attributes.position.count * 3);
     for (let i = 0; i < geometry.attributes.position.count; i++) {
       colorBuffer.set(colorArray, i * 3);
@@ -404,7 +403,7 @@ export default class SegmentMeshController {
 
     lightPositions.forEach((pos, index) => {
       const light = new THREE.DirectionalLight(
-        "white",
+        WHITE,
         // @ts-ignore
         settings[`dirLight${index + 1}Intensity`] || 1,
       );
@@ -507,7 +506,7 @@ export default class SegmentMeshController {
     //     child.material.opacity = targetOpacity;
     //   }
     // });
-    // const isNotProofreadingMode = Store.getState().uiInformation.activeTool !== "PROOFREAD";
+
     for (const rangeToReset of rangesToReset) {
       const indexRange = rangeToReset;
 
@@ -518,6 +517,25 @@ export default class SegmentMeshController {
         }
       }
     }
+    const isProofreadingMode = Store.getState().uiInformation.activeTool === "PROOFREAD";
+
+    if (!isProofreadingMode) {
+      mesh.material.vertexColors = false;
+      if (mesh.hoveredIndicesRange) {
+        const newColor = HOVERED_COLOR;
+        mesh.material.color = newColor;
+      } else {
+        mesh.material.color = new THREE.Color(...mesh.material.originalColor);
+      }
+      mesh.material.needsUpdate = true;
+      return;
+    }
+
+    if (mesh.material.color !== WHITE || !mesh.material.vertexColors) {
+      mesh.material.color = WHITE;
+      mesh.material.needsUpdate = true;
+      mesh.material.vertexColors = true;
+    }
 
     const setRangeToColor = (indexRange: Vector2, color: Vector3) => {
       for (let index = indexRange[0]; index < indexRange[1]; index++) {
@@ -525,13 +543,15 @@ export default class SegmentMeshController {
       }
     };
 
-    if (mesh.hoveredIndicesRange) {
-      const newColor = HOVERED_COLOR;
-      setRangeToColor(mesh.hoveredIndicesRange, newColor);
-    }
     if (mesh.activeIndicesRange) {
-      const newColor = ACTIVATED_COLOR;
+      const newColor = ACTIVATED_COLOR_VEC3;
       setRangeToColor(mesh.activeIndicesRange, newColor);
+    }
+    // Setting the hovered part needs to happenp after setting the active part,
+    // so that there is still a hover effect for an active super voxel.
+    if (mesh.hoveredIndicesRange) {
+      const newColor = HOVERED_COLOR_VEC3;
+      setRangeToColor(mesh.hoveredIndicesRange, newColor);
     }
     mesh.geometry.attributes.color.needsUpdate = true;
   }

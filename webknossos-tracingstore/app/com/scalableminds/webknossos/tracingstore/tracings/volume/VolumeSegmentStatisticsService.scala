@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SegmentStatistics}
-import com.scalableminds.webknossos.datastore.models.{UnsignedInteger, UnsignedIntegerArray, WebknossosDataRequest}
+import com.scalableminds.webknossos.datastore.models.{SegmentInteger, SegmentIntegerArray, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
@@ -67,7 +67,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
                                               mag,
                                               Seq(bucketPosition),
                                               additionalCoordinates)
-      dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(
+      dataTyped: Array[SegmentInteger] = SegmentIntegerArray.fromByteArray(
         bucketData,
         elementClassFromProto(tracing.elementClass))
     } yield dataTyped

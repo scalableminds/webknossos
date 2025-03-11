@@ -138,9 +138,13 @@ object ElementClass extends ExtendedEnumeration {
   /* only used for segmentation layers, so only unsigned integers 8 16 32 64 */
   private def maxSegmentIdValue(elementClass: ElementClass.Value): Long = elementClass match {
     case ElementClass.uint8  => 1L << 8L
+    case ElementClass.int8   => Byte.MaxValue
     case ElementClass.uint16 => 1L << 16L
+    case ElementClass.int16  => Short.MaxValue
     case ElementClass.uint32 => 1L << 32L
-    case ElementClass.uint64 => (1L << 53L) - 1 // Front-end can only handle segment-ids up to (2^53)-1
+    case ElementClass.int32  => Int.MaxValue
+    case ElementClass.uint64 | ElementClass.int64 =>
+      (1L << 53L) - 1 // Front-end can only handle segment-ids up to (2^53)-1
   }
 
   def largestSegmentIdIsInRange(largestSegmentId: Long, elementClass: ElementClass.Value): Boolean =

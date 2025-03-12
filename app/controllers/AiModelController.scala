@@ -54,7 +54,7 @@ object RunInferenceParameters {
   implicit val jsonFormat: OFormat[RunInferenceParameters] = Json.format[RunInferenceParameters]
 }
 
-case class UpdateAiModelParameters(name: String, comment: Option[String])
+case class UpdateAiModelParameters(name: String, comment: Option[String], sharedOrganizationIds: Option[List[String]])
 
 object UpdateAiModelParameters {
   implicit val jsonFormat: OFormat[UpdateAiModelParameters] = Json.format[UpdateAiModelParameters]
@@ -91,7 +91,7 @@ class AiModelController @Inject()(
       for {
         _ <- userService.assertIsSuperUser(request.identity)
         aiModel <- aiModelDAO.findOne(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
-        jsResult <- aiModelService.publicWrites(aiModel)
+        jsResult <- aiModelService.publicWrites(aiModel, request.identity)
       } yield Ok(jsResult)
     }
   }
@@ -111,7 +111,7 @@ class AiModelController @Inject()(
       for {
         _ <- userService.assertIsSuperUser(request.identity)
         aiModels <- aiModelDAO.findAll
-        jsResults <- Fox.serialCombined(aiModels)(aiModelService.publicWrites)
+        jsResults <- Fox.serialCombined(aiModels)(model => aiModelService.publicWrites(model, request.identity))
       } yield Ok(Json.toJson(jsResults))
     }
   }
@@ -156,7 +156,8 @@ class AiModelController @Inject()(
           .submitJob(jobCommand, commandArgs, request.identity, dataStore.name) ?~> "job.couldNotRunTrainModel"
         newAiModel = AiModel(
           _id = modelId,
-          _organization = request.identity._organization,
+          _owningOrganization = request.identity._organization,
+          _sharedOrganizations = List(request.identity._organization),
           _dataStore = dataStore.name,
           _user = request.identity._id,
           _trainingJob = Some(newTrainingJob._id),
@@ -166,7 +167,7 @@ class AiModelController @Inject()(
           category = request.body.aiModelCategory
         )
         _ <- aiModelDAO.insertOne(newAiModel)
-        newAiModelJs <- aiModelService.publicWrites(newAiModel)
+        newAiModelJs <- aiModelService.publicWrites(newAiModel, request.identity)
       } yield Ok(newAiModelJs)
   }
 
@@ -213,14 +214,40 @@ class AiModelController @Inject()(
 
   def updateAiModelInfo(aiModelId: ObjectId): Action[UpdateAiModelParameters] =
     sil.SecuredAction.async(validateJson[UpdateAiModelParameters]) { implicit request =>
-      for {
-        _ <- userService.assertIsSuperUser(request.identity)
-        aiModel <- aiModelDAO.findOne(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
-        _ <- aiModelDAO.updateOne(
-          aiModel.copy(name = request.body.name, comment = request.body.comment, modified = Instant.now))
-        updatedAiModel <- aiModelDAO.findOne(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
-        jsResult <- aiModelService.publicWrites(updatedAiModel)
-      } yield Ok(jsResult)
+      {
+        // Automatically add the owning organization to the shared organizations to ensure it is impossible for the owning organization to loose access..
+        val sharedOrganizationIdsOpt = request.body.sharedOrganizationIds.map { sharedOrganizationIds =>
+          if (!sharedOrganizationIds.contains(request.identity._organization)) {
+            sharedOrganizationIds :+ request.identity._organization
+          } else sharedOrganizationIds
+        }
+        for {
+          _ <- userService.assertIsSuperUser(request.identity)
+          aiModel <- aiModelDAO.findOne(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
+          _ <- bool2Fox(aiModel._owningOrganization == request.identity._organization) ?~> "aiModel.notOwned"
+          _ <- aiModelDAO.updateOne(aiModel.copy(name = request.body.name,
+                                                 comment = request.body.comment,
+                                                 modified = Instant.now)) ?~> "aiModel.updatingFailed"
+          areSharedOrganizationsUpdated = sharedOrganizationIdsOpt
+            .getOrElse(List())
+            .toSet != aiModel._sharedOrganizations.toSet
+          sharedAndPreservedOrganizationIdsOpt <- if (areSharedOrganizationsUpdated)
+            Fox.runOptional(sharedOrganizationIdsOpt) { newlySharedOrganizationIds =>
+              // Keep organizations with access to the aiModel which the current user has no access to.
+              for {
+                organizationIdsUserCanAccess <- organizationDAO.findAll.flatMap(os => Fox.successful(os.map(_._id)))
+                organizationsToPreserveAccessTo = aiModel._sharedOrganizations.filter(
+                  organizationIdsUserCanAccess.contains)
+              } yield newlySharedOrganizationIds ++ organizationsToPreserveAccessTo
+            } else Fox.successful(None)
+          _ <- Fox.runOptional(sharedAndPreservedOrganizationIdsOpt)(
+            orgas =>
+              if (orgas.toSet == aiModel._sharedOrganizations.toSet) Fox.successful(())
+              else aiModelDAO.updateSharedOrganizations(aiModel._id, orgas)) ?~> "aiModel.updatingSharedFailed"
+          updatedAiModel <- aiModelDAO.findOne(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
+          jsResult <- aiModelService.publicWrites(updatedAiModel, request.identity)
+        } yield Ok(jsResult)
+      }
     }
 
   def registerAiModel: Action[RegisterAiModelParameters] =
@@ -233,7 +260,8 @@ class AiModelController @Inject()(
         _ <- aiModelDAO.insertOne(
           AiModel(
             request.body.id,
-            _organization = request.identity._organization,
+            _owningOrganization = request.identity._organization,
+            _sharedOrganizations = List(request.identity._organization),
             request.body.dataStoreName,
             request.identity._id,
             None,

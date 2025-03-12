@@ -11,6 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/25.02.1...HEAD)
 
 ### Added
+- Super users can now share the trained AI models with other organizations. [#8418](https://github.com/scalableminds/webknossos/pull/8418)
 - Added a command palette that allows navigating between pages, switching tools and accessing some user settings via Ctrl+K. [#8392](https://github.com/scalableminds/webknossos/pull/8392/)
 - Failed jobs may be retried by super-users. [#8377](https://github.com/scalableminds/webknossos/pull/8377)
 

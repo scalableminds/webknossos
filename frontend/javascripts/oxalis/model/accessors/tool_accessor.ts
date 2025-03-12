@@ -21,22 +21,6 @@ import { reuseInstanceOnEquality } from "./accessor_helpers";
 import { getTransformsPerLayer } from "./dataset_layer_transformation_accessor";
 import { isSkeletonLayerTransformed } from "./skeletontracing_accessor";
 
-export const TOOL_NAMES = {
-  MOVE: "Move",
-  SKELETON: "Skeleton",
-  BRUSH: "Brush",
-  ERASE_BRUSH: "Erase (via Brush)",
-  TRACE: "Trace",
-  ERASE_TRACE: "Erase",
-  FILL_CELL: "Fill Tool",
-  PICK_CELL: "Segment Picker",
-  QUICK_SELECT: "Quick Select Tool",
-  BOUNDING_BOX: "Bounding Box Tool",
-  PROOFREAD: "Proofreading Tool",
-  LINE_MEASUREMENT: "Measurement Tool",
-  AREA_MEASUREMENT: "Area Measurement Tool",
-};
-
 const zoomInToUseToolMessage =
   "Please zoom in further to use this tool. If you want to edit volume data on this zoom level, create an annotation with restricted magnifications from the extended annotation menu in the dashboard.";
 
@@ -425,11 +409,3 @@ export function adaptActiveToolToShortcuts(
 
   return activeTool;
 }
-
-export const getLabelForTool = (tool: AnnotationTool) => {
-  const toolName = TOOL_NAMES[tool];
-  if (toolName.endsWith("Tool")) {
-    return toolName;
-  }
-  return `${toolName} Tool`;
-};

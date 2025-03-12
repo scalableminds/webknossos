@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 126, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
+do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 127, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
 
 DROP VIEW IF EXISTS webknossos.aiModels_;
 
@@ -23,6 +23,6 @@ SELECT _id, _owningOrganization FROM webknossos.aiModels;
 
 CREATE VIEW webknossos.aiModels_ as SELECT * FROM webknossos.aiModels WHERE NOT isDeleted;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 127;
+UPDATE webknossos.releaseInformation SET schemaVersion = 128;
 
 COMMIT TRANSACTION;

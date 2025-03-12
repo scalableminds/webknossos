@@ -38,7 +38,6 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   dispatchMaybeFetchMeshFilesAsync,
-  refreshMeshAction,
   removeMeshAction,
 } from "oxalis/model/actions/annotation_actions";
 import type {

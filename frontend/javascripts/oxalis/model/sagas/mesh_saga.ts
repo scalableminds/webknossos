@@ -6,7 +6,7 @@ import { V3 } from "libs/mjs";
 import { areVec3AlmostEqual, chunkDynamically, sleep } from "libs/utils";
 import _ from "lodash";
 import type { ActionPattern } from "redux-saga/effects";
-import * as THREE from "three";
+import type * as THREE from "three";
 import type { APIDataset, APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
 
 import {
@@ -996,17 +996,11 @@ function* _getLoadChunksTasks(
                 )) as BufferGeometryWithInfo;
                 bufferGeometry.unmappedSegmentId = chunk.unmappedSegmentId;
 
-                // todop: can we avoid this by using getUnmappedSegmentIdForPosition?
-                const unmappedSegmentIdBuffer = new Float32Array(
-                  bufferGeometry.attributes.position.count,
-                );
-                unmappedSegmentIdBuffer.fill(chunk.unmappedSegmentId);
-                bufferGeometry.setAttribute(
-                  "unmappedSegmentId",
-                  new THREE.BufferAttribute(unmappedSegmentIdBuffer, 1),
-                );
-
                 bufferGeometry.translate(position[0], position[1], position[2]);
+                // Compute vertex normals to achieve smooth shading. We do this here
+                // within the chunk-specific code (instead of after all chunks are merged)
+                // to distribute the workload a bit over time.
+                bufferGeometry.computeVertexNormals();
 
                 bufferGeometries.push(bufferGeometry);
               } catch (error) {
@@ -1037,7 +1031,9 @@ function* _getLoadChunksTasks(
       (geometryWithInfo) => geometryWithInfo.unmappedSegmentId,
     );
 
+    console.time("mergeGeometries");
     const geometry = mergeGeometries(sortedBufferGeometries, false) as BufferGeometryWithInfo;
+    console.timeEnd("mergeGeometries");
 
     // If mergeGeometries does not succeed, the method logs the error to the console and returns null
     if (geometry == null) {
@@ -1046,9 +1042,6 @@ function* _getLoadChunksTasks(
     }
     geometry.positionToSegmentId = new PositionToSegmentId(sortedBufferGeometries);
     bufferGeometries = [geometry as BufferGeometryWithInfo];
-
-    // Compute vertex normals to achieve smooth shading
-    bufferGeometries.forEach((geometry) => geometry.computeVertexNormals());
 
     // Check if the mesh scale is different to all supported mags of the active segmentation scaled by the dataset scale and warn in the console to make debugging easier in such a case.
     // This hint at the mesh file being computed when the dataset scale was different than currently configured.

@@ -5,9 +5,7 @@ import type { Vector2, Vector3 } from "oxalis/constants";
 import CustomLOD from "oxalis/controller/custom_lod";
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
 import {
-  getActiveCellId,
   getActiveSegmentationTracing,
-  getActiveSegmentationTracingLayer,
   getSegmentColorAsHSLA,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { NO_LOD_MESH_INDEX } from "oxalis/model/sagas/mesh_saga";
@@ -16,7 +14,7 @@ import * as THREE from "three";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
 import type { AdditionalCoordinate } from "types/api_flow_types";
-import { MeshBVH, MeshBVHHelper, acceleratedRaycast, getBVHExtremes } from "three-mesh-bvh";
+import { MeshBVH, MeshBVHHelper, acceleratedRaycast } from "three-mesh-bvh";
 import GUI from "lil-gui";
 
 // Add the raycast function. Assumes the BVH is available on
@@ -33,7 +31,6 @@ const HOVERED_COLOR_VEC3 = hslToSRGB([0.65, 0.9, 0.75]).toArray() as Vector3;
 
 type MeshMaterial = THREE.MeshLambertMaterial & { originalColor: Vector3 };
 export type MeshSceneNode = THREE.Mesh<THREE.BufferGeometry, MeshMaterial> & {
-  unmappedSegmentId?: number | null;
   hoveredIndicesRange?: Vector2 | null;
   activeIndicesRange?: Vector2 | null;
   parent: SceneGroupForMeshes;
@@ -141,8 +138,12 @@ export default class SegmentMeshController {
     bufferGeometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
 
     // todop: can this cause problems with PositionToSegmentId instances?
+    console.time("mergeVertices");
     bufferGeometry = mergeVertices(bufferGeometry);
+    console.timeEnd("mergeVertices");
+    console.time("computeVertexNormals (in addMeshFromVertices)");
     bufferGeometry.computeVertexNormals();
+    console.timeEnd("computeVertexNormals (in addMeshFromVertices)");
 
     this.addMeshFromGeometry(
       bufferGeometry as BufferGeometryWithInfo,
@@ -203,10 +204,6 @@ export default class SegmentMeshController {
       })
       .start();
 
-    if ("unmappedSegmentId" in geometry) {
-      mesh.unmappedSegmentId = geometry.unmappedSegmentId as number | null;
-    }
-
     return mesh;
   }
 
@@ -241,9 +238,12 @@ export default class SegmentMeshController {
       }
     }
     const meshChunks = geometries.map((geometry) => {
+      console.time("constructMesh");
       const meshChunk = this.constructMesh(segmentId, layerName, geometry);
+      console.timeEnd("constructMesh");
+      console.time("build MeshBVH");
       meshChunk.geometry.boundsTree = new MeshBVH(meshChunk.geometry);
-      // console.log(getBVHExtremes(meshChunk.geometry.boundsTree));
+      console.timeEnd("build MeshBVH");
       return meshChunk;
     });
     const group = new THREE.Group() as SceneGroupForMeshes;

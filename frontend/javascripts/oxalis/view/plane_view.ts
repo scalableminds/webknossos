@@ -10,6 +10,7 @@ import getSceneController from "oxalis/controller/scene_controller_provider";
 import type {
   BufferGeometryWithInfo,
   MeshSceneNode,
+  PositionToSegmentId,
   SceneGroupForMeshes,
 } from "oxalis/controller/segment_mesh_controller";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
@@ -71,8 +72,6 @@ function getIndexRangeForFace(mesh: MeshSceneNode, face: THREE.Face | null | und
     return null;
   }
   const { a } = face;
-  // const unmappedSegmentIds = mesh.geometry.attributes.unmappedSegmentId;
-  // const segmentId = unmappedSegmentIds.array[a];
 
   const positionToSegmentId = (mesh.geometry as BufferGeometryWithInfo).positionToSegmentId;
 
@@ -206,8 +205,10 @@ class PlaneView {
     let unmappedSegmentId = 0;
 
     if (hitObject && face) {
-      const unmappedSegmentIds = hitObject.geometry.attributes.unmappedSegmentId;
-      unmappedSegmentId = unmappedSegmentIds.array[face.a];
+      if ("positionToSegmentId" in hitObject.geometry) {
+        const positionToSegmentId = hitObject.geometry.positionToSegmentId as PositionToSegmentId;
+        unmappedSegmentId = positionToSegmentId.getUnmappedSegmentIdForPosition(face.a);
+      }
     }
 
     // Check whether we are hitting the same object as before, since we can return early

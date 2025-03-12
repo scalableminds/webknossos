@@ -60,6 +60,7 @@ type AddNewUserBoundingBox = ReturnType<typeof addUserBoundingBoxAction>;
 type ChangeUserBoundingBoxAction = ReturnType<typeof changeUserBoundingBoxAction>;
 type DeleteUserBoundingBox = ReturnType<typeof deleteUserBoundingBoxAction>;
 export type UpdateMeshVisibilityAction = ReturnType<typeof updateMeshVisibilityAction>;
+export type UpdateMeshOpacityAction = ReturnType<typeof updateMeshOpacityAction>;
 export type MaybeFetchMeshFilesAction = ReturnType<typeof maybeFetchMeshFilesAction>;
 export type TriggerMeshDownloadAction = ReturnType<typeof triggerMeshDownloadAction>;
 export type TriggerMeshesDownloadAction = ReturnType<typeof triggerMeshesDownloadAction>;
@@ -93,6 +94,7 @@ export type AnnotationActionTypes =
   | AddUserBoundingBoxesAction
   | MaybeFetchMeshFilesAction
   | UpdateMeshVisibilityAction
+  | UpdateMeshOpacityAction
   | TriggerMeshDownloadAction
   | TriggerMeshesDownloadAction
   | RefreshMeshesAction
@@ -227,6 +229,20 @@ export const updateMeshVisibilityAction = (
     layerName,
     id,
     visibility,
+    additionalCoordinates,
+  }) as const;
+
+export const updateMeshOpacityAction = (
+  layerName: string,
+  id: number,
+  opacity: number,
+  additionalCoordinates?: AdditionalCoordinate[] | undefined | null,
+) =>
+  ({
+    type: "UPDATE_MESH_OPACITY",
+    segmentId: id,
+    layerName,
+    opacity,
     additionalCoordinates,
   }) as const;
 

@@ -1,9 +1,9 @@
 import { Popover } from "antd";
 import useThrottledCallback from "beautiful-react-hooks/useThrottledCallback";
 import * as Utils from "libs/utils";
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3, Vector4 } from "oxalis/constants";
 import { useRef, useState } from "react";
-import { HexColorInput, HexColorPicker } from "react-colorful";
+import { HexColorInput, HexColorPicker, type RgbaColor, RgbaColorPicker } from "react-colorful";
 
 export const ThrottledColorPicker = ({
   color,
@@ -68,6 +68,48 @@ export function ChangeColorMenuItemContent({
   const content = isDisabled ? null : (
     <ThrottledColorPicker color={color} onChange={onChangeColor} />
   );
+  return (
+    <Popover content={content} trigger="click" overlayStyle={{ zIndex: 10000 }}>
+      <div style={{ position: "relative", display: "inline-block", width: "100%" }}>{title}</div>
+    </Popover>
+  );
+}
+
+export function ChangeRGBAColorMenuItemContent({
+  title,
+  isDisabled,
+  rgba,
+  onSetColor,
+}: {
+  title: string;
+  isDisabled: boolean;
+  rgba: Vector4;
+  onSetColor: (rgba: Vector4, createsNewUndoState: boolean) => void;
+}) {
+  const isFirstColorChange = useRef(true);
+  const color = {
+    r: rgba[0] * 255,
+    g: rgba[1] * 255,
+    b: rgba[2] * 255,
+    a: rgba[3],
+  };
+  const onChangeColor = (color: RgbaColor) => {
+    if (isDisabled) {
+      return;
+    }
+    const colorRgb: Vector3 = [color.r, color.g, color.b];
+    const newColor = Utils.map3((component) => component / 255, colorRgb);
+    newColor.push(color.a);
+
+    // Only create a new undo state on the first color change event.
+    // All following color change events should mutate the most recent undo
+    // state so that the undo stack is not filled on each mouse movement.
+    onSetColor(newColor, isFirstColorChange.current);
+    isFirstColorChange.current = false;
+  };
+
+  const content = isDisabled ? null : <RgbaColorPicker color={color} onChange={onChangeColor} />;
+
   return (
     <Popover content={content} trigger="click" overlayStyle={{ zIndex: 10000 }}>
       <div style={{ position: "relative", display: "inline-block", width: "100%" }}>{title}</div>

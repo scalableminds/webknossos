@@ -13,11 +13,10 @@ import { useDispatch, useSelector } from "react-redux";
 
 import type { MenuItemType } from "antd/es/menu/interface";
 import classnames from "classnames";
-import { ChangeColorMenuItemContent } from "components/color_picker";
+import { ChangeRGBAColorMenuItemContent } from "components/color_picker";
 import FastTooltip from "components/fast_tooltip";
 import { V4 } from "libs/mjs";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
 import {
@@ -206,6 +205,12 @@ type Props = {
   ) => void;
   removeSegment: (arg0: number, arg2: string) => void;
   deleteSegmentData: (arg0: number, arg2: string, callback?: () => void) => void;
+  setMeshOpacity: (
+    arg0: number,
+    arg1: string,
+    arg2: number,
+    arg3: AdditionalCoordinate[] | null | undefined,
+  ) => void;
   onSelectSegment: (arg0: Segment) => void;
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
   loadAdHocMesh: (
@@ -385,6 +390,7 @@ function _SegmentListItem({
   allowUpdate,
   updateSegment,
   removeSegment,
+  setMeshOpacity,
   deleteSegmentData,
   onSelectSegment,
   visibleSegmentationLayer,
@@ -409,6 +415,20 @@ function _SegmentListItem({
     (state: OxalisState) => getSegmentColorAsRGBA(state, segment.id),
     (a: Vector4, b: Vector4) => V4.isEqual(a, b),
   );
+
+  const additionalCoordinates = useSelector(
+    (state: OxalisState) => state.flycam.additionalCoordinates,
+  );
+
+  const meshOpacity = useSelector((state: OxalisState) => {
+    if (visibleSegmentationLayer == null) return 1; // TODO_c default
+    return (
+      state.localSegmentationData[visibleSegmentationLayer.name]?.meshes[
+        getAdditionalCoordinatesAsString(additionalCoordinates)
+      ]?.[segment.id].opacity || 1
+    );
+  });
+
   const isHoveredSegmentId = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.hoveredSegmentId === segment.id,
   );
@@ -416,6 +436,13 @@ function _SegmentListItem({
     const centeredSegmentId = getSegmentIdForPosition(getPosition(state.flycam));
     return centeredSegmentId === segment.id;
   });
+
+  const meshColor: Vector4 = [
+    segmentColorRGBA[0],
+    segmentColorRGBA[1],
+    segmentColorRGBA[2],
+    meshOpacity,
+  ];
 
   const createSegmentContextMenu = (): MenuProps => ({
     items: [
@@ -444,7 +471,7 @@ function _SegmentListItem({
       {
         key: `changeSegmentColor-${segment.id}`,
         label: (
-          <ChangeColorMenuItemContent
+          <ChangeRGBAColorMenuItemContent
             isDisabled={false}
             title="Change Segment Color"
             onSetColor={(color, createsNewUndoState) => {
@@ -454,13 +481,19 @@ function _SegmentListItem({
               updateSegment(
                 segment.id,
                 {
-                  color,
+                  color: color.slice(0, 3),
                 },
                 visibleSegmentationLayer.name,
                 createsNewUndoState,
               );
+              setMeshOpacity(
+                segment.id,
+                visibleSegmentationLayer.name,
+                color[3],
+                additionalCoordinates,
+              );
             }}
-            rgb={Utils.take3(segmentColorRGBA)}
+            rgba={meshColor}
           />
         ),
       },

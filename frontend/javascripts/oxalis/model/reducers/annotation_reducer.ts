@@ -277,6 +277,26 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "UPDATE_MESH_OPACITY": {
+      const { layerName, segmentId, opacity, additionalCoordinates } = action;
+      const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+      return update(state, {
+        localSegmentationData: {
+          [layerName]: {
+            meshes: {
+              [additionalCoordKey]: {
+                [segmentId]: {
+                  opacity: {
+                    $set: opacity,
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+    }
+
     case "REMOVE_MESH": {
       const { layerName, segmentId } = action;
       const newMeshes: Record<string, Record<number, MeshInformation>> = {};
@@ -321,6 +341,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         isLoading: false,
         isVisible: true,
         isPrecomputed: false,
+        opacity: 1, //TODO_c add const default alpha
         mappingName,
         mappingType,
       };
@@ -366,6 +387,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         isLoading: false,
         isVisible: true,
         isPrecomputed: true,
+        opacity: 1, //TODO_c add const default
         meshFileName,
         areChunksMerged,
         mappingName,

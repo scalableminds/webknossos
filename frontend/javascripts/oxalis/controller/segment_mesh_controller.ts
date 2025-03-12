@@ -258,7 +258,7 @@ export default class SegmentMeshController {
     });
   }
 
-  setMeshColor(id: number, layerName: string): void {
+  setMeshColor(id: number, layerName: string, opacity?: number): void {
     const color = this.getColorObjectForSegment(id, layerName);
     // If in nd-dataset, set the color for all additional coordinates
     for (const recordsOfLayers of Object.values(this.meshesGroupsPerSegmentId)) {
@@ -266,7 +266,27 @@ export default class SegmentMeshController {
       if (meshDataForOneSegment != null) {
         for (const lodGroup of Object.values(meshDataForOneSegment)) {
           for (const meshGroup of lodGroup.children) {
-            meshGroup.children.forEach((child: MeshSceneNode) => (child.material.color = color));
+            meshGroup.children.forEach((child: MeshSceneNode) => {
+              child.material.color = color;
+              if (opacity != null) child.material.opacity = opacity;
+            });
+          }
+        }
+      }
+    }
+  }
+
+  setMeshOpacity(id: number, layerName: string, opacity: number): void {
+    console.log("setMeshOpacity", id, layerName, opacity);
+    // If in nd-dataset, set the opacity for all additional coordinates
+    for (const recordsOfLayers of Object.values(this.meshesGroupsPerSegmentId)) {
+      const meshDataForOneSegment = recordsOfLayers[layerName][id];
+      if (meshDataForOneSegment != null) {
+        for (const lodGroup of Object.values(meshDataForOneSegment)) {
+          for (const meshGroup of lodGroup.children) {
+            meshGroup.children.forEach((child: MeshSceneNode) => {
+              child.material.opacity = opacity;
+            });
           }
         }
       }
@@ -369,7 +389,7 @@ export default class SegmentMeshController {
       return;
     }
 
-    const targetOpacity = mesh.isHovered ? 0.8 : 1.0;
+    const targetOpacity = mesh.material.opacity * (mesh.isHovered ? 0.8 : 1.0);
 
     // mesh.parent contains all geometries that were loaded
     // for one chunk (if isMerged is true, this is only one geometry).
@@ -414,7 +434,7 @@ export default class SegmentMeshController {
           ? HOVERED_COLOR
           : ACTIVATED_COLOR;
         material.color = new THREE.Color().setHSL(...newColor);
-        material.opacity = 1.0;
+        material.opacity = 1.0 * mesh.material.opacity;
         material.emissive.setHSL(...HOVERED_COLOR);
       });
     } else {

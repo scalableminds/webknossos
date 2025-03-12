@@ -122,10 +122,10 @@ class Int32(val signed: Int) extends SegmentInteger {
   def increment: Int32 = Int32(signed + 1)
   def isZero: Boolean = signed == 0
   override def toLong: Long = signed.toLong
-  override def toString = s"UInt32($signed)"
+  override def toString = s"Int32($signed)"
   override def hashCode: Int = signed.hashCode
   override def equals(that: Any): Boolean = that match {
-    case that: UInt32 => that.signed == signed
+    case that: Int32 => that.signed == signed
     case _            => false
   }
 }
@@ -147,10 +147,10 @@ class Int64(val signed: Long) extends SegmentInteger {
   def increment: Int64 = Int64(signed + 1)
   def isZero: Boolean = signed == 0L
   override def toLong: Long = signed
-  override def toString = s"UInt64($signed)"
+  override def toString = s"Int64($signed)"
   override def hashCode: Int = signed.hashCode
   override def equals(that: Any): Boolean = that match {
-    case that: UInt64 => that.signed == signed
+    case that: Int64 => that.signed == signed
     case _            => false
   }
 }

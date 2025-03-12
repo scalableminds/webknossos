@@ -32,7 +32,7 @@ import {
   reOpenAnnotation,
 } from "admin/admin_rest_api";
 import { withAuthentication } from "admin/auth/authentication_modal";
-import { Button, Dropdown, Modal, Space, Tooltip } from "antd";
+import { Button, ConfigProvider, Dropdown, Modal, Space, Tooltip } from "antd";
 import type { SubMenuType } from "antd/es/menu/interface";
 import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
 import features from "features";
@@ -78,6 +78,7 @@ import type { LayoutKeys } from "oxalis/view/layouting/default_layout_configs";
 import { mapLayoutKeysToLanguage } from "oxalis/view/layouting/default_layout_configs";
 import * as React from "react";
 import { connect } from "react-redux";
+import { getAntdTheme, getThemeFromUser } from "theme";
 import type { APIAnnotationType, APIUser, APIUserBase } from "types/api_flow_types";
 import { APIAnnotationTypeEnum, TracingTypeEnum } from "types/api_flow_types";
 import CreateAnimationModal from "./create_animation_modal";
@@ -777,6 +778,8 @@ class TracingActionsView extends React.PureComponent<Props, State> {
 
     const modals = this.getTracingViewModals();
     const menuItems = getTracingViewMenuItems(this.props, layoutMenu);
+    const userTheme = getThemeFromUser(activeUser);
+
     return (
       <>
         <Space.Compact>
@@ -784,7 +787,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
           {finishAndNextTaskButton}
           {reopenTaskButton}
         </Space.Compact>
-        {modals}
+        <ConfigProvider theme={{ ...getAntdTheme(userTheme) }}>{modals}</ConfigProvider>
         <div>
           <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
             <ButtonComponent className="narrow">

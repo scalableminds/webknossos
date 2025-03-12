@@ -73,7 +73,6 @@ import { CheckTermsOfServices } from "components/terms_of_services_check";
 import loadable from "libs/lazy_loader";
 import { getDatasetIdOrNameFromReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
 import { Store } from "oxalis/singletons";
-import { CommandPalette } from "oxalis/view/components/command_palette";
 import type { EmptyObject } from "types/globals";
 
 const { Content } = Layout;
@@ -87,7 +86,6 @@ type StateProps = {
   activeUser: APIUser | null | undefined;
   hasOrganizations: boolean;
   pricingPlan: PricingPlanEnum;
-  isAdminView: boolean;
 };
 type Props = StateProps;
 const browserHistory = createBrowserHistory();
@@ -267,10 +265,6 @@ class ReactRouter extends React.Component<Props> {
         <Layout>
           <DisableGenericDnd />
           <CheckCertificateModal />
-          {
-            /* within tracing view, the command palette is rendered in the status bar. */
-            isAuthenticated && this.props.isAdminView && <CommandPalette label={null} />
-          }
           <CheckTermsOfServices />
           <Navbar isAuthenticated={isAuthenticated} />
           <HelpButton />
@@ -808,7 +802,6 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
     ? state.activeOrganization.pricingPlan
     : PricingPlanEnum.Basic,
   hasOrganizations: state.uiInformation.hasOrganizations,
-  isAdminView: !state.uiInformation.isInAnnotationView,
 });
 
 const connector = connect(mapStateToProps);

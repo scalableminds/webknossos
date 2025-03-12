@@ -39,7 +39,6 @@ import { NumberInputPopoverSetting } from "oxalis/view/components/setting_input_
 import React, { useCallback, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { AdditionalCoordinate } from "types/api_flow_types";
-import { CommandPalette } from "./components/command_palette";
 
 const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = {
@@ -48,7 +47,7 @@ const moreIconStyle = {
 };
 const moreLinkStyle = {
   marginLeft: 10,
-  marginRight: 10,
+  marginRight: "auto",
 };
 
 function getPosString(
@@ -354,7 +353,6 @@ function ShortcutsInfo() {
       </span>
       <ZoomShortcut />
       {moreShortcutsLink}
-      <CommandPalette label="[Ctrl+K] Commands" />
     </React.Fragment>
   );
 }

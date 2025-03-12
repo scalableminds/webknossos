@@ -200,7 +200,7 @@ function getCollapsibleMenuTitle(
   );
 }
 
-export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser) {
+function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser) {
   const isAdmin = Utils.isUserAdmin(activeUser);
   const isAdminOrTeamManager = Utils.isUserAdminOrTeamManager(activeUser);
   const organization = activeUser.organization;
@@ -245,7 +245,7 @@ export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser)
 
   if (isAdmin) {
     adminstrationSubMenuItems.push({
-      key: `/organizations/${organization}`,
+      key: "/organization",
       label: <Link to={`/organizations/${organization}`}>Organization</Link>,
     });
   }

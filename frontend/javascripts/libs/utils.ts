@@ -1310,3 +1310,10 @@ export function generateRandomId(length: number) {
   }
   return result;
 }
+
+export function getPhraseFromCamelCaseString(stringInCamelCase: string): string {
+  return stringInCamelCase
+    .split(/(?=[A-Z])/)
+    .map((word) => capitalize(word.replace(/(^|\s)td/, "$13D")))
+    .join(" ");
+}

@@ -29,7 +29,7 @@ trait AbstractRequestLogging extends LazyLogging with Formatter {
       case _                                => ""
     }
 
-  def logTime(notifier: String => Unit, durationThreshold: FiniteDuration = 30 seconds)(
+  def logTime(notifier: String => Unit, durationThreshold: FiniteDuration = 2 minutes)(
       block: => Future[Result])(implicit request: Request[_], ec: ExecutionContext): Future[Result] = {
     def logTimeFormatted(executionTime: FiniteDuration, request: Request[_], result: Result): Unit = {
       val debugString =

@@ -1,4 +1,4 @@
-import { DeleteOutlined } from "@ant-design/icons";
+import { CopyOutlined, DeleteOutlined } from "@ant-design/icons";
 import { startFindLargestSegmentIdJob } from "admin/admin_rest_api";
 import { getDatasetNameRules, layerNameRules } from "admin/dataset/dataset_components";
 import { useStartAndPollJob } from "admin/job/job_hooks";
@@ -158,6 +158,17 @@ export default function DatasetSettingsDataTab({
   );
 }
 
+function copyDatasetID(datasetId: string | null | undefined) {
+  if (!datasetId) {
+    return;
+  }
+  navigator.clipboard.writeText(datasetId);
+  Toast.success("Dataset ID copied.");
+}
+
+const LEFT_COLUMN_ITEMS_WIDTH = 408;
+const COPY_ICON_BUTTON_WIDTH = 32;
+
 function SimpleDatasetForm({
   dataSource,
   form,
@@ -212,9 +223,29 @@ function SimpleDatasetForm({
                 >
                   <Input
                     style={{
-                      width: 408,
+                      width: LEFT_COLUMN_ITEMS_WIDTH,
                     }}
                   />
+                </FormItemWithInfo>
+                <Space size="large" />
+                <FormItemWithInfo
+                  name={["dataset", "id"]}
+                  label="Dataset ID"
+                  info="The ID used to identify the dataset. Needed for e.g. Task bulk creation."
+                >
+                  <Space.Compact>
+                    <Input
+                      value={dataset?.id}
+                      style={{
+                        width: LEFT_COLUMN_ITEMS_WIDTH - COPY_ICON_BUTTON_WIDTH,
+                      }}
+                      readOnly
+                      disabled
+                    />
+                    <Tooltip title="Copy dataset ID">
+                      <Button onClick={() => copyDatasetID(dataset?.id)} icon={<CopyOutlined />} />
+                    </Tooltip>
+                  </Space.Compact>
                 </FormItemWithInfo>
               </Col>
               <Col span={24} xl={12}>
@@ -418,7 +449,7 @@ function SimpleLayerForm({
               // editing the layer name for wkw.
               disabled={layer.dataFormat === "wkw"}
               style={{
-                width: 408,
+                width: LEFT_COLUMN_ITEMS_WIDTH,
               }}
             />
           </FormItemWithInfo>
@@ -473,7 +504,7 @@ function SimpleLayerForm({
               disabled
               allowClear
               value={getMags(layer).map((mag) => mag.toString())}
-              style={{ width: 408 }}
+              style={{ width: LEFT_COLUMN_ITEMS_WIDTH }}
             >
               {getMags(layer).map((mag) => (
                 <Select.Option key={mag.toString()} value={mag.toString()}>

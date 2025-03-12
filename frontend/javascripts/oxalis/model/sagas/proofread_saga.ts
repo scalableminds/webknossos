@@ -168,14 +168,7 @@ function* loadCoarseMesh(
   );
 
   if (meshInfo != null) {
-    if (meshInfo.isPrecomputed && meshInfo.areChunksMerged) {
-      console.log(
-        `Reloading mesh for segment ${segmentId} because its chunks should not be merged for proofreading.`,
-      );
-      yield* put(refreshMeshAction(layerName, segmentId));
-    } else {
-      console.log(`Don't load mesh for segment ${segmentId} because it already exists.`);
-    }
+    console.log(`Don't load mesh for segment ${segmentId} because it already exists.`);
     return;
   }
 
@@ -193,7 +186,6 @@ function* loadCoarseMesh(
         additionalCoordinates,
         currentMeshFile.meshFileName,
         undefined,
-        false,
       ),
     );
   } else {

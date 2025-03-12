@@ -595,9 +595,6 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
   }
 
   if (meshInfo.isPrecomputed) {
-    const isProofreadingActive = yield* select(
-      (state) => state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD,
-    );
     yield* put(removeMeshAction(layerName, meshInfo.segmentId));
     yield* put(
       loadPrecomputedMeshAction(
@@ -606,7 +603,6 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
         meshInfo.seedAdditionalCoordinates,
         meshInfo.meshFileName,
         layerName,
-        !isProofreadingActive,
       ),
     );
   } else {

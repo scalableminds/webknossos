@@ -23,7 +23,7 @@ import scala.concurrent.ExecutionContext
 
 case class AiModel(_id: ObjectId,
                    _owningOrganization: String,
-                   _organizations: List[String],
+                   _sharedOrganizations: List[String],
                    _dataStore: String,
                    _user: ObjectId,
                    _trainingJob: Option[ObjectId],
@@ -66,7 +66,7 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
           .toFox)
       trainingJobJsOpt <- Fox.runOptional(trainingJobOpt.flatten)(jobService.publicWrites)
       isOwnedByUsersOrganization = aiModel._owningOrganization == requestingUser._organization
-      sharedOrganizationIds = if (isOwnedByUsersOrganization) Some(aiModel._organizations) else None
+      sharedOrganizationIds = if (isOwnedByUsersOrganization) Some(aiModel._sharedOrganizations) else None
     } yield
       Json.obj(
         "id" -> aiModel._id,
@@ -93,7 +93,7 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected def parse(r: AimodelsRow): Fox[AiModel] =
     for {
       trainingAnnotationIds <- findTrainingAnnotationIdsFor(ObjectId(r._Id))
-      organizations <- findOrganizationsFor(ObjectId(r._Id))
+      organizations <- findSharedOrganizationsFor(ObjectId(r._Id))
     } yield
       AiModel(
         ObjectId(r._Id),
@@ -121,21 +121,8 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
               (o._id IN (
                   SELECT _organization
                   FROM webknossos.users_
-                  WHERE _multiUser = (
-                      SELECT _multiUser
-                      FROM webknossos.users_
-                      WHERE _id = $requestingUserId
-                  )
+                  WHERE _id = $requestingUserId
               ))
-              OR TRUE IN (
-                  SELECT isSuperUser
-                  FROM webknossos.multiUsers_
-                  WHERE _id IN (
-                      SELECT _multiUser
-                      FROM webknossos.users_
-                      WHERE _id = $requestingUserId
-                  )
-              )
           )
      """
 
@@ -165,7 +152,7 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                     )
            """.asUpdate
     val insertTrainingAnnotationQueries = insertTrainingAnnotationIdQueries(a._id, a._trainingAnnotations)
-    val insertOrganizationQueries = insertOrganizationQuery(a._id, a._organizations)
+    val insertOrganizationQueries = insertSharedOrganizationsQuery(a._id, a._sharedOrganizations)
     for {
       _ <- run(
         DBIO
@@ -192,17 +179,17 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           .as[ObjectId])
     } yield rows.toList
 
-  private def insertOrganizationQuery(aiModelId: ObjectId,
+  private def insertSharedOrganizationsQuery(aiModelId: ObjectId,
                                       organizationIds: List[String]): List[SqlAction[Int, NoStream, Effect]] =
     organizationIds.map { organizationId =>
-      insertOrganizationQuery(aiModelId, organizationId)
+      insertSharedOrganizationQuery(aiModelId, organizationId)
     }
 
-  private def insertOrganizationQuery(aiModelId: ObjectId, organizationId: String): SqlAction[Int, NoStream, Effect] =
+  private def insertSharedOrganizationQuery(aiModelId: ObjectId, organizationId: String): SqlAction[Int, NoStream, Effect] =
     q"""INSERT INTO webknossos.aiModel_organizations (_aiModel, _organization)
             VALUES ($aiModelId, $organizationId)""".asUpdate
 
-  private def findOrganizationsFor(aiModelId: ObjectId): Fox[List[String]] =
+  private def findSharedOrganizationsFor(aiModelId: ObjectId): Fox[List[String]] =
     for {
       rows <- run(
         q"SELECT _organization FROM webknossos.aiModel_organizations WHERE _aiModel = $aiModelId ORDER BY _organization"

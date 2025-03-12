@@ -157,7 +157,7 @@ class AiModelController @Inject()(
         newAiModel = AiModel(
           _id = modelId,
           _owningOrganization = request.identity._organization,
-          _organizations = List(request.identity._organization),
+          _sharedOrganizations = List(request.identity._organization),
           _dataStore = dataStore.name,
           _user = request.identity._id,
           _trainingJob = Some(newTrainingJob._id),
@@ -215,7 +215,7 @@ class AiModelController @Inject()(
   def updateAiModelInfo(aiModelId: ObjectId): Action[UpdateAiModelParameters] =
     sil.SecuredAction.async(validateJson[UpdateAiModelParameters]) { implicit request =>
       {
-        // Automatically add the owning organization to the shared organizations if it is not already there.
+        // Automatically add the owning organization to the shared organizations to ensure it is impossible for the owning organization to loose access..
         val sharedOrganizationIds = request.body.sharedOrganizationIds.map { sharedOrganizationIds =>
           if (!sharedOrganizationIds.contains(request.identity._organization)) {
             sharedOrganizationIds :+ request.identity._organization
@@ -246,7 +246,7 @@ class AiModelController @Inject()(
           AiModel(
             request.body.id,
             _owningOrganization = request.identity._organization,
-            _organizations = List(request.identity._organization),
+            _sharedOrganizations = List(request.identity._organization),
             request.body.dataStoreName,
             request.identity._id,
             None,

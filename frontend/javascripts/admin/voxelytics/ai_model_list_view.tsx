@@ -256,9 +256,10 @@ function EditModelSharedOrganizationsModal({
         <Typography.Text italic>{model.name}</Typography.Text>.
       </p>
       <Typography.Paragraph type="secondary">
-        Note: You can only select and deselect organizations you are part of. The AI model might
-        still be accessible to additional organizations which other users of you organization
-        granted access to.
+        You can only select or deselect organizations that you are a member of. However, other users
+        in your organization may have granted access to additional organizations that you are not
+        part of. Only members of your organization who have access to those organizations can modify
+        their access.
       </Typography.Paragraph>
       <Select
         mode="multiple"

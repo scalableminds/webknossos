@@ -255,12 +255,6 @@ export default class SegmentMeshController {
     const group = new THREE.Group() as SceneGroupForMeshes;
 
     group.add(meshChunk);
-    // @ts-ignore todop
-    if (window.DEBUG_BVH) {
-      const bvhHelper = new MeshBVHHelper(meshChunk);
-      bvhHelper.displayParents = true;
-      group.add(bvhHelper);
-    }
 
     group.segmentId = segmentId;
     this.addMeshToMeshGroups(additionalCoordinatesString, layerName, segmentId, lod, group);

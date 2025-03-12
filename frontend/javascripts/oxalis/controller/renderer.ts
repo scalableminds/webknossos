@@ -46,8 +46,6 @@ if (typeof window !== "undefined") {
   }
   // @ts-ignore
   window.testContextLoss = testContextLoss;
-  // @ts-ignore todop
-  window.getRenderer = getRenderer;
 }
 
 export { getRenderer };

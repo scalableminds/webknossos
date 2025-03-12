@@ -190,7 +190,6 @@ class PlaneView {
     if (hitObject && face) {
       if ("positionToSegmentId" in hitObject.geometry) {
         const positionToSegmentId = hitObject.geometry.positionToSegmentId as PositionToSegmentId;
-        // todop: combine these two calls to avoid the repeated index look up?
         unmappedSegmentId = positionToSegmentId.getUnmappedSegmentIdForPosition(face.a);
         indexRange = positionToSegmentId.getRangeForUnmappedSegmentId(unmappedSegmentId);
       }

@@ -977,39 +977,27 @@ function* _getLoadChunksTasks(
 
           const errorsWithDetails = [];
 
-          const chunksWithData = chunks.map((chunk, idx) => ({
-            ...chunk,
-            data: dataForChunks[idx],
-          }));
-
-          // todop: partially obsolete comment
-          // Group chunks by position and merge meshes in the same chunk to keep the number
-          // of objects in the scene low for better performance. Ideally, more mesh geometries
-          // would be merged, but the meshes in different chunks need to be translated differently.
-          const chunksGroupedByPosition = _.groupBy(chunksWithData, "position");
-          for (const chunksForPosition of Object.values(chunksGroupedByPosition)) {
-            // All chunks in chunksForPosition have the same position
-            const position = chunksForPosition[0].position;
-
-            for (let chunkIdx = 0; chunkIdx < chunksForPosition.length; chunkIdx++) {
-              const chunk = chunksForPosition[chunkIdx];
-              try {
-                const bufferGeometry = (yield* call(
-                  loader.decodeDracoFileAsync,
-                  chunk.data,
-                )) as UnmergedBufferGeometryWithInfo;
-                bufferGeometry.unmappedSegmentId = chunk.unmappedSegmentId;
-
-                bufferGeometry.translate(position[0], position[1], position[2]);
-                // Compute vertex normals to achieve smooth shading. We do this here
-                // within the chunk-specific code (instead of after all chunks are merged)
-                // to distribute the workload a bit over time.
-                bufferGeometry.computeVertexNormals();
-
-                bufferGeometries.push(bufferGeometry);
-              } catch (error) {
-                errorsWithDetails.push({ error, chunk });
+          for (const [chunk, data] of _.zip(chunks, dataForChunks)) {
+            try {
+              if (chunk == null || data == null) {
+                throw new Error("Unexpected null value.");
               }
+              const position = chunk.position;
+              const bufferGeometry = (yield* call(
+                loader.decodeDracoFileAsync,
+                data,
+              )) as UnmergedBufferGeometryWithInfo;
+              bufferGeometry.unmappedSegmentId = chunk.unmappedSegmentId;
+
+              bufferGeometry.translate(position[0], position[1], position[2]);
+              // Compute vertex normals to achieve smooth shading. We do this here
+              // within the chunk-specific code (instead of after all chunks are merged)
+              // to distribute the workload a bit over time.
+              bufferGeometry.computeVertexNormals();
+
+              bufferGeometries.push(bufferGeometry);
+            } catch (error) {
+              errorsWithDetails.push({ error, chunk });
             }
           }
 
@@ -1028,19 +1016,16 @@ function* _getLoadChunksTasks(
       console.error(exception);
     }
 
-    // todop: clean up
     // Merge Chunks
     const sortedBufferGeometries = _.sortBy(
       bufferGeometries,
       (geometryWithInfo) => geometryWithInfo.unmappedSegmentId,
     );
 
-    console.time("mergeGeometries");
     const mergedGeometry = mergeGeometries(
       sortedBufferGeometries,
       false,
     ) as BufferGeometryWithInfo | null;
-    console.timeEnd("mergeGeometries");
 
     // If mergeGeometries does not succeed, the method logs the error to the console and returns null
     if (mergedGeometry == null) {

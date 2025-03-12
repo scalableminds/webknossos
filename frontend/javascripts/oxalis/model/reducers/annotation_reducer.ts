@@ -278,14 +278,14 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "UPDATE_MESH_OPACITY": {
-      const { layerName, segmentId, opacity, additionalCoordinates } = action;
+      const { layerName, id, opacity, additionalCoordinates } = action;
       const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
       return update(state, {
         localSegmentationData: {
           [layerName]: {
             meshes: {
               [additionalCoordKey]: {
-                [segmentId]: {
+                [id]: {
                   opacity: {
                     $set: opacity,
                   },

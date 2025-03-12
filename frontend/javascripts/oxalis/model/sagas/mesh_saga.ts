@@ -1267,10 +1267,11 @@ function* handleSegmentColorChange(action: UpdateSegmentAction): Saga<void> {
 }
 
 function* handleMeshOpacityChange(action: UpdateMeshOpacityAction): Saga<void> {
+  console.log("handleMeshOpacityChange");
   const { segmentMeshController } = yield* call(getSceneController);
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
-  if (segmentMeshController.hasMesh(action.segmentId, action.layerName, additionalCoordinates)) {
-    segmentMeshController.setMeshOpacity(action.segmentId, action.layerName, action.opacity);
+  if (segmentMeshController.hasMesh(action.id, action.layerName, additionalCoordinates)) {
+    segmentMeshController.setMeshOpacity(action.id, action.layerName, action.opacity);
   }
 }
 

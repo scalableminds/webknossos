@@ -9,6 +9,7 @@ export const ThrottledColorPicker = ({
   color,
   onChange,
 }: {
+  // TODO_c sync input and color picker
   color: string;
   onChange: (color: string) => void;
 }) => {

@@ -240,7 +240,7 @@ export const updateMeshOpacityAction = (
 ) =>
   ({
     type: "UPDATE_MESH_OPACITY",
-    segmentId: id,
+    id,
     layerName,
     opacity,
     additionalCoordinates,

@@ -1,7 +1,7 @@
 import { EditOutlined, PlusOutlined, SyncOutlined } from "@ant-design/icons";
 import { getAiModels, getUsersOrganizations, updateAiModel } from "admin/admin_rest_api";
 import { JobState, getShowTrainingDataLink } from "admin/job/job_list_view";
-import { Button, Modal, Select, Space, Table, Typography } from "antd";
+import { Button, Col, Modal, Select, Space, Table, Typography } from "antd";
 import FormattedDate from "components/formatted_date";
 import { PageNotAvailableToNormalUser } from "components/permission_enforcer";
 import { useFetch, useGuardedFetch } from "libs/react_helpers";
@@ -250,6 +250,7 @@ function EditModelSharedOrganizationsModal({
       onCancel={onClose}
       onClose={onClose}
       maskClosable={false}
+      width={800}
     >
       <p>
         Select all organization that should have access to the AI model{" "}
@@ -261,16 +262,18 @@ function EditModelSharedOrganizationsModal({
         part of. Only members of your organization who have access to those organizations can modify
         their access.
       </Typography.Paragraph>
-      <Select
-        mode="multiple"
-        allowClear
-        autoFocus
-        style={{ width: "100%" }}
-        placeholder="Please select"
-        onChange={handleChange}
-        options={options}
-        value={selectedOrganizationIds}
-      />
+      <Col span={14} offset={4}>
+        <Select
+          mode="multiple"
+          allowClear
+          autoFocus
+          style={{ width: "100%" }}
+          placeholder="Please select"
+          onChange={handleChange}
+          options={options}
+          value={selectedOrganizationIds}
+        />
+      </Col>
     </Modal>
   );
 }

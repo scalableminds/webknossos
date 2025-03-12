@@ -430,7 +430,7 @@ export default class SegmentMeshController {
     });
   }
 
-  getMeshGroupsByLOD(
+  private getMeshGroupsByLOD(
     additionalCoordinates: AdditionalCoordinate[] | null | undefined,
     layerName: string,
     segmentId: number,
@@ -441,7 +441,7 @@ export default class SegmentMeshController {
     return _.get(this.meshesGroupsPerSegmentId, keys, null);
   }
 
-  getMeshGroups(
+  private getMeshGroups(
     additionalCoordKey: string,
     layerName: string,
     segmentId: number,
@@ -450,7 +450,7 @@ export default class SegmentMeshController {
     return _.get(this.meshesGroupsPerSegmentId, keys, null);
   }
 
-  addMeshToMeshGroups(
+  private addMeshToMeshGroups(
     additionalCoordKey: string,
     layerName: string,
     segmentId: number,
@@ -461,7 +461,11 @@ export default class SegmentMeshController {
     group.add(mesh);
   }
 
-  removeMeshFromMeshGroups(additionalCoordinateKey: string, layerName: string, segmentId: number) {
+  private removeMeshFromMeshGroups(
+    additionalCoordinateKey: string,
+    layerName: string,
+    segmentId: number,
+  ) {
     delete this.meshesGroupsPerSegmentId[additionalCoordinateKey][layerName][segmentId];
   }
 
@@ -472,10 +476,10 @@ export default class SegmentMeshController {
     highlightState?: HighlightState,
   ) {
     // This method has three steps:
-    // 1) Check whether the provided parameters differ from the actual
+    // 1) Check whether (and which of) the provided parameters differ from the actual
     //    appearance.
-    // 2) Clear
-    // 3) Change
+    // 2) Clear old partial ranges if necessary.
+    // 3) Update the appearance.
     const isProofreadingMode = Store.getState().uiInformation.activeTool === "PROOFREAD";
 
     if (highlightState != null && !isProofreadingMode) {
@@ -509,6 +513,7 @@ export default class SegmentMeshController {
       return;
     }
 
+    // todop: restore?
     // const targetOpacity = mesh.hoveredState ? 0.8 : 1.0;
 
     // mesh.parent.parent contains exactly one geometry (merged from all chunks

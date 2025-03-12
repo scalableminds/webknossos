@@ -231,7 +231,7 @@ function SimpleDatasetForm({
                 <FormItemWithInfo
                   name={["dataset", "id"]}
                   label="Dataset ID"
-                  info="The id used to identify the dataset. Needed for e.g. Task bulk creation."
+                  info="The ID used to identify the dataset. Needed for e.g. Task bulk creation."
                 >
                   <Space.Compact>
                     <Input
@@ -247,13 +247,6 @@ function SimpleDatasetForm({
                     </Tooltip>
                   </Space.Compact>
                 </FormItemWithInfo>
-                {/*<span style={{ marginLeft: 16 }}>
-                    <Tooltip title="Copy dataset ID">
-                      <Button onClick={() => copyDatasetID(dataset?.id)}>
-                        <CopyOutlined />
-                      </Button>
-                    </Tooltip>
-                  </span>*/}
               </Col>
               <Col span={24} xl={12}>
                 <FormItemWithInfo

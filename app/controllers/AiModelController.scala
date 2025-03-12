@@ -216,7 +216,7 @@ class AiModelController @Inject()(
     sil.SecuredAction.async(validateJson[UpdateAiModelParameters]) { implicit request =>
       {
         // Automatically add the owning organization to the shared organizations to ensure it is impossible for the owning organization to loose access..
-        val sharedOrganizationIds = request.body.sharedOrganizationIds.map { sharedOrganizationIds =>
+        val sharedOrganizationIdsOpt = request.body.sharedOrganizationIds.map { sharedOrganizationIds =>
           if (!sharedOrganizationIds.contains(request.identity._organization)) {
             sharedOrganizationIds :+ request.identity._organization
           } else sharedOrganizationIds
@@ -228,7 +228,22 @@ class AiModelController @Inject()(
           _ <- aiModelDAO.updateOne(aiModel.copy(name = request.body.name,
                                                  comment = request.body.comment,
                                                  modified = Instant.now)) ?~> "aiModel.updatingFailed"
-          _ <- Fox.runOptional(sharedOrganizationIds)(orgas => aiModelDAO.updateSharedOrganizations(aiModel._id, orgas)) ?~> "aiModel.updatingSharedFailed"
+          areSharedOrganizationsUpdated = sharedOrganizationIdsOpt
+            .getOrElse(List())
+            .toSet != aiModel._sharedOrganizations.toSet
+          sharedAndPreservedOrganizationIdsOpt <- if (areSharedOrganizationsUpdated)
+            Fox.runOptional(sharedOrganizationIdsOpt) { newlySharedOrganizationIds =>
+              // Keep organizations with access to the aiModel which the current user has no access to.
+              for {
+                organizationIdsUserCanAccess <- organizationDAO.findAll.flatMap(os => Fox.successful(os.map(_._id)))
+                organizationsToPreserveAccessTo = aiModel._sharedOrganizations.filter(
+                  organizationIdsUserCanAccess.contains)
+              } yield newlySharedOrganizationIds ++ organizationsToPreserveAccessTo
+            } else Fox.successful(None)
+          _ <- Fox.runOptional(sharedAndPreservedOrganizationIdsOpt)(
+            orgas =>
+              if (orgas.toSet == aiModel._sharedOrganizations.toSet) Fox.successful(())
+              else aiModelDAO.updateSharedOrganizations(aiModel._id, orgas)) ?~> "aiModel.updatingSharedFailed"
           updatedAiModel <- aiModelDAO.findOne(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
           jsResult <- aiModelService.publicWrites(updatedAiModel, request.identity)
         } yield Ok(jsResult)

@@ -66,6 +66,7 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
           .toFox)
       trainingJobJsOpt <- Fox.runOptional(trainingJobOpt.flatten)(jobService.publicWrites)
       isOwnedByUsersOrganization = aiModel._owningOrganization == requestingUser._organization
+      // TODO: only send organization ids which the active user can access.
       sharedOrganizationIds = if (isOwnedByUsersOrganization) Some(aiModel._sharedOrganizations) else None
     } yield
       Json.obj(

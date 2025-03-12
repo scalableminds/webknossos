@@ -58,7 +58,7 @@ import { setThemeAction } from "oxalis/model/actions/ui_actions";
 import { logoutUserAction, setActiveUserAction } from "oxalis/model/actions/user_actions";
 import type { OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
-import { HelpModal } from "oxalis/view/help_modal";
+import { HelpChatModal } from "oxalis/view/help_modal";
 import { PortalTarget } from "oxalis/view/layouting/portal_utils";
 import type { MenuClickEventHandler } from "rc-menu/lib/interface";
 import { getAntdTheme, getSystemColorTheme } from "theme";
@@ -970,11 +970,7 @@ function Navbar({
       />
 
       {isInAnnotationView ? separator : null}
-      <HelpModal
-        isModalOpen={isHelpModalOpen}
-        onCancel={() => setIsHelpModalOpen(false)}
-        centeredLayout
-      />
+      <HelpChatModal isModalOpen={isHelpModalOpen} onCancel={() => setIsHelpModalOpen(false)} />
       <PortalTarget
         portalId="navbarTracingSlot"
         style={{

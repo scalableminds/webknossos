@@ -284,7 +284,7 @@ function _getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull(
     return null;
   }
 
-  return invertTransform(transformsOfNativeLayer);
+  return toIdentityTransformMaybe(invertTransform(transformsOfNativeLayer));
 }
 
 export const getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull = memoizeOne(

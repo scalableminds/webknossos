@@ -318,9 +318,17 @@ export default class SegmentMeshController {
       if (meshDataForOneSegment != null) {
         for (const lodGroup of Object.values(meshDataForOneSegment)) {
           for (const meshGroup of lodGroup.children) {
-            meshGroup.children.forEach(
-              (child: MeshSceneNode) => (child.material.originalColor = colorArray),
-            );
+            meshGroup.children.forEach((child: MeshSceneNode) => {
+              child.material.originalColor = colorArray;
+              if (child.material.vertexColors) {
+                for (let index = 0; index < child.geometry.attributes.color.count; index++) {
+                  child.geometry.attributes.color.set(colorArray, 3 * index);
+                }
+                child.geometry.attributes.color.needsUpdate = true;
+              } else {
+                child.material.color = color;
+              }
+            });
           }
         }
       }

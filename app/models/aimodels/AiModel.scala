@@ -15,6 +15,7 @@ import slick.lifted.Rep
 import slick.sql.SqlAction
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox.futureBox2Fox
+import models.organization.OrganizationDAO
 import net.liftweb.common.Full
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
@@ -39,6 +40,7 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
                                dataStoreService: DataStoreService,
                                userDAO: UserDAO,
                                userService: UserService,
+                               organizationDAO: OrganizationDAO,
                                jobDAO: JobDAO,
                                jobService: JobService) {
   def publicWrites(aiModel: AiModel, requestingUser: User)(implicit ec: ExecutionContext,
@@ -66,8 +68,11 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
           .toFox)
       trainingJobJsOpt <- Fox.runOptional(trainingJobOpt.flatten)(jobService.publicWrites)
       isOwnedByUsersOrganization = aiModel._owningOrganization == requestingUser._organization
-      // TODO: only send organization ids which the active user can access.
-      sharedOrganizationIds = if (isOwnedByUsersOrganization) Some(aiModel._sharedOrganizations) else None
+      sharedOrganizationIds <- if (isOwnedByUsersOrganization) for {
+        orgaIdsUserCanAccess <- organizationDAO.findAll.flatMap(os => Fox.successful(os.map(_._id)))
+        sharedOrgasIdsUserCanAccess = aiModel._sharedOrganizations.filter(orgaIdsUserCanAccess.contains)
+      } yield Some(sharedOrgasIdsUserCanAccess)
+      else Fox.successful(None)
     } yield
       Json.obj(
         "id" -> aiModel._id,
@@ -181,12 +186,13 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield rows.toList
 
   private def insertSharedOrganizationsQuery(aiModelId: ObjectId,
-                                      organizationIds: List[String]): List[SqlAction[Int, NoStream, Effect]] =
+                                             organizationIds: List[String]): List[SqlAction[Int, NoStream, Effect]] =
     organizationIds.map { organizationId =>
       insertSharedOrganizationQuery(aiModelId, organizationId)
     }
 
-  private def insertSharedOrganizationQuery(aiModelId: ObjectId, organizationId: String): SqlAction[Int, NoStream, Effect] =
+  private def insertSharedOrganizationQuery(aiModelId: ObjectId,
+                                            organizationId: String): SqlAction[Int, NoStream, Effect] =
     q"""INSERT INTO webknossos.aiModel_organizations (_aiModel, _organization)
             VALUES ($aiModelId, $organizationId)""".asUpdate
 

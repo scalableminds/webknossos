@@ -85,7 +85,7 @@ export function ChangeColorMenuItemContent({
   return getPopover(title, content);
 }
 
-export const ThrottledRGBAColorPicker = ({
+const ThrottledRGBAColorPicker = ({
   color,
   onChangeColor,
 }: {
@@ -93,23 +93,22 @@ export const ThrottledRGBAColorPicker = ({
   onChangeColor: (color: RgbaColor) => void;
 }) => {
   const [value, localSetValue] = useState(color);
-  const throttledSetValue = useThrottledCallback(onChangeColor, [onChangeColor], 20);
+  const throttledSetValue = useThrottledCallback(onChangeColor, [onChangeColor, value], 20);
   const setValue = (newValue: RgbaColor) => {
     localSetValue(newValue);
     throttledSetValue(newValue);
+    console.log("set value", newValue);
   };
   const setValueFromHex = (color: string) => {
     const colorRgb = Utils.hexToRgb(color);
-    setValue({ r: colorRgb[0] / 255, g: colorRgb[1] / 255, b: colorRgb[2] / 255, a: value.a });
+    setValue({ r: colorRgb[0], g: colorRgb[1], b: colorRgb[2], a: value.a });
   };
-  const colorAsHex = Utils.rgbToHex(
-    Utils.map3((value) => value * 255, [value.r, value.g, value.b]),
-  );
+  const colorAsHex = Utils.rgbToHex([value.r, value.g, value.b]);
   return (
-    <>
+    <div style={{ marginRight: "10px" }}>
       <RgbaColorPicker color={value} onChange={setValue} />
       {getColorInput(colorAsHex, setValueFromHex)}
-    </>
+    </div>
   );
 };
 

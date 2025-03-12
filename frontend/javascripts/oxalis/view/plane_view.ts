@@ -1,14 +1,11 @@
 import app from "app";
-import VisibilityAwareRaycaster, {
-  type RaycastIntersection,
-} from "libs/visibility_aware_raycaster";
+import VisibilityAwareRaycaster from "libs/visibility_aware_raycaster";
 import window from "libs/window";
 import _ from "lodash";
-import type { OrthoViewMap, Vector3, Viewport } from "oxalis/constants";
+import type { OrthoViewMap, Vector2, Vector3, Viewport } from "oxalis/constants";
 import Constants, { OrthoViewColors, OrthoViewValues, OrthoViews } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import type {
-  BufferGeometryWithInfo,
   MeshSceneNode,
   PositionToSegmentId,
   SceneGroupForMeshes,
@@ -32,8 +29,8 @@ const settings = {
 
 type RaycasterHit = {
   node: MeshSceneNode;
-  face: THREE.Face;
-  unmappedSegmentId: number;
+  indexRange: Vector2 | null;
+  unmappedSegmentId: number | null;
   point: Vector3;
 } | null;
 
@@ -66,21 +63,6 @@ const raycaster = new VisibilityAwareRaycaster();
 raycaster.firstHitOnly = true;
 
 let oldRaycasterHit: RaycasterHit = null;
-
-function getIndexRangeForFace(mesh: MeshSceneNode, face: THREE.Face | null | undefined) {
-  if (face == null) {
-    return null;
-  }
-  const { a } = face;
-
-  const positionToSegmentId = (mesh.geometry as BufferGeometryWithInfo).positionToSegmentId;
-
-  if (positionToSegmentId) {
-    const indexRange = positionToSegmentId.getRangeForPosition(a);
-    return indexRange;
-  }
-  return null;
-}
 
 class PlaneView {
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
@@ -202,46 +184,52 @@ class PlaneView {
     const after = performance.now();
     const face = intersections.length > 0 ? intersections[0].face : null;
     const hitObject = intersections.length > 0 ? (intersections[0].object as MeshSceneNode) : null;
-    let unmappedSegmentId = 0;
+    let unmappedSegmentId = null;
+    let indexRange = null;
 
     if (hitObject && face) {
       if ("positionToSegmentId" in hitObject.geometry) {
         const positionToSegmentId = hitObject.geometry.positionToSegmentId as PositionToSegmentId;
+        // todop: combine these two calls to avoid the repeated index look up?
         unmappedSegmentId = positionToSegmentId.getUnmappedSegmentIdForPosition(face.a);
+        indexRange = positionToSegmentId.getRangeForUnmappedSegmentId(unmappedSegmentId);
       }
     }
 
     // Check whether we are hitting the same object as before, since we can return early
     // in this case.
-    if (unmappedSegmentId === oldRaycasterHit?.unmappedSegmentId) {
-      return oldRaycasterHit;
+    if (storeState.uiInformation.activeTool === "PROOFREAD") {
+      if (hitObject == null && oldRaycasterHit == null) {
+        return null;
+      }
+      if (unmappedSegmentId != null && unmappedSegmentId === oldRaycasterHit?.unmappedSegmentId) {
+        return oldRaycasterHit;
+      }
+    } else {
+      // In proofreading, there is no highlighting of parts of the meshes.
+      // If the parent group is identical, we can reuse the old hit object.
+      if (hitObject?.parent === oldRaycasterHit?.node.parent) {
+        return oldRaycasterHit;
+      }
     }
 
     // Undo highlighting of old hit
-    if (oldRaycasterHit?.node.parent != null) {
-      console.time("updateMeshAppearance for old hit");
-      segmentMeshController.updateMeshAppearance(oldRaycasterHit.node, false, undefined, null);
-      console.timeEnd("updateMeshAppearance for old hit");
-
-      oldRaycasterHit = null;
-    }
+    this.clearLastMeshHitTest();
 
     oldRaycasterHit =
-      hitObject != null && face != null
-        ? { node: hitObject, face, unmappedSegmentId, point: intersections[0].point.toArray() }
+      hitObject != null
+        ? {
+            node: hitObject,
+            indexRange,
+            unmappedSegmentId,
+            point: intersections[0].point.toArray(),
+          }
         : null;
 
     // Highlight new hit
     if (hitObject?.parent != null) {
       console.log("raycast took", after - before, "ms");
-      console.time("updateMeshAppearance");
-      segmentMeshController.updateMeshAppearance(
-        hitObject,
-        true,
-        undefined,
-        getIndexRangeForFace(hitObject, face),
-      );
-      console.timeEnd("updateMeshAppearance");
+      segmentMeshController.updateMeshAppearance(hitObject, true, undefined, indexRange || "full");
 
       Store.dispatch(
         updateTemporarySettingAction(
@@ -255,6 +243,15 @@ class PlaneView {
       return null;
     }
   }
+
+  clearLastMeshHitTest = () => {
+    if (oldRaycasterHit?.node.parent != null) {
+      const SceneController = getSceneController();
+      const { segmentMeshController } = SceneController;
+      segmentMeshController.updateMeshAppearance(oldRaycasterHit.node, false, undefined, null);
+      oldRaycasterHit = null;
+    }
+  };
 
   draw(): void {
     app.vent.emit("rerender");

@@ -25,10 +25,11 @@ import Zip from "libs/zipjs_wrapper";
 import messages from "messages";
 import { WkDevFlags } from "oxalis/api/wk_dev";
 import type { Vector3 } from "oxalis/constants";
-import { AnnotationToolEnum, MappingStatusEnum } from "oxalis/constants";
+import { MappingStatusEnum } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import {
   PositionToSegmentId,
+  type UnmergedBufferGeometryWithInfo,
   type BufferGeometryWithInfo,
 } from "oxalis/controller/segment_mesh_controller";
 import {
@@ -955,7 +956,7 @@ function* _getLoadChunksTasks(
       (chunk) => chunk.byteSize,
     );
 
-    let bufferGeometries: BufferGeometryWithInfo[] = [];
+    let bufferGeometries: UnmergedBufferGeometryWithInfo[] = [];
     const tasks = batches.map(
       (chunks) =>
         function* loadChunks(): Saga<void> {
@@ -996,7 +997,7 @@ function* _getLoadChunksTasks(
                 const bufferGeometry = (yield* call(
                   loader.decodeDracoFileAsync,
                   chunk.data,
-                )) as BufferGeometryWithInfo;
+                )) as UnmergedBufferGeometryWithInfo;
                 bufferGeometry.unmappedSegmentId = chunk.unmappedSegmentId;
 
                 bufferGeometry.translate(position[0], position[1], position[2]);
@@ -1035,10 +1036,11 @@ function* _getLoadChunksTasks(
     );
 
     console.time("mergeGeometries");
-    const mergedGeometry = mergeGeometries(sortedBufferGeometries, false) as BufferGeometryWithInfo;
+    const mergedGeometry = mergeGeometries(
+      sortedBufferGeometries,
+      false,
+    ) as BufferGeometryWithInfo | null;
     console.timeEnd("mergeGeometries");
-
-    mergedGeometry.boundsTree = yield* call(computeBvhAsync, mergedGeometry);
 
     // If mergeGeometries does not succeed, the method logs the error to the console and returns null
     if (mergedGeometry == null) {
@@ -1046,6 +1048,7 @@ function* _getLoadChunksTasks(
       return;
     }
     mergedGeometry.positionToSegmentId = new PositionToSegmentId(sortedBufferGeometries);
+    mergedGeometry.boundsTree = yield* call(computeBvhAsync, mergedGeometry);
 
     // Check if the mesh scale is different to all supported mags of the active segmentation scaled by the dataset scale and warn in the console to make debugging easier in such a case.
     // This hint at the mesh file being computed when the dataset scale was different than currently configured.
@@ -1067,15 +1070,16 @@ function* _getLoadChunksTasks(
     yield* call(
       {
         context: segmentMeshController,
-        fn: segmentMeshController.addMeshFromGeometries,
+        fn: segmentMeshController.addMeshFromGeometry,
       },
-      [mergedGeometry],
+      mergedGeometry,
       id,
       // Apply the scale from the segment info, which includes dataset scale and mag
       scale,
       lod,
       layerName,
       additionalCoordinates,
+      true,
     );
   }
 }

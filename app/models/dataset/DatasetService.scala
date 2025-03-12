@@ -5,8 +5,15 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.helpers.DatasourceMagInfo
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableDataSource, InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, GenericDataSource, DataLayerLike => DataLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
+  UnusableDataSource,
+  InboxDataSourceLike => InboxDataSource
+}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataSourceId,
+  GenericDataSource,
+  DataLayerLike => DataLayer
+}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.DataSourcePathInfo
 import com.typesafe.scalalogging.LazyLogging
@@ -350,7 +357,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- Fox.serialCombined(pathInfos)(updateRealPath)
     } yield ()
 
-  def getPathsForDataLayer(datasetId: ObjectId, layerName: String): Fox[List[(DatasourceMagInfo, List[DatasourceMagInfo])]] =
+  def getPathsForDataLayer(datasetId: ObjectId,
+                           layerName: String): Fox[List[(DatasourceMagInfo, List[DatasourceMagInfo])]] =
     for {
       magInfos <- datasetMagsDAO.findPathsForDatasetAndDatalayer(datasetId, layerName)
       magInfosAndLinkedMags <- Fox.serialCombined(magInfos)(magInfo =>
@@ -358,7 +366,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
           case Some(realPath) =>
             for {
               pathInfos <- datasetMagsDAO.findAllByRealPath(realPath)
-            } yield (magInfo, pathInfos.filter(!_.equals(magInfo)))
+              filteredPathInfos = pathInfos.filter(_.dataSourceId != magInfo.dataSourceId)
+            } yield (magInfo, filteredPathInfos)
           case None => Fox.successful((magInfo, List()))
       })
     } yield magInfosAndLinkedMags

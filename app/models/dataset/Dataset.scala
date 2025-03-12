@@ -810,7 +810,7 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
             WHERE _dataset = $datasetId
             AND dataLayerName = $dataLayerName""".as[DataSourceMagRow]) //TODO: Remove duplication
       mags <- Fox.serialCombined(rows.toList)(r => parseMag(r.mag))
-      dataSources = rows.map(row => DataSourceId(row._organization, row.directoryName))
+      dataSources = rows.map(row => DataSourceId(row.directoryName, row._organization))
       magInfos = rows.toList.zip(mags).zip(dataSources).map {
         case ((row, mag), dataSource) =>
           DatasourceMagInfo(dataSource, row.dataLayerName, mag, row.path, row.realPath, row.hasLocalData)

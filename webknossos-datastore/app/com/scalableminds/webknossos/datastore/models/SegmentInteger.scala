@@ -126,7 +126,7 @@ class Int32(val signed: Int) extends SegmentInteger {
   override def hashCode: Int = signed.hashCode
   override def equals(that: Any): Boolean = that match {
     case that: Int32 => that.signed == signed
-    case _            => false
+    case _           => false
   }
 }
 
@@ -151,7 +151,7 @@ class Int64(val signed: Long) extends SegmentInteger {
   override def hashCode: Int = signed.hashCode
   override def equals(that: Any): Boolean = that match {
     case that: Int64 => that.signed == signed
-    case _            => false
+    case _           => false
   }
 }
 

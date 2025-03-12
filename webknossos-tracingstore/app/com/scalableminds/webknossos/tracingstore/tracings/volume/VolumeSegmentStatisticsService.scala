@@ -67,9 +67,8 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
                                               mag,
                                               Seq(bucketPosition),
                                               additionalCoordinates)
-      dataTyped: Array[SegmentInteger] = SegmentIntegerArray.fromByteArray(
-        bucketData,
-        elementClassFromProto(tracing.elementClass))
+      dataTyped: Array[SegmentInteger] = SegmentIntegerArray.fromByteArray(bucketData,
+                                                                           elementClassFromProto(tracing.elementClass))
     } yield dataTyped
 
   private def getBucketPositions(annotationId: String,

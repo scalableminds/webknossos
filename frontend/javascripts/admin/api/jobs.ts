@@ -382,7 +382,7 @@ export async function getAiModels(): Promise<AiModel[]> {
   }));
 }
 
-export async function updateAIModel(aiModel: AiModel) {
+export async function updateAiModel(aiModel: AiModel) {
   return Request.sendJSONReceiveJSON(`/api/aiModels/${aiModel.id}`, {
     method: "PUT",
     data: {

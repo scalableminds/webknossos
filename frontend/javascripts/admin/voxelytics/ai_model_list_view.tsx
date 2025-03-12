@@ -1,5 +1,5 @@
 import { EditOutlined, PlusOutlined, SyncOutlined } from "@ant-design/icons";
-import { getAiModels, getUsersOrganizations, updateAIModel } from "admin/admin_rest_api";
+import { getAiModels, getUsersOrganizations, updateAiModel } from "admin/admin_rest_api";
 import { JobState, getShowTrainingDataLink } from "admin/job/job_list_view";
 import { Button, Modal, Select, Space, Table, Typography } from "antd";
 import FormattedDate from "components/formatted_date";
@@ -47,7 +47,7 @@ export default function AiModelListView() {
           model={currentlyEditedModel}
           onClose={() => {
             setCurrentlyEditedModel(null);
-            () => setRefreshCounter((val) => val + 1);
+            setRefreshCounter((val) => val + 1);
           }}
           owningOrganization={activeUser.organization}
         />
@@ -182,7 +182,7 @@ function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
 const renderActionsForModel = (model: AiModel, onChangeSharedOrganizations: () => void) => {
   const organizationSharingButton = model.isOwnedByUsersOrganization ? (
     <Button type="link" onClick={onChangeSharedOrganizations}>
-      Shared Organizations <EditOutlined />
+      Manage Access <EditOutlined />
     </Button>
   ) : null;
   if (model.trainingJob == null) {
@@ -230,9 +230,11 @@ function EditModelSharedOrganizationsModal({
 
   const submitNewSharedOrganizations = async () => {
     try {
-      model.sharedOrganizationIds = selectedOrganizationIds;
-      await updateAIModel(model);
-      Toast.success("Updated shared organizations successfully.");
+      const updatedModel = { ...model, sharedOrganizationIds: selectedOrganizationIds };
+      await updateAiModel(updatedModel);
+      Toast.success(
+        `Successfully updated organizations that can access model ${updatedModel.name}.`,
+      );
       onClose();
     } catch (e) {
       Toast.error("Failed to update shared organizations. See console for details.");
@@ -242,7 +244,7 @@ function EditModelSharedOrganizationsModal({
 
   return (
     <Modal
-      title="Edit Shared Organizations"
+      title={`Edit Organizations with Access to AI Model ${model.name}`}
       open
       onOk={submitNewSharedOrganizations}
       onCancel={onClose}
@@ -253,6 +255,11 @@ function EditModelSharedOrganizationsModal({
         Select all organization that should have access to the AI model{" "}
         <Typography.Text italic>{model.name}</Typography.Text>.
       </p>
+      <Typography.Paragraph type="secondary">
+        Note: You can only select and deselect organizations you are part of. The AI model might
+        still be accessible to additional organizations which other users of you organization
+        granted access to.
+      </Typography.Paragraph>
       <Select
         mode="multiple"
         allowClear

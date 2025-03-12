@@ -764,15 +764,15 @@ export type APIJob = {
 };
 
 export type AiModel = {
-  id: string;
-  name: string;
-  isOwnedByUsersOrganization: boolean;
-  sharedOrganizationIds: string[] | null | undefined;
-  dataStore: APIDataStore;
-  user: APIUser | null | undefined;
-  comment: string;
-  created: number;
-  trainingJob: APIJob | null;
+  readonly id: string;
+  readonly name: string;
+  readonly isOwnedByUsersOrganization: boolean;
+  readonly sharedOrganizationIds: string[] | null | undefined;
+  readonly dataStore: APIDataStore;
+  readonly user: APIUser | null | undefined;
+  readonly comment: string;
+  readonly created: number;
+  readonly trainingJob: APIJob | null;
 };
 
 // Tracing related datatypes

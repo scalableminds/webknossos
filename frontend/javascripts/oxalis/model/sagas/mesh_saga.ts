@@ -87,6 +87,7 @@ import type {
 } from "../actions/volumetracing_actions";
 import type { MagInfo } from "../helpers/mag_info";
 import { ensureSceneControllerReady, ensureWkReady } from "./ready_sagas";
+import { computeBvhAsync } from "libs/compute_bvh_async";
 
 export const NO_LOD_MESH_INDEX = -1;
 const MAX_RETRY_COUNT = 5;
@@ -515,7 +516,9 @@ function* maybeLoadMeshChunk(
         segmentMeshController.removeMeshById(segmentId, layer.name);
       }
 
-      segmentMeshController.addMeshFromVertices(
+      // Note that this is called in a fire-and-forget fashion.
+      // We won't assume that the mesh is added immediately.
+      segmentMeshController.addMeshFromVerticesAsync(
         vertices,
         segmentId,
         layer.name,
@@ -1032,16 +1035,17 @@ function* _getLoadChunksTasks(
     );
 
     console.time("mergeGeometries");
-    const geometry = mergeGeometries(sortedBufferGeometries, false) as BufferGeometryWithInfo;
+    const mergedGeometry = mergeGeometries(sortedBufferGeometries, false) as BufferGeometryWithInfo;
     console.timeEnd("mergeGeometries");
 
+    mergedGeometry.boundsTree = yield* call(computeBvhAsync, mergedGeometry);
+
     // If mergeGeometries does not succeed, the method logs the error to the console and returns null
-    if (geometry == null) {
+    if (mergedGeometry == null) {
       console.error("Merged geometry is null. Look at error above.");
       return;
     }
-    geometry.positionToSegmentId = new PositionToSegmentId(sortedBufferGeometries);
-    bufferGeometries = [geometry as BufferGeometryWithInfo];
+    mergedGeometry.positionToSegmentId = new PositionToSegmentId(sortedBufferGeometries);
 
     // Check if the mesh scale is different to all supported mags of the active segmentation scaled by the dataset scale and warn in the console to make debugging easier in such a case.
     // This hint at the mesh file being computed when the dataset scale was different than currently configured.
@@ -1065,7 +1069,7 @@ function* _getLoadChunksTasks(
         context: segmentMeshController,
         fn: segmentMeshController.addMeshFromGeometries,
       },
-      bufferGeometries,
+      [mergedGeometry],
       id,
       // Apply the scale from the segment info, which includes dataset scale and mag
       scale,

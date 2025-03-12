@@ -14,8 +14,10 @@ import * as THREE from "three";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
 import type { AdditionalCoordinate } from "types/api_flow_types";
-import { MeshBVH, MeshBVHHelper, acceleratedRaycast } from "three-mesh-bvh";
+import { MeshBVHHelper, acceleratedRaycast } from "three-mesh-bvh";
+
 import GUI from "lil-gui";
+import { computeBvhAsync } from "libs/compute_bvh_async";
 
 // Add the raycast function. Assumes the BVH is available on
 // the `boundsTree` variable
@@ -26,8 +28,8 @@ const hslToSRGB = (hsl: Vector3) => new THREE.Color().setHSL(...hsl).convertSRGB
 const WHITE = new THREE.Color(1, 1, 1);
 const ACTIVATED_COLOR = hslToSRGB([0.7, 0.9, 0.75]);
 const HOVERED_COLOR = hslToSRGB([0.65, 0.9, 0.75]);
-const ACTIVATED_COLOR_VEC3 = hslToSRGB([0.7, 0.9, 0.75]).toArray() as Vector3;
-const HOVERED_COLOR_VEC3 = hslToSRGB([0.65, 0.9, 0.75]).toArray() as Vector3;
+const ACTIVATED_COLOR_VEC3 = ACTIVATED_COLOR.toArray() as Vector3;
+const HOVERED_COLOR_VEC3 = HOVERED_COLOR.toArray() as Vector3;
 
 type MeshMaterial = THREE.MeshLambertMaterial & { originalColor: Vector3 };
 export type MeshSceneNode = THREE.Mesh<THREE.BufferGeometry, MeshMaterial> & {
@@ -127,26 +129,24 @@ export default class SegmentMeshController {
     );
   }
 
-  addMeshFromVertices(
+  async addMeshFromVerticesAsync(
     vertices: Float32Array,
     segmentId: number,
     layerName: string,
     additionalCoordinates?: AdditionalCoordinate[] | undefined | null,
-  ): void {
+  ): Promise<void> {
+    // Currently, this function is only used by ad hoc meshing.
     if (vertices.length === 0) return;
     let bufferGeometry = new THREE.BufferGeometry();
     bufferGeometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
 
-    // todop: can this cause problems with PositionToSegmentId instances?
-    console.time("mergeVertices");
     bufferGeometry = mergeVertices(bufferGeometry);
-    console.timeEnd("mergeVertices");
-    console.time("computeVertexNormals (in addMeshFromVertices)");
     bufferGeometry.computeVertexNormals();
-    console.timeEnd("computeVertexNormals (in addMeshFromVertices)");
 
-    this.addMeshFromGeometry(
-      bufferGeometry as BufferGeometryWithInfo,
+    bufferGeometry.boundsTree = await computeBvhAsync(bufferGeometry);
+
+    this.addMeshFromGeometries(
+      [bufferGeometry as BufferGeometryWithInfo],
       segmentId,
       null,
       NO_LOD_MESH_INDEX,
@@ -241,9 +241,7 @@ export default class SegmentMeshController {
       console.time("constructMesh");
       const meshChunk = this.constructMesh(segmentId, layerName, geometry);
       console.timeEnd("constructMesh");
-      console.time("build MeshBVH");
-      meshChunk.geometry.boundsTree = new MeshBVH(meshChunk.geometry);
-      console.timeEnd("build MeshBVH");
+
       return meshChunk;
     });
     const group = new THREE.Group() as SceneGroupForMeshes;
@@ -265,17 +263,6 @@ export default class SegmentMeshController {
       // Therefore, used a throttled variant of the highlightActiveUnmappedSegmentId method.
       this.throttledHighlightActiveUnmappedSegmentId(segmentationTracing.activeUnmappedSegmentId);
     }
-  }
-
-  addMeshFromGeometry(
-    geometry: BufferGeometryWithInfo,
-    segmentId: number,
-    scale: Vector3 | null = null,
-    lod: number,
-    layerName: string,
-    additionalCoordinates: AdditionalCoordinate[] | null | undefined,
-  ): void {
-    this.addMeshFromGeometries([geometry], segmentId, scale, lod, layerName, additionalCoordinates);
   }
 
   removeMeshById(segmentId: number, layerName: string): void {

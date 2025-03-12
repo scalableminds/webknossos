@@ -86,6 +86,19 @@ export class PositionToSegmentId {
   }
 }
 
+const setRangeToColor = (
+  geometry: BufferGeometryWithInfo,
+  indexRange: Vector2 | null,
+  color: Vector3,
+) => {
+  if (indexRange == null) {
+    indexRange = [0, geometry.attributes.color.count];
+  }
+  for (let index = indexRange[0]; index < indexRange[1]; index++) {
+    geometry.attributes.color.set(color, 3 * index);
+  }
+};
+
 export type BufferGeometryWithInfo = THREE.BufferGeometry & {
   positionToSegmentId?: PositionToSegmentId;
 };
@@ -321,9 +334,7 @@ export default class SegmentMeshController {
             meshGroup.children.forEach((child: MeshSceneNode) => {
               child.material.originalColor = colorArray;
               if (child.material.vertexColors) {
-                for (let index = 0; index < child.geometry.attributes.color.count; index++) {
-                  child.geometry.attributes.color.set(colorArray, 3 * index);
-                }
+                setRangeToColor(child.geometry, null, colorArray);
                 child.geometry.attributes.color.needsUpdate = true;
               } else {
                 child.material.color = color;
@@ -516,18 +527,13 @@ export default class SegmentMeshController {
     //     child.material.opacity = targetOpacity;
     //   }
     // });
-    const setRangeToColor = (indexRange: Vector2, color: Vector3) => {
-      for (let index = indexRange[0]; index < indexRange[1]; index++) {
-        mesh.geometry.attributes.color.set(color, 3 * index);
-      }
-    };
 
     // Reset ranges
     for (const rangeToReset of rangesToReset) {
       const indexRange = rangeToReset;
 
       if (mesh.material.originalColor != null) {
-        setRangeToColor(indexRange, mesh.material.originalColor);
+        setRangeToColor(mesh.geometry, indexRange, mesh.material.originalColor);
       }
     }
 
@@ -569,13 +575,13 @@ export default class SegmentMeshController {
 
       if (mesh.activeState && mesh.activeState !== "full") {
         const newColor = ACTIVATED_COLOR_VEC3;
-        setRangeToColor(mesh.activeState, newColor);
+        setRangeToColor(mesh.geometry, mesh.activeState, newColor);
       }
       // Setting the hovered part needs to happen after setting the active part,
       // so that there is still a hover effect for an active super voxel.
       if (mesh.hoveredState && mesh.hoveredState !== "full") {
         const newColor = HOVERED_COLOR_VEC3;
-        setRangeToColor(mesh.hoveredState, newColor);
+        setRangeToColor(mesh.geometry, mesh.hoveredState, newColor);
       }
       mesh.geometry.attributes.color.needsUpdate = true;
     };

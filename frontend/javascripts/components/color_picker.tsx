@@ -21,20 +21,34 @@ export const ThrottledColorPicker = ({
   return (
     <>
       <HexColorPicker color={value} onChange={setValue} />
-      <HexColorInput
-        color={color}
-        onChange={setValue}
-        style={{
-          background: "var(--ant-component-background)",
-          textAlign: "center",
-          width: "100%",
-          marginTop: "12px",
-          color: "var(--ant-color-text)",
-          borderRadius: "4px",
-          border: "1px solid var(--ant-border-radius)",
-        }}
-      />
+      {getColorInput(color, setValue)}
     </>
+  );
+};
+
+const getPopover = (title: string, content: JSX.Element | null) => {
+  return (
+    <Popover content={content} trigger="click" overlayStyle={{ zIndex: 10000 }}>
+      <div style={{ position: "relative", display: "inline-block", width: "100%" }}>{title}</div>
+    </Popover>
+  );
+};
+
+const getColorInput = (color: string, setValue: (newValue: string) => void) => {
+  return (
+    <HexColorInput
+      color={color}
+      onChange={setValue}
+      style={{
+        background: "var(--ant-component-background)",
+        textAlign: "center",
+        width: "100%",
+        marginTop: "12px",
+        color: "var(--ant-color-text)",
+        borderRadius: "4px",
+        border: "1px solid var(--ant-border-radius)",
+      }}
+    />
   );
 };
 
@@ -68,12 +82,36 @@ export function ChangeColorMenuItemContent({
   const content = isDisabled ? null : (
     <ThrottledColorPicker color={color} onChange={onChangeColor} />
   );
-  return (
-    <Popover content={content} trigger="click" overlayStyle={{ zIndex: 10000 }}>
-      <div style={{ position: "relative", display: "inline-block", width: "100%" }}>{title}</div>
-    </Popover>
-  );
+  return getPopover(title, content);
 }
+
+export const ThrottledRGBAColorPicker = ({
+  color,
+  onChangeColor,
+}: {
+  color: RgbaColor;
+  onChangeColor: (color: RgbaColor) => void;
+}) => {
+  const [value, localSetValue] = useState(color);
+  const throttledSetValue = useThrottledCallback(onChangeColor, [onChangeColor], 20);
+  const setValue = (newValue: RgbaColor) => {
+    localSetValue(newValue);
+    throttledSetValue(newValue);
+  };
+  const setValueFromHex = (color: string) => {
+    const colorRgb = Utils.hexToRgb(color);
+    setValue({ r: colorRgb[0] / 255, g: colorRgb[1] / 255, b: colorRgb[2] / 255, a: value.a });
+  };
+  const colorAsHex = Utils.rgbToHex(
+    Utils.map3((value) => value * 255, [value.r, value.g, value.b]),
+  );
+  return (
+    <>
+      <RgbaColorPicker color={value} onChange={setValue} />
+      {getColorInput(colorAsHex, setValueFromHex)}
+    </>
+  );
+};
 
 export function ChangeRGBAColorMenuItemContent({
   title,
@@ -108,11 +146,9 @@ export function ChangeRGBAColorMenuItemContent({
     isFirstColorChange.current = false;
   };
 
-  const content = isDisabled ? null : <RgbaColorPicker color={color} onChange={onChangeColor} />;
-
-  return (
-    <Popover content={content} trigger="click" overlayStyle={{ zIndex: 10000 }}>
-      <div style={{ position: "relative", display: "inline-block", width: "100%" }}>{title}</div>
-    </Popover>
+  const content = isDisabled ? null : (
+    <ThrottledRGBAColorPicker color={color} onChangeColor={onChangeColor} />
   );
+
+  return getPopover(title, content);
 }

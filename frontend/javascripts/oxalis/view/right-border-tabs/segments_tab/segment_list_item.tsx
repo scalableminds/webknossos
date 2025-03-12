@@ -437,7 +437,7 @@ function _SegmentListItem({
     return centeredSegmentId === segment.id;
   });
 
-  const meshColor: Vector4 = [
+  const segmentColorWithMeshOpacity: Vector4 = [
     segmentColorRGBA[0],
     segmentColorRGBA[1],
     segmentColorRGBA[2],
@@ -493,7 +493,7 @@ function _SegmentListItem({
                 additionalCoordinates,
               );
             }}
-            rgba={meshColor}
+            rgba={segmentColorWithMeshOpacity}
           />
         ),
       },

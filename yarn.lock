@@ -13009,12 +13009,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"three-mesh-bvh@npm:^0.8.1":
-  version: 0.8.1
-  resolution: "three-mesh-bvh@npm:0.8.1"
+"three-mesh-bvh@npm:^0.9.0":
+  version: 0.9.0
+  resolution: "three-mesh-bvh@npm:0.9.0"
   peerDependencies:
     three: ">= 0.159.0"
-  checksum: 10c0/5c4ddef9f06fb1f51a6a6b288f53d3834e308cc713cb6f38f03deb3eef90a45bd3a873cfd6b6292466bce0e4e9b0ca3b0a8d2fecad86514e45aa3828628c0ffd
+  checksum: 10c0/76629dd6264fe4af877745669b1947ce8f3d5cf45c613daef062c3a8964a2a61f29b9f26f004ab1a57e935307f0a6eafebd97a3e4af437f1c3429bc4b27e630e
   languageName: node
   linkType: hard
 
@@ -14063,7 +14063,7 @@ __metadata:
     shelljs: "npm:^0.8.5"
     sinon: "npm:^12.0.1"
     three: "npm:^0.169.0"
-    three-mesh-bvh: "npm:^0.8.1"
+    three-mesh-bvh: "npm:^0.9.0"
     tmp: "npm:0.0.33"
     ts-loader: "npm:^9.4.1"
     tween.js: "npm:^16.3.1"

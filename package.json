@@ -203,7 +203,7 @@
     "resumablejs": "^1.1.0",
     "saxophone": "^0.8.0",
     "three": "^0.169.0",
-    "three-mesh-bvh": "^0.8.1",
+    "three-mesh-bvh": "^0.9.0",
     "tween.js": "^16.3.1",
     "typed-redux-saga": "^1.4.0",
     "url": "^0.11.0",

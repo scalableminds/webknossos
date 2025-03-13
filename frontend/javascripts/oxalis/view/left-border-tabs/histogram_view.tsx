@@ -4,7 +4,7 @@ import FastTooltip from "components/fast_tooltip";
 import { Slider } from "components/slider";
 import { roundTo } from "libs/utils";
 import * as _ from "lodash";
-import { PRIMARY_COLOR, type Vector2, type Vector3 } from "oxalis/constants";
+import { PRIMARY_COLOR, type Vector3 } from "oxalis/constants";
 import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
 import type { DatasetLayerConfiguration } from "oxalis/store";
 import * as React from "react";
@@ -20,7 +20,8 @@ type OwnProps = {
   min?: number;
   max?: number;
   isInEditMode: boolean;
-  defaultMinMax: Vector2;
+  defaultMinMax: readonly [number, number];
+  supportFractions: boolean;
   reloadHistogram: () => void;
 };
 type HistogramProps = OwnProps & {
@@ -44,7 +45,13 @@ const canvasHeight = 100;
 const canvasWidth = 318;
 
 export function isHistogramSupported(elementClass: ElementClass): boolean {
-  return ["int8", "uint8", "int16", "uint16", "float", "uint24"].includes(elementClass);
+  // This function needs to be adapted when a new dtype should/element class needs
+  // to be supported.
+  // Note that histograms are only supported for color layers. This is why
+  // (u)int64 is not listed here.
+  return ["int8", "uint8", "int16", "uint16", "uint24", "uint32", "int32", "float"].includes(
+    elementClass,
+  );
 }
 
 function getMinAndMax(props: HistogramProps) {
@@ -268,6 +275,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     const minMaxInputStyle = {
       width: "100%",
     };
+    const maybeCeilFn = this.props.supportFractions ? (val: number) => val : Math.ceil;
     return (
       <Spin spinning={data === undefined}>
         <canvas ref={this.onCanvasRefChange} width={canvasWidth} height={canvasHeight} />
@@ -279,7 +287,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
           defaultValue={[minRange, maxRange]}
           onChange={this.onThresholdChange}
           onChangeComplete={this.onThresholdChange}
-          step={(maxRange - minRange) / 255}
+          step={maybeCeilFn((maxRange - minRange) / 255)}
           tooltip={{ formatter: this.tipFormatter }}
           style={{
             width: canvasWidth,

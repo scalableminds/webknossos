@@ -57,7 +57,6 @@ function createLayers(grayscaleCount: number, volumeCount: number) {
 test("calculateTextureSizeAndCountForLayer: grayscale data + minSpecs", (t) => {
   const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
     minSpecs,
-    grayscaleByteCount,
     grayscaleElementClass,
     DEFAULT_REQUIRED_BUCKET_CAPACITY,
   );
@@ -68,7 +67,6 @@ test("calculateTextureSizeAndCountForLayer: grayscale data + minSpecs", (t) => {
 test("calculateTextureSizeAndCountForLayer: grayscale data + midSpecs", (t) => {
   const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
     midSpecs,
-    grayscaleByteCount,
     grayscaleElementClass,
     DEFAULT_REQUIRED_BUCKET_CAPACITY,
   );
@@ -79,7 +77,6 @@ test("calculateTextureSizeAndCountForLayer: grayscale data + midSpecs", (t) => {
 test("calculateTextureSizeAndCountForLayer: grayscale data + betterSpecs", (t) => {
   const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
     betterSpecs,
-    grayscaleByteCount,
     grayscaleElementClass,
     DEFAULT_REQUIRED_BUCKET_CAPACITY,
   );
@@ -90,7 +87,6 @@ test("calculateTextureSizeAndCountForLayer: grayscale data + betterSpecs", (t) =
 test("calculateTextureSizeAndCountForLayer: color data + minSpecs", (t) => {
   const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
     minSpecs,
-    volumeByteCount,
     volumeElementClass,
     DEFAULT_REQUIRED_BUCKET_CAPACITY,
   );
@@ -101,7 +97,6 @@ test("calculateTextureSizeAndCountForLayer: color data + minSpecs", (t) => {
 test("calculateTextureSizeAndCountForLayer: color data + midSpecs", (t) => {
   const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
     midSpecs,
-    volumeByteCount,
     volumeElementClass,
     DEFAULT_REQUIRED_BUCKET_CAPACITY,
   );
@@ -112,7 +107,6 @@ test("calculateTextureSizeAndCountForLayer: color data + midSpecs", (t) => {
 test("calculateTextureSizeAndCountForLayer: color data + betterSpecs", (t) => {
   const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
     betterSpecs,
-    volumeByteCount,
     volumeElementClass,
     DEFAULT_REQUIRED_BUCKET_CAPACITY,
   );
@@ -121,8 +115,6 @@ test("calculateTextureSizeAndCountForLayer: color data + betterSpecs", (t) => {
 });
 
 type Layer = ReturnType<typeof createGrayscaleLayer>;
-
-const getByteCount = (layer: Layer) => layer.byteCount;
 
 function testSupportFlags(
   t: ExecutionContext,
@@ -137,7 +129,6 @@ function computeDataTexturesSetupCurried(spec: typeof minSpecs, hasSegmentation:
     computeDataTexturesSetup(
       spec,
       layers as { elementClass: ElementClass; category: "color" | "segmentation" }[],
-      getByteCount as any,
       hasSegmentation,
       DEFAULT_REQUIRED_BUCKET_CAPACITY,
     );

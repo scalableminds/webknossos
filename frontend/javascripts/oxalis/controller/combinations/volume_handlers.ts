@@ -115,7 +115,7 @@ export function handlePickCellFromGlobalPosition(
 ) {
   const segmentId = getSegmentIdForPosition(globalPos);
 
-  if (segmentId > 0) {
+  if (segmentId !== 0) {
     Store.dispatch(setActiveCellAction(segmentId, globalPos, additionalCoordinates));
   }
 }

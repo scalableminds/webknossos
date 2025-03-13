@@ -221,10 +221,10 @@ class VolumeTracingService @Inject()(
               bucketPosition =>
                 for {
                   data <- loadBucket(dataLayer, bucketPosition)
-                  typedData = UnsignedIntegerArray.fromByteArray(data, volumeTracing.elementClass)
+                  typedData = SegmentIntegerArray.fromByteArray(data, volumeTracing.elementClass)
                   filteredData = typedData.map(elem =>
-                    if (elem.toLong == a.id) UnsignedInteger.zeroFromElementClass(volumeTracing.elementClass) else elem)
-                  filteredBytes = UnsignedIntegerArray.toByteArray(filteredData, volumeTracing.elementClass)
+                    if (elem.toLong == a.id) SegmentInteger.zeroFromElementClass(volumeTracing.elementClass) else elem)
+                  filteredBytes = SegmentIntegerArray.toByteArray(filteredData, volumeTracing.elementClass)
                   _ <- saveBucket(dataLayer, bucketPosition, filteredBytes, version)
                   _ <- updateSegmentIndex(
                     segmentIndexBuffer,
@@ -902,7 +902,7 @@ class VolumeTracingService @Inject()(
             } yield ()
           }
           _ <- segmentIndexBuffer.flush()
-        } yield mergedVolume.largestSegmentId.toPositiveLong
+        } yield mergedVolume.largestSegmentId.toLong
       }
     }
 

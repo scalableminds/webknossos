@@ -26,12 +26,14 @@ import {
 import {
   getActiveSegmentationTracing,
   getReadableNameForLayerName,
+  getSegmentationLayerForTracing,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   setActiveNodeAction,
   setActiveTreeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
+import { getSupportedValueRangeForElementClass } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
 import { Store } from "oxalis/singletons";
 import type { OxalisState } from "oxalis/store";
@@ -430,6 +432,15 @@ function Infos() {
     [dispatch],
   );
 
+  const validSegmentIdRange = useSelector((state: OxalisState) => {
+    if (!activeVolumeTracing) {
+      return null;
+    }
+    const segmentationLayer = getSegmentationLayerForTracing(state, activeVolumeTracing);
+    const elementClass = segmentationLayer.elementClass;
+    return getSupportedValueRangeForElementClass(elementClass);
+  });
+
   const isUint64SegmentationVisible = useSelector(hasVisibleUint64Segmentation);
 
   return (
@@ -438,12 +449,13 @@ function Infos() {
       <span className="info-element">
         <DownloadSpeedometer />
       </span>
-      {activeVolumeTracing != null ? (
+      {activeVolumeTracing != null && validSegmentIdRange != null ? (
         <span className="info-element">
           <NumberInputPopoverSetting
             value={activeCellId}
             label={maybeLabelWithSegmentationWarning(isUint64SegmentationVisible, "Active Segment")}
-            min={0}
+            min={validSegmentIdRange[0]}
+            max={validSegmentIdRange[1]}
             detailedLabel={maybeLabelWithSegmentationWarning(
               isUint64SegmentationVisible,
               "Change Active Segment ID",

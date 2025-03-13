@@ -20,7 +20,10 @@ import getSceneController from "oxalis/controller/scene_controller_provider";
 import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "oxalis/geometries/helper_geometries";
 
 import messages from "messages";
-import { getMaximumSegmentIdForLayer } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getSupportedValueRangeOfLayer,
+  isInSupportedValueRangeForLayer,
+} from "oxalis/model/accessors/dataset_accessor";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import {
   isBrushTool,
@@ -128,27 +131,32 @@ function* warnOfTooLowOpacity(): Saga<void> {
   }
 }
 
-function* warnTooLargeSegmentId(): Saga<void> {
+function* warnAboutInvalidSegmentId(): Saga<void> {
   yield* takeWithBatchActionSupport("INITIALIZE_VOLUMETRACING");
   while (true) {
     const action = (yield* take(["SET_ACTIVE_CELL", "CREATE_CELL"]) as any) as
       | SetActiveCellAction
       | CreateCellAction;
-    const newSegmentId = yield* select((state) => enforceActiveVolumeTracing(state).activeCellId);
-    if (
-      (action.type === "CREATE_CELL" && action.newSegmentId === newSegmentId) ||
-      (action.type === "SET_ACTIVE_CELL" && action.segmentId === newSegmentId)
-    ) {
+    const currentSegmentId = yield* select(
+      (state) => enforceActiveVolumeTracing(state).activeCellId,
+    );
+    const requestedSegmentId =
+      action.type === "CREATE_CELL" ? action.newSegmentId : action.segmentId;
+
+    if (requestedSegmentId === currentSegmentId) {
       continue;
     }
+
     const dataset = yield* select((state) => state.dataset);
     const volumeTracing = yield* select(enforceActiveVolumeTracing);
     const segmentationLayer = yield* call(
       [Model, Model.getSegmentationTracingLayer],
       volumeTracing.tracingId,
     );
-    const maxSegmentId = getMaximumSegmentIdForLayer(dataset, segmentationLayer.name);
-    Toast.warning(messages["tracing.segment_id_out_of_bounds"]({ maxSegmentId }));
+    if (!isInSupportedValueRangeForLayer(dataset, segmentationLayer.name, requestedSegmentId)) {
+      const validRange = getSupportedValueRangeOfLayer(dataset, segmentationLayer.name);
+      Toast.warning(messages["tracing.segment_id_out_of_bounds"](requestedSegmentId, validRange));
+    }
   }
 }
 
@@ -757,5 +765,5 @@ export default [
   maintainContourGeometry,
   maintainVolumeTransactionEnds,
   ensureValidBrushSize,
-  warnTooLargeSegmentId,
+  warnAboutInvalidSegmentId,
 ];

@@ -26,7 +26,7 @@ import Toast from "libs/toast";
 import { jsonStringify, parseMaybe } from "libs/utils";
 import { BoundingBoxInput, Vector3Input } from "libs/vector_input";
 import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "oxalis/constants";
-import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
+import { getSupportedValueRangeForElementClass } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import type { BoundingBoxObject, OxalisState } from "oxalis/store";
 import * as React from "react";
 import { useSelector } from "react-redux";
@@ -362,7 +362,7 @@ function SimpleLayerForm({
   const dataLayers = Form.useWatch(["dataSource", "dataLayers"]);
   const category = Form.useWatch(["dataSource", "dataLayers", index, "category"]);
   const isSegmentation = category === "segmentation";
-  const bitDepth = getBitDepth(layer);
+  const valueRange = getSupportedValueRangeForElementClass(layer.elementClass);
 
   const mayLayerBeRemoved = dataLayers?.length > 1;
 
@@ -585,21 +585,23 @@ function SimpleLayerForm({
                   rules={[
                     {
                       validator: (_rule, value) =>
-                        value == null || value === "" || (value > 0 && value < 2 ** bitDepth)
+                        value == null ||
+                        value === "" ||
+                        (value >= valueRange[0] && value <= valueRange[1] && value !== 0)
                           ? Promise.resolve()
                           : Promise.reject(
                               new Error(
-                                `The largest segmentation ID must be greater than 0 and smaller than 2^${bitDepth}. You can also leave this field empty, but annotating this layer later will only be possible with manually chosen segment IDs.`,
+                                `The largest segmentation ID must be between ${valueRange[0]} and ${valueRange[1]} and not 0. You can also leave this field empty, but annotating this layer later will only be possible with manually chosen segment IDs.`,
                               ),
                             ),
                     },
                     {
                       warningOnly: true,
                       validator: (_rule, value) =>
-                        value != null && value === 2 ** bitDepth - 1
+                        value != null && value === valueRange[1]
                           ? Promise.reject(
                               new Error(
-                                `The largest segmentation ID has already reached the maximum possible value of 2^${bitDepth}-1. Annotations of this dataset cannot create new segments.`,
+                                `The largest segmentation ID has already reached the maximum possible value of ${valueRange[1]}. Annotations of this dataset cannot create new segments.`,
                               ),
                             )
                           : Promise.resolve(),

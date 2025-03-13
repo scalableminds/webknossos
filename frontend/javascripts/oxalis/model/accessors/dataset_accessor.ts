@@ -27,6 +27,7 @@ import type {
 } from "types/api_flow_types";
 import type { DataLayer } from "types/schemas/datasource.types";
 import BoundingBox from "../bucket_data_handling/bounding_box";
+import { getSupportedValueRangeForElementClass } from "../bucket_data_handling/data_rendering_logic";
 import { MagInfo, convertToDenseMag } from "../helpers/mag_info";
 
 function _getMagInfo(magnifications: Array<Vector3>): MagInfo {
@@ -196,46 +197,18 @@ export function getElementClass(dataset: APIDataset, layerName: string): Element
 export function getDefaultValueRangeOfLayer(
   dataset: APIDataset,
   layerName: string,
-): [number, number] {
-  const maxFloatValue = 3.40282347e38;
-  // biome-ignore lint/correctness/noPrecisionLoss: This number literal will lose precision at runtime. The value at runtime will be inf.
-  const maxDoubleValue = 1.79769313486232e308;
+): readonly [number, number] {
+  // Currently, the default range is identical to the supported range. However,
+  // this might change in the future.
+  return getSupportedValueRangeOfLayer(dataset, layerName);
+}
+
+export function getSupportedValueRangeOfLayer(
+  dataset: APIDataset,
+  layerName: string,
+): readonly [number, number] {
   const elementClass = getElementClass(dataset, layerName);
-
-  switch (elementClass) {
-    case "uint8":
-    case "uint24":
-      // Since uint24 layers are multi-channel, their intensity ranges are equal to uint8
-      return [0, 2 ** 8 - 1];
-
-    case "uint16":
-      return [0, 2 ** 16 - 1];
-
-    case "uint32":
-      return [0, 2 ** 32 - 1];
-
-    case "uint64":
-      return [0, 2 ** 64 - 1];
-
-    // We do not fully support signed int data;
-    case "int16":
-      return [0, 2 ** 15 - 1];
-
-    case "int32":
-      return [0, 2 ** 31 - 1];
-
-    case "int64":
-      return [0, 2 ** 63 - 1];
-
-    case "float":
-      return [-maxFloatValue, maxFloatValue];
-
-    case "double":
-      return [-maxDoubleValue, maxDoubleValue];
-
-    default:
-      return [0, 255];
-  }
+  return getSupportedValueRangeForElementClass(elementClass);
 }
 
 export function getLayerBoundingBox(dataset: APIDataset, layerName: string): BoundingBox {
@@ -371,6 +344,16 @@ export function getMaximumSegmentIdForLayer(dataset: APIDataset, layerName: stri
   return getDefaultValueRangeOfLayer(dataset, layerName)[1];
 }
 
+export function isInSupportedValueRangeForLayer(
+  dataset: APIDataset,
+  layerName: string,
+  value: number,
+): boolean {
+  const elementClass = getElementClass(dataset, layerName);
+  const [min, max] = getSupportedValueRangeForElementClass(elementClass);
+  return value >= min && value <= max;
+}
+
 export function getBitDepth(layerInfo: DataLayer | DataLayerType): number {
   switch (layerInfo.elementClass) {
     case "uint8":
@@ -411,6 +394,8 @@ export function getBitDepth(layerInfo: DataLayer | DataLayerType): number {
   }
 }
 export function isElementClassSupported(layerInfo: DataLayerType): boolean {
+  // This function needs to be adapted when a new dtype should/element class needs
+  // to be supported.
   switch (layerInfo.elementClass) {
     case "uint8":
     case "uint16":
@@ -420,11 +405,16 @@ export function isElementClassSupported(layerInfo: DataLayerType): boolean {
     case "int16":
     case "int32":
     case "float":
-    case "uint64":
       return true;
 
+    case "uint64":
+    case "int64": {
+      // We only support 64 bit for segmentation (note that only segment ids
+      // below 2**53 - 1 will be handled properly due to the JS Number type currently).
+      return layerInfo.category === "segmentation";
+    }
+
     case "double":
-    case "int64":
     default:
       return false;
   }
@@ -703,7 +693,7 @@ export function getEffectiveIntensityRange(
   dataset: APIDataset,
   layerName: string,
   datasetConfiguration: DatasetConfiguration,
-): [number, number] {
+): readonly [number, number] {
   const defaultIntensityRange = getDefaultValueRangeOfLayer(dataset, layerName);
   const layerConfiguration = datasetConfiguration.layers[layerName];
 

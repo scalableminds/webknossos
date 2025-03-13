@@ -335,15 +335,15 @@ class EditableMappingService @Inject()(
     } yield segmentIdsOrdered.zip(agglomerateIdsOrdered).toMap
   }
 
-  def collectSegmentIds(data: Array[UnsignedInteger]): Set[Long] =
-    data.toSet.map { u: UnsignedInteger =>
-      u.toPositiveLong
+  def collectSegmentIds(data: Array[SegmentInteger]): Set[Long] =
+    data.toSet.map { u: SegmentInteger =>
+      u.toLong
     }
 
-  def mapData(unmappedData: Array[UnsignedInteger],
+  def mapData(unmappedData: Array[SegmentInteger],
               relevantMapping: Map[Long, Long],
               elementClass: ElementClassProto): Fox[Array[Byte]] = {
-    val mappedDataLongs = unmappedData.map(element => relevantMapping(element.toPositiveLong))
+    val mappedDataLongs = unmappedData.map(element => relevantMapping(element.toLong))
     for {
       bytes <- longsToBytes(mappedDataLongs, elementClass)
     } yield bytes
@@ -352,20 +352,20 @@ class EditableMappingService @Inject()(
   private def bytesToLongs(bytes: Array[Byte], elementClass: ElementClassProto): Fox[Array[Long]] =
     for {
       _ <- bool2Fox(!elementClass.isuint64)
-      unsignedIntArray <- tryo(UnsignedIntegerArray.fromByteArray(bytes, elementClass)).toFox
-    } yield unsignedIntArray.map(_.toPositiveLong)
+      segmentIntArray <- tryo(SegmentIntegerArray.fromByteArray(bytes, elementClass)).toFox
+    } yield segmentIntArray.map(_.toLong)
 
-  def bytesToUnsignedInt(bytes: Array[Byte], elementClass: ElementClassProto): Fox[Array[UnsignedInteger]] =
+  def bytesToSegmentInt(bytes: Array[Byte], elementClass: ElementClassProto): Fox[Array[SegmentInteger]] =
     for {
       _ <- bool2Fox(!elementClass.isuint64)
-      unsignedIntArray <- tryo(UnsignedIntegerArray.fromByteArray(bytes, elementClass)).toFox
-    } yield unsignedIntArray
+      segmentIntArray <- tryo(SegmentIntegerArray.fromByteArray(bytes, elementClass)).toFox
+    } yield segmentIntArray
 
   private def longsToBytes(longs: Array[Long], elementClass: ElementClassProto): Fox[Array[Byte]] =
     for {
       _ <- bool2Fox(!elementClass.isuint64)
-      unsignedIntArray: Array[UnsignedInteger] = longs.map(UnsignedInteger.fromLongWithElementClass(_, elementClass))
-      bytes = UnsignedIntegerArray.toByteArray(unsignedIntArray, elementClass)
+      segmentIntArray: Array[SegmentInteger] = longs.map(SegmentInteger.fromLongWithElementClass(_, elementClass))
+      bytes = SegmentIntegerArray.toByteArray(segmentIntArray, elementClass)
     } yield bytes
 
   def createAdHocMesh(editableMappingLayer: EditableMappingLayer, request: WebknossosAdHocMeshRequest)(

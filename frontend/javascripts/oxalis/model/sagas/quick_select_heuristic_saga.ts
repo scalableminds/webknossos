@@ -221,7 +221,7 @@ export default function* performQuickSelect(
   const size = boundingBoxInMag.getSize();
   const stride = [1, size[0], size[0] * size[1]];
 
-  if (inputDataRaw instanceof BigUint64Array) {
+  if (inputDataRaw instanceof BigUint64Array || inputDataRaw instanceof BigInt64Array) {
     throw new Error("Color input layer must not be 64-bit.");
   }
 

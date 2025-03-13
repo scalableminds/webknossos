@@ -486,7 +486,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     const { selectedTreeIds } = this.state;
     const selectedTreeCount = selectedTreeIds.length;
 
-    if (selectedTreeCount > 0) {
+    if (selectedTreeCount > 1) {
       const deleteAllSelectedTrees = () => {
         checkAndConfirmDeletingInitialNode(selectedTreeIds).then(() => {
           this.props.onDeleteTrees(selectedTreeIds);

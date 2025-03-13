@@ -1318,7 +1318,13 @@ class SegmentsView extends React.Component<Props, State> {
     const { areSomeSegmentsInvisible, areSomeSegmentsVisible } =
       groupId == null
         ? this.visibilityStateOfSelectedMeshes()
-        : this.state.groupsSegmentsVisibilityStateMap[groupId];
+        : (this.state.groupsSegmentsVisibilityStateMap[groupId] ?? {
+            // This is a workaround for when groupsSegmentsVisibilityStateMap does not contain
+            // an entry for groupId. This can currently happen when moving segments into a new group
+            // and rightclicking that group.
+            areSomeSegmentsInvisible: false,
+            areSomeSegmentsVisible: false,
+          });
     const menuOptions: ItemType[] = [];
     const changeVisibility = (isVisible: boolean) => {
       if (this.props.visibleSegmentationLayer == null) {
@@ -1691,6 +1697,23 @@ class SegmentsView extends React.Component<Props, State> {
     this.setState({ contextMenuPosition: null, menu: null });
   };
 
+  getMultiSelectMenu = (): MenuProps => {
+    const doSelectedSegmentsHaveAnyMeshes = this.doesGroupHaveAnyMeshes(null);
+    return {
+      items: _.flatten([
+        this.getLoadMeshesFromFileMenuItem(null),
+        this.getComputeMeshesAdHocMenuItem(null),
+        doSelectedSegmentsHaveAnyMeshes ? this.maybeGetShowOrHideMeshesMenuItems(null) : null,
+        doSelectedSegmentsHaveAnyMeshes ? this.getReloadMenuItem(null) : null,
+        doSelectedSegmentsHaveAnyMeshes ? this.getRemoveMeshesMenuItem(null) : null,
+        doSelectedSegmentsHaveAnyMeshes ? this.getDownLoadMeshesMenuItem(null) : null,
+        this.getSetGroupColorMenuItem(null),
+        this.getResetGroupColorMenuItem(null),
+        this.getRemoveFromSegmentListMenuItem(null),
+      ]),
+    };
+  };
+
   render() {
     const { groupToDelete } = this.state;
 
@@ -1718,25 +1741,6 @@ class SegmentsView extends React.Component<Props, State> {
                 />
               );
             }
-
-            const doSelectedSegmentsHaveAnyMeshes = this.doesGroupHaveAnyMeshes(null);
-            const multiSelectMenu = (): MenuProps => {
-              return {
-                items: _.flatten([
-                  this.getLoadMeshesFromFileMenuItem(null),
-                  this.getComputeMeshesAdHocMenuItem(null),
-                  doSelectedSegmentsHaveAnyMeshes
-                    ? this.maybeGetShowOrHideMeshesMenuItems(null)
-                    : null,
-                  doSelectedSegmentsHaveAnyMeshes ? this.getReloadMenuItem(null) : null,
-                  doSelectedSegmentsHaveAnyMeshes ? this.getRemoveMeshesMenuItem(null) : null,
-                  doSelectedSegmentsHaveAnyMeshes ? this.getDownLoadMeshesMenuItem(null) : null,
-                  this.getSetGroupColorMenuItem(null),
-                  this.getResetGroupColorMenuItem(null),
-                  this.getRemoveFromSegmentListMenuItem(null),
-                ]),
-              };
-            };
 
             const titleRender = (treeItem: SegmentHierarchyNode) => {
               if (treeItem.type === "segment") {
@@ -1766,9 +1770,7 @@ class SegmentsView extends React.Component<Props, State> {
                     currentMeshFile={this.props.currentMeshFile}
                     onRenameStart={this.onRenameStart}
                     onRenameEnd={this.onRenameEnd}
-                    // TODO #7895: The line below causes SegmentItems to always rerender
-                    // if SegmentsView rerenders.
-                    multiSelectMenu={multiSelectMenu()}
+                    getMultiSelectMenu={this.getMultiSelectMenu}
                     activeVolumeTracing={this.props.activeVolumeTracing}
                   />
                 );

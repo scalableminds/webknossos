@@ -2,10 +2,11 @@ import showFpsMeter from "libs/fps_meter";
 import { V3 } from "libs/mjs";
 import { roundTo, sleep } from "libs/utils";
 import _ from "lodash";
-import type { Vector3 } from "oxalis/constants";
+import { OrthoView, OrthoViews, type Vector3 } from "oxalis/constants";
 import { Store } from "oxalis/singletons";
 import type { ApiInterface } from "./api_latest";
 import type ApiLoader from "./api_loader";
+import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 
 // Can be accessed via window.webknossos.DEV.flags. Only use this
 // for debugging or one off scripts.
@@ -189,6 +190,21 @@ export default class WkDev {
         `Average of all ${this.benchmarkHistory.length} benchmark runs:`,
         _.mean(this.benchmarkHistory),
       );
+    }
+  }
+
+  async benchmarkRotate() {
+    const animateAsPromise = (plane: OrthoView) => {
+      return new Promise<void>((resolve) => {
+        rotate3DViewTo(plane, true, resolve);
+      });
+    };
+
+    for (let i = 0; i < 10; i++) {
+      await animateAsPromise(OrthoViews.PLANE_XY);
+      await animateAsPromise(OrthoViews.PLANE_YZ);
+      await animateAsPromise(OrthoViews.PLANE_XZ);
+      await animateAsPromise(OrthoViews.TDView);
     }
   }
 }

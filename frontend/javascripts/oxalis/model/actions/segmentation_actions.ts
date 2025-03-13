@@ -35,7 +35,6 @@ export const loadPrecomputedMeshAction = (
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
   layerName?: string | undefined,
-  mergeChunks: boolean = true,
 ) =>
   ({
     type: "LOAD_PRECOMPUTED_MESH_ACTION",
@@ -44,5 +43,4 @@ export const loadPrecomputedMeshAction = (
     seedAdditionalCoordinates,
     meshFileName,
     layerName,
-    mergeChunks,
   }) as const;

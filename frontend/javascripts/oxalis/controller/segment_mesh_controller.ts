@@ -560,14 +560,11 @@ export default class SegmentMeshController {
         // segment ID. Only for adhoc meshes, these will contain multiple
         // children. For precomputed meshes, this will only affect one
         // mesh in the scene graph.
-        console.group("Traverse");
         parent.traverse((child) => {
           if (child instanceof THREE.Mesh) {
-            console.log("setMaterialToUniformColor for", child);
             setMaterialToUniformColor(child.material, newColor);
           }
         });
-        console.groupEnd();
 
         return;
       }

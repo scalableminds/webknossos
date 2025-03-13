@@ -995,6 +995,21 @@ function* _getLoadChunksTasks(
               // to distribute the workload a bit over time.
               bufferGeometry.computeVertexNormals();
 
+              yield* call(
+                {
+                  context: segmentMeshController,
+                  fn: segmentMeshController.addMeshFromGeometry,
+                },
+                bufferGeometry,
+                id,
+                // Apply the scale from the segment info, which includes dataset scale and mag
+                scale,
+                lod,
+                layerName,
+                additionalCoordinates,
+                false,
+              );
+
               bufferGeometries.push(bufferGeometry);
             } catch (error) {
               errorsWithDetails.push({ error, chunk });
@@ -1051,6 +1066,16 @@ function* _getLoadChunksTasks(
         );
       }
     }
+
+    yield* call(
+      {
+        context: segmentMeshController,
+        fn: segmentMeshController.removeMeshById,
+      },
+      id,
+
+      layerName,
+    );
 
     yield* call(
       {

@@ -9,7 +9,6 @@ export const ThrottledColorPicker = ({
   color,
   onChange,
 }: {
-  // TODO_c sync input and color picker
   color: string;
   onChange: (color: string) => void;
 }) => {
@@ -22,7 +21,7 @@ export const ThrottledColorPicker = ({
   return (
     <>
       <HexColorPicker color={value} onChange={setValue} />
-      {getColorInput(color, setValue)}
+      {getColorInput(value, setValue)}
     </>
   );
 };
@@ -136,8 +135,7 @@ export function ChangeRGBAColorMenuItemContent({
       return;
     }
     const colorRgb: Vector3 = [color.r, color.g, color.b];
-    const newColor = Utils.map3((component) => component / 255, colorRgb);
-    newColor.push(color.a);
+    const newColor: Vector4 = [...Utils.map3((component) => component / 255, colorRgb), color.a];
 
     // Only create a new undo state on the first color change event.
     // All following color change events should mutate the most recent undo

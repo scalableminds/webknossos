@@ -1,5 +1,5 @@
-import { _getMaximumZoomForAllMags } from "oxalis/model/accessors/flycam_accessor";
 import { expose } from "./comlink_wrapper";
+import { _getMaximumZoomForAllMags } from "oxalis/model/accessors/flycam_accessor";
 import type { OrthoViewRects, Vector3, ViewMode } from "oxalis/constants";
 import type { LoadingStrategy } from "oxalis/store";
 import type { Matrix4x4 } from "mjs";

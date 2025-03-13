@@ -41,7 +41,6 @@ import {
 } from "../helpers/transformation_helpers";
 import { getMatrixScale, rotateOnAxis } from "../reducers/flycam_reducer";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
-import { getTransformsForLayer, invertAndTranspose } from "./dataset_layer_transformation_accessor";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
 
@@ -213,50 +212,8 @@ export function getMoveOffset3d(state: OxalisState, timeFactor: number) {
 }
 
 function getMaximumZoomForAllMagsFromStore(state: OxalisState, layerName: string): Array<number> {
-  // return values from store
-
+  // An empty array is a valid fallback, as it will lead to the coarsest mag being rendered.
   return state.flycamInfoCache.magRangesPerLayer[layerName] ?? [];
-
-  // return [
-  //   0.8264462809917351, 1.4640999999999997, 2.853116706110001, 6.115909044841461,
-  //   13.109994191499952,
-  // ];
-}
-
-function computeMaximumZoomForAllMagsFromStore(state: OxalisState, layerName: string): number[] {
-  const { viewMode } = state.temporaryConfiguration;
-
-  const layer = getLayerByName(state.dataset, layerName);
-  const layerMatrix = invertAndTranspose(
-    getTransformsForLayer(
-      state.dataset,
-      layer,
-      state.datasetConfiguration.nativelyRenderedLayerName,
-    ).affineMatrix,
-  );
-
-  const dummyFlycamMatrix = _getDummyFlycamMatrix(state.dataset.dataSource.scale.factor);
-
-  return _getMaximumZoomForAllMags(
-    viewMode,
-    state.datasetConfiguration.loadingStrategy,
-    state.dataset.dataSource.scale.factor,
-    getMagInfo(layer.resolutions).getDenseMags(),
-    getViewportRects(state),
-    Math.min(
-      state.temporaryConfiguration.gpuSetup.smallestCommonBucketCapacity,
-      constants.GPU_FACTOR_MULTIPLIER * state.userConfiguration.gpuMemoryFactor,
-    ),
-    layerMatrix,
-    // Theoretically, the following parameter should be state.flycam.currentMatrix.
-    // However, that matrix changes on each move which means that the ranges would need
-    // to be recalculate on each move. At least, for orthogonal mode, the actual matrix
-    // should only differ in its translation which can be ignored for gauging the maximum
-    // zoom here.
-    // However, for oblique and flight mode this is not really accurate. As a heuristic,
-    // this already proved to be fine, though.
-    dummyFlycamMatrix,
-  );
 }
 
 // This function depends on functionality from this and the dataset_layer_transformation_accessor module.

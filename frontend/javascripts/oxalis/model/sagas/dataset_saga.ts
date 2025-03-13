@@ -155,7 +155,14 @@ export function* watchZ1Downsampling(): Saga<void> {
   yield* call(ensureWkReady);
   yield* call(maybeShowWarning);
   yield* takeLatest(
-    ["ZOOM_IN", "ZOOM_OUT", "ZOOM_BY_DELTA", "SET_ZOOM_STEP", "SET_STORED_LAYOUTS"],
+    [
+      "ZOOM_IN",
+      "ZOOM_OUT",
+      "ZOOM_BY_DELTA",
+      "SET_ZOOM_STEP",
+      "SET_STORED_LAYOUTS",
+      "SET_MAG_RANGE_FOR_LAYER",
+    ],
     maybeShowWarning,
   );
 }

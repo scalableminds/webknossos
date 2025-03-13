@@ -1,10 +1,8 @@
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { call, take } from "oxalis/model/sagas/effect-generators";
-import { Store } from "oxalis/singletons";
+import { call, select, take } from "oxalis/model/sagas/effect-generators";
 import type { OxalisState } from "oxalis/store";
 import AsyncGetMaximumZoomForAllMags from "oxalis/workers/async_get_maximum_zoom_for_all_mags.worker";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
-import { EventChannel, eventChannel } from "redux-saga";
 import { put } from "typed-redux-saga";
 import type { OrthoViewRects, Vector3, ViewMode } from "oxalis/constants";
 import type { LoadingStrategy } from "oxalis/store";
@@ -28,15 +26,6 @@ const asyncGetMaximumZoomForAllMags: typeof asyncGetMaximumZoomForAllMagsRaw = m
   (oldArgs, newArgs) => _.isEqual(oldArgs, newArgs),
 );
 
-function createStoreChannel(): EventChannel<OxalisState> {
-  return eventChannel((emit) => {
-    const unsubscribe = Store.subscribe(() => {
-      emit(Store.getState()); // Emit the new state whenever it changes
-    });
-    return unsubscribe;
-  });
-}
-
 const getComputeFunction = _.memoize((_layerName: string) => {
   // The argument _layerName is not used in this function, but
   // we want to have one memoized function per layer name which
@@ -52,8 +41,6 @@ const getComputeFunction = _.memoize((_layerName: string) => {
       layerMatrix: Matrix4x4,
       flycamMatrix: Matrix4x4,
     ) => {
-      console.log("calling asyncGetMaximumZoomForAllMags");
-
       return asyncGetMaximumZoomForAllMags(
         viewMode,
         loadingStrategy,
@@ -70,9 +57,17 @@ const getComputeFunction = _.memoize((_layerName: string) => {
 
 export default function* maintainMagRangesSaga(): Saga<void> {
   yield* call(ensureWkReady);
-  const channel = yield* call(createStoreChannel);
   while (true) {
-    const state: OxalisState = yield* take(channel);
+    yield* take([
+      "SET_VIEW_MODE",
+      "UPDATE_DATASET_SETTING",
+      "UPDATE_USER_SETTING",
+      "SET_DATASET",
+      "SET_INPUT_CATCHER_RECT",
+      "SET_INPUT_CATCHER_RECTS",
+      "INITIALIZE_GPU_SETUP",
+    ]);
+    const state: OxalisState = yield* select((state) => state);
     const layers = getDataLayers(state.dataset);
 
     for (const layer of layers) {

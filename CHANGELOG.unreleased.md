@@ -13,6 +13,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Added
 - Added support for datasets with the following data types: int8, int16, int32, uint32 (support for color was added, support for segmentation already existed before) and int64 (segmentation only). [#8325](https://github.com/scalableminds/webknossos/pull/8325)
 - Added a command palette that allows navigating between pages, switching tools and accessing some user settings via Ctrl+K. [#8392](https://github.com/scalableminds/webknossos/pull/8392/)
+- Added a command palette that allows navigating between pages, switching tools and accessing some user settings via Ctrl+K. [#8392](https://github.com/scalableminds/webknossos/pull/8392/)
 - Failed jobs may be retried by super-users. [#8377](https://github.com/scalableminds/webknossos/pull/8377)
 
 ### Changed

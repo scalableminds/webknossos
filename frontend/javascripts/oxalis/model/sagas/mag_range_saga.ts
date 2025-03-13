@@ -1,24 +1,24 @@
+import _ from "lodash";
+import memoizeOne from "memoize-one";
+import type { Matrix4x4 } from "mjs";
+import type { OrthoViewRects, Vector3, ViewMode } from "oxalis/constants";
+import constants from "oxalis/constants";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { call, select, take } from "oxalis/model/sagas/effect-generators";
 import type { OxalisState } from "oxalis/store";
+import type { LoadingStrategy } from "oxalis/store";
 import AsyncGetMaximumZoomForAllMags from "oxalis/workers/async_get_maximum_zoom_for_all_mags.worker";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import { put } from "typed-redux-saga";
-import type { OrthoViewRects, Vector3, ViewMode } from "oxalis/constants";
-import type { LoadingStrategy } from "oxalis/store";
-import type { Matrix4x4 } from "mjs";
 import { getDataLayers, getMagInfo } from "../accessors/dataset_accessor";
 import {
   getTransformsForLayer,
   invertAndTranspose,
 } from "../accessors/dataset_layer_transformation_accessor";
 import { _getDummyFlycamMatrix } from "../accessors/flycam_accessor";
+import { getViewportRects } from "../accessors/view_mode_accessor";
 import { setMagRangeForLayerAction } from "../actions/flycam_info_cache_actions";
 import { ensureWkReady } from "./ready_sagas";
-import memoizeOne from "memoize-one";
-import { getViewportRects } from "../accessors/view_mode_accessor";
-import constants from "oxalis/constants";
-import _ from "lodash";
 
 const asyncGetMaximumZoomForAllMagsRaw = createWorker(AsyncGetMaximumZoomForAllMags);
 const asyncGetMaximumZoomForAllMags: typeof asyncGetMaximumZoomForAllMagsRaw = memoizeOne(

@@ -1,3 +1,4 @@
+import type { FlycamInfoCacheAction } from "oxalis/model/actions//flycam_info_cache_actions";
 import type { AnnotationActionTypes } from "oxalis/model/actions/annotation_actions";
 import type { ConnectomeAction } from "oxalis/model/actions/connectome_actions";
 import type { DatasetAction } from "oxalis/model/actions/dataset_actions";
@@ -13,7 +14,6 @@ import type { UiAction } from "oxalis/model/actions/ui_actions";
 import type { UserAction } from "oxalis/model/actions/user_actions";
 import type { ViewModeAction } from "oxalis/model/actions/view_mode_actions";
 import type { VolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
-import type { FlycamInfoCacheAction } from "oxalis/model/actions//flycam_info_cache_actions";
 
 export type EscalateErrorAction = ReturnType<typeof escalateErrorAction>;
 

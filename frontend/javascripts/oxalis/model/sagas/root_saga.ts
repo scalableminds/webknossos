@@ -20,8 +20,8 @@ import VolumetracingSagas from "oxalis/model/sagas/volumetracing_saga";
 import { all, call, cancel, fork, put, take, takeEvery } from "typed-redux-saga";
 import type { EscalateErrorAction } from "../actions/actions";
 import { setIsWkReadyAction } from "../actions/ui_actions";
-import { warnIfEmailIsUnverified } from "./user_saga";
 import maintainMagRangesSaga from "./mag_range_saga";
+import { warnIfEmailIsUnverified } from "./user_saga";
 
 let rootSagaCrashed = false;
 export default function* rootSaga(): Saga<never> {

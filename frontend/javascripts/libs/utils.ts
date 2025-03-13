@@ -901,7 +901,9 @@ export function convertDecToBase256(num: number): Vector4 {
 }
 
 export function castForArrayType(uncastNumber: number, data: TypedArray): number | bigint {
-  return data instanceof BigUint64Array ? BigInt(uncastNumber) : uncastNumber;
+  return data instanceof BigUint64Array || data instanceof BigInt64Array
+    ? BigInt(uncastNumber)
+    : uncastNumber;
 }
 
 export function convertNumberTo64Bit(num: number | bigint | null): [Vector4, Vector4] {

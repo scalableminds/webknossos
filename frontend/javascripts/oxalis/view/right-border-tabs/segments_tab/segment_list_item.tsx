@@ -491,7 +491,6 @@ function _SegmentListItem({
                 );
               }}
               rgba={segmentColorWithMeshOpacity}
-              hasMesh={mesh != null}
             />
           ) : (
             <ChangeColorMenuItemContent

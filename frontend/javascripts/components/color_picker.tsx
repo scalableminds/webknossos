@@ -6,6 +6,9 @@ import { useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { HexColorInput, HexColorPicker, type RgbaColor, RgbaColorPicker } from "react-colorful";
 
+const COLOR_PICKER_WIDTH = 200;
+const RELATIVE_OPACITY_INPUT_WIDTH = 0.25;
+
 const getPopover = (title: string, content: JSX.Element | null) => {
   return (
     <Popover content={content} trigger="click" overlayStyle={{ zIndex: 10000 }}>
@@ -45,10 +48,10 @@ const ThrottledColorPicker = ({
     throttledSetValue(newValue);
   };
   return (
-    <>
+    <div style={{ marginRight: "10px" }}>
       <HexColorPicker color={value} onChange={setValue} />
       {getColorInput(value, setValue)}
-    </>
+    </div>
   );
 };
 
@@ -105,7 +108,7 @@ const ThrottledRGBAColorPicker = ({
 
   const maybeGetInfoText = () => {
     return (
-      <div style={{ wordBreak: "break-word", fontSize: "12px", lineHeight: 1 }}>
+      <div style={{ wordBreak: "break-word", fontSize: "12px", lineHeight: 1, marginTop: "8px" }}>
         Note that the opacity will only effect the mesh in the 3D viewport.
       </div>
     );
@@ -114,7 +117,7 @@ const ThrottledRGBAColorPicker = ({
   const getOpacityInput = () => {
     return (
       <InputNumber
-        style={{ width: 50, ...inputStyle }}
+        style={{ width: COLOR_PICKER_WIDTH * RELATIVE_OPACITY_INPUT_WIDTH, ...inputStyle }}
         size="small"
         variant="borderless"
         type="number"
@@ -128,11 +131,12 @@ const ThrottledRGBAColorPicker = ({
     );
   };
   const valueAsHex = Utils.rgbToHex([value.r, value.g, value.b]);
+  const hexInputWidth = COLOR_PICKER_WIDTH * (1 - RELATIVE_OPACITY_INPUT_WIDTH);
   return (
-    <div style={{ marginRight: "10px", width: 200 }}>
+    <div style={{ marginRight: "10px", width: COLOR_PICKER_WIDTH }}>
       <RgbaColorPicker color={value} onChange={setValue} style={{ width: "100 %" }} />
       <div>
-        {getColorInput(valueAsHex, setValueFromHex, 150)}
+        {getColorInput(valueAsHex, setValueFromHex, hexInputWidth)}
         {getOpacityInput()}
       </div>
       {maybeGetInfoText()}

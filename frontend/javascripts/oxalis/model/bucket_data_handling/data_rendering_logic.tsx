@@ -296,9 +296,10 @@ export function getGpuFactorsWithLabels() {
   ];
 }
 
-export function getSupportedValueRangeForElementClass(
+function _getSupportedValueRangeForElementClass(
   elementClass: ElementClass,
-): [number, number] {
+): readonly [number, number] {
+  // The returned range is inclusive (min and max).
   // This function needs to be adapted when a new dtype should/element class needs
   // to be supported.
   switch (elementClass) {
@@ -344,6 +345,12 @@ export function getSupportedValueRangeForElementClass(
       throw new Error("Unknown elementClass: " + elementClass);
   }
 }
+
+// Use memoization to ensure that the returned tuples always have the
+// same identity.
+export const getSupportedValueRangeForElementClass = _.memoize(
+  _getSupportedValueRangeForElementClass,
+);
 
 export function getDtypeConfigForElementClass(elementClass: ElementClass): {
   textureType: THREE.TextureDataType;

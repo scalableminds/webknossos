@@ -335,6 +335,16 @@ export function getMaximumSegmentIdForLayer(dataset: APIDataset, layerName: stri
   return getDefaultValueRangeOfLayer(dataset, layerName)[1];
 }
 
+export function isInSupportedValueRangeForLayer(
+  dataset: APIDataset,
+  layerName: string,
+  value: number,
+): boolean {
+  const elementClass = getElementClass(dataset, layerName);
+  const [min, max] = getSupportedValueRangeForElementClass(elementClass);
+  return value >= min && value <= max;
+}
+
 export function getBitDepth(layerInfo: DataLayer | DataLayerType): number {
   switch (layerInfo.elementClass) {
     case "uint8":

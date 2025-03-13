@@ -20,11 +20,7 @@ import { getViewportRects } from "../accessors/view_mode_accessor";
 import { setMagRangeForLayerAction } from "../actions/flycam_info_cache_actions";
 import { ensureWkReady } from "./ready_sagas";
 
-const asyncGetMaximumZoomForAllMagsRaw = createWorker(AsyncGetMaximumZoomForAllMags);
-const asyncGetMaximumZoomForAllMags: typeof asyncGetMaximumZoomForAllMagsRaw = memoizeOne(
-  asyncGetMaximumZoomForAllMagsRaw,
-  (oldArgs, newArgs) => _.isEqual(oldArgs, newArgs),
-);
+const asyncGetMaximumZoomForAllMags = createWorker(AsyncGetMaximumZoomForAllMags);
 
 const getComputeFunction = _.memoize((_layerName: string) => {
   // The argument _layerName is not used in this function, but

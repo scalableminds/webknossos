@@ -40,7 +40,6 @@ export const renderAnimationMenuItem: MenuItemType = {
 };
 
 export default function ViewDatasetActionsView(props: Props) {
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const isShareModalOpen = useSelector((state: OxalisState) => state.uiInformation.showShareModal);
   const isPythonClientModalOpen = useSelector(
     (state: OxalisState) => state.uiInformation.showPythonClientModal,
@@ -98,7 +97,7 @@ export default function ViewDatasetActionsView(props: Props) {
     >
       {shareDatasetModal}
       {pythonClientModal}
-      {activeUser?.isSuperUser ? renderAnimationModal : null}
+      {renderAnimationModal}
       <Dropdown menu={overlayMenu} trigger={["click"]}>
         <ButtonComponent
           style={{

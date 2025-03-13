@@ -200,7 +200,7 @@ export function getDefaultValueRangeOfLayer(
 ): readonly [number, number] {
   // Currently, the default range is identical to the supported range. However,
   // this might change in the future.
-  return getDefaultValueRangeOfLayer(dataset, layerName);
+  return getSupportedValueRangeOfLayer(dataset, layerName);
 }
 
 export function getSupportedValueRangeOfLayer(

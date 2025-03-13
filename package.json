@@ -43,7 +43,7 @@
     "documentation": "^14.0.2",
     "domexception": "^2.0.1",
     "dpdm": "^3.14.0",
-    "esbuild": "^0.20",
+    "esbuild": "^0.25",
     "espree": "^3.5.4",
     "husky": "^9.1.5",
     "jsdoc": "^3.5.5",

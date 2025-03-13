@@ -1,4 +1,5 @@
 import {
+  CopyOutlined,
   EditOutlined,
   FileOutlined,
   FolderOpenOutlined,
@@ -10,6 +11,7 @@ import { getOrganization } from "admin/admin_rest_api";
 import { Result, Spin, Tag, Tooltip } from "antd";
 import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
+import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
 import _ from "lodash";
 import type { OxalisState } from "oxalis/store";
@@ -169,6 +171,23 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
           {fullDataset && (
             <Tag color={stringToColor(fullDataset.dataStore.name)}>
               {fullDataset.dataStore.name}
+            </Tag>
+          )}
+        </div>
+
+        <div style={{ marginBottom: 4 }}>
+          <div className="sidebar-label">ID</div>
+          {fullDataset && (
+            <Tag>
+              {fullDataset.id.substring(0, 10)}...{" "}
+              <Tooltip title="Copy Dataset ID">
+                <CopyOutlined
+                  onClick={() => {
+                    navigator.clipboard.writeText(fullDataset.id);
+                    Toast.success("Dataset ID copied.");
+                  }}
+                />
+              </Tooltip>
             </Tag>
           )}
         </div>

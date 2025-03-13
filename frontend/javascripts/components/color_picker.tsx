@@ -1,11 +1,37 @@
-import { Popover } from "antd";
+import { InputNumber, Popover } from "antd";
 import useThrottledCallback from "beautiful-react-hooks/useThrottledCallback";
 import * as Utils from "libs/utils";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import { useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { HexColorInput, HexColorPicker, type RgbaColor, RgbaColorPicker } from "react-colorful";
 
-export const ThrottledColorPicker = ({
+const getPopover = (title: string, content: JSX.Element | null) => {
+  return (
+    <Popover content={content} trigger="click" overlayStyle={{ zIndex: 10000 }}>
+      <div style={{ position: "relative", display: "inline-block", width: "100%" }}>{title}</div>
+    </Popover>
+  );
+};
+
+const inputStyle: CSSProperties = {
+  background: "var(--ant-component-background)",
+  textAlign: "center",
+  marginTop: "12px",
+  color: "var(--ant-color-text)",
+  borderRadius: "4px",
+  border: "1px solid var(--ant-border-radius)",
+};
+
+const getColorInput = (
+  color: string,
+  setValue: (newValue: string) => void,
+  width: string | number = "100%",
+) => {
+  return <HexColorInput color={color} onChange={setValue} style={{ width, ...inputStyle }} />;
+};
+
+const ThrottledColorPicker = ({
   color,
   onChange,
 }: {
@@ -23,32 +49,6 @@ export const ThrottledColorPicker = ({
       <HexColorPicker color={value} onChange={setValue} />
       {getColorInput(value, setValue)}
     </>
-  );
-};
-
-const getPopover = (title: string, content: JSX.Element | null) => {
-  return (
-    <Popover content={content} trigger="click" overlayStyle={{ zIndex: 10000 }}>
-      <div style={{ position: "relative", display: "inline-block", width: "100%" }}>{title}</div>
-    </Popover>
-  );
-};
-
-const getColorInput = (color: string, setValue: (newValue: string) => void) => {
-  return (
-    <HexColorInput
-      color={color}
-      onChange={setValue}
-      style={{
-        background: "var(--ant-component-background)",
-        textAlign: "center",
-        width: "100%",
-        marginTop: "12px",
-        color: "var(--ant-color-text)",
-        borderRadius: "4px",
-        border: "1px solid var(--ant-border-radius)",
-      }}
-    />
   );
 };
 
@@ -97,17 +97,45 @@ const ThrottledRGBAColorPicker = ({
   const setValue = (newValue: RgbaColor) => {
     localSetValue(newValue);
     throttledSetValue(newValue);
-    console.log("set value", newValue);
   };
   const setValueFromHex = (color: string) => {
     const colorRgb = Utils.hexToRgb(color);
     setValue({ r: colorRgb[0], g: colorRgb[1], b: colorRgb[2], a: value.a });
   };
-  const colorAsHex = Utils.rgbToHex([value.r, value.g, value.b]);
+
+  const maybeGetInfoText = () => {
+    return (
+      <div style={{ wordBreak: "break-word", fontSize: "12px", lineHeight: 1 }}>
+        Note that the opacity will only effect the mesh in the 3D viewport.
+      </div>
+    );
+  };
+
+  const getOpacityInput = () => {
+    return (
+      <InputNumber
+        style={{ width: 50, ...inputStyle }}
+        size="small"
+        variant="borderless"
+        type="number"
+        min={0}
+        max={1}
+        value={value.a}
+        onChange={(e) => {
+          setValue({ r: value.r, g: value.g, b: value.b, a: e || 0 });
+        }}
+      />
+    );
+  };
+  const valueAsHex = Utils.rgbToHex([value.r, value.g, value.b]);
   return (
-    <div style={{ marginRight: "10px" }}>
-      <RgbaColorPicker color={value} onChange={setValue} />
-      {getColorInput(colorAsHex, setValueFromHex)}
+    <div style={{ marginRight: "10px", width: 200 }}>
+      <RgbaColorPicker color={value} onChange={setValue} style={{ width: "100 %" }} />
+      <div>
+        {getColorInput(valueAsHex, setValueFromHex, 150)}
+        {getOpacityInput()}
+      </div>
+      {maybeGetInfoText()}
     </div>
   );
 };
@@ -131,9 +159,7 @@ export function ChangeRGBAColorMenuItemContent({
     a: rgba[3],
   };
   const onChangeColor = (color: RgbaColor) => {
-    if (isDisabled) {
-      return;
-    }
+    if (isDisabled) return;
     const colorRgb: Vector3 = [color.r, color.g, color.b];
     const newColor: Vector4 = [...Utils.map3((component) => component / 255, colorRgb), color.a];
 

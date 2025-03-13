@@ -197,7 +197,16 @@ export function getElementClass(dataset: APIDataset, layerName: string): Element
 export function getDefaultValueRangeOfLayer(
   dataset: APIDataset,
   layerName: string,
-): [number, number] {
+): readonly [number, number] {
+  // Currently, the default range is identical to the supported range. However,
+  // this might change in the future.
+  return getDefaultValueRangeOfLayer(dataset, layerName);
+}
+
+export function getSupportedValueRangeOfLayer(
+  dataset: APIDataset,
+  layerName: string,
+): readonly [number, number] {
   const elementClass = getElementClass(dataset, layerName);
   return getSupportedValueRangeForElementClass(elementClass);
 }
@@ -684,7 +693,7 @@ export function getEffectiveIntensityRange(
   dataset: APIDataset,
   layerName: string,
   datasetConfiguration: DatasetConfiguration,
-): [number, number] {
+): readonly [number, number] {
   const defaultIntensityRange = getDefaultValueRangeOfLayer(dataset, layerName);
   const layerConfiguration = datasetConfiguration.layers[layerName];
 

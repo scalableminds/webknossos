@@ -4,7 +4,7 @@ import FastTooltip from "components/fast_tooltip";
 import { Slider } from "components/slider";
 import { roundTo } from "libs/utils";
 import * as _ from "lodash";
-import { PRIMARY_COLOR, type Vector2, type Vector3 } from "oxalis/constants";
+import { PRIMARY_COLOR, type Vector3 } from "oxalis/constants";
 import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
 import type { DatasetLayerConfiguration } from "oxalis/store";
 import * as React from "react";
@@ -20,7 +20,7 @@ type OwnProps = {
   min?: number;
   max?: number;
   isInEditMode: boolean;
-  defaultMinMax: Vector2;
+  defaultMinMax: readonly [number, number];
   supportFractions: boolean;
   reloadHistogram: () => void;
 };

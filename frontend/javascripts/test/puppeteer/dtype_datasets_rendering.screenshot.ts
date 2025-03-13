@@ -62,7 +62,7 @@ setupBeforeEachAndAfterEach(semaphore);
 
 const datasetConfigHelper = (
   layerName: string,
-  minMax: [number, number] | undefined,
+  minMax: readonly [number, number] | undefined,
 ): PartialDatasetConfiguration => {
   const base = {
     segmentationPatternOpacity: 20,

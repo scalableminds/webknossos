@@ -27,7 +27,7 @@
     "@types/pixelmatch": "^5.2.4",
     "@types/pngjs": "^6.0.1",
     "@types/react": "^18.3.1",
-    "@types/react-command-palette": "^0",
+    "@types/react-command-palette": "^0.18.4",
     "@types/react-dom": "^18.3.0",
     "@types/react-router-dom": "^5.3.3",
     "@types/sinon": "^10.0.11",

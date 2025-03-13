@@ -2525,7 +2525,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react-command-palette@npm:^0":
+"@types/react-command-palette@npm:^0.18.4":
   version: 0.18.4
   resolution: "@types/react-command-palette@npm:0.18.4"
   dependencies:
@@ -14073,7 +14073,7 @@ __metadata:
     "@types/pixelmatch": "npm:^5.2.4"
     "@types/pngjs": "npm:^6.0.1"
     "@types/react": "npm:^18.3.1"
-    "@types/react-command-palette": "npm:^0"
+    "@types/react-command-palette": "npm:^0.18.4"
     "@types/react-dom": "npm:^18.3.0"
     "@types/react-router-dom": "npm:^5.3.3"
     "@types/sinon": "npm:^10.0.11"

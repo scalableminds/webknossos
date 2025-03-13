@@ -130,12 +130,7 @@ class UrlManager {
   };
 
   parseUrlHash(): PartialUrlManagerState {
-    // const urlHash = decodeURIComponent(location.hash.slice(1));
-
-    const urlHash = decodeURIComponent(
-      // "http://localhost:9000/annotations/67ceae683401002d1b5678a7#%7B%22position%22:%5B1341,1796,1322%5D,%22mode%22:%22orthogonal%22,%22zoomStep%22:1,%22additionalCoordinates%22:%5B%5D,%22stateByLayer%22:%7B%22c969d078-e0fd-4f83-afe2-386ff4abf2a9%22:%7B%22mappingInfo%22:%7B%22mappingName%22:%22agglomerate_view_80%22,%22mappingType%22:%22HDF5%22%7D,%22meshInfo%22:%7B%22meshFileName%22:%22meshfile_4-4-2-large%22,%22meshes%22:%5B%7B%22segmentId%22:1999,%22seedPosition%22:%5B1799,1736,1710%5D,%22isPrecomputed%22:true,%22meshFileName%22:%22meshfile_4-4-2-large%22%7D,%7B%22segmentId%22:5988,%22seedPosition%22:%5B1305,1854,1322%5D,%22isPrecomputed%22:true,%22meshFileName%22:%22meshfile_4-4-2-large%22%7D,%7B%22segmentId%22:6218,%22seedPosition%22:%5B1687,2002,1322%5D,%22isPrecomputed%22:true,%22meshFileName%22:%22meshfile_4-4-2-large%22%7D,%7B%22segmentId%22:40685,%22seedPosition%22:%5B1799,1992,1179%5D,%22isPrecomputed%22:true,%22meshFileName%22:%22meshfile_4-4-2-large%22%7D%5D%7D,%22isDisabled%22:false%7D,%22color%22:%7B%22isDisabled%22:false%7D,%22Skeleton%22:%7B%22isDisabled%22:false%7D%7D%7D",
-      "http://localhost:9000/annotations/67cebbf0340100292e567921#%7B%22position%22:%5B1554,1519,1536%5D,%22mode%22:%22orthogonal%22,%22zoomStep%22:1,%22additionalCoordinates%22:%5B%5D,%22stateByLayer%22:%7B%22728f0c13-20e1-4aa2-bd5b-78c7152d9e00%22:%7B%22mappingInfo%22:%7B%22mappingName%22:%22agglomerate_view_80%22,%22mappingType%22:%22HDF5%22%7D,%22meshInfo%22:%7B%22meshFileName%22:%22meshfile_4-4-2-large%22,%22meshes%22:%5B%7B%22segmentId%22:1999,%22seedPosition%22:%5B1977,1569,1536%5D,%22isPrecomputed%22:true,%22meshFileName%22:%22meshfile_4-4-2-large%22%7D%5D%7D,%22isDisabled%22:false%7D,%22color%22:%7B%22isDisabled%22:false%7D,%22Skeleton%22:%7B%22isDisabled%22:false%7D%7D%7D",
-    );
+    const urlHash = decodeURIComponent(location.hash.slice(1));
 
     if (urlHash.includes("{")) {
       // The hash is in json format

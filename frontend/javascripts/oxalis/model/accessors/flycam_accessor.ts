@@ -192,10 +192,6 @@ export function _getMaximumZoomForAllMags(
   return maxZoomValueThresholds;
 }
 
-// todo: make this cleaner. since the maximum zoom depends on the layer name and the right matrix,
-// a memoization cache size of one doesn't work anymore. move cache to store and update explicitly?
-const perLayerFnCache: Map<string, typeof _getMaximumZoomForAllMags> = new Map();
-
 // Only exported for testing.
 export const _getDummyFlycamMatrix = memoizeOne((scale: Vector3) => {
   const scaleMatrix = getMatrixScale(scale);
@@ -217,6 +213,17 @@ export function getMoveOffset3d(state: OxalisState, timeFactor: number) {
 }
 
 function getMaximumZoomForAllMagsFromStore(state: OxalisState, layerName: string): Array<number> {
+  // return values from store
+
+  return state.flycamInfoCache.magRangesPerLayer[layerName] ?? [];
+
+  // return [
+  //   0.8264462809917351, 1.4640999999999997, 2.853116706110001, 6.115909044841461,
+  //   13.109994191499952,
+  // ];
+}
+
+function computeMaximumZoomForAllMagsFromStore(state: OxalisState, layerName: string): number[] {
   const { viewMode } = state.temporaryConfiguration;
 
   const layer = getLayerByName(state.dataset, layerName);
@@ -228,15 +235,9 @@ function getMaximumZoomForAllMagsFromStore(state: OxalisState, layerName: string
     ).affineMatrix,
   );
 
-  let fn = perLayerFnCache.get(layerName);
-  if (fn == null) {
-    fn = memoizeOne(_getMaximumZoomForAllMags);
-    perLayerFnCache.set(layerName, fn);
-  }
-
   const dummyFlycamMatrix = _getDummyFlycamMatrix(state.dataset.dataSource.scale.factor);
 
-  return fn(
+  return _getMaximumZoomForAllMags(
     viewMode,
     state.datasetConfiguration.loadingStrategy,
     state.dataset.dataSource.scale.factor,

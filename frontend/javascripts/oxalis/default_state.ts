@@ -199,6 +199,9 @@ const defaultState: OxalisState = {
     direction: [0, 0, 0],
     additionalCoordinates: [],
   },
+  flycamInfoCache: {
+    magRangesPerLayer: {},
+  },
   viewModeData: {
     plane: {
       activeViewport: OrthoViews.PLANE_XY,

@@ -71,6 +71,7 @@ import type {
 } from "types/api_flow_types";
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import type { StartAIJobModalState } from "./view/action-bar/starting_job_modals";
+import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
 
 export type MutableCommentType = {
   content: string;
@@ -602,6 +603,9 @@ export type OxalisState = {
   readonly task: Task | null | undefined;
   readonly save: SaveState;
   readonly flycam: Flycam;
+  readonly flycamInfoCache: {
+    readonly magRangesPerLayer: Record<string, number[]>;
+  };
   readonly viewModeData: ViewModeData;
   readonly activeUser: APIUser | null | undefined;
   readonly activeOrganization: APIOrganization | null;
@@ -637,6 +641,7 @@ const combinedReducers = reduceReducers(
   TaskReducer,
   SaveReducer,
   FlycamReducer,
+  FlycamInfoCacheReducer,
   ViewModeReducer,
   AnnotationReducer,
   UserReducer,

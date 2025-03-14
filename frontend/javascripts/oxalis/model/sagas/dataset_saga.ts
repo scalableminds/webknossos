@@ -153,6 +153,10 @@ export function* watchZ1Downsampling(): Saga<void> {
   }
 
   yield* call(ensureWkReady);
+  // Once WK is ready, a correct maximumZoomForAllMags attribute is computed
+  // asynchronously. During that time, we don't want to show any warning.
+  // Therefore, we sleep a little bit here.
+  yield* call(sleep, 1000);
   yield* call(maybeShowWarning);
   yield* takeLatest(
     [

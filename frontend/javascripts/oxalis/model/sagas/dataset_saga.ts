@@ -161,7 +161,7 @@ export function* watchZ1Downsampling(): Saga<void> {
       "ZOOM_BY_DELTA",
       "SET_ZOOM_STEP",
       "SET_STORED_LAYOUTS",
-      "SET_MAG_RANGE_FOR_LAYER",
+      "SET_MAXIMUM_ZOOM_FOR_ALL_MAGS_FOR_LAYER",
     ],
     maybeShowWarning,
   );

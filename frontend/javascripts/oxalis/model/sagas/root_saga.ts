@@ -20,7 +20,7 @@ import VolumetracingSagas from "oxalis/model/sagas/volumetracing_saga";
 import { all, call, cancel, fork, put, take, takeEvery } from "typed-redux-saga";
 import type { EscalateErrorAction } from "../actions/actions";
 import { setIsWkReadyAction } from "../actions/ui_actions";
-import maintainMagRangesSaga from "./mag_range_saga";
+import maintainMaximumZoomForAllMagsSaga from "./mag_range_saga";
 import { warnIfEmailIsUnverified } from "./user_saga";
 
 let rootSagaCrashed = false;
@@ -69,7 +69,7 @@ function* restartableSaga(): Saga<void> {
       call(warnIfEmailIsUnverified),
       call(listenToErrorEscalation),
       call(handleAdditionalCoordinateUpdate),
-      call(maintainMagRangesSaga),
+      call(maintainMaximumZoomForAllMagsSaga),
       ...DatasetSagas.map((saga) => call(saga)),
     ]);
   } catch (err) {

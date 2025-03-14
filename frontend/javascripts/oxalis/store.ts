@@ -604,7 +604,7 @@ export type OxalisState = {
   readonly save: SaveState;
   readonly flycam: Flycam;
   readonly flycamInfoCache: {
-    readonly magRangesPerLayer: Record<string, number[]>;
+    readonly maximumZoomForAllMags: Record<string, number[]>;
   };
   readonly viewModeData: ViewModeData;
   readonly activeUser: APIUser | null | undefined;

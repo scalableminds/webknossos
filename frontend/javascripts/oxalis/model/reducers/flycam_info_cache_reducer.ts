@@ -4,10 +4,10 @@ import type { OxalisState } from "oxalis/store";
 
 function FlycamInfoCacheReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
-    case "SET_MAG_RANGE_FOR_LAYER": {
+    case "SET_MAXIMUM_ZOOM_FOR_ALL_MAGS_FOR_LAYER": {
       return update(state, {
         flycamInfoCache: {
-          magRangesPerLayer: {
+          maximumZoomForAllMags: {
             [action.layerName]: {
               $set: action.magRange,
             },

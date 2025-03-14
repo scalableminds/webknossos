@@ -200,7 +200,7 @@ const defaultState: OxalisState = {
     additionalCoordinates: [],
   },
   flycamInfoCache: {
-    magRangesPerLayer: {},
+    maximumZoomForAllMags: {},
   },
   viewModeData: {
     plane: {

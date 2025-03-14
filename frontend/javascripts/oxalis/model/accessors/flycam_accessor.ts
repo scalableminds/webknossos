@@ -213,7 +213,7 @@ export function getMoveOffset3d(state: OxalisState, timeFactor: number) {
 
 function getMaximumZoomForAllMagsFromStore(state: OxalisState, layerName: string): Array<number> {
   // An empty array is a valid fallback, as it will lead to the coarsest mag being rendered.
-  return state.flycamInfoCache.magRangesPerLayer[layerName] ?? [];
+  return state.flycamInfoCache.maximumZoomForAllMags[layerName] ?? [];
 }
 
 // This function depends on functionality from this and the dataset_layer_transformation_accessor module.

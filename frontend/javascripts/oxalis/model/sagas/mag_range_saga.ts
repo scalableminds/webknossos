@@ -17,7 +17,7 @@ import {
 } from "../accessors/dataset_layer_transformation_accessor";
 import { _getDummyFlycamMatrix } from "../accessors/flycam_accessor";
 import { getViewportRects } from "../accessors/view_mode_accessor";
-import { setMagRangeForLayerAction } from "../actions/flycam_info_cache_actions";
+import { setMaximumZoomForAllMagsForLayerAction } from "../actions/flycam_info_cache_actions";
 import { ensureWkReady } from "./ready_sagas";
 import { buffers } from "redux-saga";
 import type { Action } from "../actions/actions";
@@ -53,7 +53,7 @@ const getComputeFunction = _.memoize((_layerName: string) => {
   );
 });
 
-export default function* maintainMagRangesSaga(): Saga<void> {
+export default function* maintainMaximumZoomForAllMagsSaga(): Saga<void> {
   // We use an actionChannel so that we don't miss new incoming actions
   // while waiting for the async computation of the last action.
   // We are only interested in the newest action, which is why we use
@@ -123,8 +123,8 @@ export default function* maintainMagRangesSaga(): Saga<void> {
         // this already proved to be fine, though.
         dummyFlycamMatrix,
       );
-      if (state.flycamInfoCache.magRangesPerLayer[layerName] !== zoomLevels) {
-        yield* put(setMagRangeForLayerAction(layerName, zoomLevels));
+      if (state.flycamInfoCache.maximumZoomForAllMags[layerName] !== zoomLevels) {
+        yield* put(setMaximumZoomForAllMagsForLayerAction(layerName, zoomLevels));
       }
     }
   }

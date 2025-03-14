@@ -1,10 +1,12 @@
-type SetMagRangeForLayerAction = ReturnType<typeof setMagRangeForLayerAction>;
+type SetMaximumZoomForAllMagsForLayerAction = ReturnType<
+  typeof setMaximumZoomForAllMagsForLayerAction
+>;
 
-export type FlycamInfoCacheAction = SetMagRangeForLayerAction;
+export type FlycamInfoCacheAction = SetMaximumZoomForAllMagsForLayerAction;
 
-export const setMagRangeForLayerAction = (layerName: string, magRange: number[]) =>
+export const setMaximumZoomForAllMagsForLayerAction = (layerName: string, magRange: number[]) =>
   ({
-    type: "SET_MAG_RANGE_FOR_LAYER",
+    type: "SET_MAXIMUM_ZOOM_FOR_ALL_MAGS_FOR_LAYER",
     layerName,
     magRange,
   }) as const;

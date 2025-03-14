@@ -35,12 +35,12 @@ import {
 } from "oxalis/view/layouting/layout_persistence";
 import * as React from "react";
 import { connect, useDispatch, useSelector } from "react-redux";
+import { useHistory } from "react-router-dom";
 import type { APIDataset, APIUser } from "types/api_flow_types";
 import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
 import { StartAIJobModal, type StartAIJobModalState } from "./action-bar/starting_job_modals";
 import ButtonComponent from "./components/button_component";
 import { NumberSliderSetting } from "./components/setting_input_views";
-import { useHistory, withRouter } from "react-router-dom";
 
 const VersionRestoreWarning = (
   <Alert

@@ -121,7 +121,6 @@ class PlaneMaterialFactory {
   scaledTpsInvPerLayer: Record<string, TPS3D> = {};
 
   constructor(planeID: OrthoView, isOrthogonal: boolean, shaderId: number) {
-    console.log("PlaneMaterialFactory::constructor");
     this.planeID = planeID;
     this.isOrthogonal = isOrthogonal;
     this.shaderId = shaderId;
@@ -1160,7 +1159,6 @@ class PlaneMaterialFactory {
   }
 
   destroy() {
-    console.log("PlaneMaterialFactory::destroy");
     this.stopListening();
     if (this.unsubscribeColorSeedsFn) {
       this.unsubscribeColorSeedsFn();

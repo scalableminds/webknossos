@@ -278,13 +278,6 @@ class ReactRouter extends React.Component<Props> {
             <Switch>
               <RouteWithErrorBoundary
                 exact
-                path="/nothing"
-                render={() => {
-                  return <div>Nothing</div>;
-                }}
-              />
-              <RouteWithErrorBoundary
-                exact
                 path="/"
                 render={() => {
                   if (!this.props.hasOrganizations && !features().isWkorgInstance) {

@@ -139,7 +139,6 @@ class Skeleton {
   }
 
   destroy() {
-    console.log("Skeleton.destroy");
     this.stopStoreListening();
     this.stopStoreListening = () => {};
 

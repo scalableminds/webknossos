@@ -85,7 +85,6 @@ class UpdatableTexture extends THREE.Texture {
     if (originalTexSubImage2D == null) {
       // See explanation at declaration of originalTexSubImage2D.
       originalTexSubImage2D = this.gl.texSubImage2D.bind(this.gl);
-      console.log("this.gl", this.gl);
       // @ts-ignore
       this.gl.texSubImage2D = (...args) => {
         // @ts-ignore

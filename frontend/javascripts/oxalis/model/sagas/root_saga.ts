@@ -34,11 +34,9 @@ export default function* rootSaga(): Saga<void> {
     });
     yield* cancel(task);
     if (restart) {
-      console.log("restart");
       yield* put(setIsWkReadyAction(false));
     }
     if (doCancel) {
-      console.log("doCancel");
       // No restart, leave the while-true-loop
       break;
     }

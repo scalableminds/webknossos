@@ -151,7 +151,6 @@ export default class LayerRenderingManager {
   }
 
   setupDataTextures(): void {
-    console.log("setupDataTextures");
     const { dataset } = Store.getState();
     const bytes = getByteCount(dataset, this.name);
     const elementClass = getElementClass(dataset, this.name);
@@ -283,7 +282,6 @@ export default class LayerRenderingManager {
   }
 
   destroy() {
-    console.log("LayerRenderingManager::destroy");
     this.storePropertyUnsubscribers.forEach((fn) => fn());
     this.textureBucketManager.destroy();
     getSharedLookUpCuckooTable.clear();

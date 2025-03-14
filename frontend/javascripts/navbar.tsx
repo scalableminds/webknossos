@@ -968,8 +968,6 @@ function Navbar({
         disabledOverflow
         items={menuItems}
       />
-      <Link to="/nothing">Nothing</Link>
-
       {isInAnnotationView ? separator : null}
       <HelpModal
         isModalOpen={isHelpModalOpen}

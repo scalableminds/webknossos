@@ -68,7 +68,6 @@ class DataLayer {
   }
 
   destroy() {
-    console.group("DataLayer.clear()");
     this.pullQueue.clear();
     this.pushQueue.clear();
     this.layerRenderingManager.destroy();
@@ -76,7 +75,6 @@ class DataLayer {
     if (this.mappings) {
       this.mappings.destroy();
     }
-    console.groupEnd();
   }
 }
 

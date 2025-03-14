@@ -269,7 +269,6 @@ class SceneController {
   }
 
   removeSkeleton(skeletonId: number) {
-    console.log("removeSkeleton");
     const skeleton = this.skeletons[skeletonId];
     const skeletonGroup = skeleton.getRootGroup();
     skeleton.destroy();
@@ -536,7 +535,6 @@ class SceneController {
   }
 
   destroy() {
-    console.group("SceneController.destroy()");
     // @ts-ignore
     window.addBucketMesh = undefined;
     // @ts-ignore
@@ -569,7 +567,6 @@ class SceneController {
     for (const plane of _.values(this.planes)) {
       plane.destroy();
     }
-    console.groupEnd();
 
     this.rootNode = new THREE.Object3D();
   }

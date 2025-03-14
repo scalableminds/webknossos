@@ -358,7 +358,6 @@ export class OxalisModel {
     /*
      * Destroys all layers
      */
-    console.log("Model::reset");
 
     if (this.dataLayers != null) {
       _.values(this.dataLayers).forEach((layer) => layer.destroy());

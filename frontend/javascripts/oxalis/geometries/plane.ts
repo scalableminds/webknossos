@@ -200,9 +200,7 @@ class Plane {
   };
 
   destroy() {
-    console.group("Plane.destroy()");
     this.materialFactory.destroy();
-    console.groupEnd();
   }
 }
 

@@ -156,10 +156,8 @@ class Mappings {
   }
 
   destroy() {
-    console.group("Mappings.destroy");
     this.storePropertyUnsubscribers.forEach((fn) => fn());
     this.storePropertyUnsubscribers = [];
-    console.groupEnd();
   }
 }
 

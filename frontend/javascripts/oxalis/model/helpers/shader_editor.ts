@@ -14,7 +14,6 @@ export default {
   },
 
   destroy() {
-    console.log("ShaderEditor.destroy");
     window.materials = [];
     window.managers = [];
   },

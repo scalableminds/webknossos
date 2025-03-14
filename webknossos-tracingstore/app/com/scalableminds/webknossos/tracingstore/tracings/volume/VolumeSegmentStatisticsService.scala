@@ -80,7 +80,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       mag: Vec3Int)(implicit ec: ExecutionContext, tc: TokenContext) =
     for {
       tracing <- annotationService.findVolume(annotationId, tracingId) ?~> "tracing.notFound"
-      fallbackLayer <- volumeTracingService.getFallbackLayer(tracingId, tracing)
+      fallbackLayer <- volumeTracingService.getFallbackLayer(annotationId, tracing)
       additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes)
       allBucketPositions: ListOfVec3IntProto <- volumeSegmentIndexService
         .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
@@ -119,7 +119,8 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       (data, _) <- if (tracing.getHasEditableMapping) {
         val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
         editableMappingService.volumeData(mappingLayer, dataRequests)
-      } else volumeTracingService.data(tracingId, tracing, dataRequests, includeFallbackDataIfAvailable = true)
+      } else
+        volumeTracingService.data(annotationId, tracingId, tracing, dataRequests, includeFallbackDataIfAvailable = true)
     } yield data
   }
 

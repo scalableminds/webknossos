@@ -1,8 +1,7 @@
 import { Slider as AntdSlider, type SliderSingleProps } from "antd";
 import type { SliderRangeProps } from "antd/lib/slider";
 import { clamp } from "libs/utils";
-import _ from "lodash";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 const DEFAULT_WHEEL_FACTOR = 0.02;
 const DEFAULT_STEP = 1;

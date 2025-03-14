@@ -20,7 +20,6 @@ import Store from "oxalis/store";
 import type { APICompoundType } from "types/api_flow_types";
 
 import { globalToLayerTransformedPosition } from "./model/accessors/dataset_layer_transformation_accessor";
-import { invertTransform, transformPointUnscaled } from "./model/helpers/transformation_helpers";
 import { initialize } from "./model_initialization";
 
 // TODO: Non-reactive

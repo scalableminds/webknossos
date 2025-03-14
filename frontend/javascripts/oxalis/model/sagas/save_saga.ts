@@ -7,6 +7,7 @@ import Toast from "libs/toast";
 import { sleep } from "libs/utils";
 import window, { alert, document, location } from "libs/window";
 import _ from "lodash";
+import memoizeOne from "memoize-one";
 import messages from "messages";
 import { ControlModeEnum } from "oxalis/constants";
 import { getMagInfo } from "oxalis/model/accessors/dataset_accessor";
@@ -57,7 +58,7 @@ import { takeEveryWithBatchActionSupport } from "./saga_helpers";
 
 const ONE_YEAR_MS = 365 * 24 * 3600 * 1000;
 
-export function* pushSaveQueueAsync(): Saga<void> {
+export function* pushSaveQueueAsync(): Saga<never> {
   yield* call(ensureWkReady);
 
   yield* put(setLastSaveTimestampAction());
@@ -87,7 +88,7 @@ export function* pushSaveQueueAsync(): Saga<void> {
     });
     yield* put(setSaveBusyAction(true));
 
-    // Send (parts) of the save queue to the server.
+    // Send (parts of) the save queue to the server.
     // There are two main cases:
     // 1) forcePush is true
     //    The user explicitly requested to save an annotation.
@@ -100,7 +101,7 @@ export function* pushSaveQueueAsync(): Saga<void> {
     //    The auto-save interval was reached at time T. The following code
     //    will determine how many items are in the save queue at this time T.
     //    Exactly that many items will be sent to the server.
-    //    New items that might be added to the save queue during saving, will
+    //    New items that might be added to the save queue during saving, will be
     //    ignored (they will be picked up in the next iteration of this loop).
     //    Otherwise, the risk of a high number of save-requests (see case 1)
     //    would be present here, too (note the risk would be greater, because the
@@ -118,7 +119,6 @@ export function* pushSaveQueueAsync(): Saga<void> {
         break;
       }
     }
-
     yield* put(setSaveBusyAction(false));
   }
 }
@@ -183,7 +183,6 @@ export function* sendSaveRequestToServer(): Saga<number> {
       const startTime = Date.now();
       yield* call(
         sendRequestWithToken,
-
         `${tracingStoreUrl}/tracings/annotation/${annotationId}/update?token=`,
         {
           method: "POST",
@@ -281,12 +280,16 @@ export function* sendSaveRequestToServer(): Saga<number> {
 }
 
 function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>) {
+  const getLayerAndMagInfoForTracingId = memoizeOne((tracingId: string) => {
+    const segmentationLayer = Model.getSegmentationTracingLayer(tracingId);
+    const segmentationMagInfo = getMagInfo(segmentationLayer.mags);
+    return [segmentationLayer, segmentationMagInfo] as const;
+  });
   for (const saveEntry of saveQueue) {
     for (const updateAction of saveEntry.actions) {
       if (updateAction.name === "updateBucket") {
         const { actionTracingId: tracingId } = updateAction.value;
-        const segmentationLayer = Model.getSegmentationTracingLayer(tracingId);
-        const segmentationMagInfo = yield* call(getMagInfo, segmentationLayer.mags);
+        const [segmentationLayer, segmentationMagInfo] = getLayerAndMagInfoForTracingId(tracingId);
 
         const { position, mag, additionalCoordinates } = updateAction.value;
         const magIndex = segmentationMagInfo.getIndexByMag(mag);
@@ -377,7 +380,7 @@ export function* saveTracingAsync(): Saga<void> {
 
 export function* setupSavingForTracingType(
   initializeAction: InitializeSkeletonTracingAction | InitializeVolumeTracingAction,
-): Saga<void> {
+): Saga<never> {
   /*
     Listen to changes to the annotation and derive UpdateActions from the
     old and new state.
@@ -450,7 +453,7 @@ const VERSION_POLL_INTERVAL_COLLAB = 10 * 1000;
 const VERSION_POLL_INTERVAL_READ_ONLY = 60 * 1000;
 const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 30 * 1000;
 
-function* watchForSaveConflicts() {
+function* watchForSaveConflicts(): Saga<never> {
   function* checkForNewVersion() {
     const allowSave = yield* select(
       (state) => state.tracing.restrictions.allowSave && state.tracing.restrictions.allowUpdate,

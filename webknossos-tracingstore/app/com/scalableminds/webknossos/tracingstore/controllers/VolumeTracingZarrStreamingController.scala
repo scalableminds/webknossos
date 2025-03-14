@@ -228,7 +228,7 @@ class VolumeTracingZarrStreamingController @Inject()(
         annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
         tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
         existingMags = tracing.mags.map(vec3IntFromProto)
-        dataSource <- remoteWebknossosClient.getDataSourceForTracing(tracingId) ~> NOT_FOUND
+        dataSource <- remoteWebknossosClient.getDataSourceForAnnotation(annotationId) ~> NOT_FOUND
         omeNgffHeader = NgffMetadata.fromNameVoxelSizeAndMags(tracingId,
                                                               dataSourceVoxelSize = dataSource.scale,
                                                               mags = existingMags.toList)
@@ -244,7 +244,7 @@ class VolumeTracingZarrStreamingController @Inject()(
         annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
         tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
         sortedExistingMags = tracing.mags.map(vec3IntFromProto).toList.sortBy(_.maxDim)
-        dataSource <- remoteWebknossosClient.getDataSourceForTracing(tracingId) ~> NOT_FOUND
+        dataSource <- remoteWebknossosClient.getDataSourceForAnnotation(annotationId) ~> NOT_FOUND
         omeNgffHeader = NgffMetadataV0_5.fromNameVoxelSizeAndMags(tracingId,
                                                                   dataSourceVoxelSize = dataSource.scale,
                                                                   mags = sortedExistingMags,
@@ -303,9 +303,9 @@ class VolumeTracingZarrStreamingController @Inject()(
             (data, missingBucketIndices) <- if (tracing.getHasEditableMapping) {
               val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
               editableMappingService.volumeData(mappingLayer, List(wkRequest))
-            } else tracingService.data(tracingId, tracing, List(wkRequest))
+            } else tracingService.data(annotationId, tracingId, tracing, List(wkRequest))
             dataWithFallback <- getFallbackLayerDataIfEmpty(tracing,
-                                                            tracingId,
+                                                            annotationId,
                                                             data,
                                                             missingBucketIndices,
                                                             magParsed,
@@ -319,7 +319,7 @@ class VolumeTracingZarrStreamingController @Inject()(
 
   private def getFallbackLayerDataIfEmpty(
       tracing: VolumeTracing,
-      tracingId: String,
+      annotationId: String,
       data: Array[Byte],
       missingBucketIndices: List[Int],
       mag: Vec3Int,
@@ -328,7 +328,7 @@ class VolumeTracingZarrStreamingController @Inject()(
       additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit tc: TokenContext): Fox[Array[Byte]] =
     if (missingBucketIndices.nonEmpty) {
       for {
-        remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId) ?~> "No data at coordinates, no fallback layer defined"
+        remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, annotationId) ?~> "No data at coordinates, no fallback layer defined"
         request = WebknossosDataRequest(
           position = position * mag * cubeSize,
           mag = mag,

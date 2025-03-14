@@ -1,4 +1,4 @@
-import { AnnotationToolEnum, AvailableToolsInViewMode, ControlModeEnum } from "oxalis/constants";
+import { AnnotationToolEnum, AvailableToolsInViewMode } from "oxalis/constants";
 import defaultState from "oxalis/default_state";
 import type { Action } from "oxalis/model/actions/actions";
 import { updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
@@ -116,6 +116,24 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
     case "SET_AI_JOB_MODAL_STATE": {
       return updateKey(state, "uiInformation", {
         aIJobModalState: action.state,
+      });
+    }
+
+    case "SET_MERGE_MODAL_VISIBILITY": {
+      return updateKey(state, "uiInformation", {
+        showMergeAnnotationModal: action.visible,
+      });
+    }
+
+    case "SET_USER_SCRIPTS_MODAL_VISIBILITY": {
+      return updateKey(state, "uiInformation", {
+        showAddScriptModal: action.visible,
+      });
+    }
+
+    case "SET_ZARR_LINKS_MODAL_VISIBILITY": {
+      return updateKey(state, "uiInformation", {
+        showZarrPrivateLinksModal: action.visible,
       });
     }
 

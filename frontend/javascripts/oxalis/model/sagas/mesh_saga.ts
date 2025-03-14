@@ -1170,15 +1170,9 @@ function* downloadMeshCells(action: TriggerMeshesDownloadAction): Saga<void> {
 }
 
 function* handleRemoveSegment(action: RemoveSegmentAction) {
-  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
-  const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
-  const { layerName, segmentId } = action;
-  if (adhocMeshesMapByLayer[additionalCoordKey]?.[layerName]?.get(segmentId) != null) {
-    // The dispatched action will make sure that the mesh entry is removed from the
-    // store **and** from the scene. Otherwise, the store will still contain a reference
-    // to the mesh even though it's not in the scene, anymore.
-    yield* put(removeMeshAction(action.layerName, action.segmentId));
-  }
+  // The dispatched action will make sure that the mesh entry is removed from the
+  // store and from the scene.
+  yield* put(removeMeshAction(action.layerName, action.segmentId));
 }
 
 function* removeMesh(action: RemoveMeshAction, removeFromScene: boolean = true): Saga<void> {
@@ -1199,7 +1193,7 @@ function* handleMeshVisibilityChange(action: UpdateMeshVisibilityAction): Saga<v
   segmentMeshController.setMeshVisibility(id, visibility, layerName, additionalCoordinates);
 }
 
-export function* handleAdditionalCoordinateUpdate(): Saga<void> {
+export function* handleAdditionalCoordinateUpdate(): Saga<never> {
   // We want to prevent iterating through all additional coordinates to adjust the mesh visibility, so we store the
   // previous additional coordinates in this method. Thus we have to catch SET_ADDITIONAL_COORDINATES actions in a
   // while-true loop and register this saga in the root saga instead of calling from the mesh saga.
@@ -1212,11 +1206,13 @@ export function* handleAdditionalCoordinateUpdate(): Saga<void> {
     const action = (yield* take(["SET_ADDITIONAL_COORDINATES"]) as any) as FlycamAction;
     // Satisfy TS
     if (action.type !== "SET_ADDITIONAL_COORDINATES") {
-      throw new Error("Unexpected action type");
+      // Don't throw as this would interfere with the never return type
+      console.error("Unexpected action.type. Ignoring SET_ADDITIONAL_COORDINATES action...");
+      continue;
     }
     const meshRecords = segmentMeshController.meshesGroupsPerSegmentId;
 
-    if (action.values == null || action.values.length === 0) break;
+    if (action.values == null || action.values.length === 0) continue;
     const newAdditionalCoordKey = getAdditionalCoordinatesAsString(action.values);
 
     for (const additionalCoordinates of [action.values, previousAdditionalCoordinates]) {

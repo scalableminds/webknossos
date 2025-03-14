@@ -25,16 +25,14 @@ class SkeletonTracingService @Inject()(
   implicit val tracingCompanion: SkeletonTracing.type = SkeletonTracing
 
   def saveSkeleton(tracing: SkeletonTracing,
-                   tracingId: Option[String],
+                   tracingId: String,
                    version: Long,
-                   toTemporaryStore: Boolean = false): Fox[String] = {
-    val id = tracingId.getOrElse(TracingId.generate)
+                   toTemporaryStore: Boolean = false): Fox[Unit] =
     if (toTemporaryStore) {
-      temporaryTracingService.saveSkeleton(id, tracing).map(_ => id)
+      temporaryTracingService.saveSkeleton(tracingId, tracing)
     } else {
-      tracingDataStore.skeletons.put(id, version, tracing).map(_ => id)
+      tracingDataStore.skeletons.put(tracingId, version, tracing)
     }
-  }
 
   def adaptSkeletonForDuplicate(tracing: SkeletonTracing,
                                 fromTask: Boolean,

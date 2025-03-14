@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.Fox
 import models.dataset.{DataStoreDAO, DatasetDAO, DatasetLayerAdditionalAxesDAO, DatasetService}
 import models.job._
 import models.organization.OrganizationDAO
-import models.user.MultiUserDAO
+import models.user.{MultiUserDAO, UserService}
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -50,21 +50,21 @@ object AnimationJobOptions {
   implicit val jsonFormat: OFormat[AnimationJobOptions] = Json.format[AnimationJobOptions]
 }
 
-class JobController @Inject()(
-    jobDAO: JobDAO,
-    sil: Silhouette[WkEnv],
-    datasetDAO: DatasetDAO,
-    datasetService: DatasetService,
-    jobService: JobService,
-    workerService: WorkerService,
-    workerDAO: WorkerDAO,
-    datasetLayerAdditionalAxesDAO: DatasetLayerAdditionalAxesDAO,
-    wkconf: WkConf,
-    multiUserDAO: MultiUserDAO,
-    wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-    slackNotificationService: SlackNotificationService,
-    organizationDAO: OrganizationDAO,
-    dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
+class JobController @Inject()(jobDAO: JobDAO,
+                              sil: Silhouette[WkEnv],
+                              datasetDAO: DatasetDAO,
+                              datasetService: DatasetService,
+                              jobService: JobService,
+                              workerService: WorkerService,
+                              workerDAO: WorkerDAO,
+                              datasetLayerAdditionalAxesDAO: DatasetLayerAdditionalAxesDAO,
+                              wkconf: WkConf,
+                              multiUserDAO: MultiUserDAO,
+                              wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+                              slackNotificationService: SlackNotificationService,
+                              organizationDAO: OrganizationDAO,
+                              dataStoreDAO: DataStoreDAO,
+                              userService: UserService)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
     with Zarr3OutputHelper {
 
@@ -108,6 +108,16 @@ class JobController @Inject()(
       _ <- bool2Fox(wkconf.Features.jobsEnabled) ?~> "job.disabled"
       job <- jobDAO.findOne(id)
       _ <- jobDAO.updateManualState(id, JobState.CANCELLED)
+      js <- jobService.publicWrites(job)
+    } yield Ok(js)
+  }
+
+  def retry(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      _ <- bool2Fox(wkconf.Features.jobsEnabled) ?~> "job.disabled"
+      _ <- userService.assertIsSuperUser(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+      job <- jobDAO.findOne(id)
+      _ <- jobDAO.retryOne(id)
       js <- jobService.publicWrites(job)
     } yield Ok(js)
   }
@@ -334,7 +344,7 @@ class JobController @Inject()(
           organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
             "organization.notFound",
             dataset._organization)
-          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.meshFile.notAllowed.organization" ~> FORBIDDEN
+          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.exportTiff.notAllowed.organization" ~> FORBIDDEN
           _ <- Fox.runOptional(layerName)(datasetService.assertValidLayerNameLax)
           _ <- Fox.runOptional(annotationLayerName)(datasetService.assertValidLayerNameLax)
           _ <- jobService.assertBoundingBoxLimits(bbox, mag)

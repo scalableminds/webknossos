@@ -86,3 +86,13 @@ message SkeletonTracingOpt {
 message SkeletonTracings {
   repeated SkeletonTracingOpt tracings = 1;
 }
+
+message StringOpt {
+  optional string stringValue = 1;
+}
+
+message SkeletonTracingsWithIds {
+  repeated SkeletonTracingOpt tracings = 1;
+  repeated StringOpt annotationId = 2;
+  repeated StringOpt tracingId = 3;
+}

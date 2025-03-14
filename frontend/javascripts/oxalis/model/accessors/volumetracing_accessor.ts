@@ -244,12 +244,12 @@ export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state:
   }
 
   const volumeMags = getMagInfoOfActiveSegmentationTracingLayer(state);
-  const lowestExistingMagIndex = volumeMags.getFinestMagIndex();
+  const finestExistingMagIndex = volumeMags.getFinestMagIndex();
   // The current mag is too high for the tool
   // because too many voxels could be annotated at the same time.
   const isZoomStepTooHigh =
     getActiveMagIndexForLayer(state, activeSegmentation.tracingId) >
-    threshold + lowestExistingMagIndex;
+    threshold + finestExistingMagIndex;
   return isZoomStepTooHigh;
 }
 
@@ -261,10 +261,10 @@ export function getMaximumBrushSize(state: OxalisState) {
     return MAX_BRUSH_SIZE_FOR_MAG1;
   }
 
-  const lowestExistingMagIndex = volumeMags.getFinestMagIndex();
+  const finestExistingMagIndex = volumeMags.getFinestMagIndex();
   // For each leading magnification which does not exist,
   // we double the maximum brush size.
-  return MAX_BRUSH_SIZE_FOR_MAG1 * 2 ** lowestExistingMagIndex;
+  return MAX_BRUSH_SIZE_FOR_MAG1 * 2 ** finestExistingMagIndex;
 }
 
 export function getRequestedOrVisibleSegmentationLayer(

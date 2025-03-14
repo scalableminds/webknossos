@@ -1,4 +1,4 @@
-import _ from "lodash";
+import update from "immutability-helper";
 import type { OxalisState } from "oxalis/store";
 import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
 import * as accessors from "oxalis/model/accessors/flycam_accessor";
@@ -71,10 +71,14 @@ test("Flycam Accessors should calculate the request log zoom step (1/2)", (t) =>
 });
 
 test("Flycam Accessors should calculate the request log zoom step (2/2)", (t) => {
-  const state = _.cloneDeep(initialState);
+  const state = update(initialState, {
+    flycam: {
+      zoomStep: {
+        $set: 9,
+      },
+    },
+  });
 
-  // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'zoomStep' because it is a read-o... Remove this comment to see the full error message
-  state.flycam.zoomStep = 8;
   t.is(accessors.getActiveMagIndexForLayer(state, "layer1"), 3);
 });
 

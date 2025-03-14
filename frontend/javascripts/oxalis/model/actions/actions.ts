@@ -2,6 +2,7 @@ import type { AnnotationActionTypes } from "oxalis/model/actions/annotation_acti
 import type { ConnectomeAction } from "oxalis/model/actions/connectome_actions";
 import type { DatasetAction } from "oxalis/model/actions/dataset_actions";
 import type { FlycamAction } from "oxalis/model/actions/flycam_actions";
+import type { FlycamInfoCacheAction } from "oxalis/model/actions/flycam_info_cache_actions";
 import type { OrganizationAction } from "oxalis/model/actions/organization_actions";
 import type { ProofreadAction } from "oxalis/model/actions/proofread_actions";
 import type { SaveAction } from "oxalis/model/actions/save_actions";
@@ -26,6 +27,7 @@ export type Action =
   | ViewModeAction
   | AnnotationActionTypes
   | FlycamAction
+  | FlycamInfoCacheAction
   | UserAction
   | UiAction
   | SegmentationAction

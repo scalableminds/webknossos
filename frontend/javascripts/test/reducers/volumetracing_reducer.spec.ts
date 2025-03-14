@@ -237,7 +237,7 @@ test("VolumeTracing should add values to the contourList even if getActiveMagInd
   const alteredState = update(initialState, {
     flycam: {
       zoomStep: {
-        $set: 3,
+        $set: 8,
       },
     },
   });

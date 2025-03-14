@@ -20,7 +20,7 @@ import VolumetracingSagas from "oxalis/model/sagas/volumetracing_saga";
 import { all, call, cancel, fork, put, take, takeEvery } from "typed-redux-saga";
 import type { EscalateErrorAction } from "../actions/actions";
 import { setIsWkReadyAction } from "../actions/ui_actions";
-import maintainMaximumZoomForAllMagsSaga from "./mag_range_saga";
+import maintainMaximumZoomForAllMagsSaga from "./flycam_info_cache_saga";
 import { warnIfEmailIsUnverified } from "./user_saga";
 
 let rootSagaCrashed = false;

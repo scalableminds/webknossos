@@ -16,6 +16,7 @@ import constants, { OrthoViews } from "oxalis/constants";
 import {
   getColorLayers,
   getDataLayers,
+  getDenseMagsForLayerName,
   getEnabledLayers,
   getLayerByName,
   getMagInfo,
@@ -212,8 +213,18 @@ export function getMoveOffset3d(state: OxalisState, timeFactor: number) {
 }
 
 function getMaximumZoomForAllMagsFromStore(state: OxalisState, layerName: string): Array<number> {
-  // An empty array is a valid fallback, as it will lead to the coarsest mag being rendered.
-  return state.flycamInfoCache.maximumZoomForAllMags[layerName] ?? [];
+  const zoomValues = state.flycamInfoCache.maximumZoomForAllMags[layerName];
+  if (zoomValues) {
+    return zoomValues;
+  }
+  // If the maintainMaximumZoomForAllMagsSaga has not populated the store yet,
+  // we use the following fallback heuristic. In production, this should not be
+  // relevant (an empty array would also work, because this would just lead to the coarsest
+  // mag being chosen for a brief period of time).
+  // However, for the tests, it is useful to have this heuristic. Otherwise, we would need
+  // to ensure that the relevant saga runs in every unit test setup (or in general, that the ranges
+  // are set up properly).
+  return getDenseMagsForLayerName(state.dataset, layerName).map((_mag, idx) => 2 ** (idx + 1));
 }
 
 // This function depends on functionality from this and the dataset_layer_transformation_accessor module.

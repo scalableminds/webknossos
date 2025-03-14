@@ -9,7 +9,7 @@ import type { OxalisState } from "oxalis/store";
 import type { LoadingStrategy } from "oxalis/store";
 import AsyncGetMaximumZoomForAllMags from "oxalis/workers/async_get_maximum_zoom_for_all_mags.worker";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
-import { put } from "typed-redux-saga";
+import { actionChannel, put } from "typed-redux-saga";
 import { getDataLayers, getMagInfo } from "../accessors/dataset_accessor";
 import {
   getTransformsForLayer,
@@ -19,6 +19,8 @@ import { _getDummyFlycamMatrix } from "../accessors/flycam_accessor";
 import { getViewportRects } from "../accessors/view_mode_accessor";
 import { setMagRangeForLayerAction } from "../actions/flycam_info_cache_actions";
 import { ensureWkReady } from "./ready_sagas";
+import { buffers } from "redux-saga";
+import type { Action } from "../actions/actions";
 
 const asyncGetMaximumZoomForAllMags = createWorker(AsyncGetMaximumZoomForAllMags);
 
@@ -52,9 +54,20 @@ const getComputeFunction = _.memoize((_layerName: string) => {
 });
 
 export default function* maintainMagRangesSaga(): Saga<void> {
-  yield* call(ensureWkReady);
-  while (true) {
-    yield* take([
+  // We use an actionChannel so that we don't miss new incoming actions
+  // while waiting for the async computation of the last action.
+  // We are only interested in the newest action, which is why we use
+  // a sliding buffer of size 1.
+  // We don't use takeLatest, because that would try to
+  // abort a previous calculation (however, the webworker
+  // would still complete its computation and the result value
+  // can still be useful because the next computation
+  // might be able to use the memoization result).
+  const channel = yield actionChannel(
+    [
+      // These actions *might* affect the values of the parameters
+      // that are given to getZoomLevelsFn. If they don't affect the
+      // actual value, memoization will avoid recomputation.
       "SET_VIEW_MODE",
       "UPDATE_DATASET_SETTING",
       "UPDATE_USER_SETTING",
@@ -62,7 +75,13 @@ export default function* maintainMagRangesSaga(): Saga<void> {
       "SET_INPUT_CATCHER_RECT",
       "SET_INPUT_CATCHER_RECTS",
       "INITIALIZE_GPU_SETUP",
-    ]);
+    ],
+    buffers.sliding<Action>(1),
+  );
+
+  yield* call(ensureWkReady);
+  while (true) {
+    yield* take(channel);
     const state: OxalisState = yield* select((state) => state);
     const layers = getDataLayers(state.dataset);
 

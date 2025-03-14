@@ -9,6 +9,7 @@ import type { OxalisState } from "oxalis/store";
 import type { LoadingStrategy } from "oxalis/store";
 import AsyncGetMaximumZoomForAllMags from "oxalis/workers/async_get_maximum_zoom_for_all_mags.worker";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
+import { buffers } from "redux-saga";
 import { actionChannel, put } from "typed-redux-saga";
 import { getDataLayers, getMagInfo } from "../accessors/dataset_accessor";
 import {
@@ -17,10 +18,9 @@ import {
 } from "../accessors/dataset_layer_transformation_accessor";
 import { _getDummyFlycamMatrix } from "../accessors/flycam_accessor";
 import { getViewportRects } from "../accessors/view_mode_accessor";
+import type { Action } from "../actions/actions";
 import { setMaximumZoomForAllMagsForLayerAction } from "../actions/flycam_info_cache_actions";
 import { ensureWkReady } from "./ready_sagas";
-import { buffers } from "redux-saga";
-import type { Action } from "../actions/actions";
 
 const asyncGetMaximumZoomForAllMags = createWorker(AsyncGetMaximumZoomForAllMags);
 

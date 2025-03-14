@@ -78,8 +78,6 @@ type State = {
 };
 const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
 
-const FORCE_PAGE_RELOAD_WHEN_EXITING = false;
-
 class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
   lastTouchTimeStamp: number | null = null;
 
@@ -125,9 +123,17 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     Store.dispatch(resetStoreAction());
     Store.dispatch(cancelSagaAction());
 
-    if (!FORCE_PAGE_RELOAD_WHEN_EXITING) {
+    // todop: remove before merging
+    const ENFORCE_FOR_TESTING = true;
+    const { activeUser } = Store.getState();
+    if (ENFORCE_FOR_TESTING || activeUser?.isSuperUser) {
+      // For super users, we don't enforce a page reload.
+      // They'll act as a guinea pig for this performance
+      // improvement for now.
       return;
     }
+
+    // Enforce a reload to absolutely ensure a clean slate.
 
     // Replace entire document with loading message
     if (document.body != null) {

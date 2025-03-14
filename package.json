@@ -39,6 +39,7 @@
     "copy-webpack-plugin": "^11.0.0",
     "coveralls": "^3.0.2",
     "css-loader": "^6.5.1",
+    "dependency-cruiser": "^16.10.0",
     "documentation": "^14.0.2",
     "domexception": "^2.0.1",
     "dpdm": "^3.14.0",

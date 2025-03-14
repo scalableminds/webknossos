@@ -353,6 +353,17 @@ export class OxalisModel {
       await Utils.sleep(500);
     }
   };
+
+  reset() {
+    /*
+     * Destroys all layers
+     */
+
+    if (this.dataLayers != null) {
+      _.values(this.dataLayers).forEach((layer) => layer.destroy());
+      this.dataLayers = {};
+    }
+  }
 }
 const model = new OxalisModel(); // export the model as a singleton
 

@@ -7,10 +7,6 @@ const HEAP = new ArrayBuffer(HEAP_SIZE);
 const Int32MIN = -2147483648;
 const Int32MAX = 2147483647;
 
-// Macros
-// unused?
-// crossMacro = (o0, o1, a0, a1, b0, b1) ->
-//   (a0 - o0) * (b1 - o1) - (a1 - o1) * (b0 - o0)
 function drawFunction(x: number, y: number, z: number, buffer: Int32Array, shiftZ: number): void {
   const __indexY = (z << shiftZ) + (y << 1);
 

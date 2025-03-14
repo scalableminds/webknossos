@@ -131,9 +131,7 @@ function InputCatcher({
       renderedInputCatchers.set(viewportID, domElementRef.current);
     }
     return () => {
-      if (domElementRef.current) {
-        renderedInputCatchers.delete(viewportID);
-      }
+      renderedInputCatchers.delete(viewportID);
     };
   });
 

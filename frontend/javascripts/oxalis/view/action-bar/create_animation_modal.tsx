@@ -285,6 +285,7 @@ function CreateAnimationModal(props: Props) {
       title="Create Animation"
       open={isOpen}
       width={700}
+      onCancel={onClose}
       okText={isFeatureDisabled ? "This feature is not available" : "Start Animation"}
       footer={[
         <Button key="cancel" onClick={onClose}>
@@ -296,7 +297,7 @@ function CreateAnimationModal(props: Props) {
             title="This feature is not available on your WEBKNOSSOS server. Contact your administrator."
           >
             <Button type="primary" disabled>
-              This feature is not available
+              Start Animation
             </Button>
           </Tooltip>
         ) : (

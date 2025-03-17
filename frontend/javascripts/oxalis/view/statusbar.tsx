@@ -354,7 +354,7 @@ function ShortcutsInfo() {
       </span>
       <ZoomShortcut />
       {moreShortcutsLink}
-      <CommandPalette label="[Ctrl+K] Commands" />
+      <CommandPalette label="[Ctrl+P] Commands" />
     </React.Fragment>
   );
 }

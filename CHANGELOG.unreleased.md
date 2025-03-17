@@ -11,7 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/25.02.1...HEAD)
 
 ### Added
-- Added a command palette that allows navigating between pages, switching tools and accessing some user settings via Ctrl+K. [#8392](https://github.com/scalableminds/webknossos/pull/8392/)
+- Added a command palette that allows navigating between pages, switching tools and accessing some user settings via Ctrl+P. [#8447](https://github.com/scalableminds/webknossos/pull/8447/)
 - Failed jobs may be retried by super-users. [#8377](https://github.com/scalableminds/webknossos/pull/8377)
 
 ### Changed
@@ -24,8 +24,10 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed the alignment of the button that allows restricting floodfill operations to a bounding box. [#8388](https://github.com/scalableminds/webknossos/pull/8388) 
 - Fixed rare bug where saving got stuck. [#8409](https://github.com/scalableminds/webknossos/pull/8409)
 - Fixed a bug where reverting annotations could get stuck if some of its layers had been deleted in the meantime. [#8405](https://github.com/scalableminds/webknossos/pull/8405)
+- When removing a segment from the segment list, a corresponding precomputed mesh was not removed automatically. [#8428](https://github.com/scalableminds/webknossos/pull/8428)
 - Fixed a bug where newly added remote datasets would always appear in root folder, regardless of actual selected folder. [#8425](https://github.com/scalableminds/webknossos/pull/8425)
 - Fixed a bug where the python libs functionality `wk.RemoteDataset.explore_and_add_remote` would error. [#8425](https://github.com/scalableminds/webknossos/pull/8425)
+- Fixed a bug where various UI dialogs would be dark mode even the user preferred a light theme. [#8445](https://github.com/scalableminds/webknossos/pull/8445)
 - Fixed a bug where the "Create Animation" modal did not open when selecting the corresponding feature from the navbar menu. [#8444](https://github.com/scalableminds/webknossos/pull/8444)
 
 ### Removed

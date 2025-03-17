@@ -22,6 +22,7 @@ A complete listing of all available keyboard & mouse shortcuts for WEBKNOSSOS ca
 | ++q++                                     | Download Screenshot(s) of Viewport(s)       |
 | ++period++                                | Toggle Viewport Maximization                |
 | ++k++ , ++l++                             | Toggle left/right Sidebars                  |
+| ++ctrl++ / ++cmd++ + ++p++                | Open command palette                        |
 
 ## Skeleton Annotation Mode
 

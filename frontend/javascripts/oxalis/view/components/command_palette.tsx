@@ -190,7 +190,7 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
             id: counter,
           };
         })}
-        hotKeys={["ctrl+k", "command+k"]}
+        hotKeys={["ctrl+p", "command+p"]}
         trigger={label}
         closeOnSelect
         resetInputOnOpen

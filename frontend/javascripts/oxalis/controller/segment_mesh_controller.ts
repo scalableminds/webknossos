@@ -18,6 +18,7 @@ import { MeshBVHHelper, acceleratedRaycast } from "three-mesh-bvh";
 
 import GUI from "lil-gui";
 import { computeBvhAsync } from "libs/compute_bvh_async";
+import { BufferAttribute } from "three";
 
 // Add the raycast function. Assumes the BVH is available on
 // the `boundsTree` variable
@@ -95,7 +96,7 @@ const setRangeToColor = (
     indexRange = [0, geometry.attributes.color.count];
   }
   for (let index = indexRange[0]; index < indexRange[1]; index++) {
-    geometry.attributes.color.set(color, 3 * index);
+    (geometry.attributes.color as BufferAttribute).set(color, 3 * index);
   }
 };
 

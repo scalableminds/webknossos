@@ -232,7 +232,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     );
     return task.annotation.state === "Finished" ? (
       <div>
-        <CheckCircleOutlined className="icon-margin-right"/>
+        <CheckCircleOutlined className="icon-margin-right" />
         Finished
       </div>
     ) : (

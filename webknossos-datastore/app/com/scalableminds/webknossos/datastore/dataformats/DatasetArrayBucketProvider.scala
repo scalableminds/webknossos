@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.dataformats
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.time.Instant
@@ -16,6 +17,7 @@ import com.scalableminds.webknossos.datastore.models.requests.DataReadInstructio
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Empty
+
 import scala.concurrent.duration._
 import ucar.ma2.{Array => MultiArray}
 
@@ -32,7 +34,7 @@ class DatasetArrayBucketProvider(dataLayer: DataLayer,
   // Cache the DatasetArrays of all mags of this layer
   private lazy val datasetArrayCache = AlfuCache[Vec3Int, DatasetArray](maxCapacity = 50)
 
-  def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+  def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       datasetArray <- datasetArrayCache.getOrLoad(readInstruction.bucket.mag,
                                                   _ => openDatasetArrayWithTimeLogging(readInstruction))
@@ -45,8 +47,8 @@ class DatasetArrayBucketProvider(dataLayer: DataLayer,
                                                                     dataLayer.elementClass == ElementClass.uint24)
     } yield bucketData
 
-  private def openDatasetArrayWithTimeLogging(readInstruction: DataReadInstruction)(
-      implicit ec: ExecutionContext): Fox[DatasetArray] = {
+  private def openDatasetArrayWithTimeLogging(
+      readInstruction: DataReadInstruction)(implicit ec: ExecutionContext, tc: TokenContext): Fox[DatasetArray] = {
     val before = Instant.now
     for {
       result <- openDatasetArray(readInstruction).futureBox
@@ -59,8 +61,8 @@ class DatasetArrayBucketProvider(dataLayer: DataLayer,
     } yield result
   }
 
-  private def openDatasetArray(readInstruction: DataReadInstruction)(
-      implicit ec: ExecutionContext): Fox[DatasetArray] = {
+  private def openDatasetArray(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext,
+                                                                     tc: TokenContext): Fox[DatasetArray] = {
     val magLocatorOpt: Option[MagLocator] =
       dataLayer.mags.find(_.mag == readInstruction.bucket.mag)
 

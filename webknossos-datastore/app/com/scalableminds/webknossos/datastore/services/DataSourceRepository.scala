@@ -14,9 +14,9 @@ import scala.concurrent.ExecutionContext
 
 class DataSourceRepository @Inject()(
     remoteWebknossosClient: DSRemoteWebknossosClient,
-    @Named("webknossos-datastore") val system: ActorSystem
+    @Named("webknossos-datastore") val actorSystem: ActorSystem
 )(implicit ec: ExecutionContext)
-    extends TemporaryStore[DataSourceId, InboxDataSource](system)
+    extends TemporaryStore[DataSourceId, InboxDataSource](actorSystem)
     with LazyLogging
     with FoxImplicits {
 
@@ -44,6 +44,12 @@ class DataSourceRepository @Inject()(
       _ = removeAll()
       _ = dataSources.foreach(dataSource => insert(dataSource.id, dataSource))
       _ <- remoteWebknossosClient.reportDataSources(dataSources)
+    } yield ()
+
+  def publishRealPaths(infos: List[DataSourcePathInfo]): Fox[Unit] =
+    for {
+      _ <- Fox.successful(())
+      _ <- remoteWebknossosClient.reportRealPaths(infos)
     } yield ()
 
   def cleanUpDataSource(dataSourceId: DataSourceId): Fox[Unit] =

@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
@@ -32,7 +33,7 @@ class BinaryDataService(val dataBaseDir: Path,
 
   private lazy val bucketProviderCache = new BucketProviderCache(maxEntries = 5000)
 
-  def handleDataRequest(request: DataServiceDataRequest): Fox[Array[Byte]] = {
+  def handleDataRequest(request: DataServiceDataRequest)(implicit tc: TokenContext): Fox[Array[Byte]] = {
     val bucketQueue = request.cuboid.allBucketsInCuboid
 
     if (!request.cuboid.hasValidDimensions) {
@@ -51,7 +52,8 @@ class BinaryDataService(val dataBaseDir: Path,
     }
   }
 
-  def handleDataRequests(requests: List[DataServiceDataRequest]): Fox[(Array[Byte], List[Int])] = {
+  def handleDataRequests(requests: List[DataServiceDataRequest])(
+      implicit tc: TokenContext): Fox[(Array[Byte], List[Int])] = {
     def convertIfNecessary(isNecessary: Boolean,
                            inputArray: Array[Byte],
                            conversionFunc: Array[Byte] => Fox[Array[Byte]],
@@ -89,7 +91,8 @@ class BinaryDataService(val dataBaseDir: Path,
     }
   }
 
-  private def handleBucketRequest(request: DataServiceDataRequest, bucket: BucketPosition): Fox[Array[Byte]] =
+  private def handleBucketRequest(request: DataServiceDataRequest, bucket: BucketPosition)(
+      implicit tc: TokenContext): Fox[Array[Byte]] =
     if (request.dataLayer.doesContainBucket(bucket) && request.dataLayer.containsMag(bucket.mag)) {
       val readInstruction =
         DataReadInstruction(dataBaseDir, request.dataSource, request.dataLayer, bucket, request.settings.version)

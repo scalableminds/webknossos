@@ -30,7 +30,8 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit val ec: Ex
   val volumeDataStore: FossilDBClient = layer.volumeDataStore
   val temporaryTracingService: TemporaryTracingService = layer.temporaryTracingService
 
-  override def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+  override def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext,
+                                                          tc: TokenContext): Fox[Array[Byte]] =
     loadBucket(layer, readInstruction.bucket, readInstruction.version)
 
   override def bucketStream(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] =
@@ -46,7 +47,8 @@ class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit v
   val volumeDataStore: FossilDBClient = layer.volumeDataStore
   val temporaryTracingService: TemporaryTracingService = layer.temporaryTracingService
 
-  override def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+  override def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext,
+                                                          tc: TokenContext): Fox[Array[Byte]] =
     for {
       _ <- temporaryTracingService.assertTracingStillPresent(layer.name)
       data <- loadBucket(layer, readInstruction.bucket, readInstruction.version)
@@ -61,6 +63,7 @@ class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit v
 
 case class VolumeTracingLayer(
     name: String,
+    annotationId: String,
     volumeTracingService: VolumeTracingService,
     temporaryTracingService: TemporaryTracingService,
     isTemporaryTracing: Boolean = false,
@@ -83,6 +86,8 @@ case class VolumeTracingLayer(
   override val mags: List[MagLocator] = List.empty // MagLocators do not apply for annotation layers
 
   private lazy val volumeMags: List[Vec3Int] = tracing.mags.map(vec3IntFromProto).toList
+
+  lazy val tracingId: String = name
 
   override def bucketProviderCacheKey: String = s"$name-withFallbackData=$includeFallbackDataIfAvailable"
 
@@ -109,4 +114,5 @@ case class VolumeTracingLayer(
   override def containsMag(mag: Vec3Int) =
     true // allow requesting buckets of all mags. database takes care of missing.
 
+  def bucketStream: Iterator[(BucketPosition, Array[Byte])] = bucketProvider.bucketStream(Some(tracing.version))
 }

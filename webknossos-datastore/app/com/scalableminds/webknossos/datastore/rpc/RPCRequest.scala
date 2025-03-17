@@ -106,9 +106,9 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     extractBytesResponse(performRequest)
   }
 
-  def postEmpty(): Fox[WSResponse] = {
+  def postEmpty(): Fox[Unit] = {
     request = request.withMethod("POST")
-    performRequest
+    performRequest.map(_ => ())
   }
 
   def postEmptyWithJsonResponse[T: Reads](): Fox[T] = {

@@ -2,12 +2,13 @@ package controllers
 
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.services.DataStoreStatus
+import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataStoreStatus}
 import com.scalableminds.webknossos.datastore.services.uploading.{
   LinkedLayerIdentifier,
   ReserveAdditionalInformation,
@@ -32,6 +33,7 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
 import telemetry.SlackNotificationService
 import utils.WkConf
+import scala.concurrent.duration.DurationInt
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -184,26 +186,22 @@ class WKRemoteDataStoreController @Inject()(
     }
   }
 
-  def updateAll(name: String, key: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
-    dataStoreService.validateAccess(name, key) { dataStore =>
-      request.body.validate[List[InboxDataSource]] match {
-        case JsSuccess(dataSources, _) =>
-          for {
-            _ <- Fox.successful(
-              logger.info(s"Received dataset list from datastore '${dataStore.name}': " +
-                s"${dataSources.count(_.isUsable)} active, ${dataSources.count(!_.isUsable)} inactive datasets"))
-            existingIds <- datasetService.updateDataSources(dataStore, dataSources)(GlobalAccessContext)
-            _ <- datasetService.deactivateUnreportedDataSources(existingIds, dataStore)
-          } yield {
-            JsonOk
-          }
-
-        case e: JsError =>
-          logger.warn("Data store reported invalid json for data sources.")
-          Fox.successful(JsonBadRequest(JsError.toJson(e)))
+  def updateAll(name: String, key: String): Action[List[InboxDataSource]] =
+    Action.async(validateJson[List[InboxDataSource]]) { implicit request =>
+      dataStoreService.validateAccess(name, key) { dataStore =>
+        val dataSources = request.body
+        for {
+          before <- Instant.nowFox
+          _ = logger.info(
+            s"Received dataset list from datastore '${dataStore.name}': " +
+              s"${dataSources.count(_.isUsable)} active, ${dataSources.count(!_.isUsable)} inactive")
+          existingIds <- datasetService.updateDataSources(dataStore, dataSources)(GlobalAccessContext)
+          _ <- datasetService.deactivateUnreportedDataSources(existingIds, dataStore)
+          _ = if (Instant.since(before) > (30 seconds))
+            Instant.logSince(before, s"Updating datasources from datastore '${dataStore.name}'", logger)
+        } yield Ok
       }
     }
-  }
 
   def updateOne(name: String, key: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
     dataStoreService.validateAccess(name, key) { dataStore =>
@@ -216,6 +214,22 @@ class WKRemoteDataStoreController @Inject()(
           }
         case e: JsError =>
           logger.warn("Data store reported invalid json for data source.")
+          Fox.successful(JsonBadRequest(JsError.toJson(e)))
+      }
+    }
+  }
+
+  def updatePaths(name: String, key: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
+    dataStoreService.validateAccess(name, key) { _ =>
+      request.body.validate[List[DataSourcePathInfo]] match {
+        case JsSuccess(infos, _) =>
+          for {
+            _ <- datasetService.updateRealPaths(infos)(GlobalAccessContext)
+          } yield {
+            JsonOk
+          }
+        case e: JsError =>
+          logger.warn("Data store reported invalid json for data source paths.")
           Fox.successful(JsonBadRequest(JsError.toJson(e)))
       }
     }

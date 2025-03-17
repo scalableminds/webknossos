@@ -5,6 +5,7 @@ import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
@@ -36,6 +37,18 @@ object TracingStoreInfo {
   implicit val jsonFormat: OFormat[TracingStoreInfo] = Json.format[TracingStoreInfo]
 }
 
+case class DataSourcePathInfo(dataSourceId: DataSourceId, magPathInfos: List[MagPathInfo])
+
+object DataSourcePathInfo {
+  implicit val jsonFormat: OFormat[DataSourcePathInfo] = Json.format[DataSourcePathInfo]
+}
+
+case class MagPathInfo(layerName: String, mag: Vec3Int, path: String, realPath: String, hasLocalData: Boolean)
+
+object MagPathInfo {
+  implicit val jsonFormat: OFormat[MagPathInfo] = Json.format[MagPathInfo]
+}
+
 trait RemoteWebknossosClient {
   def requestUserAccess(accessRequest: UserAccessRequest)(implicit tc: TokenContext): Fox[UserAccessAnswer]
 }
@@ -44,7 +57,7 @@ class DSRemoteWebknossosClient @Inject()(
     rpc: RPC,
     config: DataStoreConfig,
     val lifecycle: ApplicationLifecycle,
-    @Named("webknossos-datastore") val system: ActorSystem
+    @Named("webknossos-datastore") val actorSystem: ActorSystem
 )(implicit val ec: ExecutionContext)
     extends RemoteWebknossosClient
     with IntervalScheduler
@@ -60,7 +73,7 @@ class DSRemoteWebknossosClient @Inject()(
 
   protected lazy val tickerInterval: FiniteDuration = config.Datastore.WebKnossos.pingInterval
 
-  def tick(): Unit = reportStatus()
+  def tick(): Fox[Unit] = reportStatus().map(_ => ())
 
   private def reportStatus(): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/status")
@@ -100,6 +113,12 @@ class DSRemoteWebknossosClient @Inject()(
       .addQueryString("key" -> dataStoreKey)
       .silent
       .putJson(dataSources)
+
+  def reportRealPaths(dataSourcePaths: List[DataSourcePathInfo]): Fox[_] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/paths")
+      .addQueryString("key" -> dataStoreKey)
+      .silent
+      .putJson(dataSourcePaths)
 
   def reserveDataSourceUpload(info: ReserveUploadInformation)(
       implicit tc: TokenContext): Fox[ReserveAdditionalInformation] =

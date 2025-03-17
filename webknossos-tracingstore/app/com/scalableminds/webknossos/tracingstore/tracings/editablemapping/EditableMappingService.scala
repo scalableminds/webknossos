@@ -192,8 +192,8 @@ class EditableMappingService @Inject()(
       voxelAsLong <- voxelAsLongArray.headOption
     } yield voxelAsLong
 
-  def volumeData(editableMappingLayer: EditableMappingLayer,
-                 dataRequests: DataRequestCollection): Fox[(Array[Byte], List[Int])] = {
+  def volumeData(editableMappingLayer: EditableMappingLayer, dataRequests: DataRequestCollection)(
+      implicit tc: TokenContext): Fox[(Array[Byte], List[Int])] = {
     val requests = dataRequests.map(
       r =>
         DataServiceDataRequest(null,
@@ -368,14 +368,15 @@ class EditableMappingService @Inject()(
       bytes = UnsignedIntegerArray.toByteArray(unsignedIntArray, elementClass)
     } yield bytes
 
-  def createAdHocMesh(editableMappingLayer: EditableMappingLayer,
-                      request: WebknossosAdHocMeshRequest): Fox[(Array[Float], List[Int])] = {
+  def createAdHocMesh(editableMappingLayer: EditableMappingLayer, request: WebknossosAdHocMeshRequest)(
+      implicit tc: TokenContext): Fox[(Array[Float], List[Int])] = {
     val adHocMeshRequest = AdHocMeshRequest(
       dataSource = None,
       dataLayer = editableMappingLayer,
       cuboid = request.cuboid(editableMappingLayer),
       segmentId = request.segmentId,
       voxelSizeFactor = request.voxelSizeFactorInUnit,
+      tokenContext = tc,
       mapping = None,
       mappingType = None,
       findNeighbors = request.findNeighbors

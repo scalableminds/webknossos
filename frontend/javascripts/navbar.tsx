@@ -949,7 +949,7 @@ function Navbar({
     >
       <GlobalProgressBar />
       <MaintenanceBanner />
-      <ConfigProvider theme={{ ...getAntdTheme("light") }}>
+      <ConfigProvider theme={getAntdTheme("light")}>
         <UpgradeVersionBanner />
       </ConfigProvider>
       <Menu
@@ -983,7 +983,7 @@ function Navbar({
           paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
         }}
       />
-      <ConfigProvider theme={{ ...getAntdTheme("dark") }}>
+      <ConfigProvider theme={getAntdTheme("dark")}>
         <div
           style={{
             display: "flex",

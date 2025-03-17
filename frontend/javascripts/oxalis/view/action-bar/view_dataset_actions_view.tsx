@@ -5,7 +5,7 @@ import {
   ShareAltOutlined,
   VideoCameraOutlined,
 } from "@ant-design/icons";
-import { Dropdown, type MenuProps } from "antd";
+import { ConfigProvider, Dropdown, type MenuProps } from "antd";
 import type { MenuItemType, SubMenuType } from "antd/lib/menu/interface";
 import {
   setPythonClientModalVisibilityAction,
@@ -17,6 +17,7 @@ import ShareViewDatasetModalView from "oxalis/view/action-bar/share_view_dataset
 import ButtonComponent from "oxalis/view/components/button_component";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
 import { useSelector } from "react-redux";
+import { getAntdTheme, getThemeFromUser } from "theme";
 import CreateAnimationModal from "./create_animation_modal";
 import DownloadModalView from "./download_modal_view";
 
@@ -93,15 +94,19 @@ export default function ViewDatasetActionsView(props: Props) {
     />
   );
 
+  const userTheme = getThemeFromUser(activeUser);
+
   return (
     <div
       style={{
         marginLeft: 10,
       }}
     >
-      {shareDatasetModal}
-      {pythonClientModal}
-      {activeUser?.isSuperUser ? renderAnimationModal : null}
+      <ConfigProvider theme={getAntdTheme(userTheme)}>
+        {shareDatasetModal}
+        {pythonClientModal}
+        {activeUser?.isSuperUser ? renderAnimationModal : null}
+      </ConfigProvider>
       <Dropdown menu={overlayMenu} trigger={["click"]}>
         <ButtonComponent
           style={{

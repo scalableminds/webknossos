@@ -1,3 +1,4 @@
+import { AnnotationToolEnum, AvailableToolsInViewMode } from "oxalis/constants";
 import type { Action } from "oxalis/model/actions/actions";
 import { updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
 import {
@@ -55,6 +56,9 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
 
     case "SET_TOOL": {
       if (!state.tracing.restrictions.allowUpdate) {
+        if (AvailableToolsInViewMode.includes(AnnotationToolEnum[action.tool])) {
+          return setToolReducer(state, action.tool);
+        }
         return state;
       }
 
@@ -102,6 +106,24 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "SET_MERGE_MODAL_VISIBILITY": {
+      return updateKey(state, "uiInformation", {
+        showMergeAnnotationModal: action.visible,
+      });
+    }
+
+    case "SET_USER_SCRIPTS_MODAL_VISIBILITY": {
+      return updateKey(state, "uiInformation", {
+        showAddScriptModal: action.visible,
+      });
+    }
+
+    case "SET_ZARR_LINKS_MODAL_VISIBILITY": {
+      return updateKey(state, "uiInformation", {
+        showZarrPrivateLinksModal: action.visible,
+      });
+    }
+
     case "SET_CREATE_ANIMATION_MODAL_VISIBILITY": {
       return updateKey(state, "uiInformation", {
         showRenderAnimationModal: action.visible,
@@ -118,6 +140,13 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       return updateKey(state, "uiInformation", {
         busyBlockingInfo: action.value,
       });
+    }
+
+    case "SET_IS_WK_READY": {
+      return updateKey(state, "uiInformation", { isWkReady: action.isReady });
+    }
+    case "WK_READY": {
+      return updateKey(state, "uiInformation", { isWkReady: true });
     }
 
     case "SET_QUICK_SELECT_STATE": {

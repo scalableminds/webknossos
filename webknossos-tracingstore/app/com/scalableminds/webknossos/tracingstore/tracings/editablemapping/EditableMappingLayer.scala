@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.Fox
@@ -21,24 +22,24 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
+import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 
 import scala.concurrent.ExecutionContext
 
 class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketProvider with ProtoGeometryImplicits {
 
-  override def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
+  override def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext,
+                                                          tc: TokenContext): Fox[Array[Byte]] = {
     val bucket: BucketPosition = readInstruction.bucket
     for {
-      editableMappingId <- Fox.successful(layer.name)
+      tracingId <- Fox.successful(layer.name)
       _ <- bool2Fox(layer.doesContainBucket(bucket))
       remoteFallbackLayer <- layer.editableMappingService
-        .remoteFallbackLayerFromVolumeTracing(layer.tracing, layer.tracingId)
+        .remoteFallbackLayerFromVolumeTracing(layer.tracing, layer.annotationId)
       // called here to ensure updates are applied
-      (editableMappingInfo, editableMappingVersion) <- layer.editableMappingService.getInfoAndActualVersion(
-        editableMappingId,
-        requestedVersion = None,
-        remoteFallbackLayer = remoteFallbackLayer,
-        userToken = layer.token)
+      editableMappingInfo <- layer.annotationService.findEditableMappingInfo(layer.annotationId,
+                                                                             tracingId,
+                                                                             Some(layer.version))(ec, tc)
       dataRequest: WebknossosDataRequest = WebknossosDataRequest(
         position = Vec3Int(bucket.topLeft.mag1X, bucket.topLeft.mag1Y, bucket.topLeft.mag1Z),
         mag = bucket.mag,
@@ -49,17 +50,15 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
         additionalCoordinates = readInstruction.bucket.additionalCoordinates
       )
       (unmappedData, indices) <- layer.editableMappingService.getFallbackDataFromDatastore(remoteFallbackLayer,
-                                                                                           List(dataRequest),
-                                                                                           layer.token)
+                                                                                           List(dataRequest))(ec, tc)
       _ <- bool2Fox(indices.isEmpty)
       unmappedDataTyped <- layer.editableMappingService.bytesToUnsignedInt(unmappedData, layer.tracing.elementClass)
       segmentIds = layer.editableMappingService.collectSegmentIds(unmappedDataTyped)
       relevantMapping <- layer.editableMappingService.generateCombinedMappingForSegmentIds(segmentIds,
                                                                                            editableMappingInfo,
-                                                                                           editableMappingVersion,
-                                                                                           editableMappingId,
-                                                                                           remoteFallbackLayer,
-                                                                                           layer.token)
+                                                                                           layer.version,
+                                                                                           tracingId,
+                                                                                           remoteFallbackLayer)(tc)
       mappedData: Array[Byte] <- layer.editableMappingService.mapData(unmappedDataTyped,
                                                                       relevantMapping,
                                                                       layer.elementClass)
@@ -67,14 +66,14 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
   }
 }
 
-case class EditableMappingLayer(name: String,
+case class EditableMappingLayer(name: String, // set to tracing id
                                 boundingBox: BoundingBox,
                                 resolutions: List[Vec3Int],
                                 largestSegmentId: Option[Long],
                                 elementClass: ElementClass.Value,
-                                token: Option[String],
                                 tracing: VolumeTracing,
-                                tracingId: String,
+                                annotationId: String,
+                                annotationService: TSAnnotationService,
                                 editableMappingService: EditableMappingService)
     extends SegmentationLayer {
   override val mags: List[MagLocator] = List.empty // MagLocators do not apply for annotation layers
@@ -90,8 +89,6 @@ case class EditableMappingLayer(name: String,
                               sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
     new EditableMappingBucketProvider(layer = this)
 
-  override def bucketProviderCacheKey: String = s"$name-token=$token"
-
   override def mappings: Option[Set[String]] = None
 
   override def defaultViewConfiguration: Option[LayerViewConfiguration] = None
@@ -99,4 +96,6 @@ case class EditableMappingLayer(name: String,
   override def adminViewConfiguration: Option[LayerViewConfiguration] = None
 
   override def additionalAxes: Option[Seq[AdditionalAxis]] = None
+
+  def version: Long = tracing.version
 }

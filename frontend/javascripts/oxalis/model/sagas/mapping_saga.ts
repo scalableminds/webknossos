@@ -73,6 +73,7 @@ import type { Action } from "../actions/actions";
 import { updateSegmentAction } from "../actions/volumetracing_actions";
 import type DataCube from "../bucket_data_handling/data_cube";
 import { listenToStoreProperty } from "../helpers/listener_helpers";
+import { ensureWkReady } from "./ready_sagas";
 
 type APIMappings = Record<string, APIMapping>;
 type Container<T> = { value: T };
@@ -96,7 +97,9 @@ const takeLatestMappingChange = (
       );
       const mapping = getMappingInfo(activeMappingByLayer, layerName);
 
-      console.log("Changed from", lastBucketRetrievalSource, "to", bucketRetrievalSource);
+      if (process.env.NODE_ENV === "production") {
+        console.log("Changed from", lastBucketRetrievalSource, "to", bucketRetrievalSource);
+      }
 
       if (lastWatcherTask) {
         console.log("Cancel old bucket watcher");
@@ -137,7 +140,7 @@ export default function* watchActivatedMappings(): Saga<void> {
   };
   // Buffer actions since they might be dispatched before WK_READY
   const setMappingActionChannel = yield* actionChannel("SET_MAPPING");
-  yield* take("WK_READY");
+  yield* call(ensureWkReady);
   yield* takeLatest(setMappingActionChannel, handleSetMapping, oldActiveMappingByLayer);
   yield* takeEvery(
     "ENSURE_LAYER_MAPPINGS_ARE_LOADED",
@@ -222,7 +225,7 @@ function createBucketRetrievalSourceChannel(layerName: string) {
   }, buffers.sliding<BucketRetrievalSource>(1));
 }
 
-function* watchChangedBucketsForLayer(layerName: string): Saga<void> {
+function* watchChangedBucketsForLayer(layerName: string): Saga<never> {
   const dataCube = yield* call([Model, Model.getCubeByLayerName], layerName);
   const bucketChannel = yield* call(createBucketDataChangedChannel, dataCube);
 
@@ -360,7 +363,13 @@ function* handleSetMapping(
     return;
   }
 
-  if (showLoadingIndicator) {
+  const visibleSegmentationLayerName = yield* select(
+    (state) => getVisibleSegmentationLayer(state)?.name,
+  );
+  if (showLoadingIndicator && layerName === visibleSegmentationLayerName) {
+    // Only show the message if the mapping belongs to the currently visible
+    // segmentation layer. Otherwise, the message would stay as long as the
+    // actual layer not visible.
     message.loading({
       content: "Activating Mapping",
       key: MAPPING_MESSAGE_KEY,
@@ -455,6 +464,8 @@ function* updateLocalHdf5Mapping(
           annotation.tracingStore.url,
           editableMapping.tracingId,
           Array.from(newSegmentIds),
+          annotation.annotationId,
+          annotation.version,
         )
       : yield* call(
           getAgglomeratesForSegmentsFromDatastore,

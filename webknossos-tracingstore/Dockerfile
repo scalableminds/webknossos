@@ -1,7 +1,7 @@
 FROM eclipse-temurin:21-jammy
 
 RUN apt-get update \
-  && apt-get -y install libdraco4 \
+  && apt-get -y install libblosc1 libbrotli1 libdraco4 \
   && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /webknossos-tracingstore \

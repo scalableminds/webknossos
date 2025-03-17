@@ -177,7 +177,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     with Hdf5HashedArrayUtils
     with ByteUtils {
 
-  private val dataBaseDir = Paths.get(config.Datastore.baseFolder)
+  private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
   private val meshesDir = "meshes"
 
   private lazy val meshFileCache = new Hdf5FileCache(30)

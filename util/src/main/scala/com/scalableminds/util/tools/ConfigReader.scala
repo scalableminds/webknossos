@@ -1,17 +1,17 @@
 package com.scalableminds.util.tools
 
+import com.scalableminds.util.time.Instant
 import com.typesafe.config.Config
 import play.api.{ConfigLoader, Configuration}
 
-import java.time.Instant
-
 trait ConfigReader {
-  def raw: Configuration
+  val raw: Configuration
 
-  implicit val instantConfigLoader: ConfigLoader[Instant] = new ConfigLoader[Instant] {
-    def load(rootConfig: Config, path: String): Instant = {
-      val literal = rootConfig.getString(path)
-      Instant.parse(literal)
+  implicit val instantConfigLoader: ConfigLoader[Instant] = (rootConfig: Config, path: String) => {
+    val literal = rootConfig.getString(path)
+    Instant.fromString(literal).getOrElse {
+      throw new IllegalArgumentException(
+        s"Cannot read config value “$literal” for $path as Instant. Expected ISO date like “2023-01-01T00:00:00Z”")
     }
   }
 

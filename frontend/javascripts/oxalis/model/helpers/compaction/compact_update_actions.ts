@@ -7,7 +7,7 @@ import type {
   DeleteEdgeUpdateAction,
   DeleteNodeUpdateAction,
   DeleteTreeUpdateAction,
-  UpdateAction,
+  UpdateActionWithoutIsolationRequirement,
 } from "oxalis/model/sagas/update_actions";
 import { moveTreeComponent } from "oxalis/model/sagas/update_actions";
 import type { SkeletonTracing, VolumeTracing } from "oxalis/store";
@@ -17,7 +17,7 @@ function cantor(a: number, b: number): number {
   return 0.5 * (a + b) * (a + b + 1) + b;
 }
 
-function compactMovedNodesAndEdges(updateActions: Array<UpdateAction>) {
+function compactMovedNodesAndEdges(updateActions: Array<UpdateActionWithoutIsolationRequirement>) {
   // This function detects tree merges and splits.
   // It does so by identifying nodes and edges that were deleted in one tree only to be created
   // in another tree again afterwards.
@@ -78,6 +78,7 @@ function compactMovedNodesAndEdges(updateActions: Array<UpdateAction>) {
 
   // Create a moveTreeComponent update action for each of the groups and insert it at the right spot
   for (const movedPairings of _.values(groupedMovedNodesAndEdges)) {
+    const actionTracingId = movedPairings[0][1].value.actionTracingId;
     const oldTreeId = movedPairings[0][1].value.treeId;
     const newTreeId = movedPairings[0][0].value.treeId;
     // This could be done with a .filter(...).map(...), but flow cannot comprehend that
@@ -105,18 +106,18 @@ function compactMovedNodesAndEdges(updateActions: Array<UpdateAction>) {
       compactedActions.splice(
         createTreeUAIndex + 1,
         0,
-        moveTreeComponent(oldTreeId, newTreeId, nodeIds),
+        moveTreeComponent(oldTreeId, newTreeId, nodeIds, actionTracingId),
       );
     } else if (deleteTreeUAIndex > -1) {
       // Insert before the deleteTreeUA
       compactedActions.splice(
         deleteTreeUAIndex,
         0,
-        moveTreeComponent(oldTreeId, newTreeId, nodeIds),
+        moveTreeComponent(oldTreeId, newTreeId, nodeIds, actionTracingId),
       );
     } else {
       // Insert in front
-      compactedActions.unshift(moveTreeComponent(oldTreeId, newTreeId, nodeIds));
+      compactedActions.unshift(moveTreeComponent(oldTreeId, newTreeId, nodeIds, actionTracingId));
     }
 
     // Remove the original create/delete update actions of the moved nodes and edges.
@@ -135,7 +136,7 @@ function compactMovedNodesAndEdges(updateActions: Array<UpdateAction>) {
   return compactedActions;
 }
 
-function compactDeletedTrees(updateActions: Array<UpdateAction>) {
+function compactDeletedTrees(updateActions: Array<UpdateActionWithoutIsolationRequirement>) {
   // This function detects deleted trees.
   // Instead of sending deleteNode/deleteEdge update actions for all nodes of a deleted tree,
   // just one deleteTree update action is sufficient for the server to delete the tree.
@@ -155,9 +156,9 @@ function compactDeletedTrees(updateActions: Array<UpdateAction>) {
 }
 
 export default function compactUpdateActions(
-  updateActions: Array<UpdateAction>,
+  updateActions: Array<UpdateActionWithoutIsolationRequirement>,
   tracing: SkeletonTracing | VolumeTracing,
-): Array<UpdateAction> {
+): Array<UpdateActionWithoutIsolationRequirement> {
   return compactToggleActions(
     compactDeletedTrees(compactMovedNodesAndEdges(updateActions)),
     tracing,

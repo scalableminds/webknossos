@@ -1,4 +1,5 @@
 import {
+  CopyOutlined,
   EditOutlined,
   FileOutlined,
   FolderOpenOutlined,
@@ -10,6 +11,7 @@ import { getOrganization } from "admin/admin_rest_api";
 import { Result, Spin, Tag, Tooltip } from "antd";
 import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
+import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
 import _ from "lodash";
 import type { OxalisState } from "oxalis/store";
@@ -173,6 +175,23 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
           )}
         </div>
 
+        <div style={{ marginBottom: 4 }}>
+          <div className="sidebar-label">ID</div>
+          {fullDataset && (
+            <Tag>
+              {fullDataset.id.substring(0, 10)}...{" "}
+              <Tooltip title="Copy Dataset ID">
+                <CopyOutlined
+                  onClick={() => {
+                    navigator.clipboard.writeText(fullDataset.id);
+                    Toast.success("Dataset ID copied.");
+                  }}
+                />
+              </Tooltip>
+            </Tag>
+          )}
+        </div>
+
         {selectedDataset.isActive ? (
           <div style={{ marginBottom: 4 }}>
             <div className="sidebar-label">Tags</div>
@@ -182,10 +201,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
 
         {fullDataset && (
           /* The key is crucial to enforce rerendering when the dataset changes. This is necessary for the MetadataTable to work correctly. */
-          <MetadataTable
-            datasetOrFolder={fullDataset}
-            key={`${fullDataset.dataSource.id.name}#dataset`}
-          />
+          <MetadataTable datasetOrFolder={fullDataset} key={`${fullDataset.id}#dataset`} />
         )}
       </Spin>
 

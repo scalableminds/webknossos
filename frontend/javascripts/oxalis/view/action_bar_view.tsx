@@ -195,7 +195,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
       fallbackLayerName,
       maybeMappingName,
     );
-    location.href = `${location.origin}/annotations/${annotation.typ}/${annotation.id}${location.hash}`;
+    location.href = `${location.origin}/annotations/${annotation.id}${location.hash}`;
   };
 
   renderStartAIJobButton(disabled: boolean, tooltipTextIfDisabled: string): React.ReactNode {
@@ -298,8 +298,10 @@ class ActionBarView extends React.PureComponent<Props, State> {
           {getIsAIAnalysisEnabled() && isAdminOrDatasetManager
             ? this.renderStartAIJobButton(shouldDisableAIJobButton, tooltip)
             : null}
-          {!isReadOnly && constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
           {isViewMode ? this.renderStartTracingButton() : null}
+          {constants.MODES_PLANE.indexOf(viewMode) > -1 ? (
+            <ToolbarView isReadOnly={isReadOnly} />
+          ) : null}
         </div>
         <AddNewLayoutModal
           addLayout={this.addNewLayout}

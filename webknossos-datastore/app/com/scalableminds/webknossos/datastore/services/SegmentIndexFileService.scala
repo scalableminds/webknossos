@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -34,7 +35,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
     extends FoxImplicits
     with Hdf5HashedArrayUtils
     with SegmentStatistics {
-  private val dataBaseDir = Paths.get(config.Datastore.baseFolder)
+  private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
   private val segmentIndexDir = "segmentIndex"
 
   private lazy val fileHandleCache = new Hdf5FileCache(10)
@@ -123,7 +124,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
                        dataLayerName: String,
                        segmentId: Long,
                        mag: Vec3Int,
-                       mappingName: Option[String])(implicit m: MessagesProvider): Fox[Long] =
+                       mappingName: Option[String])(implicit m: MessagesProvider, tc: TokenContext): Fox[Long] =
     calculateSegmentVolume(
       segmentId,
       mag,
@@ -132,12 +133,13 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       getTypedDataForBucketPosition(organizationId, datasetDirectoryName, dataLayerName, mappingName)
     )
 
-  def getSegmentBoundingBox(organizationId: String,
-                            datasetDirectoryName: String,
-                            dataLayerName: String,
-                            segmentId: Long,
-                            mag: Vec3Int,
-                            mappingName: Option[String])(implicit m: MessagesProvider): Fox[BoundingBox] =
+  def getSegmentBoundingBox(
+      organizationId: String,
+      datasetDirectoryName: String,
+      dataLayerName: String,
+      segmentId: Long,
+      mag: Vec3Int,
+      mappingName: Option[String])(implicit m: MessagesProvider, tc: TokenContext): Fox[BoundingBox] =
     for {
 
       bb <- calculateSegmentBoundingBox(
@@ -160,7 +162,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
                                             mappingName: Option[String])(
       bucketPosition: Vec3Int,
       mag: Vec3Int,
-      additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit m: MessagesProvider) =
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit m: MessagesProvider, tc: TokenContext) =
     for {
       // Additional coordinates parameter ignored, see #7556
       (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
@@ -231,7 +233,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
                                         dataLayer: DataLayer,
                                         mag: Vec3Int,
                                         mag1BucketPositions: Seq[Vec3Int],
-                                        mappingName: Option[String]): Fox[Array[Byte]] = {
+                                        mappingName: Option[String])(implicit tc: TokenContext): Fox[Array[Byte]] = {
     val dataRequests = mag1BucketPositions.map { position =>
       DataServiceDataRequest(
         dataSource = dataSource,

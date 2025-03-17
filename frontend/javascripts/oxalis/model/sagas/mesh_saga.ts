@@ -82,6 +82,7 @@ import type {
   UpdateSegmentAction,
 } from "../actions/volumetracing_actions";
 import type { MagInfo } from "../helpers/mag_info";
+import { ensureSceneControllerReady, ensureWkReady } from "./ready_sagas";
 
 export const NO_LOD_MESH_INDEX = -1;
 const MAX_RETRY_COUNT = 5;
@@ -673,7 +674,7 @@ function* _refreshMeshWithMap(
 
 // Avoid redundant fetches of mesh files for the same layer by
 // storing Deferreds per layer lazily.
-const fetchDeferredsPerLayer: Record<string, Deferred<Array<APIMeshFile>, unknown>> = {};
+let fetchDeferredsPerLayer: Record<string, Deferred<Array<APIMeshFile>, unknown>> = {};
 function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
   const { segmentationLayer, dataset, mustRequest, autoActivate, callback } = action;
 
@@ -1169,15 +1170,9 @@ function* downloadMeshCells(action: TriggerMeshesDownloadAction): Saga<void> {
 }
 
 function* handleRemoveSegment(action: RemoveSegmentAction) {
-  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
-  const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
-  const { layerName, segmentId } = action;
-  if (adhocMeshesMapByLayer[additionalCoordKey]?.[layerName]?.get(segmentId) != null) {
-    // The dispatched action will make sure that the mesh entry is removed from the
-    // store **and** from the scene. Otherwise, the store will still contain a reference
-    // to the mesh even though it's not in the scene, anymore.
-    yield* put(removeMeshAction(action.layerName, action.segmentId));
-  }
+  // The dispatched action will make sure that the mesh entry is removed from the
+  // store and from the scene.
+  yield* put(removeMeshAction(action.layerName, action.segmentId));
 }
 
 function* removeMesh(action: RemoveMeshAction, removeFromScene: boolean = true): Saga<void> {
@@ -1198,11 +1193,11 @@ function* handleMeshVisibilityChange(action: UpdateMeshVisibilityAction): Saga<v
   segmentMeshController.setMeshVisibility(id, visibility, layerName, additionalCoordinates);
 }
 
-export function* handleAdditionalCoordinateUpdate(): Saga<void> {
+export function* handleAdditionalCoordinateUpdate(): Saga<never> {
   // We want to prevent iterating through all additional coordinates to adjust the mesh visibility, so we store the
   // previous additional coordinates in this method. Thus we have to catch SET_ADDITIONAL_COORDINATES actions in a
   // while-true loop and register this saga in the root saga instead of calling from the mesh saga.
-  yield* take("WK_READY");
+  yield* call(ensureWkReady);
 
   let previousAdditionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   const { segmentMeshController } = yield* call(getSceneController);
@@ -1211,11 +1206,13 @@ export function* handleAdditionalCoordinateUpdate(): Saga<void> {
     const action = (yield* take(["SET_ADDITIONAL_COORDINATES"]) as any) as FlycamAction;
     // Satisfy TS
     if (action.type !== "SET_ADDITIONAL_COORDINATES") {
-      throw new Error("Unexpected action type");
+      // Don't throw as this would interfere with the never return type
+      console.error("Unexpected action.type. Ignoring SET_ADDITIONAL_COORDINATES action...");
+      continue;
     }
     const meshRecords = segmentMeshController.meshesGroupsPerSegmentId;
 
-    if (action.values == null || action.values.length === 0) break;
+    if (action.values == null || action.values.length === 0) continue;
     const newAdditionalCoordKey = getAdditionalCoordinatesAsString(action.values);
 
     for (const additionalCoordinates of [action.values, previousAdditionalCoordinates]) {
@@ -1277,13 +1274,14 @@ function* handleBatchSegmentColorChange(
 }
 
 export default function* meshSaga(): Saga<void> {
+  fetchDeferredsPerLayer = {};
   // Buffer actions since they might be dispatched before WK_READY
   const loadAdHocMeshActionChannel = yield* actionChannel("LOAD_AD_HOC_MESH_ACTION");
   const loadPrecomputedMeshActionChannel = yield* actionChannel("LOAD_PRECOMPUTED_MESH_ACTION");
   const maybeFetchMeshFilesActionChannel = yield* actionChannel("MAYBE_FETCH_MESH_FILES");
 
-  yield* take("SCENE_CONTROLLER_READY");
-  yield* take("WK_READY");
+  yield* call(ensureSceneControllerReady);
+  yield* call(ensureWkReady);
   yield* takeEvery(maybeFetchMeshFilesActionChannel, maybeFetchMeshFiles);
   yield* takeEvery(loadAdHocMeshActionChannel, loadAdHocMeshFromAction);
   yield* takeEvery(loadPrecomputedMeshActionChannel, loadPrecomputedMesh);

@@ -29,11 +29,11 @@ object LegacyCreateExplorationalParameters {
     Json.format[LegacyCreateExplorationalParameters]
 }
 
-case class LegacyTaskParameters(taskTypeId: String,
+case class LegacyTaskParameters(taskTypeId: ObjectId,
                                 neededExperience: Experience,
                                 pendingInstances: Int,
                                 projectName: String,
-                                scriptId: Option[String],
+                                scriptId: Option[ObjectId],
                                 boundingBox: Option[BoundingBox],
                                 dataSet: String,
                                 datasetId: Option[ObjectId],
@@ -71,7 +71,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     sil.UserAwareAction.async { implicit request =>
       for {
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
-        result <- datasetController.read(dataset._id.toString, sharingToken)(request)
+        result <- datasetController.read(dataset._id, sharingToken)(request)
         adaptedResult <- replaceInResult(migrateDatasetJsonToOldFormat)(result)
       } yield adaptedResult
     }
@@ -81,7 +81,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
       for {
         _ <- Fox.successful(logVersioned(request))
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
-        result <- datasetController.update(dataset._id.toString)(request)
+        result <- datasetController.update(dataset._id)(request)
         adaptedResult <- replaceInResult(migrateDatasetJsonToOldFormat)(result)
       } yield adaptedResult
     }
@@ -91,7 +91,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
       for {
         _ <- Fox.successful(logVersioned(request))
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
-        result <- datasetController.updateTeams(dataset._id.toString)(request)
+        result <- datasetController.updateTeams(dataset._id)(request)
       } yield result
     }
 
@@ -100,11 +100,11 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
       for {
         _ <- Fox.successful(logVersioned(request))
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
-        sharingToken <- datasetController.getSharingToken(dataset._id.toString)(request)
+        sharingToken <- datasetController.getSharingToken(dataset._id)(request)
       } yield sharingToken
     }
 
-  def readTaskV8(taskId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def readTaskV8(taskId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- Fox.successful(logVersioned(request))
       result <- taskController.read(taskId)(request)
@@ -127,7 +127,21 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
       } yield adaptedResult
     }
 
-  def tasksForProjectV8(id: String,
+  def updateTaskV8(taskId: ObjectId): Action[LegacyTaskParameters] =
+    sil.SecuredAction.async(validateJson[LegacyTaskParameters]) { implicit request =>
+      val params = request.body
+      for {
+        dataset <- datasetDAO.findOneByIdOrNameAndOrganization(params.datasetId,
+                                                               params.dataSet,
+                                                               request.identity._organization)
+        paramsWithDatasetId = TaskParameters.fromLegacyTaskParameters(params, dataset._id)
+        requestWithUpdatedBody = request.withBody(paramsWithDatasetId)
+        result <- taskController.update(taskId)(requestWithUpdatedBody)
+        adaptedResult <- replaceInResult(addLegacyDataSetFieldToTask)(result)
+      } yield adaptedResult
+    }
+
+  def tasksForProjectV8(id: ObjectId,
                         limit: Option[Int] = None,
                         pageNumber: Option[Int] = None,
                         includeTotalCount: Option[Boolean]): Action[AnyContent] =
@@ -145,8 +159,8 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
                      isUnreported: Option[Boolean],
                      organizationName: Option[String],
                      onlyMyOrganization: Option[Boolean],
-                     uploaderId: Option[String],
-                     folderId: Option[String],
+                     uploaderId: Option[ObjectId],
+                     folderId: Option[ObjectId],
                      includeSubfolders: Option[Boolean],
                      searchQuery: Option[String],
                      limit: Option[Int],
@@ -169,8 +183,8 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
                      isUnreported: Option[Boolean],
                      organizationName: Option[String],
                      onlyMyOrganization: Option[Boolean],
-                     uploaderId: Option[String],
-                     folderId: Option[String],
+                     uploaderId: Option[ObjectId],
+                     folderId: Option[ObjectId],
                      includeSubfolders: Option[Boolean],
                      searchQuery: Option[String],
                      limit: Option[Int],
@@ -194,7 +208,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     sil.UserAwareAction.async { implicit request =>
       for {
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationName)
-        result <- datasetController.read(dataset._id.toString, sharingToken)(request)
+        result <- datasetController.read(dataset._id, sharingToken)(request)
         adaptedResult <- replaceInResult(replaceVoxelSize)(result)
       } yield adaptedResult
     }

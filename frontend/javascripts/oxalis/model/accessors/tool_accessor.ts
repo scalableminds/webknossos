@@ -6,10 +6,7 @@ import {
 import memoizeOne from "memoize-one";
 import { type AnnotationTool, IdentityTransform } from "oxalis/constants";
 import { AnnotationToolEnum } from "oxalis/constants";
-import {
-  getTransformsPerLayer,
-  getVisibleSegmentationLayer,
-} from "oxalis/model/accessors/dataset_accessor";
+import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
 import {
   type AgglomerateState,
@@ -21,7 +18,24 @@ import {
 import type { OxalisState } from "oxalis/store";
 import type { APIOrganization, APIUser } from "types/api_flow_types";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
+import { getTransformsPerLayer } from "./dataset_layer_transformation_accessor";
 import { isSkeletonLayerTransformed } from "./skeletontracing_accessor";
+
+export const TOOL_NAMES = {
+  MOVE: "Move",
+  SKELETON: "Skeleton",
+  BRUSH: "Brush",
+  ERASE_BRUSH: "Erase (via Brush)",
+  TRACE: "Trace",
+  ERASE_TRACE: "Erase",
+  FILL_CELL: "Fill Tool",
+  PICK_CELL: "Segment Picker",
+  QUICK_SELECT: "Quick Select Tool",
+  BOUNDING_BOX: "Bounding Box Tool",
+  PROOFREAD: "Proofreading Tool",
+  LINE_MEASUREMENT: "Measurement Tool",
+  AREA_MEASUREMENT: "Area Measurement Tool",
+};
 
 const zoomInToUseToolMessage =
   "Please zoom in further to use this tool. If you want to edit volume data on this zoom level, create an annotation with restricted magnifications from the extended annotation menu in the dashboard.";
@@ -36,7 +50,7 @@ const getExplanationForDisabledVolume = (
   isJSONMappingActive: boolean,
 ) => {
   if (!isSegmentationTracingVisible) {
-    return "Volume annotation is disabled since no segmentation tracing layer is enabled. Enable it in the left settings sidebar.";
+    return "Volume annotation is disabled since no segmentation tracing layer is enabled. Enable one in the left settings sidebar or make a segmentation layer editable via the lock icon.";
   }
 
   if (isZoomInvalidForTracing) {
@@ -411,3 +425,11 @@ export function adaptActiveToolToShortcuts(
 
   return activeTool;
 }
+
+export const getLabelForTool = (tool: AnnotationTool) => {
+  const toolName = TOOL_NAMES[tool];
+  if (toolName.endsWith("Tool")) {
+    return toolName;
+  }
+  return `${toolName} Tool`;
+};

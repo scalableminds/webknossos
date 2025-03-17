@@ -3,12 +3,15 @@ import DiffableMap from "libs/diffable_map";
 import * as Utils from "libs/utils";
 import { ContourModeEnum } from "oxalis/constants";
 import {
+  getLayerByName,
   getMappingInfo,
   getMaximumSegmentIdForLayer,
+  getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getRequestedOrVisibleSegmentationLayer,
   getSegmentationLayerForTracing,
+  getSelectedIds,
   getVisibleSegments,
   getVolumeTracingById,
 } from "oxalis/model/accessors/volumetracing_accessor";
@@ -55,10 +58,11 @@ import type {
 import {
   findParentIdForGroupId,
   getGroupNodeKey,
-} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+} from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import type { AdditionalCoordinate, ServerVolumeTracing } from "types/api_flow_types";
 import { mapGroups } from "../accessors/skeletontracing_accessor";
 import { sanitizeMetadata } from "./skeletontracing_reducer";
+
 type SegmentUpdateInfo =
   | {
       readonly type: "UPDATE_VOLUME_TRACING";
@@ -192,7 +196,7 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
       creationTime: action.timestamp,
       name: null,
       color: null,
-      groupId: null,
+      groupId: getSelectedIds(state)[0].group,
       someAdditionalCoordinates: someAdditionalCoordinates,
       ...oldSegment,
       ...segment,
@@ -262,7 +266,6 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
     contourList: [],
     largestSegmentId,
     tracingId: tracing.id,
-    version: tracing.version,
     boundingBox: convertServerBoundingBoxToFrontend(tracing.boundingBox),
     fallbackLayer: tracing.fallbackLayer,
     userBoundingBoxes,
@@ -276,15 +279,33 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
   return volumeTracing;
 }
 
-function VolumeTracingReducer(
-  state: OxalisState,
-  action:
-    | VolumeTracingAction
-    | SetMappingAction
-    | FinishMappingInitializationAction
-    | SetMappingEnabledAction
-    | SetMappingNameAction,
-): OxalisState {
+type VolumeTracingReducerAction =
+  | VolumeTracingAction
+  | SetMappingAction
+  | FinishMappingInitializationAction
+  | SetMappingEnabledAction
+  | SetMappingNameAction;
+
+function getVolumeTracingFromAction(state: OxalisState, action: VolumeTracingReducerAction) {
+  if ("tracingId" in action && action.tracingId != null) {
+    return getVolumeTracingById(state.tracing, action.tracingId);
+  }
+  const maybeVolumeLayer =
+    "layerName" in action && action.layerName != null
+      ? getLayerByName(state.dataset, action.layerName)
+      : getVisibleSegmentationLayer(state);
+
+  if (
+    maybeVolumeLayer == null ||
+    !("tracingId" in maybeVolumeLayer) ||
+    maybeVolumeLayer.tracingId == null
+  ) {
+    return null;
+  }
+  return getVolumeTracingById(state.tracing, maybeVolumeLayer.tracingId);
+}
+
+function VolumeTracingReducer(state: OxalisState, action: VolumeTracingReducerAction): OxalisState {
   switch (action.type) {
     case "INITIALIZE_VOLUMETRACING": {
       const volumeTracing = serverVolumeToClientVolumeTracing(action.tracing);
@@ -393,13 +414,10 @@ function VolumeTracingReducer(
     return state;
   }
 
-  const volumeLayer = getRequestedOrVisibleSegmentationLayer(state, null);
-
-  if (volumeLayer == null || volumeLayer.tracingId == null) {
+  const volumeTracing = getVolumeTracingFromAction(state, action);
+  if (volumeTracing == null) {
     return state;
   }
-
-  const volumeTracing = getVolumeTracingById(state.tracing, volumeLayer.tracingId);
 
   switch (action.type) {
     case "SET_ACTIVE_CELL": {

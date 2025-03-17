@@ -15,6 +15,8 @@ export type Vector4 = [number, number, number, number];
 export type Vector5 = [number, number, number, number, number];
 export type Vector6 = [number, number, number, number, number, number];
 
+export type NestedMatrix4 = [Vector4, Vector4, Vector4, Vector4]; // Represents a row major matrix.
+
 // For 3D data BucketAddress = x, y, z, mag
 // For higher dimensional data, BucketAddress = x, y, z, mag, [{name: "t", value: t}, ...]
 export type BucketAddress =
@@ -220,6 +222,8 @@ export const MeasurementTools: Array<keyof typeof AnnotationToolEnum> = [
   AnnotationToolEnum.LINE_MEASUREMENT,
   AnnotationToolEnum.AREA_MEASUREMENT,
 ];
+
+export const AvailableToolsInViewMode = [...MeasurementTools, AnnotationToolEnum.MOVE];
 
 export type AnnotationTool = keyof typeof AnnotationToolEnum;
 export enum ContourModeEnum {

@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.explore
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
@@ -16,7 +17,8 @@ class N5ArrayExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExpl
 
   override def name: String = "N5 Array"
 
-  override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(N5Layer, VoxelSize)]] =
+  override def explore(remotePath: VaultPath, credentialId: Option[String])(
+      implicit tc: TokenContext): Fox[List[(N5Layer, VoxelSize)]] =
     for {
       headerPath <- Fox.successful(remotePath / N5Header.FILENAME_ATTRIBUTES_JSON)
       name = guessNameFromPath(remotePath)

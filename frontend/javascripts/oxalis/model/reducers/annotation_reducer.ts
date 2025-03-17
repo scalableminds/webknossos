@@ -6,7 +6,6 @@ import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { getDisplayedDataExtentInPlaneMode } from "oxalis/model/accessors/view_mode_accessor";
 import type { Action } from "oxalis/model/actions/actions";
 import { updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
-import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reducers/reducer_helpers";
 import type { MeshInformation, OxalisState, UserBoundingBox } from "oxalis/store";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 import { getDatasetBoundingBox } from "../accessors/dataset_accessor";
@@ -75,8 +74,14 @@ const maybeAddAdditionalCoordinatesToMeshState = (
 function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
     case "INITIALIZE_ANNOTATION": {
-      const annotationInfo = convertServerAnnotationToFrontendAnnotation(action.annotation);
-      return updateTracing(state, annotationInfo);
+      return updateTracing(state, {
+        // Clear all tracings. These will be initialized in corresponding
+        // initialization actions.
+        mappings: [],
+        skeleton: undefined,
+        volumes: [],
+        ...action.annotation,
+      });
     }
 
     case "SET_ANNOTATION_NAME": {

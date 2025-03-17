@@ -32,12 +32,12 @@ import type {
   TreeGroup,
   UserBoundingBox,
 } from "oxalis/store";
-import { findGroup } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import { findGroup } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'saxo... Remove this comment to see the full error message
 import Saxophone from "saxophone";
 import type { APIBuildInfo, MetadataEntryProto } from "types/api_flow_types";
 import type { AdditionalCoordinate } from "types/api_flow_types";
-import { getTransformsForSkeletonLayer } from "../accessors/dataset_accessor";
+import { getTransformsForSkeletonLayer } from "../accessors/dataset_layer_transformation_accessor";
 import { getNodePosition } from "../accessors/skeletontracing_accessor";
 
 // NML Defaults

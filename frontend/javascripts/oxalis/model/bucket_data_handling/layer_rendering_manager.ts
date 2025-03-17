@@ -14,8 +14,6 @@ import {
   getElementClass,
   getLayerByName,
   getMagInfo,
-  getTransformsForLayer,
-  invertAndTranspose,
   isLayerVisible,
 } from "oxalis/model/accessors/dataset_accessor";
 import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
@@ -28,6 +26,10 @@ import AsyncBucketPickerWorker from "oxalis/workers/async_bucket_picker.worker";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import type * as THREE from "three";
 import type { AdditionalCoordinate } from "types/api_flow_types";
+import {
+  getTransformsForLayer,
+  invertAndTranspose,
+} from "../accessors/dataset_layer_transformation_accessor";
 import { getViewportRects } from "../accessors/view_mode_accessor";
 import { getSegmentsForLayer } from "../accessors/volumetracing_accessor";
 import { listenToStoreProperty } from "../helpers/listener_helpers";
@@ -306,7 +308,7 @@ export default class LayerRenderingManager {
         (storeState) => getSegmentsForLayer(storeState, this.name),
         (newSegments) => {
           const cuckoo = this.getCustomColorCuckooTable();
-          for (const updateAction of cachedDiffSegmentLists(prevSegments, newSegments)) {
+          for (const updateAction of cachedDiffSegmentLists(this.name, prevSegments, newSegments)) {
             if (
               updateAction.name === "updateSegment" ||
               updateAction.name === "createSegment" ||

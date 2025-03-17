@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders.n5
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReader, DatasetArray, DatasetHeader}
@@ -21,7 +22,8 @@ object N5Array extends LazyLogging {
            axisOrderOpt: Option[AxisOrder],
            channelIndex: Option[Int],
            additionalAxes: Option[Seq[AdditionalAxis]],
-           sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[N5Array] =
+           sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext,
+                                                                    tc: TokenContext): Fox[N5Array] =
     for {
       headerBytes <- (path / N5Header.FILENAME_ATTRIBUTES_JSON)
         .readBytes() ?~> s"Could not read header at ${N5Header.FILENAME_ATTRIBUTES_JSON}"

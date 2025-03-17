@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
@@ -50,14 +51,12 @@ class ZarrStreamingController @Inject()(
     * Uses the OME-NGFF standard (see https://ngff.openmicroscopy.org/latest/)
     */
   def requestZAttrs(
-      token: Option[String],
       organizationId: String,
       datasetDirectoryName: String,
       dataLayerName: String = "",
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(
-      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId)),
-      urlOrHeaderToken(token, request)) {
+    accessTokenService.validateAccessFromTokenContext(
+      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                   datasetDirectoryName,
@@ -69,14 +68,12 @@ class ZarrStreamingController @Inject()(
   }
 
   def requestZarrJson(
-      token: Option[String],
       organizationId: String,
       datasetDirectoryName: String,
       dataLayerName: String = "",
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(
-      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId)),
-      urlOrHeaderToken(token, request)) {
+    accessTokenService.validateAccessFromTokenContext(
+      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                   datasetDirectoryName,
@@ -91,17 +88,14 @@ class ZarrStreamingController @Inject()(
     }
   }
 
-  def zAttrsWithAnnotationPrivateLink(token: Option[String],
-                                      accessToken: String,
-                                      dataLayerName: String = ""): Action[AnyContent] =
+  def zAttrsWithAnnotationPrivateLink(accessToken: String, dataLayerName: String = ""): Action[AnyContent] =
     Action.async { implicit request =>
       ifIsAnnotationLayerOrElse(
-        token,
         accessToken,
         dataLayerName,
-        ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantToken) => {
+        ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) => {
           remoteTracingstoreClient
-            .getOmeNgffHeader(annotationLayer.tracingId, annotationSource.tracingStoreUrl, relevantToken)
+            .getOmeNgffHeader(annotationLayer.tracingId, annotationSource.tracingStoreUrl)(relevantTokenContext)
             .map(ngffMetadata => Ok(Json.toJson(ngffMetadata)))
         },
         orElse = annotationSource =>
@@ -117,17 +111,15 @@ class ZarrStreamingController @Inject()(
       )
     }
 
-  def zarrJsonWithAnnotationPrivateLink(token: Option[String],
-                                        accessToken: String,
-                                        dataLayerName: String = ""): Action[AnyContent] =
+  def zarrJsonWithAnnotationPrivateLink(accessToken: String, dataLayerName: String = ""): Action[AnyContent] =
     Action.async { implicit request =>
       ifIsAnnotationLayerOrElse(
-        token,
         accessToken,
         dataLayerName,
-        ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantToken) => {
+        ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) => {
           remoteTracingstoreClient
-            .getZarrJsonGroupHeaderWithNgff(annotationLayer.tracingId, annotationSource.tracingStoreUrl, relevantToken)
+            .getZarrJsonGroupHeaderWithNgff(annotationLayer.tracingId, annotationSource.tracingStoreUrl)(
+              relevantTokenContext)
             .map(header => Ok(Json.toJson(header)))
         },
         orElse = annotationSource =>
@@ -150,14 +142,12 @@ class ZarrStreamingController @Inject()(
     * Note that the result here is not necessarily equal to the file used in the underlying storage.
     */
   def requestDataSource(
-      token: Option[String],
       organizationId: String,
       datasetDirectoryName: String,
       zarrVersion: Int,
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(
-      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId)),
-      urlOrHeaderToken(token, request)) {
+    accessTokenService.validateAccessFromTokenContext(
+      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
         dataSource <- dataSourceRepository
           .findUsable(DataSourceId(datasetDirectoryName, organizationId))
@@ -206,14 +196,12 @@ class ZarrStreamingController @Inject()(
     }
   }
 
-  def dataSourceWithAnnotationPrivateLink(token: Option[String],
-                                          accessToken: String,
-                                          zarrVersion: Int): Action[AnyContent] =
+  def dataSourceWithAnnotationPrivateLink(accessToken: String, zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       for {
-        annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken, urlOrHeaderToken(token, request)) ~> NOT_FOUND
-        relevantToken = if (annotationSource.accessViaPrivateLink) Some(accessToken)
-        else urlOrHeaderToken(token, request)
+        annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken) ~> NOT_FOUND
+        relevantTokenContext = if (annotationSource.accessViaPrivateLink) TokenContext(Some(accessToken))
+        else tokenContextForRequest
         volumeAnnotationLayers = annotationSource.annotationLayers.filter(_.typ == AnnotationLayerType.Volume)
         dataSource <- dataSourceRepository
           .findUsable(DataSourceId(annotationSource.datasetDirectoryName, annotationSource.organizationId))
@@ -226,45 +214,37 @@ class ZarrStreamingController @Inject()(
             remoteTracingstoreClient.getVolumeLayerAsZarrLayer(l.tracingId,
                                                                Some(l.name),
                                                                annotationSource.tracingStoreUrl,
-                                                               relevantToken,
-                                                               zarrVersion))
+                                                               zarrVersion)(relevantTokenContext))
         allLayer = dataSourceLayers ++ annotationLayers
         zarrSource = GenericDataSource[DataLayer](dataSource.id, allLayer, dataSource.scale)
       } yield Ok(Json.toJson(zarrSource))
     }
 
   def requestRawZarrCube(
-      token: Option[String],
       organizationId: String,
       datasetDirectoryName: String,
       dataLayerName: String,
       mag: String,
       coordinates: String,
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(
-      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId)),
-      urlOrHeaderToken(token, request)) {
+    accessTokenService.validateAccessFromTokenContext(
+      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       rawZarrCube(organizationId, datasetDirectoryName, dataLayerName, mag, coordinates)
     }
   }
 
-  def rawZarrCubePrivateLink(token: Option[String],
-                             accessToken: String,
+  def rawZarrCubePrivateLink(accessToken: String,
                              dataLayerName: String,
                              mag: String,
                              coordinates: String): Action[AnyContent] =
     Action.async { implicit request =>
       ifIsAnnotationLayerOrElse(
-        token,
         accessToken,
         dataLayerName,
-        ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantToken) =>
+        ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) =>
           remoteTracingstoreClient
-            .getRawZarrCube(annotationLayer.tracingId,
-                            mag,
-                            coordinates,
-                            annotationSource.tracingStoreUrl,
-                            relevantToken)
+            .getRawZarrCube(annotationLayer.tracingId, mag, coordinates, annotationSource.tracingStoreUrl)(
+              relevantTokenContext)
             .map(Ok(_)),
         orElse = annotationSource =>
           rawZarrCube(annotationSource.organizationId,
@@ -281,7 +261,7 @@ class ZarrStreamingController @Inject()(
       dataLayerName: String,
       mag: String,
       coordinates: String,
-  )(implicit m: MessagesProvider): Fox[Result] =
+  )(implicit m: MessagesProvider, tc: TokenContext): Fox[Result] =
     for {
       (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                 datasetDirectoryName,
@@ -311,15 +291,14 @@ class ZarrStreamingController @Inject()(
       _ <- bool2Fox(notFoundIndices.isEmpty) ~> "zarr.chunkNotFound" ~> NOT_FOUND
     } yield Ok(data)
 
-  def requestZArray(token: Option[String],
-                    organizationId: String,
-                    datasetDirectoryName: String,
-                    dataLayerName: String,
-                    mag: String,
+  def requestZArray(
+      organizationId: String,
+      datasetDirectoryName: String,
+      dataLayerName: String,
+      mag: String,
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(
-      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId)),
-      urlOrHeaderToken(token, request)) {
+    accessTokenService.validateAccessFromTokenContext(
+      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       zArray(organizationId, datasetDirectoryName, dataLayerName, mag)
     }
   }
@@ -336,15 +315,14 @@ class ZarrStreamingController @Inject()(
       zarrHeader = ZarrHeader.fromLayer(dataLayer, magParsed)
     } yield Ok(Json.toJson(zarrHeader))
 
-  def requestZarrJsonForMag(token: Option[String],
-                            organizationId: String,
-                            datasetDirectoryName: String,
-                            dataLayerName: String,
-                            mag: String,
+  def requestZarrJsonForMag(
+      organizationId: String,
+      datasetDirectoryName: String,
+      dataLayerName: String,
+      mag: String,
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(
-      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId)),
-      urlOrHeaderToken(token, request)) {
+    accessTokenService.validateAccessFromTokenContext(
+      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       zarrJsonForMag(organizationId, datasetDirectoryName, dataLayerName, mag)
     }
   }
@@ -361,76 +339,67 @@ class ZarrStreamingController @Inject()(
       zarrHeader = Zarr3ArrayHeader.fromDataLayer(dataLayer, magParsed)
     } yield Ok(Json.toJson(zarrHeader))
 
-  def zArrayPrivateLink(token: Option[String],
-                        accessToken: String,
-                        dataLayerName: String,
-                        mag: String): Action[AnyContent] = Action.async { implicit request =>
-    ifIsAnnotationLayerOrElse(
-      token,
-      accessToken,
-      dataLayerName,
-      ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantToken) =>
-        remoteTracingstoreClient
-          .getZArray(annotationLayer.tracingId, mag, annotationSource.tracingStoreUrl, relevantToken)
-          .map(z => Ok(Json.toJson(z))),
-      orElse = annotationSource =>
-        zArray(annotationSource.organizationId, annotationSource.datasetDirectoryName, dataLayerName, mag)
-    )
+  def zArrayPrivateLink(accessToken: String, dataLayerName: String, mag: String): Action[AnyContent] = Action.async {
+    implicit request =>
+      ifIsAnnotationLayerOrElse(
+        accessToken,
+        dataLayerName,
+        ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) =>
+          remoteTracingstoreClient
+            .getZArray(annotationLayer.tracingId, mag, annotationSource.tracingStoreUrl)(relevantTokenContext)
+            .map(z => Ok(Json.toJson(z))),
+        orElse = annotationSource =>
+          zArray(annotationSource.organizationId, annotationSource.datasetDirectoryName, dataLayerName, mag)
+      )
   }
 
-  def zarrJsonPrivateLink(token: Option[String],
-                          accessToken: String,
-                          dataLayerName: String,
-                          mag: String): Action[AnyContent] = Action.async { implicit request =>
-    ifIsAnnotationLayerOrElse(
-      token,
-      accessToken,
-      dataLayerName,
-      ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantToken) =>
-        remoteTracingstoreClient
-          .getZarrJson(annotationLayer.tracingId, mag, annotationSource.tracingStoreUrl, relevantToken)
-          .map(z => Ok(Json.toJson(z))),
-      orElse = annotationSource =>
-        zarrJsonForMag(annotationSource.organizationId, annotationSource.datasetDirectoryName, dataLayerName, mag)
-    )
+  def zarrJsonPrivateLink(accessToken: String, dataLayerName: String, mag: String): Action[AnyContent] = Action.async {
+    implicit request =>
+      ifIsAnnotationLayerOrElse(
+        accessToken,
+        dataLayerName,
+        ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) =>
+          remoteTracingstoreClient
+            .getZarrJson(annotationLayer.tracingId, mag, annotationSource.tracingStoreUrl)(relevantTokenContext)
+            .map(z => Ok(Json.toJson(z))),
+        orElse = annotationSource =>
+          zarrJsonForMag(annotationSource.organizationId, annotationSource.datasetDirectoryName, dataLayerName, mag)
+      )
   }
 
   private def ifIsAnnotationLayerOrElse(
-      token: Option[String],
       accessToken: String,
       dataLayerName: String,
-      ifIsAnnotationLayer: (AnnotationLayer, AnnotationSource, Option[String]) => Fox[Result],
+      ifIsAnnotationLayer: (AnnotationLayer, AnnotationSource, TokenContext) => Fox[Result],
       orElse: AnnotationSource => Fox[Result])(implicit request: Request[Any]): Fox[Result] =
     for {
-      annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken, urlOrHeaderToken(token, request)) ~> NOT_FOUND
-      relevantToken = if (annotationSource.accessViaPrivateLink) Some(accessToken)
-      else urlOrHeaderToken(token, request)
+      annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken) ~> NOT_FOUND
+      relevantTokenContext = if (annotationSource.accessViaPrivateLink) TokenContext(Some(accessToken))
+      else tokenContextForRequest
       layer = annotationSource.getAnnotationLayer(dataLayerName)
       result <- layer match {
-        case Some(annotationLayer) => ifIsAnnotationLayer(annotationLayer, annotationSource, relevantToken)
+        case Some(annotationLayer) => ifIsAnnotationLayer(annotationLayer, annotationSource, relevantTokenContext)
         case None                  => orElse(annotationSource)
       }
     } yield result
 
-  def requestDataLayerMagFolderContents(token: Option[String],
-                                        organizationId: String,
-                                        datasetDirectoryName: String,
-                                        dataLayerName: String,
-                                        mag: String,
-                                        zarrVersion: Int): Action[AnyContent] =
+  def requestDataLayerMagDirectoryContents(organizationId: String,
+                                           datasetDirectoryName: String,
+                                           dataLayerName: String,
+                                           mag: String,
+                                           zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(
-        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId)),
-        urlOrHeaderToken(token, request)) {
-        dataLayerMagFolderContents(organizationId, datasetDirectoryName, dataLayerName, mag, zarrVersion)
+      accessTokenService.validateAccessFromTokenContext(
+        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
+        dataLayerMagDirectoryContents(organizationId, datasetDirectoryName, dataLayerName, mag, zarrVersion)
       }
     }
 
-  private def dataLayerMagFolderContents(organizationId: String,
-                                         datasetDirectoryName: String,
-                                         dataLayerName: String,
-                                         mag: String,
-                                         zarrVersion: Int)(implicit m: MessagesProvider): Fox[Result] =
+  private def dataLayerMagDirectoryContents(organizationId: String,
+                                            datasetDirectoryName: String,
+                                            dataLayerName: String,
+                                            mag: String,
+                                            zarrVersion: Int)(implicit m: MessagesProvider): Fox[Result] =
     for {
       (_, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                        datasetDirectoryName,
@@ -447,23 +416,20 @@ class ZarrStreamingController @Inject()(
           additionalEntries
         )).withHeaders()
 
-  def dataLayerMagFolderContentsPrivateLink(token: Option[String],
-                                            accessToken: String,
-                                            dataLayerName: String,
-                                            mag: String,
-                                            zarrVersion: Int): Action[AnyContent] =
+  def dataLayerMagDirectoryContentsPrivateLink(accessToken: String,
+                                               dataLayerName: String,
+                                               mag: String,
+                                               zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       ifIsAnnotationLayerOrElse(
-        token,
         accessToken,
         dataLayerName,
-        ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantToken) =>
+        ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) =>
           remoteTracingstoreClient
-            .getDataLayerMagFolderContents(annotationLayer.tracingId,
-                                           mag,
-                                           annotationSource.tracingStoreUrl,
-                                           relevantToken,
-                                           zarrVersion)
+            .getDataLayerMagDirectoryContents(annotationLayer.tracingId,
+                                              mag,
+                                              annotationSource.tracingStoreUrl,
+                                              zarrVersion)(relevantTokenContext)
             .map(
               layers =>
                 Ok(
@@ -473,30 +439,28 @@ class ZarrStreamingController @Inject()(
                     layers
                   )).withHeaders()),
         orElse = annotationSource =>
-          dataLayerMagFolderContents(annotationSource.organizationId,
-                                     annotationSource.datasetDirectoryName,
-                                     dataLayerName,
-                                     mag,
-                                     zarrVersion)
+          dataLayerMagDirectoryContents(annotationSource.organizationId,
+                                        annotationSource.datasetDirectoryName,
+                                        dataLayerName,
+                                        mag,
+                                        zarrVersion)
       )
     }
 
-  def requestDataLayerFolderContents(token: Option[String],
-                                     organizationId: String,
-                                     datasetDirectoryName: String,
-                                     dataLayerName: String,
-                                     zarrVersion: Int): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(
-      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId)),
-      urlOrHeaderToken(token, request)) {
-      dataLayerFolderContents(organizationId, datasetDirectoryName, dataLayerName, zarrVersion)
+  def requestDataLayerDirectoryContents(organizationId: String,
+                                        datasetDirectoryName: String,
+                                        dataLayerName: String,
+                                        zarrVersion: Int): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccessFromTokenContext(
+      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
+      dataLayerDirectoryContents(organizationId, datasetDirectoryName, dataLayerName, zarrVersion)
     }
   }
 
-  private def dataLayerFolderContents(organizationId: String,
-                                      datasetDirectoryName: String,
-                                      dataLayerName: String,
-                                      zarrVersion: Int)(implicit m: MessagesProvider): Fox[Result] =
+  private def dataLayerDirectoryContents(organizationId: String,
+                                         datasetDirectoryName: String,
+                                         dataLayerName: String,
+                                         zarrVersion: Int)(implicit m: MessagesProvider): Fox[Result] =
     for {
       (_, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                        datasetDirectoryName,
@@ -514,21 +478,17 @@ class ZarrStreamingController @Inject()(
           additionalFiles ++ mags.map(_.toMagLiteral(allowScalar = true))
         )).withHeaders()
 
-  def dataLayerFolderContentsPrivateLink(token: Option[String],
-                                         accessToken: String,
-                                         dataLayerName: String,
-                                         zarrVersion: Int): Action[AnyContent] =
+  def dataLayerDirectoryContentsPrivateLink(accessToken: String,
+                                            dataLayerName: String,
+                                            zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       ifIsAnnotationLayerOrElse(
-        token,
         accessToken,
         dataLayerName,
-        ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantToken) =>
+        ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) =>
           remoteTracingstoreClient
-            .getDataLayerFolderContents(annotationLayer.tracingId,
-                                        annotationSource.tracingStoreUrl,
-                                        relevantToken,
-                                        zarrVersion)
+            .getDataLayerDirectoryContents(annotationLayer.tracingId, annotationSource.tracingStoreUrl, zarrVersion)(
+              relevantTokenContext)
             .map(
               layers =>
                 Ok(
@@ -538,21 +498,19 @@ class ZarrStreamingController @Inject()(
                     layers
                   )).withHeaders()),
         orElse = annotationSource =>
-          dataLayerFolderContents(annotationSource.organizationId,
-                                  annotationSource.datasetDirectoryName,
-                                  dataLayerName,
-                                  zarrVersion)
+          dataLayerDirectoryContents(annotationSource.organizationId,
+                                     annotationSource.datasetDirectoryName,
+                                     dataLayerName,
+                                     zarrVersion)
       )
     }
 
-  def requestDataSourceFolderContents(token: Option[String],
-                                      organizationId: String,
-                                      datasetDirectoryName: String,
-                                      zarrVersion: Int): Action[AnyContent] =
+  def requestDataSourceDirectoryContents(organizationId: String,
+                                         datasetDirectoryName: String,
+                                         zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(
-        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId)),
-        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccessFromTokenContext(
+        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
           dataSource <- dataSourceRepository
             .findUsable(DataSourceId(datasetDirectoryName, organizationId))
@@ -570,12 +528,10 @@ class ZarrStreamingController @Inject()(
       }
     }
 
-  def dataSourceFolderContentsPrivateLink(token: Option[String],
-                                          accessToken: String,
-                                          zarrVersion: Int): Action[AnyContent] =
+  def dataSourceDirectoryContentsPrivateLink(accessToken: String, zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       for {
-        annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken, urlOrHeaderToken(token, request))
+        annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken)
         dataSource <- dataSourceRepository
           .findUsable(DataSourceId(annotationSource.datasetDirectoryName, annotationSource.organizationId))
           .toFox ?~> Messages("dataSource.notFound") ~> NOT_FOUND
@@ -597,28 +553,26 @@ class ZarrStreamingController @Inject()(
           ))
     }
 
-  def requestZGroup(token: Option[String],
-                    organizationId: String,
+  def requestZGroup(organizationId: String,
                     datasetDirectoryName: String,
-                    dataLayerName: String = ""): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccessForSyncBlock(
-      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId)),
-      urlOrHeaderToken(token, request)) {
-      Ok(zGroupJson)
+                    dataLayerName: String = ""): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccessFromTokenContextForSyncBlock(
+        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
+        Ok(zGroupJson)
+      }
     }
-  }
 
   private def zGroupJson: JsValue = Json.toJson(NgffGroupHeader(zarr_format = 2))
 
-  def zGroupPrivateLink(token: Option[String], accessToken: String, dataLayerName: String): Action[AnyContent] =
+  def zGroupPrivateLink(accessToken: String, dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
       ifIsAnnotationLayerOrElse(
-        token,
         accessToken,
         dataLayerName,
-        ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantToken) =>
+        ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) =>
           remoteTracingstoreClient
-            .getZGroup(annotationLayer.tracingId, annotationSource.tracingStoreUrl, relevantToken)
+            .getZGroup(annotationLayer.tracingId, annotationSource.tracingStoreUrl)(relevantTokenContext)
             .map(Ok(_)),
         orElse = _ => Fox.successful(Ok(zGroupJson))
       )

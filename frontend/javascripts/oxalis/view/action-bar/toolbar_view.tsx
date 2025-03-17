@@ -40,6 +40,7 @@ import {
 } from "oxalis/constants";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
+  TOOL_NAMES,
   adaptActiveToolToShortcuts,
   getDisabledInfoForTools,
 } from "oxalis/model/accessors/tool_accessor";
@@ -398,12 +399,14 @@ function SkeletonSpecificButtons() {
   );
   const isEditableMappingActive =
     segmentationTracingLayer != null && !!segmentationTracingLayer.hasEditableMapping;
-  const isMappingLocked =
-    segmentationTracingLayer != null && !!segmentationTracingLayer.mappingIsLocked;
-  const isMergerModeDisabled = isEditableMappingActive || isMappingLocked;
+  const isMappingLockedWithNonNull =
+    segmentationTracingLayer != null &&
+    !!segmentationTracingLayer.mappingIsLocked &&
+    segmentationTracingLayer.mappingName != null;
+  const isMergerModeDisabled = isEditableMappingActive || isMappingLockedWithNonNull;
   const mergerModeTooltipText = isEditableMappingActive
     ? "Merger mode cannot be enabled while an editable mapping is active."
-    : isMappingLocked
+    : isMappingLockedWithNonNull
       ? "Merger mode cannot be enabled while a mapping is locked. Please create a new annotation and use the merger mode there."
       : "Toggle Merger Mode - When enabled, skeletons that connect multiple segments will merge those segments.";
 
@@ -829,33 +832,17 @@ function calculateMediumBrushSize(maximumBrushSize: number) {
   return Math.ceil((maximumBrushSize - userSettings.brushSize.minimum) / 10) * 5;
 }
 
-const TOOL_NAMES = {
-  MOVE: "Move",
-  SKELETON: "Skeleton",
-  BRUSH: "Brush",
-  ERASE_BRUSH: "Erase (via Brush)",
-  TRACE: "Trace",
-  ERASE_TRACE: "Erase",
-  FILL_CELL: "Fill Tool",
-  PICK_CELL: "Segment Picker",
-  QUICK_SELECT: "Quick Select Tool",
-  BOUNDING_BOX: "Bounding Box Tool",
-  PROOFREAD: "Proofreading Tool",
-  LINE_MEASUREMENT: "Measurement Tool",
-  AREA_MEASUREMENT: "Area Measurement Tool",
-};
-
-export default function ToolbarView() {
+export default function ToolbarView({ isReadOnly }: { isReadOnly: boolean }) {
   const dispatch = useDispatch();
-  const hasVolume = useSelector((state: OxalisState) => state.tracing.volumes.length > 0);
-  const hasSkeleton = useSelector((state: OxalisState) => state.tracing.skeleton != null);
+  const hasVolume = useSelector((state: OxalisState) => state.tracing?.volumes.length > 0);
+  const hasSkeleton = useSelector((state: OxalisState) => state.tracing?.skeleton != null);
+
   const isAgglomerateMappingEnabled = useSelector(hasAgglomerateMapping);
 
   const [lastForcefullyDisabledTool, setLastForcefullyDisabledTool] =
     useState<AnnotationTool | null>(null);
-  const isVolumeModificationAllowed = useSelector(
-    (state: OxalisState) => !hasEditableMapping(state),
-  );
+  const isVolumeModificationAllowed =
+    useSelector((state: OxalisState) => !hasEditableMapping(state)) && !isReadOnly;
   const useLegacyBindings = useSelector(
     (state: OxalisState) => state.userConfiguration.useLegacyBindings,
   );
@@ -917,6 +904,7 @@ export default function ToolbarView() {
     isControlOrMetaPressed,
     isAltPressed,
   );
+  const areEditableMappingsEnabled = features().editableMappingsEnabled;
 
   const skeletonToolDescription = useLegacyBindings
     ? "Use left-click to move around and right-click to create new skeleton nodes"
@@ -939,7 +927,7 @@ export default function ToolbarView() {
           <i className="fas fa-arrows-alt" />
         </ToolRadioButton>
 
-        {hasSkeleton ? (
+        {hasSkeleton && !isReadOnly ? (
           <ToolRadioButton
             name={TOOL_NAMES.SKELETON}
             description={skeletonToolDescription}
@@ -1103,32 +1091,41 @@ export default function ToolbarView() {
             </ToolRadioButton>
           </React.Fragment>
         ) : null}
-        <ToolRadioButton
-          name={TOOL_NAMES.BOUNDING_BOX}
-          description="Create, resize and modify bounding boxes."
-          disabledExplanation={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].explanation}
-          disabled={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled}
-          value={AnnotationToolEnum.BOUNDING_BOX}
-        >
-          <img
-            src="/assets/images/bounding-box.svg"
-            alt="Bounding Box Icon"
-            style={{
-              opacity: disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled ? 0.5 : 1,
-              ...imgStyleForSpaceyIcons,
-            }}
-          />
-        </ToolRadioButton>
+        {!isReadOnly && (
+          <ToolRadioButton
+            name={TOOL_NAMES.BOUNDING_BOX}
+            description="Create, resize and modify bounding boxes."
+            disabledExplanation={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].explanation}
+            disabled={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled}
+            value={AnnotationToolEnum.BOUNDING_BOX}
+          >
+            <img
+              src="/assets/images/bounding-box.svg"
+              alt="Bounding Box Icon"
+              style={{
+                opacity: disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled
+                  ? 0.5
+                  : 1,
+                ...imgStyleForSpaceyIcons,
+              }}
+            />
+          </ToolRadioButton>
+        )}
 
-        {hasSkeleton && hasVolume ? (
+        {hasSkeleton && hasVolume && !isReadOnly ? (
           <ToolRadioButton
             name={TOOL_NAMES.PROOFREAD}
-            description="Modify an agglomerated segmentation. Other segmentation modifications, like brushing, are not allowed if this tool is used."
+            description={
+              "Modify an agglomerated segmentation. Other segmentation modifications, like brushing, are not allowed if this tool is used."
+            }
             disabledExplanation={
-              isAgglomerateMappingEnabled.reason ||
-              disabledInfosForTools[AnnotationToolEnum.PROOFREAD].explanation
+              areEditableMappingsEnabled
+                ? isAgglomerateMappingEnabled.reason ||
+                  disabledInfosForTools[AnnotationToolEnum.PROOFREAD].explanation
+                : "Proofreading tool is only available on webknossos.org"
             }
             disabled={
+              !areEditableMappingsEnabled ||
               !isAgglomerateMappingEnabled.value ||
               disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled
             }
@@ -1199,6 +1196,7 @@ function ToolSpecificSettings({
       ? "The quick select tool is now working without AI. Activate AI for better results."
       : "The quick select tool is now working with AI."
     : "The quick select tool with AI is only available on webknossos.org";
+  const areEditableMappingsEnabled = features().editableMappingsEnabled;
   const toggleQuickSelectStrategy = () => {
     dispatch(
       updateUserSettingAction("quickSelect", {
@@ -1265,7 +1263,9 @@ function ToolSpecificSettings({
 
       {adaptedActiveTool === AnnotationToolEnum.FILL_CELL ? <FloodFillSettings /> : null}
 
-      {adaptedActiveTool === AnnotationToolEnum.PROOFREAD ? <ProofReadingComponents /> : null}
+      {adaptedActiveTool === AnnotationToolEnum.PROOFREAD && areEditableMappingsEnabled ? (
+        <ProofReadingComponents />
+      ) : null}
 
       {MeasurementTools.includes(adaptedActiveTool) ? (
         <MeasurementToolSwitch activeTool={adaptedActiveTool} />
@@ -1365,6 +1365,7 @@ function FloodFillSettings() {
         style={{
           opacity: isRestrictedToBoundingBox ? 1 : 0.5,
           marginLeft: 12,
+          display: "inline-block",
         }}
         type={isRestrictedToBoundingBox ? "primary" : "default"}
         onClick={toggleRestrictFloodfillToBoundingBox}

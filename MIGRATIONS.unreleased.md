@@ -11,5 +11,5 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
  - FossilDB now needs to be opened with additional column family `skeletonTreeBodies`. [#8423](https://github.com/scalableminds/webknossos/pull/8423)
 
 ### Postgres Evolutions:
-
 - [126-mag-real-paths.sql](conf/evolutions/126-mag-real-paths.sql)
+- [127-job-retried-by-super-user.sql](conf/evolutions/127-job-retried-by-super-user.sql)

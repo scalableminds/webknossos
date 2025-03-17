@@ -98,7 +98,9 @@ class DefaultMails @Inject()(conf: WkConf) {
       from = defaultSender,
       subject = "Help requested // Feedback provided",
       bodyHtml = html.mail.help(user.name, organizationName, message, currentUrl, additionalFooter).body,
-      recipients = List("hello@webknossos.org", userEmail)
+      recipients = List("hello@webknossos.org"),
+      ccRecipients = List(userEmail),
+      replyTo = List(userEmail, "hello@webknossos.org")
     )
 
   def extendPricingPlanMail(user: User, userEmail: String): Mail =
@@ -150,7 +152,8 @@ class DefaultMails @Inject()(conf: WkConf) {
       subject = "Request to upgrade WEBKNOSSOS plan",
       bodyHtml =
         html.mail.upgradePricingPlanRequest(user.name, userEmail, organizationName, messageBody, additionalFooter).body,
-      recipients = List("hello@webknossos.org")
+      recipients = List("hello@webknossos.org"),
+      replyTo = List(userEmail, "hello@webknossos.org")
     )
 
   def jobSuccessfulGenericMail(user: User,

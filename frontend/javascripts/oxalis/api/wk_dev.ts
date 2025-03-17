@@ -2,11 +2,11 @@ import showFpsMeter from "libs/fps_meter";
 import { V3 } from "libs/mjs";
 import { roundTo, sleep } from "libs/utils";
 import _ from "lodash";
-import { OrthoView, OrthoViews, type Vector3 } from "oxalis/constants";
+import { type OrthoView, OrthoViews, type Vector3 } from "oxalis/constants";
+import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import { Store } from "oxalis/singletons";
 import type { ApiInterface } from "./api_latest";
 import type ApiLoader from "./api_loader";
-import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 
 // Can be accessed via window.webknossos.DEV.flags. Only use this
 // for debugging or one off scripts.

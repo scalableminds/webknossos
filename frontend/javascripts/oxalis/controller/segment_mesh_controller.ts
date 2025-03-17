@@ -11,14 +11,14 @@ import {
 import { NO_LOD_MESH_INDEX } from "oxalis/model/sagas/mesh_saga";
 import Store from "oxalis/store";
 import * as THREE from "three";
+import { acceleratedRaycast } from "three-mesh-bvh";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
 import type { AdditionalCoordinate } from "types/api_flow_types";
-import { MeshBVHHelper, acceleratedRaycast } from "three-mesh-bvh";
 
-import GUI from "lil-gui";
 import { computeBvhAsync } from "libs/compute_bvh_async";
-import { BufferAttribute } from "three";
+import GUI from "lil-gui";
+import type { BufferAttribute } from "three";
 
 // Add the raycast function. Assumes the BVH is available on
 // the `boundsTree` variable

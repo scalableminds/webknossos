@@ -18,6 +18,7 @@ import {
 } from "admin/admin_rest_api";
 import ThreeDMap from "libs/ThreeDMap";
 import processTaskWithPool from "libs/async/task_pool";
+import { computeBvhAsync } from "libs/compute_bvh_async";
 import { getDracoLoader } from "libs/draco";
 import exportToStl from "libs/stl_exporter";
 import Toast from "libs/toast";
@@ -28,9 +29,9 @@ import type { Vector3 } from "oxalis/constants";
 import { MappingStatusEnum } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import {
+  type BufferGeometryWithInfo,
   PositionToSegmentId,
   type UnmergedBufferGeometryWithInfo,
-  type BufferGeometryWithInfo,
 } from "oxalis/controller/segment_mesh_controller";
 import {
   getMagInfo,
@@ -88,7 +89,6 @@ import type {
 } from "../actions/volumetracing_actions";
 import type { MagInfo } from "../helpers/mag_info";
 import { ensureSceneControllerReady, ensureWkReady } from "./ready_sagas";
-import { computeBvhAsync } from "libs/compute_bvh_async";
 
 export const NO_LOD_MESH_INDEX = -1;
 const MAX_RETRY_COUNT = 5;

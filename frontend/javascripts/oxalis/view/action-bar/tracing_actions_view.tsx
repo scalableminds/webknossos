@@ -787,7 +787,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
           {finishAndNextTaskButton}
           {reopenTaskButton}
         </Space.Compact>
-        <ConfigProvider theme={{ ...getAntdTheme(userTheme) }}>{modals}</ConfigProvider>
+        <ConfigProvider theme={getAntdTheme(userTheme)}>{modals}</ConfigProvider>
         <div>
           <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
             <ButtonComponent className="narrow">

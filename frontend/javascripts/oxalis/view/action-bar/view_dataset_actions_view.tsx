@@ -102,7 +102,7 @@ export default function ViewDatasetActionsView(props: Props) {
         marginLeft: 10,
       }}
     >
-      <ConfigProvider theme={{ ...getAntdTheme(userTheme) }}>
+      <ConfigProvider theme={getAntdTheme(userTheme)}>
         {shareDatasetModal}
         {pythonClientModal}
         {activeUser?.isSuperUser ? renderAnimationModal : null}

@@ -61,6 +61,7 @@ const createDirLight = (
 
 const raycaster = new VisibilityAwareRaycaster();
 raycaster.firstHitOnly = true;
+const MESH_HOVER_THROTTLING_DELAY = 50;
 
 let oldRaycasterHit: RaycasterHit = null;
 
@@ -150,7 +151,7 @@ class PlaneView {
     }
   }
 
-  performMeshHitTest(mousePosition: [number, number]): RaycasterHit {
+  performMeshHitTest = _.throttle((mousePosition: [number, number]): RaycasterHit => {
     const storeState = Store.getState();
     const SceneController = getSceneController();
     const { segmentMeshController } = SceneController;
@@ -241,7 +242,7 @@ class PlaneView {
       Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", null));
       return null;
     }
-  }
+  }, MESH_HOVER_THROTTLING_DELAY);
 
   clearLastMeshHitTest = () => {
     if (oldRaycasterHit?.node.parent != null) {

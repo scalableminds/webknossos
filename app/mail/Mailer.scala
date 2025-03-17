@@ -1,10 +1,9 @@
 package mail
 
-import com.typesafe.scalalogging.LazyLogging
-import org.apache.commons.mail._
 import org.apache.pekko.actor._
-
+import com.typesafe.scalalogging.LazyLogging
 import javax.mail.internet.InternetAddress
+import org.apache.commons.mail._
 
 case class Send(mail: Mail)
 

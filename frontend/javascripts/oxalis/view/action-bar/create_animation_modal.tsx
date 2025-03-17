@@ -1,4 +1,4 @@
-import { Alert, Checkbox, Col, Divider, Modal, Radio, Row, Space, Tooltip } from "antd";
+import { Alert, Button, Checkbox, Col, Divider, Modal, Radio, Row, Space, Tooltip } from "antd";
 import React, { useState } from "react";
 import { useSelector } from "react-redux";
 
@@ -285,10 +285,26 @@ function CreateAnimationModal(props: Props) {
       title="Create Animation"
       open={isOpen}
       width={700}
-      onOk={submitJob}
-      onCancel={onClose}
       okText={isFeatureDisabled ? "This feature is not available" : "Start Animation"}
-      okButtonProps={{ disabled: isFeatureDisabled }}
+      footer={[
+        <Button key="cancel" onClick={onClose}>
+          Cancel
+        </Button>,
+        isFeatureDisabled ? (
+          <Tooltip
+            key="ok"
+            title="This feature is not available on your WEBKNOSSOS server. Contact your administrator."
+          >
+            <Button type="primary" disabled>
+              This feature is not available
+            </Button>
+          </Tooltip>
+        ) : (
+          <Button key="ok" type="primary" onClick={submitJob}>
+            Start Animation
+          </Button>
+        ),
+      ]}
     >
       <React.Fragment>
         <Row gutter={8}>

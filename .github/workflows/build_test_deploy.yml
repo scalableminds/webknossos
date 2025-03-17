@@ -206,7 +206,7 @@ jobs:
           max_attempts: 3
           command: .github/not-on-master.sh yarn run test-e2e
         env:
-          POSTGRES_URL: jdbc:postgresql://postgres/webknossos
+          POSTGRES_URL: jdbc:postgresql://localhost:5432/webknossos
           POSTGRES_USER: webknossos_user
           POSTGRES_PASSWORD: secret_password
 

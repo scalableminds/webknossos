@@ -23,7 +23,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 case class AiModel(_id: ObjectId,
-                   _owningOrganization: String,
+                   _organization: String,
                    _sharedOrganizations: List[String],
                    _dataStore: String,
                    _user: ObjectId,
@@ -62,7 +62,7 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
           }
           .toFox)
       trainingJobJsOpt <- Fox.runOptional(trainingJobOpt.flatten)(jobService.publicWrites)
-      isOwnedByUsersOrganization = aiModel._owningOrganization == requestingUser._organization
+      isOwnedByUsersOrganization = aiModel._organization == requestingUser._organization
       sharedOrganizationIds <- if (isOwnedByUsersOrganization) for {
         orgaIdsUserCanAccess <- organizationDAO.findAll.flatMap(os => Fox.successful(os.map(_._id)))
         sharedOrgasIdsUserCanAccess = aiModel._sharedOrganizations.filter(orgaIdsUserCanAccess.contains)
@@ -96,7 +96,7 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       trainingAnnotationIds <- findTrainingAnnotationIdsFor(ObjectId(r._Id))
       aiModelWithoutSharedOrgas = AiModel(
         ObjectId(r._Id),
-        r._Owningorganization,
+        r._Organization,
         List(),
         r._Datastore.trim,
         ObjectId(r._User),
@@ -127,7 +127,7 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           )
         OR _id IN (
           SELECT _id FROM webknossos.aiModels
-          WHERE _owningOrganization IN (
+          WHERE _organization IN (
                   SELECT _organization
                   FROM webknossos.users_
                   WHERE _id = $requestingUserId
@@ -153,10 +153,10 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def insertOne(a: AiModel): Fox[Unit] = {
     val insertModelQuery =
       q"""INSERT INTO webknossos.aiModels (
-                      _id, _owningOrganization, _dataStore, _user, _trainingJob, name,
+                      _id, _organization, _dataStore, _user, _trainingJob, name,
                        comment, category, created, modified, isDeleted
                     ) VALUES (
-                      ${a._id}, ${a._owningOrganization}, ${a._dataStore}, ${a._user}, ${a._trainingJob}, ${a.name},
+                      ${a._id}, ${a._organization}, ${a._dataStore}, ${a._user}, ${a._trainingJob}, ${a.name},
                       ${a.comment}, ${a.category}, ${a.created}, ${a.modified}, ${a.isDeleted}
                     )
            """.asUpdate
@@ -190,8 +190,8 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         q"SELECT _organization FROM webknossos.aiModel_organizations WHERE _aiModel = ${aiModel._id} ORDER BY _organization"
           .as[String])
       ids = rows.toList
-      idsWithOwningOrganization = if (ids.contains(aiModel._owningOrganization)) ids
-      else ids :+ aiModel._owningOrganization
+      idsWithOwningOrganization = if (ids.contains(aiModel._organization)) ids
+      else ids :+ aiModel._organization
     } yield idsWithOwningOrganization
 
   def updateOne(a: AiModel): Fox[Unit] =

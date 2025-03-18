@@ -554,7 +554,7 @@ CREATE TYPE webknossos.AI_MODEL_CATEGORY AS ENUM ('em_neurons', 'em_nuclei', 'em
 
 CREATE TABLE webknossos.aiModels(
   _id CHAR(24) PRIMARY KEY,
-  _owningOrganization VARCHAR(256) NOT NULL,
+  _organization VARCHAR(256) NOT NULL,
   _dataStore VARCHAR(256) NOT NULL, -- redundant to job, but must be available for jobless models
   _user CHAR(24) NOT NULL,
   _trainingJob CHAR(24),
@@ -564,7 +564,7 @@ CREATE TABLE webknossos.aiModels(
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   modified TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
-  UNIQUE (_owningOrganization, name)
+  UNIQUE (_organization, name)
 );
 
 CREATE TABLE webknossos.aiModel_organizations(
@@ -868,7 +868,7 @@ ALTER TABLE webknossos.voxelytics_chunkProfilingEvents
 ALTER TABLE webknossos.voxelytics_artifactFileChecksumEvents
   ADD FOREIGN KEY (_artifact) REFERENCES webknossos.voxelytics_artifacts(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.aiModels
-  ADD CONSTRAINT owningOrganization_ref FOREIGN KEY (_owningOrganization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
+  ADD CONSTRAINT organization_ref FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
   ADD FOREIGN KEY (_dataStore) REFERENCES webknossos.datastores(name) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
   ADD FOREIGN KEY (_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
   ADD FOREIGN KEY (_trainingJob) REFERENCES webknossos.jobs(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;

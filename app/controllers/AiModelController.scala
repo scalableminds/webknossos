@@ -156,8 +156,8 @@ class AiModelController @Inject()(
           .submitJob(jobCommand, commandArgs, request.identity, dataStore.name) ?~> "job.couldNotRunTrainModel"
         newAiModel = AiModel(
           _id = modelId,
-          _owningOrganization = request.identity._organization,
-          _sharedOrganizations = List(request.identity._organization),
+          _organization = request.identity._organization,
+          _sharedOrganizations = List(),
           _dataStore = dataStore.name,
           _user = request.identity._id,
           _trainingJob = Some(newTrainingJob._id),
@@ -224,7 +224,7 @@ class AiModelController @Inject()(
         for {
           _ <- userService.assertIsSuperUser(request.identity)
           aiModel <- aiModelDAO.findOne(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
-          _ <- bool2Fox(aiModel._owningOrganization == request.identity._organization) ?~> "aiModel.notOwned"
+          _ <- bool2Fox(aiModel._organization == request.identity._organization) ?~> "aiModel.notOwned"
           _ <- aiModelDAO.updateOne(aiModel.copy(name = request.body.name,
                                                  comment = request.body.comment,
                                                  modified = Instant.now)) ?~> "aiModel.updatingFailed"
@@ -260,7 +260,7 @@ class AiModelController @Inject()(
         _ <- aiModelDAO.insertOne(
           AiModel(
             request.body.id,
-            _owningOrganization = request.identity._organization,
+            _organization = request.identity._organization,
             _sharedOrganizations = List(request.identity._organization),
             request.body.dataStoreName,
             request.identity._id,

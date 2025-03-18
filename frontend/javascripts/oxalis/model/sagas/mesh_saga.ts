@@ -27,12 +27,12 @@ import messages from "messages";
 import { WkDevFlags } from "oxalis/api/wk_dev";
 import type { Vector3 } from "oxalis/constants";
 import { MappingStatusEnum } from "oxalis/constants";
-import getSceneController from "oxalis/controller/scene_controller_provider";
 import {
   type BufferGeometryWithInfo,
   PositionToSegmentId,
   type UnmergedBufferGeometryWithInfo,
 } from "oxalis/controller/mesh_helpers";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 import {
   getMagInfo,
   getMappingInfo,

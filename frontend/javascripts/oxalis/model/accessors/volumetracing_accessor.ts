@@ -727,11 +727,11 @@ const AGGLOMERATE_STATES = {
     reason: messages["tracing.agglomerate_skeleton.no_agglomerate_file_active"],
   },
   NO_AGGLOMERATE_FILE_AVAILABLE: {
-    value: false,
+    value: true,
     reason: messages["tracing.agglomerate_skeleton.no_agglomerate_file_available"],
   },
   NO_AGGLOMERATE_FILES_LOADED_YET: {
-    value: false,
+    value: true,
     reason: messages["tracing.agglomerate_skeleton.no_agglomerate_files_loaded_yet"],
   },
   YES: {

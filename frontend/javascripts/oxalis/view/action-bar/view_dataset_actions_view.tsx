@@ -105,7 +105,7 @@ export default function ViewDatasetActionsView(props: Props) {
       <ConfigProvider theme={getAntdTheme(userTheme)}>
         {shareDatasetModal}
         {pythonClientModal}
-        {activeUser?.isSuperUser ? renderAnimationModal : null}
+        {renderAnimationModal}
       </ConfigProvider>
       <Dropdown menu={overlayMenu} trigger={["click"]}>
         <ButtonComponent

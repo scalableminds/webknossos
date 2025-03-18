@@ -194,126 +194,124 @@ function ShortcutsInfo() {
     }
 
     return (
-      <React.Fragment>
-        {actionDescriptor != null ? (
-          <LeftClickShortcut actionDescriptor={actionDescriptor} />
-        ) : (
-          <span
-            className="shortcut-info-element"
-            style={{
-              textTransform: "capitalize",
-            }}
-          >
-            <img
-              className="keyboard-mouse-icon"
-              src="/assets/images/icon-statusbar-mouse-left-drag.svg"
-              alt="Mouse Left Drag"
-            />
-            Move
-          </span>
-        )}
+      <div style={{ display: "flex", alignItems: "center" }}>
+        <div style={{ display: "flex", alignItems: "center" }}>
+          {actionDescriptor != null ? (
+            <LeftClickShortcut actionDescriptor={actionDescriptor} />
+          ) : (
+            <span
+              className="shortcut-info-element"
+              style={{
+                textTransform: "capitalize",
+              }}
+            >
+              <img
+                className="keyboard-mouse-icon"
+                src="/assets/images/icon-statusbar-mouse-left-drag.svg"
+                alt="Mouse Left Drag"
+              />
+              Move
+            </span>
+          )}
 
-        <span className="shortcut-info-element">
-          <span
-            key="space-forward-i"
-            className="keyboard-key-icon-small"
-            style={{
-              borderColor: lineColor,
-              marginTop: -1,
-            }}
-          >
-            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
+          <span className="shortcut-info-element">
             <span
+              key="space-forward-i"
+              className="keyboard-key-icon-small"
               style={{
-                position: "relative",
-                top: -2,
+                borderColor: lineColor,
+                marginTop: -1,
               }}
             >
-              Space
-            </span>
-          </span>{" "}
-          Trace forward
-        </span>
-        <span className="shortcut-info-element">
-          <span
-            key="ctrl-back-i"
-            className="keyboard-key-icon-small"
-            style={{
-              borderColor: lineColor,
-              marginTop: -1,
-            }}
-          >
-            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
+              <span
+                style={{
+                  position: "relative",
+                  top: -2,
+                }}
+              >
+                Space
+              </span>
+            </span>{" "}
+            Trace forward
+          </span>
+          <span className="shortcut-info-element">
             <span
+              key="ctrl-back-i"
+              className="keyboard-key-icon-small"
               style={{
-                position: "relative",
-                top: -2,
+                borderColor: lineColor,
+                marginTop: -1,
               }}
             >
-              CTRL
-            </span>
-          </span>{" "}
-          <span
-            key="space-back-i"
-            className="keyboard-key-icon-small"
-            style={{
-              borderColor: lineColor,
-              marginTop: -1,
-            }}
-          >
-            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
+              <span
+                style={{
+                  position: "relative",
+                  top: -2,
+                }}
+              >
+                CTRL
+              </span>
+            </span>{" "}
             <span
+              key="space-back-i"
+              className="keyboard-key-icon-small"
               style={{
-                position: "relative",
-                top: -2,
+                borderColor: lineColor,
+                marginTop: -1,
               }}
             >
-              Space
-            </span>
-          </span>{" "}
-          Trace backward
-        </span>
-        <span className="shortcut-info-element">
-          <span
-            key="arrow-left-i"
-            className="keyboard-key-icon-small"
-            style={{
-              borderColor: lineColor,
-              marginTop: -1,
-            }}
-          >
-            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
+              <span
+                style={{
+                  position: "relative",
+                  top: -2,
+                }}
+              >
+                Space
+              </span>
+            </span>{" "}
+            Trace backward
+          </span>
+          <span className="shortcut-info-element">
             <span
+              key="arrow-left-i"
+              className="keyboard-key-icon-small"
               style={{
-                position: "relative",
-                top: -2,
+                borderColor: lineColor,
+                marginTop: -1,
               }}
             >
-              ◀
-            </span>
-          </span>{" "}
-          <span
-            key="arrow-right-i"
-            className="keyboard-key-icon-small"
-            style={{
-              borderColor: lineColor,
-              marginTop: -1,
-            }}
-          >
-            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
+              <span
+                style={{
+                  position: "relative",
+                  top: -2,
+                }}
+              >
+                ◀
+              </span>
+            </span>{" "}
             <span
+              key="arrow-right-i"
+              className="keyboard-key-icon-small"
               style={{
-                position: "relative",
-                top: -2,
+                borderColor: lineColor,
+                marginTop: -1,
               }}
             >
-              ▶
-            </span>
-          </span>{" "}
-          Rotation
-        </span>
-        {moreShortcutsLink}
-      </React.Fragment>
+              <span
+                style={{
+                  position: "relative",
+                  top: -2,
+                }}
+              >
+                ▶
+              </span>
+            </span>{" "}
+            Rotation
+          </span>
+          <CommandPalette label={<div style={{ marginRight: "auto" }}>[Ctrl+P] Commands</div>} />
+          {moreShortcutsLink}
+        </div>
+      </div>
     );
   }
 
@@ -333,29 +331,31 @@ function ShortcutsInfo() {
   );
 
   return (
-    <React.Fragment>
-      <LeftClickShortcut actionDescriptor={actionDescriptor} />
-      <RightClickShortcut actionDescriptor={actionDescriptor} />
-      <span className="shortcut-info-element">
-        <img
-          className="keyboard-mouse-icon"
-          src="/assets/images/icon-statusbar-mouse-wheel.svg"
-          alt="Mouse Wheel"
-        />
-        {isAltPressed || isControlOrMetaPressed ? "Zoom in/out" : "Move along 3rd axis"}
-      </span>
-      <span className="shortcut-info-element">
-        <img
-          className="keyboard-mouse-icon"
-          src="/assets/images/icon-statusbar-mouse-right-drag.svg"
-          alt="Mouse Right"
-        />
-        Rotate 3D View
-      </span>
-      <ZoomShortcut />
-      {moreShortcutsLink}
-      <CommandPalette label="[Ctrl+P] Commands" />
-    </React.Fragment>
+    <div style={{ display: "flex", alignItems: "center" }}>
+      <div style={{ display: "flex", alignItems: "center" }}>
+        <LeftClickShortcut actionDescriptor={actionDescriptor} />
+        <RightClickShortcut actionDescriptor={actionDescriptor} />
+        <span className="shortcut-info-element">
+          <img
+            className="keyboard-mouse-icon"
+            src="/assets/images/icon-statusbar-mouse-wheel.svg"
+            alt="Mouse Wheel"
+          />
+          {isAltPressed || isControlOrMetaPressed ? "Zoom in/out" : "Move along 3rd axis"}
+        </span>
+        <span className="shortcut-info-element">
+          <img
+            className="keyboard-mouse-icon"
+            src="/assets/images/icon-statusbar-mouse-right-drag.svg"
+            alt="Mouse Right"
+          />
+          Rotate 3D View
+        </span>
+        <ZoomShortcut />
+        {moreShortcutsLink}
+        <CommandPalette label={<div style={{ marginRight: "auto" }}>[Ctrl+P] Commands</div>} />
+      </div>
+    </div>
   );
 }
 
@@ -588,10 +588,12 @@ function SegmentAndMousePosition() {
 
 function Statusbar() {
   return (
-    <span className="statusbar">
+    <div className="statusbar" style={{ display: "flex", justifyContent: "space-between" }}>
       <ShortcutsInfo />
-      <Infos />
-    </span>
+      <div style={{ display: "flex", justifyContent: "flex-end", flex: 1 }}>
+        <Infos />
+      </div>
+    </div>
   );
 }
 

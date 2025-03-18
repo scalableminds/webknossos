@@ -10,7 +10,6 @@ import com.scalableminds.webknossos.datastore.geometry.{
   Vec3IntProto
 }
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
-import net.liftweb.common.Box
 
 trait ProtoGeometryImplicits {
 
@@ -33,9 +32,6 @@ trait ProtoGeometryImplicits {
 
   implicit def boundingBoxOptFromProto(bbOpt: Option[BoundingBoxProto]): Option[BoundingBox] =
     bbOpt.map(bb => BoundingBox(bb.topLeft, bb.width, bb.height, bb.depth))
-
-  implicit def elementClassToProto(ec: ElementClass.Value): Box[ElementClassProto] =
-    ElementClass.toProto(ec)
 
   implicit def elementClassFromProto(ec: ElementClassProto): ElementClass.Value =
     ElementClass.fromProto(ec)

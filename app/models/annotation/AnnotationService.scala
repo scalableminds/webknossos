@@ -141,8 +141,9 @@ class AnnotationService @Inject()(
           remoteDatastoreClient.hasSegmentIndexFile(datasetOrganizationId, dataSource.id.directoryName, layer.name)
         case None => Fox.successful(false)
       }
-      elementClassProto <- elementClassToProto(
-        fallbackLayer.map(layer => layer.elementClass).getOrElse(VolumeTracingDefaults.elementClass)).toFox
+      elementClassProto <- ElementClass
+        .toProto(fallbackLayer.map(layer => layer.elementClass).getOrElse(VolumeTracingDefaults.elementClass))
+        .toFox
     } yield
       VolumeTracing(
         None,

@@ -1011,7 +1011,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                       const fileSize = getFileSize(files);
                       return getLeftOverStorageBytes(this.props.organization) >= fileSize;
                     },
-                    `The uploaded files exceed the available storage of your organization. Please ${
+                    `The selected files exceed the available storage of your organization. Please ${
                       isActiveUserAdmin
                         ? "use the organization management page to request more storage"
                         : "ask your administrator to request more storage"

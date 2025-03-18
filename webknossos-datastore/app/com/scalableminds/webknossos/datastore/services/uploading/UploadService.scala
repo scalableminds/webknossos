@@ -200,7 +200,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       unfinishedUploadsWithoutIds: List[UnfinishedUpload]): Fox[List[UnfinishedUpload]] =
     for {
       maybeUnfinishedUploads: List[Box[Option[UnfinishedUpload]]] <- Fox.sequence(
-        // Filter out unfinished uploads that do not have entries in the redis store and adds the uploadId and filePaths to those that have an entry.
+        // Previously rejected uploads may still appear in this list, but don’t have entries in redis. We can use that to filter them out here, since we don’t want to list them to the user. Those that *do* have entries in redis are then enriched using info from there (uploadId and filePaths).
         unfinishedUploadsWithoutIds.map(
           unfinishedUpload => {
             for {

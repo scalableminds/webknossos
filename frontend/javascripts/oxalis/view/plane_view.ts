@@ -4,12 +4,9 @@ import window from "libs/window";
 import _ from "lodash";
 import type { OrthoViewMap, Vector2, Vector3, Viewport } from "oxalis/constants";
 import Constants, { OrthoViewColors, OrthoViewValues, OrthoViews } from "oxalis/constants";
+import type { PositionToSegmentId } from "oxalis/controller/mesh_helpers";
 import getSceneController from "oxalis/controller/scene_controller_provider";
-import type {
-  MeshSceneNode,
-  PositionToSegmentId,
-  SceneGroupForMeshes,
-} from "oxalis/controller/segment_mesh_controller";
+import type { MeshSceneNode, SceneGroupForMeshes } from "oxalis/controller/segment_mesh_controller";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";

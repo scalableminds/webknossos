@@ -18,6 +18,7 @@ import type { AdditionalCoordinate } from "types/api_flow_types";
 
 import { computeBvhAsync } from "libs/compute_bvh_async";
 import type { BufferAttribute } from "three";
+import type { BufferGeometryWithInfo } from "./mesh_helpers";
 
 // Add the raycast function. Assumes the BVH is available on
 // the `boundsTree` variable
@@ -41,51 +42,6 @@ export type MeshSceneNode = THREE.Mesh<BufferGeometryWithInfo, MeshMaterial> & {
 };
 export type SceneGroupForMeshes = THREE.Group & { segmentId: number; children: MeshSceneNode[] };
 
-export class PositionToSegmentId {
-  cumulativeStartPosition: number[];
-  unmappedSegmentIds: number[];
-  constructor(sortedBufferGeometries: UnmergedBufferGeometryWithInfo[]) {
-    let cumsum = 0;
-    this.cumulativeStartPosition = [];
-    this.unmappedSegmentIds = [];
-
-    for (const bufferGeometry of sortedBufferGeometries) {
-      const isNewSegmentId =
-        this.unmappedSegmentIds.length === 0 ||
-        bufferGeometry.unmappedSegmentId !== this.unmappedSegmentIds.at(-1);
-
-      if (isNewSegmentId) {
-        this.unmappedSegmentIds.push(bufferGeometry.unmappedSegmentId);
-        this.cumulativeStartPosition.push(cumsum);
-      }
-      cumsum += bufferGeometry.attributes.position.count;
-    }
-    this.cumulativeStartPosition.push(cumsum);
-  }
-
-  getUnmappedSegmentIdForPosition(position: number) {
-    const index = _.sortedIndex(this.cumulativeStartPosition, position) - 1;
-    return this.unmappedSegmentIds[index];
-  }
-
-  getRangeForPosition(position: number): [number, number] {
-    const index = _.sortedIndex(this.cumulativeStartPosition, position) - 1;
-    return [this.cumulativeStartPosition[index], this.cumulativeStartPosition[index + 1]];
-  }
-
-  getRangeForUnmappedSegmentId(segmentId: number): [number, number] | null {
-    const index = _.sortedIndexOf(this.unmappedSegmentIds, segmentId);
-    if (index === -1) {
-      return null;
-    }
-    return [this.cumulativeStartPosition[index], this.cumulativeStartPosition[index + 1]];
-  }
-
-  containsSegmentId(segmentId: number): boolean {
-    return _.sortedIndexOf(this.unmappedSegmentIds, segmentId) !== -1;
-  }
-}
-
 const setRangeToColor = (
   geometry: BufferGeometryWithInfo,
   indexRange: Vector2 | null,
@@ -97,15 +53,6 @@ const setRangeToColor = (
   for (let index = indexRange[0]; index < indexRange[1]; index++) {
     (geometry.attributes.color as BufferAttribute).set(color, 3 * index);
   }
-};
-
-export type BufferGeometryWithInfo = THREE.BufferGeometry & {
-  positionToSegmentId?: PositionToSegmentId;
-};
-
-export type UnmergedBufferGeometryWithInfo = THREE.BufferGeometry & {
-  unmappedSegmentId: number;
-  positionToSegmentId?: PositionToSegmentId;
 };
 
 type GroupForLOD = THREE.Group & {

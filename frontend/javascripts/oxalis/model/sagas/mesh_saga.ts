@@ -32,7 +32,7 @@ import {
   type BufferGeometryWithInfo,
   PositionToSegmentId,
   type UnmergedBufferGeometryWithInfo,
-} from "oxalis/controller/segment_mesh_controller";
+} from "oxalis/controller/mesh_helpers";
 import {
   getMagInfo,
   getMappingInfo,

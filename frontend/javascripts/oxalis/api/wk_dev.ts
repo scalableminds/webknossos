@@ -3,7 +3,6 @@ import { V3 } from "libs/mjs";
 import { roundTo, sleep } from "libs/utils";
 import _ from "lodash";
 import { type OrthoView, OrthoViews, type Vector3 } from "oxalis/constants";
-import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import { Store } from "oxalis/singletons";
 import type { ApiInterface } from "./api_latest";
 import type ApiLoader from "./api_loader";
@@ -194,6 +193,9 @@ export default class WkDev {
   }
 
   async benchmarkRotate() {
+    // Dynamic import to avoid circular imports.
+    const { rotate3DViewTo } = await import("oxalis/controller/camera_controller");
+
     const animateAsPromise = (plane: OrthoView) => {
       return new Promise<void>((resolve) => {
         rotate3DViewTo(plane, true, resolve);

@@ -53,7 +53,7 @@ const mapMenuActionsToCommands = (menuActions: Array<ItemType>): CommandWithoutI
 const getLabelForPath = (key: string) =>
   getPhraseFromCamelCaseString(capitalize(key.split("/")[1])) || key;
 
-export const CommandPalette = ({ label }: { label: string | null | JSX.Element }) => {
+export const CommandPalette = ({ label }: { label: string | JSX.Element | null }) => {
   const userConfig = useSelector((state: OxalisState) => state.userConfiguration);
   const isViewMode = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.controlMode === "VIEW",

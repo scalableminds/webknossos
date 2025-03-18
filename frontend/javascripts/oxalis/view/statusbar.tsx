@@ -231,6 +231,7 @@ function ShortcutsInfo() {
               marginTop: -1,
             }}
           >
+            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
             <span
               style={{
                 position: "relative",
@@ -251,6 +252,7 @@ function ShortcutsInfo() {
               marginTop: -1,
             }}
           >
+            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
             <span
               style={{
                 position: "relative",
@@ -268,6 +270,7 @@ function ShortcutsInfo() {
               marginTop: -1,
             }}
           >
+            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
             <span
               style={{
                 position: "relative",
@@ -288,6 +291,7 @@ function ShortcutsInfo() {
               marginTop: -1,
             }}
           >
+            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
             <span
               style={{
                 position: "relative",
@@ -305,6 +309,7 @@ function ShortcutsInfo() {
               marginTop: -1,
             }}
           >
+            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
             <span
               style={{
                 position: "relative",

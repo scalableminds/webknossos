@@ -47,8 +47,8 @@ const moreIconStyle = {
   color: lineColor,
 };
 const moreLinkStyle = {
-  marginLeft: 10,
-  marginRight: 10,
+  marginLeft: 25,
+  marginRight: "auto",
 };
 
 function getPosString(
@@ -153,6 +153,28 @@ function RightClickShortcut({ actionDescriptor }: { actionDescriptor: ActionDesc
   );
 }
 
+const getMoreShortcutsInfo = () => {
+  return (
+    <>
+      <CommandPalette label={<div style={{ marginLeft: 25 }}>[Ctrl+P] Commands</div>} />
+      {moreShortcutsLink}
+    </>
+  );
+};
+
+const moreShortcutsLink = (
+  <a
+    target="_blank"
+    href="https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html"
+    rel="noopener noreferrer"
+    style={moreLinkStyle}
+  >
+    <FastTooltip title="More Shortcuts">
+      <MoreOutlined rotate={90} style={moreIconStyle} />
+    </FastTooltip>
+  </a>
+);
+
 function ShortcutsInfo() {
   const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
   const useLegacyBindings = useSelector(
@@ -165,19 +187,6 @@ function ShortcutsInfo() {
   const hasSkeleton = useSelector((state: OxalisState) => state.tracing.skeleton != null);
   const isTDViewportActive = useSelector(
     (state: OxalisState) => state.viewModeData.plane.activeViewport === OrthoViews.TDView,
-  );
-
-  const moreShortcutsLink = (
-    <a
-      target="_blank"
-      href="https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html"
-      rel="noopener noreferrer"
-      style={moreLinkStyle}
-    >
-      <FastTooltip title="More Shortcuts">
-        <MoreOutlined rotate={90} style={moreIconStyle} />
-      </FastTooltip>
-    </a>
   );
 
   if (!isPlaneMode) {
@@ -194,124 +203,121 @@ function ShortcutsInfo() {
     }
 
     return (
-      <div style={{ display: "flex", alignItems: "center" }}>
-        <div style={{ display: "flex", alignItems: "center" }}>
-          {actionDescriptor != null ? (
-            <LeftClickShortcut actionDescriptor={actionDescriptor} />
-          ) : (
-            <span
-              className="shortcut-info-element"
-              style={{
-                textTransform: "capitalize",
-              }}
-            >
-              <img
-                className="keyboard-mouse-icon"
-                src="/assets/images/icon-statusbar-mouse-left-drag.svg"
-                alt="Mouse Left Drag"
-              />
-              Move
-            </span>
-          )}
+      <React.Fragment>
+        {actionDescriptor != null ? (
+          <LeftClickShortcut actionDescriptor={actionDescriptor} />
+        ) : (
+          <span
+            className="shortcut-info-element"
+            style={{
+              textTransform: "capitalize",
+            }}
+          >
+            <img
+              className="keyboard-mouse-icon"
+              src="/assets/images/icon-statusbar-mouse-left-drag.svg"
+              alt="Mouse Left Drag"
+            />
+            Move
+          </span>
+        )}
 
-          <span className="shortcut-info-element">
+        <span className="shortcut-info-element">
+          <span
+            key="space-forward-i"
+            className="keyboard-key-icon-small"
+            style={{
+              borderColor: lineColor,
+              marginTop: -1,
+            }}
+          >
             <span
-              key="space-forward-i"
-              className="keyboard-key-icon-small"
               style={{
-                borderColor: lineColor,
-                marginTop: -1,
+                position: "relative",
+                top: -2,
               }}
             >
-              <span
-                style={{
-                  position: "relative",
-                  top: -2,
-                }}
-              >
-                Space
-              </span>
-            </span>{" "}
-            Trace forward
-          </span>
-          <span className="shortcut-info-element">
+              Space
+            </span>
+          </span>{" "}
+          Trace forward
+        </span>
+        <span className="shortcut-info-element">
+          <span
+            key="ctrl-back-i"
+            className="keyboard-key-icon-small"
+            style={{
+              borderColor: lineColor,
+              marginTop: -1,
+            }}
+          >
             <span
-              key="ctrl-back-i"
-              className="keyboard-key-icon-small"
               style={{
-                borderColor: lineColor,
-                marginTop: -1,
+                position: "relative",
+                top: -2,
               }}
             >
-              <span
-                style={{
-                  position: "relative",
-                  top: -2,
-                }}
-              >
-                CTRL
-              </span>
-            </span>{" "}
+              CTRL
+            </span>
+          </span>{" "}
+          <span
+            key="space-back-i"
+            className="keyboard-key-icon-small"
+            style={{
+              borderColor: lineColor,
+              marginTop: -1,
+            }}
+          >
             <span
-              key="space-back-i"
-              className="keyboard-key-icon-small"
               style={{
-                borderColor: lineColor,
-                marginTop: -1,
+                position: "relative",
+                top: -2,
               }}
             >
-              <span
-                style={{
-                  position: "relative",
-                  top: -2,
-                }}
-              >
-                Space
-              </span>
-            </span>{" "}
-            Trace backward
-          </span>
-          <span className="shortcut-info-element">
+              Space
+            </span>
+          </span>{" "}
+          Trace backward
+        </span>
+        <span className="shortcut-info-element">
+          <span
+            key="arrow-left-i"
+            className="keyboard-key-icon-small"
+            style={{
+              borderColor: lineColor,
+              marginTop: -1,
+            }}
+          >
             <span
-              key="arrow-left-i"
-              className="keyboard-key-icon-small"
               style={{
-                borderColor: lineColor,
-                marginTop: -1,
+                position: "relative",
+                top: -2,
               }}
             >
-              <span
-                style={{
-                  position: "relative",
-                  top: -2,
-                }}
-              >
-                ◀
-              </span>
-            </span>{" "}
+              ◀
+            </span>
+          </span>{" "}
+          <span
+            key="arrow-right-i"
+            className="keyboard-key-icon-small"
+            style={{
+              borderColor: lineColor,
+              marginTop: -1,
+            }}
+          >
             <span
-              key="arrow-right-i"
-              className="keyboard-key-icon-small"
               style={{
-                borderColor: lineColor,
-                marginTop: -1,
+                position: "relative",
+                top: -2,
               }}
             >
-              <span
-                style={{
-                  position: "relative",
-                  top: -2,
-                }}
-              >
-                ▶
-              </span>
-            </span>{" "}
-            Rotation
-          </span>
-          <CommandPalette label={<div style={{ marginRight: "auto" }}>[Ctrl+P] Commands</div>} />
-          {moreShortcutsLink}
-        </div>
-      </div>
+              ▶
+            </span>
+          </span>{" "}
+          Rotation
+        </span>
+        {getMoreShortcutsInfo()}
+      </React.Fragment>
     );
   }
 
@@ -331,31 +337,28 @@ function ShortcutsInfo() {
   );
 
   return (
-    <div style={{ display: "flex", alignItems: "center" }}>
-      <div style={{ display: "flex", alignItems: "center" }}>
-        <LeftClickShortcut actionDescriptor={actionDescriptor} />
-        <RightClickShortcut actionDescriptor={actionDescriptor} />
-        <span className="shortcut-info-element">
-          <img
-            className="keyboard-mouse-icon"
-            src="/assets/images/icon-statusbar-mouse-wheel.svg"
-            alt="Mouse Wheel"
-          />
-          {isAltPressed || isControlOrMetaPressed ? "Zoom in/out" : "Move along 3rd axis"}
-        </span>
-        <span className="shortcut-info-element">
-          <img
-            className="keyboard-mouse-icon"
-            src="/assets/images/icon-statusbar-mouse-right-drag.svg"
-            alt="Mouse Right"
-          />
-          Rotate 3D View
-        </span>
-        <ZoomShortcut />
-        {moreShortcutsLink}
-        <CommandPalette label={<div style={{ marginRight: "auto" }}>[Ctrl+P] Commands</div>} />
-      </div>
-    </div>
+    <React.Fragment>
+      <LeftClickShortcut actionDescriptor={actionDescriptor} />
+      <RightClickShortcut actionDescriptor={actionDescriptor} />
+      <span className="shortcut-info-element">
+        <img
+          className="keyboard-mouse-icon"
+          src="/assets/images/icon-statusbar-mouse-wheel.svg"
+          alt="Mouse Wheel"
+        />
+        {isAltPressed || isControlOrMetaPressed ? "Zoom in/out" : "Move along 3rd axis"}
+      </span>
+      <span className="shortcut-info-element">
+        <img
+          className="keyboard-mouse-icon"
+          src="/assets/images/icon-statusbar-mouse-right-drag.svg"
+          alt="Mouse Right"
+        />
+        Rotate 3D View
+      </span>
+      <ZoomShortcut />
+      {getMoreShortcutsInfo()}
+    </React.Fragment>
   );
 }
 
@@ -588,12 +591,10 @@ function SegmentAndMousePosition() {
 
 function Statusbar() {
   return (
-    <div className="statusbar" style={{ display: "flex", justifyContent: "space-between" }}>
+    <span className="statusbar">
       <ShortcutsInfo />
-      <div style={{ display: "flex", justifyContent: "flex-end", flex: 1 }}>
-        <Infos />
-      </div>
-    </div>
+      <Infos />
+    </span>
   );
 }
 

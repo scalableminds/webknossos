@@ -182,21 +182,19 @@ export const CommandPalette = ({ label }: { label: string | null | JSX.Element }
     ...getTabsAndSettingsMenuItems(),
   ];
   return (
-    <div style={{ marginRight: "10px" }}>
-      <ReactCommandPalette
-        commands={allCommands.map((command, counter) => {
-          return {
-            ...command,
-            id: counter,
-          };
-        })}
-        hotKeys={["ctrl+p", "command+p"]}
-        trigger={label}
-        closeOnSelect
-        resetInputOnOpen
-        maxDisplayed={100}
-        theme={theme === "light" ? commandPaletteLightTheme : commandPaletteDarkTheme}
-      />
-    </div>
+    <ReactCommandPalette
+      commands={allCommands.map((command, counter) => {
+        return {
+          ...command,
+          id: counter,
+        };
+      })}
+      hotKeys={["ctrl+p", "command+p"]}
+      trigger={label}
+      closeOnSelect
+      resetInputOnOpen
+      maxDisplayed={100}
+      theme={theme === "light" ? commandPaletteLightTheme : commandPaletteDarkTheme}
+    />
   );
 };

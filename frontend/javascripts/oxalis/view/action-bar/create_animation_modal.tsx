@@ -94,6 +94,7 @@ function CreateAnimationModal(props: Props) {
   const { isOpen, onClose } = props;
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
 
   const colorLayers = getColorLayers(dataset);
 
@@ -301,7 +302,7 @@ function CreateAnimationModal(props: Props) {
             </Button>
           </Tooltip>
         ) : (
-          <Button key="ok" type="primary" onClick={submitJob}>
+          <Button key="ok" type="primary" onClick={submitJob} disabled={activeUser == null}>
             Start Animation
           </Button>
         ),

@@ -502,6 +502,7 @@ export function* diffVolumeTracing(
     }
 
     if (
+      volumeTracing.mappingName == null ||
       prevVolumeTracing.mappingName !== volumeTracing.mappingName ||
       prevVolumeTracing.mappingIsLocked !== volumeTracing.mappingIsLocked
     ) {
@@ -509,7 +510,7 @@ export function* diffVolumeTracing(
       // In case no mapping is active, this is denoted by setting the mapping name to null.
       const action = updateMappingName(
         volumeTracing.mappingName || null,
-        volumeTracing.hasEditableMapping || null,
+        true, //TODO_c check
         volumeTracing.mappingIsLocked,
         volumeTracing.tracingId,
       );

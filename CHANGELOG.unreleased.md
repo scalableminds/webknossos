@@ -30,6 +30,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where various UI dialogs would be dark mode even the user preferred a light theme. [#8445](https://github.com/scalableminds/webknossos/pull/8445)
 - Fixed an issue with icon spacing on the task dashboard page. [#8452](https://github.com/scalableminds/webknossos/pull/8452)
 - Fixed a spacing issue in the statusbar. [#8455](https://github.com/scalableminds/webknossos/pull/8455)
+- Fixed a bug where the "Create Animation" modal did not open when selecting the corresponding feature from the navbar menu. [#8444](https://github.com/scalableminds/webknossos/pull/8444)
 
 ### Removed
 

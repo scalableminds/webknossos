@@ -112,6 +112,8 @@ export function getAntdTheme(userTheme: Theme) {
     // Apparently, antd mutates this variable?
     token: _.clone(globalDesignToken),
     components,
+    // Disable inheriting from the parent theme, in case we are nesting dark and light mode components
+    inherit: false,
   };
 }
 

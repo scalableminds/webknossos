@@ -147,7 +147,7 @@ Samplecountry
   private val defaultAiModel = AiModel(
     ObjectId("66544a56d20000af0e42ba0f"),
     defaultOrganization._id,
-    List(defaultOrganization._id),
+    List(),
     defaultDataStore.name,
     defaultUser._id,
     None,

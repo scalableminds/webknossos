@@ -14,7 +14,7 @@ import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import slick.sql.SqlAction
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.Fox.futureBox2Fox
+import com.scalableminds.util.tools.Fox.{future2Fox, futureBox2Fox}
 import models.organization.OrganizationDAO
 import net.liftweb.common.Full
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
@@ -47,15 +47,10 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
                                                            ctx: DBAccessContext): Fox[JsObject] =
     for {
       dataStore <- dataStoreDAO.findOneByName(aiModel._dataStore)
-      user <- userDAO
+      userOpt <- userDAO
         .findOne(aiModel._user)
-        .futureBox
-        .flatMap {
-          case Full(user) => Fox.successful(Some(user))
-          case _          => Fox.successful(None)
-        }
-        .toFox
-      userJs <- Fox.runOptional(user)(userService.compactWrites)
+        .futureBox.toFutureOption.toFox
+      userJs <- Fox.runOptional(userOpt)(userService.compactWrites)
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
       trainingJobOpt <- Fox.runOptional(aiModel._trainingJob)(
         jobDAO
@@ -99,12 +94,10 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected def parse(r: AimodelsRow): Fox[AiModel] =
     for {
       trainingAnnotationIds <- findTrainingAnnotationIdsFor(ObjectId(r._Id))
-      organizations <- findSharedOrganizationsFor(ObjectId(r._Id))
-    } yield
-      AiModel(
+      aiModelWithoutSharedOrgas = AiModel(
         ObjectId(r._Id),
         r._Owningorganization,
-        organizations,
+        List(),
         r._Datastore.trim,
         ObjectId(r._User),
         r._Trainingjob.map(ObjectId(_)),
@@ -116,6 +109,8 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         Instant.fromSql(r.modified),
         r.isdeleted
       )
+      organizations <- findSharedOrganizationsFor(aiModelWithoutSharedOrgas)
+    } yield aiModelWithoutSharedOrgas.copy(_sharedOrganizations = organizations)
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"""_id IN (
@@ -130,6 +125,14 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                   WHERE _id = $requestingUserId
               ))
           )
+        OR _id IN (
+          SELECT _id FROM webknossos.aiModels
+          WHERE _owningOrganization IN (
+                  SELECT _organization
+                  FROM webknossos.users_
+                  WHERE _id = $requestingUserId
+          )
+        )
      """
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[AiModel]] =
@@ -158,12 +161,8 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                     )
            """.asUpdate
     val insertTrainingAnnotationQueries = insertTrainingAnnotationIdQueries(a._id, a._trainingAnnotations)
-    val insertOrganizationQueries = insertSharedOrganizationsQuery(a._id, a._sharedOrganizations)
     for {
-      _ <- run(
-        DBIO
-          .sequence(insertModelQuery +: (insertTrainingAnnotationQueries ++ insertOrganizationQueries))
-          .transactionally)
+      _ <- run(DBIO.sequence(insertModelQuery +: insertTrainingAnnotationQueries).transactionally)
     } yield ()
   }
 
@@ -185,23 +184,15 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           .as[ObjectId])
     } yield rows.toList
 
-  private def insertSharedOrganizationsQuery(aiModelId: ObjectId,
-                                             organizationIds: List[String]): List[SqlAction[Int, NoStream, Effect]] =
-    organizationIds.map { organizationId =>
-      insertSharedOrganizationQuery(aiModelId, organizationId)
-    }
-
-  private def insertSharedOrganizationQuery(aiModelId: ObjectId,
-                                            organizationId: String): SqlAction[Int, NoStream, Effect] =
-    q"""INSERT INTO webknossos.aiModel_organizations (_aiModel, _organization)
-            VALUES ($aiModelId, $organizationId)""".asUpdate
-
-  private def findSharedOrganizationsFor(aiModelId: ObjectId): Fox[List[String]] =
+  private def findSharedOrganizationsFor(aiModel: AiModel): Fox[List[String]] =
     for {
       rows <- run(
-        q"SELECT _organization FROM webknossos.aiModel_organizations WHERE _aiModel = $aiModelId ORDER BY _organization"
+        q"SELECT _organization FROM webknossos.aiModel_organizations WHERE _aiModel = ${aiModel._id} ORDER BY _organization"
           .as[String])
-    } yield rows.toList
+      ids = rows.toList
+      idsWithOwningOrganization = if (ids.contains(aiModel._owningOrganization)) ids
+      else ids :+ aiModel._owningOrganization
+    } yield idsWithOwningOrganization
 
   def updateOne(a: AiModel): Fox[Unit] =
     for {

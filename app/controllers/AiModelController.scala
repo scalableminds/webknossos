@@ -235,9 +235,9 @@ class AiModelController @Inject()(
             Fox.runOptional(sharedOrganizationIdsOpt) { newlySharedOrganizationIds =>
               // Keep organizations with access to the aiModel which the current user has no access to.
               for {
-                organizationIdsUserCanAccess <- organizationDAO.findAll.flatMap(os => Fox.successful(os.map(_._id)))
+                organizationIdsUserCanAccess <- organizationDAO.findAll.map(os => os.map(_._id))
                 organizationsToPreserveAccessTo = aiModel._sharedOrganizations.filter(
-                  organizationIdsUserCanAccess.contains)
+                  !organizationIdsUserCanAccess.contains(_))
               } yield newlySharedOrganizationIds ++ organizationsToPreserveAccessTo
             } else Fox.successful(None)
           _ <- Fox.runOptional(sharedAndPreservedOrganizationIdsOpt)(
@@ -245,8 +245,8 @@ class AiModelController @Inject()(
               if (orgas.toSet == aiModel._sharedOrganizations.toSet) Fox.successful(())
               else aiModelDAO.updateSharedOrganizations(aiModel._id, orgas)) ?~> "aiModel.updatingSharedFailed"
           updatedAiModel <- aiModelDAO.findOne(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
-          jsResult <- aiModelService.publicWrites(updatedAiModel, request.identity)
-        } yield Ok(jsResult)
+          js <- aiModelService.publicWrites(updatedAiModel, request.identity)
+        } yield Ok(js)
       }
     }
 

@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.bool2Fox
+import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MagLocator}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
@@ -33,6 +33,7 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
     val bucket: BucketPosition = readInstruction.bucket
     for {
       tracingId <- Fox.successful(layer.name)
+      elementClassProto <- ElementClass.toProto(layer.elementClass).toFox
       _ <- bool2Fox(layer.doesContainBucket(bucket))
       remoteFallbackLayer <- layer.editableMappingService
         .remoteFallbackLayerFromVolumeTracing(layer.tracing, layer.annotationId)
@@ -61,7 +62,7 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
                                                                                            remoteFallbackLayer)(tc)
       mappedData: Array[Byte] <- layer.editableMappingService.mapData(unmappedDataTyped,
                                                                       relevantMapping,
-                                                                      layer.elementClass)
+                                                                      elementClassProto)
     } yield mappedData
   }
 }

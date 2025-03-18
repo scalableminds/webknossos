@@ -6,23 +6,13 @@ import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MagLo
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
-import com.scalableminds.webknossos.datastore.dataformats.layers.{
-  N5DataLayer,
-  N5SegmentationLayer,
-  PrecomputedDataLayer,
-  PrecomputedSegmentationLayer,
-  WKWDataLayer,
-  WKWSegmentationLayer,
-  Zarr3DataLayer,
-  Zarr3SegmentationLayer,
-  ZarrDataLayer,
-  ZarrSegmentationLayer
-}
+import com.scalableminds.webknossos.datastore.dataformats.layers.{N5DataLayer, N5SegmentationLayer, PrecomputedDataLayer, PrecomputedSegmentationLayer, WKWDataLayer, WKWSegmentationLayer, Zarr3DataLayer, Zarr3SegmentationLayer, ZarrDataLayer, ZarrSegmentationLayer}
 import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
+import net.liftweb.common.{Box, Failure, Full}
 import play.api.libs.json._
 
 object DataFormat extends ExtendedEnumeration {
@@ -126,16 +116,17 @@ object ElementClass extends ExtendedEnumeration {
         throw new RuntimeException(s"Cannot convert ElementClassProto $elementClassProto to ElementClass")
     }
 
-  def toProto(elementClass: ElementClass.Value): ElementClassProto =
+  def toProto(elementClass: ElementClass.Value): Box[ElementClassProto] =
     elementClass match {
-      case ElementClass.uint8  => ElementClassProto.uint8
-      case ElementClass.uint16 => ElementClassProto.uint16
-      case ElementClass.uint32 => ElementClassProto.uint32
-      case ElementClass.uint64 => ElementClassProto.uint64
-      case ElementClass.int8   => ElementClassProto.int8
-      case ElementClass.int16  => ElementClassProto.int16
-      case ElementClass.int32  => ElementClassProto.int32
-      case ElementClass.int64  => ElementClassProto.int64
+      case ElementClass.uint8  => Full(ElementClassProto.uint8)
+      case ElementClass.uint16 => Full(ElementClassProto.uint16)
+      case ElementClass.uint32 => Full(ElementClassProto.uint32)
+      case ElementClass.uint64 => Full(ElementClassProto.uint64)
+      case ElementClass.int8   => Full(ElementClassProto.int8)
+      case ElementClass.int16  => Full(ElementClassProto.int16)
+      case ElementClass.int32  => Full(ElementClassProto.int32)
+      case ElementClass.int64  => Full(ElementClassProto.int64)
+      case _ => Failure(s"Unsupported element class $elementClass for ElementClassProto")
     }
 
   /* only used for segmentation layers, so only unsigned integers 8 16 32 64 */

@@ -141,6 +141,8 @@ class AnnotationService @Inject()(
           remoteDatastoreClient.hasSegmentIndexFile(datasetOrganizationId, dataSource.id.directoryName, layer.name)
         case None => Fox.successful(false)
       }
+      elementClassProto <- elementClassToProto(
+        fallbackLayer.map(layer => layer.elementClass).getOrElse(VolumeTracingDefaults.elementClass)).toFox
     } yield
       VolumeTracing(
         None,
@@ -149,8 +151,7 @@ class AnnotationService @Inject()(
         dataSource.id.directoryName,
         vec3IntToProto(startPosition.getOrElse(dataSource.center)),
         vec3DoubleToProto(startRotation.getOrElse(vec3DoubleFromProto(VolumeTracingDefaults.editRotation))),
-        elementClassToProto(
-          fallbackLayer.map(layer => layer.elementClass).getOrElse(VolumeTracingDefaults.elementClass)),
+        elementClassProto,
         fallbackLayer.map(_.name),
         combineLargestSegmentIdsByPrecedence(fromNml = None, fromFallbackLayer = fallbackLayer.map(_.largestSegmentId)),
         0,

@@ -2,14 +2,9 @@ package com.scalableminds.webknossos.datastore.helpers
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
-import com.scalableminds.webknossos.datastore.geometry.{
-  BoundingBoxProto,
-  ColorProto,
-  Vec2IntProto,
-  Vec3DoubleProto,
-  Vec3IntProto
-}
+import com.scalableminds.webknossos.datastore.geometry.{BoundingBoxProto, ColorProto, Vec2IntProto, Vec3DoubleProto, Vec3IntProto}
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
+import net.liftweb.common.Box
 
 trait ProtoGeometryImplicits {
 
@@ -33,7 +28,7 @@ trait ProtoGeometryImplicits {
   implicit def boundingBoxOptFromProto(bbOpt: Option[BoundingBoxProto]): Option[BoundingBox] =
     bbOpt.map(bb => BoundingBox(bb.topLeft, bb.width, bb.height, bb.depth))
 
-  implicit def elementClassToProto(ec: ElementClass.Value): ElementClassProto =
+  implicit def elementClassToProto(ec: ElementClass.Value): Box[ElementClassProto] =
     ElementClass.toProto(ec)
 
   implicit def elementClassFromProto(ec: ElementClassProto): ElementClass.Value =

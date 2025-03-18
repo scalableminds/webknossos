@@ -754,8 +754,8 @@ class VolumeTracingService @Inject()(
     val volumeTracingLayers = volumeTracingIds.zip(volumeTracings).map {
       case (tracingId, tracing) => volumeTracingLayer("annotationIdUnusedInThisContext", tracingId, tracing)
     }
-    val elementClass =
-      volumeTracingLayers.headOption.map(_.tracing.elementClass).getOrElse(elementClassToProto(ElementClass.uint8))
+    val elementClassProto =
+      volumeTracingLayers.headOption.map(_.tracing.elementClass).getOrElse(ElementClassProto.uint8)
 
     val magSets = new mutable.HashSet[Set[Vec3Int]]()
     volumeTracingLayers.foreach { volumeTracingLayer =>
@@ -782,7 +782,7 @@ class VolumeTracingService @Inject()(
         }
       }.getOrElse(Set.empty)
 
-      val mergedVolume = new MergedVolume(elementClass)
+      val mergedVolume = new MergedVolume(elementClassProto)
 
       volumeTracingLayers.foreach { volumeTracingLayer =>
         mergedVolume.addLabelSetFromBucketStream(volumeTracingLayer.bucketStream, magsIntersection)
@@ -793,10 +793,10 @@ class VolumeTracingService @Inject()(
           mergedVolume.addFromBucketStream(sourceVolumeIndex, volumeTracingLayer.bucketStream, Some(magsIntersection))
       }
       for {
-        _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, elementClass)) ?~> Messages(
+        _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, elementClassProto)) ?~> Messages(
           "annotation.volume.largestSegmentIdExceedsRange",
           mergedVolume.largestSegmentId.toLong,
-          elementClass)
+          elementClassProto)
         mergedAdditionalAxes <- Fox.box2Fox(AdditionalAxis.mergeAndAssertSameAdditionalAxes(volumeTracingLayers.map(l =>
           AdditionalAxis.fromProtosAsOpt(l.tracing.additionalAxes))))
         firstTracing <- volumeTracingLayers.headOption.map(_.tracing) ?~> "merge.noTracings"
@@ -816,7 +816,7 @@ class VolumeTracingService @Inject()(
         _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
           for {
             _ <- saveBucket(newVolumeTracingId,
-                            elementClass,
+                            elementClassProto,
                             bucketPosition,
                             bucketBytes,
                             newVersion,
@@ -827,7 +827,7 @@ class VolumeTracingService @Inject()(
                                  bucketPosition,
                                  bucketBytes,
                                  Empty,
-                                 elementClass,
+                                 elementClassProto,
                                  volumeTracingLayers.headOption.flatMap(_.tracing.mappingName),
                                  None))
           } yield ()
@@ -917,9 +917,10 @@ class VolumeTracingService @Inject()(
       for {
         dataSource <- remoteWebknossosClient.getDataSourceForAnnotation(annotationId)
         dataSourceId = dataSource.id
-        fallbackLayer = dataSource.dataLayers
-          .find(_.name == fallbackLayerName.getOrElse(""))
-          .map(RemoteFallbackLayer.fromDataLayerAndDataSource(_, dataSourceId))
+        layerWithFallbackOpt = dataSource.dataLayers.find(_.name == fallbackLayerName.getOrElse(""))
+        fallbackLayer <- Fox.runOptional(layerWithFallbackOpt) { layerWithFallback =>
+          RemoteFallbackLayer.fromDataLayerAndDataSource(layerWithFallback, dataSourceId).toFox
+        }
       } yield fallbackLayer
     }
 

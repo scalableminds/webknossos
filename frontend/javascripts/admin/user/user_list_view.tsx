@@ -194,8 +194,7 @@ function UserListView({ activeUser, activeOrganization }: Props) {
           <Row key={user.id} gutter={16}>
             <Col span={6}>{`${user.lastName}, ${user.firstName} (${user.email}) `}</Col>
             <Col span={4}>
-              <LinkButton onClick={() => activateUser(user)}>
-                <UserAddOutlined className="icon-margin-right" />
+              <LinkButton onClick={() => activateUser(user)} icon={<UserAddOutlined />}>
                 Activate User
               </LinkButton>
             </Col>
@@ -594,8 +593,7 @@ function UserListView({ activeUser, activeOrganization }: Props) {
             render={(__, user: APIUser) => (
               <span>
                 <Link to={`/users/${user.id}/details`}>
-                  <UserOutlined className="icon-margin-right" />
-                  Show Annotations
+                  <LinkButton icon={<UserOutlined />}>Show Annotations</LinkButton>
                 </Link>
                 <br />
                 {user.isActive ? (
@@ -605,8 +603,8 @@ function UserListView({ activeUser, activeOrganization }: Props) {
                         event.stopPropagation();
                         deactivateUser(user);
                       }}
+                      icon={<UserDeleteOutlined />}
                     >
-                      <UserDeleteOutlined className="icon-margin-right" />
                       Deactivate User
                     </LinkButton>
                   ) : null
@@ -616,8 +614,8 @@ function UserListView({ activeUser, activeOrganization }: Props) {
                       event.stopPropagation();
                       activateUser(user);
                     }}
+                    icon={<UserAddOutlined />}
                   >
-                    <UserAddOutlined className="icon-margin-right" />
                     Activate User
                   </LinkButton>
                 )}

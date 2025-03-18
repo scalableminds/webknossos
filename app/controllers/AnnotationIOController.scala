@@ -335,7 +335,8 @@ class AnnotationIOController @Inject()(
                                                         remoteDataStoreClient)
       elementClassProto <- fallbackLayerOpt
         .map(layer => elementClassToProto(layer.elementClass))
-        .getOrElse(elementClassToProto(VolumeTracingDefaults.elementClass)).toFox
+        .getOrElse(elementClassToProto(VolumeTracingDefaults.elementClass))
+        .toFox
     } yield
       volumeTracing.copy(
         boundingBox = bbox,

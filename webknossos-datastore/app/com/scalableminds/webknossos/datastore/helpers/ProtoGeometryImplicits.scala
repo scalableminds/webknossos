@@ -2,7 +2,13 @@ package com.scalableminds.webknossos.datastore.helpers
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
-import com.scalableminds.webknossos.datastore.geometry.{BoundingBoxProto, ColorProto, Vec2IntProto, Vec3DoubleProto, Vec3IntProto}
+import com.scalableminds.webknossos.datastore.geometry.{
+  BoundingBoxProto,
+  ColorProto,
+  Vec2IntProto,
+  Vec3DoubleProto,
+  Vec3IntProto
+}
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import net.liftweb.common.Box
 

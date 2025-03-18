@@ -133,6 +133,8 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     val mitochondriaInferralCostPerGVx: BigDecimal =
       get[BigDecimal]("features.mitochondriaInferralCostPerGVx")
     val alignmentCostPerGVx: BigDecimal = get[BigDecimal]("features.alignmentCostPerGVx")
+    val costPerCreditInEuro: BigDecimal = get[BigDecimal]("features.costPerCreditInEuro")
+    val costPerCreditInDollar: BigDecimal = get[BigDecimal]("features.costPerCreditInDollar")
     val taskReopenAllowed: FiniteDuration = get[Int]("features.taskReopenAllowedInSeconds") seconds
     val allowDeleteDatasets: Boolean = get[Boolean]("features.allowDeleteDatasets")
     val publicDemoDatasetUrl: String = get[String]("features.publicDemoDatasetUrl")

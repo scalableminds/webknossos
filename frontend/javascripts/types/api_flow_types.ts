@@ -708,6 +708,8 @@ export type APIFeatureToggles = {
   readonly neuronInferralCostPerGVx: number;
   readonly mitochondriaInferralCostPerGVx: number;
   readonly alignmentCostPerGVx: number;
+  readonly costPerCreditInEuro: number;
+  readonly costPerCreditInDollar: number;
   readonly publicDemoDatasetUrl: string;
   readonly exportTiffMaxVolumeMVx: number;
   readonly exportTiffMaxEdgeLengthVx: number;

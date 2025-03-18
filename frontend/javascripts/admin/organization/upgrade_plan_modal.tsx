@@ -24,6 +24,7 @@ import type { APIOrganization } from "types/api_flow_types";
 import { TeamAndPowerPlanUpgradeCards } from "./organization_cards";
 import { powerPlanFeatures, teamPlanFeatures } from "./pricing_plan_utils";
 import { PricingPlanEnum } from "./pricing_plan_utils";
+import features from "features";
 
 const ModalInformationFooter = (
   <>
@@ -304,28 +305,34 @@ export function orderWebknossosCredits() {
   ));
 }
 
-const CREDIT_COST_EUR = 5;
-const CREDIT_COST_USD = 5.75;
-
 function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
   const userInputRef = useRef<HTMLInputElement | null>(null);
-  const [creditCostAsString, setCreditCostsAsString] = useState<string>("5€/5.75$");
+  const defaultCostPerCreditInEuro = formatCurrency(features().costPerCreditInEuro, "€");
+  const defaultCostPerCreditInDollar = formatCurrency(features().costPerCreditInDollar, "€");
+  const [creditCostAsString, setCreditCostsAsString] = useState<string>(
+    `${defaultCostPerCreditInEuro}€/${defaultCostPerCreditInDollar}$`,
+  );
   const [creditAmount, setCreditAmount] = useState<number | null>(1);
   useEffect(() => {
     // TODOM: Remove magic numbers. E.g. put them into application configuration.
     if (creditAmount == null) {
       return;
     }
-    const totalCostInEuro = creditAmount * CREDIT_COST_EUR;
-    const totalCostInDollar = creditAmount * CREDIT_COST_USD;
+    const totalCostInEuro = creditAmount * features().costPerCreditInEuro;
+    const totalCostInDollar = creditAmount * features().costPerCreditInDollar;
     setCreditCostsAsString(`${totalCostInEuro}€/${totalCostInDollar}$`);
   }, [creditAmount]);
 
   const handleOrderCredits = async () => {
     if (userInputRef.current) {
       const requestedUsers = Number.parseInt(userInputRef.current.value);
-      await sendOrderCreditsEmail(requestedUsers);
-      Toast.success(messages["organization.credit_request_sent"]);
+      try {
+        await sendOrderCreditsEmail(requestedUsers);
+        Toast.success(messages["organization.credit_request_sent"]);
+      } catch (e) {
+        Toast.error(`Could not request credits: ${e}`);
+        console.log(e);
+      }
     }
 
     destroy();
@@ -341,9 +348,9 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
       open
     >
       <div className="drawing-upgrade-users">
-        <p style={{ marginRight: "30%" }}>
-          You can buy new WEBKNOSSOS credits to pay for premium jobs and services. Each credit costs
-          {formatCurrency(5, "€")} or {formatCurrency(5.75, "$")}.
+        <p style={{ marginRight: "5%" }}>
+          You can buy new WEBKNOSSOS credits to pay for premium jobs and services. Each credit costs{" "}
+          {defaultCostPerCreditInEuro} or {defaultCostPerCreditInDollar}.
         </p>
         <div>Amount of credits to order:</div>
         <div>

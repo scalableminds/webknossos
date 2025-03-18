@@ -857,8 +857,15 @@ function StartJobForm(props: StartJobFormProps) {
       }
       if (jobCreditCostPerGVx != null && activeUser?.organization) {
         // As the job did cost credits, refetch the organization to have a correct credit balance.
-        const updatedOrganization = await getOrganization(activeUser?.organization);
-        dispatch(setActiveOrganizationAction(updatedOrganization));
+        try {
+          const updatedOrganization = await getOrganization(activeUser?.organization);
+          dispatch(setActiveOrganizationAction(updatedOrganization));
+        } catch (error) {
+          Toast.error(
+            "Failed to fetch updated amount of credits of your organization. See the console for more details. This usually shouldn't impact you.",
+          );
+          console.error("Failed to refresh organization credits.", error);
+        }
       }
 
       Toast.info(

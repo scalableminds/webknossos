@@ -257,20 +257,13 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       (filePath, uploadDir) <- getFilePathAndDirOfUploadId(uploadFileId)
       isFileKnown <- runningUploadMetadataStore.contains(redisKeyForFileChunkCount(uploadId, filePath))
       totalFileSizeInBytesOpt <- runningUploadMetadataStore.findLong(redisKeyForTotalFileSizeInBytes(uploadId))
-      _ = println(s"----------------------------------------------------------------\nreceived $chunkSize bytes")
       _ <- Fox.runOptional(totalFileSizeInBytesOpt) { maxFileSize =>
         runningUploadMetadataStore
           .increaseBy(redisKeyForCurrentUploadedTotalFileSizeInBytes(uploadId), chunkSize)
           .flatMap(newTotalFileSizeInBytesOpt => {
-            val exceedsSize = newTotalFileSizeInBytesOpt.getOrElse(0L) > maxFileSize
-            println(s"newTotalFileSizeInBytesOpt: $newTotalFileSizeInBytesOpt     Exceeds Size: $exceedsSize")
-            println(
-              s"uploadFileId: $uploadFileId,totalChunkCount: $totalChunkCount, currentChunkNumber: $currentChunkNumber, chunkFile: $chunkFile")
-            println("----------------------------------------------------------------")
             if (newTotalFileSizeInBytesOpt.getOrElse(0L) > maxFileSize) {
-              Fox.successful(())
-              /*cleanUpDatasetExceedingSize(uploadDir, uploadId).flatMap(_ =>
-                Fox.failure("dataset.upload.moreBytesThanReserved"))*/
+              cleanUpDatasetExceedingSize(uploadDir, uploadId).flatMap(_ =>
+                Fox.failure("dataset.upload.moreBytesThanReserved"))
             } else {
               Fox.successful(())
             }

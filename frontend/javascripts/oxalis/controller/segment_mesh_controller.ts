@@ -17,7 +17,6 @@ import TWEEN from "tween.js";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 
 import { computeBvhAsync } from "libs/compute_bvh_async";
-import GUI from "lil-gui";
 import type { BufferAttribute } from "three";
 
 // Add the raycast function. Assumes the BVH is available on
@@ -354,21 +353,7 @@ export default class SegmentMeshController {
     return color;
   }
 
-  getGui() {
-    if (!window.gui) {
-      window.gui = new GUI();
-    }
-    return window.gui;
-  }
-
   addLights(): void {
-    // const ambientLight2 = new THREE.AmbientLight(0x888888, 1.0 * Math.PI);
-    // // const directionalLight = new THREE.DirectionalLight(0x888888, 1.0 * Math.PI);
-    // this.meshesLODRootGroup.add(ambientLight2);
-    // // this.meshesLODRootGroup.add(directionalLight);
-
-    // return;
-
     const settings = {
       ambientIntensity: 0.41,
       dirLight1Intensity: 0.54,
@@ -380,17 +365,6 @@ export default class SegmentMeshController {
       dirLight7Intensity: 0.17,
       dirLight8Intensity: 0.54,
     };
-
-    const gui = this.getGui();
-    gui.add(settings, "ambientIntensity", 0, 10);
-    gui.add(settings, "dirLight1Intensity", 0, 10);
-    gui.add(settings, "dirLight2Intensity", 0, 10);
-    gui.add(settings, "dirLight3Intensity", 0, 10);
-    gui.add(settings, "dirLight4Intensity", 0, 10);
-    gui.add(settings, "dirLight5Intensity", 0, 10);
-    gui.add(settings, "dirLight6Intensity", 0, 10);
-    gui.add(settings, "dirLight7Intensity", 0, 10);
-    gui.add(settings, "dirLight8Intensity", 0, 10);
 
     // Note that the PlaneView also attaches a directional light directly to the TD camera,
     // so that the light moves along the cam.
@@ -419,15 +393,6 @@ export default class SegmentMeshController {
       light.position.set(...pos).normalize();
       directionalLights.push(light);
       this.meshesLODRootGroup.add(light);
-    });
-
-    gui.onChange(() => {
-      ambientLight.intensity = settings.ambientIntensity;
-      directionalLights.forEach((light, index) => {
-        // @ts-ignore
-        light.intensity = settings[`dirLight${index + 1}Intensity`] || 1;
-      });
-      app.vent.emit("rerender");
     });
   }
 

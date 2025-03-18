@@ -1,7 +1,6 @@
 import app from "app";
 import VisibilityAwareRaycaster from "libs/visibility_aware_raycaster";
 import window from "libs/window";
-import GUI from "lil-gui";
 import _ from "lodash";
 import type { OrthoViewMap, Vector2, Vector3, Viewport } from "oxalis/constants";
 import Constants, { OrthoViewColors, OrthoViewValues, OrthoViews } from "oxalis/constants";
@@ -22,10 +21,7 @@ import * as THREE from "three";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
 
-const settings = {
-  cameraLightIntensity1: 10,
-  cameraLightIntensity2: 10,
-};
+const LIGHT_INTENSITY = 10;
 
 type RaycasterHit = {
   node: MeshSceneNode;
@@ -37,24 +33,15 @@ type RaycasterHit = {
 const createDirLight = (
   position: Vector3,
   target: Vector3,
-  _intensity: number,
+  intensity: number,
   camera: THREE.OrthographicCamera,
-  num: number,
 ) => {
   // @ts-ignore
-  const dirLight = new THREE.DirectionalLight(0x888888, settings["cameraLightIntensity" + num]);
+  const dirLight = new THREE.DirectionalLight(0x888888, intensity);
   dirLight.position.set(...position);
   camera.add(dirLight);
   camera.add(dirLight.target);
   dirLight.target.position.set(...target);
-
-  if (!window.gui) {
-    window.gui = new GUI();
-  }
-  const gui = window.gui;
-  gui.add(settings, "cameraLightIntensity" + num, 0, 10).onChange((value: number) => {
-    dirLight.intensity = value;
-  });
 
   return dirLight;
 };
@@ -87,8 +74,8 @@ class PlaneView {
     }
     this.cameras = cameras;
 
-    createDirLight([10, 10, 10], [0, 0, 10], 1 * Math.PI, this.cameras[OrthoViews.TDView], 1);
-    createDirLight([-10, 10, 10], [0, 0, 10], 1 * Math.PI, this.cameras[OrthoViews.TDView], 2);
+    createDirLight([10, 10, 10], [0, 0, 10], LIGHT_INTENSITY, this.cameras[OrthoViews.TDView]);
+    createDirLight([-10, 10, 10], [0, 0, 10], LIGHT_INTENSITY, this.cameras[OrthoViews.TDView]);
     this.cameras[OrthoViews.PLANE_XY].position.z = -1;
     this.cameras[OrthoViews.PLANE_YZ].position.x = 1;
     this.cameras[OrthoViews.PLANE_XZ].position.y = 1;

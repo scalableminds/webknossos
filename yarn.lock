@@ -8057,13 +8057,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lil-gui@npm:^0.20.0":
-  version: 0.20.0
-  resolution: "lil-gui@npm:0.20.0"
-  checksum: 10c0/17d1262baa547c15fb783af1e0d33e171f5323f83425692286c3e7167cbf075448dd7dbc48100862ff4dc4adecfd274b8fdb07e738ce308a4a724584ba70c205
-  languageName: node
-  linkType: hard
-
 "lines-and-columns@npm:^1.1.6":
   version: 1.1.6
   resolution: "lines-and-columns@npm:1.1.6"
@@ -14039,7 +14032,6 @@ __metadata:
     jsonschema: "npm:^1.2.4"
     less: "npm:^4.0.0"
     less-loader: "npm:^10.2.0"
-    lil-gui: "npm:^0.20.0"
     lodash: "npm:^4.17.21"
     lz-string: "npm:^1.4.4"
     lz4-wasm: "npm:^0.9.2"

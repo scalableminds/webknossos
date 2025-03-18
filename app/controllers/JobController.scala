@@ -7,7 +7,8 @@ import com.scalableminds.util.tools.Fox
 import models.dataset.{DataStoreDAO, DatasetDAO, DatasetLayerAdditionalAxesDAO, DatasetService}
 import models.job.{JobCommand, _}
 import models.organization.{CreditTransactionDAO, CreditTransactionService, OrganizationDAO, OrganizationService}
-import models.user.MultiUserDAO
+import models.organization.OrganizationDAO
+import models.user.{MultiUserDAO, UserService}
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -67,7 +68,8 @@ class JobController @Inject()(
     organizationService: OrganizationService,
     creditTransactionService: CreditTransactionService,
     creditTransactionDAO: CreditTransactionDAO,
-    dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
+    dataStoreDAO: DataStoreDAO,
+    userService: UserService)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
     with Zarr3OutputHelper {
 
@@ -111,6 +113,16 @@ class JobController @Inject()(
       _ <- bool2Fox(wkconf.Features.jobsEnabled) ?~> "job.disabled"
       job <- jobDAO.findOne(id)
       _ <- jobDAO.updateManualState(id, JobState.CANCELLED)
+      js <- jobService.publicWrites(job)
+    } yield Ok(js)
+  }
+
+  def retry(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      _ <- bool2Fox(wkconf.Features.jobsEnabled) ?~> "job.disabled"
+      _ <- userService.assertIsSuperUser(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+      job <- jobDAO.findOne(id)
+      _ <- jobDAO.retryOne(id)
       js <- jobService.publicWrites(job)
     } yield Ok(js)
   }

@@ -176,7 +176,7 @@ function TeamListView() {
     <div className="container">
       <div className="pull-right">
         <Button
-          icon={<PlusOutlined className="icon-margin-right" />}
+          icon={<PlusOutlined />}
           style={marginRight}
           type="primary"
           onClick={() => setIsTeamCreationModalVisible(true)}
@@ -233,14 +233,13 @@ function TeamListView() {
                       setSelectedTeam(team);
                       setIsTeamEditModalVisible(true);
                     }}
+                    icon={<UserOutlined />}
                   >
-                    <UserOutlined className="icon-margin-right" />
                     Add / Remove Users
                   </LinkButton>
                 </div>
                 <div>
-                  <LinkButton onClick={_.partial(deleteTeam, team)}>
-                    <DeleteOutlined className="icon-margin-right" />
+                  <LinkButton onClick={_.partial(deleteTeam, team)} icon={<DeleteOutlined />}>
                     Delete
                   </LinkButton>
                 </div>

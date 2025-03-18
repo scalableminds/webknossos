@@ -54,7 +54,11 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
     layerType match {
       case "n5" =>
         Fox.firstSuccess(
-          Seq(new N5ArrayExplorer().explore(remotePath, None), new N5MultiscalesExplorer().explore(remotePath, None)))
+          Seq(
+            new N5ArrayExplorer().explore(remotePath, None),
+            new N5MultiscalesExplorer().explore(remotePath, None),
+            new N5CompactMultiscalesExplorer().explore(remotePath, None)
+          ))
       case "precomputed" => new PrecomputedExplorer().explore(remotePath, None)
       case "zarr" | "zarr2" =>
         Fox.firstSuccess(

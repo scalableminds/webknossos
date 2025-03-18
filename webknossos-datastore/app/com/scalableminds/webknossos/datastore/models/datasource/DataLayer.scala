@@ -122,7 +122,8 @@ object ElementClass extends ExtendedEnumeration {
       case ElementClassProto.int16  => int16
       case ElementClassProto.int32  => int32
       case ElementClassProto.int64  => int64
-      case _                        => throw new RuntimeException(s"Cannot convert ElementClassProto $elementClassProto to ElementClass")
+      case ElementClassProto.Unrecognized(_) =>
+        throw new RuntimeException(s"Cannot convert ElementClassProto $elementClassProto to ElementClass")
     }
 
   def toProto(elementClass: ElementClass.Value): ElementClassProto =

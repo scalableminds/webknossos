@@ -47,9 +47,7 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
                                                            ctx: DBAccessContext): Fox[JsObject] =
     for {
       dataStore <- dataStoreDAO.findOneByName(aiModel._dataStore)
-      userOpt <- userDAO
-        .findOne(aiModel._user)
-        .futureBox.toFutureOption.toFox
+      userOpt <- userDAO.findOne(aiModel._user).futureBox.toFutureOption.toFox
       userJs <- Fox.runOptional(userOpt)(userService.compactWrites)
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
       trainingJobOpt <- Fox.runOptional(aiModel._trainingJob)(

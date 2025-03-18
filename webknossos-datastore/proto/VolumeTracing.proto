@@ -17,8 +17,9 @@ message Segment {
 }
 
 message VolumeTracing {
+  // Do not use with floating point element classes
   enum ElementClassProto {
-  // field number equals byteCount + (unsigned ? 0 : 10).
+    // field number equals byteCount + (unsigned ? 0 : 10).
     uint8 = 1;
     uint16 = 2;
     uint24 = 3;

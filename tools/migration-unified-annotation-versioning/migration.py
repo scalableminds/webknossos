@@ -107,6 +107,8 @@ class Migration:
 
     def fetch_updates(self, tracing_id: str, tracing_or_mapping_id: str, layer_type: str, collection: str, json_encoder, json_decoder) -> Tuple[List[Tuple[int, int, bytes]], bool]:
         batch_size = 100
+        if self.args.small_batch_sizes:
+            batch_size = 10
         newest_version = self.get_newest_version(tracing_or_mapping_id, collection)
         updates_for_layer = []
         included_revert = False
@@ -163,6 +165,8 @@ class Migration:
             version_mapping[tracing_or_mapping_id] = {0: 0} # We always want to keep the initial version 0 of all layers, even if there are no updates at all.
 
         put_updates_buffer_size = 100
+        if self.args.small_batch_sizes:
+            put_updates_buffer_size = 10
         buffered_versions_to_put = []
         buffered_updates_to_put = []
         # We use a priority queue to efficiently select which tracing each next update should come from.
@@ -329,6 +333,8 @@ class Migration:
 
     def migrate_volume_proto(self, tracing_id: str, layer_version_mapping: LayerVersionMapping, mapping_id_map: MappingIdMap):
         volume_proto_page_size = 2000
+        if self.args.small_batch_sizes:
+            volume_proto_page_size = 100
         collection = "volumes"
         materialized_versions_unified = []
         newest_tracing_version = max(layer_version_mapping[tracing_id].keys())
@@ -379,7 +385,6 @@ class Migration:
 
     def put_multiple_keys_versions(self, collection: str, to_put) -> None:
         if self.dst_stub is not None:
-            before = time.time()
             reply = self.dst_stub.PutMultipleKeysWithMultipleVersions(proto.PutMultipleKeysWithMultipleVersionsRequest(collection=collection, versionedKeyValuePairs = to_put))
             assert_grpc_success(reply)
 
@@ -437,11 +442,14 @@ class Migration:
             current_start_after_key = list_keys_reply.keys[-1]
 
     def migrate_segment_index(self, tracing_id, layer_version_mapping):
-        try:
-            self.migrate_all_versions_and_keys_with_prefix("volumeSegmentIndex", tracing_id, layer_version_mapping, transform_key=None, put_buffer_size=10, get_keys_page_size=10)
-        except Exception as e:
-            logger.info(f"Migrating segment index with large batch sizes for {tracing_id} failed with {e}, retrying with small batch sizes...")
-            self.migrate_all_versions_and_keys_with_prefix("volumeSegmentIndex", tracing_id, layer_version_mapping, transform_key=None, put_buffer_size=10, get_keys_page_size=1, get_keys_version_batch_size=1000)
+        put_buffer_size = 10
+        get_keys_page_size = 10
+        get_keys_version_batch_size = 10000
+        if self.args.small_batch_sizes:
+            get_keys_page_size = 1
+            get_keys_version_batch_size = 1000
+
+        self.migrate_all_versions_and_keys_with_prefix("volumeSegmentIndex", tracing_id, layer_version_mapping, transform_key=None, put_buffer_size=put_buffer_size, get_keys_page_size=get_keys_page_size, get_keys_version_batch_size=get_keys_version_batch_size)
 
     def migrate_editable_mapping(self, tracing_id: str, layer_version_mapping: LayerVersionMapping, mapping_id_map: MappingIdMap) -> List[int]:
         if tracing_id not in mapping_id_map:

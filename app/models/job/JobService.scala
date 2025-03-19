@@ -63,7 +63,7 @@ class JobService @Inject()(wkConf: WkConf,
         s"Failed job$superUserLabel",
         msg
       )
-      _ = sendFailedEmailNotification(user, jobAfterChange)
+      _ = if (!jobAfterChange.retriedBySuperUser) sendFailedEmailNotification(user, jobAfterChange)
     } yield ()
     ()
   }
@@ -149,11 +149,12 @@ class JobService @Inject()(wkConf: WkConf,
 
   def cleanUpIfFailed(job: Job): Fox[Unit] =
     if (job.state == JobState.FAILURE && job.command == JobCommand.convert_to_wkw) {
-      logger.info(s"WKW conversion job ${job._id} failed. Deleting dataset from the database, freeing the name...")
+      logger.info(
+        s"WKW conversion job ${job._id} failed. Deleting dataset from the database, freeing the directoryName...")
       val commandArgs = job.commandArgs.value
       for {
         datasetDirectoryName <- commandArgs.get("dataset_directory_name").map(_.as[String]).toFox
-        organizationId <- commandArgs.get("organization_name").map(_.as[String]).toFox
+        organizationId <- commandArgs.get("organization_id").map(_.as[String]).toFox
         dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(datasetDirectoryName, organizationId)(
           GlobalAccessContext)
         _ <- datasetDAO.deleteDataset(dataset._id)

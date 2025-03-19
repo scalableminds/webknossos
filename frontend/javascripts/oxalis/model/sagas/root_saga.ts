@@ -20,10 +20,11 @@ import VolumetracingSagas from "oxalis/model/sagas/volumetracing_saga";
 import { all, call, cancel, fork, put, take, takeEvery } from "typed-redux-saga";
 import type { EscalateErrorAction } from "../actions/actions";
 import { setIsWkReadyAction } from "../actions/ui_actions";
+import maintainMaximumZoomForAllMagsSaga from "./flycam_info_cache_saga";
 import { warnIfEmailIsUnverified } from "./user_saga";
 
 let rootSagaCrashed = false;
-export default function* rootSaga(): Saga<void> {
+export default function* rootSaga(): Saga<never> {
   while (true) {
     rootSagaCrashed = false;
     const task = yield* fork(restartableSaga);
@@ -68,6 +69,7 @@ function* restartableSaga(): Saga<void> {
       call(warnIfEmailIsUnverified),
       call(listenToErrorEscalation),
       call(handleAdditionalCoordinateUpdate),
+      call(maintainMaximumZoomForAllMagsSaga),
       ...DatasetSagas.map((saga) => call(saga)),
     ]);
   } catch (err) {

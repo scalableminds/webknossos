@@ -200,7 +200,7 @@ function getCollapsibleMenuTitle(
   );
 }
 
-function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser) {
+export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser) {
   const isAdmin = Utils.isUserAdmin(activeUser);
   const isAdminOrTeamManager = Utils.isUserAdminOrTeamManager(activeUser);
   const organization = activeUser.organization;
@@ -245,7 +245,7 @@ function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser) {
 
   if (isAdmin) {
     adminstrationSubMenuItems.push({
-      key: "/organization",
+      key: `/organizations/${organization}`,
       label: <Link to={`/organizations/${organization}`}>Organization</Link>,
     });
   }
@@ -949,7 +949,7 @@ function Navbar({
     >
       <GlobalProgressBar />
       <MaintenanceBanner />
-      <ConfigProvider theme={{ ...getAntdTheme("light") }}>
+      <ConfigProvider theme={getAntdTheme("light")}>
         <UpgradeVersionBanner />
       </ConfigProvider>
       <Menu
@@ -983,7 +983,7 @@ function Navbar({
           paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
         }}
       />
-      <ConfigProvider theme={{ ...getAntdTheme("dark") }}>
+      <ConfigProvider theme={getAntdTheme("dark")}>
         <div
           style={{
             display: "flex",

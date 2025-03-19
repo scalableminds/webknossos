@@ -135,7 +135,7 @@ const ThrottledRGBAColorPicker = ({
   const hexInputWidth = COLOR_PICKER_WIDTH * (1 - RELATIVE_OPACITY_INPUT_WIDTH);
   return (
     <div style={{ marginRight: "10px", width: COLOR_PICKER_WIDTH }}>
-      <RgbaColorPicker color={value} onChange={setValue} style={{ width: "100 %" }} />
+      <RgbaColorPicker color={value} onChange={setValue} style={{ width: "100%" }} />
       <div>
         {getColorInput(valueAsHex, setValueFromHex, hexInputWidth)}
         {getOpacityInput()}

@@ -44,7 +44,7 @@ class JobService @Inject()(wkConf: WkConf,
     with Formatter {
 
   private val MINIMUM_COST_PER_JOB = BigDecimal(0.001)
-  private val ONE_GIGAVOXEL = BigDecimal(math.pow(2, 30))
+  private val ONE_GIGAVOXEL = BigDecimal(math.pow(10, 9))
   private val SHOULD_DEDUCE_CREDITS = false
 
   private lazy val Mailer =

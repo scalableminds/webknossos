@@ -519,22 +519,22 @@ export function formatVoxels(voxelCount: number) {
   if (!Number.isFinite(voxelCount)) {
     return "Infinity";
   }
-  if (voxelCount > 2 ** 50) {
-    return `${(voxelCount / 2 ** 50).toPrecision(4)} PVx`;
+  if (voxelCount > 10 ** 15) {
+    return `${(voxelCount / 10 ** 15).toPrecision(4)} PVx`;
   }
-  if (voxelCount > 2 ** 40) {
-    return `${(voxelCount / 2 ** 40).toPrecision(4)} TVx`;
+  if (voxelCount > 10 ** 12) {
+    return `${(voxelCount / 10 ** 12).toPrecision(4)} TVx`;
   }
-  if (voxelCount > 2 ** 30) {
-    return `${(voxelCount / 2 ** 30).toPrecision(4)} GVx`;
+  if (voxelCount > 10 ** 9) {
+    return `${(voxelCount / 10 ** 9).toPrecision(4)} GVx`;
   }
-  if (voxelCount > 2 ** 20) {
-    return `${(voxelCount / 2 ** 20).toPrecision(4)} MVx`;
+  if (voxelCount > 10 ** 6) {
+    return `${(voxelCount / 10 ** 6).toPrecision(4)} MVx`;
   }
-  if (voxelCount > 2 ** 10) {
-    return `${(voxelCount / 2 ** 10).toPrecision(4)} KVx`;
+  if (voxelCount > 10 ** 3) {
+    return `${(voxelCount / 10 ** 3).toPrecision(4)} KVx`;
   }
-  return `${voxelCount} B`;
+  return `${voxelCount} Vx`;
 }
 
 export function formatNumber(num: number): string {

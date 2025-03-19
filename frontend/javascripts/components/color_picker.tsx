@@ -109,7 +109,7 @@ const ThrottledRGBAColorPicker = ({
   const maybeGetInfoText = () => {
     return (
       <div style={{ wordBreak: "break-word", fontSize: "12px", lineHeight: 1, marginTop: "8px" }}>
-        Note that the opacity will only effect the mesh in the 3D viewport.
+        Note that the opacity will only affect the mesh in the 3D viewport.
       </div>
     );
   };

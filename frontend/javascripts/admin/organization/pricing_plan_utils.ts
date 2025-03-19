@@ -47,6 +47,10 @@ export function hasPricingPlanExceededStorage(organization: APIOrganization): bo
   return organization.usedStorageBytes > organization.includedStorageBytes;
 }
 
+export function getLeftOverStorageBytes(organization: APIOrganization): number {
+  return organization.includedStorageBytes - organization.usedStorageBytes;
+}
+
 export function isUserAllowedToRequestUpgrades(user: APIUser): boolean {
   return user.isAdmin || user.isOrganizationOwner;
 }

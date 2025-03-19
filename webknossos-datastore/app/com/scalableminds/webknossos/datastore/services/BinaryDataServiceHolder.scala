@@ -19,12 +19,11 @@ import scala.concurrent.ExecutionContext
  * The DataStore one is singleton-ized via this holder.
  */
 
-class BinaryDataServiceHolder @Inject()(
-    config: DataStoreConfig,
-    agglomerateService: AgglomerateService,
-    remoteSourceDescriptorService: RemoteSourceDescriptorService,
-    datasetErrorLoggingService: DatasetErrorLoggingService,
-    remoteWebknossosClient: DSRemoteWebknossosClient)(implicit ec: ExecutionContext)
+class BinaryDataServiceHolder @Inject()(config: DataStoreConfig,
+                                        agglomerateService: AgglomerateService,
+                                        remoteSourceDescriptorService: RemoteSourceDescriptorService,
+                                        datasetErrorLoggingService: DatasetErrorLoggingService,
+                                        remoteWebknossosClient: DSRemoteWebknossosClient)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
   private lazy val sharedChunkContentsCache: AlfuCache[String, MultiArray] = {

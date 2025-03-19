@@ -1,64 +1,82 @@
 import {
+  BarChartOutlined,
+  BellOutlined,
+  CheckOutlined,
+  HomeOutlined,
+  QuestionCircleOutlined,
+  SwapOutlined,
+  TeamOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
+import {
   Avatar,
-  Button,
   Badge,
-  Tooltip,
+  Button,
+  ConfigProvider,
+  Input,
+  type InputRef,
   Layout,
   Menu,
   Popover,
   type SubMenuProps,
   Tag,
+  Tooltip,
 } from "antd";
-import {
-  SwapOutlined,
-  TeamOutlined,
-  CheckOutlined,
-  BarChartOutlined,
-  HomeOutlined,
-  QuestionCircleOutlined,
-  UserOutlined,
-  BellOutlined,
-} from "@ant-design/icons";
-import { useHistory, Link } from "react-router-dom";
-
 import classnames from "classnames";
-import { connect } from "react-redux";
-import React, { useState, useEffect } from "react";
-import Toast from "libs/toast";
-import type { APIOrganization, APIUser, APIUserCompact, APIUserTheme } from "types/api_flow_types";
-import { PortalTarget } from "oxalis/view/layouting/portal_utils";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
+import { connect, useSelector } from "react-redux";
+import { Link, useHistory } from "react-router-dom";
+
 import {
   getBuildInfo,
   getUsersOrganizations,
-  switchToOrganization,
-  updateSelectedThemeOfUser,
-  updateNovelUserExperienceInfos,
   sendAnalyticsEvent,
+  switchToOrganization,
+  updateNovelUserExperienceInfos,
+  updateSelectedThemeOfUser,
 } from "admin/admin_rest_api";
-import { logoutUserAction, setActiveUserAction } from "oxalis/model/actions/user_actions";
-import { trackVersion } from "oxalis/model/helpers/analytics";
-import { useFetch, useInterval } from "libs/react_helpers";
 import LoginForm from "admin/auth/login_form";
+import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import type { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
+import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
+import { PricingEnforcedSpan } from "components/pricing_enforcers";
+import features from "features";
+import { useFetch, useInterval } from "libs/react_helpers";
 import Request from "libs/request";
-import type { OxalisState } from "oxalis/store";
-import Store from "oxalis/store";
+import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import window, { location } from "libs/window";
-import features from "features";
-import { setThemeAction } from "oxalis/model/actions/ui_actions";
-import { HelpModal } from "oxalis/view/help_modal";
-import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import messages from "messages";
-import { PricingEnforcedSpan } from "components/pricing_enforcers";
-import { ItemType, MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
-import { MenuClickEventHandler } from "rc-menu/lib/interface";
 import constants from "oxalis/constants";
-import { MaintenanceBanner } from "maintenance_banner";
-import { getSystemColorTheme } from "theme";
+import {
+  isAnnotationFromDifferentOrganization,
+  isAnnotationOwner as isAnnotationOwnerAccessor,
+} from "oxalis/model/accessors/annotation_accessor";
+import { formatUserName } from "oxalis/model/accessors/user_accessor";
+import { setThemeAction } from "oxalis/model/actions/ui_actions";
+import { logoutUserAction, setActiveUserAction } from "oxalis/model/actions/user_actions";
+import type { OxalisState } from "oxalis/store";
+import Store from "oxalis/store";
+import { HelpModal } from "oxalis/view/help_modal";
+import { PortalTarget } from "oxalis/view/layouting/portal_utils";
+import type { MenuClickEventHandler } from "rc-menu/lib/interface";
+import { getAntdTheme, getSystemColorTheme } from "theme";
+import type {
+  APIOrganizationCompact,
+  APIUser,
+  APIUserCompact,
+  APIUserTheme,
+} from "types/api_flow_types";
 
 const { Header } = Layout;
 
 const HELP_MENU_KEY = "helpMenu";
+// At most, 20 organizations are rendered in the dropdown.
+const MAX_RENDERED_ORGANIZATION = 20;
+// A search input is shown when more than 10 switchable organizations
+// exist.
+const ORGANIZATION_COUNT_THRESHOLD_FOR_SEARCH_INPUT = 10;
 
 type OwnProps = {
   isAuthenticated: boolean;
@@ -69,6 +87,10 @@ type StateProps = {
   hasOrganizations: boolean;
   othersMayEdit: boolean;
   allowUpdate: boolean;
+  isLockedByOwner: boolean;
+  isAnnotationFromDifferentOrganization: boolean;
+  isAnnotationOwner: boolean;
+  annotationOwnerName: string;
   blockedByUser: APIUserCompact | null | undefined;
   navbarHeight: number;
 };
@@ -82,10 +104,8 @@ function useOlvy() {
   useEffect(() => {
     const OlvyConfig = {
       organisation: "webknossos",
-      // This target needs to be defined (otherwise, Olvy crashes when using .show()). However,
-      // we don't want Olvy to add any notification icons, since we do this on our own. Therefore,
-      // provide a dummy value here.
-      target: "#unused-olvy-target",
+      // This target needs to be an empty string as else olvy will eagerly init the modal and thus fetch all its contents.
+      target: "",
       type: "modal",
       view: {
         showSearch: false,
@@ -180,7 +200,7 @@ function getCollapsibleMenuTitle(
   );
 }
 
-function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser) {
+export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser) {
   const isAdmin = Utils.isUserAdmin(activeUser);
   const isAdminOrTeamManager = Utils.isUserAdminOrTeamManager(activeUser);
   const organization = activeUser.organization;
@@ -223,11 +243,18 @@ function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser) {
       label: <Link to="/jobs">Processing Jobs</Link>,
     });
 
-  if (isAdmin)
+  if (isAdmin) {
     adminstrationSubMenuItems.push({
-      key: "/organization",
+      key: `/organizations/${organization}`,
       label: <Link to={`/organizations/${organization}`}>Organization</Link>,
     });
+  }
+  if (activeUser.isSuperUser) {
+    adminstrationSubMenuItems.push({
+      key: "/aiModels",
+      label: <Link to={"/aiModels"}>AI Models</Link>,
+    });
+  }
 
   if (features().voxelyticsEnabled)
     adminstrationSubMenuItems.push({
@@ -261,12 +288,11 @@ function getStatisticsSubMenu(collapse: boolean): SubMenuType {
       collapse,
     ),
     children: [
-      { key: "/statistics", label: <Link to="/statistics">Overview</Link> },
       {
-        key: "/reports/timetracking",
+        key: "/timetracking",
         label: (
-          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Power}>
-            <Link to="/reports/timetracking">Time Tracking</Link>
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+            <Link to="/timetracking">Time Tracking</Link>
           </PricingEnforcedSpan>
         ),
       },
@@ -296,7 +322,7 @@ function getTimeTrackingMenu(collapse: boolean): MenuItemType {
 
     label: (
       <Link
-        to="/reports/timetracking"
+        to="/timetracking"
         style={{
           fontWeight: 400,
         }}
@@ -353,7 +379,7 @@ function getHelpSubMenu(
       label: (
         <a
           target="_blank"
-          href="https://docs.webknossos.org/webknossos/keyboard_shortcuts.html"
+          href="https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html"
           rel="noopener noreferrer"
         >
           Keyboard Shortcuts
@@ -434,11 +460,11 @@ function getDashboardSubMenu(collapse: boolean): SubMenuType {
     ),
     children: [
       { key: "/dashboard/datasets", label: <Link to="/dashboard/datasets">Datasets</Link> },
-      { key: "/dashboard/tasks", label: <Link to="/dashboard/tasks">Tasks</Link> },
       {
         key: "/dashboard/annotations",
         label: <Link to="/dashboard/annotations">Annotations</Link>,
       },
+      { key: "/dashboard/tasks", label: <Link to="/dashboard/tasks">Tasks</Link> },
     ],
   };
 }
@@ -460,6 +486,8 @@ function NotificationIcon({
     sendAnalyticsEvent("open_whats_new_view");
 
     if (window.Olvy) {
+      // Setting the target lazily, to finally let olvy load the “what’s new” modal, as it should be shown now.
+      window.Olvy.config.target = "#unused-olvy-target";
       window.Olvy.show();
     }
   };
@@ -470,8 +498,7 @@ function NotificationIcon({
         position: "relative",
         display: "flex",
         marginRight: 12,
-        paddingTop:
-          navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.MAINTENANCE_BANNER_HEIGHT : 0,
+        paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
       }}
     >
       <Tooltip title="See what's new in WEBKNOSSOS" placement="bottomLeft">
@@ -483,8 +510,8 @@ function NotificationIcon({
   );
 }
 
-export const switchTo = async (org: APIOrganization) => {
-  Toast.info(`Switching to ${org.displayName || org.name}`);
+export const switchTo = async (org: APIOrganizationCompact) => {
+  Toast.info(`Switching to ${org.name || org.id}`);
 
   // If the user is currently at the datasets tab, the active folder is encoded
   // in the URI. Switching to another organization means that the folder id
@@ -495,8 +522,45 @@ export const switchTo = async (org: APIOrganization) => {
     window.history.replaceState({}, "", "/dashboard/datasets/");
   }
 
-  await switchToOrganization(org.name);
+  await switchToOrganization(org.id);
 };
+
+function OrganizationFilterInput({
+  onChange,
+  isVisible,
+  onPressEnter,
+}: { onChange: (val: string) => void; isVisible: boolean; onPressEnter: () => void }) {
+  const ref = useRef<InputRef>(null);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Biome doesn't understand that ref.current is accessed?
+  useEffect(() => {
+    if (ref?.current && isVisible) {
+      setTimeout(() => {
+        // Without the timeout, the focus doesn't work unfortunately.
+        ref.current?.input?.focus();
+      }, 100);
+    }
+  }, [ref.current, isVisible]);
+  const onChangeImpl = (evt: React.ChangeEvent<HTMLInputElement>) => {
+    onChange(evt.target.value);
+  };
+  const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    const consumableKeyCodes = [40, 38, 27]; // up, down, escape
+    if (!consumableKeyCodes.includes(event.keyCode)) {
+      event.stopPropagation();
+    }
+  };
+
+  return (
+    <Input
+      placeholder="Filter organizations..."
+      onChange={onChangeImpl}
+      onKeyDown={onKeyDown}
+      ref={ref}
+      onPressEnter={onPressEnter}
+    />
+  );
+}
 
 function LoggedInAvatar({
   activeUser,
@@ -507,14 +571,25 @@ function LoggedInAvatar({
   handleLogout: (event: React.SyntheticEvent) => void;
   navbarHeight: number;
 } & SubMenuProps) {
-  const { firstName, lastName, organization: organizationName, selectedTheme } = activeUser;
+  const { firstName, lastName, organization: organizationId, selectedTheme } = activeUser;
   const usersOrganizations = useFetch(getUsersOrganizations, [], []);
-  const activeOrganization = usersOrganizations.find((org) => org.name === organizationName);
-  const switchableOrganizations = usersOrganizations.filter((org) => org.name !== organizationName);
-  const orgDisplayName =
-    activeOrganization != null
-      ? activeOrganization.displayName || activeOrganization.name
-      : organizationName;
+  const activeOrganization = usersOrganizations.find((org) => org.id === organizationId);
+  const switchableOrganizations = usersOrganizations.filter((org) => org.id !== organizationId);
+  const orgName =
+    activeOrganization != null ? activeOrganization.name || activeOrganization.id : organizationId;
+  const [organizationFilter, onChangeOrganizationFilter] = useState("");
+  const [openKeys, setOpenKeys] = useState<string[]>([]);
+
+  const filteredOrganizations = Utils.filterWithSearchQueryAND(
+    switchableOrganizations,
+    ["name", "id"],
+    organizationFilter,
+  );
+  const onEnterOrganization = () => {
+    if (filteredOrganizations.length > 0) {
+      switchTo(filteredOrganizations[0]);
+    }
+  };
 
   const setSelectedTheme = async (newTheme: APIUserTheme) => {
     if (newTheme === "auto") newTheme = getSystemColorTheme();
@@ -526,20 +601,37 @@ function LoggedInAvatar({
     }
   };
 
+  const maybeOrganizationFilterInput =
+    switchableOrganizations.length > ORGANIZATION_COUNT_THRESHOLD_FOR_SEARCH_INPUT
+      ? [
+          {
+            key: "input",
+            label: (
+              <OrganizationFilterInput
+                onChange={onChangeOrganizationFilter}
+                isVisible={openKeys.includes("switch-organization")}
+                onPressEnter={onEnterOrganization}
+              />
+            ),
+          },
+        ]
+      : [];
+
   const isMultiMember = switchableOrganizations.length > 0;
   return (
     <Menu
       selectedKeys={["prevent highlighting of this menu"]}
       mode="horizontal"
       style={{
-        paddingTop:
-          navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.MAINTENANCE_BANNER_HEIGHT : 0,
+        paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
         lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
       }}
       theme="dark"
       subMenuCloseDelay={subMenuCloseDelay}
       triggerSubMenuAction="click"
       className="right-navbar"
+      onOpenChange={setOpenKeys}
+      openKeys={openKeys}
       items={[
         {
           key: "loggedMenu",
@@ -553,16 +645,14 @@ function LoggedInAvatar({
             },
             {
               key: "organization",
-              label: orgDisplayName,
+              label: orgName,
               disabled: true,
             },
             activeOrganization && Utils.isUserAdmin(activeUser)
               ? {
                   key: "manage-organization",
                   label: (
-                    <Link to={`/organizations/${activeOrganization.name}`}>
-                      Manage Organization
-                    </Link>
+                    <Link to={`/organizations/${activeOrganization.id}`}>Manage Organization</Link>
                   ),
                 }
               : null,
@@ -570,11 +660,15 @@ function LoggedInAvatar({
               ? {
                   key: "switch-organization",
                   label: "Switch Organization",
-                  children: switchableOrganizations.map((org) => ({
-                    key: org.name,
-                    onClick: () => switchTo(org),
-                    label: org.displayName || org.name,
-                  })),
+                  popupClassName: "organization-switch-menu",
+                  children: [
+                    ...maybeOrganizationFilterInput,
+                    ...filteredOrganizations.slice(0, MAX_RENDERED_ORGANIZATION).map((org) => ({
+                      key: org.id,
+                      onClick: () => switchTo(org),
+                      label: org.name || org.id,
+                    })),
+                  ],
                 }
               : null,
             {
@@ -617,6 +711,9 @@ function LoggedInAvatar({
 }
 
 function AnonymousAvatar() {
+  const bannerHeight = useSelector(
+    (state: OxalisState) => state.uiInformation.navbarHeight - constants.DEFAULT_NAVBAR_HEIGHT,
+  );
   return (
     <Popover
       placement="bottomRight"
@@ -638,19 +735,16 @@ function AnonymousAvatar() {
         icon={<UserOutlined />}
         style={{
           marginLeft: 8,
+          marginTop: bannerHeight,
         }}
       />
     </Popover>
   );
 }
 
-async function getAndTrackVersion(dontTrack: boolean = false) {
+async function getVersion() {
   const buildInfo = await getBuildInfo();
-  const { version } = buildInfo.webknossos;
-  if (dontTrack) {
-    trackVersion(version);
-  }
-  return version;
+  return buildInfo.webknossos.version;
 }
 
 function AnnotationLockedByUserTag({
@@ -664,13 +758,17 @@ function AnnotationLockedByUserTag({
   if (blockedByUser == null) {
     content = (
       <Tooltip title={messages["annotation.acquiringMutexFailed.noUser"]}>
-        <Tag color="warning">Locked by unknown user.</Tag>
+        <Tag color="warning" className="flex-center-child">
+          Locked by unknown user.
+        </Tag>
       </Tooltip>
     );
   } else if (blockedByUser.id === activeUser.id) {
     content = (
       <Tooltip title={messages["annotation.acquiringMutexSucceeded"]}>
-        <Tag color="success">Locked by you. Reload to edit.</Tag>
+        <Tag color="success" className="flex-center-child">
+          Locked by you. Reload to edit.
+        </Tag>
       </Tooltip>
     );
   } else {
@@ -681,7 +779,9 @@ function AnnotationLockedByUserTag({
           userName: blockingUserName,
         })}
       >
-        <Tag color="warning">Locked by {blockingUserName}</Tag>
+        <Tag color="warning" className="flex-center-child">
+          Locked by {blockingUserName}
+        </Tag>
       </Tooltip>
     );
   }
@@ -689,6 +789,21 @@ function AnnotationLockedByUserTag({
     <span style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
       {content}
     </span>
+  );
+}
+
+function AnnotationLockedByOwnerTag(props: { annotationOwnerName: string; isOwner: boolean }) {
+  const unlockHintForOwners = props.isOwner
+    ? " You can unlock the annotation in the navbar annotation menu."
+    : "";
+  const tooltipMessage =
+    messages["tracing.read_only_mode_notification"](true, props.isOwner) + unlockHintForOwners;
+  return (
+    <Tooltip title={tooltipMessage}>
+      <Tag color="warning" className="flex-center-child">
+        Locked by {props.annotationOwnerName}
+      </Tag>
+    </Tooltip>
   );
 }
 
@@ -700,7 +815,11 @@ function Navbar({
   othersMayEdit,
   blockedByUser,
   allowUpdate,
+  annotationOwnerName,
+  isLockedByOwner,
+  isAnnotationFromDifferentOrganization,
   navbarHeight,
+  isAnnotationOwner,
 }: Props) {
   const history = useHistory();
 
@@ -712,7 +831,7 @@ function Navbar({
     location.href = "/";
   };
 
-  const version = useFetch(getAndTrackVersion, null, []);
+  const version = useFetch(getVersion, null, []);
   const [isHelpMenuOpen, setIsHelpMenuOpen] = useState(false);
   const [polledVersion, setPolledVersion] = useState<string | null>(null);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
@@ -720,7 +839,7 @@ function Navbar({
   useInterval(
     async () => {
       if (isHelpMenuOpen) {
-        setPolledVersion(await getAndTrackVersion(true));
+        setPolledVersion(await getVersion());
       }
     },
     2000,
@@ -763,12 +882,26 @@ function Navbar({
       menuItems.push(getTimeTrackingMenu(collapseAllNavItems));
     }
 
-    if (othersMayEdit && !allowUpdate) {
+    if (
+      othersMayEdit &&
+      !allowUpdate &&
+      !isLockedByOwner &&
+      !isAnnotationFromDifferentOrganization
+    ) {
       trailingNavItems.push(
         <AnnotationLockedByUserTag
           key="locked-by-user-tag"
           blockedByUser={blockedByUser}
           activeUser={activeUser}
+        />,
+      );
+    }
+    if (isLockedByOwner) {
+      trailingNavItems.push(
+        <AnnotationLockedByOwnerTag
+          key="locked-by-owner-tag"
+          annotationOwnerName={annotationOwnerName}
+          isOwner={isAnnotationOwner}
         />,
       );
     }
@@ -814,16 +947,17 @@ function Navbar({
         "collapsed-nav-header": collapseAllNavItems,
       })}
     >
+      <GlobalProgressBar />
       <MaintenanceBanner />
+      <ConfigProvider theme={getAntdTheme("light")}>
+        <UpgradeVersionBanner />
+      </ConfigProvider>
       <Menu
         mode="horizontal"
         selectedKeys={selectedKeys}
         onOpenChange={(openKeys) => setIsHelpMenuOpen(openKeys.includes(HELP_MENU_KEY))}
         style={{
-          paddingTop:
-            navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT
-              ? constants.MAINTENANCE_BANNER_HEIGHT
-              : 0,
+          paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
           lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
         }}
         theme="dark"
@@ -846,23 +980,32 @@ function Navbar({
         style={{
           flex: 1,
           display: "flex",
-          paddingTop:
-            navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT
-              ? constants.MAINTENANCE_BANNER_HEIGHT
-              : 0,
+          paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
         }}
       />
-
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          marginRight: 12,
-        }}
-      >
-        {trailingNavItems}
-      </div>
+      <ConfigProvider theme={getAntdTheme("dark")}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            marginRight: 12,
+          }}
+        >
+          {trailingNavItems}
+        </div>
+      </ConfigProvider>
     </Header>
+  );
+}
+
+function GlobalProgressBar() {
+  const globalProgress = useSelector((state: OxalisState) => state.uiInformation.globalProgress);
+  const hide = globalProgress === 0;
+  return (
+    <div
+      className={`global-progress-bar ${hide ? "hidden-global-progress-bar" : ""}`}
+      style={{ width: `${Math.round(globalProgress * 100)}%` }}
+    />
   );
 }
 
@@ -873,6 +1016,10 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   othersMayEdit: state.tracing.othersMayEdit,
   blockedByUser: state.tracing.blockedByUser,
   allowUpdate: state.tracing.restrictions.allowUpdate,
+  isLockedByOwner: state.tracing.isLockedByOwner,
+  annotationOwnerName: formatUserName(state.activeUser, state.tracing.owner),
+  isAnnotationOwner: isAnnotationOwnerAccessor(state),
+  isAnnotationFromDifferentOrganization: isAnnotationFromDifferentOrganization(state),
   navbarHeight: state.uiInformation.navbarHeight,
 });
 

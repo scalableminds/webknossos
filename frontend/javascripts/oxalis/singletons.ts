@@ -1,7 +1,7 @@
-import { Store as ReduxStore } from "redux";
-import { ApiInterface } from "./api/api_latest";
-import { type OxalisModel } from "./model";
-import { type OxalisState } from "./store";
+import type { Store as ReduxStore } from "redux";
+import type { ApiInterface } from "./api/api_latest";
+import type { OxalisModel } from "./model";
+import type { OxalisState } from "./store";
 
 export let Store: ReduxStore<OxalisState>;
 export let Model: OxalisModel;

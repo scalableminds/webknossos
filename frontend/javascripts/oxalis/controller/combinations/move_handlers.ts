@@ -1,18 +1,17 @@
-import Store from "oxalis/store";
-import type { Point2, Vector3, OrthoView } from "oxalis/constants";
-import { OrthoViews, OrthoViewValuesWithoutTDView } from "oxalis/constants";
-import Dimensions from "oxalis/model/dimensions";
-import { getInputCatcherRect, calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
+import type { OrthoView, Point2, Vector3 } from "oxalis/constants";
+import { OrthoViewValuesWithoutTDView, OrthoViews } from "oxalis/constants";
 import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
+import { getActiveMagInfo } from "oxalis/model/accessors/flycam_accessor";
+import { calculateGlobalPos, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import {
-  movePlaneFlycamOrthoAction,
   moveFlycamOrthoAction,
+  movePlaneFlycamOrthoAction,
   zoomByDeltaAction,
 } from "oxalis/model/actions/flycam_actions";
 import { setViewportAction, zoomTDViewAction } from "oxalis/model/actions/view_mode_actions";
-import { getActiveResolutionInfo } from "oxalis/model/accessors/flycam_accessor";
 import { setMousePositionAction } from "oxalis/model/actions/volumetracing_actions";
-import _ from "lodash";
+import Dimensions from "oxalis/model/dimensions";
+import Store from "oxalis/store";
 
 export function setMousePosition(position: Point2 | null | undefined): void {
   if (position != null) {
@@ -50,9 +49,9 @@ export const moveW = (deltaW: number, oneSlide: boolean): void => {
     // The following logic might not always make sense when having layers
     // that are transformed each. Todo: Rethink / adapt the logic once
     // problems occur. Tracked in #6926.
-    const { representativeResolution } = getActiveResolutionInfo(Store.getState());
+    const { representativeMag } = getActiveMagInfo(Store.getState());
     const wDim = Dimensions.getIndices(activeViewport)[2];
-    const wStep = (representativeResolution || [1, 1, 1])[wDim];
+    const wStep = (representativeMag || [1, 1, 1])[wDim];
     Store.dispatch(
       moveFlycamOrthoAction(
         Dimensions.transDim([0, 0, Math.sign(deltaW) * Math.max(1, wStep)], activeViewport),
@@ -68,7 +67,7 @@ export function moveWhenAltIsPressed(delta: Point2, position: Point2, _id: any, 
   // alt + scroll won't result in the correct zoomToMouse behavior.
   setMousePosition(position);
 
-  if (event.altKey && !event.shiftKey && !event.ctrlKey) {
+  if (event.altKey && !event.shiftKey && !(event.ctrlKey || event.metaKey)) {
     handleMovePlane(delta);
   }
 }
@@ -108,7 +107,6 @@ export function zoomPlanes(value: number, zoomToMouse: boolean): void {
 export function zoomTDView(value: number): void {
   const zoomToPosition = null;
   const { width, height } = getInputCatcherRect(Store.getState(), OrthoViews.TDView);
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'null' is not assignable to param... Remove this comment to see the full error message
   Store.dispatch(zoomTDViewAction(value, zoomToPosition, width, height));
 }
 

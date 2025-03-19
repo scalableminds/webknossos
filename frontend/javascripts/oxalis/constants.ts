@@ -1,4 +1,4 @@
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 export const ViewModeValues = ["orthogonal", "flight", "oblique"] as ViewMode[];
 
@@ -14,6 +14,8 @@ export type Vector3 = [number, number, number];
 export type Vector4 = [number, number, number, number];
 export type Vector5 = [number, number, number, number, number];
 export type Vector6 = [number, number, number, number, number, number];
+
+export type NestedMatrix4 = [Vector4, Vector4, Vector4, Vector4]; // Represents a row major matrix.
 
 // For 3D data BucketAddress = x, y, z, mag
 // For higher dimensional data, BucketAddress = x, y, z, mag, [{name: "t", value: t}, ...]
@@ -75,7 +77,7 @@ export const ArbitraryViewport = "arbitraryViewport";
 export const ArbitraryViews = {
   arbitraryViewport: "arbitraryViewport",
   TDView: "TDView",
-};
+} as const;
 export const ArbitraryViewsToName = {
   arbitraryViewport: "Arbitrary View",
   TDView: "3D",
@@ -221,8 +223,10 @@ export const MeasurementTools: Array<keyof typeof AnnotationToolEnum> = [
   AnnotationToolEnum.AREA_MEASUREMENT,
 ];
 
+export const AvailableToolsInViewMode = [...MeasurementTools, AnnotationToolEnum.MOVE];
+
 export type AnnotationTool = keyof typeof AnnotationToolEnum;
-export const enum ContourModeEnum {
+export enum ContourModeEnum {
   DRAW = "DRAW",
   DELETE = "DELETE",
 }
@@ -251,7 +255,7 @@ export enum TDViewDisplayModeEnum {
   DATA = "DATA",
 }
 export type TDViewDisplayMode = keyof typeof TDViewDisplayModeEnum;
-export const enum MappingStatusEnum {
+export enum MappingStatusEnum {
   DISABLED = "DISABLED",
   ACTIVATING = "ACTIVATING",
   ENABLED = "ENABLED",
@@ -265,6 +269,12 @@ export type TreeType = keyof typeof TreeTypeEnum;
 export const NODE_ID_REF_REGEX = /#([0-9]+)/g;
 export const POSITION_REF_REGEX = /#\(([0-9]+,[0-9]+,[0-9]+)\)/g;
 const VIEWPORT_WIDTH = 376;
+
+// ARBITRARY_CAM_DISTANCE has to be calculated such that with cam
+// angle 45°, the plane of width Constants.VIEWPORT_WIDTH fits exactly in the
+// viewport.
+export const ARBITRARY_CAM_DISTANCE = VIEWPORT_WIDTH / 2 / Math.tan(((Math.PI / 180) * 45) / 2);
+
 export const ensureSmallerEdge = false;
 export const Unicode = {
   ThinSpace: "\u202f",
@@ -281,16 +291,6 @@ export type LabeledVoxelsMap = Map<BucketAddress, Uint8Array>;
 // that it can hold multiple slices per bucket (keyed by the W component,
 // e.g., z in XY viewport).
 export type LabelMasksByBucketAndW = Map<BucketAddress, Map<number, Uint8Array>>;
-export type ShowContextMenuFunction = (
-  arg0: number,
-  arg1: number,
-  arg2: number | null | undefined,
-  arg3: number | null | undefined,
-  arg4: Vector3 | null | undefined,
-  arg5: OrthoView,
-  arg6?: number | null | undefined,
-  arg7?: Vector3 | null | undefined,
-) => void;
 
 const Constants = {
   ARBITRARY_VIEW: 4,
@@ -307,7 +307,7 @@ const Constants = {
   BUCKET_SIZE: 32 ** 3,
   VIEWPORT_WIDTH,
   DEFAULT_NAVBAR_HEIGHT: 48,
-  MAINTENANCE_BANNER_HEIGHT: 38,
+  BANNER_HEIGHT: 38,
   // For reference, the area of a large brush size (let's say, 300px) corresponds to
   // pi * 300 ^ 2 == 282690.
   // We multiply this with 5, since the labeling is not done
@@ -337,10 +337,15 @@ const Constants = {
     _2D: (process.env.IS_TESTING ? [512, 512, 1] : [768, 768, 1]) as Vector3,
     _3D: (process.env.IS_TESTING ? [64, 64, 32] : [96, 96, 96]) as Vector3,
   },
+  // When the user uses the "isFloodfillRestrictedToBoundingBox" setting,
+  // we are more lax with the flood fill extent.
+  FLOOD_FILL_MULTIPLIER_FOR_BBOX_RESTRICTION: 10,
   MAXIMUM_DATE_TIMESTAMP: 8640000000000000,
   SCALEBAR_HEIGHT: 22,
   SCALEBAR_OFFSET: 10,
   OBJECT_ID_STRING_LENGTH: 24,
+  REGISTER_SEGMENTS_BB_MAX_VOLUME_VX: 512 * 512 * 512,
+  REGISTER_SEGMENTS_BB_MAX_SEGMENT_COUNT: 5000,
 };
 export default Constants;
 
@@ -376,5 +381,127 @@ export enum BLEND_MODES {
 }
 
 export const Identity4x4 = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
-export const IdentityTransform = { type: "affine", affineMatrix: Identity4x4 } as const;
+export const IdentityTransform = {
+  type: "affine",
+  affineMatrix: Identity4x4,
+  affineMatrixInv: Identity4x4,
+} as const;
 export const EMPTY_OBJECT = {} as const;
+
+const isMac = (() => {
+  try {
+    // Even though navigator.platform¹ is deprecated, this still
+    // seems to be the best mechanism to find out whether the machine is
+    // a Mac. At some point, NavigatorUAData² might be a feasible alternative.
+    //
+    // ¹ https://developer.mozilla.org/en-US/docs/Web/API/Navigator/platform
+    // ² https://developer.mozilla.org/en-US/docs/Web/API/NavigatorUAData/platform
+    return navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+  } catch {
+    return false;
+  }
+})();
+
+export const AltOrOptionKey = isMac ? "⌥" : "Alt";
+export const CtrlOrCmdKey = isMac ? "Cmd" : "Ctrl";
+
+export enum UnitLong {
+  ym = "yoctometer",
+  zm = "zeptometer",
+  am = "attometer",
+  fm = "femtometer",
+  pm = "picometer",
+  nm = "nanometer",
+  µm = "micrometer",
+  mm = "millimeter",
+  cm = "centimeter",
+  dm = "decimeter",
+  m = "meter",
+  hm = "hectometer",
+  km = "kilometer",
+  Mm = "megameter",
+  Gm = "gigameter",
+  Tm = "terameter",
+  Pm = "petameter",
+  Em = "exameter",
+  Zm = "zettameter",
+  Ym = "yottameter",
+  Å = "angstrom",
+  in = "inch",
+  ft = "foot",
+  yd = "yard",
+  mi = "mile",
+  pc = "parsec",
+}
+
+export enum UnitShort {
+  ym = "ym",
+  zm = "zm",
+  am = "am",
+  fm = "fm",
+  pm = "pm",
+  nm = "nm",
+  µm = "µm",
+  mm = "mm",
+  cm = "cm",
+  dm = "dm",
+  m = "m",
+  hm = "hm",
+  km = "km",
+  Mm = "Mm",
+  Gm = "Gm",
+  Tm = "Tm",
+  Pm = "Pm",
+  Em = "Em",
+  Zm = "Zm",
+  Ym = "Ym",
+  Å = "Å",
+  in = "in",
+  ft = "ft",
+  yd = "yd",
+  mi = "mi",
+  pc = "pc",
+}
+
+export const LongUnitToShortUnitMap: Record<UnitLong, UnitShort> = {
+  [UnitLong.ym]: UnitShort.ym,
+  [UnitLong.zm]: UnitShort.zm,
+  [UnitLong.am]: UnitShort.am,
+  [UnitLong.fm]: UnitShort.fm,
+  [UnitLong.pm]: UnitShort.pm,
+  [UnitLong.nm]: UnitShort.nm,
+  [UnitLong.µm]: UnitShort.µm,
+  [UnitLong.mm]: UnitShort.mm,
+  [UnitLong.cm]: UnitShort.cm,
+  [UnitLong.dm]: UnitShort.dm,
+  [UnitLong.m]: UnitShort.m,
+  [UnitLong.hm]: UnitShort.hm,
+  [UnitLong.km]: UnitShort.km,
+  [UnitLong.Mm]: UnitShort.Mm,
+  [UnitLong.Gm]: UnitShort.Gm,
+  [UnitLong.Tm]: UnitShort.Tm,
+  [UnitLong.Pm]: UnitShort.Pm,
+  [UnitLong.Em]: UnitShort.Em,
+  [UnitLong.Zm]: UnitShort.Zm,
+  [UnitLong.Ym]: UnitShort.Ym,
+  [UnitLong.Å]: UnitShort.Å,
+  [UnitLong.in]: UnitShort.in,
+  [UnitLong.ft]: UnitShort.ft,
+  [UnitLong.yd]: UnitShort.yd,
+  [UnitLong.mi]: UnitShort.mi,
+  [UnitLong.pc]: UnitShort.pc,
+};
+
+export const AllUnits = Object.values(UnitLong);
+
+export enum AnnotationTypeFilterEnum {
+  ONLY_ANNOTATIONS_KEY = "Explorational",
+  ONLY_TASKS_KEY = "Task",
+  TASKS_AND_ANNOTATIONS_KEY = "Task,Explorational",
+}
+
+export enum AnnotationStateFilterEnum {
+  ALL = "All",
+  ACTIVE = "Active",
+  FINISHED_OR_ARCHIVED = "Finished",
+}

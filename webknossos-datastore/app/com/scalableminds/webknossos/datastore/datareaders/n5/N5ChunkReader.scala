@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders.n5
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.webknossos.datastore.datareaders.{ChunkReader, DatasetHeader}
@@ -21,7 +22,8 @@ class N5ChunkReader(header: DatasetHeader) extends ChunkReader(header) with Lazy
   private val dataExtractor: N5DataExtractor = new N5DataExtractor
 
   override protected def readChunkBytesAndShape(path: VaultPath, range: Option[NumericRange[Long]])(
-      implicit ec: ExecutionContext): Fox[(Array[Byte], Option[Array[Int]])] = {
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[(Array[Byte], Option[Array[Int]])] = {
 
     def processBytes(bytes: Array[Byte], expectedElementCount: Int): Box[Array[Byte]] =
       for {

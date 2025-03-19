@@ -1,13 +1,13 @@
 import { Popover } from "antd";
-import * as React from "react";
+import type * as React from "react";
 
 import classNames from "classnames";
-import { MarkdownWrapper } from "oxalis/view/components/markdown_modal";
-import { NODE_ID_REF_REGEX, POSITION_REF_REGEX } from "oxalis/constants";
 import { document } from "libs/window";
+import { NODE_ID_REF_REGEX, POSITION_REF_REGEX } from "oxalis/constants";
 import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 import type { CommentType } from "oxalis/store";
 import Store from "oxalis/store";
+import { MarkdownWrapper } from "oxalis/view/components/markdown_modal";
 
 function linkify(comment: string) {
   return comment // Replace linked nodes (#<nodeid>) with a proper link
@@ -18,7 +18,6 @@ function linkify(comment: string) {
 type CommentProps = {
   isActive: boolean;
   comment: CommentType;
-  style: Record<string, any>;
 };
 export const commentListId = "commentList";
 
@@ -54,49 +53,42 @@ function ActiveCommentPopover({
   );
 }
 
-export function Comment({ comment, isActive, style }: CommentProps) {
+export function Comment({ comment, isActive }: CommentProps) {
   const handleClick = () => {
     Store.dispatch(setActiveNodeAction(comment.nodeId));
   };
 
-  const liClassName = classNames("markdown", "markdown-small", "nowrap", "comment", {
-    "comment-active": isActive,
-  });
-  const iClassName = classNames("fa", "fa-fw", {
-    "fa-angle-right": isActive,
-  });
+  const liClassName = classNames("markdown", "markdown-small", "nowrap");
+
   const isMultiLine = comment.content.indexOf("\n") !== -1;
 
   return (
-    <li style={style}>
-      <div className={liClassName}>
-        <span>
-          <i className={iClassName} />
-          <a onClick={handleClick}>{comment.nodeId}</a>
-          {" - "}
-        </span>
-        <span
-          style={{
-            display: "inline-block",
-          }}
-        >
-          <MarkdownWrapper source={linkify(comment.content)} singleLine />
-        </span>
-        {isMultiLine ? (
-          <ActiveCommentPopover comment={comment} isActive={isActive}>
-            <span
-              style={{
-                marginLeft: 5,
-              }}
-            >
-              <a onClick={handleClick}>
-                <i className="far fa-comment-dots" />
-              </a>
-            </span>
-          </ActiveCommentPopover>
-        ) : null}
-      </div>
-    </li>
+    <div className={liClassName}>
+      <span>
+        <a onClick={handleClick}>{comment.nodeId}</a>
+        {" - "}
+      </span>
+      <span
+        style={{
+          display: "inline-block",
+        }}
+      >
+        <MarkdownWrapper source={linkify(comment.content)} singleLine />
+      </span>
+      {isMultiLine ? (
+        <ActiveCommentPopover comment={comment} isActive={isActive}>
+          <span
+            style={{
+              marginLeft: 5,
+            }}
+          >
+            <a onClick={handleClick}>
+              <i className="far fa-comment-dots" />
+            </a>
+          </span>
+        </ActiveCommentPopover>
+      ) : null}
+    </div>
   );
 }
 export default Comment;

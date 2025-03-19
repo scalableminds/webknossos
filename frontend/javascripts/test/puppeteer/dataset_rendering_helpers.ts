@@ -2,18 +2,15 @@
 import urljoin from "url-join";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'node... Remove this comment to see the full error message
 import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
-import type { Browser } from "puppeteer";
-import type { TestInterface } from "ava";
-import anyTest from "ava";
+import type { Browser, Page } from "puppeteer-core";
+import puppeteer from "puppeteer-core";
+import anyTest, { type TestFn } from "ava";
 import type { PartialDatasetConfiguration } from "oxalis/store";
-import type { Page } from "puppeteer";
 import mergeImg from "merge-img";
 import pixelmatch from "pixelmatch";
-import { RequestOptions } from "libs/request";
+import type { RequestOptions } from "libs/request";
 import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
-import type { APIDatasetId } from "../../types/api_flow_types";
 import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
-import puppeteer from "puppeteer";
 import { sleep } from "libs/utils";
 
 export const { WK_AUTH_TOKEN } = process.env;
@@ -24,7 +21,7 @@ type Screenshot = {
   height: number;
 };
 
-function getDefaultRequestOptions(baseUrl: string): RequestOptions {
+export function getDefaultRequestOptions(baseUrl: string): RequestOptions {
   if (!WK_AUTH_TOKEN) {
     throw new Error("No WK_AUTH_TOKEN specified.");
   }
@@ -40,7 +37,7 @@ function getDefaultRequestOptions(baseUrl: string): RequestOptions {
 export async function screenshotDataset(
   page: Page,
   baseUrl: string,
-  datasetId: APIDatasetId,
+  datasetId: string,
   optionalViewOverride?: string | null | undefined,
   optionalDatasetConfigOverride?: PartialDatasetConfiguration | null | undefined,
 ): Promise<Screenshot> {
@@ -58,7 +55,7 @@ export async function screenshotDataset(
 export async function screenshotAnnotation(
   page: Page,
   baseUrl: string,
-  datasetId: APIDatasetId,
+  datasetId: string,
   fallbackLayerName: string | null,
   optionalViewOverride?: string | null | undefined,
   optionalDatasetConfigOverride?: PartialDatasetConfiguration | null | undefined,
@@ -77,7 +74,7 @@ export async function screenshotAnnotation(
 async function _screenshotAnnotationHelper(
   page: Page,
   baseUrl: string,
-  datasetId: APIDatasetId,
+  datasetId: string,
   typ: "skeleton" | "volume" | "hybrid",
   fallbackLayerName: string | null,
   optionalViewOverride?: string | null | undefined,
@@ -105,10 +102,10 @@ async function _screenshotAnnotationHelper(
 export async function screenshotDatasetView(
   page: Page,
   baseUrl: string,
-  datasetId: APIDatasetId,
+  datasetId: string,
   optionalViewOverride?: string | null | undefined,
 ): Promise<Screenshot> {
-  const url = `${baseUrl}/datasets/${datasetId.owningOrganization}/${datasetId.name}`;
+  const url = `${baseUrl}/datasets/${datasetId}`;
 
   await openDatasetView(page, url, optionalViewOverride);
   return screenshotTracingView(page);
@@ -117,7 +114,7 @@ export async function screenshotDatasetView(
 export async function screenshotDatasetWithMapping(
   page: Page,
   baseUrl: string,
-  datasetId: APIDatasetId,
+  datasetId: string,
   mappingName: string,
 ): Promise<Screenshot> {
   const options = getDefaultRequestOptions(baseUrl);
@@ -140,7 +137,7 @@ export async function screenshotDatasetWithMapping(
 export async function screenshotDatasetWithMappingLink(
   page: Page,
   baseUrl: string,
-  datasetId: APIDatasetId,
+  datasetId: string,
   optionalViewOverride: string | null | undefined,
 ): Promise<Screenshot> {
   const options = getDefaultRequestOptions(baseUrl);
@@ -160,7 +157,7 @@ export async function screenshotDatasetWithMappingLink(
 export async function screenshotSandboxWithMappingLink(
   page: Page,
   baseUrl: string,
-  datasetId: APIDatasetId,
+  datasetId: string,
   optionalViewOverride: string | null | undefined,
 ): Promise<Screenshot> {
   await openSandboxView(page, baseUrl, datasetId, optionalViewOverride);
@@ -199,7 +196,7 @@ async function waitForRenderingFinish(page: Page) {
   let lastShot = await page.screenshot({
     fullPage: true,
   });
-  let changedPixels = Infinity;
+  let changedPixels = Number.POSITIVE_INFINITY;
 
   // If the screenshot of the page didn't change in the last x seconds, rendering should be finished
   while (currentShot == null || !isPixelEquivalent(changedPixels, width, height)) {
@@ -266,14 +263,11 @@ async function openDatasetView(
 async function openSandboxView(
   page: Page,
   baseUrl: string,
-  datasetId: APIDatasetId,
+  datasetId: string,
   optionalViewOverride: string | null | undefined,
 ) {
   const urlSlug = optionalViewOverride != null ? `#${optionalViewOverride}` : "";
-  const url = urljoin(
-    baseUrl,
-    `/datasets/${datasetId.owningOrganization}/${datasetId.name}/sandbox/skeleton${urlSlug}`,
-  );
+  const url = urljoin(baseUrl, `/datasets/${datasetId}/sandbox/skeleton${urlSlug}`);
   console.log(`Opening sandbox annotation view at ${url}`);
   await page.goto(url, {
     timeout: 0,
@@ -336,7 +330,6 @@ export async function withRetry(
 ) {
   retryCount = 3;
   for (let i = 0; i < retryCount; i++) {
-    // eslint-disable-next-line no-await-in-loop
     const condition = await testFn();
 
     if (condition || i === retryCount - 1) {
@@ -351,39 +344,45 @@ export async function withRetry(
 
 // Ava's recommendation for Typescript types
 // https://github.com/avajs/ava/blob/main/docs/recipes/typescript.md#typing-tcontext
-export const test: TestInterface<{
+export const test = anyTest as TestFn<{
   browser: Browser;
-}> = anyTest as any;
+}>;
 
 export function setupBeforeEachAndAfterEach() {
   test.beforeEach(async (t) => {
-    t.context.browser = await puppeteer.launch({
-      args: [
-        "--headless",
-        "--hide-scrollbars",
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--use-gl=swiftshader",
-      ],
-      dumpio: true,
-    });
+    // TODO Consider removing running local screenshot tests entirely and only use Browserstack
+
+    // Use this for connecting to local Chrome browser instance
+    // t.context.browser = await puppeteer.launch({
+    //   args: [
+    //     "--headless=new",
+    //     "--hide-scrollbars",
+    //     "--no-sandbox",
+    //     "--disable-setuid-sandbox",
+    //     "--disable-dev-shm-usage",
+    //     "--use-gl=swiftshader",
+    //   ],
+    //   dumpio: true,
+    // });
 
     const caps = {
       browser: "chrome",
       browser_version: "latest",
       os: "os x",
       os_version: "mojave",
+      name: t.title, // add test name to BrowserStack session
       "browserstack.username": process.env.BROWSERSTACK_USERNAME,
       "browserstack.accessKey": process.env.BROWSERSTACK_ACCESS_KEY,
     };
-    t.context.browser = await puppeteer.connect({
+    const browser = await puppeteer.connect({
       browserWSEndpoint: `ws://cdp.browserstack.com/puppeteer?caps=${encodeURIComponent(
         JSON.stringify(caps),
       )}`,
     });
+    t.context.browser = browser;
 
     console.log(`\nRunning chrome version ${await t.context.browser.version()}\n`);
+    console.log(`\nBrowserStack Session Id ${await getBrowserstackSessionId(browser)}\n`);
     global.Headers = Headers;
     global.fetch = fetch;
     global.Request = Request;
@@ -395,6 +394,17 @@ export function setupBeforeEachAndAfterEach() {
   test.afterEach.always(async (t) => {
     await t.context.browser.close();
   });
+}
+
+async function getBrowserstackSessionId(browser: Browser) {
+  const page = await browser.newPage();
+  const response = (await page.evaluate(
+    (_) => {},
+    `browserstack_executor: ${JSON.stringify({ action: "getSessionDetails" })}`,
+  )) as unknown as string;
+
+  const sessionDetails = await JSON.parse(response);
+  return sessionDetails.hashed_id;
 }
 
 export function checkBrowserstackCredentials() {

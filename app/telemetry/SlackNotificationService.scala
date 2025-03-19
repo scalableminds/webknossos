@@ -1,8 +1,10 @@
 package telemetry
 
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.slacknotification.SlackClient
 import com.typesafe.scalalogging.LazyLogging
+
 import javax.inject.Inject
 import utils.WkConf
 
@@ -43,10 +45,10 @@ class SlackNotificationService @Inject()(rpc: RPC, config: WkConf) extends LazyL
       msg = msg
     )
 
-  def noticeBaseAnnotationTaskCreation(taskType: List[String], numberOfTasks: Int): Unit =
+  def noticeBaseAnnotationTaskCreation(taskTypeId: ObjectId, numberOfTasks: Int): Unit =
     slackClient.info(
       title = "Task creation with base",
-      msg = s"$numberOfTasks tasks with BaseAnnotation for TaskTypes ${taskType.mkString(", ")} have been created"
+      msg = s"$numberOfTasks tasks with BaseAnnotation for TaskType $taskTypeId have been created"
     )
 
   def noticeSlowRequest(msg: String): Unit =

@@ -382,13 +382,26 @@ program
   });
 
 program
+  .command("insert-local-datastore")
+  .description("Inserts local datastore (note that this is redundant to initialData on webknossos startup)")
+  .action(() => {
+    console.log("Inserting local datastore in the local database");
+    console.log(
+      callPsql(
+        `INSERT INTO webknossos.dataStores(name, url, publicUrl, key) VALUES('localhost', 'http://localhost:9000', 'http://localhost:9000', 'something-secure') ON CONFLICT DO NOTHING`,
+      ),
+    );
+    console.log("✨✨ Done");
+  });
+
+program
   .command("enable-jobs")
   .description("Activates jobs in WEBKNOSSOS by registering a worker")
   .action(() => {
     console.log("Enabling jobs in the local database by inserting a worker.");
     console.log(
       callPsql(
-        `INSERT INTO webknossos.workers(_id, _dataStore, key, supportedJobCommands) VALUES('6194dc03040200b0027f28a1', 'localhost', 'secretWorkerKey', '{compute_mesh_file, convert_to_wkw, export_tiff, find_largest_segment_id, globalize_floodfills, infer_nuclei, infer_neurons, materialize_volume_annotation, render_animation, compute_segment_index_file}') ON CONFLICT DO NOTHING;`,
+        `INSERT INTO webknossos.workers(_id, _dataStore, key, supportedJobCommands, name) VALUES('6194dc03040200b0027f28a1', 'localhost', 'secretWorkerKey', '{compute_mesh_file, convert_to_wkw, export_tiff, find_largest_segment_id, globalize_floodfills, infer_nuclei, infer_neurons, materialize_volume_annotation, render_animation, compute_segment_index_file, infer_mitochondria, train_model, infer_with_model, align_sections}', 'Dev Worker') ON CONFLICT (_id) DO UPDATE SET supportedJobCommands = EXCLUDED.supportedJobCommands;`,
       ),
     );
     console.log("✨✨ Done");

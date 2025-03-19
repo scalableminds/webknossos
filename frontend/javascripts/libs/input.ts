@@ -1,13 +1,13 @@
-import _ from "lodash";
 import Date from "libs/date";
 import Hammer from "libs/hammerjs_wrapper";
 // @ts-expect-error ts-migrate(2306) FIXME: ... Remove this comment to see the full error message
 import KeyboardJS from "libs/keyboard";
 import * as Utils from "libs/utils";
+import window, { document } from "libs/window";
+import _ from "lodash";
+import { type Emitter, createNanoEvents } from "nanoevents";
 import type { Point2 } from "oxalis/constants";
 import constants from "oxalis/constants";
-import window, { document } from "libs/window";
-import { createNanoEvents, Emitter } from "nanoevents";
 // This is the main Input implementation.
 // Although all keys, buttons and sensor are mapped in
 // the controller, this is were the magic happens.
@@ -20,8 +20,9 @@ import { createNanoEvents, Emitter } from "nanoevents";
 // In most cases the heavy lifting is done by libraries in the background.
 export const KEYBOARD_BUTTON_LOOP_INTERVAL = 1000 / constants.FPS;
 const MOUSE_MOVE_DELTA_THRESHOLD = 5;
-export type ModifierKeys = "alt" | "shift" | "ctrl";
+export type ModifierKeys = "alt" | "shift" | "ctrlOrMeta";
 type KeyboardKey = string;
+type MouseButton = string;
 type KeyboardHandler = (event: KeyboardEvent) => void | Promise<void>;
 // Callable Object, see https://www.typescriptlang.org/docs/handbook/2/functions.html#call-signatures
 type KeyboardLoopHandler = {
@@ -32,13 +33,15 @@ type KeyboardLoopHandler = {
 };
 type KeyboardBindingPress = [KeyboardKey, KeyboardHandler, KeyboardHandler];
 type KeyboardBindingDownUp = [KeyboardKey, KeyboardHandler, KeyboardHandler];
-type BindingMap<T extends (...args: Array<any>) => any> = Record<KeyboardKey, T>;
+type KeyBindingMap = Record<KeyboardKey, KeyboardHandler>;
+type KeyBindingLoopMap = Record<KeyboardKey, KeyboardLoopHandler>;
+export type MouseBindingMap = Record<MouseButton, MouseHandler>;
 type MouseButtonWhich = 1 | 2 | 3;
 type MouseButtonString = "left" | "middle" | "right";
-type MouseHandler =
+export type MouseHandler =
   | ((deltaYorX: number, modifier: ModifierKeys | null | undefined) => void)
-  | ((position: Point2, id: string | null | undefined, event: MouseEvent) => void)
-  | ((delta: Point2, position: Point2, id: string | null | undefined, event: MouseEvent) => void);
+  | ((position: Point2, id: string, event: MouseEvent, isTouch: boolean) => void)
+  | ((delta: Point2, position: Point2, id: string, event: MouseEvent) => void);
 type HammerJsEvent = {
   center: Point2;
   pointers: Array<Record<string, any>>;
@@ -76,11 +79,12 @@ export class InputKeyboardNoLoop {
   cancelExtendedModeTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
-    initialBindings: BindingMap<KeyboardHandler>,
+    initialBindings: KeyBindingMap,
     options?: {
       supportInputElements?: boolean;
     },
-    extendedCommands?: BindingMap<KeyboardHandler>,
+    extendedCommands?: KeyBindingMap,
+    keyUpBindings?: KeyBindingMap,
   ) {
     if (options) {
       this.supportInputElements = options.supportInputElements || this.supportInputElements;
@@ -97,16 +101,17 @@ export class InputKeyboardNoLoop {
       document.addEventListener("keydown", this.preventBrowserSearchbarShortcut);
       this.attach(EXTENDED_COMMAND_KEYS, this.toggleExtendedMode);
       // Add empty callback in extended mode to deactivate the extended mode via the same EXTENDED_COMMAND_KEYS.
-      this.attach(EXTENDED_COMMAND_KEYS, _.noop, true);
+      this.attach(EXTENDED_COMMAND_KEYS, _.noop, _.noop, true);
       for (const key of Object.keys(extendedCommands)) {
         const callback = extendedCommands[key];
-        this.attach(key, callback, true);
+        this.attach(key, callback, _.noop, true);
       }
     }
 
     for (const key of Object.keys(initialBindings)) {
       const callback = initialBindings[key];
-      this.attach(key, callback);
+      const keyUpCallback = keyUpBindings != null ? keyUpBindings[key] : _.noop;
+      this.attach(key, callback, keyUpCallback);
     }
   }
 
@@ -125,7 +130,7 @@ export class InputKeyboardNoLoop {
   };
 
   preventBrowserSearchbarShortcut = (evt: KeyboardEvent) => {
-    if (evt.ctrlKey && evt.key === "k") {
+    if ((evt.ctrlKey || evt.metaKey) && evt.key === "k") {
       evt.preventDefault();
       evt.stopPropagation();
     }
@@ -138,7 +143,12 @@ export class InputKeyboardNoLoop {
     }
   }
 
-  attach(key: KeyboardKey, callback: KeyboardHandler, isExtendedCommand: boolean = false) {
+  attach(
+    key: KeyboardKey,
+    keyDownCallback: KeyboardHandler,
+    keyUpCallback: KeyboardHandler = _.noop,
+    isExtendedCommand: boolean = false,
+  ) {
     const binding = [
       key,
       (event: KeyboardEvent) => {
@@ -160,13 +170,15 @@ export class InputKeyboardNoLoop {
         }
 
         if (!event.repeat) {
-          callback(event);
+          keyDownCallback(event);
         } else {
           event.preventDefault();
           event.stopPropagation();
         }
       },
-      _.noop,
+      (event: KeyboardEvent) => {
+        keyUpCallback(event);
+      },
     ];
     if (isExtendedCommand) {
       KeyboardJS.withContext("extended", () => {
@@ -196,7 +208,7 @@ export class InputKeyboardNoLoop {
 // It is able to handle key-presses and will continuously
 // fire the attached callback.
 export class InputKeyboard {
-  keyCallbackMap: Record<string, KeyboardLoopHandler> = {};
+  keyCallbackMap: KeyBindingLoopMap = {};
   keyPressedCount: number = 0;
   bindings: Array<KeyboardBindingDownUp> = [];
   isStarted: boolean = true;
@@ -204,7 +216,7 @@ export class InputKeyboard {
   supportInputElements: boolean = false;
 
   constructor(
-    initialBindings: BindingMap<KeyboardLoopHandler>,
+    initialBindings: KeyBindingLoopMap,
     options?: {
       delay?: number;
       supportInputElements?: boolean;
@@ -293,7 +305,7 @@ export class InputKeyboard {
     this.bindings.push(binding);
   }
 
-  // In order to continously fire callbacks we have to loop
+  // In order to continuously fire callbacks we have to loop
   // through all the buttons that a marked as "pressed".
   buttonLoop() {
     if (!this.isStarted) {
@@ -328,22 +340,17 @@ export class InputKeyboard {
 }
 
 // The mouse module.
-// Events: over, out, leftClick, rightClick, leftDownMove
+// Events: over, out, {left,right}Click, {left,right}DownMove, leftDoubleClick
 class InputMouseButton {
   mouse: InputMouse;
   name: MouseButtonString;
   which: MouseButtonWhich;
-  id: string | null | undefined;
+  id: string;
   down: boolean = false;
   drag: boolean = false;
   moveDelta: number = 0;
 
-  constructor(
-    name: MouseButtonString,
-    which: MouseButtonWhich,
-    mouse: InputMouse,
-    id: string | null | undefined,
-  ) {
+  constructor(name: MouseButtonString, which: MouseButtonWhich, mouse: InputMouse, id: string) {
     this.name = name;
     this.which = which;
     this.mouse = mouse;
@@ -386,6 +393,19 @@ class InputMouseButton {
     }
   }
 
+  handleDoubleClick(event: MouseEvent, triggeredByTouch: boolean): void {
+    // DoubleClick is only supported for the left mouse button
+    if (this.name === "left" && this.moveDelta <= MOUSE_MOVE_DELTA_THRESHOLD) {
+      this.mouse.emitter.emit(
+        "leftDoubleClick",
+        this.mouse.lastPosition,
+        this.id,
+        event,
+        triggeredByTouch,
+      );
+    }
+  }
+
   handleMouseMove(event: MouseEvent, delta: Point2): void {
     if (this.down) {
       this.moveDelta += Math.abs(delta.x) + Math.abs(delta.y);
@@ -399,7 +419,7 @@ export class InputMouse {
   emitter: Emitter;
   targetId: string;
   hammerManager: typeof Hammer;
-  id: string | null | undefined;
+  id: string;
   leftMouseButton: InputMouseButton;
   middleMouseButton: InputMouseButton;
   rightMouseButton: InputMouseButton;
@@ -416,8 +436,8 @@ export class InputMouse {
 
   constructor(
     targetId: string,
-    initialBindings: BindingMap<MouseHandler> = {},
-    id: string | null | undefined = null,
+    initialBindings: MouseBindingMap,
+    id: string,
     ignoreScrollingWhileDragging: boolean = false,
   ) {
     this.emitter = createNanoEvents();
@@ -439,6 +459,7 @@ export class InputMouse {
     document.addEventListener("mousemove", this.mouseMove);
     document.addEventListener("mouseup", this.mouseUp);
     document.addEventListener("touchend", this.touchEnd);
+    document.addEventListener("dblclick", this.doubleClick);
 
     this.delegatedEvents = {
       ...Utils.addEventListenerWithDelegation(
@@ -491,6 +512,7 @@ export class InputMouse {
     document.removeEventListener("mousemove", this.mouseMove);
     document.removeEventListener("mouseup", this.mouseUp);
     document.removeEventListener("touchend", this.touchEnd);
+    document.removeEventListener("dblclick", this.doubleClick);
 
     for (const [eventName, eventHandler] of Object.entries(this.delegatedEvents)) {
       document.removeEventListener(eventName, eventHandler);
@@ -541,6 +563,12 @@ export class InputMouse {
 
     if (this.isHit(event)) {
       this.mouseOver();
+    }
+  };
+
+  doubleClick = (event: MouseEvent): void => {
+    if (this.isHit(event)) {
+      this.leftMouseButton.handleDoubleClick(event, false);
     }
   };
 
@@ -640,8 +668,8 @@ export class InputMouse {
       modifier = "shift";
     } else if (event.altKey) {
       modifier = "alt";
-    } else if (event.ctrlKey) {
-      modifier = "ctrl";
+    } else if (event.ctrlKey || event.metaKey) {
+      modifier = "ctrlOrMeta";
     }
 
     this.emitter.emit("scroll", delta, modifier);

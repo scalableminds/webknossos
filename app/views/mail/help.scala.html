@@ -1,6 +1,6 @@
-@( name: String, organizationDisplayName: String, message: String, currentUrl: String)
+@( name: String, organizationName: String, message: String, currentUrl: String, additionalFooter: String)
 
-@emailBaseTemplate() {
+@emailBaseTemplate(additionalFooter) {
 <p>Hi WEBKNOSSOS team</p>
 <p>I have a question or feedback for you:</p>
 <p>
@@ -9,5 +9,5 @@
 
 <p>Current URL: @{currentUrl}</p>
 
-<p>With best regards,<br />@{name} from @{organizationDisplayName}</p>
+<p>With best regards,<br />@{name} from @{organizationName}</p>
 }

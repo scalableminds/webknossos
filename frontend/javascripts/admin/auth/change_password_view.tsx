@@ -1,12 +1,11 @@
-import React from "react";
-import { RouteComponentProps, withRouter } from "react-router-dom";
-import { Form, Input, Button, Col, Row, Alert } from "antd";
 import { LockOutlined } from "@ant-design/icons";
+import { Alert, Button, Col, Form, Input, Row } from "antd";
 import Request from "libs/request";
-import messages from "messages";
 import Toast from "libs/toast";
+import messages from "messages";
 import { logoutUserAction } from "oxalis/model/actions/user_actions";
 import Store from "oxalis/store";
+import { type RouteComponentProps, withRouter } from "react-router-dom";
 const FormItem = Form.Item;
 const { Password } = Input;
 

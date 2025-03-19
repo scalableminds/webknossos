@@ -1,4 +1,3 @@
-import { Button, Modal, Tag, Card, Row, Col, List, Tooltip } from "antd";
 import {
   CheckCircleOutlined,
   DeleteOutlined,
@@ -9,42 +8,34 @@ import {
   TeamOutlined,
   UserAddOutlined,
 } from "@ant-design/icons";
-import { Link } from "react-router-dom";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
-import { connect } from "react-redux";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
-import Markdown from "react-remarkable";
+import { Button, Card, Col, List, Modal, Row, Space, Tag, Tooltip } from "antd";
+import Markdown from "libs/markdown_adapter";
 import * as React from "react";
+import { connect } from "react-redux";
+import { Link } from "react-router-dom";
 
+import { deleteAnnotation, downloadAnnotation, resetAnnotation } from "admin/admin_rest_api";
+import { finishTask, peekNextTasks, requestTask } from "admin/api/tasks";
 import classNames from "classnames";
-import type { APITaskWithAnnotation, APIUser, APIAnnotation } from "types/api_flow_types";
 import { AsyncButton, AsyncLink } from "components/async_clickables";
-import type { OxalisState } from "oxalis/store";
-import {
-  deleteAnnotation,
-  resetAnnotation,
-  finishTask,
-  requestTask,
-  peekNextTasks,
-  downloadAnnotation,
-} from "admin/admin_rest_api";
-import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import { getSkeletonDescriptor } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
-import { handleGenericError } from "libs/error_handling";
 import FormattedDate from "components/formatted_date";
 import LinkButton from "components/link_button";
+import TransferTaskModal from "dashboard/transfer_task_modal";
+import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
 import Request from "libs/request";
 import Toast from "libs/toast";
-import TransferTaskModal from "dashboard/transfer_task_modal";
 import * as Utils from "libs/utils";
 import messages from "messages";
+import { getSkeletonDescriptor } from "oxalis/model/accessors/skeletontracing_accessor";
+import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
+import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
+import type { OxalisState } from "oxalis/store";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
+import type { APIAnnotation, APITaskWithAnnotation, APIUser } from "types/api_flow_types";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 
-const typeHint: APITaskWithAnnotation[] = [];
 const pageLength: number = 1000;
 
 export type TaskModeState = {
@@ -235,37 +226,25 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         .map((team) => team.name)
         .includes(task.team);
     const label = this.props.isAdminView ? (
-      <span>
-        <EyeOutlined className="icon-margin-right" />
-        View
-      </span>
+      <LinkButton icon={<EyeOutlined />}>View</LinkButton>
     ) : (
-      <span>
-        <PlayCircleOutlined className="icon-margin-right" />
-        Open
-      </span>
+      <LinkButton icon={<PlayCircleOutlined />}>Open</LinkButton>
     );
     return task.annotation.state === "Finished" ? (
       <div>
         <CheckCircleOutlined className="icon-margin-right" />
         Finished
-        <br />
       </div>
     ) : (
-      <div>
+      <Space direction="vertical" size={1}>
         <Link to={`/annotations/${annotation.id}`}>{label}</Link>
-        <br />
         {isAdmin || this.props.isAdminView ? (
-          <div>
-            <LinkButton onClick={() => this.openTransferModal(annotation.id)}>
-              <TeamOutlined className="icon-margin-right" />
-              Transfer
-            </LinkButton>
-            <br />
-          </div>
+          <LinkButton onClick={() => this.openTransferModal(annotation.id)} icon={<TeamOutlined />}>
+            Transfer
+          </LinkButton>
         ) : null}
         {isAdmin ? (
-          <div>
+          <>
             <AsyncLink
               href="#"
               onClick={() => {
@@ -276,30 +255,24 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
             >
               Download
             </AsyncLink>
-            <br />
-            <LinkButton onClick={() => this.resetTask(annotation)}>
+            <LinkButton onClick={() => this.resetTask(annotation)} icon={<RollbackOutlined />}>
               <Tooltip title={messages["task.tooltip_explain_reset"]} placement="left">
-                <RollbackOutlined className="icon-margin-right" />
                 Reset
               </Tooltip>
             </LinkButton>
-            <br />
-            <LinkButton onClick={() => this.cancelAnnotation(annotation)}>
+            <LinkButton onClick={() => this.cancelAnnotation(annotation)} icon={<DeleteOutlined />}>
               <Tooltip title={messages["task.tooltip_explain_reset_cancel"]} placement="left">
-                <DeleteOutlined className="icon-margin-right" />
                 Reset and Cancel
               </Tooltip>
             </LinkButton>
-            <br />
-          </div>
+          </>
         ) : null}
         {this.props.isAdminView ? null : (
-          <LinkButton onClick={() => this.confirmFinish(task)}>
-            <CheckCircleOutlined className="icon-margin-right" />
+          <LinkButton onClick={() => this.confirmFinish(task)} icon={<CheckCircleOutlined />}>
             Finish
           </LinkButton>
         )}
-      </div>
+      </Space>
     );
   };
 
@@ -417,7 +390,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
                         as part of the WEBKNOSSOS project management.{" "}
                       </p>
                       <a
-                        href="https://docs.webknossos.org/webknossos/tasks.html"
+                        href="https://docs.webknossos.org/webknossos/tasks_projects/index.html"
                         rel="noopener noreferrer"
                         target="_blank"
                       >
@@ -441,8 +414,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 
   renderTaskList() {
     const tasks = this.getCurrentTasks().sort(
-      Utils.compareBy(
-        typeHint,
+      Utils.compareBy<APITaskWithAnnotation>(
         (task) => (this.state.showFinishedTasks ? task.annotation.modified : task.created),
         false,
       ),
@@ -502,14 +474,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
           <Row gutter={16}>
             <Col span={16}>
               <div className={descriptionClassName}>
-                <Markdown
-                  source={task.type.description}
-                  options={{
-                    html: false,
-                    breaks: true,
-                    linkify: true,
-                  }}
-                />
+                <Markdown>{task.type.description}</Markdown>
               </div>
             </Col>
             <Col span={8}>

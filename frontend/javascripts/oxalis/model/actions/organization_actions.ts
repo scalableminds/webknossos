@@ -8,4 +8,4 @@ export const setActiveOrganizationAction = (organization: APIOrganization) =>
   ({
     type: "SET_ACTIVE_ORGANIZATION",
     organization,
-  } as const);
+  }) as const;

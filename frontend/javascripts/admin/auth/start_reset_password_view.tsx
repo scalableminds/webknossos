@@ -1,10 +1,9 @@
-import React from "react";
-import { RouteComponentProps, withRouter } from "react-router-dom";
-import { Form, Input, Button, Col, Row, Card } from "antd";
 import { MailOutlined } from "@ant-design/icons";
+import { Button, Card, Col, Form, Input, Row } from "antd";
 import Request from "libs/request";
-import messages from "messages";
 import Toast from "libs/toast";
+import messages from "messages";
+import { Link, type RouteComponentProps, withRouter } from "react-router-dom";
 const FormItem = Form.Item;
 type Props = {
   history: RouteComponentProps["history"];
@@ -61,6 +60,7 @@ function StartResetPasswordView({ history }: Props) {
               </Button>
             </FormItem>
           </Form>
+          <Link to="/auth/login">Back to Login</Link>
         </Card>
       </Col>
     </Row>

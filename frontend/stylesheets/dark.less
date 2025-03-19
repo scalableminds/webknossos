@@ -1,4 +1,9 @@
 .dark-theme {
+  .metadata-table {
+    --compact-table-bg1: #262626;
+    --compact-table-bg2: #1A1A1A;
+    --compact-table-border: #4A4A4A;
+  }
 
   .brain-loading-content img {
     filter: invert(1) contrast(0.7);
@@ -21,6 +26,12 @@
     }
   }
 
+  // virtualized Ant <Tree> components draw a scrollbar drag handle using some div
+  // The default color values are not visible in dark mode, so we override them
+  // Remove after https://github.com/ant-design/ant-design/issues/47565 is fixed
+  .ant-tree-list-scrollbar .ant-tree-list-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.5) !important
+  }
 
   // Change the bright versions to dark, too
   .icon-sidebar-hide-left-bright {
@@ -51,9 +62,8 @@
     }
   }
 
-  
   .floating-buttons-bar {
-    // Navigation buttons for mobile 
+    // Navigation buttons for mobile
     .ant-btn-default {
       color: rgba(0, 0, 0, 0.85);
       background: white;
@@ -91,6 +101,10 @@
     background-image: url("/assets/images/drawings/empty-list-dataset-upload-dark.svg");
   }
 
+  .drawing-forbidden-view {
+    background-image: url("/assets/images/drawings/forbidden-view-dark.svg");
+  }
+
   .icon-mouse-left {
     background-image: url("/assets/images/icon-mouse-left-dark.svg");
   }
@@ -105,5 +119,9 @@
 
   .dataset-table-thumbnail.icon-thumbnail {
     filter: invert() contrast(0.8);
+  }
+
+  .deemphasized {
+    color: #afb8ba;
   }
 }

@@ -1,14 +1,16 @@
-import type { Dispatch } from "redux";
-import { Alert, Slider, Row, Col, InputNumber, Spin, Tooltip } from "antd";
-import { connect } from "react-redux";
-import * as React from "react";
-import * as _ from "lodash";
-import { PRIMARY_COLOR, Vector2, Vector3 } from "oxalis/constants";
-import type { APIHistogramData, HistogramDatum, ElementClass } from "types/api_flow_types";
+import { CloseOutlined } from "@ant-design/icons";
+import { Alert, Col, InputNumber, Row, Spin } from "antd";
+import FastTooltip from "components/fast_tooltip";
+import { Slider } from "components/slider";
 import { roundTo } from "libs/utils";
+import * as _ from "lodash";
+import { PRIMARY_COLOR, type Vector2, type Vector3 } from "oxalis/constants";
 import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
 import type { DatasetLayerConfiguration } from "oxalis/store";
-import { CloseOutlined } from "@ant-design/icons";
+import * as React from "react";
+import { connect } from "react-redux";
+import type { Dispatch } from "redux";
+import type { APIHistogramData, ElementClass, HistogramDatum } from "types/api_flow_types";
 
 type OwnProps = {
   data: APIHistogramData | null | undefined;
@@ -246,7 +248,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
           style={{ margin: 10 }}
           message={
             <>
-              Histogram couldn&apos;t be fetched.{" "}
+              Histogram couldn’t be fetched.{" "}
               <a href="#" onClick={this.props.reloadHistogram}>
                 Retry
               </a>
@@ -296,7 +298,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
               <label className="setting-label">Min:</label>
             </Col>
             <Col span={8}>
-              <Tooltip title={tooltipTitleFor("minimum")}>
+              <FastTooltip title={tooltipTitleFor("minimum")}>
                 <InputNumber
                   size="small"
                   min={defaultMinMax[0]}
@@ -306,7 +308,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
                   variant="borderless"
                   onChange={(value) => {
                     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
-                    value = parseFloat(value);
+                    value = Number.parseFloat(value);
 
                     if (value <= maxRange) {
                       this.setState({
@@ -317,7 +319,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
                   }}
                   style={minMaxInputStyle}
                 />
-              </Tooltip>
+              </FastTooltip>
             </Col>
             <Col span={3}>
               <label
@@ -331,7 +333,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
               </label>
             </Col>
             <Col span={8}>
-              <Tooltip title={tooltipTitleFor("maximum")}>
+              <FastTooltip title={tooltipTitleFor("maximum")}>
                 <InputNumber
                   size="small"
                   min={minRange}
@@ -341,7 +343,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
                   variant="borderless"
                   onChange={(value) => {
                     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
-                    value = parseFloat(value);
+                    value = Number.parseFloat(value);
 
                     if (value >= minRange) {
                       this.setState({
@@ -352,9 +354,9 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
                   }}
                   style={minMaxInputStyle}
                 />
-              </Tooltip>
+              </FastTooltip>
             </Col>
-            <Tooltip title="Stop editing histogram range">
+            <FastTooltip title="Stop editing histogram range">
               <Col
                 span={2}
                 style={{ textAlign: "right", cursor: "pointer" }}
@@ -362,7 +364,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
               >
                 <CloseOutlined />
               </Col>
-            </Tooltip>
+            </FastTooltip>
           </Row>
         ) : null}
       </Spin>

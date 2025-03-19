@@ -8,38 +8,31 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/24.02.3...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/25.02.1...HEAD)
 
 ### Added
-- Added support for storing analytics events in the Postgres. [#7594](https://github.com/scalableminds/webknossos/pull/7594) [#7609](https://github.com/scalableminds/webknossos/pull/7609)
-- Segment statistics are now available for ND datasets. [#7411](https://github.com/scalableminds/webknossos/pull/7411)
-- Added support for uploading N5 and Neuroglancer Precomputed datasets. [#7578](https://github.com/scalableminds/webknossos/pull/7578)
-- Webknossos can now open ND Zarr datasets with arbitrary axis orders (not limited to `**xyz` anymore). [#7592](https://github.com/scalableminds/webknossos/pull/7592)
+- Added a command palette that allows navigating between pages, switching tools and accessing some user settings via Ctrl+P. [#8447](https://github.com/scalableminds/webknossos/pull/8447/)
+- Failed jobs may be retried by super-users. [#8377](https://github.com/scalableminds/webknossos/pull/8377)
 
 ### Changed
-- Datasets stored in WKW format are no longer loaded with memory mapping, reducing memory demands. [#7528](https://github.com/scalableminds/webknossos/pull/7528)
-- Content Security Policy (CSP) settings are now relaxed by default. To keep stricter CSP rules, add them to your specific `application.conf`. [#7589](https://github.com/scalableminds/webknossos/pull/7589)
-- WEBKNOSSOS now uses Java 21. [#7599](https://github.com/scalableminds/webknossos/pull/7599)
-- Email verification is disabled by default. To enable it, set `webKnossos.user.emailVerification.activated` to `true` in your `application.conf`. [#7620](https://github.com/scalableminds/webknossos/pull/7620) [#7621](https://github.com/scalableminds/webknossos/pull/7621)
-- Added more documentation for N5 and Neuroglancer precomputed web upload. [#7622](https://github.com/scalableminds/webknossos/pull/7622)
-- Added the config key `webKnossos.user.timeTrackingOnlyWithSignificantChanges`, which when set to `true` will only track time if the user has made significant changes to the annotation. [#7627](https://github.com/scalableminds/webknossos/pull/7627)
+- When using a zarr link to a wk-served data layer as another layer’s source, the user’s token is used to access the data. [#8322](https://github.com/scalableminds/webknossos/pull/8322/)
+- Compound annotations (created when viewing all annotations of a task) no longer permanently store data in the FossilDB. [#8422](https://github.com/scalableminds/webknossos/pull/8422)
+- When creating multiple tasks at once (bulk task creation), they now all need to have the same task type. [#8405](https://github.com/scalableminds/webknossos/pull/8405)
+- Improved performance when changing the layout/viewports. [#8448](https://github.com/scalableminds/webknossos/pull/8448)
 
 ### Fixed
-- Fixed rare SIGBUS crashes of the datastore module that were caused by memory mapping on unstable file systems. [#7528](https://github.com/scalableminds/webknossos/pull/7528)
-- Fixed loading local datasets for organizations that have spaces in their names. [#7593](https://github.com/scalableminds/webknossos/pull/7593)
-- Fixed a bug where proofreading annotations would stay black until the next server restart due to expired but cached tokens. [#7598](https://github.com/scalableminds/webknossos/pull/7598)
-- Fixed a bug where ad-hoc meshing didn't make use of a segment index, even when it existed. [#7600](https://github.com/scalableminds/webknossos/pull/7600)
-- Fixed a bug where importing remote datasets with existing datasource-properties.jsons would not properly register the remote credentials. [#7601](https://github.com/scalableminds/webknossos/pull/7601)
-- Fixed a bug in ND volume annotation downloads where the additionalAxes metadata had wrong indices. [#7592](https://github.com/scalableminds/webknossos/pull/7592)
-- Fixed a bug in proofreading aka editable mapping annotations where splitting would sometimes give the new id to the selected segment rather than to the split-off one. [#7608](https://github.com/scalableminds/webknossos/pull/7608)
-- Fixed small styling errors as a follow-up to the antd v5 upgrade. [#7612](https://github.com/scalableminds/webknossos/pull/7612)
-- Fixed deprecation warnings caused by Antd \<Collapse\> components. [#7610](https://github.com/scalableminds/webknossos/pull/7610)
-- Fixed small styling error with a welcome notification for new users on webknossos.org. [#7623](https://github.com/scalableminds/webknossos/pull/7623)
-- Fixed that filtering by tags could produce false positives. [#7640](https://github.com/scalableminds/webknossos/pull/7640)
-- Fixed a slight offset when creating a node with the mouse. [#7639](https://github.com/scalableminds/webknossos/pull/7639)
-- Fixed small styling error with NML drag and drop uploading. [7641](https://github.com/scalableminds/webknossos/pull/7641)
+- Fixed a bug that would lock a non-existing mapping to an empty segmentation layer under certain conditions. [#8401](https://github.com/scalableminds/webknossos/pull/8401)
+- Fixed the alignment of the button that allows restricting floodfill operations to a bounding box. [#8388](https://github.com/scalableminds/webknossos/pull/8388) 
+- Fixed rare bug where saving got stuck. [#8409](https://github.com/scalableminds/webknossos/pull/8409)
+- Fixed a bug where reverting annotations could get stuck if some of its layers had been deleted in the meantime. [#8405](https://github.com/scalableminds/webknossos/pull/8405)
+- When removing a segment from the segment list, a corresponding precomputed mesh was not removed automatically. [#8428](https://github.com/scalableminds/webknossos/pull/8428)
+- Fixed a bug where newly added remote datasets would always appear in root folder, regardless of actual selected folder. [#8425](https://github.com/scalableminds/webknossos/pull/8425)
+- Fixed a bug where the python libs functionality `wk.RemoteDataset.explore_and_add_remote` would error. [#8425](https://github.com/scalableminds/webknossos/pull/8425)
+- Fixed a bug where various UI dialogs would be dark mode even the user preferred a light theme. [#8445](https://github.com/scalableminds/webknossos/pull/8445)
+- Fixed an issue with icon spacing on the task dashboard page. [#8452](https://github.com/scalableminds/webknossos/pull/8452)
+- Fixed a spacing issue in the statusbar. [#8455](https://github.com/scalableminds/webknossos/pull/8455)
+- Fixed a bug where the "Create Animation" modal did not open when selecting the corresponding feature from the navbar menu. [#8444](https://github.com/scalableminds/webknossos/pull/8444)
 
 ### Removed
 
 ### Breaking Changes
-- Updated antd UI library from version 4.24.15 to 5.13.2. Drop support for nodeJs version <18. [#7522](https://github.com/scalableminds/webknossos/pull/7522)

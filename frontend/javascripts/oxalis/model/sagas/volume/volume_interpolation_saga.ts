@@ -3,21 +3,20 @@ import distanceTransform from "distance-transform";
 import { V2, V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
-import ndarray, { NdArray } from "ndarray";
+import ndarray, { type NdArray } from "ndarray";
 import {
   ContourModeEnum,
   InterpolationModeEnum,
   OrthoViews,
   ToolsWithInterpolationCapabilities,
-  TypedArrayWithoutBigInt,
-  Vector3,
+  type TypedArrayWithoutBigInt,
+  type Vector3,
 } from "oxalis/constants";
-import { Model, api } from "oxalis/singletons";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
-import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getMagInfo } from "oxalis/model/accessors/dataset_accessor";
 import {
-  getFlooredPosition,
   getActiveMagIndexForLayer,
+  getFlooredPosition,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
   enforceActiveVolumeTracing,
@@ -34,9 +33,11 @@ import {
 import Dimensions from "oxalis/model/dimensions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
-import { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
-import { OxalisState } from "oxalis/store";
+import type { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
+import { Model, api } from "oxalis/singletons";
+import type { OxalisState } from "oxalis/store";
 import { call, put } from "typed-redux-saga";
+import { requestBucketModificationInVolumeTracing } from "../saga_helpers";
 import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } from "./helpers";
 
 /*
@@ -69,7 +70,7 @@ function _getInterpolationInfo(state: OxalisState, explanationPrefix: string) {
       isDisabled: true,
       activeViewport: OrthoViews.PLANE_XY,
       previousCentroid: null,
-      labeledResolution: [1, 1, 1] as Vector3,
+      labeledMag: [1, 1, 1] as Vector3,
       labeledZoomStep: 0,
       interpolationDepth,
       directionFactor,
@@ -83,14 +84,14 @@ function _getInterpolationInfo(state: OxalisState, explanationPrefix: string) {
 
   const segmentationLayer = Model.getSegmentationTracingLayer(volumeTracing.tracingId);
   const requestedZoomStep = getActiveMagIndexForLayer(state, segmentationLayer.name);
-  const resolutionInfo = getResolutionInfo(segmentationLayer.resolutions);
-  const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
-  const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
+  const magInfo = getMagInfo(segmentationLayer.mags);
+  const labeledZoomStep = magInfo.getClosestExistingIndex(requestedZoomStep);
+  const labeledMag = magInfo.getMagByIndexOrThrow(labeledZoomStep);
 
   const previousCentroid = getLabelActionFromPreviousSlice(
     state,
     volumeTracing,
-    labeledResolution,
+    labeledMag,
     thirdDim,
   )?.centroid;
 
@@ -100,12 +101,12 @@ function _getInterpolationInfo(state: OxalisState, explanationPrefix: string) {
   if (previousCentroid != null) {
     const position = getFlooredPosition(state.flycam);
     // Note that in coarser mags (e.g., 8-8-2), the comparison of the coordinates
-    // is done while respecting how the coordinates are clipped due to that resolution.
+    // is done while respecting how the coordinates are clipped due to that magnification.
     // For example, in mag 8-8-2, the z distance needs to be divided by two, since it is measured
     // in global coordinates.
-    const adapt = (vec: Vector3) => V3.roundElementToResolution(vec, labeledResolution, thirdDim);
+    const adapt = (vec: Vector3) => V3.roundElementToMag(vec, labeledMag, thirdDim);
     const signedInterpolationDepth = Math.floor(
-      V3.sub(adapt(position), adapt(previousCentroid))[thirdDim] / labeledResolution[thirdDim],
+      V3.sub(adapt(position), adapt(previousCentroid))[thirdDim] / labeledMag[thirdDim],
     );
     directionFactor = Math.sign(signedInterpolationDepth);
     interpolationDepth = Math.abs(signedInterpolationDepth);
@@ -141,7 +142,7 @@ function _getInterpolationInfo(state: OxalisState, explanationPrefix: string) {
     isDisabled,
     activeViewport,
     previousCentroid,
-    labeledResolution,
+    labeledMag,
     labeledZoomStep,
     interpolationDepth,
     directionFactor,
@@ -161,10 +162,11 @@ const isEqual = cwise({
 const isEqualFromBigUint64: (
   output: NdArray<TypedArrayWithoutBigInt>,
   a: NdArray<BigUint64Array>,
-  b: BigInt,
+  b: bigint,
 ) => void = cwise({
   args: ["array", "array", "scalar"],
-  body: function body(output: number, a: BigInt, b: BigInt) {
+  // biome-ignore lint/correctness/noUnusedVariables: output is needed for the assignment
+  body: function body(output: number, a: bigint, b: bigint) {
     output = a === b ? 1 : 0;
   },
 });
@@ -176,7 +178,7 @@ const isNonZero = cwise({
   // Also, cwise uses this function content to build
   // the target function. Adding a return here would not
   // yield the desired behavior for isNonZero.
-  // eslint-disable-next-line consistent-return, object-shorthand
+
   body: function (a) {
     if (a > 0) {
       return true;
@@ -184,7 +186,7 @@ const isNonZero = cwise({
   },
   // The following function is parsed by cwise which is why
   // the shorthand syntax is not supported.
-  // eslint-disable-next-line object-shorthand
+
   post: function () {
     return false;
   },
@@ -206,6 +208,7 @@ const absMax = cwise({
 
 const assign = cwise({
   args: ["array", "array"],
+  // biome-ignore lint/correctness/noUnusedVariables: a is needed for the assignment
   body: function body(a: number, b: number) {
     a = b;
   },
@@ -216,7 +219,7 @@ export function copyNdArray(
   arr: ndarray.NdArray,
 ): ndarray.NdArray {
   const { shape } = arr;
-  let stride;
+  let stride: number[];
 
   if (arr.shape.length === 3) {
     stride = [1, shape[0], shape[0] * shape[1]];
@@ -279,11 +282,11 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
 
   // Disable copy-segmentation for the same zoom steps where the brush/trace tool is forbidden, too.
-  const isResolutionTooLow = yield* select((state) =>
+  const isMagTooLow = yield* select((state) =>
     isVolumeAnnotationDisallowedForZoom(activeTool, state),
   );
 
-  if (isResolutionTooLow) {
+  if (isMagTooLow) {
     Toast.warning(
       'The "interpolate segmentation"-feature is not supported at this zoom level. Please zoom in further.',
     );
@@ -294,7 +297,7 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     activeViewport,
     previousCentroid,
     disabledExplanation,
-    labeledResolution,
+    labeledMag,
     labeledZoomStep,
     interpolationDepth,
     directionFactor,
@@ -330,11 +333,11 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   const relevantBoxMag1 = viewportBoxMag1
     // Consider the n previous/next slices
     .paddedWithSignedMargins(
-      transpose([0, 0, -directionFactor * interpolationDepth * labeledResolution[thirdDim]]),
+      transpose([0, 0, -directionFactor * interpolationDepth * labeledMag[thirdDim]]),
     )
-    .alignWithMag(labeledResolution, "grow")
+    .alignWithMag(labeledMag, "grow")
     .rounded();
-  const relevantBoxCurrentMag = relevantBoxMag1.fromMag1ToMag(labeledResolution);
+  const relevantBoxCurrentMag = relevantBoxMag1.fromMag1ToMag(labeledMag);
 
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   const inputData = yield* call(
@@ -349,7 +352,6 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   const stride = [1, size[0], size[0] * size[1]];
   const inputNd = ndarray(inputData, size, stride).transpose(firstDim, secondDim, thirdDim);
 
-  // eslint-disable-next-line no-nested-ternary
   const adaptedInterpolationRange = onlyExtrude
     ? // When extruding and...
       directionFactor > 0
@@ -370,8 +372,8 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
       createVolumeLayer,
       volumeTracing,
       activeViewport,
-      labeledResolution,
-      relevantBoxMag1.min[thirdDim] + labeledResolution[thirdDim] * targetOffsetW,
+      labeledMag,
+      relevantBoxMag1.min[thirdDim] + labeledMag[thirdDim] * targetOffsetW,
     );
     interpolationVoxelBuffers[targetOffsetW] = interpolationLayer.createVoxelBuffer2D(
       V2.floor(
@@ -386,8 +388,8 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
 
   // These two variables will be initialized with binary masks (representing whether
   // a voxel contains the active segment id).
-  let firstSlice;
-  let lastSlice;
+  let firstSlice: NdArray<TypedArrayWithoutBigInt>;
+  let lastSlice: NdArray<TypedArrayWithoutBigInt>;
 
   const isBigUint64 = inputNd.data instanceof BigUint64Array;
   if (isBigUint64) {
@@ -433,6 +435,14 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     );
     return;
   }
+  // As the interpolation will be applied, the potentially existing mapping should be locked to ensure a consistent state.
+  const isModificationAllowed = yield* call(
+    requestBucketModificationInVolumeTracing,
+    volumeTracing,
+  );
+  if (!isModificationAllowed) {
+    return;
+  }
 
   // In the extrusion case, we don't need any distance transforms. The binary
   // masks are enough to decide whether a voxel needs to be written.
@@ -473,7 +483,7 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
 
   // Theoretically, the user might extrude (or interpolate, even though this is less likely) multiple
-  // times (e.g., from slice 0 to 5, then from 5 to 10 etc) without labeling anything inbetween manually.
+  // times (e.g., from slice 0 to 5, then from 5 to 10 etc) without labeling anything in between manually.
   // In that case, the interpolation/extrusion would always start from slice 0 which is unexpected and leads
   // to additional performance overhead (also the maximum interpolation depth will be exceeded at some point).
   // As a counter measure, we simply use the current position to update the current direction (and with it

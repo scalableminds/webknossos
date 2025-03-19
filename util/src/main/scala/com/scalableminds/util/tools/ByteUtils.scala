@@ -20,4 +20,19 @@ trait ByteUtils {
     }
     result.reverse
   }
+
+  /**
+    *
+    * @param i a 32 bit number
+    * @return i as array of 8 bytes, little endian
+    */
+  def intToBytes(i: Int): Array[Byte] = {
+    var w = i
+    val result = new Array[Byte](4)
+    for (i <- 3 to 0 by -1) {
+      result(i) = (w & 0xFF).toByte
+      w >>= 4
+    }
+    result.reverse
+  }
 }

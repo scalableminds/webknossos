@@ -4,9 +4,9 @@ package com.scalableminds.webknossos.datastore;
 
 
 message Vec3IntProto {
-    required int32 x = 1;
-    required int32 y = 2;
-    required int32 z = 3;
+  required int32 x = 1;
+  required int32 y = 2;
+  required int32 z = 3;
 }
 
 message Vec2IntProto {
@@ -19,9 +19,9 @@ message ListOfVec3IntProto {
 }
 
 message Vec3DoubleProto {
-    required double x = 1;
-    required double y = 2;
-    required double z = 3;
+  required double x = 1;
+  required double y = 2;
+  required double z = 3;
 }
 
 message ColorProto {
@@ -32,10 +32,10 @@ message ColorProto {
 }
 
 message BoundingBoxProto {
-    required Vec3IntProto topLeft = 1;
-    required int32 width = 2;
-    required int32 height = 3;
-    required int32 depth = 4;
+  required Vec3IntProto topLeft = 1;
+  required int32 width = 2;
+  required int32 height = 3;
+  required int32 depth = 4;
 }
 
 message NamedBoundingBoxProto {

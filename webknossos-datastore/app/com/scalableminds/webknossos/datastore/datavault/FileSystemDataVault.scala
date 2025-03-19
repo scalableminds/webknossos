@@ -1,57 +1,105 @@
 package com.scalableminds.webknossos.datastore.datavault
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.Fox
-import net.liftweb.common.Box.tryo
-import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox}
+import com.scalableminds.util.tools.Fox.bool2Fox
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import net.liftweb.common.{Box, Full}
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
 import java.nio.ByteBuffer
-import java.nio.file.{Files, Path, Paths}
-import scala.concurrent.ExecutionContext
+import java.nio.channels.{AsynchronousFileChannel, CompletionHandler}
+import java.nio.file.{Files, Path, Paths, StandardOpenOption}
+import java.util.stream.Collectors
+import scala.concurrent.{ExecutionContext, Promise}
+import scala.jdk.CollectionConverters._
 
 class FileSystemDataVault extends DataVault {
 
   override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
-      implicit ec: ExecutionContext): Fox[(Array[Byte], Encoding.Value)] = {
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[(Array[Byte], Encoding.Value)] =
+    for {
+      localPath <- vaultPathToLocalPath(path)
+      bytes <- readBytesLocal(localPath, range)
+    } yield (bytes, Encoding.identity)
+
+  private def readBytesLocal(localPath: Path, range: RangeSpecifier)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+    if (Files.exists(localPath)) {
+      range match {
+        case Complete() =>
+          readAsync(localPath, 0, Math.toIntExact(Files.size(localPath)))
+
+        case StartEnd(r) =>
+          readAsync(localPath, r.start, r.length)
+
+        case SuffixLength(length) =>
+          val fileSize = Files.size(localPath)
+          readAsync(localPath, fileSize - length, length)
+      }
+    } else {
+      Fox.empty
+    }
+
+  private def readAsync(path: Path, position: Long, length: Int)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
+    val promise = Promise[Box[Array[Byte]]]()
+    val buffer = ByteBuffer.allocateDirect(length)
+    var channel: AsynchronousFileChannel = null
+
+    try {
+      channel = AsynchronousFileChannel.open(path, StandardOpenOption.READ)
+
+      channel.read(
+        buffer,
+        position,
+        buffer,
+        new CompletionHandler[Integer, ByteBuffer] {
+          override def completed(result: Integer, buffer: ByteBuffer): Unit = {
+            buffer.rewind()
+            val arr = new Array[Byte](length)
+            buffer.get(arr)
+            promise.success(Full(arr))
+            channel.close()
+          }
+
+          override def failed(exc: Throwable, buffer: ByteBuffer): Unit = {
+            promise.failure(exc)
+            channel.close()
+          }
+        }
+      )
+    } catch {
+      case e: Throwable =>
+        promise.failure(e)
+        if (channel != null && channel.isOpen) channel.close()
+    }
+
+    promise.future
+  }
+
+  override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
+    vaultPathToLocalPath(path).map(
+      localPath =>
+        if (Files.isDirectory(localPath))
+          Files
+            .list(localPath)
+            .filter(file => Files.isDirectory(file))
+            .collect(Collectors.toList())
+            .asScala
+            .toList
+            .map(dir => new VaultPath(dir.toUri, this))
+            .take(maxItems)
+        else List.empty)
+
+  private def vaultPathToLocalPath(path: VaultPath)(implicit ec: ExecutionContext): Fox[Path] = {
     val uri = path.toUri
     for {
       _ <- bool2Fox(uri.getScheme == DataVaultService.schemeFile) ?~> "trying to read from FileSystemDataVault, but uri scheme is not file"
       _ <- bool2Fox(uri.getHost == null || uri.getHost.isEmpty) ?~> s"trying to read from FileSystemDataVault, but hostname ${uri.getHost} is non-empty"
       localPath = Paths.get(uri.getPath)
       _ <- bool2Fox(localPath.isAbsolute) ?~> "trying to read from FileSystemDataVault, but hostname is non-empty"
-      bytes <- readBytesLocal(localPath, range)
-    } yield (bytes, Encoding.identity)
+    } yield localPath
   }
-
-  private def readBytesLocal(localPath: Path, range: RangeSpecifier)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
-    if (Files.exists(localPath)) {
-      range match {
-        case Complete() => tryo(Files.readAllBytes(localPath)).toFox
-        case StartEnd(r) =>
-          tryo {
-            val channel = Files.newByteChannel(localPath)
-            val buf = ByteBuffer.allocateDirect(r.length)
-            channel.position(r.start)
-            channel.read(buf)
-            buf.rewind()
-            val arr = new Array[Byte](r.length)
-            buf.get(arr)
-            arr
-          }.toFox
-        case SuffixLength(length) =>
-          tryo {
-            val channel = Files.newByteChannel(localPath)
-            val buf = ByteBuffer.allocateDirect(length)
-            channel.position(channel.size() - length)
-            channel.read(buf)
-            buf.rewind()
-            val arr = new Array[Byte](length)
-            buf.get(arr)
-            arr
-          }.toFox
-      }
-    } else Fox.empty
 
   override def hashCode(): Int =
     new HashCodeBuilder(19, 31).toHashCode

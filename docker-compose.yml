@@ -3,7 +3,12 @@ version: "2.2"
 services:
   # Production
   webknossos:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      cache_from:
+        - scalableminds/webknossos
+        - scalableminds/webknossos:${DEV_CACHE:-master}
     image: scalableminds/webknossos:${DOCKER_TAG:-master}
     ports:
       - "9000:9000"
@@ -35,9 +40,10 @@ services:
     volumes:
       - ./binaryData:/webknossos/binaryData
     environment:
-      POSTGRES_URL: jdbc:postgresql://postgres/webknossos
-      POSTGRES_USER: webknossos_user
-      POSTGRES_PASSWORD: secret_password
+      - CERTIFICATE
+      - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
+      - POSTGRES_USER=webknossos_user
+      - POSTGRES_PASSWORD=secret_password
     user: ${USER_UID:-1000}:${USER_GID:-1000}
 
   webknossos-datastore:
@@ -95,6 +101,8 @@ services:
       - USER_UID
       - USER_GID
       - COVERALLS_REPO_TOKEN
+      - CERTIFICATE
+      - CERTIFICATE_PUBLIC_KEY
       - TZ=${TZ:-Europe/Berlin}
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
       - POSTGRES_USER=webknossos_user
@@ -137,9 +145,9 @@ services:
       fossildb-dev:
         condition: service_healthy
     environment:
-      POSTGRES_URL: jdbc:postgresql://postgres/webknossos
-      POSTGRES_USER: webknossos_user
-      POSTGRES_PASSWORD: secret_password
+      - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
+      - POSTGRES_USER=webknossos_user
+      - POSTGRES_PASSWORD=secret_password
     command:
       - bash
       - -c
@@ -181,9 +189,10 @@ services:
       fossildb:
         condition: service_healthy
     environment:
-      POSTGRES_URL: jdbc:postgresql://postgres/webknossos_testing
-      POSTGRES_USER: webknossos_user
-      POSTGRES_PASSWORD: secret_password
+      - CERTIFICATE
+      - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
+      - POSTGRES_USER=webknossos_user
+      - POSTGRES_PASSWORD=secret_password
     command:
       - bash
       - -c
@@ -196,7 +205,7 @@ services:
           -Ddatastore.redis.address=redis
           -Ddatastore.watchFileSystem.enabled=false"
     volumes:
-      - ./binaryData/Connectomics department:/home/${USER_NAME:-sbt-user}/webknossos/binaryData/Organization_X
+      - ./binaryData/Organization_X:/home/${USER_NAME:-sbt-user}/webknossos/binaryData/Organization_X
 
   screenshot-tests:
     image: scalableminds/puppeteer:master
@@ -213,11 +222,11 @@ services:
   postgres:
     image: postgres:10-alpine
     environment:
-      POSTGRES_DB: webknossos
-      POSTGRES_USER: webknossos_user
-      POSTGRES_PASSWORD: secret_password
+      - POSTGRES_DB=webknossos
+      - POSTGRES_USER=webknossos_user
+      - POSTGRES_PASSWORD=secret_password
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -h 127.0.0.1 -p 5432"]
+      test: ["CMD-SHELL", "pg_isready -d webknossos -U webknossos_user -h 127.0.0.1 -p 5432"]
       interval: 2s
       timeout: 5s
       retries: 30
@@ -247,7 +256,7 @@ services:
       postgres-persisted:
         condition: service_healthy
     environment:
-      PGPASSWORD: secret_password
+      - PGPASSWORD=secret_password
     volumes:
       - ./conf/evolutions/:/evolutions/
 
@@ -260,15 +269,15 @@ services:
       postgres-dev:
         condition: service_healthy
     environment:
-      PGPASSWORD: secret_password
+      - PGPASSWORD=secret_password
 
   # FossilDB
   fossildb:
-    image: scalableminds/fossildb:master__484
+    image: scalableminds/fossildb:master__510
     command:
       - fossildb
       - -c
-      - skeletons,skeletonUpdates,volumes,volumeData,volumeUpdates,volumeSegmentIndex,editableMappings,editableMappingUpdates,editableMappingsInfo,editableMappingsAgglomerateToGraph,editableMappingsSegmentToAgglomerate
+      - skeletons,volumes,volumeData,volumeSegmentIndex,editableMappingsInfo,editableMappingsAgglomerateToGraph,editableMappingsSegmentToAgglomerate,annotations,annotationUpdates
     user: ${USER_UID:-fossildb}:${USER_GID:-fossildb}
 
   fossildb-persisted:

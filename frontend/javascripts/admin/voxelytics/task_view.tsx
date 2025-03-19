@@ -1,25 +1,23 @@
-import React from "react";
-import { JSONTree } from "react-json-tree";
-import { Progress, Tabs, TabsProps, Tooltip } from "antd";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
-import Markdown from "react-remarkable";
+import { Progress, Tabs, type TabsProps, Tooltip } from "antd";
+import { formatNumber } from "libs/format_utils";
+import Markdown from "libs/markdown_adapter";
+import { JSONTree, type LabelRenderer, type ShouldExpandNodeInitially } from "react-json-tree";
 import {
-  VoxelyticsArtifactConfig,
+  type VoxelyticsArtifactConfig,
   VoxelyticsRunState,
-  VoxelyticsTaskConfig,
-  VoxelyticsTaskInfo,
-  VoxelyticsWorkflowDagEdge,
+  type VoxelyticsTaskConfig,
+  type VoxelyticsTaskInfo,
+  type VoxelyticsWorkflowDagEdge,
 } from "types/api_flow_types";
 import ArtifactsViewer from "./artifacts_view";
 import LogTab from "./log_tab";
 import StatisticsTab from "./statistics_tab";
 import { runStateToStatus, useTheme } from "./utils";
-import { formatNumber } from "libs/format_utils";
-function labelRenderer(_keyPath: Array<string | number>) {
+
+const labelRenderer: LabelRenderer = function (_keyPath) {
   const keyPath = _keyPath.slice().reverse();
-  const divWithId = <div id={`label-${keyPath.join(".")}`}>{keyPath.slice(-1)[0]}</div>;
-  return divWithId;
-}
+  return <div id={`label-${keyPath.join(".")}`}>{keyPath.slice(-1)[0]}</div>;
+};
 
 function TaskView({
   taskName,
@@ -40,9 +38,10 @@ function TaskView({
   taskInfo: VoxelyticsTaskInfo;
   onSelectTask: (id: string) => void;
 }) {
-  const shouldExpandNode = (_keyPath: Array<string | number>, data: any) =>
+  const shouldExpandNode: ShouldExpandNodeInitially = function (_keyPath, data) {
     // Expand all with at most 10 keys
-    (data.length || 0) <= 10;
+    return ((data as any[]).length || 0) <= 10;
+  };
 
   const ingoingEdges = dag.edges.filter((edge) => edge.target === taskName);
   const [theme, invertTheme] = useTheme();
@@ -55,7 +54,7 @@ function TaskView({
       <JSONTree
         data={task.config}
         hideRoot
-        shouldExpandNode={shouldExpandNode}
+        shouldExpandNodeInitially={shouldExpandNode}
         labelRenderer={labelRenderer}
         theme={theme}
         invertTheme={invertTheme}
@@ -82,16 +81,7 @@ function TaskView({
     tabs.unshift({
       label: "Description",
       key: "0",
-      children: (
-        <Markdown
-          source={task.description}
-          options={{
-            html: false,
-            breaks: true,
-            linkify: true,
-          }}
-        />
-      ),
+      children: <Markdown>{task.description}</Markdown>,
     });
 
   if (Object.keys(artifacts).length > 0)

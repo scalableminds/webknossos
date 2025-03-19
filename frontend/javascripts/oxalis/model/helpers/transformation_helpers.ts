@@ -1,11 +1,21 @@
 import { estimateAffineMatrix4x4 } from "libs/estimate_affine";
 import { M4x4 } from "libs/mjs";
 import TPS3D from "libs/thin_plate_spline";
-import { Matrix4x4 } from "mjs";
-import { Vector3 } from "oxalis/constants";
+import type { Matrix4x4 } from "mjs";
+import type { NestedMatrix4, Vector3 } from "oxalis/constants";
+
+export function nestedToFlatMatrix(matrix: NestedMatrix4): Matrix4x4 {
+  return [...matrix[0], ...matrix[1], ...matrix[2], ...matrix[3]];
+}
 
 export type Transform =
-  | { type: "affine"; affineMatrix: Matrix4x4 }
+  | {
+      type: "affine";
+      affineMatrix: Matrix4x4;
+      // Store the inverse directly to avoid potential loss of quality
+      // due to later inversions
+      affineMatrixInv: Matrix4x4;
+    }
   | {
       type: "thin_plate_spline";
       affineMatrix: Matrix4x4;
@@ -16,13 +26,28 @@ export type Transform =
       scaledTps: TPS3D;
     };
 
+export function createAffineTransformFromMatrix(nestedMatrix: NestedMatrix4): Transform {
+  const affineMatrix = nestedToFlatMatrix(nestedMatrix);
+  return { type: "affine", affineMatrix, affineMatrixInv: M4x4.inverse(affineMatrix) };
+}
+
 export function createAffineTransform(source: Vector3[], target: Vector3[]): Transform {
+  /* Creates an affine transform that transforms from source points to target points. */
   const affineMatrix = estimateAffineMatrix4x4(source, target);
 
   return {
     type: "affine",
     affineMatrix,
+    affineMatrixInv: M4x4.inverse(affineMatrix),
   };
+}
+
+export function checkLandmarksForThinPlateSpline(source: Vector3[], target: Vector3[]) {
+  // Strictly speaking, the TPS transform is not needed here, because it will
+  // be created when the actual dataset is opened. However, if the landmarks
+  // cannot be loaded into a TPS (e.g., because the landmarks are planar and
+  // affine estimation will crash), we want to detect this here automatically.
+  createThinPlateSplineTransform(source, target, [1, 1, 1]);
 }
 
 export function createThinPlateSplineTransform(
@@ -30,6 +55,7 @@ export function createThinPlateSplineTransform(
   target: Vector3[],
   scale: Vector3,
 ): Transform {
+  /* Creates a TPS that transforms from source points to target points. */
   const affineMatrix = estimateAffineMatrix4x4(source, target);
   const affineMatrixInv = estimateAffineMatrix4x4(target, source);
 
@@ -46,7 +72,8 @@ export function invertTransform(transforms: Transform): Transform {
   if (transforms.type === "affine") {
     return {
       type: "affine",
-      affineMatrix: M4x4.inverse(transforms.affineMatrix),
+      affineMatrix: transforms.affineMatrixInv,
+      affineMatrixInv: transforms.affineMatrix,
     };
   }
 
@@ -72,6 +99,7 @@ export function chainTransforms(transformsA: Transform | null, transformsB: Tran
     return {
       type: "affine",
       affineMatrix: M4x4.mul(transformsA.affineMatrix, transformsB.affineMatrix),
+      affineMatrixInv: M4x4.mul(transformsB.affineMatrixInv, transformsA.affineMatrixInv),
     };
   }
 

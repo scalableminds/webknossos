@@ -24,7 +24,7 @@ case class DataRequest(
   def cuboid(dataLayer: DataLayer): Cuboid = Cuboid(position, width, height, depth)
 }
 
-case class WebKnossosDataRequest(
+case class WebknossosDataRequest(
     position: Vec3Int,
     mag: Vec3Int,
     cubeSize: Int,
@@ -41,17 +41,16 @@ case class WebKnossosDataRequest(
     DataServiceRequestSettings(halfByte = fourBit.getOrElse(false), applyAgglomerate, version, additionalCoordinates)
 }
 
-object WebKnossosDataRequest {
-  implicit val jsonFormat: OFormat[WebKnossosDataRequest] = Json.format[WebKnossosDataRequest]
+object WebknossosDataRequest {
+  implicit val jsonFormat: OFormat[WebknossosDataRequest] = Json.format[WebknossosDataRequest]
 }
 
 case class WebknossosAdHocMeshRequest(
-    position: Vec3Int,
+    position: Vec3Int, // In mag1
     mag: Vec3Int,
-    cubeSize: Vec3Int,
+    cubeSize: Vec3Int, // In target mag
     segmentId: Long,
-    subsamplingStrides: Vec3Int,
-    scale: Vec3Double,
+    voxelSizeFactorInUnit: Vec3Double, // assumed to be in dataset’s unit
     mapping: Option[String] = None,
     mappingType: Option[String] = None,
     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,

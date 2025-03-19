@@ -12,7 +12,7 @@ import play.api.libs.json.Json._
 import play.api.libs.json._
 import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 
@@ -84,24 +84,15 @@ class MeshDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[MeshInfo] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(q"select $infoColumns from $existingCollectionName where _id = $id and $accessQuery".as[InfoTuple])
-      r <- rList.headOption.toFox
+      rows <- run(q"SELECT $infoColumns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[InfoTuple])
+      r <- rows.headOption.toFox
       parsed <- parseInfo(r)
     } yield parsed
 
-  def findAllWithAnnotation(annotationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[MeshInfo]] =
-    for {
-      accessQuery <- readAccessQuery
-      resultTuples <- run(
-        q"select $infoColumns from $existingCollectionName where _annotation = $annotationId and $accessQuery"
-          .as[InfoTuple])
-      resultsParsed <- Fox.serialCombined(resultTuples.toList)(parseInfo)
-    } yield resultsParsed
-
   def insertOne(m: MeshInfo): Fox[Unit] =
     for {
-      _ <- run(q"""insert into webknossos.meshes(_id, _annotation, description, position, created, isDeleted)
-                   values(${m._id}, ${m._annotation}, ${m.description}, ${m.position}, ${m.created}, ${m.isDeleted})
+      _ <- run(q"""INSERT INTO webknossos.meshes(_id, _annotation, description, position, created, isDeleted)
+                   VALUES(${m._id}, ${m._annotation}, ${m.description}, ${m.position}, ${m.created}, ${m.isDeleted})
                 """.asUpdate)
     } yield ()
 
@@ -109,23 +100,26 @@ class MeshDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(q"""update webknossos.meshes
-                   set _annotation = $annotationId, description = $description, position = $position
-                   where _id = $id""".asUpdate)
+      _ <- run(q"""UPDATE webknossos.meshes
+                   SET
+                     _annotation = $annotationId,
+                     description = $description,
+                     position = $position
+                   WHERE _id = $id""".asUpdate)
     } yield ()
 
   def getData(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Array[Byte]] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(q"select data from webknossos.meshes where _id = $id and $accessQuery".as[Option[String]])
-      r <- rList.headOption.flatten.toFox
+      rows <- run(q"SELECT data FROM webknossos.meshes WHERE _id = $id AND $accessQuery".as[Option[String]])
+      r <- rows.headOption.flatten.toFox
       binary = BaseEncoding.base64().decode(r)
     } yield binary
 
   def updateData(id: ObjectId, data: Array[Byte])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(q"update webknossos.meshes set data = ${BaseEncoding.base64().encode(data)} where _id = $id".asUpdate)
+      _ <- run(q"UPDATE webknossos.meshes SET data = ${BaseEncoding.base64().encode(data)} WHERE _id = $id".asUpdate)
     } yield ()
 
 }

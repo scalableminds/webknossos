@@ -1,16 +1,16 @@
+import { useQueryClient } from "@tanstack/react-query";
+import { deleteDatasetOnDisk, getDataset } from "admin/admin_rest_api";
 import { Button } from "antd";
-import React, { useState, useEffect } from "react";
-import type { APIDataset, APIDatasetId } from "types/api_flow_types";
-import { getDataset, deleteDatasetOnDisk } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
+import { useEffect, useState } from "react";
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
+import type { APIDataset } from "types/api_flow_types";
 import { confirmAsync } from "./helper_components";
-import { useQueryClient } from "@tanstack/react-query";
 
 type Props = {
-  datasetId: APIDatasetId;
+  datasetId: string;
   history: RouteComponentProps["history"];
 };
 
@@ -24,6 +24,7 @@ const DatasetSettingsDeleteTab = ({ datasetId, history }: Props) => {
     setDataset(newDataset);
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies(fetch):
   useEffect(() => {
     fetch();
   }, []);
@@ -41,9 +42,13 @@ const DatasetSettingsDeleteTab = ({ datasetId, history }: Props) => {
     if (!deleteDataset) {
       return;
     }
+    const dataSourceId = {
+      owningOrganization: dataset.owningOrganization,
+      directoryName: dataset.directoryName,
+    };
 
     setIsDeleting(true);
-    await deleteDatasetOnDisk(dataset.dataStore.url, datasetId);
+    await deleteDatasetOnDisk(dataset.dataStore.url, dataSourceId);
     Toast.success(
       messages["dataset.delete_success"]({
         datasetName: dataset.name,

@@ -1,16 +1,17 @@
-import { Button, Dropdown, MenuProps, Space } from "antd";
+import { Button, Dropdown, type MenuProps, Space } from "antd";
+import * as Utils from "libs/utils";
+import { type ViewMode, ViewModeValues } from "oxalis/constants";
+import constants from "oxalis/constants";
+import {
+  setFlightmodeRecordingAction,
+  setViewModeAction,
+} from "oxalis/model/actions/settings_actions";
+import type { AllowedMode, OxalisState } from "oxalis/store";
+import Store from "oxalis/store";
+import { PureComponent } from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import React, { PureComponent } from "react";
-import {
-  setViewModeAction,
-  setFlightmodeRecordingAction,
-} from "oxalis/model/actions/settings_actions";
-import type { OxalisState, AllowedMode } from "oxalis/store";
-import Store from "oxalis/store";
-import * as Utils from "libs/utils";
-import { ViewMode, ViewModeValues } from "oxalis/constants";
-import constants from "oxalis/constants";
+import type { EmptyObject } from "types/globals";
 
 type StateProps = {
   viewMode: ViewMode;
@@ -29,7 +30,7 @@ const VIEW_MODE_TO_ICON = {
   ),
 };
 
-class ViewModesView extends PureComponent<Props, {}> {
+class ViewModesView extends PureComponent<Props, EmptyObject> {
   handleChange = (mode: ViewMode) => {
     // If we switch back from any arbitrary mode we stop recording.
     // This prevents that when the user switches back to any arbitrary mode,

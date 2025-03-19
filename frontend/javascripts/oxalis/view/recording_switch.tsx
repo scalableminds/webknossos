@@ -1,9 +1,8 @@
 import { Switch } from "antd";
-import { connect } from "react-redux";
-import * as React from "react";
-import type { Dispatch } from "redux";
-import type { OxalisState } from "oxalis/store";
 import { setFlightmodeRecordingAction } from "oxalis/model/actions/settings_actions";
+import type { OxalisState } from "oxalis/store";
+import { connect } from "react-redux";
+import type { Dispatch } from "redux";
 type Props = {
   flightmodeRecording: boolean;
   onChangeFlightmodeRecording: (arg0: boolean) => void;

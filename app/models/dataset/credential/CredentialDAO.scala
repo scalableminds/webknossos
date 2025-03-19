@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.schema.Tables.{Credentials, CredentialsRow}
 import net.liftweb.common.Box.tryo
 import play.api.libs.json.Json
 import utils.sql.{SecuredSQLDAO, SqlClient, SqlToken}
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -63,25 +63,25 @@ class CredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
 
   def insertOne(_id: ObjectId, credential: HttpBasicAuthCredential): Fox[Unit] =
     for {
-      _ <- run(q"""insert into webknossos.credentials(_id, type, name, identifier, secret, _user, _organization)
-                     values(${_id}, ${CredentialType.HttpBasicAuth}, ${credential.name}, ${credential.username}, ${credential.password}, ${credential.user}, ${credential.organization})""".asUpdate)
+      _ <- run(q"""INSERT INTO webknossos.credentials(_id, type, name, identifier, secret, _user, _organization)
+                   VALUES(${_id}, ${CredentialType.HttpBasicAuth}, ${credential.name}, ${credential.username}, ${credential.password}, ${credential.user}, ${credential.organization})""".asUpdate)
     } yield ()
 
   def insertOne(_id: ObjectId, credential: S3AccessKeyCredential): Fox[Unit] =
     for {
-      _ <- run(q"""insert into webknossos.credentials(_id, type, name, identifier, secret, _user, _organization)
-                       values(${_id}, ${CredentialType.S3AccessKey}, ${credential.name}, ${credential.accessKeyId}, ${credential.secretAccessKey}, ${credential.user}, ${credential.organization})""".asUpdate)
+      _ <- run(q"""INSERT INTO webknossos.credentials(_id, type, name, identifier, secret, _user, _organization)
+                   VALUES(${_id}, ${CredentialType.S3AccessKey}, ${credential.name}, ${credential.accessKeyId}, ${credential.secretAccessKey}, ${credential.user}, ${credential.organization})""".asUpdate)
     } yield ()
 
   def insertOne(_id: ObjectId, credential: GoogleServiceAccountCredential): Fox[Unit] =
     for {
-      _ <- run(q"""insert into webknossos.credentials(_id, type, name, secret, _user, _organization)
-                       values(${_id}, ${CredentialType.GoogleServiceAccount}, ${credential.name}, ${credential.secretJson.toString}, ${credential.user}, ${credential.organization})""".asUpdate)
+      _ <- run(q"""INSERT INTO webknossos.credentials(_id, type, name, secret, _user, _organization)
+                   VALUES(${_id}, ${CredentialType.GoogleServiceAccount}, ${credential.name}, ${credential.secretJson.toString}, ${credential.user}, ${credential.organization})""".asUpdate)
     } yield ()
 
   def findOne(id: ObjectId): Fox[DataVaultCredential] =
     for {
-      r <- run(q"select $columns from webknossos.credentials_ where _id = $id".as[CredentialsRow])
+      r <- run(q"SELECT $columns FROM webknossos.credentials_ WHERE _id = $id".as[CredentialsRow])
       firstRow <- r.headOption.toFox
       parsed <- parseAnyCredential(firstRow)
     } yield parsed

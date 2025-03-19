@@ -1,7 +1,7 @@
 import "test/mocks/lz4";
 import update from "immutability-helper";
-import { getFirstVolumeTracingOrFail } from "test/helpers/apiHelpers";
-import { AnnotationToolEnum, Vector3 } from "oxalis/constants";
+import Maybe from "data.maybe";
+import { AnnotationToolEnum, type Vector3 } from "oxalis/constants";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
 import * as UiActions from "oxalis/model/actions/ui_actions";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
@@ -9,8 +9,17 @@ import UiReducer from "oxalis/model/reducers/ui_reducer";
 import mockRequire from "mock-require";
 import test from "ava";
 import { initialState } from "test/fixtures/volumetracing_object";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState, Tracing, VolumeTracing } from "oxalis/store";
 import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
+
+// biome-ignore lint/suspicious/noExportsInTest:
+export function getFirstVolumeTracingOrFail(tracing: Tracing): Maybe<VolumeTracing> {
+  if (tracing.volumes.length > 0) {
+    return Maybe.Just(tracing.volumes[0]);
+  }
+
+  throw new Error("Annotation is not of type volume!");
+}
 
 mockRequire("app", {
   currentUser: {
@@ -228,7 +237,7 @@ test("VolumeTracing should add values to the contourList even if getActiveMagInd
   const alteredState = update(initialState, {
     flycam: {
       zoomStep: {
-        $set: 3,
+        $set: 8,
       },
     },
   });
@@ -282,4 +291,5 @@ test("VolumeTracing should reset contourList", (t) => {
     t.deepEqual(tracing.contourList, []);
   });
 });
-export default {};
+
+// export default {};

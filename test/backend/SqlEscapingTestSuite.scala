@@ -23,7 +23,7 @@ class SqlEscapingTestSuite extends PlaySpec with SqlTypeImplicits with SqlEscapi
     "handle null" in {
       assert(parseArrayLiteral(null) == List())
     }
-    "handle emptystring" in {
+    "handle empty string" in {
       assert(parseArrayLiteral("") == List())
     }
     "handle empty array literal" in {
@@ -44,7 +44,7 @@ class SqlEscapingTestSuite extends PlaySpec with SqlTypeImplicits with SqlEscapi
     "parse two elements if one has a comma and escaped double quotes" in {
       assert(parseArrayLiteral("""{"h\"e,llo",there}""") == List("""h"e,llo""", "there"))
     }
-    "parse single element if the comma is between escaped duoble quotes" in {
+    "parse single element if the comma is between escaped double quotes" in {
       assert(parseArrayLiteral("""{"this one has \"spe,cial\" chars"}""") == List("""this one has "spe,cial" chars"""))
     }
     "parse single elements if it has a comma and single escaped double quote" in {

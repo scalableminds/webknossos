@@ -33,7 +33,7 @@ const UserLocalStorage = {
   },
 
   removeItem(key: string, isOrganizationSpecific: boolean = true): void {
-    return localStorage.removeItem(prefixKey(key, isOrganizationSpecific));
+    localStorage.removeItem(prefixKey(key, isOrganizationSpecific));
   },
 
   clear(): void {

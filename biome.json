@@ -1,0 +1,109 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "organizeImports": { 
+    "enabled": true,  
+    "ignore": [
+      "frontend/javascripts/test/*",
+      "frontend/javascripts/oxalis/model/helpers/shader_editor.ts"
+    ]
+  },
+  "linter": {
+    "enabled": true,
+    "ignore": [
+      "libs/keyboard.ts",
+      "libs/stl_exporter.ts",
+      "libs/DRACOLoader.ts",
+      "libs/DRACOWorker.worker.js",
+      "libs/BufferGeometryUtils.ts",
+      "libs/fps_meter.ts",
+      "libs/parse_stl_buffer.ts",
+      "libs/trackball_controls.ts",
+      "*.d.ts",
+      "frontend/javascripts/test/snapshots/*"
+    ],
+    "rules": {
+      "recommended": true,
+      "style": {
+        "useShorthandArrayType": "off",
+        "useBlockStatements": "off",
+        "noNegationElse": "off",
+        "noImplicitBoolean": "off",
+        "useTemplate": "off",
+        "useSingleVarDeclarator": "off",
+        "noShoutyConstants": "off",
+        "noUselessElse": "off",
+        "noParameterAssign": "off",
+        "useConst": "off",
+        "noInferrableTypes": "off",
+        "useExponentiationOperator": "off",
+        "useDefaultParameterLast": "off",
+        "useAsConstAssertion": "off",
+        "noNonNullAssertion": "off"
+      },
+      "complexity": {
+        "useSimplifiedLogicExpression": "off",
+        "noForEach": "off",
+        "noBannedTypes": "error",
+        "noUselessFragments": "off",
+        "useLiteralKeys": "off",
+        "useArrowFunction": "off",
+        "noStaticOnlyClass": "off",
+        "noUselessSwitchCase": "off",
+        "noUselessRename": "off",
+        "noThisInStatic": "off"
+      },
+      "a11y": {
+        "useValidAnchor": "off",
+        "useKeyWithClickEvents": "off",
+        "useIframeTitle": "off",
+        "noAriaHiddenOnFocusable": "off",
+        "noLabelWithoutControl": "off"
+      },
+      "performance": {
+        "noDelete": "off"
+      },
+      "correctness": {
+        "noUnusedVariables": "error",
+        "noUnusedImports": "error",
+        "noRenderReturnValue": "off",
+        "useHookAtTopLevel": "error"
+      },
+      "suspicious": {
+        "noExplicitAny": "off",
+        "noAsyncPromiseExecutor": "off",
+        "noShadowRestrictedNames": "off",
+        "noImplicitAnyLet": "off",
+        "noConfusingVoidType": "off",
+        "noGlobalIsNan": "off",
+        "noArrayIndexKey": "off",
+        "noConstEnum": "off",
+        "noRedeclare": "off",
+        "noFallthroughSwitchClause": "off",
+        "noAssignInExpressions": "off"
+      }
+    }
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "lineWidth": 100,
+    "ignore": [
+      "libs/keyboard.ts",
+      "libs/stl_exporter.ts",
+      "libs/DRACOLoader.ts",
+      "libs/DRACOWorker.worker.js",
+      "libs/BufferGeometryUtils.ts",
+      "libs/parse_stl_buffer.ts",
+      "libs/trackball_controls.ts",
+      "*.d.ts"
+    ]
+  },
+  "overrides": [
+    {
+      "include": ["**/package.json"],
+      "formatter": {
+        "lineWidth": 1
+      }
+    }
+  ]
+}

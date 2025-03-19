@@ -68,7 +68,7 @@ class ResizableBuffer<T extends Float32Array> {
 
   pushMany(elements: Array<Array<number>> | Array<T>): void {
     this.ensureCapacity(this.length + elements.length * this.elementLength);
-    // eslint-disable-next-line prefer-const
+
     let { buffer, elementLength, length } = this;
 
     for (const element of elements) {
@@ -95,7 +95,6 @@ class ResizableBuffer<T extends Float32Array> {
       return null;
     }
 
-    // eslint-disable-next-line prefer-const
     let { buffer, elementLength, length } = this;
 
     for (let i = elementLength - 1; i >= 0; i--) {
@@ -115,7 +114,6 @@ class ResizableBuffer<T extends Float32Array> {
       return null;
     }
 
-    // eslint-disable-next-line prefer-const
     let { buffer, elementLength, length } = this;
 
     for (let i = elementLength - 1; i >= 0; i--) {

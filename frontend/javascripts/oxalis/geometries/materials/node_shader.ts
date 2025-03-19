@@ -1,13 +1,21 @@
-import * as THREE from "three";
+import { M4x4 } from "libs/mjs";
+import type TPS3D from "libs/thin_plate_spline";
+import _ from "lodash";
 import { ViewModeValues, ViewModeValuesIndices } from "oxalis/constants";
 import type { Uniforms } from "oxalis/geometries/materials/plane_material_factory";
-import { getBaseVoxel } from "oxalis/model/scaleinfo";
+import { getTransformsForSkeletonLayer } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import { Store } from "oxalis/singletons";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
-import _ from "lodash";
+import { getBaseVoxelInUnit } from "oxalis/model/scaleinfo";
+import {
+  generateCalculateTpsOffsetFunction,
+  generateTpsInitialization,
+} from "oxalis/shaders/thin_plate_spline.glsl";
 import { formatNumberAsGLSLFloat } from "oxalis/shaders/utils.glsl";
+import { Store } from "oxalis/singletons";
+import * as THREE from "three";
+
 export const NodeTypes = {
   INVALID: 0.0,
   NORMAL: 1.0,
@@ -19,6 +27,8 @@ export const COLOR_TEXTURE_WIDTH_FIXED = COLOR_TEXTURE_WIDTH.toFixed(1);
 class NodeShader {
   material: THREE.RawShaderMaterial;
   uniforms: Uniforms = {};
+  scaledTps: TPS3D | null = null;
+  oldVertexShaderCode: string | null = null;
 
   constructor(treeColorTexture: THREE.DataTexture) {
     this.setupUniforms(treeColorTexture);
@@ -43,8 +53,8 @@ class NodeShader {
         // will and should be square regardless of the plane's aspect ratio.
         value: getZoomValue(state.flycam),
       },
-      datasetScale: {
-        value: getBaseVoxel(state.dataset.dataSource.scale),
+      voxelSizeMin: {
+        value: getBaseVoxelInUnit(state.dataset.dataSource.scale.factor),
       },
       overrideParticleSize: {
         value: state.userConfiguration.particleSize,
@@ -56,10 +66,10 @@ class NodeShader {
         value: true,
       },
       activeTreeId: {
-        value: NaN,
+        value: Number.NaN,
       },
       activeNodeId: {
-        value: NaN,
+        value: Number.NaN,
       },
       treeColors: {
         value: treeColorTexture,
@@ -106,10 +116,57 @@ class NodeShader {
       },
       true,
     );
+
+    const dataset = Store.getState().dataset;
+    const nativelyRenderedLayerName =
+      Store.getState().datasetConfiguration.nativelyRenderedLayerName;
+
+    const { affineMatrix } = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName);
+    this.uniforms["transform"] = {
+      value: M4x4.transpose(affineMatrix),
+    };
+
+    listenToStoreProperty(
+      (storeState) =>
+        getTransformsForSkeletonLayer(
+          storeState.dataset,
+          storeState.datasetConfiguration.nativelyRenderedLayerName,
+        ),
+      (skeletonTransforms) => {
+        const transforms = skeletonTransforms;
+        const { affineMatrix } = transforms;
+
+        const scaledTps = transforms.type === "thin_plate_spline" ? transforms.scaledTps : null;
+
+        if (scaledTps) {
+          this.scaledTps = scaledTps;
+        } else {
+          this.scaledTps = null;
+        }
+
+        this.uniforms["transform"].value = M4x4.transpose(affineMatrix);
+
+        this.recomputeVertexShader();
+      },
+    );
   }
 
   getMaterial(): THREE.RawShaderMaterial {
     return this.material;
+  }
+
+  recomputeVertexShader() {
+    const newVertexShaderCode = this.getVertexShader();
+
+    // Comparing to this.material.vertexShader does not work. The code seems
+    // to be modified by a third party.
+    if (this.oldVertexShaderCode != null && this.oldVertexShaderCode === newVertexShaderCode) {
+      return;
+    }
+
+    this.oldVertexShaderCode = newVertexShaderCode;
+    this.material.vertexShader = newVertexShaderCode;
+    this.material.needsUpdate = true;
   }
 
   getVertexShader(): string {
@@ -124,7 +181,7 @@ out vec3 color;
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 uniform float planeZoomFactor;
-uniform float datasetScale;
+uniform float voxelSizeMin;
 uniform float viewportScale;
 uniform float activeNodeId;
 uniform float activeTreeId;
@@ -135,7 +192,14 @@ uniform int isTouch; // bool that is used during picking and indicates whether t
 uniform float highlightCommentedNodes;
 uniform float viewMode;
 
-<% _.each(additionalCoordinates || [], (_coord, idx) => { %>
+uniform mat4 transform;
+
+<% if (tpsTransform != null) { %>
+  <%= generateTpsInitialization({Skeleton: tpsTransform}, "Skeleton") %>
+  <%= generateCalculateTpsOffsetFunction("Skeleton", true) %>
+<% } %>
+
+<% _.range(additionalCoordinateLength).map((idx) => { %>
   uniform float currentAdditionalCoord_<%= idx %>;
 <% }) %>
 
@@ -144,7 +208,7 @@ uniform sampler2D treeColors;
 in float radius;
 in vec3 position;
 
-<% _.each(additionalCoordinates || [], (_coord, idx) => { %>
+<% _.range(additionalCoordinateLength).map((idx) => { %>
   in float additionalCoord_<%= idx %>;
 <% }) %>
 
@@ -185,11 +249,15 @@ vec3 shiftHue(vec3 color, float shiftValue) {
 }
 
 void main() {
-    <% _.each(additionalCoordinates || [], (_coord, idx) => { %>
+    <% _.range(additionalCoordinateLength).map((idx) => { %>
       if (additionalCoord_<%= idx %> != currentAdditionalCoord_<%= idx %>) {
         return;
       }
     <% }) %>
+
+    <% if (tpsTransform != null) { %>
+      initializeTPSArraysForSkeleton();
+    <% } %>
 
     ivec2 treeIdToTextureCoordinate = ivec2(
       mod(treeId, ${COLOR_TEXTURE_WIDTH_FIXED}),
@@ -209,14 +277,20 @@ void main() {
       return;
     }
 
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    <% if (tpsTransform != null) { %>
+      vec3 tpsOffset = calculateTpsOffsetForSkeleton(position);
+      vec4 transformedCoord = vec4(position + tpsOffset, 1.);
+    <% } else { %>
+      vec4 transformedCoord = transform * vec4(position, 1.);
+    <% } %>
+    gl_Position = projectionMatrix * modelViewMatrix * transformedCoord;
 
     // NODE RADIUS
     if (overrideNodeRadius == 1) {
       gl_PointSize = overrideParticleSize;
     } else {
       gl_PointSize = max(
-        radius / planeZoomFactor / datasetScale,
+        radius / planeZoomFactor / voxelSizeMin,
         overrideParticleSize
       ) * viewportScale;
     }
@@ -246,6 +320,9 @@ void main() {
         ? v_innerPointSize + 25.0
         : v_innerPointSize * 1.5;
       gl_PointSize = v_outerPointSize;
+
+      // Shift hue to further highlight active node in arbitrary mode.
+      color = shiftHue(color, isOrthogonalMode ? 0. : 0.15);
     }
 
     float isBranchpoint =
@@ -264,7 +341,12 @@ void main() {
       gl_PointSize *= 2.0;
     }
 
-}`)({ additionalCoordinates });
+}`)({
+      additionalCoordinateLength: (additionalCoordinates || []).length,
+      tpsTransform: this.scaledTps,
+      generateTpsInitialization,
+      generateCalculateTpsOffsetFunction,
+    });
   }
 
   getFragmentShader(): string {

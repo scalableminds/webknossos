@@ -1,12 +1,11 @@
 import { CopyOutlined } from "@ant-design/icons";
-import { Modal, Input, Button, Row, Col, Dropdown, Space } from "antd";
-import { useSelector } from "react-redux";
-import React from "react";
+import { Button, Col, Dropdown, Input, Modal, Row, Space } from "antd";
 import { makeComponentLazy } from "libs/react_helpers";
 import messages from "messages";
-import { OxalisState } from "oxalis/store";
-import { useDatasetSharingToken, getUrl, CopyableSharingLink } from "./share_modal_view";
+import type { OxalisState } from "oxalis/store";
+import { useSelector } from "react-redux";
 import { useZarrLinkMenu } from "./private_links_view";
+import { CopyableSharingLink, getUrl, useDatasetSharingToken } from "./share_modal_view";
 
 const sharingActiveNode = false;
 

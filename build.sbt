@@ -1,8 +1,8 @@
 import sbt._
 
 ThisBuild / version := "wk"
-ThisBuild / scalaVersion := "2.13.11"
-ThisBuild / scapegoatVersion := "2.1.2"
+ThisBuild / scalaVersion := "2.13.14"
+ThisBuild / scapegoatVersion := "2.1.6"
 val failOnWarning = if (sys.props.contains("failOnWarning")) Seq("-Xfatal-warnings") else Seq()
 ThisBuild / scalacOptions ++= Seq(
   "-release:11",
@@ -22,6 +22,9 @@ ThisBuild / javacOptions ++= Seq(
 )
 ThisBuild / dependencyCheckAssemblyAnalyzerEnabled := Some(false)
 
+// Keep asset timestamps when assembling jar
+ThisBuild / packageOptions += Package.FixedTimestamp(Package.keepTimestamps)
+
 PlayKeys.devSettings := Seq("play.server.pekko.requestTimeout" -> "10000s", "play.server.http.idleTimeout" -> "10000s")
 
 // Disable unused import warnings, only in sbt console REPL
@@ -29,6 +32,9 @@ Compile / console / scalacOptions -= "-Xlint:unused"
 
 scapegoatIgnoredFiles := Seq(".*/Tables.scala", ".*/Routes.scala", ".*/.*mail.*template\\.scala")
 scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "UnusedMethodParameter", "UnsafeTraversableMethods")
+
+// Allow path binding for ObjectId
+routesImport += "com.scalableminds.util.objectid.ObjectId"
 
 lazy val commonSettings = Seq(
   resolvers ++= DependencyResolvers.dependencyResolvers,
@@ -57,11 +63,17 @@ lazy val util = (project in file("util")).settings(
   dependencyOverrides ++= Dependencies.dependencyOverrides
 )
 
+lazy val webknossosJni = (project in file("webknossos-jni"))
+  .settings(nativeCompile / sourceDirectory := sourceDirectory.value)
+  .enablePlugins(JniNative)
+
 lazy val webknossosDatastore = (project in file("webknossos-datastore"))
   .dependsOn(util)
+  .dependsOn(webknossosJni)
   .enablePlugins(play.sbt.PlayScala)
   .enablePlugins(BuildInfoPlugin)
   .enablePlugins(ProtocPlugin)
+  .settings(javah / target := (webknossosJni / nativeCompile / sourceDirectory).value / "include")
   .settings(
     name := "webknossos-datastore",
     commonSettings,
@@ -108,6 +120,13 @@ lazy val webknossos = (project in file("."))
     libraryDependencies ++= Dependencies.webknossosDependencies,
     dependencyOverrides ++= Dependencies.dependencyOverrides,
     Assets / sourceDirectory := file("none"),
+    // The following two assignments avoid that the public assets
+    // appear in two output jars. Namely, target/universal/stage/lib/webknossos.webknossos-wk-sans-externalized.jar
+    // does not need to contain them. Might be fixed automatically with Play 2.9.4 and 3.0.4
+    // See this discussion for context:
+    // https://github.com/playframework/playframework/issues/5765#issuecomment-1996991474
+    Assets / WebKeys.exportedMappings := Seq(),
+    TestAssets / WebKeys.exportedMappings := Seq(),
     updateOptions := updateOptions.value.withLatestSnapshots(true),
     Compile / unmanagedJars ++= {
       val libs = baseDirectory.value / "lib"

@@ -1,9 +1,9 @@
-import React, { useEffect } from "react";
 import { Button, notification } from "antd";
-import { useSelector } from "react-redux";
 import features from "features";
+import { useEffectOnlyOnce } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
+import { useSelector } from "react-redux";
 
 function showWelcomeToast() {
   notification.open({
@@ -45,7 +45,7 @@ function showWelcomeToast() {
 
 export default function WelcomeToast() {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  useEffect(() => {
+  useEffectOnlyOnce(() => {
     if (!features().isWkorgInstance) {
       return;
     }
@@ -63,6 +63,6 @@ export default function WelcomeToast() {
     // show the toast will still be valid (and important) in the future. For example, the toast
     // should also *not* appear after a registered user logs out.
     UserLocalStorage.setItem("novelUserExperienceInfos.hasSeenWelcomeToast", "true", false);
-  }, []);
+  });
   return null;
 }

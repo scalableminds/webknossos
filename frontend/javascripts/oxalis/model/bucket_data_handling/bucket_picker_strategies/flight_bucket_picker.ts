@@ -1,14 +1,14 @@
-import type { EnqueueFunction } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4, V3 } from "libs/mjs";
+import { map3, map4, mod } from "libs/utils";
+import type { BucketAddress, Vector3, Vector4 } from "oxalis/constants";
+import constants from "oxalis/constants";
+import type { EnqueueFunction } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import {
   globalPositionToBucketPosition,
   globalPositionToBucketPositionFloat,
   zoomedAddressToAnotherZoomStep,
 } from "oxalis/model/helpers/position_converter";
-import type { BucketAddress, Vector3, Vector4 } from "oxalis/constants";
-import constants from "oxalis/constants";
-import { map3, map4, mod } from "libs/utils";
 
 const aggregatePerDimension = (
   aggregateFn: (...args: number[]) => number,
@@ -40,7 +40,7 @@ function createDistinctBucketAdder(bucketsWithPriorities: Array<[Vector4, number
 }
 
 export default function determineBucketsForFlight(
-  resolutions: Array<Vector3>,
+  mags: Array<Vector3>,
   centerPosition: Vector3,
   sphericalCapRadius: number,
   enqueueFunction: EnqueueFunction,
@@ -53,7 +53,7 @@ export default function determineBucketsForFlight(
   const halfWidth = width / 2;
   const cameraVertex: Vector3 = [0, 0, -sphericalCapRadius];
   const fallbackZoomStep = logZoomStep + 1;
-  const isFallbackAvailable = fallbackZoomStep < resolutions.length;
+  const isFallbackAvailable = fallbackZoomStep < mags.length;
 
   const transformToSphereCap = (_vec: Vector3) => {
     const vec = V3.sub(_vec, cameraVertex);
@@ -81,7 +81,7 @@ export default function determineBucketsForFlight(
       const transformedVec = transformAndApplyMatrix([x, y, z]);
       const bucketPos = globalPositionToBucketPositionFloat(
         transformedVec as Vector3,
-        resolutions,
+        mags,
         logZoomStep,
       );
 
@@ -119,7 +119,7 @@ export default function determineBucketsForFlight(
     // null is passed as additionalCoordinates, since the bucket picker doesn't care about the
     // additional coordinates. It simply sticks to 3D and the caller is responsible for augmenting
     // potential other coordinates.
-    globalPositionToBucketPosition(position, resolutions, logZoomStep, null),
+    globalPositionToBucketPosition(position, mags, logZoomStep, null),
   );
 
   const traverseFallbackBBox = (boundingBoxBuckets: {
@@ -131,12 +131,12 @@ export default function determineBucketsForFlight(
     // use all fallback buckets in bbox
     const min = zoomedAddressToAnotherZoomStep(
       [...boundingBoxBuckets.cornerMin, logZoomStep],
-      resolutions,
+      mags,
       fallbackZoomStep,
     );
     const max = zoomedAddressToAnotherZoomStep(
       [...boundingBoxBuckets.cornerMax, logZoomStep],
-      resolutions,
+      mags,
       fallbackZoomStep,
     );
 

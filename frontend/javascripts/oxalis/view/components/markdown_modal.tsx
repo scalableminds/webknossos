@@ -1,8 +1,6 @@
-import { Alert, Modal, Button, Row, Col } from "antd";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
-import Markdown from "react-remarkable";
+import { Alert, Button, Col, Input, Modal, Row } from "antd";
+import Markdown from "libs/markdown_adapter";
 import * as React from "react";
-import TextArea from "antd/lib/input/TextArea";
 
 function getFirstLine(comment: string) {
   const newLineIndex = comment.indexOf("\n");
@@ -11,16 +9,7 @@ function getFirstLine(comment: string) {
 
 export function MarkdownWrapper({ source, singleLine }: { source: string; singleLine?: boolean }) {
   const content = singleLine ? getFirstLine(source) : source;
-  return (
-    <Markdown
-      source={content}
-      options={{
-        html: false,
-        breaks: true,
-        linkify: true,
-      }}
-    />
-  );
+  return <Markdown>{content}</Markdown>;
 }
 
 export function MarkdownModal({
@@ -29,23 +18,39 @@ export function MarkdownModal({
   onOk,
   onChange,
   label,
+  placeholder,
 }: {
   source: string;
   label: string;
   isOpen?: boolean;
+  placeholder?: string;
   onOk: () => void;
-  onChange: React.ChangeEventHandler<HTMLTextAreaElement>;
+  onChange: (newValue: string) => void;
 }) {
+  const placeholderText = placeholder ? placeholder : `Add ${label}`;
+  const [currentValue, setCurrentValue] = React.useState(source);
+
+  const onConfirm = () => {
+    onChange(currentValue);
+    onOk();
+  };
+
+  const setCurrentValueFromEvent = (
+    event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>,
+  ) => {
+    setCurrentValue(event.target.value);
+  };
+
   return (
     <Modal
       key="comment-markdown-modal"
       title={<span>{`Edit ${label}`}</span>}
       open={isOpen}
       onCancel={onOk}
-      closable={false}
+      closable={true}
       width={700}
       footer={[
-        <Button key="back" onClick={onOk}>
+        <Button key="back" onClick={onConfirm}>
           Ok
         </Button>,
       ]}
@@ -69,10 +74,10 @@ export function MarkdownModal({
       />
       <Row gutter={16}>
         <Col span={12}>
-          <TextArea
-            value={source}
-            placeholder={`Add ${label}`}
-            onChange={onChange}
+          <Input.TextArea
+            defaultValue={currentValue}
+            placeholder={placeholderText}
+            onChange={setCurrentValueFromEvent}
             rows={5}
             autoSize={{
               minRows: 5,
@@ -87,7 +92,7 @@ export function MarkdownModal({
             overflowY: "auto",
           }}
         >
-          <MarkdownWrapper source={source} />
+          <MarkdownWrapper source={currentValue} />
         </Col>
       </Row>
     </Modal>

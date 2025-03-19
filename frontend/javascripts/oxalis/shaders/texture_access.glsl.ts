@@ -1,5 +1,5 @@
 import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
-import { getResolutionFactors, getAbsoluteCoords } from "oxalis/shaders/coords.glsl";
+import { getAbsoluteCoords, getMagnificationFactors } from "oxalis/shaders/coords.glsl";
 import { hashCombine } from "./hashing.glsl";
 import type { ShaderModule } from "./shader_module_system";
 import { transDim } from "./utils.glsl";
@@ -52,7 +52,7 @@ export const getRgbaAtXYIndex: ShaderModule = {
 
     <% _.each(layerNamesWithSegmentation, (name) => { %>
       vec4 getRgbaAtXYIndex_<%= name %>(float textureIdx, float x, float y) {
-        // Since WebGL 1 doesnt allow dynamic texture indexing, we use an exhaustive if-else-construct
+        // Since WebGL 1 doesn't allow dynamic texture indexing, we use an exhaustive if-else-construct
         // here which checks for each case individually. The else-if-branches are constructed via
         // lodash templates.
 
@@ -92,7 +92,7 @@ export const getColorForCoords: ShaderModule = {
     getRgbaAtIndex,
     getRgbaAtXYIndex,
     getAbsoluteCoords,
-    getResolutionFactors,
+    getMagnificationFactors,
     hashCombine,
     transDim,
   ],
@@ -272,10 +272,10 @@ export const getColorForCoords: ShaderModule = {
          * If we are in the [5, _, _, 0]-bucket, we have to look into the **second** half
          * of the [2, _, _, 1]-bucket.
          * We can determine which "half" (subVolumeIndex) is relevant by doing a modulo operation
-         * with the resolution factor. A typical resolution factor is 2.
+         * with the magnification factor. A typical magnification factor is 2.
          */
 
-        vec3 magnificationFactors = getResolutionFactors(renderedMagIdx, activeMagIdx, globalLayerIndex);
+        vec3 magnificationFactors = getMagnificationFactors(renderedMagIdx, activeMagIdx, globalLayerIndex);
         vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, activeMagIdx, globalLayerIndex));
         offsetInBucket = mod(coords, bucketWidth);
         vec3 worldBucketPosition = div(coords, bucketWidth);
@@ -345,7 +345,7 @@ export const getColorForCoords: ShaderModule = {
 
       if (packingDegree == 2.0) {
         // It's essentially irrelevant what we return as the 3rd and 4th value here as we only have 2 byte of information.
-        // The caller needs to unpack this vec4 according to the packingDegree, see getSegmentationId for an example.
+        // The caller needs to unpack this vec4 according to the packingDegree, see getSegmentId for an example.
         // The same goes for the following code where the packingDegree is 4 and we only have 1 byte of information.
         if (rgbaIndex == 0.0) {
           returnValue[1] = vec4(

@@ -1,5 +1,5 @@
-import type { Vector3, OrthoView } from "oxalis/constants";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { OrthoView, Vector3 } from "oxalis/constants";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 type ZoomInAction = ReturnType<typeof zoomInAction>;
 type ZoomOutAction = ReturnType<typeof zoomOutAction>;
@@ -54,56 +54,56 @@ export const FlycamActions = [
 export const zoomInAction = () =>
   ({
     type: "ZOOM_IN",
-  } as const);
+  }) as const;
 
 export const zoomOutAction = () =>
   ({
     type: "ZOOM_OUT",
-  } as const);
+  }) as const;
 
 export const zoomByDeltaAction = (zoomDelta: number) =>
   ({
     type: "ZOOM_BY_DELTA",
     zoomDelta,
-  } as const);
+  }) as const;
 
 export const setZoomStepAction = (zoomStep: number) =>
   ({
     type: "SET_ZOOM_STEP",
     zoomStep,
-  } as const);
+  }) as const;
 
 export const setPositionAction = (position: Vector3, dimensionToSkip?: number | null | undefined) =>
   ({
     type: "SET_POSITION",
     position,
     dimensionToSkip,
-  } as const);
+  }) as const;
 
 export const setAdditionalCoordinatesAction = (values: AdditionalCoordinate[] | null | undefined) =>
   ({
     type: "SET_ADDITIONAL_COORDINATES",
     values,
-  } as const);
+  }) as const;
 
 export const setRotationAction = (rotation: Vector3) =>
   ({
     type: "SET_ROTATION",
     rotation,
-  } as const);
+  }) as const;
 
 export const setDirectionAction = (direction: Vector3) =>
   ({
     type: "SET_DIRECTION",
     direction,
-  } as const);
+  }) as const;
 
 export const moveFlycamOrthoAction = (vector: Vector3, planeId: OrthoView | null | undefined) =>
   ({
     type: "MOVE_FLYCAM_ORTHO",
     vector,
     planeId,
-  } as const);
+  }) as const;
 
 export const movePlaneFlycamOrthoAction = (
   vector: Vector3,
@@ -115,34 +115,34 @@ export const movePlaneFlycamOrthoAction = (
     vector,
     planeId,
     increaseSpeedWithZoom,
-  } as const);
+  }) as const;
 
 export const moveFlycamAction = (vector: Vector3) =>
   ({
     type: "MOVE_FLYCAM",
     vector,
-  } as const);
+  }) as const;
 
 export const yawFlycamAction = (angle: number, regardDistance: boolean = false) =>
   ({
     type: "YAW_FLYCAM",
     angle,
     regardDistance,
-  } as const);
+  }) as const;
 
 export const rollFlycamAction = (angle: number, regardDistance: boolean = false) =>
   ({
     type: "ROLL_FLYCAM",
     angle,
     regardDistance,
-  } as const);
+  }) as const;
 
 export const pitchFlycamAction = (angle: number, regardDistance: boolean = false) =>
   ({
     type: "PITCH_FLYCAM",
     angle,
     regardDistance,
-  } as const);
+  }) as const;
 
 export const rotateFlycamAction = (angle: number, axis: Vector3, regardDistance: boolean = false) =>
   ({
@@ -150,4 +150,4 @@ export const rotateFlycamAction = (angle: number, axis: Vector3, regardDistance:
     angle,
     axis,
     regardDistance,
-  } as const);
+  }) as const;

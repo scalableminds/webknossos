@@ -1,6 +1,7 @@
 package models.configuration
 
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayerLike
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
@@ -19,26 +20,21 @@ class DatasetConfigurationService @Inject()(datasetService: DatasetService,
                                             datasetDAO: DatasetDAO,
                                             thumbnailCachingService: ThumbnailCachingService,
                                             datasetDataLayerDAO: DatasetLayerDAO)(implicit ec: ExecutionContext) {
-  def getDatasetViewConfigurationForUserAndDataset(
-      requestedVolumeIds: List[String],
-      user: User,
-      datasetName: String,
-      organizationName: String)(implicit ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
+  def getDatasetViewConfigurationForUserAndDataset(requestedVolumeIds: List[String], user: User, datasetId: ObjectId)(
+      implicit ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
     for {
-      dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)
 
+      dataset <- datasetDAO.findOne(datasetId)
       datasetViewConfiguration <- userDatasetConfigurationDAO.findOneForUserAndDataset(user._id, dataset._id)
 
       datasetLayers <- datasetService.allLayersFor(dataset)
       layerConfigurations <- getLayerConfigurations(datasetLayers, requestedVolumeIds, dataset, Some(user))
     } yield buildCompleteDatasetConfiguration(datasetViewConfiguration, layerConfigurations)
 
-  def getDatasetViewConfigurationForDataset(
-      requestedVolumeIds: List[String],
-      datasetName: String,
-      organizationName: String)(implicit ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
+  def getDatasetViewConfigurationForDataset(requestedVolumeIds: List[String], datasetId: ObjectId)(
+      implicit ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
     for {
-      dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)
+      dataset <- datasetDAO.findOne(datasetId)
 
       datasetViewConfiguration = getDatasetViewConfigurationFromDefaultAndAdmin(dataset)
 
@@ -52,12 +48,11 @@ class DatasetConfigurationService @Inject()(datasetService: DatasetService,
     defaultVC ++ adminVC
   }
 
-  def getCompleteAdminViewConfiguration(datasetName: String, organizationName: String)(
+  def getCompleteAdminViewConfiguration(datasetId: ObjectId)(
       implicit ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
     for {
-      dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)
+      dataset <- datasetDAO.findOne(datasetId)
       datasetViewConfiguration = getDatasetViewConfigurationFromDefaultAndAdmin(dataset)
-
       datasetLayers <- datasetService.allLayersFor(dataset)
       layerConfigurations = getAllLayerAdminViewConfigForDataset(datasetLayers).view.mapValues(Json.toJson(_)).toMap
     } yield buildCompleteDatasetConfiguration(datasetViewConfiguration, layerConfigurations)

@@ -1,7 +1,6 @@
 import "test/mocks/lz4";
-import _ from "lodash";
 import test from "ava";
-import { Vector3 } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 import Matrix from "ml-matrix";
 import estimateAffine, { estimateAffineMatrix4x4 } from "libs/estimate_affine";
 import { almostEqual, getPointsC555 } from "./transform_spec_helpers";
@@ -9,7 +8,7 @@ import { M4x4 } from "libs/mjs";
 
 test("Estimate affine projection", (t) => {
   const [sourcePoints, targetPoints] = getPointsC555();
-  let affineMatrix = estimateAffine(sourcePoints, targetPoints);
+  const affineMatrix = estimateAffine(sourcePoints, targetPoints);
 
   const transform = (x: number, y: number, z: number) => {
     const vec = new Matrix([[x, y, z, 1]]).transpose();

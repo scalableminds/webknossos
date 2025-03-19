@@ -1,25 +1,4 @@
-import {
-  Divider,
-  Modal,
-  Checkbox,
-  Row,
-  Col,
-  Tabs,
-  Typography,
-  Button,
-  Radio,
-  Alert,
-  Tooltip,
-  TabsProps,
-} from "antd";
 import { CopyOutlined } from "@ant-design/icons";
-import React, { useState } from "react";
-import { makeComponentLazy, useFetch } from "libs/react_helpers";
-import type { AdditionalAxis, APIDataLayer, APIDataset } from "types/api_flow_types";
-import Toast from "libs/toast";
-import messages from "messages";
-import { Model } from "oxalis/singletons";
-import features from "features";
 import {
   doWithToken,
   downloadAnnotation,
@@ -27,33 +6,59 @@ import {
   getAuthToken,
   startExportTiffJob,
 } from "admin/admin_rest_api";
+import { useStartAndPollJob } from "admin/job/job_hooks";
 import {
-  LayerSelection,
-  BoundingBoxSelection,
-  getReadableNameOfVolumeLayer,
-  MagSlider,
-} from "oxalis/view/action-bar/starting_job_modals";
-import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
-import {
-  getVolumeTracingById,
-  hasVolumeTracings,
-} from "oxalis/model/accessors/volumetracing_accessor";
-import {
-  getByteCountFromLayer,
-  getDataLayers,
-  getLayerByName,
-  getResolutionInfo,
-} from "oxalis/model/accessors/dataset_accessor";
-import { useSelector } from "react-redux";
-import type { HybridTracing, OxalisState, UserBoundingBox } from "oxalis/store";
+  Alert,
+  Button,
+  Checkbox,
+  Col,
+  Divider,
+  Modal,
+  Radio,
+  Row,
+  Tabs,
+  type TabsProps,
+  Tooltip,
+  Typography,
+} from "antd";
+import { LayerSelection } from "components/layer_selection";
+import features from "features";
+import { formatCountToDataAmountUnit, formatScale } from "libs/format_utils";
+import { makeComponentLazy, useFetch } from "libs/react_helpers";
+import Toast from "libs/toast";
 import {
   computeArrayFromBoundingBox,
   computeBoundingBoxFromBoundingBoxObject,
   computeShapeFromBoundingBox,
 } from "libs/utils";
-import { formatCountToDataAmountUnit, formatScale } from "libs/format_utils";
-import { BoundingBoxType, Vector3 } from "oxalis/constants";
-import { useStartAndPollJob } from "admin/job/job_hooks";
+import messages from "messages";
+import type { BoundingBoxType, Vector3 } from "oxalis/constants";
+import {
+  getByteCountFromLayer,
+  getDataLayers,
+  getLayerByName,
+  getMagInfo,
+} from "oxalis/model/accessors/dataset_accessor";
+import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
+import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
+import {
+  getReadableNameOfVolumeLayer,
+  getVolumeTracingById,
+  hasVolumeTracings,
+} from "oxalis/model/accessors/volumetracing_accessor";
+import { Model } from "oxalis/singletons";
+import type { HybridTracing, OxalisState, UserBoundingBox } from "oxalis/store";
+import { BoundingBoxSelection, MagSlider } from "oxalis/view/action-bar/starting_job_modals";
+import type React from "react";
+import { useState } from "react";
+import { useSelector } from "react-redux";
+import {
+  type APIDataLayer,
+  type APIDataset,
+  APIJobType,
+  type AdditionalAxis,
+  type VoxelSize,
+} from "types/api_flow_types";
 const { Paragraph, Text } = Typography;
 
 type TabKeys = "download" | "export" | "python";
@@ -173,8 +178,10 @@ function estimateFileSize(
 }
 
 function formatSelectedScale(dataset: APIDataset, mag: Vector3) {
-  const scale = dataset.dataSource.scale;
-  return formatScale([scale[0] * mag[0], scale[1] * mag[1], scale[2] * mag[2]]);
+  const magAdaptedScale = dataset.dataSource.scale.factor.map((f, i) => f * mag[i]);
+  const unit = dataset.dataSource.scale.unit;
+  const scale = { factor: magAdaptedScale, unit } as VoxelSize;
+  return formatScale(scale);
 }
 
 export function Hint({
@@ -275,6 +282,9 @@ function _DownloadModalView({
   const rawUserBoundingBoxes = useSelector((state: OxalisState) =>
     getUserBoundingBoxesFromState(state),
   );
+  const currentAdditionalCoordinates = useSelector(
+    (state: OxalisState) => state.flycam.additionalCoordinates,
+  );
   const typeName = isAnnotation ? "annotation" : "dataset";
   const isMergerModeEnabled = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.isMergerModeEnabled,
@@ -297,7 +307,7 @@ function _DownloadModalView({
 
   const selectedLayer = getLayerByName(dataset, selectedLayerName);
   const selectedLayerInfos = getExportLayerInfos(selectedLayer, tracing);
-  const selectedLayerResolutionInfo = getResolutionInfo(selectedLayer.resolutions);
+  const selectedLayerMagInfo = getMagInfo(selectedLayer.resolutions);
 
   const userBoundingBoxes = [
     ...rawUserBoundingBoxes,
@@ -313,8 +323,8 @@ function _DownloadModalView({
   const [selectedBoundingBoxId, setSelectedBoundingBoxId] = useState(
     initialBoundingBoxId ?? userBoundingBoxes[0].id,
   );
-  const [rawMag, setMag] = useState<Vector3>(selectedLayerResolutionInfo.getFinestResolution());
-  const mag = selectedLayerResolutionInfo.getClosestExistingResolution(rawMag);
+  const [rawMag, setMag] = useState<Vector3>(selectedLayerMagInfo.getFinestMag());
+  const mag = selectedLayerMagInfo.getClosestExistingMag(rawMag);
   const [exportFormat, setExportFormat] = useState<ExportFormat>(ExportFormat.OME_TIFF);
 
   const selectedBoundingBox = userBoundingBoxes.find(
@@ -345,22 +355,18 @@ function _DownloadModalView({
         tracing.annotationId,
         tracing.annotationType,
         hasVolumeFallback,
-        {},
+        undefined,
         fileFormatToDownload,
         includeVolumeData,
       );
       onClose();
     } else if (activeTabKey === "export" && startJob != null) {
-      if ((selectedLayerInfos.additionalAxes || []).length > 0) {
-        Toast.warning("Exporting an n-dimensional layer is currently not supported.");
-        return;
-      }
       await Model.ensureSavedState();
       await startJob(async () => {
         const job = await startExportTiffJob(
-          dataset.name,
-          dataset.owningOrganization,
+          dataset.id,
           computeArrayFromBoundingBox(selectedBoundingBox.boundingBox),
+          currentAdditionalCoordinates,
           selectedLayerInfos.layerName,
           mag.join("-"),
           selectedLayerInfos.annotationId,
@@ -390,18 +396,6 @@ function _DownloadModalView({
           </Text>
         </Row>
       ) : null;
-    const ndVolumeWarning = isVolumeNDimensional ? (
-      <Row key="unsupported-nd">
-        <Text
-          style={{
-            margin: "0 6px 12px",
-          }}
-          type="warning"
-        >
-          Downloading/exporting n-dimensional volume data is not yet supported.
-        </Text>
-      </Row>
-    ) : null;
     const pythonTokenWarning =
       activeTabKey === "python" ? (
         <Row key="python-token-warning">
@@ -418,7 +412,7 @@ function _DownloadModalView({
         </Row>
       ) : null;
 
-    return [volumeFallbackWarning, ndVolumeWarning, pythonTokenWarning];
+    return [volumeFallbackWarning, pythonTokenWarning];
   };
 
   const handleTabChange = (key: string) => {
@@ -438,7 +432,7 @@ function _DownloadModalView({
     >
       For more information on how to work with {typeDependentFileName} visit the{" "}
       <a
-        href="https://docs.webknossos.org/webknossos/tooling.html"
+        href="https://docs.webknossos.org/webknossos/data/export_ui.html"
         target="_blank"
         rel="noreferrer"
       >
@@ -582,6 +576,8 @@ function _DownloadModalView({
     </>
   );
 
+  const onlyOneMagAvailable = selectedLayerMagInfo.getMagList().length === 1;
+
   const tiffExportTab = (
     <>
       <Row>
@@ -594,7 +590,8 @@ function _DownloadModalView({
           {messages["download.export_as_tiff"]({ typeName })}
         </Text>
       </Row>
-      {activeTabKey === "export" && !features().jobsEnabled ? (
+      {activeTabKey === "export" &&
+      !dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.EXPORT_TIFF) ? (
         workerInfo
       ) : (
         <div>
@@ -623,7 +620,9 @@ function _DownloadModalView({
             layers={layers}
             value={selectedLayerName}
             onChange={setSelectedLayerName}
-            tracing={tracing}
+            getReadableNameForLayer={(layer) =>
+              getReadableNameOfVolumeLayer(layer, tracing) || layer.name
+            }
             style={{ width: "100%" }}
           />
 
@@ -645,6 +644,26 @@ function _DownloadModalView({
             style={{ width: "100%" }}
           />
           {boundingBoxCompatibilityAlerts}
+          {(selectedLayerInfos.additionalAxes?.length || 0) > 0 && (
+            <Row>
+              <Divider
+                style={{
+                  margin: "18px 0",
+                }}
+              >
+                Additional Coordinates
+              </Divider>
+              <Text
+                style={{
+                  margin: "0 6px 12px",
+                }}
+              >
+                Your dataset has more than three dimensions. The export will only include the
+                selected bounding box at the current additional dimensions:{" "}
+                {getAdditionalCoordinatesAsString(currentAdditionalCoordinates)}
+              </Text>
+            </Row>
+          )}
 
           <Divider
             style={{
@@ -653,31 +672,30 @@ function _DownloadModalView({
           >
             Mag
           </Divider>
-          <Row>
-            <Col span={19}>
-              <MagSlider
-                resolutionInfo={selectedLayerResolutionInfo}
-                value={mag}
-                onChange={setMag}
-              />
-            </Col>
-            <Col
-              span={5}
-              style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}
-            >
-              {mag.join("-")}
-            </Col>
-          </Row>
+          {!onlyOneMagAvailable && (
+            <Row>
+              <Col span={19}>
+                <MagSlider magnificationInfo={selectedLayerMagInfo} value={mag} onChange={setMag} />
+              </Col>
+              <Col
+                span={5}
+                style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}
+              >
+                {mag.join("-")}
+              </Col>
+            </Row>
+          )}
           <Text
             style={{
               margin: "0 6px 12px",
               display: "block",
             }}
           >
+            {onlyOneMagAvailable && <div>{mag.join("-")}</div>}
             Estimated file size:{" "}
             {estimateFileSize(selectedLayer, mag, selectedBoundingBox.boundingBox, exportFormat)}
             <br />
-            Resolution: {formatSelectedScale(dataset, mag)}
+            Magnification: {formatSelectedScale(dataset, mag)}
           </Text>
 
           <Divider />

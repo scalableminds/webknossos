@@ -1,23 +1,31 @@
-import { MenuOutlined, InfoCircleOutlined } from "@ant-design/icons";
-import { List, Collapse, Tooltip, CollapseProps } from "antd";
-import React from "react";
-import { SortEnd } from "react-sortable-hoc";
-import { SortableContainer, SortableElement, SortableHandle } from "react-sortable-hoc";
+import { InfoCircleOutlined, MenuOutlined } from "@ant-design/icons";
+import { DndContext, type DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Collapse, type CollapseProps, List, Tooltip } from "antd";
 import { settings, settingsTooltips } from "messages";
 
-// Example taken and modified from https://4x.ant.design/components/table/#components-table-demo-drag-sorting-handler.
+// Example taken and modified from https://ant.design/components/table/#components-table-demo-drag-sorting-handler.
 
-const DragHandle = SortableHandle(() => <MenuOutlined style={{ cursor: "grab", color: "#999" }} />);
+function SortableListItem({ colorLayerName }: { colorLayerName: string }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: colorLayerName,
+  });
 
-const SortableItem = SortableElement(({ name }: { name: string }) => (
-  <List.Item key={name}>
-    <DragHandle /> {name}
-  </List.Item>
-));
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? "100" : "auto",
+    opacity: isDragging ? 0.3 : 1,
+  };
 
-const SortableLayerSettingsContainer = SortableContainer(({ children }: { children: any }) => {
-  return <div style={{ paddingTop: -16, paddingBottom: -16 }}>{children}</div>;
-});
+  return (
+    <List.Item id={colorLayerName} ref={setNodeRef} style={style}>
+      <MenuOutlined style={{ cursor: "grab", color: "#999" }} {...listeners} {...attributes} />{" "}
+      {colorLayerName}
+    </List.Item>
+  );
+}
 
 export default function ColorLayerOrderingTable({
   colorLayerNames,
@@ -25,18 +33,27 @@ export default function ColorLayerOrderingTable({
 }: {
   colorLayerNames?: string[];
   onChange?: (newColorLayerNames: string[]) => void;
-}): JSX.Element {
-  const onSortEnd = ({ oldIndex, newIndex }: SortEnd) => {
-    document.body.classList.remove("is-dragging");
-    if (oldIndex !== newIndex && onChange && colorLayerNames) {
-      const movedElement = colorLayerNames[oldIndex];
-      let newColorLayerNames = colorLayerNames.filter((_, index) => index !== oldIndex);
-      newColorLayerNames.splice(newIndex, 0, movedElement);
-      onChange(newColorLayerNames);
+}) {
+  const onSortEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (active && over && colorLayerNames) {
+      const oldIndex = colorLayerNames.indexOf(active.id as string);
+      const newIndex = colorLayerNames.indexOf(over.id as string);
+
+      document.body.classList.remove("is-dragging");
+
+      if (oldIndex !== newIndex && onChange) {
+        const movedElement = colorLayerNames[oldIndex];
+        const newColorLayerNames = colorLayerNames.filter((_, index) => index !== oldIndex);
+        newColorLayerNames.splice(newIndex, 0, movedElement);
+        onChange(newColorLayerNames);
+      }
     }
   };
 
   const isSettingEnabled = colorLayerNames && colorLayerNames.length > 1;
+  const sortingItems = isSettingEnabled ? colorLayerNames.map((name) => name) : [];
   const collapsibleDisabledExplanation =
     "The order of layers can only be configured when the dataset has multiple color layers.";
 
@@ -55,29 +72,25 @@ export default function ColorLayerOrderingTable({
     {
       label: panelTitle,
       key: "1",
-      children: (
-        <SortableLayerSettingsContainer
-          onSortEnd={onSortEnd}
-          onSortStart={() =>
-            colorLayerNames &&
-            colorLayerNames.length > 1 &&
-            document.body.classList.add("is-dragging")
-          }
-          useDragHandle
-        >
-          {colorLayerNames?.map((name, index) => (
-            <SortableItem key={name} index={index} name={name} />
-          ))}
-        </SortableLayerSettingsContainer>
-      ),
+      children: sortingItems.map((name) => <SortableListItem key={name} colorLayerName={name} />),
     },
   ];
 
   return (
-    <Collapse
-      defaultActiveKey={[]}
-      collapsible={isSettingEnabled ? "header" : "disabled"}
-      items={collapseItems}
-    />
+    <DndContext
+      autoScroll={false}
+      onDragStart={() => {
+        colorLayerNames && colorLayerNames.length > 1 && document.body.classList.add("is-dragging");
+      }}
+      onDragEnd={onSortEnd}
+    >
+      <SortableContext items={sortingItems} strategy={verticalListSortingStrategy}>
+        <Collapse
+          defaultActiveKey={[]}
+          collapsible={isSettingEnabled ? "header" : "disabled"}
+          items={collapseItems}
+        />
+      </SortableContext>
+    </DndContext>
   );
 }

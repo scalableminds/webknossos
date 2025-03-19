@@ -1,23 +1,42 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.mvc.ExtendedController
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrCoordinatesParser, ZarrSegmentationLayer}
-import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffGroupHeader, NgffMetadata, ZarrHeader}
+import com.scalableminds.webknossos.datastore.dataformats.layers.ZarrSegmentationLayer
+import com.scalableminds.webknossos.datastore.dataformats.zarr.{Zarr3OutputHelper, ZarrCoordinatesParser}
+import com.scalableminds.webknossos.datastore.datareaders.zarr.{
+  NgffGroupHeader,
+  NgffMetadata,
+  NgffMetadataV0_5,
+  ZarrHeader
+}
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
+  BytesCodecConfiguration,
+  ChunkGridConfiguration,
+  ChunkGridSpecification,
+  ChunkKeyEncoding,
+  ChunkKeyEncodingConfiguration,
+  TransposeCodecConfiguration,
+  TransposeSetting,
+  Zarr3ArrayHeader,
+  Zarr3GroupHeader
+}
 import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, AxisOrder}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
+import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, WebknossosDataRequest}
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataFormat, DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
+import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import com.scalableminds.webknossos.tracingstore.{
   TSRemoteDatastoreClient,
-  TSRemoteWebKnossosClient,
+  TSRemoteWebknossosClient,
   TracingStoreAccessTokenService
 }
 import play.api.i18n.Messages
@@ -30,81 +49,92 @@ class VolumeTracingZarrStreamingController @Inject()(
     tracingService: VolumeTracingService,
     accessTokenService: TracingStoreAccessTokenService,
     editableMappingService: EditableMappingService,
+    annotationService: TSAnnotationService,
     remoteDataStoreClient: TSRemoteDatastoreClient,
-    remoteWebKnossosClient: TSRemoteWebKnossosClient)(implicit ec: ExecutionContext)
+    remoteWebknossosClient: TSRemoteWebknossosClient)(implicit ec: ExecutionContext)
     extends ExtendedController
     with ProtoGeometryImplicits
-    with FoxImplicits {
+    with FoxImplicits
+    with Zarr3OutputHelper {
 
   override def defaultErrorCode: Int = NOT_FOUND
 
-  def volumeTracingFolderContent(token: Option[String], tracingId: String): Action[AnyContent] =
+  def volumeTracingDirectoryContent(tracingId: String, zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
-          existingMags = tracing.resolutions.map(vec3IntFromProto)
+          annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
+          tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
+          existingMags = tracing.mags.map(vec3IntFromProto)
+          additionalFiles = if (zarrVersion == 2)
+            List(NgffMetadata.FILENAME_DOT_ZATTRS, NgffGroupHeader.FILENAME_DOT_ZGROUP)
+          else List(Zarr3ArrayHeader.FILENAME_ZARR_JSON)
         } yield
           Ok(
             views.html.datastoreZarrDatasourceDir(
               "Tracingstore",
               "%s".format(tracingId),
-              List(".zattrs", ".zgroup") ++ existingMags.map(_.toMagLiteral(allowScalar = true))
+              additionalFiles ++ existingMags.map(_.toMagLiteral(allowScalar = true))
             )).withHeaders()
       }
     }
 
-  def volumeTracingFolderContentJson(token: Option[String], tracingId: String): Action[AnyContent] =
+  def volumeTracingDirectoryContentJson(tracingId: String, zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
-          existingMags = tracing.resolutions.map(vec3IntFromProto(_).toMagLiteral(allowScalar = true))
-        } yield Ok(Json.toJson(List(".zattrs", ".zgroup") ++ existingMags))
+          annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
+          tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
+          existingMags = tracing.mags.map(vec3IntFromProto(_).toMagLiteral(allowScalar = true))
+          additionalFiles = if (zarrVersion == 2)
+            List(NgffMetadata.FILENAME_DOT_ZATTRS, NgffGroupHeader.FILENAME_DOT_ZGROUP)
+          else List(Zarr3ArrayHeader.FILENAME_ZARR_JSON)
+        } yield Ok(Json.toJson(additionalFiles ++ existingMags))
       }
     }
 
-  def volumeTracingMagFolderContent(token: Option[String], tracingId: String, mag: String): Action[AnyContent] =
+  def volumeTracingMagDirectoryContent(tracingId: String, mag: String, zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
-
-          existingMags = tracing.resolutions.map(vec3IntFromProto)
+          annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
+          tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
+          existingMags = tracing.mags.map(vec3IntFromProto)
           magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
           _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> NOT_FOUND
+          files = if (zarrVersion == 2) List(".zarray") else List(Zarr3ArrayHeader.FILENAME_ZARR_JSON)
         } yield
           Ok(
             views.html.datastoreZarrDatasourceDir(
               "Tracingstore",
               "%s".format(tracingId),
-              List(".zarray")
+              files
             )).withHeaders()
       }
     }
 
-  def volumeTracingMagFolderContentJson(token: Option[String], tracingId: String, mag: String): Action[AnyContent] =
+  def volumeTracingMagDirectoryContentJson(tracingId: String, mag: String, zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
-
-          existingMags = tracing.resolutions.map(vec3IntFromProto)
+          annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
+          tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
+          existingMags = tracing.mags.map(vec3IntFromProto)
           magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
           _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> NOT_FOUND
-        } yield Ok(Json.toJson(List(".zarray")))
+          files = if (zarrVersion == 2) List(".zarray") else List(Zarr3ArrayHeader.FILENAME_ZARR_JSON)
+        } yield Ok(Json.toJson(files))
       }
     }
 
-  def zArray(token: Option[String], tracingId: String, mag: String): Action[AnyContent] = Action.async {
-    implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+  def zArray(tracingId: String, mag: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
-
-          existingMags = tracing.resolutions.map(vec3IntFromProto)
-          magParsed <- Vec3Int
-            .fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
+          annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
+          tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
+          existingMags = tracing.mags.map(vec3IntFromProto)
+          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
           _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> NOT_FOUND
 
           cubeLength = DataLayer.bucketLength
@@ -130,10 +160,57 @@ class VolumeTracingZarrStreamingController @Inject()(
                                   order = ArrayOrder.F)
         } yield Ok(Json.toJson(zarrHeader))
       }
-  }
+    }
 
-  def zGroup(token: Option[String], tracingId: String): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+  def zarrJsonForMag(tracingId: String, mag: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
+        for {
+          annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
+          tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
+
+          existingMags = tracing.mags.map(vec3IntFromProto)
+          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
+          _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> NOT_FOUND
+
+          additionalAxes = AdditionalAxis.fromProtos(tracing.additionalAxes)
+          dimNames = Some(Array("c") ++ additionalAxes.map(_.name).toArray ++ Seq("x", "y", "z"))
+
+          zarrHeader = Zarr3ArrayHeader(
+            zarr_format = 3,
+            node_type = "array",
+            // channel, additional axes, XYZ
+            shape = Array(1) ++ additionalAxes.map(_.highestValue).toArray ++ Array(
+              (tracing.boundingBox.width + tracing.boundingBox.topLeft.x) / magParsed.x,
+              (tracing.boundingBox.height + tracing.boundingBox.topLeft.y) / magParsed.y,
+              (tracing.boundingBox.depth + tracing.boundingBox.topLeft.z) / magParsed.z
+            ),
+            data_type = Left(tracing.elementClass.toString),
+            chunk_grid = Left(
+              ChunkGridSpecification(
+                "regular",
+                ChunkGridConfiguration(
+                  chunk_shape = Array.fill(1 + additionalAxes.length)(1) ++ Array(DataLayer.bucketLength,
+                                                                                  DataLayer.bucketLength,
+                                                                                  DataLayer.bucketLength))
+              )),
+            chunk_key_encoding =
+              ChunkKeyEncoding("v2", configuration = Some(ChunkKeyEncodingConfiguration(separator = Some(".")))),
+            fill_value = Right(0),
+            attributes = None,
+            codecs = Seq(
+              TransposeCodecConfiguration(TransposeSetting.fOrderFromRank(additionalAxes.length + 4)),
+              BytesCodecConfiguration(Some("little")),
+            ),
+            storage_transformers = None,
+            dimension_names = dimNames
+          )
+        } yield Ok(Json.toJson(zarrHeader))
+      }
+    }
+
+  def zGroup(tracingId: String): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
       Future(Ok(Json.toJson(NgffGroupHeader(zarr_format = 2))))
     }
   }
@@ -144,103 +221,125 @@ class VolumeTracingZarrStreamingController @Inject()(
     * Used by zarr-streaming.
     */
   def zAttrs(
-      token: Option[String],
       tracingId: String,
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
       for {
-        tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
-
-        existingMags = tracing.resolutions.map(vec3IntFromProto)
-        dataSource <- remoteWebKnossosClient.getDataSourceForTracing(tracingId) ~> NOT_FOUND
-        omeNgffHeader = NgffMetadata.fromNameScaleAndMags(tracingId,
-                                                          dataSourceScale = dataSource.scale,
-                                                          mags = existingMags.toList)
+        annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
+        tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
+        existingMags = tracing.mags.map(vec3IntFromProto)
+        dataSource <- remoteWebknossosClient.getDataSourceForAnnotation(annotationId) ~> NOT_FOUND
+        omeNgffHeader = NgffMetadata.fromNameVoxelSizeAndMags(tracingId,
+                                                              dataSourceVoxelSize = dataSource.scale,
+                                                              mags = existingMags.toList)
       } yield Ok(Json.toJson(omeNgffHeader))
     }
   }
 
-  def zarrSource(token: Option[String], tracingId: String, tracingName: Option[String]): Action[AnyContent] =
-    Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
-        for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
+  def zarrJson(
+      tracingId: String,
+  ): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
+      for {
+        annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
+        tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
+        sortedExistingMags = tracing.mags.map(vec3IntFromProto).toList.sortBy(_.maxDim)
+        dataSource <- remoteWebknossosClient.getDataSourceForAnnotation(annotationId) ~> NOT_FOUND
+        omeNgffHeader = NgffMetadataV0_5.fromNameVoxelSizeAndMags(tracingId,
+                                                                  dataSourceVoxelSize = dataSource.scale,
+                                                                  mags = sortedExistingMags,
+                                                                  additionalAxes = dataSource.additionalAxesUnion)
+        zarr3GroupHeader = Zarr3GroupHeader(3, "group", Some(omeNgffHeader))
+      } yield Ok(Json.toJson(zarr3GroupHeader))
+    }
+  }
 
+  def zarrSource(tracingId: String, tracingName: Option[String], zarrVersion: Int): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
+        for {
+          annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
+          tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
           zarrLayer = ZarrSegmentationLayer(
             name = tracingName.getOrElse(tracingId),
             largestSegmentId = tracing.largestSegmentId,
             boundingBox = tracing.boundingBox,
             elementClass = tracing.elementClass,
-            mags = tracing.resolutions.toList.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
+            mags = tracing.mags.toList.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
             mappings = None,
-            numChannels = Some(if (tracing.elementClass.isuint24) 3 else 1)
+            numChannels = Some(if (tracing.elementClass.isuint24) 3 else 1),
+            dataFormat = if (zarrVersion == 2) DataFormat.zarr else DataFormat.zarr3
           )
         } yield Ok(Json.toJson(zarrLayer))
       }
     }
 
-  def rawZarrCube(token: Option[String], tracingId: String, mag: String, cxyz: String): Action[AnyContent] =
+  def rawZarrCube(tracingId: String, mag: String, coordinates: String): Action[AnyContent] =
     Action.async { implicit request =>
       {
-        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
-            tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
+            annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
+            tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
 
-            existingMags = tracing.resolutions.map(vec3IntFromProto)
+            existingMags = tracing.mags.map(vec3IntFromProto)
             magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
             _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> NOT_FOUND
 
-            (c, x, y, z) <- ZarrCoordinatesParser.parseDotCoordinates(cxyz) ?~> Messages("zarr.invalidChunkCoordinates") ~> NOT_FOUND
-            _ <- bool2Fox(c == 0) ~> Messages("zarr.invalidFirstChunkCoord") ~> NOT_FOUND
+            reorderedAdditionalAxes = reorderAdditionalAxes(AdditionalAxis.fromProtos(tracing.additionalAxes))
+            (x, y, z, additionalCoordinates) <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates(
+              coordinates,
+              Some(reorderedAdditionalAxes)) ?~> Messages("zarr.invalidChunkCoordinates") ~> NOT_FOUND
             cubeSize = DataLayer.bucketLength
-            wkRequest = WebKnossosDataRequest(
+            wkRequest = WebknossosDataRequest(
               position = Vec3Int(x, y, z) * cubeSize * magParsed,
               mag = magParsed,
               cubeSize = cubeSize,
               fourBit = Some(false),
               applyAgglomerate = None,
               version = None,
-              additionalCoordinates = None
+              additionalCoordinates = additionalCoordinates
             )
-            (data, missingBucketIndices) <- if (tracing.getMappingIsEditable)
-              editableMappingService.volumeData(tracing, tracingId, List(wkRequest), urlOrHeaderToken(token, request))
-            else tracingService.data(tracingId, tracing, List(wkRequest))
+            (data, missingBucketIndices) <- if (tracing.getHasEditableMapping) {
+              val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
+              editableMappingService.volumeData(mappingLayer, List(wkRequest))
+            } else tracingService.data(annotationId, tracingId, tracing, List(wkRequest))
             dataWithFallback <- getFallbackLayerDataIfEmpty(tracing,
-                                                            tracingId,
+                                                            annotationId,
                                                             data,
                                                             missingBucketIndices,
                                                             magParsed,
                                                             Vec3Int(x, y, z),
                                                             cubeSize,
-                                                            urlOrHeaderToken(token, request)) ~> NOT_FOUND
+                                                            additionalCoordinates) ~> NOT_FOUND
           } yield Ok(dataWithFallback)
         }
       }
     }
 
-  private def getFallbackLayerDataIfEmpty(tracing: VolumeTracing,
-                                          tracingId: String,
-                                          data: Array[Byte],
-                                          missingBucketIndices: List[Int],
-                                          mag: Vec3Int,
-                                          position: Vec3Int,
-                                          cubeSize: Int,
-                                          urlToken: Option[String]): Fox[Array[Byte]] =
+  private def getFallbackLayerDataIfEmpty(
+      tracing: VolumeTracing,
+      annotationId: String,
+      data: Array[Byte],
+      missingBucketIndices: List[Int],
+      mag: Vec3Int,
+      position: Vec3Int,
+      cubeSize: Int,
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit tc: TokenContext): Fox[Array[Byte]] =
     if (missingBucketIndices.nonEmpty) {
       for {
-        remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId) ?~> "No data at coordinates, no fallback layer defined"
-        request = WebKnossosDataRequest(
+        remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, annotationId) ?~> "No data at coordinates, no fallback layer defined"
+        request = WebknossosDataRequest(
           position = position * mag * cubeSize,
           mag = mag,
           cubeSize = cubeSize,
           fourBit = Some(false),
           applyAgglomerate = tracing.mappingName,
           version = None,
-          additionalCoordinates = None
+          additionalCoordinates = additionalCoordinates
         )
         (fallbackData, fallbackMissingBucketIndices) <- remoteDataStoreClient.getData(remoteFallbackLayer,
-                                                                                      List(request),
-                                                                                      urlToken)
+                                                                                      List(request))
         _ <- bool2Fox(fallbackMissingBucketIndices.isEmpty) ?~> "No data at coordinations in fallback layer"
       } yield fallbackData
     } else Fox.successful(data)

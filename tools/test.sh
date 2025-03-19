@@ -2,6 +2,7 @@
 
 testBundlePath="public-test/test-bundle"
 jsPath="frontend/javascripts"
+proto_dir="webknossos-datastore/proto"
 FIND=find
 
 if [ -x "$(command -v gfind)" ]; then
@@ -17,8 +18,10 @@ mkdir -p "$testBundlePath"
 function prepare {
   rm -rf "$testBundlePath" && mkdir "$testBundlePath"
   # Webpack with the proto loader isn't used when running the tests, so the proto files need to be prepared manually
-  pbjs -t json "webknossos-datastore/proto/SkeletonTracing.proto" > "$testBundlePath/SkeletonTracing.proto.json"
-  pbjs -t json "webknossos-datastore/proto/VolumeTracing.proto" > "$testBundlePath/VolumeTracing.proto.json"
+  for proto_file in "$proto_dir"/*.proto; do
+      output_file="$testBundlePath/$(basename "$proto_file").json"
+      pbjs -t json "$proto_file" > "$output_file"
+  done
 
   # Beginning from target==node13, dynamic imports are not converted anymore by esbuild. Tests which use code
   # that relies on dynamic imports fails then because the module cannot be found for some reason.
@@ -64,9 +67,11 @@ ensureUpToDateTests() {
 maybeWithC8() {
   if [[ -n "$CIRCLECI" ]]; then
     # Running in CircleCI, use c8 to gather code coverage.
+    echo "Running with c8 to gather code coverage..."
     c8 --silent --no-clean "$@"
   else
     # Not running in CircleCI, execute the command directly
+    echo "Running tests without gathering code coverage..."
     "$@"
   fi
 }
@@ -85,7 +90,7 @@ elif [ $cmd == "test-changed" ]
 then
   ensureUpToDateTests
   # Find modified *.spec.* files, trim their extension (since ts != js) and look them up in the compiled bundle
-  changed_files=$(git ls-files --modified | grep \\.spec\\. | xargs -i basename {} | sed -r 's|^(.*?)\.\w+$|\1|' | xargs -i find public-test/test-bundle -name "{}*")
+  changed_files=$(git ls-files --modified | grep \\.spec\\. | xargs -i basename {} | sed -r 's|^(.*?)\.\w+$|\1|' | xargs -i find public-test/test-bundle -name "{}*" | grep -E -v "\.(md|snap)")
 
   if [ -z "$changed_files" ]
   then

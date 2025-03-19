@@ -8,7 +8,7 @@ import models.job.JobCommand.JobCommand
 import models.organization.Organization
 import models.user.User
 import play.api.libs.json._
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 
@@ -37,7 +37,7 @@ trait AnalyticsEvent {
     }
 }
 
-case class AnalyticsEventJsonUserProperties(organizationId: ObjectId,
+case class AnalyticsEventJsonUserProperties(organizationId: String,
                                             isOrganizationAdmin: Boolean,
                                             isSuperUser: Boolean,
                                             webknossosUri: String)
@@ -46,13 +46,15 @@ object AnalyticsEventJsonUserProperties {
   implicit val jsonWrites: OWrites[AnalyticsEventJsonUserProperties] = Json.writes[AnalyticsEventJsonUserProperties]
 
   implicit object analyticsEventJsonUserPropertiesReads extends Reads[AnalyticsEventJsonUserProperties] {
-    override def reads(json: JsValue): JsResult[AnalyticsEventJsonUserProperties] =
+    override def reads(json: JsValue): JsResult[AnalyticsEventJsonUserProperties] = {
+      val organizationIdLookup = (json \ "organization_id").orElse(json \ "organizationId")
       for {
-        organizationId <- (json \ "organization_id").orElse(json \ "organizationId").validate[ObjectId]
+        organizationId <- organizationIdLookup.validate[String]
         isOrganizationAdmin <- (json \ "is_organization_admin").orElse(json \ "isOrganizationAdmin").validate[Boolean]
         isSuperUser <- (json \ "is_superuser").orElse(json \ "isSuperUser").validate[Boolean]
         webknossosUri <- (json \ "webknossos_uri").orElse(json \ "webknossosUri").validate[String]
       } yield AnalyticsEventJsonUserProperties(organizationId, isOrganizationAdmin, isSuperUser, webknossosUri)
+    }
   }
 }
 
@@ -120,7 +122,7 @@ case class JoinOrganizationEvent(user: User, organization: Organization)(implici
     extends AnalyticsEvent {
   def eventType: String = "join_organization"
   def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
-    Fox.successful(Json.obj("joined_organization_id" -> organization._id.id))
+    Fox.successful(Json.obj("joined_organization_id" -> organization._id))
 }
 
 case class CreateAnnotationEvent(user: User, annotation: Annotation)(implicit ec: ExecutionContext)
@@ -172,17 +174,17 @@ case class UpdateAnnotationViewOnlyEvent(user: User, annotation: Annotation, cha
     Fox.successful(Json.obj("annotation_id" -> annotation._id.id, "changes_count" -> changesCount))
 }
 
-case class OpenDatasetEvent(user: User, dataSet: Dataset)(implicit ec: ExecutionContext) extends AnalyticsEvent {
+case class OpenDatasetEvent(user: User, dataset: Dataset)(implicit ec: ExecutionContext) extends AnalyticsEvent {
   def eventType: String = "open_dataset"
   def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
     for {
-      uploader_multiuser_id <- Fox.runOptional(dataSet._uploader)(uploader =>
+      uploader_multiuser_id <- Fox.runOptional(dataset._uploader)(uploader =>
         analyticsLookUpService.multiUserIdFor(uploader))
     } yield {
       Json.obj(
-        "dataset_id" -> dataSet._id.id,
-        "dataset_name" -> dataSet.name,
-        "dataset_organization_id" -> dataSet._organization.id,
+        "dataset_id" -> dataset._id.id,
+        "dataset_name" -> dataset.name,
+        "dataset_organization_id" -> dataset._organization,
         "dataset_uploader_multiuser_id" -> uploader_multiuser_id
       )
     }
@@ -200,26 +202,26 @@ case class FailedJobEvent(user: User, command: JobCommand)(implicit ec: Executio
     Fox.successful(Json.obj("command" -> command.toString))
 }
 
-case class UploadDatasetEvent(user: User, dataSet: Dataset, dataStore: DataStore, dataSetSizeBytes: Long)(
+case class UploadDatasetEvent(user: User, dataset: Dataset, dataStore: DataStore, datasetSizeBytes: Long)(
     implicit ec: ExecutionContext)
     extends AnalyticsEvent {
   def eventType: String = "upload_dataset"
   def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
     Fox.successful(
       Json.obj(
-        "dataset_id" -> dataSet._id.id,
-        "dataset_name" -> dataSet.name,
-        "dataset_size_bytes" -> dataSetSizeBytes,
+        "dataset_id" -> dataset._id.id,
+        "dataset_name" -> dataset.name,
+        "dataset_size_bytes" -> datasetSizeBytes,
         "datastore_uri" -> dataStore.publicUrl,
-        "dataset_organization_id" -> dataSet._organization.id
+        "dataset_organization_id" -> dataset._organization
       ))
 }
 
-case class ChangeDatasetSettingsEvent(user: User, dataSet: Dataset)(implicit ec: ExecutionContext)
+case class ChangeDatasetSettingsEvent(user: User, dataset: Dataset)(implicit ec: ExecutionContext)
     extends AnalyticsEvent {
   def eventType: String = "change_dataset_settings"
   def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
-    Fox.successful(Json.obj("dataset_id" -> dataSet._id.id))
+    Fox.successful(Json.obj("dataset_id" -> dataset._id.id))
 }
 
 case class FrontendAnalyticsEvent(user: User, eventType: String, eventProperties: JsObject)(

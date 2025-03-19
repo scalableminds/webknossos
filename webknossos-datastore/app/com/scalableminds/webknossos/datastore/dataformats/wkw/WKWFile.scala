@@ -3,11 +3,13 @@ package com.scalableminds.webknossos.datastore.dataformats.wkw
 import java.io._
 import org.apache.commons.io.IOUtils
 import com.google.common.io.LittleEndianDataInputStream
-import com.scalableminds.util.tools.BoxImplicits
-import com.scalableminds.webknossos.datastore.dataformats.wkw.util.ResourceBox
+import com.scalableminds.util.tools.Fox.box2Fox
+import com.scalableminds.util.tools.{BoxImplicits, Fox}
 import net.jpountz.lz4.LZ4Factory
 import net.liftweb.common.{Box, Failure, Full}
 import net.liftweb.common.Box.tryo
+
+import scala.concurrent.ExecutionContext
 
 trait WKWCompressionHelper extends BoxImplicits {
 
@@ -65,18 +67,18 @@ trait WKWCompressionHelper extends BoxImplicits {
 
 object WKWFile extends WKWCompressionHelper {
 
-  def read[T](is: InputStream)(f: (WKWHeader, Iterator[Array[Byte]]) => T): Box[T] =
-    ResourceBox.manage(new LittleEndianDataInputStream(is)) { dataStream =>
-      for {
-        header <- WKWHeader(dataStream, readJumpTable = true)
-      } yield {
-        val blockIterator = header.blockLengths.flatMap { blockLength =>
-          val data: Array[Byte] = IOUtils.toByteArray(dataStream, blockLength)
-          if (header.isCompressed) decompressChunk(header.blockType, header.numBytesPerChunk)(data) else Full(data)
-        }
-        f(header, blockIterator)
+  def read[T](is: InputStream)(f: (WKWHeader, Iterator[Array[Byte]]) => Fox[T])(
+      implicit ec: ExecutionContext): Fox[T] = {
+    val dataStream = new LittleEndianDataInputStream(is)
+    for {
+      header <- WKWHeader(dataStream, readJumpTable = true).toFox
+      blockIterator = header.blockLengths.flatMap { blockLength =>
+        val data: Array[Byte] = IOUtils.toByteArray(dataStream, blockLength)
+        if (header.isCompressed) decompressChunk(header.blockType, header.numBytesPerChunk)(data) else Full(data)
       }
-    }
+      result <- f(header, blockIterator)
+    } yield result
+  }
 
   def write(os: OutputStream, header: WKWHeader, blocks: Iterator[Array[Byte]]): Box[Unit] = {
     val dataBuffer = new ByteArrayOutputStream()

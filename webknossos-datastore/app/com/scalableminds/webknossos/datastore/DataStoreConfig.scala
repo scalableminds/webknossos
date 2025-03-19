@@ -7,7 +7,7 @@ import play.api.Configuration
 import scala.concurrent.duration._
 
 class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigReader {
-  override def raw: Configuration = configuration
+  override val raw: Configuration = configuration
 
   object Http {
     val uri: String = get[String]("http.uri")
@@ -20,17 +20,14 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
       val uri: String = get[String]("datastore.webKnossos.uri")
       val pingInterval: FiniteDuration = get[FiniteDuration]("datastore.webKnossos.pingInterval")
     }
-    val baseFolder: String = get[String]("datastore.baseFolder")
-    val localFolderWhitelist: List[String] = getList[String]("datastore.localFolderWhitelist")
+    val baseDirectory: String = get[String]("datastore.baseDirectory")
+    val localDirectoryWhitelist: List[String] = getList[String]("datastore.localDirectoryWhitelist")
     object WatchFileSystem {
       val enabled: Boolean = get[Boolean]("datastore.watchFileSystem.enabled")
       val interval: FiniteDuration = get[FiniteDuration]("datastore.watchFileSystem.interval")
       val initialDelay: FiniteDuration = get[FiniteDuration]("datastore.watchFileSystem.initialDelay")
     }
     object Cache {
-      object DataCube {
-        val maxEntries: Int = get[Int]("datastore.cache.dataCube.maxEntries")
-      }
       object Mapping {
         val maxEntries: Int = get[Int]("datastore.cache.mapping.maxEntries")
       }
@@ -43,7 +40,7 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
         val blockSize: Int = get[Int]("datastore.cache.agglomerateFile.blockSize")
         val cumsumMaxReaderRange: Long = get[Long]("datastore.cache.agglomerateFile.cumsumMaxReaderRange")
       }
-      val children = List(DataCube, Mapping, AgglomerateFile)
+      val children = List(Mapping, AgglomerateFile)
     }
     object AdHocMesh {
       val timeout: FiniteDuration = get[FiniteDuration]("datastore.adHocMesh.timeout")

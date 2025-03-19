@@ -1,5 +1,4 @@
-import * as React from "react";
-import { Modal, Button } from "antd";
+import { Button, Modal } from "antd";
 import messages from "messages";
 
 type Props = {

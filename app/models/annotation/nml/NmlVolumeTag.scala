@@ -4,6 +4,8 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGro
 
 case class NmlVolumeTag(dataZipPath: String,
                         fallbackLayerName: Option[String],
+                        mappingName: Option[String],
+                        mappingIsLocked: Option[Boolean],
                         name: Option[String],
                         segments: Seq[Segment],
                         largestSegmentId: Option[Long],

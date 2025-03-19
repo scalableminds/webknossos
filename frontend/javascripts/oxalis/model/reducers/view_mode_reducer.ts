@@ -1,11 +1,10 @@
-import * as THREE from "three";
 import update from "immutability-helper";
-import type { Action } from "oxalis/model/actions/actions";
-import type { Rect, Viewport } from "oxalis/constants";
+import type { Point2, Rect, Viewport } from "oxalis/constants";
 import { ArbitraryViewport } from "oxalis/constants";
-import type { OxalisState, PartialCameraData } from "oxalis/store";
 import { getTDViewportSize } from "oxalis/model/accessors/view_mode_accessor";
+import type { Action } from "oxalis/model/actions/actions";
 import { zoomReducer } from "oxalis/model/reducers/flycam_reducer";
+import type { OxalisState, PartialCameraData } from "oxalis/store";
 
 function ViewModeReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
@@ -135,7 +134,7 @@ function centerTDViewReducer(state: OxalisState): OxalisState {
 function zoomTDView(
   state: OxalisState,
   value: number,
-  targetPosition: THREE.Vector3,
+  targetPosition: Point2 | null | undefined,
   curWidth: number,
   curHeight: number,
 ): OxalisState {

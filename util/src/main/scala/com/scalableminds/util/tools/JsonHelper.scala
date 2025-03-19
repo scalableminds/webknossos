@@ -38,15 +38,14 @@ object JsonHelper extends BoxImplicits with LazyLogging {
       Full(Json.parse(buffer.getLines().mkString))
     } catch {
       case _: java.io.EOFException =>
-        logger.warn(
-          s"EOFException in JsonHelper while trying to extract json from file. File: ${rootPath.relativize(path).toString}")
+        logger.warn(s"EOFException in JsonHelper while trying to extract json from file. File: ${rootPath.toString}")
         Failure(s"An EOF exception occurred during json read. File: ${rootPath.relativize(path).toString}")
       case _: AccessDeniedException | _: FileNotFoundException =>
         logger.warn(
-          s"File access exception in JsonHelper while trying to extract json from file. File: ${rootPath.relativize(path).toString}")
+          s"File access exception in JsonHelper while trying to extract json from file. File: ${rootPath.toString}")
         Failure(s"Failed to parse Json in '${rootPath.relativize(path).toString}'. Access denied.")
       case e: Exception =>
-        logger.warn(s"Json mapping issue in '${rootPath.relativize(path).toString}': $e")
+        logger.warn(s"Json mapping issue in '${rootPath.toString}': $e")
         Failure(s"Failed to parse Json in '${rootPath.relativize(path).toString}': $e")
     } finally {
       if (buffer != null) buffer.close()
@@ -119,5 +118,22 @@ object JsonHelper extends BoxImplicits with LazyLogging {
         Some(parsed)
       case _ =>
         None
+    }
+
+  // Sometimes play-json adds a "_type" field to the json-serialized case classes,
+  // when it thinks they can’t be distinguished otherwise. We need to remove it manually.
+  def removeGeneratedTypeFieldFromJsonRecursively(jsValue: JsValue): JsValue =
+    removeKeyRecursively(jsValue, "_type")
+
+  private def removeKeyRecursively(jsValue: JsValue, keyToRemove: String): JsValue =
+    jsValue match {
+      case JsObject(fields) =>
+        val processedAsMap = fields.filter { case (k, _) => k != keyToRemove }.view.mapValues { value: JsValue =>
+          removeKeyRecursively(value, keyToRemove)
+        }.toMap
+        Json.toJson(processedAsMap)
+      case JsArray(fields) =>
+        Json.toJson(fields.map(value => removeKeyRecursively(value, keyToRemove)))
+      case _ => jsValue
     }
 }

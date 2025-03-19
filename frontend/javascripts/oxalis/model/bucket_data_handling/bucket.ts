@@ -1,23 +1,23 @@
-import { createNanoEvents, Emitter } from "nanoevents";
-import * as THREE from "three";
-import _ from "lodash";
-import type { ElementClass } from "types/api_flow_types";
-import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
-import type { MaybeUnmergedBucketLoadedPromise } from "oxalis/model/actions/volumetracing_actions";
-import { addBucketToUndoAction } from "oxalis/model/actions/volumetracing_actions";
-import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
+import ErrorHandling from "libs/error_handling";
 import { castForArrayType, mod } from "libs/utils";
+import window from "libs/window";
+import _ from "lodash";
+import { type Emitter, createNanoEvents } from "nanoevents";
 import type { BoundingBoxType, BucketAddress, Vector3 } from "oxalis/constants";
 import Constants from "oxalis/constants";
+import type { MaybeUnmergedBucketLoadedPromise } from "oxalis/model/actions/volumetracing_actions";
+import { addBucketToUndoAction } from "oxalis/model/actions/volumetracing_actions";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import ErrorHandling from "libs/error_handling";
+import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
+import type TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
+import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
 import Store from "oxalis/store";
-import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
-import window from "libs/window";
+import * as THREE from "three";
+import type { ElementClass } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
-import { type AdditionalCoordinate } from "types/api_flow_types";
 
-export const enum BucketStateEnum {
+export enum BucketStateEnum {
   UNREQUESTED = "UNREQUESTED",
   REQUESTED = "REQUESTED",
   MISSING = "MISSING", // Missing means that the bucket couldn't be found on the data store
@@ -30,18 +30,6 @@ export type BucketDataArray =
   | Uint32Array
   | Float32Array
   | BigUint64Array;
-export const bucketDebuggingFlags = {
-  // For visualizing buckets which are passed to the GPU
-  visualizeBucketsOnGPU: false,
-  // For visualizing buckets which are prefetched
-  visualizePrefetchedBuckets: false,
-  // For enforcing fallback rendering. enforcedZoomDiff == 2, means
-  // that buckets of currentZoomStep + 2 are rendered.
-  enforcedZoomDiff: undefined,
-};
-// Exposing this variable allows debugging on deployed systems
-// @ts-ignore
-window.bucketDebuggingFlags = bucketDebuggingFlags;
 
 const WARNING_THROTTLE_THRESHOLD = 10000;
 
@@ -51,6 +39,10 @@ const warnMergeWithoutPendingOperations = _.throttle(() => {
   );
 }, WARNING_THROTTLE_THRESHOLD);
 
+const warnAwaitedMissingBucket = _.throttle(() => {
+  ErrorHandling.notify(new Error("Awaited missing bucket"));
+}, WARNING_THROTTLE_THRESHOLD);
+
 export function assertNonNullBucket(bucket: Bucket): asserts bucket is DataBucket {
   if (bucket.type === "null") {
     throw new Error("Unexpected null bucket.");
@@ -58,7 +50,7 @@ export function assertNonNullBucket(bucket: Bucket): asserts bucket is DataBucke
 }
 
 export class NullBucket {
-  type: "null" = "null";
+  type = "null" as const;
 
   hasData(): boolean {
     return false;
@@ -127,7 +119,7 @@ export function markVolumeTransactionEnd() {
 }
 
 export class DataBucket {
-  type: "data" = "data";
+  type = "data" as const;
   elementClass: ElementClass;
   visualizedMesh: Record<string, any> | null | undefined;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'visualizationColor' has no initializer a... Remove this comment to see the full error message
@@ -156,7 +148,7 @@ export class DataBucket {
   // know whether a certain ID is contained in this bucket. To
   // speed up such requests a cached set of the contained values
   // can be stored in cachedValueSet.
-  cachedValueSet: Set<number | BigInt> | null = null;
+  cachedValueSet: Set<number> | Set<bigint> | null = null;
 
   constructor(
     elementClass: ElementClass,
@@ -199,14 +191,12 @@ export class DataBucket {
   }
 
   getBoundingBox(): BoundingBoxType {
-    const min = bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.resolutionInfo);
-    const bucketResolution = this.cube.resolutionInfo.getResolutionByIndexOrThrow(
-      this.zoomedAddress[3],
-    );
+    const min = bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.magInfo);
+    const bucketMag = this.cube.magInfo.getMagByIndexOrThrow(this.zoomedAddress[3]);
     const max: Vector3 = [
-      min[0] + Constants.BUCKET_WIDTH * bucketResolution[0],
-      min[1] + Constants.BUCKET_WIDTH * bucketResolution[1],
-      min[2] + Constants.BUCKET_WIDTH * bucketResolution[2],
+      min[0] + Constants.BUCKET_WIDTH * bucketMag[0],
+      min[1] + Constants.BUCKET_WIDTH * bucketMag[1],
+      min[2] + Constants.BUCKET_WIDTH * bucketMag[2],
     ];
     return {
       min,
@@ -215,7 +205,7 @@ export class DataBucket {
   }
 
   getGlobalPosition(): Vector3 {
-    return bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.resolutionInfo);
+    return bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.magInfo);
   }
 
   getTopLeftInMag(): Vector3 {
@@ -395,6 +385,7 @@ export class DataBucket {
     this.pendingOperations = newPendingOperations;
     this.dirty = true;
     this.endDataMutation();
+    this.cube.triggerBucketDataChanged();
   }
 
   uint8ToTypedBuffer(arrayBuffer: Uint8Array | null | undefined) {
@@ -534,7 +525,7 @@ export class DataBucket {
           const voxelToLabel = out;
           voxelToLabel[thirdDimensionIndex] =
             (voxelToLabel[thirdDimensionIndex] + sliceCount) % Constants.BUCKET_WIDTH;
-          // The voxelToLabel is already within the bucket and in the correct resolution.
+          // The voxelToLabel is already within the bucket and in the correct magnification.
           const voxelAddress = this.cube.getVoxelIndexByVoxelOffset(voxelToLabel);
           const currentSegmentId = Number(data[voxelAddress]);
 
@@ -580,7 +571,7 @@ export class DataBucket {
     }
   }
 
-  receiveData(arrayBuffer: Uint8Array | null | undefined): void {
+  receiveData(arrayBuffer: Uint8Array | null | undefined, computeValueSet: boolean = false): void {
     const data = this.uint8ToTypedBuffer(arrayBuffer);
     const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
 
@@ -613,9 +604,13 @@ export class DataBucket {
           this.data = data;
         }
         this.invalidateValueSet();
+        if (computeValueSet) {
+          this.ensureValueSet();
+        }
 
         this.state = BucketStateEnum.LOADED;
         this.trigger("bucketLoaded", data);
+        this.cube.triggerBucketDataChanged();
         break;
       }
 
@@ -628,16 +623,22 @@ export class DataBucket {
     this.cachedValueSet = null;
   }
 
-  private recomputeValueSet() {
-    // @ts-ignore The Set constructor accepts null and BigUint64Arrays just fine.
-    this.cachedValueSet = new Set(this.data);
+  private ensureValueSet(): asserts this is { cachedValueSet: Set<number> | Set<bigint> } {
+    if (this.cachedValueSet == null) {
+      // @ts-ignore The Set constructor accepts null and BigUint64Arrays just fine.
+      this.cachedValueSet = new Set(this.data);
+    }
   }
 
-  containsValue(value: number | BigInt): boolean {
-    if (this.cachedValueSet == null) {
-      this.recomputeValueSet();
-    }
-    return this.cachedValueSet!.has(value);
+  containsValue(value: number | bigint): boolean {
+    this.ensureValueSet();
+    // @ts-ignore The Set has function accepts number | bigint values just fine, regardless of what's in it.
+    return this.cachedValueSet.has(value);
+  }
+
+  getValueSet(): Set<number> | Set<bigint> {
+    this.ensureValueSet();
+    return this.cachedValueSet;
   }
 
   markAsPushed(): void {
@@ -710,9 +711,9 @@ export class DataBucket {
     if (this.zoomedAddress[3] === zoomStep) {
       // @ts-ignore
       this.visualizedMesh = window.addBucketMesh(
-        bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.resolutionInfo),
+        bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.magInfo),
         this.zoomedAddress[3],
-        this.cube.resolutionInfo.getResolutionByIndex(this.zoomedAddress[3]),
+        this.cube.magInfo.getMagByIndex(this.zoomedAddress[3]),
         colors[this.zoomedAddress[3]] || this.visualizationColor,
       );
     }
@@ -776,7 +777,7 @@ export class DataBucket {
       // In the past, ensureLoaded() never returned if the bucket
       // was MISSING. This log might help to discover potential
       // bugs which could arise in combination with MISSING buckets.
-      console.warn("Awaited missing bucket.");
+      warnAwaitedMissingBucket();
     }
   }
 }

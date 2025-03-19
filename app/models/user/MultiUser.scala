@@ -10,7 +10,7 @@ import models.user.Theme.Theme
 import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json.{JsObject, Json}
 import slick.lifted.Rep
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient}
 
 import javax.inject.Inject
@@ -64,11 +64,11 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
   def insertOne(u: MultiUser): Fox[Unit] =
     for {
       passwordInfoHasher <- PasswordHasherType.fromString(u.passwordInfo.hasher).toFox
-      _ <- run(q"""insert into webknossos.multiusers(_id, email, passwordInfo_hasher,
+      _ <- run(q"""INSERT INTO webknossos.multiusers(_id, email, passwordInfo_hasher,
                                                      passwordInfo_password,
                                                      isSuperUser, novelUserExperienceInfos, selectedTheme,
                                                      created, isEmailVerified, isDeleted)
-                   values(${u._id}, ${u.email}, $passwordInfoHasher,
+                   VALUES(${u._id}, ${u.email}, $passwordInfoHasher,
                           ${u.passwordInfo.password},
                           ${u.isSuperUser}, ${u.novelUserExperienceInfos}, ${u.selectedTheme},
                           ${u.created}, ${u.isEmailVerified}, ${u.isDeleted})""".asUpdate)
@@ -78,93 +78,94 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
     for {
       _ <- assertUpdateAccess(multiUserId)
       passwordInfoHasher <- PasswordHasherType.fromString(passwordInfo.hasher).toFox
-      _ <- run(q"""update webknossos.multiusers set
-                          passwordInfo_hasher = $passwordInfoHasher,
-                          passwordInfo_password = ${passwordInfo.password}
-                   where _id = $multiUserId""".asUpdate)
+      _ <- run(q"""UPDATE webknossos.multiusers
+                   SET
+                     passwordInfo_hasher = $passwordInfoHasher,
+                     passwordInfo_password = ${passwordInfo.password}
+                   WHERE _id = $multiUserId""".asUpdate)
     } yield ()
 
   def updateEmail(multiUserId: ObjectId, email: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(multiUserId)
-      _ <- run(q"""update webknossos.multiusers set
-                          email = $email, isEmailVerified = false
-                   where _id = $multiUserId""".asUpdate)
+      _ <- run(q"""UPDATE webknossos.multiusers
+                   SET
+                     email = $email,
+                     isEmailVerified = false
+                   WHERE _id = $multiUserId""".asUpdate)
     } yield ()
 
   def updateEmailVerification(multiUserId: ObjectId, verified: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(multiUserId)
-      _ <- run(q"""update webknossos.multiusers set
-                          isemailverified = $verified
-                   where _id = $multiUserId""".asUpdate)
+      _ <- run(q"""UPDATE webknossos.multiusers
+                   SET isemailverified = $verified
+                   WHERE _id = $multiUserId""".asUpdate)
     } yield ()
 
   def updateLastLoggedInIdentity(multiUserId: ObjectId, userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(multiUserId)
-      _ <- run(q"""update webknossos.multiusers set
-                          _lastLoggedInIdentity = $userId
-                   where _id = $multiUserId""".asUpdate)
+      _ <- run(q"""UPDATE webknossos.multiusers
+                   SET _lastLoggedInIdentity = $userId
+                   WHERE _id = $multiUserId""".asUpdate)
     } yield ()
 
   def updateNovelUserExperienceInfos(multiUserId: ObjectId, novelUserExperienceInfos: JsObject)(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(multiUserId)
-      _ <- run(q"""update webknossos.multiusers set
-                          novelUserExperienceInfos = $novelUserExperienceInfos
-                   where _id = $multiUserId""".asUpdate)
+      _ <- run(q"""UPDATE webknossos.multiusers
+                   SET novelUserExperienceInfos = $novelUserExperienceInfos
+                   WHERE _id = $multiUserId""".asUpdate)
     } yield ()
 
   def updateSelectedTheme(multiUserId: ObjectId, selectedTheme: Theme)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(multiUserId)
-      _ <- run(q"""update webknossos.multiusers set
-                          selectedTheme = $selectedTheme
-                   where _id = $multiUserId""".asUpdate)
+      _ <- run(q"""UPDATE webknossos.multiusers
+                   SET selectedTheme = $selectedTheme
+                   WHERE _id = $multiUserId""".asUpdate)
     } yield ()
 
-  def removeLastLoggedInIdentitiesWithOrga(organizationId: ObjectId): Fox[Unit] =
+  def removeLastLoggedInIdentitiesWithOrga(organizationId: String): Fox[Unit] =
     for {
-      _ <- run(q"""
-        update webknossos.multiusers set _lastLoggedInIdentity = null
-        where _lastLoggedInIdentity in
-         (select _id from webknossos.users where _organization = $organizationId)
-        """.asUpdate)
+      _ <- run(q"""UPDATE webknossos.multiusers
+                   SET _lastLoggedInIdentity = NULL
+                   WHERE _lastLoggedInIdentity IN
+                     (SELECT _id FROM webknossos.users WHERE _organization = $organizationId)""".asUpdate)
     } yield ()
 
   def findOneByEmail(email: String)(implicit ctx: DBAccessContext): Fox[MultiUser] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"select $columns from $existingCollectionName where email = $email and $accessQuery".as[MultiusersRow])
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE email = $email AND $accessQuery".as[MultiusersRow])
       parsed <- parseFirst(r, email)
     } yield parsed
 
   def emailNotPresentYet(email: String)(implicit ctx: DBAccessContext): Fox[Boolean] =
     for {
       accessQuery <- readAccessQuery
-      idList <- run(q"select _id from $existingCollectionName where email = $email and $accessQuery".as[String])
+      idList <- run(q"SELECT _id FROM $existingCollectionName WHERE email = $email AND $accessQuery".as[String])
     } yield idList.isEmpty
 
   def hasAtLeastOneActiveUser(multiUserId: ObjectId): Fox[Boolean] =
     for {
-      idList <- run(q"""select u._id
-                        from webknossos.multiUsers_ m
-                        join webknossos.users_ u on u._multiUser = m._id
-                        where m._id = $multiUserId
-                        and not u.isDeactivated""".as[String])
+      idList <- run(q"""SELECT u._id
+                        FROM webknossos.multiUsers_ m
+                        JOIN webknossos.users_ u ON u._multiUser = m._id
+                        WHERE m._id = $multiUserId
+                        AND NOT u.isDeactivated""".as[String])
     } yield idList.nonEmpty
 
   def lastActivity(multiUserId: ObjectId): Fox[Instant] =
     for {
-      lastActivityList <- run(q"""select max(u.lastActivity)
-                                    from webknossos.multiUsers_ m
-                                    join webknossos.users_ u on u._multiUser = m._id
-                                    where m._id = $multiUserId
-                                    and not u.isDeactivated
-                                    group by m._id
-                                    """.as[Instant])
+      lastActivityList <- run(q"""SELECT MAX(u.lastActivity)
+                                  FROM webknossos.multiUsers_ m
+                                  JOIN webknossos.users_ u ON u._multiUser = m._id
+                                  WHERE m._id = $multiUserId
+                                  AND NOT u.isDeactivated
+                                  GROUP BY m._id""".as[Instant])
       head <- lastActivityList.headOption.toFox
     } yield head
 }

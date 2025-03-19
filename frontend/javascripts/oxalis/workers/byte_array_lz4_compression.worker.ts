@@ -1,5 +1,5 @@
-import { expose } from "./comlink_wrapper";
 import * as lz4 from "lz4-wasm";
+import { expose } from "./comlink_wrapper";
 
 function compressLz4Block(data: Uint8Array, compress: boolean): Uint8Array {
   if (compress) {

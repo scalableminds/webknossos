@@ -2,18 +2,22 @@ package com.scalableminds.webknossos.datastore.models.datasource
 
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.enumeration.ExtendedEnumeration
-import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MagLocator, MappingProvider}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5SegmentationLayer}
-import com.scalableminds.webknossos.datastore.dataformats.precomputed.{
+import com.scalableminds.webknossos.datastore.dataformats.layers.{
+  N5DataLayer,
+  N5SegmentationLayer,
   PrecomputedDataLayer,
-  PrecomputedSegmentationLayer
+  PrecomputedSegmentationLayer,
+  WKWDataLayer,
+  WKWSegmentationLayer,
+  Zarr3DataLayer,
+  Zarr3SegmentationLayer,
+  ZarrDataLayer,
+  ZarrSegmentationLayer
 }
 import ucar.ma2.{Array => MultiArray}
-import com.scalableminds.webknossos.datastore.dataformats.zarr3.{Zarr3DataLayer, Zarr3SegmentationLayer}
-import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
@@ -25,7 +29,7 @@ object DataFormat extends ExtendedEnumeration {
 }
 
 object Category extends ExtendedEnumeration {
-  val color, mask, segmentation = Value
+  val color, segmentation = Value
 
   def guessFromElementClass(elementClass: ElementClass.Value): Category.Value =
     elementClass match {
@@ -111,20 +115,6 @@ object ElementClass extends ExtendedEnumeration {
     case ElementClass.int64  => (1, "<i8")
   }
 
-  def guessFromZarrString(zarrDtype: String): Option[ElementClass.Value] = zarrDtype.drop(1) match {
-    case "u1" => Some(ElementClass.uint8)
-    case "u2" => Some(ElementClass.uint16)
-    case "u4" => Some(ElementClass.uint32)
-    case "u8" => Some(ElementClass.uint64)
-    case "f4" => Some(ElementClass.float)
-    case "f8" => Some(ElementClass.double)
-    case "i1" => Some(ElementClass.int8)
-    case "i2" => Some(ElementClass.int16)
-    case "i4" => Some(ElementClass.int32)
-    case "i8" => Some(ElementClass.int64)
-    case _    => None
-  }
-
   def fromArrayDataType(arrayDataType: ArrayDataType): Option[ElementClass.Value] = arrayDataType match {
     case ArrayDataType.u1 => Some(ElementClass.uint8)
     case ArrayDataType.u2 => Some(ElementClass.uint16)
@@ -157,6 +147,8 @@ trait DataLayerLike {
   def boundingBox: BoundingBox
 
   def resolutions: List[Vec3Int]
+
+  lazy val sortedMags: List[Vec3Int] = resolutions.sortBy(_.maxDim)
 
   def elementClass: ElementClass.Value
 
@@ -205,7 +197,7 @@ trait DataLayer extends DataLayerLike {
   /**
     * Defines the length of the underlying cubes making up the layer. This is the maximal size that can be loaded from a single file.
     */
-  def lengthOfUnderlyingCubes(resolution: Vec3Int): Int
+  def lengthOfUnderlyingCubes(mag: Vec3Int): Int
 
   def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                      dataSourceId: DataSourceId,
@@ -213,13 +205,15 @@ trait DataLayer extends DataLayerLike {
 
   def bucketProviderCacheKey: String = this.name
 
-  def containsResolution(resolution: Vec3Int): Boolean = resolutions.contains(resolution)
+  def containsMag(mag: Vec3Int): Boolean = resolutions.contains(mag)
 
   def doesContainBucket(bucket: BucketPosition): Boolean =
     boundingBox.intersects(bucket.toMag1BoundingBox)
 
   lazy val bytesPerElement: Int =
     ElementClass.bytesPerElement(elementClass)
+
+  def mags: List[MagLocator]
 }
 
 object DataLayer {
@@ -228,6 +222,7 @@ object DataLayer {
     * Defines the length of a bucket per axis. This is the minimal size that can be loaded from a wkw file.
     */
   val bucketLength: Int = 32
+  val bucketSize: Vec3Int = Vec3Int(bucketLength, bucketLength, bucketLength)
 
   implicit object dataLayerFormat extends Format[DataLayer] {
     override def reads(json: JsValue): JsResult[DataLayer] =
@@ -272,8 +267,6 @@ object DataLayer {
 }
 
 trait DataLayerWithMagLocators extends DataLayer {
-
-  def mags: List[MagLocator]
 
   def mapped(boundingBoxMapping: BoundingBox => BoundingBox = b => b,
              defaultViewConfigurationMapping: Option[LayerViewConfiguration] => Option[LayerViewConfiguration] = l => l,
@@ -420,15 +413,15 @@ object AbstractSegmentationLayer {
   implicit val jsonFormat: OFormat[AbstractSegmentationLayer] = Json.format[AbstractSegmentationLayer]
 }
 
-trait ResolutionFormatHelper {
+trait MagFormatHelper {
 
-  implicit object resolutionFormat extends Format[Vec3Int] {
+  implicit object magFormat extends Format[Vec3Int] {
 
     override def reads(json: JsValue): JsResult[Vec3Int] =
       json.validate[Int].map(result => Vec3Int(result, result, result)).orElse(Vec3Int.Vec3IntReads.reads(json))
 
-    override def writes(resolution: Vec3Int): JsValue =
-      Vec3Int.Vec3IntWrites.writes(resolution)
+    override def writes(mag: Vec3Int): JsValue =
+      Vec3Int.Vec3IntWrites.writes(mag)
   }
 
 }

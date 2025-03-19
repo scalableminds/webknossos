@@ -1,6 +1,9 @@
-import { call, type Saga } from "oxalis/model/sagas/effect-generators";
-import { buffers, Channel, channel, runSaga } from "redux-saga";
+import { type Saga, call } from "oxalis/model/sagas/effect-generators";
+import { type Channel, buffers, channel, runSaga } from "redux-saga";
 import { delay, race, take } from "redux-saga/effects";
+
+// biome-ignore lint/complexity/noBannedTypes: This is copied from redux-saga because it cannot be imported.
+type NotUndefined = {} | null;
 
 /*
  * This function takes a saga and a debounce threshold
@@ -15,7 +18,7 @@ import { delay, race, take } from "redux-saga/effects";
  * is slower than a standard _.debounce. Also see
  * debounced_abortable_saga.spec.ts for a small benchmark.
  */
-export function createDebouncedAbortableCallable<T, C>(
+export function createDebouncedAbortableCallable<T extends NotUndefined, C>(
   fn: (param1: T) => Saga<void>,
   debounceThreshold: number,
   context: C,
@@ -34,7 +37,7 @@ export function createDebouncedAbortableCallable<T, C>(
     debouncedAbortableSagaRunner,
     debounceThreshold,
     triggerChannel,
-    // @ts-expect-error TS thinks fn doesnt match, but it does.
+    // @ts-expect-error TS thinks fn doesn't match, but it does.
     fn,
     context,
   );
@@ -56,7 +59,7 @@ export function createDebouncedAbortableParameterlessCallable<C>(
   };
 }
 
-function* debouncedAbortableSagaRunner<T, C>(
+function* debouncedAbortableSagaRunner<T extends NotUndefined, C>(
   debounceThreshold: number,
   triggerChannel: Channel<T>,
   abortableFn: (param: T) => Saga<void>,

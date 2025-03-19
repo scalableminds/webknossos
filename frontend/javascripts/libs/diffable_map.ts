@@ -48,13 +48,13 @@ class DiffableMap<K extends number, V> {
     this[idSymbol] = id;
   }
 
-  get(key: K): V {
+  getOrThrow(key: K): V {
     const value = this.getNullable(key);
 
     if (value !== undefined) {
       return value;
     } else {
-      throw new Error("Get empty");
+      throw new Error(`Key '${key}' does not exist in diffable map.`);
     }
   }
 
@@ -325,7 +325,7 @@ export function diffDiffableMaps<K extends number, V>(
     const newOnlyB = onlyB.filter((id) => !missingChangedIdSet.has(id));
     // Ensure that these elements are not equal before adding them to "changed"
     const newChanged = changed.concat(
-      missingChangedIds.filter((id) => mapA.get(id) !== mapB.get(id)),
+      missingChangedIds.filter((id) => mapA.getOrThrow(id) !== mapB.getOrThrow(id)),
     );
     return {
       changed: newChanged,

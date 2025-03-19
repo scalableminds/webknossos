@@ -1,7 +1,7 @@
 import _ from "lodash";
-import type { Tree } from "oxalis/store";
-import type { Vector2 } from "oxalis/constants";
 import messages from "messages";
+import type { Vector2 } from "oxalis/constants";
+import type { Tree } from "oxalis/store";
 const NODE_RADIUS = 2;
 const MAX_NODE_DISTANCE = 100;
 const CLICK_TRESHOLD = 6;
@@ -32,7 +32,7 @@ const CYCLIC_TREE_ERROR = "CyclicTree";
 
 class AbstractTreeRenderer {
   canvas: HTMLCanvasElement;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'ctx' has no initializer and is not defin... Remove this comment to see the full error message
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'ctx' has no initializer and is not define... Remove this comment to see the full error message
   ctx: CanvasRenderingContext2D;
   nodeList: Array<NodeListItem>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'activeNodeId' has no initializer and is ... Remove this comment to see the full error message
@@ -91,7 +91,7 @@ class AbstractTreeRenderer {
   }
 
   buildTree(): AbstractNode | null | undefined {
-    // Asumption: Node with smallest id is root
+    // Assumption: Node with smallest id is root
     const rootId = _.min(Array.from(this.tree.nodes.keys()));
 
     const rootNode = {
@@ -615,7 +615,7 @@ class AbstractTreeRenderer {
    * Clear the background of the canvas.
    */
   clearBackground(): void {
-    return this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
   /**

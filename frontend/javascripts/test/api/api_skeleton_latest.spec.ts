@@ -1,7 +1,7 @@
 // @ts-nocheck
 import "test/mocks/lz4";
 import { __setupOxalis, KeyboardJS } from "test/helpers/apiHelpers";
-import { makeBasicGroupObject } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import { makeBasicGroupObject } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import { setTreeGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
 import { userSettings } from "types/schemas/user_settings.schema";
@@ -136,18 +136,6 @@ test("User Api: setConfiguration should clamp a user configuration value if it i
   const MOVE_VALUE = 1;
   api.user.setConfiguration("moveValue", MOVE_VALUE);
   t.is(api.user.getConfiguration("moveValue"), userSettings.moveValue.minimum);
-});
-test.serial.cb("Utils Api: sleep should sleep", (t) => {
-  const { api } = t.context;
-  let bool = false;
-  api.utils.sleep(200).then(() => {
-    bool = true;
-  });
-  t.false(bool);
-  setTimeout(() => {
-    t.true(bool);
-    t.end();
-  }, 400);
 });
 test("Utils Api: registerKeyHandler should register a key handler and return a handler to unregister it again", (t) => {
   const { api } = t.context;

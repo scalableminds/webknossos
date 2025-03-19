@@ -1,0 +1,60 @@
+name: Nightly WK.org Test Pipeline
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    # Runs every day at 12:00 AM UTC
+    - cron: '0 0 * * *'
+
+jobs:
+  nightly-screenshot-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v4
+        with:
+            node-version: 18
+
+      - name: Install dependencies
+        run: |
+            corepack enable && yarn install --immutable
+
+      - name: Run screenshot tests
+        run: |
+          yarn test-wkorg-screenshot
+        env:
+          URL: https://webknossos.org/
+          WK_AUTH_TOKEN: ${{ secrets.WK_AUTH_TOKEN }}
+          BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+          BROWSERSTACK_ACCESS_KEY : ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+
+      - name: Upload screenshots as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: frontend/javascripts/test/screenshots-wkorg
+
+
+  nightly-gzip-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Assert GZIP is enabled
+        run: |
+          # Test gzipped assets
+          curl -s -I -H "Accept-Encoding: gzip" https://webknossos.org/assets/bundle/main.js | grep -q "content-encoding: gzip"
+          curl -s -I -H "Accept-Encoding: gzip" https://webknossos.org/assets/bundle/main.css | grep -q "content-encoding: gzip"
+          # Test gzipped buckets
+          curl -s -i \
+            -H 'accept: application/octet-stream' \
+            -H 'Accept-Encoding: gzip' \
+            -H 'content-type: application/json' \
+            --data-raw '[{"position":[2752,4320,1728],"additionalCoordinates":[],"mag":[1,1,1],"cubeSize":32,"fourBit":false}]' \
+            'https://data-humerus.webknossos.org/data/datasets/scalable_minds/l4dense_motta_et_al_demo/layers/segmentation/data?token=' \
+            | grep -q "content-encoding: gzip"
+          echo Success.

@@ -1,13 +1,12 @@
-import { Modal, Button, Radio, Col, Row, Checkbox, Divider, RadioChangeEvent } from "antd";
 import { InfoCircleOutlined } from "@ant-design/icons";
-import * as React from "react";
-import _ from "lodash";
-import update from "immutability-helper";
-import type { APIUser, APITeam, APITeamMembership } from "types/api_flow_types";
-import { updateUser, getEditableTeams } from "admin/admin_rest_api";
-import messages from "messages";
+import { getEditableTeams, updateUser } from "admin/admin_rest_api";
+import { App, Checkbox, Col, Divider, Modal, Radio, type RadioChangeEvent, Row } from "antd";
+import { useFetch } from "libs/react_helpers";
 import * as Utils from "libs/utils";
-import { Key } from "antd/lib/table/interface";
+import _ from "lodash";
+import messages from "messages";
+import React, { type Key, useEffect, useState } from "react";
+import type { APITeam, APITeamMembership, APIUser } from "types/api_flow_types";
 const RadioButton = Radio.Button;
 const RadioGroup = Radio.Group;
 
@@ -20,18 +19,14 @@ enum PERMISSIONS {
   datasetManager = "datasetManager",
   member = "member",
 }
-type TeamRoleModalProp = {
+
+type TeamRoleModalProps = {
   onChange: (...args: Array<any>) => any;
   onCancel: (...args: Array<any>) => any;
   isOpen: boolean;
   selectedUserIds: Key[];
   users: Array<APIUser>;
   activeUser: APIUser;
-};
-type State = {
-  teams: Array<APITeam>;
-  selectedTeams: Record<string, APITeamMembership>;
-  selectedPermission: string;
 };
 
 function getPermissionGroupOfUser(user: APIUser) {
@@ -46,54 +41,36 @@ function getPermissionGroupOfUser(user: APIUser) {
   return PERMISSIONS.member;
 }
 
-function getSingleUserMaybe(props: TeamRoleModalProp) {
-  if (props.selectedUserIds.length === 1) {
-    return props.users.find((_user) => _user.id === props.selectedUserIds[0]);
-  }
+function PermissionsAndTeamsModalView({
+  onChange,
+  onCancel,
+  isOpen,
+  selectedUserIds,
+  users,
+  activeUser,
+}: TeamRoleModalProps) {
+  const { modal } = App.useApp();
 
-  return false;
-}
+  const [selectedTeams, setSelectedTeams] = useState<Record<string, APITeamMembership>>({});
+  const [selectedPermission, setSelectedPermission] = useState(PERMISSIONS.member);
 
-class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp, State> {
-  state: State = {
-    selectedTeams: {},
-    teams: [],
-    selectedPermission: PERMISSIONS.member,
-  };
+  const teams = useFetch(getEditableTeams, [], []);
 
-  componentDidMount() {
-    this.fetchData();
-  }
+  useEffect(() => {
+    // If a single user is selected, pre-select his teams
+    const singleUserMaybe = getSingleUserMaybe(selectedUserIds, users);
 
-  componentDidUpdate(prevProps: TeamRoleModalProp) {
-    if (
-      prevProps.selectedUserIds !== this.props.selectedUserIds ||
-      prevProps.users !== this.props.users
-    ) {
-      // If a single user is selected, pre-select his teams
-      const singleUserMaybe = getSingleUserMaybe(this.props);
+    if (singleUserMaybe) {
+      const newSelectedTeams = _.keyBy(singleUserMaybe.teams, "name");
 
-      if (singleUserMaybe) {
-        const newSelectedTeams = _.keyBy(singleUserMaybe.teams, "name");
-
-        const userPermission = getPermissionGroupOfUser(singleUserMaybe);
-        this.setState({
-          selectedTeams: newSelectedTeams,
-          selectedPermission: userPermission,
-        });
-      }
+      const userPermission = getPermissionGroupOfUser(singleUserMaybe);
+      setSelectedTeams(newSelectedTeams);
+      setSelectedPermission(userPermission);
     }
-  }
+  }, [selectedUserIds, users]);
 
-  async fetchData() {
-    const teams = await getEditableTeams();
-    this.setState({
-      teams,
-    });
-  }
-
-  didPermissionsChange = () => {
-    const singleUserMaybe = getSingleUserMaybe(this.props);
+  function didPermissionsChange() {
+    const singleUserMaybe = getSingleUserMaybe(selectedUserIds, users);
 
     if (!singleUserMaybe) {
       return false;
@@ -107,63 +84,55 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
       previousPermission = PERMISSIONS.datasetManager;
     }
 
-    return previousPermission !== this.state.selectedPermission;
-  };
-  handleUpdatePermissionsAndTeams = () => {
-    if (this.didPermissionsChange()) {
-      const user = getSingleUserMaybe(this.props);
+    return previousPermission !== selectedPermission;
+  }
+
+  function handleUpdatePermissionsAndTeams() {
+    if (didPermissionsChange()) {
+      const user = getSingleUserMaybe(selectedUserIds, users);
 
       if (user) {
         const userName = `${user.firstName} ${user.lastName}`;
         let message = messages["users.revoke_all_permissions"];
 
-        if (this.state.selectedPermission === PERMISSIONS.admin) {
+        if (selectedPermission === PERMISSIONS.admin) {
           message = messages["users.set_admin"];
         }
 
-        if (this.state.selectedPermission === PERMISSIONS.datasetManager) {
+        if (selectedPermission === PERMISSIONS.datasetManager) {
           message = messages["users.set_dataset_manager"];
         }
 
-        Modal.confirm({
+        modal.confirm({
           title: messages["users.change_permissions_title"],
           content: message({
             userName,
           }),
-          onOk: this.setPermissionsAndTeams,
+          onOk: setPermissionsAndTeams,
         });
       }
     } else {
-      this.setPermissionsAndTeams();
+      setPermissionsAndTeams();
     }
-  };
-  setPermissionsAndTeams = () => {
-    const newUserPromises = this.props.users.map((user) => {
-      if (this.props.selectedUserIds.includes(user.id)) {
-        const newTeams = Utils.values(this.state.selectedTeams);
-        const newUser = Object.assign({}, user, {
-          teams: newTeams,
-        });
+  }
 
-        if (this.props.activeUser.isAdmin && this.props.selectedUserIds.length === 1) {
+  function setPermissionsAndTeams() {
+    const newUserPromises = users.map((user) => {
+      if (selectedUserIds.includes(user.id)) {
+        const newTeams = Utils.values(selectedTeams);
+        let permissions = { isAdmin: false, isDatasetManager: false };
+
+        if (activeUser.isAdmin && selectedUserIds.length === 1) {
           // If the current user is admin and only one user is edited we also update the permissions.
-          if (this.state.selectedPermission === PERMISSIONS.admin) {
-            // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'isAdmin' because it is a read-on... Remove this comment to see the full error message
-            newUser.isAdmin = true;
-            // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'isDatasetManager' because it is ... Remove this comment to see the full error message
-            newUser.isDatasetManager = false;
-          } else if (this.state.selectedPermission === PERMISSIONS.datasetManager) {
-            // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'isDatasetManager' because it is ... Remove this comment to see the full error message
-            newUser.isDatasetManager = true;
-            // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'isAdmin' because it is a read-on... Remove this comment to see the full error message
-            newUser.isAdmin = false;
-          } else {
-            // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'isDatasetManager' because it is ... Remove this comment to see the full error message
-            newUser.isDatasetManager = false;
-            // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'isAdmin' because it is a read-on... Remove this comment to see the full error message
-            newUser.isAdmin = false;
+          if (selectedPermission === PERMISSIONS.admin) {
+            permissions["isAdmin"] = true;
+            permissions["isDatasetManager"] = false;
+          } else if (selectedPermission === PERMISSIONS.datasetManager) {
+            permissions["isDatasetManager"] = true;
+            permissions["isAdmin"] = false;
           }
         }
+        const newUser = { ...user, ...permissions, teams: newTeams };
 
         // server-side validation can reject a user's new teams
         return updateUser(newUser).then(
@@ -176,22 +145,21 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
     });
     Promise.all(newUserPromises).then(
       (newUsers) => {
-        this.props.onChange(newUsers);
+        onChange(newUsers);
       },
       () => {
         // do nothing and keep modal open
       },
     );
-  };
-  handlePermissionChanged = (evt: RadioChangeEvent) => {
-    const selectedPermission: PERMISSIONS = evt.target.value;
-    this.setState({
-      selectedPermission,
-    });
-  };
+  }
 
-  handleSelectTeamRole(teamName: string, isTeamManager: boolean) {
-    const team = this.state.teams.find((t) => t.name === teamName);
+  function handlePermissionChanged(evt: RadioChangeEvent) {
+    const selectedPermission: PERMISSIONS = evt.target.value;
+    setSelectedPermission(selectedPermission);
+  }
+
+  function handleSelectTeamRole(teamName: string, isTeamManager: boolean) {
+    const team = teams.find((t) => t.name === teamName);
 
     if (team) {
       const selectedTeam = {
@@ -199,37 +167,34 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
         name: teamName,
         isTeamManager,
       };
-      this.setState((prevState) => ({
-        selectedTeams: update(prevState.selectedTeams, {
-          [teamName]: {
-            $set: selectedTeam,
-          },
-        }),
-      }));
+
+      setSelectedTeams({ ...selectedTeams, [teamName]: selectedTeam });
     }
   }
 
-  handleUnselectTeam(teamName: string) {
-    this.setState((prevState) => ({
-      selectedTeams: update(prevState.selectedTeams, {
-        $unset: [teamName],
-      }),
-    }));
+  function handleUnselectTeam(teamName: string) {
+    setSelectedTeams(_.omit(selectedTeams, teamName));
   }
 
-  getTeamComponent(team: APITeam, isDisabled: boolean) {
+  function getSingleUserMaybe(selectedUserIds: Key[], users: APIUser[]): APIUser | undefined {
+    if (selectedUserIds.length === 1) {
+      return users.find((_user) => _user.id === selectedUserIds[0]);
+    }
+
+    return undefined;
+  }
+
+  function getTeamComponent(team: APITeam, isDisabled: boolean) {
     return (
       <Checkbox
         value={team.name}
-        checked={_.has(this.state.selectedTeams, team.name)}
+        checked={_.has(selectedTeams, team.name)}
         disabled={isDisabled}
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '(event: React.SyntheticEvent) => void' is no... Remove this comment to see the full error message
-        onChange={(event: React.SyntheticEvent) => {
-          // @ts-expect-error ts-migrate(2339) FIXME: Property 'checked' does not exist on type 'EventTa... Remove this comment to see the full error message
+        onChange={(event) => {
           if (event.target.checked) {
-            this.handleSelectTeamRole(team.name, false);
+            handleSelectTeamRole(team.name, false);
           } else {
-            this.handleUnselectTeam(team.name);
+            handleUnselectTeam(team.name);
           }
         }}
       >
@@ -238,8 +203,8 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
     );
   }
 
-  getRoleComponent(team: APITeam, isDisabled: boolean) {
-    const selectedTeam = this.state.selectedTeams[team.name];
+  function getRoleComponent(team: APITeam, isDisabled: boolean) {
+    const selectedTeam = selectedTeams[team.name];
     let selectedValue = null;
 
     if (selectedTeam) {
@@ -254,9 +219,9 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
           paddingBottom: 8,
         }}
         value={selectedValue}
-        disabled={!_.has(this.state.selectedTeams, team.name) || isDisabled}
+        disabled={!_.has(selectedTeams, team.name) || isDisabled}
         onChange={({ target: { value } }) =>
-          this.handleSelectTeamRole(team.name, value === ROLES.teammanager)
+          handleSelectTeamRole(team.name, value === ROLES.teammanager)
         }
       >
         <RadioButton value={ROLES.teammanager}>Team Manager</RadioButton>
@@ -265,7 +230,7 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
     );
   }
 
-  getPermissionSelection(onlyEditingSingleUser: boolean, isUserAdmin: boolean) {
+  function getPermissionSelection(onlyEditingSingleUser: boolean, isUserAdmin: boolean) {
     const roleStyle = {
       fontWeight: "bold",
     } as React.CSSProperties;
@@ -278,7 +243,7 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
         <h4>
           Organization Permissions{" "}
           <a
-            href="https://docs.webknossos.org/webknossos/users.html"
+            href="https://docs.webknossos.org/webknossos/users/index.html"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -291,9 +256,9 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
         {onlyEditingSingleUser ? (
           <Radio.Group
             name="permission-role"
-            defaultValue={this.state.selectedPermission}
-            value={this.state.selectedPermission}
-            onChange={this.handlePermissionChanged}
+            defaultValue={selectedPermission}
+            value={selectedPermission}
+            onChange={handlePermissionChanged}
             disabled={!isUserAdmin}
           >
             <Radio value={PERMISSIONS.admin}>
@@ -322,52 +287,42 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
     );
   }
 
-  render() {
-    const userIsAdmin = this.props.activeUser.isAdmin;
-    const onlyEditingSingleUser = this.props.selectedUserIds.length === 1;
-    const permissionEditingSection = this.getPermissionSelection(
-      onlyEditingSingleUser,
-      userIsAdmin,
-    );
-    const isAdminSelected = this.state.selectedPermission === PERMISSIONS.admin;
-    const teamsRoleComponents = this.state.teams.map((team) => (
-      <Row key={team.id}>
-        <Col span={12}>{this.getTeamComponent(team, isAdminSelected)}</Col>
-        <Col span={12}>{this.getRoleComponent(team, isAdminSelected)}</Col>
-      </Row>
-    ));
-    return (
-      <Modal
-        maskClosable={false}
-        closable={false}
-        open={this.props.isOpen}
-        onCancel={this.props.onCancel}
-        footer={
-          <div>
-            <Button onClick={this.handleUpdatePermissionsAndTeams} type="primary">
-              Set Teams &amp; Permissions
-            </Button>
-            <Button onClick={this.props.onCancel}>Cancel</Button>
-          </div>
-        }
-      >
-        {permissionEditingSection}
-        <Divider />
-        <h4>Team Permissions</h4>
-        <div>
-          <Row>
-            <Col span={12}>
-              <h4>Teams</h4>
-            </Col>
-            <Col span={12}>
-              <h4>Role</h4>
-            </Col>
-          </Row>
-          {teamsRoleComponents}
-        </div>
-      </Modal>
-    );
-  }
+  const userIsAdmin = activeUser.isAdmin;
+  const onlyEditingSingleUser = selectedUserIds.length === 1;
+  const permissionEditingSection = getPermissionSelection(onlyEditingSingleUser, userIsAdmin);
+  const isAdminSelected = selectedPermission === PERMISSIONS.admin;
+  const teamsRoleComponents = teams.map((team) => (
+    <Row key={team.id}>
+      <Col span={12}>{getTeamComponent(team, isAdminSelected)}</Col>
+      <Col span={12}>{getRoleComponent(team, isAdminSelected)}</Col>
+    </Row>
+  ));
+
+  return (
+    <Modal
+      maskClosable={false}
+      closable={false}
+      open={isOpen}
+      onCancel={onCancel}
+      onOk={handleUpdatePermissionsAndTeams}
+      okText="Set Teams &amp; Permissions"
+    >
+      {permissionEditingSection}
+      <Divider />
+      <h4>Team Permissions</h4>
+      <div>
+        <Row>
+          <Col span={12}>
+            <h4>Teams</h4>
+          </Col>
+          <Col span={12}>
+            <h4>Role</h4>
+          </Col>
+        </Row>
+        {teamsRoleComponents}
+      </div>
+    </Modal>
+  );
 }
 
 export default PermissionsAndTeamsModalView;

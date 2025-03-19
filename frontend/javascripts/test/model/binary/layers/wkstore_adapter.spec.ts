@@ -6,8 +6,9 @@ import datasetServerObject from "test/fixtures/dataset_server_object";
 import mockRequire from "mock-require";
 import sinon from "sinon";
 import test from "ava";
-import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
-import { APIDataLayer } from "types/api_flow_types";
+import { MagInfo } from "oxalis/model/helpers/mag_info";
+import type { APIDataLayer } from "types/api_flow_types";
+import type { PushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
 
 const RequestMock = {
   always: (promise: Promise<any>, func: (v: any) => any) => promise.then(func, func),
@@ -21,17 +22,21 @@ function setFourBit(bool: boolean) {
   _fourBit = bool;
 }
 
+const tracingId = "tracingId";
 const mockedCube = {
   isSegmentation: true,
-  resolutionInfo: new ResolutionInfo([
+  layerName: tracingId,
+  magInfo: new MagInfo([
     [1, 1, 1],
     [2, 2, 2],
   ]),
+  triggerBucketDataChanged: () => {},
 };
 const StoreMock = {
   getState: () => ({
     dataset: {
-      name: "dataSet",
+      name: "dataset",
+      directoryName: "datasetPath",
       dataStore: {
         typ: "webknossos-store",
         url: "url",
@@ -44,6 +49,7 @@ const StoreMock = {
         name: "localhost",
         url: "http://localhost:9000",
       },
+      volumes: [],
     },
     datasetConfiguration: {
       fourBit: _fourBit,
@@ -118,7 +124,6 @@ test.serial(
     RequestMock.sendJSONReceiveArraybufferWithHeaders
       .onFirstCall()
       .returns(
-        // eslint-disable-next-line prefer-promise-reject-errors
         Promise.reject({
           status: 403,
         }),
@@ -148,9 +153,9 @@ test.serial(
         t.deepEqual(buffer2, bucketData2);
         t.is(RequestMock.sendJSONReceiveArraybufferWithHeaders.callCount, 2);
         const url = RequestMock.sendJSONReceiveArraybufferWithHeaders.getCall(0).args[0];
-        t.is(url, "url/data/datasets/organization/dataSet/layers/color/data?token=token");
+        t.is(url, "url/data/datasets/organization/datasetPath/layers/color/data?token=token");
         const url2 = RequestMock.sendJSONReceiveArraybufferWithHeaders.getCall(1).args[0];
-        t.is(url2, "url/data/datasets/organization/dataSet/layers/color/data?token=token2");
+        t.is(url2, "url/data/datasets/organization/datasetPath/layers/color/data?token=token2");
       },
     );
   },
@@ -184,7 +189,7 @@ test.serial(
   (t) => {
     const { layer } = t.context as { layer: APIDataLayer };
     const { batch } = prepare();
-    const expectedUrl = "url/data/datasets/organization/dataSet/layers/color/data?token=token2";
+    const expectedUrl = "url/data/datasets/organization/datasetPath/layers/color/data?token=token2";
     const expectedOptions = createExpectedOptions();
     return requestWithFallback(layer, batch).then(() => {
       t.is(RequestMock.sendJSONReceiveArraybufferWithHeaders.callCount, 1);
@@ -201,7 +206,7 @@ test.serial(
     // test four bit color and 8 bit seg
     const { layer } = t.context as { layer: APIDataLayer };
     const { batch } = prepare();
-    const expectedUrl = "url/data/datasets/organization/dataSet/layers/color/data?token=token2";
+    const expectedUrl = "url/data/datasets/organization/datasetPath/layers/color/data?token=token2";
     const expectedOptions = createExpectedOptions(true);
     await requestWithFallback(layer, batch).then(() => {
       t.is(RequestMock.sendJSONReceiveArraybufferWithHeaders.callCount, 1);
@@ -219,7 +224,7 @@ test.serial(
     const { segmentationLayer } = t.context as { segmentationLayer: APIDataLayer };
     const { batch } = prepare();
     const expectedUrl =
-      "url/data/datasets/organization/dataSet/layers/segmentation/data?token=token2";
+      "url/data/datasets/organization/datasetPath/layers/segmentation/data?token=token2";
     const expectedOptions = createExpectedOptions(false);
     await requestWithFallback(segmentationLayer, batch).then(() => {
       t.is(RequestMock.sendJSONReceiveArraybufferWithHeaders.callCount, 1);
@@ -230,6 +235,7 @@ test.serial(
     setFourBit(false);
   },
 );
+
 test.serial("sendToStore: Request Handling should send the correct request parameters", (t) => {
   const data = new Uint8Array(2);
   const bucket1 = new DataBucket("uint8", [0, 0, 0, 0], null, mockedCube);
@@ -241,13 +247,13 @@ test.serial("sendToStore: Request Handling should send the correct request param
   const batch = [bucket1, bucket2];
   const getBucketData = sinon.stub();
   getBucketData.returns(data);
-  const tracingId = "tracingId";
-  const expectedSaveQueueItems = {
+  const expectedSaveQueueItems: PushSaveQueueTransaction = {
     type: "PUSH_SAVE_QUEUE_TRANSACTION",
     items: [
       {
         name: "updateBucket",
         value: {
+          actionTracingId: tracingId,
           position: [0, 0, 0],
           additionalCoordinates: undefined,
           mag: [1, 1, 1],
@@ -258,6 +264,7 @@ test.serial("sendToStore: Request Handling should send the correct request param
       {
         name: "updateBucket",
         value: {
+          actionTracingId: tracingId,
           position: [64, 64, 64],
           additionalCoordinates: undefined,
           mag: [2, 2, 2],
@@ -267,8 +274,6 @@ test.serial("sendToStore: Request Handling should send the correct request param
       },
     ],
     transactionId: "dummyRequestId",
-    saveQueueType: "volume",
-    tracingId,
   };
 
   const pushQueue = new PushQueue({ ...mockedCube, layerName: tracingId });

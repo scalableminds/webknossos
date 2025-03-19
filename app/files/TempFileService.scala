@@ -1,6 +1,7 @@
 package files
 
 import cleanup.CleanUpService
+import com.scalableminds.util.time.Instant
 
 import java.nio.file.{Files, Path, Paths}
 import com.scalableminds.util.tools.Fox
@@ -22,7 +23,7 @@ class TempFileService @Inject()(cleanUpService: CleanUpService)(implicit ec: Exe
 
   private val tmpDir: Path = Paths.get(System.getProperty("java.io.tmpdir")).resolve("webknossosTempFiles")
 
-  private val activeTempFiles = scala.collection.mutable.Set[(Path, Long)]()
+  private val activeTempFiles = scala.collection.mutable.Set[(Path, Instant)]()
 
   cleanUpService.register("Clean up expired temporary files", 1 hour)(cleanUpExpiredFiles())
 
@@ -34,12 +35,12 @@ class TempFileService @Inject()(cleanUpService: CleanUpService)(implicit ec: Exe
     val path = tmpDir.resolve(f"$prefix-${Random.alphanumeric.take(15).mkString("")}")
     logger.info(f"Creating temp file at $path")
     Files.createFile(path)
-    activeTempFiles.add((path, System.currentTimeMillis() + lifeTime.toMillis))
+    activeTempFiles.add((path, Instant.now + lifeTime))
     path
   }
 
-  def cleanUpExpiredFiles(): Fox[Unit] = {
-    val now = System.currentTimeMillis()
+  private def cleanUpExpiredFiles(): Fox[Unit] = {
+    val now = Instant.now
     activeTempFiles.foreach {
       case (path, expiryTime) =>
         if (expiryTime < now) {

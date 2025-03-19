@@ -1,30 +1,26 @@
-import _ from "lodash";
-import { V3 } from "libs/mjs";
-import { applyState } from "oxalis/model_initialization";
-import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
-import {
-  getSkeletonTracing,
-  getActiveNode,
-  enforceSkeletonTracing,
-} from "oxalis/model/accessors/skeletontracing_accessor";
-import type { OxalisState, MappingType, MeshInformation } from "oxalis/store";
-import Store from "oxalis/store";
-import * as Utils from "libs/utils";
-import type { ViewMode, Vector3 } from "oxalis/constants";
-import constants, { ViewModeValues, MappingStatusEnum } from "oxalis/constants";
-import window, { location } from "libs/window";
 import ErrorHandling from "libs/error_handling";
+import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import messages from "messages";
-import { validateUrlStateJSON } from "types/validation";
-import { APIAnnotationType, APICompoundTypeEnum } from "types/api_flow_types";
+import * as Utils from "libs/utils";
 import { coalesce } from "libs/utils";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import window, { location } from "libs/window";
+import _ from "lodash";
+import messages from "messages";
+import type { Vector3, ViewMode } from "oxalis/constants";
+import constants, { ViewModeValues, MappingStatusEnum } from "oxalis/constants";
+import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getMeshesForCurrentAdditionalCoordinates } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   additionalCoordinateToKeyValue,
   parseAdditionalCoordinateKey,
 } from "oxalis/model/helpers/nml_helpers";
-import { getMeshesForCurrentAdditionalCoordinates } from "oxalis/model/accessors/volumetracing_accessor";
+import { applyState } from "oxalis/model_initialization";
+import type { MappingType, MeshInformation, OxalisState } from "oxalis/store";
+import Store from "oxalis/store";
+import { type APIAnnotationType, APICompoundTypeEnum } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
+import { validateUrlStateJSON } from "types/validation";
 
 const MAX_UPDATE_INTERVAL = 1000;
 const MINIMUM_VALID_CSV_LENGTH = 5;
@@ -103,10 +99,14 @@ class UrlManager {
     this.initialState = this.parseUrlHash();
   }
 
-  reset(keepUrlState: boolean = false): void {
+  reset(keepUrlState: boolean = false, keepUrlSearch: boolean = false): void {
     // don't use location.hash = ""; since it refreshes the page
     if (!keepUrlState) {
-      window.history.replaceState({}, "", location.pathname + location.search);
+      window.history.replaceState(
+        {},
+        "",
+        location.pathname + (keepUrlSearch ? location.search : ""),
+      );
     }
 
     this.initialize();
@@ -219,7 +219,7 @@ class UrlManager {
       if (coordinateName != null) {
         additionalCoordinates.push({
           name: coordinateName,
-          value: parseFloat(value),
+          value: Number.parseFloat(value),
         });
       }
     }
@@ -246,12 +246,8 @@ class UrlManager {
           rotation: Utils.map3((e) => Utils.roundTo(e, 2), getRotation(state.flycam)),
         }
       : {};
-    const activeNodeOptional = getSkeletonTracing(state.tracing)
-      .chain((skeletonTracing) => getActiveNode(skeletonTracing))
-      .map((node) => ({
-        activeNode: node.id,
-      }))
-      .getOrElse({});
+    const activeNode = state.tracing.skeleton?.activeNodeId;
+    const activeNodeOptional = activeNode != null ? { activeNode } : {};
     const stateByLayer: UrlStateByLayer = {};
 
     for (const layerName of Object.keys(state.temporaryConfiguration.activeMappingByLayer)) {
@@ -406,10 +402,13 @@ export function updateTypeAndId(
 // for better url readability
 const urlHashCharacterWhiteList = ["$", "&", "+", ",", ";", "=", ":", "@", "/", "?"];
 // Build lookup table from encoded to decoded value
-const encodedCharacterToDecodedCharacter = urlHashCharacterWhiteList.reduce((obj, decodedValue) => {
-  obj[encodeURIComponent(decodedValue)] = decodedValue;
-  return obj;
-}, {} as Record<string, string>);
+const encodedCharacterToDecodedCharacter = urlHashCharacterWhiteList.reduce(
+  (obj, decodedValue) => {
+    obj[encodeURIComponent(decodedValue)] = decodedValue;
+    return obj;
+  },
+  {} as Record<string, string>,
+);
 // Build RegExp that matches each of the encoded characters (%xy) and a function to decode it
 const re = new RegExp(Object.keys(encodedCharacterToDecodedCharacter).join("|"), "gi");
 

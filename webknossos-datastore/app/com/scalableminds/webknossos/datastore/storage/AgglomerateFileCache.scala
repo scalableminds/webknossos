@@ -20,15 +20,15 @@ case class CachedAgglomerateFile(reader: IHDF5Reader,
 }
 
 case class AgglomerateFileKey(
-    organizationName: String,
-    datasetName: String,
+    organizationId: String,
+    datasetDirectoryName: String,
     layerName: String,
     mappingName: String
 ) {
   def path(dataBaseDir: Path, agglomerateDir: String, agglomerateFileExtension: String): Path =
     dataBaseDir
-      .resolve(organizationName)
-      .resolve(datasetName)
+      .resolve(organizationId)
+      .resolve(datasetDirectoryName)
       .resolve(layerName)
       .resolve(agglomerateDir)
       .resolve(s"$mappingName.$agglomerateFileExtension")
@@ -36,10 +36,12 @@ case class AgglomerateFileKey(
 
 object AgglomerateFileKey {
   def fromDataRequest(dataRequest: DataServiceDataRequest): AgglomerateFileKey =
-    AgglomerateFileKey(dataRequest.dataSource.id.team,
-                       dataRequest.dataSource.id.name,
-                       dataRequest.dataLayer.name,
-                       dataRequest.settings.appliedAgglomerate.get)
+    AgglomerateFileKey(
+      dataRequest.dataSource.id.organizationId,
+      dataRequest.dataSource.id.directoryName,
+      dataRequest.dataLayer.name,
+      dataRequest.settings.appliedAgglomerate.get
+    )
 }
 
 class AgglomerateFileCache(val maxEntries: Int) extends LRUConcurrentCache[AgglomerateFileKey, CachedAgglomerateFile] {

@@ -13,7 +13,7 @@ import net.liftweb.common.Full
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import slick.lifted.Rep
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient}
 
 import javax.inject.Inject
@@ -77,11 +77,9 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       ))
 
   override protected def readAccessQ(requestingUserId: ObjectId) =
-    q"""(
-        (_team in (select _team from webknossos.user_team_roles where _user = $requestingUserId))
-        or _owner = $requestingUserId
-        or _organization = (select _organization from webknossos.users_ where _id = $requestingUserId and isAdmin)
-        )"""
+    q"""(_team IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = $requestingUserId))
+        OR _owner = $requestingUserId
+        OR _organization = (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin)"""
   override protected def deleteAccessQ(requestingUserId: ObjectId) = q"_owner = $requestingUserId"
 
   // read operations
@@ -89,14 +87,14 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Project] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"select $columns from $existingCollectionName where _id = $id and $accessQuery".as[ProjectsRow])
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[ProjectsRow])
       parsed <- parseFirst(r, id)
     } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Project]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"select $columns from $existingCollectionName where $accessQuery order by created".as[ProjectsRow])
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery ORDER BY created".as[ProjectsRow])
       parsed <- parseAll(r)
     } yield parsed
 
@@ -104,49 +102,49 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def findAllWithTaskType(taskTypeId: String): Fox[List[Project]] =
     for {
       r <- run(
-        q"""select distinct ${columnsWithPrefix("p.")}
-            from webknossos.projects_ p
-            join webknossos.tasks_ t on t._project = p._id
-            join webknossos.taskTypes_ tt on t._taskType = tt._id
-            where tt._id = $taskTypeId
+        q"""SELECT DISTINCT ${columnsWithPrefix("p.")}
+            FROM webknossos.projects_ p
+            JOIN webknossos.tasks_ t ON t._project = p._id
+            JOIN webknossos.taskTypes_ tt ON t._taskType = tt._id
+            WHERE tt._id = $taskTypeId
            """.as[ProjectsRow]
       )
       parsed <- parseAll(r)
     } yield parsed
 
-  def findOneByNameAndOrganization(name: String, organizationId: ObjectId)(
-      implicit ctx: DBAccessContext): Fox[Project] =
+  def findOneByNameAndOrganization(name: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[Project] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"""select $columns from $existingCollectionName
-                   where name = $name and _organization = $organizationId and $accessQuery""".as[ProjectsRow])
+      r <- run(q"""SELECT $columns FROM $existingCollectionName
+                   WHERE name = $name
+                   AND _organization = $organizationId
+                   AND $accessQuery""".as[ProjectsRow])
       parsed <- parseFirst(r, s"$organizationId/$name")
     } yield parsed
 
   def findUsersWithActiveTasks(projectId: ObjectId): Fox[List[(String, String, String, Int)]] =
     for {
-      rSeq <- run(q"""select m.email, u.firstName, u.lastName, count(a._id)
-                      from
-                      webknossos.annotations_ a
-                      join webknossos.tasks_ t on a._task = t._id
-                      join webknossos.projects_ p on t._project = p._id
-                      join webknossos.users_ u on a._user = u._id
-                      join webknossos.multiusers_ m on u._multiUser = m._id
-                      where p._id = $projectId
-                      and a.state = ${AnnotationState.Active}
-                      and a.typ = ${AnnotationType.Task}
-                      group by m.email, u.firstName, u.lastName
+      rSeq <- run(q"""SELECT m.email, u.firstName, u.lastName, count(a._id)
+                      FROM webknossos.annotations_ a
+                      JOIN webknossos.tasks_ t ON a._task = t._id
+                      JOIN webknossos.projects_ p ON t._project = p._id
+                      JOIN webknossos.users_ u ON a._user = u._id
+                      JOIN webknossos.multiusers_ m ON u._multiUser = m._id
+                      WHERE p._id = $projectId
+                      AND a.state = ${AnnotationState.Active}
+                      AND a.typ = ${AnnotationType.Task}
+                      GROUP BY m.email, u.firstName, u.lastName
                      """.as[(String, String, String, Int)])
     } yield rSeq.toList
 
   // write operations
 
-  def insertOne(p: Project, organizationId: ObjectId): Fox[Unit] =
+  def insertOne(p: Project, organizationId: String): Fox[Unit] =
     for {
-      _ <- run(q"""insert into webknossos.projects(
+      _ <- run(q"""INSERT INTO webknossos.projects(
                                      _id, _organization, _team, _owner, name, priority,
                                      paused, expectedTime, isblacklistedfromreport, created, isDeleted)
-                         values(${p._id}, $organizationId, ${p._team}, ${p._owner}, ${p.name}, ${p.priority},
+                         VALUES(${p._id}, $organizationId, ${p._team}, ${p._owner}, ${p.name}, ${p.priority},
                          ${p.paused}, ${p.expectedTime}, ${p.isBlacklistedFromReport},
                          ${p.created}, ${p.isDeleted})""".asUpdate)
     } yield ()
@@ -154,8 +152,8 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def updateOne(p: Project)(implicit ctx: DBAccessContext): Fox[Unit] =
     for { // note that p.created is immutable, hence skipped here
       _ <- assertUpdateAccess(p._id)
-      _ <- run(q"""update webknossos.projects
-                   set
+      _ <- run(q"""UPDATE webknossos.projects
+                   SET
                      _team = ${p._team},
                      _owner = ${p._owner},
                      name = ${p.name},
@@ -164,7 +162,7 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                      expectedTime = ${p.expectedTime},
                      isblacklistedfromreport = ${p.isBlacklistedFromReport},
                      isDeleted = ${p.isDeleted}
-                   where _id = ${p._id}""".asUpdate)
+                   WHERE _id = ${p._id}""".asUpdate)
     } yield ()
 
   def updatePaused(id: ObjectId, isPaused: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
@@ -172,7 +170,7 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def countForTeam(teamId: ObjectId): Fox[Int] =
     for {
-      countList <- run(q"select count(*) from $existingCollectionName where _team = $teamId".as[Int])
+      countList <- run(q"SELECT count(*) FROM $existingCollectionName WHERE _team = $teamId".as[Int])
       count <- countList.headOption
     } yield count
 

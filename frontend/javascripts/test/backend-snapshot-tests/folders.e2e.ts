@@ -1,5 +1,4 @@
 import _ from "lodash";
-import Request from "libs/request";
 import {
   tokenUserA,
   tokenUserC,
@@ -7,9 +6,11 @@ import {
   resetDatabase,
   replaceVolatileValues,
   writeTypeCheckingFile,
-} from "test/enzyme/e2e-setup";
+} from "test/e2e-setup";
+import Request from "libs/request";
 import * as foldersApi from "admin/api/folders";
 import test from "ava";
+import { APIMetadataEnum } from "types/api_flow_types";
 test.before("Reset database and change token", async () => {
   resetDatabase();
   setCurrToken(tokenUserA);
@@ -23,18 +24,14 @@ test("getFolderTree", async (t) => {
   writeTypeCheckingFile(folderTree, "folderTree", "FlatFolderTreeItem", {
     isArray: true,
   });
-  t.snapshot(folderTree, {
-    id: "folders-getFolderTree()",
-  });
+  t.snapshot(folderTree);
 });
 const organizationXRootFolderId = "570b9f4e4bb848d0885ea917";
 test("getFolder", async (t) => {
   const folder = await foldersApi.getFolder(organizationXRootFolderId);
 
   writeTypeCheckingFile(folder, "folder", "Folder");
-  t.snapshot(folder, {
-    id: "folders-getFolder()",
-  });
+  t.snapshot(folder);
 });
 test("updateFolder", async (t) => {
   const newName = "renamed organization x root folder";
@@ -42,21 +39,18 @@ test("updateFolder", async (t) => {
     id: organizationXRootFolderId,
     allowedTeams: [],
     name: newName,
+    metadata: [],
   });
   t.is(updatedFolder.name, newName);
 
-  t.snapshot(updatedFolder, {
-    id: "folders-updatedFolder()",
-  });
+  t.snapshot(updatedFolder);
 });
 test("createFolder", async (t) => {
   const newName = "a newly created folder!";
   const folder = await foldersApi.createFolder(organizationXRootFolderId, newName);
   t.is(folder.name, newName);
 
-  t.snapshot(replaceVolatileValues(folder), {
-    id: "folders-createFolder()",
-  });
+  t.snapshot(replaceVolatileValues(folder));
 });
 test("addAllowedTeamToFolder", async (t) => {
   const subFolderId = "570b9f4e4bb848d08880712a";
@@ -69,11 +63,10 @@ test("addAllowedTeamToFolder", async (t) => {
     id: subFolderId,
     allowedTeams: [teamId],
     name: "A subfolder!",
+    metadata: [{ type: APIMetadataEnum.STRING, key: "foo", value: "bar" }],
   });
 
-  t.snapshot(updatedFolderWithTeam, {
-    id: "folders-updatedWithTeam",
-  });
+  t.snapshot(updatedFolderWithTeam);
 
   setCurrToken(tokenUserC);
   /*
@@ -83,9 +76,7 @@ test("addAllowedTeamToFolder", async (t) => {
 
   const subFolderSeenByUserC = await foldersApi.getFolder(subFolderId);
 
-  t.snapshot(subFolderSeenByUserC, {
-    id: "folders-folderAfterUpdateTeamsSeenByUserC",
-  });
+  t.snapshot(subFolderSeenByUserC);
 
   await t.throwsAsync(async () => {
     try {

@@ -1,28 +1,32 @@
 import {
+  CopyOutlined,
+  EditOutlined,
   FileOutlined,
   FolderOpenOutlined,
-  SearchOutlined,
-  EditOutlined,
   LoadingOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
+import { useQuery } from "@tanstack/react-query";
+import { getOrganization } from "admin/admin_rest_api";
 import { Result, Spin, Tag, Tooltip } from "antd";
-import { stringToColor } from "libs/format_utils";
+import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
+import Markdown from "libs/markdown_adapter";
+import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
 import _ from "lodash";
+import type { OxalisState } from "oxalis/store";
 import {
   DatasetExtentRow,
   OwningOrganizationRow,
   VoxelSizeRow,
 } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
-import React, { useEffect } from "react";
-import { APIDatasetCompact, Folder } from "types/api_flow_types";
+import { useEffect } from "react";
+import { useSelector } from "react-redux";
+import type { APIDatasetCompact, Folder } from "types/api_flow_types";
 import { DatasetLayerTags, DatasetTags, TeamTags } from "../advanced_dataset/dataset_table";
 import { useDatasetCollectionContext } from "../dataset/dataset_collection_context";
 import { SEARCH_RESULTS_LIMIT, useDatasetQuery, useFolderQuery } from "../dataset/queries";
-import { useSelector } from "react-redux";
-import { OxalisState } from "oxalis/store";
-import { getOrganization } from "admin/admin_rest_api";
-import { useQuery } from "@tanstack/react-query";
+import MetadataTable from "./metadata_table";
 
 export function DetailsSidebar({
   selectedDatasets,
@@ -45,6 +49,7 @@ export function DetailsSidebar({
 }) {
   const context = useDatasetCollectionContext();
   const { data: folder, error } = useFolderQuery(folderId);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation whether context.globalSearchQuery should be added as a dependency.
   useEffect(() => {
     if (
       selectedDatasets.some((ds) => ds.folderId !== context.activeFolderId) &&
@@ -87,7 +92,7 @@ function getMaybeSelectMessage(datasetCount: number) {
 
 function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompact }) {
   const context = useDatasetCollectionContext();
-  const { data: fullDataset, isFetching } = useDatasetQuery(selectedDataset);
+  const { data: fullDataset, isFetching } = useDatasetQuery(selectedDataset.id);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const { data: owningOrganization } = useQuery(
     ["organizations", selectedDataset.owningOrganization],
@@ -96,7 +101,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
       refetchOnWindowFocus: false,
     },
   );
-  const owningOrganizationDisplayName = owningOrganization?.displayName;
+  const owningOrganizationName = owningOrganization?.name;
 
   const renderOrganization = () => {
     if (activeUser?.organization === selectedDataset.owningOrganization) return;
@@ -104,9 +109,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
       <table>
         <tbody>
           <OwningOrganizationRow
-            organizationName={
-              owningOrganizationDisplayName != null ? owningOrganizationDisplayName : ""
-            }
+            organizationId={owningOrganizationName != null ? owningOrganizationName : ""}
           />
         </tbody>
       </table>
@@ -121,7 +124,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
         ) : (
           <FileOutlined style={{ marginRight: 4 }} />
         )}{" "}
-        {selectedDataset.displayName || selectedDataset.name}
+        {selectedDataset.name}
       </h4>
       {renderOrganization()}
       <Spin spinning={fullDataset == null}>
@@ -147,7 +150,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
 
         <div style={{ marginBottom: 4 }}>
           <div className="sidebar-label">Description</div>
-          <div>{fullDataset?.description}</div>
+          <Markdown>{fullDataset?.description}</Markdown>
         </div>
 
         <div style={{ marginBottom: 4 }}>
@@ -171,11 +174,43 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
             </Tag>
           )}
         </div>
-      </Spin>
-      {selectedDataset.isActive ? (
+
         <div style={{ marginBottom: 4 }}>
-          <div className="sidebar-label">Tags</div>
-          <DatasetTags dataset={selectedDataset} updateDataset={context.updateCachedDataset} />
+          <div className="sidebar-label">ID</div>
+          {fullDataset && (
+            <Tag>
+              {fullDataset.id.substring(0, 10)}...{" "}
+              <Tooltip title="Copy Dataset ID">
+                <CopyOutlined
+                  onClick={() => {
+                    navigator.clipboard.writeText(fullDataset.id);
+                    Toast.success("Dataset ID copied.");
+                  }}
+                />
+              </Tooltip>
+            </Tag>
+          )}
+        </div>
+
+        {selectedDataset.isActive ? (
+          <div style={{ marginBottom: 4 }}>
+            <div className="sidebar-label">Tags</div>
+            <DatasetTags dataset={selectedDataset} updateDataset={context.updateCachedDataset} />
+          </div>
+        ) : null}
+
+        {fullDataset && (
+          /* The key is crucial to enforce rerendering when the dataset changes. This is necessary for the MetadataTable to work correctly. */
+          <MetadataTable datasetOrFolder={fullDataset} key={`${fullDataset.id}#dataset`} />
+        )}
+      </Spin>
+
+      {fullDataset?.usedStorageBytes && fullDataset.usedStorageBytes > 10000 ? (
+        <div style={{ marginBottom: 4 }}>
+          <div className="sidebar-label">Used Storage</div>
+          <Tooltip title="Note that linked and remote layers aren’t measured." placement="left">
+            <div>{formatCountToDataAmountUnit(fullDataset.usedStorageBytes, true)}</div>
+          </Tooltip>
         </div>
       ) : null}
     </>
@@ -269,7 +304,11 @@ function FolderDetails({
             . {message}
           </p>
           <div className="sidebar-label">Access Permissions</div>
-          <FolderTeamTags folder={folder} />
+          <div style={{ marginBottom: 4 }}>
+            <FolderTeamTags folder={folder} />
+          </div>
+          {/* The key is crucial to enforce rerendering when the folder changes. This is necessary for the MetadataTable to work correctly. */}
+          <MetadataTable datasetOrFolder={folder} key={`${folder.id}#folder`} />
         </div>
       ) : error ? (
         "Could not load folder."

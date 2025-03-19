@@ -1,33 +1,33 @@
-import React from "react";
-import { Form, Modal, Input, Button, Row, Col, Steps, Card, AutoComplete, Alert } from "antd";
 import {
-  CloudUploadOutlined,
-  TeamOutlined,
-  UserOutlined,
-  FileAddOutlined,
-  RocketOutlined,
   ClockCircleOutlined,
-  PlayCircleOutlined,
-  PaperClipOutlined,
+  CloudUploadOutlined,
   CodeOutlined,
   CustomerServiceOutlined,
+  FileAddOutlined,
+  PaperClipOutlined,
+  PlayCircleOutlined,
   PlusOutlined,
+  RocketOutlined,
+  TeamOutlined,
   UserAddOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
-import { Link, RouteComponentProps, withRouter } from "react-router-dom";
-import { connect } from "react-redux";
-import type { APIUser, APIDataStore } from "types/api_flow_types";
+import { getDatastores, sendInvitesForOrganization } from "admin/admin_rest_api";
+import RegistrationFormGeneric from "admin/auth/registration_form_generic";
+import DatasetUploadView from "admin/dataset/dataset_upload_view";
+import { maxInludedUsersInBasicPlan } from "admin/organization/pricing_plan_utils";
+import { Alert, AutoComplete, Button, Card, Col, Form, Input, Modal, Row, Steps } from "antd";
+import CreditsFooter from "components/credits_footer";
+import LinkButton from "components/link_button";
+import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
+import features from "features";
+import Toast from "libs/toast";
 import type { OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
-import LinkButton from "components/link_button";
-import { getDatastores, sendInvitesForOrganization } from "admin/admin_rest_api";
-import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
-import DatasetUploadView from "admin/dataset/dataset_upload_view";
-import RegistrationFormGeneric from "admin/auth/registration_form_generic";
-import CreditsFooter from "components/credits_footer";
-import Toast from "libs/toast";
-import features from "features";
-import { maxInludedUsersInBasicPlan } from "admin/organization/pricing_plan_utils";
+import React, { useState } from "react";
+import { connect } from "react-redux";
+import { Link, type RouteComponentProps, withRouter } from "react-router-dom";
+import type { APIDataStore, APIUser } from "types/api_flow_types";
 
 const { Step } = Steps;
 const FormItem = Form.Item;
@@ -38,8 +38,8 @@ type Props = StateProps & RouteComponentProps;
 type State = {
   currentStep: number;
   datastores: Array<APIDataStore>;
-  organizationName: string;
-  datasetNameToImport: string | null | undefined;
+  organizationId: string;
+  datasetIdToImport: string | null | undefined;
   isDatasetUploadModalVisible: boolean;
   isInviteModalVisible: boolean;
 };
@@ -215,50 +215,42 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
   );
 }
 
-type InviteUsersModalState = {
-  inviteesString: string;
-};
+export function InviteUsersModal({
+  organizationId,
+  isOpen,
+  handleVisibleChange,
+  destroy,
+  currentUserCount = 1,
+  maxUserCountPerOrganization = maxInludedUsersInBasicPlan, // default for Basic Plan,
+}: {
+  organizationId: string;
+  isOpen?: boolean;
+  handleVisibleChange?: (...args: Array<any>) => any;
+  destroy?: (...args: Array<any>) => any;
+  currentUserCount?: number;
+  maxUserCountPerOrganization?: number;
+}) {
+  const [inviteesString, setInviteesString] = useState("");
 
-export class InviteUsersModal extends React.Component<
-  {
-    isOpen?: boolean;
-    handleVisibleChange?: (...args: Array<any>) => any;
-    destroy?: (...args: Array<any>) => any;
-    organizationName: string;
-    currentUserCount: number;
-    maxUserCountPerOrganization: number;
-  },
-  InviteUsersModalState
-> {
-  state: InviteUsersModalState = {
-    inviteesString: "",
-  };
-
-  static defaultProps = {
-    currentUserCount: 1,
-    maxUserCountPerOrganization: maxInludedUsersInBasicPlan, // default for Basic Plan
-  };
-
-  extractEmailAddresses(): string[] {
-    return this.state.inviteesString
+  function extractEmailAddresses(): string[] {
+    return inviteesString
       .split(/[,\s]+/)
       .map((a) => a.trim())
       .filter((lines) => lines.includes("@"));
   }
 
-  sendInvite = async () => {
-    const addresses = this.extractEmailAddresses();
+  async function sendInvite() {
+    const addresses = extractEmailAddresses();
 
     await sendInvitesForOrganization(addresses, true);
     Toast.success("An invitation was sent to the provided email addresses.");
-    this.setState({
-      inviteesString: "",
-    });
-    if (this.props.handleVisibleChange != null) this.props.handleVisibleChange(false);
-    if (this.props.destroy != null) this.props.destroy();
-  };
 
-  getContent(isInvitesDisabled: boolean) {
+    setInviteesString("");
+    if (handleVisibleChange != null) handleVisibleChange(false);
+    if (destroy != null) destroy();
+  }
+
+  function getContent(isInvitesDisabled: boolean) {
     const exceedingUserLimitAlert = isInvitesDisabled ? (
       <Alert
         showIcon
@@ -266,7 +258,7 @@ export class InviteUsersModal extends React.Component<
         description="Inviting more users will exceed your organization's user limit. Consider upgrading your WEBKNOSSOS plan."
         style={{ marginBottom: 10 }}
         action={
-          <Link to={`/organizations/${this.props.organizationName}`}>
+          <Link to={`/organizations/${organizationId}`}>
             <Button size="small" type="primary">
               Upgrade Now
             </Button>
@@ -294,46 +286,41 @@ export class InviteUsersModal extends React.Component<
             minRows: 6,
           }}
           onChange={(evt) => {
-            this.setState({
-              inviteesString: evt.target.value,
-            });
+            setInviteesString(evt.target.value);
           }}
           placeholder={"jane@example.com\njoe@example.com"}
-          value={this.state.inviteesString}
+          defaultValue={inviteesString}
         />
       </React.Fragment>
     );
   }
 
-  render() {
-    const isInvitesDisabled =
-      this.props.currentUserCount + this.extractEmailAddresses().length >
-      this.props.maxUserCountPerOrganization;
+  const isInvitesDisabled =
+    currentUserCount + extractEmailAddresses().length > maxUserCountPerOrganization;
 
-    return (
-      <Modal
-        open={this.props.isOpen == null ? true : this.props.isOpen}
-        title={
-          <>
-            <UserAddOutlined /> Invite Users
-          </>
-        }
-        width={600}
-        footer={
-          <Button onClick={this.sendInvite} type="primary" disabled={isInvitesDisabled}>
-            Send Invite Emails
-          </Button>
-        }
-        onCancel={() => {
-          if (this.props.handleVisibleChange != null) this.props.handleVisibleChange(false);
-          if (this.props.destroy != null) this.props.destroy();
-        }}
-        closable
-      >
-        {this.getContent(isInvitesDisabled)}
-      </Modal>
-    );
-  }
+  return (
+    <Modal
+      open={isOpen == null ? true : isOpen}
+      title={
+        <>
+          <UserAddOutlined /> Invite Users
+        </>
+      }
+      width={600}
+      footer={
+        <Button onClick={sendInvite} type="primary" disabled={isInvitesDisabled}>
+          Send Invite Emails
+        </Button>
+      }
+      onCancel={() => {
+        if (handleVisibleChange != null) handleVisibleChange(false);
+        if (destroy != null) destroy();
+      }}
+      closable
+    >
+      {getContent(isInvitesDisabled)}
+    </Modal>
+  );
 }
 
 const OrganizationForm = ({ onComplete }: { onComplete: (args: any) => void }) => {
@@ -341,7 +328,7 @@ const OrganizationForm = ({ onComplete }: { onComplete: (args: any) => void }) =
 
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'values' implicitly has an 'any' type.
   const onFinish = (values) => {
-    onComplete(values.organizationName);
+    onComplete(values.organizationId);
   };
 
   return (
@@ -349,7 +336,7 @@ const OrganizationForm = ({ onComplete }: { onComplete: (args: any) => void }) =
       onFinish={onFinish}
       form={form}
       initialValues={{
-        organizationName: "",
+        organizationId: "",
       }}
     >
       <Row
@@ -371,7 +358,7 @@ const OrganizationForm = ({ onComplete }: { onComplete: (args: any) => void }) =
                 message: "Please enter an organization name!",
               },
             ]}
-            name="organizationName"
+            name="organizationId"
           >
             <AutoComplete
               size="large"
@@ -405,10 +392,10 @@ class OnboardingView extends React.PureComponent<Props, State> {
   state: State = {
     currentStep: 0,
     datastores: [],
-    organizationName: "",
+    organizationId: "",
     isDatasetUploadModalVisible: false,
     isInviteModalVisible: false,
-    datasetNameToImport: null,
+    datasetIdToImport: null,
   };
 
   componentDidMount() {
@@ -429,7 +416,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
       currentStep: prevState.currentStep + 1,
       isDatasetUploadModalVisible: false,
       isInviteModalVisible: false,
-      datasetNameToImport: null,
+      datasetIdToImport: null,
     }));
   };
   renderCreateOrganization = () => (
@@ -446,9 +433,9 @@ class OnboardingView extends React.PureComponent<Props, State> {
       icon={<i className="far fa-building icon-big" />}
     >
       <OrganizationForm
-        onComplete={(organizationName) => {
+        onComplete={(organizationId) => {
           this.setState({
-            organizationName,
+            organizationId,
           });
           this.advanceStep();
         }}
@@ -469,7 +456,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
     >
       <RegistrationFormGeneric
         hidePrivacyStatement
-        organizationNameToCreate={this.state.organizationName}
+        organizationIdToCreate={this.state.organizationId}
         onRegistered={() => {
           // Update the entered organization to the normalized name of the organization received by the backend.
           // This is needed for further requests.
@@ -477,7 +464,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
 
           if (activeUser) {
             this.setState({
-              organizationName: activeUser.organization,
+              organizationId: activeUser.organization,
             });
             // A user can only see the available datastores when he is logged in.
             // Thus we can fetch the datastores only after the registration.
@@ -494,7 +481,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
   renderUploadDatasets = () => (
     <StepHeader
       header="Add the first dataset to your organization."
-      subheader={<React.Fragment>Upload your dataset via drag and drop.</React.Fragment>}
+      subheader="Upload your dataset via drag and drop"
       icon={<FileAddOutlined className="icon-big" />}
     >
       {this.state.isDatasetUploadModalVisible && (
@@ -512,12 +499,12 @@ class OnboardingView extends React.PureComponent<Props, State> {
           <DatasetUploadView
             datastores={this.state.datastores}
             onUploaded={async (
-              _organization: string,
-              datasetName: string,
+              uploadedDatasetId: string,
+              _uploadedDatasetName: string,
               needsConversion: boolean,
             ) => {
               this.setState({
-                datasetNameToImport: datasetName,
+                datasetIdToImport: uploadedDatasetId,
                 isDatasetUploadModalVisible: false,
               });
 
@@ -530,14 +517,11 @@ class OnboardingView extends React.PureComponent<Props, State> {
           />
         </Modal>
       )}
-      {this.state.datasetNameToImport != null && (
+      {this.state.datasetIdToImport != null && (
         <Modal open width="85%" footer={null} maskClosable={false} onCancel={this.advanceStep}>
           <DatasetSettingsView
             isEditingMode={false}
-            datasetId={{
-              name: this.state.datasetNameToImport || "",
-              owningOrganization: this.state.organizationName || "",
-            }}
+            datasetId={this.state.datasetIdToImport}
             onComplete={this.advanceStep}
             onCancel={this.advanceStep}
           />
@@ -561,7 +545,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
           height={250}
         >
           You can also copy it directly onto the hosting server.{" "}
-          <a href="https://docs.webknossos.org/webknossos/data_formats.html">
+          <a href="https://docs.webknossos.org/webknossos/data/index.html">
             Learn more about supported data formats.
           </a>
         </OptionCard>
@@ -592,12 +576,12 @@ class OnboardingView extends React.PureComponent<Props, State> {
       <Row gutter={50}>
         <FeatureCard header="Data Annotation" icon={<PlayCircleOutlined />}>
           <a href="/dashboard">Explore and annotate your data.</a> For a brief overview,{" "}
-          <a href="https://www.youtube.com/watch?v=jsz0tc3tuKI&t=30s">watch this video</a>.
+          <a href="https://www.youtube.com/watch?v=iw2C7XB6wP4">watch this video</a>.
         </FeatureCard>
         <FeatureCard header="More Datasets" icon={<CloudUploadOutlined />}>
           <a href="/datasets/upload">Upload more of your datasets.</a>{" "}
-          <a href="https://docs.webknossos.org/webknossos/data_formats.html">Learn more</a> about
-          the formats and upload processes WEBKNOSSOS supports.
+          <a href="https://docs.webknossos.org/webknossos/data/index.html">Learn more</a> about the
+          formats and upload processes WEBKNOSSOS supports.
         </FeatureCard>
         <FeatureCard header="User & Team Management" icon={<TeamOutlined />}>
           <LinkButton
@@ -610,7 +594,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
             Invite users to work collaboratively
           </LinkButton>{" "}
           <InviteUsersModal
-            organizationName={this.state.organizationName}
+            organizationId={this.state.organizationId}
             isOpen={this.state.isInviteModalVisible}
             handleVisibleChange={(isInviteModalVisible) =>
               this.setState({
@@ -624,12 +608,14 @@ class OnboardingView extends React.PureComponent<Props, State> {
         <FeatureCard header="Project Management" icon={<PaperClipOutlined />}>
           Create <a href="/tasks">tasks</a> and <a href="/projects">projects</a> to efficiently
           accomplish your research goals.{" "}
-          <a href="https://www.youtube.com/watch?v=4DD7408avUY">Watch this demo</a> to learn more.
+          <a href="https://www.youtube.com/watch?v=G6AumzpIzR0">Watch this short video</a> to learn
+          more.
         </FeatureCard>
         <FeatureCard header="Scripting" icon={<CodeOutlined />}>
-          Use the <a href="/assets/docs/frontend-api/index.html">WEBKNOSSOS API</a> to create{" "}
-          <a href="/scripts">scriptable workflows</a>.{" "}
-          <a href="https://www.youtube.com/watch?v=u5j8Sf5YwuM">Watch this demo</a> to learn more.
+          Use the <a href="https://docs.webknossos.org/webknossos-py">WEBKNOSSOS Python library</a>{" "}
+          to create automated workflows.
+          <a href="https://www.youtube.com/watch?v=JABaGvqg2-g">Watch this short video</a> to learn
+          more.
         </FeatureCard>
         <FeatureCard header="Contact Us" icon={<CustomerServiceOutlined />}>
           <a href="mailto:hello@webknossos.org">Get in touch</a> or{" "}

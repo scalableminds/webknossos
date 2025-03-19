@@ -1,25 +1,27 @@
-import { Card, Button, Tooltip } from "antd";
 import { LinkOutlined } from "@ant-design/icons";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
-import Markdown from "react-remarkable";
-import React, { useState } from "react";
+import { Button, Card, Tooltip } from "antd";
 import classNames from "classnames";
-import { Link } from "react-router-dom";
-import type {
-  APIDataset,
-  APIDatasetDetails,
-  APIPublication,
-  APIPublicationAnnotation,
-} from "types/api_flow_types";
 import { formatScale } from "libs/format_utils";
+import Markdown from "libs/markdown_adapter";
+import { compareBy } from "libs/utils";
 import {
+  getDatasetExtentAsString,
+  getSegmentationThumbnailURL,
   getThumbnailURL,
   hasSegmentation,
-  getSegmentationThumbnailURL,
-  getDatasetExtentAsString,
 } from "oxalis/model/accessors/dataset_accessor";
-import { compareBy } from "libs/utils";
-type ExtendedDatasetDetails = APIDatasetDetails & {
+import type React from "react";
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import type { APIDataset, APIPublication, APIPublicationAnnotation } from "types/api_flow_types";
+
+type DatasetDetails = {
+  species?: string;
+  brainRegion?: string;
+  acquisition?: string;
+};
+
+type ExtendedDatasetDetails = DatasetDetails & {
   name: string;
   scale: string;
   extent: string;
@@ -45,13 +47,17 @@ function getDisplayName(item: PublicationItem): string {
       ? "Unnamed annotation"
       : item.annotation.name;
   }
-  return item.dataset.displayName == null || item.dataset.displayName === ""
-    ? item.dataset.name
-    : item.dataset.displayName;
+  return item.dataset.name;
 }
 
-function getDetails(item: PublicationItem): ExtendedDatasetDetails {
-  const { dataSource, details } = item.dataset;
+function getExtendedDetails(item: PublicationItem): ExtendedDatasetDetails {
+  const { dataSource, metadata } = item.dataset;
+  const details = {} as DatasetDetails;
+  metadata?.forEach((entry) => {
+    if (entry.key === "species" || entry.key === "brainRegion" || entry.key === "acquisition") {
+      details[entry.key] = entry.value.toString();
+    }
+  });
   return {
     ...details,
     scale: formatScale(dataSource.scale, 0),
@@ -63,7 +69,7 @@ function getDetails(item: PublicationItem): ExtendedDatasetDetails {
 function getUrl(item: PublicationItem): string {
   return item.type === PublicationItemType.ANNOTATION
     ? `/annotations/${item.annotation.id}`
-    : `/datasets/${item.dataset.owningOrganization}/${item.dataset.name}`;
+    : `/datasets/${item.dataset.id}`;
 }
 
 function ThumbnailOverlay({ details }: { details: ExtendedDatasetDetails }) {
@@ -184,19 +190,19 @@ function PublicationCard({ publication, showDetailedLink }: Props) {
   const sortedItems: Array<PublicationItem> = [
     ...publication.datasets
       .filter((dataset) => dataset.isActive)
-      .map((dataset) => ({ type: PublicationItemType.DATASET, dataset } as PublicationItem)),
+      .map((dataset) => ({ type: PublicationItemType.DATASET, dataset }) as PublicationItem),
     ...publication.annotations
-      .filter((annotation) => annotation.dataSet.isActive)
+      .filter((annotation) => annotation.dataset.isActive)
       .map(
         (annotation) =>
           ({
             type: PublicationItemType.ANNOTATION,
             annotation,
-            dataset: annotation.dataSet,
-          } as PublicationItem),
+            dataset: annotation.dataset,
+          }) as PublicationItem,
       ),
   ];
-  sortedItems.sort(compareBy([] as Array<PublicationItem>, (item) => item.dataset.sortingKey));
+  sortedItems.sort(compareBy<PublicationItem>((item) => item.dataset.sortingKey));
   const [activeItem, setActiveItem] = useState<PublicationItem | null>(sortedItems[0]);
 
   return (
@@ -235,14 +241,7 @@ function PublicationCard({ publication, showDetailedLink }: Props) {
             ) : null}
           </h3>
           <div className="publication-description-body nice-scrollbar">
-            <Markdown
-              source={publication.description}
-              options={{
-                html: false,
-                breaks: true,
-                linkify: true,
-              }}
-            />
+            <Markdown>{publication.description}</Markdown>
           </div>
         </div>
         <PublicationThumbnail
@@ -272,7 +271,7 @@ function PublicationThumbnail({
   const segmentationThumbnailURL = hasSegmentation(activeItem.dataset)
     ? getSegmentationThumbnailURL(activeItem.dataset)
     : null;
-  const details = getDetails(activeItem);
+  const extendedDetails = getExtendedDetails(activeItem);
 
   return (
     <div className="dataset-thumbnail">
@@ -301,7 +300,7 @@ function PublicationThumbnail({
             }}
           />
         )}
-        <ThumbnailOverlay details={details} />
+        <ThumbnailOverlay details={extendedDetails} />
         {sortedItems.length > 1 && (
           <PublishedDatasetsOverlay
             items={sortedItems}

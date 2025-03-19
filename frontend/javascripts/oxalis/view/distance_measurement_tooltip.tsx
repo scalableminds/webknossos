@@ -1,26 +1,30 @@
-import { useDispatch, useSelector } from "react-redux";
-import _ from "lodash";
-import React, { useEffect, useRef } from "react";
-import type { OxalisState } from "oxalis/store";
-import { AnnotationToolEnum, MeasurementTools } from "oxalis/constants";
-import { getPosition } from "oxalis/model/accessors/flycam_accessor";
-import { hideMeasurementTooltipAction } from "oxalis/model/actions/ui_actions";
-import getSceneController from "oxalis/controller/scene_controller_provider";
 import { CopyOutlined } from "@ant-design/icons";
 import { copyToClipboad } from "admin/voxelytics/utils";
-import {
-  formatNumberToLength,
-  formatLengthAsVx,
-  formatAreaAsVx,
-  formatNumberToArea,
-} from "libs/format_utils";
 import { Tooltip } from "antd";
+import {
+  formatAreaAsVx,
+  formatLengthAsVx,
+  formatNumberToArea,
+  formatNumberToLength,
+} from "libs/format_utils";
+import { clamp } from "libs/utils";
+import {
+  AnnotationToolEnum,
+  LongUnitToShortUnitMap,
+  MeasurementTools,
+  type Vector3,
+} from "oxalis/constants";
+import getSceneController from "oxalis/controller/scene_controller_provider";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
   calculateMaybePlaneScreenPos,
   getInputCatcherRect,
 } from "oxalis/model/accessors/view_mode_accessor";
-import { clamp } from "libs/utils";
+import { hideMeasurementTooltipAction } from "oxalis/model/actions/ui_actions";
 import dimensions from "oxalis/model/dimensions";
+import type { OxalisState } from "oxalis/store";
+import { useEffect, useRef } from "react";
+import { useDispatch, useSelector } from "react-redux";
 
 const TOOLTIP_HEIGHT = 48;
 const ADDITIONAL_OFFSET = 12;
@@ -50,7 +54,7 @@ export default function DistanceMeasurementTooltip() {
   const flycam = useSelector((state: OxalisState) => state.flycam);
   const state = useSelector((state: OxalisState) => state);
   const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
-  const datasetScale = useSelector((state: OxalisState) => state.dataset.dataSource.scale);
+  const voxelSize = useSelector((state: OxalisState) => state.dataset.dataSource.scale);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const dispatch = useDispatch();
   const currentPosition = getPosition(flycam);
@@ -62,6 +66,13 @@ export default function DistanceMeasurementTooltip() {
   const orthoView = activeGeometry.viewport;
   // When the flycam is moved into the third dimension, the tooltip should be hidden.
   const thirdDim = dimensions.thirdDimensionForPlane(orthoView);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies(thirdDim): thirdDim is more or less a constant
+  // biome-ignore lint/correctness/useExhaustiveDependencies(position[thirdDim]):
+  // biome-ignore lint/correctness/useExhaustiveDependencies(hideMeasurementTooltipAction): constant
+  // biome-ignore lint/correctness/useExhaustiveDependencies(dispatch): constant
+  // biome-ignore lint/correctness/useExhaustiveDependencies(position):
+  // biome-ignore lint/correctness/useExhaustiveDependencies(activeGeometry.resetAndHide):
   useEffect(() => {
     if (
       position != null &&
@@ -70,21 +81,32 @@ export default function DistanceMeasurementTooltip() {
       dispatch(hideMeasurementTooltipAction());
       activeGeometry.resetAndHide();
     }
-  }, [currentPosition]);
+  }, [currentPosition[thirdDim]]);
+
   if (position == null || !MeasurementTools.includes(activeTool)) {
     return null;
   }
+
   let valueInVx = "";
   let valueInMetricUnit = "";
+  const notScalingFactor = [1, 1, 1] as Vector3;
+
   if (activeTool === AnnotationToolEnum.LINE_MEASUREMENT) {
     const { lineMeasurementGeometry } = getSceneController();
-    valueInVx = formatLengthAsVx(lineMeasurementGeometry.getDistance([1, 1, 1]), 1);
-    valueInMetricUnit = formatNumberToLength(lineMeasurementGeometry.getDistance(datasetScale), 1);
+    valueInVx = formatLengthAsVx(lineMeasurementGeometry.getDistance(notScalingFactor), 1);
+    valueInMetricUnit = formatNumberToLength(
+      lineMeasurementGeometry.getDistance(voxelSize.factor),
+      LongUnitToShortUnitMap[voxelSize.unit],
+    );
   } else if (activeTool === AnnotationToolEnum.AREA_MEASUREMENT) {
     const { areaMeasurementGeometry } = getSceneController();
-    valueInVx = formatAreaAsVx(areaMeasurementGeometry.getArea([1, 1, 1]), 1);
-    valueInMetricUnit = formatNumberToArea(areaMeasurementGeometry.getArea(datasetScale), 1);
+    valueInVx = formatAreaAsVx(areaMeasurementGeometry.getArea(notScalingFactor), 1);
+    valueInMetricUnit = formatNumberToArea(
+      areaMeasurementGeometry.getArea(voxelSize.factor),
+      LongUnitToShortUnitMap[voxelSize.unit],
+    );
   }
+
   const {
     left: viewportLeft,
     top: viewportTop,
@@ -92,6 +114,7 @@ export default function DistanceMeasurementTooltip() {
     height: viewportHeight,
   } = getInputCatcherRect(state, orthoView);
   const tooltipPosition = calculateMaybePlaneScreenPos(state, position, orthoView);
+
   if (tooltipPosition == null) {
     return null;
   }
@@ -107,6 +130,7 @@ export default function DistanceMeasurementTooltip() {
     tooltipPosition.y - TOOLTIP_HEIGHT - ADDITIONAL_OFFSET,
     viewportTop + viewportHeight + TOOLTIP_HEIGHT - ADDITIONAL_OFFSET,
   );
+
   return (
     <div
       ref={tooltipRef}

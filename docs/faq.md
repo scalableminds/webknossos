@@ -11,7 +11,7 @@ We also provide intro calls to answer your questions or walk you through the pla
 ## I have a very large dataset and need help annotating it
 There are two options to help you with data annotation:
 
-1. Invite collaborators to your WEBKNOSSOS organization, set up a project to work on, and assign them sub-volumes of your data for annotation. See the [page on tasks and projects for more info](./tasks.md). 
+1. Invite collaborators to your WEBKNOSSOS organization, set up a project to work on, and assign them sub-volumes of your data for annotation. See the [page on tasks and projects for more info](./tasks_projects/tasks.md). 
 2. We also offer professional services to help with annotation. We can do both [manual annotations](https://webknossos.org/services/annotations) for your data or apply [automated segmentations](https://webknossos.org/services/automated-segmentation) on large-scale datasets.
 
 ## Where can I ask questions or report issues on WEBKNOSSOS?
@@ -21,17 +21,17 @@ We are always happy to help you through email or a quick call. In addition, we o
 ## How can I run machine learning analysis on my datasets with WEBKNOSSOS?
 Machine learning integration with WEBKNOSSOS is a very interesting topic for us and something that we want to focus more on. 
 At the moment, there is a trial integration of a neural network model for neuron segmentation in EM brain data. 
-We are looking to expand the model portfolio and integrated analysis. [Read more about automated analysis.](./automated_analysis.md)
+We are looking to expand the model portfolio and integrated analysis. [Read more about automated analysis.](./automation/index.md)
 We have years of experience with automated machine learning analysis and [offer commercial automated analysis services](https://webknossos.org/services/automated-segmentation). 
 
 We are also always interested in new collaborations. 
 Get in touch if you want to work together on a project resulting in new classifiers.
 
-WEBKNOSSOS does not allow you to run custom machine learning models on your data yet. As a work-around you can download your annotations from WEBKNOSSOS - either manually or scripted [through our Python libarary](https://docs.webknossos.org/webknossos-py) - and do your ML analysis offline and use WEBKNOSSOS to inspect the results. 
+WEBKNOSSOS does not allow you to run custom machine learning models on your data yet. As a work-around you can download your annotations from WEBKNOSSOS - either manually or scripted [through our Python library](https://docs.webknossos.org/webknossos-py) - and do your ML analysis offline and use WEBKNOSSOS to inspect the results. 
 
 ## How can I use my dataset with WEBKNOSSOS?
 
-WEBKNOSSOS supports [WKW (optimized), OME-Zarr (NGFF), Neuroglancer Precomputed, N5, KNOSSOS cubes](./datasets.md), and image stacks (converted on upload). You can also connect to Neuroglancer Precomputed, N5, and Zarr datasets hosted in the cloud (Google Cloud Storage, AWS S3).
+WEBKNOSSOS supports [WKW (optimized), OME-Zarr (NGFF), Neuroglancer Precomputed, N5, KNOSSOS cubes](./data/index.md), and image stacks (converted on upload). You can also connect to Neuroglancer Precomputed, N5, and Zarr datasets hosted in the cloud (Google Cloud Storage, AWS S3).
 
 Smaller datasets (up to multiple GB) can be uploaded directly through the web interface. For larger datasets, we recommend converting them to the standard WKW format using the [WEBKNOSSOS CLI](https://docs.webknossos.org/cli) CLI tool and uploading it via the [WEBKNOSSOS Python package](https://docs.webknossos.org/webknossos-py/examples/upload_image_data.html).
 

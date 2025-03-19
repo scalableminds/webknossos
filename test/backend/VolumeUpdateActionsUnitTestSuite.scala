@@ -3,8 +3,8 @@ package backend
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.tracingstore.tracings.UpdateAction
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
+  ApplyableVolumeUpdateAction,
   CreateSegmentVolumeAction,
   DeleteSegmentVolumeAction,
   UpdateActionSegmentGroup,
@@ -15,7 +15,7 @@ import org.scalatestplus.play._
 
 class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplicits {
 
-  private def applyUpdateAction(action: UpdateAction.VolumeUpdateAction): VolumeTracing =
+  private def applyUpdateAction(action: ApplyableVolumeUpdateAction): VolumeTracing =
     action.applyOn(Dummies.volumeTracing)
 
   "CreateSegmentVolumeAction" should {
@@ -26,7 +26,8 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
         color = None,
         name = Some("aSegment"),
         groupId = Some(1),
-        creationTime = Some(Dummies.timestampLong)
+        creationTime = Some(Dummies.timestampLong),
+        actionTracingId = Dummies.tracingId
       )
       val result = applyUpdateAction(createSegmentAction)
 
@@ -39,7 +40,7 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
 
   "DeleteSegmentVolumeAction" should {
     "delete the specified segment" in {
-      val deleteSegmentAction = DeleteSegmentVolumeAction(id = 5)
+      val deleteSegmentAction = DeleteSegmentVolumeAction(id = 5, actionTracingId = Dummies.tracingId)
       val result = applyUpdateAction(deleteSegmentAction)
 
       assert(result.segments.length == Dummies.volumeTracing.segments.length - 1)
@@ -58,7 +59,8 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
         name = Some("aRenamedSegment"),
         color = None,
         creationTime = Some(Dummies.timestampLong),
-        groupId = None
+        groupId = None,
+        actionTracingId = Dummies.tracingId
       )
       val result = applyUpdateAction(updateSegmentAction)
 
@@ -76,7 +78,8 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
     "update a top level segment group" in {
       val updatedName = "Segment Group 2 updated"
       val updateSegmentGroupsVolumeAction = new UpdateSegmentGroupsVolumeAction(
-        List(UpdateActionSegmentGroup(updatedName, 2, List()))
+        List(UpdateActionSegmentGroup(updatedName, 2, isExpanded = Some(true), List())),
+        actionTracingId = Dummies.tracingId
       )
       val result = applyUpdateAction(updateSegmentGroupsVolumeAction)
       assert(result.segments == Dummies.volumeTracing.segments)
@@ -87,7 +90,13 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
       val updatedNameTop = "Segment Group 1 updated"
       val updatedNameNested = "Segment Group 3 updated"
       val updateSegmentGroupsVolumeAction = new UpdateSegmentGroupsVolumeAction(
-        List(UpdateActionSegmentGroup(updatedNameTop, 1, List(UpdateActionSegmentGroup(updatedNameNested, 3, List()))))
+        List(
+          UpdateActionSegmentGroup(
+            updatedNameTop,
+            1,
+            isExpanded = Some(true),
+            List(UpdateActionSegmentGroup(updatedNameNested, 3, isExpanded = Some(false), List())))),
+        actionTracingId = Dummies.tracingId
       )
       val result = applyUpdateAction(updateSegmentGroupsVolumeAction)
       assert(result.segments == Dummies.volumeTracing.segments)

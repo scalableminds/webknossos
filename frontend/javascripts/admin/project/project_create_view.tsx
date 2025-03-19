@@ -1,23 +1,23 @@
-import { Form, Input, Select, Button, Card, InputNumber, Checkbox } from "antd";
-import React, { useState, useEffect } from "react";
-import { useHistory } from "react-router-dom";
-import { useSelector } from "react-redux";
-import type { APIUser, APITeam } from "types/api_flow_types";
-import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import {
-  getUsers,
-  getEditableTeams,
   createProject,
+  getEditableTeams,
   getProject,
+  getUsers,
   updateProject,
 } from "admin/admin_rest_api";
+import { Button, Card, Checkbox, Form, Input, InputNumber, Select } from "antd";
+import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
+import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
+import { useHistory } from "react-router-dom";
+import type { APITeam, APIUser } from "types/api_flow_types";
 import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
+
 const FormItem = Form.Item;
 type OwnProps = {
   projectId?: string | null | undefined;
 };
-type StateProps = {};
-type Props = OwnProps & StateProps;
+type Props = OwnProps;
 type PropsWithRouter = Props;
 
 function ProjectCreateView({ projectId }: PropsWithRouter) {

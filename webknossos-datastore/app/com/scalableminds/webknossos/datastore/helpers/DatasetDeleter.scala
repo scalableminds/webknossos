@@ -11,7 +11,7 @@ import scala.concurrent.ExecutionContext
 trait DatasetDeleter extends LazyLogging with DirectoryConstants {
   def dataBaseDir: Path
 
-  def deleteOnDisk(organizationName: String,
+  def deleteOnDisk(organizationId: String,
                    datasetName: String,
                    isInConversion: Boolean = false,
                    reason: Option[String] = None)(implicit ec: ExecutionContext): Fox[Unit] = {
@@ -32,11 +32,11 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
       }
 
     val dataSourcePath =
-      if (isInConversion) dataBaseDir.resolve(organizationName).resolve(forConversionDir).resolve(datasetName)
-      else dataBaseDir.resolve(organizationName).resolve(datasetName)
+      if (isInConversion) dataBaseDir.resolve(organizationId).resolve(forConversionDir).resolve(datasetName)
+      else dataBaseDir.resolve(organizationId).resolve(datasetName)
 
     if (Files.exists(dataSourcePath)) {
-      val trashPath: Path = dataBaseDir.resolve(organizationName).resolve(trashDir)
+      val trashPath: Path = dataBaseDir.resolve(organizationId).resolve(trashDir)
       val targetPath = trashPath.resolve(datasetName)
       new File(trashPath.toString).mkdirs()
 

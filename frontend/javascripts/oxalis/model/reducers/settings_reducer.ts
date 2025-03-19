@@ -1,19 +1,19 @@
-import type { Action } from "oxalis/model/actions/actions";
-import { MappingStatusEnum } from "oxalis/constants";
-import type { OxalisState, ActiveMappingInfo } from "oxalis/store";
 import { clamp } from "libs/utils";
+import { MappingStatusEnum } from "oxalis/constants";
 import {
   getLayerByName,
+  getMappingInfo,
   getSegmentationLayers,
   getVisibleSegmentationLayers,
-  getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
-import { updateKey, updateKey2, updateKey3 } from "oxalis/model/helpers/deep_update";
-import { userSettings } from "types/schemas/user_settings.schema";
 import {
   hasEditableMapping,
   isMappingActivationAllowed,
 } from "oxalis/model/accessors/volumetracing_accessor";
+import type { Action } from "oxalis/model/actions/actions";
+import { updateKey, updateKey2, updateKey3 } from "oxalis/model/helpers/deep_update";
+import type { ActiveMappingInfo, OxalisState } from "oxalis/store";
+import { userSettings } from "types/schemas/user_settings.schema";
 import { setRotationReducer } from "./flycam_reducer";
 
 //
@@ -100,8 +100,8 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       const settingSpec = propertyName in userSettings ? userSettings[propertyName] : null;
 
       if (settingSpec != null && settingSpec.type === "number") {
-        const min = "minimum" in settingSpec ? settingSpec.minimum : -Infinity;
-        const max = "maximum" in settingSpec ? settingSpec.maximum : Infinity;
+        const min = "minimum" in settingSpec ? settingSpec.minimum : Number.NEGATIVE_INFINITY;
+        const max = "maximum" in settingSpec ? settingSpec.maximum : Number.POSITIVE_INFINITY;
         // @ts-ignore Since settingSpec.type === "number", value will be a number
         value = clamp(min, value, max);
 
@@ -222,6 +222,16 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "FINISH_MAPPING_INITIALIZATION": {
+      const { layerName } = action;
+      return updateActiveMapping(
+        state,
+        {
+          mappingStatus: MappingStatusEnum.ENABLED,
+        },
+        layerName,
+      );
+    }
     case "SET_MAPPING_ENABLED": {
       const { isMappingEnabled, layerName } = action;
 
@@ -250,10 +260,12 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "SET_MAPPING": {
-      const { mappingName, mapping, mappingKeys, mappingColors, mappingType, layerName } = action;
+      const { mappingName, mapping, mappingColors, mappingType, layerName, isMergerModeMapping } =
+        action;
 
       // Editable mappings cannot be disabled or switched for now
-      if (!isMappingActivationAllowed(state, mappingName, layerName)) return state;
+      if (!isMappingActivationAllowed(state, mappingName, layerName, !!isMergerModeMapping))
+        return state;
 
       const hideUnmappedIds =
         action.hideUnmappedIds != null
@@ -265,13 +277,24 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
         {
           mappingName,
           mapping,
-          mappingKeys,
           mappingColors,
           mappingType,
-          mappingSize: mappingKeys != null ? mappingKeys.length : 0,
           hideUnmappedIds,
           mappingStatus:
             mappingName != null ? MappingStatusEnum.ACTIVATING : MappingStatusEnum.DISABLED,
+          isMergerModeMapping,
+        },
+        layerName,
+      );
+    }
+
+    case "CLEAR_MAPPING": {
+      const { layerName } = action;
+
+      return updateActiveMapping(
+        state,
+        {
+          mapping: undefined,
         },
         layerName,
       );

@@ -3,7 +3,7 @@ jobs:
   build_test_deploy:
     machine:
       image: ubuntu-2004:202111-02
-      docker_layer_caching: true
+      docker_layer_caching: false
     resource_class: large
     environment:
       USER_NAME: circleci
@@ -11,7 +11,15 @@ jobs:
       USER_GID: 1000
       TZ: Europe/Berlin
     steps:
-      - checkout
+      - run:
+          name: "Clone Repository"
+          command: |
+            if [ -n "$CIRCLE_BRANCH" ]; then
+              git clone --depth 5 "$CIRCLE_REPOSITORY_URL" --branch "$CIRCLE_BRANCH" --no-tags .
+            fi
+            if [ -n "$CIRCLE_TAG" ]; then
+              git clone --depth 5 "$CIRCLE_REPOSITORY_URL" --branch "$CIRCLE_TAG" .
+            fi
       - run:
           name: "Custom environment variables"
           command: |
@@ -31,33 +39,13 @@ jobs:
             DEV_CACHE=$NORMALIZED_BRANCH docker-compose build base
       - run:
           name: Prepare dependency folders
-          command: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier ~/.cache/yarn
-      - restore_cache:
-          name: Restore target cache
-          keys:
-            - target-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
-            - target-cache-{{ checksum ".circleci/cache_version" }}-master
-      - restore_cache:
-          name: Restore sbt cache
-          keys:
-            - sbt-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "project/Dependencies.scala" }}
-            - sbt-cache-{{ checksum ".circleci/cache_version" }}-
-      - restore_cache:
-          name: Restore yarn cache
-          keys:
-            - yarn-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "yarn.lock" }}
-            - yarn-cache-{{ checksum ".circleci/cache_version" }}-
+          command: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier
       - run:
           name: Install frontend dependencies
-          command: docker-compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --frozen-lockfile
+          command: docker-compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --immutable
       - run:
           name: Assert unique evolution numbers
           command: docker-compose run base tools/postgres/dbtool.js assert-unique-evolution-numbers
-      - restore_cache:
-          name: Restore webpack cache
-          keys:
-            - webpack-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
-            - webpack-cache-{{ checksum ".circleci/cache_version" }}-master
       - run:
           name: Assert schema.sql and evolutions are equal
           command: |
@@ -65,8 +53,13 @@ jobs:
             sleep 3
             docker-compose run compile tools/postgres/dbtool.js check-evolutions-schema
       - run:
+          name: Assert that all migrations are mentioned in one migration guide and that they have a reversion counterpart.
+          command: tools/assert-complete-migrations.sh
+      - run:
           name: Build frontend documentation
-          command: docker-compose run base yarn run docs
+          command: |
+            WK_VERSION=${CIRCLE_TAG:-${CIRCLE_BUILD_NUM:-dev}}
+            docker-compose run base yarn run docs --project-version $WK_VERSION
       - run:
           name: Build webknossos (webpack)
           command: |
@@ -87,34 +80,15 @@ jobs:
           name: Build webknossos-tracingstore (sbt)
           command: docker-compose run base sbt -no-colors -DfailOnWarning "project webknossosTracingstore" copyMessages compile stage
 
-      - save_cache:
-          name: Save target cache
-          key: target-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ .Revision }}
-          paths:
-            - "project/target"
-            - "target"
+      - run:
+          name: Checksum App Dirs
+          command: find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
 
-      - save_cache:
-          name: Save sbt cache
-          key: sbt-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "project/Dependencies.scala" }}
-          paths:
-            - "~/.ivy2"
-            - "~/.cache/coursier"
-
-      - save_cache:
-          name: Save yarn cache
-          key: yarn-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "yarn.lock" }}
-          paths:
-            - "~/.cache/yarn"
-
-      - save_cache:
-          name: Save webpack cache
-          key: webpack-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ .Revision }}
-          paths:
-            - "node_modules/.cache/webpack"
       - run:
           name: Build webknossos docker image
-          command: docker-compose build --pull webknossos
+          command: |
+            docker pull scalableminds/webknossos:$NORMALIZED_BRANCH || true
+            DEV_CACHE=$NORMALIZED_BRANCH docker-compose build --pull webknossos
 
       - run:
           name: Build webknossos-datastore docker image
@@ -123,6 +97,73 @@ jobs:
       - run:
           name: Build webknossos-tracingstore docker image
           command: docker-compose build --pull webknossos-tracingstore
+
+      - run:
+          name: Lint frontend code and check formatting
+          command: |
+            .circleci/not-on-master.sh docker-compose run base bash -c "yarn run check-frontend"
+      - run:
+          name: Check for cyclic dependencies in front-end
+          command: |
+            .circleci/not-on-master.sh docker-compose run base yarn check-cyclic-dependencies
+      - run:
+          name: Run frontend tests
+          command: |
+            .circleci/not-on-master.sh docker-compose run base yarn test-verbose
+      - run:
+          name: Lint backend code and check formatting
+          command: |
+            .circleci/not-on-master.sh docker-compose run backend-lint-format
+      - run:
+          name: Run backend tests
+          command: |
+            .circleci/not-on-master.sh docker-compose run backend-tests
+      - run:
+          name: Run end-to-end tests
+          command: |
+            mkdir -p binaryData/Organization_X && chmod 777 binaryData/Organization_X
+            for i in {1..3}; do # retry
+              .circleci/not-on-master.sh docker-compose run e2e-tests && s=0 && break || s=$?
+            done
+            (exit $s)
+      - run:
+          name: Validate frontend types
+          command: |
+            .circleci/not-on-master.sh docker-compose run base yarn typecheck
+      - run:
+          name: Start webknossos, datastore and tracingstore
+          command: docker-compose up -d webknossos && docker-compose up -d webknossos-datastore && docker-compose up -d webknossos-tracingstore
+
+      - run:
+          name: Run webknossos smoke test
+          command: |
+            for i in {1..20}; do # retry
+              curl --fail -v http://localhost:9000/api/health && s=0 && break || s=$?
+              sleep 5
+            done
+            (exit $s)
+
+      - run:
+          name: Run webknossos-datastore smoke test
+          command: |
+            for i in {1..20}; do # retry
+              curl --fail -v http://localhost:9090/data/health && s=0 && break || s=$?
+              sleep 5
+            done
+            (exit $s)
+
+      - run:
+          name: Run webknossos-tracingstore smoke test
+          command: |
+            for i in {1..20}; do # retry
+              curl --fail -v http://localhost:9050/tracings/health && s=0 && break || s=$?
+              sleep 5
+            done
+            (exit $s)
+      - run:
+          name: Stop webknossos, datastore and tracingstore
+          command: docker-compose down --volumes --remove-orphans
+
       - run:
           name: Push docker images
           command: |
@@ -168,7 +209,6 @@ jobs:
                   echo "Starting autodeploy"
                   curl -X POST -H "X-Auth-Token: $RELEASE_API_TOKEN" "https://kubernetix.scm.io/hooks/install/webknossos/dev/${CIRCLE_BRANCH}?user=CI+%28nightly%29"
                   echo "\nInstalled to $NORMALIZED_BRANCH.webknossos.xyz"
-
                   # Install gh client
                   sudo mkdir -p -m 755 /etc/apt/keyrings && wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
                   && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
@@ -176,86 +216,20 @@ jobs:
                   && sudo apt update \
                   && sudo apt install gh -y
                   gh auth status
-
                   CURRENT_BODY=$(gh pr view $PR_NUMBER --json body | jq -r '.body')
                   echo "CURRENT_BODY=$CURRENT_BODY"
                   UPDATED_BODY=$(echo $CURRENT_BODY | sed "s|https://___.webknossos.xyz|https://$NORMALIZED_BRANCH.webknossos.xyz|g")
                   echo "UPDATED_BODY=$UPDATED_BODY"
-
                   echo $UPDATED_BODY | gh pr edit $PR_NUMBER -F -
               fi
             fi
       - run:
+          name: Report coverage
+          command: .circleci/not-on-master.sh docker-compose run base yarn coverage || true
+      - run:
           name: Send Slack notification (master only)
           command: .circleci/slack-notification.sh
 
-  nightly:
-    docker:
-      - image: scalableminds/puppeteer:master
-    resource_class: large
-    steps:
-      - checkout
-      - run:
-          name: Remove dev-deployment
-          command: >
-            curl
-            -X POST
-            -H "X-Auth-Token: $RELEASE_API_TOKEN"
-            https://kubernetix.scm.io/hooks/remove/webknossos/dev/master?user=CI+%28nightly%29
-      - run:
-          name: Wait 3min
-          command: sleep 180
-      - run:
-          name: Install dev-deployment
-          command: >
-            curl
-            -X POST
-            -H "X-Auth-Token: $RELEASE_API_TOKEN"
-            https://kubernetix.scm.io/hooks/install/webknossos/dev/master?user=CI+%28nightly%29
-      - run:
-          name: Install dependencies and sleep at least 3min
-          command: |
-            yarn install --frozen-lockfile &
-            sleep 180 &
-            wait
-      - run:
-          name: Refresh datasets
-          command: curl -X POST --fail https://master.webknossos.xyz/data/triggers/checkInboxBlocking?token=$WK_AUTH_TOKEN
-      - run:
-          name: Run screenshot-tests
-          command: |
-            # CircleCI cancels the job after 60 minutes. To ensure that screenshots are still
-            # uploaded as artifacts, we define a timeout of 50 minutes for the screenshot tests.
-            URL=https://master.webknossos.xyz/ \
-            timeout 3000 \
-            yarn test-screenshot
-
-      - store_artifacts:
-          path: frontend/javascripts/test/screenshots
-
-      - store_artifacts:
-          path: frontend/javascripts/test/snapshots/type-check
-
-  wkorg_nightly:
-    docker:
-      - image: scalableminds/puppeteer:master
-    resource_class: large
-    steps:
-      - checkout
-      - run:
-          name: Install dependencies
-          command: |
-            yarn install --frozen-lockfile
-      - run:
-          name: Run screenshot-tests
-          command: |
-            # CircleCI cancels the job after 60 minutes. To ensure that screenshots are still
-            # uploaded as artifacts, we define a timeout of 50 minutes for the screenshot tests.
-            timeout 3000 \
-            yarn test-wkorg-screenshot
-
-      - store_artifacts:
-          path: frontend/javascripts/test/screenshots-wkorg
 
 workflows:
   version: 2
@@ -267,25 +241,3 @@ workflows:
           filters:
             tags:
               only: /.*/
-  circleci_nightly:
-    jobs:
-      - nightly
-    triggers:
-      - schedule:
-          # 02:15 AM UTC
-          cron: "15 2 * * *"
-          filters:
-            branches:
-              only:
-                - master
-  circleci_wkorg_nightly:
-    jobs:
-      - wkorg_nightly
-    triggers:
-      - schedule:
-          # 03:15 AM UTC
-          cron: "15 3 * * *"
-          filters:
-            branches:
-              only:
-                - master

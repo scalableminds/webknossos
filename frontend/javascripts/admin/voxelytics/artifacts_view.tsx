@@ -1,10 +1,10 @@
-import React from "react";
-import { JSONTree } from "react-json-tree";
-import { Button, Card, message } from "antd";
-import { CopyOutlined } from "@ant-design/icons";
-import { VoxelyticsArtifactConfig } from "types/api_flow_types";
+import { CopyOutlined, ExportOutlined } from "@ant-design/icons";
 import { getVoxelyticsArtifactChecksums } from "admin/admin_rest_api";
+import { Button, Card, message } from "antd";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
+import { JSONTree } from "react-json-tree";
+import { Link } from "react-router-dom";
+import type { VoxelyticsArtifactConfig } from "types/api_flow_types";
 import { copyToClipboad, isObjectEmpty, useTheme } from "./utils";
 
 export function renderArtifactPath(artifact: VoxelyticsArtifactConfig) {
@@ -126,7 +126,19 @@ function ArtifactsView({
   function renderArtifact(artifactName: string, artifact: VoxelyticsArtifactConfig) {
     const title = (
       <>
-        <span>{artifactName}</span>
+        <span>
+          {artifact.foreignWorkflow != null ? (
+            <>
+              <Link
+                to={`/workflows/${artifact.foreignWorkflow[0]}?runId=${artifact.foreignWorkflow[1]}`}
+              >
+                {artifactName} <ExportOutlined />
+              </Link>
+            </>
+          ) : (
+            artifactName
+          )}
+        </span>
         <span style={{ fontSize: "10px", marginLeft: 10 }}>
           \\ version {artifact.version}, {formatCountToDataAmountUnit(artifact.fileSize)},{" "}
           {artifact.inodeCount.toLocaleString()} inodes

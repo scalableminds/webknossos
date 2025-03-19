@@ -37,10 +37,10 @@ systemctl stop webknossos-tracingstore
 ```
 
 ## Using a cluster proxy/firewall for HTTP(S) routing
-If your cluster enviroment has a firewall that supports HTTP(S) routing, you can expose the tracingstore directly on Port 80.
+If your cluster environment has a firewall that supports HTTP(S) routing, you can expose the tracingstore directly on Port 80.
 
 ## Using nginx for HTTP(S) routing
-Nginx is a high performance HTTP server that allows for proxing HTTP(S) request. This is useful, because the tracingstore doesn't support HTTPS by itself. So, you can put the nginx in front of the tracingstore to accept HTTPS requests from the outside and route them as regular HTTP requests to the tracingstore.
+Nginx is a high performance HTTP server that allows for proxying HTTP(S) request. This is useful, because the tracingstore doesn't support HTTPS by itself. So, you can put the nginx in front of the tracingstore to accept HTTPS requests from the outside and route them as regular HTTP requests to the tracingstore.
 
 [DigitalOcean has a great tutorial for setting up nginx](https://www.digitalocean.com/community/tutorials/understanding-nginx-http-proxying-load-balancing-buffering-and-caching).
 

@@ -7,22 +7,22 @@ import {
 import { Alert, Button, Card, Col, Progress, Row } from "antd";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import dayjs from "dayjs";
+import { formatCountToDataAmountUnit } from "libs/format_utils";
 import Constants from "oxalis/constants";
-import { OxalisState } from "oxalis/store";
-import React from "react";
+import type { OxalisState } from "oxalis/store";
+import type React from "react";
 import { useSelector } from "react-redux";
-import { APIOrganization } from "types/api_flow_types";
+import type { APIOrganization } from "types/api_flow_types";
 import {
+  PricingPlanEnum,
   hasPricingPlanExceededStorage,
   hasPricingPlanExceededUsers,
   hasPricingPlanExpired,
   isUserAllowedToRequestUpgrades,
   powerPlanFeatures,
-  PricingPlanEnum,
   teamPlanFeatures,
 } from "./pricing_plan_utils";
 import UpgradePricingPlanModal from "./upgrade_plan_modal";
-import { formatCountToDataAmountUnit } from "libs/format_utils";
 
 export function TeamAndPowerPlanUpgradeCards({
   teamUpgradeCallback,
@@ -38,7 +38,7 @@ export function TeamAndPowerPlanUpgradeCards({
           title={`${PricingPlanEnum.Team} Plan`}
           styles={{ body: { minHeight: 220, opacity: 0.8 } }}
           actions={[
-            <Button type="primary" onClick={teamUpgradeCallback}>
+            <Button type="primary" onClick={teamUpgradeCallback} key="buy-teamupgrade-button">
               <PlusCircleOutlined /> Buy Upgrade
             </Button>,
           ]}
@@ -55,7 +55,7 @@ export function TeamAndPowerPlanUpgradeCards({
           title={`${PricingPlanEnum.Power} Plan`}
           styles={{ body: { minHeight: 220, opacity: 0.8 } }}
           actions={[
-            <Button type="primary" onClick={powerUpgradeCallback}>
+            <Button type="primary" onClick={powerUpgradeCallback} key="buy-power-upgrade-button">
               <PlusCircleOutlined /> Buy Upgrade
             </Button>,
           ]}

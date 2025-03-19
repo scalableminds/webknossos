@@ -43,7 +43,7 @@ systemctl stop webknossos-datastore
 ```
 
 ## Using a cluster proxy/firewall for HTTP(S) routing
-If your cluster enviroment has a firewall that supports HTTP(S) routing, you can expose the datastore directly on Port 80.
+If your cluster environment has a firewall that supports HTTP(S) routing, you can expose the datastore directly on Port 80.
 
 ## Using nginx for HTTP(S) routing
 Nginx is a high performance HTTP server that allows for proxing HTTP(S) request. This is useful, because the datastore doesn't support HTTPS by itself. So, you can put the nginx in front of the datastore to accept HTTPS requests from the outside and route them as regular HTTP requests to the datastore.

@@ -1,9 +1,8 @@
-import * as THREE from "three";
+import type { OrthoView, Point2, Rect, Viewport, ViewportRects } from "oxalis/constants";
+import constants from "oxalis/constants";
 import { getTDViewportSize } from "oxalis/model/accessors/view_mode_accessor";
 import type { PartialCameraData } from "oxalis/store";
 import Store from "oxalis/store";
-import type { OrthoView, Rect, Viewport, ViewportRects } from "oxalis/constants";
-import constants from "oxalis/constants";
 type SetViewportAction = ReturnType<typeof setViewportAction>;
 type SetTDCameraAction = ReturnType<typeof setTDCameraAction>;
 type CenterTDViewAction = ReturnType<typeof centerTDViewAction>;
@@ -26,29 +25,29 @@ export const setViewportAction = (viewport: OrthoView) =>
   ({
     type: "SET_VIEWPORT",
     viewport,
-  } as const);
+  }) as const;
 
 export const setTDCameraAction = (cameraData: PartialCameraData) =>
   ({
     type: "SET_TD_CAMERA",
     cameraData,
-  } as const);
+  }) as const;
 
 // See the explanation further up for when to use this action instead of the setTDCameraAction
 export const setTDCameraWithoutTimeTrackingAction = (cameraData: PartialCameraData) =>
   ({
     type: "SET_TD_CAMERA_WITHOUT_TIME_TRACKING",
     cameraData,
-  } as const);
+  }) as const;
 
 export const centerTDViewAction = () =>
   ({
     type: "CENTER_TD_VIEW",
-  } as const);
+  }) as const;
 
 export const zoomTDViewAction = (
   value: number,
-  targetPosition: THREE.Vector3,
+  targetPosition: Point2 | null | undefined,
   curWidth: number,
   curHeight: number,
 ) =>
@@ -58,14 +57,14 @@ export const zoomTDViewAction = (
     targetPosition,
     curWidth,
     curHeight,
-  } as const);
+  }) as const;
 
 export const moveTDViewByVectorAction = (x: number, y: number) =>
   ({
     type: "MOVE_TD_VIEW_BY_VECTOR",
     x,
     y,
-  } as const);
+  }) as const;
 
 // See the explanation further up for when to use this action instead of the moveTDViewByVectorAction
 export const moveTDViewByVectorWithoutTimeTrackingAction = (x: number, y: number) =>
@@ -73,7 +72,7 @@ export const moveTDViewByVectorWithoutTimeTrackingAction = (x: number, y: number
     type: "MOVE_TD_VIEW_BY_VECTOR_WITHOUT_TIME_TRACKING",
     x,
     y,
-  } as const);
+  }) as const;
 
 export const moveTDViewXAction = (x: number): MoveTDViewByVectorAction => {
   const state = Store.getState();
@@ -88,13 +87,13 @@ export const setInputCatcherRect = (viewport: Viewport, rect: Rect) =>
     type: "SET_INPUT_CATCHER_RECT",
     viewport,
     rect,
-  } as const);
+  }) as const;
 
 export const setInputCatcherRects = (viewportRects: ViewportRects) =>
   ({
     type: "SET_INPUT_CATCHER_RECTS",
     viewportRects,
-  } as const);
+  }) as const;
 
 export type ViewModeAction =
   | SetViewportAction

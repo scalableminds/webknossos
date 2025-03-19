@@ -1,8 +1,8 @@
-@(userName: String, projectName: String, taskId: String, annotationId: String, uri: String)
+@(userName: String, projectName: String, taskId: String, annotationId: String, uri: String, additionalFooter: String )
 
-@emailBaseTemplate() {
+@emailBaseTemplate(additionalFooter) {
   <p>Hi,</p>
-  
+
   <p>
     We noticed a user reached the time limit for a project:
   </p>
@@ -13,9 +13,9 @@
       <li>Project: @{projectName}</li>
       <li>Task: @{taskId}</li>
     </ul>
-    
+
   </p>
-  <p>For mor information visit <a href="@{uri}/annotations/Task/@{annotationId}">@{uri}/annotations/Task/@{annotationId}</a></p>
+  <p>For more information visit <a href="@{uri}/annotations/Task/@{annotationId}">@{uri}/annotations/Task/@{annotationId}</a></p>
 
   <p>With best regards,<br />your WEBKNOSSOS team</p>
 }

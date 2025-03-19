@@ -89,7 +89,7 @@ BEGIN
     next_month_first_day := DATE_TRUNC('MONTH', NOW()) + INTERVAL '1 MONTH';
 
     -- Loop through all organizations
-    FOR organization_id IN (SELECT _id FROM webknossos.organizations WHERE pricingPlan != 'Basic') LOOP
+    FOR organization_id IN (SELECT _id FROM webknossos.organizations) LOOP
         -- Check if there is already a free credit transaction for this organization in the current month
         SELECT COUNT(*) INTO existing_transaction_count
         FROM webknossos.credit_transactions

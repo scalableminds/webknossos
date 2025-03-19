@@ -224,7 +224,6 @@ class JobService @Inject()(wkConf: WkConf,
                     datastoreName: String)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
       costsInCredits <- calculateJobCostInCredits(jobBoundingBox, command)
-      _ <- organizationService.assertOrganizationHasPaidPlan(user._organization) ?~> "job.paidJob.notAllowed.noPaidPlan"
       _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(user._organization, costsInCredits)) ?~> "job.notEnoughCredits"
       creditTransaction <- creditTransactionService.reserveCredits(user._organization,
                                                                    costsInCredits,

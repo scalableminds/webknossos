@@ -11,6 +11,7 @@ import models.organization.CreditTransactionState.TransactionState
 import slick.dbio.DBIO
 import slick.jdbc.GetResult
 import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import telemetry.SlackNotificationService
 import utils.WkConf
@@ -147,7 +148,8 @@ class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
           (${transaction._id}, ${transaction._organization}, ${transaction.creditChange.toString()}::DECIMAL,
           ${transaction.comment}, ${transaction._paidJob}, ${CreditTransactionState.Pending}, ${CreditState.Pending},
           ${transaction.expirationDate}, ${transaction.createdAt}, ${transaction.updatedAt}, ${transaction.isDeleted})
-          """.asUpdate
+          """.asUpdate.transactionally.withTransactionIsolation(
+          Serializable)
       )
     } yield ()
 
@@ -158,7 +160,8 @@ class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
         q"""UPDATE webknossos.credit_transactions
           SET _paid_job = $jobId, updated_at = NOW()
           WHERE _id = ${transaction._id}
-          """.asUpdate
+          """.asUpdate.transactionally.withTransactionIsolation(
+          Serializable)
       )
     } yield ()
 
@@ -173,7 +176,8 @@ class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
           ${transaction._relatedTransaction}, ${transaction.comment}, ${transaction._paidJob},
           ${transaction.transactionState}, ${transaction.creditState}, ${transaction.expirationDate},
           ${transaction.createdAt}, ${transaction.updatedAt}, ${transaction.isDeleted})
-          """.asUpdate)
+          """.asUpdate.transactionally.withTransactionIsolation(
+        Serializable))
 
     } yield ()
 
@@ -199,7 +203,7 @@ class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
         q"""UPDATE webknossos.credit_transactions
           SET transaction_state = ${CreditTransactionState.Complete}, credit_state = ${CreditState.Spent}, updated_at = NOW()
           WHERE _id = $transactionId
-          """.asUpdate
+          """.asUpdate.transactionally.withTransactionIsolation(Serializable)
       )
     } yield ()
 
@@ -237,7 +241,11 @@ class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
           WHERE _id = $transactionId AND transaction_state = ${CreditTransactionState.Pending}
           AND credit_change < 0
           """.asUpdate
-      updatedRows <- run(DBIO.sequence(List(insertRefundTransaction, setToRefunded)).transactionally)
+      updatedRows <- run(
+        DBIO
+          .sequence(List(insertRefundTransaction, setToRefunded))
+          .transactionally
+          .withTransactionIsolation(Serializable))
       _ <- bool2Fox(updatedRows.forall(_ == 1)) ?~> s"Failed to refund transaction ${transactionToRefund._id} properly."
     } yield ()
 
@@ -339,7 +347,9 @@ class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
       orgas <- findAllOrganizationsWithExpiredCredits
       failedTransactionsToRevoke <- Fox.foldLeft(orgas.iterator, List(): List[CreditTransaction]) {
         case (failedTransactions, organizationId) =>
-          run(revokeExpiredCreditsForOrganizationQuery(organizationId).transactionally).map(failedTransactions ++ _)
+          run(
+            revokeExpiredCreditsForOrganizationQuery(organizationId).transactionally.withTransactionIsolation(
+              Serializable)).map(failedTransactions ++ _)
       }
       _ = if (failedTransactionsToRevoke.nonEmpty) {
         val failedTransactions = failedTransactionsToRevoke.map(transaction =>

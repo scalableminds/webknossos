@@ -290,7 +290,7 @@ PUT           /aiModels/:id                                                     
 DELETE        /aiModels/:id                                                                     controllers.AiModelController.deleteAiModel(id: ObjectId)
 
 # CreditTransactions
-POST          /creditTransactions/chargeUpCredits                                               controllers.CreditTransactionController.chargeUpCredits(organizationId: String, creditAmount: Int, moneySpent: String, currency: String, comment: Option[String], expiresAt: Option[String])
+POST          /creditTransactions/addCredits                                                    controllers.CreditTransactionController.addCredits(organizationId: String, creditAmount: Int, moneySpent: String, currency: String, comment: Option[String], expiresAt: Option[String])
 PATCH         /creditTransactions/:transactionId                                                controllers.CreditTransactionController.refundCreditTransaction(organizationId: String, transactionId: String)
 
 # Publications

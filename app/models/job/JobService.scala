@@ -43,7 +43,7 @@ class JobService @Inject()(wkConf: WkConf,
     with LazyLogging
     with Formatter {
 
-  private val MINIMUM_COST_PER_JOB = BigDecimal(0.0001)
+  private val MINIMUM_COST_PER_JOB = BigDecimal(0.001)
   private val ONE_GIGAVOXEL = BigDecimal(math.pow(2, 30))
 
   private lazy val Mailer =
@@ -190,7 +190,7 @@ class JobService @Inject()(wkConf: WkConf,
         "created" -> job.created,
         "started" -> job.started,
         "ended" -> job.ended,
-        "creditCost" -> creditTransactionOpt.map(t => t.creditChange * -1)
+        "creditCost" -> creditTransactionOpt.map(t => (t.creditDelta * -1).toString)
       )
     }
 
@@ -271,7 +271,7 @@ class JobService @Inject()(wkConf: WkConf,
       val volumeInGVx = BigDecimal(boundingBoxInTargetMag.volume) / ONE_GIGAVOXEL
       val costInCredits = volumeInGVx * costPerGVx
       if (costInCredits < MINIMUM_COST_PER_JOB) MINIMUM_COST_PER_JOB
-      else costInCredits.setScale(4, RoundingMode.HALF_UP)
+      else costInCredits.setScale(3, RoundingMode.HALF_UP)
     })
 
 }

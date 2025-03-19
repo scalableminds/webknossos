@@ -78,7 +78,7 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
         "organization_id" -> transaction._organization,
         "relatedTransaction" -> transaction._relatedTransaction,
         "paidJobId" -> transaction._paidJob,
-        "creditChange" -> transaction.creditChange,
+        "creditChange" -> transaction.creditDelta,
         "comment" -> transaction.comment,
         "transactionState" -> transaction.transactionState,
         "creditState" -> transaction.creditState,

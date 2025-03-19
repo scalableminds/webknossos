@@ -767,7 +767,7 @@ export type APIJob = {
   readonly createdAt: number;
   readonly voxelyticsWorkflowHash: string | null;
   readonly trainingAnnotations: Array<{ annotationId: string }>;
-  readonly creditCost: number | null | undefined;
+  readonly creditCost: string | null | undefined;
 };
 
 export type AiModel = {

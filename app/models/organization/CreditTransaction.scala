@@ -25,7 +25,7 @@ case class CreditTransaction(_id: ObjectId = ObjectId.generate,
                              _organization: String,
                              _relatedTransaction: Option[ObjectId] = None,
                              _paidJob: Option[ObjectId] = None,
-                             creditChange: BigDecimal,
+                             creditDelta: BigDecimal,
                              comment: String,
                              transactionState: TransactionState,
                              creditState: CreditState,
@@ -34,8 +34,7 @@ case class CreditTransaction(_id: ObjectId = ObjectId.generate,
                              updatedAt: Instant = Instant.now,
                              isDeleted: Boolean = false)
 
-class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
-                                     conf: WkConf,
+class CreditTransactionDAO @Inject()(conf: WkConf,
                                      slackNotificationService: SlackNotificationService,
                                      sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[CreditTransaction, CreditTransactionsRow, CreditTransactions](sqlClient) {
@@ -59,7 +58,7 @@ class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
         row._Organization,
         relatedTransactionOpt,
         jobIdOpt,
-        row.creditChange,
+        row.creditDelta,
         row.comment,
         transactionState,
         creditState,
@@ -132,7 +131,7 @@ class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        q"SELECT COALESCE(SUM(credit_change), 0) FROM $existingCollectionName WHERE _organization = $organizationId AND $accessQuery"
+        q"SELECT COALESCE(SUM(credit_delta), 0) FROM $existingCollectionName WHERE _organization = $organizationId AND $accessQuery"
           .as[BigDecimal])
       firstRow <- r.headOption
     } yield firstRow
@@ -142,10 +141,10 @@ class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
       _ <- readAccessQuery
       _ <- run(
         q"""INSERT INTO webknossos.credit_transactions
-          (_id, _organization, credit_change, comment, _paid_job,
+          (_id, _organization, credit_delta, comment, _paid_job,
           transaction_state, credit_state, expiration_date, created_at, updated_at, is_deleted)
           VALUES
-          (${transaction._id}, ${transaction._organization}, ${transaction.creditChange.toString()}::DECIMAL,
+          (${transaction._id}, ${transaction._organization}, ${transaction.creditDelta.toString()}::DECIMAL,
           ${transaction.comment}, ${transaction._paidJob}, ${CreditTransactionState.Pending}, ${CreditState.Pending},
           ${transaction.expirationDate}, ${transaction.createdAt}, ${transaction.updatedAt}, ${transaction.isDeleted})
           """.asUpdate.transactionally.withTransactionIsolation(Serializable)
@@ -167,10 +166,10 @@ class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
     for {
       _ <- readAccessQuery
       _ <- run(q"""INSERT INTO webknossos.credit_transactions
-          (_id, _organization, credit_change, _related_transaction, comment, _paid_job,
+          (_id, _organization, credit_delta, _related_transaction, comment, _paid_job,
           transaction_state, credit_state, expiration_date, created_at, updated_at, is_deleted)
           VALUES
-          (${transaction._id}, ${transaction._organization}, ${transaction.creditChange.toString()}::DECIMAL,
+          (${transaction._id}, ${transaction._organization}, ${transaction.creditDelta.toString()}::DECIMAL,
           ${transaction._relatedTransaction}, ${transaction.comment}, ${transaction._paidJob},
           ${transaction.transactionState}, ${transaction.creditState}, ${transaction.expirationDate},
           ${transaction.createdAt}, ${transaction.updatedAt}, ${transaction.isDeleted})
@@ -181,13 +180,13 @@ class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
   private def insertRevokingTransaction(transaction: CreditTransaction): DBIOAction[Int, NoStream, Effect] = {
     assert(transaction.transactionState == CreditTransactionState.Complete)
     assert(transaction.creditState == CreditState.Revoking)
-    assert(transaction.creditChange < 0, "Revoking transactions must have a negative credit change")
+    assert(transaction.creditDelta < 0, "Revoking transactions must have a negative credit change")
     assert(transaction.expirationDate.isEmpty)
     q"""INSERT INTO webknossos.credit_transactions
-          (_id, _organization, credit_change, comment, _paid_job,
+          (_id, _organization, credit_delta, comment, _paid_job,
           transaction_state, credit_state, expiration_date, created_at, updated_at, is_deleted)
           VALUES
-          (${transaction._id}, ${transaction._organization}, ${transaction.creditChange.toString()}::DECIMAL,
+          (${transaction._id}, ${transaction._organization}, ${transaction.creditDelta.toString()}::DECIMAL,
           ${transaction.comment}, ${transaction._paidJob}, ${transaction.transactionState}, ${transaction.creditState},
           ${transaction.expirationDate}, ${transaction.createdAt}, ${transaction.updatedAt}, ${transaction.isDeleted})
           """.asUpdate
@@ -214,18 +213,18 @@ class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
         .getOrElse(s"Refund for transaction $transactionId.")
       insertRefundTransaction = q"""
         INSERT INTO webknossos.credit_transactions
-          (_id, _organization, _related_transaction, credit_change, comment, transaction_state, credit_state)
+          (_id, _organization, _related_transaction, credit_delta, comment, transaction_state, credit_state)
         VALUES (
           ${ObjectId.generate},
           ${transactionToRefund._organization},
           $transactionId,
           (
-            SELECT credit_change * -1
+            SELECT credit_delta * -1
             FROM webknossos.credit_transactions
             WHERE _id = $transactionId
               AND transaction_state = ${CreditTransactionState.Pending}
               AND credit_state = ${CreditState.Pending}
-              AND credit_change < 0
+              AND credit_delta < 0
           ),
           0::DECIMAL,
           $refundComment,
@@ -236,7 +235,7 @@ class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
       setToRefunded = q"""UPDATE webknossos.credit_transactions
           SET transaction_state = ${CreditTransactionState.Complete}, credit_state = ${CreditState.Refunded}, updated_at = NOW()
           WHERE _id = $transactionId AND transaction_state = ${CreditTransactionState.Pending}
-          AND credit_change < 0
+          AND credit_delta < 0
           """.asUpdate
       updatedRows <- run(
         DBIO
@@ -261,7 +260,7 @@ class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
         FROM webknossos.credit_transactions
         WHERE expiration_date <= NOW()
         AND credit_state = ${CreditState.Pending}
-        AND credit_change > 0""".as[ObjectId])
+        AND credit_delta > 0""".as[ObjectId])
     } yield r.toList
 
   private def revokeExpiredCreditsForOrganizationQuery(organizationId: ObjectId): DBIO[List[CreditTransaction]] =
@@ -271,7 +270,7 @@ class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
             WHERE _organization = $organizationId
               AND expiration_date <= NOW()
               AND credit_state = ${CreditState.Pending}
-              AND credit_change > 0
+              AND credit_delta > 0
             ORDER BY created_at DESC
          """.as[CreditTransaction]
       transactionsWhereRevokingFailed <- transactionsWithExpiredCredits.foldLeft(
@@ -294,14 +293,14 @@ class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
     for {
       // Query: Sums up all spent credits since the transaction which are completed and subtracts refunded transactions.
       freeCreditsAvailableResult <- q"""
-      SELECT COALESCE(SUM(credit_change), 0)
+      SELECT COALESCE(SUM(credit_delta), 0)
       FROM webknossos.credit_transactions
       WHERE _organization = ${transaction._organization}
         AND created_at >= ${transaction.createdAt}
         AND (
-		      credit_change < 0
-          OR (credit_change > 0 AND _related_transaction IS NOT NULL AND credit_state = 'Refunding') -- Counts refunding transactions
-          OR (credit_change > 0 AND expiration_date <= NOW()) -- Counts also expired transactions
+		      credit_delta < 0
+          OR (credit_delta > 0 AND _related_transaction IS NOT NULL AND credit_state = 'Refunding') -- Counts refunding transactions
+          OR (credit_delta > 0 AND expiration_date <= NOW()) -- Counts also expired transactions
 	      )
 		""".as[BigDecimal]
       freeCreditsAvailable = freeCreditsAvailableResult.headOption.getOrElse(BigDecimal(0))
@@ -314,7 +313,7 @@ class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
         WHERE _id = ${transaction._id}
       """.asUpdate
       } else {
-        val creditStateOfExpiredTransaction = if (freeCreditsAvailable == transaction.creditChange) {
+        val creditStateOfExpiredTransaction = if (freeCreditsAvailable == transaction.creditDelta) {
           CreditState.Revoked
         } else { CreditState.PartiallyRevoked }
         val revokingTransaction = CreditTransaction(

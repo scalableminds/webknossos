@@ -30,23 +30,23 @@ class CreditTransactionController @Inject()(organizationService: OrganizationSer
     extends Controller
     with FoxImplicits {
 
-  def chargeUpCredits(organizationId: String,
+  def addCredits(organizationId: String,
                       creditAmount: Int,
                       moneySpent: String,
                       currency: String,
                       comment: Option[String],
                       expiresAt: Option[String]): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      _ <- userService.assertIsSuperUser(request.identity) ?~> "Only super users can charge up credits"
+      _ <- userService.assertIsSuperUser(request.identity) ?~> "Only super users can add credits to an organization"
       moneySpentInDecimal <- tryo(BigDecimal(moneySpent)) ?~> s"moneySpent $moneySpent is not a valid decimal"
       _ <- bool2Fox(moneySpentInDecimal > 0) ?~> "moneySpent must be a positive number"
       _ <- bool2Fox(creditAmount > 0) ?~> "creditAmount must be a positive number"
-      commentNoOptional = comment.getOrElse(s"Charge up for $creditAmount credits for $moneySpentInDecimal $currency.")
+      commentNoOptional = comment.getOrElse(s"Adding $creditAmount credits for $moneySpentInDecimal $currency.")
       _ <- organizationService.assertOrganizationHasPaidPlan(organizationId)
       expirationDateOpt <- Fox.runOptional(expiresAt)(Instant.fromString)
       _ <- Fox
         .runOptional(expirationDateOpt)(expirationDate => bool2Fox(!expirationDate.isPast)) ?~> "Expiration date must be in the future"
-      chargeUpTransaction = CreditTransaction(
+      addCreditsTransaction = CreditTransaction(
         ObjectId.generate,
         organizationId,
         None,
@@ -54,10 +54,10 @@ class CreditTransactionController @Inject()(organizationService: OrganizationSer
         BigDecimal(creditAmount),
         commentNoOptional,
         CreditTransactionState.Complete,
-        CreditState.ChargeUp,
+        CreditState.AddCredits,
         expirationDateOpt
       )
-      _ <- creditTransactionService.insertCreditTransaction(chargeUpTransaction)
+      _ <- creditTransactionService.insertCreditTransaction(addCreditsTransaction)
     } yield Ok
   }
 

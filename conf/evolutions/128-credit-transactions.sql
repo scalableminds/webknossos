@@ -5,14 +5,14 @@ do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 1
 
 -- Create the enum types for transaction states and credit states
 CREATE TYPE webknossos.credit_transaction_state AS ENUM ('Pending', 'Complete');
-CREATE TYPE webknossos.credit_state AS ENUM ('Pending', 'Spent', 'Refunded', 'Revoked', 'PartiallyRevoked', 'Refunding', 'Revoking', 'ChargedUp');
+CREATE TYPE webknossos.credit_state AS ENUM ('Pending', 'Spent', 'Refunded', 'Revoked', 'PartiallyRevoked', 'Refunding', 'Revoking', 'AddCredits');
 
 CREATE TABLE webknossos.credit_transactions (
     _id CHAR(24) PRIMARY KEY,
     _organization VARCHAR(256) NOT NULL,
     _related_transaction CHAR(24) DEFAULT NULL,
     _paid_job CHAR(24) DEFAULT NULL,
-    credit_change DECIMAL(14, 4) NOT NULL,
+    credit_delta DECIMAL(14, 3) NOT NULL,
     comment TEXT NOT NULL,
     -- The state of the transaction.
     transaction_state webknossos.credit_transaction_state NOT NULL,
@@ -39,10 +39,10 @@ ALTER TABLE webknossos.credit_transactions
 CREATE FUNCTION webknossos.enforce_non_negative_balance() RETURNS TRIGGER AS $$
   BEGIN
     -- Assert that the new balance is non-negative
-    ASSERT (SELECT COALESCE(SUM(credit_change), 0) + COALESCE(NEW.credit_change, 0)
+    ASSERT (SELECT COALESCE(SUM(credit_delta), 0) + COALESCE(NEW.credit_delta, 0)
             FROM webknossos.credit_transactions
             WHERE _organization = NEW._organization AND _id != NEW._id) >= 0, 'Transaction would result in a negative credit balance for organization %', NEW._organization;
-    -- Allow the transaction
+    -- Assertion passed, transaction can go ahead
     RETURN NEW;
   END;
 $$ LANGUAGE plpgsql;
@@ -99,7 +99,7 @@ BEGIN
         -- Insert free credits only if no record exists for this month
         IF existing_transaction_count = 0 THEN
             INSERT INTO webknossos.credit_transactions
-                (_id, _organization, credit_change, comment, transaction_state, credit_state, expiration_date)
+                (_id, _organization, credit_delta, comment, transaction_state, credit_state, expiration_date)
             VALUES
                 (webknossos.generate_object_id(), organization_id, free_credits_amount,
                  'Free credits for this month', 'Complete', 'Pending', next_month_first_day);

@@ -51,25 +51,24 @@ object AnimationJobOptions {
   implicit val jsonFormat: OFormat[AnimationJobOptions] = Json.format[AnimationJobOptions]
 }
 
-class JobController @Inject()(
-    jobDAO: JobDAO,
-    sil: Silhouette[WkEnv],
-    datasetDAO: DatasetDAO,
-    datasetService: DatasetService,
-    jobService: JobService,
-    workerService: WorkerService,
-    workerDAO: WorkerDAO,
-    datasetLayerAdditionalAxesDAO: DatasetLayerAdditionalAxesDAO,
-    wkconf: WkConf,
-    multiUserDAO: MultiUserDAO,
-    wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-    slackNotificationService: SlackNotificationService,
-    organizationDAO: OrganizationDAO,
-    organizationService: OrganizationService,
-    creditTransactionService: CreditTransactionService,
-    creditTransactionDAO: CreditTransactionDAO,
-    dataStoreDAO: DataStoreDAO,
-    userService: UserService)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
+class JobController @Inject()(jobDAO: JobDAO,
+                              sil: Silhouette[WkEnv],
+                              datasetDAO: DatasetDAO,
+                              datasetService: DatasetService,
+                              jobService: JobService,
+                              workerService: WorkerService,
+                              workerDAO: WorkerDAO,
+                              datasetLayerAdditionalAxesDAO: DatasetLayerAdditionalAxesDAO,
+                              wkconf: WkConf,
+                              multiUserDAO: MultiUserDAO,
+                              wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+                              slackNotificationService: SlackNotificationService,
+                              organizationDAO: OrganizationDAO,
+                              organizationService: OrganizationService,
+                              creditTransactionService: CreditTransactionService,
+                              creditTransactionDAO: CreditTransactionDAO,
+                              dataStoreDAO: DataStoreDAO,
+                              userService: UserService)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
     with Zarr3OutputHelper {
 

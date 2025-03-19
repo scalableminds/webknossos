@@ -148,8 +148,7 @@ class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
           (${transaction._id}, ${transaction._organization}, ${transaction.creditChange.toString()}::DECIMAL,
           ${transaction.comment}, ${transaction._paidJob}, ${CreditTransactionState.Pending}, ${CreditState.Pending},
           ${transaction.expirationDate}, ${transaction.createdAt}, ${transaction.updatedAt}, ${transaction.isDeleted})
-          """.asUpdate.transactionally.withTransactionIsolation(
-          Serializable)
+          """.asUpdate.transactionally.withTransactionIsolation(Serializable)
       )
     } yield ()
 
@@ -160,8 +159,7 @@ class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
         q"""UPDATE webknossos.credit_transactions
           SET _paid_job = $jobId, updated_at = NOW()
           WHERE _id = ${transaction._id}
-          """.asUpdate.transactionally.withTransactionIsolation(
-          Serializable)
+          """.asUpdate.transactionally.withTransactionIsolation(Serializable)
       )
     } yield ()
 
@@ -176,8 +174,7 @@ class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
           ${transaction._relatedTransaction}, ${transaction.comment}, ${transaction._paidJob},
           ${transaction.transactionState}, ${transaction.creditState}, ${transaction.expirationDate},
           ${transaction.createdAt}, ${transaction.updatedAt}, ${transaction.isDeleted})
-          """.asUpdate.transactionally.withTransactionIsolation(
-        Serializable))
+          """.asUpdate.transactionally.withTransactionIsolation(Serializable))
 
     } yield ()
 

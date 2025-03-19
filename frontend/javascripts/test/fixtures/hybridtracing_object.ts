@@ -33,53 +33,7 @@ const colorLayer: APIColorLayer = {
     [16, 16, 4],
   ],
   elementClass: "uint8",
-  coordinateTransformations: [
-    {
-      type: "affine",
-      matrix: [
-        [1, 0, 0, -128],
-        [0, 1, 0, -128],
-        [0, 0, 1, -128],
-        [0, 0, 0, 1],
-      ],
-    },
-    {
-      type: "affine",
-      matrix: [
-        [1, 0, 0, 0],
-        [0, 0, -1, 0],
-        [0, 1, 0, 0],
-        [0, 0, 0, 1],
-      ],
-    },
-    {
-      type: "affine",
-      matrix: [
-        [-1, 0, 0, 0],
-        [0, 1, 0, 0],
-        [0, 0, -1, 0],
-        [0, 0, 0, 1],
-      ],
-    },
-    {
-      type: "affine",
-      matrix: [
-        [-1, 0, 0, 0],
-        [0, -1, 0, 0],
-        [0, 0, 1, 0],
-        [0, 0, 0, 1],
-      ],
-    },
-    {
-      type: "affine",
-      matrix: [
-        [1, 0, 0, 128],
-        [0, 1, 0, 128],
-        [0, 0, 1, 128],
-        [0, 0, 0, 1],
-      ],
-    },
-  ],
+  coordinateTransformations: null,
   additionalAxes: [],
 };
 

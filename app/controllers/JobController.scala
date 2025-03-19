@@ -216,6 +216,7 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- datasetService.assertValidLayerNameLax(layerName)
           command = JobCommand.infer_nuclei
           commandArgs = Json.obj(
+            "dataset_id" -> dataset._id,
             "organization_id" -> dataset._organization,
             "dataset_name" -> dataset.name,
             "dataset_directory_name" -> dataset.directoryName,
@@ -254,6 +255,7 @@ class JobController @Inject()(jobDAO: JobDAO,
           parsedBoundingBox <- BoundingBox.fromLiteral(bbox).toFox
           _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
           commandArgs = Json.obj(
+            "dataset_id" -> dataset._id,
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
             "dataset_directory_name" -> dataset.directoryName,
@@ -297,6 +299,7 @@ class JobController @Inject()(jobDAO: JobDAO,
           parsedBoundingBox <- BoundingBox.fromLiteral(bbox).toFox
           _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
           commandArgs = Json.obj(
+            "dataset_id" -> dataset._id,
             "organization_id" -> dataset._organization,
             "dataset_name" -> dataset.name,
             "dataset_directory_name" -> dataset.directoryName,
@@ -337,6 +340,7 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(datasetBoundingBox.toLiteral, None))
           command = JobCommand.align_sections
           commandArgs = Json.obj(
+            "dataset_id" -> dataset._id,
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
             "dataset_directory_name" -> dataset.directoryName,
@@ -394,6 +398,7 @@ class JobController @Inject()(jobDAO: JobDAO,
           else
             s"${formatDateForFilename(new Date())}__${dataset.name}__${annotationLayerName.map(_ => "volume").getOrElse(layerName.getOrElse(""))}.zip"
           commandArgs = Json.obj(
+            "dataset_id" -> dataset._id,
             "dataset_directory_name" -> dataset.directoryName,
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
@@ -436,6 +441,7 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- Fox.runIf(!multiUser.isSuperUser && includesEditableMapping)(Fox.runOptional(boundingBox)(bbox =>
             jobService.assertBoundingBoxLimits(bbox, None)))
           commandArgs = Json.obj(
+            "dataset_id" -> dataset._id,
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
             "dataset_directory_name" -> dataset.directoryName,
@@ -500,6 +506,7 @@ class JobController @Inject()(jobDAO: JobDAO,
           exportFileName = s"webknossos_animation_${formatDateForFilename(new Date())}__${dataset.name}__$layerName.mp4"
           command = JobCommand.render_animation
           commandArgs = Json.obj(
+            "dataset_id" -> dataset._id,
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
             "dataset_directory_name" -> dataset.directoryName,

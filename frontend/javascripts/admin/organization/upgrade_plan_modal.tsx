@@ -369,9 +369,9 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
           <Divider style={{ marginTop: 40 }} />
           <p style={{ color: "#aaa", fontSize: 12 }}>
             Ordering WEBKNOSSOS credits for your organization will send an email to the WEBKNOSSOS
-            sales team. They will top up your account with the requested amount of credits and send
-            you an invoice with the required cost. We typically respond within one business day. See
-            our <a href="https://webknossos.org/faq">FAQ</a> for more information.
+            sales team. We typically respond within one business day to discuss payment options and
+            purchasing requirements. See our <a href="https://webknossos.org/faq">FAQ</a> for more
+            information.
           </p>
         </>
       </div>

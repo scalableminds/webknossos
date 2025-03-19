@@ -199,8 +199,8 @@ function TimeTrackingOverview() {
                 selectedProjectIds,
               );
             }}
+            icon={<DownloadOutlined />}
           >
-            <DownloadOutlined className="icon-margin-right" />
             Download time spans
           </LinkButton>
         );

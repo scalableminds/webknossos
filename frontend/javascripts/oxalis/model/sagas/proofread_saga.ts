@@ -259,7 +259,7 @@ function* createEditableMapping(): Saga<string> {
    */
   // Get volume tracing again to make sure the version is up to date
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
-  if (!volumeTracing || !volumeTracing.mappingName) {
+  if (!volumeTracing) {
     // This should never occur, because the proofreading tool is only available when a volume tracing layer is active.
     throw new Error("No active segmentation tracing layer. Cannot create editable mapping.");
   }
@@ -1017,7 +1017,7 @@ function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Preparation
   }
   let { mappingName } = volumeTracing;
   if (mappingName == null) {
-    return null;
+    //TODO open modal
   }
 
   const isJSONMappingEnabled = yield* call(ensureNoJSONMappingIsEnabled, volumeTracing.tracingId);

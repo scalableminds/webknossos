@@ -501,16 +501,7 @@ export function* diffVolumeTracing(
       yield removeFallbackLayer(volumeTracing.tracingId);
     }
 
-    if (volumeTracing.mappingName == null) {
-      //new mapping TODO_c improve comment
-      const action = updateMappingName(
-        volumeTracing.tracingId,
-        true,
-        true,
-        volumeTracing.tracingId,
-      );
-      yield action;
-    } else if (
+    if (
       prevVolumeTracing.mappingName !== volumeTracing.mappingName ||
       prevVolumeTracing.mappingIsLocked !== volumeTracing.mappingIsLocked
     ) {

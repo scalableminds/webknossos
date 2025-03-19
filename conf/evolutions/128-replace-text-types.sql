@@ -80,7 +80,6 @@ START TRANSACTION;
 ALTER TABLE webknossos.dataset_layers ALTER COLUMN _dataset SET DATA TYPE TEXT;
 ALTER TABLE webknossos.dataset_layers ALTER COLUMN name SET DATA TYPE TEXT;
 ALTER TABLE webknossos.dataset_layers ALTER COLUMN mappings SET DATA TYPE TEXT[];
-ALTER TABLE webknossos.dataset_layers ALTER COLUMN mappings SET DATA TYPE TEXT[];
 COMMIT TRANSACTION;
 
 START TRANSACTION;
@@ -283,7 +282,7 @@ ALTER TABLE webknossos.multiUsers ALTER COLUMN _id SET DATA TYPE TEXT;
 ALTER TABLE webknossos.multiUsers ALTER COLUMN email SET DATA TYPE TEXT;
 ALTER TABLE webknossos.multiUsers ALTER COLUMN passwordInfo_password SET DATA TYPE TEXT;
 ALTER TABLE webknossos.multiUsers ALTER COLUMN _lastLoggedInIdentity SET DATA TYPE TEXT;
-ALTER TABLE webknossos.multiusers ALTER COLUMN _lastloggedinidentity SET DEFAULT NULL;
+ALTER TABLE webknossos.multiUsers ALTER COLUMN _lastloggedinidentity SET DEFAULT NULL;
 CREATE VIEW webknossos.multiUsers_ AS SELECT * FROM webknossos.multiUsers WHERE NOT isDeleted;
 CREATE VIEW webknossos.userInfos AS
 SELECT

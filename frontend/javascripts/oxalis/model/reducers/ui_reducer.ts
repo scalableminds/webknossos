@@ -106,6 +106,24 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "SET_MERGE_MODAL_VISIBILITY": {
+      return updateKey(state, "uiInformation", {
+        showMergeAnnotationModal: action.visible,
+      });
+    }
+
+    case "SET_USER_SCRIPTS_MODAL_VISIBILITY": {
+      return updateKey(state, "uiInformation", {
+        showAddScriptModal: action.visible,
+      });
+    }
+
+    case "SET_ZARR_LINKS_MODAL_VISIBILITY": {
+      return updateKey(state, "uiInformation", {
+        showZarrPrivateLinksModal: action.visible,
+      });
+    }
+
     case "SET_CREATE_ANIMATION_MODAL_VISIBILITY": {
       return updateKey(state, "uiInformation", {
         showRenderAnimationModal: action.visible,

@@ -573,11 +573,11 @@ function JobCreditCostInformation({
   const jobCreditCost = jobCreditCostInfo?.costInCredits;
   const jobCostInfoString =
     jobCreditCost != null
-      ? `This job costs ${formatCreditsString(jobCreditCost)} credits. `
+      ? `This job would cost ${formatCreditsString(jobCreditCost)} credits after the testing period. `
       : currentBoundingBoxVolume == null
         ? isBoundingBoxConfigurable
-          ? "Please select a bounding box to see the job costs. "
-          : "Please select a layer to see the costs. "
+          ? "Please select a bounding box to see the potential cost of this job. "
+          : "Please select a layer to see the potential cost of this job. "
         : "";
   return (
     <>
@@ -587,12 +587,14 @@ function JobCreditCostInformation({
             <>
               {jobCostInfoString}
               Your organization currently has {formatCreditsString(organizationCredits)} WEBKNOSSOS
-              credits. The cost of this job are derived from processed bounding box size and costs{" "}
+              credits. The cost of this job is derived from processed bounding box size and costs{" "}
               {jobCreditCostPerGVx} WEBKNOSSOS credits per Gigavoxel.
               <br />
+              As the credit based paid jobs are currently in testing phase, the costs will not be
+              deducted from your organization's credits.{" "}
               {currentBoundingBoxVolume != null && jobCreditCost != null
                 ? `${isBoundingBoxConfigurable ? "The selected bounding box" : "This dataset"} has a volume of
-                  ${formatVoxels(currentBoundingBoxVolume)} resulting in costs of ${formatCreditsString(jobCreditCost)} WEBKNOSSOS credits.`
+                  ${formatVoxels(currentBoundingBoxVolume)} that would resulting in costs of ${formatCreditsString(jobCreditCost)} WEBKNOSSOS credits.`
                 : "You do not have a bounding box selected."}
             </>
           }
@@ -611,9 +613,10 @@ function JobCreditCostInformation({
                   if (jobCreditCostPerGVx != null && currentBoundingBoxVolume == null) {
                     return Promise.reject("This is a requires a selected bounding box.");
                   } else if (jobCreditCostPerGVx != null && !orgaHasEnoughCredits) {
+                    /* TODO: Uncomment after credit system testing phase.
                     return Promise.reject(
                       "Your organization does not have enough credits to start this job.",
-                    );
+                    );*/
                   }
                   return Promise.resolve();
                 },
@@ -625,8 +628,8 @@ function JobCreditCostInformation({
                 message={
                   isOrganizationOwner ? (
                     <>
-                      Your organization does not have enough credits to start this job. You can buy
-                      more credits{" "}
+                      After the testing phase your organization would not have enough credits to
+                      start this job. Once the credit system is fully live you can buy more credits{" "}
                       <Link
                         to=""
                         onClick={(evt) => {
@@ -639,7 +642,7 @@ function JobCreditCostInformation({
                       .
                     </>
                   ) : (
-                    "Your organization does not have enough credits to start this job. Please contact the organization owner to buy more WEBKNOSSOS credits."
+                    "After the testing phase your organization would not have enough credits to start this job out."
                   )
                 }
                 type="error"
@@ -947,7 +950,7 @@ function StartJobForm(props: StartJobFormProps) {
         <Button type="primary" size="large" htmlType="submit">
           {props.buttonLabel ? props.buttonLabel : title}
           {jobCreditCostInfo?.costInCredits != null
-            ? ` for ${formatCreditsString(jobCreditCostInfo?.costInCredits)} credits`
+            ? ` (would cost ${formatCreditsString(jobCreditCostInfo?.costInCredits)} credits)`
             : ""}
         </Button>
       </div>

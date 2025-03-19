@@ -252,6 +252,7 @@ class JobController @Inject()(jobDAO: JobDAO,
           annotationIdParsed <- Fox.runIf(doSplitMergerEvaluation)(annotationId.toFox) ?~> "job.inferNeurons.annotationIdEvalParamsMissing"
           command = JobCommand.infer_neurons
           parsedBoundingBox <- BoundingBox.fromLiteral(bbox).toFox
+          _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
           commandArgs = Json.obj(
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
@@ -332,6 +333,8 @@ class JobController @Inject()(jobDAO: JobDAO,
             .dataSourceFor(dataset)
             .flatMap(_.toUsable)
             .map(_.boundingBox) ?~> "dataset.boundingBox.unset"
+          multiUser <- multiUserDAO.findOne(request.identity._multiUser)
+          _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(datasetBoundingBox.toLiteral, None))
           command = JobCommand.align_sections
           commandArgs = Json.obj(
             "organization_id" -> organization._id,

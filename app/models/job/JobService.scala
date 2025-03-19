@@ -45,6 +45,7 @@ class JobService @Inject()(wkConf: WkConf,
 
   private val MINIMUM_COST_PER_JOB = BigDecimal(0.001)
   private val ONE_GIGAVOXEL = BigDecimal(math.pow(2, 30))
+  private val SHOULD_DEDUCE_CREDITS = false
 
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
@@ -223,7 +224,8 @@ class JobService @Inject()(wkConf: WkConf,
                     user: User,
                     datastoreName: String)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
-      costsInCredits <- calculateJobCostInCredits(jobBoundingBox, command)
+      costsInCredits <- if (SHOULD_DEDUCE_CREDITS) calculateJobCostInCredits(jobBoundingBox, command)
+      else Fox.successful(BigDecimal(0))
       _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(user._organization, costsInCredits)) ?~> "job.notEnoughCredits"
       creditTransaction <- creditTransactionService.reserveCredits(user._organization,
                                                                    costsInCredits,

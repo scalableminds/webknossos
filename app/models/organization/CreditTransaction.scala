@@ -357,6 +357,7 @@ class CreditTransactionDAO @Inject()(organizationDAO: OrganizationDAO,
     } yield ()
 
   def handOutMonthlyFreeCredits(): Fox[Unit] =
-    run(q"SELECT webknossos.hand_out_monthly_free_credits(${conf.Jobs.monthlyFreeCredits}::DECIMAL)".as[Unit]).map(_ =>
-      ())
+    run(
+      q"BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE; SELECT webknossos.hand_out_monthly_free_credits(${conf.Jobs.monthlyFreeCredits}::DECIMAL); COMMIT;"
+        .as[Unit]).map(_ => ())
 }

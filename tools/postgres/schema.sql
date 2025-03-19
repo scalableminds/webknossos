@@ -1024,7 +1024,6 @@ DECLARE
     next_month_first_day DATE;
     existing_transaction_count INT;
 BEGIN
-SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
     -- Calculate the first day of the next month
     next_month_first_day := DATE_TRUNC('MONTH', NOW()) + INTERVAL '1 MONTH';
 

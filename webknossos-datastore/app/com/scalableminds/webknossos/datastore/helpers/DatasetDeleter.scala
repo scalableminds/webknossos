@@ -108,7 +108,7 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
     relativeTargetPath
   }
 
-  private def getMagPath(basePath: Path, magInfo: DatasourceMagInfo): Path =
+  private def getMagPath(basePath: Path, magInfo: DataSourceMagInfo): Path =
     basePath
       .resolve(magInfo.dataSourceId.organizationId)
       .resolve(magInfo.dataSourceId.directoryName)
@@ -147,7 +147,7 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
       }
     })
 
-  private def updateMagSymlinks(targetMagPath: Path, linkedMag: DatasourceMagInfo): Unit = {
+  private def updateMagSymlinks(targetMagPath: Path, linkedMag: DataSourceMagInfo): Unit = {
     val linkedMagPath = getMagPath(dataBaseDir, linkedMag)
     if (Files.exists(linkedMagPath) || Files.isSymbolicLink(linkedMagPath)) {
       Files.delete(linkedMagPath)

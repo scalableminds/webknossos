@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.helpers.DatasourceMagInfo
+import com.scalableminds.webknossos.datastore.helpers.DataSourceMagInfo
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
   UnusableDataSource,
   InboxDataSourceLike => InboxDataSource
@@ -358,7 +358,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     } yield ()
 
   def getPathsForDataLayer(datasetId: ObjectId,
-                           layerName: String): Fox[List[(DatasourceMagInfo, List[DatasourceMagInfo])]] =
+                           layerName: String): Fox[List[(DataSourceMagInfo, List[DataSourceMagInfo])]] =
     for {
       magInfos <- datasetMagsDAO.findPathsForDatasetAndDatalayer(datasetId, layerName)
       magInfosAndLinkedMags <- Fox.serialCombined(magInfos)(magInfo =>

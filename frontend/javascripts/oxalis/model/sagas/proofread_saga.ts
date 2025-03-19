@@ -267,7 +267,7 @@ function* createEditableMapping(): Saga<string> {
   const volumeTracingId = volumeTracing.tracingId;
   const layerName = volumeTracingId;
   const baseMappingName = volumeTracing.mappingName;
-  yield* put(setMappingNameAction(layerName, volumeTracingId, "HDF5"));
+  yield* put(setMappingNameAction(layerName, volumeTracingId, "HDF5")); // TODO new type for identity mapping?
   yield* put(setHasEditableMappingAction(volumeTracingId));
   // Ensure a saved state so that the mapping is locked and editable before doing the first proofreading operation.
   yield* call([Model, Model.ensureSavedState]);

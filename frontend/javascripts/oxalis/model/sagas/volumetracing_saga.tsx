@@ -501,17 +501,24 @@ export function* diffVolumeTracing(
       yield removeFallbackLayer(volumeTracing.tracingId);
     }
 
-    if (
-      volumeTracing.mappingName == null ||
+    if (volumeTracing.mappingName == null) {
+      //new mapping TODO_c improve comment
+      const action = updateMappingName(
+        volumeTracing.tracingId,
+        true,
+        true,
+        volumeTracing.tracingId,
+      );
+      yield action;
+    } else if (
       prevVolumeTracing.mappingName !== volumeTracing.mappingName ||
       prevVolumeTracing.mappingIsLocked !== volumeTracing.mappingIsLocked
     ) {
-      // TODO this is probably more cases, e.g. when brushing after enabling a mapping
       // Once the first volume action is performed on a volume layer, the mapping state is locked.
       // In case no mapping is active, this is denoted by setting the mapping name to null.
       const action = updateMappingName(
-        volumeTracing.tracingId,
-        true, //TODO_c check
+        volumeTracing.mappingName || null,
+        volumeTracing.hasEditableMapping || null,
         volumeTracing.mappingIsLocked,
         volumeTracing.tracingId,
       );

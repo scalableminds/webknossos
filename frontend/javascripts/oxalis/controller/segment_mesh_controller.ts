@@ -277,7 +277,6 @@ export default class SegmentMeshController {
   }
 
   setMeshOpacity(id: number, layerName: string, opacity: number): void {
-    console.log("setMeshOpacity", id, layerName, opacity);
     // If in nd-dataset, set the opacity for all additional coordinates
     for (const recordsOfLayers of Object.values(this.meshesGroupsPerSegmentId)) {
       const meshDataForOneSegment = recordsOfLayers[layerName][id];
@@ -434,7 +433,7 @@ export default class SegmentMeshController {
           ? HOVERED_COLOR
           : ACTIVATED_COLOR;
         material.color = new THREE.Color().setHSL(...newColor);
-        material.opacity = 1.0 * mesh.material.opacity;
+        material.opacity = mesh.material.opacity;
         material.emissive.setHSL(...HOVERED_COLOR);
       });
     } else {

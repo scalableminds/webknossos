@@ -55,6 +55,7 @@ import { withMappingActivationConfirmation } from "./segments_view_helper";
 const ALSO_DELETE_SEGMENT_FROM_LIST_KEY = "also-delete-segment-from-list";
 
 import * as Utils from "libs/utils";
+import Constants from "oxalis/constants";
 
 export function ColoredDotIcon({ colorRGBA }: { colorRGBA: Vector4 }) {
   const rgbaCss = rgbaToCSS(colorRGBA);
@@ -437,7 +438,7 @@ function _SegmentListItem({
     segmentColorRGBA[0],
     segmentColorRGBA[1],
     segmentColorRGBA[2],
-    mesh != null ? mesh.opacity : 1, //TODO_c default
+    mesh != null ? mesh.opacity : Constants.DEFAULT_MESH_OPACITY,
   ];
 
   const createSegmentContextMenu = (): MenuProps => ({
@@ -466,52 +467,51 @@ function _SegmentListItem({
       ),
       {
         key: `changeSegmentColor-${segment.id}`,
-        label:
-          mesh != null ? (
-            <ChangeRGBAColorMenuItemContent
-              isDisabled={false}
-              title="Change Segment Color"
-              onSetColor={(color, createsNewUndoState) => {
-                if (visibleSegmentationLayer == null) {
-                  return;
-                }
-                updateSegment(
-                  segment.id,
-                  {
-                    color: color.slice(0, 3) as Vector3,
-                  },
-                  visibleSegmentationLayer.name,
-                  createsNewUndoState,
-                );
-                setMeshOpacity(
-                  segment.id,
-                  visibleSegmentationLayer.name,
-                  color[3],
-                  additionalCoordinates,
-                );
-              }}
-              rgba={segmentColorWithMeshOpacity}
-            />
-          ) : (
-            <ChangeColorMenuItemContent
-              isDisabled={false}
-              title="Change Segment Color"
-              onSetColor={(color, createsNewUndoState) => {
-                if (visibleSegmentationLayer == null) {
-                  return;
-                }
-                updateSegment(
-                  segment.id,
-                  {
-                    color,
-                  },
-                  visibleSegmentationLayer.name,
-                  createsNewUndoState,
-                );
-              }}
-              rgb={Utils.take3(segmentColorRGBA)}
-            />
-          ),
+        label: mesh?.isVisible ? (
+          <ChangeRGBAColorMenuItemContent
+            isDisabled={false}
+            title="Change Segment Color"
+            onSetColor={(color, createsNewUndoState) => {
+              if (visibleSegmentationLayer == null) {
+                return;
+              }
+              updateSegment(
+                segment.id,
+                {
+                  color: color.slice(0, 3) as Vector3,
+                },
+                visibleSegmentationLayer.name,
+                createsNewUndoState,
+              );
+              setMeshOpacity(
+                segment.id,
+                visibleSegmentationLayer.name,
+                color[3],
+                additionalCoordinates,
+              );
+            }}
+            rgba={segmentColorWithMeshOpacity}
+          />
+        ) : (
+          <ChangeColorMenuItemContent
+            isDisabled={false}
+            title="Change Segment Color"
+            onSetColor={(color, createsNewUndoState) => {
+              if (visibleSegmentationLayer == null) {
+                return;
+              }
+              updateSegment(
+                segment.id,
+                {
+                  color,
+                },
+                visibleSegmentationLayer.name,
+                createsNewUndoState,
+              );
+            }}
+            rgb={Utils.take3(segmentColorRGBA)}
+          />
+        ),
       },
       {
         key: "resetSegmentColor",

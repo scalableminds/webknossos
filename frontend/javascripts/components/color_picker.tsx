@@ -123,9 +123,10 @@ const ThrottledRGBAColorPicker = ({
         type="number"
         min={0}
         max={1}
+        step={0.1}
         value={value.a}
-        onChange={(e) => {
-          setValue({ r: value.r, g: value.g, b: value.b, a: e || 0 });
+        onChange={(newOpacity) => {
+          setValue({ r: value.r, g: value.g, b: value.b, a: newOpacity || 0 });
         }}
       />
     );

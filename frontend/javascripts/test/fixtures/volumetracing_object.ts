@@ -65,8 +65,8 @@ export const initialState = update(defaultState, {
             ],
             category: "segmentation",
             elementClass: "uint32",
-            name: "tracingId",
-            tracingId: "tracingId",
+            name: volumeTracing.tracingId,
+            tracingId: volumeTracing.tracingId,
             // @ts-expect-error ts-migrate(2322) FIXME: Type '{ resolutions: [number, number, number][]; c... Remove this comment to see the full error message
             isDisabled: false,
             alpha: 100,
@@ -77,7 +77,7 @@ export const initialState = update(defaultState, {
   },
   datasetConfiguration: {
     layers: {
-      tracingId: {
+      [volumeTracing.tracingId]: {
         $set: {
           color: [0, 0, 0],
           alpha: 100,

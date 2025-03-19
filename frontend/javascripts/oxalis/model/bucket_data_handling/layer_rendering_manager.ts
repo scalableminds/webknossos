@@ -127,6 +127,7 @@ export default class LayerRenderingManager {
   currentBucketPickerTick: number = 0;
   latestTaskExecutor: LatestTaskExecutor<ArrayBuffer> = new LatestTaskExecutor();
   additionalCoordinates: AdditionalCoordinate[] | null = null;
+  maximumZoomForAllMags: number[] | null = null;
 
   cuckooTable: CuckooTableVec3 | undefined;
   storePropertyUnsubscribers: Array<() => void> = [];
@@ -211,6 +212,7 @@ export default class LayerRenderingManager {
     const isVisible = isLayerVisible(dataset, this.name, datasetConfiguration, viewMode);
     const rects = getViewportRects(state);
     const additionalCoordinates = state.flycam.additionalCoordinates;
+    const maximumZoomForAllMags = state.flycamInfoCache.maximumZoomForAllMags[this.name];
 
     if (
       !_.isEqual(this.lastZoomedMatrix, matrix) ||
@@ -219,6 +221,7 @@ export default class LayerRenderingManager {
       isVisible !== this.lastIsVisible ||
       rects !== this.lastRects ||
       !_.isEqual(additionalCoordinates, this.additionalCoordinates) ||
+      !_.isEqual(maximumZoomForAllMags, this.maximumZoomForAllMags) ||
       this.needsRefresh
     ) {
       this.lastZoomedMatrix = matrix;
@@ -229,6 +232,7 @@ export default class LayerRenderingManager {
       this.needsRefresh = false;
       this.currentBucketPickerTick++;
       this.additionalCoordinates = additionalCoordinates;
+      this.maximumZoomForAllMags = maximumZoomForAllMags;
       this.pullQueue.clear();
       let pickingPromise: Promise<ArrayBuffer> = Promise.resolve(dummyBuffer);
 

@@ -41,6 +41,7 @@ import { NumberInputPopoverSetting } from "oxalis/view/components/setting_input_
 import React, { useCallback, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { AdditionalCoordinate } from "types/api_flow_types";
+import { CommandPalette } from "./components/command_palette";
 
 const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = {
@@ -48,7 +49,7 @@ const moreIconStyle = {
   color: lineColor,
 };
 const moreLinkStyle = {
-  marginLeft: 10,
+  marginLeft: 25,
   marginRight: "auto",
 };
 
@@ -154,6 +155,28 @@ function RightClickShortcut({ actionDescriptor }: { actionDescriptor: ActionDesc
   );
 }
 
+const getMoreShortcutsInfo = () => {
+  return (
+    <>
+      <CommandPalette label={<div style={{ marginLeft: 25 }}>[Ctrl+P] Commands</div>} />
+      {moreShortcutsLink}
+    </>
+  );
+};
+
+const moreShortcutsLink = (
+  <a
+    target="_blank"
+    href="https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html"
+    rel="noopener noreferrer"
+    style={moreLinkStyle}
+  >
+    <FastTooltip title="More Shortcuts">
+      <MoreOutlined rotate={90} style={moreIconStyle} />
+    </FastTooltip>
+  </a>
+);
+
 function ShortcutsInfo() {
   const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
   const useLegacyBindings = useSelector(
@@ -166,19 +189,6 @@ function ShortcutsInfo() {
   const hasSkeleton = useSelector((state: OxalisState) => state.tracing.skeleton != null);
   const isTDViewportActive = useSelector(
     (state: OxalisState) => state.viewModeData.plane.activeViewport === OrthoViews.TDView,
-  );
-
-  const moreShortcutsLink = (
-    <a
-      target="_blank"
-      href="https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html"
-      rel="noopener noreferrer"
-      style={moreLinkStyle}
-    >
-      <FastTooltip title="More Shortcuts">
-        <MoreOutlined rotate={90} style={moreIconStyle} />
-      </FastTooltip>
-    </a>
   );
 
   if (!isPlaneMode) {
@@ -313,7 +323,7 @@ function ShortcutsInfo() {
           </span>{" "}
           Rotation
         </span>
-        {moreShortcutsLink}
+        {getMoreShortcutsInfo()}
       </React.Fragment>
     );
   }
@@ -354,7 +364,7 @@ function ShortcutsInfo() {
         Rotate 3D View
       </span>
       <ZoomShortcut />
-      {moreShortcutsLink}
+      {getMoreShortcutsInfo()}
     </React.Fragment>
   );
 }

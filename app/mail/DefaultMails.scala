@@ -13,6 +13,7 @@ class DefaultMails @Inject()(conf: WkConf) {
 
   private val uri = conf.Http.uri
   private val defaultSender = conf.Mail.defaultSender
+  private val supportEmail = conf.Mail.supportEmail
   private val newOrganizationMailingList = conf.WebKnossos.newOrganizationMailingList
   private val additionalFooter = conf.Mail.additionalFooter
 
@@ -98,62 +99,63 @@ class DefaultMails @Inject()(conf: WkConf) {
       from = defaultSender,
       subject = "Help requested // Feedback provided",
       bodyHtml = html.mail.help(user.name, organizationName, message, currentUrl, additionalFooter).body,
-      recipients = List("hello@webknossos.org"),
+      recipients = List(supportEmail),
       ccRecipients = List(userEmail),
-      replyTo = List(userEmail, "hello@webknossos.org")
+      replyTo = List(supportEmail, userEmail)
     )
 
-  def extendPricingPlanMail(user: User, userEmail: String): Mail =
+  def extendPricingPlanMail(user: User, userEmail: String, organizationName: String): Mail =
     Mail(
       from = defaultSender,
-      subject = "WEBKNOSSOS Plan Extension Request",
-      bodyHtml = html.mail.extendPricingPlan(user.name, additionalFooter).body,
-      recipients = List(userEmail)
+      subject = "WEBKNOSSOS Plan Extension",
+      bodyHtml = html.mail.extendPricingPlan(user.name, additionalFooter, organizationName).body,
+      recipients = List(userEmail),
+      ccRecipients = List(supportEmail),
+      replyTo = List(userEmail, supportEmail)
     )
 
-  def upgradePricingPlanToTeamMail(user: User, userEmail: String): Mail =
+  def upgradePricingPlanToTeamMail(user: User, userEmail: String, organizationName: String): Mail =
     Mail(
       from = defaultSender,
-      subject = "WEBKNOSSOS Plan Upgrade Request",
-      bodyHtml = html.mail.upgradePricingPlanToTeam(user.name, additionalFooter).body,
-      recipients = List(userEmail)
+      subject = "WEBKNOSSOS Upgrade: Team Plan",
+      bodyHtml = html.mail.upgradePricingPlanToTeam(user.name, additionalFooter, organizationName).body,
+      recipients = List(userEmail),
+      ccRecipients = List(supportEmail),
+      replyTo = List(userEmail, supportEmail)
     )
 
-  def upgradePricingPlanToPowerMail(user: User, userEmail: String): Mail =
+  def upgradePricingPlanToPowerMail(user: User, userEmail: String, organizationName: String): Mail =
     Mail(
       from = defaultSender,
-      subject = "WEBKNOSSOS Plan Upgrade Request",
-      bodyHtml = html.mail.upgradePricingPlanToPower(user.name, additionalFooter).body,
-      recipients = List(userEmail)
+      subject = "WEBKNOSSOS Upgrade: Power Plan",
+      bodyHtml = html.mail.upgradePricingPlanToPower(user.name, additionalFooter, organizationName).body,
+      recipients = List(userEmail),
+      ccRecipients = List(supportEmail),
+      replyTo = List(userEmail, supportEmail)
     )
 
-  def upgradePricingPlanUsersMail(user: User, userEmail: String, requestedUsers: Int): Mail =
+  def upgradePricingPlanUsersMail(user: User, userEmail: String, requestedUsers: Int, organizationName: String): Mail =
     Mail(
       from = defaultSender,
-      subject = "Request to upgrade WEBKNOSSOS users",
-      bodyHtml = html.mail.upgradePricingPlanUsers(user.name, requestedUsers, additionalFooter).body,
-      recipients = List(userEmail)
+      subject = "WEBKNOSSOS Upgrade: Additional Users",
+      bodyHtml = html.mail.upgradePricingPlanUsers(user.name, requestedUsers, additionalFooter, organizationName).body,
+      recipients = List(userEmail),
+      ccRecipients = List(supportEmail),
+      replyTo = List(userEmail, supportEmail)
     )
 
-  def upgradePricingPlanStorageMail(user: User, userEmail: String, requestedStorage: Int): Mail =
-    Mail(
-      from = defaultSender,
-      subject = "Request to upgrade WEBKNOSSOS storage",
-      bodyHtml = html.mail.upgradePricingPlanStorage(user.name, requestedStorage, additionalFooter).body,
-      recipients = List(userEmail)
-    )
-
-  def upgradePricingPlanRequestMail(user: User,
+  def upgradePricingPlanStorageMail(user: User,
                                     userEmail: String,
-                                    organizationName: String,
-                                    messageBody: String): Mail =
+                                    requestedStorage: Int,
+                                    organizationName: String): Mail =
     Mail(
       from = defaultSender,
-      subject = "Request to upgrade WEBKNOSSOS plan",
+      subject = "WEBKNOSSOS Upgrade: Additional Storage",
       bodyHtml =
-        html.mail.upgradePricingPlanRequest(user.name, userEmail, organizationName, messageBody, additionalFooter).body,
-      recipients = List("hello@webknossos.org"),
-      replyTo = List(userEmail, "hello@webknossos.org")
+        html.mail.upgradePricingPlanStorage(user.name, requestedStorage, additionalFooter, organizationName).body,
+      recipients = List(userEmail),
+      ccRecipients = List(supportEmail),
+      replyTo = List(userEmail, supportEmail)
     )
 
   def jobSuccessfulGenericMail(user: User,

@@ -168,6 +168,7 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
       val pass: String = get[String]("mail.smtp.pass")
     }
 
+    val supportEmail: String = get[String]("mail.supportEmail")
     val defaultSender: String = get[String]("mail.defaultSender")
     def additionalFooter: String = get[String]("mail.additionalFooter")
 

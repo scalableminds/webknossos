@@ -320,9 +320,9 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def moveSubtree(idValidated: ObjectId, newParentIdValidated: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val deleteObsoletePathsQuery =
       q"""
-         DELETE FROM webknossos.folder_paths
+         DELETE FROM webknossos.folder_paths fp1
          WHERE _descendant IN (SELECT _descendant FROM webknossos.folder_paths WHERE _ancestor = $idValidated)
-         AND _ancestor NOT IN (SELECT _descendant FROM webknossos.folder_paths WHERE _ancestor = $idValidated)
+         AND NOT EXISTS(SELECT FROM webknossos.folder_paths fp2 WHERE fp2._ancestor = $idValidated AND fp2._descendant = fp1._descendant);
         """.asUpdate
     val insertNewPathsQuery =
       q"""

@@ -151,6 +151,7 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
     val linkedMagPath = getMagPath(dataBaseDir, linkedMag)
     if (Files.exists(linkedMagPath) || Files.isSymbolicLink(linkedMagPath)) {
       Files.delete(linkedMagPath)
+      logger.info(s"Deleting symlink and recreating it at $linkedMagPath")
       Files.createSymbolicLink(linkedMagPath, relativizeSymlinkPath(targetMagPath, linkedMagPath))
     } else {
       if (!Files.exists(linkedMagPath) && linkedMag.path == linkedMag.realPath) {
@@ -198,7 +199,8 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
         // 2. The layer is a symlink to the other layer itself.
         // We can handle both by deleting the layer and creating a new symlink.
         Files.delete(linkedLayerPath)
-
+        logger.info(
+          s"Deleting existing symlink at $linkedLayerPath linking to $sourceDataSource/$sourceLayer, creating new symlink")
         Files.createSymbolicLink(linkedLayerPath, relativizeSymlinkPath(targetPath, linkedLayerPath))
       } else {
         if (!Files.exists(linkedLayerPath)) {
@@ -251,6 +253,9 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
                 val target = magLinkInfo.linkedMags.head
                 val targetPath = getMagPath(dataBaseDir, target)
                 if (Files.exists(targetPath) && Files.isSymbolicLink(targetPath)) {
+                  logger.info(
+                    s"Deleting existing symlink at $targetPath linking to ${magToDelete.dataSourceId}/${magToDelete.dataLayerName}/${magToDelete.mag
+                      .toMagLiteral(true)}")
                   Files.delete(targetPath)
                 }
                 Files.move(magPath, targetPath)

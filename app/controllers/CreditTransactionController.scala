@@ -31,11 +31,11 @@ class CreditTransactionController @Inject()(organizationService: OrganizationSer
     with FoxImplicits {
 
   def addCredits(organizationId: String,
-                      creditAmount: Int,
-                      moneySpent: String,
-                      currency: String,
-                      comment: Option[String],
-                      expiresAt: Option[String]): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+                 creditAmount: Int,
+                 moneySpent: String,
+                 currency: String,
+                 comment: Option[String],
+                 expiresAt: Option[String]): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- userService.assertIsSuperUser(request.identity) ?~> "Only super users can add credits to an organization"
       moneySpentInDecimal <- tryo(BigDecimal(moneySpent)) ?~> s"moneySpent $moneySpent is not a valid decimal"

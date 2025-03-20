@@ -33,11 +33,8 @@ trait ProtoGeometryImplicits {
   implicit def boundingBoxOptFromProto(bbOpt: Option[BoundingBoxProto]): Option[BoundingBox] =
     bbOpt.map(bb => BoundingBox(bb.topLeft, bb.width, bb.height, bb.depth))
 
-  implicit def elementClassToProto(ec: ElementClass.Value): ElementClassProto =
-    ElementClassProto.fromValue(ElementClass.bytesPerElement(ec))
-
   implicit def elementClassFromProto(ec: ElementClassProto): ElementClass.Value =
-    ElementClass.guessFromBytesPerElement(ec.value).getOrElse(ElementClass.uint32)
+    ElementClass.fromProto(ec)
 
   implicit def colorToProto(c: com.scalableminds.util.image.Color): ColorProto =
     ColorProto(c.r, c.g, c.b, c.a)

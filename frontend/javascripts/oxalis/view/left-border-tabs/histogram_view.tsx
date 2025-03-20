@@ -152,7 +152,8 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
       return;
     }
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    const { min, max } = getMinAndMax(this.props);
+    const { min, max } =
+      this.props.data != null ? getMinAndMax(this.props) : DUMMY_HISTOGRAM_DATA[0];
     const data = this.props.data ?? DUMMY_HISTOGRAM_DATA;
 
     // Compute the overall maximum count, so the RGB curves are scaled correctly relative to each other.

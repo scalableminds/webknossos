@@ -39,8 +39,8 @@ enum TreeTypeProto {
 }
 
 message TreeBody {
-  repeated Node nodes = 2;
-  repeated Edge edges = 3;
+  repeated Node nodes = 1;
+  repeated Edge edges = 2;
 }
 
 message Tree {

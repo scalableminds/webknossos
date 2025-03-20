@@ -1,21 +1,20 @@
-import * as THREE from "three";
+import app from "app";
+import type UpdatableTexture from "libs/UpdatableTexture";
+import type { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
+import { waitForCondition } from "libs/utils";
+import window from "libs/window";
 import _ from "lodash";
-import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
+import { WkDevFlags } from "oxalis/api/wk_dev";
+import constants, { type TypedArray } from "oxalis/constants";
+import { getRenderer } from "oxalis/controller/renderer";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
+import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import {
   getBucketCapacity,
-  getPackingDegree,
-  getChannelCount,
+  getDtypeConfigForElementClass,
 } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import { getRenderer } from "oxalis/controller/renderer";
-import { waitForCondition } from "libs/utils";
-import type UpdatableTexture from "libs/UpdatableTexture";
-import constants from "oxalis/constants";
-import window from "libs/window";
+import type * as THREE from "three";
 import type { ElementClass } from "types/api_flow_types";
-import type { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
-import app from "app";
-import { WkDevFlags } from "oxalis/api/wk_dev";
 
 // A TextureBucketManager instance is responsible for making buckets available
 // to the GPU.
@@ -49,7 +48,7 @@ function getSomeValue<T>(set: Set<T>): T {
 }
 
 const tmpPaddingBuffer = new Uint8Array(4 * constants.BUCKET_SIZE);
-function maybePadRgbData(src: Uint8Array | Float32Array, elementClass: ElementClass) {
+function maybePadRgbData(src: TypedArray, elementClass: ElementClass) {
   if (elementClass !== "uint24") {
     return src;
   }
@@ -59,8 +58,11 @@ function maybePadRgbData(src: Uint8Array | Float32Array, elementClass: ElementCl
   let idx = 0;
   let srcIdx = 0;
   while (srcIdx < 3 * constants.BUCKET_SIZE) {
+    // @ts-ignore BigInt is not a problem as this code here only handles uint24 data
     tmpPaddingBuffer[idx++] = src[srcIdx++];
+    // @ts-ignore BigInt is not a problem as this code here only handles uint24 data
     tmpPaddingBuffer[idx++] = src[srcIdx++];
+    // @ts-ignore BigInt is not a problem as this code here only handles uint24 data
     tmpPaddingBuffer[idx++] = src[srcIdx++];
     tmpPaddingBuffer[idx++] = 255;
   }
@@ -91,15 +93,10 @@ export default class TextureBucketManager {
   packingDegree: number;
   elementClass: ElementClass;
 
-  constructor(
-    textureWidth: number,
-    dataTextureCount: number,
-    bytes: number,
-    elementClass: ElementClass,
-  ) {
+  constructor(textureWidth: number, dataTextureCount: number, elementClass: ElementClass) {
     // If there is one byte per voxel, we pack 4 bytes into one texel (packingDegree = 4)
     // Otherwise, we don't pack bytes together (packingDegree = 1)
-    this.packingDegree = getPackingDegree(bytes, elementClass);
+    this.packingDegree = getDtypeConfigForElementClass(elementClass).packingDegree;
     this.elementClass = elementClass;
     this.maximumCapacity = getBucketCapacity(dataTextureCount, textureWidth, this.packingDegree);
     this.textureWidth = textureWidth;
@@ -217,7 +214,7 @@ export default class TextureBucketManager {
       const dataTextureIndex = Math.floor(_index / bucketsPerTexture);
       const indexInDataTexture = _index % bucketsPerTexture;
       const data = bucket.getData();
-      const TypedArrayClass = this.elementClass === "float" ? Float32Array : Uint8Array;
+      const { TypedArrayClass } = getDtypeConfigForElementClass(this.elementClass);
 
       const rawSrc = new TypedArrayClass(
         data.buffer,
@@ -261,17 +258,21 @@ export default class TextureBucketManager {
     return [this.lookUpCuckooTable._texture].concat(this.dataTextures);
   }
 
-  setupDataTextures(bytes: number, lookUpCuckooTable: CuckooTableVec5, layerIndex: number): void {
+  setupDataTextures(lookUpCuckooTable: CuckooTableVec5, layerIndex: number): void {
     for (let i = 0; i < this.dataTextureCount; i++) {
-      const channelCount = getChannelCount(bytes, this.packingDegree, this.elementClass);
-      const textureType = this.elementClass === "float" ? THREE.FloatType : THREE.UnsignedByteType;
+      const { textureType, pixelFormat, internalFormat } = getDtypeConfigForElementClass(
+        this.elementClass,
+      );
+
       const dataTexture = createUpdatableTexture(
         this.textureWidth,
         this.textureWidth,
-        channelCount,
         textureType,
         getRenderer(),
+        pixelFormat,
+        internalFormat,
       );
+
       this.dataTextures.push(dataTexture);
     }
 

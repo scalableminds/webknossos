@@ -1,17 +1,17 @@
-import _ from "lodash";
 import update from "immutability-helper";
-import type { Action } from "oxalis/model/actions/actions";
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4 } from "libs/mjs";
-import type { OxalisState } from "oxalis/store";
-import type { Vector3 } from "oxalis/constants";
-import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
-import {
-  getValidZoomRangeForUser,
-  ZOOM_STEP_INTERVAL,
-} from "oxalis/model/accessors/flycam_accessor";
-import Dimensions from "oxalis/model/dimensions";
 import * as Utils from "libs/utils";
+import _ from "lodash";
+import type { Vector3 } from "oxalis/constants";
+import {
+  ZOOM_STEP_INTERVAL,
+  getValidZoomRangeForUser,
+} from "oxalis/model/accessors/flycam_accessor";
+import type { Action } from "oxalis/model/actions/actions";
+import Dimensions from "oxalis/model/dimensions";
+import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
+import type { OxalisState } from "oxalis/store";
 import { getUnifiedAdditionalCoordinates } from "../accessors/dataset_accessor";
 
 function cloneMatrix(m: Matrix4x4): Matrix4x4 {
@@ -102,7 +102,7 @@ function resetMatrix(matrix: Matrix4x4, voxelSize: Vector3) {
   // Save position
   const position = [matrix[12], matrix[13], matrix[14]];
   // Reset rotation
-  const newMatrix = rotateOnAxis(M4x4.scale(scale, M4x4.identity, []), Math.PI, [0, 0, 1]);
+  const newMatrix = rotateOnAxis(M4x4.scale(scale, M4x4.identity(), []), Math.PI, [0, 0, 1]);
   // Restore position
   newMatrix[12] = position[0];
   newMatrix[13] = position[1];

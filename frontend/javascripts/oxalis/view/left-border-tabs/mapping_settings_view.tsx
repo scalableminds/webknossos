@@ -1,33 +1,33 @@
 import { Select } from "antd";
-import { connect } from "react-redux";
-import React from "react";
-import debounceRender from "react-debounce-render";
-import type { APISegmentationLayer } from "types/api_flow_types";
-import { MappingStatusEnum } from "oxalis/constants";
-import type { OxalisState, Mapping, MappingType, EditableMapping } from "oxalis/store";
-import {
-  getSegmentationLayerByName,
-  getMappingInfo,
-} from "oxalis/model/accessors/dataset_accessor";
-import {
-  ensureLayerMappingsAreLoadedAction,
-  setLayerMappingsAction,
-} from "oxalis/model/actions/dataset_actions";
-import {
-  setMappingEnabledAction,
-  setHideUnmappedIdsAction,
-  setMappingAction,
-} from "oxalis/model/actions/settings_actions";
-import { SwitchSetting } from "oxalis/view/components/setting_input_views";
+import FastTooltip from "components/fast_tooltip";
 import * as Utils from "libs/utils";
+import messages from "messages";
+import { MappingStatusEnum } from "oxalis/constants";
+import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
+import {
+  getMappingInfo,
+  getSegmentationLayerByName,
+} from "oxalis/model/accessors/dataset_accessor";
 import {
   getEditableMappingForVolumeTracingId,
   hasEditableMapping,
   isMappingLocked,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import messages from "messages";
-import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
-import FastTooltip from "components/fast_tooltip";
+import {
+  ensureLayerMappingsAreLoadedAction,
+  setLayerMappingsAction,
+} from "oxalis/model/actions/dataset_actions";
+import {
+  setHideUnmappedIdsAction,
+  setMappingAction,
+  setMappingEnabledAction,
+} from "oxalis/model/actions/settings_actions";
+import type { EditableMapping, Mapping, MappingType, OxalisState } from "oxalis/store";
+import { SwitchSetting } from "oxalis/view/components/setting_input_views";
+import React from "react";
+import debounceRender from "react-debounce-render";
+import { connect } from "react-redux";
+import type { APISegmentationLayer } from "types/api_flow_types";
 
 const { Option, OptGroup } = Select;
 

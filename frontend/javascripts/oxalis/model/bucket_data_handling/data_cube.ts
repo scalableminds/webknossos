@@ -1,40 +1,40 @@
-import _ from "lodash";
-import { createNanoEvents, type Emitter } from "nanoevents";
-import type { Bucket } from "oxalis/model/bucket_data_handling/bucket";
-import { DataBucket, NULL_BUCKET, NullBucket } from "oxalis/model/bucket_data_handling/bucket";
-import type { AdditionalAxis, BucketDataArray, ElementClass } from "types/api_flow_types";
-import type { ProgressCallback } from "libs/progress_callback";
+import ErrorHandling from "libs/error_handling";
 import { V3 } from "libs/mjs";
-import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "oxalis/model/volumetracing/volumelayer";
+import type { ProgressCallback } from "libs/progress_callback";
+import Toast from "libs/toast";
 import {
   areBoundingBoxesOverlappingOrTouching,
   castForArrayType,
   isNumberMap,
   union,
 } from "libs/utils";
-import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
-import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
-import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import type { DimensionMap } from "oxalis/model/dimensions";
-import Dimensions from "oxalis/model/dimensions";
-import ErrorHandling from "libs/error_handling";
-import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
-import type PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
-import type { Mapping } from "oxalis/store";
-import Store from "oxalis/store";
-import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
-import Toast from "libs/toast";
+import _ from "lodash";
+import { type Emitter, createNanoEvents } from "nanoevents";
 import type {
-  Vector3,
   BoundingBoxType,
-  LabelMasksByBucketAndW,
   BucketAddress,
+  LabelMasksByBucketAndW,
+  Vector3,
 } from "oxalis/constants";
 import constants, { MappingStatusEnum } from "oxalis/constants";
-import type { MagInfo } from "../helpers/mag_info";
+import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
+import type { Bucket } from "oxalis/model/bucket_data_handling/bucket";
+import { DataBucket, NULL_BUCKET, NullBucket } from "oxalis/model/bucket_data_handling/bucket";
+import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
+import type PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
+import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
+import type { DimensionMap } from "oxalis/model/dimensions";
+import Dimensions from "oxalis/model/dimensions";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
+import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "oxalis/model/volumetracing/volumelayer";
+import type { Mapping } from "oxalis/store";
+import Store from "oxalis/store";
+import type { AdditionalAxis, BucketDataArray, ElementClass } from "types/api_flow_types";
 import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { MagInfo } from "../helpers/mag_info";
 
 const warnAboutTooManyAllocations = _.once(() => {
   const msg =
@@ -716,22 +716,27 @@ class DataCube {
               currentGlobalBucketPosition,
               V3.scale3(adjustedNeighbourVoxelXyz, currentMag),
             );
+            // When flood filling in a coarser mag, a voxel in the coarse mag is more than one voxel in mag 1
+            const voxelBoundingBoxInMag1 = new BoundingBox({
+              min: currentGlobalPosition,
+              max: V3.add(currentGlobalPosition, currentMag),
+            });
 
             if (bucketData[neighbourVoxelIndex] === sourceSegmentId) {
-              if (floodfillBoundingBox.containsPoint(currentGlobalPosition)) {
+              if (floodfillBoundingBox.intersectedWith(voxelBoundingBoxInMag1).getVolume() > 0) {
                 bucketData[neighbourVoxelIndex] = segmentId;
                 markUvwInSliceAsLabeled(neighbourVoxelUvw);
                 neighbourVoxelStackUvw.pushVoxel(neighbourVoxelUvw);
                 labeledVoxelCount++;
 
-                coveredBBoxMin[0] = Math.min(coveredBBoxMin[0], currentGlobalPosition[0]);
-                coveredBBoxMin[1] = Math.min(coveredBBoxMin[1], currentGlobalPosition[1]);
-                coveredBBoxMin[2] = Math.min(coveredBBoxMin[2], currentGlobalPosition[2]);
+                coveredBBoxMin[0] = Math.min(coveredBBoxMin[0], voxelBoundingBoxInMag1.min[0]);
+                coveredBBoxMin[1] = Math.min(coveredBBoxMin[1], voxelBoundingBoxInMag1.min[1]);
+                coveredBBoxMin[2] = Math.min(coveredBBoxMin[2], voxelBoundingBoxInMag1.min[2]);
 
                 // The maximum is exclusive which is why we add 1 to the position
-                coveredBBoxMax[0] = Math.max(coveredBBoxMax[0], currentGlobalPosition[0] + 1);
-                coveredBBoxMax[1] = Math.max(coveredBBoxMax[1], currentGlobalPosition[1] + 1);
-                coveredBBoxMax[2] = Math.max(coveredBBoxMax[2], currentGlobalPosition[2] + 1);
+                coveredBBoxMax[0] = Math.max(coveredBBoxMax[0], voxelBoundingBoxInMag1.max[0] + 1);
+                coveredBBoxMax[1] = Math.max(coveredBBoxMax[1], voxelBoundingBoxInMag1.max[1] + 1);
+                coveredBBoxMax[2] = Math.max(coveredBBoxMax[2], voxelBoundingBoxInMag1.max[2] + 1);
 
                 if (labeledVoxelCount % 1000000 === 0) {
                   console.log(`Labeled ${labeledVoxelCount} Vx. Continuing...`);

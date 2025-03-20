@@ -1,15 +1,35 @@
+import { V3 } from "libs/mjs";
+import _ from "lodash";
 import memoizeOne from "memoize-one";
-import type {
-  APIAnnotation,
-  APIAnnotationInfo,
-  APIDataLayer,
-  APIDataset,
-  APISegmentationLayer,
-  AdditionalCoordinate,
-  AnnotationLayerDescriptor,
-  ServerTracing,
-  ServerVolumeTracing,
-} from "types/api_flow_types";
+import messages from "messages";
+import {
+  type AnnotationTool,
+  type ContourMode,
+  MappingStatusEnum,
+  type Vector3,
+  type Vector4,
+} from "oxalis/constants";
+import { AnnotationToolEnum, VolumeTools } from "oxalis/constants";
+import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
+import {
+  getDataLayers,
+  getLayerByName,
+  getMagInfo,
+  getMappingInfo,
+  getSegmentationLayerByName,
+  getSegmentationLayers,
+  getVisibleOrLastSegmentationLayer,
+  getVisibleSegmentationLayer,
+} from "oxalis/model/accessors/dataset_accessor";
+import {
+  getActiveMagIndexForLayer,
+  getAdditionalCoordinatesAsString,
+  getFlooredPosition,
+} from "oxalis/model/accessors/flycam_accessor";
+import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
+import { jsConvertCellIdToRGBA } from "oxalis/shaders/segmentation.glsl";
+import { jsRgb2hsl } from "oxalis/shaders/utils.glsl";
+import { Store } from "oxalis/singletons";
 import type {
   ActiveMappingInfo,
   HybridTracing,
@@ -21,44 +41,24 @@ import type {
   Tracing,
   VolumeTracing,
 } from "oxalis/store";
-import {
-  type AnnotationTool,
-  type ContourMode,
-  MappingStatusEnum,
-  type Vector3,
-  type Vector4,
-} from "oxalis/constants";
-import { AnnotationToolEnum, VolumeTools } from "oxalis/constants";
-import {
-  getMappingInfo,
-  getMagInfo,
-  getSegmentationLayerByName,
-  getSegmentationLayers,
-  getVisibleSegmentationLayer,
-  getDataLayers,
-  getLayerByName,
-  getVisibleOrLastSegmentationLayer,
-} from "oxalis/model/accessors/dataset_accessor";
-import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
-import {
-  getFlooredPosition,
-  getActiveMagIndexForLayer,
-  getAdditionalCoordinatesAsString,
-} from "oxalis/model/accessors/flycam_accessor";
-import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
-import { V3 } from "libs/mjs";
-import { jsConvertCellIdToRGBA } from "oxalis/shaders/segmentation.glsl";
-import { jsRgb2hsl } from "oxalis/shaders/utils.glsl";
-import { MagInfo } from "../helpers/mag_info";
-import messages from "messages";
+import type { SegmentHierarchyNode } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import {
   MISSING_GROUP_ID,
   getGroupByIdWithSubgroups,
-} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import { Store } from "oxalis/singletons";
+} from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import type {
+  APIAnnotation,
+  APIAnnotationInfo,
+  APIDataLayer,
+  APIDataset,
+  APISegmentationLayer,
+  AdditionalCoordinate,
+  AnnotationLayerDescriptor,
+  ServerTracing,
+  ServerVolumeTracing,
+} from "types/api_flow_types";
 import { setSelectedSegmentsOrGroupAction } from "../actions/volumetracing_actions";
-import _ from "lodash";
-import type { SegmentHierarchyNode } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import { MagInfo } from "../helpers/mag_info";
 
 export function getVolumeTracings(tracing: Tracing): Array<VolumeTracing> {
   return tracing.volumes;
@@ -244,12 +244,12 @@ export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state:
   }
 
   const volumeMags = getMagInfoOfActiveSegmentationTracingLayer(state);
-  const lowestExistingMagIndex = volumeMags.getFinestMagIndex();
+  const finestExistingMagIndex = volumeMags.getFinestMagIndex();
   // The current mag is too high for the tool
   // because too many voxels could be annotated at the same time.
   const isZoomStepTooHigh =
     getActiveMagIndexForLayer(state, activeSegmentation.tracingId) >
-    threshold + lowestExistingMagIndex;
+    threshold + finestExistingMagIndex;
   return isZoomStepTooHigh;
 }
 
@@ -261,10 +261,10 @@ export function getMaximumBrushSize(state: OxalisState) {
     return MAX_BRUSH_SIZE_FOR_MAG1;
   }
 
-  const lowestExistingMagIndex = volumeMags.getFinestMagIndex();
+  const finestExistingMagIndex = volumeMags.getFinestMagIndex();
   // For each leading magnification which does not exist,
   // we double the maximum brush size.
-  return MAX_BRUSH_SIZE_FOR_MAG1 * 2 ** lowestExistingMagIndex;
+  return MAX_BRUSH_SIZE_FOR_MAG1 * 2 ** finestExistingMagIndex;
 }
 
 export function getRequestedOrVisibleSegmentationLayer(
@@ -609,11 +609,25 @@ export function isMappingActivationAllowed(
   state: OxalisState,
   mappingName: string | null | undefined,
   layerName?: string | null | undefined,
+  isMergerModeMapping?: boolean,
 ): boolean {
   const isEditableMappingActive = hasEditableMapping(state, layerName);
   const isActiveMappingLocked = isMappingLocked(state, layerName);
 
-  if (!isEditableMappingActive && !isActiveMappingLocked) return true;
+  const activeMappingInfo = getMappingInfo(
+    state.temporaryConfiguration.activeMappingByLayer,
+    layerName,
+  );
+
+  const isAllowedBecauseOfMergerMode =
+    // a merger mode mapping should be enabled
+    isMergerModeMapping &&
+    // and currently no (or a merger mode) mapping exists
+    (activeMappingInfo.mappingName == null || activeMappingInfo.isMergerModeMapping);
+
+  if (!isEditableMappingActive && (!isActiveMappingLocked || isAllowedBecauseOfMergerMode)) {
+    return true;
+  }
 
   const volumeTracing = getRequestedOrDefaultSegmentationTracingLayer(state, layerName);
 

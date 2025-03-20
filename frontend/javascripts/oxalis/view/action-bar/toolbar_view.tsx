@@ -1,39 +1,49 @@
 import {
-  Radio,
-  Badge,
-  Space,
-  Popover,
-  type RadioChangeEvent,
-  Dropdown,
-  type MenuProps,
-  Col,
-  Row,
-  Divider,
-  Popconfirm,
-} from "antd";
-import {
   ClearOutlined,
   DownOutlined,
   ExportOutlined,
   InfoCircleOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
-import { useSelector, useDispatch } from "react-redux";
+import {
+  Badge,
+  Col,
+  Divider,
+  Dropdown,
+  type MenuProps,
+  Popconfirm,
+  Popover,
+  Radio,
+  type RadioChangeEvent,
+  Row,
+  Space,
+} from "antd";
 import React, { useEffect, useCallback, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 
-import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
-import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
-import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
-import {
-  interpolateSegmentationLayerAction,
-  createCellAction,
-  setMousePositionAction,
-} from "oxalis/model/actions/volumetracing_actions";
-import {
-  createTreeAction,
-  setMergerModeEnabledAction,
-} from "oxalis/model/actions/skeletontracing_actions";
+import { useKeyPress, usePrevious } from "libs/react_hooks";
 import { document } from "libs/window";
+import {
+  type AnnotationTool,
+  AnnotationToolEnum,
+  FillModeEnum,
+  type InterpolationMode,
+  InterpolationModeEnum,
+  MappingStatusEnum,
+  MeasurementTools,
+  type OverwriteMode,
+  OverwriteModeEnum,
+  ToolsWithInterpolationCapabilities,
+  ToolsWithOverwriteCapabilities,
+  Unicode,
+  VolumeTools,
+} from "oxalis/constants";
+import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  TOOL_NAMES,
+  adaptActiveToolToShortcuts,
+  getDisabledInfoForTools,
+} from "oxalis/model/accessors/tool_accessor";
 import {
   getActiveSegmentationTracing,
   getMappingInfoForVolumeTracing,
@@ -43,49 +53,40 @@ import {
   hasAgglomerateMapping,
   hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
-import {
-  getDisabledInfoForTools,
-  adaptActiveToolToShortcuts,
-} from "oxalis/model/accessors/tool_accessor";
-import { setToolAction, showQuickSelectSettingsAction } from "oxalis/model/actions/ui_actions";
+import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { usePrevious, useKeyPress } from "libs/react_hooks";
-import { userSettings } from "types/schemas/user_settings.schema";
-import ButtonComponent, { ToggleButton } from "oxalis/view/components/button_component";
-import { MaterializeVolumeAnnotationModal } from "oxalis/view/action-bar/starting_job_modals";
 import {
-  ToolsWithOverwriteCapabilities,
-  AnnotationToolEnum,
-  OverwriteModeEnum,
-  FillModeEnum,
-  VolumeTools,
-  MappingStatusEnum,
-  type AnnotationTool,
-  type OverwriteMode,
-  ToolsWithInterpolationCapabilities,
-  InterpolationModeEnum,
-  type InterpolationMode,
-  Unicode,
-  MeasurementTools,
-} from "oxalis/constants";
+  createTreeAction,
+  setMergerModeEnabledAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import { setToolAction, showQuickSelectSettingsAction } from "oxalis/model/actions/ui_actions";
+import {
+  createCellAction,
+  interpolateSegmentationLayerAction,
+  setMousePositionAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import { Model } from "oxalis/singletons";
 import Store, { type BrushPresets, type OxalisState } from "oxalis/store";
+import { MaterializeVolumeAnnotationModal } from "oxalis/view/action-bar/starting_job_modals";
+import ButtonComponent, { ToggleButton } from "oxalis/view/components/button_component";
+import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
+import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
+import { userSettings } from "types/schemas/user_settings.schema";
 
+import { updateNovelUserExperienceInfos } from "admin/admin_rest_api";
+import FastTooltip from "components/fast_tooltip";
 import features from "features";
-import { getInterpolationInfo } from "oxalis/model/sagas/volume/volume_interpolation_saga";
-import { rgbaToCSS } from "oxalis/shaders/utils.glsl";
-import { clearProofreadingByProducts } from "oxalis/model/actions/proofread_actions";
-import { QuickSelectControls } from "./quick_select_settings";
-import type { MenuInfo } from "rc-menu/lib/interface";
+import { useIsActiveUserAdminOrManager } from "libs/react_helpers";
+import defaultState from "oxalis/default_state";
 import { getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
 import { ensureLayerMappingsAreLoadedAction } from "oxalis/model/actions/dataset_actions";
-import { APIJobType } from "types/api_flow_types";
-import { useIsActiveUserAdminOrManager } from "libs/react_helpers";
-import { updateNovelUserExperienceInfos } from "admin/admin_rest_api";
+import { clearProofreadingByProducts } from "oxalis/model/actions/proofread_actions";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
-import FastTooltip from "components/fast_tooltip";
-import defaultState from "oxalis/default_state";
+import { getInterpolationInfo } from "oxalis/model/sagas/volume/volume_interpolation_saga";
+import { rgbaToCSS } from "oxalis/shaders/utils.glsl";
+import type { MenuInfo } from "rc-menu/lib/interface";
+import { APIJobType } from "types/api_flow_types";
+import { QuickSelectControls } from "./quick_select_settings";
 
 const NARROW_BUTTON_STYLE = {
   paddingLeft: 10,
@@ -398,12 +399,14 @@ function SkeletonSpecificButtons() {
   );
   const isEditableMappingActive =
     segmentationTracingLayer != null && !!segmentationTracingLayer.hasEditableMapping;
-  const isMappingLocked =
-    segmentationTracingLayer != null && !!segmentationTracingLayer.mappingIsLocked;
-  const isMergerModeDisabled = isEditableMappingActive || isMappingLocked;
+  const isMappingLockedWithNonNull =
+    segmentationTracingLayer != null &&
+    !!segmentationTracingLayer.mappingIsLocked &&
+    segmentationTracingLayer.mappingName != null;
+  const isMergerModeDisabled = isEditableMappingActive || isMappingLockedWithNonNull;
   const mergerModeTooltipText = isEditableMappingActive
     ? "Merger mode cannot be enabled while an editable mapping is active."
-    : isMappingLocked
+    : isMappingLockedWithNonNull
       ? "Merger mode cannot be enabled while a mapping is locked. Please create a new annotation and use the merger mode there."
       : "Toggle Merger Mode - When enabled, skeletons that connect multiple segments will merge those segments.";
 
@@ -829,33 +832,17 @@ function calculateMediumBrushSize(maximumBrushSize: number) {
   return Math.ceil((maximumBrushSize - userSettings.brushSize.minimum) / 10) * 5;
 }
 
-const TOOL_NAMES = {
-  MOVE: "Move",
-  SKELETON: "Skeleton",
-  BRUSH: "Brush",
-  ERASE_BRUSH: "Erase (via Brush)",
-  TRACE: "Trace",
-  ERASE_TRACE: "Erase",
-  FILL_CELL: "Fill Tool",
-  PICK_CELL: "Segment Picker",
-  QUICK_SELECT: "Quick Select Tool",
-  BOUNDING_BOX: "Bounding Box Tool",
-  PROOFREAD: "Proofreading Tool",
-  LINE_MEASUREMENT: "Measurement Tool",
-  AREA_MEASUREMENT: "Area Measurement Tool",
-};
-
-export default function ToolbarView() {
+export default function ToolbarView({ isReadOnly }: { isReadOnly: boolean }) {
   const dispatch = useDispatch();
-  const hasVolume = useSelector((state: OxalisState) => state.tracing.volumes.length > 0);
-  const hasSkeleton = useSelector((state: OxalisState) => state.tracing.skeleton != null);
+  const hasVolume = useSelector((state: OxalisState) => state.tracing?.volumes.length > 0);
+  const hasSkeleton = useSelector((state: OxalisState) => state.tracing?.skeleton != null);
+
   const isAgglomerateMappingEnabled = useSelector(hasAgglomerateMapping);
 
   const [lastForcefullyDisabledTool, setLastForcefullyDisabledTool] =
     useState<AnnotationTool | null>(null);
-  const isVolumeModificationAllowed = useSelector(
-    (state: OxalisState) => !hasEditableMapping(state),
-  );
+  const isVolumeModificationAllowed =
+    useSelector((state: OxalisState) => !hasEditableMapping(state)) && !isReadOnly;
   const useLegacyBindings = useSelector(
     (state: OxalisState) => state.userConfiguration.useLegacyBindings,
   );
@@ -917,6 +904,7 @@ export default function ToolbarView() {
     isControlOrMetaPressed,
     isAltPressed,
   );
+  const areEditableMappingsEnabled = features().editableMappingsEnabled;
 
   const skeletonToolDescription = useLegacyBindings
     ? "Use left-click to move around and right-click to create new skeleton nodes"
@@ -939,7 +927,7 @@ export default function ToolbarView() {
           <i className="fas fa-arrows-alt" />
         </ToolRadioButton>
 
-        {hasSkeleton ? (
+        {hasSkeleton && !isReadOnly ? (
           <ToolRadioButton
             name={TOOL_NAMES.SKELETON}
             description={skeletonToolDescription}
@@ -1103,32 +1091,41 @@ export default function ToolbarView() {
             </ToolRadioButton>
           </React.Fragment>
         ) : null}
-        <ToolRadioButton
-          name={TOOL_NAMES.BOUNDING_BOX}
-          description="Create, resize and modify bounding boxes."
-          disabledExplanation={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].explanation}
-          disabled={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled}
-          value={AnnotationToolEnum.BOUNDING_BOX}
-        >
-          <img
-            src="/assets/images/bounding-box.svg"
-            alt="Bounding Box Icon"
-            style={{
-              opacity: disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled ? 0.5 : 1,
-              ...imgStyleForSpaceyIcons,
-            }}
-          />
-        </ToolRadioButton>
+        {!isReadOnly && (
+          <ToolRadioButton
+            name={TOOL_NAMES.BOUNDING_BOX}
+            description="Create, resize and modify bounding boxes."
+            disabledExplanation={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].explanation}
+            disabled={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled}
+            value={AnnotationToolEnum.BOUNDING_BOX}
+          >
+            <img
+              src="/assets/images/bounding-box.svg"
+              alt="Bounding Box Icon"
+              style={{
+                opacity: disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled
+                  ? 0.5
+                  : 1,
+                ...imgStyleForSpaceyIcons,
+              }}
+            />
+          </ToolRadioButton>
+        )}
 
-        {hasSkeleton && hasVolume ? (
+        {hasSkeleton && hasVolume && !isReadOnly ? (
           <ToolRadioButton
             name={TOOL_NAMES.PROOFREAD}
-            description="Modify an agglomerated segmentation. Other segmentation modifications, like brushing, are not allowed if this tool is used."
+            description={
+              "Modify an agglomerated segmentation. Other segmentation modifications, like brushing, are not allowed if this tool is used."
+            }
             disabledExplanation={
-              isAgglomerateMappingEnabled.reason ||
-              disabledInfosForTools[AnnotationToolEnum.PROOFREAD].explanation
+              areEditableMappingsEnabled
+                ? isAgglomerateMappingEnabled.reason ||
+                  disabledInfosForTools[AnnotationToolEnum.PROOFREAD].explanation
+                : "Proofreading tool is only available on webknossos.org"
             }
             disabled={
+              !areEditableMappingsEnabled ||
               !isAgglomerateMappingEnabled.value ||
               disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled
             }
@@ -1199,6 +1196,7 @@ function ToolSpecificSettings({
       ? "The quick select tool is now working without AI. Activate AI for better results."
       : "The quick select tool is now working with AI."
     : "The quick select tool with AI is only available on webknossos.org";
+  const areEditableMappingsEnabled = features().editableMappingsEnabled;
   const toggleQuickSelectStrategy = () => {
     dispatch(
       updateUserSettingAction("quickSelect", {
@@ -1265,7 +1263,9 @@ function ToolSpecificSettings({
 
       {adaptedActiveTool === AnnotationToolEnum.FILL_CELL ? <FloodFillSettings /> : null}
 
-      {adaptedActiveTool === AnnotationToolEnum.PROOFREAD ? <ProofReadingComponents /> : null}
+      {adaptedActiveTool === AnnotationToolEnum.PROOFREAD && areEditableMappingsEnabled ? (
+        <ProofReadingComponents />
+      ) : null}
 
       {MeasurementTools.includes(adaptedActiveTool) ? (
         <MeasurementToolSwitch activeTool={adaptedActiveTool} />
@@ -1365,6 +1365,7 @@ function FloodFillSettings() {
         style={{
           opacity: isRestrictedToBoundingBox ? 1 : 0.5,
           marginLeft: 12,
+          display: "inline-block",
         }}
         type={isRestrictedToBoundingBox ? "primary" : "default"}
         onClick={toggleRestrictFloodfillToBoundingBox}

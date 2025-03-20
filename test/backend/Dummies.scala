@@ -61,6 +61,8 @@ object Dummies {
     Some(true))
   val treeGroup2: TreeGroup = TreeGroup("Axon 2", 2, Seq.empty, Some(true))
 
+  val tracingId: String = "dummyTracingId"
+
   val skeletonTracing: SkeletonTracing = SkeletonTracing(
     "dummy_dataset",
     Seq(tree1, tree2),

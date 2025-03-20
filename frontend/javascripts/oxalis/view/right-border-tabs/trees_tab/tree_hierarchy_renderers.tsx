@@ -11,8 +11,8 @@ import { type MenuProps, notification } from "antd";
 import _ from "lodash";
 import {
   LongUnitToShortUnitMap,
-  TreeTypeEnum,
   type TreeType,
+  TreeTypeEnum,
   type Vector3,
 } from "oxalis/constants";
 import type { Action } from "oxalis/model/actions/actions";
@@ -32,27 +32,29 @@ import {
   setTreeEdgeVisibilityAction,
   setTreeGroupAction,
   setTreeGroupsAction,
+  setTreeNameAction,
   setTreeTypeAction,
   shuffleAllTreeColorsAction,
   shuffleTreeColorAction,
   toggleInactiveTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import { api, Store } from "oxalis/singletons";
+import { Store, api } from "oxalis/singletons";
 import type { Tree, TreeGroup, TreeMap } from "oxalis/store";
+import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import {
+  GroupTypeEnum,
+  MISSING_GROUP_ID,
+  type TreeNode,
   anySatisfyDeep,
   callDeep,
   createGroupToTreesMap,
   getGroupByIdWithSubgroups,
   getNodeKey,
-  GroupTypeEnum,
   makeBasicGroupObject,
-  MISSING_GROUP_ID,
-  type TreeNode,
-} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import { HideTreeEdgesIcon } from "./hide_tree_edges_icon";
+} from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { ColoredDotIcon } from "../segments_tab/segment_list_item";
+import { HideTreeEdgesIcon } from "./hide_tree_edges_icon";
 
 export type Props = {
   activeTreeId: number | null | undefined;
@@ -93,7 +95,14 @@ export function renderTreeNode(
       style={{ wordBreak: "break-word" }}
     >
       <ColoredDotIcon colorRGBA={[...tree.color, 1.0]} />
-      {`(${tree.nodes.size()}) `} {maybeProofreadingIcon} {tree.name}
+      {`(${tree.nodes.size()}) `} {maybeProofreadingIcon}
+      <EditableTextLabel
+        value={tree.name}
+        label="Tree Name"
+        onChange={(newValue) => Store.dispatch(setTreeNameAction(newValue, tree.treeId))}
+        hideEditIcon
+        margin={0}
+      />
       {(tree.metadata || []).length > 0 ? (
         <FastTooltip
           className="deemphasized icon-margin-left"
@@ -203,7 +212,7 @@ export function renderGroupNode(
   expandedNodeKeys: string[],
 ) {
   // The root group must not be removed or renamed
-  const { name } = node;
+  const { id, name } = node;
 
   // Make sure the displayed name is not empty
   const displayableName = name.trim() || "<Unnamed Group>";
@@ -218,7 +227,14 @@ export function renderGroupNode(
       style={{ wordBreak: "break-word" }}
     >
       <FolderOutlined className="icon-margin-right" />
-      {displayableName}
+      <EditableTextLabel
+        value={displayableName}
+        label="Group Name"
+        onChange={(newValue) => api.tracing.renameSkeletonGroup(id, newValue)}
+        hideEditIcon
+        margin={0}
+      />
+      {}
     </div>
   );
 }

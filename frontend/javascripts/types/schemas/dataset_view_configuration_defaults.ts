@@ -1,10 +1,10 @@
 import _ from "lodash";
-import {
-  getDefaultLayerViewConfiguration,
-  defaultDatasetViewConfiguration,
-} from "types/schemas/dataset_view_configuration.schema";
-import type { APIDataset, APIMaybeUnimportedDataset, APIDataLayer } from "types/api_flow_types";
 import { getDefaultValueRangeOfLayer, isColorLayer } from "oxalis/model/accessors/dataset_accessor";
+import type { APIDataset, APIMaybeUnimportedDataset } from "types/api_flow_types";
+import {
+  defaultDatasetViewConfiguration,
+  getDefaultLayerViewConfiguration,
+} from "types/schemas/dataset_view_configuration.schema";
 import { validateObjectWithType } from "types/validation";
 
 const eliminateErrors = (
@@ -30,10 +30,13 @@ const eliminateErrors = (
   });
 };
 
-export const getSpecificDefaultsForLayers = (dataset: APIDataset, layer: APIDataLayer) => ({
-  intensityRange:
-    layer.category === "color" ? getDefaultValueRangeOfLayer(dataset, layer.name) : undefined,
-  alpha: layer.category === "color" ? 100 : 20,
+export const getSpecificDefaultsForLayer = (
+  dataset: APIDataset,
+  layerName: string,
+  isColorLayer: boolean,
+) => ({
+  intensityRange: isColorLayer ? getDefaultValueRangeOfLayer(dataset, layerName) : undefined,
+  alpha: isColorLayer ? 100 : 20,
 });
 
 export function ensureDatasetSettingsHasLayerOrder(
@@ -71,7 +74,7 @@ export const enforceValidatedDatasetViewConfiguration = (
     const dataset: APIDataset = maybeUnimportedDataset;
     dataset.dataSource.dataLayers.forEach((layer) => {
       const layerConfigDefault = getDefaultLayerViewConfiguration(
-        getSpecificDefaultsForLayers(dataset, layer),
+        getSpecificDefaultsForLayer(dataset, layer.name, layer.category === "color"),
       );
       const existingLayerConfig = layers[layer.name];
 

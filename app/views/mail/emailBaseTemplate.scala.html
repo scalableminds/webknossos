@@ -1,4 +1,4 @@
-@()(content:Html)
+@(additionalFooter: String)(content:Html)
 <html>
 
 <body>
@@ -35,6 +35,9 @@
       &nbsp;
       <a href="https://twitter.com/webknossos"><img src="https://static.webknossos.org/mails/icon-twitter.png"
           alt="Twitter Channel" style="width: 50px; height: 50px;" /></a>
+      &nbsp;
+      <a href="https://bsky.app/profile/webknossos.org"><img src="https://static.webknossos.org/mails/icon-bluesky.png"
+          alt="Bluesky Channel" style="width: 50px; height: 50px;" /></a>
     </p>
 
     <div style="height: 60px;">&nbsp;</div>
@@ -43,8 +46,7 @@
       cancel your account at any time.
     </p>
     <p style="color: #888; font-size: 0.6rem;">
-      <a href="https://webknossos.org" style="color: #888;">webknossos.org</a> is a service by
-      <a href="https://scalableminds.com">scalable minds</a> &bull; <a href="mailto:hello@@webknossos.org" style="color: #888;">hello@@webknossos.org</a>
+      @Html(additionalFooter)
     </p>
     <div style="height: 60px;">&nbsp;</div>
   </div>

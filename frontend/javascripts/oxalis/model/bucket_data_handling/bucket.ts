@@ -1,23 +1,23 @@
-import { createNanoEvents, type Emitter } from "nanoevents";
-import * as THREE from "three";
-import _ from "lodash";
-import type { BucketDataArray, ElementClass } from "types/api_flow_types";
-import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
-import type { MaybeUnmergedBucketLoadedPromise } from "oxalis/model/actions/volumetracing_actions";
-import { addBucketToUndoAction } from "oxalis/model/actions/volumetracing_actions";
-import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
+import ErrorHandling from "libs/error_handling";
 import { castForArrayType, mod } from "libs/utils";
+import window from "libs/window";
+import _ from "lodash";
+import { type Emitter, createNanoEvents } from "nanoevents";
 import type { BoundingBoxType, BucketAddress, Vector3 } from "oxalis/constants";
 import Constants from "oxalis/constants";
+import type { MaybeUnmergedBucketLoadedPromise } from "oxalis/model/actions/volumetracing_actions";
+import { addBucketToUndoAction } from "oxalis/model/actions/volumetracing_actions";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import ErrorHandling from "libs/error_handling";
-import Store from "oxalis/store";
+import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
 import type TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
-import window from "libs/window";
-import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
+import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
+import Store from "oxalis/store";
+import * as THREE from "three";
+import type { BucketDataArray, ElementClass } from "types/api_flow_types";
 import type { AdditionalCoordinate } from "types/api_flow_types";
-import BucketSnapshot, { type PendingOperation } from "./bucket_snapshot";
+import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 import { getConstructorForElementClass, uint8ToTypedBuffer } from "../helpers/typed_buffer";
+import BucketSnapshot, { type PendingOperation } from "./bucket_snapshot";
 
 export enum BucketStateEnum {
   UNREQUESTED = "UNREQUESTED",
@@ -593,12 +593,11 @@ export class DataBucket {
 
     switch (this.state) {
       case BucketStateEnum.REQUESTED: {
-        // Clone the data for the unmergedBucketDataLoaded event,
-        // as the following merge operation is done in-place.
-        const dataClone = new TypedArrayClass(data);
-        this.trigger("unmergedBucketDataLoaded", dataClone);
-
         if (this.dirty) {
+          // Clone the data for the unmergedBucketDataLoaded event,
+          // as the following merge operation is done in-place.
+          const dataClone = new TypedArrayClass(data);
+          this.trigger("unmergedBucketDataLoaded", dataClone);
           this.merge(data);
         } else {
           this.data = data;

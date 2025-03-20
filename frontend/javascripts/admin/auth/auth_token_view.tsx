@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
 import { CopyOutlined, SwapOutlined } from "@ant-design/icons";
-import { Input, Button, Col, Row, Spin, Form, Space } from "antd";
 import { getAuthToken, revokeAuthToken } from "admin/admin_rest_api";
-import type { OxalisState } from "oxalis/store";
+import { Button, Col, Form, Input, Row, Space, Spin } from "antd";
 import Toast from "libs/toast";
+import type { OxalisState } from "oxalis/store";
+import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 const FormItem = Form.Item;
 

@@ -1,21 +1,21 @@
 import Maybe from "data.maybe";
-import _ from "lodash";
+import dayjs from "dayjs";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'java... Remove this comment to see the full error message
 import naturalSort from "javascript-natural-sort";
-import type { APIDataset, APIUser } from "types/api_flow_types";
-import type { BoundingBoxObject, NumberLike } from "oxalis/store";
+import window, { document, location } from "libs/window";
+import _ from "lodash";
 import type {
+  BoundingBoxType,
+  ColorObject,
+  Point3,
+  TypedArray,
   Vector3,
   Vector4,
   Vector6,
-  BoundingBoxType,
-  Point3,
-  ColorObject,
-  TypedArray,
 } from "oxalis/constants";
-import window, { document, location } from "libs/window";
+import type { BoundingBoxObject, NumberLike } from "oxalis/store";
+import type { APIDataset, APIUser } from "types/api_flow_types";
 import type { ArbitraryObject, Comparator } from "types/globals";
-import dayjs from "dayjs";
 
 type UrlParams = Record<string, string>;
 // Fix JS modulo bug
@@ -881,9 +881,11 @@ export function waitForElementWithId(elementId: string): Promise<any> {
 }
 
 export function convertDecToBase256(num: number): Vector4 {
+  const sign = Math.sign(num);
+
   const divMod = (n: number) => [Math.floor(n / 256), n % 256];
 
-  let tmp = num;
+  let tmp = Math.abs(num);
 
   let r: number, g: number, b: number, a: number;
   [tmp, r] = divMod(tmp);
@@ -895,11 +897,13 @@ export function convertDecToBase256(num: number): Vector4 {
   [tmp, a] = divMod(tmp);
 
   // Little endian
-  return [r, g, b, a];
+  return map4((el) => sign * el, [r, g, b, a]);
 }
 
 export function castForArrayType(uncastNumber: number, data: TypedArray): number | bigint {
-  return data instanceof BigUint64Array ? BigInt(uncastNumber) : uncastNumber;
+  return data instanceof BigUint64Array || data instanceof BigInt64Array
+    ? BigInt(uncastNumber)
+    : uncastNumber;
 }
 
 export function convertNumberTo64Bit(num: number | bigint | null): [Vector4, Vector4] {
@@ -915,12 +919,20 @@ export function convertNumberTo64BitTuple(num: number | bigint | null): [number,
   if (num == null || Number.isNaN(num)) {
     return [0, 0];
   }
+
+  let sign: number | null;
+  if (typeof num === "bigint") {
+    sign = num < 0n ? -1 : 1;
+  } else {
+    sign = Math.sign(num);
+  }
+
   // Cast to BigInt as bit-wise operations only work with 32 bits,
   // even though Number uses 53 bits.
-  const bigNum = BigInt(num);
+  const bigNum = BigInt(sign) * BigInt(num);
 
-  const bigNumLow = Number((2n ** 32n - 1n) & bigNum);
-  const bigNumHigh = Number(bigNum >> 32n);
+  const bigNumLow = sign * Number((2n ** 32n - 1n) & bigNum);
+  const bigNumHigh = sign * Number(bigNum >> 32n);
 
   return [bigNumHigh, bigNumLow];
 }
@@ -1299,4 +1311,11 @@ export function generateRandomId(length: number) {
     counter += 1;
   }
   return result;
+}
+
+export function getPhraseFromCamelCaseString(stringInCamelCase: string): string {
+  return stringInCamelCase
+    .split(/(?=[A-Z])/)
+    .map((word) => capitalize(word.replace(/(^|\s)td/, "$13D")))
+    .join(" ");
 }

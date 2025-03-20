@@ -1,73 +1,73 @@
-import type React from "react";
-import { useState, useEffect, useRef } from "react";
+import {
+  BarChartOutlined,
+  BellOutlined,
+  CheckOutlined,
+  HomeOutlined,
+  QuestionCircleOutlined,
+  SwapOutlined,
+  TeamOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
 import {
   Avatar,
-  Button,
   Badge,
-  Tooltip,
+  Button,
+  ConfigProvider,
+  Input,
+  type InputRef,
   Layout,
   Menu,
   Popover,
   type SubMenuProps,
   Tag,
-  Input,
-  type InputRef,
-  ConfigProvider,
+  Tooltip,
 } from "antd";
-import {
-  SwapOutlined,
-  TeamOutlined,
-  CheckOutlined,
-  BarChartOutlined,
-  HomeOutlined,
-  QuestionCircleOutlined,
-  UserOutlined,
-  BellOutlined,
-} from "@ant-design/icons";
-import { useHistory, Link } from "react-router-dom";
 import classnames from "classnames";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
 import { connect, useSelector } from "react-redux";
+import { Link, useHistory } from "react-router-dom";
 
+import {
+  getBuildInfo,
+  getUsersOrganizations,
+  sendAnalyticsEvent,
+  switchToOrganization,
+  updateNovelUserExperienceInfos,
+  updateSelectedThemeOfUser,
+} from "admin/admin_rest_api";
+import LoginForm from "admin/auth/login_form";
+import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import type { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
+import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
+import { PricingEnforcedSpan } from "components/pricing_enforcers";
+import features from "features";
+import { useFetch, useInterval } from "libs/react_helpers";
+import Request from "libs/request";
 import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import window, { location } from "libs/window";
+import messages from "messages";
+import constants from "oxalis/constants";
+import {
+  isAnnotationFromDifferentOrganization,
+  isAnnotationOwner as isAnnotationOwnerAccessor,
+} from "oxalis/model/accessors/annotation_accessor";
+import { formatUserName } from "oxalis/model/accessors/user_accessor";
+import { setThemeAction } from "oxalis/model/actions/ui_actions";
+import { logoutUserAction, setActiveUserAction } from "oxalis/model/actions/user_actions";
+import type { OxalisState } from "oxalis/store";
+import Store from "oxalis/store";
+import { HelpModal } from "oxalis/view/help_modal";
+import { PortalTarget } from "oxalis/view/layouting/portal_utils";
+import type { MenuClickEventHandler } from "rc-menu/lib/interface";
+import { getAntdTheme, getSystemColorTheme } from "theme";
 import type {
   APIOrganizationCompact,
   APIUser,
   APIUserCompact,
   APIUserTheme,
 } from "types/api_flow_types";
-import { PortalTarget } from "oxalis/view/layouting/portal_utils";
-import {
-  getBuildInfo,
-  getUsersOrganizations,
-  switchToOrganization,
-  updateSelectedThemeOfUser,
-  updateNovelUserExperienceInfos,
-  sendAnalyticsEvent,
-} from "admin/admin_rest_api";
-import { logoutUserAction, setActiveUserAction } from "oxalis/model/actions/user_actions";
-import { useFetch, useInterval } from "libs/react_helpers";
-import LoginForm from "admin/auth/login_form";
-import Request from "libs/request";
-import type { OxalisState } from "oxalis/store";
-import Store from "oxalis/store";
-import * as Utils from "libs/utils";
-import window, { location } from "libs/window";
-import features from "features";
-import { setThemeAction } from "oxalis/model/actions/ui_actions";
-import { HelpModal } from "oxalis/view/help_modal";
-import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import messages from "messages";
-import { PricingEnforcedSpan } from "components/pricing_enforcers";
-import type { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
-import type { MenuClickEventHandler } from "rc-menu/lib/interface";
-import constants from "oxalis/constants";
-import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
-import { getAntdTheme, getSystemColorTheme } from "theme";
-import { formatUserName } from "oxalis/model/accessors/user_accessor";
-import {
-  isAnnotationFromDifferentOrganization,
-  isAnnotationOwner as isAnnotationOwnerAccessor,
-} from "oxalis/model/accessors/annotation_accessor";
 
 const { Header } = Layout;
 
@@ -200,7 +200,7 @@ function getCollapsibleMenuTitle(
   );
 }
 
-function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser) {
+export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser) {
   const isAdmin = Utils.isUserAdmin(activeUser);
   const isAdminOrTeamManager = Utils.isUserAdminOrTeamManager(activeUser);
   const organization = activeUser.organization;
@@ -245,7 +245,7 @@ function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser) {
 
   if (isAdmin) {
     adminstrationSubMenuItems.push({
-      key: "/organization",
+      key: `/organizations/${organization}`,
       label: <Link to={`/organizations/${organization}`}>Organization</Link>,
     });
   }
@@ -949,7 +949,7 @@ function Navbar({
     >
       <GlobalProgressBar />
       <MaintenanceBanner />
-      <ConfigProvider theme={{ ...getAntdTheme("light") }}>
+      <ConfigProvider theme={getAntdTheme("light")}>
         <UpgradeVersionBanner />
       </ConfigProvider>
       <Menu
@@ -983,7 +983,7 @@ function Navbar({
           paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
         }}
       />
-      <ConfigProvider theme={{ ...getAntdTheme("dark") }}>
+      <ConfigProvider theme={getAntdTheme("dark")}>
         <div
           style={{
             display: "flex",

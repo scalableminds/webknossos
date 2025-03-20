@@ -1,33 +1,36 @@
-import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { all, call, cancel, fork, take, takeEvery } from "typed-redux-saga";
-import { alert } from "libs/window";
-import VolumetracingSagas from "oxalis/model/sagas/volumetracing_saga";
-import SaveSagas, { toggleErrorHighlighting } from "oxalis/model/sagas/save_saga";
-import UndoSaga from "oxalis/model/sagas/undo_saga";
-import AnnotationSagas from "oxalis/model/sagas/annotation_saga";
-import { watchDataRelevantChanges } from "oxalis/model/sagas/prefetch_saga";
-import SkeletontracingSagas from "oxalis/model/sagas/skeletontracing_saga";
 import ErrorHandling from "libs/error_handling";
-import meshSaga, { handleAdditionalCoordinateUpdate } from "oxalis/model/sagas/mesh_saga";
-import DatasetSagas from "oxalis/model/sagas/dataset_saga";
+import { alert } from "libs/window";
+import AnnotationSagas from "oxalis/model/sagas/annotation_saga";
 import { watchToolDeselection, watchToolReset } from "oxalis/model/sagas/annotation_tool_saga";
-import SettingsSaga from "oxalis/model/sagas/settings_saga";
-import watchTasksAsync, { warnAboutMagRestriction } from "oxalis/model/sagas/task_saga";
-import loadHistogramDataSaga from "oxalis/model/sagas/load_histogram_data_saga";
 import listenToClipHistogramSaga from "oxalis/model/sagas/clip_histogram_saga";
+import DatasetSagas from "oxalis/model/sagas/dataset_saga";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
+import loadHistogramDataSaga from "oxalis/model/sagas/load_histogram_data_saga";
 import MappingSaga from "oxalis/model/sagas/mapping_saga";
+import meshSaga, { handleAdditionalCoordinateUpdate } from "oxalis/model/sagas/mesh_saga";
+import { watchDataRelevantChanges } from "oxalis/model/sagas/prefetch_saga";
 import ProofreadSaga from "oxalis/model/sagas/proofread_saga";
-import { listenForWkReady } from "oxalis/model/sagas/wk_ready_saga";
-import { warnIfEmailIsUnverified } from "./user_saga";
+import ReadySagas from "oxalis/model/sagas/ready_sagas";
+import SaveSagas, { toggleErrorHighlighting } from "oxalis/model/sagas/save_saga";
+import SettingsSaga from "oxalis/model/sagas/settings_saga";
+import SkeletontracingSagas from "oxalis/model/sagas/skeletontracing_saga";
+import watchTasksAsync, { warnAboutMagRestriction } from "oxalis/model/sagas/task_saga";
+import UndoSaga from "oxalis/model/sagas/undo_saga";
+import VolumetracingSagas from "oxalis/model/sagas/volumetracing_saga";
+import { all, call, cancel, fork, put, take, takeEvery } from "typed-redux-saga";
 import type { EscalateErrorAction } from "../actions/actions";
+import { setIsWkReadyAction } from "../actions/ui_actions";
+import maintainMaximumZoomForAllMagsSaga from "./flycam_info_cache_saga";
+import { warnIfEmailIsUnverified } from "./user_saga";
 
 let rootSagaCrashed = false;
-export default function* rootSaga(): Saga<void> {
+export default function* rootSaga(): Saga<never> {
   while (true) {
     rootSagaCrashed = false;
     const task = yield* fork(restartableSaga);
     yield* take("RESTART_SAGA");
     yield* cancel(task);
+    yield* put(setIsWkReadyAction(false));
   }
 }
 export function hasRootSagaCrashed() {
@@ -46,7 +49,7 @@ function* listenToErrorEscalation() {
 function* restartableSaga(): Saga<void> {
   try {
     yield* all([
-      call(listenForWkReady),
+      ...ReadySagas.map((saga) => call(saga)),
       call(warnAboutMagRestriction),
       call(SettingsSaga),
       ...SkeletontracingSagas.map((saga) => call(saga)),
@@ -66,6 +69,7 @@ function* restartableSaga(): Saga<void> {
       call(warnIfEmailIsUnverified),
       call(listenToErrorEscalation),
       call(handleAdditionalCoordinateUpdate),
+      call(maintainMaximumZoomForAllMagsSaga),
       ...DatasetSagas.map((saga) => call(saga)),
     ]);
   } catch (err) {

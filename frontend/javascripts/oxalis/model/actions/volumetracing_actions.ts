@@ -1,15 +1,15 @@
+import Deferred from "libs/async/deferred";
+import type { ContourMode, OrthoView, Vector2, Vector3 } from "oxalis/constants";
+import type { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
+import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
+import type { NumberLike, Segment, SegmentGroup, SegmentMap } from "oxalis/store";
+import type { Dispatch } from "redux";
+import { batchActions } from "redux-batched-actions";
 import type {
   BucketDataArray,
   ServerEditableMapping,
   ServerVolumeTracing,
 } from "types/api_flow_types";
-import type { Vector2, Vector3, OrthoView, ContourMode } from "oxalis/constants";
-import type { NumberLike, Segment, SegmentGroup, SegmentMap } from "oxalis/store";
-import Deferred from "libs/async/deferred";
-import type { Dispatch } from "redux";
-import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
-import type { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
-import { batchActions } from "redux-batched-actions";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 import type BucketSnapshot from "../bucket_data_handling/bucket_snapshot";
 
@@ -375,14 +375,16 @@ export const dispatchFloodfillAsync = async (
   await readyDeferred.promise();
 };
 
-export const setHasEditableMappingAction = () =>
+export const setHasEditableMappingAction = (tracingId: string) =>
   ({
     type: "SET_HAS_EDITABLE_MAPPING",
+    tracingId,
   }) as const;
 
-export const setMappingIsLockedAction = () =>
+export const setMappingIsLockedAction = (tracingId: string) =>
   ({
     type: "SET_MAPPING_IS_LOCKED",
+    tracingId,
   }) as const;
 
 export const computeQuickSelectForRectAction = (

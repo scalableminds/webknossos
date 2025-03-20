@@ -1,21 +1,21 @@
-import type { Point2, Vector3 } from "oxalis/constants";
-import { Model } from "oxalis/singletons";
-import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
-import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
-import { loadAgglomerateSkeletonAction } from "oxalis/model/actions/skeletontracing_actions";
-import Store from "oxalis/store";
 import Toast from "libs/toast";
-import { clickSegmentAction } from "oxalis/model/actions/volumetracing_actions";
+import type { Point2, Vector3 } from "oxalis/constants";
 import {
   getSegmentIdForPosition,
   getSegmentIdForPositionAsync,
 } from "oxalis/controller/combinations/volume_handlers";
-import { setActiveConnectomeAgglomerateIdsAction } from "oxalis/model/actions/connectome_actions";
+import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getTreeNameForAgglomerateSkeleton } from "oxalis/model/accessors/skeletontracing_accessor";
+import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import {
   hasAgglomerateMapping,
   hasConnectomeFile,
 } from "oxalis/model/accessors/volumetracing_accessor";
+import { setActiveConnectomeAgglomerateIdsAction } from "oxalis/model/actions/connectome_actions";
+import { loadAgglomerateSkeletonAction } from "oxalis/model/actions/skeletontracing_actions";
+import { clickSegmentAction } from "oxalis/model/actions/volumetracing_actions";
+import { Model } from "oxalis/singletons";
+import Store from "oxalis/store";
 
 export async function handleAgglomerateSkeletonAtClick(clickPosition: Point2) {
   const state = Store.getState();

@@ -1,5 +1,5 @@
-import React from "react";
 import window from "libs/window";
+import React from "react";
 import type { EmptyObject } from "types/globals";
 export default class DisableGenericDnd extends React.Component<EmptyObject> {
   componentDidMount() {

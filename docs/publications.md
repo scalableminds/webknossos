@@ -1,6 +1,11 @@
 # Publications
 The following publications used WEBKNOSSOS for exploring large 3D electron-microscopy (EM) and light-microscopy (LM) datasets as well as collaboratively generating annotations or other tasks. Please [get in touch with us](mailto:hello@webknossos.org) if your publication is missing.
 
+## 2025
+* Jakob Reichmann, Anne Schnurpfeil, Sylvia Mittelstädt, Patrick Moller Jensen, Vedrana Andersen Dahl, Anders Bjorholm Dahl, Carina Weide, Eva von Campenhausen, Hector Dejea, Paul Tafforeau, Christopher Werlein, Danny Jonigk, Maximilian Ackermann, Klaus Engel, Julia Gallwas, Alexander Dietz, Mir Fuad Hasanov & Tim Salditt.  
+  3D multiscale characterization of the human placenta: Bridging anatomy and histology by X-ray phase-contrast tomography.  
+  [PNAS Nexus, Volume 4, Issue 1 (2025). DOI: 10.1093/pnasnexus/pgae583](https://doi.org/10.1093/pnasnexus/pgae583)
+
 ## 2024
 * Andrea Nathansen, Matthis Clausen, Manuel Berning, Ethan MacKenzie, Yuxin Zhang, Alexandra Pacureanu, Andreas T. Schaefer, Norman Rzepka, & Carles Bosch.  
   Cell nuclei segmentation in mm-scale x-ray holographic nanotomography images of mouse brain tissue.  
@@ -96,8 +101,12 @@ The following publications used WEBKNOSSOS for exploring large 3D electron-micro
   Dense, Continuous Membrane Labeling and Expansion Microscopy Visualization of Ultrastructure in Tissues.  
   [bioRxiv (2024). DOI: 10.1101/2024.03.07.583776](https://doi.org/10.1101/2024.03.07.583776)
 
+* Carina C. Theobald, Ahmadali Lotfinia, Jan A. Knobloch, Yasser Medlej, David R. Stevens & Marcel A. Lauterbach.  
+  Distribution of spine classes shows intra-neuronal dendritic heterogeneity in mouse cortex.  
+  [Neurophotonics, Vol. 12, Issue 1, 015001. SPIE (2024). DOI: 1.NPh.12.1.015001](https://doi.org/10.1117/1.NPh.12.1.015001)
+
 * Norman Rzepka.  
-  Next-generation file formats (NGFF), RFC 2:  Specification for using Zarr v3 in OME-Zarr
+  Next-generation file formats (NGFF), RFC 2:  Specification for using Zarr v3 in OME-Zarr.  
   [NGFF RFC 2 (2024)](https://ngff.openmicroscopy.org/rfc/2/index.html).
 
 ## 2023
@@ -116,7 +125,6 @@ The following publications used WEBKNOSSOS for exploring large 3D electron-micro
 * Tri Nguyen, Mukul Narwani, Mark Larson, Yicong Li, Shuhan Xie, Hanspeter Pfister, Donglai Wei, Nir Shavit, Lu Mi, Alexandra Pacureanu, Wei-Chung Lee & Aaron T. Kuan.  
   The XPRESS Challenge: Xray Projectomic Reconstruction -- Extracting Segmentation with Skeletons.  
   [arXiv (2023). DOI: 10.48550/arXiv.2302.03819](https://doi.org/10.48550/arXiv.2302.03819)
-
 
 ## 2022
 * Sahil Loomba, Jakob Straehle, Vijayan Gangadharan, Natalie Heike, Abdelrahman Khalifa, Alessandro Motta, Niansheng Ju, Meike Sievers, Jens Gempt, Hanno S. Meyer & Moritz Helmstaedter.  

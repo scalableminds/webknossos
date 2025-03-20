@@ -6,6 +6,38 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [25.02.1](https://github.com/scalableminds/webknossos/releases/tag/25.02.1) - 2025-02-26
+[Commits](https://github.com/scalableminds/webknossos/compare/25.02.0...25.02.1)
+
+### Postgres Evolutions:
+
+
+## [25.02.0](https://github.com/scalableminds/webknossos/releases/tag/25.02.0) - 2025-02-17
+[Commits](https://github.com/scalableminds/webknossos/compare/25.01.0...25.02.0)
+- config options `proxy.prefix` and `proxy.routes` were renamed to `aboutPageRedirect.prefix` and `aboutPageRedirect.routes` (as we no longer proxy, but redirect). [#8344](https://github.com/scalableminds/webknossos/pull/8344)
+- The migration route `addSegmentIndex` was removed. If you haven’t done this yet, but need segment indices for your volume annotations, upgrade to an earlier version first, call addSegmentIndex, and then upgrade again. [#7917](https://github.com/scalableminds/webknossos/pull/7917)
+- The versioning scheme of annotations has been changed. That requires a larger migration including the FossilDB content. [#7917](https://github.com/scalableminds/webknossos/pull/7917)
+     - The FossilDB content needs to be migrated. For that, use the python program at `tools/migration-unified-annotation-versioning` (see python main.py --help for instructions). Note that it writes to a completely new FossilDB, that must first be opened with the new column families, see below. The migration code needs to connect to postgres, to the old FossilDB and to the new. After the migration, replace the old FossilDB by the new one (either change the ports of the existing programs, or exchange the data directories on disk).
+    - For the migration, a second FossilDB needs to be started. To do that, either use the docker image, a jar, or checkout the [fossilDB repository](https://github.com/scalableminds/fossildb). If you opened your old FossilDB with an options file, it probably makes sense to use the same options file for the new one as well.
+    - New FossilDB version `0.1.34` (docker image `scalableminds/fossildb:master__510`) is required. Start both the source and target FossilDBs with this new version.
+    - (Target) FossilDB must now be opened with new column family set `skeletons,volumes,volumeData,volumeSegmentIndex,editableMappingsInfo,editableMappingsAgglomerateToGraph,editableMappingsSegmentToAgglomerate,annotations,annotationUpdates`.
+    - For large databases, the migration may take multiple hours or even days. To avoid long downtimes, the migration can also be run in several incremental steps so that the majority of the data can already be migrated while WEBKNOSSOS is still running. Then only annotations that have been edited again since the first run need to be migrated in the incremental second run during a WEBKNOSSOS downtime.
+    - Example command for the migration: `PG_PASSWORD=myPassword python main.py --src localhost:7500 --dst localhost:7155 --num_threads 20 --postgres webknossos@localhost:5430/webknossos`
+
+### Postgres Evolutions:
+
+
+## [25.01.0](https://github.com/scalableminds/webknossos/releases/tag/25.01.0) - 2025-01-22
+[Commits](https://github.com/scalableminds/webknossos/compare/24.12.0...25.01.0)
+- Removed support for HTTP API versions 3 and 4. [#8075](https://github.com/scalableminds/webknossos/pull/8075)
+- New FossilDB version `0.1.33` (docker image `scalableminds/fossildb:master__504`) is required.
+- Datastore config options `datastore.baseFolder` and `datastore.localFolderWhitelist` have been renamed to `datastore.baseDirectory` and `datastore.localDirectoryWhitelist` respectively, to avoid confusion with the dashboard folders. [#8292](https://github.com/scalableminds/webknossos/pull/8292)
+
+### Postgres Evolutions:
+- [124-decouple-dataset-directory-from-name.sql](conf/evolutions/124-decouple-dataset-directory-from-name.sql)
+- [125-allow-dollar-in-layer-names.sql](conf/evolutions/125-allow-dollar-in-layer-names.sql)
+
+
 ## [24.12.0](https://github.com/scalableminds/webknossos/releases/tag/24.12.0) - 2024-12-05
 [Commits](https://github.com/scalableminds/webknossos/compare/24.11.1...24.12.0)
 
@@ -765,3 +797,16 @@ No migrations necessary.
 
 ## [18.07.0](https://github.com/scalableminds/webknossos/releases/tag/18.07.0) - 2018-07-05
 First release
+
+### Postgres Evolutions:
+- [001-add-organizations.sql](conf/evolutions/001-add-organizations.sql)
+- [002-add-dataset-urlsharing-token.sql](conf/evolutions/002-add-dataset-urlsharing-token.sql)
+- [003-add-dataset-displayname.sql](conf/evolutions/003-add-dataset-displayname.sql)
+- [004-add-initializing-annotation-state.sql](conf/evolutions/004-add-initializing-annotation-state.sql)
+- [005-add-openinstances-trigger.sql](conf/evolutions/005-add-openinstances-trigger.sql)
+- [007-unify-type-datalayer-name.sql](conf/evolutions/007-unify-type-datalayer-name.sql)
+- [008-task-instances-triggers.sql](conf/evolutions/008-task-instances-triggers.sql)
+- [009-remove-team-assignment-from-task.sql](conf/evolutions/009-remove-team-assignment-from-task.sql)
+- [010-add-organization-data.sql](conf/evolutions/010-add-organization-data.sql)
+- [011-add-isOrganizationTeam.sql](conf/evolutions/011-add-isOrganizationTeam.sql)
+- [012-add-foreign-keys.sql](conf/evolutions/012-add-foreign-keys.sql)

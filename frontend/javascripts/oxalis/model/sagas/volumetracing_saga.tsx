@@ -20,7 +20,10 @@ import getSceneController from "oxalis/controller/scene_controller_provider";
 import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "oxalis/geometries/helper_geometries";
 
 import messages from "messages";
-import { getMaximumSegmentIdForLayer } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getSupportedValueRangeOfLayer,
+  isInSupportedValueRangeForLayer,
+} from "oxalis/model/accessors/dataset_accessor";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import {
   isBrushTool,
@@ -67,8 +70,10 @@ import listenToQuickSelect from "oxalis/model/sagas/quick_select_saga";
 import {
   requestBucketModificationInVolumeTracing,
   takeEveryUnlessBusy,
+  takeWithBatchActionSupport,
 } from "oxalis/model/sagas/saga_helpers";
 import {
+  type UpdateActionWithoutIsolationRequirement,
   createSegmentVolumeAction,
   deleteSegmentDataVolumeAction,
   deleteSegmentVolumeAction,
@@ -76,9 +81,8 @@ import {
   updateMappingName,
   updateSegmentGroups,
   updateSegmentVolumeAction,
-  updateUserBoundingBoxes,
+  updateUserBoundingBoxesInVolumeTracing,
   updateVolumeTracing,
-  type UpdateAction,
 } from "oxalis/model/sagas/update_actions";
 import type VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import { Model, api } from "oxalis/singletons";
@@ -86,14 +90,15 @@ import type { Flycam, SegmentMap, VolumeTracing } from "oxalis/store";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
-import { createVolumeLayer, labelWithVoxelBuffer2D, type BooleanBox } from "./volume/helpers";
-import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
+import { ensureWkReady } from "./ready_sagas";
 import { floodFill } from "./volume/floodfill_saga";
+import { type BooleanBox, createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
+import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
 
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 
 export function* watchVolumeTracingAsync(): Saga<void> {
-  yield* take("WK_READY");
+  yield* call(ensureWkReady);
   yield* takeEveryUnlessBusy(
     "INTERPOLATE_SEGMENTATION_LAYER",
     maybeInterpolateSegmentationLayer,
@@ -126,32 +131,39 @@ function* warnOfTooLowOpacity(): Saga<void> {
   }
 }
 
-function* warnTooLargeSegmentId(): Saga<void> {
-  yield* take("INITIALIZE_VOLUMETRACING");
+function* warnAboutInvalidSegmentId(): Saga<void> {
+  yield* takeWithBatchActionSupport("INITIALIZE_VOLUMETRACING");
   while (true) {
     const action = (yield* take(["SET_ACTIVE_CELL", "CREATE_CELL"]) as any) as
       | SetActiveCellAction
       | CreateCellAction;
-    const newSegmentId = yield* select((state) => enforceActiveVolumeTracing(state).activeCellId);
-    if (
-      (action.type === "CREATE_CELL" && action.newSegmentId === newSegmentId) ||
-      (action.type === "SET_ACTIVE_CELL" && action.segmentId === newSegmentId)
-    ) {
+    const currentSegmentId = yield* select(
+      (state) => enforceActiveVolumeTracing(state).activeCellId,
+    );
+    const requestedSegmentId =
+      action.type === "CREATE_CELL" ? action.newSegmentId : action.segmentId;
+
+    if (requestedSegmentId === currentSegmentId) {
       continue;
     }
+
     const dataset = yield* select((state) => state.dataset);
     const volumeTracing = yield* select(enforceActiveVolumeTracing);
     const segmentationLayer = yield* call(
       [Model, Model.getSegmentationTracingLayer],
       volumeTracing.tracingId,
     );
-    const maxSegmentId = getMaximumSegmentIdForLayer(dataset, segmentationLayer.name);
-    Toast.warning(messages["tracing.segment_id_out_of_bounds"]({ maxSegmentId }));
+    if (!isInSupportedValueRangeForLayer(dataset, segmentationLayer.name, requestedSegmentId)) {
+      const validRange = getSupportedValueRangeOfLayer(dataset, segmentationLayer.name);
+      Toast.warning(messages["tracing.segment_id_out_of_bounds"](requestedSegmentId, validRange));
+    }
   }
 }
 
 export function* editVolumeLayerAsync(): Saga<any> {
-  yield* take("INITIALIZE_VOLUMETRACING");
+  // Waiting for the initialization is important. Otherwise, allowUpdate would be
+  // false and the saga would terminate.
+  yield* takeWithBatchActionSupport("INITIALIZE_VOLUMETRACING");
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
 
   while (allowUpdate) {
@@ -380,8 +392,8 @@ export function* finishLayer(
   yield* put(registerLabelPointAction(layer.getUnzoomedCentroid()));
 }
 
-export function* ensureToolIsAllowedInMag(): Saga<any> {
-  yield* take("INITIALIZE_VOLUMETRACING");
+export function* ensureToolIsAllowedInMag(): Saga<void> {
+  yield* takeWithBatchActionSupport("INITIALIZE_VOLUMETRACING");
 
   while (true) {
     yield* take(["ZOOM_IN", "ZOOM_OUT", "ZOOM_BY_DELTA", "SET_ZOOM_STEP"]);
@@ -410,14 +422,15 @@ function updateTracingPredicate(
 }
 
 export const cachedDiffSegmentLists = memoizeOne(
-  (prevSegments: SegmentMap, newSegments: SegmentMap) =>
-    Array.from(uncachedDiffSegmentLists(prevSegments, newSegments)),
+  (tracingId: string, prevSegments: SegmentMap, newSegments: SegmentMap) =>
+    Array.from(uncachedDiffSegmentLists(tracingId, prevSegments, newSegments)),
 );
 
 function* uncachedDiffSegmentLists(
+  tracingId: string,
   prevSegments: SegmentMap,
   newSegments: SegmentMap,
-): Generator<UpdateAction, void, void> {
+): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   const {
     onlyA: deletedSegmentIds,
     onlyB: addedSegmentIds,
@@ -425,7 +438,7 @@ function* uncachedDiffSegmentLists(
   } = diffDiffableMaps(prevSegments, newSegments);
 
   for (const segmentId of deletedSegmentIds) {
-    yield deleteSegmentVolumeAction(segmentId);
+    yield deleteSegmentVolumeAction(segmentId, tracingId);
   }
 
   for (const segmentId of addedSegmentIds) {
@@ -437,6 +450,7 @@ function* uncachedDiffSegmentLists(
       segment.color,
       segment.groupId,
       segment.metadata,
+      tracingId,
     );
   }
 
@@ -453,6 +467,7 @@ function* uncachedDiffSegmentLists(
         segment.color,
         segment.groupId,
         segment.metadata,
+        tracingId,
         segment.creationTime,
       );
     }
@@ -463,7 +478,7 @@ export function* diffVolumeTracing(
   volumeTracing: VolumeTracing,
   prevFlycam: Flycam,
   flycam: Flycam,
-): Generator<UpdateAction, void, void> {
+): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (updateTracingPredicate(prevVolumeTracing, volumeTracing, prevFlycam, flycam)) {
     yield updateVolumeTracing(
       volumeTracing,
@@ -475,12 +490,16 @@ export function* diffVolumeTracing(
   }
 
   if (!_.isEqual(prevVolumeTracing.userBoundingBoxes, volumeTracing.userBoundingBoxes)) {
-    yield updateUserBoundingBoxes(volumeTracing.userBoundingBoxes);
+    yield updateUserBoundingBoxesInVolumeTracing(
+      volumeTracing.userBoundingBoxes,
+      volumeTracing.tracingId,
+    );
   }
 
   if (prevVolumeTracing !== volumeTracing) {
     if (prevVolumeTracing.segments !== volumeTracing.segments) {
       for (const action of cachedDiffSegmentLists(
+        volumeTracing.tracingId,
         prevVolumeTracing.segments,
         volumeTracing.segments,
       )) {
@@ -489,11 +508,11 @@ export function* diffVolumeTracing(
     }
 
     if (prevVolumeTracing.segmentGroups !== volumeTracing.segmentGroups) {
-      yield updateSegmentGroups(volumeTracing.segmentGroups);
+      yield updateSegmentGroups(volumeTracing.segmentGroups, volumeTracing.tracingId);
     }
 
     if (prevVolumeTracing.fallbackLayer != null && volumeTracing.fallbackLayer == null) {
-      yield removeFallbackLayer();
+      yield removeFallbackLayer(volumeTracing.tracingId);
     }
 
     if (
@@ -506,6 +525,7 @@ export function* diffVolumeTracing(
         volumeTracing.mappingName || null,
         volumeTracing.hasEditableMapping || null,
         volumeTracing.mappingIsLocked,
+        volumeTracing.tracingId,
       );
       yield action;
     }
@@ -723,11 +743,7 @@ function* handleDeleteSegmentData(): Saga<void> {
 
     yield* put(setBusyBlockingInfoAction(true, "Segment is being deleted."));
     yield* put(
-      pushSaveQueueTransaction(
-        [deleteSegmentDataVolumeAction(action.segmentId)],
-        "volume",
-        action.layerName,
-      ),
+      pushSaveQueueTransaction([deleteSegmentDataVolumeAction(action.segmentId, action.layerName)]),
     );
     yield* call([Model, Model.ensureSavedState]);
 
@@ -755,5 +771,5 @@ export default [
   maintainContourGeometry,
   maintainVolumeTransactionEnds,
   ensureValidBrushSize,
-  warnTooLargeSegmentId,
+  warnAboutInvalidSegmentId,
 ];

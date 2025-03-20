@@ -1,6 +1,7 @@
 package com.scalableminds.util.mvc
 
 import com.google.protobuf.CodedInputStream
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
@@ -38,23 +39,10 @@ trait BoxToResultHelpers extends I18nSupport with Formatter with RemoteOriginHel
     allowRemoteOriginIfSelected(addNoCacheHeaderFallback(result))
   }
 
-  private def formatChainOpt(chain: Box[Failure])(implicit messages: MessagesProvider): Option[String] = chain match {
-    case Full(_) => Some(formatChain(chain))
-    case _       => None
-  }
-
-  private def formatChain(chain: Box[Failure], includeTime: Boolean = true)(
-      implicit messages: MessagesProvider): String = chain match {
-    case Full(failure) =>
-      val serverTimeMsg = if (includeTime) "[Server Time " + formatDate(System.currentTimeMillis()) + "] " else ""
-      serverTimeMsg + " <~ " + formatFailure(failure) + formatChain(failure.chain, includeTime = false)
-    case _ => ""
-  }
-
-  private def formatFailure(failure: Failure)(implicit messages: MessagesProvider): String =
-    failure match {
-      case ParamFailure(msg, _, _, param) => Messages(msg) + " " + param.toString
-      case Failure(msg, _, _)             => Messages(msg)
+  private def formatChainOpt(chainBox: Box[Failure])(implicit messages: MessagesProvider): Option[String] =
+    chainBox match {
+      case Full(chain) => Some(formatFailureChain(chain, includeTime = true, messagesProviderOpt = Some(messages)))
+      case _           => None
     }
 
   private def jsonMessages(msgs: JsArray): JsObject =
@@ -130,7 +118,7 @@ class JsonResult(status: Int)
 
   val isSuccess: Boolean = List(OK) contains status
 
-  def createResult(content: JsValue)(implicit writeable: Writeable[JsValue]): Result =
+  private def createResult(content: JsValue)(implicit writeable: Writeable[JsValue]): Result =
     Result(header = ResponseHeader(status),
            body = HttpEntity.Strict(writeable.transform(content), writeable.contentType))
 
@@ -175,7 +163,7 @@ class JsonResult(status: Int)
     case Some(chain) => Some("chain" -> chain)
   }
 
-  def jsonHTMLResult(html: Html): JsObject = {
+  private def jsonHTMLResult(html: Html): JsObject = {
     val htmlJson = html.body match {
       case "" =>
         Json.obj()
@@ -186,7 +174,7 @@ class JsonResult(status: Int)
     htmlJson
   }
 
-  def jsonMessages(messages: Seq[(String, String)]): JsObject =
+  private def jsonMessages(messages: Seq[(String, String)]): JsObject =
     Json.obj("messages" -> messages.map(m => Json.obj(m._1 -> m._2)))
 }
 
@@ -235,8 +223,8 @@ trait ValidationHelpers {
 }
 
 trait RequestTokenHelper {
-  protected def urlOrHeaderToken(token: Option[String], request: Request[Any]): Option[String] =
-    token.orElse(request.headers.get("X-Auth-Token"))
+  implicit def tokenContextForRequest(implicit request: Request[Any]): TokenContext =
+    TokenContext(request.target.getQueryParameter("token").orElse(request.headers.get("X-Auth-Token")))
 }
 
 trait ExtendedController

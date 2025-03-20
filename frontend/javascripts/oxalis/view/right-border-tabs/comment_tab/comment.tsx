@@ -2,12 +2,12 @@ import { Popover } from "antd";
 import type * as React from "react";
 
 import classNames from "classnames";
-import { MarkdownWrapper } from "oxalis/view/components/markdown_modal";
-import { NODE_ID_REF_REGEX, POSITION_REF_REGEX } from "oxalis/constants";
 import { document } from "libs/window";
+import { NODE_ID_REF_REGEX, POSITION_REF_REGEX } from "oxalis/constants";
 import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 import type { CommentType } from "oxalis/store";
 import Store from "oxalis/store";
+import { MarkdownWrapper } from "oxalis/view/components/markdown_modal";
 
 function linkify(comment: string) {
   return comment // Replace linked nodes (#<nodeid>) with a proper link

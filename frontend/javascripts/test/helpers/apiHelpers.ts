@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { createNanoEvents } from "nanoevents";
 import type { ExecutionContext } from "ava";
 import _ from "lodash";
@@ -13,16 +12,20 @@ import { setSceneController } from "oxalis/controller/scene_controller_provider"
 import {
   tracing as SKELETON_TRACING,
   annotation as SKELETON_ANNOTATION,
+  annotationProto as SKELETON_ANNOTATION_PROTO,
 } from "../fixtures/skeletontracing_server_objects";
 import {
   tracing as TASK_TRACING,
   annotation as TASK_ANNOTATION,
+  annotationProto as TASK_ANNOTATION_PROTO,
 } from "../fixtures/tasktracing_server_objects";
 import {
   tracing as VOLUME_TRACING,
   annotation as VOLUME_ANNOTATION,
+  annotationProto as VOLUME_ANNOTATION_PROTO,
 } from "../fixtures/volumetracing_server_objects";
 import DATASET from "../fixtures/dataset_server_object";
+import type { ApiInterface } from "oxalis/api/api_latest";
 
 const Request = {
   receiveJSON: sinon.stub(),
@@ -32,8 +35,8 @@ const Request = {
   sendJSONReceiveArraybufferWithHeaders: sinon.stub(),
   always: () => Promise.resolve(),
 };
-export function createBucketResponseFunction(TypedArrayClass, fillValue, delay = 0) {
-  return async function getBucketData(_url, payload) {
+export function createBucketResponseFunction(TypedArrayClass: any, fillValue: number, delay = 0) {
+  return async function getBucketData(_url: string, payload: { data: Array<unknown> }) {
     const bucketCount = payload.data.length;
     await sleep(delay);
     return {
@@ -46,6 +49,7 @@ export function createBucketResponseFunction(TypedArrayClass, fillValue, delay =
   };
 }
 
+// @ts-ignore
 Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(Uint8Array, 0);
 const ErrorHandling = {
   assertExtendContext: _.noop,
@@ -58,6 +62,7 @@ const app = {
 };
 const protoHelpers = {
   parseProtoTracing: sinon.stub(),
+  parseProtoAnnotation: sinon.stub(),
 };
 export const TIMESTAMP = 1494695001688;
 const DateMock = {
@@ -125,14 +130,17 @@ const modelData = {
   skeleton: {
     tracing: SKELETON_TRACING,
     annotation: SKELETON_ANNOTATION,
+    annotationProto: SKELETON_ANNOTATION_PROTO,
   },
   volume: {
     tracing: VOLUME_TRACING,
     annotation: VOLUME_ANNOTATION,
+    annotationProto: VOLUME_ANNOTATION_PROTO,
   },
   task: {
     tracing: TASK_TRACING,
     annotation: TASK_ANNOTATION,
+    annotationProto: TASK_ANNOTATION_PROTO,
   },
 };
 
@@ -199,6 +207,8 @@ export function __setupOxalis(
     // each __setupOxalis call would overwrite the current stub to receiveJSON.
     .onCall(counter++)
     .returns(Promise.resolve(datasetClone));
+
+  protoHelpers.parseProtoAnnotation.returns(_.cloneDeep(modelData[mode].annotationProto));
   protoHelpers.parseProtoTracing.returns(_.cloneDeep(modelData[mode].tracing));
   Request.receiveJSON
     .withArgs("/api/userToken/generate", {
@@ -219,11 +229,12 @@ export function __setupOxalis(
 
   setSceneController({
     name: "This is a dummy scene controller so that getSceneController works in the tests.",
+    // @ts-ignore
     segmentMeshController: { meshesGroupsPerSegmentId: {} },
   });
 
   return Model.fetch(
-    ANNOTATION_TYPE,
+    null, // no compound annotation
     {
       annotationId: ANNOTATION_ID,
       type: ControlModeEnum.TRACE,
@@ -233,11 +244,11 @@ export function __setupOxalis(
     .then(() => {
       // Trigger the event ourselves, as the OxalisController is not instantiated
       app.vent.emit("webknossos:ready");
-      webknossos.apiReady(apiVersion).then((apiObject) => {
+      webknossos.apiReady(apiVersion).then((apiObject: ApiInterface) => {
         t.context.api = apiObject;
       });
     })
-    .catch((error) => {
+    .catch((error: { message: string }) => {
       console.error("model.fetch() failed", error);
       t.fail(error.message);
     });

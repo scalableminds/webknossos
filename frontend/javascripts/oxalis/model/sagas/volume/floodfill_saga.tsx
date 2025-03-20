@@ -4,44 +4,61 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import type {
   BoundingBoxType,
+  FillMode,
   LabeledVoxelsMap,
   OrthoView,
   Vector2,
   Vector3,
-  FillMode,
 } from "oxalis/constants";
-import Constants, { FillModeEnum, Unicode } from "oxalis/constants";
+import Constants, { AnnotationToolEnum, FillModeEnum, Unicode } from "oxalis/constants";
 
+import _ from "lodash";
 import { getDatasetBoundingBox, getMagInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
+import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
 import { enforceActiveVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import {
-  finishAnnotationStrokeAction,
   type FloodFillAction,
+  finishAnnotationStrokeAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Dimensions from "oxalis/model/dimensions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { select, take } from "oxalis/model/sagas/effect-generators";
+import { select } from "oxalis/model/sagas/effect-generators";
 import { requestBucketModificationInVolumeTracing } from "oxalis/model/sagas/saga_helpers";
 import { Model } from "oxalis/singletons";
 import { call, put, takeEvery } from "typed-redux-saga";
 import { getUserBoundingBoxesThatContainPosition } from "../../accessors/tracing_accessor";
 import { applyLabeledVoxelMapToAllMissingMags } from "./helpers";
-import _ from "lodash";
 
 const NO_FLOODFILL_BBOX_TOAST_KEY = "NO_FLOODFILL_BBOX";
 const NO_SUCCESS_MSG_WHEN_WITHIN_MS = 500;
 
 export function* floodFill(): Saga<void> {
-  yield* take("INITIALIZE_VOLUMETRACING");
   yield* takeEvery("FLOOD_FILL", handleFloodFill);
 }
 
-function* getBoundingBoxForFloodFillWhenRestricted(position: Vector3, currentViewport: OrthoView) {
+function getMaximumBoundingBoxSizeForFloodfill(
+  fillMode: FillMode,
+  finestSegmentationLayerMag: Vector3,
+): Vector3 {
+  const maximumBoundingBoxMag1 = Constants.FLOOD_FILL_EXTENTS[fillMode];
+  // If the finest mag of the segmentation layer is not Mag(1), the maximum bounding box needs to be scaled accordingly
+  const maximumBoundingBoxInFinestMag = V3.scale3(
+    maximumBoundingBoxMag1,
+    finestSegmentationLayerMag,
+  );
+  return maximumBoundingBoxInFinestMag;
+}
+
+function* getBoundingBoxForFloodFillWhenRestricted(
+  position: Vector3,
+  currentViewport: OrthoView,
+  finestSegmentationLayerMag: Vector3,
+) {
   const fillMode = yield* select((state) => state.userConfiguration.fillMode);
   const bboxes = yield* select((state) => getUserBoundingBoxesThatContainPosition(state, position));
   if (bboxes.length === 0) {
@@ -52,9 +69,12 @@ function* getBoundingBoxForFloodFillWhenRestricted(position: Vector3, currentVie
   }
   const smallestBbox = _.sortBy(bboxes, (bbox) => new BoundingBox(bbox.boundingBox).getVolume())[0];
 
-  const maximumVoxelSize =
-    Constants.FLOOD_FILL_MULTIPLIER_FOR_BBOX_RESTRICTION *
-    V3.prod(Constants.FLOOD_FILL_EXTENTS[fillMode]);
+  const maxBboxSize = yield* call(
+    getMaximumBoundingBoxSizeForFloodfill,
+    fillMode,
+    finestSegmentationLayerMag,
+  );
+  const maxBboxVolume = Constants.FLOOD_FILL_MULTIPLIER_FOR_BBOX_RESTRICTION * V3.prod(maxBboxSize);
   const bboxObj = new BoundingBox(smallestBbox.boundingBox);
 
   const bboxVolume =
@@ -64,9 +84,9 @@ function* getBoundingBoxForFloodFillWhenRestricted(position: Vector3, currentVie
         V2.prod(
           Dimensions.getIndices(currentViewport).map((idx) => bboxObj.getSize()[idx]) as Vector2,
         );
-  if (bboxVolume > maximumVoxelSize) {
+  if (bboxVolume > maxBboxVolume) {
     return {
-      failureReason: `The bounding box that encloses the clicked position is too large. Shrink its size so that it does not contain more than ${maximumVoxelSize} voxels.`,
+      failureReason: `The bounding box that encloses the clicked position is too large, containing ${bboxVolume} voxels. Shrink its size so that it does not contain more than ${maxBboxVolume} voxels.`,
     };
   }
   return smallestBbox.boundingBox;
@@ -75,18 +95,24 @@ function* getBoundingBoxForFloodFillWhenRestricted(position: Vector3, currentVie
 function* getBoundingBoxForFloodFillWhenUnrestricted(
   position: Vector3,
   currentViewport: OrthoView,
+  finestSegmentationLayerMag: Vector3,
 ) {
   const fillMode = yield* select((state) => state.userConfiguration.fillMode);
-  const halfBoundingBoxSizeUVW = V3.scale(Constants.FLOOD_FILL_EXTENTS[fillMode], 0.5);
+  const maxBoundingBoxSize = yield* call(
+    getMaximumBoundingBoxSizeForFloodfill,
+    fillMode,
+    finestSegmentationLayerMag,
+  );
+  const halfBoundingBoxSize = V3.scale(maxBoundingBoxSize, 0.5);
   const currentViewportBounding = {
-    min: V3.sub(position, halfBoundingBoxSizeUVW),
-    max: V3.add(position, halfBoundingBoxSizeUVW),
+    min: V3.sub(position, halfBoundingBoxSize),
+    max: V3.add(position, halfBoundingBoxSize),
   };
 
   if (fillMode === FillModeEnum._2D) {
     // Only use current plane
     const thirdDimension = Dimensions.thirdDimensionForPlane(currentViewport);
-    const numberOfSlices = 1;
+    const numberOfSlices = finestSegmentationLayerMag[thirdDimension];
     currentViewportBounding.min[thirdDimension] = position[thirdDimension];
     currentViewportBounding.max[thirdDimension] = position[thirdDimension] + numberOfSlices;
   }
@@ -104,21 +130,33 @@ function* getBoundingBoxForFloodFillWhenUnrestricted(
 function* getBoundingBoxForFloodFill(
   position: Vector3,
   currentViewport: OrthoView,
+  finestSegmentationLayerMag: Vector3,
 ): Saga<BoundingBoxType | { failureReason: string }> {
   const isRestrictedToBoundingBox = yield* select(
     (state) => state.userConfiguration.isFloodfillRestrictedToBoundingBox,
   );
   if (isRestrictedToBoundingBox) {
-    return yield* call(getBoundingBoxForFloodFillWhenRestricted, position, currentViewport);
+    return yield* call(
+      getBoundingBoxForFloodFillWhenRestricted,
+      position,
+      currentViewport,
+      finestSegmentationLayerMag,
+    );
   } else {
-    return yield* call(getBoundingBoxForFloodFillWhenUnrestricted, position, currentViewport);
+    return yield* call(
+      getBoundingBoxForFloodFillWhenUnrestricted,
+      position,
+      currentViewport,
+      finestSegmentationLayerMag,
+    );
   }
 }
 
 function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
+  const disabledInfosForTools = yield* select(getDisabledInfoForTools);
 
-  if (!allowUpdate) {
+  if (!allowUpdate || disabledInfosForTools[AnnotationToolEnum.FILL_CELL].isDisabled) {
     return;
   }
 
@@ -171,7 +209,13 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
   if (!isModificationAllowed) {
     return;
   }
-  const boundingBoxForFloodFill = yield* call(getBoundingBoxForFloodFill, seedPosition, planeId);
+  const finestSegmentationLayerMag = magInfo.getFinestMag();
+  const boundingBoxForFloodFill = yield* call(
+    getBoundingBoxForFloodFill,
+    seedPosition,
+    planeId,
+    finestSegmentationLayerMag,
+  );
   if ("failureReason" in boundingBoxForFloodFill) {
     Toast.warning(boundingBoxForFloodFill.failureReason, {
       key: NO_FLOODFILL_BBOX_TOAST_KEY,

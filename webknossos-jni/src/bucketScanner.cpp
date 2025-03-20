@@ -2,9 +2,14 @@
 
 #include <unordered_set>
 #include <stdexcept>
+#include <chrono>
+#include <iostream>
 
 JNIEXPORT jlongArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_collectSegmentIds
   (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jboolean isSigned) {
+
+
+  auto t0 = std::chrono::high_resolution_clock::now();
 
   jsize inputLengthBytes = env -> GetArrayLength(bucketBytesJavaArray);
   jbyte * bucketBytesAsJByte = env -> GetByteArrayElements(bucketBytesJavaArray, NULL);
@@ -57,6 +62,12 @@ JNIEXPORT jlongArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers
 
   jlongArray resultAsJLongArray = env -> NewLongArray(resultCount);
   env -> SetLongArrayRegion(resultAsJLongArray, 0, resultCount, reinterpret_cast < const jlong * > (result));
+
+
+  auto t3 = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double, std::milli> duration_total = t3 - t0;
+
+  std::cout << "total " << duration_total.count() << "ms\n";
 
   return resultAsJLongArray;
 }

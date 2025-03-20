@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 127, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
+do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 128, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
 
 
 -- Create the enum types for transaction states and credit states
@@ -108,6 +108,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 128;
+UPDATE webknossos.releaseInformation SET schemaVersion = 129;
 
 COMMIT TRANSACTION;

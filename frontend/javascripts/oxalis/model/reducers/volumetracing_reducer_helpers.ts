@@ -20,7 +20,7 @@ import type {
   SegmentMap,
   VolumeTracing,
 } from "oxalis/store";
-import { getMaximumSegmentIdForLayer } from "../accessors/dataset_accessor";
+import { isInSupportedValueRangeForLayer } from "../accessors/dataset_accessor";
 import { mapGroupsToGenerator } from "../accessors/skeletontracing_accessor";
 
 export function updateVolumeTracing(
@@ -62,8 +62,9 @@ export function setActiveCellReducer(
   activeUnmappedSegmentId: number | null | undefined,
 ) {
   const segmentationLayer = getSegmentationLayerForTracing(state, volumeTracing);
-  if (id > getMaximumSegmentIdForLayer(state.dataset, segmentationLayer.name)) {
-    // Ignore the action if the segment id is larger than the maximum segment id for the layer.
+
+  if (!isInSupportedValueRangeForLayer(state.dataset, segmentationLayer.name, id)) {
+    // Ignore the action if the segment id is not valid for the current elementClass
     return state;
   }
   return updateVolumeTracing(state, volumeTracing.tracingId, {

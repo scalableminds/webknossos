@@ -8,7 +8,7 @@ import * as Utils from "libs/utils";
 import window, { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
-import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector2, Vector3 } from "oxalis/constants";
+import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector3 } from "oxalis/constants";
 import Constants, { ControlModeEnum, AnnotationStateFilterEnum } from "oxalis/constants";
 import type BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import {
@@ -2240,7 +2240,7 @@ export async function getSamMask(
         pointY: number; // int, relative to topleft
       },
   additionalCoordinates: AdditionalCoordinate[],
-  intensityRange?: Vector2 | null,
+  intensityRange?: readonly [number, number] | null,
 ): Promise<Uint8Array> {
   const params = new URLSearchParams();
   if (intensityRange != null) {

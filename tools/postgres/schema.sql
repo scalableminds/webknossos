@@ -598,6 +598,12 @@ CREATE TABLE webknossos.aiModels(
   UNIQUE (_organization, name)
 );
 
+CREATE TABLE webknossos.aiModel_organizations(
+  _aiModel CHAR(24) NOT NULL,
+  _organization VARCHAR(256) NOT NULL,
+  PRIMARY KEY(_aiModel, _organization)
+);
+
 CREATE TABLE webknossos.aiModel_trainingAnnotations(
   _aiModel CHAR(24) NOT NULL,
   _annotation CHAR(24) NOT NULL,
@@ -912,6 +918,9 @@ ALTER TABLE webknossos.aiInferences
 ALTER TABLE webknossos.aiModel_trainingAnnotations
   ADD FOREIGN KEY (_aiModel) REFERENCES webknossos.aiModels(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
   ADD FOREIGN KEY (_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.aiModel_organizations
+  ADD FOREIGN KEY (_aiModel) REFERENCES webknossos.aiModels(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
+  ADD FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 
 
 CREATE FUNCTION webknossos.countsAsTaskInstance(a webknossos.annotations) RETURNS BOOLEAN AS $$

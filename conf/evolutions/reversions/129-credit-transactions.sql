@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 128, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
+do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 129, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
 
 DROP TRIGGER IF EXISTS enforce_non_negative_balance_trigger ON webknossos.credit_transactions;
 DROP FUNCTION IF EXISTS webknossos.enforce_non_negative_balance();
@@ -22,6 +22,6 @@ DROP TABLE IF EXISTS webknossos.credit_transactions;
 DROP TYPE IF EXISTS webknossos.credit_transaction_state;
 DROP TYPE IF EXISTS webknossos.credit_state;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 127;
+UPDATE webknossos.releaseInformation SET schemaVersion = 128;
 
 COMMIT TRANSACTION;

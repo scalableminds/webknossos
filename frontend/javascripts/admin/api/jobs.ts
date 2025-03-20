@@ -400,3 +400,14 @@ export async function getAiModels(): Promise<AiModel[]> {
     trainingJob: model.trainingJob == null ? null : transformBackendJobToAPIJob(model.trainingJob),
   }));
 }
+
+export async function updateAiModel(aiModel: AiModel) {
+  return Request.sendJSONReceiveJSON(`/api/aiModels/${aiModel.id}`, {
+    method: "PUT",
+    data: {
+      name: aiModel.name,
+      comment: aiModel.comment,
+      sharedOrganizationIds: aiModel.sharedOrganizationIds,
+    },
+  });
+}

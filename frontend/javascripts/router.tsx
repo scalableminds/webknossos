@@ -1,8 +1,7 @@
 import {
   createExplorational,
-  getAnnotationInformation,
-  getOrganizationForDataset,
   getShortLink,
+  getUnversionedAnnotationInformation,
 } from "admin/admin_rest_api";
 import AcceptInviteView from "admin/auth/accept_invite_view";
 import AuthTokenView from "admin/auth/auth_token_view";
@@ -14,29 +13,26 @@ import StartResetPasswordView from "admin/auth/start_reset_password_view";
 import DatasetAddView from "admin/dataset/dataset_add_view";
 import JobListView from "admin/job/job_list_view";
 import Onboarding from "admin/onboarding";
-import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import OrganizationEditView from "admin/organization/organization_edit_view";
+import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import ProjectCreateView from "admin/project/project_create_view";
 import ProjectListView from "admin/project/project_list_view";
 import ScriptCreateView from "admin/scripts/script_create_view";
 import ScriptListView from "admin/scripts/script_list_view";
 import AvailableTasksReportView from "admin/statistic/available_tasks_report_view";
 import ProjectProgressReportView from "admin/statistic/project_progress_report_view";
-import StatisticView from "admin/statistic/statistic_view";
 import TaskCreateFormView from "admin/task/task_create_form_view";
 import TaskCreateView from "admin/task/task_create_view";
 import TaskListView from "admin/task/task_list_view";
 import TaskTypeCreateView from "admin/tasktype/task_type_create_view";
 import TaskTypeListView from "admin/tasktype/task_type_list_view";
 import TeamListView from "admin/team/team_list_view";
-import TimeLineView from "admin/time/time_line_view";
 import UserListView from "admin/user/user_list_view";
 import { Button, Col, Layout, Result, Row } from "antd";
 import DisableGenericDnd from "components/disable_generic_dnd";
 import { Imprint, Privacy } from "components/legal";
 import AsyncRedirect from "components/redirect";
 import SecuredRoute from "components/secured_route";
-import { CheckTermsOfServices } from "components/terms_of_services_check";
 import DashboardView, { urlTokenToTabKeyMap } from "dashboard/dashboard_view";
 import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
 import PublicationDetailView from "dashboard/publication_details_view";
@@ -48,69 +44,53 @@ import window from "libs/window";
 import _ from "lodash";
 import Navbar from "navbar";
 import { ControlModeEnum } from "oxalis/constants";
-import { trackAction } from "oxalis/model/helpers/analytics";
 import type { OxalisState } from "oxalis/store";
 import HelpButton from "oxalis/view/help_modal";
 import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
-import React, { lazy, Suspense } from "react";
+import React from "react";
 import { connect } from "react-redux";
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import { ContextRouter, Link, RouteProps } from "react-router-dom";
+import { type ContextRouter, Link, type RouteProps } from "react-router-dom";
 import { Redirect, Route, Router, Switch } from "react-router-dom";
 import {
   APICompoundTypeEnum,
-  APIResolutionRestrictions,
-  APIUser,
+  type APIMagRestrictions,
+  type APIUser,
   TracingTypeEnum,
 } from "types/api_flow_types";
 
-import ErrorBoundary from "components/error_boundary";
-import { Store } from "oxalis/singletons";
+import {
+  getDatasetIdFromNameAndOrganization,
+  getOrganizationForDataset,
+} from "admin/api/disambiguate_legacy_routes";
 import VerifyEmailView from "admin/auth/verify_email_view";
+import { DatasetURLImport } from "admin/dataset/dataset_url_import";
+import TimeTrackingOverview from "admin/statistic/time_tracking_overview";
+import AiModelListView from "admin/voxelytics/ai_model_list_view";
+import { CheckCertificateModal } from "components/check_certificate_modal";
+import ErrorBoundary from "components/error_boundary";
+import { CheckTermsOfServices } from "components/terms_of_services_check";
+import loadable from "libs/lazy_loader";
+import { getDatasetIdOrNameFromReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
+import { Store } from "oxalis/singletons";
+import { CommandPalette } from "oxalis/view/components/command_palette";
+import type { EmptyObject } from "types/globals";
 
 const { Content } = Layout;
 
-function loadable(loader: () => Promise<{ default: React.ComponentType<{}> }>) {
-  const InternalComponent = lazy(loader);
-  return function AsyncComponent() {
-    return (
-      <Suspense fallback={<div style={{ textAlign: "center" }}>Loading...</div>}>
-        <InternalComponent />
-      </Suspense>
-    );
-  };
-}
-
-const AsyncWorkflowView = loadable(() => import("admin/voxelytics/workflow_view"));
-const AsyncWorkflowListView = loadable(() => import("admin/voxelytics/workflow_list_view"));
+const AsyncWorkflowView = loadable<EmptyObject>(() => import("admin/voxelytics/workflow_view"));
+const AsyncWorkflowListView = loadable<EmptyObject>(
+  () => import("admin/voxelytics/workflow_list_view"),
+);
 
 type StateProps = {
   activeUser: APIUser | null | undefined;
   hasOrganizations: boolean;
   pricingPlan: PricingPlanEnum;
+  isAdminView: boolean;
 };
 type Props = StateProps;
 const browserHistory = createBrowserHistory();
-browserHistory.listen((location) => {
-  // @ts-ignore
-  if (typeof window.ga !== "undefined" && window.ga !== null && window.ga.getByName != null) {
-    // t0 is the default tracker name
-    // @ts-ignore
-    const tracker = window.ga.getByName("t0");
-    if (tracker == null) return;
-    const lastPage = tracker.get("page");
-    const newPage = location.pathname;
-
-    // The listener is called repeatedly for a single page change, don't send repeated pageviews
-    if (lastPage !== newPage) {
-      // Update the tracker state first, so that subsequent pageviews AND events use the correct page
-      // @ts-ignore
-      window.gtag("set", "page_path", newPage);
-      // @ts-ignore
-      window.gtag("event", "page_view");
-    }
-  }
-});
 
 function PageNotFoundView() {
   return (
@@ -124,7 +104,7 @@ function PageNotFoundView() {
           }
           style={{ height: "100%" }}
           extra={[
-            <Link to="/">
+            <Link to="/" key="return-to-dashboard">
               <Button>Back to Dashboard</Button>
             </Link>,
           ]}
@@ -171,40 +151,107 @@ class ReactRouter extends React.Component<Props> {
     );
   };
 
+  tracingSandboxLegacy = ({ match }: ContextRouter) => {
+    const tracingType = coalesce(TracingTypeEnum, match.params.type);
+    if (tracingType == null) {
+      return <h3>Invalid annotation URL.</h3>;
+    }
+    return (
+      <AsyncRedirect
+        redirectTo={async () => {
+          const datasetName = match.params.datasetName || "";
+          const organizationId = match.params.organizationId || "";
+          const datasetId = await getDatasetIdFromNameAndOrganization(datasetName, organizationId);
+          return `/datasets/${datasetName}-${datasetId}/sandbox/:${tracingType}${location.search}${location.hash}`;
+        }}
+      />
+    );
+  };
+
   tracingSandbox = ({ match }: ContextRouter) => {
     const tracingType = coalesce(TracingTypeEnum, match.params.type);
+    const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(
+      match.params.datasetNameAndId,
+    );
 
-    if (tracingType != null) {
+    if (tracingType == null) {
+      return <h3>Invalid annotation URL.</h3>;
+    }
+    if (datasetName) {
+      // Handle very old legacy URLs which neither have a datasetId nor an organizationId.
+      // The schema is something like <authority>/datasets/:datasetName/sandbox/<type>
       return (
-        <TracingLayoutView
-          initialMaybeCompoundType={null}
-          initialCommandType={{
-            type: ControlModeEnum.SANDBOX,
-            tracingType,
-            name: match.params.datasetName || "",
-            owningOrganization: match.params.organizationName || "",
+        <AsyncRedirect
+          redirectTo={async () => {
+            const organizationId = await getOrganizationForDataset(datasetName);
+            const datasetId = await getDatasetIdFromNameAndOrganization(
+              datasetName,
+              organizationId,
+            );
+            return `/datasets/${datasetName}-${datasetId}/sandbox/${tracingType}${location.search}${location.hash}`;
           }}
         />
       );
     }
-
-    return <h3>Invalid annotation URL.</h3>;
+    return (
+      <TracingLayoutView
+        initialMaybeCompoundType={null}
+        initialCommandType={{
+          type: ControlModeEnum.SANDBOX,
+          tracingType,
+          datasetId: datasetId || "",
+        }}
+      />
+    );
   };
 
-  tracingViewMode = ({ match }: ContextRouter) => (
-    <TracingLayoutView
-      initialMaybeCompoundType={null}
-      initialCommandType={{
-        type: ControlModeEnum.VIEW,
-        name: match.params.datasetName || "",
-        owningOrganization: match.params.organizationName || "",
+  tracingViewModeLegacy = ({ match, location }: ContextRouter) => (
+    <AsyncRedirect
+      redirectTo={async () => {
+        const datasetName = match.params.datasetName || "";
+        const organizationId = match.params.organizationId || "";
+        const datasetId = await getDatasetIdFromNameAndOrganization(datasetName, organizationId);
+        return `/datasets/${datasetName}-${datasetId}/view${location.search}${location.hash}`;
       }}
     />
   );
 
+  tracingViewMode = ({ match }: ContextRouter) => {
+    const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(
+      match.params.datasetNameAndId,
+    );
+    if (datasetName) {
+      // Handle very old legacy URLs which neither have a datasetId nor an organizationId.
+      // The schema is something like <authority>/datasets/:datasetName/view
+      return (
+        <AsyncRedirect
+          redirectTo={async () => {
+            const organizationId = await getOrganizationForDataset(datasetName);
+            const datasetId = await getDatasetIdFromNameAndOrganization(
+              datasetName,
+              organizationId,
+            );
+            return `/datasets/${datasetName}-${datasetId}/view${location.search}${location.hash}`;
+          }}
+        />
+      );
+    }
+    return (
+      <TracingLayoutView
+        initialMaybeCompoundType={null}
+        initialCommandType={{
+          type: ControlModeEnum.VIEW,
+          datasetId: datasetId || "",
+        }}
+      />
+    );
+  };
+
   serverAuthenticationCallback = async ({ match }: ContextRouter) => {
     try {
-      const annotationInformation = await getAnnotationInformation(match.params.id || "");
+      const annotationInformation = await getUnversionedAnnotationInformation(
+        match.params.id || "",
+      );
       return annotationInformation.visibility === "Public";
     } catch (_ex) {
       // Annotation could not be found
@@ -219,6 +266,11 @@ class ReactRouter extends React.Component<Props> {
       <Router history={browserHistory}>
         <Layout>
           <DisableGenericDnd />
+          <CheckCertificateModal />
+          {
+            /* within tracing view, the command palette is rendered in the status bar. */
+            isAuthenticated && this.props.isAdminView && <CommandPalette label={null} />
+          }
           <CheckTermsOfServices />
           <Navbar isAuthenticated={isAuthenticated} />
           <HelpButton />
@@ -291,6 +343,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/users/:userId/details"
+                requiresAdminOrManagerRole
                 render={({ match }: ContextRouter) => (
                   <DashboardView
                     userId={match.params.userId}
@@ -303,22 +356,30 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/users"
                 component={UserListView}
+                requiresAdminOrManagerRole
+              />
+              <SecuredRouteWithErrorBoundary
+                isAuthenticated={isAuthenticated}
+                path="/import"
+                component={DatasetURLImport}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/teams"
                 component={TeamListView}
+                requiresAdminOrManagerRole
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
-                path="/statistics"
-                component={StatisticView}
+                path="/timetracking"
+                component={TimeTrackingOverview}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 requiredPricingPlan={PricingPlanEnum.Team}
                 path="/reports/projectProgress"
                 component={ProjectProgressReportView}
+                requiresAdminOrManagerRole
                 exact
               />
               <RouteWithErrorBoundary
@@ -330,6 +391,7 @@ class ReactRouter extends React.Component<Props> {
                 requiredPricingPlan={PricingPlanEnum.Team}
                 path="/reports/availableTasks"
                 component={AvailableTasksReportView}
+                requiresAdminOrManagerRole
                 exact
               />
               <SecuredRouteWithErrorBoundary
@@ -337,6 +399,7 @@ class ReactRouter extends React.Component<Props> {
                 path="/tasks"
                 requiredPricingPlan={PricingPlanEnum.Team}
                 component={TaskListView}
+                requiresAdminOrManagerRole
                 exact
               />
               <SecuredRouteWithErrorBoundary
@@ -344,11 +407,13 @@ class ReactRouter extends React.Component<Props> {
                 path="/tasks/create"
                 requiredPricingPlan={PricingPlanEnum.Team}
                 component={TaskCreateView}
+                requiresAdminOrManagerRole
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/tasks/:taskId/edit"
                 requiredPricingPlan={PricingPlanEnum.Team}
+                requiresAdminOrManagerRole
                 render={({ match }: ContextRouter) => (
                   <TaskCreateFormView taskId={match.params.taskId} />
                 )}
@@ -357,6 +422,7 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/tasks/:taskId"
                 requiredPricingPlan={PricingPlanEnum.Team}
+                requiresAdminOrManagerRole
                 render={({ match }: ContextRouter) => (
                   <TaskListView
                     initialFieldValues={{
@@ -369,6 +435,7 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/projects"
                 requiredPricingPlan={PricingPlanEnum.Team}
+                requiresAdminOrManagerRole
                 render={(
                   { location }: ContextRouter, // Strip the leading # away. If there is no hash, "".slice(1) will evaluate to "", too.
                 ) => <ProjectListView initialSearchValue={location.hash.slice(1)} />}
@@ -378,12 +445,14 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/projects/create"
                 requiredPricingPlan={PricingPlanEnum.Team}
+                requiresAdminOrManagerRole
                 render={() => <ProjectCreateView />}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/projects/:projectId/tasks"
                 requiredPricingPlan={PricingPlanEnum.Team}
+                requiresAdminOrManagerRole
                 render={({ match }: ContextRouter) => (
                   <TaskListView
                     initialFieldValues={{
@@ -396,6 +465,7 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/projects/:projectId/edit"
                 requiredPricingPlan={PricingPlanEnum.Team}
+                requiresAdminOrManagerRole
                 render={({ match }: ContextRouter) => (
                   <ProjectCreateView projectId={match.params.projectId} />
                 )}
@@ -427,43 +497,47 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/datasets/upload"
+                requiresAdminOrManagerRole
                 render={() => <DatasetAddView />}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
-                path="/datasets/:organizationName/:datasetName/import"
-                render={({ match }: ContextRouter) => (
-                  <DatasetSettingsView
-                    isEditingMode={false}
-                    datasetId={{
-                      name: match.params.datasetName || "",
-                      owningOrganization: match.params.organizationName || "",
-                    }}
-                    onComplete={() =>
-                      window.location.replace(`${window.location.origin}/dashboard/datasets`)
-                    }
-                    onCancel={() => window.history.back()}
-                  />
-                )}
-              />
-              <SecuredRouteWithErrorBoundary
-                isAuthenticated={isAuthenticated}
-                path="/datasets/:organizationName/:datasetName/edit"
-                render={({ match }: ContextRouter) => (
-                  <DatasetSettingsView
-                    isEditingMode
-                    datasetId={{
-                      name: match.params.datasetName || "",
-                      owningOrganization: match.params.organizationName || "",
-                    }}
-                    onComplete={() => window.history.back()}
-                    onCancel={() => window.history.back()}
-                  />
-                )}
+                path="/datasets/:datasetNameAndId/edit"
+                requiresAdminOrManagerRole
+                render={({ match }: ContextRouter) => {
+                  const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(
+                    match.params.datasetNameAndId,
+                  );
+                  if (datasetName) {
+                    // Handle very old legacy URLs which neither have a datasetId nor an organizationId.
+                    // The schema is something like <authority>/datasets/:datasetName/edit
+                    return (
+                      <AsyncRedirect
+                        redirectTo={async () => {
+                          const organizationId = await getOrganizationForDataset(datasetName);
+                          const datasetId = await getDatasetIdFromNameAndOrganization(
+                            datasetName,
+                            organizationId,
+                          );
+                          return `/datasets/${datasetName}-${datasetId}/edit`;
+                        }}
+                      />
+                    );
+                  }
+                  return (
+                    <DatasetSettingsView
+                      isEditingMode
+                      datasetId={datasetId || ""}
+                      onComplete={() => window.history.back()}
+                      onCancel={() => window.history.back()}
+                    />
+                  );
+                }}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes"
+                requiresAdminOrManagerRole
                 render={(
                   { location }: ContextRouter, // Strip the leading # away. If there is no hash, "".slice(1) will evaluate to "", too.
                 ) => <TaskTypeListView initialSearchValue={location.hash.slice(1)} />}
@@ -474,6 +548,7 @@ class ReactRouter extends React.Component<Props> {
                 path="/taskTypes/create"
                 requiredPricingPlan={PricingPlanEnum.Team}
                 component={TaskTypeCreateView}
+                requiresAdminOrManagerRole
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
@@ -482,6 +557,7 @@ class ReactRouter extends React.Component<Props> {
                 render={({ match }: ContextRouter) => (
                   <TaskTypeCreateView taskTypeId={match.params.taskTypeId} />
                 )}
+                requiresAdminOrManagerRole
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
@@ -494,6 +570,7 @@ class ReactRouter extends React.Component<Props> {
                     }}
                   />
                 )}
+                requiresAdminOrManagerRole
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
@@ -502,15 +579,18 @@ class ReactRouter extends React.Component<Props> {
                 render={({ match }: ContextRouter) => (
                   <ProjectListView taskTypeId={match.params.taskTypeId || ""} />
                 )}
+                requiresAdminOrManagerRole
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/scripts/create"
                 render={() => <ScriptCreateView />}
+                requiresAdminOrManagerRole
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/scripts/:scriptId/edit"
+                requiresAdminOrManagerRole
                 render={({ match }: ContextRouter) => (
                   <ScriptCreateView scriptId={match.params.scriptId} />
                 )}
@@ -519,6 +599,7 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/scripts"
                 component={ScriptListView}
+                requiresAdminOrManagerRole
                 exact
               />
               <SecuredRouteWithErrorBoundary
@@ -528,20 +609,14 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
-                path="/organizations/:organizationName"
+                path="/organizations/:organizationId"
                 render={() => <OrganizationEditView />}
               />
               <RouteWithErrorBoundary
                 path="/help/keyboardshortcuts"
                 render={() => (
-                  <Redirect to="https://docs.webknossos.org/webknossos/keyboard_shortcuts.html" />
+                  <Redirect to="https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html" />
                 )}
-              />
-              <SecuredRouteWithErrorBoundary
-                isAuthenticated={isAuthenticated}
-                path="/reports/timetracking"
-                requiredPricingPlan={PricingPlanEnum.Power}
-                render={() => <TimeLineView />}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
@@ -604,77 +679,64 @@ class ReactRouter extends React.Component<Props> {
                   return <FinishResetPasswordView resetToken={params.token} />;
                 }}
               />
-              <Route
-                path="/datasets/:organizationName/:datasetName/view"
-                render={this.tracingViewMode}
-              />
+              {/* legacy view mode route */}
               <RouteWithErrorBoundary
-                path="/datasets/:id/view"
-                render={({ match, location }: ContextRouter) => (
-                  <AsyncRedirect
-                    redirectTo={async () => {
-                      const datasetName = match.params.id || "";
-                      const organizationName = await getOrganizationForDataset(datasetName);
-                      return `/datasets/${organizationName}/${datasetName}/view${location.search}${location.hash}`;
-                    }}
-                  />
-                )}
+                path="/datasets/:organizationId/:datasetName/view"
+                render={this.tracingViewModeLegacy}
               />
+              <Route path="/datasets/:datasetNameAndId/view" render={this.tracingViewMode} />
               <RouteWithErrorBoundary
-                path="/datasets/:organizationName/:datasetName/sandbox/:type"
+                path="/datasets/:datasetNameAndId/sandbox/:type"
                 render={this.tracingSandbox}
+              />
+              {/* legacy sandbox route */}
+              <RouteWithErrorBoundary
+                path="/datasets/:organizationId/:datasetName/sandbox/:type"
+                render={this.tracingSandboxLegacy}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
-                path="/datasets/:organizationName/:dataSetName/createExplorative/:type"
+                path="/datasets/:datasetId/createExplorative/:type"
                 render={({ match }: ContextRouter) => (
                   <AsyncRedirect
                     pushToHistory={false}
                     redirectTo={async () => {
-                      if (
-                        !match.params.organizationName ||
-                        !match.params.dataSetName ||
-                        !match.params.type
-                      ) {
+                      if (!match.params.datasetId || !match.params.type) {
                         // Typehint for TS
                         throw new Error("Invalid URL");
                       }
 
-                      const dataset = {
-                        owningOrganization: match.params.organizationName,
-                        name: match.params.dataSetName,
-                      };
+                      const datasetId = match.params.datasetId;
                       const type =
                         coalesce(TracingTypeEnum, match.params.type) || TracingTypeEnum.skeleton;
                       const getParams = Utils.getUrlParamsObjectFromString(location.search);
                       const { autoFallbackLayer, fallbackLayerName } = getParams;
-                      const resolutionRestrictions: APIResolutionRestrictions = {};
+                      const magRestrictions: APIMagRestrictions = {};
 
-                      if (getParams.minRes !== undefined) {
-                        resolutionRestrictions.min = parseInt(getParams.minRes);
+                      if (getParams.minMag !== undefined) {
+                        magRestrictions.min = Number.parseInt(getParams.minMag);
 
-                        if (!_.isNumber(resolutionRestrictions.min)) {
-                          throw new Error("Invalid minRes parameter");
+                        if (!_.isNumber(magRestrictions.min)) {
+                          throw new Error("Invalid minMag parameter");
                         }
-                      }
 
-                      if (getParams.maxRes !== undefined) {
-                        resolutionRestrictions.max = parseInt(getParams.maxRes);
+                        if (getParams.maxMag !== undefined) {
+                          magRestrictions.max = Number.parseInt(getParams.maxMag);
 
-                        if (!_.isNumber(resolutionRestrictions.max)) {
-                          throw new Error("Invalid maxRes parameter");
+                          if (!_.isNumber(magRestrictions.max)) {
+                            throw new Error("Invalid maxMag parameter");
+                          }
                         }
                       }
 
                       const annotation = await createExplorational(
-                        dataset,
+                        datasetId,
                         type,
                         !!autoFallbackLayer,
                         fallbackLayerName,
                         null,
-                        resolutionRestrictions,
+                        magRestrictions,
                       );
-                      trackAction(`Create ${type} tracing`);
                       return `/annotations/${annotation.id}`;
                     }}
                   />
@@ -684,10 +746,12 @@ class ReactRouter extends React.Component<Props> {
                 // Note that this route has to be beneath all others sharing the same prefix,
                 // to avoid url mismatching
               }
-              <Route
-                path="/datasets/:organizationName/:datasetName"
-                render={this.tracingViewMode}
+              {/*legacy view mode route */}
+              <RouteWithErrorBoundary
+                path="/datasets/:organizationId/:datasetName"
+                render={this.tracingViewModeLegacy}
               />
+              <Route path="/datasets/:datasetNameAndId" render={this.tracingViewMode} />
               <RouteWithErrorBoundary
                 path="/publications/:id"
                 render={({ match }: ContextRouter) => (
@@ -699,6 +763,12 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/workflows"
                 component={AsyncWorkflowListView}
+                exact
+              />
+              <SecuredRouteWithErrorBoundary
+                isAuthenticated={isAuthenticated}
+                path="/aiModels"
+                component={AiModelListView}
                 exact
               />
               <SecuredRouteWithErrorBoundary
@@ -738,6 +808,7 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
     ? state.activeOrganization.pricingPlan
     : PricingPlanEnum.Basic,
   hasOrganizations: state.uiInformation.hasOrganizations,
+  isAdminView: !state.uiInformation.isInAnnotationView,
 });
 
 const connector = connect(mapStateToProps);

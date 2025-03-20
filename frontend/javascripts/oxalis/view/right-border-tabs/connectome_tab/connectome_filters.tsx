@@ -1,13 +1,14 @@
-import { Checkbox, Divider, Popover, Tooltip } from "antd";
 import { FilterOutlined } from "@ant-design/icons";
-import React from "react";
+import { Checkbox, Divider, Popover, Tooltip } from "antd";
 import _ from "lodash";
+import ButtonComponent from "oxalis/view/components/button_component";
 import type {
-  Synapse,
   ConnectomeData,
+  DirectionCaptionsKeys,
+  Synapse,
 } from "oxalis/view/right-border-tabs/connectome_tab/synapse_tree";
 import { directionCaptions } from "oxalis/view/right-border-tabs/connectome_tab/synapse_tree";
-import ButtonComponent from "oxalis/view/components/button_component";
+import React from "react";
 
 type SynapseDirection = "in" | "out";
 
@@ -134,11 +135,13 @@ class ConnectomeFilters extends React.Component<Props, State> {
   getFilterSettings = () => {
     const { availableSynapseTypes } = this.props;
     const { filters } = this.state;
-    const synapseDirectionOptions = Object.keys(directionCaptions).map((direction) => ({
-      // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
-      label: directionCaptions[direction],
-      value: direction,
-    }));
+    const synapseDirectionOptions = Object.keys(directionCaptions).map(
+      // @ts-ignore
+      (direction: DirectionCaptionsKeys) => ({
+        label: directionCaptions[direction],
+        value: direction,
+      }),
+    );
     const synapseTypeOptions = availableSynapseTypes.map((synapseType) => ({
       label: synapseType,
       value: synapseType,
@@ -169,14 +172,12 @@ class ConnectomeFilters extends React.Component<Props, State> {
         <Checkbox.Group
           options={synapseDirectionOptions}
           value={filters.synapseDirections}
-          // @ts-expect-error ts-migrate(2322) FIXME: Type '(synapseDirections: Array<SynapseDirection>)... Remove this comment to see the full error message
           onChange={this.onChangeSynapseDirectionFilter}
         />
         <h4>by Synapse Type</h4>
         <Checkbox.Group
           options={synapseTypeOptions}
           value={filters.synapseTypes}
-          // @ts-expect-error ts-migrate(2322) FIXME: Type '(synapseTypes: Array<string>) => void' is no... Remove this comment to see the full error message
           onChange={this.onChangeSynapseTypeFilter}
         />
       </div>

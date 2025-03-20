@@ -1,12 +1,15 @@
-import { Form, Input, Button, Row, Col, Checkbox } from "antd";
-import { UserOutlined, LockOutlined, MailOutlined } from "@ant-design/icons";
-import React, { useRef, memo } from "react";
+import { LockOutlined, MailOutlined, UserOutlined } from "@ant-design/icons";
 import { loginUser } from "admin/admin_rest_api";
-import { setActiveUserAction } from "oxalis/model/actions/user_actions";
+import { getTermsOfService } from "admin/api/terms_of_service";
+import { Button, Checkbox, Col, Form, Input, Row } from "antd";
+import { useFetch } from "libs/react_helpers";
 import Request from "libs/request";
-import Store from "oxalis/throttled_store";
 import messages from "messages";
 import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
+import { setActiveUserAction } from "oxalis/model/actions/user_actions";
+import Store from "oxalis/throttled_store";
+import { memo, useRef } from "react";
+import { TOSCheckFormItem } from "./tos_check_form_item";
 
 const FormItem = Form.Item;
 const { Password } = Input;
@@ -15,7 +18,7 @@ type Props = {
   onRegistered: (isUserLoggedIn: true) => void;
 };
 
-function generateOrganizationName() {
+function generateOrganizationId() {
   let output = "";
 
   for (let i = 0; i < 8; i++) {
@@ -29,18 +32,22 @@ function generateOrganizationName() {
 
 function RegistrationFormWKOrg(props: Props) {
   const [form] = Form.useForm();
-  const organizationName = useRef(generateOrganizationName());
+  const organizationId = useRef(generateOrganizationId());
+  const terms = useFetch(getTermsOfService, null, []);
 
   async function onFinish(formValues: Record<string, any>) {
     await Request.sendJSONReceiveJSON("/api/auth/createOrganizationWithAdmin", {
       data: {
         ...formValues,
+        firstName: formValues.firstName.trim(),
+        lastName: formValues.lastName.trim(),
         password: {
           password1: formValues.password.password1,
           password2: formValues.password.password1,
         },
-        organization: organizationName.current,
-        organizationDisplayName: `${formValues.firstName} ${formValues.lastName} Lab`,
+        organization: organizationId.current,
+        organizationName: `${formValues.firstName.trim()} ${formValues.lastName.trim()} Lab`,
+        acceptedTermsOfService: terms?.version,
       },
     });
     const [user, organization] = await loginUser({
@@ -153,32 +160,31 @@ function RegistrationFormWKOrg(props: Props) {
           placeholder="Password"
         />
       </FormItem>
+      <div className="registration-form-checkboxes">
+        <FormItem
+          name="privacy_check"
+          valuePropName="checked"
+          rules={[
+            {
+              validator: (_, value) =>
+                value
+                  ? Promise.resolve()
+                  : Promise.reject(new Error(messages["auth.privacy_check_required"])),
+            },
+          ]}
+        >
+          <Checkbox>
+            I agree to storage and processing of my personal data as described in the{" "}
+            <a target="_blank" href="/privacy" rel="noopener noreferrer">
+              privacy statement
+            </a>
+            .
+          </Checkbox>
+        </FormItem>
+        <TOSCheckFormItem terms={terms} />
+      </div>
 
-      <FormItem
-        name="privacy_check"
-        valuePropName="checked"
-        rules={[
-          {
-            validator: (_, value) =>
-              value
-                ? Promise.resolve()
-                : Promise.reject(new Error(messages["auth.privacy_check_required"])),
-          },
-        ]}
-      >
-        <Checkbox>
-          I agree to storage and processing of my personal data as described in the{" "}
-          <a target="_blank" href="/privacy" rel="noopener noreferrer">
-            privacy statement
-          </a>
-          .
-        </Checkbox>
-      </FormItem>
-      <FormItem
-        style={{
-          marginBottom: 10,
-        }}
-      >
+      <FormItem>
         <Button
           size="large"
           type="primary"

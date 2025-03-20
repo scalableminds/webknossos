@@ -1,13 +1,29 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
 import com.scalableminds.webknossos.datastore.geometry.{AdditionalAxisProto, Vec2IntProto}
+import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import net.liftweb.common.{Box, Failure, Full}
 import play.api.libs.json.{Format, Json}
 
 // bounds: lower bound inclusive, upper bound exclusive
 case class AdditionalAxis(name: String, bounds: Array[Int], index: Int) {
-  def lowerBound: Int = bounds(0)
-  def upperBound: Int = bounds(1)
+  lazy val lowerBound: Int = bounds(0)
+  lazy val upperBound: Int = bounds(1)
+  lazy val highestValue: Int = upperBound - 1
+
+  // Creates a new AdditionalAxis that encloses the the position given by additional coordinates with width 1.
+  // Used to create the additional axes of an nd bounding box that encloses the given additional coordinates.
+  // For normal axes x, y, z use the normal bounding box intersection.
+  def intersectWithAdditionalCoordinates(additionalCoordinates: Seq[AdditionalCoordinate]): AdditionalAxis = {
+    val matchingCoordinate = additionalCoordinates.find(ac => ac.name == name)
+    matchingCoordinate match {
+      case Some(ac) =>
+        AdditionalAxis(name, Array(ac.value, ac.value + 1), index)
+      case None =>
+        // Use the lower bound as fallback
+        AdditionalAxis(name, Array(lowerBound, lowerBound + 1), index)
+    }
+  }
 }
 
 object AdditionalAxis {
@@ -24,10 +40,19 @@ object AdditionalAxis {
       case None => Seq()
     }
 
-  def fromProto(additionalAxisProtos: Seq[AdditionalAxisProto]): Seq[AdditionalAxis] =
+  def fromProtos(additionalAxisProtos: Seq[AdditionalAxisProto]): Seq[AdditionalAxis] =
     additionalAxisProtos.map(
       p => AdditionalAxis(p.name, Array(p.bounds.x, p.bounds.y), p.index)
     )
+
+  def fromProtosAsOpt(additionalAxisProtos: Seq[AdditionalAxisProto]): Option[Seq[AdditionalAxis]] = {
+    val axes = fromProtos(additionalAxisProtos)
+    if (axes.nonEmpty) {
+      Some(axes)
+    } else {
+      None
+    }
+  }
 
   def merge(additionalAxeses: Seq[Option[Seq[AdditionalAxis]]]): Option[Seq[AdditionalAxis]] = {
     val additionalAxesMap = scala.collection.mutable.Map[String, (Int, Int, Int)]()
@@ -79,4 +104,26 @@ object AdditionalAxis {
       Failure("dataset.additionalCoordinates.different")
     }
   }
+
+  // All possible values of the additional coordinates for given axes
+  def coordinateSpace(additionalAxes: Option[Seq[AdditionalAxis]]): Seq[Seq[AdditionalCoordinate]] =
+    additionalAxes match {
+      case Some(axes) =>
+        val coordinateSpaces = axes.map { axis =>
+          axis.lowerBound until axis.upperBound
+        }
+        val coordinateSpace = coordinateSpaces.foldLeft(Seq(Seq.empty[Int])) { (acc, space) =>
+          for {
+            a <- acc
+            b <- space
+          } yield a :+ b
+        }
+        coordinateSpace.map { coordinates =>
+          coordinates.zipWithIndex.map {
+            case (coordinate, index) =>
+              AdditionalCoordinate(axes(index).name, coordinate)
+          }
+        }
+      case None => Seq.empty
+    }
 }

@@ -1,0 +1,12 @@
+syntax = "proto2";
+
+package com.scalableminds.webknossos.datastore;
+
+// Use exactly one of the value fields!
+message MetadataEntryProto {
+  required string key = 1;
+  optional string stringValue = 2;
+  optional bool boolValue = 3;
+  optional double numberValue = 4;
+  repeated string stringListValue = 5;
+}

@@ -4,9 +4,9 @@ import play.api.mvc.RequestHeader
 
 trait ApiVersioning {
 
-  protected def CURRENT_API_VERSION: Int = 6
+  protected def CURRENT_API_VERSION: Int = 9
 
-  protected def OLDEST_SUPPORTED_API_VERSION: Int = 1
+  protected def OLDEST_SUPPORTED_API_VERSION: Int = 5
 
   protected def isInvalidApiVersion(request: RequestHeader): Boolean = {
     val requestedVersion = extractRequestedApiVersion(request)

@@ -1,19 +1,19 @@
+import { Button, Card, Col, Row } from "antd";
+import features, { getDemoDatasetUrl } from "features";
 import { filterNullValues } from "libs/utils";
+import * as Utils from "libs/utils";
+import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import React, { useEffect, useState } from "react";
-import { APIDatasetCompact, APIUser, FolderItem } from "types/api_flow_types";
+import { Link } from "react-router-dom";
+import type { APIDatasetCompact, APIUser, FolderItem } from "types/api_flow_types";
 import DatasetCollectionContextProvider, {
   useDatasetCollectionContext,
 } from "./dataset/dataset_collection_context";
-import { Button, Card, Col, Row } from "antd";
-import { Link } from "react-router-dom";
-import * as Utils from "libs/utils";
+import { useDatasetsInFolderQuery, useFolderHierarchyQuery } from "./dataset/queries";
 import DatasetView, { DatasetAddButton, DatasetRefreshButton } from "./dataset_view";
 import { DetailsSidebar } from "./folders/details_sidebar";
 import { EditFolderModal } from "./folders/edit_folder_modal";
 import { FolderTreeSidebar } from "./folders/folder_tree";
-import features, { getDemoDatasetUrl } from "features";
-import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
-import { useFolderHierarchyQuery, useDatasetsInFolderQuery } from "./dataset/queries";
 
 type Props = {
   user: APIUser;
@@ -78,6 +78,8 @@ function DatasetFolderViewInner(props: Props) {
   const folderIdForDetailsSidebar = context.selectedFolder?.key ?? context.activeFolderId;
   const datasetCountForDetailsSidebar =
     context.selectedFolder != null ? selectedFolderDatasets?.length || 0 : context.datasets.length;
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Only update the selected datasets when the context datasets change.
   useEffect(() => {
     if (selectedDatasets.length === 0 || !context.datasets) {
       return;
@@ -132,7 +134,7 @@ function DatasetFolderViewInner(props: Props) {
                 <p>
                   WEBKNOSSOS supports a variety of (remote){" "}
                   <a
-                    href="https://docs.webknossos.org/webknossos/data_formats.html"
+                    href="https://docs.webknossos.org/webknossos/data/index.html"
                     target="_blank"
                     rel="noreferrer"
                   >
@@ -201,7 +203,7 @@ function DatasetFolderViewInner(props: Props) {
     <div
       style={{
         display: "grid",
-        gridTemplate: "auto / auto 1fr auto",
+        gridTemplate: "auto / auto minmax(60%, 1fr) auto",
         flexGrow: 1,
         minHeight: 0,
       }}
@@ -216,13 +218,13 @@ function DatasetFolderViewInner(props: Props) {
         style={{
           gridColumn: "1 / 2",
           overflow: "auto",
-          borderRight: "1px solid var(--ant-border-base)",
+          borderRight: "1px solid var(--ant-color-border)",
           marginRight: 16,
         }}
       >
         <FolderTreeSidebar setFolderIdForEditModal={setFolderIdForEditModal} />
       </div>
-      <main style={{ gridColumn: "2 / 2", overflow: "auto", paddingRight: 4 }}>
+      <main style={{ gridColumn: "2 / 3", overflow: "auto", paddingRight: 4 }}>
         <DatasetView
           user={props.user}
           onSelectDataset={setSelectedDataset}
@@ -236,7 +238,7 @@ function DatasetFolderViewInner(props: Props) {
         style={{
           gridColumn: "3 / 4",
           overflow: "auto",
-          borderLeft: "1px solid var(--ant-border-base)",
+          borderLeft: "1px solid var(--ant-color-border)",
           marginLeft: 4,
         }}
       >

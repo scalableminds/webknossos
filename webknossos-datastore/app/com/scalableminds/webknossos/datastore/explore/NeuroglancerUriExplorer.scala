@@ -1,32 +1,26 @@
 package com.scalableminds.webknossos.datastore.explore
 
-import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
+import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5SegmentationLayer}
-import com.scalableminds.webknossos.datastore.dataformats.precomputed.{
-  PrecomputedDataLayer,
-  PrecomputedSegmentationLayer
-}
-import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrSegmentationLayer}
-import com.scalableminds.webknossos.datastore.dataformats.zarr3.{Zarr3DataLayer, Zarr3SegmentationLayer}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, LayerViewConfiguration}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerWithMagLocators, LayerViewConfiguration}
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
 import net.liftweb.common.Box.tryo
 import play.api.libs.json._
 
 import java.net.URI
-import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class NeuroglancerUriExplorer @Inject()(dataVaultService: DataVaultService,
-                                        exploreLayerService: ExploreLayerService,
-                                        implicit val ec: ExecutionContext)
-    extends RemoteLayerExplorer {
+class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val ec: ExecutionContext)
+    extends RemoteLayerExplorer
+    with ExploreLayerUtils {
   override def name: String = "Neuroglancer URI Explorer"
 
-  override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(DataLayer, Vec3Double)]] =
+  override def explore(remotePath: VaultPath, credentialId: Option[String])(
+      implicit tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     for {
       _ <- Fox.successful(())
       uriFragment <- tryo(remotePath.toUri.getFragment.drop(1)) ?~> "URI has no matching fragment part"
@@ -36,10 +30,11 @@ class NeuroglancerUriExplorer @Inject()(dataVaultService: DataVaultService,
       exploredLayers = layerSpecs.value.map(exploreNeuroglancerLayer).toList
       layerLists <- Fox.combined(exploredLayers)
       layers = layerLists.flatten
-      renamedLayers = exploreLayerService.makeLayerNamesUnique(layers.map(_._1))
+      renamedLayers = makeLayerNamesUnique(layers.map(_._1))
     } yield renamedLayers.zip(layers.map(_._2))
 
-  private def exploreNeuroglancerLayer(layerSpec: JsValue): Fox[List[(DataLayer, Vec3Double)]] =
+  private def exploreNeuroglancerLayer(layerSpec: JsValue)(
+      implicit tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     for {
       _ <- Fox.successful(())
       obj <- layerSpec.validate[JsObject].toFox
@@ -54,7 +49,8 @@ class NeuroglancerUriExplorer @Inject()(dataVaultService: DataVaultService,
       layerWithViewConfiguration <- assignViewConfiguration(layer, viewConfiguration)
     } yield layerWithViewConfiguration
 
-  private def exploreLayer(layerType: String, remotePath: VaultPath, name: String): Fox[List[(DataLayer, Vec3Double)]] =
+  private def exploreLayer(layerType: String, remotePath: VaultPath, name: String)(
+      implicit tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     layerType match {
       case "n5" =>
         Fox.firstSuccess(
@@ -62,8 +58,11 @@ class NeuroglancerUriExplorer @Inject()(dataVaultService: DataVaultService,
       case "precomputed" => new PrecomputedExplorer().explore(remotePath, None)
       case "zarr" | "zarr2" =>
         Fox.firstSuccess(
-          Seq(new NgffExplorer().explore(remotePath, None),
-              new ZarrArrayExplorer(Vec3Int.ones, ec).explore(remotePath, None)))
+          Seq(
+            new NgffV0_4Explorer().explore(remotePath, None),
+            new NgffV0_5Explorer().explore(remotePath, None),
+            new ZarrArrayExplorer(Vec3Int.ones).explore(remotePath, None)
+          ))
       case "zarr3" => new Zarr3ArrayExplorer().explore(remotePath, None)
       case _       => Fox.failure(f"Can not explore layer of $layerType type")
     }
@@ -76,22 +75,12 @@ class NeuroglancerUriExplorer @Inject()(dataVaultService: DataVaultService,
   }
 
   private def assignViewConfiguration(
-      value: List[(DataLayer, Vec3Double)],
-      configuration: LayerViewConfiguration.LayerViewConfiguration): Fox[List[(DataLayer, Vec3Double)]] =
+      value: List[(DataLayerWithMagLocators, VoxelSize)],
+      configuration: LayerViewConfiguration.LayerViewConfiguration): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     for {
       _ <- Fox.successful(())
       layers = value.map(_._1)
-      layersWithViewConfigs = layers.map {
-        case l: ZarrDataLayer                => l.copy(defaultViewConfiguration = Some(configuration))
-        case l: ZarrSegmentationLayer        => l.copy(defaultViewConfiguration = Some(configuration))
-        case l: N5DataLayer                  => l.copy(defaultViewConfiguration = Some(configuration))
-        case l: N5SegmentationLayer          => l.copy(defaultViewConfiguration = Some(configuration))
-        case l: PrecomputedDataLayer         => l.copy(defaultViewConfiguration = Some(configuration))
-        case l: PrecomputedSegmentationLayer => l.copy(defaultViewConfiguration = Some(configuration))
-        case l: Zarr3DataLayer               => l.copy(defaultViewConfiguration = Some(configuration))
-        case l: Zarr3SegmentationLayer       => l.copy(defaultViewConfiguration = Some(configuration))
-
-      }
+      layersWithViewConfigs = layers.map(l => l.mapped(defaultViewConfigurationMapping = _ => Some(configuration)))
     } yield layersWithViewConfigs.zip(value.map(_._2))
 
 }

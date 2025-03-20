@@ -1,17 +1,17 @@
-import * as THREE from "three";
 import { saveAs } from "file-saver";
-import Store from "oxalis/store";
-import { OUTER_CSS_BORDER, OrthoView } from "oxalis/constants";
+import { convertBufferToImage } from "libs/utils";
+import { ARBITRARY_CAM_DISTANCE, type OrthoView } from "oxalis/constants";
 import constants, {
   ArbitraryViewport,
   OrthoViewColors,
   OrthoViewValues,
   OrthoViews,
 } from "oxalis/constants";
-import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
-import { convertBufferToImage } from "libs/utils";
+import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
+import Store from "oxalis/store";
+import * as THREE from "three";
 
 const getBackgroundColor = (): number =>
   Store.getState().uiInformation.theme === "dark" ? 0x000000 : 0xffffff;
@@ -39,7 +39,8 @@ export const clearCanvas = (renderer: THREE.WebGLRenderer) => {
 export function renderToTexture(
   plane: OrthoView | typeof ArbitraryViewport,
   scene?: THREE.Scene,
-  camera?: THREE.OrthographicCamera, // When withFarClipping is true, the user-specified clipping distance is used.
+  camera?: THREE.OrthographicCamera | THREE.PerspectiveCamera,
+  // When withFarClipping is true, the user-specified clipping distance is used.
   // Note that the data planes might not be included in the rendered texture, since
   // these are exactly offset by the clipping distance. Currently, `withFarClipping`
   // is only used for node picking (which does not render the data planes), which is why
@@ -51,19 +52,35 @@ export function renderToTexture(
   const { renderer, scene: defaultScene } = SceneController;
   const state = Store.getState();
   scene = scene || defaultScene;
-  camera = (camera || scene.getObjectByName(plane)) as THREE.OrthographicCamera;
+  camera = (camera || scene.getObjectByName(plane)) as
+    | THREE.OrthographicCamera
+    | THREE.PerspectiveCamera;
 
   // Don't respect withFarClipping for the TDViewport as we don't do any clipping for
   // nodes there.
   if (withFarClipping && plane !== OrthoViews.TDView) {
-    const isArbitraryMode = constants.MODES_ARBITRARY.includes(
-      state.temporaryConfiguration.viewMode,
-    );
-    camera = camera.clone() as THREE.OrthographicCamera;
-    camera.far = isArbitraryMode
-      ? state.userConfiguration.clippingDistanceArbitrary
-      : state.userConfiguration.clippingDistance;
-    camera.updateProjectionMatrix();
+    function adaptCameraToCurrentClippingDistance<
+      T extends THREE.OrthographicCamera | THREE.PerspectiveCamera,
+    >(camera: T): T {
+      const isArbitraryMode = constants.MODES_ARBITRARY.includes(
+        state.temporaryConfiguration.viewMode,
+      );
+      camera = camera.clone() as T;
+      // The near value is already set in the camera (done in the CameraController/ArbitraryView).
+      if (isArbitraryMode) {
+        // The far value has to be set, since in normal rendering the far clipping is
+        // achieved by the data plane which is not rendered during node picking
+        camera.far = ARBITRARY_CAM_DISTANCE;
+      } else {
+        // The far value has to be set, since in normal rendering the far clipping is
+        // achieved by offsetting the plane instead of setting the far property.
+        camera.far = state.userConfiguration.clippingDistance;
+      }
+      camera.updateProjectionMatrix();
+      return camera;
+    }
+
+    camera = adaptCameraToCurrentClippingDistance(camera);
   }
 
   clearColor = clearColor != null ? clearColor : 0x000000;
@@ -110,10 +127,9 @@ export async function downloadScreenshot() {
   for (const planeId of planeIds) {
     const { width, height } = getInputCatcherRect(Store.getState(), planeId);
     if (width === 0 || height === 0) continue;
-    // @ts-ignore planeId cannot be arbitraryViewport in OrthoViewColors access
-    const clearColor = OrthoViewValues.includes(planeId) ? OrthoViewColors[planeId] : 0xffffff;
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'null' is not assignable to param... Remove this comment to see the full error message
-    const buffer = renderToTexture(planeId, null, null, false, clearColor);
+    const clearColor = planeId !== "arbitraryViewport" ? OrthoViewColors[planeId] : 0xffffff;
+
+    const buffer = renderToTexture(planeId, undefined, undefined, false, clearColor);
 
     const inputCatcherElement = document.querySelector(`#inputcatcher_${planeId}`);
     const drawImageIntoCanvasCallback =
@@ -121,10 +137,7 @@ export async function downloadScreenshot() {
         ? (ctx: CanvasRenderingContext2D) => {
             const scalebarDistanceToRightBorder = constants.SCALEBAR_OFFSET;
             const scalebarDistanceToTopBorder =
-              ctx.canvas.height +
-              OUTER_CSS_BORDER -
-              constants.SCALEBAR_OFFSET -
-              constants.SCALEBAR_HEIGHT;
+              ctx.canvas.height - constants.SCALEBAR_OFFSET - constants.SCALEBAR_HEIGHT;
             const logoHeight = constants.SCALEBAR_HEIGHT;
             const logoWidth = (logoHeight / logo.height) * logo.width;
             ctx.drawImage(
@@ -150,14 +163,13 @@ export async function downloadScreenshot() {
           )
         : null;
 
-    // eslint-disable-next-line no-await-in-loop
     const blob = await convertBufferToImage(
       buffer,
       width,
       height,
-      true,
       canvas,
       drawImageIntoCanvasCallback,
+      true,
     );
     if (blob != null) {
       const planeDescriptor = viewMode === constants.MODE_PLANE_TRACING ? planeId : viewMode;

@@ -1,13 +1,17 @@
 // This module should be used to access the window object, so it can be mocked in the unit tests
+
+import type TextureBucketManager from "oxalis/model/bucket_data_handling/texture_bucket_manager";
+import type { ArbitraryFunction, ArbitraryObject } from "types/globals";
+
 // mockRequire("libs/window", myFakeWindow);
 const removeEventListener = (
   _type: string,
-  _fn: Function,
+  _fn: ArbitraryFunction,
   _options?: boolean | EventListenerOptions,
 ) => {};
 const addEventListener = (
   _type: string,
-  _fn: Function,
+  _fn: ArbitraryFunction,
   _options?: boolean | EventListenerOptions,
 ) => {};
 
@@ -58,19 +62,26 @@ let performanceCounterForMocking = 0;
 
 type Olvy =
   | {
-      init: (obj: Object) => void;
+      init: (obj: ArbitraryObject) => void;
       getUnreadReleasesCount: (timestamp: string) => number;
       show: () => void;
+      config: { target: string };
     }
   | undefined;
 
-const _window: Window & typeof globalThis & { Olvy?: Olvy; OlvyConfig?: Object | null } =
+const _window: Window &
+  typeof globalThis & {
+    Olvy?: Olvy;
+    OlvyConfig?: ArbitraryObject | null;
+    managers?: Array<TextureBucketManager>;
+    materials?: Record<string, THREE.ShaderMaterial>;
+  } =
   typeof window === "undefined"
     ? ({
         alert: console.log.bind(console),
         app: null,
         location: dummyLocation,
-        requestAnimationFrame: (resolver: Function) => {
+        requestAnimationFrame: (resolver: ArbitraryFunction) => {
           setTimeout(resolver, 16);
         },
         document,
@@ -84,6 +95,7 @@ const _window: Window & typeof globalThis & { Olvy?: Olvy; OlvyConfig?: Object |
         removeEventListener,
         open: (_url: string) => {},
         performance: { now: () => ++performanceCounterForMocking },
+        matchMedia: () => false,
       } as typeof window)
     : window;
 

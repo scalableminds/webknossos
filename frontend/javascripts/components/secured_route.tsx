@@ -1,19 +1,22 @@
-import React from "react";
-import { Route, withRouter } from "react-router-dom";
-import { connect } from "react-redux";
 import LoginView from "admin/auth/login_view";
 import {
+  type PricingPlanEnum,
   isFeatureAllowedByPricingPlan,
-  PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
-import { APIOrganization } from "types/api_flow_types";
 import { PageUnavailableForYourPlanView } from "components/pricing_enforcers";
-import type { ComponentType } from "react";
-import type { RouteComponentProps } from "react-router-dom";
+import { isUserAdminOrManager } from "libs/utils";
 import type { OxalisState } from "oxalis/store";
+import React from "react";
+import type { ComponentType } from "react";
+import { connect } from "react-redux";
+import { Route, withRouter } from "react-router-dom";
+import type { RouteComponentProps } from "react-router-dom";
+import type { APIOrganization, APIUser } from "types/api_flow_types";
+import { PageNotAvailableToNormalUser } from "./permission_enforcer";
 
 type StateProps = {
   activeOrganization: APIOrganization | null;
+  activeUser: APIUser | null | undefined;
 };
 export type SecuredRouteProps = RouteComponentProps &
   StateProps & {
@@ -22,6 +25,7 @@ export type SecuredRouteProps = RouteComponentProps &
     render?: (arg0: RouteComponentProps) => React.ReactNode;
     isAuthenticated: boolean;
     requiredPricingPlan?: PricingPlanEnum;
+    requiresAdminOrManagerRole?: boolean;
     serverAuthenticationCallback?: (...args: Array<any>) => any;
     exact?: boolean;
   };
@@ -62,12 +66,17 @@ class SecuredRoute extends React.PureComponent<SecuredRouteProps, State> {
     const isCompletelyAuthenticated = serverAuthenticationCallback
       ? isAuthenticated || this.state.isAdditionallyAuthenticated
       : isAuthenticated;
+    const isAdminOrManager = this.props.activeUser && isUserAdminOrManager(this.props.activeUser);
     return (
       <Route
         {...rest}
         render={(props) => {
           if (!isCompletelyAuthenticated) {
-            return <LoginView redirect={this.props.location.pathname} />;
+            return (
+              <LoginView
+                redirect={this.props.location.pathname.concat(this.props.location.search)}
+              />
+            );
           }
 
           if (
@@ -82,6 +91,9 @@ class SecuredRoute extends React.PureComponent<SecuredRouteProps, State> {
                 requiredPricingPlan={this.props.requiredPricingPlan}
               />
             );
+          }
+          if (this.props.requiresAdminOrManagerRole && !isAdminOrManager) {
+            return <PageNotAvailableToNormalUser />;
           }
 
           if (Component != null) {
@@ -98,6 +110,7 @@ class SecuredRoute extends React.PureComponent<SecuredRouteProps, State> {
 }
 const mapStateToProps = (state: OxalisState): StateProps => ({
   activeOrganization: state.activeOrganization,
+  activeUser: state.activeUser,
 });
 
 const connector = connect(mapStateToProps);

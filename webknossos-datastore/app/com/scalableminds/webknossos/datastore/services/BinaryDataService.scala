@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
@@ -10,7 +11,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataL
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
 import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Failure, Full}
+import net.liftweb.common.{Box, Full}
 import ucar.ma2.{Array => MultiArray}
 import net.liftweb.common.Box.tryo
 
@@ -18,29 +19,26 @@ import java.nio.file.Path
 import scala.concurrent.ExecutionContext
 
 class BinaryDataService(val dataBaseDir: Path,
-                        maxCacheSize: Int,
                         val agglomerateServiceOpt: Option[AgglomerateService],
                         remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
-                        val applicationHealthService: Option[ApplicationHealthService],
                         sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]],
                         datasetErrorLoggingService: Option[DatasetErrorLoggingService])(implicit ec: ExecutionContext)
     extends FoxImplicits
     with DatasetDeleter
     with LazyLogging {
 
-  /* Note that this must stay in sync with the front-end constant
-    compare https://github.com/scalableminds/webknossos/issues/5223 */
+  /* Note that this must stay in sync with the front-end constant MAX_MAG_FOR_AGGLOMERATE_MAPPING
+     compare https://github.com/scalableminds/webknossos/issues/5223 */
   private val MaxMagForAgglomerateMapping = 16
 
-  private lazy val shardHandleCache = new DataCubeCache(maxCacheSize)
   private lazy val bucketProviderCache = new BucketProviderCache(maxEntries = 5000)
 
-  def handleDataRequest(request: DataServiceDataRequest): Fox[Array[Byte]] = {
+  def handleDataRequest(request: DataServiceDataRequest)(implicit tc: TokenContext): Fox[Array[Byte]] = {
     val bucketQueue = request.cuboid.allBucketsInCuboid
 
     if (!request.cuboid.hasValidDimensions) {
       Fox.failure("Invalid cuboid dimensions (must be > 0 and <= 512).")
-    } else if (request.cuboid.isSingleBucket(DataLayer.bucketLength) && request.subsamplingStrides == Vec3Int.ones) {
+    } else if (request.cuboid.isSingleBucket(DataLayer.bucketLength)) {
       bucketQueue.headOption.toFox.flatMap { bucket =>
         handleBucketRequest(request, bucket.copy(additionalCoordinates = request.settings.additionalCoordinates))
       }
@@ -54,25 +52,33 @@ class BinaryDataService(val dataBaseDir: Path,
     }
   }
 
-  def handleDataRequests(requests: List[DataServiceDataRequest]): Fox[(Array[Byte], List[Int])] = {
+  def handleDataRequests(requests: List[DataServiceDataRequest])(
+      implicit tc: TokenContext): Fox[(Array[Byte], List[Int])] = {
     def convertIfNecessary(isNecessary: Boolean,
                            inputArray: Array[Byte],
-                           conversionFunc: Array[Byte] => Box[Array[Byte]]): Box[Array[Byte]] =
-      if (isNecessary) conversionFunc(inputArray) else Full(inputArray)
+                           conversionFunc: Array[Byte] => Fox[Array[Byte]],
+                           request: DataServiceDataRequest): Fox[Array[Byte]] =
+      if (isNecessary) datasetErrorLoggingService match {
+        case Some(value) =>
+          value.withErrorLogging(request.dataSource.id, "converting bucket data", conversionFunc(inputArray))
+        case None => conversionFunc(inputArray)
+      } else Full(inputArray)
 
     val requestsCount = requests.length
     val requestData = requests.zipWithIndex.map {
       case (request, index) =>
         for {
           data <- handleDataRequest(request)
-          mappedData <- agglomerateServiceOpt.map { agglomerateService =>
+          mappedDataFox <- agglomerateServiceOpt.map { agglomerateService =>
             convertIfNecessary(
               request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation && request.cuboid.mag.maxDim <= MaxMagForAgglomerateMapping,
               data,
-              agglomerateService.applyAgglomerate(request)
+              agglomerateService.applyAgglomerate(request),
+              request
             )
-          }.getOrElse(Full(data)) ?~> "Failed to apply agglomerate mapping"
-          resultData <- convertIfNecessary(request.settings.halfByte, mappedData, convertToHalfByte)
+          }.fillEmpty(Fox.successful(data)) ?~> "Failed to apply agglomerate mapping"
+          mappedData <- mappedDataFox
+          resultData <- convertIfNecessary(request.settings.halfByte, mappedData, convertToHalfByte, request)
         } yield (resultData, index)
     }
 
@@ -84,37 +90,24 @@ class BinaryDataService(val dataBaseDir: Path,
     }
   }
 
-  private def handleBucketRequest(request: DataServiceDataRequest, bucket: BucketPosition): Fox[Array[Byte]] =
-    if (request.dataLayer.doesContainBucket(bucket) && request.dataLayer.containsResolution(bucket.mag)) {
+  private def handleBucketRequest(request: DataServiceDataRequest, bucket: BucketPosition)(
+      implicit tc: TokenContext): Fox[Array[Byte]] =
+    if (request.dataLayer.doesContainBucket(bucket) && request.dataLayer.containsMag(bucket.mag)) {
       val readInstruction =
         DataReadInstruction(dataBaseDir, request.dataSource, request.dataLayer, bucket, request.settings.version)
       // dataSource is null and unused for volume tracings. Insert dummy DataSourceId (also unused in that case)
       val dataSourceId = if (request.dataSource != null) request.dataSource.id else DataSourceId("", "")
       val bucketProvider =
-        bucketProviderCache.getOrLoadAndPut((dataSourceId, request.dataLayer.name))(_ =>
+        bucketProviderCache.getOrLoadAndPut((dataSourceId, request.dataLayer.bucketProviderCacheKey))(_ =>
           request.dataLayer.bucketProvider(remoteSourceDescriptorServiceOpt, dataSourceId, sharedChunkContentsCache))
-      bucketProvider.load(readInstruction, shardHandleCache).futureBox.flatMap {
-        case Failure(msg, Full(e: InternalError), _) =>
-          applicationHealthService.foreach(a => a.pushError(e))
-          logger.warn(
-            s"Caught internal error: $msg while loading a bucket for layer ${request.dataLayer.name} of dataset ${request.dataSource.id}")
-          Fox.failure(e.getMessage)
-        case f: Failure =>
-          if (datasetErrorLoggingService.exists(_.shouldLog(request.dataSource.id.team, request.dataSource.id.name))) {
-            logger.debug(
-              s"Bucket loading for layer ${request.dataLayer.name} of dataset ${request.dataSource.id.team}/${request.dataSource.id.name} at ${readInstruction.bucket} failed: ${Fox
-                .failureChainAsString(f, includeStackTraces = true)}")
-            datasetErrorLoggingService.foreach(_.registerLogged(request.dataSource.id.team, request.dataSource.id.name))
-          }
-          f.toFox
-        case Full(data) =>
-          if (data.length == 0) {
-            val msg =
-              s"Bucket provider returned Full, but data is zero-length array. Layer ${request.dataLayer.name} of dataset ${request.dataSource.id}, ${request.cuboid}"
-            logger.warn(msg)
-            Fox.failure(msg)
-          } else Fox.successful(data)
-        case other => other.toFox
+      datasetErrorLoggingService match {
+        case Some(d) =>
+          d.withErrorLogging(
+            request.dataSource.id,
+            s"loading bucket for layer ${request.dataLayer.name} at ${readInstruction.bucket}, cuboid: ${request.cuboid}",
+            bucketProvider.load(readInstruction)
+          )
+        case None => bucketProvider.load(readInstruction)
       }
     } else Fox.empty
 
@@ -124,68 +117,38 @@ class BinaryDataService(val dataBaseDir: Path,
   private def cutOutCuboid(request: DataServiceDataRequest, rs: List[(BucketPosition, Array[Byte])]): Array[Byte] = {
     val bytesPerElement = request.dataLayer.bytesPerElement
     val cuboid = request.cuboid
-    val subsamplingStrides = request.subsamplingStrides
+    val subsamplingStrides = Vec3Int.ones
 
-    val resultVolume = Vec3Int(
-      math.ceil(cuboid.width.toDouble / subsamplingStrides.x.toDouble).toInt,
-      math.ceil(cuboid.height.toDouble / subsamplingStrides.y.toDouble).toInt,
-      math.ceil(cuboid.depth.toDouble / subsamplingStrides.z.toDouble).toInt
-    )
-    val result = new Array[Byte](resultVolume.x * resultVolume.y * resultVolume.z * bytesPerElement)
+    val resultShape = Vec3Int(cuboid.width, cuboid.height, cuboid.depth)
+    val result = new Array[Byte](cuboid.volume * bytesPerElement)
     val bucketLength = DataLayer.bucketLength
 
     rs.reverse.foreach {
       case (bucket, data) =>
-        val xRemainder = cuboid.topLeft.voxelXInMag % subsamplingStrides.x
-        val yRemainder = cuboid.topLeft.voxelYInMag % subsamplingStrides.y
-        val zRemainder = cuboid.topLeft.voxelZInMag % subsamplingStrides.z
-
-        val xMin = math
-          .ceil(
-            (math
-              .max(cuboid.topLeft.voxelXInMag, bucket.topLeft.voxelXInMag)
-              .toDouble - xRemainder) / subsamplingStrides.x.toDouble)
-          .toInt * subsamplingStrides.x + xRemainder
-        val yMin = math
-          .ceil(
-            (math
-              .max(cuboid.topLeft.voxelYInMag, bucket.topLeft.voxelYInMag)
-              .toDouble - yRemainder) / subsamplingStrides.y.toDouble)
-          .toInt * subsamplingStrides.y + yRemainder
-        val zMin = math
-          .ceil(
-            (math
-              .max(cuboid.topLeft.voxelZInMag, bucket.topLeft.voxelZInMag)
-              .toDouble - zRemainder) / subsamplingStrides.z.toDouble)
-          .toInt * subsamplingStrides.z + zRemainder
+        val xMin = math.max(cuboid.topLeft.voxelXInMag, bucket.topLeft.voxelXInMag)
+        val yMin = math.max(cuboid.topLeft.voxelYInMag, bucket.topLeft.voxelYInMag)
+        val zMin = math.max(cuboid.topLeft.voxelZInMag, bucket.topLeft.voxelZInMag)
 
         val xMax = math.min(cuboid.bottomRight.voxelXInMag, bucket.topLeft.voxelXInMag + bucketLength)
         val yMax = math.min(cuboid.bottomRight.voxelYInMag, bucket.topLeft.voxelYInMag + bucketLength)
         val zMax = math.min(cuboid.bottomRight.voxelZInMag, bucket.topLeft.voxelZInMag + bucketLength)
 
         for {
-          z <- zMin until zMax by subsamplingStrides.z
-          y <- yMin until yMax by subsamplingStrides.y
-          // if subsamplingStrides.x == 1, we can bulk copy a row of voxels and do not need to iterate in the x dimension
-          x <- xMin until xMax by (if (subsamplingStrides.x == 1) xMax else subsamplingStrides.x)
+          z <- zMin until zMax
+          y <- yMin until yMax
+          // We can bulk copy a row of voxels and do not need to iterate in the x dimension
         } {
           val dataOffset =
-            (x % bucketLength +
+            (xMin % bucketLength +
               y % bucketLength * bucketLength +
               z % bucketLength * bucketLength * bucketLength) * bytesPerElement
 
-          val rx = (x - cuboid.topLeft.voxelXInMag) / subsamplingStrides.x
+          val rx = (xMin - cuboid.topLeft.voxelXInMag) / subsamplingStrides.x
           val ry = (y - cuboid.topLeft.voxelYInMag) / subsamplingStrides.y
           val rz = (z - cuboid.topLeft.voxelZInMag) / subsamplingStrides.z
 
-          val resultOffset = (rx + ry * resultVolume.x + rz * resultVolume.x * resultVolume.y) * bytesPerElement
-          if (subsamplingStrides.x == 1) {
-            // bulk copy a row of voxels
-            System.arraycopy(data, dataOffset, result, resultOffset, (xMax - x) * bytesPerElement)
-          } else {
-            // copy single voxel
-            System.arraycopy(data, dataOffset, result, resultOffset, bytesPerElement)
-          }
+          val resultOffset = (rx + ry * resultShape.x + rz * resultShape.x * resultShape.y) * bytesPerElement
+          System.arraycopy(data, dataOffset, result, resultOffset, (xMax - xMin) * bytesPerElement)
         }
     }
     result
@@ -206,26 +169,20 @@ class BinaryDataService(val dataBaseDir: Path,
     compressed
   }
 
-  def clearCache(organizationName: String, datasetName: String, layerName: Option[String]): (Int, Int, Int) = {
-    val dataSourceId = DataSourceId(datasetName, organizationName)
-
-    def dataCubeMatchPredicate(cubeKey: CachedCube) =
-      cubeKey.dataSourceName == datasetName && cubeKey.organization == organizationName && layerName.forall(
-        _ == cubeKey.dataLayerName)
+  def clearCache(organizationId: String, datasetDirectoryName: String, layerName: Option[String]): (Int, Int, Int) = {
+    val dataSourceId = DataSourceId(datasetDirectoryName, organizationId)
 
     def agglomerateFileMatchPredicate(agglomerateKey: AgglomerateFileKey) =
-      agglomerateKey.datasetName == datasetName && agglomerateKey.organizationName == organizationName && layerName
+      agglomerateKey.datasetDirectoryName == datasetDirectoryName && agglomerateKey.organizationId == organizationId && layerName
         .forall(_ == agglomerateKey.layerName)
 
     def bucketProviderPredicate(key: (DataSourceId, String)): Boolean =
-      key._1 == DataSourceId(datasetName, organizationName) && layerName.forall(_ == key._2)
+      key._1 == DataSourceId(datasetDirectoryName, organizationId) && layerName.forall(_ == key._2)
 
     val closedAgglomerateFileHandleCount =
       agglomerateServiceOpt.map(_.agglomerateFileCache.clear(agglomerateFileMatchPredicate)).getOrElse(0)
 
-    val closedDataCubeHandleCount = shardHandleCache.clear(dataCubeMatchPredicate)
-
-    bucketProviderCache.clear(bucketProviderPredicate)
+    val clearedBucketProviderCount = bucketProviderCache.clear(bucketProviderPredicate)
 
     def chunkContentsPredicate(key: String): Boolean =
       key.startsWith(s"${dataSourceId.toString}") && layerName.forall(l =>
@@ -233,7 +190,6 @@ class BinaryDataService(val dataBaseDir: Path,
 
     val removedChunksCount = sharedChunkContentsCache.map(_.clear(chunkContentsPredicate)).getOrElse(0)
 
-    (closedAgglomerateFileHandleCount, closedDataCubeHandleCount, removedChunksCount)
+    (closedAgglomerateFileHandleCount, clearedBucketProviderCount, removedChunksCount)
   }
-
 }

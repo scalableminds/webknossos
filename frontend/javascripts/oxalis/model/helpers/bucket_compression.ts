@@ -1,7 +1,7 @@
 import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
-import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import { createWorker } from "oxalis/workers/comlink_wrapper";
+import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import compressLz4Block from "oxalis/workers/byte_array_lz4_compression.worker";
+import { createWorker } from "oxalis/workers/comlink_wrapper";
 
 const _byteArrayToLz4Array = createWorker(compressLz4Block);
 

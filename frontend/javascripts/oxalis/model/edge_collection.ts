@@ -1,7 +1,7 @@
-import _ from "lodash";
-import type { Edge } from "oxalis/store";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import * as Utils from "libs/utils";
+import _ from "lodash";
+import type { Edge } from "oxalis/store";
 type EdgeMap = DiffableMap<number, Array<Edge>>;
 export default class EdgeCollection {
   // Edge map keyed by the source id of the edges (outgoing)
@@ -168,7 +168,7 @@ export function diffEdgeCollections(
   const mapDiff = diffDiffableMaps(edgeCollectionA.outMap, edgeCollectionB.outMap);
 
   const getEdgesForNodes = (nodeIds: number[], diffableMap: EdgeMap) =>
-    _.flatten(nodeIds.map((nodeId) => diffableMap.get(nodeId)));
+    _.flatten(nodeIds.map((nodeId) => diffableMap.getOrThrow(nodeId)));
 
   const edgeDiff = {
     onlyA: getEdgesForNodes(mapDiff.onlyA, edgeCollectionA.outMap),
@@ -179,8 +179,8 @@ export function diffEdgeCollections(
     // For each changedNodeIndex there is at least one outgoing edge which was added or removed.
     // So, check for each outgoing edge whether it only exists in A or B
     const outgoingEdgesDiff = Utils.diffArrays(
-      edgeCollectionA.outMap.get(changedNodeIndex),
-      edgeCollectionB.outMap.get(changedNodeIndex),
+      edgeCollectionA.outMap.getOrThrow(changedNodeIndex),
+      edgeCollectionB.outMap.getOrThrow(changedNodeIndex),
     );
     edgeDiff.onlyA = edgeDiff.onlyA.concat(outgoingEdgesDiff.onlyA);
     edgeDiff.onlyB = edgeDiff.onlyB.concat(outgoingEdgesDiff.onlyB);

@@ -1,41 +1,50 @@
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'saxo... Remove this comment to see the full error message
-import Saxophone from "saxophone";
+import Date from "libs/date";
+import DiffableMap from "libs/diffable_map";
+import * as Utils from "libs/utils";
+import { coalesce } from "libs/utils";
+import { location } from "libs/window";
 import _ from "lodash";
-import type { APIBuildInfo } from "types/api_flow_types";
+import messages from "messages";
+import {
+  type BoundingBoxType,
+  IdentityTransform,
+  type TreeType,
+  TreeTypeEnum,
+  type Vector3,
+} from "oxalis/constants";
+import Constants from "oxalis/constants";
+import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import EdgeCollection from "oxalis/model/edge_collection";
 import {
   getMaximumGroupId,
   getMaximumTreeId,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
-import Date from "libs/date";
-import DiffableMap from "libs/diffable_map";
-import EdgeCollection from "oxalis/model/edge_collection";
 import type {
-  UserBoundingBox,
+  BoundingBoxObject,
+  MutableNode,
+  MutableTree,
+  MutableTreeMap,
   NodeMap,
   OxalisState,
   SkeletonTracing,
-  MutableTreeMap,
   Tracing,
   Tree,
-  MutableTree,
   TreeGroup,
-  BoundingBoxObject,
+  UserBoundingBox,
 } from "oxalis/store";
-import { findGroup } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import messages from "messages";
-import * as Utils from "libs/utils";
-import { BoundingBoxType, TreeType, TreeTypeEnum, Vector3 } from "oxalis/constants";
-import Constants from "oxalis/constants";
-import { location } from "libs/window";
-import { coalesce } from "libs/utils";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import { findGroup } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'saxo... Remove this comment to see the full error message
+import Saxophone from "saxophone";
+import type { APIBuildInfo, MetadataEntryProto } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
+import { getTransformsForSkeletonLayer } from "../accessors/dataset_layer_transformation_accessor";
+import { getNodePosition } from "../accessors/skeletontracing_accessor";
 
 // NML Defaults
 const DEFAULT_COLOR: Vector3 = [1, 0, 0];
 const TASK_BOUNDING_BOX_COLOR: Vector3 = [0, 1, 0];
 const DEFAULT_VIEWPORT = 0;
-const DEFAULT_RESOLUTION = 0;
+const DEFAULT_MAG = 0;
 const DEFAULT_BITDEPTH = 0;
 const DEFAULT_INTERPOLATION = false;
 const DEFAULT_TIMESTAMP = 0;
@@ -103,6 +112,10 @@ function serializeTag(
     .join(" ")}${closed ? " /" : ""}>`;
 }
 
+function serializeXmlComment(comment: string) {
+  return `<!-- ${comment} -->`;
+}
+
 export function getNmlName(state: OxalisState): string {
   // Use the same naming convention as the backend
   const { activeUser, dataset, task, tracing } = state;
@@ -122,6 +135,7 @@ export function serializeToNml(
   annotation: Tracing,
   tracing: SkeletonTracing,
   buildInfo: APIBuildInfo,
+  applyTransform: boolean,
 ): string {
   // Only visible trees will be serialized!
   const visibleTrees = Utils.values(tracing.trees).filter((tree) => tree.isVisible);
@@ -130,8 +144,8 @@ export function serializeToNml(
     ...indent(
       _.concat(
         serializeMetaInformation(state, annotation, buildInfo),
-        serializeParameters(state, annotation, tracing),
-        serializeTrees(visibleTrees),
+        serializeParameters(state, annotation, tracing, applyTransform),
+        serializeTrees(state, visibleTrees, applyTransform),
         serializeBranchPoints(visibleTrees),
         serializeComments(visibleTrees),
         "<groups>",
@@ -223,6 +237,7 @@ function serializeParameters(
   state: OxalisState,
   annotation: Tracing,
   skeletonTracing: SkeletonTracing,
+  applyTransform: boolean,
 ): Array<string> {
   const editPosition = getPosition(state.flycam).map(Math.round);
   const editPositionAdditionalCoordinates = state.flycam.additionalCoordinates;
@@ -236,15 +251,17 @@ function serializeParameters(
     ...indent(
       _.compact([
         serializeTag("experiment", {
-          name: state.dataset.name,
+          datasetId: state.dataset.id,
+          name: state.dataset.directoryName,
           description: annotation.description,
           organization: state.dataset.owningOrganization,
           wkUrl: `${location.protocol}//${location.host}`,
         }),
         serializeTag("scale", {
-          x: state.dataset.dataSource.scale[0],
-          y: state.dataset.dataSource.scale[1],
-          z: state.dataset.dataSource.scale[2],
+          x: state.dataset.dataSource.scale.factor[0],
+          y: state.dataset.dataSource.scale.factor[1],
+          z: state.dataset.dataSource.scale.factor[2],
+          unit: state.dataset.dataSource.scale.unit,
         }),
         serializeTag("offset", {
           x: 0,
@@ -285,16 +302,71 @@ function serializeParameters(
               ),
             )
           : []),
+
+        ...(applyTransform ? serializeTransform(state) : []),
       ]),
     ),
     "</parameters>",
   ];
 }
 
-function serializeTrees(trees: Array<Tree>): Array<string> {
+function serializeTransform(state: OxalisState): string[] {
+  const transform = getTransformsForSkeletonLayer(
+    state.dataset,
+    state.datasetConfiguration.nativelyRenderedLayerName,
+  );
+
+  if (transform === IdentityTransform) {
+    return [];
+  }
+
+  if (transform.type === "affine") {
+    return [
+      serializeXmlComment(
+        "The node positions in this file were transformed using the following affine transform:",
+      ),
+      serializeTag("transform", {
+        type: "affine",
+        matrix: `[${transform.affineMatrix.join(",")}]`,
+        positionsAreTransformed: true,
+      }),
+    ];
+  } else {
+    const correspondences = _.zip(
+      transform.scaledTps.unscaledSourcePoints,
+      transform.scaledTps.unscaledTargetPoints,
+    ) as Array<[Vector3, Vector3]>;
+    return [
+      serializeXmlComment(
+        "The node positions in this file were transformed using a thin plate spline that was derived from the following correspondences:",
+      ),
+      ...serializeTagWithChildren(
+        "transform",
+        {
+          type: "thin_plate_spline",
+          positionsAreTransformed: true,
+        },
+        correspondences.map((pair) =>
+          serializeTag("correspondence", {
+            source: `[${pair[0].join(",")}]`,
+            target: `[${pair[1].join(",")}]`,
+          }),
+        ),
+      ),
+    ];
+  }
+}
+
+function serializeTrees(
+  state: OxalisState,
+  trees: Array<Tree>,
+  applyTransform: boolean,
+): Array<string> {
   return _.flatten(
-    trees.map((tree) =>
-      serializeTagWithChildren(
+    trees.map((tree) => {
+      const metadataString = serializeMetadata(tree.metadata);
+
+      return serializeTagWithChildren(
         "thing",
         {
           id: tree.treeId,
@@ -305,20 +377,29 @@ function serializeTrees(trees: Array<Tree>): Array<string> {
         },
         [
           "<nodes>",
-          ...indent(serializeNodes(tree.nodes)),
+          ...indent(serializeNodes(state, tree.nodes, applyTransform)),
           "</nodes>",
           "<edges>",
           ...indent(serializeEdges(tree.edges)),
           "</edges>",
+          ...(metadataString.length > 0
+            ? ["<metadata>", ...indent(metadataString), "</metadata>"]
+            : []),
         ],
-      ),
-    ),
+      );
+    }),
   );
 }
 
-function serializeNodes(nodes: NodeMap): Array<string> {
+function serializeNodes(
+  state: OxalisState,
+  nodes: NodeMap,
+  applyTransform: boolean,
+): Array<string> {
   return nodes.map((node) => {
-    const position = node.position.map(Math.floor);
+    const position = (
+      applyTransform ? getNodePosition(node, state) : node.untransformedPosition
+    ).map(Math.floor);
     const maybeProperties = additionalCoordinatesToObject(node.additionalCoordinates || []);
 
     return serializeTag("node", {
@@ -332,7 +413,7 @@ function serializeNodes(nodes: NodeMap): Array<string> {
       rotY: node.rotation[1],
       rotZ: node.rotation[2],
       inVp: node.viewport,
-      inMag: node.resolution,
+      inMag: node.mag,
       bitDepth: node.bitDepth,
       interpolation: node.interpolation,
       time: node.timestamp,
@@ -380,6 +461,25 @@ function serializeEdges(edges: EdgeCollection): Array<string> {
       target: edge.target,
     }),
   );
+}
+
+function serializeMetadata(metadata: MetadataEntryProto[]): string[] {
+  return metadata.map((prop) => {
+    const values: any = {};
+    if (prop.stringValue != null) {
+      values.stringValue = prop.stringValue;
+    } else if (prop.boolValue != null) {
+      values.boolValue = prop.boolValue ? "true" : "false";
+    } else if (prop.numberValue != null) {
+      values.numberValue = `${prop.numberValue}`;
+    } else if (prop.stringListValue != null) {
+      for (let i = 0; i < prop.stringListValue.length; i++) {
+        values[`stringListValue-${i}`] = prop.stringListValue[i];
+      }
+    }
+
+    return serializeTag("metadataEntry", { key: prop.key, ...values });
+  });
 }
 
 function serializeBranchPoints(trees: Array<Tree>): Array<string> {
@@ -430,6 +530,7 @@ function serializeTreeGroups(treeGroups: Array<TreeGroup>, trees: Array<Tree>): 
         {
           id: treeGroup.groupId,
           name: treeGroup.name,
+          ...(treeGroup.isExpanded ? {} : { isExpanded: treeGroup.isExpanded }),
         },
         serializeTreeGroups(treeGroup.children, trees),
       ),
@@ -442,52 +543,98 @@ export class NmlParseError extends Error {
   name = "NmlParseError";
 }
 
-function _parseInt(obj: Record<string, string>, key: string, defaultValue?: number): number {
+function _parseInt<T>(
+  obj: Record<string, string>,
+  key: string,
+  options?: {
+    defaultValue: number | T;
+  },
+): number | T {
   if (obj[key] == null || obj[key].length === 0) {
-    if (defaultValue == null) {
+    if (options == null) {
       throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
     } else {
-      return defaultValue;
+      return options.defaultValue;
     }
   }
 
   return Number.parseInt(obj[key], 10);
 }
 
-function _parseFloat(obj: Record<string, string>, key: string, defaultValue?: number): number {
+function _parseFloat<T>(
+  obj: Record<string, string>,
+  key: string,
+  options?: {
+    defaultValue: number | T;
+  },
+): number | T {
   if (obj[key] == null || obj[key].length === 0) {
-    if (defaultValue == null) {
+    if (options == null) {
       throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
     } else {
-      return defaultValue;
+      return options.defaultValue;
     }
   }
 
   return Number.parseFloat(obj[key]);
 }
 
-function _parseTimestamp(obj: Record<string, string>, key: string, defaultValue?: number): number {
-  const timestamp = _parseInt(obj, key, defaultValue);
+function _parseStringArray(
+  obj: Record<string, string>,
+  prefix: string,
+  options?: {
+    defaultValue: string[] | undefined;
+  },
+): string[] | undefined {
+  const indices = Object.keys(obj)
+    .map((key) => key.split(`${prefix}-`))
+    .filter((splitElements) => splitElements.length === 2)
+    .map((splitElements) => Number.parseInt(splitElements[1], 10));
+  if (indices.length === 0) {
+    if (options) {
+      return options.defaultValue;
+    } else {
+      throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${prefix}`);
+    }
+  }
+  indices.sort((a, b) => a - b);
+  return indices.map((idx) => obj[`${prefix}-${idx}`]);
+}
 
-  const isValid = new Date(timestamp).getTime() > 0;
+function _parseTimestamp(
+  obj: Record<string, string>,
+  key: string,
+  options?: {
+    defaultValue: number | undefined;
+  },
+): number {
+  const timestamp = _parseInt(obj, key, options);
+
+  const isValid = timestamp != null && new Date(timestamp).getTime() > 0;
 
   if (!isValid) {
-    if (defaultValue == null) {
+    if (options?.defaultValue == null) {
       throw new NmlParseError(`${messages["nml.invalid_timestamp"]} ${key}`);
     } else {
-      return defaultValue;
+      return options.defaultValue;
     }
   }
 
   return timestamp;
 }
 
-function _parseBool(obj: Record<string, string>, key: string, defaultValue?: boolean): boolean {
+function _parseBool<T>(
+  obj: Record<string, string>,
+  key: string,
+  options?: {
+    defaultValue: boolean | T;
+  },
+): boolean | T {
   if (obj[key] == null || obj[key].length === 0) {
-    if (defaultValue == null) {
+    if (options == null) {
       throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
     } else {
-      return defaultValue;
+      return options.defaultValue;
     }
   }
 
@@ -496,9 +643,9 @@ function _parseBool(obj: Record<string, string>, key: string, defaultValue?: boo
 
 function _parseColor(obj: Record<string, string>, defaultColor: Vector3): Vector3 {
   const color = [
-    _parseFloat(obj, "color.r", defaultColor[0]),
-    _parseFloat(obj, "color.g", defaultColor[1]),
-    _parseFloat(obj, "color.b", defaultColor[2]),
+    _parseFloat(obj, "color.r", { defaultValue: defaultColor[0] }),
+    _parseFloat(obj, "color.g", { defaultValue: defaultColor[1] }),
+    _parseFloat(obj, "color.b", { defaultValue: defaultColor[2] }),
   ];
   // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
   return color;
@@ -507,13 +654,15 @@ function _parseColor(obj: Record<string, string>, defaultColor: Vector3): Vector
 function _parseTreeType(
   obj: Record<string, string>,
   key: string,
-  defaultValue?: TreeType,
+  options?: {
+    defaultValue: TreeType;
+  },
 ): TreeType {
   if (obj[key] == null || obj[key].length === 0) {
-    if (defaultValue == null) {
+    if (options?.defaultValue == null) {
       throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
     } else {
-      return defaultValue;
+      return options.defaultValue;
     }
   }
 
@@ -526,12 +675,18 @@ function _parseTreeType(
   }
 }
 
-function _parseEntities(obj: Record<string, string>, key: string, defaultValue?: string): string {
+function _parseEntities<T>(
+  obj: Record<string, string>,
+  key: string,
+  options?: {
+    defaultValue: string | T;
+  },
+): string | T {
   if (obj[key] == null) {
-    if (defaultValue == null) {
+    if (options == null) {
       throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
     } else {
-      return defaultValue;
+      return options.defaultValue;
     }
   }
 
@@ -606,7 +761,7 @@ function splitTreeIntoComponents(
       color: tree.color,
       name: `${tree.name}_${i}`,
       comments: tree.comments.filter((comment) => nodeIdsSet.has(comment.nodeId)),
-      nodes: new DiffableMap(nodeIds.map((nodeId) => [nodeId, tree.nodes.get(nodeId)])),
+      nodes: new DiffableMap(nodeIds.map((nodeId) => [nodeId, tree.nodes.getOrThrow(nodeId)])),
       branchPoints: tree.branchPoints.filter((bp) => nodeIdsSet.has(bp.nodeId)),
       timestamp: tree.timestamp,
       edges: EdgeCollection.loadFromArray(edges),
@@ -614,6 +769,7 @@ function splitTreeIntoComponents(
       groupId: newGroupId,
       type: tree.type,
       edgesAreVisible: tree.edgesAreVisible,
+      metadata: tree.metadata,
     };
     newTrees.push(newTree);
   }
@@ -693,6 +849,32 @@ function parseBoundingBoxObject(attr: Record<any, any>): BoundingBoxObject {
   return boundingBoxObject;
 }
 
+function parseMetadataEntry(attr: Record<any, any>): MetadataEntryProto {
+  const stringValue = _parseEntities(attr, "stringValue", { defaultValue: undefined });
+  const boolValue = _parseBool(attr, "boolValue", { defaultValue: undefined });
+  const numberValue = _parseFloat(attr, "numberValue", { defaultValue: undefined });
+  const stringListValue = _parseStringArray(attr, "stringListValue", { defaultValue: undefined });
+  const prop: MetadataEntryProto = {
+    key: _parseEntities(attr, "key"),
+    stringValue,
+    boolValue,
+    numberValue,
+    stringListValue,
+  };
+  const compactProp = Object.fromEntries(
+    Object.entries(prop).filter(([_k, v]) => v !== undefined),
+  ) as MetadataEntryProto;
+  if (Object.entries(compactProp).length !== 2) {
+    throw new NmlParseError(
+      `Could not parse user-defined property. Expected exactly one key and one value. Got: ${Object.keys(
+        compactProp,
+      )}`,
+    );
+  }
+
+  return compactProp;
+}
+
 export function parseNml(nmlString: string): Promise<{
   trees: MutableTreeMap;
   treeGroups: Array<TreeGroup>;
@@ -709,6 +891,7 @@ export function parseNml(nmlString: string): Promise<{
     const existingEdges = new Set();
     let currentTree: MutableTree | null | undefined = null;
     let currentTreeGroup: TreeGroup | null | undefined = null;
+    let currentNode: MutableNode | null | undefined = null;
     let containedVolumes = false;
     let isParsingVolumeTag = false;
 
@@ -727,13 +910,15 @@ export function parseNml(nmlString: string): Promise<{
           }
 
           case "thing": {
-            const groupId = _parseInt(attr, "groupId", -1);
+            const groupId = _parseInt(attr, "groupId", { defaultValue: -1 });
 
             currentTree = {
               treeId: _parseInt(attr, "id"),
               color: _parseColor(attr, DEFAULT_COLOR),
               // In Knossos NMLs, there is usually a tree comment instead of a name
-              name: _parseEntities(attr, "name", "") || _parseEntities(attr, "comment", ""),
+              name:
+                _parseEntities(attr, "name", { defaultValue: "" }) ||
+                _parseEntities(attr, "comment", { defaultValue: "" }),
               comments: [],
               nodes: new DiffableMap(),
               branchPoints: [],
@@ -741,8 +926,9 @@ export function parseNml(nmlString: string): Promise<{
               edges: new EdgeCollection(),
               isVisible: _parseFloat(attr, "color.a") !== 0,
               groupId: groupId >= 0 ? groupId : DEFAULT_GROUP_ID,
-              type: _parseTreeType(attr, "type", TreeTypeEnum.DEFAULT),
-              edgesAreVisible: _parseBool(attr, "edgesAreVisible", true),
+              type: _parseTreeType(attr, "type", { defaultValue: TreeTypeEnum.DEFAULT }),
+              edgesAreVisible: _parseBool(attr, "edgesAreVisible", { defaultValue: true }),
+              metadata: [],
             };
             if (trees[currentTree.treeId] != null)
               throw new NmlParseError(`${messages["nml.duplicate_tree_id"]} ${currentTree.treeId}`);
@@ -751,11 +937,11 @@ export function parseNml(nmlString: string): Promise<{
           }
 
           case "node": {
-            const nodeId = _parseInt(attr, "id");
+            const nodeId = _parseInt<never>(attr, "id");
 
-            const currentNode = {
+            currentNode = {
               id: nodeId,
-              position: [
+              untransformedPosition: [
                 Math.trunc(_parseFloat(attr, "x")),
                 Math.trunc(_parseFloat(attr, "y")),
                 Math.trunc(_parseFloat(attr, "z")),
@@ -766,19 +952,21 @@ export function parseNml(nmlString: string): Promise<{
                 .filter(([_key, name]) => name != null)
                 .map(([key, name]) => ({
                   name,
-                  value: _parseFloat(attr, key, 0),
+                  value: _parseFloat(attr, key, { defaultValue: 0 }),
                 })) as AdditionalCoordinate[],
               rotation: [
-                _parseFloat(attr, "rotX", DEFAULT_ROTATION[0]),
-                _parseFloat(attr, "rotY", DEFAULT_ROTATION[1]),
-                _parseFloat(attr, "rotZ", DEFAULT_ROTATION[2]),
+                _parseFloat(attr, "rotX", { defaultValue: DEFAULT_ROTATION[0] }),
+                _parseFloat(attr, "rotY", { defaultValue: DEFAULT_ROTATION[1] }),
+                _parseFloat(attr, "rotZ", { defaultValue: DEFAULT_ROTATION[2] }),
               ] as Vector3,
-              interpolation: _parseBool(attr, "interpolation", DEFAULT_INTERPOLATION),
-              bitDepth: _parseInt(attr, "bitDepth", DEFAULT_BITDEPTH),
-              viewport: _parseInt(attr, "inVp", DEFAULT_VIEWPORT),
-              resolution: _parseInt(attr, "inMag", DEFAULT_RESOLUTION),
-              radius: _parseFloat(attr, "radius", Constants.DEFAULT_NODE_RADIUS),
-              timestamp: _parseTimestamp(attr, "time", DEFAULT_TIMESTAMP),
+              interpolation: _parseBool(attr, "interpolation", {
+                defaultValue: DEFAULT_INTERPOLATION,
+              }),
+              bitDepth: _parseInt(attr, "bitDepth", { defaultValue: DEFAULT_BITDEPTH }),
+              viewport: _parseInt(attr, "inVp", { defaultValue: DEFAULT_VIEWPORT }),
+              mag: _parseInt(attr, "inMag", { defaultValue: DEFAULT_MAG }),
+              radius: _parseFloat(attr, "radius", { defaultValue: Constants.DEFAULT_NODE_RADIUS }),
+              timestamp: _parseTimestamp(attr, "time", { defaultValue: DEFAULT_TIMESTAMP }),
             };
             if (currentTree == null)
               throw new NmlParseError(`${messages["nml.node_outside_tree"]} ${currentNode.id}`);
@@ -787,13 +975,29 @@ export function parseNml(nmlString: string): Promise<{
             nodeIdToTreeId[nodeId] = currentTree.treeId;
             currentTree.nodes.mutableSet(currentNode.id, currentNode);
             existingNodeIds.add(currentNode.id);
+
+            if (node.isSelfClosing) {
+              currentNode = null;
+            }
+            break;
+          }
+
+          case "metadataEntry": {
+            if (currentTree == null) {
+              throw new NmlParseError(messages["nml.metadata_entry_outside_tree"]);
+            }
+            if (currentNode == null) {
+              currentTree.metadata.push(parseMetadataEntry(attr));
+            } else {
+              // TODO: Also support MetadataEntryProto in nodes. See #7483
+            }
             break;
           }
 
           case "edge": {
             const currentEdge = {
-              source: _parseInt(attr, "source"),
-              target: _parseInt(attr, "target"),
+              source: _parseInt<never>(attr, "source"),
+              target: _parseInt<never>(attr, "target"),
             };
             const edgeHash = getEdgeHash(currentEdge.source, currentEdge.target);
             if (currentTree == null)
@@ -824,8 +1028,8 @@ export function parseNml(nmlString: string): Promise<{
 
           case "comment": {
             const currentComment = {
-              nodeId: _parseInt(attr, "node"),
-              content: _parseEntities(attr, "content"),
+              nodeId: _parseInt<never>(attr, "node"),
+              content: _parseEntities<never>(attr, "content"),
             };
             const tree = trees[nodeIdToTreeId[currentComment.nodeId]];
             if (tree == null)
@@ -838,8 +1042,8 @@ export function parseNml(nmlString: string): Promise<{
 
           case "branchpoint": {
             const currentBranchpoint = {
-              nodeId: _parseInt(attr, "id"),
-              timestamp: _parseInt(attr, "time", DEFAULT_TIMESTAMP),
+              nodeId: _parseInt<never>(attr, "id"),
+              timestamp: _parseInt(attr, "time", { defaultValue: DEFAULT_TIMESTAMP }),
             };
             const tree = trees[nodeIdToTreeId[currentBranchpoint.nodeId]];
             if (tree == null)
@@ -855,8 +1059,9 @@ export function parseNml(nmlString: string): Promise<{
               return;
             }
             const newGroup = {
-              groupId: _parseInt(attr, "id"),
-              name: _parseEntities(attr, "name"),
+              groupId: _parseInt<never>(attr, "id"),
+              name: _parseEntities<never>(attr, "name"),
+              isExpanded: _parseBool(attr, "isExpanded", { defaultValue: true }),
               children: [],
             };
             if (existingTreeGroupIds.has(newGroup.groupId)) {
@@ -881,7 +1086,7 @@ export function parseNml(nmlString: string): Promise<{
           }
 
           case "userBoundingBox": {
-            const parsedUserBoundingBoxId = _parseInt(attr, "id", 0);
+            const parsedUserBoundingBoxId = _parseInt(attr, "id", { defaultValue: 0 });
 
             const userBoundingBoxId = getUnusedUserBoundingBoxId(
               userBoundingBoxes,
@@ -892,8 +1097,12 @@ export function parseNml(nmlString: string): Promise<{
               boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(boundingBoxObject),
               color: _parseColor(attr, DEFAULT_COLOR),
               id: userBoundingBoxId,
-              isVisible: _parseBool(attr, "isVisible", DEFAULT_USER_BOUNDING_BOX_VISIBILITY),
-              name: _parseEntities(attr, "name", `user bounding box ${userBoundingBoxId}`),
+              isVisible: _parseBool(attr, "isVisible", {
+                defaultValue: DEFAULT_USER_BOUNDING_BOX_VISIBILITY,
+              }),
+              name: _parseEntities(attr, "name", {
+                defaultValue: `user bounding box ${userBoundingBoxId}`,
+              }),
             };
             userBoundingBoxes.push(userBoundingBox);
             break;
@@ -935,6 +1144,11 @@ export function parseNml(nmlString: string): Promise<{
             }
 
             currentTree = null;
+            break;
+          }
+
+          case "node": {
+            currentNode = null;
             break;
           }
 

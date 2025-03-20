@@ -1,28 +1,28 @@
-import _ from "lodash";
-import type { Action } from "oxalis/model/actions/actions";
-import type { BoundingBoxType, TypedArray, Vector3 } from "oxalis/constants";
-import type { MutableNode, Node } from "oxalis/store";
-import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { call, put } from "typed-redux-saga";
-import { select } from "oxalis/model/sagas/effect-generators";
 import { V3 } from "libs/mjs";
-import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
+import createProgressCallback from "libs/progress_callback";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import window from "libs/window";
+import _ from "lodash";
+import type { BoundingBoxType, TypedArray, Vector3 } from "oxalis/constants";
+import { getMagInfo } from "oxalis/model/accessors/dataset_accessor";
 import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracingLayer,
 } from "oxalis/model/accessors/volumetracing_accessor";
+import type { Action } from "oxalis/model/actions/actions";
+import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { finishAnnotationStrokeAction } from "oxalis/model/actions/volumetracing_actions";
-import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
-import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import createProgressCallback from "libs/progress_callback";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
+import { select } from "oxalis/model/sagas/effect-generators";
+import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
 import { api } from "oxalis/singletons";
-import window from "libs/window";
-import { APISegmentationLayer } from "types/api_flow_types";
-import { ResolutionInfo } from "../helpers/resolution_info";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { MutableNode, Node } from "oxalis/store";
+import { call, put } from "typed-redux-saga";
+import type { APISegmentationLayer } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { MagInfo } from "../helpers/mag_info";
 
 // By default, a new bounding box is created around
 // the seed nodes with a padding. Within the bounding box
@@ -39,7 +39,7 @@ const DEFAULT_PADDING: Vector3 = [50, 50, 50];
 const MIN_DIST_TO_SEED = 30;
 const TimeoutError = new Error("Timeout");
 const PartitionFailedError = new Error(
-  "Segmentation could not be partioned. Zero edges removed in last iteration. Probably due to nodes being too close to each other? Aborting...",
+  "Segmentation could not be partitioned. Zero edges removed in last iteration. Probably due to nodes being too close to each other? Aborting...",
 );
 // If the min-cut does not succeed after 10 seconds
 // in the selected mag, the next mag is tried.
@@ -60,31 +60,27 @@ const VOXEL_THRESHOLD = 2000000;
 // optimization (unless it's the only existent mag).
 const ALWAYS_IGNORE_FIRST_MAG_INITIALLY = true;
 
-function selectAppropriateResolutions(
+function selectAppropriateMags(
   boundingBoxMag1: BoundingBox,
-  resolutionInfo: ResolutionInfo,
+  magInfo: MagInfo,
 ): Array<[number, Vector3]> {
-  const resolutionsWithIndices = resolutionInfo.getResolutionsWithIndices();
-  const appropriateResolutions: Array<[number, Vector3]> = [];
+  const magsWithIndices = magInfo.getMagsWithIndices();
+  const appropriateMags: Array<[number, Vector3]> = [];
 
-  for (const [resolutionIndex, resolution] of resolutionsWithIndices) {
-    if (
-      resolutionIndex === 0 &&
-      resolutionsWithIndices.length > 1 &&
-      ALWAYS_IGNORE_FIRST_MAG_INITIALLY
-    ) {
+  for (const [magIndex, mag] of magsWithIndices) {
+    if (magIndex === 0 && magsWithIndices.length > 1 && ALWAYS_IGNORE_FIRST_MAG_INITIALLY) {
       // Don't consider Mag 1, as it's usually too fine-granular
       continue;
     }
 
-    const boundingBoxTarget = boundingBoxMag1.fromMag1ToMag(resolution);
+    const boundingBoxTarget = boundingBoxMag1.fromMag1ToMag(mag);
 
     if (boundingBoxTarget.getVolume() < VOXEL_THRESHOLD) {
-      appropriateResolutions.push([resolutionIndex, resolution]);
+      appropriateMags.push([magIndex, mag]);
     }
   }
 
-  return appropriateResolutions;
+  return appropriateMags;
 }
 
 //
@@ -176,7 +172,10 @@ function removeOutgoingEdge(edgeBuffer: Uint16Array, idx: number, neighborIdx: n
 
 export function isBoundingBoxUsableForMinCut(boundingBoxObj: BoundingBoxType, nodes: Array<Node>) {
   const bbox = new BoundingBox(boundingBoxObj);
-  return bbox.containsPoint(nodes[0].position) && bbox.containsPoint(nodes[1].position);
+  return (
+    bbox.containsPoint(nodes[0].untransformedPosition) &&
+    bbox.containsPoint(nodes[1].untransformedPosition)
+  );
 }
 
 type L = (x: number, y: number, z: number) => number;
@@ -233,10 +232,18 @@ function* performMinCut(action: Action): Saga<void> {
     boundingBoxObj = boundingBoxes[0].boundingBox;
   } else {
     const newBBox = {
-      min: V3.floor(V3.sub(V3.min(nodes[0].position, nodes[1].position), DEFAULT_PADDING)),
+      min: V3.floor(
+        V3.sub(
+          V3.min(nodes[0].untransformedPosition, nodes[1].untransformedPosition),
+          DEFAULT_PADDING,
+        ),
+      ),
       max: V3.floor(
         V3.add(
-          V3.add(V3.max(nodes[0].position, nodes[1].position), DEFAULT_PADDING), // Add [1, 1, 1], since BoundingBox.max is exclusive
+          V3.add(
+            V3.max(nodes[0].untransformedPosition, nodes[1].untransformedPosition),
+            DEFAULT_PADDING,
+          ), // Add [1, 1, 1], since BoundingBox.max is exclusive
           [1, 1, 1],
         ),
       ),
@@ -244,9 +251,11 @@ function* performMinCut(action: Action): Saga<void> {
     yield* put(
       addUserBoundingBoxAction({
         boundingBox: newBBox,
-        name: `Bounding box used for splitting cell (seedA=(${nodes[0].position.join(
+        name: `Bounding box used for splitting cell (seedA=(${nodes[0].untransformedPosition.join(
           ",",
-        )}), seedB=(${nodes[1].position.join(",")}), timestamp=${new Date().getTime()})`,
+        )}), seedB=(${nodes[1].untransformedPosition.join(
+          ",",
+        )}), timestamp=${new Date().getTime()})`,
         color: Utils.getRandomColor(),
         isVisible: true,
       }),
@@ -271,10 +280,10 @@ function* performMinCut(action: Action): Saga<void> {
     return;
   }
 
-  const resolutionInfo = getResolutionInfo(volumeTracingLayer.resolutions);
-  const appropriateResolutionInfos = selectAppropriateResolutions(boundingBoxMag1, resolutionInfo);
+  const magInfo = getMagInfo(volumeTracingLayer.resolutions);
+  const appropriateMagInfos = selectAppropriateMags(boundingBoxMag1, magInfo);
 
-  if (appropriateResolutionInfos.length === 0) {
+  if (appropriateMagInfos.length === 0) {
     yield* call(
       [Toast, Toast.warning],
       "The bounding box for the selected seeds is too large. Choose a smaller bounding box or lower the distance between the seeds. Alternatively, ensure that lower magnifications exist which can be used.",
@@ -287,10 +296,10 @@ function* performMinCut(action: Action): Saga<void> {
     successMessageDelay: 5000,
   });
 
-  // Try to perform a min-cut on the selected resolutions. If the min-cut
-  // fails for one resolution, it's tried again on the next resolution.
-  // If the min-cut succeeds, it's refined again with the better resolutions.
-  for (const [resolutionIndex, targetMag] of appropriateResolutionInfos) {
+  // Try to perform a min-cut on the selected mags. If the min-cut
+  // fails for one mag, it's tried again on the next mag.
+  // If the min-cut succeeds, it's refined again with the better mags.
+  for (const [magIndex, targetMag] of appropriateMagInfos) {
     try {
       yield* call(
         progressCallback,
@@ -301,7 +310,7 @@ function* performMinCut(action: Action): Saga<void> {
       yield* call(
         tryMinCutAtMag,
         targetMag,
-        resolutionIndex,
+        magIndex,
         boundingBoxMag1,
         nodes,
         volumeTracingLayer,
@@ -309,30 +318,21 @@ function* performMinCut(action: Action): Saga<void> {
       );
       console.groupEnd();
 
-      for (
-        let refiningResolutionIndex = resolutionIndex - 1;
-        refiningResolutionIndex >= 0;
-        refiningResolutionIndex--
-      ) {
-        // Refine min-cut on lower resolutions, if they exist.
-        if (!resolutionInfo.hasIndex(refiningResolutionIndex)) {
+      for (let refiningMagIndex = magIndex - 1; refiningMagIndex >= 0; refiningMagIndex--) {
+        // Refine min-cut on lower mags, if they exist.
+        if (!magInfo.hasIndex(refiningMagIndex)) {
           continue;
         }
 
-        const refiningResolution =
-          resolutionInfo.getResolutionByIndexOrThrow(refiningResolutionIndex);
-        console.group("Refining min-cut at", refiningResolution.join("-"));
-        yield* call(
-          progressCallback,
-          false,
-          `Refining min-cut at Mag=${refiningResolution.join("-")}`,
-        );
+        const refiningMag = magInfo.getMagByIndexOrThrow(refiningMagIndex);
+        console.group("Refining min-cut at", refiningMag.join("-"));
+        yield* call(progressCallback, false, `Refining min-cut at Mag=${refiningMag.join("-")}`);
 
         try {
           yield* call(
             tryMinCutAtMag,
-            refiningResolution,
-            refiningResolutionIndex,
+            refiningMag,
+            refiningMagIndex,
             boundingBoxMag1,
             nodes,
             volumeTracingLayer,
@@ -407,7 +407,7 @@ function* performMinCut(action: Action): Saga<void> {
 // to separate A from B.
 function* tryMinCutAtMag(
   targetMag: Vector3,
-  resolutionIndex: number,
+  magIndex: number,
   boundingBoxMag1: BoundingBox,
   nodes: MutableNode[],
   volumeTracingLayer: APISegmentationLayer,
@@ -415,8 +415,8 @@ function* tryMinCutAtMag(
 ): Saga<void> {
   const targetMagString = `${targetMag.join(",")}`;
   const boundingBoxTarget = boundingBoxMag1.fromMag1ToMag(targetMag);
-  const globalSeedA = V3.fromMag1ToMag(nodes[0].position, targetMag);
-  const globalSeedB = V3.fromMag1ToMag(nodes[1].position, targetMag);
+  const globalSeedA = V3.fromMag1ToMag(nodes[0].untransformedPosition, targetMag);
+  const globalSeedB = V3.fromMag1ToMag(nodes[1].untransformedPosition, targetMag);
   const minDistToSeed = Math.min(V3.length(V3.sub(globalSeedA, globalSeedB)) / 2, MIN_DIST_TO_SEED);
   console.log("Setting minDistToSeed to ", minDistToSeed);
   const seedA = V3.sub(globalSeedA, boundingBoxTarget.min);
@@ -428,7 +428,7 @@ function* tryMinCutAtMag(
     [api.data, api.data.getDataForBoundingBox],
     volumeTracingLayer.name,
     boundingBoxMag1,
-    resolutionIndex,
+    magIndex,
     additionalCoordinates,
   );
   // For the 3D volume flat arrays are constructed

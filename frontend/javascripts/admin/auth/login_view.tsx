@@ -1,9 +1,8 @@
-import { Col, Row } from "antd";
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
-import React from "react";
+import { Card, Col, Row } from "antd";
 import * as Utils from "libs/utils";
 import window from "libs/window";
+import type { RouteComponentProps } from "react-router-dom";
+import { withRouter } from "react-router-dom";
 import LoginForm from "./login_form";
 
 type Props = {
@@ -29,9 +28,11 @@ function LoginView({ history, redirect }: Props) {
 
   return (
     <Row justify="center" align="middle" className="login-view">
-      <Col className="login-content">
-        <h3>Login</h3>
-        <LoginForm layout="horizontal" onLoggedIn={onLoggedIn} />
+      <Col xs={22} sm={20} md={16} lg={12} xl={8}>
+        <Card className="login-content" style={{ margin: "0 auto" }}>
+          <h3>Login</h3>
+          <LoginForm layout="horizontal" onLoggedIn={onLoggedIn} />
+        </Card>
       </Col>
     </Row>
   );

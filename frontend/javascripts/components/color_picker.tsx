@@ -1,9 +1,9 @@
-import React, { useRef, useState } from "react";
 import { Popover } from "antd";
-import * as Utils from "libs/utils";
-import { HexColorInput, HexColorPicker } from "react-colorful";
 import useThrottledCallback from "beautiful-react-hooks/useThrottledCallback";
+import * as Utils from "libs/utils";
 import type { Vector3 } from "oxalis/constants";
+import { useRef, useState } from "react";
+import { HexColorInput, HexColorPicker } from "react-colorful";
 
 export const ThrottledColorPicker = ({
   color,
@@ -29,9 +29,9 @@ export const ThrottledColorPicker = ({
           textAlign: "center",
           width: "100%",
           marginTop: "12px",
-          color: "var(--ant-text)",
+          color: "var(--ant-color-text)",
           borderRadius: "4px",
-          border: "1px solid var(--ant-border-base)",
+          border: "1px solid var(--ant-border-radius)",
         }}
       />
     </>
@@ -43,13 +43,11 @@ export function ChangeColorMenuItemContent({
   isDisabled,
   onSetColor,
   rgb,
-  hidePickerIcon,
 }: {
   title: string;
   isDisabled: boolean;
   onSetColor: (rgb: Vector3, createsNewUndoState: boolean) => void;
   rgb: Vector3;
-  hidePickerIcon?: boolean;
 }) {
   const isFirstColorChange = useRef(true);
   const color = Utils.rgbToHex(Utils.map3((value) => value * 255, rgb));
@@ -72,17 +70,7 @@ export function ChangeColorMenuItemContent({
   );
   return (
     <Popover content={content} trigger="click" overlayStyle={{ zIndex: 10000 }}>
-      <div style={{ position: "relative", display: "inline-block", width: "100%" }}>
-        {hidePickerIcon ? null : (
-          <i
-            className="fas fa-eye-dropper fa-sm"
-            style={{
-              cursor: "pointer",
-            }}
-          />
-        )}{" "}
-        {title}
-      </div>
+      <div style={{ position: "relative", display: "inline-block", width: "100%" }}>{title}</div>
     </Popover>
   );
 }

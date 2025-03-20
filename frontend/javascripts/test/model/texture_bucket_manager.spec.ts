@@ -1,11 +1,11 @@
 import mock from "mock-require";
 import "test/mocks/lz4";
-import test, { ExecutionContext } from "ava";
-import { Vector4 } from "oxalis/constants";
+import test, { type ExecutionContext } from "ava";
+import type { Vector4 } from "oxalis/constants";
 
 import "test/mocks/globals.mock";
 import "test/mocks/updatable_texture.mock";
-import { CuckooTableVec5 } from "oxalis/model/bucket_data_handling/cuckoo_table_vec5";
+import { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
 
 const LAYER_INDEX = 0;
 const CUCKOO_TEXTURE_WIDTH = 64;
@@ -15,6 +15,7 @@ const temporalBucketManagerMock = {
 };
 const mockedCube = {
   isSegmentation: false,
+  triggerBucketDataChanged: () => {},
 };
 const { default: TextureBucketManager } = mock.reRequire(
   "oxalis/model/bucket_data_handling/texture_bucket_manager",
@@ -33,7 +34,7 @@ const buildBucket = (zoomedAddress: Vector4, firstByte: number) => {
 
 const setActiveBucketsAndWait = (
   tbm: typeof TextureBucketManager,
-  activeBuckets: typeof DataBucket[],
+  activeBuckets: (typeof DataBucket)[],
 ) => {
   tbm.setActiveBuckets(activeBuckets);
   // Depending on timing, processWriterQueue has to be called n times in the slowest case
@@ -59,8 +60,8 @@ const expectBucket = (
 };
 
 test("TextureBucketManager: basic functionality", (t) => {
-  const tbm = new TextureBucketManager(2048, 1, 1, "uint8");
-  tbm.setupDataTextures(1, new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
+  const tbm = new TextureBucketManager(2048, 1, "uint8");
+  tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
   const activeBuckets = [
     buildBucket([1, 1, 1, 0], 100),
     buildBucket([1, 1, 2, 0], 101),
@@ -73,8 +74,8 @@ test("TextureBucketManager: basic functionality", (t) => {
 });
 
 test("TextureBucketManager: changing active buckets", (t) => {
-  const tbm = new TextureBucketManager(2048, 2, 1, "uint8");
-  tbm.setupDataTextures(1, new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
+  const tbm = new TextureBucketManager(2048, 2, "uint8");
+  tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
   const activeBuckets = [
     buildBucket([0, 0, 0, 0], 100),
     buildBucket([0, 0, 1, 0], 101),

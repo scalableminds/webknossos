@@ -14,8 +14,8 @@ import models.configuration.DatasetConfigurationService
 import net.liftweb.common.Full
 import play.api.http.Status.NOT_FOUND
 import play.api.i18n.{Messages, MessagesProvider}
-import play.api.libs.json.JsArray
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
+import play.api.libs.json.{JsArray, JsObject}
 import utils.sql.{SimpleSQLDAO, SqlClient}
 
 import javax.inject.Inject
@@ -36,8 +36,7 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
   private val MaxThumbnailHeight = 4000
 
   def getThumbnailWithCache(
-      organizationName: String,
-      datasetName: String,
+      datasetIdValidated: ObjectId,
       layerName: String,
       w: Option[Int],
       h: Option[Int],
@@ -45,70 +44,62 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
     val width = com.scalableminds.util.tools.Math.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailWidth)
     val height = com.scalableminds.util.tools.Math.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
     for {
-      dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)(GlobalAccessContext)
+      dataset <- datasetDAO.findOne(datasetIdValidated)(GlobalAccessContext)
       image <- thumbnailCachingService.getOrLoad(
         dataset._id,
         layerName,
         width,
         height,
         mappingName,
-        _ =>
-          getThumbnail(organizationName, datasetName, layerName, width, height, mappingName)(ec,
-                                                                                             GlobalAccessContext,
-                                                                                             mp)
+        _ => getThumbnail(dataset, layerName, width, height, mappingName)(ec, GlobalAccessContext, mp)
       )
     } yield image
   }
 
-  private def getThumbnail(organizationName: String,
-                           datasetName: String,
-                           layerName: String,
-                           width: Int,
-                           height: Int,
-                           mappingName: Option[String])(implicit ec: ExecutionContext,
-                                                        ctx: DBAccessContext,
-                                                        mp: MessagesProvider): Fox[Array[Byte]] =
+  private def getThumbnail(dataset: Dataset, layerName: String, width: Int, height: Int, mappingName: Option[String])(
+      implicit ec: ExecutionContext,
+      ctx: DBAccessContext,
+      mp: MessagesProvider): Fox[Array[Byte]] =
     for {
-      dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)
       dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
       usableDataSource <- dataSource.toUsable.toFox ?~> "dataset.notImported"
       layer <- usableDataSource.dataLayers.find(_.name == layerName) ?~> Messages("dataLayer.notFound", layerName) ~> NOT_FOUND
-      viewConfiguration <- datasetConfigurationService.getDatasetViewConfigurationForDataset(List.empty,
-                                                                                             datasetName,
-                                                                                             organizationName)(ctx)
-      (mag1BoundingBox, mag, intensityRangeOpt, colorSettingsOpt) = selectParameters(viewConfiguration,
-                                                                                     usableDataSource,
-                                                                                     layerName,
-                                                                                     layer,
-                                                                                     width,
-                                                                                     height)
+      viewConfiguration <- datasetConfigurationService.getDatasetViewConfigurationForDataset(List.empty, dataset._id)(
+        ctx)
+      (mag1BoundingBox, mag, intensityRangeOpt, colorSettingsOpt, mapping) = selectParameters(viewConfiguration,
+                                                                                              usableDataSource,
+                                                                                              layerName,
+                                                                                              layer,
+                                                                                              width,
+                                                                                              height,
+                                                                                              mappingName)
       client <- datasetService.clientFor(dataset)
-      image <- client.getDataLayerThumbnail(organizationName,
-                                            dataset,
+      image <- client.getDataLayerThumbnail(dataset,
                                             layerName,
                                             mag1BoundingBox,
                                             mag,
-                                            mappingName,
+                                            mapping,
                                             intensityRangeOpt,
                                             colorSettingsOpt)
       _ <- thumbnailDAO.upsertThumbnail(dataset._id,
                                         layerName,
                                         width,
                                         height,
-                                        mappingName,
+                                        mapping,
                                         image,
                                         jpegMimeType,
                                         mag,
                                         mag1BoundingBox)
     } yield image
 
-  private def selectParameters(
-      viewConfiguration: DatasetViewConfiguration,
-      usableDataSource: GenericDataSource[DataLayerLike],
-      layerName: String,
-      layer: DataLayerLike,
-      targetMagWidth: Int,
-      targetMagHeigt: Int): (BoundingBox, Vec3Int, Option[(Double, Double)], Option[ThumbnailColorSettings]) = {
+  private def selectParameters(viewConfiguration: DatasetViewConfiguration,
+                               usableDataSource: GenericDataSource[DataLayerLike],
+                               layerName: String,
+                               layer: DataLayerLike,
+                               targetMagWidth: Int,
+                               targetMagHeigt: Int,
+                               mappingName: Option[String])
+    : (BoundingBox, Vec3Int, Option[(Double, Double)], Option[ThumbnailColorSettings], Option[String]) = {
     val configuredCenterOpt =
       viewConfiguration.get("position").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Vec3Int]))
     val centerOpt =
@@ -126,7 +117,13 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
     val x = center.x - mag1Width / 2
     val y = center.y - mag1Height / 2
     val z = center.z
-    (BoundingBox(Vec3Int(x, y, z), mag1Width, mag1Height, 1), mag, intensityRangeOpt, colorSettingsOpt)
+
+    val mappingNameResult = mappingName.orElse(readMappingName(viewConfiguration, layerName))
+    (BoundingBox(Vec3Int(x, y, z), mag1Width, mag1Height, 1),
+     mag,
+     intensityRangeOpt,
+     colorSettingsOpt,
+     mappingNameResult)
   }
 
   private def readIntensityRange(viewConfiguration: DatasetViewConfiguration,
@@ -149,6 +146,13 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
       b <- colorArray(2).validate[Int].asOpt
     } yield ThumbnailColorSettings(Color(r / 255d, g / 255d, b / 255d, 0), isInverted)
 
+  private def readMappingName(viewConfiguration: DatasetViewConfiguration, layerName: String): Option[String] =
+    for {
+      layersJsValue <- viewConfiguration.get("layers")
+      mapping <- (layersJsValue \ layerName \ "mapping").validate[JsObject].asOpt
+      mappingName <- mapping("name").validate[String].asOpt
+    } yield mappingName
+
   private def magForZoom(dataLayer: DataLayerLike, zoom: Double): Vec3Int =
     dataLayer.resolutions.minBy(r => Math.abs(r.maxDim - zoom))
 
@@ -156,7 +160,7 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
 
 case class ThumbnailColorSettings(color: Color, isInverted: Boolean)
 
-class ThumbnailCachingService @Inject()(datasetDAO: DatasetDAO, thumbnailDAO: ThumbnailDAO) {
+class ThumbnailCachingService @Inject()(thumbnailDAO: ThumbnailDAO) {
   private val ThumbnailCacheDuration = 10 days
 
   // First cache is in memory, then in postgres.
@@ -183,12 +187,6 @@ class ThumbnailCachingService @Inject()(datasetDAO: DatasetDAO, thumbnailDAO: Th
           }
         } yield fromDbOrNew
     )
-
-  def removeFromCache(organizationName: String, datasetName: String): Fox[Unit] =
-    for {
-      dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)(GlobalAccessContext)
-      _ <- removeFromCache(dataset._id)
-    } yield ()
 
   def removeFromCache(datasetId: ObjectId): Fox[Unit] = {
     inMemoryThumbnailCache.clear(keyTuple => keyTuple._1 == datasetId)
@@ -227,7 +225,7 @@ class ThumbnailDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionContext
                       mimeType: String,
                       mag: Vec3Int,
                       mag1BoundingBox: BoundingBox): Fox[Unit] = {
-    val mappingName = mappingNameOpt.getOrElse("") // in sql, nullable columns can’t be primary key, so we encode no mapping with emptystring
+    val mappingName = mappingNameOpt.getOrElse("") // in sql, nullable columns can’t be primary key, so we encode no mapping with empty string
     for {
       _ <- run(q"""INSERT INTO webknossos.dataset_thumbnails (
             _dataset, dataLayerName, width, height, mappingName, image, mimetype, mag, mag1BoundingBox, created)

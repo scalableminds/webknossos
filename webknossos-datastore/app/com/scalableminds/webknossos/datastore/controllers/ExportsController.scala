@@ -6,7 +6,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.tools.FoxImplicits
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.services.{
-  DSRemoteWebKnossosClient,
+  DSRemoteWebknossosClient,
   DataStoreAccessTokenService,
   UserAccessRequest
 }
@@ -15,30 +15,30 @@ import play.api.mvc.{Action, AnyContent}
 
 import scala.concurrent.ExecutionContext
 
-case class JobExportProperties(jobId: String, runId: String, organizationName: String, exportFileName: String) {
+case class JobExportProperties(jobId: String, runId: String, organizationId: String, exportFileName: String) {
 
   def fullPathIn(baseDir: Path): Path =
-    baseDir.resolve(organizationName).resolve(".export").resolve(runId).resolve(exportFileName)
+    baseDir.resolve(organizationId).resolve(".export").resolve(runId).resolve(exportFileName)
 }
 
 object JobExportProperties {
   implicit val jsonFormat: OFormat[JobExportProperties] = Json.format[JobExportProperties]
 }
 
-class ExportsController @Inject()(webKnossosClient: DSRemoteWebKnossosClient,
+class ExportsController @Inject()(webknossosClient: DSRemoteWebknossosClient,
                                   accessTokenService: DataStoreAccessTokenService,
                                   config: DataStoreConfig)(implicit ec: ExecutionContext)
     extends Controller
     with FoxImplicits {
 
-  private val dataBaseDir: Path = Paths.get(config.Datastore.baseFolder)
+  private val dataBaseDir: Path = Paths.get(config.Datastore.baseDirectory)
 
   override def allowRemoteOrigin: Boolean = true
 
-  def download(token: Option[String], jobId: String): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.downloadJobExport(jobId), urlOrHeaderToken(token, request)) {
+  def download(jobId: String): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.downloadJobExport(jobId)) {
       for {
-        exportProperties <- webKnossosClient.getJobExportProperties(jobId)
+        exportProperties <- webknossosClient.getJobExportProperties(jobId)
         fullPath = exportProperties.fullPathIn(dataBaseDir)
         _ <- bool2Fox(Files.exists(fullPath)) ?~> "job.export.fileNotFound"
       } yield Ok.sendPath(fullPath, inline = false)

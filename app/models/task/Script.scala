@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.schema.Tables._
 import models.user.{UserDAO, UserService}
 import play.api.libs.json._
 import slick.lifted.Rep
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject
@@ -56,7 +56,7 @@ class ScriptDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected def isDeletedColumn(x: Scripts): Rep[Boolean] = x.isdeleted
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
-    q"(select _organization from webknossos.users_ u where u._id = _owner) = (select _organization from webknossos.users_ u where u._id = $requestingUserId)"
+    q"(SELECT _organization FROM webknossos.users_ u WHERE u._id = _owner) = (SELECT _organization FROM webknossos.users_ u WHERE u._id = $requestingUserId)"
 
   protected def parse(r: ScriptsRow): Fox[Script] =
     Fox.successful(
@@ -71,26 +71,26 @@ class ScriptDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def insertOne(s: Script): Fox[Unit] =
     for {
-      _ <- run(q"""insert into webknossos.scripts(_id, _owner, name, gist, created, isDeleted)
-                   values(${s._id}, ${s._owner}, ${s.name}, ${s.gist}, ${s.created}, ${s.isDeleted})""".asUpdate)
+      _ <- run(q"""INSERT INTO webknossos.scripts(_id, _owner, name, gist, created, isDeleted)
+                   VALUES(${s._id}, ${s._owner}, ${s.name}, ${s.gist}, ${s.created}, ${s.isDeleted})""".asUpdate)
     } yield ()
 
   def updateOne(s: Script)(implicit ctx: DBAccessContext): Fox[Unit] =
     for { //note that s.created is skipped
       _ <- assertUpdateAccess(s._id)
-      _ <- run(q"""update webknossos.scripts
-                          set
-                            _owner = ${s._owner},
-                            name = ${s.name},
-                            gist = ${s.gist},
-                            isDeleted = ${s.isDeleted}
-                          where _id = ${s._id}""".asUpdate)
+      _ <- run(q"""UPDATE webknossos.scripts
+                   SET
+                     _owner = ${s._owner},
+                     name = ${s.name},
+                     gist = ${s.gist},
+                     isDeleted = ${s.isDeleted}
+                   WHERE _id = ${s._id}""".asUpdate)
     } yield ()
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Script]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"select $columns from $existingCollectionName where $accessQuery".as[ScriptsRow])
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[ScriptsRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 }

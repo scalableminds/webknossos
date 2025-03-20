@@ -1,0 +1,13 @@
+name: CI Pipeline
+
+on:
+  workflow_dispatch:
+
+jobs:
+  foo:
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 5

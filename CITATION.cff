@@ -1,0 +1,92 @@
+﻿# Content: Citation File Format (CFF) file for webKnossos
+cff-version: 1.2.0
+title: "WEBKNOSSOS"
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - family-names: Boergens
+    given-names: Kevin M
+  - family-names: Berning
+    given-names: Manuel
+  - family-names: Bocklisch
+    given-names: Tom
+  - family-names: Bräunlein
+    given-names: Dominic
+  - family-names: Drawitsch
+    given-names: Florian
+  - family-names: Frohnhofen
+    given-names: Johannes
+  - family-names: Herold
+    given-names: Tom
+  - family-names: Otto
+    given-names: Philipp
+  - family-names: Rzepka
+    given-names: Norman
+  - family-names: Werkmeister
+    given-names: Thomas
+  - family-names: Werner
+    given-names: Daniel
+  - family-names: Wiese
+    given-names: Georg
+  - family-names: Wissler
+    given-names: Heiko
+  - family-names: Helmstaedter
+    given-names: Moritz
+identifiers:
+  - type: doi
+    value: 10.1038/nmeth.4331
+abstract: >-
+  webKnossos is a browser-based tracing and annotation tool
+  for 3D electron microscopy data sets that is optimized for
+  seamless data viewing. The tool’s flight-mode view
+  facilitates fast neurite tracing because of its egocentric
+  viewpoint.
+preferred-citation:
+  type: article
+  authors:
+    - family-names: Boergens
+      given-names: Kevin M
+    - family-names: Berning
+      given-names: Manuel
+    - family-names: Bocklisch
+      given-names: Tom
+    - family-names: Bräunlein
+      given-names: Dominic
+    - family-names: Drawitsch
+      given-names: Florian
+    - family-names: Frohnhofen
+      given-names: Johannes
+    - family-names: Herold
+      given-names: Tom
+    - family-names: Otto
+      given-names: Philipp
+    - family-names: Rzepka
+      given-names: Norman
+    - family-names: Werkmeister
+      given-names: Thomas
+    - family-names: Werner
+      given-names: Daniel
+    - family-names: Wiese
+      given-names: Georg
+    - family-names: Wissler
+      given-names: Heiko
+    - family-names: Helmstaedter
+      given-names: Moritz
+  journal: "Nature methods"
+  month: 7
+  year: 2017
+  title: "webKnossos: efficient online 3D data annotation for connectomics"
+  abstract: >-
+    webKnossos is a browser-based tracing and annotation tool
+    for 3D electron microscopy data sets that is optimized for
+    seamless data viewing. The tool’s flight-mode view
+    facilitates fast neurite tracing because of its egocentric
+    viewpoint.
+  start: 691
+  end: 694
+  issn: 1548-7105
+  doi: 10.1038/nmeth.4331
+  volume: 14
+  issue: 7

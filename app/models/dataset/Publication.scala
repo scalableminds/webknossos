@@ -9,7 +9,7 @@ import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json.{JsObject, Json}
 import slick.lifted.Rep
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient}
 
 import javax.inject.Inject
@@ -74,20 +74,20 @@ class PublicationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
 
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Publication] =
     for {
-      r <- run(q"select $columns from $existingCollectionName where _id = $id".as[PublicationsRow])
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id".as[PublicationsRow])
       parsed <- parseFirst(r, id)
     } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Publication]] =
     for {
-      r <- run(q"select $columns from $existingCollectionName".as[PublicationsRow])
+      r <- run(q"SELECT $columns FROM $existingCollectionName".as[PublicationsRow])
       parsed <- parseAll(r)
     } yield parsed
 
   def insertOne(p: Publication): Fox[Unit] =
     for {
       _ <- run(
-        q"""insert into webknossos.publications(_id, publicationDate, imageUrl, title, description, created, isDeleted)
-                   values(${p._id}, ${p.publicationDate}, ${p.imageUrl}, ${p.title}, ${p.description}, ${p.created}, ${p.isDeleted})""".asUpdate)
+        q"""INSERT INTO webknossos.publications(_id, publicationDate, imageUrl, title, description, created, isDeleted)
+            VALUES(${p._id}, ${p.publicationDate}, ${p.imageUrl}, ${p.title}, ${p.description}, ${p.created}, ${p.isDeleted})""".asUpdate)
     } yield ()
 }

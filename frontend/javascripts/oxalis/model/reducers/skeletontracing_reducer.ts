@@ -1,45 +1,51 @@
 import Maybe from "data.maybe";
-import _ from "lodash";
 import update from "immutability-helper";
+import ColorGenerator from "libs/color_generator";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import _ from "lodash";
+import Constants, { AnnotationToolEnum, TreeTypeEnum } from "oxalis/constants";
+import {
+  findTreeByNodeId,
+  getNodeAndTree,
+  getSkeletonTracing,
+  getTree,
+  isSkeletonLayerTransformed,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Action } from "oxalis/model/actions/actions";
-import type { OxalisState, SkeletonTracing, Tree } from "oxalis/store";
 import {
   convertServerAdditionalAxesToFrontEnd,
   convertServerBoundingBoxToFrontend,
   convertUserBoundingBoxesFromServerToFrontend,
 } from "oxalis/model/reducers/reducer_helpers";
 import {
+  addTreesAndGroups,
   createBranchPoint,
-  deleteBranchPoint,
+  createComment,
   createNode,
   createTree,
-  deleteTree,
-  deleteNode,
-  deleteEdge,
-  shuffleTreeColor,
-  setTreeColorIndex,
-  createComment,
+  createTreeMapFromTreeArray,
+  deleteBranchPoint,
   deleteComment,
+  deleteEdge,
+  deleteNode,
+  deleteTrees,
+  ensureTreeNames,
+  getOrCreateTree,
   mergeTrees,
+  removeMissingGroupsFromTrees,
+  setExpandedTreeGroups,
+  setTreeColorIndex,
+  shuffleTreeColor,
   toggleAllTreesReducer,
   toggleTreeGroupReducer,
-  addTreesAndGroups,
-  createTreeMapFromTreeArray,
-  removeMissingGroupsFromTrees,
-  getOrCreateTree,
-  ensureTreeNames,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import type { OxalisState, SkeletonTracing, Tree, TreeGroup } from "oxalis/store";
 import {
-  getSkeletonTracing,
-  findTreeByNodeId,
-  getTree,
-  getTreesWithType,
-  getNodeAndTree,
-} from "oxalis/model/accessors/skeletontracing_accessor";
-import ColorGenerator from "libs/color_generator";
-import Constants, { AnnotationToolEnum, TreeTypeEnum } from "oxalis/constants";
-import Toast from "libs/toast";
-import * as Utils from "libs/utils";
+  GroupTypeEnum,
+  getNodeKey,
+} from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import type { MetadataEntryProto } from "types/api_flow_types";
 import { userSettings } from "types/schemas/user_settings.schema";
 
 function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState {
@@ -99,7 +105,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         trees,
         treeGroups: action.tracing.treeGroups || [],
         tracingId: action.tracing.id,
-        version: action.tracing.version,
         boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
         userBoundingBoxes,
         navigationList: {
@@ -435,11 +440,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           return update(state, {
             tracing: {
               skeleton: {
-                $set: update(action.tracing, {
-                  version: {
-                    $set: skeletonTracing.version,
-                  },
-                }),
+                $set: action.tracing,
               },
             },
           });
@@ -485,6 +486,22 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
               }),
             )
             .getOrElse(state);
+        }
+
+        case "SET_EXPANDED_TREE_GROUPS_BY_KEYS": {
+          const { expandedGroups } = action;
+
+          return setExpandedTreeGroups(state, (group: TreeGroup) =>
+            expandedGroups.has(getNodeKey(GroupTypeEnum.GROUP, group.groupId)),
+          );
+        }
+
+        case "SET_EXPANDED_TREE_GROUPS_BY_IDS": {
+          const { expandedGroups } = action;
+
+          return setExpandedTreeGroups(state, (group: TreeGroup) =>
+            expandedGroups.has(group.groupId),
+          );
         }
 
         case "TOGGLE_ALL_TREES": {
@@ -575,15 +592,12 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
 
       switch (action.type) {
         case "CREATE_NODE": {
-          const {
-            position,
-            rotation,
-            viewport,
-            resolution,
-            treeId,
-            timestamp,
-            additionalCoordinates,
-          } = action;
+          if (isSkeletonLayerTransformed(state)) {
+            // Don't create nodes if the skeleton layer is rendered with transforms.
+            return state;
+          }
+          const { position, rotation, viewport, mag, treeId, timestamp, additionalCoordinates } =
+            action;
           return getOrCreateTree(state, skeletonTracing, treeId, timestamp, TreeTypeEnum.DEFAULT)
             .chain((tree) =>
               createNode(
@@ -594,7 +608,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                 additionalCoordinates,
                 rotation,
                 viewport,
-                resolution,
+                mag,
                 timestamp,
               ).map(([node, edges]) => {
                 const diffableNodeMap = tree.nodes;
@@ -704,6 +718,10 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         }
 
         case "SET_NODE_POSITION": {
+          if (isSkeletonLayerTransformed(state)) {
+            // Don't move node if the skeleton layer is rendered with transforms.
+            return state;
+          }
           const { position, nodeId, treeId } = action;
           return getNodeAndTree(skeletonTracing, nodeId, treeId, TreeTypeEnum.DEFAULT)
             .map(([tree, node]) => {
@@ -711,7 +729,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
               const newDiffableMap = diffableMap.set(
                 node.id,
                 update(node, {
-                  position: {
+                  untransformedPosition: {
                     // Don't round here, since this would make the continuous
                     // movement of a node weird.
                     $set: position,
@@ -811,8 +829,11 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         case "CREATE_TREE": {
           const { timestamp } = action;
           return createTree(state, timestamp)
-            .map((tree) =>
-              update(state, {
+            .map((tree) => {
+              if (action.treeIdCallback) {
+                action.treeIdCallback(tree.treeId);
+              }
+              return update(state, {
                 tracing: {
                   skeleton: {
                     trees: {
@@ -831,8 +852,8 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                     },
                   },
                 },
-              }),
-            )
+              });
+            })
             .getOrElse(state);
         }
 
@@ -863,10 +884,16 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             .getOrElse(state);
         }
 
-        case "DELETE_TREE": {
-          const { treeId, suppressActivatingNextNode } = action;
-          return getTree(skeletonTracing, treeId)
-            .chain((tree) => deleteTree(skeletonTracing, tree, suppressActivatingNextNode))
+        case "DELETE_TREE":
+        case "DELETE_TREES": {
+          const { suppressActivatingNextNode } = action;
+          const treeIds =
+            action.type === "DELETE_TREE"
+              ? getTree(skeletonTracing, action.treeId) // The treeId in a DELETE_TREE action can be undefined which will select the active tree
+                  .map((tree) => [tree.treeId])
+                  .getOrElse([])
+              : action.treeIds;
+          return deleteTrees(skeletonTracing, treeIds, suppressActivatingNextNode)
             .map(([trees, newActiveTreeId, newActiveNodeId, newMaxNodeId]) =>
               update(state, {
                 tracing: {
@@ -930,29 +957,30 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           const isProofreadingActive =
             state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
           const treeType = isProofreadingActive ? TreeTypeEnum.AGGLOMERATE : TreeTypeEnum.DEFAULT;
-          const trees = getTreesWithType(skeletonTracing, treeType);
-          return mergeTrees(trees, sourceNodeId, targetNodeId)
-            .map(([trees, newActiveTreeId, newActiveNodeId]) =>
-              update(state, {
-                tracing: {
-                  skeleton: {
-                    trees: {
-                      $set: trees,
-                    },
-                    activeNodeId: {
-                      $set: newActiveNodeId,
-                    },
-                    activeTreeId: {
-                      $set: newActiveTreeId,
-                    },
-                    activeGroupId: {
-                      $set: null,
-                    },
-                  },
+          const oldTrees = skeletonTracing.trees;
+          const mergeResult = mergeTrees(oldTrees, sourceNodeId, targetNodeId, treeType);
+          if (mergeResult == null) {
+            return state;
+          }
+          const [trees, newActiveTreeId, newActiveNodeId] = mergeResult;
+          return update(state, {
+            tracing: {
+              skeleton: {
+                trees: {
+                  $set: trees,
                 },
-              }),
-            )
-            .getOrElse(state);
+                activeNodeId: {
+                  $set: newActiveNodeId,
+                },
+                activeTreeId: {
+                  $set: newActiveTreeId,
+                },
+                activeGroupId: {
+                  $set: null,
+                },
+              },
+            },
+          });
         }
 
         case "SET_TREE_NAME": {
@@ -967,6 +995,26 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                       [tree.treeId]: {
                         name: {
                           $set: newName,
+                        },
+                      },
+                    },
+                  },
+                },
+              });
+            })
+            .getOrElse(state);
+        }
+
+        case "SET_TREE_METADATA": {
+          return getTree(skeletonTracing, action.treeId)
+            .map((tree) => {
+              return update(state, {
+                tracing: {
+                  skeleton: {
+                    trees: {
+                      [tree.treeId]: {
+                        metadata: {
+                          $set: sanitizeMetadata(action.metadata),
                         },
                       },
                     },
@@ -1085,6 +1133,28 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
       }
     })
     .getOrElse(state);
+}
+
+export function sanitizeMetadata(metadata: MetadataEntryProto[]) {
+  // Workaround for stringList values that are [], even though they
+  // should be null. This workaround is necessary because protobuf cannot
+  // distinguish between an empty list and an not existent property.
+  // Therefore, we clean this up here.
+  return metadata.map((prop) => {
+    // If stringList value is defined, but it's an empty array, it should
+    // be switched to undefined
+    const needsCorrection =
+      prop.stringListValue != null &&
+      prop.stringListValue.length === 0 &&
+      (prop.stringValue != null || prop.numberValue != null || prop.boolValue != null);
+    if (needsCorrection) {
+      return {
+        ...prop,
+        stringListValue: undefined,
+      };
+    }
+    return prop;
+  });
 }
 
 export default SkeletonTracingReducer;

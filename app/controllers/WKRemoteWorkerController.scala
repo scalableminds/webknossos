@@ -1,25 +1,34 @@
 package controllers
 
-import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
+import models.aimodels.AiInferenceDAO
+import models.dataset.DatasetDAO
 import models.job.JobCommand.JobCommand
 
 import javax.inject.Inject
 import models.job._
+import models.voxelytics.VoxelyticsDAO
+import net.liftweb.common.{Empty, Failure, Full}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
-import utils.ObjectId
+import utils.WkConf
 
 import scala.concurrent.ExecutionContext
 
-class WKRemoteWorkerController @Inject()(jobDAO: JobDAO, jobService: JobService, workerDAO: WorkerDAO)(
-    implicit ec: ExecutionContext,
-    bodyParsers: PlayBodyParsers)
+class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
+                                         jobService: JobService,
+                                         workerDAO: WorkerDAO,
+                                         voxelyticsDAO: VoxelyticsDAO,
+                                         aiInferenceDAO: AiInferenceDAO,
+                                         datasetDAO: DatasetDAO,
+                                         wkConf: WkConf)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
   def requestJobs(key: String): Action[AnyContent] = Action.async { implicit request =>
     for {
-      worker <- workerDAO.findOneByKey(key) ?~> "jobs.worker.notFound"
+      worker <- workerDAO.findOneByKey(key) ?~> "job.worker.notFound"
       _ = workerDAO.updateHeartBeat(worker._id)
       _ <- reserveNextJobs(worker, pendingIterationCount = 10)
       assignedUnfinishedJobs: List[Job] <- jobDAO.findAllUnfinishedByWorker(worker._id)
@@ -27,8 +36,9 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO, jobService: JobService,
       // make sure that the jobs to run have not already just been cancelled
       assignedUnfinishedJobsFiltered = assignedUnfinishedJobs.filter(j =>
         !jobsToCancel.map(_._id).toSet.contains(j._id))
-      assignedUnfinishedJs = assignedUnfinishedJobsFiltered.map(jobService.parameterWrites)
-      toCancelJs = jobsToCancel.map(jobService.parameterWrites)
+      assignedUnfinishedJs <- Fox.serialCombined(assignedUnfinishedJobsFiltered)(
+        jobService.parameterWrites(_)(GlobalAccessContext))
+      toCancelJs <- Fox.serialCombined(jobsToCancel)(jobService.parameterWrites(_)(GlobalAccessContext))
     } yield Ok(Json.obj("to_run" -> assignedUnfinishedJs, "to_cancel" -> toCancelJs))
   }
 
@@ -62,17 +72,45 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO, jobService: JobService,
     lowPriorityOrEmpty ++ highPriorityOrEmpty
   }
 
-  def updateJobStatus(key: String, id: String): Action[JobStatus] = Action.async(validateJson[JobStatus]) {
+  def updateJobStatus(key: String, id: ObjectId): Action[JobStatus] = Action.async(validateJson[JobStatus]) {
     implicit request =>
       for {
-        _ <- workerDAO.findOneByKey(key) ?~> "jobs.worker.notFound"
-        jobIdParsed <- ObjectId.fromString(id)
-        jobBeforeChange <- jobDAO.findOne(jobIdParsed)(GlobalAccessContext)
-        _ <- jobDAO.updateStatus(jobIdParsed, request.body)
-        jobAfterChange <- jobDAO.findOne(jobIdParsed)(GlobalAccessContext)
+        _ <- workerDAO.findOneByKey(key) ?~> "job.worker.notFound"
+        jobBeforeChange <- jobDAO.findOne(id)(GlobalAccessContext)
+        _ <- jobDAO.updateStatus(id, request.body)
+        jobAfterChange <- jobDAO.findOne(id)(GlobalAccessContext) ?~> "job.notFound"
         _ = jobService.trackStatusChange(jobBeforeChange, jobAfterChange)
-        _ <- jobService.cleanUpIfFailed(jobAfterChange)
+        _ <- jobService.cleanUpIfFailed(jobAfterChange) ?~> "job.cleanup.failed"
       } yield Ok
   }
+
+  def attachVoxelyticsWorkflow(key: String, id: ObjectId): Action[String] = Action.async(validateJson[String]) {
+    implicit request =>
+      for {
+        _ <- workerDAO.findOneByKey(key) ?~> "job.worker.notFound"
+        _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
+        organizationId <- jobDAO.organizationIdForJobId(id) ?~> "job.notFound"
+        workflowHash = request.body
+        existingWorkflowBox <- voxelyticsDAO.findWorkflowByHashAndOrganization(organizationId, workflowHash).futureBox
+        _ <- existingWorkflowBox match {
+          case Full(_)    => Fox.successful(())
+          case Empty      => voxelyticsDAO.upsertWorkflow(workflowHash, "initializing worker workflow", organizationId)
+          case f: Failure => f.toFox
+        }
+        _ <- jobDAO.updateVoxelyticsWorkflow(id, request.body)
+      } yield Ok
+  }
+
+  def attachDatasetToInference(key: String, id: ObjectId): Action[String] =
+    Action.async(validateJson[String]) { implicit request =>
+      implicit val ctx: DBAccessContext = GlobalAccessContext
+      for {
+        _ <- workerDAO.findOneByKey(key) ?~> "job.worker.notFound"
+        organizationId <- jobDAO.organizationIdForJobId(id) ?~> "job.notFound"
+        dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(request.body, organizationId)
+        aiInference <- aiInferenceDAO.findOneByJobId(id) ?~> "aiInference.notFound"
+        _ <- aiInferenceDAO.updateDataset(aiInference._id, dataset._id)
+      } yield Ok
+    }
 
 }

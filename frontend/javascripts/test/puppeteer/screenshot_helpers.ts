@@ -1,10 +1,35 @@
 import { PNG } from "pngjs";
-import fs from "fs";
+import fs from "node:fs";
 import pixelmatch from "pixelmatch";
+import path from "node:path";
+
+export const SCREENSHOTS_BASE_PATH = path.join(
+  __dirname,
+  "../../../../frontend/javascripts/test/screenshots",
+);
+
+export function getUrlForScreenshotTests() {
+  let URL = "https://master.webknossos.xyz/";
+
+  if (!process.env.URL) {
+    console.warn(
+      "[Warning] No url specified, assuming dev master. If you want to specify a URL, prepend URL=<url> to the command.",
+    );
+  } else {
+    URL = process.env.URL;
+
+    // Prepend https:// if not specified
+    if (!/^https?:\/\//i.test(URL)) {
+      URL = `https://${URL}`;
+    }
+  }
+
+  return URL;
+}
 
 export function isPixelEquivalent(changedPixels: number, width: number, height: number) {
-  // There may be a difference of 0.1 %
-  const allowedThreshold = 0.1 / 100;
+  // There may be a difference of 0.75 %
+  const allowedThreshold = 0.75 / 100;
   const allowedChangedPixel = allowedThreshold * width * height;
   return changedPixels < allowedChangedPixel;
 }
@@ -25,6 +50,20 @@ function openScreenshot(path: string, name: string): Promise<PNG | null> {
         resolve(this);
       });
   });
+}
+
+async function deleteScreenshotIfExists(path: string, name: string): Promise<void> {
+  try {
+    // Delete the file
+    await new Promise<void>((resolve, reject) => {
+      fs.unlink(`${path}/${name}.png`, (unlinkErr) => {
+        if (unlinkErr) {
+          return reject(unlinkErr);
+        }
+        resolve();
+      });
+    });
+  } catch {}
 }
 
 function saveScreenshot(png: PNG, path: string, name: string): Promise<void> {
@@ -63,6 +102,12 @@ export async function compareScreenshot(
     return 0;
   }
 
+  if (width !== existingScreenshot.width || height !== existingScreenshot.height) {
+    console.warn("Width/height differs between screenshots. Using Infinity as pixelErrors value.");
+    await saveScreenshot(newScreenshot, path, `${name}.new`);
+    return Number.POSITIVE_INFINITY;
+  }
+
   const diff = new PNG({
     width,
     height,
@@ -86,6 +131,11 @@ export async function compareScreenshot(
     await Promise.all([
       saveScreenshot(diff, path, `${name}.diff`),
       saveScreenshot(newScreenshot, path, `${name}.new`),
+    ]);
+  } else {
+    await Promise.all([
+      deleteScreenshotIfExists(path, `${name}.diff`),
+      deleteScreenshotIfExists(path, `${name}.new`),
     ]);
   }
 

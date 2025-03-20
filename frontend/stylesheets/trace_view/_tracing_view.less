@@ -18,46 +18,42 @@
   position: absolute;
   width: 100%;
 }
-.inputcatcher {
+.inputcatcher-border {
   border-style: solid;
   border-width: 2px;
-  z-index: 20;
-  box-sizing: border-box;
-  -moz-box-sizing: border-box;
-  float: left;
-  margin: 0;
   opacity: 0.85;
   width: 100%;
   height: 100%;
-
+  &:hover {
+    opacity: 1;
+  }
   &.PLANE_XY {
-    border-color: @xyRed;
+    border-color: var(--color-xy-viewport);
   }
   &.PLANE_YZ {
-    border-color: @yzBlue;
+    border-color: var(--color-yz-viewport);
   }
   &.PLANE_XZ {
-    border-color: @xzGreen;
+    border-color: var(--color-xz-viewport);
   }
   &.TDView {
     border-color: white;
   }
-
-  &:hover {
-    opacity: 1;
-  }
+}
+.inputcatcher {
+  z-index: 20;
+  float: left;
+  margin: 0;
+  width: 100%;
+  height: 100%;
 }
 
 #inputcatcher_TDView {
   position: relative;
 }
 #TDViewControls {
-  text-align: right;
-  height: 20px;
-  position: absolute;
-  top: 0px;
-  z-index: 30;
-  width: 100%;
+  display: flex;
+  justify-content: end;
 
   .ant-btn {
     line-height: 23px;
@@ -72,13 +68,13 @@
       margin-right: 5px;
     }
     &:nth-child(2) .colored-dot {
-      background-color: @xyRed;
+      background-color: var(--color-xy-viewport);
     }
     &:nth-child(3) .colored-dot {
-      background-color: @yzBlue;
+      background-color: var(--color-yz-viewport);
     }
     &:nth-child(4) .colored-dot {
-      background-color: @xzGreen;
+      background-color: var(--color-xz-viewport);
     }
   }
 }
@@ -136,9 +132,9 @@
 .node-context-menu {
   z-index: 1000;
   border-radius: 6px;
-  color: @text-color;
-  background: @component-background;
-  box-shadow: @box-shadow-base;
+  color: var(--ant-color-text);
+  background: var(--ant-color-bg-container);
+  box-shadow: var(--ant-box-shadow);
 
   .node-context-menu-item {
     clear: both;
@@ -194,13 +190,13 @@
     height: 12px;
     width: 12px;
     transform: rotate(45deg);
-    background-color: var(--ant-text);
+    background-color: var(--ant-color-text);
   }
 }
 
 #version-restore-sider {
-  box-shadow: @box-shadow-base;
-  border-left: 1px solid @border-color-base;
+  box-shadow: var(--ant-box-shadow);
+  border-left: 1px solid var(--ant-color-border);
   padding-top: 15px;
   position: fixed;
   right: 0;
@@ -210,26 +206,25 @@
 
   .version-section {
     font-weight: bold;
-    background-color: @layout-body-background;
   }
 
   .version-entry-header {
     .ant-avatar {
-      color: @text-color;
+      color: var(--ant-color-text);
       background-color: transparent;
     }
   }
   .version-entry {
     padding: 3px;
     &:hover:not(.active-version-entry) {
-      background-color: @blue-1;
+      background-color: var(--ant-blue-1);
     }
   }
   .version-entry-indented {
     padding-left: 40px;
   }
   .active-version-entry {
-    background-color: @blue-2;
+    background-color: var(--ant-blue-2);
   }
 
   .close-button > i {
@@ -249,7 +244,7 @@
   vertical-align: middle;
   line-height: 24px;
   font-weight: bold;
-  color: @primary-color;
+  color: var(--ant-color-primary);
 }
 
 .keyboard-key-icon-small {
@@ -299,26 +294,12 @@ img.keyboard-mouse-icon:first-child {
   line-height: normal;
 }
 
-.antd-legacy-group {
-  .ant-btn {
-    border-radius: 0;
-    margin-left: -1px;
-  }
-
-  .ant-btn:first-child {
-    border-radius: 2px 0 0 2px;
-  }
-
-  .ant-btn:last-child {
-    border-radius: 0 2px 2px 0;
-  }
-}
-
 .navbar-header {
   padding: 0;
   overflow-x: auto;
   overflow-y: hidden;
   position: fixed;
+  top: 0;
   height: var(--navbar-height);
   display: flex;
   align-items: center;
@@ -331,10 +312,7 @@ img.keyboard-mouse-icon:first-child {
   @dark-bg: #383d48;
   @dark-fg: #f1f1f1;
   @dark-border: #585868;
-  @primary-border: @primary-color;
-  @hover-border: @blue-zircon;
 
-  background-color: @layout-header-background;
   color: rgba(255, 255, 255, 0.67);
   z-index: 1000;
 
@@ -343,7 +321,7 @@ img.keyboard-mouse-icon:first-child {
     bottom: 0px;
     right: 0px;
     position: absolute;
-    height: @footer-height;
+    height: var(--footer-height);
     overflow: hidden;
     font-size: 11px;
     text-align: center;
@@ -374,95 +352,37 @@ img.keyboard-mouse-icon:first-child {
   .ant-input,
   .ant-input-number,
   .ant-radio-button-wrapper,
-  .ant-select > .ant-select-selector {
-    background-color: @dark-bg;
+  .ant-select > .ant-select-selector{
     color: @dark-fg !important;
-    border-color: @dark-border;
+
+    &.upgrade-banner-button {
+        background-color: var(--ant-button-primary-color) !important;
+        color: var(--ant-color-primary) !important;
+        border-color: var(--ant-button-primary-color);
+        display: flex;
+        align-items: center;
+      }
 
     &:hover {
-      border-color: @hover-border !important;
       z-index: 1 !important;
-    }
-
-    &:not(:first-child):hover::before {
-      background-color: @hover-border !important;
-    }
-
-    &.ant-btn-disabled,
-    &.ant-input-disabled,
-    &.ant-input-number-disabled,
-    &.ant-radio-button-wrapper-disabled,
-    &.ant-select-selector-disabled {
-      color: fade(@dark-fg, 50%);
-      border-color: @dark-border !important;
-
-      &:hover::before {
-        background-color: @dark-border !important;
-      }
     }
   }
 
   .ant-btn[disabled],
   .ant-btn[disabled]:hover {
     color: fade(@dark-fg, 50%) !important;
-    border-color: @dark-border !important;
-    background-color: @dark-bg !important;
   }
 
   .ant-select-arrow {
     color: @dark-fg;
   }
 
-  .ant-btn-primary {
-    background-color: @primary-color !important;
-  }
-
-  // Radio button
-  .ant-radio-button-wrapper:first-child {
-    border-left: 1px solid @dark-border;
-    &:hover {
-      border-left: 1px solid @hover-border;
-    }
-  }
-
-  .ant-radio-button-wrapper-checked,
-  .ant-radio-button-wrapper-checked:first-child {
-    border-color: @primary-border;
-    color: @primary-border;
-
-    &::before {
-      background-color: @primary-border !important;
-    }
-  }
-
-  .ant-radio-button-wrapper:not(:first-child)::before {
-    background-color: @dark-border;
-  }
-
-  .ant-radio-button-wrapper-checked:not([class*=" ant-radio-button-wrapper-disabled"]).ant-radio-button-wrapper:first-child {
-    border-right-color: @primary-border;
-  }
-
-  // Primary button in button group
-  .ant-btn-group .ant-btn-primary:not(:first-child):not(:last-child) {
-    border-right-color: @dark-border;
-    border-left-color: @dark-border;
-  }
-
   .ant-btn-danger {
-    background: @error-color;
+    background: var(--ant-color-error-bg);
 
     &:hover {
-      background: @error-color;
+      background: var(--ant-color-error-bg);
       color: white;
-    }
-  }
-
-  // Settings icon
-  .highlight-togglable-button.ant-btn {
-    background-color: @primary-color !important;
-    &:not(:hover) {
-      border-color: @primary-border !important;
     }
   }
 
@@ -481,6 +401,24 @@ img.keyboard-mouse-icon:first-child {
   .right-border-button.footer-button {
     right: 8px;
   }
+
+  .upgrade-banner {
+    .upgrade-banner-wk-link {
+      margin-inline: -2; 
+      color: var(--ant-color-text-primary); 
+      font-weight: bold;
+
+      &:hover {
+        color: var(--color-blue-zircon);
+      }
+    }
+    
+    .ant-alert-close-icon {
+      .anticon, .anticon-close {
+        color: var(--ant-color-text-primary);
+      }
+    }
+  }
 }
 
 .left-border-button,
@@ -492,7 +430,7 @@ img.keyboard-mouse-icon:first-child {
   // on mobile does not work or the icon bleeds some white background
   // into the top navbar.
   z-index: 999;
-  color: @text-color-secondary;
+  color: var(--ant-color-text-secondary);
   i {
     font-size: 15px !important;
     margin: 0;
@@ -503,7 +441,7 @@ img.keyboard-mouse-icon:first-child {
   left: 0px;
   top: 0px;
   right: 0px;
-  height: calc(100% - @footer-height);
+  height: calc(100% - var(--footer-height));
   position: absolute;
   overflow: hidden;
 }
@@ -557,7 +495,7 @@ img.keyboard-mouse-icon:first-child {
 }
 
 .cell-context-icon {
-  margin-right: 8px;
+  margin-inline-end: var(--ant-margin-xs);
   height: 12px;
   width: 15px;
   display: inline-block;
@@ -566,22 +504,14 @@ img.keyboard-mouse-icon:first-child {
   opacity: 0.65;
 }
 
-.hide-tree-edges-icon {
-  height: 15px;
-  width: 15px;
-  display: inline-block;
-  background-image: url("/assets/images/hide-skeleton-edges-icon-dark.svg");
-  background-size: contain;
-}
-
 .segment-context-icon {
-  margin-right: 8px;
+  margin-inline-end: var(--ant-margin-xs);
   height: 12px;
   width: 15px;
   display: inline-block;
 }
 
-.resolution-status-bar-icon {
+.mag-status-bar-icon {
   height: 14px;
   margin-top: -2px;
 }
@@ -599,9 +529,25 @@ img.keyboard-mouse-icon:first-child {
   /* The navbar and footer have a higher z-value than the context menu and
      should not be covered by the context menu overlay. At the same time
      the overlay serves as the container for the css-sticky context menu. */
-  height: calc(100% - var(--navbar-height) - @footer-height);
+  height: calc(100% - var(--navbar-height) - var(--footer-height));
   position: absolute;
   /* The context menu needs a higher z-value than flexlayout__tab_button_content.
      Otherwise the tab title covers the context menu. */
   z-index: 110;
+}
+
+.segment-list-context-menu-overlay,.bbox-list-context-menu-overlay {
+  // The parent has a padding of 10px on all sides which we need to subtract here.
+  width: calc(100% - 20px) !important;
+  height: calc(100% - 20px) !important;
+}
+
+.tree-list-context-menu-overlay{
+  width: calc(100% - 20px) !important;
+  height: calc(100% - var(--navbar-height) - var(--footer-height) - 30px) !important;
+}
+
+#main-tooltip {
+  max-width: 250px;
+  font-size: 14px;
 }

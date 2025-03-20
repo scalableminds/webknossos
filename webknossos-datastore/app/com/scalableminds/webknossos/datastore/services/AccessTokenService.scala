@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.services
 
 import com.google.inject.Inject
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.tools.Fox
@@ -19,7 +20,7 @@ object AccessMode extends ExtendedEnumeration {
 
 object AccessResourceType extends ExtendedEnumeration {
   type AccessResourceType = Value
-  val datasource, tracing, webknossos, jobExport = Value
+  val datasource, tracing, annotation, webknossos, jobExport = Value
 }
 
 case class UserAccessAnswer(granted: Boolean, msg: Option[String] = None)
@@ -33,8 +34,8 @@ object UserAccessRequest {
     UserAccessRequest(dataSourceId, AccessResourceType.datasource, AccessMode.delete)
   def administrateDataSources: UserAccessRequest =
     UserAccessRequest(DataSourceId("", ""), AccessResourceType.datasource, AccessMode.administrate)
-  def administrateDataSources(organizationName: String): UserAccessRequest =
-    UserAccessRequest(DataSourceId("", organizationName), AccessResourceType.datasource, AccessMode.administrate)
+  def administrateDataSources(organizationId: String): UserAccessRequest =
+    UserAccessRequest(DataSourceId("", organizationId), AccessResourceType.datasource, AccessMode.administrate)
   def readDataSources(dataSourceId: DataSourceId): UserAccessRequest =
     UserAccessRequest(dataSourceId, AccessResourceType.datasource, AccessMode.read)
   def writeDataSource(dataSourceId: DataSourceId): UserAccessRequest =
@@ -42,8 +43,15 @@ object UserAccessRequest {
 
   def readTracing(tracingId: String): UserAccessRequest =
     UserAccessRequest(DataSourceId(tracingId, ""), AccessResourceType.tracing, AccessMode.read)
+
   def writeTracing(tracingId: String): UserAccessRequest =
     UserAccessRequest(DataSourceId(tracingId, ""), AccessResourceType.tracing, AccessMode.write)
+
+  def readAnnotation(annotationId: String): UserAccessRequest =
+    UserAccessRequest(DataSourceId(annotationId, ""), AccessResourceType.annotation, AccessMode.read)
+
+  def writeAnnotation(annotationId: String): UserAccessRequest =
+    UserAccessRequest(DataSourceId(annotationId, ""), AccessResourceType.annotation, AccessMode.write)
 
   def downloadJobExport(jobId: String): UserAccessRequest =
     UserAccessRequest(DataSourceId(jobId, ""), AccessResourceType.jobExport, AccessMode.read)
@@ -53,34 +61,33 @@ object UserAccessRequest {
 }
 
 trait AccessTokenService {
-  val remoteWebKnossosClient: RemoteWebKnossosClient
+  val remoteWebknossosClient: RemoteWebknossosClient
 
   private val AccessExpiration: FiniteDuration = 2 minutes
   private lazy val accessAnswersCache: AlfuCache[(UserAccessRequest, Option[String]), UserAccessAnswer] =
     AlfuCache(timeToLive = AccessExpiration, timeToIdle = AccessExpiration)
 
-  def validateAccessForSyncBlock(accessRequest: UserAccessRequest, token: Option[String])(block: => Result)(
-      implicit ec: ExecutionContext): Fox[Result] =
-    validateAccess(accessRequest, token) {
+  def validateAccessFromTokenContextForSyncBlock(accessRequest: UserAccessRequest)(
+      block: => Result)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Result] =
+    validateAccessFromTokenContext(accessRequest) {
       Future.successful(block)
     }
 
-  def validateAccess(accessRequest: UserAccessRequest, token: Option[String])(block: => Future[Result])(
-      implicit ec: ExecutionContext): Fox[Result] =
+  def validateAccessFromTokenContext(accessRequest: UserAccessRequest)(
+      block: => Future[Result])(implicit ec: ExecutionContext, tc: TokenContext): Fox[Result] =
     for {
-      userAccessAnswer <- hasUserAccess(accessRequest, token) ?~> "Failed to check data access, token may be expired, consider reloading."
+      userAccessAnswer <- hasUserAccess(accessRequest) ?~> "Failed to check data access, token may be expired, consider reloading."
       result <- executeBlockOnPositiveAnswer(userAccessAnswer, block)
     } yield result
 
-  private def hasUserAccess(accessRequest: UserAccessRequest, token: Option[String])(
-      implicit ec: ExecutionContext): Fox[UserAccessAnswer] =
-    accessAnswersCache.getOrLoad((accessRequest, token),
-                                 _ => remoteWebKnossosClient.requestUserAccess(token, accessRequest))
+  private def hasUserAccess(accessRequest: UserAccessRequest)(implicit ec: ExecutionContext,
+                                                              tc: TokenContext): Fox[UserAccessAnswer] =
+    accessAnswersCache.getOrLoad((accessRequest, tc.userTokenOpt),
+                                 _ => remoteWebknossosClient.requestUserAccess(accessRequest))
 
-  def assertUserAccess(accessRequest: UserAccessRequest, token: Option[String])(
-      implicit ec: ExecutionContext): Fox[Unit] =
+  def assertUserAccess(accessRequest: UserAccessRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
     for {
-      userAccessAnswer <- hasUserAccess(accessRequest, token) ?~> "Failed to check data access, token may be expired, consider reloading."
+      userAccessAnswer <- hasUserAccess(accessRequest) ?~> "Failed to check data access, token may be expired, consider reloading."
       _ <- Fox.bool2Fox(userAccessAnswer.granted) ?~> userAccessAnswer.msg.getOrElse("Access forbidden.")
     } yield ()
 
@@ -96,5 +103,5 @@ trait AccessTokenService {
     }
 }
 
-class DataStoreAccessTokenService @Inject()(val remoteWebKnossosClient: DSRemoteWebKnossosClient)
+class DataStoreAccessTokenService @Inject()(val remoteWebknossosClient: DSRemoteWebknossosClient)
     extends AccessTokenService

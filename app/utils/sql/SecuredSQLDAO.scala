@@ -1,11 +1,11 @@
 package utils.sql
 
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import models.user.User
 import net.liftweb.common.Full
 import security.{SharingTokenContainer, UserSharingTokenContainer}
-import utils.ObjectId
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -15,13 +15,13 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execut
   protected def collectionName: String
   protected def existingCollectionName: SqlToken = SqlToken.raw(collectionName + "_")
 
-  protected def anonymousReadAccessQ(sharingToken: Option[String]): SqlToken = q"${false}"
-  protected def readAccessQ(requestingUserId: ObjectId): SqlToken = q"${true}"
+  protected def anonymousReadAccessQ(sharingToken: Option[String]): SqlToken = q"FALSE"
+  protected def readAccessQ(requestingUserId: ObjectId): SqlToken = q"TRUE"
   protected def updateAccessQ(requestingUserId: ObjectId): SqlToken = readAccessQ(requestingUserId)
   protected def deleteAccessQ(requestingUserId: ObjectId): SqlToken = readAccessQ(requestingUserId)
 
   protected def readAccessQuery(implicit ctx: DBAccessContext): Fox[SqlToken] =
-    if (ctx.globalAccess) Fox.successful(q"${true}")
+    if (ctx.globalAccess) Fox.successful(q"TRUE")
     else {
       for {
         userIdBox <- userIdFromCtx.futureBox
@@ -39,7 +39,7 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execut
       for {
         userId <- userIdFromCtx ?~> "FAILED: userIdFromCtx"
         resultList <- run(
-          q"SELECT _id FROM $existingCollectionName WHERE _id = $id and (${updateAccessQ(userId)})"
+          q"SELECT _id FROM $existingCollectionName WHERE _id = $id AND (${updateAccessQ(userId)})"
             .as[String]) ?~> "Failed to check write access. Does the object exist?"
         _ <- resultList.headOption.toFox ?~> "No update access."
       } yield ()
@@ -51,7 +51,7 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execut
       for {
         userId <- userIdFromCtx
         resultList <- run(
-          q"SELECT _id FROM $existingCollectionName WHERE _id = $id and (${deleteAccessQ(userId)})"
+          q"SELECT _id FROM $existingCollectionName WHERE _id = $id AND (${deleteAccessQ(userId)})"
             .as[String]) ?~> "Failed to check delete access. Does the object exist?"
         _ <- resultList.headOption.toFox ?~> "No delete access."
       } yield ()
@@ -67,27 +67,27 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execut
 
   protected def accessQueryFromAccessQWithPrefix(accessQ: (ObjectId, SqlToken) => SqlToken, prefix: SqlToken)(
       implicit ctx: DBAccessContext): Fox[SqlToken] =
-    if (ctx.globalAccess) Fox.successful(q"${true}")
+    if (ctx.globalAccess) Fox.successful(q"TRUE")
     else {
       for {
         userIdBox <- userIdFromCtx.futureBox
       } yield {
         userIdBox match {
           case Full(userId) => q"(${accessQ(userId, prefix)})"
-          case _            => q"${false}"
+          case _            => q"FALSE"
         }
       }
     }
 
   protected def accessQueryFromAccessQ(accessQ: ObjectId => SqlToken)(implicit ctx: DBAccessContext): Fox[SqlToken] =
-    if (ctx.globalAccess) Fox.successful(q"${true}")
+    if (ctx.globalAccess) Fox.successful(q"TRUE")
     else {
       for {
         userIdBox <- userIdFromCtx.futureBox
       } yield {
         userIdBox match {
           case Full(userId) => q"(${accessQ(userId)})"
-          case _            => q"${false}"
+          case _            => q"FALSE"
         }
       }
     }

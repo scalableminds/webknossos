@@ -1,13 +1,13 @@
 /* eslint-disable no-eval */
-import { Modal, Input, Select, Spin } from "antd";
-import * as React from "react";
-import type { Script } from "oxalis/store";
-import { alert } from "libs/window";
-import { fetchGistContent } from "libs/gist";
+import { Input, Modal, Select, Spin } from "antd";
 import { handleGenericError } from "libs/error_handling";
-import Request from "libs/request";
-import messages from "messages";
+import { fetchGistContent } from "libs/gist";
 import { makeComponentLazy } from "libs/react_helpers";
+import Request from "libs/request";
+import { alert } from "libs/window";
+import messages from "messages";
+import type { Script } from "oxalis/store";
+import * as React from "react";
 
 const { TextArea } = Input;
 
@@ -103,6 +103,7 @@ class _UserScriptsModalView extends React.PureComponent<UserScriptsModalViewProp
 
   handleClick = () => {
     try {
+      // biome-ignore lint/security/noGlobalEval: Loads a user provided frontend API script.
       eval(this.state.code);
       // close modal if the script executed successfully
       return this.props.onOK();

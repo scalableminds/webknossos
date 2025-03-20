@@ -1,11 +1,12 @@
 import { CardContainer } from "admin/dataset/dataset_components";
-import React, { useState } from "react";
-import { APIDataStore } from "types/api_flow_types";
+import { useState } from "react";
+import type { APIDataStore } from "types/api_flow_types";
 import SelectImportType from "./composition_wizard/01_select_import_type";
 import UploadFiles from "./composition_wizard/02_upload_files";
 import SelectDatasets from "./composition_wizard/03_select_datasets";
 import { ConfigureNewDataset } from "./composition_wizard/04_configure_new_dataset";
-import { WizardComponentProps, WizardContext } from "./composition_wizard/common";
+import type { WizardComponentProps, WizardContext } from "./composition_wizard/common";
+import { dataPrivacyInfo } from "./dataset_upload_view";
 
 type Props = {
   onAdded: WizardComponentProps["onAdded"];
@@ -45,7 +46,10 @@ export default function DatasetAddComposeView(props: Props) {
 
   return (
     <div style={{ padding: 5 }}>
-      <CardContainer title="Compose a dataset from existing dataset layers">
+      <CardContainer
+        title="Compose a dataset from existing dataset layers"
+        subtitle={dataPrivacyInfo}
+      >
         <CurrentWizardComponent
           wizardContext={wizardContext}
           setWizardContext={setWizardContext}

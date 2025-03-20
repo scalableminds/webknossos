@@ -1,10 +1,10 @@
-import * as React from "react";
+import type { InputProps } from "antd";
+import * as Utils from "libs/utils";
 import _ from "lodash";
-import type { ServerBoundingBoxTypeTuple } from "types/api_flow_types";
 import type { Vector3, Vector6 } from "oxalis/constants";
 import InputComponent from "oxalis/view/components/input_component";
-import * as Utils from "libs/utils";
-import { InputProps } from "antd";
+import * as React from "react";
+import type { ServerBoundingBoxTypeTuple } from "types/api_flow_types";
 
 const CHARACTER_WIDTH_PX = 8;
 
@@ -87,7 +87,7 @@ abstract class BaseVector<T extends number[]> extends React.PureComponent<BasePr
     const validSubVector = text
       .replace(this.props.allowDecimals ? /[^0-9,.]/gm : /[^0-9,]/gm, "")
       .split(",")
-      .map((el) => parseFloat(el) || 0)
+      .map((el) => Number.parseFloat(el) || 0)
       .slice(0, this.defaultValue.length);
     const paddedVector = validSubVector.concat(this.defaultValue.slice(validSubVector.length));
     const vector = paddedVector as any as T;

@@ -1,7 +1,6 @@
-// @ts-nocheck
 import _ from "lodash";
 import "test/mocks/lz4";
-import type { Flycam, OxalisState, Tree, TreeMap } from "oxalis/store";
+import type { Flycam, OxalisState, Tree, TreeGroup, TreeMap } from "oxalis/store";
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { updateTreeGroupVisibility, updateTreeVisibility } from "oxalis/model/sagas/update_actions";
@@ -12,7 +11,7 @@ import compactToggleActions from "oxalis/model/helpers/compaction/compact_toggle
 import defaultState from "oxalis/default_state";
 import test from "ava";
 
-const createTree = (id, groupId, isVisible) => ({
+const createTree = (id: number, groupId: number | null, isVisible: boolean): Tree => ({
   treeId: id,
   name: "TestTree",
   nodes: new DiffableMap(),
@@ -23,11 +22,14 @@ const createTree = (id, groupId, isVisible) => ({
   color: [23, 23, 23],
   isVisible,
   groupId,
+  edgesAreVisible: true,
+  metadata: [],
+  type: "DEFAULT",
 });
 
-const makeTreesObject = (trees) => _.keyBy(trees, "treeId") as any as TreeMap;
+const makeTreesObject = (trees: Tree[]) => _.keyBy(trees, "treeId") as TreeMap;
 
-const treeGroups = [
+const treeGroups: TreeGroup[] = [
   {
     name: "subroot1",
     groupId: 1,
@@ -52,16 +54,15 @@ const treeGroups = [
   },
 ];
 const flycamMock = {} as any as Flycam;
-
-const createState = (trees, _treeGroups): OxalisState => ({
+const tracingId = "someTracingId";
+const createState = (trees: Tree[], _treeGroups: TreeGroup[]): OxalisState => ({
   ...defaultState,
   tracing: {
     ...defaultState.tracing,
     skeleton: {
-      ...defaultState.tracing.skeleton,
+      additionalAxes: [],
       createdTimestamp: 0,
-      version: 0,
-      tracingId: "tracingId",
+      tracingId,
       boundingBox: null,
       userBoundingBoxes: [],
       type: "skeleton",
@@ -93,7 +94,7 @@ const allVisible = createState(
   treeGroups,
 );
 
-function testDiffing(prevState, nextState) {
+function testDiffing(prevState: OxalisState, nextState: OxalisState) {
   // Let's remove updateTree actions as well, as these will occur here
   // because we don't do shallow updates within the tests (instead, we are
   // are creating completely new trees, so that we don't have to go through the
@@ -117,10 +118,10 @@ function _updateTreeVisibility(treeId: number, isVisible: boolean) {
     treeId,
     isVisible,
   } as any as Tree;
-  return updateTreeVisibility(tree);
+  return updateTreeVisibility(tree, tracingId);
 }
 
-function getActions(initialState, newState) {
+function getActions(initialState: OxalisState, newState: OxalisState) {
   const updateActions = testDiffing(initialState, newState);
 
   if (newState.tracing.skeleton == null) {
@@ -161,7 +162,7 @@ test("compactUpdateActions should compact when toggling all trees", (t) => {
   );
   const [compactedActions] = getActions(allVisible, testState);
   // Root group should be toggled
-  t.deepEqual(compactedActions, [updateTreeGroupVisibility(undefined, false)]);
+  t.deepEqual(compactedActions, [updateTreeGroupVisibility(undefined, false, tracingId)]);
 });
 test("compactUpdateActions should compact when toggling a group", (t) => {
   // Let's toggle group 3 (which contains group 4)
@@ -177,7 +178,7 @@ test("compactUpdateActions should compact when toggling a group", (t) => {
     treeGroups,
   );
   const [compactedActions] = getActions(allVisible, testState);
-  t.deepEqual(compactedActions, [updateTreeGroupVisibility(3, false)]);
+  t.deepEqual(compactedActions, [updateTreeGroupVisibility(3, false, tracingId)]);
 });
 test("compactUpdateActions should compact when toggling a group except for one tree", (t) => {
   // Let's make all trees invisible except for tree 3. Compaction should yield a toggle-root and toggle 3 action
@@ -194,7 +195,7 @@ test("compactUpdateActions should compact when toggling a group except for one t
   );
   const [compactedActions] = getActions(allVisible, testState);
   t.deepEqual(compactedActions, [
-    updateTreeGroupVisibility(undefined, false),
+    updateTreeGroupVisibility(undefined, false, tracingId),
     _updateTreeVisibility(3, true),
   ]);
 });

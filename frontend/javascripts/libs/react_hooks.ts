@@ -1,5 +1,6 @@
+import _ from "lodash";
 import constants from "oxalis/constants";
-import { useState, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { KEYBOARD_BUTTON_LOOP_INTERVAL } from "./input";
 
@@ -13,7 +14,7 @@ export function usePrevious<T>(value: T, ignoreNullAndUndefined: boolean = false
     if (!ignoreNullAndUndefined || value != null) {
       ref.current = value;
     }
-  }, [value]);
+  }, [value, ignoreNullAndUndefined]);
   // Only re-run if value changes
   // Return previous value (happens before update in useEffect above)
   return ref.current;
@@ -23,13 +24,13 @@ const extractModifierState = <K extends keyof WindowEventMap>(event: WindowEvent
   // @ts-ignore
   Shift: event.shiftKey,
   // @ts-ignore
-  Alt: event.altKey,
+  Alt: event.altKey, // This is the option key ⌥ on MacOS
   // @ts-ignore
-  Control: event.ctrlKey,
+  ControlOrMeta: event.ctrlKey || event.metaKey,
 });
 
 // Adapted from: https://gist.github.com/gragland/b61b8f46114edbcf2a9e4bd5eb9f47f5
-export function useKeyPress(targetKey: "Shift" | "Alt" | "Control") {
+export function useKeyPress(targetKey: "Shift" | "Alt" | "ControlOrMeta") {
   // State for keeping track of whether key is pressed
   const [keyPressed, setKeyPressed] = useState(false);
 
@@ -79,7 +80,7 @@ export function useKeyPress(targetKey: "Shift" | "Alt" | "Control") {
   };
 
   // Add event listeners
-  useEffect(() => {
+  useEffectOnlyOnce(() => {
     window.addEventListener("keydown", downHandler);
     window.addEventListener("keyup", upHandler);
     // Remove event listeners on cleanup
@@ -87,7 +88,7 @@ export function useKeyPress(targetKey: "Shift" | "Alt" | "Control") {
       window.removeEventListener("keydown", downHandler);
       window.removeEventListener("keyup", upHandler);
     };
-  }, []);
+  });
   // Empty array ensures that effect is only run on mount and unmount
   return keyPressed;
 }
@@ -124,7 +125,7 @@ export function useRepeatedButtonTrigger(
       lastTrigger.current = null;
       clearTimeout(timerId);
     };
-  }, [isPressed, triggerCallback]);
+  }, [isPressed, triggerCallback, repeatDelay]);
 
   const onTouchStart = () => setIsPressed(true);
   const onTouchEnd = () => setIsPressed(false);
@@ -132,7 +133,7 @@ export function useRepeatedButtonTrigger(
   return {
     // Don't do anything on click to avoid that the trigger
     // is called twice on touch start.
-    onClick: () => {},
+    onClick: _.noop,
     onTouchStart,
     onTouchEnd,
   };
@@ -192,4 +193,45 @@ export function usePolling(
       if (timeoutId != null) clearTimeout(timeoutId);
     };
   }, [delay, ...dependencies]);
+}
+
+export function useEffectOnlyOnce(callback: () => void | (() => void)) {
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Explicitly run only once.
+  useEffect(() => {
+    return callback();
+  }, []);
+}
+
+// This hook allows to access the current state value in an asynchronous function call.
+// Due to the nature of hooks, the ref value might be one render cycle ahead of the state value.
+// If the ref value should preferably be one render cycle behind the state value,
+// use a different hook that uses an effect instead of a wrapped state setter.
+export function useStateWithRef<T>(initialValue: T) {
+  const [state, setState] = useState(initialValue);
+  const ref = useRef(state);
+
+  const wrappedSetState = (newState: T | ((prevState: T) => T)) => {
+    setState((prevState: T) => {
+      const nextState =
+        typeof newState === "function" ? (newState as (prevState: T) => T)(prevState) : newState;
+      ref.current = nextState;
+      return nextState;
+    });
+  };
+
+  return [state, ref, wrappedSetState] as const;
+}
+
+export function useIsMounted() {
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const isMounted = useCallback(() => isMountedRef.current, []);
+
+  return isMounted;
 }

@@ -1,46 +1,35 @@
-import { Spin, Tag } from "antd";
-import * as React from "react";
-import type { APIDataset, APIUser } from "types/api_flow_types";
 import { getDatasetAccessList } from "admin/admin_rest_api";
+import { Spin, Tag } from "antd";
 import { handleGenericError } from "libs/error_handling";
 import { stringToColor } from "libs/format_utils";
+import { useFetch } from "libs/react_helpers";
+import * as React from "react";
+import type { APIDataset, APIUser } from "types/api_flow_types";
 
 type Props = {
   dataset: APIDataset;
 };
-type State = {
-  datasetUsers: APIUser[];
-  isLoading: boolean;
-};
-export default class DatasetAccessListView extends React.PureComponent<Props, State> {
-  state: State = {
-    datasetUsers: [],
-    isLoading: false,
-  };
 
-  componentDidMount() {
-    this.fetchData();
-  }
+const DatasetAccessListView = ({ dataset }: Props) => {
+  const [isLoading, setIsLoading] = React.useState(false);
 
-  async fetchData(): Promise<void> {
-    try {
-      this.setState({
-        isLoading: true,
-      });
-      const datasetUsers = await getDatasetAccessList(this.props.dataset);
-      this.setState({
-        datasetUsers,
-      });
-    } catch (error) {
-      handleGenericError(error as Error);
-    } finally {
-      this.setState({
-        isLoading: false,
-      });
-    }
-  }
+  const datasetUsers = useFetch(
+    () => {
+      try {
+        setIsLoading(true);
+        return getDatasetAccessList(dataset);
+      } catch (error) {
+        handleGenericError(error as Error);
+        return Promise.resolve([]);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [],
+    [],
+  );
 
-  renderUserTags(user: APIUser): Array<React.ReactNode> {
+  function renderUserTags(user: APIUser): React.ReactNode[] {
     if (user.isAdmin) {
       return [
         <Tag key={`team_role_${user.id}`} color="red">
@@ -64,11 +53,11 @@ export default class DatasetAccessListView extends React.PureComponent<Props, St
     }
   }
 
-  renderTable() {
+  function renderTable() {
     return (
       <div>
         <ul>
-          {this.state.datasetUsers.map((user: APIUser) => (
+          {datasetUsers.map((user: APIUser) => (
             <li key={user.id}>
               <div
                 style={{
@@ -78,7 +67,7 @@ export default class DatasetAccessListView extends React.PureComponent<Props, St
               >
                 {user.firstName} {user.lastName}
               </div>
-              {this.renderUserTags(user)}
+              {renderUserTags(user)}
             </li>
           ))}
         </ul>
@@ -86,11 +75,11 @@ export default class DatasetAccessListView extends React.PureComponent<Props, St
     );
   }
 
-  render() {
-    return (
-      <Spin size="large" spinning={this.state.isLoading}>
-        {this.renderTable()}
-      </Spin>
-    );
-  }
-}
+  return (
+    <Spin size="large" spinning={isLoading}>
+      {renderTable()}
+    </Spin>
+  );
+};
+
+export default DatasetAccessListView;

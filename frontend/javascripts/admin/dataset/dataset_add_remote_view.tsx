@@ -1,56 +1,65 @@
+import { UnlockOutlined } from "@ant-design/icons";
+import { exploreRemoteDataset, isDatasetNameValid, storeRemoteDataset } from "admin/admin_rest_api";
+import { CardContainer, DatastoreFormItem } from "admin/dataset/dataset_components";
 import {
-  Form,
-  Input,
   Button,
   Col,
+  Collapse,
+  Divider,
+  Form,
+  type FormInstance,
+  Input,
+  List,
+  Modal,
   Radio,
   Row,
-  Collapse,
-  FormInstance,
-  Modal,
-  Divider,
-  List,
+  Upload,
 } from "antd";
-import { connect } from "react-redux";
-import React, { useEffect, useState } from "react";
-import type { APIDataStore, APIUser } from "types/api_flow_types";
-import type { OxalisState } from "oxalis/store";
-import { exploreRemoteDataset, isDatasetNameValid, storeRemoteDataset } from "admin/admin_rest_api";
-import messages from "messages";
-import { jsonStringify } from "libs/utils";
-import { CardContainer } from "admin/dataset/dataset_components";
-import Password from "antd/lib/input/Password";
+import type { RcFile, UploadChangeParam, UploadFile } from "antd/lib/upload";
 import { AsyncButton } from "components/async_clickables";
-import Toast from "libs/toast";
-import _ from "lodash";
-import { Hint } from "oxalis/view/action-bar/download_modal_view";
-import { formatScale } from "libs/format_utils";
-import { DataLayer, DatasourceConfiguration } from "types/schemas/datasource.types";
+import BrainSpinner from "components/brain_spinner";
 import DatasetSettingsDataTab, {
   // Sync simple with advanced and get newest datasourceJson
   syncDataSourceFields,
 } from "dashboard/dataset/dataset_settings_data_tab";
 import { FormItemWithInfo, Hideable } from "dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
-import Upload, { RcFile, UploadChangeParam, UploadFile } from "antd/lib/upload";
-import { UnlockOutlined } from "@ant-design/icons";
-import { Unicode } from "oxalis/constants";
+import { formatScale } from "libs/format_utils";
 import { readFileAsText } from "libs/read_file";
+import Toast from "libs/toast";
+import { jsonStringify } from "libs/utils";
 import * as Utils from "libs/utils";
+import _ from "lodash";
+import messages from "messages";
+import { Unicode } from "oxalis/constants";
+import type { OxalisState } from "oxalis/store";
+import { Hint } from "oxalis/view/action-bar/download_modal_view";
+import React, { useEffect, useState } from "react";
+import { connect } from "react-redux";
+import { useHistory } from "react-router-dom";
+import type { APIDataStore, APIUser } from "types/api_flow_types";
+import type { ArbitraryObject } from "types/globals";
+import type { DataLayer, DatasourceConfiguration } from "types/schemas/datasource.types";
+import { dataPrivacyInfo } from "./dataset_upload_view";
 
-const { Panel } = Collapse;
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
+const { Password } = Input;
 
 type FileList = UploadFile<any>[];
 
 type OwnProps = {
   onAdded: (
-    datasetOrganization: string,
-    uploadedDatasetName: string,
+    uploadedDatasetId: string,
+    updatedDatasetName: string,
     needsConversion?: boolean | null | undefined,
   ) => Promise<void>;
   datastores: APIDataStore[];
+  // This next prop has a high impact on the component's behavior.
+  // If it is set, the component will automatically explore the dataset
+  // and import it. If it is not set, the user has to manually trigger
+  // the exploration and import.
+  defaultDatasetUrl?: string | null | undefined;
 };
 type StateProps = {
   activeUser: APIUser | null | undefined;
@@ -72,14 +81,14 @@ function mergeNewLayers(
   existingDatasource: DatasourceConfiguration | null,
   newDatasource: DatasourceConfiguration,
 ): DatasourceConfiguration {
-  if (existingDatasource == null) {
+  if (existingDatasource?.dataLayers == null) {
     return newDatasource;
   }
   const allLayers = newDatasource.dataLayers.concat(existingDatasource.dataLayers);
-  const groupedLayers = _.groupBy(allLayers, (layer: DataLayer) => layer.name) as unknown as Record<
-    string,
-    DataLayer[]
-  >;
+  const groupedLayers: Record<string, DataLayer[]> = _.groupBy(
+    allLayers,
+    (layer: DataLayer) => layer.name,
+  );
   const uniqueLayers: DataLayer[] = [];
   for (const entry of _.entries(groupedLayers)) {
     const [name, layerGroup] = entry;
@@ -103,7 +112,9 @@ function mergeNewLayers(
   };
 }
 
-export const parseCredentials = async (file: RcFile | undefined): Promise<Object | null> => {
+export const parseCredentials = async (
+  file: RcFile | undefined,
+): Promise<ArbitraryObject | null> => {
   if (!file) {
     return null;
   }
@@ -169,14 +180,19 @@ export function GoogleAuthFormItem({
 }
 
 function DatasetAddRemoteView(props: Props) {
-  const { activeUser, onAdded } = props;
+  const { activeUser, onAdded, datastores, defaultDatasetUrl } = props;
+
+  const uploadableDatastores = datastores.filter((datastore) => datastore.allowsUpload);
+  const hasOnlyOneDatastoreOrNone = uploadableDatastores.length <= 1;
 
   const [showAddLayerModal, setShowAddLayerModal] = useState(false);
+  const [showLoadingOverlay, setShowLoadingOverlay] = useState(defaultDatasetUrl != null);
   const [dataSourceEditMode, setDataSourceEditMode] = useState<"simple" | "advanced">("simple");
   const [form] = Form.useForm();
   const [targetFolderId, setTargetFolderId] = useState<string | null>(null);
-  const isDatasourceConfigStrFalsy = !Form.useWatch("dataSourceJson", form);
+  const isDatasourceConfigStrFalsy = Form.useWatch("dataSourceJson", form) == null;
   const maybeDataLayers = Form.useWatch(["dataSource", "dataLayers"], form);
+  const history = useHistory();
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -184,50 +200,111 @@ function DatasetAddRemoteView(props: Props) {
     setTargetFolderId(targetFolderId);
   }, []);
 
+  const getDefaultDatasetName = (url: string) => {
+    if (url === "") return "";
+    let urlPathElements = url.split(/[^a-zA-Z\d_\-.~]/); // split by non url-safe characters
+    const defaultName = urlPathElements.filter((el) => el !== "").at(-1);
+    const urlHash = Utils.computeHash(url);
+    return defaultName + "-" + urlHash;
+  };
+
+  const maybeOpenExistingDataset = () => {
+    const maybeDSNameError = form
+      .getFieldError("datasetName")
+      .filter((error) => error === messages["dataset.name.already_taken"]);
+    if (maybeDSNameError == null) return;
+    history.push(
+      `/datasets/${activeUser?.organization}/${form.getFieldValue(["dataSource", "id", "name"])}`,
+    );
+  };
+
+  const hasFormAnyErrors = (form: FormInstance) =>
+    form.getFieldsError().filter(({ errors }) => errors.length).length > 0;
+
+  const onSuccesfulExplore = async (url: string) => {
+    const dataSourceJsonString = form.getFieldValue("dataSourceJson");
+    if (defaultDatasetUrl == null) {
+      setShowLoadingOverlay(false);
+      return;
+    }
+    if (!showLoadingOverlay) setShowLoadingOverlay(true); // show overlay again, e.g. after credentials were passed
+    const dataSourceJson = JSON.parse(dataSourceJsonString);
+    const defaultDatasetName = getDefaultDatasetName(url);
+    setDatasourceConfigStr(
+      JSON.stringify({ ...dataSourceJson, id: { name: defaultDatasetName, team: "" } }),
+    );
+    try {
+      await form.validateFields();
+    } catch (_e) {
+      console.warn(_e);
+      if (defaultDatasetUrl != null) {
+        maybeOpenExistingDataset();
+        return;
+      }
+    }
+    if (!hasFormAnyErrors(form)) {
+      handleStoreDataset();
+    } else {
+      setShowLoadingOverlay(false);
+    }
+  };
+
   const setDatasourceConfigStr = (dataSourceJson: string) => {
     form.setFieldsValue({ dataSourceJson });
     // Since this function sets the JSON string, we have to update the
     // data which is rendered by the "simple" page.
-    syncDataSourceFields(form, "simple");
+    syncDataSourceFields(form, "simple", true);
     form.validateFields();
   };
 
   async function handleStoreDataset() {
     // Sync simple with advanced and get newest datasourceJson
-    syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple");
-    await form.validateFields();
-    const datasourceConfigStr = form.getFieldValue("dataSourceJson");
+    syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple", true);
+    try {
+      await form.validateFields();
+    } catch (_e) {
+      console.warn(_e);
+      if (defaultDatasetUrl != null) {
+        maybeOpenExistingDataset();
+        return;
+      }
+    }
+    if (hasFormAnyErrors(form)) {
+      setShowLoadingOverlay(false);
+      return;
+    }
 
-    const uploadableDatastores = props.datastores.filter((datastore) => datastore.allowsUpload);
-    const datastoreToUse = uploadableDatastores[0];
+    const datastoreToUse = uploadableDatastores.find(
+      (datastore) => form.getFieldValue("datastoreUrl") === datastore.url,
+    );
     if (!datastoreToUse) {
+      setShowLoadingOverlay(false);
       Toast.error("Could not find datastore that allows uploading.");
       return;
     }
 
-    if (datasourceConfigStr && activeUser) {
+    const dataSourceJsonStr = form.getFieldValue("dataSourceJson");
+    if (dataSourceJsonStr && activeUser) {
       let configJSON;
       try {
-        configJSON = JSON.parse(datasourceConfigStr);
-        const nameValidationResult = await isDatasetNameValid({
-          name: configJSON.id.name,
-          owningOrganization: activeUser.organization,
-        });
+        configJSON = JSON.parse(dataSourceJsonStr);
+        const nameValidationResult = await isDatasetNameValid(configJSON.id.name);
         if (nameValidationResult) {
           throw new Error(nameValidationResult);
         }
-        await storeRemoteDataset(
+        const { newDatasetId } = await storeRemoteDataset(
           datastoreToUse.url,
           configJSON.id.name,
           activeUser.organization,
-          datasourceConfigStr,
+          dataSourceJsonStr,
           targetFolderId,
         );
+        onAdded(newDatasetId, configJSON.id.name);
       } catch (e) {
+        setShowLoadingOverlay(false);
         Toast.error(`The datasource config could not be stored. ${e}`);
         return;
       }
-      onAdded(activeUser.organization, configJSON.id.name);
     }
   }
 
@@ -235,8 +312,13 @@ function DatasetAddRemoteView(props: Props) {
   return (
     // Using Forms here only to validate fields and for easy layout
     <div style={{ padding: 5 }}>
-      <CardContainer title="Add Remote Zarr / Neuroglancer Precomputed / N5 Dataset">
+      {showLoadingOverlay ? <BrainSpinner /> : null}
+      <CardContainer
+        title="Add Remote Zarr / Neuroglancer Precomputed / N5 Dataset"
+        subtitle={dataPrivacyInfo}
+      >
         <Form form={form} layout="vertical">
+          <DatastoreFormItem datastores={uploadableDatastores} hidden={hasOnlyOneDatastoreOrNone} />
           <Modal
             title="Add Layer"
             width={800}
@@ -244,8 +326,9 @@ function DatasetAddRemoteView(props: Props) {
             footer={null}
             onCancel={() => setShowAddLayerModal(false)}
           >
-            <AddZarrLayer
+            <AddRemoteLayer
               form={form}
+              uploadableDatastores={uploadableDatastores}
               setDatasourceConfigStr={setDatasourceConfigStr}
               onSuccess={() => setShowAddLayerModal(false)}
               dataSourceEditMode={dataSourceEditMode}
@@ -253,10 +336,14 @@ function DatasetAddRemoteView(props: Props) {
           </Modal>
 
           {hideDatasetUI && (
-            <AddZarrLayer
+            <AddRemoteLayer
               form={form}
+              uploadableDatastores={uploadableDatastores}
               setDatasourceConfigStr={setDatasourceConfigStr}
               dataSourceEditMode={dataSourceEditMode}
+              defaultUrl={defaultDatasetUrl}
+              onError={() => setShowLoadingOverlay(false)}
+              onSuccess={(defaultDatasetUrl: string) => onSuccesfulExplore(defaultDatasetUrl)}
             />
           )}
           <Hideable hidden={hideDatasetUI}>
@@ -290,11 +377,10 @@ function DatasetAddRemoteView(props: Props) {
             {/* Only the component's visibility is changed, so that the form is always rendered.
                 This is necessary so that the form's structure is always populated. */}
             <DatasetSettingsDataTab
-              allowRenamingDataset
               form={form}
               activeDataSourceEditMode={dataSourceEditMode}
               onChange={(activeEditMode) => {
-                syncDataSourceFields(form, activeEditMode);
+                syncDataSourceFields(form, activeEditMode, true);
                 form.validateFields();
                 setDataSourceEditMode(activeEditMode);
               }}
@@ -352,25 +438,43 @@ function DatasetAddRemoteView(props: Props) {
   );
 }
 
-function AddZarrLayer({
+function AddRemoteLayer({
   form,
+  uploadableDatastores,
   setDatasourceConfigStr,
   onSuccess,
+  onError,
   dataSourceEditMode,
+  defaultUrl,
 }: {
   form: FormInstance;
+  uploadableDatastores: APIDataStore[];
   setDatasourceConfigStr: (dataSourceJson: string) => void;
-  onSuccess?: () => void;
+  onSuccess?: (datasetUrl: string) => Promise<void> | void;
+  onError?: () => void;
   dataSourceEditMode: "simple" | "advanced";
+  defaultUrl?: string | null | undefined;
 }) {
-  const isDatasourceConfigStrFalsy = !Form.useWatch("dataSourceJson", form);
+  const isDatasourceConfigStrFalsy = Form.useWatch("dataSourceJson", form) != null;
   const datasourceUrl: string | null = Form.useWatch("url", form);
   const [exploreLog, setExploreLog] = useState<string | null>(null);
   const [showCredentialsFields, setShowCredentialsFields] = useState<boolean>(false);
   const [usernameOrAccessKey, setUsernameOrAccessKey] = useState<string>("");
   const [passwordOrSecretKey, setPasswordOrSecretKey] = useState<string>("");
-  const [selectedProtocol, setSelectedProtocol] = useState<"s3" | "https" | "gs">("https");
+  const [selectedProtocol, setSelectedProtocol] = useState<"s3" | "https" | "gs" | "file">("https");
   const [fileList, setFileList] = useState<FileList>([]);
+
+  useEffect(() => {
+    if (defaultUrl != null) {
+      // only set datasourceUrl in the first render
+      if (datasourceUrl == null) {
+        form.setFieldValue("url", defaultUrl);
+        form.validateFields(["url"]);
+      } else {
+        handleExplore();
+      }
+    }
+  }, [defaultUrl, datasourceUrl, form.setFieldValue, form.validateFields]);
 
   const handleChange = (info: UploadChangeParam<UploadFile<any>>) => {
     // Restrict the upload list to the latest file
@@ -379,28 +483,52 @@ function AddZarrLayer({
   };
 
   function validateUrls(userInput: string) {
+    const removePrefix = (value: string, prefix: string) =>
+      value.startsWith(prefix) ? value.slice(prefix.length) : value;
+
+    // If pasted from neuroglancer, uris have these prefixes even before the protocol. The backend ignores them.
+    userInput = removePrefix(userInput, "zarr://");
+    userInput = removePrefix(userInput, "zarr3://");
+    userInput = removePrefix(userInput, "n5://");
+    userInput = removePrefix(userInput, "precomputed://");
+
     if (userInput.startsWith("https://") || userInput.startsWith("http://")) {
       setSelectedProtocol("https");
     } else if (userInput.startsWith("s3://")) {
       setSelectedProtocol("s3");
     } else if (userInput.startsWith("gs://")) {
       setSelectedProtocol("gs");
+    } else if (userInput.startsWith("file://")) {
+      setSelectedProtocol("file"); // Unused
     } else {
       throw new Error(
-        "Dataset URL must employ one of the following protocols: https://, http://, s3:// or gs://",
+        "Dataset URL must employ one of the following protocols: https://, http://, s3://, gs:// or file://",
       );
     }
   }
 
+  const handleFailure = () => {
+    if (onError) onError();
+  };
+
   async function handleExplore() {
     if (!datasourceUrl) {
+      handleFailure();
       Toast.error("Please provide a valid URL for exploration.");
       return;
     }
 
     // Sync simple with advanced and get newest datasourceJson
-    syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple");
+    syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple", true);
     const datasourceConfigStr = form.getFieldValue("dataSourceJson");
+    const datastoreToUse = uploadableDatastores.find(
+      (datastore) => form.getFieldValue("datastoreUrl") === datastore.url,
+    );
+    if (!datastoreToUse) {
+      handleFailure();
+      Toast.error("Could not find datastore that allows uploading.");
+      return;
+    }
 
     const { dataSource: newDataSource, report } = await (async () => {
       // @ts-ignore
@@ -413,6 +541,7 @@ function AddZarrLayer({
           if (credentials) {
             return exploreRemoteDataset(
               [datasourceUrl],
+              datastoreToUse.name,
               {
                 username: "",
                 pass: JSON.stringify(credentials),
@@ -425,6 +554,7 @@ function AddZarrLayer({
         } else if (usernameOrAccessKey && passwordOrSecretKey) {
           return exploreRemoteDataset(
             [datasourceUrl],
+            datastoreToUse.name,
             {
               username: usernameOrAccessKey,
               pass: passwordOrSecretKey,
@@ -433,10 +563,11 @@ function AddZarrLayer({
           );
         }
       }
-      return exploreRemoteDataset([datasourceUrl], null, preferredVoxelSize);
+      return exploreRemoteDataset([datasourceUrl], datastoreToUse.name, null, preferredVoxelSize);
     })();
     setExploreLog(report);
     if (!newDataSource) {
+      handleFailure();
       Toast.error(
         "Exploring this remote dataset did not return a datasource. Please check the Log.",
       );
@@ -445,18 +576,25 @@ function AddZarrLayer({
     ensureLargestSegmentIdsInPlace(newDataSource);
     if (!datasourceConfigStr) {
       setDatasourceConfigStr(jsonStringify(newDataSource));
+      if (onSuccess) {
+        onSuccess(datasourceUrl);
+      }
       return;
     }
-    let existingDatasource;
+    let existingDatasource: DatasourceConfiguration;
     try {
       existingDatasource = JSON.parse(datasourceConfigStr);
     } catch (_e) {
+      handleFailure();
       Toast.error(
         "The current datasource config contains invalid JSON. Cannot add the new Zarr/N5 data.",
       );
       return;
     }
-    if (existingDatasource != null && !_.isEqual(existingDatasource.scale, newDataSource.scale)) {
+    if (
+      existingDatasource?.scale != null &&
+      !_.isEqual(existingDatasource.scale, newDataSource.scale)
+    ) {
       Toast.warning(
         `${messages["dataset.add_zarr_different_scale_warning"]}\n${formatScale(
           newDataSource.scale,
@@ -466,16 +604,19 @@ function AddZarrLayer({
     }
     setDatasourceConfigStr(jsonStringify(mergeNewLayers(existingDatasource, newDataSource)));
     if (onSuccess) {
-      onSuccess();
+      onSuccess(datasourceUrl);
     }
   }
 
   return (
     <>
       Please enter a URL that points to the Zarr, Neuroglancer Precomputed or N5 data you would like
-      to import. If necessary, specify the credentials for the dataset. For datasets with multiple
-      layers, e.g. raw microscopy and segmentation data, please add them separately with the ”Add
-      Layer” button below. Once you have approved of the resulting datasource you can import it.
+      to import. If necessary, specify the credentials for the dataset.{" "}
+      {defaultUrl == null
+        ? "For datasets with multiple \
+      layers, e.g. raw microscopy and segmentation data, please add them separately with the ”Add \
+      Layer” button below. Once you have approved of the resulting datasource you can import it."
+        : "If the provided URL is valid, the datasource will be imported and you will be redirected to the dataset."}
       <FormItem
         style={{ marginTop: 16, marginBottom: 16 }}
         name="url"
@@ -493,6 +634,7 @@ function AddZarrLayer({
                 validateUrls(value);
                 return Promise.resolve();
               } catch (e) {
+                handleFailure();
                 return Promise.reject(e);
               }
             },
@@ -551,13 +693,20 @@ function AddZarrLayer({
       {exploreLog ? (
         <Row gutter={8}>
           <Col span={24}>
-            <Collapse defaultActiveKey="1">
-              <Panel header="Error Log" key="1">
-                <Hint style={{ width: "90%" }}>
-                  <pre style={{ whiteSpace: "pre-wrap" }}>{exploreLog}</pre>
-                </Hint>
-              </Panel>
-            </Collapse>
+            <Collapse
+              defaultActiveKey="1"
+              items={[
+                {
+                  key: "1",
+                  label: "Error Log",
+                  children: (
+                    <Hint style={{ width: "90%" }}>
+                      <pre style={{ whiteSpace: "pre-wrap" }}>{exploreLog}</pre>
+                    </Hint>
+                  ),
+                },
+              ]}
+            />
           </Col>
         </Row>
       ) : null}
@@ -571,7 +720,7 @@ function AddZarrLayer({
               style={{ width: "100%" }}
               onClick={handleExplore}
             >
-              Add Layer
+              {defaultUrl == null ? "Add Layer" : "Validate URL and Continue"}
             </AsyncButton>
           </Col>
         </Row>

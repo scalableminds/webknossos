@@ -3,18 +3,19 @@ syntax = "proto2";
 package com.scalableminds.webknossos.datastore;
 
 import "geometry.proto";
+import "MetadataEntry.proto";
 
 message Node {
-    required int32 id = 1;
-    required Vec3IntProto position = 2;
-    required Vec3DoubleProto rotation = 3;
-    required float radius = 4;
-    required int32 viewport = 5;
-    required int32 resolution = 6;
-    required int32 bitDepth = 7;
-    required bool interpolation = 8;
-    required int64 createdTimestamp = 9;
-    repeated AdditionalCoordinateProto additionalCoordinates = 10;
+  required int32 id = 1;
+  required Vec3IntProto position = 2;
+  required Vec3DoubleProto rotation = 3;
+  required float radius = 4;
+  required int32 viewport = 5;
+  required int32 mag = 6;
+  required int32 bitDepth = 7;
+  required bool interpolation = 8;
+  required int64 createdTimestamp = 9;
+  repeated AdditionalCoordinateProto additionalCoordinates = 10;
 }
 
 message Edge {
@@ -23,13 +24,13 @@ message Edge {
 }
 
 message Comment {
-    required int32 nodeId = 1;
-    required string content = 2;
+  required int32 nodeId = 1;
+  required string content = 2;
 }
 
 message BranchPoint {
-    required int32 nodeId = 1;
-    required int64 createdTimestamp = 2;
+  required int32 nodeId = 1;
+  required int64 createdTimestamp = 2;
 }
 
 enum TreeTypeProto {
@@ -38,48 +39,60 @@ enum TreeTypeProto {
 }
 
 message Tree {
-     required int32 treeId = 1;
-     repeated Node nodes = 2;
-     repeated Edge edges = 3;
-     optional ColorProto color = 4;
-     repeated BranchPoint branchPoints = 5;
-     repeated Comment comments = 6;
-     required string name = 7;
-     required int64 createdTimestamp = 8;
-     optional int32 groupId = 9;
-     optional bool isVisible = 10; // `None` means `true`
-     optional TreeTypeProto type = 11;
-     optional bool edgesAreVisible = 12; // `None` means `true`
+  required int32 treeId = 1;
+  repeated Node nodes = 2;
+  repeated Edge edges = 3;
+  optional ColorProto color = 4;
+  repeated BranchPoint branchPoints = 5;
+  repeated Comment comments = 6;
+  required string name = 7;
+  required int64 createdTimestamp = 8;
+  optional int32 groupId = 9;
+  optional bool isVisible = 10; // `None` means `true`
+  optional TreeTypeProto type = 11;
+  optional bool edgesAreVisible = 12; // `None` means `true`
+  repeated MetadataEntryProto metadata = 13;
 }
 
 message TreeGroup {
   required string name = 1;
   required int32 groupId = 2;
   repeated TreeGroup children = 3;
+  optional bool isExpanded = 4;
 }
 
 message SkeletonTracing {
-    required string datasetName = 1; // used when parsing and handling nmls, not used in tracing store anymore, do not rely on correct values
-    repeated Tree trees = 2;
-    required int64 createdTimestamp = 3;
-    optional BoundingBoxProto boundingBox = 4;
-    optional int32 activeNodeId = 5;
-    required Vec3IntProto editPosition = 6;
-    required Vec3DoubleProto editRotation = 7;
-    required double zoomLevel = 8;
-    required int64 version = 9;
-    optional BoundingBoxProto userBoundingBox = 10;
-    repeated TreeGroup treeGroups = 11;
-    repeated NamedBoundingBoxProto userBoundingBoxes = 12;
-    optional string organizationName = 13; // used when parsing and handling nmls, not used in tracing store anymore, do not rely on correct values
-    repeated AdditionalCoordinateProto editPositionAdditionalCoordinates = 21;
-    repeated AdditionalAxisProto additionalAxes = 22; // Additional axes for which this tracing is defined
+  required string datasetName = 1; // used when parsing and handling nmls, not used in tracing store anymore, do not rely on correct values
+  repeated Tree trees = 2;
+  required int64 createdTimestamp = 3;
+  optional BoundingBoxProto boundingBox = 4;
+  optional int32 activeNodeId = 5;
+  required Vec3IntProto editPosition = 6;
+  required Vec3DoubleProto editRotation = 7;
+  required double zoomLevel = 8;
+  required int64 version = 9;
+  optional BoundingBoxProto userBoundingBox = 10;
+  repeated TreeGroup treeGroups = 11;
+  repeated NamedBoundingBoxProto userBoundingBoxes = 12;
+  optional string organizationId = 13; // used when parsing and handling nmls, not used in tracing store anymore, do not rely on correct values
+  repeated AdditionalCoordinateProto editPositionAdditionalCoordinates = 21;
+  repeated AdditionalAxisProto additionalAxes = 22; // Additional axes for which this tracing is defined
 }
 
 message SkeletonTracingOpt {
-    optional SkeletonTracing tracing = 1;
+  optional SkeletonTracing tracing = 1;
 }
 
 message SkeletonTracings {
-    repeated SkeletonTracingOpt tracings = 1;
+  repeated SkeletonTracingOpt tracings = 1;
+}
+
+message StringOpt {
+  optional string stringValue = 1;
+}
+
+message SkeletonTracingsWithIds {
+  repeated SkeletonTracingOpt tracings = 1;
+  repeated StringOpt annotationId = 2;
+  repeated StringOpt tracingId = 3;
 }

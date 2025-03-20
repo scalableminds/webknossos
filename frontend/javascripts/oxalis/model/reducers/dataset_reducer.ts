@@ -1,10 +1,10 @@
-import type { Action } from "oxalis/model/actions/actions";
-import type { OxalisState } from "oxalis/store";
-import { updateKey2 } from "oxalis/model/helpers/deep_update";
-import { getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
 import DiffableMap from "libs/diffable_map";
-import { MappingStatusEnum } from "oxalis/constants";
 import { deepIterate } from "libs/utils";
+import { MappingStatusEnum } from "oxalis/constants";
+import { getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
+import type { Action } from "oxalis/model/actions/actions";
+import { updateKey2 } from "oxalis/model/helpers/deep_update";
+import type { OxalisState } from "oxalis/store";
 
 function createDictWithKeysAndValue<T>(
   keys: Array<string>,
@@ -43,11 +43,9 @@ function DatasetReducer(state: OxalisState, action: Action): OxalisState {
           activeMappingByLayer: createDictWithKeysAndValue(segmentationLayerNames, () => ({
             mappingName: null,
             mapping: null,
-            mappingKeys: null,
             mappingColors: null,
             hideUnmappedIds: false,
             mappingStatus: MappingStatusEnum.DISABLED,
-            mappingSize: 0,
             mappingType: "JSON",
           })),
         },
@@ -63,6 +61,24 @@ function DatasetReducer(state: OxalisState, action: Action): OxalisState {
           return layer;
         }
       });
+      return updateKey2(state, "dataset", "dataSource", {
+        dataLayers: newLayers,
+      });
+    }
+
+    case "SET_LAYER_HAS_SEGMENT_INDEX": {
+      const { layerName, hasSegmentIndex } = action;
+      const newLayers = state.dataset.dataSource.dataLayers.map((layer) => {
+        if (layer.name === layerName) {
+          return {
+            ...layer,
+            hasSegmentIndex,
+          };
+        } else {
+          return layer;
+        }
+      });
+
       return updateKey2(state, "dataset", "dataSource", {
         dataLayers: newLayers,
       });

@@ -1,47 +1,49 @@
 import Maybe from "data.maybe";
-import _ from "lodash";
 import update from "immutability-helper";
-import type {
-  OxalisState,
-  SkeletonTracing,
-  Edge,
-  Node,
-  MutableNode,
-  Tree,
-  MutableTree,
-  BranchPoint,
-  MutableBranchPoint,
-  MutableCommentType,
-  TreeMap,
-  MutableTreeMap,
-  CommentType,
-  TreeGroup,
-  RestrictionsAndSettings,
-  MutableTreeGroup,
-  MutableNodeMap,
-} from "oxalis/store";
-import type {
-  ServerSkeletonTracingTree,
-  ServerNode,
-  ServerBranchPoint,
-} from "types/api_flow_types";
+import ColorGenerator from "libs/color_generator";
+import DiffableMap from "libs/diffable_map";
+import { V3 } from "libs/mjs";
+import * as Utils from "libs/utils";
+import _ from "lodash";
+import { type TreeType, TreeTypeEnum, type Vector3 } from "oxalis/constants";
+import Constants, { NODE_ID_REF_REGEX } from "oxalis/constants";
 import {
-  getSkeletonTracing,
+  findTreeByNodeId,
   getActiveNodeFromTree,
-  getTree,
   getActiveTree,
   getActiveTreeGroup,
-  findTreeByNodeId,
+  getSkeletonTracing,
+  getTree,
+  mapGroups,
   mapGroupsToGenerator,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import ColorGenerator from "libs/color_generator";
-import { TreeType, TreeTypeEnum, Vector3 } from "oxalis/constants";
-import Constants, { NODE_ID_REF_REGEX } from "oxalis/constants";
-import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
-import * as Utils from "libs/utils";
-import { V3 } from "libs/mjs";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type {
+  BranchPoint,
+  CommentType,
+  Edge,
+  MutableBranchPoint,
+  MutableCommentType,
+  MutableNode,
+  MutableNodeMap,
+  MutableTree,
+  MutableTreeGroup,
+  MutableTreeMap,
+  Node,
+  OxalisState,
+  RestrictionsAndSettings,
+  SkeletonTracing,
+  Tree,
+  TreeGroup,
+  TreeMap,
+} from "oxalis/store";
+import type {
+  MetadataEntryProto,
+  ServerBranchPoint,
+  ServerNode,
+  ServerSkeletonTracingTree,
+} from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 export function generateTreeName(state: OxalisState, timestamp: number, treeId: number) {
   let user = "";
@@ -81,7 +83,7 @@ export function getMaximumTreeId(trees: TreeMap | MutableTreeMap): number {
 
 function getNearestTreeId(treeId: number, trees: TreeMap): number {
   const sortedTreeIds = Object.keys(trees)
-    .map((currentTreeId) => parseInt(currentTreeId))
+    .map((currentTreeId) => Number.parseInt(currentTreeId))
     .sort((firstId, secId) => (firstId > secId ? 1 : -1));
 
   if (sortedTreeIds.length === 0) {
@@ -120,7 +122,7 @@ export function createNode(
   additionalCoordinates: AdditionalCoordinate[] | null,
   rotation: Vector3,
   viewport: number,
-  resolution: number,
+  mag: number,
   timestamp: number,
 ): Maybe<[Node, EdgeCollection]> {
   const activeNodeMaybe = getActiveNodeFromTree(skeletonTracing, tree);
@@ -139,12 +141,12 @@ export function createNode(
   const position = V3.trunc(positionFloat);
   // Create the new node
   const node: Node = {
-    position,
+    untransformedPosition: position,
     additionalCoordinates,
     radius,
     rotation,
     viewport,
-    resolution,
+    mag,
     id: nextNewId,
     timestamp,
     bitDepth: state.datasetConfiguration.fourBit ? 4 : 8,
@@ -304,7 +306,7 @@ function splitTreeByNodes(
       // ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number | undefined' is not assig... Remove this comment to see the full error message
       const edges = activeTree.edges.getEdgesForNode(nodeId);
       visitedNodes[nodeId] = true;
-      newTree.nodes.mutableSet(nodeId, activeTree.nodes.get(nodeId));
+      newTree.nodes.mutableSet(nodeId, activeTree.nodes.getOrThrow(nodeId));
 
       for (const edge of edges) {
         const edgeHash = getEdgeHash(edge);
@@ -361,6 +363,7 @@ function splitTreeByNodes(
             groupId: activeTree.groupId,
             type: activeTree.type,
             edgesAreVisible: true,
+            metadata: activeTree.metadata,
           };
         } else {
           const immutableNewTree = createTree(
@@ -484,6 +487,7 @@ export function createTree(
   name?: string,
   type: TreeType = TreeTypeEnum.DEFAULT,
   edgesAreVisible: boolean = true,
+  metadata: MetadataEntryProto[] = [],
 ): Maybe<Tree> {
   return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
     // Create a new tree id and name
@@ -492,11 +496,11 @@ export function createTree(
     let groupId = null;
 
     if (addToActiveGroup) {
-      const groupIdOfActiveTreeMaybe = getActiveTree(skeletonTracing).map((tree) => tree.groupId);
+      const groupIdOfActiveTree = getActiveTree(skeletonTracing)?.groupId;
       const groupIdOfActiveGroupMaybe = getActiveTreeGroup(skeletonTracing).map(
         (group) => group.groupId,
       );
-      groupId = Utils.toNullable(groupIdOfActiveTreeMaybe.orElse(() => groupIdOfActiveGroupMaybe));
+      groupId = groupIdOfActiveTree ?? Utils.toNullable(groupIdOfActiveGroupMaybe);
     }
 
     // Create the new tree
@@ -513,6 +517,7 @@ export function createTree(
       groupId,
       type,
       edgesAreVisible,
+      metadata,
     };
     return Maybe.Just(tree);
   });
@@ -556,7 +561,10 @@ export function addTreesAndGroups(
   );
   const hasInvalidNodeIds = getMinimumNodeId(trees) < Constants.MIN_NODE_ID;
   const needsReassignedIds =
-    Object.keys(skeletonTracing.trees).length > 0 || hasInvalidTreeIds || hasInvalidNodeIds;
+    Object.keys(skeletonTracing.trees).length > 0 ||
+    skeletonTracing.treeGroups.length > 0 ||
+    hasInvalidTreeIds ||
+    hasInvalidNodeIds;
 
   if (!needsReassignedIds) {
     // Without reassigning ids, the code is considerably faster.
@@ -626,20 +634,22 @@ export function addTreesAndGroups(
 
   return Maybe.Just([newTrees, treeGroups, newNodeId - 1]);
 }
-export function deleteTree(
+export function deleteTrees(
   skeletonTracing: SkeletonTracing,
-  tree: Tree,
+  treeIds: number[],
   suppressActivatingNextNode: boolean = false,
 ): Maybe<[TreeMap, number | null | undefined, number | null | undefined, number]> {
-  // Delete tree
-  const newTrees = _.omit(skeletonTracing.trees, tree.treeId);
+  if (treeIds.length === 0) return Maybe.Nothing();
+  // Delete trees
+  const newTrees = _.omit(skeletonTracing.trees, treeIds);
 
   let newActiveTreeId = null;
   let newActiveNodeId = null;
 
   if (_.size(newTrees) > 0 && !suppressActivatingNextNode) {
-    // Setting the tree active whose id is the next highest compared to the id of the deleted tree.
-    newActiveTreeId = getNearestTreeId(tree.treeId, newTrees);
+    // Setting the tree active whose id is the next highest compared to the ids of the deleted trees.
+    const maximumTreeId = _.max(treeIds) || Constants.MIN_TREE_ID;
+    newActiveTreeId = getNearestTreeId(maximumTreeId, newTrees);
     // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
     newActiveNodeId = +_.first(Array.from(newTrees[newActiveTreeId].nodes.keys())) || null;
   }
@@ -651,12 +661,20 @@ export function mergeTrees(
   trees: TreeMap,
   sourceNodeId: number,
   targetNodeId: number,
-): Maybe<[TreeMap, number, number]> {
-  const sourceTree = findTreeByNodeId(trees, sourceNodeId);
-  const targetTree = findTreeByNodeId(trees, targetNodeId); // should be activeTree
+  treeType: TreeType,
+): [TreeMap, number, number] | null {
+  // targetTree will be removed (the content will be merged into sourceTree).
+  const sourceTree = findTreeByNodeId(trees, sourceNodeId); // should be activeTree, so that the active tree "survives"
+  const targetTree = findTreeByNodeId(trees, targetNodeId);
 
-  if (sourceTree == null || targetTree == null || sourceTree === targetTree) {
-    return Maybe.Nothing();
+  if (
+    targetTree == null ||
+    sourceTree == null ||
+    targetTree === sourceTree ||
+    sourceTree.type !== treeType ||
+    targetTree.type !== treeType
+  ) {
+    return null;
   }
 
   const newEdge: Edge = {
@@ -664,31 +682,31 @@ export function mergeTrees(
     target: targetNodeId,
   };
 
-  let newTrees = _.omit(trees, sourceTree.treeId);
+  let newTrees = _.omit(trees, targetTree.treeId);
 
-  const newNodes = targetTree.nodes.clone();
+  const newNodes = sourceTree.nodes.clone();
 
-  for (const [id, node] of sourceTree.nodes.entries()) {
+  for (const [id, node] of targetTree.nodes.entries()) {
     newNodes.mutableSet(id, node);
   }
 
   newTrees = update(newTrees, {
-    [targetTree.treeId]: {
+    [sourceTree.treeId]: {
       nodes: {
         $set: newNodes,
       },
       edges: {
-        $set: targetTree.edges.addEdges(sourceTree.edges.asArray().concat(newEdge)),
+        $set: sourceTree.edges.addEdges(targetTree.edges.asArray().concat(newEdge)),
       },
       comments: {
-        $set: targetTree.comments.concat(sourceTree.comments),
+        $set: sourceTree.comments.concat(targetTree.comments),
       },
       branchPoints: {
-        $set: targetTree.branchPoints.concat(sourceTree.branchPoints),
+        $set: sourceTree.branchPoints.concat(targetTree.branchPoints),
       },
     },
   });
-  return Maybe.Just([newTrees, targetTree.treeId, targetNodeId]);
+  return [newTrees, sourceTree.treeId, sourceNodeId];
 }
 export function shuffleTreeColor(
   skeletonTracing: SkeletonTracing,
@@ -804,15 +822,43 @@ export function toggleTreeGroupReducer(
   });
 }
 
+export function setExpandedTreeGroups(
+  state: OxalisState,
+  shouldBeExpanded: (arg: TreeGroup) => boolean,
+): OxalisState {
+  const currentTreeGroups = state.tracing?.skeleton?.treeGroups;
+  if (currentTreeGroups == null) {
+    return state;
+  }
+  const newGroups = mapGroups(currentTreeGroups, (group) => {
+    const updatedIsExpanded = shouldBeExpanded(group);
+    if (updatedIsExpanded !== group.isExpanded) {
+      return { ...group, isExpanded: updatedIsExpanded };
+    } else {
+      return group;
+    }
+  });
+
+  return update(state, {
+    tracing: {
+      skeleton: {
+        treeGroups: {
+          $set: newGroups,
+        },
+      },
+    },
+  });
+}
+
 function serverNodeToMutableNode(n: ServerNode): MutableNode {
   return {
     id: n.id,
-    position: Utils.point3ToVector3(n.position),
+    untransformedPosition: Utils.point3ToVector3(n.position),
     additionalCoordinates: n.additionalCoordinates,
     rotation: Utils.point3ToVector3(n.rotation),
     bitDepth: n.bitDepth,
     viewport: n.viewport,
-    resolution: n.resolution,
+    mag: n.mag,
     radius: n.radius,
     timestamp: n.createdTimestamp,
     interpolation: n.interpolation,
@@ -849,6 +895,7 @@ export function createMutableTreeMapFromTreeArray(
         groupId: tree.groupId,
         type: tree.type != null ? tree.type : TreeTypeEnum.DEFAULT,
         edgesAreVisible: tree.edgesAreVisible != null ? tree.edgesAreVisible : true,
+        metadata: tree.metadata,
       }),
     ),
     "treeId",
@@ -887,7 +934,7 @@ export function extractPathAsNewTree(
   ).map((newTree) => {
     let lastNodeId = null;
     for (const nodeId of pathOfNodeIds) {
-      const node: MutableNode = { ...sourceTree.nodes.get(nodeId) };
+      const node: MutableNode = { ...sourceTree.nodes.getOrThrow(nodeId) };
       newTree.nodes.mutableSet(nodeId, node);
       if (lastNodeId != null) {
         const newEdge: Edge = {

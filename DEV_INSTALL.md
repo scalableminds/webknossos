@@ -20,15 +20,17 @@ For non-localhost deployments, check out the [installation guide in the document
 
 ## Dependencies
 
-* [Oracle JDK 11 to 14](http://www.oracle.com/technetwork/java/javase/downloads/index.html) or [Open JDK 11 to 14](http://openjdk.java.net/) (full JDK, JRE is not enough)
+* [Oracle JDK 21](http://www.oracle.com/technetwork/java/javase/downloads/index.html) or [Eclipse Temurin JDK 21](https://adoptium.net/temurin/releases/) (full JDK, JRE is not enough)
 * [sbt](http://www.scala-sbt.org/)
 * [PostgreSQL 10+](https://www.postgresql.org/)
 * [Redis 5+](https://redis.io/)
 * [Blosc](https://github.com/Blosc/c-blosc)
 * [Brotli](https://github.com/google/brotli)
-* [node.js 16 or 18](http://nodejs.org/download/)
+* [Draco](https://github.com/google/draco)
+* [node.js 18](http://nodejs.org/download/)
 * [yarn package manager](https://yarnpkg.com/)
 * [git](http://git-scm.com/downloads)
+* [cmake](https://cmake.org/download/)
 
 * For some development tasks like refreshing snapshots, Docker 19.03.0+ and Docker Compose 2.+ are required
 
@@ -41,13 +43,14 @@ arch -x86_64 /bin/zsh
 # Install Homebrew package manager
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-# Install git, node.js, postgres, sbt, gfind, gsed
-brew install openjdk@14 openssl git node postgresql sbt findutils coreutils gnu-sed redis yarn c-blosc brotli wget
+# Install git, node.js, postgres, sbt, gfind, gsed, draco
+brew install openjdk draco openssl git node postgresql sbt findutils coreutils gnu-sed redis c-blosc brotli wget
 
 # Set env variables for openjdk and openssl
 # You probably want to add these lines manually to avoid conflicts in your zshrc
 echo 'if [ $(arch) = "i386" ]; then' >> ~/.zshrc
-echo '  export PATH="/usr/local/opt/openjdk@14/bin:$PATH"' >> ~/.zshrc
+echo '  export JAVA_HOME=/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home' >> ~/.zshrc
+echo '  export PATH="/usr/local/opt/openjdk/bin:$PATH"' >> ~/.zshrc
 echo '  export PATH="/usr/local/opt/openssl/bin:$PATH"' >> ~/.zshrc
 echo '  export LDFLAGS="-L/usr/local/opt/openssl/lib"' >> ~/.zshrc
 echo '  export CPPFLAGS="-I/usr/local/opt/openssl/include"' >> ~/.zshrc
@@ -64,6 +67,9 @@ psql -c "CREATE USER postgres WITH ENCRYPTED PASSWORD 'postgres';"
 psql -c "ALTER USER postgres WITH SUPERUSER;"
 psql -c "GRANT ALL PRIVILEGES ON DATABASE webknossos TO postgres;"
 
+# Enable corepack for nodeJs and yarn
+corepack enable
+
 # Checkout the WEBKNOSSOS git repository
 git clone git@github.com:scalableminds/webknossos.git
 ```
@@ -73,29 +79,35 @@ Note: On arm64-based Macs (e.g. M1), you need to run WEBKNOSSOS in an x86_64 env
 ## Ubuntu 22.04 LTS
 
 ```bash
-sudo apt install -y curl ca-certificates wget
-# Adding repositories for nodejs, sbt and yarn
-curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
-echo "deb https://repo.scala-sbt.org/scalasbt/debian all main" | sudo tee /etc/apt/sources.list.d/sbt.list
-echo "deb https://repo.scala-sbt.org/scalasbt/debian /" | sudo tee /etc/apt/sources.list.d/sbt_old.list
-curl -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2EE0EA64E40A89B84B2DF73499E82A75642AC823" | sudo -H gpg --no-default-keyring --keyring gnupg-ring:/etc/apt/trusted.gpg.d/scalasbt-release.gpg --import
-sudo chmod 644 /etc/apt/trusted.gpg.d/scalasbt-release.gpg
-curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
-echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
-
 sudo apt update
-sudo apt install -y nodejs git postgresql postgresql-client scala sbt openjdk-11-jdk yarn redis-server build-essential libblosc1 libbrotli1
+sudo apt install -y curl ca-certificates wget git postgresql postgresql-client unzip zip redis-server build-essential libblosc1 libbrotli1 libdraco-dev cmake
+
+# Install nvm, node 18
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+source ~/.bashrc
+nvm install 18
+nvm use 18
+
+ # Install sdkman, java, scala and sbt
+curl -s "https://get.sdkman.io" | bash
+source "$HOME/.sdkman/bin/sdkman-init.sh"
+sdk install scala 2.13.12
+sdk install sbt
+sdk install java 21.0.2-tem
+# Source sdkman-init.sh again to load environment variables like JAVA_HOME
+source "$HOME/.sdkman/bin/sdkman-init.sh"
 
 # Assign a password to PostgreSQL user
 sudo -u postgres psql -c "ALTER USER postgres WITH ENCRYPTED PASSWORD 'postgres';"
+
 # Clone the git repo to the current directory
 git clone git@github.com:scalableminds/webknossos.git
+cd webknossos
+
+# Enable node corepack to select the right yarn, install node packages
+corepack enable
+yarn install
 ```
-
-If you already have a different Java version installed, set the default version to Java 11:
-
-* run `sudo update-alternatives --config java`
-* when prompted, select the desired version
 
 On older Ubuntu distributions: Please make sure to have the correct versions of node, PostgreSQL and java installed.
 
@@ -103,8 +115,9 @@ On older Ubuntu distributions: Please make sure to have the correct versions of 
 
 ### Java
 
-* Install Java JDK 14 (from Oracle or OpenJDK)
+* Install Java JDK 21 (from Oracle or OpenJDK)
 * make sure `JAVA_HOME` and `JDK_HOME` are set and `PATH` contains the path to JDK
+* Also see [SDKMAN!](https://sdkman.io/) for a convenient way to install and manage Java versions
 
 ### sbt
 
@@ -122,8 +135,10 @@ On older Ubuntu distributions: Please make sure to have the correct versions of 
 ### node.js & yarn
 
 * Install node from [http://nodejs.org/download/](http://nodejs.org/download/)
-* node version **16+ is required**
-* Install yarn package manager: `npm install -g yarn`
+* node version **18 is required**
+* Use `corepack` to install `yarn`
+* `corepack enable`&& `yarn install`
+
 
 ## Run locally
 

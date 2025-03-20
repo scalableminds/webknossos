@@ -1,12 +1,14 @@
 package com.scalableminds.webknossos.datastore.explore
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5Layer, N5SegmentationLayer}
+import com.scalableminds.webknossos.datastore.dataformats.layers.{N5DataLayer, N5Layer, N5SegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.n5._
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.Category
 import net.liftweb.common.Box.tryo
 
@@ -16,16 +18,18 @@ class N5MultiscalesExplorer(implicit val ec: ExecutionContext) extends RemoteLay
 
   override def name: String = "N5 Multiscales"
 
-  override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(N5Layer, Vec3Double)]] =
+  override def explore(remotePath: VaultPath, credentialId: Option[String])(
+      implicit tc: TokenContext): Fox[List[(N5Layer, VoxelSize)]] =
     for {
       metadataPath <- Fox.successful(remotePath / N5Metadata.FILENAME_ATTRIBUTES_JSON)
-      n5Metadata <- parseJsonFromPath[N5Metadata](metadataPath) ?~> s"Failed to read N5 header at $metadataPath"
+      n5Metadata <- metadataPath.parseAsJson[N5Metadata] ?~> s"Failed to read N5 header at $metadataPath"
       layers <- Fox.serialCombined(n5Metadata.multiscales)(layerFromN5MultiscalesItem(_, remotePath, credentialId))
     } yield layers
 
-  private def layerFromN5MultiscalesItem(multiscalesItem: N5MultiscalesItem,
-                                         remotePath: VaultPath,
-                                         credentialId: Option[String]): Fox[(N5Layer, Vec3Double)] =
+  private def layerFromN5MultiscalesItem(
+      multiscalesItem: N5MultiscalesItem,
+      remotePath: VaultPath,
+      credentialId: Option[String])(implicit tc: TokenContext): Fox[(N5Layer, VoxelSize)] =
     for {
       voxelSizeNanometers <- extractVoxelSize(multiscalesItem.datasets.map(_.transform))
       magsWithAttributes <- Fox.serialCombined(multiscalesItem.datasets)(d =>
@@ -37,7 +41,7 @@ class N5MultiscalesExplorer(implicit val ec: ExecutionContext) extends RemoteLay
       layer: N5Layer = if (looksLikeSegmentationLayer(name, elementClass)) {
         N5SegmentationLayer(name, boundingBox, elementClass, magsWithAttributes.map(_.mag), largestSegmentId = None)
       } else N5DataLayer(name, Category.color, boundingBox, elementClass, magsWithAttributes.map(_.mag))
-    } yield (layer, voxelSizeNanometers)
+    } yield (layer, VoxelSize.fromFactorWithDefaultUnit(voxelSizeNanometers))
 
   private def extractAxisOrder(axes: List[String]): Fox[AxisOrder] = {
     val x = axes.indexWhere(_ == "x")
@@ -98,13 +102,13 @@ class N5MultiscalesExplorer(implicit val ec: ExecutionContext) extends RemoteLay
   private def n5MagFromDataset(n5Dataset: N5MultiscalesDataset,
                                layerPath: VaultPath,
                                voxelSize: Vec3Double,
-                               credentialId: Option[String]): Fox[MagWithAttributes] =
+                               credentialId: Option[String])(implicit tc: TokenContext): Fox[MagWithAttributes] =
     for {
       axisOrder <- extractAxisOrder(n5Dataset.transform.axes) ?~> "Could not extract XYZ axis order mapping. Does the data have x, y and z axes, stated in multiscales metadata?"
       mag <- magFromTransform(voxelSize, n5Dataset.transform) ?~> "Could not extract mag from transforms"
       magPath = layerPath / n5Dataset.path
       headerPath = magPath / N5Header.FILENAME_ATTRIBUTES_JSON
-      n5Header <- parseJsonFromPath[N5Header](headerPath) ?~> s"failed to read n5 header at $headerPath"
+      n5Header <- headerPath.parseAsJson[N5Header] ?~> s"failed to read n5 header at $headerPath"
       elementClass <- n5Header.elementClass ?~> s"failed to read element class from n5 header at $headerPath"
       boundingBox <- n5Header.boundingBox(axisOrder) ?~> s"failed to read bounding box from n5 header at $headerPath"
     } yield

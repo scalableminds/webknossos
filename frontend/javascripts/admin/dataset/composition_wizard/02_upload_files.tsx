@@ -1,17 +1,21 @@
 import { FileExcelOutlined } from "@ant-design/icons";
-import { Button } from "antd";
-import Upload, { UploadChangeParam, UploadFile } from "antd/lib/upload";
+import { Button, Upload } from "antd";
+import type { UploadChangeParam, UploadFile } from "antd/lib/upload";
 import { AsyncButton } from "components/async_clickables";
+import ErrorHandling from "libs/error_handling";
 import { readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
 import { SoftError } from "libs/utils";
-import _ from "lodash";
-import { Vector3 } from "oxalis/constants";
-import { parseNml } from "oxalis/model/helpers/nml_helpers";
-import React from "react";
-import { tryToFetchDatasetsByName, WizardComponentProps, WizardContext, FileList } from "./common";
-import ErrorHandling from "libs/error_handling";
 import * as Utils from "libs/utils";
+import _ from "lodash";
+import type { Vector3 } from "oxalis/constants";
+import { parseNml } from "oxalis/model/helpers/nml_helpers";
+import {
+  type FileList,
+  type WizardComponentProps,
+  type WizardContext,
+  tryToFetchDatasetsByNameOrId,
+} from "./common";
 
 const EXPECTED_VALUE_COUNT_PER_CSV_LINE = 8;
 
@@ -133,8 +137,8 @@ async function parseBigWarpFile(fileList: FileList): Promise<Partial<WizardConte
     const [_pointName, enabled, x1, y1, z1, x2, y2, z2] = fields;
 
     if (enabled) {
-      const source = [x1, y1, z1].map((el) => parseInt(el.replaceAll('"', ""))) as Vector3;
-      const target = [x2, y2, z2].map((el) => parseInt(el.replaceAll('"', ""))) as Vector3;
+      const source = [x1, y1, z1].map((el) => Number.parseInt(el.replaceAll('"', ""))) as Vector3;
+      const target = [x2, y2, z2].map((el) => Number.parseInt(el.replaceAll('"', ""))) as Vector3;
       sourcePoints.push(source);
       targetPoints.push(target);
     }
@@ -162,10 +166,12 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
     throw new SoftError("NML files should not be empty.");
   }
 
-  const { trees: trees1, datasetName: datasetName1 } = await parseNml(nmlString1);
-  const { trees: trees2, datasetName: datasetName2 } = await parseNml(nmlString2);
+  // TODO: Now the datasetName stored in the nml is interpreted as the path of the dataset. -> call to legacy route is necessary.
+  //  Discussion: how to handle this better?
+  const { trees: trees1, datasetName: datasetDirectoryName1 } = await parseNml(nmlString1);
+  const { trees: trees2, datasetName: datasetDirectoryName2 } = await parseNml(nmlString2);
 
-  if (!datasetName1 || !datasetName2) {
+  if (!datasetDirectoryName1 || !datasetDirectoryName2) {
     throw new SoftError("Could not extract dataset names.");
   }
 
@@ -173,14 +179,17 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
     throw new SoftError("The two NML files should have the same tree count.");
   }
 
-  for (const [tree1, tree2] of _.zip(Utils.values(trees1), Utils.values(trees2))) {
+  for (const [tree1, tree2] of _.zip(
+    Utils.values(trees1).sort((a, b) => a.treeId - b.treeId),
+    Utils.values(trees2).sort((a, b) => a.treeId - b.treeId),
+  )) {
     if (tree1 == null || tree2 == null) {
       // Satisfy TS. This should not happen, as we checked before that both tree collections
       // have the same size.
       throw new SoftError("A tree was unexpectedly parsed as null. Please try again");
     }
-    const nodes1 = Array.from(tree1.nodes.values());
-    const nodes2 = Array.from(tree2.nodes.values());
+    const nodes1 = Array.from(tree1.nodes.values()).sort((a, b) => a.id - b.id);
+    const nodes2 = Array.from(tree2.nodes.values()).sort((a, b) => a.id - b.id);
     for (const [node1, node2] of _.zip(nodes1, nodes2)) {
       if ((node1 == null) !== (node2 == null)) {
         throw new SoftError(
@@ -188,21 +197,26 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
         );
       }
       if (node1 != null && node2 != null) {
-        sourcePoints.push(node1.position);
-        targetPoints.push(node2.position);
+        sourcePoints.push(node1.untransformedPosition);
+        targetPoints.push(node2.untransformedPosition);
       }
     }
   }
 
-  const datasets = await tryToFetchDatasetsByName(
-    [datasetName1, datasetName2],
+  if (sourcePoints.length < 3) {
+    throw new SoftError("Each file should contain at least 3 nodes.");
+  }
+
+  const datasets = await tryToFetchDatasetsByNameOrId(
+    [datasetDirectoryName1, datasetDirectoryName2], // fetch by name
+    [],
     "Could not derive datasets from NML. Please specify these manually.",
   );
 
   return {
     datasets: datasets || [],
-    sourcePoints,
-    targetPoints,
+    sourcePoints, // The first dataset (will be transformed to match the second later)
+    targetPoints, // The second dataset (won't be transformed by default)
     currentWizardStep: "SelectDatasets",
   };
 }

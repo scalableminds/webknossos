@@ -1,12 +1,12 @@
-import * as THREE from "three";
+import app from "app";
 import _ from "lodash";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import type { OrthoView, OrthoViewWithoutTDMap, Vector3 } from "oxalis/constants";
 import { OrthoViewValuesWithoutTDView, OrthoViews } from "oxalis/constants";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
-import Store from "oxalis/throttled_store";
-import app from "app";
 import dimensions from "oxalis/model/dimensions";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import Store from "oxalis/throttled_store";
+import * as THREE from "three";
 type Properties = {
   min?: Vector3;
   max: Vector3;
@@ -27,7 +27,7 @@ class Cube {
   cube: THREE.Line;
   min: Vector3;
   max: Vector3;
-  showCrossSections: boolean;
+  readonly showCrossSections: boolean;
   initialized: boolean;
   visible: boolean;
   lineWidth: number;
@@ -57,10 +57,12 @@ class Cube {
       this.setCorners(this.min, this.max);
     }
 
-    listenToStoreProperty(
-      (state) => getPosition(state.flycam),
-      (position) => this.updatePositionForCrossSections(position),
-    );
+    if (this.showCrossSections) {
+      listenToStoreProperty(
+        (state) => getPosition(state.flycam),
+        (position) => this.updatePositionForCrossSections(position),
+      );
+    }
   }
 
   getLineMaterial() {

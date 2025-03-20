@@ -1,22 +1,22 @@
 import "test/mocks/lz4";
 import test from "ava";
-import { getResolutionUnion } from "oxalis/model/accessors/dataset_accessor";
-import { Vector3 } from "oxalis/constants";
-import { APIDataset } from "types/api_flow_types";
-import { convertToDenseResolution } from "oxalis/model/helpers/resolution_info";
+import { getMagnificationUnion } from "oxalis/model/accessors/dataset_accessor";
+import type { Vector3 } from "oxalis/constants";
+import type { APIDataset } from "types/api_flow_types";
+import { convertToDenseMag } from "oxalis/model/helpers/mag_info";
 
-test("Simple convertToDenseResolution", (t) => {
-  const denseResolutions = convertToDenseResolution([
+test("Simple convertToDenseMag", (t) => {
+  const denseMags = convertToDenseMag([
     [2, 2, 1],
     [4, 4, 2],
   ]);
-  t.deepEqual(denseResolutions, [
+  t.deepEqual(denseMags, [
     [1, 1, 1],
     [2, 2, 1],
     [4, 4, 2],
   ]);
 });
-test("Complex convertToDenseResolution", (t) => {
+test("Complex convertToDenseMag", (t) => {
   const dataset = {
     dataSource: {
       dataLayers: [
@@ -36,7 +36,7 @@ test("Complex convertToDenseResolution", (t) => {
     },
   };
 
-  const expectedResolutions = {
+  const expectedMags = {
     "0": [
       [1, 1, 1],
       [2, 2, 1],
@@ -55,23 +55,22 @@ test("Complex convertToDenseResolution", (t) => {
     ] as Vector3[],
   };
 
-  const densify = (layer: { resolutions: Vector3[] }) =>
-    convertToDenseResolution(layer.resolutions);
+  const densify = (layer: { resolutions: Vector3[] }) => convertToDenseMag(layer.resolutions);
 
-  t.deepEqual(densify(dataset.dataSource.dataLayers[0]), expectedResolutions[0]);
-  t.deepEqual(densify(dataset.dataSource.dataLayers[1]), expectedResolutions[1]);
+  t.deepEqual(densify(dataset.dataSource.dataLayers[0]), expectedMags[0]);
+  t.deepEqual(densify(dataset.dataSource.dataLayers[1]), expectedMags[1]);
 });
-test("Test empty getResolutionUnion", (t) => {
+test("Test empty getMagUnion", (t) => {
   const dataset = {
     dataSource: {
       dataLayers: [],
     },
   } as any as APIDataset;
-  const expectedResolutions: Array<Vector3[]> = [];
-  const union = getResolutionUnion(dataset);
-  t.deepEqual(union, expectedResolutions);
+  const expectedMags: Array<Vector3[]> = [];
+  const union = getMagnificationUnion(dataset);
+  t.deepEqual(union, expectedMags);
 });
-test("Test getResolutionUnion", (t) => {
+test("Test getMagUnion", (t) => {
   const dataset = {
     dataSource: {
       dataLayers: [
@@ -93,12 +92,12 @@ test("Test getResolutionUnion", (t) => {
       ],
     },
   } as any as APIDataset;
-  const expectedResolutions = [[[2, 2, 1]], [[4, 4, 1]], [[8, 8, 1]], [[16, 16, 2]], [[32, 32, 4]]];
-  const union = getResolutionUnion(dataset);
-  t.deepEqual(union, expectedResolutions);
+  const expectedMags = [[[2, 2, 1]], [[4, 4, 1]], [[8, 8, 1]], [[16, 16, 2]], [[32, 32, 4]]];
+  const union = getMagnificationUnion(dataset);
+  t.deepEqual(union, expectedMags);
 });
 
-test("Test getResolutionUnion with mixed mags", (t) => {
+test("Test getMagUnion with mixed mags", (t) => {
   const dataset = {
     dataSource: {
       dataLayers: [
@@ -120,7 +119,7 @@ test("Test getResolutionUnion with mixed mags", (t) => {
       ],
     },
   } as any as APIDataset;
-  const expectedResolutions = [
+  const expectedMags = [
     [[2, 2, 1]],
     [[4, 4, 1]],
     [
@@ -130,6 +129,6 @@ test("Test getResolutionUnion with mixed mags", (t) => {
     [[16, 16, 2]],
     [[32, 32, 4]],
   ];
-  const union = getResolutionUnion(dataset);
-  t.deepEqual(union, expectedResolutions);
+  const union = getMagnificationUnion(dataset);
+  t.deepEqual(union, expectedMags);
 });

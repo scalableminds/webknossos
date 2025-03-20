@@ -1,19 +1,20 @@
-import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { select } from "oxalis/model/sagas/effect-generators";
-import { take, call, put } from "typed-redux-saga";
+import { AnnotationToolEnum, MeasurementTools } from "oxalis/constants";
+import { getToolClassForAnnotationTool } from "oxalis/controller/combinations/tool_controls";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 import {
-  type SetToolAction,
   type CycleToolAction,
-  type EscapeAction,
+  type SetToolAction,
   hideMeasurementTooltipAction,
   setIsMeasuringAction,
 } from "oxalis/model/actions/ui_actions";
 import { getNextTool } from "oxalis/model/reducers/reducer_helpers";
-import { getToolClassForAnnotationTool } from "oxalis/controller/combinations/tool_controls";
-import getSceneController from "oxalis/controller/scene_controller_provider";
-import { AnnotationToolEnum, MeasurementTools } from "oxalis/constants";
-export function* watchToolDeselection(): Saga<void> {
-  yield* take("WK_READY");
+import type { Saga } from "oxalis/model/sagas/effect-generators";
+import { select } from "oxalis/model/sagas/effect-generators";
+import { call, put, take } from "typed-redux-saga";
+import { ensureWkReady } from "./ready_sagas";
+
+export function* watchToolDeselection(): Saga<never> {
+  yield* call(ensureWkReady);
   let previousTool = yield* select((state) => state.uiInformation.activeTool);
 
   while (true) {
@@ -37,9 +38,9 @@ export function* watchToolDeselection(): Saga<void> {
   }
 }
 
-export function* watchToolReset(): Saga<void> {
+export function* watchToolReset(): Saga<never> {
   while (true) {
-    (yield* take("ESCAPE") as any) as EscapeAction;
+    yield* take("ESCAPE");
     const activeTool = yield* select((state) => state.uiInformation.activeTool);
     if (MeasurementTools.indexOf(activeTool) >= 0) {
       const sceneController = yield* call(() => getSceneController());

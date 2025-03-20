@@ -1,8 +1,9 @@
-import * as React from "react";
-import { Button, Tooltip } from "antd";
-import { connect } from "react-redux";
-import type { OxalisState, BorderOpenStatus } from "oxalis/store";
+import { Button } from "antd";
+import FastTooltip from "components/fast_tooltip";
 import { V2 } from "libs/mjs";
+import type { BorderOpenStatus, OxalisState } from "oxalis/store";
+import * as React from "react";
+import { connect } from "react-redux";
 type OwnProps = {
   onClick: () => void;
   side: "left" | "right";
@@ -14,9 +15,11 @@ type StateProps = {
 type Props = OwnProps & StateProps;
 const DRAG_THRESHOLD = 5;
 
+const TOOLTIP_STYLE = { height: 24 };
+
 function BorderToggleButton(props: Props) {
   const { onClick, side, borderOpenStatus, inFooter } = props;
-  const placement = side === "left" ? "right" : "left";
+  const placement = side === "left" ? "top-end" : "top-start";
   const iconKind = borderOpenStatus[side] ? "hide" : "show";
   const tooltipTitle = `${borderOpenStatus[side] ? "Hide" : "Open"} ${side} sidebar (${
     side === "left" ? "K" : "L"
@@ -29,7 +32,7 @@ function BorderToggleButton(props: Props) {
   }`;
   const [lastTouchPosition, setLastTouchPosition] = React.useState([0, 0]);
   return (
-    <Tooltip title={tooltipTitle} placement={placement}>
+    <FastTooltip title={tooltipTitle} placement={placement} style={TOOLTIP_STYLE}>
       <Button
         className={className}
         size="small"
@@ -71,7 +74,7 @@ function BorderToggleButton(props: Props) {
       >
         <div className={imageClass} />
       </Button>
-    </Tooltip>
+    </FastTooltip>
   );
 }
 

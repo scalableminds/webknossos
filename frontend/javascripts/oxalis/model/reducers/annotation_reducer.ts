@@ -1,16 +1,17 @@
 import update from "immutability-helper";
-import type { Action } from "oxalis/model/actions/actions";
-import type { OxalisState, UserBoundingBox, MeshInformation } from "oxalis/store";
 import { V3 } from "libs/mjs";
-import { updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
-import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import * as Utils from "libs/utils";
-import { getDisplayedDataExtentInPlaneMode } from "oxalis/model/accessors/view_mode_accessor";
-import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reducers/reducer_helpers";
 import _ from "lodash";
+import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import { getDisplayedDataExtentInPlaneMode } from "oxalis/model/accessors/view_mode_accessor";
+import type { Action } from "oxalis/model/actions/actions";
+import { updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
+import type { MeshInformation, OxalisState, UserBoundingBox } from "oxalis/store";
+import type { AdditionalCoordinate } from "types/api_flow_types";
+import { getDatasetBoundingBox } from "../accessors/dataset_accessor";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { getMeshesForAdditionalCoordinates } from "../accessors/volumetracing_accessor";
-import { AdditionalCoordinate } from "types/api_flow_types";
+import BoundingBox from "../bucket_data_handling/bounding_box";
 
 const updateTracing = (state: OxalisState, shape: Partial<OxalisState["tracing"]>): OxalisState =>
   updateKey(state, "tracing", shape);
@@ -73,8 +74,14 @@ const maybeAddAdditionalCoordinatesToMeshState = (
 function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
     case "INITIALIZE_ANNOTATION": {
-      const annotationInfo = convertServerAnnotationToFrontendAnnotation(action.annotation);
-      return updateTracing(state, annotationInfo);
+      return updateTracing(state, {
+        // Clear all tracings. These will be initialized in corresponding
+        // initialization actions.
+        mappings: [],
+        skeleton: undefined,
+        volumes: [],
+        ...action.annotation,
+      });
     }
 
     case "SET_ANNOTATION_NAME": {
@@ -146,7 +153,10 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
             }
           : bbox,
       );
-      return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+      const updatedState = updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+      return updateKey(updatedState, "uiInformation", {
+        activeUserBoundingBoxId: action.id,
+      });
     }
 
     case "ADD_NEW_USER_BOUNDING_BOX": {
@@ -178,18 +188,31 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
           max: V3.toArray(V3.round(V3.add(action.center, halfBoxExtent))),
         };
       }
-      let newBoundingBox: UserBoundingBox;
+      let newUserBoundingBox: UserBoundingBox;
       if (action.newBoundingBox != null) {
-        newBoundingBox = {
+        newUserBoundingBox = {
           ...newBoundingBoxTemplate,
           ...action.newBoundingBox,
         };
       } else {
-        newBoundingBox = newBoundingBoxTemplate;
+        newUserBoundingBox = newBoundingBoxTemplate;
       }
 
-      const updatedUserBoundingBoxes = [...userBoundingBoxes, newBoundingBox];
-      return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+      // Ensure the new bounding box is within the dataset bounding box.
+      const datasetBoundingBox = getDatasetBoundingBox(state.dataset);
+      const newBoundingBox = new BoundingBox(newUserBoundingBox.boundingBox);
+      const newBoundingBoxWithinDataset = newBoundingBox.intersectedWith(datasetBoundingBox);
+      // Only update the bounding box if the bounding box overlaps with the dataset bounds.
+      // Else the bounding box is completely outside the dataset bounds -> in that case just keep the bounding box and let the user cook.
+      if (newBoundingBoxWithinDataset.getVolume() > 0) {
+        newUserBoundingBox.boundingBox = newBoundingBoxWithinDataset.toBoundingBoxType();
+      }
+
+      const updatedUserBoundingBoxes = [...userBoundingBoxes, newUserBoundingBox];
+      const updatedState = updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+      return updateKey(updatedState, "uiInformation", {
+        activeUserBoundingBoxId: newUserBoundingBox.id,
+      });
     }
 
     case "ADD_USER_BOUNDING_BOXES": {
@@ -225,7 +248,13 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       const updatedUserBoundingBoxes = tracing.userBoundingBoxes.filter(
         (bbox) => bbox.id !== action.id,
       );
-      return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+      const updatedState = updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+      if (action.id === state.uiInformation.activeUserBoundingBoxId) {
+        return updateKey(updatedState, "uiInformation", {
+          activeUserBoundingBoxId: null,
+        });
+      }
+      return updatedState;
     }
 
     case "UPDATE_MESH_VISIBILITY": {
@@ -321,8 +350,15 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "ADD_PRECOMPUTED_MESH": {
-      const { layerName, segmentId, seedPosition, seedAdditionalCoordinates, meshFileName } =
-        action;
+      const {
+        layerName,
+        segmentId,
+        seedPosition,
+        seedAdditionalCoordinates,
+        meshFileName,
+        areChunksMerged,
+        mappingName,
+      } = action;
       const meshInfo: MeshInformation = {
         segmentId: segmentId,
         seedPosition,
@@ -331,6 +367,8 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         isVisible: true,
         isPrecomputed: true,
         meshFileName,
+        areChunksMerged,
+        mappingName,
       };
       const additionalCoordinates = state.flycam.additionalCoordinates;
       const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);

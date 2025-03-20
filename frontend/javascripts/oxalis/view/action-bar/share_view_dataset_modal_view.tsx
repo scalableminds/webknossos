@@ -1,12 +1,11 @@
 import { CopyOutlined } from "@ant-design/icons";
-import { Modal, Input, Button, Row, Col, Dropdown } from "antd";
-import { useSelector } from "react-redux";
-import React from "react";
+import { Button, Col, Dropdown, Input, Modal, Row, Space } from "antd";
 import { makeComponentLazy } from "libs/react_helpers";
 import messages from "messages";
-import { OxalisState } from "oxalis/store";
-import { useDatasetSharingToken, getUrl, CopyableSharingLink } from "./share_modal_view";
+import type { OxalisState } from "oxalis/store";
+import { useSelector } from "react-redux";
 import { useZarrLinkMenu } from "./private_links_view";
+import { CopyableSharingLink, getUrl, useDatasetSharingToken } from "./share_modal_view";
 
 const sharingActiveNode = false;
 
@@ -68,7 +67,7 @@ function _ShareViewDatasetModalView(props: Props) {
             Zarr Link
           </Col>
           <Col span={18}>
-            <Input.Group compact>
+            <Space.Compact>
               <Input
                 style={{
                   width: "85%",
@@ -86,7 +85,7 @@ function _ShareViewDatasetModalView(props: Props) {
                   Copy
                 </Button>
               </Dropdown>
-            </Input.Group>
+            </Space.Compact>
             <div
               style={{
                 marginBottom: 12,

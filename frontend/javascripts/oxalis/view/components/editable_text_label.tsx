@@ -1,19 +1,21 @@
-import { Input, InputProps, Tooltip } from "antd";
 import { CheckOutlined, EditOutlined } from "@ant-design/icons";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
-import Markdown from "react-remarkable";
-import * as React from "react";
-import { MarkdownModal } from "oxalis/view/components/markdown_modal";
+import { Input, type InputProps } from "antd";
+import FastTooltip from "components/fast_tooltip";
+import Markdown from "libs/markdown_adapter";
 import Toast from "libs/toast";
-import { ValidationResult } from "../left-border-tabs/modals/add_volume_layer_modal";
+import { MarkdownModal } from "oxalis/view/components/markdown_modal";
+import * as React from "react";
+import type { ValidationResult } from "../left-border-tabs/modals/add_volume_layer_modal";
+
 type Rule = {
   message?: string;
   type?: string;
+  min?: number;
   validator?: (arg0: string) => ValidationResult;
 };
 export type EditableTextLabelProp = {
   value: string;
-  onChange: (...args: Array<any>) => any;
+  onChange: (newValue: string) => any;
   rules?: Rule[];
   rows?: number;
   markdown?: boolean;
@@ -21,8 +23,10 @@ export type EditableTextLabelProp = {
   margin?: number | string;
   onClick?: () => void;
   disableEditing?: boolean;
+  hideEditIcon?: boolean;
   onContextMenu?: () => void;
   width?: string | number;
+  iconClassName?: string;
   isInvalid?: boolean | null | undefined;
   trimValue?: boolean | null | undefined;
   onRenameStart?: (() => void) | undefined;
@@ -60,9 +64,17 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
     }
   }
 
-  handleInputChange = (event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+  handleInputChangeFromEvent = (
+    event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>,
+  ) => {
     this.setState({
       value: event.target.value,
+    });
+  };
+
+  handleInputChange = (newValue: string) => {
+    this.setState({
+      value: newValue,
     });
   };
 
@@ -108,6 +120,11 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
           Toast.error(validationResult.message);
           return false;
         }
+      } else if (rule.min != null) {
+        if (this.state.value.length < rule.min) {
+          Toast.error(`Length must at least be ${rule.min}.`);
+          return false;
+        }
       }
       return true;
     });
@@ -117,11 +134,12 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
   render() {
     const iconStyle = {
       cursor: "pointer",
+      marginLeft: 5,
     };
     const margin = this.props.margin != null ? this.props.margin : "0 10px";
     const inputComponentProps: InputProps = {
       value: this.state.value,
-      onChange: this.handleInputChange,
+      onChange: this.handleInputChangeFromEvent,
       onPressEnter: this.handleOnChange,
       style: {
         width: this.props.width != null ? this.props.width : "60%",
@@ -130,7 +148,19 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
       size: "small",
       autoFocus: true,
     };
-    const isInvalidStyleMaybe = this.props.isInvalid ? { color: "var(--ant-error)" } : {};
+    const isInvalidStyleMaybe = this.props.isInvalid ? { color: "var(--ant-color-error)" } : {};
+    const onRename = (evt: React.MouseEvent) => {
+      if (this.props.disableEditing) {
+        return;
+      }
+      evt.stopPropagation();
+      this.setState({
+        isEditing: true,
+      });
+      if (this.props.onRenameStart) {
+        this.props.onRenameStart();
+      }
+    };
 
     if (this.state.isEditing) {
       return (
@@ -138,7 +168,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
           {this.props.rows === 1 ? (
             <React.Fragment>
               <Input {...inputComponentProps} onBlur={() => this.handleOnChange} />
-              <Tooltip key="save" title={`Save ${this.props.label}`} placement="bottom">
+              <FastTooltip key="save" title={`Save ${this.props.label}`} placement="bottom">
                 <CheckOutlined
                   style={iconStyle}
                   onClick={(evt) => {
@@ -146,7 +176,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
                     this.handleOnChange();
                   }}
                 />
-              </Tooltip>
+              </FastTooltip>
             </React.Fragment>
           ) : (
             <MarkdownModal
@@ -169,44 +199,30 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
           }}
           className={this.props.onClick != null ? "clickable-text" : undefined}
           onClick={this.props.onClick}
+          onDoubleClick={onRename}
           onContextMenu={this.props.onContextMenu}
         >
           {this.props.markdown ? (
-            <Markdown
-              className="flex-item"
-              source={this.props.value}
-              options={{
-                html: false,
-                breaks: true,
-                linkify: true,
-              }}
-              container="span"
-              style={isInvalidStyleMaybe}
-            />
+            <span style={isInvalidStyleMaybe}>
+              <Markdown className="flex-item">{this.props.value}</Markdown>
+            </span>
           ) : (
             <span style={isInvalidStyleMaybe}>{this.props.value}</span>
           )}
-          {this.props.disableEditing ? null : (
-            <Tooltip key="edit" title={`Edit ${this.props.label}`} placement="bottom">
+          {this.props.disableEditing || this.props.hideEditIcon ? null : (
+            <FastTooltip key="edit" title={`Edit ${this.props.label}`} placement="bottom">
               <EditOutlined
-                className={this.props.markdown ? "flex-item" : undefined}
+                className={
+                  this.props.iconClassName + " " + (this.props.markdown ? "flex-item" : "")
+                }
                 style={{
                   ...iconStyle,
-                  marginLeft: 5,
                   display: "inline",
                   whiteSpace: "nowrap",
                 }}
-                onClick={(evt) => {
-                  evt.stopPropagation();
-                  this.setState({
-                    isEditing: true,
-                  });
-                  if (this.props.onRenameStart) {
-                    this.props.onRenameStart();
-                  }
-                }}
+                onClick={onRename}
               />
-            </Tooltip>
+            </FastTooltip>
           )}
         </div>
       );

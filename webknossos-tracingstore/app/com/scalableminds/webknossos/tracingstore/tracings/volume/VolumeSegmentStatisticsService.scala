@@ -1,152 +1,125 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.datastore.models.{UnsignedInteger, UnsignedIntegerArray, WebKnossosDataRequest}
+import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SegmentStatistics}
+import com.scalableminds.webknossos.datastore.models.{SegmentInteger, SegmentIntegerArray, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
+import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
+import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
+import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
-import play.api.libs.json.{Json, OFormat}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-case class SegmentStatisticsParameters(mag: Vec3Int, segmentIds: List[Long])
-object SegmentStatisticsParameters {
-  implicit val jsonFormat: OFormat[SegmentStatisticsParameters] = Json.format[SegmentStatisticsParameters]
-}
-
 class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTracingService,
+                                               annotationService: TSAnnotationService,
                                                volumeSegmentIndexService: VolumeSegmentIndexService,
                                                editableMappingService: EditableMappingService)
-    extends ProtoGeometryImplicits {
+    extends ProtoGeometryImplicits
+    with SegmentStatistics {
 
   // Returns the segment volume (=number of voxels) in the target mag
-  def getSegmentVolume(tracingId: String, segmentId: Long, mag: Vec3Int, userToken: Option[String])(
-      implicit ec: ExecutionContext): Fox[Long] =
-    for {
-      tracing <- volumeTracingService.find(tracingId) ?~> "tracing.notFound"
-      bucketPositions: ListOfVec3IntProto <- volumeSegmentIndexService
-        .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(tracingId, segmentId, mag)
-      volumeData <- getVolumeDataForPositions(tracing, tracingId, mag, bucketPositions, userToken)
-      dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(volumeData, tracing.elementClass)
-      volumeInVx = dataTyped.count(unsignedInteger => unsignedInteger.toPositiveLong == segmentId)
-    } yield volumeInVx
+  def getSegmentVolume(annotationId: String,
+                       tracingId: String,
+                       segmentId: Long,
+                       mag: Vec3Int,
+                       mappingName: Option[String],
+                       additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit ec: ExecutionContext,
+                                                                                 tc: TokenContext): Fox[Long] =
+    calculateSegmentVolume(
+      segmentId,
+      mag,
+      additionalCoordinates,
+      getBucketPositions(annotationId, tracingId, mappingName, additionalCoordinates),
+      getTypedDataForBucketPosition(annotationId, tracingId)
+    )
 
-  // Returns the bounding box in voxels in the target mag
-  def getSegmentBoundingBox(tracingId: String, segmentId: Long, mag: Vec3Int, userToken: Option[String])(
-      implicit ec: ExecutionContext): Fox[BoundingBox] =
+  def getSegmentBoundingBox(annotationId: String,
+                            tracingId: String,
+                            segmentId: Long,
+                            mag: Vec3Int,
+                            mappingName: Option[String],
+                            additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[BoundingBox] =
+    calculateSegmentBoundingBox(
+      segmentId,
+      mag,
+      additionalCoordinates,
+      getBucketPositions(annotationId, tracingId, mappingName, additionalCoordinates),
+      getTypedDataForBucketPosition(annotationId, tracingId)
+    )
+
+  private def getTypedDataForBucketPosition(annotationId: String, tracingId: String)(
+      bucketPosition: Vec3Int,
+      mag: Vec3Int,
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit tc: TokenContext, ec: ExecutionContext) =
     for {
-      tracing <- volumeTracingService.find(tracingId) ?~> "tracing.notFound"
+      tracing <- annotationService.findVolume(annotationId, tracingId) ?~> "tracing.notFound"
+      bucketData <- getVolumeDataForPositions(annotationId,
+                                              tracingId,
+                                              tracing,
+                                              mag,
+                                              Seq(bucketPosition),
+                                              additionalCoordinates)
+      dataTyped: Array[SegmentInteger] = SegmentIntegerArray.fromByteArray(bucketData,
+                                                                           elementClassFromProto(tracing.elementClass))
+    } yield dataTyped
+
+  private def getBucketPositions(annotationId: String,
+                                 tracingId: String,
+                                 mappingName: Option[String],
+                                 additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
+      segmentId: Long,
+      mag: Vec3Int)(implicit ec: ExecutionContext, tc: TokenContext) =
+    for {
+      tracing <- annotationService.findVolume(annotationId, tracingId) ?~> "tracing.notFound"
+      fallbackLayer <- volumeTracingService.getFallbackLayer(annotationId, tracing)
+      additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes)
       allBucketPositions: ListOfVec3IntProto <- volumeSegmentIndexService
-        .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(tracingId, segmentId, mag)
-      relevantBucketPositions = filterOutInnerBucketPositions(allBucketPositions)
-      boundingBoxMutable = scala.collection.mutable.ListBuffer[Int](Int.MaxValue,
-                                                                    Int.MaxValue,
-                                                                    Int.MaxValue,
-                                                                    Int.MinValue,
-                                                                    Int.MinValue,
-                                                                    Int.MinValue) //topleft, bottomright
-      _ <- Fox.serialCombined(relevantBucketPositions.iterator)(bucketPosition =>
-        extendBouningBoxByData(tracing, tracingId, mag, segmentId, boundingBoxMutable, bucketPosition, userToken))
-    } yield
-      if (boundingBoxMutable.exists(item => item == Int.MaxValue || item == Int.MinValue)) {
-        BoundingBox.empty
-      } else
-        BoundingBox(
-          Vec3Int(boundingBoxMutable(0), boundingBoxMutable(1), boundingBoxMutable(2)),
-          boundingBoxMutable(3) - boundingBoxMutable(0) + 1,
-          boundingBoxMutable(4) - boundingBoxMutable(1) + 1,
-          boundingBoxMutable(5) - boundingBoxMutable(2) + 1
+        .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
+          fallbackLayer,
+          tracingId,
+          segmentId,
+          mag,
+          None,
+          mappingName,
+          editableMappingTracingId = volumeTracingService.editableMappingTracingId(tracing, tracingId),
+          additionalCoordinates,
+          additionalAxes
         )
+    } yield allBucketPositions
 
-  // The buckets that form the outer walls of the bounding box are relevant (in each of those the real min/max voxel positions could occur)
-  private def filterOutInnerBucketPositions(bucketPositions: ListOfVec3IntProto): Seq[Vec3Int] =
-    if (bucketPositions.values.isEmpty) List.empty
-    else {
-      val minX = bucketPositions.values.map(_.x).min
-      val minY = bucketPositions.values.map(_.y).min
-      val minZ = bucketPositions.values.map(_.z).min
-      val maxX = bucketPositions.values.map(_.x).max
-      val maxY = bucketPositions.values.map(_.y).max
-      val maxZ = bucketPositions.values.map(_.z).max
-      bucketPositions.values
-        .filter(pos =>
-          pos.x == minX || pos.x == maxX || pos.y == minY || pos.y == maxY || pos.z == minZ || pos.z == maxZ)
-        .map(vec3IntFromProto)
-    }
+  private def getVolumeDataForPositions(
+      annotationId: String,
+      tracingId: String,
+      tracing: VolumeTracing,
+      mag: Vec3Int,
+      bucketPositions: Seq[Vec3Int],
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit tc: TokenContext): Fox[Array[Byte]] = {
 
-  private def extendBouningBoxByData(tracing: VolumeTracing,
-                                     tracingId: String,
-                                     mag: Vec3Int,
-                                     segmentId: Long,
-                                     mutableBoundingBox: scala.collection.mutable.ListBuffer[Int],
-                                     bucketPosition: Vec3Int,
-                                     userToken: Option[String]): Fox[Unit] =
-    for {
-      bucketData <- getVolumeDataForPositions(tracing, tracingId, mag, Seq(bucketPosition), userToken)
-      dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(
-        bucketData,
-        elementClassFromProto(tracing.elementClass))
-      bucketTopLeftInTargetMagVoxels = bucketPosition * DataLayer.bucketLength
-      _ = scanDataAndExtendBoundingBox(dataTyped, bucketTopLeftInTargetMagVoxels, segmentId, mutableBoundingBox)
-    } yield ()
-
-  private def scanDataAndExtendBoundingBox(dataTyped: Array[UnsignedInteger],
-                                           bucketTopLeftInTargetMagVoxels: Vec3Int,
-                                           segmentId: Long,
-                                           mutableBoundingBox: scala.collection.mutable.ListBuffer[Int]): Unit =
-    for {
-      x <- 0 until DataLayer.bucketLength
-      y <- 0 until DataLayer.bucketLength
-      z <- 0 until DataLayer.bucketLength
-      index = z * DataLayer.bucketLength * DataLayer.bucketLength + y * DataLayer.bucketLength + x
-    } yield {
-      if (dataTyped(index).toPositiveLong == segmentId) {
-        val voxelPosition = bucketTopLeftInTargetMagVoxels + Vec3Int(x, y, z)
-        extendBoundingBoxByPosition(mutableBoundingBox, voxelPosition)
-      }
-    }
-
-  private def extendBoundingBoxByPosition(mutableBoundingBox: scala.collection.mutable.ListBuffer[Int],
-                                          position: Vec3Int): Unit = {
-    mutableBoundingBox(0) = Math.min(mutableBoundingBox(0), position.x)
-    mutableBoundingBox(1) = Math.min(mutableBoundingBox(1), position.y)
-    mutableBoundingBox(2) = Math.min(mutableBoundingBox(2), position.z)
-    mutableBoundingBox(3) = Math.max(mutableBoundingBox(3), position.x)
-    mutableBoundingBox(4) = Math.max(mutableBoundingBox(4), position.y)
-    mutableBoundingBox(5) = Math.max(mutableBoundingBox(5), position.z)
-  }
-
-  private def getVolumeDataForPositions(tracing: VolumeTracing,
-                                        tracingId: String,
-                                        mag: Vec3Int,
-                                        bucketPositions: ListOfVec3IntProto,
-                                        userToken: Option[String]): Fox[Array[Byte]] =
-    getVolumeDataForPositions(tracing, tracingId, mag, bucketPositions.values.map(vec3IntFromProto), userToken)
-
-  private def getVolumeDataForPositions(tracing: VolumeTracing,
-                                        tracingId: String,
-                                        mag: Vec3Int,
-                                        bucketPositions: Seq[Vec3Int],
-                                        userToken: Option[String]): Fox[Array[Byte]] = {
     val dataRequests = bucketPositions.map { position =>
-      WebKnossosDataRequest(
+      WebknossosDataRequest(
         position = position * mag * DataLayer.bucketLength,
         mag = mag,
         cubeSize = DataLayer.bucketLength,
         fourBit = Some(false),
         applyAgglomerate = None,
         version = None,
-        additionalCoordinates = None
+        additionalCoordinates = additionalCoordinates
       )
     }.toList
     for {
-      (data, _) <- if (tracing.mappingIsEditable.getOrElse(false))
-        editableMappingService.volumeData(tracing, tracingId, dataRequests, userToken)
-      else volumeTracingService.data(tracingId, tracing, dataRequests)
+      (data, _) <- if (tracing.getHasEditableMapping) {
+        val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
+        editableMappingService.volumeData(mappingLayer, dataRequests)
+      } else
+        volumeTracingService.data(annotationId, tracingId, tracing, dataRequests, includeFallbackDataIfAvailable = true)
     } yield data
   }
 

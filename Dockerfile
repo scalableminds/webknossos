@@ -1,15 +1,14 @@
-FROM eclipse-temurin:11
-ARG VERSION_NODE="16.x"
+FROM eclipse-temurin:21-jammy
+ARG VERSION_NODE="18.x"
 
 RUN curl -sL "https://deb.nodesource.com/setup_${VERSION_NODE}" | bash - \
-  && apt-get -y install libblosc1 libbrotli1 postgresql-client git nodejs \
+  && apt-get -y install libblosc1 libbrotli1 postgresql-client libdraco4 git nodejs \
   && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /webknossos
 WORKDIR /webknossos
 
 COPY target/universal/stage .
-
 
 RUN addgroup --system --gid 999 webknossos \
   && adduser --system --uid 999 --ingroup webknossos webknossos \
@@ -28,5 +27,7 @@ HEALTHCHECK \
 USER webknossos
 
 EXPOSE 9000
+
+ENV CERTIFICATE "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzY2FsYWJsZW1pbmRzIiwiaWF0IjoxNzM5ODExMTc3LCJleHAiOjE4OTM0NTYwMDAsImZlYXR1cmVzIjp7Im9wZW5JZENvbm5lY3RFbmFibGVkIjpmYWxzZSwic2VnbWVudEFueXRoaW5nRW5hYmxlZCI6ZmFsc2UsImVkaXRhYmxlTWFwcGluZ3NFbmFibGVkIjpmYWxzZX19.c_zBzj7bKPCXp5eTjFrCC4YmOxSH9uQx3BRMYbVx9dPsiCwlyvi7jepqOP7bS8QIcdoSHnrhHpZ-tQKkTi3rkw"
 
 ENTRYPOINT [ "/docker-entrypoint.sh" ]

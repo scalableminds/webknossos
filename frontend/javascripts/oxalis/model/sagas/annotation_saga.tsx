@@ -1,51 +1,67 @@
-import React from "react";
+import type { EditableAnnotation } from "admin/admin_rest_api";
+import { acquireAnnotationMutex, editAnnotation } from "admin/admin_rest_api";
+import { Button } from "antd";
+import ErrorHandling from "libs/error_handling";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
 import _ from "lodash";
+import messages from "messages";
+import constants, { MappingStatusEnum } from "oxalis/constants";
+import { getMappingInfo, is2dDataset } from "oxalis/model/accessors/dataset_accessor";
+import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
 import type { Action } from "oxalis/model/actions/actions";
 import {
-  EditAnnotationLayerAction,
+  type EditAnnotationLayerAction,
+  type SetAnnotationDescriptionAction,
+  type SetOthersMayEditForAnnotationAction,
   setAnnotationAllowUpdateAction,
   setBlockedByUserAction,
-  type SetOthersMayEditForAnnotationAction,
 } from "oxalis/model/actions/annotation_actions";
-import type { EditableAnnotation } from "admin/admin_rest_api";
-import {
-  editAnnotation,
-  updateAnnotationLayer,
-  acquireAnnotationMutex,
-} from "admin/admin_rest_api";
+import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
+import { select } from "oxalis/model/sagas/effect-generators";
 import {
   SETTINGS_MAX_RETRY_COUNT,
   SETTINGS_RETRY_DELAY,
 } from "oxalis/model/sagas/save_saga_constants";
-import type { Saga } from "oxalis/model/sagas/effect-generators";
-import {
-  takeLatest,
-  take,
-  retry,
-  delay,
-  call,
-  put,
-  fork,
-  takeEvery,
-  cancel,
-  cancelled,
-} from "typed-redux-saga";
-import { select } from "oxalis/model/sagas/effect-generators";
-import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
-import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
 import { Model } from "oxalis/singletons";
 import Store from "oxalis/store";
-import Toast from "libs/toast";
-import constants, { MappingStatusEnum } from "oxalis/constants";
-import messages from "messages";
-import { APIUserCompact } from "types/api_flow_types";
-import { Button } from "antd";
-import ErrorHandling from "libs/error_handling";
+import { determineLayout } from "oxalis/view/layouting/default_layout_configs";
+import { is3dViewportMaximized } from "oxalis/view/layouting/flex_layout_helper";
+import { getLastActiveLayout, getLayoutConfig } from "oxalis/view/layouting/layout_persistence";
+import React from "react";
+import type { ActionPattern } from "redux-saga/effects";
+import {
+  call,
+  cancel,
+  cancelled,
+  delay,
+  fork,
+  put,
+  retry,
+  take,
+  takeEvery,
+  takeLatest,
+} from "typed-redux-saga";
+import type { APIUserCompact } from "types/api_flow_types";
 import { mayEditAnnotationProperties } from "../accessors/annotation_accessor";
+import { needsLocalHdf5Mapping } from "../accessors/volumetracing_accessor";
+import { pushSaveQueueTransaction } from "../actions/save_actions";
+import { ensureWkReady } from "./ready_sagas";
+import { updateAnnotationLayerName, updateMetadataOfAnnotation } from "./update_actions";
 
-/* Note that this must stay in sync with the back-end constant
-  compare https://github.com/scalableminds/webknossos/issues/5223 */
+/* Note that this must stay in sync with the back-end constant MaxMagForAgglomerateMapping
+  compare https://github.com/scalableminds/webknossos/issues/5223.
+ */
 const MAX_MAG_FOR_AGGLOMERATE_MAPPING = 16;
+
+export function* pushAnnotationDescriptionUpdateAction(action: SetAnnotationDescriptionAction) {
+  const mayEdit = yield* select((state) => mayEditAnnotationProperties(state));
+  if (!mayEdit) {
+    return;
+  }
+  yield* put(pushSaveQueueTransaction([updateMetadataOfAnnotation(action.description)]));
+}
 
 export function* pushAnnotationUpdateAsync(action: Action) {
   const tracing = yield* select((state) => state.tracing);
@@ -66,7 +82,6 @@ export function* pushAnnotationUpdateAsync(action: Action) {
   const editObject: Partial<EditableAnnotation> = {
     name: tracing.name,
     visibility: tracing.visibility,
-    description: tracing.description,
     viewConfiguration,
   };
   try {
@@ -83,7 +98,6 @@ export function* pushAnnotationUpdateAsync(action: Action) {
     // we will only notify the user if the name, visibility or description could not be changed.
     // Otherwise, we won't notify the user and won't let the sagas crash as the actual skeleton/volume
     // tracings are handled separately.
-    console.error(error);
     ErrorHandling.notify(error as Error);
     if (
       ["SET_ANNOTATION_NAME", "SET_ANNOTATION_VISIBILITY", "SET_ANNOTATION_DESCRIPTION"].includes(
@@ -92,26 +106,28 @@ export function* pushAnnotationUpdateAsync(action: Action) {
     ) {
       Toast.error("Could not update annotation property. Please try again.");
     }
+    console.error(error);
   }
 }
 
 function* pushAnnotationLayerUpdateAsync(action: EditAnnotationLayerAction): Saga<void> {
   const { tracingId, layerProperties } = action;
-  const annotationId = yield* select((storeState) => storeState.tracing.annotationId);
-  const annotationType = yield* select((storeState) => storeState.tracing.annotationType);
-  yield* retry(
-    SETTINGS_MAX_RETRY_COUNT,
-    SETTINGS_RETRY_DELAY,
-    updateAnnotationLayer,
-    annotationId,
-    annotationType,
-    tracingId,
-    layerProperties,
+  yield* put(
+    pushSaveQueueTransaction([updateAnnotationLayerName(tracingId, layerProperties.name)]),
   );
 }
 
+export function* checkVersionRestoreParam(): Saga<void> {
+  const showVersionRestore = yield* call(Utils.hasUrlParam, "showVersionRestore");
+
+  if (showVersionRestore) {
+    yield* put(setVersionRestoreVisibilityAction(true));
+  }
+}
+
 function shouldDisplaySegmentationData(): boolean {
-  const currentViewMode = Store.getState().temporaryConfiguration.viewMode;
+  const state = Store.getState();
+  const currentViewMode = state.temporaryConfiguration.viewMode;
   const canModeDisplaySegmentationData = constants.MODES_PLANE.includes(currentViewMode);
   const segmentationLayer = Model.getVisibleSegmentationLayer();
 
@@ -121,11 +137,20 @@ function shouldDisplaySegmentationData(): boolean {
 
   const segmentationLayerName = segmentationLayer.name;
   const isSegmentationLayerDisabled =
-    Store.getState().datasetConfiguration.layers[segmentationLayerName].isDisabled;
-  return !isSegmentationLayerDisabled;
+    state.datasetConfiguration.layers[segmentationLayerName].isDisabled;
+  if (isSegmentationLayerDisabled) {
+    return false;
+  }
+  const is2d = is2dDataset(state.dataset);
+  const controlMode = state.temporaryConfiguration.controlMode;
+  const currentLayoutType = determineLayout(controlMode, currentViewMode, is2d);
+  const lastActiveLayoutName = getLastActiveLayout(currentLayoutType);
+  const layout = getLayoutConfig(currentLayoutType, lastActiveLayoutName);
+  const onlyViewing3dViewport = is3dViewportMaximized(layout);
+  return !onlyViewing3dViewport;
 }
 
-export function* warnAboutSegmentationZoom(): Saga<void> {
+export function* warnAboutSegmentationZoom(): Saga<never> {
   function* warnMaybe(): Saga<void> {
     const segmentationLayer = Model.getVisibleSegmentationLayer();
 
@@ -133,18 +158,18 @@ export function* warnAboutSegmentationZoom(): Saga<void> {
       return;
     }
 
-    const isAgglomerateMappingEnabled = yield* select((storeState) => {
+    const isRemoteAgglomerateMappingEnabled = yield* select((storeState) => {
       if (!segmentationLayer) {
         return false;
       }
-
       const mappingInfo = getMappingInfo(
         storeState.temporaryConfiguration.activeMappingByLayer,
         segmentationLayer.name,
       );
       return (
         mappingInfo.mappingStatus === MappingStatusEnum.ENABLED &&
-        mappingInfo.mappingType === "HDF5"
+        mappingInfo.mappingType === "HDF5" &&
+        !needsLocalHdf5Mapping(storeState, segmentationLayer.name)
       );
     });
     const isZoomThresholdExceeded = yield* select(
@@ -153,7 +178,11 @@ export function* warnAboutSegmentationZoom(): Saga<void> {
         Math.log2(MAX_MAG_FOR_AGGLOMERATE_MAPPING),
     );
 
-    if (shouldDisplaySegmentationData() && isAgglomerateMappingEnabled && isZoomThresholdExceeded) {
+    if (
+      shouldDisplaySegmentationData() &&
+      isRemoteAgglomerateMappingEnabled &&
+      isZoomThresholdExceeded
+    ) {
       Toast.error(messages["tracing.segmentation_zoom_warning_agglomerate"], {
         sticky: false,
         timeout: 3000,
@@ -163,7 +192,7 @@ export function* warnAboutSegmentationZoom(): Saga<void> {
     }
   }
 
-  yield* take("WK_READY");
+  yield* call(ensureWkReady);
   // Wait before showing the initial warning. Due to initialization lag it may only be visible very briefly, otherwise.
   yield* delay(5000);
   yield* warnMaybe();
@@ -179,11 +208,12 @@ export function* warnAboutSegmentationZoom(): Saga<void> {
       "SET_STORED_LAYOUTS",
       "SET_MAPPING",
       "SET_MAPPING_ENABLED",
+      "FINISH_MAPPING_INITIALIZATION",
       (action: Action) =>
         action.type === "UPDATE_LAYER_SETTING" &&
         action.layerName === segmentationLayerName &&
         action.propertyName === "alpha",
-    ]);
+    ] as ActionPattern);
     yield* warnMaybe();
   }
 }
@@ -191,21 +221,24 @@ export function* watchAnnotationAsync(): Saga<void> {
   // Consuming the latest action here handles an offline scenario better.
   // If the user is offline and performs multiple changes to the annotation
   // name, only the latest action is relevant. If `_takeEvery` was used,
-  // all updates to the annotation name would be retried regularily, which
+  // all updates to the annotation name would be retried regularly, which
   // would also cause race conditions.
-  yield* takeLatest("SET_ANNOTATION_NAME", pushAnnotationUpdateAsync);
-  yield* takeLatest("SET_ANNOTATION_VISIBILITY", pushAnnotationUpdateAsync);
-  yield* takeLatest("SET_ANNOTATION_DESCRIPTION", pushAnnotationUpdateAsync);
   yield* takeLatest(
-    (action: Action) =>
-      action.type === "UPDATE_LAYER_SETTING" && action.propertyName === "isDisabled",
+    ["SET_ANNOTATION_NAME", "SET_ANNOTATION_VISIBILITY"],
+    pushAnnotationUpdateAsync,
+  );
+  yield* takeLatest("SET_ANNOTATION_DESCRIPTION", pushAnnotationDescriptionUpdateAction);
+  yield* takeLatest(
+    ((action: Action) =>
+      action.type === "UPDATE_LAYER_SETTING" &&
+      action.propertyName === "isDisabled") as ActionPattern,
     pushAnnotationUpdateAsync,
   );
   yield* takeLatest("EDIT_ANNOTATION_LAYER", pushAnnotationLayerUpdateAsync);
 }
 
 export function* acquireAnnotationMutexMaybe(): Saga<void> {
-  yield* take("WK_READY");
+  yield* call(ensureWkReady);
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   const annotationId = yield* select((storeState) => storeState.tracing.annotationId);
   if (!allowUpdate) {
@@ -312,4 +345,9 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
   }
   yield* takeEvery("SET_OTHERS_MAY_EDIT_FOR_ANNOTATION", reactToOthersMayEditChanges);
 }
-export default [warnAboutSegmentationZoom, watchAnnotationAsync, acquireAnnotationMutexMaybe];
+export default [
+  warnAboutSegmentationZoom,
+  watchAnnotationAsync,
+  acquireAnnotationMutexMaybe,
+  checkVersionRestoreParam,
+];

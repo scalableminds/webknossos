@@ -1,5 +1,5 @@
-FROM scalableminds/sbt:master__3437035799
-ARG VERSION_NODE="16.x"
+FROM scalableminds/sbt:master__7830403826
+ARG VERSION_NODE="18.x"
 
 ENV DEBIAN_FRONTEND noninteractive
 ENV SBT_OPTS "${SBT_OPTS} -XX:MaxMetaspaceSize=512m -Xms1024m -Xmx1024m"
@@ -11,10 +11,6 @@ RUN apt-get update && apt-get install apt-transport-https
 # add node package source
 RUN curl -sL "https://deb.nodesource.com/setup_${VERSION_NODE}" | bash -
 
-# add yarn package source
-RUN echo "deb https://dl.yarnpkg.com/debian/ stable main" > /etc/apt/sources.list.d/yarn.list \
-  && curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
-
 # Install sbt, node & build-essentials
 RUN apt-get update \
   && apt-get install -y \
@@ -22,10 +18,15 @@ RUN apt-get update \
   findutils \
   nodejs \
   postgresql-client \
-  yarn \
+  cmake \
   git \
+  libdraco-dev \
+  libblosc1 \
   # The following packages are necessary to run headless-gl
   && apt-get install -y \
   mesa-utils xvfb libgl1-mesa-dri libglapi-mesa libosmesa6 pkg-config x11proto-xext-dev xserver-xorg-dev libxext-dev libxi-dev \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Enable corepack for Node (which will install yarn)
+RUN corepack enable && corepack install --global yarn@4.4.1

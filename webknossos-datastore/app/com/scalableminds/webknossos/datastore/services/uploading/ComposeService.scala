@@ -1,18 +1,16 @@
 package com.scalableminds.webknossos.datastore.services.uploading
 
-import com.scalableminds.util.geometry.Vec3Double
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5SegmentationLayer}
-import com.scalableminds.webknossos.datastore.dataformats.precomputed.{
-  PrecomputedDataLayer,
-  PrecomputedSegmentationLayer
-}
-import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
-import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrSegmentationLayer}
-import com.scalableminds.webknossos.datastore.dataformats.zarr3.{Zarr3DataLayer, Zarr3SegmentationLayer}
+import com.scalableminds.webknossos.datastore.dataformats.layers.{WKWDataLayer, WKWSegmentationLayer}
+import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.services.{DSRemoteWebKnossosClient, DataSourceRepository}
+import com.scalableminds.webknossos.datastore.services.{
+  DSRemoteWebknossosClient,
+  DataSourceRepository,
+  DataSourceService
+}
 import play.api.libs.json.{Json, OFormat}
 
 import java.nio.charset.StandardCharsets
@@ -23,8 +21,8 @@ import scala.concurrent.ExecutionContext
 case class ComposeRequest(
     newDatasetName: String,
     targetFolderId: String,
-    organizationName: String,
-    scale: Vec3Double,
+    organizationId: String,
+    voxelSize: VoxelSize,
     layers: Seq[ComposeRequestLayer]
 )
 
@@ -32,7 +30,7 @@ object ComposeRequest {
   implicit val composeRequestFormat: OFormat[ComposeRequest] = Json.format[ComposeRequest]
 }
 case class ComposeRequestLayer(
-    datasetId: DataLayerId,
+    dataSourceId: DataSourceId,
     sourceName: String,
     newName: String,
     transformations: Seq[CoordinateTransformation]
@@ -42,47 +40,44 @@ object ComposeRequestLayer {
   implicit val composeLayerFormat: OFormat[ComposeRequestLayer] = Json.format[ComposeRequestLayer]
 }
 
-case class DataLayerId(name: String, owningOrganization: String)
-
-object DataLayerId {
-  implicit val dataLayerIdFormat: OFormat[DataLayerId] = Json.format[DataLayerId]
-}
-
 class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
-                               remoteWebKnossosClient: DSRemoteWebKnossosClient,
+                               remoteWebknossosClient: DSRemoteWebknossosClient,
+                               dataSourceService: DataSourceService,
                                datasetSymlinkService: DatasetSymlinkService)(implicit ec: ExecutionContext)
     extends FoxImplicits {
 
   val dataBaseDir: Path = datasetSymlinkService.dataBaseDir
 
-  private def uploadDirectory(organizationName: String, name: String): Path =
-    dataBaseDir.resolve(organizationName).resolve(name)
+  private def uploadDirectory(organizationId: String, datasetDirectoryName: String): Path =
+    dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName)
 
-  def composeDataset(composeRequest: ComposeRequest, userToken: Option[String])(
-      implicit ec: ExecutionContext): Fox[DataSource] =
+  def composeDataset(composeRequest: ComposeRequest)(implicit tc: TokenContext): Fox[(DataSource, String)] =
     for {
-      _ <- Fox.bool2Fox(Files.isWritable(dataBaseDir)) ?~> "Datastore can not write to its data directory."
-
-      reserveUploadInfo = ReserveUploadInformation("",
-                                                   composeRequest.newDatasetName,
-                                                   composeRequest.organizationName,
-                                                   1,
-                                                   None,
-                                                   List(),
-                                                   Some(composeRequest.targetFolderId))
-      _ <- remoteWebKnossosClient.reserveDataSourceUpload(reserveUploadInfo, userToken) ?~> "Failed to reserve upload."
-      directory = uploadDirectory(composeRequest.organizationName, composeRequest.newDatasetName)
+      _ <- dataSourceService.assertDataDirWritable(composeRequest.organizationId)
+      reserveUploadInfo = ReserveUploadInformation(
+        "",
+        composeRequest.newDatasetName,
+        composeRequest.organizationId,
+        1,
+        None,
+        None,
+        List(),
+        Some(composeRequest.targetFolderId)
+      )
+      reservedAdditionalInfo <- remoteWebknossosClient.reserveDataSourceUpload(reserveUploadInfo) ?~> "Failed to reserve upload."
+      directory = uploadDirectory(composeRequest.organizationId, reservedAdditionalInfo.directoryName)
       _ = PathUtils.ensureDirectory(directory)
-      dataSource <- createDatasource(composeRequest, composeRequest.organizationName)
+      dataSource <- createDatasource(composeRequest,
+                                     reservedAdditionalInfo.directoryName,
+                                     composeRequest.organizationId,
+                                     directory)
       properties = Json.toJson(dataSource).toString().getBytes(StandardCharsets.UTF_8)
       _ = Files.write(directory.resolve(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON), properties)
-    } yield dataSource
+    } yield (dataSource, reservedAdditionalInfo.newDatasetId.toString)
 
   private def getLayerFromComposeLayer(composeLayer: ComposeRequestLayer, uploadDir: Path): Fox[DataLayer] =
     for {
-      dataSourceId <- Fox.successful(
-        DataSourceId(composeLayer.datasetId.name, composeLayer.datasetId.owningOrganization))
-      dataSource <- Fox.option2Fox(dataSourceRepository.find(dataSourceId))
+      dataSource <- Fox.option2Fox(dataSourceRepository.get(composeLayer.dataSourceId))
       ds <- Fox.option2Fox(dataSource.toUsable)
       layer <- Fox.option2Fox(ds.dataLayers.find(_.name == composeLayer.sourceName))
       applyCoordinateTransformations = (cOpt: Option[List[CoordinateTransformation]]) =>
@@ -90,38 +85,17 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
           case Some(c) => Some(c ++ composeLayer.transformations.toList)
           case None    => Some(composeLayer.transformations.toList)
       }
-      linkedLayerIdentifier = LinkedLayerIdentifier(composeLayer.datasetId.owningOrganization,
-                                                    composeLayer.datasetId.name,
+      linkedLayerIdentifier = LinkedLayerIdentifier(composeLayer.dataSourceId.organizationId,
+                                                    composeLayer.dataSourceId.directoryName,
                                                     composeLayer.sourceName,
                                                     Some(composeLayer.newName))
-      layerIsRemote = isLayerRemote(dataSourceId, composeLayer.sourceName)
+      layerIsRemote = isLayerRemote(composeLayer.dataSourceId, composeLayer.sourceName)
       _ <- Fox.runIf(!layerIsRemote)(
         datasetSymlinkService.addSymlinksToOtherDatasetLayers(uploadDir, List(linkedLayerIdentifier)))
       editedLayer: DataLayer = layer match {
-        case l: PrecomputedDataLayer =>
-          l.copy(name = composeLayer.newName,
-                 coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
-        case l: PrecomputedSegmentationLayer =>
-          l.copy(name = composeLayer.newName,
-                 coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
-        case l: ZarrDataLayer =>
-          l.copy(name = composeLayer.newName,
-                 coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
-        case l: ZarrSegmentationLayer =>
-          l.copy(name = composeLayer.newName,
-                 coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
-        case l: N5DataLayer =>
-          l.copy(name = composeLayer.newName,
-                 coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
-        case l: N5SegmentationLayer =>
-          l.copy(name = composeLayer.newName,
-                 coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
-        case l: Zarr3DataLayer =>
-          l.copy(name = composeLayer.newName,
-                 coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
-        case l: Zarr3SegmentationLayer =>
-          l.copy(name = composeLayer.newName,
-                 coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
+        case l: DataLayerWithMagLocators =>
+          l.mapped(name = composeLayer.newName,
+                   coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
         case l: WKWDataLayer =>
           l.copy(name = composeLayer.newName,
                  coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
@@ -131,22 +105,24 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
       }
     } yield editedLayer
 
-  private def createDatasource(composeRequest: ComposeRequest, organizationName: String): Fox[DataSource] = {
-    val uploadDir = uploadDirectory(organizationName, composeRequest.newDatasetName)
+  private def createDatasource(composeRequest: ComposeRequest,
+                               datasetDirectoryName: String,
+                               organizationId: String,
+                               uploadDir: Path): Fox[DataSource] =
     for {
       layers <- Fox.serialCombined(composeRequest.layers.toList)(getLayerFromComposeLayer(_, uploadDir))
       dataSource = GenericDataSource(
-        DataSourceId(composeRequest.newDatasetName, organizationName),
+        DataSourceId(datasetDirectoryName, organizationId),
         layers,
-        composeRequest.scale,
+        composeRequest.voxelSize,
         None
       )
 
     } yield dataSource
-  }
 
   private def isLayerRemote(dataSourceId: DataSourceId, layerName: String) = {
-    val layerPath = dataBaseDir.resolve(dataSourceId.team).resolve(dataSourceId.name).resolve(layerName)
+    val layerPath =
+      dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName).resolve(layerName)
     !Files.exists(layerPath)
   }
 }

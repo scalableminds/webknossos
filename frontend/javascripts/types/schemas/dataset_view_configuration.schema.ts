@@ -1,5 +1,5 @@
 import { BLEND_MODES } from "oxalis/constants";
-import { type DatasetLayerConfiguration, type DatasetConfiguration } from "oxalis/store";
+import type { DatasetConfiguration, DatasetLayerConfiguration } from "oxalis/store";
 
 export function getDefaultLayerViewConfiguration(
   dynamicDefault: Partial<DatasetLayerConfiguration> = {},
@@ -14,6 +14,7 @@ export function getDefaultLayerViewConfiguration(
     isDisabled: false,
     isInverted: false,
     isInEditMode: false,
+    mapping: null,
   };
   return { ...defaultLayerViewConfiguration, ...dynamicDefault };
 }
@@ -64,6 +65,19 @@ export const layerViewConfiguration = {
   isInEditMode: {
     type: "boolean",
   },
+  mapping: {
+    type: ["object", "null"],
+    properties: {
+      name: {
+        type: "string",
+      },
+      type: {
+        type: "string",
+      },
+    },
+    required: ["name", "type"],
+    additionalProperties: false,
+  },
 };
 export const defaultDatasetViewConfigurationWithoutNull: DatasetConfiguration = {
   fourBit: false,
@@ -75,6 +89,7 @@ export const defaultDatasetViewConfigurationWithoutNull: DatasetConfiguration = 
   blendMode: BLEND_MODES.Additive,
   colorLayerOrder: [],
   nativelyRenderedLayerName: null,
+  selectiveSegmentVisibility: false,
 };
 export const defaultDatasetViewConfiguration = {
   ...defaultDatasetViewConfigurationWithoutNull,
@@ -134,6 +149,9 @@ export const datasetViewConfiguration = {
     items: {
       type: "string",
     },
+  },
+  nativelyRenderedLayerName: {
+    type: "string",
   },
 };
 export default {

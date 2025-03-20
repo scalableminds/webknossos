@@ -22,6 +22,8 @@ const WkstoreAdapterMock = {
 mockRequire("oxalis/model/bucket_data_handling/wkstore_adapter", WkstoreAdapterMock);
 const mockedCube = {
   isSegmentation: true,
+  shouldEagerlyMaintainUsedValueSet: () => false,
+  triggerBucketDataChanged: () => false,
 };
 const layer = {
   url: "url",
@@ -57,6 +59,7 @@ test.beforeEach((t) => {
       containsBucket: sinon.stub().returns(true),
       removeOutsideArea: sinon.stub(),
     },
+    shouldEagerlyMaintainUsedValueSet: () => false,
   };
   const connectionInfo = {
     log: sinon.stub(),

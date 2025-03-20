@@ -1,29 +1,29 @@
 package models.folder
 
 import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.{bool2Fox, option2Fox}
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
 import models.organization.{Organization, OrganizationDAO}
 import models.team.{TeamDAO, TeamService}
 import models.user.User
-import play.api.libs.json.{JsObject, Json, OFormat}
+import play.api.libs.json.{JsArray, JsObject, Json, OFormat}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import slick.sql.SqlAction
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import javax.inject.Inject
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 
-case class Folder(_id: ObjectId, name: String)
+case class Folder(_id: ObjectId, name: String, metadata: JsArray)
 
-case class FolderWithParent(_id: ObjectId, name: String, _parent: Option[ObjectId])
+case class FolderWithParent(_id: ObjectId, name: String, metadata: JsArray, _parent: Option[ObjectId])
 
-case class FolderParameters(name: String, allowedTeams: List[ObjectId])
+case class FolderParameters(name: String, allowedTeams: List[ObjectId], metadata: JsArray)
 object FolderParameters {
   implicit val jsonFormat: OFormat[FolderParameters] = Json.format[FolderParameters]
 }
@@ -48,17 +48,21 @@ class FolderService @Inject()(teamDAO: TeamDAO,
         teamService.publicWrites(t, requestingUserOrganization)) ?~> "dataset.list.teamWritesFailed"
       isEditable <- folderDAO.isEditable(folder._id)
     } yield
-      Json.obj("id" -> folder._id,
-               "name" -> folder.name,
-               "allowedTeams" -> teamsJs,
-               "allowedTeamsCumulative" -> teamsCumulativeJs,
-               "isEditable" -> isEditable)
+      Json.obj(
+        "id" -> folder._id,
+        "name" -> folder.name,
+        "metadata" -> folder.metadata,
+        "allowedTeams" -> teamsJs,
+        "allowedTeamsCumulative" -> teamsCumulativeJs,
+        "isEditable" -> isEditable
+      )
 
   def publicWritesWithParent(folderWithParent: FolderWithParent, allEditableIds: Set[ObjectId]): JsObject =
     Json.obj(
       "id" -> folderWithParent._id,
       "name" -> folderWithParent.name,
       "parent" -> folderWithParent._parent,
+      "metadata" -> folderWithParent.metadata,
       "isEditable" -> allEditableIds.contains(folderWithParent._id)
     )
 
@@ -78,7 +82,7 @@ class FolderService @Inject()(teamDAO: TeamDAO,
   def assertValidFolderName(name: String): Fox[Unit] =
     bool2Fox(!name.contains("/")) ?~> "folder.nameMustNotContainSlash"
 
-  def getOrCreateFromPathLiteral(folderPathLiteral: String, organizationId: ObjectId)(
+  def getOrCreateFromPathLiteral(folderPathLiteral: String, organizationId: String)(
       implicit ctx: DBAccessContext): Fox[ObjectId] =
     for {
       organization <- organizationDAO.findOne(organizationId)
@@ -117,7 +121,7 @@ class FolderService @Inject()(teamDAO: TeamDAO,
     remainingPathNames match {
       case pathNamesHead :: pathNamesTail =>
         for {
-          newFolder <- Fox.successful(Folder(ObjectId.generate, pathNamesHead))
+          newFolder <- Fox.successful(Folder(ObjectId.generate, pathNamesHead, JsArray.empty))
           _ <- folderDAO.insertAsChild(parentFolderId, newFolder)
           folderId <- createMissingFoldersForPathNames(newFolder._id, pathNamesTail)
         } yield folderId
@@ -133,10 +137,18 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected def isDeletedColumn(x: Folders): Rep[Boolean] = x.isdeleted
 
   protected def parse(r: FoldersRow): Fox[Folder] =
-    Fox.successful(Folder(ObjectId(r._Id), r.name))
+    for {
+      metadata <- parseMetadata(r.metadata)
+    } yield Folder(ObjectId(r._Id), r.name, metadata)
 
-  private def parseWithParent(t: (String, String, Option[String])): Fox[FolderWithParent] =
-    Fox.successful(FolderWithParent(ObjectId(t._1), t._2, t._3.map(ObjectId(_))))
+  private def parseWithParent(t: (String, String, String, Option[String])): Fox[FolderWithParent] =
+    for {
+      metadata <- parseMetadata(t._3)
+      folderWithParent = FolderWithParent(ObjectId(t._1), t._2, metadata, t._4.map(ObjectId(_)))
+    } yield folderWithParent
+
+  private def parseMetadata(literal: String): Fox[JsArray] =
+    JsonHelper.parseAndValidateJson[JsArray](literal)
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     readAccessQWithPrefix(requestingUserId, q"")
@@ -148,9 +160,9 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     rawAccessQ(write = true, requestingUserId, prefix = q"")
 
   private def rawAccessQ(write: Boolean, requestingUserId: ObjectId, prefix: SqlToken): SqlToken = {
-    val writeAccessPredicate = if (write) q"tr.isTeamManager" else q"${true}"
+    val writeAccessPredicate = if (write) q"tr.isTeamManager" else q"TRUE"
     val breadCrumbsAccessForFolder =
-      if (write) q"${false}"
+      if (write) q"FALSE"
       else
         q"""
        -- only for read access: you may read the ancestors of a folder you can access
@@ -166,7 +178,7 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
        )
        """
     val breadCrumbsAccessForDataset =
-      if (write) q"${false}"
+      if (write) q"FALSE"
       else
         q"""
        -- only for read access: you may read the ancestors of a dataset you can access
@@ -230,7 +242,7 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   override def findOne(folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Folder] =
     for {
       accessQuery <- readAccessQuery
-      rows <- run(q"SELECT $columns FROM webknossos.folders WHERE _id = $folderId and $accessQuery".as[FoldersRow])
+      rows <- run(q"SELECT $columns FROM webknossos.folders WHERE _id = $folderId AND $accessQuery".as[FoldersRow])
       parsed <- parseFirst(rows, "id")
     } yield parsed
 
@@ -244,6 +256,12 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       _ <- assertUpdateAccess(folderId)
       _ <- run(q"UPDATE webknossos.folders SET name = $name WHERE _id = $folderId".asUpdate)
+    } yield ()
+
+  def updateMetadata(folderId: ObjectId, metadata: JsArray)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(folderId)
+      _ <- run(q"UPDATE webknossos.folders SET metadata = $metadata WHERE _id = $folderId".asUpdate)
     } yield ()
 
   def findAllEditableIds(implicit ctx: DBAccessContext): Fox[List[ObjectId]] =
@@ -269,7 +287,7 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       accessQueryWithPrefix <- accessQueryFromAccessQWithPrefix(readAccessQWithPrefix, prefix = q"f.")
       accessQuery <- readAccessQuery
-      rows <- run(q"""SELECT f._id, f.name, fp._ancestor
+      rows <- run(q"""SELECT f._id, f.name, f.metadata, fp._ancestor
               FROM webknossos.folders_ f
               JOIN webknossos.folder_paths fp -- join to find immediate parent, this will also kick out self
               ON f._id = fp._descendant
@@ -278,11 +296,11 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
               FROM webknossos.folder_paths
               WHERE _ancestor = $folderId)
               AND $accessQueryWithPrefix
-              UNION ALL SELECT _id, name, NULL -- find self again, with no parent
+              UNION ALL SELECT _id, name, metadata, NULL -- find self again, with no parent
               FROM webknossos.folders_
               WHERE _id = $folderId
               AND $accessQuery
-              """.as[(String, String, Option[String])])
+              """.as[(String, String, String, Option[String])])
       parsed <- Fox.combined(rows.toList.map(parseWithParent))
     } yield parsed
 

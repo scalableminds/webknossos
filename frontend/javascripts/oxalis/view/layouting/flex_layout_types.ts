@@ -11,6 +11,7 @@ export type TabsetNode = {
   weight?: number;
   selected?: number;
   children: Array<TabNode>;
+  maximized?: boolean;
 };
 
 export type RowOrTabsetNode = TabsetNode | RowNode;

@@ -1,37 +1,100 @@
-import _ from "lodash";
 import { InfoCircleOutlined } from "@ant-design/icons";
+import { getAgglomeratesForDatasetLayer, getMappingsForDatasetLayer } from "admin/admin_rest_api";
 import {
+  Alert,
+  Checkbox,
+  Col,
+  Divider,
   Form,
   Input,
-  Checkbox,
-  Alert,
   InputNumber,
-  Col,
   Row,
-  Tooltip,
-  Table,
   Select,
-  Slider,
-  Divider,
+  Table,
+  Tooltip,
 } from "antd";
-import * as React from "react";
+import { Slider } from "components/slider";
 import { Vector3Input } from "libs/vector_input";
-import { validateLayerViewConfigurationObjectJSON, syncValidator } from "types/validation";
-import { getDefaultLayerViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
-import {
-  RecommendedConfiguration,
+import _ from "lodash";
+import messages, {
+  type RecommendedConfiguration,
   layerViewConfigurations,
   settings,
   settingsTooltips,
 } from "messages";
-import type { DatasetLayerConfiguration } from "oxalis/store";
-import { FormItemWithInfo, jsonEditStyle } from "./helper_components";
 import { BLEND_MODES } from "oxalis/constants";
+import type { DatasetConfiguration, DatasetLayerConfiguration } from "oxalis/store";
+import { useMemo, useState } from "react";
+import type { APIDataSourceId } from "types/api_flow_types";
+import { getDefaultLayerViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
+import { syncValidator, validateLayerViewConfigurationObjectJSON } from "types/validation";
 import ColorLayerOrderingTable from "./color_layer_ordering_component";
+import { FormItemWithInfo, jsonEditStyle } from "./helper_components";
 
 const FormItem = Form.Item;
 
-export default function DatasetSettingsViewConfigTab() {
+export default function DatasetSettingsViewConfigTab(props: {
+  dataSourceId: APIDataSourceId;
+  dataStoreURL: string | undefined;
+}) {
+  const { dataSourceId, dataStoreURL } = props;
+  const [availableMappingsPerLayerCache, setAvailableMappingsPerLayer] = useState<
+    Record<string, [string[], string[]]>
+  >({});
+
+  const validateDefaultMappings = useMemo(
+    () => async (configStr: string, dataStoreURL: string, dataSourceId: APIDataSourceId) => {
+      let config = {} as DatasetConfiguration["layers"];
+      try {
+        config = JSON.parse(configStr);
+      } catch (e: any) {
+        return Promise.reject(new Error("Invalid JSON format for : " + e.message));
+      }
+      const layerNamesWithDefaultMappings = Object.keys(config).filter(
+        (layerName) => config[layerName].mapping != null,
+      );
+
+      const maybeMappingRequests = layerNamesWithDefaultMappings.map(async (layerName) => {
+        if (layerName in availableMappingsPerLayerCache) {
+          return availableMappingsPerLayerCache[layerName];
+        }
+        try {
+          const jsonAndAgglomerateMappings = await Promise.all([
+            getMappingsForDatasetLayer(dataStoreURL, dataSourceId, layerName),
+            getAgglomeratesForDatasetLayer(dataStoreURL, dataSourceId, layerName),
+          ]);
+          setAvailableMappingsPerLayer((prev) => ({
+            ...prev,
+            [layerName]: jsonAndAgglomerateMappings,
+          }));
+          return jsonAndAgglomerateMappings;
+        } catch (e: any) {
+          console.error(e);
+          throw new Error(messages["mapping.loading_failed"](layerName));
+        }
+      });
+      const mappings = await Promise.all(maybeMappingRequests);
+      const errors = layerNamesWithDefaultMappings
+        .map((layerName, index) => {
+          const [mappingsForLayer, agglomeratesForLayer] = mappings[index];
+          const mappingType = config[layerName]?.mapping?.type;
+          const mappingName = config[layerName]?.mapping?.name;
+          const doesMappingExist =
+            mappingType === "HDF5"
+              ? agglomeratesForLayer.some((agglomerate) => agglomerate === mappingName)
+              : mappingsForLayer.some((mapping) => mapping === mappingName);
+          return doesMappingExist
+            ? null
+            : `The mapping "${mappingName}" of type "${mappingType}" does not exist for layer ${layerName}.`;
+        })
+        .filter((error) => error != null);
+      if (errors.length > 0) {
+        throw new Error("The following mappings are invalid: " + errors.join("\n"));
+      }
+    },
+    [availableMappingsPerLayerCache],
+  );
+
   const columns = [
     {
       title: "Name",
@@ -50,11 +113,27 @@ export default function DatasetSettingsViewConfigTab() {
       dataIndex: "comment",
     },
   ];
-  const comments: Partial<Record<keyof DatasetLayerConfiguration, string>> = {
-    alpha: "20 for segmentation layer",
-    min: "Only for color layers",
-    max: "Only for color layers",
-    intensityRange: "Only for color layers",
+  const comments: Partial<
+    Record<keyof DatasetLayerConfiguration, { shortComment: string; tooltip: string }>
+  > = {
+    alpha: { shortComment: "20 for segmentation layer", tooltip: "The default alpha value." },
+    min: {
+      shortComment: "Only for color layers",
+      tooltip: "The minimum possible color range value adjustable with the histogram slider.",
+    },
+    max: {
+      shortComment: "Only for color layers",
+      tooltip: "The maximum possible color range value adjustable with the histogram slider.",
+    },
+    intensityRange: {
+      shortComment: "Only for color layers",
+      tooltip: "The color value range between which color values are interpolated and shown.",
+    },
+    mapping: {
+      shortComment: "Active Mapping",
+      tooltip:
+        "The mapping whose type and name is active by default. This field is an object with the keys 'type' and 'name' like {name: 'agglomerate_65', type: 'HDF5'}.",
+    },
   };
   const layerViewConfigurationEntries = _.map(
     { ...getDefaultLayerViewConfiguration(), min: 0, max: 255, intensityRange: [0, 255] },
@@ -62,11 +141,20 @@ export default function DatasetSettingsViewConfigTab() {
       // @ts-ignore Typescript doesn't infer that key will be of type keyof DatasetLayerConfiguration
       const layerViewConfigurationKey: keyof DatasetLayerConfiguration = key;
       const name = layerViewConfigurations[layerViewConfigurationKey];
+      const comment = comments[layerViewConfigurationKey];
+      const commentContent =
+        comment != null ? (
+          <Tooltip title={comment.tooltip}>
+            {comment.shortComment} <InfoCircleOutlined />
+          </Tooltip>
+        ) : (
+          ""
+        );
       return {
         name,
         key,
         value: defaultValue == null ? "not set" : defaultValue.toString(),
-        comment: comments[layerViewConfigurationKey] || "",
+        comment: commentContent,
       };
     },
   );
@@ -92,6 +180,7 @@ export default function DatasetSettingsViewConfigTab() {
       </FormItem>
     </Col>
   ));
+
   return (
     <div>
       <Alert
@@ -114,7 +203,7 @@ export default function DatasetSettingsViewConfigTab() {
           <FormItemWithInfo
             name={["defaultConfiguration", "zoom"]}
             label="Zoom"
-            info="A zoom of &ldquo;1&rdquo; will display the data in its original resolution."
+            info="A zoom of &ldquo;1&rdquo; will display the data in its original magnification."
             rules={[
               {
                 validator: syncValidator(
@@ -134,8 +223,8 @@ export default function DatasetSettingsViewConfigTab() {
         <Col span={6}>
           <FormItemWithInfo
             name={["defaultConfiguration", "rotation"]}
-            label="Rotation"
-            info="The default rotation that will be used in oblique and arbitrary view mode."
+            label="Rotation - Arbitrary View Modes"
+            info="The default rotation that will be used in oblique and flight view mode."
           >
             <Vector3Input />
           </FormItemWithInfo>
@@ -212,7 +301,13 @@ export default function DatasetSettingsViewConfigTab() {
             info="Use the following JSON to define layer-specific properties, such as color, alpha and intensityRange."
             rules={[
               {
-                validator: validateLayerViewConfigurationObjectJSON,
+                validator: (_rule, config: string) =>
+                  Promise.all([
+                    validateLayerViewConfigurationObjectJSON(_rule, config),
+                    dataStoreURL
+                      ? validateDefaultMappings(config, dataStoreURL, dataSourceId)
+                      : Promise.resolve(),
+                  ]),
               },
             ]}
           >

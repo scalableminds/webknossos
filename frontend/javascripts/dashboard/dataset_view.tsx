@@ -1,51 +1,51 @@
-import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
 import {
-  Badge,
-  Button,
-  Radio,
-  Col,
-  Dropdown,
-  Input,
-  Row,
-  Spin,
-  Tooltip,
-  Alert,
-  Select,
-} from "antd";
-import {
+  HourglassOutlined,
+  InfoCircleOutlined,
   LoadingOutlined,
   PlusOutlined,
   ReloadOutlined,
-  SettingOutlined,
-  InfoCircleOutlined,
-  HourglassOutlined,
   SearchOutlined,
+  SettingOutlined,
 } from "@ant-design/icons";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
-import type { APIJob, APIDatasetCompact, APIUser, FolderItem } from "types/api_flow_types";
+import { getJobs } from "admin/admin_rest_api";
+import { TOOLTIP_MESSAGES_AND_ICONS } from "admin/job/job_list_view";
+import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import {
+  Alert,
+  Badge,
+  Button,
+  Col,
+  Dropdown,
+  Input,
+  Radio,
+  Row,
+  Select,
+  Space,
+  Spin,
+  Tooltip,
+} from "antd";
+import type { ItemType } from "antd/es/menu/interface";
+import FormattedDate from "components/formatted_date";
+import { PricingEnforcedButton } from "components/pricing_enforcers";
 import DatasetTable from "dashboard/advanced_dataset/dataset_table";
-import * as Utils from "libs/utils";
-import { CategorizationSearch } from "oxalis/view/components/categorization_label";
+import dayjs from "dayjs";
 import features from "features";
 import Persistence from "libs/persistence";
-import { getJobs } from "admin/admin_rest_api";
-import dayjs from "dayjs";
-import FormattedDate from "components/formatted_date";
-import { TOOLTIP_MESSAGES_AND_ICONS } from "admin/job/job_list_view";
+import * as Utils from "libs/utils";
 import { Unicode } from "oxalis/constants";
+import { CategorizationSearch } from "oxalis/view/components/categorization_label";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
-import { DatasetCollectionContextValue } from "./dataset/dataset_collection_context";
+import type { MenuProps } from "rc-menu";
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import type { APIDatasetCompact, APIJob, APIUser, FolderItem } from "types/api_flow_types";
+import type { DatasetCollectionContextValue } from "./dataset/dataset_collection_context";
 import {
   MINIMUM_SEARCH_QUERY_LENGTH,
   SEARCH_RESULTS_LIMIT,
   useFolderQuery,
 } from "./dataset/queries";
-import { PricingEnforcedButton } from "components/pricing_enforcers";
-import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import { MenuProps } from "rc-menu";
-import { ItemType } from "antd/lib/menu/hooks/useItems";
 
 type Props = {
   user: APIUser;
@@ -114,7 +114,7 @@ function DatasetView(props: Props) {
     if (features().jobsEnabled) {
       getJobs().then((newJobs) => setJobs(newJobs));
     }
-  }, []);
+  }, [setSearchQuery]);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
@@ -211,7 +211,7 @@ function DatasetView(props: Props) {
   const isUserAdminOrDatasetManagerOrTeamManager =
     isUserAdminOrDatasetManager || Utils.isUserTeamManager(user);
   const search = isUserAdminOrDatasetManager ? (
-    <Input.Group compact style={{ display: "flex" }}>
+    <Space.Compact style={{ display: "flex" }}>
       {searchBox}
       <Dropdown menu={filterMenu} trigger={["click"]}>
         <Button>
@@ -220,7 +220,7 @@ function DatasetView(props: Props) {
           </Badge>
         </Button>
       </Dropdown>
-    </Input.Group>
+    </Space.Compact>
   ) : (
     searchBox
   );
@@ -376,7 +376,7 @@ function GlobalSearchHeader({
       <div style={{ float: "right" }}>
         <Select
           options={SEARCH_OPTIONS}
-          dropdownMatchSelectWidth={false}
+          popupMatchSelectWidth={false}
           onChange={(value) => {
             if (value === "everywhere") {
               setActiveFolderId(null);
@@ -394,8 +394,8 @@ function GlobalSearchHeader({
             activeFolderId == null
               ? "everywhere"
               : context.searchRecursively
-              ? "folder-with-subfolders"
-              : "folder"
+                ? "folder-with-subfolders"
+                : "folder"
           }
         />
       </div>
@@ -403,7 +403,7 @@ function GlobalSearchHeader({
         <SearchOutlined />
         Search Results for &quot;{searchQuery}&quot;
         {filteredDatasets.length === SEARCH_RESULTS_LIMIT ? (
-          <span style={{ color: "var( --ant-text-secondary)", fontSize: 14, marginLeft: 8 }}>
+          <span style={{ color: "var( --ant-color-text-secondary)", fontSize: 14, marginLeft: 8 }}>
             (only showing the first {SEARCH_RESULTS_LIMIT} results)
           </span>
         ) : null}

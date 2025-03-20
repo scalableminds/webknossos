@@ -1,11 +1,16 @@
-import * as THREE from "three";
 import app from "app";
-import Maybe from "data.maybe";
+import type Maybe from "data.maybe";
 import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 import window from "libs/window";
 import _ from "lodash";
-import type { BoundingBoxType, OrthoView, OrthoViewMap, Vector3 } from "oxalis/constants";
+import type {
+  BoundingBoxType,
+  OrthoView,
+  OrthoViewMap,
+  OrthoViewWithoutTDMap,
+  Vector3,
+} from "oxalis/constants";
 import constants, {
   OrthoViews,
   OrthoViewValuesWithoutTDView,
@@ -13,7 +18,7 @@ import constants, {
 } from "oxalis/constants";
 import { getRenderer } from "oxalis/controller/renderer";
 import { setSceneController } from "oxalis/controller/scene_controller_provider";
-import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
+import type ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import Cube from "oxalis/geometries/cube";
 import {
   ContourGeometry,
@@ -27,8 +32,8 @@ import {
   getDatasetBoundingBox,
   getLayerBoundingBox,
   getLayerNameToIsDisabled,
-  getTransformsForLayerOrNull,
 } from "oxalis/model/accessors/dataset_accessor";
+import { getTransformsForLayerOrNull } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import { getActiveMagIndicesForLayers, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
@@ -36,10 +41,11 @@ import { getPlaneScalingFactor } from "oxalis/model/accessors/view_mode_accessor
 import { sceneControllerReadyAction } from "oxalis/model/actions/actions";
 import Dimensions from "oxalis/model/dimensions";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import { getVoxelPerNM } from "oxalis/model/scaleinfo";
+import { getVoxelPerUnit } from "oxalis/model/scaleinfo";
 import { Model } from "oxalis/singletons";
 import type { OxalisState, SkeletonTracing, UserBoundingBox } from "oxalis/store";
 import Store from "oxalis/store";
+import * as THREE from "three";
 import SegmentMeshController from "./segment_mesh_controller";
 
 const CUBE_COLOR = 0x999999;
@@ -50,38 +56,25 @@ class SceneController {
   current: number;
   isPlaneVisible: OrthoViewMap<boolean>;
   planeShift: Vector3;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'datasetBoundingBox' has no initializer a... Remove this comment to see the full error message
-  datasetBoundingBox: Cube;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'userBoundingBoxGroup' has no initializer... Remove this comment to see the full error message
-  userBoundingBoxGroup: THREE.Group;
+  datasetBoundingBox!: Cube;
+  userBoundingBoxGroup!: THREE.Group;
   layerBoundingBoxGroup!: THREE.Group;
   userBoundingBoxes!: Array<Cube>;
   layerBoundingBoxes!: { [layerName: string]: Cube };
   annotationToolsGeometryGroup!: THREE.Group;
   highlightedBBoxId: number | null | undefined;
   taskBoundingBox: Cube | null | undefined;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'contour' has no initializer and is not d... Remove this comment to see the full error message
-  contour: ContourGeometry;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'quickSelectGeometry' has no initializer and is not d... Remove this comment to see the full error message
-  quickSelectGeometry: QuickSelectGeometry;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'lineMeasurementGeometry' has no initializer and is not d... Remove this comment to see the full error message
-  lineMeasurementGeometry: LineMeasurementGeometry;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'areaMeasurementGeometry' has no initializer and is not d... Remove this comment to see the full error message
-  areaMeasurementGeometry: ContourGeometry;
-  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'OrthoViewWithoutTDMap'.
-  planes: OrthoViewWithoutTDMap<Plane>;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'rootNode' has no initializer and is not ... Remove this comment to see the full error message
-  rootNode: THREE.Object3D;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'renderer' has no initializer and is not ... Remove this comment to see the full error message
-  renderer: THREE.WebGLRenderer;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'scene' has no initializer and is not def... Remove this comment to see the full error message
-  scene: THREE.Scene;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'rootGroup' has no initializer and is not... Remove this comment to see the full error message
-  rootGroup: THREE.Object3D;
+  contour!: ContourGeometry;
+  quickSelectGeometry!: QuickSelectGeometry;
+  lineMeasurementGeometry!: LineMeasurementGeometry;
+  areaMeasurementGeometry!: ContourGeometry;
+  planes!: OrthoViewWithoutTDMap<Plane>;
+  rootNode!: THREE.Object3D;
+  renderer!: THREE.WebGLRenderer;
+  scene!: THREE.Scene;
+  rootGroup!: THREE.Object3D;
   // Group for all meshes including a light.
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'meshesRootGroup' has no initializer and ... Remove this comment to see the full error message
-  meshesRootGroup: THREE.Object3D;
-  stlMeshes: Record<string, THREE.Mesh> = {};
+  meshesRootGroup!: THREE.Object3D;
   segmentMeshController: SegmentMeshController;
 
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
@@ -113,8 +106,10 @@ class SceneController {
 
     this.meshesRootGroup = new THREE.Group();
     this.highlightedBBoxId = null;
-    // The dimension(s) with the highest resolution will not be distorted
-    this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.dataSource.scale));
+    // The dimension(s) with the highest mag will not be distorted
+    this.rootGroup.scale.copy(
+      new THREE.Vector3(...Store.getState().dataset.dataSource.scale.factor),
+    );
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.rootGroup);
     this.scene.add(this.segmentMeshController.meshesLODRootGroup);
@@ -130,13 +125,13 @@ class SceneController {
     window.addBucketMesh = (
       position: Vector3,
       zoomStep: number,
-      resolution: Vector3,
+      mag: Vector3,
       optColor?: string,
     ) => {
       const bucketSize = [
-        constants.BUCKET_WIDTH * resolution[0],
-        constants.BUCKET_WIDTH * resolution[1],
-        constants.BUCKET_WIDTH * resolution[2],
+        constants.BUCKET_WIDTH * mag[0],
+        constants.BUCKET_WIDTH * mag[1],
+        constants.BUCKET_WIDTH * mag[2],
       ];
       const boxGeometry = new THREE.BoxGeometry(...bucketSize);
       const edgesGeometry = new THREE.EdgesGeometry(boxGeometry);
@@ -199,22 +194,6 @@ class SceneController {
 
     // @ts-ignore
     window.removeBucketMesh = (mesh: THREE.LineSegments) => this.rootNode.remove(mesh);
-  }
-
-  removeSTL(id: string): void {
-    this.meshesRootGroup.remove(this.stlMeshes[id]);
-  }
-
-  setMeshVisibility(id: string, visibility: boolean): void {
-    this.stlMeshes[id].visible = visibility;
-  }
-
-  updateMeshPostion(id: string, position: Vector3): void {
-    const [x, y, z] = position;
-    const mesh = this.stlMeshes[id];
-    mesh.position.x = x;
-    mesh.position.y = y;
-    mesh.position.z = z;
   }
 
   createMeshes(): void {
@@ -419,7 +398,7 @@ class SceneController {
 
   setClippingDistance(value: number): void {
     // convert nm to voxel
-    const voxelPerNMVector = getVoxelPerNM(Store.getState().dataset.dataSource.scale);
+    const voxelPerNMVector = getVoxelPerUnit(Store.getState().dataset.dataSource.scale);
     V3.scale(voxelPerNMVector, value, this.planeShift);
     app.vent.emit("rerender");
   }

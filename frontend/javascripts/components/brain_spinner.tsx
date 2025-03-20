@@ -1,11 +1,11 @@
-import * as React from "react";
-import { APIOrganization } from "types/api_flow_types";
-import { AsyncButton } from "components/async_clickables";
 import { switchToOrganization } from "admin/admin_rest_api";
-import messages from "messages";
-import { Link } from "react-router-dom";
-import { Button, Col, Row } from "antd";
 import LoginForm from "admin/auth/login_form";
+import { Button, Card, Col, Row } from "antd";
+import { AsyncButton } from "components/async_clickables";
+import messages from "messages";
+import type * as React from "react";
+import { Link } from "react-router-dom";
+import type { APIOrganization } from "types/api_flow_types";
 
 type Props = {
   message?: React.ReactNode;
@@ -59,7 +59,7 @@ export function BrainSpinnerWithError({
       type="primary"
       onClick={async () => {
         if (organizationToSwitchTo != null) {
-          await switchToOrganization(organizationToSwitchTo.name);
+          await switchToOrganization(organizationToSwitchTo.id);
         }
       }}
     >
@@ -69,7 +69,7 @@ export function BrainSpinnerWithError({
 
   const message =
     organizationToSwitchTo != null
-      ? `This ${entity} belongs to the organization ${organizationToSwitchTo.displayName} which is currently not your active organization. Do you want to switch to that organization?`
+      ? `This ${entity} belongs to the organization ${organizationToSwitchTo.name} which is currently not your active organization. Do you want to switch to that organization?`
       : `Either the ${entity} does not exist or you do not have the necessary access rights.`;
   return (
     <BrainSpinner
@@ -78,16 +78,18 @@ export function BrainSpinnerWithError({
           <div style={{ textAlign: "center" }}>
             {gotUnhandledError ? messages["tracing.unhandled_initialization_error"] : message}
           </div>
-          {organizationToSwitchTo != null ? <div>{switchToOwningOrganizationButton}</div> : null}
-          <div>
-            <Link
-              to="/"
-              style={{
-                marginTop: 16,
-              }}
-            >
-              <Button type="primary">Return to dashboard</Button>
-            </Link>
+          <div className="flex-center-child" style={{ gap: 8 }}>
+            {organizationToSwitchTo != null ? <div>{switchToOwningOrganizationButton}</div> : null}
+            <div>
+              <Link
+                to="/"
+                style={{
+                  marginTop: 16,
+                }}
+              >
+                <Button type="primary">Return to dashboard</Button>
+              </Link>
+            </div>
           </div>
         </>
       }
@@ -98,19 +100,13 @@ export function BrainSpinnerWithError({
 
 export function CoverWithLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
   return (
-    <div className="cover-whole-screen">
-      <Row
-        justify="center"
-        style={{
-          padding: 50,
-        }}
-        align="middle"
-      >
-        <Col span={8}>
+    <Row justify="center" align="middle" className="login-view">
+      <Col xs={22} sm={20} md={16} lg={12} xl={8}>
+        <Card className="login-content">
           <h3>Try logging in to view the dataset.</h3>
           <LoginForm layout="horizontal" onLoggedIn={onLoggedIn} />
-        </Col>
-      </Row>
-    </div>
+        </Card>
+      </Col>
+    </Row>
   );
 }

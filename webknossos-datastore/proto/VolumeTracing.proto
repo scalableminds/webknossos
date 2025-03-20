@@ -3,60 +3,71 @@ syntax = "proto2";
 package com.scalableminds.webknossos.datastore;
 
 import "geometry.proto";
+import "MetadataEntry.proto";
 
 message Segment {
-	  required int64 segmentId = 1;
-	  optional Vec3IntProto anchorPosition = 2;
-	  optional string name = 3;
-	  optional int64 creationTime = 4;
-    optional ColorProto color = 5;
-    optional int32 groupId = 6;
-    repeated AdditionalCoordinateProto anchorPositionAdditionalCoordinates = 7;
+	required int64 segmentId = 1;
+	optional Vec3IntProto anchorPosition = 2;
+	optional string name = 3;
+	optional int64 creationTime = 4;
+  optional ColorProto color = 5;
+  optional int32 groupId = 6;
+  repeated AdditionalCoordinateProto anchorPositionAdditionalCoordinates = 7;
+  repeated MetadataEntryProto metadata = 11;
 }
 
 message VolumeTracing {
-    enum ElementClassProto {
-        uint8 = 1;
-        uint16 = 2;
-        uint24 = 3;
-        uint32 = 4;
-        uint64 = 8;
-    }
+  // Do not use with floating point element classes
+  enum ElementClassProto {
+    // field number equals byteCount + (unsigned ? 0 : 10).
+    uint8 = 1;
+    uint16 = 2;
+    uint24 = 3;
+    uint32 = 4;
+    uint64 = 8;
+    int8 = 11;
+    int16 = 12;
+    int32 = 14;
+    int64 = 18;
+  }
 
-    optional int64 activeSegmentId = 1;
-    required BoundingBoxProto boundingBox = 2;
-    required int64 createdTimestamp = 3;
-    required string datasetName = 4; // used when parsing and handling nmls, not used in tracing store anymore, do not rely on correct values
-    required Vec3IntProto editPosition = 5;
-    required Vec3DoubleProto editRotation = 6;
-    required ElementClassProto elementClass = 7;
-    optional string fallbackLayer = 8;
-    optional int64 largestSegmentId = 9;
-    required int64 version = 10;
-    required double zoomLevel = 11;
-    optional BoundingBoxProto userBoundingBox = 12;
-    repeated NamedBoundingBoxProto userBoundingBoxes = 13;
-    optional string organizationName = 14; // used when parsing and handling nmls, not used in tracing store anymore, do not rely on correct values
-    repeated Vec3IntProto resolutions = 15;
-    repeated Segment segments = 16;
-    optional string mappingName = 17; // either a mapping present in the fallback layer, or an editable mapping on the tracingstore
-    optional bool mappingIsEditable = 18;
-    repeated SegmentGroup segmentGroups = 19;
-    optional bool hasSegmentIndex = 20;
-    repeated AdditionalCoordinateProto editPositionAdditionalCoordinates = 21;
-    repeated AdditionalAxisProto additionalAxes = 22; // Additional axes for which this tracing is defined
+  optional int64 activeSegmentId = 1;
+  required BoundingBoxProto boundingBox = 2;
+  required int64 createdTimestamp = 3;
+  required string datasetName = 4; // used when parsing and handling nmls, not used in tracing store anymore, do not rely on correct values
+  required Vec3IntProto editPosition = 5;
+  required Vec3DoubleProto editRotation = 6;
+  required ElementClassProto elementClass = 7;
+  optional string fallbackLayer = 8;
+  optional int64 largestSegmentId = 9;
+  required int64 version = 10;
+  required double zoomLevel = 11;
+  optional BoundingBoxProto userBoundingBox = 12;
+  repeated NamedBoundingBoxProto userBoundingBoxes = 13;
+  optional string organizationId = 14; // used when parsing and handling nmls, not used in tracing store anymore, do not rely on correct values
+  repeated Vec3IntProto mags = 15;
+  repeated Segment segments = 16;
+  optional string mappingName = 17; // either a mapping present in the fallback layer, or an editable mapping on the tracingstore
+  optional bool hasEditableMapping = 18; // the selected mapping is an editable mapping
+  repeated SegmentGroup segmentGroups = 19;
+  optional bool hasSegmentIndex = 20;
+  repeated AdditionalCoordinateProto editPositionAdditionalCoordinates = 21;
+  repeated AdditionalAxisProto additionalAxes = 22; // Additional axes for which this tracing is defined
+  optional bool mappingIsLocked = 23; // user may not select another mapping (e.g. because they have already mutated buckets)
+  optional bool volumeBucketDataHasChanged = 24; // The volume bucket data has been edited at least once
 }
 
 message SegmentGroup {
   required string name = 1;
   required int32 groupId = 2;
   repeated SegmentGroup children = 3;
+  optional bool isExpanded = 4;
 }
 
 message VolumeTracingOpt {
-    optional VolumeTracing tracing = 1;
+  optional VolumeTracing tracing = 1;
 }
 
 message VolumeTracings {
-    repeated VolumeTracingOpt tracings = 1;
+  repeated VolumeTracingOpt tracings = 1;
 }

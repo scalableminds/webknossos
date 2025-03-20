@@ -1,21 +1,22 @@
+import { V3 } from "libs/mjs";
+import { document } from "libs/window";
+import _ from "lodash";
+import type { BoundingBoxType, OrthoView, Point2, Vector2, Vector3 } from "oxalis/constants";
+import getSceneController from "oxalis/controller/scene_controller_provider";
+import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
+  calculateGlobalDelta,
   calculateGlobalPos,
   calculateMaybeGlobalPos,
 } from "oxalis/model/accessors/view_mode_accessor";
-import _ from "lodash";
-import type { OrthoView, Point2, Vector3, BoundingBoxType, Vector2 } from "oxalis/constants";
-import Store from "oxalis/store";
-import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
-import type { DimensionMap, DimensionIndices } from "oxalis/model/dimensions";
-import Dimension from "oxalis/model/dimensions";
 import {
   addUserBoundingBoxAction,
   changeUserBoundingBoxAction,
 } from "oxalis/model/actions/annotation_actions";
-import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
-import getSceneController from "oxalis/controller/scene_controller_provider";
-import { document } from "libs/window";
-import { V3 } from "libs/mjs";
+import type { DimensionIndices, DimensionMap } from "oxalis/model/dimensions";
+import Dimension from "oxalis/model/dimensions";
+import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
+import Store, { type OxalisState, type UserBoundingBox } from "oxalis/store";
 
 const BOUNDING_BOX_HOVERING_THROTTLE_TIME = 100;
 const getNeighbourEdgeIndexByEdgeIndex: { [key: number]: Vector2 } = {
@@ -167,7 +168,7 @@ export function getClosestHoveredBoundingBox(
 
   const { userBoundingBoxes } = getSomeTracing(state.tracing);
   const indices = Dimension.getIndices(plane);
-  const planeRatio = getBaseVoxelFactors(state.dataset.dataSource.scale);
+  const planeRatio = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
   const thirdDim = indices[2];
   const zoomedMaxDistanceToSelection = MAX_DISTANCE_TO_SELECTION * state.flycam.zoomStep;
   let currentNearestDistance = zoomedMaxDistanceToSelection;
@@ -241,6 +242,8 @@ export function createBoundingBoxAndGetEdges(
     addUserBoundingBoxAction({
       boundingBox: {
         min: globalPosition,
+        // The last argument ensures that a Vector3 is used and not a
+        // Float32Array.
         max: V3.add(globalPosition, [1, 1, 1], [0, 0, 0]),
       },
     }),
@@ -248,7 +251,7 @@ export function createBoundingBoxAndGetEdges(
   const { userBoundingBoxes } = getSomeTracing(Store.getState().tracing);
 
   const indices = Dimension.getIndices(plane);
-  let newestBoundingBox =
+  const newestBoundingBox =
     userBoundingBoxes.length > 0 ? userBoundingBoxes[userBoundingBoxes.length - 1] : null;
 
   if (newestBoundingBox == null) {
@@ -264,7 +267,7 @@ export function createBoundingBoxAndGetEdges(
 }
 
 export const highlightAndSetCursorOnHoveredBoundingBox = _.throttle(
-  (position: Point2, planeId: OrthoView) => {
+  (position: Point2, planeId: OrthoView, event: MouseEvent | KeyboardEvent) => {
     const hoveredEdgesInfo = getClosestHoveredBoundingBox(position, planeId);
     // Access the parent element as that is where the cursor style property is set
     const inputCatcher = document.getElementById(`inputcatcher_${planeId}`)?.parentElement;
@@ -272,8 +275,9 @@ export const highlightAndSetCursorOnHoveredBoundingBox = _.throttle(
     if (hoveredEdgesInfo != null && inputCatcher != null) {
       const [primaryHoveredEdge, secondaryHoveredEdge] = hoveredEdgesInfo;
       getSceneController().highlightUserBoundingBox(primaryHoveredEdge.boxId);
-
-      if (secondaryHoveredEdge != null) {
+      if (event.ctrlKey || event.metaKey) {
+        inputCatcher.style.cursor = "move";
+      } else if (secondaryHoveredEdge != null) {
         // If a corner is selected.
         inputCatcher.style.cursor =
           (primaryHoveredEdge.isMaxEdge && secondaryHoveredEdge.isMaxEdge) ||
@@ -295,6 +299,15 @@ export const highlightAndSetCursorOnHoveredBoundingBox = _.throttle(
   },
   BOUNDING_BOX_HOVERING_THROTTLE_TIME,
 );
+
+function getBoundingBoxOfPrimaryEdge(
+  primaryEdge: SelectedEdge,
+  state: OxalisState,
+): UserBoundingBox | undefined {
+  const { userBoundingBoxes } = getSomeTracing(state.tracing);
+  return userBoundingBoxes.find((bbox) => bbox.id === primaryEdge.boxId);
+}
+
 export function handleResizingBoundingBox(
   mousePosition: Point2,
   planeId: OrthoView,
@@ -303,8 +316,7 @@ export function handleResizingBoundingBox(
 ) {
   const state = Store.getState();
   const globalMousePosition = calculateGlobalPos(state, mousePosition, planeId);
-  const { userBoundingBoxes } = getSomeTracing(state.tracing);
-  const bboxToResize = userBoundingBoxes.find((bbox) => bbox.id === primaryEdge.boxId);
+  const bboxToResize = getBoundingBoxOfPrimaryEdge(primaryEdge, state);
 
   if (!bboxToResize) {
     return;
@@ -357,6 +369,31 @@ export function handleResizingBoundingBox(
       secondaryEdge.isMaxEdge = !secondaryEdge.isMaxEdge;
     }
   }
+
+  Store.dispatch(
+    changeUserBoundingBoxAction(primaryEdge.boxId, {
+      boundingBox: updatedBounds,
+    }),
+  );
+}
+
+export function handleMovingBoundingBox(
+  delta: Point2,
+  planeId: OrthoView,
+  primaryEdge: SelectedEdge,
+) {
+  const state = Store.getState();
+  const globalDelta = calculateGlobalDelta(state, delta, planeId);
+  const bboxToResize = getBoundingBoxOfPrimaryEdge(primaryEdge, state);
+
+  if (!bboxToResize) {
+    return;
+  }
+
+  const updatedBounds = {
+    min: V3.toArray(V3.add(bboxToResize.boundingBox.min, globalDelta)),
+    max: V3.toArray(V3.add(bboxToResize.boundingBox.max, globalDelta)),
+  };
 
   Store.dispatch(
     changeUserBoundingBoxAction(primaryEdge.boxId, {

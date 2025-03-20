@@ -2,6 +2,7 @@ package com.scalableminds.util.geometry
 
 import com.scalableminds.util.tools.Math.ceilDiv
 import net.liftweb.common.Full
+import play.api.libs.json.{JsObject, Json}
 
 case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
 
@@ -70,6 +71,9 @@ case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
     Vec3Int(width, height, depth)
 
   def toLiteral: String = f"${topLeft.x},${topLeft.y},${topLeft.z},$width,$height,$depth"
+
+  def toWkLibsJson: JsObject =
+    Json.obj("topLeft" -> topLeft, "width" -> width, "height" -> height, "depth" -> depth)
 }
 
 object BoundingBox {

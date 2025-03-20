@@ -1,11 +1,11 @@
 import PriorityQueue from "js-priority-queue";
-import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
-import { requestWithFallback } from "oxalis/model/bucket_data_handling/wkstore_adapter";
+import { asAbortable, sleep } from "libs/utils";
 import type { BucketAddress } from "oxalis/constants";
+import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import { requestWithFallback } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import type { DataStoreInfo } from "oxalis/store";
 import Store from "oxalis/store";
-import { asAbortable, sleep } from "libs/utils";
 
 export type PullQueueItem = {
   priority: number;
@@ -162,7 +162,15 @@ class PullQueue {
     const bucket = this.cube.getBucket(bucketAddress);
 
     if (bucket.type === "data") {
-      bucket.receiveData(bucketData);
+      if (this.cube.shouldEagerlyMaintainUsedValueSet()) {
+        // If we assume that the value set of the bucket is needed often (for proofreading),
+        // we compute it here eagerly and then send the data to the bucket.
+        // That way, the computations of the value set are spread out over time instead of being
+        // clustered when DataCube.getValueSetForAllBuckets is called. This improves the FPS rate.
+        bucket.receiveData(bucketData, true);
+      } else {
+        bucket.receiveData(bucketData);
+      }
     }
   }
 

@@ -31,9 +31,8 @@ case class ZarrHeader(
     override val order: ArrayOrder
 ) extends DatasetHeader {
 
-  lazy val datasetShape: Array[Int] = shape
-  lazy val chunkSize: Array[Int] = chunks
-  lazy val dataType: String = dtype
+  override lazy val datasetShape: Option[Array[Int]] = Some(shape)
+  override lazy val chunkShape: Array[Int] = chunks
 
   override lazy val byteOrder: ByteOrder =
     if (dtype.startsWith(">")) ByteOrder.BIG_ENDIAN
@@ -47,9 +46,7 @@ case class ZarrHeader(
   lazy val resolvedDataType: ArrayDataType =
     ArrayDataType.fromString(dtype.filter(char => char != '>' && char != '<' & char != '|')).get
 
-  lazy val elementClass: Option[ElementClass.Value] = ElementClass.guessFromZarrString(dtype)
-
-  lazy val voxelOffset: Array[Int] = Array.fill(datasetShape.length)(0)
+  lazy val voxelOffset: Array[Int] = Array.fill(rank)(0)
 }
 
 object ZarrHeader extends JsonImplicits {
@@ -65,15 +62,19 @@ object ZarrHeader extends JsonImplicits {
     // data request method always decompresses before sending
     val compressor = None
 
-    val shape = Array(
-      channels,
-      // Zarr can't handle data sets that don't start at 0, so we extend shape to include "true" coords
+    val additionalAxesShapeEntries =
+      dataLayer.additionalAxes.map(axes => axes.map(_.bounds(1)).toArray).getOrElse(Array.empty)
+    val additionalAxesChunksEntries =
+      dataLayer.additionalAxes.map(axes => axes.map(_ => 1).toArray).getOrElse(Array.empty)
+
+    val shape = Array(channels) ++ additionalAxesShapeEntries ++ Array(
+      // Zarr can't handle data sets that don't start at 0, so we extend the shape to include "true" coords
       (dataLayer.boundingBox.width + dataLayer.boundingBox.topLeft.x) / mag.x,
       (dataLayer.boundingBox.height + dataLayer.boundingBox.topLeft.y) / mag.y,
       (dataLayer.boundingBox.depth + dataLayer.boundingBox.topLeft.z) / mag.z
     )
 
-    val chunks = Array(channels, cubeLength, cubeLength, cubeLength)
+    val chunks = Array(channels) ++ additionalAxesChunksEntries ++ Array(cubeLength, cubeLength, cubeLength)
 
     ZarrHeader(zarr_format = 2,
                shape = shape,

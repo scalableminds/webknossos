@@ -48,11 +48,11 @@ trait CompressedSegmentation[T <: AnyVal] extends ByteUtils {
           val bitmask = (1 << encodedBits) - 1
           for (z <- zmin until zmax) {
             for (y <- ymin until ymax) {
-              var outindex = (z * (volumeSize(1)) + y) * volumeSize(0) + xmin
-              var bitpos = blockSize.x * ((z - zmin) * (blockSize.y) + (y - ymin)) * encodedBits
-              for (x <- xmin until xmax) {
+              var outindex = (z * volumeSize(1) + y) * volumeSize(0) + xmin
+              var bitpos = blockSize.x * ((z - zmin) * blockSize.y + (y - ymin)) * encodedBits
+              for (_ <- xmin until xmax) {
                 val bitshift = bitpos % 32
-                val arraypos = bitpos / (32)
+                val arraypos = bitpos / 32
                 var bitval = 0
                 if (encodedBits > 0) {
                   bitval = (input(encodedValueStart + arraypos) >> bitshift) & bitmask
@@ -76,7 +76,7 @@ trait CompressedSegmentation[T <: AnyVal] extends ByteUtils {
       .flatMap(channel => decompressChannel(input.drop(input(channel)), volumeSize, blockSize))
       .toArray
 
-  def valueAsLong(v: T): Long
+  def valueToBytes(v: T): Array[Byte]
 
   def decompress(encodedBytes: Array[Byte], volumeSize: Array[Int], blockSize: Vec3Int)(
       implicit c: ClassTag[T]): Array[Byte] = {
@@ -87,8 +87,8 @@ trait CompressedSegmentation[T <: AnyVal] extends ByteUtils {
     }
     val input32 = new Array[Int](encodedBytes.length / 4)
     ByteBuffer.wrap(encodedBytes).order(ByteOrder.LITTLE_ENDIAN).asIntBuffer().get(input32)
-    val values = decompressChannels(input32, vs, blockSize)
-    values.flatMap(v => longToBytes(valueAsLong(v)))
+    val values: Array[T] = decompressChannels(input32, vs, blockSize)
+    values.flatMap(v => valueToBytes(v))
   }
 }
 
@@ -101,7 +101,7 @@ object CompressedSegmentation32 extends CompressedSegmentation[Int] {
   override def readValue(input: Array[Int], position: Int): Int =
     input(position)
 
-  override def valueAsLong(v: Int): Long = v.toLong
+  def valueToBytes(v: Int): Array[Byte] = intToBytes(v)
 }
 
 object CompressedSegmentation64 extends CompressedSegmentation[Long] {
@@ -113,5 +113,5 @@ object CompressedSegmentation64 extends CompressedSegmentation[Long] {
   override def readValue(input: Array[Int], position: Int): Long =
     ByteBuffer.wrap(ByteBuffer.allocate(8).putInt(input(position + 1)).putInt(input(position)).array()).getLong
 
-  override def valueAsLong(v: Long): Long = v
+  def valueToBytes(v: Long): Array[Byte] = longToBytes(v)
 }

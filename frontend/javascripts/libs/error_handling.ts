@@ -1,10 +1,10 @@
 import { Notifier } from "@airbrake/browser";
+import Toast from "libs/toast";
+import window, { document, location } from "libs/window";
 import _ from "lodash";
+import messages from "messages";
 import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";
 import type { APIUser } from "types/api_flow_types";
-import Toast from "libs/toast";
-import messages from "messages";
-import window, { document, location } from "libs/window";
 // Note that if you set this value to true for debugging airbrake reporting,
 // you also need to set the values for projectID and projectKey in application.conf
 const LOG_LOCAL_ERRORS = false;
@@ -18,6 +18,7 @@ const BLACKLISTED_ERROR_MESSAGES = [
   "Invariant Violation: Cannot call hover while not dragging.", // Errors from the sortable-tree when dragging an element onto itself
   "Uncaught Invariant Violation: Expected to find a valid target.",
   "Uncaught TypeError: Cannot read property 'path' of null",
+  "WebGLContextLost",
 ];
 type ErrorHandlingOptions = {
   throwAssertions: boolean;
@@ -127,15 +128,19 @@ class ErrorHandling {
       // Create our own error for unhandled rejections here to get additional information for [Object object] errors in airbrake
       const reasonAsString = event.reason instanceof Error ? event.reason.toString() : event.reason;
       let wrappedError = event.reason instanceof Error ? event.reason : new Error(event.reason);
-      wrappedError = {
-        ...wrappedError,
-        // The message property is read-only in newer browser versions which is why
-        // the object is copied shallowly.
-        message: UNHANDLED_REJECTION_PREFIX + JSON.stringify(reasonAsString).slice(0, 80),
-      };
+
+      const newMessage = UNHANDLED_REJECTION_PREFIX + JSON.stringify(reasonAsString).slice(0, 80);
+      try {
+        // In the past, we had records of the following line not working because message was read-only.
+        // However, with Chrome, Firefox, Safari and Edge, that bug could not be reproduced in July 2024.
+        // Therefore, we assume that the code should work. If not, we don't augment the error message.
+        // Instead, the exceptionType is passed to the notify() method below.
+        wrappedError.message = newMessage;
+      } catch {}
 
       this.notify(wrappedError, {
         originalError: reasonAsString,
+        exceptionType: "unhandledrejection",
       });
     });
 
@@ -174,7 +179,6 @@ class ErrorHandling {
         error = new Error(message);
       }
 
-      console.error(error);
       this.notify(error);
 
       if (error.toString() === "Error: Script error.") {

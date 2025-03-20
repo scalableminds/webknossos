@@ -1,8 +1,6 @@
-import _ from "lodash";
-import React, { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import * as Utils from "libs/utils";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  DatasetUpdater,
+  type DatasetUpdater,
   getDataset,
   getDatasets,
   updateDatasetPartial,
@@ -15,19 +13,20 @@ import {
   moveFolder,
   updateFolder,
 } from "admin/api/folders";
+import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import _ from "lodash";
 import { useEffect, useRef } from "react";
 import {
-  APIDatasetId,
-  APIDatasetCompact,
-  FlatFolderTreeItem,
-  Folder,
-  FolderItem,
-  FolderUpdater,
+  type APIDataset,
+  type APIDatasetCompact,
+  type FlatFolderTreeItem,
+  type Folder,
+  type FolderItem,
+  type FolderUpdater,
   convertDatasetToCompact,
-  APIDataset,
 } from "types/api_flow_types";
-import { handleGenericError } from "libs/error_handling";
 
 export const SEARCH_RESULTS_LIMIT = 100;
 export const MINIMUM_SEARCH_QUERY_LENGTH = 3;
@@ -46,11 +45,18 @@ export function useFolderQuery(folderId: string | null) {
     {
       refetchOnWindowFocus: false,
       enabled: folderId != null,
+      // Avoid default retry delay with exponential back-off
+      // to shorten the delay after which webKnossos will switch
+      // to the root folder.
+      // This is relevant for the case where the current folder
+      // does not exist, anymore (e.g., was deleted by somebody
+      // else).
+      retryDelay: 500,
     },
   );
 }
 
-export function useDatasetQuery(datasetId: APIDatasetId) {
+export function useDatasetQuery(datasetId: string) {
   const queryKey = ["datasetById", datasetId];
   return useQuery(
     queryKey,
@@ -113,9 +119,14 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
    * - ask the user if they want to update the list IF something changes
    * - do nothing (since the cache is up to date)
    *
-   * We do this by disabling the main query by default (and enabling it when
-   * necessary). Also the main query reads its result from the prefetched
+   * We do this by disabling the main query by default and setting the data
+   * manually. The main query will read its result from the prefetched
    * data (if available).
+   *
+   * **Note** that invalidateQueries() calls won't have a direct, visible effect
+   * due to the above mechanism IF the query data is already rendered.
+   * Therefore, queryClient.setQueryData() or datasetsInFolderQuery.refetch()
+   * should be used instead in these scenarios.
    */
 
   const queryClient = useQueryClient();
@@ -147,6 +158,7 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
     },
   );
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation whether further dependencies are necessary.
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
     if (queryData.data == null || queryData.data.length === 0) {
@@ -266,7 +278,7 @@ export function useCreateFolderMutation() {
       queryClient.setQueryData(
         mutationKey,
         transformHierarchy((oldItems: FlatFolderTreeItem[] | undefined) =>
-          (oldItems || []).concat([{ ...newFolder, parent: parentId }]),
+          (oldItems || []).concat([{ ...newFolder, parent: parentId, metadata: [] }]),
         ),
       );
     },
@@ -382,15 +394,15 @@ export function useUpdateDatasetMutation(folderId: string | null) {
   const mutationKey = ["datasetsByFolder", folderId];
 
   return useMutation(
-    (params: [APIDatasetId, DatasetUpdater] | APIDatasetId) => {
+    (params: [string, DatasetUpdater] | string) => {
       // If a APIDatasetId is provided, simply refetch the dataset
       // without any mutation so that it gets reloaded effectively.
-      if ("owningOrganization" in params) {
-        const datasetId = params;
-        return getDataset(datasetId);
+      if (Array.isArray(params)) {
+        const [id, updater] = params;
+        return updateDatasetPartial(id, updater);
       }
-      const [id, updater] = params;
-      return updateDatasetPartial(id, updater);
+      const datasetId = params;
+      return getDataset(datasetId);
     },
     {
       mutationKey,
@@ -398,7 +410,7 @@ export function useUpdateDatasetMutation(folderId: string | null) {
         queryClient.setQueryData(mutationKey, (oldItems: APIDatasetCompact[] | undefined) =>
           (oldItems || [])
             .map((oldDataset: APIDatasetCompact) => {
-              return oldDataset.name === updatedDataset.name
+              return oldDataset.id === updatedDataset.id
                 ? // Don't update lastUsedByUser, since this can lead to annoying reorderings in the table.
                   convertDatasetToCompact({
                     ...updatedDataset,
@@ -408,6 +420,8 @@ export function useUpdateDatasetMutation(folderId: string | null) {
             })
             .filter((dataset: APIDatasetCompact) => dataset.folderId === folderId),
         );
+        // Also update the cached dataset under the key "datasetById".
+        queryClient.setQueryData(["datasetById", updatedDataset.id], updatedDataset);
         const targetFolderId = updatedDataset.folderId;
         if (targetFolderId !== folderId) {
           // The dataset was moved to another folder. Add the dataset to that target folder
@@ -427,7 +441,7 @@ export function useUpdateDatasetMutation(folderId: string | null) {
                   // The dataset shouldn't be in oldItems, but if it should be
                   // for some reason (e.g., a bug), we filter it away to avoid
                   // duplicates.
-                  .filter((el) => el.name !== updatedDataset.name)
+                  .filter((el) => el.id !== updatedDataset.id)
                   .concat([convertDatasetToCompact(updatedDataset)])
               );
             },
@@ -471,18 +485,18 @@ function diffDatasets(
     onlyB: onlyInNew,
     both,
   } = Utils.diffArrays(
-    oldDatasets.map((ds) => ds.name),
-    newDatasets.map((ds) => ds.name),
+    oldDatasets.map((ds) => ds.id),
+    newDatasets.map((ds) => ds.id),
   );
 
-  const oldDatasetsDict = _.keyBy(oldDatasets, (ds) => ds.name);
-  const newDatasetsDict = _.keyBy(newDatasets, (ds) => ds.name);
+  const oldDatasetsDict = _.keyBy(oldDatasets, (ds) => ds.id);
+  const newDatasetsDict = _.keyBy(newDatasets, (ds) => ds.id);
 
   const changedDatasets = both
-    .map((name) => newDatasetsDict[name])
+    .map((id) => newDatasetsDict[id])
     .filter((newDataset) => {
-      const oldDataset = oldDatasetsDict[newDataset.name];
-      return !_.isEqualWith(oldDataset, newDataset, (_objValue, _otherValue, key) => {
+      const oldDataset = oldDatasetsDict[newDataset.id];
+      return !_.isEqualWith(oldDataset, newDataset, (_oldValue, _newValue, key) => {
         if (key === "lastUsedByUser") {
           // Ignore the lastUsedByUser timestamp when diffing datasets.
           return true;
@@ -542,7 +556,7 @@ function getUnobtrusivelyUpdatedDatasets(
    * lastUsedByUser property, as this would change the ordering when the default sorting is used.
    */
 
-  const idFn = (dataset: APIDatasetCompact) => `${dataset.owningOrganization}#${dataset.name}`;
+  const idFn = (dataset: APIDatasetCompact) => dataset.id;
 
   const newDatasetsById = _.keyBy(newDatasets, idFn);
   return oldDatasets.map((oldDataset) => {
@@ -572,6 +586,7 @@ export function getFolderHierarchy(folderTree: FlatFolderTreeItem[]): FolderHier
       title: folderTreeItem.name,
       isEditable: folderTreeItem.isEditable,
       parent: folderTreeItem.parent,
+      metadata: folderTreeItem.metadata,
       children: [],
     };
     if (folderTreeItem.parent == null) {

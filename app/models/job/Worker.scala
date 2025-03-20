@@ -3,19 +3,19 @@ package models.job
 import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mvc.Formatter
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
-import models.dataset.DataStoreDAO
 import models.job.JobCommand.JobCommand
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
 import slick.lifted.Rep
 import telemetry.SlackNotificationService
 import utils.sql.{SQLDAO, SqlClient}
-import utils.{ObjectId, WkConf}
+import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -23,11 +23,12 @@ import scala.concurrent.duration._
 
 case class Worker(_id: ObjectId,
                   _dataStore: String,
+                  name: String,
                   key: String,
                   maxParallelHighPriorityJobs: Int,
                   maxParallelLowPriorityJobs: Int,
                   supportedJobCommands: Set[JobCommand],
-                  lastHeartBeat: Long = 0,
+                  lastHeartBeat: Instant = Instant.zero,
                   created: Instant = Instant.now,
                   isDeleted: Boolean = false)
 
@@ -48,11 +49,12 @@ class WorkerDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       Worker(
         ObjectId(r._Id),
         r._Datastore,
+        r.name,
         r.key,
         r.maxparallelhighpriorityjobs,
         r.maxparallellowpriorityjobs,
         supportedJobCommands.toSet,
-        r.lastheartbeat.getTime,
+        Instant.fromSql(r.lastheartbeat),
         Instant.fromSql(r.created),
         r.isdeleted
       )
@@ -77,14 +79,15 @@ class WorkerDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   }
 }
 
-class WorkerService @Inject()(conf: WkConf, dataStoreDAO: DataStoreDAO, workerDAO: WorkerDAO) {
+class WorkerService @Inject()(conf: WkConf) {
 
   def lastHeartBeatIsRecent(worker: Worker): Boolean =
-    System.currentTimeMillis() - worker.lastHeartBeat < conf.Jobs.workerLivenessTimeout.toMillis
+    Instant.since(worker.lastHeartBeat) < conf.Jobs.workerLivenessTimeout
 
   def publicWrites(worker: Worker): JsObject =
     Json.obj(
       "id" -> worker._id.id,
+      "name" -> worker.name,
       "maxParallelHighPriorityJobs" -> worker.maxParallelHighPriorityJobs,
       "maxParallelLowPriorityJobs" -> worker.maxParallelLowPriorityJobs,
       "supportedJobCommands" -> worker.supportedJobCommands,
@@ -99,7 +102,7 @@ class WorkerLivenessService @Inject()(workerService: WorkerService,
                                       workerDAO: WorkerDAO,
                                       slackNotificationService: SlackNotificationService,
                                       val lifecycle: ApplicationLifecycle,
-                                      val system: ActorSystem)(implicit val ec: ExecutionContext)
+                                      val actorSystem: ActorSystem)(implicit val ec: ExecutionContext)
     extends IntervalScheduler
     with Formatter
     with LazyLogging {
@@ -108,13 +111,11 @@ class WorkerLivenessService @Inject()(workerService: WorkerService,
 
   override protected def tickerInterval: FiniteDuration = 1 minute
 
-  override protected def tick(): Unit = {
+  override protected def tick(): Fox[Unit] =
     for {
       workers <- workerDAO.findAll(GlobalAccessContext)
       _ = workers.foreach(reportIfLivenessChanged)
     } yield ()
-    ()
-  }
 
   private val reportedAsDead: scala.collection.mutable.Set[ObjectId] = scala.collection.mutable.Set()
 
@@ -131,13 +132,15 @@ class WorkerLivenessService @Inject()(workerService: WorkerService,
   }
 
   private def reportAsDead(worker: Worker): Unit = {
-    val msg = s"Worker ${worker._id} is not reporting. Last heartbeat was at ${formatDate(worker.lastHeartBeat)}"
+    val msg =
+      s"Worker ${worker.name} (${worker._id}) is not reporting. Last heartbeat was at ${worker.lastHeartBeat}"
     slackNotificationService.warn("Worker missing", msg)
     logger.warn(msg)
   }
 
   private def reportAsResurrected(worker: Worker): Unit = {
-    val msg = s"Worker ${worker._id} is reporting again. Last heartbeat was at ${formatDate(worker.lastHeartBeat)}"
+    val msg =
+      s"Worker ${worker.name} (${worker._id}) is reporting again. Last heartbeat was at ${worker.lastHeartBeat}"
     slackNotificationService.success("Worker return", msg)
     logger.info(msg)
   }

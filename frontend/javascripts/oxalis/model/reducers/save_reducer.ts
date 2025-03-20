@@ -1,174 +1,102 @@
-import _ from "lodash";
 import update from "immutability-helper";
-import type { Action } from "oxalis/model/actions/actions";
-import type { OxalisState, SaveState, SaveQueueEntry } from "oxalis/store";
-import type {
-  PushSaveQueueTransaction,
-  SetVersionNumberAction,
-  ShiftSaveQueueAction,
-  SetLastSaveTimestampAction,
-} from "oxalis/model/actions/save_actions";
-import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";
-import { getStats } from "oxalis/model/accessors/annotation_accessor";
-import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "oxalis/model/sagas/save_saga_constants";
-import { selectQueue } from "oxalis/model/accessors/save_accessor";
-import { updateKey2 } from "oxalis/model/helpers/deep_update";
-import {
-  updateEditableMapping,
-  updateVolumeTracing,
-} from "oxalis/model/reducers/volumetracing_reducer_helpers";
 import Date from "libs/date";
-import * as Utils from "libs/utils";
+import _ from "lodash";
+import { type TracingStats, getStats } from "oxalis/model/accessors/annotation_accessor";
+import type { Action } from "oxalis/model/actions/actions";
+import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";
+import { updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
+import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "oxalis/model/sagas/save_saga_constants";
+import type { OxalisState, SaveState } from "oxalis/store";
 
-function updateQueueObj(
-  action: PushSaveQueueTransaction | ShiftSaveQueueAction,
-  oldQueueObj: SaveState["queue"],
-  newQueue: any,
-): SaveState["queue"] {
-  if (action.saveQueueType === "skeleton") {
-    return { ...oldQueueObj, skeleton: newQueue };
-  } else if (action.saveQueueType === "volume") {
-    return { ...oldQueueObj, volumes: { ...oldQueueObj.volumes, [action.tracingId]: newQueue } };
-  } else if (action.saveQueueType === "mapping") {
-    return { ...oldQueueObj, mappings: { ...oldQueueObj.mappings, [action.tracingId]: newQueue } };
-  }
-
-  return oldQueueObj;
-}
+// These update actions are not idempotent. Having them
+// twice in the save queue causes a corruption of the current annotation.
+// Therefore, we check this.
+const NOT_IDEMPOTENT_ACTIONS = [
+  "createEdge",
+  "deleteEdge",
+  "createTree",
+  "deleteTree",
+  "createNode",
+  "deleteNode",
+];
 
 export function getTotalSaveQueueLength(queueObj: SaveState["queue"]) {
-  return (
-    queueObj.skeleton.length +
-    _.sum(
-      Utils.values(queueObj.volumes).map((volumeQueue: SaveQueueEntry[]) => volumeQueue.length),
-    ) +
-    _.sum(
-      Utils.values(queueObj.mappings).map((mappingQueue: SaveQueueEntry[]) => mappingQueue.length),
-    )
-  );
-}
-
-function updateVersion(state: OxalisState, action: SetVersionNumberAction) {
-  if (action.saveQueueType === "skeleton" && state.tracing.skeleton != null) {
-    return updateKey2(state, "tracing", "skeleton", {
-      version: action.version,
-    });
-  } else if (action.saveQueueType === "volume") {
-    return updateVolumeTracing(state, action.tracingId, {
-      version: action.version,
-    });
-  } else if (action.saveQueueType === "mapping") {
-    return updateEditableMapping(state, action.tracingId, {
-      version: action.version,
-    });
-  }
-
-  return state;
-}
-
-function updateLastSaveTimestamp(state: OxalisState, action: SetLastSaveTimestampAction) {
-  if (action.saveQueueType === "skeleton") {
-    return updateKey2(state, "save", "lastSaveTimestamp", {
-      skeleton: action.timestamp,
-    });
-  } else if (action.saveQueueType === "volume") {
-    const newVolumesDict = {
-      ...state.save.lastSaveTimestamp.volumes,
-      [action.tracingId]: action.timestamp,
-    };
-    return updateKey2(state, "save", "lastSaveTimestamp", {
-      volumes: newVolumesDict,
-    });
-  } else if (action.saveQueueType === "mapping") {
-    const newMappingsDict = {
-      ...state.save.lastSaveTimestamp.mappings,
-      [action.tracingId]: action.timestamp,
-    };
-    return updateKey2(state, "save", "lastSaveTimestamp", {
-      mappings: newMappingsDict,
-    });
-  }
-
-  return state;
+  return queueObj.length;
 }
 
 function SaveReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
-    case "INITIALIZE_VOLUMETRACING": {
-      // Set up empty save queue array for volume tracing
-      const newVolumesQueue = { ...state.save.queue.volumes, [action.tracing.id]: [] };
-      return updateKey2(state, "save", "queue", {
-        volumes: newVolumesQueue,
-      });
-    }
-
-    case "INITIALIZE_EDITABLE_MAPPING": {
-      // Set up empty save queue array for editable mapping
-      const newMappingsQueue = { ...state.save.queue.mappings, [action.mapping.tracingId]: [] };
-      return updateKey2(state, "save", "queue", {
-        mappings: newMappingsQueue,
-      });
-    }
-
     case "PUSH_SAVE_QUEUE_TRANSACTION": {
-      // Only report tracing statistics, if a "real" update to the tracing happened
-      const stats = _.some(action.items, (ua) => ua.name !== "updateTracing")
-        ? getStats(state.tracing, action.saveQueueType, action.tracingId)
-        : null;
-      const { items, transactionId } = action;
-
-      if (items.length > 0) {
-        const { activeUser } = state;
-        if (activeUser == null) {
-          throw new Error("Tried to save something even though user is not logged in.");
-        }
-
-        const updateActionChunks = _.chunk(
-          items,
-          MAXIMUM_ACTION_COUNT_PER_BATCH[action.saveQueueType],
-        );
-
-        const transactionGroupCount = updateActionChunks.length;
-        const actionLogInfo = JSON.stringify(getActionLog().slice(-10));
-        const oldQueue = selectQueue(state, action.saveQueueType, action.tracingId);
-        const newQueue = oldQueue.concat(
-          updateActionChunks.map((actions, transactionGroupIndex) => ({
-            // Placeholder, the version number will be updated before sending to the server
-            version: -1,
-            transactionId,
-            transactionGroupCount,
-            transactionGroupIndex,
-            timestamp: Date.now(),
-            authorId: activeUser.id,
-            actions,
-            stats,
-            // Redux Action Log context for debugging purposes.
-            info: actionLogInfo,
-          })),
-        );
-        const newQueueObj = updateQueueObj(action, state.save.queue, newQueue);
-        return update(state, {
-          save: {
-            queue: {
-              $set: newQueueObj,
-            },
-            progressInfo: {
-              totalActionCount: {
-                $apply: (count) => count + items.length,
-              },
-            },
-          },
-        });
+      // Use `dispatchedAction` to better distinguish this variable from
+      // update actions.
+      const dispatchedAction = action;
+      const { items, transactionId } = dispatchedAction;
+      const stats: TracingStats = getStats(state.tracing);
+      const { activeUser } = state;
+      if (activeUser == null) {
+        throw new Error("Tried to save something even though user is not logged in.");
       }
 
-      return state;
+      const updateActionChunks = _.chunk(items, MAXIMUM_ACTION_COUNT_PER_BATCH);
+
+      const transactionGroupCount = updateActionChunks.length;
+      const actionLogInfo = JSON.stringify(getActionLog().slice(-10));
+      const oldQueue = state.save.queue;
+      const newQueue = oldQueue.concat(
+        updateActionChunks.map((actions, transactionGroupIndex) => ({
+          // Placeholder, the version number will be updated before sending to the server
+          version: -1,
+          transactionId,
+          transactionGroupCount,
+          transactionGroupIndex,
+          timestamp: Date.now(),
+          authorId: activeUser.id,
+          actions,
+          stats,
+          // Redux Action Log context for debugging purposes.
+          info: actionLogInfo,
+        })),
+      );
+
+      // The following code checks that the update actions are not identical to the previously
+      // added ones. We have received a bug report that showed corrupted data that should be
+      // caught by the following check. If the bug appears again, we can investigate with more
+      // details thanks to airbrake.
+      if (
+        oldQueue.length > 0 &&
+        newQueue.length > 0 &&
+        newQueue.at(-1)?.actions.some((action) => NOT_IDEMPOTENT_ACTIONS.includes(action.name)) &&
+        _.isEqual(oldQueue.at(-1)?.actions, newQueue.at(-1)?.actions)
+      ) {
+        console.warn(
+          "Redundant saving was detected.",
+          oldQueue.at(-1)?.actions,
+          newQueue.at(-1)?.actions,
+        );
+        throw new Error(
+          "An internal error has occurred. To prevent data corruption, no saving was performed. Please reload the page and try the last action again.",
+        );
+      }
+
+      return update(state, {
+        save: {
+          queue: {
+            $set: newQueue,
+          },
+          progressInfo: {
+            totalActionCount: {
+              $apply: (count) => count + items.length,
+            },
+          },
+        },
+      });
     }
 
     case "SHIFT_SAVE_QUEUE": {
       const { count } = action;
 
       if (count > 0) {
-        const queue = selectQueue(state, action.saveQueueType, action.tracingId);
+        const queue = state.save.queue;
 
         const processedQueueActionCount = _.sumBy(
           queue.slice(0, count),
@@ -176,13 +104,12 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
         );
 
         const remainingQueue = queue.slice(count);
-        const newQueueObj = updateQueueObj(action, state.save.queue, remainingQueue);
-        const remainingQueueLength = getTotalSaveQueueLength(newQueueObj);
+        const remainingQueueLength = getTotalSaveQueueLength(remainingQueue);
         const resetCounter = remainingQueueLength === 0;
         return update(state, {
           save: {
             queue: {
-              $set: newQueueObj,
+              $set: remainingQueue,
             },
             progressInfo: {
               // Reset progress counters if the queue is empty. Otherwise,
@@ -205,11 +132,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
       return update(state, {
         save: {
           queue: {
-            $set: {
-              skeleton: [],
-              volumes: _.mapValues(state.save.queue.volumes, () => []),
-              mappings: _.mapValues(state.save.queue.mappings, () => []),
-            },
+            $set: [],
           },
           progressInfo: {
             processedActionCount: {
@@ -226,21 +149,21 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
     case "SET_SAVE_BUSY": {
       return update(state, {
         save: {
-          isBusyInfo: {
-            [action.saveQueueType]: {
-              $set: action.isBusy,
-            },
+          isBusy: {
+            $set: action.isBusy,
           },
         },
       });
     }
 
     case "SET_LAST_SAVE_TIMESTAMP": {
-      return updateLastSaveTimestamp(state, action);
+      return updateKey(state, "save", { lastSaveTimestamp: action.timestamp });
     }
 
     case "SET_VERSION_NUMBER": {
-      return updateVersion(state, action);
+      return updateKey(state, "tracing", {
+        version: action.version,
+      });
     }
 
     case "DISABLE_SAVING": {

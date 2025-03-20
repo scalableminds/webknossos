@@ -2,7 +2,7 @@ import { Button, InputNumber, Modal } from "antd";
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
 import { mayUserEditDataset } from "libs/utils";
-import { getBitDepth, getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
+import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
 import {
   getSegmentationLayerForTracing,
   getVolumeTracingByLayerName,
@@ -11,6 +11,7 @@ import {
   createCellAction,
   setLargestSegmentIdAction,
 } from "oxalis/model/actions/volumetracing_actions";
+import { getSupportedValueRangeForElementClass } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import type { OxalisState, VolumeTracing } from "oxalis/store";
 import Store from "oxalis/throttled_store";
 import * as React from "react";
@@ -83,7 +84,9 @@ export default function EnterLargestSegmentIdModal({
     editString
   );
 
-  const maxValue = 2 ** getBitDepth(segmentationLayer);
+  const [minValue, maxValue] = getSupportedValueRangeForElementClass(
+    segmentationLayer.elementClass,
+  );
 
   return (
     <Modal open title="Enter Largest Segment ID" onOk={handleOk} onCancel={handleCancel}>
@@ -100,7 +103,7 @@ export default function EnterLargestSegmentIdModal({
       <div style={{ display: "grid", placeItems: "center" }}>
         <InputNumber
           size="large"
-          min={1}
+          min={minValue}
           max={maxValue}
           value={largestSegmentId}
           onChange={setLargestSegmentId}

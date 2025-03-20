@@ -4,7 +4,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
-import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, UnsignedInteger}
+import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, SegmentInteger}
 import play.api.libs.json.{Json, OFormat}
 
 import scala.concurrent.ExecutionContext
@@ -19,22 +19,22 @@ object SegmentStatisticsParameters {
 
 trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
 
-  def calculateSegmentVolume(
-      segmentId: Long,
-      mag: Vec3Int,
-      additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-      getBucketPositions: (Long, Vec3Int) => Fox[ListOfVec3IntProto],
-      getTypedDataForBucketPosition: (
-          Vec3Int,
-          Vec3Int,
-          Option[Seq[AdditionalCoordinate]]) => Fox[Array[UnsignedInteger]])(implicit ec: ExecutionContext): Fox[Long] =
+  def calculateSegmentVolume(segmentId: Long,
+                             mag: Vec3Int,
+                             additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+                             getBucketPositions: (Long, Vec3Int) => Fox[ListOfVec3IntProto],
+                             getTypedDataForBucketPosition: (
+                                 Vec3Int,
+                                 Vec3Int,
+                                 Option[Seq[AdditionalCoordinate]]) => Fox[Array[SegmentInteger]])(
+      implicit ec: ExecutionContext): Fox[Long] =
     for {
       bucketPositionsProtos: ListOfVec3IntProto <- getBucketPositions(segmentId, mag)
       bucketPositionsInMag = bucketPositionsProtos.values.map(vec3IntFromProto)
       volumeBoxes <- Fox.serialSequence(bucketPositionsInMag.toList)(bucketPosition =>
         for {
-          dataTyped: Array[UnsignedInteger] <- getTypedDataForBucketPosition(bucketPosition, mag, additionalCoordinates)
-          count = dataTyped.count(unsignedInteger => unsignedInteger.toPositiveLong == segmentId)
+          dataTyped: Array[SegmentInteger] <- getTypedDataForBucketPosition(bucketPosition, mag, additionalCoordinates)
+          count = dataTyped.count(segmentInteger => segmentInteger.toLong == segmentId)
         } yield count.toLong)
       counts <- Fox.combined(volumeBoxes.map(_.toFox))
     } yield counts.sum
@@ -47,7 +47,7 @@ trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
                                   getTypedDataForBucketPosition: (
                                       Vec3Int,
                                       Vec3Int,
-                                      Option[Seq[AdditionalCoordinate]]) => Fox[Array[UnsignedInteger]])(
+                                      Option[Seq[AdditionalCoordinate]]) => Fox[Array[SegmentInteger]])(
       implicit ec: ExecutionContext): Fox[BoundingBox] =
     for {
       allBucketPositions: ListOfVec3IntProto <- getBucketPositions(segmentId, mag)
@@ -93,22 +93,22 @@ trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
         .map(vec3IntFromProto)
     }
 
-  private def extendBoundingBoxByData(
-      mag: Vec3Int,
-      segmentId: Long,
-      mutableBoundingBox: scala.collection.mutable.ListBuffer[Int],
-      bucketPosition: Vec3Int,
-      additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-      getTypedDataForBucketPosition: (Vec3Int,
-                                      Vec3Int,
-                                      Option[Seq[AdditionalCoordinate]]) => Fox[Array[UnsignedInteger]]): Fox[Unit] =
+  private def extendBoundingBoxByData(mag: Vec3Int,
+                                      segmentId: Long,
+                                      mutableBoundingBox: scala.collection.mutable.ListBuffer[Int],
+                                      bucketPosition: Vec3Int,
+                                      additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+                                      getTypedDataForBucketPosition: (
+                                          Vec3Int,
+                                          Vec3Int,
+                                          Option[Seq[AdditionalCoordinate]]) => Fox[Array[SegmentInteger]]): Fox[Unit] =
     for {
-      dataTyped: Array[UnsignedInteger] <- getTypedDataForBucketPosition(bucketPosition, mag, additionalCoordinates)
+      dataTyped: Array[SegmentInteger] <- getTypedDataForBucketPosition(bucketPosition, mag, additionalCoordinates)
       bucketTopLeftInTargetMagVoxels = bucketPosition * DataLayer.bucketLength
       _ = scanDataAndExtendBoundingBox(dataTyped, bucketTopLeftInTargetMagVoxels, segmentId, mutableBoundingBox)
     } yield ()
 
-  private def scanDataAndExtendBoundingBox(dataTyped: Array[UnsignedInteger],
+  private def scanDataAndExtendBoundingBox(dataTyped: Array[SegmentInteger],
                                            bucketTopLeftInTargetMagVoxels: Vec3Int,
                                            segmentId: Long,
                                            mutableBoundingBox: scala.collection.mutable.ListBuffer[Int]): Unit =
@@ -118,7 +118,7 @@ trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
       z <- 0 until DataLayer.bucketLength
       index = z * DataLayer.bucketLength * DataLayer.bucketLength + y * DataLayer.bucketLength + x
     } yield {
-      if (dataTyped(index).toPositiveLong == segmentId) {
+      if (dataTyped(index).toLong == segmentId) {
         val voxelPosition = bucketTopLeftInTargetMagVoxels + Vec3Int(x, y, z)
         extendBoundingBoxByPosition(mutableBoundingBox, voxelPosition)
       }

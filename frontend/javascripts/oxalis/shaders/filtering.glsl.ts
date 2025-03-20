@@ -140,6 +140,13 @@ export const getMaybeFilteredColorOrFallback: ShaderModule = {
     ) {
       vec4[2] color = getColorForCoords64(layerIndex, d_texture_width, packingDegree, worldPositionUVW, supportsPrecomputedBucketAddress);
 
+      // Segment ids are always handled as two vec4s (8 byte). On some hardware, floating point
+      // accuracies can lead to bytes that are stored incorrectly (e.g., as 0.99999 instead of 1).
+      // As a workaround, we round here. A proper (future) fix would probably be to not use floats
+      // when accessing textures in the first place.
+      color[0] = round(color[0]);
+      color[1] = round(color[1]);
+
       if (color[1].a < 0.0) {
         // Render gray for not-yet-existing data
         color[1] = fallbackColor;

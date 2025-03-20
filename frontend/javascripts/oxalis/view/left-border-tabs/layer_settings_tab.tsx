@@ -699,7 +699,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             key: "deleteAnnotationLayer",
           }
         : null,
-      hasHistogram && !isDisabled
+      !isDisabled
         ? { label: this.getEditMinMaxButton(layerName, isInEditMode), key: "editMinMax" }
         : null,
       hasHistogram && !isDisabled

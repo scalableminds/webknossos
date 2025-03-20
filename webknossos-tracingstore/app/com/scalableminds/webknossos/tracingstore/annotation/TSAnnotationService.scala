@@ -24,7 +24,10 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingUpdateAction,
   EditableMappingUpdater
 }
-import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTracingService
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{
+  SkeletonTracingService,
+  SkeletonTracingWithUpdatedTreeIds
+}
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.SkeletonUpdateAction
 import com.scalableminds.webknossos.tracingstore.tracings.volume._
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
@@ -402,12 +405,14 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       skeletonTracings <- Fox.serialCombined(skeletonTracingIds.toList)(id =>
         findSkeletonRawFilledWithTreeBodies(id, Some(annotation.version))) ?~> "findSkeletonRaw.failed"
       volumeTracings <- Fox.serialCombined(volumeTracingIds.toList)(id => findVolumeRaw(id, Some(annotation.version))) ?~> "findVolumeRaw.failed"
-      skeletonTracingsMap: Map[String, Either[(SkeletonTracing, Set[Int]), VolumeTracing]] = skeletonTracingIds
-        .zip(skeletonTracings.map(versioned =>
-          Left[(SkeletonTracing, Set[Int]), VolumeTracing](versioned.value, Set.empty)))
+      skeletonTracingsMap: Map[String, Either[SkeletonTracingWithUpdatedTreeIds, VolumeTracing]] = skeletonTracingIds
+        .zip(
+          skeletonTracings.map(versioned =>
+            Left[SkeletonTracingWithUpdatedTreeIds, VolumeTracing](
+              SkeletonTracingWithUpdatedTreeIds(versioned.value, Set.empty))))
         .toMap
-      volumeTracingsMap: Map[String, Either[(SkeletonTracing, Set[Int]), VolumeTracing]] = volumeTracingIds
-        .zip(volumeTracings.map(versioned => Right[(SkeletonTracing, Set[Int]), VolumeTracing](versioned.value)))
+      volumeTracingsMap: Map[String, Either[SkeletonTracingWithUpdatedTreeIds, VolumeTracing]] = volumeTracingIds
+        .zip(volumeTracings.map(versioned => Right[SkeletonTracingWithUpdatedTreeIds, VolumeTracing](versioned.value)))
         .toMap
     } yield AnnotationWithTracings(annotation, skeletonTracingsMap ++ volumeTracingsMap, Map.empty)
   }

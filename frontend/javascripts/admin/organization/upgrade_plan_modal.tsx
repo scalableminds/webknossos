@@ -14,6 +14,7 @@ import {
 import { Button, Divider, InputNumber, Modal } from "antd";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import dayjs from "dayjs";
+import features from "features";
 import { formatCurrency } from "libs/format_utils";
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
@@ -24,7 +25,6 @@ import type { APIOrganization } from "types/api_flow_types";
 import { TeamAndPowerPlanUpgradeCards } from "./organization_cards";
 import { powerPlanFeatures, teamPlanFeatures } from "./pricing_plan_utils";
 import { PricingPlanEnum } from "./pricing_plan_utils";
-import features from "features";
 
 const ModalInformationFooter = (
   <>
@@ -308,7 +308,7 @@ export function orderWebknossosCredits() {
 function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
   const userInputRef = useRef<HTMLInputElement | null>(null);
   const defaultCostPerCreditInEuro = formatCurrency(features().costPerCreditInEuro, "€");
-  const defaultCostPerCreditInDollar = formatCurrency(features().costPerCreditInDollar, "€");
+  const defaultCostPerCreditInDollar = formatCurrency(features().costPerCreditInDollar, "$");
   const [creditCostAsString, setCreditCostsAsString] = useState<string>(
     `${defaultCostPerCreditInEuro}€/${defaultCostPerCreditInDollar}$`,
   );

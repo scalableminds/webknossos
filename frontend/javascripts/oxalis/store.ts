@@ -69,6 +69,7 @@ import type {
   ServerEditableMapping,
   TracingType,
 } from "types/api_flow_types";
+import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import type { StartAIJobModalState } from "./view/action-bar/starting_job_modals";
 
@@ -304,7 +305,7 @@ export type DatasetLayerConfiguration = {
   readonly brightness?: number;
   readonly contrast?: number;
   readonly alpha: number;
-  readonly intensityRange?: Vector2;
+  readonly intensityRange?: readonly [number, number];
   readonly min?: number;
   readonly max?: number;
   readonly isDisabled: boolean;
@@ -605,6 +606,9 @@ export type OxalisState = {
   readonly task: Task | null | undefined;
   readonly save: SaveState;
   readonly flycam: Flycam;
+  readonly flycamInfoCache: {
+    readonly maximumZoomForAllMags: Record<string, number[]>;
+  };
   readonly viewModeData: ViewModeData;
   readonly activeUser: APIUser | null | undefined;
   readonly activeOrganization: APIOrganization | null;
@@ -640,6 +644,7 @@ const combinedReducers = reduceReducers(
   TaskReducer,
   SaveReducer,
   FlycamReducer,
+  FlycamInfoCacheReducer,
   ViewModeReducer,
   AnnotationReducer,
   UserReducer,

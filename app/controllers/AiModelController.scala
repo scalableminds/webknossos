@@ -186,6 +186,7 @@ class AiModelController @Inject()(
         jobCommand = JobCommand.infer_with_model
         boundingBox <- BoundingBox.fromLiteral(request.body.boundingBox).toFox
         commandArgs = Json.obj(
+          "dataset_id" -> dataset._id,
           "organization_id" -> organization._id,
           "dataset_name" -> dataset.name,
           "color_layer_name" -> request.body.colorLayerName,

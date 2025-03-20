@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, ElementClass}
 import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, ProtoGeometryImplicits}
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, SegmentInteger, SegmentIntegerArray}
 import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
@@ -74,6 +74,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
       // previous bytes: include fallback layer bytes if available, otherwise use empty bytes
       previousBucketBytesWithEmptyFallback <- bytesWithEmptyFallback(previousBucketBytesBox, elementClass) ?~> "volumeSegmentIndex.update.getPreviousBucket.failed"
       segmentIds: Set[Long] <- collectSegmentIds(bucketBytesDecompressed, elementClass)
+      _ = logger.info(s"Collected segments: $segmentIds")
       previousSegmentIds: Set[Long] <- collectSegmentIds(previousBucketBytesWithEmptyFallback, elementClass) ?~> "volumeSegmentIndex.update.collectSegmentIds.failed"
       additions = segmentIds.diff(previousSegmentIds)
       removals = previousSegmentIds.diff(segmentIds)
@@ -148,8 +149,14 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
       }
     } yield ()
 
+  lazy val bucketScanner = new NativeBucketScanner()
+
   private def collectSegmentIds(bytes: Array[Byte], elementClass: ElementClassProto)(
       implicit ec: ExecutionContext): Fox[Set[Long]] =
+    /*tryo(
+      bucketScanner
+        .collectSegmentIds(bytes, ElementClass.bytesPerElement(elementClass), ElementClass.isSigned(elementClass))
+        .toSet).toFox*/
     for {
       set <- tryo(SegmentIntegerArray.toSetFromByteArray(bytes, elementClass)).toFox
     } yield

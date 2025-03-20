@@ -41,8 +41,8 @@ const uint24Colors = [
   [46, 204, 64],
   [24, 144, 255],
 ];
-const canvasHeight = 100;
-const canvasWidth = 318;
+const CANVAS_HEIGHT = 100;
+const CANVAS_WIDTH = 318;
 
 export function isHistogramSupported(elementClass: ElementClass): boolean {
   // This function needs to be adapted when a new dtype should/element class needs
@@ -84,6 +84,18 @@ function getPrecisionOf(num: number): number {
   return decimals ? decimals.length : 0;
 }
 
+const DUMMY_HISTOGRAM_DATA = [
+  // Define a dummy histogram with a gaussian curve (mean=128 and std=30).
+  // This is used as a fallback for a nicer look. On top of that, an error
+  // message will be rendered.
+  {
+    numberOfElements: 255,
+    elementCounts: _.range(255).map((idx) => Math.exp(-0.5 * ((idx - 128) / 30) ** 2)),
+    min: 0,
+    max: 255,
+  },
+];
+
 class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
   canvasRef: HTMLCanvasElement | null | undefined;
 
@@ -123,7 +135,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     if (ctx == null) {
       return;
     }
-    ctx.translate(0, canvasHeight);
+    ctx.translate(0, CANVAS_HEIGHT);
     ctx.scale(1, -1);
     ctx.lineWidth = 1;
     ctx.lineJoin = "round";
@@ -139,11 +151,9 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     if (ctx == null) {
       return;
     }
-    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     const { min, max } = getMinAndMax(this.props);
-    const { data } = this.props;
-
-    if (data == null) return;
+    const data = this.props.data ?? DUMMY_HISTOGRAM_DATA;
 
     // Compute the overall maximum count, so the RGB curves are scaled correctly relative to each other.
     const maxValue = Math.max(
@@ -187,14 +197,14 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     ctx.strokeStyle = `rgba(${color.join(",")})`;
     ctx.beginPath();
     // Scale data to the height of the histogram canvas.
-    const downscaledData = elementCounts.map((value) => (value / maxValue) * canvasHeight);
+    const downscaledData = elementCounts.map((value) => (value / maxValue) * CANVAS_HEIGHT);
     const activeRegion = new Path2D();
     ctx.moveTo(0, 0);
-    activeRegion.moveTo(((intensityRangeMin - minRange) / fullLength) * canvasWidth, 0);
+    activeRegion.moveTo(((intensityRangeMin - minRange) / fullLength) * CANVAS_WIDTH, 0);
 
     for (let i = 0; i < downscaledData.length; i++) {
       const xInHistogramScale = (i * histogramLength) / downscaledData.length;
-      const xInCanvasScale = ((xOffset + xInHistogramScale) * canvasWidth) / fullLength;
+      const xInCanvasScale = ((xOffset + xInHistogramScale) * CANVAS_WIDTH) / fullLength;
       const xValue = histogramMin + xInHistogramScale;
 
       if (xValue >= intensityRangeMin && xValue <= intensityRangeMax) {
@@ -208,8 +218,8 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     ctx.closePath();
     const activeRegionRightLimit = Math.min(histogramMax, intensityRangeMax);
     const activeRegionLeftLimit = Math.max(histogramMin, intensityRangeMin);
-    activeRegion.lineTo(((activeRegionRightLimit - minRange) / fullLength) * canvasWidth, 0);
-    activeRegion.lineTo(((activeRegionLeftLimit - minRange) / fullLength) * canvasWidth, 0);
+    activeRegion.lineTo(((activeRegionRightLimit - minRange) / fullLength) * CANVAS_WIDTH, 0);
+    activeRegion.lineTo(((activeRegionLeftLimit - minRange) / fullLength) * CANVAS_WIDTH, 0);
     activeRegion.closePath();
     ctx.fill(activeRegion);
   };
@@ -248,8 +258,8 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     const { intensityRangeMin, intensityRangeMax, isInEditMode, defaultMinMax, layerName, data } =
       this.props;
 
-    if (data === null) {
-      return (
+    const maybeWarning =
+      data === null ? (
         <Alert
           type="warning"
           style={{ margin: 10 }}
@@ -263,8 +273,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
           }
           showIcon
         />
-      );
-    }
+      ) : null;
 
     const { currentMin, currentMax } = this.state;
     const { min: minRange, max: maxRange } = getMinAndMax(this.props);
@@ -278,7 +287,15 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     const maybeCeilFn = this.props.supportFractions ? (val: number) => val : Math.ceil;
     return (
       <Spin spinning={data === undefined}>
-        <canvas ref={this.onCanvasRefChange} width={canvasWidth} height={canvasHeight} />
+        <div style={{ display: "grid", placeItems: "center", position: "relative" }}>
+          {maybeWarning && <div style={{ position: "absolute", zIndex: 1 }}>{maybeWarning}</div>}
+          <canvas
+            ref={this.onCanvasRefChange}
+            width={CANVAS_WIDTH}
+            height={CANVAS_HEIGHT}
+            style={{ opacity: maybeWarning ? 0.5 : 1 }}
+          />
+        </div>
         <Slider
           range
           value={[intensityRangeMin, intensityRangeMax]}
@@ -290,7 +307,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
           step={maybeCeilFn((maxRange - minRange) / 255)}
           tooltip={{ formatter: this.tipFormatter }}
           style={{
-            width: canvasWidth,
+            width: CANVAS_WIDTH,
             margin: 0,
             marginTop: 6,
           }}

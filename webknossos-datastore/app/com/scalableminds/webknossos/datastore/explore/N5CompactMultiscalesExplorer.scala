@@ -23,7 +23,7 @@ class N5CompactMultiscalesExplorer(implicit val ec: ExecutionContext) extends N5
       metadataPath <- Fox.successful(remotePath / N5Metadata.FILENAME_ATTRIBUTES_JSON)
       n5Metadata <- metadataPath
         .parseAsJson[N5CompactMultiscalesMetadata] ?~> s"Failed to read N5 header at $metadataPath"
-      _ <- bool2Fox(n5Metadata.multiScale.contains(true)) ?~> s"N5 header at $metadataPath does have multiScale=true"
+      _ <- bool2Fox(n5Metadata.multiScale.contains(true)) ?~> s"N5 header at $metadataPath does not have multiScale=true"
       axisOrder <- extractAxisOrder(n5Metadata.axes.getOrElse(List("x", "y", "z")))
       downsamplingFactors <- n5Metadata.downsamplingFactors.orElse(n5Metadata.scales) ?~> s"N5 header at $metadataPath does not have downsamplingFactors/scales"
       voxelSize <- extractVoxelSize(axisOrder, n5Metadata)

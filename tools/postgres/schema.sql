@@ -20,7 +20,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(128);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(129);
 COMMIT TRANSACTION;
 
 
@@ -1046,7 +1046,7 @@ BEGIN
     -- Calculate the first day of the next month
     next_month_first_day := DATE_TRUNC('MONTH', NOW()) + INTERVAL '1 MONTH';
 
-    -- Loop through all organizations with a paid plan
+    -- Loop through all organizations
     FOR organization_id IN (SELECT _id FROM webknossos.organizations) LOOP
         -- Check if there is already a free credit transaction for this organization in the current month
         SELECT COUNT(*) INTO existing_transaction_count

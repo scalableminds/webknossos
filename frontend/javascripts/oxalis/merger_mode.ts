@@ -23,17 +23,23 @@ import type { AdditionalCoordinate } from "types/api_flow_types";
 import type { CreateNodeAction } from "./model/actions/skeletontracing_actions";
 
 type MergerModeState = {
+  // Representative Segment Id is a mapped id.
   treeIdToRepresentativeSegmentId: Record<number, number | null | undefined>;
   idMapping: Map<number, number>;
-  nodesPerSegment: Record<number, number>;
+
+  // Unmapped Segment Id -> Count
+  nodesPerUnmappedSegment: Record<number, number>;
   nodes: Array<NodeWithTreeId>;
+
   // A properly initialized merger mode should always
   // have a segmentationLayerName. However, some edge cases
   // become easier when we handle the null case, anyway.
   // In theory, the UI should not allow to enable the merger mode
   // without a visible segmentation layer.
   segmentationLayerName: string | null | undefined;
-  nodeSegmentMap: Record<string, any>;
+
+  // Node Id -> Unmapped Segment Id
+  nodeToUnmappedSegmentMap: Record<string, number>;
   prevTracing: SkeletonTracing;
 };
 const unregisterKeyHandlers: UnregisterHandler[] = [];
@@ -41,55 +47,92 @@ const unsubscribeFunctions: Array<() => void> = [];
 let isCodeActive = false;
 
 function mapSegmentToRepresentative(
-  segId: number,
+  unmappedSegmentId: number,
   treeId: number,
   mergerModeState: MergerModeState,
 ) {
-  const representative = getRepresentativeForTree(treeId, segId, mergerModeState);
-  mergerModeState.idMapping.set(segId, representative);
+  const representative = getRepresentativeForTree(treeId, unmappedSegmentId, mergerModeState);
+  mergerModeState.idMapping.set(unmappedSegmentId, representative);
 }
 
-function getRepresentativeForTree(treeId: number, segId: number, mergerModeState: MergerModeState) {
+function getRepresentativeForTree(
+  treeId: number,
+  unmappedSegmentId: number,
+  mergerModeState: MergerModeState,
+) {
   const { treeIdToRepresentativeSegmentId } = mergerModeState;
   let representative = treeIdToRepresentativeSegmentId[treeId];
 
   // Use the passed segment id as a representative, if the tree was never seen before
   if (representative == null) {
-    representative = segId;
+    representative = unmappedSegmentId;
     treeIdToRepresentativeSegmentId[treeId] = representative;
   }
 
   return representative;
 }
 
-function deleteIdMappingOfSegment(segId: number, treeId: number, mergerModeState: MergerModeState) {
+function removeUnmappedSegmentIdFromMapping(
+  unmappedSegmentId: number,
+  treeId: number,
+  mergerModeState: MergerModeState,
+) {
+  if (mergerModeState.idMapping.get(unmappedSegmentId) === unmappedSegmentId) {
+    // The representative was removed from the mapping. Delete it.
+    delete mergerModeState.treeIdToRepresentativeSegmentId[treeId];
+
+    // Relabel ids that were mapped to the old representative (and find
+    // a new one).
+    let newRepresentative;
+    for (const [key, value] of mergerModeState.idMapping) {
+      if (key === unmappedSegmentId) {
+        // This is the value that is about to be removed.
+        continue;
+      }
+      if (value === unmappedSegmentId) {
+        if (newRepresentative == null) {
+          newRepresentative = key;
+        }
+        mergerModeState.idMapping.set(key, newRepresentative);
+      }
+    }
+
+    if (newRepresentative != null) {
+      mergerModeState.treeIdToRepresentativeSegmentId[treeId] = newRepresentative;
+    }
+  }
   // Remove segment from color mapping
-  mergerModeState.idMapping.delete(segId);
-  delete mergerModeState.treeIdToRepresentativeSegmentId[treeId];
+  mergerModeState.idMapping.delete(unmappedSegmentId);
 }
 
 /* This function is used to increment the reference count /
    number of nodes mapped to the given segment */
-function increaseNodesOfSegment(segementId: number, mergerModeState: MergerModeState) {
-  const { nodesPerSegment } = mergerModeState;
-  const currentValue = nodesPerSegment[segementId];
+function increaseNodesOfUnmappedSegment(
+  unmappedSegmentId: number,
+  mergerModeState: MergerModeState,
+) {
+  const { nodesPerUnmappedSegment } = mergerModeState;
+  const currentValue = nodesPerUnmappedSegment[unmappedSegmentId];
 
   if (currentValue == null) {
-    nodesPerSegment[segementId] = 1;
+    nodesPerUnmappedSegment[unmappedSegmentId] = 1;
   } else {
-    nodesPerSegment[segementId] = currentValue + 1;
+    nodesPerUnmappedSegment[unmappedSegmentId] = currentValue + 1;
   }
 
-  return nodesPerSegment[segementId];
+  return nodesPerUnmappedSegment[unmappedSegmentId];
 }
 
 /* This function is used to decrement the reference count /
    number of nodes mapped to the given segment. */
-function decreaseNodesOfSegment(segementId: number, mergerModeState: MergerModeState): number {
-  const { nodesPerSegment } = mergerModeState;
-  const currentValue = nodesPerSegment[segementId];
-  nodesPerSegment[segementId] = currentValue - 1;
-  return nodesPerSegment[segementId];
+function decreaseNodesOfUnmappedSegment(
+  unmappedSegmentId: number,
+  mergerModeState: MergerModeState,
+): number {
+  const { nodesPerUnmappedSegment } = mergerModeState;
+  const currentValue = nodesPerUnmappedSegment[unmappedSegmentId];
+  nodesPerUnmappedSegment[unmappedSegmentId] = currentValue - 1;
+  return nodesPerUnmappedSegment[unmappedSegmentId];
 }
 
 function getAllNodesWithTreeId(): Array<NodeWithTreeId> {
@@ -125,7 +168,7 @@ async function createNodeOverwrite(
   }
   const { position: untransformedPosition, additionalCoordinates } = action;
 
-  const segmentId = await getSegmentId(
+  const unmappedSegmentId = await getUnmappedSegmentId(
     store.getState(),
     segmentationLayerName,
     untransformedPosition,
@@ -134,7 +177,7 @@ async function createNodeOverwrite(
 
   // If there is no segment id, the node was set outside of all segments.
   // Drop the node creation action in that case.
-  if (!segmentId) {
+  if (!unmappedSegmentId) {
     api.utils.showToast("warning", messages["tracing.merger_mode_node_outside_segment"]);
   } else {
     call(action);
@@ -157,13 +200,13 @@ async function onCreateNode(
   additionalCoordinates: AdditionalCoordinate[] | null,
   updateMapping: boolean = true,
 ) {
-  const { idMapping, segmentationLayerName, nodeSegmentMap } = mergerModeState;
+  const { idMapping, segmentationLayerName, nodeToUnmappedSegmentMap } = mergerModeState;
 
   if (segmentationLayerName == null) {
     return;
   }
 
-  const segmentId = await getSegmentId(
+  const unmappedSegmentId = await getUnmappedSegmentId(
     Store.getState(),
     segmentationLayerName,
     untransformedPosition,
@@ -173,15 +216,15 @@ async function onCreateNode(
   // It can still happen that there are createNode diffing actions for nodes which
   // are placed outside of a segment, for example when merging trees that were created
   // outside of merger mode. Ignore those nodes.
-  if (!segmentId) {
+  if (!unmappedSegmentId) {
     return;
   }
 
-  // Set segment id
-  nodeSegmentMap[nodeId] = segmentId;
+  nodeToUnmappedSegmentMap[nodeId] = unmappedSegmentId;
+
   // Count references
-  increaseNodesOfSegment(segmentId, mergerModeState);
-  mapSegmentToRepresentative(segmentId, treeId, mergerModeState);
+  increaseNodesOfUnmappedSegment(unmappedSegmentId, mergerModeState);
+  mapSegmentToRepresentative(unmappedSegmentId, treeId, mergerModeState);
 
   if (updateMapping) {
     // Update mapping
@@ -189,7 +232,7 @@ async function onCreateNode(
   }
 }
 
-async function getSegmentId(
+async function getUnmappedSegmentId(
   state: OxalisState,
   segmentationLayerName: string,
   untransformedPosition: Vector3,
@@ -229,12 +272,15 @@ async function onDeleteNode(
     return;
   }
 
-  const segmentId = mergerModeState.nodeSegmentMap[nodeWithTreeId.nodeId];
-  const numberOfNodesMappedToSegment = decreaseNodesOfSegment(segmentId, mergerModeState);
+  const unmappedSegmentId = mergerModeState.nodeToUnmappedSegmentMap[nodeWithTreeId.nodeId];
+  const numberOfNodesInUnmappedSegment = decreaseNodesOfUnmappedSegment(
+    unmappedSegmentId,
+    mergerModeState,
+  );
 
-  if (numberOfNodesMappedToSegment === 0) {
-    // Reset color of all segments that were mapped to this tree
-    deleteIdMappingOfSegment(segmentId, nodeWithTreeId.treeId, mergerModeState);
+  if (numberOfNodesInUnmappedSegment === 0) {
+    // Reset color of the unmapped segment that was mapped to this tree
+    removeUnmappedSegmentIdFromMapping(unmappedSegmentId, nodeWithTreeId.treeId, mergerModeState);
 
     if (updateMapping) {
       api.data.setMapping(segmentationLayerName, mergerModeState.idMapping, {
@@ -246,7 +292,7 @@ async function onDeleteNode(
 
 async function onUpdateNode(mergerModeState: MergerModeState, node: UpdateActionNode) {
   const { position: untransformedPosition, id, treeId } = node;
-  const { segmentationLayerName, nodeSegmentMap } = mergerModeState;
+  const { segmentationLayerName, nodeToUnmappedSegmentMap } = mergerModeState;
 
   if (segmentationLayerName == null) {
     return;
@@ -254,17 +300,17 @@ async function onUpdateNode(mergerModeState: MergerModeState, node: UpdateAction
 
   const state = Store.getState();
 
-  const segmentId = await getSegmentId(
+  const unmappedSegmentId = await getUnmappedSegmentId(
     state,
     segmentationLayerName,
     untransformedPosition,
     state.flycam.additionalCoordinates,
   );
 
-  if (nodeSegmentMap[id] !== segmentId) {
+  if (nodeToUnmappedSegmentMap[id] !== unmappedSegmentId) {
     // If the segment of the node changed, it is like the node got deleted and a copy got created somewhere else.
     // Thus we use the onNodeDelete and onNodeCreate method to update the mapping.
-    if (nodeSegmentMap[id] != null) {
+    if (nodeToUnmappedSegmentMap[id] != null) {
       await onDeleteNode(
         mergerModeState,
         { nodeId: id, treeId, actionTracingId: mergerModeState.prevTracing.tracingId },
@@ -272,7 +318,7 @@ async function onUpdateNode(mergerModeState: MergerModeState, node: UpdateAction
       );
     }
 
-    if (segmentId != null && segmentId > 0) {
+    if (unmappedSegmentId != null && unmappedSegmentId > 0) {
       await onCreateNode(
         mergerModeState,
         id,
@@ -281,9 +327,9 @@ async function onUpdateNode(mergerModeState: MergerModeState, node: UpdateAction
         node.additionalCoordinates,
         false,
       );
-    } else if (nodeSegmentMap[id] != null) {
-      // The node is not inside a segment anymore. Thus we delete it from the nodeSegmentMap.
-      delete nodeSegmentMap[id];
+    } else if (nodeToUnmappedSegmentMap[id] != null) {
+      // The node is not inside a segment anymore. Thus we delete it from the nodeToUnmappedSegmentMap.
+      delete nodeToUnmappedSegmentMap[id];
     }
 
     api.data.setMapping(segmentationLayerName, mergerModeState.idMapping, {
@@ -359,7 +405,7 @@ async function mergeSegmentsOfAlreadyExistingTrees(
   mergerModeState: MergerModeState,
   onProgressUpdate: (arg0: number) => void,
 ) {
-  const { nodes, segmentationLayerName, nodeSegmentMap, idMapping } = mergerModeState;
+  const { nodes, segmentationLayerName, nodeToUnmappedSegmentMap, idMapping } = mergerModeState;
   const numbOfNodes = nodes.length;
 
   if (index >= numbOfNodes) {
@@ -398,14 +444,14 @@ async function mergeSegmentsOfAlreadyExistingTrees(
       return;
     }
 
-    const segmentId = await api.data.getDataValue(segmentationLayerName, segmentPosition);
+    const unmappedSegmentId = await api.data.getDataValue(segmentationLayerName, segmentPosition);
 
-    if (segmentId != null && segmentId > 0) {
+    if (unmappedSegmentId != null && unmappedSegmentId > 0) {
       // Store the segment id
-      nodeSegmentMap[node.id] = segmentId;
+      nodeToUnmappedSegmentMap[node.id] = unmappedSegmentId;
       // Add to agglomerate
-      increaseNodesOfSegment(segmentId, mergerModeState);
-      mapSegmentToRepresentative(segmentId, treeId, mergerModeState);
+      increaseNodesOfUnmappedSegment(unmappedSegmentId, mergerModeState);
+      mapSegmentToRepresentative(unmappedSegmentId, treeId, mergerModeState);
     }
   };
 
@@ -432,10 +478,10 @@ function resetState(mergerModeState: Partial<MergerModeState> = {}) {
   const defaults: MergerModeState = {
     treeIdToRepresentativeSegmentId: {},
     idMapping: new Map(),
-    nodesPerSegment: {},
+    nodesPerUnmappedSegment: {},
     nodes: getAllNodesWithTreeId(),
     segmentationLayerName,
-    nodeSegmentMap: {},
+    nodeToUnmappedSegmentMap: {},
     prevTracing: getSkeletonTracing(state.tracing).get(),
   };
   // Keep the object identity when resetting

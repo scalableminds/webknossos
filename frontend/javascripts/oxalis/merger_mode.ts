@@ -55,7 +55,11 @@ function mapSegmentToRepresentative(
   mergerModeState.idMapping.set(unmappedSegmentId, representative);
 }
 
-function getRepresentativeForTree(treeId: number, unmappedSegmentId: number, mergerModeState: MergerModeState) {
+function getRepresentativeForTree(
+  treeId: number,
+  unmappedSegmentId: number,
+  mergerModeState: MergerModeState,
+) {
   const { treeIdToRepresentativeSegmentId } = mergerModeState;
   let representative = treeIdToRepresentativeSegmentId[treeId];
 
@@ -68,7 +72,11 @@ function getRepresentativeForTree(treeId: number, unmappedSegmentId: number, mer
   return representative;
 }
 
-function removeUnmappedSegmentIdFromMapping(unmappedSegmentId: number, treeId: number, mergerModeState: MergerModeState) {
+function removeUnmappedSegmentIdFromMapping(
+  unmappedSegmentId: number,
+  treeId: number,
+  mergerModeState: MergerModeState,
+) {
   if (mergerModeState.idMapping.get(unmappedSegmentId) === unmappedSegmentId) {
     // The representative was removed from the mapping. Delete it.
     delete mergerModeState.treeIdToRepresentativeSegmentId[treeId];
@@ -85,7 +93,7 @@ function removeUnmappedSegmentIdFromMapping(unmappedSegmentId: number, treeId: n
         if (newRepresentative == null) {
           newRepresentative = key;
         }
-        mergerModeState.idMapping.set(key, newRepresentative)
+        mergerModeState.idMapping.set(key, newRepresentative);
       }
     }
 
@@ -99,7 +107,10 @@ function removeUnmappedSegmentIdFromMapping(unmappedSegmentId: number, treeId: n
 
 /* This function is used to increment the reference count /
    number of nodes mapped to the given segment */
-function increaseNodesOfUnmappedSegment(unmappedSegmentId: number, mergerModeState: MergerModeState) {
+function increaseNodesOfUnmappedSegment(
+  unmappedSegmentId: number,
+  mergerModeState: MergerModeState,
+) {
   const { nodesPerUnmappedSegment } = mergerModeState;
   const currentValue = nodesPerUnmappedSegment[unmappedSegmentId];
 
@@ -114,7 +125,10 @@ function increaseNodesOfUnmappedSegment(unmappedSegmentId: number, mergerModeSta
 
 /* This function is used to decrement the reference count /
    number of nodes mapped to the given segment. */
-function decreaseNodesOfUnmappedSegment(unmappedSegmentId: number, mergerModeState: MergerModeState): number {
+function decreaseNodesOfUnmappedSegment(
+  unmappedSegmentId: number,
+  mergerModeState: MergerModeState,
+): number {
   const { nodesPerUnmappedSegment } = mergerModeState;
   const currentValue = nodesPerUnmappedSegment[unmappedSegmentId];
   nodesPerUnmappedSegment[unmappedSegmentId] = currentValue - 1;
@@ -259,7 +273,10 @@ async function onDeleteNode(
   }
 
   const unmappedSegmentId = mergerModeState.nodeToUnmappedSegmentMap[nodeWithTreeId.nodeId];
-  const numberOfNodesInUnmappedSegment = decreaseNodesOfUnmappedSegment(unmappedSegmentId, mergerModeState);
+  const numberOfNodesInUnmappedSegment = decreaseNodesOfUnmappedSegment(
+    unmappedSegmentId,
+    mergerModeState,
+  );
 
   if (numberOfNodesInUnmappedSegment === 0) {
     // Reset color of the unmapped segment that was mapped to this tree

@@ -5,7 +5,7 @@ import _ from "lodash";
 import constants from "oxalis/constants";
 import * as THREE from "three";
 import type { ElementClass } from "types/api_flow_types";
-import type { TypedArrayConstructor } from "./bucket";
+import type { TypedArrayConstructor } from "../helpers/typed_buffer";
 
 type GpuSpecs = {
   supportedTextureSize: number;

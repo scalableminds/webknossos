@@ -139,7 +139,6 @@ import {
 } from "oxalis/model/actions/volumetracing_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { Bucket, DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 import type DataLayer from "oxalis/model/data_layer";
 import dimensions from "oxalis/model/dimensions";
 import { MagInfo } from "oxalis/model/helpers/mag_info";
@@ -151,6 +150,7 @@ import {
   scaleGlobalPositionWithMagnification,
   zoomedAddressToZoomedPosition,
 } from "oxalis/model/helpers/position_converter";
+import { getConstructorForElementClass } from "oxalis/model/helpers/typed_buffer";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { getHalfViewportExtentsInUnitFromState } from "oxalis/model/sagas/saga_selectors";
 import { Model, api } from "oxalis/singletons";
@@ -1617,6 +1617,7 @@ class DataApi {
     layerName: string,
     predicateFn?: (bucket: DataBucket) => boolean,
   ): Promise<void> {
+    const truePredicate = () => true;
     await Promise.all(
       Utils.values(this.model.dataLayers).map(async (dataLayer: DataLayer) => {
         if (dataLayer.name === layerName) {
@@ -1624,7 +1625,7 @@ class DataApi {
             await Model.ensureSavedState();
           }
 
-          dataLayer.cube.collectBucketsIf(predicateFn || (() => true));
+          dataLayer.cube.collectBucketsIf(predicateFn || truePredicate);
           dataLayer.layerRenderingManager.refresh();
         }
       }),

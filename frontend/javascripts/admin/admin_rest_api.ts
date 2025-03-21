@@ -1939,19 +1939,25 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
   segmentIds: Array<T>,
 ): Promise<Mapping> {
   const segmentIdBuffer = serializeProtoListOfLong<T>(segmentIds);
-  const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
-    const params = new URLSearchParams({ token });
-    return Request.receiveArraybuffer(
-      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?${params}`,
-      {
-        method: "POST",
-        body: segmentIdBuffer,
-        headers: {
-          "Content-Type": "application/octet-stream",
+  let listArrayBuffer: ArrayBuffer;
+  if (mappingId === "") {
+    // Identity mapping, every segment is its own agglomerate
+    listArrayBuffer = segmentIdBuffer;
+  } else {
+    listArrayBuffer = await doWithToken((token) => {
+      const params = new URLSearchParams({ token });
+      return Request.receiveArraybuffer(
+        `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?${params}`,
+        {
+          method: "POST",
+          body: segmentIdBuffer,
+          headers: {
+            "Content-Type": "application/octet-stream",
+          },
         },
-      },
-    );
-  });
+      );
+    });
+  }
   // Ensure that the values are bigint if the keys are bigint
   const adaptToType = Utils.isBigInt(segmentIds[0])
     ? (el: NumberLike) => BigInt(el)

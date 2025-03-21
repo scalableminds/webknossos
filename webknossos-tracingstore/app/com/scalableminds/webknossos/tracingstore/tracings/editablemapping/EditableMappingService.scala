@@ -122,7 +122,7 @@ class EditableMappingService @Inject()(
       "createdTimestamp" -> editableMappingInfo.createdTimestamp
     )
 
-  def create(baseMappingName: String): EditableMappingInfo =
+  def create(baseMappingName: Option[String]): EditableMappingInfo =
     EditableMappingInfo(
       baseMappingName = baseMappingName,
       createdTimestamp = Instant.now.epochMillis,
@@ -324,7 +324,7 @@ class EditableMappingService @Inject()(
   }
 
   def getBaseSegmentToAgglomerate(
-      baseMappingName: String,
+      baseMappingName: Option[String],
       segmentIds: Set[Long],
       remoteFallbackLayer: RemoteFallbackLayer)(implicit tc: TokenContext): Fox[Map[Long, Long]] = {
     val segmentIdsOrdered = segmentIds.toList
@@ -403,13 +403,17 @@ class EditableMappingService @Inject()(
       tracingId: String,
       version: Long,
       agglomerateId: Long,
+      segmentPosition: Option[Vec3Int],
       remoteFallbackLayer: RemoteFallbackLayer)(implicit tc: TokenContext): Fox[AgglomerateGraph] =
     for {
       agglomerateGraphBox <- getAgglomerateGraphForId(tracingId, version, agglomerateId).futureBox
       agglomerateGraph <- agglomerateGraphBox match {
         case Full(agglomerateGraph) => Fox.successful(agglomerateGraph)
         case Empty =>
-          remoteDatastoreClient.getAgglomerateGraph(remoteFallbackLayer, mapping.baseMappingName, agglomerateId)
+          remoteDatastoreClient.getAgglomerateGraph(remoteFallbackLayer,
+                                                    mapping.baseMappingName,
+                                                    agglomerateId,
+                                                    segmentPosition)
         case f: Failure => f.toFox
       }
     } yield agglomerateGraph
@@ -426,6 +430,7 @@ class EditableMappingService @Inject()(
                                                                tracingId,
                                                                version,
                                                                parameters.agglomerateId,
+                                                               None,
                                                                remoteFallbackLayer) ?~> "getAgglomerateGraph.failed"
       edgesToCut <- minCut(agglomerateGraph, parameters.segmentId1, parameters.segmentId2) ?~> "Could not calculate min-cut on agglomerate graph."
       edgesWithPositions = annotateEdgesWithPositions(edgesToCut, agglomerateGraph)
@@ -494,6 +499,7 @@ class EditableMappingService @Inject()(
                                                                tracingId,
                                                                version,
                                                                parameters.agglomerateId,
+                                                               None,
                                                                remoteFallbackLayer)
       neighborNodes = neighbors(agglomerateGraph, parameters.segmentId)
       nodesWithPositions = annotateNodesWithPositions(neighborNodes, agglomerateGraph)

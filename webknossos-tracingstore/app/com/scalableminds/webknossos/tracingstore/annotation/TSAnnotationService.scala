@@ -13,7 +13,7 @@ import com.scalableminds.webknossos.datastore.Annotation.{
   AnnotationProto
 }
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
-import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, Tree, TreeBody}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType
@@ -24,7 +24,10 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingUpdateAction,
   EditableMappingUpdater
 }
-import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTracingService
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{
+  SkeletonTracingService,
+  SkeletonTracingWithUpdatedTreeIds
+}
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.SkeletonUpdateAction
 import com.scalableminds.webknossos.tracingstore.tracings.volume._
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
@@ -210,7 +213,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       _ = Instant.logSince(
         before,
         s"Reverting annotation $annotationId from v${annotationWithTracings.version} to v${revertAction.sourceVersion}")
-    } yield sourceAnnotation
+    } yield sourceAnnotation.markAllTreeBodiesAsChanged
 
   private def resetToBase(annotationId: String, annotationWithTracings: AnnotationWithTracings, newVersion: Long)(
       implicit ec: ExecutionContext,
@@ -222,7 +225,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       sourceAnnotation: AnnotationWithTracings <- getWithTracings(annotationId, Some(sourceVersion))
       _ <- revertDistributedElements(annotationId, annotationWithTracings, sourceAnnotation, sourceVersion, newVersion)
       _ = Instant.logSince(before, s"Resetting annotation $annotationId to base (v$sourceVersion)")
-    } yield sourceAnnotation
+    } yield sourceAnnotation.markAllTreeBodiesAsChanged
   }
 
   def saveAnnotationProto(annotationId: String,
@@ -400,13 +403,16 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       annotation.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Volume).map(_.tracingId)
     for {
       skeletonTracings <- Fox.serialCombined(skeletonTracingIds.toList)(id =>
-        findSkeletonRaw(id, Some(annotation.version))) ?~> "findSkeletonRaw.failed"
+        findSkeletonRawFilledWithTreeBodies(id, Some(annotation.version))) ?~> "findSkeletonRaw.failed"
       volumeTracings <- Fox.serialCombined(volumeTracingIds.toList)(id => findVolumeRaw(id, Some(annotation.version))) ?~> "findVolumeRaw.failed"
-      skeletonTracingsMap: Map[String, Either[SkeletonTracing, VolumeTracing]] = skeletonTracingIds
-        .zip(skeletonTracings.map(versioned => Left[SkeletonTracing, VolumeTracing](versioned.value)))
+      skeletonTracingsMap: Map[String, Either[SkeletonTracingWithUpdatedTreeIds, VolumeTracing]] = skeletonTracingIds
+        .zip(
+          skeletonTracings.map(versioned =>
+            Left[SkeletonTracingWithUpdatedTreeIds, VolumeTracing](
+              SkeletonTracingWithUpdatedTreeIds(versioned.value, Set.empty))))
         .toMap
-      volumeTracingsMap: Map[String, Either[SkeletonTracing, VolumeTracing]] = volumeTracingIds
-        .zip(volumeTracings.map(versioned => Right[SkeletonTracing, VolumeTracing](versioned.value)))
+      volumeTracingsMap: Map[String, Either[SkeletonTracingWithUpdatedTreeIds, VolumeTracing]] = volumeTracingIds
+        .zip(volumeTracings.map(versioned => Right[SkeletonTracingWithUpdatedTreeIds, VolumeTracing](versioned.value)))
         .toMap
     } yield AnnotationWithTracings(annotation, skeletonTracingsMap ++ volumeTracingsMap, Map.empty)
   }
@@ -553,13 +559,13 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     for {
       _ <- Fox.serialCombined(annotationWithTracings.getVolumes) {
         case (volumeTracingId, volumeTracing) if allMayHaveUpdates || tracingIdsWithUpdates.contains(volumeTracingId) =>
-          tracingDataStore.volumes.put(volumeTracingId, volumeTracing.version, volumeTracing)
+          volumeTracingService.saveVolume(volumeTracingId, volumeTracing.version, volumeTracing)
         case _ => Fox.successful(())
       }
       _ <- Fox.serialCombined(annotationWithTracings.getSkeletons) {
         case (skeletonTracingId, skeletonTracing)
             if allMayHaveUpdates || tracingIdsWithUpdates.contains(skeletonTracingId) =>
-          tracingDataStore.skeletons.put(skeletonTracingId, skeletonTracing.version, skeletonTracing)
+          flushSkeletonTracingWithSeparatedTreeBodies(annotationWithTracings, skeletonTracingId, skeletonTracing)
         case _ => Fox.successful(())
       }
       _ <- Fox.serialCombined(annotationWithTracings.getEditableMappingsInfo) {
@@ -572,6 +578,19 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       }
     } yield ()
   }
+
+  private def flushSkeletonTracingWithSeparatedTreeBodies(
+      annotationWithTracings: AnnotationWithTracings,
+      skeletonTracingId: String,
+      skeletonTracing: SkeletonTracing)(implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      // All tree bodies that were changed by the update actions need to be stored
+      updatedTreeIds <- annotationWithTracings.getUpdatedTreeBodyIdsForSkeleton(skeletonTracingId).toFox
+      _ <- skeletonTracingService.saveSkeleton(skeletonTracingId,
+                                               skeletonTracing.version,
+                                               skeletonTracing,
+                                               flushOnlyTheseTreeIds = Some(updatedTreeIds))
+    } yield ()
 
   private def flushAnnotationInfo(annotationId: String, annotationWithTracings: AnnotationWithTracings) =
     saveAnnotationProto(annotationId, annotationWithTracings.version, annotationWithTracings.annotation)
@@ -622,6 +641,25 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
   def findVolumeRaw(tracingId: String, version: Option[Long] = None): Fox[VersionedKeyValuePair[VolumeTracing]] =
     tracingDataStore.volumes
       .get[VolumeTracing](tracingId, version, mayBeEmpty = Some(true))(fromProtoBytes[VolumeTracing])
+
+  private def findSkeletonRawFilledWithTreeBodies(tracingId: String, version: Option[Long])(
+      implicit ec: ExecutionContext): Fox[VersionedKeyValuePair[SkeletonTracing]] =
+    for {
+      skeletonRawKeyValuePair <- findSkeletonRaw(tracingId, version)
+      skeletonRaw = skeletonRawKeyValuePair.value
+      newTrees: Seq[Tree] <- if (skeletonRaw.getStoredWithExternalTreeBodies) {
+        Fox.serialCombined(skeletonRaw.trees) { tree =>
+          for {
+            treeBodyKeyValuePair <- tracingDataStore.skeletonTreeBodies
+              .get[TreeBody](s"$tracingId/${tree.treeId}", version)(fromProtoBytes[TreeBody])
+            treeBody <- treeBodyKeyValuePair.value
+          } yield {
+            tree.copy(nodes = treeBody.nodes, edges = treeBody.edges)
+          }
+        }
+      } else Fox.successful(skeletonRaw.trees)
+      newSkeletonRaw = skeletonRaw.copy(trees = newTrees)
+    } yield skeletonRawKeyValuePair.copy(value = newSkeletonRaw)
 
   private def findSkeletonRaw(tracingId: String, version: Option[Long]): Fox[VersionedKeyValuePair[SkeletonTracing]] =
     tracingDataStore.skeletons
@@ -840,7 +878,6 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       sourceTracing <- findVolume(sourceAnnotationId, sourceTracingId, Some(sourceVersion))
       newTracing <- volumeTracingService.adaptVolumeForDuplicate(
         sourceAnnotationId,
-        sourceTracingId,
         newTracingId,
         sourceTracing,
         isFromTask,
@@ -851,7 +888,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         editRotation,
         newVersion
       )
-      _ <- tracingDataStore.volumes.put(newTracingId, newVersion, newTracing)
+      _ <- volumeTracingService.saveVolume(newTracingId, newVersion, newTracing)
       _ <- Fox.runIf(!newTracing.getHasEditableMapping)(
         volumeTracingService.duplicateVolumeData(sourceAnnotationId,
                                                  sourceTracingId,
@@ -896,7 +933,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                                                                          editRotation,
                                                                          boundingBox,
                                                                          newVersion)
-      _ <- tracingDataStore.skeletons.put(newTracingId, newVersion, adaptedSkeleton)
+      _ <- skeletonTracingService.saveSkeleton(newTracingId, newVersion, adaptedSkeleton)
     } yield ()
 
 }

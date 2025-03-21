@@ -111,6 +111,7 @@ class VolumeTracingService @Inject()(
     for {
       // warning, may be called multiple times with the same version number (due to transaction management).
       // frontend ensures that each bucket is only updated once per transaction
+      before <- Instant.nowFox
       fallbackLayerOpt <- getFallbackLayer(annotationId, tracing)
       segmentIndexBuffer = new VolumeSegmentIndexBuffer(
         tracingId,
@@ -122,6 +123,8 @@ class VolumeTracingService @Inject()(
         temporaryTracingService,
         tc
       )
+      _ = Instant.logSince(before, "setup")
+      beforeUpdateBuckt = Instant.now
       _ <- Fox.serialCombined(updateActions) {
         case a: UpdateBucketVolumeAction =>
           if (tracing.getHasEditableMapping) {
@@ -135,7 +138,10 @@ class VolumeTracingService @Inject()(
             deleteSegmentData(tracingId, annotationId, tracing, a, segmentIndexBuffer, newVersion) ?~> "Failed to delete segment data."
         case _ => Fox.failure("Unknown bucket-mutating action.")
       }
+      _ = Instant.logSince(beforeUpdateBuckt, s"updateBucket ${updateActions.length}x")
+      beforeFlush = Instant.now
       _ <- segmentIndexBuffer.flush()
+      _ = Instant.logSince(beforeFlush, "flush")
     } yield ()
 
   private def updateBucket(tracingId: String,

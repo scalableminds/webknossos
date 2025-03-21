@@ -82,7 +82,7 @@ type APIDataLayerBase = {
   readonly coordinateTransformations?: CoordinateTransformation[] | null;
   readonly hasSegmentIndex?: boolean;
 };
-type APIColorLayer = APIDataLayerBase & {
+export type APIColorLayer = APIDataLayerBase & {
   readonly category: "color";
 };
 export type APISegmentationLayer = APIDataLayerBase & {

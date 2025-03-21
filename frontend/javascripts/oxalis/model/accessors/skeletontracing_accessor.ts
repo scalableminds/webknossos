@@ -1,6 +1,6 @@
 import Maybe from "data.maybe";
 import _ from "lodash";
-import type { TreeType, Vector3 } from "oxalis/constants";
+import { IdentityTransform, type TreeType, type Vector3 } from "oxalis/constants";
 import type {
   BranchPoint,
   Node,
@@ -218,12 +218,11 @@ export function getNodeAndTreeOrNull(
 }
 
 export function isSkeletonLayerTransformed(state: OxalisState) {
-  return (
-    getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull(
-      state.dataset,
-      state.datasetConfiguration.nativelyRenderedLayerName,
-    ) != null
+  const transformation = getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull(
+    state.dataset,
+    state.datasetConfiguration.nativelyRenderedLayerName,
   );
+  return transformation != null && transformation !== IdentityTransform;
 }
 
 export function getNodePosition(node: Node, state: OxalisState): Vector3 {

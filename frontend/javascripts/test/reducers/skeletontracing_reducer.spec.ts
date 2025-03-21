@@ -9,13 +9,16 @@ import EdgeCollection from "oxalis/model/edge_collection";
 import mock from "mock-require";
 import test from "ava";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import type { OxalisState, SkeletonTracing, Node, Tree, MutableNode } from "oxalis/store";
-import defaultState from "oxalis/default_state";
+import type { OxalisState, Node, Tree, MutableNode } from "oxalis/store";
 import { TreeTypeEnum, type Vector3 } from "oxalis/constants";
 import type { Action } from "oxalis/model/actions/actions";
 import type * as OriginalSkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
 import type OriginalSkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  initialState as defaultState,
+  initialSkeletonTracing,
+} from "test/fixtures/hybridtracing_object";
 
 mock("app", {
   currentUser: {
@@ -46,55 +49,6 @@ function deepEqualObjectContaining(
   });
 }
 
-const initialSkeletonTracing: SkeletonTracing = {
-  type: "skeleton",
-  createdTimestamp: 0,
-  tracingId: "tracingId",
-  trees: {},
-  treeGroups: [],
-  activeGroupId: null,
-  activeTreeId: 1,
-  activeNodeId: null,
-  cachedMaxNodeId: 0,
-  boundingBox: null,
-  userBoundingBoxes: [],
-  navigationList: {
-    list: [],
-    activeIndex: -1,
-  },
-  showSkeletons: true,
-  additionalAxes: [],
-};
-initialSkeletonTracing.trees[1] = {
-  treeId: 1,
-  name: "TestTree",
-  nodes: new DiffableMap(),
-  timestamp: Date.now(),
-  branchPoints: [],
-  edges: new EdgeCollection(),
-  comments: [],
-  color: [23, 23, 23],
-  isVisible: true,
-  groupId: MISSING_GROUP_ID,
-  type: TreeTypeEnum.DEFAULT,
-  edgesAreVisible: true,
-  metadata: [],
-};
-initialSkeletonTracing.trees[2] = {
-  treeId: 2,
-  name: "TestAgglomerateTree",
-  nodes: new DiffableMap(),
-  timestamp: Date.now(),
-  branchPoints: [],
-  edges: new EdgeCollection(),
-  comments: [],
-  color: [23, 23, 23],
-  isVisible: true,
-  groupId: MISSING_GROUP_ID,
-  type: TreeTypeEnum.AGGLOMERATE,
-  edgesAreVisible: true,
-  metadata: [],
-};
 const initialState: OxalisState = update(defaultState, {
   tracing: {
     restrictions: {
@@ -106,9 +60,6 @@ const initialState: OxalisState = update(defaultState, {
       },
     },
     annotationType: { $set: "Explorational" },
-    skeleton: {
-      $set: initialSkeletonTracing,
-    },
   },
 });
 const initialStateWithActiveTreeId2 = update(initialState, {

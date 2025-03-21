@@ -191,6 +191,10 @@ export function isLayerWithoutTransformationConfigSupport(layer: APIDataLayer | 
   );
 }
 
+function toIdentityTransformMaybe(transform: Transform | null): Transform | null {
+  return transform && equalsIdentityTransform(transform) ? IdentityTransform : transform;
+}
+
 function _getTransformsForLayerOrNull(
   dataset: APIDataset,
   layer: APIDataLayer | APISkeletonLayer,
@@ -202,7 +206,6 @@ function _getTransformsForLayerOrNull(
       nativelyRenderedLayerName,
     );
   }
-
   if (layer.name === nativelyRenderedLayerName) {
     // This layer should be rendered without any transforms.
     return null;
@@ -210,7 +213,7 @@ function _getTransformsForLayerOrNull(
   const layerTransforms = getOriginalTransformsForLayerOrNull(dataset, layer as APIDataLayer);
   if (nativelyRenderedLayerName == null) {
     // No layer is requested to be rendered natively. -> We can use the layer's transforms as is.
-    return layerTransforms;
+    return toIdentityTransformMaybe(layerTransforms);
   }
 
   // Apply the inverse of the layer that should be rendered natively
@@ -221,11 +224,11 @@ function _getTransformsForLayerOrNull(
   if (transformsOfNativeLayer == null) {
     // The inverse of no transforms, are no transforms. Leave the layer
     // transforms untouched.
-    return layerTransforms;
+    return toIdentityTransformMaybe(layerTransforms);
   }
 
   const inverseNativeTransforms = invertTransform(transformsOfNativeLayer);
-  return chainTransforms(layerTransforms, inverseNativeTransforms);
+  return toIdentityTransformMaybe(chainTransforms(layerTransforms, inverseNativeTransforms));
 }
 
 export const getTransformsForLayerOrNull = memoizeWithThreeKeys(_getTransformsForLayerOrNull);
@@ -239,7 +242,7 @@ export function getTransformsForLayer(
   );
 }
 
-export function isIdentityTransform(transform: Transform) {
+function equalsIdentityTransform(transform: Transform) {
   return transform.type === "affine" && _.isEqual(transform.affineMatrix, Identity4x4);
 }
 
@@ -266,7 +269,7 @@ function _getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull(
     const someLayersTransformsMaybe = usableReferenceLayer
       ? getTransformsForLayerOrNull(dataset, usableReferenceLayer, nativelyRenderedLayerName)
       : null;
-    return someLayersTransformsMaybe;
+    return toIdentityTransformMaybe(someLayersTransformsMaybe);
   } else if (nativelyRenderedLayerName != null && allLayersSameRotation) {
     // If all layers have the same transformations and at least one is rendered natively, this means that all layer should be rendered natively.
     return null;
@@ -281,7 +284,7 @@ function _getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull(
     return null;
   }
 
-  return invertTransform(transformsOfNativeLayer);
+  return toIdentityTransformMaybe(invertTransform(transformsOfNativeLayer));
 }
 
 export const getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull = memoizeOne(

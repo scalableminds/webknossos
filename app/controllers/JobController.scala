@@ -7,7 +7,6 @@ import com.scalableminds.util.tools.Fox
 import models.dataset.{DataStoreDAO, DatasetDAO, DatasetLayerAdditionalAxesDAO, DatasetService}
 import models.job.{JobCommand, _}
 import models.organization.{CreditTransactionDAO, CreditTransactionService, OrganizationDAO, OrganizationService}
-import models.organization.OrganizationDAO
 import models.user.{MultiUserDAO, UserService}
 import play.api.i18n.Messages
 import play.api.libs.json._

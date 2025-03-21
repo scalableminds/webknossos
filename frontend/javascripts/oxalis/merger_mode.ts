@@ -69,9 +69,32 @@ function getRepresentativeForTree(treeId: number, unmappedSegmentId: number, mer
 }
 
 function removeUnmappedSegmentIdFromMapping(unmappedSegmentId: number, treeId: number, mergerModeState: MergerModeState) {
+  if (mergerModeState.idMapping.get(unmappedSegmentId) === unmappedSegmentId) {
+    // The representative was removed from the mapping. Delete it.
+    delete mergerModeState.treeIdToRepresentativeSegmentId[treeId];
+
+    // Relabel ids that were mapped to the old representative (and find
+    // a new one).
+    let newRepresentative;
+    for (const [key, value] of mergerModeState.idMapping) {
+      if (key === unmappedSegmentId) {
+        // This is the value that is about to be removed.
+        continue;
+      }
+      if (value === unmappedSegmentId) {
+        if (newRepresentative == null) {
+          newRepresentative = key;
+        }
+        mergerModeState.idMapping.set(key, newRepresentative)
+      }
+    }
+
+    if (newRepresentative != null) {
+      mergerModeState.treeIdToRepresentativeSegmentId[treeId] = newRepresentative;
+    }
+  }
   // Remove segment from color mapping
   mergerModeState.idMapping.delete(unmappedSegmentId);
-  delete mergerModeState.treeIdToRepresentativeSegmentId[treeId];
 }
 
 /* This function is used to increment the reference count /

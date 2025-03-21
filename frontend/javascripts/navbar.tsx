@@ -346,6 +346,8 @@ function getHelpSubMenu(
       ? `(Server is currently at ${polledVersion}!)`
       : "";
 
+  const { discussionBoardRequiresAdmin, discussionBoard, isWkorgInstance } = features();
+
   const helpSubMenuItems: ItemType[] = [
     {
       key: "user-documentation",
@@ -355,12 +357,11 @@ function getHelpSubMenu(
         </a>
       ),
     },
-    (!features().discussionBoardRequiresAdmin || isAdminOrManager) &&
-    features().discussionBoard !== false
+    (!discussionBoardRequiresAdmin || isAdminOrManager) && discussionBoard !== false
       ? {
           key: "discussion-board",
           label: (
-            <a href={features().discussionBoard} target="_blank" rel="noreferrer noopener">
+            <a href={discussionBoard} target="_blank" rel="noreferrer noopener">
               Community Support
             </a>
           ),
@@ -395,7 +396,7 @@ function getHelpSubMenu(
       label: "Ask a Question",
     });
 
-  if (features().isWkorgInstance) {
+  if (isWkorgInstance) {
     helpSubMenuItems.push({
       key: "contact",
       label: (

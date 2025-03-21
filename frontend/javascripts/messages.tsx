@@ -494,6 +494,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "ui.no_form_active": "Could not set the initial form values as the form could not be loaded.",
   "organization.plan.upgrage_request_sent":
     "An email with your upgrade request has been sent to the WEBKNOSSOS sales team.",
+  "organization.credit_request_sent":
+    "An email with your credit request has been sent to the WEBKNOSSOS sales team.",
   "organization.plan.feature_not_available": (
     requiredPlan: string,
     organizationOwnerName: string,

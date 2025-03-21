@@ -149,17 +149,18 @@ class DataSourceController @Inject()(
       val uploadForm = Form(
         tuple(
           "resumableChunkNumber" -> number,
+          "resumableChunkSize" -> number,
           "resumableCurrentChunkSize" -> number,
           "resumableTotalChunks" -> longNumber,
           "resumableIdentifier" -> nonEmptyText
-        )).fill((-1, -1, -1, ""))
+        )).fill((-1, -1, -1, -1, ""))
 
       uploadForm
         .bindFromRequest(request.body.dataParts)
         .fold(
           hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
           success = {
-            case (chunkNumber, currentChunkSize, totalChunkCount, uploadFileId) =>
+            case (chunkNumber, chunkSize, currentChunkSize, totalChunkCount, uploadFileId) =>
               for {
                 dataSourceId <- uploadService.getDataSourceIdByUploadId(
                   uploadService.extractDatasetUploadId(uploadFileId)) ?~> "dataset.upload.validation.failed"
@@ -170,6 +171,7 @@ class DataSourceController @Inject()(
                     _ <- bool2Fox(isKnownUpload) ?~> "dataset.upload.validation.failed"
                     chunkFile <- request.body.file("file") ?~> "zip.file.notFound"
                     _ <- uploadService.handleUploadChunk(uploadFileId,
+                                                         chunkSize,
                                                          currentChunkSize,
                                                          totalChunkCount,
                                                          chunkNumber,

@@ -247,6 +247,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   }
 
   def handleUploadChunk(uploadFileId: String,
+                        chunkSize: Long,
                         currentChunkSize: Long,
                         totalChunkCount: Long,
                         currentChunkNumber: Long,
@@ -285,7 +286,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
           this.synchronized {
             PathUtils.ensureDirectory(uploadDir.resolve(filePath).getParent)
             val tempFile = new RandomAccessFile(uploadDir.resolve(filePath).toFile, "rw")
-            tempFile.seek((currentChunkNumber - 1) * currentChunkSize)
+            tempFile.seek((currentChunkNumber - 1) * chunkSize)
             tempFile.write(bytes)
             tempFile.close()
           }

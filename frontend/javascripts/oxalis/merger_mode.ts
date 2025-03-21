@@ -39,7 +39,7 @@ type MergerModeState = {
   segmentationLayerName: string | null | undefined;
 
   // Node Id -> Unmapped Segment Id
-  nodeToUnmappedSegmentMap: Record<string, any>;
+  nodeToUnmappedSegmentMap: Record<string, number>;
   prevTracing: SkeletonTracing;
 };
 const unregisterKeyHandlers: UnregisterHandler[] = [];

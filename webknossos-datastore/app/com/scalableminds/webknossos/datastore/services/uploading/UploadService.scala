@@ -247,7 +247,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   }
 
   def handleUploadChunk(uploadFileId: String,
-                        chunkSize: Long,
+                        currentChunkSize: Long,
                         totalChunkCount: Long,
                         currentChunkNumber: Long,
                         chunkFile: File): Fox[Unit] = {
@@ -259,7 +259,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       totalFileSizeInBytesOpt <- runningUploadMetadataStore.findLong(redisKeyForTotalFileSizeInBytes(uploadId))
       _ <- Fox.runOptional(totalFileSizeInBytesOpt) { maxFileSize =>
         runningUploadMetadataStore
-          .increaseBy(redisKeyForCurrentUploadedTotalFileSizeInBytes(uploadId), chunkSize)
+          .increaseBy(redisKeyForCurrentUploadedTotalFileSizeInBytes(uploadId), currentChunkSize)
           .flatMap(newTotalFileSizeInBytesOpt => {
             if (newTotalFileSizeInBytesOpt.getOrElse(0L) > maxFileSize) {
               cleanUpDatasetExceedingSize(uploadDir, uploadId).flatMap(_ =>
@@ -285,7 +285,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
           this.synchronized {
             PathUtils.ensureDirectory(uploadDir.resolve(filePath).getParent)
             val tempFile = new RandomAccessFile(uploadDir.resolve(filePath).toFile, "rw")
-            tempFile.seek((currentChunkNumber - 1) * chunkSize)
+            tempFile.seek((currentChunkNumber - 1) * currentChunkSize)
             tempFile.write(bytes)
             tempFile.close()
           }

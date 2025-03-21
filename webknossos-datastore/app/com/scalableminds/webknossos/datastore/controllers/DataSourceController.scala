@@ -5,17 +5,8 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
-import com.scalableminds.webknossos.datastore.explore.{
-  ExploreRemoteDatasetRequest,
-  ExploreRemoteDatasetResponse,
-  ExploreRemoteLayerService
-}
-import com.scalableminds.webknossos.datastore.helpers.{
-  GetMultipleSegmentIndexParameters,
-  GetSegmentIndexParameters,
-  SegmentIndexData,
-  SegmentStatisticsParameters
-}
+import com.scalableminds.webknossos.datastore.explore.{ExploreRemoteDatasetRequest, ExploreRemoteDatasetResponse, ExploreRemoteLayerService}
+import com.scalableminds.webknossos.datastore.helpers.{GetMultipleSegmentIndexParameters, GetSegmentIndexParameters, SegmentIndexData, SegmentStatisticsParameters}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSource
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId, GenericDataSource}
 import com.scalableminds.webknossos.datastore.services._
@@ -23,7 +14,7 @@ import com.scalableminds.webknossos.datastore.services.uploading._
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, DataVaultService}
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.data.Form
-import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
+import play.api.data.Forms.{longNumber, nonEmptyText, number, optional, tuple}
 import play.api.i18n.Messages
 import play.api.libs.Files
 import play.api.libs.json.Json
@@ -149,7 +140,7 @@ class DataSourceController @Inject()(
       val uploadForm = Form(
         tuple(
           "resumableChunkNumber" -> number,
-          "resumableChunkSize" -> number,
+          "resumableCurrentChunkSize" -> number,
           "resumableTotalChunks" -> longNumber,
           "resumableIdentifier" -> nonEmptyText
         )).fill((-1, -1, -1, ""))
@@ -159,7 +150,7 @@ class DataSourceController @Inject()(
         .fold(
           hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
           success = {
-            case (chunkNumber, chunkSize, totalChunkCount, uploadFileId) =>
+            case (chunkNumber, currentChunkSize, totalChunkCount, uploadFileId) =>
               for {
                 dataSourceId <- uploadService.getDataSourceIdByUploadId(
                   uploadService.extractDatasetUploadId(uploadFileId)) ?~> "dataset.upload.validation.failed"
@@ -170,7 +161,7 @@ class DataSourceController @Inject()(
                     _ <- bool2Fox(isKnownUpload) ?~> "dataset.upload.validation.failed"
                     chunkFile <- request.body.file("file") ?~> "zip.file.notFound"
                     _ <- uploadService.handleUploadChunk(uploadFileId,
-                                                         chunkSize,
+                                                         currentChunkSize,
                                                          totalChunkCount,
                                                          chunkNumber,
                                                          new File(chunkFile.ref.path.toString))

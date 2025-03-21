@@ -68,9 +68,9 @@ function getRepresentativeForTree(treeId: number, segId: number, mergerModeState
   return representative;
 }
 
-function deleteIdMappingOfSegment(segId: number, treeId: number, mergerModeState: MergerModeState) {
+function deleteIdMappingOfSegment(unmappedSegmentId: number, treeId: number, mergerModeState: MergerModeState) {
   // Remove segment from color mapping
-  mergerModeState.idMapping.delete(segId);
+  mergerModeState.idMapping.delete(unmappedSegmentId);
   delete mergerModeState.treeIdToRepresentativeSegmentId[treeId];
 }
 

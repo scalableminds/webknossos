@@ -8,6 +8,7 @@ RUN curl -sL "https://deb.nodesource.com/setup_${VERSION_NODE}" | bash - \
 RUN mkdir -p /webknossos
 WORKDIR /webknossos
 
+# Copy compiled Scala output from a previous build step, e.g. output of the Docker-dev image
 COPY target/universal/stage .
 
 RUN addgroup --system --gid 999 webknossos \

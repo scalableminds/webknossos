@@ -14,8 +14,8 @@ object BuildInfoSettings {
       case _: Throwable => failureMsg
     }
 
-  val ciBuild: String = Properties.envOrElse("CIRCLE_BUILD_NUM", "")
-  val ciTag: String = Properties.envOrElse("CIRCLE_TAG", "")
+  val ciBuild: String = Properties.envOrElse("CI_BUILD_NUM", "")
+  val ciTag: String = Properties.envOrElse("CI_TAG", "")
 
   def commitHash: String = getStdoutFromCommand("git rev-parse HEAD", "<getting commit hash failed>")
   def commitDate: String = getStdoutFromCommand("git log -1 --format=%cd ", "<getting git date failed>")

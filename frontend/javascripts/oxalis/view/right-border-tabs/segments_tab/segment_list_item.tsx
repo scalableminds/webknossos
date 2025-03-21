@@ -13,11 +13,13 @@ import { useDispatch, useSelector } from "react-redux";
 
 import type { MenuItemType } from "antd/es/menu/interface";
 import classnames from "classnames";
-import { ChangeColorMenuItemContent } from "components/color_picker";
+import {
+  ChangeColorMenuItemContent,
+  ChangeRGBAColorMenuItemContent,
+} from "components/color_picker";
 import FastTooltip from "components/fast_tooltip";
 import { V4 } from "libs/mjs";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
 import {
@@ -51,6 +53,9 @@ import { LoadMeshMenuItemLabel } from "./load_mesh_menu_item_label";
 import { withMappingActivationConfirmation } from "./segments_view_helper";
 
 const ALSO_DELETE_SEGMENT_FROM_LIST_KEY = "also-delete-segment-from-list";
+
+import * as Utils from "libs/utils";
+import Constants from "oxalis/constants";
 
 export function ColoredDotIcon({ colorRGBA }: { colorRGBA: Vector4 }) {
   const rgbaCss = rgbaToCSS(colorRGBA);
@@ -206,6 +211,12 @@ type Props = {
   ) => void;
   removeSegment: (arg0: number, arg2: string) => void;
   deleteSegmentData: (arg0: number, arg2: string, callback?: () => void) => void;
+  setMeshOpacity: (
+    arg0: number,
+    arg1: string,
+    arg2: number,
+    arg3: AdditionalCoordinate[] | null | undefined,
+  ) => void;
   onSelectSegment: (arg0: Segment) => void;
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
   loadAdHocMesh: (
@@ -385,6 +396,7 @@ function _SegmentListItem({
   allowUpdate,
   updateSegment,
   removeSegment,
+  setMeshOpacity,
   deleteSegmentData,
   onSelectSegment,
   visibleSegmentationLayer,
@@ -409,6 +421,11 @@ function _SegmentListItem({
     (state: OxalisState) => getSegmentColorAsRGBA(state, segment.id),
     (a: Vector4, b: Vector4) => V4.isEqual(a, b),
   );
+
+  const additionalCoordinates = useSelector(
+    (state: OxalisState) => state.flycam.additionalCoordinates,
+  );
+
   const isHoveredSegmentId = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.hoveredSegmentId === segment.id,
   );
@@ -416,6 +433,13 @@ function _SegmentListItem({
     const centeredSegmentId = getSegmentIdForPosition(getPosition(state.flycam));
     return centeredSegmentId === segment.id;
   });
+
+  const segmentColorWithMeshOpacity: Vector4 = [
+    segmentColorRGBA[0],
+    segmentColorRGBA[1],
+    segmentColorRGBA[2],
+    mesh != null ? mesh.opacity : Constants.DEFAULT_MESH_OPACITY,
+  ];
 
   const createSegmentContextMenu = (): MenuProps => ({
     items: [
@@ -443,7 +467,32 @@ function _SegmentListItem({
       ),
       {
         key: `changeSegmentColor-${segment.id}`,
-        label: (
+        label: mesh?.isVisible ? (
+          <ChangeRGBAColorMenuItemContent
+            isDisabled={false}
+            title="Change Segment Color"
+            onSetColor={(color, createsNewUndoState) => {
+              if (visibleSegmentationLayer == null) {
+                return;
+              }
+              updateSegment(
+                segment.id,
+                {
+                  color: color.slice(0, 3) as Vector3,
+                },
+                visibleSegmentationLayer.name,
+                createsNewUndoState,
+              );
+              setMeshOpacity(
+                segment.id,
+                visibleSegmentationLayer.name,
+                color[3],
+                additionalCoordinates,
+              );
+            }}
+            rgba={segmentColorWithMeshOpacity}
+          />
+        ) : (
           <ChangeColorMenuItemContent
             isDisabled={false}
             title="Change Segment Color"

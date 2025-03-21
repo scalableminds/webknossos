@@ -36,6 +36,7 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
         exploreLocalNgffV0_5Array(path, dataSourceId),
         exploreLocalZarrArray(path, dataSourceId, layerDirectory),
         exploreLocalNeuroglancerPrecomputed(path, dataSourceId, layerDirectory),
+        exploreLocalN5CompactMultiscales(path, dataSourceId, layerDirectory),
         exploreLocalN5Multiscales(path, dataSourceId, layerDirectory),
         exploreLocalN5Array(path, dataSourceId)
       )
@@ -85,6 +86,13 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
     exploreLocalLayer(
       layers => layers.map(selectLastDirectory),
       new N5MultiscalesExplorer
+    )(path, dataSourceId, layerDirectory)
+
+  private def exploreLocalN5CompactMultiscales(path: Path, dataSourceId: DataSourceId, layerDirectory: String)(
+      implicit ec: ExecutionContext): Fox[DataSourceWithMagLocators] =
+    exploreLocalLayer(
+      layers => layers.map(selectLastDirectory),
+      new N5CompactMultiscalesExplorer
     )(path, dataSourceId, layerDirectory)
 
   private def exploreLocalN5Array(path: Path, dataSourceId: DataSourceId)(

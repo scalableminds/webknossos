@@ -102,6 +102,7 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
           new Zarr3ArrayExplorer,
           new ZarrArrayExplorer(Vec3Int.ones),
           new N5MultiscalesExplorer,
+          new N5CompactMultiscalesExplorer,
           new N5ArrayExplorer,
           new PrecomputedExplorer,
           new NeuroglancerUriExplorer(dataVaultService)

@@ -15,8 +15,8 @@ import com.scalableminds.webknossos.datastore.models.requests.{
 }
 import com.scalableminds.webknossos.datastore.models.{
   AdditionalCoordinate,
-  UnsignedInteger,
-  UnsignedIntegerArray,
+  SegmentInteger,
+  SegmentIntegerArray,
   VoxelPosition,
   datasource
 }
@@ -169,7 +169,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
                                                                                 datasetDirectoryName,
                                                                                 dataLayerName)
       data <- getDataForBucketPositions(dataSource, dataLayer, mag, Seq(bucketPosition * mag), mappingName)
-      dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(data, dataLayer.elementClass)
+      dataTyped: Array[SegmentInteger] = SegmentIntegerArray.fromByteArray(data, dataLayer.elementClass)
     } yield dataTyped
 
   private def getBucketPositions(

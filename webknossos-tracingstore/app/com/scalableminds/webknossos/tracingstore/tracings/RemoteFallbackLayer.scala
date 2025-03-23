@@ -8,9 +8,10 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.WebknossosDataRequest
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, DataSourceId}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, DataSourceId, ElementClass}
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.FallbackDataKey
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
+import net.liftweb.common.Box
 
 import scala.concurrent.ExecutionContext
 
@@ -20,8 +21,11 @@ case class RemoteFallbackLayer(organizationId: String,
                                elementClass: ElementClassProto)
 
 object RemoteFallbackLayer extends ProtoGeometryImplicits {
-  def fromDataLayerAndDataSource(dataLayer: DataLayerLike, dataSource: DataSourceId): RemoteFallbackLayer =
-    RemoteFallbackLayer(dataSource.organizationId, dataSource.directoryName, dataLayer.name, dataLayer.elementClass)
+  def fromDataLayerAndDataSource(dataLayer: DataLayerLike, dataSource: DataSourceId): Box[RemoteFallbackLayer] = {
+    val elementClassProtoBox = ElementClass.toProto(dataLayer.elementClass)
+    elementClassProtoBox.map(elementClassProto =>
+      RemoteFallbackLayer(dataSource.organizationId, dataSource.directoryName, dataLayer.name, elementClassProto))
+  }
 }
 trait FallbackDataHelper {
   def remoteDatastoreClient: TSRemoteDatastoreClient

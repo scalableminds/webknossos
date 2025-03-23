@@ -53,7 +53,7 @@ const mapMenuActionsToCommands = (menuActions: Array<ItemType>): CommandWithoutI
 const getLabelForPath = (key: string) =>
   getPhraseFromCamelCaseString(capitalize(key.split("/")[1])) || key;
 
-export const CommandPalette = ({ label }: { label: string | null }) => {
+export const CommandPalette = ({ label }: { label: string | JSX.Element | null }) => {
   const userConfig = useSelector((state: OxalisState) => state.userConfiguration);
   const isViewMode = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.controlMode === "VIEW",
@@ -182,21 +182,19 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
     ...getTabsAndSettingsMenuItems(),
   ];
   return (
-    <div style={{ marginRight: "10px" }}>
-      <ReactCommandPalette
-        commands={allCommands.map((command, counter) => {
-          return {
-            ...command,
-            id: counter,
-          };
-        })}
-        hotKeys={["ctrl+p", "command+p"]}
-        trigger={label}
-        closeOnSelect
-        resetInputOnOpen
-        maxDisplayed={100}
-        theme={theme === "light" ? commandPaletteLightTheme : commandPaletteDarkTheme}
-      />
-    </div>
+    <ReactCommandPalette
+      commands={allCommands.map((command, counter) => {
+        return {
+          ...command,
+          id: counter,
+        };
+      })}
+      hotKeys={["ctrl+p", "command+p"]}
+      trigger={label}
+      closeOnSelect
+      resetInputOnOpen
+      maxDisplayed={100}
+      theme={theme === "light" ? commandPaletteLightTheme : commandPaletteDarkTheme}
+    />
   );
 };

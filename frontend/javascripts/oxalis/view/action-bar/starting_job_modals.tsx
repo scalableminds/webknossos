@@ -865,7 +865,7 @@ function StartJobForm(props: StartJobFormProps) {
           dispatch(setActiveOrganizationAction(updatedOrganization));
         } catch (error) {
           Toast.error(
-            "Failed to fetch updated amount of credits of your organization. See the console for more details. This usually shouldn't impact you.",
+            "There was an error while reloading the available credits. Consider reloading the page.",
           );
           console.error("Failed to refresh organization credits.", error);
         }

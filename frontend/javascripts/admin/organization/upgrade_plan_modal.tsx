@@ -314,7 +314,6 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
   );
   const [creditAmount, setCreditAmount] = useState<number | null>(1);
   useEffect(() => {
-    // TODOM: Remove magic numbers. E.g. put them into application configuration.
     if (creditAmount == null) {
       return;
     }

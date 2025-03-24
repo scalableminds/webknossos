@@ -79,8 +79,6 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
       previousSegmentIds: Set[Long] <- collectSegmentIds(previousBucketBytesWithEmptyFallback, elementClass) ?~> "volumeSegmentIndex.update.collectSegmentIds.failed"
       additions = segmentIds.diff(previousSegmentIds)
       removals = previousSegmentIds.diff(segmentIds)
-      _ = Instant.logSince(before, s"Collecting segments, diffing")
-      beforeRemove = Instant.now
       _ <- Fox.serialCombined(removals.toList)(
         segmentId =>
           // When fallback layer is used we also need to include relevant segments here into the fossildb since otherwise the fallback layer would be used with invalid data
@@ -90,15 +88,13 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
                                        mappingName,
                                        editableMappingTracingId)) ?~> "volumeSegmentIndex.update.removeBucket.failed"
       // When fallback layer is used, copy the entire bucketlist for this segment instead of one bucket
-      _ = Instant.logSince(beforeRemove, "remove")
-      beforeAdd = Instant.now
       _ <- Fox.runIf(additions.nonEmpty)(
         addBucketToSegmentIndex(segmentIndexBuffer,
                                 additions.toList,
                                 bucketPosition,
                                 mappingName,
                                 editableMappingTracingId)) ?~> "volumeSegmentIndex.update.addBucket.failed"
-      _ = Instant.logSince(beforeAdd, "add")
+      _ = Instant.logSince(before, "update segment index from bucket total")
     } yield ()
 
   private def bytesWithEmptyFallback(bytesBox: Box[Array[Byte]], elementClass: ElementClassProto)(
@@ -155,7 +151,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
       }
     } yield ()
 
-  lazy val bucketScanner = new NativeBucketScanner()
+  private lazy val bucketScanner = new NativeBucketScanner()
 
   private def collectSegmentIds(bytes: Array[Byte], elementClass: ElementClassProto): Box[Set[Long]] =
     tryo(

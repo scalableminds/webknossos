@@ -67,7 +67,7 @@ JNIEXPORT jlongArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers
   auto t3 = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> duration_total = t3 - t0;
 
-  std::cout << "total " << duration_total.count() << "ms\n";
+  // std::cout << "total " << duration_total.count() << "ms\n";
 
   return resultAsJLongArray;
 }

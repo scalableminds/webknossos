@@ -5,21 +5,21 @@ import { compressTypedArray, decompressToTypedArray } from "../helpers/bucket_co
 
 export type PendingOperation = (data: BucketDataArray) => void;
 
-// todop: write unit tests for this module to check against
-// race conditions?
+const DefaultCompressionService = {
+  compressTypedArray,
+  decompressToTypedArray,
+};
 
 export default class BucketSnapshot {
   readonly zoomedAddress: BucketAddress;
-  readonly pendingOperations: PendingOperation[];
-  readonly tracingId: string;
   readonly needsMergeWithBackendData: boolean;
-  readonly elementClass: ElementClass;
+  // readonly elementClass: ElementClass;
 
   // A copy of the bucket's data. Either stored
   // uncompressed:
-  dataClone: BucketDataArray | null;
+  private dataClone: BucketDataArray | null;
   // ... or compressed:
-  compressedData: Uint8Array | null = null;
+  private compressedData: Uint8Array | null = null;
 
   // A pending promise of the unmerged backend data. Once the promise
   // is fulfilled, it will be set to null.
@@ -27,27 +27,25 @@ export default class BucketSnapshot {
   // maybeUnmergedBucketLoadedPromise. however, they will all
   // compress/decompress the data independently (== redundantly).
   // this could be optimized
-  maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise;
+  private maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise;
   // Afterwards, the backend data is either stored
   // uncompressed:
-  backendBucketData: BucketDataArray | null = null;
+  private backendBucketData: BucketDataArray | null = null;
   // ... or compressed:
-  compressedBackendData: Uint8Array | null = null;
+  private compressedBackendData: Uint8Array | null = null;
 
   constructor(
     zoomedAddress: BucketAddress,
     dataClone: BucketDataArray,
     maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise,
-    pendingOperations: PendingOperation[],
-    tracingId: string,
-    elementClass: ElementClass,
+    readonly pendingOperations: PendingOperation[],
+    readonly tracingId: string,
+    private readonly elementClass: ElementClass,
+    private compressor: typeof DefaultCompressionService = DefaultCompressionService,
   ) {
     this.zoomedAddress = zoomedAddress;
     this.dataClone = dataClone;
     this.maybeUnmergedBucketLoadedPromise = maybeUnmergedBucketLoadedPromise;
-    this.pendingOperations = pendingOperations;
-    this.tracingId = tracingId;
-    this.elementClass = elementClass;
 
     this.needsMergeWithBackendData = maybeUnmergedBucketLoadedPromise != null;
 
@@ -56,7 +54,7 @@ export default class BucketSnapshot {
 
   private startCompression() {
     if (this.dataClone != null) {
-      compressTypedArray(this.dataClone).then((compressedData) => {
+      this.compressor.compressTypedArray(this.dataClone).then((compressedData) => {
         this.compressedData = compressedData;
         this.dataClone = null;
       });
@@ -65,12 +63,13 @@ export default class BucketSnapshot {
       return;
     }
     this.maybeUnmergedBucketLoadedPromise.then((backendBucketData) => {
+      console.log("maybeUnmergedBucketLoadedPromise.then", backendBucketData);
       // Once the backend data is fetched, do not directly merge it with the local data
       // as this operation is only needed, when the volume action is undone. Additionally merging is more
       // expensive than saving the backend data. Thus the data is only merged when it is needed.
       this.backendBucketData = backendBucketData;
       this.maybeUnmergedBucketLoadedPromise = null;
-      compressTypedArray(backendBucketData).then((compressedBackendData) => {
+      this.compressor.compressTypedArray(backendBucketData).then((compressedBackendData) => {
         this.backendBucketData = null;
         this.compressedBackendData = compressedBackendData;
       });
@@ -84,7 +83,7 @@ export default class BucketSnapshot {
     if (this.compressedData == null) {
       throw new Error("BucketSnapshot has neither data nor compressedData.");
     }
-    return await decompressToTypedArray(this.compressedData, this.elementClass);
+    return await this.compressor.decompressToTypedArray(this.compressedData, this.elementClass);
   }
 
   private isBackendDataAvailable() {
@@ -98,7 +97,10 @@ export default class BucketSnapshot {
     if (this.compressedBackendData == null) {
       throw new Error("getBackendData was called even though no backend data exists.");
     }
-    return await decompressToTypedArray(this.compressedBackendData, this.elementClass);
+    return await this.compressor.decompressToTypedArray(
+      this.compressedBackendData,
+      this.elementClass,
+    );
   }
 
   async getDataForRestore(): Promise<{

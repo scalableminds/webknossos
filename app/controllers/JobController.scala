@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.Fox
 import models.dataset.{DataStoreDAO, DatasetDAO, DatasetLayerAdditionalAxesDAO, DatasetService}
 import models.job._
 import models.organization.OrganizationDAO
-import models.user.MultiUserDAO
+import models.user.{MultiUserDAO, UserService}
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -50,21 +50,21 @@ object AnimationJobOptions {
   implicit val jsonFormat: OFormat[AnimationJobOptions] = Json.format[AnimationJobOptions]
 }
 
-class JobController @Inject()(
-    jobDAO: JobDAO,
-    sil: Silhouette[WkEnv],
-    datasetDAO: DatasetDAO,
-    datasetService: DatasetService,
-    jobService: JobService,
-    workerService: WorkerService,
-    workerDAO: WorkerDAO,
-    datasetLayerAdditionalAxesDAO: DatasetLayerAdditionalAxesDAO,
-    wkconf: WkConf,
-    multiUserDAO: MultiUserDAO,
-    wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-    slackNotificationService: SlackNotificationService,
-    organizationDAO: OrganizationDAO,
-    dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
+class JobController @Inject()(jobDAO: JobDAO,
+                              sil: Silhouette[WkEnv],
+                              datasetDAO: DatasetDAO,
+                              datasetService: DatasetService,
+                              jobService: JobService,
+                              workerService: WorkerService,
+                              workerDAO: WorkerDAO,
+                              datasetLayerAdditionalAxesDAO: DatasetLayerAdditionalAxesDAO,
+                              wkconf: WkConf,
+                              multiUserDAO: MultiUserDAO,
+                              wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+                              slackNotificationService: SlackNotificationService,
+                              organizationDAO: OrganizationDAO,
+                              dataStoreDAO: DataStoreDAO,
+                              userService: UserService)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
     with Zarr3OutputHelper {
 
@@ -89,11 +89,10 @@ class JobController @Inject()(
     } yield Ok(Json.toJson(jobsJsonList))
   }
 
-  def get(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def get(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- bool2Fox(wkconf.Features.jobsEnabled) ?~> "job.disabled"
-      idValidated <- ObjectId.fromString(id)
-      job <- jobDAO.findOne(idValidated) ?~> "job.notFound"
+      job <- jobDAO.findOne(id) ?~> "job.notFound"
       js <- jobService.publicWrites(job)
     } yield Ok(js)
   }
@@ -104,23 +103,31 @@ class JobController @Inject()(
    * The worker-written “state” field is later updated by the worker when it has successfully cancelled the job run.
    * When both fields are set, the cancelling is complete and wk no longer includes the job in the to_cancel list sent to worker
    */
-  def cancel(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def cancel(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- bool2Fox(wkconf.Features.jobsEnabled) ?~> "job.disabled"
-      jobIdValidated <- ObjectId.fromString(id)
-      job <- jobDAO.findOne(jobIdValidated)
-      _ <- jobDAO.updateManualState(jobIdValidated, JobState.CANCELLED)
+      job <- jobDAO.findOne(id)
+      _ <- jobDAO.updateManualState(id, JobState.CANCELLED)
+      js <- jobService.publicWrites(job)
+    } yield Ok(js)
+  }
+
+  def retry(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      _ <- bool2Fox(wkconf.Features.jobsEnabled) ?~> "job.disabled"
+      _ <- userService.assertIsSuperUser(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+      job <- jobDAO.findOne(id)
+      _ <- jobDAO.retryOne(id)
       js <- jobService.publicWrites(job)
     } yield Ok(js)
   }
 
   // Note that the dataset has to be registered by reserveUpload via the datastore first.
-  def runConvertToWkwJob(datasetId: String, scale: String, unit: Option[String]): Action[AnyContent] =
+  def runConvertToWkwJob(datasetId: ObjectId, scale: String, unit: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          datasetIdValidated <- ObjectId.fromString(datasetId)
-          dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           voxelSizeFactor <- Vec3Double.fromUriLiteral(scale).toFox
           voxelSizeUnit <- Fox.runOptional(unit)(u => LengthUnit.fromString(u).toFox)
           voxelSize = VoxelSize.fromFactorAndUnitWithDefault(voxelSizeFactor, voxelSizeUnit)
@@ -144,14 +151,13 @@ class JobController @Inject()(
       }
     }
 
-  def runComputeMeshFileJob(datasetId: String,
+  def runComputeMeshFileJob(datasetId: ObjectId,
                             layerName: String,
                             mag: String,
                             agglomerateView: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        datasetIdValidated <- ObjectId.fromString(datasetId)
-        dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
+        dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
         organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
           "organization.notFound",
           dataset._organization)
@@ -172,11 +178,10 @@ class JobController @Inject()(
       } yield Ok(js)
     }
 
-  def runComputeSegmentIndexFileJob(datasetId: String, layerName: String): Action[AnyContent] =
+  def runComputeSegmentIndexFileJob(datasetId: ObjectId, layerName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        datasetIdValidated <- ObjectId.fromString(datasetId)
-        dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
+        dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
         organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
           "organization.notFound",
           dataset._organization)
@@ -194,12 +199,11 @@ class JobController @Inject()(
       } yield Ok(js)
     }
 
-  def runInferNucleiJob(datasetId: String, layerName: String, newDatasetName: String): Action[AnyContent] =
+  def runInferNucleiJob(datasetId: ObjectId, layerName: String, newDatasetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          datasetIdValidated <- ObjectId.fromString(datasetId)
-          dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
             "organization.notFound",
             dataset._organization)
@@ -208,6 +212,7 @@ class JobController @Inject()(
           _ <- datasetService.assertValidLayerNameLax(layerName)
           command = JobCommand.infer_nuclei
           commandArgs = Json.obj(
+            "dataset_id" -> dataset._id,
             "organization_id" -> dataset._organization,
             "dataset_name" -> dataset.name,
             "dataset_directory_name" -> dataset.directoryName,
@@ -220,15 +225,20 @@ class JobController @Inject()(
       }
     }
 
-  def runInferNeuronsJob(datasetId: String,
+  def runInferNeuronsJob(datasetId: ObjectId,
                          layerName: String,
                          bbox: String,
-                         newDatasetName: String): Action[AnyContent] =
+                         newDatasetName: String,
+                         doSplitMergerEvaluation: Boolean,
+                         annotationId: Option[String],
+                         evalUseSparseTracing: Option[Boolean],
+                         evalMaxEdgeLength: Option[Double],
+                         evalSparseTubeThresholdNm: Option[Double],
+                         evalMinMergerPathLengthNm: Option[Double]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          datasetIdValidated <- ObjectId.fromString(datasetId)
-          dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
             "organization.notFound",
             dataset._organization)
@@ -237,14 +247,22 @@ class JobController @Inject()(
           _ <- datasetService.assertValidLayerNameLax(layerName)
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
           _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
+          annotationIdParsed <- Fox.runIf(doSplitMergerEvaluation)(annotationId.toFox) ?~> "job.inferNeurons.annotationIdEvalParamsMissing"
           command = JobCommand.infer_neurons
           commandArgs = Json.obj(
+            "dataset_id" -> dataset._id,
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
             "dataset_directory_name" -> dataset.directoryName,
             "new_dataset_name" -> newDatasetName,
             "layer_name" -> layerName,
             "bbox" -> bbox,
+            "do_split_merger_evaluation" -> doSplitMergerEvaluation,
+            "annotation_id" -> annotationIdParsed,
+            "eval_use_sparse_tracing" -> evalUseSparseTracing,
+            "eval_max_edge_length" -> evalMaxEdgeLength,
+            "eval_sparse_tube_threshold_nm" -> evalSparseTubeThresholdNm,
+            "eval_min_merger_path_length_nm" -> evalMinMergerPathLengthNm,
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunNeuronInferral"
           js <- jobService.publicWrites(job)
@@ -252,15 +270,14 @@ class JobController @Inject()(
       }
     }
 
-  def runInferMitochondriaJob(datasetId: String,
+  def runInferMitochondriaJob(datasetId: ObjectId,
                               layerName: String,
                               bbox: String,
                               newDatasetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          datasetIdValidated <- ObjectId.fromString(datasetId)
-          dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
             "organization.notFound",
             dataset._organization)
@@ -272,6 +289,7 @@ class JobController @Inject()(
           _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
           command = JobCommand.infer_mitochondria
           commandArgs = Json.obj(
+            "dataset_id" -> dataset._id,
             "organization_id" -> dataset._organization,
             "dataset_name" -> dataset.name,
             "dataset_directory_name" -> dataset.directoryName,
@@ -285,24 +303,23 @@ class JobController @Inject()(
       }
     }
 
-  def runAlignSectionsJob(datasetId: String,
+  def runAlignSectionsJob(datasetId: ObjectId,
                           layerName: String,
                           newDatasetName: String,
-                          annotationId: Option[String] = None): Action[AnyContent] =
+                          annotationId: Option[ObjectId] = None): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          datasetIdValidated <- ObjectId.fromString(datasetId)
-          dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
             "organization.notFound",
             dataset._organization)
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.alignSections.notAllowed.organization" ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
-          _ <- Fox.runOptional(annotationId)(ObjectId.fromString)
           command = JobCommand.align_sections
           commandArgs = Json.obj(
+            "dataset_id" -> dataset._id,
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
             "dataset_directory_name" -> dataset.directoryName,
@@ -316,23 +333,22 @@ class JobController @Inject()(
       }
     }
 
-  def runExportTiffJob(datasetId: String,
+  def runExportTiffJob(datasetId: ObjectId,
                        bbox: String,
                        additionalCoordinates: Option[String],
                        layerName: Option[String],
                        mag: Option[String],
                        annotationLayerName: Option[String],
-                       annotationId: Option[String],
+                       annotationId: Option[ObjectId],
                        asOmeTiff: Boolean): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          datasetIdValidated <- ObjectId.fromString(datasetId)
-          dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
             "organization.notFound",
             dataset._organization)
-          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.meshFile.notAllowed.organization" ~> FORBIDDEN
+          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.exportTiff.notAllowed.organization" ~> FORBIDDEN
           _ <- Fox.runOptional(layerName)(datasetService.assertValidLayerNameLax)
           _ <- Fox.runOptional(annotationLayerName)(datasetService.assertValidLayerNameLax)
           _ <- jobService.assertBoundingBoxLimits(bbox, mag)
@@ -356,6 +372,7 @@ class JobController @Inject()(
           else
             s"${formatDateForFilename(new Date())}__${dataset.name}__${annotationLayerName.map(_ => "volume").getOrElse(layerName.getOrElse(""))}.zip"
           commandArgs = Json.obj(
+            "dataset_id" -> dataset._id,
             "dataset_directory_name" -> dataset.directoryName,
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
@@ -372,19 +389,20 @@ class JobController @Inject()(
       }
     }
 
-  def runMaterializeVolumeAnnotationJob(datasetId: String,
+  def runMaterializeVolumeAnnotationJob(datasetId: ObjectId,
                                         fallbackLayerName: String,
-                                        annotationId: String,
+                                        annotationId: ObjectId,
                                         annotationType: String,
                                         newDatasetName: String,
                                         outputSegmentationLayerName: String,
                                         mergeSegments: Boolean,
-                                        volumeLayerName: Option[String]): Action[AnyContent] =
+                                        volumeLayerName: Option[String],
+                                        includesEditableMapping: Boolean,
+                                        boundingBox: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          datasetIdValidated <- ObjectId.fromString(datasetId)
-          dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
             "organization.notFound",
             dataset._organization)
@@ -393,7 +411,11 @@ class JobController @Inject()(
           command = JobCommand.materialize_volume_annotation
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(outputSegmentationLayerName)
+          multiUser <- multiUserDAO.findOne(request.identity._multiUser)
+          _ <- Fox.runIf(!multiUser.isSuperUser && includesEditableMapping)(Fox.runOptional(boundingBox)(bbox =>
+            jobService.assertBoundingBoxLimits(bbox, None)))
           commandArgs = Json.obj(
+            "dataset_id" -> dataset._id,
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
             "dataset_directory_name" -> dataset.directoryName,
@@ -403,7 +425,9 @@ class JobController @Inject()(
             "annotation_type" -> annotationType,
             "new_dataset_name" -> newDatasetName,
             "merge_segments" -> mergeSegments,
-            "volume_layer_name" -> volumeLayerName
+            "volume_layer_name" -> volumeLayerName,
+            "use_zarr_streaming" -> includesEditableMapping,
+            "bounding_box" -> boundingBox
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunApplyMergerMode"
           js <- jobService.publicWrites(job)
@@ -411,12 +435,11 @@ class JobController @Inject()(
       }
     }
 
-  def runFindLargestSegmentIdJob(datasetId: String, layerName: String): Action[AnyContent] =
+  def runFindLargestSegmentIdJob(datasetId: ObjectId, layerName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          datasetIdValidated <- ObjectId.fromString(datasetId)
-          dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
             "organization.notFound",
             dataset._organization)
@@ -435,12 +458,11 @@ class JobController @Inject()(
       }
     }
 
-  def runRenderAnimationJob(datasetId: String): Action[AnimationJobOptions] =
+  def runRenderAnimationJob(datasetId: ObjectId): Action[AnimationJobOptions] =
     sil.SecuredAction.async(validateJson[AnimationJobOptions]) { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          datasetIdValidated <- ObjectId.fromString(datasetId)
-          dataset <- datasetDAO.findOne(datasetIdValidated) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
             "organization.notFound",
             dataset._organization)
@@ -458,6 +480,7 @@ class JobController @Inject()(
           exportFileName = s"webknossos_animation_${formatDateForFilename(new Date())}__${dataset.name}__$layerName.mp4"
           command = JobCommand.render_animation
           commandArgs = Json.obj(
+            "dataset_id" -> dataset._id,
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
             "dataset_directory_name" -> dataset.directoryName,
@@ -478,11 +501,10 @@ class JobController @Inject()(
       }
     }
 
-  def redirectToExport(jobId: String): Action[AnyContent] =
+  def redirectToExport(jobId: ObjectId): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        jobIdValidated <- ObjectId.fromString(jobId)
-        job <- jobDAO.findOne(jobIdValidated)
+        job <- jobDAO.findOne(jobId)
         dataStore <- dataStoreDAO.findOneByName(job._dataStore) ?~> "dataStore.notFound"
         userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
           request.identity.loginInfo)

@@ -1,17 +1,17 @@
-import * as THREE from "three";
+import { M4x4 } from "libs/mjs";
+import type TPS3D from "libs/thin_plate_spline";
+import _ from "lodash";
 import { COLOR_TEXTURE_WIDTH_FIXED } from "oxalis/geometries/materials/node_shader";
 import type { Uniforms } from "oxalis/geometries/materials/plane_material_factory";
+import { getTransformsForSkeletonLayer } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
-import { Store } from "oxalis/singletons";
-import _ from "lodash";
-import { getTransformsForSkeletonLayer } from "oxalis/model/accessors/dataset_accessor";
-import { M4x4 } from "libs/mjs";
 import {
   generateCalculateTpsOffsetFunction,
   generateTpsInitialization,
 } from "oxalis/shaders/thin_plate_spline.glsl";
-import type TPS3D from "libs/thin_plate_spline";
+import { Store } from "oxalis/singletons";
+import * as THREE from "three";
 
 class EdgeShader {
   material: THREE.RawShaderMaterial;

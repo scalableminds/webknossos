@@ -105,13 +105,14 @@ object Fox extends FoxImplicits {
   def sequence[T](l: List[Fox[T]])(implicit ec: ExecutionContext): Future[List[Box[T]]] =
     Future.sequence(l.map(_.futureBox))
 
-  def combined[T](l: List[Fox[T]])(implicit ec: ExecutionContext): Fox[List[T]] =
+  def combined[T](l: Seq[Fox[T]])(implicit ec: ExecutionContext): Fox[List[T]] =
     Fox(Future.sequence(l.map(_.futureBox)).map { results =>
       results.find(_.isEmpty) match {
         case Some(Empty)            => Empty
         case Some(failure: Failure) => failure
         case _ =>
-          Full(results.map(_.openOrThrowException("An exception should never be thrown, all boxes must be full")))
+          Full(
+            results.map(_.openOrThrowException("An exception should never be thrown, all boxes must be full")).toList)
       }
     })
 
@@ -137,7 +138,7 @@ object Fox extends FoxImplicits {
   }
 
   // Run serially, fail on the first failure
-  def serialCombined[A, B](l: List[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Fox[List[B]] =
+  def serialCombined[A, B](l: Iterable[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Fox[List[B]] =
     serialCombined(l.iterator)(f)
 
   // Run serially, fail on the first failure
@@ -254,22 +255,6 @@ object Fox extends FoxImplicits {
       }
     t =>
       runNext(functions, t)
-  }
-
-  def failureChainAsString(failure: Failure, includeStackTraces: Boolean = false): String = {
-    def formatStackTrace(failure: Failure) =
-      failure.exception match {
-        case Full(exception) if includeStackTraces => s" Stack trace: ${TextUtils.stackTraceAsString(exception)} "
-        case _                                     => ""
-      }
-
-    def formatChain(chain: Box[Failure]): String = chain match {
-      case Full(failure) =>
-        " <~ " + failure.msg + formatStackTrace(failure) + formatChain(failure.chain)
-      case _ => ""
-    }
-
-    failure.msg + formatStackTrace(failure) + formatChain(failure.chain)
   }
 
   def firstSuccess[T](foxes: Seq[Fox[T]])(implicit ec: ExecutionContext): Fox[T] = {

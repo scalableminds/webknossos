@@ -1,7 +1,3 @@
-import type { RouteComponentProps } from "react-router-dom";
-import { Link } from "react-router-dom";
-import { PropTypes } from "@scalableminds/prop-types";
-import { Table, Tag, Spin, Button, Input, Modal, Alert, Row, Col, Tooltip, App } from "antd";
 import {
   CheckCircleOutlined,
   CloseCircleOutlined,
@@ -14,34 +10,38 @@ import {
   UserDeleteOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { connect } from "react-redux";
-import React, { type Key, useEffect, useState } from "react";
-import _ from "lodash";
-import dayjs from "dayjs";
-import { location } from "libs/window";
-import type {
-  APIUser,
-  APITeamMembership,
-  ExperienceMap,
-  APIOrganization,
-} from "types/api_flow_types";
-import { InviteUsersModal } from "admin/onboarding";
-import type { OxalisState } from "oxalis/store";
-import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import LinkButton from "components/link_button";
+import { PropTypes } from "@scalableminds/prop-types";
 import { getEditableUsers, updateUser } from "admin/admin_rest_api";
-import EditableTextLabel from "oxalis/view/components/editable_text_label";
-import ExperienceModalView from "admin/user/experience_modal_view";
-import Persistence from "libs/persistence";
-import PermissionsAndTeamsModalView from "admin/user/permissions_and_teams_modal_view";
+import { InviteUsersModal } from "admin/onboarding";
 import { getActiveUserCount } from "admin/organization/pricing_plan_utils";
+import { renderTeamRolesAndPermissionsForUser } from "admin/team/team_list_view";
+import ExperienceModalView from "admin/user/experience_modal_view";
+import PermissionsAndTeamsModalView from "admin/user/permissions_and_teams_modal_view";
+import { Alert, App, Button, Col, Input, Modal, Row, Spin, Table, Tag, Tooltip } from "antd";
+import LinkButton from "components/link_button";
+import dayjs from "dayjs";
+import Persistence from "libs/persistence";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
+import { location } from "libs/window";
+import _ from "lodash";
 import messages from "messages";
+import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
+import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
+import type { OxalisState } from "oxalis/store";
+import EditableTextLabel from "oxalis/view/components/editable_text_label";
+import React, { type Key, useEffect, useState } from "react";
+import { connect } from "react-redux";
+import type { RouteComponentProps } from "react-router-dom";
+import { Link } from "react-router-dom";
+import type {
+  APIOrganization,
+  APITeamMembership,
+  APIUser,
+  ExperienceMap,
+} from "types/api_flow_types";
 import { logoutUserAction } from "../../oxalis/model/actions/user_actions";
 import Store from "../../oxalis/store";
-import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
-import { renderTeamRolesAndPermissionsForUser } from "admin/team/team_list_view";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -194,8 +194,7 @@ function UserListView({ activeUser, activeOrganization }: Props) {
           <Row key={user.id} gutter={16}>
             <Col span={6}>{`${user.lastName}, ${user.firstName} (${user.email}) `}</Col>
             <Col span={4}>
-              <LinkButton onClick={() => activateUser(user)}>
-                <UserAddOutlined className="icon-margin-right" />
+              <LinkButton onClick={() => activateUser(user)} icon={<UserAddOutlined />}>
                 Activate User
               </LinkButton>
             </Col>
@@ -594,8 +593,7 @@ function UserListView({ activeUser, activeOrganization }: Props) {
             render={(__, user: APIUser) => (
               <span>
                 <Link to={`/users/${user.id}/details`}>
-                  <UserOutlined className="icon-margin-right" />
-                  Show Annotations
+                  <LinkButton icon={<UserOutlined />}>Show Annotations</LinkButton>
                 </Link>
                 <br />
                 {user.isActive ? (
@@ -605,8 +603,8 @@ function UserListView({ activeUser, activeOrganization }: Props) {
                         event.stopPropagation();
                         deactivateUser(user);
                       }}
+                      icon={<UserDeleteOutlined />}
                     >
-                      <UserDeleteOutlined className="icon-margin-right" />
                       Deactivate User
                     </LinkButton>
                   ) : null
@@ -616,8 +614,8 @@ function UserListView({ activeUser, activeOrganization }: Props) {
                       event.stopPropagation();
                       activateUser(user);
                     }}
+                    icon={<UserAddOutlined />}
                   >
-                    <UserAddOutlined className="icon-margin-right" />
                     Activate User
                   </LinkButton>
                 )}

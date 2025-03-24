@@ -1,22 +1,8 @@
-import * as THREE from "three";
+import type { Matrix4x4 } from "libs/mjs";
+import { M4x4, V3 } from "libs/mjs";
+import { map3, mod } from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
-import type { DataLayerType, Flycam, LoadingStrategy, OxalisState } from "oxalis/store";
-import type { Matrix4x4 } from "libs/mjs";
-import { M4x4 } from "libs/mjs";
-import { getViewportRects } from "oxalis/model/accessors/view_mode_accessor";
-import {
-  getColorLayers,
-  getDataLayers,
-  getEnabledLayers,
-  getLayerByName,
-  getMaxZoomStep,
-  getMagInfo,
-  getTransformsForLayer,
-  invertAndTranspose,
-} from "oxalis/model/accessors/dataset_accessor";
-import { map3, mod } from "libs/utils";
-import Dimensions from "oxalis/model/dimensions";
 import type {
   OrthoView,
   OrthoViewMap,
@@ -27,16 +13,35 @@ import type {
   ViewMode,
 } from "oxalis/constants";
 import constants, { OrthoViews } from "oxalis/constants";
+import {
+  getColorLayers,
+  getDataLayers,
+  getDenseMagsForLayerName,
+  getEnabledLayers,
+  getLayerByName,
+  getMagInfo,
+  getMaxZoomStep,
+} from "oxalis/model/accessors/dataset_accessor";
+import { getViewportRects } from "oxalis/model/accessors/view_mode_accessor";
 import determineBucketsForFlight from "oxalis/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
 import determineBucketsForOblique from "oxalis/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
-import * as scaleInfo from "oxalis/model/scaleinfo";
-import { reuseInstanceOnEquality } from "./accessor_helpers";
-import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
-import { getMatrixScale, rotateOnAxis } from "../reducers/flycam_reducer";
-import type { SmallerOrHigherInfo } from "../helpers/mag_info";
+import Dimensions from "oxalis/model/dimensions";
+import * as scaleInfo from "oxalis/model/scaleinfo";
 import { getBaseVoxelInUnit } from "oxalis/model/scaleinfo";
+import type { DataLayerType, Flycam, LoadingStrategy, OxalisState } from "oxalis/store";
+import * as THREE from "three";
 import type { AdditionalCoordinate, VoxelSize } from "types/api_flow_types";
+import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
+import type { SmallerOrHigherInfo } from "../helpers/mag_info";
+import {
+  type Transform,
+  chainTransforms,
+  invertTransform,
+  transformPointUnscaled,
+} from "../helpers/transformation_helpers";
+import { getMatrixScale, rotateOnAxis } from "../reducers/flycam_reducer";
+import { reuseInstanceOnEquality } from "./accessor_helpers";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
 
@@ -187,14 +192,10 @@ export function _getMaximumZoomForAllMags(
   return maxZoomValueThresholds;
 }
 
-// todo: make this cleaner. since the maximum zoom depends on the layer name and the right matrix,
-// a memoization cache size of one doesn't work anymore. move cache to store and update explicitly?
-const perLayerFnCache: Map<string, typeof _getMaximumZoomForAllMags> = new Map();
-
 // Only exported for testing.
 export const _getDummyFlycamMatrix = memoizeOne((scale: Vector3) => {
   const scaleMatrix = getMatrixScale(scale);
-  return rotateOnAxis(M4x4.scale(scaleMatrix, M4x4.identity, []), Math.PI, [0, 0, 1]);
+  return rotateOnAxis(M4x4.scale(scaleMatrix, M4x4.identity(), []), Math.PI, [0, 0, 1]);
 });
 
 export function getMoveOffset(state: OxalisState, timeFactor: number) {
@@ -212,45 +213,48 @@ export function getMoveOffset3d(state: OxalisState, timeFactor: number) {
 }
 
 function getMaximumZoomForAllMagsFromStore(state: OxalisState, layerName: string): Array<number> {
-  const { viewMode } = state.temporaryConfiguration;
-
-  const layer = getLayerByName(state.dataset, layerName);
-  const layerMatrix = invertAndTranspose(
-    getTransformsForLayer(
-      state.dataset,
-      layer,
-      state.datasetConfiguration.nativelyRenderedLayerName,
-    ).affineMatrix,
-  );
-
-  let fn = perLayerFnCache.get(layerName);
-  if (fn == null) {
-    fn = memoizeOne(_getMaximumZoomForAllMags);
-    perLayerFnCache.set(layerName, fn);
+  const zoomValues = state.flycamInfoCache.maximumZoomForAllMags[layerName];
+  if (zoomValues) {
+    return zoomValues;
   }
+  // If the maintainMaximumZoomForAllMagsSaga has not populated the store yet,
+  // we use the following fallback heuristic. In production, this should not be
+  // relevant (an empty array would also work, because this would just lead to the coarsest
+  // mag being chosen for a brief period of time).
+  // However, for the tests, it is useful to have this heuristic. Otherwise, we would need
+  // to ensure that the relevant saga runs in every unit test setup (or in general, that the ranges
+  // are set up properly).
+  return getDenseMagsForLayerName(state.dataset, layerName).map((_mag, idx) => 2 ** (idx + 1));
+}
 
-  const dummyFlycamMatrix = _getDummyFlycamMatrix(state.dataset.dataSource.scale.factor);
+// This function depends on functionality from this and the dataset_layer_transformation_accessor module.
+// To avoid cyclic dependencies and as the result of the function is a position and scale change,
+// this function is arguably semantically closer to this flycam module.
+export function getNewPositionAndZoomChangeFromTransformationChange(
+  activeTransformation: Transform,
+  nextTransform: Transform,
+  state: OxalisState,
+) {
+  // Calculate the difference between the current and the next transformation.
+  const currentTransformInverted = invertTransform(activeTransformation);
+  const changeInAppliedTransformation = chainTransforms(currentTransformInverted, nextTransform);
 
-  return fn(
-    viewMode,
-    state.datasetConfiguration.loadingStrategy,
-    state.dataset.dataSource.scale.factor,
-    getMagInfo(layer.resolutions).getDenseMags(),
-    getViewportRects(state),
-    Math.min(
-      state.temporaryConfiguration.gpuSetup.smallestCommonBucketCapacity,
-      constants.GPU_FACTOR_MULTIPLIER * state.userConfiguration.gpuMemoryFactor,
-    ),
-    layerMatrix,
-    // Theoretically, the following parameter should be state.flycam.currentMatrix.
-    // However, that matrix changes on each move which means that the ranges would need
-    // to be recalculate on each move. At least, for orthogonal mode, the actual matrix
-    // should only differ in its translation which can be ignored for gauging the maximum
-    // zoom here.
-    // However, for oblique and flight mode this is not really accurate. As a heuristic,
-    // this already proved to be fine, though.
-    dummyFlycamMatrix,
+  const currentPosition = getPosition(state.flycam);
+  const newPosition = transformPointUnscaled(changeInAppliedTransformation)(currentPosition);
+
+  // Also transform a reference coordinate to determine how the scaling
+  // changed. Then, adapt the zoom accordingly.
+
+  const referenceOffset: Vector3 = [10, 10, 10];
+  const secondPosition = V3.add(currentPosition, referenceOffset, [0, 0, 0]);
+  const newSecondPosition = transformPointUnscaled(changeInAppliedTransformation)(secondPosition);
+
+  const scaleChange = _.mean(
+    // Only consider XY for now to determine the zoom change (by slicing from 0 to 2)
+    V3.abs(V3.divide3(V3.sub(newPosition, newSecondPosition), referenceOffset)).slice(0, 2),
   );
+
+  return { newPosition, scaleChange };
 }
 
 function _getUp(flycam: Flycam): Vector3 {

@@ -1,13 +1,13 @@
-import _ from "lodash";
 import Date from "libs/date";
 import Hammer from "libs/hammerjs_wrapper";
 // @ts-expect-error ts-migrate(2306) FIXME: ... Remove this comment to see the full error message
 import KeyboardJS from "libs/keyboard";
 import * as Utils from "libs/utils";
+import window, { document } from "libs/window";
+import _ from "lodash";
+import { type Emitter, createNanoEvents } from "nanoevents";
 import type { Point2 } from "oxalis/constants";
 import constants from "oxalis/constants";
-import window, { document } from "libs/window";
-import { createNanoEvents, type Emitter } from "nanoevents";
 // This is the main Input implementation.
 // Although all keys, buttons and sensor are mapped in
 // the controller, this is were the magic happens.
@@ -340,7 +340,7 @@ export class InputKeyboard {
 }
 
 // The mouse module.
-// Events: over, out, leftClick, rightClick, leftDownMove
+// Events: over, out, {left,right}Click, {left,right}DownMove, leftDoubleClick
 class InputMouseButton {
   mouse: InputMouse;
   name: MouseButtonString;
@@ -390,6 +390,19 @@ class InputMouseButton {
       }
 
       this.down = false;
+    }
+  }
+
+  handleDoubleClick(event: MouseEvent, triggeredByTouch: boolean): void {
+    // DoubleClick is only supported for the left mouse button
+    if (this.name === "left" && this.moveDelta <= MOUSE_MOVE_DELTA_THRESHOLD) {
+      this.mouse.emitter.emit(
+        "leftDoubleClick",
+        this.mouse.lastPosition,
+        this.id,
+        event,
+        triggeredByTouch,
+      );
     }
   }
 
@@ -446,6 +459,7 @@ export class InputMouse {
     document.addEventListener("mousemove", this.mouseMove);
     document.addEventListener("mouseup", this.mouseUp);
     document.addEventListener("touchend", this.touchEnd);
+    document.addEventListener("dblclick", this.doubleClick);
 
     this.delegatedEvents = {
       ...Utils.addEventListenerWithDelegation(
@@ -498,6 +512,7 @@ export class InputMouse {
     document.removeEventListener("mousemove", this.mouseMove);
     document.removeEventListener("mouseup", this.mouseUp);
     document.removeEventListener("touchend", this.touchEnd);
+    document.removeEventListener("dblclick", this.doubleClick);
 
     for (const [eventName, eventHandler] of Object.entries(this.delegatedEvents)) {
       document.removeEventListener(eventName, eventHandler);
@@ -548,6 +563,12 @@ export class InputMouse {
 
     if (this.isHit(event)) {
       this.mouseOver();
+    }
+  };
+
+  doubleClick = (event: MouseEvent): void => {
+    if (this.isHit(event)) {
+      this.leftMouseButton.handleDoubleClick(event, false);
     }
   };
 

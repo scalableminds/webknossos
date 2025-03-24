@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders.precomputed
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.Fox
@@ -32,10 +33,10 @@ trait NeuroglancerPrecomputedShardingUtils {
     Range.Long(0, end, 1)
   }
 
-  private def getShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+  private def getShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     shardIndexCache.getOrLoad(shardPath, readShardIndex)
 
-  private def readShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+  private def readShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     shardPath.readBytes(Some(shardIndexRange))
 
   private def parseShardIndex(index: Array[Byte]): Seq[(Long, Long)] =
@@ -107,12 +108,13 @@ trait NeuroglancerPrecomputedShardingUtils {
     chunkIds.lazyZip(chunkStartOffsets).lazyZip(chunkSizes).toArray
   }
 
-  def getMinishardIndex(shardPath: VaultPath, minishardNumber: Int)(
-      implicit ec: ExecutionContext): Fox[Array[(Long, Long, Long)]] =
+  def getMinishardIndex(shardPath: VaultPath, minishardNumber: Int)(implicit ec: ExecutionContext,
+                                                                    tc: TokenContext): Fox[Array[(Long, Long, Long)]] =
     minishardIndexCache.getOrLoad((shardPath, minishardNumber), readMinishardIndex)
 
   private def readMinishardIndex(vaultPathAndMinishardNumber: (VaultPath, Int))(
-      implicit ec: ExecutionContext): Fox[Array[(Long, Long, Long)]] = {
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[Array[(Long, Long, Long)]] = {
     val (vaultPath, minishardNumber) = vaultPathAndMinishardNumber
     for {
       index <- getShardIndex(vaultPath)
@@ -131,7 +133,8 @@ trait NeuroglancerPrecomputedShardingUtils {
       chunkEnd = (shardIndexRange.end) + chunkSpecification._2 + chunkSpecification._3
     } yield Range.Long(chunkStart, chunkEnd, 1)
 
-  def getChunk(chunkRange: NumericRange[Long], shardPath: VaultPath)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+  def getChunk(chunkRange: NumericRange[Long], shardPath: VaultPath)(implicit ec: ExecutionContext,
+                                                                     tc: TokenContext): Fox[Array[Byte]] =
     for {
       rawBytes <- shardPath.readBytes(Some(chunkRange))
       bytes = shardingSpecification.data_encoding match {

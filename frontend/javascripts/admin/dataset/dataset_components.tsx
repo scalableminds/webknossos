@@ -1,21 +1,23 @@
-import type * as React from "react";
-import { Form, Input, Select, Card, type FormInstance } from "antd";
-import messages from "messages";
-import type { APIDataStore, APITeam, APIUser } from "types/api_flow_types";
-import { syncValidator } from "types/validation";
+import { Card, Form, type FormInstance, Input, Select } from "antd";
 import { FormItemWithInfo } from "dashboard/dataset/helper_components";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import features from "features";
+import messages from "messages";
+import type * as React from "react";
+import type { APIDataStore, APITeam, APIUser } from "types/api_flow_types";
+import { syncValidator } from "types/validation";
 
 const FormItem = Form.Item;
 export function CardContainer({
   children,
   withoutCard,
   title,
+  subtitle,
 }: {
   children: React.ReactNode;
   withoutCard?: boolean;
   title: string;
+  subtitle?: React.ReactNode;
 }) {
   if (withoutCard) {
     return <>{children}</>;
@@ -28,7 +30,16 @@ export function CardContainer({
           marginRight: "auto",
         }}
         bordered={false}
-        title={<h3>{title}</h3>}
+        title={
+          <>
+            <h3 style={{ lineHeight: "10px", marginTop: subtitle != null ? "22px" : "12px" }}>
+              {title}
+            </h3>
+            <span style={{ fontSize: 12, marginTop: 0, marginLeft: 1, color: "grey" }}>
+              {subtitle}
+            </span>
+          </>
+        }
       >
         {children}
       </Card>

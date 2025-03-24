@@ -1,32 +1,34 @@
-import { Modal, Row } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
-import type React from "react";
-import { useMemo, useState } from "react";
-import _ from "lodash";
-import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
+import { Modal, Row } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import {
   NewVolumeLayerSelection,
   RestrictMagnificationSlider,
 } from "dashboard/advanced_dataset/create_explorative_modal";
-import Store, { type Tracing } from "oxalis/store";
-import { addAnnotationLayer } from "admin/admin_rest_api";
+import Toast from "libs/toast";
+import _ from "lodash";
+import messages from "messages";
+import { MappingStatusEnum } from "oxalis/constants";
 import {
-  getSomeMagInfoForDataset,
   getLayerByName,
+  getMagInfo,
   getMappingInfo,
   getSegmentationLayers,
-  getMagInfo,
+  getSomeMagInfoForDataset,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getAllReadableLayerNames,
   getVolumeTracingLayers,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import messages from "messages";
+import { pushSaveQueueTransactionIsolated } from "oxalis/model/actions/save_actions";
+import { addLayerToAnnotation } from "oxalis/model/sagas/update_actions";
+import { Model, api } from "oxalis/singletons";
+import Store, { type Tracing } from "oxalis/store";
 import InputComponent from "oxalis/view/components/input_component";
-import { api } from "oxalis/singletons";
-import Toast from "libs/toast";
-import { MappingStatusEnum } from "oxalis/constants";
+import type React from "react";
+import { useMemo, useState } from "react";
+import { useDispatch } from "react-redux";
+import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
 
 export type ValidationResult = { isValid: boolean; message: string };
 export function checkForLayerNameDuplication(
@@ -114,6 +116,7 @@ export default function AddVolumeLayerModal({
   const [selectedSegmentationLayerName, setSelectedSegmentationLayerName] = useState<
     string | undefined
   >(preselectedLayerName);
+  const dispatch = useDispatch();
   const allReadableLayerNames = useMemo(
     () => getAllReadableLayerNames(dataset, tracing),
     [dataset, tracing],
@@ -171,15 +174,20 @@ export default function AddVolumeLayerModal({
     const maxMagAllowed = Math.max(...magInfo.getMagByIndexOrThrow(magIndices[1]));
 
     if (selectedSegmentationLayerName == null) {
-      await addAnnotationLayer(tracing.annotationId, tracing.annotationType, {
-        typ: "Volume",
-        name: newLayerName,
-        fallbackLayerName: undefined,
-        magRestrictions: {
-          min: minMagAllowed,
-          max: maxMagAllowed,
-        },
-      });
+      dispatch(
+        pushSaveQueueTransactionIsolated(
+          addLayerToAnnotation({
+            typ: "Volume",
+            name: newLayerName,
+            fallbackLayerName: undefined,
+            magRestrictions: {
+              min: minMagAllowed,
+              max: maxMagAllowed,
+            },
+          }),
+        ),
+      );
+      await Model.ensureSavedState();
     } else {
       if (selectedSegmentationLayer == null) {
         throw new Error("Segmentation layer is null");
@@ -198,16 +206,21 @@ export default function AddVolumeLayerModal({
         maybeMappingName = mappingInfo.mappingName;
       }
 
-      await addAnnotationLayer(tracing.annotationId, tracing.annotationType, {
-        typ: "Volume",
-        name: newLayerName,
-        fallbackLayerName,
-        magRestrictions: {
-          min: minMagAllowed,
-          max: maxMagAllowed,
-        },
-        mappingName: maybeMappingName,
-      });
+      dispatch(
+        pushSaveQueueTransactionIsolated(
+          addLayerToAnnotation({
+            typ: "Volume",
+            name: newLayerName,
+            fallbackLayerName,
+            magRestrictions: {
+              min: minMagAllowed,
+              max: maxMagAllowed,
+            },
+            mappingName: maybeMappingName,
+          }),
+        ),
+      );
+      await Model.ensureSavedState();
     }
 
     await api.tracing.hardReload();

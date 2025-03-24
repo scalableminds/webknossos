@@ -1,32 +1,4 @@
-import {
-  Divider,
-  Modal,
-  Checkbox,
-  Row,
-  Col,
-  Tabs,
-  Typography,
-  Button,
-  Radio,
-  Alert,
-  Tooltip,
-  type TabsProps,
-} from "antd";
 import { CopyOutlined } from "@ant-design/icons";
-import type React from "react";
-import { useState } from "react";
-import { makeComponentLazy, useFetch } from "libs/react_helpers";
-import {
-  APIJobType,
-  type VoxelSize,
-  type AdditionalAxis,
-  type APIDataLayer,
-  type APIDataset,
-} from "types/api_flow_types";
-import Toast from "libs/toast";
-import messages from "messages";
-import { Model } from "oxalis/singletons";
-import features from "features";
 import {
   doWithToken,
   downloadAnnotation,
@@ -34,31 +6,59 @@ import {
   getAuthToken,
   startExportTiffJob,
 } from "admin/admin_rest_api";
-import { BoundingBoxSelection, MagSlider } from "oxalis/view/action-bar/starting_job_modals";
-import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
+import { useStartAndPollJob } from "admin/job/job_hooks";
 import {
-  getReadableNameOfVolumeLayer,
-  getVolumeTracingById,
-  hasVolumeTracings,
-} from "oxalis/model/accessors/volumetracing_accessor";
+  Alert,
+  Button,
+  Checkbox,
+  Col,
+  Divider,
+  Modal,
+  Radio,
+  Row,
+  Tabs,
+  type TabsProps,
+  Tooltip,
+  Typography,
+} from "antd";
+import { LayerSelection } from "components/layer_selection";
+import features from "features";
+import { formatCountToDataAmountUnit, formatScale } from "libs/format_utils";
+import { makeComponentLazy, useFetch } from "libs/react_helpers";
+import Toast from "libs/toast";
+import {
+  computeArrayFromBoundingBox,
+  computeBoundingBoxFromBoundingBoxObject,
+  computeShapeFromBoundingBox,
+} from "libs/utils";
+import messages from "messages";
+import type { BoundingBoxType, Vector3 } from "oxalis/constants";
 import {
   getByteCountFromLayer,
   getDataLayers,
   getLayerByName,
   getMagInfo,
 } from "oxalis/model/accessors/dataset_accessor";
-import { useSelector } from "react-redux";
-import type { HybridTracing, OxalisState, UserBoundingBox } from "oxalis/store";
-import {
-  computeArrayFromBoundingBox,
-  computeBoundingBoxFromBoundingBoxObject,
-  computeShapeFromBoundingBox,
-} from "libs/utils";
-import { formatCountToDataAmountUnit, formatScale } from "libs/format_utils";
-import type { BoundingBoxType, Vector3 } from "oxalis/constants";
-import { useStartAndPollJob } from "admin/job/job_hooks";
-import { LayerSelection } from "components/layer_selection";
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
+import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
+import {
+  getReadableNameOfVolumeLayer,
+  getVolumeTracingById,
+  hasVolumeTracings,
+} from "oxalis/model/accessors/volumetracing_accessor";
+import { Model } from "oxalis/singletons";
+import type { HybridTracing, OxalisState, UserBoundingBox } from "oxalis/store";
+import { BoundingBoxSelection, MagSlider } from "oxalis/view/action-bar/starting_job_modals";
+import type React from "react";
+import { useState } from "react";
+import { useSelector } from "react-redux";
+import {
+  type APIDataLayer,
+  type APIDataset,
+  APIJobType,
+  type AdditionalAxis,
+  type VoxelSize,
+} from "types/api_flow_types";
 const { Paragraph, Text } = Typography;
 
 type TabKeys = "download" | "export" | "python";
@@ -355,7 +355,7 @@ function _DownloadModalView({
         tracing.annotationId,
         tracing.annotationType,
         hasVolumeFallback,
-        {},
+        undefined,
         fileFormatToDownload,
         includeVolumeData,
       );
@@ -576,6 +576,8 @@ function _DownloadModalView({
     </>
   );
 
+  const onlyOneMagAvailable = selectedLayerMagInfo.getMagList().length === 1;
+
   const tiffExportTab = (
     <>
       <Row>
@@ -642,7 +644,7 @@ function _DownloadModalView({
             style={{ width: "100%" }}
           />
           {boundingBoxCompatibilityAlerts}
-          {selectedLayerInfos.additionalAxes != null && (
+          {(selectedLayerInfos.additionalAxes?.length || 0) > 0 && (
             <Row>
               <Divider
                 style={{
@@ -670,23 +672,26 @@ function _DownloadModalView({
           >
             Mag
           </Divider>
-          <Row>
-            <Col span={19}>
-              <MagSlider magnificationInfo={selectedLayerMagInfo} value={mag} onChange={setMag} />
-            </Col>
-            <Col
-              span={5}
-              style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}
-            >
-              {mag.join("-")}
-            </Col>
-          </Row>
+          {!onlyOneMagAvailable && (
+            <Row>
+              <Col span={19}>
+                <MagSlider magnificationInfo={selectedLayerMagInfo} value={mag} onChange={setMag} />
+              </Col>
+              <Col
+                span={5}
+                style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}
+              >
+                {mag.join("-")}
+              </Col>
+            </Row>
+          )}
           <Text
             style={{
               margin: "0 6px 12px",
               display: "block",
             }}
           >
+            {onlyOneMagAvailable && <div>{mag.join("-")}</div>}
             Estimated file size:{" "}
             {estimateFileSize(selectedLayer, mag, selectedBoundingBox.boundingBox, exportFormat)}
             <br />

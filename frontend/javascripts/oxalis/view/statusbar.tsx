@@ -1,44 +1,47 @@
-import { useDispatch, useSelector } from "react-redux";
-import React, { useCallback, useState } from "react";
-import { WarningOutlined, MoreOutlined, DownloadOutlined } from "@ant-design/icons";
+import { DownloadOutlined, MoreOutlined, WarningOutlined } from "@ant-design/icons";
+import FastTooltip from "components/fast_tooltip";
+import { formatCountToDataAmountUnit } from "libs/format_utils";
+import { V3 } from "libs/mjs";
+import { useInterval } from "libs/react_helpers";
+import { useKeyPress } from "libs/react_hooks";
+import message from "messages";
+import messages from "messages";
 import type { Vector3 } from "oxalis/constants";
 import { AltOrOptionKey, MappingStatusEnum, OrthoViews } from "oxalis/constants";
-import {
-  getMappingInfoOrNull,
-  getVisibleSegmentationLayer,
-  hasVisibleUint64Segmentation,
-} from "oxalis/model/accessors/dataset_accessor";
-import { NumberInputPopoverSetting } from "oxalis/view/components/setting_input_views";
-import { useKeyPress } from "libs/react_hooks";
-import { getActiveMagInfo } from "oxalis/model/accessors/flycam_accessor";
-import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
-import {
-  setActiveNodeAction,
-  setActiveTreeAction,
-} from "oxalis/model/actions/skeletontracing_actions";
-import { formatCountToDataAmountUnit } from "libs/format_utils";
-import message from "messages";
 import {
   type ActionDescriptor,
   getToolClassForAnnotationTool,
 } from "oxalis/controller/combinations/tool_controls";
 import {
+  getMappingInfoOrNull,
+  getVisibleSegmentationLayer,
+  hasVisibleUint64Segmentation,
+} from "oxalis/model/accessors/dataset_accessor";
+import { getActiveMagInfo } from "oxalis/model/accessors/flycam_accessor";
+import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
+import {
   calculateGlobalPos,
   isPlaneMode as getIsPlaneMode,
 } from "oxalis/model/accessors/view_mode_accessor";
-import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
-import { V3 } from "libs/mjs";
-import type { OxalisState } from "oxalis/store";
 import {
   getActiveSegmentationTracing,
   getReadableNameForLayerName,
+  getSegmentationLayerForTracing,
 } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  setActiveNodeAction,
+  setActiveTreeAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
+import { getSupportedValueRangeForElementClass } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
-import { useInterval } from "libs/react_helpers";
-import type { AdditionalCoordinate } from "types/api_flow_types";
-import FastTooltip from "components/fast_tooltip";
 import { Store } from "oxalis/singletons";
-import messages from "messages";
+import type { OxalisState } from "oxalis/store";
+import { NumberInputPopoverSetting } from "oxalis/view/components/setting_input_views";
+import React, { useCallback, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import type { AdditionalCoordinate } from "types/api_flow_types";
+import { CommandPalette } from "./components/command_palette";
 
 const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = {
@@ -46,7 +49,7 @@ const moreIconStyle = {
   color: lineColor,
 };
 const moreLinkStyle = {
-  marginLeft: 10,
+  marginLeft: 25,
   marginRight: "auto",
 };
 
@@ -152,6 +155,28 @@ function RightClickShortcut({ actionDescriptor }: { actionDescriptor: ActionDesc
   );
 }
 
+const getMoreShortcutsInfo = () => {
+  return (
+    <>
+      <CommandPalette label={<div style={{ marginLeft: 25 }}>[Ctrl+P] Commands</div>} />
+      {moreShortcutsLink}
+    </>
+  );
+};
+
+const moreShortcutsLink = (
+  <a
+    target="_blank"
+    href="https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html"
+    rel="noopener noreferrer"
+    style={moreLinkStyle}
+  >
+    <FastTooltip title="More Shortcuts">
+      <MoreOutlined rotate={90} style={moreIconStyle} />
+    </FastTooltip>
+  </a>
+);
+
 function ShortcutsInfo() {
   const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
   const useLegacyBindings = useSelector(
@@ -164,19 +189,6 @@ function ShortcutsInfo() {
   const hasSkeleton = useSelector((state: OxalisState) => state.tracing.skeleton != null);
   const isTDViewportActive = useSelector(
     (state: OxalisState) => state.viewModeData.plane.activeViewport === OrthoViews.TDView,
-  );
-
-  const moreShortcutsLink = (
-    <a
-      target="_blank"
-      href="https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html"
-      rel="noopener noreferrer"
-      style={moreLinkStyle}
-    >
-      <FastTooltip title="More Shortcuts">
-        <MoreOutlined rotate={90} style={moreIconStyle} />
-      </FastTooltip>
-    </a>
   );
 
   if (!isPlaneMode) {
@@ -311,7 +323,7 @@ function ShortcutsInfo() {
           </span>{" "}
           Rotation
         </span>
-        {moreShortcutsLink}
+        {getMoreShortcutsInfo()}
       </React.Fragment>
     );
   }
@@ -352,7 +364,7 @@ function ShortcutsInfo() {
         Rotate 3D View
       </span>
       <ZoomShortcut />
-      {moreShortcutsLink}
+      {getMoreShortcutsInfo()}
     </React.Fragment>
   );
 }
@@ -430,6 +442,15 @@ function Infos() {
     [dispatch],
   );
 
+  const validSegmentIdRange = useSelector((state: OxalisState) => {
+    if (!activeVolumeTracing) {
+      return null;
+    }
+    const segmentationLayer = getSegmentationLayerForTracing(state, activeVolumeTracing);
+    const elementClass = segmentationLayer.elementClass;
+    return getSupportedValueRangeForElementClass(elementClass);
+  });
+
   const isUint64SegmentationVisible = useSelector(hasVisibleUint64Segmentation);
 
   return (
@@ -438,12 +459,13 @@ function Infos() {
       <span className="info-element">
         <DownloadSpeedometer />
       </span>
-      {activeVolumeTracing != null ? (
+      {activeVolumeTracing != null && validSegmentIdRange != null ? (
         <span className="info-element">
           <NumberInputPopoverSetting
             value={activeCellId}
             label={maybeLabelWithSegmentationWarning(isUint64SegmentationVisible, "Active Segment")}
-            min={0}
+            min={validSegmentIdRange[0]}
+            max={validSegmentIdRange[1]}
             detailedLabel={maybeLabelWithSegmentationWarning(
               isUint64SegmentationVisible,
               "Change Active Segment ID",

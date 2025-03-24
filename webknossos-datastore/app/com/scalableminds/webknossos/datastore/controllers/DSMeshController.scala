@@ -23,14 +23,10 @@ class DSMeshController @Inject()(
 
   override def allowRemoteOrigin: Boolean = true
 
-  def listMeshFiles(token: Option[String],
-                    organizationId: String,
-                    datasetDirectoryName: String,
-                    dataLayerName: String): Action[AnyContent] =
+  def listMeshFiles(organizationId: String, datasetDirectoryName: String, dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(
-        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId)),
-        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccessFromTokenContext(
+        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
           meshFiles <- meshFileService.exploreMeshFiles(organizationId, datasetDirectoryName, dataLayerName)
           neuroglancerMeshFiles <- meshFileService.exploreNeuroglancerPrecomputedMeshes(organizationId,
@@ -41,22 +37,20 @@ class DSMeshController @Inject()(
       }
     }
 
-  def listMeshChunksForSegment(token: Option[String],
-                               organizationId: String,
+  def listMeshChunksForSegment(organizationId: String,
                                datasetDirectoryName: String,
                                dataLayerName: String,
                                /* If targetMappingName is set, assume that meshfile contains meshes for
-                                           the oversegmentation. Collect mesh chunks of all *unmapped* segment ids
-                                           belonging to the supplied agglomerate id.
-                                           If it is not set, use meshfile as is, assume passed id is present in meshfile
-                                  Note: in case of an editable mapping, targetMappingName is its baseMapping name.
+                                            the oversegmentation. Collect mesh chunks of all *unmapped* segment ids
+                                            belonging to the supplied agglomerate id.
+                                            If it is not set, use meshfile as is, assume passed id is present in meshfile
+                                   Note: in case of an editable mapping, targetMappingName is its baseMapping name.
                                 */
                                targetMappingName: Option[String],
                                editableMappingTracingId: Option[String]): Action[ListMeshChunksRequest] =
     Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
-      accessTokenService.validateAccess(
-        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId)),
-        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccessFromTokenContext(
+        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
           _ <- Fox.successful(())
           mappingNameForMeshFile = meshFileService.mappingNameForMeshFile(organizationId,
@@ -71,8 +65,7 @@ class DSMeshController @Inject()(
             editableMappingTracingId,
             request.body.segmentId,
             mappingNameForMeshFile,
-            omitMissing = false,
-            urlOrHeaderToken(token, request)
+            omitMissing = false
           )
           chunkInfos <- request.body.meshFileType match {
             case Some("neuroglancerPrecomputed") =>
@@ -90,14 +83,12 @@ class DSMeshController @Inject()(
       }
     }
 
-  def readMeshChunk(token: Option[String],
-                    organizationId: String,
+  def readMeshChunk(organizationId: String,
                     datasetDirectoryName: String,
                     dataLayerName: String): Action[MeshChunkDataRequestList] =
     Action.async(validateJson[MeshChunkDataRequestList]) { implicit request =>
-      accessTokenService.validateAccess(
-        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId)),
-        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccessFromTokenContext(
+        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
           (data, encoding) <- request.body.meshFileType match {
             case Some("neuroglancerPrecomputed") =>
@@ -113,17 +104,14 @@ class DSMeshController @Inject()(
       }
     }
 
-  def loadFullMeshStl(token: Option[String],
-                      organizationId: String,
+  def loadFullMeshStl(organizationId: String,
                       datasetDirectoryName: String,
                       dataLayerName: String): Action[FullMeshRequest] =
     Action.async(validateJson[FullMeshRequest]) { implicit request =>
-      accessTokenService.validateAccess(
-        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId)),
-        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccessFromTokenContext(
+        UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
-          data: Array[Byte] <- fullMeshService.loadFor(token: Option[String],
-                                                       organizationId,
+          data: Array[Byte] <- fullMeshService.loadFor(organizationId,
                                                        datasetDirectoryName,
                                                        dataLayerName,
                                                        request.body) ?~> "mesh.file.loadChunk.failed"

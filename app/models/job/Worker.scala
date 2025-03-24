@@ -9,7 +9,6 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
-import models.dataset.DataStoreDAO
 import models.job.JobCommand.JobCommand
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
@@ -29,7 +28,7 @@ case class Worker(_id: ObjectId,
                   maxParallelHighPriorityJobs: Int,
                   maxParallelLowPriorityJobs: Int,
                   supportedJobCommands: Set[JobCommand],
-                  lastHeartBeat: Long = 0,
+                  lastHeartBeat: Instant = Instant.zero,
                   created: Instant = Instant.now,
                   isDeleted: Boolean = false)
 
@@ -55,7 +54,7 @@ class WorkerDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         r.maxparallelhighpriorityjobs,
         r.maxparallellowpriorityjobs,
         supportedJobCommands.toSet,
-        r.lastheartbeat.getTime,
+        Instant.fromSql(r.lastheartbeat),
         Instant.fromSql(r.created),
         r.isdeleted
       )
@@ -80,10 +79,10 @@ class WorkerDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   }
 }
 
-class WorkerService @Inject()(conf: WkConf, dataStoreDAO: DataStoreDAO, workerDAO: WorkerDAO) {
+class WorkerService @Inject()(conf: WkConf) {
 
   def lastHeartBeatIsRecent(worker: Worker): Boolean =
-    System.currentTimeMillis() - worker.lastHeartBeat < conf.Jobs.workerLivenessTimeout.toMillis
+    Instant.since(worker.lastHeartBeat) < conf.Jobs.workerLivenessTimeout
 
   def publicWrites(worker: Worker): JsObject =
     Json.obj(
@@ -103,7 +102,7 @@ class WorkerLivenessService @Inject()(workerService: WorkerService,
                                       workerDAO: WorkerDAO,
                                       slackNotificationService: SlackNotificationService,
                                       val lifecycle: ApplicationLifecycle,
-                                      val system: ActorSystem)(implicit val ec: ExecutionContext)
+                                      val actorSystem: ActorSystem)(implicit val ec: ExecutionContext)
     extends IntervalScheduler
     with Formatter
     with LazyLogging {
@@ -112,13 +111,11 @@ class WorkerLivenessService @Inject()(workerService: WorkerService,
 
   override protected def tickerInterval: FiniteDuration = 1 minute
 
-  override protected def tick(): Unit = {
+  override protected def tick(): Fox[Unit] =
     for {
       workers <- workerDAO.findAll(GlobalAccessContext)
       _ = workers.foreach(reportIfLivenessChanged)
     } yield ()
-    ()
-  }
 
   private val reportedAsDead: scala.collection.mutable.Set[ObjectId] = scala.collection.mutable.Set()
 
@@ -136,14 +133,14 @@ class WorkerLivenessService @Inject()(workerService: WorkerService,
 
   private def reportAsDead(worker: Worker): Unit = {
     val msg =
-      s"Worker ${worker.name} (${worker._id}) is not reporting. Last heartbeat was at ${formatDate(worker.lastHeartBeat)}"
+      s"Worker ${worker.name} (${worker._id}) is not reporting. Last heartbeat was at ${worker.lastHeartBeat}"
     slackNotificationService.warn("Worker missing", msg)
     logger.warn(msg)
   }
 
   private def reportAsResurrected(worker: Worker): Unit = {
     val msg =
-      s"Worker ${worker.name} (${worker._id}) is reporting again. Last heartbeat was at ${formatDate(worker.lastHeartBeat)}"
+      s"Worker ${worker.name} (${worker._id}) is reporting again. Last heartbeat was at ${worker.lastHeartBeat}"
     slackNotificationService.success("Worker return", msg)
     logger.info(msg)
   }

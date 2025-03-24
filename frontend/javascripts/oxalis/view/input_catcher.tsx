@@ -1,23 +1,23 @@
+import { useEffectOnlyOnce, useKeyPress } from "libs/react_hooks";
+import { waitForCondition } from "libs/utils";
 import _ from "lodash";
-import type * as React from "react";
-import type { Rect, Viewport } from "oxalis/constants";
+import type { Rect, Viewport, ViewportRects } from "oxalis/constants";
 import {
   AnnotationToolEnum,
   ArbitraryViewport,
   ArbitraryViews,
   OrthoViews,
 } from "oxalis/constants";
+import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
 import { setInputCatcherRects } from "oxalis/model/actions/view_mode_actions";
-import Scalebar from "oxalis/view/scalebar";
-import ViewportStatusIndicator from "oxalis/view/viewport_status_indicator";
 import type { BusyBlockingInfo, OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
 import makeRectRelativeToCanvas from "oxalis/view/layouting/layout_canvas_adapter";
-import { waitForCondition } from "libs/utils";
-import { useEffectOnlyOnce, useKeyPress } from "libs/react_hooks";
+import Scalebar from "oxalis/view/scalebar";
+import ViewportStatusIndicator from "oxalis/view/viewport_status_indicator";
+import type * as React from "react";
 import { useRef } from "react";
 import { useSelector } from "react-redux";
-import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
 
 const emptyViewportRect = {
   top: 0,
@@ -73,7 +73,7 @@ export async function initializeInputCatcherSizes() {
   recalculateInputCatcherSizes();
 }
 export function recalculateInputCatcherSizes() {
-  const viewportRects: Record<string, any> = {
+  const viewportRects: Record<string, Rect> = {
     PLANE_XY: emptyViewportRect,
     PLANE_YZ: emptyViewportRect,
     PLANE_XZ: emptyViewportRect,
@@ -93,8 +93,7 @@ export function recalculateInputCatcherSizes() {
   // will re-calculate the zoom ranges for the available magnifications
   // (which is expensive and unnecessary).
   if (!_.isEqual(viewportRects, Store.getState().viewModeData.plane.inputCatcherRects)) {
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Record<string, any>' is not assi... Remove this comment to see the full error message
-    Store.dispatch(setInputCatcherRects(viewportRects));
+    Store.dispatch(setInputCatcherRects(viewportRects as ViewportRects));
   }
 }
 
@@ -140,7 +139,7 @@ function InputCatcher({
   const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
 
   const isShiftPressed = useKeyPress("Shift");
-  const isControlPressed = useKeyPress("ControlOrMeta");
+  const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
   const isAltPressed = useKeyPress("Alt");
 
   const adaptedTool =
@@ -148,7 +147,12 @@ function InputCatcher({
       ? AnnotationToolEnum.SKELETON
       : viewportID === OrthoViews.TDView
         ? AnnotationToolEnum.MOVE
-        : adaptActiveToolToShortcuts(activeTool, isShiftPressed, isControlPressed, isAltPressed);
+        : adaptActiveToolToShortcuts(
+            activeTool,
+            isShiftPressed,
+            isControlOrMetaPressed,
+            isAltPressed,
+          );
 
   return (
     <div

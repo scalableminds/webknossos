@@ -1,14 +1,14 @@
 import Maybe from "data.maybe";
-import _ from "lodash";
 import update from "immutability-helper";
+import _ from "lodash";
+import Constants from "oxalis/constants";
 import type { Action } from "oxalis/model/actions/actions";
-import type { OxalisState, SkeletonTracing, TreeMap } from "oxalis/store";
+import { updateKey3 } from "oxalis/model/helpers/deep_update";
 import {
   addTreesAndGroups,
   getMaximumNodeId,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import { updateKey3 } from "oxalis/model/helpers/deep_update";
-import Constants from "oxalis/constants";
+import type { OxalisState, SkeletonTracing, TreeMap } from "oxalis/store";
 
 function getSkeletonTracingForConnectome(
   state: OxalisState,
@@ -75,7 +75,6 @@ function ConnectomeReducer(state: OxalisState, action: Action): OxalisState {
         trees: {},
         treeGroups: [],
         tracingId: "connectome-tracing-data",
-        version: 1,
         boundingBox: null,
         userBoundingBoxes: [],
         navigationList: {

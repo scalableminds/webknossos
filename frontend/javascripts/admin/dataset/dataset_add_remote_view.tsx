@@ -1,45 +1,46 @@
+import { UnlockOutlined } from "@ant-design/icons";
+import { exploreRemoteDataset, isDatasetNameValid, storeRemoteDataset } from "admin/admin_rest_api";
+import { CardContainer, DatastoreFormItem } from "admin/dataset/dataset_components";
 import {
-  Form,
-  Input,
   Button,
   Col,
+  Collapse,
+  Divider,
+  Form,
+  type FormInstance,
+  Input,
+  List,
+  Modal,
   Radio,
   Row,
-  Collapse,
-  type FormInstance,
-  Modal,
-  Divider,
-  List,
   Upload,
 } from "antd";
-import { connect } from "react-redux";
-import React, { useEffect, useState } from "react";
-import type { APIDataStore, APIUser } from "types/api_flow_types";
-import type { OxalisState } from "oxalis/store";
-import { exploreRemoteDataset, isDatasetNameValid, storeRemoteDataset } from "admin/admin_rest_api";
-import messages from "messages";
-import { jsonStringify } from "libs/utils";
-import { CardContainer, DatastoreFormItem } from "admin/dataset/dataset_components";
+import type { RcFile, UploadChangeParam, UploadFile } from "antd/lib/upload";
 import { AsyncButton } from "components/async_clickables";
-import Toast from "libs/toast";
-import _ from "lodash";
-import { Hint } from "oxalis/view/action-bar/download_modal_view";
-import { formatScale } from "libs/format_utils";
-import type { DataLayer, DatasourceConfiguration } from "types/schemas/datasource.types";
+import BrainSpinner from "components/brain_spinner";
 import DatasetSettingsDataTab, {
   // Sync simple with advanced and get newest datasourceJson
   syncDataSourceFields,
 } from "dashboard/dataset/dataset_settings_data_tab";
 import { FormItemWithInfo, Hideable } from "dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
-import type { RcFile, UploadChangeParam, UploadFile } from "antd/lib/upload";
-import { UnlockOutlined } from "@ant-design/icons";
-import { Unicode } from "oxalis/constants";
+import { formatScale } from "libs/format_utils";
 import { readFileAsText } from "libs/read_file";
+import Toast from "libs/toast";
+import { jsonStringify } from "libs/utils";
 import * as Utils from "libs/utils";
-import type { ArbitraryObject } from "types/globals";
-import BrainSpinner from "components/brain_spinner";
+import _ from "lodash";
+import messages from "messages";
+import { Unicode } from "oxalis/constants";
+import type { OxalisState } from "oxalis/store";
+import { Hint } from "oxalis/view/action-bar/download_modal_view";
+import React, { useEffect, useState } from "react";
+import { connect } from "react-redux";
 import { useHistory } from "react-router-dom";
+import type { APIDataStore, APIUser } from "types/api_flow_types";
+import type { ArbitraryObject } from "types/globals";
+import type { DataLayer, DatasourceConfiguration } from "types/schemas/datasource.types";
+import { dataPrivacyInfo } from "./dataset_upload_view";
 
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
@@ -312,7 +313,10 @@ function DatasetAddRemoteView(props: Props) {
     // Using Forms here only to validate fields and for easy layout
     <div style={{ padding: 5 }}>
       {showLoadingOverlay ? <BrainSpinner /> : null}
-      <CardContainer title="Add Remote Zarr / Neuroglancer Precomputed / N5 Dataset">
+      <CardContainer
+        title="Add Remote Zarr / Neuroglancer Precomputed / N5 Dataset"
+        subtitle={dataPrivacyInfo}
+      >
         <Form form={form} layout="vertical">
           <DatastoreFormItem datastores={uploadableDatastores} hidden={hasOnlyOneDatastoreOrNone} />
           <Modal

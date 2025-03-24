@@ -1,75 +1,76 @@
 import {
-  Popover,
-  Avatar,
-  Form,
-  Button,
-  Col,
-  Row,
-  Modal,
-  Progress,
-  Alert,
-  List,
-  Spin,
-  Select,
-  Tooltip,
-} from "antd";
-import type { Location as HistoryLocation, Action as HistoryAction } from "history";
-import {
-  InfoCircleOutlined,
   FileOutlined,
   FolderOutlined,
-  InboxOutlined,
   HourglassOutlined,
+  InboxOutlined,
+  InfoCircleOutlined,
   LoadingOutlined,
 } from "@ant-design/icons";
-import { connect } from "react-redux";
-import React from "react";
+import {
+  Alert,
+  Avatar,
+  Button,
+  Col,
+  Form,
+  List,
+  Modal,
+  Popover,
+  Progress,
+  Row,
+  Select,
+  Space,
+  Spin,
+  Tooltip,
+} from "antd";
 import dayjs from "dayjs";
+import type { Action as HistoryAction, Location as HistoryLocation } from "history";
+import React from "react";
+import { connect } from "react-redux";
 
-import classnames from "classnames";
-import _ from "lodash";
-import { useDropzone, type FileWithPath } from "react-dropzone";
-import ErrorHandling from "libs/error_handling";
-import { Link, type RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
 import {
-  type APITeam,
-  type APIDataStore,
-  type APIUser,
-  type APIOrganization,
-  APIJobType,
-} from "types/api_flow_types";
-import type { OxalisState } from "oxalis/store";
-import {
-  reserveDatasetUpload,
-  finishDatasetUpload,
+  type UnfinishedUpload,
   cancelDatasetUpload,
   createResumableUpload,
-  startConvertToWkwJob,
+  finishDatasetUpload,
+  getUnfinishedUploads,
+  reserveDatasetUpload,
   sendAnalyticsEvent,
   sendFailedRequestAnalyticsEvent,
-  getUnfinishedUploads,
-  type UnfinishedUpload,
+  startConvertToWkwJob,
 } from "admin/admin_rest_api";
-import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import messages from "messages";
-import Zip from "libs/zipjs_wrapper";
 import {
   AllowedTeamsFormItem,
   CardContainer,
   DatasetNameFormItem,
   DatastoreFormItem,
 } from "admin/dataset/dataset_components";
-import { Vector3Input } from "libs/vector_input";
-import features from "features";
-import { syncValidator } from "types/validation";
-import type { FormInstance } from "antd/lib/form";
-import { AllUnits, UnitLong, LongUnitToShortUnitMap, type Vector3 } from "oxalis/constants";
-import { FormItemWithInfo, confirmAsync } from "../../dashboard/dataset/helper_components";
-import FolderSelection from "dashboard/folders/folder_selection";
 import { hasPricingPlanExceededStorage } from "admin/organization/pricing_plan_utils";
+import type { FormInstance } from "antd/lib/form";
+import classnames from "classnames";
+import FolderSelection from "dashboard/folders/folder_selection";
+import features from "features";
+import ErrorHandling from "libs/error_handling";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import { Vector3Input } from "libs/vector_input";
+import Zip from "libs/zipjs_wrapper";
+import _ from "lodash";
+import messages from "messages";
+import { AllUnits, LongUnitToShortUnitMap, UnitLong, type Vector3 } from "oxalis/constants";
 import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
+import type { OxalisState } from "oxalis/store";
+import { type FileWithPath, useDropzone } from "react-dropzone";
+import { Link, type RouteComponentProps } from "react-router-dom";
+import { withRouter } from "react-router-dom";
+import {
+  type APIDataStore,
+  APIJobType,
+  type APIOrganization,
+  type APITeam,
+  type APIUser,
+} from "types/api_flow_types";
+import { syncValidator } from "types/validation";
+import { FormItemWithInfo, confirmAsync } from "../../dashboard/dataset/helper_components";
 
 const FormItem = Form.Item;
 const REPORT_THROTTLE_THRESHOLD = 1 * 60 * 1000; // 1 min
@@ -179,6 +180,20 @@ type UploadFormFieldTypes = {
   continuingOldUpload: boolean;
   datastoreUrl: string;
 };
+
+export const dataPrivacyInfo = (
+  <Space direction="horizontal" size={4}>
+    Per default, imported data is private and only visible within your organization.
+    <a
+      style={{ color: "var(--ant-color-primary)" }}
+      href="https://docs.webknossos.org/webknossos/datasets/settings.html#sharing-permissions-tab"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      Read more
+    </a>
+  </Space>
+);
 
 class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   state: State = {
@@ -707,7 +722,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           padding: 5,
         }}
       >
-        <CardContainer withoutCard={withoutCard} title="Upload Dataset">
+        <CardContainer withoutCard={withoutCard} title="Upload Dataset" subtitle={dataPrivacyInfo}>
           {hasPricingPlanExceededStorage(this.props.organization) ? (
             <Alert
               type="error"

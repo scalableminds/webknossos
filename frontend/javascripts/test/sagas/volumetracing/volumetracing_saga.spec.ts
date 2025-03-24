@@ -56,7 +56,6 @@ const serverVolumeTracing: ServerVolumeTracing = {
   id: "tracingId",
   elementClass: "uint32",
   createdTimestamp: 0,
-  version: 0,
   boundingBox: {
     topLeft: {
       x: 0,
@@ -147,7 +146,6 @@ test("VolumeTracingSaga shouldn't do anything if unchanged (saga test)", (t) => 
   const saga = setupSavingForTracingType(
     VolumeTracingActions.initializeVolumeTracingAction(serverVolumeTracing),
   );
-  saga.next(); // forking pushSaveQueueAsync
 
   saga.next();
   saga.next(initialState.tracing.volumes[0]);
@@ -168,7 +166,6 @@ test("VolumeTracingSaga should do something if changed (saga test)", (t) => {
   const saga = setupSavingForTracingType(
     VolumeTracingActions.initializeVolumeTracingAction(serverVolumeTracing),
   );
-  saga.next(); // forking pushSaveQueueAsync
 
   saga.next();
   saga.next(initialState.tracing.volumes[0]);
@@ -182,11 +179,7 @@ test("VolumeTracingSaga should do something if changed (saga test)", (t) => {
   const items = execCall(t, saga.next(newState.viewModeData.plane.tdCamera));
   t.is(withoutUpdateTracing(items).length, 0);
   t.true(items[0].value.activeSegmentId === ACTIVE_CELL_ID);
-  expectValueDeepEqual(
-    t,
-    saga.next(items),
-    put(pushSaveQueueTransaction(items, "volume", volumeTracing.tracingId)),
-  );
+  expectValueDeepEqual(t, saga.next(items), put(pushSaveQueueTransaction(items)));
 });
 
 test("VolumeTracingSaga should create a volume layer (saga test)", (t) => {
@@ -463,7 +456,11 @@ test("ensureMaybeActiveMappingIsLocked should lock an existing mapping to the an
 test("ensureMaybeActiveMappingIsLocked should lock 'no mapping' in case no mapping is active.", (t) => {
   const saga = ensureMaybeActiveMappingIsLocked(volumeTracing);
   saga.next();
-  expectValueDeepEqual(t, saga.next({}), put(VolumeTracingActions.setMappingIsLockedAction()));
+  expectValueDeepEqual(
+    t,
+    saga.next({}),
+    put(VolumeTracingActions.setMappingIsLockedAction(volumeTracing.tracingId)),
+  );
   t.true(saga.next().done);
 });
 
@@ -474,7 +471,7 @@ test("ensureMaybeActiveMappingIsLocked should lock 'no mapping' in case a mappin
   expectValueDeepEqual(
     t,
     saga.next({ [volumeTracing.tracingId]: jsonDummyMapping }),
-    put(VolumeTracingActions.setMappingIsLockedAction()),
+    put(VolumeTracingActions.setMappingIsLockedAction(volumeTracing.tracingId)),
   );
   t.true(saga.next().done);
 });
@@ -486,7 +483,7 @@ test("ensureMaybeActiveMappingIsLocked should lock 'no mapping' in case a JSON m
   expectValueDeepEqual(
     t,
     saga.next({ [volumeTracing.tracingId]: jsonDummyMapping }),
-    put(VolumeTracingActions.setMappingIsLockedAction()),
+    put(VolumeTracingActions.setMappingIsLockedAction(volumeTracing.tracingId)),
   );
   t.true(saga.next().done);
 });

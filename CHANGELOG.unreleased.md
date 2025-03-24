@@ -8,36 +8,37 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/24.12.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/25.02.1...HEAD)
 
 ### Added
-- Added the total volume of a dataset to a tooltip in the dataset info tab. [#8229](https://github.com/scalableminds/webknossos/pull/8229)
-- Optimized performance of data loading with “fill value“ chunks. [#8271](https://github.com/scalableminds/webknossos/pull/8271)
+- Added support for datasets with the following data types: int8, int16, int32, uint32 (support for color was added, support for segmentation already existed before) and int64 (segmentation only). [#8325](https://github.com/scalableminds/webknossos/pull/8325)
+- Added a command palette that allows navigating between pages, switching tools and accessing some user settings via Ctrl+P. [#8447](https://github.com/scalableminds/webknossos/pull/8447/)
+- Super users can now share the trained AI models with other organizations. [#8418](https://github.com/scalableminds/webknossos/pull/8418)
+- Failed jobs may be retried by super-users. [#8377](https://github.com/scalableminds/webknossos/pull/8377)
+- Optimized server-side storage of skeleton annotation layers. [#8423](https://github.com/scalableminds/webknossos/pull/8423)
+- Added support for adding N5 datasets with compact-style multiscale metadata. [#8456](https://github.com/scalableminds/webknossos/pull/8456)
 
 ### Changed
-- Renamed "resolution" to "magnification" in more places within the codebase, including local variables. [#8168](https://github.com/scalableminds/webknossos/pull/8168)
-- Layer names are now allowed to contain `$` as special characters. [#8241](https://github.com/scalableminds/webknossos/pull/8241)
-- Datasets can now be renamed and can have duplicate names. [#8075](https://github.com/scalableminds/webknossos/pull/8075)
-- Improved the default colors for skeleton trees. [#8228](https://github.com/scalableminds/webknossos/pull/8228)
-- Allowed to train an AI model using differently sized bounding boxes. We recommend all bounding boxes to have equal dimensions or to have dimensions which are multiples of the smallest bounding box. [#8222](https://github.com/scalableminds/webknossos/pull/8222)
-- Within the bounding box tool, the cursor updates immediately after pressing `ctrl`, indicating that a bounding box can be moved instead of resized. [#8253](https://github.com/scalableminds/webknossos/pull/8253)
+- When using a zarr link to a wk-served data layer as another layer’s source, the user’s token is used to access the data. [#8322](https://github.com/scalableminds/webknossos/pull/8322/)
+- Compound annotations (created when viewing all annotations of a task) no longer permanently store data in the FossilDB. [#8422](https://github.com/scalableminds/webknossos/pull/8422)
+- When creating multiple tasks at once (bulk task creation), they now all need to have the same task type. [#8405](https://github.com/scalableminds/webknossos/pull/8405)
+- Improved performance when changing the layout/viewports. [#8448](https://github.com/scalableminds/webknossos/pull/8448)
 
 ### Fixed
-- Fixed that listing datasets with the `api/datasets` route without compression failed due to missing permissions regarding public datasets. [#8249](https://github.com/scalableminds/webknossos/pull/8249)
-- A "Locked by anonymous user" banner is no longer shown when opening public editable annotations of other organizations. [#8273](https://github.com/scalableminds/webknossos/pull/8273)
-- Fixed a bug that uploading a zarr dataset with an already existing `datasource-properties.json` file failed. [#8268](https://github.com/scalableminds/webknossos/pull/8268)
-- Fixed the organization switching feature for datasets opened via old links. [#8257](https://github.com/scalableminds/webknossos/pull/8257)
-- Fixed that uploading an NML file without an organization id failed. Now the user's organization is used as fallback. [#8277](https://github.com/scalableminds/webknossos/pull/8277)
-- Fixed that the frontend did not ensure a minimum length for annotation layer names. Moreover, names starting with a `.` are also disallowed now. [#8244](https://github.com/scalableminds/webknossos/pull/8244)
-- Fixed a bug where in the add remote dataset view the dataset name setting was not in sync with the datasource setting of the advanced tab making the form not submittable. [#8245](https://github.com/scalableminds/webknossos/pull/8245)
-- Fix read and update dataset route for versions 8 and lower. [#8263](https://github.com/scalableminds/webknossos/pull/8263)
-- Fixed that task bounding boxes are again converted to user bounding boxes when uploading annotations via nmls. [#8280](https://github.com/scalableminds/webknossos/pull/8280)
-- Added missing legacy support for `isValidNewName` route. [#8252](https://github.com/scalableminds/webknossos/pull/8252)
-- Fixed some layout issues in the upload view. [#8231](https://github.com/scalableminds/webknossos/pull/8231)
-- Fixed `FATAL: role "postgres" does not exist` error message in Docker compose. [#8240](https://github.com/scalableminds/webknossos/pull/8240)
-- Fixed the Zarr 3 implementation not accepting BytesCodec without "configuration" key. [#8282](https://github.com/scalableminds/webknossos/pull/8282)
+- Fixed a bug that would lock a non-existing mapping to an empty segmentation layer under certain conditions. [#8401](https://github.com/scalableminds/webknossos/pull/8401)
+- Fixed the alignment of the button that allows restricting floodfill operations to a bounding box. [#8388](https://github.com/scalableminds/webknossos/pull/8388) 
+- Fixed rare bug where saving got stuck. [#8409](https://github.com/scalableminds/webknossos/pull/8409)
+- Fixed some rendering bugs for float datasets that used a large dynamic range. [#8325](https://github.com/scalableminds/webknossos/pull/8325)
+- Fixed a bug where reverting annotations could get stuck if some of its layers had been deleted in the meantime. [#8405](https://github.com/scalableminds/webknossos/pull/8405)
+- When removing a segment from the segment list, a corresponding precomputed mesh was not removed automatically. [#8428](https://github.com/scalableminds/webknossos/pull/8428)
+- Fixed a bug where newly added remote datasets would always appear in root folder, regardless of actual selected folder. [#8425](https://github.com/scalableminds/webknossos/pull/8425)
+- Fixed a bug where the python libs functionality `wk.RemoteDataset.explore_and_add_remote` would error. [#8425](https://github.com/scalableminds/webknossos/pull/8425)
+- Fixed a bug where various UI dialogs would be dark mode even the user preferred a light theme. [#8445](https://github.com/scalableminds/webknossos/pull/8445)
+- Fixed an issue with icon spacing on the task dashboard page. [#8452](https://github.com/scalableminds/webknossos/pull/8452)
+- Fixed a spacing issue in the statusbar. [#8455](https://github.com/scalableminds/webknossos/pull/8455)
+- Fixed a bug where the "Create Animation" modal did not open when selecting the corresponding feature from the navbar menu. [#8444](https://github.com/scalableminds/webknossos/pull/8444)
+- Fixed that the brightness/contrast settings (in the histogram) could not be changed if the histogram data could not be loaded for some reason. [#8459](https://github.com/scalableminds/webknossos/pull/8459)
 
 ### Removed
-- Removed support for HTTP API versions 3 and 4. [#8075](https://github.com/scalableminds/webknossos/pull/8075)
 
 ### Breaking Changes

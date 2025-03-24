@@ -1,58 +1,63 @@
-import * as THREE from "three";
+import app from "app";
+import { CuckooTableVec3 } from "libs/cuckoo/cuckoo_table_vec3";
+import { V3 } from "libs/mjs";
+import type TPS3D from "libs/thin_plate_spline";
+import * as Utils from "libs/utils";
 import _ from "lodash";
+import { WkDevFlags } from "oxalis/api/wk_dev";
 import { BLEND_MODES, Identity4x4, type OrthoView, type Vector3 } from "oxalis/constants";
 import {
-  ViewModeValues,
+  AnnotationToolEnum,
+  MappingStatusEnum,
   OrthoViewValues,
   OrthoViews,
-  MappingStatusEnum,
-  AnnotationToolEnum,
+  ViewModeValues,
 } from "oxalis/constants";
-import { calculateGlobalPos, getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
-import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
-import {
-  getActiveCellId,
-  getActiveSegmentationTracing,
-  getActiveSegmentPosition,
-  getBucketRetrievalSourceFn,
-  needsLocalHdf5Mapping,
-} from "oxalis/model/accessors/volumetracing_accessor";
-import { getPackingDegree } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import {
   getColorLayers,
   getDataLayers,
-  getByteCount,
-  getElementClass,
   getDatasetBoundingBox,
+  getElementClass,
   getEnabledLayers,
-  getSegmentationLayerWithMappingSupport,
-  getMappingInfoForSupportedLayer,
-  getVisibleSegmentationLayer,
   getLayerByName,
-  invertAndTranspose,
-  getTransformsForLayer,
-  getMagInfoByLayer,
   getMagInfo,
-  getTransformsPerLayer,
+  getMagInfoByLayer,
+  getMappingInfoForSupportedLayer,
+  getSegmentationLayerWithMappingSupport,
+  getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getTransformsForLayer,
+  getTransformsPerLayer,
+  invertAndTranspose,
+} from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import {
   getActiveMagIndicesForLayers,
   getUnrenderableLayerInfosForCurrentZoom,
   getZoomValue,
 } from "oxalis/model/accessors/flycam_accessor";
+import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
+import { calculateGlobalPos, getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
+import {
+  getActiveCellId,
+  getActiveSegmentPosition,
+  getActiveSegmentationTracing,
+  getBucketRetrievalSourceFn,
+  needsLocalHdf5Mapping,
+} from "oxalis/model/accessors/volumetracing_accessor";
+import { getDtypeConfigForElementClass } from "oxalis/model/bucket_data_handling/data_rendering_logic";
+import { getGlobalLayerIndexForLayerName } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import shaderEditor from "oxalis/model/helpers/shader_editor";
+import getMainFragmentShader, {
+  getMainVertexShader,
+  type Params,
+} from "oxalis/shaders/main_data_shaders.glsl";
 import { Model } from "oxalis/singletons";
 import type { DatasetLayerConfiguration } from "oxalis/store";
 import Store from "oxalis/store";
-import * as Utils from "libs/utils";
-import app from "app";
-import getMainFragmentShader, { getMainVertexShader } from "oxalis/shaders/main_data_shaders.glsl";
-import shaderEditor from "oxalis/model/helpers/shader_editor";
-import type { ElementClass } from "types/api_flow_types";
-import { CuckooTableVec3 } from "libs/cuckoo/cuckoo_table_vec3";
-import { getGlobalLayerIndexForLayerName } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
-import { V3 } from "libs/mjs";
-import type TPS3D from "libs/thin_plate_spline";
+import * as THREE from "three";
+import type { ValueOf } from "types/globals";
 
 type ShaderMaterialOptions = {
   polygonOffset?: boolean;
@@ -66,9 +71,13 @@ export type Uniforms = Record<
     value: any;
   }
 >;
+
 const DEFAULT_COLOR = new THREE.Vector3(255, 255, 255);
 
 function sanitizeName(name: string | null | undefined): string {
+  if (WkDevFlags.bucketDebugging.disableLayerNameSanitization) {
+    return name || "unknown name";
+  }
   if (name == null) {
     return "";
   }
@@ -83,23 +92,26 @@ function getSanitizedColorLayerNames() {
   return getColorLayers(Store.getState().dataset).map((layer) => sanitizeName(layer.name));
 }
 
-function getTextureLayerInfos(): Record<
-  string,
-  { packingDegree: number; dataTextureCount: number }
-> {
+function getTextureLayerInfos(): Params["textureLayerInfos"] {
   const { dataset } = Store.getState();
   const layers = getDataLayers(dataset);
 
   // keyBy the sanitized layer name as the lookup will happen in the shader using the sanitized layer name
   const layersObject = _.keyBy(layers, (layer) => sanitizeName(layer.name));
 
-  return _.mapValues(layersObject, (layer) => ({
-    packingDegree: getPackingDegree(
-      getByteCount(dataset, layer.name),
-      getElementClass(dataset, layer.name),
-    ),
-    dataTextureCount: Model.getLayerRenderingManagerByName(layer.name).dataTextureCount,
-  }));
+  return _.mapValues(layersObject, (layer): ValueOf<Params["textureLayerInfos"]> => {
+    const elementClass = getElementClass(dataset, layer.name);
+    const dtypeConfig = getDtypeConfigForElementClass(elementClass);
+    return {
+      packingDegree: dtypeConfig.packingDegree,
+      glslPrefix: dtypeConfig.glslPrefix,
+      dataTextureCount: Model.getLayerRenderingManagerByName(layer.name).dataTextureCount,
+      isSigned: dtypeConfig.isSigned,
+      elementClass,
+      isColor: layer.category === "color",
+      unsanitizedName: layer.name,
+    };
+  });
 }
 
 class PlaneMaterialFactory {
@@ -145,6 +157,9 @@ class PlaneMaterialFactory {
       },
       selectiveVisibilityInProofreading: {
         value: true,
+      },
+      selectiveSegmentVisibility: {
+        value: false,
       },
       is3DViewBeingRendered: {
         value: true,
@@ -214,23 +229,23 @@ class PlaneMaterialFactory {
       // value which is why it is spread over two uniforms,
       // named as `-High` and `-Low`.
       hoveredSegmentIdHigh: {
-        value: new THREE.Vector4(0, 0, 0, 0),
+        value: 0,
       },
       hoveredSegmentIdLow: {
-        value: new THREE.Vector4(0, 0, 0, 0),
+        value: 0,
       },
       hoveredUnmappedSegmentIdHigh: {
-        value: new THREE.Vector4(0, 0, 0, 0),
+        value: 0,
       },
       hoveredUnmappedSegmentIdLow: {
-        value: new THREE.Vector4(0, 0, 0, 0),
+        value: 0,
       },
       // The same is done for the active cell id.
       activeCellIdHigh: {
-        value: new THREE.Vector4(0, 0, 0, 0),
+        value: 0,
       },
       activeCellIdLow: {
-        value: new THREE.Vector4(0, 0, 0, 0),
+        value: 0,
       },
       isUnmappedSegmentHighlighted: {
         value: false,
@@ -242,8 +257,7 @@ class PlaneMaterialFactory {
     this.uniforms.activeMagIndices = {
       value: Object.values(activeMagIndices),
     };
-    const nativelyRenderedLayerName =
-      Store.getState().datasetConfiguration.nativelyRenderedLayerName;
+    const { nativelyRenderedLayerName } = Store.getState().datasetConfiguration;
     const dataset = Store.getState().dataset;
     for (const dataLayer of Model.getAllLayers()) {
       const layerName = sanitizeName(dataLayer.name);
@@ -562,6 +576,17 @@ class PlaneMaterialFactory {
         true,
       ),
     );
+
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        (storeState) => storeState.datasetConfiguration.selectiveSegmentVisibility,
+        (selectiveSegmentVisibility) => {
+          this.uniforms.selectiveSegmentVisibility.value = selectiveSegmentVisibility;
+        },
+        true,
+      ),
+    );
+
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) => getMagInfoByLayer(storeState.dataset),
@@ -652,7 +677,6 @@ class PlaneMaterialFactory {
         (layerSettings) => {
           let updatedLayerVisibility = false;
           for (const dataLayer of Model.getAllLayers()) {
-            const { elementClass } = dataLayer.cube;
             const settings = layerSettings[dataLayer.name];
 
             if (settings != null) {
@@ -673,7 +697,7 @@ class PlaneMaterialFactory {
 
               oldVisibilityPerLayer[dataLayer.name] = isLayerEnabled;
               const name = sanitizeName(dataLayer.name);
-              this.updateUniformsForLayer(settings, name, elementClass, isSegmentationLayer);
+              this.updateUniformsForLayer(settings, name, isSegmentationLayer);
             }
           }
           if (updatedLayerVisibility) {
@@ -766,10 +790,12 @@ class PlaneMaterialFactory {
         listenToStoreProperty(
           (storeState) => storeState.temporaryConfiguration.hoveredSegmentId,
           (hoveredSegmentId) => {
-            const [high, low] = Utils.convertNumberTo64Bit(hoveredSegmentId);
+            const [high, low] = Utils.convertNumberTo64BitTuple(
+              hoveredSegmentId != null ? Math.abs(hoveredSegmentId) : null,
+            );
 
-            this.uniforms.hoveredSegmentIdLow.value.set(...low);
-            this.uniforms.hoveredSegmentIdHigh.value.set(...high);
+            this.uniforms.hoveredSegmentIdLow.value = low;
+            this.uniforms.hoveredSegmentIdHigh.value = high;
           },
         ),
       );
@@ -777,10 +803,12 @@ class PlaneMaterialFactory {
         listenToStoreProperty(
           (storeState) => storeState.temporaryConfiguration.hoveredUnmappedSegmentId,
           (hoveredUnmappedSegmentId) => {
-            const [high, low] = Utils.convertNumberTo64Bit(hoveredUnmappedSegmentId);
+            const [high, low] = Utils.convertNumberTo64BitTuple(
+              hoveredUnmappedSegmentId != null ? Math.abs(hoveredUnmappedSegmentId) : null,
+            );
 
-            this.uniforms.hoveredUnmappedSegmentIdLow.value.set(...low);
-            this.uniforms.hoveredUnmappedSegmentIdHigh.value.set(...high);
+            this.uniforms.hoveredUnmappedSegmentIdLow.value = low;
+            this.uniforms.hoveredUnmappedSegmentIdHigh.value = high;
           },
         ),
       );
@@ -924,26 +952,23 @@ class PlaneMaterialFactory {
       return;
     }
 
-    const [high, low] = Utils.convertNumberTo64Bit(activeCellId);
+    const [high, low] = Utils.convertNumberTo64BitTuple(Math.abs(activeCellId));
 
-    this.uniforms.activeCellIdLow.value.set(...low);
-    this.uniforms.activeCellIdHigh.value.set(...high);
+    this.uniforms.activeCellIdLow.value = low;
+    this.uniforms.activeCellIdHigh.value = high;
   }
 
   updateUniformsForLayer(
     settings: DatasetLayerConfiguration,
     name: string,
-    elementClass: ElementClass,
     isSegmentationLayer: boolean,
   ): void {
     const { alpha, intensityRange, isDisabled, isInverted, gammaCorrectionValue } = settings;
 
-    // In UnsignedByte textures the byte values are scaled to [0, 1], in Float textures they are not
     if (!isSegmentationLayer) {
-      const divisor = elementClass === "float" ? 1 : 255;
       if (intensityRange) {
-        this.uniforms[`${name}_min`].value = intensityRange[0] / divisor;
-        this.uniforms[`${name}_max`].value = intensityRange[1] / divisor;
+        this.uniforms[`${name}_min`].value = intensityRange[0];
+        this.uniforms[`${name}_max`].value = intensityRange[1];
       }
       this.uniforms[`${name}_is_inverted`].value = isInverted ? 1.0 : 0;
 

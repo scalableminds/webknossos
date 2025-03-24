@@ -1,48 +1,54 @@
-import { Button, Spin, Alert, Form, Card, Tabs, Tooltip, type FormInstance } from "antd";
 import { ExclamationCircleOutlined } from "@ant-design/icons";
-import * as React from "react";
-import _ from "lodash";
-import dayjs from "dayjs";
-import { connect } from "react-redux";
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter, Link } from "react-router-dom";
-import type {
-  UnregisterCallback,
-  Location as HistoryLocation,
-  Action as HistoryAction,
-} from "history";
-import type {
-  APIDataSource,
-  APIDataset,
-  MutableAPIDataset,
-  APIMessage,
-} from "types/api_flow_types";
-import { Unicode } from "oxalis/constants";
-import type { DatasetConfiguration, OxalisState } from "oxalis/store";
-import { diffObjects, jsonStringify } from "libs/utils";
+import { defaultContext } from "@tanstack/react-query";
 import {
   getDataset,
   getDatasetDefaultConfiguration,
-  updateDatasetDefaultConfiguration,
   readDatasetDatasource,
-  updateDatasetDatasource,
-  updateDatasetTeams,
   sendAnalyticsEvent,
+  updateDatasetDatasource,
+  updateDatasetDefaultConfiguration,
   updateDatasetPartial,
+  updateDatasetTeams,
 } from "admin/admin_rest_api";
+import { Alert, Button, Card, Form, type FormInstance, Spin, Tabs, Tooltip } from "antd";
+import dayjs from "dayjs";
+import features from "features";
+import type {
+  Action as HistoryAction,
+  Location as HistoryLocation,
+  UnregisterCallback,
+} from "history";
 import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
+import { diffObjects, jsonStringify } from "libs/utils";
+import _ from "lodash";
 import messages from "messages";
-import features from "features";
+import { Unicode } from "oxalis/constants";
+import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
+import {
+  EXPECTED_TRANSFORMATION_LENGTH,
+  doAllLayersHaveTheSameRotation,
+  getRotationFromTransformationIn90DegreeSteps,
+} from "oxalis/model/accessors/dataset_layer_transformation_accessor";
+import type { DatasetConfiguration, OxalisState } from "oxalis/store";
+import * as React from "react";
+import { connect } from "react-redux";
+import type { RouteComponentProps } from "react-router-dom";
+import { Link, withRouter } from "react-router-dom";
+import type {
+  APIDataSource,
+  APIDataset,
+  APIMessage,
+  MutableAPIDataset,
+} from "types/api_flow_types";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
-import { Hideable, hasFormError } from "./helper_components";
-import DatasetSettingsViewConfigTab from "./dataset_settings_viewconfig_tab";
+import type { DatasetRotation } from "./dataset_rotation_form_item";
+import DatasetSettingsDataTab, { syncDataSourceFields } from "./dataset_settings_data_tab";
+import DatasetSettingsDeleteTab from "./dataset_settings_delete_tab";
 import DatasetSettingsMetadataTab from "./dataset_settings_metadata_tab";
 import DatasetSettingsSharingTab from "./dataset_settings_sharing_tab";
-import DatasetSettingsDeleteTab from "./dataset_settings_delete_tab";
-import DatasetSettingsDataTab, { syncDataSourceFields } from "./dataset_settings_data_tab";
-import { defaultContext } from "@tanstack/react-query";
-import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
+import DatasetSettingsViewConfigTab from "./dataset_settings_viewconfig_tab";
+import { Hideable, hasFormError } from "./helper_components";
 
 const FormItem = Form.Item;
 const notImportedYetStatus = "Not imported yet.";
@@ -76,6 +82,7 @@ export type FormData = {
   dataset: APIDataset;
   defaultConfiguration: DatasetConfiguration;
   defaultConfigurationLayersJson: string;
+  datasetRotation?: DatasetRotation;
 };
 
 class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, State> {
@@ -194,6 +201,32 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       form.setFieldsValue({
         dataSource,
       });
+      // Retrieve the initial dataset rotation settings from the data source config.
+      if (doAllLayersHaveTheSameRotation(dataSource.dataLayers)) {
+        const firstLayerTransformations = dataSource.dataLayers[0].coordinateTransformations;
+        let initialDatasetRotationSettings: DatasetRotation;
+        if (
+          !firstLayerTransformations ||
+          firstLayerTransformations.length !== EXPECTED_TRANSFORMATION_LENGTH
+        ) {
+          initialDatasetRotationSettings = {
+            x: 0,
+            y: 0,
+            z: 0,
+          };
+        } else {
+          initialDatasetRotationSettings = {
+            // First transformation is a translation to the coordinate system origin.
+            x: getRotationFromTransformationIn90DegreeSteps(firstLayerTransformations[1], "x"),
+            y: getRotationFromTransformationIn90DegreeSteps(firstLayerTransformations[2], "y"),
+            z: getRotationFromTransformationIn90DegreeSteps(firstLayerTransformations[3], "z"),
+            // Fifth transformation is a translation back to the original position.
+          };
+        }
+        form.setFieldsValue({
+          datasetRotation: initialDatasetRotationSettings,
+        });
+      }
       const datasetDefaultConfiguration = await getDatasetDefaultConfiguration(
         this.props.datasetId,
       );

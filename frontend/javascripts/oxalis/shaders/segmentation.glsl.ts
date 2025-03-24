@@ -1,31 +1,49 @@
+import type { Vector3, Vector4 } from "oxalis/constants";
 import {
-  hsvToRgb,
-  jsRgb2hsv,
-  getElementOfPermutation,
-  jsGetElementOfPermutation,
   aaStep,
   colormapJet,
+  formatNumberAsGLSLFloat,
+  getElementOfPermutation,
+  getPermutation,
+  hsvToRgb,
   jsColormapJet,
+  jsGetElementOfPermutation,
+  jsRgb2hsv,
 } from "oxalis/shaders/utils.glsl";
-import type { Vector3, Vector4 } from "oxalis/constants";
-import type { ShaderModule } from "./shader_module_system";
-import { getRgbaAtIndex } from "./texture_access.glsl";
 import { hashCombine } from "./hashing.glsl";
 import { attemptMappingLookUp } from "./mappings.glsl";
+import type { ShaderModule } from "./shader_module_system";
+
+function buildPermutation(sequenceLength: number, primitiveRoot: number) {
+  return {
+    permutation: getPermutation(sequenceLength, primitiveRoot),
+    count: sequenceLength,
+  };
+}
+
+const permutations = {
+  color: buildPermutation(19, 2),
+  frequency: buildPermutation(3, 2),
+  angle: buildPermutation(17, 3),
+  useGrid: buildPermutation(13, 2),
+};
 
 export const convertCellIdToRGB: ShaderModule = {
-  requirements: [
-    hsvToRgb,
-    getRgbaAtIndex,
-    getElementOfPermutation,
-    aaStep,
-    colormapJet,
-    hashCombine,
-  ],
+  requirements: [hsvToRgb, getElementOfPermutation, aaStep, colormapJet, hashCombine],
   code: `
     highp uint vec4ToUint(vec4 idLow) {
       uint integerValue = (uint(idLow.a) << 24) | (uint(idLow.b) << 16) | (uint(idLow.g) << 8) | uint(idLow.r);
       return integerValue;
+    }
+
+    highp int vec4ToInt(vec4 color) {
+      ivec4 four_bytes = ivec4(color);
+      highp int hpv = four_bytes.r | (four_bytes.g << 8) | (four_bytes.b << 16) | (four_bytes.a << 24);
+      return hpv;
+    }
+
+    highp uint vec4ToIntToUint(vec4 idLow) {
+      return uint(abs(vec4ToInt(idLow)));
     }
 
     vec4 uintToVec4(uint integerValue) {
@@ -36,6 +54,44 @@ export const convertCellIdToRGB: ShaderModule = {
 
       vec4 id = vec4(r, g, b, a);
       return id;
+    }
+
+    void uint64ToUint64(vec4 lowColor, vec4 highColor, out highp uint absLow, out highp uint absHigh) {
+      absLow = vec4ToUint(lowColor);
+      absHigh = vec4ToUint(highColor);
+    }
+
+    void int32ToUint64(vec4 lowColor, vec4 highColor, out highp uint absLow, out highp uint absHigh) {
+      absLow = vec4ToIntToUint(lowColor);
+      absHigh = 0u;
+    }
+
+    void uint32ToUint64(vec4 lowColor, vec4 highColor, out highp uint absLow, out highp uint absHigh) {
+      absLow = vec4ToUint(lowColor);
+      absHigh = 0u;
+    }
+
+    void int64ToUint64(vec4 lowColor, vec4 highColor, out highp uint absLow, out highp uint absHigh) {
+      // Extract low and high 32-bit parts
+      highp int low = vec4ToInt(lowColor);
+      highp int high = vec4ToInt(highColor);
+
+      // Check if the number is negative
+      if (high < 0) {
+        // Calculate the two's complement (absolute value)
+        highp uint low_uint = uint(low);
+        highp uint high_uint = uint(high);
+        highp uint combinedLow = ~low_uint + 1u; // Add 1 to the bitwise NOT of low
+        highp uint combinedHigh = ~high_uint + uint(combinedLow == 0u ? 1u : 0u); // Add carry if low overflows
+
+        // Output absolute value as two uint32
+        absLow = combinedLow;
+        absHigh = combinedHigh;
+      } else {
+        // The number is already positive
+        absLow = uint(low);
+        absHigh = uint(high);
+      }
     }
 
     vec3 attemptCustomColorLookUp(uint integerValue, uint seed) {
@@ -56,7 +112,27 @@ export const convertCellIdToRGB: ShaderModule = {
       return vec3(customColor) / 255.;
     }
 
-    vec3 convertCellIdToRGB(vec4 idHigh, vec4 idLow) {
+    float colorCount = ${formatNumberAsGLSLFloat(permutations.color.count)};
+    float[${permutations.color.count}] colorPermutation = float[](
+      ${permutations.color.permutation.map(formatNumberAsGLSLFloat).join(", ")}
+    );
+
+    float frequencyCount = ${formatNumberAsGLSLFloat(permutations.frequency.count)};
+    float[${permutations.frequency.count}] frequencyPermutation = float[](
+      ${permutations.frequency.permutation.map(formatNumberAsGLSLFloat).join(", ")}
+    );
+
+    float angleCount = ${formatNumberAsGLSLFloat(permutations.angle.count)};
+    float[${permutations.angle.count}] anglePermutation = float[](
+      ${permutations.angle.permutation.map(formatNumberAsGLSLFloat).join(", ")}
+    );
+
+    float useGridCount = ${formatNumberAsGLSLFloat(permutations.useGrid.count)};
+    float[${permutations.useGrid.count}] useGridPermutation = float[](
+      ${permutations.useGrid.permutation.map(formatNumberAsGLSLFloat).join(", ")}
+    );
+
+    vec3 convertCellIdToRGB(uint idHigh_uint, uint idLow_uint) {
       /*
       This function maps from a segment id to a color with a pattern.
       For the color, the jet color map is used. For the patterns, we employ the following
@@ -73,13 +149,16 @@ export const convertCellIdToRGB: ShaderModule = {
       The patterns are still painted on top of these, though.
       */
 
+      vec4 idHigh = uintToVec4(idHigh_uint);
+      vec4 idLow = uintToVec4(idLow_uint);
+
       // Since collisions of ids are bound to happen, using all 64 bits is not
       // necessary, which is why we simply combine the 32-bit tuple into one 32-bit value.
-      vec4 id = idHigh + idLow;
+      vec4 id = abs(idHigh) + abs(idLow);
       float significantSegmentIndex = 256.0 * id.g + id.r;
 
-      float colorCount = 19.;
-      float colorIndex = getElementOfPermutation(significantSegmentIndex, colorCount, 2.);
+
+      float colorIndex = colorPermutation[uint(mod(significantSegmentIndex, colorCount))];
       float colorValueDecimal = 1.0 / colorCount * colorIndex;
       float colorHue = rgb2hsv(colormapJet(colorValueDecimal)).x;
       float colorSaturation = 1.;
@@ -107,9 +186,10 @@ export const convertCellIdToRGB: ShaderModule = {
       //
       // By default, scale everything with fineTunedScale as this seemed a good value during testing.
       float fineTunedScale = 0.15;
+      float frequencyIndex = frequencyPermutation[uint(mod(significantSegmentIndex, frequencyCount))];
+
       // Additionally, apply another scale factor (between 0.5 and 1.5) depending on the segment id.
-      float frequencySequenceLength = 3.;
-      float frequencyModulator = mix(0.5, 1.5, getElementOfPermutation(significantSegmentIndex, frequencySequenceLength, 2.) / frequencySequenceLength);
+      float frequencyModulator = mix(0.5, 1.5, frequencyIndex / frequencyCount);
       float coordScaling = fineTunedScale * frequencyModulator;
       // Round the zoomValue so that the pattern frequency only changes at distinct steps. Otherwise, zooming out
       // wouldn't change the pattern at all, which would feel weird.
@@ -121,8 +201,8 @@ export const convertCellIdToRGB: ShaderModule = {
       worldCoordUVW.x = worldCoordUVW.x * anisotropyFactorUVW.x;
       worldCoordUVW.y = worldCoordUVW.y * anisotropyFactorUVW.y;
 
-      float angleCount = 17.;
-      float angle = 1.0 / angleCount * getElementOfPermutation(significantSegmentIndex, angleCount, 3.0);
+      float angleIndex = anglePermutation[uint(mod(significantSegmentIndex, angleCount))];
+      float angle = 1.0 / angleCount * angleIndex;
 
       // To produce a stripe or grid pattern, we use the current fragment coordinates
       // and an angle.
@@ -145,8 +225,8 @@ export const convertCellIdToRGB: ShaderModule = {
 
       // useGrid is binary, but we generate a pseudo-random sequence of 13 elements which we map
       // to ones and zeros. This has the benefit that the periodicity has a prime length.
-      float useGridSequenceLength = 13.;
-      float useGrid = step(mod(getElementOfPermutation(significantSegmentIndex, useGridSequenceLength, 2.0), 2.0), 0.5);
+      float useGridIndex = useGridPermutation[uint(mod(significantSegmentIndex, useGridCount))];
+      float useGrid = step(mod(useGridIndex, 2.0), 0.5);
       // Cast the continuous stripe values to 0 and 1 + a bit of anti-aliasing.
       float aaStripeValueA = aaStep(stripeValueA);
       float aaStripeValueB = aaStep(stripeValueB);
@@ -177,6 +257,8 @@ export const jsConvertCellIdToRGBA = (
   }
 
   let rgb;
+
+  id = Math.abs(id);
 
   if (customColors != null) {
     const last8Bits = id % 2 ** 8;
@@ -279,7 +361,7 @@ export const getCrossHairOverlay: ShaderModule = {
 };
 
 export const getSegmentId: ShaderModule = {
-  requirements: [getRgbaAtIndex, convertCellIdToRGB, attemptMappingLookUp],
+  requirements: [convertCellIdToRGB, attemptMappingLookUp],
   code: `
 
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
@@ -314,13 +396,13 @@ export const getSegmentId: ShaderModule = {
         segment_id[1] = vec4(segment_id[1].r, segment_id[1].g, 0.0, 0.0);
       <% } %>
 
-      mapped_id[0] = 255. * segment_id[0]; // High
-      mapped_id[1] = 255. * segment_id[1]; // Low
-
-      uint high_integer = vec4ToUint(mapped_id[0]);
-      uint low_integer = vec4ToUint(mapped_id[1]);
+      mapped_id[0] = segment_id[0]; // High
+      mapped_id[1] = segment_id[1]; // Low
 
       if (shouldApplyMappingOnGPU) {
+        uint high_integer = vec4ToUint(mapped_id[0]);
+        uint low_integer = vec4ToUint(mapped_id[1]);
+
         ivec2 mapped_entry = is_mapping_64bit
           ? attemptMappingLookUp64(high_integer, low_integer, mapping_seeds[0])
           : attemptMappingLookUp32(low_integer, mapping_seeds[0]);
@@ -344,10 +426,48 @@ export const getSegmentId: ShaderModule = {
           mapped_id[1] = vec4(0.0);
         }
       }
-
-      segment_id[0] *= 255.0;
-      segment_id[1] *= 255.0;
     }
 <% }) %>
+  `,
+};
+
+export const getSegmentationAlphaIncrement: ShaderModule = {
+  requirements: [],
+  code: `
+    float getSegmentationAlphaIncrement(float alpha, bool isHoveredSegment, bool isHoveredUnmappedSegment, bool isActiveCell) {
+      // Highlight segment only if
+      // - it's hovered or
+      // - active during proofreading
+      // Also, make segments invisible if selective visibility is turned on (unless the segment
+      // is active or hovered).
+
+      if (isProofreading) {
+        if (isActiveCell) {
+          return (isHoveredUnmappedSegment
+            ? 0.4     // Highlight the hovered super-voxel of the active segment
+            : (isHoveredSegment
+              ? 0.15  // Highlight the not-hovered super-voxels of the hovered segment
+              : 0.0
+            )
+          );
+        } else {
+          return (isHoveredSegment
+            ? 0.2
+            // We are in proofreading mode, but the current voxel neither belongs
+            // to the active segment nor is it hovered. When selective visibility
+            // is enabled, lower the opacity.
+            : (selectiveVisibilityInProofreading ? -alpha : 0.0)
+          );
+        }
+      }
+
+      if (isHoveredSegment) {
+        return 0.2;
+      } else if (selectiveSegmentVisibility) {
+        return isActiveCell ? 0.15 : -alpha;
+      } else {
+        return 0.;
+      }
+    }
   `,
 };

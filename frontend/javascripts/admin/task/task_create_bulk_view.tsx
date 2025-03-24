@@ -1,14 +1,14 @@
-import { Form, Input, Button, Card, Upload, Spin, Progress, Divider, App } from "antd";
-import { useState } from "react";
 import { InboxOutlined } from "@ant-design/icons";
-import _ from "lodash";
-import type { APITask } from "types/api_flow_types";
-import type { BoundingBoxObject } from "oxalis/store";
-import type { Vector3 } from "oxalis/constants";
 import { createTasks } from "admin/api/tasks";
 import { handleTaskCreationResponse } from "admin/task/task_create_form_view";
-import Messages from "messages";
+import { App, Button, Card, Divider, Form, Input, Progress, Spin, Upload } from "antd";
 import Toast from "libs/toast";
+import _ from "lodash";
+import Messages from "messages";
+import type { Vector3 } from "oxalis/constants";
+import type { BoundingBoxObject } from "oxalis/store";
+import { useState } from "react";
+import type { APITask } from "types/api_flow_types";
 
 const FormItem = Form.Item;
 const { TextArea } = Input;
@@ -273,7 +273,7 @@ function TaskCreateBulkView() {
             Specify each new task on a separate line as comma separated values (CSV) in the
             following format:
             <br />
-            <a href="/dashboard">datasetName, datasetId</a>, <a href="/taskTypes">taskTypeId</a>,
+            <a href="/dashboard">datasetId</a>, <a href="/taskTypes">taskTypeId</a>,
             experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ,
             width, height, depth, <a href="/projects">project</a>, <a href="/scripts">scriptId</a>{" "}
             (optional), baseAnnotationId (optional)

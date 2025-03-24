@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.explore
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.image.Color
 import com.scalableminds.util.tools.TextUtils.normalizeStrong
@@ -21,6 +22,8 @@ import com.scalableminds.webknossos.datastore.models.LengthUnit.LengthUnit
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AdditionalAxis,
+  CoordinateTransformation,
+  CoordinateTransformationType,
   DataLayerWithMagLocators,
   ElementClass,
   LayerViewConfiguration
@@ -180,7 +183,7 @@ trait NgffExplorationUtils extends FoxImplicits {
     Vec3Double(xFactors.product, yFactors.product, zFactors.product)
   }
 
-  protected def getShape(dataset: NgffDataset, path: VaultPath): Fox[Array[Int]]
+  protected def getShape(dataset: NgffDataset, path: VaultPath)(implicit tc: TokenContext): Fox[Array[Int]]
 
   protected def createAdditionalAxis(name: String, index: Int, bounds: Array[Int]): Box[AdditionalAxis] =
     for {
@@ -189,7 +192,8 @@ trait NgffExplorationUtils extends FoxImplicits {
     } yield AdditionalAxis(normalizedName, bounds, index)
 
   protected def getAdditionalAxes(multiscale: NgffMultiscalesItem, remotePath: VaultPath)(
-      implicit ec: ExecutionContext): Fox[Seq[AdditionalAxis]] = {
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[Seq[AdditionalAxis]] = {
     val defaultAxes = List("c", "x", "y", "z")
     for {
       // Selecting shape of first mag, assuming no mags for additional coordinates
@@ -207,7 +211,8 @@ trait NgffExplorationUtils extends FoxImplicits {
   }
 
   protected def getNgffMultiscaleChannelCount(multiscale: NgffMultiscalesItem, remotePath: VaultPath)(
-      implicit ec: ExecutionContext): Fox[Int] =
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[Int] =
     for {
       firstDataset <- multiscale.datasets.headOption.toFox
       shape <- getShape(firstDataset, remotePath)
@@ -226,7 +231,7 @@ trait NgffExplorationUtils extends FoxImplicits {
                             datasetName: String,
                             voxelSizeInAxisUnits: Vec3Double,
                             axisOrder: AxisOrder,
-                            isSegmentation: Boolean): Fox[DataLayerWithMagLocators]
+                            isSegmentation: Boolean)(implicit tc: TokenContext): Fox[DataLayerWithMagLocators]
 
   protected def layersFromNgffMultiscale(multiscale: NgffMultiscalesItem,
                                          remotePath: VaultPath,
@@ -234,7 +239,8 @@ trait NgffExplorationUtils extends FoxImplicits {
                                          channelCount: Int,
                                          channelAttributes: Option[Seq[ChannelAttributes]] = None,
                                          isSegmentation: Boolean = false)(
-      implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     for {
       axisOrder <- extractAxisOrder(multiscale.axes) ?~> "Could not extract XYZ axis order mapping. Does the data have x, y and z axes, stated in multiscales metadata?"
       unifiedAxisUnit <- selectAxisUnit(multiscale.axes, axisOrder)
@@ -244,7 +250,7 @@ trait NgffExplorationUtils extends FoxImplicits {
         axisOrder) ?~> "Could not extract voxel size from scale transforms"
       voxelSizeFactor = voxelSizeInAxisUnits * axisUnitFactors
       nameFromPath = remotePath.basename
-      datasetName = multiscale.name.getOrElse(nameFromPath)
+      datasetName = multiscale.name.flatMap(TextUtils.normalizeStrong).getOrElse(nameFromPath)
       layers <- Fox.serialCombined((0 until channelCount).toList)({ channelIndex: Int =>
         createLayer(remotePath,
                     credentialId,
@@ -259,12 +265,52 @@ trait NgffExplorationUtils extends FoxImplicits {
       layerAndVoxelSizeTuples = layers.map((_, VoxelSize(voxelSizeFactor, unifiedAxisUnit)))
     } yield layerAndVoxelSizeTuples
 
-  protected def layersForLabel(remotePath: VaultPath,
-                               labelPath: String,
-                               credentialId: Option[String]): Fox[List[(DataLayerWithMagLocators, VoxelSize)]]
+  protected def getTranslation(multiscale: NgffMultiscalesItem): Option[List[CoordinateTransformation]] = {
+    val is2d = !multiscale.axes.exists(_.name == "z")
+    val baseTranslation = if (is2d) List(1.0, 1.0) else List(1.0, 1.0, 1.0)
+    multiscale.datasets.headOption match {
+      case Some(firstDataset) if firstDataset.coordinateTransformations.exists(_.`type` == "translation") => {
+        var translation = firstDataset.coordinateTransformations.foldLeft(baseTranslation)((acc, ct) => {
+          ct.`type` match {
+            case "translation" =>
+              ct.translation match {
+                case Some(translationList) =>
+                  acc.zipWithIndex.map { case (v, i) => v * translationList(translationList.length - 1 - i) }
+                case _ => acc
+              }
+            case _ =>
+              ct.scale match {
+                case Some(scaleList) => acc.zipWithIndex.map { case (v, i) => v / scaleList(scaleList.length - 1 - i) }
+                case _               => acc
+              }
+          }
+        })
+        if (is2d) {
+          translation = translation :+ 0.0
+        }
+        val xTranslation = translation(0)
+        val yTranslation = translation(1)
+        val zTranslation = translation(2)
+        val coordinateTransformation = CoordinateTransformation(
+          `type` = CoordinateTransformationType.affine,
+          matrix = Some(
+            List(List(1, 0, 0, xTranslation),
+                 List(0, 1, 0, yTranslation),
+                 List(0, 0, 1, zTranslation),
+                 List(0, 0, 0, 1)))
+        )
+        Some(List(coordinateTransformation))
+      }
+      case _ => None
+    }
+  }
+
+  protected def layersForLabel(remotePath: VaultPath, labelPath: String, credentialId: Option[String])(
+      implicit tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]]
 
   protected def exploreLabelLayers(remotePath: VaultPath, credentialId: Option[String])(
-      implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     for {
       labelDescriptionPath <- Fox.successful(remotePath / NgffLabelsGroup.LABEL_PATH)
       labelGroup <- labelDescriptionPath.parseAsJson[NgffLabelsGroup]

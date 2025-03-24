@@ -1,13 +1,13 @@
-import { Checkbox, Col, Collapse, Form, Input, Row, Table, Button, type CollapseProps } from "antd";
+import { Button, Checkbox, Col, Collapse, type CollapseProps, Form, Input, Row, Table } from "antd";
 import type { FormInstance } from "antd/lib/form";
-import * as React from "react";
-import _ from "lodash";
 import { jsonEditStyle } from "dashboard/dataset/helper_components";
-import { jsonStringify } from "libs/utils";
-import { settings, type RecommendedConfiguration } from "messages";
-import { validateUserSettingsJSON } from "types/validation";
-import { TDViewDisplayModeEnum } from "oxalis/constants";
 import features from "features";
+import { jsonStringify } from "libs/utils";
+import _ from "lodash";
+import { type RecommendedConfiguration, settings } from "messages";
+import { TDViewDisplayModeEnum } from "oxalis/constants";
+import * as React from "react";
+import { validateUserSettingsJSON } from "types/validation";
 const FormItem = Form.Item;
 
 function getRecommendedConfigByCategory() {

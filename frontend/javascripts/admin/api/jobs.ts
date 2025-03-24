@@ -3,13 +3,13 @@ import { location } from "libs/window";
 import type { UnitLong, Vector3, Vector6 } from "oxalis/constants";
 import type {
   APIAnnotationType,
-  APIJob,
-  APIJobState,
-  APIJobManualState,
   APIEffectiveJobState,
+  APIJob,
+  APIJobManualState,
+  APIJobState,
+  AdditionalCoordinate,
   AiModel,
   RenderAnimationOptions,
-  AdditionalCoordinate,
 } from "types/api_flow_types";
 import { assertResponseLimit } from "./api_utils";
 
@@ -21,7 +21,7 @@ function transformBackendJobToAPIJob(job: any): APIJob {
     type: job.command,
     datasetName: job.commandArgs.dataset_name,
     datasetDirectoryName: job.commandArgs.dataset_directory_name,
-    organizationId: job.commandArgs.organization_id,
+    organizationId: job.commandArgs.organization_id || job.commandArgs.organization_name,
     layerName: job.commandArgs.layer_name || job.commandArgs.volume_layer_name,
     annotationLayerName: job.commandArgs.annotation_layer_name,
     boundingBox: job.commandArgs.bbox,
@@ -70,6 +70,12 @@ function adaptJobState(
 
 export async function cancelJob(jobId: string): Promise<APIJob> {
   return Request.receiveJSON(`/api/jobs/${jobId}/cancel`, {
+    method: "PATCH",
+  });
+}
+
+export async function retryJob(jobId: string): Promise<APIJob> {
+  return Request.receiveJSON(`/api/jobs/${jobId}/retry`, {
     method: "PATCH",
   });
 }
@@ -179,12 +185,37 @@ export function startNeuronInferralJob(
   layerName: string,
   bbox: Vector6,
   newDatasetName: string,
+  doSplitMergerEvaluation: boolean,
+  annotationId?: string,
+  useSparseTracing?: boolean,
+  evalMaxEdgeLength?: number,
+  evalSparseTubeThresholdNm?: number,
+  evalMinMergerPathLengthNm?: number,
 ): Promise<APIJob> {
   const urlParams = new URLSearchParams({
     layerName,
     bbox: bbox.join(","),
     newDatasetName,
+    doSplitMergerEvaluation: doSplitMergerEvaluation.toString(),
   });
+  if (doSplitMergerEvaluation) {
+    if (!annotationId) {
+      throw new Error("annotationId is required when doSplitMergerEvaluation is true");
+    }
+    urlParams.append("annotationId", `${annotationId}`);
+    if (useSparseTracing != null) {
+      urlParams.append("evalUseSparseTracing", `${useSparseTracing}`);
+    }
+    if (evalMaxEdgeLength != null) {
+      urlParams.append("evalMaxEdgeLength", `${evalMaxEdgeLength}`);
+    }
+    if (evalSparseTubeThresholdNm != null) {
+      urlParams.append("evalSparseTubeThresholdNm", `${evalSparseTubeThresholdNm}`);
+    }
+    if (evalMinMergerPathLengthNm != null) {
+      urlParams.append("evalMinMergerPathLengthNm", `${evalMinMergerPathLengthNm}`);
+    }
+  }
   return Request.receiveJSON(`/api/jobs/run/inferNeurons/${datasetId}?${urlParams.toString()}`, {
     method: "POST",
   });
@@ -208,6 +239,8 @@ function startSegmentationAnnotationDependentJob(
   annotationId: string,
   annotationType: APIAnnotationType,
   mergeSegments?: boolean,
+  includesEditableMapping?: boolean,
+  boundingBox?: Vector6,
 ): Promise<APIJob> {
   const requestURL = new URL(`/api/jobs/run/${jobURLPath}/${datasetId}`, location.origin);
   if (volumeLayerName != null) {
@@ -222,6 +255,12 @@ function startSegmentationAnnotationDependentJob(
   if (mergeSegments != null) {
     requestURL.searchParams.append("mergeSegments", mergeSegments.toString());
   }
+  if (includesEditableMapping != null) {
+    requestURL.searchParams.append("includesEditableMapping", includesEditableMapping.toString());
+  }
+  if (boundingBox) {
+    requestURL.searchParams.append("boundingBox", boundingBox.join(","));
+  }
   return Request.receiveJSON(requestURL.href, {
     method: "POST",
   });
@@ -235,6 +274,8 @@ export function startMaterializingVolumeAnnotationJob(
   annotationId: string,
   annotationType: APIAnnotationType,
   mergeSegments: boolean,
+  includesEditableMapping: boolean,
+  boundingBox?: Vector6,
 ): Promise<APIJob> {
   return startSegmentationAnnotationDependentJob(
     "materializeVolumeAnnotation",
@@ -245,6 +286,8 @@ export function startMaterializingVolumeAnnotationJob(
     annotationId,
     annotationType,
     mergeSegments,
+    includesEditableMapping,
+    boundingBox,
   );
 }
 
@@ -337,4 +380,15 @@ export async function getAiModels(): Promise<AiModel[]> {
     ...model,
     trainingJob: model.trainingJob == null ? null : transformBackendJobToAPIJob(model.trainingJob),
   }));
+}
+
+export async function updateAiModel(aiModel: AiModel) {
+  return Request.sendJSONReceiveJSON(`/api/aiModels/${aiModel.id}`, {
+    method: "PUT",
+    data: {
+      name: aiModel.name,
+      comment: aiModel.comment,
+      sharedOrganizationIds: aiModel.sharedOrganizationIds,
+    },
+  });
 }

@@ -1,43 +1,43 @@
-import _ from "lodash";
-import { connect } from "react-redux";
-import * as React from "react";
-import * as THREE from "three";
 import { InputMouse } from "libs/input";
+import { V3 } from "libs/mjs";
+import TrackballControls from "libs/trackball_controls";
+import * as Utils from "libs/utils";
+import _ from "lodash";
 import {
   type AnnotationTool,
   AnnotationToolEnum,
   type OrthoView,
-  OrthoViews,
   type OrthoViewMap,
+  OrthoViews,
   type Point2,
   type Vector3,
 } from "oxalis/constants";
-import { V3 } from "libs/mjs";
+import CameraController from "oxalis/controller/camera_controller";
+import { handleOpenContextMenu } from "oxalis/controller/combinations/skeleton_handlers";
+import { ProofreadTool, SkeletonTool } from "oxalis/controller/combinations/tool_controls";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
-import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
+import { getActiveNode, getNodePosition } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getInputCatcherRect, getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
+import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import {
-  setViewportAction,
-  setTDCameraAction,
-  setTDCameraWithoutTimeTrackingAction,
-  zoomTDViewAction,
+  moveTDViewByVectorWithoutTimeTrackingAction,
   moveTDViewXAction,
   moveTDViewYAction,
-  moveTDViewByVectorWithoutTimeTrackingAction,
+  setTDCameraAction,
+  setTDCameraWithoutTimeTrackingAction,
+  setViewportAction,
+  zoomTDViewAction,
 } from "oxalis/model/actions/view_mode_actions";
-import { getActiveNode, getNodePosition } from "oxalis/model/accessors/skeletontracing_accessor";
+import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { voxelToUnit } from "oxalis/model/scaleinfo";
-import CameraController from "oxalis/controller/camera_controller";
-import type PlaneView from "oxalis/view/plane_view";
 import type { CameraData, OxalisState, Tracing } from "oxalis/store";
 import Store from "oxalis/store";
-import TrackballControls from "libs/trackball_controls";
-import * as Utils from "libs/utils";
-import { ProofreadTool, SkeletonTool } from "oxalis/controller/combinations/tool_controls";
-import { handleOpenContextMenu } from "oxalis/controller/combinations/skeleton_handlers";
+import type PlaneView from "oxalis/view/plane_view";
+import * as React from "react";
+import { connect } from "react-redux";
+import * as THREE from "three";
 import type { VoxelSize } from "types/api_flow_types";
-import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
-import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 
 export function threeCameraToCameraData(camera: THREE.OrthographicCamera): CameraData {
   const { position, up, near, far, left, right, top, bottom } = camera;

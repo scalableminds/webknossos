@@ -41,9 +41,9 @@ class OrganizationController @Inject()(
 
   def organizationsIsEmpty: Action[AnyContent] = Action.async { implicit request =>
     for {
-      allOrgs <- organizationDAO.findAll(GlobalAccessContext) ?~> "organization.list.failed"
+      orgaTableIsEmpty <- organizationDAO.isEmpty ?~> "organization.list.failed"
     } yield {
-      Ok(Json.toJson(allOrgs.isEmpty))
+      Ok(Json.toJson(orgaTableIsEmpty))
     }
   }
 
@@ -127,13 +127,12 @@ class OrganizationController @Inject()(
       needsAcceptance = conf.WebKnossos.TermsOfService.enabled &&
         organization.lastTermsOfServiceAcceptanceVersion < conf.WebKnossos.TermsOfService.version
       acceptanceDeadline = conf.WebKnossos.TermsOfService.acceptanceDeadline
-      deadlinePassed = acceptanceDeadline.toEpochMilli < System.currentTimeMillis()
     } yield
       Ok(
         Json.obj(
           "acceptanceNeeded" -> needsAcceptance,
-          "acceptanceDeadline" -> acceptanceDeadline.toEpochMilli,
-          "acceptanceDeadlinePassed" -> deadlinePassed
+          "acceptanceDeadline" -> acceptanceDeadline,
+          "acceptanceDeadlinePassed" -> acceptanceDeadline.isPast
         ))
   }
 
@@ -212,7 +211,7 @@ class OrganizationController @Inject()(
         mail = if (requestedPlan == PricingPlan.Team) {
           defaultMails.upgradePricingPlanToTeamMail _
         } else {
-          defaultMails.upgradePricingPlanToTeamMail _
+          defaultMails.upgradePricingPlanToPowerMail _
         }
         _ = Mailer ! Send(mail(request.identity, userEmail))
         _ = Mailer ! Send(

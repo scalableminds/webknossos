@@ -1,6 +1,7 @@
 import _ from "lodash";
-import type { Dispatch } from "redux";
+import { WkDevFlags } from "oxalis/api/wk_dev";
 import type { Action } from "oxalis/model/actions/actions";
+import type { Dispatch } from "redux";
 
 const MAX_ACTION_LOG_LENGTH = 250;
 let actionLog: string[] = [];
@@ -8,8 +9,6 @@ let actionLog: string[] = [];
 // For grouping consecutive action types
 let lastActionName: string | null = null;
 let lastActionCount: number = 0;
-
-const DEBUG_OUTPUT_FOR_ACTIONS = false;
 
 const actionBlacklist = [
   "ADD_TO_LAYER",
@@ -51,7 +50,7 @@ export default function actionLoggerMiddleware<A extends Action>(): (
         const overflowCount = Math.max(actionLog.length - MAX_ACTION_LOG_LENGTH, 0);
         actionLog = _.drop(actionLog, overflowCount);
 
-        if (DEBUG_OUTPUT_FOR_ACTIONS) {
+        if (WkDevFlags.logActions) {
           console.group(action.type);
           console.info("dispatching", action);
           let result = next(action);

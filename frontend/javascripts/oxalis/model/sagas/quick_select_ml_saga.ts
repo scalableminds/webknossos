@@ -1,26 +1,26 @@
+import { getSamMask, sendAnalyticsEvent } from "admin/admin_rest_api";
+import { estimateBBoxInMask } from "libs/find_bounding_box_in_nd";
+import { V3 } from "libs/mjs";
+import Toast from "libs/toast";
+import { map3, sleep } from "libs/utils";
 import _ from "lodash";
 import ndarray, { type NdArray } from "ndarray";
-import type { OrthoView, TypedArrayWithoutBigInt, Vector2, Vector3 } from "oxalis/constants";
-import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { call, cancel, fork, put } from "typed-redux-saga";
-import { select } from "oxalis/model/sagas/effect-generators";
-import { V3 } from "libs/mjs";
+import { WkDevFlags } from "oxalis/api/wk_dev";
+import type { OrthoView, TypedArrayWithoutBigInt, Vector3 } from "oxalis/constants";
 import type {
   ComputeQuickSelectForPointAction,
   ComputeQuickSelectForRectAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import Toast from "libs/toast";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
+import { select } from "oxalis/model/sagas/effect-generators";
 import type { OxalisState } from "oxalis/store";
-import { map3, sleep } from "libs/utils";
-import type { AdditionalCoordinate, APIDataset } from "types/api_flow_types";
-import { getSamMask, sendAnalyticsEvent } from "admin/admin_rest_api";
+import { call, cancel, fork, put } from "typed-redux-saga";
+import type { APIDataset, AdditionalCoordinate } from "types/api_flow_types";
+import { getPlaneExtentInVoxelFromStore } from "../accessors/view_mode_accessor";
+import { setGlobalProgressAction } from "../actions/ui_actions";
 import Dimensions from "../dimensions";
 import { finalizeQuickSelectForSlice, prepareQuickSelect } from "./quick_select_heuristic_saga";
-import { setGlobalProgressAction } from "../actions/ui_actions";
-import { estimateBBoxInMask } from "libs/find_bounding_box_in_nd";
-import { getPlaneExtentInVoxelFromStore } from "../accessors/view_mode_accessor";
-import { WkDevFlags } from "oxalis/api/wk_dev";
 
 const MAXIMUM_MASK_BASE = 1024;
 
@@ -41,7 +41,7 @@ function* getMask(
   mag: Vector3,
   activeViewport: OrthoView,
   additionalCoordinates: AdditionalCoordinate[],
-  intensityRange?: Vector2 | null,
+  intensityRange?: readonly [number, number] | null,
 ): Saga<[BoundingBox, Array<NdArray<TypedArrayWithoutBigInt>>]> {
   const usePointPrompt = userBoxMag1.getVolume() === 0;
   const trans = (vec: Vector3) => Dimensions.transDim(vec, activeViewport);
@@ -130,7 +130,10 @@ function* getMask(
   ];
 }
 
-function* showApproximatelyProgress(amount: number, expectedDurationPerItemMs: number) {
+function* showApproximatelyProgress(
+  amount: number,
+  expectedDurationPerItemMs: number,
+): Saga<never> {
   // The progress bar is split into amount + 1 chunks. The first amount
   // chunks are filled after expectedDurationPerItemMs passed.
   // Afterwards, only one chunk is missing. With each additional iteration,

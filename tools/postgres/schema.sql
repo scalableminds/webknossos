@@ -20,7 +20,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(125);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(128);
 COMMIT TRANSACTION;
 
 
@@ -178,6 +178,9 @@ CREATE TABLE webknossos.dataset_mags(
   _dataset CHAR(24) NOT NULL,
   dataLayerName VARCHAR(256),
   mag webknossos.VECTOR3 NOT NULL,
+  path TEXT,
+  realPath TEXT,
+  hasLocalData BOOLEAN NOT NULL DEFAULT false,
   PRIMARY KEY (_dataset, dataLayerName, mag)
 );
 
@@ -472,6 +475,7 @@ CREATE TABLE webknossos.jobs(
   _voxelytics_workflowHash VARCHAR(512),
   latestRunId VARCHAR(1024),
   returnValue Text,
+  retriedBySuperUser BOOLEAN NOT NULL DEFAULT false,
   started TIMESTAMPTZ,
   ended TIMESTAMPTZ,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -561,6 +565,12 @@ CREATE TABLE webknossos.aiModels(
   modified TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   UNIQUE (_organization, name)
+);
+
+CREATE TABLE webknossos.aiModel_organizations(
+  _aiModel CHAR(24) NOT NULL,
+  _organization VARCHAR(256) NOT NULL,
+  PRIMARY KEY(_aiModel, _organization)
 );
 
 CREATE TABLE webknossos.aiModel_trainingAnnotations(
@@ -871,6 +881,9 @@ ALTER TABLE webknossos.aiInferences
 ALTER TABLE webknossos.aiModel_trainingAnnotations
   ADD FOREIGN KEY (_aiModel) REFERENCES webknossos.aiModels(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
   ADD FOREIGN KEY (_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.aiModel_organizations
+  ADD FOREIGN KEY (_aiModel) REFERENCES webknossos.aiModels(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
+  ADD FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 
 
 CREATE FUNCTION webknossos.countsAsTaskInstance(a webknossos.annotations) RETURNS BOOLEAN AS $$

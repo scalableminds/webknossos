@@ -1,21 +1,21 @@
-import { createNanoEvents, type Emitter } from "nanoevents";
-import * as THREE from "three";
-import _ from "lodash";
-import type { ElementClass } from "types/api_flow_types";
-import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
-import type { MaybeUnmergedBucketLoadedPromise } from "oxalis/model/actions/volumetracing_actions";
-import { addBucketToUndoAction } from "oxalis/model/actions/volumetracing_actions";
-import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
+import ErrorHandling from "libs/error_handling";
 import { castForArrayType, mod } from "libs/utils";
+import window from "libs/window";
+import _ from "lodash";
+import { type Emitter, createNanoEvents } from "nanoevents";
 import type { BoundingBoxType, BucketAddress, Vector3 } from "oxalis/constants";
 import Constants from "oxalis/constants";
+import type { MaybeUnmergedBucketLoadedPromise } from "oxalis/model/actions/volumetracing_actions";
+import { addBucketToUndoAction } from "oxalis/model/actions/volumetracing_actions";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import ErrorHandling from "libs/error_handling";
-import Store from "oxalis/store";
+import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
 import type TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
-import window from "libs/window";
-import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
+import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
+import Store from "oxalis/store";
+import * as THREE from "three";
+import type { ElementClass } from "types/api_flow_types";
 import type { AdditionalCoordinate } from "types/api_flow_types";
+import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 
 export enum BucketStateEnum {
   UNREQUESTED = "UNREQUESTED",
@@ -24,12 +24,19 @@ export enum BucketStateEnum {
   LOADED = "LOADED",
 }
 export type BucketStateEnumType = keyof typeof BucketStateEnum;
+
+// This type needs to be adapted when a new dtype should/element class needs
+// to be supported.
 export type BucketDataArray =
   | Uint8Array
+  | Int8Array
   | Uint16Array
+  | Int16Array
   | Uint32Array
+  | Int32Array
   | Float32Array
-  | BigUint64Array;
+  | BigUint64Array
+  | BigInt64Array;
 
 const WARNING_THROTTLE_THRESHOLD = 10000;
 
@@ -37,6 +44,10 @@ const warnMergeWithoutPendingOperations = _.throttle(() => {
   ErrorHandling.notify(
     new Error("Bucket.merge() was called with an empty list of pending operations."),
   );
+}, WARNING_THROTTLE_THRESHOLD);
+
+const warnAwaitedMissingBucket = _.throttle(() => {
+  ErrorHandling.notify(new Error("Awaited missing bucket"));
 }, WARNING_THROTTLE_THRESHOLD);
 
 export function assertNonNullBucket(bucket: Bucket): asserts bucket is DataBucket {
@@ -66,37 +77,48 @@ export class NullBucket {
 }
 
 export type TypedArrayConstructor =
+  | Int8ArrayConstructor
   | Uint8ArrayConstructor
+  | Int16ArrayConstructor
   | Uint16ArrayConstructor
+  | Int32ArrayConstructor
   | Uint32ArrayConstructor
   | Float32ArrayConstructor
+  | BigInt64ArrayConstructor
   | BigUint64ArrayConstructor;
+
 export const getConstructorForElementClass = (
   type: ElementClass,
 ): [TypedArrayConstructor, number] => {
   switch (type) {
-    case "int8":
+    // This function needs to be adapted when a new dtype should/element class needs
+    // to be supported.
     case "uint8":
       return [Uint8Array, 1];
+    case "int8":
+      return [Int8Array, 1];
 
-    case "int16":
     case "uint16":
       return [Uint16Array, 1];
+    case "int16":
+      return [Int16Array, 1];
 
     case "uint24":
       // There is no Uint24Array and uint24 is treated in a special way (rgb) anyways
       return [Uint8Array, 3];
 
-    case "int32":
     case "uint32":
       return [Uint32Array, 1];
+    case "int32":
+      return [Int32Array, 1];
 
     case "float":
       return [Float32Array, 1];
 
-    case "int64":
     case "uint64":
       return [BigUint64Array, 1];
+    case "int64":
+      return [BigInt64Array, 1];
 
     default:
       throw new Error(`This type is not supported by the DataBucket class: ${type}`);
@@ -589,12 +611,11 @@ export class DataBucket {
 
     switch (this.state) {
       case BucketStateEnum.REQUESTED: {
-        // Clone the data for the unmergedBucketDataLoaded event,
-        // as the following merge operation is done in-place.
-        const dataClone = new TypedArrayClass(data);
-        this.trigger("unmergedBucketDataLoaded", dataClone);
-
         if (this.dirty) {
+          // Clone the data for the unmergedBucketDataLoaded event,
+          // as the following merge operation is done in-place.
+          const dataClone = new TypedArrayClass(data);
+          this.trigger("unmergedBucketDataLoaded", dataClone);
           this.merge(data);
         } else {
           this.data = data;
@@ -773,7 +794,7 @@ export class DataBucket {
       // In the past, ensureLoaded() never returned if the bucket
       // was MISSING. This log might help to discover potential
       // bugs which could arise in combination with MISSING buckets.
-      console.warn("Awaited missing bucket.");
+      warnAwaitedMissingBucket();
     }
   }
 }

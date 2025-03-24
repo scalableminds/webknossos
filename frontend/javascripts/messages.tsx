@@ -2,8 +2,8 @@ import _ from "lodash";
 import type { Vector4 } from "oxalis/constants";
 import type {
   DatasetConfiguration,
-  UserConfiguration,
   DatasetLayerConfiguration,
+  UserConfiguration,
 } from "oxalis/store";
 
 export type RecommendedConfiguration = Partial<
@@ -130,8 +130,9 @@ A reload is necessary to return to a valid state.`,
     "There is no action that could be undone. However, if you want to restore an earlier version of this annotation, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
   "undo.no_redo": "There is no action that could be redone.",
   "undo.no_undo_during_proofread":
-    "Undo is not supported during proofreading yet. Please manually revert the last action you took.",
-  "undo.no_redo_during_proofread": "Redo is not supported during proofreading yet.",
+    "Undo is not supported during proofreading yet. Please use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
+  "undo.no_redo_during_proofread":
+    "Redo is not supported during proofreading yet. Please use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
   "undo.import_volume_tracing":
     "Importing a volume annotation cannot be undone. However, if you want to restore an earlier version of this annotation, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
   "download.wait": "Please wait...",
@@ -176,9 +177,12 @@ instead. Only enable this option if you understand its effect. All layers will n
     </span>
   ),
   "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered segment id",
-  "tracing.segment_id_out_of_bounds": _.template(
-    "Cannot create a segment id larger than the segment layers maximum value of <%- maxSegmentId %>.",
-  ),
+  "tracing.segment_id_out_of_bounds": (
+    requestedId: number,
+    validRange: readonly [number, number],
+  ) =>
+    `Cannot create a segment with id=${requestedId} because it is not between ${validRange[0]} and ${validRange[1]}.`,
+
   "tracing.copy_maybe_mapped_cell_id":
     "Hit CTRL + I to copy the currently hovered segment id. Press CTRL + ALT + I if you want to copy the mapped id.",
   "tracing.no_more_branchpoints": "No more branchpoints",
@@ -364,8 +368,6 @@ instead. Only enable this option if you understand its effect. All layers will n
     `The layer "${layerName}" was defined as ${elementClass}. This format is not officially supported. Please convert the layer to a supported format.`,
   "dataset.unsupported_segmentation_class_uint24":
     "The segmentation layer was defined as uint24. This format is not supported for segmentations. Please convert the layer to a supported format.",
-  "dataset.unsupported_segmentation_class_int64":
-    "The segmentation layer was defined as int64. This format is not supported for segmentations. Please convert the layer to the unsigned uint64 format.",
   "dataset.is_scratch":
     "This dataset location is marked as 'scratch' and meant for testing only. Please move this dataset to a permanent storage location and reimport it.",
   "dataset.z1_downsampling_hint":

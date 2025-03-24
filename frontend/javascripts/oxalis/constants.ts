@@ -15,6 +15,8 @@ export type Vector4 = [number, number, number, number];
 export type Vector5 = [number, number, number, number, number];
 export type Vector6 = [number, number, number, number, number, number];
 
+export type NestedMatrix4 = [Vector4, Vector4, Vector4, Vector4]; // Represents a row major matrix.
+
 // For 3D data BucketAddress = x, y, z, mag
 // For higher dimensional data, BucketAddress = x, y, z, mag, [{name: "t", value: t}, ...]
 export type BucketAddress =
@@ -221,6 +223,8 @@ export const MeasurementTools: Array<keyof typeof AnnotationToolEnum> = [
   AnnotationToolEnum.AREA_MEASUREMENT,
 ];
 
+export const AvailableToolsInViewMode = [...MeasurementTools, AnnotationToolEnum.MOVE];
+
 export type AnnotationTool = keyof typeof AnnotationToolEnum;
 export enum ContourModeEnum {
   DRAW = "DRAW",
@@ -333,6 +337,9 @@ const Constants = {
     _2D: (process.env.IS_TESTING ? [512, 512, 1] : [768, 768, 1]) as Vector3,
     _3D: (process.env.IS_TESTING ? [64, 64, 32] : [96, 96, 96]) as Vector3,
   },
+  // When the user uses the "isFloodfillRestrictedToBoundingBox" setting,
+  // we are more lax with the flood fill extent.
+  FLOOD_FILL_MULTIPLIER_FOR_BBOX_RESTRICTION: 10,
   MAXIMUM_DATE_TIMESTAMP: 8640000000000000,
   SCALEBAR_HEIGHT: 22,
   SCALEBAR_OFFSET: 10,
@@ -343,18 +350,19 @@ const Constants = {
 export default Constants;
 
 export type TypedArray =
-  | Int8Array
   | Uint8Array
   | Uint8ClampedArray
-  | Int16Array
+  | Int8Array
   | Uint16Array
-  | Int32Array
+  | Int16Array
   | Uint32Array
+  | Int32Array
   | Float32Array
   | Float64Array
-  | BigUint64Array;
+  | BigUint64Array
+  | BigInt64Array;
 
-export type TypedArrayWithoutBigInt = Exclude<TypedArray, BigUint64Array>;
+export type TypedArrayWithoutBigInt = Exclude<TypedArray, BigUint64Array | BigInt64Array>;
 
 export const PRIMARY_COLOR: Vector3 = [86, 96, 255];
 

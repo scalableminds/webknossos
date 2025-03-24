@@ -1,11 +1,11 @@
-import { Input, Tooltip, Popover, Space, type InputRef } from "antd";
 import { CheckSquareOutlined, DownOutlined, UpOutlined } from "@ant-design/icons";
-import * as React from "react";
+import { Input, type InputRef, Popover, Space, Tooltip } from "antd";
+import Shortcut from "libs/shortcut_component";
+import { mod } from "libs/utils";
 import memoizeOne from "memoize-one";
 import ButtonComponent from "oxalis/view/components/button_component";
-import Shortcut from "libs/shortcut_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
-import { mod } from "libs/utils";
+import * as React from "react";
 
 const PRIMARY_COLOR = "var(--ant-color-primary)";
 

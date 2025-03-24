@@ -1,26 +1,31 @@
-import _ from "lodash";
-import { useState } from "react";
-import { PlusOutlined, SyncOutlined } from "@ant-design/icons";
-import { Table, Button, Modal, Space } from "antd";
-import { getAiModels } from "admin/admin_rest_api";
-import type { AiModel, APIAnnotation } from "types/api_flow_types";
+import { EditOutlined, PlusOutlined, SyncOutlined } from "@ant-design/icons";
+import { getAiModels, getUsersOrganizations, updateAiModel } from "admin/admin_rest_api";
+import { JobState, getShowTrainingDataLink } from "admin/job/job_list_view";
+import { Button, Col, Modal, Select, Space, Table, Typography } from "antd";
 import FormattedDate from "components/formatted_date";
-import { formatUserName } from "oxalis/model/accessors/user_accessor";
-import { useSelector } from "react-redux";
-import type { OxalisState } from "oxalis/store";
-import { JobState } from "admin/job/job_list_view";
-import { Link } from "react-router-dom";
-import { useGuardedFetch } from "libs/react_helpers";
 import { PageNotAvailableToNormalUser } from "components/permission_enforcer";
-import { type AnnotationInfoForAIJob, TrainAiModelTab } from "oxalis/view/jobs/train_ai_model";
-import { getMagInfo, getSegmentationLayerByName } from "oxalis/model/accessors/dataset_accessor";
+import { useFetch, useGuardedFetch } from "libs/react_helpers";
+import Toast from "libs/toast";
+import _ from "lodash";
 import type { Vector3 } from "oxalis/constants";
+import { getMagInfo, getSegmentationLayerByName } from "oxalis/model/accessors/dataset_accessor";
+import { formatUserName } from "oxalis/model/accessors/user_accessor";
+import type { OxalisState } from "oxalis/store";
+import {
+  type AnnotationInfoForAITrainingJob,
+  TrainAiModelTab,
+} from "oxalis/view/jobs/train_ai_model";
+import { useState } from "react";
 import type { Key } from "react";
+import { useSelector } from "react-redux";
+import { Link } from "react-router-dom";
+import type { APIAnnotation, AiModel } from "types/api_flow_types";
 
 export default function AiModelListView() {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const [refreshCounter, setRefreshCounter] = useState(0);
   const [isTrainModalVisible, setIsTrainModalVisible] = useState(false);
+  const [currentlyEditedModel, setCurrentlyEditedModel] = useState<AiModel | null>(null);
   const [aiModels, isLoading] = useGuardedFetch(
     getAiModels,
     [],
@@ -36,6 +41,16 @@ export default function AiModelListView() {
     <div className="container voxelytics-view">
       {isTrainModalVisible ? (
         <TrainNewAiJobModal onClose={() => setIsTrainModalVisible(false)} />
+      ) : null}
+      {currentlyEditedModel ? (
+        <EditModelSharedOrganizationsModal
+          model={currentlyEditedModel}
+          onClose={() => {
+            setCurrentlyEditedModel(null);
+            setRefreshCounter((val) => val + 1);
+          }}
+          owningOrganization={activeUser.organization}
+        />
       ) : null}
       <div className="pull-right">
         <Space>
@@ -94,7 +109,8 @@ export default function AiModelListView() {
           },
           {
             title: "Actions",
-            render: renderActionsForModel,
+            render: (aiModel: AiModel) =>
+              renderActionsForModel(aiModel, () => setCurrentlyEditedModel(aiModel)),
             key: "actions",
           },
         ]}
@@ -106,10 +122,10 @@ export default function AiModelListView() {
 
 function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
   const [annotationInfosForAiJob, setAnnotationInfosForAiJob] = useState<
-    AnnotationInfoForAIJob<APIAnnotation>[]
+    AnnotationInfoForAITrainingJob<APIAnnotation>[]
   >([]);
 
-  const getMagForSegmentationLayer = async (annotationId: string, layerName: string) => {
+  const getMagsForSegmentationLayer = (annotationId: string, layerName: string) => {
     // The layer name is a human-readable one. It can either belong to an annotationLayer
     // (therefore, also to a volume tracing) or to the actual dataset.
     // Both are checked below. This won't be ambiguous because annotationLayers must not
@@ -130,10 +146,10 @@ function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
         (tracing) => tracing.tracingId === annotationLayer.tracingId,
       );
       const mags = volumeTracingMags[volumeTracingIndex] || ([[1, 1, 1]] as Vector3[]);
-      return getMagInfo(mags).getFinestMag();
+      return getMagInfo(mags);
     } else {
       const segmentationLayer = getSegmentationLayerByName(dataset, layerName);
-      return getMagInfo(segmentationLayer.resolutions).getFinestMag();
+      return getMagInfo(segmentationLayer.resolutions);
     }
   };
 
@@ -152,7 +168,7 @@ function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
       maskClosable={false}
     >
       <TrainAiModelTab
-        getMagForSegmentationLayer={getMagForSegmentationLayer}
+        getMagsForSegmentationLayer={getMagsForSegmentationLayer}
         onClose={onClose}
         annotationInfos={annotationInfosForAiJob}
         onAddAnnotationsInfos={(newItems) => {
@@ -163,59 +179,101 @@ function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-const renderActionsForModel = (model: AiModel) => {
+const renderActionsForModel = (model: AiModel, onChangeSharedOrganizations: () => void) => {
+  const organizationSharingButton = model.isOwnedByUsersOrganization ? (
+    <Button type="link" onClick={onChangeSharedOrganizations}>
+      Manage Access <EditOutlined />
+    </Button>
+  ) : null;
   if (model.trainingJob == null) {
-    return;
+    return organizationSharingButton;
   }
   const { voxelyticsWorkflowHash, trainingAnnotations } = model.trainingJob;
 
   return (
     <div>
+      {organizationSharingButton}
       {voxelyticsWorkflowHash != null ? (
         <>
           <Link to={`/workflows/${voxelyticsWorkflowHash}`}>Voxelytics Report</Link>
           <br />
         </>
       ) : null}
-      {trainingAnnotations == null ? null : trainingAnnotations.length > 1 ? (
-        <a
-          href="#"
-          onClick={() => {
-            Modal.info({
-              content: (
-                <div>
-                  The following annotations were used during training:
-                  <ul>
-                    {trainingAnnotations.map(
-                      (annotation: { annotationId: string }, index: number) => (
-                        <li key={`annotation_${index}`}>
-                          <a
-                            href={`/annotations/${annotation.annotationId}`}
-                            target="_blank"
-                            rel="noreferrer noopener"
-                          >
-                            Annotation {index + 1}
-                          </a>
-                        </li>
-                      ),
-                    )}
-                  </ul>
-                </div>
-              ),
-            });
-          }}
-        >
-          Show Training Data
-        </a>
-      ) : (
-        <a
-          href={`/annotations/${trainingAnnotations[0].annotationId}`}
-          target="_blank"
-          rel="noreferrer noopener"
-        >
-          Show Training Data
-        </a>
-      )}
+      {getShowTrainingDataLink(trainingAnnotations)}
     </div>
   );
 };
+
+function EditModelSharedOrganizationsModal({
+  model,
+  onClose,
+  owningOrganization,
+}: { model: AiModel; onClose: () => void; owningOrganization: string }) {
+  const [selectedOrganizationIds, setSelectedOrganizationIds] = useState<string[]>(
+    model.sharedOrganizationIds || [owningOrganization],
+  );
+  const usersOrganizations = useFetch(getUsersOrganizations, [], []);
+  const options = usersOrganizations.map((org) => {
+    const additionalProps =
+      org.id === owningOrganization
+        ? { disabled: true, title: "Cannot remove owning organization from model." }
+        : {};
+    return { label: org.name, value: org.id, ...additionalProps };
+  });
+
+  const handleChange = (organizationIds: string[]) => {
+    if (!organizationIds.some((id) => id === owningOrganization)) {
+      organizationIds.push(owningOrganization);
+    }
+    setSelectedOrganizationIds(organizationIds);
+  };
+
+  const submitNewSharedOrganizations = async () => {
+    try {
+      const updatedModel = { ...model, sharedOrganizationIds: selectedOrganizationIds };
+      await updateAiModel(updatedModel);
+      Toast.success(
+        `Successfully updated organizations that can access model ${updatedModel.name}.`,
+      );
+      onClose();
+    } catch (e) {
+      Toast.error("Failed to update shared organizations. See console for details.");
+      console.error("Failed to update shared organizations.", e);
+    }
+  };
+
+  return (
+    <Modal
+      title={`Edit Organizations with Access to AI Model ${model.name}`}
+      open
+      onOk={submitNewSharedOrganizations}
+      onCancel={onClose}
+      onClose={onClose}
+      maskClosable={false}
+      width={800}
+    >
+      <p>
+        Select all organization that should have access to the AI model{" "}
+        <Typography.Text italic>{model.name}</Typography.Text>.
+      </p>
+      <Typography.Paragraph type="secondary">
+        You can only select or deselect organizations that you are a member of. However, other users
+        in your organization may have granted access to additional organizations that you are not
+        part of. Only members of your organization who have access to those organizations can modify
+        their access.
+      </Typography.Paragraph>
+      <Col span={14} offset={4}>
+        <Select
+          mode="multiple"
+          allowClear
+          autoFocus
+          style={{ width: "100%" }}
+          placeholder="Please select"
+          onChange={handleChange}
+          options={options}
+          value={selectedOrganizationIds}
+        />
+      </Col>
+    </Modal>
+  );
+}

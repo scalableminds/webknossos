@@ -8,6 +8,9 @@ Working with 3D (and 2D) image datasets is at the heart of WEBKNOSSOS.
 
 [Read the section on file and data formats](../data/concepts.md) if you are interested in the technical background and concepts behind WEBKNOSSOS datasets.
 
+Watch this tutorial to get started: 
+![youtube-video](https://www.youtube.com/embed/LU-JnJ6SV_w)
+
 
 ## Example Datasets
 

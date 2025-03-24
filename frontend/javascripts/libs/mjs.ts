@@ -220,6 +220,10 @@ const M4x4 = {
     r[2] = m[14];
     return r;
   },
+
+  identity(): Matrix4x4 {
+    return BareM4x4.identity;
+  },
 };
 
 const V2 = {
@@ -249,6 +253,9 @@ const V2 = {
   },
   clone(a: Vector2): Vector2 {
     return [a[0], a[1]];
+  },
+  prod(a: Vector2) {
+    return a[0] * a[1];
   },
 };
 

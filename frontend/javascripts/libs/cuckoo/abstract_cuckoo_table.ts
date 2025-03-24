@@ -1,7 +1,7 @@
-import * as THREE from "three";
 import type UpdatableTexture from "libs/UpdatableTexture";
 import { getRenderer } from "oxalis/controller/renderer";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
+import * as THREE from "three";
 
 const DEFAULT_LOAD_FACTOR = 0.9;
 export const EMPTY_KEY_VALUE = 2 ** 32 - 1;
@@ -50,17 +50,11 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
     this._texture = createUpdatableTexture(
       textureWidth,
       textureWidth,
-      this.getClass().getTextureChannelCount(),
       this.getClass().getTextureType(),
       getRenderer(),
       this.getClass().getTextureFormat(),
+      this.getClass().getInternalFormat(),
     );
-
-    // The internal format has to be set manually, since ThreeJS does not
-    // derive this value by itself.
-    // See https://webgl2fundamentals.org/webgl/lessons/webgl-data-textures.html
-    // for a reference of the internal formats.
-    this._texture.internalFormat = this.getClass().getInternalFormat();
 
     this.entryCapacity = Math.floor(
       (textureWidth ** 2 * this.getClass().getTextureChannelCount()) /
@@ -96,7 +90,6 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
       // Use 1x1 texture to avoid WebGL warnings.
       1,
       1,
-      this.getTextureChannelCount(),
       this.getTextureType(),
       getRenderer(),
       this.getTextureFormat(),

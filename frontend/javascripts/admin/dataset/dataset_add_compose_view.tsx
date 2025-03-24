@@ -6,6 +6,7 @@ import UploadFiles from "./composition_wizard/02_upload_files";
 import SelectDatasets from "./composition_wizard/03_select_datasets";
 import { ConfigureNewDataset } from "./composition_wizard/04_configure_new_dataset";
 import type { WizardComponentProps, WizardContext } from "./composition_wizard/common";
+import { dataPrivacyInfo } from "./dataset_upload_view";
 
 type Props = {
   onAdded: WizardComponentProps["onAdded"];
@@ -45,7 +46,10 @@ export default function DatasetAddComposeView(props: Props) {
 
   return (
     <div style={{ padding: 5 }}>
-      <CardContainer title="Compose a dataset from existing dataset layers">
+      <CardContainer
+        title="Compose a dataset from existing dataset layers"
+        subtitle={dataPrivacyInfo}
+      >
         <CurrentWizardComponent
           wizardContext={wizardContext}
           setWizardContext={setWizardContext}

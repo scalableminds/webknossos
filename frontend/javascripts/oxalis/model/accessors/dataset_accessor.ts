@@ -1,49 +1,34 @@
+import ErrorHandling from "libs/error_handling";
+import { formatExtentInUnitWithLength, formatNumberToLength } from "libs/format_utils";
+import { V3 } from "libs/mjs";
+import { aggregateBoundingBox, maxValue } from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
+import messages from "messages";
+import { LongUnitToShortUnitMap, type Vector3, type ViewMode } from "oxalis/constants";
+import constants, { ViewModeValues, Vector3Indicies, MappingStatusEnum } from "oxalis/constants";
 import type {
-  AdditionalAxis,
+  ActiveMappingInfo,
+  BoundingBoxObject,
+  DataLayerType,
+  DatasetConfiguration,
+  OxalisState,
+  Settings,
+} from "oxalis/store";
+import type {
   APIAllowedMode,
   APIDataLayer,
   APIDataset,
   APIDatasetCompact,
   APIMaybeUnimportedDataset,
   APISegmentationLayer,
-  APISkeletonLayer,
+  AdditionalAxis,
   ElementClass,
 } from "types/api_flow_types";
-import type {
-  Settings,
-  DataLayerType,
-  DatasetConfiguration,
-  BoundingBoxObject,
-  OxalisState,
-  ActiveMappingInfo,
-} from "oxalis/store";
-import ErrorHandling from "libs/error_handling";
-import {
-  IdentityTransform,
-  LongUnitToShortUnitMap,
-  type Vector3,
-  type Vector4,
-  type ViewMode,
-} from "oxalis/constants";
-import constants, { ViewModeValues, Vector3Indicies, MappingStatusEnum } from "oxalis/constants";
-import { aggregateBoundingBox, maxValue } from "libs/utils";
-import { formatExtentInUnitWithLength, formatNumberToLength } from "libs/format_utils";
-import messages from "messages";
 import type { DataLayer } from "types/schemas/datasource.types";
 import BoundingBox from "../bucket_data_handling/bounding_box";
-import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
-import { convertToDenseMag, MagInfo } from "../helpers/mag_info";
-import MultiKeyMap from "libs/multi_key_map";
-import {
-  chainTransforms,
-  createAffineTransformFromMatrix,
-  createThinPlateSplineTransform,
-  invertTransform,
-  type Transform,
-  transformPointUnscaled,
-} from "../helpers/transformation_helpers";
+import { getSupportedValueRangeForElementClass } from "../bucket_data_handling/data_rendering_logic";
+import { MagInfo, convertToDenseMag } from "../helpers/mag_info";
 
 function _getMagInfo(magnifications: Array<Vector3>): MagInfo {
   return new MagInfo(magnifications);
@@ -212,46 +197,18 @@ export function getElementClass(dataset: APIDataset, layerName: string): Element
 export function getDefaultValueRangeOfLayer(
   dataset: APIDataset,
   layerName: string,
-): [number, number] {
-  const maxFloatValue = 3.40282347e38;
-  // biome-ignore lint/correctness/noPrecisionLoss: This number literal will lose precision at runtime. The value at runtime will be inf.
-  const maxDoubleValue = 1.79769313486232e308;
+): readonly [number, number] {
+  // Currently, the default range is identical to the supported range. However,
+  // this might change in the future.
+  return getSupportedValueRangeOfLayer(dataset, layerName);
+}
+
+export function getSupportedValueRangeOfLayer(
+  dataset: APIDataset,
+  layerName: string,
+): readonly [number, number] {
   const elementClass = getElementClass(dataset, layerName);
-
-  switch (elementClass) {
-    case "uint8":
-    case "uint24":
-      // Since uint24 layers are multi-channel, their intensity ranges are equal to uint8
-      return [0, 2 ** 8 - 1];
-
-    case "uint16":
-      return [0, 2 ** 16 - 1];
-
-    case "uint32":
-      return [0, 2 ** 32 - 1];
-
-    case "uint64":
-      return [0, 2 ** 64 - 1];
-
-    // We do not fully support signed int data;
-    case "int16":
-      return [0, 2 ** 15 - 1];
-
-    case "int32":
-      return [0, 2 ** 31 - 1];
-
-    case "int64":
-      return [0, 2 ** 63 - 1];
-
-    case "float":
-      return [-maxFloatValue, maxFloatValue];
-
-    case "double":
-      return [-maxDoubleValue, maxDoubleValue];
-
-    default:
-      return [0, 255];
-  }
+  return getSupportedValueRangeForElementClass(elementClass);
 }
 
 export function getLayerBoundingBox(dataset: APIDataset, layerName: string): BoundingBox {
@@ -387,6 +344,16 @@ export function getMaximumSegmentIdForLayer(dataset: APIDataset, layerName: stri
   return getDefaultValueRangeOfLayer(dataset, layerName)[1];
 }
 
+export function isInSupportedValueRangeForLayer(
+  dataset: APIDataset,
+  layerName: string,
+  value: number,
+): boolean {
+  const elementClass = getElementClass(dataset, layerName);
+  const [min, max] = getSupportedValueRangeForElementClass(elementClass);
+  return value >= min && value <= max;
+}
+
 export function getBitDepth(layerInfo: DataLayer | DataLayerType): number {
   switch (layerInfo.elementClass) {
     case "uint8":
@@ -427,6 +394,8 @@ export function getBitDepth(layerInfo: DataLayer | DataLayerType): number {
   }
 }
 export function isElementClassSupported(layerInfo: DataLayerType): boolean {
+  // This function needs to be adapted when a new dtype should/element class needs
+  // to be supported.
   switch (layerInfo.elementClass) {
     case "uint8":
     case "uint16":
@@ -436,11 +405,16 @@ export function isElementClassSupported(layerInfo: DataLayerType): boolean {
     case "int16":
     case "int32":
     case "float":
-    case "uint64":
       return true;
 
+    case "uint64":
+    case "int64": {
+      // We only support 64 bit for segmentation (note that only segment ids
+      // below 2**53 - 1 will be handled properly due to the JS Number type currently).
+      return layerInfo.category === "segmentation";
+    }
+
     case "double":
-    case "int64":
     default:
       return false;
   }
@@ -715,193 +689,11 @@ export function getMappingInfoForSupportedLayer(state: OxalisState): ActiveMappi
   );
 }
 
-// Returns the transforms (if they exist) for a layer as
-// they are defined in the dataset properties.
-function _getOriginalTransformsForLayerOrNull(
-  dataset: APIDataset,
-  layer: APIDataLayer,
-): Transform | null {
-  const coordinateTransformations = layer.coordinateTransformations;
-  if (!coordinateTransformations || coordinateTransformations.length === 0) {
-    return null;
-  }
-  if (coordinateTransformations.length > 1) {
-    console.error(
-      "Data layer has defined multiple coordinate transforms. This is currently not supported and ignored",
-    );
-    return null;
-  }
-  const transformation = coordinateTransformations[0];
-  const { type } = transformation;
-
-  if (type === "affine") {
-    const nestedMatrix = transformation.matrix;
-    return createAffineTransformFromMatrix(nestedMatrix);
-  } else if (type === "thin_plate_spline") {
-    const { source, target } = transformation.correspondences;
-
-    return createThinPlateSplineTransform(source, target, dataset.dataSource.scale.factor);
-  }
-
-  console.error(
-    "Data layer has defined a coordinate transform that is not affine or thin_plate_spline. This is currently not supported and ignored",
-  );
-  return null;
-}
-
-function _getTransformsForLayerOrNull(
-  dataset: APIDataset,
-  layer: APIDataLayer | APISkeletonLayer,
-  nativelyRenderedLayerName: string | null,
-): Transform | null {
-  if (layer.category === "skeleton") {
-    return getTransformsForSkeletonLayerOrNull(dataset, nativelyRenderedLayerName);
-  }
-  const layerTransforms = _getOriginalTransformsForLayerOrNull(dataset, layer);
-
-  if (nativelyRenderedLayerName == null) {
-    // No layer is requested to be rendered natively. Just use the transforms
-    // as they are in the dataset.
-    return layerTransforms;
-  }
-
-  if (nativelyRenderedLayerName === layer.name) {
-    // This layer should be rendered without any transforms.
-    return null;
-  }
-
-  // Apply the inverse of the layer that should be rendered natively
-  // to the current layers transforms
-  const nativeLayer = getLayerByName(dataset, nativelyRenderedLayerName, true);
-
-  const transformsOfNativeLayer = _getOriginalTransformsForLayerOrNull(dataset, nativeLayer);
-
-  if (transformsOfNativeLayer == null) {
-    // The inverse of no transforms, are no transforms. Leave the layer
-    // transforms untouched.
-    return layerTransforms;
-  }
-
-  const inverseNativeTransforms = invertTransform(transformsOfNativeLayer);
-  return chainTransforms(layerTransforms, inverseNativeTransforms);
-}
-
-function memoizeWithThreeKeys<A, B, C, T>(fn: (a: A, b: B, c: C) => T) {
-  const map = new MultiKeyMap<A | B | C, T, [A, B, C]>();
-  return (a: A, b: B, c: C): T => {
-    let res = map.get([a, b, c]);
-    if (res === undefined) {
-      res = fn(a, b, c);
-      map.set([a, b, c], res);
-    }
-    return res;
-  };
-}
-
-export const getTransformsForLayerOrNull = memoizeWithThreeKeys(_getTransformsForLayerOrNull);
-export function getTransformsForLayer(
-  dataset: APIDataset,
-  layer: APIDataLayer | APISkeletonLayer,
-  nativelyRenderedLayerName: string | null,
-): Transform {
-  return (
-    getTransformsForLayerOrNull(dataset, layer, nativelyRenderedLayerName || null) ||
-    IdentityTransform
-  );
-}
-
-function _getTransformsForSkeletonLayerOrNull(
-  dataset: APIDataset,
-  nativelyRenderedLayerName: string | null,
-): Transform | null {
-  if (nativelyRenderedLayerName == null) {
-    // No layer is requested to be rendered natively. We can use
-    // each layer's transforms as is. The skeleton layer doesn't have
-    // a transforms property currently, which is why we return null.
-    return null;
-  }
-
-  // Compute the inverse of the layer that should be rendered natively
-  const nativeLayer = getLayerByName(dataset, nativelyRenderedLayerName, true);
-  const transformsOfNativeLayer = _getOriginalTransformsForLayerOrNull(dataset, nativeLayer);
-
-  if (transformsOfNativeLayer == null) {
-    // The inverse of no transforms, are no transforms
-    return null;
-  }
-
-  return invertTransform(transformsOfNativeLayer);
-}
-
-export const getTransformsForSkeletonLayerOrNull = memoizeOne(_getTransformsForSkeletonLayerOrNull);
-
-export function getTransformsForSkeletonLayer(
-  dataset: APIDataset,
-  nativelyRenderedLayerName: string | null,
-): Transform {
-  return (
-    getTransformsForSkeletonLayerOrNull(dataset, nativelyRenderedLayerName || null) ||
-    IdentityTransform
-  );
-}
-
-function _getTransformsPerLayer(
-  dataset: APIDataset,
-  nativelyRenderedLayerName: string | null,
-): Record<string, Transform> {
-  const transformsPerLayer: Record<string, Transform> = {};
-  const layers = dataset.dataSource.dataLayers;
-  for (const layer of layers) {
-    const transforms = getTransformsForLayer(dataset, layer, nativelyRenderedLayerName);
-    transformsPerLayer[layer.name] = transforms;
-  }
-
-  return transformsPerLayer;
-}
-
-export const getTransformsPerLayer = memoizeOne(_getTransformsPerLayer);
-
-export function getInverseSegmentationTransformer(
-  state: OxalisState,
-  segmentationLayerName: string,
-) {
-  const { dataset } = state;
-  const { nativelyRenderedLayerName } = state.datasetConfiguration;
-  const layer = getLayerByName(dataset, segmentationLayerName);
-  const segmentationTransforms = getTransformsForLayer(dataset, layer, nativelyRenderedLayerName);
-  return transformPointUnscaled(invertTransform(segmentationTransforms));
-}
-
-export const hasDatasetTransforms = memoizeOne((dataset: APIDataset) => {
-  const layers = dataset.dataSource.dataLayers;
-  return layers.some((layer) => _getOriginalTransformsForLayerOrNull(dataset, layer) != null);
-});
-
-export function flatToNestedMatrix(matrix: Matrix4x4): [Vector4, Vector4, Vector4, Vector4] {
-  return [
-    matrix.slice(0, 4) as Vector4,
-    matrix.slice(4, 8) as Vector4,
-    matrix.slice(8, 12) as Vector4,
-    matrix.slice(12, 16) as Vector4,
-  ];
-}
-
-// Transposition is often needed so that the matrix has the right format
-// for matrix operations (e.g., on the GPU; but not for ThreeJS).
-// Inversion is needed when the position of an "output voxel" (e.g., during
-// rendering in the fragment shader) needs to be mapped to its original
-// data position (i.e., how it's stored without the transformation).
-// Without the inversion, the matrix maps from stored position to the position
-// where it should be rendered.
-export const invertAndTranspose = _.memoize((mat: Matrix4x4) => {
-  return M4x4.transpose(M4x4.inverse(mat));
-});
-
 export function getEffectiveIntensityRange(
   dataset: APIDataset,
   layerName: string,
   datasetConfiguration: DatasetConfiguration,
-): [number, number] {
+): readonly [number, number] {
   const defaultIntensityRange = getDefaultValueRangeOfLayer(dataset, layerName);
   const layerConfiguration = datasetConfiguration.layers[layerName];
 

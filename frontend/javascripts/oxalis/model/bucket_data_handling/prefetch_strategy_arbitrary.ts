@@ -1,12 +1,12 @@
-import { AbstractPrefetchStrategy } from "oxalis/model/bucket_data_handling/prefetch_strategy_plane";
-import type { BoundingBoxType, Vector3 } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4, V3 } from "libs/mjs";
+import type { BoundingBoxType, Vector3 } from "oxalis/constants";
+import PolyhedronRasterizer from "oxalis/model/bucket_data_handling/polyhedron_rasterizer";
+import { AbstractPrefetchStrategy } from "oxalis/model/bucket_data_handling/prefetch_strategy_plane";
 import type { PullQueueItem } from "oxalis/model/bucket_data_handling/pullqueue";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
-import PolyhedronRasterizer from "oxalis/model/bucket_data_handling/polyhedron_rasterizer";
-import type { MagInfo } from "../helpers/mag_info";
 import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { MagInfo } from "../helpers/mag_info";
 
 export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
   velocityRangeStart = 0;

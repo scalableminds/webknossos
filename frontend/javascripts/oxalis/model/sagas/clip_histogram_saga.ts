@@ -1,13 +1,13 @@
-import Store from "oxalis/store";
-import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { takeEvery } from "typed-redux-saga";
-import type { ClipHistogramAction } from "oxalis/model/actions/settings_actions";
-import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
 import Toast from "libs/toast";
 import { OrthoViews, type Vector3 } from "oxalis/constants";
-import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
+import type { ClipHistogramAction } from "oxalis/model/actions/settings_actions";
+import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
+import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { api } from "oxalis/singletons";
+import Store from "oxalis/store";
+import { takeEvery } from "typed-redux-saga";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 
 function onThresholdChange(layerName: string, [firstVal, secVal]: [number, number]) {

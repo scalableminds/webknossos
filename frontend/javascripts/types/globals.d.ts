@@ -1,3 +1,4 @@
+import { ApiType } from "oxalis/api/api_loader"
 import WkDev from "oxalis/api/wk_dev";
 
 declare global {
@@ -5,6 +6,7 @@ declare global {
     needsRerender: boolean;
     webknossos: {
       DEV: WkDev;
+      apiReady: ApiType["apiReady"]
     };
   }
 }

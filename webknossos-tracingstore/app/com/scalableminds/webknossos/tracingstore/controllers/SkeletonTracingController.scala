@@ -51,7 +51,7 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
             val tracing = request.body
-            skeletonTracingService.saveSkeleton(tracing, newTracingId, 0).map { _ =>
+            skeletonTracingService.saveSkeleton(newTracingId, version = 0, tracing).map { _ =>
               Ok
             }
           }
@@ -68,7 +68,7 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
             for {
               resultBoxes: List[Box[Boolean]] <- Fox.sequence(zipped.map {
                 case (SkeletonTracingOpt(Some(tracing), _), StringOpt(Some(tracingId), _)) =>
-                  skeletonTracingService.saveSkeleton(tracing, tracingId, 0).map(_ => true)
+                  skeletonTracingService.saveSkeleton(tracingId, version = 0, tracing).map(_ => true)
                 case _ => Fox.empty
               })
             } yield Ok(Json.toJson(resultBoxes))
@@ -109,7 +109,7 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
           for {
             mergedTracing <- Fox.box2Fox(skeletonTracingService.merge(tracings.flatten, newVersion = 0L))
             processedTracing = skeletonTracingService.remapTooLargeTreeIds(mergedTracing)
-            _ <- skeletonTracingService.saveSkeleton(processedTracing, newTracingId, processedTracing.version)
+            _ <- skeletonTracingService.saveSkeleton(newTracingId, processedTracing.version, processedTracing)
           } yield Ok
         }
       }

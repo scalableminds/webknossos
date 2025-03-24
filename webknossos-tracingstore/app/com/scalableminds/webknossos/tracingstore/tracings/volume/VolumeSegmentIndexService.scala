@@ -73,6 +73,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
                              expectedUncompressedBucketSizeFor(elementClass),
                              "updating segment index, new bucket data")).toFox
       }
+
       // previous bytes: include fallback layer bytes if available, otherwise use empty bytes
       previousBucketBytesWithEmptyFallback <- bytesWithEmptyFallback(previousBucketBytesBox, elementClass) ?~> "volumeSegmentIndex.update.getPreviousBucket.failed"
       segmentIds: Set[Long] <- collectSegmentIds(bucketBytesDecompressed, elementClass).toFox
@@ -94,15 +95,13 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
                                 bucketPosition,
                                 mappingName,
                                 editableMappingTracingId)) ?~> "volumeSegmentIndex.update.addBucket.failed"
-      _ = Instant.logSince(before, "update segment index from bucket total")
     } yield ()
 
-  private def bytesWithEmptyFallback(bytesBox: Box[Array[Byte]], elementClass: ElementClassProto)(
-      implicit ec: ExecutionContext): Fox[Array[Byte]] =
+  private def bytesWithEmptyFallback(bytesBox: Box[Array[Byte]], elementClass: ElementClassProto): Box[Array[Byte]] =
     bytesBox match {
-      case Empty       => Fox.successful(emptyArrayForElementClass(elementClass))
-      case Full(bytes) => Fox.successful(bytes)
-      case f: Failure  => f.toFox
+      case Empty       => Full(emptyArrayForElementClass(elementClass))
+      case Full(bytes) => Full(bytes)
+      case f: Failure  => f
     }
 
   private def emptyArrayForElementClass(elementClass: ElementClassProto): Array[Byte] =
@@ -141,10 +140,8 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
                                                                        bucketPosition.additionalCoordinates)
       _ <- Fox.serialCombined(previousBuckets) {
         case (segmentId, previousBucketList) =>
-          val newBucketList = ListOfVec3IntProto(
-            (bucketPosition.toVec3IntProto +: ListOfVec3IntProto
-              .of(previousBucketList.map(vec3IntToProto))
-              .values).distinct)
+          val newBucketList =
+            ListOfVec3IntProto((bucketPosition.toVec3IntProto +: previousBucketList).distinct)
           segmentIndexBuffer.put(segmentId, bucketPosition.mag, bucketPosition.additionalCoordinates, newBucketList)
           Fox.successful(())
         case _ => Fox.successful(())
@@ -159,7 +156,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
         .collectSegmentIds(bytes, ElementClass.bytesPerElement(elementClass), ElementClass.isSigned(elementClass))
         .toSet)
   /*for {
-      set <- tryo(SegmentIntegerArray.toSetFromByteArray(bytes, elementClass)).toFox
+      set <- tryo(SegmentIntegerArray.toSetFromByteArray(bytes, elementClass))
     } yield
       set.filter(!_.isZero).map { u: SegmentInteger =>
         u.toLong

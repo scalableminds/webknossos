@@ -232,7 +232,7 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
                                                                tracing,
                                                                actionsGrouped(volumeTracingId),
                                                                updateActionGroup.version)
-        } yield ()
+        } yield () // TODO make sure volumeDataHasChanged is set on lazy updating
       }
     } yield ()
 

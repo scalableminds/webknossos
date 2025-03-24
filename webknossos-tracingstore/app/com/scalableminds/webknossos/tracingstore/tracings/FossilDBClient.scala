@@ -108,6 +108,7 @@ class FossilDBClient(collection: String,
   def get[T](key: String, version: Option[Long] = None, mayBeEmpty: Option[Boolean] = None)(
       implicit fromByteArray: Array[Byte] => Box[T]): Fox[VersionedKeyValuePair[T]] =
     for {
+      _ <- Fox.successful(logger.info(s"fossil get $collection/$key"))
       reply <- wrapException(stub.get(GetRequest(collection, key, version, mayBeEmpty)))
       _ <- assertSuccess(reply.success, reply.errorMessage, mayBeEmpty)
       result <- fromByteArray(reply.value.toByteArray)
@@ -174,6 +175,7 @@ class FossilDBClient(collection: String,
 
   def put(key: String, version: Long, value: Array[Byte]): Fox[Unit] = {
     val putFox = for {
+      _ <- Fox.successful(logger.info(s"fossil put $collection/$key"))
       reply <- wrapException(stub.put(PutRequest(collection, key, Some(version), ByteString.copyFrom(value))))
       _ <- assertSuccess(reply.success, reply.errorMessage)
     } yield ()
@@ -188,6 +190,31 @@ class FossilDBClient(collection: String,
       }
     } yield ()
   }
+
+  def putMultiple(keyValueTuples: Seq[(String, Array[Byte])], version: Long): Fox[Unit] = {
+    val putFox = for {
+      _ <- Fox.successful(logger.info(s"fossil multi-put for ${keyValueTuples.length} keys to $collection"))
+      keyValuePairs = keyValueTuples.map {
+        case (key, value) => VersionedKeyValuePairProto(key, version, ByteString.copyFrom(value))
+      }
+      reply <- wrapException(
+        stub.putMultipleKeysWithMultipleVersions(PutMultipleKeysWithMultipleVersionsRequest(collection, keyValuePairs)))
+      _ <- assertSuccess(reply.success, reply.errorMessage)
+    } yield ()
+    for {
+      box <- putFox.futureBox
+      _ <- box match {
+        case Full(()) => Fox.successful(())
+        case Empty    => Fox.empty
+        case net.liftweb.common.Failure(msg, _, _) =>
+          slackNotificationService.reportFossilWriteError("put", msg)
+          Fox.failure("could not multi-put to FossilDB: " + msg)
+      }
+    } yield ()
+  }
+
+  def putMultiple(keys: Seq[String], version: Long, values: Seq[Array[Byte]]): Fox[Unit] =
+    putMultiple(keys.zip(values), version)
 
   def shutdown(): Boolean = {
     channel.shutdownNow()

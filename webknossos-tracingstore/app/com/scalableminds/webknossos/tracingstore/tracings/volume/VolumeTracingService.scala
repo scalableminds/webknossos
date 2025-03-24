@@ -27,6 +27,7 @@ import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.Files
 import play.api.libs.Files.TemporaryFileCreator
+import spire.syntax.action
 
 import java.io._
 import java.nio.file.Paths
@@ -123,14 +124,31 @@ class VolumeTracingService @Inject()(
         temporaryTracingService,
         tc
       )
+      layer = volumeTracingLayer(annotationId,
+                                 tracingId,
+                                 tracing,
+                                 isTemporaryTracing = false,
+                                 includeFallbackDataIfAvailable = true)
+      volumeBucketBuffer = new VolumeBucketBuffer(
+        version = newVersion,
+        volumeTracingLayer = layer,
+        volumeDataStore = volumeDataStore,
+        temporaryTracingService = temporaryTracingService,
+        tc = tc,
+        ec = ec
+      )
       _ = Instant.logSince(before, "setup")
+      _ <- Fox.runIf(layer.tracing.getHasSegmentIndex)(volumeBucketBuffer.prefill(updateActions.flatMap {
+        case a: UpdateBucketVolumeAction => Some(a.bucketPosition)
+        case _                           => None
+      }) ?~> "prefill failed")
       beforeUpdateBuckt = Instant.now
       _ <- Fox.serialCombined(updateActions) {
         case a: UpdateBucketVolumeAction =>
           if (tracing.getHasEditableMapping) {
             Fox.failure("Cannot mutate volume data in annotation with editable mapping.")
           } else
-            updateBucket(tracingId, annotationId, tracing, a, segmentIndexBuffer, newVersion) ?~> "Failed to save volume data."
+            updateBucket(tracingId, tracing, a, segmentIndexBuffer, volumeBucketBuffer) ?~> "Failed to save volume data."
         case a: DeleteSegmentDataVolumeAction =>
           if (!tracing.getHasSegmentIndex) {
             Fox.failure("Cannot delete segment data for annotations without segment index.")
@@ -140,34 +158,27 @@ class VolumeTracingService @Inject()(
       }
       _ = Instant.logSince(beforeUpdateBuckt, s"updateBucket ${updateActions.length}x")
       beforeFlush = Instant.now
+      _ <- volumeBucketBuffer.flush()
       _ <- segmentIndexBuffer.flush()
       _ = Instant.logSince(beforeFlush, "flush")
     } yield ()
 
   private def updateBucket(tracingId: String,
-                           annotationId: String,
                            volumeTracing: VolumeTracing,
                            action: UpdateBucketVolumeAction,
                            segmentIndexBuffer: VolumeSegmentIndexBuffer,
-                           updateGroupVersion: Long)(implicit tc: TokenContext): Fox[VolumeTracing] =
+                           volumeBucketBuffer: VolumeBucketBuffer)(implicit tc: TokenContext): Fox[Unit] =
     for {
+      _ <- bool2Fox(!action.bucketPosition.hasNegativeComponent) ?~> s"Received a bucket at negative position (${action.bucketPosition}), must be positive"
       _ <- assertMagIsValid(volumeTracing, action.mag) ?~> s"Received a mag-${action.mag.toMagLiteral(allowScalar = true)} bucket, which is invalid for this annotation."
-      bucketPosition = BucketPosition(action.position.x,
-                                      action.position.y,
-                                      action.position.z,
-                                      action.mag,
-                                      action.additionalCoordinates)
-      _ <- bool2Fox(!bucketPosition.hasNegativeComponent) ?~> s"Received a bucket at negative position ($bucketPosition), must be positive"
-      dataLayer = volumeTracingLayer(annotationId, tracingId, volumeTracing)
       actionBucketData <- action.base64Data.map(Base64.getDecoder.decode).toFox
-      _ <- saveBucket(dataLayer, bucketPosition, actionBucketData, updateGroupVersion) ?~> "failed to save bucket"
       mappingName <- getMappingNameUnlessEditable(volumeTracing)
-      _ <- Fox.runIfOptionTrue(volumeTracing.hasSegmentIndex) {
+      _ <- Fox.runIf(volumeTracing.getHasSegmentIndex) {
         for {
-          previousBucketBytes <- loadBucket(dataLayer, bucketPosition, Some(updateGroupVersion - 1L)).futureBox
+          previousBucketBytes <- volumeBucketBuffer.getWithFallback(action.bucketPosition).futureBox
           _ <- updateSegmentIndex(
             segmentIndexBuffer,
-            bucketPosition,
+            action.bucketPosition,
             actionBucketData,
             previousBucketBytes,
             volumeTracing.elementClass,
@@ -176,6 +187,7 @@ class VolumeTracingService @Inject()(
           ) ?~> "failed to update segment index"
         } yield ()
       }
+      _ = volumeBucketBuffer.put(action.bucketPosition, actionBucketData)
     } yield volumeTracing.copy(volumeBucketDataHasChanged = Some(true))
 
   def editableMappingTracingId(tracing: VolumeTracing, tracingId: String): Option[String] =

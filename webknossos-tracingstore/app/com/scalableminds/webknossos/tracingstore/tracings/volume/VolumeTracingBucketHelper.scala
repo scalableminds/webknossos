@@ -80,20 +80,20 @@ trait AdditionalCoordinateKey {
 }
 
 trait BucketKeys extends WKWDataFormatHelper with AdditionalCoordinateKey {
-  protected def buildBucketKey(dataLayerName: String,
+  protected def buildBucketKey(volumeTracingId: String,
                                bucket: BucketPosition,
                                additionalAxes: Option[Seq[AdditionalAxis]]): String =
     (bucket.additionalCoordinates, additionalAxes, bucket.hasAdditionalCoordinates) match {
       case (Some(additionalCoordinates), Some(axes), true) =>
-        s"$dataLayerName/${bucket.mag.toMagLiteral(allowScalar = true)}/[${additionalCoordinatesKeyPart(
+        s"$volumeTracingId/${bucket.mag.toMagLiteral(allowScalar = true)}/[${additionalCoordinatesKeyPart(
           additionalCoordinates,
           axes)}][${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ}]"
       case _ =>
-        s"$dataLayerName/${bucket.mag.toMagLiteral(allowScalar = true)}/[${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ}]"
+        s"$volumeTracingId/${bucket.mag.toMagLiteral(allowScalar = true)}/[${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ}]"
     }
 
-  protected def buildKeyPrefix(dataLayerName: String): String =
-    s"$dataLayerName/"
+  protected def buildKeyPrefix(volumeTracingId: String): String =
+    s"$volumeTracingId/"
 
   protected def parseBucketKey(key: String,
                                additionalAxes: Option[Seq[AdditionalAxis]]): Option[(String, BucketPosition)] =
@@ -186,7 +186,7 @@ trait VolumeTracingBucketHelper
       else
         volumeDataStore.get(bucketKey, version, mayBeEmpty = Some(true))
 
-    val unpackedDataFox = dataFox.flatMap { versionedVolumeBucket =>
+    val unpackedDataFox: Fox[Array[Byte]] = dataFox.flatMap { versionedVolumeBucket =>
       if (isRevertedElement(versionedVolumeBucket)) Fox.empty
       else {
         val debugInfo =
@@ -198,12 +198,14 @@ trait VolumeTracingBucketHelper
       }
     }
     unpackedDataFox.futureBox.flatMap {
-      case Full(unpackedData) => Fox.successful(unpackedData)
+      case Full(unpackedData) =>
+        Fox.successful(unpackedData)
       case Empty =>
         if (volumeTracingLayer.includeFallbackDataIfAvailable && volumeTracingLayer.tracing.fallbackLayer.nonEmpty) {
           loadFallbackBucket(volumeTracingLayer, bucket)
         } else Fox.empty
-      case f: Failure => f.toFox
+      case f: Failure =>
+        f.toFox
     }
   }
 
@@ -231,7 +233,7 @@ trait VolumeTracingBucketHelper
                            data: Array[Byte],
                            version: Long,
                            toTemporaryStore: Boolean = false): Fox[Unit] =
-    saveBucket(dataLayer.name,
+    saveBucket(dataLayer.tracingId,
                dataLayer.elementClass,
                bucket,
                data,
@@ -253,6 +255,19 @@ trait VolumeTracingBucketHelper
     } else {
       volumeDataStore.put(bucketKey, version, compressedBucket)
     }
+  }
+
+  protected def saveBuckets(dataLayer: VolumeTracingLayer,
+                            bucketPositions: Seq[BucketPosition],
+                            bucketBytes: Seq[Array[Byte]],
+                            version: Long,
+                            toTemporaryStore: Boolean = false): Fox[Unit] = {
+    val bucketKeys = bucketPositions.map(buildBucketKey(dataLayer.tracingId, _, dataLayer.additionalAxes))
+    val expectedUncompressedSize = expectedUncompressedBucketSizeFor(dataLayer.elementClass)
+    val compressedBuckets =
+      bucketBytes.map(singleBucketBytes => compressVolumeBucket(singleBucketBytes, expectedUncompressedSize))
+    volumeDataStore.putMultiple(bucketKeys, version, compressedBuckets)
+    // TODO temporary store
   }
 
   def bucketStream(dataLayer: VolumeTracingLayer, version: Option[Long]): Iterator[(BucketPosition, Array[Byte])] = {

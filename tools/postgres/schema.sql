@@ -569,8 +569,8 @@ CREATE TABLE webknossos.aiModels(
 );
 
 CREATE TABLE webknossos.aiModel_organizations(
-  _aiModel CHAR(24) NOT NULL,
-  _organization VARCHAR(256) NOT NULL,
+  _aiModel TEXT CONSTRAINT _aiModel_objectId CHECK (_aiModel ~ '^[0-9a-f]{24}$') NOT NULL,
+  _organization TEXT NOT NULL,
   PRIMARY KEY(_aiModel, _organization)
 );
 

@@ -485,6 +485,12 @@ CREATE VIEW webknossos.aiModels_ as SELECT * FROM webknossos.aiModels WHERE NOT 
 COMMIT TRANSACTION;
 
 START TRANSACTION;
+ALTER TABLE webknossos.aiModel_organizations ALTER COLUMN _aiModel SET DATA TYPE TEXT;
+ALTER TABLE webknossos.aiModel_organizations ADD CONSTRAINT _aiModel_objectId CHECK (_aiModel ~ '^[0-9a-f]{24}$');
+ALTER TABLE webknossos.aiModel_organizations ALTER COLUMN _organization SET DATA TYPE TEXT;
+COMMIT TRANSACTION;
+
+START TRANSACTION;
 ALTER TABLE webknossos.aiModel_trainingAnnotations ALTER COLUMN _aiModel SET DATA TYPE TEXT;
 ALTER TABLE webknossos.aiModel_trainingAnnotations ADD CONSTRAINT _aiModel_objectId CHECK (_aiModel ~ '^[0-9a-f]{24}$');
 ALTER TABLE webknossos.aiModel_trainingAnnotations ALTER COLUMN _annotation SET DATA TYPE TEXT;

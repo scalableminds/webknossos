@@ -41,7 +41,6 @@ const datasetNames = [
   "2017-05-31_mSEM_aniso-test",
   "dsA_2",
   "2017-05-31_mSEM_scMS109_bk_100um_v01-aniso",
-  "float_test_dataset",
   "Multi-Channel-Test",
   "connectome_file_test_dataset",
   "kiwi", // This dataset is rotated and translated.

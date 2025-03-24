@@ -7,6 +7,7 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ## Unreleased
 [Commits](https://github.com/scalableminds/webknossos/compare/25.02.1...HEAD)
+
  - FossilDB now needs to be opened with additional column family `skeletonTreeBodies`. [#8423](https://github.com/scalableminds/webknossos/pull/8423)
 
 ### Postgres Evolutions:

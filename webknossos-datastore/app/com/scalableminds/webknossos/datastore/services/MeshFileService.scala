@@ -36,6 +36,7 @@ import java.nio.file.{Path, Paths}
 import javax.inject.Inject
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
+import scala.math
 
 case class ListMeshChunksRequest(
     meshFile: String,
@@ -86,10 +87,7 @@ case class NeuroglancerPrecomputedMeshInfo(
     transform: Array[Double],
     sharding: Option[ShardingSpecification],
     vertex_quantization_bits: Int,
-) {
-  def transform2DArray: Array[Array[Double]] = transform.grouped(4).toArray
-}
-
+)
 object NeuroglancerPrecomputedMeshInfo {
   implicit val jsonFormat: OFormat[NeuroglancerPrecomputedMeshInfo] = Json.format[NeuroglancerPrecomputedMeshInfo]
 }
@@ -173,7 +171,14 @@ case class MeshChunk(position: Vec3Float, byteOffset: Long, byteSize: Int, unmap
 object MeshChunk {
   implicit val jsonFormat: OFormat[MeshChunk] = Json.format[MeshChunk]
 }
-case class MeshLodInfo(scale: Int, vertexOffset: Vec3Float, chunkShape: Vec3Float, chunks: List[MeshChunk])
+case class MeshLodInfo(
+    scale: Int,
+    vertexOffset: Vec3Float,
+    chunkShape: Vec3Float,
+    chunks: List[MeshChunk],
+    // We use lod-specific transforms for Neuroglancer, but not for Webknossos
+    transform: Array[Array[Double]] =
+      Array(Array(1.0, 0.0, 0.0, 0.0), Array(0.0, 1.0, 0.0, 0.0), Array(0.0, 0.0, 1.0, 0.0), Array(0.0, 0.0, 0.0, 1.0)))
 
 object MeshLodInfo {
   implicit val jsonFormat: OFormat[MeshLodInfo] = Json.format[MeshLodInfo]
@@ -183,21 +188,27 @@ case class MeshSegmentInfo(chunkShape: Vec3Float, gridOrigin: Vec3Float, lods: L
 object MeshSegmentInfo {
   implicit val jsonFormat: OFormat[MeshSegmentInfo] = Json.format[MeshSegmentInfo]
 }
-case class WebknossosSegmentInfo(transform: Array[Array[Double]], // TODO: Is currently not lod dependant, but Neuroglancer uses different scales for different lods.
-                                 meshFormat: String, chunks: MeshSegmentInfo) // add vertex quantization bits here?, lod scaling property? or make Transform property lod dependant?
+case class WebknossosSegmentInfo(
+    transform: Array[Array[Double]], // TODO: Is currently not lod dependant, but Neuroglancer uses different scales for different lods, need to change meshsegmentinfo.
+    meshFormat: String,
+    chunks: MeshSegmentInfo,
+    chunkScale: Array[Double] = Array(1.0, 1.0, 1.0) // Uses for Neuroglancer Precomputed Meshes to account for vertex quantization
+)
 
 object WebknossosSegmentInfo {
   implicit val jsonFormat: OFormat[WebknossosSegmentInfo] = Json.format[WebknossosSegmentInfo]
 
   def fromMeshInfosAndMetadata(chunkInfos: List[MeshSegmentInfo],
                                encoding: String,
-                               transform: Array[Array[Double]]): Option[WebknossosSegmentInfo] =
+                               transform: Array[Array[Double]],
+                               chunkScale: Array[Double] = Array(1.0, 1.0, 1.0)): Option[WebknossosSegmentInfo] =
     chunkInfos.headOption.flatMap { firstChunkInfo =>
       tryo {
         WebknossosSegmentInfo(
           transform,
           meshFormat = encoding,
-          chunks = firstChunkInfo.copy(lods = chunkInfos.map(_.lods).transpose.map(mergeLod))
+          chunks = firstChunkInfo.copy(lods = chunkInfos.map(_.lods).transpose.map(mergeLod)),
+          chunkScale = chunkScale
         )
       }
     }
@@ -415,8 +426,9 @@ class MeshFileService @Inject()(config: DataStoreConfig, dataVaultService: DataV
       bytesPerLod.take(lod).sum + chunkByteOffsetsInLod(lod)(currentChunk)
 
     def computeGlobalPositionAndOffset(lod: Int, currentChunk: Int): MeshChunk = {
-      // TODO: This computation works with neuroglancer, wk meshes need something else
-      val globalPosition = segmentInfo.chunkPositions(lod)(currentChunk).toVec3Float
+      val globalPosition = segmentInfo.gridOrigin + segmentInfo
+        .chunkPositions(lod)(currentChunk)
+        .toVec3Float * segmentInfo.chunkShape * Math.pow(2, lod) * segmentInfo.lodScales(lod) * lodScaleMultiplier
 
       MeshChunk(
         position = globalPosition, // This position is in Voxel Space
@@ -466,6 +478,75 @@ class MeshFileService @Inject()(config: DataStoreConfig, dataVaultService: DataV
     (neuroglancerStart, neuroglancerEnd)
   }
 
+  def enrichSegmentInfoNeuroglancerPrecomputed(segmentInfo: NeuroglancerSegmentManifest,
+                                               lodScaleMultiplier: Double,
+                                               neuroglancerOffsetStart: Long,
+                                               segmentId: Long,
+                                               storedToModelSpaceTransform: Array[Double]): MeshSegmentInfo = {
+    val bytesPerLod = segmentInfo.chunkByteSizes.map(_.sum)
+    val totalMeshSize = bytesPerLod.sum
+    val meshByteStartOffset = neuroglancerOffsetStart - totalMeshSize
+    val chunkByteOffsetsInLod = segmentInfo.chunkByteSizes.map(_.scanLeft(0L)(_ + _)) // builds cumulative sum
+
+    def getChunkByteOffset(lod: Int, currentChunk: Int): Long =
+      // get past the finer lods first, then take offset in selected lod
+      bytesPerLod.take(lod).sum + chunkByteOffsetsInLod(lod)(currentChunk)
+
+    def computeGlobalPositionAndOffset(lod: Int, currentChunk: Int): MeshChunk = {
+      val globalPosition = segmentInfo.chunkPositions(lod)(currentChunk).toVec3Float
+
+      MeshChunk(
+        position = globalPosition,
+        byteOffset = meshByteStartOffset + getChunkByteOffset(lod, currentChunk),
+        byteSize = segmentInfo.chunkByteSizes(lod)(currentChunk).toInt, // size must be int32 to fit in java array
+        unmappedSegmentId = Some(segmentId)
+      )
+    }
+
+    val lods: Seq[Int] = for (lod <- 0 until segmentInfo.numLods) yield lod
+
+    def chunkCountsWithLod(lod: Int): IndexedSeq[(Int, Int)] =
+      for (currentChunk <- 0 until segmentInfo.numChunksPerLod(lod))
+        yield (lod, currentChunk)
+
+    val chunks = lods.map(lod => chunkCountsWithLod(lod).map(x => computeGlobalPositionAndOffset(x._1, x._2)).toList)
+
+    val baseScale = Vec3Float(1, 1, 1) * lodScaleMultiplier * segmentInfo.chunkShape
+
+    val meshfileLods = lods
+      .map(
+        lod =>
+          MeshLodInfo(
+            scale = 1, // Not used here, applied in the transform
+            vertexOffset = segmentInfo.vertexOffsets(lod), // Not currently used by the frontend, thus we apply it in the transform
+            chunkShape = segmentInfo.chunkShape, // Not currently used by the frontend, thus we apply it in the transform
+            chunks = chunks(lod),
+            transform = Array(
+              Array(
+                baseScale.x * storedToModelSpaceTransform(0) * segmentInfo.lodScales(lod),
+                storedToModelSpaceTransform(1),
+                storedToModelSpaceTransform(2),
+                storedToModelSpaceTransform(3) + segmentInfo.gridOrigin.x + segmentInfo.vertexOffsets(lod).x
+              ),
+              Array(
+                storedToModelSpaceTransform(4),
+                baseScale.y * storedToModelSpaceTransform(5) * segmentInfo.lodScales(lod),
+                storedToModelSpaceTransform(6),
+                storedToModelSpaceTransform(7) + segmentInfo.gridOrigin.y + segmentInfo.vertexOffsets(lod).y
+              ),
+              Array(
+                storedToModelSpaceTransform(8),
+                storedToModelSpaceTransform(9),
+                baseScale.z * storedToModelSpaceTransform(10) * segmentInfo.lodScales(lod),
+                storedToModelSpaceTransform(11) + segmentInfo.gridOrigin.z + segmentInfo.vertexOffsets(lod).z
+              ),
+              Array(0.0, 0.0, 0.0, 1.0)
+            )
+        ))
+      .toList
+    MeshSegmentInfo(chunkShape = segmentInfo.chunkShape, gridOrigin = segmentInfo.gridOrigin, lods = meshfileLods)
+  }
+
   def listMeshChunksForNeuroglancerPrecomputedMesh(meshFilePathOpt: Option[String], segmentId: Long)(
       implicit tc: TokenContext): Fox[WebknossosSegmentInfo] =
     for {
@@ -479,27 +560,31 @@ class MeshFileService @Inject()(config: DataStoreConfig, dataVaultService: DataV
       chunkRange <- mesh.getChunkRange(segmentId, minishardIndex)
       chunk <- mesh.getChunk(chunkRange, shardUrl)
       segmentManifest = NeuroglancerSegmentManifest.fromBytes(chunk)
-      _ = logger.info(s"Chunk Position 0 ${segmentManifest.chunkPositions(0)}")
-      meshSegmentInfo = enrichSegmentInfo(segmentManifest, meshInfo.lod_scale_multiplier, chunkRange.start, segmentId)
-      meshSegmentInfoc = meshSegmentInfo.copy(lods = List(meshSegmentInfo.lods(0)))
-      scale = segmentManifest.chunkShape * meshInfo.lod_scale_multiplier // TODO: Multiply lod here or in frontend
-      // TODO: Add offsets (grid origin, vertex offset) to the transform
-      _ = logger.info(s"segment info $meshSegmentInfo")
+      meshSegmentInfo = enrichSegmentInfoNeuroglancerPrecomputed(segmentManifest,
+                                                                 meshInfo.lod_scale_multiplier,
+                                                                 chunkRange.start,
+                                                                 segmentId,
+                                                                 meshInfo.transform)
+
+      /**
       transform = Array(
-        Array(scale.x * meshInfo.transform(0), 0.0, 0.0, 0.0),
-        Array(0.0, scale.y * meshInfo.transform(5), 0.0, 0.0),
-        Array(0.0, 0.0, scale.z * meshInfo.transform(10), 0.0),
+        Array(scale.x * meshInfo.transform(0), meshInfo.transform(1), meshInfo.transform(2), meshInfo.transform(3)),
+        Array(meshInfo.transform(4), scale.y * meshInfo.transform(5), meshInfo.transform(6), meshInfo.transform(7)),
+        Array(meshInfo.transform(8), meshInfo.transform(9), scale.z * meshInfo.transform(10), meshInfo.transform(11)),
         Array(0.0, 0.0, 0.0, 1.0)
-      )
-      //transform = meshInfo.transform2DArray // Something is going wrong here, the meshes are far outside the other data
-      //
-      // This works for precomputed-fafb with ds scale 4,4,40
-      //transform = Array(Array(2.0, 0.0, 0.0, 0.0),
-      //                  Array(0.0, 2.0, 0.0, 0.0),
-      //                  Array(0.0, 0.0, 2.5, 0.0),
-      //                  Array(0.0, 0.0, 0.0, 1.0))
+      )*/
       encoding = "draco"
-      wkChunkInfos <- WebknossosSegmentInfo.fromMeshInfosAndMetadata(List(meshSegmentInfoc), encoding, transform)
+      chunkScale = Array.fill(3)(1 / math.pow(2, meshInfo.vertex_quantization_bits))
+      wkChunkInfos <- WebknossosSegmentInfo.fromMeshInfosAndMetadata(
+        List(meshSegmentInfo),
+        encoding,
+        // This transform is not used since we are using the lod-specific transforms
+        Array(Array(1.0, 0.0, 0.0, 0.0),
+              Array(0.0, 1.0, 0.0, 0.0),
+              Array(0.0, 0.0, 1.0, 0.0),
+              Array(0.0, 0.0, 0.0, 1.0)),
+        chunkScale
+      )
     } yield wkChunkInfos
 
   def readMeshChunk(organizationId: String,

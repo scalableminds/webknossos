@@ -23,10 +23,12 @@ export default class BucketSnapshot {
 
   // A pending promise of the unmerged backend data. Once the promise
   // is fulfilled, it will be set to null.
-  // todop (perf): multiple bucketsnapshots might refer to the same
-  // maybeUnmergedBucketLoadedPromise. however, they will all
+  // Potential performance optimization:
+  // Multiple BucketSnapshots might refer to the same
+  // maybeUnmergedBucketLoadedPromise. However, they will all
   // compress/decompress the data independently (== redundantly).
-  // this could be optimized
+  // It needs to be measured, whether the added complexity would really
+  // be worth it, though.
   private maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise;
   // Afterwards, the backend data is either stored
   // uncompressed:
@@ -36,6 +38,7 @@ export default class BucketSnapshot {
 
   constructor(
     zoomedAddress: BucketAddress,
+    // Note that the BucketSnapshot instance may modify dataClone in place.
     dataClone: BucketDataArray,
     maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise,
     readonly pendingOperations: PendingOperation[],
@@ -63,7 +66,6 @@ export default class BucketSnapshot {
       return;
     }
     this.maybeUnmergedBucketLoadedPromise.then((backendBucketData) => {
-      console.log("maybeUnmergedBucketLoadedPromise.then", backendBucketData);
       // Once the backend data is fetched, do not directly merge it with the local data
       // as this operation is only needed, when the volume action is undone. Additionally merging is more
       // expensive than saving the backend data. Thus the data is only merged when it is needed.
@@ -119,8 +121,11 @@ export default class BucketSnapshot {
     const { needsMergeWithBackendData } = this;
     if (needsMergeWithBackendData && this.isBackendDataAvailable()) {
       const decompressedBackendData = await this.getBackendData();
-      // todop: The following code mutates newData (which could be this.dataClone).
-      // Is this a problem? maybe not, because the snapshot instance is used nowhere else? still, can we be sure?
+
+      // Note that the following function call modifies newData in-place.
+      // The source of newData is either a) the result of decompression or b)
+      // the dataClone parameter passed to BucketSnapshot during instantiation.
+      // In both cases, mutation should be okay.
       mergeDataWithBackendDataInPlace(newData, decompressedBackendData, this.pendingOperations);
       return {
         newData,

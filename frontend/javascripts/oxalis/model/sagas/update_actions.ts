@@ -560,7 +560,7 @@ export function splitAgglomerate(
   name: "splitAgglomerate";
   value: {
     actionTracingId: string;
-    agglomerateId: number;
+    agglomerateId: number; // Unused in back-end.
     segmentId1: number | undefined;
     segmentId2: number | undefined;
     // For backwards compatibility reasons,
@@ -594,8 +594,8 @@ export function mergeAgglomerate(
   name: "mergeAgglomerate";
   value: {
     actionTracingId: string;
-    agglomerateId1: number;
-    agglomerateId2: number;
+    agglomerateId1: number; // unused
+    agglomerateId2: number; // unused
     segmentId1: number | undefined;
     segmentId2: number | undefined;
     // For backwards compatibility reasons,

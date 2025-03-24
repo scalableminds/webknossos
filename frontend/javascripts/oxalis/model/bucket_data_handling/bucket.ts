@@ -101,7 +101,7 @@ export class DataBucket {
   _fallbackBucket: Bucket | null | undefined;
   throttledTriggerLabeled: () => void;
   emitter: Emitter;
-  maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise;
+  private maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise;
   // Especially, for segmentation buckets, it can be interesting to
   // know whether a certain ID is contained in this bucket. To
   // speed up such requests a cached set of the contained values

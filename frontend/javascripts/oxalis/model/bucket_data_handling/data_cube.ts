@@ -369,6 +369,8 @@ class DataCube {
   }
 
   collectBucketsIf(predicateFn: (bucket: DataBucket) => boolean): void {
+    // called by reloadBuckets and collectAllBuckets (reloadAllBuckets, version restore view e.g.,)
+
     // todop: why clear this? can't the buckets be still in the queue? their
     // download didn't even start yet (the request + version look up happens *after* dequeuing).
     // also, clear() does not clear high-pri buckets anyway, so we cannot rely on that.
@@ -380,7 +382,7 @@ class DataCube {
     const notCollectedBuckets = [];
     for (const bucket of this.buckets) {
       bucket._debuggerMaybe();
-      // If a bucket is in the `requested` state, collect it independently of the predicateFn,
+      // If a bucket is in the `REQUESTED` state, collect it independently of the predicateFn,
       // because the corresponding request was aborted above (meaning the bucket would never
       // be filled with data).
 

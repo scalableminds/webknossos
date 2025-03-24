@@ -149,8 +149,6 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 
   override def dataBaseDir: Path = dataSourceService.dataBaseDir
 
-  override def remoteWKClient: Option[DSRemoteWebknossosClient] = Some(remoteWebknossosClient)
-
   def isKnownUploadByFileId(uploadFileId: String): Fox[Boolean] = isKnownUpload(extractDatasetUploadId(uploadFileId))
 
   def isKnownUpload(uploadId: String): Fox[Boolean] =

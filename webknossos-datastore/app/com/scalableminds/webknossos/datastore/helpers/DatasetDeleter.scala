@@ -7,9 +7,10 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   GenericDataSource
 }
 import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
+import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Box, Full}
+import net.liftweb.common.{Box, EmptyBox, Full}
 
 import java.io.File
 import java.nio.file.{Files, Path}
@@ -48,9 +49,8 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
         val targetPath = trashPath.resolve(datasetName)
         new File(trashPath.toString).mkdirs()
 
-        logger.info(s"Deleting dataset by moving it from $dataSourcePath to $targetPath${if (reason.isDefined)
-          s" because ${reason.getOrElse("")}"
-        else "..."}")
+        logger.info(
+          s"Deleting dataset by moving it from $dataSourcePath to $targetPath${reason.map(r => s"because $r").getOrElse("...")}")
         deleteWithRetry(dataSourcePath, targetPath)
       } else {
         Fox.successful(logger.info(
@@ -67,25 +67,19 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
     } yield ()
   }
 
-  def remoteWKClient: Option[DSRemoteWebknossosClient]
+  def remoteWebknossosClient: DSRemoteWebknossosClient
 
   // Handle references to layers and mags that are deleted
 
   private def moveSymlinks(organizationId: String, datasetName: String)(implicit ec: ExecutionContext) =
     for {
       dataSourceId <- Fox.successful(DataSourceId(datasetName, organizationId))
-      layersAndLinkedMagsOpt <- Fox.runOptional(remoteWKClient)(_.fetchPaths(dataSourceId))
-      exceptionBoxes = layersAndLinkedMagsOpt match {
-        case Some(layersAndLinkedMags) =>
-          layersAndLinkedMags.map(layerMagLinkInfo =>
-            handleLayerSymlinks(dataSourceId, layerMagLinkInfo.layerName, layerMagLinkInfo.magLinkInfos.toList))
-        case None => Seq(tryo {})
-      }
-      _ <- Fox.combined(exceptionBoxes.toList.map(Fox.box2Fox)) ?~> "Failed to move symlinks"
-      affectedDataSources = layersAndLinkedMagsOpt
-        .map(layersAndMags => layersAndMags.map(_.magLinkInfos.map(m => m.linkedMags.map(_.dataSourceId))))
-        .getOrElse(List())
-        .flatten
+      layersAndLinkedMags <- remoteWebknossosClient.fetchPaths(dataSourceId)
+      exceptionBoxes = layersAndLinkedMags.map(layerMagLinkInfo =>
+        handleLayerSymlinks(dataSourceId, layerMagLinkInfo.layerName, layerMagLinkInfo.magLinkInfos.toList))
+      _ <- Fox.combined(exceptionBoxes.map(Fox.box2Fox)) ?~> "Failed to move symlinks"
+      affectedDataSources = layersAndLinkedMags
+        .flatMap(_.magLinkInfos.map(m => m.linkedMags.map(_.dataSourceId)))
         .flatten
       _ <- updateDatasourceProperties(affectedDataSources)
     } yield ()
@@ -129,7 +123,7 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
           case Full(dataSource) =>
             val updatedDataSource = dataSource.copy(dataLayers = dataSource.dataLayers.map {
               case dl: DataLayerWithMagLocators =>
-                if (dl.mags.forall(_.path.exists(_.startsWith("file://")))) {
+                if (dl.mags.forall(_.path.exists(_.startsWith(s"${DataVaultService.schemeFile}://")))) {
                   // Setting path to None means using resolution of layer/mag directories to access data
                   dl.mapped(magMapping = _.copy(path = None))
                 } else {
@@ -138,8 +132,10 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
               case dl => dl
             })
             // Write properties back
-            Files.delete(propertiesPath)
-            JsonHelper.jsonToFile(propertiesPath, updatedDataSource)
+            tryo(Files.delete(propertiesPath)) match {
+              case Full(_) => JsonHelper.jsonToFile(propertiesPath, updatedDataSource)
+              case e       => e
+            }
           case _ => Full(())
         }
       } else {

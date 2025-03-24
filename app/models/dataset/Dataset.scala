@@ -717,14 +717,7 @@ case class MagWithPaths(layerName: String,
                         realPath: Option[String],
                         hasLocalData: Boolean)
 
-case class DatasetMagInfo(datasetId: ObjectId,
-                          dataLayerName: String,
-                          mag: Vec3Int,
-                          path: Option[String],
-                          realPath: Option[String],
-                          hasLocalData: Boolean)
-
-case class DataSourceMagRow(_dataset: String,
+case class DataSourceMagRow(_dataset: ObjectId,
                             dataLayerName: String,
                             mag: String,
                             path: Option[String],
@@ -793,7 +786,7 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
   implicit def GetResultDataSourceMagRow: GetResult[DataSourceMagRow] =
     GetResult(
       r =>
-        DataSourceMagRow(r.nextString(),
+        DataSourceMagRow(ObjectId(r.nextString()),
                          r.nextString(),
                          r.nextString(),
                          r.nextStringOption(),

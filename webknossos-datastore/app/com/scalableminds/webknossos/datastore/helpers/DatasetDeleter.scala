@@ -145,6 +145,10 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
 
   private def updateMagSymlinks(targetMagPath: Path, linkedMag: DataSourceMagInfo): Unit = {
     val linkedMagPath = getMagPath(dataBaseDir, linkedMag)
+    // Before deleting, check write permissions at linkedMagPath
+    if (!Files.isWritable(linkedMagPath.getParent)) {
+      throw new Exception(s"Cannot update symlink at $linkedMagPath, no write permissions!")
+    }
     if (Files.exists(linkedMagPath) || Files.isSymbolicLink(linkedMagPath)) {
       Files.delete(linkedMagPath)
       logger.info(s"Deleting symlink and recreating it at $linkedMagPath")
@@ -177,6 +181,12 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
       .resolve(moveToDataSource.organizationId)
       .resolve(moveToDataSource.directoryName)
       .resolve(moveToDataLayer)
+
+    // Before deleting, check write permissions at targetPath
+    if (!Files.isWritable(targetPath.getParent)) {
+      throw new Exception(s"Cannot move layer $sourceLayer to $targetPath, no write permissions!")
+    }
+
     logger.info(
       s"Found complete symlinks to layer; Moving layer $sourceLayer from $sourceDataSource to $moveToDataSource/$moveToDataLayer")
     if (Files.exists(targetPath) && Files.isSymbolicLink(targetPath)) {
@@ -190,6 +200,10 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
     fullLayerLinks.tail.foreach { linkedLayer =>
       val linkedLayerPath =
         dataBaseDir.resolve(linkedLayer._1.organizationId).resolve(linkedLayer._1.directoryName).resolve(linkedLayer._2)
+      // Before deleting, check write permissions at linkedLayerPath
+      if (!Files.isWritable(linkedLayerPath.getParent)) {
+        throw new Exception(s"Cannot move layer $sourceLayer to $targetPath, no write permissions!")
+      }
       if (Files.exists(linkedLayerPath) || Files.isSymbolicLink(linkedLayerPath)) {
         // Two cases exist here: 1. The layer is a regular directory where each mag is a symlink
         // 2. The layer is a symlink to the other layer itself.
@@ -248,6 +262,12 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
                 // Select an arbitrary linked mag to move to
                 val target = magLinkInfo.linkedMags.head
                 val targetPath = getMagPath(dataBaseDir, target)
+
+                // Before deleting, check write permissions at targetPath
+                if (!Files.isWritable(targetPath.getParent)) {
+                  throw new Exception(s"Cannot move mag $magToDelete to $targetPath, no write permissions!")
+                }
+
                 if (Files.exists(targetPath) && Files.isSymbolicLink(targetPath)) {
                   logger.info(
                     s"Deleting existing symlink at $targetPath linking to ${magToDelete.dataSourceId}/${magToDelete.dataLayerName}/${magToDelete.mag

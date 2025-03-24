@@ -1,3 +1,13 @@
+/*
+ * This module tests the BucketSnapshot class which depends
+ * on the async functions for compressing/decompressing bucket data
+ * and for the actual fetch of the backend's bucket data.
+ * To properly test the various orders in which these async functions
+ * can return, a PlanExecutor is defined in this module that can
+ * process a "plan". Each plan defines the order of events that happen
+ * and the expected result.
+ */
+
 import test, { type ExecutionContext } from "ava";
 import "test/mocks/lz4";
 import BucketSnapshot, {
@@ -8,9 +18,14 @@ import type { BucketDataArray, ElementClass } from "types/api_flow_types";
 import { uint8ToTypedBuffer } from "oxalis/model/helpers/typed_buffer";
 import { sleep } from "libs/utils";
 
+/*
+ * The MockCompressor provides the async compress and decompress
+ * functions. These can be controlled from within the test plans
+ * with resolveNextCompression/Decompression.
+ */
 class MockCompressor {
-  public compressionQueue: Array<Deferred<void, void>> = [];
-  public decompressionQueue: Array<Deferred<void, void>> = [];
+  private compressionQueue: Array<Deferred<void, void>> = [];
+  private decompressionQueue: Array<Deferred<void, void>> = [];
 
   resolveCompressionCounter: number = 0;
   resolveDecompressionCounter: number = 0;
@@ -61,12 +76,19 @@ class MockCompressor {
 
 class PlanExecutor {
   constructor(
-    private plan: { start: string[]; middle: string[]; end: string[] },
+    private plan: {
+      beforeInstantiation: string[];
+      beforeRestore1: string[];
+      afterRestore1: string[];
+      beforeRestore2: string[];
+    },
     private mockCompressor: MockCompressor,
     private backendDeferred: Deferred<void, void> | undefined,
   ) {}
 
-  async executeStep(step: "start" | "middle" | "end") {
+  async executeStep(
+    step: "beforeInstantiation" | "beforeRestore1" | "afterRestore1" | "beforeRestore2",
+  ) {
     for (const action of this.plan[step]) {
       await this.processAction(action);
     }
@@ -118,58 +140,93 @@ const expectMerged = (t: ExecutionContext<unknown>, p: ExpectParams) => {
 };
 
 const plans = [
+  /*
+    When a plan is executed, the overall events that happen are:
+    - executeStep("beforeInstantiation")
+    - new BucketSnapshot(...)
+    - executeStep("beforeRestore1");
+    - snapshot.getDataForRestore();
+    - executeStep("afterRestore1");
+    - expect1(...);
+    - executeStep("beforeRestore2");
+    - getDataForRestore();
+    - expect2(...)
+   */
+
   {
-    start: [],
-    middle: [],
-    end: [],
-    expect: expectUnmerged,
+    // Compression is "slow" (never happens). Backend
+    // data is not available, either.
+    beforeInstantiation: [],
+    beforeRestore1: [],
+    afterRestore1: [],
+    expect1: expectUnmerged,
+    beforeRestore2: [],
+    expect2: expectUnmerged,
   },
   {
-    start: ["resolveBackendData"],
-    middle: [],
-    end: [],
-    expect: expectMerged,
+    // Backend data is already there. Compression/decompression
+    // only kicks in after the first restore.
+    beforeInstantiation: ["resolveBackendData"],
+    beforeRestore1: [],
+    afterRestore1: [],
+    expect1: expectMerged,
+    beforeRestore2: ["resolveCompression", "resolveDecompression"],
+    expect2: expectMerged,
   },
   {
-    start: [],
-    middle: ["resolveCompression", "resolveDecompression"],
-    end: ["resolveBackendData"],
-    expect: expectUnmerged,
+    // Compression kicks in before first restore, but backend data only
+    // appears after first restore.
+    beforeInstantiation: [],
+    beforeRestore1: ["resolveCompression", "resolveDecompression"],
+    afterRestore1: ["resolveBackendData"],
+    expect1: expectUnmerged,
+    beforeRestore2: ["resolveDecompression"], // for local data
+    expect2: expectMerged,
   },
   {
-    start: ["resolveBackendData"],
-    middle: ["resolveCompression", "resolveDecompression"],
-    end: [],
-    expect: expectMerged,
+    beforeInstantiation: ["resolveBackendData"],
+    beforeRestore1: ["resolveCompression", "resolveDecompression"],
+    afterRestore1: [],
+    expect1: expectMerged,
+    beforeRestore2: ["resolveDecompression"],
+    expect2: expectMerged,
   },
   {
-    start: ["resolveBackendData"],
-    middle: [
+    beforeInstantiation: ["resolveBackendData"],
+    beforeRestore1: [
       "resolveCompression",
       "resolveCompression",
       "resolveDecompression",
       "resolveDecompression",
     ],
-    end: [],
-    expect: expectMerged,
+    afterRestore1: [],
+    expect1: expectMerged,
+    // For the second read, we local and backend data need to be decompressed
+    // again.
+    beforeRestore2: ["resolveDecompression", "resolveDecompression"],
+    expect2: expectMerged,
   },
   {
-    start: [],
-    middle: ["resolveCompression", "resolveBackendData", "resolveDecompression"],
-    end: [],
-    expect: expectMerged,
+    beforeInstantiation: [],
+    beforeRestore1: ["resolveCompression", "resolveBackendData", "resolveDecompression"],
+    afterRestore1: [],
+    expect1: expectMerged,
+    beforeRestore2: ["resolveDecompression"],
+    expect2: expectMerged,
   },
   {
-    start: [],
-    middle: [
+    beforeInstantiation: [],
+    beforeRestore1: [
       "resolveCompression",
       "resolveBackendData",
       "resolveCompression",
       "resolveDecompression",
       "resolveDecompression",
     ],
-    end: [],
-    expect: expectMerged,
+    afterRestore1: [],
+    expect1: expectMerged,
+    beforeRestore2: ["resolveDecompression", "resolveDecompression"],
+    expect2: expectMerged,
   },
 ];
 
@@ -194,7 +251,7 @@ for (const [idx, plan] of plans.entries()) {
     backendData[4] = 4;
     backendData[5] = 5;
 
-    planExecutor.executeStep("start");
+    planExecutor.executeStep("beforeInstantiation");
 
     const snapshot = new BucketSnapshot(
       [0, 0, 0, 0],
@@ -205,14 +262,14 @@ for (const [idx, plan] of plans.entries()) {
       "uint8",
       mockCompressor,
     );
-    await planExecutor.executeStep("middle");
+    await planExecutor.executeStep("beforeRestore1");
 
     const { newData, newPendingOperations, needsMergeWithBackendData } =
       await snapshot.getDataForRestore();
 
-    await planExecutor.executeStep("end");
+    await planExecutor.executeStep("afterRestore1");
 
-    plan.expect(t, {
+    plan.expect1(t, {
       newPendingOperations,
       pendingOperations,
       needsMergeWithBackendData,
@@ -220,7 +277,22 @@ for (const [idx, plan] of plans.entries()) {
       localData,
       backendData,
     });
+
     t.is(newData[3], 4);
+    await planExecutor.executeStep("beforeRestore2");
+
+    {
+      const { newData, newPendingOperations, needsMergeWithBackendData } =
+        await snapshot.getDataForRestore();
+      plan.expect2(t, {
+        newPendingOperations,
+        pendingOperations,
+        needsMergeWithBackendData,
+        newData,
+        localData,
+        backendData,
+      });
+    }
 
     t.is(mockCompressor.resolveCompressionCounter, 0);
     t.is(mockCompressor.resolveDecompressionCounter, 0);

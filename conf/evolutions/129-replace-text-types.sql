@@ -1,4 +1,4 @@
-do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 127, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
+do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 128, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
 
 -- Replaces all columns with types CHAR or VARCHAR with TEXT
 -- Since doing this for all columns in one transactions takes a significant time,
@@ -487,4 +487,4 @@ ALTER TABLE webknossos.analyticsEvents ALTER COLUMN _organization SET DATA TYPE 
 ALTER TABLE webknossos.analyticsEvents ALTER COLUMN webknossosUri SET DATA TYPE TEXT;
 COMMIT TRANSACTION;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 128;
+UPDATE webknossos.releaseInformation SET schemaVersion = 129;

@@ -108,7 +108,6 @@ class FossilDBClient(collection: String,
   def get[T](key: String, version: Option[Long] = None, mayBeEmpty: Option[Boolean] = None)(
       implicit fromByteArray: Array[Byte] => Box[T]): Fox[VersionedKeyValuePair[T]] =
     for {
-      _ <- Fox.successful(logger.info(s"fossil get $collection/$key"))
       reply <- wrapException(stub.get(GetRequest(collection, key, version, mayBeEmpty)))
       _ <- assertSuccess(reply.success, reply.errorMessage, mayBeEmpty)
       result <- fromByteArray(reply.value.toByteArray)
@@ -175,7 +174,6 @@ class FossilDBClient(collection: String,
 
   def put(key: String, version: Long, value: Array[Byte]): Fox[Unit] = {
     val putFox = for {
-      _ <- Fox.successful(logger.info(s"fossil put $collection/$key"))
       reply <- wrapException(stub.put(PutRequest(collection, key, Some(version), ByteString.copyFrom(value))))
       _ <- assertSuccess(reply.success, reply.errorMessage)
     } yield ()

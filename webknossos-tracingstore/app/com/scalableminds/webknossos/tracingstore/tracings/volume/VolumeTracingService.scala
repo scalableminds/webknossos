@@ -161,6 +161,7 @@ class VolumeTracingService @Inject()(
       _ <- volumeBucketBuffer.flush()
       _ <- segmentIndexBuffer.flush()
       _ = Instant.logSince(beforeFlush, "flush")
+      _ = Instant.logSince(before, "applyBucketMutatingActions")
     } yield ()
 
   private def updateBucket(tracingId: String,

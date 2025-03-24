@@ -879,6 +879,7 @@ export type ServerSkeletonTracing = ServerTracingBase & {
   boundingBox?: ServerBoundingBox;
   trees: Array<ServerSkeletonTracingTree>;
   treeGroups: Array<TreeGroup> | null | undefined;
+  storedWithExternalTreeBodies?: boolean; // unused in frontend
 };
 export type ServerVolumeTracing = ServerTracingBase & {
   // The following property is added when fetching the

@@ -78,9 +78,9 @@ class VolumeTracingService @Inject()(
   private val fallbackLayerCache: AlfuCache[(String, Option[String], Option[String]), Option[RemoteFallbackLayer]] =
     AlfuCache(maxCapacity = 100)
 
-  def saveVolume(tracing: VolumeTracing,
-                 tracingId: String,
+  def saveVolume(tracingId: String,
                  version: Long,
+                 tracing: VolumeTracing,
                  toTemporaryStore: Boolean = false): Fox[Unit] =
     if (toTemporaryStore)
       temporaryTracingService.saveVolume(tracingId, tracing)
@@ -505,7 +505,6 @@ class VolumeTracingService @Inject()(
     } yield data
 
   def adaptVolumeForDuplicate(sourceAnnotationId: String,
-                              sourceTracingId: String,
                               newTracingId: String,
                               sourceTracing: VolumeTracing,
                               isFromTask: Boolean,
@@ -628,7 +627,7 @@ class VolumeTracingService @Inject()(
     for {
       _ <- bool2Fox(tracing.version == 0L) ?~> "Tracing has already been edited."
       _ <- bool2Fox(mags.nonEmpty) ?~> "Initializing without any mags. No data or mag restrictions too tight?"
-      _ <- saveVolume(tracing.copy(mags = mags.toList.sortBy(_.maxDim).map(vec3IntToProto)), tracingId, tracing.version)
+      _ <- saveVolume(tracingId, tracing.version, tracing.copy(mags = mags.toList.sortBy(_.maxDim).map(vec3IntToProto)))
     } yield ()
 
   def volumeBucketsAreEmpty(tracingId: String): Boolean =

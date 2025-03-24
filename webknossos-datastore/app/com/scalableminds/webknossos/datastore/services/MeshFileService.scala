@@ -183,7 +183,8 @@ case class MeshSegmentInfo(chunkShape: Vec3Float, gridOrigin: Vec3Float, lods: L
 object MeshSegmentInfo {
   implicit val jsonFormat: OFormat[MeshSegmentInfo] = Json.format[MeshSegmentInfo]
 }
-case class WebknossosSegmentInfo(transform: Array[Array[Double]], meshFormat: String, chunks: MeshSegmentInfo)
+case class WebknossosSegmentInfo(transform: Array[Array[Double]], // TODO: Is currently not lod dependant, but Neuroglancer uses different scales for different lods.
+                                 meshFormat: String, chunks: MeshSegmentInfo) // add vertex quantization bits here?, lod scaling property? or make Transform property lod dependant?
 
 object WebknossosSegmentInfo {
   implicit val jsonFormat: OFormat[WebknossosSegmentInfo] = Json.format[WebknossosSegmentInfo]
@@ -414,9 +415,8 @@ class MeshFileService @Inject()(config: DataStoreConfig, dataVaultService: DataV
       bytesPerLod.take(lod).sum + chunkByteOffsetsInLod(lod)(currentChunk)
 
     def computeGlobalPositionAndOffset(lod: Int, currentChunk: Int): MeshChunk = {
-      val globalPosition = segmentInfo.gridOrigin + segmentInfo
-        .chunkPositions(lod)(currentChunk)
-        .toVec3Float * segmentInfo.chunkShape * Math.pow(2, lod) * segmentInfo.lodScales(lod) * lodScaleMultiplier
+      // TODO: This computation works with neuroglancer, wk meshes need something else
+      val globalPosition = segmentInfo.chunkPositions(lod)(currentChunk).toVec3Float
 
       MeshChunk(
         position = globalPosition, // This position is in Voxel Space
@@ -479,11 +479,27 @@ class MeshFileService @Inject()(config: DataStoreConfig, dataVaultService: DataV
       chunkRange <- mesh.getChunkRange(segmentId, minishardIndex)
       chunk <- mesh.getChunk(chunkRange, shardUrl)
       segmentManifest = NeuroglancerSegmentManifest.fromBytes(chunk)
+      _ = logger.info(s"Chunk Position 0 ${segmentManifest.chunkPositions(0)}")
       meshSegmentInfo = enrichSegmentInfo(segmentManifest, meshInfo.lod_scale_multiplier, chunkRange.start, segmentId)
-      transform = meshInfo.transform2DArray // Something is going wrong here, the meshes are far outside the other data
-      //transform = Array(Array(2.0, 0.0, 0.0, 0.0), Array(0.0, 2.0, 0.0, 0.0), Array(0.0, 0.0, 2.0, 0.0))
+      meshSegmentInfoc = meshSegmentInfo.copy(lods = List(meshSegmentInfo.lods(0)))
+      scale = segmentManifest.chunkShape * meshInfo.lod_scale_multiplier // TODO: Multiply lod here or in frontend
+      // TODO: Add offsets (grid origin, vertex offset) to the transform
+      _ = logger.info(s"segment info $meshSegmentInfo")
+      transform = Array(
+        Array(scale.x * meshInfo.transform(0), 0.0, 0.0, 0.0),
+        Array(0.0, scale.y * meshInfo.transform(5), 0.0, 0.0),
+        Array(0.0, 0.0, scale.z * meshInfo.transform(10), 0.0),
+        Array(0.0, 0.0, 0.0, 1.0)
+      )
+      //transform = meshInfo.transform2DArray // Something is going wrong here, the meshes are far outside the other data
+      //
+      // This works for precomputed-fafb with ds scale 4,4,40
+      //transform = Array(Array(2.0, 0.0, 0.0, 0.0),
+      //                  Array(0.0, 2.0, 0.0, 0.0),
+      //                  Array(0.0, 0.0, 2.5, 0.0),
+      //                  Array(0.0, 0.0, 0.0, 1.0))
       encoding = "draco"
-      wkChunkInfos <- WebknossosSegmentInfo.fromMeshInfosAndMetadata(List(meshSegmentInfo), encoding, transform)
+      wkChunkInfos <- WebknossosSegmentInfo.fromMeshInfosAndMetadata(List(meshSegmentInfoc), encoding, transform)
     } yield wkChunkInfos
 
   def readMeshChunk(organizationId: String,

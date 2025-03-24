@@ -1020,6 +1020,7 @@ function _getLoadChunksTasks(
                       chunk.data,
                     )) as BufferGeometryWithInfo;
                     bufferGeometry.unmappedSegmentId = chunk.unmappedSegmentId;
+                    bufferGeometry.scale(1/65536, 1/65536, 1/65536);
                     bufferGeometries.push(bufferGeometry);
                   } catch (error) {
                     errorsWithDetails.push({ error, chunk });

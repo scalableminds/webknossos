@@ -3,12 +3,7 @@ version: "2.2"
 services:
   # Production
   webknossos:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      cache_from:
-        - scalableminds/webknossos
-        - scalableminds/webknossos:${DEV_CACHE:-master}
+    build: .
     image: scalableminds/webknossos:${DOCKER_TAG:-master}
     ports:
       - "9000:9000"
@@ -105,8 +100,6 @@ services:
       - CERTIFICATE_PUBLIC_KEY
       - TZ=${TZ:-Europe/Berlin}
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
-      - POSTGRES_USER=webknossos_user
-      - POSTGRES_PASSWORD=secret_password
       - HOME=/root
       - CIRCLE_TAG=${CIRCLE_TAG}
       - CIRCLE_BUILD_NUM=${CIRCLE_BUILD_NUM}
@@ -205,7 +198,7 @@ services:
           -Ddatastore.redis.address=redis
           -Ddatastore.watchFileSystem.enabled=false"
     volumes:
-      - ./binaryData/Organization_X:/home/${USER_NAME:-sbt-user}/webknossos/binaryData/Organization_X
+      - ./binaryData/Connectomics department:/home/${USER_NAME:-sbt-user}/webknossos/binaryData/Organization_X
 
   screenshot-tests:
     image: scalableminds/puppeteer:master
@@ -218,6 +211,12 @@ services:
       - ".:/home/pptruser/webknossos"
     user: ${USER_UID:-1000}:${USER_GID:-1000}
 
+  # webKnossos-connect
+  webknossos-connect:
+    image: scalableminds/webknossos-connect:master__205
+    volumes:
+      - "./conf/connect:/app/data"
+
   # Postgres
   postgres:
     image: postgres:10-alpine
@@ -226,7 +225,7 @@ services:
       - POSTGRES_USER=webknossos_user
       - POSTGRES_PASSWORD=secret_password
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -d webknossos -U webknossos_user -h 127.0.0.1 -p 5432"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -h 127.0.0.1 -p 5432"]
       interval: 2s
       timeout: 5s
       retries: 30
@@ -237,7 +236,7 @@ services:
     ports:
       - "5434:5432"
     volumes:
-      - "./pg/db:/var/lib/postgresql/data/"
+      - "./pg.old/db:/var/lib/postgresql/data/"
 
   postgres-dev:
     extends:
@@ -249,7 +248,7 @@ services:
 
   psql:
     extends: postgres
-    command: psql -h postgres -U webknossos_user webknossos
+    command: psql -h postgres -U postgres webknossos
     links:
       - "postgres-persisted:postgres"
     depends_on:
@@ -262,7 +261,7 @@ services:
 
   drop-db:
     extends: postgres
-    command: psql -h postgres -U webknossos_user postgres -c "DROP DATABASE webknossos"
+    command: psql -h postgres -U postgres postgres -c "DROP DATABASE webknossos"
     links:
       - "postgres-persisted:postgres"
     depends_on:
@@ -284,8 +283,8 @@ services:
     extends:
       service: fossildb
     volumes:
-      - "./fossildb/data:/fossildb/data"
-      - "./fossildb/backup:/fossildb/backup"
+      - "./fossildb-old/data:/fossildb/data"
+      - "./fossildb-old/backup:/fossildb/backup"
 
   fossildb-dev:
     extends:

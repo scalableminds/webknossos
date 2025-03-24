@@ -23,7 +23,7 @@ import com.scalableminds.webknossos.datastore.services.uploading._
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, DataVaultService}
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.data.Form
-import play.api.data.Forms.{longNumber, nonEmptyText, number, optional, tuple}
+import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
 import play.api.i18n.Messages
 import play.api.libs.Files
 import play.api.libs.json.Json

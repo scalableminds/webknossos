@@ -327,18 +327,20 @@ class AnnotationIOController @Inject()(
     val bbox =
       if (volumeTracing.boundingBox.isEmpty) boundingBoxToProto(dataSource.boundingBox)
       else volumeTracing.boundingBox
-    val elementClass = fallbackLayerOpt
-      .map(layer => elementClassToProto(layer.elementClass))
-      .getOrElse(elementClassToProto(VolumeTracingDefaults.elementClass))
+
     for {
       tracingCanHaveSegmentIndex <- canHaveSegmentIndex(organizationId,
                                                         dataset.name,
                                                         fallbackLayerOpt.map(_.name),
                                                         remoteDataStoreClient)
+      elementClassProto <- fallbackLayerOpt
+        .map(layer => ElementClass.toProto(layer.elementClass))
+        .getOrElse(ElementClass.toProto(VolumeTracingDefaults.elementClass))
+        .toFox
     } yield
       volumeTracing.copy(
         boundingBox = bbox,
-        elementClass = elementClass,
+        elementClass = elementClassProto,
         fallbackLayer = fallbackLayerOpt.map(_.name),
         largestSegmentId = combineLargestSegmentIdsByPrecedence(volumeTracing.largestSegmentId,
                                                                 fallbackLayerOpt.map(_.largestSegmentId)),

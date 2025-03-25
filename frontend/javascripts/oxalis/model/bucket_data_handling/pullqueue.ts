@@ -6,6 +6,7 @@ import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import { requestWithFallback } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import type { DataStoreInfo } from "oxalis/store";
 import Store from "oxalis/store";
+import type { DataBucket } from "./bucket";
 
 export type PullQueueItem = {
   priority: number;
@@ -91,7 +92,7 @@ class PullQueue {
 
       for (const [index, bucketAddress] of batch.entries()) {
         const bucketBuffer = bucketBuffers[index];
-        const bucket = this.cube.getBucket(bucketAddress);
+        const bucket = this.cube.getOrCreateBucket(bucketAddress);
 
         if (bucket.type !== "data") {
           continue;
@@ -100,7 +101,7 @@ class PullQueue {
         if (bucketBuffer == null && !renderMissingDataBlack) {
           bucket.markAsFailed(true);
         } else {
-          this.handleBucket(bucketAddress, bucketBuffer);
+          this.handleBucket(bucket, bucketBuffer);
         }
       }
     } catch (error) {
@@ -154,15 +155,7 @@ class PullQueue {
     return Math.min(exponentialBackOff, MAX_RETRY_DELAY);
   }
 
-  private handleBucket(
-    bucketAddress: BucketAddress,
-    bucketData: Uint8Array | null | undefined,
-  ): void {
-    const bucket = this.cube.getBucket(bucketAddress);
-
-    if (bucket.type !== "data") {
-      return;
-    }
+  private handleBucket(bucket: DataBucket, bucketData: Uint8Array | null | undefined): void {
     if (this.cube.shouldEagerlyMaintainUsedValueSet()) {
       // If we assume that the value set of the bucket is needed often (for proofreading),
       // we compute it here eagerly and then send the data to the bucket.

@@ -175,13 +175,13 @@ export class DataBucket {
     ];
   }
 
-  mayBeGarbageCollected(): boolean {
-    const collect =
-      !this.accessed &&
+  mayBeGarbageCollected(respectAccessedFlag: boolean): boolean {
+    const mayBeCollected =
+      (!respectAccessedFlag || !this.accessed) &&
       !this.dirty &&
       this.state !== BucketStateEnum.REQUESTED &&
       this.dirtyCount === 0;
-    return collect;
+    return mayBeCollected;
   }
 
   destroy(): void {

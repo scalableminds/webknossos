@@ -324,7 +324,13 @@ class DataCube {
       for (let i = 0; i < this.buckets.length; i++) {
         this.bucketIterator = (this.bucketIterator + 1) % this.buckets.length;
 
-        if (this.buckets[this.bucketIterator].mayBeGarbageCollected()) {
+        if (
+          this.buckets[this.bucketIterator].mayBeGarbageCollected(
+            // respectAccessedFlag=true because we don't want to GC buckets
+            // that were used for rendering.
+            true,
+          )
+        ) {
           foundCollectibleBucket = true;
           break;
         }
@@ -369,37 +375,32 @@ class DataCube {
   }
 
   collectBucketsIf(predicateFn: (bucket: DataBucket) => boolean): void {
-    // called by reloadBuckets and collectAllBuckets (reloadAllBuckets, version restore view e.g.,)
+    // called by
+    //  reloadBuckets (ensures save anyway)
+    //    mapping saga
+    //    delete segment data
+    //    render missing data black
+    //    explicit "reload layers" action by user
+    //  collectAllBuckets (reloadAllBuckets, version restore view e.g.,)
+    //    previewVersion in version restore view (we are in a saved state, anyway)
 
-    // todop: why clear this? can't the buckets be still in the queue? their
-    // download didn't even start yet (the request + version look up happens *after* dequeuing).
-    // also, clear() does not clear high-pri buckets anyway, so we cannot rely on that.
-    // however: if the bucket is collected below and the bucket address is still in the pullqueue,
-    // the bucket state will be unexpected once the request goes through.
-    this.pullQueue.clear();
+    // We don't need to clear the pull queue, because the bucket addresses in it weren't
+    // even requested from the backend yet. The version look up for the actual request
+    // happens *after* dequeuing. Also, clear() does not remove high-pri buckets anyway,
+    // so we cannot rely on that.
     this.pullQueue.abortRequests();
 
     const notCollectedBuckets = [];
     for (const bucket of this.buckets) {
       bucket._debuggerMaybe();
-      // If a bucket is in the `REQUESTED` state, collect it independently of the predicateFn,
-      // because the corresponding request was aborted above (meaning the bucket would never
-      // be filled with data).
-
-      if (bucket.state === "UNREQUESTED") {
-        // No need to GC bucket because its data hasn't been loaded, anyway
-      } else if (bucket.state === "REQUESTED") {
-        // No need to GC bucket because no data has arrived yet. However, its request was aborted above.
-        // So, mark it as failed.
-        // todop: this should have happened in the abort handler above. test this again?
-        // bucket.markAsFailed(false);
-      }
-      if (bucket.state === "REQUESTED" || predicateFn(bucket)) {
-        // We ignore bucket.mayBeGarbageCollected() here, because that method would not
-        // allow to collect requested buckets. <-- not a strong point. we could adapt that.
-        // other reason: mayBeGarbageCollected is meant for asking whether the bucket is necessary
-        // right now. however, we know that we want to reload everything. so, we shouldn't care
-        // for that method.
+      if (
+        predicateFn(bucket) &&
+        bucket.mayBeGarbageCollected(
+          // respectAccessedFlag=false because we don't care whether the bucket
+          // was just used for rendering, as we reload data anyway.
+          false,
+        )
+      ) {
         this.collectBucket(bucket);
       } else {
         notCollectedBuckets.push(bucket);

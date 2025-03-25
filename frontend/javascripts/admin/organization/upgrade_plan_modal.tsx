@@ -354,7 +354,7 @@ function OrderWebknossosCreditsModal({ destroy }: { destroy: () => void }) {
         <div>Amount of credits to order:</div>
         <div>
           <InputNumber
-            min={0}
+            min={1}
             defaultValue={1}
             step={1}
             ref={userInputRef}

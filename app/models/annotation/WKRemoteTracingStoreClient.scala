@@ -33,10 +33,10 @@ import net.liftweb.common.Box
 import scala.concurrent.ExecutionContext
 
 class WKRemoteTracingStoreClient(
-    tracingStore: TracingStore,
-    dataset: Dataset,
-    rpc: RPC,
-    tracingDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore)(implicit ec: ExecutionContext)
+                                  tracingStore: TracingStore,
+                                  dataset: Dataset,
+                                  rpc: RPC,
+                                  annotationDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
   private def baseInfo = s" Dataset: ${dataset.name} Tracingstore: ${tracingStore.url}"
@@ -141,7 +141,7 @@ class WKRemoteTracingStoreClient(
                              editRotation: Option[Vec3Double] = None,
                              boundingBox: Option[BoundingBox] = None,
                              dataSource: DataSourceLike): Fox[Unit] = {
-    tracingDataSourceTemporaryStore.store(newAnnotationId, dataSource)
+    annotationDataSourceTemporaryStore.store(newAnnotationId, dataSource)
     rpc(s"${tracingStore.url}/tracings/volume/$volumeTracingId/duplicate").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .addQueryString("newAnnotationId" -> newAnnotationId.toString)
@@ -185,7 +185,7 @@ class WKRemoteTracingStoreClient(
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
         .postProto[VolumeTracings](tracings)
       packedVolumeDataZips = packVolumeDataZips(initialData.flatten)
-      _ = tracingDataSourceTemporaryStore.store(newAnnotationId, dataSource)
+      _ = annotationDataSourceTemporaryStore.store(newAnnotationId, dataSource)
       _ <- rpc(s"${tracingStore.url}/tracings/volume/$newTracingId/initialDataMultiple").withLongTimeout
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
         .addQueryString("annotationId" -> newAnnotationId.toString)
@@ -203,7 +203,7 @@ class WKRemoteTracingStoreClient(
                         magRestrictions: MagRestrictions = MagRestrictions.empty,
                         dataSource: DataSourceLike): Fox[Unit] = {
     logger.debug(s"Called to save VolumeTracing at $newTracingId for annotation $annotationId." + baseInfo)
-    tracingDataSourceTemporaryStore.store(annotationId, dataSource)
+    annotationDataSourceTemporaryStore.store(annotationId, dataSource)
     for {
       _ <- rpc(s"${tracingStore.url}/tracings/volume/save")
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)

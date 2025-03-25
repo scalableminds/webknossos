@@ -79,8 +79,9 @@ class TemporaryTracingService @Inject()(
     Fox.successful(())
   }
 
-  def saveVolumeSegmentIndexBuffer(tracingId: String, segmentIndexBuffer: Map[String, Set[Vec3IntProto]]): Fox[Unit] = {
-    segmentIndexStore.insertAll(segmentIndexBuffer.toSeq: _*)
+  def saveVolumeSegmentIndexBuffer(tracingId: String,
+                                   bucketPositionsBySegmentId: Seq[(String, Set[Vec3IntProto])]): Fox[Unit] = {
+    segmentIndexStore.insertAll(bucketPositionsBySegmentId: _*)
     registerTracingId(tracingId)
     Fox.successful(())
   }

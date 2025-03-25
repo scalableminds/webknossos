@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
+import com.scalableminds.util.tools.Fox.option2Fox
 import com.scalableminds.webknossos.datastore.geometry.{ListOfVec3IntProto, Vec3IntProto}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
@@ -70,19 +70,16 @@ class VolumeSegmentIndexBuffer(tracingId: String,
         put(segmentId, mag, additionalCoordinates, bucketPositions, markAsChanged)
     }
 
-  def getOne(segmentId: Long,
-             mag: Vec3Int,
-             mappingName: Option[String],
-             editableMappingTracingId: Option[String],
-             additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
-      implicit ec: ExecutionContext): Fox[Set[Vec3IntProto]] = {
-    val key = segmentIndexKey(tracingId, segmentId, mag, additionalCoordinates, additionalAxes)
-    segmentIndexBuffer.get(key) match {
-      case Some((positions, _)) => Fox.successful(positions)
-      case None =>
-        getOneFromFossilOrDatastore(segmentId, mag, mappingName, editableMappingTracingId, additionalCoordinates)
-    }
-  }
+  def getOne(
+      segmentId: Long,
+      mag: Vec3Int,
+      mappingName: Option[String],
+      editableMappingTracingId: Option[String],
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit ec: ExecutionContext): Fox[Set[Vec3IntProto]] =
+    for {
+      resultList <- getMultiple(List(segmentId), mag, mappingName, editableMappingTracingId, additionalCoordinates)
+      result <- resultList.headOption.map(_._2).toFox
+    } yield result
 
   def getMultiple(segmentIds: List[Long],
                   mag: Vec3Int,
@@ -116,7 +113,7 @@ class VolumeSegmentIndexBuffer(tracingId: String,
     }
 
   def flush(): Fox[Unit] = {
-    val toFlush = segmentIndexBuffer.toMap.flatMap {
+    val toFlush = segmentIndexBuffer.toSeq.flatMap {
       case (key, (bucketPositions, true)) => Some((key, bucketPositions))
       case _                              => None
     }
@@ -124,32 +121,11 @@ class VolumeSegmentIndexBuffer(tracingId: String,
       temporaryTracingService.saveVolumeSegmentIndexBuffer(tracingId, toFlush)
     } else {
       // TODO batching
-      val asByteArrays: Seq[(String, Array[Byte])] =
-        toFlush.toSeq.map(tuple => (tuple._1, toProtoBytes(tuple._2)))
-      volumeSegmentIndexClient.putMultiple(asByteArrays, version)
-    }
-  }
-
-  private def getOneFromFossilOrDatastore(segmentId: Long,
-                                          mag: Vec3Int,
-                                          mappingName: Option[String],
-                                          editableMappingTracingId: Option[String],
-                                          additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
-      implicit ec: ExecutionContext): Fox[Set[Vec3IntProto]] = {
-    val key = segmentIndexKey(tracingId, segmentId, mag, additionalCoordinates, additionalAxes)
-    for {
-      fossilDbData <- volumeSegmentIndexClient
-        .get(key, Some(version), mayBeEmpty = Some(true))(fromProtoBytes[ListOfVec3IntProto])
-        .map(_.value.values.toSet)
-        .fillEmpty(Set[Vec3IntProto]())
-      data <- fallbackLayer match {
-        case Some(layer) if fossilDbData.isEmpty =>
-          remoteDatastoreClient
-            .querySegmentIndex(layer, segmentId, mag, mappingName, editableMappingTracingId)(tc)
-            .map(_.toSet.map(vec3IntToProto))
-        case _ => Fox.successful(fossilDbData)
+      val asProtoByteArrays: Seq[(String, Array[Byte])] = toFlush.map {
+        case (segmentId, bucketPositions) => (segmentId, toProtoBytes(ListOfVec3IntProto(bucketPositions.toList)))
       }
-    } yield data
+      volumeSegmentIndexClient.putMultiple(asProtoByteArrays, version)
+    }
   }
 
   private def getMultipleFromBufferNoteMisses(
@@ -223,7 +199,7 @@ class VolumeSegmentIndexBuffer(tracingId: String,
                                                                    mappingName,
                                                                    editableMappingTracingId)(tc)
       }
-      case None => Fox.successful(List.empty)
+      case _ => Fox.successful(List.empty)
     }
 
   lazy val emptyBucketArrayForElementClass: Array[Byte] =

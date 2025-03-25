@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.helpers
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
+import com.scalableminds.webknossos.datastore.geometry.{ListOfVec3IntProto, Vec3IntProto}
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, SegmentInteger}
 import play.api.libs.json.{Json, OFormat}
@@ -22,15 +22,15 @@ trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
   def calculateSegmentVolume(segmentId: Long,
                              mag: Vec3Int,
                              additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-                             getBucketPositions: (Long, Vec3Int) => Fox[ListOfVec3IntProto],
+                             getBucketPositions: (Long, Vec3Int) => Fox[Set[Vec3IntProto]],
                              getTypedDataForBucketPosition: (
                                  Vec3Int,
                                  Vec3Int,
                                  Option[Seq[AdditionalCoordinate]]) => Fox[Array[SegmentInteger]])(
       implicit ec: ExecutionContext): Fox[Long] =
     for {
-      bucketPositionsProtos: ListOfVec3IntProto <- getBucketPositions(segmentId, mag)
-      bucketPositionsInMag = bucketPositionsProtos.values.map(vec3IntFromProto)
+      bucketPositionsProtos: Set[Vec3IntProto] <- getBucketPositions(segmentId, mag)
+      bucketPositionsInMag = bucketPositionsProtos.map(vec3IntFromProto)
       volumeBoxes <- Fox.serialSequence(bucketPositionsInMag.toList)(bucketPosition =>
         for {
           dataTyped: Array[SegmentInteger] <- getTypedDataForBucketPosition(bucketPosition, mag, additionalCoordinates)
@@ -43,14 +43,14 @@ trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
   def calculateSegmentBoundingBox(segmentId: Long,
                                   mag: Vec3Int,
                                   additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-                                  getBucketPositions: (Long, Vec3Int) => Fox[ListOfVec3IntProto],
+                                  getBucketPositions: (Long, Vec3Int) => Fox[Set[Vec3IntProto]],
                                   getTypedDataForBucketPosition: (
                                       Vec3Int,
                                       Vec3Int,
                                       Option[Seq[AdditionalCoordinate]]) => Fox[Array[SegmentInteger]])(
       implicit ec: ExecutionContext): Fox[BoundingBox] =
     for {
-      allBucketPositions: ListOfVec3IntProto <- getBucketPositions(segmentId, mag)
+      allBucketPositions: Set[Vec3IntProto] <- getBucketPositions(segmentId, mag)
       relevantBucketPositions = filterOutInnerBucketPositions(allBucketPositions)
       boundingBoxMutable = scala.collection.mutable.ListBuffer[Int](Int.MaxValue,
                                                                     Int.MaxValue,
@@ -78,16 +78,16 @@ trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
         )
 
   // The buckets that form the outer walls of the bounding box are relevant (in each of those the real min/max voxel positions could occur)
-  private def filterOutInnerBucketPositions(bucketPositions: ListOfVec3IntProto): Seq[Vec3Int] =
-    if (bucketPositions.values.isEmpty) List.empty
+  private def filterOutInnerBucketPositions(bucketPositions: Set[Vec3IntProto]): Set[Vec3Int] =
+    if (bucketPositions.isEmpty) Set.empty
     else {
-      val minX = bucketPositions.values.map(_.x).min
-      val minY = bucketPositions.values.map(_.y).min
-      val minZ = bucketPositions.values.map(_.z).min
-      val maxX = bucketPositions.values.map(_.x).max
-      val maxY = bucketPositions.values.map(_.y).max
-      val maxZ = bucketPositions.values.map(_.z).max
-      bucketPositions.values
+      val minX = bucketPositions.map(_.x).min
+      val minY = bucketPositions.map(_.y).min
+      val minZ = bucketPositions.map(_.z).min
+      val maxX = bucketPositions.map(_.x).max
+      val maxY = bucketPositions.map(_.y).max
+      val maxZ = bucketPositions.map(_.z).max
+      bucketPositions
         .filter(pos =>
           pos.x == minX || pos.x == maxX || pos.y == minY || pos.y == maxY || pos.z == minZ || pos.z == maxZ)
         .map(vec3IntFromProto)

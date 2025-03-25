@@ -129,16 +129,13 @@ class VolumeTracingService @Inject()(
                                        tracing,
                                        isTemporaryTracing = false,
                                        includeFallbackDataIfAvailable = true)
-      // Prefill for timing measurement purposes
-      _ <- Fox.serialCombined(volumeLayer.resolutions)(mag =>
-        segmentIndexBuffer.getSegmentToBucketIndexMap((1L to 30L).toList, mag, None, None, None))
       volumeBucketBuffer = new VolumeBucketBuffer(
-        version = newVersion,
-        volumeTracingLayer = volumeLayer,
-        volumeDataStore = volumeDataStore,
-        temporaryTracingService = temporaryTracingService,
-        tc = tc,
-        ec = ec
+        newVersion,
+        volumeLayer,
+        volumeDataStore,
+        temporaryTracingService,
+        tc,
+        ec
       )
       _ = Instant.logSince(before, "setup")
       _ <- Fox.runIf(volumeLayer.tracing.getHasSegmentIndex)(volumeBucketBuffer.prefill(updateActions.flatMap {
@@ -164,23 +161,19 @@ class VolumeTracingService @Inject()(
       _ <- volumeBucketBuffer.flush()
       _ <- segmentIndexBuffer.flush()
       _ = Instant.logSince(beforeFlush, "flush")
-      _ = Instant.logSince(before, "applyBucketMutatingActions")
+      _ = Instant.logSince(before, "applyBucketMutatingActions total")
     } yield ()
 
   private def updateBucket(tracingId: String,
                            volumeLayer: VolumeTracingLayer,
                            action: UpdateBucketVolumeAction,
                            segmentIndexBuffer: VolumeSegmentIndexBuffer,
-                           volumeBucketBuffer: VolumeBucketBuffer)(implicit tc: TokenContext): Fox[Unit] =
+                           volumeBucketBuffer: VolumeBucketBuffer): Fox[Unit] =
     for {
       _ <- bool2Fox(!action.bucketPosition.hasNegativeComponent) ?~> s"Received a bucket at negative position (${action.bucketPosition}), must be positive"
       _ <- assertMagIsValid(volumeLayer.tracing, action.mag) ?~> s"Received a mag-${action.mag.toMagLiteral(allowScalar = true)} bucket, which is invalid for this annotation."
-      actionBucketData <- action.base64Data.map(Base64.getDecoder.decode).toFox
-      actionBucketDataDecompressed = decompressIfNeeded(actionBucketData,
-                                                        volumeLayer.expectedUncompressedBucketSize,
-                                                        "updating segment index, new bucket data")
       mappingName <- getMappingNameUnlessEditable(volumeLayer.tracing)
-      _ = if (actionBucketDataDecompressed.length > 100000000) logger.info("so big!")
+      actionBucketData <- action.base64Data.map(Base64.getDecoder.decode).toFox
       _ <- Fox.runIf(volumeLayer.tracing.getHasSegmentIndex) {
         for {
           previousBucketBytes <- volumeBucketBuffer.getWithFallback(action.bucketPosition).futureBox
@@ -228,17 +221,16 @@ class VolumeTracingService @Inject()(
           val mag = vec3IntFromProto(magProto)
           for {
             bucketPositionsRaw <- volumeSegmentIndexService.getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
+              volumeTracing,
               fallbackLayer,
               tracingId,
               a.id,
               mag,
-              None,
               mappingName,
               editableMappingTracingId(volumeTracing, tracingId),
-              additionalCoordinates,
-              dataLayer.additionalAxes
+              additionalCoordinates
             )
-            bucketPositions = bucketPositionsRaw.values
+            bucketPositions = bucketPositionsRaw.toSeq
               .map(vec3IntFromProto)
               .map(_ * mag * DataLayer.bucketLength)
               .map(bp => BucketPosition(bp.x, bp.y, bp.z, mag, additionalCoordinates))

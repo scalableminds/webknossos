@@ -4,12 +4,11 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
+import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SegmentStatistics}
 import com.scalableminds.webknossos.datastore.models.{SegmentInteger, SegmentIntegerArray, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 
@@ -80,18 +79,16 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
     for {
       tracing <- annotationService.findVolume(annotationId, tracingId) ?~> "tracing.notFound"
       fallbackLayer <- volumeTracingService.getFallbackLayer(annotationId, tracing)
-      additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes)
-      allBucketPositions: ListOfVec3IntProto <- volumeSegmentIndexService
+      allBucketPositions: Set[Vec3IntProto] <- volumeSegmentIndexService
         .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
+          tracing,
           fallbackLayer,
           tracingId,
           segmentId,
           mag,
-          None,
           mappingName,
           editableMappingTracingId = volumeTracingService.editableMappingTracingId(tracing, tracingId),
-          additionalCoordinates,
-          additionalAxes
+          additionalCoordinates
         )
     } yield allBucketPositions
 

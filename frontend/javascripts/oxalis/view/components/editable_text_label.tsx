@@ -1,5 +1,5 @@
 import { CheckOutlined, EditOutlined } from "@ant-design/icons";
-import { Input, Space, type InputProps } from "antd";
+import { Input, type InputProps, Space } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import Markdown from "libs/markdown_adapter";
 import Toast from "libs/toast";

@@ -226,7 +226,6 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
               AND credit_state = ${CreditState.Pending}
               AND credit_delta < 0
           ),
-          0::DECIMAL,
           $refundComment,
           ${CreditTransactionState.Complete},
           ${CreditState.Refunding}

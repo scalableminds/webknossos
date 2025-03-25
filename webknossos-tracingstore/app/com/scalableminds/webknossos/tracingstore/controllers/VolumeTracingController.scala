@@ -79,7 +79,7 @@ class VolumeTracingController @Inject()(
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
             for {
-              _ <- volumeTracingService.saveVolume(request.body, newTracingId, 0)
+              _ <- volumeTracingService.saveVolume(newTracingId, version = 0, request.body)
             } yield Ok
           }
         }
@@ -145,7 +145,7 @@ class VolumeTracingController @Inject()(
               .toFox
             // segment lists for multi-volume uploads are not supported yet, compare https://github.com/scalableminds/webknossos/issues/6887
             mergedTracing = mergedTracingRaw.copy(segments = List.empty)
-            _ <- volumeTracingService.saveVolume(mergedTracing, newTracingId, mergedTracing.version)
+            _ <- volumeTracingService.saveVolume(newTracingId, mergedTracing.version, mergedTracing)
           } yield Ok
         }
       }

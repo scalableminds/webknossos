@@ -41,7 +41,6 @@ class NMLGenerator():
             for node_id in range(node_id_count, node_id_count + self.nodes_per_tree):
                 print('            <node ')
                 print(f'                id="{node_id}" radius="165.0" x="{node_id}" y="{node_id}" z="{tree_id}"')
-                print(f'                id="{node_id}" radius="165.0" x="{node_id}" y="{node_id}" z="{tree_id}"')
                 print('                inVp="0" inMag="0" bitDepth="8" interpolation="false" time="1395338380800">')
                 print('            </node>')
             print('        </nodes>')

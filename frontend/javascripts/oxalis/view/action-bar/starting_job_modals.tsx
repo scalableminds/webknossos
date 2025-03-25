@@ -416,27 +416,24 @@ function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) {
                 </Space>
               </Card>
             </Radio.Button>
-            <Tooltip title={!isSuperUser ? "Coming soon" : null}>
-              <Radio.Button
-                className="aIJobSelection"
-                disabled={!isSuperUser}
-                checked={aIJobModalState === APIJobType.INFER_MITOCHONDRIA}
-                onClick={() => dispatch(setAIJobModalStateAction(APIJobType.INFER_MITOCHONDRIA))}
-              >
-                <Card bordered={false}>
-                  <Space direction="vertical" size="small">
-                    <Row className="ai-job-title">Mitochondria detection</Row>
-                    <Row>
-                      <img
-                        src={`/assets/images/${jobNameToImagePath.infer_mitochondria}`}
-                        alt={"Mitochondria detection example"}
-                        style={centerImageStyle}
-                      />
-                    </Row>
-                  </Space>
-                </Card>
-              </Radio.Button>
-            </Tooltip>
+            <Radio.Button
+              className="aIJobSelection"
+              checked={aIJobModalState === APIJobType.INFER_MITOCHONDRIA}
+              onClick={() => dispatch(setAIJobModalStateAction(APIJobType.INFER_MITOCHONDRIA))}
+            >
+              <Card bordered={false}>
+                <Space direction="vertical" size="small">
+                  <Row className="ai-job-title">Mitochondria detection</Row>
+                  <Row>
+                    <img
+                      src={`/assets/images/${jobNameToImagePath.infer_mitochondria}`}
+                      alt={"Mitochondria detection example"}
+                      style={centerImageStyle}
+                    />
+                  </Row>
+                </Space>
+              </Card>
+            </Radio.Button>
             <Tooltip title="Coming soon">
               <Radio.Button
                 className="aIJobSelection"

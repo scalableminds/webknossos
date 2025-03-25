@@ -31,7 +31,10 @@ trait ApplyableVolumeUpdateAction extends VolumeUpdateAction {
   def applyOn(tracing: VolumeTracing): VolumeTracing
 }
 
-trait BucketMutatingVolumeUpdateAction extends VolumeUpdateAction
+trait BucketMutatingVolumeUpdateAction extends ApplyableVolumeUpdateAction {
+  override def applyOn(tracing: VolumeTracing): VolumeTracing =
+    if (tracing.getVolumeBucketDataHasChanged) tracing else tracing.copy(volumeBucketDataHasChanged = Some(true))
+}
 
 case class UpdateBucketVolumeAction(position: Vec3Int,
                                     cubeSize: Int,

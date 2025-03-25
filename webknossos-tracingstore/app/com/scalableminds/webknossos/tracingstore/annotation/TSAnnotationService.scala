@@ -168,8 +168,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         revertToVersion(annotationId, annotationWithTracings, a, targetVersion) ?~> "applyUpdate.revertToversion.failed"
       case _: ResetToBaseAnnotationAction =>
         resetToBase(annotationId, annotationWithTracings, targetVersion) ?~> "applyUpdate.resetToBase.failed"
-      case _: BucketMutatingVolumeUpdateAction =>
-        Fox.successful(annotationWithTracings) // No-op, as bucket-mutating actions are performed eagerly, so not here.
+      case a: BucketMutatingVolumeUpdateAction =>
+        Fox.successful(annotationWithTracings.markVolumeDataAsChanged(a.actionTracingId)) // No-op, as bucket-mutating actions are performed eagerly, so not here.
       case _: CompactVolumeUpdateAction =>
         Fox.successful(annotationWithTracings) // No-op, as legacy compacted update actions cannot be applied
       case _: UpdateTdCameraAnnotationAction =>

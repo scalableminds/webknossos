@@ -594,8 +594,8 @@ export function mergeAgglomerate(
   name: "mergeAgglomerate";
   value: {
     actionTracingId: string;
-    agglomerateId1: number; // unused
-    agglomerateId2: number; // unused
+    agglomerateId1: number; // unused in backend
+    agglomerateId2: number; // unused in backend
     segmentId1: number | undefined;
     segmentId2: number | undefined;
     // For backwards compatibility reasons,

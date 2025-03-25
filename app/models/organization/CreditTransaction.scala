@@ -103,7 +103,7 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
   }
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
-    q"""(_id IN (SELECT _organization FROM webknossos.users_ WHERE _multiUser = (SELECT _multiUser FROM webknossos.users_ WHERE _id = $requestingUserId)))
+    q"""(_organization IN (SELECT _organization FROM webknossos.users_ WHERE _multiUser = (SELECT _multiUser FROM webknossos.users_ WHERE _id = $requestingUserId)))
       OR TRUE in (SELECT isSuperUser FROM webknossos.multiUsers_ WHERE _id IN (SELECT _multiUser FROM webknossos.users_ WHERE _id = $requestingUserId))"""
 
   // Any user from an organization can update their credit transactions as for now all users can start paid jobs.

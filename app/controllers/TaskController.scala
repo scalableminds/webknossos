@@ -22,7 +22,7 @@ import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv
 import com.scalableminds.util.objectid.ObjectId
-import models.dataset.DatasetDAO
+import models.dataset.{DatasetDAO, DatasetService}
 
 import scala.concurrent.ExecutionContext
 
@@ -32,6 +32,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
                                taskTypeDAO: TaskTypeDAO,
                                userService: UserService,
                                taskDAO: TaskDAO,
+                               datasetService: DatasetService,
                                datasetDAO: DatasetDAO,
                                taskService: TaskService,
                                nmlService: AnnotationUploadService,
@@ -55,12 +56,14 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
         taskType <- taskTypeDAO.findOne(taskTypeId) ?~> "taskType.notFound"
         datasetId <- SequenceUtils.findUniqueElement(request.body.map(_.datasetId)) ?~> "task.create.notOnSameDataset"
         dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId)
+        dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable) ?~> "dataset.dataSource.notUsable"
         _ <- bool2Fox(dataset._organization == request.identity._organization) ?~> "task.create.datasetOfOtherOrga"
         _ <- taskCreationService.assertBatchLimit(request.body.length, taskType)
         taskParametersWithIds = taskCreationService.addNewIdsToTaskParameters(request.body, taskType)
         taskParametersFull <- taskCreationService.createTracingsFromBaseAnnotations(taskParametersWithIds,
                                                                                     taskType,
-                                                                                    dataset)
+                                                                                    dataset,
+                                                                                    dataSource)
         skeletonBaseOpts: List[Option[SkeletonTracing]] = taskCreationService.createTaskSkeletonTracingBases(
           taskParametersFull)
         volumeBaseOpts: List[Option[(VolumeTracing, Option[File])]] <- taskCreationService.createTaskVolumeTracingBases(

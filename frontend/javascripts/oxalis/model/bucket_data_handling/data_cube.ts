@@ -375,26 +375,33 @@ class DataCube {
   }
 
   collectBucketsIf(predicateFn: (bucket: DataBucket) => boolean): void {
-    // called by
-    //  reloadBuckets (ensures save anyway)
-    //    mapping saga
-    //    delete segment data
-    //    render missing data black
-    //    explicit "reload layers" action by user
-    //  collectAllBuckets (reloadAllBuckets, version restore view e.g.,)
-    //    previewVersion in version restore view (we are in a saved state, anyway)
+    // This method is always called in the context of reloading data.
+    // All callers should ensure a saved state. This is encapsulated in the
+    // api's reloadBuckets function that is most for most refresh-related
+    // features (e.g., user-initiated reload, mapping saga).
+    // Other than that, the function is only needed by the version restore view
+    // for previewing data. In that context, a saved state is given, too.
 
-    // We don't need to clear the pull queue, because the bucket addresses in it weren't
+    // We don't need to clear the pullQueue, because the bucket addresses in it weren't
     // even requested from the backend yet. The version look up for the actual request
     // happens *after* dequeuing. Also, clear() does not remove high-pri buckets anyway,
     // so we cannot rely on that.
+    // However, we abort ongoing requests in the pullQueue as they might yield outdated
+    // results. The buckets for which request(s) got aborted, will be marked as failed.
+    // Typically, they will be refetched as soon as they are needed again.
     this.pullQueue.abortRequests();
 
     const notCollectedBuckets = [];
     for (const bucket of this.buckets) {
       bucket._debuggerMaybe();
       if (
+        // In addition to the given predicate...
         predicateFn(bucket) &&
+        // ...we also call mayBeGarbageCollected() to find out whether we can GC the bucket.
+        // The bucket should never be in the requested state, since we aborted the requests above
+        // which will mark the bucket as failed. Using mayBeGarbageCollected guards us against
+        // collecting unsaved buckets (that should never occur, though, because of the saved state
+        // as explained above).
         bucket.mayBeGarbageCollected(
           // respectAccessedFlag=false because we don't care whether the bucket
           // was just used for rendering, as we reload data anyway.

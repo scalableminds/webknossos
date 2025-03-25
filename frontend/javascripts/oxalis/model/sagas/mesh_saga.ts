@@ -3,7 +3,7 @@ import { mergeBufferGeometries } from "libs/BufferGeometryUtils";
 import Deferred from "libs/async/deferred";
 import ErrorHandling from "libs/error_handling";
 import { V3 } from "libs/mjs";
-import { areVec3AlmostEqual, chunkDynamically, sleep } from "libs/utils";
+import { chunkDynamically, sleep } from "libs/utils";
 import _ from "lodash";
 import type { ActionPattern } from "redux-saga/effects";
 import type { APIDataset, APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
@@ -15,6 +15,7 @@ import {
   meshApi,
   sendAnalyticsEvent,
 } from "admin/admin_rest_api";
+import type { MeshLodInfo } from "admin/api/mesh";
 import ThreeDMap from "libs/ThreeDMap";
 import processTaskWithPool from "libs/async/task_pool";
 import { getDracoLoader } from "libs/draco";
@@ -23,7 +24,7 @@ import Toast from "libs/toast";
 import Zip from "libs/zipjs_wrapper";
 import messages from "messages";
 import { WkDevFlags } from "oxalis/api/wk_dev";
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3, Vector4 } from "oxalis/constants";
 import { AnnotationToolEnum, MappingStatusEnum } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import type { BufferGeometryWithInfo } from "oxalis/controller/segment_mesh_controller";
@@ -810,8 +811,10 @@ function* loadPrecomputedMeshForSegmentId(
   }
 
   let availableChunksMap: ChunksMap = {};
-  let scale: Vector3 | null = null;
+  let uniformScale: Vector3 | null = null;
+  let chunkScale: Vector3 | null = null;
   let loadingOrder: number[] | null = null;
+  let lods: MeshLodInfo[] | null = null;
   try {
     const chunkDescriptors = yield* call(
       _getChunkLoadingDescriptors,
@@ -820,8 +823,10 @@ function* loadPrecomputedMeshForSegmentId(
       segmentationLayer,
       meshFile,
     );
+    lods = chunkDescriptors.segmentInfo.chunks.lods;
     availableChunksMap = chunkDescriptors.availableChunksMap;
-    scale = chunkDescriptors.scale;
+    uniformScale = chunkDescriptors.uniformScale;
+    chunkScale = chunkDescriptors.segmentInfo.chunkScale;
     loadingOrder = chunkDescriptors.loadingOrder;
   } catch (exception) {
     Toast.warning(messages["tracing.mesh_listing_failed"](id));
@@ -844,7 +849,8 @@ function* loadPrecomputedMeshForSegmentId(
     seedPosition,
     availableChunksMap,
     loadingOrder,
-    scale,
+    (lod: number) => V3.scale3(uniformScale, extractScaleFromMatrix(lods[lod].transform)),
+    chunkScale,
     additionalCoordinates,
     mergeChunks,
     id,
@@ -879,7 +885,7 @@ function* _getChunkLoadingDescriptors(
   meshFile: APIMeshFile,
 ) {
   const availableChunksMap: ChunksMap = {};
-  let scale: Vector3 | null = null;
+  let uniformScale: Vector3 | null = null;
   let loadingOrder: number[] = [];
 
   const { segmentMeshController } = getSceneController();
@@ -921,10 +927,11 @@ function* _getChunkLoadingDescriptors(
     meshFileType,
     meshFilePath,
   );
-  scale = [segmentInfo.transform[0][0], segmentInfo.transform[1][1], segmentInfo.transform[2][2]];
-  segmentInfo.chunks.lods.forEach((chunks, lodIndex) => {
-    availableChunksMap[lodIndex] = chunks?.chunks;
+  uniformScale = extractScaleFromMatrix(segmentInfo.transform);
+  segmentInfo.chunks.lods.forEach((meshLodInfo, lodIndex) => {
+    availableChunksMap[lodIndex] = meshLodInfo?.chunks;
     loadingOrder.push(lodIndex);
+    meshLodInfo.transform;
   });
   const currentLODIndex = yield* call(
     {
@@ -938,9 +945,14 @@ function* _getChunkLoadingDescriptors(
 
   return {
     availableChunksMap,
-    scale,
+    uniformScale,
     loadingOrder,
+    segmentInfo,
   };
+}
+
+function extractScaleFromMatrix(transform: [Vector4, Vector4, Vector4]): Vector3 {
+  return [transform[0][0], transform[1][1], transform[2][2]];
 }
 
 function _getLoadChunksTasks(
@@ -952,7 +964,8 @@ function _getLoadChunksTasks(
   seedPosition: Vector3,
   availableChunksMap: ChunksMap,
   loadingOrder: number[],
-  scale: Vector3 | null,
+  getGlobalScale: (lod: number) => Vector3 | null,
+  chunkScale: Vector3 | null,
   additionalCoordinates: AdditionalCoordinate[] | null,
   mergeChunks: boolean,
   segmentId: number,
@@ -1020,7 +1033,9 @@ function _getLoadChunksTasks(
                       chunk.data,
                     )) as BufferGeometryWithInfo;
                     bufferGeometry.unmappedSegmentId = chunk.unmappedSegmentId;
-                    bufferGeometry.scale(1/65536, 1/65536, 1/65536); // TODO @philipp: chunkScale parameter here
+                    if (chunkScale != null) {
+                      bufferGeometry.scale(...chunkScale);
+                    }
                     bufferGeometries.push(bufferGeometry);
                   } catch (error) {
                     errorsWithDetails.push({ error, chunk });
@@ -1041,20 +1056,20 @@ function _getLoadChunksTasks(
 
                 // Check if the mesh scale is different to all supported mags of the active segmentation scaled by the dataset scale and warn in the console to make debugging easier in such a case.
                 // This hint at the mesh file being computed when the dataset scale was different than currently configured.
-                const segmentationLayerMags = yield* select(
-                  (state) => getVisibleSegmentationLayer(state)?.resolutions,
-                );
-                const datasetScaleFactor = dataset.dataSource.scale.factor;
-                if (segmentationLayerMags && scale) {
-                  const doesSomeSegmentMagMatchMeshScale = segmentationLayerMags.some((res) =>
-                    areVec3AlmostEqual(V3.scale3(datasetScaleFactor, res), scale),
-                  );
-                  if (!doesSomeSegmentMagMatchMeshScale) {
-                    console.warn(
-                      `Scale of mesh ${id} is different to dataset scale. Mesh scale: ${scale}, Dataset scale: ${dataset.dataSource.scale.factor}. This might lead to unexpected rendering results.`,
-                    );
-                  }
-                }
+                // const segmentationLayerMags = yield* select(
+                //   (state) => getVisibleSegmentationLayer(state)?.resolutions,
+                // );
+                // const datasetScaleFactor = dataset.dataSource.scale.factor;
+                // if (segmentationLayerMags && scale) {
+                //   const doesSomeSegmentMagMatchMeshScale = segmentationLayerMags.some((res) =>
+                //     areVec3AlmostEqual(V3.scale3(datasetScaleFactor, res), scale),
+                //   );
+                //   if (!doesSomeSegmentMagMatchMeshScale) {
+                //     console.warn(
+                //       `Scale of mesh ${id} is different to dataset scale. Mesh scale: ${scale}, Dataset scale: ${dataset.dataSource.scale.factor}. This might lead to unexpected rendering results.`,
+                //     );
+                //   }
+                // }
 
                 yield* call(
                   {
@@ -1065,7 +1080,7 @@ function _getLoadChunksTasks(
                   id,
                   position,
                   // Apply the scale from the segment info, which includes dataset scale and mag
-                  scale,
+                  getGlobalScale(lod),
                   lod,
                   layerName,
                   additionalCoordinates,

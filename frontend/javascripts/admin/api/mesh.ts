@@ -10,11 +10,12 @@ export type MeshChunk = {
   unmappedSegmentId: number;
 };
 
-type MeshLodInfo = {
+export type MeshLodInfo = {
   scale: number;
   vertexOffset: Vector3;
   chunkShape: Vector3;
   chunks: Array<MeshChunk>;
+  transform: [Vector4, Vector4, Vector4]; // 4x3 matrix
 };
 
 type MeshSegmentInfo = {
@@ -27,6 +28,7 @@ type SegmentInfo = {
   transform: [Vector4, Vector4, Vector4]; // 4x3 matrix
   meshFormat: "draco";
   chunks: MeshSegmentInfo;
+  chunkScale: Vector3;
 };
 
 export function getMeshfileChunksForSegment(

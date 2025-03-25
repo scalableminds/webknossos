@@ -33,10 +33,10 @@ import net.liftweb.common.Box
 import scala.concurrent.ExecutionContext
 
 class WKRemoteTracingStoreClient(
-                                  tracingStore: TracingStore,
-                                  dataset: Dataset,
-                                  rpc: RPC,
-                                  annotationDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore)(implicit ec: ExecutionContext)
+    tracingStore: TracingStore,
+    dataset: Dataset,
+    rpc: RPC,
+    annotationDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
   private def baseInfo = s" Dataset: ${dataset.name} Tracingstore: ${tracingStore.url}"

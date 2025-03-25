@@ -23,7 +23,7 @@ const WkstoreAdapterMock = {
 };
 mockRequire("oxalis/model/bucket_data_handling/wkstore_adapter", WkstoreAdapterMock);
 
-const mockedCube = {
+const mockedCubeTemplate = {
   isSegmentation: true,
   shouldEagerlyMaintainUsedValueSet: () => false,
   triggerBucketDataChanged: () => false,
@@ -82,6 +82,10 @@ test.beforeEach((t) => {
     typ: "webknossos-store",
   };
   const pullQueue = new PullQueue(cube as any, layer.name, datastoreInfo as any);
+  const mockedCube = {
+    ...mockedCubeTemplate,
+    pullQueue,
+  };
   const buckets = [
     new DataBucket("uint8", [0, 0, 0, 0], null, mockedCube),
     new DataBucket("uint8", [1, 1, 1, 1], null, mockedCube),

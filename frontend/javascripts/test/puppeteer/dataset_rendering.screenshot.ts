@@ -1,8 +1,11 @@
-import urljoin from "url-join";
 import "test/mocks/lz4";
 import type { PartialDatasetConfiguration } from "oxalis/store";
-import path from "node:path";
-import { compareScreenshot, isPixelEquivalent } from "./screenshot_helpers";
+import {
+  compareScreenshot,
+  getUrlForScreenshotTests,
+  isPixelEquivalent,
+  SCREENSHOTS_BASE_PATH,
+} from "./screenshot_helpers";
 import {
   test,
   getNewPage,
@@ -14,34 +17,19 @@ import {
   setupBeforeEachAndAfterEach,
   withRetry,
   WK_AUTH_TOKEN,
-  checkBrowserstackCredentials,
-  getDefaultRequestOptions,
+  writeDatasetNameToIdMapping,
+  assertDatasetIds,
 } from "./dataset_rendering_helpers";
 
 if (!WK_AUTH_TOKEN) {
   throw new Error("No WK_AUTH_TOKEN specified.");
 }
 
-checkBrowserstackCredentials();
-
 process.on("unhandledRejection", (err, promise) => {
   console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");
 });
-const BASE_PATH = path.join(__dirname, "../../../../frontend/javascripts/test/screenshots");
-let URL = "https://master.webknossos.xyz/";
 
-if (!process.env.URL) {
-  console.warn(
-    "[Warning] No url specified, assuming dev master. If you want to specify a URL, prepend URL=<url> to the command.",
-  );
-} else {
-  URL = process.env.URL;
-
-  // Prepend https:// if not specified
-  if (!/^https?:\/\//i.test(URL)) {
-    URL = `https://${URL}`;
-  }
-}
+const URL = getUrlForScreenshotTests();
 
 console.log(`[Info] Executing tests on URL ${URL}.`);
 
@@ -53,8 +41,6 @@ const datasetNames = [
   "2017-05-31_mSEM_aniso-test",
   "dsA_2",
   "2017-05-31_mSEM_scMS109_bk_100um_v01-aniso",
-  "ROI2017_wkw_fallback",
-  "float_test_dataset",
   "Multi-Channel-Test",
   "connectome_file_test_dataset",
   "kiwi", // This dataset is rotated and translated.
@@ -63,13 +49,13 @@ const datasetNames = [
 type DatasetName = string;
 type FallbackLayerName = string | null;
 const annotationSpecs: Array<[DatasetName, FallbackLayerName]> = [
-  ["ROI2017_wkw_fallback", "segmentation"],
-  ["ROI2017_wkw_fallback", null],
+  ["ROI2017_wkw", "segmentation"],
+  ["ROI2017_wkw", null],
 ];
 
 const viewOverrides: Record<string, string> = {
   "2017-05-31_mSEM_scMS109_bk_100um_v01-aniso": "4608,4543,386,0,4.00",
-  ROI2017_wkw_fallback: "535,536,600,0,1.18",
+  ROI2017_wkw: "535,536,600,0,1.18",
   dsA_2: "1024,1024,64,0,0.424",
   "Multi-Channel-Test": "1201,1072,7,0,0.683",
   "test-agglomerate-file":
@@ -81,7 +67,7 @@ const viewOverrides: Record<string, string> = {
   kiwi: "1191,1112,21,0,8.746",
 };
 const datasetConfigOverrides: Record<string, PartialDatasetConfiguration> = {
-  ROI2017_wkw_fallback: {
+  ROI2017_wkw: {
     layers: {
       color: {
         alpha: 100,
@@ -110,26 +96,15 @@ const datasetConfigOverrides: Record<string, PartialDatasetConfiguration> = {
 
 const datasetNameToId: Record<string, string> = {};
 test.before("Retrieve dataset ids", async () => {
-  for (const datasetName of datasetNames.concat(["test-agglomerate-file"])) {
-    await withRetry(
-      3,
-      async () => {
-        const options = getDefaultRequestOptions(URL);
-        const path = `/api/datasets/disambiguate/sample_organization/${datasetName}/toId`;
-        const url = urljoin(URL, path);
-        const response = await fetch(url, options);
-        const { id } = await response.json();
-        datasetNameToId[datasetName] = id;
-        return true;
-      },
-      () => {},
-    );
-  }
+  await writeDatasetNameToIdMapping(
+    URL,
+    datasetNames.concat(["test-agglomerate-file"]),
+    datasetNameToId,
+  );
 });
+
 test.serial("Dataset IDs were retrieved successfully", (t) => {
-  for (const datasetName of datasetNames) {
-    t.truthy(datasetNameToId[datasetName], `Dataset ID not found for "${datasetName}"`);
-  }
+  assertDatasetIds(t, datasetNames, datasetNameToId);
 });
 
 datasetNames.map(async (datasetName) => {
@@ -137,20 +112,25 @@ datasetNames.map(async (datasetName) => {
     await withRetry(
       3,
       async () => {
+        const page = await getNewPage(t.context.browser);
         const { screenshot, width, height } = await screenshotDataset(
-          await getNewPage(t.context.browser),
+          page,
           URL,
           datasetNameToId[datasetName],
-          viewOverrides[datasetName],
-          datasetConfigOverrides[datasetName],
+          undefined,
+          {
+            viewOverride: viewOverrides[datasetName],
+            datasetConfigOverride: datasetConfigOverrides[datasetName],
+          },
         );
         const changedPixels = await compareScreenshot(
           screenshot,
           width,
           height,
-          BASE_PATH,
+          SCREENSHOTS_BASE_PATH,
           datasetName,
         );
+        await page.close();
         return isPixelEquivalent(changedPixels, width, height);
       },
       (condition) => {
@@ -165,6 +145,7 @@ datasetNames.map(async (datasetName) => {
 
 annotationSpecs.map(async (annotationSpec) => {
   const [datasetName, fallbackLayerName] = annotationSpec;
+  const fallbackLabel = fallbackLayerName ?? "without_fallback";
 
   test.serial(
     `It should render an annotation for ${datasetName} with fallback_layer=${fallbackLayerName} correctly`,
@@ -175,21 +156,25 @@ annotationSpecs.map(async (annotationSpec) => {
       await withRetry(
         3,
         async () => {
+          const page = await getNewPage(t.context.browser);
           const { screenshot, width, height } = await screenshotAnnotation(
-            await getNewPage(t.context.browser),
+            page,
             URL,
             datasetNameToId[datasetName],
             fallbackLayerName,
-            viewOverrides[datasetName],
-            datasetConfigOverrides[datasetName],
+            {
+              viewOverride: viewOverrides[datasetName],
+              datasetConfigOverride: datasetConfigOverrides[datasetName],
+            },
           );
           const changedPixels = await compareScreenshot(
             screenshot,
             width,
             height,
-            BASE_PATH,
-            `annotation_${datasetName}_${fallbackLayerName}`,
+            SCREENSHOTS_BASE_PATH,
+            `annotation_${datasetName}_${fallbackLabel}`,
           );
+          await page.close();
           return isPixelEquivalent(changedPixels, width, height);
         },
         (condition) => {
@@ -209,8 +194,9 @@ test.serial("it should render a dataset with mappings correctly", async (t) => {
   await withRetry(
     3,
     async () => {
+      const page = await getNewPage(t.context.browser);
       const { screenshot, width, height } = await screenshotDatasetWithMapping(
-        await getNewPage(t.context.browser),
+        page,
         URL,
         datasetNameToId[datasetName],
         mappingName,
@@ -219,9 +205,10 @@ test.serial("it should render a dataset with mappings correctly", async (t) => {
         screenshot,
         width,
         height,
-        BASE_PATH,
+        SCREENSHOTS_BASE_PATH,
         `${datasetName}_with_mapping_${mappingName}`,
       );
+      await page.close();
       return isPixelEquivalent(changedPixels, width, height);
     },
     (condition) => {
@@ -240,8 +227,9 @@ test.serial(
     await withRetry(
       3,
       async () => {
+        const page = await getNewPage(t.context.browser);
         const { screenshot, width, height } = await screenshotDatasetWithMappingLink(
-          await getNewPage(t.context.browser),
+          page,
           URL,
           datasetNameToId[datasetName],
           viewOverride,
@@ -250,9 +238,10 @@ test.serial(
           screenshot,
           width,
           height,
-          BASE_PATH,
+          SCREENSHOTS_BASE_PATH,
           `${datasetName}_with_mapping_link`,
         );
+        await page.close();
         return isPixelEquivalent(changedPixels, width, height);
       },
       (condition) => {
@@ -272,8 +261,9 @@ test.serial(
     await withRetry(
       3,
       async () => {
+        const page = await getNewPage(t.context.browser);
         const { screenshot, width, height } = await screenshotSandboxWithMappingLink(
-          await getNewPage(t.context.browser),
+          page,
           URL,
           datasetNameToId[datasetName],
           viewOverride,
@@ -282,9 +272,10 @@ test.serial(
           screenshot,
           width,
           height,
-          BASE_PATH, // Should look the same as an explorative tracing on the same dataset with the same mapping link
+          SCREENSHOTS_BASE_PATH, // Should look the same as an explorative tracing on the same dataset with the same mapping link
           `${datasetName}_with_mapping_link`,
         );
+        await page.close();
         return isPixelEquivalent(changedPixels, width, height);
       },
       (condition) => {
@@ -304,19 +295,24 @@ test.serial(
     await withRetry(
       3,
       async () => {
+        const page = await getNewPage(t.context.browser);
         const { screenshot, width, height } = await screenshotDataset(
-          await getNewPage(t.context.browser),
+          page,
           URL,
           datasetNameToId[datasetName],
-          viewOverride,
+          undefined,
+          {
+            viewOverride: viewOverride,
+          },
         );
         const changedPixels = await compareScreenshot(
           screenshot,
           width,
           height,
-          BASE_PATH,
+          SCREENSHOTS_BASE_PATH,
           `${datasetName}_with_meshes_link`,
         );
+        await page.close();
         return isPixelEquivalent(changedPixels, width, height);
       },
       (condition) => {

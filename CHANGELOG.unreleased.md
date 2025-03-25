@@ -11,8 +11,12 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/25.02.1...HEAD)
 
 ### Added
+- Added support for datasets with the following data types: int8, int16, int32, uint32 (support for color was added, support for segmentation already existed before) and int64 (segmentation only). [#8325](https://github.com/scalableminds/webknossos/pull/8325)
 - Added a command palette that allows navigating between pages, switching tools and accessing some user settings via Ctrl+P. [#8447](https://github.com/scalableminds/webknossos/pull/8447/)
+- Super users can now share the trained AI models with other organizations. [#8418](https://github.com/scalableminds/webknossos/pull/8418)
 - Failed jobs may be retried by super-users. [#8377](https://github.com/scalableminds/webknossos/pull/8377)
+- Optimized server-side storage of skeleton annotation layers. [#8423](https://github.com/scalableminds/webknossos/pull/8423)
+- Added support for adding N5 datasets with compact-style multiscale metadata. [#8456](https://github.com/scalableminds/webknossos/pull/8456)
 
 ### Changed
 - When using a zarr link to a wk-served data layer as another layer’s source, the user’s token is used to access the data. [#8322](https://github.com/scalableminds/webknossos/pull/8322/)
@@ -25,6 +29,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed the alignment of the button that allows restricting floodfill operations to a bounding box. [#8388](https://github.com/scalableminds/webknossos/pull/8388) 
 - Fixed a bug for rotated dataset where volume tools were disabled although the dataset was rendered untransformed. [#8432](https://github.com/scalableminds/webknossos/pull/8432)
 - Fixed rare bug where saving got stuck. [#8409](https://github.com/scalableminds/webknossos/pull/8409)
+- Fixed some rendering bugs for float datasets that used a large dynamic range. [#8325](https://github.com/scalableminds/webknossos/pull/8325)
 - Fixed a bug where reverting annotations could get stuck if some of its layers had been deleted in the meantime. [#8405](https://github.com/scalableminds/webknossos/pull/8405)
 - When removing a segment from the segment list, a corresponding precomputed mesh was not removed automatically. [#8428](https://github.com/scalableminds/webknossos/pull/8428)
 - Fixed a bug where newly added remote datasets would always appear in root folder, regardless of actual selected folder. [#8425](https://github.com/scalableminds/webknossos/pull/8425)
@@ -33,6 +38,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed an issue with icon spacing on the task dashboard page. [#8452](https://github.com/scalableminds/webknossos/pull/8452)
 - Fixed a spacing issue in the statusbar. [#8455](https://github.com/scalableminds/webknossos/pull/8455)
 - Fixed a bug where the "Create Animation" modal did not open when selecting the corresponding feature from the navbar menu. [#8444](https://github.com/scalableminds/webknossos/pull/8444)
+- Fixed that the brightness/contrast settings (in the histogram) could not be changed if the histogram data could not be loaded for some reason. [#8459](https://github.com/scalableminds/webknossos/pull/8459)
 
 ### Removed
 

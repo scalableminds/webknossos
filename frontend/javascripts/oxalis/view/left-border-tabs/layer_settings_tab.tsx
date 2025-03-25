@@ -587,9 +587,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     }
     const defaultIntensityRange = getDefaultValueRangeOfLayer(this.props.dataset, layerName);
     const histograms = this.props.histogramData?.[layerName];
+    const elementClass = getElementClass(this.props.dataset, layerName);
 
     return (
       <Histogram
+        supportFractions={elementClass === "float" || elementClass === "double"}
         data={histograms}
         intensityRangeMin={intensityRange[0]}
         intensityRangeMax={intensityRange[1]}
@@ -696,7 +698,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             key: "deleteAnnotationLayer",
           }
         : null,
-      hasHistogram && !isDisabled
+      !isDisabled
         ? { label: this.getEditMinMaxButton(layerName, isInEditMode), key: "editMinMax" }
         : null,
       hasHistogram && !isDisabled

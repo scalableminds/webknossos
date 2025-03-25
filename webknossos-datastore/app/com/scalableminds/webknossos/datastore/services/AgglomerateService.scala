@@ -76,7 +76,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
        agglomerate id in the segment-to-agglomerate array.
        The value is first converted to the primitive signed number types, and then converted
        to Long via uByteToLong, uShortToLong etc, which perform bitwise and to take care of
-       the unsigned semantics. Using functions avoids allocating intermediate UnsignedInteger objects.
+       the unsigned semantics. Using functions avoids allocating intermediate SegmentInteger objects.
        Allocating a fixed-length LongBuffer first is a further performance optimization.
      */
     convertData(data, request.dataLayer.elementClass) match {

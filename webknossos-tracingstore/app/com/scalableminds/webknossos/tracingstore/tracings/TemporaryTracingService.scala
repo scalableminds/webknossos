@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.Fox.bool2Fox
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
+import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
 import scalapb.GeneratedMessageCompanion
 
@@ -20,7 +20,7 @@ class TemporaryTracingService @Inject()(
     volumeStore: TemporaryTracingStore[VolumeTracing],
     volumeDataStore: TemporaryTracingStore[Array[Byte]],
     annotationStore: TemporaryTracingStore[AnnotationProto],
-    segmentIndexStore: TemporaryTracingStore[ListOfVec3IntProto],
+    segmentIndexStore: TemporaryTracingStore[Set[Vec3IntProto]],
     temporaryTracingIdStore: TracingStoreRedisStore)(implicit ec: ExecutionContext) {
 
   implicit def skeletonTracingCompanion: GeneratedMessageCompanion[SkeletonTracing] = SkeletonTracing
@@ -53,7 +53,7 @@ class TemporaryTracingService @Inject()(
   def getAllVolumeBucketsWithPrefix(bucketPrefix: String): collection.Map[String, Array[Byte]] =
     volumeDataStore.getAllConditionalWithKey(key => key.startsWith(bucketPrefix))
 
-  def getVolumeSegmentIndexBufferForKey(segmentIndexKey: String): Option[ListOfVec3IntProto] =
+  def getVolumeSegmentIndexBufferForKey(segmentIndexKey: String): Option[Set[Vec3IntProto]] =
     segmentIndexStore.get(segmentIndexKey)
 
   def saveSkeleton(tracingId: String, skeletonTracing: SkeletonTracing): Fox[Unit] = {
@@ -79,8 +79,7 @@ class TemporaryTracingService @Inject()(
     Fox.successful(())
   }
 
-  def saveVolumeSegmentIndexBuffer(tracingId: String,
-                                   segmentIndexBuffer: Map[String, ListOfVec3IntProto]): Fox[Unit] = {
+  def saveVolumeSegmentIndexBuffer(tracingId: String, segmentIndexBuffer: Map[String, Set[Vec3IntProto]]): Fox[Unit] = {
     segmentIndexStore.insertAll(segmentIndexBuffer.toSeq: _*)
     registerTracingId(tracingId)
     Fox.successful(())

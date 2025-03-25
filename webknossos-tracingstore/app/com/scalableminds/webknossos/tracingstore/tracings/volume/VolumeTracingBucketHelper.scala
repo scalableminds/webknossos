@@ -28,7 +28,7 @@ trait VolumeBucketCompression extends LazyLogging {
   private val compressor: LZ4Compressor = lz4factory.fastCompressor
   private val decompressor: LZ4FastDecompressor = lz4factory.fastDecompressor
 
-  def compressVolumeBucket(data: Array[Byte], expectedUncompressedBucketSize: Int): Array[Byte] =
+  protected def compressVolumeBucket(data: Array[Byte], expectedUncompressedBucketSize: Int): Array[Byte] =
     if (data.length == expectedUncompressedBucketSize) {
       val compressedData = compressor.compress(data)
       if (compressedData.length < data.length) {
@@ -39,7 +39,9 @@ trait VolumeBucketCompression extends LazyLogging {
       data
     }
 
-  def decompressIfNeeded(data: Array[Byte], expectedUncompressedBucketSize: Int, debugInfo: String): Array[Byte] = {
+  protected def decompressIfNeeded(data: Array[Byte],
+                                   expectedUncompressedBucketSize: Int,
+                                   debugInfo: String): Array[Byte] = {
     val isAlreadyDecompressed = data.length == expectedUncompressedBucketSize
     if (isAlreadyDecompressed) {
       data
@@ -55,10 +57,10 @@ trait VolumeBucketCompression extends LazyLogging {
     }
   }
 
-  def expectedUncompressedBucketSizeFor(dataLayer: DataLayer): Int =
+  protected def expectedUncompressedBucketSizeFor(dataLayer: DataLayer): Int =
     expectedUncompressedBucketSizeFor(dataLayer.elementClass)
 
-  def expectedUncompressedBucketSizeFor(elementClass: ElementClass.Value): Int = {
+  protected def expectedUncompressedBucketSizeFor(elementClass: ElementClass.Value): Int = {
     val bytesPerVoxel = ElementClass.bytesPerElement(elementClass)
     bytesPerVoxel * scala.math.pow(DataLayer.bucketLength, 3).intValue
   }

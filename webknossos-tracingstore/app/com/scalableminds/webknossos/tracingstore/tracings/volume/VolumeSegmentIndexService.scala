@@ -9,7 +9,7 @@ import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, ElementClass}
-import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
+import com.scalableminds.webknossos.datastore.geometry.{ListOfVec3IntProto, Vec3IntProto}
 import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, ProtoGeometryImplicits}
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, SegmentInteger, SegmentIntegerArray}
 import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
@@ -66,7 +66,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
     for {
       before <- Instant.nowFox
       bucketBytesDecompressed <- if (isRevertedElement(bucketBytes)) {
-        Fox.successful(emptyArrayForElementClass(elementClass))
+        Fox.successful(segmentIndexBuffer.emptyBucketArrayForElementClass)
       } else {
         tryo(
           decompressIfNeeded(bucketBytes,
@@ -74,20 +74,19 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
                              "updating segment index, new bucket data")).toFox
       }
 
-      // previous bytes: include fallback layer bytes if available, otherwise use empty bytes
-      previousBucketBytesWithEmptyFallback <- bytesWithEmptyFallback(previousBucketBytesBox, elementClass) ?~> "volumeSegmentIndex.update.getPreviousBucket.failed"
+      previousBucketBytesWithEmptyFallback <- segmentIndexBuffer.bytesWithEmptyFallback(previousBucketBytesBox) ?~> "volumeSegmentIndex.update.getPreviousBucket.failed"
       segmentIds: Set[Long] <- collectSegmentIds(bucketBytesDecompressed, elementClass).toFox
       previousSegmentIds: Set[Long] <- collectSegmentIds(previousBucketBytesWithEmptyFallback, elementClass) ?~> "volumeSegmentIndex.update.collectSegmentIds.failed"
       additions = segmentIds.diff(previousSegmentIds)
       removals = previousSegmentIds.diff(segmentIds)
-      _ <- Fox.serialCombined(removals.toList)(
+      /*_ <- Fox.serialCombined(removals.toList)(
         segmentId =>
           // When fallback layer is used we also need to include relevant segments here into the fossildb since otherwise the fallback layer would be used with invalid data
           removeBucketFromSegmentIndex(segmentIndexBuffer,
                                        segmentId,
                                        bucketPosition,
                                        mappingName,
-                                       editableMappingTracingId)) ?~> "volumeSegmentIndex.update.removeBucket.failed"
+                                       editableMappingTracingId)) ?~> "volumeSegmentIndex.update.removeBucket.failed"*/
       // When fallback layer is used, copy the entire bucketlist for this segment instead of one bucket
       _ <- Fox.runIf(additions.nonEmpty)(
         addBucketToSegmentIndex(segmentIndexBuffer,
@@ -96,16 +95,6 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
                                 mappingName,
                                 editableMappingTracingId)) ?~> "volumeSegmentIndex.update.addBucket.failed"
     } yield ()
-
-  private def bytesWithEmptyFallback(bytesBox: Box[Array[Byte]], elementClass: ElementClassProto): Box[Array[Byte]] =
-    bytesBox match {
-      case Empty       => Full(emptyArrayForElementClass(elementClass))
-      case Full(bytes) => Full(bytes)
-      case f: Failure  => f
-    }
-
-  private def emptyArrayForElementClass(elementClass: ElementClassProto): Array[Byte] =
-    Array.fill[Byte](ElementClass.bytesPerElement(elementClass))(0)
 
   private def removeBucketFromSegmentIndex(
       segmentIndexBuffer: VolumeSegmentIndexBuffer,
@@ -133,11 +122,12 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
       mappingName: Option[String],
       editableMappingTracingId: Option[String])(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      previousBuckets <- segmentIndexBuffer.getSegmentToBucketIndexMap(segmentIds,
-                                                                       bucketPosition.mag,
-                                                                       mappingName,
-                                                                       editableMappingTracingId,
-                                                                       bucketPosition.additionalCoordinates)
+      previousBuckets: Seq[(Long, Seq[Vec3IntProto])] <- segmentIndexBuffer.getSegmentToBucketIndexMap(
+        segmentIds,
+        bucketPosition.mag,
+        mappingName,
+        editableMappingTracingId,
+        bucketPosition.additionalCoordinates)
       _ <- Fox.serialCombined(previousBuckets) {
         case (segmentId, previousBucketList) =>
           val newBucketList =
@@ -156,25 +146,20 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
         .collectSegmentIds(bytes, ElementClass.bytesPerElement(elementClass), ElementClass.isSigned(elementClass))
         .toSet)
   /*for {
-      set <- tryo(SegmentIntegerArray.toSetFromByteArray(bytes, elementClass))
-    } yield
-      set.filter(!_.isZero).map { u: SegmentInteger =>
-        u.toLong
-      }*/
+set <- tryo(SegmentIntegerArray.toSetFromByteArray(bytes, elementClass))
+} yield
+set.filter(!_.isZero).map { u: SegmentInteger =>
+  u.toLong
+}*/
 
-  private def getSegmentToBucketIndexWithEmptyFallback(segmentIndexBuffer: VolumeSegmentIndexBuffer,
-                                                       segmentId: Long,
-                                                       mag: Vec3Int,
-                                                       mappingName: Option[String],
-                                                       editableMappingTracingId: Option[String],
-                                                       additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
-      implicit ec: ExecutionContext): Fox[ListOfVec3IntProto] =
-    for {
-      bucketListBox <- segmentIndexBuffer
-        .getWithFallback(segmentId, mag, mappingName, editableMappingTracingId, additionalCoordinates)
-        .futureBox
-      bucketList <- addEmptyFallback(bucketListBox)
-    } yield bucketList
+  private def getSegmentToBucketIndexWithEmptyFallback(
+      segmentIndexBuffer: VolumeSegmentIndexBuffer,
+      segmentId: Long,
+      mag: Vec3Int,
+      mappingName: Option[String],
+      editableMappingTracingId: Option[String],
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit ec: ExecutionContext): Fox[Set[Vec3IntProto]] =
+    segmentIndexBuffer.getOne(segmentId, mag, mappingName, editableMappingTracingId, additionalCoordinates)
 
   def getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(fallbackLayer: Option[RemoteFallbackLayer],
                                                             tracingId: String,

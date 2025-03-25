@@ -1,5 +1,4 @@
 import update from "immutability-helper";
-import mockRequire from "mock-require";
 import type { SkeletonTracing } from "oxalis/store";
 import { initialState as defaultState } from "test/fixtures/volumetracing_object";
 
@@ -8,13 +7,6 @@ import EdgeCollection from "oxalis/model/edge_collection";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { TreeTypeEnum } from "oxalis/constants";
 import type { APIColorLayer } from "types/api_flow_types";
-
-mockRequire("app", {
-  currentUser: {
-    firstName: "SCM",
-    lastName: "Boy",
-  },
-});
 
 const colorLayer: APIColorLayer = {
   name: "color",

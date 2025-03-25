@@ -20,12 +20,6 @@ import {
   initialSkeletonTracing,
 } from "test/fixtures/hybridtracing_object";
 
-mock("app", {
-  currentUser: {
-    firstName: "SCM",
-    lastName: "Boy",
-  },
-});
 mock("libs/window", {
   confirm: () => true,
   document: {

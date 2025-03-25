@@ -164,7 +164,7 @@ test("Tools should be disabled when dataset is rotated", (t) => {
   }
 });
 
-test("Tools should not be  disabled when dataset is rotation is toggled off", (t) => {
+test("Tools should not be disabled when dataset rotation is toggled off", (t) => {
   const rotationTurnedOffState = update(rotatedState, {
     datasetConfiguration: {
       nativelyRenderedLayerName: { $set: rotatedState.dataset.dataSource.dataLayers[0].name },

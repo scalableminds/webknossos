@@ -165,7 +165,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
     if (this.state.isEditing) {
       return this.props.rows === 1 ? (
         <Space.Compact block>
-          <Input {...inputComponentProps} onBlur={() => this.handleOnChange} />
+          <Input {...inputComponentProps} onBlur={() => this.handleOnChange()} />
           <FastTooltip key="save" title={`Save ${this.props.label}`} placement="bottom">
             <CheckOutlined
               style={iconStyle}

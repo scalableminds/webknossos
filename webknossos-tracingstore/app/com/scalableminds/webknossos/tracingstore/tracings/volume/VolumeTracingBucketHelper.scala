@@ -177,6 +177,10 @@ trait VolumeTracingBucketHelper
   def volumeDataStore: FossilDBClient
   def temporaryTracingService: TemporaryTracingService
 
+  def loadBuckets(volumeTracingLayer: VolumeTracingLayer,
+                  bucketPositions: Seq[BucketPosition],
+                  version: Option[Long] = None): Fox[List[Array[Byte]]] = ???
+
   def loadBucket(volumeTracingLayer: VolumeTracingLayer,
                  bucket: BucketPosition,
                  version: Option[Long] = None): Fox[Array[Byte]] = {

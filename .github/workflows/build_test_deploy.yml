@@ -53,7 +53,7 @@ jobs:
     env:
       # The hostname used to communicate with the PostgreSQL service container
       # POSTGRES_HOST: localhost
-      # POSTGRES_PORT: 5433
+      # POSTGRES_PORT: 5432
       PGPASSWORD: secret_password
     services:
         postgres:
@@ -69,7 +69,7 @@ jobs:
             --health-timeout 5s
             --health-retries 30
           ports:
-            - 5433:5432
+            - 5432:5432
     steps:
 
       - name: Checkout code
@@ -134,7 +134,7 @@ jobs:
             sbt -no-colors -DfailOnWarning compile stage
           fi
         env:
-          POSTGRES_URL: jdbc:postgresql://localhost:5433/webknossos
+          POSTGRES_URL: jdbc:postgresql://localhost:5432/webknossos
           POSTGRES_USER: webknossos_user
           POSTGRES_PASSWORD: secret_password
 
@@ -161,7 +161,7 @@ jobs:
           docker pull scalableminds/webknossos:$NORMALIZED_BRANCH || true
           DEV_CACHE=$NORMALIZED_BRANCH docker compose build --pull webknossos
         env:
-          POSTGRES_URL: jdbc:postgresql://localhost:5433/webknossos
+          POSTGRES_URL: jdbc:postgresql://localhost:5432/webknossos
           POSTGRES_USER: webknossos_user
           POSTGRES_PASSWORD: secret_password
 
@@ -178,6 +178,8 @@ jobs:
 
       - name: Start webknossos, datastore, and tracingstore
         run: |
+          set -xeo pipefail
+
           mkdir -p fossildb/data && sudo chmod -R "0777" fossildb/data
           mkdir -p fossildb/backup && sudo chmod -R "0777" fossildb/backup
           docker compose up -d webknossos
@@ -206,7 +208,7 @@ jobs:
           max_attempts: 3
           command: sh -c "docker ps && .github/not-on-master.sh yarn run test-e2e"
         env:
-          POSTGRES_URL: jdbc:postgresql://localhost:5432/webknossos
+          POSTGRES_URL: jdbc:postgresql://localhost:5434/webknossos
           POSTGRES_USER: webknossos_user
           POSTGRES_PASSWORD: secret_password
 

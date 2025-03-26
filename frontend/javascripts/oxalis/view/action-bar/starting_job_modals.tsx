@@ -555,10 +555,10 @@ function JobCreditCostInformation({
   jobCreditCostPerGVx: number;
 }) {
   const organizationCreditsFromStore = useSelector(
-    (state: OxalisState) => state.activeOrganization?.creditBalance || 0,
+    (state: OxalisState) => state.activeOrganization?.creditBalance || "0",
   );
   const organizationCredits =
-    jobCreditCostInfo?.organizationCredits || organizationCreditsFromStore.toString();
+    jobCreditCostInfo?.organizationCredits || organizationCreditsFromStore;
   const jobCreditCost = jobCreditCostInfo?.costInCredits;
   const jobCostInfoString =
     jobCreditCost != null ? ` and would cost ${formatCreditsString(jobCreditCost)} credits` : "";
@@ -710,7 +710,7 @@ function StartJobForm(props: StartJobFormProps) {
   const isActiveUserSuperUser = activeUser?.isSuperUser || false;
   const colorLayers = getColorLayers(dataset);
   const organizationCredits = useSelector(
-    (state: OxalisState) => state.activeOrganization?.creditBalance || 0,
+    (state: OxalisState) => state.activeOrganization?.creditBalance || "0",
   );
   const layers = chooseSegmentationLayer ? getSegmentationLayers(dataset) : colorLayers;
   const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);

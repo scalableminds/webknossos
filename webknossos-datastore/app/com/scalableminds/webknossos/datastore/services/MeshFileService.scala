@@ -565,14 +565,6 @@ class MeshFileService @Inject()(config: DataStoreConfig, dataVaultService: DataV
                                                                  chunkRange.start,
                                                                  segmentId,
                                                                  meshInfo.transform)
-
-      /**
-      transform = Array(
-        Array(scale.x * meshInfo.transform(0), meshInfo.transform(1), meshInfo.transform(2), meshInfo.transform(3)),
-        Array(meshInfo.transform(4), scale.y * meshInfo.transform(5), meshInfo.transform(6), meshInfo.transform(7)),
-        Array(meshInfo.transform(8), meshInfo.transform(9), scale.z * meshInfo.transform(10), meshInfo.transform(11)),
-        Array(0.0, 0.0, 0.0, 1.0)
-      )*/
       encoding = "draco"
       chunkScale = Array.fill(3)(1 / math.pow(2, meshInfo.vertex_quantization_bits))
       wkChunkInfos <- WebknossosSegmentInfo.fromMeshInfosAndMetadata(

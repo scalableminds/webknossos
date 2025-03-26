@@ -6,6 +6,7 @@ import com.scalableminds.webknossos.datastore.datareaders.precomputed.{
 }
 
 case class NeuroglancerMesh(meshInfo: NeuroglancerPrecomputedMeshInfo) extends NeuroglancerPrecomputedShardingUtils {
-  override val shardingSpecification: ShardingSpecification = meshInfo.sharding.get // TODO: Remove get
+  // Right now, we only support sharded Neuroglancer meshes
+  override val shardingSpecification: ShardingSpecification = meshInfo.sharding.getOrElse(ShardingSpecification.empty)
 
 }

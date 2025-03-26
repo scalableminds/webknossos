@@ -206,13 +206,11 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
                                        scale.z))
     } yield stlEncodedChunk
 
-  private def loadFullMeshFromRemoteNeuroglancerMeshFile(organizationId: String,
-                                                         datasetDirectoryName: String,
-                                                         layerName: String,
-                                                         fullMeshRequest: FullMeshRequest)(
-      implicit ec: ExecutionContext,
-      tc: TokenContext,
-      m: MessagesProvider): Fox[Array[Byte]] =
+  private def loadFullMeshFromRemoteNeuroglancerMeshFile(
+      organizationId: String,
+      datasetDirectoryName: String,
+      layerName: String,
+      fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       // TODO: Mapping, segmentIds
       chunkInfos: WebknossosSegmentInfo <- meshFileService.listMeshChunksForNeuroglancerPrecomputedMesh(
@@ -221,12 +219,13 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
       )
       selectedLod = fullMeshRequest.lod.getOrElse(0)
       allChunkRanges: List[MeshChunk] = chunkInfos.chunks.lods(selectedLod).chunks
+      meshFileName <- fullMeshRequest.meshFileName.toFox ?~> "mesh file name needed"
       stlEncodedChunks: Seq[Array[Byte]] <- Fox.serialCombined(allChunkRanges) { chunkRange: MeshChunk =>
         readMeshChunkAsStl(
           organizationId,
           datasetDirectoryName,
           layerName,
-          fullMeshRequest.meshFileName.get,
+          meshFileName,
           chunkRange,
           Array(Array(1, 0, 0), Array(0, 1, 0), Array(0, 0, 1)),
           fullMeshRequest.meshFileType,

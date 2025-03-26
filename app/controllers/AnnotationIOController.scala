@@ -177,7 +177,7 @@ class AnnotationIOController @Inject()(
                                         newTracingId,
                                         uploadedVolumeLayer.tracing,
                                         uploadedVolumeLayer.getDataZipFrom(otherFiles),
-                                        dataSource = Some(dataSource))
+                                        dataSource = dataSource)
         } yield
           AnnotationLayer(
             newTracingId,

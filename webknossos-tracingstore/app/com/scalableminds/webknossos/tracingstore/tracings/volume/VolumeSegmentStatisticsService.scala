@@ -86,7 +86,13 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       volumeTracingLayer = volumeTracingService.volumeTracingLayer(annotationId, tracingId, tracing)
       bucketData <- volumeTracingService.loadBuckets(
         volumeTracingLayer,
-        bucketPositions.map(p => BucketPosition(p.x, p.y, p.z, mag, additionalCoordinates)),
+        bucketPositions.map(
+          p =>
+            BucketPosition(p.x * mag.x * DataLayer.bucketLength,
+                           p.y * mag.y * DataLayer.bucketLength,
+                           p.z * mag.z * DataLayer.bucketLength,
+                           mag,
+                           additionalCoordinates)),
         None
       )
     } yield (bucketData, elementClassFromProto(tracing.elementClass))

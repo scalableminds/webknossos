@@ -7,6 +7,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
+import net.liftweb.common.Box
 import scalapb.GeneratedMessageCompanion
 
 import javax.inject.Inject
@@ -49,6 +50,9 @@ class TemporaryTracingService @Inject()(
 
   def getVolumeBucket(bucketKey: String): Fox[Array[Byte]] =
     volumeDataStore.get(bucketKey)
+
+  def getVolumeBuckets(bucketKeys: Seq[String]): Seq[Option[Array[Byte]]] =
+    volumeDataStore.getMultiple(bucketKeys)
 
   def getAllVolumeBucketsWithPrefix(bucketPrefix: String): collection.Map[String, Array[Byte]] =
     volumeDataStore.getAllConditionalWithKey(key => key.startsWith(bucketPrefix))

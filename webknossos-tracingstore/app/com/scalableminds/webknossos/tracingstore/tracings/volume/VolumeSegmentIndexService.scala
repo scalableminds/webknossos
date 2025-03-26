@@ -3,7 +3,6 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -130,19 +129,13 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
       }
     } yield ()
 
-  private lazy val bucketScanner = new NativeBucketScanner()
+  private lazy val nativeBucketScanner = new NativeBucketScanner()
 
   private def collectSegmentIds(bytes: Array[Byte], elementClass: ElementClassProto): Box[Set[Long]] =
     tryo(
-      bucketScanner
+      nativeBucketScanner
         .collectSegmentIds(bytes, ElementClass.bytesPerElement(elementClass), ElementClass.isSigned(elementClass))
         .toSet)
-  /*for {
-set <- tryo(SegmentIntegerArray.toSetFromByteArray(bytes, elementClass))
-} yield
-set.filter(!_.isZero).map { u: SegmentInteger =>
-  u.toLong
-}*/
 
   def getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(tracing: VolumeTracing,
                                                             fallbackLayer: Option[RemoteFallbackLayer],
@@ -156,6 +149,7 @@ set.filter(!_.isZero).map { u: SegmentInteger =>
       tc: TokenContext): Fox[Set[Vec3IntProto]] =
     for {
       isTemporaryTracing <- temporaryTracingService.isTemporaryTracing(tracingId)
+      // TODO can we skip the buffer here and load directly from the fallback stuff?
       dummyBuffer = new VolumeSegmentIndexBuffer(
         tracingId = tracingId,
         elementClass = tracing.elementClass,

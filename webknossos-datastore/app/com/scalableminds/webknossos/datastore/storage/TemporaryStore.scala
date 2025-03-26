@@ -25,6 +25,11 @@ class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
       map.values.toList
     }
 
+  def getMultiple(ids: Seq[K]): Seq[Option[V]] =
+    map.synchronized {
+      ids.map(map.get)
+    }
+
   def getAllConditionalWithKey(predicate: K => Boolean): scala.collection.Map[K, V] =
     map.synchronized {
       map.view.filterKeys(predicate).toMap

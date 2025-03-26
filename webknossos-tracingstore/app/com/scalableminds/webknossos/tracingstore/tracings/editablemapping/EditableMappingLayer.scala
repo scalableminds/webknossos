@@ -36,7 +36,7 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
       elementClassProto <- ElementClass.toProto(layer.elementClass).toFox
       _ <- bool2Fox(layer.doesContainBucket(bucket))
       remoteFallbackLayer <- layer.editableMappingService
-        .remoteFallbackLayerFromVolumeTracing(layer.tracing, layer.annotationId)
+        .remoteFallbackLayerForVolumeTracing(layer.tracing, layer.annotationId)
       // called here to ensure updates are applied
       editableMappingInfo <- layer.annotationService.findEditableMappingInfo(layer.annotationId,
                                                                              tracingId,

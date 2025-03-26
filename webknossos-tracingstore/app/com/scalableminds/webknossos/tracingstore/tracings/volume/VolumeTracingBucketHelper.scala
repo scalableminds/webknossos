@@ -184,23 +184,41 @@ trait VolumeTracingBucketHelper
     val bucketKeys = bucketPositions.map(buildBucketKey(volumeTracingLayer.name, _, volumeTracingLayer.additionalAxes))
 
     for {
-      bucketBoxesFromFossil <- volumeDataStore.getMultipleKeysByList(bucketKeys, version)
-      bucketBoxesUnpacked = bucketBoxesFromFossil.map { bucketBox =>
-        bucketBox.flatMap { versionedVolumeBucket: VersionedKeyValuePair[Array[Byte]] =>
-          if (isRevertedElement(versionedVolumeBucket)) Empty
+      bucketKeyValueBoxesFromFossil <- if (volumeTracingLayer.isTemporaryTracing) {
+        Fox.successful(temporaryTracingService.getVolumeBuckets(bucketKeys).map(option2Box))
+      } else {
+        volumeDataStore.getMultipleKeysByList(bucketKeys, version).map(_.map(_.map(_.value)))
+      }
+      bucketBoxesFromFossil = bucketKeyValueBoxesFromFossil
+      bucketBoxesWithFallback <- addFallbackBucketData(volumeTracingLayer, bucketPositions, bucketBoxesFromFossil)
+      bucketBoxesUnpacked = bucketBoxesWithFallback.map { bucketBox =>
+        bucketBox.flatMap { volumeBucket: Array[Byte] =>
+          if (isRevertedElement(volumeBucket)) Empty
           else {
-            tryo(
-              decompressIfNeeded(versionedVolumeBucket.value,
-                                 expectedUncompressedBucketSizeFor(volumeTracingLayer),
-                                 ""))
+            tryo(decompressIfNeeded(volumeBucket, expectedUncompressedBucketSizeFor(volumeTracingLayer), ""))
           }
         }
       }
     } yield bucketBoxesUnpacked
-
-    //TODO if isTemporaryTracing, load from temporaryTracingService
-    //TODO also load from fallback layer
   }
+
+  private def addFallbackBucketData(volumeTracingLayer: VolumeTracingLayer,
+                                    bucketPositions: Seq[BucketPosition],
+                                    bucketBoxesFromFossil: Seq[Box[Array[Byte]]]): Fox[Seq[Box[Array[Byte]]]] =
+    if (!volumeTracingLayer.includeFallbackDataIfAvailable || volumeTracingLayer.tracing.fallbackLayer.isEmpty) {
+      Fox.successful(bucketBoxesFromFossil)
+    } else {
+      for {
+        remoteFallbackLayer <- volumeTracingLayer.volumeTracingService
+          .remoteFallbackLayerForVolumeTracing(volumeTracingLayer.tracing, volumeTracingLayer.annotationId)
+        bucketBoxesFilled <- Fox.serialSequenceBox(bucketPositions.zip(bucketBoxesFromFossil).toList) {
+          case (_, Full(bucketFromFossil)) => Full(bucketFromFossil)
+          case (bucketPosition, Empty) =>
+            loadFallbackBucket(volumeTracingLayer, remoteFallbackLayer, bucketPosition) // TODO batch this too? hard, needs manual array range copy
+          case (_, f: Failure) => f
+        }
+      } yield bucketBoxesFilled
+    }
 
   def loadBucket(volumeTracingLayer: VolumeTracingLayer,
                  bucket: BucketPosition,
@@ -229,14 +247,20 @@ trait VolumeTracingBucketHelper
         Fox.successful(unpackedData)
       case Empty =>
         if (volumeTracingLayer.includeFallbackDataIfAvailable && volumeTracingLayer.tracing.fallbackLayer.nonEmpty) {
-          loadFallbackBucket(volumeTracingLayer, bucket)
+          for {
+            remoteFallbackLayer <- volumeTracingLayer.volumeTracingService
+              .remoteFallbackLayerForVolumeTracing(volumeTracingLayer.tracing, volumeTracingLayer.annotationId)
+            fallbackBucket <- loadFallbackBucket(volumeTracingLayer, remoteFallbackLayer, bucket)
+          } yield fallbackBucket
         } else Fox.empty
       case f: Failure =>
         f.toFox
     }
   }
 
-  private def loadFallbackBucket(layer: VolumeTracingLayer, bucket: BucketPosition): Fox[Array[Byte]] = {
+  private def loadFallbackBucket(layer: VolumeTracingLayer,
+                                 remoteFallbackLayer: RemoteFallbackLayer,
+                                 bucket: BucketPosition): Fox[Array[Byte]] = {
     val dataRequest: WebknossosDataRequest = WebknossosDataRequest(
       position = Vec3Int(bucket.topLeft.mag1X, bucket.topLeft.mag1Y, bucket.topLeft.mag1Z),
       mag = bucket.mag,
@@ -247,8 +271,6 @@ trait VolumeTracingBucketHelper
       additionalCoordinates = None
     )
     for {
-      remoteFallbackLayer <- layer.volumeTracingService
-        .remoteFallbackLayerFromVolumeTracing(layer.tracing, layer.annotationId)
       (unmappedData, indices) <- layer.volumeTracingService
         .getFallbackDataFromDatastore(remoteFallbackLayer, List(dataRequest))(ec, layer.tokenContext)
       unmappedDataOrEmpty <- if (indices.isEmpty) Fox.successful(unmappedData) else Fox.empty

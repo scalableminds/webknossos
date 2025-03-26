@@ -34,14 +34,14 @@ trait FallbackDataHelper {
   private lazy val fallbackDataCache: AlfuCache[FallbackDataKey, (Array[Byte], List[Int])] =
     AlfuCache(maxCapacity = 3000)
 
-  def remoteFallbackLayerFromVolumeTracing(tracing: VolumeTracing, annotationId: String)(
+  def remoteFallbackLayerForVolumeTracing(tracing: VolumeTracing, annotationId: String)(
       implicit ec: ExecutionContext): Fox[RemoteFallbackLayer] =
     for {
       layerName <- tracing.fallbackLayer.toFox ?~> "This feature is only defined on volume annotations with fallback segmentation layer."
       datasetId <- remoteWebknossosClient.getDataSourceIdForAnnotation(annotationId)
     } yield RemoteFallbackLayer(datasetId.organizationId, datasetId.directoryName, layerName, tracing.elementClass)
 
-  def getFallbackDataFromDatastore(remoteFallbackLayer: RemoteFallbackLayer, dataRequests: List[WebknossosDataRequest])(
+  def getFallbackDataFromDatastore(remoteFallbackLayer: RemoteFallbackLayer, dataRequests: Seq[WebknossosDataRequest])(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[(Array[Byte], List[Int])] =
     fallbackDataCache.getOrLoad(FallbackDataKey(remoteFallbackLayer, dataRequests, tc.userTokenOpt),

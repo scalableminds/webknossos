@@ -12,6 +12,7 @@ const dummyOrga: APIOrganization = {
   includedUsers: 1,
   includedStorageBytes: 1200000,
   usedStorageBytes: 1000,
+  creditBalance: "0.0",
   ownerName: undefined,
 };
 

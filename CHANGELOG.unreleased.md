@@ -13,6 +13,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Added
 - Added support for datasets with the following data types: int8, int16, int32, uint32 (support for color was added, support for segmentation already existed before) and int64 (segmentation only). [#8325](https://github.com/scalableminds/webknossos/pull/8325)
 - Added a command palette that allows navigating between pages, switching tools and accessing some user settings via Ctrl+P. [#8447](https://github.com/scalableminds/webknossos/pull/8447/)
+- Added a credit system making payment for long running jobs possible. For now it is in testing phase. [#8352](https://github.com/scalableminds/webknossos/pull/8352)
 - Super users can now share the trained AI models with other organizations. [#8418](https://github.com/scalableminds/webknossos/pull/8418)
 - Failed jobs may be retried by super-users. [#8377](https://github.com/scalableminds/webknossos/pull/8377)
 - Optimized server-side storage of skeleton annotation layers. [#8423](https://github.com/scalableminds/webknossos/pull/8423)

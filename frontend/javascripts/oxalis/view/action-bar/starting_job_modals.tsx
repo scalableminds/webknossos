@@ -12,7 +12,6 @@ import {
   startNucleiInferralJob,
 } from "admin/admin_rest_api";
 import { DatasetNameFormItem } from "admin/dataset/dataset_components";
-import { orderWebknossosCredits } from "admin/organization/upgrade_plan_modal";
 import {
   Alert,
   Button,
@@ -43,6 +42,7 @@ import {
   clamp,
   computeArrayFromBoundingBox,
   computeBoundingBoxFromBoundingBoxObject,
+  pluralize,
   rgbToHex,
 } from "libs/utils";
 import _ from "lodash";
@@ -65,7 +65,6 @@ import type { OxalisState, UserBoundingBox } from "oxalis/store";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import React, { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Link } from "react-router-dom";
 import { type APIDataLayer, type APIJob, APIJobType } from "types/api_flow_types";
 import {
   CollapsibleWorkflowYamlEditor,
@@ -548,107 +547,34 @@ function ShouldUseTreesFormItem() {
 function JobCreditCostInformation({
   jobCreditCostInfo,
   jobCreditCostPerGVx,
-  isBoundingBoxConfigurable,
-  boundingBoxForJob,
-  isOrganizationOwner,
 }: {
   jobCreditCostInfo: JobCreditCostInfo | undefined;
   jobCreditCostPerGVx: number;
-  isBoundingBoxConfigurable: boolean;
-  boundingBoxForJob: UserBoundingBox | undefined;
-  isOrganizationOwner: boolean;
 }) {
   const organizationCreditsFromStore = useSelector(
     (state: OxalisState) => state.activeOrganization?.creditBalance || 0,
   );
   const organizationCredits =
     jobCreditCostInfo?.organizationCredits || organizationCreditsFromStore.toString();
-  const currentBoundingBoxVolume = boundingBoxForJob?.boundingBox
-    ? new BoundingBox(boundingBoxForJob?.boundingBox).getVolume()
-    : null;
-  const orgaHasEnoughCredits = jobCreditCostInfo?.hasEnoughCredits || false;
   const jobCreditCost = jobCreditCostInfo?.costInCredits;
   const jobCostInfoString =
-    jobCreditCost != null
-      ? `This job would cost ${formatCreditsString(jobCreditCost)} credits after the testing period. `
-      : currentBoundingBoxVolume == null
-        ? isBoundingBoxConfigurable
-          ? "Please select a bounding box to see the potential cost of this job. "
-          : "Please select a layer to see the potential cost of this job. "
-        : "";
+    jobCreditCost != null ? ` and would cost ${formatCreditsString(jobCreditCost)} credits` : "";
   return (
     <>
       <Row style={{ display: "grid", marginBottom: 16 }}>
         <Alert
           message={
             <>
-              {jobCostInfoString}
-              Your organization currently has {formatCreditsString(organizationCredits)} WEBKNOSSOS
-              credits. The cost of this job is derived from processed bounding box size and costs{" "}
-              {jobCreditCostPerGVx} WEBKNOSSOS credits per Gigavoxel.
-              <br />
-              As the credit based paid jobs are currently in testing phase, the costs will not be
-              deducted from your organization's credits.{" "}
-              {currentBoundingBoxVolume != null && jobCreditCost != null
-                ? `${isBoundingBoxConfigurable ? "The selected bounding box" : "This dataset"} has a volume of
-                  ${formatVoxels(currentBoundingBoxVolume)} that would resulting in costs of ${formatCreditsString(jobCreditCost)} WEBKNOSSOS credits.`
-                : "You do not have a bounding box selected."}
+              Billing for this job is not active during testing phase. This job is billed at{" "}
+              {jobCreditCostPerGVx} {pluralize("credit", jobCreditCostPerGVx)} per Gigavoxel
+              {jobCostInfoString}. Your organization currently has{" "}
+              {formatCreditsString(organizationCredits)} WEBKNOSSOS credits.
             </>
           }
           type="info"
           showIcon
         />
       </Row>
-      {jobCreditCost != null && !orgaHasEnoughCredits ? (
-        <div style={{ marginBottom: 42 }}>
-          <Form.Item
-            name="requireBoundingBoxForPaidJobs"
-            valuePropName="checked"
-            rules={[
-              {
-                validator: (_rule, _checked) => {
-                  if (jobCreditCostPerGVx != null && currentBoundingBoxVolume == null) {
-                    return Promise.reject("This is a requires a selected bounding box.");
-                  } else if (jobCreditCostPerGVx != null && !orgaHasEnoughCredits) {
-                    /* TODO: Uncomment after credit system testing phase.
-                    return Promise.reject(
-                      "Your organization does not have enough credits to start this job.",
-                    );*/
-                  }
-                  return Promise.resolve();
-                },
-              },
-            ]}
-          >
-            <Row>
-              <Alert
-                message={
-                  isOrganizationOwner ? (
-                    <>
-                      After the testing phase your organization would not have enough credits to
-                      start this job. Once the credit system is fully live you can buy more credits{" "}
-                      <Link
-                        to=""
-                        onClick={(evt) => {
-                          evt.preventDefault();
-                          orderWebknossosCredits();
-                        }}
-                      >
-                        here
-                      </Link>
-                      .
-                    </>
-                  ) : (
-                    "After the testing phase your organization would not have enough credits to start this job out."
-                  )
-                }
-                type="error"
-                showIcon
-              />
-            </Row>
-          </Form.Item>
-        </div>
-      ) : null}
     </>
   );
 }
@@ -937,10 +863,7 @@ function StartJobForm(props: StartJobFormProps) {
       {jobCreditCostPerGVx != null ? (
         <JobCreditCostInformation
           jobCreditCostPerGVx={jobCreditCostPerGVx}
-          isBoundingBoxConfigurable={isBoundingBoxConfigurable}
           jobCreditCostInfo={jobCreditCostInfo}
-          boundingBoxForJob={boundingBoxForJob}
-          isOrganizationOwner={isActiveUserSuperUser}
         />
       ) : null}
       <div style={{ textAlign: "center" }}>

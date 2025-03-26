@@ -320,11 +320,9 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
         skeletons
           .zip(volumes)
           .map {
-            case (skeletonTracingBox, volumeTracingBox) =>
-              volumeTracingBox match {
-                case Full(_) => (Failure(Messages("taskType.mismatch", "skeleton", "volume")), Empty)
-                case _       => (skeletonTracingBox, Empty)
-              }
+            case (skeletonTracingBox, _) =>
+              // drop the volume if it exists
+              (skeletonTracingBox, Empty)
           }
           .unzip)
     } else if (taskType.tracingType == TracingType.volume) {
@@ -332,11 +330,9 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
         skeletons
           .zip(volumes)
           .map {
-            case (skeletonTracingBox, volumeTracingBox) =>
-              skeletonTracingBox match {
-                case Full(_) => (Empty, Failure(Messages("taskType.mismatch", "volume", "skeleton")))
-                case _       => (Empty, volumeTracingBox.map(box => (box._1.tracing, box._2)))
-              }
+            case (_, volumeTracingBox) =>
+              // drop the skeleton if it exists
+              (Empty, volumeTracingBox.map(box => (box._1.tracing, box._2)))
           }
           .unzip)
     } else

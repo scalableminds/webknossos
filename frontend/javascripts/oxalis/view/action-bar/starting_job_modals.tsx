@@ -872,9 +872,6 @@ function StartJobForm(props: StartJobFormProps) {
       <div style={{ textAlign: "center" }}>
         <Button type="primary" size="large" htmlType="submit">
           {props.buttonLabel ? props.buttonLabel : title}
-          {jobCreditCostInfo?.costInCredits != null
-            ? ` (would cost ${formatCreditsString(jobCreditCostInfo?.costInCredits)} credits)`
-            : ""}
         </Button>
       </div>
     </Form>

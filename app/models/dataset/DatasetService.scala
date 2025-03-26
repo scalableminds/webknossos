@@ -358,12 +358,12 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     } yield ()
 
   /**
-   * Returns a list of tuples, where the first element is the magInfo and the second element is a list of all magInfos
-   * that share the same realPath but have a different dataSourceId. For each mag in the data layer there is one tuple.
-   * @param datasetId id of the dataset
-   * @param layerName name of the layer in the dataset
-   * @return
-   */
+    * Returns a list of tuples, where the first element is the magInfo and the second element is a list of all magInfos
+    * that share the same realPath but have a different dataSourceId. For each mag in the data layer there is one tuple.
+    * @param datasetId id of the dataset
+    * @param layerName name of the layer in the dataset
+    * @return
+    */
   def getPathsForDataLayer(datasetId: ObjectId,
                            layerName: String): Fox[List[(DataSourceMagInfo, List[DataSourceMagInfo])]] =
     for {

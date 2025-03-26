@@ -83,7 +83,11 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit tc: TokenContext, ec: ExecutionContext) =
     for {
       tracing <- annotationService.findVolume(annotationId, tracingId) ?~> "tracing.notFound"
-      volumeTracingLayer = volumeTracingService.volumeTracingLayer(annotationId, tracingId, tracing)
+      volumeTracingLayer = volumeTracingService.volumeTracingLayer(
+        annotationId,
+        tracingId,
+        tracing,
+        includeFallbackDataIfAvailable = true) // TODO handle temporaryTracing case
       bucketData <- volumeTracingService.loadBuckets(
         volumeTracingLayer,
         bucketPositions.map(

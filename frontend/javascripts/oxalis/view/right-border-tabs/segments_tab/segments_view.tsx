@@ -1104,9 +1104,9 @@ class SegmentsView extends React.Component<Props, State> {
             if (getVisibleSegmentationLayer == null) {
               return;
             }
-            this.setGroupColor(groupId, color);
+            this.setGroupColor(groupId, color.slice(0, 3) as Vector3);
           }}
-          rgb={this.getColorOfFirstSegmentOrGrey(groupId)}
+          color={[...this.getColorOfFirstSegmentOrGrey(groupId), 1]}
         />
       ),
     };

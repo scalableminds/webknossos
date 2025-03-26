@@ -130,9 +130,9 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
             title="Change Tree Color"
             isDisabled={isEditingDisabled}
             onSetColor={(color) => {
-              setTreeColor(tree.treeId, color);
+              setTreeColor(tree.treeId, color.slice(0, 3) as Vector3);
             }}
-            rgb={tree.color}
+            color={[...tree.color, 1]}
           />
         ),
       },
@@ -445,10 +445,10 @@ const createMenuForTreeGroup = (
             title="Change Tree Group Color"
             isDisabled={isEditingDisabled}
             onSetColor={(color) => {
-              if (id === MISSING_GROUP_ID) setAllTreesColor(color);
-              else setTreeGroupColor(id, color);
+              if (id === MISSING_GROUP_ID) setAllTreesColor(color.slice(0, 3) as Vector3);
+              else setTreeGroupColor(id, color.slice(0, 3) as Vector3);
             }}
-            rgb={[0.5, 0.5, 0.5]}
+            color={[0.5, 0.5, 0.5, 1]}
           />
         ),
       },

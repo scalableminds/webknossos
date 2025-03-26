@@ -279,19 +279,33 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "UPDATE_MESH_OPACITY": {
-      const { layerName, id, opacity, additionalCoordinates } = action;
-      const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
+      const { layerName, id, opacity } = action;
+      const meshDict = state.localSegmentationData[layerName].meshes;
+      if (meshDict == null) return state;
+      const currentAdditionalCoordinates = Object.keys(meshDict || {});
+      const updatedMeshes = _.reduce(
+        currentAdditionalCoordinates,
+        (updatedMeshesDict, additionalCoordKey) => {
+          const meshes = updatedMeshesDict[additionalCoordKey];
+          if (meshes == null) return updatedMeshesDict;
+          return {
+            ...updatedMeshesDict,
+            [additionalCoordKey]: update(meshes, {
+              [id]: {
+                opacity: {
+                  $set: opacity,
+                },
+              },
+            }),
+          };
+        },
+        meshDict,
+      );
       return update(state, {
         localSegmentationData: {
           [layerName]: {
             meshes: {
-              [additionalCoordKey]: {
-                [id]: {
-                  opacity: {
-                    $set: opacity,
-                  },
-                },
-              },
+              $set: updatedMeshes,
             },
           },
         },

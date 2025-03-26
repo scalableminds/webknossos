@@ -13,10 +13,7 @@ import { useDispatch, useSelector } from "react-redux";
 
 import type { MenuItemType } from "antd/es/menu/interface";
 import classnames from "classnames";
-import {
-  ChangeColorMenuItemContent,
-  ChangeRGBAColorMenuItemContent,
-} from "components/color_picker";
+import { ChangeColorMenuItemContent } from "components/color_picker";
 import FastTooltip from "components/fast_tooltip";
 import { V4 } from "libs/mjs";
 import Toast from "libs/toast";
@@ -54,7 +51,6 @@ import { withMappingActivationConfirmation } from "./segments_view_helper";
 
 const ALSO_DELETE_SEGMENT_FROM_LIST_KEY = "also-delete-segment-from-list";
 
-import * as Utils from "libs/utils";
 import Constants from "oxalis/constants";
 
 export function ColoredDotIcon({ colorRGBA }: { colorRGBA: Vector4 }) {
@@ -468,7 +464,7 @@ function _SegmentListItem({
         {
           key: `changeSegmentColor-${segment.id}`,
           label: mesh?.isVisible ? (
-            <ChangeRGBAColorMenuItemContent
+            <ChangeColorMenuItemContent
               isDisabled={false}
               title="Change Segment Color"
               onSetColor={(color, createsNewUndoState) => {
@@ -486,15 +482,17 @@ function _SegmentListItem({
                 setMeshOpacity(
                   segment.id,
                   visibleSegmentationLayer.name,
-                  color[3],
+                  color[3] || 0,
                   additionalCoordinates,
                 );
               }}
-              rgba={segmentColorWithMeshOpacity}
+              color={segmentColorWithMeshOpacity}
+              isRGBA={true}
             />
           ) : (
             <ChangeColorMenuItemContent
               isDisabled={false}
+              isRGBA={false}
               title="Change Segment Color"
               onSetColor={(color, createsNewUndoState) => {
                 if (visibleSegmentationLayer == null) {
@@ -503,13 +501,13 @@ function _SegmentListItem({
                 updateSegment(
                   segment.id,
                   {
-                    color,
+                    color: color.slice(0, 3) as Vector3,
                   },
                   visibleSegmentationLayer.name,
                   createsNewUndoState,
                 );
               }}
-              rgb={Utils.take3(segmentColorRGBA)}
+              color={segmentColorRGBA}
             />
           ),
         },

@@ -20,9 +20,9 @@ const getPopover = (title: string, content: JSX.Element | null) => {
 const inputStyle: CSSProperties = {
   background: "var(--ant-component-background)",
   textAlign: "center",
-  marginTop: "12px",
+  marginTop: 12,
   color: "var(--ant-color-text)",
-  borderRadius: "4px",
+  borderRadius: 4,
   border: "1px solid var(--ant-border-radius)",
 };
 
@@ -48,7 +48,7 @@ const ThrottledColorPicker = ({
     throttledSetValue(newValue);
   };
   return (
-    <div style={{ marginRight: "10px" }}>
+    <div style={{ marginRight: 10 }}>
       <HexColorPicker color={value} onChange={setValue} />
       {getColorInput(value, setValue)}
     </div>
@@ -108,7 +108,7 @@ const ThrottledRGBAColorPicker = ({
 
   const maybeGetInfoText = () => {
     return (
-      <div style={{ wordBreak: "break-word", fontSize: "12px", lineHeight: 1, marginTop: "8px" }}>
+      <div style={{ wordBreak: "break-word", fontSize: "12px", lineHeight: 1, marginTop: 8 }}>
         Note that the opacity will only affect the mesh in the 3D viewport.
       </div>
     );
@@ -134,7 +134,7 @@ const ThrottledRGBAColorPicker = ({
   const valueAsHex = Utils.rgbToHex([value.r, value.g, value.b]);
   const hexInputWidth = COLOR_PICKER_WIDTH * (1 - RELATIVE_OPACITY_INPUT_WIDTH);
   return (
-    <div style={{ marginRight: "10px", width: COLOR_PICKER_WIDTH }}>
+    <div style={{ marginRight: 10, width: COLOR_PICKER_WIDTH }}>
       <RgbaColorPicker color={value} onChange={setValue} style={{ width: "100%" }} />
       <div>
         {getColorInput(valueAsHex, setValueFromHex, hexInputWidth)}

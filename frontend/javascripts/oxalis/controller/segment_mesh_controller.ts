@@ -433,7 +433,6 @@ export default class SegmentMeshController {
           ? HOVERED_COLOR
           : ACTIVATED_COLOR;
         material.color = new THREE.Color().setHSL(...newColor);
-        material.opacity = mesh.material.opacity;
         material.emissive.setHSL(...HOVERED_COLOR);
       });
     } else {

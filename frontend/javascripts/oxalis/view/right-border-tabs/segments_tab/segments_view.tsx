@@ -317,13 +317,8 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(removeSegmentAction(segmentId, layerName));
   },
 
-  changeMeshOpacity(
-    segmentId: number,
-    layerName: string,
-    opacity: number,
-    additionalCoordinates: AdditionalCoordinate[] | null | undefined,
-  ) {
-    dispatch(updateMeshOpacityAction(layerName, segmentId, opacity, additionalCoordinates));
+  changeMeshOpacity(segmentId: number, layerName: string, opacity: number) {
+    dispatch(updateMeshOpacityAction(layerName, segmentId, opacity));
   },
 
   deleteSegmentData(segmentId: number, layerName: string, callback?: () => void) {
@@ -1100,13 +1095,13 @@ class SegmentsView extends React.Component<Props, State> {
         <ChangeColorMenuItemContent
           title="Change Segment Color"
           isDisabled={false}
-          onSetColor={(color) => {
+          onSetColor={(color: Vector3) => {
             if (getVisibleSegmentationLayer == null) {
               return;
             }
-            this.setGroupColor(groupId, color.slice(0, 3) as Vector3);
+            this.setGroupColor(groupId, color);
           }}
-          color={[...this.getColorOfFirstSegmentOrGrey(groupId), 1]}
+          rgb={this.getColorOfFirstSegmentOrGrey(groupId)}
         />
       ),
     };

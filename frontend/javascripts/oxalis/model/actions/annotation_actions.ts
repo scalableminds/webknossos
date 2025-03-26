@@ -232,18 +232,12 @@ export const updateMeshVisibilityAction = (
     additionalCoordinates,
   }) as const;
 
-export const updateMeshOpacityAction = (
-  layerName: string,
-  id: number,
-  opacity: number,
-  additionalCoordinates?: AdditionalCoordinate[] | undefined | null,
-) =>
+export const updateMeshOpacityAction = (layerName: string, id: number, opacity: number) =>
   ({
     type: "UPDATE_MESH_OPACITY",
     id,
     layerName,
     opacity,
-    additionalCoordinates,
   }) as const;
 
 export const maybeFetchMeshFilesAction = (

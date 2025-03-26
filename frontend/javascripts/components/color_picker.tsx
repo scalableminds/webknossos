@@ -2,7 +2,6 @@ import { InputNumber, Popover } from "antd";
 import useThrottledCallback from "beautiful-react-hooks/useThrottledCallback";
 import * as Utils from "libs/utils";
 import type { Vector3, Vector4 } from "oxalis/constants";
-import Constants from "oxalis/constants";
 import { useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { HexColorInput, HexColorPicker, type RgbaColor, RgbaColorPicker } from "react-colorful";
@@ -37,28 +36,85 @@ const getColorInput = (
 
 const ThrottledColorPicker = ({
   color,
+  onChange,
+}: {
+  color: string;
+  onChange: (color: string) => void;
+}) => {
+  const [value, localSetValue] = useState(color);
+  const throttledSetValue = useThrottledCallback(onChange, [onChange], 20);
+  const setValue = (newValue: string) => {
+    localSetValue(newValue);
+    throttledSetValue(newValue);
+  };
+  return (
+    <div style={{ marginRight: 10 }}>
+      <HexColorPicker color={value} onChange={setValue} />
+      {getColorInput(value, setValue)}
+    </div>
+  );
+};
+
+export function ChangeColorMenuItemContent({
+  title,
+  isDisabled,
+  onSetColor,
+  rgb,
+}: {
+  title: string;
+  isDisabled: boolean;
+  onSetColor: (rgb: Vector3, createsNewUndoState: boolean) => void;
+  rgb: Vector3;
+}) {
+  const isFirstColorChange = useRef(true);
+  const color = Utils.rgbToHex(Utils.map3((value) => value * 255, rgb));
+  const onChangeColor = (colorStr: string) => {
+    if (isDisabled) {
+      return;
+    }
+    const colorRgb = Utils.hexToRgb(colorStr);
+    const newColor = Utils.map3((component) => component / 255, colorRgb);
+
+    // Only create a new undo state on the first color change event.
+    // All following color change events should mutate the most recent undo
+    // state so that the undo stack is not filled on each mouse movement.
+    onSetColor(newColor, isFirstColorChange.current);
+    isFirstColorChange.current = false;
+  };
+
+  const content = isDisabled ? null : (
+    <ThrottledColorPicker color={color} onChange={onChangeColor} />
+  );
+  return getPopover(title, content);
+}
+
+const ThrottledRGBAColorPicker = ({
+  color,
   onChangeColor,
-  isRGBA = false,
 }: {
   color: RgbaColor;
   onChangeColor: (color: RgbaColor) => void;
-  isRGBA?: boolean;
 }) => {
   const [value, localSetValue] = useState(color);
   const throttledSetValue = useThrottledCallback(onChangeColor, [onChangeColor, value], 20);
-
   const setValue = (newValue: RgbaColor) => {
     localSetValue(newValue);
     throttledSetValue(newValue);
   };
-
   const setValueFromHex = (color: string) => {
     const colorRgb = Utils.hexToRgb(color);
     setValue({ r: colorRgb[0], g: colorRgb[1], b: colorRgb[2], a: value.a });
   };
 
+  const maybeGetInfoText = () => {
+    return (
+      <div style={{ wordBreak: "break-word", fontSize: 12, lineHeight: 1, marginTop: 8 }}>
+        Note that the opacity will only affect the mesh in the 3D viewport.
+      </div>
+    );
+  };
+
   const getOpacityInput = () => {
-    if (!isRGBA) return null; // Only show opacity input for RGBA
     return (
       <InputNumber
         style={{ width: COLOR_PICKER_WIDTH * RELATIVE_OPACITY_INPUT_WIDTH, ...inputStyle }}
@@ -75,26 +131,11 @@ const ThrottledColorPicker = ({
       />
     );
   };
-
-  const maybeGetInfoText = () => {
-    if (!isRGBA) return null;
-    return (
-      <div style={{ wordBreak: "break-word", fontSize: 12, lineHeight: 1, marginTop: 8 }}>
-        Note that the opacity will only affect the mesh in the 3D viewport.
-      </div>
-    );
-  };
-
   const valueAsHex = Utils.rgbToHex([value.r, value.g, value.b]);
   const hexInputWidth = COLOR_PICKER_WIDTH * (1 - RELATIVE_OPACITY_INPUT_WIDTH);
-
   return (
     <div style={{ marginRight: 10, width: COLOR_PICKER_WIDTH }}>
-      {isRGBA ? (
-        <RgbaColorPicker color={value} onChange={setValue} style={{ width: "100%" }} />
-      ) : (
-        <HexColorPicker color={valueAsHex} onChange={setValueFromHex} style={{ width: "100%" }} />
-      )}
+      <RgbaColorPicker color={value} onChange={setValue} style={{ width: "100%" }} />
       <div>
         {getColorInput(valueAsHex, setValueFromHex, hexInputWidth)}
         {getOpacityInput()}
@@ -104,58 +145,15 @@ const ThrottledColorPicker = ({
   );
 };
 
-export function ChangeColorMenuItemContent({
+export function ChangeRGBAColorMenuItemContent({
   title,
   isDisabled,
-  color,
+  color: rgba,
   onSetColor,
-  isRGBA = false,
 }: {
   title: string;
   isDisabled: boolean;
   color: Vector4;
-  onSetColor: (color: Vector4, createsNewUndoState: boolean) => void;
-  isRGBA?: boolean;
-}) {
-  const isFirstColorChange = useRef(true);
-
-  const initialColor = {
-    r: color[0] * 255,
-    g: color[1] * 255,
-    b: color[2] * 255,
-    a: isRGBA ? color[3] : Constants.DEFAULT_MESH_OPACITY,
-  };
-
-  const onChangeColor = (newColor: RgbaColor) => {
-    if (isDisabled) return;
-
-    const colorRgb: Vector3 = [newColor.r, newColor.g, newColor.b];
-    const updatedColor: Vector4 = [
-      ...Utils.map3((component) => component / 255, colorRgb),
-      isRGBA ? newColor.a : Constants.DEFAULT_MESH_OPACITY,
-    ];
-
-    // Only create a new undo state on the first color change event.
-    onSetColor(updatedColor, isFirstColorChange.current);
-    isFirstColorChange.current = false;
-  };
-
-  const content = isDisabled ? null : (
-    <ThrottledColorPicker color={initialColor} onChangeColor={onChangeColor} isRGBA={isRGBA} />
-  );
-
-  return getPopover(title, content);
-}
-
-/* export function ChangeRGBAColorMenuItemContent({
-  title,
-  isDisabled,
-  rgba,
-  onSetColor,
-}: {
-  title: string;
-  isDisabled: boolean;
-  rgba: Vector4;
   onSetColor: (rgba: Vector4, createsNewUndoState: boolean) => void;
 }) {
   const isFirstColorChange = useRef(true);
@@ -178,8 +176,8 @@ export function ChangeColorMenuItemContent({
   };
 
   const content = isDisabled ? null : (
-    <ThrottledColorPicker color={color} onChangeColor={onChangeColor} isRGBA={true} />
+    <ThrottledRGBAColorPicker color={color} onChangeColor={onChangeColor} />
   );
 
   return getPopover(title, content);
-} */
+}

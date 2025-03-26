@@ -13,7 +13,10 @@ import { useDispatch, useSelector } from "react-redux";
 
 import type { MenuItemType } from "antd/es/menu/interface";
 import classnames from "classnames";
-import { ChangeColorMenuItemContent } from "components/color_picker";
+import {
+  ChangeColorMenuItemContent,
+  ChangeRGBAColorMenuItemContent,
+} from "components/color_picker";
 import FastTooltip from "components/fast_tooltip";
 import { V4 } from "libs/mjs";
 import Toast from "libs/toast";
@@ -464,7 +467,7 @@ function _SegmentListItem({
         {
           key: `changeSegmentColor-${segment.id}`,
           label: mesh?.isVisible ? (
-            <ChangeColorMenuItemContent
+            <ChangeRGBAColorMenuItemContent
               isDisabled={false}
               title="Change Segment Color"
               onSetColor={(color, createsNewUndoState) => {
@@ -482,17 +485,15 @@ function _SegmentListItem({
                 setMeshOpacity(
                   segment.id,
                   visibleSegmentationLayer.name,
-                  color[3] || 0,
+                  color[3],
                   additionalCoordinates,
                 );
               }}
               color={segmentColorWithMeshOpacity}
-              isRGBA={true}
             />
           ) : (
             <ChangeColorMenuItemContent
               isDisabled={false}
-              isRGBA={false}
               title="Change Segment Color"
               onSetColor={(color, createsNewUndoState) => {
                 if (visibleSegmentationLayer == null) {
@@ -501,13 +502,13 @@ function _SegmentListItem({
                 updateSegment(
                   segment.id,
                   {
-                    color: color.slice(0, 3) as Vector3,
+                    color,
                   },
                   visibleSegmentationLayer.name,
                   createsNewUndoState,
                 );
               }}
-              color={segmentColorRGBA}
+              rgb={segmentColorRGBA.slice(0, 3) as Vector3}
             />
           ),
         },

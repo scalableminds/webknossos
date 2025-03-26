@@ -68,7 +68,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         "includedStorageBytes" -> organization.includedStorageBytes,
         "usedStorageBytes" -> usedStorageBytes,
         "ownerName" -> ownerNameOpt,
-        "creditBalance" -> creditBalanceOpt
+        "creditBalance" -> creditBalanceOpt.map(_.toString)
       ) ++ adminOnlyInfo
   }
 

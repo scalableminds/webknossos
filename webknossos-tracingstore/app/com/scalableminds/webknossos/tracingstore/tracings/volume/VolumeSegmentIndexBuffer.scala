@@ -120,7 +120,6 @@ class VolumeSegmentIndexBuffer(tracingId: String,
     if (toTemporaryStore) {
       temporaryTracingService.saveVolumeSegmentIndexBuffer(tracingId, toFlush)
     } else {
-      // TODO batching
       val asProtoByteArrays: Seq[(String, Array[Byte])] = toFlush.map {
         case (segmentId, bucketPositions) => (segmentId, toProtoBytes(ListOfVec3IntProto(bucketPositions.toList)))
       }

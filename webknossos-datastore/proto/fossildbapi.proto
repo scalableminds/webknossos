@@ -18,6 +18,11 @@ message VersionValuePairProto {
   required bytes value = 2;
 }
 
+message VersionValueBoxProto {
+  optional VersionValuePairProto versionValuePair = 1;
+  optional string errorMessage = 2;
+}
+
 message HealthRequest {}
 message HealthReply {
   required bool success = 1;
@@ -123,6 +128,18 @@ message GetMultipleKeysReply {
   repeated uint64 actualVersions = 5;
 }
 
+message GetMultipleKeysByListRequest {
+  required string collection = 1;
+  repeated string keys = 2;
+  optional uint64 version = 3; // Applied to all requested keys
+}
+
+message GetMultipleKeysByListReply {
+  required bool success = 1;
+  optional string errorMessage = 2;
+  repeated VersionValueBoxProto versionValueBoxes = 3;
+}
+
 message GetMultipleKeysByListWithMultipleVersionsRequest {
   required string collection = 1;
   repeated string keys = 2;
@@ -215,6 +232,7 @@ service FossilDB {
   rpc Get (GetRequest) returns (GetReply) {}
   rpc GetMultipleVersions (GetMultipleVersionsRequest) returns (GetMultipleVersionsReply) {}
   rpc GetMultipleKeys (GetMultipleKeysRequest) returns (GetMultipleKeysReply) {}
+  rpc GetMultipleKeysByList (GetMultipleKeysByListRequest) returns (GetMultipleKeysByListReply) {}
   rpc GetMultipleKeysByListWithMultipleVersions (GetMultipleKeysByListWithMultipleVersionsRequest) returns (GetMultipleKeysByListWithMultipleVersionsReply) {}
   rpc Put (PutRequest) returns (PutReply) {}
   rpc PutMultipleVersions (PutMultipleVersionsRequest) returns (PutMultipleVersionsReply) {}

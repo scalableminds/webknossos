@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.{FossilDBClient, Tempo
 import net.liftweb.common.{Box, Empty, Failure, Full}
 
 import scala.collection.mutable
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 class VolumeBucketBuffer(version: Long,
                          volumeTracingLayer: VolumeTracingLayer,
@@ -28,7 +28,7 @@ class VolumeBucketBuffer(version: Long,
     for {
       before <- Instant.nowFox
       // TODO use multi-get
-      _ <- Fox.serialSequenceBox(bucketPositions)(pos => getFromFossilOrFallbackLayer(pos))
+      _ <- getMultipleFromFossilOrFallbackLayer(bucketPositions)
       _ = Instant.logSince(before, s"bucketBuffer prefill for ${bucketPositions.length} bucket positions.")
     } yield ()
 
@@ -40,13 +40,24 @@ class VolumeBucketBuffer(version: Long,
 
   private def getFromFossilOrFallbackLayer(bucketPosition: BucketPosition): Fox[Array[Byte]] =
     for {
-      bucketDataBox: Box[Array[Byte]] <- loadBucket(volumeTracingLayer, bucketPosition, Some(version)).futureBox
-      _ = bucketDataBox match {
-        case Full(_)    => bucketDataBuffer.put(bucketPosition, (bucketDataBox, false))
-        case Empty      => bucketDataBuffer.put(bucketPosition, (bucketDataBox, false))
-        case _: Failure => logger.info("failure in loadBucket")
+      multiResult <- getMultipleFromFossilOrFallbackLayer(Seq(bucketPosition))
+      firstBox <- multiResult.headOption.toFox
+      firstValue <- firstBox
+    } yield firstValue
+
+  private def getMultipleFromFossilOrFallbackLayer(bucketPositions: Seq[BucketPosition]): Fox[Seq[Box[Array[Byte]]]] =
+    for {
+      bucketDataKeyValueBoxes <- loadBuckets(volumeTracingLayer, bucketPositions, Some(version))
+      bucketDataBoxes = bucketDataKeyValueBoxes.map(_.map(_.value))
+      _ = bucketDataBoxes.zip(bucketPositions).foreach {
+        case (bucketDataBox, bucketPosition) =>
+          bucketDataBox match {
+            case Full(_)    => logger.info("put!"); bucketDataBuffer.put(bucketPosition, (bucketDataBox, false))
+            case Empty      => bucketDataBuffer.put(bucketPosition, (Empty, false))
+            case _: Failure => logger.info("failure in loadBucket") // TODO what to do in failure case? stop?
+          }
       }
-    } yield bucketDataBox
+    } yield bucketDataBoxes
 
   def put(bucketPosition: BucketPosition, bucketBytes: Array[Byte]): Unit =
     bucketDataBuffer.put(bucketPosition, (Full(bucketBytes), true))

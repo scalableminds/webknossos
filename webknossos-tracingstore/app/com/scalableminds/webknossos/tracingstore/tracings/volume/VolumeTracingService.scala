@@ -78,9 +78,9 @@ class VolumeTracingService @Inject()(
   private val fallbackLayerCache: AlfuCache[(String, Option[String], Option[String]), Option[RemoteFallbackLayer]] =
     AlfuCache(maxCapacity = 100)
 
-  def saveVolume(tracing: VolumeTracing,
-                 tracingId: String,
+  def saveVolume(tracingId: String,
                  version: Long,
+                 tracing: VolumeTracing,
                  toTemporaryStore: Boolean = false): Fox[Unit] =
     if (toTemporaryStore)
       temporaryTracingService.saveVolume(tracingId, tracing)
@@ -221,10 +221,10 @@ class VolumeTracingService @Inject()(
               bucketPosition =>
                 for {
                   data <- loadBucket(dataLayer, bucketPosition)
-                  typedData = UnsignedIntegerArray.fromByteArray(data, volumeTracing.elementClass)
+                  typedData = SegmentIntegerArray.fromByteArray(data, volumeTracing.elementClass)
                   filteredData = typedData.map(elem =>
-                    if (elem.toLong == a.id) UnsignedInteger.zeroFromElementClass(volumeTracing.elementClass) else elem)
-                  filteredBytes = UnsignedIntegerArray.toByteArray(filteredData, volumeTracing.elementClass)
+                    if (elem.toLong == a.id) SegmentInteger.zeroFromElementClass(volumeTracing.elementClass) else elem)
+                  filteredBytes = SegmentIntegerArray.toByteArray(filteredData, volumeTracing.elementClass)
                   _ <- saveBucket(dataLayer, bucketPosition, filteredBytes, version)
                   _ <- updateSegmentIndex(
                     segmentIndexBuffer,
@@ -499,7 +499,6 @@ class VolumeTracingService @Inject()(
     } yield data
 
   def adaptVolumeForDuplicate(sourceAnnotationId: String,
-                              sourceTracingId: String,
                               newTracingId: String,
                               sourceTracing: VolumeTracing,
                               isFromTask: Boolean,
@@ -622,7 +621,7 @@ class VolumeTracingService @Inject()(
     for {
       _ <- bool2Fox(tracing.version == 0L) ?~> "Tracing has already been edited."
       _ <- bool2Fox(mags.nonEmpty) ?~> "Initializing without any mags. No data or mag restrictions too tight?"
-      _ <- saveVolume(tracing.copy(mags = mags.toList.sortBy(_.maxDim).map(vec3IntToProto)), tracingId, tracing.version)
+      _ <- saveVolume(tracingId, tracing.version, tracing.copy(mags = mags.toList.sortBy(_.maxDim).map(vec3IntToProto)))
     } yield ()
 
   def volumeBucketsAreEmpty(tracingId: String): Boolean =
@@ -754,8 +753,8 @@ class VolumeTracingService @Inject()(
     val volumeTracingLayers = volumeTracingIds.zip(volumeTracings).map {
       case (tracingId, tracing) => volumeTracingLayer("annotationIdUnusedInThisContext", tracingId, tracing)
     }
-    val elementClass =
-      volumeTracingLayers.headOption.map(_.tracing.elementClass).getOrElse(elementClassToProto(ElementClass.uint8))
+    val elementClassProto =
+      volumeTracingLayers.headOption.map(_.tracing.elementClass).getOrElse(ElementClassProto.uint8)
 
     val magSets = new mutable.HashSet[Set[Vec3Int]]()
     volumeTracingLayers.foreach { volumeTracingLayer =>
@@ -782,7 +781,7 @@ class VolumeTracingService @Inject()(
         }
       }.getOrElse(Set.empty)
 
-      val mergedVolume = new MergedVolume(elementClass)
+      val mergedVolume = new MergedVolume(elementClassProto)
 
       volumeTracingLayers.foreach { volumeTracingLayer =>
         mergedVolume.addLabelSetFromBucketStream(volumeTracingLayer.bucketStream, magsIntersection)
@@ -793,10 +792,10 @@ class VolumeTracingService @Inject()(
           mergedVolume.addFromBucketStream(sourceVolumeIndex, volumeTracingLayer.bucketStream, Some(magsIntersection))
       }
       for {
-        _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, elementClass)) ?~> Messages(
+        _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, elementClassProto)) ?~> Messages(
           "annotation.volume.largestSegmentIdExceedsRange",
           mergedVolume.largestSegmentId.toLong,
-          elementClass)
+          elementClassProto)
         mergedAdditionalAxes <- Fox.box2Fox(AdditionalAxis.mergeAndAssertSameAdditionalAxes(volumeTracingLayers.map(l =>
           AdditionalAxis.fromProtosAsOpt(l.tracing.additionalAxes))))
         firstTracing <- volumeTracingLayers.headOption.map(_.tracing) ?~> "merge.noTracings"
@@ -816,7 +815,7 @@ class VolumeTracingService @Inject()(
         _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
           for {
             _ <- saveBucket(newVolumeTracingId,
-                            elementClass,
+                            elementClassProto,
                             bucketPosition,
                             bucketBytes,
                             newVersion,
@@ -827,7 +826,7 @@ class VolumeTracingService @Inject()(
                                  bucketPosition,
                                  bucketBytes,
                                  Empty,
-                                 elementClass,
+                                 elementClassProto,
                                  volumeTracingLayers.headOption.flatMap(_.tracing.mappingName),
                                  None))
           } yield ()
@@ -902,7 +901,7 @@ class VolumeTracingService @Inject()(
             } yield ()
           }
           _ <- segmentIndexBuffer.flush()
-        } yield mergedVolume.largestSegmentId.toPositiveLong
+        } yield mergedVolume.largestSegmentId.toLong
       }
     }
 
@@ -917,9 +916,10 @@ class VolumeTracingService @Inject()(
       for {
         dataSource <- remoteWebknossosClient.getDataSourceForAnnotation(annotationId)
         dataSourceId = dataSource.id
-        fallbackLayer = dataSource.dataLayers
-          .find(_.name == fallbackLayerName.getOrElse(""))
-          .map(RemoteFallbackLayer.fromDataLayerAndDataSource(_, dataSourceId))
+        layerWithFallbackOpt = dataSource.dataLayers.find(_.name == fallbackLayerName.getOrElse(""))
+        fallbackLayer <- Fox.runOptional(layerWithFallbackOpt) { layerWithFallback =>
+          RemoteFallbackLayer.fromDataLayerAndDataSource(layerWithFallback, dataSourceId).toFox
+        }
       } yield fallbackLayer
     }
 

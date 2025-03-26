@@ -29,12 +29,6 @@ const actionTracingId = "tracingId";
 const DateMock = {
   now: () => TIMESTAMP,
 };
-mockRequire("app", {
-  currentUser: {
-    firstName: "SCM",
-    lastName: "Boy",
-  },
-});
 mockRequire("libs/date", DateMock);
 mockRequire("oxalis/model/sagas/root_saga", function* () {
   yield;

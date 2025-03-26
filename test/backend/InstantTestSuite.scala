@@ -4,8 +4,6 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.JsonHelper
 import org.scalatestplus.play.PlaySpec
 
-import scala.concurrent.ExecutionContext.global
-
 class InstantTestSuite extends PlaySpec {
   val handleFoxJustification = "Handling Fox in Unit Test Context"
 

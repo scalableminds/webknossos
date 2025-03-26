@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.Elemen
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, ElementClass}
 import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedInteger, UnsignedIntegerArray}
+import com.scalableminds.webknossos.datastore.models.{BucketPosition, SegmentInteger, SegmentIntegerArray}
 import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.tracingstore.tracings.{
@@ -151,10 +151,10 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
   private def collectSegmentIds(bytes: Array[Byte], elementClass: ElementClassProto)(
       implicit ec: ExecutionContext): Fox[Set[Long]] =
     for {
-      set <- tryo(UnsignedIntegerArray.toSetFromByteArray(bytes, elementClass)).toFox
+      set <- tryo(SegmentIntegerArray.toSetFromByteArray(bytes, elementClass)).toFox
     } yield
-      set.filter(!_.isZero).map { u: UnsignedInteger =>
-        u.toPositiveLong
+      set.filter(!_.isZero).map { u: SegmentInteger =>
+        u.toLong
       }
 
   private def getSegmentToBucketIndexWithEmptyFallback(segmentIndexBuffer: VolumeSegmentIndexBuffer,

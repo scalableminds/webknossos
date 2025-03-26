@@ -9,6 +9,7 @@ import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.util.tools.JsonHelper.bool2Box
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing}
 import com.scalableminds.webknossos.datastore.geometry.{
   AdditionalAxisProto,
@@ -19,7 +20,6 @@ import com.scalableminds.webknossos.datastore.geometry.{
   Vec3IntProto
 }
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
-import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.tracingstore.tracings.ColorGenerator
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.TreeType
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{MultiComponentTreeSplitter, TreeValidator}
@@ -75,7 +75,7 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
             datasetName = dataset.name,
             editPosition = nmlParams.editPosition,
             editRotation = nmlParams.editRotation,
-            elementClass = ElementClass.uint32, // Note: this property may be adapted later in adaptPropertiesToFallbackLayer
+            elementClass = ElementClassProto.uint32, // Note: this property may be adapted later in adaptPropertiesToFallbackLayer
             fallbackLayer = v.fallbackLayerName,
             largestSegmentId = v.largestSegmentId,
             version = 0,
@@ -95,30 +95,25 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
           v.name,
         )
       }
-      skeletonTracingOpt: Option[SkeletonTracing] = if (nmlParams.treesSplit.isEmpty && nmlParams.userBoundingBoxes.isEmpty)
-        None
-      else
-        Some(
-          SkeletonTracing(
-            dataset.name,
-            nmlParams.treesSplit,
-            nmlParams.timestamp,
-            nmlParams.taskBoundingBox,
-            nmlParams.activeNodeId,
-            nmlParams.editPosition,
-            nmlParams.editRotation,
-            nmlParams.zoomLevel,
-            version = 0,
-            None,
-            nmlParams.treeGroupsAfterSplit,
-            nmlParams.userBoundingBoxes,
-            Some(dataset._organization),
-            nmlParams.editPositionAdditionalCoordinates,
-            additionalAxes = nmlParams.additionalAxisProtos
-          )
-        )
+      skeletonTracing: SkeletonTracing = SkeletonTracing(
+        dataset.name,
+        nmlParams.treesSplit,
+        nmlParams.timestamp,
+        nmlParams.taskBoundingBox,
+        nmlParams.activeNodeId,
+        nmlParams.editPosition,
+        nmlParams.editRotation,
+        nmlParams.zoomLevel,
+        version = 0,
+        None,
+        nmlParams.treeGroupsAfterSplit,
+        nmlParams.userBoundingBoxes,
+        Some(dataset._organization),
+        nmlParams.editPositionAdditionalCoordinates,
+        additionalAxes = nmlParams.additionalAxisProtos
+      )
     } yield
-      NmlParseSuccessWithoutFile(skeletonTracingOpt, volumeLayers, dataset._id, nmlParams.description, nmlParams.wkUrl)
+      NmlParseSuccessWithoutFile(skeletonTracing, volumeLayers, dataset._id, nmlParams.description, nmlParams.wkUrl)
 
   private def getParametersFromNML(
       nmlInputStream: InputStream,

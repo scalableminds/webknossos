@@ -1,13 +1,7 @@
 import update from "immutability-helper";
 import Constants, { AnnotationToolEnum } from "oxalis/constants";
-import mockRequire from "mock-require";
 import defaultState from "oxalis/default_state";
-mockRequire("app", {
-  currentUser: {
-    firstName: "SCM",
-    lastName: "Boy",
-  },
-});
+
 const volumeTracing = {
   type: "volume",
   activeCellId: 0,
@@ -64,6 +58,7 @@ export const initialState = update(defaultState, {
               [4, 4, 4],
             ],
             category: "segmentation",
+            elementClass: "uint32",
             name: volumeTracing.tracingId,
             tracingId: volumeTracing.tracingId,
             // @ts-expect-error ts-migrate(2322) FIXME: Type '{ resolutions: [number, number, number][]; c... Remove this comment to see the full error message

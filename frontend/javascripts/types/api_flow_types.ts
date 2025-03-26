@@ -82,7 +82,7 @@ type APIDataLayerBase = {
   readonly coordinateTransformations?: CoordinateTransformation[] | null;
   readonly hasSegmentIndex?: boolean;
 };
-type APIColorLayer = APIDataLayerBase & {
+export type APIColorLayer = APIDataLayerBase & {
   readonly category: "color";
 };
 export type APISegmentationLayer = APIDataLayerBase & {
@@ -764,13 +764,15 @@ export type APIJob = {
 };
 
 export type AiModel = {
-  id: string;
-  name: string;
-  dataStore: APIDataStore;
-  user: APIUser;
-  comment: string;
-  created: number;
-  trainingJob: APIJob | null;
+  readonly id: string;
+  readonly name: string;
+  readonly isOwnedByUsersOrganization: boolean;
+  readonly sharedOrganizationIds: string[] | null | undefined;
+  readonly dataStore: APIDataStore;
+  readonly user: APIUser | null | undefined;
+  readonly comment: string;
+  readonly created: number;
+  readonly trainingJob: APIJob | null;
 };
 
 // Tracing related datatypes
@@ -877,6 +879,7 @@ export type ServerSkeletonTracing = ServerTracingBase & {
   boundingBox?: ServerBoundingBox;
   trees: Array<ServerSkeletonTracingTree>;
   treeGroups: Array<TreeGroup> | null | undefined;
+  storedWithExternalTreeBodies?: boolean; // unused in frontend
 };
 export type ServerVolumeTracing = ServerTracingBase & {
   // The following property is added when fetching the

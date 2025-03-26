@@ -31,7 +31,7 @@ import net.liftweb.common.Empty
 import models.analytics.{AnalyticsService, DownloadAnnotationEvent, UploadAnnotationEvent}
 import models.annotation.AnnotationState._
 import models.annotation._
-import models.annotation.nml.NmlResults.{NmlParseResult, NmlParseSuccess}
+import models.annotation.nml.NmlResults.NmlParseResult
 import models.annotation.nml.{NmlResults, NmlWriter}
 import models.dataset._
 import models.organization.OrganizationDAO
@@ -114,8 +114,7 @@ class AnnotationIOController @Inject()(
           name = nameForUploaded(parseResultsFiltered.map(_.fileName))
           description = descriptionForNMLs(parseResultsFiltered.map(_.description))
           wkUrl = wkUrlsForNMLs(parseResultsFiltered.map(_.wkUrl))
-          _ <- assertNonEmpty(parseSuccesses)
-          skeletonTracings = parseSuccesses.flatMap(_.skeletonTracingOpt)
+          skeletonTracings = parseSuccesses.map(_.skeletonTracing)
           // Create a list of volume layers for each uploaded (non-skeleton-only) annotation.
           // This is what determines the merging strategy for volume layers
           volumeLayersGroupedRaw = parseSuccesses.map(_.volumeLayers).filter(_.nonEmpty)
@@ -226,9 +225,6 @@ class AnnotationIOController @Inject()(
                           AnnotationLayerStatistics.unknown))
     }
 
-  private def assertNonEmpty(parseSuccesses: List[NmlParseSuccess]) =
-    bool2Fox(parseSuccesses.exists(p => p.skeletonTracingOpt.nonEmpty || p.volumeLayers.nonEmpty)) ?~> "nml.file.noFile"
-
   private def findDatasetForUploadedAnnotations(
       skeletonTracings: List[SkeletonTracing],
       volumeTracings: List[UploadedVolumeLayer],
@@ -327,18 +323,20 @@ class AnnotationIOController @Inject()(
     val bbox =
       if (volumeTracing.boundingBox.isEmpty) boundingBoxToProto(dataSource.boundingBox)
       else volumeTracing.boundingBox
-    val elementClass = fallbackLayerOpt
-      .map(layer => elementClassToProto(layer.elementClass))
-      .getOrElse(elementClassToProto(VolumeTracingDefaults.elementClass))
+
     for {
       tracingCanHaveSegmentIndex <- canHaveSegmentIndex(organizationId,
                                                         dataset.name,
                                                         fallbackLayerOpt.map(_.name),
                                                         remoteDataStoreClient)
+      elementClassProto <- fallbackLayerOpt
+        .map(layer => ElementClass.toProto(layer.elementClass))
+        .getOrElse(ElementClass.toProto(VolumeTracingDefaults.elementClass))
+        .toFox
     } yield
       volumeTracing.copy(
         boundingBox = bbox,
-        elementClass = elementClass,
+        elementClass = elementClassProto,
         fallbackLayer = fallbackLayerOpt.map(_.name),
         largestSegmentId = combineLargestSegmentIdsByPrecedence(volumeTracing.largestSegmentId,
                                                                 fallbackLayerOpt.map(_.largestSegmentId)),

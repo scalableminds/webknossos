@@ -40,7 +40,7 @@ import {
   settingsTooltips,
 } from "messages";
 import type { Vector3 } from "oxalis/constants";
-import Constants, { ControlModeEnum, MappingStatusEnum } from "oxalis/constants";
+import Constants, { ControlModeEnum, IdentityTransform, MappingStatusEnum } from "oxalis/constants";
 import defaultState from "oxalis/default_state";
 import {
   getDefaultValueRangeOfLayer,
@@ -55,7 +55,6 @@ import {
   getTransformsForLayer,
   getTransformsForLayerOrNull,
   hasDatasetTransforms,
-  isIdentityTransform,
   isLayerWithoutTransformationConfigSupport,
 } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import {
@@ -208,7 +207,7 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
   if (!showIcon) {
     return null;
   }
-  const isRenderedNatively = transform == null || isIdentityTransform(transform);
+  const isRenderedNatively = transform == null || transform === IdentityTransform;
 
   const typeToLabel = {
     affine: "an affine",
@@ -588,9 +587,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     }
     const defaultIntensityRange = getDefaultValueRangeOfLayer(this.props.dataset, layerName);
     const histograms = this.props.histogramData?.[layerName];
+    const elementClass = getElementClass(this.props.dataset, layerName);
 
     return (
       <Histogram
+        supportFractions={elementClass === "float" || elementClass === "double"}
         data={histograms}
         intensityRangeMin={intensityRange[0]}
         intensityRangeMax={intensityRange[1]}
@@ -697,7 +698,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             key: "deleteAnnotationLayer",
           }
         : null,
-      hasHistogram && !isDisabled
+      !isDisabled
         ? { label: this.getEditMinMaxButton(layerName, isInEditMode), key: "editMinMax" }
         : null,
       hasHistogram && !isDisabled

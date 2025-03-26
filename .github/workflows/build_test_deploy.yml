@@ -204,7 +204,7 @@ jobs:
         with:
           timeout_minutes: 10
           max_attempts: 3
-          command: .github/not-on-master.sh yarn run test-e2e
+          command: sh -c "docker ps && .github/not-on-master.sh yarn run test-e2e"
         env:
           POSTGRES_URL: jdbc:postgresql://localhost:5432/webknossos
           POSTGRES_USER: webknossos_user

@@ -61,10 +61,8 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
                        bucketBytes: Array[Byte],
                        previousBucketBytesBox: Box[Array[Byte]],
                        elementClass: ElementClassProto,
-                       mappingName: Option[String],
                        editableMappingTracingId: Option[String])(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      before <- Instant.nowFox
       bucketBytesDecompressed <- if (isRevertedElement(bucketBytes)) {
         Fox.successful(segmentIndexBuffer.emptyBucketArrayForElementClass)
       } else {
@@ -73,39 +71,32 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
                              expectedUncompressedBucketSizeFor(elementClass),
                              "updating segment index, new bucket data")).toFox
       }
-
       previousBucketBytesWithEmptyFallback <- segmentIndexBuffer.bytesWithEmptyFallback(previousBucketBytesBox) ?~> "volumeSegmentIndex.update.getPreviousBucket.failed"
       segmentIds: Set[Long] <- collectSegmentIds(bucketBytesDecompressed, elementClass).toFox
       previousSegmentIds: Set[Long] <- collectSegmentIds(previousBucketBytesWithEmptyFallback, elementClass) ?~> "volumeSegmentIndex.update.collectSegmentIds.failed"
       additions = segmentIds.diff(previousSegmentIds)
       removals = previousSegmentIds.diff(segmentIds)
+      _ = logger.info(s"additions: $additions, removals $removals")
       _ <- Fox.serialCombined(removals.toList)(
         segmentId =>
           // When fallback layer is used we also need to include relevant segments here into the fossildb since otherwise the fallback layer would be used with invalid data
-          removeBucketFromSegmentIndex(segmentIndexBuffer,
-                                       segmentId,
-                                       bucketPosition,
-                                       mappingName,
-                                       editableMappingTracingId)) ?~> "volumeSegmentIndex.update.removeBucket.failed"
+          removeBucketFromSegmentIndex(segmentIndexBuffer, segmentId, bucketPosition, editableMappingTracingId)) ?~> "volumeSegmentIndex.update.removeBucket.failed"
       // When fallback layer is used, copy the entire bucketlist for this segment instead of one bucket
-      _ <- Fox.runIf(additions.nonEmpty)(
-        addBucketToSegmentIndex(segmentIndexBuffer,
-                                additions.toList,
-                                bucketPosition,
-                                mappingName,
-                                editableMappingTracingId)) ?~> "volumeSegmentIndex.update.addBucket.failed"
+      _ <- Fox.runIf(additions.nonEmpty)(addBucketToSegmentIndex(
+        segmentIndexBuffer,
+        additions.toList,
+        bucketPosition,
+        editableMappingTracingId)) ?~> "volumeSegmentIndex.update.addBucket.failed"
     } yield ()
 
   private def removeBucketFromSegmentIndex(
       segmentIndexBuffer: VolumeSegmentIndexBuffer,
       segmentId: Long,
       bucketPosition: BucketPosition,
-      mappingName: Option[String],
       editableMappingTracingId: Option[String])(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       previousBucketPositions: Set[Vec3IntProto] <- segmentIndexBuffer.getOne(segmentId,
                                                                               bucketPosition.mag,
-                                                                              mappingName,
                                                                               editableMappingTracingId,
                                                                               bucketPosition.additionalCoordinates)
       bucketPositionProto = bucketPosition.toVec3IntProto
@@ -121,13 +112,11 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
       segmentIndexBuffer: VolumeSegmentIndexBuffer,
       segmentIds: List[Long],
       bucketPosition: BucketPosition,
-      mappingName: Option[String],
       editableMappingTracingId: Option[String])(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       previousBucketPositionsBySegment: Seq[(Long, Set[Vec3IntProto])] <- segmentIndexBuffer.getMultiple(
         segmentIds,
         bucketPosition.mag,
-        mappingName,
         editableMappingTracingId,
         bucketPosition.additionalCoordinates)
       _ <- previousBucketPositionsBySegment.foreach {
@@ -164,21 +153,23 @@ set.filter(!_.isZero).map { u: SegmentInteger =>
                                                             editableMappingTracingId: Option[String],
                                                             additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
       implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[Set[Vec3IntProto]] = {
-    // TODO avoid buffer here? we just need the read functionality?
-    val dummyBuffer = new VolumeSegmentIndexBuffer(
-      tracingId = tracingId,
-      elementClass = tracing.elementClass,
-      volumeSegmentIndexClient = volumeSegmentIndexClient,
-      version = tracing.version,
-      remoteDatastoreClient = remoteDatastoreClient,
-      fallbackLayer = fallbackLayer,
-      additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),
-      temporaryTracingService = temporaryTracingService,
-      tc = tc,
-      toTemporaryStore = false // TDOO isTemporaryTracing
-    )
-    dummyBuffer.getOne(segmentId, mag, mappingName, editableMappingTracingId, additionalCoordinates)
-  }
+      tc: TokenContext): Fox[Set[Vec3IntProto]] =
+    for {
+      isTemporaryTracing <- temporaryTracingService.isTemporaryTracing(tracingId)
+      dummyBuffer = new VolumeSegmentIndexBuffer(
+        tracingId = tracingId,
+        elementClass = tracing.elementClass,
+        mappingName = mappingName,
+        volumeSegmentIndexClient = volumeSegmentIndexClient,
+        version = tracing.version,
+        remoteDatastoreClient = remoteDatastoreClient,
+        fallbackLayer = fallbackLayer,
+        additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),
+        temporaryTracingService = temporaryTracingService,
+        tc = tc,
+        toTemporaryStore = isTemporaryTracing
+      )
+      bucketPositions <- dummyBuffer.getOne(segmentId, mag, editableMappingTracingId, additionalCoordinates)
+    } yield bucketPositions
 
 }

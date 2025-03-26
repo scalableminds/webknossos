@@ -73,6 +73,11 @@ class TemporaryTracingService @Inject()(
     Fox.successful(())
   }
 
+  def saveVolumeBuckets(bucketDataByKey: Seq[(String, Array[Byte])]): Fox[Unit] = {
+    volumeDataStore.insertAll(bucketDataByKey, Some(temporaryStoreTimeout))
+    Fox.successful(())
+  }
+
   def saveAnnotationProto(annotationId: String, annotationProto: AnnotationProto): Fox[Unit] = {
     annotationStore.insert(annotationId, annotationProto, Some(temporaryStoreTimeout))
     registerAnnotationId(annotationId)
@@ -81,7 +86,7 @@ class TemporaryTracingService @Inject()(
 
   def saveVolumeSegmentIndexBuffer(tracingId: String,
                                    bucketPositionsBySegmentId: Seq[(String, Set[Vec3IntProto])]): Fox[Unit] = {
-    segmentIndexStore.insertAll(bucketPositionsBySegmentId: _*)
+    segmentIndexStore.insertAll(bucketPositionsBySegmentId, Some(temporaryStoreTimeout))
     registerTracingId(tracingId)
     Fox.successful(())
   }

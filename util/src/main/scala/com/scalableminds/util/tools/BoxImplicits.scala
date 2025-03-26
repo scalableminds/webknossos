@@ -23,6 +23,20 @@ trait BoxImplicits {
     val failures = boxes.collect { case f: Failure => f }
     if (failures.isEmpty) None else Some(failures.map(_.msg))
   }
+
+  def assertNoFailure(boxes: Seq[Box[_]]): Box[Unit] = {
+    val firstFailure = boxes.find { box =>
+      box match {
+        case _: Failure => true
+        case _          => false
+      }
+    }
+    firstFailure match {
+      case Some(failure) => Failure(s"At least one failure contained in list of ${boxes.length} boxes: $failure")
+      case None          => Full(())
+    }
+  }
+
 }
 
 object BoxImplicits extends BoxImplicits

@@ -9,6 +9,7 @@ import com.scalableminds.webknossos.datastore.services.DataConverter
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.typesafe.scalalogging.LazyLogging
 import net.jpountz.lz4.{LZ4Compressor, LZ4Factory, LZ4FastDecompressor}
+import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Box, Empty, Failure, Full}
 
 import scala.annotation.tailrec
@@ -179,13 +180,26 @@ trait VolumeTracingBucketHelper
 
   def loadBuckets(volumeTracingLayer: VolumeTracingLayer,
                   bucketPositions: Seq[BucketPosition],
-                  version: Option[Long]): Fox[Seq[Box[VersionedKeyValuePair[Array[Byte]]]]] = {
+                  version: Option[Long]): Fox[Seq[Box[Array[Byte]]]] = {
     val bucketKeys = bucketPositions.map(buildBucketKey(volumeTracingLayer.name, _, volumeTracingLayer.additionalAxes))
 
-    volumeDataStore.getMultipleKeysByList(bucketKeys, version)
+    for {
+      bucketBoxesFromFossil <- volumeDataStore.getMultipleKeysByList(bucketKeys, version)
+      bucketBoxesUnpacked = bucketBoxesFromFossil.map { bucketBox =>
+        bucketBox.flatMap { versionedVolumeBucket: VersionedKeyValuePair[Array[Byte]] =>
+          if (isRevertedElement(versionedVolumeBucket)) Empty
+          else {
+            tryo(
+              decompressIfNeeded(versionedVolumeBucket.value,
+                                 expectedUncompressedBucketSizeFor(volumeTracingLayer),
+                                 ""))
+          }
+        }
+      }
+    } yield bucketBoxesUnpacked
 
-    // TODO if isTemporaryTracing, load from temporaryTracingService
-    // TODO also load from fallback layer
+    //TODO if isTemporaryTracing, load from temporaryTracingService
+    //TODO also load from fallback layer
   }
 
   def loadBucket(volumeTracingLayer: VolumeTracingLayer,
@@ -279,8 +293,11 @@ trait VolumeTracingBucketHelper
     val expectedUncompressedSize = expectedUncompressedBucketSizeFor(dataLayer.elementClass)
     val compressedBuckets =
       bucketBytes.map(singleBucketBytes => compressVolumeBucket(singleBucketBytes, expectedUncompressedSize))
-    volumeDataStore.putMultiple(bucketKeys.zip(compressedBuckets), version)
-    // TODO temporary store
+    if (toTemporaryStore) {
+      temporaryTracingService.saveVolumeBuckets(bucketKeys.zip(compressedBuckets))
+    } else {
+      volumeDataStore.putMultiple(bucketKeys.zip(compressedBuckets), version)
+    }
   }
 
   def bucketStream(dataLayer: VolumeTracingLayer, version: Option[Long]): Iterator[(BucketPosition, Array[Byte])] = {

@@ -54,13 +54,20 @@ class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
     to.foreach(system.scheduler.scheduleOnce(_)(remove(id)))
   }
 
-  def insertAll(els: (K, V)*): map.type =
+  def insertAll(elements: Seq[(K, V)], to: Option[FiniteDuration] = None)(implicit ec: ExecutionContext): Unit = {
     map.synchronized {
-      map ++= els
+      map ++= elements
     }
+    to.foreach(system.scheduler.scheduleOnce(_)(removeMultiple(elements.map(_._1))))
+  }
 
   def remove(id: K): map.type =
     map.synchronized {
       map -= id
+    }
+
+  private def removeMultiple(ids: Seq[K]): map.type =
+    map.synchronized {
+      map --= ids
     }
 }

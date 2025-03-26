@@ -35,16 +35,18 @@ trait SegmentIndexKeyHelper extends AdditionalCoordinateKey {
 // read provides fallback data from fossildb / segment index file
 // while write is done only locally in-memory, until flush is called
 // This saves a lot of db interactions (since adjacent bucket updates usually touch the same segments)
-class VolumeSegmentIndexBuffer(tracingId: String,
-                               elementClass: ElementClass.Value,
-                               volumeSegmentIndexClient: FossilDBClient,
-                               version: Long,
-                               remoteDatastoreClient: TSRemoteDatastoreClient,
-                               fallbackLayer: Option[RemoteFallbackLayer],
-                               additionalAxes: Option[Seq[AdditionalAxis]],
-                               temporaryTracingService: TemporaryTracingService,
-                               tc: TokenContext,
-                               toTemporaryStore: Boolean = false)
+class VolumeSegmentIndexBuffer(
+    tracingId: String,
+    elementClass: ElementClass.Value,
+    mappingName: Option[String], // should be the base mapping name in case of editable mapping, otherwise the selected mapping
+    volumeSegmentIndexClient: FossilDBClient,
+    version: Long,
+    remoteDatastoreClient: TSRemoteDatastoreClient,
+    fallbackLayer: Option[RemoteFallbackLayer],
+    additionalAxes: Option[Seq[AdditionalAxis]],
+    temporaryTracingService: TemporaryTracingService,
+    tc: TokenContext,
+    toTemporaryStore: Boolean = false)
     extends KeyValueStoreImplicits
     with SegmentIndexKeyHelper
     with ProtoGeometryImplicits
@@ -73,17 +75,15 @@ class VolumeSegmentIndexBuffer(tracingId: String,
   def getOne(
       segmentId: Long,
       mag: Vec3Int,
-      mappingName: Option[String],
       editableMappingTracingId: Option[String],
       additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit ec: ExecutionContext): Fox[Set[Vec3IntProto]] =
     for {
-      resultList <- getMultiple(List(segmentId), mag, mappingName, editableMappingTracingId, additionalCoordinates)
+      resultList <- getMultiple(List(segmentId), mag, editableMappingTracingId, additionalCoordinates)
       result <- resultList.headOption.map(_._2).toFox
     } yield result
 
   def getMultiple(segmentIds: List[Long],
                   mag: Vec3Int,
-                  mappingName: Option[String], // TODO move mappingName to buffer properties?
                   editableMappingTracingId: Option[String],
                   additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
       implicit ec: ExecutionContext): Fox[List[(Long, Set[Vec3IntProto])]] =
@@ -117,11 +117,12 @@ class VolumeSegmentIndexBuffer(tracingId: String,
       case (key, (bucketPositions, true)) => Some((key, bucketPositions))
       case _                              => None
     }
+    logger.info(s"toFlush: ${toFlush.map(_._1)}")
     if (toTemporaryStore) {
       temporaryTracingService.saveVolumeSegmentIndexBuffer(tracingId, toFlush)
     } else {
       val asProtoByteArrays: Seq[(String, Array[Byte])] = toFlush.map {
-        case (segmentId, bucketPositions) => (segmentId, toProtoBytes(ListOfVec3IntProto(bucketPositions.toList)))
+        case (key, bucketPositions) => (key, toProtoBytes(ListOfVec3IntProto(bucketPositions.toList)))
       }
       volumeSegmentIndexClient.putMultiple(asProtoByteArrays, version)
     }
@@ -191,13 +192,12 @@ class VolumeSegmentIndexBuffer(tracingId: String,
       mappingName: Option[String],
       editableMappingTracingId: Option[String])(implicit ec: ExecutionContext): Fox[Seq[(Long, Set[Vec3IntProto])]] =
     fallbackLayer match {
-      case Some(remoteFallbackLayer) if segmentIds.nonEmpty => {
+      case Some(remoteFallbackLayer) if segmentIds.nonEmpty =>
         remoteDatastoreClient.querySegmentIndexForMultipleSegments(remoteFallbackLayer,
                                                                    segmentIds,
                                                                    mag,
                                                                    mappingName,
                                                                    editableMappingTracingId)(tc)
-      }
       case _ => Fox.successful(List.empty)
     }
 

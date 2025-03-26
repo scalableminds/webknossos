@@ -1,8 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{BoxImplicits, Fox}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.tracingstore.tracings.{FossilDBClient, TemporaryTracingService}
@@ -15,6 +14,7 @@ class VolumeBucketBuffer(version: Long,
                          volumeTracingLayer: VolumeTracingLayer,
                          val volumeDataStore: FossilDBClient,
                          val temporaryTracingService: TemporaryTracingService,
+                         toTemporaryStore: Boolean,
                          implicit val tc: TokenContext,
                          implicit val ec: ExecutionContext)
     extends VolumeTracingBucketHelper
@@ -26,16 +26,13 @@ class VolumeBucketBuffer(version: Long,
 
   def prefill(bucketPositions: List[BucketPosition]): Fox[Unit] =
     for {
-      before <- Instant.nowFox
-      // TODO use multi-get
       _ <- getMultipleFromFossilOrFallbackLayer(bucketPositions)
-      _ = Instant.logSince(before, s"bucketBuffer prefill for ${bucketPositions.length} bucket positions.")
     } yield ()
 
   def getWithFallback(bucketPosition: BucketPosition)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     bucketDataBuffer.get(bucketPosition) match {
-      case Some((bucketDataBox, _d)) => bucketDataBox
-      case None                      => logger.info(s"buffer miss for $bucketPosition"); getFromFossilOrFallbackLayer(bucketPosition)
+      case Some((bucketDataBox, _)) => bucketDataBox
+      case None                     => logger.info(s"buffer miss for $bucketPosition"); getFromFossilOrFallbackLayer(bucketPosition)
     }
 
   private def getFromFossilOrFallbackLayer(bucketPosition: BucketPosition): Fox[Array[Byte]] =
@@ -47,14 +44,15 @@ class VolumeBucketBuffer(version: Long,
 
   private def getMultipleFromFossilOrFallbackLayer(bucketPositions: Seq[BucketPosition]): Fox[Seq[Box[Array[Byte]]]] =
     for {
-      bucketDataKeyValueBoxes <- loadBuckets(volumeTracingLayer, bucketPositions, Some(version))
-      bucketDataBoxes = bucketDataKeyValueBoxes.map(_.map(_.value))
+      bucketDataBoxes <- loadBuckets(volumeTracingLayer, bucketPositions, Some(version))
+      _ <- bool2Box(bucketDataBoxes.length == bucketPositions.length)
+      _ <- BoxImplicits.assertNoFailure(bucketDataBoxes)
       _ = bucketDataBoxes.zip(bucketPositions).foreach {
         case (bucketDataBox, bucketPosition) =>
           bucketDataBox match {
-            case Full(_)    => logger.info("put!"); bucketDataBuffer.put(bucketPosition, (bucketDataBox, false))
+            case Full(_)    => bucketDataBuffer.put(bucketPosition, (bucketDataBox, false))
             case Empty      => bucketDataBuffer.put(bucketPosition, (Empty, false))
-            case _: Failure => logger.info("failure in loadBucket") // TODO what to do in failure case? stop?
+            case _: Failure => () // we asserted no failures above
           }
       }
     } yield bucketDataBoxes
@@ -66,13 +64,10 @@ class VolumeBucketBuffer(version: Long,
     val fullDirtyBuckets = bucketDataBuffer.keys.flatMap { bucketPosition =>
       bucketDataBuffer(bucketPosition) match {
         case (Full(bucketData), true) =>
-          Some(
-            (buildBucketKey(volumeTracingLayer.tracingId, bucketPosition, volumeTracingLayer.additionalAxes),
-             bucketData))
+          Some((bucketPosition, bucketData))
         case _ => None
       }
-    }
-    // TODO go via VolumeTracingBucketHelper (compress if needed, etc)
-    volumeDataStore.putMultiple(fullDirtyBuckets.toList, version)
+    }.toSeq
+    saveBuckets(volumeTracingLayer, fullDirtyBuckets.map(_._1), fullDirtyBuckets.map(_._2), version, toTemporaryStore)
   }
 }

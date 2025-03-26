@@ -210,12 +210,7 @@ type Props = {
   ) => void;
   removeSegment: (arg0: number, arg2: string) => void;
   deleteSegmentData: (arg0: number, arg2: string, callback?: () => void) => void;
-  setMeshOpacity: (
-    arg0: number,
-    arg1: string,
-    arg2: number,
-    arg3: AdditionalCoordinate[] | null | undefined,
-  ) => void;
+  setMeshOpacity: (arg0: number, arg1: string, arg2: number) => void;
   onSelectSegment: (arg0: Segment) => void;
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
   loadAdHocMesh: (
@@ -421,10 +416,6 @@ function _SegmentListItem({
     (a: Vector4, b: Vector4) => V4.isEqual(a, b),
   );
 
-  const additionalCoordinates = useSelector(
-    (state: OxalisState) => state.flycam.additionalCoordinates,
-  );
-
   const isHoveredSegmentId = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.hoveredSegmentId === segment.id,
   );
@@ -482,12 +473,7 @@ function _SegmentListItem({
                   visibleSegmentationLayer.name,
                   createsNewUndoState,
                 );
-                setMeshOpacity(
-                  segment.id,
-                  visibleSegmentationLayer.name,
-                  color[3],
-                  additionalCoordinates,
-                );
+                setMeshOpacity(segment.id, visibleSegmentationLayer.name, color[3]);
               }}
               rgba={segmentColorWithMeshOpacity}
             />

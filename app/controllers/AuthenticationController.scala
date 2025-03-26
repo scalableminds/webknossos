@@ -34,11 +34,79 @@ import utils.WkConf
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
+import java.security.SecureRandom
 import java.util.UUID
 import javax.inject.Inject
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
+
+/**
+ * Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions
+ *
+ * Omitted:
+ * - `attestation` and `attestationFormat`, because attestation is not implemented.
+ * - `extensions` no extensions in use.
+ */
+case class WebAuthnPublicKeyCredentialCreationOptions(
+  authenticatorSelection: WebAuthnCreationOptionsAuthenticatorSelection,
+  challenge: Array[Byte],
+  excludeCredentials: Array[WebAuthnCreationOptionsExcludeCredentials],
+  pubKeyParams: Array[WebAuthnCreationOptionsPubKeyParam],
+  timeout: Int, // NOTE: timeout in milliseconds
+  rp: WebAuthnCreationOptionsRelyingParty,
+  user: WebAuthnCreationOptionsUser
+  )
+
+/**
+ * Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions#authenticatorselection
+ *
+ * Omitted:
+ * - `authenticatorAttachment` no forced authenticator.
+ * - `userVerifiaction` not implemented on our side.
+ * - `hints` no restrictions.
+ */
+case class WebAuthnCreationOptionsAuthenticatorSelection(
+  requiredResidentKey: Boolean,
+  residentKey: String,
+  )
+
+/**
+ * Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions#excludecredentials
+ *
+ * Omitted:
+ * - `transports` not restricted by us.
+ */
+case class WebAuthnCreationOptionsExcludeCredentials(
+  id: Array[Byte],
+  `type`: String, // NOTE: must be set to "public-key"
+  )
+
+/**
+ * Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions#pubkeycredparams
+ */
+case class WebAuthnCreationOptionsPubKeyParam(
+  alg: Int,
+  `type`: String, // NOTE: must be set to "public-key"
+  )
+
+/**
+ * Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions#rp
+ */
+case class WebAuthnCreationOptionsRelyingParty(
+  id: String, // NOTE: Should be set to the hostname
+  name: String,
+  )
+
+/**
+ * Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions#user
+ */
+case class WebAuthnCreationOptionsUser(
+  displayName: String,
+  id: Array[Byte],
+  name: String
+  )
+
 
 case class WebAuthnRegistration(name: String, key: String)
 object WebAuthnRegistration {
@@ -494,26 +562,44 @@ class AuthenticationController @Inject()(
 
   def webauthnRegisterStart(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      email <- userService.emailFor(request.identity);
-      result <- Future {
-        val userIdentity = UserIdentity
-          .builder()
-          .name(email)
-          .displayName(request.identity.name)
-          .id(WebAuthnCredentialRepository.objectIdToByteArray(request.identity._multiUser))
-          .build();
-        val opts = StartRegistrationOptions
-          .builder()
-          .user(userIdentity)
-          .timeout(60000)
-          .authenticatorSelection(
-            AuthenticatorSelectionCriteria.builder().residentKey(ResidentKeyRequirement.REQUIRED).build())
-          .build()
-        val registration = relyingParty.startRegistration(opts);
-        temporaryRegistrationStore.insert(request.identity._multiUser, registration);
-        Ok(Json.toJson(registration.toCredentialsCreateJson))
-      }(blockingContext)
-    } yield result;
+      email <- userService.emailFor(request.identity)
+      user = WebAuthnCreationOptionsUser(
+        displayName = request.identity.name,
+        id = request.identity._multiUser.id.getBytes,
+        name = email
+      )
+      credentials <- webAuthnCredentialDAO.findAllForUser(request.identity._multiUser)
+      excludeCredentials = credentials.map(c => WebAuthnCreationOptionsExcludeCredentials(
+        id=c._multiUser.id.getBytes(StandardCharsets.UTF_8),
+        `type`="public-key"
+      )).toArray
+      random = new SecureRandom() // TODO: Initialize once
+      challenge = {
+        val challenge = new Array[Byte](32) // NOTE: Minimum required length are 16 bytes.
+        random.nextBytes(challenge)
+        challenge
+      }
+      options = WebAuthnPublicKeyCredentialCreationOptions(
+        authenticatorSelection = WebAuthnCreationOptionsAuthenticatorSelection(
+          requiredResidentKey = true,
+          residentKey = "required"
+          ),
+        challenge,
+        excludeCredentials,
+        pubKeyParams = Array(
+          // TODO: Disable Ed25519 for Java 11
+          WebAuthnCreationOptionsPubKeyParam(-8, "public-key"), // NOTE: COSE Algorithm: Ed25519
+          WebAuthnCreationOptionsPubKeyParam(-7, "public-key"), // NOTE: COSE Algorithm: ES256
+          WebAuthnCreationOptionsPubKeyParam(-257, "public-key"), // NOTE: COSE Algorithm: RS256
+          ), // NOTE: Could be created at startup
+        timeout = 120000, // 2 minutes timeout
+        rp = WebAuthnCreationOptionsRelyingParty(
+          id = "webknossos.local", // TODO: Use hostname
+          name = "Webknossos"
+          ), // NOTE: Could be created once at startup
+        user,
+        )
+    } yield Ok(Json.toJson(options))
   }
 
   def webauthnRegisterFinalize(): Action[WebAuthnRegistration] =

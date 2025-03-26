@@ -6,8 +6,8 @@ import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
-import com.scalableminds.webknossos.datastore.helpers.SegmentStatistics
-import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
+import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, SegmentStatistics}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.{
   Cuboid,
   DataServiceDataRequest,
@@ -39,6 +39,8 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
   private val segmentIndexDir = "segmentIndex"
 
   private lazy val fileHandleCache = new Hdf5FileCache(10)
+
+  protected lazy val bucketScanner = new NativeBucketScanner()
 
   def getSegmentIndexFile(organizationId: String, datasetDirectoryName: String, dataLayerName: String): Box[Path] =
     for {
@@ -125,13 +127,18 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
                        segmentId: Long,
                        mag: Vec3Int,
                        mappingName: Option[String])(implicit m: MessagesProvider, tc: TokenContext): Fox[Long] =
-    calculateSegmentVolume(
-      segmentId,
-      mag,
-      None, // see #7556
-      getBucketPositions(organizationId, datasetDirectoryName, dataLayerName, mappingName),
-      getTypedDataForBucketPosition(organizationId, datasetDirectoryName, dataLayerName, mappingName)
-    )
+    for {
+      (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                datasetDirectoryName,
+                                                                                dataLayerName)
+      volume <- calculateSegmentVolume(
+        segmentId,
+        mag,
+        None, // see #7556
+        getBucketPositions(organizationId, datasetDirectoryName, dataLayerName, mappingName),
+        getDataForBucketPositionsCallable(organizationId, datasetDirectoryName, dataLayerName, mappingName)
+      )
+    } yield volume
 
   def getSegmentBoundingBox(
       organizationId: String,
@@ -155,6 +162,24 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
                                    datasetDirectoryName: String,
                                    dataLayerName: String): Fox[Path] =
     Fox.box2Fox(getSegmentIndexFile(organizationId, datasetDirectoryName, dataLayerName)) ?~> "segmentIndexFile.notFound"
+
+  private def getDataForBucketPositionsCallable(organizationId: String,
+                                                datasetDirectoryName: String,
+                                                dataLayerName: String,
+                                                mappingName: Option[String])(
+      bucketPositions: Seq[Vec3Int],
+      mag: Vec3Int,
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
+      implicit m: MessagesProvider,
+      tc: TokenContext): Fox[(List[Box[Array[Byte]]], ElementClass.Value)] =
+    for {
+      // Additional coordinates parameter ignored, see #7556
+      (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                                datasetDirectoryName,
+                                                                                dataLayerName)
+      bucketData <- Fox.serialCombined(bucketPositions)(bucketPosition =>
+        getDataForBucketPositions(dataSource, dataLayer, mag, Seq(bucketPosition * mag), mappingName))
+    } yield (bucketData.map(Full(_)), dataLayer.elementClass)
 
   private def getTypedDataForBucketPosition(organizationId: String,
                                             datasetDirectoryName: String,

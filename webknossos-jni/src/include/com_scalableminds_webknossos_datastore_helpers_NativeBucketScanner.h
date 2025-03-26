@@ -15,6 +15,14 @@ extern "C" {
 JNIEXPORT jlongArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_collectSegmentIds
   (JNIEnv *, jobject, jbyteArray, jint, jboolean);
 
+/*
+ * Class:      com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner
+ * Method:     countSegmentVoxels
+ * Signature:  ([BIZJ)J
+ */
+JNIEXPORT jlong JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_countSegmentVoxels
+  (JNIEnv *, jobject, jbyteArray, jint, jboolean, jlong);
+
 #ifdef __cplusplus
 }
 #endif

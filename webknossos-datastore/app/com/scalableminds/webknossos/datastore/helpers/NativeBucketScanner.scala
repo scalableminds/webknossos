@@ -5,4 +5,9 @@ import com.github.sbt.jni.nativeLoader
 @nativeLoader("webknossosJni0")
 class NativeBucketScanner() {
   @native def collectSegmentIds(bucketBytes: Array[Byte], bytesPerElement: Int, isSigned: Boolean): Array[Long]
+
+  @native def countSegmentVoxels(bucketBytes: Array[Byte],
+                                 bytesPerElement: Int,
+                                 isSigned: Boolean,
+                                 segmentId: Long): Long
 }

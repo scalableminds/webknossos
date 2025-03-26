@@ -10,7 +10,8 @@ import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Box, EmptyBox, Full}
+import net.liftweb.common.{Box, Full}
+import org.apache.commons.io.FileUtils
 
 import java.io.File
 import java.nio.file.{Files, Path}
@@ -191,6 +192,11 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
       s"Found complete symlinks to layer; Moving layer $sourceLayer from $sourceDataSource to $moveToDataSource/$moveToDataLayer")
     if (Files.exists(targetPath) && Files.isSymbolicLink(targetPath)) {
       Files.delete(targetPath)
+    }
+    if (Files.exists(targetPath) && Files.isDirectory(targetPath)) {
+      // This happens when the fully linked layer consists of mag symlinks. The directory exists and is full of symlinked mags.
+      // We need to delete the directory before moving the layer.
+      FileUtils.deleteDirectory(targetPath.toFile)
     }
     Files.move(layerPath, targetPath)
 

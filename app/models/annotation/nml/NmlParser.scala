@@ -95,30 +95,25 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with Proto
           v.name,
         )
       }
-      skeletonTracingOpt: Option[SkeletonTracing] = if (nmlParams.treesSplit.isEmpty && nmlParams.userBoundingBoxes.isEmpty)
-        None
-      else
-        Some(
-          SkeletonTracing(
-            dataset.name,
-            nmlParams.treesSplit,
-            nmlParams.timestamp,
-            nmlParams.taskBoundingBox,
-            nmlParams.activeNodeId,
-            nmlParams.editPosition,
-            nmlParams.editRotation,
-            nmlParams.zoomLevel,
-            version = 0,
-            None,
-            nmlParams.treeGroupsAfterSplit,
-            nmlParams.userBoundingBoxes,
-            Some(dataset._organization),
-            nmlParams.editPositionAdditionalCoordinates,
-            additionalAxes = nmlParams.additionalAxisProtos
-          )
-        )
+      skeletonTracing: SkeletonTracing = SkeletonTracing(
+        dataset.name,
+        nmlParams.treesSplit,
+        nmlParams.timestamp,
+        nmlParams.taskBoundingBox,
+        nmlParams.activeNodeId,
+        nmlParams.editPosition,
+        nmlParams.editRotation,
+        nmlParams.zoomLevel,
+        version = 0,
+        None,
+        nmlParams.treeGroupsAfterSplit,
+        nmlParams.userBoundingBoxes,
+        Some(dataset._organization),
+        nmlParams.editPositionAdditionalCoordinates,
+        additionalAxes = nmlParams.additionalAxisProtos
+      )
     } yield
-      NmlParseSuccessWithoutFile(skeletonTracingOpt, volumeLayers, dataset._id, nmlParams.description, nmlParams.wkUrl)
+      NmlParseSuccessWithoutFile(skeletonTracing, volumeLayers, dataset._id, nmlParams.description, nmlParams.wkUrl)
 
   private def getParametersFromNML(
       nmlInputStream: InputStream,

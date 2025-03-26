@@ -13,12 +13,6 @@ import { tracing, annotation } from "../fixtures/skeletontracing_server_objects"
 import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reducers/reducer_helpers";
 import { batchedAnnotationInitializationAction } from "oxalis/model/actions/annotation_actions";
 
-mockRequire("app", {
-  currentUser: {
-    firstName: "SCM",
-    lastName: "Boy",
-  },
-});
 const NodeShader = mockRequire.reRequire("oxalis/geometries/materials/node_shader");
 const Store = mockRequire.reRequire("oxalis/store").default;
 const Skeleton = mockRequire.reRequire("oxalis/geometries/skeleton").default;

@@ -489,7 +489,7 @@ function _SegmentListItem({
                   additionalCoordinates,
                 );
               }}
-              color={segmentColorWithMeshOpacity}
+              rgba={segmentColorWithMeshOpacity}
             />
           ) : (
             <ChangeColorMenuItemContent

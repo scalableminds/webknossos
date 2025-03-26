@@ -148,12 +148,12 @@ const ThrottledRGBAColorPicker = ({
 export function ChangeRGBAColorMenuItemContent({
   title,
   isDisabled,
-  color: rgba,
+  rgba,
   onSetColor,
 }: {
   title: string;
   isDisabled: boolean;
-  color: Vector4;
+  rgba: Vector4;
   onSetColor: (rgba: Vector4, createsNewUndoState: boolean) => void;
 }) {
   const isFirstColorChange = useRef(true);

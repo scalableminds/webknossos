@@ -1095,7 +1095,7 @@ class SegmentsView extends React.Component<Props, State> {
         <ChangeColorMenuItemContent
           title="Change Segment Color"
           isDisabled={false}
-          onSetColor={(color: Vector3) => {
+          onSetColor={(color) => {
             if (getVisibleSegmentationLayer == null) {
               return;
             }

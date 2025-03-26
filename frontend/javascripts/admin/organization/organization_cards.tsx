@@ -4,7 +4,7 @@ import {
   RocketOutlined,
   SafetyOutlined,
 } from "@ant-design/icons";
-import { Alert, Button, Card, Col, Progress, Row } from "antd";
+import { Alert, Button, Card, Col, Progress, Row, Tooltip } from "antd";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import dayjs from "dayjs";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
@@ -253,9 +253,16 @@ export function PlanDashboardCard({
     ];
   }
   const buyMoreCreditsAction = [
-    <span key="buyMoreCreditsAction" onClick={UpgradePricingPlanModal.orderWebknossosCredits}>
-      Buy more credits
-    </span>,
+    <Tooltip title="Disabled during testing phase" key="buyMoreCreditsAction">
+      <Button
+        type="text"
+        key="buyMoreCreditsAction"
+        onClick={UpgradePricingPlanModal.orderWebknossosCredits}
+        disabled
+      >
+        Buy more credits
+      </Button>
+    </Tooltip>,
   ];
 
   return (

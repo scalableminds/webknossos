@@ -214,7 +214,7 @@ class VolumeTracingService @Inject()(
         Fox.serialCombined(additionalCoordinateList)(additionalCoordinates => {
           val mag = vec3IntFromProto(magProto)
           for {
-            bucketPositionsRaw <- volumeSegmentIndexService.getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
+            bucketPositionsRaw <- volumeSegmentIndexService.getSegmentToBucketIndex(
               volumeTracing,
               fallbackLayer,
               tracingId,

@@ -80,7 +80,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       tracing <- annotationService.findVolume(annotationId, tracingId) ?~> "tracing.notFound"
       fallbackLayer <- volumeTracingService.getFallbackLayer(annotationId, tracing)
       allBucketPositions: Set[Vec3IntProto] <- volumeSegmentIndexService
-        .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
+        .getSegmentToBucketIndex(
           tracing,
           fallbackLayer,
           tracingId,

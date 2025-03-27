@@ -349,7 +349,7 @@ class VolumeTracingController @Inject()(
           mappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
           _ <- bool2Fox(DataLayer.bucketSize <= request.body.cubeSize) ?~> "cubeSize must be at least one bucket (32³)"
           bucketPositions: Set[Vec3IntProto] <- volumeSegmentIndexService
-            .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
+            .getSegmentToBucketIndex(
               tracing,
               fallbackLayer,
               tracingId,

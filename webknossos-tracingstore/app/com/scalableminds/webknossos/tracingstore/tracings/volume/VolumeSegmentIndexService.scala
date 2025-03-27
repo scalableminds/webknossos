@@ -137,20 +137,19 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
         .collectSegmentIds(bytes, ElementClass.bytesPerElement(elementClass), ElementClass.isSigned(elementClass))
         .toSet)
 
-  def getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(tracing: VolumeTracing,
-                                                            fallbackLayer: Option[RemoteFallbackLayer],
-                                                            tracingId: String,
-                                                            segmentId: Long,
-                                                            mag: Vec3Int,
-                                                            mappingName: Option[String],
-                                                            editableMappingTracingId: Option[String],
-                                                            additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
+  def getSegmentToBucketIndex(tracing: VolumeTracing,
+                              fallbackLayer: Option[RemoteFallbackLayer],
+                              tracingId: String,
+                              segmentId: Long,
+                              mag: Vec3Int,
+                              mappingName: Option[String],
+                              editableMappingTracingId: Option[String],
+                              additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[Set[Vec3IntProto]] =
     for {
       isTemporaryTracing <- temporaryTracingService.isTemporaryTracing(tracingId)
-      // TODO can we skip the buffer here and load directly from the fallback stuff?
-      dummyBuffer = new VolumeSegmentIndexBuffer(
+      segmentIndexReader = new VolumeSegmentIndexBuffer(
         tracingId = tracingId,
         elementClass = tracing.elementClass,
         mappingName = mappingName,
@@ -161,9 +160,10 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
         additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),
         temporaryTracingService = temporaryTracingService,
         tc = tc,
+        isReaderOnly = true,
         toTemporaryStore = isTemporaryTracing
       )
-      bucketPositions <- dummyBuffer.getOne(segmentId, mag, editableMappingTracingId, additionalCoordinates)
+      bucketPositions <- segmentIndexReader.getOne(segmentId, mag, editableMappingTracingId, additionalCoordinates)
     } yield bucketPositions
 
 }

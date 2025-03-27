@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.option2Fox
+import com.scalableminds.util.tools.Fox.{bool2Fox, option2Fox}
 import com.scalableminds.webknossos.datastore.geometry.{ListOfVec3IntProto, Vec3IntProto}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
@@ -46,6 +46,7 @@ class VolumeSegmentIndexBuffer(
     additionalAxes: Option[Seq[AdditionalAxis]],
     temporaryTracingService: TemporaryTracingService,
     tc: TokenContext,
+    isReaderOnly: Boolean = false,
     toTemporaryStore: Boolean = false)
     extends KeyValueStoreImplicits
     with SegmentIndexKeyHelper
@@ -60,16 +61,20 @@ class VolumeSegmentIndexBuffer(
           additionalCoordinates: Option[Seq[AdditionalCoordinate]],
           bucketPositions: Set[Vec3IntProto],
           markAsChanged: Boolean): Unit =
-    segmentIndexBuffer(segmentIndexKey(tracingId, segmentId, mag, additionalCoordinates, additionalAxes)) =
-      (bucketPositions, markAsChanged)
+    if (!isReaderOnly) {
+      segmentIndexBuffer(segmentIndexKey(tracingId, segmentId, mag, additionalCoordinates, additionalAxes)) =
+        (bucketPositions, markAsChanged)
+    }
 
   private def putMultiple(segmentIdsWithBucketPositions: Seq[(Long, Set[Vec3IntProto])],
                           mag: Vec3Int,
                           additionalCoordinates: Option[Seq[AdditionalCoordinate]],
                           markAsChanged: Boolean): Unit =
-    segmentIdsWithBucketPositions.foreach {
-      case (segmentId, bucketPositions) =>
-        put(segmentId, mag, additionalCoordinates, bucketPositions, markAsChanged)
+    if (!isReaderOnly) {
+      segmentIdsWithBucketPositions.foreach {
+        case (segmentId, bucketPositions) =>
+          put(segmentId, mag, additionalCoordinates, bucketPositions, markAsChanged)
+      }
     }
 
   def getOne(
@@ -112,38 +117,43 @@ class VolumeSegmentIndexBuffer(
       } yield allHitsFilled
     }
 
-  def flush(): Fox[Unit] = {
-    val toFlush = segmentIndexBuffer.toSeq.flatMap {
-      case (key, (bucketPositions, true)) => Some((key, bucketPositions))
-      case _                              => None
-    }
-    logger.info(s"toFlush: ${toFlush.map(_._1)}")
-    if (toTemporaryStore) {
-      temporaryTracingService.saveVolumeSegmentIndexBuffer(tracingId, toFlush)
-    } else {
-      val asProtoByteArrays: Seq[(String, Array[Byte])] = toFlush.map {
-        case (key, bucketPositions) => (key, toProtoBytes(ListOfVec3IntProto(bucketPositions.toList)))
+  def flush()(implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      _ <- bool2Fox(!isReaderOnly) ?~> "this VolumeSegmentIndexBuffer was instantiated with isReaderOnly=true and cannot be flushed."
+      toFlush = segmentIndexBuffer.toSeq.flatMap {
+        case (key, (bucketPositions, true)) => Some((key, bucketPositions))
+        case _                              => None
       }
-      volumeSegmentIndexClient.putMultiple(asProtoByteArrays, version)
-    }
-  }
+      _ <- if (toTemporaryStore) {
+        temporaryTracingService.saveVolumeSegmentIndexBuffer(tracingId, toFlush)
+      } else {
+        val asProtoByteArrays: Seq[(String, Array[Byte])] = toFlush.map {
+          case (key, bucketPositions) => (key, toProtoBytes(ListOfVec3IntProto(bucketPositions.toList)))
+        }
+        volumeSegmentIndexClient.putMultiple(asProtoByteArrays, version)
+      }
+    } yield ()
 
   private def getMultipleFromBufferNoteMisses(
       segmentIds: List[Long],
       mag: Vec3Int,
       additionalCoordinates: Option[Seq[AdditionalCoordinate]]
-  ): (List[(Long, Set[Vec3IntProto])], List[Long]) = {
-    var misses = List[Long]()
-    var hits = List[(Long, Set[Vec3IntProto])]()
-    segmentIds.foreach { segmentId =>
-      val key = segmentIndexKey(tracingId, segmentId, mag, additionalCoordinates, additionalAxes)
-      segmentIndexBuffer.get(key) match {
-        case Some((bucketPositions, _)) => hits = (segmentId, bucketPositions) :: hits
-        case None                       => misses = segmentId :: misses
+  ): (List[(Long, Set[Vec3IntProto])], List[Long]) =
+    if (isReaderOnly) {
+      // Nothing is buffered in isReaderOnly case, no need to query it.
+      (List.empty, segmentIds)
+    } else {
+      var misses = List[Long]()
+      var hits = List[(Long, Set[Vec3IntProto])]()
+      segmentIds.foreach { segmentId =>
+        val key = segmentIndexKey(tracingId, segmentId, mag, additionalCoordinates, additionalAxes)
+        segmentIndexBuffer.get(key) match {
+          case Some((bucketPositions, _)) => hits = (segmentId, bucketPositions) :: hits
+          case None                       => misses = segmentId :: misses
+        }
       }
+      (hits, misses)
     }
-    (hits, misses)
-  }
 
   private def getMultipleFromFossilNoteMisses(segmentIds: List[Long],
                                               mag: Vec3Int,

@@ -133,10 +133,12 @@ class VolumeTracingService @Inject()(
         tc,
         ec
       )
+      beforePrefill <- Instant.nowFox
       _ <- Fox.runIf(volumeLayer.tracing.getHasSegmentIndex)(volumeBucketBuffer.prefill(updateActions.flatMap {
         case a: UpdateBucketVolumeAction => Some(a.bucketPosition)
         case _                           => None
       }) ?~> "annotation.update.failed.prefillBucketBuffer")
+      _ = Instant.logSince(beforePrefill, "prefill")
       beforeUpdateBuckt = Instant.now
       _ <- Fox.serialCombined(updateActions) {
         case a: UpdateBucketVolumeAction =>

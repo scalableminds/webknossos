@@ -41,7 +41,7 @@ trait FallbackDataHelper {
       datasetId <- remoteWebknossosClient.getDataSourceIdForAnnotation(annotationId)
     } yield RemoteFallbackLayer(datasetId.organizationId, datasetId.directoryName, layerName, tracing.elementClass)
 
-  def getFallbackDataFromDatastore(remoteFallbackLayer: RemoteFallbackLayer, dataRequests: Seq[WebknossosDataRequest])(
+  def getFallbackDataFromDataStore(remoteFallbackLayer: RemoteFallbackLayer, dataRequests: Seq[WebknossosDataRequest])(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[(Array[Byte], List[Int])] =
     fallbackDataCache.getOrLoad(FallbackDataKey(remoteFallbackLayer, dataRequests, tc.userTokenOpt),

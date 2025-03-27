@@ -2,9 +2,11 @@ package com.scalableminds.webknossos.datastore.helpers
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.geometry.{ListOfVec3IntProto, Vec3IntProto}
-import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
+import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, SegmentInteger}
+import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.common.Box.tryo
 import play.api.libs.json.{Json, OFormat}
 
 import scala.concurrent.ExecutionContext
@@ -19,24 +21,32 @@ object SegmentStatisticsParameters {
 
 trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
 
-  def calculateSegmentVolume(segmentId: Long,
-                             mag: Vec3Int,
-                             additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-                             getBucketPositions: (Long, Vec3Int) => Fox[Set[Vec3IntProto]],
-                             getTypedDataForBucketPosition: (
-                                 Vec3Int,
-                                 Vec3Int,
-                                 Option[Seq[AdditionalCoordinate]]) => Fox[Array[SegmentInteger]])(
+  protected def bucketScanner: NativeBucketScanner
+
+  def calculateSegmentVolume(
+      segmentId: Long,
+      mag: Vec3Int,
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+      getBucketPositions: (Long, Vec3Int) => Fox[Set[Vec3IntProto]],
+      getDataForBucketPositions: (
+          Seq[Vec3Int],
+          Vec3Int,
+          Option[Seq[AdditionalCoordinate]]) => Fox[(Seq[Box[Array[Byte]]], ElementClass.Value)])(
       implicit ec: ExecutionContext): Fox[Long] =
     for {
       bucketPositionsProtos: Set[Vec3IntProto] <- getBucketPositions(segmentId, mag)
       bucketPositionsInMag = bucketPositionsProtos.map(vec3IntFromProto)
-      volumeBoxes <- Fox.serialSequence(bucketPositionsInMag.toList)(bucketPosition =>
-        for {
-          dataTyped: Array[SegmentInteger] <- getTypedDataForBucketPosition(bucketPosition, mag, additionalCoordinates)
-          count = dataTyped.count(segmentInteger => segmentInteger.toLong == segmentId)
-        } yield count.toLong)
-      counts <- Fox.combined(volumeBoxes.map(_.toFox))
+      (bucketBoxes, elementClass) <- getDataForBucketPositions(bucketPositionsInMag.toSeq, mag, additionalCoordinates)
+      counts <- Fox.serialCombined(bucketBoxes.toList) {
+        case Full(bucketBytes) =>
+          tryo(
+            bucketScanner.countSegmentVoxels(bucketBytes,
+                                             ElementClass.bytesPerElement(elementClass),
+                                             ElementClass.isSigned(elementClass),
+                                             segmentId)).toFox
+        case Empty      => Full(0L).toFox
+        case f: Failure => f.toFox
+      }
     } yield counts.sum
 
   // Returns the bounding box in voxels in the target mag

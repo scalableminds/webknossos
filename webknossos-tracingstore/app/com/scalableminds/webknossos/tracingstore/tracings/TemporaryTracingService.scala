@@ -7,7 +7,6 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
-import net.liftweb.common.Box
 import scalapb.GeneratedMessageCompanion
 
 import javax.inject.Inject

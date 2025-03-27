@@ -5,9 +5,9 @@
 #include <chrono>
 #include <iostream>
 
+
 JNIEXPORT jlongArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_collectSegmentIds
   (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jboolean isSigned) {
-
 
   auto t0 = std::chrono::high_resolution_clock::now();
 
@@ -70,4 +70,51 @@ JNIEXPORT jlongArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers
   // std::cout << "total " << duration_total.count() << "ms\n";
 
   return resultAsJLongArray;
+}
+
+JNIEXPORT jlong JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_countSegmentVoxels
+  (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jboolean isSigned, jlong segmentId) {
+
+    jsize inputLengthBytes = env -> GetArrayLength(bucketBytesJavaArray);
+    jbyte * bucketBytesAsJByte = env -> GetByteArrayElements(bucketBytesJavaArray, NULL);
+    unsigned char* bucketBytesAsByteArray = reinterpret_cast<unsigned char*>(bucketBytesAsJByte);
+
+    size_t elementCount = inputLengthBytes / bytesPerElement;
+
+    size_t segmentVoxelCount = 0;
+
+
+  for (size_t i = 0; i < elementCount; ++i) {
+      unsigned char* currentPos = bucketBytesAsByteArray + (i * bytesPerElement);
+      long currentValue;
+      switch (bytesPerElement) {
+          case 1:
+              currentValue = isSigned ?
+                  static_cast<long>(*reinterpret_cast<const signed char*>(const_cast<unsigned char*>(currentPos))) :
+                  static_cast<long>(*currentPos);
+              break;
+          case 2:
+              currentValue = isSigned ?
+                  static_cast<long>(*reinterpret_cast<const short*>(const_cast<unsigned char*>(currentPos))) :
+                  static_cast<long>(*reinterpret_cast<const unsigned short*>(const_cast<unsigned char*>(currentPos)));
+              break;
+          case 4:
+              currentValue = isSigned ?
+                  static_cast<long>(*reinterpret_cast<const int*>(const_cast<unsigned char*>(currentPos))) :
+                  static_cast<long>(*reinterpret_cast<const unsigned int*>(const_cast<unsigned char*>(currentPos)));
+              break;
+          case 8:
+              currentValue = isSigned ?
+                  static_cast<long>(*reinterpret_cast<const long*>(const_cast<unsigned char*>(currentPos))) :
+                  static_cast<long>(*reinterpret_cast<const unsigned long*>(const_cast<unsigned char*>(currentPos)));
+              break;
+          default:
+              throw std::invalid_argument("Unsupported bytes per element");
+      }
+      if (currentValue == segmentId) {
+        segmentVoxelCount++;
+      }
+  }
+
+  return segmentVoxelCount;
 }

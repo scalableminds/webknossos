@@ -20,7 +20,9 @@ import {
 import FastTooltip from "components/fast_tooltip";
 import { V4 } from "libs/mjs";
 import Toast from "libs/toast";
+import * as Utils from "libs/utils";
 import type { Vector3, Vector4 } from "oxalis/constants";
+import Constants from "oxalis/constants";
 import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
 import {
   getAdditionalCoordinatesAsString,
@@ -53,8 +55,6 @@ import { LoadMeshMenuItemLabel } from "./load_mesh_menu_item_label";
 import { withMappingActivationConfirmation } from "./segments_view_helper";
 
 const ALSO_DELETE_SEGMENT_FROM_LIST_KEY = "also-delete-segment-from-list";
-
-import Constants from "oxalis/constants";
 
 export function ColoredDotIcon({ colorRGBA }: { colorRGBA: Vector4 }) {
   const rgbaCss = rgbaToCSS(colorRGBA);
@@ -494,7 +494,7 @@ function _SegmentListItem({
                   createsNewUndoState,
                 );
               }}
-              rgb={segmentColorRGBA.slice(0, 3) as Vector3}
+              rgb={Utils.take3(segmentColorRGBA)}
             />
           ),
         },

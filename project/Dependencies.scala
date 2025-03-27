@@ -106,6 +106,7 @@ object Dependencies {
     // SQL Queries postgres specifics. not imported.
     "org.postgresql" % "postgresql" % "42.7.3",
     /// WebAuthn Dependencies
+    "com.webauthn4j" % "webauthn4j-core" % "0.28.6.RELEASE",
     "com.yubico" % "webauthn-server-core" % "2.6.0",
   )
 

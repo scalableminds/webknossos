@@ -4,6 +4,11 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
+import com.webauthn4j.converter.AttestedCredentialDataConverter
+import com.webauthn4j.converter.util.ObjectConverter
+import com.webauthn4j.credential.CredentialRecordImpl
+import com.webauthn4j.data.attestation.authenticator.AttestedCredentialData
+import com.webauthn4j.data.attestation.statement.AttestationStatement
 import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient}
 
@@ -19,6 +24,43 @@ case class WebAuthnCredential(
     signatureCount: Int,
     isDeleted: Boolean,
 )
+
+case class WebAuthnGenericAttestationStatement(stmt: AttestationStatement) {
+  def getFormat = stmt.getFormat
+}
+
+case class WebAuthnCredential2(
+    _id: ObjectId,
+    _multiUser: ObjectId,
+    name: String,
+    record: CredentialRecordImpl,
+    isDeleted: Boolean,
+) {
+  def serializeAttestationStatement() = {
+    val converter = new ObjectConverter();
+    val envelope = WebAuthnGenericAttestationStatement(record.getAttestationStatement)
+    converter.getCborConverter.writeValueAsBytes(envelope)
+  }
+
+  def serializableAttestationData() = {
+    val converter = new AttestedCredentialDataConverter(new ObjectConverter());
+    converter.convert(record.getAttestedCredentialData)
+  }
+}
+object WebAuthnCredential2 {
+  def deserializeAttestationStatement(serializedEnvelope: Array[Byte]): AttestationStatement = {
+    val converter = new ObjectConverter();
+    val envelope: WebAuthnGenericAttestationStatement = converter
+      .getCborConverter
+      .readValue[WebAuthnGenericAttestationStatement](serializedEnvelope, WebAuthnGenericAttestationStatement.getClass)
+    envelope.stmt
+  }
+
+  def deseriaizeAttestationData(serializedData: Array[Byte]): AttestedCredentialData = {
+    val converter = new AttestedCredentialDataConverter(new ObjectConverter());
+    converter.convert(serializedData)
+  }
+}
 
 class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[WebAuthnCredential, WebauthncredentialsRow, Webauthncredentials](sqlClient) {
@@ -76,6 +118,17 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
                        VALUES(${c._id}, ${c._multiUser}, ${c.keyId}, ${c.name},
                               ${c.publicKeyCose}, ${c.signatureCount})""".asUpdate)
     } yield ()
+
+  def insertOne2(c: WebAuthnCredential2): Fox[Unit] = {
+    val serializedAttestationStatement = c.serializeAttestationStatement()
+    val serializedAttestationData = c.serializableAttestationData()
+    for {
+      _ <- run(
+        q"""INSERT INTO webknossos.webauthncredentials(_id, _multiUser, keyId, name) VALUES ()""".asUpdate // TODO
+      )
+    } yield ()
+  }
+
 
   def listKeys(multiUser: ObjectId)(implicit ctx: DBAccessContext): Fox[List[WebAuthnCredential]] =
     for {

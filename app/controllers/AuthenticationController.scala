@@ -7,11 +7,19 @@ import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.yubico.webauthn._
 import com.yubico.webauthn.data._
 import com.yubico.webauthn.exception._
+import com.webauthn4j.data.attestation.statement.COSEAlgorithmIdentifier
+import com.webauthn4j.data.client.Origin
+import com.webauthn4j.data.client.challenge.Challenge
+import com.webauthn4j.data.{PublicKeyCredentialParameters, PublicKeyCredentialType, RegistrationParameters}
+import com.webauthn4j.server.ServerProperty
+import com.webauthn4j.WebAuthnManager
+import com.webauthn4j.credential.CredentialRecordImpl
 import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
 import models.organization.{Organization, OrganizationDAO, OrganizationService}
 import models.user._
 import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.common.Box.tryo
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.{HmacAlgorithms, HmacUtils}
 import org.apache.pekko.actor.ActorSystem
@@ -37,6 +45,7 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.UUID
 import javax.inject.Inject
+import scala.collection.JavaConverters._
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
@@ -113,6 +122,10 @@ object WebAuthnCreationOptionsRelyingParty {
   implicit val jsonFormat: OFormat[WebAuthnCreationOptionsRelyingParty] = Json.format[WebAuthnCreationOptionsRelyingParty]
 }
 
+case class WebAuthnChallenge(data: Array[Byte]) extends Challenge {
+  def getValue() = data
+}
+
 /**
  * Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions#user
  */
@@ -126,7 +139,7 @@ object WebAuthnCreationOptionsUser {
 }
 
 
-case class WebAuthnRegistration(name: String, key: String)
+case class WebAuthnRegistration(name: String, key: JsValue)
 object WebAuthnRegistration {
   implicit val jsonFormat: OFormat[WebAuthnRegistration] = Json.format[WebAuthnRegistration]
 }
@@ -165,7 +178,7 @@ class AuthenticationController @Inject()(
     webAuthnCredentialRepository: WebAuthnCredentialRepository,
     webAuthnCredentialDAO: WebAuthnCredentialDAO,
     temporaryAssertionStore: TemporaryStore[String, AssertionRequest],
-    temporaryRegistrationStore: TemporaryStore[ObjectId, PublicKeyCredentialCreationOptions],
+    temporaryRegistrationStore: TemporaryStore[String, WebAuthnChallenge],
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with AuthForms
@@ -185,6 +198,15 @@ class AuthenticationController @Inject()(
     val identity = RelyingPartyIdentity.builder().id(origin).name("WebKnossos").build();
     RelyingParty.builder().identity(identity).credentialRepository(webAuthnCredentialRepository).build()
   }
+
+  private lazy val origin = new Origin("https://webknossos.local:9000") // TODO: Load from config
+  private lazy val webAuthnPubKeyParams = Array(
+    WebAuthnCreationOptionsPubKeyParam(-8, "public-key"), // NOTE: COSE Algorithm: Ed25519
+    WebAuthnCreationOptionsPubKeyParam(-7, "public-key"), // NOTE: COSE Algorithm: ES256
+    WebAuthnCreationOptionsPubKeyParam(-257, "public-key"), // NOTE: COSE Algorithm: RS256
+  )
+  private lazy val webAuthnManager = WebAuthnManager.createNonStrictWebAuthnManager()
+
   private val blockingContext: ExecutionContext = actorSystem.dispatchers.lookup("play.context.blocking")
 
   private lazy val isOIDCEnabled = conf.Features.openIdConnectEnabled
@@ -597,6 +619,9 @@ class AuthenticationController @Inject()(
         random.nextBytes(challenge)
         challenge
       }
+      sessionId = UUID.randomUUID().toString
+      cookie = Cookie("webauthn-registration", sessionId, maxAge = Some(120), httpOnly = true, secure = true)
+      _ = temporaryRegistrationStore.insert(sessionId, WebAuthnChallenge(challenge), Some(2 minutes))
       options = WebAuthnPublicKeyCredentialCreationOptions(
         authenticatorSelection = WebAuthnCreationOptionsAuthenticatorSelection(
           requiredResidentKey = true,
@@ -604,59 +629,49 @@ class AuthenticationController @Inject()(
           ),
         challenge,
         excludeCredentials,
-        pubKeyParams = Array(
-          // TODO: Disable Ed25519 for Java 11
-          WebAuthnCreationOptionsPubKeyParam(-8, "public-key"), // NOTE: COSE Algorithm: Ed25519
-          WebAuthnCreationOptionsPubKeyParam(-7, "public-key"), // NOTE: COSE Algorithm: ES256
-          WebAuthnCreationOptionsPubKeyParam(-257, "public-key"), // NOTE: COSE Algorithm: RS256
-          ), // NOTE: Could be created at startup
+        pubKeyParams = webAuthnPubKeyParams, // NOTE: Could be created at startup
         timeout = 120000, // 2 minutes timeout
         rp = WebAuthnCreationOptionsRelyingParty(
-          id = "webknossos.local", // TODO: Use hostname
-          name = "Webknossos"
-          ), // NOTE: Could be created once at startup
+          id = origin.getHost(),
+          name = "Webknossos",
+          ),
         user,
         )
     } yield Ok(Json.toJson(options))
   }
 
-  def webauthnRegisterFinalize(): Action[WebAuthnRegistration] =
-    sil.SecuredAction.async(validateJson[WebAuthnRegistration]) { implicit request =>
-      {
-        val creationOpts = temporaryRegistrationStore.get(request.identity._multiUser)
-        temporaryRegistrationStore.remove(request.identity._multiUser)
-        creationOpts match {
-          case Some(data) => {
-            val response = PublicKeyCredential.parseRegistrationResponseJson(request.body.key);
-            val opts = FinishRegistrationOptions.builder().request(data).response(response).build();
-            try {
-              for {
-                preKey <- Fox.future2Fox(Future { Try(relyingParty.finishRegistration(opts)) })(blockingContext);
-                key <- preKey match {
-                  case scala.util.Success(key) => Fox.successful(key)
-                  case scala.util.Failure(e)   => Fox.failure("Registration failed", Full(e))
-                };
-                result <- {
-                  val credential = WebAuthnCredential(
-                    ObjectId.generate,
-                    request.identity._multiUser,
-                    WebAuthnCredentialRepository.byteArrayToBytes(key.getKeyId.getId),
-                    request.body.name,
-                    key.getPublicKeyCose.getBytes,
-                    key.getSignatureCount.toInt,
-                    isDeleted = false,
-                  )
-                  webAuthnCredentialDAO.insertOne(credential).map(_ => Ok(""))
-                }
-              } yield result;
-            } catch {
-              case e: RegistrationFailedException => Future.successful(BadRequest("Failed to register key"))
-            }
-          }
-          case None => Future.successful(BadRequest("Challenge not found or expired"))
-        }
+  def webauthnRegisterFinalize(): Action[WebAuthnRegistration] = sil.SecuredAction.async(validateJson[WebAuthnRegistration]) { implicit request =>
+    for {
+      registrationData <- tryo(webAuthnManager.parseRegistrationResponseJSON(Json.stringify(request.body.key))).toFox
+      cookie <- Fox.option2Fox(request.cookies.get("webauthn-registration"))
+      sessionId = cookie.value
+      challenge <- {
+        val challenge = temporaryRegistrationStore.get(sessionId)
+        temporaryRegistrationStore.remove(sessionId)
+        Fox.option2Fox(challenge)
       }
-    }
+      challenge <- Fox.option2Fox(temporaryRegistrationStore.get(sessionId))
+      serverProperty = new ServerProperty(origin, origin.getHost, challenge)
+      publicKeyParams = webAuthnPubKeyParams.map(k => new PublicKeyCredentialParameters(PublicKeyCredentialType.PUBLIC_KEY, COSEAlgorithmIdentifier.create(k.alg)))
+      registrationParams = new RegistrationParameters(serverProperty, publicKeyParams.toList.asJava, false, true)
+      _ <- tryo(webAuthnManager.verify(registrationData,  registrationParams)).toFox
+      attestation = registrationData.getAttestationObject
+      credentialRecord = new CredentialRecordImpl(
+        attestation,
+        null, // NOTE: Collected Client Data Not used
+        null, // NOTE: Client extensions not used
+        null, // NOTE: Transports not restricted
+      )
+      credential = WebAuthnCredential2(
+        _id = ObjectId.generate,
+        _multiUser = request.identity._multiUser,
+        name = request.body.name,
+        record = credentialRecord,
+        isDeleted = false
+      )
+      _ <- webAuthnCredentialDAO.insertOne2(credential)
+    } yield Ok(Json.obj("message" -> "Key registered successfully"))
+  }
 
   def webauthnListKeys: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     {

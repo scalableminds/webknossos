@@ -969,7 +969,6 @@ function Navbar({
         disabledOverflow
         items={menuItems}
       />
-
       {isInAnnotationView ? separator : null}
       <HelpModal
         isModalOpen={isHelpModalOpen}

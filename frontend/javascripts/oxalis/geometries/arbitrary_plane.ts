@@ -39,7 +39,7 @@ class ArbitraryPlane {
     });
   }
 
-  destroy() {
+  stop() {
     this.stopStoreListening();
     this.materialFactory.stopListening();
   }
@@ -168,6 +168,10 @@ class ArbitraryPlane {
       debuggerMaterial,
     );
     return debuggerPlane;
+  }
+
+  destroy() {
+    this.materialFactory.destroy();
   }
 }
 

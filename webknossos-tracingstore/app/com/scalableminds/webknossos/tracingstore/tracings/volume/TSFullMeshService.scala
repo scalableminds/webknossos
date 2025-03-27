@@ -6,9 +6,9 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.{bool2Fox, option2Fox}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
+import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.{
   BucketPosition,
   VoxelPosition,
@@ -52,7 +52,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       tracing: VolumeTracing,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
-      remoteFallbackLayer <- remoteFallbackLayerFromVolumeTracing(tracing, annotationId)
+      remoteFallbackLayer <- remoteFallbackLayerForVolumeTracing(tracing, annotationId)
       baseMappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
       fullMeshRequestAdapted = if (tracing.getHasEditableMapping)
         fullMeshRequest.copy(mappingName = baseMappingName,
@@ -100,19 +100,17 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
     for {
       fallbackLayer <- volumeTracingService.getFallbackLayer(annotationId, tracing)
       mappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
-      bucketPositionsRaw: ListOfVec3IntProto <- volumeSegmentIndexService
-        .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
-          fallbackLayer,
-          tracingId,
-          fullMeshRequest.segmentId,
-          mag,
-          version = None,
-          mappingName = mappingName,
-          editableMappingTracingId = volumeTracingService.editableMappingTracingId(tracing, tracingId),
-          fullMeshRequest.additionalCoordinates,
-          AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes)
-        )
-      bucketPositions = bucketPositionsRaw.values
+      bucketPositionsRaw: Set[Vec3IntProto] <- volumeSegmentIndexService.getSegmentToBucketIndex(
+        tracing,
+        fallbackLayer,
+        tracingId,
+        fullMeshRequest.segmentId,
+        mag,
+        mappingName,
+        volumeTracingService.editableMappingTracingId(tracing, tracingId),
+        fullMeshRequest.additionalCoordinates
+      )
+      bucketPositions = bucketPositionsRaw.toSeq
         .map(vec3IntFromProto)
         .map(_ * mag * DataLayer.bucketLength)
         .map(bp => BucketPosition(bp.x, bp.y, bp.z, mag, fullMeshRequest.additionalCoordinates))

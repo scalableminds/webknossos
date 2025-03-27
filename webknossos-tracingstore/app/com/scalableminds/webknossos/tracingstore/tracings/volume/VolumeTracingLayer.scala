@@ -74,7 +74,8 @@ case class VolumeTracingLayer(
     volumeDataStore: FossilDBClient,
 )(implicit val ec: ExecutionContext)
     extends SegmentationLayer
-    with ProtoGeometryImplicits {
+    with ProtoGeometryImplicits
+    with VolumeBucketCompression {
 
   override val boundingBox: BoundingBox = tracing.boundingBox
   override val elementClass: ElementClass.Value = tracing.elementClass
@@ -115,4 +116,6 @@ case class VolumeTracingLayer(
     true // allow requesting buckets of all mags. database takes care of missing.
 
   def bucketStream: Iterator[(BucketPosition, Array[Byte])] = bucketProvider.bucketStream(Some(tracing.version))
+
+  lazy val expectedUncompressedBucketSize: Int = expectedUncompressedBucketSizeFor(elementClass)
 }

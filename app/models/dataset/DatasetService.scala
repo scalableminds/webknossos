@@ -65,8 +65,11 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- bool2Fox(!name.startsWith(".")) ?~> "dataset.layer.name.invalid.startsWithDot"
     } yield ()
 
-  def createPreliminaryDataset(datasetName: String, organizationId: String, dataStore: DataStore): Fox[Dataset] = {
-    val newDatasetId = ObjectId.generate
+  def createPreliminaryDataset(datasetName: String,
+                               organizationId: String,
+                               dataStore: DataStore,
+                               alreadyGivenDatasetId: Option[ObjectId]): Fox[Dataset] = {
+    val newDatasetId = alreadyGivenDatasetId.getOrElse(ObjectId.generate)
     for {
       datasetDirectoryName <- datasetDAO
         .doesDatasetDirectoryExistInOrganization(datasetName, organizationId)(GlobalAccessContext)

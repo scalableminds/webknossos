@@ -113,7 +113,7 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.administrateDataSources(request.body.organization)) {
         for {
-          _ <- dsRemoteWebknossosClient.reserveDataSourceUpload(
+          reservedDatasetInfo <- dsRemoteWebknossosClient.reserveDataSourceUpload(
             ReserveUploadInformation(
               "aManualUpload",
               request.body.datasetName,
@@ -123,10 +123,11 @@ class DataSourceController @Inject()(
               None,
               None,
               request.body.initialTeamIds,
-              request.body.folderId
+              request.body.folderId,
+              request.body.datasetId
             )
           ) ?~> "dataset.upload.validation.failed"
-        } yield Ok
+        } yield Ok(Json.obj("newDatasetId" -> reservedDatasetInfo.newDatasetId))
       }
     }
 

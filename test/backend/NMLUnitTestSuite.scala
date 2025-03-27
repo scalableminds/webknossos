@@ -71,8 +71,8 @@ class NMLUnitTestSuite @Inject()(nmlParser: NmlParser) extends PlaySpec {
     parsedTracing match {
       case Full(tuple) =>
         tuple match {
-          case NmlParseSuccessWithoutFile(Some(_), _, _, _, _) => true
-          case _                                               => false
+          case NmlParseSuccessWithoutFile(_, _, _, _, _) => true
+          case _                                         => false
         }
       case _ => false
     }
@@ -84,7 +84,7 @@ class NMLUnitTestSuite @Inject()(nmlParser: NmlParser) extends PlaySpec {
       writeAndParseTracing(dummyTracing) match {
         case Full(tuple) =>
           tuple match {
-            case NmlParseSuccessWithoutFile(Some(tracing), _, _, _, _) =>
+            case NmlParseSuccessWithoutFile(tracing, _, _, _, _) =>
               assert(tracing == dummyTracing)
             case _ => throw new Exception
           }
@@ -106,7 +106,7 @@ class NMLUnitTestSuite @Inject()(nmlParser: NmlParser) extends PlaySpec {
       writeAndParseTracing(dummyTracingWithOmittedIsExpandedTreeGroupProp) match {
         case Full(tuple) =>
           tuple match {
-            case NmlParseSuccessWithoutFile(Some(tracing), _, _, _, _) =>
+            case NmlParseSuccessWithoutFile(tracing, _, _, _, _) =>
               assert(tracing == dummyTracing)
             case _ => throw new Exception
           }

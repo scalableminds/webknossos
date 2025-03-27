@@ -190,10 +190,6 @@ const initialState: OxalisState = _.extend({}, defaultState, {
     annotationId: "annotationId",
   },
   task: TASK_ANNOTATION.task,
-  activeUser: {
-    firstName: "SCM",
-    lastName: "Boy",
-  },
 });
 
 async function testThatParserThrowsWithState(
@@ -553,11 +549,11 @@ test("NML serializer should escape special characters and multilines", (t) => {
   t.snapshot(serializedNml);
 });
 test("Serialized nml should be correctly named", async (t) => {
-  t.is(getNmlName(initialState), "Test Dataset__5b1fd1cb97000027049c67ec__sboy__tionId.nml");
+  t.is(getNmlName(initialState), "Test Dataset__5b1fd1cb97000027049c67ec____tionId.nml");
 
   const stateWithoutTask = { ...initialState, task: null };
 
-  t.is(getNmlName(stateWithoutTask), "Test Dataset__explorational__sboy__tionId.nml");
+  t.is(getNmlName(stateWithoutTask), "Test Dataset__explorational____tionId.nml");
 });
 test("NML Parser should throw errors for invalid nmls", async (t) => {
   const invalidCommentState = update(initialState, {

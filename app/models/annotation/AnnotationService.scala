@@ -255,6 +255,7 @@ class AnnotationService @Inject()(
       mp: MessagesProvider): Fox[List[AnnotationLayer]] =
     for {
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
+      dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable) ?~> "dataset.dataSource.notUsable"
       newAnnotationLayers <- Fox.serialCombined(allAnnotationLayerParameters) { annotationLayerParameters =>
         for {
           tracing <- createTracingForExplorational(dataset,
@@ -267,7 +268,8 @@ class AnnotationService @Inject()(
           newTracingId = TracingId.generate
           _ <- tracing match {
             case Left(skeleton) => tracingStoreClient.saveSkeletonTracing(skeleton, newTracingId)
-            case Right(volume)  => tracingStoreClient.saveVolumeTracing(annotationId, newTracingId, volume)
+            case Right(volume) =>
+              tracingStoreClient.saveVolumeTracing(annotationId, newTracingId, volume, dataSource = dataSource)
           }
         } yield
           AnnotationLayer(newTracingId,

@@ -20,7 +20,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(128);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(129);
 COMMIT TRANSACTION;
 
 
@@ -350,6 +350,37 @@ CREATE TABLE webknossos.organization_usedStorage(
   usedStorageBytes BIGINT NOT NULL,
   lastUpdated TIMESTAMPTZ,
   PRIMARY KEY(_organization, _dataStore, _dataset, layerName, magOrDirectoryName)
+);
+
+-- Create the enum types for transaction states and credit states
+-- Pending -> The transaction is a payment for a unfinished & not crashed job
+-- Complete -> The transaction is commited and the potential associated job finished successfully or was refunded.
+CREATE TYPE webknossos.credit_transaction_state AS ENUM ('Pending', 'Complete');
+-- Pending -> The credit_delta is yet to be completed
+-- Spent -> The credit_delta is commited as reduced as the associated job finished successfully.
+-- Refunded -> The credit_delta is commited as reduced but a new refunding transaction is added as the associated job finished failed.
+-- Revoked -> The credit_delta has been fully revoked by a revoking transaction as the credit_delta expired.
+-- PartiallyRevoked -> The credit_delta has been partially revoked by a revoking transaction as the credit_delta expired but parts of it were already spent or are pending.
+-- Refunding -> Marks credit_delta as a refund for transaction associated with a failed job.
+-- Revoking -> The credit_delta of this transaction revokes the credit_delta of another transaction with expired credits.
+-- AddCredits -> The credit_delta of this transaction adds adds more credits for the organization.
+CREATE TYPE webknossos.credit_state AS ENUM ('Pending', 'Spent', 'Refunded', 'Revoked', 'PartiallyRevoked', 'Refunding', 'Revoking', 'AddCredits');
+
+CREATE TABLE webknossos.credit_transactions (
+    _id CHAR(24) PRIMARY KEY,
+    _organization VARCHAR(256) NOT NULL,
+    _related_transaction CHAR(24) DEFAULT NULL,
+    _paid_job CHAR(24) DEFAULT NULL,
+    credit_delta DECIMAL(14, 3) NOT NULL,
+    comment TEXT NOT NULL,
+    -- The state of the transaction.
+    transaction_state webknossos.credit_transaction_state NOT NULL,
+    -- The state of the credits of this transaction.
+    credit_state webknossos.credit_state NOT NULL,
+    expiration_date TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TYPE webknossos.USER_PASSWORDINFO_HASHERS AS ENUM ('SCrypt', 'Empty');
@@ -733,6 +764,7 @@ CREATE VIEW webknossos.credentials_ as SELECT * FROM webknossos.credentials WHER
 CREATE VIEW webknossos.maintenances_ as SELECT * FROM webknossos.maintenances WHERE NOT isDeleted;
 CREATE VIEW webknossos.aiModels_ as SELECT * FROM webknossos.aiModels WHERE NOT isDeleted;
 CREATE VIEW webknossos.aiInferences_ as SELECT * FROM webknossos.aiInferences WHERE NOT isDeleted;
+CREATE VIEW webknossos.credit_transactions_ as SELECT * FROM webknossos.credit_transactions WHERE NOT is_deleted;
 
 CREATE VIEW webknossos.userInfos AS
 SELECT
@@ -769,6 +801,7 @@ CREATE INDEX ON webknossos.projects(_team, isDeleted);
 CREATE INDEX ON webknossos.invites(tokenValue);
 CREATE INDEX ON webknossos.annotation_privateLinks(accessToken);
 CREATE INDEX ON webknossos.shortLinks(key);
+CREATE INDEX ON webknossos.credit_transactions(credit_state);
 
 ALTER TABLE webknossos.annotations
   ADD CONSTRAINT task_ref FOREIGN KEY(_task) REFERENCES webknossos.tasks(_id) ON DELETE SET NULL DEFERRABLE,
@@ -824,6 +857,10 @@ ALTER TABLE webknossos.user_experiences
 ALTER TABLE webknossos.user_datasetConfigurations
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE,
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.credit_transactions
+  ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) DEFERRABLE,
+  ADD CONSTRAINT paid_job_ref FOREIGN KEY(_paid_job) REFERENCES webknossos.jobs(_id) DEFERRABLE,
+  ADD CONSTRAINT related_transaction_ref FOREIGN KEY(_related_transaction) REFERENCES webknossos.credit_transactions(_id) DEFERRABLE;
 ALTER TABLE webknossos.user_datasetLayerConfigurations
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE,
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) ON DELETE CASCADE DEFERRABLE;
@@ -944,7 +981,7 @@ AFTER UPDATE ON webknossos.annotations
 FOR EACH ROW EXECUTE PROCEDURE webknossos.onUpdateAnnotation();
 
 
-CREATE FUNCTION webknossos.onDeleteAnnotation() RETURNS trigger AS $$
+CREATE FUNCTION webknossos.onDeleteAnnotation() RETURNS TRIGGER AS $$
   BEGIN
     IF (OLD.typ = 'Task') AND (OLD.isDeleted = false) AND (OLD.state != 'Cancelled') THEN
       UPDATE webknossos.tasks SET pendingInstances = pendingInstances + 1 WHERE _id = OLD._task;
@@ -956,4 +993,79 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER onDeleteAnnotationTrigger
 AFTER DELETE ON webknossos.annotations
 FOR EACH ROW EXECUTE PROCEDURE webknossos.onDeleteAnnotation();
+
+CREATE FUNCTION webknossos.enforce_non_negative_balance() RETURNS TRIGGER AS $$
+  BEGIN
+    -- Assert that the new balance is non-negative
+    ASSERT (SELECT COALESCE(SUM(credit_delta), 0) + COALESCE(NEW.credit_delta, 0)
+            FROM webknossos.credit_transactions
+            WHERE _organization = NEW._organization AND _id != NEW._id) >= 0, 'Transaction would result in a negative credit balance for organization %', NEW._organization;
+    -- Assertion passed, transaction can go ahead
+    RETURN NEW;
+  END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER enforce_non_negative_balance_trigger
+BEFORE INSERT OR UPDATE ON webknossos.credit_transactions
+FOR EACH ROW EXECUTE PROCEDURE webknossos.enforce_non_negative_balance();
+
+-- ObjectId generation function taken and modified from https://thinhdanggroup.github.io/mongo-id-in-postgresql/
+CREATE SEQUENCE webknossos.objectid_sequence;
+
+CREATE FUNCTION webknossos.generate_object_id() RETURNS TEXT AS $$
+DECLARE
+  time_component TEXT;
+  machine_id TEXT;
+  process_id TEXT;
+  counter TEXT;
+  result TEXT;
+BEGIN
+  -- Extract the current timestamp in seconds since the Unix epoch (4 bytes, 8 hex chars)
+  SELECT LPAD(TO_HEX(FLOOR(EXTRACT(EPOCH FROM clock_timestamp()))::BIGINT), 8, '0') INTO time_component;
+  -- Generate a machine identifier using the hash of the server IP (3 bytes, 6 hex chars)
+  SELECT SUBSTRING(md5(CAST(inet_server_addr() AS TEXT)) FROM 1 FOR 6) INTO machine_id;
+  -- Retrieve the current backend process ID, limited to 2 bytes (4 hex chars)
+  SELECT LPAD(TO_HEX(pg_backend_pid() % 65536), 4, '0') INTO process_id;
+  -- Generate a counter using a sequence, ensuring it's 3 bytes (6 hex chars)
+  SELECT LPAD(TO_HEX(nextval('webknossos.objectid_sequence')::BIGINT % 16777216), 6, '0') INTO counter;
+  -- Concatenate all parts to form a 24-character ObjectId
+  result := time_component || machine_id || process_id || counter;
+
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE FUNCTION webknossos.hand_out_monthly_free_credits(free_credits_amount DECIMAL) RETURNS VOID AS $$
+DECLARE
+    organization_id VARCHAR(256);
+    next_month_first_day DATE;
+    existing_transaction_count INT;
+BEGIN
+    -- Calculate the first day of the next month
+    next_month_first_day := DATE_TRUNC('MONTH', NOW()) + INTERVAL '1 MONTH';
+
+    -- Loop through all organizations
+    FOR organization_id IN (SELECT _id FROM webknossos.organizations) LOOP
+        -- Check if there is already a free credit transaction for this organization in the current month
+        SELECT COUNT(*) INTO existing_transaction_count
+        FROM webknossos.credit_transactions
+        WHERE _organization = organization_id
+          AND DATE_TRUNC('MONTH', expiration_date) = next_month_first_day;
+
+        -- Insert free credits only if no record exists for this month
+        IF existing_transaction_count = 0 THEN
+            INSERT INTO webknossos.credit_transactions
+                (_id, _organization, credit_delta, comment, transaction_state, credit_state, expiration_date)
+            VALUES
+                (webknossos.generate_object_id(), organization_id, free_credits_amount,
+                 'Free credits for this month', 'Complete', 'Pending', next_month_first_day);
+        END IF;
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+
+
 

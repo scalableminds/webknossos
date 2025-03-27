@@ -23,10 +23,14 @@ import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.ExecutionContext
 
-class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketProvider with ProtoGeometryImplicits {
+class EditableMappingBucketProvider(layer: EditableMappingLayer)
+    extends BucketProvider
+    with ProtoGeometryImplicits
+    with LazyLogging {
 
   override def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext,
                                                           tc: TokenContext): Fox[Array[Byte]] = {
@@ -54,6 +58,7 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
         .getFallbackBucketFromDataStore(remoteFallbackLayer, dataRequest)(ec, tc)
       unmappedDataTyped <- layer.editableMappingService.bytesToSegmentInt(unmappedData, layer.tracing.elementClass)
       segmentIds = layer.editableMappingService.collectSegmentIds(unmappedDataTyped)
+      _ = logger.info(s"found segment ids ${segmentIds.mkString(",")}")
       relevantMapping <- layer.editableMappingService.generateCombinedMappingForSegmentIds(segmentIds,
                                                                                            editableMappingInfo,
                                                                                            layer.version,
@@ -62,6 +67,9 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
       mappedData: Array[Byte] <- layer.editableMappingService.mapData(unmappedDataTyped,
                                                                       relevantMapping,
                                                                       elementClassProto)
+      mappedDataTyped <- layer.editableMappingService.bytesToSegmentInt(mappedData, layer.tracing.elementClass)
+      mappedSegmentIds = layer.editableMappingService.collectSegmentIds(mappedDataTyped)
+      _ = logger.info(s"mapped to segment ids ${mappedSegmentIds.mkString(",")}")
     } yield mappedData
   }
 }

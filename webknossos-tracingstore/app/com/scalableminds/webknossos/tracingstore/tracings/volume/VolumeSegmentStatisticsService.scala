@@ -11,6 +11,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
+import com.typesafe.scalalogging.LazyLogging
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -20,6 +21,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
                                                volumeSegmentIndexService: VolumeSegmentIndexService,
                                                editableMappingService: EditableMappingService)
     extends ProtoGeometryImplicits
+    with LazyLogging
     with SegmentStatistics {
 
   // Returns the segment volume (=number of voxels) in the target mag
@@ -60,6 +62,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit tc: TokenContext, ec: ExecutionContext) =
     for {
       tracing <- annotationService.findVolume(annotationId, tracingId) ?~> "tracing.notFound"
+      _ = logger.info(s"answering with tracing version ${tracing.version}")
       bucketData <- getVolumeDataForPositions(annotationId,
                                               tracingId,
                                               tracing,

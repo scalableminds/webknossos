@@ -239,7 +239,6 @@ trait VolumeTracingBucketHelper
           case Empty                  => bucketBoxesFromDataStoreIterator.next()
           case f: Failure             => f
         }
-        _ = logger.info(f"bucketBoxesFilled ${bucketBoxesFilled.count(_.isDefined)} defined")
       } yield bucketBoxesFilled
     }
 

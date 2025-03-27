@@ -79,17 +79,16 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
     for {
       tracing <- annotationService.findVolume(annotationId, tracingId) ?~> "tracing.notFound"
       fallbackLayer <- volumeTracingService.getFallbackLayer(annotationId, tracing)
-      allBucketPositions: Set[Vec3IntProto] <- volumeSegmentIndexService
-        .getSegmentToBucketIndex(
-          tracing,
-          fallbackLayer,
-          tracingId,
-          segmentId,
-          mag,
-          mappingName,
-          editableMappingTracingId = volumeTracingService.editableMappingTracingId(tracing, tracingId),
-          additionalCoordinates
-        )
+      allBucketPositions: Set[Vec3IntProto] <- volumeSegmentIndexService.getSegmentToBucketIndex(
+        tracing,
+        fallbackLayer,
+        tracingId,
+        segmentId,
+        mag,
+        mappingName,
+        editableMappingTracingId = volumeTracingService.editableMappingTracingId(tracing, tracingId),
+        additionalCoordinates
+      )
     } yield allBucketPositions
 
   private def getVolumeDataForPositions(

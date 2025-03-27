@@ -108,7 +108,7 @@ class VolumeTracingService @Inject()(
     for {
       // warning, may be called multiple times with the same version number (due to transaction management).
       // frontend ensures that each bucket is only updated once per transaction
-      before <- Instant.nowFox
+      _ <- Fox.successful(())
       volumeLayer = volumeTracingLayer(annotationId, tracingId, tracing, includeFallbackDataIfAvailable = true)
       fallbackLayerOpt <- getFallbackLayer(annotationId, tracing)
       mappingName <- getMappingNameUnlessEditable(volumeLayer.tracing)
@@ -152,7 +152,6 @@ class VolumeTracingService @Inject()(
       }
       _ <- volumeBucketBuffer.flush()
       _ <- segmentIndexBuffer.flush()
-      _ = Instant.logSince(before, "applyBucketMutatingActions total")
     } yield ()
 
   private def updateBucket(tracingId: String,

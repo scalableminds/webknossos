@@ -57,6 +57,9 @@ case class WebAuthnPublicKeyCredentialCreationOptions(
   rp: WebAuthnCreationOptionsRelyingParty,
   user: WebAuthnCreationOptionsUser
   )
+object WebAuthnPublicKeyCredentialCreationOptions {
+  implicit val jsonFormat: OFormat[WebAuthnPublicKeyCredentialCreationOptions] = Json.format[WebAuthnPublicKeyCredentialCreationOptions]
+}
 
 /**
  * Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions#authenticatorselection
@@ -70,6 +73,9 @@ case class WebAuthnCreationOptionsAuthenticatorSelection(
   requiredResidentKey: Boolean,
   residentKey: String,
   )
+object WebAuthnCreationOptionsAuthenticatorSelection {
+  implicit val jsonFormat: OFormat[WebAuthnCreationOptionsAuthenticatorSelection] = Json.format[WebAuthnCreationOptionsAuthenticatorSelection]
+}
 
 /**
  * Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions#excludecredentials
@@ -81,6 +87,9 @@ case class WebAuthnCreationOptionsExcludeCredentials(
   id: Array[Byte],
   `type`: String, // NOTE: must be set to "public-key"
   )
+object WebAuthnCreationOptionsExcludeCredentials {
+  implicit val jsonFormat: OFormat[WebAuthnCreationOptionsExcludeCredentials] = Json.format[WebAuthnCreationOptionsExcludeCredentials]
+}
 
 /**
  * Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions#pubkeycredparams
@@ -89,6 +98,9 @@ case class WebAuthnCreationOptionsPubKeyParam(
   alg: Int,
   `type`: String, // NOTE: must be set to "public-key"
   )
+object WebAuthnCreationOptionsPubKeyParam {
+  implicit val jsonFormat: OFormat[WebAuthnCreationOptionsPubKeyParam] = Json.format[WebAuthnCreationOptionsPubKeyParam]
+}
 
 /**
  * Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions#rp
@@ -97,6 +109,9 @@ case class WebAuthnCreationOptionsRelyingParty(
   id: String, // NOTE: Should be set to the hostname
   name: String,
   )
+object WebAuthnCreationOptionsRelyingParty {
+  implicit val jsonFormat: OFormat[WebAuthnCreationOptionsRelyingParty] = Json.format[WebAuthnCreationOptionsRelyingParty]
+}
 
 /**
  * Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialCreationOptions#user
@@ -106,6 +121,9 @@ case class WebAuthnCreationOptionsUser(
   id: Array[Byte],
   name: String
   )
+object WebAuthnCreationOptionsUser {
+  implicit val jsonFormat: OFormat[WebAuthnCreationOptionsUser] = Json.format[WebAuthnCreationOptionsUser]
+}
 
 
 case class WebAuthnRegistration(name: String, key: String)

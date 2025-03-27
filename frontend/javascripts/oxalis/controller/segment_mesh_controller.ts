@@ -388,8 +388,9 @@ export default class SegmentMeshController {
       // Nothing to do
       return;
     }
-    const targetOpacity =
-      mesh.material.opacity * (mesh.isHovered ? HOVERED_OPACITY : 1 / HOVERED_OPACITY);
+
+    const prevOpacity = mesh.material.opacity;
+    const targetOpacity = mesh.isHovered ? HOVERED_OPACITY : prevOpacity;
 
     // mesh.parent contains all geometries that were loaded
     // for one chunk (if isMerged is true, this is only one geometry).
@@ -434,6 +435,7 @@ export default class SegmentMeshController {
           ? HOVERED_COLOR
           : ACTIVATED_COLOR;
         material.color = new THREE.Color().setHSL(...newColor);
+        material.opacity = prevOpacity;
         material.emissive.setHSL(...HOVERED_COLOR);
       });
     } else {

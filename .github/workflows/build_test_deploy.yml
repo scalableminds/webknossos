@@ -206,7 +206,7 @@ jobs:
         with:
           timeout_minutes: 10
           max_attempts: 3
-          command: sh -c "docker ps && .github/not-on-master.sh yarn run test-e2e"
+          command: sh -c "mkdir -p binaryData/Organization_X && chmod 777 binaryData/Organization_X && .github/not-on-master.sh yarn run test-e2e"
         env:
           POSTGRES_URL: jdbc:postgresql://localhost:5434/webknossos
           POSTGRES_USER: webknossos_user

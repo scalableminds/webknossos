@@ -26,7 +26,7 @@ import classnames from "classnames";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { connect, useSelector } from "react-redux";
-import { Link, useHistory } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import {
   getBuildInfo,
@@ -821,7 +821,7 @@ function Navbar({
   navbarHeight,
   isAnnotationOwner,
 }: Props) {
-  const history = useHistory();
+  const historyLocation = useLocation();
 
   const handleLogout = async (event: React.SyntheticEvent) => {
     event.preventDefault();
@@ -938,7 +938,7 @@ function Navbar({
   );
   // Don't highlight active menu items, when showing the narrow version of the navbar,
   // since this makes the icons appear more crowded.
-  const selectedKeys = collapseAllNavItems ? [] : [history.location.pathname];
+  const selectedKeys = collapseAllNavItems ? [] : [historyLocation.pathname];
   const separator = <div className="navbar-separator" />;
 
   return (

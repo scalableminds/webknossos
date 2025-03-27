@@ -218,11 +218,10 @@ class FossilDBClient(collection: String,
     } yield ()
 
   private def putMultipleImpl(keyValueTuples: Seq[(String, Array[Byte])], version: Long): Fox[Unit] = {
+    val keyValuePairs = keyValueTuples.map {
+      case (key, value) => VersionedKeyValuePairProto(key, version, ByteString.copyFrom(value))
+    }
     val putFox = for {
-      _ <- Fox.successful(logger.info(s"fossil multi-put for ${keyValueTuples.length} keys to $collection"))
-      keyValuePairs = keyValueTuples.map {
-        case (key, value) => VersionedKeyValuePairProto(key, version, ByteString.copyFrom(value))
-      }
       reply <- wrapException(
         stub.putMultipleKeysWithMultipleVersions(PutMultipleKeysWithMultipleVersionsRequest(collection, keyValuePairs)))
       _ <- assertSuccess(reply.success, reply.errorMessage)

@@ -133,13 +133,10 @@ class VolumeTracingService @Inject()(
         tc,
         ec
       )
-      beforePrefill <- Instant.nowFox
       _ <- Fox.runIf(volumeLayer.tracing.getHasSegmentIndex)(volumeBucketBuffer.prefill(updateActions.flatMap {
         case a: UpdateBucketVolumeAction => Some(a.bucketPosition)
         case _                           => None
       }) ?~> "annotation.update.failed.prefillBucketBuffer")
-      _ = Instant.logSince(beforePrefill, "prefill")
-      beforeUpdateBuckt = Instant.now
       _ <- Fox.serialCombined(updateActions) {
         case a: UpdateBucketVolumeAction =>
           if (tracing.getHasEditableMapping) {
@@ -153,7 +150,6 @@ class VolumeTracingService @Inject()(
             deleteSegmentData(tracingId, annotationId, tracing, a, segmentIndexBuffer, newVersion) ?~> "Failed to delete segment data."
         case _ => Fox.failure("Unknown bucket-mutating action.")
       }
-      _ = Instant.logSince(beforeUpdateBuckt, s"updateBucket ${updateActions.length}x")
       _ <- volumeBucketBuffer.flush()
       _ <- segmentIndexBuffer.flush()
       _ = Instant.logSince(before, "applyBucketMutatingActions total")

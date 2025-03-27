@@ -19,6 +19,11 @@ trait RedisTemporaryStore extends LazyLogging {
       r.get(id)
     }
 
+  def findLong(id: String): Fox[Option[Long]] =
+    withExceptionHandler {
+      r.get(id).map(s => s.toLong)
+    }
+
   def removeAllConditional(pattern: String): Fox[Unit] =
     withExceptionHandler {
       val keysOpt: Option[List[Option[String]]] = r.keys(pattern)
@@ -58,6 +63,17 @@ trait RedisTemporaryStore extends LazyLogging {
         )
     }
 
+  def insertLong(id: String, value: Long, expirationOpt: Option[FiniteDuration] = None): Fox[Unit] =
+    withExceptionHandler {
+      expirationOpt
+        .map(
+          expiration => r.setex(id, expiration.toSeconds, value)
+        )
+        .getOrElse(
+          r.set(id, value)
+        )
+    }
+
   def contains(id: String): Fox[Boolean] =
     withExceptionHandler {
       r.exists(id)
@@ -66,6 +82,11 @@ trait RedisTemporaryStore extends LazyLogging {
   def remove(id: String): Fox[Unit] =
     withExceptionHandler {
       r.del(id)
+    }
+
+  def increaseBy(id: String, value: Long): Fox[Option[Long]] =
+    withExceptionHandler {
+      r.incrby(id, value)
     }
 
   def checkHealth(implicit ec: ExecutionContext): Fox[Unit] =

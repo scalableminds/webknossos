@@ -579,7 +579,7 @@ function _SegmentListItem({
       onContextMenu={onOpenContextMenu}
     >
       <div>
-        <div style={{ display: "inline-flex", alignItems: "center" }}>
+        <div style={{ display: "inline-flex", alignItems: "center", width: "100%" }}>
           <ColoredDotIcon colorRGBA={segmentColorRGBA} />
           <EditableTextLabel
             value={getSegmentName(segment)}

@@ -226,15 +226,12 @@ trait VolumeTracingBucketHelper
             additionalCoordinates = None
           )
         }
-        _ = logger.info(f"Fetching ${dataRequests.length} buckets from fallback layer")
-        // TODO can we utilize the cache here? otherwise disable it
         (flatDataFromDataStore, datastoreMissingBucketIndices) <- volumeTracingLayer.volumeTracingService
-          .getFallbackDataFromDataStore(remoteFallbackLayer, dataRequests)(ec, volumeTracingLayer.tokenContext)
+          .getFallbackBucketsFromDataStore(remoteFallbackLayer, dataRequests)(volumeTracingLayer.tokenContext)
         bucketBoxesFromDataStore <- splitIntoBuckets(dataRequests.length,
                                                      flatDataFromDataStore,
                                                      datastoreMissingBucketIndices.toSet,
                                                      volumeTracingLayer.elementClass) ?~> "fallbackData.split.failed"
-        _ = logger.info("splitIntoBuckets successful")
         _ <- bool2Fox(bucketBoxesFromDataStore.length == indicesWhereEmpty.length) ?~> "length mismatch"
         bucketBoxesFromDataStoreIterator = bucketBoxesFromDataStore.iterator
         bucketBoxesFilled = bucketBoxesFromFossil.map {
@@ -316,11 +313,7 @@ trait VolumeTracingBucketHelper
       version = None,
       additionalCoordinates = None
     )
-    for {
-      (unmappedData, indices) <- layer.volumeTracingService
-        .getFallbackDataFromDataStore(remoteFallbackLayer, List(dataRequest))(ec, layer.tokenContext)
-      unmappedDataOrEmpty <- if (indices.isEmpty) Fox.successful(unmappedData) else Fox.empty
-    } yield unmappedDataOrEmpty
+    layer.volumeTracingService.getFallbackBucketFromDataStore(remoteFallbackLayer, dataRequest)(ec, layer.tokenContext)
   }
 
   protected def saveBucket(dataLayer: VolumeTracingLayer,

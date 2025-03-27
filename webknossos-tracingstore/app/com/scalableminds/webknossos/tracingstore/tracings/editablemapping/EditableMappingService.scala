@@ -46,7 +46,7 @@ import scala.jdk.CollectionConverters.CollectionHasAsScala
 
 case class FallbackDataKey(
     remoteFallbackLayer: RemoteFallbackLayer,
-    dataRequests: Seq[WebknossosDataRequest],
+    dataRequest: WebknossosDataRequest,
     userToken: Option[String]
 )
 

@@ -180,9 +180,10 @@ jobs:
         run: |
           set -xeo pipefail
 
+          mkdir -p binaryData/Organization_X
           unzip test/dataset/test-dataset.zip -d binaryData/Organization_X/
+          sudo chmod -R "0777" binaryData/Organization_X
 
-          mkdir -p binaryData/Organization_X && sudo chmod -R "0777" binaryData/Organization_X
           mkdir -p fossildb/data && sudo chmod -R "0777" fossildb/data
           mkdir -p fossildb/backup && sudo chmod -R "0777" fossildb/backup
           docker compose up -d webknossos

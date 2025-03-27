@@ -211,7 +211,7 @@ const renderActionsForModel = (model: AiModel, onChangeSharedOrganizations: () =
         </Row>
       ) : null}
       {trainingAnnotations != null ? (
-        <Row style={{ marginLeft: 16 }}>
+        <Row style={{ marginLeft: 16, display: "inline-block" }}>
           <EyeOutlined
             className="icon-margin-right"
             style={{ color: "var(--ant-color-primary)" }}

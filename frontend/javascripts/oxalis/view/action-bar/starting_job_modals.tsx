@@ -103,6 +103,7 @@ type StartAIJobModalProps = {
 type JobApiCallArgsType = {
   newDatasetName: string;
   selectedLayer: APIDataLayer;
+  isSelectedLayerInverted: boolean;
   selectedBoundingBox: UserBoundingBox | null | undefined;
   annotationId?: string;
   useCustomWorkflow?: boolean;
@@ -712,6 +713,9 @@ function StartJobForm(props: StartJobFormProps) {
   const organizationCredits = useSelector(
     (state: OxalisState) => state.activeOrganization?.creditBalance || "0",
   );
+  const layer_configurations = useSelector(
+    (state: OxalisState) => state.datasetConfiguration.layers,
+  );
   const layers = chooseSegmentationLayer ? getSegmentationLayers(dataset) : colorLayers;
   const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
   const defaultBBForLayers = useMemo(() => getBoundingBoxesForLayers(layers), [layers]);
@@ -761,6 +765,8 @@ function StartJobForm(props: StartJobFormProps) {
       console.error(errorMessage);
       return;
     }
+    // get the layer configuration for the selected layer
+    const isSelectedLayerInverted = layer_configurations[layerName].isInverted;
     const selectedBoundingBox = userBoundingBoxes.find((bbox) => bbox.id === boundingBoxId);
     if (
       selectedLayer == null ||
@@ -778,6 +784,7 @@ function StartJobForm(props: StartJobFormProps) {
         selectedBoundingBox,
         annotationId: useAnnotation ? tracing.annotationId : undefined,
         useCustomWorkflow,
+        isSelectedLayerInverted,
       };
       const apiJob = await jobApiCall(jobArgs, form);
 
@@ -888,8 +895,8 @@ export function NucleiDetectionForm() {
       jobName={APIJobType.INFER_NUCLEI}
       title="AI Nuclei Segmentation"
       suggestedDatasetSuffix="with_nuclei"
-      jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer }) =>
-        startNucleiInferralJob(dataset.id, colorLayer.name, newDatasetName)
+      jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer, isSelectedLayerInverted }) =>
+        startNucleiInferralJob(dataset.id, colorLayer.name, newDatasetName, isSelectedLayerInverted)
       }
       description={
         <>
@@ -927,7 +934,13 @@ export function NeuronSegmentationForm() {
       isBoundingBoxConfigurable
       jobCreditCostPerGVx={neuronInferralCostPerGVx}
       jobApiCall={async (
-        { newDatasetName, selectedLayer: colorLayer, selectedBoundingBox, annotationId },
+        {
+          newDatasetName,
+          selectedLayer: colorLayer,
+          selectedBoundingBox,
+          annotationId,
+          isSelectedLayerInverted,
+        },
         form: FormInstance<any>,
       ) => {
         const splitMergerEvaluationSettings = form.getFieldValue(
@@ -948,6 +961,7 @@ export function NeuronSegmentationForm() {
             bbox,
             newDatasetName,
             doSplitMergerEvaluation,
+            isSelectedLayerInverted,
           );
         }
         return startNeuronInferralJob(
@@ -956,6 +970,7 @@ export function NeuronSegmentationForm() {
           bbox,
           newDatasetName,
           doSplitMergerEvaluation,
+          isSelectedLayerInverted,
           annotationId,
           splitMergerEvaluationSettings.useSparseTracing,
           splitMergerEvaluationSettings.maxEdgeLength,

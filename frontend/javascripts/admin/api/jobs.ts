@@ -190,9 +190,10 @@ export function startNucleiInferralJob(
   datasetId: string,
   layerName: string,
   newDatasetName: string,
+  isSelectedLayerInverted: boolean,
 ): Promise<APIJob> {
   return Request.receiveJSON(
-    `/api/jobs/run/inferNuclei/${datasetId}?layerName=${layerName}&newDatasetName=${newDatasetName}`,
+    `/api/jobs/run/inferNuclei/${datasetId}?layerName=${layerName}&newDatasetName=${newDatasetName}&isSelectedLayerInverted=${isSelectedLayerInverted}`,
     {
       method: "POST",
     },
@@ -205,6 +206,7 @@ export function startNeuronInferralJob(
   bbox: Vector6,
   newDatasetName: string,
   doSplitMergerEvaluation: boolean,
+  isSelectedLayerInverted: boolean,
   annotationId?: string,
   useSparseTracing?: boolean,
   evalMaxEdgeLength?: number,
@@ -216,6 +218,7 @@ export function startNeuronInferralJob(
     bbox: bbox.join(","),
     newDatasetName,
     doSplitMergerEvaluation: doSplitMergerEvaluation.toString(),
+    isSelectedLayerInverted: isSelectedLayerInverted.toString(),
   });
   if (doSplitMergerEvaluation) {
     if (!annotationId) {

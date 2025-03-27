@@ -202,7 +202,10 @@ class JobController @Inject()(jobDAO: JobDAO,
       } yield Ok(js)
     }
 
-  def runInferNucleiJob(datasetId: ObjectId, layerName: String, newDatasetName: String): Action[AnyContent] =
+  def runInferNucleiJob(datasetId: ObjectId,
+                        layerName: String,
+                        newDatasetName: String,
+                        isSelectedLayerInverted: Boolean): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
@@ -220,7 +223,8 @@ class JobController @Inject()(jobDAO: JobDAO,
             "dataset_name" -> dataset.name,
             "dataset_directory_name" -> dataset.directoryName,
             "layer_name" -> layerName,
-            "new_dataset_name" -> newDatasetName
+            "new_dataset_name" -> newDatasetName,
+            "is_selected_layer_inverted" -> isSelectedLayerInverted
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunNucleiInferral"
           js <- jobService.publicWrites(job)
@@ -233,6 +237,7 @@ class JobController @Inject()(jobDAO: JobDAO,
                          bbox: String,
                          newDatasetName: String,
                          doSplitMergerEvaluation: Boolean,
+                         isSelectedLayerInverted: Boolean,
                          annotationId: Option[String],
                          evalUseSparseTracing: Option[Boolean],
                          evalMaxEdgeLength: Option[Double],
@@ -262,6 +267,7 @@ class JobController @Inject()(jobDAO: JobDAO,
             "layer_name" -> layerName,
             "bbox" -> bbox,
             "do_split_merger_evaluation" -> doSplitMergerEvaluation,
+            "invert_color_layer" -> isSelectedLayerInverted,
             "annotation_id" -> annotationIdParsed,
             "eval_use_sparse_tracing" -> evalUseSparseTracing,
             "eval_max_edge_length" -> evalMaxEdgeLength,

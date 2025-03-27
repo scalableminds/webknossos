@@ -204,6 +204,7 @@ const renderActionsForModel = (model: AiModel, onChangeSharedOrganizations: () =
     <Col>
       {trainingJobState === "SUCCESS" ? <Row>{organizationSharingButton}</Row> : null}
       {voxelyticsWorkflowHash != null ? (
+        /* margin left is needed  as organizationSharingButton is a button with a 16 margin */
         <Row style={{ marginLeft: 16 }}>
           <FileTextOutlined />
           <Link to={`/workflows/${voxelyticsWorkflowHash}`}>Voxelytics Report</Link>

@@ -180,6 +180,9 @@ jobs:
         run: |
           set -xeo pipefail
 
+          unzip test/dataset/test-dataset.zip -d binaryData/Organization_X/
+
+          mkdir -p binaryData/Organization_X && sudo chmod -R "0777" binaryData/Organization_X
           mkdir -p fossildb/data && sudo chmod -R "0777" fossildb/data
           mkdir -p fossildb/backup && sudo chmod -R "0777" fossildb/backup
           docker compose up -d webknossos
@@ -206,7 +209,7 @@ jobs:
         with:
           timeout_minutes: 10
           max_attempts: 3
-          command: sh -c "mkdir -p binaryData/Organization_X && chmod 777 binaryData/Organization_X && .github/not-on-master.sh yarn run test-e2e"
+          command: sh -c ".github/not-on-master.sh yarn run test-e2e"
         env:
           POSTGRES_URL: jdbc:postgresql://localhost:5434/webknossos
           POSTGRES_USER: webknossos_user

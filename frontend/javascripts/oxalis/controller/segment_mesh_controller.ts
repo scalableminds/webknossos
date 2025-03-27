@@ -17,7 +17,7 @@ import type { AdditionalCoordinate } from "types/api_flow_types";
 
 const ACTIVATED_COLOR = [0.7, 0.5, 0.1] as const;
 const HOVERED_COLOR = [0.65, 0.5, 0.1] as const;
-const HOVERED_OPACITY = 0.8;
+const HOVERED_OPACITY_FACTOR = 0.8;
 
 type MeshMaterial = THREE.MeshLambertMaterial & { savedHex?: number };
 export type MeshSceneNode = THREE.Mesh<THREE.BufferGeometry, MeshMaterial> & {
@@ -390,7 +390,8 @@ export default class SegmentMeshController {
     }
 
     const prevOpacity = mesh.material.opacity;
-    const targetOpacity = mesh.isHovered ? HOVERED_OPACITY : prevOpacity;
+    const hoveredOpacity = HOVERED_OPACITY_FACTOR * Math.min(1, prevOpacity);
+    const targetOpacity = mesh.isHovered ? hoveredOpacity : prevOpacity;
 
     // mesh.parent contains all geometries that were loaded
     // for one chunk (if isMerged is true, this is only one geometry).

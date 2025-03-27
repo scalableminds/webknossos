@@ -3,7 +3,7 @@ syntax = "proto2";
 package com.scalableminds.webknossos.datastore;
 
 message EditableMappingInfo {
-  required string baseMappingName = 1;
+  optional string baseMappingName = 1;
   required int64 createdTimestamp = 2;
   required int64 largestAgglomerateId = 3;
 }

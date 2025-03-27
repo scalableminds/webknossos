@@ -45,8 +45,8 @@ function DatasetReducer(state: OxalisState, action: Action): OxalisState {
             mapping: null,
             mappingColors: null,
             hideUnmappedIds: false,
-            mappingStatus: MappingStatusEnum.DISABLED,
-            mappingType: "JSON",
+            mappingStatus: MappingStatusEnum.ENABLED,
+            mappingType: "HDF5", //TODO_c
           })),
         },
       };

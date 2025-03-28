@@ -1,7 +1,13 @@
-import { EditOutlined, PlusOutlined, SyncOutlined } from "@ant-design/icons";
+import {
+  EyeOutlined,
+  FileTextOutlined,
+  PlusOutlined,
+  SyncOutlined,
+  TeamOutlined,
+} from "@ant-design/icons";
 import { getAiModels, getUsersOrganizations, updateAiModel } from "admin/admin_rest_api";
 import { JobState, getShowTrainingDataLink } from "admin/job/job_list_view";
-import { Button, Col, Modal, Select, Space, Table, Typography } from "antd";
+import { Button, Col, Modal, Row, Select, Space, Table, Typography } from "antd";
 import FormattedDate from "components/formatted_date";
 import { PageNotAvailableToNormalUser } from "components/permission_enforcer";
 import { useFetch, useGuardedFetch } from "libs/react_helpers";
@@ -181,26 +187,39 @@ function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
 
 const renderActionsForModel = (model: AiModel, onChangeSharedOrganizations: () => void) => {
   const organizationSharingButton = model.isOwnedByUsersOrganization ? (
-    <Button type="link" onClick={onChangeSharedOrganizations}>
-      Manage Access <EditOutlined />
+    <Button type="link" onClick={onChangeSharedOrganizations} icon={<TeamOutlined />}>
+      Manage Access
     </Button>
   ) : null;
   if (model.trainingJob == null) {
     return organizationSharingButton;
   }
-  const { voxelyticsWorkflowHash, trainingAnnotations } = model.trainingJob;
+  const {
+    voxelyticsWorkflowHash,
+    trainingAnnotations,
+    state: trainingJobState,
+  } = model.trainingJob;
 
   return (
-    <div>
-      {organizationSharingButton}
+    <Col>
+      {trainingJobState === "SUCCESS" ? <Row>{organizationSharingButton}</Row> : null}
       {voxelyticsWorkflowHash != null ? (
-        <>
+        /* margin left is needed  as organizationSharingButton is a button with a 16 margin */
+        <Row style={{ marginLeft: 16 }}>
+          <FileTextOutlined />
           <Link to={`/workflows/${voxelyticsWorkflowHash}`}>Voxelytics Report</Link>
-          <br />
-        </>
+        </Row>
       ) : null}
-      {getShowTrainingDataLink(trainingAnnotations)}
-    </div>
+      {trainingAnnotations != null ? (
+        <Row style={{ marginLeft: 16, display: "inline-block" }}>
+          <EyeOutlined
+            className="icon-margin-right"
+            style={{ color: "var(--ant-color-primary)" }}
+          />
+          {getShowTrainingDataLink(trainingAnnotations)}
+        </Row>
+      ) : null}
+    </Col>
   );
 };
 

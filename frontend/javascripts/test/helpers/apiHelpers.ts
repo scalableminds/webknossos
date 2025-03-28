@@ -122,7 +122,7 @@ wkstoreAdapter = {
 mockRequire("oxalis/model/bucket_data_handling/wkstore_adapter", wkstoreAdapter);
 
 // Do not reRequire the model here as this would create a separate instance
-const Model = require("oxalis/model").default;
+import Model from "oxalis/model";
 
 const OxalisApi = mockRequire.reRequire("oxalis/api/api_loader").default;
 const TOKEN = "secure-token";
@@ -144,10 +144,10 @@ const modelData = {
   },
 };
 
-const { default: Store, startSagas } = require("oxalis/store");
-const rootSaga = require("oxalis/model/sagas/root_saga").default;
-const { setStore, setModel } = require("oxalis/singletons");
-const { setupApi } = require("oxalis/api/internal_api");
+import { default as Store, startSagas } from "oxalis/store";
+import rootSaga from "oxalis/model/sagas/root_saga";
+import { setStore, setModel } from "oxalis/singletons";
+import { setupApi } from "oxalis/api/internal_api";
 const { setActiveOrganizationAction } = mockRequire.reRequire(
   "oxalis/model/actions/organization_actions",
 );

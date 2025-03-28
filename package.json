@@ -42,7 +42,6 @@
     "css-loader": "^6.5.1",
     "dependency-cruiser": "^16.10.0",
     "documentation": "^14.0.2",
-    "domexception": "^2.0.1",
     "dpdm": "^3.14.0",
     "esbuild": "^0.25",
     "espree": "^3.5.4",
@@ -69,6 +68,8 @@
     "ts-loader": "^9.4.1",
     "typescript": "^5.5.0",
     "typescript-coverage-report": "^0.8.0",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^3.0.9",
     "webpack": "^5.74.0",
     "webpack-cli": "^5.1.4",
     "webpack-dev-server": "^5.0.2"
@@ -86,7 +87,7 @@
     "listening": "lsof -i:5005,7155,9000,9001,9002",
     "kill-listeners": "kill -9 $(lsof -t -i:5005,7155,9000,9001,9002)",
     "rm-fossil-lock": "rm fossildb/data/LOCK",
-    "test": "tools/test.sh test --timeout=30s",
+    "test": "tools/test.sh test",
     "test-changed": "tools/test.sh test-changed --timeout=30s",
     "test-verbose": "xvfb-run -s '-ac -screen 0 1280x1024x24' tools/test.sh test --timeout=60s --verbose",
     "test-backend": "sbt \"testOnly backend.*\"",
@@ -224,10 +225,17 @@
     },
     "require": [
       "./frontend/javascripts/test/_ava_polyfill_provider.ts",
-      "./frontend/javascripts/test/_force-exit.mjs"
+      "./frontend/javascripts/test/_force-exit.ts"
     ],
     "snapshotDir": "frontend/javascripts/test/snapshots",
-    "concurrency": 8
+    "concurrency": 8,
+    "extensions": {
+      "ts": "module",
+      "tsx": "module"
+    },
+    "nodeArguments": [
+      "--trace-warnings"
+    ]
   },
   "c8": {
     "exclude": [
@@ -236,5 +244,6 @@
     ],
     "reporter": "lcov"
   },
-  "packageManager": "yarn@4.4.1"
+  "packageManager": "yarn@4.4.1",
+  "type": "module"
 }

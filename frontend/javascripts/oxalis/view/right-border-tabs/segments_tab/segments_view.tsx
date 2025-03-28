@@ -62,6 +62,7 @@ import {
   removeMeshAction,
   triggerMeshesDownloadAction,
   updateCurrentMeshFileAction,
+  updateMeshOpacityAction,
   updateMeshVisibilityAction,
 } from "oxalis/model/actions/annotation_actions";
 import { ensureSegmentIndexIsLoadedAction } from "oxalis/model/actions/dataset_actions";
@@ -314,6 +315,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   removeSegment(segmentId: number, layerName: string) {
     dispatch(removeSegmentAction(segmentId, layerName));
+  },
+
+  changeMeshOpacity(segmentId: number, layerName: string, opacity: number) {
+    dispatch(updateMeshOpacityAction(layerName, segmentId, opacity));
   },
 
   deleteSegmentData(segmentId: number, layerName: string, callback?: () => void) {
@@ -1756,6 +1761,7 @@ class SegmentsView extends React.Component<Props, State> {
                     allowUpdate={this.props.allowUpdate}
                     updateSegment={this.props.updateSegment}
                     removeSegment={this.props.removeSegment}
+                    setMeshOpacity={this.props.changeMeshOpacity}
                     deleteSegmentData={this.props.deleteSegmentData}
                     visibleSegmentationLayer={this.props.visibleSegmentationLayer}
                     loadAdHocMesh={this.props.loadAdHocMesh}

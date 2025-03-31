@@ -294,6 +294,7 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
+          _ <- bool2Fox(multiUser.isSuperUser) ?~> "job.inferMitochondria.notAllowed.onlySuperUsers"
           command = JobCommand.infer_mitochondria
           parsedBoundingBox <- BoundingBox.fromLiteral(bbox).toFox
           _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))

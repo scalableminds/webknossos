@@ -170,11 +170,12 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       editablePredicate = isEditableOpt match {
         case Some(isEditable) =>
           val usersInTeamsManagedByRequestingUser =
-            q"(SELECT _user FROM webknossos.user_team_roles WHERE _team IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = ${requestingUser._id}  AND isTeamManager)))"
+            q"""(SELECT 1 FROM webknossos.user_team_roles AS utr1 WHERE utr1._user = ${userPrefix}_id AND utr1._team IN
+                (SELECT _team FROM webknossos.user_team_roles AS utr2 WHERE utr2._user = ${requestingUser._id} AND utr2.isTeamManager) ))"""
           if (isEditable) {
-            q"(${userPrefix}_id IN $usersInTeamsManagedByRequestingUser OR (${requestingUser.isAdmin} AND ${userPrefix}_organization = ${requestingUser._organization})"
+            q"(EXISTS $usersInTeamsManagedByRequestingUser OR (${requestingUser.isAdmin} AND ${userPrefix}_organization = ${requestingUser._organization})"
           } else {
-            q"(${userPrefix}_id NOT IN $usersInTeamsManagedByRequestingUser AND (NOT (${requestingUser.isAdmin} AND ${userPrefix}_organization = ${requestingUser._organization}))"
+            q"(NOT EXISTS $usersInTeamsManagedByRequestingUser AND NOT (${requestingUser.isAdmin} AND ${userPrefix}_organization = ${requestingUser._organization})"
           }
         case None => q"TRUE"
       }

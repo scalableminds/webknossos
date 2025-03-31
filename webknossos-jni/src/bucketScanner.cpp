@@ -5,29 +5,29 @@
 #include <iostream>
 #include <vector>
 
-uint64_t segmentIdAtIndex(unsigned char* bucketBytes, int index, int bytesPerElement, bool isSigned) {
-    unsigned char* currentPos = bucketBytes + (index * bytesPerElement);
+uint64_t segmentIdAtIndex(uint8_t* bucketBytes, int index, int bytesPerElement, bool isSigned) {
+    uint8_t* currentPos = bucketBytes + (index * bytesPerElement);
     long currentValue;
     switch (bytesPerElement) {
         case 1:
             currentValue = isSigned ?
-                static_cast<long>(*reinterpret_cast<signed char*>(currentPos)) :
-                static_cast<long>(*currentPos);
+                static_cast<int64_t>(*reinterpret_cast<int8_t*>(currentPos)) :
+                static_cast<int64_t>(*currentPos);
             break;
         case 2:
             currentValue = isSigned ?
-                static_cast<long>(*reinterpret_cast<short*>(currentPos)) :
-                static_cast<long>(*reinterpret_cast<unsigned short*>(currentPos));
+                static_cast<int64_t>(*reinterpret_cast<int16_t*>(currentPos)) :
+                static_cast<int64_t>(*reinterpret_cast<uint16_t*>(currentPos));
             break;
         case 4:
             currentValue = isSigned ?
-                static_cast<long>(*reinterpret_cast<int*>(currentPos)) :
-                static_cast<long>(*reinterpret_cast<unsigned int*>(currentPos));
+                static_cast<int64_t>(*reinterpret_cast<int32_t*>(currentPos)) :
+                static_cast<int64_t>(*reinterpret_cast<uint32_t*>(currentPos));
             break;
         case 8:
             currentValue = isSigned ?
-                static_cast<long>(*reinterpret_cast<long*>(currentPos)) :
-                static_cast<long>(*reinterpret_cast<unsigned long*>(currentPos));
+                static_cast<int64_t>(*reinterpret_cast<int64_t*>(currentPos)) :
+                static_cast<int64_t>(*reinterpret_cast<uint64_t*>(currentPos));
             break;
         default:
             throw std::invalid_argument("Cannot read segment value, unsupported bytesPerElement value");
@@ -41,9 +41,9 @@ JNIEXPORT jlongArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers
 
     jsize inputLengthBytes = env -> GetArrayLength(bucketBytesJavaArray);
     jbyte * bucketBytesAsJByte = env -> GetByteArrayElements(bucketBytesJavaArray, NULL);
-    unsigned char* bucketBytesAsByteArray = reinterpret_cast<unsigned char*>(bucketBytesAsJByte);
+    uint8_t* bucketBytesAsByteArray = reinterpret_cast<uint8_t*>(bucketBytesAsJByte);
 
-    std::unordered_set<long> uniqueSegmentIds;
+    std::unordered_set<int64_t> uniqueSegmentIds;
 
     size_t elementCount = inputLengthBytes / bytesPerElement;
 
@@ -57,7 +57,7 @@ JNIEXPORT jlongArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers
     env -> ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytesAsJByte, 0);
 
     size_t resultCount = uniqueSegmentIds.size();
-    long* result = new long[resultCount];
+    int64_t* result = new int64_t[resultCount];
     size_t idx = 0;
     for (const auto& value : uniqueSegmentIds) {
         result[idx++] = value;
@@ -70,37 +70,38 @@ JNIEXPORT jlongArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers
 }
 
 JNIEXPORT jlong JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_countSegmentVoxels
-  (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jboolean isSigned, jlong segmentId) {
+    (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jboolean isSigned, jlong segmentId) {
 
     jsize inputLengthBytes = env -> GetArrayLength(bucketBytesJavaArray);
     jbyte * bucketBytesAsJByte = env -> GetByteArrayElements(bucketBytesJavaArray, NULL);
-    unsigned char* bucketBytesAsByteArray = reinterpret_cast<unsigned char*>(bucketBytesAsJByte);
+    uint8_t* bucketBytesAsByteArray = reinterpret_cast<uint8_t*>(bucketBytesAsJByte);
 
     size_t elementCount = inputLengthBytes / bytesPerElement;
 
     size_t segmentVoxelCount = 0;
 
 
-  for (size_t i = 0; i < elementCount; ++i) {
-      unsigned char* currentPos = bucketBytesAsByteArray + (i * bytesPerElement);
-      int64_t currentValue = segmentIdAtIndex(bucketBytesAsByteArray, i, bytesPerElement, isSigned);
-      if (currentValue == segmentId) {
-        segmentVoxelCount++;
-      }
-  }
+    for (size_t i = 0; i < elementCount; ++i) {
+        unsigned char* currentPos = bucketBytesAsByteArray + (i * bytesPerElement);
+        int64_t currentValue = segmentIdAtIndex(bucketBytesAsByteArray, i, bytesPerElement, isSigned);
+        if (currentValue == segmentId) {
+            segmentVoxelCount++;
+        }
+    }
 
-  return segmentVoxelCount;
+    return segmentVoxelCount;
 }
 
 
 JNIEXPORT jintArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_extendSegmentBoundingBox
-  (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jboolean isSigned, jint bucketLength, jlong segmentId,
-   jint bucketTopLeftX, jint bucketTopLeftY, jint bucketTopLeftZ,
-    jint existingBBoxTopLeftX, jint existingBBoxTopLeftY, jint existingBBoxTopLeftZ, jint existingBBoxBottomRightX, jint existingBBoxBottomRightY, jint existingBBoxBottomRightZ) {
+    (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jboolean isSigned, jint bucketLength, jlong segmentId,
+      jint bucketTopLeftX, jint bucketTopLeftY, jint bucketTopLeftZ,
+      jint existingBBoxTopLeftX, jint existingBBoxTopLeftY, jint existingBBoxTopLeftZ,
+      jint existingBBoxBottomRightX, jint existingBBoxBottomRightY, jint existingBBoxBottomRightZ) {
 
     jsize inputLengthBytes = env -> GetArrayLength(bucketBytesJavaArray);
     jbyte * bucketBytesAsJByte = env -> GetByteArrayElements(bucketBytesJavaArray, NULL);
-    unsigned char* bucketBytesAsByteArray = reinterpret_cast<unsigned char*>(bucketBytesAsJByte);
+    uint8_t* bucketBytesAsByteArray = reinterpret_cast<uint8_t*>(bucketBytesAsJByte);
 
     std::vector<int> bbox = {existingBBoxTopLeftX, existingBBoxTopLeftY, existingBBoxTopLeftZ, existingBBoxBottomRightX, existingBBoxBottomRightY, existingBBoxBottomRightZ};
 

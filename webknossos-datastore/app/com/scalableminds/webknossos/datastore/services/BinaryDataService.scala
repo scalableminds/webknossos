@@ -52,34 +52,68 @@ class BinaryDataService(val dataBaseDir: Path,
     }
   }
 
+  def handleMultipleBucketRequests(requests: List[DataServiceDataRequest])(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[Seq[Box[Array[Byte]]]] =
+    if (requests.isEmpty) Fox.successful(Seq.empty)
+    else {
+      for {
+        _ <- bool2Fox(requests.forall(_.isSingleBucket)) ?~> "data requests handed to handleMultipleBucketRequests don’t contain bucket requests"
+        firstRequest <- requests.headOption.toFox
+        readInstructions = requests.map(
+          r =>
+            DataReadInstruction(dataBaseDir,
+                                firstRequest.dataSource,
+                                firstRequest.dataLayer,
+                                r.cuboid.topLeft.toBucket,
+                                firstRequest.settings.version))
+
+        // dataSource is null and unused for volume tracings. Insert dummy DataSourceId (also unused in that case)
+        dataSourceId = if (firstRequest.dataSource != null) firstRequest.dataSource.id else DataSourceId("", "")
+        bucketProvider = bucketProviderCache.getOrLoadAndPut(
+          (dataSourceId, firstRequest.dataLayer.bucketProviderCacheKey))(
+          _ =>
+            firstRequest.dataLayer
+              .bucketProvider(remoteSourceDescriptorServiceOpt, dataSourceId, sharedChunkContentsCache))
+        // TODO those outside of mag and bbox should be set to empty here.
+        // TODO add withErrorLogging
+        bucketBoxes <- bucketProvider.loadMultiple(readInstructions)
+      } yield bucketBoxes
+    }
+
+  private def convertIfNecessary(isNecessary: Boolean,
+                                 inputArray: Array[Byte],
+                                 conversionFunc: Array[Byte] => Fox[Array[Byte]],
+                                 request: DataServiceDataRequest): Fox[Array[Byte]] =
+    if (isNecessary) datasetErrorLoggingService match {
+      case Some(value) =>
+        value.withErrorLogging(request.dataSource.id, "converting bucket data", conversionFunc(inputArray))
+      case None => conversionFunc(inputArray)
+    } else Full(inputArray)
+
+  private def convertAccordingToRequest(request: DataServiceDataRequest, inputArray: Array[Byte]): Fox[Array[Byte]] =
+    for {
+      mappedDataFox <- agglomerateServiceOpt.map { agglomerateService =>
+        convertIfNecessary(
+          request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation && request.cuboid.mag.maxDim <= MaxMagForAgglomerateMapping,
+          inputArray,
+          agglomerateService.applyAgglomerate(request),
+          request
+        )
+      }.fillEmpty(Fox.successful(inputArray)) ?~> "Failed to apply agglomerate mapping"
+      mappedData <- mappedDataFox
+      resultData <- convertIfNecessary(request.settings.halfByte, mappedData, convertToHalfByte, request)
+    } yield resultData
+
   def handleDataRequests(requests: List[DataServiceDataRequest])(
       implicit tc: TokenContext): Fox[(Array[Byte], List[Int])] = {
-    def convertIfNecessary(isNecessary: Boolean,
-                           inputArray: Array[Byte],
-                           conversionFunc: Array[Byte] => Fox[Array[Byte]],
-                           request: DataServiceDataRequest): Fox[Array[Byte]] =
-      if (isNecessary) datasetErrorLoggingService match {
-        case Some(value) =>
-          value.withErrorLogging(request.dataSource.id, "converting bucket data", conversionFunc(inputArray))
-        case None => conversionFunc(inputArray)
-      } else Full(inputArray)
-
     val requestsCount = requests.length
     val requestData = requests.zipWithIndex.map {
       case (request, index) =>
         for {
           data <- handleDataRequest(request)
-          mappedDataFox <- agglomerateServiceOpt.map { agglomerateService =>
-            convertIfNecessary(
-              request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation && request.cuboid.mag.maxDim <= MaxMagForAgglomerateMapping,
-              data,
-              agglomerateService.applyAgglomerate(request),
-              request
-            )
-          }.fillEmpty(Fox.successful(data)) ?~> "Failed to apply agglomerate mapping"
-          mappedData <- mappedDataFox
-          resultData <- convertIfNecessary(request.settings.halfByte, mappedData, convertToHalfByte, request)
-        } yield (resultData, index)
+          dataConverted <- convertAccordingToRequest(request, data)
+        } yield (dataConverted, index)
     }
 
     Fox.sequenceOfFulls(requestData).map { l =>

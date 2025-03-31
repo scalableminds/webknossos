@@ -203,6 +203,17 @@ class EditableMappingService @Inject()(
     binaryDataService.handleDataRequests(requests)
   }
 
+  def volumeDataBucketBoxes(editableMappingLayer: EditableMappingLayer, dataRequests: DataRequestCollection)(
+      implicit tc: TokenContext): Fox[Seq[Box[Array[Byte]]]] = {
+    val requests = dataRequests.map(
+      r =>
+        DataServiceDataRequest(null,
+                               editableMappingLayer,
+                               r.cuboid(editableMappingLayer),
+                               r.settings.copy(appliedAgglomerate = None)))
+    binaryDataService.handleMultipleBucketRequests(requests)
+  }
+
   private def getSegmentToAgglomerateForSegmentIds(segmentIds: Set[Long],
                                                    tracingId: String,
                                                    version: Long): Fox[Map[Long, Long]] = {

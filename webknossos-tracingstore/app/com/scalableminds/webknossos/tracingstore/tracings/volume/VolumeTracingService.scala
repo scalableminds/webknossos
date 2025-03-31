@@ -506,6 +506,24 @@ class VolumeTracingService @Inject()(
       data <- binaryDataService.handleDataRequests(requests)
     } yield data
 
+  def dataBucketBoxes(
+      annotationId: String,
+      tracingId: String,
+      tracing: VolumeTracing,
+      dataRequests: DataRequestCollection,
+      includeFallbackDataIfAvailable: Boolean = false)(implicit tc: TokenContext): Fox[Seq[Box[Array[Byte]]]] =
+    for {
+      isTemporaryTracing <- temporaryTracingService.isTemporaryTracing(tracingId)
+      dataLayer = volumeTracingLayer(annotationId,
+                                     tracingId,
+                                     tracing,
+                                     isTemporaryTracing,
+                                     includeFallbackDataIfAvailable)
+      requests = dataRequests.map(r =>
+        DataServiceDataRequest(null, dataLayer, r.cuboid(dataLayer), r.settings.copy(appliedAgglomerate = None)))
+      data <- binaryDataService.handleMultipleBucketRequests(requests)
+    } yield data
+
   def adaptVolumeForDuplicate(sourceAnnotationId: String,
                               newTracingId: String,
                               sourceTracing: VolumeTracing,

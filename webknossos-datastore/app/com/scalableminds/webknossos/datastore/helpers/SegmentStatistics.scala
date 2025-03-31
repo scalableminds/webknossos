@@ -132,29 +132,4 @@ trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
     (0 until 6).foreach(i => boundingBoxMutable(i) = extendedBBArray(i))
   }
 
-  private def scanDataAndExtendBoundingBox(dataTyped: Array[SegmentInteger],
-                                           bucketTopLeftInTargetMagVoxels: Vec3Int,
-                                           segmentId: Long,
-                                           mutableBoundingBox: scala.collection.mutable.ListBuffer[Int]): Unit =
-    for {
-      x <- 0 until DataLayer.bucketLength
-      y <- 0 until DataLayer.bucketLength
-      z <- 0 until DataLayer.bucketLength
-      index = z * DataLayer.bucketLength * DataLayer.bucketLength + y * DataLayer.bucketLength + x
-    } yield {
-      if (dataTyped(index).toLong == segmentId) {
-        val voxelPosition = bucketTopLeftInTargetMagVoxels + Vec3Int(x, y, z)
-        extendBoundingBoxByPosition(mutableBoundingBox, voxelPosition)
-      }
-    }
-
-  private def extendBoundingBoxByPosition(mutableBoundingBox: scala.collection.mutable.ListBuffer[Int],
-                                          position: Vec3Int): Unit = {
-    mutableBoundingBox(0) = Math.min(mutableBoundingBox(0), position.x)
-    mutableBoundingBox(1) = Math.min(mutableBoundingBox(1), position.y)
-    mutableBoundingBox(2) = Math.min(mutableBoundingBox(2), position.z)
-    mutableBoundingBox(3) = Math.max(mutableBoundingBox(3), position.x)
-    mutableBoundingBox(4) = Math.max(mutableBoundingBox(4), position.y)
-    mutableBoundingBox(5) = Math.max(mutableBoundingBox(5), position.z)
-  }
 }

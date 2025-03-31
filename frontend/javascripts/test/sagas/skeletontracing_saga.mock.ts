@@ -1,8 +1,8 @@
 import "test/mocks/lz4";
-import mockRequire from "mock-require";
+import { vi } from "vitest";
 
 const REQUEST_ID = "dummyRequestId";
-const UidMock = {
+
+vi.mock("libs/uid_generator", () => ({
   getUid: () => REQUEST_ID,
-};
-mockRequire("libs/uid_generator", UidMock);
+}));

@@ -1,4 +1,4 @@
-import { describe, it, expect} from "vitest";
+import { describe, it, expect } from "vitest";
 import { getMagnificationUnion } from "oxalis/model/accessors/dataset_accessor";
 import type { Vector3 } from "oxalis/constants";
 import type { APIDataset } from "types/api_flow_types";

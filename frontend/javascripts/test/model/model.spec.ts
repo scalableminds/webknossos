@@ -2,7 +2,7 @@ import _ from "lodash";
 import "test/mocks/lz4";
 import mockRequire from "mock-require";
 import sinon from "sinon";
-import anyTest, { type TestFn } from "ava";
+import { describe, it, expect, beforeEach } from "vitest";
 import { ControlModeEnum } from "oxalis/constants";
 import {
   tracing as TRACING,
@@ -10,8 +10,6 @@ import {
 } from "../fixtures/skeletontracing_server_objects";
 import DATASET from "../fixtures/dataset_server_object";
 import type { OxalisModel } from "oxalis/model";
-
-const test = anyTest as TestFn<{ model: OxalisModel }>;
 
 function makeModelMock() {
   class ModelMock {
@@ -51,71 +49,64 @@ const Model = mockRequire.reRequire("../../oxalis/model").OxalisModel;
 const { HANDLED_ERROR } = mockRequire.reRequire("../../oxalis/model_initialization");
 const ANNOTATION_TYPE = null;
 const ANNOTATION_ID = "annotationIdValue";
-test.beforeEach((t) => {
-  const model = new Model();
-  t.context.model = model;
-  model.state = {
-    position: [1, 2, 3],
-  };
-  Request.receiveJSON
-    .withArgs(`/api/annotations/${ANNOTATION_ID}/info?timestamp=${Date.now()}`)
-    .returns(Promise.resolve(_.cloneDeep(ANNOTATION)));
-  // The following code assumes a skeleton tracing (note that ANNOTATION is imported from
-  // skeletontracing_server_objects.js)
-  const contentType = "skeleton";
-  const { tracingId } = ANNOTATION.annotationLayers[0];
-  Request.receiveJSON
-    .withArgs(`${ANNOTATION.tracingStore.url}/tracings/${contentType}/${tracingId}`)
-    .returns(Promise.resolve(_.cloneDeep(TRACING)));
-  User.prototype.fetch.returns(Promise.resolve());
-});
-test("Model Initialization: should throw a model.HANDLED_ERROR for missing data layers", (t) => {
-  t.plan(1);
-  const { model } = t.context;
 
-  const datasetObject = _.clone(DATASET);
+describe("Model Initialization", () => {
+  let model: OxalisModel;
 
-  // @ts-expect-error still delete dataLayers on the cloned object.
-  delete datasetObject.dataSource.dataLayers;
-  Request.receiveJSON
-    .withArgs(`/api/datasets/${ANNOTATION.datasetId}`)
-    .returns(Promise.resolve(_.cloneDeep(datasetObject)));
-  return model
-    .fetch(
-      ANNOTATION_TYPE,
-      {
-        type: ControlModeEnum.VIEW,
-        datasetId: ANNOTATION.datasetId,
-      },
-      true,
-    )
-    .then(() => {
-      t.fail("Promise should not have been resolved.");
-    })
-    .catch((error) => {
-      t.is(error, HANDLED_ERROR);
-    });
-});
-test("Model Initialization: should throw an Error on unexpected failure", (t) => {
-  t.plan(1);
-  const { model } = t.context;
-  const rejectedDatasetError = new Error("mocked dataset rejection");
-  Request.receiveJSON
-    .withArgs(`/api/datasets/${ANNOTATION.datasetId}`)
-    .returns(Promise.reject(rejectedDatasetError));
-  return model
-    .fetch(
-      ANNOTATION_TYPE,
-      {
-        type: ControlModeEnum.VIEW,
-        datasetId: ANNOTATION.datasetId,
-      },
-      true,
-    )
-    .then(() => {
-      t.fail("Promise should not have been resolved.");
-    })
-    .catch((error) => {
-      t.is(error, rejectedDatasetError);
-    });
+  beforeEach(() => {
+    model = new Model();
+    model.state = {
+      position: [1, 2, 3],
+    };
+    Request.receiveJSON
+      .withArgs(`/api/annotations/${ANNOTATION_ID}/info?timestamp=${Date.now()}`)
+      .returns(Promise.resolve(_.cloneDeep(ANNOTATION)));
+    // The following code assumes a skeleton tracing (note that ANNOTATION is imported from
+    // skeletontracing_server_objects.js)
+    const contentType = "skeleton";
+    const { tracingId } = ANNOTATION.annotationLayers[0];
+    Request.receiveJSON
+      .withArgs(`${ANNOTATION.tracingStore.url}/tracings/${contentType}/${tracingId}`)
+      .returns(Promise.resolve(_.cloneDeep(TRACING)));
+    User.prototype.fetch.returns(Promise.resolve());
+  });
+
+  it("should throw a model.HANDLED_ERROR for missing data layers", async () => {
+    const datasetObject = _.clone(DATASET);
+
+    // @ts-expect-error still delete dataLayers on the cloned object.
+    delete datasetObject.dataSource.dataLayers;
+    Request.receiveJSON
+      .withArgs(`/api/datasets/${ANNOTATION.datasetId}`)
+      .returns(Promise.resolve(_.cloneDeep(datasetObject)));
+
+    await expect(
+      model.fetch(
+        ANNOTATION_TYPE,
+        {
+          type: ControlModeEnum.VIEW,
+          datasetId: ANNOTATION.datasetId,
+        },
+        true,
+      ),
+    ).rejects.toBe(HANDLED_ERROR);
+  });
+
+  it("should throw an Error on unexpected failure", async () => {
+    const rejectedDatasetError = new Error("mocked dataset rejection");
+    Request.receiveJSON
+      .withArgs(`/api/datasets/${ANNOTATION.datasetId}`)
+      .returns(Promise.reject(rejectedDatasetError));
+
+    await expect(
+      model.fetch(
+        ANNOTATION_TYPE,
+        {
+          type: ControlModeEnum.VIEW,
+          datasetId: ANNOTATION.datasetId,
+        },
+        true,
+      ),
+    ).rejects.toBe(rejectedDatasetError);
+  });
 });

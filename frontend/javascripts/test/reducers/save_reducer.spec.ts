@@ -8,18 +8,6 @@ import * as SaveActions from "oxalis/model/actions/save_actions";
 import SaveReducer from "oxalis/model/reducers/save_reducer";
 import { createEdge } from "oxalis/model/sagas/update_actions";
 
-const TIMESTAMP = 1494695001688;
-const REQUEST_ID = "dummyRequestId";
-
-// Mock modules
-vi.mock("libs/uid_generator", () => ({
-  getUid: () => REQUEST_ID,
-}));
-vi.mock("libs/date", () => ({
-  default: {
-    now: () => TIMESTAMP,
-  },
-}));
 vi.mock("oxalis/model/accessors/annotation_accessor", () => ({
   getStats: () => null,
 }));

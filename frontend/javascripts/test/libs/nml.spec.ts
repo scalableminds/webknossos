@@ -9,7 +9,7 @@ import EdgeCollection from "oxalis/model/edge_collection";
 import { findGroup } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { TreeTypeEnum } from "oxalis/constants";
-import {addTreesAndGroupsAction} from "oxalis/model/actions/skeletontracing_actions";
+import { addTreesAndGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
 import { serializeToNml, getNmlName, parseNml } from "oxalis/model/helpers/nml_helpers";
 import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -191,10 +191,7 @@ const initialState: OxalisState = _.extend({}, defaultState, {
   task: TASK_ANNOTATION.task,
 });
 
-async function testThatParserThrowsWithState(
-  invalidState: OxalisState,
-  key: string,
-) {
+async function testThatParserThrowsWithState(invalidState: OxalisState, key: string) {
   // Serialize the NML using the invalidState, then parse it again, which should throw an NMLParseError
   const nmlWithInvalidContent = serializeToNml(
     invalidState,
@@ -224,12 +221,12 @@ describe("NML", () => {
     // This only mocks Date.now, but leaves the constructor intact
     sinon.stub(Date, "now").returns(TIMESTAMP);
   });
-  
+
   afterAll(async () => {
     // @ts-ignore
     Date.now.restore();
   });
-  
+
   it("serializing and parsing should yield the same state", async () => {
     const serializedNml = serializeToNml(
       initialState,
@@ -499,7 +496,9 @@ describe("NML", () => {
       false,
     );
 
-    expect(serializedNml).toContain('<metadataEntry key="key of string" stringValue="string value" />');
+    expect(serializedNml).toContain(
+      '<metadataEntry key="key of string" stringValue="string value" />',
+    );
 
     expect(serializedNml).toContain('<metadataEntry key="key of true" boolValue="true" />');
     expect(serializedNml).toContain('<metadataEntry key="key of false" boolValue="false" />');
@@ -749,10 +748,7 @@ describe("NML", () => {
   });
 
   it("addTreesAndGroups reducer should assign new node and tree ids", () => {
-    const action = addTreesAndGroupsAction(
-      _.cloneDeep(initialSkeletonTracing.trees),
-      [],
-    );
+    const action = addTreesAndGroupsAction(_.cloneDeep(initialSkeletonTracing.trees), []);
     const newState = SkeletonTracingReducer(initialState, action);
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.tracing);
@@ -829,8 +825,12 @@ describe("NML", () => {
     expect(newSkeletonTracing.activeTreeId).toBe(initialSkeletonTracing.activeTreeId);
     // New node and tree ids should have been assigned
     expect(_.size(newSkeletonTracing.treeGroups)).toBe(4);
-    expect(newSkeletonTracing.treeGroups[2].groupId).not.toBe(newSkeletonTracing.treeGroups[0].groupId);
-    expect(newSkeletonTracing.treeGroups[3].groupId).not.toBe(newSkeletonTracing.treeGroups[1].groupId);
+    expect(newSkeletonTracing.treeGroups[2].groupId).not.toBe(
+      newSkeletonTracing.treeGroups[0].groupId,
+    );
+    expect(newSkeletonTracing.treeGroups[3].groupId).not.toBe(
+      newSkeletonTracing.treeGroups[1].groupId,
+    );
     expect(newSkeletonTracing.trees[3].groupId).toBe(5);
     expect(newSkeletonTracing.trees[4].groupId).toBe(newSkeletonTracing.treeGroups[3].groupId);
   });
@@ -855,9 +855,9 @@ describe("NML", () => {
     // Comments should have been rewritten if appropriate
     expect(_.size(newSkeletonTracing.trees)).toBe(4);
     expect(newSkeletonTracing.trees[3].comments.length).toBe(3);
-    expect(
-      newSkeletonTracing.trees[3].comments[1].content,
-    ).toBe("Reference to existing id in another tree #12");
+    expect(newSkeletonTracing.trees[3].comments[1].content).toBe(
+      "Reference to existing id in another tree #12",
+    );
     expect(newSkeletonTracing.trees[3].comments[2].content).toBe(commentWithoutValidReferences);
   });
 

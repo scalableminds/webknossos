@@ -1,25 +1,40 @@
 // @ts-nocheck
 import _ from "lodash";
-import mockRequire from "mock-require";
 import runAsync from "test/helpers/run-async";
-import sinon from "sinon";
-import test from "ava";
-const RequestMock = {
-  always: (promise, func) => promise.then(func, func),
-};
-mockRequire("oxalis/model/sagas/root_saga", function* () {
-  yield;
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
+import { requestWithFallback } from "oxalis/model/bucket_data_handling/wkstore_adapter";
+// import "libs/request";
+// import "oxalis/model"
+import { DataBucket, BucketStateEnum } from "oxalis/model/bucket_data_handling/bucket";
+
+vi.mock("oxalis/model/sagas/root_saga", function () {
+  return function* () {
+    yield;
+  };
 });
-mockRequire("oxalis/model", {
-  getLayerRenderingManagerByName: () => ({
-    currentBucketPickerTick: 0,
-  }),
+
+vi.mock("oxalis/model", function () {
+  return {
+    getLayerRenderingManagerByName: () => ({
+      currentBucketPickerTick: 0,
+    }),
+  };
 });
-mockRequire("libs/request", RequestMock);
-const WkstoreAdapterMock = {
-  requestWithFallback: sinon.stub(),
-};
-mockRequire("oxalis/model/bucket_data_handling/wkstore_adapter", WkstoreAdapterMock);
+
+vi.mock("libs/request", function () {
+  return {
+    receiveJSON: vi.fn(),
+    always: (promise, func) => promise.then(func, func),
+  };
+});
+
+vi.mock("oxalis/model/bucket_data_handling/wkstore_adapter", function () {
+  return {
+    requestWithFallback: vi.fn(),
+  };
+});
+
 const mockedCube = {
   isSegmentation: true,
   shouldEagerlyMaintainUsedValueSet: () => false,
@@ -31,117 +46,111 @@ const layer = {
   category: "color",
   resolutions: [[1, 1, 1]],
 };
-const StoreMock = {
-  getState: () => ({
-    dataset: {
-      dataSource: {
-        dataLayers: [layer],
-      },
-    },
-    datasetConfiguration: {
-      renderMissingDataBlack: true,
-    },
-  }),
-  dispatch: sinon.stub(),
-  subscribe: sinon.stub(),
-};
-mockRequire("oxalis/store", StoreMock);
-// Avoid node caching and make sure all mockRequires are applied
-const PullQueue = mockRequire.reRequire("oxalis/model/bucket_data_handling/pullqueue").default;
-const { DataBucket, BucketStateEnum } = mockRequire.reRequire(
-  "oxalis/model/bucket_data_handling/bucket",
-);
-test.beforeEach((t) => {
-  const cube = {
-    getBucket: sinon.stub(),
-    getOrCreateBucket: sinon.stub(),
-    boundingBox: {
-      containsBucket: sinon.stub().returns(true),
-      removeOutsideArea: sinon.stub(),
-    },
-    shouldEagerlyMaintainUsedValueSet: () => false,
-  };
-  const connectionInfo = {
-    log: sinon.stub(),
-  };
-  const datastoreInfo = {
-    typ: "webknossos-store",
-  };
-  const pullQueue = new PullQueue(cube, layer.name, connectionInfo, datastoreInfo);
-  const buckets = [
-    new DataBucket("uint8", [0, 0, 0, 0], null, mockedCube),
-    new DataBucket("uint8", [1, 1, 1, 1], null, mockedCube),
-  ];
 
-  for (const bucket of buckets) {
-    cube.getBucket.withArgs(bucket.zoomedAddress).returns(bucket);
-    cube.getOrCreateBucket.withArgs(bucket.zoomedAddress).returns(bucket);
-    pullQueue.add({
-      bucket: bucket.zoomedAddress,
-      priority: 0,
-    });
+vi.mock("oxalis/store", function () {
+  return {
+    default: {
+      getState: () => ({
+        dataset: {
+          dataSource: {
+            dataLayers: [layer],
+          },
+        },
+        datasetConfiguration: {
+          renderMissingDataBlack: true,
+        },
+      }),
+      dispatch: vi.fn(),
+      subscribe: vi.fn(),
+    },
+  };
+});
+
+describe("PullQueue", () => {
+  let buckets;
+  let pullQueue;
+
+  beforeEach(() => {
+    const cube = {
+      getBucket: vi.fn(),
+      getOrCreateBucket: vi.fn(),
+      boundingBox: {
+        containsBucket: vi.fn().mockReturnValue(true),
+        removeOutsideArea: vi.fn(),
+      },
+      shouldEagerlyMaintainUsedValueSet: () => false,
+    };
+    const connectionInfo = {
+      log: vi.fn(),
+    };
+    const datastoreInfo = {
+      typ: "webknossos-store",
+    };
+    pullQueue = new PullQueue(cube, layer.name, connectionInfo, datastoreInfo);
+    buckets = [
+      new DataBucket("uint8", [0, 0, 0, 0], null, mockedCube),
+      new DataBucket("uint8", [1, 1, 1, 1], null, mockedCube),
+    ];
+
+    for (const bucket of buckets) {
+      cube.getBucket.mockImplementation((address) => bucket);
+      cube.getOrCreateBucket.mockImplementation((address) => bucket);
+      pullQueue.add({
+        bucket: bucket.zoomedAddress,
+        priority: 0,
+      });
+    }
+  });
+
+  it("Successful pulling: should receive the correct data", () => {
+    const bucketData1 = _.range(0, 32 * 32 * 32).map((i) => i % 256);
+    const bucketData2 = _.range(0, 32 * 32 * 32).map((i) => (2 * i) % 256);
+
+    vi.mocked(requestWithFallback).mockResolvedValue([
+      new Uint8Array(bucketData1),
+      new Uint8Array(bucketData2),
+    ]);
+    pullQueue.pull();
+    return runAsync([
+      () => {
+        expect(buckets[0].state).toBe(BucketStateEnum.LOADED);
+        expect(buckets[1].state).toBe(BucketStateEnum.LOADED);
+        expect(buckets[0].getData()).toEqual(new Uint8Array(bucketData1));
+        expect(buckets[1].getData()).toEqual(new Uint8Array(bucketData2));
+      },
+    ]);
+  });
+
+  function prepare() {
+    const mockRequestWithFallback = vi.mocked(requestWithFallback);
+    mockRequestWithFallback
+      .mockRejectedValueOnce(new Error("Expected promise rejection in tests. Can be ignored."))
+      .mockResolvedValueOnce([new Uint8Array(32 * 32 * 32)]);
   }
 
-  t.context = {
-    buckets,
-    pullQueue,
-  };
-});
-test.serial("Successful pulling: should receive the correct data", (t) => {
-  const { pullQueue, buckets } = t.context;
+  it("Request Failure: should not request twice if not bucket dirty", () => {
+    prepare();
+    pullQueue.pull();
+    return runAsync([
+      () => {
+        expect(vi.mocked(requestWithFallback)).toHaveBeenCalledTimes(1);
+        expect(buckets[0].state).toBe(BucketStateEnum.UNREQUESTED);
+        expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
+      },
+    ]);
+  });
 
-  const bucketData1 = _.range(0, 32 * 32 * 32).map((i) => i % 256);
-
-  const bucketData2 = _.range(0, 32 * 32 * 32).map((i) => (2 * i) % 256);
-
-  WkstoreAdapterMock.requestWithFallback = sinon.stub();
-  WkstoreAdapterMock.requestWithFallback.returns(
-    Promise.resolve([new Uint8Array(bucketData1), new Uint8Array(bucketData2)]),
-  );
-  pullQueue.pull();
-  return runAsync([
-    () => {
-      t.is(buckets[0].state, BucketStateEnum.LOADED);
-      t.is(buckets[1].state, BucketStateEnum.LOADED);
-      t.deepEqual(buckets[0].getData(), new Uint8Array(bucketData1));
-      t.deepEqual(buckets[1].getData(), new Uint8Array(bucketData2));
-    },
-  ]);
-});
-
-function prepare() {
-  WkstoreAdapterMock.requestWithFallback = sinon.stub();
-  WkstoreAdapterMock.requestWithFallback
-    .onFirstCall()
-    .returns(Promise.reject(new Error("Expected promise rejection in tests. Can be ignored.")));
-  WkstoreAdapterMock.requestWithFallback
-    .onSecondCall()
-    .returns(Promise.resolve([new Uint8Array(32 * 32 * 32)]));
-}
-
-test.serial("Request Failure: should not request twice if not bucket dirty", (t) => {
-  const { pullQueue, buckets } = t.context;
-  prepare();
-  pullQueue.pull();
-  return runAsync([
-    () => {
-      t.is(WkstoreAdapterMock.requestWithFallback.callCount, 1);
-      t.is(buckets[0].state, BucketStateEnum.UNREQUESTED);
-      t.is(buckets[1].state, BucketStateEnum.UNREQUESTED);
-    },
-  ]);
-});
-test.serial("Request Failure: should reinsert dirty buckets", (t) => {
-  const { pullQueue, buckets } = t.context;
-  prepare();
-  buckets[0].dirty = true;
-  buckets[0].data = new Uint8Array(32 * 32 * 32);
-  pullQueue.pull();
-  return runAsync([
-    () => {
-      t.is(WkstoreAdapterMock.requestWithFallback.callCount, 2);
-      t.is(buckets[0].state, BucketStateEnum.LOADED);
-      t.is(buckets[1].state, BucketStateEnum.UNREQUESTED);
-    },
-  ]);
+  it("Request Failure: should reinsert dirty buckets", () => {
+    prepare();
+    buckets[0].dirty = true;
+    buckets[0].data = new Uint8Array(32 * 32 * 32);
+    pullQueue.pull();
+    return runAsync([
+      () => {
+        expect(vi.mocked(requestWithFallback)).toHaveBeenCalledTimes(2);
+        expect(buckets[0].state).toBe(BucketStateEnum.LOADED);
+        expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
+      },
+    ]);
+  });
 });

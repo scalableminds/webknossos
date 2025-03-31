@@ -4,7 +4,7 @@ import update from "immutability-helper";
 import ChainReducer from "test/helpers/chainReducer";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
-import { vi, describe, it, expect } from "vitest";
+import { describe, it, expect } from "vitest";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import type { OxalisState, Node, Tree, MutableNode } from "oxalis/store";
 import { TreeTypeEnum, type Vector3 } from "oxalis/constants";
@@ -16,26 +16,6 @@ import {
 } from "test/fixtures/hybridtracing_object";
 import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
 import * as SkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
-
-// Mock window
-vi.mock("libs/window", () => ({
-  default: {
-    confirm: () => true,
-    matchMedia: (query: string) => ({
-      matches: false,
-      media: query,
-      onchange: null,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    }),
-    document: {
-      getElementById: vi.fn(),
-    },
-  },
-}));
 
 const initialState: OxalisState = update(defaultState, {
   tracing: {

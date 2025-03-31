@@ -319,14 +319,16 @@ trait VolumeTracingBucketHelper
                            bucket: BucketPosition,
                            data: Array[Byte],
                            version: Long,
-                           toTemporaryStore: Boolean = false): Fox[Unit] =
+                           toTemporaryStore: Boolean = false,
+                           fossilPutBuffer: Option[FossilDBPutBuffer] = None): Fox[Unit] =
     saveBucket(dataLayer.tracingId,
                dataLayer.elementClass,
                bucket,
                data,
                version,
                toTemporaryStore,
-               dataLayer.additionalAxes)
+               dataLayer.additionalAxes,
+               fossilPutBuffer)
 
   protected def saveBucket(tracingId: String,
                            elementClass: ElementClass.Value,
@@ -334,13 +336,17 @@ trait VolumeTracingBucketHelper
                            data: Array[Byte],
                            version: Long,
                            toTemporaryStore: Boolean,
-                           additionalAxes: Option[Seq[AdditionalAxis]]): Fox[Unit] = {
+                           additionalAxes: Option[Seq[AdditionalAxis]],
+                           fossilPutBuffer: Option[FossilDBPutBuffer]): Fox[Unit] = {
     val bucketKey = buildBucketKey(tracingId, bucket, additionalAxes)
     val compressedBucket = compressVolumeBucket(data, expectedUncompressedBucketSizeFor(elementClass))
     if (toTemporaryStore) {
       temporaryTracingService.saveVolumeBucket(bucketKey, compressedBucket)
     } else {
-      volumeDataStore.put(bucketKey, version, compressedBucket)
+      fossilPutBuffer match {
+        case Some(buffer) => buffer.put(bucketKey, version, compressedBucket)
+        case None         => volumeDataStore.put(bucketKey, version, compressedBucket)
+      }
     }
   }
 

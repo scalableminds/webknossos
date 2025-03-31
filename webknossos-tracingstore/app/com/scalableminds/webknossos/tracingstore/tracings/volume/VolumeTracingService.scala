@@ -582,11 +582,17 @@ class VolumeTracingService @Inject()(
         temporaryTracingService,
         tc
       )
+      bucketPutBuffer = new FossilDBPutBuffer(volumeDataStore)
       _ <- Fox.serialCombined(buckets) {
         case (bucketPosition, bucketData) =>
           if (newTracing.mags.contains(vec3IntToProto(bucketPosition.mag))) {
             for {
-              _ <- saveBucket(destinationDataLayer, bucketPosition, bucketData, newTracing.version)
+              _ <- saveBucket(destinationDataLayer,
+                              bucketPosition,
+                              bucketData,
+                              newTracing.version,
+                              toTemporaryStore = false,
+                              Some(bucketPutBuffer))
               _ = bucketCount += 1
               _ <- Fox.runIfOptionTrue(newTracing.hasSegmentIndex)(
                 updateSegmentIndex(
@@ -600,6 +606,7 @@ class VolumeTracingService @Inject()(
             } yield ()
           } else Fox.successful(())
       }
+      _ <- bucketPutBuffer.flush()
       _ = Instant.logSince(
         before,
         s"Duplicating $bucketCount volume buckets from $sourceTracingId v${sourceTracing.version} to $newTracingId v${newTracing.version}.")
@@ -823,6 +830,7 @@ class VolumeTracingService @Inject()(
           tc,
           toTemporaryStore
         )
+        volumeBucketPutBuffer = new FossilDBPutBuffer(volumeDataStore, Some(newVersion))
         _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
           for {
             _ <- saveBucket(newVolumeTracingId,
@@ -831,11 +839,13 @@ class VolumeTracingService @Inject()(
                             bucketBytes,
                             newVersion,
                             toTemporaryStore,
-                            mergedAdditionalAxes)
+                            mergedAdditionalAxes,
+                            Some(volumeBucketPutBuffer))
             _ <- Fox.runIf(shouldCreateSegmentIndex)(
               updateSegmentIndex(segmentIndexBuffer, bucketPosition, bucketBytes, Empty, elementClassProto, None))
           } yield ()
         }
+        _ <- volumeBucketPutBuffer.flush()
         _ <- segmentIndexBuffer.flush()
         _ = Instant.logSince(
           before,

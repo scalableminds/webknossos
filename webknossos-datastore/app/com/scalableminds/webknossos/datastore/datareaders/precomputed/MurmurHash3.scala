@@ -1,5 +1,13 @@
 package com.scalableminds.webknossos.datastore.datareaders.precomputed
 
+/*
+This is a scala translation of the python implementation of the murmur3 hash algorithm.
+pymmh3 was written by Fredrik Kihlander and enhanced by Swapnil Gusani, and is placed in the public
+domain.
+pure python implementation of the murmur3 hash algorithm
+https://github.com/wc-duck/pymmh3
+*/
+
 object MurmurHash3 {
 
   private def fmix(h: Int): Int = {

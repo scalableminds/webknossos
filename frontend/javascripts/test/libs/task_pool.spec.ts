@@ -8,7 +8,6 @@ import { describe, it, expect } from "vitest";
 type Tasks = Array<() => Saga<void>>;
 
 describe("Task Pool", () => {
-
   it("should run a simple task", async () => {
     const protocol: number[] = [];
     const tasks: Tasks = [

@@ -1,11 +1,8 @@
-import { describe, it, expect, vi } from "vitest";
-import * as lz4 from "lz4-wasm-nodejs";
-vi.mock("lz4-wasm-nodejs", { spy: true });
+import { describe, it, expect} from "vitest";
 import { getMagnificationUnion } from "oxalis/model/accessors/dataset_accessor";
 import type { Vector3 } from "oxalis/constants";
 import type { APIDataset } from "types/api_flow_types";
 import { convertToDenseMag } from "oxalis/model/helpers/mag_info";
-
 
 describe("Model resolutions", () => {
   it("Simple convertToDenseMag", () => {

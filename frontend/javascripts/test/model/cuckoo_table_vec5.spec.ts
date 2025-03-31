@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import _ from "lodash";
 
 import "test/mocks/updatable_texture.mock";
@@ -8,7 +8,6 @@ type Vector5 = [number, number, number, number, number];
 type Key = Vector5; // [x, y, z, layerIdx, requestedMagIdx]
 type Value = number; // [address, actualMagIdx]
 type Entry = [Key, Value];
-
 
 import { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
 
@@ -43,7 +42,9 @@ describe("CuckooTableVec5", () => {
     const ct = CuckooTableVec5.fromCapacity(0);
     const expectedEntry: Entry = [[363, 213, 995, 28, 58], 1547497];
 
-    const actualEntry = ct.decompressEntry(ct.compressEntry(expectedEntry[0] as Vector5, expectedEntry[1]));
+    const actualEntry = ct.decompressEntry(
+      ct.compressEntry(expectedEntry[0] as Vector5, expectedEntry[1]),
+    );
 
     expect(expectedEntry).toEqual(actualEntry);
   });

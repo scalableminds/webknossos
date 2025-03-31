@@ -53,9 +53,9 @@ describe("LatestTaskExecutor", () => {
     deferred3.resolve(3);
     const result1 = await scheduledPromise1;
     expect(result1).toBe(1);
-    
+
     await expect(scheduledPromise2).rejects.toThrowError(SKIPPED_TASK_REASON);
-    
+
     const result3 = await scheduledPromise3;
     expect(result3).toBe(3);
   });

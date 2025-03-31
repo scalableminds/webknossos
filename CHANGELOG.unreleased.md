@@ -19,6 +19,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Optimized server-side storage of skeleton annotation layers. [#8423](https://github.com/scalableminds/webknossos/pull/8423)
 - The maximum available storage of an organization is now enforced during upload. [#8385](https://github.com/scalableminds/webknossos/pull/8385)
 - Added support for adding N5 datasets with compact-style multiscale metadata. [#8456](https://github.com/scalableminds/webknossos/pull/8456)
+- Meshes of Neuroglancer Precomputed Datasets can now be viewed. [#8236](https://github.com/scalableminds/webknossos/pull/8236)
 
 ### Changed
 - When using a zarr link to a wk-served data layer as another layer’s source, the user’s token is used to access the data. [#8322](https://github.com/scalableminds/webknossos/pull/8322/)

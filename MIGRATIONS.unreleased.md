@@ -9,6 +9,7 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/25.02.1...HEAD)
 
  - FossilDB now needs to be opened with additional column family `skeletonTreeBodies`. [#8423](https://github.com/scalableminds/webknossos/pull/8423)
+ - New FossilDB version `0.1.37` (`master__525:` on dockerhub) is required. [#8460](https://github.com/scalableminds/webknossos/pull/8460)
 
 ### Postgres Evolutions:
 - [126-mag-real-paths.sql](conf/evolutions/126-mag-real-paths.sql)

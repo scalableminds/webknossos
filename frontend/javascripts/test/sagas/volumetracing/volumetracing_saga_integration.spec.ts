@@ -1,4 +1,3 @@
-/* eslint-disable no-await-in-loop */
 import "test/sagas/saga_integration.mock";
 import _ from "lodash";
 import Constants, {

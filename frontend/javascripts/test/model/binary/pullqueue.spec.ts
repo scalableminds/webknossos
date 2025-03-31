@@ -4,8 +4,7 @@ import runAsync from "test/helpers/run-async";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import { requestWithFallback } from "oxalis/model/bucket_data_handling/wkstore_adapter";
-// import "libs/request";
-// import "oxalis/model"
+import "oxalis/model";
 import { DataBucket, BucketStateEnum } from "oxalis/model/bucket_data_handling/bucket";
 
 vi.mock("oxalis/model/sagas/root_saga", function () {
@@ -19,13 +18,6 @@ vi.mock("oxalis/model", function () {
     getLayerRenderingManagerByName: () => ({
       currentBucketPickerTick: 0,
     }),
-  };
-});
-
-vi.mock("libs/request", function () {
-  return {
-    receiveJSON: vi.fn(),
-    always: (promise, func) => promise.then(func, func),
   };
 });
 
@@ -93,8 +85,8 @@ describe("PullQueue", () => {
     ];
 
     for (const bucket of buckets) {
-      cube.getBucket.mockImplementation((address) => bucket);
-      cube.getOrCreateBucket.mockImplementation((address) => bucket);
+      cube.getBucket.mockImplementation((_address) => bucket);
+      cube.getOrCreateBucket.mockImplementation((_address) => bucket);
       pullQueue.add({
         bucket: bucket.zoomedAddress,
         priority: 0,

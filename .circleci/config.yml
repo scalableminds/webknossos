@@ -107,7 +107,11 @@ jobs:
           command: |
             .circleci/not-on-master.sh docker-compose run base yarn check-cyclic-dependencies
       - run:
-          name: Run frontend tests
+          name: Run frontend unit tests
+          command: |
+            .circleci/not-on-master.sh docker-compose run base yarn unit-test
+      - run:
+          name: Run frontend e2e tests
           command: |
             .circleci/not-on-master.sh docker-compose run base yarn test-verbose
       - run:

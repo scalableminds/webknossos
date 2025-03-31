@@ -147,7 +147,7 @@ describe("TemporalBucketManager", () => {
     });
     bucket1.receiveData(new Uint8Array(1 << 15));
     bucket2.receiveData(new Uint8Array(1 << 15));
-    
+
     return runAsync([
       () => {
         expect(resolved).toBe(true);

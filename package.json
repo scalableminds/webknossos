@@ -88,6 +88,7 @@
     "kill-listeners": "kill -9 $(lsof -t -i:5005,7155,9000,9001,9002)",
     "rm-fossil-lock": "rm fossildb/data/LOCK",
     "test": "tools/test.sh test",
+    "unit-test": "vitest run",
     "test-changed": "tools/test.sh test-changed --timeout=30s",
     "test-verbose": "xvfb-run -s '-ac -screen 0 1280x1024x24' tools/test.sh test --timeout=60s --verbose",
     "test-backend": "sbt \"testOnly backend.*\"",
@@ -232,10 +233,7 @@
     "extensions": {
       "ts": "module",
       "tsx": "module"
-    },
-    "nodeArguments": [
-      "--trace-warnings"
-    ]
+    }
   },
   "c8": {
     "exclude": [

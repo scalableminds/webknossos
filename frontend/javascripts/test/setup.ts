@@ -48,6 +48,7 @@ vi.mock("libs/date", () => ({
     now: () => 1494695001688,
   },
 }));
+export const TIMESTAMP = 1494695001688; // This variable can not be used direct in the mock function above. Vitest does not allow this.
 
 vi.mock("libs/request", () => {
   return {

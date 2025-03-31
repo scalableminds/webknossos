@@ -119,7 +119,7 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
     <Row gutter={24}>
       <Col span={8}>
         <FormItemWithInfo
-          name={["datasetRotation", axis, "angleInDegrees"]}
+          name={["datasetRotation", axis, "rotationInDegrees"]}
           label={`${axis.toUpperCase()} Axis Rotation`}
           info={`Change the datasets rotation around the ${axis}-axis.`}
           colon={false}
@@ -129,7 +129,7 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
       </Col>
       <Col span={4} style={{ marginRight: -12 }}>
         <FormItem
-          name={["datasetRotation", axis, "angleInDegrees"]}
+          name={["datasetRotation", axis, "rotationInDegrees"]}
           colon={false}
           label=" " /* Whitespace label is needed for correct formatting*/
         >
@@ -149,11 +149,12 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
         <FormItem
           name={["datasetRotation", axis, "isMirrored"]}
           colon={false}
-          label={`Mirror ${axis}-axis`} /* Whitespace label is needed for correct formatting*/
+          valuePropName="checked"
+          label={`Mirror ${axis.toUpperCase()} Axis`} /* Whitespace label is needed for correct formatting*/
         >
           <Checkbox
             onChange={(evt: CheckboxChangeEvent) =>
-              setMatrixRotationsForAllLayer(undefined, evt.target.value)
+              setMatrixRotationsForAllLayer(undefined, evt.target.checked)
             }
           />
         </FormItem>

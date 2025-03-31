@@ -71,6 +71,8 @@ export function flatToNestedMatrix(matrix: Matrix4x4): NestedMatrix4 {
   ];
 }
 
+const axisPositionInMatrix = { x: 0, y: 1, z: 2 };
+
 export type RotationSetting = {
   rotationInDegrees: number;
   isMirrored: boolean;
@@ -102,20 +104,6 @@ export function getRotationSettingsFromTransformationIn90DegreeSteps(
   return { rotationInDegrees: roundedRotation, isMirrored };
 }
 
-const axisPositionInMatrix = { x: 0, y: 1, z: 2 };
-
-export function getIsMirroredFromTransformationIn90DegreeSteps(
-  transformation: CoordinateTransformation | undefined,
-  axis: "x" | "y" | "z",
-): boolean {
-  if (transformation && transformation.type !== "affine") {
-    return false;
-  }
-  const matrix = transformation ? transformation.matrix : IDENTITY_MATRIX;
-  const isMirrored = matrix[axisPositionInMatrix[axis]][axisPositionInMatrix[axis]] < 0;
-  return isMirrored;
-}
-
 export function fromCenterToOrigin(bbox: BoundingBox): AffineTransformation {
   const center = bbox.getCenter();
   const translationMatrix = new THREE.Matrix4()
@@ -143,7 +131,9 @@ export function getRotationMatrixAroundAxis(
   if (rotationSettings.isMirrored) {
     const scaleVector = new THREE.Vector3(1, 1, 1);
     scaleVector[axis] = -1;
-    rotationMatrix = rotationMatrix.makeScale(scaleVector.x, scaleVector.y, scaleVector.z);
+    rotationMatrix = rotationMatrix.multiply(
+      new THREE.Matrix4().makeScale(scaleVector.x, scaleVector.y, scaleVector.z),
+    );
   }
   rotationMatrix = rotationMatrix.transpose(); // Column-major to row-major
   const matrixWithoutNearlyZeroValues = rotationMatrix
@@ -391,7 +381,7 @@ function isTranslationOnly(transformation?: AffineTransformation) {
   return scale.equals(NON_SCALED_VECTOR) && quaternion.equals(IDENTITY_QUATERNION);
 }
 
-function isRotationOnly(transformation?: AffineTransformation) {
+function isRotationAndMirrorMaybeOnly(transformation?: AffineTransformation) {
   if (!transformation) {
     return false;
   }
@@ -399,7 +389,7 @@ function isRotationOnly(transformation?: AffineTransformation) {
     .fromArray(nestedToFlatMatrix(transformation.matrix))
     .transpose();
   threeMatrix.decompose(translation, quaternion, scale);
-  return translation.length() === 0 && scale.equals(NON_SCALED_VECTOR);
+  return translation.length() === 0 && scale.length() === NON_SCALED_VECTOR.length();
 }
 
 function hasValidTransformationCount(dataLayers: Array<APIDataLayer>): boolean {
@@ -414,9 +404,9 @@ function hasOnlyAffineTransformations(dataLayers: Array<APIDataLayer>): boolean 
 
 // The transformation array consists of 5 matrices:
 // 1. Translation to coordinate system origin
-// 2. Rotation around x-axis
-// 3. Rotation around y-axis
-// 4. Rotation around z-axis
+// 2. Rotation around x-axis (potentially mirrored)
+// 3. Rotation around y-axis (potentially mirrored)
+// 4. Rotation around z-axis (potentially mirrored)
 // 5. Translation back to original position
 export const EXPECTED_TRANSFORMATION_LENGTH = 5;
 
@@ -424,9 +414,9 @@ function hasValidTransformationPattern(transformations: CoordinateTransformation
   return (
     transformations.length === EXPECTED_TRANSFORMATION_LENGTH &&
     isTranslationOnly(transformations[0] as AffineTransformation) &&
-    isRotationOnly(transformations[1] as AffineTransformation) &&
-    isRotationOnly(transformations[2] as AffineTransformation) &&
-    isRotationOnly(transformations[3] as AffineTransformation) &&
+    isRotationAndMirrorMaybeOnly(transformations[1] as AffineTransformation) &&
+    isRotationAndMirrorMaybeOnly(transformations[2] as AffineTransformation) &&
+    isRotationAndMirrorMaybeOnly(transformations[3] as AffineTransformation) &&
     isTranslationOnly(transformations[4] as AffineTransformation)
   );
 }

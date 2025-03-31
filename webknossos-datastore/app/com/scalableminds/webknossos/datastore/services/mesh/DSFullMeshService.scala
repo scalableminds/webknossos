@@ -215,11 +215,10 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       // TODO: Mapping, segmentIds
-      chunkInfos: WebknossosSegmentInfo <- neuroglancerPrecomputedMeshService
-        .listMeshChunksForNeuroglancerPrecomputedMesh(
-          fullMeshRequest.meshFilePath,
-          fullMeshRequest.segmentId
-        )
+      chunkInfos: WebknossosSegmentInfo <- neuroglancerPrecomputedMeshService.listMeshChunksForMultipleSegments(
+        fullMeshRequest.meshFilePath,
+        List(fullMeshRequest.segmentId)
+      )
       selectedLod = fullMeshRequest.lod.getOrElse(0)
       allChunkRanges: List[MeshChunk] = chunkInfos.chunks.lods(selectedLod).chunks
       meshFileName <- fullMeshRequest.meshFileName.toFox ?~> "mesh file name needed"

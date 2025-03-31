@@ -89,11 +89,11 @@ class NeuroglancerPrecomputedMeshService @Inject()(config: DataStoreConfig, data
         .toSet
   }
 
-  def enrichSegmentInfoNeuroglancerPrecomputed(segmentInfo: NeuroglancerSegmentManifest,
-                                               lodScaleMultiplier: Double,
-                                               neuroglancerOffsetStart: Long,
-                                               segmentId: Long,
-                                               storedToModelSpaceTransform: Array[Double]): MeshSegmentInfo = {
+  private def enrichSegmentInfoNeuroglancerPrecomputed(segmentInfo: NeuroglancerSegmentManifest,
+                                                       lodScaleMultiplier: Double,
+                                                       neuroglancerOffsetStart: Long,
+                                                       segmentId: Long,
+                                                       storedToModelSpaceTransform: Array[Double]): MeshSegmentInfo = {
     val bytesPerLod = segmentInfo.chunkByteSizes.map(_.sum)
     val totalMeshSize = bytesPerLod.sum
     val meshByteStartOffset = neuroglancerOffsetStart - totalMeshSize
@@ -158,13 +158,32 @@ class NeuroglancerPrecomputedMeshService @Inject()(config: DataStoreConfig, data
     MeshSegmentInfo(chunkShape = segmentInfo.chunkShape, gridOrigin = segmentInfo.gridOrigin, lods = meshfileLods)
   }
 
-  def listMeshChunksForNeuroglancerPrecomputedMesh(meshFilePathOpt: Option[String], segmentId: Long)(
+  def listMeshChunksForMultipleSegments(meshFilePathOpt: Option[String], segmentId: List[Long])(
       implicit tc: TokenContext): Fox[WebknossosSegmentInfo] =
     for {
       meshFilePath <- meshFilePathOpt.toFox ?~> "No mesh file path provided"
       vaultPath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(new URI(meshFilePath), None))
       meshInfo <- neuroglancerPrecomputedMeshInfoCache.getOrLoad(vaultPath, loadRemoteMeshInfo)
       mesh = NeuroglancerMesh(meshInfo)
+      chunkScale = Array.fill(3)(1 / math.pow(2, meshInfo.vertex_quantization_bits))
+      meshSegmentInfos <- Fox.serialCombined(segmentId)(id =>
+        listMeshChunksForNeuroglancerPrecomputedMesh(vaultPath, mesh, id))
+      baseTransform = Array(Array(1.0, 0.0, 0.0, 0.0),
+                            Array(0.0, 1.0, 0.0, 0.0),
+                            Array(0.0, 0.0, 1.0, 0.0),
+                            Array(0.0, 0.0, 0.0, 1.0))
+      segmentInfo <- WebknossosSegmentInfo.fromMeshInfosAndMetadata(meshSegmentInfos,
+                                                                    NeuroglancerMesh.meshEncoding,
+                                                                    baseTransform,
+                                                                    chunkScale)
+    } yield segmentInfo
+
+  private def listMeshChunksForNeuroglancerPrecomputedMesh(
+      vaultPath: VaultPath,
+      mesh: NeuroglancerMesh,
+      segmentId: Long)(implicit tc: TokenContext): Fox[MeshSegmentInfo] =
+    for {
+      _ <- Fox.successful(())
       minishardInfo = mesh.shardingSpecification.getMinishardInfo(segmentId)
       shardUrl = mesh.shardingSpecification.getPathForShard(vaultPath, minishardInfo._1)
       minishardIndex <- mesh.getMinishardIndex(shardUrl, minishardInfo._2.toInt)
@@ -172,22 +191,11 @@ class NeuroglancerPrecomputedMeshService @Inject()(config: DataStoreConfig, data
       chunk <- mesh.getChunk(chunkRange, shardUrl)
       segmentManifest = NeuroglancerSegmentManifest.fromBytes(chunk)
       meshSegmentInfo = enrichSegmentInfoNeuroglancerPrecomputed(segmentManifest,
-                                                                 meshInfo.lod_scale_multiplier,
+                                                                 mesh.meshInfo.lod_scale_multiplier,
                                                                  chunkRange.start,
                                                                  segmentId,
-                                                                 meshInfo.transform)
-      chunkScale = Array.fill(3)(1 / math.pow(2, meshInfo.vertex_quantization_bits))
-      wkChunkInfos <- WebknossosSegmentInfo.fromMeshInfosAndMetadata(
-        List(meshSegmentInfo),
-        NeuroglancerMesh.meshEncoding,
-        // This transform is not used since we are using the lod-specific transforms
-        Array(Array(1.0, 0.0, 0.0, 0.0),
-              Array(0.0, 1.0, 0.0, 0.0),
-              Array(0.0, 0.0, 1.0, 0.0),
-              Array(0.0, 0.0, 0.0, 1.0)),
-        chunkScale
-      )
-    } yield wkChunkInfos
+                                                                 mesh.meshInfo.transform)
+    } yield meshSegmentInfo
 
   def readMeshChunkForNeuroglancerPrecomputed(
       meshFilePathOpt: Option[String],

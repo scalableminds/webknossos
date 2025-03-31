@@ -68,7 +68,7 @@ class DSMeshController @Inject()(
             omitMissing = false
           )
           chunkInfos <- request.body.meshFileType match {
-            case Some("neuroglancerPrecomputed") =>
+            case Some(NeuroglancerMesh.meshTypeName) =>
               meshFileService.listMeshChunksForNeuroglancerPrecomputedMesh(
                 request.body.meshFilePath,
                 request.body.segmentId) // TODO: Pass segmentIds here
@@ -91,7 +91,7 @@ class DSMeshController @Inject()(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
           (data, encoding) <- request.body.meshFileType match {
-            case Some("neuroglancerPrecomputed") =>
+            case Some(NeuroglancerMesh.meshTypeName) =>
               meshFileService.readMeshChunkForNeuroglancerPrecomputed(request.body.meshFilePath, request.body.requests)
             case _ =>
               meshFileService.readMeshChunk(organizationId, datasetDirectoryName, dataLayerName, request.body) ?~> "mesh.file.loadChunk.failed"

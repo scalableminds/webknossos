@@ -296,7 +296,7 @@ class MeshFileService @Inject()(config: DataStoreConfig, dataVaultService: DataV
       d.name == dataLayerName && d.category == Category.segmentation && d.dataFormat == DataFormat.neuroglancerPrecomputed
 
     val datasetDir = dataBaseDir.resolve(organizationId).resolve(datasetName)
-    val datasetPropertiesFile = datasetDir.resolve("datasource-properties.json")
+    val datasetPropertiesFile = datasetDir.resolve(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
     for {
       datasetProperties <- JsonHelper
         .validatedJsonFromFile[GenericDataSource[DataLayer]](datasetPropertiesFile, datasetDir)
@@ -309,7 +309,11 @@ class MeshFileService @Inject()(config: DataStoreConfig, dataVaultService: DataV
       meshInfosResolved
         .map({
           case (_, vaultPath) =>
-            MeshFileInfo("mesh", Some(vaultPath.toString), Some("neuroglancerPrecomputed"), None, 7)
+            MeshFileInfo(NeuroglancerMesh.meshName,
+                         Some(vaultPath.toString),
+                         Some(NeuroglancerMesh.meshTypeName),
+                         None,
+                         NeuroglancerMesh.meshInfoVersion)
         })
         .toSet
   }
@@ -566,11 +570,10 @@ class MeshFileService @Inject()(config: DataStoreConfig, dataVaultService: DataV
                                                                  chunkRange.start,
                                                                  segmentId,
                                                                  meshInfo.transform)
-      encoding = "draco"
       chunkScale = Array.fill(3)(1 / math.pow(2, meshInfo.vertex_quantization_bits))
       wkChunkInfos <- WebknossosSegmentInfo.fromMeshInfosAndMetadata(
         List(meshSegmentInfo),
-        encoding,
+        NeuroglancerMesh.meshEncoding,
         // This transform is not used since we are using the lod-specific transforms
         Array(Array(1.0, 0.0, 0.0, 0.0),
               Array(0.0, 1.0, 0.0, 0.0),
@@ -639,8 +642,7 @@ class MeshFileService @Inject()(config: DataStoreConfig, dataVaultService: DataV
       shardUrl = mesh.shardingSpecification.getPathForShard(vaultPath, minishardInfo._1)
       chunks <- Fox.serialCombined(meshChunkDataRequests.toList)(request =>
         shardUrl.readBytes(Some(request.byteOffset until request.byteOffset + request.byteSize)))
-      encoding = "draco"
       output = chunks.flatten.toArray
-    } yield (output, encoding)
+    } yield (output, NeuroglancerMesh.meshEncoding)
 
 }

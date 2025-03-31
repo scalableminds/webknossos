@@ -1,6 +1,7 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { Col, Form, type FormInstance, InputNumber, Row, Slider, Tooltip, Typography } from "antd";
 import FormItem from "antd/es/form/FormItem";
+import Checkbox, { type CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
 import {
   AXIS_TO_TRANSFORM_INDEX,
   EXPECTED_TRANSFORMATION_LENGTH,
@@ -15,7 +16,6 @@ import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { useCallback, useEffect, useMemo } from "react";
 import type { APIDataLayer } from "types/api_flow_types";
 import { FormItemWithInfo } from "./helper_components";
-import Checkbox, { type CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
 
 const { Text } = Typography;
 

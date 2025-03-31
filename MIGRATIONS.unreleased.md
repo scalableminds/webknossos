@@ -16,4 +16,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 - [128-allow-ai-model-sharing.sql](conf/evolutions/128-allow-ai-model-sharing.sql)
 - [129-credit-transactions.sql](conf/evolutions/129-credit-transactions.sql)
 - [130-replace-text-types.sql](conf/evolutions/130-replace-text-types.sql)
-
+- [131-relax-constraints-publications.sql](conf/evolutions/131-relax-constraints-publications.sql)

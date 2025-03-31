@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(130);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(131);
 COMMIT TRANSACTION;
 
 
@@ -34,7 +34,7 @@ CREATE TABLE webknossos.annotations(
   _task TEXT CONSTRAINT _task_objectId CHECK (_task ~ '^[0-9a-f]{24}$'),
   _team TEXT CONSTRAINT _team_objectId CHECK (_team ~ '^[0-9a-f]{24}$') NOT NULL,
   _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
-  _publication TEXT CONSTRAINT _publication_objectId CHECK (_publication ~ '^[0-9a-f]{24}$'),
+  _publication TEXT,
   description TEXT NOT NULL DEFAULT '',
   visibility webknossos.ANNOTATION_VISIBILITY NOT NULL DEFAULT 'Internal',
   name TEXT NOT NULL DEFAULT '',
@@ -93,7 +93,7 @@ CREATE TABLE webknossos.meshes(
 );
 
 CREATE TABLE webknossos.publications(
-  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
+  _id TEXT PRIMARY KEY,
   publicationDate TIMESTAMPTZ,
   imageUrl TEXT,
   title TEXT,
@@ -107,7 +107,7 @@ CREATE TABLE webknossos.datasets(
   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
   _dataStore TEXT NOT NULL,
   _organization TEXT NOT NULL,
-  _publication TEXT CONSTRAINT _publication_objectId CHECK (_publication ~ '^[0-9a-f]{24}$'),
+  _publication TEXT,
   _uploader TEXT CONSTRAINT _uploader_objectId CHECK (_uploader ~ '^[0-9a-f]{24}$'),
   _folder TEXT CONSTRAINT _folder_objectId CHECK (_folder ~ '^[0-9a-f]{24}$') NOT NULL,
   inboxSourceHash INT,

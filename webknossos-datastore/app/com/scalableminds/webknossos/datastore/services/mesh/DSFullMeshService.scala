@@ -181,7 +181,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
     for {
       (dracoMeshChunkBytes, encoding) <- meshFileType match {
         case Some("neuroglancerPrecomputed") =>
-          neuroglancerPrecomputedMeshService.readMeshChunkForNeuroglancerPrecomputed(
+          neuroglancerPrecomputedMeshService.readMeshChunk(
             meshFilePath,
             Seq(MeshChunkDataRequest(chunkInfo.byteOffset, chunkInfo.byteSize, segmentId))
           ) ?~> "mesh.file.loadChunk.failed"

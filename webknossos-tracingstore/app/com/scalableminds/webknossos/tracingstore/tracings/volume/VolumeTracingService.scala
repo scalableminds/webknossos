@@ -625,7 +625,7 @@ class VolumeTracingService @Inject()(
     } yield ()
   }
 
-  def volumeTracingLayer( // TODO make private again
+  private def volumeTracingLayer(
       annotationId: String,
       tracingId: String,
       tracing: VolumeTracing,

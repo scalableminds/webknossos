@@ -13,13 +13,7 @@ import com.scalableminds.webknossos.datastore.models.requests.{
   DataServiceDataRequest,
   DataServiceRequestSettings
 }
-import com.scalableminds.webknossos.datastore.models.{
-  AdditionalCoordinate,
-  SegmentInteger,
-  SegmentIntegerArray,
-  VoxelPosition,
-  datasource
-}
+import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, VoxelPosition, datasource}
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, CachedHdf5File, Hdf5FileCache}
 import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Box, Full}
@@ -128,15 +122,12 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
                        mag: Vec3Int,
                        mappingName: Option[String])(implicit m: MessagesProvider, tc: TokenContext): Fox[Long] =
     for {
-      (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                datasetDirectoryName,
-                                                                                dataLayerName)
       volume <- calculateSegmentVolume(
         segmentId,
         mag,
         None, // see #7556
         getBucketPositions(organizationId, datasetDirectoryName, dataLayerName, mappingName),
-        getDataForBucketPositionsCallable(organizationId, datasetDirectoryName, dataLayerName, mappingName)
+        getDataForBucketPositions(organizationId, datasetDirectoryName, dataLayerName, mappingName)
       )
     } yield volume
 
@@ -153,7 +144,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
         mag,
         None, // see #7556
         getBucketPositions(organizationId, datasetDirectoryName, dataLayerName, mappingName),
-        getDataForBucketPositionsCallable(organizationId, datasetDirectoryName, dataLayerName, mappingName)
+        getDataForBucketPositions(organizationId, datasetDirectoryName, dataLayerName, mappingName)
       )
     } yield bb
 
@@ -162,10 +153,10 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
                                    dataLayerName: String): Fox[Path] =
     Fox.box2Fox(getSegmentIndexFile(organizationId, datasetDirectoryName, dataLayerName)) ?~> "segmentIndexFile.notFound"
 
-  private def getDataForBucketPositionsCallable(organizationId: String,
-                                                datasetDirectoryName: String,
-                                                dataLayerName: String,
-                                                mappingName: Option[String])(
+  private def getDataForBucketPositions(organizationId: String,
+                                        datasetDirectoryName: String,
+                                        dataLayerName: String,
+                                        mappingName: Option[String])(
       bucketPositions: Seq[Vec3Int],
       mag: Vec3Int,
       additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
@@ -176,25 +167,9 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                 datasetDirectoryName,
                                                                                 dataLayerName)
-      bucketData <- Fox.serialCombined(bucketPositions)(bucketPosition =>
+      bucketData <- Fox.serialSequenceBox(bucketPositions)(bucketPosition =>
         getDataForBucketPositions(dataSource, dataLayer, mag, Seq(bucketPosition * mag), mappingName))
-    } yield (bucketData.map(Full(_)), dataLayer.elementClass)
-
-  private def getTypedDataForBucketPosition(organizationId: String,
-                                            datasetDirectoryName: String,
-                                            dataLayerName: String,
-                                            mappingName: Option[String])(
-      bucketPosition: Vec3Int,
-      mag: Vec3Int,
-      additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit m: MessagesProvider, tc: TokenContext) =
-    for {
-      // Additional coordinates parameter ignored, see #7556
-      (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
-                                                                                datasetDirectoryName,
-                                                                                dataLayerName)
-      data <- getDataForBucketPositions(dataSource, dataLayer, mag, Seq(bucketPosition * mag), mappingName)
-      dataTyped: Array[SegmentInteger] = SegmentIntegerArray.fromByteArray(data, dataLayer.elementClass)
-    } yield dataTyped
+    } yield (bucketData, dataLayer.elementClass)
 
   private def getBucketPositions(
       organizationId: String,

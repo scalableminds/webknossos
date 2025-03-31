@@ -9,4 +9,9 @@ case class NeuroglancerMesh(meshInfo: NeuroglancerPrecomputedMeshInfo) extends N
   // Right now, we only support sharded Neuroglancer meshes
   override val shardingSpecification: ShardingSpecification = meshInfo.sharding.getOrElse(ShardingSpecification.empty)
 
+
+}
+
+object NeuroglancerMesh {
+  val FILENAME_INFO = "info"
 }

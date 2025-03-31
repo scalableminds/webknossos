@@ -7,7 +7,7 @@ import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{ByteUtils, Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.datareaders.precomputed.ShardingSpecification
+import com.scalableminds.webknossos.datastore.datareaders.precomputed.{PrecomputedHeader, ShardingSpecification}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.{
   Category,
@@ -273,7 +273,7 @@ class MeshFileService @Inject()(config: DataStoreConfig, dataVaultService: DataV
   private def loadRemoteMeshInfo(meshPath: VaultPath)(implicit tc: TokenContext): Fox[NeuroglancerPrecomputedMeshInfo] =
     for {
       _ <- Fox.successful(())
-      meshInfoPath = meshPath / "info"
+      meshInfoPath = meshPath / NeuroglancerMesh.FILENAME_INFO
       meshInfo <- meshInfoPath.parseAsJson[NeuroglancerPrecomputedMeshInfo] ?~> "Failed to read mesh info"
     } yield meshInfo
 
@@ -281,13 +281,14 @@ class MeshFileService @Inject()(config: DataStoreConfig, dataVaultService: DataV
       implicit tc: TokenContext): Fox[Set[MeshFileInfo]] = {
     def exploreMeshesForLayer(dataLayer: DataLayer): Fox[(NeuroglancerPrecomputedMeshInfo, VaultPath)] =
       for {
-        _ <- Fox.successful(())
-        dataLayerWithMagLocators <- tryo(dataLayer.asInstanceOf[DataLayerWithMagLocators]).toFox
+        dataLayerWithMagLocators <- tryo(dataLayer.asInstanceOf[DataLayerWithMagLocators]).toFox ?~> "Invalid DataLayer: Expected DataLayer to have mag locators"
         firstMag <- dataLayerWithMagLocators.mags.headOption.toFox ?~> "No mags found"
         magPath <- firstMag.path.toFox ?~> "Mag has no path"
         remotePath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(new URI(magPath), None))
-        // We are assuming that meshes will be placed in /mesh directory. To be precise, we would first need to check the root info file.
-        meshPath = remotePath.parent / "mesh"
+        infoPath = remotePath.parent / PrecomputedHeader.FILENAME_INFO
+        precomputedHeader <- infoPath
+          .parseAsJson[PrecomputedHeader] ?~> s"Failed to read neuroglancer precomputed metadata at $infoPath"
+        meshPath = remotePath.parent / precomputedHeader.meshPath
         meshInfo <- neuroglancerPrecomputedMeshInfoCache.getOrLoad(meshPath, loadRemoteMeshInfo)
       } yield (meshInfo, meshPath)
 

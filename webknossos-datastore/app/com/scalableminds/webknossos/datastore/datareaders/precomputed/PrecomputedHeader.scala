@@ -13,12 +13,18 @@ import play.api.libs.json.Json.WithDefaultValues
 
 import java.nio.ByteOrder
 
-case class PrecomputedHeader(`type`: String, data_type: String, num_channels: Int, scales: List[PrecomputedScale]) {
+case class PrecomputedHeader(`type`: String,
+                             data_type: String,
+                             num_channels: Int,
+                             scales: List[PrecomputedScale],
+                             mesh: Option[String]) {
 
   def getScale(key: String): Option[PrecomputedScale] =
     scales.find(s => s.key == key)
 
   def describesSegmentationLayer: Boolean = `type` == "segmentation"
+
+  def meshPath: String = mesh.getOrElse("mesh")
 }
 
 case class PrecomputedScale(key: String,

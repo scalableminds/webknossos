@@ -4,6 +4,16 @@ import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services._
+import com.scalableminds.webknossos.datastore.services.mesh.{
+  DSFullMeshService,
+  FullMeshRequest,
+  ListMeshChunksRequest,
+  MeshChunkDataRequestList,
+  MeshFileService,
+  MeshMappingHelper,
+  NeuroglancerMesh,
+  NeuroglancerPrecomputedMeshService
+}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
@@ -12,6 +22,7 @@ import scala.concurrent.ExecutionContext
 class DSMeshController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
     meshFileService: MeshFileService,
+    neuroglancerPrecomputedMeshService: NeuroglancerPrecomputedMeshService,
     fullMeshService: DSFullMeshService,
     val dsRemoteWebknossosClient: DSRemoteWebknossosClient,
     val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
@@ -29,9 +40,10 @@ class DSMeshController @Inject()(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
           meshFiles <- meshFileService.exploreMeshFiles(organizationId, datasetDirectoryName, dataLayerName)
-          neuroglancerMeshFiles <- meshFileService.exploreNeuroglancerPrecomputedMeshes(organizationId,
-                                                                                        datasetDirectoryName,
-                                                                                        dataLayerName)
+          neuroglancerMeshFiles <- neuroglancerPrecomputedMeshService.exploreNeuroglancerPrecomputedMeshes(
+            organizationId,
+            datasetDirectoryName,
+            dataLayerName)
           allMeshFiles = meshFiles ++ neuroglancerMeshFiles
         } yield Ok(Json.toJson(allMeshFiles))
       }
@@ -69,7 +81,7 @@ class DSMeshController @Inject()(
           )
           chunkInfos <- request.body.meshFileType match {
             case Some(NeuroglancerMesh.meshTypeName) =>
-              meshFileService.listMeshChunksForNeuroglancerPrecomputedMesh(
+              neuroglancerPrecomputedMeshService.listMeshChunksForNeuroglancerPrecomputedMesh(
                 request.body.meshFilePath,
                 request.body.segmentId) // TODO: Pass segmentIds here
             case _ =>
@@ -92,7 +104,8 @@ class DSMeshController @Inject()(
         for {
           (data, encoding) <- request.body.meshFileType match {
             case Some(NeuroglancerMesh.meshTypeName) =>
-              meshFileService.readMeshChunkForNeuroglancerPrecomputed(request.body.meshFilePath, request.body.requests)
+              neuroglancerPrecomputedMeshService.readMeshChunkForNeuroglancerPrecomputed(request.body.meshFilePath,
+                                                                                         request.body.requests)
             case _ =>
               meshFileService.readMeshChunk(organizationId, datasetDirectoryName, dataLayerName, request.body) ?~> "mesh.file.loadChunk.failed"
           }

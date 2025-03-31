@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.tracingstore
 
 import com.google.inject.AbstractModule
 import com.google.inject.name.Names
-import com.scalableminds.webknossos.datastore.services.AdHocMeshServiceHolder
+import com.scalableminds.webknossos.datastore.services.mesh.AdHocMeshServiceHolder
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService

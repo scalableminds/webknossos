@@ -1,4 +1,4 @@
-package com.scalableminds.webknossos.datastore.services
+package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
@@ -7,9 +7,10 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox, option2Fox}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, VoxelPosition}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, SegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.requests.Cuboid
+import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, VoxelPosition}
+import com.scalableminds.webknossos.datastore.services._
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
 import play.api.i18n.MessagesProvider
@@ -37,6 +38,7 @@ object FullMeshRequest {
 
 class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
                                   meshFileService: MeshFileService,
+                                  neuroglancerPrecomputedMeshService: NeuroglancerPrecomputedMeshService,
                                   val binaryDataServiceHolder: BinaryDataServiceHolder,
                                   val dsRemoteWebknossosClient: DSRemoteWebknossosClient,
                                   val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
@@ -179,7 +181,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
     for {
       (dracoMeshChunkBytes, encoding) <- meshFileType match {
         case Some("neuroglancerPrecomputed") =>
-          meshFileService.readMeshChunkForNeuroglancerPrecomputed(
+          neuroglancerPrecomputedMeshService.readMeshChunkForNeuroglancerPrecomputed(
             meshFilePath,
             Seq(MeshChunkDataRequest(chunkInfo.byteOffset, chunkInfo.byteSize, segmentId))
           ) ?~> "mesh.file.loadChunk.failed"
@@ -213,10 +215,11 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       // TODO: Mapping, segmentIds
-      chunkInfos: WebknossosSegmentInfo <- meshFileService.listMeshChunksForNeuroglancerPrecomputedMesh(
-        fullMeshRequest.meshFilePath,
-        fullMeshRequest.segmentId
-      )
+      chunkInfos: WebknossosSegmentInfo <- neuroglancerPrecomputedMeshService
+        .listMeshChunksForNeuroglancerPrecomputedMesh(
+          fullMeshRequest.meshFilePath,
+          fullMeshRequest.segmentId
+        )
       selectedLod = fullMeshRequest.lod.getOrElse(0)
       allChunkRanges: List[MeshChunk] = chunkInfos.chunks.lods(selectedLod).chunks
       meshFileName <- fullMeshRequest.meshFileName.toFox ?~> "mesh file name needed"

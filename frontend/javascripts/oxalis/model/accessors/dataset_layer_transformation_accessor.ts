@@ -71,16 +71,21 @@ export function flatToNestedMatrix(matrix: Matrix4x4): NestedMatrix4 {
   ];
 }
 
-// This function extracts the rotation in 90 degree steps a the transformation matrix.
+export type RotationSetting = {
+  rotationInDegrees: number;
+  isMirrored: boolean;
+};
+// This function extracts the rotation in 90 degree steps and whether the axis is mirrored from the transformation matrix.
 // The transformation matrix must only include a rotation around one of the main axis.
-export function getRotationFromTransformationIn90DegreeSteps(
+export function getRotationSettingsFromTransformationIn90DegreeSteps(
   transformation: CoordinateTransformation | undefined,
   axis: "x" | "y" | "z",
-) {
+): RotationSetting {
   if (transformation && transformation.type !== "affine") {
-    return 0;
+    return { rotationInDegrees: 0, isMirrored: false };
   }
   const matrix = transformation ? transformation.matrix : IDENTITY_MATRIX;
+  const isMirrored = matrix[axisPositionInMatrix[axis]][axisPositionInMatrix[axis]] < 0;
   const cosineLocation = cosineLocationOfRotationInMatrix[axis];
   const sinusLocation = sinusLocationOfRotationInMatrix[axis];
   const sinOfAngle = matrix[sinusLocation[0]][sinusLocation[1]];
@@ -94,7 +99,21 @@ export function getRotationFromTransformationIn90DegreeSteps(
   const rotationInDegrees = rotation * (180 / Math.PI);
   // Round to multiple of 90 degrees and keep the result positive.
   const roundedRotation = mod(Math.round((rotationInDegrees + 360) / 90) * 90, 360);
-  return roundedRotation;
+  return { rotationInDegrees: roundedRotation, isMirrored };
+}
+
+const axisPositionInMatrix = { x: 0, y: 1, z: 2 };
+
+export function getIsMirroredFromTransformationIn90DegreeSteps(
+  transformation: CoordinateTransformation | undefined,
+  axis: "x" | "y" | "z",
+): boolean {
+  if (transformation && transformation.type !== "affine") {
+    return false;
+  }
+  const matrix = transformation ? transformation.matrix : IDENTITY_MATRIX;
+  const isMirrored = matrix[axisPositionInMatrix[axis]][axisPositionInMatrix[axis]] < 0;
+  return isMirrored;
 }
 
 export function fromCenterToOrigin(bbox: BoundingBox): AffineTransformation {
@@ -112,13 +131,21 @@ export function fromOriginToCenter(bbox: BoundingBox): AffineTransformation {
     .transpose(); // Column-major to row-major
   return { type: "affine", matrix: flatToNestedMatrix(translationMatrix.toArray()) };
 }
+
 export function getRotationMatrixAroundAxis(
   axis: "x" | "y" | "z",
-  angleInRadians: number,
+  rotationSettings: RotationSetting,
 ): AffineTransformation {
   const euler = new THREE.Euler();
-  euler[axis] = angleInRadians;
-  const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(euler).transpose(); // Column-major to row-major
+  const rotationInRadians = rotationSettings.rotationInDegrees * (Math.PI / 180);
+  euler[axis] = rotationInRadians;
+  let rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(euler);
+  if (rotationSettings.isMirrored) {
+    const scaleVector = new THREE.Vector3(1, 1, 1);
+    scaleVector[axis] = -1;
+    rotationMatrix = rotationMatrix.makeScale(scaleVector.x, scaleVector.y, scaleVector.z);
+  }
+  rotationMatrix = rotationMatrix.transpose(); // Column-major to row-major
   const matrixWithoutNearlyZeroValues = rotationMatrix
     .toArray()
     // Avoid nearly zero values due to floating point arithmetic inaccuracies.

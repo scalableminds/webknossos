@@ -5,6 +5,7 @@ import {
   AXIS_TO_TRANSFORM_INDEX,
   EXPECTED_TRANSFORMATION_LENGTH,
   IDENTITY_TRANSFORM,
+  type RotationSetting,
   doAllLayersHaveTheSameRotation,
   fromCenterToOrigin,
   fromOriginToCenter,
@@ -14,6 +15,7 @@ import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { useCallback, useEffect, useMemo } from "react";
 import type { APIDataLayer } from "types/api_flow_types";
 import { FormItemWithInfo } from "./helper_components";
+import Checkbox, { type CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
 
 const { Text } = Typography;
 
@@ -53,7 +55,11 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
     ) {
       return;
     }
-    const rotationValues = form.getFieldValue(["datasetRotation"]);
+    const rotationValues: {
+      x: RotationSetting;
+      y: RotationSetting;
+      z: RotationSetting;
+    } = form.getFieldValue(["datasetRotation"]);
     const transformations = [
       fromCenterToOrigin(datasetBoundingBox),
       getRotationMatrixAroundAxis("x", rotationValues["x"]),
@@ -71,7 +77,7 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
   }, [datasetBoundingBox, dataLayers, form]);
 
   const setMatrixRotationsForAllLayer = useCallback(
-    (rotationInDegrees: number): void => {
+    (rotationInDegrees: number | undefined, isMirrored?: boolean): void => {
       if (!form) {
         return;
       }
@@ -80,9 +86,14 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
       if (datasetBoundingBox == null) {
         return;
       }
-
-      const rotationInRadians = rotationInDegrees * (Math.PI / 180);
-      const rotationMatrix = getRotationMatrixAroundAxis(axis, rotationInRadians);
+      const rotationValues: RotationSetting = form.getFieldValue(["datasetRotation"])[axis];
+      if (rotationInDegrees) {
+        rotationValues.rotationInDegrees = rotationInDegrees;
+      }
+      if (isMirrored) {
+        rotationValues.isMirrored = isMirrored;
+      }
+      const rotationMatrix = getRotationMatrixAroundAxis(axis, rotationValues);
       const dataLayersWithUpdatedTransforms: APIDataLayer[] = dataLayers.map((layer) => {
         let transformations = layer.coordinateTransformations;
         if (transformations == null || transformations.length !== EXPECTED_TRANSFORMATION_LENGTH) {
@@ -106,9 +117,9 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
   );
   return (
     <Row gutter={24}>
-      <Col span={16}>
+      <Col span={8}>
         <FormItemWithInfo
-          name={["datasetRotation", axis]}
+          name={["datasetRotation", axis, "angleInDegrees"]}
           label={`${axis.toUpperCase()} Axis Rotation`}
           info={`Change the datasets rotation around the ${axis}-axis.`}
           colon={false}
@@ -116,9 +127,9 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
           <Slider min={0} max={270} step={90} onChange={setMatrixRotationsForAllLayer} />
         </FormItemWithInfo>
       </Col>
-      <Col span={8} style={{ marginRight: -12 }}>
+      <Col span={4} style={{ marginRight: -12 }}>
         <FormItem
-          name={["datasetRotation", axis]}
+          name={["datasetRotation", axis, "angleInDegrees"]}
           colon={false}
           label=" " /* Whitespace label is needed for correct formatting*/
         >
@@ -134,6 +145,19 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
           />
         </FormItem>
       </Col>
+      <Col span={4} style={{ marginRight: -12 }}>
+        <FormItem
+          name={["datasetRotation", axis, "isMirrored"]}
+          colon={false}
+          label={`Mirror ${axis}-axis`} /* Whitespace label is needed for correct formatting*/
+        >
+          <Checkbox
+            onChange={(evt: CheckboxChangeEvent) =>
+              setMatrixRotationsForAllLayer(undefined, evt.target.value)
+            }
+          />
+        </FormItem>
+      </Col>
     </Row>
   );
 };
@@ -142,10 +166,10 @@ type AxisRotationSettingForDatasetProps = {
   form: FormInstance | undefined;
 };
 
-export type DatasetRotation = {
-  x: number;
-  y: number;
-  z: number;
+export type DatasetRotationSettings = {
+  x: RotationSetting;
+  y: RotationSetting;
+  z: RotationSetting;
 };
 
 export const AxisRotationSettingForDataset: React.FC<AxisRotationSettingForDatasetProps> = ({

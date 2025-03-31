@@ -82,7 +82,7 @@ errorShots/
 flow-coverage/
 
 
-# Sublime
+# Sublime 
 *.sublime-project
 *.sublime-workspace
 
@@ -102,7 +102,7 @@ metals.sbt
 **/screenshots/*.diff.png
 **/screenshots/*.new.png
 
-# Yarn
+# Yarn 
 .yarn/*
 !.yarn/cache
 !.yarn/patches

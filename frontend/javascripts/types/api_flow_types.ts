@@ -82,7 +82,7 @@ type APIDataLayerBase = {
   readonly coordinateTransformations?: CoordinateTransformation[] | null;
   readonly hasSegmentIndex?: boolean;
 };
-type APIColorLayer = APIDataLayerBase & {
+export type APIColorLayer = APIDataLayerBase & {
   readonly category: "color";
 };
 export type APISegmentationLayer = APIDataLayerBase & {
@@ -649,6 +649,7 @@ export type APIOrganization = APIOrganizationCompact & {
   readonly includedStorageBytes: number;
   readonly usedStorageBytes: number;
   readonly ownerName?: string;
+  readonly creditBalance: string | null | undefined;
 };
 export type APIPricingPlanStatus = {
   readonly pricingPlan: PricingPlanEnum;
@@ -704,6 +705,11 @@ export type APIFeatureToggles = {
   readonly allowDeleteDatasets: boolean;
   readonly jobsEnabled: boolean;
   readonly voxelyticsEnabled: boolean;
+  readonly neuronInferralCostPerGVx: number;
+  readonly mitochondriaInferralCostPerGVx: number;
+  readonly alignmentCostPerGVx: number;
+  readonly costPerCreditInEuro: number;
+  readonly costPerCreditInDollar: number;
   readonly publicDemoDatasetUrl: string;
   readonly exportTiffMaxVolumeMVx: number;
   readonly exportTiffMaxEdgeLengthVx: number;
@@ -761,6 +767,7 @@ export type APIJob = {
   readonly createdAt: number;
   readonly voxelyticsWorkflowHash: string | null;
   readonly trainingAnnotations: Array<{ annotationId: string }>;
+  readonly creditCost: string | null | undefined;
 };
 
 export type AiModel = {

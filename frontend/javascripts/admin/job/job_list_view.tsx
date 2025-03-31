@@ -16,7 +16,7 @@ import { Input, Modal, Spin, Table, Tooltip, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import { confirmAsync } from "dashboard/dataset/helper_components";
-import { formatWkLibsNdBBox } from "libs/format_utils";
+import { formatCreditsString, formatWkLibsNdBBox } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import { useInterval } from "libs/react_helpers";
 import Toast from "libs/toast";
@@ -484,6 +484,11 @@ function JobListView() {
             key="state"
             render={renderState}
             sorter={Utils.localeCompareBy<APIJob>((job) => job.state)}
+          />
+          <Column
+            title="Cost in Credits"
+            key="creditCost"
+            render={(job: APIJob) => (job.creditCost ? formatCreditsString(job.creditCost) : "-")}
           />
           <Column title="Action" key="actions" fixed="right" width={150} render={renderActions} />
         </Table>

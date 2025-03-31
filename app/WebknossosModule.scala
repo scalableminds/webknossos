@@ -7,6 +7,7 @@ import models.analytics.AnalyticsSessionService
 import models.annotation.{AnnotationMutexService, AnnotationStore, AnnotationDataSourceTemporaryStore}
 import models.dataset.{DatasetService, ThumbnailCachingService}
 import models.job.{JobService, WorkerLivenessService}
+import models.organization.FreeCreditTransactionService
 import models.storage.UsedStorageService
 import models.task.TaskService
 import models.user._
@@ -41,5 +42,6 @@ class WebknossosModule extends AbstractModule {
     bind(classOf[ThumbnailCachingService]).asEagerSingleton()
     bind(classOf[AnnotationDataSourceTemporaryStore]).asEagerSingleton()
     bind(classOf[CertificateValidationService]).asEagerSingleton()
+    bind(classOf[FreeCreditTransactionService]).asEagerSingleton()
   }
 }

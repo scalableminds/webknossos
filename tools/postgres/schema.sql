@@ -15,12 +15,13 @@ CREATE TYPE webknossos.BOUNDING_BOX AS (
   depth DOUBLE PRECISION
 );
 
+
 START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(128);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(130);
 COMMIT TRANSACTION;
 
 
@@ -28,19 +29,19 @@ CREATE TYPE webknossos.ANNOTATION_TYPE AS ENUM ('Task', 'Explorational', 'Tracin
 CREATE TYPE webknossos.ANNOTATION_STATE AS ENUM ('Active', 'Finished', 'Cancelled', 'Initializing');
 CREATE TYPE webknossos.ANNOTATION_VISIBILITY AS ENUM ('Private', 'Internal', 'Public');
 CREATE TABLE webknossos.annotations(
-  _id CHAR(24) PRIMARY KEY,
-  _dataset CHAR(24) NOT NULL,
-  _task CHAR(24),
-  _team CHAR(24) NOT NULL,
-  _user CHAR(24) NOT NULL,
-  _publication CHAR(24),
+  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
+  _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
+  _task TEXT CONSTRAINT _task_objectId CHECK (_task ~ '^[0-9a-f]{24}$'),
+  _team TEXT CONSTRAINT _team_objectId CHECK (_team ~ '^[0-9a-f]{24}$') NOT NULL,
+  _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
+  _publication TEXT CONSTRAINT _publication_objectId CHECK (_publication ~ '^[0-9a-f]{24}$'),
   description TEXT NOT NULL DEFAULT '',
   visibility webknossos.ANNOTATION_VISIBILITY NOT NULL DEFAULT 'Internal',
-  name VARCHAR(256) NOT NULL DEFAULT '',
+  name TEXT NOT NULL DEFAULT '',
   viewConfiguration JSONB,
   state webknossos.ANNOTATION_STATE NOT NULL DEFAULT 'Active',
   isLockedByOwner BOOLEAN NOT NULL DEFAULT FALSE,
-  tags VARCHAR(256)[] NOT NULL DEFAULT '{}',
+  tags TEXT[] NOT NULL DEFAULT '{}',
   tracingTime BIGINT,
   typ webknossos.ANNOTATION_TYPE NOT NULL,
   othersMayEdit BOOLEAN NOT NULL DEFAULT false,
@@ -53,10 +54,10 @@ CREATE TABLE webknossos.annotations(
 
 CREATE TYPE webknossos.ANNOTATION_LAYER_TYPE AS ENUM ('Skeleton', 'Volume');
 CREATE TABLE webknossos.annotation_layers(
-  _annotation CHAR(24) NOT NULL,
-  tracingId CHAR(36) NOT NULL UNIQUE,
+  _annotation TEXT CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$') NOT NULL,
+  tracingId TEXT NOT NULL UNIQUE,
   typ webknossos.ANNOTATION_LAYER_TYPE NOT NULL,
-  name VARCHAR(256) NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\.\$]+$'),
+  name TEXT NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\.\$]+$'),
   statistics JSONB NOT NULL,
   UNIQUE (name, _annotation),
   PRIMARY KEY (_annotation, tracingId),
@@ -64,26 +65,26 @@ CREATE TABLE webknossos.annotation_layers(
 );
 
 CREATE TABLE webknossos.annotation_sharedTeams(
-  _annotation CHAR(24) NOT NULL,
-  _team CHAR(24) NOT NULL,
+  _annotation TEXT CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$') NOT NULL,
+  _team TEXT CONSTRAINT _team_objectId CHECK (_team ~ '^[0-9a-f]{24}$') NOT NULL,
   PRIMARY KEY (_annotation, _team)
 );
 
 CREATE TABLE webknossos.annotation_contributors(
-  _annotation CHAR(24) NOT NULL,
-  _user CHAR(24) NOT NULL,
+  _annotation TEXT CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$') NOT NULL,
+  _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
   PRIMARY KEY (_annotation, _user)
 );
 
 CREATE TABLE webknossos.annotation_mutexes(
-  _annotation CHAR(24) PRIMARY KEY,
-  _user CHAR(24) NOT NULL,
+  _annotation TEXT CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$') PRIMARY KEY,
+  _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
   expiry TIMESTAMP NOT NULL
 );
 
 CREATE TABLE webknossos.meshes(
-  _id CHAR(24) PRIMARY KEY,
-  _annotation CHAR(24) NOT NULL,
+  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
+  _annotation TEXT CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$') NOT NULL,
   description TEXT NOT NULL DEFAULT '',
   position webknossos.VECTOR3 NOT NULL,
   data TEXT,
@@ -92,10 +93,10 @@ CREATE TABLE webknossos.meshes(
 );
 
 CREATE TABLE webknossos.publications(
-  _id CHAR(24) PRIMARY KEY,
+  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
   publicationDate TIMESTAMPTZ,
-  imageUrl VARCHAR(2048),
-  title VARCHAR(2048),
+  imageUrl TEXT,
+  title TEXT,
   description TEXT,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
@@ -103,28 +104,28 @@ CREATE TABLE webknossos.publications(
 
 CREATE TYPE webknossos.LENGTH_UNIT AS ENUM ('yoctometer', 'zeptometer', 'attometer', 'femtometer', 'picometer', 'nanometer', 'micrometer', 'millimeter', 'centimeter', 'decimeter', 'meter', 'hectometer', 'kilometer', 'megameter', 'gigameter', 'terameter', 'petameter', 'exameter', 'zettameter', 'yottameter', 'angstrom', 'inch', 'foot', 'yard', 'mile', 'parsec');
 CREATE TABLE webknossos.datasets(
-  _id CHAR(24) PRIMARY KEY,
-  _dataStore VARCHAR(256) NOT NULL,
-  _organization VARCHAR(256) NOT NULL,
-  _publication CHAR(24),
-  _uploader CHAR(24),
-  _folder CHAR(24) NOT NULL,
+  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
+  _dataStore TEXT NOT NULL,
+  _organization TEXT NOT NULL,
+  _publication TEXT CONSTRAINT _publication_objectId CHECK (_publication ~ '^[0-9a-f]{24}$'),
+  _uploader TEXT CONSTRAINT _uploader_objectId CHECK (_uploader ~ '^[0-9a-f]{24}$'),
+  _folder TEXT CONSTRAINT _folder_objectId CHECK (_folder ~ '^[0-9a-f]{24}$') NOT NULL,
   inboxSourceHash INT,
   defaultViewConfiguration JSONB,
   adminViewConfiguration JSONB,
   description TEXT,
-  name VARCHAR(256) NOT NULL,
+  name TEXT NOT NULL,
   isPublic BOOLEAN NOT NULL DEFAULT false,
   isUsable BOOLEAN NOT NULL DEFAULT false,
-  directoryName VARCHAR(256) NOT NULL,
+  directoryName TEXT NOT NULL,
   voxelSizeFactor webknossos.VECTOR3,
   voxelSizeUnit webknossos.LENGTH_UNIT,
-  status VARCHAR(1024) NOT NULL DEFAULT '',
-  sharingToken CHAR(256),
-  logoUrl VARCHAR(2048),
+  status TEXT NOT NULL DEFAULT '',
+  sharingToken TEXT,
+  logoUrl TEXT,
   sortingKey TIMESTAMPTZ NOT NULL,
   metadata JSONB NOT NULL DEFAULT '[]',
-  tags VARCHAR(256)[] NOT NULL DEFAULT '{}',
+  tags TEXT[] NOT NULL DEFAULT '{}',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   UNIQUE (directoryName, _organization),
@@ -136,13 +137,13 @@ CREATE TABLE webknossos.datasets(
 CREATE TYPE webknossos.DATASET_LAYER_CATEGORY AS ENUM ('color', 'mask', 'segmentation');
 CREATE TYPE webknossos.DATASET_LAYER_ELEMENT_CLASS AS ENUM ('uint8', 'uint16', 'uint24', 'uint32', 'uint64', 'float', 'double', 'int8', 'int16', 'int32', 'int64');
 CREATE TABLE webknossos.dataset_layers(
-  _dataset CHAR(24) NOT NULL,
-  name VARCHAR(256) NOT NULL,
+  _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
+  name TEXT NOT NULL,
   category webknossos.DATASET_LAYER_CATEGORY NOT NULL,
   elementClass webknossos.DATASET_LAYER_ELEMENT_CLASS NOT NULL,
   boundingBox webknossos.BOUNDING_BOX NOT NULL,
   largestSegmentId BIGINT,
-  mappings VARCHAR(256)[],
+  mappings TEXT[],
   defaultViewConfiguration JSONB,
   adminViewConfiguration JSONB,
   PRIMARY KEY(_dataset, name),
@@ -151,32 +152,32 @@ CREATE TABLE webknossos.dataset_layers(
 );
 
 CREATE TABLE webknossos.dataset_layer_coordinateTransformations(
-  _dataset CHAR(24) NOT NULL,
-  layerName VARCHAR(256) NOT NULL,
-  type VARCHAR(256) NOT NULL,
+  _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
+  layerName TEXT NOT NULL,
+  type TEXT NOT NULL,
   matrix JSONB,
   correspondences JSONB,
   insertionOrderIndex INT
 );
 
 CREATE TABLE webknossos.dataset_layer_additionalAxes(
-   _dataset CHAR(24) NOT NULL,
-   layerName VARCHAR(256) NOT NULL,
-   name VARCHAR(256) NOT NULL,
+   _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
+   layerName TEXT NOT NULL,
+   name TEXT NOT NULL,
    lowerBound INT NOT NULL,
    upperBound INT NOT NULL,
    index INT NOT NULL
 );
 
 CREATE TABLE webknossos.dataset_allowedTeams(
-  _dataset CHAR(24) NOT NULL,
-  _team CHAR(24) NOT NULL,
+  _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
+  _team TEXT CONSTRAINT _team_objectId CHECK (_team ~ '^[0-9a-f]{24}$') NOT NULL,
   PRIMARY KEY (_dataset, _team)
 );
 
 CREATE TABLE webknossos.dataset_mags(
-  _dataset CHAR(24) NOT NULL,
-  dataLayerName VARCHAR(256),
+  _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
+  dataLayerName TEXT,
   mag webknossos.VECTOR3 NOT NULL,
   path TEXT,
   realPath TEXT,
@@ -185,19 +186,19 @@ CREATE TABLE webknossos.dataset_mags(
 );
 
 CREATE TABLE webknossos.dataset_lastUsedTimes(
-  _dataset CHAR(24) NOT NULL,
-  _user CHAR(24) NOT NULL,
+  _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
+  _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
   lastUsedTime TIMESTAMPTZ NOT NULL
 );
 
 CREATE TABLE webknossos.dataset_thumbnails(
-  _dataset CHAR(24) NOT NULL,
-  dataLayerName VARCHAR(256),
+  _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
+  dataLayerName TEXT,
   width INT NOT NULL,
   height INT NOT NULL,
-  mappingName VARCHAR(256) NOT NULL, -- emptystring means no mapping
+  mappingName TEXT NOT NULL, -- emptystring means no mapping
   image BYTEA NOT NULL,
-  mimetype VARCHAR(256),
+  mimetype TEXT,
   mag webknossos.VECTOR3 NOT NULL,
   mag1BoundingBox webknossos.BOUNDING_BOX NOT NULL,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -206,31 +207,31 @@ CREATE TABLE webknossos.dataset_thumbnails(
 
 CREATE TYPE webknossos.DATASTORE_TYPE AS ENUM ('webknossos-store');
 CREATE TABLE webknossos.dataStores(
-  name VARCHAR(256) PRIMARY KEY NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\.]+$'),
-  url VARCHAR(512) UNIQUE NOT NULL CHECK (url ~* '^https?://[a-z0-9\.]+.*$'),
-  publicUrl VARCHAR(512) UNIQUE NOT NULL CHECK (publicUrl ~* '^https?://[a-z0-9\.]+.*$'),
-  key VARCHAR(1024) NOT NULL,
+  name TEXT PRIMARY KEY NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\.]+$'),
+  url TEXT UNIQUE NOT NULL CHECK (url ~* '^https?://[a-z0-9\.]+.*$'),
+  publicUrl TEXT UNIQUE NOT NULL CHECK (publicUrl ~* '^https?://[a-z0-9\.]+.*$'),
+  key TEXT NOT NULL,
   isScratch BOOLEAN NOT NULL DEFAULT false,
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   allowsUpload BOOLEAN NOT NULL DEFAULT true,
-  onlyAllowedOrganization CHAR(24),
+  onlyAllowedOrganization TEXT,
   reportUsedStorageEnabled BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TABLE webknossos.tracingStores(
-  name VARCHAR(256) PRIMARY KEY NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\.]+$'),
-  url VARCHAR(512) UNIQUE NOT NULL CHECK (url ~* '^https?://[a-z0-9\.]+.*$'),
-  publicUrl VARCHAR(512) UNIQUE NOT NULL CHECK (publicUrl ~* '^https?://[a-z0-9\.]+.*$'),
-  key VARCHAR(1024) NOT NULL,
+  name TEXT PRIMARY KEY NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\.]+$'),
+  url TEXT UNIQUE NOT NULL CHECK (url ~* '^https?://[a-z0-9\.]+.*$'),
+  publicUrl TEXT UNIQUE NOT NULL CHECK (publicUrl ~* '^https?://[a-z0-9\.]+.*$'),
+  key TEXT NOT NULL,
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TABLE webknossos.projects(
-  _id CHAR(24) PRIMARY KEY,
-  _organization VARCHAR(256) NOT NULL,
-  _team CHAR(24) NOT NULL,
-  _owner CHAR(24) NOT NULL,
-  name VARCHAR(256) NOT NULL CHECK (name ~* '^.{3,}$'), -- Unique among non-deleted, enforced in scala
+  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
+  _organization TEXT NOT NULL,
+  _team TEXT CONSTRAINT _team_objectId CHECK (_team ~ '^[0-9a-f]{24}$') NOT NULL,
+  _owner TEXT CONSTRAINT _owner_objectId CHECK (_owner ~ '^[0-9a-f]{24}$') NOT NULL,
+  name TEXT NOT NULL CHECK (name ~* '^.{3,}$'), -- Unique among non-deleted, enforced in scala
   priority BIGINT NOT NULL DEFAULT 100,
   paused BOOLEAN NOT NULL DEFAULT false,
   expectedTime BIGINT,
@@ -240,10 +241,10 @@ CREATE TABLE webknossos.projects(
 );
 
 CREATE TABLE webknossos.scripts(
-  _id CHAR(24) PRIMARY KEY,
-  _owner CHAR(24) NOT NULL,
-  name VARCHAR(256) NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\. ß]+$'),
-  gist VARCHAR(1024) NOT NULL,
+  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
+  _owner TEXT CONSTRAINT _owner_objectId CHECK (_owner ~ '^[0-9a-f]{24}$') NOT NULL,
+  name TEXT NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\. ß]+$'),
+  gist TEXT NOT NULL,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   CHECK (gist ~* '^https?://[a-z0-9\-_\.]+.*$')
@@ -252,10 +253,10 @@ CREATE TABLE webknossos.scripts(
 CREATE TYPE webknossos.TASKTYPE_MODES AS ENUM ('orthogonal', 'flight', 'oblique', 'volume');
 CREATE TYPE webknossos.TASKTYPE_TRACINGTYPES AS ENUM ('skeleton', 'volume', 'hybrid');
 CREATE TABLE webknossos.taskTypes(
-  _id CHAR(24) PRIMARY KEY,
-  _organization VARCHAR(256) NOT NULL,
-  _team CHAR(24) NOT NULL,
-  summary VARCHAR(256) NOT NULL,
+  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
+  _organization TEXT NOT NULL,
+  _team TEXT CONSTRAINT _team_objectId CHECK (_team ~ '^[0-9a-f]{24}$') NOT NULL,
+  summary TEXT NOT NULL,
   description TEXT NOT NULL,
   settings_allowedModes webknossos.TASKTYPE_MODES[] NOT NULL DEFAULT '{orthogonal, flight, oblique}',
   settings_preferredMode webknossos.TASKTYPE_MODES DEFAULT 'orthogonal',
@@ -274,11 +275,11 @@ CREATE TABLE webknossos.taskTypes(
 );
 
 CREATE TABLE webknossos.tasks(
-  _id CHAR(24) PRIMARY KEY,
-  _project CHAR(24) NOT NULL,
-  _script CHAR(24),
-  _taskType CHAR(24) NOT NULL,
-  neededExperience_domain VARCHAR(256) NOT NULL CHECK (neededExperience_domain ~* '^.{2,}$'),
+  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
+  _project TEXT CONSTRAINT _project_objectId CHECK (_project ~ '^[0-9a-f]{24}$') NOT NULL,
+  _script TEXT CONSTRAINT _script_objectId CHECK (_script ~ '^[0-9a-f]{24}$'),
+  _taskType TEXT CONSTRAINT _taskType_objectId CHECK (_taskType ~ '^[0-9a-f]{24}$') NOT NULL,
+  neededExperience_domain TEXT NOT NULL CHECK (neededExperience_domain ~* '^.{2,}$'),
   neededExperience_value INT NOT NULL,
   totalInstances BIGINT NOT NULL,
   pendingInstances BIGINT NOT NULL,
@@ -286,22 +287,22 @@ CREATE TABLE webknossos.tasks(
   boundingBox webknossos.BOUNDING_BOX,
   editPosition webknossos.VECTOR3 NOT NULL,
   editRotation webknossos.VECTOR3 NOT NULL,
-  creationInfo VARCHAR(512),
+  creationInfo TEXT,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   CONSTRAINT pendingInstancesLargeEnoughCheck CHECK (pendingInstances >= 0)
 );
 
 CREATE TABLE webknossos.experienceDomains(
-  domain VARCHAR(256) NOT NULL,
-  _organization VARCHAR(256) NOT NULL,
+  domain TEXT NOT NULL,
+  _organization TEXT NOT NULL,
   CONSTRAINT primarykey__domain_orga PRIMARY KEY (domain,_organization)
 );
 
 CREATE TABLE webknossos.teams(
-  _id CHAR(24) PRIMARY KEY,
-  _organization VARCHAR(256) NOT NULL,
-  name VARCHAR(256) NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\. ß]+$'),
+  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
+  _organization TEXT NOT NULL,
+  name TEXT NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\. ß]+$'),
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isOrganizationTeam BOOLEAN NOT NULL DEFAULT false,
   isDeleted BOOLEAN NOT NULL DEFAULT false,
@@ -309,9 +310,9 @@ CREATE TABLE webknossos.teams(
 );
 
 CREATE TABLE webknossos.timespans(
-  _id CHAR(24) PRIMARY KEY,
-  _user CHAR(24) NOT NULL,
-  _annotation CHAR(24),
+  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
+  _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
+  _annotation TEXT CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$'),
   time BIGINT NOT NULL,
   lastUpdate TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   numberOfUpdates BIGINT NOT NULL DEFAULT 1,
@@ -321,13 +322,13 @@ CREATE TABLE webknossos.timespans(
 
 CREATE TYPE webknossos.PRICING_PLANS AS ENUM ('Basic', 'Team', 'Power', 'Team_Trial', 'Power_Trial', 'Custom');
 CREATE TABLE webknossos.organizations(
-  _id_old CHAR(24) DEFAULT NULL,
-  _id VARCHAR(256) PRIMARY KEY,
-  additionalInformation VARCHAR(2048) NOT NULL DEFAULT '',
-  logoUrl VARCHAR(2048) NOT NULL DEFAULT '',
-  name VARCHAR(1024) NOT NULL DEFAULT '',
-  _rootFolder CHAR(24) NOT NULL UNIQUE,
-  newUserMailingList VARCHAR(512) NOT NULL DEFAULT '',
+  _id_old TEXT CONSTRAINT _id_old_objectId CHECK (_id_old ~ '^[0-9a-f]{24}$') DEFAULT NULL,
+  _id TEXT PRIMARY KEY,
+  additionalInformation TEXT NOT NULL DEFAULT '',
+  logoUrl TEXT NOT NULL DEFAULT '',
+  name TEXT NOT NULL DEFAULT '',
+  _rootFolder TEXT CONSTRAINT _rootFolder_objectId CHECK (_rootFolder ~ '^[0-9a-f]{24}$') NOT NULL UNIQUE,
+  newUserMailingList TEXT NOT NULL DEFAULT '',
   enableAutoVerify BOOLEAN NOT NULL DEFAULT false,
   pricingPlan webknossos.PRICING_PLANS NOT NULL DEFAULT 'Custom',
   paidUntil TIMESTAMPTZ DEFAULT NULL,
@@ -342,23 +343,54 @@ CREATE TABLE webknossos.organizations(
 );
 
 CREATE TABLE webknossos.organization_usedStorage(
-  _organization VARCHAR(256) NOT NULL,
-  _dataStore VARCHAR(256) NOT NULL,
-  _dataset CHAR(24) NOT NULL,
-  layerName VARCHAR(256) NOT NULL,
-  magOrDirectoryName VARCHAR(256) NOT NULL,
+  _organization TEXT NOT NULL,
+  _dataStore TEXT NOT NULL,
+  _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
+  layerName TEXT NOT NULL,
+  magOrDirectoryName TEXT NOT NULL,
   usedStorageBytes BIGINT NOT NULL,
   lastUpdated TIMESTAMPTZ,
   PRIMARY KEY(_organization, _dataStore, _dataset, layerName, magOrDirectoryName)
 );
 
+-- Create the enum types for transaction states and credit states
+-- Pending -> The transaction is a payment for a unfinished & not crashed job
+-- Complete -> The transaction is commited and the potential associated job finished successfully or was refunded.
+CREATE TYPE webknossos.credit_transaction_state AS ENUM ('Pending', 'Complete');
+-- Pending -> The credit_delta is yet to be completed
+-- Spent -> The credit_delta is commited as reduced as the associated job finished successfully.
+-- Refunded -> The credit_delta is commited as reduced but a new refunding transaction is added as the associated job finished failed.
+-- Revoked -> The credit_delta has been fully revoked by a revoking transaction as the credit_delta expired.
+-- PartiallyRevoked -> The credit_delta has been partially revoked by a revoking transaction as the credit_delta expired but parts of it were already spent or are pending.
+-- Refunding -> Marks credit_delta as a refund for transaction associated with a failed job.
+-- Revoking -> The credit_delta of this transaction revokes the credit_delta of another transaction with expired credits.
+-- AddCredits -> The credit_delta of this transaction adds adds more credits for the organization.
+CREATE TYPE webknossos.credit_state AS ENUM ('Pending', 'Spent', 'Refunded', 'Revoked', 'PartiallyRevoked', 'Refunding', 'Revoking', 'AddCredits');
+
+CREATE TABLE webknossos.credit_transactions (
+    _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
+    _organization TEXT NOT NULL,
+    _related_transaction TEXT CONSTRAINT _related_transaction_objectId CHECK (_related_transaction ~ '^[0-9a-f]{24}$') DEFAULT NULL,
+    _paid_job TEXT CONSTRAINT _paid_job_objectId CHECK (_paid_job ~ '^[0-9a-f]{24}$') DEFAULT NULL,
+    credit_delta DECIMAL(14, 3) NOT NULL,
+    comment TEXT NOT NULL,
+    -- The state of the transaction.
+    transaction_state webknossos.credit_transaction_state NOT NULL,
+    -- The state of the credits of this transaction.
+    credit_state webknossos.credit_state NOT NULL,
+    expiration_date TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE
+);
+
 CREATE TYPE webknossos.USER_PASSWORDINFO_HASHERS AS ENUM ('SCrypt', 'Empty');
 CREATE TABLE webknossos.users(
-  _id CHAR(24) PRIMARY KEY,
-  _multiUser CHAR(24) NOT NULL,
-  _organization VARCHAR(256) NOT NULL,
-  firstName VARCHAR(256) NOT NULL, -- CHECK (firstName ~* '^[A-Za-z0-9\-_ ]+$'),
-  lastName VARCHAR(256) NOT NULL, -- CHECK (lastName ~* '^[A-Za-z0-9\-_ ]+$'),
+  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
+  _multiUser TEXT CONSTRAINT _multiUser_objectId CHECK (_multiUser ~ '^[0-9a-f]{24}$') NOT NULL,
+  _organization TEXT NOT NULL,
+  firstName TEXT NOT NULL, -- CHECK (firstName ~* '^[A-Za-z0-9\-_ ]+$'),
+  lastName TEXT NOT NULL, -- CHECK (lastName ~* '^[A-Za-z0-9\-_ ]+$'),
   lastActivity TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   userConfiguration JSONB NOT NULL,
   isDeactivated BOOLEAN NOT NULL DEFAULT false,
@@ -366,7 +398,7 @@ CREATE TABLE webknossos.users(
   isOrganizationOwner BOOLEAN NOT NULL DEFAULT false,
   isDatasetManager BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  lastTaskTypeId CHAR(24) DEFAULT NULL,
+  lastTaskTypeId TEXT CONSTRAINT lastTaskTypeId_objectId CHECK (lastTaskTypeId ~ '^[0-9a-f]{24}$') DEFAULT NULL,
   isUnlisted BOOLEAN NOT NULL DEFAULT FALSE,
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   UNIQUE (_multiUser, _organization),
@@ -374,31 +406,31 @@ CREATE TABLE webknossos.users(
 );
 
 CREATE TABLE webknossos.user_team_roles(
-  _user CHAR(24) NOT NULL,
-  _team CHAR(24) NOT NULL,
+  _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
+  _team TEXT CONSTRAINT _team_objectId CHECK (_team ~ '^[0-9a-f]{24}$') NOT NULL,
   isTeamManager BOOLEAN NOT NULL DEFAULT false,
   PRIMARY KEY (_user, _team)
 );
 
 CREATE TABLE webknossos.user_experiences(
-  _user CHAR(24) NOT NULL,
-  domain VARCHAR(256) NOT NULL,
+  _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
+  domain TEXT NOT NULL,
   value INT NOT NULL DEFAULT 1,
   PRIMARY KEY (_user, domain)
 );
 
 CREATE TABLE webknossos.user_datasetConfigurations(
-  _user CHAR(24) NOT NULL,
-  _dataset CHAR(24) NOT NULL,
+  _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
+  _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
   viewConfiguration JSONB NOT NULL,
   PRIMARY KEY (_user, _dataset),
   CONSTRAINT viewConfigurationIsJsonObject CHECK(jsonb_typeof(viewConfiguration) = 'object')
 );
 
 CREATE TABLE webknossos.user_datasetLayerConfigurations(
-  _user CHAR(24) NOT NULL,
-  _dataset CHAR(24) NOT NULL,
-  layerName VARCHAR(256) NOT NULL,
+  _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
+  _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
+  layerName TEXT NOT NULL,
   viewConfiguration JSONB NOT NULL,
   PRIMARY KEY (_user, _dataset, layerName),
   CONSTRAINT viewConfigurationIsJsonObject CHECK(jsonb_typeof(viewConfiguration) = 'object')
@@ -407,15 +439,15 @@ CREATE TABLE webknossos.user_datasetLayerConfigurations(
 
 CREATE TYPE webknossos.THEME AS ENUM ('light', 'dark', 'auto');
 CREATE TABLE webknossos.multiUsers(
-  _id CHAR(24) PRIMARY KEY,
-  email VARCHAR(512) NOT NULL UNIQUE CHECK (email ~* '^.+@.+$'),
+  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE CHECK (email ~* '^.+@.+$'),
   passwordInfo_hasher webknossos.USER_PASSWORDINFO_HASHERS NOT NULL DEFAULT 'SCrypt',
-  passwordInfo_password VARCHAR(512) NOT NULL,
+  passwordInfo_password TEXT NOT NULL,
   isSuperUser BOOLEAN NOT NULL DEFAULT false,
   novelUserExperienceInfos JSONB NOT NULL DEFAULT '{}'::json,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   selectedTheme webknossos.THEME NOT NULL DEFAULT 'auto',
-  _lastLoggedInIdentity CHAR(24) DEFAULT NULL,
+  _lastLoggedInIdentity TEXT CONSTRAINT _lastLoggedInIdentity_objectId CHECK (_lastLoggedInIdentity ~ '^[0-9a-f]{24}$') DEFAULT NULL,
   isEmailVerified BOOLEAN NOT NULL DEFAULT false,
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   CONSTRAINT nuxInfoIsJsonObject CHECK(jsonb_typeof(novelUserExperienceInfos) = 'object')
@@ -425,10 +457,10 @@ CREATE TABLE webknossos.multiUsers(
 CREATE TYPE webknossos.TOKEN_TYPES AS ENUM ('Authentication', 'DataStore', 'ResetPassword');
 CREATE TYPE webknossos.USER_LOGININFO_PROVDERIDS AS ENUM ('credentials');
 CREATE TABLE webknossos.tokens(
-  _id CHAR(24) PRIMARY KEY,
+  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
   value TEXT NOT NULL,
   loginInfo_providerID webknossos.USER_LOGININFO_PROVDERIDS NOT NULL,
-  loginInfo_providerKey VARCHAR(512) NOT NULL,
+  loginInfo_providerKey TEXT NOT NULL,
   lastUsedDateTime TIMESTAMPTZ NOT NULL,
   expirationDateTime TIMESTAMPTZ NOT NULL,
   idleTimeout BIGINT,
@@ -438,8 +470,8 @@ CREATE TABLE webknossos.tokens(
 );
 
 CREATE TABLE webknossos.maintenances(
-  _id CHAR(24) PRIMARY KEY,
-  _user CHAR(24) NOT NULL,
+  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
+  _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
   startTime TIMESTAMPTZ NOT NULL,
   endTime TIMESTAMPTZ NOT NULL,
   message TEXT NOT NULL,
@@ -448,13 +480,13 @@ CREATE TABLE webknossos.maintenances(
 );
 
 CREATE TABLE webknossos.workers(
-  _id CHAR(24) PRIMARY KEY,
-  _dataStore VARCHAR(256) NOT NULL,
-  name VARCHAR(256) NOT NULL DEFAULT 'Unnamed Worker',
-  key VARCHAR(1024) NOT NULL UNIQUE,
+  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
+  _dataStore TEXT NOT NULL,
+  name TEXT NOT NULL DEFAULT 'Unnamed Worker',
+  key TEXT NOT NULL UNIQUE,
   maxParallelHighPriorityJobs INT NOT NULL DEFAULT 1,
   maxParallelLowPriorityJobs INT NOT NULL DEFAULT 1,
-  supportedJobCommands VARCHAR(256)[] NOT NULL DEFAULT array[]::varchar(256)[],
+  supportedJobCommands TEXT[] NOT NULL DEFAULT array[]::TEXT[],
   lastHeartBeat TIMESTAMPTZ NOT NULL DEFAULT '2000-01-01T00:00:00Z',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
@@ -464,16 +496,16 @@ CREATE TABLE webknossos.workers(
 CREATE TYPE webknossos.JOB_STATE AS ENUM ('PENDING', 'STARTED', 'SUCCESS', 'FAILURE', 'CANCELLED');
 
 CREATE TABLE webknossos.jobs(
-  _id CHAR(24) PRIMARY KEY,
-  _owner CHAR(24) NOT NULL,
-  _dataStore VARCHAR(256) NOT NULL,
+  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
+  _owner TEXT CONSTRAINT _owner_objectId CHECK (_owner ~ '^[0-9a-f]{24}$') NOT NULL,
+  _dataStore TEXT NOT NULL,
   command TEXT NOT NULL,
   commandArgs JSONB NOT NULL,
   state webknossos.JOB_STATE NOT NULL DEFAULT 'PENDING', -- always updated by the worker
   manualState webknossos.JOB_STATE, -- set by the user or admin
-  _worker CHAR(24),
-  _voxelytics_workflowHash VARCHAR(512),
-  latestRunId VARCHAR(1024),
+  _worker TEXT CONSTRAINT _worker_objectId CHECK (_worker ~ '^[0-9a-f]{24}$'),
+  _voxelytics_workflowHash TEXT,
+  latestRunId TEXT,
   returnValue Text,
   retriedBySuperUser BOOLEAN NOT NULL DEFAULT false,
   started TIMESTAMPTZ,
@@ -484,9 +516,9 @@ CREATE TABLE webknossos.jobs(
 
 
 CREATE TABLE webknossos.invites(
-  _id CHAR(24) PRIMARY KEY,
+  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
   tokenValue Text NOT NULL,
-  _organization VARCHAR(256) NOT NULL,
+  _organization TEXT NOT NULL,
   autoActivate BOOLEAN NOT NULL,
   expirationDateTime TIMESTAMPTZ NOT NULL,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -494,34 +526,34 @@ CREATE TABLE webknossos.invites(
 );
 
 CREATE TABLE webknossos.annotation_privateLinks(
-  _id CHAR(24) PRIMARY KEY,
-  _annotation CHAR(24) NOT NULL,
+  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
+  _annotation TEXT CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$') NOT NULL,
   accessToken Text NOT NULL UNIQUE,
   expirationDateTime TIMESTAMPTZ,
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TABLE webknossos.shortLinks(
-  _id CHAR(24) PRIMARY KEY,
-  key CHAR(16) NOT NULL UNIQUE,
+  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
+  key TEXT NOT NULL UNIQUE,
   longLink Text NOT NULL
 );
 
 CREATE TYPE webknossos.CREDENTIAL_TYPE AS ENUM ('HttpBasicAuth', 'HttpToken', 'S3AccessKey', 'GoogleServiceAccount');
 CREATE TABLE webknossos.credentials(
-  _id CHAR(24) PRIMARY KEY,
+  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
   type webknossos.CREDENTIAL_TYPE NOT NULL,
-  name VARCHAR(256) NOT NULL,
+  name TEXT NOT NULL,
   identifier Text,
   secret Text,
-  _user CHAR(24) NOT NULL,
-  _organization VARCHAR(256) NOT NULL,
+  _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
+  _organization TEXT NOT NULL,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TABLE webknossos.folders(
-    _id CHAR(24) PRIMARY KEY,
+    _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
     name TEXT NOT NULL CHECK (name !~ '/'),
     isDeleted BOOLEAN NOT NULL DEFAULT false,
     metadata JSONB  NOT NULL DEFAULT '[]',
@@ -529,23 +561,23 @@ CREATE TABLE webknossos.folders(
 );
 
 CREATE TABLE webknossos.folder_paths(
-    _ancestor CHAR(24) NOT NULL,
-    _descendant CHAR(24) NOT NULL,
+    _ancestor TEXT CONSTRAINT _ancestor_objectId CHECK (_ancestor ~ '^[0-9a-f]{24}$') NOT NULL,
+    _descendant TEXT CONSTRAINT _descendant_objectId CHECK (_descendant ~ '^[0-9a-f]{24}$') NOT NULL,
     depth INT NOT NULL,
     PRIMARY KEY(_ancestor, _descendant)
 );
 
 CREATE TABLE webknossos.folder_allowedTeams(
-  _folder CHAR(24) NOT NULL,
-  _team CHAR(24) NOT NULL,
+  _folder TEXT CONSTRAINT _folder_objectId CHECK (_folder ~ '^[0-9a-f]{24}$') NOT NULL,
+  _team TEXT CONSTRAINT _team_objectId CHECK (_team ~ '^[0-9a-f]{24}$') NOT NULL,
   PRIMARY KEY (_folder, _team)
 );
 
 CREATE TABLE webknossos.emailVerificationKeys(
-  _id CHAR(24) PRIMARY KEY,
+  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
   key TEXT NOT NULL,
-  email VARCHAR(512) NOT NULL,
-  _multiUser CHAR(24) NOT NULL,
+  email TEXT NOT NULL,
+  _multiUser TEXT CONSTRAINT _multiUser_objectId CHECK (_multiUser ~ '^[0-9a-f]{24}$') NOT NULL,
   validUntil TIMESTAMPTZ,
   isUsed BOOLEAN NOT NULL DEFAULT false
 );
@@ -553,13 +585,13 @@ CREATE TABLE webknossos.emailVerificationKeys(
 CREATE TYPE webknossos.AI_MODEL_CATEGORY AS ENUM ('em_neurons', 'em_nuclei', 'em_synapses', 'em_neuron_types', 'em_cell_organelles');
 
 CREATE TABLE webknossos.aiModels(
-  _id CHAR(24) PRIMARY KEY,
-  _organization VARCHAR(256) NOT NULL,
-  _dataStore VARCHAR(256) NOT NULL, -- redundant to job, but must be available for jobless models
-  _user CHAR(24) NOT NULL,
-  _trainingJob CHAR(24),
-  name VARCHAR(1024) NOT NULL,
-  comment VARCHAR(1024),
+  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
+  _organization TEXT NOT NULL,
+  _dataStore TEXT NOT NULL, -- redundant to job, but must be available for jobless models
+  _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
+  _trainingJob TEXT CONSTRAINT _trainingJob_objectId CHECK (_trainingJob ~ '^[0-9a-f]{24}$'),
+  name TEXT NOT NULL,
+  comment TEXT,
   category webknossos.AI_MODEL_CATEGORY,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   modified TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -568,27 +600,27 @@ CREATE TABLE webknossos.aiModels(
 );
 
 CREATE TABLE webknossos.aiModel_organizations(
-  _aiModel CHAR(24) NOT NULL,
-  _organization VARCHAR(256) NOT NULL,
+  _aiModel TEXT CONSTRAINT _aiModel_objectId CHECK (_aiModel ~ '^[0-9a-f]{24}$') NOT NULL,
+  _organization TEXT NOT NULL,
   PRIMARY KEY(_aiModel, _organization)
 );
 
 CREATE TABLE webknossos.aiModel_trainingAnnotations(
-  _aiModel CHAR(24) NOT NULL,
-  _annotation CHAR(24) NOT NULL,
+  _aiModel TEXT CONSTRAINT _aiModel_objectId CHECK (_aiModel ~ '^[0-9a-f]{24}$') NOT NULL,
+  _annotation TEXT CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$') NOT NULL,
   PRIMARY KEY(_aiModel,_annotation)
 );
 
 CREATE TABLE webknossos.aiInferences(
-  _id CHAR(24) PRIMARY KEY,
-  _organization VARCHAR(256) NOT NULL,
-  _aiModel CHAR(24) NOT NULL,
-  _newDataset CHAR(24),
-  _annotation CHAR(24),
-  _inferenceJob CHAR(24) NOT NULL,
+  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
+  _organization TEXT NOT NULL,
+  _aiModel TEXT CONSTRAINT _aiModel_objectId CHECK (_aiModel ~ '^[0-9a-f]{24}$') NOT NULL,
+  _newDataset TEXT CONSTRAINT _newDataset_objectId CHECK (_newDataset ~ '^[0-9a-f]{24}$'),
+  _annotation TEXT CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$'),
+  _inferenceJob TEXT CONSTRAINT _inferenceJob_objectId CHECK (_inferenceJob ~ '^[0-9a-f]{24}$') NOT NULL,
   boundingBox webknossos.BOUNDING_BOX NOT NULL,
-  newSegmentationLayerName VARCHAR(256) NOT NULL,
-  maskAnnotationLayerName VARCHAR(256),
+  newSegmentationLayerName TEXT NOT NULL,
+  maskAnnotationLayerName TEXT,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   modified TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE
@@ -597,9 +629,9 @@ CREATE TABLE webknossos.aiInferences(
 CREATE TYPE webknossos.VOXELYTICS_RUN_STATE AS ENUM ('PENDING', 'SKIPPED', 'RUNNING', 'COMPLETE', 'FAILED', 'CANCELLED', 'STALE');
 
 CREATE TABLE webknossos.voxelytics_artifacts(
-    _id CHAR(24) NOT NULL,
-    _task CHAR(24) NOT NULL,
-    name VARCHAR(512) NOT NULL,
+    _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') NOT NULL,
+    _task TEXT CONSTRAINT _task_objectId CHECK (_task ~ '^[0-9a-f]{24}$') NOT NULL,
+    name TEXT NOT NULL,
     path TEXT NOT NULL,
     fileSize INT8 NOT NULL,
     inodeCount INT8 NOT NULL,
@@ -612,14 +644,14 @@ CREATE TABLE webknossos.voxelytics_artifacts(
 );
 
 CREATE TABLE webknossos.voxelytics_runs(
-    _id CHAR(24) NOT NULL,
-    _organization VARCHAR(256) NOT NULL,
-    _user CHAR(24) NOT NULL,
-    name VARCHAR(2048) NOT NULL,
+    _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') NOT NULL,
+    _organization TEXT NOT NULL,
+    _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
+    name TEXT NOT NULL,
     username TEXT NOT NULL,
     hostname TEXT NOT NULL,
     voxelyticsVersion TEXT NOT NULL,
-    workflow_hash VARCHAR(512) NOT NULL,
+    workflow_hash TEXT NOT NULL,
     workflow_yamlContent TEXT,
     workflow_config JSONB,
     beginTime TIMESTAMPTZ,
@@ -631,10 +663,10 @@ CREATE TABLE webknossos.voxelytics_runs(
 );
 
 CREATE TABLE webknossos.voxelytics_tasks(
-    _id CHAR(24) NOT NULL,
-    _run CHAR(24) NOT NULL,
-    name varCHAR(2048) NOT NULL,
-    task varCHAR(512) NOT NULL,
+    _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') NOT NULL,
+    _run TEXT CONSTRAINT _run_objectId CHECK (_run ~ '^[0-9a-f]{24}$') NOT NULL,
+    name TEXT NOT NULL,
+    task TEXT NOT NULL,
     config JSONB NOT NULL,
     beginTime TIMESTAMPTZ,
     endTime TIMESTAMPTZ,
@@ -645,10 +677,10 @@ CREATE TABLE webknossos.voxelytics_tasks(
 );
 
 CREATE TABLE webknossos.voxelytics_chunks(
-    _id CHAR(24) NOT NULL,
-    _task CHAR(24) NOT NULL,
-    executionId VARCHAR(2048) NOT NULL,
-    chunkName VARCHAR(2048) NOT NULL,
+    _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') NOT NULL,
+    _task TEXT CONSTRAINT _task_objectId CHECK (_task ~ '^[0-9a-f]{24}$') NOT NULL,
+    executionId TEXT NOT NULL,
+    chunkName TEXT NOT NULL,
     beginTime TIMESTAMPTZ,
     endTime TIMESTAMPTZ,
     state webknossos.voxelytics_run_state NOT NULL DEFAULT 'PENDING',
@@ -657,20 +689,20 @@ CREATE TABLE webknossos.voxelytics_chunks(
 );
 
 CREATE TABLE webknossos.voxelytics_workflows(
-    _organization VARCHAR(256) NOT NULL,
-    hash VARCHAR(512) NOT NULL,
+    _organization TEXT NOT NULL,
+    hash TEXT NOT NULL,
     name TEXT NOT NULL,
     PRIMARY KEY (_organization, hash)
 );
 
 CREATE TABLE webknossos.voxelytics_runHeartbeatEvents(
-    _run CHAR(24) NOT NULL,
+    _run TEXT CONSTRAINT _run_objectId CHECK (_run ~ '^[0-9a-f]{24}$') NOT NULL,
     timestamp TIMESTAMPTZ NOT NULL,
     PRIMARY KEY (_run)
 );
 
 CREATE TABLE webknossos.voxelytics_chunkProfilingEvents(
-    _chunk CHAR(24) NOT NULL,
+    _chunk TEXT CONSTRAINT _chunk_objectId CHECK (_chunk ~ '^[0-9a-f]{24}$') NOT NULL,
     hostname TEXT NOT NULL,
     pid INT8 NOT NULL,
     memory FLOAT NOT NULL,
@@ -681,11 +713,11 @@ CREATE TABLE webknossos.voxelytics_chunkProfilingEvents(
 );
 
 CREATE TABLE webknossos.voxelytics_artifactFileChecksumEvents(
-    _artifact CHAR(24) NOT NULL,
+    _artifact TEXT CONSTRAINT _artifact_objectId CHECK (_artifact ~ '^[0-9a-f]{24}$') NOT NULL,
     path TEXT NOT NULL,
     resolvedPath TEXT NOT NULL,
-    checksumMethod VARCHAR(512) NOT NULL,
-    checksum VARCHAR(512) NOT NULL,
+    checksumMethod TEXT NOT NULL,
+    checksum TEXT NOT NULL,
     fileSize INT8 NOT NULL,
     lastModified TIMESTAMPTZ NOT NULL,
     timestamp TIMESTAMPTZ NOT NULL,
@@ -693,16 +725,16 @@ CREATE TABLE webknossos.voxelytics_artifactFileChecksumEvents(
 );
 
 CREATE TABLE webknossos.analyticsEvents(
-  _id CHAR(24) PRIMARY KEY,
+  _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   sessionId BIGINT NOT NULL,
-  eventType VARCHAR(512) NOT NULL,
+  eventType TEXT NOT NULL,
   eventProperties JSONB NOT NULL,
-  _user CHAR(24) NOT NULL,
-  _organization VARCHAR(256) NOT NULL,
+  _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
+  _organization TEXT NOT NULL,
   isOrganizationAdmin BOOLEAN NOT NULL,
   isSuperUser BOOLEAN NOT NULL,
-  webknossosUri VARCHAR(512) NOT NULL,
+  webknossosUri TEXT NOT NULL,
   CONSTRAINT eventProperties CHECK(jsonb_typeof(eventProperties) = 'object')
 );
 
@@ -733,6 +765,7 @@ CREATE VIEW webknossos.credentials_ as SELECT * FROM webknossos.credentials WHER
 CREATE VIEW webknossos.maintenances_ as SELECT * FROM webknossos.maintenances WHERE NOT isDeleted;
 CREATE VIEW webknossos.aiModels_ as SELECT * FROM webknossos.aiModels WHERE NOT isDeleted;
 CREATE VIEW webknossos.aiInferences_ as SELECT * FROM webknossos.aiInferences WHERE NOT isDeleted;
+CREATE VIEW webknossos.credit_transactions_ as SELECT * FROM webknossos.credit_transactions WHERE NOT is_deleted;
 
 CREATE VIEW webknossos.userInfos AS
 SELECT
@@ -769,6 +802,7 @@ CREATE INDEX ON webknossos.projects(_team, isDeleted);
 CREATE INDEX ON webknossos.invites(tokenValue);
 CREATE INDEX ON webknossos.annotation_privateLinks(accessToken);
 CREATE INDEX ON webknossos.shortLinks(key);
+CREATE INDEX ON webknossos.credit_transactions(credit_state);
 
 ALTER TABLE webknossos.annotations
   ADD CONSTRAINT task_ref FOREIGN KEY(_task) REFERENCES webknossos.tasks(_id) ON DELETE SET NULL DEFERRABLE,
@@ -824,6 +858,10 @@ ALTER TABLE webknossos.user_experiences
 ALTER TABLE webknossos.user_datasetConfigurations
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE,
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.credit_transactions
+  ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) DEFERRABLE,
+  ADD CONSTRAINT paid_job_ref FOREIGN KEY(_paid_job) REFERENCES webknossos.jobs(_id) DEFERRABLE,
+  ADD CONSTRAINT related_transaction_ref FOREIGN KEY(_related_transaction) REFERENCES webknossos.credit_transactions(_id) DEFERRABLE;
 ALTER TABLE webknossos.user_datasetLayerConfigurations
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE,
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) ON DELETE CASCADE DEFERRABLE;
@@ -944,7 +982,7 @@ AFTER UPDATE ON webknossos.annotations
 FOR EACH ROW EXECUTE PROCEDURE webknossos.onUpdateAnnotation();
 
 
-CREATE FUNCTION webknossos.onDeleteAnnotation() RETURNS trigger AS $$
+CREATE FUNCTION webknossos.onDeleteAnnotation() RETURNS TRIGGER AS $$
   BEGIN
     IF (OLD.typ = 'Task') AND (OLD.isDeleted = false) AND (OLD.state != 'Cancelled') THEN
       UPDATE webknossos.tasks SET pendingInstances = pendingInstances + 1 WHERE _id = OLD._task;
@@ -956,4 +994,79 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER onDeleteAnnotationTrigger
 AFTER DELETE ON webknossos.annotations
 FOR EACH ROW EXECUTE PROCEDURE webknossos.onDeleteAnnotation();
+
+CREATE FUNCTION webknossos.enforce_non_negative_balance() RETURNS TRIGGER AS $$
+  BEGIN
+    -- Assert that the new balance is non-negative
+    ASSERT (SELECT COALESCE(SUM(credit_delta), 0) + COALESCE(NEW.credit_delta, 0)
+            FROM webknossos.credit_transactions
+            WHERE _organization = NEW._organization AND _id != NEW._id) >= 0, 'Transaction would result in a negative credit balance for organization %', NEW._organization;
+    -- Assertion passed, transaction can go ahead
+    RETURN NEW;
+  END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER enforce_non_negative_balance_trigger
+BEFORE INSERT OR UPDATE ON webknossos.credit_transactions
+FOR EACH ROW EXECUTE PROCEDURE webknossos.enforce_non_negative_balance();
+
+-- ObjectId generation function taken and modified from https://thinhdanggroup.github.io/mongo-id-in-postgresql/
+CREATE SEQUENCE webknossos.objectid_sequence;
+
+CREATE FUNCTION webknossos.generate_object_id() RETURNS TEXT AS $$
+DECLARE
+  time_component TEXT;
+  machine_id TEXT;
+  process_id TEXT;
+  counter TEXT;
+  result TEXT;
+BEGIN
+  -- Extract the current timestamp in seconds since the Unix epoch (4 bytes, 8 hex chars)
+  SELECT LPAD(TO_HEX(FLOOR(EXTRACT(EPOCH FROM clock_timestamp()))::BIGINT), 8, '0') INTO time_component;
+  -- Generate a machine identifier using the hash of the server IP (3 bytes, 6 hex chars)
+  SELECT SUBSTRING(md5(CAST(inet_server_addr() AS TEXT)) FROM 1 FOR 6) INTO machine_id;
+  -- Retrieve the current backend process ID, limited to 2 bytes (4 hex chars)
+  SELECT LPAD(TO_HEX(pg_backend_pid() % 65536), 4, '0') INTO process_id;
+  -- Generate a counter using a sequence, ensuring it's 3 bytes (6 hex chars)
+  SELECT LPAD(TO_HEX(nextval('webknossos.objectid_sequence')::BIGINT % 16777216), 6, '0') INTO counter;
+  -- Concatenate all parts to form a 24-character ObjectId
+  result := time_component || machine_id || process_id || counter;
+
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE FUNCTION webknossos.hand_out_monthly_free_credits(free_credits_amount DECIMAL) RETURNS VOID AS $$
+DECLARE
+    organization_id TEXT;
+    next_month_first_day DATE;
+    existing_transaction_count INT;
+BEGIN
+    -- Calculate the first day of the next month
+    next_month_first_day := DATE_TRUNC('MONTH', NOW()) + INTERVAL '1 MONTH';
+
+    -- Loop through all organizations
+    FOR organization_id IN (SELECT _id FROM webknossos.organizations) LOOP
+        -- Check if there is already a free credit transaction for this organization in the current month
+        SELECT COUNT(*) INTO existing_transaction_count
+        FROM webknossos.credit_transactions
+        WHERE _organization = organization_id
+          AND DATE_TRUNC('MONTH', expiration_date) = next_month_first_day;
+
+        -- Insert free credits only if no record exists for this month
+        IF existing_transaction_count = 0 THEN
+            INSERT INTO webknossos.credit_transactions
+                (_id, _organization, credit_delta, comment, transaction_state, credit_state, expiration_date)
+            VALUES
+                (webknossos.generate_object_id(), organization_id, free_credits_amount,
+                 'Free credits for this month', 'Complete', 'Pending', next_month_first_day);
+        END IF;
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+
+
 

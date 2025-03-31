@@ -77,7 +77,7 @@ class WKRemoteDataStoreController @Inject()(
             uploadInfo.organization) ~> NOT_FOUND
           usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
           _ <- Fox.runOptional(organization.includedStorageBytes)(includedStorage =>
-            bool2Fox(usedStorageBytes <= includedStorage)) ?~> "dataset.upload.storageExceeded" ~> FORBIDDEN
+            bool2Fox(usedStorageBytes + uploadInfo.totalFileSizeInBytes.getOrElse(0L) <= includedStorage)) ?~> "dataset.upload.storageExceeded" ~> FORBIDDEN
           _ <- bool2Fox(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(uploadInfo.name)
           _ <- bool2Fox(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> "dataset.upload.Datastore.restricted"

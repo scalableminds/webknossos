@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, WebknossosDataRequest}
@@ -13,6 +13,7 @@ import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Box, Empty, Failure, Full}
 
 import scala.annotation.tailrec
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 
 trait ReversionHelper {
@@ -211,14 +212,55 @@ trait VolumeTracingBucketHelper
       for {
         remoteFallbackLayer <- volumeTracingLayer.volumeTracingService
           .remoteFallbackLayerForVolumeTracing(volumeTracingLayer.tracing, volumeTracingLayer.annotationId)
-        bucketBoxesFilled <- Fox.serialSequenceBox(bucketPositions.zip(bucketBoxesFromFossil).toList) {
-          case (_, Full(bucketFromFossil)) => Full(bucketFromFossil)
-          case (bucketPosition, Empty) =>
-            loadFallbackBucket(volumeTracingLayer, remoteFallbackLayer, bucketPosition) // TODO batch this too? hard, needs manual array range copy
-          case (_, f: Failure) => f
+        _ <- BoxImplicits.assertNoFailure(bucketBoxesFromFossil).toFox
+        indicesWhereEmpty = bucketBoxesFromFossil.zipWithIndex.collect { case (dataBox, idx) if dataBox.isEmpty => idx }
+        dataRequests = indicesWhereEmpty.map { idx =>
+          val bucketPosition = bucketPositions(idx)
+          WebknossosDataRequest(
+            position = Vec3Int(bucketPosition.topLeft.mag1X, bucketPosition.topLeft.mag1Y, bucketPosition.topLeft.mag1Z),
+            mag = bucketPosition.mag,
+            cubeSize = volumeTracingLayer.lengthOfUnderlyingCubes(bucketPosition.mag),
+            fourBit = None,
+            applyAgglomerate = volumeTracingLayer.tracing.mappingName,
+            version = None,
+            additionalCoordinates = None
+          )
+        }
+        (flatDataFromDataStore, datastoreMissingBucketIndices) <- volumeTracingLayer.volumeTracingService
+          .getFallbackBucketsFromDataStore(remoteFallbackLayer, dataRequests)(volumeTracingLayer.tokenContext)
+        bucketBoxesFromDataStore <- splitIntoBuckets(dataRequests.length,
+                                                     flatDataFromDataStore,
+                                                     datastoreMissingBucketIndices.toSet,
+                                                     volumeTracingLayer.elementClass) ?~> "fallbackData.split.failed"
+        _ <- bool2Fox(bucketBoxesFromDataStore.length == indicesWhereEmpty.length) ?~> "length mismatch"
+        bucketBoxesFromDataStoreIterator = bucketBoxesFromDataStore.iterator
+        bucketBoxesFilled = bucketBoxesFromFossil.map {
+          case Full(bucketFromFossil) => Full(bucketFromFossil)
+          case Empty                  => bucketBoxesFromDataStoreIterator.next()
+          case f: Failure             => f
         }
       } yield bucketBoxesFilled
     }
+
+  private def splitIntoBuckets(expectedBucketCount: Int,
+                               flatDataFromDataStore: Array[Byte],
+                               datastoreMissingBucketIndices: Set[Int],
+                               elementClass: ElementClass.Value): Box[Seq[Box[Array[Byte]]]] = tryo {
+    val bytesPerBucket = expectedUncompressedBucketSizeFor(elementClass)
+    var currentBucketIdx = 0
+    var currentPosition = 0
+    val bucketsMutable = ListBuffer[Box[Array[Byte]]]()
+    for (_ <- 0 until expectedBucketCount) {
+      if (datastoreMissingBucketIndices.contains(currentBucketIdx)) {
+        bucketsMutable.append(Empty)
+      } else {
+        bucketsMutable.append(Full(flatDataFromDataStore.slice(currentPosition, currentPosition + bytesPerBucket)))
+        currentPosition += bytesPerBucket
+      }
+      currentBucketIdx += 1
+    }
+    bucketsMutable.toList
+  }
 
   def loadBucket(volumeTracingLayer: VolumeTracingLayer,
                  bucket: BucketPosition,
@@ -270,11 +312,7 @@ trait VolumeTracingBucketHelper
       version = None,
       additionalCoordinates = None
     )
-    for {
-      (unmappedData, indices) <- layer.volumeTracingService
-        .getFallbackDataFromDatastore(remoteFallbackLayer, List(dataRequest))(ec, layer.tokenContext)
-      unmappedDataOrEmpty <- if (indices.isEmpty) Fox.successful(unmappedData) else Fox.empty
-    } yield unmappedDataOrEmpty
+    layer.volumeTracingService.getFallbackBucketFromDataStore(remoteFallbackLayer, dataRequest)(ec, layer.tokenContext)
   }
 
   protected def saveBucket(dataLayer: VolumeTracingLayer,

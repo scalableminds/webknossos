@@ -100,17 +100,16 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
     for {
       fallbackLayer <- volumeTracingService.getFallbackLayer(annotationId, tracing)
       mappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
-      bucketPositionsRaw: Set[Vec3IntProto] <- volumeSegmentIndexService
-        .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
-          tracing,
-          fallbackLayer,
-          tracingId,
-          fullMeshRequest.segmentId,
-          mag,
-          mappingName,
-          volumeTracingService.editableMappingTracingId(tracing, tracingId),
-          fullMeshRequest.additionalCoordinates
-        )
+      bucketPositionsRaw: Set[Vec3IntProto] <- volumeSegmentIndexService.getSegmentToBucketIndex(
+        tracing,
+        fallbackLayer,
+        tracingId,
+        fullMeshRequest.segmentId,
+        mag,
+        mappingName,
+        volumeTracingService.editableMappingTracingId(tracing, tracingId),
+        fullMeshRequest.additionalCoordinates
+      )
       bucketPositions = bucketPositionsRaw.toSeq
         .map(vec3IntFromProto)
         .map(_ * mag * DataLayer.bucketLength)

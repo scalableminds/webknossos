@@ -348,17 +348,16 @@ class VolumeTracingController @Inject()(
           fallbackLayer <- volumeTracingService.getFallbackLayer(annotationId, tracing)
           mappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
           _ <- bool2Fox(DataLayer.bucketSize <= request.body.cubeSize) ?~> "cubeSize must be at least one bucket (32³)"
-          bucketPositions: Set[Vec3IntProto] <- volumeSegmentIndexService
-            .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
-              tracing,
-              fallbackLayer,
-              tracingId,
-              segmentId,
-              request.body.mag,
-              additionalCoordinates = request.body.additionalCoordinates,
-              mappingName = mappingName,
-              editableMappingTracingId = volumeTracingService.editableMappingTracingId(tracing, tracingId)
-            )
+          bucketPositions: Set[Vec3IntProto] <- volumeSegmentIndexService.getSegmentToBucketIndex(
+            tracing,
+            fallbackLayer,
+            tracingId,
+            segmentId,
+            request.body.mag,
+            additionalCoordinates = request.body.additionalCoordinates,
+            mappingName = mappingName,
+            editableMappingTracingId = volumeTracingService.editableMappingTracingId(tracing, tracingId)
+          )
           bucketPositionsForCubeSize = bucketPositions.toSeq
             .map(vec3IntFromProto)
             .map(_.scale(DataLayer.bucketLength)) // bucket positions raw are indices of 32³ buckets

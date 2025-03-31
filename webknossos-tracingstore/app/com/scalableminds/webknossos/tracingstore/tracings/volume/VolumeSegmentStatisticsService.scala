@@ -16,6 +16,7 @@ import com.scalableminds.webknossos.datastore.models.{
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
+import com.typesafe.scalalogging.LazyLogging
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -25,6 +26,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
                                                volumeSegmentIndexService: VolumeSegmentIndexService,
                                                editableMappingService: EditableMappingService)
     extends ProtoGeometryImplicits
+    with LazyLogging
     with SegmentStatistics {
 
   protected lazy val bucketScanner = new NativeBucketScanner()
@@ -110,17 +112,16 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
     for {
       tracing <- annotationService.findVolume(annotationId, tracingId) ?~> "tracing.notFound"
       fallbackLayer <- volumeTracingService.getFallbackLayer(annotationId, tracing)
-      allBucketPositions: Set[Vec3IntProto] <- volumeSegmentIndexService
-        .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
-          tracing,
-          fallbackLayer,
-          tracingId,
-          segmentId,
-          mag,
-          mappingName,
-          editableMappingTracingId = volumeTracingService.editableMappingTracingId(tracing, tracingId),
-          additionalCoordinates
-        )
+      allBucketPositions: Set[Vec3IntProto] <- volumeSegmentIndexService.getSegmentToBucketIndex(
+        tracing,
+        fallbackLayer,
+        tracingId,
+        segmentId,
+        mag,
+        mappingName,
+        editableMappingTracingId = volumeTracingService.editableMappingTracingId(tracing, tracingId),
+        additionalCoordinates
+      )
     } yield allBucketPositions
 
   private def getVolumeDataForPositions(
@@ -138,7 +139,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
         cubeSize = DataLayer.bucketLength,
         fourBit = Some(false),
         applyAgglomerate = None,
-        version = None,
+        version = Some(tracing.version),
         additionalCoordinates = additionalCoordinates
       )
     }.toList

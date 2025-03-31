@@ -182,9 +182,6 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       _ <- organizationDAO.acceptTermsOfService(organizationId, version, Instant.now)
     } yield ()
 
-  def assertOrganizationHasPaidPlan(organizationId: String): Fox[Unit] =
-    for {
-      organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext)
-      _ <- bool2Fox(PricingPlan.isPaidPlan(organization.pricingPlan)) ?~> "creditTransaction.notPaidPlan"
-    } yield ()
+  def assertOrganizationHasPaidPlan(organizationId: String): Fox[Unit] = Fox.successful(())
+
 }

@@ -370,8 +370,8 @@ CREATE TYPE webknossos.credit_state AS ENUM ('Pending', 'Spent', 'Refunded', 'Re
 CREATE TABLE webknossos.credit_transactions (
     _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
     _organization TEXT NOT NULL,
-    _related_transaction TEXT CONSTRAINT _related_transaction_objectId CHECK (_id ~ '^[0-9a-f]{24}$') DEFAULT NULL,
-    _paid_job TEXT CONSTRAINT _paid_job_objectId CHECK (_id ~ '^[0-9a-f]{24}$') DEFAULT NULL,
+    _related_transaction TEXT CONSTRAINT _related_transaction_objectId CHECK (_related_transaction ~ '^[0-9a-f]{24}$') DEFAULT NULL,
+    _paid_job TEXT CONSTRAINT _paid_job_objectId CHECK (_paid_job ~ '^[0-9a-f]{24}$') DEFAULT NULL,
     credit_delta DECIMAL(14, 3) NOT NULL,
     comment TEXT NOT NULL,
     -- The state of the transaction.

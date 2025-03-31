@@ -175,7 +175,7 @@ class FossilDBClient(collection: String,
             case VersionValueBoxProto(None, None, _) => Empty
             case _                                   => net.liftweb.common.Failure("unexpected reply format in fossilDB getMultipleKeysByList")
           }
-        case _ => net.liftweb.common.Failure("unexpected reply format in fossilDB getMultipleKeysByList")
+        case _ => net.liftweb.common.Failure("Unexpected reply format in fossilDB getMultipleKeysByList")
       }
     } yield parsedValues
 
@@ -207,7 +207,7 @@ class FossilDBClient(collection: String,
         case Empty    => Fox.empty
         case net.liftweb.common.Failure(msg, _, _) =>
           slackNotificationService.reportFossilWriteError("put", msg)
-          Fox.failure("could not save to FossilDB: " + msg)
+          Fox.failure("Could not save to FossilDB: " + msg)
       }
     } yield ()
   }
@@ -232,8 +232,8 @@ class FossilDBClient(collection: String,
         case Full(()) => Fox.successful(())
         case Empty    => Fox.empty
         case net.liftweb.common.Failure(msg, _, _) =>
-          slackNotificationService.reportFossilWriteError("put", msg)
-          Fox.failure("could not multi-put to FossilDB: " + msg)
+          slackNotificationService.reportFossilWriteError("multi-put", msg)
+          Fox.failure("Could not multi-put to FossilDB: " + msg)
       }
     } yield ()
   }

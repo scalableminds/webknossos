@@ -528,7 +528,6 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
           Some(annotationWithTracings.withNewUpdaters(annotationWithTracings.version, targetVersion)),
           updates)
         updatedWithNewVersion = updated.withVersion(targetVersion)
-        _ = logger.info(s"flush version ${updatedWithNewVersion.version}")
         _ <- updatedWithNewVersion.flushEditableMappingUpdaterBuffers() ?~> "flushEditableMappingUpdaterBuffers.failed"
         _ <- flushUpdatedTracings(updatedWithNewVersion, updates) ?~> "flushUpdatedTracings.failed"
         _ <- flushAnnotationInfo(annotationId, updatedWithNewVersion) ?~> "flushAnnotationInfo.failed"

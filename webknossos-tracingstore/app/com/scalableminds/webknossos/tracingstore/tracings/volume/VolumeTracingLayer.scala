@@ -32,6 +32,7 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit val ec: Ex
 
   override def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext,
                                                           tc: TokenContext): Fox[Array[Byte]] =
+    // Don’t use the layer version, because BucketProvider (with layer) may be cached across versions. readInstruction has the current version.
     loadBucket(layer, readInstruction.bucket, readInstruction.version)
 
   override def bucketStream(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] =

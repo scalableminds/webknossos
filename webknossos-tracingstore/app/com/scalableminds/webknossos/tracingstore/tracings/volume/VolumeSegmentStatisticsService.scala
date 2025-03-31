@@ -62,7 +62,6 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit tc: TokenContext, ec: ExecutionContext) =
     for {
       tracing <- annotationService.findVolume(annotationId, tracingId) ?~> "tracing.notFound"
-      _ = logger.info(s"answering with tracing version ${tracing.version}")
       bucketData <- getVolumeDataForPositions(annotationId,
                                               tracingId,
                                               tracing,
@@ -109,7 +108,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
         cubeSize = DataLayer.bucketLength,
         fourBit = Some(false),
         applyAgglomerate = None,
-        version = None,
+        version = Some(tracing.version),
         additionalCoordinates = additionalCoordinates
       )
     }.toList

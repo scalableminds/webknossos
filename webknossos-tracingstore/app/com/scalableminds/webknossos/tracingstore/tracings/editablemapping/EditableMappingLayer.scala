@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox}
+import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox, option2Fox}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MagLocator}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
@@ -36,15 +36,17 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer)
                                                           tc: TokenContext): Fox[Array[Byte]] = {
     val bucket: BucketPosition = readInstruction.bucket
     for {
-      tracingId <- Fox.successful(layer.name)
+      // Don’t use the layer version, because BucketProvider (with layer) may be cached across versions. readInstruction has the current version.
+      version <- readInstruction.version.toFox ?~> "editableMappingData must be requested with version"
+      editableMappingService = layer.editableMappingService
       elementClassProto <- ElementClass.toProto(layer.elementClass).toFox
       _ <- bool2Fox(layer.doesContainBucket(bucket))
-      remoteFallbackLayer <- layer.editableMappingService
-        .remoteFallbackLayerForVolumeTracing(layer.tracing, layer.annotationId)
+      remoteFallbackLayer <- editableMappingService.remoteFallbackLayerForVolumeTracing(layer.tracing,
+                                                                                        layer.annotationId)
       // called here to ensure updates are applied
       editableMappingInfo <- layer.annotationService.findEditableMappingInfo(layer.annotationId,
-                                                                             tracingId,
-                                                                             Some(layer.version))(ec, tc)
+                                                                             layer.tracingId,
+                                                                             Some(version))(ec, tc)
       dataRequest: WebknossosDataRequest = WebknossosDataRequest(
         position = Vec3Int(bucket.topLeft.mag1X, bucket.topLeft.mag1Y, bucket.topLeft.mag1Z),
         mag = bucket.mag,
@@ -54,22 +56,15 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer)
         version = None,
         additionalCoordinates = readInstruction.bucket.additionalCoordinates
       )
-      unmappedData <- layer.editableMappingService
-        .getFallbackBucketFromDataStore(remoteFallbackLayer, dataRequest)(ec, tc)
-      unmappedDataTyped <- layer.editableMappingService.bytesToSegmentInt(unmappedData, layer.tracing.elementClass)
-      segmentIds = layer.editableMappingService.collectSegmentIds(unmappedDataTyped)
-      _ = logger.info(s"found segment ids ${segmentIds.mkString(",")}")
-      relevantMapping <- layer.editableMappingService.generateCombinedMappingForSegmentIds(segmentIds,
-                                                                                           editableMappingInfo,
-                                                                                           layer.version,
-                                                                                           tracingId,
-                                                                                           remoteFallbackLayer)(tc)
-      mappedData: Array[Byte] <- layer.editableMappingService.mapData(unmappedDataTyped,
-                                                                      relevantMapping,
-                                                                      elementClassProto)
-      mappedDataTyped <- layer.editableMappingService.bytesToSegmentInt(mappedData, layer.tracing.elementClass)
-      mappedSegmentIds = layer.editableMappingService.collectSegmentIds(mappedDataTyped)
-      _ = logger.info(s"mapped to segment ids ${mappedSegmentIds.mkString(",")}")
+      unmappedData <- editableMappingService.getFallbackBucketFromDataStore(remoteFallbackLayer, dataRequest)(ec, tc)
+      unmappedDataTyped <- editableMappingService.bytesToSegmentInt(unmappedData, layer.tracing.elementClass)
+      segmentIds = editableMappingService.collectSegmentIds(unmappedDataTyped)
+      relevantMapping <- editableMappingService.generateCombinedMappingForSegmentIds(segmentIds,
+                                                                                     editableMappingInfo,
+                                                                                     version,
+                                                                                     layer.tracingId,
+                                                                                     remoteFallbackLayer)(tc)
+      mappedData <- editableMappingService.mapData(unmappedDataTyped, relevantMapping, elementClassProto)
     } yield mappedData
   }
 }
@@ -106,4 +101,6 @@ case class EditableMappingLayer(name: String, // set to tracing id
   override def additionalAxes: Option[Seq[AdditionalAxis]] = None
 
   def version: Long = tracing.version
+
+  def tracingId: String = name
 }

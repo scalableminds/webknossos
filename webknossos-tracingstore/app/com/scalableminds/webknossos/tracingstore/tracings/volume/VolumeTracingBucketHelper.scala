@@ -406,7 +406,7 @@ class VersionedBucketIterator(prefix: String,
     with BucketKeys
     with FoxImplicits
     with ReversionHelper {
-  private val batchSize = 64
+  private val batchSize = 100
 
   private var currentStartAfterKey: Option[String] = None
   private var currentBatchIterator: Iterator[VersionedKeyValuePair[Array[Byte]]] = fetchNext

@@ -7,7 +7,7 @@ import com.typesafe.scalalogging.LazyLogging
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
-class FossilDBPutBuffer(fossilDBClient: FossilDBClient, version: Option[Long] = None, maxElements: Int = 1000)
+class FossilDBPutBuffer(fossilDBClient: FossilDBClient, version: Option[Long] = None, maxElements: Int = 100)
     extends LazyLogging {
 
   private lazy val buffer: mutable.Map[(String, Long), Array[Byte]] =
@@ -34,11 +34,9 @@ class FossilDBPutBuffer(fossilDBClient: FossilDBClient, version: Option[Long] = 
 
   private def size = this.synchronized { buffer.size }
 
-  // TODO consider making this an AutoCloseable
   def flush()(implicit ec: ExecutionContext): Fox[Unit] = this.synchronized {
     if (isEmpty) Fox.successful(())
     else {
-      logger.info(s"flush! size: ${buffer.size}")
       for {
         _ <- fossilDBClient.putMultipleWithIndividualVersions(buffer.toSeq)
         _ = buffer.clear()

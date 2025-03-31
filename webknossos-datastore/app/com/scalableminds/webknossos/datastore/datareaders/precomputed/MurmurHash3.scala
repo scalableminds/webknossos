@@ -6,7 +6,7 @@ pymmh3 was written by Fredrik Kihlander and enhanced by Swapnil Gusani, and is p
 domain.
 pure python implementation of the murmur3 hash algorithm
 https://github.com/wc-duck/pymmh3
-*/
+ */
 
 object MurmurHash3 {
 

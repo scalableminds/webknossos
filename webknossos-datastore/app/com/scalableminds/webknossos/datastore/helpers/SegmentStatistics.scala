@@ -4,7 +4,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
-import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, SegmentInteger}
+import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.common.Box.tryo
 import play.api.libs.json.{Json, OFormat}

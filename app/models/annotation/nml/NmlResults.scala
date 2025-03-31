@@ -34,7 +34,7 @@ case class NmlParsedParameters(
     treeGroupsAfterSplit: Seq[TreeGroup],
 )
 
-case class NmlParseSuccessWithoutFile(skeletonTracing: Option[SkeletonTracing],
+case class NmlParseSuccessWithoutFile(skeletonTracing: SkeletonTracing,
                                       volumeLayers: List[UploadedVolumeLayer],
                                       datasetId: ObjectId,
                                       description: String,
@@ -63,7 +63,7 @@ object NmlResults extends LazyLogging {
   }
 
   case class NmlParseSuccess(fileName: String,
-                             skeletonTracingOpt: Option[SkeletonTracing],
+                             skeletonTracing: SkeletonTracing,
                              volumeLayers: List[UploadedVolumeLayer],
                              datasetId: ObjectId,
                              _description: String,
@@ -90,9 +90,6 @@ object NmlResults extends LazyLogging {
     def combineWith(other: MultiNmlParseResult): MultiNmlParseResult =
       MultiNmlParseResult(parseResults ::: other.parseResults, other.otherFiles ++ otherFiles)
 
-    def containsNoSuccesses: Boolean =
-      !parseResults.exists(_.succeeded)
-
     def containsFailure: Boolean =
       parseResults.exists {
         case _: NmlParseFailure => true
@@ -104,13 +101,9 @@ object NmlResults extends LazyLogging {
       parseResults.map { parseResult =>
         val successBox = parseResult.toSuccessBox
         val skeletonBox = successBox match {
-          case Full(success) =>
-            success.skeletonTracingOpt match {
-              case Some(skeleton) => Full(skeleton)
-              case None           => Empty
-            }
-          case f: Failure => f
-          case _          => Failure("")
+          case Full(success) => Full(success.skeletonTracing)
+          case f: Failure    => f
+          case _             => Failure("")
         }
         val volumeBox = successBox match {
           case Full(success) if success.volumeLayers.length <= 1 =>

@@ -78,8 +78,9 @@
   display: flex;
   flex-direction: column;
   
-  .ant-space-compact {
-    // Spacing between skeleton tab buttons and name input
+  .ant-space-compact:not(.ant-tree .ant-space-compact) {
+    // Override <antd.Space> spacing between skeleton tab buttons and name input
+    // Do not affect use of <Space> in in the <Tree> elements
     margin: 0 0 10px 0;
   }
 }

@@ -6,7 +6,6 @@ import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_action
 import * as UiActions from "oxalis/model/actions/ui_actions";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
 import UiReducer from "oxalis/model/reducers/ui_reducer";
-import mockRequire from "mock-require";
 import test from "ava";
 import { initialState } from "test/fixtures/volumetracing_object";
 import type { OxalisState, Tracing, VolumeTracing } from "oxalis/store";
@@ -20,13 +19,6 @@ export function getFirstVolumeTracingOrFail(tracing: Tracing): Maybe<VolumeTraci
 
   throw new Error("Annotation is not of type volume!");
 }
-
-mockRequire("app", {
-  currentUser: {
-    firstName: "SCM",
-    lastName: "Boy",
-  },
-});
 
 test("VolumeTracing should set a new active cell", (t) => {
   const createCellAction = VolumeTracingActions.createCellAction(1000, 1000);

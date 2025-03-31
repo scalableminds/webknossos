@@ -60,7 +60,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       mag,
       additionalCoordinates,
       getBucketPositions(annotationId, tracingId, mappingName, additionalCoordinates),
-      getTypedDataForBucketPosition(annotationId, tracingId)
+      getDataForBucketPositionsCallable(annotationId, tracingId)
     )
 
   private def getTypedDataForBucketPosition(annotationId: String, tracingId: String)(

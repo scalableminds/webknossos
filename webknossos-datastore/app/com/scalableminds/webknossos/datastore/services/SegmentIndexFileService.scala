@@ -148,13 +148,12 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       mag: Vec3Int,
       mappingName: Option[String])(implicit m: MessagesProvider, tc: TokenContext): Fox[BoundingBox] =
     for {
-
       bb <- calculateSegmentBoundingBox(
         segmentId,
         mag,
         None, // see #7556
         getBucketPositions(organizationId, datasetDirectoryName, dataLayerName, mappingName),
-        getTypedDataForBucketPosition(organizationId, datasetDirectoryName, dataLayerName, mappingName)
+        getDataForBucketPositionsCallable(organizationId, datasetDirectoryName, dataLayerName, mappingName)
       )
     } yield bb
 

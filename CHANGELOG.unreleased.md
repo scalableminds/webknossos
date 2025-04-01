@@ -46,6 +46,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed that the brightness/contrast settings (in the histogram) could not be changed if the histogram data could not be loaded for some reason. [#8459](https://github.com/scalableminds/webknossos/pull/8459)
 - Fixed that downloading + reupload of an annotation, in which the skeleton tools were never used, actually made them unreachable. [#8466](https://github.com/scalableminds/webknossos/pull/8466)
 - Fixed a bug where task creation with volume zip as input would fail. [#8468](https://github.com/scalableminds/webknossos/pull/8468)
+- Fixed that a warning message about a newer version of an annotation was shown multiple times. [#8486](https://github.com/scalableminds/webknossos/pull/8486)
 
 ### Removed
 

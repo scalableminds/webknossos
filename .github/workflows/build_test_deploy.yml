@@ -35,8 +35,21 @@ jobs:
       with:
         node-version: 18
 
+    - name: Get yarn cache directory path
+      id: yarn-cache-dir
+      run: |
+        corepack enable
+        echo "dir=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
+    - uses: actions/cache@v4
+      id: yarn-cache
+      with:
+        path: ${{ steps.yarn-cache-dir.outputs.dir }}
+        key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+        restore-keys:
+          ${{ runner.os }}-yarn-
+
     - name: Install frontend dependencies
-      run: corepack enable && yarn install --immutable
+      run: yarn install --immutable
 
     - name: Lint frontend code and check formatting
       run: yarn run check-frontend
@@ -88,12 +101,25 @@ jobs:
             echo "NORMALIZED_BRANCH=master" >> $GITHUB_ENV
             echo "DOCKER_TAG=${{ github.ref_name }}" >> $GITHUB_ENV
           fi
+
       - uses: actions/setup-node@v4
         with:
           node-version: 18
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir
+        run: |
+          corepack enable
+          echo "dir=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        id: yarn-cache
+        with:
+          path: ${{ steps.yarn-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys:
+            ${{ runner.os }}-yarn-
 
       - name: Install frontend dependencies
-        run: corepack enable && yarn install --immutable
+        run: yarn install --immutable
 
       - name: Build webknossos (webpack)
         run: yarn build
@@ -106,6 +132,14 @@ jobs:
           cache: 'sbt'
       - name: Set up sbt
         uses: sbt/setup-sbt@v1
+
+      - name: Cache SBT
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.ivy2/cache
+            ~/.sbt
+          key: ${{ runner.os }}-sbt-${{ hashFiles('**/*.sbt', '**/Dependencies.scala') }}
 
       - name: Install OS dependencies / libs
         run: sudo apt-get update && sudo apt-get install -y libdraco-dev libblosc-dev

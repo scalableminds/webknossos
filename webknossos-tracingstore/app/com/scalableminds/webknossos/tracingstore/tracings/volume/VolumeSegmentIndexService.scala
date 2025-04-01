@@ -72,6 +72,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
       }
       previousBucketBytesWithEmptyFallback <- segmentIndexBuffer.bytesWithEmptyFallback(previousBucketBytesBox) ?~> "volumeSegmentIndex.update.getPreviousBucket.failed"
       segmentIds: Set[Long] <- collectSegmentIds(bucketBytesDecompressed, elementClass).toFox
+      _ = logger.info(s"segmentIds: $segmentIds")
       previousSegmentIds: Set[Long] <- collectSegmentIds(previousBucketBytesWithEmptyFallback, elementClass) ?~> "volumeSegmentIndex.update.collectSegmentIds.failed"
       additions = segmentIds.diff(previousSegmentIds)
       removals = previousSegmentIds.diff(segmentIds)

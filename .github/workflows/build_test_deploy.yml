@@ -234,6 +234,10 @@ jobs:
           url: http://localhost:9050/tracings/health
 
       # Run e2e-tests
+      - name: Prepare e2e test
+        run: |
+          mkdir -p binaryData/Organization_X
+          unzip test/dataset/test-dataset.zip -d binaryData/Organization_X/
       - name: Run e2e tests
         uses: nick-invision/retry@v2
         with:

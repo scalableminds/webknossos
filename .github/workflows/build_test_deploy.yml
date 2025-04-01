@@ -103,7 +103,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libdraco-dev libblosc-dev
       - name: Build webknossos (sbt)
         run: |
-          if [ "${{ github.ref_name }}" == "master" ]; then
+          if [ "${{ github.ref_name }}" == 'master' ]; then
             sbt -no-colors clean compile stage
           else
             sbt -no-colors -DfailOnWarning compile stage
@@ -129,7 +129,7 @@ jobs:
   test-backend:
     runs-on: ubuntu-24.04
     needs: [build]
-    if: ${{ github.ref_name != "master" }}
+    if: ${{ github.ref_name != 'master' }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -211,7 +211,7 @@ jobs:
       # Run e2e Tests
       #
       - name: Start Docker Instance
-        if: ${{ github.ref_name != "master" }}
+        if: ${{ github.ref_name != 'master' }}
         run: |
           docker compose -f .github/docker-compose.yml -p "webknossos" -d
         env:

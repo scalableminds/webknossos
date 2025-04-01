@@ -88,7 +88,7 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
         return;
       }
       const rotationValues: RotationSetting = form.getFieldValue(["datasetRotation"])[axis];
-      if (rotationInDegrees) {
+      if (rotationInDegrees !== undefined) {
         rotationValues.rotationInDegrees = rotationInDegrees;
       }
       if (isMirrored !== undefined) {

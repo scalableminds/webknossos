@@ -83,7 +83,7 @@ jobs:
             echo "docker_tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
           fi
       - name: Install frontend dependencies
-        run: yarn install --immutable
+        run: corepack enable && yarn install --immutable
       - name: Build webknossos (webpack)
         run: yarn build
       - uses: actions/setup-java@v4

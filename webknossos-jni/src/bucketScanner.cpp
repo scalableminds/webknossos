@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <unordered_set>
 
-uint64_t segmentIdAtIndex(jbyte *bucketBytes, int index, const int bytesPerElement, const bool isSigned) {
+uint64_t segmentIdAtIndex(jbyte *bucketBytes, size_t index, const int bytesPerElement, const bool isSigned) {
     jbyte *currentPos = bucketBytes + (index * bytesPerElement);
     long currentValue;
     switch (bytesPerElement) {
@@ -47,6 +47,9 @@ jlongArray copyToJLongArray(JNIEnv *env, const std::unordered_set<int64_t> &sour
 }
 
 size_t getElementCount(jsize inputLengthBytes, jint bytesPerElement) {
+    if (bytesPerElement == 0) {
+        throw std::invalid_argument("bytesPerElement cannot be zero");
+    }
     if (inputLengthBytes % bytesPerElement != 0) {
         throw std::invalid_argument("Bucket bytes length must be divisible by bytesPerElement");
     }

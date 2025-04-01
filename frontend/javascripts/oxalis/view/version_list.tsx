@@ -126,7 +126,7 @@ const getGroupedAndChunkedVersions = _.memoize(
 );
 
 async function getUpdateActionLogPage(
-  tracing: StoreAnnotation,
+  annotation: StoreAnnotation,
   tracingStoreUrl: string,
   annotationId: string,
   earliestAccessibleVersion: number,
@@ -170,7 +170,7 @@ async function getUpdateActionLogPage(
   if (oldestVersionInPage === 1) {
     updateActionLog.push({
       version: 0,
-      value: [serverCreateTracing(getCreationTimestamp(tracing))],
+      value: [serverCreateTracing(getCreationTimestamp(annotation))],
     });
   }
 

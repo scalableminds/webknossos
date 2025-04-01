@@ -91,9 +91,9 @@ const exportKey = (layerInfos: ExportLayerInfos, mag: Vector3) =>
 
 function getExportLayerInfos(
   layer: APIDataLayer,
-  tracing: StoreAnnotation | null | undefined,
+  annotation: StoreAnnotation | null | undefined,
 ): ExportLayerInfos {
-  const annotationId = tracing != null ? tracing.annotationId : null;
+  const annotationId = annotation != null ? annotation.annotationId : null;
 
   if (layer.category === "color" || !layer.tracingId) {
     return {
@@ -107,12 +107,12 @@ function getExportLayerInfos(
 
   // The layer is a volume tracing layer, since tracingId exists. Therefore, a tracing
   // must exist.
-  if (tracing == null) {
+  if (annotation == null) {
     // Satisfy TS.
     throw new Error("Tracing is null, but layer.tracingId is defined.");
   }
-  const readableVolumeLayerName = getReadableNameOfVolumeLayer(layer, tracing) || "Volume";
-  const volumeTracing = getVolumeTracingById(tracing, layer.tracingId);
+  const readableVolumeLayerName = getReadableNameOfVolumeLayer(layer, annotation) || "Volume";
+  const volumeTracing = getVolumeTracingById(annotation, layer.tracingId);
 
   return {
     displayName: readableVolumeLayerName,
@@ -227,14 +227,14 @@ export function CopyableCodeSnippet({ code, onCopy }: { code: string; onCopy?: (
   );
 }
 
-function getPythonAnnotationDownloadSnippet(authToken: string | null, tracing: StoreAnnotation) {
+function getPythonAnnotationDownloadSnippet(authToken: string | null, annotation: StoreAnnotation) {
   return `import webknossos as wk
 
 with wk.webknossos_context(
     token="${authToken || "<insert token here>"}",
     url="${window.location.origin}"
 ):
-    annotation = wk.Annotation.download("${tracing.annotationId}")
+    annotation = wk.Annotation.download("${annotation.annotationId}")
 `;
 }
 

@@ -193,12 +193,12 @@ export function assertExists<T>(value: any, message: string): asserts value is N
     throw new Error(message);
   }
 }
-export function assertSkeleton(tracing: StoreAnnotation): SkeletonTracing {
-  if (tracing.skeleton == null) {
+export function assertSkeleton(annotation: StoreAnnotation): SkeletonTracing {
+  if (annotation.skeleton == null) {
     throw new Error("This api function should only be called in a skeleton annotation.");
   }
 
-  return tracing.skeleton;
+  return annotation.skeleton;
 }
 export function assertVolume(state: OxalisState): VolumeTracing {
   if (state.annotation.volumes.length === 0) {

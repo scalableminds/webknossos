@@ -44,14 +44,14 @@ export function getBaseSegmentationName(segmentationLayer: APIDataLayer) {
 
 export function getVolumeRequestUrl(
   dataset: APIDataset,
-  tracing: StoreAnnotation | null,
+  annotation: StoreAnnotation | null,
   tracingId: string | undefined,
   visibleSegmentationLayer: APISegmentationLayer | APIDataLayer,
 ) {
-  if (tracing == null || tracingId == null) {
+  if (annotation == null || tracingId == null) {
     return `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.directoryName}/layers/${visibleSegmentationLayer.name}`;
   } else {
-    const tracingStoreHost = tracing?.tracingStore.url;
+    const tracingStoreHost = annotation?.tracingStore.url;
     return `${tracingStoreHost}/tracings/volume/${tracingId}`;
   }
 }
@@ -59,13 +59,13 @@ export function getVolumeRequestUrl(
 export async function hasSegmentIndex(
   visibleSegmentationLayer: APIDataLayer,
   dataset: APIDataset,
-  tracing: StoreAnnotation | null | undefined,
+  annotation: StoreAnnotation | null | undefined,
 ) {
   const maybeVolumeTracing =
     "tracingId" in visibleSegmentationLayer &&
     visibleSegmentationLayer.tracingId != null &&
-    tracing != null
-      ? getVolumeTracingById(tracing, visibleSegmentationLayer.tracingId)
+    annotation != null
+      ? getVolumeTracingById(annotation, visibleSegmentationLayer.tracingId)
       : null;
   let segmentIndexInDataStore = false;
   if (maybeVolumeTracing == null) {

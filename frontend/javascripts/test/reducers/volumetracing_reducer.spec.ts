@@ -12,9 +12,9 @@ import type { OxalisState, StoreAnnotation, VolumeTracing } from "oxalis/store";
 import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
 
 // biome-ignore lint/suspicious/noExportsInTest:
-export function getFirstVolumeTracingOrFail(tracing: StoreAnnotation): Maybe<VolumeTracing> {
-  if (tracing.volumes.length > 0) {
-    return Maybe.Just(tracing.volumes[0]);
+export function getFirstVolumeTracingOrFail(annotation: StoreAnnotation): Maybe<VolumeTracing> {
+  if (annotation.volumes.length > 0) {
+    return Maybe.Just(annotation.volumes[0]);
   }
 
   throw new Error("Annotation is not of type volume!");

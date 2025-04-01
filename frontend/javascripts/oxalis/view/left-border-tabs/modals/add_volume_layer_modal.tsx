@@ -103,13 +103,13 @@ export function validateReadableLayerName(
 export default function AddVolumeLayerModal({
   dataset,
   onCancel,
-  tracing,
+  annotation,
   preselectedLayerName,
   disableLayerSelection,
 }: {
   dataset: APIDataset;
   onCancel: () => void;
-  tracing: StoreAnnotation;
+  annotation: StoreAnnotation;
   preselectedLayerName: string | undefined;
   disableLayerSelection: boolean | undefined;
 }) {
@@ -118,8 +118,8 @@ export default function AddVolumeLayerModal({
   >(preselectedLayerName);
   const dispatch = useDispatch();
   const allReadableLayerNames = useMemo(
-    () => getAllReadableLayerNames(dataset, tracing),
-    [dataset, tracing],
+    () => getAllReadableLayerNames(dataset, annotation),
+    [dataset, annotation],
   );
   // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation whether to add more dependencies.
   const initialNewLayerName = useMemo(() => {
@@ -138,7 +138,7 @@ export default function AddVolumeLayerModal({
       }
       return name;
     }
-  }, [dataset, tracing]);
+  }, [dataset, annotation]);
   const selectedSegmentationLayer =
     selectedSegmentationLayerName != null
       ? (getLayerByName(dataset, selectedSegmentationLayerName) as APISegmentationLayer)

@@ -274,7 +274,7 @@ jobs:
       - name: Start Docker Instance
         if: ${{ github.ref_name != 'master' }}
         run: |
-          docker compose -f .github/docker-compose.yml -p "webknossos" -d
+          docker compose -f .github/docker-compose.yml -p "webknossos" up -d
         env:
           DOCKER_TAG: ${{ needs.build.outputs.docker_tag }}
           POSTGRES_USER: webknossos_user

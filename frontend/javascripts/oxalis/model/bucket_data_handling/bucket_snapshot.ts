@@ -11,9 +11,7 @@ const DefaultCompressionService = {
 };
 
 export default class BucketSnapshot {
-  readonly zoomedAddress: BucketAddress;
   readonly needsMergeWithBackendData: boolean;
-  // readonly elementClass: ElementClass;
 
   // A copy of the bucket's data. Either stored
   // uncompressed:
@@ -37,7 +35,7 @@ export default class BucketSnapshot {
   private compressedBackendData: Uint8Array | null = null;
 
   constructor(
-    zoomedAddress: BucketAddress,
+    readonly zoomedAddress: BucketAddress,
     // Note that the BucketSnapshot instance may modify dataClone in place.
     dataClone: BucketDataArray,
     maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise,
@@ -46,7 +44,6 @@ export default class BucketSnapshot {
     private readonly elementClass: ElementClass,
     private compressor: typeof DefaultCompressionService = DefaultCompressionService,
   ) {
-    this.zoomedAddress = zoomedAddress;
     this.dataClone = dataClone;
     this.maybeUnmergedBucketLoadedPromise = maybeUnmergedBucketLoadedPromise;
 

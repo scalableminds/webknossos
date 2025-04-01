@@ -322,11 +322,12 @@ export class DataBucket {
     // 2) The user uses undo/redo which will restore the bucket to another snapshot.
     //    Before this restoration is done, the current version is snapshotted.
     //    In that case, data must not be null, as it's important that we don't
-    //    initiate a new request from the back-end. If we did this, we would depend
-    //    on the correct version being fetched. Correct would be the most recent
-    //    version, but older snapshots might depend on another version.
+    //    initiate a new request from the back-end when restoring the new snapshot.
+    //    If we did this, we would depend on the correct version being fetched. Correct
+    //    would be the most recent version, but older snapshots might depend on another
+    //    version.
 
-    if (purpose === "PREPARE_RESTORE_TO_SNAPSHOT" && this.data == null) {
+    if (purpose === "PREPARE_RESTORE_TO_SNAPSHOT" && !this.needsBackendData()) {
       throw new Error("Unexpected getSnapshot call.");
     }
 

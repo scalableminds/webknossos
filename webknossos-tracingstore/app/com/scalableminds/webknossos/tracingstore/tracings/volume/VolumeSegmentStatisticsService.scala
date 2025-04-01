@@ -38,7 +38,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       mag,
       additionalCoordinates,
       getBucketPositions(annotationId, tracingId, mappingName, additionalCoordinates),
-      getDataForBucketPositionsCallable(annotationId, tracingId)
+      getDataForBucketPositions(annotationId, tracingId)
     )
 
   def getSegmentBoundingBox(annotationId: String,
@@ -54,10 +54,10 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       mag,
       additionalCoordinates,
       getBucketPositions(annotationId, tracingId, mappingName, additionalCoordinates),
-      getDataForBucketPositionsCallable(annotationId, tracingId)
+      getDataForBucketPositions(annotationId, tracingId)
     )
 
-  private def getDataForBucketPositionsCallable(annotationId: String, tracingId: String)(
+  private def getDataForBucketPositions(annotationId: String, tracingId: String)(
       bucketPositions: Seq[Vec3Int],
       mag: Vec3Int,
       additionalCoordinates: Option[Seq[AdditionalCoordinate]])(

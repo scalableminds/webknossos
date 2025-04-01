@@ -85,8 +85,12 @@ class BinaryDataService(val dataBaseDir: Path,
           s"Loading ${requests.length} buckets for $dataSourceId layer ${dataLayer.name}, first request: ${firstRequest.cuboid.topLeft.toBucket}",
           bucketProvider.loadMultiple(readInstructions)
         )
-        _ <- bool2Fox(bucketBoxes.length + indicesWhereOutsideRange.size == requests.length) ?~> "multipleBuckets.resultCountMismatch"
-        bucketBoxesIterator = bucketBoxes.iterator
+        bucketBoxesConverted <- Fox.serialSequenceBox(requestsSelected.zip(bucketBoxes)) {
+          case (request, Full(bucketBytes)) => convertAccordingToRequest(request, bucketBytes)
+          case (_, other)                   => other
+        }
+        _ <- bool2Fox(bucketBoxesConverted.length + indicesWhereOutsideRange.size == requests.length) ?~> "multipleBuckets.resultCountMismatch"
+        bucketBoxesIterator = bucketBoxesConverted.iterator
         allBucketBoxes = requests.indices.map { index =>
           if (indicesWhereOutsideRange.contains(index)) Empty
           else bucketBoxesIterator.next

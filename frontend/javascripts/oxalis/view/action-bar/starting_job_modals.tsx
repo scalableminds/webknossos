@@ -715,7 +715,7 @@ function StartJobForm(props: StartJobFormProps) {
 
   const dispatch = useDispatch();
   const dataset = useSelector((state: OxalisState) => state.dataset);
-  const tracing = useSelector((state: OxalisState) => state.annotation);
+  const annotation = useSelector((state: OxalisState) => state.annotation);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const isActiveUserSuperUser = activeUser?.isSuperUser || false;
   const colorLayers = getColorLayers(dataset);
@@ -786,7 +786,7 @@ function StartJobForm(props: StartJobFormProps) {
         newDatasetName,
         selectedLayer,
         selectedBoundingBox,
-        annotationId: useAnnotation ? tracing.annotationId : undefined,
+        annotationId: useAnnotation ? annotation.annotationId : undefined,
         useCustomWorkflow,
       };
       const apiJob = await jobApiCall(jobArgs, form);
@@ -854,7 +854,7 @@ function StartJobForm(props: StartJobFormProps) {
         layers={layers}
         fixedLayerName={fixedSelectedLayer?.name}
         getReadableNameForLayer={(layer) =>
-          getReadableNameOfVolumeLayer(layer, tracing) || layer.name
+          getReadableNameOfVolumeLayer(layer, annotation) || layer.name
         }
       />
       <BoundingBoxSelectionFormItem

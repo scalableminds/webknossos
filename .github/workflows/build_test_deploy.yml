@@ -49,8 +49,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 18
+      - run: corepack enable
+      - uses: actions/cache@v4
+        id: node_modules
+        with:
+          path: node_modules
+          key: node_modules-${{ hashFiles("/yarn.lock") }}
       - name: Install frontend dependencies
-        run: corepack enable && yarn install --immutable
+        if: steps.node_modules.outputs.cache-hit != 'true'
+        run: yarn install --immutable
       - name: Lint frontend code and check formatting
         run: yarn run check-frontend
       - name: Typecheck frontend code
@@ -85,6 +92,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 18
+
       - name: "Custom environment variables"
         id: configure
         run: |
@@ -97,8 +105,17 @@ jobs:
             echo "normalized_branch=master" >> "$GITHUB_OUTPUT"
             echo "docker_tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
           fi
+
+      - run: corepack enable
+      - uses: actions/cache@v4
+        id: node_modules
+        with:
+          path: node_modules
+          key: node_modules-${{ hashFiles("/yarn.lock") }}
       - name: Install frontend dependencies
-        run: corepack enable && yarn install --immutable
+        if: steps.node_modules.outputs.cache-hit != 'true'
+        run: yarn install --immutable
+
       - name: Build webknossos (webpack)
         run: yarn build
       - uses: actions/setup-java@v4
@@ -195,12 +212,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 18
+
+      - run: corepack enable
+      - uses: actions/cache@v4
+        id: node_modules
+        with:
+          path: node_modules
+          key: node_modules-${{ hashFiles("/yarn.lock") }}
+      - name: Install frontend dependencies
+        if: steps.node_modules.outputs.cache-hit != 'true'
+        run: yarn install --immutable
+
       - name: Setup tmate session
         uses: mxschmitt/action-tmate@v3
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.tmate_debug_docker_build }}
-
-      - name: Install frontend dependencies
-        run: corepack enable && yarn install --immutable
 
       #
       # Build Docker Images

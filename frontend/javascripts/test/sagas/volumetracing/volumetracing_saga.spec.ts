@@ -29,22 +29,9 @@ import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import { serverVolumeToClientVolumeTracing } from "oxalis/model/reducers/volumetracing_reducer";
 
 // Mock dependencies
-const TIMESTAMP = 123456789;
 vi.mock("oxalis/model/sagas/root_saga", () => ({
   default: function* () {
     yield;
-  },
-}));
-
-vi.mock("libs/toast", () => ({
-  default: {
-    info: vi.fn(),
-  },
-}));
-
-vi.mock("libs/date", () => ({
-  default: {
-    now: () => TIMESTAMP,
   },
 }));
 

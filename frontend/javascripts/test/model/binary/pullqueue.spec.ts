@@ -32,12 +32,6 @@ const mockedCube = {
   shouldEagerlyMaintainUsedValueSet: () => false,
   triggerBucketDataChanged: () => false,
 };
-const layer = {
-  url: "url",
-  name: "layername",
-  category: "color",
-  resolutions: [[1, 1, 1]],
-};
 
 vi.mock("oxalis/store", function () {
   return {
@@ -45,7 +39,14 @@ vi.mock("oxalis/store", function () {
       getState: () => ({
         dataset: {
           dataSource: {
-            dataLayers: [layer],
+            dataLayers: [
+              {
+                url: "url",
+                name: "layername",
+                category: "color",
+                resolutions: [[1, 1, 1]],
+              },
+            ],
           },
         },
         datasetConfiguration: {
@@ -59,10 +60,7 @@ vi.mock("oxalis/store", function () {
 });
 
 describe("PullQueue", () => {
-  let buckets;
-  let pullQueue;
-
-  beforeEach(() => {
+  beforeEach(async (context) => {
     const cube = {
       getBucket: vi.fn(),
       getOrCreateBucket: vi.fn(),
@@ -78,8 +76,8 @@ describe("PullQueue", () => {
     const datastoreInfo = {
       typ: "webknossos-store",
     };
-    pullQueue = new PullQueue(cube, layer.name, connectionInfo, datastoreInfo);
-    buckets = [
+    const pullQueue = new PullQueue(cube, "layername", connectionInfo, datastoreInfo);
+    const buckets = [
       new DataBucket("uint8", [0, 0, 0, 0], null, mockedCube),
       new DataBucket("uint8", [1, 1, 1, 1], null, mockedCube),
     ];
@@ -92,9 +90,12 @@ describe("PullQueue", () => {
         priority: 0,
       });
     }
+
+    context.pullQueue = pullQueue;
+    context.buckets = buckets;
   });
 
-  it("Successful pulling: should receive the correct data", () => {
+  it("Successful pulling: should receive the correct data", ({ pullQueue, buckets }) => {
     const bucketData1 = _.range(0, 32 * 32 * 32).map((i) => i % 256);
     const bucketData2 = _.range(0, 32 * 32 * 32).map((i) => (2 * i) % 256);
 
@@ -120,26 +121,30 @@ describe("PullQueue", () => {
       .mockResolvedValueOnce([new Uint8Array(32 * 32 * 32)]);
   }
 
-  it("Request Failure: should not request twice if not bucket dirty", () => {
+  it("Request Failure: should not request twice if not bucket dirty", ({ pullQueue, buckets }) => {
     prepare();
     pullQueue.pull();
+
+    const foo = requestWithFallback;
+    const requestCall = vi.mocked(requestWithFallback);
     return runAsync([
-      () => {
-        expect(vi.mocked(requestWithFallback)).toHaveBeenCalledTimes(1);
+      async () => {
+        // await expect(requestCall).rejects.toThrowError();
+        await expect(vi.mocked(requestWithFallback)).toHaveBeenCalledTimes(1);
         expect(buckets[0].state).toBe(BucketStateEnum.UNREQUESTED);
         expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
       },
     ]);
   });
 
-  it("Request Failure: should reinsert dirty buckets", () => {
+  it("Request Failure: should reinsert dirty buckets", ({ pullQueue, buckets }) => {
     prepare();
     buckets[0].dirty = true;
     buckets[0].data = new Uint8Array(32 * 32 * 32);
     pullQueue.pull();
     return runAsync([
-      () => {
-        expect(vi.mocked(requestWithFallback)).toHaveBeenCalledTimes(2);
+      async () => {
+        await expect(vi.mocked(requestWithFallback)).toHaveBeenCalledTimes(2);
         expect(buckets[0].state).toBe(BucketStateEnum.LOADED);
         expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
       },

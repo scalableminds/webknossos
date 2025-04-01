@@ -25,8 +25,25 @@ import DATASET from "../fixtures/dataset_server_object";
 import type { ApiInterface } from "oxalis/api/api_latest";
 import type ModelType from "oxalis/model";
 
+import { setSlowCompression } from "oxalis/workers/slow_byte_array_lz4_compression.worker";
+import Model from "oxalis/model";
+import UrlManager from "oxalis/controller/url_manager";
+
+import OxalisApi from "oxalis/api/api_loader";
+import { default as Store, startSagas } from "oxalis/store";
+import rootSaga from "oxalis/model/sagas/root_saga";
+import { setStore, setModel } from "oxalis/singletons";
+import { setupApi } from "oxalis/api/internal_api";
+import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
+import Request from "libs/request";
+import { parseProtoAnnotation, parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
+
+const TOKEN = "secure-token";
+const ANNOTATION_TYPE = "annotationTypeValue";
+const ANNOTATION_ID = "annotationIdValue";
+
 // Define extended test context
-interface TestContext extends BaseTestContext {
+export interface SetupWebknossosTestContext extends BaseTestContext {
   model: typeof ModelType;
   mocks: {
     Request: typeof Request;
@@ -36,14 +53,73 @@ interface TestContext extends BaseTestContext {
 }
 
 // Create mock objects
-const Request = {
-  receiveJSON: vi.fn(),
-  sendJSONReceiveJSON: vi.fn(),
-  receiveArraybuffer: vi.fn(),
-  sendJSONReceiveArraybuffer: vi.fn(),
-  sendJSONReceiveArraybufferWithHeaders: vi.fn(),
-  always: () => Promise.resolve(),
-};
+vi.mock("libs/request", () => ({
+  default: {
+    receiveJSON: vi.fn().mockImplementation(receiveJSONMockImplementation),
+    sendJSONReceiveJSON: vi.fn().mockImplementation(sendJSONReceiveJSONMockImplementation),
+    receiveArraybuffer: vi.fn(),
+    sendJSONReceiveArraybuffer: vi.fn(),
+    sendJSONReceiveArraybufferWithHeaders: vi
+      .fn()
+      .mockImplementation(createBucketResponseFunction(Uint8Array, 0)),
+    always: () => Promise.resolve(),
+  },
+}));
+
+function receiveJSONMockImplementation(url: string, options?: any) {
+  if (
+    url.startsWith(`/api/annotations/${ANNOTATION_TYPE}/${ANNOTATION_ID}/info`) ||
+    url.startsWith(`/api/annotations/${ANNOTATION_ID}/info`)
+  ) {
+    return Promise.resolve(_.cloneDeep(SKELETON_ANNOTATION));
+    // TODO return Promise.resolve(_.cloneDeep(ANNOTATION));
+  }
+
+  if (
+    url ===
+    `http://localhost:9000/data/datasets/Connectomics department/ROI2017_wkw/layers/color/mappings?token=${TOKEN}`
+  ) {
+    return Promise.resolve({});
+  }
+
+  if (url === `/api/datasets/${SKELETON_ANNOTATION.datasetId}`) {
+    // TODO if (url === `/api/datasets/${ANNOTATION.datasetId}`) {
+    return Promise.resolve(_.cloneDeep(DATASET));
+  }
+
+  if (url === "/api/userToken/generate" && options && options.method === "POST") {
+    return Promise.resolve({
+      token: TOKEN,
+    });
+  }
+  return Promise.resolve({});
+}
+
+function sendJSONReceiveJSONMockImplementation(url: string, _options?: any) {
+  if (url === `/api/users/${dummyUser.id}/taskTypeId`) {
+    return Promise.resolve(dummyUser);
+  }
+  return Promise.resolve({});
+}
+
+// Create a modified version of wkstoreAdapter
+vi.mock("oxalis/model/bucket_data_handling/wkstore_adapter", () => ({
+  default: {
+    requestFromStore: () => new Uint8Array(),
+  },
+}));
+
+vi.mock("oxalis/model/bucket_data_handling/data_rendering_logic", async (importOriginal) => {
+  const orginalDataRenderingLogicModule = await importOriginal();
+
+  return {
+    ...(orginalDataRenderingLogicModule as object),
+    getSupportedTextureSpecs: vi.fn().mockReturnValue({
+      supportedTextureSize: 4096,
+      maxTextureCount: 8,
+    }),
+  };
+});
 
 export function createBucketResponseFunction(TypedArrayClass: any, fillValue: number, delay = 0) {
   return async function getBucketData(_url: string, payload: { data: Array<unknown> }) {
@@ -59,41 +135,16 @@ export function createBucketResponseFunction(TypedArrayClass: any, fillValue: nu
   };
 }
 
-// @ts-ignore
-Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(Uint8Array, 0);
-
 const app = {
   vent: createNanoEvents(),
 };
-const protoHelpers = {
-  parseProtoTracing: vi.fn(),
-  parseProtoAnnotation: vi.fn(),
-};
 
 export const KeyboardJS = {
-  bind: _.noop,
-  unbind: _.noop,
+  bind: vi.fn(),
+  unbind: vi.fn(),
   withContext: (_arg0: string, arg1: () => void) => arg1(),
 };
 
-// Update import to use vitest mocking
-import Model from "oxalis/model";
-// Import modules after mocking
-import UrlManager from "oxalis/controller/url_manager";
-
-// Create a modified version of wkstoreAdapter
-const wkstoreAdapter = {
-  requestFromStore: () => new Uint8Array(),
-};
-
-vi.mock("oxalis/model/bucket_data_handling/wkstore_adapter", () => ({
-  ...wkstoreAdapter,
-}));
-
-// Get OxalisApi
-import OxalisApi from "oxalis/api/api_loader";
-
-const TOKEN = "secure-token";
 const modelData = {
   skeleton: {
     tracing: SKELETON_TRACING,
@@ -112,101 +163,36 @@ const modelData = {
   },
 };
 
-import { default as Store, startSagas } from "oxalis/store";
-import rootSaga from "oxalis/model/sagas/root_saga";
-import { setStore, setModel } from "oxalis/singletons";
-import { setupApi } from "oxalis/api/internal_api";
-import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
-
 setModel(Model);
 setStore(Store);
 setupApi();
 startSagas(rootSaga);
 
-const ANNOTATION_TYPE = "annotationTypeValue";
-const ANNOTATION_ID = "annotationIdValue";
 // This function should always be imported at the very top since it setups
 // important mocks. The leading underscores are there to make the import
 // appear at the top when sorting the imports with importjs.
 
-export function __setupOxalis(mode: keyof typeof modelData): Promise<void>;
-export function __setupOxalis(
-  t: TestContext,
+export function __setupWebknossos(
+  testContext: SetupWebknossosTestContext,
   mode: keyof typeof modelData,
   apiVersion?: number,
-): Promise<void>;
-export function __setupOxalis(
-  tOrMode: TestContext | keyof typeof modelData,
-  modeOrNothing?: keyof typeof modelData | undefined,
-  apiVersion?: number,
 ): Promise<void> {
-  const isExecutionContext = typeof tOrMode !== "string";
-  const t = isExecutionContext ? (tOrMode as TestContext) : undefined;
-  const mode = isExecutionContext
-    ? (modeOrNothing as keyof typeof modelData)
-    : (tOrMode as keyof typeof modelData);
-
   Store.dispatch(setActiveOrganizationAction(dummyOrga));
   UrlManager.initialState = {
     position: [1, 2, 3],
   };
 
-  if (t) {
-    t.model = Model;
-    t.mocks = {
-      Request,
-    };
-    // Store setSlowCompression in test context if needed
-    const { setSlowCompression } = require("oxalis/workers/byte_array_lz4_compression.worker");
-    t.setSlowCompression = setSlowCompression;
-  }
+  testContext.model = Model;
+  testContext.mocks = {
+    Request,
+  };
+  testContext.setSlowCompression = setSlowCompression;
 
   const webknossos = new OxalisApi(Model);
   const ANNOTATION = modelData[mode].annotation;
-  Request.receiveJSON.mockImplementation((arg) => {
-    if (
-      typeof arg === "string" &&
-      (arg.startsWith(`/api/annotations/${ANNOTATION_TYPE}/${ANNOTATION_ID}/info`) ||
-        arg.startsWith(`/api/annotations/${ANNOTATION_ID}/info`))
-    ) {
-      return Promise.resolve(_.cloneDeep(ANNOTATION));
-    }
 
-    if (
-      arg ===
-      `http://localhost:9000/data/datasets/Connectomics department/ROI2017_wkw/layers/color/mappings?token=${TOKEN}`
-    ) {
-      return Promise.resolve({});
-    }
-
-    if (arg === `/api/datasets/${ANNOTATION.datasetId}`) {
-      return Promise.resolve(_.cloneDeep(DATASET));
-    }
-
-    return Promise.resolve({});
-  });
-
-  protoHelpers.parseProtoAnnotation.mockReturnValue(_.cloneDeep(modelData[mode].annotationProto));
-  protoHelpers.parseProtoTracing.mockReturnValue(_.cloneDeep(modelData[mode].tracing));
-
-  Request.receiveJSON.mockImplementation((url, options) => {
-    if (url === "/api/userToken/generate" && options && options.method === "POST") {
-      return Promise.resolve({
-        token: TOKEN,
-      });
-    }
-    return Promise.resolve({});
-  });
-
-  Request.sendJSONReceiveJSON.mockReturnValue(Promise.resolve({}));
-
-  // Make calls to updateLastTaskTypeIdOfUser() pass.
-  Request.sendJSONReceiveJSON.mockImplementation((arg) => {
-    if (arg === `/api/users/${dummyUser.id}/taskTypeId`) {
-      return Promise.resolve(dummyUser);
-    }
-    return Promise.resolve({});
-  });
+  vi.mocked(parseProtoTracing).mockReturnValue(_.cloneDeep(modelData[mode].tracing));
+  vi.mocked(parseProtoAnnotation).mockReturnValue(_.cloneDeep(modelData[mode].annotationProto));
 
   setSceneController({
     name: "This is a dummy scene controller so that getSceneController works in the tests.",
@@ -226,15 +212,11 @@ export function __setupOxalis(
       // Trigger the event ourselves, as the OxalisController is not instantiated
       app.vent.emit("webknossos:ready");
       return webknossos.apiReady(apiVersion).then((apiObject: ApiInterface) => {
-        if (t) {
-          t.api = apiObject;
-        }
+        testContext.api = apiObject;
       });
     })
     .catch((error: { message: string }) => {
       console.error("model.fetch() failed", error);
-      if (t) {
-        throw new Error(error.message);
-      }
+      throw new Error(error.message);
     });
 }

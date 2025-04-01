@@ -1,7 +1,11 @@
 import update from "immutability-helper";
 import { describe, it, beforeEach, afterEach, expect } from "vitest";
 import "test/sagas/saga_integration.mock";
-import { __setupOxalis, TIMESTAMP } from "test/helpers/apiHelpers";
+import {
+  __setupWebknossos,
+  type SetupWebknossosTestContext,
+  TIMESTAMP,
+} from "test/helpers/apiHelpers";
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getStats } from "oxalis/model/accessors/annotation_accessor";
@@ -27,13 +31,14 @@ import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import * as UpdateActions from "oxalis/model/sagas/update_actions";
 
 describe("Saga Integration Tests", () => {
-  beforeEach(async () => {
+  beforeEach<SetupWebknossosTestContext>(async (context) => {
     // Setup oxalis, this will execute model.fetch(...) and initialize the store with the tracing, etc.
     Store.dispatch(restartSagaAction());
     Store.dispatch(discardSaveQueuesAction());
     Store.dispatch(setActiveUserAction(dummyUser));
-    // TODO: The original __setupOxalis required an ExecutionContext but we're not using it directly
-    await __setupOxalis("task");
+
+    await __setupWebknossos(context, "task");
+
     // Dispatch the wkReadyAction, so the sagas are started
     Store.dispatch(wkReadyAction());
   });

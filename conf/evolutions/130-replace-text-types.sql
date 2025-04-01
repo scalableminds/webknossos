@@ -21,7 +21,8 @@ ALTER TABLE webknossos.annotations ADD CONSTRAINT _team_objectId CHECK (_team ~ 
 ALTER TABLE webknossos.annotations ALTER COLUMN _user SET DATA TYPE TEXT;
 ALTER TABLE webknossos.annotations ADD CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$');
 ALTER TABLE webknossos.annotations ALTER COLUMN _publication SET DATA TYPE TEXT;
-ALTER TABLE webknossos.annotations ADD CONSTRAINT _publication_objectId CHECK (_publication ~ '^[0-9a-f]{24}$');
+-- Dropped because there are publication ids that are not valid objectIds
+-- ALTER TABLE webknossos.annotations ADD CONSTRAINT _publication_objectId CHECK (_publication ~ '^[0-9a-f]{24}$');
 ALTER TABLE webknossos.annotations ALTER COLUMN name SET DATA TYPE TEXT;
 ALTER TABLE webknossos.annotations ALTER COLUMN name SET DEFAULT ''::TEXT;
 ALTER TABLE webknossos.annotations ALTER COLUMN tags SET DATA TYPE TEXT[];
@@ -69,7 +70,8 @@ COMMIT TRANSACTION;
 START TRANSACTION;
 DROP VIEW webknossos.publications_;
 ALTER TABLE webknossos.publications ALTER COLUMN _id SET DATA TYPE TEXT;
-ALTER TABLE webknossos.publications ADD CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$');
+-- Dropped because there are publication ids that are not valid objectIds
+--ALTER TABLE webknossos.publications ADD CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$');
 ALTER TABLE webknossos.publications ALTER COLUMN imageUrl SET DATA TYPE TEXT;
 ALTER TABLE webknossos.publications ALTER COLUMN title SET DATA TYPE TEXT;
 CREATE VIEW webknossos.publications_ AS SELECT * FROM webknossos.publications WHERE NOT isDeleted;
@@ -82,7 +84,8 @@ ALTER TABLE webknossos.datasets ADD CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a
 ALTER TABLE webknossos.datasets ALTER COLUMN _dataStore SET DATA TYPE TEXT;
 ALTER TABLE webknossos.datasets ALTER COLUMN _organization SET DATA TYPE TEXT;
 ALTER TABLE webknossos.datasets ALTER COLUMN _publication SET DATA TYPE TEXT;
-ALTER TABLE webknossos.datasets ADD CONSTRAINT _publication_objectId CHECK (_publication ~ '^[0-9a-f]{24}$');
+-- Dropped because there are publication ids that are not valid objectIds
+--ALTER TABLE webknossos.datasets ADD CONSTRAINT _publication_objectId CHECK (_publication ~ '^[0-9a-f]{24}$');
 ALTER TABLE webknossos.datasets ALTER COLUMN _uploader SET DATA TYPE TEXT;
 ALTER TABLE webknossos.datasets ADD CONSTRAINT _uploader_objectId CHECK (_uploader ~ '^[0-9a-f]{24}$');
 ALTER TABLE webknossos.datasets ALTER COLUMN _folder SET DATA TYPE TEXT;

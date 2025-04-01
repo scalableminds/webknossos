@@ -13,8 +13,10 @@ import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { getMeshesForAdditionalCoordinates } from "../accessors/volumetracing_accessor";
 import BoundingBox from "../bucket_data_handling/bounding_box";
 
-const updateTracing = (state: OxalisState, shape: Partial<OxalisState["tracing"]>): OxalisState =>
-  updateKey(state, "tracing", shape);
+const updateTracing = (
+  state: OxalisState,
+  shape: Partial<OxalisState["annotation"]>,
+): OxalisState => updateKey(state, "annotation", shape);
 
 const updateUserBoundingBoxes = (state: OxalisState, userBoundingBoxes: Array<UserBoundingBox>) => {
   const updaterObject = {
@@ -23,11 +25,11 @@ const updateUserBoundingBoxes = (state: OxalisState, userBoundingBoxes: Array<Us
     },
   };
   // We mirror/sync the user bounding boxes between all tracing objects.
-  const newVolumes = state.tracing.volumes.map((volumeTracing) => ({
+  const newVolumes = state.annotation.volumes.map((volumeTracing) => ({
     ...volumeTracing,
     userBoundingBoxes,
   }));
-  const maybeSkeletonUpdater = state.tracing.skeleton
+  const maybeSkeletonUpdater = state.annotation.skeleton
     ? {
         skeleton: updaterObject,
       }
@@ -37,13 +39,13 @@ const updateUserBoundingBoxes = (state: OxalisState, userBoundingBoxes: Array<Us
       $set: newVolumes,
     },
   };
-  const maybeReadOnlyUpdater = state.tracing.readOnly
+  const maybeReadOnlyUpdater = state.annotation.readOnly
     ? {
         readOnly: updaterObject,
       }
     : {};
   return update(state, {
-    tracing: {
+    annotation: {
       ...maybeSkeletonUpdater,
       ...maybeVolumeUpdater,
       ...maybeReadOnlyUpdater,
@@ -99,7 +101,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "EDIT_ANNOTATION_LAYER": {
-      const newAnnotationLayers = state.tracing.annotationLayers.map((layer) => {
+      const newAnnotationLayers = state.annotation.annotationLayers.map((layer) => {
         if (layer.tracingId !== action.tracingId) {
           return layer;
         } else {
@@ -120,14 +122,14 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
 
     case "SET_ANNOTATION_ALLOW_UPDATE": {
       const { allowUpdate } = action;
-      return updateKey2(state, "tracing", "restrictions", {
+      return updateKey2(state, "annotation", "restrictions", {
         allowUpdate,
       });
     }
 
     case "SET_BLOCKED_BY_USER": {
       const { blockedByUser } = action;
-      return updateKey(state, "tracing", {
+      return updateKey(state, "annotation", {
         blockedByUser,
       });
     }
@@ -137,7 +139,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "CHANGE_USER_BOUNDING_BOX": {
-      const tracing = maybeGetSomeTracing(state.tracing);
+      const tracing = maybeGetSomeTracing(state.annotation);
 
       if (tracing == null) {
         return state;
@@ -160,7 +162,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "ADD_NEW_USER_BOUNDING_BOX": {
-      const tracing = maybeGetSomeTracing(state.tracing);
+      const tracing = maybeGetSomeTracing(state.annotation);
 
       if (tracing == null) {
         return state;
@@ -216,7 +218,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "ADD_USER_BOUNDING_BOXES": {
-      const tracing = maybeGetSomeTracing(state.tracing);
+      const tracing = maybeGetSomeTracing(state.annotation);
 
       if (tracing == null) {
         return state;
@@ -239,7 +241,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "DELETE_USER_BOUNDING_BOX": {
-      const tracing = maybeGetSomeTracing(state.tracing);
+      const tracing = maybeGetSomeTracing(state.annotation);
 
       if (tracing == null) {
         return state;
@@ -465,7 +467,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "SET_OTHERS_MAY_EDIT_FOR_ANNOTATION": {
-      return updateKey(state, "tracing", {
+      return updateKey(state, "annotation", {
         othersMayEdit: action.othersMayEdit,
       });
     }

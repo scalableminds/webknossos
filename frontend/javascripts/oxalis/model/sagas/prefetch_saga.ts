@@ -93,9 +93,9 @@ function getTraceDirection(
 
 function getTracingTypes(state: OxalisState) {
   return {
-    [PrefetchContentTypes.SKELETON]: state.tracing.skeleton != null,
-    [PrefetchContentTypes.VOLUME]: state.tracing.volumes.length > 0,
-    [PrefetchContentTypes.READ_ONLY]: state.tracing.readOnly != null,
+    [PrefetchContentTypes.SKELETON]: state.annotation.skeleton != null,
+    [PrefetchContentTypes.VOLUME]: state.annotation.volumes.length > 0,
+    [PrefetchContentTypes.READ_ONLY]: state.annotation.readOnly != null,
   };
 }
 

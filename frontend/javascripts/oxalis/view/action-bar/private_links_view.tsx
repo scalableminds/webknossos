@@ -139,7 +139,7 @@ function useDeleteLinkMutation(annotationId: string) {
 
 export function useZarrLinkMenu(maybeAccessToken: string | null) {
   const dataset = useSelector((state: OxalisState) => state.dataset);
-  const tracing = useSelector((state: OxalisState) => state.tracing);
+  const tracing = useSelector((state: OxalisState) => state.annotation);
   const dataStoreURL = dataset.dataStore.url;
   const dataLayers = getDataLayers(dataset);
 

@@ -35,7 +35,7 @@ export default function BoundingBoxTab() {
   const bboxTableRef: Parameters<typeof Table>[0]["ref"] = useRef(null);
   const [selectedBoundingBoxForExport, setSelectedBoundingBoxForExport] =
     useState<UserBoundingBox | null>(null);
-  const tracing = useSelector((state: OxalisState) => state.tracing);
+  const tracing = useSelector((state: OxalisState) => state.annotation);
   const allowUpdate = tracing.restrictions.allowUpdate;
   const isLockedByOwner = tracing.isLockedByOwner;
   const isOwner = useSelector((state: OxalisState) => isAnnotationOwner(state));

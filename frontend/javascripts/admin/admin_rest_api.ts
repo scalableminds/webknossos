@@ -23,8 +23,8 @@ import type {
   MappingType,
   NumberLike,
   PartialDatasetConfiguration,
+  StoreAnnotation,
   TraceOrViewCommand,
-  Tracing,
   UserConfiguration,
   VolumeTracing,
 } from "oxalis/store";
@@ -863,7 +863,7 @@ export function getSegmentBoundingBoxes(
 }
 
 export async function importVolumeTracing(
-  tracing: Tracing,
+  tracing: StoreAnnotation,
   volumeTracing: VolumeTracing,
   dataFile: File,
   version: number,

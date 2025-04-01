@@ -9,7 +9,7 @@ import {
   getVolumeTracingById,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { setMappingAction, setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
-import type { ActiveMappingInfo, HybridTracing, Segment } from "oxalis/store";
+import type { ActiveMappingInfo, Segment, StoreAnnotation } from "oxalis/store";
 import Store from "oxalis/store";
 import type { MenuClickEventHandler } from "rc-menu/lib/interface";
 import type { APIDataLayer, APIDataset, APISegmentationLayer } from "types/api_flow_types";
@@ -44,7 +44,7 @@ export function getBaseSegmentationName(segmentationLayer: APIDataLayer) {
 
 export function getVolumeRequestUrl(
   dataset: APIDataset,
-  tracing: HybridTracing | null,
+  tracing: StoreAnnotation | null,
   tracingId: string | undefined,
   visibleSegmentationLayer: APISegmentationLayer | APIDataLayer,
 ) {
@@ -59,7 +59,7 @@ export function getVolumeRequestUrl(
 export async function hasSegmentIndex(
   visibleSegmentationLayer: APIDataLayer,
   dataset: APIDataset,
-  tracing: HybridTracing | null | undefined,
+  tracing: StoreAnnotation | null | undefined,
 ) {
   const maybeVolumeTracing =
     "tracingId" in visibleSegmentationLayer &&

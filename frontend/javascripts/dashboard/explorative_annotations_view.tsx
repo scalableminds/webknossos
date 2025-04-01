@@ -71,7 +71,7 @@ const { Search } = Input;
 const pageLength: number = 1000;
 
 type TracingModeState = {
-  tracings: Array<APIAnnotationInfo>;
+  annotations: Array<APIAnnotationInfo>;
   lastLoadedPage: number;
   loadedAllTracings: boolean;
 };
@@ -112,12 +112,12 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   state: State = {
     shouldShowArchivedTracings: false,
     archivedModeState: {
-      tracings: [],
+      annotations: [],
       lastLoadedPage: -1,
       loadedAllTracings: false,
     },
     unarchivedModeState: {
-      tracings: [],
+      annotations: [],
       lastLoadedPage: -1,
       loadedAllTracings: false,
     },
@@ -161,11 +161,11 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     tracing: APIAnnotationInfo,
     callback: (arg0: APIAnnotationInfo) => APIAnnotationInfo,
   ) => {
-    const tracings = this.getCurrentTracings();
-    const newTracings = tracings.map((currentTracing) =>
+    const annotations = this.getCurrentAnnotations();
+    const newTracings = annotations.map((currentTracing) =>
       currentTracing.id !== tracing.id ? currentTracing : callback(currentTracing),
     );
-    this.setModeState({ tracings: newTracings }, this.state.shouldShowArchivedTracings);
+    this.setModeState({ annotations: newTracings }, this.state.shouldShowArchivedTracings);
   };
 
   setModeState = (modeShape: Partial<TracingModeState>, useArchivedTracings: boolean) =>
@@ -189,7 +189,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     // this does not refer to the pagination of antd but to the pagination of querying data from SQL
     const showArchivedTracings = this.state.shouldShowArchivedTracings;
     const currentModeState = this.getCurrentModeState();
-    const previousTracings = currentModeState.tracings;
+    const previousTracings = currentModeState.annotations;
 
     if (currentModeState.loadedAllTracings || pageNumber <= currentModeState.lastLoadedPage) {
       return;
@@ -200,7 +200,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         isLoading: true,
       });
 
-      const tracings =
+      const annotations =
         this.props.userId != null
           ? // If an administrator views the dashboard of a specific user, we only fetch the annotations of that user.
             await getCompactAnnotationsForUser(this.props.userId, showArchivedTracings, pageNumber)
@@ -211,9 +211,9 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           // If the user archives a tracing, the tracing is already moved to the archived
           // state. Switching to the archived tab for the first time, will download the annotation
           // again which is why we need to deduplicate here.
-          tracings: _.uniqBy(previousTracings.concat(tracings), (tracing) => tracing.id),
+          annotations: _.uniqBy(previousTracings.concat(annotations), (tracing) => tracing.id),
           lastLoadedPage: pageNumber,
-          loadedAllTracings: tracings.length !== pageLength || tracings.length === 0,
+          loadedAllTracings: annotations.length !== pageLength || annotations.length === 0,
         },
         showArchivedTracings,
       );
@@ -253,22 +253,22 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
 
     // If the annotation was finished, update the not finished list
     // (and vice versa).
-    const newTracings = this.getModeState(!shouldFinish).tracings.filter(
+    const newTracings = this.getModeState(!shouldFinish).annotations.filter(
       (t) => t.id !== tracing.id,
     );
     this.setModeState(
       {
-        tracings: newTracings,
+        annotations: newTracings,
       },
       !shouldFinish,
     );
 
     // If the annotation was finished, add it to the finished list
     // (and vice versa).
-    const existingTracings = this.getModeState(shouldFinish).tracings;
+    const existingTracings = this.getModeState(shouldFinish).annotations;
     this.setModeState(
       {
-        tracings: [newTracing].concat(existingTracings),
+        annotations: [newTracing].concat(existingTracings),
       },
       shouldFinish,
     );
@@ -370,8 +370,8 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     }
   };
 
-  getCurrentTracings(): Array<APIAnnotationInfo> {
-    return this.getCurrentModeState().tracings;
+  getCurrentAnnotations(): Array<APIAnnotationInfo> {
+    return this.getCurrentModeState().annotations;
   }
 
   handleSearchChanged = (event: React.ChangeEvent<HTMLInputElement>): void => {
@@ -412,7 +412,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         this.setState((prevState) => ({
           archivedModeState: {
             ...prevState.archivedModeState,
-            tracings: prevState.archivedModeState.tracings.concat(
+            annotations: prevState.archivedModeState.annotations.concat(
               selectedAnnotations.map((annotation) =>
                 this._updateAnnotationWithArchiveAction(annotation, "finish"),
               ),
@@ -420,7 +420,10 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           },
           unarchivedModeState: {
             ...prevState.unarchivedModeState,
-            tracings: _.without(prevState.unarchivedModeState.tracings, ...selectedAnnotations),
+            annotations: _.without(
+              prevState.unarchivedModeState.annotations,
+              ...selectedAnnotations,
+            ),
           },
         }));
       },
@@ -444,7 +447,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     event?.stopPropagation(); // prevent the onClick event
 
     this.setState((prevState) => {
-      const newTracings = prevState.unarchivedModeState.tracings.map((t) => {
+      const newTracings = prevState.unarchivedModeState.annotations.map((t) => {
         let newAnnotation = t;
 
         if (t.id === annotation.id) {
@@ -477,7 +480,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         return newAnnotation;
       });
       return {
-        unarchivedModeState: { ...prevState.unarchivedModeState, tracings: newTracings },
+        unarchivedModeState: { ...prevState.unarchivedModeState, annotations: newTracings },
       };
     });
   };
@@ -525,13 +528,13 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   _getSearchFilteredTracings() {
-    // Note, this method should only be used to pass tracings
+    // Note, this method should only be used to pass annotations
     // to the antd table. Antd itself can apply additional filters
     // (e.g., filtering by owner in the column header).
     // Use `this.currentPageData` if you need all currently visible
     // items of the active page.
     const filteredTracings = Utils.filterWithSearchQueryAND(
-      this.getCurrentTracings(),
+      this.getCurrentAnnotations(),
       ["id", "name", "modified", "tags", "owner"],
       this.state.searchQuery,
     );

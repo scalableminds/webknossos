@@ -64,7 +64,7 @@ export function* pushAnnotationDescriptionUpdateAction(action: SetAnnotationDesc
 }
 
 export function* pushAnnotationUpdateAsync(action: Action) {
-  const tracing = yield* select((state) => state.tracing);
+  const tracing = yield* select((state) => state.annotation);
   const mayEdit = yield* select((state) => mayEditAnnotationProperties(state));
   if (!mayEdit) {
     return;
@@ -239,12 +239,12 @@ export function* watchAnnotationAsync(): Saga<void> {
 
 export function* acquireAnnotationMutexMaybe(): Saga<void> {
   yield* call(ensureWkReady);
-  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
-  const annotationId = yield* select((storeState) => storeState.tracing.annotationId);
+  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
+  const annotationId = yield* select((storeState) => storeState.annotation.annotationId);
   if (!allowUpdate) {
     return;
   }
-  const othersMayEdit = yield* select((state) => state.tracing.othersMayEdit);
+  const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
   const activeUser = yield* select((state) => state.activeUser);
   const acquireMutexInterval = 1000 * 60;
   const RETRY_COUNT = 12;

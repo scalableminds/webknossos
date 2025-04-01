@@ -47,7 +47,7 @@ import {
   hasVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { Model } from "oxalis/singletons";
-import type { HybridTracing, OxalisState, UserBoundingBox } from "oxalis/store";
+import type { OxalisState, StoreAnnotation, UserBoundingBox } from "oxalis/store";
 import { BoundingBoxSelection, MagSlider } from "oxalis/view/action-bar/starting_job_modals";
 import type React from "react";
 import { useState } from "react";
@@ -91,7 +91,7 @@ const exportKey = (layerInfos: ExportLayerInfos, mag: Vector3) =>
 
 function getExportLayerInfos(
   layer: APIDataLayer,
-  tracing: HybridTracing | null | undefined,
+  tracing: StoreAnnotation | null | undefined,
 ): ExportLayerInfos {
   const annotationId = tracing != null ? tracing.annotationId : null;
 
@@ -227,7 +227,7 @@ export function CopyableCodeSnippet({ code, onCopy }: { code: string; onCopy?: (
   );
 }
 
-function getPythonAnnotationDownloadSnippet(authToken: string | null, tracing: HybridTracing) {
+function getPythonAnnotationDownloadSnippet(authToken: string | null, tracing: StoreAnnotation) {
   return `import webknossos as wk
 
 with wk.webknossos_context(
@@ -277,7 +277,7 @@ function _DownloadModalView({
   initialBoundingBoxId,
 }: Props): JSX.Element {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  const tracing = useSelector((state: OxalisState) => state.tracing);
+  const tracing = useSelector((state: OxalisState) => state.annotation);
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const rawUserBoundingBoxes = useSelector((state: OxalisState) =>
     getUserBoundingBoxesFromState(state),

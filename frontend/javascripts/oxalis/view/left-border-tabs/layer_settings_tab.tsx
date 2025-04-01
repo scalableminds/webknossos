@@ -1060,7 +1060,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     isDataLayer: boolean,
     volume: VolumeTracing | null | undefined,
   ) => {
-    const { tracingStore } = Store.getState().tracing;
+    const { tracingStore } = Store.getState().annotation;
     const { dataset } = this.props;
     let foundPosition;
     let foundMag;
@@ -1600,7 +1600,7 @@ const mapStateToProps = (state: OxalisState) => ({
   datasetConfiguration: state.datasetConfiguration,
   histogramData: state.temporaryConfiguration.histogramData,
   dataset: state.dataset,
-  tracing: state.tracing,
+  tracing: state.annotation,
   task: state.task,
   controlMode: state.temporaryConfiguration.controlMode,
   isArbitraryMode: Constants.MODES_ARBITRARY.includes(state.temporaryConfiguration.viewMode),

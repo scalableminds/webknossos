@@ -501,7 +501,7 @@ function AlignmentTab() {
 }
 
 function ShouldUseTreesFormItem() {
-  const tracing = useSelector((state: OxalisState) => state.tracing);
+  const tracing = useSelector((state: OxalisState) => state.annotation);
   const trees = tracing.skeleton ? Object.values(tracing.skeleton.trees) : [];
   return (
     <div>
@@ -715,7 +715,7 @@ function StartJobForm(props: StartJobFormProps) {
 
   const dispatch = useDispatch();
   const dataset = useSelector((state: OxalisState) => state.dataset);
-  const tracing = useSelector((state: OxalisState) => state.tracing);
+  const tracing = useSelector((state: OxalisState) => state.annotation);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const isActiveUserSuperUser = activeUser?.isSuperUser || false;
   const colorLayers = getColorLayers(dataset);
@@ -924,7 +924,9 @@ export function NucleiDetectionForm() {
 export function NeuronSegmentationForm() {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const { neuronInferralCostPerGVx } = features();
-  const hasSkeletonAnnotation = useSelector((state: OxalisState) => state.tracing.skeleton != null);
+  const hasSkeletonAnnotation = useSelector(
+    (state: OxalisState) => state.annotation.skeleton != null,
+  );
   const dispatch = useDispatch();
   const [doSplitMergerEvaluation, setDoSplitMergerEvaluation] = React.useState(false);
   return (
@@ -1038,7 +1040,7 @@ export function MitochondriaSegmentationForm() {
 
 function CustomAiModelInferenceForm() {
   const dataset = useSelector((state: OxalisState) => state.dataset);
-  const annotationId = useSelector((state: OxalisState) => state.tracing.annotationId);
+  const annotationId = useSelector((state: OxalisState) => state.annotation.annotationId);
   const isViewMode = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
@@ -1157,7 +1159,7 @@ export function MaterializeVolumeAnnotationModal({
   handleClose,
 }: MaterializeVolumeAnnotationModalProps) {
   const dataset = useSelector((state: OxalisState) => state.dataset);
-  const tracing = useSelector((state: OxalisState) => state.tracing);
+  const tracing = useSelector((state: OxalisState) => state.annotation);
   let includesEditableMapping = false;
   const activeSegmentationTracingLayer = useSelector(getActiveSegmentationTracingLayer);
   const fixedSelectedLayer = selectedVolumeLayer || activeSegmentationTracingLayer;

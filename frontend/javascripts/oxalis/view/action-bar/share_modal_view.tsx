@@ -124,7 +124,7 @@ export async function copyUrlToClipboard(url: string) {
 export function ShareButton(props: { dataset: APIDataset; style?: Record<string, any> }) {
   const { dataset, style } = props;
   const sharingToken = useDatasetSharingToken(props.dataset);
-  const annotationVisibility = useSelector((state: OxalisState) => state.tracing.visibility);
+  const annotationVisibility = useSelector((state: OxalisState) => state.annotation.visibility);
   const controlMode = useSelector((state: OxalisState) => state.temporaryConfiguration.controlMode);
   const isViewMode = controlMode === ControlModeEnum.VIEW;
   const isSandboxMode = controlMode === ControlModeEnum.SANDBOX;
@@ -177,7 +177,7 @@ export function ShareButton(props: { dataset: APIDataset; style?: Record<string,
 function _ShareModalView(props: Props) {
   const { isOpen, onOk, annotationType, annotationId } = props;
   const dataset = useSelector((state: OxalisState) => state.dataset);
-  const tracing = useSelector((state: OxalisState) => state.tracing);
+  const tracing = useSelector((state: OxalisState) => state.annotation);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const isAnnotationLockedByUser = tracing.isLockedByOwner;
 

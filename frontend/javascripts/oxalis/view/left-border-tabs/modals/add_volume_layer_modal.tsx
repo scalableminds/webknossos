@@ -23,7 +23,7 @@ import {
 import { pushSaveQueueTransactionIsolated } from "oxalis/model/actions/save_actions";
 import { addLayerToAnnotation } from "oxalis/model/sagas/update_actions";
 import { Model, api } from "oxalis/singletons";
-import Store, { type Tracing } from "oxalis/store";
+import Store, { type StoreAnnotation } from "oxalis/store";
 import InputComponent from "oxalis/view/components/input_component";
 import type React from "react";
 import { useMemo, useState } from "react";
@@ -109,7 +109,7 @@ export default function AddVolumeLayerModal({
 }: {
   dataset: APIDataset;
   onCancel: () => void;
-  tracing: Tracing;
+  tracing: StoreAnnotation;
   preselectedLayerName: string | undefined;
   disableLayerSelection: boolean | undefined;
 }) {

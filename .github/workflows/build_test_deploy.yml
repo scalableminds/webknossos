@@ -139,7 +139,7 @@ jobs:
           path: |
             ~/.ivy2/cache
             ~/.sbt
-          key: ${{ runner.os }}-sbt-${{ hashFiles('**/*.sbt', '**/Dependencies.scala') }}
+          key: ${{ runner.os }}-sbt-${{ hashFiles('**/build.sbt') }}
 
       - name: Install OS dependencies / libs
         run: sudo apt-get update && sudo apt-get install -y libdraco-dev libblosc-dev

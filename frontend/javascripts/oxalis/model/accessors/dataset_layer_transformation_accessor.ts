@@ -460,6 +460,28 @@ function _doAllLayersHaveTheSameRotation(dataLayers: Array<APIDataLayer>): boole
 
 export const doAllLayersHaveTheSameRotation = _.memoize(_doAllLayersHaveTheSameRotation);
 
+export function transformationEqualsAffineIdentityTransform(
+  transformations: CoordinateTransformation[],
+): boolean {
+  const hasValidTransformationCount = transformations.length;
+  const hasOnlyAffineTransformations = transformations.every(
+    (transformation) => transformation.type === "affine",
+  );
+  // There should be a translation to the origin, one transformation for each axis and one translation back. => A total of 5 affine transformations.
+  if (!hasValidTransformationCount || !hasOnlyAffineTransformations) {
+    return false;
+  }
+  const resultingTransformation = transformations.reduce(
+    (accTransformation, currentTransformation) =>
+      chainTransforms(
+        accTransformation,
+        createAffineTransformFromMatrix(currentTransformation.matrix),
+      ),
+    IdentityTransform as Transform,
+  );
+  return _.isEqual(resultingTransformation, IdentityTransform);
+}
+
 export function globalToLayerTransformedPosition(
   globalPos: Vector3,
   layerName: string,

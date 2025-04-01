@@ -11,6 +11,7 @@ import {
   fromCenterToOrigin,
   fromOriginToCenter,
   getRotationMatrixAroundAxis,
+  transformationEqualsAffineIdentityTransform,
 } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { useCallback, useEffect, useMemo } from "react";
@@ -106,9 +107,13 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
           ];
         }
         transformations[AXIS_TO_TRANSFORM_INDEX[axis]] = rotationMatrix;
+        const updatedTransformations = transformationEqualsAffineIdentityTransform(transformations)
+          ? null
+          : transformations;
+
         return {
           ...layer,
-          coordinateTransformations: transformations,
+          coordinateTransformations: updatedTransformations,
         };
       });
       form.setFieldValue(["dataSource", "dataLayers"], dataLayersWithUpdatedTransforms);

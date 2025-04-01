@@ -57,14 +57,13 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer)
         additionalCoordinates = readInstruction.bucket.additionalCoordinates
       )
       unmappedData <- editableMappingService.getFallbackBucketFromDataStore(remoteFallbackLayer, dataRequest)(ec, tc)
-      unmappedDataTyped <- editableMappingService.bytesToSegmentInt(unmappedData, layer.tracing.elementClass)
-      segmentIds = editableMappingService.collectSegmentIds(unmappedDataTyped)
+      segmentIds <- editableMappingService.collectSegmentIds(unmappedData, layer.elementClass).toFox
       relevantMapping <- editableMappingService.generateCombinedMappingForSegmentIds(segmentIds,
                                                                                      editableMappingInfo,
                                                                                      version,
                                                                                      layer.tracingId,
                                                                                      remoteFallbackLayer)(tc)
-      mappedData <- editableMappingService.mapData(unmappedDataTyped, relevantMapping, elementClassProto)
+      mappedData <- editableMappingService.mapData(unmappedData, relevantMapping, elementClassProto)
     } yield mappedData
   }
 }

@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.google.inject.name.Named
-import com.scalableminds.webknossos.datastore.services.{ApplicationHealthService, DatasetErrorLoggingService}
+import com.scalableminds.webknossos.datastore.services.DatasetErrorLoggingService
 import org.apache.pekko.actor.ActorSystem
 import play.api.inject.ApplicationLifecycle
 

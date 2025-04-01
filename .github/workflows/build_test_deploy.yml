@@ -27,21 +27,21 @@ jobs:
   static_frontend_code_checks:
     runs-on: ubuntu-24.04
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 5
-    - uses: actions/setup-node@v4
-      with:
-        node-version: 18
-    - name: Install frontend dependencies
-      run: corepack enable && yarn install --immutable
-    - name: Lint frontend code and check formatting
-      run: yarn run check-frontend
-    - name: Typecheck frontend code
-      run: yarn typecheck
-    - name: Check for cyclic dependencies in frontend
-      run: yarn check-cyclic-dependencies
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Install frontend dependencies
+        run: corepack enable && yarn install --immutable
+      - name: Lint frontend code and check formatting
+        run: yarn run check-frontend
+      - name: Typecheck frontend code
+        run: yarn typecheck
+      - name: Check for cyclic dependencies in frontend
+        run: yarn check-cyclic-dependencies
 
   build:
     runs-on: ubuntu-24.04

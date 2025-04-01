@@ -247,6 +247,10 @@ trait VolumeTracingBucketHelper
                                datastoreMissingBucketIndices: Set[Int],
                                elementClass: ElementClass.Value): Box[Seq[Box[Array[Byte]]]] = tryo {
     val bytesPerBucket = expectedUncompressedBucketSizeFor(elementClass)
+    if ((expectedBucketCount - datastoreMissingBucketIndices.size) * bytesPerBucket != flatDataFromDataStore.length) {
+      throw new IllegalStateException(
+        s"bucket data array from datastore does not have expected length to be split into ${expectedBucketCount - datastoreMissingBucketIndices.length} buckets.")
+    }
     var currentBucketIdx = 0
     var currentPosition = 0
     val bucketsMutable = ListBuffer[Box[Array[Byte]]]()

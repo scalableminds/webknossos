@@ -4,14 +4,14 @@
 #include <stdexcept>
 #include <iostream>
 
-uint64_t segmentIdAtIndex(uint8_t* bucketBytes, int index, int bytesPerElement, bool isSigned) {
-    uint8_t* currentPos = bucketBytes + (index * bytesPerElement);
+uint64_t segmentIdAtIndex(jbyte* bucketBytes, int index, int bytesPerElement, bool isSigned) {
+    jbyte* currentPos = bucketBytes + (index * bytesPerElement);
     long currentValue;
     switch (bytesPerElement) {
         case 1:
             currentValue = isSigned ?
                 static_cast<int64_t>(*reinterpret_cast<int8_t*>(currentPos)) :
-                static_cast<int64_t>(*currentPos);
+                static_cast<int64_t>(*reinterpret_cast<uint8_t*>(currentPos));
             break;
         case 2:
             currentValue = isSigned ?
@@ -34,35 +34,44 @@ uint64_t segmentIdAtIndex(uint8_t* bucketBytes, int index, int bytesPerElement, 
     return currentValue;
 }
 
+jlongArray copyToJLongArray(JNIEnv * env, const std::unordered_set<int64_t> &source) {
+    size_t size = source.size();
+    jlongArray target = env -> NewLongArray(size);
+    jlong* targetElements = env->GetLongArrayElements(target, nullptr);
+
+    auto it = source.begin();
+    for (size_t i = 0; i < source.size(); ++i) {
+        targetElements[i] = static_cast<jlong>(*it);
+        ++it;
+    }
+    env->ReleaseLongArrayElements(target, targetElements, JNI_COMMIT);
+
+    return target;
+}
+
+void checkValidBucket(jsize inputLengthBytes, jint bytesPerElement) {
+    if (inputLengthBytes % bytesPerElement != 0) {
+        throw std::invalid_argument("Bucket bytes length must be divisible by bytesPerElement");
+    }
+}
+
 JNIEXPORT jlongArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_collectSegmentIds
     (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jboolean isSigned) {
 
     jsize inputLengthBytes = env -> GetArrayLength(bucketBytesJavaArray);
     jbyte * bucketBytesAsJByte = env -> GetByteArrayElements(bucketBytesJavaArray, NULL);
-    uint8_t* bucketBytesAsByteArray = reinterpret_cast<uint8_t*>(bucketBytesAsJByte);
+    checkValidBucket(inputLengthBytes, bytesPerElement);
+    size_t elementCount = inputLengthBytes / bytesPerElement;
 
     std::unordered_set<int64_t> uniqueSegmentIds;
 
-    size_t elementCount = inputLengthBytes / bytesPerElement;
-
     for (size_t i = 0; i < elementCount; ++i) {
-        uint8_t* currentPos = bucketBytesAsByteArray + (i * bytesPerElement);
-        int64_t currentValue = segmentIdAtIndex(bucketBytesAsByteArray, i, bytesPerElement, isSigned);
+        int64_t currentValue = segmentIdAtIndex(bucketBytesAsJByte, i, bytesPerElement, isSigned);
         if (currentValue != 0) {
           uniqueSegmentIds.insert(currentValue);
         }
     }
 
     env -> ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytesAsJByte, 0);
-
-    size_t resultCount = uniqueSegmentIds.size();
-    int64_t* result = new int64_t[resultCount];
-    size_t idx = 0;
-    for (const auto& value : uniqueSegmentIds) {
-        result[idx++] = value;
-    }
-    jlongArray resultAsJLongArray = env -> NewLongArray(resultCount);
-    env -> SetLongArrayRegion(resultAsJLongArray, 0, resultCount, reinterpret_cast < const jlong * > (result));
-
-    return resultAsJLongArray;
+    return copyToJLongArray(env, uniqueSegmentIds);
 }

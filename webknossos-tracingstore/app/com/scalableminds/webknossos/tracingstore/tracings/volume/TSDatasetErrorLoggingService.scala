@@ -10,6 +10,7 @@ import scala.concurrent.ExecutionContext
 
 class TSDatasetErrorLoggingService @Inject()(
     val lifecycle: ApplicationLifecycle,
-    val applicationHealthService: ApplicationHealthService,
     @Named("webknossos-tracingstore") val actorSystem: ActorSystem)(implicit val ec: ExecutionContext)
-    extends DatasetErrorLoggingService {}
+    extends DatasetErrorLoggingService {
+  protected val applicationHealthService: Option[Nothing] = None
+}

@@ -17,7 +17,7 @@ import scala.concurrent.duration._
 
 trait DatasetErrorLoggingService extends IntervalScheduler with Formatter with LazyLogging {
 
-  protected def applicationHealthService: ApplicationHealthService
+  protected def applicationHealthService: Option[ApplicationHealthService]
 
   private val errorCountThresholdPerDataset = 5
 
@@ -72,7 +72,7 @@ trait DatasetErrorLoggingService extends IntervalScheduler with Formatter with L
         }
       case Failure(msg, Full(e: InternalError), _) =>
         logger.error(s"Caught internal error ($msg) while $label for $dataSourceId:", e)
-        applicationHealthService.pushError(e)
+        applicationHealthService.foreach(_.pushError(e))
         Fox.failure(msg, Full(e))
       case f: Failure =>
         if (shouldLog(dataSourceId.organizationId, dataSourceId.directoryName)) {
@@ -87,6 +87,8 @@ trait DatasetErrorLoggingService extends IntervalScheduler with Formatter with L
 
 class DSDatasetErrorLoggingService @Inject()(
     val lifecycle: ApplicationLifecycle,
-    val applicationHealthService: ApplicationHealthService,
+    dsApplicationHealthService: ApplicationHealthService,
     @Named("webknossos-datastore") val actorSystem: ActorSystem)(implicit val ec: ExecutionContext)
-    extends DatasetErrorLoggingService {}
+    extends DatasetErrorLoggingService {
+  protected def applicationHealthService: Option[ApplicationHealthService] = Some(dsApplicationHealthService)
+}

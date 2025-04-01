@@ -54,8 +54,16 @@ object UpdateAction {
           case "updateTreeEdgesVisibility" => deserialize[UpdateTreeEdgesVisibilitySkeletonAction](jsonValue)
           case "updateUserBoundingBoxesInSkeletonTracing" =>
             deserialize[UpdateUserBoundingBoxesSkeletonAction](jsonValue)
+          case "addUserBoundingBoxSkeletonAction"    => deserialize[AddUserBoundingBoxSkeletonAction](jsonValue)
+          case "deleteUserBoundingBoxSkeletonAction" => deserialize[DeleteUserBoundingBoxSkeletonAction](jsonValue)
+          case "updateUserBoundingBoxBoundsSkeletonAction" =>
+            deserialize[UpdateUserBoundingBoxBoundsSkeletonAction](jsonValue)
           case "updateUserBoundingBoxVisibilityInSkeletonTracing" =>
             deserialize[UpdateUserBoundingBoxVisibilitySkeletonAction](jsonValue)
+          case "updateUserBoundingBoxNameSkeletonAction" =>
+            deserialize[UpdateUserBoundingBoxNameSkeletonAction](jsonValue)
+          case "updateUserBoundingBoxColorSkeletonAction" =>
+            deserialize[UpdateUserBoundingBoxColorSkeletonAction](jsonValue)
 
           // Volume
           case "updateBucket"        => deserialize[UpdateBucketVolumeAction](jsonValue)

@@ -91,7 +91,7 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
       if (rotationInDegrees) {
         rotationValues.rotationInDegrees = rotationInDegrees;
       }
-      if (isMirrored) {
+      if (isMirrored !== undefined) {
         rotationValues.isMirrored = isMirrored;
       }
       const rotationMatrix = getRotationMatrixAroundAxis(axis, rotationValues);

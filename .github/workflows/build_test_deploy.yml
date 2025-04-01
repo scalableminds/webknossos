@@ -21,6 +21,7 @@ env:
   USER_GID: 1000
   DOCKER_USER: ${{ secrets.DOCKER_USER }}
   DOCKER_PASS: ${{ secrets.DOCKER_PASS }}
+  POSTGRES_PASSWORD: "secret_password"
 
 jobs:
   static_frontend_code_checks:
@@ -30,84 +31,67 @@ jobs:
       uses: actions/checkout@v3
       with:
         fetch-depth: 5
-
     - uses: actions/setup-node@v4
       with:
         node-version: 18
-
     - name: Install frontend dependencies
       run: corepack enable && yarn install --immutable
-
     - name: Lint frontend code and check formatting
       run: yarn run check-frontend
-
     - name: Typecheck frontend code
       run: yarn typecheck
-
     - name: Check for cyclic dependencies in frontend
       run: yarn check-cyclic-dependencies
 
-
-  build_test_deploy:
+  build:
     runs-on: ubuntu-24.04
-    env:
-      # The hostname used to communicate with the PostgreSQL service container
-      # POSTGRES_HOST: localhost
-      # POSTGRES_PORT: 5432
-      PGPASSWORD: secret_password
     services:
-        postgres:
-          image: postgres:10-alpine
-          env:
-            POSTGRES_URL: jdbc:postgresql://postgres/webknossos
-            POSTGRES_USER: webknossos_user
-            POSTGRES_PASSWORD: secret_password
-          # Set health checks to wait until postgres has started
-          options: >-
-            --health-cmd pg_isready
-            --health-interval 2s
-            --health-timeout 5s
-            --health-retries 30
-          ports:
-            - 5432:5432
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_URL: jdbc:postgresql://postgres/webknossos
+          POSTGRES_USER: webknossos_user
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
+        ports:
+          - 5432:5432
+    outputs:
+      normalized_branch: ${{ steps.configure.outputs.normalized_branch }}
+      docker_tag: ${{ steps.configure.outputs.docker_tag }}
     steps:
-
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 5
-
-      - name: "Custom environment variables"
-        run: |
-          if [[ ${{ github.ref_type }} == "branch" ]]; then
-            NORMALIZED_BRANCH=$(echo ${{ github.ref_name }} | sed 's/[\/-]/_/g')
-            echo "NORMALIZED_BRANCH=$NORMALIZED_BRANCH" >> $GITHUB_ENV
-            DOCKER_TAG="${NORMALIZED_BRANCH}__${{ github.run_number }}"
-            echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
-          else
-            echo "NORMALIZED_BRANCH=master" >> $GITHUB_ENV
-            echo "DOCKER_TAG=${{ github.ref_name }}" >> $GITHUB_ENV
-          fi
-
       - uses: actions/setup-node@v4
         with:
           node-version: 18
-
+      - name: "Custom environment variables"
+        id: configure
+        run: |
+          if [[ ${{ github.ref_type }} == "branch" ]]; then
+            NORMALIZED_BRANCH=$(echo ${{ github.ref_name }} | sed 's/[\/-]/_/g')
+            echo "normalized_branch=$NORMALIZED_BRANCH" >> "$GITHUB_OUTPUT"
+            DOCKER_TAG="${NORMALIZED_BRANCH}__${{ github.run_number }}"
+            echo "docker_tag=$DOCKER_TAG" >> "$GITHUB_OUTPUT"
+          else
+            echo "normalized_branch=master" >> "$GITHUB_OUTPUT"
+            echo "docker_tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
       - name: Install frontend dependencies
         run: yarn install --immutable
-
       - name: Build webknossos (webpack)
         run: yarn build
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: 'temurin' # See 'Supported distributions' for available options
           java-version: '21'
           cache: 'sbt'
-      - name: Set up sbt
-        uses: sbt/setup-sbt@v1
-
+      - uses: sbt/setup-sbt@v1
       - name: Cache SBT
         uses: actions/cache@v4
         with:
@@ -115,26 +99,8 @@ jobs:
             ~/.ivy2/cache
             ~/.sbt
           key: ${{ runner.os }}-sbt-${{ hashFiles('/build.sbt') }}
-
       - name: Install OS dependencies / libs
         run: sudo apt-get update && sudo apt-get install -y libdraco-dev libblosc-dev
-
-                    # build-essential \
-          # cmake \
-
-      # - name: Prepare dependency folders
-      #   run: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier
-
-      # - name: Assert unique evolution numbers
-      #   run: node tools/postgres/dbtool.js assert-unique-evolution-numbers
-
-      # - name: Assert schema.sql and evolutions are equal
-      #   run: |
-      #     docker compose up -d postgres
-      #     sleep 3
-      #     docker compose run compile tools/postgres/dbtool.js check-evolutions-schema
-
-
       - name: Build webknossos (sbt)
         run: |
           if [ "${{ github.ref_name }}" == "master" ]; then
@@ -145,113 +111,345 @@ jobs:
         env:
           POSTGRES_URL: jdbc:postgresql://localhost:5432/webknossos
           POSTGRES_USER: webknossos_user
-          POSTGRES_PASSWORD: secret_password
-
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
       - name: Build webknossos-datastore (sbt)
         run: sbt -no-colors -DfailOnWarning "project webknossosDatastore" copyMessages compile stage
-
       - name: Build webknossos-tracingstore (sbt)
         run: sbt -no-colors -DfailOnWarning "project webknossosTracingstore" copyMessages compile stage
+      - name: actions/upload-artifact@v4
+        with:
+          name: backend-build-artifacts
+          retention-days: 1
+          path: |
+            target/
+            util/target
+            project/**/target
+            webknossos*/target
 
-      - name: Lint backend code and check formatting
-        run: .github/not-on-master.sh sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
-
+  test-backend:
+    runs-on: ubuntu-24.04
+    needs: [build]
+    if: ${{ github.ref_name != "master" }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 5
+      - uses: actions/download-artifact@v4
+        with:
+          name: backend-build-artifacts
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin' # See 'Supported distributions' for available options
+          java-version: '21'
+          cache: 'sbt'
+      - uses: sbt/setup-sbt@v1
+      - name: Cache SBT
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.ivy2/cache
+            ~/.sbt
+          key: ${{ runner.os }}-sbt-${{ hashFiles('/build.sbt') }}
       - name: Run backend tests
-        run: .github/not-on-master.sh sbt -v "testOnly backend.*"
-
-      - name: Checksum App Dirs
-        run: find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
-
-      - name: Set up Docker
-        uses: docker/setup-buildx-action@v2
-
-      - name: Build webknossos docker image
         run: |
-          docker pull scalableminds/webknossos:$NORMALIZED_BRANCH || true
-          DEV_CACHE=$NORMALIZED_BRANCH docker compose build --pull webknossos
+          sbt -v "testOnly backend.*"
+      - name: Lint backend code and check formatting
+        run: |
+          sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
+
+  docker-build-and-e2e-tests:
+    runs-on: ubuntu-24.04
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 5
+      - uses: actions/download-artifact@v4
+        with:
+          name: backend-build-artifacts
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Install frontend dependencies
+        run: corepack enable && yarn install --immutable
+
+      #
+      # Build Docker Images
+      #
+      - name: Checksum App Dirs
+        run: |
+          find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
+      - uses: docker/setup-buildx-action@v2
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASS }}
+      - name: Build webknossos docker image
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: |
+            scalableminds/webknossos:${{ needs.build.outputs.docker_tag }}
+            scalableminds/webknossos:${{ needs.build.outputs.normalized_branch }}
+      - name: Build webknossos datastore docker image
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          context: webknossos-datastore
+          tags: |
+            scalableminds/webknossos-datastore:${{ needs.build.outputs.docker_tag }}
+            scalableminds/webknossos-datastore:${{ needs.build.outputs.normalized_branch }}
+      - name: Build webknossos tracingstore docker image
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          context: webknossos-tracingstore
+          tags: |
+            scalableminds/webknossos-tracingstore:${{ needs.build.outputs.docker_tag }}
+            scalableminds/webknossos-tracingstore:${{ needs.build.outputs.normalized_branch }}
+      #
+      # Run e2e Tests
+      #
+      - name: Start Docker Instance
+        if: ${{ github.ref_name != "master" }}
+        run: |
+          docker compose -f .github/docker-compose.yml -p "webknossos" -d
         env:
-          POSTGRES_URL: jdbc:postgresql://localhost:5432/webknossos
+          DOCKER_TAG: ${{ needs.build.outputs.docker_tag }}
           POSTGRES_USER: webknossos_user
           POSTGRES_PASSWORD: secret_password
 
-      - name: Build webknossos-datastore docker image
-        run: docker compose build --pull webknossos-datastore
-
-      - name: Build webknossos-tracingstore docker image
-        run: docker compose build --pull webknossos-tracingstore
-
-        # Enable tmate debugging of manually-triggered workflows if the input option was provided
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-
-      - name: Start webknossos, datastore, and tracingstore
-        run: |
-          set -xeo pipefail
-
-          mkdir -p binaryData/Organization_X
-          unzip test/dataset/test-dataset.zip -d binaryData/Organization_X/
-          sudo chmod -R "0777" binaryData/Organization_X
-
-          mkdir -p fossildb/data && sudo chmod -R "0777" fossildb/data
-          mkdir -p fossildb/backup && sudo chmod -R "0777" fossildb/backup
-          docker compose up -d webknossos
-          docker compose up -d webknossos-datastore
-          docker compose up -d webknossos-tracingstore
-
+      # Smoke Tests
       - name: Run webknossos smoke test
         uses: ./.github/actions/url-health-check
         with:
           url: http://localhost:9000/api/health
-
       - name: Run webknossos-datastore smoke test
         uses: ./.github/actions/url-health-check
         with:
           url: http://localhost:9090/data/health
-
       - name: Run webknossos-tracingstore smoke test
         uses: ./.github/actions/url-health-check
         with:
           url: http://localhost:9050/tracings/health
 
-      - name: Run end-to-end tests
-        uses: nick-invision/retry@v2
-        with:
-          timeout_minutes: 10
-          max_attempts: 3
-          command: sh -c ".github/not-on-master.sh yarn run test-e2e"
-        env:
-          POSTGRES_URL: jdbc:postgresql://localhost:5434/webknossos
-          POSTGRES_USER: webknossos_user
-          POSTGRES_PASSWORD: secret_password
-
-      - name: Stop webknossos, datastore, and tracingstore
-        run: docker compose down --volumes --remove-orphans
-
-      - name: Push docker images
+      # Run e2e-tests
+      - name: Run e2e tests
         uses: nick-invision/retry@v2
         with:
           timeout_minutes: 10
           max_attempts: 3
           command: |
-            docker compose push webknossos
-            docker compose push webknossos-datastore
-            docker compose push webknossos-tracingstore
+            yarn run test-e2e
+        env:
+          POSTGRES_URL: jdbc:postgresql://localhost:5432/webknossos
+          POSTGRES_USER: webknossos_user
+          POSTGRES_PASSWORD: secret_password
 
-            if [[ ${{ github.ref_type }} == "branch" ]]; then
-              docker tag scalableminds/webknossos:${DOCKER_TAG} scalableminds/webknossos:${NORMALIZED_BRANCH}
-              retry docker push scalableminds/webknossos:${NORMALIZED_BRANCH}
-              docker tag scalableminds/webknossos-datastore:${DOCKER_TAG} scalableminds/webknossos-datastore:${NORMALIZED_BRANCH}
-              retry docker push scalableminds/webknossos-datastore:${NORMALIZED_BRANCH}
-              docker tag scalableminds/webknossos-tracingstore:${DOCKER_TAG} scalableminds/webknossos-tracingstore:${NORMALIZED_BRANCH}
-              retry docker push scalableminds/webknossos-tracingstore:${NORMALIZED_BRANCH}
-              docker tag scalableminds/webknossos-dev scalableminds/webknossos-dev:${NORMALIZED_BRANCH}
-              retry docker push scalableminds/webknossos-dev:${NORMALIZED_BRANCH}
-            fi
-            docker logout
-
-      - name: Report coverage
-        run: .github/not-on-master.sh yarn coverage || true
-
-      # - name: Send Slack notification (master only)
-      #   run: .circleci/slack-notification.sh
+#  build_test_deploy:
+#    runs-on: ubuntu-24.04
+#    env:
+#      # The hostname used to communicate with the PostgreSQL service container
+#      # POSTGRES_HOST: localhost
+#      # POSTGRES_PORT: 5432
+#      PGPASSWORD: secret_password
+#    services:
+#        postgres:
+#          image: postgres:10-alpine
+#          env:
+#            POSTGRES_URL: jdbc:postgresql://postgres/webknossos
+#            POSTGRES_USER: webknossos_user
+#            POSTGRES_PASSWORD: secret_password
+#          # Set health checks to wait until postgres has started
+#          options: >-
+#            --health-cmd pg_isready
+#            --health-interval 2s
+#            --health-timeout 5s
+#            --health-retries 30
+#          ports:
+#            - 5432:5432
+#    steps:
+#
+#      - name: Checkout code
+#        uses: actions/checkout@v3
+#        with:
+#          fetch-depth: 5
+#
+#      - name: "Custom environment variables"
+#        run: |
+#          if [[ ${{ github.ref_type }} == "branch" ]]; then
+#            NORMALIZED_BRANCH=$(echo ${{ github.ref_name }} | sed 's/[\/-]/_/g')
+#            echo "NORMALIZED_BRANCH=$NORMALIZED_BRANCH" >> $GITHUB_ENV
+#            DOCKER_TAG="${NORMALIZED_BRANCH}__${{ github.run_number }}"
+#            echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
+#          else
+#            echo "NORMALIZED_BRANCH=master" >> $GITHUB_ENV
+#            echo "DOCKER_TAG=${{ github.ref_name }}" >> $GITHUB_ENV
+#          fi
+#
+#      - uses: actions/setup-node@v4
+#        with:
+#          node-version: 18
+#
+#      - name: Install frontend dependencies
+#        run: yarn install --immutable
+#
+#      - name: Build webknossos (webpack)
+#        run: yarn build
+#
+#      - name: Set up Java
+#        uses: actions/setup-java@v4
+#        with:
+#          distribution: 'temurin' # See 'Supported distributions' for available options
+#          java-version: '21'
+#          cache: 'sbt'
+#      - name: Set up sbt
+#        uses: sbt/setup-sbt@v1
+#
+#      - name: Cache SBT
+#        uses: actions/cache@v4
+#        with:
+#          path: |
+#            ~/.ivy2/cache
+#            ~/.sbt
+#          key: ${{ runner.os }}-sbt-${{ hashFiles('/build.sbt') }}
+#
+#      - name: Install OS dependencies / libs
+#        run: sudo apt-get update && sudo apt-get install -y libdraco-dev libblosc-dev
+#
+#                    # build-essential \
+#          # cmake \
+#
+#      # - name: Prepare dependency folders
+#      #   run: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier
+#
+#      # - name: Assert unique evolution numbers
+#      #   run: node tools/postgres/dbtool.js assert-unique-evolution-numbers
+#
+#      # - name: Assert schema.sql and evolutions are equal
+#      #   run: |
+#      #     docker compose up -d postgres
+#      #     sleep 3
+#      #     docker compose run compile tools/postgres/dbtool.js check-evolutions-schema
+#
+#
+#      - name: Build webknossos (sbt)
+#        run: |
+#          if [ "${{ github.ref_name }}" == "master" ]; then
+#            sbt -no-colors clean compile stage
+#          else
+#            sbt -no-colors -DfailOnWarning compile stage
+#          fi
+#        env:
+#          POSTGRES_URL: jdbc:postgresql://localhost:5432/webknossos
+#          POSTGRES_USER: webknossos_user
+#          POSTGRES_PASSWORD: secret_password
+#
+#      - name: Build webknossos-datastore (sbt)
+#        run: sbt -no-colors -DfailOnWarning "project webknossosDatastore" copyMessages compile stage
+#
+#      - name: Build webknossos-tracingstore (sbt)
+#        run: sbt -no-colors -DfailOnWarning "project webknossosTracingstore" copyMessages compile stage
+#
+#      - name: Lint backend code and check formatting
+#        run: .github/not-on-master.sh sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
+#
+#      - name: Run backend tests
+#        run: .github/not-on-master.sh sbt -v "testOnly backend.*"
+#
+#      - name: Checksum App Dirs
+#        run: find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
+#
+#      - name: Set up Docker
+#        uses: docker/setup-buildx-action@v2
+#
+#      - name: Build webknossos docker image
+#        run: |
+#          docker pull scalableminds/webknossos:$NORMALIZED_BRANCH || true
+#          DEV_CACHE=$NORMALIZED_BRANCH docker compose build --pull webknossos
+#        env:
+#          POSTGRES_URL: jdbc:postgresql://localhost:5432/webknossos
+#          POSTGRES_USER: webknossos_user
+#          POSTGRES_PASSWORD: secret_password
+#
+#      - name: Build webknossos-datastore docker image
+#        run: docker compose build --pull webknossos-datastore
+#
+#      - name: Build webknossos-tracingstore docker image
+#        run: docker compose build --pull webknossos-tracingstore
+#
+#        # Enable tmate debugging of manually-triggered workflows if the input option was provided
+#      - name: Setup tmate session
+#        uses: mxschmitt/action-tmate@v3
+#        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+#
+#      - name: Start webknossos, datastore, and tracingstore
+#        run: |
+#          set -xeo pipefail
+#
+#          mkdir -p binaryData/Organization_X
+#          unzip test/dataset/test-dataset.zip -d binaryData/Organization_X/
+#          sudo chmod -R "0777" binaryData/Organization_X
+#
+#          mkdir -p fossildb/data && sudo chmod -R "0777" fossildb/data
+#          mkdir -p fossildb/backup && sudo chmod -R "0777" fossildb/backup
+#          docker compose up -d webknossos
+#          docker compose up -d webknossos-datastore
+#          docker compose up -d webknossos-tracingstore
+#
+#      - name: Run webknossos smoke test
+#        uses: ./.github/actions/url-health-check
+#        with:
+#          url: http://localhost:9000/api/health
+#
+#      - name: Run webknossos-datastore smoke test
+#        uses: ./.github/actions/url-health-check
+#        with:
+#          url: http://localhost:9090/data/health
+#
+#      - name: Run webknossos-tracingstore smoke test
+#        uses: ./.github/actions/url-health-check
+#        with:
+#          url: http://localhost:9050/tracings/health
+#
+#      - name: Run end-to-end tests
+#        uses: nick-invision/retry@v2
+#        with:
+#          timeout_minutes: 10
+#          max_attempts: 3
+#          command: sh -c ".github/not-on-master.sh yarn run test-e2e"
+#        env:
+#          POSTGRES_URL: jdbc:postgresql://localhost:5434/webknossos
+#          POSTGRES_USER: webknossos_user
+#          POSTGRES_PASSWORD: secret_password
+#
+#      - name: Stop webknossos, datastore, and tracingstore
+#        run: docker compose down --volumes --remove-orphans
+#
+#      - name: Push docker images
+#        uses: nick-invision/retry@v2
+#        with:
+#          timeout_minutes: 10
+#          max_attempts: 3
+#          command: |
+#            docker compose push webknossos
+#            docker compose push webknossos-datastore
+#            docker compose push webknossos-tracingstore
+#
+#            if [[ ${{ github.ref_type }} == "branch" ]]; then
+#              docker tag scalableminds/webknossos:${DOCKER_TAG} scalableminds/webknossos:${NORMALIZED_BRANCH}
+#              retry docker push scalableminds/webknossos:${NORMALIZED_BRANCH}
+#              docker tag scalableminds/webknossos-datastore:${DOCKER_TAG} scalableminds/webknossos-datastore:${NORMALIZED_BRANCH}
+#              retry docker push scalableminds/webknossos-datastore:${NORMALIZED_BRANCH}
+#              docker tag scalableminds/webknossos-tracingstore:${DOCKER_TAG} scalableminds/webknossos-tracingstore:${NORMALIZED_BRANCH}
+#              retry docker push scalableminds/webknossos-tracingstore:${NORMALIZED_BRANCH}
+#              docker tag scalableminds/webknossos-dev scalableminds/webknossos-dev:${NORMALIZED_BRANCH}
+#              retry docker push scalableminds/webknossos-dev:${NORMALIZED_BRANCH}
+#            fi
+#            docker logout
+#
+#      - name: Report coverage
+#        run: .github/not-on-master.sh yarn coverage || true
+#
+#      # - name: Send Slack notification (master only)
+#      #   run: .circleci/slack-notification.sh

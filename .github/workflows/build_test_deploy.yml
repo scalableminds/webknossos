@@ -125,7 +125,7 @@ jobs:
         id: node_modules
         with:
           path: node_modules
-          key: node_modules-${{ hashFiles("/yarn.lock") }}
+          key: node_modules-${{ hashFiles('/yarn.lock') }}
       - name: Install frontend dependencies
         if: steps.node_modules.outputs.cache-hit != 'true'
         run: yarn install --immutable
@@ -223,7 +223,7 @@ jobs:
         id: node_modules
         with:
           path: node_modules
-          key: node_modules-${{ hashFiles("/yarn.lock") }}
+          key: node_modules-${{ hashFiles('/yarn.lock') }}
       - name: Install frontend dependencies
         if: steps.node_modules.outputs.cache-hit != 'true'
         run: yarn install --immutable

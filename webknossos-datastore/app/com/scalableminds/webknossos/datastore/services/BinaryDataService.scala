@@ -93,7 +93,7 @@ class BinaryDataService(val dataBaseDir: Path,
         bucketBoxesIterator = bucketBoxesConverted.iterator
         allBucketBoxes = requests.indices.map { index =>
           if (indicesWhereOutsideRange.contains(index)) Empty
-          else bucketBoxesIterator.next
+          else bucketBoxesIterator.next()
         }
       } yield allBucketBoxes
     }

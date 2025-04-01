@@ -614,7 +614,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     isHistogramAvailable: boolean,
     hasLessThanTwoColorLayers: boolean = true,
   ) => {
-    const { tracing, dataset, isAdminOrManager } = this.props;
+    const { annotation, dataset, isAdminOrManager } = this.props;
     const { intensityRange } = layerSettings;
     const layer = getLayerByName(dataset, layerName);
     const isSegmentation = layer.category === "segmentation";
@@ -625,10 +625,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const isVolumeTracing = isSegmentation ? layer.tracingId != null : false;
     const isAnnotationLayer = isSegmentation && layer.tracingId != null;
     const isOnlyAnnotationLayer =
-      isAnnotationLayer && tracing && tracing.annotationLayers.length === 1;
+      isAnnotationLayer && annotation && annotation.annotationLayers.length === 1;
     const maybeTracingId = isSegmentation ? layer.tracingId : null;
     const maybeVolumeTracing =
-      maybeTracingId != null ? getVolumeTracingById(tracing, maybeTracingId) : null;
+      maybeTracingId != null ? getVolumeTracingById(annotation, maybeTracingId) : null;
     const maybeFallbackLayer =
       maybeVolumeTracing?.fallbackLayer != null ? maybeVolumeTracing.fallbackLayer : null;
 
@@ -654,13 +654,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const hasHistogram = this.props.histogramData[layerName] != null;
     const volumeDescriptor =
       "tracingId" in layer && layer.tracingId != null
-        ? getVolumeDescriptorById(tracing, layer.tracingId)
+        ? getVolumeDescriptorById(annotation, layer.tracingId)
         : null;
     const readableName =
       "tracingId" in layer && layer.tracingId != null
-        ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)
+        ? getReadableNameByVolumeTracingId(annotation, layer.tracingId)
         : layerName;
-    const allReadableLayerNames = getAllReadableLayerNames(dataset, tracing);
+    const allReadableLayerNames = getAllReadableLayerNames(dataset, annotation);
     const readableLayerNameValidationResult = validateReadableLayerName(
       readableName,
       allReadableLayerNames,
@@ -1192,17 +1192,17 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   };
 
   getSkeletonLayer = () => {
-    const { controlMode, tracing, onChangeRadius, userConfiguration, onChangeShowSkeletons } =
+    const { controlMode, annotation, onChangeRadius, userConfiguration, onChangeShowSkeletons } =
       this.props;
     const isPublicViewMode = controlMode === ControlModeEnum.VIEW;
 
-    if (isPublicViewMode || tracing.skeleton == null) {
+    if (isPublicViewMode || annotation.skeleton == null) {
       return null;
     }
 
     const readableName = "Skeleton";
-    const skeletonTracing = enforceSkeletonTracing(tracing);
-    const isOnlyAnnotationLayer = tracing.annotationLayers.length === 1;
+    const skeletonTracing = enforceSkeletonTracing(annotation);
+    const isOnlyAnnotationLayer = annotation.annotationLayers.length === 1;
     const { showSkeletons, tracingId } = skeletonTracing;
     const activeNodeRadius = getActiveNode(skeletonTracing)?.radius ?? 0;
     return (
@@ -1258,7 +1258,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               ? this.getDeleteAnnotationLayerButton(
                   readableName,
                   AnnotationLayerEnum.Skeleton,
-                  tracing.skeleton.tracingId,
+                  annotation.skeleton.tracingId,
                 )
               : null}
           </div>
@@ -1513,8 +1513,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     const state = Store.getState();
     const canBeMadeHybrid =
-      this.props.tracing.skeleton === null &&
-      this.props.tracing.annotationType === APIAnnotationTypeEnum.Explorational &&
+      this.props.annotation.skeleton === null &&
+      this.props.annotation.annotationType === APIAnnotationTypeEnum.Explorational &&
       state.task === null;
 
     return (
@@ -1536,7 +1536,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         {segmentationLayerSettings}
         {this.getSkeletonLayer()}
 
-        {this.props.tracing.restrictions.allowUpdate &&
+        {this.props.annotation.restrictions.allowUpdate &&
         this.props.controlMode === ControlModeEnum.TRACE ? (
           <>
             <Divider />
@@ -1549,7 +1549,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           </>
         ) : null}
 
-        {this.props.tracing.restrictions.allowUpdate && canBeMadeHybrid ? (
+        {this.props.annotation.restrictions.allowUpdate && canBeMadeHybrid ? (
           <Row justify="center" align="middle">
             <Button
               onClick={this.addSkeletonAnnotationLayer}
@@ -1585,7 +1585,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           <AddVolumeLayerModal
             dataset={this.props.dataset}
             onCancel={this.hideAddVolumeLayerModal}
-            tracing={this.props.tracing}
+            annotation={this.props.annotation}
             preselectedLayerName={this.state.preselectedSegmentationLayerName}
             disableLayerSelection={this.state.segmentationLayerWasPreselected}
           />
@@ -1600,7 +1600,7 @@ const mapStateToProps = (state: OxalisState) => ({
   datasetConfiguration: state.datasetConfiguration,
   histogramData: state.temporaryConfiguration.histogramData,
   dataset: state.dataset,
-  tracing: state.annotation,
+  annotation: state.annotation,
   task: state.task,
   controlMode: state.temporaryConfiguration.controlMode,
   isArbitraryMode: Constants.MODES_ARBITRARY.includes(state.temporaryConfiguration.viewMode),

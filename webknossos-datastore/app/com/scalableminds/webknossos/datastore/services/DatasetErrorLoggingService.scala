@@ -8,20 +8,16 @@ import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Failure, Full}
+import net.liftweb.common.{Box, Failure, Full}
 import play.api.inject.ApplicationLifecycle
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-class DatasetErrorLoggingService @Inject()(
-    val lifecycle: ApplicationLifecycle,
-    val applicationHealthService: ApplicationHealthService,
-    @Named("webknossos-datastore") val actorSystem: ActorSystem)(implicit val ec: ExecutionContext)
-    extends IntervalScheduler
-    with Formatter
-    with LazyLogging {
+trait DatasetErrorLoggingService extends IntervalScheduler with Formatter with LazyLogging {
+
+  protected def applicationHealthService: ApplicationHealthService
 
   private val errorCountThresholdPerDataset = 5
 
@@ -48,6 +44,18 @@ class DatasetErrorLoggingService @Inject()(
     recentErrors.remove((organizationId, datasetName))
 
   override protected def tick(): Fox[Unit] = Fox.successful(recentErrors.clear())
+
+  def withErrorLoggingMultiple(dataSourceId: DataSourceId,
+                               label: String,
+                               resultFox: Fox[Seq[Box[Array[Byte]]]]): Fox[Seq[Box[Array[Byte]]]] =
+    resultFox.futureBox.flatMap {
+      case Full(boxes) =>
+        boxes.foreach(box => withErrorLogging(dataSourceId, label, box))
+        Fox.successful(boxes)
+      case other =>
+        withErrorLogging(dataSourceId, label, resultFox.map(_ => Array[Byte]()))
+        other.toFox
+    }
 
   def withErrorLogging(dataSourceId: DataSourceId, label: String, resultFox: Fox[Array[Byte]]): Fox[Array[Byte]] =
     resultFox.futureBox.flatMap {
@@ -76,3 +84,9 @@ class DatasetErrorLoggingService @Inject()(
     }
 
 }
+
+class DSDatasetErrorLoggingService @Inject()(
+    val lifecycle: ApplicationLifecycle,
+    val applicationHealthService: ApplicationHealthService,
+    @Named("webknossos-datastore") val actorSystem: ActorSystem)(implicit val ec: ExecutionContext)
+    extends DatasetErrorLoggingService {}

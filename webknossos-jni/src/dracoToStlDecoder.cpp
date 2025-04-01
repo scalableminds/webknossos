@@ -1,18 +1,9 @@
 #include "com_scalableminds_webknossos_datastore_draco_NativeDracoToStlConverter.h"
 
+#include "jniutils.h"
 #include <draco/compression/encode.h>
 #include <draco/compression/decode.h>
-
 #include <string>
-
-void throwRuntimeException(JNIEnv * env,
-    const std::string msg) {
-    jclass exceptionClass = env -> FindClass("java/lang/RuntimeException");
-
-    if (exceptionClass != nullptr) {
-        env -> ThrowNew(exceptionClass, ("An error occurred in native code: " + msg).c_str());
-    }
-}
 
 // Takes a byte array containing a DRACO-Encoded mesh, adds offsetX, offsetY, offsetZ to each vertex
 // And encodes the results as STL faces (50 bytes per face)

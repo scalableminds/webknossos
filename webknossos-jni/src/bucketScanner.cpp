@@ -1,10 +1,11 @@
 #include "com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner.h"
 
+#include "jniutils.h"
 #include <unordered_set>
 #include <stdexcept>
 #include <iostream>
 
-uint64_t segmentIdAtIndex(jbyte* bucketBytes, int index, int bytesPerElement, bool isSigned) {
+uint64_t segmentIdAtIndex(jbyte* bucketBytes, int index, const int bytesPerElement, const bool isSigned) {
     jbyte* currentPos = bucketBytes + (index * bytesPerElement);
     long currentValue;
     switch (bytesPerElement) {
@@ -35,7 +36,7 @@ uint64_t segmentIdAtIndex(jbyte* bucketBytes, int index, int bytesPerElement, bo
 }
 
 jlongArray copyToJLongArray(JNIEnv * env, const std::unordered_set<int64_t> &source) {
-    size_t size = source.size();
+    const size_t size = source.size();
     jlongArray target = env -> NewLongArray(size);
     jlong* targetElements = env->GetLongArrayElements(target, nullptr);
 
@@ -49,29 +50,39 @@ jlongArray copyToJLongArray(JNIEnv * env, const std::unordered_set<int64_t> &sou
     return target;
 }
 
-void checkValidBucket(jsize inputLengthBytes, jint bytesPerElement) {
+size_t getElementCount(jsize inputLengthBytes, jint bytesPerElement) {
     if (inputLengthBytes % bytesPerElement != 0) {
         throw std::invalid_argument("Bucket bytes length must be divisible by bytesPerElement");
     }
+    return inputLengthBytes / bytesPerElement;
 }
 
 JNIEXPORT jlongArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_collectSegmentIds
     (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jboolean isSigned) {
 
-    jsize inputLengthBytes = env -> GetArrayLength(bucketBytesJavaArray);
-    jbyte * bucketBytesAsJByte = env -> GetByteArrayElements(bucketBytesJavaArray, NULL);
-    checkValidBucket(inputLengthBytes, bytesPerElement);
-    size_t elementCount = inputLengthBytes / bytesPerElement;
+    const jsize inputLengthBytes = env -> GetArrayLength(bucketBytesJavaArray);
+    jbyte * bucketBytes = env -> GetByteArrayElements(bucketBytesJavaArray, nullptr);
+    try {
+        const size_t elementCount = getElementCount(inputLengthBytes, bytesPerElement);
 
-    std::unordered_set<int64_t> uniqueSegmentIds;
+        std::unordered_set<int64_t> uniqueSegmentIds;
 
-    for (size_t i = 0; i < elementCount; ++i) {
-        int64_t currentValue = segmentIdAtIndex(bucketBytesAsJByte, i, bytesPerElement, isSigned);
-        if (currentValue != 0) {
-          uniqueSegmentIds.insert(currentValue);
+        for (size_t i = 0; i < elementCount; ++i) {
+            const int64_t currentValue = segmentIdAtIndex(bucketBytes, i, bytesPerElement, isSigned);
+            if (currentValue != 0) {
+              uniqueSegmentIds.insert(currentValue);
+            }
         }
-    }
 
-    env -> ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytesAsJByte, 0);
-    return copyToJLongArray(env, uniqueSegmentIds);
+        env -> ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+        return copyToJLongArray(env, uniqueSegmentIds);
+    } catch (const std::exception & e) {
+        env -> ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+        throwRuntimeException(env, "Native Exception in BucketScanner: " + std::string(e.what()));
+        return nullptr;
+    } catch (...) {
+        env -> ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+        throwRuntimeException(env, "Native Exception in BucketScanner");
+        return nullptr;
+    }
 }

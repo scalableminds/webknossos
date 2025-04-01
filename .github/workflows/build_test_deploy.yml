@@ -9,6 +9,21 @@ on:
       - '*'
   workflow_dispatch:
     inputs:
+      tmate_debug_docker_build:
+        type: boolean
+        description: "Debug Docker Build and e2e Test Step"
+        required: false
+        default: false
+      tmate_debug_test_backend:
+        type: boolean
+        description: "Debug Backend Tests"
+        required: false
+        default: false
+      tmate_debug_build:
+        type: boolean
+        description: "Debug Build Step"
+        required: false
+        default: false
       debug_enabled:
         type: boolean
         description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
@@ -99,6 +114,11 @@ jobs:
             ~/.ivy2/cache
             ~/.sbt
           key: ${{ runner.os }}-sbt-${{ hashFiles('/build.sbt') }}
+
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.tmate_debug_build }}
+
       - name: Install OS dependencies / libs
         run: sudo apt-get update && sudo apt-get install -y libdraco-dev libblosc-dev
       - name: Build webknossos (sbt)
@@ -143,6 +163,11 @@ jobs:
           java-version: '21'
           cache: 'sbt'
       - uses: sbt/setup-sbt@v1
+
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.tmate_debug_test_backend }}
+
       - name: Cache SBT
         uses: actions/cache@v4
         with:
@@ -170,6 +195,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 18
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.tmate_debug_docker_build }}
+
       - name: Install frontend dependencies
         run: corepack enable && yarn install --immutable
 

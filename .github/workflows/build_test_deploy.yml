@@ -34,7 +34,6 @@ jobs:
     - uses: actions/setup-node@v4
       with:
         node-version: 18
-        cache: 'yarn'
 
     - name: Install frontend dependencies
       run: corepack enable && yarn install --immutable
@@ -93,7 +92,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 18
-          cache: 'yarn'
 
       - name: Install frontend dependencies
         run: yarn install --immutable

@@ -301,9 +301,9 @@ class UrlManager {
       }
     }
 
-    const tracing = state.annotation;
-    if (tracing.skeleton != null) {
-      const skeletonTracing = enforceSkeletonTracing(tracing);
+    const annotation = state.annotation;
+    if (annotation.skeleton != null) {
+      const skeletonTracing = enforceSkeletonTracing(annotation);
       const { showSkeletons } = skeletonTracing;
       const layerName = "Skeleton";
 

@@ -135,14 +135,18 @@ const AiModelCommentFormItem = () => (
 );
 
 export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void }) {
-  const tracing = useSelector((state: OxalisState) => state.annotation);
+  const annotation = useSelector((state: OxalisState) => state.annotation);
   const dataset = useSelector((state: OxalisState) => state.dataset);
 
   const getMagsForSegmentationLayer = (_annotationId: string, layerName: string) => {
-    const segmentationLayer = getSegmentationLayerByHumanReadableName(dataset, tracing, layerName);
+    const segmentationLayer = getSegmentationLayerByHumanReadableName(
+      dataset,
+      annotation,
+      layerName,
+    );
     return getMagInfo(segmentationLayer.resolutions);
   };
-  const userBoundingBoxes = getSomeTracing(tracing).userBoundingBoxes;
+  const userBoundingBoxes = getSomeTracing(annotation).userBoundingBoxes;
 
   return (
     <TrainAiModelTab
@@ -151,9 +155,9 @@ export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void
       onClose={onClose}
       annotationInfos={[
         {
-          annotation: tracing,
+          annotation: annotation,
           dataset,
-          volumeTracings: tracing.volumes,
+          volumeTracings: annotation.volumes,
           volumeTracingMags: [],
           userBoundingBoxes,
         },

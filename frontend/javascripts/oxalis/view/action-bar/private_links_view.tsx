@@ -139,7 +139,7 @@ function useDeleteLinkMutation(annotationId: string) {
 
 export function useZarrLinkMenu(maybeAccessToken: string | null) {
   const dataset = useSelector((state: OxalisState) => state.dataset);
-  const tracing = useSelector((state: OxalisState) => state.annotation);
+  const annotation = useSelector((state: OxalisState) => state.annotation);
   const dataStoreURL = dataset.dataStore.url;
   const dataLayers = getDataLayers(dataset);
 
@@ -162,7 +162,7 @@ export function useZarrLinkMenu(maybeAccessToken: string | null) {
         children: dataLayers.map((layer) => {
           const readableLayerName =
             "tracingId" in layer && layer.tracingId != null
-              ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)
+              ? getReadableNameByVolumeTracingId(annotation, layer.tracingId)
               : layer.name;
           return {
             label: readableLayerName,

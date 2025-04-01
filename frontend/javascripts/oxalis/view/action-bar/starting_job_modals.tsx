@@ -501,8 +501,8 @@ function AlignmentTab() {
 }
 
 function ShouldUseTreesFormItem() {
-  const tracing = useSelector((state: OxalisState) => state.annotation);
-  const trees = tracing.skeleton ? Object.values(tracing.skeleton.trees) : [];
+  const annotation = useSelector((state: OxalisState) => state.annotation);
+  const trees = annotation.skeleton ? Object.values(annotation.skeleton.trees) : [];
   return (
     <div>
       <Form.Item
@@ -522,13 +522,13 @@ function ShouldUseTreesFormItem() {
           {
             validator: (_rule, checked) => {
               if (checked) {
-                if (tracing.annotationId === "") {
+                if (annotation.annotationId === "") {
                   return Promise.reject(
                     "No annotation was found. Please create an annotation first.",
                   );
                 }
                 if (
-                  tracing.skeleton == null ||
+                  annotation.skeleton == null ||
                   trees.filter((tree) => tree.edges.edgeCount > 0).length === 0
                 ) {
                   return Promise.reject(

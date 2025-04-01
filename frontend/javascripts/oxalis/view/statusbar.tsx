@@ -530,14 +530,14 @@ function MagnificationInfo() {
     const state = Store.getState();
     const { activeMagOfEnabledLayers } = getActiveMagInfo(state);
     const dataset = state.dataset;
-    const tracing = state.annotation;
+    const annotation = state.annotation;
 
     return (
       <div style={{ width: 200 }}>
         Rendered magnification per layer:
         <ul>
           {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
-            const readableName = getReadableNameForLayerName(dataset, tracing, layerName);
+            const readableName = getReadableNameForLayerName(dataset, annotation, layerName);
 
             return (
               <li key={layerName}>

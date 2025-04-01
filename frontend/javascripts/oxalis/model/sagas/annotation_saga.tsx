@@ -64,7 +64,7 @@ export function* pushAnnotationDescriptionUpdateAction(action: SetAnnotationDesc
 }
 
 export function* pushAnnotationUpdateAsync(action: Action) {
-  const tracing = yield* select((state) => state.annotation);
+  const annotation = yield* select((state) => state.annotation);
   const mayEdit = yield* select((state) => mayEditAnnotationProperties(state));
   if (!mayEdit) {
     return;
@@ -80,8 +80,8 @@ export function* pushAnnotationUpdateAsync(action: Action) {
   };
   // The extra type annotation is needed here for flow
   const editObject: Partial<EditableAnnotation> = {
-    name: tracing.name,
-    visibility: tracing.visibility,
+    name: annotation.name,
+    visibility: annotation.visibility,
     viewConfiguration,
   };
   try {
@@ -89,8 +89,8 @@ export function* pushAnnotationUpdateAsync(action: Action) {
       SETTINGS_MAX_RETRY_COUNT,
       SETTINGS_RETRY_DELAY,
       editAnnotation,
-      tracing.annotationId,
-      tracing.annotationType,
+      annotation.annotationId,
+      annotation.annotationType,
       editObject,
     );
   } catch (error) {

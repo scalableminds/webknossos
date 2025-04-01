@@ -214,13 +214,13 @@ function VersionList() {
 }
 
 function InnerVersionList(props: Props & { newestVersion: number; initialAllowUpdate: boolean }) {
-  const tracing = useSelector((state: OxalisState) => state.annotation);
+  const annotation = useSelector((state: OxalisState) => state.annotation);
   const queryClient = useQueryClient();
   // Remember the version with which the version view was opened (
   // the active version could change by the actions of the user).
   // Based on this version, the page numbers are calculated.
   const { newestVersion } = props;
-  const [initialVersion] = useState(tracing.version);
+  const [initialVersion] = useState(annotation.version);
 
   // true if another version is being restored or previewed
   const [isChangingVersion, setIsChangingVersion] = useState(false);
@@ -233,7 +233,7 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
     const { annotationId, earliestAccessibleVersion } = Store.getState().annotation;
 
     return getUpdateActionLogPage(
-      tracing,
+      annotation,
       tracingStoreUrl,
       annotationId,
       earliestAccessibleVersion,
@@ -242,7 +242,7 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
     );
   }
 
-  const queryKey = ["versions", tracing.annotationId];
+  const queryKey = ["versions", annotation.annotationId];
 
   useEffectOnlyOnce(() => {
     // Remove all previous existent queries so that the content of this view
@@ -347,7 +347,7 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
                 batches={batchesOrDateString}
                 initialAllowUpdate={props.initialAllowUpdate}
                 newestVersion={flattenedVersions[0].version}
-                activeVersion={tracing.version}
+                activeVersion={annotation.version}
                 onRestoreVersion={async (version) => {
                   executeUnlessSwitchingVersions(() =>
                     handleRestoreVersion(props, flattenedVersions, version),
@@ -368,9 +368,9 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
             {isFetchingNextPage ? "Loading more..." : "Load More"}
           </Button>
         </div>
-      ) : tracing.earliestAccessibleVersion > 0 ? (
+      ) : annotation.earliestAccessibleVersion > 0 ? (
         <div style={{ textAlign: "center", marginTop: 8, marginBottom: 4 }}>
-          Cannot show versions earlier than {tracing.earliestAccessibleVersion}.
+          Cannot show versions earlier than {annotation.earliestAccessibleVersion}.
         </div>
       ) : null}
     </div>

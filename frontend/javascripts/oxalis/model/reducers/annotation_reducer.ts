@@ -13,7 +13,7 @@ import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { getMeshesForAdditionalCoordinates } from "../accessors/volumetracing_accessor";
 import BoundingBox from "../bucket_data_handling/bounding_box";
 
-const updateTracing = (
+const updateAnnotation = (
   state: OxalisState,
   shape: Partial<OxalisState["annotation"]>,
 ): OxalisState => updateKey(state, "annotation", shape);
@@ -76,7 +76,7 @@ const maybeAddAdditionalCoordinatesToMeshState = (
 function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
     case "INITIALIZE_ANNOTATION": {
-      return updateTracing(state, {
+      return updateAnnotation(state, {
         // Clear all tracings. These will be initialized in corresponding
         // initialization actions.
         mappings: [],
@@ -88,14 +88,14 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
 
     case "SET_ANNOTATION_NAME": {
       const { name } = action;
-      return updateTracing(state, {
+      return updateAnnotation(state, {
         name,
       });
     }
 
     case "SET_ANNOTATION_VISIBILITY": {
       const { visibility } = action;
-      return updateTracing(state, {
+      return updateAnnotation(state, {
         visibility,
       });
     }
@@ -108,14 +108,14 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
           return { ...layer, ...action.layerProperties };
         }
       });
-      return updateTracing(state, {
+      return updateAnnotation(state, {
         annotationLayers: newAnnotationLayers,
       });
     }
 
     case "SET_ANNOTATION_DESCRIPTION": {
       const { description } = action;
-      return updateTracing(state, {
+      return updateAnnotation(state, {
         description,
       });
     }

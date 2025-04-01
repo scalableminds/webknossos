@@ -12,6 +12,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Fixed
 - Fixed rare bug where saving got stuck. [#8409](https://github.com/scalableminds/webknossos/pull/8409)
+- Fixed the correct highlighting of navbar menu items depending on the current open page. [#8473](https://github.com/scalableminds/webknossos/pull/8473)
 
 ## [25.02.0](https://github.com/scalableminds/webknossos/releases/tag/25.02.0) - 2025-02-17
 [Commits](https://github.com/scalableminds/webknossos/compare/25.01.0...25.02.0)

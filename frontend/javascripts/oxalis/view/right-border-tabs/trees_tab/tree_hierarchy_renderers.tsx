@@ -92,10 +92,12 @@ export function renderTreeNode(
       onContextMenu={(evt) =>
         onOpenContextMenu(createMenuForTree(tree, props, hideContextMenu), evt)
       }
-      style={{ wordBreak: "break-word" }}
+      style={{ wordBreak: "break-word", display: "inline-flex", width: "100%" }}
     >
       <ColoredDotIcon colorRGBA={[...tree.color, 1.0]} />
-      {`(${tree.nodes.size()}) `} {maybeProofreadingIcon}
+      <span style={{ marginRight: 4, whiteSpace: "nowrap" }}>
+        {`(${tree.nodes.size()}) `} {maybeProofreadingIcon}
+      </span>
       <EditableTextLabel
         value={tree.name}
         label="Tree Name"

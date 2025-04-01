@@ -1,5 +1,5 @@
 import { CheckOutlined, EditOutlined } from "@ant-design/icons";
-import { Input, type InputProps } from "antd";
+import { Input, type InputProps, Space } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import Markdown from "libs/markdown_adapter";
 import Toast from "libs/toast";
@@ -142,7 +142,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
       onChange: this.handleInputChangeFromEvent,
       onPressEnter: this.handleOnChange,
       style: {
-        width: this.props.width != null ? this.props.width : "60%",
+        width: this.props.width != null ? this.props.width : "calc(100% - 24px)",
         margin,
       },
       size: "small",
@@ -163,31 +163,27 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
     };
 
     if (this.state.isEditing) {
-      return (
-        <span style={{ display: "inline-flex", alignItems: "center" }}>
-          {this.props.rows === 1 ? (
-            <React.Fragment>
-              <Input {...inputComponentProps} onBlur={() => this.handleOnChange} />
-              <FastTooltip key="save" title={`Save ${this.props.label}`} placement="bottom">
-                <CheckOutlined
-                  style={iconStyle}
-                  onClick={(evt) => {
-                    evt.stopPropagation();
-                    this.handleOnChange();
-                  }}
-                />
-              </FastTooltip>
-            </React.Fragment>
-          ) : (
-            <MarkdownModal
-              source={this.state.value}
-              isOpen={this.state.isEditing}
-              onChange={this.handleInputChange}
-              onOk={this.handleOnChange}
-              label={this.props.label}
+      return this.props.rows === 1 ? (
+        <Space.Compact block>
+          <Input {...inputComponentProps} onBlur={() => this.handleOnChange()} />
+          <FastTooltip key="save" title={`Save ${this.props.label}`} placement="bottom">
+            <CheckOutlined
+              style={iconStyle}
+              onClick={(evt) => {
+                evt.stopPropagation();
+                this.handleOnChange();
+              }}
             />
-          )}
-        </span>
+          </FastTooltip>
+        </Space.Compact>
+      ) : (
+        <MarkdownModal
+          source={this.state.value}
+          isOpen={this.state.isEditing}
+          onChange={this.handleInputChange}
+          onOk={this.handleOnChange}
+          label={this.props.label}
+        />
       );
     } else {
       return (

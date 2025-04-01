@@ -24,12 +24,6 @@ import { withoutUpdateTracing } from "test/helpers/saveHelpers";
 import type { ActiveMappingInfo } from "oxalis/store";
 import { askUserForLockingActiveMapping } from "oxalis/model/sagas/saga_helpers";
 
-mockRequire("app", {
-  currentUser: {
-    firstName: "SCM",
-    lastName: "Boy",
-  },
-});
 mockRequire("oxalis/model/sagas/root_saga", function* () {
   yield;
 });

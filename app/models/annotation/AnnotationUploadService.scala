@@ -55,8 +55,8 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService, nmlPar
         basePath
       )
     parserOutput.futureBox.map {
-      case Full(NmlParseSuccessWithoutFile(skeletonTracingOpt, uploadedVolumeLayers, datasetId, description, wkUrl)) =>
-        NmlParseSuccess(name, skeletonTracingOpt, uploadedVolumeLayers, datasetId, description, wkUrl)
+      case Full(NmlParseSuccessWithoutFile(skeletonTracing, uploadedVolumeLayers, datasetId, description, wkUrl)) =>
+        NmlParseSuccess(name, skeletonTracing, uploadedVolumeLayers, datasetId, description, wkUrl)
       case f: Failure => NmlParseFailure(name, formatFailureChain(f, messagesProviderOpt = Some(m)))
       case Empty      => NmlParseEmpty(name)
     }
@@ -100,13 +100,8 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService, nmlPar
 
     if (parseResults.length > 1) {
       parseResults.map {
-        case NmlParseSuccess(name, Some(skeletonTracing), uploadedVolumeLayers, datasetId, description, wkUrl) =>
-          NmlParseSuccess(name,
-                          Some(renameTrees(name, skeletonTracing)),
-                          uploadedVolumeLayers,
-                          datasetId,
-                          description,
-                          wkUrl)
+        case NmlParseSuccess(name, skeletonTracing, uploadedVolumeLayers, datasetId, description, wkUrl) =>
+          NmlParseSuccess(name, renameTrees(name, skeletonTracing), uploadedVolumeLayers, datasetId, description, wkUrl)
         case r => r
       }
     } else {
@@ -142,9 +137,9 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService, nmlPar
       volumeLayers.map(v => v.copy(tracing = wrapSegmentsInGroup(name, v.tracing)))
 
     parseResults.map {
-      case NmlParseSuccess(name, Some(skeletonTracing), uploadedVolumeLayers, datasetId, description, wkUrl) =>
+      case NmlParseSuccess(name, skeletonTracing, uploadedVolumeLayers, datasetId, description, wkUrl) =>
         NmlParseSuccess(name,
-                        Some(wrapTreesInGroup(name, skeletonTracing)),
+                        wrapTreesInGroup(name, skeletonTracing),
                         wrapVolumeLayers(name, uploadedVolumeLayers),
                         datasetId,
                         description,

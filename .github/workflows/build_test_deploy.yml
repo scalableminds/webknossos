@@ -277,6 +277,14 @@ jobs:
       #
       # Run e2e Tests
       #
+      - name: Prepare e2e test
+        run: |
+          mkdir -p binaryData/Organization_X
+          unzip test/dataset/test-dataset.zip -d binaryData/Organization_X/
+          sudo chmod -R "0777" binaryData/Organization_X
+
+          mkdir -p fossildb/data && sudo chmod -R "0777" fossildb/data
+          mkdir -p fossildb/backup && sudo chmod -R "0777" fossildb/backup
       - name: Start Docker Instance
         if: ${{ github.ref_name != 'master' }}
         run: |
@@ -297,14 +305,6 @@ jobs:
           url: http://localhost:9050/tracings/health
 
       # Run e2e-tests
-      - name: Prepare e2e test
-        run: |
-          mkdir -p binaryData/Organization_X
-          unzip test/dataset/test-dataset.zip -d binaryData/Organization_X/
-          sudo chmod -R "0777" binaryData/Organization_X
-
-          mkdir -p fossildb/data && sudo chmod -R "0777" fossildb/data
-          mkdir -p fossildb/backup && sudo chmod -R "0777" fossildb/backup
       - name: Run e2e tests
         uses: nick-invision/retry@v2
         with:

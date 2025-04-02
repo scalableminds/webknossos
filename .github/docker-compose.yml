@@ -32,7 +32,7 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./binaryData:/webknossos-datastore/binaryData
+      - ../binaryData:/webknossos-datastore/binaryData
     command:
       - -J-Xmx20G
       - -J-Xms1G
@@ -69,10 +69,10 @@ services:
     command:
       - fossildb
       - -c
-      - skeletons,volumes,volumeData,volumeSegmentIndex,editableMappingsInfo,editableMappingsAgglomerateToGraph,editableMappingsSegmentToAgglomerate,annotations,annotationUpdates
+      - skeletons,volumes,volumeData,volumeSegmentIndex,editableMappingsInfomeditableMappingsAgglomerateToGraph,editableMappingsSegmentToAgglomerate,annotations,annotationUpdates
     volumes:
-      - "./fossildb/data:/fossildb/data"
-      - "./fossildb/backup:/fossildb/backup"
+      - "../fossildb/data:/fossildb/data"
+      - "../fossildb/backup:/fossildb/backup"
 
   postgres:
     image: postgres:17-bookworm
@@ -83,7 +83,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - "./pg/db:/var/lib/postgresql/data"
+      - "../pg/db:/var/lib/postgresql/data"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -d webknossos -U ${POSTGRES_USER} -h 127.0.0.1 -p 5432"]
       interval: 2s

@@ -942,7 +942,7 @@ test.serial("Undo for deleting segment group (without recursion)", async (t) => 
   );
 
   const state = Store.getState();
-  const tracing = state.tracing.volumes[0];
+  const tracing = state.annotation.volumes[0];
   t.is(tracing.segmentGroups.length, 0);
   t.is(tracing.segments.size(), 4);
 
@@ -953,7 +953,7 @@ test.serial("Undo for deleting segment group (without recursion)", async (t) => 
   await dispatchUndoAsync(Store.dispatch);
 
   const stateRestored = Store.getState();
-  const tracingRestored = stateRestored.tracing.volumes[0];
+  const tracingRestored = stateRestored.annotation.volumes[0];
   t.is(tracingRestored.segmentGroups.length, 2);
   t.is(tracingRestored.segments.size(), 4);
 
@@ -994,14 +994,14 @@ test.serial("Undo for deleting segment group (with recursion)", async (t) => {
   );
 
   const state = Store.getState();
-  const tracing = state.tracing.volumes[0];
+  const tracing = state.annotation.volumes[0];
   t.is(tracing.segmentGroups.length, 0);
   t.is(tracing.segments.size(), 0);
 
   await dispatchUndoAsync(Store.dispatch);
 
   const stateRestored = Store.getState();
-  const tracingRestored = stateRestored.tracing.volumes[0];
+  const tracingRestored = stateRestored.annotation.volumes[0];
   t.is(tracingRestored.segmentGroups.length, 1);
   t.is(tracingRestored.segmentGroups[0]?.children.length || 0, 1);
   t.is(tracingRestored.segments.size(), 4);
@@ -1043,7 +1043,7 @@ test.serial("Undo for deleting segment group (bug repro)", async (t) => {
   Store.dispatch(updateSegmentAction(3, { groupId: 2 }, volumeTracingLayerName));
   Store.dispatch(updateSegmentAction(4, { groupId: 2 }, volumeTracingLayerName));
 
-  t.is(Store.getState().tracing.volumes[0].segmentGroups.length, 2);
+  t.is(Store.getState().annotation.volumes[0].segmentGroups.length, 2);
 
   // Delete everything
   Store.dispatch(
@@ -1057,14 +1057,14 @@ test.serial("Undo for deleting segment group (bug repro)", async (t) => {
   );
 
   const state = Store.getState();
-  const tracing = state.tracing.volumes[0];
+  const tracing = state.annotation.volumes[0];
   t.is(tracing.segmentGroups.length, 0);
   t.is(tracing.segments.size(), 0);
 
   // Undo again
   await dispatchUndoAsync(Store.dispatch);
 
-  t.is(Store.getState().tracing.volumes[0].segmentGroups.length, 2);
+  t.is(Store.getState().annotation.volumes[0].segmentGroups.length, 2);
 
   // Delete without recursion
   Store.dispatch(
@@ -1080,7 +1080,7 @@ test.serial("Undo for deleting segment group (bug repro)", async (t) => {
   await dispatchUndoAsync(Store.dispatch);
 
   const stateRestored = Store.getState();
-  const tracingRestored = stateRestored.tracing.volumes[0];
+  const tracingRestored = stateRestored.annotation.volumes[0];
   t.is(tracingRestored.segments.size(), 4);
   t.is(tracingRestored.segmentGroups.length, 2);
 

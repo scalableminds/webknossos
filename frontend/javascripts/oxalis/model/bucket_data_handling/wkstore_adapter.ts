@@ -100,7 +100,7 @@ export async function requestWithFallback(
   const datasetDirectoryName = state.dataset.directoryName;
   const organization = state.dataset.owningOrganization;
   const dataStoreHost = state.dataset.dataStore.url;
-  const tracingStoreHost = state.tracing.tracingStore.url;
+  const tracingStoreHost = state.annotation.tracingStore.url;
 
   const getDataStoreUrl = (optLayerName?: string) =>
     `${dataStoreHost}/data/datasets/${organization}/${datasetDirectoryName}/layers/${
@@ -111,7 +111,7 @@ export async function requestWithFallback(
 
   const maybeVolumeTracing =
     "tracingId" in layerInfo && layerInfo.tracingId != null
-      ? getVolumeTracingById(state.tracing, layerInfo.tracingId)
+      ? getVolumeTracingById(state.annotation, layerInfo.tracingId)
       : null;
 
   // For non-segmentation layers and for viewing datasets, we'll always use the datastore URL.
@@ -129,7 +129,7 @@ export async function requestWithFallback(
     layerInfo,
     batch,
     maybeVolumeTracing,
-    maybeVolumeTracing != null ? state.tracing.annotationId : undefined,
+    maybeVolumeTracing != null ? state.annotation.annotationId : undefined,
   );
   const missingBucketIndices = getNullIndices(bucketBuffers);
 
@@ -160,7 +160,7 @@ export async function requestWithFallback(
     layerInfo,
     fallbackBatch,
     maybeVolumeTracing,
-    maybeVolumeTracing != null ? state.tracing.annotationId : undefined,
+    maybeVolumeTracing != null ? state.annotation.annotationId : undefined,
     true,
   );
   return bucketBuffers.map((bucket, idx) => {
@@ -206,7 +206,7 @@ export async function requestFromStore(
   const magInfo = getMagInfo(layerInfo.resolutions);
   const version =
     !isVolumeFallback && isSegmentation && maybeVolumeTracing != null
-      ? state.tracing.version
+      ? state.annotation.version
       : null;
   const bucketInfo = batch.map((zoomedAddress) =>
     createRequestBucketInfo(

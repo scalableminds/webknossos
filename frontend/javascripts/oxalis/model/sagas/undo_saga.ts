@@ -162,9 +162,9 @@ export function* manageUndoStates(): Saga<never> {
   yield* call(ensureWkReady);
 
   // Initialization of the local state variables from above.
-  prevSkeletonTracingOrNull = yield* select((state) => state.tracing.skeleton);
+  prevSkeletonTracingOrNull = yield* select((state) => state.annotation.skeleton);
   prevUserBoundingBoxes = yield* select(getUserBoundingBoxesFromState);
-  const volumeTracings = yield* select((state) => getVolumeTracings(state.tracing));
+  const volumeTracings = yield* select((state) => getVolumeTracings(state.annotation));
   for (const volumeTracing of volumeTracings) {
     volumeInfoById[volumeTracing.tracingId] = {
       currentBucketSnapshots: [],
@@ -178,7 +178,7 @@ export function* manageUndoStates(): Saga<never> {
   // Helper functions for functionality related to volumeInfoById.
   function* setPrevSegmentsAndGroupsToCurrent() {
     // Read the current segments map and store it in volumeInfoById for all volume layers.
-    const volumeTracings = yield* select((state) => getVolumeTracings(state.tracing));
+    const volumeTracings = yield* select((state) => getVolumeTracings(state.annotation));
     for (const volumeTracing of volumeTracings) {
       volumeInfoById[volumeTracing.tracingId].prevSegments = volumeTracing.segments;
       volumeInfoById[volumeTracing.tracingId].prevSegmentGroups = volumeTracing.segmentGroups;
@@ -190,7 +190,7 @@ export function* manageUndoStates(): Saga<never> {
     // In case the invariant is violated for some reason, we forbid undo/redo.
     // The case can be provoked by brushing and hitting ctrl+z without lifting the
     // mouse button.
-    const volumeTracings = yield* select((state) => getVolumeTracings(state.tracing));
+    const volumeTracings = yield* select((state) => getVolumeTracings(state.annotation));
     for (const volumeTracing of volumeTracings) {
       if (volumeInfoById[volumeTracing.tracingId].currentBucketSnapshots.length > 0) {
         return false;
@@ -329,7 +329,7 @@ export function* manageUndoStates(): Saga<never> {
         // of a volume transaction.
         shouldClearRedoState = true;
         const activeVolumeTracing = yield* select((state) =>
-          getVolumeTracingById(state.tracing, finishAnnotationStrokeAction.tracingId),
+          getVolumeTracingById(state.annotation, finishAnnotationStrokeAction.tracingId),
         );
         const volumeInfo = volumeInfoById[activeVolumeTracing.tracingId];
         undoStack.push({
@@ -377,7 +377,7 @@ export function* manageUndoStates(): Saga<never> {
         if (createNewUndoState) {
           shouldClearRedoState = true;
           const activeVolumeTracing = yield* select((state) =>
-            getVolumeTracingByLayerName(state.tracing, action.layerName),
+            getVolumeTracingByLayerName(state.annotation, action.layerName),
           );
           if (activeVolumeTracing) {
             const volumeInfo = volumeInfoById[activeVolumeTracing.tracingId];
@@ -397,7 +397,7 @@ export function* manageUndoStates(): Saga<never> {
         } else {
           // Update most recent undo stack entry in-place.
           const volumeTracing = yield* select((state) =>
-            getVolumeTracingByLayerName(state.tracing, action.layerName),
+            getVolumeTracingByLayerName(state.annotation, action.layerName),
           );
 
           // If no volume tracing exists (but a segmentation layer exists, otherwise, the action wouldn't
@@ -420,7 +420,7 @@ export function* manageUndoStates(): Saga<never> {
           throw new Error("Could not find layer name for action.");
         }
         const activeVolumeTracing = yield* select((state) =>
-          getVolumeTracingByLayerName(state.tracing, layerName),
+          getVolumeTracingByLayerName(state.annotation, layerName),
         );
         if (activeVolumeTracing) {
           const volumeInfo = volumeInfoById[activeVolumeTracing.tracingId];
@@ -450,7 +450,7 @@ export function* manageUndoStates(): Saga<never> {
     }
 
     // We need the updated tracing here
-    prevSkeletonTracingOrNull = yield* select((state) => state.tracing.skeleton);
+    prevSkeletonTracingOrNull = yield* select((state) => state.annotation.skeleton);
     prevUserBoundingBoxes = yield* select(getUserBoundingBoxesFromState);
   }
 }
@@ -476,7 +476,7 @@ function* getSkeletonTracingToUndoState(
   prevTracing: SkeletonTracing,
   previousAction: Action | null | undefined,
 ): Saga<SkeletonUndoState | null | undefined> {
-  const curTracing = yield* select((state) => enforceSkeletonTracing(state.tracing));
+  const curTracing = yield* select((state) => enforceSkeletonTracing(state.annotation));
 
   if (curTracing !== prevTracing) {
     if (shouldAddToUndoStack(skeletonUserAction, previousAction)) {
@@ -657,7 +657,7 @@ function* applyAndGetRevertingVolumeUndoState(
   );
 
   const activeVolumeTracing = yield* select((state) =>
-    getVolumeTracingById(state.tracing, volumeUndoState.data.tracingId),
+    getVolumeTracingById(state.annotation, volumeUndoState.data.tracingId),
   );
   // Segments and SegmentGroups are always handled as immutable. So, no need to copy.
   const currentSegments = activeVolumeTracing.segments;

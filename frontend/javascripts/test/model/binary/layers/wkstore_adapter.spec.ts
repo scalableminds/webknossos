@@ -44,7 +44,7 @@ const StoreMock = {
       owningOrganization: "organization",
       dataSource,
     },
-    tracing: {
+    annotation: {
       tracingStore: {
         name: "localhost",
         url: "http://localhost:9000",

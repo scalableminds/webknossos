@@ -302,11 +302,16 @@ export class DataBucket {
   }
 
   getSnapshotBeforeMutation(): BucketSnapshot {
+    // This function is not async because we don't want to block the user during
+    // annotating.
     return this.getSnapshot("MUTATION");
   }
 
   async getSnapshotBeforeRestore(): Promise<BucketSnapshot> {
+    // Note that this function is async in contrast to getSnapshotBeforeMutation.
+    // Blocking the user on undo/redo is an okay trade-off.
     if (this.data == null) {
+      // Only await the data if no local copy exists.
       await this.ensureLoaded();
     }
     return this.getSnapshot("PREPARE_RESTORE_TO_SNAPSHOT");
@@ -316,16 +321,15 @@ export class DataBucket {
     // getSnapshot is called in two use cases:
     // 1) The user mutates data.
     //    If this.data is null, it will be allocated and the bucket will be added
-    //    to the pullQueue and temporalBucketManager.
+    //    to the pullQueue and temporalBucketManager (see getOrCreateData).
     // 2) The user uses undo/redo which will restore the bucket to another snapshot.
     //    Before this restoration is done, the current version is snapshotted.
-    //    In that case, data must not be null, as it's important that we don't
-    //    initiate a new request from the back-end when restoring the new snapshot.
-    //    If we did this, we would depend on the correct version being fetched. Correct
-    //    would be the most recent version, but older snapshots might depend on another
-    //    version.
+    //    In that case, this.data must not be null, because we assume either
+    //      (a) a local copy of the data already exists (and the bucket is in the TemporalBucketManager).
+    //      (b) the current back-end's version is used for the snapshot and that should have been
+    //          awaited by getSnapshotBeforeRestore.
 
-    if (purpose === "PREPARE_RESTORE_TO_SNAPSHOT" && this.needsBackendData()) {
+    if (purpose === "PREPARE_RESTORE_TO_SNAPSHOT" && this.data == null) {
       throw new Error("Unexpected getSnapshot call.");
     }
 

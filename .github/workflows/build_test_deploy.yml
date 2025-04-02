@@ -91,7 +91,6 @@ jobs:
     env:
       POSTGRES_URL: jdbc:postgresql://localhost:5432/webknossos
       POSTGRES_USER: webknossos_user
-      POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
     steps:
       - uses: actions/checkout@v3
         with:

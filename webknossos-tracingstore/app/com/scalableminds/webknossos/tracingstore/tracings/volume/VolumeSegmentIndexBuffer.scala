@@ -104,13 +104,13 @@ class VolumeSegmentIndexBuffer(
                                                       additionalCoordinates,
                                                       mappingName,
                                                       editableMappingTracingId)
-        _ = putMultiple(fromFossilOrTempHits, mag, additionalCoordinates, markAsChanged = false)
+        _ = putMultiple(fromFossilOrTempHits.toSeq, mag, additionalCoordinates, markAsChanged = false)
         _ = putMultiple(fromDatastoreHits, mag, additionalCoordinates, markAsChanged = false)
         allHits = fromBufferHits ++ fromFossilOrTempHits ++ fromDatastoreHits
         allHitsFilled = segmentIds.map { segmentId =>
-          allHits.find(_._1 == segmentId) match {
-            case Some((_, positions)) => (segmentId, positions)
-            case None                 => (segmentId, Set[Vec3IntProto]())
+          allHits.get(segmentId) match {
+            case Some(positions) => (segmentId, positions)
+            case None            => (segmentId, Set[Vec3IntProto]())
           }
         }
       } yield allHitsFilled
@@ -137,55 +137,55 @@ class VolumeSegmentIndexBuffer(
       segmentIds: List[Long],
       mag: Vec3Int,
       additionalCoordinates: Option[Seq[AdditionalCoordinate]]
-  ): (List[(Long, Set[Vec3IntProto])], List[Long]) =
+  ): (Map[Long, Set[Vec3IntProto]], List[Long]) =
     if (isReadOnly) {
       // Nothing is buffered in isReaderOnly case, no need to query it.
-      (List.empty, segmentIds)
+      (Map.empty, segmentIds)
     } else {
       var misses = List[Long]()
-      var hits = List[(Long, Set[Vec3IntProto])]()
+      val hits = mutable.Map[Long, Set[Vec3IntProto]]()
       segmentIds.foreach { segmentId =>
         val key = segmentIndexKey(tracingId, segmentId, mag, additionalCoordinates, additionalAxes)
         segmentIndexBuffer.get(key) match {
-          case Some((bucketPositions, _)) => hits = (segmentId, bucketPositions) :: hits
+          case Some((bucketPositions, _)) => hits.put(segmentId, bucketPositions)
           case None                       => misses = segmentId :: misses
         }
       }
-      (hits, misses)
+      (hits.toMap, misses)
     }
 
   private def getMultipleFromFossilNoteMisses(
       segmentIds: List[Long],
       mag: Vec3Int,
-      additionalCoordinates: Option[Seq[AdditionalCoordinate]]): Fox[(List[(Long, Set[Vec3IntProto])], List[Long])] = {
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]]): Fox[(Map[Long, Set[Vec3IntProto]], List[Long])] = {
     var misses = List[Long]()
-    var hits = List[(Long, Set[Vec3IntProto])]()
+    val hits = mutable.Map[Long, Set[Vec3IntProto]]()
     val keys =
       segmentIds.map(segmentId => segmentIndexKey(tracingId, segmentId, mag, additionalCoordinates, additionalAxes))
     for {
       bucketPositionsBoxes <- volumeSegmentIndexClient.getMultipleKeysByList(keys, Some(version), batchSize = 50)(
         fromProtoBytes[ListOfVec3IntProto])
       _ = segmentIds.zip(bucketPositionsBoxes).foreach {
-        case (segmentId, Full(bucketPositions)) => hits = (segmentId, bucketPositions.value.values.toSet) :: hits
+        case (segmentId, Full(bucketPositions)) => hits.put(segmentId, bucketPositions.value.values.toSet)
         case (segmentId, _)                     => misses = segmentId :: misses
       }
-    } yield (hits, misses)
+    } yield (hits.toMap, misses)
   }
 
   private def getMultipleFromTemporaryStoreNoteMisses(
       segmentIds: List[Long],
       mag: Vec3Int,
-      additionalCoordinates: Option[Seq[AdditionalCoordinate]]): (List[(Long, Set[Vec3IntProto])], List[Long]) = {
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]]): (Map[Long, Set[Vec3IntProto]], List[Long]) = {
     var misses = List[Long]()
-    var hits = List[(Long, Set[Vec3IntProto])]()
+    val hits = mutable.Map[Long, Set[Vec3IntProto]]()
     segmentIds.foreach { segmentId =>
       val key = segmentIndexKey(tracingId, segmentId, mag, additionalCoordinates, additionalAxes)
       temporaryTracingService.getVolumeSegmentIndexBufferForKey(key) match {
-        case Some(bucketPositions) => hits = (segmentId, bucketPositions) :: hits
+        case Some(bucketPositions) => hits.put(segmentId, bucketPositions)
         case None                  => misses = segmentId :: misses
       }
     }
-    (hits, misses)
+    (hits.toMap, misses)
   }
 
   private def getMultipleFromDatastore(

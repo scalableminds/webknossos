@@ -110,7 +110,6 @@ const ALWAYS_ENABLED_TOOL_INFOS = {
   [AnnotationToolEnum.MOVE]: NOT_DISABLED_INFO,
   [AnnotationToolEnum.LINE_MEASUREMENT]: NOT_DISABLED_INFO,
   [AnnotationToolEnum.AREA_MEASUREMENT]: NOT_DISABLED_INFO,
-  [AnnotationToolEnum.BOUNDING_BOX]: NOT_DISABLED_INFO,
 };
 
 function _getSkeletonToolInfo(hasSkeleton: boolean, isSkeletonLayerTransformed: boolean) {
@@ -138,6 +137,27 @@ function _getSkeletonToolInfo(hasSkeleton: boolean, isSkeletonLayerTransformed: 
   };
 }
 const getSkeletonToolInfo = memoizeOne(_getSkeletonToolInfo);
+
+function _getBoundingBoxToolInfo(hasSkeleton: boolean, isSkeletonLayerTransformed: boolean) {
+  if (isSkeletonLayerTransformed) {
+    return {
+      [AnnotationToolEnum.BOUNDING_BOX]: {
+        isDisabled: true,
+        explanation: hasSkeleton
+          ? "The bounding box tool is disabled because the bounding boxes are rendered transformed like the skeleton layer. Use the left sidebar to render them without transformations by letting the skeleton layer render without any transformations."
+          : "The bounding box tool is disabled because the bounding boxes are rendered transformed.",
+      },
+    };
+  }
+  return {
+    [AnnotationToolEnum.BOUNDING_BOX]: {
+      isDisabled: false,
+      explanation: "",
+    },
+  };
+}
+
+const getBoundingBoxToolInfo = memoizeOne(_getBoundingBoxToolInfo);
 
 function _getDisabledInfoWhenVolumeIsDisabled(
   isSegmentationTracingVisible: boolean,
@@ -350,13 +370,17 @@ function getDisabledVolumeInfo(state: OxalisState) {
 const getVolumeDisabledWhenVolumeIsEnabled = memoizeOne(_getVolumeDisabledWhenVolumeIsEnabled);
 const _getDisabledInfoForTools = (state: OxalisState): Record<AnnotationToolEnum, DisabledInfo> => {
   const hasSkeleton = state.tracing.skeleton != null;
-  const skeletonToolInfo = getSkeletonToolInfo(hasSkeleton, isSkeletonLayerTransformed(state));
+  const isSkeletonTransformed = isSkeletonLayerTransformed(state);
+  const skeletonToolInfo = getSkeletonToolInfo(hasSkeleton, isSkeletonTransformed);
+  // TODO: test volume only annotations & view mode only
+  const boundingBoxToolInfo = getBoundingBoxToolInfo(hasSkeleton, isSkeletonTransformed);
 
   const disabledVolumeInfo = getDisabledVolumeInfo(state);
   return {
     ...ALWAYS_ENABLED_TOOL_INFOS,
     ...skeletonToolInfo,
     ...disabledVolumeInfo,
+    ...boundingBoxToolInfo,
   };
 };
 export const getDisabledInfoForTools = reuseInstanceOnEquality(_getDisabledInfoForTools);

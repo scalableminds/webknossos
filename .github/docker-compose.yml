@@ -13,7 +13,7 @@ services:
       - -Ddatastore.redis.address=redis
       - -DwebKnossos.sampleOrganization.enabled=false
     volumes:
-      - ./binaryData:/webknossos/binaryData
+      - ../binaryData:/webknossos/binaryData
     environment:
       - CERTIFICATE
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos

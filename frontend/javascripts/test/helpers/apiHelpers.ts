@@ -1,5 +1,5 @@
 import { createNanoEvents } from "nanoevents";
-import { vi, type TestContext as BaseTestContext, type MockedObject } from "vitest";
+import { vi, type TestContext as BaseTestContext } from "vitest";
 import _ from "lodash";
 import { ControlModeEnum } from "oxalis/constants";
 import { sleep } from "libs/utils";

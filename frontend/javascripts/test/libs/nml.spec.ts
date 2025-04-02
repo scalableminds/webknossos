@@ -1,13 +1,11 @@
-import "test/mocks/lz4";
 import _ from "lodash";
 import update from "immutability-helper";
-import sinon from "sinon";
 import type { Node, SkeletonTracing, OxalisState } from "oxalis/store";
 import defaultState from "oxalis/default_state";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
 import { findGroup } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect } from "vitest";
 import { TreeTypeEnum } from "oxalis/constants";
 import { addTreesAndGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
 import { serializeToNml, getNmlName, parseNml } from "oxalis/model/helpers/nml_helpers";
@@ -15,17 +13,6 @@ import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reduce
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { annotation as TASK_ANNOTATION } from "../fixtures/tasktracing_server_objects";
 import { buildInfo as BUILD_INFO } from "../fixtures/build_info";
-
-const TIMESTAMP = 123456789;
-// const { serializeToNml, getNmlName, parseNml }: typeof OriginalNmlHelpers = mock.reRequire(
-//   "oxalis/model/helpers/nml_helpers",
-// );
-// const SkeletonTracingReducer: typeof OriginalSkeletonTracingReducer = mock.reRequire(
-//   "oxalis/model/reducers/skeletontracing_reducer",
-// ).default;
-// const SkeletonTracingActions: typeof OriginalSkeletonTracingActions = mock.reRequire(
-//   "oxalis/model/actions/skeletontracing_actions",
-// );
 
 const createDummyNode = (id: number): Node => ({
   bitDepth: 8,
@@ -217,16 +204,6 @@ async function throwsAsyncParseError(fn: () => void, key: string) {
 }
 
 describe("NML", () => {
-  beforeAll(async () => {
-    // This only mocks Date.now, but leaves the constructor intact
-    sinon.stub(Date, "now").returns(TIMESTAMP);
-  });
-
-  afterAll(async () => {
-    // @ts-ignore
-    Date.now.restore();
-  });
-
   it("serializing and parsing should yield the same state", async () => {
     const serializedNml = serializeToNml(
       initialState,

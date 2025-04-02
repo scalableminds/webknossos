@@ -242,6 +242,5 @@
     ],
     "reporter": "lcov"
   },
-  "packageManager": "yarn@4.4.1",
-  "type": "module"
+  "packageManager": "yarn@4.4.1"
 }

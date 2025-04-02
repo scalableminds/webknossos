@@ -4,7 +4,7 @@ exports[`NML > NML serializer should escape special characters and multilines 1`
 "<things>
   <meta name="writer" content="nml_helpers.js" />
   <meta name="writerGitCommit" content="fc0ea6432ec7107e8f9b5b308ee0e90eae0e7b17" />
-  <meta name="timestamp" content="123456789" />
+  <meta name="timestamp" content="1494695001688" />
   <meta name="annotationId" content="annotationId" />
   <meta name="taskId" content="5b1fd1cb97000027049c67ec" />
   <parameters>
@@ -63,7 +63,7 @@ exports[`NML > NML serializer should produce correct NMLs 1`] = `
 "<things>
   <meta name="writer" content="nml_helpers.js" />
   <meta name="writerGitCommit" content="fc0ea6432ec7107e8f9b5b308ee0e90eae0e7b17" />
-  <meta name="timestamp" content="123456789" />
+  <meta name="timestamp" content="1494695001688" />
   <meta name="annotationId" content="annotationId" />
   <meta name="taskId" content="5b1fd1cb97000027049c67ec" />
   <parameters>
@@ -121,7 +121,7 @@ exports[`NML > NML serializer should produce correct NMLs with additional coordi
 "<things>
   <meta name="writer" content="nml_helpers.js" />
   <meta name="writerGitCommit" content="fc0ea6432ec7107e8f9b5b308ee0e90eae0e7b17" />
-  <meta name="timestamp" content="123456789" />
+  <meta name="timestamp" content="1494695001688" />
   <meta name="annotationId" content="annotationId" />
   <meta name="taskId" content="5b1fd1cb97000027049c67ec" />
   <parameters>

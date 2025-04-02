@@ -7,7 +7,8 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./frontend/javascripts/test/setup.ts'],
     include: ['./frontend/javascripts/test/**/*.ts'],
-    exclude: ['./frontend/javascripts/test/**/*.e2e.ts']
+    exclude: ['./frontend/javascripts/test/**/*.e2e.ts'],
+    env: {IS_TESTING: "true"}
   },
-  plugins: [tsconfigPaths()]
+  plugins: [tsconfigPaths()],
 }); 

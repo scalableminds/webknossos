@@ -1,4 +1,3 @@
-import "../mocks/lz4";
 import { describe, it, expect } from "vitest";
 import TPS3D from "libs/thin_plate_spline";
 import { almostEqual, getPointsC555 } from "./transform_spec_helpers";

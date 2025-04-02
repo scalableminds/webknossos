@@ -377,7 +377,7 @@ class DataCube {
   collectBucketsIf(predicateFn: (bucket: DataBucket) => boolean): void {
     // This method is always called in the context of reloading data.
     // All callers should ensure a saved state. This is encapsulated in the
-    // api's reloadBuckets function that is most for most refresh-related
+    // api's reloadBuckets function that is used for most refresh-related
     // features (e.g., user-initiated reload, mapping saga).
     // Other than that, the function is only needed by the version restore view
     // for previewing data. In that context, a saved state is given, too.

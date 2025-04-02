@@ -201,7 +201,7 @@ const plans = [
     ],
     afterRestore1: [],
     expect1: expectMerged,
-    // For the second read, we local and backend data need to be decompressed
+    // For the second read, local and backend data need to be decompressed
     // again.
     beforeRestore2: ["resolveDecompression", "resolveDecompression"],
     expect2: expectMerged,

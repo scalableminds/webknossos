@@ -152,7 +152,12 @@ export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
   };
 
   return (
-    <FastTooltip dynamicRenderer={renderDSExtentTooltip} placement="left" wrapper="tr">
+    <FastTooltip
+      dynamicRenderer={renderDSExtentTooltip}
+      placement="left"
+      wrapper="tr"
+      key={dataset.id}
+    >
       <td
         style={{
           paddingRight: 20,

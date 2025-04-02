@@ -499,39 +499,37 @@ function* watchForSaveConflicts(): Saga<never> {
       annotationId,
     );
 
-    for (const tracing of tracings) {
-      // Read the tracing version again from the store, since the
-      // old reference to tracing might be outdated now due to the
-      // immutability.
-      const versionOnClient = yield* select((state) => {
-        return state.tracing.version;
-      });
+    // Read the tracing version again from the store, since the
+    // old reference to tracing might be outdated now due to the
+    // immutability.
+    const versionOnClient = yield* select((state) => {
+      return state.tracing.version;
+    });
 
-      const toastKey = `save_conflicts_warning_${tracing.tracingId}`;
-      if (versionOnServer > versionOnClient) {
-        // The latest version on the server is greater than the most-recently
-        // stored version.
+    const toastKey = "save_conflicts_warning";
+    if (versionOnServer > versionOnClient) {
+      // The latest version on the server is greater than the most-recently
+      // stored version.
 
-        const saveQueue = yield* select((state) => state.save.queue);
+      const saveQueue = yield* select((state) => state.save.queue);
 
-        let msg = "";
-        if (!allowSave) {
-          msg =
-            "A newer version of this annotation was found on the server. Reload the page to see the newest changes.";
-        } else if (saveQueue.length > 0) {
-          msg =
-            "A newer version of this annotation was found on the server. Your current changes to this annotation cannot be saved anymore.";
-        } else {
-          msg =
-            "A newer version of this annotation was found on the server. Please reload the page to see the newer version. Otherwise, changes to the annotation cannot be saved anymore.";
-        }
-        Toast.warning(msg, {
-          sticky: true,
-          key: toastKey,
-        });
+      let msg = "";
+      if (!allowSave) {
+        msg =
+          "A newer version of this annotation was found on the server. Reload the page to see the newest changes.";
+      } else if (saveQueue.length > 0) {
+        msg =
+          "A newer version of this annotation was found on the server. Your current changes to this annotation cannot be saved anymore.";
       } else {
-        Toast.close(toastKey);
+        msg =
+          "A newer version of this annotation was found on the server. Please reload the page to see the newer version. Otherwise, changes to the annotation cannot be saved anymore.";
       }
+      Toast.warning(msg, {
+        sticky: true,
+        key: toastKey,
+      });
+    } else {
+      Toast.close(toastKey);
     }
   }
 

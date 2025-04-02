@@ -325,7 +325,7 @@ export class DataBucket {
     //    would be the most recent version, but older snapshots might depend on another
     //    version.
 
-    if (purpose === "PREPARE_RESTORE_TO_SNAPSHOT" && !this.needsBackendData()) {
+    if (purpose === "PREPARE_RESTORE_TO_SNAPSHOT" && this.needsBackendData()) {
       throw new Error("Unexpected getSnapshot call.");
     }
 

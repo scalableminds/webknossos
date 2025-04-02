@@ -118,5 +118,6 @@ case class VolumeTracingLayer(
 
   def bucketStream: Iterator[(BucketPosition, Array[Byte])] = bucketProvider.bucketStream(Some(tracing.version))
 
-  lazy val expectedUncompressedBucketSize: Int = expectedUncompressedBucketSizeFor(elementClass)
+  lazy val expectedUncompressedBucketSize: Int =
+    ElementClass.bytesPerElement(elementClass) * scala.math.pow(DataLayer.bucketLength, 3).intValue
 }

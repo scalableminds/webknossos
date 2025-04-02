@@ -173,9 +173,9 @@ class FossilDBClient(collection: String,
             case VersionValueBoxProto(None, Some(errorMessage), _) =>
               net.liftweb.common.Failure(s"Failed to get entry from FossilDB: $errorMessage")
             case VersionValueBoxProto(None, None, _) => Empty
-            case _                                   => net.liftweb.common.Failure("unexpected reply format in fossilDB getMultipleKeysByList")
+            case _                                   => net.liftweb.common.Failure("Unexpected reply format in FossilDB getMultipleKeysByList")
           }
-        case _ => net.liftweb.common.Failure("Unexpected reply format in fossilDB getMultipleKeysByList")
+        case _ => net.liftweb.common.Failure("Unexpected reply format in FossilDB getMultipleKeysByList")
       }
     } yield parsedValues
 

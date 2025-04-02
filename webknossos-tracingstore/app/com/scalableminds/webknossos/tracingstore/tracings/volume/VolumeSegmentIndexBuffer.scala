@@ -46,7 +46,7 @@ class VolumeSegmentIndexBuffer(
     additionalAxes: Option[Seq[AdditionalAxis]],
     temporaryTracingService: TemporaryTracingService,
     tc: TokenContext,
-    isReaderOnly: Boolean = false,
+    isReadOnly: Boolean = false,
     toTemporaryStore: Boolean = false)
     extends KeyValueStoreImplicits
     with SegmentIndexKeyHelper
@@ -61,7 +61,7 @@ class VolumeSegmentIndexBuffer(
           additionalCoordinates: Option[Seq[AdditionalCoordinate]],
           bucketPositions: Set[Vec3IntProto],
           markAsChanged: Boolean): Unit =
-    if (!isReaderOnly) {
+    if (!isReadOnly) {
       segmentIndexBuffer(segmentIndexKey(tracingId, segmentId, mag, additionalCoordinates, additionalAxes)) =
         (bucketPositions, markAsChanged)
     }
@@ -70,7 +70,7 @@ class VolumeSegmentIndexBuffer(
                           mag: Vec3Int,
                           additionalCoordinates: Option[Seq[AdditionalCoordinate]],
                           markAsChanged: Boolean): Unit =
-    if (!isReaderOnly) {
+    if (!isReadOnly) {
       segmentIdsWithBucketPositions.foreach {
         case (segmentId, bucketPositions) =>
           put(segmentId, mag, additionalCoordinates, bucketPositions, markAsChanged)
@@ -94,9 +94,8 @@ class VolumeSegmentIndexBuffer(
       implicit ec: ExecutionContext): Fox[List[(Long, Set[Vec3IntProto])]] =
     if (segmentIds.isEmpty) Fox.successful(List.empty)
     else {
+      val (fromBufferHits, fromBufferMisses) = getMultipleFromBufferNoteMisses(segmentIds, mag, additionalCoordinates)
       for {
-        (fromBufferHits, fromBufferMisses) <- Fox.successful(
-          getMultipleFromBufferNoteMisses(segmentIds, mag, additionalCoordinates))
         (fromFossilOrTempHits, fromFossilOrTempMisses) <- if (toTemporaryStore)
           Fox.successful(getMultipleFromTemporaryStoreNoteMisses(fromBufferMisses, mag, additionalCoordinates))
         else getMultipleFromFossilNoteMisses(fromBufferMisses, mag, additionalCoordinates)
@@ -119,18 +118,18 @@ class VolumeSegmentIndexBuffer(
 
   def flush()(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      _ <- bool2Fox(!isReaderOnly) ?~> "this VolumeSegmentIndexBuffer was instantiated with isReaderOnly=true and cannot be flushed."
-      toFlush = segmentIndexBuffer.toSeq.flatMap {
+      _ <- bool2Fox(!isReadOnly) ?~> "this VolumeSegmentIndexBuffer was instantiated with isReaderOnly=true and cannot be flushed."
+      toFlush = segmentIndexBuffer.flatMap {
         case (key, (bucketPositions, true)) => Some((key, bucketPositions))
         case _                              => None
       }
       _ <- if (toTemporaryStore) {
-        temporaryTracingService.saveVolumeSegmentIndexBuffer(tracingId, toFlush)
+        temporaryTracingService.saveVolumeSegmentIndexBuffer(tracingId, toFlush.toSeq)
       } else {
-        val asProtoByteArrays: Seq[(String, Array[Byte])] = toFlush.map {
+        val asProtoByteArrays = toFlush.map {
           case (key, bucketPositions) => (key, toProtoBytes(ListOfVec3IntProto(bucketPositions.toList)))
         }
-        volumeSegmentIndexClient.putMultiple(asProtoByteArrays, version)
+        volumeSegmentIndexClient.putMultiple(asProtoByteArrays.toSeq, version)
       }
     } yield ()
 
@@ -139,7 +138,7 @@ class VolumeSegmentIndexBuffer(
       mag: Vec3Int,
       additionalCoordinates: Option[Seq[AdditionalCoordinate]]
   ): (List[(Long, Set[Vec3IntProto])], List[Long]) =
-    if (isReaderOnly) {
+    if (isReadOnly) {
       // Nothing is buffered in isReaderOnly case, no need to query it.
       (List.empty, segmentIds)
     } else {

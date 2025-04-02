@@ -49,7 +49,7 @@ describe("Saga Integration Tests", () => {
 
   it("watchTreeNames saga should rename empty trees in tasks and these updates should be persisted", () => {
     const state = Store.getState();
-    const skeletonTracing = enforceSkeletonTracing(state.tracing);
+    const skeletonTracing = enforceSkeletonTracing(state.annotation);
     const treeWithEmptyName = skeletonTracing.trees[1];
     const treeWithCorrectName = update(treeWithEmptyName, {
       name: {
@@ -61,7 +61,7 @@ describe("Saga Integration Tests", () => {
         [
           UpdateActions.updateTree(treeWithCorrectName, skeletonTracing.tracingId),
           UpdateActions.updateSkeletonTracing(
-            enforceSkeletonTracing(Store.getState().tracing),
+            enforceSkeletonTracing(Store.getState().annotation),
             [1, 2, 3],
             [],
             [0, 0, 0],
@@ -70,7 +70,7 @@ describe("Saga Integration Tests", () => {
         ],
       ],
       TIMESTAMP,
-      getStats(state.tracing) || undefined,
+      getStats(state.annotation) || undefined,
     );
     // Reset the info field which is just for debugging purposes
     const actualSaveQueue = state.save.queue.map((entry) => {

@@ -501,8 +501,8 @@ function AlignmentTab() {
 }
 
 function ShouldUseTreesFormItem() {
-  const tracing = useSelector((state: OxalisState) => state.tracing);
-  const trees = tracing.skeleton ? Object.values(tracing.skeleton.trees) : [];
+  const annotation = useSelector((state: OxalisState) => state.annotation);
+  const trees = annotation.skeleton ? Object.values(annotation.skeleton.trees) : [];
   return (
     <div>
       <Form.Item
@@ -522,13 +522,13 @@ function ShouldUseTreesFormItem() {
           {
             validator: (_rule, checked) => {
               if (checked) {
-                if (tracing.annotationId === "") {
+                if (annotation.annotationId === "") {
                   return Promise.reject(
                     "No annotation was found. Please create an annotation first.",
                   );
                 }
                 if (
-                  tracing.skeleton == null ||
+                  annotation.skeleton == null ||
                   trees.filter((tree) => tree.edges.edgeCount > 0).length === 0
                 ) {
                   return Promise.reject(
@@ -675,13 +675,23 @@ function useCurrentlySelectedBoundingBox(
 ): UserBoundingBox | undefined {
   const selectedBoundingBoxId = Form.useWatch("boundingBoxId", form);
   const currentlySelectedLayerName = Form.useWatch("layerName", form);
-  const currentSelectedLayer = layers.find((layer) => layer.name === currentlySelectedLayerName);
-  const indexOfLayer = currentSelectedLayer ? layers.indexOf(currentSelectedLayer) : -1;
-  return isBoundingBoxConfigurable
-    ? userBoundingBoxes.find((bbox) => bbox.id === selectedBoundingBoxId)
-    : indexOfLayer >= 0
-      ? defaultBBForLayers[indexOfLayer]
-      : undefined;
+  const [currentlySelectedBoundingBox, setCurrentlySelectedBoundingBox] = useState<
+    UserBoundingBox | undefined
+  >(undefined);
+  // userBoundingBoxes, defaultBBForLayers, layers are different objects with each calls,
+  // but they shouldn't be able to change while the modal is open
+  // biome-ignore lint/correctness/useExhaustiveDependencies: see above
+  useEffect(() => {
+    const currentSelectedLayer = layers.find((layer) => layer.name === currentlySelectedLayerName);
+    const indexOfLayer = currentSelectedLayer ? layers.indexOf(currentSelectedLayer) : -1;
+    const newCurrentlySelectedBoundingBox = isBoundingBoxConfigurable
+      ? userBoundingBoxes.find((bbox) => bbox.id === selectedBoundingBoxId)
+      : indexOfLayer >= 0
+        ? defaultBBForLayers[indexOfLayer]
+        : undefined;
+    setCurrentlySelectedBoundingBox(newCurrentlySelectedBoundingBox);
+  }, [selectedBoundingBoxId, currentlySelectedLayerName, isBoundingBoxConfigurable]);
+  return currentlySelectedBoundingBox;
 }
 
 function StartJobForm(props: StartJobFormProps) {
@@ -705,7 +715,7 @@ function StartJobForm(props: StartJobFormProps) {
 
   const dispatch = useDispatch();
   const dataset = useSelector((state: OxalisState) => state.dataset);
-  const tracing = useSelector((state: OxalisState) => state.tracing);
+  const annotation = useSelector((state: OxalisState) => state.annotation);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const isActiveUserSuperUser = activeUser?.isSuperUser || false;
   const colorLayers = getColorLayers(dataset);
@@ -776,7 +786,7 @@ function StartJobForm(props: StartJobFormProps) {
         newDatasetName,
         selectedLayer,
         selectedBoundingBox,
-        annotationId: useAnnotation ? tracing.annotationId : undefined,
+        annotationId: useAnnotation ? annotation.annotationId : undefined,
         useCustomWorkflow,
       };
       const apiJob = await jobApiCall(jobArgs, form);
@@ -844,7 +854,7 @@ function StartJobForm(props: StartJobFormProps) {
         layers={layers}
         fixedLayerName={fixedSelectedLayer?.name}
         getReadableNameForLayer={(layer) =>
-          getReadableNameOfVolumeLayer(layer, tracing) || layer.name
+          getReadableNameOfVolumeLayer(layer, annotation) || layer.name
         }
       />
       <BoundingBoxSelectionFormItem
@@ -914,7 +924,9 @@ export function NucleiDetectionForm() {
 export function NeuronSegmentationForm() {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const { neuronInferralCostPerGVx } = features();
-  const hasSkeletonAnnotation = useSelector((state: OxalisState) => state.tracing.skeleton != null);
+  const hasSkeletonAnnotation = useSelector(
+    (state: OxalisState) => state.annotation.skeleton != null,
+  );
   const dispatch = useDispatch();
   const [doSplitMergerEvaluation, setDoSplitMergerEvaluation] = React.useState(false);
   return (
@@ -1028,7 +1040,7 @@ export function MitochondriaSegmentationForm() {
 
 function CustomAiModelInferenceForm() {
   const dataset = useSelector((state: OxalisState) => state.dataset);
-  const annotationId = useSelector((state: OxalisState) => state.tracing.annotationId);
+  const annotationId = useSelector((state: OxalisState) => state.annotation.annotationId);
   const isViewMode = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
@@ -1147,7 +1159,7 @@ export function MaterializeVolumeAnnotationModal({
   handleClose,
 }: MaterializeVolumeAnnotationModalProps) {
   const dataset = useSelector((state: OxalisState) => state.dataset);
-  const tracing = useSelector((state: OxalisState) => state.tracing);
+  const tracing = useSelector((state: OxalisState) => state.annotation);
   let includesEditableMapping = false;
   const activeSegmentationTracingLayer = useSelector(getActiveSegmentationTracingLayer);
   const fixedSelectedLayer = selectedVolumeLayer || activeSegmentationTracingLayer;

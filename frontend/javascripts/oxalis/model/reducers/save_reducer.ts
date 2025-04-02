@@ -31,7 +31,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
       // update actions.
       const dispatchedAction = action;
       const { items, transactionId } = dispatchedAction;
-      const stats: TracingStats = getStats(state.tracing);
+      const stats: TracingStats = getStats(state.annotation);
       const { activeUser } = state;
       if (activeUser == null) {
         throw new Error("Tried to save something even though user is not logged in.");
@@ -161,7 +161,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "SET_VERSION_NUMBER": {
-      return updateKey(state, "tracing", {
+      return updateKey(state, "annotation", {
         version: action.version,
       });
     }
@@ -172,7 +172,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
         return state;
       }
 
-      return updateKey2(state, "tracing", "restrictions", {
+      return updateKey2(state, "annotation", "restrictions", {
         allowSave: false,
       });
     }

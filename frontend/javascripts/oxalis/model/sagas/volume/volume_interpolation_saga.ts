@@ -57,7 +57,7 @@ import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } 
 export const MAXIMUM_INTERPOLATION_DEPTH = 100;
 
 function _getInterpolationInfo(state: OxalisState, explanationPrefix: string) {
-  const isAllowed = state.tracing.restrictions.volumeInterpolationAllowed;
+  const isAllowed = state.annotation.restrictions.volumeInterpolationAllowed;
   const onlyExtrude = state.userConfiguration.interpolationMode === InterpolationModeEnum.EXTRUDE;
   const volumeTracing = getActiveSegmentationTracing(state);
   let interpolationDepth = 0;
@@ -263,7 +263,7 @@ function signedDist(arr: ndarray.NdArray) {
 }
 
 export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
-  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
+  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
   if (!allowUpdate) return;
 
   const activeTool = yield* select((state) => state.uiInformation.activeTool);
@@ -272,7 +272,7 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   }
 
   const isVolumeInterpolationAllowed = yield* select(
-    (state) => state.tracing.restrictions.volumeInterpolationAllowed,
+    (state) => state.annotation.restrictions.volumeInterpolationAllowed,
   );
 
   if (!isVolumeInterpolationAllowed) {

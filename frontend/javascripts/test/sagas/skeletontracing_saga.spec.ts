@@ -1,4 +1,4 @@
-import type { Flycam, HybridTracing, OxalisState, SkeletonTracing } from "oxalis/store";
+import type { Flycam, OxalisState, SkeletonTracing, StoreAnnotation } from "oxalis/store";
 import ChainReducer from "test/helpers/chainReducer";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
@@ -33,16 +33,16 @@ vi.mock("oxalis/model/sagas/root_saga", () => ({
 }));
 
 function testDiffing(
-  prevTracing: HybridTracing,
-  nextTracing: HybridTracing,
+  prevAnnotation: StoreAnnotation,
+  nextAnnotation: StoreAnnotation,
   prevFlycam: Flycam,
   flycam: Flycam,
 ) {
   return withoutUpdateTracing(
     Array.from(
       diffSkeletonTracing(
-        enforceSkeletonTracing(prevTracing),
-        enforceSkeletonTracing(nextTracing),
+        enforceSkeletonTracing(prevAnnotation),
+        enforceSkeletonTracing(nextAnnotation),
         prevFlycam,
         flycam,
       ),
@@ -123,7 +123,7 @@ skeletonTracing.trees[1] = {
   metadata: [],
 };
 const initialState = update(defaultState, {
-  tracing: {
+  annotation: {
     restrictions: {
       allowUpdate: {
         $set: true,
@@ -155,6 +155,7 @@ const createBranchPointAction = SkeletonTracingActions.createBranchPointAction(
   undefined,
   12345678,
 );
+
 describe("SkeletonTracingSaga", () => {
   it("shouldn't do anything if unchanged (saga test)", () => {
     const saga = setupSavingForTracingType(
@@ -162,13 +163,13 @@ describe("SkeletonTracingSaga", () => {
     );
 
     saga.next();
-    saga.next(initialState.tracing.skeleton);
+    saga.next(initialState.annotation.skeleton);
     saga.next(initialState.flycam);
     saga.next(initialState.viewModeData.plane.tdCamera);
     saga.next();
     saga.next();
     saga.next(true);
-    saga.next(initialState.tracing.skeleton);
+    saga.next(initialState.annotation.skeleton);
     saga.next(initialState.flycam);
     // only updateTracing
     const items = execCall(expect, saga.next(initialState.viewModeData.plane.tdCamera));
@@ -182,13 +183,13 @@ describe("SkeletonTracingSaga", () => {
     );
 
     saga.next();
-    saga.next(initialState.tracing.skeleton);
+    saga.next(initialState.annotation.skeleton);
     saga.next(initialState.flycam);
     saga.next(initialState.viewModeData.plane.tdCamera);
     saga.next();
     saga.next();
     saga.next(true);
-    saga.next(newState.tracing.skeleton);
+    saga.next(newState.annotation.skeleton);
     saga.next(newState.flycam);
 
     const items = execCall(expect, saga.next(newState.viewModeData.plane.tdCamera));
@@ -200,8 +201,8 @@ describe("SkeletonTracingSaga", () => {
   it("should emit createNode update actions", () => {
     const newState = SkeletonTracingReducer(initialState, createNodeAction);
     const updateActions = testDiffing(
-      initialState.tracing,
-      newState.tracing,
+      initialState.annotation,
+      newState.annotation,
       initialState.flycam,
       newState.flycam,
     );
@@ -220,8 +221,8 @@ describe("SkeletonTracingSaga", () => {
       .apply(SkeletonTracingReducer, createNodeAction)
       .unpack();
     const updateActions = testDiffing(
-      initialState.tracing,
-      newState.tracing,
+      initialState.annotation,
+      newState.annotation,
       initialState.flycam,
       newState.flycam,
     );
@@ -260,8 +261,8 @@ describe("SkeletonTracingSaga", () => {
       .unpack();
 
     const updateActions = testDiffing(
-      initialState.tracing,
-      newState.tracing,
+      initialState.annotation,
+      newState.annotation,
       initialState.flycam,
       newState.flycam,
     );
@@ -301,8 +302,8 @@ describe("SkeletonTracingSaga", () => {
 
     const newState = SkeletonTracingReducer(testState, mergeTreesAction);
     const updateActions = testDiffing(
-      testState.tracing,
-      newState.tracing,
+      testState.annotation,
+      newState.annotation,
       testState.flycam,
       newState.flycam,
     );
@@ -345,8 +346,8 @@ describe("SkeletonTracingSaga", () => {
     const testState = SkeletonTracingReducer(initialState, createNodeAction);
     const newState = SkeletonTracingReducer(testState, deleteNodeAction);
     const updateActions = testDiffing(
-      testState.tracing,
-      newState.tracing,
+      testState.annotation,
+      newState.annotation,
       testState.flycam,
       newState.flycam,
     );
@@ -368,8 +369,8 @@ describe("SkeletonTracingSaga", () => {
       .unpack();
     const newState = SkeletonTracingReducer(testState, deleteNodeAction);
     const updateActions = testDiffing(
-      testState.tracing,
-      newState.tracing,
+      testState.annotation,
+      newState.annotation,
       testState.flycam,
       newState.flycam,
     );
@@ -397,8 +398,8 @@ describe("SkeletonTracingSaga", () => {
     const testState = SkeletonTracingReducer(initialState, createTreeAction);
     const newState = SkeletonTracingReducer(testState, deleteTreeAction);
     const updateActions = testDiffing(
-      testState.tracing,
-      newState.tracing,
+      testState.annotation,
+      newState.annotation,
       testState.flycam,
       newState.flycam,
     );
@@ -415,8 +416,8 @@ describe("SkeletonTracingSaga", () => {
     const testState = SkeletonTracingReducer(initialState, createNodeAction);
     const newState = SkeletonTracingReducer(testState, setNodeRadiusAction);
     const updateActions = testDiffing(
-      testState.tracing,
-      newState.tracing,
+      testState.annotation,
+      newState.annotation,
       testState.flycam,
       newState.flycam,
     );
@@ -439,8 +440,8 @@ describe("SkeletonTracingSaga", () => {
 
     const newState = SkeletonTracingReducer(testState, setNodeRadiusAction);
     const updateActions = testDiffing(
-      testState.tracing,
-      newState.tracing,
+      testState.annotation,
+      newState.annotation,
       testState.flycam,
       newState.flycam,
     );
@@ -452,8 +453,8 @@ describe("SkeletonTracingSaga", () => {
     const testState = SkeletonTracingReducer(initialState, createNodeAction);
     const newState = SkeletonTracingReducer(testState, createCommentAction);
     const updateActions = testDiffing(
-      testState.tracing,
-      newState.tracing,
+      testState.annotation,
+      newState.annotation,
       testState.flycam,
       newState.flycam,
     );
@@ -481,8 +482,8 @@ describe("SkeletonTracingSaga", () => {
 
     const newState = SkeletonTracingReducer(testState, createCommentAction);
     const updateActions = testDiffing(
-      testState.tracing,
-      newState.tracing,
+      testState.annotation,
+      newState.annotation,
       testState.flycam,
       newState.flycam,
     );
@@ -494,8 +495,8 @@ describe("SkeletonTracingSaga", () => {
     const testState = SkeletonTracingReducer(initialState, createNodeAction);
     const newState = SkeletonTracingReducer(testState, createBranchPointAction);
     const updateActions = testDiffing(
-      testState.tracing,
-      newState.tracing,
+      testState.annotation,
+      newState.annotation,
       testState.flycam,
       newState.flycam,
     );
@@ -528,8 +529,8 @@ describe("SkeletonTracingSaga", () => {
 
     const newState = SkeletonTracingReducer(testState, mergeTreesAction);
     const updateActions = testDiffing(
-      testState.tracing,
-      newState.tracing,
+      testState.annotation,
+      newState.annotation,
       testState.flycam,
       newState.flycam,
     );
@@ -583,8 +584,8 @@ describe("SkeletonTracingSaga", () => {
     // Node 3 will be deleted since it is active in testState.
     const newState = SkeletonTracingReducer(testState, deleteNodeAction);
     const updateActions = testDiffing(
-      testState.tracing,
-      newState.tracing,
+      testState.annotation,
+      newState.annotation,
       testState.flycam,
       newState.flycam,
     );
@@ -685,8 +686,8 @@ describe("SkeletonTracingSaga", () => {
 
     const newState = SkeletonTracingReducer(testState, mergeTreesAction);
     const updateActions = testDiffing(
-      testState.tracing,
-      newState.tracing,
+      testState.annotation,
+      newState.annotation,
       testState.flycam,
       newState.flycam,
     );
@@ -743,7 +744,7 @@ describe("SkeletonTracingSaga", () => {
     const newState1 = SkeletonTracingReducer(testState, createNodeAction);
     const updateActions = [];
     updateActions.push(
-      testDiffing(testState.tracing, newState1.tracing, testState.flycam, newState1.flycam),
+      testDiffing(testState.annotation, newState1.annotation, testState.flycam, newState1.flycam),
     );
     // Merge the two trees (b), then create another tree and node (c)
     const newState2 = ChainReducer<OxalisState, Action>(newState1)
@@ -752,7 +753,7 @@ describe("SkeletonTracingSaga", () => {
       .apply(SkeletonTracingReducer, createNodeAction)
       .unpack();
     updateActions.push(
-      testDiffing(newState1.tracing, newState2.tracing, newState1.flycam, newState2.flycam),
+      testDiffing(newState1.annotation, newState2.annotation, newState1.flycam, newState2.flycam),
     );
     // compactUpdateActions is triggered by the saving, it can therefore contain the results of more than one diffing
     const simplifiedUpdateActions = createCompactedSaveQueueFromUpdateActions(
@@ -834,8 +835,8 @@ describe("SkeletonTracingSaga", () => {
     const updateActions = [];
     updateActions.push(
       testDiffing(
-        testState.tracing,
-        stateAfterFirstMerge.tracing,
+        testState.annotation,
+        stateAfterFirstMerge.annotation,
         testState.flycam,
         stateAfterFirstMerge.flycam,
       ),
@@ -849,8 +850,8 @@ describe("SkeletonTracingSaga", () => {
 
     updateActions.push(
       testDiffing(
-        stateAfterFirstMerge.tracing,
-        newState.tracing,
+        stateAfterFirstMerge.annotation,
+        newState.annotation,
         stateAfterFirstMerge.flycam,
         newState.flycam,
       ),
@@ -859,8 +860,8 @@ describe("SkeletonTracingSaga", () => {
     const stateAfterSecondMerge = SkeletonTracingReducer(newState, secondMergeTreesAction);
     updateActions.push(
       testDiffing(
-        newState.tracing,
-        stateAfterSecondMerge.tracing,
+        newState.annotation,
+        stateAfterSecondMerge.annotation,
         newState.flycam,
         stateAfterSecondMerge.flycam,
       ),
@@ -953,8 +954,8 @@ describe("SkeletonTracingSaga", () => {
     // Delete the second node to split the tree
     const newState = SkeletonTracingReducer(testState, deleteMiddleNodeAction);
     const updateActions = testDiffing(
-      testState.tracing,
-      newState.tracing,
+      testState.annotation,
+      newState.annotation,
       testState.flycam,
       newState.flycam,
     );
@@ -1018,8 +1019,8 @@ describe("SkeletonTracingSaga", () => {
     // Delete node 2 to split the tree into three parts
     const newState = SkeletonTracingReducer(testState, deleteMiddleNodeAction);
     const updateActions = testDiffing(
-      testState.tracing,
-      newState.tracing,
+      testState.annotation,
+      newState.annotation,
       testState.flycam,
       newState.flycam,
     );
@@ -1096,12 +1097,12 @@ describe("SkeletonTracingSaga", () => {
     const newState1 = SkeletonTracingReducer(testState, deleteMiddleNodeAction);
     const updateActions = [];
     updateActions.push(
-      testDiffing(testState.tracing, newState1.tracing, testState.flycam, newState1.flycam),
+      testDiffing(testState.annotation, newState1.annotation, testState.flycam, newState1.flycam),
     );
     // Delete node 4 to split the tree again (b)
     const newState2 = SkeletonTracingReducer(newState1, deleteOtherMiddleNodeAction);
     updateActions.push(
-      testDiffing(newState1.tracing, newState2.tracing, newState1.flycam, newState2.flycam),
+      testDiffing(newState1.annotation, newState2.annotation, newState1.flycam, newState2.flycam),
     );
     const simplifiedUpdateActions = createCompactedSaveQueueFromUpdateActions(
       updateActions,
@@ -1195,8 +1196,8 @@ describe("SkeletonTracingSaga", () => {
 
     // This will currently never be the result of one diff (see description of the test)
     const updateActions = testDiffing(
-      testState.tracing,
-      newState.tracing,
+      testState.annotation,
+      newState.annotation,
       testState.flycam,
       newState.flycam,
     );
@@ -1229,8 +1230,8 @@ describe("SkeletonTracingSaga", () => {
       .unpack();
 
     const updateActions = testDiffing(
-      testState.tracing,
-      newState.tracing,
+      testState.annotation,
+      newState.annotation,
       testState.flycam,
       newState.flycam,
     );
@@ -1266,8 +1267,8 @@ describe("SkeletonTracingSaga", () => {
       .unpack();
 
     const updateActions = testDiffing(
-      testState.tracing,
-      newState.tracing,
+      testState.annotation,
+      newState.annotation,
       testState.flycam,
       newState.flycam,
     );

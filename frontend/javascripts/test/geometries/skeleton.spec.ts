@@ -25,7 +25,7 @@ import {
 import { initializeAnnotationAction } from "oxalis/model/actions/annotation_actions";
 
 const skeletonCreator = () =>
-  new Skeleton((state: OxalisState) => getSkeletonTracing(state.tracing), true);
+  new Skeleton((state: OxalisState) => getSkeletonTracing(state.annotation), true);
 
 describe("Skeleton", () => {
   beforeAll(() => {
@@ -50,7 +50,7 @@ describe("Skeleton", () => {
       Store.dispatch(createNodeAction([i, i, i] as Vector3, null, rotation, viewport, mag));
     }
 
-    getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
+    getSkeletonTracing(Store.getState().annotation).map((skeletonTracing) => {
       const trees = skeletonTracing.trees;
       expect(_.size(trees)).toBe(20);
 
@@ -61,7 +61,7 @@ describe("Skeleton", () => {
   });
 
   it("should initialize correctly using the store's state", () => {
-    getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
+    getSkeletonTracing(Store.getState().annotation).map((skeletonTracing) => {
       const trees = skeletonTracing.trees;
       const skeleton = skeletonCreator();
       expect(skeleton.nodes.buffers.length).toBe(1);
@@ -170,7 +170,7 @@ describe("Skeleton", () => {
 
   it("should update node radius", async () => {
     const skeleton = skeletonCreator();
-    const skeletonTracing = getSkeletonTracing(Store.getState().tracing).get();
+    const skeletonTracing = getSkeletonTracing(Store.getState().annotation).get();
     const { activeNodeId, activeTreeId } = skeletonTracing;
 
     Store.dispatch(setNodeRadiusAction(2));
@@ -183,7 +183,7 @@ describe("Skeleton", () => {
   it("should update tree colors upon tree creation", async () => {
     const skeleton = skeletonCreator();
     Store.dispatch(createTreeAction());
-    const skeletonTracing = getSkeletonTracing(Store.getState().tracing).get();
+    const skeletonTracing = getSkeletonTracing(Store.getState().annotation).get();
     const { activeTreeId, trees } = skeletonTracing;
 
     if (activeTreeId != null) {

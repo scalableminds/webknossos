@@ -162,7 +162,7 @@ const initialState: OxalisState = _.extend({}, defaultState, {
     ...defaultState.dataset,
     name: "Test Dataset",
   },
-  tracing: {
+  annotation: {
     name: "",
     restrictions: {
       branchPointsAllowed: true,
@@ -182,8 +182,8 @@ async function testThatParserThrowsWithState(invalidState: OxalisState, key: str
   // Serialize the NML using the invalidState, then parse it again, which should throw an NMLParseError
   const nmlWithInvalidContent = serializeToNml(
     invalidState,
-    invalidState.tracing,
-    enforceSkeletonTracing(invalidState.tracing),
+    invalidState.annotation,
+    enforceSkeletonTracing(invalidState.annotation),
     BUILD_INFO,
     false,
   );
@@ -207,8 +207,8 @@ describe("NML", () => {
   it("serializing and parsing should yield the same state", async () => {
     const serializedNml = serializeToNml(
       initialState,
-      initialState.tracing,
-      enforceSkeletonTracing(initialState.tracing),
+      initialState.annotation,
+      enforceSkeletonTracing(initialState.annotation),
       BUILD_INFO,
       false,
     );
@@ -219,7 +219,7 @@ describe("NML", () => {
 
   it("serializing and parsing should yield the same state even when using special characters", async () => {
     const state = update(initialState, {
-      tracing: {
+      annotation: {
         skeleton: {
           trees: {
             "1": {
@@ -238,20 +238,20 @@ describe("NML", () => {
     });
     const serializedNml = serializeToNml(
       state,
-      state.tracing,
-      enforceSkeletonTracing(state.tracing),
+      state.annotation,
+      enforceSkeletonTracing(state.annotation),
       BUILD_INFO,
       false,
     );
     const { trees, treeGroups } = await parseNml(serializedNml);
-    const skeletonTracing = enforceSkeletonTracing(state.tracing);
+    const skeletonTracing = enforceSkeletonTracing(state.annotation);
     expect(skeletonTracing.trees).toEqual(trees);
     expect(skeletonTracing.treeGroups).toEqual(treeGroups);
   });
 
   it("serializing and parsing should yield the same state even when using multiline attributes", async () => {
     const state = update(initialState, {
-      tracing: {
+      annotation: {
         skeleton: {
           trees: {
             "1": {
@@ -270,19 +270,19 @@ describe("NML", () => {
     });
     const serializedNml = serializeToNml(
       state,
-      state.tracing,
-      enforceSkeletonTracing(state.tracing),
+      state.annotation,
+      enforceSkeletonTracing(state.annotation),
       BUILD_INFO,
       false,
     );
     const { trees, treeGroups } = await parseNml(serializedNml);
-    const skeletonTracing = enforceSkeletonTracing(state.tracing);
+    const skeletonTracing = enforceSkeletonTracing(state.annotation);
     expect(skeletonTracing.trees).toEqual(trees);
     expect(skeletonTracing.treeGroups).toEqual(treeGroups);
   });
 
   it("serializing and parsing should yield the same state even when additional coordinates exist", async () => {
-    const existingNodeMap = initialState.tracing.skeleton?.trees[1].nodes;
+    const existingNodeMap = initialState.annotation.skeleton?.trees[1].nodes;
     if (existingNodeMap == null) {
       throw new Error("Unexpected null value.");
     }
@@ -292,7 +292,7 @@ describe("NML", () => {
       additionalCoordinates: [{ name: "t", value: 123 }],
     });
     const state = update(initialState, {
-      tracing: {
+      annotation: {
         skeleton: {
           trees: {
             "1": {
@@ -306,20 +306,20 @@ describe("NML", () => {
     });
     const serializedNml = serializeToNml(
       state,
-      state.tracing,
-      enforceSkeletonTracing(state.tracing),
+      state.annotation,
+      enforceSkeletonTracing(state.annotation),
       BUILD_INFO,
       false,
     );
     const { trees, treeGroups } = await parseNml(serializedNml);
-    const skeletonTracing = enforceSkeletonTracing(state.tracing);
+    const skeletonTracing = enforceSkeletonTracing(state.annotation);
     expect(skeletonTracing.trees).toEqual(trees);
     expect(skeletonTracing.treeGroups).toEqual(treeGroups);
   });
 
   it("NML Serializer should only serialize visible trees", async () => {
     const state = update(initialState, {
-      tracing: {
+      annotation: {
         skeleton: {
           trees: {
             "1": {
@@ -333,13 +333,13 @@ describe("NML", () => {
     });
     const serializedNml = serializeToNml(
       state,
-      state.tracing,
-      enforceSkeletonTracing(state.tracing),
+      state.annotation,
+      enforceSkeletonTracing(state.annotation),
       BUILD_INFO,
       false,
     );
     const { trees } = await parseNml(serializedNml);
-    const skeletonTracing = enforceSkeletonTracing(state.tracing);
+    const skeletonTracing = enforceSkeletonTracing(state.annotation);
     // Tree 1 should not be exported as it is not visible
     delete skeletonTracing.trees["1"];
     expect(Object.keys(skeletonTracing.trees)).toEqual(Object.keys(trees));
@@ -348,7 +348,7 @@ describe("NML", () => {
 
   it("NML Serializer should only serialize groups with visible trees", async () => {
     const state = update(initialState, {
-      tracing: {
+      annotation: {
         skeleton: {
           trees: {
             "1": {
@@ -362,13 +362,13 @@ describe("NML", () => {
     });
     const serializedNml = serializeToNml(
       state,
-      state.tracing,
-      enforceSkeletonTracing(state.tracing),
+      state.annotation,
+      enforceSkeletonTracing(state.annotation),
       BUILD_INFO,
       false,
     );
     const { treeGroups } = await parseNml(serializedNml);
-    const skeletonTracing = enforceSkeletonTracing(state.tracing);
+    const skeletonTracing = enforceSkeletonTracing(state.annotation);
     // Group 1 (and group 3 and 4 which are children of group 1) should not be exported as they do not contain a visible tree
     const expectedTreeGroups = skeletonTracing.treeGroups.filter((group) => group.groupId !== 1);
     expect(expectedTreeGroups).toEqual(treeGroups);
@@ -377,8 +377,8 @@ describe("NML", () => {
   it("NML serializer should produce correct NMLs", () => {
     const serializedNml = serializeToNml(
       initialState,
-      initialState.tracing,
-      enforceSkeletonTracing(initialState.tracing),
+      initialState.annotation,
+      enforceSkeletonTracing(initialState.annotation),
       BUILD_INFO,
       false,
     );
@@ -387,7 +387,7 @@ describe("NML", () => {
 
   it("NML serializer should produce correct NMLs with additional coordinates", () => {
     let adaptedState = update(initialState, {
-      tracing: {
+      annotation: {
         skeleton: {
           additionalAxes: {
             $set: [{ name: "t", bounds: [0, 100], index: 0 }],
@@ -396,7 +396,7 @@ describe("NML", () => {
       },
     });
 
-    const existingNodeMap = adaptedState.tracing.skeleton?.trees[1].nodes;
+    const existingNodeMap = adaptedState.annotation.skeleton?.trees[1].nodes;
     if (existingNodeMap == null) {
       throw new Error("Unexpected null value.");
     }
@@ -406,7 +406,7 @@ describe("NML", () => {
       additionalCoordinates: [{ name: "t", value: 123 }],
     });
     adaptedState = update(adaptedState, {
-      tracing: {
+      annotation: {
         skeleton: {
           trees: {
             "1": {
@@ -421,8 +421,8 @@ describe("NML", () => {
 
     const serializedNml = serializeToNml(
       adaptedState,
-      adaptedState.tracing,
-      enforceSkeletonTracing(adaptedState.tracing),
+      adaptedState.annotation,
+      enforceSkeletonTracing(adaptedState.annotation),
       BUILD_INFO,
       false,
     );
@@ -453,7 +453,7 @@ describe("NML", () => {
       },
     ];
     const state = update(initialState, {
-      tracing: {
+      annotation: {
         skeleton: {
           trees: {
             "1": {
@@ -467,8 +467,8 @@ describe("NML", () => {
     });
     const serializedNml = serializeToNml(
       state,
-      state.tracing,
-      enforceSkeletonTracing(state.tracing),
+      state.annotation,
+      enforceSkeletonTracing(state.annotation),
       BUILD_INFO,
       false,
     );
@@ -485,15 +485,15 @@ describe("NML", () => {
     );
 
     const { trees } = await parseNml(serializedNml);
-    if (state.tracing.skeleton == null) {
+    if (state.annotation.skeleton == null) {
       throw new Error("Unexpected null for skeleton");
     }
-    expect(state.tracing.skeleton.trees[1]).toEqual(trees[1]);
+    expect(state.annotation.skeleton.trees[1]).toEqual(trees[1]);
   });
 
   it("NML serializer should escape special characters and multilines", () => {
     const state = update(initialState, {
-      tracing: {
+      annotation: {
         description: {
           $set: "Multiline dataset\ndescription\nwith special &'<>\" chars.",
         },
@@ -515,8 +515,8 @@ describe("NML", () => {
     });
     const serializedNml = serializeToNml(
       state,
-      state.tracing,
-      enforceSkeletonTracing(state.tracing),
+      state.annotation,
+      enforceSkeletonTracing(state.annotation),
       BUILD_INFO,
       false,
     );
@@ -539,7 +539,7 @@ describe("NML", () => {
 
   it("NML Parser should throw errors for invalid nmls", async () => {
     const invalidCommentState = update(initialState, {
-      tracing: {
+      annotation: {
         skeleton: {
           trees: {
             "2": {
@@ -557,7 +557,7 @@ describe("NML", () => {
       },
     });
     const invalidBranchPointState = update(initialState, {
-      tracing: {
+      annotation: {
         skeleton: {
           trees: {
             "2": {
@@ -575,7 +575,7 @@ describe("NML", () => {
       },
     });
     const invalidEdgeState = update(initialState, {
-      tracing: {
+      annotation: {
         skeleton: {
           trees: {
             "2": {
@@ -593,7 +593,7 @@ describe("NML", () => {
       },
     });
     const invalidSelfEdgeState = update(initialState, {
-      tracing: {
+      annotation: {
         skeleton: {
           trees: {
             "2": {
@@ -619,7 +619,7 @@ describe("NML", () => {
       },
     });
     const duplicateEdgeState = update(initialState, {
-      tracing: {
+      annotation: {
         skeleton: {
           trees: {
             "2": {
@@ -645,7 +645,7 @@ describe("NML", () => {
       },
     });
     const duplicateNodeState = update(initialState, {
-      tracing: {
+      annotation: {
         skeleton: {
           trees: {
             "1": {
@@ -673,7 +673,7 @@ describe("NML", () => {
       },
     });
     const duplicateTreeState = update(initialState, {
-      tracing: {
+      annotation: {
         skeleton: {
           trees: {
             "2": {
@@ -686,7 +686,7 @@ describe("NML", () => {
       },
     });
     const missingGroupIdState = update(initialState, {
-      tracing: {
+      annotation: {
         skeleton: {
           trees: {
             "2": {
@@ -699,7 +699,7 @@ describe("NML", () => {
       },
     });
     const duplicateGroupIdState = update(initialState, {
-      tracing: {
+      annotation: {
         skeleton: {
           treeGroups: {
             $push: [
@@ -728,9 +728,9 @@ describe("NML", () => {
     const action = addTreesAndGroupsAction(_.cloneDeep(initialSkeletonTracing.trees), []);
     const newState = SkeletonTracingReducer(initialState, action);
     expect(newState).not.toBe(initialState);
-    const newSkeletonTracing = enforceSkeletonTracing(newState.tracing);
+    const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
     // This should be unchanged / sanity check
-    expect(newState.tracing.name).toBe(initialState.tracing.name);
+    expect(newState.annotation.name).toBe(initialState.annotation.name);
     expect(newSkeletonTracing.activeTreeId).toBe(initialSkeletonTracing.activeTreeId);
     // New node and tree ids should have been assigned
     expect(_.size(newSkeletonTracing.trees)).toBe(4);
@@ -796,9 +796,9 @@ describe("NML", () => {
     );
     const newState = SkeletonTracingReducer(initialState, action);
     expect(newState).not.toBe(initialState);
-    const newSkeletonTracing = enforceSkeletonTracing(newState.tracing);
+    const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
     // This should be unchanged / sanity check
-    expect(newState.tracing.name).toBe(initialState.tracing.name);
+    expect(newState.annotation.name).toBe(initialState.annotation.name);
     expect(newSkeletonTracing.activeTreeId).toBe(initialSkeletonTracing.activeTreeId);
     // New node and tree ids should have been assigned
     expect(_.size(newSkeletonTracing.treeGroups)).toBe(4);
@@ -828,7 +828,7 @@ describe("NML", () => {
     });
     const action = addTreesAndGroupsAction(newTrees, []);
     const newState = SkeletonTracingReducer(initialState, action);
-    const newSkeletonTracing = enforceSkeletonTracing(newState.tracing);
+    const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
     // Comments should have been rewritten if appropriate
     expect(_.size(newSkeletonTracing.trees)).toBe(4);
     expect(newSkeletonTracing.trees[3].comments.length).toBe(3);
@@ -840,7 +840,7 @@ describe("NML", () => {
 
   it("NML Parser should split up disconnected trees", async () => {
     const disconnectedTreeState = update(initialState, {
-      tracing: {
+      annotation: {
         skeleton: {
           trees: {
             "1": {
@@ -859,8 +859,8 @@ describe("NML", () => {
     });
     const nmlWithDisconnectedTree = serializeToNml(
       disconnectedTreeState,
-      disconnectedTreeState.tracing,
-      enforceSkeletonTracing(disconnectedTreeState.tracing),
+      disconnectedTreeState.annotation,
+      enforceSkeletonTracing(disconnectedTreeState.annotation),
       BUILD_INFO,
       false,
     );

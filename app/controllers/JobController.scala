@@ -294,6 +294,7 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
+          _ <- bool2Fox(multiUser.isSuperUser) ?~> "job.inferMitochondria.notAllowed.onlySuperUsers"
           command = JobCommand.infer_mitochondria
           parsedBoundingBox <- BoundingBox.fromLiteral(bbox).toFox
           _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
@@ -335,8 +336,6 @@ class JobController @Inject()(jobDAO: JobDAO,
             .dataSourceFor(dataset)
             .flatMap(_.toUsable)
             .map(_.boundingBox) ?~> "dataset.boundingBox.unset"
-          multiUser <- multiUserDAO.findOne(request.identity._multiUser)
-          _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(datasetBoundingBox.toLiteral, None))
           command = JobCommand.align_sections
           commandArgs = Json.obj(
             "dataset_id" -> dataset._id,

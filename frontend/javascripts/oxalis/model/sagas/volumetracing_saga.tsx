@@ -110,7 +110,7 @@ export function* watchVolumeTracingAsync(): Saga<void> {
 function* warnOfTooLowOpacity(): Saga<void> {
   yield* take("INITIALIZE_SETTINGS");
 
-  if (yield* select((state) => state.tracing.volumes.length === 0)) {
+  if (yield* select((state) => state.annotation.volumes.length === 0)) {
     return;
   }
 
@@ -164,7 +164,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
   // Waiting for the initialization is important. Otherwise, allowUpdate would be
   // false and the saga would terminate.
   yield* takeWithBatchActionSupport("INITIALIZE_VOLUMETRACING");
-  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
+  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
 
   while (allowUpdate) {
     const startEditingAction = yield* take("START_EDITING");

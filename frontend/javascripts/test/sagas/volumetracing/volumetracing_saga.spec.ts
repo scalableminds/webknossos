@@ -82,7 +82,7 @@ const volumeTracingLayer: APISegmentationLayer = {
 };
 
 const initialState = update(defaultState, {
-  tracing: {
+  annotation: {
     volumes: {
       $set: [volumeTracing],
     },
@@ -130,13 +130,13 @@ describe("VolumeTracingSaga", () => {
     );
 
     saga.next();
-    saga.next(initialState.tracing.volumes[0]);
+    saga.next(initialState.annotation.volumes[0]);
     saga.next(initialState.flycam);
     saga.next(initialState.viewModeData.plane.tdCamera);
     saga.next();
     saga.next();
     saga.next(true);
-    saga.next(initialState.tracing.volumes[0]);
+    saga.next(initialState.annotation.volumes[0]);
     saga.next(initialState.flycam);
     // only updateTracing
     const items = execCall(expect, saga.next(initialState.viewModeData.plane.tdCamera));
@@ -150,13 +150,13 @@ describe("VolumeTracingSaga", () => {
     );
 
     saga.next();
-    saga.next(initialState.tracing.volumes[0]);
+    saga.next(initialState.annotation.volumes[0]);
     saga.next(initialState.flycam);
     saga.next(initialState.viewModeData.plane.tdCamera);
     saga.next();
     saga.next();
     saga.next(true);
-    saga.next(newState.tracing.volumes[0]);
+    saga.next(newState.annotation.volumes[0]);
     saga.next(newState.flycam);
 
     const items = execCall(expect, saga.next(newState.viewModeData.plane.tdCamera));

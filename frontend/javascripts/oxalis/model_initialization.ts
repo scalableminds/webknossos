@@ -403,9 +403,9 @@ function setInitialTool() {
     return;
   }
 
-  const { tracing } = Store.getState();
+  const { annotation } = Store.getState();
 
-  if (tracing.skeleton != null) {
+  if (annotation.skeleton != null) {
     // We are in a annotation which contains a skeleton. Due to the
     // enabled legacy-bindings, the user can expect to immediately create new nodes
     // with right click. Therefore, switch to the skeleton tool.
@@ -813,9 +813,9 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
       Store.dispatch(setMappingEnabledAction(effectiveLayerName, true));
 
       if (agglomerateIdsToImport != null) {
-        const { tracing } = Store.getState();
+        const { annotation } = Store.getState();
 
-        if (tracing.skeleton == null) {
+        if (annotation.skeleton == null) {
           Toast.error(messages["tracing.agglomerate_skeleton.no_skeleton_tracing"]);
           continue;
         }

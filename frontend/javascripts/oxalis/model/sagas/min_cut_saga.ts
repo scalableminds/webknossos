@@ -197,7 +197,7 @@ function* performMinCut(action: Action): Saga<void> {
     throw new Error("Satisfy typescript.");
   }
 
-  const skeleton = yield* select((store) => store.tracing.skeleton);
+  const skeleton = yield* select((store) => store.annotation.skeleton);
 
   if (!skeleton) {
     return;

@@ -55,7 +55,7 @@ export function generateTreeName(state: OxalisState, timestamp: number, treeId: 
 
   let prefix = "Tree";
 
-  if (state.tracing.annotationType === "Explorational") {
+  if (state.annotation.annotationType === "Explorational") {
     // Get YYYY-MM-DD string
     const creationDate = new Date(timestamp).toJSON().slice(0, 10);
     prefix = `explorative_${creationDate}_${user}_`;
@@ -170,7 +170,7 @@ export function deleteNode(
   node: Node,
   timestamp: number,
 ): Maybe<[TreeMap, number, number | null | undefined, number]> {
-  return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
+  return getSkeletonTracing(state.annotation).chain((skeletonTracing) => {
     // Delete node and possible branchpoints/comments
     const activeTree = update(tree, {
       nodes: {
@@ -226,7 +226,7 @@ export function deleteEdge(
   targetNode: Node,
   timestamp: number,
 ): Maybe<[TreeMap, number | null | undefined]> {
-  return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
+  return getSkeletonTracing(state.annotation).chain((skeletonTracing) => {
     if (sourceTree.treeId !== targetTree.treeId) {
       // The two selected nodes are in different trees
       console.error(
@@ -377,7 +377,7 @@ function splitTreeByNodes(
           // in this reducer for performance reasons.
           newTree = immutableNewTree as any as Tree;
           intermediateState = update(intermediateState, {
-            tracing: {
+            annotation: {
               skeleton: {
                 trees: {
                   [newTree.treeId]: {
@@ -489,7 +489,7 @@ export function createTree(
   edgesAreVisible: boolean = true,
   metadata: MetadataEntryProto[] = [],
 ): Maybe<Tree> {
-  return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
+  return getSkeletonTracing(state.annotation).chain((skeletonTracing) => {
     // Create a new tree id and name
     const newTreeId = getMaximumTreeId(skeletonTracing.trees) + 1;
     const newTreeName = name || generateTreeName(state, timestamp, newTreeId);
@@ -770,7 +770,7 @@ export function toggleAllTreesReducer(
     updateTreeObject[treeId] = isVisibleUpdater;
   });
   return update(state, {
-    tracing: {
+    annotation: {
       skeleton: {
         trees: updateTreeObject,
       },
@@ -814,7 +814,7 @@ export function toggleTreeGroupReducer(
   });
 
   return update(state, {
-    tracing: {
+    annotation: {
       skeleton: {
         trees: updateTreeObject,
       },
@@ -826,7 +826,7 @@ export function setExpandedTreeGroups(
   state: OxalisState,
   shouldBeExpanded: (arg: TreeGroup) => boolean,
 ): OxalisState {
-  const currentTreeGroups = state.tracing?.skeleton?.treeGroups;
+  const currentTreeGroups = state.annotation?.skeleton?.treeGroups;
   if (currentTreeGroups == null) {
     return state;
   }
@@ -840,7 +840,7 @@ export function setExpandedTreeGroups(
   });
 
   return update(state, {
-    tracing: {
+    annotation: {
       skeleton: {
         treeGroups: {
           $set: newGroups,

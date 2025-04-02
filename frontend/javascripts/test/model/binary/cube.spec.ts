@@ -13,7 +13,7 @@ vi.mock("oxalis/store", () => ({
   default: {
     getState: () => ({
       dataset: datasetServerObject,
-      tracing: {
+      annotation: {
         skeleton: skeletontracingServerObject,
       },
       datasetConfiguration: {

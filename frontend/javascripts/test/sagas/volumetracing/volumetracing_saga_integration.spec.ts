@@ -893,7 +893,7 @@ describe("Volume Tracing", () => {
     );
 
     const state = Store.getState();
-    const tracing = state.tracing.volumes[0];
+    const tracing = state.annotation.volumes[0];
     expect(tracing.segmentGroups.length).toBe(0);
     expect(tracing.segments.size()).toBe(4);
 
@@ -904,7 +904,7 @@ describe("Volume Tracing", () => {
     await dispatchUndoAsync(Store.dispatch);
 
     const stateRestored = Store.getState();
-    const tracingRestored = stateRestored.tracing.volumes[0];
+    const tracingRestored = stateRestored.annotation.volumes[0];
     expect(tracingRestored.segmentGroups.length).toBe(2);
     expect(tracingRestored.segments.size()).toBe(4);
 
@@ -954,14 +954,14 @@ describe("Volume Tracing", () => {
     );
 
     const state = Store.getState();
-    const tracing = state.tracing.volumes[0];
+    const tracing = state.annotation.volumes[0];
     expect(tracing.segmentGroups.length).toBe(0);
     expect(tracing.segments.size()).toBe(0);
 
     await dispatchUndoAsync(Store.dispatch);
 
     const stateRestored = Store.getState();
-    const tracingRestored = stateRestored.tracing.volumes[0];
+    const tracingRestored = stateRestored.annotation.volumes[0];
     expect(tracingRestored.segmentGroups.length).toBe(1);
     expect(tracingRestored.segmentGroups[0]?.children.length || 0).toBe(1);
     expect(tracingRestored.segments.size()).toBe(4);
@@ -1004,7 +1004,7 @@ describe("Volume Tracing", () => {
     Store.dispatch(updateSegmentAction(3, { groupId: 2 }, volumeTracingLayerName));
     Store.dispatch(updateSegmentAction(4, { groupId: 2 }, volumeTracingLayerName));
 
-    expect(Store.getState().tracing.volumes[0].segmentGroups.length).toBe(2);
+    expect(Store.getState().annotation.volumes[0].segmentGroups.length).toBe(2);
 
     // Delete everything
     Store.dispatch(
@@ -1018,14 +1018,14 @@ describe("Volume Tracing", () => {
     );
 
     const state = Store.getState();
-    const tracing = state.tracing.volumes[0];
+    const tracing = state.annotation.volumes[0];
     expect(tracing.segmentGroups.length).toBe(0);
     expect(tracing.segments.size()).toBe(0);
 
     // Undo again
     await dispatchUndoAsync(Store.dispatch);
 
-    expect(Store.getState().tracing.volumes[0].segmentGroups.length).toBe(2);
+    expect(Store.getState().annotation.volumes[0].segmentGroups.length).toBe(2);
 
     // Delete without recursion
     Store.dispatch(
@@ -1041,7 +1041,7 @@ describe("Volume Tracing", () => {
     await dispatchUndoAsync(Store.dispatch);
 
     const stateRestored = Store.getState();
-    const tracingRestored = stateRestored.tracing.volumes[0];
+    const tracingRestored = stateRestored.annotation.volumes[0];
     expect(tracingRestored.segments.size()).toBe(4);
     expect(tracingRestored.segmentGroups.length).toBe(2);
 

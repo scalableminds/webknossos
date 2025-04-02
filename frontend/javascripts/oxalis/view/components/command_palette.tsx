@@ -62,15 +62,15 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     (state: OxalisState) => state.uiInformation.isInAnnotationView,
   );
 
-  const restrictions = useSelector((state: OxalisState) => state.tracing.restrictions);
+  const restrictions = useSelector((state: OxalisState) => state.annotation.restrictions);
   const task = useSelector((state: OxalisState) => state.task);
-  const annotationType = useSelector((state: OxalisState) => state.tracing.annotationType);
-  const annotationId = useSelector((state: OxalisState) => state.tracing.annotationId);
+  const annotationType = useSelector((state: OxalisState) => state.annotation.annotationType);
+  const annotationId = useSelector((state: OxalisState) => state.annotation.annotationId);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const isAnnotationLockedByUser = useSelector(
-    (state: OxalisState) => state.tracing.isLockedByOwner,
+    (state: OxalisState) => state.annotation.isLockedByOwner,
   );
-  const annotationOwner = useSelector((state: OxalisState) => state.tracing.owner);
+  const annotationOwner = useSelector((state: OxalisState) => state.annotation.owner);
 
   const props: TracingViewMenuProps = {
     restrictions,

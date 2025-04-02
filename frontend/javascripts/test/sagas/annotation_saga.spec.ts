@@ -1,4 +1,4 @@
-import { describe, expect, vi, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { OxalisState } from "oxalis/store";
 import { createMockTask } from "@redux-saga/testing-utils";
 import { put, call } from "redux-saga/effects";
@@ -17,10 +17,10 @@ import { acquireAnnotationMutexMaybe } from "oxalis/model/sagas/annotation_saga"
 const createInitialState = (othersMayEdit: boolean, allowUpdate: boolean = true): OxalisState => ({
   ...defaultState,
   activeUser: dummyUser,
-  tracing: {
-    ...defaultState.tracing,
+  annotation: {
+    ...defaultState.annotation,
     restrictions: {
-      ...defaultState.tracing.restrictions,
+      ...defaultState.annotation.restrictions,
       allowUpdate,
     },
     volumes: [],
@@ -31,31 +31,14 @@ const createInitialState = (othersMayEdit: boolean, allowUpdate: boolean = true)
 
 const blockingUser = { firstName: "Sample", lastName: "User", id: "1111" };
 
-vi.mock("libs/toast", () => ({
-  default: {
-    warning: vi.fn(),
-    close: vi.fn(),
-    success: vi.fn(),
-  },
-}));
-
-vi.mock("libs/user_local_storage", () => ({
-  default: {
-    getItem: vi.fn(),
-    setItem: vi.fn(),
-    removeItem: vi.fn(),
-    clear: vi.fn(),
-  },
-}));
-
 describe("Annotation Saga", () => {
   it("An annotation with allowUpdate = false should not try to acquire the annotation mutex.", () => {
     const storeState = createInitialState(false, false);
     const saga = acquireAnnotationMutexMaybe();
     saga.next();
     saga.next(wkReadyAction());
-    saga.next(storeState.tracing.restrictions.allowUpdate);
-    saga.next(storeState.tracing.annotationId);
+    saga.next(storeState.annotation.restrictions.allowUpdate);
+    saga.next(storeState.annotation.annotationId);
     expect(saga.next().done, "The saga should terminate.").toBe(true);
   });
 
@@ -71,15 +54,15 @@ describe("Annotation Saga", () => {
       "The saga should select the allowUpdate next.",
     ).toBe("SELECT");
     expect(
-      saga.next(storeState.tracing.restrictions.allowUpdate).value.type,
+      saga.next(storeState.annotation.restrictions.allowUpdate).value.type,
       "The saga should select the annotationId next.",
     ).toBe("SELECT");
     expect(
-      saga.next(storeState.tracing.annotationId).value.type,
+      saga.next(storeState.annotation.annotationId).value.type,
       "The saga should select the othersMayEdit next.",
     ).toBe("SELECT");
     expect(
-      saga.next(storeState.tracing.othersMayEdit).value.type,
+      saga.next(storeState.annotation.othersMayEdit).value.type,
       "The saga should select the activeUser next.",
     ).toBe("SELECT");
 

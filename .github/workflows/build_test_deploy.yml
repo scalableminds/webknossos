@@ -208,6 +208,7 @@ jobs:
     needs: [build]
     env:
       DOCKER_TAG: ${{ needs.build.outputs.docker_tag }}
+      POSTGRES_URL: jdbc:postgresql://localhost:5432/webknossos
       POSTGRES_USER: webknossos_user
     steps:
       - uses: actions/checkout@v3
@@ -311,10 +312,6 @@ jobs:
           max_attempts: 3
           command: |
             yarn run test-e2e
-        env:
-          POSTGRES_URL: jdbc:postgresql://localhost:5432/webknossos
-          POSTGRES_USER: webknossos_user
-          POSTGRES_PASSWORD: secret_password
 
 #  build_test_deploy:
 #    runs-on: ubuntu-24.04

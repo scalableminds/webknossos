@@ -16,7 +16,7 @@ services:
       - ./binaryData:/webknossos/binaryData
     environment:
       - CERTIFICATE
-      - POSTGRES_URL=jdbc:postgres://postgres/webknossos
+      - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     depends_on:

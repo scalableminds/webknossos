@@ -5,8 +5,8 @@ import tsconfigPaths from 'vite-tsconfig-paths'
 export default defineConfig({
   test: {
     globals: true,
-    setupFiles: ['./frontend/javascripts/test/setup.ts'],
-    include: ['./frontend/javascripts/test/**/*.ts'],
+    setupFiles: ['./frontend/javascripts/test/global_mocks.ts'],
+    include: ['./frontend/javascripts/test/**/*.spec.ts'],
     exclude: ['./frontend/javascripts/test/**/*.e2e.ts'],
     env: {IS_TESTING: "true"}
   },

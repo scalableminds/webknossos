@@ -1,4 +1,3 @@
-import { createNanoEvents } from "nanoevents";
 import { vi, type TestContext as BaseTestContext } from "vitest";
 import _ from "lodash";
 import { ControlModeEnum } from "oxalis/constants";
@@ -37,6 +36,7 @@ import { setupApi } from "oxalis/api/internal_api";
 import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
 import Request from "libs/request";
 import { parseProtoAnnotation, parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
+import app from "app";
 
 const TOKEN = "secure-token";
 const ANNOTATION_TYPE = "annotationTypeValue";
@@ -46,7 +46,7 @@ const ANNOTATION_ID = "annotationIdValue";
 export interface SetupWebknossosTestContext extends BaseTestContext {
   model: typeof ModelType;
   mocks: {
-    Request: Request;
+    Request: typeof Request;
   };
   setSlowCompression: (enabled: boolean) => void;
   api: ApiInterface;
@@ -55,24 +55,27 @@ export interface SetupWebknossosTestContext extends BaseTestContext {
 // Create mock objects
 vi.mock("libs/request", () => ({
   default: {
-    receiveJSON: vi.fn().mockImplementation(receiveJSONMockImplementation),
+    receiveJSON: vi.fn().mockReturnValue(Promise.resolve()),
     sendJSONReceiveJSON: vi.fn().mockImplementation(sendJSONReceiveJSONMockImplementation),
-    receiveArraybuffer: vi.fn(),
-    sendJSONReceiveArraybuffer: vi.fn(),
+    receiveArraybuffer: vi.fn().mockReturnValue(Promise.resolve()),
+    sendJSONReceiveArraybuffer: vi.fn().mockReturnValue(Promise.resolve()),
     sendJSONReceiveArraybufferWithHeaders: vi
       .fn()
-      .mockImplementation(createBucketResponseFunction(Uint8Array, 0)),
-    always: () => Promise.resolve(),
+      .mockImplementation(() => createBucketResponseFunction(Uint8Array, 0)),
+    always: vi.fn().mockReturnValue(Promise.resolve()),
   },
 }));
 
-function receiveJSONMockImplementation(url: string, options?: any) {
+function receiveJSONMockImplementation(
+  url: string,
+  options: any,
+  annotationFixture: typeof SKELETON_ANNOTATION | typeof VOLUME_ANNOTATION | typeof TASK_ANNOTATION,
+) {
   if (
     url.startsWith(`/api/annotations/${ANNOTATION_TYPE}/${ANNOTATION_ID}/info`) ||
     url.startsWith(`/api/annotations/${ANNOTATION_ID}/info`)
   ) {
-    return Promise.resolve(_.cloneDeep(SKELETON_ANNOTATION));
-    // TODO return Promise.resolve(_.cloneDeep(ANNOTATION));
+    return Promise.resolve(_.cloneDeep(annotationFixture));
   }
 
   if (
@@ -82,8 +85,7 @@ function receiveJSONMockImplementation(url: string, options?: any) {
     return Promise.resolve({});
   }
 
-  if (url === `/api/datasets/${SKELETON_ANNOTATION.datasetId}`) {
-    // TODO if (url === `/api/datasets/${ANNOTATION.datasetId}`) {
+  if (url === `/api/datasets/${annotationFixture.datasetId}`) {
     return Promise.resolve(_.cloneDeep(DATASET));
   }
 
@@ -105,7 +107,8 @@ function sendJSONReceiveJSONMockImplementation(url: string, _options?: any) {
 // Create a modified version of wkstoreAdapter
 vi.mock("oxalis/model/bucket_data_handling/wkstore_adapter", () => ({
   default: {
-    requestFromStore: () => new Uint8Array(),
+    requestWithFallback: vi.fn().mockReturnValue(new Uint8Array()),
+    requestFromStore: vi.fn().mockReturnValue(new Uint8Array()),
   },
 }));
 
@@ -134,10 +137,6 @@ export function createBucketResponseFunction(TypedArrayClass: any, fillValue: nu
     };
   };
 }
-
-const app = {
-  vent: createNanoEvents(),
-};
 
 export const KeyboardJS = {
   bind: vi.fn(),
@@ -172,7 +171,7 @@ startSagas(rootSaga);
 // important mocks. The leading underscores are there to make the import
 // appear at the top when sorting the imports with importjs.
 
-export function __setupWebknossos(
+export async function __setupWebknossos(
   testContext: SetupWebknossosTestContext,
   mode: keyof typeof modelData,
   apiVersion?: number,
@@ -189,7 +188,11 @@ export function __setupWebknossos(
   testContext.setSlowCompression = setSlowCompression;
 
   const webknossos = new OxalisApi(Model);
-  const ANNOTATION = modelData[mode].annotation;
+  const annotationFixture = modelData[mode].annotation;
+
+  vi.mocked(Request).receiveJSON.mockImplementation((url, options) =>
+    receiveJSONMockImplementation(url, options, annotationFixture),
+  );
 
   vi.mocked(parseProtoTracing).mockReturnValue(_.cloneDeep(modelData[mode].tracing));
   vi.mocked(parseProtoAnnotation).mockReturnValue(_.cloneDeep(modelData[mode].annotationProto));
@@ -200,23 +203,23 @@ export function __setupWebknossos(
     segmentMeshController: { meshesGroupsPerSegmentId: {} },
   });
 
-  return Model.fetch(
-    null, // no compound annotation
-    {
-      annotationId: ANNOTATION_ID,
-      type: ControlModeEnum.TRACE,
-    },
-    true,
-  )
-    .then(() => {
-      // Trigger the event ourselves, as the OxalisController is not instantiated
-      app.vent.emit("webknossos:ready");
-      return webknossos.apiReady(apiVersion).then((apiObject: ApiInterface) => {
-        testContext.api = apiObject;
-      });
-    })
-    .catch((error: { message: string }) => {
-      console.error("model.fetch() failed", error);
-      throw new Error(error.message);
-    });
+  try {
+    await Model.fetch(
+      null, // no compound annotation
+      {
+        annotationId: ANNOTATION_ID,
+        type: ControlModeEnum.TRACE,
+      },
+      true,
+    );
+    // Trigger the event ourselves, as the webKnossosController is not instantiated
+    app.vent.emit("webknossos:ready");
+
+    const api = await webknossos.apiReady(apiVersion);
+    testContext.api = api;
+  } catch (error) {
+    console.error("model.fetch() failed", error);
+    // @ts-ignore
+    throw new Error(error.message);
+  }
 }

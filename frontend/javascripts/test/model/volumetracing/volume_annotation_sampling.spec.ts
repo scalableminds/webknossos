@@ -1,4 +1,3 @@
-import "test/mocks/lz4";
 import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
 import { tracing as volumetracingServerObject } from "test/fixtures/volumetracing_server_objects";
 import type { Vector3, Vector4 } from "oxalis/constants";

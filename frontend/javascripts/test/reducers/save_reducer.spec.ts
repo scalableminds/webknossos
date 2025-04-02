@@ -7,7 +7,7 @@ import type { UpdateActionWithoutIsolationRequirement } from "oxalis/model/sagas
 import * as SaveActions from "oxalis/model/actions/save_actions";
 import SaveReducer from "oxalis/model/reducers/save_reducer";
 import { createEdge } from "oxalis/model/sagas/update_actions";
-import { TIMESTAMP } from "test/setup";
+import { TIMESTAMP } from "test/global_mocks";
 
 vi.mock("oxalis/model/accessors/annotation_accessor", () => ({
   getStats: () => null,

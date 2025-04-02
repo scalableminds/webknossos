@@ -38,7 +38,7 @@ describe("Bucket Eviction With Saving", () => {
     mocks,
   }) => {
     await api.tracing.save();
-    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.withImplementation(() =>
+    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.withImplementation(
       createBucketResponseFunction(Uint16Array, 0, 0),
     );
 

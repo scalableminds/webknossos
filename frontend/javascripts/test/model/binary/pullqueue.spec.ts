@@ -143,27 +143,25 @@ describe("PullQueue", () => {
     prepare();
     pullQueue.pull();
 
-    const foo = requestWithFallback;
-    const requestCall = vi.mocked(requestWithFallback);
-
     return runAsync([
       async () => {
-        // await expect(requestCall).rejects.toThrowError();
-        await expect(vi.mocked(requestWithFallback)).toHaveBeenCalledTimes(1);
+        await expect(requestWithFallback).rejects.toThrowError();
+        await expect(requestWithFallback).toHaveBeenCalledTimes(1);
         expect(buckets[0].state).toBe(BucketStateEnum.UNREQUESTED);
         expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
       },
     ]);
   });
 
-  it("Request Failure: should reinsert dirty buckets", ({ pullQueue, buckets }) => {
+  it<TestContext>("Request Failure: should reinsert dirty buckets", ({ pullQueue, buckets }) => {
     prepare();
     buckets[0].dirty = true;
     buckets[0].data = new Uint8Array(32 * 32 * 32);
     pullQueue.pull();
+
     return runAsync([
       async () => {
-        await expect(vi.mocked(requestWithFallback)).toHaveBeenCalledTimes(2);
+        await expect(requestWithFallback).toHaveBeenCalledTimes(2);
         expect(buckets[0].state).toBe(BucketStateEnum.LOADED);
         expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
       },

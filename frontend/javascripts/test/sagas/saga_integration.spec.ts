@@ -1,11 +1,7 @@
 import update from "immutability-helper";
 import { describe, it, beforeEach, afterEach, expect } from "vitest";
 import "test/sagas/saga_integration.mock";
-import {
-  __setupWebknossos,
-  type SetupWebknossosTestContext,
-  TIMESTAMP,
-} from "test/helpers/apiHelpers";
+import { __setupWebknossos, type SetupWebknossosTestContext } from "test/helpers/apiHelpers";
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getStats } from "oxalis/model/accessors/annotation_accessor";
@@ -29,6 +25,7 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import * as UpdateActions from "oxalis/model/sagas/update_actions";
+import { TIMESTAMP } from "test/global_mocks";
 
 describe("Saga Integration Tests", () => {
   beforeEach<SetupWebknossosTestContext>(async (context) => {

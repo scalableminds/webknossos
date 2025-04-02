@@ -1,4 +1,3 @@
-import "test/mocks/lz4";
 import { describe, it, expect } from "vitest";
 import type { Vector3 } from "oxalis/constants";
 import { almostEqual } from "test/libs/transform_spec_helpers";

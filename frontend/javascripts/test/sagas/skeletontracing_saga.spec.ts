@@ -1,4 +1,3 @@
-import "test/sagas/skeletontracing_saga.mock";
 import type { Flycam, HybridTracing, OxalisState, SkeletonTracing } from "oxalis/store";
 import ChainReducer from "test/helpers/chainReducer";
 import DiffableMap from "libs/diffable_map";
@@ -17,26 +16,21 @@ import type { ServerSkeletonTracing } from "types/api_flow_types";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { UpdateActionWithoutIsolationRequirement } from "oxalis/model/sagas/update_actions";
 import type { TracingStats } from "oxalis/model/accessors/annotation_accessor";
-
-const TIMESTAMP = 1494347146379;
-const actionTracingId = "tracingId";
-
-vi.mock("libs/date", () => ({
-  now: () => TIMESTAMP,
-}));
-
-vi.mock("oxalis/model/sagas/root_saga", () => ({
-  default: function* () {
-    yield;
-  },
-}));
-
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
 import { setupSavingForTracingType } from "oxalis/model/sagas/save_saga";
 import * as SkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
 import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
 import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
 import { put } from "redux-saga/effects";
+import { TIMESTAMP } from "test/global_mocks";
+
+const actionTracingId = "tracingId";
+
+vi.mock("oxalis/model/sagas/root_saga", () => ({
+  default: function* () {
+    yield;
+  },
+}));
 
 function testDiffing(
   prevTracing: HybridTracing,

@@ -1,4 +1,3 @@
-import "test/mocks/lz4";
 import update from "immutability-helper";
 import Maybe from "data.maybe";
 import { AnnotationToolEnum, type Vector3 } from "oxalis/constants";

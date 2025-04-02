@@ -206,7 +206,10 @@ const renderActionsForModel = (model: AiModel, onChangeSharedOrganizations: () =
       {voxelyticsWorkflowHash != null ? (
         /* margin left is needed  as organizationSharingButton is a button with a 16 margin */
         <Row style={{ marginLeft: 16 }}>
-          <FileTextOutlined />
+          <FileTextOutlined
+            className="icon-margin-right"
+            style={{ color: "var(--ant-color-primary)" }}
+          />
           <Link to={`/workflows/${voxelyticsWorkflowHash}`}>Voxelytics Report</Link>
         </Row>
       ) : null}

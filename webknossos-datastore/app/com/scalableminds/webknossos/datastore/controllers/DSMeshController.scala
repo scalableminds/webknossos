@@ -4,6 +4,16 @@ import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services._
+import com.scalableminds.webknossos.datastore.services.mesh.{
+  DSFullMeshService,
+  FullMeshRequest,
+  ListMeshChunksRequest,
+  MeshChunkDataRequestList,
+  MeshFileService,
+  MeshMappingHelper,
+  NeuroglancerMesh,
+  NeuroglancerPrecomputedMeshService
+}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
@@ -12,6 +22,7 @@ import scala.concurrent.ExecutionContext
 class DSMeshController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
     meshFileService: MeshFileService,
+    neuroglancerPrecomputedMeshService: NeuroglancerPrecomputedMeshService,
     fullMeshService: DSFullMeshService,
     val dsRemoteWebknossosClient: DSRemoteWebknossosClient,
     val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
@@ -29,7 +40,11 @@ class DSMeshController @Inject()(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
           meshFiles <- meshFileService.exploreMeshFiles(organizationId, datasetDirectoryName, dataLayerName)
-        } yield Ok(Json.toJson(meshFiles))
+          neuroglancerMeshFiles <- neuroglancerPrecomputedMeshService.exploreMeshes(organizationId,
+                                                                                    datasetDirectoryName,
+                                                                                    dataLayerName)
+          allMeshFiles = meshFiles ++ neuroglancerMeshFiles
+        } yield Ok(Json.toJson(allMeshFiles))
       }
     }
 
@@ -63,11 +78,17 @@ class DSMeshController @Inject()(
             mappingNameForMeshFile,
             omitMissing = false
           )
-          chunkInfos <- meshFileService.listMeshChunksForSegmentsMerged(organizationId,
-                                                                        datasetDirectoryName,
-                                                                        dataLayerName,
-                                                                        request.body.meshFile,
-                                                                        segmentIds)
+          chunkInfos <- request.body.meshFileType match {
+            case Some(NeuroglancerMesh.meshTypeName) =>
+              neuroglancerPrecomputedMeshService.listMeshChunksForMultipleSegments(request.body.meshFilePath,
+                                                                                   segmentIds)
+            case _ =>
+              meshFileService.listMeshChunksForSegmentsMerged(organizationId,
+                                                              datasetDirectoryName,
+                                                              dataLayerName,
+                                                              request.body.meshFile,
+                                                              segmentIds)
+          }
         } yield Ok(Json.toJson(chunkInfos))
       }
     }
@@ -79,10 +100,12 @@ class DSMeshController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
-          (data, encoding) <- meshFileService.readMeshChunk(organizationId,
-                                                            datasetDirectoryName,
-                                                            dataLayerName,
-                                                            request.body) ?~> "mesh.file.loadChunk.failed"
+          (data, encoding) <- request.body.meshFileType match {
+            case Some(NeuroglancerMesh.meshTypeName) =>
+              neuroglancerPrecomputedMeshService.readMeshChunk(request.body.meshFilePath, request.body.requests)
+            case _ =>
+              meshFileService.readMeshChunk(organizationId, datasetDirectoryName, dataLayerName, request.body) ?~> "mesh.file.loadChunk.failed"
+          }
         } yield {
           if (encoding.contains("gzip")) {
             Ok(data).withHeaders("Content-Encoding" -> "gzip")

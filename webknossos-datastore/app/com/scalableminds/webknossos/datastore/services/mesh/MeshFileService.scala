@@ -1,15 +1,15 @@
-package com.scalableminds.webknossos.datastore.services
+package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.google.common.io.LittleEndianDataInputStream
 import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
 import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.JsonHelper.bool2Box
 import com.scalableminds.util.tools.{ByteUtils, Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.webknossos.datastore.services.Hdf5HashedArrayUtils
 import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box
 import net.liftweb.common.Box.tryo
+import net.liftweb.common.{Box, Full}
 import org.apache.commons.io.FilenameUtils
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{Json, OFormat}
@@ -22,6 +22,8 @@ import scala.concurrent.ExecutionContext
 
 case class ListMeshChunksRequest(
     meshFile: String,
+    meshFilePath: Option[String],
+    meshFileType: Option[String],
     segmentId: Long
 )
 
@@ -31,11 +33,14 @@ object ListMeshChunksRequest {
 
 case class MeshChunkDataRequest(
     byteOffset: Long,
-    byteSize: Int
+    byteSize: Int,
+    segmentId: Option[Long] // Only relevant for neuroglancer precomputed meshes, needed because of sharding
 )
 
 case class MeshChunkDataRequestList(
     meshFile: String,
+    meshFilePath: Option[String],
+    meshFileType: Option[String],
     requests: Seq[MeshChunkDataRequest]
 )
 
@@ -49,6 +54,8 @@ object MeshChunkDataRequestList {
 
 case class MeshFileInfo(
     meshFileName: String,
+    meshFilePath: Option[String],
+    meshFileType: Option[String],
     mappingName: Option[String],
     formatVersion: Long
 )
@@ -136,7 +143,14 @@ case class MeshChunk(position: Vec3Float, byteOffset: Long, byteSize: Int, unmap
 object MeshChunk {
   implicit val jsonFormat: OFormat[MeshChunk] = Json.format[MeshChunk]
 }
-case class MeshLodInfo(scale: Int, vertexOffset: Vec3Float, chunkShape: Vec3Float, chunks: List[MeshChunk])
+case class MeshLodInfo(
+    scale: Int,
+    vertexOffset: Vec3Float,
+    chunkShape: Vec3Float,
+    chunks: List[MeshChunk],
+    // We use lod-specific transforms for Neuroglancer, but not for Webknossos
+    transform: Array[Array[Double]] =
+      Array(Array(1.0, 0.0, 0.0, 0.0), Array(0.0, 1.0, 0.0, 0.0), Array(0.0, 0.0, 1.0, 0.0), Array(0.0, 0.0, 0.0, 1.0)))
 
 object MeshLodInfo {
   implicit val jsonFormat: OFormat[MeshLodInfo] = Json.format[MeshLodInfo]
@@ -146,20 +160,27 @@ case class MeshSegmentInfo(chunkShape: Vec3Float, gridOrigin: Vec3Float, lods: L
 object MeshSegmentInfo {
   implicit val jsonFormat: OFormat[MeshSegmentInfo] = Json.format[MeshSegmentInfo]
 }
-case class WebknossosSegmentInfo(transform: Array[Array[Double]], meshFormat: String, chunks: MeshSegmentInfo)
+case class WebknossosSegmentInfo(
+    transform: Array[Array[Double]], // TODO: Is currently not lod dependant, but Neuroglancer uses different scales for different lods, need to change meshsegmentinfo.
+    meshFormat: String,
+    chunks: MeshSegmentInfo,
+    chunkScale: Array[Double] = Array(1.0, 1.0, 1.0) // Uses for Neuroglancer Precomputed Meshes to account for vertex quantization
+)
 
 object WebknossosSegmentInfo {
   implicit val jsonFormat: OFormat[WebknossosSegmentInfo] = Json.format[WebknossosSegmentInfo]
 
   def fromMeshInfosAndMetadata(chunkInfos: List[MeshSegmentInfo],
                                encoding: String,
-                               transform: Array[Array[Double]]): Option[WebknossosSegmentInfo] =
+                               transform: Array[Array[Double]],
+                               chunkScale: Array[Double] = Array(1.0, 1.0, 1.0)): Option[WebknossosSegmentInfo] =
     chunkInfos.headOption.flatMap { firstChunkInfo =>
       tryo {
         WebknossosSegmentInfo(
           transform,
           meshFormat = encoding,
-          chunks = firstChunkInfo.copy(lods = chunkInfos.map(_.lods).transpose.map(mergeLod))
+          chunks = firstChunkInfo.copy(lods = chunkInfos.map(_.lods).transpose.map(mergeLod)),
+          chunkScale = chunkScale
         )
       }
     }
@@ -209,7 +230,13 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
 
       mappingNameOptions = mappingNameBoxes.map(_.toOption)
       zipped = meshFileNames.lazyZip(mappingNameOptions).lazyZip(meshFileVersions)
-    } yield zipped.map(MeshFileInfo(_, _, _)).toSet
+    } yield
+      zipped
+        .map({
+          case (fileName, mappingName, fileVersion) =>
+            MeshFileInfo(fileName, None, Some("local"), mappingName, fileVersion)
+        })
+        .toSet
   }
 
   /*
@@ -403,20 +430,16 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     // Sort the requests by byte offset to optimize for spinning disk access
     val requestsReordered =
       meshChunkDataRequests.requests.zipWithIndex.sortBy(requestAndIndex => requestAndIndex._1.byteOffset).toList
-    val data: List[(Array[Byte], String, Int)] = requestsReordered.map { requestAndIndex =>
+    val data: List[(Array[Byte], Int)] = requestsReordered.map { requestAndIndex =>
       val meshChunkDataRequest = requestAndIndex._1
       val data =
         cachedMeshFile.uint8Reader.readArrayBlockWithOffset("neuroglancer",
                                                             meshChunkDataRequest.byteSize,
                                                             meshChunkDataRequest.byteOffset)
-      (data, meshFormat, requestAndIndex._2)
+      (data, requestAndIndex._2)
     }
-    val dataSorted = data.sortBy(d => d._3)
-    for {
-      _ <- bool2Box(data.map(d => d._2).toSet.size == 1) ?~! "Different encodings for the same mesh chunk request found."
-      encoding <- data.map(d => d._2).headOption
-      output = dataSorted.flatMap(d => d._1).toArray
-    } yield (output, encoding)
+    val dataSorted = data.sortBy(d => d._2)
+    Full((dataSorted.flatMap(d => d._1).toArray, meshFormat))
   }
 
   def clearCache(organizationId: String, datasetDirectoryName: String, layerNameOpt: Option[String]): Int = {

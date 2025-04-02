@@ -16,12 +16,8 @@ import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeomet
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.datastore.models._
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.services.{
-  AdHocMeshRequest,
-  AdHocMeshService,
-  AdHocMeshServiceHolder,
-  BinaryDataService
-}
+import com.scalableminds.webknossos.datastore.services.mesh.{AdHocMeshRequest, AdHocMeshService, AdHocMeshServiceHolder}
+import com.scalableminds.webknossos.datastore.services.BinaryDataService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ReversionHelper
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FallbackDataHelper,

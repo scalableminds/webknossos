@@ -4,6 +4,11 @@ import org.apache.pekko.actor.ActorSystem
 import com.google.inject.AbstractModule
 import com.google.inject.name.Names
 import com.scalableminds.webknossos.datastore.services._
+import com.scalableminds.webknossos.datastore.services.mesh.{
+  AdHocMeshServiceHolder,
+  MeshFileService,
+  NeuroglancerPrecomputedMeshService
+}
 import com.scalableminds.webknossos.datastore.services.uploading.UploadService
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 
@@ -27,5 +32,6 @@ class DataStoreModule extends AbstractModule {
     bind(classOf[ApplicationHealthService]).asEagerSingleton()
     bind(classOf[DatasetErrorLoggingService]).asEagerSingleton()
     bind(classOf[MeshFileService]).asEagerSingleton()
+    bind(classOf[NeuroglancerPrecomputedMeshService]).asEagerSingleton()
   }
 }

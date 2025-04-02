@@ -154,26 +154,21 @@ class VolumeSegmentIndexBuffer(
       (hits, misses)
     }
 
-  private def getMultipleFromFossilNoteMisses(segmentIds: List[Long],
-                                              mag: Vec3Int,
-                                              additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
-      implicit ec: ExecutionContext): Fox[(List[(Long, Set[Vec3IntProto])], List[Long])] = {
+  private def getMultipleFromFossilNoteMisses(
+      segmentIds: List[Long],
+      mag: Vec3Int,
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]]): Fox[(List[(Long, Set[Vec3IntProto])], List[Long])] = {
     var misses = List[Long]()
     var hits = List[(Long, Set[Vec3IntProto])]()
+    val keys =
+      segmentIds.map(segmentId => segmentIndexKey(tracingId, segmentId, mag, additionalCoordinates, additionalAxes))
     for {
-      _ <- Fox.serialCombined(segmentIds)(segmentId =>
-        for {
-          _ <- Fox.successful(())
-          key = segmentIndexKey(tracingId, segmentId, mag, additionalCoordinates, additionalAxes)
-          bucketPositionsBox <- volumeSegmentIndexClient
-            .get(key, Some(version), mayBeEmpty = Some(true))(fromProtoBytes[ListOfVec3IntProto])
-            .map(_.value.values.toSet)
-            .futureBox
-          _ = bucketPositionsBox match {
-            case Full(bucketPositions) => hits = (segmentId, bucketPositions) :: hits
-            case _                     => misses = segmentId :: misses
-          }
-        } yield ())
+      bucketPositionsBoxes <- volumeSegmentIndexClient.getMultipleKeysByList(keys, Some(version), batchSize = 50)(
+        fromProtoBytes[ListOfVec3IntProto])
+      _ = segmentIds.zip(bucketPositionsBoxes).foreach {
+        case (segmentId, Full(bucketPositions)) => hits = (segmentId, bucketPositions.value.values.toSet) :: hits
+        case (segmentId, _)                     => misses = segmentId :: misses
+      }
     } yield (hits, misses)
   }
 

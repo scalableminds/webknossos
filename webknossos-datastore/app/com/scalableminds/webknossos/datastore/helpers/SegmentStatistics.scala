@@ -5,6 +5,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, SegmentInteger}
+import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{Json, OFormat}
 
 import scala.concurrent.ExecutionContext
@@ -17,7 +18,7 @@ object SegmentStatisticsParameters {
   implicit val jsonFormat: OFormat[SegmentStatisticsParameters] = Json.format[SegmentStatisticsParameters]
 }
 
-trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
+trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits with LazyLogging {
 
   def calculateSegmentVolume(segmentId: Long,
                              mag: Vec3Int,
@@ -30,6 +31,7 @@ trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
       implicit ec: ExecutionContext): Fox[Long] =
     for {
       bucketPositionsProtos: Set[Vec3IntProto] <- getBucketPositions(segmentId, mag)
+      _ = logger.info(s"bucketPositionsProtos: ${bucketPositionsProtos.size}")
       bucketPositionsInMag = bucketPositionsProtos.map(vec3IntFromProto)
       volumeBoxes <- Fox.serialSequence(bucketPositionsInMag.toList)(bucketPosition =>
         for {

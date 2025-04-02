@@ -16,7 +16,7 @@ VOLUME /webknossos-tracingstore/tracingData /tmp
 COPY target/universal/stage .
 
 RUN chown -R webknossos . \
-  && chmod go+x bin/webknossos-tracingstore \
+  && chmod +x bin/webknossos-tracingstore \
   && chmod go+w .
 
 RUN echo '#!/bin/bash\numask 002\nbin/webknossos-tracingstore "$@"\n' > /docker-entrypoint.sh \

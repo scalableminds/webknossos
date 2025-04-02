@@ -15,8 +15,8 @@ RUN addgroup --system --gid 999 webknossos \
   && adduser --system --uid 999 --ingroup webknossos webknossos \
   && mkdir disk \
   && chown -R webknossos . \
-  && chmod go+x bin/webknossos \
-  && chmod go+x tools/postgres/dbtool.js \
+  && chmod +x bin/webknossos \
+  && chmod +x tools/postgres/dbtool.js \
   && chmod go+w .
 
 RUN echo '#!/bin/bash\numask 002\nbin/webknossos "$@"\n' > /docker-entrypoint.sh \

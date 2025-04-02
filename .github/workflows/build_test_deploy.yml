@@ -206,6 +206,9 @@ jobs:
   docker-build-and-e2e-tests:
     runs-on: ubuntu-24.04
     needs: [build]
+    env:
+      DOCKER_TAG: ${{ needs.build.outputs.docker_tag }}
+      POSTGRES_USER: webknossos_user
     steps:
       - uses: actions/checkout@v3
         with:
@@ -277,10 +280,6 @@ jobs:
         if: ${{ github.ref_name != 'master' }}
         run: |
           docker compose -f .github/docker-compose.yml -p "webknossos" up -d
-        env:
-          DOCKER_TAG: ${{ needs.build.outputs.docker_tag }}
-          POSTGRES_USER: webknossos_user
-          POSTGRES_PASSWORD: secret_password
 
       # Smoke Tests
       - name: Run webknossos smoke test

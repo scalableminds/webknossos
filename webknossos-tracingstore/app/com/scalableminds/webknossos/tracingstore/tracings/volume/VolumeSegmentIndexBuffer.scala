@@ -139,7 +139,7 @@ class VolumeSegmentIndexBuffer(
       additionalCoordinates: Option[Seq[AdditionalCoordinate]]
   ): (Map[Long, Set[Vec3IntProto]], List[Long]) =
     if (isReadOnly) {
-      // Nothing is buffered in isReaderOnly case, no need to query it.
+      // Nothing is buffered in isReadOnly case, no need to query it.
       (Map.empty, segmentIds)
     } else {
       var misses = List[Long]()

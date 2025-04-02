@@ -88,6 +88,10 @@ jobs:
     outputs:
       normalized_branch: ${{ steps.configure.outputs.normalized_branch }}
       docker_tag: ${{ steps.configure.outputs.docker_tag }}
+    env:
+      POSTGRES_URL: jdbc:postgresql://localhost:5432/webknossos
+      POSTGRES_USER: webknossos_user
+      POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -140,8 +144,6 @@ jobs:
         run: tools/postgres/dbtool.js assert-unique-evolution-numbers
       - name: Assert schema.sql and evolutions are equal
         run: tools/postgres/dbtool.js check-evolutions-schema
-        env:
-          POSTGRES_USER: webknossos_user
       - name: Assert that all mirations are mentioned in one migration guide and that they have a reversion counterpart.
         run: tools/assert-complete-migrations.sh
       # TODO: Build docs
@@ -156,10 +158,6 @@ jobs:
           else
             sbt -no-colors -DfailOnWarning compile stage
           fi
-        env:
-          POSTGRES_URL: jdbc:postgresql://localhost:5432/webknossos
-          POSTGRES_USER: webknossos_user
-          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
       - name: Build webknossos-datastore (sbt)
         run: sbt -no-colors -DfailOnWarning "project webknossosDatastore" copyMessages compile stage
       - name: Build webknossos-tracingstore (sbt)

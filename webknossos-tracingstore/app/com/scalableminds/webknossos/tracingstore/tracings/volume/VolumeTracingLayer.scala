@@ -95,9 +95,9 @@ case class VolumeTracingLayer(
 
   def lengthOfUnderlyingCubes(mag: Vec3Int): Int = DataLayer.bucketLength
 
-  val dataFormat: DataFormat.Value = DataFormat.tracing
+  lazy val dataFormat: DataFormat.Value = DataFormat.tracing
 
-  val volumeBucketProvider: AbstractVolumeTracingBucketProvider =
+  lazy val volumeBucketProvider: AbstractVolumeTracingBucketProvider =
     if (isTemporaryTracing)
       new TemporaryVolumeTracingBucketProvider(this)
     else

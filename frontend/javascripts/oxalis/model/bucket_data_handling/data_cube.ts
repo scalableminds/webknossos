@@ -393,7 +393,6 @@ class DataCube {
 
     const notCollectedBuckets = [];
     for (const bucket of this.buckets) {
-      bucket._debuggerMaybe();
       if (
         // In addition to the given predicate...
         predicateFn(bucket) &&

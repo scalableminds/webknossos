@@ -130,7 +130,6 @@ export class DataBucket {
     } else {
       this.throttledTriggerLabeled = _.noop;
     }
-    this._debuggerMaybe();
   }
 
   once(event: string, callback: (...args: any[]) => any): () => void {
@@ -185,7 +184,6 @@ export class DataBucket {
   }
 
   destroy(): void {
-    this._debuggerMaybe();
     // Since we rely on the GC to collect buckets, we
     // can easily have references to buckets which prohibit GC.
     // As a countermeasure, we set the data attribute to null
@@ -363,14 +361,6 @@ export class DataBucket {
     // needsMergeWithBackendData should be irrelevant. if the snapshot is complete,
     // the bucket should also be loaded.
     // if it's not complete, the bucket should already be requested.
-
-    if (this.state === BucketStateEnum.UNREQUESTED) {
-      this._logMaybe(
-        "setData was called but state is still unrequested. will probably be overwritten?",
-      );
-    } else {
-      this._logMaybe("setData was called. state==", this.state);
-    }
   }
 
   hasData(): boolean {
@@ -542,7 +532,6 @@ export class DataBucket {
   markAsRequested(): void {
     switch (this.state) {
       case BucketStateEnum.UNREQUESTED: {
-        this._debuggerMaybe();
         this.state = BucketStateEnum.REQUESTED;
         break;
       }
@@ -570,9 +559,6 @@ export class DataBucket {
   }
 
   receiveData(arrayBuffer: Uint8Array | null | undefined, computeValueSet: boolean = false): void {
-    if (this.data != null) {
-      this._logMaybe("bucket.receiveData was called, but this.data already exists.");
-    }
     const data = uint8ToTypedBuffer(arrayBuffer, this.elementClass);
     const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
 
@@ -604,7 +590,6 @@ export class DataBucket {
           this.data = data;
         }
         this.invalidateValueSet();
-        this._debuggerMaybe();
 
         if (computeValueSet) {
           this.ensureValueSet();

@@ -16,7 +16,6 @@ import BucketSnapshot, {
 import Deferred from "libs/async/deferred";
 import type { BucketDataArray, ElementClass } from "types/api_flow_types";
 import { uint8ToTypedBuffer } from "oxalis/model/helpers/typed_buffer";
-import { sleep } from "libs/utils";
 
 /*
  * The MockCompressor provides the async compress and decompress
@@ -104,8 +103,6 @@ class PlanExecutor {
       this.mockCompressor.resolveNextCompression();
     } else if (action === "resolveDecompression") {
       this.mockCompressor.resolveNextDecompression();
-    } else if (action === "sleepTick") {
-      await sleep(0);
     } else {
       throw new Error("Unexpected action");
     }

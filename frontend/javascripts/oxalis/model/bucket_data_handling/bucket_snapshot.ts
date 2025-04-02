@@ -135,7 +135,7 @@ export default class BucketSnapshot {
     // Either, no merge is necessary (e.g., because the snapshot was already
     // created with the merged data) or the backend data hasn't arrived yet.
     // In both cases, simply return the available data.
-    // If back-end data needs to be merged, this will happen within Bucket.receiveData?
+    // If back-end data needs to be merged, this will happen within Bucket.receiveData
 
     return {
       newData,

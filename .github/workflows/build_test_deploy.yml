@@ -140,6 +140,8 @@ jobs:
         run: tools/postgres/dbtool.js assert-unique-evolution-numbers
       - name: Assert schema.sql and evolutions are equal
         run: tools/postgres/dbtool.js check-evolutions-schema
+        env:
+          POSTGRES_USER: webknossos_user
       - name: Assert that all mirations are mentioned in one migration guide and that they have a reversion counterpart.
         run: tools/assert-complete-migrations.sh
       # TODO: Build docs

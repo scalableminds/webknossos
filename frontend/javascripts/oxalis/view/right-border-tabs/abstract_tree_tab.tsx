@@ -106,7 +106,7 @@ class AbstractTreeTab extends Component<Props, State> {
 
 function mapStateToProps(state: OxalisState): Partial<Props> {
   return {
-    skeletonTracing: state.tracing.skeleton,
+    skeletonTracing: state.annotation.skeleton,
   };
 }
 

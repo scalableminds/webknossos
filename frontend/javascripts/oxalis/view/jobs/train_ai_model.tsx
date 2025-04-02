@@ -39,7 +39,7 @@ import { MagInfo } from "oxalis/model/helpers/mag_info";
 import { convertUserBoundingBoxesFromServerToFrontend } from "oxalis/model/reducers/reducer_helpers";
 import { serverVolumeToClientVolumeTracing } from "oxalis/model/reducers/volumetracing_reducer";
 import { Model } from "oxalis/singletons";
-import type { HybridTracing, OxalisState, UserBoundingBox, VolumeTracing } from "oxalis/store";
+import type { OxalisState, StoreAnnotation, UserBoundingBox, VolumeTracing } from "oxalis/store";
 import React, { useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import {
@@ -53,9 +53,9 @@ import {
 const { TextArea } = Input;
 const FormItem = Form.Item;
 
-// This type is used for GenericAnnotation = HybridTracing | APIAnnotation as in case of multi annotation training,
+// This type is used for GenericAnnotation = StoreAnnotation | APIAnnotation as in case of multi annotation training,
 // only the APIAnnotations of the given annotations to train on are loaded from the backend.
-// Thus, the code needs to handle both HybridTracing | APIAnnotation where APIAnnotation is missing some information.
+// Thus, the code needs to handle both StoreAnnotation | APIAnnotation where APIAnnotation is missing some information.
 // Therefore, volumeTracings with the matching volumeTracingMags are needed to get more details on each volume annotation layer and its magnifications.
 // As the userBoundingBoxes should have extents that are multiples of the smallest extent, a check with a warning should be included.
 // As training on fallback data is supported and an annotation is not required to have VolumeTracings,
@@ -135,14 +135,18 @@ const AiModelCommentFormItem = () => (
 );
 
 export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void }) {
-  const tracing = useSelector((state: OxalisState) => state.tracing);
+  const annotation = useSelector((state: OxalisState) => state.annotation);
   const dataset = useSelector((state: OxalisState) => state.dataset);
 
   const getMagsForSegmentationLayer = (_annotationId: string, layerName: string) => {
-    const segmentationLayer = getSegmentationLayerByHumanReadableName(dataset, tracing, layerName);
+    const segmentationLayer = getSegmentationLayerByHumanReadableName(
+      dataset,
+      annotation,
+      layerName,
+    );
     return getMagInfo(segmentationLayer.resolutions);
   };
-  const userBoundingBoxes = getSomeTracing(tracing).userBoundingBoxes;
+  const userBoundingBoxes = getSomeTracing(annotation).userBoundingBoxes;
 
   return (
     <TrainAiModelTab
@@ -151,9 +155,9 @@ export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void
       onClose={onClose}
       annotationInfos={[
         {
-          annotation: tracing,
+          annotation: annotation,
           dataset,
-          volumeTracings: tracing.volumes,
+          volumeTracings: annotation.volumes,
           volumeTracingMags: [],
           userBoundingBoxes,
         },
@@ -169,7 +173,7 @@ type TrainingAnnotation = {
   mag: Vector3;
 };
 
-export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | HybridTracing>({
+export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | StoreAnnotation>({
   getMagsForSegmentationLayer,
   onClose,
   ensureSavedState,
@@ -505,7 +509,7 @@ export function CollapsibleWorkflowYamlEditor({
   );
 }
 
-function checkAnnotationsForErrorsAndWarnings<T extends HybridTracing | APIAnnotation>(
+function checkAnnotationsForErrorsAndWarnings<T extends StoreAnnotation | APIAnnotation>(
   annotationsWithDatasets: Array<AnnotationInfoForAITrainingJob<T>>,
 ): {
   hasAnnotationErrors: boolean;

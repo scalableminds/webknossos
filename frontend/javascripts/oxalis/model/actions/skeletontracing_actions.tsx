@@ -558,7 +558,7 @@ export const deleteNodeAsUserAction = (
   nodeId?: number,
   treeId?: number,
 ): DeleteNodeAction | NoAction | DeleteTreeAction => {
-  const skeletonTracing = enforceSkeletonTracing(state.tracing);
+  const skeletonTracing = enforceSkeletonTracing(state.annotation);
   return getNodeAndTree(skeletonTracing, nodeId, treeId)
     .map(([tree, node]): DeleteNodeAction | NoAction | DeleteTreeAction => {
       if (state.task != null && node.id === 1) {
@@ -595,7 +595,7 @@ function confirmDeletingInitialNode(treeId: number) {
 
 export const deleteTreeAsUserAction = (treeId?: number): NoAction => {
   const state = Store.getState();
-  const skeletonTracing = enforceSkeletonTracing(state.tracing);
+  const skeletonTracing = enforceSkeletonTracing(state.annotation);
   getTree(skeletonTracing, treeId).map((tree) => {
     if (state.task != null && tree.nodes.has(1)) {
       confirmDeletingInitialNode(tree.treeId);

@@ -216,7 +216,7 @@ class SceneController {
       isHighlighted: false,
     });
     this.datasetBoundingBox.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
-    const taskBoundingBox = getSomeTracing(state.tracing).boundingBox;
+    const taskBoundingBox = getSomeTracing(state.annotation).boundingBox;
     this.buildTaskingBoundingBox(taskBoundingBox);
 
     this.contour = new ContourGeometry();
@@ -234,8 +234,8 @@ class SceneController {
       .getMeshes()
       .forEach((mesh) => this.annotationToolsGeometryGroup.add(mesh));
 
-    if (state.tracing.skeleton != null) {
-      this.addSkeleton((_state) => getSkeletonTracing(_state.tracing), true);
+    if (state.annotation.skeleton != null) {
+      this.addSkeleton((_state) => getSkeletonTracing(_state.annotation), true);
     }
 
     this.planes = {
@@ -546,7 +546,7 @@ class SceneController {
       (interpolation) => this.setInterpolation(interpolation),
     );
     listenToStoreProperty(
-      (storeState) => getSomeTracing(storeState.tracing).userBoundingBoxes,
+      (storeState) => getSomeTracing(storeState.annotation).userBoundingBoxes,
       (bboxes) => this.setUserBoundingBoxes(bboxes),
     );
     listenToStoreProperty(
@@ -558,12 +558,12 @@ class SceneController {
       () => this.updateLayerBoundingBoxes(),
     );
     listenToStoreProperty(
-      (storeState) => getSomeTracing(storeState.tracing).boundingBox,
+      (storeState) => getSomeTracing(storeState.annotation).boundingBox,
       (bb) => this.buildTaskingBoundingBox(bb),
     );
     listenToStoreProperty(
       (storeState) =>
-        storeState.tracing.skeleton ? storeState.tracing.skeleton.showSkeletons : false,
+        storeState.annotation.skeleton ? storeState.annotation.skeleton.showSkeletons : false,
       (showSkeletons) => this.setSkeletonGroupVisibility(showSkeletons),
       true,
     );

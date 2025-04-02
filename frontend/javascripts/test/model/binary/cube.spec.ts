@@ -16,7 +16,7 @@ import type DataCubeType from "oxalis/model/bucket_data_handling/data_cube";
 const StoreMock = {
   getState: () => ({
     dataset: datasetServerObject,
-    tracing: {
+    annotation: {
       skeleton: skeletontracingServerObject,
     },
     datasetConfiguration: {

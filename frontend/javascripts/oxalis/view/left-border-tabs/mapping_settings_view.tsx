@@ -280,11 +280,11 @@ function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
     mappingType: activeMappingInfo.mappingType,
     segmentationLayer,
     isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,
-    allowUpdate: state.tracing.restrictions.allowUpdate,
+    allowUpdate: state.annotation.restrictions.allowUpdate,
     editableMapping,
     isEditableMappingActive: hasEditableMapping(state, ownProps.layerName),
     isMappingLocked: isMappingLocked(state, ownProps.layerName),
-    isAnnotationLockedByOwner: state.tracing.isLockedByOwner,
+    isAnnotationLockedByOwner: state.annotation.isLockedByOwner,
     isOwner: isAnnotationOwner(state),
   };
 }

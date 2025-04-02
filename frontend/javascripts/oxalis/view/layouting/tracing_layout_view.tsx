@@ -374,12 +374,12 @@ function mapStateToProps(state: OxalisState) {
   return {
     viewMode: state.temporaryConfiguration.viewMode,
     autoSaveLayouts: state.userConfiguration.autoSaveLayouts,
-    isUpdateTracingAllowed: state.tracing.restrictions.allowUpdate,
+    isUpdateTracingAllowed: state.annotation.restrictions.allowUpdate,
     showVersionRestore: state.uiInformation.showVersionRestore,
     storedLayouts: state.uiInformation.storedLayouts,
     datasetId: state.dataset.id,
     is2d: is2dDataset(state.dataset),
-    displayName: state.tracing.name ? state.tracing.name : state.dataset.name,
+    displayName: state.annotation.name ? state.annotation.name : state.dataset.name,
     organization: state.dataset.owningOrganization,
     distanceMeasurementTooltipPosition:
       state.uiInformation.measurementToolInfo.lastMeasuredPosition,

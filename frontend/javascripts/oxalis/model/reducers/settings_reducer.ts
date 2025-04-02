@@ -176,7 +176,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "SET_VIEW_MODE": {
-      const { allowedModes } = state.tracing.restrictions;
+      const { allowedModes } = state.annotation.restrictions;
 
       if (allowedModes.includes(action.viewMode)) {
         const newState = updateTemporaryConfig(state, {

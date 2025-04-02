@@ -19,6 +19,7 @@ services:
       - POSTGRES_URL=jdbc:postgres://postgres/webknossos
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    user: 1000:1000
     depends_on:
       postgres:
         condition: service_healthy

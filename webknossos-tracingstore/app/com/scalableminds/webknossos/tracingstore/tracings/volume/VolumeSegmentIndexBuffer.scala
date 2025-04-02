@@ -118,7 +118,7 @@ class VolumeSegmentIndexBuffer(
 
   def flush()(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      _ <- bool2Fox(!isReadOnly) ?~> "this VolumeSegmentIndexBuffer was instantiated with isReaderOnly=true and cannot be flushed."
+      _ <- bool2Fox(!isReadOnly) ?~> "this VolumeSegmentIndexBuffer was instantiated with isReadOnly=true and cannot be flushed."
       toFlush = segmentIndexBuffer.flatMap {
         case (key, (bucketPositions, true)) => Some((key, bucketPositions))
         case _                              => None

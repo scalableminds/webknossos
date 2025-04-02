@@ -79,7 +79,7 @@ services:
     image: postgres:17-bookworm
     environment:
       - POSTGRES_DB=webknossos
-      - POSTGRES_USER=${POSTRGRES_USER}
+      - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"

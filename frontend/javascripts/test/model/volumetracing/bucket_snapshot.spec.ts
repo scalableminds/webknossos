@@ -248,7 +248,7 @@ for (const [idx, plan] of plans.entries()) {
     backendData[4] = 4;
     backendData[5] = 5;
 
-    planExecutor.executeStep("beforeInstantiation");
+    await planExecutor.executeStep("beforeInstantiation");
 
     const snapshot = new BucketSnapshot(
       [0, 0, 0, 0],

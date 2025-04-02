@@ -40,10 +40,9 @@ class DSMeshController @Inject()(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
           meshFiles <- meshFileService.exploreMeshFiles(organizationId, datasetDirectoryName, dataLayerName)
-          neuroglancerMeshFiles <- neuroglancerPrecomputedMeshService.exploreMeshes(
-            organizationId,
-            datasetDirectoryName,
-            dataLayerName)
+          neuroglancerMeshFiles <- neuroglancerPrecomputedMeshService.exploreMeshes(organizationId,
+                                                                                    datasetDirectoryName,
+                                                                                    dataLayerName)
           allMeshFiles = meshFiles ++ neuroglancerMeshFiles
         } yield Ok(Json.toJson(allMeshFiles))
       }
@@ -103,8 +102,7 @@ class DSMeshController @Inject()(
         for {
           (data, encoding) <- request.body.meshFileType match {
             case Some(NeuroglancerMesh.meshTypeName) =>
-              neuroglancerPrecomputedMeshService.readMeshChunk(request.body.meshFilePath,
-                                                                                         request.body.requests)
+              neuroglancerPrecomputedMeshService.readMeshChunk(request.body.meshFilePath, request.body.requests)
             case _ =>
               meshFileService.readMeshChunk(organizationId, datasetDirectoryName, dataLayerName, request.body) ?~> "mesh.file.loadChunk.failed"
           }

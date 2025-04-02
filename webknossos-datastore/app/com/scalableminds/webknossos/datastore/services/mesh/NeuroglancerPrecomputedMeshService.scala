@@ -90,10 +90,10 @@ class NeuroglancerPrecomputedMeshService @Inject()(config: DataStoreConfig, data
   }
 
   private def enrichSegmentInfo(segmentInfo: NeuroglancerSegmentManifest,
-                                                       lodScaleMultiplier: Double,
-                                                       neuroglancerOffsetStart: Long,
-                                                       segmentId: Long,
-                                                       storedToModelSpaceTransform: Array[Double]): MeshSegmentInfo = {
+                                lodScaleMultiplier: Double,
+                                neuroglancerOffsetStart: Long,
+                                segmentId: Long,
+                                storedToModelSpaceTransform: Array[Double]): MeshSegmentInfo = {
     val bytesPerLod = segmentInfo.chunkByteSizes.map(_.sum)
     val totalMeshSize = bytesPerLod.sum
     val meshByteStartOffset = neuroglancerOffsetStart - totalMeshSize
@@ -166,8 +166,7 @@ class NeuroglancerPrecomputedMeshService @Inject()(config: DataStoreConfig, data
       meshInfo <- neuroglancerPrecomputedMeshInfoCache.getOrLoad(vaultPath, loadRemoteMeshInfo)
       mesh = NeuroglancerMesh(meshInfo)
       chunkScale = Array.fill(3)(1 / math.pow(2, meshInfo.vertex_quantization_bits))
-      meshSegmentInfos <- Fox.serialCombined(segmentId)(id =>
-        listMeshChunks(vaultPath, mesh, id))
+      meshSegmentInfos <- Fox.serialCombined(segmentId)(id => listMeshChunks(vaultPath, mesh, id))
       baseTransform = Array(Array(1.0, 0.0, 0.0, 0.0),
                             Array(0.0, 1.0, 0.0, 0.0),
                             Array(0.0, 0.0, 1.0, 0.0),
@@ -178,10 +177,8 @@ class NeuroglancerPrecomputedMeshService @Inject()(config: DataStoreConfig, data
                                                                     chunkScale)
     } yield segmentInfo
 
-  private def listMeshChunks(
-      vaultPath: VaultPath,
-      mesh: NeuroglancerMesh,
-      segmentId: Long)(implicit tc: TokenContext): Fox[MeshSegmentInfo] =
+  private def listMeshChunks(vaultPath: VaultPath, mesh: NeuroglancerMesh, segmentId: Long)(
+      implicit tc: TokenContext): Fox[MeshSegmentInfo] =
     for {
       _ <- Fox.successful(())
       minishardInfo = mesh.shardingSpecification.getMinishardInfo(segmentId)
@@ -191,15 +188,14 @@ class NeuroglancerPrecomputedMeshService @Inject()(config: DataStoreConfig, data
       chunk <- mesh.getChunk(chunkRange, shardUrl)
       segmentManifest = NeuroglancerSegmentManifest.fromBytes(chunk)
       meshSegmentInfo = enrichSegmentInfo(segmentManifest,
-                                                                 mesh.meshInfo.lod_scale_multiplier,
-                                                                 chunkRange.start,
-                                                                 segmentId,
-                                                                 mesh.meshInfo.transform)
+                                          mesh.meshInfo.lod_scale_multiplier,
+                                          chunkRange.start,
+                                          segmentId,
+                                          mesh.meshInfo.transform)
     } yield meshSegmentInfo
 
-  def readMeshChunk(
-      meshFilePathOpt: Option[String],
-      meshChunkDataRequests: Seq[MeshChunkDataRequest])(implicit tc: TokenContext): Fox[(Array[Byte], String)] =
+  def readMeshChunk(meshFilePathOpt: Option[String], meshChunkDataRequests: Seq[MeshChunkDataRequest])(
+      implicit tc: TokenContext): Fox[(Array[Byte], String)] =
     for {
       meshFilePath <- meshFilePathOpt.toFox ?~> "Mesh file path is required"
       vaultPath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(new URI(meshFilePath), None))

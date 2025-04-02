@@ -87,7 +87,7 @@ global.FetchError = FetchError;
 global.FormData = FormData;
 global.File = File;
 
-const { JSDOM } = require("jsdom");
+import { JSDOM } from "jsdom";
 
 // set pretendToBeVisual to true, so that window.requestAnimationFrame is available from JSDOM
 const jsdom = new JSDOM("<!doctype html><html><body></body></html>", {

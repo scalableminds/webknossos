@@ -1,5 +1,5 @@
 import { createNanoEvents } from "nanoevents";
-import { vi, type TestContext as BaseTestContext } from "vitest";
+import { vi, type TestContext as BaseTestContext, type MockedObject } from "vitest";
 import _ from "lodash";
 import { ControlModeEnum } from "oxalis/constants";
 import { sleep } from "libs/utils";
@@ -46,7 +46,7 @@ const ANNOTATION_ID = "annotationIdValue";
 export interface SetupWebknossosTestContext extends BaseTestContext {
   model: typeof ModelType;
   mocks: {
-    Request: typeof Request;
+    Request: Request;
   };
   setSlowCompression: (enabled: boolean) => void;
   api: ApiInterface;

@@ -154,13 +154,6 @@ jobs:
       - name: Build webknossos-tracingstore (sbt)
         run: sbt -no-colors -DfailOnWarning "project webknossosTracingstore" copyMessages compile stage
 
-      - name: Lint backend code and check formatting
-        run: |
-          sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
-      - name: Run backend tests
-        run: |
-          sbt -v "testOnly backend.*"
-
       - name: Checksum App Dirs
         run: |
           find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
@@ -198,10 +191,32 @@ jobs:
             scalableminds/webknossos-tracingstore:${{ steps.configure.outputs.docker_tag }}
             scalableminds/webknossos-tracingstore:${{ steps.configure.outputs.normalized_branch }}
 
+  backend-test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 5
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'  # See 'Supported distributions' for available options
+          java-version: '21'
+          # cache: 'sbt'
+      - uses: sbt/setup-sbt@v1
+      - name: Lint backend code and check formatting
+        run: |
+          sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
+      - name: Run backend tests
+        run: |
+          sbt -v "testOnly backend.*"
+
   e2e-tests:
     runs-on: ubuntu-24.04
     needs: [build]
     steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 5
       - name: Prepare e2e test
         run: |
           mkdir -p binaryData/Organization_X

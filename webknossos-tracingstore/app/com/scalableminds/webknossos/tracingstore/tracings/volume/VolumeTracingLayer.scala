@@ -107,9 +107,9 @@ case class VolumeTracingLayer(
 
   def lengthOfUnderlyingCubes(mag: Vec3Int): Int = DataLayer.bucketLength
 
-  val dataFormat: DataFormat.Value = DataFormat.tracing
+  lazy val dataFormat: DataFormat.Value = DataFormat.tracing
 
-  val volumeBucketProvider: AbstractVolumeTracingBucketProvider =
+  lazy val volumeBucketProvider: AbstractVolumeTracingBucketProvider =
     if (isTemporaryTracing)
       new TemporaryVolumeTracingBucketProvider(this)
     else
@@ -130,5 +130,6 @@ case class VolumeTracingLayer(
 
   def bucketStream: Iterator[(BucketPosition, Array[Byte])] = bucketProvider.bucketStream(Some(tracing.version))
 
-  lazy val expectedUncompressedBucketSize: Int = expectedUncompressedBucketSizeFor(elementClass)
+  lazy val expectedUncompressedBucketSize: Int =
+    ElementClass.bytesPerElement(elementClass) * scala.math.pow(DataLayer.bucketLength, 3).intValue
 }

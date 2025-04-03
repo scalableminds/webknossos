@@ -124,7 +124,7 @@ export async function copyUrlToClipboard(url: string) {
 export function ShareButton(props: { dataset: APIDataset; style?: Record<string, any> }) {
   const { dataset, style } = props;
   const sharingToken = useDatasetSharingToken(props.dataset);
-  const annotationVisibility = useSelector((state: OxalisState) => state.tracing.visibility);
+  const annotationVisibility = useSelector((state: OxalisState) => state.annotation.visibility);
   const controlMode = useSelector((state: OxalisState) => state.temporaryConfiguration.controlMode);
   const isViewMode = controlMode === ControlModeEnum.VIEW;
   const isSandboxMode = controlMode === ControlModeEnum.SANDBOX;
@@ -177,17 +177,17 @@ export function ShareButton(props: { dataset: APIDataset; style?: Record<string,
 function _ShareModalView(props: Props) {
   const { isOpen, onOk, annotationType, annotationId } = props;
   const dataset = useSelector((state: OxalisState) => state.dataset);
-  const tracing = useSelector((state: OxalisState) => state.tracing);
+  const annotation = useSelector((state: OxalisState) => state.annotation);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  const isAnnotationLockedByUser = tracing.isLockedByOwner;
+  const isAnnotationLockedByUser = annotation.isLockedByOwner;
 
-  const annotationVisibility = tracing.visibility;
+  const annotationVisibility = annotation.visibility;
   const [visibility, setVisibility] = useState(annotationVisibility);
   const [isChangingInProgress, setIsChangingInProgress] = useState(false);
   const [sharedTeams, setSharedTeams] = useState<APITeam[]>([]);
   const sharingToken = useDatasetSharingToken(dataset);
 
-  const { othersMayEdit } = tracing;
+  const { othersMayEdit } = annotation;
   const [newOthersMayEdit, setNewOthersMayEdit] = useState(othersMayEdit);
 
   const hasUpdatePermissions = useSelector(mayEditAnnotationProperties);
@@ -305,7 +305,7 @@ function _ShareModalView(props: Props) {
     if (isAnnotationLockedByUser) {
       message = `You can't change the visibility of this annotation because it is locked by ${formatUserName(
         activeUser,
-        tracing.owner,
+        annotation.owner,
       )}.`;
     } else if (!hasUpdatePermissions) {
       message = "You don't have the permission to edit the visibility of this annotation.";

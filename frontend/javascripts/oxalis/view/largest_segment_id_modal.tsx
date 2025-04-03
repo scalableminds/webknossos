@@ -57,7 +57,7 @@ export default function EnterLargestSegmentIdModal({
   const activeCellId =
     useSelector(
       (state: OxalisState) =>
-        getVolumeTracingByLayerName(state.tracing, segmentationLayer.name)?.activeCellId,
+        getVolumeTracingByLayerName(state.annotation, segmentationLayer.name)?.activeCellId,
     ) || 0;
 
   const dispatch = useDispatch();

@@ -6,7 +6,6 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, ElementClass}
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, ProtoGeometryImplicits}
@@ -55,11 +54,11 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
   def shouldCreateSegmentIndexForMerged(tracings: Seq[VolumeTracing]): Boolean =
     tracings.forall(_.hasSegmentIndex.getOrElse(false))
 
-  def updateFromBucket(segmentIndexBuffer: VolumeSegmentIndexBuffer,
+  def updateFromBucket(volumeLayer: VolumeTracingLayer,
+                       segmentIndexBuffer: VolumeSegmentIndexBuffer,
                        bucketPosition: BucketPosition,
                        bucketBytes: Array[Byte],
                        previousBucketBytesBox: Box[Array[Byte]],
-                       elementClass: ElementClassProto,
                        editableMappingTracingId: Option[String])(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       bucketBytesDecompressed <- if (isRevertedElement(bucketBytes)) {
@@ -67,12 +66,12 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
       } else {
         tryo(
           decompressIfNeeded(bucketBytes,
-                             expectedUncompressedBucketSizeFor(elementClass),
+                             volumeLayer.expectedUncompressedBucketSize,
                              "updating segment index, new bucket data")).toFox
       }
       previousBucketBytesWithEmptyFallback <- segmentIndexBuffer.bytesWithEmptyFallback(previousBucketBytesBox) ?~> "volumeSegmentIndex.update.getPreviousBucket.failed"
-      segmentIds: Set[Long] <- collectSegmentIds(bucketBytesDecompressed, elementClass).toFox
-      previousSegmentIds: Set[Long] <- collectSegmentIds(previousBucketBytesWithEmptyFallback, elementClass) ?~> "volumeSegmentIndex.update.collectSegmentIds.failed"
+      segmentIds: Set[Long] <- collectSegmentIds(bucketBytesDecompressed, volumeLayer.elementClass).toFox
+      previousSegmentIds: Set[Long] <- collectSegmentIds(previousBucketBytesWithEmptyFallback, volumeLayer.elementClass) ?~> "volumeSegmentIndex.update.collectSegmentIds.failed"
       additions = segmentIds.diff(previousSegmentIds)
       removals = previousSegmentIds.diff(segmentIds)
       _ <- Fox.serialCombined(removals.toList)(
@@ -130,7 +129,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
 
   private lazy val nativeBucketScanner = new NativeBucketScanner()
 
-  private def collectSegmentIds(bytes: Array[Byte], elementClass: ElementClassProto): Box[Set[Long]] =
+  private def collectSegmentIds(bytes: Array[Byte], elementClass: ElementClass.Value): Box[Set[Long]] =
     tryo(
       nativeBucketScanner
         .collectSegmentIds(bytes, ElementClass.bytesPerElement(elementClass), ElementClass.isSigned(elementClass))
@@ -159,7 +158,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
         additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),
         temporaryTracingService = temporaryTracingService,
         tc = tc,
-        isReaderOnly = true,
+        isReadOnly = true,
         toTemporaryStore = isTemporaryTracing
       )
       bucketPositions <- segmentIndexReader.getOne(segmentId, mag, editableMappingTracingId, additionalCoordinates)

@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, ProtoGeometryImplicits, SegmentStatistics}
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, WebknossosDataRequest}
@@ -72,7 +73,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
           cubeSize = DataLayer.bucketLength,
           fourBit = Some(false),
           applyAgglomerate = None,
-          version = Some(tracing.version),
+          version = None,
           additionalCoordinates = additionalCoordinates
         )
       }.toList

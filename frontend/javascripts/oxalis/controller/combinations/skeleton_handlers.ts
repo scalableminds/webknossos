@@ -61,7 +61,7 @@ export function handleMergeTrees(
   isTouch: boolean,
 ) {
   const nodeId = maybeGetNodeIdFromPosition(view, position, plane, isTouch);
-  const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
+  const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
 
   // otherwise we have hit the background and do nothing
   if (nodeId != null && nodeId > 0) {
@@ -78,7 +78,7 @@ export function handleDeleteEdge(
   isTouch: boolean,
 ) {
   const nodeId = maybeGetNodeIdFromPosition(view, position, plane, isTouch);
-  const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
+  const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
 
   // otherwise we have hit the background and do nothing
   if (nodeId != null && nodeId > 0) {
@@ -181,7 +181,7 @@ export function moveNode(
   useFloat: boolean = false,
 ) {
   // dx and dy are measured in pixel.
-  getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) =>
+  getSkeletonTracing(Store.getState().annotation).map((skeletonTracing) =>
     getNodeAndTree(skeletonTracing, nodeId).map(([activeTree, activeNode]) => {
       const state = Store.getState();
       const { activeViewport } = state.viewModeData.plane;
@@ -223,7 +223,7 @@ export function moveNode(
 }
 
 export function finishNodeMovement(nodeId: number) {
-  getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) =>
+  getSkeletonTracing(Store.getState().annotation).map((skeletonTracing) =>
     getNodeAndTree(skeletonTracing, nodeId).map(([activeTree, node]) => {
       Store.dispatch(
         setNodePositionAction(
@@ -244,7 +244,7 @@ export function handleCreateNodeFromGlobalPosition(
   const state = Store.getState();
   // Create a new tree automatically if the corresponding setting is true and allowed
   const createNewTree =
-    state.tracing.restrictions.somaClickingAllowed && state.userConfiguration.newNodeNewTree;
+    state.annotation.restrictions.somaClickingAllowed && state.userConfiguration.newNodeNewTree;
   if (createNewTree) {
     Store.dispatch(createTreeAction());
   }
@@ -274,7 +274,7 @@ export function getOptionsForCreateSkeletonNode(
 ) {
   const state = Store.getState();
   const additionalCoordinates = state.flycam.additionalCoordinates;
-  const skeletonTracing = enforceSkeletonTracing(state.tracing);
+  const skeletonTracing = enforceSkeletonTracing(state.annotation);
   const activeNode = getActiveNode(skeletonTracing);
   const rotation = getRotationOrtho(activeViewport || state.viewModeData.plane.activeViewport);
 
@@ -342,7 +342,7 @@ export function createSkeletonNode(
   state = Store.getState();
 
   if (center) {
-    const newSkeleton = enforceSkeletonTracing(state.tracing);
+    const newSkeleton = enforceSkeletonTracing(state.annotation);
     // Note that the new node isn't necessarily active
     const newNodeId = newSkeleton.cachedMaxNodeId;
 
@@ -361,7 +361,7 @@ export function createSkeletonNode(
 }
 
 function updateTraceDirection(position: Vector3) {
-  const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
+  const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
   const activeNode = getActiveNode(skeletonTracing);
   if (activeNode != null) {
     const activeNodePosition = getNodePosition(activeNode, Store.getState());
@@ -457,7 +457,7 @@ function getPrecedingNodeFromTree(
 }
 
 export function toSubsequentNode(): void {
-  const tracing = enforceSkeletonTracing(Store.getState().tracing);
+  const tracing = enforceSkeletonTracing(Store.getState().annotation);
   const { navigationList, activeNodeId, activeTreeId } = tracing;
   if (activeNodeId == null) return;
   const isValidList =
@@ -491,7 +491,7 @@ export function toSubsequentNode(): void {
   }
 }
 export function toPrecedingNode(): void {
-  const tracing = enforceSkeletonTracing(Store.getState().tracing);
+  const tracing = enforceSkeletonTracing(Store.getState().annotation);
   const { navigationList, activeNodeId, activeTreeId } = tracing;
   if (activeNodeId == null) return;
   const isValidList =

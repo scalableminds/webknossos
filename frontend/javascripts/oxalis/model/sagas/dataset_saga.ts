@@ -183,7 +183,7 @@ export function* ensureSegmentIndexIsLoaded(): Saga<void> {
       layerName,
     );
     if (maybeIsSegmentIndexAvailable == null && segmentationLayer != null) {
-      const tracing = yield* select((state) => state.tracing);
+      const tracing = yield* select((state) => state.annotation);
       const updatedIsSegmentIndexAvailable = yield* call(
         hasSegmentIndex,
         segmentationLayer,

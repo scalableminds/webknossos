@@ -7,7 +7,7 @@ import { select as _select, take as _take } from "typed-redux-saga";
 
 // Ensures that the type of state is known. Otherwise,
 // a statement such as
-//   const tracing = yield* select((state) => state.tracing);
+//   const tracing = yield* select((state) => state.annotation);
 // would result in tracing being any.
 export function select<T>(fn: (state: OxalisState) => T) {
   return _select(fn);

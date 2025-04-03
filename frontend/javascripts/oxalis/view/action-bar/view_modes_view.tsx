@@ -107,7 +107,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 function mapStateToProps(state: OxalisState): StateProps {
   return {
     viewMode: state.temporaryConfiguration.viewMode,
-    allowedModes: state.tracing.restrictions.allowedModes,
+    allowedModes: state.annotation.restrictions.allowedModes,
   };
 }
 

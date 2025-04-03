@@ -80,7 +80,7 @@ initialSkeletonTracing.trees[2] = {
 };
 
 export const initialState = update(defaultState, {
-  tracing: {
+  annotation: {
     skeleton: {
       $set: initialSkeletonTracing,
     },

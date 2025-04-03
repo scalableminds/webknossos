@@ -62,7 +62,7 @@ trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
       implicit ec: ExecutionContext): Fox[BoundingBox] =
     for {
       allBucketPositions: Set[Vec3IntProto] <- getBucketPositions(segmentId, mag)
-      relevantBucketPositions = filterOutInnerBucketPositions(allBucketPositions)
+      relevantBucketPositions = filterOutInnerBucketPositions(allBucketPositions.toSeq)
       boundingBoxMutable = scala.collection.mutable.ListBuffer[Int](Int.MaxValue,
                                                                     Int.MaxValue,
                                                                     Int.MaxValue,
@@ -91,8 +91,8 @@ trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
         )
 
   // The buckets that form the outer walls of the bounding box are relevant (in each of those the real min/max voxel positions could occur)
-  private def filterOutInnerBucketPositions(bucketPositions: Set[Vec3IntProto]): Set[Vec3Int] =
-    if (bucketPositions.isEmpty) Set.empty
+  private def filterOutInnerBucketPositions(bucketPositions: Seq[Vec3IntProto]): Seq[Vec3Int] =
+    if (bucketPositions.isEmpty) Seq.empty
     else {
       val minX = bucketPositions.map(_.x).min
       val minY = bucketPositions.map(_.y).min

@@ -196,6 +196,9 @@ jobs:
   e2e-tests:
     runs-on: ubuntu-24.04
     needs: [build]
+    env:
+      POSTGRES_USER: webknossos
+      POSTGRES_URL: "jdbc:postgresql://localhost:5432/webknossos"
     steps:
       - uses: actions/checkout@v3
         with:

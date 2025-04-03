@@ -5,7 +5,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
+import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.SegmentStatistics
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.requests.{
@@ -176,7 +176,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       organizationId: String,
       datasetDirectoryName: String,
       dataLayerName: String,
-      mappingName: Option[String])(segmentOrAgglomerateId: Long, mag: Vec3Int): Fox[ListOfVec3IntProto] =
+      mappingName: Option[String])(segmentOrAgglomerateId: Long, mag: Vec3Int): Fox[Set[Vec3IntProto]] =
     for {
       segmentIds <- getSegmentIdsForAgglomerateIdIfNeeded(organizationId,
                                                           datasetDirectoryName,
@@ -185,8 +185,8 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
                                                           mappingName)
       positionsPerSegment <- Fox.serialCombined(segmentIds)(segmentId =>
         getBucketPositions(organizationId, datasetDirectoryName, dataLayerName, segmentId, mag))
-      positionsCollected = positionsPerSegment.flatten.distinct
-    } yield ListOfVec3IntProto.of(positionsCollected.map(vec3IntToProto))
+      positionsCollected = positionsPerSegment.flatten.toSet.map(vec3IntToProto)
+    } yield positionsCollected
 
   private def getBucketPositions(organizationId: String,
                                  datasetDirectoryName: String,

@@ -11,7 +11,7 @@ import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
 class VolumeBucketBuffer(version: Long,
-                         volumeTracingLayer: VolumeTracingLayer,
+                         volumeLayer: VolumeTracingLayer,
                          val volumeDataStore: FossilDBClient,
                          val temporaryTracingService: TemporaryTracingService,
                          toTemporaryStore: Boolean,
@@ -32,7 +32,7 @@ class VolumeBucketBuffer(version: Long,
   def getWithFallback(bucketPosition: BucketPosition)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     bucketDataBuffer.get(bucketPosition) match {
       case Some((bucketDataBox, _)) => bucketDataBox
-      case None                     => logger.info(s"buffer miss for $bucketPosition"); getFromFossilOrFallbackLayer(bucketPosition)
+      case None                     => getFromFossilOrFallbackLayer(bucketPosition)
     }
 
   private def getFromFossilOrFallbackLayer(bucketPosition: BucketPosition): Fox[Array[Byte]] =
@@ -44,7 +44,7 @@ class VolumeBucketBuffer(version: Long,
 
   private def getMultipleFromFossilOrFallbackLayer(bucketPositions: Seq[BucketPosition]): Fox[Seq[Box[Array[Byte]]]] =
     for {
-      bucketDataBoxes <- loadBuckets(volumeTracingLayer, bucketPositions, Some(version))
+      bucketDataBoxes <- loadBuckets(volumeLayer, bucketPositions, Some(version))
       _ <- bool2Box(bucketDataBoxes.length == bucketPositions.length)
       _ <- BoxImplicits.assertNoFailure(bucketDataBoxes)
       _ = bucketDataBoxes.zip(bucketPositions).foreach {
@@ -68,6 +68,6 @@ class VolumeBucketBuffer(version: Long,
         case _ => None
       }
     }.toSeq
-    saveBuckets(volumeTracingLayer, fullDirtyBuckets.map(_._1), fullDirtyBuckets.map(_._2), version, toTemporaryStore)
+    saveBuckets(volumeLayer, fullDirtyBuckets.map(_._1), fullDirtyBuckets.map(_._2), version, toTemporaryStore)
   }
 }

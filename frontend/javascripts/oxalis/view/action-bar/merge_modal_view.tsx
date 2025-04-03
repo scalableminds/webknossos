@@ -298,8 +298,8 @@ const MergeModalView = makeComponentLazy(_MergeModalView);
 
 function mapStateToProps(state: OxalisState): StateProps {
   return {
-    annotationId: state.tracing.annotationId,
-    annotationType: state.tracing.annotationType,
+    annotationId: state.annotation.annotationId,
+    annotationType: state.annotation.annotationType,
   };
 }
 

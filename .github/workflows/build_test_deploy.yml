@@ -198,6 +198,10 @@ jobs:
             scalableminds/webknossos-tracingstore:${{ steps.configure.outputs.docker_tag }}
             scalableminds/webknossos-tracingstore:${{ steps.configure.outputs.normalized_branch }}
 
+  e2e-tests:
+    runs-on: ubuntu-24.04
+    needs: [build]
+    steps:
       - name: Prepare e2e test
         run: |
           mkdir -p binaryData/Organization_X

@@ -19,7 +19,9 @@ case class DataServiceDataRequest(
     dataLayer: DataLayer,
     cuboid: Cuboid,
     settings: DataServiceRequestSettings
-)
+) {
+  def isSingleBucket: Boolean = cuboid.isSingleBucket(DataLayer.bucketLength)
+}
 
 case class DataReadInstruction(
     baseDir: Path,

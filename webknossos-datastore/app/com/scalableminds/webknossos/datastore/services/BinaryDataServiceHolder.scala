@@ -23,7 +23,7 @@ class BinaryDataServiceHolder @Inject()(
     config: DataStoreConfig,
     agglomerateService: AgglomerateService,
     remoteSourceDescriptorService: RemoteSourceDescriptorService,
-    datasetErrorLoggingService: DatasetErrorLoggingService)(implicit ec: ExecutionContext)
+    datasetErrorLoggingService: DSDatasetErrorLoggingService)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
   private lazy val sharedChunkContentsCache: AlfuCache[String, MultiArray] = {
@@ -46,7 +46,7 @@ class BinaryDataServiceHolder @Inject()(
     Some(agglomerateService),
     Some(remoteSourceDescriptorService),
     Some(sharedChunkContentsCache),
-    Some(datasetErrorLoggingService)
+    datasetErrorLoggingService
   )
 
 }

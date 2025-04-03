@@ -43,7 +43,7 @@ class DataSourceController @Inject()(
     connectomeFileService: ConnectomeFileService,
     segmentIndexFileService: SegmentIndexFileService,
     storageUsageService: DSUsedStorageService,
-    datasetErrorLoggingService: DatasetErrorLoggingService,
+    datasetErrorLoggingService: DSDatasetErrorLoggingService,
     exploreRemoteLayerService: ExploreRemoteLayerService,
     uploadService: UploadService,
     composeService: ComposeService,

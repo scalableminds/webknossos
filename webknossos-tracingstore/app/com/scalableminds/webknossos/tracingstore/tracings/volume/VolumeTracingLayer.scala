@@ -13,6 +13,7 @@ import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.scalableminds.webknossos.tracingstore.tracings.{FossilDBClient, TemporaryTracingService}
+import net.liftweb.common.Box
 import ucar.ma2.{Array => MultiArray}
 
 import scala.concurrent.ExecutionContext
@@ -34,6 +35,17 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit val ec: Ex
                                                           tc: TokenContext): Fox[Array[Byte]] =
     // Don’t use the layer version, because BucketProvider (with layer) may be cached across versions. readInstruction has the current version.
     loadBucket(layer, readInstruction.bucket, readInstruction.version)
+
+  override def loadMultiple(readInstructions: Seq[DataReadInstruction])(implicit ec: ExecutionContext,
+                                                                        tc: TokenContext): Fox[Seq[Box[Array[Byte]]]] =
+    if (readInstructions.isEmpty) Fox.successful(Seq.empty)
+    else {
+      for {
+        // Don’t use the layer version, because BucketProvider (with layer) may be cached across versions. readInstruction has the current version.
+        version <- readInstructions.headOption.map(_.version).toFox
+        bucketBoxes <- loadBuckets(layer, readInstructions.map(_.bucket), version)
+      } yield bucketBoxes
+    }
 
   override def bucketStream(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] =
     bucketStream(layer, version)

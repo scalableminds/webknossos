@@ -88,7 +88,7 @@ object Fox extends FoxImplicits {
   }
 
   // run serially, return individual results in list of box
-  def serialSequenceBox[A, B](l: List[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Future[List[Box[B]]] = {
+  def serialSequenceBox[A, B](l: Seq[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Future[List[Box[B]]] = {
     def runNext(remaining: List[A], results: List[Box[B]]): Future[List[Box[B]]] =
       remaining match {
         case head :: tail =>
@@ -99,7 +99,7 @@ object Fox extends FoxImplicits {
         case Nil =>
           Future.successful(results.reverse)
       }
-    runNext(l, Nil)
+    runNext(l.toList, Nil)
   }
 
   def sequence[T](l: List[Fox[T]])(implicit ec: ExecutionContext): Future[List[Box[T]]] =

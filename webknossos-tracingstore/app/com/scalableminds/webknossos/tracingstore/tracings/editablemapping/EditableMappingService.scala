@@ -22,7 +22,7 @@ import com.scalableminds.webknossos.datastore.services.{
   AdHocMeshServiceHolder,
   BinaryDataService
 }
-import com.scalableminds.webknossos.tracingstore.tracings.volume.ReversionHelper
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{ReversionHelper, TSDatasetErrorLoggingService}
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FallbackDataHelper,
   KeyValueStoreImplicits,
@@ -88,6 +88,7 @@ object NodeWithPosition {
 }
 
 class EditableMappingService @Inject()(
+    datasetErrorLoggingService: TSDatasetErrorLoggingService,
     val tracingDataStore: TracingDataStore,
     val adHocMeshServiceHolder: AdHocMeshServiceHolder,
     val remoteDatastoreClient: TSRemoteDatastoreClient,
@@ -103,7 +104,7 @@ class EditableMappingService @Inject()(
 
   val defaultSegmentToAgglomerateChunkSize: Int = 64 * 1024 // max. 1 MiB chunks (two 8-byte numbers per element)
 
-  val binaryDataService = new BinaryDataService(Paths.get(""), None, None, None, None)
+  val binaryDataService = new BinaryDataService(Paths.get(""), None, None, None, datasetErrorLoggingService)
 
   adHocMeshServiceHolder.tracingStoreAdHocMeshConfig = (binaryDataService, 30 seconds, 1)
   private val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.tracingStoreAdHocMeshService
@@ -201,6 +202,17 @@ class EditableMappingService @Inject()(
                                r.cuboid(editableMappingLayer),
                                r.settings.copy(appliedAgglomerate = None)))
     binaryDataService.handleDataRequests(requests)
+  }
+
+  def volumeDataBucketBoxes(editableMappingLayer: EditableMappingLayer, dataRequests: DataRequestCollection)(
+      implicit tc: TokenContext): Fox[Seq[Box[Array[Byte]]]] = {
+    val requests = dataRequests.map(
+      r =>
+        DataServiceDataRequest(null,
+                               editableMappingLayer,
+                               r.cuboid(editableMappingLayer),
+                               r.settings.copy(appliedAgglomerate = None)))
+    binaryDataService.handleMultipleBucketRequests(requests)
   }
 
   private def getSegmentToAgglomerateForSegmentIds(segmentIds: Set[Long],

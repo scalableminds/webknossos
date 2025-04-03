@@ -48,19 +48,21 @@ import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
 import type { UpdateActionWithoutIsolationRequirement } from "oxalis/model/sagas/update_actions";
 import {
+  addUserBoundingBoxSkeletonAction,
   createEdge,
   createNode,
   createTree,
   deleteEdge,
   deleteNode,
   deleteTree,
+  deleteUserBoundingBoxInSkeletonTracingAction,
   updateNode,
   updateSkeletonTracing,
   updateTree,
   updateTreeEdgesVisibility,
   updateTreeGroups,
   updateTreeVisibility,
-  updateUserBoundingBoxesInSkeletonTracing,
+  updateUserBoundingBoxInSkeletonTracingAction,
 } from "oxalis/model/sagas/update_actions";
 import { api } from "oxalis/singletons";
 import type {
@@ -612,6 +614,7 @@ export function* diffSkeletonTracing(
   skeletonTracing: SkeletonTracing,
   prevFlycam: Flycam,
   flycam: Flycam,
+  activeUserId: string | null,
 ): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (prevSkeletonTracing !== skeletonTracing) {
     for (const action of cachedDiffTrees(
@@ -638,10 +641,53 @@ export function* diffSkeletonTracing(
   }
 
   if (!_.isEqual(prevSkeletonTracing.userBoundingBoxes, skeletonTracing.userBoundingBoxes)) {
-    yield updateUserBoundingBoxesInSkeletonTracing(
-      skeletonTracing.userBoundingBoxes,
-      skeletonTracing.tracingId,
+    const {
+      onlyA: deletedBBoxIds,
+      onlyB: addedBBoxIds,
+      both: changedBBoxIds,
+    } = Utils.diffArrays(
+      _.map(prevSkeletonTracing.userBoundingBoxes, (bbox) => bbox.id),
+      _.map(skeletonTracing.userBoundingBoxes, (bbox) => bbox.id),
     );
+    for (const id of deletedBBoxIds) {
+      yield deleteUserBoundingBoxInSkeletonTracingAction(
+        id,
+        skeletonTracing.tracingId,
+        Date.now(),
+        activeUserId,
+        null,
+      );
+    }
+    for (const id of addedBBoxIds) {
+      const bbox = skeletonTracing.userBoundingBoxes.find((bbox) => bbox.id === id);
+      if (bbox) {
+        yield addUserBoundingBoxSkeletonAction(
+          bbox,
+          skeletonTracing.tracingId,
+          Date.now(),
+          activeUserId,
+          null,
+        );
+      } else {
+        Toast.error(`User bounding box with id ${id} not found in skeleton tracing.`);
+      }
+    }
+    for (const id of changedBBoxIds) {
+      const bbox = skeletonTracing.userBoundingBoxes.find((bbox) => bbox.id === id);
+      if (bbox) {
+        // TODO_charlie only update changed props
+        yield updateUserBoundingBoxInSkeletonTracingAction(
+          bbox.id,
+          bbox,
+          skeletonTracing.tracingId,
+          Date.now(),
+          activeUserId,
+          null,
+        );
+      } else {
+        Toast.error(`User bounding box with id ${id} not found in skeleton tracing.`);
+      }
+    }
   }
 }
 export default [

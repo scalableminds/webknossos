@@ -38,6 +38,22 @@ export type CreateSegmentUpdateAction = ReturnType<typeof createSegmentVolumeAct
 export type UpdateSegmentUpdateAction = ReturnType<typeof updateSegmentVolumeAction>;
 export type DeleteSegmentUpdateAction = ReturnType<typeof deleteSegmentVolumeAction>;
 export type DeleteSegmentDataUpdateAction = ReturnType<typeof deleteSegmentDataVolumeAction>;
+export type AddUserBoundingBoxSkeletonAction = ReturnType<typeof addUserBoundingBoxSkeletonAction>;
+export type AddUserBoundingBoxInVolumeTracingAction = ReturnType<
+  typeof addUserBoundingBoxInVolumeTracingAction
+>;
+export type DeleteUserBoundingBoxInSkeletonTracingAction = ReturnType<
+  typeof deleteUserBoundingBoxInSkeletonTracingAction
+>;
+export type DeleteUserBoundingBoxInVolumeTracingAction = ReturnType<
+  typeof deleteUserBoundingBoxInVolumeTracingAction
+>;
+export type UpdateUserBoundingBoxInSkeletonTracingAction = ReturnType<
+  typeof updateUserBoundingBoxInSkeletonTracingAction
+>;
+export type UpdateUserBoundingBoxInVolumeTracingAction = ReturnType<
+  typeof updateUserBoundingBoxInVolumeTracingAction
+>;
 type UpdateUserBoundingBoxesInSkeletonTracingUpdateAction = ReturnType<
   typeof updateUserBoundingBoxesInSkeletonTracing
 >;
@@ -83,6 +99,12 @@ export type UpdateActionWithoutIsolationRequirement =
   | DeleteEdgeUpdateAction
   | UpdateSkeletonTracingUpdateAction
   | UpdateVolumeTracingUpdateAction
+  | AddUserBoundingBoxSkeletonAction
+  | AddUserBoundingBoxInVolumeTracingAction
+  | DeleteUserBoundingBoxInSkeletonTracingAction
+  | DeleteUserBoundingBoxInVolumeTracingAction
+  | UpdateUserBoundingBoxInSkeletonTracingAction
+  | UpdateUserBoundingBoxInVolumeTracingAction
   | UpdateUserBoundingBoxesInSkeletonTracingUpdateAction
   | UpdateUserBoundingBoxesInVolumeTracingUpdateAction
   | CreateSegmentUpdateAction
@@ -386,7 +408,7 @@ export function addUserBoundingBoxSkeletonAction(
   info: string | null,
 ) {
   return {
-    name: "addUserBoundingBoxSkeleton",
+    name: "addUserBoundingBoxSkeletonAction",
     value: {
       boundingBox: convertUserBoundingBoxesFromFrontendToServer([boundingBox]),
       actionTracingId,
@@ -405,7 +427,7 @@ export function addUserBoundingBoxInVolumeTracingAction(
   info: string | null,
 ) {
   return {
-    name: "addUserBoundingBoxSkeleton",
+    name: "addUserBoundingBoxVolumeAction",
     value: {
       boundingBox: convertUserBoundingBoxesFromFrontendToServer([boundingBox]),
       actionTracingId,

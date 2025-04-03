@@ -350,18 +350,19 @@ export function performDiffTracing(
   flycam: Flycam,
   prevTdCamera: CameraData,
   tdCamera: CameraData,
+  activeUserId: string | null,
 ): Array<UpdateActionWithoutIsolationRequirement> {
   let actions: Array<UpdateActionWithoutIsolationRequirement> = [];
 
   if (prevTracing.type === "skeleton" && tracing.type === "skeleton") {
     actions = actions.concat(
-      Array.from(diffSkeletonTracing(prevTracing, tracing, prevFlycam, flycam)),
+      Array.from(diffSkeletonTracing(prevTracing, tracing, prevFlycam, flycam, activeUserId)),
     );
   }
 
   if (prevTracing.type === "volume" && tracing.type === "volume") {
     actions = actions.concat(
-      Array.from(diffVolumeTracing(prevTracing, tracing, prevFlycam, flycam)),
+      Array.from(diffVolumeTracing(prevTracing, tracing, prevFlycam, flycam, activeUserId)),
     );
   }
 
@@ -394,6 +395,7 @@ export function* setupSavingForTracingType(
     | SkeletonTracing;
   let prevFlycam = yield* select((state) => state.flycam);
   let prevTdCamera = yield* select((state) => state.viewModeData.plane.tdCamera);
+  const activeUserId = yield* select((state) => state.activeUser?.id || null);
   yield* call(ensureWkReady);
 
   while (true) {
@@ -434,6 +436,7 @@ export function* setupSavingForTracingType(
           flycam,
           prevTdCamera,
           tdCamera,
+          activeUserId,
         ),
       ),
       tracing,

@@ -74,14 +74,16 @@ import {
 } from "oxalis/model/sagas/saga_helpers";
 import {
   type UpdateActionWithoutIsolationRequirement,
+  addUserBoundingBoxInVolumeTracingAction,
   createSegmentVolumeAction,
   deleteSegmentDataVolumeAction,
   deleteSegmentVolumeAction,
+  deleteUserBoundingBoxInVolumeTracingAction,
   removeFallbackLayer,
   updateMappingName,
   updateSegmentGroups,
   updateSegmentVolumeAction,
-  updateUserBoundingBoxesInVolumeTracing,
+  updateUserBoundingBoxInVolumeTracingAction,
   updateVolumeTracing,
 } from "oxalis/model/sagas/update_actions";
 import type VolumeLayer from "oxalis/model/volumetracing/volumelayer";
@@ -94,6 +96,8 @@ import { ensureWkReady } from "./ready_sagas";
 import { floodFill } from "./volume/floodfill_saga";
 import { type BooleanBox, createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
+
+import * as Utils from "libs/utils";
 
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 
@@ -472,6 +476,7 @@ export function* diffVolumeTracing(
   volumeTracing: VolumeTracing,
   prevFlycam: Flycam,
   flycam: Flycam,
+  activeUserId: string | null,
 ): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (updateTracingPredicate(prevVolumeTracing, volumeTracing, prevFlycam, flycam)) {
     yield updateVolumeTracing(
@@ -484,10 +489,53 @@ export function* diffVolumeTracing(
   }
 
   if (!_.isEqual(prevVolumeTracing.userBoundingBoxes, volumeTracing.userBoundingBoxes)) {
-    yield updateUserBoundingBoxesInVolumeTracing(
-      volumeTracing.userBoundingBoxes,
-      volumeTracing.tracingId,
+    const {
+      onlyA: deletedBBoxIds,
+      onlyB: addedBBoxIds,
+      both: changedBBoxIds,
+    } = Utils.diffArrays(
+      _.map(prevVolumeTracing.userBoundingBoxes, (bbox) => bbox.id),
+      _.map(volumeTracing.userBoundingBoxes, (bbox) => bbox.id),
     );
+    for (const id of deletedBBoxIds) {
+      yield deleteUserBoundingBoxInVolumeTracingAction(
+        id,
+        volumeTracing.tracingId,
+        Date.now(),
+        activeUserId,
+        null,
+      );
+    }
+    for (const id of addedBBoxIds) {
+      const bbox = volumeTracing.userBoundingBoxes.find((bbox) => bbox.id === id);
+      if (bbox) {
+        yield addUserBoundingBoxInVolumeTracingAction(
+          bbox,
+          volumeTracing.tracingId,
+          Date.now(),
+          activeUserId,
+          null,
+        );
+      } else {
+        Toast.error(`User bounding box with id ${id} not found in volume tracing.`);
+      }
+    }
+    for (const id of changedBBoxIds) {
+      const bbox = volumeTracing.userBoundingBoxes.find((bbox) => bbox.id === id);
+      if (bbox) {
+        // TODO_charlie only update changed props
+        yield updateUserBoundingBoxInVolumeTracingAction(
+          bbox.id,
+          bbox,
+          volumeTracing.tracingId,
+          Date.now(),
+          activeUserId,
+          null,
+        );
+      } else {
+        Toast.error(`User bounding box with id ${id} not found in volume tracing.`);
+      }
+    }
   }
 
   if (prevVolumeTracing !== volumeTracing) {

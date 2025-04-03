@@ -107,6 +107,7 @@ function testDiffing(prevState: OxalisState, nextState: OxalisState) {
           enforceSkeletonTracing(nextState.tracing),
           flycamMock,
           flycamMock,
+          nextState.activeUser?.id || null,
         ),
       ),
     ),

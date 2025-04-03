@@ -63,6 +63,7 @@ function testDiffing(
         enforceSkeletonTracing(nextTracing),
         prevFlycam,
         flycam,
+        null,
       ),
     ),
   );

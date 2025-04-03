@@ -94,7 +94,7 @@ class FossilDBClient(collection: String,
               messageWithCauses.append(cause.toString)
               cause = cause.getCause
             }
-            new net.liftweb.common.Failure(s"Request to FossilDB failed: ${messageWithCauses}", Full(e), Empty)
+            new net.liftweb.common.Failure(s"Request to FossilDB failed: $messageWithCauses", Full(e), Empty)
         }
         Future.successful(box)
     }
@@ -150,11 +150,34 @@ class FossilDBClient(collection: String,
     }
   }
 
-  def getMultipleVersions[T](key: String, newestVersion: Option[Long] = None, oldestVersion: Option[Long] = None)(
-      implicit fromByteArray: Array[Byte] => Box[T]): Fox[List[T]] =
+  def getMultipleKeysByList[T](keys: Seq[String], version: Option[Long], batchSize: Int = 1000)(
+      implicit fromByteArray: Array[Byte] => Box[T]): Fox[Seq[Box[VersionedKeyValuePair[T]]]] =
     for {
-      versionValueTuples <- getMultipleVersionsAsVersionValueTuple(key, newestVersion, oldestVersion)
-    } yield versionValueTuples.map(_._2)
+      batchedResults <- Fox.serialCombined(keys.grouped(batchSize))(keyBatch =>
+        getMultipleKeysByListImpl(keyBatch, version))
+    } yield batchedResults.flatten
+
+  private def getMultipleKeysByListImpl[T](keys: Seq[String], version: Option[Long])(
+      implicit fromByteArray: Array[Byte] => Box[T]): Fox[Seq[Box[VersionedKeyValuePair[T]]]] =
+    for {
+      reply: GetMultipleKeysByListReply <- stub.getMultipleKeysByList(
+        GetMultipleKeysByListRequest(collection, keys, version))
+      _ <- assertSuccess(reply.success, reply.errorMessage)
+      parsedValues: Seq[Box[VersionedKeyValuePair[T]]] = keys.zip(reply.versionValueBoxes).map {
+        case (key, versionValueBox) =>
+          versionValueBox match {
+            case VersionValueBoxProto(Some(versionValuePair), None, _) =>
+              for {
+                parsed <- fromByteArray(versionValuePair.value.toByteArray)
+              } yield VersionedKeyValuePair(VersionedKey(key, versionValuePair.actualVersion), parsed)
+            case VersionValueBoxProto(None, Some(errorMessage), _) =>
+              net.liftweb.common.Failure(s"Failed to get entry from FossilDB: $errorMessage")
+            case VersionValueBoxProto(None, None, _) => Empty
+            case _                                   => net.liftweb.common.Failure("Unexpected reply format in FossilDB getMultipleKeysByList")
+          }
+        case _ => net.liftweb.common.Failure("Unexpected reply format in FossilDB getMultipleKeysByList")
+      }
+    } yield parsedValues
 
   def getMultipleVersionsAsVersionValueTuple[T](
       key: String,
@@ -184,7 +207,33 @@ class FossilDBClient(collection: String,
         case Empty    => Fox.empty
         case net.liftweb.common.Failure(msg, _, _) =>
           slackNotificationService.reportFossilWriteError("put", msg)
-          Fox.failure("could not save to FossilDB: " + msg)
+          Fox.failure("Could not save to FossilDB: " + msg)
+      }
+    } yield ()
+  }
+
+  def putMultiple(keyValueTuple: Seq[(String, Array[Byte])], version: Long, batchSize: Int = 1000): Fox[Unit] =
+    for {
+      _ <- Fox.serialCombined(keyValueTuple.grouped(batchSize))(batch => putMultipleImpl(batch, version))
+    } yield ()
+
+  private def putMultipleImpl(keyValueTuples: Seq[(String, Array[Byte])], version: Long): Fox[Unit] = {
+    val keyValuePairs = keyValueTuples.map {
+      case (key, value) => VersionedKeyValuePairProto(key, version, ByteString.copyFrom(value))
+    }
+    val putFox = for {
+      reply <- wrapException(
+        stub.putMultipleKeysWithMultipleVersions(PutMultipleKeysWithMultipleVersionsRequest(collection, keyValuePairs)))
+      _ <- assertSuccess(reply.success, reply.errorMessage)
+    } yield ()
+    for {
+      box <- putFox.futureBox
+      _ <- box match {
+        case Full(()) => Fox.successful(())
+        case Empty    => Fox.empty
+        case net.liftweb.common.Failure(msg, _, _) =>
+          slackNotificationService.reportFossilWriteError("multi-put", msg)
+          Fox.failure("Could not multi-put to FossilDB: " + msg)
       }
     } yield ()
   }

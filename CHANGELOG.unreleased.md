@@ -13,6 +13,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Added
 - Added a credit system making payment for long running jobs possible. For now it is in testing phase. [#8352](https://github.com/scalableminds/webknossos/pull/8352)
 - The maximum available storage of an organization is now enforced during upload. [#8385](https://github.com/scalableminds/webknossos/pull/8385)
+- Performance improvements for volume annotation save requests. [#8460](https://github.com/scalableminds/webknossos/pull/8460)
 
 ### Changed
 
@@ -24,6 +25,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where task creation with volume zip as input would fail. [#8468](https://github.com/scalableminds/webknossos/pull/8468)
 - Fixed a rare and subtle bug related to volume annotation and undo/redo. [#7506](https://github.com/scalableminds/webknossos/pull/7506)
 - Fixed that a warning message about a newer version of an annotation was shown multiple times. [#8486](https://github.com/scalableminds/webknossos/pull/8486)
+- Fixed a bug where segment statistics would sometimes be wrong in case of an on-disk segmentation fallback layer with segment index file. [#8460](https://github.com/scalableminds/webknossos/pull/8460)
+- Fixed a bug where sometimes outdated segment statistics would be displayed. [#8460](https://github.com/scalableminds/webknossos/pull/8460)
 
 ### Removed
 

@@ -5,6 +5,7 @@ import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import { requestWithFallback } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import "oxalis/model";
 import { DataBucket, BucketStateEnum } from "oxalis/model/bucket_data_handling/bucket";
+import type { BucketAddress } from "oxalis/constants";
 
 vi.mock("oxalis/model/sagas/root_saga", function () {
   return function* () {
@@ -29,7 +30,7 @@ vi.mock("oxalis/model/bucket_data_handling/wkstore_adapter", function () {
 const mockedCube = {
   isSegmentation: true,
   shouldEagerlyMaintainUsedValueSet: () => false,
-  triggerBucketDataChanged: () => false,
+  triggerBucketDataChanged: () => {},
 };
 
 vi.mock("oxalis/store", function () {
@@ -83,17 +84,11 @@ describe("PullQueue", () => {
       new DataBucket("uint8", [1, 1, 1, 1], null as any, mockedCube as any),
     ];
 
-    cube.getBucket.mockImplementation((address) => {
-      if (address === buckets[0].zoomedAddress) {
-        return buckets[0];
-      }
-      return buckets[1];
+    cube.getBucket.mockImplementation((address: BucketAddress) => {
+      return buckets.find((bucket) => _.isEqual(bucket.zoomedAddress, address));
     });
-    cube.getOrCreateBucket.mockImplementation((address) => {
-      if (address === buckets[0].zoomedAddress) {
-        return buckets[0];
-      }
-      return buckets[1];
+    cube.getOrCreateBucket.mockImplementation((address: BucketAddress) => {
+      return buckets.find((bucket) => _.isEqual(bucket.zoomedAddress, address));
     });
 
     for (const bucket of buckets) {
@@ -130,10 +125,10 @@ describe("PullQueue", () => {
   });
 
   function prepare() {
-    const mockRequestWithFallback = vi.mocked(requestWithFallback);
-    mockRequestWithFallback
+    vi.mocked(requestWithFallback)
+      .mockReset()
       .mockRejectedValueOnce(new Error("Expected promise rejection in tests. Can be ignored."))
-      .mockResolvedValueOnce([new Uint8Array(32 * 32 * 32)]);
+      .mockResolvedValueOnce([new Uint8Array(32 ** 3)]);
   }
 
   it<TestContext>("Request Failure: should not request twice if not bucket dirty", async ({
@@ -145,8 +140,7 @@ describe("PullQueue", () => {
 
     return runAsync([
       async () => {
-        await expect(requestWithFallback).rejects.toThrowError();
-        await expect(requestWithFallback).toHaveBeenCalledTimes(1);
+        expect(requestWithFallback).toHaveBeenCalledTimes(1);
         expect(buckets[0].state).toBe(BucketStateEnum.UNREQUESTED);
         expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
       },
@@ -161,7 +155,7 @@ describe("PullQueue", () => {
 
     return runAsync([
       async () => {
-        await expect(requestWithFallback).toHaveBeenCalledTimes(2);
+        expect(requestWithFallback).toHaveBeenCalledTimes(2);
         expect(buckets[0].state).toBe(BucketStateEnum.LOADED);
         expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
       },

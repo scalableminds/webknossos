@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 5
       - uses: actions/setup-node@v4
@@ -87,7 +87,7 @@ jobs:
       POSTGRES_URL: jdbc:postgresql://localhost:5432/webknossos
       POSTGRES_USER: webknossos_user
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 5
       - uses: actions/setup-node@v4
@@ -200,7 +200,7 @@ jobs:
       POSTGRES_USER: webknossos
       POSTGRES_URL: "jdbc:postgresql://localhost:5432/webknossos"
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 5
 

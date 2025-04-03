@@ -1,15 +1,15 @@
+import "test/mocks/updatable_texture.mock";
 import { describe, it, expect, beforeEach } from "vitest";
 import type { Vector4 } from "oxalis/constants";
+import { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
+import TextureBucketManager from "oxalis/model/bucket_data_handling/texture_bucket_manager";
+import { DataBucket, NULL_BUCKET } from "oxalis/model/bucket_data_handling/bucket";
 
 // Mock storage for texture data
 const textureMockDataStore = {
   data: new Uint8Array(2048),
   addressMapping: new Map(),
 };
-
-import { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
-import TextureBucketManager from "oxalis/model/bucket_data_handling/texture_bucket_manager";
-import { DataBucket, NULL_BUCKET } from "oxalis/model/bucket_data_handling/bucket";
 
 const LAYER_INDEX = 0;
 const CUCKOO_TEXTURE_WIDTH = 64;
@@ -79,12 +79,14 @@ describe("TextureBucketManager", () => {
   it("basic functionality", () => {
     const tbm = new TextureBucketManager(2048, 1, "uint8");
     tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
+    
     const activeBuckets = [
       buildBucket([1, 1, 1, 0], 100),
       buildBucket([1, 1, 2, 0], 101),
       buildBucket([1, 2, 1, 0], 102),
     ];
     setActiveBucketsAndWait(tbm, activeBuckets);
+
     expectBucket(tbm, activeBuckets[0], 100);
     expectBucket(tbm, activeBuckets[1], 101);
     expectBucket(tbm, activeBuckets[2], 102);
@@ -93,6 +95,7 @@ describe("TextureBucketManager", () => {
   it("changing active buckets", () => {
     const tbm = new TextureBucketManager(2048, 2, "uint8");
     tbm.setupDataTextures(new CuckooTableVec5(CUCKOO_TEXTURE_WIDTH), LAYER_INDEX);
+    
     const activeBuckets = [
       buildBucket([0, 0, 0, 0], 100),
       buildBucket([0, 0, 1, 0], 101),
@@ -101,8 +104,10 @@ describe("TextureBucketManager", () => {
       buildBucket([1, 0, 1, 0], 201),
       buildBucket([1, 1, 0, 0], 202),
     ];
+    
     setActiveBucketsAndWait(tbm, activeBuckets.slice(0, 3));
     setActiveBucketsAndWait(tbm, activeBuckets.slice(3, 6));
+    
     expectBucket(tbm, activeBuckets[3], 200);
     expectBucket(tbm, activeBuckets[4], 201);
     expectBucket(tbm, activeBuckets[5], 202);

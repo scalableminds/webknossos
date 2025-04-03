@@ -203,13 +203,9 @@ jobs:
         run: |
           sbt -v "testOnly backend.*"
 
-  docker-build-and-e2e-tests:
+  docker-build:
     runs-on: ubuntu-24.04
     needs: [build]
-    env:
-      DOCKER_TAG: ${{ needs.build.outputs.docker_tag }}
-      POSTGRES_URL: jdbc:postgresql://localhost:5432/webknossos
-      POSTGRES_USER: webknossos_user
     steps:
       - uses: actions/checkout@v3
         with:
@@ -274,9 +270,31 @@ jobs:
           tags: |
             scalableminds/webknossos-tracingstore:${{ needs.build.outputs.docker_tag }}
             scalableminds/webknossos-tracingstore:${{ needs.build.outputs.normalized_branch }}
-      #
-      # Run e2e Tests
-      #
+
+  e2e-tests:
+    runs-on: ubuntu-24.04
+    needs: [build, docker-build]
+    env:
+      DOCKER_TAG: ${{ needs.build.outputs.docker_tag }}
+      POSTGRES_URL: jdbc:postgresql://localhost:5432/webknossos
+      POSTGRES_USER: webknossos_user
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 5
+      - run: corepack enable
+      - uses: actions/cache@v4
+        id: node_modules
+        with:
+          path: |
+            tools/postgres/node_modules
+            tools/proxy/node_modules
+            node_modules
+          key: node_modules-${{ hashFiles('**/yarn.lock') }}
+      - name: Install frontend dependencies
+        if: steps.node_modules.outputs.cache-hit != 'true'
+        run: yarn install --immutable
+
       - name: Prepare e2e test
         run: |
           mkdir -p binaryData/Organization_X
@@ -289,7 +307,6 @@ jobs:
         if: ${{ github.ref_name != 'master' }}
         run: |
           docker compose -f .github/docker-compose.yml -p "webknossos" up -d
-
       # Smoke Tests
       - name: Run webknossos smoke test
         uses: ./.github/actions/url-health-check

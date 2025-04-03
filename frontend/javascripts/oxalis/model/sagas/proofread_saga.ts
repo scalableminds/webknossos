@@ -9,12 +9,7 @@ import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { SoftError, isBigInt, isNumberMap } from "libs/utils";
 import _ from "lodash";
-import {
-  AnnotationToolEnum,
-  MappingStatusEnum,
-  TreeTypeEnum,
-  type Vector3,
-} from "oxalis/constants";
+import { AnnotationToolEnum, TreeTypeEnum, type Vector3 } from "oxalis/constants";
 import { getSegmentIdForPositionAsync } from "oxalis/controller/combinations/volume_handlers";
 import {
   getLayerByName,
@@ -246,8 +241,8 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
   if (volumeTracing == null) return;
 
   const layerName = volumeTracingLayer.tracingId;
-  const isHdf5MappingEnabled = yield* call(ensureHdf5MappingIsEnabled, layerName);
-  if (!isHdf5MappingEnabled || volumeTracing.mappingName == null) return;
+  const isJSONMappingEnabled = yield* call(ensureNoJSONMappingIsEnabled, layerName);
+  if (isJSONMappingEnabled) return;
 
   const segmentId = yield* call(getSegmentIdForPositionAsync, position);
 
@@ -260,11 +255,11 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
 function* createEditableMapping(): Saga<string> {
   /*
    * Returns the name of the editable mapping. This is not identical to the
-   * name of the HDF5 mapping for which the editable mapping is about to be created.
+   * name of the mapping for which the editable mapping is about to be created.
    */
   // Get volume tracing again to make sure the version is up to date
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
-  if (!volumeTracing || !volumeTracing.mappingName) {
+  if (!volumeTracing) {
     // This should never occur, because the proofreading tool is only available when a volume tracing layer is active.
     throw new Error("No active segmentation tracing layer. Cannot create editable mapping.");
   }
@@ -272,7 +267,7 @@ function* createEditableMapping(): Saga<string> {
   const volumeTracingId = volumeTracing.tracingId;
   const layerName = volumeTracingId;
   const baseMappingName = volumeTracing.mappingName;
-  yield* put(setMappingNameAction(layerName, volumeTracingId, "HDF5"));
+  yield* put(setMappingNameAction(layerName, volumeTracingId, "HDF5")); // TODO new type for identity mapping?
   yield* put(setHasEditableMappingAction(volumeTracingId));
   // Ensure a saved state so that the mapping is locked and editable before doing the first proofreading operation.
   yield* call([Model, Model.ensureSavedState]);
@@ -285,21 +280,17 @@ function* createEditableMapping(): Saga<string> {
   return volumeTracingId;
 }
 
-function* ensureHdf5MappingIsEnabled(layerName: string): Saga<boolean> {
-  const mappingInfo = yield* select((state) =>
-    getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
+function* ensureNoJSONMappingIsEnabled(layerName: string): Saga<boolean> {
+  const mappingType = yield* select(
+    (state) =>
+      getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName).mappingType,
   );
-  const { mappingName, mappingType, mappingStatus } = mappingInfo;
-  if (
-    mappingName == null ||
-    mappingType !== "HDF5" ||
-    mappingStatus === MappingStatusEnum.DISABLED
-  ) {
-    Toast.error("An HDF5 mapping needs to be enabled to use the proofreading tool.");
-    return false;
+  if (mappingType === "JSON") {
+    Toast.error("The proofreading tool can not be used with a JSON mapping.");
+    return true;
   }
 
-  return true;
+  return false;
 }
 
 function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
@@ -1026,11 +1017,11 @@ function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Preparation
   }
   let { mappingName } = volumeTracing;
   if (mappingName == null) {
-    return null;
+    //TODO open modal
   }
 
-  const isHdf5MappingEnabled = yield* call(ensureHdf5MappingIsEnabled, volumeTracing.tracingId);
-  if (!isHdf5MappingEnabled) {
+  const isJSONMappingEnabled = yield* call(ensureNoJSONMappingIsEnabled, volumeTracing.tracingId);
+  if (isJSONMappingEnabled) {
     return null;
   }
 

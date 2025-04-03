@@ -39,12 +39,14 @@ class TSRemoteDatastoreClient @Inject()(
 
   private lazy val dataStoreUriCache: AlfuCache[(String, String), String] = AlfuCache()
   private lazy val voxelSizeCache: AlfuCache[String, VoxelSize] = AlfuCache(timeToLive = 10 minutes)
-  private lazy val largestAgglomerateIdCache: AlfuCache[(RemoteFallbackLayer, String, Option[String]), Long] =
+  private lazy val largestAgglomerateIdCache: AlfuCache[(RemoteFallbackLayer, Option[String], Option[String]), Long] =
     AlfuCache(timeToLive = 10 minutes)
 
-  def getAgglomerateSkeleton(remoteFallbackLayer: RemoteFallbackLayer, mappingName: String, agglomerateId: Long)(
-      implicit tc: TokenContext): Fox[Array[Byte]] =
+  def getAgglomerateSkeleton(remoteFallbackLayer: RemoteFallbackLayer,
+                             mappingNameOpt: Option[String],
+                             agglomerateId: Long)(implicit tc: TokenContext): Fox[Array[Byte]] =
     for {
+      mappingName <- mappingNameOpt.toFox ?~> "cannot get agglomerate skeleton without hdf5 base mapping"
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
       result <- rpc(s"$remoteLayerUri/agglomerates/$mappingName/skeleton/$agglomerateId").withTokenFromContext.getWithBytesResponse
     } yield result
@@ -76,35 +78,51 @@ class TSRemoteDatastoreClient @Inject()(
     } yield result
 
   def getAgglomerateIdsForSegmentIds(remoteFallbackLayer: RemoteFallbackLayer,
-                                     mappingName: String,
+                                     mappingNameOpt: Option[String],
                                      segmentIdsOrdered: List[Long])(implicit tc: TokenContext): Fox[List[Long]] =
-    for {
-      remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
-      segmentIdsOrderedProto = ListOfLong(items = segmentIdsOrdered)
-      result <- rpc(s"$remoteLayerUri/agglomerates/$mappingName/agglomeratesForSegments").withTokenFromContext.silent
-        .postProtoWithProtoResponse[ListOfLong, ListOfLong](segmentIdsOrderedProto)(ListOfLong)
-    } yield result.items.toList
+    mappingNameOpt.map { mappingName =>
+      for {
+        remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
+        segmentIdsOrderedProto = ListOfLong(items = segmentIdsOrdered)
+        result <- rpc(s"$remoteLayerUri/agglomerates/$mappingName/agglomeratesForSegments").withTokenFromContext.silent
+          .postProtoWithProtoResponse[ListOfLong, ListOfLong](segmentIdsOrderedProto)(ListOfLong)
+      } yield result.items.toList
+    }.getOrElse(Fox.successful(segmentIdsOrdered))
 
-  def getAgglomerateGraph(remoteFallbackLayer: RemoteFallbackLayer, baseMappingName: String, agglomerateId: Long)(
-      implicit tc: TokenContext): Fox[AgglomerateGraph] =
-    for {
-      remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
-      result <- rpc(s"$remoteLayerUri/agglomerates/$baseMappingName/agglomerateGraph/$agglomerateId").silent.withTokenFromContext.silent
-        .getWithProtoResponse[AgglomerateGraph](AgglomerateGraph)
-    } yield result
+  def getAgglomerateGraph(remoteFallbackLayer: RemoteFallbackLayer,
+                          mappingNameOpt: Option[String],
+                          agglomerateId: Long,
+                          segmentPosition: Option[Vec3Int])(implicit tc: TokenContext): Fox[AgglomerateGraph] =
+    mappingNameOpt match {
+      case None =>
+        // Identity mapping: graph with just the agglomerate id as mapping.
+        // passed segmentPosition is used if supplied. Should only be None where it is not later needed in the graph.
+        Fox.successful(
+          AgglomerateGraph(List(agglomerateId),
+                           List.empty,
+                           List(vec3IntToProto(segmentPosition.getOrElse(Vec3Int.zeros))),
+                           List.empty))
+      case Some(mappingName) =>
+        for {
+          remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
+          result <- rpc(s"$remoteLayerUri/agglomerates/$mappingName/agglomerateGraph/$agglomerateId").silent.withTokenFromContext.silent
+            .getWithProtoResponse[AgglomerateGraph](AgglomerateGraph)
+        } yield result
+    }
 
-  def getLargestAgglomerateId(remoteFallbackLayer: RemoteFallbackLayer, mappingName: String)(
+  def getLargestAgglomerateId(remoteFallbackLayer: RemoteFallbackLayer, mappingNameOpt: Option[String])(
       implicit tc: TokenContext): Fox[Long] = {
-    val cacheKey = (remoteFallbackLayer, mappingName, tc.userTokenOpt)
+    val cacheKey = (remoteFallbackLayer, mappingNameOpt, tc.userTokenOpt)
     largestAgglomerateIdCache.getOrLoad(
       cacheKey,
       k =>
         for {
           remoteLayerUri <- getRemoteLayerUri(k._1)
-          result <- rpc(s"$remoteLayerUri/agglomerates/${k._2}/largestAgglomerateId")
-            .addQueryStringOptional("token", k._3)
-            .silent
-            .getWithJsonResponse[Long]
+          uri = k._2 match {
+            case Some(mappingName) => s"$remoteLayerUri/agglomerates/$mappingName/largestAgglomerateId"
+            case None              => s"$remoteLayerUri/largestSegmentId"
+          }
+          result <- rpc(uri).addQueryStringOptional("token", k._3).silent.getWithJsonResponse[Long]
         } yield result
     )
   }

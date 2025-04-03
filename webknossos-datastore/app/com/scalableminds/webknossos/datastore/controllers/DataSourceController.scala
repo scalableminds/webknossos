@@ -17,7 +17,13 @@ import com.scalableminds.webknossos.datastore.helpers.{
   SegmentStatisticsParameters
 }
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSource
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId, GenericDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataLayer,
+  DataSource,
+  DataSourceId,
+  GenericDataSource,
+  SegmentationLayer
+}
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.uploading._
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, DataVaultService}
@@ -338,6 +344,26 @@ class DataSourceController @Inject()(
           )
           .toFox
       } yield Ok(Json.toJson(largestAgglomerateId))
+    }
+  }
+
+  def largestSegmentId(
+      organizationId: String,
+      datasetDirectoryName: String,
+      dataLayerName: String,
+  ): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccessFromTokenContext(
+      UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
+
+      for {
+        (_, layer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
+                                                                     datasetDirectoryName,
+                                                                     dataLayerName)
+        largestSegmentId <- layer match {
+          case l: SegmentationLayer => Fox.successful(l.largestSegmentId)
+          case _                    => Fox.failure("tried looking up largesetAgglomerateId on layer that is not a segmentation layer")
+        }
+      } yield Ok(Json.toJson(largestSegmentId))
     }
   }
 

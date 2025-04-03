@@ -28,14 +28,14 @@ export function updateVolumeTracing(
   volumeTracingId: string,
   shape: Partial<VolumeTracing>,
 ) {
-  const newVolumes = state.tracing.volumes.map((volume) => {
+  const newVolumes = state.annotation.volumes.map((volume) => {
     if (volume.tracingId === volumeTracingId) {
       return { ...volume, ...shape };
     } else {
       return volume;
     }
   });
-  return updateKey(state, "tracing", {
+  return updateKey(state, "annotation", {
     volumes: newVolumes,
   });
 }
@@ -44,14 +44,14 @@ export function updateEditableMapping(
   volumeTracingId: string,
   shape: Partial<EditableMapping>,
 ) {
-  const newMappings = state.tracing.mappings.map((mapping) => {
+  const newMappings = state.annotation.mappings.map((mapping) => {
     if (mapping.tracingId === volumeTracingId) {
       return { ...mapping, ...shape };
     } else {
       return mapping;
     }
   });
-  return updateKey(state, "tracing", {
+  return updateKey(state, "annotation", {
     mappings: newMappings,
   });
 }
@@ -115,7 +115,7 @@ export function addToLayerReducer(
   volumeTracing: VolumeTracing,
   position: Vector3,
 ) {
-  const { allowUpdate } = state.tracing.restrictions;
+  const { allowUpdate } = state.annotation.restrictions;
 
   if (!allowUpdate || isVolumeAnnotationDisallowedForZoom(state.uiInformation.activeTool, state)) {
     return state;

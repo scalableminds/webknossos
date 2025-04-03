@@ -172,7 +172,7 @@ export function* labelWithVoxelBuffer2D(
   viewport: OrthoView,
   wroteVoxelsBox?: BooleanBox,
 ): Saga<void> {
-  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
+  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   if (!allowUpdate) return;
   if (voxelBuffer.isEmpty()) return;

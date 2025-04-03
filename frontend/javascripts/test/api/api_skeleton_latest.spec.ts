@@ -210,8 +210,8 @@ test.serial("getTreeGroups should get all tree groups and set a tree group", (t)
   api.tracing.setTreeGroup(2, 3);
   api.tracing.setTreeGroup(1, 7);
   const state = Store.getState();
-  t.is(state.tracing.skeleton.trees[2].groupId, 3);
-  t.is(state.tracing.skeleton.trees[1].groupId, 7);
+  t.is(state.annotation.skeleton.trees[2].groupId, 3);
+  t.is(state.annotation.skeleton.trees[1].groupId, 7);
 });
 test.serial("renameSkeletonGroup should rename a tree group", (t) => {
   const { api } = t.context;
@@ -220,12 +220,12 @@ test.serial("renameSkeletonGroup should rename a tree group", (t) => {
   );
   api.tracing.renameSkeletonGroup(7, "renamed");
   const state = Store.getState();
-  t.is(state.tracing.skeleton.treeGroups[1].name, "renamed");
+  t.is(state.annotation.skeleton.treeGroups[1].name, "renamed");
 });
 test("setTreeGroup should set the visibility of a tree", (t) => {
   const { api } = t.context;
   api.tracing.setTreeVisibility(2, false);
-  t.false(Store.getState().tracing.skeleton.trees[2].isVisible);
+  t.false(Store.getState().annotation.skeleton.trees[2].isVisible);
   api.tracing.setTreeVisibility(2, true);
-  t.true(Store.getState().tracing.skeleton.trees[2].isVisible);
+  t.true(Store.getState().annotation.skeleton.trees[2].isVisible);
 });

@@ -25,11 +25,9 @@ trait BoxImplicits {
   }
 
   def assertNoFailure(boxes: Seq[Box[_]]): Box[Unit] = {
-    val firstFailure = boxes.find { box =>
-      box match {
-        case _: Failure => true
-        case _          => false
-      }
+    val firstFailure = boxes.find {
+      case _: Failure => true
+      case _          => false
     }
     firstFailure match {
       case Some(failure) => Failure(s"At least one failure contained in list of ${boxes.length} boxes: $failure")

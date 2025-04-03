@@ -31,7 +31,7 @@ import {
 } from "oxalis/model/actions/view_mode_actions";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { voxelToUnit } from "oxalis/model/scaleinfo";
-import type { CameraData, OxalisState, Tracing } from "oxalis/store";
+import type { CameraData, OxalisState, StoreAnnotation } from "oxalis/store";
 import Store from "oxalis/store";
 import type PlaneView from "oxalis/view/plane_view";
 import * as React from "react";
@@ -83,7 +83,7 @@ const INVALID_ACTIVE_NODE_ID = -1;
 type OwnProps = {
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
   planeView?: PlaneView;
-  tracing?: Tracing;
+  annotation?: StoreAnnotation;
 };
 type StateProps = {
   voxelSize: VoxelSize;
@@ -92,8 +92,8 @@ type StateProps = {
 type Props = OwnProps & StateProps;
 
 function maybeGetActiveNodeFromProps(props: Props) {
-  return props.tracing?.skeleton?.activeNodeId != null
-    ? props.tracing.skeleton.activeNodeId
+  return props.annotation?.skeleton?.activeNodeId != null
+    ? props.annotation.skeleton.activeNodeId
     : INVALID_ACTIVE_NODE_ID;
 }
 
@@ -114,13 +114,13 @@ class TDController extends React.PureComponent<Props> {
     if (
       maybeGetActiveNodeFromProps(this.props) !== maybeGetActiveNodeFromProps(prevProps) &&
       maybeGetActiveNodeFromProps(this.props) !== INVALID_ACTIVE_NODE_ID &&
-      this.props.tracing &&
-      this.props.tracing.skeleton
+      this.props.annotation &&
+      this.props.annotation.skeleton
     ) {
       // The rotation center of this viewport is not updated to the new position after selecting a node in the viewport.
       // This happens because the selection of the node does not trigger a call to setTargetAndFixPosition directly.
       // Thus we do it manually whenever the active node changes.
-      const activeNode = getActiveNode(this.props.tracing.skeleton);
+      const activeNode = getActiveNode(this.props.annotation.skeleton);
       if (activeNode) {
         this.setTargetAndFixPosition(getNodePosition(activeNode, Store.getState()));
       }
@@ -182,7 +182,7 @@ class TDController extends React.PureComponent<Props> {
 
   getTDViewMouseControls(): Record<string, any> {
     const skeletonControls =
-      this.props.tracing?.skeleton != null && this.props.planeView != null
+      this.props.annotation?.skeleton != null && this.props.planeView != null
         ? getTDViewMouseControlsSkeleton(this.props.planeView)
         : null;
     const controls = {

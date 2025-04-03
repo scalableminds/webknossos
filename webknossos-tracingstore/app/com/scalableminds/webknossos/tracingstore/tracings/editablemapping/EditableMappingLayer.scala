@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox, option2Fox}
+import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MagLocator}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
@@ -36,10 +36,12 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer)
                                                           tc: TokenContext): Fox[Array[Byte]] = {
     val bucket: BucketPosition = readInstruction.bucket
     for {
-      // Don’t use the layer version, because BucketProvider (with layer) may be cached across versions. readInstruction has the current version.
-      version <- readInstruction.version.toFox ?~> "editableMappingData must be requested with version"
-      editableMappingService = layer.editableMappingService
       elementClassProto <- ElementClass.toProto(layer.elementClass).toFox
+      editableMappingService = layer.editableMappingService
+      // The layer version is always current because EditableMappingBucketProvider is not cached across versions.
+      // This is different from volumeTracingVersion, because we need a non-optional version here so the caching
+      // in editableMappingService works properly.
+      version = layer.version
       _ <- bool2Fox(layer.doesContainBucket(bucket))
       remoteFallbackLayer <- editableMappingService.remoteFallbackLayerForVolumeTracing(layer.tracing,
                                                                                         layer.annotationId)
@@ -90,6 +92,9 @@ case class EditableMappingLayer(name: String, // set to tracing id
                               dataSourceId: DataSourceId,
                               sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
     new EditableMappingBucketProvider(layer = this)
+
+  // Do not cache EditableMappingBucketProviders across versions. This way, load can use the passed layer’s version.
+  override def bucketProviderCacheKey: String = s"${this.name}-v${this.version}"
 
   override def mappings: Option[Set[String]] = None
 

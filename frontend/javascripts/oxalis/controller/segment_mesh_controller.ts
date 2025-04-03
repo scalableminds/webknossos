@@ -461,45 +461,41 @@ export default class SegmentMeshController {
       material.needsUpdate = true;
     };
 
-    const setColor = () => {
-      const isUniformColor = (mesh.activeState || mesh.hoveredState) === "full" || !mesh.isMerged;
+    const isUniformColor = (mesh.activeState || mesh.hoveredState) === "full" || !mesh.isMerged;
 
-      if (isUniformColor) {
-        let newColor = mesh.hoveredState
-          ? HOVERED_COLOR
-          : new THREE.Color(...mesh.material.originalColor);
+    if (isUniformColor) {
+      let newColor = mesh.hoveredState
+        ? HOVERED_COLOR
+        : new THREE.Color(...mesh.material.originalColor);
 
-        // Update the material for all meshes that belong to the current
-        // segment ID. Only for adhoc meshes, these will contain multiple
-        // children. For precomputed meshes, this will only affect one
-        // mesh in the scene graph.
-        parent.traverse((child) => {
-          if (child instanceof THREE.Mesh) {
-            setMaterialToUniformColor(child.material, newColor);
-          }
-        });
+      // Update the material for all meshes that belong to the current
+      // segment ID. Only for adhoc meshes, these will contain multiple
+      // children. For precomputed meshes, this will only affect one
+      // mesh in the scene graph.
+      parent.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          setMaterialToUniformColor(child.material, newColor);
+        }
+      });
 
-        return;
-      }
+      return;
+    }
 
-      if (mesh.material.color !== WHITE || !mesh.material.vertexColors) {
-        setMaterialToVertexColors(mesh.material);
-      }
+    if (mesh.material.color !== WHITE || !mesh.material.vertexColors) {
+      setMaterialToVertexColors(mesh.material);
+    }
 
-      if (mesh.activeState && mesh.activeState !== "full") {
-        const newColor = ACTIVATED_COLOR_VEC3;
-        setRangeToColor(mesh.geometry, mesh.activeState, newColor);
-      }
-      // Setting the hovered part needs to happen after setting the active part,
-      // so that there is still a hover effect for an active super voxel.
-      if (mesh.hoveredState && mesh.hoveredState !== "full") {
-        const newColor = HOVERED_COLOR_VEC3;
-        setRangeToColor(mesh.geometry, mesh.hoveredState, newColor);
-      }
-      mesh.geometry.attributes.color.needsUpdate = true;
-    };
-
-    setColor();
+    if (mesh.activeState && mesh.activeState !== "full") {
+      const newColor = ACTIVATED_COLOR_VEC3;
+      setRangeToColor(mesh.geometry, mesh.activeState, newColor);
+    }
+    // Setting the hovered part needs to happen after setting the active part,
+    // so that there is still a hover effect for an active super voxel.
+    if (mesh.hoveredState && mesh.hoveredState !== "full") {
+      const newColor = HOVERED_COLOR_VEC3;
+      setRangeToColor(mesh.geometry, mesh.hoveredState, newColor);
+    }
+    mesh.geometry.attributes.color.needsUpdate = true;
   }
 
   highlightActiveUnmappedSegmentId = (activeUnmappedSegmentId: number | null | undefined) => {

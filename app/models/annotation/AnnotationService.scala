@@ -141,6 +141,9 @@ class AnnotationService @Inject()(
           remoteDatastoreClient.hasSegmentIndexFile(datasetOrganizationId, dataSource.id.directoryName, layer.name)
         case None => Fox.successful(false)
       }
+      elementClassProto <- ElementClass
+        .toProto(fallbackLayer.map(layer => layer.elementClass).getOrElse(VolumeTracingDefaults.elementClass))
+        .toFox
     } yield
       VolumeTracing(
         None,
@@ -149,8 +152,7 @@ class AnnotationService @Inject()(
         dataSource.id.directoryName,
         vec3IntToProto(startPosition.getOrElse(dataSource.center)),
         vec3DoubleToProto(startRotation.getOrElse(vec3DoubleFromProto(VolumeTracingDefaults.editRotation))),
-        elementClassToProto(
-          fallbackLayer.map(layer => layer.elementClass).getOrElse(VolumeTracingDefaults.elementClass)),
+        elementClassProto,
         fallbackLayer.map(_.name),
         combineLargestSegmentIdsByPrecedence(fromNml = None, fromFallbackLayer = fallbackLayer.map(_.largestSegmentId)),
         0,
@@ -253,6 +255,7 @@ class AnnotationService @Inject()(
       mp: MessagesProvider): Fox[List[AnnotationLayer]] =
     for {
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
+      dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable) ?~> "dataset.dataSource.notUsable"
       newAnnotationLayers <- Fox.serialCombined(allAnnotationLayerParameters) { annotationLayerParameters =>
         for {
           tracing <- createTracingForExplorational(dataset,
@@ -265,7 +268,8 @@ class AnnotationService @Inject()(
           newTracingId = TracingId.generate
           _ <- tracing match {
             case Left(skeleton) => tracingStoreClient.saveSkeletonTracing(skeleton, newTracingId)
-            case Right(volume)  => tracingStoreClient.saveVolumeTracing(annotationId, newTracingId, volume)
+            case Right(volume) =>
+              tracingStoreClient.saveVolumeTracing(annotationId, newTracingId, volume, dataSource = dataSource)
           }
         } yield
           AnnotationLayer(newTracingId,
@@ -289,19 +293,18 @@ class AnnotationService @Inject()(
       _ <- tracingStoreClient.saveAnnotationProto(annotationId, annotationProto)
     } yield newAnnotationLayers
 
-  def createExplorationalFor(user: User,
-                             datasetId: ObjectId,
-                             annotationLayerParameters: List[AnnotationLayerParameters])(
+  def createExplorationalFor(user: User, dataset: Dataset, annotationLayerParameters: List[AnnotationLayerParameters])(
       implicit ctx: DBAccessContext,
-      m: MessagesProvider): Fox[Annotation] =
+      m: MessagesProvider): Fox[Annotation] = {
+    val newAnnotationId = ObjectId.generate
+    val datasetId = dataset._id
     for {
-      dataset <- datasetDAO.findOne(datasetId) ?~> "dataset.noAccessById"
-      newAnnotationId = ObjectId.generate
       annotationLayers <- createLayersForExplorational(dataset, newAnnotationId, annotationLayerParameters) ?~> "annotation.createTracings.failed"
       teamId <- selectSuitableTeam(user, dataset) ?~> "annotation.create.forbidden"
       annotation = Annotation(newAnnotationId, datasetId, None, teamId, user._id, annotationLayers)
       _ <- annotationDAO.insertOne(annotation)
     } yield annotation
+  }
 
   // WARNING: needs to be repeatable, might be called multiple times for an annotation
   def finish(annotation: Annotation, user: User, restrictions: AnnotationRestrictions)(

@@ -16,6 +16,7 @@ import constants, { OrthoViews } from "oxalis/constants";
 import {
   getColorLayers,
   getDataLayers,
+  getDenseMagsForLayerName,
   getEnabledLayers,
   getLayerByName,
   getMagInfo,
@@ -41,7 +42,6 @@ import {
 } from "../helpers/transformation_helpers";
 import { getMatrixScale, rotateOnAxis } from "../reducers/flycam_reducer";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
-import { getTransformsForLayer, invertAndTranspose } from "./dataset_layer_transformation_accessor";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
 
@@ -192,10 +192,6 @@ export function _getMaximumZoomForAllMags(
   return maxZoomValueThresholds;
 }
 
-// todo: make this cleaner. since the maximum zoom depends on the layer name and the right matrix,
-// a memoization cache size of one doesn't work anymore. move cache to store and update explicitly?
-const perLayerFnCache: Map<string, typeof _getMaximumZoomForAllMags> = new Map();
-
 // Only exported for testing.
 export const _getDummyFlycamMatrix = memoizeOne((scale: Vector3) => {
   const scaleMatrix = getMatrixScale(scale);
@@ -217,45 +213,18 @@ export function getMoveOffset3d(state: OxalisState, timeFactor: number) {
 }
 
 function getMaximumZoomForAllMagsFromStore(state: OxalisState, layerName: string): Array<number> {
-  const { viewMode } = state.temporaryConfiguration;
-
-  const layer = getLayerByName(state.dataset, layerName);
-  const layerMatrix = invertAndTranspose(
-    getTransformsForLayer(
-      state.dataset,
-      layer,
-      state.datasetConfiguration.nativelyRenderedLayerName,
-    ).affineMatrix,
-  );
-
-  let fn = perLayerFnCache.get(layerName);
-  if (fn == null) {
-    fn = memoizeOne(_getMaximumZoomForAllMags);
-    perLayerFnCache.set(layerName, fn);
+  const zoomValues = state.flycamInfoCache.maximumZoomForAllMags[layerName];
+  if (zoomValues) {
+    return zoomValues;
   }
-
-  const dummyFlycamMatrix = _getDummyFlycamMatrix(state.dataset.dataSource.scale.factor);
-
-  return fn(
-    viewMode,
-    state.datasetConfiguration.loadingStrategy,
-    state.dataset.dataSource.scale.factor,
-    getMagInfo(layer.resolutions).getDenseMags(),
-    getViewportRects(state),
-    Math.min(
-      state.temporaryConfiguration.gpuSetup.smallestCommonBucketCapacity,
-      constants.GPU_FACTOR_MULTIPLIER * state.userConfiguration.gpuMemoryFactor,
-    ),
-    layerMatrix,
-    // Theoretically, the following parameter should be state.flycam.currentMatrix.
-    // However, that matrix changes on each move which means that the ranges would need
-    // to be recalculate on each move. At least, for orthogonal mode, the actual matrix
-    // should only differ in its translation which can be ignored for gauging the maximum
-    // zoom here.
-    // However, for oblique and flight mode this is not really accurate. As a heuristic,
-    // this already proved to be fine, though.
-    dummyFlycamMatrix,
-  );
+  // If the maintainMaximumZoomForAllMagsSaga has not populated the store yet,
+  // we use the following fallback heuristic. In production, this should not be
+  // relevant (an empty array would also work, because this would just lead to the coarsest
+  // mag being chosen for a brief period of time).
+  // However, for the tests, it is useful to have this heuristic. Otherwise, we would need
+  // to ensure that the relevant saga runs in every unit test setup (or in general, that the ranges
+  // are set up properly).
+  return getDenseMagsForLayerName(state.dataset, layerName).map((_mag, idx) => 2 ** (idx + 1));
 }
 
 // This function depends on functionality from this and the dataset_layer_transformation_accessor module.
@@ -459,7 +428,7 @@ export function getValidTaskZoomRange(
     baseDatasetViewConfiguration.zoom.minimum,
     Number.POSITIVE_INFINITY,
   ] as Vector2;
-  const { magRestrictions } = state.tracing.restrictions;
+  const { magRestrictions } = state.annotation.restrictions;
   // We use the first color layer as a heuristic to check the validity of the zoom range,
   // as we don't know to which layer a restriction is meant to be applied.
   // If the layers don't have any transforms, the layer choice doesn't matter, anyway.
@@ -489,7 +458,7 @@ export function getValidTaskZoomRange(
 }
 
 export function isMagRestrictionViolated(state: OxalisState): boolean {
-  const { magRestrictions } = state.tracing.restrictions;
+  const { magRestrictions } = state.annotation.restrictions;
   // We use the first color layer as a heuristic to check the validity of the zoom range,
   // as we don't know to which layer a restriction is meant to be applied.
   // If the layers don't have any transforms, the layer choice doesn't matter, anyway.

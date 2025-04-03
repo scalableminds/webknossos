@@ -159,7 +159,7 @@ const defaultState: OxalisState = {
     publication: null,
     usedStorageBytes: null,
   },
-  tracing: {
+  annotation: {
     ...initialAnnotationInfo,
     readOnly: {
       userBoundingBoxes: [],
@@ -198,6 +198,9 @@ const defaultState: OxalisState = {
     spaceDirectionOrtho: [1, 1, 1],
     direction: [0, 0, 0],
     additionalCoordinates: [],
+  },
+  flycamInfoCache: {
+    maximumZoomForAllMags: {},
   },
   viewModeData: {
     plane: {

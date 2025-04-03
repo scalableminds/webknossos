@@ -32,7 +32,7 @@ import {
   reOpenAnnotation,
 } from "admin/admin_rest_api";
 import { withAuthentication } from "admin/auth/authentication_modal";
-import { Button, Dropdown, Modal, Space, Tooltip } from "antd";
+import { Button, ConfigProvider, Dropdown, Modal, Space, Tooltip } from "antd";
 import type { SubMenuType } from "antd/es/menu/interface";
 import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
 import features from "features";
@@ -78,6 +78,7 @@ import type { LayoutKeys } from "oxalis/view/layouting/default_layout_configs";
 import { mapLayoutKeysToLanguage } from "oxalis/view/layouting/default_layout_configs";
 import * as React from "react";
 import { connect } from "react-redux";
+import { getAntdTheme, getThemeFromUser } from "theme";
 import type { APIAnnotationType, APIUser, APIUserBase } from "types/api_flow_types";
 import { APIAnnotationTypeEnum, TracingTypeEnum } from "types/api_flow_types";
 import CreateAnimationModal from "./create_animation_modal";
@@ -539,8 +540,8 @@ class TracingActionsView extends React.PureComponent<Props, State> {
   };
 
   handleCopySandboxToAccount = async () => {
-    const { tracing: sandboxTracing, dataset } = Store.getState();
-    const tracingType = getTracingType(sandboxTracing);
+    const { annotation: sandboxAnnotation, dataset } = Store.getState();
+    const tracingType = getTracingType(sandboxAnnotation);
 
     if (tracingType !== TracingTypeEnum.skeleton) {
       const message = "Sandbox copying functionality is only implemented for skeleton tracings.";
@@ -551,12 +552,12 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     // todo: does this logic make sense at all? the above condition seems to exclude
     // volume tracings
     const fallbackLayer =
-      sandboxTracing.volumes.length > 0 ? sandboxTracing.volumes[0].fallbackLayer : null;
+      sandboxAnnotation.volumes.length > 0 ? sandboxAnnotation.volumes[0].fallbackLayer : null;
     const newAnnotation = await createExplorational(dataset.id, tracingType, false, fallbackLayer);
     UrlManager.changeBaseUrl(`/annotations/${newAnnotation.typ}/${newAnnotation.id}`);
     await api.tracing.restart(null, newAnnotation.id, ControlModeEnum.TRACE, undefined, true);
-    const sandboxSkeletonTracing = enforceSkeletonTracing(sandboxTracing);
-    const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
+    const sandboxSkeletonTracing = enforceSkeletonTracing(sandboxAnnotation);
+    const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
     // Update the sandbox tracing with the new tracingId and createdTimestamp
     const newSkeletonTracing = {
       ...sandboxSkeletonTracing,
@@ -777,6 +778,8 @@ class TracingActionsView extends React.PureComponent<Props, State> {
 
     const modals = this.getTracingViewModals();
     const menuItems = getTracingViewMenuItems(this.props, layoutMenu);
+    const userTheme = getThemeFromUser(activeUser);
+
     return (
       <>
         <Space.Compact>
@@ -784,7 +787,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
           {finishAndNextTaskButton}
           {reopenTaskButton}
         </Space.Compact>
-        {modals}
+        <ConfigProvider theme={getAntdTheme(userTheme)}>{modals}</ConfigProvider>
         <div>
           <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
             <ButtonComponent className="narrow">
@@ -800,19 +803,19 @@ class TracingActionsView extends React.PureComponent<Props, State> {
 
 function mapStateToProps(state: OxalisState): StateProps {
   return {
-    annotationType: state.tracing.annotationType,
-    annotationId: state.tracing.annotationId,
-    restrictions: state.tracing.restrictions,
-    annotationOwner: state.tracing.owner,
+    annotationType: state.annotation.annotationType,
+    annotationId: state.annotation.annotationId,
+    restrictions: state.annotation.restrictions,
+    annotationOwner: state.annotation.owner,
     task: state.task,
     activeUser: state.activeUser,
-    hasTracing: state.tracing.skeleton != null || state.tracing.volumes.length > 0,
+    hasTracing: state.annotation.skeleton != null || state.annotation.volumes.length > 0,
     isDownloadModalOpen: state.uiInformation.showDownloadModal,
     isShareModalOpen: state.uiInformation.showShareModal,
     isRenderAnimationModalOpen: state.uiInformation.showRenderAnimationModal,
     busyBlockingInfo: state.uiInformation.busyBlockingInfo,
-    isAnnotationLockedByUser: state.tracing.isLockedByOwner,
-    annotationTags: state.tracing.tags,
+    isAnnotationLockedByUser: state.annotation.isLockedByOwner,
+    annotationTags: state.annotation.tags,
     isMergeModalOpen: state.uiInformation.showMergeAnnotationModal,
     isUserScriptsModalOpen: state.uiInformation.showAddScriptModal,
     isZarrPrivateLinksModalOpen: state.uiInformation.showZarrPrivateLinksModal,

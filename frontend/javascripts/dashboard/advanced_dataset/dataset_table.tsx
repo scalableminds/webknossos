@@ -661,7 +661,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
               },
               onClick: (event) => {
                 // @ts-expect-error
-                if (event.target?.tagName !== "TD") {
+                if (event.target?.tagName !== "TD" && event.target?.tagName !== "DIV") {
                   // Don't (de)select when another element within the row was clicked
                   // (e.g., a link). Otherwise, clicking such elements would cause two actions
                   // (e.g., the link action and a (de)selection).

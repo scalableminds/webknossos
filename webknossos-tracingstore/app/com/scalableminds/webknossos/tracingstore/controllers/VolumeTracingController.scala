@@ -8,13 +8,13 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.JsonHelper.optionFormat
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.controllers.Controller
-import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
+import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{
   GetSegmentIndexParameters,
   ProtoGeometryImplicits,
   SegmentStatisticsParameters
 }
-import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.{
   LengthUnit,
   VoxelSize,
@@ -79,7 +79,7 @@ class VolumeTracingController @Inject()(
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
             for {
-              _ <- volumeTracingService.saveVolume(request.body, newTracingId, 0)
+              _ <- volumeTracingService.saveVolume(newTracingId, version = 0, request.body)
             } yield Ok
           }
         }
@@ -145,7 +145,7 @@ class VolumeTracingController @Inject()(
               .toFox
             // segment lists for multi-volume uploads are not supported yet, compare https://github.com/scalableminds/webknossos/issues/6887
             mergedTracing = mergedTracingRaw.copy(segments = List.empty)
-            _ <- volumeTracingService.saveVolume(mergedTracing, newTracingId, mergedTracing.version)
+            _ <- volumeTracingService.saveVolume(newTracingId, mergedTracing.version, mergedTracing)
           } yield Ok
         }
       }
@@ -348,18 +348,17 @@ class VolumeTracingController @Inject()(
           fallbackLayer <- volumeTracingService.getFallbackLayer(annotationId, tracing)
           mappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
           _ <- bool2Fox(DataLayer.bucketSize <= request.body.cubeSize) ?~> "cubeSize must be at least one bucket (32³)"
-          bucketPositionsRaw: ListOfVec3IntProto <- volumeSegmentIndexService
-            .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
-              fallbackLayer,
-              tracingId,
-              segmentId,
-              request.body.mag,
-              additionalCoordinates = request.body.additionalCoordinates,
-              additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),
-              mappingName = mappingName,
-              editableMappingTracingId = volumeTracingService.editableMappingTracingId(tracing, tracingId)
-            )
-          bucketPositionsForCubeSize = bucketPositionsRaw.values
+          bucketPositions: Set[Vec3IntProto] <- volumeSegmentIndexService.getSegmentToBucketIndex(
+            tracing,
+            fallbackLayer,
+            tracingId,
+            segmentId,
+            request.body.mag,
+            additionalCoordinates = request.body.additionalCoordinates,
+            mappingName = mappingName,
+            editableMappingTracingId = volumeTracingService.editableMappingTracingId(tracing, tracingId)
+          )
+          bucketPositionsForCubeSize = bucketPositions.toSeq
             .map(vec3IntFromProto)
             .map(_.scale(DataLayer.bucketLength)) // bucket positions raw are indices of 32³ buckets
             .map(_ / request.body.cubeSize)

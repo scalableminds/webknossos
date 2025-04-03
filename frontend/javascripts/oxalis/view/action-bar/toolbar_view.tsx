@@ -553,7 +553,7 @@ function CreateNewBoundingBoxButton() {
 
 function CreateTreeButton() {
   const dispatch = useDispatch();
-  const activeTree = useSelector((state: OxalisState) => getActiveTree(state.tracing.skeleton));
+  const activeTree = useSelector((state: OxalisState) => getActiveTree(state.annotation.skeleton));
   const rgbColorString =
     activeTree != null
       ? `rgb(${activeTree.color.map((c) => Math.round(c * 255)).join(",")})`
@@ -834,8 +834,8 @@ function calculateMediumBrushSize(maximumBrushSize: number) {
 
 export default function ToolbarView({ isReadOnly }: { isReadOnly: boolean }) {
   const dispatch = useDispatch();
-  const hasVolume = useSelector((state: OxalisState) => state.tracing?.volumes.length > 0);
-  const hasSkeleton = useSelector((state: OxalisState) => state.tracing?.skeleton != null);
+  const hasVolume = useSelector((state: OxalisState) => state.annotation?.volumes.length > 0);
+  const hasSkeleton = useSelector((state: OxalisState) => state.annotation?.skeleton != null);
 
   const isAgglomerateMappingEnabled = useSelector(hasAgglomerateMapping);
 

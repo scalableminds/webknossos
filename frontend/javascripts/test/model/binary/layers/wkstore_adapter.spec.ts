@@ -72,7 +72,6 @@ interface TestContext {
 }
 
 describe("wkstore_adapter", () => {
-
   beforeEach<TestContext>(async (context) => {
     vi.mocked(Request).receiveJSON.mockReturnValue(Promise.resolve(tokenResponse));
 
@@ -118,7 +117,7 @@ describe("wkstore_adapter", () => {
     layer,
   }) => {
     const { batch, responseBuffer, bucketData1, bucketData2 } = prepare();
-    
+
     const RequestMock = vi.mocked(Request);
     RequestMock.sendJSONReceiveArraybufferWithHeaders
       .mockReturnValueOnce(
@@ -137,13 +136,11 @@ describe("wkstore_adapter", () => {
         }),
       );
 
-      RequestMock.receiveJSON
-      .mockReturnValueOnce(Promise.resolve(tokenResponse))
-      .mockReturnValueOnce(
-        Promise.resolve({
-          token: "token2",
-        }),
-      );
+    RequestMock.receiveJSON.mockReturnValueOnce(Promise.resolve(tokenResponse)).mockReturnValueOnce(
+      Promise.resolve({
+        token: "token2",
+      }),
+    );
 
     return requestWithFallback(layer, batch).then(
       ([buffer1, buffer2]: [ArrayBuffer, ArrayBuffer]) => {
@@ -184,7 +181,9 @@ describe("wkstore_adapter", () => {
     };
   }
 
-  it<TestContext>("requestWithFallback: Request Handling: should pass the correct request parameters", async ({layer}) => {
+  it<TestContext>("requestWithFallback: Request Handling: should pass the correct request parameters", async ({
+    layer,
+  }) => {
     const { batch } = prepare();
     const expectedUrl = "url/data/datasets/organization/datasetPath/layers/color/data?token=token2";
     const expectedOptions = createExpectedOptions();
@@ -192,7 +191,7 @@ describe("wkstore_adapter", () => {
     await requestWithFallback(layer, batch).then(() => {
       const RequestMock = vi.mocked(Request);
       expect(RequestMock.sendJSONReceiveArraybufferWithHeaders).toHaveBeenCalledTimes(1);
-      
+
       expect(RequestMock.sendJSONReceiveArraybufferWithHeaders).toHaveBeenCalledWith(
         expectedUrl,
         expectedOptions,
@@ -200,7 +199,9 @@ describe("wkstore_adapter", () => {
     });
   });
 
-  it<TestContext>("requestWithFallback: Request Handling: four bit mode should be respected for color layers", async ({layer}) => {
+  it<TestContext>("requestWithFallback: Request Handling: four bit mode should be respected for color layers", async ({
+    layer,
+  }) => {
     setFourBit(true);
     // test four bit color and 8 bit seg
     const { batch } = prepare();
@@ -210,12 +211,17 @@ describe("wkstore_adapter", () => {
     const RequestMock = vi.mocked(Request);
     await requestWithFallback(layer, batch).then(() => {
       expect(RequestMock.sendJSONReceiveArraybufferWithHeaders).toHaveBeenCalledTimes(1);
-      expect(RequestMock.sendJSONReceiveArraybufferWithHeaders).toHaveBeenCalledWith(expectedUrl, expectedOptions)
+      expect(RequestMock.sendJSONReceiveArraybufferWithHeaders).toHaveBeenCalledWith(
+        expectedUrl,
+        expectedOptions,
+      );
     });
     setFourBit(false);
   });
 
-  it<TestContext>("requestWithFallback: Request Handling: four bit mode should not be respected for segmentation layers", async ({segmentationLayer}) => {
+  it<TestContext>("requestWithFallback: Request Handling: four bit mode should not be respected for segmentation layers", async ({
+    segmentationLayer,
+  }) => {
     setFourBit(true);
     const { batch } = prepare();
     const expectedUrl =
@@ -225,7 +231,10 @@ describe("wkstore_adapter", () => {
     const RequestMock = vi.mocked(Request);
     await requestWithFallback(segmentationLayer, batch).then(() => {
       expect(RequestMock.sendJSONReceiveArraybufferWithHeaders).toHaveBeenCalledTimes(1);
-      expect(RequestMock.sendJSONReceiveArraybufferWithHeaders).toHaveBeenCalledWith(expectedUrl, expectedOptions)
+      expect(RequestMock.sendJSONReceiveArraybufferWithHeaders).toHaveBeenCalledWith(
+        expectedUrl,
+        expectedOptions,
+      );
     });
     setFourBit(false);
   });
@@ -236,16 +245,16 @@ describe("wkstore_adapter", () => {
 
     bucket1.markAsPulled();
     bucket1.receiveData(data);
-    
+
     const bucket2 = new DataBucket("uint8", [1, 1, 1, 1], null as any, mockedCube);
     bucket2.markAsPulled();
     bucket2.receiveData(data);
-    
+
     const batch = [bucket1, bucket2];
     const getBucketData = vi.fn();
-    
+
     getBucketData.mockReturnValue(data);
-    
+
     const expectedSaveQueueItems: PushSaveQueueTransaction = {
       type: "PUSH_SAVE_QUEUE_TRANSACTION",
       items: [

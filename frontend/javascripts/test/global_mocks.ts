@@ -44,7 +44,7 @@ vi.mock("libs/user_local_storage", () => ({
 }));
 
 const REQUEST_ID = "dummyRequestId";
-vi.mock("libs/uid_generator", ()=> ({
+vi.mock("libs/uid_generator", () => ({
   getUid: () => REQUEST_ID,
 }));
 
@@ -60,12 +60,14 @@ vi.setSystemTime(TIMESTAMP);
 
 vi.mock("libs/request", () => {
   return {
-    receiveJSON: vi.fn(),
-    sendJSONReceiveJSON: vi.fn(),
-    receiveArraybuffer: vi.fn(),
-    sendJSONReceiveArraybuffer: vi.fn(),
-    sendJSONReceiveArraybufferWithHeaders: vi.fn(),
-    always: () => Promise.resolve(),
+    default: {
+      receiveJSON: vi.fn(),
+      sendJSONReceiveJSON: vi.fn(),
+      receiveArraybuffer: vi.fn(),
+      sendJSONReceiveArraybuffer: vi.fn(),
+      sendJSONReceiveArraybufferWithHeaders: vi.fn(),
+      always: () => Promise.resolve(),
+    },
   };
 });
 

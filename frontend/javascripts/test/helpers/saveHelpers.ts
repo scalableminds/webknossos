@@ -8,7 +8,6 @@ export function createSaveQueueFromUpdateActions(
   timestamp: number,
   stats: TracingStats | null = null,
 ): SaveQueueEntry[] {
-  
   return updateActions.map((ua) => ({
     version: -1,
     timestamp,

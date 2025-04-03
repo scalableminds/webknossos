@@ -78,7 +78,7 @@ describe("Model Initialization", () => {
   });
 
   it<TestContext>("should throw an Error on unexpected failure", async ({ model }) => {
-    // const rejectedDatasetError = new Error("mocked dataset rejection");
+    const rejectedDatasetError = new Error("mocked dataset rejection");
 
     vi.mocked(Request).receiveJSON.mockImplementation((url: string, options?: any) =>
       receiveJSONMockImplementation(
@@ -97,6 +97,6 @@ describe("Model Initialization", () => {
         },
         true,
       ),
-    ).toThrowError("mocked dataset rejection");
+    ).rejects.toThrowError("mocked dataset rejection");
   });
 });

@@ -31,6 +31,7 @@ env:
   USER_GID: 1000
   DOCKER_USER: ${{ secrets.DOCKER_USER }}
   DOCKER_PASS: ${{ secrets.DOCKER_PASS }}
+  POSTGRES_USER: "webknossos_user"
   POSTGRES_PASSWORD: "secret_password"
 
 jobs:
@@ -66,16 +67,39 @@ jobs:
 
   build_test_deploy:
     runs-on: ubuntu-24.04
+    service:
+      postgres:
+        image: docker.io/library/postgres:17-alpine
+        env:
+          POSTGRES_DB: "webknossos"
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASWORD: ${{ env.POSTGRES_PASWORD }}
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
+        ports:
+          - 5432:5432
+      redis:
+        image: docker.io/library/redis:7.4.2
+        options: >-
+          --health-cmd "bash -c 'exec 3<> /dev/tcp/127.0.0.1/6379 && echo PING >&3 && head -1 <&3 | grep PONG'"
+          --health-interval 5s
+          --health-timeout 1s
+          --health-retries 10
+        ports:
+          - 6379:6379
     env:
       USER_UID: 1001
       USER_GID: 1001
       POSTGRES_URL: "jdbc:postgresql://localhost:5432/webknossos"
-      POSTGRES_USER: "webknossos_user"
-      POSTGRES_PASWORD: "secret_password"
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 5
+
+      - uses: actions/setup-buildx-action@v2
 
       - uses: actions/setup-node@v4
         with:
@@ -207,6 +231,11 @@ jobs:
           (exit $s)
       - name: Stop webknossos, datastore and tracingstore
         run: docker compose down --volumes --remove-orphans
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASS }}
       - name: Push docker images
         run: |
           function retry() {
@@ -216,7 +245,6 @@ jobs:
             done
             return $s
           }
-          retry sh -c 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
           retry docker compose push webknossos
           retry docker compose push webknossos-datastore
           retry docker compose push webknossos-tracingstore
@@ -238,7 +266,6 @@ jobs:
               scalableminds/webknossos-dev:${NORMALIZED_BRANCH}
             retry docker push scalableminds/webknossos-dev:${NORMALIZED_BRANCH}
           fi
-          docker logout
       - name: Report coverage
         if: ${{ github.ref_name != 'master' }}
         continue-on-error: true

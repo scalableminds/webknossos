@@ -225,6 +225,11 @@ export function isSkeletonLayerTransformed(state: OxalisState) {
   return transformation != null && transformation !== IdentityTransform;
 }
 
+export function isSkeletonLayerVisible(annotation: StoreAnnotation) {
+  const skeletonLayer = getSkeletonTracing(annotation);
+  return skeletonLayer.isNothing ? false : skeletonLayer.get().showSkeletons;
+}
+
 export function getNodePosition(node: Node, state: OxalisState): Vector3 {
   return transformNodePosition(node.untransformedPosition, state);
 }

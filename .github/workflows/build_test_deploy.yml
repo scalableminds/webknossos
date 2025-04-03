@@ -99,7 +99,7 @@ jobs:
         with:
           fetch-depth: 5
 
-      - uses: actions/setup-buildx-action@v2
+      - uses: docker/setup-buildx-action@v2
 
       - uses: actions/setup-node@v4
         with:

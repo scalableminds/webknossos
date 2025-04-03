@@ -92,74 +92,74 @@ jobs:
       - name: Build webknossos-dev docker image
         run: |
           docker pull scalableminds/webknossos-dev:$NORMALIZED_BRANCH || true
-          DEV_CACHE=$NORMALIZED_BRANCH docker-compose build base
+          DEV_CACHE=$NORMALIZED_BRANCH docker compose build base
       - name: Prepare Dependency Folders
         run: mkdir -p project/target target ~/.iv2 ~/.cache/coursier
       - name: Install frontend dependencies
-        run: docker-compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --immutable
+        run: docker compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --immutable
       - name: Assert unique evolution numbers
-        run: docker-compose run base tools/postgres/dbtool.js assert-unique-evolution-numbers
+        run: docker compose run base tools/postgres/dbtool.js assert-unique-evolution-numbers
       - name: Assert schema.sql and evolutions are equal
         run: |
-          docker-compose up -d postgres
+          docker compose up -d postgres
           sleep 3
-          docker-compose run compile tools/postgres/dbtool.js check-evolutions-schema
+          docker compose run compile tools/postgres/dbtool.js check-evolutions-schema
       - name: Assert that all migrations are mentioned in one migration guide and that they have a reversion counterpart.
         run: tools/assert-complete-migrations.sh
       - name: Build frontend documentation
         run: |
           WK_VERSION=${CIRCLE_TAG:-${CIRCLE_BUILD_NUM:-dev}}
-          docker-compose run base yarn run docs --project-version $WK_VERSION
+          docker compose run base yarn run docs --project-version $WK_VERSION
       - name: Build webknossos (webpack)
-        run: docker-compose run base yarn build
+        run: docker compose run base yarn build
       - name: Build webknossos (sbt)
         run: |
           if [ "${CIRCLE_BRANCH}" == "master" ]; then
-            docker-compose run compile sbt -no-colors clean compile stage
+            docker compose run compile sbt -no-colors clean compile stage
           else
-            docker-compose run compile sbt -no-colors -DfailOnWarning compile stage
+            docker compose run compile sbt -no-colors -DfailOnWarning compile stage
           fi
       - name: Build webknossos-datastore (sbt)
-        run: docker-compose run base sbt -no-colors -DfailOnWarning "project webknossosDatastore" copyMessages compile stage
+        run: docker compose run base sbt -no-colors -DfailOnWarning "project webknossosDatastore" copyMessages compile stage
       - name: Build webknossos-tracingstore (sbt)
-        run: docker-compose run base sbt -no-colors -DfailOnWarning "project webknossosTracingstore" copyMessages compile stage
+        run: docker compose run base sbt -no-colors -DfailOnWarning "project webknossosTracingstore" copyMessages compile stage
       - name: Checksum App Dirs
         run: find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
       - name: Build webknossos docker image
         run: |
           docker pull scalableminds/webknossos:$NORMALIZED_BRANCH || true
-          DEV_CACHE=$NORMALIZED_BRANCH docker-compose build --pull webknossos
+          DEV_CACHE=$NORMALIZED_BRANCH docker compose build --pull webknossos
       - name: Build webknossos-datastore docker image
-        run: docker-compose build --pull webknossos-datastore
+        run: docker compose build --pull webknossos-datastore
       - name: Build webknossos-tracingstore docker image
-        run: docker-compose build --pull webknossos-tracingstore
+        run: docker compose build --pull webknossos-tracingstore
       - name: Lint frontend code and check formatting
         run: |
-          .circleci/not-on-master.sh docker-compose run base bash -c "yarn run check-frontend"
+          .circleci/not-on-master.sh docker compose run base bash -c "yarn run check-frontend"
       - name: Check for cyclic dependencies in front-end
         run: |
-          .circleci/not-on-master.sh docker-compose run base yarn check-cyclic-dependencies
+          .circleci/not-on-master.sh docker compose run base yarn check-cyclic-dependencies
       - name: Run frontend tests
         run: |
-          .circleci/not-on-master.sh docker-compose run base yarn test-verbose
+          .circleci/not-on-master.sh docker compose run base yarn test-verbose
       - name: Lint backend code and check formatting
         run: |
-          .circleci/not-on-master.sh docker-compose run backend-lint-format
+          .circleci/not-on-master.sh docker compose run backend-lint-format
       - name: Run backend tests
         run: |
-          .circleci/not-on-master.sh docker-compose run backend-tests
+          .circleci/not-on-master.sh docker compose run backend-tests
       - name: Run end-to-end tests
         run: |
           mkdir -p binaryData/Organization_X && chmod 777 binaryData/Organization_X
           for i in {1..3}; do # retry
-            .circleci/not-on-master.sh docker-compose run e2e-tests && s=0 && break || s=$?
+            .circleci/not-on-master.sh docker compose run e2e-tests && s=0 && break || s=$?
           done
           (exit $s)
       - name: Validate frontend types
         run: |
-          .circleci/not-on-master.sh docker-compose run base yarn typecheck
+          .circleci/not-on-master.sh docker compose run base yarn typecheck
       - name: Start webknossos, datastore and tracingstore
-        run: docker-compose up -d webknossos && docker-compose up -d webknossos-datastore && docker-compose up -d webknossos-tracingstore
+        run: docker compose up -d webknossos && docker-compose up -d webknossos-datastore && docker-compose up -d webknossos-tracingstore
       - name: Run webknossos smoke test
         run: |
           for i in {1..20}; do # retry
@@ -182,7 +182,7 @@ jobs:
           done
           (exit $s)
       - name: Stop webknossos, datastore and tracingstore
-        run: docker-compose down --volumes --remove-orphans
+        run: docker compose down --volumes --remove-orphans
       - name: Push docker images
         run: |
           function retry() {
@@ -193,9 +193,9 @@ jobs:
             return $s
           }
           retry sh -c 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
-          retry docker-compose push webknossos
-          retry docker-compose push webknossos-datastore
-          retry docker-compose push webknossos-tracingstore
+          retry docker compose push webknossos
+          retry docker compose push webknossos-datastore
+          retry docker compose push webknossos-tracingstore
           if [ -n "$CIRCLE_BRANCH" ]; then
             docker tag \
               scalableminds/webknossos:${DOCKER_TAG} \
@@ -216,6 +216,6 @@ jobs:
           fi
           docker logout
       - name: Report coverage
-        run: .circleci/not-on-master.sh docker-compose run base yarn coverage || true
+        run: .circleci/not-on-master.sh docker compose run base yarn coverage || true
       - name: Send Slack notification (master only)
         run: .circleci/slack-notification.sh

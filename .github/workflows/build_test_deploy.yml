@@ -116,20 +116,11 @@ jobs:
         with:
           distribution: 'temurin'  # See 'Supported distributions' for available options
           java-version: '21'
-          cache: 'sbt'
+          # cache: 'sbt'
       - uses: sbt/setup-sbt@v1
 
       - run: corepack enable
-      - uses: actions/cache@v4
-        id: node_modules
-        with:
-          path: |
-            tools/postgres/node_modules
-            tools/proxy/node_modules
-            node_modules
-          key: node_modules-${{ hashFiles('**/yarn.lock') }}
       - name: Install frontend dependencies
-        if: steps.node_modules.outputs.cache-hit != 'true'
         run: yarn install --immutable
 
       - name: Install OS dependencies / libs
@@ -145,6 +136,7 @@ jobs:
         run: tools/postgres/dbtool.js check-evolutions-schema
       - name: Assert that all mirations are mentioned in one migration guide and that they have a reversion counterpart.
         run: tools/assert-complete-migrations.sh
+
       # TODO: Build docs
 
       - name: Build webknossos (webpack)
@@ -161,40 +153,6 @@ jobs:
         run: sbt -no-colors -DfailOnWarning "project webknossosDatastore" copyMessages compile stage
       - name: Build webknossos-tracingstore (sbt)
         run: sbt -no-colors -DfailOnWarning "project webknossosTracingstore" copyMessages compile stage
-      - uses: actions/upload-artifact@v4
-        with:
-          name: backend-build-artifacts
-          retention-days: 1
-          path: |
-            target/
-            util/target
-            project/**/target
-            webknossos*/target
-
-  test-backend:
-    runs-on: ubuntu-24.04
-    needs: [build]
-    if: ${{ github.ref_name != 'master' }}
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 5
-      - uses: actions/download-artifact@v4
-        with:
-          name: backend-build-artifacts
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'  # See 'Supported distributions' for available options
-          java-version: '21'
-          cache: 'sbt'
-      - uses: sbt/setup-sbt@v1
-
-      - name: Install OS dependencies / libs
-        run: sudo apt-get update && sudo apt-get install -y libdraco-dev libblosc-dev
-
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.tmate_debug_test_backend }}
 
       - name: Lint backend code and check formatting
         run: |
@@ -203,45 +161,14 @@ jobs:
         run: |
           sbt -v "testOnly backend.*"
 
-  docker-build:
-    runs-on: ubuntu-24.04
-    needs: [build]
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 5
-      - uses: actions/download-artifact@v4
-        with:
-          name: backend-build-artifacts
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 18
-
-      - run: corepack enable
-      - uses: actions/cache@v4
-        id: node_modules
-        with:
-          path: |
-            tools/postgres/node_modules
-            tools/proxy/node_modules
-            node_modules
-          key: node_modules-${{ hashFiles('**/yarn.lock') }}
-      - name: Install frontend dependencies
-        if: steps.node_modules.outputs.cache-hit != 'true'
-        run: yarn install --immutable
-
-      - uses: docker/setup-buildx-action@v2
-
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.tmate_debug_docker_build }}
+      - name: Checksum App Dirs
+        run: |
+          find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
 
       #
       # Build Docker Images
       #
-      - name: Checksum App Dirs
-        run: |
-          find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
+      - uses: docker/setup-buildx-action@v2
       - uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USER }}
@@ -271,30 +198,6 @@ jobs:
             scalableminds/webknossos-tracingstore:${{ needs.build.outputs.docker_tag }}
             scalableminds/webknossos-tracingstore:${{ needs.build.outputs.normalized_branch }}
 
-  e2e-tests:
-    runs-on: ubuntu-24.04
-    needs: [build, docker-build]
-    env:
-      DOCKER_TAG: ${{ needs.build.outputs.docker_tag }}
-      POSTGRES_URL: jdbc:postgresql://localhost:5432/webknossos
-      POSTGRES_USER: webknossos_user
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 5
-      - run: corepack enable
-      - uses: actions/cache@v4
-        id: node_modules
-        with:
-          path: |
-            tools/postgres/node_modules
-            tools/proxy/node_modules
-            node_modules
-          key: node_modules-${{ hashFiles('**/yarn.lock') }}
-      - name: Install frontend dependencies
-        if: steps.node_modules.outputs.cache-hit != 'true'
-        run: yarn install --immutable
-
       - name: Prepare e2e test
         run: |
           mkdir -p binaryData/Organization_X
@@ -307,6 +210,8 @@ jobs:
         if: ${{ github.ref_name != 'master' }}
         run: |
           docker compose -f .github/docker-compose.yml -p "webknossos" up -d
+        env:
+          DOCKER_TAG: ${{ needs.build.outputs.docker_tag }}
       # Smoke Tests
       - name: Run webknossos smoke test
         uses: ./.github/actions/url-health-check

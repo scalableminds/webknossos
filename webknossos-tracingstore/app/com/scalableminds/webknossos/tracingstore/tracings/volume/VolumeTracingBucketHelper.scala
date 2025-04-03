@@ -311,14 +311,16 @@ trait VolumeTracingBucketHelper
                            bucket: BucketPosition,
                            data: Array[Byte],
                            version: Long,
-                           toTemporaryStore: Boolean = false): Fox[Unit] =
+                           toTemporaryStore: Boolean = false,
+                           fossilPutBuffer: Option[FossilDBPutBuffer] = None): Fox[Unit] =
     saveBucket(volumeLayer.tracingId,
                volumeLayer.expectedUncompressedBucketSize,
                bucket,
                data,
                version,
                toTemporaryStore,
-               volumeLayer.additionalAxes)
+               volumeLayer.additionalAxes,
+               fossilPutBuffer)
 
   protected def saveBucket(tracingId: String,
                            expectedUncompressedBucketSize: Int,
@@ -326,13 +328,17 @@ trait VolumeTracingBucketHelper
                            data: Array[Byte],
                            version: Long,
                            toTemporaryStore: Boolean,
-                           additionalAxes: Option[Seq[AdditionalAxis]]): Fox[Unit] = {
+                           additionalAxes: Option[Seq[AdditionalAxis]],
+                           fossilPutBuffer: Option[FossilDBPutBuffer]): Fox[Unit] = {
     val bucketKey = buildBucketKey(tracingId, bucket, additionalAxes)
     val compressedBucket = compressVolumeBucket(data, expectedUncompressedBucketSize)
     if (toTemporaryStore) {
       temporaryTracingService.saveVolumeBucket(bucketKey, compressedBucket)
     } else {
-      volumeDataStore.put(bucketKey, version, compressedBucket)
+      fossilPutBuffer match {
+        case Some(buffer) => buffer.put(bucketKey, version, compressedBucket)
+        case None         => volumeDataStore.put(bucketKey, version, compressedBucket)
+      }
     }
   }
 
@@ -393,7 +399,7 @@ class VersionedBucketIterator(prefix: String,
     with BucketKeys
     with FoxImplicits
     with ReversionHelper {
-  private val batchSize = 64
+  private val batchSize = 100
 
   private var currentStartAfterKey: Option[String] = None
   private var currentBatchIterator: Iterator[VersionedKeyValuePair[Array[Byte]]] = fetchNext

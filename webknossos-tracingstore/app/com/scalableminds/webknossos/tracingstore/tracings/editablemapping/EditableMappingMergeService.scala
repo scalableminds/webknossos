@@ -9,7 +9,12 @@ import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappin
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
 import com.scalableminds.webknossos.tracingstore.annotation.{UpdateAction, UpdateGroupHandling}
-import com.scalableminds.webknossos.tracingstore.tracings.{FallbackDataHelper, KeyValueStoreImplicits, TracingDataStore}
+import com.scalableminds.webknossos.tracingstore.tracings.{
+  FallbackDataHelper,
+  FossilDBPutBuffer,
+  KeyValueStoreImplicits,
+  TracingDataStore
+}
 import play.api.libs.json.Json
 
 import javax.inject.Inject
@@ -55,12 +60,15 @@ class EditableMappingMergeService @Inject()(val tracingDataStore: TracingDataSto
         targetVersion = linearizedEditableMappingUpdates.length
         _ <- Fox.runIf(!toTemporaryStore) {
           var updateVersion = 1L
-          Fox.serialCombined(linearizedEditableMappingUpdates) { update: UpdateAction =>
-            for {
-              _ <- tracingDataStore.annotationUpdates.put(newAnnotationId, updateVersion, Json.toJson(List(update)))
-              _ = updateVersion += 1
-            } yield ()
-          }
+          val annotationUpdatesPutBuffer = new FossilDBPutBuffer(tracingDataStore.annotationUpdates)
+          Fox
+            .serialCombined(linearizedEditableMappingUpdates) { update: UpdateAction =>
+              for {
+                _ <- annotationUpdatesPutBuffer.put(newAnnotationId, Json.toJson(List(update)), Some(updateVersion))
+                _ = updateVersion += 1
+              } yield ()
+            }
+            .flatMap(_ => annotationUpdatesPutBuffer.flush())
         }
         editableMappingInfo = editableMappingService.create(baseMappingName)
         updater = new EditableMappingUpdater(

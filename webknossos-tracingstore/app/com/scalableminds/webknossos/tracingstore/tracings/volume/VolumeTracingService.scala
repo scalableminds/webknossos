@@ -582,11 +582,17 @@ class VolumeTracingService @Inject()(
         temporaryTracingService,
         tc
       )
+      bucketPutBuffer = new FossilDBPutBuffer(volumeDataStore)
       _ <- Fox.serialCombined(buckets) {
         case (bucketPosition, bucketData) =>
           if (newTracing.mags.contains(vec3IntToProto(bucketPosition.mag))) {
             for {
-              _ <- saveBucket(destinationVolumeLayer, bucketPosition, bucketData, newTracing.version)
+              _ <- saveBucket(destinationVolumeLayer,
+                              bucketPosition,
+                              bucketData,
+                              newTracing.version,
+                              toTemporaryStore = false,
+                              Some(bucketPutBuffer))
               _ = bucketCount += 1
               _ <- Fox.runIfOptionTrue(newTracing.hasSegmentIndex)(
                 updateSegmentIndex(
@@ -600,6 +606,7 @@ class VolumeTracingService @Inject()(
             } yield ()
           } else Fox.successful(())
       }
+      _ <- bucketPutBuffer.flush()
       _ = Instant.logSince(
         before,
         s"Duplicating $bucketCount volume buckets from $sourceTracingId v${sourceTracing.version} to $newTracingId v${newTracing.version}.")
@@ -823,19 +830,24 @@ class VolumeTracingService @Inject()(
           tc,
           toTemporaryStore
         )
+        volumeBucketPutBuffer = new FossilDBPutBuffer(volumeDataStore, Some(newVersion))
         _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
           for {
-            _ <- saveBucket(newVolumeTracingId,
-                            firstVolumeLayer.expectedUncompressedBucketSize,
-                            bucketPosition,
-                            bucketBytes,
-                            newVersion,
-                            toTemporaryStore,
-                            mergedAdditionalAxes)
+            _ <- saveBucket(
+              newVolumeTracingId,
+              firstVolumeLayer.expectedUncompressedBucketSize,
+              bucketPosition,
+              bucketBytes,
+              newVersion,
+              toTemporaryStore,
+              mergedAdditionalAxes,
+              Some(volumeBucketPutBuffer)
+            )
             _ <- Fox.runIf(shouldCreateSegmentIndex)(
               updateSegmentIndex(firstVolumeLayer, segmentIndexBuffer, bucketPosition, bucketBytes, Empty, None))
           } yield ()
         }
+        _ <- volumeBucketPutBuffer.flush()
         _ <- segmentIndexBuffer.flush()
         _ = Instant.logSince(
           before,

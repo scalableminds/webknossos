@@ -211,7 +211,7 @@ jobs:
         run: |
           docker compose -f .github/docker-compose.yml -p "webknossos" up -d
         env:
-          DOCKER_TAG: ${{ needs.build.outputs.docker_tag }}
+          DOCKER_TAG: ${{ steps.configure.outputs.docker_tag }}
       # Smoke Tests
       - name: Run webknossos smoke test
         uses: ./.github/actions/url-health-check

@@ -19,11 +19,6 @@ on:
         description: "Debug e2e Tests"
         required: false
         default: false
-      tmate_debug_backend_tests:
-        type: boolean
-        description: "Debug Tests Backend"
-        required: false
-        default: false
       debug_enabled:
         type: boolean
         description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
@@ -154,6 +149,13 @@ jobs:
       - name: Build webknossos-tracingstore (sbt)
         run: sbt -no-colors -DfailOnWarning "project webknossosTracingstore" copyMessages compile stage
 
+      - name: Lint backend code and check formatting
+        run: |
+          sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
+      - name: Run backend tests
+        run: |
+          sbt -v "testOnly backend.*"
+
       - name: Checksum App Dirs
         run: |
           find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
@@ -190,32 +192,6 @@ jobs:
           tags: |
             scalableminds/webknossos-tracingstore:${{ steps.configure.outputs.docker_tag }}
             scalableminds/webknossos-tracingstore:${{ steps.configure.outputs.normalized_branch }}
-
-  backend-test:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 5
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'  # See 'Supported distributions' for available options
-          java-version: '21'
-          # cache: 'sbt'
-      - uses: sbt/setup-sbt@v1
-      - name: Install OS dependencies / libs
-        run: sudo apt-get update && sudo apt-get install -y libdraco-dev libblosc-dev
-
-      - name: tmate debugging session
-        uses: mxschmitt/action-tmate@v3
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.tmate_debug_backend_tests }}
-
-      - name: Lint backend code and check formatting
-        run: |
-          sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
-      - name: Run backend tests
-        run: |
-          sbt -v "testOnly backend.*"
 
   e2e-tests:
     runs-on: ubuntu-24.04

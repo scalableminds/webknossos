@@ -79,12 +79,12 @@ jobs:
           --health-timeout 5s
           --health-retries 30
         ports:
-          - 5432:5432
+          - 5434:5432
     outputs:
       normalized_branch: ${{ steps.configure.outputs.normalized_branch }}
       docker_tag: ${{ steps.configure.outputs.docker_tag }}
     env:
-      POSTGRES_URL: jdbc:postgresql://localhost:5432/webknossos
+      POSTGRES_URL: jdbc:postgresql://localhost:5434/webknossos
       POSTGRES_USER: webknossos_user
     steps:
       - uses: actions/checkout@v4
@@ -197,24 +197,8 @@ jobs:
         uses: mxschmitt/action-tmate@v3
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.tmate_debug_e2e_tests }}
 
-  e2e-tests:
-    runs-on: ubuntu-24.04
-    needs: [build]
-    env:
-      POSTGRES_USER: webknossos
-      POSTGRES_URL: "jdbc:postgresql://localhost:5432/webknossos"
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 5
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 18
-      - run: corepack enable
-      - name: Install frontend dependencies
-        run: yarn install --immutable
-
+      - name: Update ENV for end-to-end tests
+        run: echo "POSTGRES_URL=jdbc:postgresql://localhost:5432/webknossos" >> "$GITHUB_ENV"
       - name: Prepare e2e test
         run: |
           mkdir -p binaryData/Organization_X

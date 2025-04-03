@@ -131,7 +131,7 @@ class DataCube {
     // (the second parameter ensures that the callback is called immediately).
     this.boundingBox = new BoundingBox(null);
     listenToStoreProperty(
-      (state) => getSomeTracing(state.tracing).boundingBox,
+      (state) => getSomeTracing(state.annotation).boundingBox,
       (boundingBox) => {
         this.boundingBox = new BoundingBox(
           shouldBeRestrictedByTracingBoundingBox() ? boundingBox : null,

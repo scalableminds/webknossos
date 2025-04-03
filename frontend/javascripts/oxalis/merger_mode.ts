@@ -482,7 +482,7 @@ function resetState(mergerModeState: Partial<MergerModeState> = {}) {
     nodes: getAllNodesWithTreeId(),
     segmentationLayerName,
     nodeToUnmappedSegmentMap: {},
-    prevTracing: getSkeletonTracing(state.tracing).get(),
+    prevTracing: getSkeletonTracing(state.annotation).get(),
   };
   // Keep the object identity when resetting
   return Object.assign(mergerModeState, defaults);
@@ -502,7 +502,7 @@ export async function enableMergerMode(
   unsubscribeFunctions.push(
     Store.subscribe(() => {
       const state = Store.getState();
-      getSkeletonTracing(state.tracing).map((skeletonTracing) => {
+      getSkeletonTracing(state.annotation).map((skeletonTracing) => {
         const { segmentationLayerName } = mergerModeState;
 
         if (!segmentationLayerName) {

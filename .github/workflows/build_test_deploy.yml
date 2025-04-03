@@ -73,7 +73,7 @@ jobs:
         env:
           POSTGRES_DB: "webknossos"
           POSTGRES_USER: ${{ env.POSTGRES_USER }}
-          POSTGRES_PASWORD: ${{ env.POSTGRES_PASWORD }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASWORD }}
         options: >-
           --health-cmd pg_isready
           --health-interval 2s

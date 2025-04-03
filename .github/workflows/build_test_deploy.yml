@@ -323,12 +323,7 @@ jobs:
 
       # Run e2e-tests
       - name: Run e2e tests
-        uses: nick-invision/retry@v2
-        with:
-          timeout_minutes: 10
-          max_attempts: 3
-          command: |
-            yarn run test-e2e
+        run: yarn run test-e2e
 
 #  build_test_deploy:
 #    runs-on: ubuntu-24.04

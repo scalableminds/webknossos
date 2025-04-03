@@ -259,38 +259,37 @@ export default class SegmentMeshController {
     });
   }
 
-  setMeshColor(id: number, layerName: string, opacity?: number): void {
-    const color = this.getColorObjectForSegment(id, layerName);
-    // If in nd-dataset, set the color for all additional coordinates
+  applyOnMeshGroupChildren = (
+    layerName: string,
+    segmentId: number,
+    functionToApply: (child: MeshSceneNode) => void,
+  ) => {
     for (const recordsOfLayers of Object.values(this.meshesGroupsPerSegmentId)) {
-      const meshDataForOneSegment = recordsOfLayers[layerName][id];
+      const meshDataForOneSegment = recordsOfLayers[layerName][segmentId];
       if (meshDataForOneSegment != null) {
         for (const lodGroup of Object.values(meshDataForOneSegment)) {
           for (const meshGroup of lodGroup.children) {
-            meshGroup.children.forEach((child: MeshSceneNode) => {
-              child.material.color = color;
-              if (opacity != null) child.material.opacity = opacity;
-            });
+            meshGroup.children.forEach(functionToApply);
           }
         }
       }
     }
+  };
+
+  setMeshColor(id: number, layerName: string, opacity?: number): void {
+    const color = this.getColorObjectForSegment(id, layerName);
+    // If in nd-dataset, set the color for all additional coordinates
+    this.applyOnMeshGroupChildren(layerName, id, (child: MeshSceneNode) => {
+      child.material.color = color;
+      if (opacity != null) child.material.opacity = opacity;
+    });
   }
 
   setMeshOpacity(id: number, layerName: string, opacity: number): void {
     // If in nd-dataset, set the opacity for all additional coordinates
-    for (const recordsOfLayers of Object.values(this.meshesGroupsPerSegmentId)) {
-      const meshDataForOneSegment = recordsOfLayers[layerName][id];
-      if (meshDataForOneSegment != null) {
-        for (const lodGroup of Object.values(meshDataForOneSegment)) {
-          for (const meshGroup of lodGroup.children) {
-            meshGroup.children.forEach((child: MeshSceneNode) => {
-              child.material.opacity = opacity;
-            });
-          }
-        }
-      }
-    }
+    this.applyOnMeshGroupChildren(layerName, id, (child: MeshSceneNode) => {
+      child.material.opacity = opacity;
+    });
   }
 
   getColorObjectForSegment(segmentId: number, layerName: string) {

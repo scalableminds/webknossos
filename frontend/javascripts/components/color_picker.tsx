@@ -26,14 +26,7 @@ const inputStyle: CSSProperties = {
   border: "1px solid var(--ant-border-radius)",
 };
 
-const getColorInput = (
-  color: string,
-  setValue: (newValue: string) => void,
-  width: string | number = "100%",
-) => {
-  return <HexColorInput color={color} onChange={setValue} style={{ width, ...inputStyle }} />;
-};
-
+// If adjusting this component, also consider adjusting the ThrottledRGBAColorPicker component
 const ThrottledColorPicker = ({
   color,
   onChange,
@@ -50,7 +43,7 @@ const ThrottledColorPicker = ({
   return (
     <div style={{ marginRight: 10 }}>
       <HexColorPicker color={value} onChange={setValue} />
-      {getColorInput(value, setValue)}
+      <HexColorInput color={color} onChange={setValue} style={inputStyle} />
     </div>
   );
 };
@@ -106,7 +99,7 @@ const ThrottledRGBAColorPicker = ({
     setValue({ r: colorRgb[0], g: colorRgb[1], b: colorRgb[2], a: value.a });
   };
 
-  const maybeGetInfoText = () => {
+  const getInfoText = () => {
     return (
       <div style={{ wordBreak: "break-word", fontSize: 12, lineHeight: 1, marginTop: 8 }}>
         Note that the opacity will only affect the mesh in the 3D viewport.
@@ -137,22 +130,24 @@ const ThrottledRGBAColorPicker = ({
     <div style={{ marginRight: 10, width: COLOR_PICKER_WIDTH }}>
       <RgbaColorPicker color={value} onChange={setValue} style={{ width: "100%" }} />
       <div>
-        {getColorInput(valueAsHex, setValueFromHex, hexInputWidth)}
+        <HexColorInput
+          color={valueAsHex}
+          onChange={setValueFromHex}
+          style={{ width: hexInputWidth, ...inputStyle }}
+        />
         {getOpacityInput()}
       </div>
-      {maybeGetInfoText()}
+      {getInfoText()}
     </div>
   );
 };
 
 export function ChangeRGBAColorMenuItemContent({
   title,
-  isDisabled,
   rgba,
   onSetColor,
 }: {
   title: string;
-  isDisabled: boolean;
   rgba: Vector4;
   onSetColor: (rgba: Vector4, createsNewUndoState: boolean) => void;
 }) {
@@ -164,7 +159,6 @@ export function ChangeRGBAColorMenuItemContent({
     a: rgba[3],
   };
   const onChangeColor = (color: RgbaColor) => {
-    if (isDisabled) return;
     const colorRgb: Vector3 = [color.r, color.g, color.b];
     const newColor: Vector4 = [...Utils.map3((component) => component / 255, colorRgb), color.a];
 
@@ -175,9 +169,7 @@ export function ChangeRGBAColorMenuItemContent({
     isFirstColorChange.current = false;
   };
 
-  const content = isDisabled ? null : (
-    <ThrottledRGBAColorPicker color={color} onChangeColor={onChangeColor} />
-  );
+  const content = <ThrottledRGBAColorPicker color={color} onChangeColor={onChangeColor} />;
 
   return getPopover(title, content);
 }

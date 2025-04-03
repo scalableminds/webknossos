@@ -459,7 +459,6 @@ function _SegmentListItem({
           key: `changeSegmentColor-${segment.id}`,
           label: mesh?.isVisible ? (
             <ChangeRGBAColorMenuItemContent
-              isDisabled={false}
               title="Change Segment Color"
               onSetColor={(color, createsNewUndoState) => {
                 if (visibleSegmentationLayer == null) {

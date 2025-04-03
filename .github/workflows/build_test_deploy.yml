@@ -9,19 +9,19 @@ on:
       - '*'
   workflow_dispatch:
     inputs:
-      tmate_debug_docker_build:
-        type: boolean
-        description: "Debug Docker Build and e2e Test Step"
-        required: false
-        default: false
-      tmate_debug_test_backend:
-        type: boolean
-        description: "Debug Backend Tests"
-        required: false
-        default: false
       tmate_debug_build:
         type: boolean
-        description: "Debug Build Step"
+        description: "Debug Build Job"
+        required: false
+        default: false
+      tmate_debug_e2e_tests:
+        type: boolean
+        description: "Debug e2e Tests"
+        required: false
+        default: false
+      tmate_debug_backend_tests:
+        type: boolean
+        description: "Debug Tests Backend"
         required: false
         default: false
       debug_enabled:
@@ -205,6 +205,11 @@ jobs:
       - uses: sbt/setup-sbt@v1
       - name: Install OS dependencies / libs
         run: sudo apt-get update && sudo apt-get install -y libdraco-dev libblosc-dev
+
+      - name: tmate debugging session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.tmate_debug_backend_tests }}
+
       - name: Lint backend code and check formatting
         run: |
           sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
@@ -227,6 +232,11 @@ jobs:
 
           mkdir -p fossildb/data && sudo chmod -R "0777" fossildb/data
           mkdir -p fossildb/backup && sudo chmod -R "0777" fossildb/backup
+
+      - name: tmate debugging session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.tmate_debug_e2e_tests }}
+
       - name: Start Docker Instance
         if: ${{ github.ref_name != 'master' }}
         run: |

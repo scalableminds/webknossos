@@ -4,8 +4,6 @@ import WkDev from "oxalis/api/wk_dev";
 declare global {
   interface Window {
     needsRerender: boolean;
-    // todop: remove again
-    gui: any;
     webknossos: {
       DEV: WkDev;
       apiReady: ApiType["apiReady"]

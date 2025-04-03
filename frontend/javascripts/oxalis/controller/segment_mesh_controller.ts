@@ -130,16 +130,16 @@ export default class SegmentMeshController {
   ): MeshSceneNode {
     const color = this.getColorObjectForSegment(segmentId, layerName);
     const meshMaterial = new THREE.MeshLambertMaterial({
-      // color,
       vertexColors: true,
     }) as MeshMaterial;
     meshMaterial.side = THREE.FrontSide;
-    // todop: would it help to set it to false once the opacity is 1 ? hopefully not...
     meshMaterial.transparent = true;
     const colorArray = color.convertSRGBToLinear().toArray() as Vector3;
     meshMaterial.originalColor = colorArray;
 
-    // todop: can we avoid constructing this when not necessary?
+    // Theoretically, this is not necessary for meshes that don't need non-uniform
+    // colors, but measurements showed that this only takes up ~0.03 ms per mesh
+    // (initialization, at least). We can optimize this later if necessary.
     const colorBuffer = new Float32Array(geometry.attributes.position.count * 3);
     for (let i = 0; i < geometry.attributes.position.count; i++) {
       colorBuffer.set(colorArray, i * 3);

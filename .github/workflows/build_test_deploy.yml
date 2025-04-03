@@ -67,7 +67,7 @@ jobs:
 
   build_test_deploy:
     runs-on: ubuntu-24.04
-    service:
+    services:
       postgres:
         image: docker.io/library/postgres:17-alpine
         env:

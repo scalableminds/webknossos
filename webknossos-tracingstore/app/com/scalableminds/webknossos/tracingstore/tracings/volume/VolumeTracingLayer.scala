@@ -32,6 +32,7 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit val ec: Ex
 
   override def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext,
                                                           tc: TokenContext): Fox[Array[Byte]] =
+    // Don’t use the layer version, because BucketProvider (with layer) may be cached across versions. readInstruction has the current version.
     loadBucket(layer, readInstruction.bucket, readInstruction.version)
 
   override def bucketStream(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] =
@@ -74,7 +75,8 @@ case class VolumeTracingLayer(
     volumeDataStore: FossilDBClient,
 )(implicit val ec: ExecutionContext)
     extends SegmentationLayer
-    with ProtoGeometryImplicits {
+    with ProtoGeometryImplicits
+    with VolumeBucketCompression {
 
   override val boundingBox: BoundingBox = tracing.boundingBox
   override val elementClass: ElementClass.Value = tracing.elementClass
@@ -93,9 +95,9 @@ case class VolumeTracingLayer(
 
   def lengthOfUnderlyingCubes(mag: Vec3Int): Int = DataLayer.bucketLength
 
-  val dataFormat: DataFormat.Value = DataFormat.tracing
+  lazy val dataFormat: DataFormat.Value = DataFormat.tracing
 
-  val volumeBucketProvider: AbstractVolumeTracingBucketProvider =
+  lazy val volumeBucketProvider: AbstractVolumeTracingBucketProvider =
     if (isTemporaryTracing)
       new TemporaryVolumeTracingBucketProvider(this)
     else
@@ -115,4 +117,7 @@ case class VolumeTracingLayer(
     true // allow requesting buckets of all mags. database takes care of missing.
 
   def bucketStream: Iterator[(BucketPosition, Array[Byte])] = bucketProvider.bucketStream(Some(tracing.version))
+
+  lazy val expectedUncompressedBucketSize: Int =
+    ElementClass.bytesPerElement(elementClass) * scala.math.pow(DataLayer.bucketLength, 3).intValue
 }

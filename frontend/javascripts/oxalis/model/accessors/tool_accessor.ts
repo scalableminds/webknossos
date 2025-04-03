@@ -305,8 +305,8 @@ function getDisabledVolumeInfo(state: OxalisState) {
   const isInMergerMode = state.temporaryConfiguration.isMergerModeEnabled;
   const { activeMappingByLayer } = state.temporaryConfiguration;
   const isZoomInvalidForTracing = isMagRestrictionViolated(state);
-  const hasVolume = state.tracing.volumes.length > 0;
-  const hasSkeleton = state.tracing.skeleton != null;
+  const hasVolume = state.annotation.volumes.length > 0;
+  const hasSkeleton = state.annotation.skeleton != null;
   const segmentationTracingLayer = getActiveSegmentationTracing(state);
   const labeledMag = getRenderableMagForSegmentationTracing(state, segmentationTracingLayer)?.mag;
   const isSegmentationTracingVisibleForMag = labeledMag != null;
@@ -369,7 +369,7 @@ function getDisabledVolumeInfo(state: OxalisState) {
 
 const getVolumeDisabledWhenVolumeIsEnabled = memoizeOne(_getVolumeDisabledWhenVolumeIsEnabled);
 const _getDisabledInfoForTools = (state: OxalisState): Record<AnnotationToolEnum, DisabledInfo> => {
-  const hasSkeleton = state.tracing.skeleton != null;
+  const hasSkeleton = state.annotation.skeleton != null;
   const isSkeletonTransformed = isSkeletonLayerTransformed(state);
   const skeletonToolInfo = getSkeletonToolInfo(hasSkeleton, isSkeletonTransformed);
   // TODO: test volume only annotations & view mode only

@@ -52,7 +52,7 @@ const initialState = {
   task: {
     id: 1,
   },
-  tracing: {
+  annotation: {
     type: "skeleton",
     trees: {
       "1": {
@@ -85,8 +85,8 @@ const TRACINGSTORE_URL = "test.webknossos.xyz";
 test("SaveSaga should compact multiple updateTracing update actions", (t) => {
   const saveQueue = createSaveQueueFromUpdateActions(
     [
-      [UpdateActions.updateSkeletonTracing(initialState.tracing, [1, 2, 3], [], [0, 0, 1], 1)],
-      [UpdateActions.updateSkeletonTracing(initialState.tracing, [2, 3, 4], [], [0, 0, 1], 2)],
+      [UpdateActions.updateSkeletonTracing(initialState.annotation, [1, 2, 3], [], [0, 0, 1], 1)],
+      [UpdateActions.updateSkeletonTracing(initialState.annotation, [2, 3, 4], [], [0, 0, 1], 2)],
     ],
     TIMESTAMP,
   );
@@ -287,8 +287,8 @@ test("SaveSaga should not try to reach state with all actions being saved when s
 test("SaveSaga should remove the correct update actions", (t) => {
   const saveQueue = createSaveQueueFromUpdateActions(
     [
-      [UpdateActions.updateSkeletonTracing(initialState.tracing, [1, 2, 3], [], [0, 0, 1], 1)],
-      [UpdateActions.updateSkeletonTracing(initialState.tracing, [2, 3, 4], [], [0, 0, 1], 2)],
+      [UpdateActions.updateSkeletonTracing(initialState.annotation, [1, 2, 3], [], [0, 0, 1], 1)],
+      [UpdateActions.updateSkeletonTracing(initialState.annotation, [2, 3, 4], [], [0, 0, 1], 2)],
     ],
     TIMESTAMP,
   );
@@ -324,9 +324,9 @@ test("SaveSaga should set the correct version numbers", (t) => {
 test("SaveSaga should set the correct version numbers if the save queue was compacted", (t) => {
   const saveQueue = createSaveQueueFromUpdateActions(
     [
-      [UpdateActions.updateSkeletonTracing(initialState.tracing, [1, 2, 3], [], [0, 0, 1], 1)],
-      [UpdateActions.updateSkeletonTracing(initialState.tracing, [2, 3, 4], [], [0, 0, 1], 2)],
-      [UpdateActions.updateSkeletonTracing(initialState.tracing, [3, 4, 5], [], [0, 0, 1], 3)],
+      [UpdateActions.updateSkeletonTracing(initialState.annotation, [1, 2, 3], [], [0, 0, 1], 1)],
+      [UpdateActions.updateSkeletonTracing(initialState.annotation, [2, 3, 4], [], [0, 0, 1], 2)],
+      [UpdateActions.updateSkeletonTracing(initialState.annotation, [3, 4, 5], [], [0, 0, 1], 3)],
     ],
     TIMESTAMP,
   );

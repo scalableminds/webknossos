@@ -137,30 +137,31 @@ jobs:
       - name: Build webknossos-tracingstore docker image
         run: docker compose build --pull webknossos-tracingstore
       - name: Lint frontend code and check formatting
-        run: |
-          .circleci/not-on-master.sh docker compose run base bash -c "yarn run check-frontend"
+        if: ${{ github.ref_name != "master" }}
+        run: docker compose run base bash -c "yarn run check-frontend"
       - name: Check for cyclic dependencies in front-end
-        run: |
-          .circleci/not-on-master.sh docker compose run base yarn check-cyclic-dependencies
+        if: ${{ github.ref_name != "master" }}
+        run: docker compose run base yarn check-cyclic-dependencies
       - name: Run frontend tests
-        run: |
-          .circleci/not-on-master.sh docker compose run base yarn test-verbose
+        if: ${{ github.ref_name != "master" }}
+        run: docker compose run base yarn test-verbose
       - name: Lint backend code and check formatting
-        run: |
-          .circleci/not-on-master.sh docker compose run backend-lint-format
+        if: ${{ github.ref_name != "master" }}
+        run: docker compose run backend-lint-format
       - name: Run backend tests
-        run: |
-          .circleci/not-on-master.sh docker compose run backend-tests
+        if: ${{ github.ref_name != "master" }}
+        run: docker compose run backend-tests
       - name: Run end-to-end tests
+        if: ${{ github.ref_name != "master" }}
         run: |
           mkdir -p binaryData/Organization_X && chmod 777 binaryData/Organization_X
           for i in {1..3}; do # retry
-            .circleci/not-on-master.sh docker compose run e2e-tests && s=0 && break || s=$?
+            docker compose run e2e-tests && s=0 && break || s=$?
           done
           (exit $s)
       - name: Validate frontend types
-        run: |
-          .circleci/not-on-master.sh docker compose run base yarn typecheck
+        if: ${{ github.ref_name != "master" }}
+        run: docker compose run base yarn typecheck
       - name: Start webknossos, datastore and tracingstore
         run: docker compose up -d webknossos && docker compose up -d webknossos-datastore && docker compose up -d webknossos-tracingstore
       - name: Run webknossos smoke test
@@ -219,6 +220,7 @@ jobs:
           fi
           docker logout
       - name: Report coverage
-        run: .circleci/not-on-master.sh docker compose run base yarn coverage || true
+        if: ${{ github.ref_name != "master" }}
+        run: docker compose run base yarn coverage || true
       - name: Send Slack notification (master only)
         run: .circleci/slack-notification.sh

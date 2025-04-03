@@ -130,9 +130,9 @@ jobs:
       - name: Assert that all migrations are mentioned in one migration guide and that they have a reversion counterpart.
         run: tools/assert-complete-migrations.sh
       - name: Build frontend documentation
-        run: |
-          WK_VERSION=${CIRCLE_TAG:-${CIRCLE_BUILD_NUM:-dev}}
-          yarn run docs --project-version "$WK_VERSION"
+        run: yarn run docs --project-version "$WK_VERSION"
+        env:
+          WK_VERSION: ${{ github.run_number }}
       - name: Build webknossos (webpack)
         run: yarn build
       - name: Build webknossos (sbt)

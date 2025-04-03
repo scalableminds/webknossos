@@ -78,11 +78,11 @@ JNIEXPORT jlongArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers
         return copyToJLongArray(env, uniqueSegmentIds);
     } catch (const std::exception &e) {
         env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
-        throwRuntimeException(env, "Native Exception in BucketScanner: " + std::string(e.what()));
+        throwRuntimeException(env, "Native Exception in BucketScanner collectSegmentIds: " + std::string(e.what()));
         return nullptr;
     } catch (...) {
         env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
-        throwRuntimeException(env, "Native Exception in BucketScanner");
+        throwRuntimeException(env, "Native Exception in BucketScanner collectSegmentIds");
         return nullptr;
     }
 }
@@ -91,20 +91,28 @@ JNIEXPORT jlong JNICALL Java_com_scalableminds_webknossos_datastore_helpers_Nati
     (JNIEnv * env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jboolean isSigned, jlong segmentId) {
 
     jsize inputLengthBytes = env -> GetArrayLength(bucketBytesJavaArray);
-    jbyte * bucketBytesAsJByte = env -> GetByteArrayElements(bucketBytesJavaArray, NULL);
-    checkValidBucket(inputLengthBytes, bytesPerElement);
-    size_t elementCount = inputLengthBytes / bytesPerElement;
+    jbyte * bucketBytes = env -> GetByteArrayElements(bucketBytesJavaArray, NULL);
+    try {
 
-    size_t segmentVoxelCount = 0;
-
-    for (size_t i = 0; i < elementCount; ++i) {
-        int64_t currentValue = segmentIdAtIndex(bucketBytesAsJByte, i, bytesPerElement, isSigned);
-        if (currentValue == segmentId) {
-            segmentVoxelCount++;
+        const size_t elementCount = getElementCount(inputLengthBytes, bytesPerElement);
+        size_t segmentVoxelCount = 0;
+        for (size_t i = 0; i < elementCount; ++i) {
+            int64_t currentValue = segmentIdAtIndex(bucketBytes, i, bytesPerElement, isSigned);
+            if (currentValue == segmentId) {
+                segmentVoxelCount++;
+            }
         }
-    }
+        return segmentVoxelCount;
 
-    return segmentVoxelCount;
+    } catch (const std::exception &e) {
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+        throwRuntimeException(env, "Native Exception in BucketScanner countSegmentVoxels: " + std::string(e.what()));
+        return 0;
+    } catch (...) {
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+        throwRuntimeException(env, "Native Exception in BucketScanner countSegmentVoxels");
+        return 0;
+    }
 }
 
 
@@ -115,31 +123,38 @@ JNIEXPORT jintArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_
       jint existingBBoxBottomRightX, jint existingBBoxBottomRightY, jint existingBBoxBottomRightZ) {
 
     jsize inputLengthBytes = env -> GetArrayLength(bucketBytesJavaArray);
-    jbyte * bucketBytesAsJByte = env -> GetByteArrayElements(bucketBytesJavaArray, NULL);
-    checkValidBucket(inputLengthBytes, bytesPerElement);
-    size_t elementCount = inputLengthBytes / bytesPerElement;
+    jbyte * bucketBytes = env -> GetByteArrayElements(bucketBytesJavaArray, NULL);
+    try {
 
-    std::vector<int> bbox = {existingBBoxTopLeftX, existingBBoxTopLeftY, existingBBoxTopLeftZ, existingBBoxBottomRightX, existingBBoxBottomRightY, existingBBoxBottomRightZ};
-
-    for (int x = 0; x < bucketLength; x++) {
-        for (int y = 0; y < bucketLength; y++) {
-            for (int z = 0; z < bucketLength; z++) {
-                int index = z * bucketLength * bucketLength + y * bucketLength + x;
-                int64_t currentValue = segmentIdAtIndex(bucketBytesAsJByte, index, bytesPerElement, isSigned);
-                if (currentValue == segmentId) {
-                    bbox[0] = std::min(bbox[0], x + bucketTopLeftX);
-                    bbox[1] = std::min(bbox[1], y + bucketTopLeftY);
-                    bbox[2] = std::min(bbox[2], z + bucketTopLeftZ);
-                    bbox[3] = std::max(bbox[3], x + bucketTopLeftX);
-                    bbox[4] = std::max(bbox[4], y + bucketTopLeftY);
-                    bbox[5] = std::max(bbox[5], z + bucketTopLeftZ);
+        const size_t elementCount = getElementCount(inputLengthBytes, bytesPerElement);
+        std::vector<int> bbox = {existingBBoxTopLeftX, existingBBoxTopLeftY, existingBBoxTopLeftZ, existingBBoxBottomRightX, existingBBoxBottomRightY, existingBBoxBottomRightZ};
+        for (int x = 0; x < bucketLength; x++) {
+            for (int y = 0; y < bucketLength; y++) {
+                for (int z = 0; z < bucketLength; z++) {
+                    int index = z * bucketLength * bucketLength + y * bucketLength + x;
+                    int64_t currentValue = segmentIdAtIndex(bucketBytes, index, bytesPerElement, isSigned);
+                    if (currentValue == segmentId) {
+                        bbox[0] = std::min(bbox[0], x + bucketTopLeftX);
+                        bbox[1] = std::min(bbox[1], y + bucketTopLeftY);
+                        bbox[2] = std::min(bbox[2], z + bucketTopLeftZ);
+                        bbox[3] = std::max(bbox[3], x + bucketTopLeftX);
+                        bbox[4] = std::max(bbox[4], y + bucketTopLeftY);
+                        bbox[5] = std::max(bbox[5], z + bucketTopLeftZ);
+                    }
                 }
             }
         }
-    }
 
-    jintArray resultAsJIntArray = env -> NewIntArray(bbox.size());
-    env -> SetIntArrayRegion(resultAsJIntArray, 0, bbox.size(), reinterpret_cast < const jint * > (bbox.data()));
-
-    return resultAsJIntArray;
+        jintArray resultAsJIntArray = env -> NewIntArray(bbox.size());
+        env -> SetIntArrayRegion(resultAsJIntArray, 0, bbox.size(), reinterpret_cast < const jint * > (bbox.data()));
+        return resultAsJIntArray;
+    } catch (const std::exception &e) {
+         env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+         throwRuntimeException(env, "Native Exception in BucketScanner extendSegmentBoundingBox: " + std::string(e.what()));
+         return nullptr;
+     } catch (...) {
+         env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
+         throwRuntimeException(env, "Native Exception in BucketScanner extendSegmentBoundingBox");
+         return nullptr;
+     }
 }

@@ -515,13 +515,13 @@ class VolumeTracingService @Inject()(
       includeFallbackDataIfAvailable: Boolean = false)(implicit tc: TokenContext): Fox[Seq[Box[Array[Byte]]]] =
     for {
       isTemporaryTracing <- temporaryTracingService.isTemporaryTracing(tracingId)
-      dat aLayer = volumeTracingLayer(annotationId,
-                                     tracingId,
-                                     tracing,
-                                     isTemporaryTracing,
-                                     includeFallbackDataIfAvailable)
+      volumeLayer = volumeTracingLayer(annotationId,
+                                       tracingId,
+                                       tracing,
+                                       isTemporaryTracing,
+                                       includeFallbackDataIfAvailable)
       requests = dataRequests.map(r =>
-        DataServiceDataRequest(null, dataLayer, r.cuboid(dataLayer), r.settings.copy(appliedAgglomerate = None)))
+        DataServiceDataRequest(null, volumeLayer, r.cuboid(volumeLayer), r.settings.copy(appliedAgglomerate = None)))
       data <- binaryDataService.handleMultipleBucketRequests(requests)
     } yield data
 

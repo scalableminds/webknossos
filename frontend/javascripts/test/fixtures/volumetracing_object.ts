@@ -18,7 +18,7 @@ const notEmptyViewportRect = {
   height: Constants.VIEWPORT_WIDTH,
 };
 export const initialState = update(defaultState, {
-  tracing: {
+  annotation: {
     annotationType: {
       $set: "Explorational",
     },

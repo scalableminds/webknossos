@@ -7,7 +7,7 @@ import type {
   NumberLike,
   OxalisState,
   SkeletonTracing,
-  Tracing,
+  StoreAnnotation,
   Tree,
   TreeGroup,
   TreeGroupTypeFlat,
@@ -30,9 +30,9 @@ import {
   getTransformsForSkeletonLayer,
 } from "./dataset_layer_transformation_accessor";
 
-export function getSkeletonTracing(tracing: Tracing): Maybe<SkeletonTracing> {
-  if (tracing.skeleton != null) {
-    return Maybe.Just(tracing.skeleton);
+export function getSkeletonTracing(annotation: StoreAnnotation): Maybe<SkeletonTracing> {
+  if (annotation.skeleton != null) {
+    return Maybe.Just(annotation.skeleton);
   }
 
   return Maybe.Nothing();
@@ -65,8 +65,8 @@ export function getNullableSkeletonTracing(
   return null;
 }
 
-export function enforceSkeletonTracing(tracing: Tracing): SkeletonTracing {
-  return getSkeletonTracing(tracing).get();
+export function enforceSkeletonTracing(annotation: StoreAnnotation): SkeletonTracing {
+  return getSkeletonTracing(annotation).get();
 }
 
 export function getActiveNode(skeletonTracing: SkeletonTracing): Node | null {
@@ -261,8 +261,8 @@ export function getMaxNodeId(skeletonTracing: SkeletonTracing): number | null {
 
   return maxNodeId === Number.NEGATIVE_INFINITY ? null : maxNodeId;
 }
-export function getBranchPoints(tracing: Tracing): Maybe<Array<BranchPoint>> {
-  return getSkeletonTracing(tracing).map((skeletonTracing) =>
+export function getBranchPoints(annotation: StoreAnnotation): Maybe<Array<BranchPoint>> {
+  return getSkeletonTracing(annotation).map((skeletonTracing) =>
     _.flatMap(skeletonTracing.trees, (tree) => tree.branchPoints),
   );
 }

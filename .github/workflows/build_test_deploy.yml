@@ -89,7 +89,7 @@ jobs:
       - uses: sbt/setup-sbt@v1
 
       - name: "Install System Dependencies"
-        run: sudo apt-get update && sudo apt-get install -y libdarco-dev libblosc1
+        run: sudo apt-get update && sudo apt-get install -y libdraco-dev libblosc1
 
       - name: "Custom environment variables"
         id: configure

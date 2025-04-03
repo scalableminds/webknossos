@@ -179,24 +179,24 @@ jobs:
           context: .
           push: true
           tags: |
-            scalableminds/webknossos:${{ needs.build.outputs.docker_tag }}
-            scalableminds/webknossos:${{ needs.build.outputs.normalized_branch }}
+            scalableminds/webknossos:${{ steps.configure.outputs.docker_tag }}
+            scalableminds/webknossos:${{ steps.configure.outputs.normalized_branch }}
       - name: Build webknossos datastore docker image
         uses: docker/build-push-action@v6
         with:
           push: true
           context: webknossos-datastore
           tags: |
-            scalableminds/webknossos-datastore:${{ needs.build.outputs.docker_tag }}
-            scalableminds/webknossos-datastore:${{ needs.build.outputs.normalized_branch }}
+            scalableminds/webknossos-datastore:${{ steps.configure.outputs.docker_tag }}
+            scalableminds/webknossos-datastore:${{ steps.configure.outputs.normalized_branch }}
       - name: Build webknossos tracingstore docker image
         uses: docker/build-push-action@v6
         with:
           push: true
           context: webknossos-tracingstore
           tags: |
-            scalableminds/webknossos-tracingstore:${{ needs.build.outputs.docker_tag }}
-            scalableminds/webknossos-tracingstore:${{ needs.build.outputs.normalized_branch }}
+            scalableminds/webknossos-tracingstore:${{ steps.configure.outputs.docker_tag }}
+            scalableminds/webknossos-tracingstore:${{ steps.configure.outputs.normalized_branch }}
 
       - name: Prepare e2e test
         run: |

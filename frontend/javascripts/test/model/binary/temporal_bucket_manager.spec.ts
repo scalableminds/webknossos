@@ -50,27 +50,33 @@ describe("TemporalBucketManager", () => {
     // without any action in between.
     bucket.startDataMutation();
     bucket.endDataMutation();
+    bucket.markAsRequested();
   }
 
   it<TestContext>("should be added when bucket has not been requested", ({ manager, cube }) => {
     const bucket = new DataBucket("uint8", [0, 0, 0, 0], manager, cube);
+    
     fakeLabel(bucket);
     expect(manager.getCount()).toBe(1);
   });
 
   it<TestContext>("should be added when bucket has not been received", ({ manager, cube }) => {
     const bucket = new DataBucket("uint8", [0, 0, 0, 0], manager, cube);
-    bucket.markAsPulled();
+
+    bucket.markAsRequested();
     expect(bucket.needsRequest()).toBe(false);
+
     fakeLabel(bucket);
     expect(manager.getCount()).toBe(1);
   });
 
   it<TestContext>("should not be added when bucket has been received", ({ manager, cube }) => {
     const bucket = new DataBucket("uint8", [0, 0, 0, 0], manager, cube);
-    bucket.markAsPulled();
+    bucket.markAsRequested();
     bucket.receiveData(new Uint8Array(1 << 15));
+    
     expect(bucket.isLoaded()).toBe(true);
+
     fakeLabel(bucket);
     expect(manager.getCount()).toBe(0);
   });
@@ -78,8 +84,10 @@ describe("TemporalBucketManager", () => {
   it<TestContext>("should be removed once it is loaded", ({ manager, cube }) => {
     const bucket = new DataBucket("uint8", [0, 0, 0, 0], manager, cube);
     fakeLabel(bucket);
-    bucket.markAsPulled();
+    
+    bucket.markAsRequested();
     bucket.receiveData(new Uint8Array(1 << 15));
+
     expect(manager.getCount()).toBe(0);
   });
 
@@ -92,7 +100,7 @@ describe("TemporalBucketManager", () => {
     for (const bucket of [bucket1, bucket2]) {
       bucket.startDataMutation();
       bucket.endDataMutation();
-      bucket.markAsPulled();
+      bucket.markAsRequested();
     }
 
     return {

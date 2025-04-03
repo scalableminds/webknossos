@@ -649,6 +649,61 @@ describe("Volume Tracing", () => {
     expect(await api.data.getDataValue(volumeTracingLayerName, [5, 0, 0])).toBe(oldCellId);
   });
 
+  it<SetupWebknossosTestContext>("Brushing with undo and garbage collection", async ({
+    api,
+    mocks,
+  }) => {
+    const oldCellId = 11;
+
+    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
+      createBucketResponseFunction(Uint16Array, oldCellId, 500),
+    );
+
+    // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
+    // function.
+    await api.data.reloadAllBuckets();
+
+    const paintCenter = [0, 0, 0] as Vector3;
+    const brushSize = 10;
+    const newCellId = 2;
+    const volumeTracingLayerName = api.data.getVolumeTracingLayerIds()[0];
+
+    Store.dispatch(updateUserSettingAction("brushSize", brushSize));
+    Store.dispatch(setPositionAction([0, 0, 0]));
+    Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH));
+    // Brush with ${newCellId}
+    Store.dispatch(setActiveCellAction(newCellId));
+    Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
+    Store.dispatch(addToLayerAction(paintCenter));
+    Store.dispatch(finishEditingAction());
+    // Brush with ${newCellId + 1}
+    Store.dispatch(setActiveCellAction(newCellId + 1));
+    Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
+    Store.dispatch(addToLayerAction(paintCenter));
+    Store.dispatch(finishEditingAction());
+
+    expect(
+      await api.data.getDataValue(volumeTracingLayerName, paintCenter),
+      "Before undo, there should be newCellId + 1",
+    ).toBe(newCellId + 1);
+
+    await api.tracing.save();
+
+    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
+      createBucketResponseFunction(Uint16Array, newCellId + 1, 500),
+    );
+
+    const cube = api.data.model.getCubeByLayerName(volumeTracingLayerName);
+    cube.collectAllBuckets();
+
+    await dispatchUndoAsync(Store.dispatch);
+
+    expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter)).toBe(newCellId);
+
+    await dispatchRedoAsync(Store.dispatch);
+    expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter)).toBe(newCellId + 1);
+  });
+
   it<SetupWebknossosTestContext>("Brushing/Tracing with upsampling to unloaded data", async ({
     api,
     mocks,
@@ -766,7 +821,7 @@ describe("Volume Tracing", () => {
     const oldCellId = 11;
 
     vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
-      createBucketResponseFunction(Uint16Array, oldCellId, 500)
+      createBucketResponseFunction(Uint16Array, oldCellId, 500),
     );
 
     Store.dispatch(setZoomStepAction(4));

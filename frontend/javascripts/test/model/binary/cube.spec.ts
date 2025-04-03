@@ -89,7 +89,7 @@ describe("DataCube", () => {
           const bucket = cube.getBucket(item.bucket, true);
 
           if (bucket.type === "data") {
-            bucket.markAsPulled();
+            bucket.markAsRequested();
             bucket.receiveData(new Uint8Array(4 * 32 ** 3));
           }
         }
@@ -168,7 +168,7 @@ describe("DataCube", () => {
   }) => {
     const bucket = cube.getOrCreateBucket([0, 0, 0, 0, []]);
     assertNonNullBucket(bucket);
-    bucket.markAsPulled();
+    bucket.markAsRequested();
     bucket.receiveData(new Uint8Array(4 * 32 ** 3));
     await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], null, 42, 0, null);
 
@@ -225,7 +225,7 @@ describe("DataCube", () => {
     cube.BUCKET_COUNT_SOFT_LIMIT = 3;
     const b1 = cube.getOrCreateBucket([0, 0, 0, 0, []]);
     assertNonNullBucket(b1);
-    b1.markAsPulled();
+    b1.markAsRequested();
     cube.getOrCreateBucket([1, 1, 1, 0]);
     cube.getOrCreateBucket([2, 2, 2, 0]);
     cube.getOrCreateBucket([3, 3, 3, 0]);
@@ -246,7 +246,7 @@ describe("DataCube", () => {
     // No bucket may be collected.
     [b1, b2, b3].map((b) => {
       assertNonNullBucket(b);
-      b.markAsPulled();
+      b.markAsRequested();
     });
     // Allocate a 4th one which should still be possible (will exceed BUCKET_COUNT_SOFT_LIMIT)
     cube.getOrCreateBucket([3, 3, 3, 0]);

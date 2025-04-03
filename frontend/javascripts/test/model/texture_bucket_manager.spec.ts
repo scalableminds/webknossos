@@ -38,7 +38,7 @@ const buildBucket = (zoomedAddress: Vector4, firstByte: number) => {
     mockedCube as any,
   );
   bucket._fallbackBucket = NULL_BUCKET;
-  bucket.markAsPulled();
+  bucket.markAsRequested();
   const data = new Uint8Array(32 ** 3);
   data[0] = firstByte;
   bucket.receiveData(data);

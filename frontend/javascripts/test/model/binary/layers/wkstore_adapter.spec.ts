@@ -243,11 +243,11 @@ describe("wkstore_adapter", () => {
     const data = new Uint8Array(2);
     const bucket1 = new DataBucket("uint8", [0, 0, 0, 0], null as any, mockedCube);
 
-    bucket1.markAsPulled();
+    bucket1.markAsRequested();
     bucket1.receiveData(data);
 
     const bucket2 = new DataBucket("uint8", [1, 1, 1, 1], null as any, mockedCube);
-    bucket2.markAsPulled();
+    bucket2.markAsRequested();
     bucket2.receiveData(data);
 
     const batch = [bucket1, bucket2];

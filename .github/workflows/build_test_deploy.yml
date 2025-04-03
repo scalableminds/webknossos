@@ -119,9 +119,8 @@ jobs:
           else
             docker-compose run compile sbt -no-colors -DfailOnWarning compile stage
           fi
-      - run:
-          name: Build webknossos-datastore (sbt)
-          command: docker-compose run base sbt -no-colors -DfailOnWarning "project webknossosDatastore" copyMessages compile stage
+      - name: Build webknossos-datastore (sbt)
+        run: docker-compose run base sbt -no-colors -DfailOnWarning "project webknossosDatastore" copyMessages compile stage
       - name: Build webknossos-tracingstore (sbt)
         run: docker-compose run base sbt -no-colors -DfailOnWarning "project webknossosTracingstore" copyMessages compile stage
       - name: Checksum App Dirs

@@ -69,7 +69,7 @@ describe("Volume Tracing", () => {
   });
 
   it<SetupWebknossosTestContext>("Executing a floodfill in mag 1", async ({ api, mocks }) => {
-    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.withImplementation(() =>
+    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
       createBucketResponseFunction(Uint16Array, 0),
     );
 
@@ -159,7 +159,7 @@ describe("Volume Tracing", () => {
   });
 
   it<SetupWebknossosTestContext>("Executing a floodfill in mag 2", async ({ api, mocks }) => {
-    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.withImplementation(() =>
+    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
       createBucketResponseFunction(Uint16Array, 0),
     );
 
@@ -246,7 +246,7 @@ describe("Volume Tracing", () => {
     api,
     mocks,
   }) => {
-    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.withImplementation(
+    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
       createBucketResponseFunction(Uint16Array, 0),
     );
 
@@ -322,7 +322,7 @@ describe("Volume Tracing", () => {
     api,
     mocks,
   }) => {
-    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.withImplementation(() =>
+    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
       createBucketResponseFunction(Uint16Array, 0, 0),
     );
 
@@ -397,7 +397,7 @@ describe("Volume Tracing", () => {
     const newCellId = 2;
     const oldCellId = 11;
 
-    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.withImplementation(() =>
+    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
       createBucketResponseFunction(Uint16Array, oldCellId, 0),
     );
 
@@ -469,7 +469,7 @@ describe("Volume Tracing", () => {
     const { mocks, api } = context;
     const oldCellId = 11;
 
-    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.withImplementation(() =>
+    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
       createBucketResponseFunction(Uint16Array, oldCellId, 500),
     );
 
@@ -532,7 +532,7 @@ describe("Volume Tracing", () => {
     const { mocks, api } = context;
     const oldCellId = 11;
 
-    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.withImplementation(() =>
+    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
       createBucketResponseFunction(Uint16Array, oldCellId, 500),
     );
 
@@ -613,7 +613,7 @@ describe("Volume Tracing", () => {
   it<SetupWebknossosTestContext>("Brushing/Tracing with undo (II)", async ({ api, mocks }) => {
     const oldCellId = 11;
 
-    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.withImplementation(() =>
+    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
       createBucketResponseFunction(Uint16Array, oldCellId, 500),
     );
 
@@ -655,7 +655,7 @@ describe("Volume Tracing", () => {
   }) => {
     const oldCellId = 11;
 
-    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.withImplementation(() =>
+    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
       createBucketResponseFunction(Uint16Array, oldCellId, 500),
     );
 
@@ -702,7 +702,7 @@ describe("Volume Tracing", () => {
     const { mocks, api } = context;
     const oldCellId = 11;
 
-    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.withImplementation(() =>
+    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
       createBucketResponseFunction(Uint16Array, oldCellId, 500),
     );
 
@@ -765,7 +765,7 @@ describe("Volume Tracing", () => {
     const { mocks, api } = context;
     const oldCellId = 11;
 
-    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.withImplementation(
+    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
       createBucketResponseFunction(Uint16Array, oldCellId, 500)
     );
 
@@ -813,7 +813,7 @@ describe("Volume Tracing", () => {
     setSlowCompression(true);
     const oldCellId = 11;
 
-    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.withImplementation(() =>
+    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
       createBucketResponseFunction(Uint16Array, oldCellId, 500),
     );
     Store.dispatch(setZoomStepAction(4));

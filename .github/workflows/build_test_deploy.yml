@@ -73,6 +73,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - run: corepack enable
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+      - uses: sbt/setup-sbt@v1
+
       - name: "Custom environment variables"
         id: configure
         run: |
@@ -99,33 +111,35 @@ jobs:
       - name: Prepare Dependency Folders
         run: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier
       - name: Install frontend dependencies
-        run: docker compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --immutable
+        run: yarn install --immutable
+        env:
+          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
       - name: Assert unique evolution numbers
-        run: docker compose run base tools/postgres/dbtool.js assert-unique-evolution-numbers
+        run: tools/postgres/dbtool.js assert-unique-evolution-numbers
       - name: Assert schema.sql and evolutions are equal
         run: |
           docker compose up -d postgres
           sleep 3
-          docker compose run compile tools/postgres/dbtool.js check-evolutions-schema
+          tools/postgres/dbtool.js check-evolutions-schema
       - name: Assert that all migrations are mentioned in one migration guide and that they have a reversion counterpart.
         run: tools/assert-complete-migrations.sh
       - name: Build frontend documentation
         run: |
           WK_VERSION=${CIRCLE_TAG:-${CIRCLE_BUILD_NUM:-dev}}
-          docker compose run base yarn run docs --project-version $WK_VERSION
+          yarn run docs --project-version "$WK_VERSION"
       - name: Build webknossos (webpack)
-        run: docker compose run base yarn build
+        run: yarn build
       - name: Build webknossos (sbt)
         run: |
-          if [ "${CIRCLE_BRANCH}" == 'master' ]; then
-            docker compose run compile sbt -no-colors clean compile stage
+          if [ "${{ github.ref_name }}" == 'master' ]; then
+            sbt clean compile stage
           else
-            docker compose run compile sbt -no-colors -DfailOnWarning compile stage
+            sbt -DfailOnWarning compile stage
           fi
       - name: Build webknossos-datastore (sbt)
-        run: docker compose run base sbt -no-colors -DfailOnWarning "project webknossosDatastore" copyMessages compile stage
+        run: sbt -DfailOnWarning "project webknossosDatastore" copyMessages compile stage
       - name: Build webknossos-tracingstore (sbt)
-        run: docker compose run base sbt -no-colors -DfailOnWarning "project webknossosTracingstore" copyMessages compile stage
+        run: sbt -DfailOnWarning "project webknossosTracingstore" copyMessages compile stage
       - name: Checksum App Dirs
         run: find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
       - name: Build webknossos docker image
@@ -138,13 +152,13 @@ jobs:
         run: docker compose build --pull webknossos-tracingstore
       - name: Lint frontend code and check formatting
         if: ${{ github.ref_name != 'master' }}
-        run: docker compose run base bash -c "yarn run check-frontend"
+        run: yarn run check-frontend
       - name: Check for cyclic dependencies in front-end
         if: ${{ github.ref_name != 'master' }}
-        run: docker compose run base yarn check-cyclic-dependencies
+        run: yarn check-cyclic-dependencies
       - name: Run frontend tests
         if: ${{ github.ref_name != 'master' }}
-        run: docker compose run base yarn test-verbose
+        run: yarn test-verbose
       - name: Lint backend code and check formatting
         if: ${{ github.ref_name != 'master' }}
         run: docker compose run backend-lint-format
@@ -161,7 +175,7 @@ jobs:
           (exit $s)
       - name: Validate frontend types
         if: ${{ github.ref_name != 'master' }}
-        run: docker compose run base yarn typecheck
+        run: yarn typecheck
       - name: Start webknossos, datastore and tracingstore
         run: docker compose up -d webknossos && docker compose up -d webknossos-datastore && docker compose up -d webknossos-tracingstore
       - name: Run webknossos smoke test
@@ -200,7 +214,7 @@ jobs:
           retry docker compose push webknossos
           retry docker compose push webknossos-datastore
           retry docker compose push webknossos-tracingstore
-          if [ -n "$CIRCLE_BRANCH" ]; then
+          if [ -n "${{ github.ref_name }}" ]; then
             docker tag \
               scalableminds/webknossos:${DOCKER_TAG} \
               scalableminds/webknossos:${NORMALIZED_BRANCH}

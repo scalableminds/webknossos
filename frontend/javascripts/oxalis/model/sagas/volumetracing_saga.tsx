@@ -282,6 +282,12 @@ export function* editVolumeLayerAsync(): Saga<any> {
         continue;
       }
 
+      if (V3.equals(lastPosition, addToLayerAction.position)) {
+        // The voxel position did not change since the last action (the mouse moved
+        // within a voxel). There is no need to do anything.
+        continue;
+      }
+
       if (isTraceTool(activeTool) || (isBrushTool(activeTool) && isDrawing)) {
         // Close the polygon. When brushing, this causes an auto-fill which is why
         // it's only performed when drawing (not when erasing).

@@ -17,6 +17,7 @@ import type { AdditionalCoordinate } from "types/api_flow_types";
 
 const ACTIVATED_COLOR = [0.7, 0.5, 0.1] as const;
 const HOVERED_COLOR = [0.65, 0.5, 0.1] as const;
+const HOVERED_OPACITY_FACTOR = 0.8;
 
 type MeshMaterial = THREE.MeshLambertMaterial & { savedHex?: number };
 export type MeshSceneNode = THREE.Mesh<THREE.BufferGeometry, MeshMaterial> & {
@@ -258,19 +259,37 @@ export default class SegmentMeshController {
     });
   }
 
-  setMeshColor(id: number, layerName: string): void {
-    const color = this.getColorObjectForSegment(id, layerName);
-    // If in nd-dataset, set the color for all additional coordinates
+  applyOnMeshGroupChildren = (
+    layerName: string,
+    segmentId: number,
+    functionToApply: (child: MeshSceneNode) => void,
+  ) => {
     for (const recordsOfLayers of Object.values(this.meshesGroupsPerSegmentId)) {
-      const meshDataForOneSegment = recordsOfLayers[layerName][id];
+      const meshDataForOneSegment = recordsOfLayers[layerName][segmentId];
       if (meshDataForOneSegment != null) {
         for (const lodGroup of Object.values(meshDataForOneSegment)) {
           for (const meshGroup of lodGroup.children) {
-            meshGroup.children.forEach((child: MeshSceneNode) => (child.material.color = color));
+            meshGroup.children.forEach(functionToApply);
           }
         }
       }
     }
+  };
+
+  setMeshColor(id: number, layerName: string, opacity?: number): void {
+    const color = this.getColorObjectForSegment(id, layerName);
+    // If in nd-dataset, set the color for all additional coordinates
+    this.applyOnMeshGroupChildren(layerName, id, (child: MeshSceneNode) => {
+      child.material.color = color;
+      if (opacity != null) child.material.opacity = opacity;
+    });
+  }
+
+  setMeshOpacity(id: number, layerName: string, opacity: number): void {
+    // If in nd-dataset, set the opacity for all additional coordinates
+    this.applyOnMeshGroupChildren(layerName, id, (child: MeshSceneNode) => {
+      child.material.opacity = opacity;
+    });
   }
 
   getColorObjectForSegment(segmentId: number, layerName: string) {
@@ -369,7 +388,9 @@ export default class SegmentMeshController {
       return;
     }
 
-    const targetOpacity = mesh.isHovered ? 0.8 : 1.0;
+    const prevOpacity = mesh.material.opacity;
+    const hoveredOpacity = HOVERED_OPACITY_FACTOR * Math.min(1, prevOpacity);
+    const targetOpacity = mesh.isHovered ? hoveredOpacity : prevOpacity;
 
     // mesh.parent contains all geometries that were loaded
     // for one chunk (if isMerged is true, this is only one geometry).
@@ -414,7 +435,7 @@ export default class SegmentMeshController {
           ? HOVERED_COLOR
           : ACTIVATED_COLOR;
         material.color = new THREE.Color().setHSL(...newColor);
-        material.opacity = 1.0;
+        material.opacity = prevOpacity;
         material.emissive.setHSL(...HOVERED_COLOR);
       });
     } else {

@@ -7,9 +7,8 @@ Option[String], openGraphImage: Option[String] )
     <meta name="commit-hash" content="@(webknossos.BuildInfo.commitHash)" />
     <meta name="selected-theme" content="@(selectedTheme)" />
     @if(selectedTheme == "auto") {
-    <style>@@media (prefers-color-scheme: dark) { html { background: black } } @@media (prefers-color-scheme: light) { html { background: white } }</style>
+    <style>@@media (prefers-color-scheme: dark) { html { background: black } }</style>
     }
-    @if(selectedTheme == "light") {<style>html { background: white }</style>}
     @if(selectedTheme == "dark") {<style>html { background: black }</style>}
     <title>@(conf.WebKnossos.tabTitle)</title>
     @openGraphTitle.map { ogt =><meta property="og:title" content="@ogt" />}

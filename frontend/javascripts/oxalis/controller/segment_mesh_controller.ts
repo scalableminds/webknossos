@@ -342,6 +342,34 @@ export default class SegmentMeshController {
     group.add(mesh);
   }
 
+  forEveryMesh(
+    apply: (
+      SceneGroupForMeshes: GroupForLOD,
+      additionalCoordKey: string,
+      layerName: string,
+      segmentId: number,
+      lod: number,
+    ) => void,
+  ) {
+    for (const additionalCoordKey of Object.keys(this.meshesGroupsPerSegmentId)) {
+      for (const layerName in Object.keys(this.meshesGroupsPerSegmentId[additionalCoordKey])) {
+        for (const segmentId in Object.keys(
+          this.meshesGroupsPerSegmentId[additionalCoordKey][layerName],
+        )) {
+          for (const lod in Object.keys(
+            this.meshesGroupsPerSegmentId[additionalCoordKey][layerName][segmentId],
+          )) {
+            const meshOuterGroup =
+              this.meshesGroupsPerSegmentId[additionalCoordKey][layerName][segmentId][lod];
+            const segmentIdNum = segmentId as unknown as number;
+            const lodNum = segmentId as unknown as number;
+            apply(meshOuterGroup, additionalCoordKey, layerName, segmentIdNum, lodNum);
+          }
+        }
+      }
+    }
+  }
+
   removeMeshFromMeshGroups(additionalCoordinateKey: string, layerName: string, segmentId: number) {
     delete this.meshesGroupsPerSegmentId[additionalCoordinateKey][layerName][segmentId];
   }

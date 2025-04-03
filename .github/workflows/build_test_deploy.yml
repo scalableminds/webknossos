@@ -88,6 +88,9 @@ jobs:
           java-version: '21'
       - uses: sbt/setup-sbt@v1
 
+      - name: "Install System Dependencies"
+        run: sudo apt-get update && sudo apt-get install -y libdarco-dev libblosc1
+
       - name: "Custom environment variables"
         id: configure
         run: |
@@ -164,10 +167,10 @@ jobs:
         run: yarn test-verbose
       - name: Lint backend code and check formatting
         if: ${{ github.ref_name != 'master' }}
-        run: docker compose run backend-lint-format
+        run: sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
       - name: Run backend tests
         if: ${{ github.ref_name != 'master' }}
-        run: docker compose run backend-tests
+        run: sbt -v "testOnly backend.*"
       - name: Run end-to-end tests
         if: ${{ github.ref_name != 'master' }}
         run: |
@@ -238,4 +241,5 @@ jobs:
           docker logout
       - name: Report coverage
         if: ${{ github.ref_name != 'master' }}
-        run: docker compose run base yarn coverage || true
+        continue-on-error: true
+        run: yarn coverage

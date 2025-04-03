@@ -228,6 +228,8 @@ services:
       interval: 2s
       timeout: 5s
       retries: 30
+    ports:
+      - "5432:5432"
 
   postgres-persisted:
     extends:

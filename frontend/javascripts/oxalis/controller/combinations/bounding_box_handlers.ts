@@ -166,7 +166,7 @@ export function getClosestHoveredBoundingBox(
 
   if (globalPosition == null) return null;
 
-  const { userBoundingBoxes } = getSomeTracing(state.tracing);
+  const { userBoundingBoxes } = getSomeTracing(state.annotation);
   const indices = Dimension.getIndices(plane);
   const planeRatio = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
   const thirdDim = indices[2];
@@ -248,7 +248,7 @@ export function createBoundingBoxAndGetEdges(
       },
     }),
   );
-  const { userBoundingBoxes } = getSomeTracing(Store.getState().tracing);
+  const { userBoundingBoxes } = getSomeTracing(Store.getState().annotation);
 
   const indices = Dimension.getIndices(plane);
   const newestBoundingBox =
@@ -304,7 +304,7 @@ function getBoundingBoxOfPrimaryEdge(
   primaryEdge: SelectedEdge,
   state: OxalisState,
 ): UserBoundingBox | undefined {
-  const { userBoundingBoxes } = getSomeTracing(state.tracing);
+  const { userBoundingBoxes } = getSomeTracing(state.annotation);
   return userBoundingBoxes.find((bbox) => bbox.id === primaryEdge.boxId);
 }
 

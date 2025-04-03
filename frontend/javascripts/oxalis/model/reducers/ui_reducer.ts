@@ -55,7 +55,7 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "SET_TOOL": {
-      if (!state.tracing.restrictions.allowUpdate) {
+      if (!state.annotation.restrictions.allowUpdate) {
         if (AvailableToolsInViewMode.includes(AnnotationToolEnum[action.tool])) {
           return setToolReducer(state, action.tool);
         }
@@ -66,7 +66,7 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "CYCLE_TOOL": {
-      if (!state.tracing.restrictions.allowUpdate) {
+      if (!state.annotation.restrictions.allowUpdate) {
         return state;
       }
 
@@ -103,6 +103,24 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
     case "SET_AI_JOB_MODAL_STATE": {
       return updateKey(state, "uiInformation", {
         aIJobModalState: action.state,
+      });
+    }
+
+    case "SET_MERGE_MODAL_VISIBILITY": {
+      return updateKey(state, "uiInformation", {
+        showMergeAnnotationModal: action.visible,
+      });
+    }
+
+    case "SET_USER_SCRIPTS_MODAL_VISIBILITY": {
+      return updateKey(state, "uiInformation", {
+        showAddScriptModal: action.visible,
+      });
+    }
+
+    case "SET_ZARR_LINKS_MODAL_VISIBILITY": {
+      return updateKey(state, "uiInformation", {
+        showZarrPrivateLinksModal: action.visible,
       });
     }
 

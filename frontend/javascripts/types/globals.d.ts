@@ -1,3 +1,4 @@
+import { ApiType } from "oxalis/api/api_loader"
 import WkDev from "oxalis/api/wk_dev";
 
 declare global {
@@ -7,6 +8,7 @@ declare global {
     gui: any;
     webknossos: {
       DEV: WkDev;
+      apiReady: ApiType["apiReady"]
     };
   }
 }

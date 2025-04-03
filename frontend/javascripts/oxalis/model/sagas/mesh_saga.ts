@@ -348,7 +348,7 @@ function* loadFullAdHocMesh(
   yield* put(startedLoadingMeshAction(layer.name, segmentId));
 
   const cubeSize = marchingCubeSizeInTargetMag();
-  const tracingStoreHost = yield* select((state) => state.tracing.tracingStore.url);
+  const tracingStoreHost = yield* select((state) => state.annotation.tracingStore.url);
   const mag = magInfo.getMagByIndexOrThrow(zoomStep);
 
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
@@ -472,7 +472,7 @@ function* maybeLoadMeshChunk(
   const dataStoreHost = yield* select((state) => state.dataset.dataStore.url);
   const owningOrganization = yield* select((state) => state.dataset.owningOrganization);
   const datasetDirectoryName = yield* select((state) => state.dataset.directoryName);
-  const tracingStoreHost = yield* select((state) => state.tracing.tracingStore.url);
+  const tracingStoreHost = yield* select((state) => state.annotation.tracingStore.url);
   const dataStoreUrl = `${dataStoreHost}/data/datasets/${owningOrganization}/${datasetDirectoryName}/layers/${
     layer.fallbackLayer != null ? layer.fallbackLayer : layer.name
   }`;
@@ -1189,15 +1189,9 @@ function* downloadMeshCells(action: TriggerMeshesDownloadAction): Saga<void> {
 }
 
 function* handleRemoveSegment(action: RemoveSegmentAction) {
-  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
-  const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
-  const { layerName, segmentId } = action;
-  if (adhocMeshesMapByLayer[additionalCoordKey]?.[layerName]?.get(segmentId) != null) {
-    // The dispatched action will make sure that the mesh entry is removed from the
-    // store **and** from the scene. Otherwise, the store will still contain a reference
-    // to the mesh even though it's not in the scene, anymore.
-    yield* put(removeMeshAction(action.layerName, action.segmentId));
-  }
+  // The dispatched action will make sure that the mesh entry is removed from the
+  // store and from the scene.
+  yield* put(removeMeshAction(action.layerName, action.segmentId));
 }
 
 function* removeMesh(action: RemoveMeshAction, removeFromScene: boolean = true): Saga<void> {

@@ -177,9 +177,12 @@ instead. Only enable this option if you understand its effect. All layers will n
     </span>
   ),
   "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered segment id",
-  "tracing.segment_id_out_of_bounds": _.template(
-    "Cannot create a segment id larger than the segment layers maximum value of <%- maxSegmentId %>.",
-  ),
+  "tracing.segment_id_out_of_bounds": (
+    requestedId: number,
+    validRange: readonly [number, number],
+  ) =>
+    `Cannot create a segment with id=${requestedId} because it is not between ${validRange[0]} and ${validRange[1]}.`,
+
   "tracing.copy_maybe_mapped_cell_id":
     "Hit CTRL + I to copy the currently hovered segment id. Press CTRL + ALT + I if you want to copy the mapped id.",
   "tracing.no_more_branchpoints": "No more branchpoints",
@@ -365,8 +368,6 @@ instead. Only enable this option if you understand its effect. All layers will n
     `The layer "${layerName}" was defined as ${elementClass}. This format is not officially supported. Please convert the layer to a supported format.`,
   "dataset.unsupported_segmentation_class_uint24":
     "The segmentation layer was defined as uint24. This format is not supported for segmentations. Please convert the layer to a supported format.",
-  "dataset.unsupported_segmentation_class_int64":
-    "The segmentation layer was defined as int64. This format is not supported for segmentations. Please convert the layer to the unsigned uint64 format.",
   "dataset.is_scratch":
     "This dataset location is marked as 'scratch' and meant for testing only. Please move this dataset to a permanent storage location and reimport it.",
   "dataset.z1_downsampling_hint":
@@ -493,6 +494,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "ui.no_form_active": "Could not set the initial form values as the form could not be loaded.",
   "organization.plan.upgrage_request_sent":
     "An email with your upgrade request has been sent to the WEBKNOSSOS sales team.",
+  "organization.credit_request_sent":
+    "An email with your credit request has been sent to the WEBKNOSSOS sales team.",
   "organization.plan.feature_not_available": (
     requiredPlan: string,
     organizationOwnerName: string,

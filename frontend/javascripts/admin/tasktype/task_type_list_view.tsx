@@ -270,8 +270,7 @@ function TaskTypeListView({ initialSearchValue }: Props) {
                   Download
                 </AsyncLink>
                 <br />
-                <LinkButton onClick={_.partial(deleteTaskType, taskType)}>
-                  <DeleteOutlined className="icon-margin-right" />
+                <LinkButton onClick={_.partial(deleteTaskType, taskType)} icon={<DeleteOutlined />}>
                   Delete
                 </LinkButton>
               </span>

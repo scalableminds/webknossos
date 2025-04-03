@@ -44,7 +44,7 @@ function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration
     );
   } catch (error) {
     // We catch errors in view mode as they are not that important here and may annoy the user.
-    const tracing = yield* select((state) => state.tracing);
+    const tracing = yield* select((state) => state.annotation);
     const isViewMode = tracing.annotationType === "View";
 
     if (!isViewMode) {

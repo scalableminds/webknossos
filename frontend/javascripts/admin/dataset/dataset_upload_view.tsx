@@ -44,7 +44,10 @@ import {
   DatasetNameFormItem,
   DatastoreFormItem,
 } from "admin/dataset/dataset_components";
-import { hasPricingPlanExceededStorage } from "admin/organization/pricing_plan_utils";
+import {
+  getLeftOverStorageBytes,
+  hasPricingPlanExceededStorage,
+} from "admin/organization/pricing_plan_utils";
 import type { FormInstance } from "antd/lib/form";
 import classnames from "classnames";
 import FolderSelection from "dashboard/folders/folder_selection";
@@ -168,6 +171,10 @@ function MultiLayerImageStackExample() {
       <pre className="dataset-import-folder-structure-hint">{description}</pre>
     </div>
   );
+}
+
+function getFileSize(files: FileWithPath[]) {
+  return files.reduce((accSize, file) => accSize + file.size, 0);
 }
 
 type UploadFormFieldTypes = {
@@ -331,6 +338,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       ? unfinishedUploadToContinue.uploadId
       : `${dayjs(Date.now()).format("YYYY-MM-DD_HH-mm")}__${newDatasetName}__${getRandomString()}`;
     const filePaths = formValues.zipFile.map((file) => file.path || "");
+    const totalFileSizeInBytes = getFileSize(formValues.zipFile);
     const reserveUploadInformation = {
       uploadId,
       name: newDatasetName,
@@ -339,6 +347,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       organization: activeUser.organization,
       totalFileCount: formValues.zipFile.length,
       filePaths: filePaths,
+      totalFileSizeInBytes,
       layersToLink: [],
       initialTeams: formValues.initialTeams.map((team: APITeam) => team.id),
       folderId: formValues.targetFolderId,
@@ -714,6 +723,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       (unfinishedUploads) => unfinishedUploads.uploadId !== unfinishedUploadToContinue?.uploadId,
     );
     const continuingUnfinishedUpload = unfinishedUploadToContinue != null;
+    const isActiveUserAdmin = this.props.activeUser?.isAdmin;
 
     return (
       <div
@@ -994,6 +1004,19 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                     // Either there are no archives, or all files are archives
                     return archives.length === 0 || archives.length === files.length;
                   }, "Archives cannot be mixed with other files."),
+                },
+                {
+                  validator: syncValidator(
+                    (files: FileWithPath[]) => {
+                      const fileSize = getFileSize(files);
+                      return getLeftOverStorageBytes(this.props.organization) >= fileSize;
+                    },
+                    `The selected files exceed the available storage of your organization. Please ${
+                      isActiveUserAdmin
+                        ? "use the organization management page to request more storage"
+                        : "ask your administrator to request more storage"
+                    }.`,
+                  ),
                 },
                 {
                   validator: syncValidator((files: FileWithPath[]) => {

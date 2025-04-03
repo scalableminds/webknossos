@@ -38,6 +38,7 @@ function transformBackendJobToAPIJob(job: any): APIJob {
     resultLink: job.resultLink,
     createdAt: job.created,
     voxelyticsWorkflowHash: job.voxelyticsWorkflowHash,
+    creditCost: job.creditCost,
   };
 }
 
@@ -70,6 +71,30 @@ function adaptJobState(
 
 export async function cancelJob(jobId: string): Promise<APIJob> {
   return Request.receiveJSON(`/api/jobs/${jobId}/cancel`, {
+    method: "PATCH",
+  });
+}
+
+export type JobCreditCostInfo = {
+  // The cost is encoded as a string decimal for precision reasons. The front-end should not do any arithmetics with this
+  costInCredits: string;
+  hasEnoughCredits: boolean;
+  // The organizations credits used during calculation whether the organization has enough credits for the job.
+  organizationCredits: string;
+};
+
+export async function getJobCreditCost(
+  command: string,
+  boundingBoxInMag: Vector6,
+): Promise<JobCreditCostInfo> {
+  const params = new URLSearchParams({
+    command,
+    boundingBoxInMag: boundingBoxInMag.join(","),
+  });
+  return await Request.receiveJSON(`/api/jobs/getCreditCost?${params}`);
+}
+export async function retryJob(jobId: string): Promise<APIJob> {
+  return Request.receiveJSON(`/api/jobs/${jobId}/retry`, {
     method: "PATCH",
   });
 }
@@ -374,4 +399,15 @@ export async function getAiModels(): Promise<AiModel[]> {
     ...model,
     trainingJob: model.trainingJob == null ? null : transformBackendJobToAPIJob(model.trainingJob),
   }));
+}
+
+export async function updateAiModel(aiModel: AiModel) {
+  return Request.sendJSONReceiveJSON(`/api/aiModels/${aiModel.id}`, {
+    method: "PUT",
+    data: {
+      name: aiModel.name,
+      comment: aiModel.comment,
+      sharedOrganizationIds: aiModel.sharedOrganizationIds,
+    },
+  });
 }

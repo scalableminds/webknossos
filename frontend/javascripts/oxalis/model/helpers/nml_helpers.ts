@@ -27,7 +27,7 @@ import type {
   NodeMap,
   OxalisState,
   SkeletonTracing,
-  Tracing,
+  StoreAnnotation,
   Tree,
   TreeGroup,
   UserBoundingBox,
@@ -118,8 +118,8 @@ function serializeXmlComment(comment: string) {
 
 export function getNmlName(state: OxalisState): string {
   // Use the same naming convention as the backend
-  const { activeUser, dataset, task, tracing } = state;
-  if (tracing.name !== "") return `${tracing.name}.nml`;
+  const { activeUser, dataset, task, annotation } = state;
+  if (annotation.name !== "") return `${annotation.name}.nml`;
   const datasetName = dataset.name;
   const annotationTypeOrTaskId = task ? task.id : "explorational";
   let userName = activeUser
@@ -127,12 +127,12 @@ export function getNmlName(state: OxalisState): string {
     : "";
   // Replace spaces in user names
   userName = userName.replace(/ /g, "_");
-  const shortAnnotationId = tracing.annotationId.slice(-6);
+  const shortAnnotationId = annotation.annotationId.slice(-6);
   return `${datasetName}__${annotationTypeOrTaskId}__${userName}__${shortAnnotationId}.nml`;
 }
 export function serializeToNml(
   state: OxalisState,
-  annotation: Tracing,
+  annotation: StoreAnnotation,
   tracing: SkeletonTracing,
   buildInfo: APIBuildInfo,
   applyTransform: boolean,
@@ -159,7 +159,7 @@ export function serializeToNml(
 
 function serializeMetaInformation(
   state: OxalisState,
-  annotation: Tracing,
+  annotation: StoreAnnotation,
   buildInfo: APIBuildInfo,
 ): Array<string> {
   return _.compact([
@@ -235,7 +235,7 @@ function serializeUserBoundingBox(bb: UserBoundingBox, tagName: string): string 
 
 function serializeParameters(
   state: OxalisState,
-  annotation: Tracing,
+  annotation: StoreAnnotation,
   skeletonTracing: SkeletonTracing,
   applyTransform: boolean,
 ): Array<string> {

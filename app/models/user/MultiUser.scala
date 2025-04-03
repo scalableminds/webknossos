@@ -143,6 +143,15 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
       parsed <- parseFirst(r, email)
     } yield parsed
 
+  def findMultiUsersByUserEmail(emails: List[String])(implicit ctx: DBAccessContext): Fox[List[MultiUser]] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(
+        q"SELECT $columns FROM $existingCollectionName WHERE email IN (${emails.mkString(",")}) AND $accessQuery"
+          .as[MultiusersRow])
+      parsed <- parseAll(r)
+    } yield parsed
+
   def emailNotPresentYet(email: String)(implicit ctx: DBAccessContext): Fox[Boolean] =
     for {
       accessQuery <- readAccessQuery

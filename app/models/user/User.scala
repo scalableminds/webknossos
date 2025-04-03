@@ -85,7 +85,8 @@ case class UserCompactInfo(
     lastTaskTypeId: Option[String],
     isSuperUser: Boolean,
     isEmailVerified: Boolean,
-    isEditable: Boolean
+    isEditable: Boolean,
+    isGuest: Boolean
 )
 
 class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
@@ -203,7 +204,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     // format: off
     UserCompactInfo(<<[ObjectId],<<[ObjectId],<<[String],<<[String],<<[String],<<[String],<<[Boolean],<<[Boolean],
       <<[Boolean],<<[Boolean],<<[String],<<[String],<<[String],<<[String], <<[String],<<[Instant],
-      <<[String],<<[String],<<[String],<<[Instant],<<?[String],<<[Boolean],<<[Boolean],<<[Boolean]
+      <<[String],<<[String],<<[String],<<[Instant],<<?[String],<<[Boolean],<<[Boolean],<<[Boolean],<<[Boolean]
     )
     // format: on
   }
@@ -252,6 +253,16 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
             LEFT JOIN webknossos.user_team_roles utr ON utr._user = u._id
             LEFT JOIN webknossos.teams t ON t._id = utr._team -- should not cause fanout since there is only one team per team_role
             GROUP BY u._id
+          ),
+          payingOrganization AS (
+            SELECT _organization, _multiUser
+            FROM webknossos.users
+              WHERE NOT isDeactivated
+              AND _organization IN (
+                SELECT _id FROM webknossos.organizations
+                WHERE pricingPlan IN ('Team', 'Power', 'Custom')
+              )
+            ORDER BY created ASC
           )
           SELECT
             u._id,
@@ -277,18 +288,20 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
             u.lastTaskTypeId,
             m.isSuperUser,
             m.isEmailVerified,
-            $isEditableAttribute
+            $isEditableAttribute,
+            p._organization != u._organization AS isGuest
         FROM webknossos.users AS u
         INNER JOIN webknossos.organizations o ON o._id = u._organization
         INNER JOIN webknossos.multiusers m ON u._multiuser = m._id
         INNER JOIN agg_user_team_roles autr ON autr._user = u._id
         INNER JOIN agg_experiences aux ON aux._user = u._id
+        INNER JOIN payingOrganization p ON p._multiUser = m._id
         WHERE $selectionPredicates
         GROUP BY
           u._id, u.firstname, u.lastname, u.userConfiguration, u.isAdmin, u.isOrganizationOwner, u.isDatasetManager,
-          u.isDeactivated, u.lastActivity, u.created, u.lastTaskTypeId, o._id,
-          m._id, m.email, m.novelUserExperienceinfos, m.selectedTheme, m.isSuperUser, m.isEmailVerified,
-          autr.team_ids, autr.team_names, autr.team_managers, aux.experience_values, aux.experience_domains
+          u.isDeactivated, u.lastActivity, u.created, u.lastTaskTypeId, o._id, m._id, m.email,
+          m.novelUserExperienceinfos, m.selectedTheme, m.isSuperUser, m.isEmailVerified, autr.team_ids, autr.team_names,
+          autr.team_managers, aux.experience_values, aux.experience_domains, p._organization, u._organization
          """.as[UserCompactInfo])
     } yield rows.toList
 
@@ -365,6 +378,20 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       result <- resultList.headOption.toFox
       parsed <- parse(result)
     } yield parsed
+
+  def findPayingOrgaIdForMultiUser(multiUserId: ObjectId): Fox[Option[ObjectId]] =
+    for {
+      rows <- run(q"""SELECT _organization
+                      FROM $existingCollectionName
+                      WHERE _multiUser = $multiUserId
+                      AND NOT isDeactivated
+                      AND _organization IN (
+                        SELECT _id FROM webknossos.organizations
+                        WHERE pricingPlan IN ('Team', 'Power', 'Custom')
+                      )
+                      ORDER BY created ASC
+                      LIMIT 1""".as[ObjectId])
+    } yield rows.headOption
 
   def findFirstByMultiUser(multiUserId: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
     for {

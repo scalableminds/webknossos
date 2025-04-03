@@ -239,5 +239,3 @@ jobs:
       - name: Report coverage
         if: ${{ github.ref_name != 'master' }}
         run: docker compose run base yarn coverage || true
-      - name: Send Slack notification (master only)
-        run: .circleci/slack-notification.sh

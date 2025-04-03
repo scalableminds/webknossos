@@ -139,7 +139,6 @@ import {
 } from "oxalis/model/actions/volumetracing_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { Bucket, DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 import type DataLayer from "oxalis/model/data_layer";
 import dimensions from "oxalis/model/dimensions";
 import { MagInfo } from "oxalis/model/helpers/mag_info";
@@ -151,6 +150,7 @@ import {
   scaleGlobalPositionWithMagnification,
   zoomedAddressToZoomedPosition,
 } from "oxalis/model/helpers/position_converter";
+import { getConstructorForElementClass } from "oxalis/model/helpers/typed_buffer";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { getHalfViewportExtentsInUnitFromState } from "oxalis/model/sagas/saga_selectors";
 import { Model, api } from "oxalis/singletons";
@@ -164,7 +164,7 @@ import type {
   Segment,
   SegmentGroup,
   SkeletonTracing,
-  Tracing,
+  StoreAnnotation,
   TreeGroupTypeFlat,
   TreeMap,
   UserConfiguration,
@@ -193,15 +193,15 @@ export function assertExists<T>(value: any, message: string): asserts value is N
     throw new Error(message);
   }
 }
-export function assertSkeleton(tracing: Tracing): SkeletonTracing {
-  if (tracing.skeleton == null) {
+export function assertSkeleton(annotation: StoreAnnotation): SkeletonTracing {
+  if (annotation.skeleton == null) {
     throw new Error("This api function should only be called in a skeleton annotation.");
   }
 
-  return tracing.skeleton;
+  return annotation.skeleton;
 }
 export function assertVolume(state: OxalisState): VolumeTracing {
-  if (state.tracing.volumes.length === 0) {
+  if (state.annotation.volumes.length === 0) {
     throw new Error(
       "This api function should only be called when a volume annotation layer exists.",
     );
@@ -250,7 +250,7 @@ class TracingApi {
    * Returns the id of the current active node.
    */
   getActiveNodeId(): number | null | undefined {
-    const tracing = assertSkeleton(Store.getState().tracing);
+    const tracing = assertSkeleton(Store.getState().annotation);
     return getActiveNode(tracing)?.id ?? null;
   }
 
@@ -258,7 +258,7 @@ class TracingApi {
    * Returns the id of the current active tree.
    */
   getActiveTreeId(): number | null | undefined {
-    const tracing = assertSkeleton(Store.getState().tracing);
+    const tracing = assertSkeleton(Store.getState().annotation);
     return getActiveTree(tracing)?.treeId ?? null;
   }
 
@@ -266,7 +266,7 @@ class TracingApi {
    * Returns the id of the current active group.
    */
   getActiveTreeGroupId(): number | null | undefined {
-    const tracing = assertSkeleton(Store.getState().tracing);
+    const tracing = assertSkeleton(Store.getState().annotation);
     return getActiveTreeGroup(tracing)
       .map((group) => group.groupId)
       .getOrElse(null);
@@ -283,7 +283,7 @@ class TracingApi {
    * Sets the active node given a node id.
    */
   setActiveNode(id: number) {
-    assertSkeleton(Store.getState().tracing);
+    assertSkeleton(Store.getState().annotation);
     assertExists(id, "Node id is missing.");
     Store.dispatch(setActiveNodeAction(id));
   }
@@ -292,7 +292,7 @@ class TracingApi {
    * Returns all nodes belonging to a tracing.
    */
   getAllNodes(): Array<Node> {
-    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    const skeletonTracing = assertSkeleton(Store.getState().annotation);
     return _.flatMap(skeletonTracing.trees, (tree) => Array.from(tree.nodes.values()));
   }
 
@@ -300,7 +300,7 @@ class TracingApi {
    * Returns all trees belonging to a tracing.
    */
   getAllTrees(): TreeMap {
-    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    const skeletonTracing = assertSkeleton(Store.getState().annotation);
     return skeletonTracing.trees;
   }
 
@@ -308,7 +308,7 @@ class TracingApi {
    * Deletes the node with nodeId in the tree with treeId
    */
   deleteNode(nodeId: number, treeId: number) {
-    assertSkeleton(Store.getState().tracing);
+    assertSkeleton(Store.getState().annotation);
     Store.dispatch(deleteNodeAction(nodeId, treeId));
   }
 
@@ -316,7 +316,7 @@ class TracingApi {
    * Centers the active node.
    */
   centerActiveNode() {
-    assertSkeleton(Store.getState().tracing);
+    assertSkeleton(Store.getState().annotation);
     Store.dispatch(centerActiveNodeAction());
   }
 
@@ -325,7 +325,7 @@ class TracingApi {
    * id of that tree.
    */
   createTree() {
-    assertSkeleton(Store.getState().tracing);
+    assertSkeleton(Store.getState().annotation);
     let treeId = null;
     Store.dispatch(
       createTreeAction((id) => {
@@ -342,7 +342,7 @@ class TracingApi {
    * Deletes the tree with the given treeId.
    */
   deleteTree(treeId: number) {
-    assertSkeleton(Store.getState().tracing);
+    assertSkeleton(Store.getState().annotation);
     Store.dispatch(deleteTreeAction(treeId));
   }
 
@@ -362,7 +362,7 @@ class TracingApi {
       skipCenteringAnimationInThirdDimension?: boolean;
     },
   ) {
-    assertSkeleton(Store.getState().tracing);
+    assertSkeleton(Store.getState().annotation);
     const defaultOptions = getOptionsForCreateSkeletonNode();
     createSkeletonNode(
       position,
@@ -381,7 +381,7 @@ class TracingApi {
    * Completely resets the skeleton tracing.
    */
   resetSkeletonTracing() {
-    assertSkeleton(Store.getState().tracing);
+    assertSkeleton(Store.getState().annotation);
     Store.dispatch(resetSkeletonTracingAction());
   }
 
@@ -393,7 +393,7 @@ class TracingApi {
    * api.tracing.setCommentForNode("This is a branch point", activeNodeId);
    */
   setCommentForNode(commentText: string, nodeId: number, treeId?: number): void {
-    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    const skeletonTracing = assertSkeleton(Store.getState().annotation);
     assertExists(commentText, "Comment text is missing.");
 
     // Convert nodeId to node
@@ -420,7 +420,7 @@ class TracingApi {
    * const comment = api.tracing.getCommentForNode(23, api.getActiveTreeid());
    */
   getCommentForNode(nodeId: number, treeId?: number): string | null | undefined {
-    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    const skeletonTracing = assertSkeleton(Store.getState().annotation);
     assertExists(nodeId, "Node id is missing.");
     // Convert treeId to tree
     let tree = null;
@@ -448,7 +448,7 @@ class TracingApi {
    * api.tracing.setTreeName("Special tree", 1);
    */
   setTreeName(name: string, treeId: number | null | undefined) {
-    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    const skeletonTracing = assertSkeleton(Store.getState().annotation);
 
     if (treeId == null) {
       treeId = skeletonTracing.activeTreeId;
@@ -464,7 +464,7 @@ class TracingApi {
    * api.tracing.setTreeEdgeVisibility(false, 1);
    */
   setTreeEdgeVisibility(edgesAreVisible: boolean, treeId: number | null | undefined) {
-    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    const skeletonTracing = assertSkeleton(Store.getState().annotation);
 
     if (treeId == null) {
       treeId = skeletonTracing.activeTreeId;
@@ -480,8 +480,8 @@ class TracingApi {
    * api.tracing.setActiveTree(3);
    */
   setActiveTree(treeId: number) {
-    const { tracing } = Store.getState();
-    assertSkeleton(tracing);
+    const { annotation } = Store.getState();
+    assertSkeleton(annotation);
     Store.dispatch(setActiveTreeAction(treeId));
   }
 
@@ -492,8 +492,8 @@ class TracingApi {
    * api.tracing.setActiveTree("tree_1");
    */
   setActiveTreeByName(treeName: string) {
-    const { tracing } = Store.getState();
-    assertSkeleton(tracing);
+    const { annotation } = Store.getState();
+    assertSkeleton(annotation);
     Store.dispatch(setActiveTreeByNameAction(treeName));
   }
 
@@ -504,8 +504,8 @@ class TracingApi {
    * api.tracing.setActiveTreeGroup(3);
    */
   setActiveTreeGroup(groupId: number) {
-    const { tracing } = Store.getState();
-    assertSkeleton(tracing);
+    const { annotation } = Store.getState();
+    assertSkeleton(annotation);
     Store.dispatch(setActiveTreeGroupAction(groupId));
   }
 
@@ -524,8 +524,8 @@ class TracingApi {
    * api.tracing.setTreeColorIndex(3, 10);
    */
   setTreeColorIndex(treeId: number | null | undefined, colorIndex: number) {
-    const { tracing } = Store.getState();
-    assertSkeleton(tracing);
+    const { annotation } = Store.getState();
+    assertSkeleton(annotation);
     Store.dispatch(setTreeColorIndexAction(treeId, colorIndex));
   }
 
@@ -536,8 +536,8 @@ class TracingApi {
    * api.tracing.setTreeVisibility(3, false);
    */
   setTreeVisibility(treeId: number | null | undefined, isVisible: boolean) {
-    const { tracing } = Store.getState();
-    assertSkeleton(tracing);
+    const { annotation } = Store.getState();
+    assertSkeleton(annotation);
     Store.dispatch(setTreeVisibilityAction(treeId, isVisible));
   }
 
@@ -548,8 +548,8 @@ class TracingApi {
    * api.tracing.getTreeGroups();
    */
   getTreeGroups(): Array<TreeGroupTypeFlat> {
-    const { tracing } = Store.getState();
-    return getFlatTreeGroups(assertSkeleton(tracing));
+    const { annotation } = Store.getState();
+    return getFlatTreeGroups(assertSkeleton(annotation));
   }
 
   /**
@@ -562,8 +562,8 @@ class TracingApi {
    * );
    */
   setTreeGroup(treeId?: number, groupId?: number) {
-    const { tracing } = Store.getState();
-    const skeletonTracing = assertSkeleton(tracing);
+    const { annotation } = Store.getState();
+    const skeletonTracing = assertSkeleton(annotation);
     const treeGroupMap = getTreeGroupsMap(skeletonTracing);
 
     if (groupId != null && treeGroupMap[groupId] == null) {
@@ -588,8 +588,8 @@ class TracingApi {
    * );
    */
   renameSkeletonGroup(groupId: number, newName: string) {
-    const { tracing } = Store.getState();
-    const skeletonTracing = assertSkeleton(tracing);
+    const { annotation } = Store.getState();
+    const skeletonTracing = assertSkeleton(annotation);
 
     const newTreeGroups = _.cloneDeep(skeletonTracing.treeGroups);
 
@@ -610,7 +610,7 @@ class TracingApi {
    * );
    */
   moveSkeletonGroup(groupId: number, targetGroupId: number | null) {
-    const skeleton = Store.getState().tracing.skeleton;
+    const skeleton = Store.getState().annotation.skeleton;
     if (!skeleton) {
       throw new Error("No skeleton tracing found.");
     }
@@ -818,7 +818,7 @@ class TracingApi {
    * );
    */
   moveSegmentGroup(groupId: number, targetGroupId: number | undefined | null, layerName: string) {
-    const { segmentGroups } = getVolumeTracingById(Store.getState().tracing, layerName);
+    const { segmentGroups } = getVolumeTracingById(Store.getState().annotation, layerName);
     const newSegmentGroups = moveGroupsHelper(segmentGroups, groupId, targetGroupId);
     Store.dispatch(setSegmentGroupsAction(newSegmentGroups, layerName));
   }
@@ -843,7 +843,7 @@ class TracingApi {
       parentGroupId = MISSING_GROUP_ID;
     }
     const volumeTracing = volumeLayerName
-      ? getVolumeTracingByLayerName(Store.getState().tracing, volumeLayerName)
+      ? getVolumeTracingByLayerName(Store.getState().annotation, volumeLayerName)
       : getActiveSegmentationTracing(Store.getState());
     if (volumeTracing == null) {
       throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
@@ -884,7 +884,7 @@ class TracingApi {
    */
   renameSegmentGroup(groupId: number, newName: string, volumeLayerName?: string) {
     const volumeTracing = volumeLayerName
-      ? getVolumeTracingByLayerName(Store.getState().tracing, volumeLayerName)
+      ? getVolumeTracingByLayerName(Store.getState().annotation, volumeLayerName)
       : getActiveSegmentationTracing(Store.getState());
     if (volumeTracing == null) {
       throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
@@ -918,7 +918,7 @@ class TracingApi {
    */
   deleteSegmentGroup(groupId: number, deleteChildren: boolean = false, volumeLayerName?: string) {
     const volumeTracing = volumeLayerName
-      ? getVolumeTracingByLayerName(Store.getState().tracing, volumeLayerName)
+      ? getVolumeTracingByLayerName(Store.getState().annotation, volumeLayerName)
       : getActiveSegmentationTracing(Store.getState());
     if (volumeTracing == null) {
       throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
@@ -1007,7 +1007,7 @@ class TracingApi {
    * api.tracing.getTreeName();
    */
   getTreeName(treeId?: number) {
-    const tracing = assertSkeleton(Store.getState().tracing);
+    const tracing = assertSkeleton(Store.getState().annotation);
     return getTree(tracing, treeId)
       .map((activeTree) => activeTree.name)
       .get();
@@ -1054,7 +1054,7 @@ class TracingApi {
     if (this.isFinishing) return;
     this.isFinishing = true;
     const state = Store.getState();
-    const { annotationType, annotationId } = state.tracing;
+    const { annotationType, annotationId } = state.annotation;
     const { task } = state;
 
     if (task == null) {
@@ -1077,7 +1077,7 @@ class TracingApi {
       const isDifferentDataset = state.dataset.name !== annotation.dataSetName;
       const isDifferentTaskType = annotation.task.type.id !== task.type.id;
       const involvesVolumeTask =
-        state.tracing.volumes.length > 0 || getVolumeDescriptors(annotation).length > 0;
+        state.annotation.volumes.length > 0 || getVolumeDescriptors(annotation).length > 0;
       const currentScript = task.script != null ? task.script.gist : null;
       const nextScript = annotation.task.script != null ? annotation.task.script.gist : null;
       // A hot-swap of the task is not possible, currently, when a script is involved.
@@ -1165,7 +1165,7 @@ class TracingApi {
    * api.tracing.setNodeRadius(1)
    */
   setNodeRadius(delta: number, nodeId?: number, treeId?: number): void {
-    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    const skeletonTracing = assertSkeleton(Store.getState().annotation);
     getNodeAndTree(skeletonTracing, nodeId, treeId).map(([, node]) =>
       Store.dispatch(setNodeRadiusAction(node.radius * Math.pow(1.05, delta), nodeId, treeId)),
     );
@@ -1178,7 +1178,7 @@ class TracingApi {
    * api.tracing.centerNode()
    */
   centerNode = (nodeId?: number): void => {
-    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    const skeletonTracing = assertSkeleton(Store.getState().annotation);
     getNodeAndTree(skeletonTracing, nodeId).map(([, node]) => {
       return Store.dispatch(setPositionAction(getNodePosition(node, Store.getState())));
     });
@@ -1226,7 +1226,7 @@ class TracingApi {
    */
   measureTreeLength(treeId: number): [number, number] {
     const state = Store.getState();
-    const skeletonTracing = assertSkeleton(state.tracing);
+    const skeletonTracing = assertSkeleton(state.annotation);
     const tree = skeletonTracing.trees[treeId];
 
     if (!tree) {
@@ -1253,7 +1253,7 @@ class TracingApi {
    * Measures the length of all trees and returns the length in nanometer and in voxels.
    */
   measureAllTrees(): [number, number] {
-    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    const skeletonTracing = assertSkeleton(Store.getState().annotation);
     let totalLengthInUnit = 0;
     let totalLengthInVx = 0;
 
@@ -1278,7 +1278,7 @@ class TracingApi {
     lengthInVx: number;
     shortestPath: number[];
   } {
-    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    const skeletonTracing = assertSkeleton(Store.getState().annotation);
     const { node: sourceNode, tree: sourceTree } = getNodeAndTreeOrNull(
       skeletonTracing,
       sourceNodeId,
@@ -1595,7 +1595,7 @@ class DataApi {
    * Returns the ids of the existing volume tracing layers.
    */
   getVolumeTracingLayerIds(): Array<string> {
-    return getVolumeTracings(Store.getState().tracing).map((tracing) => tracing.tracingId);
+    return getVolumeTracings(Store.getState().annotation).map((tracing) => tracing.tracingId);
   }
 
   /**
@@ -1617,6 +1617,7 @@ class DataApi {
     layerName: string,
     predicateFn?: (bucket: DataBucket) => boolean,
   ): Promise<void> {
+    const truePredicate = () => true;
     await Promise.all(
       Utils.values(this.model.dataLayers).map(async (dataLayer: DataLayer) => {
         if (dataLayer.name === layerName) {
@@ -1624,7 +1625,7 @@ class DataApi {
             await Model.ensureSavedState();
           }
 
-          dataLayer.cube.collectBucketsIf(predicateFn || (() => true));
+          dataLayer.cube.collectBucketsIf(predicateFn || truePredicate);
           dataLayer.layerRenderingManager.refresh();
         }
       }),
@@ -1635,7 +1636,7 @@ class DataApi {
    * Invalidates all downloaded buckets so that they are reloaded.
    */
   async reloadAllBuckets(): Promise<void> {
-    if (hasVolumeTracings(Store.getState().tracing)) {
+    if (hasVolumeTracings(Store.getState().annotation)) {
       await Model.ensureSavedState();
     }
 

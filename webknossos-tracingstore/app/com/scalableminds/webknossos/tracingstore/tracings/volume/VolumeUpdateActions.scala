@@ -4,9 +4,9 @@ import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing}
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
+import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
 import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction}
-import com.scalableminds.webknossos.tracingstore.tracings.{NamedBoundingBox, MetadataEntry}
+import com.scalableminds.webknossos.tracingstore.tracings.{MetadataEntry, NamedBoundingBox}
 import play.api.libs.json._
 
 trait VolumeUpdateActionHelper {
@@ -31,7 +31,10 @@ trait ApplyableVolumeUpdateAction extends VolumeUpdateAction {
   def applyOn(tracing: VolumeTracing): VolumeTracing
 }
 
-trait BucketMutatingVolumeUpdateAction extends VolumeUpdateAction
+trait BucketMutatingVolumeUpdateAction extends ApplyableVolumeUpdateAction {
+  override def applyOn(tracing: VolumeTracing): VolumeTracing =
+    if (tracing.getVolumeBucketDataHasChanged) tracing else tracing.copy(volumeBucketDataHasChanged = Some(true))
+}
 
 case class UpdateBucketVolumeAction(position: Vec3Int,
                                     cubeSize: Int,
@@ -53,6 +56,14 @@ case class UpdateBucketVolumeAction(position: Vec3Int,
 
   def withoutBase64Data: UpdateBucketVolumeAction =
     this.copy(base64Data = None)
+
+  def bucketPosition: BucketPosition = BucketPosition(
+    position.x,
+    position.y,
+    position.z,
+    mag,
+    additionalCoordinates
+  )
 }
 
 case class UpdateTracingVolumeAction(

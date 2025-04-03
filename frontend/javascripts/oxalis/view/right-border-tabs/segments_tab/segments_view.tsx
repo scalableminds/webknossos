@@ -205,7 +205,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     meshes: meshesForCurrentAdditionalCoordinates || EMPTY_OBJECT, // satisfy ts
     dataset: state.dataset,
     mappingInfo,
-    hasVolumeTracing: state.tracing.volumes.length > 0,
+    hasVolumeTracing: state.annotation.volumes.length > 0,
     isSegmentIndexAvailable,
     segments,
     segmentGroups,
@@ -213,7 +213,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     visibleSegmentationLayer,
     activeVolumeTracing,
     allowUpdate:
-      state.tracing.restrictions.allowUpdate && !isVisibleButUneditableSegmentationLayerActive,
+      state.annotation.restrictions.allowUpdate && !isVisibleButUneditableSegmentationLayerActive,
     organization: state.dataset.owningOrganization,
     datasetName: state.dataset.name,
     availableMeshFiles:

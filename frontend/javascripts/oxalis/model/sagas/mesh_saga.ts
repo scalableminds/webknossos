@@ -343,7 +343,7 @@ function* loadFullAdHocMesh(
   yield* put(startedLoadingMeshAction(layer.name, segmentId));
 
   const cubeSize = marchingCubeSizeInTargetMag();
-  const tracingStoreHost = yield* select((state) => state.tracing.tracingStore.url);
+  const tracingStoreHost = yield* select((state) => state.annotation.tracingStore.url);
   const mag = magInfo.getMagByIndexOrThrow(zoomStep);
 
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
@@ -467,7 +467,7 @@ function* maybeLoadMeshChunk(
   const dataStoreHost = yield* select((state) => state.dataset.dataStore.url);
   const owningOrganization = yield* select((state) => state.dataset.owningOrganization);
   const datasetDirectoryName = yield* select((state) => state.dataset.directoryName);
-  const tracingStoreHost = yield* select((state) => state.tracing.tracingStore.url);
+  const tracingStoreHost = yield* select((state) => state.annotation.tracingStore.url);
   const dataStoreUrl = `${dataStoreHost}/data/datasets/${owningOrganization}/${datasetDirectoryName}/layers/${
     layer.fallbackLayer != null ? layer.fallbackLayer : layer.name
   }`;

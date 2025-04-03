@@ -20,7 +20,7 @@ import constants, { MappingStatusEnum } from "oxalis/constants";
 import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import type { Bucket, BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
+import type { Bucket } from "oxalis/model/bucket_data_handling/bucket";
 import { DataBucket, NULL_BUCKET, NullBucket } from "oxalis/model/bucket_data_handling/bucket";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import type PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
@@ -32,7 +32,7 @@ import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_co
 import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "oxalis/model/volumetracing/volumelayer";
 import type { Mapping } from "oxalis/store";
 import Store from "oxalis/store";
-import type { AdditionalAxis, ElementClass } from "types/api_flow_types";
+import type { AdditionalAxis, BucketDataArray, ElementClass } from "types/api_flow_types";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 import type { MagInfo } from "../helpers/mag_info";
 
@@ -131,7 +131,7 @@ class DataCube {
     // (the second parameter ensures that the callback is called immediately).
     this.boundingBox = new BoundingBox(null);
     listenToStoreProperty(
-      (state) => getSomeTracing(state.tracing).boundingBox,
+      (state) => getSomeTracing(state.annotation).boundingBox,
       (boundingBox) => {
         this.boundingBox = new BoundingBox(
           shouldBeRestrictedByTracingBoundingBox() ? boundingBox : null,
@@ -324,7 +324,13 @@ class DataCube {
       for (let i = 0; i < this.buckets.length; i++) {
         this.bucketIterator = (this.bucketIterator + 1) % this.buckets.length;
 
-        if (this.buckets[this.bucketIterator].shouldCollect()) {
+        if (
+          this.buckets[this.bucketIterator].mayBeGarbageCollected(
+            // respectAccessedFlag=true because we don't want to GC buckets
+            // that were used for rendering.
+            true,
+          )
+        ) {
           foundCollectibleBucket = true;
           break;
         }
@@ -369,15 +375,38 @@ class DataCube {
   }
 
   collectBucketsIf(predicateFn: (bucket: DataBucket) => boolean): void {
-    this.pullQueue.clear();
+    // This method is always called in the context of reloading data.
+    // All callers should ensure a saved state. This is encapsulated in the
+    // api's reloadBuckets function that is used for most refresh-related
+    // features (e.g., user-initiated reload, mapping saga).
+    // Other than that, the function is only needed by the version restore view
+    // for previewing data. In that context, a saved state is given, too.
+
+    // We don't need to clear the pullQueue, because the bucket addresses in it weren't
+    // even requested from the backend yet. The version look up for the actual request
+    // happens *after* dequeuing. Also, clear() does not remove high-pri buckets anyway,
+    // so we cannot rely on that.
+    // However, we abort ongoing requests in the pullQueue as they might yield outdated
+    // results. The buckets for which request(s) got aborted, will be marked as failed.
+    // Typically, they will be refetched as soon as they are needed again.
     this.pullQueue.abortRequests();
 
     const notCollectedBuckets = [];
     for (const bucket of this.buckets) {
-      // If a bucket is requested, collect it independently of the predicateFn,
-      // because the pullQueue was already cleared (meaning the bucket is in a
-      // requested state, but will never be filled with data).
-      if (bucket.state === "REQUESTED" || predicateFn(bucket)) {
+      if (
+        // In addition to the given predicate...
+        predicateFn(bucket) &&
+        // ...we also call mayBeGarbageCollected() to find out whether we can GC the bucket.
+        // The bucket should never be in the requested state, since we aborted the requests above
+        // which will mark the bucket as failed. Using mayBeGarbageCollected guards us against
+        // collecting unsaved buckets (that should never occur, though, because of the saved state
+        // as explained above).
+        bucket.mayBeGarbageCollected(
+          // respectAccessedFlag=false because we don't care whether the bucket
+          // was just used for rendering, as we reload data anyway.
+          false,
+        )
+      ) {
         this.collectBucket(bucket);
       } else {
         notCollectedBuckets.push(bucket);
@@ -755,20 +784,6 @@ class DataCube {
         max: coveredBBoxMax,
       },
     };
-  }
-
-  setBucketData(
-    zoomedAddress: BucketAddress,
-    data: BucketDataArray,
-    newPendingOperations: Array<(arg0: BucketDataArray) => void>,
-  ) {
-    const bucket = this.getOrCreateBucket(zoomedAddress);
-
-    if (bucket.type === "null") {
-      return;
-    }
-
-    bucket.setData(data, newPendingOperations);
   }
 
   triggerPushQueue() {

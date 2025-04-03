@@ -17,10 +17,10 @@ import { ensureWkReady } from "oxalis/model/sagas/ready_sagas";
 const createInitialState = (othersMayEdit: boolean, allowUpdate: boolean = true): OxalisState => ({
   ...defaultState,
   activeUser: dummyUser,
-  tracing: {
-    ...defaultState.tracing,
+  annotation: {
+    ...defaultState.annotation,
     restrictions: {
-      ...defaultState.tracing.restrictions,
+      ...defaultState.annotation.restrictions,
       allowUpdate,
     },
     volumes: [],
@@ -52,8 +52,8 @@ test.serial(
     const saga = acquireAnnotationMutexMaybe();
     saga.next();
     saga.next(wkReadyAction());
-    saga.next(storeState.tracing.restrictions.allowUpdate);
-    saga.next(storeState.tracing.annotationId);
+    saga.next(storeState.annotation.restrictions.allowUpdate);
+    saga.next(storeState.annotation.annotationId);
     t.deepEqual(saga.next().done, true, "The saga should terminate.");
   },
 );
@@ -70,17 +70,17 @@ function prepareTryAcquireMutexSaga(t: ExecutionContext, othersMayEdit: boolean)
     "The saga should select the allowUpdate next.",
   );
   t.deepEqual(
-    saga.next(storeState.tracing.restrictions.allowUpdate).value.type,
+    saga.next(storeState.annotation.restrictions.allowUpdate).value.type,
     "SELECT",
     "The saga should select the annotationId next.",
   );
   t.deepEqual(
-    saga.next(storeState.tracing.annotationId).value.type,
+    saga.next(storeState.annotation.annotationId).value.type,
     "SELECT",
     "The saga should select the othersMayEdit next.",
   );
   t.deepEqual(
-    saga.next(storeState.tracing.othersMayEdit).value.type,
+    saga.next(storeState.annotation.othersMayEdit).value.type,
     "SELECT",
     "The saga should select the activeUser next.",
   );

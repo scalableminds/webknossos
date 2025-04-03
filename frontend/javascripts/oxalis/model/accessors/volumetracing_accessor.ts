@@ -32,13 +32,12 @@ import { jsRgb2hsl } from "oxalis/shaders/utils.glsl";
 import { Store } from "oxalis/singletons";
 import type {
   ActiveMappingInfo,
-  HybridTracing,
   LabelAction,
   OxalisState,
   Segment,
   SegmentGroup,
   SegmentMap,
-  Tracing,
+  StoreAnnotation,
   VolumeTracing,
 } from "oxalis/store";
 import type { SegmentHierarchyNode } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
@@ -60,12 +59,15 @@ import type {
 import { setSelectedSegmentsOrGroupAction } from "../actions/volumetracing_actions";
 import { MagInfo } from "../helpers/mag_info";
 
-export function getVolumeTracings(tracing: Tracing): Array<VolumeTracing> {
-  return tracing.volumes;
+export function getVolumeTracings(annotation: StoreAnnotation): Array<VolumeTracing> {
+  return annotation.volumes;
 }
 
-export function getVolumeTracingById(tracing: Tracing, tracingId: string): VolumeTracing {
-  const volumeTracing = tracing.volumes.find((t) => t.tracingId === tracingId);
+export function getVolumeTracingById(
+  annotation: StoreAnnotation,
+  tracingId: string,
+): VolumeTracing {
+  const volumeTracing = annotation.volumes.find((t) => t.tracingId === tracingId);
 
   if (volumeTracing == null) {
     throw new Error(`Could not find volume tracing with id ${tracingId}`);
@@ -80,27 +82,27 @@ export function getVolumeTracingLayers(dataset: APIDataset): Array<APISegmentati
 }
 
 export function getVolumeTracingByLayerName(
-  tracing: Tracing,
+  annotation: StoreAnnotation,
   layerName: string,
 ): VolumeTracing | null | undefined {
   // Given a segmentation layer, there might be a corresponding volume tracing. In that case,
   // the layer name will be the tracing id.
-  const volumeTracing = tracing.volumes.find((t) => t.tracingId === layerName);
+  const volumeTracing = annotation.volumes.find((t) => t.tracingId === layerName);
   return volumeTracing;
 }
 
-export function hasVolumeTracings(tracing: Tracing): boolean {
-  return tracing.volumes.length > 0;
+export function hasVolumeTracings(annotation: StoreAnnotation): boolean {
+  return annotation.volumes.length > 0;
 }
 
 export function getVolumeDescriptors(
-  annotation: APIAnnotation | HybridTracing | APIAnnotationInfo,
+  annotation: APIAnnotation | StoreAnnotation | APIAnnotationInfo,
 ): Array<AnnotationLayerDescriptor> {
   return annotation.annotationLayers.filter((layer) => layer.typ === "Volume");
 }
 
 export function getVolumeDescriptorById(
-  annotation: APIAnnotation | HybridTracing,
+  annotation: APIAnnotation | StoreAnnotation,
   tracingId: string,
 ): AnnotationLayerDescriptor {
   const descriptors = getVolumeDescriptors(annotation).filter(
@@ -115,7 +117,7 @@ export function getVolumeDescriptorById(
 }
 
 export function getReadableNameByVolumeTracingId(
-  annotation: APIAnnotation | HybridTracing,
+  annotation: APIAnnotation | StoreAnnotation,
   tracingId: string,
 ) {
   const volumeDescriptor = getVolumeDescriptorById(annotation, tracingId);
@@ -124,7 +126,7 @@ export function getReadableNameByVolumeTracingId(
 
 export function getSegmentationLayerByHumanReadableName(
   dataset: APIDataset,
-  annotation: APIAnnotation | HybridTracing,
+  annotation: APIAnnotation | StoreAnnotation,
   name: string,
 ) {
   try {
@@ -147,13 +149,13 @@ export function getSegmentationLayerByHumanReadableName(
   return layer;
 }
 
-export function getAllReadableLayerNames(dataset: APIDataset, tracing: Tracing) {
+export function getAllReadableLayerNames(dataset: APIDataset, store: StoreAnnotation) {
   const allReadableLayerNames = getDataLayers(dataset).map((currentLayer) =>
     "tracingId" in currentLayer && currentLayer.tracingId != null
-      ? getReadableNameByVolumeTracingId(tracing, currentLayer.tracingId)
+      ? getReadableNameByVolumeTracingId(store, currentLayer.tracingId)
       : currentLayer.name,
   );
-  if (tracing.skeleton != null) {
+  if (store.skeleton != null) {
     allReadableLayerNames.push("Skeleton");
   }
   return allReadableLayerNames;
@@ -161,7 +163,7 @@ export function getAllReadableLayerNames(dataset: APIDataset, tracing: Tracing) 
 
 export function getReadableNameForLayerName(
   dataset: APIDataset,
-  tracing: APIAnnotation | HybridTracing,
+  tracing: APIAnnotation | StoreAnnotation,
   layerName: string,
 ): string {
   const layer = getLayerByName(dataset, layerName, true);
@@ -226,7 +228,7 @@ export function isVolumeTool(tool: AnnotationTool): boolean {
 }
 
 export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state: OxalisState) {
-  if (state.tracing.volumes.length === 0) {
+  if (state.annotation.volumes.length === 0) {
     return true;
   }
 
@@ -281,7 +283,7 @@ export function getTracingForSegmentationLayer(
   layer: APISegmentationLayer,
 ): VolumeTracing | null | undefined {
   if (layer.tracingId != null) {
-    return getVolumeTracingById(state.tracing, layer.tracingId);
+    return getVolumeTracingById(state.annotation, layer.tracingId);
   } else {
     return null;
   }
@@ -308,8 +310,8 @@ export function getRequestedOrDefaultSegmentationTracingLayer(
     return tracing;
   }
 
-  if (state.tracing.volumes.length === 1) {
-    return state.tracing.volumes[0];
+  if (state.annotation.volumes.length === 1) {
+    return state.annotation.volumes[0];
   }
 
   const visibleLayer = getVisibleSegmentationLayer(state);
@@ -377,7 +379,7 @@ export function getSegmentsForLayer(state: OxalisState, layerName: string): Segm
   const layer = getSegmentationLayerByName(state.dataset, layerName);
 
   if (layer.tracingId != null) {
-    return getVolumeTracingById(state.tracing, layer.tracingId).segments;
+    return getVolumeTracingById(state.annotation, layer.tracingId).segments;
   }
 
   return state.localSegmentationData[layer.name].segments;
@@ -395,7 +397,7 @@ export function getVisibleSegments(state: OxalisState): {
   }
 
   if (layer.tracingId != null) {
-    const { segments, segmentGroups } = getVolumeTracingById(state.tracing, layer.tracingId);
+    const { segments, segmentGroups } = getVolumeTracingById(state.annotation, layer.tracingId);
     return { segments, segmentGroups };
   }
 
@@ -464,7 +466,7 @@ export function getActiveSegmentPosition(state: OxalisState): Vector3 | null | u
   const layer = getVisibleSegmentationLayer(state);
   if (layer == null) return null;
 
-  const volumeTracing = getVolumeTracingByLayerName(state.tracing, layer.name);
+  const volumeTracing = getVolumeTracingByLayerName(state.annotation, layer.name);
   if (volumeTracing == null) return null;
 
   const activeCellId = getActiveCellId(volumeTracing);
@@ -646,7 +648,7 @@ export function getEditableMappingForVolumeTracingId(
   if (tracingId == null) {
     return null;
   }
-  return state.tracing.mappings.find((mapping) => mapping.tracingId === tracingId);
+  return state.annotation.mappings.find((mapping) => mapping.tracingId === tracingId);
 }
 
 export function getLastLabelAction(volumeTracing: VolumeTracing): LabelAction | undefined {
@@ -849,7 +851,7 @@ export function getMeshInfoForSegment(
 }
 
 export function needsLocalHdf5Mapping(state: OxalisState, layerName: string) {
-  const volumeTracing = getVolumeTracingByLayerName(state.tracing, layerName);
+  const volumeTracing = getVolumeTracingByLayerName(state.annotation, layerName);
   if (volumeTracing == null) {
     return false;
   }
@@ -896,7 +898,7 @@ export const getBucketRetrievalSourceFn =
 
 export function getReadableNameOfVolumeLayer(
   layer: APIDataLayer,
-  tracing: APIAnnotation | HybridTracing,
+  tracing: APIAnnotation | StoreAnnotation,
 ): string | null {
   return "tracingId" in layer && layer.tracingId != null
     ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)

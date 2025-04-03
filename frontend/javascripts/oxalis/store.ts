@@ -192,6 +192,12 @@ export type AnnotationVisibility = APIAnnotationVisibility;
 export type RestrictionsAndSettings = Restrictions & Settings;
 export type Annotation = {
   readonly annotationId: string;
+  // This is the version that the front-end considers as
+  // most recently saved. Usually, this will be identical
+  // to the version stored in the back-end. Only if another
+  // actor has saved a newer version to the front-end, the
+  // versions won't match (=> conflict).
+  // Unsaved changes don't change this version field.
   readonly version: number;
   readonly earliestAccessibleVersion: number;
   readonly restrictions: RestrictionsAndSettings;
@@ -276,13 +282,12 @@ export type ReadOnlyTracing = TracingBase & {
 export type EditableMapping = Readonly<ServerEditableMapping> & {
   readonly type: "mapping";
 };
-export type HybridTracing = Annotation & {
+export type StoreAnnotation = Annotation & {
   readonly skeleton: SkeletonTracing | null | undefined;
   readonly volumes: Array<VolumeTracing>;
   readonly readOnly: ReadOnlyTracing | null | undefined;
   readonly mappings: Array<EditableMapping>;
 };
-export type Tracing = HybridTracing;
 export type LegacyViewCommand = APIDataSourceId & {
   readonly type: typeof ControlModeEnum.VIEW;
 };
@@ -603,7 +608,7 @@ export type OxalisState = {
   readonly userConfiguration: UserConfiguration;
   readonly temporaryConfiguration: TemporaryConfiguration;
   readonly dataset: APIDataset;
-  readonly tracing: Tracing;
+  readonly annotation: StoreAnnotation;
   readonly task: Task | null | undefined;
   readonly save: SaveState;
   readonly flycam: Flycam;
@@ -623,7 +628,7 @@ export type OxalisState = {
       readonly availableMeshFiles: Array<APIMeshFile> | null | undefined;
       readonly currentMeshFile: APIMeshFile | null | undefined;
       // Note that for a volume tracing, this information should be stored
-      // in state.tracing.volume.segments, as this is also persisted on the
+      // in state.annotation.volume.segments, as this is also persisted on the
       // server (i.e., not "local").
       // The `segments` here should only be used for non-annotation volume
       // layers.

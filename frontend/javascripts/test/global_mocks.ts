@@ -43,6 +43,11 @@ vi.mock("libs/user_local_storage", () => ({
   },
 }));
 
+const REQUEST_ID = "dummyRequestId";
+vi.mock("libs/uid_generator", ()=> ({
+  getUid: () => REQUEST_ID,
+}));
+
 // vi.mock("libs/date", async () => ({
 //   default: {
 //     now: () => 1494695001688,
@@ -50,8 +55,8 @@ vi.mock("libs/user_local_storage", () => ({
 // }));
 
 // mock "libs/date", Date.now() and new Date();
-vi.setSystemTime(1494695001688);
 export const TIMESTAMP = 1494695001688; // This variable can not be used direct in the mock function above. Vitest does not allow this.
+vi.setSystemTime(TIMESTAMP);
 
 vi.mock("libs/request", () => {
   return {

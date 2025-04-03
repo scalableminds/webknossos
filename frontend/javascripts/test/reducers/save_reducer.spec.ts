@@ -33,6 +33,7 @@ describe("Save Reducer", () => {
     const saveQueue = createSaveQueueFromUpdateActions([items], TIMESTAMP);
     const pushAction = SaveActions.pushSaveQueueTransaction(items);
     const newState = SaveReducer(initialState, pushAction);
+    
     expect(newState.save.queue).toEqual(saveQueue);
   });
 
@@ -44,6 +45,7 @@ describe("Save Reducer", () => {
     const saveQueue = createSaveQueueFromUpdateActions([getItems(0), getItems(1)], TIMESTAMP);
     const testState = SaveReducer(initialState, SaveActions.pushSaveQueueTransaction(getItems(0)));
     const newState = SaveReducer(testState, SaveActions.pushSaveQueueTransaction(getItems(1)));
+   
     expect(newState.save.queue).toEqual(saveQueue);
   });
 
@@ -61,9 +63,11 @@ describe("Save Reducer", () => {
     const firstPushAction = SaveActions.pushSaveQueueTransaction(firstItem);
     const secondPushAction = SaveActions.pushSaveQueueTransaction(secondItem);
     const popAction = SaveActions.shiftSaveQueueAction(1);
+
     let newState = SaveReducer(initialState, firstPushAction);
     newState = SaveReducer(newState, secondPushAction);
     newState = SaveReducer(newState, popAction);
+    
     expect(newState.save.queue).toEqual(saveQueue);
   });
 
@@ -72,8 +76,10 @@ describe("Save Reducer", () => {
     const saveQueue = createSaveQueueFromUpdateActions([items], TIMESTAMP);
     const pushAction = SaveActions.pushSaveQueueTransaction(items);
     const popAction = SaveActions.shiftSaveQueueAction(0);
+    
     let newState = SaveReducer(initialState, pushAction);
     newState = SaveReducer(newState, popAction);
+    
     expect(newState.save.queue).toEqual(saveQueue);
   });
 
@@ -81,8 +87,10 @@ describe("Save Reducer", () => {
     const items = [createEdge(0, 1, 2, tracingId), createEdge(0, 2, 3, tracingId)];
     const pushAction = SaveActions.pushSaveQueueTransaction(items);
     const popAction = SaveActions.shiftSaveQueueAction(2);
+    
     let newState = SaveReducer(initialState, pushAction);
     newState = SaveReducer(newState, popAction);
+    
     expect(newState.save.queue).toEqual([]);
   });
 
@@ -90,8 +98,10 @@ describe("Save Reducer", () => {
     const items = [createEdge(0, 1, 2, tracingId), createEdge(0, 2, 3, tracingId)];
     const pushAction = SaveActions.pushSaveQueueTransaction(items);
     const popAction = SaveActions.shiftSaveQueueAction(5);
+    
     let newState = SaveReducer(initialState, pushAction);
     newState = SaveReducer(newState, popAction);
+    
     expect(newState.save.queue).toEqual([]);
   });
 });

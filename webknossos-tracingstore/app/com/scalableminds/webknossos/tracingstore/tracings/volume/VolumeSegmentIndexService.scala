@@ -132,7 +132,10 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
   private def collectSegmentIds(bytes: Array[Byte], elementClass: ElementClass.Value): Box[Set[Long]] =
     tryo(
       nativeBucketScanner
-        .collectSegmentIds(bytes, ElementClass.bytesPerElement(elementClass), ElementClass.isSigned(elementClass))
+        .collectSegmentIds(bytes,
+                           ElementClass.bytesPerElement(elementClass),
+                           ElementClass.isSigned(elementClass),
+                           skipZeroes = true)
         .toSet)
 
   def getSegmentToBucketIndex(tracing: VolumeTracing,

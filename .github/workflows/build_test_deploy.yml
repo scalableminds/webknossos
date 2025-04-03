@@ -67,8 +67,8 @@ jobs:
   build_test_deploy:
     runs-on: ubuntu-24.04
     env:
-      USER_UID: 1000
-      USER_GID: 1000
+      USER_UID: 1001
+      USER_GID: 1001
     steps:
       - uses: actions/checkout@v4
         with:
@@ -97,7 +97,7 @@ jobs:
           docker pull scalableminds/webknossos-dev:$NORMALIZED_BRANCH || true
           DEV_CACHE=$NORMALIZED_BRANCH docker compose build base
       - name: Prepare Dependency Folders
-        run: mkdir -p project/target target ~/.iv2 ~/.cache/coursier
+        run: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier
       - name: Install frontend dependencies
         run: docker compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --immutable
       - name: Assert unique evolution numbers
@@ -162,7 +162,7 @@ jobs:
         run: |
           .circleci/not-on-master.sh docker compose run base yarn typecheck
       - name: Start webknossos, datastore and tracingstore
-        run: docker compose up -d webknossos && docker-compose up -d webknossos-datastore && docker-compose up -d webknossos-tracingstore
+        run: docker compose up -d webknossos && docker compose up -d webknossos-datastore && docker compose up -d webknossos-tracingstore
       - name: Run webknossos smoke test
         run: |
           for i in {1..20}; do # retry

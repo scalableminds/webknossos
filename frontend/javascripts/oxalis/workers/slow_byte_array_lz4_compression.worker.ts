@@ -3,7 +3,9 @@ import { sleep } from "libs/utils";
 // and is ONLY meant for mocking during tests. This implementation
 // allows to introduce an artificial delay for compression/decompression.
 import { __compressLz4BlockHelper } from "oxalis/workers/byte_array_lz4_compression.worker";
+
 let isSleepEnabled = false;
+
 export function setSlowCompression(isEnabled: boolean) {
   isSleepEnabled = isEnabled;
 }

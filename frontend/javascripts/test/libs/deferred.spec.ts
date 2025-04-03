@@ -1,7 +1,7 @@
 // @ts-nocheck
 import Deferred from "libs/async/deferred";
 import runAsync from "test/helpers/run-async";
-import test from "ava";
+import { describe, it, expect } from "vitest";
 
 function makeGetState(promise) {
   let resolved = false;
@@ -26,43 +26,44 @@ function makeGetState(promise) {
   };
 }
 
-test("Deferred should initialize an unresolved Promise", (t) => {
-  t.plan(2);
-  const deferred = new Deferred();
-  const getState = makeGetState(deferred.promise());
-  return runAsync([
-    () => {
-      const { resolved, rejected } = getState();
-      t.is(resolved, false);
-      t.is(rejected, false);
-    },
-  ]);
-});
-test("Deferred should resolve the Promise", (t) => {
-  t.plan(3);
-  const deferred = new Deferred();
-  const getState = makeGetState(deferred.promise());
-  deferred.resolve(123);
-  return runAsync([
-    () => {
-      const { resolved, rejected, result } = getState();
-      t.is(resolved, true);
-      t.is(rejected, false);
-      t.is(result, 123);
-    },
-  ]);
-});
-test("Deferred should reject the Promise", (t) => {
-  t.plan(3);
-  const deferred = new Deferred();
-  const getState = makeGetState(deferred.promise());
-  deferred.reject(123);
-  return runAsync([
-    () => {
-      const { resolved, rejected, result } = getState();
-      t.is(resolved, false);
-      t.is(rejected, true);
-      t.is(result, 123);
-    },
-  ]);
+describe("Deferred", () => {
+  it("should initialize an unresolved Promise", () => {
+    const deferred = new Deferred();
+    const getState = makeGetState(deferred.promise());
+    return runAsync([
+      () => {
+        const { resolved, rejected } = getState();
+        expect(resolved).toBe(false);
+        expect(rejected).toBe(false);
+      },
+    ]);
+  });
+
+  it("should resolve the Promise", () => {
+    const deferred = new Deferred();
+    const getState = makeGetState(deferred.promise());
+    deferred.resolve(123);
+    return runAsync([
+      () => {
+        const { resolved, rejected, result } = getState();
+        expect(resolved).toBe(true);
+        expect(rejected).toBe(false);
+        expect(result).toBe(123);
+      },
+    ]);
+  });
+
+  it("should reject the Promise", () => {
+    const deferred = new Deferred();
+    const getState = makeGetState(deferred.promise());
+    deferred.reject(123);
+    return runAsync([
+      () => {
+        const { resolved, rejected, result } = getState();
+        expect(resolved).toBe(false);
+        expect(rejected).toBe(true);
+        expect(result).toBe(123);
+      },
+    ]);
+  });
 });

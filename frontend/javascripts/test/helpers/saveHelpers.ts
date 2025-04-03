@@ -20,15 +20,17 @@ export function createSaveQueueFromUpdateActions(
     transactionId: "dummyRequestId",
   }));
 }
+
 export function withoutUpdateTracing(
-  items: Array<UpdateActionWithoutIsolationRequirement>,
-): Array<UpdateActionWithoutIsolationRequirement> {
+  items: UpdateActionWithoutIsolationRequirement[],
+): UpdateActionWithoutIsolationRequirement[] {
   return items.filter(
     (item) => item.name !== "updateSkeletonTracing" && item.name !== "updateVolumeTracing",
   );
 }
+
 export function withoutUpdateTree(
-  items: Array<UpdateActionWithoutIsolationRequirement>,
-): Array<UpdateActionWithoutIsolationRequirement> {
+  items: UpdateActionWithoutIsolationRequirement[],
+): UpdateActionWithoutIsolationRequirement[] {
   return items.filter((item) => item.name !== "updateTree");
 }

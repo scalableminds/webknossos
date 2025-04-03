@@ -4,6 +4,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <unordered_set>
+#include <stdint.h>
 
 uint64_t segmentIdAtIndex(jbyte *bucketBytes, size_t index, const int bytesPerElement, const bool isSigned) {
     jbyte *currentPos = bucketBytes + (index * bytesPerElement);

@@ -377,6 +377,129 @@ export function updateVolumeTracing(
     },
   } as const;
 }
+
+export function addUserBoundingBoxSkeletonAction(
+  boundingBox: UserBoundingBox,
+  actionTracingId: string,
+  timestamp: number | null,
+  authorId: string | null,
+  info: string | null,
+) {
+  return {
+    name: "addUserBoundingBoxSkeleton",
+    value: {
+      boundingBox: convertUserBoundingBoxesFromFrontendToServer([boundingBox]),
+      actionTracingId,
+      actionTimestamp: timestamp,
+      actionAuthorId: authorId,
+      info,
+    },
+  } as const;
+}
+
+export function addUserBoundingBoxInVolumeTracingAction(
+  boundingBox: UserBoundingBox,
+  actionTracingId: string,
+  timestamp: number | null,
+  authorId: string | null,
+  info: string | null,
+) {
+  return {
+    name: "addUserBoundingBoxSkeleton",
+    value: {
+      boundingBox: convertUserBoundingBoxesFromFrontendToServer([boundingBox]),
+      actionTracingId,
+      actionTimestamp: timestamp,
+      actionAuthorId: authorId,
+      info,
+    },
+  } as const;
+}
+
+export function deleteUserBoundingBoxInSkeletonTracingAction(
+  boundingBoxId: number,
+  actionTracingId: string,
+  timestamp: number | null,
+  authorId: string | null,
+  info: string | null,
+) {
+  return {
+    name: "deleteUserBoundingBoxSkeletonAction",
+    value: {
+      boundingBoxId,
+      actionTracingId,
+      actionTimestamp: timestamp,
+      actionAuthorId: authorId,
+      info,
+    },
+  } as const;
+}
+
+export function deleteUserBoundingBoxInVolumeTracingAction(
+  boundingBoxId: number,
+  actionTracingId: string,
+  timestamp: number | null,
+  authorId: string | null,
+  info: string | null,
+) {
+  return {
+    name: "deleteUserBoundingBoxVolumeAction",
+    value: {
+      boundingBoxId,
+      actionTracingId,
+      actionTimestamp: timestamp,
+      actionAuthorId: authorId,
+      info,
+    },
+  } as const;
+}
+
+export function updateUserBoundingBoxInSkeletonTracingAction(
+  boundingBoxId: number,
+  updatedProps: Partial<UserBoundingBox>,
+  actionTracingId: string,
+  timestamp: number | null,
+  authorId: string | null,
+  info: string | null,
+) {
+  const updatedPropKeys = Object.keys(updatedProps);
+  return {
+    name: "updateUserBoundingBoxSkeletonAction",
+    value: {
+      boundingBoxId,
+      actionTracingId,
+      updatedProps,
+      updatedPropKeys,
+      actionTimestamp: timestamp,
+      actionAuthorId: authorId,
+      info,
+    },
+  } as const;
+}
+
+export function updateUserBoundingBoxInVolumeTracingAction(
+  boundingBoxId: number,
+  updatedProps: Partial<UserBoundingBox>,
+  actionTracingId: string,
+  timestamp: number | null,
+  authorId: string | null,
+  info: string | null,
+) {
+  const updatedPropKeys = Object.keys(updatedProps);
+  return {
+    name: "updateUserBoundingBoxVolumeAction",
+    value: {
+      boundingBoxId,
+      actionTracingId,
+      updatedProps,
+      updatedPropKeys,
+      actionTimestamp: timestamp,
+      actionAuthorId: authorId,
+      info,
+    },
+  } as const;
+}
+
 export function updateUserBoundingBoxesInSkeletonTracing(
   userBoundingBoxes: Array<UserBoundingBox>,
   actionTracingId: string,

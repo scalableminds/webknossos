@@ -193,6 +193,10 @@ jobs:
             scalableminds/webknossos-tracingstore:${{ steps.configure.outputs.docker_tag }}
             scalableminds/webknossos-tracingstore:${{ steps.configure.outputs.normalized_branch }}
 
+      - name: tmate debugging session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.tmate_debug_e2e_tests }}
+
   e2e-tests:
     runs-on: ubuntu-24.04
     needs: [build]

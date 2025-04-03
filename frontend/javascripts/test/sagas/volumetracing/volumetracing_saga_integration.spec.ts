@@ -246,7 +246,7 @@ describe("Volume Tracing", () => {
     api,
     mocks,
   }) => {
-    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.withImplementation(() =>
+    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.withImplementation(
       createBucketResponseFunction(Uint16Array, 0),
     );
 
@@ -765,8 +765,8 @@ describe("Volume Tracing", () => {
     const { mocks, api } = context;
     const oldCellId = 11;
 
-    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.withImplementation(() =>
-      createBucketResponseFunction(Uint16Array, oldCellId, 500),
+    vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.withImplementation(
+      createBucketResponseFunction(Uint16Array, oldCellId, 500)
     );
 
     Store.dispatch(setZoomStepAction(4));

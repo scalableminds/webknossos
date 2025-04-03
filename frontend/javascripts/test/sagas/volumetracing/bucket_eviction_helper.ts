@@ -15,6 +15,7 @@ import {
 import type { Vector3 } from "oxalis/constants";
 import type Model from "oxalis/model";
 import type { ApiInterface } from "oxalis/api/api_latest";
+import { vi } from "vitest";
 
 // These variables are set by __setupOxalis
 declare const api: ApiInterface;
@@ -28,7 +29,10 @@ declare const mocks: {
   };
 };
 
-export async function testLabelingManyBuckets(saveInbetween: boolean) {
+export async function testLabelingManyBuckets(context, saveInbetween: boolean) {
+
+  const {api, model, mocks} = context;
+
   // We set MAXIMUM_BUCKET_COUNT to 150 and then label 199 = 75 (mag1) + 124 (downsampled) buckets in total.
   // In between, we will save the data which allows the buckets of the first batch to be GC'ed.
   // Therefore, saving the buckets of the second batch should not cause any problems.
@@ -38,11 +42,13 @@ export async function testLabelingManyBuckets(saveInbetween: boolean) {
   const oldCellId = 11;
   const brushSize = 10;
   const newCellId = 2;
-  mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
+  
+  vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(createBucketResponseFunction(
     Uint16Array,
     oldCellId,
     500,
-  );
+  ));
+  
   // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
   // function.
   await api.data.reloadAllBuckets();

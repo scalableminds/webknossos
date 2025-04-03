@@ -83,18 +83,17 @@ vi.mock("libs/error_handling", () => {
 });
 
 // Mock workers
-vi.mock("oxalis/workers/byte_arrays_to_lz4_base64.worker.ts", function () {
-  return {
-    byteArraysToLz4Base64: async () => new Uint8Array(),
-    default: async () => new Uint8Array(),
-  };
-});
+// vi.mock("oxalis/workers/byte_arrays_to_lz4_base64.worker.ts", function () {
+//   return {
+//     byteArraysToLz4Base64: async () => new Uint8Array(),
+//     default: async () => new Uint8Array(),
+//   };
+// });
 
-vi.mock("oxalis/workers/byte_array_lz4_compression.worker", () => {
-  return {
-    setSlowCompression: vi.fn(),
-    default: "oxalis/workers/slow_byte_array_lz4_compression.worker",
-  };
+
+
+vi.mock("oxalis/workers/byte_array_lz4_compression.worker", async () => {
+  return await vi.importActual("oxalis/workers/slow_byte_array_lz4_compression.worker"); 
 });
 
 vi.mock("oxalis/model/helpers/proto_helpers", () => {
@@ -111,7 +110,6 @@ vi.mock("SkeletonTracing.proto", () => ({ default: JSON.stringify(SKELETON_ANNOT
 vi.mock("VolumeTracing.proto", () => ({ default: JSON.stringify(VOLUME_ANNOTATION_PROTO) }));
 
 // Mock lz4-wasm-nodejs
-vi.mock("lz4-wasm-nodejs", () => ({
-  compress: vi.fn(),
-  decompress: vi.fn(),
-}));
+vi.mock("lz4-wasm", async () => { 
+  return await vi.importActual("lz4-wasm-nodejs");
+});

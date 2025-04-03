@@ -33,18 +33,23 @@ describe("Bucket Eviction With Saving", () => {
     Store.dispatch(wkReadyAction());
   });
 
-  it<SetupWebknossosTestContext>("Brushing/Tracing should not crash when too many buckets are labeled at once with saving in between", async ({
-    api,
-    mocks,
-  }) => {
+  it<SetupWebknossosTestContext>("Brushing/Tracing should not crash when too many buckets are labeled at once with saving in between", async (context
+  ) => {
+    const {api, mocks} = context;
     await api.tracing.save();
+    
     vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.withImplementation(
       createBucketResponseFunction(Uint16Array, 0, 0),
+      async ()=>{
+        expect(hasRootSagaCrashed()).toBe(false);
+
+        const failedSagaPromise = waitForCondition(hasRootSagaCrashed, 500);
+        await Promise.race([testLabelingManyBuckets(context, null, true), failedSagaPromise]);
+    
+        expect(hasRootSagaCrashed()).toBe(false);
+      }
     );
 
-    expect(hasRootSagaCrashed()).toBe(false);
-    const failedSagaPromise = waitForCondition(hasRootSagaCrashed, 500);
-    await Promise.race([testLabelingManyBuckets(null, true), failedSagaPromise]);
-    expect(hasRootSagaCrashed()).toBe(false);
+    
   });
 });

@@ -138,10 +138,7 @@ export default class SegmentMeshController {
     meshMaterial.transparent = true;
     const colorArray = color.convertSRGBToLinear().toArray() as Vector3;
     meshMaterial.originalColor = colorArray;
-    // todop: necessary?
-    // meshMaterial.blending = THREE.NormalBlending;
 
-    // const colorArray: readonly [number, number, number] = HOVERED_COLOR_VEC3;
     // todop: can we avoid constructing this when not necessary?
     const colorBuffer = new Float32Array(geometry.attributes.position.count * 3);
     for (let i = 0; i < geometry.attributes.position.count; i++) {
@@ -208,9 +205,7 @@ export default class SegmentMeshController {
         targetGroup.scale.copy(new THREE.Vector3(...scale));
       }
     }
-    console.time("constructMesh");
     const meshChunk = this.constructMesh(segmentId, layerName, geometry, isMerged);
-    console.timeEnd("constructMesh");
 
     const group = new THREE.Group() as SceneGroupForMeshes;
 
@@ -447,17 +442,22 @@ export default class SegmentMeshController {
     // });
 
     // Reset ranges
-    for (const rangeToReset of rangesToReset) {
-      const indexRange = rangeToReset;
-
-      if (mesh.material.originalColor != null) {
-        setRangeToColor(mesh.geometry, indexRange, mesh.material.originalColor);
+    if (mesh.material.originalColor != null) {
+      for (const rangeToReset of rangesToReset) {
+        setRangeToColor(mesh.geometry, rangeToReset, mesh.material.originalColor);
       }
     }
 
     const setMaterialToUniformColor = (material: MeshMaterial, color: THREE.Color) => {
       material.vertexColors = false;
       material.color = color;
+      material.needsUpdate = true;
+    };
+    const setMaterialToVertexColors = (material: MeshMaterial) => {
+      material.vertexColors = true;
+      // White needs to be set so that the vertex colors have precedence.
+      // The mesh will have the colors defined in the buffer attribute "color".
+      material.color = WHITE;
       material.needsUpdate = true;
     };
 
@@ -483,9 +483,7 @@ export default class SegmentMeshController {
       }
 
       if (mesh.material.color !== WHITE || !mesh.material.vertexColors) {
-        mesh.material.color = WHITE;
-        mesh.material.needsUpdate = true;
-        mesh.material.vertexColors = true;
+        setMaterialToVertexColors(mesh.material);
       }
 
       if (mesh.activeState && mesh.activeState !== "full") {

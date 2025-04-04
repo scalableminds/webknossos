@@ -8,42 +8,25 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/25.02.1...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/25.03.0...HEAD)
 
 ### Added
-- Added support for datasets with the following data types: int8, int16, int32, uint32 (support for color was added, support for segmentation already existed before) and int64 (segmentation only). [#8325](https://github.com/scalableminds/webknossos/pull/8325)
-- Added a command palette that allows navigating between pages, switching tools and accessing some user settings via Ctrl+P. [#8447](https://github.com/scalableminds/webknossos/pull/8447/)
 - Added a credit system making payment for long running jobs possible. For now it is in testing phase. [#8352](https://github.com/scalableminds/webknossos/pull/8352)
-- Super users can now share the trained AI models with other organizations. [#8418](https://github.com/scalableminds/webknossos/pull/8418)
-- Failed jobs may be retried by super-users. [#8377](https://github.com/scalableminds/webknossos/pull/8377)
-- Optimized server-side storage of skeleton annotation layers. [#8423](https://github.com/scalableminds/webknossos/pull/8423)
 - The maximum available storage of an organization is now enforced during upload. [#8385](https://github.com/scalableminds/webknossos/pull/8385)
-- Added support for adding N5 datasets with compact-style multiscale metadata. [#8456](https://github.com/scalableminds/webknossos/pull/8456)
+- Performance improvements for volume annotation save requests. [#8460](https://github.com/scalableminds/webknossos/pull/8460)
 
 ### Changed
-- When using a zarr link to a wk-served data layer as another layer’s source, the user’s token is used to access the data. [#8322](https://github.com/scalableminds/webknossos/pull/8322/)
-- Compound annotations (created when viewing all annotations of a task) no longer permanently store data in the FossilDB. [#8422](https://github.com/scalableminds/webknossos/pull/8422)
-- When creating multiple tasks at once (bulk task creation), they now all need to have the same task type. [#8405](https://github.com/scalableminds/webknossos/pull/8405)
-- Improved performance when changing the layout/viewports. [#8448](https://github.com/scalableminds/webknossos/pull/8448)
-- Annotation upload will now always add a skeleton annotation layer, even if the downloaded annotation was volume-only. [#8466](https://github.com/scalableminds/webknossos/pull/8466)
 
 ### Fixed
-- Fixed a bug that would lock a non-existing mapping to an empty segmentation layer under certain conditions. [#8401](https://github.com/scalableminds/webknossos/pull/8401)
-- Fixed the alignment of the button that allows restricting floodfill operations to a bounding box. [#8388](https://github.com/scalableminds/webknossos/pull/8388) 
-- Fixed a bug for rotated dataset where volume tools were disabled although the dataset was rendered untransformed. [#8432](https://github.com/scalableminds/webknossos/pull/8432)
-- Fixed rare bug where saving got stuck. [#8409](https://github.com/scalableminds/webknossos/pull/8409)
-- Fixed some rendering bugs for float datasets that used a large dynamic range. [#8325](https://github.com/scalableminds/webknossos/pull/8325)
-- Fixed a bug where reverting annotations could get stuck if some of its layers had been deleted in the meantime. [#8405](https://github.com/scalableminds/webknossos/pull/8405)
-- When removing a segment from the segment list, a corresponding precomputed mesh was not removed automatically. [#8428](https://github.com/scalableminds/webknossos/pull/8428)
-- Fixed a bug where newly added remote datasets would always appear in root folder, regardless of actual selected folder. [#8425](https://github.com/scalableminds/webknossos/pull/8425)
-- Fixed a bug where the python libs functionality `wk.RemoteDataset.explore_and_add_remote` would error. [#8425](https://github.com/scalableminds/webknossos/pull/8425)
-- Fixed a bug where various UI dialogs would be dark mode even the user preferred a light theme. [#8445](https://github.com/scalableminds/webknossos/pull/8445)
-- Fixed an issue with icon spacing on the task dashboard page. [#8452](https://github.com/scalableminds/webknossos/pull/8452)
-- Fixed a spacing issue in the statusbar. [#8455](https://github.com/scalableminds/webknossos/pull/8455)
-- Fixed a bug where the "Create Animation" modal did not open when selecting the corresponding feature from the navbar menu. [#8444](https://github.com/scalableminds/webknossos/pull/8444)
-- Fixed that the brightness/contrast settings (in the histogram) could not be changed if the histogram data could not be loaded for some reason. [#8459](https://github.com/scalableminds/webknossos/pull/8459)
-- Fixed that downloading + reupload of an annotation, in which the skeleton tools were never used, actually made them unreachable. [#8466](https://github.com/scalableminds/webknossos/pull/8466)
+- Fixed visual alignment of actions in ai model list. [#8474](https://github.com/scalableminds/webknossos/pull/8474)
+- Improve formatting of credits amount in organization management page [#8487](https://github.com/scalableminds/webknossos/pull/8487)
+- Re-enabled jobs planned to be paid with credits for organizations without a paid plan. [#8478](https://github.com/scalableminds/webknossos/pull/8478)
+- Fixed that the dataset extent tooltip in the right details bar in the dashboard did not properly update when switching datasets. [#8477](https://github.com/scalableminds/webknossos/pull/8477)
 - Fixed a bug where task creation with volume zip as input would fail. [#8468](https://github.com/scalableminds/webknossos/pull/8468)
+- Fixed a rare and subtle bug related to volume annotation and undo/redo. [#7506](https://github.com/scalableminds/webknossos/pull/7506)
+- Fixed that a warning message about a newer version of an annotation was shown multiple times. [#8486](https://github.com/scalableminds/webknossos/pull/8486)
+- Fixed a bug where segment statistics would sometimes be wrong in case of an on-disk segmentation fallback layer with segment index file. [#8460](https://github.com/scalableminds/webknossos/pull/8460)
+- Fixed a bug where sometimes outdated segment statistics would be displayed. [#8460](https://github.com/scalableminds/webknossos/pull/8460)
 
 ### Removed
 

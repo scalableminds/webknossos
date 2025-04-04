@@ -15,7 +15,7 @@ import { assertNonNullBucket } from "oxalis/model/bucket_data_handling/bucket";
 const StoreMock = {
   getState: () => ({
     dataset: datasetServerObject,
-    tracing: {
+    annotation: {
       skeleton: skeletontracingServerObject,
       volume: volumetracingServerObject,
     },

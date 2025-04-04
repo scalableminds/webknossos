@@ -111,11 +111,13 @@ function CommentTabView(props: Props) {
 
   const dispatch = useDispatch();
 
-  const allowUpdate = useSelector((state: OxalisState) => state.tracing.restrictions.allowUpdate);
+  const allowUpdate = useSelector(
+    (state: OxalisState) => state.annotation.restrictions.allowUpdate,
+  );
   const keyboardDelay = useSelector((state: OxalisState) => state.userConfiguration.keyboardDelay);
 
   const isAnnotationLockedByUser = useSelector(
-    (state: OxalisState) => state.tracing.isLockedByOwner,
+    (state: OxalisState) => state.annotation.isLockedByOwner,
   );
   const isOwner = useSelector((state: OxalisState) => isAnnotationOwner(state));
 
@@ -559,7 +561,7 @@ function CommentTabViewWrapper() {
   // 2. Safe-guard that a skeleton tracing is available
 
   const skeletonTracing = useSelector((state: OxalisState) =>
-    getSkeletonTracing(state.tracing).getOrElse(null),
+    getSkeletonTracing(state.annotation).getOrElse(null),
   );
 
   if (skeletonTracing) return <CommentTabViewMemo skeletonTracing={skeletonTracing} />;

@@ -182,9 +182,8 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       _ <- organizationDAO.acceptTermsOfService(organizationId, version, Instant.now)
     } yield ()
 
-  def assertOrganizationHasPaidPlan(organizationId: String): Fox[Unit] =
-    for {
-      organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext)
-      _ <- bool2Fox(PricingPlan.isPaidPlan(organization.pricingPlan)) ?~> "creditTransaction.notPaidPlan"
-    } yield ()
+  // Currently disabled as in the credit system trail phase all organizations should be able to start paid jobs.
+  // See tracking issue: https://github.com/scalableminds/webknossos/issues/8458
+  def assertOrganizationHasPaidPlan(organizationId: String): Fox[Unit] = Fox.successful(())
+
 }

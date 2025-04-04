@@ -63,7 +63,8 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
         None,
         None,
         List(),
-        Some(composeRequest.targetFolderId)
+        Some(composeRequest.targetFolderId),
+        requireUniqueName = false
       )
       reservedAdditionalInfo <- remoteWebknossosClient.reserveDataSourceUpload(reserveUploadInfo) ?~> "Failed to reserve upload."
       directory = uploadDirectory(composeRequest.organizationId, reservedAdditionalInfo.directoryName)
@@ -105,7 +106,7 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
                  coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
       }
     } yield editedLayer
-
+git pu
   private def createDatasource(composeRequest: ComposeRequest,
                                datasetDirectoryName: String,
                                organizationId: String,

@@ -6,7 +6,7 @@ import {
   AXIS_TO_TRANSFORM_INDEX,
   EXPECTED_TRANSFORMATION_LENGTH,
   IDENTITY_TRANSFORM,
-  type RotationSetting,
+  type RotationAndMirroringSettings,
   doAllLayersHaveTheSameRotation,
   fromCenterToOrigin,
   fromOriginToCenter,
@@ -57,9 +57,9 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
       return;
     }
     const rotationValues: {
-      x: RotationSetting;
-      y: RotationSetting;
-      z: RotationSetting;
+      x: RotationAndMirroringSettings;
+      y: RotationAndMirroringSettings;
+      z: RotationAndMirroringSettings;
     } = form.getFieldValue(["datasetRotation"]);
     const transformations = [
       fromCenterToOrigin(datasetBoundingBox),
@@ -87,7 +87,9 @@ export const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
       if (datasetBoundingBox == null) {
         return;
       }
-      const rotationValues: RotationSetting = form.getFieldValue(["datasetRotation"])[axis];
+      const rotationValues: RotationAndMirroringSettings = {
+        ...form.getFieldValue(["datasetRotation"])[axis],
+      };
       if (rotationInDegrees !== undefined) {
         rotationValues.rotationInDegrees = rotationInDegrees;
       }
@@ -172,10 +174,10 @@ type AxisRotationSettingForDatasetProps = {
   form: FormInstance | undefined;
 };
 
-export type DatasetRotationSettings = {
-  x: RotationSetting;
-  y: RotationSetting;
-  z: RotationSetting;
+export type DatasetRotationAndMirroringSettings = {
+  x: RotationAndMirroringSettings;
+  y: RotationAndMirroringSettings;
+  z: RotationAndMirroringSettings;
 };
 
 export const AxisRotationSettingForDataset: React.FC<AxisRotationSettingForDatasetProps> = ({

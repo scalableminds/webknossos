@@ -73,7 +73,7 @@ export function flatToNestedMatrix(matrix: Matrix4x4): NestedMatrix4 {
 
 const axisPositionInMatrix = { x: 0, y: 1, z: 2 };
 
-export type RotationSetting = {
+export type RotationAndMirroringSettings = {
   rotationInDegrees: number;
   isMirrored: boolean;
 };
@@ -82,7 +82,7 @@ export type RotationSetting = {
 export function getRotationSettingsFromTransformationIn90DegreeSteps(
   transformation: CoordinateTransformation | undefined,
   axis: "x" | "y" | "z",
-): RotationSetting {
+): RotationAndMirroringSettings {
   if (transformation && transformation.type !== "affine") {
     return { rotationInDegrees: 0, isMirrored: false };
   }
@@ -122,13 +122,13 @@ export function fromOriginToCenter(bbox: BoundingBox): AffineTransformation {
 
 export function getRotationMatrixAroundAxis(
   axis: "x" | "y" | "z",
-  rotationSettings: RotationSetting,
+  rotationAndMirroringSettings: RotationAndMirroringSettings,
 ): AffineTransformation {
   const euler = new THREE.Euler();
-  const rotationInRadians = rotationSettings.rotationInDegrees * (Math.PI / 180);
+  const rotationInRadians = rotationAndMirroringSettings.rotationInDegrees * (Math.PI / 180);
   euler[axis] = rotationInRadians;
   let rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(euler);
-  if (rotationSettings.isMirrored) {
+  if (rotationAndMirroringSettings.isMirrored) {
     const scaleVector = new THREE.Vector3(1, 1, 1);
     scaleVector[axis] = -1;
     rotationMatrix = rotationMatrix.multiply(
@@ -381,7 +381,7 @@ function isTranslationOnly(transformation?: AffineTransformation) {
   return scale.equals(NON_SCALED_VECTOR) && quaternion.equals(IDENTITY_QUATERNION);
 }
 
-function isRotationAndMirrorMaybeOnly(transformation?: AffineTransformation) {
+function isOnlyRotatedOrMirrored(transformation?: AffineTransformation) {
   if (!transformation) {
     return false;
   }
@@ -389,7 +389,10 @@ function isRotationAndMirrorMaybeOnly(transformation?: AffineTransformation) {
     .fromArray(nestedToFlatMatrix(transformation.matrix))
     .transpose();
   threeMatrix.decompose(translation, quaternion, scale);
-  return translation.length() === 0 && scale.length() === NON_SCALED_VECTOR.length();
+  return (
+    translation.length() === 0 &&
+    _.isEqual([Math.abs(scale.x), Math.abs(scale.y), Math.abs(scale.z)], [1, 1, 1])
+  );
 }
 
 function hasValidTransformationCount(dataLayers: Array<APIDataLayer>): boolean {
@@ -414,9 +417,9 @@ function hasValidTransformationPattern(transformations: CoordinateTransformation
   return (
     transformations.length === EXPECTED_TRANSFORMATION_LENGTH &&
     isTranslationOnly(transformations[0] as AffineTransformation) &&
-    isRotationAndMirrorMaybeOnly(transformations[1] as AffineTransformation) &&
-    isRotationAndMirrorMaybeOnly(transformations[2] as AffineTransformation) &&
-    isRotationAndMirrorMaybeOnly(transformations[3] as AffineTransformation) &&
+    isOnlyRotatedOrMirrored(transformations[1] as AffineTransformation) &&
+    isOnlyRotatedOrMirrored(transformations[2] as AffineTransformation) &&
+    isOnlyRotatedOrMirrored(transformations[3] as AffineTransformation) &&
     isTranslationOnly(transformations[4] as AffineTransformation)
   );
 }
@@ -463,11 +466,10 @@ export const doAllLayersHaveTheSameRotation = _.memoize(_doAllLayersHaveTheSameR
 export function transformationEqualsAffineIdentityTransform(
   transformations: CoordinateTransformation[],
 ): boolean {
-  const hasValidTransformationCount = transformations.length;
+  const hasValidTransformationCount = transformations.length === EXPECTED_TRANSFORMATION_LENGTH;
   const hasOnlyAffineTransformations = transformations.every(
     (transformation) => transformation.type === "affine",
   );
-  // There should be a translation to the origin, one transformation for each axis and one translation back. => A total of 5 affine transformations.
   if (!hasValidTransformationCount || !hasOnlyAffineTransformations) {
     return false;
   }

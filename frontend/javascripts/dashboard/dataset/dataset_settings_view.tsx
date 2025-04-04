@@ -42,7 +42,7 @@ import type {
   MutableAPIDataset,
 } from "types/api_flow_types";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
-import type { DatasetRotationSettings } from "./dataset_rotation_form_item";
+import type { DatasetRotationAndMirroringSettings } from "./dataset_rotation_form_item";
 import DatasetSettingsDataTab, { syncDataSourceFields } from "./dataset_settings_data_tab";
 import DatasetSettingsDeleteTab from "./dataset_settings_delete_tab";
 import DatasetSettingsMetadataTab from "./dataset_settings_metadata_tab";
@@ -82,7 +82,7 @@ export type FormData = {
   dataset: APIDataset;
   defaultConfiguration: DatasetConfiguration;
   defaultConfigurationLayersJson: string;
-  datasetRotation?: DatasetRotationSettings;
+  datasetRotation?: DatasetRotationAndMirroringSettings;
 };
 
 class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, State> {
@@ -204,7 +204,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       // Retrieve the initial dataset rotation settings from the data source config.
       if (doAllLayersHaveTheSameRotation(dataSource.dataLayers)) {
         const firstLayerTransformations = dataSource.dataLayers[0].coordinateTransformations;
-        let initialDatasetRotationSettings: DatasetRotationSettings;
+        let initialDatasetRotationSettings: DatasetRotationAndMirroringSettings;
         if (
           !firstLayerTransformations ||
           firstLayerTransformations.length !== EXPECTED_TRANSFORMATION_LENGTH

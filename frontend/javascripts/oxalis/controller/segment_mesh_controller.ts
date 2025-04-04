@@ -418,25 +418,14 @@ export default class SegmentMeshController {
       return;
     }
 
-    // todop: restore?
-    // const targetOpacity = mesh.hoveredState ? 0.8 : 1.0;
-
-    // mesh.parent.parent contains exactly one geometry (merged from all chunks
-    // for the current segment).
+    // mesh.parent.parent contains either
+    // - exactly one geometry (if all chunks for the current segment were merged)
+    // - one geometry per mesh chunk
     const parent = mesh.parent.parent;
     if (parent == null) {
       // Satisfy TS
       throw new Error("Unexpected null parent");
     }
-    // We update the opacity for all meshes that belong to the current
-    // segment ID (in contrast to the color) so that the user can
-    // see which other super voxels belong to the segment id of the
-    // hovered super-voxel.
-    // parent.traverse((child) => {
-    //   if (child instanceof THREE.Mesh) {
-    //     child.material.opacity = targetOpacity;
-    //   }
-    // });
 
     // Reset ranges
     if (mesh.material.originalColor != null) {

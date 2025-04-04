@@ -359,6 +359,8 @@ function SimpleLayerForm({
   form: FormInstance;
   dataset: APIDataset | null | undefined;
 }) {
+  const layerCategorySavedOnServer = dataset?.dataSource.dataLayers[index].category;
+  const isStoredAsSegmentationLayer = layerCategorySavedOnServer === "segmentation";
   const dataLayers = Form.useWatch(["dataSource", "dataLayers"]);
   const category = Form.useWatch(["dataSource", "dataLayers", index, "category"]);
   const isSegmentation = category === "segmentation";
@@ -632,22 +634,31 @@ function SimpleLayerForm({
                     {dataset?.dataStore.jobsSupportedByAvailableWorkers.includes(
                       APIJobType.FIND_LARGEST_SEGMENT_ID,
                     ) ? (
-                      <Button
-                        type={mostRecentSuccessfulJob == null ? "primary" : "default"}
-                        title={`${
-                          activeJob != null ? "Scanning" : "Scan"
-                        } the data to derive the value automatically`}
-                        style={{ marginLeft: 8 }}
-                        loading={activeJob != null}
-                        disabled={activeJob != null || startJob == null}
-                        onClick={
-                          startJob != null && startJobFn != null
-                            ? () => startJob(startJobFn)
-                            : () => Promise.resolve()
+                      <Tooltip
+                        title={
+                          !isStoredAsSegmentationLayer
+                            ? "Before being able to detect the largest segment id you must save your changes."
+                            : `${
+                                activeJob != null ? "Scanning" : "Scan"
+                              } the data to derive the value automatically`
                         }
                       >
-                        Detect
-                      </Button>
+                        <Button
+                          type={mostRecentSuccessfulJob == null ? "primary" : "default"}
+                          style={{ marginLeft: 8 }}
+                          loading={activeJob != null}
+                          disabled={
+                            !isStoredAsSegmentationLayer || activeJob != null || startJob == null
+                          }
+                          onClick={
+                            startJob != null && startJobFn != null
+                              ? () => startJob(startJobFn)
+                              : () => Promise.resolve()
+                          }
+                        >
+                          Detect
+                        </Button>
+                      </Tooltip>
                     ) : (
                       <></>
                     )}

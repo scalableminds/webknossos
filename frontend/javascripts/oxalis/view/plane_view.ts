@@ -164,9 +164,7 @@ class PlaneView {
     const intersectableObjects = meshesLODRootGroup.children;
     // The second parameter of intersectObjects is set to true to ensure that
     // the groups which contain the actual meshes are traversed.
-    const before = performance.now();
     const intersections = raycaster.intersectObjects(intersectableObjects, true);
-    const after = performance.now();
     const face = intersections.length > 0 ? intersections[0].face : null;
     const hitObject = intersections.length > 0 ? (intersections[0].object as MeshSceneNode) : null;
     let unmappedSegmentId = null;
@@ -212,7 +210,6 @@ class PlaneView {
 
     // Highlight new hit
     if (hitObject?.parent != null) {
-      console.log("raycast took", after - before, "ms");
       segmentMeshController.updateMeshAppearance(hitObject, true, undefined, indexRange || "full");
 
       Store.dispatch(

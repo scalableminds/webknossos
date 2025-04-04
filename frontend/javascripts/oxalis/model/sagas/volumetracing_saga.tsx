@@ -1,7 +1,6 @@
 import { diffDiffableMaps } from "libs/diffable_map";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type {
   AnnotationTool,
@@ -81,7 +80,6 @@ import {
   updateMappingName,
   updateSegmentGroups,
   updateSegmentVolumeAction,
-  updateUserBoundingBoxesInVolumeTracing,
   updateVolumeTracing,
 } from "oxalis/model/sagas/update_actions";
 import type VolumeLayer from "oxalis/model/volumetracing/volumelayer";
@@ -89,8 +87,10 @@ import { Model, api } from "oxalis/singletons";
 import type { Flycam, SegmentMap, VolumeTracing } from "oxalis/store";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
+import { AnnotationLayerEnum } from "types/api_flow_types";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { ensureWkReady } from "./ready_sagas";
+import { diffBoundingBoxes } from "./skeletontracing_saga";
 import { floodFill } from "./volume/floodfill_saga";
 import { type BooleanBox, createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
@@ -489,12 +489,12 @@ export function* diffVolumeTracing(
     );
   }
 
-  if (!_.isEqual(prevVolumeTracing.userBoundingBoxes, volumeTracing.userBoundingBoxes)) {
-    yield updateUserBoundingBoxesInVolumeTracing(
-      volumeTracing.userBoundingBoxes,
-      volumeTracing.tracingId,
-    );
-  }
+  yield* diffBoundingBoxes(
+    prevVolumeTracing.userBoundingBoxes,
+    volumeTracing.userBoundingBoxes,
+    volumeTracing.tracingId,
+    AnnotationLayerEnum.Volume,
+  );
 
   if (prevVolumeTracing !== volumeTracing) {
     if (prevVolumeTracing.segments !== volumeTracing.segments) {

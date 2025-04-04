@@ -38,6 +38,24 @@ export type CreateSegmentUpdateAction = ReturnType<typeof createSegmentVolumeAct
 export type UpdateSegmentUpdateAction = ReturnType<typeof updateSegmentVolumeAction>;
 export type DeleteSegmentUpdateAction = ReturnType<typeof deleteSegmentVolumeAction>;
 export type DeleteSegmentDataUpdateAction = ReturnType<typeof deleteSegmentDataVolumeAction>;
+export type AddUserBoundingBoxSkeletonAction = ReturnType<
+  typeof addUserBoundingBoxInSkeletonTracingAction
+>;
+export type AddUserBoundingBoxInVolumeTracingAction = ReturnType<
+  typeof addUserBoundingBoxInVolumeTracingAction
+>;
+export type DeleteUserBoundingBoxInSkeletonTracingAction = ReturnType<
+  typeof deleteUserBoundingBoxInSkeletonTracingAction
+>;
+export type DeleteUserBoundingBoxInVolumeTracingAction = ReturnType<
+  typeof deleteUserBoundingBoxInVolumeTracingAction
+>;
+export type UpdateUserBoundingBoxInSkeletonTracingAction = ReturnType<
+  typeof updateUserBoundingBoxInSkeletonTracingAction
+>;
+export type UpdateUserBoundingBoxInVolumeTracingAction = ReturnType<
+  typeof updateUserBoundingBoxInVolumeTracingAction
+>;
 type UpdateUserBoundingBoxesInSkeletonTracingUpdateAction = ReturnType<
   typeof updateUserBoundingBoxesInSkeletonTracing
 >;
@@ -83,6 +101,12 @@ export type UpdateActionWithoutIsolationRequirement =
   | DeleteEdgeUpdateAction
   | UpdateSkeletonTracingUpdateAction
   | UpdateVolumeTracingUpdateAction
+  | AddUserBoundingBoxSkeletonAction
+  | AddUserBoundingBoxInVolumeTracingAction
+  | DeleteUserBoundingBoxInSkeletonTracingAction
+  | DeleteUserBoundingBoxInVolumeTracingAction
+  | UpdateUserBoundingBoxInSkeletonTracingAction
+  | UpdateUserBoundingBoxInVolumeTracingAction
   | UpdateUserBoundingBoxesInSkeletonTracingUpdateAction
   | UpdateUserBoundingBoxesInVolumeTracingUpdateAction
   | CreateSegmentUpdateAction
@@ -377,6 +401,93 @@ export function updateVolumeTracing(
     },
   } as const;
 }
+
+export function addUserBoundingBoxInSkeletonTracingAction(
+  boundingBox: UserBoundingBox,
+  actionTracingId: string,
+) {
+  return {
+    name: "addUserBoundingBoxSkeletonAction",
+    value: {
+      boundingBox: convertUserBoundingBoxesFromFrontendToServer([boundingBox]),
+      actionTracingId,
+    },
+  } as const;
+}
+
+export function addUserBoundingBoxInVolumeTracingAction(
+  boundingBox: UserBoundingBox,
+  actionTracingId: string,
+) {
+  return {
+    name: "addUserBoundingBoxVolumeAction",
+    value: {
+      boundingBox: convertUserBoundingBoxesFromFrontendToServer([boundingBox]),
+      actionTracingId,
+    },
+  } as const;
+}
+
+export function deleteUserBoundingBoxInSkeletonTracingAction(
+  boundingBoxId: number,
+  actionTracingId: string,
+) {
+  return {
+    name: "deleteUserBoundingBoxSkeletonAction",
+    value: {
+      boundingBoxId,
+      actionTracingId,
+    },
+  } as const;
+}
+
+export function deleteUserBoundingBoxInVolumeTracingAction(
+  boundingBoxId: number,
+  actionTracingId: string,
+) {
+  return {
+    name: "deleteUserBoundingBoxVolumeAction",
+    value: {
+      boundingBoxId,
+      actionTracingId,
+    },
+  } as const;
+}
+
+export function updateUserBoundingBoxInSkeletonTracingAction(
+  boundingBoxId: number,
+  updatedProps: Partial<UserBoundingBox>,
+  actionTracingId: string,
+) {
+  const updatedPropKeys = Object.keys(updatedProps);
+  return {
+    name: "updateUserBoundingBoxSkeletonAction",
+    value: {
+      boundingBoxId,
+      actionTracingId,
+      updatedProps,
+      updatedPropKeys,
+    },
+  } as const;
+}
+
+export function updateUserBoundingBoxInVolumeTracingAction(
+  boundingBoxId: number,
+  updatedProps: Partial<UserBoundingBox>,
+  actionTracingId: string,
+) {
+  const updatedPropKeys = Object.keys(updatedProps);
+  return {
+    name: "updateUserBoundingBoxVolumeAction",
+    value: {
+      boundingBoxId,
+      actionTracingId,
+      updatedProps,
+      updatedPropKeys,
+    },
+  } as const;
+}
+
 export function updateUserBoundingBoxesInSkeletonTracing(
   userBoundingBoxes: Array<UserBoundingBox>,
   actionTracingId: string,

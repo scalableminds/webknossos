@@ -48,19 +48,24 @@ import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
 import type { UpdateActionWithoutIsolationRequirement } from "oxalis/model/sagas/update_actions";
 import {
+  addUserBoundingBoxInSkeletonTracingAction,
+  addUserBoundingBoxInVolumeTracingAction,
   createEdge,
   createNode,
   createTree,
   deleteEdge,
   deleteNode,
   deleteTree,
+  deleteUserBoundingBoxInSkeletonTracingAction,
+  deleteUserBoundingBoxInVolumeTracingAction,
   updateNode,
   updateSkeletonTracing,
   updateTree,
   updateTreeEdgesVisibility,
   updateTreeGroups,
   updateTreeVisibility,
-  updateUserBoundingBoxesInSkeletonTracing,
+  updateUserBoundingBoxInSkeletonTracingAction,
+  updateUserBoundingBoxInVolumeTracingAction,
 } from "oxalis/model/sagas/update_actions";
 import { api } from "oxalis/singletons";
 import type {
@@ -71,6 +76,7 @@ import type {
   SkeletonTracing,
   Tree,
   TreeMap,
+  UserBoundingBox,
 } from "oxalis/store";
 import Store from "oxalis/store";
 import {
@@ -84,7 +90,7 @@ import {
   takeEvery,
   throttle,
 } from "typed-redux-saga";
-import type { ServerSkeletonTracing } from "types/api_flow_types";
+import { AnnotationLayerEnum, type ServerSkeletonTracing } from "types/api_flow_types";
 import { ensureWkReady } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
 
@@ -607,6 +613,59 @@ export const cachedDiffTrees = memoizeOne((tracingId: string, prevTrees: TreeMap
   Array.from(diffTrees(tracingId, prevTrees, trees)),
 );
 
+export function* diffBoundingBoxes(
+  prevBoundingBoxes: UserBoundingBox[],
+  currentBoundingBoxes: UserBoundingBox[],
+  tracingId: string,
+  tracingType: AnnotationLayerEnum,
+) {
+  const {
+    onlyA: deletedBBoxIds,
+    onlyB: addedBBoxIds,
+    both: changedBBoxIds,
+  } = Utils.diffArrays(
+    _.map(prevBoundingBoxes, (bbox) => bbox.id),
+    _.map(currentBoundingBoxes, (bbox) => bbox.id),
+  );
+  const addBBoxAction =
+    tracingType === AnnotationLayerEnum.Skeleton
+      ? addUserBoundingBoxInSkeletonTracingAction
+      : addUserBoundingBoxInVolumeTracingAction;
+  const deleteBBoxAction =
+    tracingType === AnnotationLayerEnum.Skeleton
+      ? deleteUserBoundingBoxInSkeletonTracingAction
+      : deleteUserBoundingBoxInVolumeTracingAction;
+  const updateBBoxAction =
+    tracingType === AnnotationLayerEnum.Skeleton
+      ? updateUserBoundingBoxInSkeletonTracingAction
+      : updateUserBoundingBoxInVolumeTracingAction;
+  const getErrorMessage = (id: number) =>
+    `User bounding box with id ${id} not found in ${tracingType} tracing.`;
+  for (const id of deletedBBoxIds) {
+    yield deleteBBoxAction(id, tracingId);
+  }
+  for (const id of addedBBoxIds) {
+    const bbox = currentBoundingBoxes.find((bbox) => bbox.id === id);
+    if (bbox) {
+      yield addBBoxAction(bbox, tracingId);
+    } else {
+      Toast.error(getErrorMessage(id));
+    }
+  }
+  for (const id of changedBBoxIds) {
+    const currentBbox = currentBoundingBoxes.find((bbox) => bbox.id === id);
+    const prevBbox = prevBoundingBoxes.find((bbox) => bbox.id === id);
+    if (currentBbox == null || prevBbox == null) {
+      Toast.error(getErrorMessage(id));
+      continue;
+    }
+    const diffBBox = Utils.diffObjects(currentBbox, prevBbox);
+    //TODO_C remove
+    console.log("diffBBox", diffBBox);
+    yield updateBBoxAction(currentBbox.id, diffBBox, tracingId);
+  }
+}
+
 export function* diffSkeletonTracing(
   prevSkeletonTracing: SkeletonTracing,
   skeletonTracing: SkeletonTracing,
@@ -637,12 +696,12 @@ export function* diffSkeletonTracing(
     );
   }
 
-  if (!_.isEqual(prevSkeletonTracing.userBoundingBoxes, skeletonTracing.userBoundingBoxes)) {
-    yield updateUserBoundingBoxesInSkeletonTracing(
-      skeletonTracing.userBoundingBoxes,
-      skeletonTracing.tracingId,
-    );
-  }
+  yield* diffBoundingBoxes(
+    prevSkeletonTracing.userBoundingBoxes,
+    skeletonTracing.userBoundingBoxes,
+    skeletonTracing.tracingId,
+    AnnotationLayerEnum.Skeleton,
+  );
 }
 export default [
   watchSkeletonTracingAsync,

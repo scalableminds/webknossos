@@ -84,6 +84,30 @@ const descriptionFns: Record<
     description: "Updated a bounding box.",
     icon: <CodepenOutlined />,
   }),
+  addUserBoundingBoxSkeletonAction: (): Description => ({
+    description: "Added a bounding box.",
+    icon: <PlusOutlined />,
+  }),
+  addUserBoundingBoxVolumeAction: (): Description => ({
+    description: "Added a bounding box.",
+    icon: <PlusOutlined />,
+  }),
+  deleteUserBoundingBoxSkeletonAction: (): Description => ({
+    description: "Deleted a bounding box.",
+    icon: <DeleteOutlined />,
+  }),
+  deleteUserBoundingBoxVolumeAction: (): Description => ({
+    description: "Deleted a bounding box.",
+    icon: <DeleteOutlined />,
+  }),
+  updateUserBoundingBoxSkeletonAction: (): Description => ({
+    description: "Updated a bounding box.",
+    icon: <EditOutlined />,
+  }),
+  updateUserBoundingBoxVolumeAction: (): Description => ({
+    description: "Updated a bounding box.",
+    icon: <EditOutlined />,
+  }),
   removeFallbackLayer: (): Description => ({
     description: "Removed the segmentation fallback layer.",
     icon: <DeleteOutlined />,

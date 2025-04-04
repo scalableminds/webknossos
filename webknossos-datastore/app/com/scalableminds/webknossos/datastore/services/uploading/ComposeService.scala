@@ -63,7 +63,8 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
         None,
         None,
         List(),
-        Some(composeRequest.targetFolderId)
+        Some(composeRequest.targetFolderId),
+        requireUniqueName = false
       )
       reservedAdditionalInfo <- remoteWebknossosClient.reserveDataSourceUpload(reserveUploadInfo) ?~> "Failed to reserve upload."
       directory = uploadDirectory(composeRequest.organizationId, reservedAdditionalInfo.directoryName)

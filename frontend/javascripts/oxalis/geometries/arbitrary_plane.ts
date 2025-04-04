@@ -171,6 +171,7 @@ class ArbitraryPlane {
   }
 
   destroy() {
+    this.stopStoreListening();
     this.materialFactory.destroy();
   }
 }

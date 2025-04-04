@@ -358,7 +358,6 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         seedPosition,
         seedAdditionalCoordinates,
         meshFileName,
-        areChunksMerged,
         mappingName,
       } = action;
       const meshInfo: MeshInformation = {
@@ -369,7 +368,6 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         isVisible: true,
         isPrecomputed: true,
         meshFileName,
-        areChunksMerged,
         mappingName,
       };
       const additionalCoordinates = state.flycam.additionalCoordinates;

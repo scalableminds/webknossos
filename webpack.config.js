@@ -202,7 +202,11 @@ module.exports = function (env = {}) {
     stats: {
       preset: "minimal",
     },
-    // Ignore the lengthy warning considering STLExporter which is added to the exports dynamically
-    ignoreWarnings: [/export 'STLExporter'/],
+    // Ignore the lengthy warnings which are added to the exports dynamically
+    ignoreWarnings: [
+      /export 'STLExporter'/,
+      /export 'SRGBColorSpace'/,
+      /export 'LinearSRGBColorSpace'/,
+    ],
   };
 };

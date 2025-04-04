@@ -214,7 +214,11 @@ type TweenState = {
   top: number;
   bottom: number;
 };
-export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
+export function rotate3DViewTo(
+  id: OrthoView,
+  animate: boolean = true,
+  onComplete?: () => void,
+): void {
   const state = Store.getState();
   const { dataset } = state;
   const { tdCamera } = state.viewModeData.plane;
@@ -341,9 +345,13 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
         // parameter.
         updateCameraTDView(this, t);
       })
+      .onComplete(() => {
+        onComplete?.();
+      })
       .start();
   } else {
     updateCameraTDView(to, 1);
+    onComplete?.();
   }
 }
 export default CameraController;

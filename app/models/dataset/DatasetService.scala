@@ -68,12 +68,13 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   def createPreliminaryDataset(datasetName: String,
                                organizationId: String,
                                dataStore: DataStore,
-                               alreadyGivenDatasetId: Option[ObjectId]): Fox[Dataset] = {
-    val newDatasetId = alreadyGivenDatasetId.getOrElse(ObjectId.generate)
+                               requireUniqueName: Boolean): Fox[Dataset] = {
+    val newDatasetId = ObjectId.generate
     for {
-      datasetDirectoryName <- datasetDAO
-        .doesDatasetDirectoryExistInOrganization(datasetName, organizationId)(GlobalAccessContext)
-        .map(if (_) s"$datasetName-${newDatasetId.toString}" else datasetName)
+      isDatasetNameAlreadyTaken <- datasetDAO.doesDatasetDirectoryExistInOrganization(datasetName, organizationId)(
+        GlobalAccessContext)
+      _ <- bool2Fox(!(isDatasetNameAlreadyTaken && requireUniqueName)) ?~> "dataset.name.alreadyTaken"
+      datasetDirectoryName = if (isDatasetNameAlreadyTaken) s"$datasetName-${newDatasetId.toString}" else datasetName
       unreportedDatasource = UnusableDataSource(DataSourceId(datasetDirectoryName, organizationId),
                                                 notYetUploadedStatus)
       newDataset <- createDataset(dataStore, newDatasetId, datasetName, unreportedDatasource)

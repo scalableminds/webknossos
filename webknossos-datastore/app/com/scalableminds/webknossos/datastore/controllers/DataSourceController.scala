@@ -124,10 +124,13 @@ class DataSourceController @Inject()(
               None,
               request.body.initialTeamIds,
               request.body.folderId,
-              request.body.datasetId
+              request.body.requireUniqueName
             )
           ) ?~> "dataset.upload.validation.failed"
-        } yield Ok(Json.obj("newDatasetId" -> reservedDatasetInfo.newDatasetId))
+        } yield
+          Ok(
+            Json.obj("newDatasetId" -> reservedDatasetInfo.newDatasetId,
+                     "directoryName" -> reservedDatasetInfo.directoryName))
       }
     }
 
@@ -420,6 +423,7 @@ class DataSourceController @Inject()(
               layersToLink = None,
               initialTeams = List.empty,
               folderId = folderId,
+              requireUniqueName = false,
             )
           ) ?~> "dataset.upload.validation.failed"
           datasourceId = DataSourceId(reservedAdditionalInfo.directoryName, organizationId)

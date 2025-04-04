@@ -59,7 +59,7 @@ import {
 import dimensions from "oxalis/model/dimensions";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { Model, api } from "oxalis/singletons";
-import type { BrushPresets, OxalisState, Tracing } from "oxalis/store";
+import type { BrushPresets, OxalisState, StoreAnnotation } from "oxalis/store";
 import Store from "oxalis/store";
 import { getDefaultBrushSizes } from "oxalis/view/action-bar/toolbar_view";
 import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
@@ -101,7 +101,7 @@ const setTool = (tool: AnnotationTool) => {
 };
 
 type StateProps = {
-  tracing: Tracing;
+  annotation: StoreAnnotation;
   activeTool: AnnotationTool;
 };
 type Props = StateProps;
@@ -516,11 +516,11 @@ class PlaneController extends React.PureComponent<Props> {
       c: null,
     };
     const { c: skeletonCHandler, ...skeletonControls } =
-      this.props.tracing.skeleton != null
+      this.props.annotation.skeleton != null
         ? SkeletonKeybindings.getKeyboardControls()
         : emptyDefaultHandler;
     const { c: volumeCHandler, ...volumeControls } =
-      this.props.tracing.volumes.length > 0
+      this.props.annotation.volumes.length > 0
         ? VolumeKeybindings.getKeyboardControls()
         : emptyDefaultHandler;
     const {
@@ -530,9 +530,11 @@ class PlaneController extends React.PureComponent<Props> {
     } = BoundingBoxKeybindings.getKeyboardControls();
     ensureNonConflictingHandlers(skeletonControls, volumeControls);
     const extendedSkeletonControls =
-      this.props.tracing.skeleton != null ? SkeletonKeybindings.getExtendedKeyboardControls() : {};
+      this.props.annotation.skeleton != null
+        ? SkeletonKeybindings.getExtendedKeyboardControls()
+        : {};
     const extendedVolumeControls =
-      this.props.tracing.volumes.length > 0 != null
+      this.props.annotation.volumes.length > 0 != null
         ? VolumeKeybindings.getExtendedKeyboardControls()
         : {};
     ensureNonConflictingHandlers(extendedSkeletonControls, extendedVolumeControls);
@@ -564,7 +566,7 @@ class PlaneController extends React.PureComponent<Props> {
   getLoopedKeyboardControls() {
     // Note that this code needs to be adapted in case the VolumeHandlers also starts to expose
     // looped keyboard controls. For the hybrid case, these two controls would need t be combined then.
-    return this.props.tracing.skeleton != null
+    return this.props.annotation.skeleton != null
       ? SkeletonKeybindings.getLoopedKeyboardControls()
       : {};
   }
@@ -694,7 +696,7 @@ class PlaneController extends React.PureComponent<Props> {
     return (
       <TDController
         cameras={this.planeView.getCameras()}
-        tracing={this.props.tracing}
+        annotation={this.props.annotation}
         planeView={this.planeView}
       />
     );
@@ -703,7 +705,7 @@ class PlaneController extends React.PureComponent<Props> {
 
 export function mapStateToProps(state: OxalisState): StateProps {
   return {
-    tracing: state.tracing,
+    annotation: state.annotation,
     activeTool: state.uiInformation.activeTool,
   };
 }

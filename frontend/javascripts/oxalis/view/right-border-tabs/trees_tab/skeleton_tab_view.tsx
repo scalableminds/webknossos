@@ -222,9 +222,9 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
           const dataFile = new File([dataBlob], dataFileEntry.filename);
           await Model.ensureSavedState();
           const storeState = Store.getState();
-          const { tracing, dataset } = storeState;
+          const { annotation, dataset } = storeState;
 
-          if (tracing.volumes.length === 0) {
+          if (annotation.volumes.length === 0) {
             throw new Error("A volume tracing must already exist when importing a volume tracing.");
           }
 
@@ -237,14 +237,14 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
           }
 
           const newLargestSegmentId = await importVolumeTracing(
-            tracing,
+            annotation,
             oldVolumeTracing,
             dataFile,
-            tracing.version,
+            annotation.version,
           );
 
           Store.dispatch(importVolumeTracingAction());
-          Store.dispatch(setVersionNumberAction(tracing.version + 1));
+          Store.dispatch(setVersionNumberAction(annotation.version + 1));
           Store.dispatch(setLargestSegmentIdAction(newLargestSegmentId));
           await clearCache(dataset, oldVolumeTracing.tracingId);
           await api.data.reloadBuckets(oldVolumeTracing.tracingId);
@@ -301,7 +301,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
 // Let the user confirm the deletion of the initial node (node with id 1) of a task
 function checkAndConfirmDeletingInitialNode(treeIds: number[]) {
   const state = Store.getState();
-  const skeletonTracing = enforceSkeletonTracing(state.tracing);
+  const skeletonTracing = enforceSkeletonTracing(state.annotation);
 
   const hasNodeWithIdOne = (id: number) =>
     getTree(skeletonTracing, id).map((tree) => tree.nodes.has(1));
@@ -543,7 +543,13 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     // Wait 1 second for the Modal to render
     const [buildInfo] = await Promise.all([getBuildInfo(), Utils.sleep(1000)]);
     const state = Store.getState();
-    const nml = serializeToNml(state, state.tracing, skeletonTracing, buildInfo, applyTransforms);
+    const nml = serializeToNml(
+      state,
+      state.annotation,
+      skeletonTracing,
+      buildInfo,
+      applyTransforms,
+    );
     this.setState({
       isDownloading: false,
     });
@@ -847,58 +853,56 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                 >
                   <Spin />
                 </Modal>
-                <Space.Compact className="compact-icons">
-                  <div className="compact-buttons">
-                    <AdvancedSearchPopover
-                      onSelect={this.handleSearchSelect}
-                      data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}
-                      searchKey="name"
-                      provideShortcut
-                      targetId={treeTabId}
-                      onSelectAllMatches={this.handleSelectAllMatchingTrees}
-                    >
-                      <ButtonComponent
-                        title="Open the search via CTRL + Shift + F"
-                        className="firstButton"
-                      >
-                        <SearchOutlined />
-                      </ButtonComponent>
-                    </AdvancedSearchPopover>
+                <Space.Compact className="compact-icons compact-wrap">
+                  <AdvancedSearchPopover
+                    onSelect={this.handleSearchSelect}
+                    data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}
+                    searchKey="name"
+                    provideShortcut
+                    targetId={treeTabId}
+                    onSelectAllMatches={this.handleSelectAllMatchingTrees}
+                  >
                     <ButtonComponent
-                      onClick={this.props.onCreateTree}
-                      title={isEditingDisabled ? isEditingDisabledMessage : "Create new Tree (C)"}
-                      disabled={isEditingDisabled}
+                      title="Open the search via CTRL + Shift + F"
+                      className="firstButton"
                     >
-                      <i className="fas fa-plus" />
+                      <SearchOutlined />
                     </ButtonComponent>
-                    <ButtonComponent
-                      onClick={this.handleDelete}
-                      title={isEditingDisabled ? isEditingDisabledMessage : "Delete Selected Trees"}
-                      disabled={isEditingDisabled}
-                    >
-                      <i className="far fa-trash-alt" />
+                  </AdvancedSearchPopover>
+                  <ButtonComponent
+                    onClick={this.props.onCreateTree}
+                    title={isEditingDisabled ? isEditingDisabledMessage : "Create new Tree (C)"}
+                    disabled={isEditingDisabled}
+                  >
+                    <i className="fas fa-plus" />
+                  </ButtonComponent>
+                  <ButtonComponent
+                    onClick={this.handleDelete}
+                    title={isEditingDisabled ? isEditingDisabledMessage : "Delete Selected Trees"}
+                    disabled={isEditingDisabled}
+                  >
+                    <i className="far fa-trash-alt" />
+                  </ButtonComponent>
+                  <ButtonComponent
+                    onClick={this.toggleAllTrees}
+                    title="Toggle Visibility of All Trees (1)"
+                    disabled={isEditingDisabled}
+                  >
+                    <i className="fas fa-toggle-on" />
+                  </ButtonComponent>
+                  <ButtonComponent
+                    onClick={this.toggleInactiveTrees}
+                    title="Toggle Visibility of Inactive Trees (2)"
+                    disabled={isEditingDisabled}
+                  >
+                    <i className="fas fa-toggle-off" />
+                  </ButtonComponent>
+                  <Dropdown menu={this.getActionsDropdown()} trigger={["click"]}>
+                    <ButtonComponent style={{ overflow: "clip" }} className="lastButton">
+                      More
+                      <DownOutlined />
                     </ButtonComponent>
-                    <ButtonComponent
-                      onClick={this.toggleAllTrees}
-                      title="Toggle Visibility of All Trees (1)"
-                      disabled={isEditingDisabled}
-                    >
-                      <i className="fas fa-toggle-on" />
-                    </ButtonComponent>
-                    <ButtonComponent
-                      onClick={this.toggleInactiveTrees}
-                      title="Toggle Visibility of Inactive Trees (2)"
-                      disabled={isEditingDisabled}
-                    >
-                      <i className="fas fa-toggle-off" />
-                    </ButtonComponent>
-                    <Dropdown menu={this.getActionsDropdown()} trigger={["click"]}>
-                      <ButtonComponent style={{ overflow: "clip" }} className="lastButton">
-                        More
-                        <DownOutlined />
-                      </ButtonComponent>
-                    </Dropdown>
-                  </div>
+                  </Dropdown>
                 </Space.Compact>
                 <Space.Compact className="compact-icons compact-items">
                   <ButtonComponent
@@ -978,11 +982,11 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 }
 
 const mapStateToProps = (state: OxalisState) => ({
-  allowUpdate: state.tracing.restrictions.allowUpdate,
-  skeletonTracing: state.tracing.skeleton,
+  allowUpdate: state.annotation.restrictions.allowUpdate,
+  skeletonTracing: state.annotation.skeleton,
   userConfiguration: state.userConfiguration,
   isSkeletonLayerTransformed: isSkeletonLayerTransformed(state),
-  isAnnotationLockedByUser: state.tracing.isLockedByOwner,
+  isAnnotationLockedByUser: state.annotation.isLockedByOwner,
   isOwner: isAnnotationOwner(state),
 });
 

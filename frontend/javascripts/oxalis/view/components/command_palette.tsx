@@ -53,7 +53,7 @@ const mapMenuActionsToCommands = (menuActions: Array<ItemType>): CommandWithoutI
 const getLabelForPath = (key: string) =>
   getPhraseFromCamelCaseString(capitalize(key.split("/")[1])) || key;
 
-export const CommandPalette = ({ label }: { label: string | null }) => {
+export const CommandPalette = ({ label }: { label: string | JSX.Element | null }) => {
   const userConfig = useSelector((state: OxalisState) => state.userConfiguration);
   const isViewMode = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.controlMode === "VIEW",
@@ -62,15 +62,15 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
     (state: OxalisState) => state.uiInformation.isInAnnotationView,
   );
 
-  const restrictions = useSelector((state: OxalisState) => state.tracing.restrictions);
+  const restrictions = useSelector((state: OxalisState) => state.annotation.restrictions);
   const task = useSelector((state: OxalisState) => state.task);
-  const annotationType = useSelector((state: OxalisState) => state.tracing.annotationType);
-  const annotationId = useSelector((state: OxalisState) => state.tracing.annotationId);
+  const annotationType = useSelector((state: OxalisState) => state.annotation.annotationType);
+  const annotationId = useSelector((state: OxalisState) => state.annotation.annotationId);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const isAnnotationLockedByUser = useSelector(
-    (state: OxalisState) => state.tracing.isLockedByOwner,
+    (state: OxalisState) => state.annotation.isLockedByOwner,
   );
-  const annotationOwner = useSelector((state: OxalisState) => state.tracing.owner);
+  const annotationOwner = useSelector((state: OxalisState) => state.annotation.owner);
 
   const props: TracingViewMenuProps = {
     restrictions,
@@ -182,21 +182,19 @@ export const CommandPalette = ({ label }: { label: string | null }) => {
     ...getTabsAndSettingsMenuItems(),
   ];
   return (
-    <div style={{ marginRight: "10px" }}>
-      <ReactCommandPalette
-        commands={allCommands.map((command, counter) => {
-          return {
-            ...command,
-            id: counter,
-          };
-        })}
-        hotKeys={["ctrl+p", "command+p"]}
-        trigger={label}
-        closeOnSelect
-        resetInputOnOpen
-        maxDisplayed={100}
-        theme={theme === "light" ? commandPaletteLightTheme : commandPaletteDarkTheme}
-      />
-    </div>
+    <ReactCommandPalette
+      commands={allCommands.map((command, counter) => {
+        return {
+          ...command,
+          id: counter,
+        };
+      })}
+      hotKeys={["ctrl+p", "command+p"]}
+      trigger={label}
+      closeOnSelect
+      resetInputOnOpen
+      maxDisplayed={100}
+      theme={theme === "light" ? commandPaletteLightTheme : commandPaletteDarkTheme}
+    />
   );
 };

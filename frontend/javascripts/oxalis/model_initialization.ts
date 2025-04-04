@@ -24,7 +24,6 @@ import type { PartialUrlManagerState, UrlStateByLayer } from "oxalis/controller/
 import UrlManager from "oxalis/controller/url_manager";
 import {
   determineAllowedModes,
-  getBitDepth,
   getDataLayers,
   getDatasetBoundingBox,
   getDatasetCenter,
@@ -299,7 +298,6 @@ function validateSpecsForLayers(dataset: APIDataset, requiredBucketCapacity: num
   const setupDetails = computeDataTexturesSetup(
     specs,
     layers,
-    (layer) => getBitDepth(layer) >> 3,
     hasSegmentation(dataset),
     requiredBucketCapacity,
   );
@@ -316,8 +314,6 @@ function maybeWarnAboutUnsupportedLayers(layers: Array<APIDataLayer>): void {
       });
     } else if (layer.category === "segmentation" && layer.elementClass === "uint24") {
       Toast.error(messages["dataset.unsupported_segmentation_class_uint24"]);
-    } else if (layer.category === "segmentation" && layer.elementClass === "int64") {
-      Toast.error(messages["dataset.unsupported_segmentation_class_int64"]);
     }
   }
 }
@@ -407,9 +403,9 @@ function setInitialTool() {
     return;
   }
 
-  const { tracing } = Store.getState();
+  const { annotation } = Store.getState();
 
-  if (tracing.skeleton != null) {
+  if (annotation.skeleton != null) {
     // We are in a annotation which contains a skeleton. Due to the
     // enabled legacy-bindings, the user can expect to immediately create new nodes
     // with right click. Therefore, switch to the skeleton tool.
@@ -817,9 +813,9 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
       Store.dispatch(setMappingEnabledAction(effectiveLayerName, true));
 
       if (agglomerateIdsToImport != null) {
-        const { tracing } = Store.getState();
+        const { annotation } = Store.getState();
 
-        if (tracing.skeleton == null) {
+        if (annotation.skeleton == null) {
           Toast.error(messages["tracing.agglomerate_skeleton.no_skeleton_tracing"]);
           continue;
         }

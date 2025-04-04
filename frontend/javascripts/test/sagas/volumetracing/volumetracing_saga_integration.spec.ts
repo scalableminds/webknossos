@@ -466,6 +466,7 @@ test.serial("Brushing/Tracing with already existing backend data", async (t) => 
     }),
   );
 });
+
 // The binary parameters control whether the test will assert additional
 // constraints in between. Since getDataValue() has the side effect of awaiting
 // the loaded bucket, the test hits different execution paths. For example,
@@ -659,6 +660,60 @@ test.serial("Brushing/Tracing with undo (II)", async (t) => {
   t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [1, 0, 0]), newCellId + 1);
   t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [5, 0, 0]), oldCellId);
 });
+
+test.serial("Brushing with undo and garbage collection", async (t: ExecutionContext<Context>) => {
+  const oldCellId = 11;
+  t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
+    Uint16Array,
+    oldCellId,
+    500,
+  );
+  // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
+  // function.
+  await t.context.api.data.reloadAllBuckets();
+  const paintCenter = [0, 0, 0] as Vector3;
+  const brushSize = 10;
+  const newCellId = 2;
+  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
+  Store.dispatch(updateUserSettingAction("brushSize", brushSize));
+  Store.dispatch(setPositionAction([0, 0, 0]));
+  Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH));
+  // Brush with ${newCellId}
+  Store.dispatch(setActiveCellAction(newCellId));
+  Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
+  Store.dispatch(addToLayerAction(paintCenter));
+  Store.dispatch(finishEditingAction());
+  // Brush with ${newCellId + 1}
+  Store.dispatch(setActiveCellAction(newCellId + 1));
+  Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
+  Store.dispatch(addToLayerAction(paintCenter));
+  Store.dispatch(finishEditingAction());
+
+  t.is(
+    await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter),
+    newCellId + 1,
+    "Before undo, there should be newCellId + 1",
+  );
+
+  await t.context.api.tracing.save();
+
+  t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
+    Uint16Array,
+    newCellId + 1,
+    500,
+  );
+
+  const cube = t.context.api.data.model.getCubeByLayerName(volumeTracingLayerName);
+  cube.collectAllBuckets();
+
+  await dispatchUndoAsync(Store.dispatch);
+
+  t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter), newCellId);
+
+  await dispatchRedoAsync(Store.dispatch);
+  t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter), newCellId + 1);
+});
+
 test.serial("Brushing/Tracing with upsampling to unloaded data", async (t) => {
   const oldCellId = 11;
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
@@ -887,7 +942,7 @@ test.serial("Undo for deleting segment group (without recursion)", async (t) => 
   );
 
   const state = Store.getState();
-  const tracing = state.tracing.volumes[0];
+  const tracing = state.annotation.volumes[0];
   t.is(tracing.segmentGroups.length, 0);
   t.is(tracing.segments.size(), 4);
 
@@ -898,7 +953,7 @@ test.serial("Undo for deleting segment group (without recursion)", async (t) => 
   await dispatchUndoAsync(Store.dispatch);
 
   const stateRestored = Store.getState();
-  const tracingRestored = stateRestored.tracing.volumes[0];
+  const tracingRestored = stateRestored.annotation.volumes[0];
   t.is(tracingRestored.segmentGroups.length, 2);
   t.is(tracingRestored.segments.size(), 4);
 
@@ -939,14 +994,14 @@ test.serial("Undo for deleting segment group (with recursion)", async (t) => {
   );
 
   const state = Store.getState();
-  const tracing = state.tracing.volumes[0];
+  const tracing = state.annotation.volumes[0];
   t.is(tracing.segmentGroups.length, 0);
   t.is(tracing.segments.size(), 0);
 
   await dispatchUndoAsync(Store.dispatch);
 
   const stateRestored = Store.getState();
-  const tracingRestored = stateRestored.tracing.volumes[0];
+  const tracingRestored = stateRestored.annotation.volumes[0];
   t.is(tracingRestored.segmentGroups.length, 1);
   t.is(tracingRestored.segmentGroups[0]?.children.length || 0, 1);
   t.is(tracingRestored.segments.size(), 4);
@@ -988,7 +1043,7 @@ test.serial("Undo for deleting segment group (bug repro)", async (t) => {
   Store.dispatch(updateSegmentAction(3, { groupId: 2 }, volumeTracingLayerName));
   Store.dispatch(updateSegmentAction(4, { groupId: 2 }, volumeTracingLayerName));
 
-  t.is(Store.getState().tracing.volumes[0].segmentGroups.length, 2);
+  t.is(Store.getState().annotation.volumes[0].segmentGroups.length, 2);
 
   // Delete everything
   Store.dispatch(
@@ -1002,14 +1057,14 @@ test.serial("Undo for deleting segment group (bug repro)", async (t) => {
   );
 
   const state = Store.getState();
-  const tracing = state.tracing.volumes[0];
+  const tracing = state.annotation.volumes[0];
   t.is(tracing.segmentGroups.length, 0);
   t.is(tracing.segments.size(), 0);
 
   // Undo again
   await dispatchUndoAsync(Store.dispatch);
 
-  t.is(Store.getState().tracing.volumes[0].segmentGroups.length, 2);
+  t.is(Store.getState().annotation.volumes[0].segmentGroups.length, 2);
 
   // Delete without recursion
   Store.dispatch(
@@ -1025,7 +1080,7 @@ test.serial("Undo for deleting segment group (bug repro)", async (t) => {
   await dispatchUndoAsync(Store.dispatch);
 
   const stateRestored = Store.getState();
-  const tracingRestored = stateRestored.tracing.volumes[0];
+  const tracingRestored = stateRestored.annotation.volumes[0];
   t.is(tracingRestored.segments.size(), 4);
   t.is(tracingRestored.segmentGroups.length, 2);
 

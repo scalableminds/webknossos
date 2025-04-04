@@ -20,7 +20,10 @@ import getSceneController from "oxalis/controller/scene_controller_provider";
 import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "oxalis/geometries/helper_geometries";
 
 import messages from "messages";
-import { getMaximumSegmentIdForLayer } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getSupportedValueRangeOfLayer,
+  isInSupportedValueRangeForLayer,
+} from "oxalis/model/accessors/dataset_accessor";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import {
   isBrushTool,
@@ -107,7 +110,7 @@ export function* watchVolumeTracingAsync(): Saga<void> {
 function* warnOfTooLowOpacity(): Saga<void> {
   yield* take("INITIALIZE_SETTINGS");
 
-  if (yield* select((state) => state.tracing.volumes.length === 0)) {
+  if (yield* select((state) => state.annotation.volumes.length === 0)) {
     return;
   }
 
@@ -128,27 +131,32 @@ function* warnOfTooLowOpacity(): Saga<void> {
   }
 }
 
-function* warnTooLargeSegmentId(): Saga<void> {
+function* warnAboutInvalidSegmentId(): Saga<void> {
   yield* takeWithBatchActionSupport("INITIALIZE_VOLUMETRACING");
   while (true) {
     const action = (yield* take(["SET_ACTIVE_CELL", "CREATE_CELL"]) as any) as
       | SetActiveCellAction
       | CreateCellAction;
-    const newSegmentId = yield* select((state) => enforceActiveVolumeTracing(state).activeCellId);
-    if (
-      (action.type === "CREATE_CELL" && action.newSegmentId === newSegmentId) ||
-      (action.type === "SET_ACTIVE_CELL" && action.segmentId === newSegmentId)
-    ) {
+    const currentSegmentId = yield* select(
+      (state) => enforceActiveVolumeTracing(state).activeCellId,
+    );
+    const requestedSegmentId =
+      action.type === "CREATE_CELL" ? action.newSegmentId : action.segmentId;
+
+    if (requestedSegmentId === currentSegmentId) {
       continue;
     }
+
     const dataset = yield* select((state) => state.dataset);
     const volumeTracing = yield* select(enforceActiveVolumeTracing);
     const segmentationLayer = yield* call(
       [Model, Model.getSegmentationTracingLayer],
       volumeTracing.tracingId,
     );
-    const maxSegmentId = getMaximumSegmentIdForLayer(dataset, segmentationLayer.name);
-    Toast.warning(messages["tracing.segment_id_out_of_bounds"]({ maxSegmentId }));
+    if (!isInSupportedValueRangeForLayer(dataset, segmentationLayer.name, requestedSegmentId)) {
+      const validRange = getSupportedValueRangeOfLayer(dataset, segmentationLayer.name);
+      Toast.warning(messages["tracing.segment_id_out_of_bounds"](requestedSegmentId, validRange));
+    }
   }
 }
 
@@ -156,7 +164,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
   // Waiting for the initialization is important. Otherwise, allowUpdate would be
   // false and the saga would terminate.
   yield* takeWithBatchActionSupport("INITIALIZE_VOLUMETRACING");
-  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
+  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
 
   while (allowUpdate) {
     const startEditingAction = yield* take("START_EDITING");
@@ -271,6 +279,12 @@ export function* editVolumeLayerAsync(): Saga<any> {
 
       if (initialViewport !== activeViewport) {
         // if the current viewport does not match the initial viewport -> dont draw
+        continue;
+      }
+
+      if (V3.equals(lastPosition, addToLayerAction.position)) {
+        // The voxel position did not change since the last action (the mouse moved
+        // within a voxel). There is no need to do anything.
         continue;
       }
 
@@ -757,5 +771,5 @@ export default [
   maintainContourGeometry,
   maintainVolumeTransactionEnds,
   ensureValidBrushSize,
-  warnTooLargeSegmentId,
+  warnAboutInvalidSegmentId,
 ];

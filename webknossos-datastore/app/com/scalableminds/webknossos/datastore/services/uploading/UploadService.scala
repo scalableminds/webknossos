@@ -35,6 +35,7 @@ case class ReserveUploadInformation(
     organization: String,
     totalFileCount: Long,
     filePaths: Option[List[String]],
+    totalFileSizeInBytes: Option[Long],
     layersToLink: Option[List[LinkedLayerIdentifier]],
     initialTeams: List[String], // team ids
     folderId: Option[String])
@@ -125,6 +126,10 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
    */
   private def redisKeyForFileCount(uploadId: String): String =
     s"upload___${uploadId}___fileCount"
+  private def redisKeyForTotalFileSizeInBytes(uploadId: String): String =
+    s"upload___${uploadId}___totalFileSizeInBytes"
+  private def redisKeyForCurrentUploadedTotalFileSizeInBytes(uploadId: String): String =
+    s"upload___${uploadId}___currentUploadedTotalFileSizeInBytes"
   private def redisKeyForFileNameSet(uploadId: String): String =
     s"upload___${uploadId}___fileNameSet"
   private def redisKeyForDataSourceId(uploadId: String): String =
@@ -163,6 +168,15 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       _ <- dataSourceService.assertDataDirWritable(reserveUploadInfo.organization)
       _ <- runningUploadMetadataStore.insert(redisKeyForFileCount(reserveUploadInfo.uploadId),
                                              String.valueOf(reserveUploadInfo.totalFileCount))
+      _ <- Fox.runOptional(reserveUploadInfo.totalFileSizeInBytes) { fileSize =>
+        Fox.combined(
+          List(
+            runningUploadMetadataStore.insertLong(redisKeyForTotalFileSizeInBytes(reserveUploadInfo.uploadId),
+                                                  fileSize),
+            runningUploadMetadataStore
+              .insertLong(redisKeyForCurrentUploadedTotalFileSizeInBytes(reserveUploadInfo.uploadId), 0L)
+          ))
+      }
       _ <- runningUploadMetadataStore.insert(
         redisKeyForDataSourceId(reserveUploadInfo.uploadId),
         Json.stringify(
@@ -185,21 +199,24 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   def addUploadIdsToUnfinishedUploads(
       unfinishedUploadsWithoutIds: List[UnfinishedUpload]): Fox[List[UnfinishedUpload]] =
     for {
-      maybeUnfinishedUploads: List[Box[UnfinishedUpload]] <- Fox.sequence(
+      maybeUnfinishedUploads: List[Box[Option[UnfinishedUpload]]] <- Fox.sequence(
+        // Previously rejected uploads may still appear in this list, but don’t have entries in redis. We can use that to filter them out here, since we don’t want to list them to the user. Those that *do* have entries in redis are then enriched using info from there (uploadId and filePaths).
         unfinishedUploadsWithoutIds.map(
           unfinishedUpload => {
             for {
               uploadIdOpt <- runningUploadMetadataStore.find(redisKeyForUploadId(unfinishedUpload.dataSourceId))
-              maybeUpdateUpload = uploadIdOpt
-                .map(uploadId => unfinishedUpload.copy(uploadId = uploadId))
-                .getOrElse(unfinishedUpload)
-              filePathsStringOpt <- runningUploadMetadataStore.find(redisKeyForFilePaths(maybeUpdateUpload.uploadId))
-              filePathsOpt <- filePathsStringOpt.map(JsonHelper.parseAndValidateJson[List[String]])
-              uploadUpdated <- filePathsOpt.map(filePaths => maybeUpdateUpload.copy(filePaths = Some(filePaths)))
-            } yield uploadUpdated
+              updatedUploadOpt = uploadIdOpt.map(uploadId => unfinishedUpload.copy(uploadId = uploadId))
+              updatedUploadWithFilePathsOpt <- Fox.runOptional(updatedUploadOpt)(updatedUpload =>
+                for {
+                  filePathsStringOpt <- runningUploadMetadataStore.find(redisKeyForFilePaths(updatedUpload.uploadId))
+                  filePathsOpt <- filePathsStringOpt.map(JsonHelper.parseAndValidateJson[List[String]])
+                  uploadUpdatedWithFilePaths <- filePathsOpt.map(filePaths =>
+                    updatedUpload.copy(filePaths = Some(filePaths)))
+                } yield uploadUpdatedWithFilePaths)
+            } yield updatedUploadWithFilePathsOpt
           }
         ))
-      foundUnfinishedUploads = maybeUnfinishedUploads.flatten
+      foundUnfinishedUploads = maybeUnfinishedUploads.flatten.flatten
     } yield foundUnfinishedUploads
 
   private def isOutsideUploadDir(uploadDir: Path, filePath: String): Boolean =
@@ -231,6 +248,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 
   def handleUploadChunk(uploadFileId: String,
                         chunkSize: Long,
+                        currentChunkSize: Long,
                         totalChunkCount: Long,
                         currentChunkNumber: Long,
                         chunkFile: File): Fox[Unit] = {
@@ -239,6 +257,19 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       dataSourceId <- getDataSourceIdByUploadId(uploadId)
       (filePath, uploadDir) <- getFilePathAndDirOfUploadId(uploadFileId)
       isFileKnown <- runningUploadMetadataStore.contains(redisKeyForFileChunkCount(uploadId, filePath))
+      totalFileSizeInBytesOpt <- runningUploadMetadataStore.findLong(redisKeyForTotalFileSizeInBytes(uploadId))
+      _ <- Fox.runOptional(totalFileSizeInBytesOpt) { maxFileSize =>
+        runningUploadMetadataStore
+          .increaseBy(redisKeyForCurrentUploadedTotalFileSizeInBytes(uploadId), currentChunkSize)
+          .flatMap(newTotalFileSizeInBytesOpt => {
+            if (newTotalFileSizeInBytesOpt.getOrElse(0L) > maxFileSize) {
+              cleanUpDatasetExceedingSize(uploadDir, uploadId).flatMap(_ =>
+                Fox.failure("dataset.upload.moreBytesThanReserved"))
+            } else {
+              Fox.successful(())
+            }
+          })
+      }
       _ <- Fox.runIf(!isFileKnown) {
         runningUploadMetadataStore
           .insertIntoSet(redisKeyForFileNameSet(uploadId), filePath)
@@ -296,18 +327,26 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       datasetNeedsConversion = uploadInformation.needsConversion.getOrElse(false)
       uploadDir = uploadDirectory(dataSourceId.organizationId, uploadId)
       unpackToDir = dataSourceDirFor(dataSourceId, datasetNeedsConversion)
+      totalFileSizeInBytesOpt <- runningUploadMetadataStore.find(redisKeyForTotalFileSizeInBytes(uploadId))
+      _ <- Fox.runOptional(totalFileSizeInBytesOpt) { maxFileSize =>
+        tryo(FileUtils.sizeOfDirectoryAsBigInteger(uploadDir.toFile).longValue).map(actualFileSize =>
+          if (actualFileSize > maxFileSize.toLong) {
+            cleanUpDatasetExceedingSize(uploadDir, uploadId)
+            Fox.failure(s"Uploaded dataset exceeds the maximum allowed size of $maxFileSize bytes")
+          } else Fox.successful(()))
+      }
 
       _ = logger.info(
         s"Finishing dataset upload of ${dataSourceId.organizationId}/${dataSourceId.directoryName} with id $uploadId...")
       _ <- Fox.runIf(checkCompletion)(ensureAllChunksUploaded(uploadId))
       _ <- ensureDirectoryBox(unpackToDir.getParent) ?~> "dataset.import.fileAccessDenied"
       unpackResult <- unpackDataset(uploadDir, unpackToDir).futureBox
+      linkedLayerInfo <- getObjectFromRedis[LinkedLayerIdentifiers](redisKeyForLinkedLayerIdentifier(uploadId))
       _ <- cleanUpUploadedDataset(uploadDir, uploadId)
       _ <- cleanUpOnFailure(unpackResult,
                             dataSourceId,
                             datasetNeedsConversion,
                             label = s"unpacking to dataset to $unpackToDir")
-      linkedLayerInfo <- getObjectFromRedis[LinkedLayerIdentifiers](redisKeyForLinkedLayerIdentifier(uploadId))
       postProcessingResult <- postProcessUploadedDataSource(datasetNeedsConversion,
                                                             unpackToDir,
                                                             dataSourceId,
@@ -617,16 +656,32 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     removeFromRedis(uploadId)
   }
 
+  private def cleanUpDatasetExceedingSize(uploadDir: Path, uploadId: String): Fox[Unit] =
+    for {
+      dataSourceId <- getDataSourceIdByUploadId(uploadId)
+      _ <- cleanUpUploadedDataset(uploadDir, uploadId)
+      _ <- dataSourceRepository.cleanUpDataSource(dataSourceId)
+    } yield ()
+
   private def removeFromRedis(uploadId: String): Fox[Unit] =
     for {
+      _ <- runningUploadMetadataStore.remove(redisKeyForFileCount(uploadId))
       fileNames <- runningUploadMetadataStore.findSet(redisKeyForFileNameSet(uploadId))
       _ <- Fox.serialCombined(fileNames.toList) { fileName =>
-        runningUploadMetadataStore
-          .remove(redisKeyForFileChunkCount(uploadId, fileName))
-          .flatMap(_ => runningUploadMetadataStore.remove(redisKeyForFileChunkSet(uploadId, fileName)))
+        for {
+          _ <- runningUploadMetadataStore.remove(redisKeyForFileChunkCount(uploadId, fileName))
+          _ <- runningUploadMetadataStore.remove(redisKeyForFileChunkSet(uploadId, fileName))
+        } yield ()
       }
-      _ <- runningUploadMetadataStore.remove(redisKeyForFileCount(uploadId))
       _ <- runningUploadMetadataStore.remove(redisKeyForFileNameSet(uploadId))
+      _ <- runningUploadMetadataStore.remove(redisKeyForTotalFileSizeInBytes(uploadId))
+      _ <- runningUploadMetadataStore.remove(redisKeyForCurrentUploadedTotalFileSizeInBytes(uploadId))
+      dataSourceId <- getDataSourceIdByUploadId(uploadId)
+      _ <- runningUploadMetadataStore.remove(redisKeyForDataSourceId(uploadId))
+      _ <- runningUploadMetadataStore.remove(redisKeyForLinkedLayerIdentifier(uploadId))
+      _ <- runningUploadMetadataStore.remove(redisKeyForUploadId(dataSourceId))
+      _ <- runningUploadMetadataStore.remove(redisKeyForFilePaths(uploadId))
+
     } yield ()
 
   private def cleanUpOrphanUploads(): Fox[Unit] =

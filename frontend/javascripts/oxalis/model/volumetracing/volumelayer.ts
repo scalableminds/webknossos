@@ -211,7 +211,7 @@ class VolumeLayer {
 
   getContourList(useGlobalCoords: boolean = false) {
     const globalContourList = getVolumeTracingById(
-      Store.getState().tracing,
+      Store.getState().annotation,
       this.volumeTracingId,
     ).contourList;
 

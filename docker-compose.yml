@@ -273,11 +273,11 @@ services:
 
   # FossilDB
   fossildb:
-    image: scalableminds/fossildb:master__510
+    image: scalableminds/fossildb:master__525
     command:
       - fossildb
       - -c
-      - skeletons,volumes,volumeData,volumeSegmentIndex,editableMappingsInfo,editableMappingsAgglomerateToGraph,editableMappingsSegmentToAgglomerate,annotations,annotationUpdates
+      - skeletons,skeletonTreeBodies,volumes,volumeData,volumeSegmentIndex,editableMappingsInfo,editableMappingsAgglomerateToGraph,editableMappingsSegmentToAgglomerate,annotations,annotationUpdates
     user: ${USER_UID:-fossildb}:${USER_GID:-fossildb}
 
   fossildb-persisted:

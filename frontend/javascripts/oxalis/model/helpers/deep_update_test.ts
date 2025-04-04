@@ -14,16 +14,16 @@ export function test1(state: OxalisState) {
     someKey: true,
   });
 
-  updateKey(state, "tracing", {
+  updateKey(state, "annotation", {
     // @ts-expect-error
     notExisting: true,
   });
-  updateKey(state, "tracing", {
+  updateKey(state, "annotation", {
     // @ts-expect-error
     visibility: "wrong type",
   });
   // No error
-  updateKey(state, "tracing", {
+  updateKey(state, "annotation", {
     visibility: "Public",
   });
 }
@@ -33,7 +33,7 @@ export function test2(state: OxalisState) {
     someKey: true,
   });
   // @ts-expect-error
-  updateKey2(state, "tracing", "notExisting", {
+  updateKey2(state, "annotation", "notExisting", {
     notExisting: true,
   });
   updateKey2(state, "viewModeData", "plane", {

@@ -21,6 +21,7 @@ import { race } from "redux-saga/effects";
 import { all, call, cancel, fork, put, take, takeEvery } from "typed-redux-saga";
 import type { EscalateErrorAction } from "../actions/actions";
 import { setIsWkReadyAction } from "../actions/ui_actions";
+import maintainMaximumZoomForAllMagsSaga from "./flycam_info_cache_saga";
 import { warnIfEmailIsUnverified } from "./user_saga";
 
 let rootSagaCrashed = false;
@@ -79,6 +80,7 @@ function* restartableSaga(): Saga<void> {
       call(warnIfEmailIsUnverified),
       call(listenToErrorEscalation),
       call(handleAdditionalCoordinateUpdate),
+      call(maintainMaximumZoomForAllMagsSaga),
       ...DatasetSagas.map((saga) => call(saga)),
     ]);
   } catch (err) {

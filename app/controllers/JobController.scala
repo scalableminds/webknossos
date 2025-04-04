@@ -5,8 +5,8 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
 import models.dataset.{DataStoreDAO, DatasetDAO, DatasetLayerAdditionalAxesDAO, DatasetService}
-import models.job._
-import models.organization.OrganizationDAO
+import models.job.{JobCommand, _}
+import models.organization.{CreditTransactionDAO, CreditTransactionService, OrganizationDAO, OrganizationService}
 import models.user.{MultiUserDAO, UserService}
 import play.api.i18n.Messages
 import play.api.libs.json._
@@ -63,6 +63,9 @@ class JobController @Inject()(jobDAO: JobDAO,
                               wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                               slackNotificationService: SlackNotificationService,
                               organizationDAO: OrganizationDAO,
+                              organizationService: OrganizationService,
+                              creditTransactionService: CreditTransactionService,
+                              creditTransactionDAO: CreditTransactionDAO,
                               dataStoreDAO: DataStoreDAO,
                               userService: UserService)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
@@ -212,6 +215,7 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- datasetService.assertValidLayerNameLax(layerName)
           command = JobCommand.infer_nuclei
           commandArgs = Json.obj(
+            "dataset_id" -> dataset._id,
             "organization_id" -> dataset._organization,
             "dataset_name" -> dataset.name,
             "dataset_directory_name" -> dataset.directoryName,
@@ -245,10 +249,12 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
-          _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
           annotationIdParsed <- Fox.runIf(doSplitMergerEvaluation)(annotationId.toFox) ?~> "job.inferNeurons.annotationIdEvalParamsMissing"
           command = JobCommand.infer_neurons
+          parsedBoundingBox <- BoundingBox.fromLiteral(bbox).toFox
+          _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
           commandArgs = Json.obj(
+            "dataset_id" -> dataset._id,
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
             "dataset_directory_name" -> dataset.directoryName,
@@ -262,9 +268,14 @@ class JobController @Inject()(jobDAO: JobDAO,
             "eval_sparse_tube_threshold_nm" -> evalSparseTubeThresholdNm,
             "eval_min_merger_path_length_nm" -> evalMinMergerPathLengthNm,
           )
-          job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunNeuronInferral"
-          js <- jobService.publicWrites(job)
-        } yield Ok(js)
+          creditTransactionComment = s"AI neuron segmentation for dataset ${dataset.name}"
+          jobAsJs <- jobService.submitPaidJob(command,
+                                              commandArgs,
+                                              parsedBoundingBox,
+                                              creditTransactionComment,
+                                              request.identity,
+                                              dataset._dataStore)
+        } yield Ok(jobAsJs)
       }
     }
 
@@ -284,9 +295,11 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- datasetService.assertValidLayerNameLax(layerName)
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
           _ <- bool2Fox(multiUser.isSuperUser) ?~> "job.inferMitochondria.notAllowed.onlySuperUsers"
-          _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
           command = JobCommand.infer_mitochondria
+          parsedBoundingBox <- BoundingBox.fromLiteral(bbox).toFox
+          _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
           commandArgs = Json.obj(
+            "dataset_id" -> dataset._id,
             "organization_id" -> dataset._organization,
             "dataset_name" -> dataset.name,
             "dataset_directory_name" -> dataset.directoryName,
@@ -294,9 +307,14 @@ class JobController @Inject()(jobDAO: JobDAO,
             "layer_name" -> layerName,
             "bbox" -> bbox,
           )
-          job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunInferMitochondria"
-          js <- jobService.publicWrites(job)
-        } yield Ok(js)
+          creditTransactionComment = s"Run for AI mitochondria segmentation for dataset ${dataset.name}"
+          jobAsJs <- jobService.submitPaidJob(command,
+                                              commandArgs,
+                                              parsedBoundingBox,
+                                              creditTransactionComment,
+                                              request.identity,
+                                              dataset._dataStore)
+        } yield Ok(jobAsJs)
       }
     }
 
@@ -314,8 +332,13 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.alignSections.notAllowed.organization" ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
+          datasetBoundingBox <- datasetService
+            .dataSourceFor(dataset)
+            .flatMap(_.toUsable)
+            .map(_.boundingBox) ?~> "dataset.boundingBox.unset"
           command = JobCommand.align_sections
           commandArgs = Json.obj(
+            "dataset_id" -> dataset._id,
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
             "dataset_directory_name" -> dataset.directoryName,
@@ -323,9 +346,14 @@ class JobController @Inject()(jobDAO: JobDAO,
             "layer_name" -> layerName,
             "annotation_id" -> annotationId
           )
-          job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunAlignSections"
-          js <- jobService.publicWrites(job)
-        } yield Ok(js)
+          creditTransactionComment = s"Align dataset ${dataset.name}"
+          jobAsJs <- jobService.submitPaidJob(command,
+                                              commandArgs,
+                                              datasetBoundingBox,
+                                              creditTransactionComment,
+                                              request.identity,
+                                              dataset._dataStore)
+        } yield Ok(jobAsJs)
       }
     }
 
@@ -368,6 +396,7 @@ class JobController @Inject()(jobDAO: JobDAO,
           else
             s"${formatDateForFilename(new Date())}__${dataset.name}__${annotationLayerName.map(_ => "volume").getOrElse(layerName.getOrElse(""))}.zip"
           commandArgs = Json.obj(
+            "dataset_id" -> dataset._id,
             "dataset_directory_name" -> dataset.directoryName,
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
@@ -410,6 +439,7 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- Fox.runIf(!multiUser.isSuperUser && includesEditableMapping)(Fox.runOptional(boundingBox)(bbox =>
             jobService.assertBoundingBoxLimits(bbox, None)))
           commandArgs = Json.obj(
+            "dataset_id" -> dataset._id,
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
             "dataset_directory_name" -> dataset.directoryName,
@@ -463,10 +493,10 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.renderAnimation.notAllowed.organization" ~> FORBIDDEN
           userOrganization <- organizationDAO.findOne(request.identity._organization)
           animationJobOptions = request.body
-          _ <- Fox.runIf(userOrganization.pricingPlan == PricingPlan.Basic) {
+          _ <- Fox.runIf(!PricingPlan.isPaidPlan(userOrganization.pricingPlan)) {
             bool2Fox(animationJobOptions.includeWatermark) ?~> "job.renderAnimation.mustIncludeWatermark"
           }
-          _ <- Fox.runIf(userOrganization.pricingPlan == PricingPlan.Basic) {
+          _ <- Fox.runIf(!PricingPlan.isPaidPlan(userOrganization.pricingPlan)) {
             bool2Fox(animationJobOptions.movieResolution == MovieResolutionSetting.SD) ?~> "job.renderAnimation.resolutionMustBeSD"
           }
           layerName = animationJobOptions.layerName
@@ -474,6 +504,7 @@ class JobController @Inject()(jobDAO: JobDAO,
           exportFileName = s"webknossos_animation_${formatDateForFilename(new Date())}__${dataset.name}__$layerName.mp4"
           command = JobCommand.render_animation
           commandArgs = Json.obj(
+            "dataset_id" -> dataset._id,
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
             "dataset_directory_name" -> dataset.directoryName,
@@ -503,6 +534,22 @@ class JobController @Inject()(jobDAO: JobDAO,
           request.identity.loginInfo)
         uri = s"${dataStore.publicUrl}/data/exports/$jobId/download"
       } yield Redirect(uri, Map(("token", Seq(userAuthToken.id))))
+    }
+
+  def getJobCreditCost(command: String, boundingBoxInMag: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        boundingBox <- BoundingBox.fromLiteral(boundingBoxInMag).toFox
+        jobCommand <- JobCommand.fromString(command).toFox
+        jobCostsInCredits <- jobService.calculateJobCostInCredits(boundingBox, jobCommand)
+        organizationCreditBalance <- creditTransactionDAO.getCreditBalance(request.identity._organization)
+        hasEnoughCredits = jobCostsInCredits <= organizationCreditBalance
+        js = Json.obj(
+          "costInCredits" -> jobCostsInCredits.toString(),
+          "hasEnoughCredits" -> hasEnoughCredits,
+          "organizationCredits" -> organizationCreditBalance.toString(),
+        )
+      } yield Ok(js)
     }
 
 }

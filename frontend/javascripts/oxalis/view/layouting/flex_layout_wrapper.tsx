@@ -577,7 +577,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
 function mapStateToProps(state: OxalisState): StateProps {
   return {
     displayScalebars: state.userConfiguration.displayScalebars,
-    isUpdateTracingAllowed: state.tracing.restrictions.allowUpdate,
+    isUpdateTracingAllowed: state.annotation.restrictions.allowUpdate,
     busyBlockingInfo: state.uiInformation.busyBlockingInfo,
   };
 }

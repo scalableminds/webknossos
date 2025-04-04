@@ -227,7 +227,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
     return (
       <ButtonComponent
         key="ai-job-button"
-        onClick={() => Store.dispatch(setAIJobModalStateAction("neuron_inferral"))}
+        onClick={() => Store.dispatch(setAIJobModalStateAction(APIJobType.INFER_NEURONS))}
         style={{ marginLeft: 12, pointerEvents: "auto" }}
         disabled={disabled}
         title={tooltipText}
@@ -332,8 +332,8 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
   controlMode: state.temporaryConfiguration.controlMode,
   showVersionRestore: state.uiInformation.showVersionRestore,
-  hasSkeleton: state.tracing.skeleton != null,
-  isReadOnly: !state.tracing.restrictions.allowUpdate,
+  hasSkeleton: state.annotation.skeleton != null,
+  isReadOnly: !state.annotation.restrictions.allowUpdate,
   is2d: is2dDataset(state.dataset),
   viewMode: state.temporaryConfiguration.viewMode,
   aiJobModalState: state.uiInformation.aIJobModalState,

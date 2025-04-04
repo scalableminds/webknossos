@@ -2,9 +2,9 @@ package com.scalableminds.webknossos.datastore.helpers
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
+import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
-import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, UnsignedInteger}
+import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, SegmentInteger}
 import play.api.libs.json.{Json, OFormat}
 
 import scala.concurrent.ExecutionContext
@@ -19,22 +19,22 @@ object SegmentStatisticsParameters {
 
 trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
 
-  def calculateSegmentVolume(
-      segmentId: Long,
-      mag: Vec3Int,
-      additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-      getBucketPositions: (Long, Vec3Int) => Fox[ListOfVec3IntProto],
-      getTypedDataForBucketPosition: (
-          Vec3Int,
-          Vec3Int,
-          Option[Seq[AdditionalCoordinate]]) => Fox[Array[UnsignedInteger]])(implicit ec: ExecutionContext): Fox[Long] =
+  def calculateSegmentVolume(segmentId: Long,
+                             mag: Vec3Int,
+                             additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+                             getBucketPositions: (Long, Vec3Int) => Fox[Set[Vec3IntProto]],
+                             getTypedDataForBucketPosition: (
+                                 Vec3Int,
+                                 Vec3Int,
+                                 Option[Seq[AdditionalCoordinate]]) => Fox[Array[SegmentInteger]])(
+      implicit ec: ExecutionContext): Fox[Long] =
     for {
-      bucketPositionsProtos: ListOfVec3IntProto <- getBucketPositions(segmentId, mag)
-      bucketPositionsInMag = bucketPositionsProtos.values.map(vec3IntFromProto)
+      bucketPositionsProtos: Set[Vec3IntProto] <- getBucketPositions(segmentId, mag)
+      bucketPositionsInMag = bucketPositionsProtos.map(vec3IntFromProto)
       volumeBoxes <- Fox.serialSequence(bucketPositionsInMag.toList)(bucketPosition =>
         for {
-          dataTyped: Array[UnsignedInteger] <- getTypedDataForBucketPosition(bucketPosition, mag, additionalCoordinates)
-          count = dataTyped.count(unsignedInteger => unsignedInteger.toPositiveLong == segmentId)
+          dataTyped: Array[SegmentInteger] <- getTypedDataForBucketPosition(bucketPosition, mag, additionalCoordinates)
+          count = dataTyped.count(segmentInteger => segmentInteger.toLong == segmentId)
         } yield count.toLong)
       counts <- Fox.combined(volumeBoxes.map(_.toFox))
     } yield counts.sum
@@ -43,15 +43,15 @@ trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
   def calculateSegmentBoundingBox(segmentId: Long,
                                   mag: Vec3Int,
                                   additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-                                  getBucketPositions: (Long, Vec3Int) => Fox[ListOfVec3IntProto],
+                                  getBucketPositions: (Long, Vec3Int) => Fox[Set[Vec3IntProto]],
                                   getTypedDataForBucketPosition: (
                                       Vec3Int,
                                       Vec3Int,
-                                      Option[Seq[AdditionalCoordinate]]) => Fox[Array[UnsignedInteger]])(
+                                      Option[Seq[AdditionalCoordinate]]) => Fox[Array[SegmentInteger]])(
       implicit ec: ExecutionContext): Fox[BoundingBox] =
     for {
-      allBucketPositions: ListOfVec3IntProto <- getBucketPositions(segmentId, mag)
-      relevantBucketPositions = filterOutInnerBucketPositions(allBucketPositions)
+      allBucketPositions: Set[Vec3IntProto] <- getBucketPositions(segmentId, mag)
+      relevantBucketPositions = filterOutInnerBucketPositions(allBucketPositions.toSeq)
       boundingBoxMutable = scala.collection.mutable.ListBuffer[Int](Int.MaxValue,
                                                                     Int.MaxValue,
                                                                     Int.MaxValue,
@@ -78,37 +78,37 @@ trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
         )
 
   // The buckets that form the outer walls of the bounding box are relevant (in each of those the real min/max voxel positions could occur)
-  private def filterOutInnerBucketPositions(bucketPositions: ListOfVec3IntProto): Seq[Vec3Int] =
-    if (bucketPositions.values.isEmpty) List.empty
+  private def filterOutInnerBucketPositions(bucketPositions: Seq[Vec3IntProto]): Seq[Vec3Int] =
+    if (bucketPositions.isEmpty) Seq.empty
     else {
-      val minX = bucketPositions.values.map(_.x).min
-      val minY = bucketPositions.values.map(_.y).min
-      val minZ = bucketPositions.values.map(_.z).min
-      val maxX = bucketPositions.values.map(_.x).max
-      val maxY = bucketPositions.values.map(_.y).max
-      val maxZ = bucketPositions.values.map(_.z).max
-      bucketPositions.values
+      val minX = bucketPositions.map(_.x).min
+      val minY = bucketPositions.map(_.y).min
+      val minZ = bucketPositions.map(_.z).min
+      val maxX = bucketPositions.map(_.x).max
+      val maxY = bucketPositions.map(_.y).max
+      val maxZ = bucketPositions.map(_.z).max
+      bucketPositions
         .filter(pos =>
           pos.x == minX || pos.x == maxX || pos.y == minY || pos.y == maxY || pos.z == minZ || pos.z == maxZ)
         .map(vec3IntFromProto)
     }
 
-  private def extendBoundingBoxByData(
-      mag: Vec3Int,
-      segmentId: Long,
-      mutableBoundingBox: scala.collection.mutable.ListBuffer[Int],
-      bucketPosition: Vec3Int,
-      additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-      getTypedDataForBucketPosition: (Vec3Int,
-                                      Vec3Int,
-                                      Option[Seq[AdditionalCoordinate]]) => Fox[Array[UnsignedInteger]]): Fox[Unit] =
+  private def extendBoundingBoxByData(mag: Vec3Int,
+                                      segmentId: Long,
+                                      mutableBoundingBox: scala.collection.mutable.ListBuffer[Int],
+                                      bucketPosition: Vec3Int,
+                                      additionalCoordinates: Option[Seq[AdditionalCoordinate]],
+                                      getTypedDataForBucketPosition: (
+                                          Vec3Int,
+                                          Vec3Int,
+                                          Option[Seq[AdditionalCoordinate]]) => Fox[Array[SegmentInteger]]): Fox[Unit] =
     for {
-      dataTyped: Array[UnsignedInteger] <- getTypedDataForBucketPosition(bucketPosition, mag, additionalCoordinates)
+      dataTyped: Array[SegmentInteger] <- getTypedDataForBucketPosition(bucketPosition, mag, additionalCoordinates)
       bucketTopLeftInTargetMagVoxels = bucketPosition * DataLayer.bucketLength
       _ = scanDataAndExtendBoundingBox(dataTyped, bucketTopLeftInTargetMagVoxels, segmentId, mutableBoundingBox)
     } yield ()
 
-  private def scanDataAndExtendBoundingBox(dataTyped: Array[UnsignedInteger],
+  private def scanDataAndExtendBoundingBox(dataTyped: Array[SegmentInteger],
                                            bucketTopLeftInTargetMagVoxels: Vec3Int,
                                            segmentId: Long,
                                            mutableBoundingBox: scala.collection.mutable.ListBuffer[Int]): Unit =
@@ -118,7 +118,7 @@ trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
       z <- 0 until DataLayer.bucketLength
       index = z * DataLayer.bucketLength * DataLayer.bucketLength + y * DataLayer.bucketLength + x
     } yield {
-      if (dataTyped(index).toPositiveLong == segmentId) {
+      if (dataTyped(index).toLong == segmentId) {
         val voxelPosition = bucketTopLeftInTargetMagVoxels + Vec3Int(x, y, z)
         extendBoundingBoxByPosition(mutableBoundingBox, voxelPosition)
       }

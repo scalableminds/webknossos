@@ -153,9 +153,20 @@ export function* watchZ1Downsampling(): Saga<void> {
   }
 
   yield* call(ensureWkReady);
+  // Once WK is ready, a correct maximumZoomForAllMags attribute is computed
+  // asynchronously. During that time, we don't want to show any warning.
+  // Therefore, we sleep a little bit here.
+  yield* call(sleep, 1000);
   yield* call(maybeShowWarning);
   yield* takeLatest(
-    ["ZOOM_IN", "ZOOM_OUT", "ZOOM_BY_DELTA", "SET_ZOOM_STEP", "SET_STORED_LAYOUTS"],
+    [
+      "ZOOM_IN",
+      "ZOOM_OUT",
+      "ZOOM_BY_DELTA",
+      "SET_ZOOM_STEP",
+      "SET_STORED_LAYOUTS",
+      "SET_MAXIMUM_ZOOM_FOR_ALL_MAGS_FOR_LAYER",
+    ],
     maybeShowWarning,
   );
 }
@@ -172,7 +183,7 @@ export function* ensureSegmentIndexIsLoaded(): Saga<void> {
       layerName,
     );
     if (maybeIsSegmentIndexAvailable == null && segmentationLayer != null) {
-      const tracing = yield* select((state) => state.tracing);
+      const tracing = yield* select((state) => state.annotation);
       const updatedIsSegmentIndexAvailable = yield* call(
         hasSegmentIndex,
         segmentationLayer,

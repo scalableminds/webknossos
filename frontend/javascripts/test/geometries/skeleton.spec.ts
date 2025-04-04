@@ -13,12 +13,6 @@ import { tracing, annotation } from "../fixtures/skeletontracing_server_objects"
 import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reducers/reducer_helpers";
 import { batchedAnnotationInitializationAction } from "oxalis/model/actions/annotation_actions";
 
-mockRequire("app", {
-  currentUser: {
-    firstName: "SCM",
-    lastName: "Boy",
-  },
-});
 const NodeShader = mockRequire.reRequire("oxalis/geometries/materials/node_shader");
 const Store = mockRequire.reRequire("oxalis/store").default;
 const Skeleton = mockRequire.reRequire("oxalis/geometries/skeleton").default;
@@ -56,7 +50,7 @@ test.before((t) => {
     Store.dispatch(createNodeAction([i, i, i], null, rotation, viewport, mag));
   }
 
-  getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
+  getSkeletonTracing(Store.getState().annotation).map((skeletonTracing) => {
     const trees = skeletonTracing.trees;
     t.is(_.size(trees), 20);
 
@@ -67,10 +61,10 @@ test.before((t) => {
 });
 
 const skeletonCreator = () =>
-  new Skeleton((state: OxalisState) => getSkeletonTracing(state.tracing), true);
+  new Skeleton((state: OxalisState) => getSkeletonTracing(state.annotation), true);
 
 test.serial("Skeleton should initialize correctly using the store's state", (t) => {
-  getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
+  getSkeletonTracing(Store.getState().annotation).map((skeletonTracing) => {
     const trees = skeletonTracing.trees;
     const skeleton = skeletonCreator();
     t.is(skeleton.nodes.buffers.length, 1);
@@ -181,7 +175,7 @@ test.serial("Skeleton should update node types for branchpoints", async (t) => {
 });
 test.serial("Skeleton should update node radius", async (t) => {
   const skeleton = skeletonCreator();
-  const skeletonTracing = getSkeletonTracing(Store.getState().tracing).get();
+  const skeletonTracing = getSkeletonTracing(Store.getState().annotation).get();
   const { activeNodeId, activeTreeId } = skeletonTracing;
   Store.dispatch(setNodeRadiusAction(2));
   await Utils.sleep(50);
@@ -192,7 +186,7 @@ test.serial("Skeleton should update node radius", async (t) => {
 test.serial("Skeleton should update tree colors upon tree creation", async (t) => {
   const skeleton = skeletonCreator();
   Store.dispatch(createTreeAction());
-  const skeletonTracing = getSkeletonTracing(Store.getState().tracing).get();
+  const skeletonTracing = getSkeletonTracing(Store.getState().annotation).get();
   const { activeTreeId, trees } = skeletonTracing;
 
   if (activeTreeId != null) {

@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import mail.{DefaultMails, Send}
 
 import javax.inject.Inject
-import models.organization.{OrganizationDAO, OrganizationService}
+import models.organization.{FreeCreditTransactionService, OrganizationDAO, OrganizationService}
 import models.user.{InviteDAO, MultiUserDAO, UserDAO, UserService}
 import models.team.PricingPlan
 import play.api.i18n.Messages
@@ -31,6 +31,7 @@ class OrganizationController @Inject()(
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
     userService: UserService,
     defaultMails: DefaultMails,
+    freeCreditTransactionService: FreeCreditTransactionService,
     actorSystem: ActorSystem,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
     extends Controller
@@ -81,14 +82,15 @@ class OrganizationController @Inject()(
                                           autoActivate = true,
                                           isAdmin = true,
                                           isOrganizationOwner = true)
+        _ <- freeCreditTransactionService.handOutMonthlyFreeCredits()
       } yield Ok(org._id)
     }
 
-  def getDefault: Action[AnyContent] = Action.async { implicit request =>
+  def getDefault: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {
       allOrgs <- organizationDAO.findAll(GlobalAccessContext) ?~> "organization.list.failed"
       org <- allOrgs.headOption.toFox ?~> "organization.list.failed"
-      js <- organizationService.publicWrites(org)
+      js <- organizationService.publicWrites(org, request.identity)
     } yield {
       if (allOrgs.length > 1) // Cannot list organizations publicly if there are multiple ones, due to privacy reasons
         Ok(JsNull)
@@ -249,6 +251,24 @@ class OrganizationController @Inject()(
                                                      userEmail,
                                                      organization.name,
                                                      s"Purchase $requestedStorage TB additional storage"))
+      } yield Ok
+    }
+
+  def sendOrderCreditsEmail(requestedCredits: Int): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        _ <- bool2Fox(requestedCredits > 0) ?~> Messages("organization.creditOrder.notPositive")
+        _ <- bool2Fox(request.identity.isOrganizationOwner) ?~> Messages("organization.creditOrder.notAuthorized")
+        organization <- organizationDAO.findOne(request.identity._organization) ?~> Messages("organization.notFound") ~> NOT_FOUND
+        userEmail <- userService.emailFor(request.identity)
+        _ = logger.info(
+          s"Received credit order for organization ${organization.name} with $requestedCredits credits by user $userEmail")
+        _ = Mailer ! Send(defaultMails.orderCreditsMail(request.identity, userEmail, requestedCredits))
+        _ = Mailer ! Send(
+          defaultMails.orderCreditsRequestMail(request.identity,
+                                               userEmail,
+                                               organization.name,
+                                               s"Purchase $requestedCredits WEBKNOSSOS credits."))
       } yield Ok
     }
 

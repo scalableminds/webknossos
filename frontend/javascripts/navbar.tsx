@@ -26,7 +26,7 @@ import classnames from "classnames";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { connect, useSelector } from "react-redux";
-import { Link, useHistory } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import {
   getBuildInfo,
@@ -346,6 +346,8 @@ function getHelpSubMenu(
       ? `(Server is currently at ${polledVersion}!)`
       : "";
 
+  const { discussionBoardRequiresAdmin, discussionBoard, isWkorgInstance } = features();
+
   const helpSubMenuItems: ItemType[] = [
     {
       key: "user-documentation",
@@ -355,12 +357,11 @@ function getHelpSubMenu(
         </a>
       ),
     },
-    (!features().discussionBoardRequiresAdmin || isAdminOrManager) &&
-    features().discussionBoard !== false
+    (!discussionBoardRequiresAdmin || isAdminOrManager) && discussionBoard !== false
       ? {
           key: "discussion-board",
           label: (
-            <a href={features().discussionBoard} target="_blank" rel="noreferrer noopener">
+            <a href={discussionBoard} target="_blank" rel="noreferrer noopener">
               Community Support
             </a>
           ),
@@ -395,7 +396,7 @@ function getHelpSubMenu(
       label: "Ask a Question",
     });
 
-  if (features().isWkorgInstance) {
+  if (isWkorgInstance) {
     helpSubMenuItems.push({
       key: "contact",
       label: (
@@ -821,7 +822,7 @@ function Navbar({
   navbarHeight,
   isAnnotationOwner,
 }: Props) {
-  const history = useHistory();
+  const historyLocation = useLocation();
 
   const handleLogout = async (event: React.SyntheticEvent) => {
     event.preventDefault();
@@ -938,7 +939,7 @@ function Navbar({
   );
   // Don't highlight active menu items, when showing the narrow version of the navbar,
   // since this makes the icons appear more crowded.
-  const selectedKeys = collapseAllNavItems ? [] : [history.location.pathname];
+  const selectedKeys = collapseAllNavItems ? [] : [historyLocation.pathname];
   const separator = <div className="navbar-separator" />;
 
   return (
@@ -949,7 +950,7 @@ function Navbar({
     >
       <GlobalProgressBar />
       <MaintenanceBanner />
-      <ConfigProvider theme={{ ...getAntdTheme("light") }}>
+      <ConfigProvider theme={getAntdTheme("light")}>
         <UpgradeVersionBanner />
       </ConfigProvider>
       <Menu
@@ -982,7 +983,7 @@ function Navbar({
           paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
         }}
       />
-      <ConfigProvider theme={{ ...getAntdTheme("dark") }}>
+      <ConfigProvider theme={getAntdTheme("dark")}>
         <div
           style={{
             display: "flex",
@@ -1012,11 +1013,11 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
   isInAnnotationView: state.uiInformation.isInAnnotationView,
   hasOrganizations: state.uiInformation.hasOrganizations,
-  othersMayEdit: state.tracing.othersMayEdit,
-  blockedByUser: state.tracing.blockedByUser,
-  allowUpdate: state.tracing.restrictions.allowUpdate,
-  isLockedByOwner: state.tracing.isLockedByOwner,
-  annotationOwnerName: formatUserName(state.activeUser, state.tracing.owner),
+  othersMayEdit: state.annotation.othersMayEdit,
+  blockedByUser: state.annotation.blockedByUser,
+  allowUpdate: state.annotation.restrictions.allowUpdate,
+  isLockedByOwner: state.annotation.isLockedByOwner,
+  annotationOwnerName: formatUserName(state.activeUser, state.annotation.owner),
   isAnnotationOwner: isAnnotationOwnerAccessor(state),
   isAnnotationFromDifferentOrganization: isAnnotationFromDifferentOrganization(state),
   navbarHeight: state.uiInformation.navbarHeight,

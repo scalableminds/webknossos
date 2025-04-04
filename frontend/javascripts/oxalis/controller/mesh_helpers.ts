@@ -34,11 +34,17 @@ export class PositionToSegmentId {
 
   getUnmappedSegmentIdForPosition(position: number) {
     const index = _.sortedIndex(this.cumulativeStartPosition, position) - 1;
+    if (index >= this.unmappedSegmentIds.length) {
+      throw new Error(`Could not look up id for position=${position} in PositionToSegmentId.`);
+    }
     return this.unmappedSegmentIds[index];
   }
 
   getRangeForPosition(position: number): [number, number] {
     const index = _.sortedIndex(this.cumulativeStartPosition, position) - 1;
+    if (index + 1 >= this.cumulativeStartPosition.length) {
+      throw new Error(`Could not look up range for position=${position} in PositionToSegmentId.`);
+    }
     return [this.cumulativeStartPosition[index], this.cumulativeStartPosition[index + 1]];
   }
 

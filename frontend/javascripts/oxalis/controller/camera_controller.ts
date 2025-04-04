@@ -351,6 +351,7 @@ export function rotate3DViewTo(
       .start();
   } else {
     updateCameraTDView(to, 1);
+    onComplete?.();
   }
 }
 export default CameraController;

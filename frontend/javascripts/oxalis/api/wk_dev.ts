@@ -6,6 +6,7 @@ import { type OrthoView, OrthoViews, type Vector3 } from "oxalis/constants";
 import { Store } from "oxalis/singletons";
 import type { ApiInterface } from "./api_latest";
 import type ApiLoader from "./api_loader";
+import app from "app";
 
 // Can be accessed via window.webknossos.DEV.flags. Only use this
 // for debugging or one off scripts.
@@ -42,7 +43,7 @@ export default class WkDev {
    */
   apiLoader: ApiLoader;
   _api!: ApiInterface;
-  benchmarkHistory: number[] = [];
+  benchmarkHistory: { MOVE: number[]; ROTATE: number[] } = { MOVE: [], ROTATE: [] };
 
   flags = WkDevFlags;
 
@@ -140,6 +141,10 @@ export default class WkDev {
     console.log("Created", treeCount, "trees.");
   }
 
+  resetBenchmarks() {
+    this.benchmarkHistory = { MOVE: [], ROTATE: [] };
+  }
+
   async benchmarkMove(zRange: [number, number] = [1025, 1250], repeatAmount: number = 1) {
     /*
      * Benchmark moving in z from zRange[0] to zRange[1] ${repeatAmount} times.
@@ -186,30 +191,54 @@ export default class WkDev {
     }
     const duration = performance.now() - start;
     console.timeEnd("Move Benchmark");
-    this.benchmarkHistory.push(duration);
-    if (this.benchmarkHistory.length > 1) {
+    this.benchmarkHistory.MOVE.push(duration);
+    if (this.benchmarkHistory.MOVE.length > 1) {
       console.log(
-        `Average of all ${this.benchmarkHistory.length} benchmark runs:`,
-        _.mean(this.benchmarkHistory),
+        `Mean of all ${this.benchmarkHistory.MOVE.length} benchmark runs:`,
+        _.mean(this.benchmarkHistory.MOVE),
       );
     }
   }
 
-  async benchmarkRotate() {
+  async benchmarkRotate(n: number = 10) {
     // Dynamic import to avoid circular imports.
     const { rotate3DViewTo } = await import("oxalis/controller/camera_controller");
 
     const animateAsPromise = (plane: OrthoView) => {
       return new Promise<void>((resolve) => {
-        rotate3DViewTo(plane, true, resolve);
+        rotate3DViewTo(plane, false, resolve);
       });
     };
 
-    for (let i = 0; i < 10; i++) {
+    const start = performance.now();
+    console.time("Rotate Benchmark");
+
+    for (let i = 0; i < n; i++) {
+      app.vent.emit("forceImmediateRerender");
+      await sleep(0);
       await animateAsPromise(OrthoViews.PLANE_XY);
+
+      app.vent.emit("forceImmediateRerender");
+      await sleep(0);
       await animateAsPromise(OrthoViews.PLANE_YZ);
+
+      app.vent.emit("forceImmediateRerender");
+      await sleep(0);
       await animateAsPromise(OrthoViews.PLANE_XZ);
+
+      app.vent.emit("forceImmediateRerender");
+      await sleep(0);
       await animateAsPromise(OrthoViews.TDView);
+    }
+    console.timeEnd("Rotate Benchmark");
+
+    const duration = performance.now() - start;
+    this.benchmarkHistory.ROTATE.push(duration);
+    if (this.benchmarkHistory.ROTATE.length > 1) {
+      console.log(
+        `Mean of all ${this.benchmarkHistory.ROTATE.length} benchmark runs:`,
+        _.mean(this.benchmarkHistory.ROTATE),
+      );
     }
   }
 }

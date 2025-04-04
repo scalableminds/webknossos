@@ -152,9 +152,6 @@ export default class SegmentMeshController {
     const mesh = new THREE.Mesh(geometry, meshMaterial) as any as MeshSceneNode;
     mesh.isMerged = isMerged;
 
-    // todop: test whether this changes sth? also test perf
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
     const tweenAnimation = new TWEEN.Tween({
       opacity: 0,
     });

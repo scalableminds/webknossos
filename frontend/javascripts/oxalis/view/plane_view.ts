@@ -280,6 +280,14 @@ class PlaneView {
         this.needsRerender = true;
       }),
     );
+
+    this.unsubscribeFunctions.push(
+      // Only used for benchmarks (see WkDev)
+      app.vent.on("forceImmediateRerender", () => {
+        this.renderFunction(true);
+      }),
+    );
+
     this.unsubscribeFunctions.push(
       Store.subscribe(() => {
         // Render in the next frame after the change propagated everywhere

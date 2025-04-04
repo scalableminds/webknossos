@@ -1,7 +1,6 @@
 import { diffDiffableMaps } from "libs/diffable_map";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type {
   AnnotationTool,
@@ -74,16 +73,13 @@ import {
 } from "oxalis/model/sagas/saga_helpers";
 import {
   type UpdateActionWithoutIsolationRequirement,
-  addUserBoundingBoxInVolumeTracingAction,
   createSegmentVolumeAction,
   deleteSegmentDataVolumeAction,
   deleteSegmentVolumeAction,
-  deleteUserBoundingBoxInVolumeTracingAction,
   removeFallbackLayer,
   updateMappingName,
   updateSegmentGroups,
   updateSegmentVolumeAction,
-  updateUserBoundingBoxInVolumeTracingAction,
   updateVolumeTracing,
 } from "oxalis/model/sagas/update_actions";
 import type VolumeLayer from "oxalis/model/volumetracing/volumelayer";
@@ -91,13 +87,13 @@ import { Model, api } from "oxalis/singletons";
 import type { Flycam, SegmentMap, VolumeTracing } from "oxalis/store";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
+import { AnnotationLayerEnum } from "types/api_flow_types";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { ensureWkReady } from "./ready_sagas";
+import { diffBoundingBoxes } from "./skeletontracing_saga";
 import { floodFill } from "./volume/floodfill_saga";
 import { type BooleanBox, createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
-
-import * as Utils from "libs/utils";
 
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 
@@ -487,36 +483,12 @@ export function* diffVolumeTracing(
     );
   }
 
-  if (!_.isEqual(prevVolumeTracing.userBoundingBoxes, volumeTracing.userBoundingBoxes)) {
-    const {
-      onlyA: deletedBBoxIds,
-      onlyB: addedBBoxIds,
-      both: changedBBoxIds,
-    } = Utils.diffArrays(
-      _.map(prevVolumeTracing.userBoundingBoxes, (bbox) => bbox.id),
-      _.map(volumeTracing.userBoundingBoxes, (bbox) => bbox.id),
-    );
-    for (const id of deletedBBoxIds) {
-      yield deleteUserBoundingBoxInVolumeTracingAction(id, volumeTracing.tracingId);
-    }
-    for (const id of addedBBoxIds) {
-      const bbox = volumeTracing.userBoundingBoxes.find((bbox) => bbox.id === id);
-      if (bbox) {
-        yield addUserBoundingBoxInVolumeTracingAction(bbox, volumeTracing.tracingId);
-      } else {
-        Toast.error(`User bounding box with id ${id} not found in volume tracing.`);
-      }
-    }
-    for (const id of changedBBoxIds) {
-      const bbox = volumeTracing.userBoundingBoxes.find((bbox) => bbox.id === id);
-      if (bbox) {
-        // TODO_charlie only update changed props
-        yield updateUserBoundingBoxInVolumeTracingAction(bbox.id, bbox, volumeTracing.tracingId);
-      } else {
-        Toast.error(`User bounding box with id ${id} not found in volume tracing.`);
-      }
-    }
-  }
+  diffBoundingBoxes(
+    prevVolumeTracing.userBoundingBoxes,
+    volumeTracing.userBoundingBoxes,
+    volumeTracing.tracingId,
+    AnnotationLayerEnum.Volume,
+  );
 
   if (prevVolumeTracing !== volumeTracing) {
     if (prevVolumeTracing.segments !== volumeTracing.segments) {

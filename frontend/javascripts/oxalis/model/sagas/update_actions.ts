@@ -38,7 +38,9 @@ export type CreateSegmentUpdateAction = ReturnType<typeof createSegmentVolumeAct
 export type UpdateSegmentUpdateAction = ReturnType<typeof updateSegmentVolumeAction>;
 export type DeleteSegmentUpdateAction = ReturnType<typeof deleteSegmentVolumeAction>;
 export type DeleteSegmentDataUpdateAction = ReturnType<typeof deleteSegmentDataVolumeAction>;
-export type AddUserBoundingBoxSkeletonAction = ReturnType<typeof addUserBoundingBoxSkeletonAction>;
+export type AddUserBoundingBoxSkeletonAction = ReturnType<
+  typeof addUserBoundingBoxInSkeletonTracingAction
+>;
 export type AddUserBoundingBoxInVolumeTracingAction = ReturnType<
   typeof addUserBoundingBoxInVolumeTracingAction
 >;
@@ -400,7 +402,7 @@ export function updateVolumeTracing(
   } as const;
 }
 
-export function addUserBoundingBoxSkeletonAction(
+export function addUserBoundingBoxInSkeletonTracingAction(
   boundingBox: UserBoundingBox,
   actionTracingId: string,
 ) {

@@ -234,9 +234,11 @@ class AuthenticationController @Inject()(
       organization <- organizationDAO.findOne(invite._organization)(GlobalAccessContext) ?~> "invite.invalidToken"
       _ <- userService.assertNotInOrgaYet(request.identity._multiUser, organization._id)
       requestingMultiUser <- multiUserDAO.findOne(request.identity._multiUser)
-      _ <- Fox.runIf(!requestingMultiUser.isSuperUser)(
-        organizationService
-          .assertUsersCanBeAdded(organization._id)(GlobalAccessContext, ec)) ?~> "organization.users.userLimitReached"
+      alreadyPayingOrgaForMultiUser <- userDAO.findPayingOrgaIdForMultiUser(requestingMultiUser._id)
+      _ = println("alreadyPayingOrgaForMultiUser")
+      _ = println(alreadyPayingOrgaForMultiUser)
+      _ <- Fox.runIf(!(requestingMultiUser.isSuperUser || alreadyPayingOrgaForMultiUser.isDefined))(organizationService
+        .assertUsersCanBeAdded(organization._id)(GlobalAccessContext, ec)) ?~> "organization.users.userLimitReached"
       _ <- userService.joinOrganization(request.identity,
                                         organization._id,
                                         autoActivate = invite.autoActivate,

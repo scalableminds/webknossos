@@ -209,7 +209,11 @@ void main()
       fn();
     }
     this.storePropertyUnsubscribers = [];
-    this.uniforms.treeColors.value = null;
+
+    // Avoid memory leaks on tear down.
+    for (const key of Object.keys(this.uniforms)) {
+      this.uniforms[key].value = null;
+    }
   }
 }
 

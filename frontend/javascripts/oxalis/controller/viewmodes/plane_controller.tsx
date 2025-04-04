@@ -590,6 +590,10 @@ class PlaneController extends React.PureComponent<Props> {
       this.destroyInput();
     }
 
+    // SceneController might already be null, because componentWillUnmount will trigger
+    // earlier for outer components and later for inner components. The outer
+    // component TracingLayoutView is responsible for the destroy call which already
+    // happened when the stop method here is called.
     getSceneControllerOrNull()?.stopPlaneMode();
 
     this.planeView.stop();

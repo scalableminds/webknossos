@@ -1180,6 +1180,11 @@ class PlaneMaterialFactory {
     }
     this.material = null;
     this.recomputeShaders.cancel();
+
+    // Avoid memory leaks on tear down.
+    for (const key of Object.keys(this.uniforms)) {
+      this.uniforms[key].value = null;
+    }
   }
 }
 

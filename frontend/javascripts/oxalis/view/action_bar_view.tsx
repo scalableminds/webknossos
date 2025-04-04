@@ -142,13 +142,14 @@ function AdditionalCoordinatesInputView() {
 
 function CreateAnnotationButton() {
   const history = useHistory();
-  const dataset = useSelector((state: OxalisState) => state.dataset);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
 
-  const onClick = async (dataset: APIDataset) => {
+  const onClick = async () => {
+    const state = Store.getState();
+    const { dataset } = state;
     // If the dataset supports creating an annotation with a fallback segmentation,
     // use it (as the fallback can always be removed later)
-    const maybeSegmentationLayer = getVisibleSegmentationLayer(Store.getState());
+    const maybeSegmentationLayer = getVisibleSegmentationLayer(state);
     const fallbackLayerName =
       maybeSegmentationLayer && doesSupportVolumeWithFallback(dataset, maybeSegmentationLayer)
         ? maybeSegmentationLayer.name
@@ -184,7 +185,7 @@ function CreateAnnotationButton() {
         marginLeft: 12,
       }}
       type="primary"
-      onClick={() => onClick(dataset)}
+      onClick={onClick}
     >
       Create Annotation
     </ButtonWithAuthentication>

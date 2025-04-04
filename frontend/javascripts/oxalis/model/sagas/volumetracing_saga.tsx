@@ -476,7 +476,6 @@ export function* diffVolumeTracing(
   volumeTracing: VolumeTracing,
   prevFlycam: Flycam,
   flycam: Flycam,
-  activeUserId: string | null,
 ): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (updateTracingPredicate(prevVolumeTracing, volumeTracing, prevFlycam, flycam)) {
     yield updateVolumeTracing(
@@ -498,24 +497,12 @@ export function* diffVolumeTracing(
       _.map(volumeTracing.userBoundingBoxes, (bbox) => bbox.id),
     );
     for (const id of deletedBBoxIds) {
-      yield deleteUserBoundingBoxInVolumeTracingAction(
-        id,
-        volumeTracing.tracingId,
-        Date.now(),
-        activeUserId,
-        null,
-      );
+      yield deleteUserBoundingBoxInVolumeTracingAction(id, volumeTracing.tracingId);
     }
     for (const id of addedBBoxIds) {
       const bbox = volumeTracing.userBoundingBoxes.find((bbox) => bbox.id === id);
       if (bbox) {
-        yield addUserBoundingBoxInVolumeTracingAction(
-          bbox,
-          volumeTracing.tracingId,
-          Date.now(),
-          activeUserId,
-          null,
-        );
+        yield addUserBoundingBoxInVolumeTracingAction(bbox, volumeTracing.tracingId);
       } else {
         Toast.error(`User bounding box with id ${id} not found in volume tracing.`);
       }
@@ -524,14 +511,7 @@ export function* diffVolumeTracing(
       const bbox = volumeTracing.userBoundingBoxes.find((bbox) => bbox.id === id);
       if (bbox) {
         // TODO_charlie only update changed props
-        yield updateUserBoundingBoxInVolumeTracingAction(
-          bbox.id,
-          bbox,
-          volumeTracing.tracingId,
-          Date.now(),
-          activeUserId,
-          null,
-        );
+        yield updateUserBoundingBoxInVolumeTracingAction(bbox.id, bbox, volumeTracing.tracingId);
       } else {
         Toast.error(`User bounding box with id ${id} not found in volume tracing.`);
       }

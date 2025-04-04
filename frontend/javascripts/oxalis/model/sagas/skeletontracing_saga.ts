@@ -614,7 +614,6 @@ export function* diffSkeletonTracing(
   skeletonTracing: SkeletonTracing,
   prevFlycam: Flycam,
   flycam: Flycam,
-  activeUserId: string | null,
 ): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (prevSkeletonTracing !== skeletonTracing) {
     for (const action of cachedDiffTrees(
@@ -650,24 +649,12 @@ export function* diffSkeletonTracing(
       _.map(skeletonTracing.userBoundingBoxes, (bbox) => bbox.id),
     );
     for (const id of deletedBBoxIds) {
-      yield deleteUserBoundingBoxInSkeletonTracingAction(
-        id,
-        skeletonTracing.tracingId,
-        Date.now(),
-        activeUserId,
-        null,
-      );
+      yield deleteUserBoundingBoxInSkeletonTracingAction(id, skeletonTracing.tracingId);
     }
     for (const id of addedBBoxIds) {
       const bbox = skeletonTracing.userBoundingBoxes.find((bbox) => bbox.id === id);
       if (bbox) {
-        yield addUserBoundingBoxSkeletonAction(
-          bbox,
-          skeletonTracing.tracingId,
-          Date.now(),
-          activeUserId,
-          null,
-        );
+        yield addUserBoundingBoxSkeletonAction(bbox, skeletonTracing.tracingId);
       } else {
         Toast.error(`User bounding box with id ${id} not found in skeleton tracing.`);
       }
@@ -680,9 +667,6 @@ export function* diffSkeletonTracing(
           bbox.id,
           bbox,
           skeletonTracing.tracingId,
-          Date.now(),
-          activeUserId,
-          null,
         );
       } else {
         Toast.error(`User bounding box with id ${id} not found in skeleton tracing.`);

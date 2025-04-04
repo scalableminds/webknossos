@@ -403,18 +403,12 @@ export function updateVolumeTracing(
 export function addUserBoundingBoxSkeletonAction(
   boundingBox: UserBoundingBox,
   actionTracingId: string,
-  timestamp: number | null,
-  authorId: string | null,
-  info: string | null,
 ) {
   return {
     name: "addUserBoundingBoxSkeletonAction",
     value: {
       boundingBox: convertUserBoundingBoxesFromFrontendToServer([boundingBox]),
       actionTracingId,
-      actionTimestamp: timestamp,
-      actionAuthorId: authorId,
-      info,
     },
   } as const;
 }
@@ -422,18 +416,12 @@ export function addUserBoundingBoxSkeletonAction(
 export function addUserBoundingBoxInVolumeTracingAction(
   boundingBox: UserBoundingBox,
   actionTracingId: string,
-  timestamp: number | null,
-  authorId: string | null,
-  info: string | null,
 ) {
   return {
     name: "addUserBoundingBoxVolumeAction",
     value: {
       boundingBox: convertUserBoundingBoxesFromFrontendToServer([boundingBox]),
       actionTracingId,
-      actionTimestamp: timestamp,
-      actionAuthorId: authorId,
-      info,
     },
   } as const;
 }
@@ -441,18 +429,12 @@ export function addUserBoundingBoxInVolumeTracingAction(
 export function deleteUserBoundingBoxInSkeletonTracingAction(
   boundingBoxId: number,
   actionTracingId: string,
-  timestamp: number | null,
-  authorId: string | null,
-  info: string | null,
 ) {
   return {
     name: "deleteUserBoundingBoxSkeletonAction",
     value: {
       boundingBoxId,
       actionTracingId,
-      actionTimestamp: timestamp,
-      actionAuthorId: authorId,
-      info,
     },
   } as const;
 }
@@ -460,18 +442,12 @@ export function deleteUserBoundingBoxInSkeletonTracingAction(
 export function deleteUserBoundingBoxInVolumeTracingAction(
   boundingBoxId: number,
   actionTracingId: string,
-  timestamp: number | null,
-  authorId: string | null,
-  info: string | null,
 ) {
   return {
     name: "deleteUserBoundingBoxVolumeAction",
     value: {
       boundingBoxId,
       actionTracingId,
-      actionTimestamp: timestamp,
-      actionAuthorId: authorId,
-      info,
     },
   } as const;
 }
@@ -480,9 +456,6 @@ export function updateUserBoundingBoxInSkeletonTracingAction(
   boundingBoxId: number,
   updatedProps: Partial<UserBoundingBox>,
   actionTracingId: string,
-  timestamp: number | null,
-  authorId: string | null,
-  info: string | null,
 ) {
   const updatedPropKeys = Object.keys(updatedProps);
   return {
@@ -492,9 +465,6 @@ export function updateUserBoundingBoxInSkeletonTracingAction(
       actionTracingId,
       updatedProps,
       updatedPropKeys,
-      actionTimestamp: timestamp,
-      actionAuthorId: authorId,
-      info,
     },
   } as const;
 }
@@ -503,9 +473,6 @@ export function updateUserBoundingBoxInVolumeTracingAction(
   boundingBoxId: number,
   updatedProps: Partial<UserBoundingBox>,
   actionTracingId: string,
-  timestamp: number | null,
-  authorId: string | null,
-  info: string | null,
 ) {
   const updatedPropKeys = Object.keys(updatedProps);
   return {
@@ -515,9 +482,6 @@ export function updateUserBoundingBoxInVolumeTracingAction(
       actionTracingId,
       updatedProps,
       updatedPropKeys,
-      actionTimestamp: timestamp,
-      actionAuthorId: authorId,
-      info,
     },
   } as const;
 }

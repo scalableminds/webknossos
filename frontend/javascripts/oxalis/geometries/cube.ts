@@ -34,6 +34,7 @@ class Cube {
   color: number;
   id: number | null | undefined;
   isHighlighted: boolean;
+  storePropertyUnsubscribers: Array<() => void> = [];
 
   constructor(properties: Properties) {
     // min/max should denote a half-open interval.
@@ -58,9 +59,11 @@ class Cube {
     }
 
     if (this.showCrossSections) {
-      listenToStoreProperty(
-        (state) => getPosition(state.flycam),
-        (position) => this.updatePositionForCrossSections(position),
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          (state) => getPosition(state.flycam),
+          (position) => this.updatePositionForCrossSections(position),
+        ),
       );
     }
   }
@@ -207,6 +210,13 @@ class Cube {
     for (const planeId of OrthoViewValuesWithoutTDView) {
       this.crossSections[planeId].visible = visible;
     }
+  }
+
+  destroy() {
+    for (const fn of this.storePropertyUnsubscribers) {
+      fn();
+    }
+    this.storePropertyUnsubscribers = [];
   }
 }
 

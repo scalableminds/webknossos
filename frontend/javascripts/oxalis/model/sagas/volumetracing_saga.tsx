@@ -483,7 +483,7 @@ export function* diffVolumeTracing(
     );
   }
 
-  diffBoundingBoxes(
+  yield* diffBoundingBoxes(
     prevVolumeTracing.userBoundingBoxes,
     volumeTracing.userBoundingBoxes,
     volumeTracing.tracingId,

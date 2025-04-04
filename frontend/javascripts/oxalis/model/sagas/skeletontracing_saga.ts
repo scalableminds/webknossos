@@ -696,9 +696,9 @@ export function* diffSkeletonTracing(
     );
   }
 
-  diffBoundingBoxes(
-    skeletonTracing.userBoundingBoxes,
+  yield* diffBoundingBoxes(
     prevSkeletonTracing.userBoundingBoxes,
+    skeletonTracing.userBoundingBoxes,
     skeletonTracing.tracingId,
     AnnotationLayerEnum.Skeleton,
   );

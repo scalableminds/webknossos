@@ -227,7 +227,7 @@ function* checkForAgglomerateSkeletonModification(
     ({ nodeId, treeId } = action);
   }
 
-  const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.tracing));
+  const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.annotation));
 
   getNodeAndTree(skeletonTracing, nodeId, treeId, TreeTypeEnum.AGGLOMERATE).map((_) => {
     Toast.warning(
@@ -320,11 +320,11 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     return;
   }
 
-  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
+  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
   if (!allowUpdate) return;
 
   const { sourceNodeId, targetNodeId } = action;
-  const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.tracing));
+  const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.annotation));
   const { trees } = skeletonTracing;
   const sourceTree = findTreeByNodeId(trees, sourceNodeId);
   const targetTree = findTreeByNodeId(trees, targetNodeId);
@@ -538,7 +538,7 @@ function* performMinCut(
     return true;
   }
 
-  const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
+  const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
   const segmentsInfo = {
     segmentId1: sourceSegmentId,
     segmentId2: targetSegmentId,
@@ -604,7 +604,7 @@ function* performCutFromNeighbors(
 ): Saga<
   { didCancel: false; neighborInfo: NeighborInfo } | { didCancel: true; neighborInfo?: null }
 > {
-  const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
+  const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
   const segmentsInfo = {
     segmentId,
     mag: agglomerateFileMag,
@@ -701,7 +701,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     return;
   }
 
-  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
+  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
   if (!allowUpdate) return;
 
   const preparation = yield* call(prepareSplitOrMerge, false);
@@ -894,7 +894,7 @@ function* handleProofreadCutFromNeighbors(action: Action) {
   // This action does not depend on the active agglomerate. Instead, it
   // only depends on the rightclicked agglomerate.
 
-  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
+  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
   if (!allowUpdate) return;
 
   const preparation = yield* call(prepareSplitOrMerge, false);
@@ -1279,8 +1279,8 @@ function* splitAgglomerateInMapping(
     .filter(([_segmentId, agglomerateId]) => agglomerateId === comparableSourceAgglomerateId)
     .map(([segmentId, _agglomerateId]) => segmentId);
 
-  const annotationId = yield* select((state) => state.tracing.annotationId);
-  const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
+  const annotationId = yield* select((state) => state.annotation.annotationId);
+  const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
   // Ask the server to map the (split) segment ids. This creates a partial mapping
   // that only contains these ids.
   const mappingAfterSplit = yield* call(

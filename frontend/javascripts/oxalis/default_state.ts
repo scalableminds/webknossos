@@ -159,7 +159,7 @@ const defaultState: OxalisState = {
     publication: null,
     usedStorageBytes: null,
   },
-  tracing: {
+  annotation: {
     ...initialAnnotationInfo,
     readOnly: {
       userBoundingBoxes: [],

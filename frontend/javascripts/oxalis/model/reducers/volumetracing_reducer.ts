@@ -90,7 +90,7 @@ function getSegmentUpdateInfo(
   }
 
   if (layer.tracingId != null) {
-    const volumeTracing = getVolumeTracingById(state.tracing, layer.tracingId);
+    const volumeTracing = getVolumeTracingById(state.annotation, layer.tracingId);
     return {
       type: "UPDATE_VOLUME_TRACING",
       volumeTracing,
@@ -288,7 +288,7 @@ type VolumeTracingReducerAction =
 
 function getVolumeTracingFromAction(state: OxalisState, action: VolumeTracingReducerAction) {
   if ("tracingId" in action && action.tracingId != null) {
-    return getVolumeTracingById(state.tracing, action.tracingId);
+    return getVolumeTracingById(state.annotation, action.tracingId);
   }
   const maybeVolumeLayer =
     "layerName" in action && action.layerName != null
@@ -302,19 +302,19 @@ function getVolumeTracingFromAction(state: OxalisState, action: VolumeTracingRed
   ) {
     return null;
   }
-  return getVolumeTracingById(state.tracing, maybeVolumeLayer.tracingId);
+  return getVolumeTracingById(state.annotation, maybeVolumeLayer.tracingId);
 }
 
 function VolumeTracingReducer(state: OxalisState, action: VolumeTracingReducerAction): OxalisState {
   switch (action.type) {
     case "INITIALIZE_VOLUMETRACING": {
       const volumeTracing = serverVolumeToClientVolumeTracing(action.tracing);
-      const newVolumes = state.tracing.volumes.filter(
+      const newVolumes = state.annotation.volumes.filter(
         (tracing) => tracing.tracingId !== volumeTracing.tracingId,
       );
       newVolumes.push(volumeTracing);
       const newState = update(state, {
-        tracing: {
+        annotation: {
           volumes: {
             $set: newVolumes,
           },
@@ -348,12 +348,12 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingReducerAc
         type: "mapping",
         ...action.mapping,
       };
-      const newMappings = state.tracing.mappings.filter(
+      const newMappings = state.annotation.mappings.filter(
         (tracing) => tracing.tracingId !== mapping.tracingId,
       );
       newMappings.push(mapping);
       return update(state, {
-        tracing: {
+        annotation: {
           mappings: {
             $set: newMappings,
           },
@@ -408,7 +408,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingReducerAc
     default: // pass
   }
 
-  if (state.tracing.volumes.length === 0) {
+  if (state.annotation.volumes.length === 0) {
     // If no volume exists yet (i.e., it wasn't initialized, yet),
     // the following reducer code should not run.
     return state;

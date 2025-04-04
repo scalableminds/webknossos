@@ -47,7 +47,7 @@ import {
   hasVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { Model } from "oxalis/singletons";
-import type { HybridTracing, OxalisState, UserBoundingBox } from "oxalis/store";
+import type { OxalisState, StoreAnnotation, UserBoundingBox } from "oxalis/store";
 import { BoundingBoxSelection, MagSlider } from "oxalis/view/action-bar/starting_job_modals";
 import type React from "react";
 import { useState } from "react";
@@ -91,9 +91,9 @@ const exportKey = (layerInfos: ExportLayerInfos, mag: Vector3) =>
 
 function getExportLayerInfos(
   layer: APIDataLayer,
-  tracing: HybridTracing | null | undefined,
+  annotation: StoreAnnotation | null | undefined,
 ): ExportLayerInfos {
-  const annotationId = tracing != null ? tracing.annotationId : null;
+  const annotationId = annotation != null ? annotation.annotationId : null;
 
   if (layer.category === "color" || !layer.tracingId) {
     return {
@@ -107,12 +107,12 @@ function getExportLayerInfos(
 
   // The layer is a volume tracing layer, since tracingId exists. Therefore, a tracing
   // must exist.
-  if (tracing == null) {
+  if (annotation == null) {
     // Satisfy TS.
     throw new Error("Tracing is null, but layer.tracingId is defined.");
   }
-  const readableVolumeLayerName = getReadableNameOfVolumeLayer(layer, tracing) || "Volume";
-  const volumeTracing = getVolumeTracingById(tracing, layer.tracingId);
+  const readableVolumeLayerName = getReadableNameOfVolumeLayer(layer, annotation) || "Volume";
+  const volumeTracing = getVolumeTracingById(annotation, layer.tracingId);
 
   return {
     displayName: readableVolumeLayerName,
@@ -227,14 +227,14 @@ export function CopyableCodeSnippet({ code, onCopy }: { code: string; onCopy?: (
   );
 }
 
-function getPythonAnnotationDownloadSnippet(authToken: string | null, tracing: HybridTracing) {
+function getPythonAnnotationDownloadSnippet(authToken: string | null, annotation: StoreAnnotation) {
   return `import webknossos as wk
 
 with wk.webknossos_context(
     token="${authToken || "<insert token here>"}",
     url="${window.location.origin}"
 ):
-    annotation = wk.Annotation.download("${tracing.annotationId}")
+    annotation = wk.Annotation.download("${annotation.annotationId}")
 `;
 }
 
@@ -277,7 +277,7 @@ function _DownloadModalView({
   initialBoundingBoxId,
 }: Props): JSX.Element {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  const tracing = useSelector((state: OxalisState) => state.tracing);
+  const annotation = useSelector((state: OxalisState) => state.annotation);
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const rawUserBoundingBoxes = useSelector((state: OxalisState) =>
     getUserBoundingBoxesFromState(state),
@@ -289,9 +289,11 @@ function _DownloadModalView({
   const isMergerModeEnabled = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.isMergerModeEnabled,
   );
-  const hasVolumeFallback = tracing.volumes.some((volume) => volume.fallbackLayer != null);
-  const isVolumeNDimensional = tracing.volumes.some((tracing) => tracing.additionalAxes.length > 0);
-  const hasVolumes = hasVolumeTracings(tracing);
+  const hasVolumeFallback = annotation.volumes.some((volume) => volume.fallbackLayer != null);
+  const isVolumeNDimensional = annotation.volumes.some(
+    (tracing) => tracing.additionalAxes.length > 0,
+  );
+  const hasVolumes = hasVolumeTracings(annotation);
   const initialFileFormatToDownload = hasVolumes ? (isVolumeNDimensional ? "zarr3" : "wkw") : "nml";
 
   const [activeTabKey, setActiveTabKey] = useState<TabKeys>(initialTab ?? "download");
@@ -306,7 +308,7 @@ function _DownloadModalView({
   const layers = getDataLayers(dataset);
 
   const selectedLayer = getLayerByName(dataset, selectedLayerName);
-  const selectedLayerInfos = getExportLayerInfos(selectedLayer, tracing);
+  const selectedLayerInfos = getExportLayerInfos(selectedLayer, annotation);
   const selectedLayerMagInfo = getMagInfo(selectedLayer.resolutions);
 
   const userBoundingBoxes = [
@@ -352,8 +354,8 @@ function _DownloadModalView({
       await Model.ensureSavedState();
       const includeVolumeData = fileFormatToDownload === "wkw" || fileFormatToDownload === "zarr3";
       downloadAnnotation(
-        tracing.annotationId,
-        tracing.annotationType,
+        annotation.annotationId,
+        annotation.annotationType,
         hasVolumeFallback,
         undefined,
         fileFormatToDownload,
@@ -477,7 +479,7 @@ function _DownloadModalView({
   );
 
   const wkInitSnippet = isAnnotation
-    ? getPythonAnnotationDownloadSnippet(authToken, tracing)
+    ? getPythonAnnotationDownloadSnippet(authToken, annotation)
     : getPythonDatasetDownloadSnippet(authToken, dataset);
 
   const alertTokenIsPrivate = () => {
@@ -488,7 +490,7 @@ function _DownloadModalView({
     }
   };
 
-  const hasSkeleton = tracing.skeleton != null;
+  const hasSkeleton = annotation.skeleton != null;
 
   const okText = okTextForTab.get(activeTabKey);
   const isCurrentlyRunningExportJob =
@@ -621,7 +623,7 @@ function _DownloadModalView({
             value={selectedLayerName}
             onChange={setSelectedLayerName}
             getReadableNameForLayer={(layer) =>
-              getReadableNameOfVolumeLayer(layer, tracing) || layer.name
+              getReadableNameOfVolumeLayer(layer, annotation) || layer.name
             }
             style={{ width: "100%" }}
           />

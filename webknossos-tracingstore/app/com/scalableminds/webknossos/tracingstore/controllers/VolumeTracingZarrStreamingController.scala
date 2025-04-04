@@ -328,7 +328,7 @@ class VolumeTracingZarrStreamingController @Inject()(
       additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit tc: TokenContext): Fox[Array[Byte]] =
     if (missingBucketIndices.nonEmpty) {
       for {
-        remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, annotationId) ?~> "No data at coordinates, no fallback layer defined"
+        remoteFallbackLayer <- tracingService.remoteFallbackLayerForVolumeTracing(tracing, annotationId) ?~> "No data at coordinates, no fallback layer defined"
         request = WebknossosDataRequest(
           position = position * mag * cubeSize,
           mag = mag,

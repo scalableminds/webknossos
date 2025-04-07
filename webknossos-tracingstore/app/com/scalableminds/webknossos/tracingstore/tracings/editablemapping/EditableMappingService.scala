@@ -12,9 +12,15 @@ import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.SegmentT
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, Tree, TreeTypeProto}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
-import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
+import com.scalableminds.webknossos.datastore.helpers.{
+  NativeBucketScanner,
+  NodeDefaults,
+  ProtoGeometryImplicits,
+  SkeletonTracingDefaults
+}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.datastore.models._
+import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.services.{
   AdHocMeshRequest,
@@ -104,7 +110,7 @@ class EditableMappingService @Inject()(
 
   val defaultSegmentToAgglomerateChunkSize: Int = 64 * 1024 // max. 1 MiB chunks (two 8-byte numbers per element)
 
-  val binaryDataService = new BinaryDataService(Paths.get(""), None, None, None, None)
+  private val binaryDataService = new BinaryDataService(Paths.get(""), None, None, None, None)
 
   adHocMeshServiceHolder.tracingStoreAdHocMeshConfig = (binaryDataService, 30 seconds, 1)
   private val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.tracingStoreAdHocMeshService
@@ -114,6 +120,8 @@ class EditableMappingService @Inject()(
 
   private lazy val agglomerateToGraphCache: AlfuCache[(String, Long, Long), AgglomerateGraph] =
     AlfuCache(maxCapacity = 50)
+
+  private lazy val nativeBucketScanner: NativeBucketScanner = new NativeBucketScanner()
 
   def infoJson(tracingId: String, editableMappingInfo: EditableMappingInfo): JsObject =
     Json.obj(
@@ -340,19 +348,23 @@ class EditableMappingService @Inject()(
     } yield segmentIdsOrdered.zip(agglomerateIdsOrdered).toMap
   }
 
-  def collectSegmentIds(data: Array[SegmentInteger]): Set[Long] =
-    data.toSet.map { u: SegmentInteger =>
-      u.toLong
-    }
+  def collectSegmentIds(bytes: Array[Byte], elementClass: ElementClass.Value): Box[Set[Long]] =
+    tryo(
+      nativeBucketScanner
+        .collectSegmentIds(bytes,
+                           ElementClass.bytesPerElement(elementClass),
+                           ElementClass.isSigned(elementClass),
+                           skipZeroes = false)
+        .toSet)
 
-  def mapData(unmappedData: Array[SegmentInteger],
+  def mapData(unmappedData: Array[Byte],
               relevantMapping: Map[Long, Long],
-              elementClass: ElementClassProto): Fox[Array[Byte]] = {
-    val mappedDataLongs = unmappedData.map(element => relevantMapping(element.toLong))
+              elementClass: ElementClassProto): Fox[Array[Byte]] =
     for {
+      unmappedDataTyped <- bytesToSegmentInt(unmappedData, elementClass)
+      mappedDataLongs = unmappedDataTyped.map(element => relevantMapping(element.toLong))
       bytes <- longsToBytes(mappedDataLongs, elementClass)
     } yield bytes
-  }
 
   private def bytesToLongs(bytes: Array[Byte], elementClass: ElementClassProto): Fox[Array[Long]] =
     for {
@@ -360,7 +372,7 @@ class EditableMappingService @Inject()(
       segmentIntArray <- tryo(SegmentIntegerArray.fromByteArray(bytes, elementClass)).toFox
     } yield segmentIntArray.map(_.toLong)
 
-  def bytesToSegmentInt(bytes: Array[Byte], elementClass: ElementClassProto): Fox[Array[SegmentInteger]] =
+  private def bytesToSegmentInt(bytes: Array[Byte], elementClass: ElementClassProto): Fox[Array[SegmentInteger]] =
     for {
       _ <- bool2Fox(!elementClass.isuint64)
       segmentIntArray <- tryo(SegmentIntegerArray.fromByteArray(bytes, elementClass)).toFox

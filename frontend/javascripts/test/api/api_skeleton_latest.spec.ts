@@ -1,8 +1,4 @@
-import {
-  __setupWebknossos,
-  KeyboardJS,
-  type SetupWebknossosTestContext,
-} from "test/helpers/apiHelpers";
+import { __setupWebknossos, type SetupWebknossosTestContext } from "test/helpers/apiHelpers";
 import { makeBasicGroupObject } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import { setTreeGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
@@ -187,9 +183,12 @@ describe("API Skeleton", () => {
     expect(api.user.getConfiguration("moveValue")).toBe(userSettings.moveValue.minimum);
   });
 
-  it<SetupWebknossosTestContext>("Utils Api: registerKeyHandler should register a key handler and return a handler to unregister it again", ({
+  it<SetupWebknossosTestContext>("Utils Api: registerKeyHandler should register a key handler and return a handler to unregister it again", async ({
     api,
   }) => {
+    // @ts-ignore libs/keyboard.ts is not a proper module
+    const { default: KeyboardJS } = await import("libs/keyboard");
+
     // Unfortunately this is not properly testable as KeyboardJS doesn't work without a DOM
     const bindSpy = vi.spyOn(KeyboardJS, "bind");
     const unbindSpy = vi.spyOn(KeyboardJS, "unbind");
@@ -231,6 +230,7 @@ describe("API Skeleton", () => {
   it<SetupWebknossosTestContext>("getTreeName should get the name of the active tree if no treeId is specified", ({
     api,
   }) => {
+    api.tracing.setActiveNode(1);
     const name = api.tracing.getTreeName();
     expect(name).toBe("explorative_2017-08-09_SCM_Boy_001");
   });
@@ -252,6 +252,7 @@ describe("API Skeleton", () => {
     api,
   }) => {
     const NAME = "a tree";
+    api.tracing.setActiveNode(1);
     api.tracing.setTreeName(NAME);
     const name = api.tracing.getTreeName(1);
     expect(name).toBe(NAME);

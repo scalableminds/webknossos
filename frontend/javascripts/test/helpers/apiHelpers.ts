@@ -140,11 +140,13 @@ export function createBucketResponseFunction(TypedArrayClass: any, fillValue: nu
   };
 }
 
-export const KeyboardJS = {
-  bind: vi.fn(),
-  unbind: vi.fn(),
-  withContext: (_arg0: string, arg1: () => void) => arg1(),
-};
+vi.mock("libs/keyboard", () => ({
+  default: {
+    bind: vi.fn(),
+    unbind: vi.fn(),
+    withContext: (_arg0: string, arg1: () => void) => arg1(),
+  },
+}));
 
 const modelData = {
   skeleton: {

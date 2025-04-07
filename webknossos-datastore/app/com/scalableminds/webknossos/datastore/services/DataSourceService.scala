@@ -100,10 +100,10 @@ class DataSourceService @Inject()(
       pathInfos = magPathBoxes.map {
         case (ds, Full(magPaths)) => DataSourcePathInfo(ds.id, magPaths)
         case (ds, failure: Failure) =>
-          logger.error(formatFailureChain(failure))
+          logger.error(s"Failed to determine real paths of mags of ${ds.id}: ${formatFailureChain(failure)}")
           DataSourcePathInfo(ds.id, List())
         case (ds, Empty) =>
-          logger.error(s"Failed to determine real paths for mags of $ds")
+          logger.error(s"Failed to determine real paths for mags of ${ds.id}")
           DataSourcePathInfo(ds.id, List())
       }
       _ <- remoteWebknossosClient.reportRealPaths(pathInfos)

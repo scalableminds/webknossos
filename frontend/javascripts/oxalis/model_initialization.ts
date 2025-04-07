@@ -196,6 +196,8 @@ export async function initialize(
     datasetId,
     version,
   );
+  maybeFixDatasetNameInURL(dataset, initialCommandType);
+
   const serverVolumeTracings = getServerVolumeTracings(serverTracings);
   const serverVolumeTracingIds = serverVolumeTracings.map((volumeTracing) => volumeTracing.id);
   initializeDataset(initialFetch, dataset, serverTracings);
@@ -265,6 +267,22 @@ export async function initialize(
   }
 
   return initializationInformation;
+}
+
+function maybeFixDatasetNameInURL(dataset: APIDataset, initialCommandType: TraceOrViewCommand) {
+  if (initialCommandType.type === ControlModeEnum.VIEW) {
+    const pathnameParts = location.pathname.split("/").slice(1); // First string is empty as pathname start with a /.
+    const endOfDatasetName = pathnameParts[1].lastIndexOf("-");
+    if (endOfDatasetName < 0) {
+      return;
+    }
+    const datasetNameInURL = pathnameParts[1].substring(0, endOfDatasetName);
+    if (dataset.name !== datasetNameInURL) {
+      const pathnameWithUpdatedDatasetName = `/${pathnameParts[0]}/${dataset.name}-${dataset.id}/view`;
+      UrlManager.changeBaseUrl(pathnameWithUpdatedDatasetName + location.search);
+      // window.history.replaceState({}, "", pathnameWithUpdatedDatasetName + location.search);
+    }
+  }
 }
 
 async function fetchParallel(

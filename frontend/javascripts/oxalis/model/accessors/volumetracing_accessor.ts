@@ -680,13 +680,17 @@ export function getSegmentName(
   return segment.name || fallback;
 }
 
-function getMeshOpacity(state: OxalisState, segmentId: number, layerName: string) {
+function getMeshOpacity(
+  state: OxalisState,
+  segmentId: number,
+  layerName: string,
+): number | undefined {
   const additionalCoords = state.flycam.additionalCoordinates;
   const additionalCoordinateKey = getAdditionalCoordinatesAsString(additionalCoords);
   const localSegmentationData = state.localSegmentationData[layerName];
-  if (localSegmentationData?.meshes == null) return;
+  if (localSegmentationData?.meshes == null) return undefined;
   const meshData = localSegmentationData.meshes[additionalCoordinateKey];
-  if (meshData == null || meshData[segmentId] == null) return;
+  if (meshData == null || meshData[segmentId] == null) return undefined;
   return meshData[segmentId].opacity;
 }
 

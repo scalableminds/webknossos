@@ -785,6 +785,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       tracingIdMapMutable.put(v0TracingId, TracingId.generate)
     }
     val updateBatchRanges = SequenceUtils.batchRangeInclusive(0L, newestVersion, batchSize = 100)
+    val updatesPutBuffer = new FossilDBPutBuffer(tracingDataStore.annotationUpdates)
     Fox
       .serialCombined(updateBatchRanges.toList) { batchRange =>
         for {
@@ -813,11 +814,12 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                   case a: UpdateAction =>
                     Fox.successful(a)
                 }
-                _ <- tracingDataStore.annotationUpdates.put(newAnnotationId, version, Json.toJson(updateListAdapted))
+                _ <- updatesPutBuffer.put(newAnnotationId, version, Json.toJson(updateListAdapted))
               } yield ()
           }
         } yield ()
       }
+      .flatMap(_ => updatesPutBuffer.flush())
       .map(_ => tracingIdMapMutable.toMap)
   }
 

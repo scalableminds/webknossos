@@ -65,8 +65,10 @@ class EditableMappingUpdater(
     } yield updatedEditableMappingInfo
 
   def flushBuffersToFossil()(implicit ec: ExecutionContext): Fox[Unit] = {
-    val segmentToAgglomeratePutBuffer = new FossilDBPutBuffer(tracingDataStore.editableMappingsSegmentToAgglomerate)
-    val agglomerateToGraphPutBuffer = new FossilDBPutBuffer(tracingDataStore.editableMappingsAgglomerateToGraph)
+    val segmentToAgglomeratePutBuffer =
+      new FossilDBPutBuffer(tracingDataStore.editableMappingsSegmentToAgglomerate, version = Some(newVersion))
+    val agglomerateToGraphPutBuffer =
+      new FossilDBPutBuffer(tracingDataStore.editableMappingsAgglomerateToGraph, version = Some(newVersion))
     for {
       _ <- Fox.serialCombined(segmentToAgglomerateBuffer.keys.toList)(key =>
         flushSegmentToAgglomerateChunk(key, segmentToAgglomeratePutBuffer))

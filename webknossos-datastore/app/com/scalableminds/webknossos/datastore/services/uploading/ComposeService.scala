@@ -106,7 +106,7 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
                  coordinateTransformations = applyCoordinateTransformations(l.coordinateTransformations))
       }
     } yield editedLayer
-git pu
+
   private def createDatasource(composeRequest: ComposeRequest,
                                datasetDirectoryName: String,
                                organizationId: String,

@@ -45,7 +45,6 @@ object ReserveUploadInformation {
 }
 case class ReserveManualUploadInformation(
     datasetName: String,
-    datasetDirectoryName: String,
     organization: String,
     initialTeamIds: List[String],
     folderId: Option[String],

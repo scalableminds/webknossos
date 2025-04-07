@@ -15,6 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Changed
 
 ### Fixed
+- Fixed a bug where the annotation list would sometimes load very long if you have many annotations. [#8498](https://github.com/scalableminds/webknossos/pull/8498)
 
 ### Removed
 

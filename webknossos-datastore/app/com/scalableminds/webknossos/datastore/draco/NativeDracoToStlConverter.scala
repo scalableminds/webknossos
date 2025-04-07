@@ -11,4 +11,5 @@ class NativeDracoToStlConverter() {
                          scaleX: Double,
                          scaleY: Double,
                          scaleZ: Double): Array[Byte]
+
 }

@@ -197,6 +197,10 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
           ) ?~> "mesh.file.loadChunk.failed"
       }
       _ <- bool2Fox(encoding == "draco") ?~> s"meshfile encoding is $encoding, only draco is supported"
+      vertexQuantizationBits = meshFileType match {
+        case Some("neuroglancerPrecomputed") => 16 // TODO use the value from the header
+        case _                               => 0
+      }
       scale <- tryo(Vec3Double(transform(0)(0), transform(1)(1), transform(2)(2))) ?~> "could not extract scale from meshfile transform attribute"
       stlEncodedChunk <- tryo(
         dracoToStlConverter.dracoToStl(dracoMeshChunkBytes,
@@ -214,7 +218,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
       layerName: String,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
-      // TODO: Mapping, segmentIds
+      // TODO: Mapping
       chunkInfos: WebknossosSegmentInfo <- neuroglancerPrecomputedMeshService.listMeshChunksForMultipleSegments(
         fullMeshRequest.meshFilePath,
         List(fullMeshRequest.segmentId)
@@ -222,6 +226,14 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
       selectedLod = fullMeshRequest.lod.getOrElse(0)
       allChunkRanges: List[MeshChunk] = chunkInfos.chunks.lods(selectedLod).chunks
       meshFileName <- fullMeshRequest.meshFileName.toFox ?~> "mesh file name needed"
+      // Right now, only the scale is used, so we only need to supply these values
+      lodTransform = chunkInfos.chunks.lods(selectedLod).transform
+      chunkScale = chunkInfos.chunkScale
+      transform = Array(
+        Array(lodTransform(0)(0), 0, 0),
+        Array(0, lodTransform(1)(1), 0),
+        Array(0, 0, lodTransform(2)(2))
+      )
       stlEncodedChunks: Seq[Array[Byte]] <- Fox.serialCombined(allChunkRanges) { chunkRange: MeshChunk =>
         readMeshChunkAsStl(
           organizationId,
@@ -229,7 +241,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
           layerName,
           meshFileName,
           chunkRange,
-          Array(Array(1, 0, 0), Array(0, 1, 0), Array(0, 0, 1)),
+          transform,
           fullMeshRequest.meshFileType,
           fullMeshRequest.meshFilePath,
           Some(fullMeshRequest.segmentId)

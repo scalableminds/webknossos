@@ -121,15 +121,13 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
                        segmentId: Long,
                        mag: Vec3Int,
                        mappingName: Option[String])(implicit m: MessagesProvider, tc: TokenContext): Fox[Long] =
-    for {
-      volume <- calculateSegmentVolume(
-        segmentId,
-        mag,
-        None, // see #7556
-        getBucketPositions(organizationId, datasetDirectoryName, dataLayerName, mappingName),
-        getDataForBucketPositions(organizationId, datasetDirectoryName, dataLayerName, mappingName)
-      )
-    } yield volume
+    calculateSegmentVolume(
+      segmentId,
+      mag,
+      None, // see #7556
+      getBucketPositions(organizationId, datasetDirectoryName, dataLayerName, mappingName),
+      getDataForBucketPositions(organizationId, datasetDirectoryName, dataLayerName, mappingName)
+    )
 
   def getSegmentBoundingBox(
       organizationId: String,
@@ -138,15 +136,13 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       segmentId: Long,
       mag: Vec3Int,
       mappingName: Option[String])(implicit m: MessagesProvider, tc: TokenContext): Fox[BoundingBox] =
-    for {
-      bb <- calculateSegmentBoundingBox(
-        segmentId,
-        mag,
-        None, // see #7556
-        getBucketPositions(organizationId, datasetDirectoryName, dataLayerName, mappingName),
-        getDataForBucketPositions(organizationId, datasetDirectoryName, dataLayerName, mappingName)
-      )
-    } yield bb
+    calculateSegmentBoundingBox(
+      segmentId,
+      mag,
+      None, // see #7556
+      getBucketPositions(organizationId, datasetDirectoryName, dataLayerName, mappingName),
+      getDataForBucketPositions(organizationId, datasetDirectoryName, dataLayerName, mappingName)
+    )
 
   def assertSegmentIndexFileExists(organizationId: String,
                                    datasetDirectoryName: String,

@@ -103,6 +103,7 @@ JNIEXPORT jlong JNICALL Java_com_scalableminds_webknossos_datastore_helpers_Nati
                 segmentVoxelCount++;
             }
         }
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
         return segmentVoxelCount;
 
     } catch (const std::exception &e) {
@@ -145,9 +146,10 @@ JNIEXPORT jintArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_
                 }
             }
         }
-
+        env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);
         jintArray resultAsJIntArray = env -> NewIntArray(bbox.size());
         env -> SetIntArrayRegion(resultAsJIntArray, 0, bbox.size(), reinterpret_cast < const jint * > (bbox.data()));
+
         return resultAsJIntArray;
     } catch (const std::exception &e) {
          env->ReleaseByteArrayElements(bucketBytesJavaArray, bucketBytes, 0);

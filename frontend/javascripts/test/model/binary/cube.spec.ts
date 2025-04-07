@@ -219,7 +219,7 @@ describe("DataCube", () => {
     expect(cube.buckets.length).toBe(3);
   });
 
-  it<TestContext>("Garbage Collection should not collect buckets with shouldCollect() == false", ({
+  it<TestContext>("Garbage Collection should not collect buckets with mayBeGarbageCollected() == false", ({
     cube,
   }) => {
     cube.BUCKET_COUNT_SOFT_LIMIT = 3;
@@ -229,7 +229,7 @@ describe("DataCube", () => {
     cube.getOrCreateBucket([1, 1, 1, 0]);
     cube.getOrCreateBucket([2, 2, 2, 0]);
     cube.getOrCreateBucket([3, 3, 3, 0]);
-    expect(b1.shouldCollect()).toBe(false);
+    expect(b1.mayBeGarbageCollected()).toBe(false);
     const addresses = cube.buckets.map((b: DataBucket) => b.zoomedAddress);
     expect(addresses).toEqual([
       [0, 0, 0, 0, []],

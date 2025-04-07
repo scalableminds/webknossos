@@ -1,5 +1,5 @@
 import Base64 from "base64-js";
-import * as lz4wasm from "lz4-wasm";
+import * as lz4wasm from "lz4-wasm-nodejs";
 import { expose } from "./comlink_wrapper";
 
 function compressLz4Block(data: Uint8Array): Uint8Array {

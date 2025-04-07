@@ -10,10 +10,10 @@ extern "C" {
 /*
  * Class:      com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner
  * Method:     collectSegmentIds
- * Signature:  ([BIZ)[J
+ * Signature:  ([BIZZ)[J
  */
 JNIEXPORT jlongArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_collectSegmentIds
-  (JNIEnv *, jobject, jbyteArray, jint, jboolean);
+  (JNIEnv *, jobject, jbyteArray, jint, jboolean, jboolean);
 
 #ifdef __cplusplus
 }

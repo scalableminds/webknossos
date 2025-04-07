@@ -53,9 +53,7 @@ describe("Prefetch Saga", () => {
     saga.next(); // select viewMode
 
     expectValueDeepEqual(expect, saga.next(viewMode), call([Model, Model.getAllLayers] as any));
-    // Manually apply both values to saga to make progress, but only pass first one to execCall
-    saga.next(allLayers);
-    let shouldPrefetchSaga = execCall(expect, saga.next()); // shouldPrefetchForDataLayer
+    let shouldPrefetchSaga = execCall(expect, saga.next(allLayers)); // shouldPrefetchForDataLayer
 
     shouldPrefetchSaga.next(); // isLayerVisible
 

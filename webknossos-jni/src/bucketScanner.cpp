@@ -4,6 +4,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <unordered_set>
+#include <stdint.h>
 
 uint64_t segmentIdAtIndex(jbyte *bucketBytes, size_t index, const int bytesPerElement, const bool isSigned) {
     jbyte *currentPos = bucketBytes + (index * bytesPerElement);
@@ -57,7 +58,7 @@ size_t getElementCount(jsize inputLengthBytes, jint bytesPerElement) {
 }
 
 JNIEXPORT jlongArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner_collectSegmentIds(
-    JNIEnv *env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jboolean isSigned) {
+    JNIEnv *env, jobject instance, jbyteArray bucketBytesJavaArray, jint bytesPerElement, jboolean isSigned, jboolean skipZeroes) {
 
     const jsize inputLengthBytes = env->GetArrayLength(bucketBytesJavaArray);
     jbyte *bucketBytes = env->GetByteArrayElements(bucketBytesJavaArray, nullptr);
@@ -68,7 +69,7 @@ JNIEXPORT jlongArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers
 
         for (size_t i = 0; i < elementCount; ++i) {
             const int64_t currentValue = segmentIdAtIndex(bucketBytes, i, bytesPerElement, isSigned);
-            if (currentValue != 0) {
+            if (!skipZeroes || currentValue != 0) {
                 uniqueSegmentIds.insert(currentValue);
             }
         }

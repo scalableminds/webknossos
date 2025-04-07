@@ -31,6 +31,7 @@ import com.scalableminds.webknossos.datastore.services.{
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ReversionHelper
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FallbackDataHelper,
+  FossilDBPutBuffer,
   KeyValueStoreImplicits,
   RemoteFallbackLayer,
   TracingDataStore,
@@ -141,20 +142,21 @@ class EditableMappingService @Inject()(
                                     newId: String,
                                     sourceVersion: Long,
                                     newVersion: Long): Fox[Unit] = {
+    val putBuffer =
+      new FossilDBPutBuffer(tracingDataStore.editableMappingsSegmentToAgglomerate, version = Some(newVersion))
     val sourceIterator =
       new VersionedFossilDbIterator(sourceTracingId,
                                     tracingDataStore.editableMappingsSegmentToAgglomerate,
                                     Some(sourceVersion))
     for {
-      _ <- Fox.combined(sourceIterator.map { keyValuePair =>
+      _ <- Fox.serialCombined(sourceIterator) { keyValuePair =>
         for {
           chunkId <- chunkIdFromSegmentToAgglomerateKey(keyValuePair.key).toFox
           newKey = segmentToAgglomerateKey(newId, chunkId)
-          _ <- tracingDataStore.editableMappingsSegmentToAgglomerate.put(newKey,
-                                                                         version = newVersion,
-                                                                         keyValuePair.value)
+          _ <- putBuffer.put(newKey, keyValuePair.value)
         } yield ()
-      }.toList)
+      }
+      _ <- putBuffer.flush()
     } yield ()
   }
 
@@ -162,18 +164,21 @@ class EditableMappingService @Inject()(
                                   newId: String,
                                   sourceVersion: Long,
                                   newVersion: Long): Fox[Unit] = {
+    val putBuffer =
+      new FossilDBPutBuffer(tracingDataStore.editableMappingsAgglomerateToGraph, version = Some(newVersion))
     val sourceIterator =
       new VersionedFossilDbIterator(sourceTracingId,
                                     tracingDataStore.editableMappingsAgglomerateToGraph,
                                     Some(sourceVersion))
     for {
-      _ <- Fox.combined(sourceIterator.map { keyValuePair =>
+      _ <- Fox.serialCombined(sourceIterator) { keyValuePair =>
         for {
           agglomerateId <- agglomerateIdFromAgglomerateGraphKey(keyValuePair.key).toFox
           newKey = agglomerateGraphKey(newId, agglomerateId)
-          _ <- tracingDataStore.editableMappingsAgglomerateToGraph.put(newKey, version = newVersion, keyValuePair.value)
+          _ <- putBuffer.put(newKey, keyValuePair.value)
         } yield ()
-      }.toList)
+      }
+      _ <- putBuffer.flush()
     } yield ()
   }
 

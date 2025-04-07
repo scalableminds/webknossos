@@ -22,10 +22,11 @@ class FossilDBPutBuffer(fossilDBClient: FossilDBClient, version: Option[Long] = 
         versionToPut <- version
           .orElse(this.version)
           .toFox ?~> "FossilDBPutBuffer put without version (needs to be passed to put or to buffer)"
-      } buffer.put((key, versionToPut), value)
-      if (isFull) {
-        flush()
-      } else Fox.successful(())
+        _ = buffer.put((key, versionToPut), value)
+        result <- if (isFull) {
+          flush()
+        } else Fox.successful(())
+      } yield result
     }
 
   private def isFull = this.synchronized { size >= maxElements }

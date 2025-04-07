@@ -44,13 +44,7 @@ function receiveJSONMockImplementation(url: string, _options: any, returnValue: 
 
 describe("Model Initialization", () => {
   beforeEach<TestContext>(async (context) => {
-    let model = Model;
-    // model.state = {
-    //   position: [1, 2, 3],
-    // };
-    context.model = model;
-
-    // User.prototype.fetch.returns(Promise.resolve()); ???
+    context.model = Model;
   });
 
   it<TestContext>("should throw a model.HANDLED_ERROR for missing data layers", async ({
@@ -78,17 +72,17 @@ describe("Model Initialization", () => {
   });
 
   it<TestContext>("should throw an Error on unexpected failure", async ({ model }) => {
-
-    vi.mocked(Request).receiveJSON.mockImplementation((url: string, options?: any) =>
-      receiveJSONMockImplementation(
-        url,
-        options,
-        Promise.reject(new Error("mocked dataset rejection")),
-      ),
-    );
-
-    expect(
-      await model.fetch(
+    vi.mocked(Request)
+      .receiveJSON.mockReset()
+      .mockImplementationOnce((url: string, options?: any) =>
+        receiveJSONMockImplementation(
+          url,
+          options,
+          Promise.reject(new Error("Mocked dataset rejection")),
+        ),
+      );
+    await expect(
+      model.fetch(
         ANNOTATION_TYPE,
         {
           type: ControlModeEnum.VIEW,
@@ -96,6 +90,6 @@ describe("Model Initialization", () => {
         },
         true,
       ),
-    ).toThrow();
+    ).rejects.toThrowError("Mocked dataset rejection");
   });
 });

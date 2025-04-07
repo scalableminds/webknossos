@@ -10,8 +10,9 @@ import { requestWithFallback } from "oxalis/model/bucket_data_handling/wkstore_a
 import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
 import Request from "libs/request";
-import { Store } from "oxalis/singletons";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import type { BucketAddress } from "oxalis/constants";
+import Store from "oxalis/store";
 
 const { dataSource } = datasetServerObject;
 let _fourBit = false;
@@ -21,7 +22,7 @@ function setFourBit(bool: boolean) {
 }
 
 const tracingId = "tracingId";
-const mockedCube: DataCube = {
+const mockedCube = {
   isSegmentation: true,
   layerName: tracingId,
   magInfo: new MagInfo([
@@ -29,7 +30,7 @@ const mockedCube: DataCube = {
     [2, 2, 2],
   ]),
   triggerBucketDataChanged: () => {},
-};
+} as any as DataCube;
 
 vi.mock("oxalis/store", () => ({
   default: {
@@ -73,7 +74,9 @@ interface TestContext {
 
 describe("wkstore_adapter", () => {
   beforeEach<TestContext>(async (context) => {
-    vi.mocked(Request).receiveJSON.mockReturnValue(Promise.resolve(tokenResponse));
+    const mock = vi.mocked(Request);
+    mock.receiveJSON.mockReset();
+    mock.receiveJSON.mockReturnValue(Promise.resolve(tokenResponse));
 
     context.layer = dataSource.dataLayers[0];
     context.segmentationLayer = dataSource.dataLayers[1];
@@ -89,21 +92,23 @@ describe("wkstore_adapter", () => {
     const batch = [
       [0, 0, 0, 0],
       [1, 1, 1, 1],
-    ];
+    ] as BucketAddress[];
 
     const bucketData1 = _.range(0, 32 * 32 * 32).map((i) => i % 256);
     const bucketData2 = _.range(0, 32 * 32 * 32).map((i) => (2 * i) % 256);
 
     const responseBuffer = new Uint8Array(bucketData1.concat(bucketData2));
 
-    vi.mocked(Request).sendJSONReceiveArraybufferWithHeaders.mockReturnValue(
-      Promise.resolve({
-        buffer: responseBuffer,
-        headers: {
-          "missing-buckets": "[]",
-        },
-      }),
-    );
+    vi.mocked(Request)
+      .sendJSONReceiveArraybufferWithHeaders.mockReset()
+      .mockReturnValue(
+        Promise.resolve({
+          buffer: responseBuffer,
+          headers: {
+            "missing-buckets": "[]",
+          },
+        }),
+      );
 
     return {
       batch,
@@ -113,15 +118,16 @@ describe("wkstore_adapter", () => {
     };
   }
 
-  it<TestContext>("requestWithFallback: Token Handling should re-request a token when it's invalid", ({
+  it<TestContext>("requestWithFallback: Token Handling should re-request a token when it's invalid", async ({
     layer,
   }) => {
     const { batch, responseBuffer, bucketData1, bucketData2 } = prepare();
 
     const RequestMock = vi.mocked(Request);
     RequestMock.sendJSONReceiveArraybufferWithHeaders
+      .mockReset()
       .mockReturnValueOnce(
-        //first call
+        // first call
         Promise.reject({
           status: 403,
         }),
@@ -136,25 +142,28 @@ describe("wkstore_adapter", () => {
         }),
       );
 
-    RequestMock.receiveJSON.mockReturnValueOnce(Promise.resolve(tokenResponse)).mockReturnValueOnce(
-      Promise.resolve({
-        token: "token2",
-      }),
+    RequestMock.receiveJSON
+      .mockReset()
+      .mockReturnValueOnce(Promise.resolve(tokenResponse))
+      .mockReturnValueOnce(
+        Promise.resolve({
+          token: "token2",
+        }),
+      );
+
+    const buffers = await requestWithFallback(layer, batch);
+    const [buffer1, buffer2] = buffers;
+    expect(buffer1).toEqual(bucketData1);
+    expect(buffer2).toEqual(bucketData2);
+    expect(RequestMock.sendJSONReceiveArraybufferWithHeaders).toHaveBeenCalledTimes(2);
+
+    expect(RequestMock.sendJSONReceiveArraybufferWithHeaders).toHaveBeenCalledWith(
+      "url/data/datasets/organization/datasetPath/layers/color/data?token=token",
+      expect.anything(),
     );
-
-    return requestWithFallback(layer, batch).then(
-      ([buffer1, buffer2]: [ArrayBuffer, ArrayBuffer]) => {
-        expect(buffer1).toEqual(bucketData1);
-        expect(buffer2).toEqual(bucketData2);
-        expect(RequestMock.sendJSONReceiveArraybufferWithHeaders).toHaveBeenCalledTimes(2);
-
-        expect(RequestMock.sendJSONReceiveArraybufferWithHeaders).toHaveBeenCalledWith(
-          "url/data/datasets/organization/datasetPath/layers/color/data?token=token",
-        );
-        expect(RequestMock.sendJSONReceiveArraybufferWithHeaders).toHaveBeenCalledWith(
-          "url/data/datasets/organization/datasetPath/layers/color/data?token=token2",
-        );
-      },
+    expect(RequestMock.sendJSONReceiveArraybufferWithHeaders).toHaveBeenCalledWith(
+      "url/data/datasets/organization/datasetPath/layers/color/data?token=token2",
+      expect.anything(),
     );
   });
 
@@ -284,7 +293,7 @@ describe("wkstore_adapter", () => {
       transactionId: "dummyRequestId",
     };
 
-    const pushQueue = new PushQueue({ ...mockedCube, layerName: tracingId }, tracingId);
+    const pushQueue = new PushQueue(mockedCube, tracingId);
 
     // @ts-ignore pushTransaction is a private method
     return pushQueue.pushTransaction(batch).then(() => {

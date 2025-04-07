@@ -14,11 +14,6 @@ import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { testLabelingManyBuckets } from "./bucket_eviction_helper";
 import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 
-// Mock dependencies
-vi.mock("oxalis/model/actions/save_actions", () => ({
-  discardSaveQueuesAction: vi.fn(),
-}));
-
 beforeEach<SetupWebknossosTestContext>(async (context) => {
   // Setup webknossos, this will execute model.fetch(...) and initialize the store with the tracing, etc.
   Store.dispatch(restartSagaAction());
@@ -27,14 +22,14 @@ beforeEach<SetupWebknossosTestContext>(async (context) => {
 
   await __setupWebknossos(context, "volume");
 
+  console.log("context.api", context.api);
+
   // Dispatch the wkReadyAction, so the sagas are started
   Store.dispatch(wkReadyAction());
 });
 
-it<SetupWebknossosTestContext>("Brushing/Tracing should not crash when a lot of buckets are labeled at once without saving in between", async ({
-  api,
-  mocks,
-}) => {
+it<SetupWebknossosTestContext>("Brushing/Tracing should not crash when a lot of buckets are labeled at once without saving in between", async (context) => {
+  const { api, mocks } = context;
   await api.tracing.save();
   vi.mocked(mocks.Request.sendJSONReceiveArraybufferWithHeaders).mockImplementation(
     createBucketResponseFunction(Uint16Array, 0, 0),
@@ -44,6 +39,6 @@ it<SetupWebknossosTestContext>("Brushing/Tracing should not crash when a lot of 
   // Now, the code should not crash, anymore.
   expect(hasRootSagaCrashed()).toBe(false);
   const failedSagaPromise = waitForCondition(hasRootSagaCrashed, 500);
-  await Promise.race([testLabelingManyBuckets(null, false), failedSagaPromise]);
+  await Promise.race([testLabelingManyBuckets(context, false), failedSagaPromise]);
   expect(hasRootSagaCrashed()).toBe(false);
 });

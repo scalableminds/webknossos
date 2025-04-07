@@ -1,6 +1,6 @@
 import _ from "lodash";
 import "test/sagas/saga_integration.mock";
-import { createBucketResponseFunction } from "test/helpers/apiHelpers";
+import { createBucketResponseFunction, SetupWebknossosTestContext } from "test/helpers/apiHelpers";
 import Store from "oxalis/store";
 import { OrthoViews, AnnotationToolEnum } from "oxalis/constants";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
@@ -29,9 +29,11 @@ declare const mocks: {
   };
 };
 
-export async function testLabelingManyBuckets(context, saveInbetween: boolean) {
-
-  const {api, model, mocks} = context;
+export async function testLabelingManyBuckets(
+  context: SetupWebknossosTestContext,
+  saveInbetween: boolean,
+) {
+  const { api, model, mocks } = context;
 
   // We set MAXIMUM_BUCKET_COUNT to 150 and then label 199 = 75 (mag1) + 124 (downsampled) buckets in total.
   // In between, we will save the data which allows the buckets of the first batch to be GC'ed.
@@ -42,13 +44,11 @@ export async function testLabelingManyBuckets(context, saveInbetween: boolean) {
   const oldCellId = 11;
   const brushSize = 10;
   const newCellId = 2;
-  
-  vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(createBucketResponseFunction(
-    Uint16Array,
-    oldCellId,
-    500,
-  ));
-  
+
+  vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
+    createBucketResponseFunction(Uint16Array, oldCellId, 500),
+  );
+
   // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
   // function.
   await api.data.reloadAllBuckets();

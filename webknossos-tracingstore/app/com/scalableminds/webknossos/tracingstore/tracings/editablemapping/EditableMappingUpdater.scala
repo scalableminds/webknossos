@@ -154,11 +154,12 @@ class EditableMappingUpdater(
         logger.warn(
           s"Split action for editable mapping $tracingId: Looking up segment id at position ${update.segmentPosition2} in mag ${update.mag} returned invalid value zero. Splitting outside of dataset?")
       (graph1, graph2) <- tryo(splitGraph(agglomerateGraph, segmentId1, segmentId2)) ?~> s"splitGraph failed while removing edge between segments $segmentId1 and $segmentId2"
+      actualSplitHappened = graph2.segments.nonEmpty // if this wasn’t the last edge holding the two sides together, everything remains in graph1.
       largestExistingAgglomerateId <- largestAgglomerateId(editableMappingInfo)
-      agglomerateId2 = largestExistingAgglomerateId + 1L
-      _ <- updateSegmentToAgglomerate(graph2.segments, agglomerateId2)
+      agglomerateId2 = if (actualSplitHappened) largestExistingAgglomerateId + 1L else largestExistingAgglomerateId
+      _ <- Fox.runIf(actualSplitHappened)(updateSegmentToAgglomerate(graph2.segments, agglomerateId2))
       _ = updateAgglomerateGraph(agglomerateId, graph1)
-      _ = updateAgglomerateGraph(agglomerateId2, graph2)
+      _ = if (actualSplitHappened) updateAgglomerateGraph(agglomerateId2, graph2)
     } yield editableMappingInfo.withLargestAgglomerateId(agglomerateId2)
 
   private def getFromSegmentToAgglomerateBuffer(chunkKey: String): Option[Map[Long, Long]] =

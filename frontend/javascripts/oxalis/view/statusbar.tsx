@@ -186,7 +186,7 @@ function ShortcutsInfo() {
   const isShiftPressed = useKeyPress("Shift");
   const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
   const isAltPressed = useKeyPress("Alt");
-  const hasSkeleton = useSelector((state: OxalisState) => state.tracing.skeleton != null);
+  const hasSkeleton = useSelector((state: OxalisState) => state.annotation.skeleton != null);
   const isTDViewportActive = useSelector(
     (state: OxalisState) => state.viewModeData.plane.activeViewport === OrthoViews.TDView,
   );
@@ -416,16 +416,18 @@ function maybeLabelWithSegmentationWarning(isUint64SegmentationVisible: boolean,
 }
 
 function Infos() {
-  const isSkeletonAnnotation = useSelector((state: OxalisState) => state.tracing.skeleton != null);
+  const isSkeletonAnnotation = useSelector(
+    (state: OxalisState) => state.annotation.skeleton != null,
+  );
   const activeVolumeTracing = useSelector((state: OxalisState) =>
     getActiveSegmentationTracing(state),
   );
   const activeCellId = activeVolumeTracing?.activeCellId;
   const activeNodeId = useSelector((state: OxalisState) =>
-    state.tracing.skeleton ? state.tracing.skeleton.activeNodeId : null,
+    state.annotation.skeleton ? state.annotation.skeleton.activeNodeId : null,
   );
   const activeTreeId = useSelector((state: OxalisState) =>
-    state.tracing.skeleton ? state.tracing.skeleton.activeTreeId : null,
+    state.annotation.skeleton ? state.annotation.skeleton.activeTreeId : null,
   );
   const dispatch = useDispatch();
 
@@ -528,14 +530,14 @@ function MagnificationInfo() {
     const state = Store.getState();
     const { activeMagOfEnabledLayers } = getActiveMagInfo(state);
     const dataset = state.dataset;
-    const tracing = state.tracing;
+    const annotation = state.annotation;
 
     return (
       <div style={{ width: 200 }}>
         Rendered magnification per layer:
         <ul>
           {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
-            const readableName = getReadableNameForLayerName(dataset, tracing, layerName);
+            const readableName = getReadableNameForLayerName(dataset, annotation, layerName);
 
             return (
               <li key={layerName}>

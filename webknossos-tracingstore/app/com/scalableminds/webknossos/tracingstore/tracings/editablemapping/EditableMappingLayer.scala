@@ -23,24 +23,32 @@ import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.ExecutionContext
 
-class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketProvider with ProtoGeometryImplicits {
+class EditableMappingBucketProvider(layer: EditableMappingLayer)
+    extends BucketProvider
+    with ProtoGeometryImplicits
+    with LazyLogging {
 
   override def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext,
                                                           tc: TokenContext): Fox[Array[Byte]] = {
     val bucket: BucketPosition = readInstruction.bucket
     for {
-      tracingId <- Fox.successful(layer.name)
       elementClassProto <- ElementClass.toProto(layer.elementClass).toFox
+      editableMappingService = layer.editableMappingService
+      // The layer version is always current because EditableMappingBucketProvider is not cached across versions.
+      // This is different from volumeTracingVersion, because we need a non-optional version here so the caching
+      // in editableMappingService works properly.
+      version = layer.version
       _ <- bool2Fox(layer.doesContainBucket(bucket))
-      remoteFallbackLayer <- layer.editableMappingService
-        .remoteFallbackLayerFromVolumeTracing(layer.tracing, layer.annotationId)
+      remoteFallbackLayer <- editableMappingService.remoteFallbackLayerForVolumeTracing(layer.tracing,
+                                                                                        layer.annotationId)
       // called here to ensure updates are applied
       editableMappingInfo <- layer.annotationService.findEditableMappingInfo(layer.annotationId,
-                                                                             tracingId,
-                                                                             Some(layer.version))(ec, tc)
+                                                                             layer.tracingId,
+                                                                             Some(version))(ec, tc)
       dataRequest: WebknossosDataRequest = WebknossosDataRequest(
         position = Vec3Int(bucket.topLeft.mag1X, bucket.topLeft.mag1Y, bucket.topLeft.mag1Z),
         mag = bucket.mag,
@@ -50,19 +58,14 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
         version = None,
         additionalCoordinates = readInstruction.bucket.additionalCoordinates
       )
-      (unmappedData, indices) <- layer.editableMappingService.getFallbackDataFromDatastore(remoteFallbackLayer,
-                                                                                           List(dataRequest))(ec, tc)
-      _ <- bool2Fox(indices.isEmpty)
-      unmappedDataTyped <- layer.editableMappingService.bytesToSegmentInt(unmappedData, layer.tracing.elementClass)
-      segmentIds = layer.editableMappingService.collectSegmentIds(unmappedDataTyped)
-      relevantMapping <- layer.editableMappingService.generateCombinedMappingForSegmentIds(segmentIds,
-                                                                                           editableMappingInfo,
-                                                                                           layer.version,
-                                                                                           tracingId,
-                                                                                           remoteFallbackLayer)(tc)
-      mappedData: Array[Byte] <- layer.editableMappingService.mapData(unmappedDataTyped,
-                                                                      relevantMapping,
-                                                                      elementClassProto)
+      unmappedData <- editableMappingService.getFallbackBucketFromDataStore(remoteFallbackLayer, dataRequest)(ec, tc)
+      segmentIds <- editableMappingService.collectSegmentIds(unmappedData, layer.elementClass).toFox
+      relevantMapping <- editableMappingService.generateCombinedMappingForSegmentIds(segmentIds,
+                                                                                     editableMappingInfo,
+                                                                                     version,
+                                                                                     layer.tracingId,
+                                                                                     remoteFallbackLayer)(tc)
+      mappedData <- editableMappingService.mapData(unmappedData, relevantMapping, elementClassProto)
     } yield mappedData
   }
 }
@@ -90,6 +93,9 @@ case class EditableMappingLayer(name: String, // set to tracing id
                               sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
     new EditableMappingBucketProvider(layer = this)
 
+  // Do not cache EditableMappingBucketProviders across versions. This way, load can use the passed layer’s version.
+  override def bucketProviderCacheKey: String = s"${this.name}-v${this.version}"
+
   override def mappings: Option[Set[String]] = None
 
   override def defaultViewConfiguration: Option[LayerViewConfiguration] = None
@@ -99,4 +105,6 @@ case class EditableMappingLayer(name: String, // set to tracing id
   override def additionalAxes: Option[Seq[AdditionalAxis]] = None
 
   def version: Long = tracing.version
+
+  def tracingId: String = name
 }

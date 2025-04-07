@@ -110,7 +110,7 @@ function* centerActiveNode(action: Action): Saga<void> {
   }
 
   const activeNode = getActiveNode(
-    yield* select((state: OxalisState) => enforceSkeletonTracing(state.tracing)),
+    yield* select((state: OxalisState) => enforceSkeletonTracing(state.annotation)),
   );
 
   if (activeNode != null) {
@@ -140,7 +140,7 @@ function* watchBranchPointDeletion(): Saga<void> {
 
     if (deleteBranchpointAction) {
       const hasBranchPoints = yield* select(
-        (state: OxalisState) => getBranchPoints(state.tracing).getOrElse([]).length > 0,
+        (state: OxalisState) => getBranchPoints(state.annotation).getOrElse([]).length > 0,
       );
 
       if (hasBranchPoints) {
@@ -171,7 +171,7 @@ function* watchFailedNodeCreations(): Saga<void> {
   while (true) {
     yield* take("CREATE_NODE");
     const activeTreeId = yield* select(
-      (state) => enforceSkeletonTracing(state.tracing).activeTreeId,
+      (state) => enforceSkeletonTracing(state.annotation).activeTreeId,
     );
 
     if (activeTreeId == null) {
@@ -184,7 +184,7 @@ function* watchTracingConsistency(): Saga<void> {
   const state = yield* select((_state) => _state);
   const invalidTreeDetails = [];
 
-  for (const tree of _.values(enforceSkeletonTracing(state.tracing).trees)) {
+  for (const tree of _.values(enforceSkeletonTracing(state.annotation).trees)) {
     const edgeCount = tree.edges.size();
     const nodeCount = tree.nodes.size();
 
@@ -215,7 +215,7 @@ export function* watchTreeNames(): Saga<void> {
   const state = yield* select((_state) => _state);
 
   // rename trees with an empty/default tree name
-  for (const tree of _.values(enforceSkeletonTracing(state.tracing).trees)) {
+  for (const tree of _.values(enforceSkeletonTracing(state.annotation).trees)) {
     if (tree.name === "") {
       const newName = generateTreeName(state, tree.timestamp, tree.treeId);
       yield* put(setTreeNameAction(newName, tree.treeId));
@@ -248,7 +248,7 @@ function* getAgglomerateSkeletonTracing(
   agglomerateId: number,
 ): Saga<ServerSkeletonTracing> {
   const dataset = yield* select((state) => state.dataset);
-  const annotation = yield* select((state) => state.tracing);
+  const annotation = yield* select((state) => state.annotation);
   const layerInfo = getLayerByName(dataset, layerName);
 
   const editableMapping = annotation.mappings.find((mapping) => mapping.tracingId === mappingName);
@@ -346,7 +346,7 @@ function handleAgglomerateLoadingError(
 export function* loadAgglomerateSkeletonWithId(
   action: LoadAgglomerateSkeletonAction,
 ): Saga<[string, number] | null> {
-  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
+  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
   if (!allowUpdate) return null;
   const { layerName, mappingName, agglomerateId } = action;
 
@@ -357,7 +357,7 @@ export function* loadAgglomerateSkeletonWithId(
 
   const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
   const trees = yield* select((state) =>
-    getTreesWithType(enforceSkeletonTracing(state.tracing), TreeTypeEnum.AGGLOMERATE),
+    getTreesWithType(enforceSkeletonTracing(state.annotation), TreeTypeEnum.AGGLOMERATE),
   );
   const maybeTree = findTreeByName(trees, treeName);
 

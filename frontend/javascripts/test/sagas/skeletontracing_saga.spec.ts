@@ -1,5 +1,5 @@
 import "test/sagas/skeletontracing_saga.mock.js";
-import type { Flycam, HybridTracing, OxalisState, SkeletonTracing } from "oxalis/store";
+import type { Flycam, StoreAnnotation, OxalisState, SkeletonTracing } from "oxalis/store";
 import ChainReducer from "test/helpers/chainReducer";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
@@ -51,16 +51,16 @@ const SkeletonTracingReducer: typeof OriginalSkeletonTracingReducer = mockRequir
 const { put } = mockRequire.reRequire("redux-saga/effects");
 
 function testDiffing(
-  prevTracing: HybridTracing,
-  nextTracing: HybridTracing,
+  prevAnnotation: StoreAnnotation,
+  nextAnnotation: StoreAnnotation,
   prevFlycam: Flycam,
   flycam: Flycam,
 ) {
   return withoutUpdateTracing(
     Array.from(
       diffSkeletonTracing(
-        enforceSkeletonTracing(prevTracing),
-        enforceSkeletonTracing(nextTracing),
+        enforceSkeletonTracing(prevAnnotation),
+        enforceSkeletonTracing(nextAnnotation),
         prevFlycam,
         flycam,
         null,
@@ -142,7 +142,7 @@ skeletonTracing.trees[1] = {
   metadata: [],
 };
 const initialState = update(defaultState, {
-  tracing: {
+  annotation: {
     restrictions: {
       allowUpdate: {
         $set: true,
@@ -180,13 +180,13 @@ test("SkeletonTracingSaga shouldn't do anything if unchanged (saga test)", (t) =
   );
 
   saga.next();
-  saga.next(initialState.tracing.skeleton);
+  saga.next(initialState.annotation.skeleton);
   saga.next(initialState.flycam);
   saga.next(initialState.viewModeData.plane.tdCamera);
   saga.next();
   saga.next();
   saga.next(true);
-  saga.next(initialState.tracing.skeleton);
+  saga.next(initialState.annotation.skeleton);
   saga.next(initialState.flycam);
   // only updateTracing
   const items = execCall(t, saga.next(initialState.viewModeData.plane.tdCamera));
@@ -199,13 +199,13 @@ test("SkeletonTracingSaga should do something if changed (saga test)", (t) => {
   );
 
   saga.next();
-  saga.next(initialState.tracing.skeleton);
+  saga.next(initialState.annotation.skeleton);
   saga.next(initialState.flycam);
   saga.next(initialState.viewModeData.plane.tdCamera);
   saga.next();
   saga.next();
   saga.next(true);
-  saga.next(newState.tracing.skeleton);
+  saga.next(newState.annotation.skeleton);
   saga.next(newState.flycam);
   const items = execCall(t, saga.next(newState.viewModeData.plane.tdCamera));
   t.true(withoutUpdateTracing(items).length > 0);
@@ -214,8 +214,8 @@ test("SkeletonTracingSaga should do something if changed (saga test)", (t) => {
 test("SkeletonTracingSaga should emit createNode update actions", (t) => {
   const newState = SkeletonTracingReducer(initialState, createNodeAction);
   const updateActions = testDiffing(
-    initialState.tracing,
-    newState.tracing,
+    initialState.annotation,
+    newState.annotation,
     initialState.flycam,
     newState.flycam,
   );
@@ -233,8 +233,8 @@ test("SkeletonTracingSaga should emit createNode and createEdge update actions",
     .apply(SkeletonTracingReducer, createNodeAction)
     .unpack();
   const updateActions = testDiffing(
-    initialState.tracing,
-    newState.tracing,
+    initialState.annotation,
+    newState.annotation,
     initialState.flycam,
     newState.flycam,
   );
@@ -271,8 +271,8 @@ test("SkeletonTracingSaga should emit createNode and createTree update actions",
     .apply(SkeletonTracingReducer, createNodeAction)
     .unpack();
   const updateActions = testDiffing(
-    initialState.tracing,
-    newState.tracing,
+    initialState.annotation,
+    newState.annotation,
     initialState.flycam,
     newState.flycam,
   );
@@ -309,8 +309,8 @@ test("SkeletonTracingSaga should emit first deleteNode and then createNode updat
     .unpack();
   const newState = SkeletonTracingReducer(testState, mergeTreesAction);
   const updateActions = testDiffing(
-    testState.tracing,
-    newState.tracing,
+    testState.annotation,
+    newState.annotation,
     testState.flycam,
     newState.flycam,
   );
@@ -351,8 +351,8 @@ test("SkeletonTracingSaga should emit a deleteNode update action", (t) => {
   const testState = SkeletonTracingReducer(initialState, createNodeAction);
   const newState = SkeletonTracingReducer(testState, deleteNodeAction);
   const updateActions = testDiffing(
-    testState.tracing,
-    newState.tracing,
+    testState.annotation,
+    newState.annotation,
     testState.flycam,
     newState.flycam,
   );
@@ -372,8 +372,8 @@ test("SkeletonTracingSaga should emit a deleteEdge update action", (t) => {
     .unpack();
   const newState = SkeletonTracingReducer(testState, deleteNodeAction);
   const updateActions = testDiffing(
-    testState.tracing,
-    newState.tracing,
+    testState.annotation,
+    newState.annotation,
     testState.flycam,
     newState.flycam,
   );
@@ -399,8 +399,8 @@ test("SkeletonTracingSaga should emit a deleteTree update action", (t) => {
   const testState = SkeletonTracingReducer(initialState, createTreeAction);
   const newState = SkeletonTracingReducer(testState, deleteTreeAction);
   const updateActions = testDiffing(
-    testState.tracing,
-    newState.tracing,
+    testState.annotation,
+    newState.annotation,
     testState.flycam,
     newState.flycam,
   );
@@ -416,8 +416,8 @@ test("SkeletonTracingSaga should emit an updateNode update action", (t) => {
   const testState = SkeletonTracingReducer(initialState, createNodeAction);
   const newState = SkeletonTracingReducer(testState, setNodeRadiusAction);
   const updateActions = testDiffing(
-    testState.tracing,
-    newState.tracing,
+    testState.annotation,
+    newState.annotation,
     testState.flycam,
     newState.flycam,
   );
@@ -438,8 +438,8 @@ test("SkeletonTracingSaga should emit an updateNode update action 2", (t) => {
     .unpack();
   const newState = SkeletonTracingReducer(testState, setNodeRadiusAction);
   const updateActions = testDiffing(
-    testState.tracing,
-    newState.tracing,
+    testState.annotation,
+    newState.annotation,
     testState.flycam,
     newState.flycam,
   );
@@ -449,8 +449,8 @@ test("SkeletonTracingSaga should emit an updateTree update actions (comments)", 
   const testState = SkeletonTracingReducer(initialState, createNodeAction);
   const newState = SkeletonTracingReducer(testState, createCommentAction);
   const updateActions = testDiffing(
-    testState.tracing,
-    newState.tracing,
+    testState.annotation,
+    newState.annotation,
     testState.flycam,
     newState.flycam,
   );
@@ -475,8 +475,8 @@ test("SkeletonTracingSaga shouldn't emit an updateTree update actions (comments)
     .unpack();
   const newState = SkeletonTracingReducer(testState, createCommentAction);
   const updateActions = testDiffing(
-    testState.tracing,
-    newState.tracing,
+    testState.annotation,
+    newState.annotation,
     testState.flycam,
     newState.flycam,
   );
@@ -486,8 +486,8 @@ test("SkeletonTracingSaga should emit an updateTree update actions (branchpoints
   const testState = SkeletonTracingReducer(initialState, createNodeAction);
   const newState = SkeletonTracingReducer(testState, createBranchPointAction);
   const updateActions = testDiffing(
-    testState.tracing,
-    newState.tracing,
+    testState.annotation,
+    newState.annotation,
     testState.flycam,
     newState.flycam,
   );
@@ -517,8 +517,8 @@ test("SkeletonTracingSaga should emit update actions on merge tree", (t) => {
     .unpack();
   const newState = SkeletonTracingReducer(testState, mergeTreesAction);
   const updateActions = testDiffing(
-    testState.tracing,
-    newState.tracing,
+    testState.annotation,
+    newState.annotation,
     testState.flycam,
     newState.flycam,
   );
@@ -569,8 +569,8 @@ test("SkeletonTracingSaga should emit update actions on split tree", (t) => {
   // Node 3 will be deleted since it is active in testState.
   const newState = SkeletonTracingReducer(testState, deleteNodeAction);
   const updateActions = testDiffing(
-    testState.tracing,
-    newState.tracing,
+    testState.annotation,
+    newState.annotation,
     testState.flycam,
     newState.flycam,
   );
@@ -668,8 +668,8 @@ test("compactUpdateActions should detect a tree merge (1/3)", (t) => {
     .unpack();
   const newState = SkeletonTracingReducer(testState, mergeTreesAction);
   const updateActions = testDiffing(
-    testState.tracing,
-    newState.tracing,
+    testState.annotation,
+    newState.annotation,
     testState.flycam,
     newState.flycam,
   );
@@ -725,7 +725,7 @@ test("compactUpdateActions should detect a tree merge (2/3)", (t) => {
   const newState1 = SkeletonTracingReducer(testState, createNodeAction);
   const updateActions = [];
   updateActions.push(
-    testDiffing(testState.tracing, newState1.tracing, testState.flycam, newState1.flycam),
+    testDiffing(testState.annotation, newState1.annotation, testState.flycam, newState1.flycam),
   );
   // Merge the two trees (b), then create another tree and node (c)
   const newState2 = ChainReducer<OxalisState, Action>(newState1)
@@ -734,7 +734,7 @@ test("compactUpdateActions should detect a tree merge (2/3)", (t) => {
     .apply(SkeletonTracingReducer, createNodeAction)
     .unpack();
   updateActions.push(
-    testDiffing(newState1.tracing, newState2.tracing, newState1.flycam, newState2.flycam),
+    testDiffing(newState1.annotation, newState2.annotation, newState1.flycam, newState2.flycam),
   );
   // compactUpdateActions is triggered by the saving, it can therefore contain the results of more than one diffing
   const simplifiedUpdateActions = createCompactedSaveQueueFromUpdateActions(
@@ -814,8 +814,8 @@ test("compactUpdateActions should detect a tree merge (3/3)", (t) => {
   const updateActions = [];
   updateActions.push(
     testDiffing(
-      testState.tracing,
-      stateAfterFirstMerge.tracing,
+      testState.annotation,
+      stateAfterFirstMerge.annotation,
       testState.flycam,
       stateAfterFirstMerge.flycam,
     ),
@@ -828,8 +828,8 @@ test("compactUpdateActions should detect a tree merge (3/3)", (t) => {
     .unpack();
   updateActions.push(
     testDiffing(
-      stateAfterFirstMerge.tracing,
-      newState.tracing,
+      stateAfterFirstMerge.annotation,
+      newState.annotation,
       stateAfterFirstMerge.flycam,
       newState.flycam,
     ),
@@ -838,8 +838,8 @@ test("compactUpdateActions should detect a tree merge (3/3)", (t) => {
   const stateAfterSecondMerge = SkeletonTracingReducer(newState, secondMergeTreesAction);
   updateActions.push(
     testDiffing(
-      newState.tracing,
-      stateAfterSecondMerge.tracing,
+      newState.annotation,
+      stateAfterSecondMerge.annotation,
       newState.flycam,
       stateAfterSecondMerge.flycam,
     ),
@@ -928,8 +928,8 @@ test("compactUpdateActions should detect a tree split (1/3)", (t) => {
   // Delete the second node to split the tree
   const newState = SkeletonTracingReducer(testState, deleteMiddleNodeAction);
   const updateActions = testDiffing(
-    testState.tracing,
-    newState.tracing,
+    testState.annotation,
+    newState.annotation,
     testState.flycam,
     newState.flycam,
   );
@@ -991,8 +991,8 @@ test("compactUpdateActions should detect a tree split (2/3)", (t) => {
   // Delete node 2 to split the tree into three parts
   const newState = SkeletonTracingReducer(testState, deleteMiddleNodeAction);
   const updateActions = testDiffing(
-    testState.tracing,
-    newState.tracing,
+    testState.annotation,
+    newState.annotation,
     testState.flycam,
     newState.flycam,
   );
@@ -1066,12 +1066,12 @@ test("compactUpdateActions should detect a tree split (3/3)", (t) => {
   const newState1 = SkeletonTracingReducer(testState, deleteMiddleNodeAction);
   const updateActions = [];
   updateActions.push(
-    testDiffing(testState.tracing, newState1.tracing, testState.flycam, newState1.flycam),
+    testDiffing(testState.annotation, newState1.annotation, testState.flycam, newState1.flycam),
   );
   // Delete node 4 to split the tree again (b)
   const newState2 = SkeletonTracingReducer(newState1, deleteOtherMiddleNodeAction);
   updateActions.push(
-    testDiffing(newState1.tracing, newState2.tracing, newState1.flycam, newState2.flycam),
+    testDiffing(newState1.annotation, newState2.annotation, newState1.flycam, newState2.flycam),
   );
   const simplifiedUpdateActions = createCompactedSaveQueueFromUpdateActions(
     updateActions,
@@ -1161,8 +1161,8 @@ test("compactUpdateActions should do nothing if it cannot compact", (t) => {
     .unpack();
   // This will currently never be the result of one diff (see description of the test)
   const updateActions = testDiffing(
-    testState.tracing,
-    newState.tracing,
+    testState.annotation,
+    newState.annotation,
     testState.flycam,
     newState.flycam,
   );
@@ -1191,8 +1191,8 @@ test("compactUpdateActions should detect a deleted tree", (t) => {
     .apply(SkeletonTracingReducer, deleteTreeAction)
     .unpack();
   const updateActions = testDiffing(
-    testState.tracing,
-    newState.tracing,
+    testState.annotation,
+    newState.annotation,
     testState.flycam,
     newState.flycam,
   );
@@ -1224,8 +1224,8 @@ test("compactUpdateActions should not detect a deleted tree if there is no delet
     .apply(SkeletonTracingReducer, deleteNodeAction)
     .unpack();
   const updateActions = testDiffing(
-    testState.tracing,
-    newState.tracing,
+    testState.annotation,
+    newState.annotation,
     testState.flycam,
     newState.flycam,
   );

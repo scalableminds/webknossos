@@ -57,8 +57,8 @@ const flycamMock = {} as any as Flycam;
 const tracingId = "someTracingId";
 const createState = (trees: Tree[], _treeGroups: TreeGroup[]): OxalisState => ({
   ...defaultState,
-  tracing: {
-    ...defaultState.tracing,
+  annotation: {
+    ...defaultState.annotation,
     skeleton: {
       additionalAxes: [],
       createdTimestamp: 0,
@@ -103,8 +103,8 @@ function testDiffing(prevState: OxalisState, nextState: OxalisState) {
     withoutUpdateTracing(
       Array.from(
         diffSkeletonTracing(
-          enforceSkeletonTracing(prevState.tracing),
-          enforceSkeletonTracing(nextState.tracing),
+          enforceSkeletonTracing(prevState.annotation),
+          enforceSkeletonTracing(nextState.annotation),
           flycamMock,
           flycamMock,
           nextState.activeUser?.id || null,
@@ -125,12 +125,12 @@ function _updateTreeVisibility(treeId: number, isVisible: boolean) {
 function getActions(initialState: OxalisState, newState: OxalisState) {
   const updateActions = testDiffing(initialState, newState);
 
-  if (newState.tracing.skeleton == null) {
+  if (newState.annotation.skeleton == null) {
     // Satisfy typescript
-    throw new Error("newState.tracing.skeleton should not be null");
+    throw new Error("newState.annotation.skeleton should not be null");
   }
 
-  const compactedActions = compactToggleActions(updateActions, newState.tracing.skeleton);
+  const compactedActions = compactToggleActions(updateActions, newState.annotation.skeleton);
   return [compactedActions, updateActions];
 }
 

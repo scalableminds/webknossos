@@ -49,7 +49,7 @@ import type {
   UpdateTreeUpdateAction,
   UpdateTreeVisibilityUpdateAction,
 } from "oxalis/model/sagas/update_actions";
-import type { HybridTracing, OxalisState } from "oxalis/store";
+import type { OxalisState, StoreAnnotation } from "oxalis/store";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { useSelector } from "react-redux";
 type Description = {
@@ -66,7 +66,7 @@ const updateTracingDescription = {
 // of the `getDescriptionForBatch` function.
 const descriptionFns: Record<
   ServerUpdateAction["name"],
-  (firstAction: any, actionCount: number, tracing: HybridTracing) => Description
+  (firstAction: any, actionCount: number, annotation: StoreAnnotation) => Description
 > = {
   importVolumeTracing: (): Description => ({
     description: "Imported a volume tracing.",
@@ -178,9 +178,12 @@ const descriptionFns: Record<
   updateBucket: (
     firstAction: UpdateBucketUpdateAction,
     _actionCount: number,
-    tracing: HybridTracing,
+    annotation: StoreAnnotation,
   ): Description => {
-    const layerName = maybeGetReadableVolumeTracingName(tracing, firstAction.value.actionTracingId);
+    const layerName = maybeGetReadableVolumeTracingName(
+      annotation,
+      firstAction.value.actionTracingId,
+    );
     return {
       description: `Updated the segmentation of layer ${layerName}.`,
       icon: <PictureOutlined />,
@@ -189,9 +192,12 @@ const descriptionFns: Record<
   updateSegmentGroups: (
     firstAction: UpdateSegmentGroupsUpdateAction,
     _actionCount: number,
-    tracing: HybridTracing,
+    annotation: StoreAnnotation,
   ): Description => {
-    const layerName = maybeGetReadableVolumeTracingName(tracing, firstAction.value.actionTracingId);
+    const layerName = maybeGetReadableVolumeTracingName(
+      annotation,
+      firstAction.value.actionTracingId,
+    );
     return {
       description: `Updated the segment groups of layer ${layerName}.`,
       icon: <EditOutlined />,
@@ -230,9 +236,12 @@ const descriptionFns: Record<
   createSegment: (
     firstAction: CreateSegmentUpdateAction,
     _actionCount: number,
-    tracing: HybridTracing,
+    annotation: StoreAnnotation,
   ): Description => {
-    const layerName = maybeGetReadableVolumeTracingName(tracing, firstAction.value.actionTracingId);
+    const layerName = maybeGetReadableVolumeTracingName(
+      annotation,
+      firstAction.value.actionTracingId,
+    );
     return {
       description: `Added the segment with id ${firstAction.value.id} to the segments list of layer ${layerName}.`,
       icon: <PlusOutlined />,
@@ -241,9 +250,12 @@ const descriptionFns: Record<
   updateSegment: (
     firstAction: UpdateSegmentUpdateAction,
     _actionCount: number,
-    tracing: HybridTracing,
+    annotation: StoreAnnotation,
   ): Description => {
-    const layerName = maybeGetReadableVolumeTracingName(tracing, firstAction.value.actionTracingId);
+    const layerName = maybeGetReadableVolumeTracingName(
+      annotation,
+      firstAction.value.actionTracingId,
+    );
     return {
       description: `Updated the segment with id ${firstAction.value.id} in the segments list  of layer ${layerName}.`,
       icon: <EditOutlined />,
@@ -252,9 +264,12 @@ const descriptionFns: Record<
   deleteSegment: (
     firstAction: DeleteSegmentUpdateAction,
     _actionCount: number,
-    tracing: HybridTracing,
+    annotation: StoreAnnotation,
   ): Description => {
-    const layerName = maybeGetReadableVolumeTracingName(tracing, firstAction.value.actionTracingId);
+    const layerName = maybeGetReadableVolumeTracingName(
+      annotation,
+      firstAction.value.actionTracingId,
+    );
     return {
       description: `Deleted the segment with id ${firstAction.value.id} from the segments list of layer ${layerName}.`,
       icon: <DeleteOutlined />,
@@ -263,9 +278,12 @@ const descriptionFns: Record<
   deleteSegmentData: (
     firstAction: DeleteSegmentDataUpdateAction,
     _actionCount: number,
-    tracing: HybridTracing,
+    annotation: StoreAnnotation,
   ): Description => {
-    const layerName = maybeGetReadableVolumeTracingName(tracing, firstAction.value.actionTracingId);
+    const layerName = maybeGetReadableVolumeTracingName(
+      annotation,
+      firstAction.value.actionTracingId,
+    );
     return {
       description: `Deleted the data of segment ${firstAction.value.id} of layer ${layerName}. All voxels with that id were overwritten with 0.`,
       icon: <DeleteOutlined />,
@@ -274,9 +292,12 @@ const descriptionFns: Record<
   addSegmentIndex: (
     firstAction: AddSegmentIndexUpdateAction,
     _actionCount: number,
-    tracing: HybridTracing,
+    annotation: StoreAnnotation,
   ): Description => {
-    const layerName = maybeGetReadableVolumeTracingName(tracing, firstAction.value.actionTracingId);
+    const layerName = maybeGetReadableVolumeTracingName(
+      annotation,
+      firstAction.value.actionTracingId,
+    );
     return {
       description: `Added segment index to layer ${layerName} to enable segment statistics.`,
       icon: <EditOutlined />,
@@ -316,17 +337,17 @@ const descriptionFns: Record<
   },
 } as const;
 
-function maybeGetReadableVolumeTracingName(tracing: HybridTracing, tracingId: string): string {
-  const volumeTracing = tracing.volumes.find((volume) => volume.tracingId === tracingId);
+function maybeGetReadableVolumeTracingName(annotation: StoreAnnotation, tracingId: string): string {
+  const volumeTracing = annotation.volumes.find((volume) => volume.tracingId === tracingId);
   return volumeTracing != null
-    ? getReadableNameByVolumeTracingId(tracing, volumeTracing.tracingId)
+    ? getReadableNameByVolumeTracingId(annotation, volumeTracing.tracingId)
     : "<unknown>";
 }
 
 function getDescriptionForSpecificBatch(
   actions: Array<ServerUpdateAction>,
   type: string,
-  tracing: HybridTracing,
+  annotation: StoreAnnotation,
 ): Description {
   const firstAction = actions[0];
 
@@ -334,7 +355,7 @@ function getDescriptionForSpecificBatch(
     throw new Error("Type constraint violated");
   }
   const fn = descriptionFns[type];
-  return fn(firstAction, actions.length, tracing);
+  return fn(firstAction, actions.length, annotation);
 }
 
 // An update action batch can consist of more than one update action as a single user action
@@ -350,7 +371,7 @@ function getDescriptionForSpecificBatch(
 // `descriptionFns` object.
 function getDescriptionForBatch(
   actions: Array<ServerUpdateAction>,
-  tracing: HybridTracing,
+  annotation: StoreAnnotation,
 ): Description {
   const groupedUpdateActions = _.groupBy(actions, "name");
 
@@ -401,7 +422,7 @@ function getDescriptionForBatch(
     const updateActions = groupedUpdateActions[key];
 
     if (updateActions != null) {
-      return getDescriptionForSpecificBatch(updateActions, key, tracing);
+      return getDescriptionForSpecificBatch(updateActions, key, annotation);
     }
   }
 
@@ -430,10 +451,10 @@ export default function VersionEntry({
   onPreviewVersion,
 }: Props) {
   const lastTimestamp = _.max(actions.map((action) => action.value.actionTimestamp));
-  const contributors = useSelector((state: OxalisState) => state.tracing.contributors);
+  const contributors = useSelector((state: OxalisState) => state.annotation.contributors);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  const owner = useSelector((state: OxalisState) => state.tracing.owner);
-  const tracing = useSelector((state: OxalisState) => state.tracing);
+  const owner = useSelector((state: OxalisState) => state.annotation.owner);
+  const annotation = useSelector((state: OxalisState) => state.annotation);
 
   const liClassName = classNames("version-entry", {
     "active-version-entry": isActive,
@@ -449,7 +470,7 @@ export default function VersionEntry({
       {initialAllowUpdate ? "Restore" : "Download"}
     </Button>
   );
-  const { description, icon } = getDescriptionForBatch(actions, tracing);
+  const { description, icon } = getDescriptionForBatch(actions, annotation);
 
   // In case the actionAuthorId is not set, the action was created before the multi-contributor
   // support. Default to the owner in that case.

@@ -141,7 +141,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       if (action === undefined || newLocation.pathname !== location.pathname) {
         const stateSaved = Model.stateSaved();
 
-        if (!stateSaved && Store.getState().tracing.restrictions.allowUpdate) {
+        if (!stateSaved && Store.getState().annotation.restrictions.allowUpdate) {
           // @ts-ignore
           window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
 
@@ -230,7 +230,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
         m: () => {
           // rotate allowed modes
           const currentViewMode = Store.getState().temporaryConfiguration.viewMode;
-          const { allowedModes } = Store.getState().tracing.restrictions;
+          const { allowedModes } = Store.getState().annotation.restrictions;
           const index = (allowedModes.indexOf(currentViewMode) + 1) % allowedModes.length;
           Store.dispatch(setViewModeAction(allowedModes[index]));
         },
@@ -324,7 +324,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       );
     }
 
-    const { allowedModes } = Store.getState().tracing.restrictions;
+    const { allowedModes } = Store.getState().annotation.restrictions;
 
     if (!allowedModes.includes(viewMode)) {
       // Since this mode is not allowed, render nothing. A warning about this will be

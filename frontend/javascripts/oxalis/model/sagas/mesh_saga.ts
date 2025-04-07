@@ -46,6 +46,7 @@ import {
   type RemoveMeshAction,
   type TriggerMeshDownloadAction,
   type TriggerMeshesDownloadAction,
+  type UpdateMeshOpacityAction,
   type UpdateMeshVisibilityAction,
   addAdHocMeshAction,
   addPrecomputedMeshAction,
@@ -342,7 +343,7 @@ function* loadFullAdHocMesh(
   yield* put(startedLoadingMeshAction(layer.name, segmentId));
 
   const cubeSize = marchingCubeSizeInTargetMag();
-  const tracingStoreHost = yield* select((state) => state.tracing.tracingStore.url);
+  const tracingStoreHost = yield* select((state) => state.annotation.tracingStore.url);
   const mag = magInfo.getMagByIndexOrThrow(zoomStep);
 
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
@@ -466,7 +467,7 @@ function* maybeLoadMeshChunk(
   const dataStoreHost = yield* select((state) => state.dataset.dataStore.url);
   const owningOrganization = yield* select((state) => state.dataset.owningOrganization);
   const datasetDirectoryName = yield* select((state) => state.dataset.directoryName);
-  const tracingStoreHost = yield* select((state) => state.tracing.tracingStore.url);
+  const tracingStoreHost = yield* select((state) => state.annotation.tracingStore.url);
   const dataStoreUrl = `${dataStoreHost}/data/datasets/${owningOrganization}/${datasetDirectoryName}/layers/${
     layer.fallbackLayer != null ? layer.fallbackLayer : layer.name
   }`;
@@ -1259,6 +1260,11 @@ function* handleSegmentColorChange(action: UpdateSegmentAction): Saga<void> {
   }
 }
 
+function* handleMeshOpacityChange(action: UpdateMeshOpacityAction): Saga<void> {
+  const { segmentMeshController } = yield* call(getSceneController);
+  segmentMeshController.setMeshOpacity(action.id, action.layerName, action.opacity);
+}
+
 function* handleBatchSegmentColorChange(
   batchAction: BatchUpdateGroupsAndSegmentsAction,
 ): Saga<void> {
@@ -1294,5 +1300,6 @@ export default function* meshSaga(): Saga<void> {
   yield* takeEvery("UPDATE_MESH_VISIBILITY", handleMeshVisibilityChange);
   yield* takeEvery(["START_EDITING", "COPY_SEGMENTATION_LAYER"], markEditedCellAsDirty);
   yield* takeEvery("UPDATE_SEGMENT", handleSegmentColorChange);
+  yield* takeEvery("UPDATE_MESH_OPACITY", handleMeshOpacityChange);
   yield* takeEvery("BATCH_UPDATE_GROUPS_AND_SEGMENTS", handleBatchSegmentColorChange);
 }

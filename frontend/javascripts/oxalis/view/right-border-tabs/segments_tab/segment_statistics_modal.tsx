@@ -104,7 +104,9 @@ export function SegmentStatisticsModal({
   parentGroup,
   groupTree,
 }: Props) {
-  const { dataset, tracing, temporaryConfiguration } = useSelector((state: OxalisState) => state);
+  const { dataset, annotation, temporaryConfiguration } = useSelector(
+    (state: OxalisState) => state,
+  );
   const magInfo = getMagInfo(visibleSegmentationLayer.resolutions);
   const layersFinestMag = magInfo.getFinestMag();
   const voxelSize = dataset.dataSource.scale;
@@ -112,7 +114,7 @@ export function SegmentStatisticsModal({
   // met right here because that should happen before opening the modal.
   const requestUrl = getVolumeRequestUrl(
     dataset,
-    tracing,
+    annotation,
     visibleSegmentationLayer.tracingId,
     visibleSegmentationLayer,
   );
@@ -129,7 +131,7 @@ export function SegmentStatisticsModal({
       await api.tracing.save();
       if (requestUrl == null) return;
       const maybeVolumeTracing =
-        tracingId != null ? getVolumeTracingById(tracing, tracingId) : null;
+        tracingId != null ? getVolumeTracingById(annotation, tracingId) : null;
       const maybeGetMappingName = () => {
         if (maybeVolumeTracing?.mappingName != null) return maybeVolumeTracing.mappingName;
         const mappingInfo = getMappingInfo(

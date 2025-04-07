@@ -168,8 +168,6 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         revertToVersion(annotationId, annotationWithTracings, a, targetVersion) ?~> "applyUpdate.revertToversion.failed"
       case _: ResetToBaseAnnotationAction =>
         resetToBase(annotationId, annotationWithTracings, targetVersion) ?~> "applyUpdate.resetToBase.failed"
-      case _: BucketMutatingVolumeUpdateAction =>
-        Fox.successful(annotationWithTracings) // No-op, as bucket-mutating actions are performed eagerly, so not here.
       case _: CompactVolumeUpdateAction =>
         Fox.successful(annotationWithTracings) // No-op, as legacy compacted update actions cannot be applied
       case _: UpdateTdCameraAnnotationAction =>
@@ -470,7 +468,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       currentMaterializedVersion: Long,
       targetVersion: Long)(implicit tc: TokenContext, ec: ExecutionContext): Fox[EditableMappingUpdater] =
     for {
-      remoteFallbackLayer <- remoteFallbackLayerFromVolumeTracing(volumeTracing, annotationId)
+      remoteFallbackLayer <- remoteFallbackLayerForVolumeTracing(volumeTracing, annotationId)
     } yield
       editableMappingUpdaterFor(annotationId,
                                 tracingId,
@@ -787,6 +785,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       tracingIdMapMutable.put(v0TracingId, TracingId.generate)
     }
     val updateBatchRanges = SequenceUtils.batchRangeInclusive(0L, newestVersion, batchSize = 100)
+    val updatesPutBuffer = new FossilDBPutBuffer(tracingDataStore.annotationUpdates)
     Fox
       .serialCombined(updateBatchRanges.toList) { batchRange =>
         for {
@@ -815,11 +814,12 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                   case a: UpdateAction =>
                     Fox.successful(a)
                 }
-                _ <- tracingDataStore.annotationUpdates.put(newAnnotationId, version, Json.toJson(updateListAdapted))
+                _ <- updatesPutBuffer.put(newAnnotationId, version, Json.toJson(updateListAdapted))
               } yield ()
           }
         } yield ()
       }
+      .flatMap(_ => updatesPutBuffer.flush())
       .map(_ => tracingIdMapMutable.toMap)
   }
 

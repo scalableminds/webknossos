@@ -27,12 +27,6 @@ vi.mock("oxalis/model/bucket_data_handling/wkstore_adapter", function () {
   };
 });
 
-const mockedCube = {
-  isSegmentation: true,
-  shouldEagerlyMaintainUsedValueSet: () => false,
-  triggerBucketDataChanged: () => {},
-};
-
 const tracingId = "volumeTracingId";
 vi.mock("oxalis/store", function () {
   return {
@@ -71,7 +65,9 @@ interface TestContext {
 
 describe("PullQueue", () => {
   beforeEach<TestContext>(async (context) => {
-    const cube = {
+    const mockedCube = {
+      isSegmentation: true,
+      triggerBucketDataChanged: () => {},
       getBucket: vi.fn(),
       getOrCreateBucket: vi.fn(),
       boundingBox: {
@@ -79,20 +75,23 @@ describe("PullQueue", () => {
         removeOutsideArea: vi.fn(),
       },
       shouldEagerlyMaintainUsedValueSet: () => false,
+      // Will be set later:
+      pullQueue: null as PullQueue | null,
     };
     const datastoreInfo = {
       typ: "webknossos-store",
     };
-    const pullQueue = new PullQueue(cube as any, "layername", datastoreInfo as any);
+    const pullQueue = new PullQueue(mockedCube as any, "layername", datastoreInfo as any);
+    mockedCube.pullQueue = pullQueue;
     const buckets = [
       new DataBucket("uint8", [0, 0, 0, 0], null as any, mockedCube as any),
       new DataBucket("uint8", [1, 1, 1, 1], null as any, mockedCube as any),
     ];
 
-    cube.getBucket.mockImplementation((address: BucketAddress) => {
+    mockedCube.getBucket.mockImplementation((address: BucketAddress) => {
       return buckets.find((bucket) => _.isEqual(bucket.zoomedAddress, address));
     });
-    cube.getOrCreateBucket.mockImplementation((address: BucketAddress) => {
+    mockedCube.getOrCreateBucket.mockImplementation((address: BucketAddress) => {
       return buckets.find((bucket) => _.isEqual(bucket.zoomedAddress, address));
     });
 

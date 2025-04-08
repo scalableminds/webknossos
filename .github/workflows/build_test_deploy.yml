@@ -126,10 +126,7 @@ jobs:
       - name: Assert unique evolution numbers
         run: tools/postgres/dbtool.js assert-unique-evolution-numbers
       - name: Assert schema.sql and evolutions are equal
-        run: |
-          docker compose up -d postgres
-          sleep 3
-          tools/postgres/dbtool.js check-evolutions-schema
+        run: tools/postgres/dbtool.js check-evolutions-schema
       - name: Assert that all migrations are mentioned in one migration guide and that they have a reversion counterpart.
         run: tools/assert-complete-migrations.sh
       - name: Build frontend documentation
@@ -155,6 +152,32 @@ jobs:
         run: |
           docker pull scalableminds/webknossos:$NORMALIZED_BRANCH || true
           DEV_CACHE=$NORMALIZED_BRANCH docker compose build --pull webknossos
+
+      - name: Build webknossos docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: |
+            scalableminds/webknossos:${{ env.NORMALIZED_BRANCH }}
+            scalableminds/webknossos:${{ env.DOCKER_TAG }}
+      - name: Build webknossos-datastore docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: webknossos-datastore
+          push: false
+          tags: |
+            scalableminds/webknossos-datastore:${{ env.NORMALIZED_BRANCH }}
+            scalableminds/webknossos-datastore:${{ env.DOCKER_TAG }}
+      - name: Build webknossos-tracingstore docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: webknossos-tracingstore
+          push: false
+          tags: |
+            scalableminds/webknossos-tracingstore:${{ env.NORMALIZED_BRANCH }}
+            scalableminds/webknossos-tracingstore:${{ env.DOCKER_TAG }}
+
       - name: Build webknossos-datastore docker image
         run: docker compose build --pull webknossos-datastore
       - name: Build webknossos-tracingstore docker image

@@ -70,6 +70,8 @@ services:
       - fossildb
       - -c
       - skeletons,volumes,volumeData,volumeSegmentIndex,editableMappingsInfomeditableMappingsAgglomerateToGraph,editableMappingsSegmentToAgglomerate,annotations,annotationUpdates
+    ports:
+      - "7155:7155"
     volumes:
       - "../fossildb/data:/fossildb/data"
       - "../fossildb/backup:/fossildb/backup"

@@ -11,6 +11,19 @@ export type UnmergedBufferGeometryWithInfo = THREE.BufferGeometry & {
 };
 
 export class PositionToSegmentId {
+  /*
+   * This class is able to deal with buffer geometries.
+   * Each geometry has an unmapped segment id (multiple ones can have
+   * the same segment id) and various vertices.
+   * All (sorted) geometries are concatenated and then indices are built
+   * to allow for fast queries.
+   * E.g., one query allows to go from a vertex index ("position") to
+   * the unmapped segment id of the geometry that belongs to the vertex.
+   * Similarily, one can obtain the range that covers all vertices
+   * that belong to a certain unmapped segment id.
+   * Other queries allow a similar mapping between vertex index ("position")
+   * and unmapped segment id.
+   */
   cumulativeStartPosition: number[];
   unmappedSegmentIds: number[];
   constructor(sortedBufferGeometries: UnmergedBufferGeometryWithInfo[]) {

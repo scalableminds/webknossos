@@ -2,7 +2,7 @@ import { V3 } from "libs/mjs";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import messages from "messages";
-import {
+import Constants, {
   type AnnotationTool,
   type ContourMode,
   MappingStatusEnum,
@@ -680,6 +680,20 @@ export function getSegmentName(
   return segment.name || fallback;
 }
 
+function getMeshOpacity(
+  state: OxalisState,
+  segmentId: number,
+  layerName: string,
+): number | undefined {
+  const additionalCoords = state.flycam.additionalCoordinates;
+  const additionalCoordinateKey = getAdditionalCoordinatesAsString(additionalCoords);
+  const localSegmentationData = state.localSegmentationData[layerName];
+  if (localSegmentationData?.meshes == null) return undefined;
+  const meshData = localSegmentationData.meshes[additionalCoordinateKey];
+  if (meshData == null || meshData[segmentId] == null) return undefined;
+  return meshData[segmentId].opacity;
+}
+
 // Output is in [0,1] for R, G, B, and A
 export function getSegmentColorAsRGBA(
   state: OxalisState,
@@ -697,7 +711,8 @@ export function getSegmentColorAsRGBA(
 
     if (segment?.color) {
       const [r, g, b] = segment.color;
-      return [r, g, b, 1];
+      const maybeMeshOpacity = getMeshOpacity(state, mappedId, segmentationLayer.name);
+      return [r, g, b, maybeMeshOpacity ?? Constants.DEFAULT_MESH_OPACITY];
     }
   }
 

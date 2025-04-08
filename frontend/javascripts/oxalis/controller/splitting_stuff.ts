@@ -1,3 +1,5 @@
+import * as THREE from "three";
+
 class DisjointSet {
   private parent: number[];
   private rank: number[];

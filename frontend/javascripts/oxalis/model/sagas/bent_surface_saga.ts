@@ -23,7 +23,7 @@ function* createBentSurface() {
   //   [50, 60, 80],
   // ];
 
-  const activeTree = yield* select((state) => getActiveTree(state.tracing.skeleton));
+  const activeTree = yield* select((state) => getActiveTree(state.annotation.skeleton));
   // biome-ignore lint/complexity/useOptionalChain: <explanation>
   if (activeTree != null && activeTree.isVisible) {
     const nodes = Array.from(activeTree.nodes.values());

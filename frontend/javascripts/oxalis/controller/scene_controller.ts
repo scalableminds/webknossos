@@ -57,7 +57,7 @@ const LAYER_CUBE_COLOR = 0xffff99;
 import Delaunator from "delaunator";
 import TPS3D from "libs/thin_plate_spline";
 import { WkDevFlags } from "oxalis/api/wk_dev";
-import { enforceConsistentDirection, orderPointsMST } from "./splitting_stuff";
+import { orderPointsMST } from "./splitting_stuff";
 
 import {
   computeBoundsTree,

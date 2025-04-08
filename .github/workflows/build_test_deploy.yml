@@ -192,14 +192,15 @@ jobs:
       - name: Start Fossildb
         if: ${{ github.ref_name != 'master' }}
         run: docker compose --file .github/docker-compose.yml up -d fossildb
+      - name: Prepare binaryData folder
+        run: mkdir -p binaryData/Organization_X && chmod 777 binaryData/Organization_X
       - name: Run end-to-end tests
         if: ${{ github.ref_name != 'master' }}
-        run: |
-          mkdir -p binaryData/Organization_X && chmod 777 binaryData/Organization_X
-          for i in {1..3}; do # retry
+        uses: ./.github/actions/retry
+        with:
+          run: |
             sbt "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false" && s=0 && break || s=$?
-          done
-          (exit $s)
+          reties: 3
       - name: Validate frontend types
         if: ${{ github.ref_name != 'master' }}
         run: yarn typecheck
@@ -211,17 +212,23 @@ jobs:
           docker compose --file .github/docker-compose.yml up -d webknossos-datastore
           docker compose --file .github/docker-compose.yml up -d webknossos-tracingstore
       - name: Run webknossos smoke test
-        uses: ./.github/actions/url-health-check
+        uses: ./.github/actions/retry
         with:
-          url: http://localhost:9000/api/health
+          run: curl -v --fail "http://localhost:9000/api/health"
+          retries: 20
+          retry_delay_seconds: 5
       - name: Run webknossos-datastore smoke test
-        uses: ./.github/actions/url-health-check
+        uses: ./.github/actions/retry
         with:
-          url: http://localhost:9090/data/health
+          run: curl -v --fail "http://localhost:9090/data/health"
+          retries: 20
+          retry_delay_seconds: 5
       - name: Run webknossos-tracingstore smoke test
-        uses: ./.github/actions/url-health-check
+        uses: ./.github/actions/retry
         with:
-          url: http://localhost:9050/tracings/health
+          run: curl -v --fail "http://localhost:9050/tracings/health"
+          retries: 20
+          retry_delay_seconds: 5
       - name: Stop webknossos, datastore and tracingstore
         run: docker compose --file .github/docker-compose.yml down --volumes --remove-orphans
 
@@ -229,25 +236,62 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASS }}
-      - name: Push docker images
-        run: |
-          function retry() {
-            for i in {1..5}; do
-              "$@" && s=0 && break || s=$?
-              sleep 10
-            done
-            return $s
-          }
-          if [ -n "${{ github.ref_name }}"]; then
-            retry docker push scalableminds/webknossos:$NORMALIZED_BRANCH
-            retry docker push scalableminds/webknossos:$DOCKER_TAG
 
-            retry docker push scalableminds/webknossos-datastore:$NORMALIZED_BRANCH
-            retry docker push scalableminds/webknossos-datastore:$DOCKER_TAG
-
-            retry docker push scalableminds/webknossos-tracingstore:$NORMALIZED_BRANCH
-            retry docker push scalableminds/webknossos-tracingstore:$DOCKER_TAG
-          fi
+      - name: Push webknossos image
+        uses: ./.github/actions/retry
+        with:
+          run: docker push scalableminds/webknossos:${{ env.DOCKER_TAG }}
+          retries: 5
+          retry_delay_seconds: 10
+      - name: Push normalized webknossos image
+        uses: ./.github/actions/retry
+        with:
+          run: docker push scalableminds/webknossos:${{ env.NORMALIZED_BRANCH }}
+          retries: 5
+          retry_delay_seconds: 10
+      - name: Push webknossos-datastore image
+        uses: ./.github/actions/retry
+        with:
+          run: docker push scalableminds/webknossos-datastore:${{ env.DOCKER_TAG }}
+          retries: 5
+          retry_delay_seconds: 10
+      - name: Push normalized webknossos-datastore image
+        uses: ./.github/actions/retry
+        with:
+          run: docker push scalableminds/webknossos-datastore:${{ env.NORMALIZED_BRANCH }}
+          retries: 5
+          retry_delay_seconds: 10
+      - name: Push webknossos-tracingstore image
+        uses: ./.github/actions/retry
+        with:
+          run: docker push scalableminds/webknossos-tracingstore:${{ env.DOCKER_TAG }}
+          retries: 5
+          retry_delay_seconds: 10
+      - name: Push normalized webknossos-tracingstore image
+        uses: ./.github/actions/retry
+        with:
+          run: docker push scalableminds/webknossos-tracingstore:${{ env.NORMALIZED_BRANCH }}
+          retries: 5
+          retry_delay_seconds: 10
+#      - name: Push docker images
+#        run: |
+#          function retry() {
+#            for i in {1..5}; do
+#              "$@" && s=0 && break || s=$?
+#              sleep 10
+#            done
+#            return $s
+#          }
+#          if [ -n "${{ github.ref_name }}"]; then
+#            retry docker push scalableminds/webknossos:$NORMALIZED_BRANCH
+#            retry docker push scalableminds/webknossos:$DOCKER_TAG
+#
+#            retry docker push scalableminds/webknossos-datastore:$NORMALIZED_BRANCH
+#            retry docker push scalableminds/webknossos-datastore:$DOCKER_TAG
+#
+#            retry docker push scalableminds/webknossos-tracingstore:$NORMALIZED_BRANCH
+#            retry docker push scalableminds/webknossos-tracingstore:$DOCKER_TAG
+#          fi
       - name: Report coverage
         if: ${{ github.ref_name != 'master' }}
         continue-on-error: true

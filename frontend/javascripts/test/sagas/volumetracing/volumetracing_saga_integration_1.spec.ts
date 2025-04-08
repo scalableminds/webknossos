@@ -12,38 +12,38 @@ import {
   OverwriteModeEnum,
   type Vector3,
 } from "oxalis/constants";
-import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
-import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
-import {
-  discardSaveQueuesAction,
-  dispatchRedoAsync,
-  dispatchUndoAsync,
-} from "oxalis/model/actions/save_actions";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { setToolAction } from "oxalis/model/actions/ui_actions";
-import { setActiveUserAction } from "oxalis/model/actions/user_actions";
-import {
-  addToLayerAction,
-  batchUpdateGroupsAndSegmentsAction,
-  clickSegmentAction,
-  finishEditingAction,
-  removeSegmentAction,
-  setActiveCellAction,
-  setContourTracingModeAction,
-  setSegmentGroupsAction,
-  startEditingAction,
-  updateSegmentAction,
-} from "oxalis/model/actions/volumetracing_actions";
-import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
-import Store from "oxalis/store";
-import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import dummyUser from "test/fixtures/dummy_user";
 import {
   __setupWebknossos,
   createBucketResponseFunction,
   type SetupWebknossosTestContext,
 } from "test/helpers/apiHelpers";
+import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
+import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import Store from "oxalis/store";
+import dummyUser from "test/fixtures/dummy_user";
+import { setActiveUserAction } from "oxalis/model/actions/user_actions";
+import {
+  batchUpdateGroupsAndSegmentsAction,
+  clickSegmentAction,
+  removeSegmentAction,
+  setSegmentGroupsAction,
+  updateSegmentAction,
+  setActiveCellAction,
+  addToLayerAction,
+  startEditingAction,
+  finishEditingAction,
+  setContourTracingModeAction,
+} from "oxalis/model/actions/volumetracing_actions";
+import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  dispatchUndoAsync,
+  dispatchRedoAsync,
+  discardSaveQueuesAction,
+} from "oxalis/model/actions/save_actions";
+import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
+import { setToolAction } from "oxalis/model/actions/ui_actions";
 
 describe("Volume Tracing", () => {
   beforeEach<SetupWebknossosTestContext>(async (context) => {

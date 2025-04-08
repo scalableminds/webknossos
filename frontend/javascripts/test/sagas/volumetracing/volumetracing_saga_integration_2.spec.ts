@@ -1,5 +1,4 @@
 import "test/sagas/saga_integration.mock";
-import { V3 } from "libs/mjs";
 import Constants, {
   AnnotationToolEnum,
   ContourModeEnum,
@@ -8,34 +7,35 @@ import Constants, {
   OverwriteModeEnum,
   type Vector3,
 } from "oxalis/constants";
-import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
-import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
-import {
-  discardSaveQueuesAction,
-  dispatchRedoAsync,
-  dispatchUndoAsync,
-} from "oxalis/model/actions/save_actions";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { setToolAction } from "oxalis/model/actions/ui_actions";
-import { setActiveUserAction } from "oxalis/model/actions/user_actions";
-import {
-  addToLayerAction,
-  dispatchFloodfillAsync,
-  finishEditingAction,
-  setActiveCellAction,
-  setContourTracingModeAction,
-  startEditingAction,
-} from "oxalis/model/actions/volumetracing_actions";
-import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
-import Store from "oxalis/store";
-import dummyUser from "test/fixtures/dummy_user";
 import {
   __setupWebknossos,
   createBucketResponseFunction,
   type SetupWebknossosTestContext,
 } from "test/helpers/apiHelpers";
+import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
+import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import Store from "oxalis/store";
+import { V3 } from "libs/mjs";
+import dummyUser from "test/fixtures/dummy_user";
+import { setActiveUserAction } from "oxalis/model/actions/user_actions";
+import {
+  setActiveCellAction,
+  addToLayerAction,
+  dispatchFloodfillAsync,
+  startEditingAction,
+  finishEditingAction,
+  setContourTracingModeAction,
+} from "oxalis/model/actions/volumetracing_actions";
+import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  dispatchUndoAsync,
+  dispatchRedoAsync,
+  discardSaveQueuesAction,
+} from "oxalis/model/actions/save_actions";
+import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
+import { setToolAction } from "oxalis/model/actions/ui_actions";
 
 describe("Volume Tracing", () => {
   beforeEach<SetupWebknossosTestContext>(async (context) => {

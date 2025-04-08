@@ -206,7 +206,7 @@ jobs:
         run: |
           mkdir -p binaryData/Organization_X && chmod 777 binaryData/Organization_X
           for i in {1..3}; do # retry
-            sbt "testOnly e2e.*" -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false && s=0 && break || s=$?
+            sbt "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false" && s=0 && break || s=$?
             # docker compose run e2e-tests && s=0 && break || s=$?
           done
           (exit $s)

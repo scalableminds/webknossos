@@ -271,6 +271,16 @@ class ConnectomeView extends React.Component<Props, State> {
   }
 
   componentWillUnmount() {
+    if (!Store.getState().uiInformation.isWkReady) {
+      // Because inner componentWillUnmount's are executed before
+      // outer componentWillUnmount's, we have to check isWkReady
+      // here.
+      // If isWkReady is false, this indicates that the WK viewer
+      // was already torn down. In that case, the store was reset
+      // and the scene controller destroyed. Executing the below
+      // code would crash.
+      return;
+    }
     const { segmentationLayer } = this.props;
     if (segmentationLayer == null) return;
     this.removeSkeleton(segmentationLayer);

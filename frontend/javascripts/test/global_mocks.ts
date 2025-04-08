@@ -3,6 +3,7 @@ import { vi } from "vitest";
 
 import { annotationProto as SKELETON_ANNOTATION_PROTO } from "./fixtures/skeletontracing_server_objects";
 import { annotationProto as VOLUME_ANNOTATION_PROTO } from "./fixtures/volumetracing_server_objects";
+import { sleep } from "libs/utils";
 
 // Mock global objects
 global.performance = {
@@ -82,16 +83,21 @@ vi.mock("libs/error_handling", () => {
   };
 });
 
-// Mock workers
-// vi.mock("oxalis/workers/byte_arrays_to_lz4_base64.worker.ts", function () {
-//   return {
-//     byteArraysToLz4Base64: async () => new Uint8Array(),
-//     default: async () => new Uint8Array(),
-//   };
-// });
-
 vi.mock("oxalis/workers/byte_array_lz4_compression.worker", async () => {
   return await vi.importActual("oxalis/workers/slow_byte_array_lz4_compression.worker");
+});
+
+vi.mock("libs/progress_callback", () => {
+  function createProgressCallback() {
+    async function progressCallback() {
+      return { hideFn: () => {} };
+    }
+    return progressCallback;
+  }
+
+  return {
+    default: createProgressCallback,
+  };
 });
 
 vi.mock("oxalis/model/helpers/proto_helpers", () => {

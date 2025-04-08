@@ -1,8 +1,9 @@
+/* NOTE: This is a mirror of byte_array_lz4_compression.worker.js
+ * and is ONLY meant for mocking during tests. This implementation
+ * allows to introduce an artificial delay for compression/decompression.
+ */
 import { sleep } from "libs/utils";
-// NOTE: This is a mirror of byte_array_lz4_compression.worker.js
-// and is ONLY meant for mocking during tests. This implementation
-// allows to introduce an artificial delay for compression/decompression.
-import { __compressLz4BlockHelper } from "oxalis/workers/byte_array_lz4_compression.worker";
+import * as lz4 from "lz4-wasm-nodejs";
 
 let isSleepEnabled = false;
 
@@ -15,7 +16,11 @@ async function slowCompressLz4Block(data: Uint8Array, compress: boolean): Promis
     await sleep(400);
   }
 
-  return __compressLz4BlockHelper(data, compress);
+  if (compress) {
+    return lz4.compress(data);
+  }
+
+  return lz4.decompress(data);
 }
 
 export default slowCompressLz4Block;

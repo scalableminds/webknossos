@@ -61,6 +61,7 @@ describe("Volume Tracing", () => {
   });
 
   afterEach<SetupWebknossosTestContext>(async (context) => {
+    expect(hasRootSagaCrashed()).toBe(false);
     // Saving after each test and checking that the root saga didn't crash,
     // ensures that each test is cleanly exited. Without it weird output can
     // occur (e.g., a promise gets resolved which interferes with the next test).

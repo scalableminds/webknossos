@@ -231,9 +231,9 @@ jobs:
       - name: Run webknossos-tracingstore smoke test
         uses: ./.github/actions/url-health-check
         with:
-          url: http://localhost:9090/tracings/health
+          url: http://localhost:9050/tracings/health
       - name: Stop webknossos, datastore and tracingstore
-        run: docker compose down --volumes --remove-orphans
+        run: docker compose --file .github/docker-compose.yml down --volumes --remove-orphans
 
       - uses: docker/login-action@v3
         with:
@@ -248,26 +248,15 @@ jobs:
             done
             return $s
           }
-          retry docker compose push webknossos
-          retry docker compose push webknossos-datastore
-          retry docker compose push webknossos-tracingstore
-          if [ -n "${{ github.ref_name }}" ]; then
-            docker tag \
-              scalableminds/webknossos:${DOCKER_TAG} \
-              scalableminds/webknossos:${NORMALIZED_BRANCH}
-            retry docker push scalableminds/webknossos:${NORMALIZED_BRANCH}
-            docker tag \
-              scalableminds/webknossos-datastore:${DOCKER_TAG} \
-              scalableminds/webknossos-datastore:${NORMALIZED_BRANCH}
-            retry docker push scalableminds/webknossos-datastore:${NORMALIZED_BRANCH}
-            docker tag \
-              scalableminds/webknossos-tracingstore:${DOCKER_TAG} \
-              scalableminds/webknossos-tracingstore:${NORMALIZED_BRANCH}
-            retry docker push scalableminds/webknossos-tracingstore:${NORMALIZED_BRANCH}
-            docker tag \
-              scalableminds/webknossos-dev \
-              scalableminds/webknossos-dev:${NORMALIZED_BRANCH}
-            retry docker push scalableminds/webknossos-dev:${NORMALIZED_BRANCH}
+          if [ -n "${{ github.ref_name }}"]; then
+            retry docker push scalableminds/webknossos:$NORMALIZED_BRANCH
+            retry docker push scalableminds/webknossos:$DOCKER_TAG
+
+            retry docker push scalableminds/webknossos-datastore:$NORMALIZED_BRANCH
+            retry docker push scalableminds/webknossos-datastore:$DOCKER_TAG
+
+            retry docker push scalableminds/webknossos-tracingstore:$NORMALIZED_BRANCH
+            retry docker push scalableminds/webknossos-tracingstore:$DOCKER_TAG
           fi
       - name: Report coverage
         if: ${{ github.ref_name != 'master' }}

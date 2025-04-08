@@ -96,6 +96,8 @@ services:
     image: redis:7.4
     command:
       - redis-server
+    ports:
+      - 6379:6379
     healthcheck:
       test:
         - CMD

@@ -1,12 +1,7 @@
 package models.dataset.credential
 
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.storage.{
-  DataVaultCredential,
-  GoogleServiceAccountCredential,
-  HttpBasicAuthCredential,
-  S3AccessKeyCredential
-}
+import com.scalableminds.webknossos.datastore.storage.{CredentialType, DataVaultCredential, GoogleServiceAccountCredential, HttpBasicAuthCredential, S3AccessKeyCredential}
 import com.scalableminds.webknossos.schema.Tables.{Credentials, CredentialsRow}
 import net.liftweb.common.Box.tryo
 import play.api.libs.json.Json
@@ -32,8 +27,8 @@ class CredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         r.name,
         username,
         password,
-        r._User,
-        r._Organization
+        Some(r._User),
+        Some(r._Organization)
       )
 
   private def parseAsS3AccessKeyCredential(r: CredentialsRow): Fox[S3AccessKeyCredential] =
@@ -45,8 +40,8 @@ class CredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         r.name,
         keyId,
         key,
-        r._User,
-        r._Organization
+        Some(r._User),
+        Some(r._Organization)
       )
 
   private def parseAsGoogleServiceAccountCredential(r: CredentialsRow): Fox[GoogleServiceAccountCredential] =
@@ -57,24 +52,27 @@ class CredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
       GoogleServiceAccountCredential(
         r.name,
         secretJson,
-        r._User,
-        r._Organization
+        Some(r._User),
+        Some(r._Organization)
       )
 
   def insertOne(_id: ObjectId, credential: HttpBasicAuthCredential): Fox[Unit] =
     for {
+      _ <- credential.assertScopedToUserAndOrga
       _ <- run(q"""INSERT INTO webknossos.credentials(_id, type, name, identifier, secret, _user, _organization)
                    VALUES(${_id}, ${CredentialType.HttpBasicAuth}, ${credential.name}, ${credential.username}, ${credential.password}, ${credential.user}, ${credential.organization})""".asUpdate)
     } yield ()
 
   def insertOne(_id: ObjectId, credential: S3AccessKeyCredential): Fox[Unit] =
     for {
+      _ <- credential.assertScopedToUserAndOrga
       _ <- run(q"""INSERT INTO webknossos.credentials(_id, type, name, identifier, secret, _user, _organization)
                    VALUES(${_id}, ${CredentialType.S3AccessKey}, ${credential.name}, ${credential.accessKeyId}, ${credential.secretAccessKey}, ${credential.user}, ${credential.organization})""".asUpdate)
     } yield ()
 
   def insertOne(_id: ObjectId, credential: GoogleServiceAccountCredential): Fox[Unit] =
     for {
+      _ <- credential.assertScopedToUserAndOrga
       _ <- run(q"""INSERT INTO webknossos.credentials(_id, type, name, secret, _user, _organization)
                    VALUES(${_id}, ${CredentialType.GoogleServiceAccount}, ${credential.name}, ${credential.secretJson.toString}, ${credential.user}, ${credential.organization})""".asUpdate)
     } yield ()

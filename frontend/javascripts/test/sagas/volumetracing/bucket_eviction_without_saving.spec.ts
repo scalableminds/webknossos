@@ -2,9 +2,9 @@ import { vi, it, expect, beforeEach } from "vitest";
 import { waitForCondition } from "libs/utils";
 import "test/sagas/saga_integration.mock";
 import {
-  __setupWebknossos,
+  setupWebknossosForTesting,
   createBucketResponseFunction,
-  type SetupWebknossosTestContext,
+  type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
 import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
 import Store from "oxalis/store";
@@ -14,19 +14,19 @@ import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { testLabelingManyBuckets } from "./bucket_eviction_helper";
 import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 
-beforeEach<SetupWebknossosTestContext>(async (context) => {
+beforeEach<WebknossosTestContext>(async (context) => {
   // Setup webknossos, this will execute model.fetch(...) and initialize the store with the tracing, etc.
   Store.dispatch(restartSagaAction());
   Store.dispatch(discardSaveQueuesAction());
   Store.dispatch(setActiveUserAction(dummyUser));
 
-  await __setupWebknossos(context, "volume");
+  await setupWebknossosForTesting(context, "volume");
 
   // Dispatch the wkReadyAction, so the sagas are started
   Store.dispatch(wkReadyAction());
 });
 
-it<SetupWebknossosTestContext>("Brushing/Tracing should not crash when a lot of buckets are labeled at once without saving in between", async (context) => {
+it<WebknossosTestContext>("Brushing/Tracing should not crash when a lot of buckets are labeled at once without saving in between", async (context) => {
   const { api, mocks } = context;
   await api.tracing.save();
   vi.mocked(mocks.Request.sendJSONReceiveArraybufferWithHeaders).mockImplementation(

@@ -1,4 +1,4 @@
-import { __setupWebknossos, type SetupWebknossosTestContext } from "test/helpers/apiHelpers";
+import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { makeBasicGroupObject } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import { setTreeGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
@@ -9,78 +9,70 @@ import type { Vector3 } from "oxalis/constants";
 
 // All the mocking is done in the helpers file, so it can be reused for both skeleton and volume API
 describe("API Skeleton", () => {
-  beforeEach<SetupWebknossosTestContext>(async (context) => {
-    await __setupWebknossos(context, "skeleton");
+  beforeEach<WebknossosTestContext>(async (context) => {
+    await setupWebknossosForTesting(context, "skeleton");
   });
 
-  it<SetupWebknossosTestContext>("getActiveNodeId should get the active node id", ({ api }) => {
+  it<WebknossosTestContext>("getActiveNodeId should get the active node id", ({ api }) => {
     expect(api.tracing.getActiveNodeId()).toBe(3);
   });
 
-  it<SetupWebknossosTestContext>("setActiveNode should set the active node id", ({ api }) => {
+  it<WebknossosTestContext>("setActiveNode should set the active node id", ({ api }) => {
     api.tracing.setActiveNode(1);
     expect(api.tracing.getActiveNodeId()).toBe(1);
   });
 
-  it<SetupWebknossosTestContext>("getActiveTree should get the active tree id", ({ api }) => {
+  it<WebknossosTestContext>("getActiveTree should get the active tree id", ({ api }) => {
     api.tracing.setActiveNode(3);
     expect(api.tracing.getActiveTreeId()).toBe(2);
   });
 
-  it<SetupWebknossosTestContext>("getActiveTreeGroupId should get the active group id", ({
-    api,
-  }) => {
+  it<WebknossosTestContext>("getActiveTreeGroupId should get the active group id", ({ api }) => {
     expect(api.tracing.getActiveTreeGroupId()).toBe(null);
   });
 
-  it<SetupWebknossosTestContext>("setActiveTreeGroupId should set the active group id", ({
-    api,
-  }) => {
+  it<WebknossosTestContext>("setActiveTreeGroupId should set the active group id", ({ api }) => {
     api.tracing.setActiveTreeGroup(3);
     expect(api.tracing.getActiveTreeGroupId()).toBe(3);
   });
 
-  it<SetupWebknossosTestContext>("getAllNodes should get a list of all nodes", ({ api }) => {
+  it<WebknossosTestContext>("getAllNodes should get a list of all nodes", ({ api }) => {
     const nodes = api.tracing.getAllNodes();
     expect(nodes.length).toBe(3);
   });
 
-  it<SetupWebknossosTestContext>("getCommentForNode should get the comment of a node", ({
-    api,
-  }) => {
+  it<WebknossosTestContext>("getCommentForNode should get the comment of a node", ({ api }) => {
     const comment = api.tracing.getCommentForNode(3);
     expect(comment).toBe("Test");
   });
 
-  it<SetupWebknossosTestContext>("getCommentForNode should throw an error if the supplied treeId doesn't exist", ({
+  it<WebknossosTestContext>("getCommentForNode should throw an error if the supplied treeId doesn't exist", ({
     api,
   }) => {
     expect(() => api.tracing.getCommentForNode(3, 3)).toThrow();
   });
 
-  it<SetupWebknossosTestContext>("setCommentForNode should set the comment of a node", ({
-    api,
-  }) => {
+  it<WebknossosTestContext>("setCommentForNode should set the comment of a node", ({ api }) => {
     const COMMENT = "a comment";
     api.tracing.setCommentForNode(COMMENT, 2);
     const comment = api.tracing.getCommentForNode(2);
     expect(comment).toBe(COMMENT);
   });
 
-  it<SetupWebknossosTestContext>("setCommentForNode should throw an error if the supplied nodeId doesn't exist", ({
+  it<WebknossosTestContext>("setCommentForNode should throw an error if the supplied nodeId doesn't exist", ({
     api,
   }) => {
     expect(() => api.tracing.setCommentForNode("another comment", 4)).toThrow();
   });
 
-  it<SetupWebknossosTestContext>("getCameraPosition should return the current camera position", ({
+  it<WebknossosTestContext>("getCameraPosition should return the current camera position", ({
     api,
   }) => {
     const cameraPosition = api.tracing.getCameraPosition();
     expect(cameraPosition).toEqual([1, 2, 3]);
   });
 
-  it<SetupWebknossosTestContext>("setCameraPosition should set the current camera position", ({
+  it<WebknossosTestContext>("setCameraPosition should set the current camera position", ({
     api,
   }) => {
     api.tracing.setCameraPosition([7, 8, 9]);
@@ -88,7 +80,7 @@ describe("API Skeleton", () => {
     expect(cameraPosition).toEqual([7, 8, 9]);
   });
 
-  it<SetupWebknossosTestContext>("Data Api: getLayerNames should get an array of all layer names", ({
+  it<WebknossosTestContext>("Data Api: getLayerNames should get an array of all layer names", ({
     api,
   }) => {
     expect(api.data.getLayerNames().length).toBe(2);
@@ -96,13 +88,13 @@ describe("API Skeleton", () => {
     expect(api.data.getLayerNames().includes("color")).toBe(true);
   });
 
-  it<SetupWebknossosTestContext>("Data Api: setMapping should throw an error if the layer name is not valid", ({
+  it<WebknossosTestContext>("Data Api: setMapping should throw an error if the layer name is not valid", ({
     api,
   }) => {
     expect(() => api.data.setMapping("nonExistingLayer", [1, 3])).toThrow();
   });
 
-  it<SetupWebknossosTestContext>("Data Api: setMapping should set a mapping of a layer", ({
+  it<WebknossosTestContext>("Data Api: setMapping should set a mapping of a layer", ({
     api,
     model,
   }) => {
@@ -120,13 +112,13 @@ describe("API Skeleton", () => {
     expect(cube.mapId(1)).toBe(3);
   });
 
-  it<SetupWebknossosTestContext>("Data Api: getBoundingBox should throw an error if the layer name is not valid", ({
+  it<WebknossosTestContext>("Data Api: getBoundingBox should throw an error if the layer name is not valid", ({
     api,
   }) => {
     expect(() => api.data.getBoundingBox("nonExistingLayer")).toThrow();
   });
 
-  it<SetupWebknossosTestContext>("Data Api: getBoundingBox should get the bounding box of a layer", ({
+  it<WebknossosTestContext>("Data Api: getBoundingBox should get the bounding box of a layer", ({
     api,
   }) => {
     const correctBoundingBox = [
@@ -137,13 +129,13 @@ describe("API Skeleton", () => {
     expect(boundingBox).toEqual(correctBoundingBox);
   });
 
-  it<SetupWebknossosTestContext>("Data Api: getDataValue should throw an error if the layer name is not valid", async ({
+  it<WebknossosTestContext>("Data Api: getDataValue should throw an error if the layer name is not valid", async ({
     api,
   }) => {
     await expect(api.data.getDataValue("nonExistingLayer", [1, 2, 3])).rejects.toThrow();
   });
 
-  it<SetupWebknossosTestContext>("Data Api: getDataValue should get the data value for a layer, position and zoomstep", async ({
+  it<WebknossosTestContext>("Data Api: getDataValue should get the data value for a layer, position and zoomstep", async ({
     api,
     model,
   }) => {
@@ -170,7 +162,7 @@ describe("API Skeleton", () => {
     return promise;
   });
 
-  it<SetupWebknossosTestContext>("User Api: setConfiguration should set and get a user configuration value", ({
+  it<WebknossosTestContext>("User Api: setConfiguration should set and get a user configuration value", ({
     api,
   }) => {
     const MOVE_VALUE = 100;
@@ -178,7 +170,7 @@ describe("API Skeleton", () => {
     expect(api.user.getConfiguration("moveValue")).toBe(MOVE_VALUE);
   });
 
-  it<SetupWebknossosTestContext>("User Api: setConfiguration should clamp a user configuration value if it is outside of the valid range", ({
+  it<WebknossosTestContext>("User Api: setConfiguration should clamp a user configuration value if it is outside of the valid range", ({
     api,
   }) => {
     const MOVE_VALUE = 1;
@@ -186,7 +178,7 @@ describe("API Skeleton", () => {
     expect(api.user.getConfiguration("moveValue")).toBe(userSettings.moveValue.minimum);
   });
 
-  it<SetupWebknossosTestContext>("Utils Api: registerKeyHandler should register a key handler and return a handler to unregister it again", async ({
+  it<WebknossosTestContext>("Utils Api: registerKeyHandler should register a key handler and return a handler to unregister it again", async ({
     api,
   }) => {
     // @ts-ignore libs/keyboard.ts is not a proper module
@@ -203,7 +195,7 @@ describe("API Skeleton", () => {
     expect(unbindSpy).toHaveBeenCalledTimes(1);
   });
 
-  it<SetupWebknossosTestContext>("Utils Api: registerOverwrite should overwrite an existing function", ({
+  it<WebknossosTestContext>("Utils Api: registerOverwrite should overwrite an existing function", ({
     api,
   }) => {
     let bool = false;
@@ -219,18 +211,18 @@ describe("API Skeleton", () => {
     expect(api.tracing.getActiveNodeId()).toBe(2);
   });
 
-  it<SetupWebknossosTestContext>("Calling a volume api function in a skeleton tracing should throw an error", ({
+  it<WebknossosTestContext>("Calling a volume api function in a skeleton tracing should throw an error", ({
     api,
   }) => {
     expect(() => api.tracing.getActiveCellId()).toThrow();
   });
 
-  it<SetupWebknossosTestContext>("getTreeName should get the name of a tree", ({ api }) => {
+  it<WebknossosTestContext>("getTreeName should get the name of a tree", ({ api }) => {
     const name = api.tracing.getTreeName(2);
     expect(name).toBe("explorative_2017-08-09_SCM_Boy_002");
   });
 
-  it<SetupWebknossosTestContext>("getTreeName should get the name of the active tree if no treeId is specified", ({
+  it<WebknossosTestContext>("getTreeName should get the name of the active tree if no treeId is specified", ({
     api,
   }) => {
     api.tracing.setActiveNode(1);
@@ -238,20 +230,20 @@ describe("API Skeleton", () => {
     expect(name).toBe("explorative_2017-08-09_SCM_Boy_001");
   });
 
-  it<SetupWebknossosTestContext>("getTreeName should throw an error if the supplied treeId doesn't exist", ({
+  it<WebknossosTestContext>("getTreeName should throw an error if the supplied treeId doesn't exist", ({
     api,
   }) => {
     expect(() => api.tracing.getTreeName(5)).toThrow();
   });
 
-  it<SetupWebknossosTestContext>("setTreeName should set the name of a tree", ({ api }) => {
+  it<WebknossosTestContext>("setTreeName should set the name of a tree", ({ api }) => {
     const NAME = "a tree";
     api.tracing.setTreeName(NAME, 2);
     const name = api.tracing.getTreeName(2);
     expect(name).toBe(NAME);
   });
 
-  it<SetupWebknossosTestContext>("setTreeName should set the name of the active tree if no treeId is specified", ({
+  it<WebknossosTestContext>("setTreeName should set the name of the active tree if no treeId is specified", ({
     api,
   }) => {
     const NAME = "a tree";
@@ -261,7 +253,7 @@ describe("API Skeleton", () => {
     expect(name).toBe(NAME);
   });
 
-  it<SetupWebknossosTestContext>("getTreeGroups should get all tree groups and set a tree group", ({
+  it<WebknossosTestContext>("getTreeGroups should get all tree groups and set a tree group", ({
     api,
   }) => {
     Store.dispatch(
@@ -286,7 +278,7 @@ describe("API Skeleton", () => {
     expect(state.annotation.skeleton!.trees[1].groupId).toBe(7);
   });
 
-  it<SetupWebknossosTestContext>("renameSkeletonGroup should rename a tree group", ({ api }) => {
+  it<WebknossosTestContext>("renameSkeletonGroup should rename a tree group", ({ api }) => {
     Store.dispatch(
       setTreeGroupsAction([makeBasicGroupObject(3, "group 3"), makeBasicGroupObject(7, "group 7")]),
     );
@@ -296,7 +288,7 @@ describe("API Skeleton", () => {
     expect(state.annotation.skeleton!.treeGroups[1].name).toBe("renamed");
   });
 
-  it<SetupWebknossosTestContext>("setTreeGroup should set the visibility of a tree", ({ api }) => {
+  it<WebknossosTestContext>("setTreeGroup should set the visibility of a tree", ({ api }) => {
     api.tracing.setTreeVisibility(2, false);
     expect(Store.getState().annotation.skeleton!.trees[2].isVisible).toBe(false);
 

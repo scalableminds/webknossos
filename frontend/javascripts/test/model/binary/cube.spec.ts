@@ -229,6 +229,7 @@ describe("DataCube", () => {
     cube.getOrCreateBucket([1, 1, 1, 0]);
     cube.getOrCreateBucket([2, 2, 2, 0]);
     cube.getOrCreateBucket([3, 3, 3, 0]);
+
     expect(b1.mayBeGarbageCollected(true)).toBe(false);
     const addresses = cube.buckets.map((b: DataBucket) => b.zoomedAddress);
     expect(addresses).toEqual([

@@ -13,9 +13,9 @@ import {
   type Vector3,
 } from "oxalis/constants";
 import {
-  __setupWebknossos,
+  setupWebknossosForTesting,
   createBucketResponseFunction,
-  type SetupWebknossosTestContext,
+  type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
 import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
 import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
@@ -46,13 +46,13 @@ import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flyca
 import { setToolAction } from "oxalis/model/actions/ui_actions";
 
 describe("Volume Tracing", () => {
-  beforeEach<SetupWebknossosTestContext>(async (context) => {
+  beforeEach<WebknossosTestContext>(async (context) => {
     // Setup oxalis, this will execute model.fetch(...) and initialize the store with the tracing, etc.
     Store.dispatch(restartSagaAction());
     Store.dispatch(discardSaveQueuesAction());
     Store.dispatch(setActiveUserAction(dummyUser));
 
-    await __setupWebknossos(context, "volume");
+    await setupWebknossosForTesting(context, "volume");
 
     // Ensure the slow compression is disabled by default. Tests may change
     // this individually.
@@ -61,7 +61,7 @@ describe("Volume Tracing", () => {
     Store.dispatch(wkReadyAction());
   });
 
-  afterEach<SetupWebknossosTestContext>(async (context) => {
+  afterEach<WebknossosTestContext>(async (context) => {
     expect(hasRootSagaCrashed()).toBe(false);
     // Saving after each test and checking that the root saga didn't crash,
     // ensures that each test is cleanly exited. Without it weird output can
@@ -70,10 +70,7 @@ describe("Volume Tracing", () => {
     expect(hasRootSagaCrashed()).toBe(false);
   });
 
-  it<SetupWebknossosTestContext>("Brushing with undo and garbage collection", async ({
-    api,
-    mocks,
-  }) => {
+  it<WebknossosTestContext>("Brushing with undo and garbage collection", async ({ api, mocks }) => {
     const oldCellId = 11;
 
     vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
@@ -125,7 +122,7 @@ describe("Volume Tracing", () => {
     expect(await api.data.getDataValue(volumeTracingLayerName, paintCenter)).toBe(newCellId + 1);
   });
 
-  it<SetupWebknossosTestContext>("Brushing/Tracing with upsampling to unloaded data", async ({
+  it<WebknossosTestContext>("Brushing/Tracing with upsampling to unloaded data", async ({
     api,
     mocks,
   }) => {
@@ -163,18 +160,15 @@ describe("Volume Tracing", () => {
     }
   });
 
-  it<SetupWebknossosTestContext>("Erasing on mag 4 where mag 1 is unloaded", async (context) => {
+  it<WebknossosTestContext>("Erasing on mag 4 where mag 1 is unloaded", async (context) => {
     await eraseInMag4Helper(context, false);
   });
 
-  it<SetupWebknossosTestContext>("Erasing on mag 4 where mag 1 is loaded", async (context) => {
+  it<WebknossosTestContext>("Erasing on mag 4 where mag 1 is loaded", async (context) => {
     await eraseInMag4Helper(context, true);
   });
 
-  async function eraseInMag4Helper(
-    context: SetupWebknossosTestContext,
-    loadDataAtBeginning: boolean,
-  ) {
+  async function eraseInMag4Helper(context: WebknossosTestContext, loadDataAtBeginning: boolean) {
     const { mocks, api } = context;
     const oldCellId = 11;
 
@@ -226,18 +220,15 @@ describe("Volume Tracing", () => {
     expect(_.max(data), "All the data should be 0 (== erased).").toBe(0);
   }
 
-  it<SetupWebknossosTestContext>("Undo erasing in mag 4 (load before undo)", async (context) => {
+  it<WebknossosTestContext>("Undo erasing in mag 4 (load before undo)", async (context) => {
     return await undoEraseInMag4Helper(context, false);
   });
 
-  it<SetupWebknossosTestContext>("Undo erasing in mag 4 (load after undo)", (context) => {
+  it<WebknossosTestContext>("Undo erasing in mag 4 (load after undo)", (context) => {
     return undoEraseInMag4Helper(context, true);
   });
 
-  async function undoEraseInMag4Helper(
-    context: SetupWebknossosTestContext,
-    loadBeforeUndo: boolean,
-  ) {
+  async function undoEraseInMag4Helper(context: WebknossosTestContext, loadBeforeUndo: boolean) {
     const { mocks, api } = context;
     const oldCellId = 11;
 
@@ -281,7 +272,7 @@ describe("Volume Tracing", () => {
     }
   }
 
-  it<SetupWebknossosTestContext>("Provoke race condition when bucket compression is very slow", async ({
+  it<WebknossosTestContext>("Provoke race condition when bucket compression is very slow", async ({
     api,
     mocks,
     setSlowCompression,
@@ -332,7 +323,7 @@ describe("Volume Tracing", () => {
     }
   });
 
-  it<SetupWebknossosTestContext>("Undo for deleting segment group (without recursion)", async ({
+  it<WebknossosTestContext>("Undo for deleting segment group (without recursion)", async ({
     api,
   }) => {
     const volumeTracingLayerName = api.data.getVolumeTracingLayerIds()[0];
@@ -390,9 +381,7 @@ describe("Volume Tracing", () => {
     expect(tracingRestored.segments.getOrThrow(4).groupId).toBe(2);
   });
 
-  it<SetupWebknossosTestContext>("Undo for deleting segment group (with recursion)", async ({
-    api,
-  }) => {
+  it<WebknossosTestContext>("Undo for deleting segment group (with recursion)", async ({ api }) => {
     const volumeTracingLayerName = api.data.getVolumeTracingLayerIds()[0];
     const position = [1, 2, 3] as Vector3;
 
@@ -448,7 +437,7 @@ describe("Volume Tracing", () => {
     expect(tracingRestored.segments.getOrThrow(4).groupId).toBe(2);
   });
 
-  it<SetupWebknossosTestContext>("Undo for deleting segment group (bug repro)", async ({ api }) => {
+  it<WebknossosTestContext>("Undo for deleting segment group (bug repro)", async ({ api }) => {
     const volumeTracingLayerName = api.data.getVolumeTracingLayerIds()[0];
     const position = [1, 2, 3] as Vector3;
 

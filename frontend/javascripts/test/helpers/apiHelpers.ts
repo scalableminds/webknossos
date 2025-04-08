@@ -43,7 +43,7 @@ const ANNOTATION_TYPE = "annotationTypeValue";
 const ANNOTATION_ID = "annotationIdValue";
 
 // Define extended test context
-export interface SetupWebknossosTestContext extends BaseTestContext {
+export interface WebknossosTestContext extends BaseTestContext {
   model: typeof ModelType;
   mocks: {
     Request: typeof Request;
@@ -174,9 +174,8 @@ startSagas(rootSaga);
 // This function should always be imported at the very top since it setups
 // important mocks. The leading underscores are there to make the import
 // appear at the top when sorting the imports with importjs.
-
-export async function __setupWebknossos(
-  testContext: SetupWebknossosTestContext,
+export async function setupWebknossosForTesting(
+  testContext: WebknossosTestContext,
   mode: keyof typeof modelData,
   apiVersion?: number,
 ): Promise<void> {

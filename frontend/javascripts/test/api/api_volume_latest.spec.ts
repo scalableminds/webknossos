@@ -1,5 +1,5 @@
 import { AnnotationToolEnum } from "oxalis/constants";
-import { __setupWebknossos, type SetupWebknossosTestContext } from "test/helpers/apiHelpers";
+import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import window from "libs/window";
 import {
@@ -10,26 +10,26 @@ import {
 // All the mocking is done in the helpers file, so it can be reused for both skeleton and volume API
 
 describe("API Volume", () => {
-  beforeEach<SetupWebknossosTestContext>(async (context) => {
-    await __setupWebknossos(context, "volume");
+  beforeEach<WebknossosTestContext>(async (context) => {
+    await setupWebknossosForTesting(context, "volume");
   });
 
-  it<SetupWebknossosTestContext>("getActiveCellId should get the id of the active segment", ({
+  it<WebknossosTestContext>("getActiveCellId should get the id of the active segment", ({
     api,
   }) => {
     expect(api.tracing.getActiveCellId()).toBe(TRACING.activeSegmentId);
   });
 
-  it<SetupWebknossosTestContext>("setActiveCell should set the active segment id", ({ api }) => {
+  it<WebknossosTestContext>("setActiveCell should set the active segment id", ({ api }) => {
     api.tracing.setActiveCell(27);
     expect(api.tracing.getActiveCellId()).toBe(27);
   });
 
-  it<SetupWebknossosTestContext>("getAnnotationTool should get the current tool", ({ api }) => {
+  it<WebknossosTestContext>("getAnnotationTool should get the current tool", ({ api }) => {
     expect(api.tracing.getAnnotationTool()).toBe(AnnotationToolEnum.MOVE);
   });
 
-  it<SetupWebknossosTestContext>("setAnnotationTool should set the current tool", ({ api }) => {
+  it<WebknossosTestContext>("setAnnotationTool should set the current tool", ({ api }) => {
     api.tracing.setAnnotationTool(AnnotationToolEnum.TRACE);
     expect(api.tracing.getAnnotationTool()).toBe(AnnotationToolEnum.TRACE);
 
@@ -37,7 +37,7 @@ describe("API Volume", () => {
     expect(api.tracing.getAnnotationTool()).toBe(AnnotationToolEnum.BRUSH);
   });
 
-  it<SetupWebknossosTestContext>("setAnnotationTool should throw an error for an invalid tool", ({
+  it<WebknossosTestContext>("setAnnotationTool should throw an error for an invalid tool", ({
     api,
   }) => {
     expect(() => api.tracing.setAnnotationTool(67 as any)).toThrow();
@@ -45,7 +45,7 @@ describe("API Volume", () => {
     expect(() => api.tracing.setAnnotationTool(undefined as any)).toThrow();
   });
 
-  it<SetupWebknossosTestContext>("Data API: labelVoxels should label a list of voxels", async ({
+  it<WebknossosTestContext>("Data API: labelVoxels should label a list of voxels", async ({
     api,
   }) => {
     const volumeTracingId = api.data.getVolumeTracingLayerIds()[0];
@@ -65,13 +65,13 @@ describe("API Volume", () => {
     expect(await api.data.getDataValue(volumeTracingId, [11, 12, 13])).not.toBe(34);
   });
 
-  it<SetupWebknossosTestContext>("Data API: getVolumeTracingLayerName should return the name of the volume tracing layer", ({
+  it<WebknossosTestContext>("Data API: getVolumeTracingLayerName should return the name of the volume tracing layer", ({
     api,
   }) => {
     expect(api.data.getVolumeTracingLayerName()).toBe(ANNOTATION.annotationLayers[0].tracingId);
   });
 
-  it<SetupWebknossosTestContext>("Data API: downloadRawDataCuboid should open a popup with the correct URL", async ({
+  it<WebknossosTestContext>("Data API: downloadRawDataCuboid should open a popup with the correct URL", async ({
     api,
   }) => {
     const openSpy = vi.spyOn(window, "open");
@@ -84,7 +84,7 @@ describe("API Volume", () => {
     );
   });
 
-  it<SetupWebknossosTestContext>("Calling a skeleton api function in a volume tracing should throw an error", ({
+  it<WebknossosTestContext>("Calling a skeleton api function in a volume tracing should throw an error", ({
     api,
   }) => {
     expect(() => api.tracing.getActiveNodeId()).toThrow();

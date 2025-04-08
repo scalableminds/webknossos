@@ -1,6 +1,6 @@
 import _ from "lodash";
 import "test/sagas/saga_integration.mock";
-import { createBucketResponseFunction, SetupWebknossosTestContext } from "test/helpers/apiHelpers";
+import { createBucketResponseFunction, WebknossosTestContext } from "test/helpers/apiHelpers";
 import Store from "oxalis/store";
 import { OrthoViews, AnnotationToolEnum } from "oxalis/constants";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
@@ -17,7 +17,7 @@ import type Model from "oxalis/model";
 import type { ApiInterface } from "oxalis/api/api_latest";
 import { vi } from "vitest";
 
-// These variables are set by __setupOxalis
+// These variables are set by WebknossosTestContext
 declare const api: ApiInterface;
 declare const model: typeof Model;
 declare const mocks: {
@@ -30,7 +30,7 @@ declare const mocks: {
 };
 
 export async function testLabelingManyBuckets(
-  context: SetupWebknossosTestContext,
+  context: WebknossosTestContext,
   saveInbetween: boolean,
 ) {
   const { api, model, mocks } = context;

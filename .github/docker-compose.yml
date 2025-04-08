@@ -3,6 +3,7 @@ name: webknossos-ci
 services:
   webknossos:
     image: scalableminds/webknossos:${DOCKER_TAG}
+    pull_policy: never
     ports:
       - "9000:9000"
     command:
@@ -29,6 +30,7 @@ services:
 
   webknossos-datastore:
     image: scalableminds/webknossos-datastore:${DOCKER_TAG}
+    pull_policy: never
     ports:
       - "9090:9090"
     volumes:
@@ -47,6 +49,7 @@ services:
 
   webknossos-tracingstore:
     image: scalableminds/webknossos-tracingstore:${DOCKER_TAG}
+    pull_policy: never
     ports:
       - "9050:9050"
     command:

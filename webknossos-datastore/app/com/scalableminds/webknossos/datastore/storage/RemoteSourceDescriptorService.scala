@@ -1,17 +1,15 @@
 package com.scalableminds.webknossos.datastore.storage
 
-import com.scalableminds.util.tools.{ConfigReader, Fox}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
-import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
 import net.liftweb.common.Box.tryo
-import play.api.Configuration
 
 import java.net.URI
 import java.nio.file.{Path, Paths}
@@ -101,8 +99,12 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
     }
   }
 
-  private lazy val globalCredentials = dataStoreConfig.Datastore.DataVaults.credentials.flatMap { credentialConfig =>
-    new CredentialConfigReader(credentialConfig).getCredential
+  private lazy val globalCredentials = {
+    val res = dataStoreConfig.Datastore.DataVaults.credentials.flatMap { credentialConfig =>
+      new CredentialConfigReader(credentialConfig).getCredential
+    }
+    logger.info(s"Parsed ${res.length} global data vault credentials from datastore config.")
+    res
   }
 
   private def findGlobalCredentialFor(magLocator: MagLocator)(implicit ec: ExecutionContext) =
@@ -121,31 +123,4 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
           case None             => findGlobalCredentialFor(magLocator)
         }
     }
-}
-
-class CredentialConfigReader(underlyingConfig: Config) extends ConfigReader {
-  override val raw: Configuration = Configuration(underlyingConfig)
-  def getCredential: Option[DataVaultCredential] =
-    for {
-      typeLiteral <- getOptional[String]("type")
-      typParsed <- CredentialType.fromString(typeLiteral)
-      credential <- typParsed match {
-        case CredentialType.S3AccessKey => getAsS3
-        case _                          => None
-      }
-    } yield credential
-
-  private def getAsS3: Option[S3AccessKeyCredential] =
-    for {
-      name <- getOptional[String]("name")
-      keyId <- getOptional[String]("identifier")
-      key <- getOptional[String]("secret")
-    } yield
-      S3AccessKeyCredential(
-        name,
-        keyId,
-        key,
-        None,
-        None
-      )
 }

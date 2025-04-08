@@ -390,6 +390,7 @@ export type UserConfiguration = {
   readonly moveValue3d: number;
   readonly moveValue: number;
   readonly newNodeNewTree: boolean;
+  readonly continuousNodeCreation: boolean;
   readonly centerNewNode: boolean;
   readonly overrideNodeRadius: boolean;
   readonly particleSize: number;

@@ -1052,14 +1052,14 @@ window.test = (point: Vector3) => {
   // )
 };
 
-let rayHelper;
 // Function to check intersection
-function checkLineIntersection(geometry, _pointA: Vector3, _pointB: Vector3) {
+function checkLineIntersection(geometry: THREE.BufferGeometry, _pointA: Vector3, _pointB: Vector3) {
   // Create BVH from geometry if not already built
   if (!geometry.boundsTree) {
     geometry.computeBoundsTree();
   }
-  const mul = (vec) => [11.24 * vec[0], 11.24 * vec[1], 28 * vec[2]];
+  const scale = Store.getState().dataset.dataSource.scale.factor;
+  const mul = (vec: Vector3) => [scale[0] * vec[0], scale[1] * vec[1], scale[2] * vec[2]];
   // geometry.boundsTree = undefined;
   const pointA = new THREE.Vector3(...mul(_pointA));
   const pointB = new THREE.Vector3(...mul(_pointB));
@@ -1075,17 +1075,10 @@ function checkLineIntersection(geometry, _pointA: Vector3, _pointB: Vector3) {
   raycaster.far = pointA.distanceTo(pointB); // Limit to segment length
   raycaster.firstHitOnly = true;
 
-  // if (rayHelper != null) {
-  //   window.rootGroup.remove(rayHelper);
-  // }
-
-  // rayHelper = new THREE.ArrowHelper(ray.direction, ray.origin, raycaster.far, 0xff0000);
-  // window.rootGroup.add(rayHelper);
-
   const intersects = raycaster.intersectObject(window.bentMesh, true);
   const retval = intersects.length > 0; // Returns true if an intersection is found
 
   return retval;
 }
 
-window.checkLineIntersection = checkLineIntersection;
+// window.checkLineIntersection = checkLineIntersection;

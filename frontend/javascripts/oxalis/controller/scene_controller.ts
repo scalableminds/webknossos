@@ -78,7 +78,7 @@ THREE.BatchedMesh.prototype.raycast = acceleratedRaycast;
 
 type EigenData = { eigenvalue: number; vector: number[] };
 
-function createPointCloud(points: Vector3[], color: string) {
+function _createPointCloud(points: Vector3[], color: string) {
   // Convert points to Three.js geometry
   const geometry = new THREE.BufferGeometry();
   const vertices = new Float32Array(_.flatten(points));

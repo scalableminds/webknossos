@@ -7,7 +7,7 @@ import { areVec3AlmostEqual, chunkDynamically, sleep } from "libs/utils";
 import _ from "lodash";
 import type { ActionPattern } from "redux-saga/effects";
 import type { APIDataset, APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
-
+import type * as THREE from "three";
 import {
   computeAdHocMesh,
   getBucketPositionsForAdHocMesh,

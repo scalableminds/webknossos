@@ -391,6 +391,12 @@ function SkeletonSpecificButtons() {
   const isNewNodeNewTreeModeOn = useSelector(
     (state: OxalisState) => state.userConfiguration.newNodeNewTree,
   );
+  const isContinuousNodeCreationEnabled = useSelector(
+    (state: OxalisState) => state.userConfiguration.continuousNodeCreation,
+  );
+  const toggleContinuousNodeCreation = () =>
+    dispatch(updateUserSettingAction("continuousNodeCreation", !isContinuousNodeCreationEnabled));
+
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const isUserAdminOrManager = useIsActiveUserAdminOrManager();
 
@@ -455,6 +461,15 @@ function SkeletonSpecificButtons() {
           alt="Merger Mode"
         />
       </ToggleButton>
+      <ToggleButton
+        active={isContinuousNodeCreationEnabled}
+        onClick={toggleContinuousNodeCreation}
+        style={NARROW_BUTTON_STYLE}
+        title="When activated, clicking and dragging creates nodes like a drawing tool."
+      >
+        <i className="fas fa-pen" />
+      </ToggleButton>
+
       {isMergerModeEnabled && isMaterializeVolumeAnnotationEnabled && isUserAdminOrManager && (
         <ButtonComponent
           style={NARROW_BUTTON_STYLE}

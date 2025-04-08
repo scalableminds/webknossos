@@ -71,6 +71,7 @@ const defaultState: OxalisState = {
     moveValue3d: 300,
     moveValue: 300,
     newNodeNewTree: false,
+    continuousNodeCreation: false,
     centerNewNode: true,
     overrideNodeRadius: true,
     particleSize: 5,

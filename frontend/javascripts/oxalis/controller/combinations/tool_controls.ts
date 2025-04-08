@@ -240,6 +240,7 @@ export class SkeletonTool {
     };
 
     let draggingNodeId: number | null | undefined = null;
+    let lastContinouslyPlacedNodeTimestamp: number | null = null;
     let didDragNode: boolean = false;
     return {
       leftMouseDown: (pos: Point2, plane: OrthoView, _event: MouseEvent, isTouch: boolean) => {
@@ -266,21 +267,39 @@ export class SkeletonTool {
       },
       leftDownMove: (
         delta: Point2,
-        _pos: Point2,
-        _id: string | null | undefined,
+        pos: Point2,
+        plane: string | null | undefined,
         event: MouseEvent,
       ) => {
-        const { annotation } = Store.getState();
+        const { annotation, userConfiguration } = Store.getState();
         const { useLegacyBindings } = Store.getState().userConfiguration;
 
-        if (
-          annotation.skeleton != null &&
-          (draggingNodeId != null || (useLegacyBindings && (event.ctrlKey || event.metaKey)))
-        ) {
-          didDragNode = true;
-          SkeletonHandlers.moveNode(delta.x, delta.y, draggingNodeId, true);
+        const { continuousNodeCreation } = userConfiguration;
+
+        if (continuousNodeCreation) {
+          if (
+            lastContinouslyPlacedNodeTimestamp &&
+            Date.now() - lastContinouslyPlacedNodeTimestamp < 200
+          ) {
+            return;
+          }
+          lastContinouslyPlacedNodeTimestamp = Date.now();
+
+          if (plane) {
+            const globalPosition = calculateGlobalPos(Store.getState(), pos);
+            // SkeletonHandlers.handleCreateNodeFromEvent(pos, false);
+            api.tracing.createNode(globalPosition, { center: false });
+          }
         } else {
-          MoveHandlers.handleMovePlane(delta);
+          if (
+            annotation.skeleton != null &&
+            (draggingNodeId != null || (useLegacyBindings && (event.ctrlKey || event.metaKey)))
+          ) {
+            didDragNode = true;
+            SkeletonHandlers.moveNode(delta.x, delta.y, draggingNodeId, true);
+          } else {
+            MoveHandlers.handleMovePlane(delta);
+          }
         }
       },
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {

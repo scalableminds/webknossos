@@ -107,7 +107,7 @@ const MESH_CHUNK_THROTTLE_LIMIT = 50;
 
 /*
  *
- * Ad Hoc Meshes
+ * Ad-Hoc Meshes
  *
  */
 // Maps from additional coordinates, layerName and segmentId to a ThreeDMap that stores for each chunk
@@ -212,13 +212,22 @@ function getNeighborPosition(
 }
 
 function* loadAdHocMeshFromAction(action: LoadAdHocMeshAction): Saga<void> {
+  const { layerName } = action;
+  const layer =
+    layerName != null ? Model.getLayerByName(layerName) : Model.getVisibleSegmentationLayer();
+  if (layer == null) {
+    return;
+  }
+  // Remove older mesh instanc if it exists already.
+  yield* put(removeMeshAction(layer.name, action.segmentId));
+
   yield* call(
     loadAdHocMesh,
     action.seedPosition,
     action.seedAdditionalCoordinates,
     action.segmentId,
     false,
-    action.layerName,
+    layer.name,
     action.extraInfo,
   );
 }
@@ -267,13 +276,12 @@ function* loadAdHocMesh(
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   segmentId: number,
   removeExistingMesh: boolean = false,
-  layerName?: string | null | undefined,
+  layerName: string,
   maybeExtraInfo?: AdHocMeshInfo,
 ): Saga<void> {
-  const layer =
-    layerName != null ? Model.getLayerByName(layerName) : Model.getVisibleSegmentationLayer();
+  const layer = Model.getLayerByName(layerName);
 
-  if (segmentId === 0 || layer == null) {
+  if (segmentId === 0) {
     return;
   }
 
@@ -518,9 +526,14 @@ function* maybeLoadMeshChunk(
         segmentMeshController.removeMeshById(segmentId, layer.name);
       }
 
-      // Note that this is called in a fire-and-forget fashion.
-      // We won't assume that the mesh is added immediately.
-      segmentMeshController.addMeshFromVerticesAsync(
+      // We await addMeshFromVerticesAsync here, because the mesh saga will remove
+      // an ad-hoc loaded mesh immediately if it was "empty". Since the check is
+      // done by looking at the scene, we await the population of the scene.
+      // Theoretically, this could be built differently so that other ad-hoc chunks
+      // can be loaded in parallel to addMeshFromVerticesAsync. However, it's unclear
+      // how big the bottleneck really is.
+      yield* call(
+        { fn: segmentMeshController.addMeshFromVerticesAsync, context: segmentMeshController },
         vertices,
         segmentId,
         layer.name,
@@ -738,6 +751,10 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
       : getVisibleSegmentationLayer(state),
   );
   if (layer == null) return;
+
+  // Remove older mesh instanc if it exists already.
+  yield* put(removeMeshAction(layer.name, action.segmentId));
+
   // If a REMOVE_MESH action is dispatched and consumed
   // here before loadPrecomputedMeshForSegmentId is finished, the latter saga
   // should be canceled automatically to avoid populating mesh data even though
@@ -1106,7 +1123,7 @@ function sortByDistanceTo(
 
 /*
  *
- * Ad Hoc and Precomputed Meshes
+ * Ad-Hoc and Precomputed Meshes
  *
  */
 function* downloadMeshCellById(cellName: string, segmentId: number, layerName: string): Saga<void> {

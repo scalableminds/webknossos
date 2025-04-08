@@ -1129,7 +1129,7 @@ class SegmentsView extends React.Component<Props, State> {
             this.hideContextMenu();
           }}
         >
-          Compute Meshes (ad hoc)
+          Compute Meshes (ad-hoc)
         </div>
       ),
     };

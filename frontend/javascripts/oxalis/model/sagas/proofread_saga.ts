@@ -244,7 +244,7 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
 
   if (!proofreadUsingMeshes()) return;
 
-  /* Load a coarse ad hoc mesh of the agglomerate at the click position */
+  /* Load a coarse ad-hoc mesh of the agglomerate at the click position */
   yield* call(loadCoarseMesh, layerName, segmentId, position, additionalCoordinates);
 }
 

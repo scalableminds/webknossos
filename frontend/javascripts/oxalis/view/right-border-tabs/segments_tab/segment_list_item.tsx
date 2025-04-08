@@ -161,7 +161,7 @@ const getComputeMeshAdHocMenuItem = (
       );
     },
     disabled,
-    label: <FastTooltip title={title}>Compute Mesh (ad hoc)</FastTooltip>,
+    label: <FastTooltip title={title}>Compute Mesh (ad-hoc)</FastTooltip>,
   };
 };
 

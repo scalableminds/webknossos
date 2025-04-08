@@ -190,7 +190,7 @@ export default class SegmentMeshController {
       keys,
       new THREE.Group(),
     );
-    _.set(this.meshesGroupsPerSegmentId, keys, targetGroup);
+    _.setWith(this.meshesGroupsPerSegmentId, keys, targetGroup, Object);
     if (isNewlyAddedMesh) {
       if (lod === NO_LOD_MESH_INDEX) {
         this.meshesLODRootGroup.addNoLODSupportedMesh(targetGroup);

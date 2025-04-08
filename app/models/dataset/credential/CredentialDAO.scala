@@ -1,7 +1,13 @@
 package models.dataset.credential
 
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.storage.{CredentialType, DataVaultCredential, GoogleServiceAccountCredential, HttpBasicAuthCredential, S3AccessKeyCredential}
+import com.scalableminds.webknossos.datastore.storage.{
+  CredentialType,
+  DataVaultCredential,
+  GoogleServiceAccountCredential,
+  HttpBasicAuthCredential,
+  S3AccessKeyCredential
+}
 import com.scalableminds.webknossos.schema.Tables.{Credentials, CredentialsRow}
 import net.liftweb.common.Box.tryo
 import play.api.libs.json.Json

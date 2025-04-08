@@ -39,7 +39,7 @@ case class ReserveUploadInformation(
     layersToLink: Option[List[LinkedLayerIdentifier]],
     initialTeams: List[String], // team ids
     folderId: Option[String],
-    requireUniqueName: Boolean)
+    requireUniqueName: Option[Boolean])
 object ReserveUploadInformation {
   implicit val reserveUploadInformation: OFormat[ReserveUploadInformation] = Json.format[ReserveUploadInformation]
 }

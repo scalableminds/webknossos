@@ -87,7 +87,7 @@ class WKRemoteDataStoreController @Inject()(
             uploadInfo.name,
             uploadInfo.organization,
             dataStore,
-            uploadInfo.requireUniqueName) ?~> "dataset.upload.creation.failed"
+            uploadInfo.requireUniqueName.getOrElse(false)) ?~> "dataset.upload.creation.failed"
           _ <- datasetDAO.updateFolder(dataset._id, folderId)(GlobalAccessContext)
           _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeams, user)(AuthorizedAccessContext(user))
           _ <- datasetService.addUploader(dataset, user._id)(AuthorizedAccessContext(user))

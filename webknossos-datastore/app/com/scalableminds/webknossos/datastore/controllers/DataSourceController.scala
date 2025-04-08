@@ -124,7 +124,7 @@ class DataSourceController @Inject()(
               None,
               request.body.initialTeamIds,
               request.body.folderId,
-              request.body.requireUniqueName
+              Some(request.body.requireUniqueName)
             )
           ) ?~> "dataset.upload.validation.failed"
         } yield
@@ -423,7 +423,7 @@ class DataSourceController @Inject()(
               layersToLink = None,
               initialTeams = List.empty,
               folderId = folderId,
-              requireUniqueName = false,
+              requireUniqueName = Some(false),
             )
           ) ?~> "dataset.upload.validation.failed"
           datasourceId = DataSourceId(reservedAdditionalInfo.directoryName, organizationId)

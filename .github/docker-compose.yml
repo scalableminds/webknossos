@@ -91,7 +91,7 @@ services:
       retries: 30
 
   redis:
-    image: redis:5.0
+    image: redis:7.4
     command:
       - redis-server
     healthcheck:

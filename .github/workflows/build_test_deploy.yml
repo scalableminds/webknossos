@@ -67,29 +67,6 @@ jobs:
 
   build_test_deploy:
     runs-on: ubuntu-24.04
-    services:
-      postgres:
-        image: docker.io/library/postgres:17-alpine
-        env:
-          POSTGRES_DB: "webknossos"
-          POSTGRES_USER: ${{ env.POSTGRES_USER }}
-          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 2s
-          --health-timeout 5s
-          --health-retries 30
-        ports:
-          - 5432:5432
-      redis:
-        image: docker.io/library/redis:7.4.2
-        options: >-
-          --health-cmd "bash -c 'exec 3<> /dev/tcp/127.0.0.1/6379 && echo PING >&3 && head -1 <&3 | grep PONG'"
-          --health-interval 5s
-          --health-timeout 1s
-          --health-retries 10
-        ports:
-          - 6379:6379
     env:
       USER_UID: 1001
       USER_GID: 1001
@@ -100,6 +77,8 @@ jobs:
           fetch-depth: 5
 
       - uses: docker/setup-buildx-action@v2
+      - name: Start Docker Services
+        run: docker compose --file .github/docker-compose.yml up -d postgres redis
 
       - uses: actions/setup-node@v4
         with:
@@ -197,7 +176,7 @@ jobs:
         run: sbt -v "testOnly backend.*"
       - name: Start Fossildb
         if: ${{ github.ref_name != 'master' }}
-        run: docker compose up -d fossildb
+        run: docker compose --file .github/docker-compose.yml up -d fossildb
       - name: Run end-to-end tests
         if: ${{ github.ref_name != 'master' }}
         run: |

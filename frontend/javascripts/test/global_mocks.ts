@@ -3,10 +3,10 @@ import { vi } from "vitest";
 
 import { annotationProto as SKELETON_ANNOTATION_PROTO } from "./fixtures/skeletontracing_server_objects";
 import { annotationProto as VOLUME_ANNOTATION_PROTO } from "./fixtures/volumetracing_server_objects";
-import { sleep } from "libs/utils";
 
 // Mock global objects
 global.performance = {
+  ...global.performance,
   now: vi.fn(() => Date.now()),
 };
 

@@ -156,14 +156,17 @@ describe("API Skeleton", () => {
     const bucketAddress = cube.positionToZoomedAddress(position, null, zoomStep);
     const bucket = cube.getOrCreateBucket(bucketAddress);
 
-    vi.spyOn(cube.pullQueue, "pull").mockReturnValue([Promise.resolve(true)]);
+    vi.spyOn(cube.pullQueue, "pull").mockReturnValue();
     vi.spyOn(cube, "getDataValue").mockReturnValue(1337);
 
     const promise = api.data.getDataValue("segmentation", position, zoomStep).then((dataValue) => {
       expect(dataValue).toBe(1337);
     });
 
-    bucket.trigger("bucketLoaded");
+    expect(bucket.type).toBe("data");
+    if (bucket.type === "data") {
+      bucket.trigger("bucketLoaded");
+    }
     return promise;
   });
 

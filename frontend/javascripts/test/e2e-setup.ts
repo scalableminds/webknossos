@@ -87,6 +87,7 @@ global.FetchError = FetchError;
 global.FormData = FormData;
 global.File = File;
 
+// @ts-ignore
 import { JSDOM } from "jsdom";
 
 // set pretendToBeVisual to true, so that window.requestAnimationFrame is available from JSDOM

@@ -144,21 +144,17 @@ describe("Volume Annotation Sampling", () => {
       [0, 1, 2],
       5,
     );
-    const upsampledVoxelMapAsArray: LabeledVoxelsMapAsArray = Array.from(
+    const upsampledVoxelMapAsArray = Array.from(
       upsampledVoxelMapPerBucket,
-    );
+    ) as LabeledVoxelsMapAsArray;
     const bucketZoomedAddress = upsampledVoxelMapAsArray[0][0];
     const upsampledVoxelMap = upsampledVoxelMapAsArray[0][1];
-    expect(bucketZoomedAddress).toEqual(
-      [0, 0, 0, 0, []],
-      "The bucket of the upsampled map should be correct.",
-    );
+    expect(bucketZoomedAddress).toEqual([0, 0, 0, 0, []]);
 
     for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
       for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {
         expect(getVoxelMapEntry(firstDim, secondDim, upsampledVoxelMap)).toBe(
           getVoxelMapEntry(firstDim, secondDim, goalVoxelMap),
-          "The labeled voxels of the upsampled voxel map should match the expected labels",
         );
       }
     }
@@ -207,21 +203,17 @@ describe("Volume Annotation Sampling", () => {
       [0, 1, 2],
       5,
     );
-    const upsampledVoxelMapAsArray: LabeledVoxelsMapAsArray = Array.from(
+    const upsampledVoxelMapAsArray = Array.from(
       upsampledVoxelMapPerBucket,
-    );
+    ) as LabeledVoxelsMapAsArray;
     const bucketZoomedAddress = upsampledVoxelMapAsArray[0][0];
     const upsampledVoxelMap = upsampledVoxelMapAsArray[0][1];
-    expect(bucketZoomedAddress).toEqual(
-      [1, 0, 0, 0, []],
-      "The bucket of the upsampled map should be correct.",
-    );
+    expect(bucketZoomedAddress).toEqual([1, 0, 0, 0, []]);
 
     for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
       for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {
         expect(getVoxelMapEntry(firstDim, secondDim, upsampledVoxelMap)).toBe(
           getVoxelMapEntry(firstDim, secondDim, goalVoxelMap),
-          "The labeled voxels of the upsampled voxel map should match the expected labels",
         );
       }
     }
@@ -270,21 +262,17 @@ describe("Volume Annotation Sampling", () => {
       [0, 1, 2],
       5,
     );
-    const upsampledVoxelMapAsArray: LabeledVoxelsMapAsArray = Array.from(
+    const upsampledVoxelMapAsArray = Array.from(
       upsampledVoxelMapPerBucket,
-    );
+    ) as LabeledVoxelsMapAsArray;
     const bucketZoomedAddress = upsampledVoxelMapAsArray[0][0];
     const upsampledVoxelMap = upsampledVoxelMapAsArray[0][1];
-    expect(bucketZoomedAddress).toEqual(
-      [0, 1, 0, 0, []],
-      "The bucket of the upsampled map should be correct.",
-    );
+    expect(bucketZoomedAddress).toEqual([0, 1, 0, 0, []]);
 
     for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
       for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {
         expect(getVoxelMapEntry(firstDim, secondDim, upsampledVoxelMap)).toBe(
           getVoxelMapEntry(firstDim, secondDim, goalVoxelMap),
-          "The labeled voxels of the upsampled voxel map should match the expected labels",
         );
       }
     }
@@ -333,21 +321,17 @@ describe("Volume Annotation Sampling", () => {
       [0, 1, 2],
       5,
     );
-    const upsampledVoxelMapAsArray: LabeledVoxelsMapAsArray = Array.from(
+    const upsampledVoxelMapAsArray = Array.from(
       upsampledVoxelMapPerBucket,
-    );
+    ) as LabeledVoxelsMapAsArray;
     const bucketZoomedAddress = upsampledVoxelMapAsArray[0][0];
     const upsampledVoxelMap = upsampledVoxelMapAsArray[0][1];
-    expect(bucketZoomedAddress).toEqual(
-      [1, 1, 0, 0, []],
-      "The bucket of the upsampled map should be correct.",
-    );
+    expect(bucketZoomedAddress).toEqual([1, 1, 0, 0, []]);
 
     for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
       for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {
         expect(getVoxelMapEntry(firstDim, secondDim, upsampledVoxelMap)).toBe(
           getVoxelMapEntry(firstDim, secondDim, goalVoxelMap),
-          "The labeled voxels of the upsampled voxel map should match the expected labels",
         );
       }
     }
@@ -396,21 +380,17 @@ describe("Volume Annotation Sampling", () => {
       [0, 1, 2],
       40,
     );
-    const upsampledVoxelMapAsArray: LabeledVoxelsMapAsArray = Array.from(
+    const upsampledVoxelMapAsArray = Array.from(
       upsampledVoxelMapPerBucket,
-    );
+    ) as LabeledVoxelsMapAsArray;
     const bucketZoomedAddress = upsampledVoxelMapAsArray[0][0];
     const upsampledVoxelMap = upsampledVoxelMapAsArray[0][1];
-    expect(bucketZoomedAddress).toEqual(
-      [0, 0, 1, 0, []],
-      "The bucket of the upsampled map should be correct.",
-    );
+    expect(bucketZoomedAddress).toEqual([0, 0, 1, 0, []]);
 
     for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
       for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {
         expect(getVoxelMapEntry(firstDim, secondDim, upsampledVoxelMap)).toBe(
           getVoxelMapEntry(firstDim, secondDim, goalVoxelMap),
-          "The labeled voxels of the upsampled voxel map should match the expected labels",
         );
       }
     }
@@ -447,21 +427,17 @@ describe("Volume Annotation Sampling", () => {
       [0, 1, 2],
       5,
     );
-    const upsampledVoxelMapAsArray: LabeledVoxelsMapAsArray = Array.from(
+    const upsampledVoxelMapAsArray = Array.from(
       upsampledVoxelMapPerBucket,
-    );
+    ) as LabeledVoxelsMapAsArray;
     const bucketZoomedAddress = upsampledVoxelMapAsArray[0][0];
     const upsampledVoxelMap = upsampledVoxelMapAsArray[0][1];
-    expect(bucketZoomedAddress).toEqual(
-      [1, 1, 0, 0, []],
-      "The bucket of the upsampled map should be correct.",
-    );
+    expect(bucketZoomedAddress).toEqual([1, 1, 0, 0, []]);
 
     for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
       for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {
         expect(getVoxelMapEntry(firstDim, secondDim, upsampledVoxelMap)).toBe(
           getVoxelMapEntry(firstDim, secondDim, goalVoxelMap),
-          "The labeled voxels of the upsampled voxel map should match the expected labels",
         );
       }
     }
@@ -529,25 +505,17 @@ describe("Volume Annotation Sampling", () => {
       [0, 1, 2],
       5,
     );
-    const upsampledVoxelMapAsArray: LabeledVoxelsMapAsArray = Array.from(
+    const upsampledVoxelMapAsArray = Array.from(
       upsampledVoxelMapPerBucket,
-    );
+    ) as LabeledVoxelsMapAsArray;
     const bucketZoomedAddress = upsampledVoxelMapAsArray[0][0];
     const upsampledVoxelMap = upsampledVoxelMapAsArray[0][1];
-    expect(bucketZoomedAddress).toEqual(
-      [0, 0, 0, 1, []],
-      "The bucket of the downsampled map should be correct.",
-    );
+    expect(bucketZoomedAddress).toEqual([0, 0, 0, 1, []]);
 
     for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
       for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {
         expect(getVoxelMapEntry(firstDim, secondDim, upsampledVoxelMap)).toBe(
           getVoxelMapEntry(firstDim, secondDim, goalVoxelMap),
-          `The labeled voxels of the downsampled voxel map should match the expected labels: ${firstDim}, ${secondDim}, got ${getVoxelMapEntry(
-            firstDim,
-            secondDim,
-            upsampledVoxelMap,
-          )} , expected ${getVoxelMapEntry(firstDim, secondDim, goalVoxelMap)}.`,
         );
       }
     }
@@ -615,25 +583,17 @@ describe("Volume Annotation Sampling", () => {
       [0, 1, 2],
       5,
     );
-    const upsampledVoxelMapAsArray: LabeledVoxelsMapAsArray = Array.from(
+    const upsampledVoxelMapAsArray = Array.from(
       upsampledVoxelMapPerBucket,
-    );
+    ) as LabeledVoxelsMapAsArray;
     const bucketZoomedAddress = upsampledVoxelMapAsArray[0][0];
     const upsampledVoxelMap = upsampledVoxelMapAsArray[0][1];
-    expect(bucketZoomedAddress).toEqual(
-      [0, 0, 0, 2, []],
-      "The bucket of the downsampled map should be correct.",
-    );
+    expect(bucketZoomedAddress).toEqual([0, 0, 0, 2, []]);
 
     for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
       for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {
         expect(getVoxelMapEntry(firstDim, secondDim, upsampledVoxelMap)).toBe(
           getVoxelMapEntry(firstDim, secondDim, goalVoxelMap),
-          `The labeled voxels of the downsampled voxel map should match the expected labels: ${firstDim}, ${secondDim}, got ${getVoxelMapEntry(
-            firstDim,
-            secondDim,
-            upsampledVoxelMap,
-          )} , expected ${getVoxelMapEntry(firstDim, secondDim, goalVoxelMap)}.`,
         );
       }
     }
@@ -677,10 +637,7 @@ describe("Volume Annotation Sampling", () => {
     for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
       for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {
         const addr = cube.getVoxelIndex([firstDim, secondDim, 5], 0);
-        expect(labeledBucketData[addr]).toBe(
-          expectedBucketData[addr],
-          `Did not apply voxel map at ${[firstDim, secondDim, 5, 1].toString()} correctly.`,
-        );
+        expect(labeledBucketData[addr]).toBe(expectedBucketData[addr]);
       }
     }
   });

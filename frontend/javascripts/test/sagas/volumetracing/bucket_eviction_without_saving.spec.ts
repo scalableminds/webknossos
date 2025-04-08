@@ -22,8 +22,6 @@ beforeEach<SetupWebknossosTestContext>(async (context) => {
 
   await __setupWebknossos(context, "volume");
 
-  console.log("context.api", context.api);
-
   // Dispatch the wkReadyAction, so the sagas are started
   Store.dispatch(wkReadyAction());
 });

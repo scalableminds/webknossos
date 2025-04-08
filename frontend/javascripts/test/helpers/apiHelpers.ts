@@ -61,7 +61,7 @@ vi.mock("libs/request", () => ({
     sendJSONReceiveArraybuffer: vi.fn().mockReturnValue(Promise.resolve()),
     sendJSONReceiveArraybufferWithHeaders: vi
       .fn()
-      .mockImplementation(() => createBucketResponseFunction(Uint8Array, 0)),
+      .mockImplementation(createBucketResponseFunction(Uint8Array, 0)),
     always: vi.fn().mockReturnValue(Promise.resolve()),
   },
 }));

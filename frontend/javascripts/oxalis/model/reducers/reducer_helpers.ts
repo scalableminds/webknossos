@@ -57,12 +57,10 @@ export function convertUserBoundingBoxesFromServerToFrontend(
   });
 }
 export function convertUserBoundingBoxesFromFrontendToServer(
-  boundingBoxes: Array<UserBoundingBox>,
-): Array<UserBoundingBoxToServer> {
-  return boundingBoxes.map((bb) => {
-    const { boundingBox, ...rest } = bb;
-    return { ...rest, boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(boundingBox) };
-  });
+  boundingBox: UserBoundingBox,
+): UserBoundingBoxToServer {
+  const { boundingBox: bb, ...rest } = boundingBox;
+  return { ...rest, boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(bb) };
 }
 export function convertFrontendBoundingBoxToServer(
   boundingBox: BoundingBoxType,

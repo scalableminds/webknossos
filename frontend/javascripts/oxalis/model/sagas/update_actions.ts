@@ -409,7 +409,7 @@ export function addUserBoundingBoxInSkeletonTracingAction(
   return {
     name: "addUserBoundingBoxSkeletonAction",
     value: {
-      boundingBox: convertUserBoundingBoxesFromFrontendToServer([boundingBox]),
+      boundingBox: convertUserBoundingBoxesFromFrontendToServer(boundingBox),
       actionTracingId,
     },
   } as const;
@@ -422,7 +422,7 @@ export function addUserBoundingBoxInVolumeTracingAction(
   return {
     name: "addUserBoundingBoxVolumeAction",
     value: {
-      boundingBox: convertUserBoundingBoxesFromFrontendToServer([boundingBox]),
+      boundingBox: convertUserBoundingBoxesFromFrontendToServer(boundingBox),
       actionTracingId,
     },
   } as const;
@@ -496,7 +496,7 @@ export function updateUserBoundingBoxesInSkeletonTracing(
     name: "updateUserBoundingBoxesInSkeletonTracing",
     value: {
       actionTracingId,
-      boundingBoxes: convertUserBoundingBoxesFromFrontendToServer(userBoundingBoxes),
+      boundingBoxes: userBoundingBoxes.map(convertUserBoundingBoxesFromFrontendToServer),
     },
   } as const;
 }
@@ -508,7 +508,7 @@ export function updateUserBoundingBoxesInVolumeTracing(
     name: "updateUserBoundingBoxesInVolumeTracing",
     value: {
       actionTracingId,
-      boundingBoxes: convertUserBoundingBoxesFromFrontendToServer(userBoundingBoxes),
+      boundingBoxes: userBoundingBoxes.map(convertUserBoundingBoxesFromFrontendToServer),
     },
   } as const;
 }

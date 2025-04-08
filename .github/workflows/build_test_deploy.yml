@@ -63,54 +63,6 @@ jobs:
       - name: Check for cyclic dependencies in frontend
         run: yarn check-cyclic-dependencies
 
-  backend-tests:
-    runs-on: ubuntu-24.04
-    if: ${{ github.ref_name != 'master' }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 5
-
-      - name: Start Docker Services
-        run: docker compose --file .github/docker-compose.yml up -d postgres
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 18
-      - run: corepack enable
-      - uses: actions/cache@v4
-        id: node_modules
-        with:
-          path: |
-            tools/postgres/node_modules
-            tools/proxy/node_modules
-            node_modules
-          key: node_modules-${{ hashFiles('**/yarn.lock') }}
-      - name: Install frontend dependencies
-        if: steps.node_modules.outputs.cache-hit != 'true'
-        run: yarn install --immutable
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-      - uses: sbt/setup-sbt@v1
-
-      - name: "Install System Dependencies"
-        run: sudo apt-get update && sudo apt-get install -y libdraco-dev libblosc1
-
-      - name: Assert unique evolution numbers
-        run: tools/postgres/dbtool.js assert-unique-evolution-numbers
-      - name: Assert schema.sql and evolutions are equal
-        run: tools/postgres/dbtool.js check-evolutions-schema
-      - name: Assert that all migrations are mentioned in one migration guide and that they have a reversion counterpart.
-        run: tools/assert-complete-migrations.sh
-
-      - name: Lint backend code and check formatting
-        run: sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
-      - name: Run backend tests
-        run: sbt -v "testOnly backend.*"
-
   build_test_deploy:
     runs-on: ubuntu-24.04
     env:

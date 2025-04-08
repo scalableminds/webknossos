@@ -1,7 +1,6 @@
-import "test/sagas/volumetracing/volumetracing_saga.mock";
+import { vi, it, expect, describe } from "vitest";
 import { take, put, call } from "redux-saga/effects";
 import update from "immutability-helper";
-import _ from "lodash";
 import type { APISegmentationLayer, ServerVolumeTracing } from "types/api_flow_types";
 import {
   OrthoViews,
@@ -16,34 +15,25 @@ import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
 import defaultState from "oxalis/default_state";
-import mockRequire from "mock-require";
-import sinon from "sinon";
-import test from "ava";
 import { expectValueDeepEqual, execCall } from "test/helpers/sagaHelpers";
 import { withoutUpdateTracing } from "test/helpers/saveHelpers";
 import type { ActiveMappingInfo } from "oxalis/store";
 import { askUserForLockingActiveMapping } from "oxalis/model/sagas/saga_helpers";
-
-mockRequire("oxalis/model/sagas/root_saga", function* () {
-  yield;
-});
-mockRequire("libs/toast", {
-  info: _.noop,
-});
-
-const { setupSavingForTracingType } = require("oxalis/model/sagas/save_saga");
-
-const { editVolumeLayerAsync, finishLayer } = require("oxalis/model/sagas/volumetracing_saga");
-const {
+import { setupSavingForTracingType } from "oxalis/model/sagas/save_saga";
+import { editVolumeLayerAsync, finishLayer } from "oxalis/model/sagas/volumetracing_saga";
+import {
   requestBucketModificationInVolumeTracing,
   ensureMaybeActiveMappingIsLocked,
-} = require("oxalis/model/sagas/saga_helpers");
+} from "oxalis/model/sagas/saga_helpers";
+import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
+import { serverVolumeToClientVolumeTracing } from "oxalis/model/reducers/volumetracing_reducer";
 
-const VolumeLayer = require("oxalis/model/volumetracing/volumelayer").default;
-
-const {
-  serverVolumeToClientVolumeTracing,
-} = require("oxalis/model/reducers/volumetracing_reducer");
+// Mock dependencies
+vi.mock("oxalis/model/sagas/root_saga", () => ({
+  default: function* () {
+    yield;
+  },
+}));
 
 const serverVolumeTracing: ServerVolumeTracing = {
   typ: "Volume",
@@ -78,6 +68,7 @@ const serverVolumeTracing: ServerVolumeTracing = {
   userBoundingBoxes: [],
   largestSegmentId: 0,
 };
+
 const volumeTracing = serverVolumeToClientVolumeTracing(serverVolumeTracing);
 const volumeTracingLayer: APISegmentationLayer = {
   name: volumeTracing.tracingId,
@@ -89,6 +80,7 @@ const volumeTracingLayer: APISegmentationLayer = {
   tracingId: volumeTracing.tracingId,
   additionalAxes: [],
 };
+
 const initialState = update(defaultState, {
   annotation: {
     volumes: {
@@ -130,354 +122,371 @@ const setActiveCellAction = VolumeTracingActions.setActiveCellAction(ACTIVE_CELL
 const startEditingAction = VolumeTracingActions.startEditingAction([0, 0, 0], OrthoViews.PLANE_XY);
 const addToLayerActionFn = VolumeTracingActions.addToLayerAction;
 const finishEditingAction = VolumeTracingActions.finishEditingAction();
-const TIMESTAMP = 123456789;
-test.before("Mock Date.now", async () => {
-  // This only mocks Date.now, but leaves the constructor intact
-  sinon.stub(Date, "now").returns(TIMESTAMP);
-});
 
-test("VolumeTracingSaga shouldn't do anything if unchanged (saga test)", (t) => {
-  const saga = setupSavingForTracingType(
-    VolumeTracingActions.initializeVolumeTracingAction(serverVolumeTracing),
-  );
+describe("VolumeTracingSaga", () => {
+  it("shouldn't do anything if unchanged (saga test)", () => {
+    const saga = setupSavingForTracingType(
+      VolumeTracingActions.initializeVolumeTracingAction(serverVolumeTracing),
+    );
 
-  saga.next();
-  saga.next(initialState.annotation.volumes[0]);
-  saga.next(initialState.flycam);
-  saga.next(initialState.viewModeData.plane.tdCamera);
-  saga.next();
-  saga.next();
-  saga.next(true);
-  saga.next(initialState.annotation.volumes[0]);
-  saga.next(initialState.flycam);
-  // only updateTracing
-  const items = execCall(t, saga.next(initialState.viewModeData.plane.tdCamera));
-  t.is(withoutUpdateTracing(items).length, 0);
-});
-
-test("VolumeTracingSaga should do something if changed (saga test)", (t) => {
-  const newState = VolumeTracingReducer(initialState, setActiveCellAction);
-  const saga = setupSavingForTracingType(
-    VolumeTracingActions.initializeVolumeTracingAction(serverVolumeTracing),
-  );
-
-  saga.next();
-  saga.next(initialState.annotation.volumes[0]);
-  saga.next(initialState.flycam);
-  saga.next(initialState.viewModeData.plane.tdCamera);
-  saga.next();
-  saga.next();
-  saga.next(true);
-  saga.next(newState.annotation.volumes[0]);
-  saga.next(newState.flycam);
-  const items = execCall(t, saga.next(newState.viewModeData.plane.tdCamera));
-  t.is(withoutUpdateTracing(items).length, 0);
-  t.true(items[0].value.activeSegmentId === ACTIVE_CELL_ID);
-  expectValueDeepEqual(t, saga.next(items), put(pushSaveQueueTransaction(items)));
-});
-
-test("VolumeTracingSaga should create a volume layer (saga test)", (t) => {
-  const saga = editVolumeLayerAsync();
-  saga.next();
-  saga.next();
-  expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
-  saga.next(startEditingAction);
-  saga.next({
-    isBusy: false,
+    saga.next();
+    saga.next(initialState.annotation.volumes[0]);
+    saga.next(initialState.flycam);
+    saga.next(initialState.viewModeData.plane.tdCamera);
+    saga.next();
+    saga.next();
+    saga.next(true);
+    saga.next(initialState.annotation.volumes[0]);
+    saga.next(initialState.flycam);
+    // only updateTracing
+    const items = execCall(expect, saga.next(initialState.viewModeData.plane.tdCamera));
+    expect(withoutUpdateTracing(items).length).toBe(0);
   });
-  saga.next(volumeTracing);
-  saga.next(OverwriteModeEnum.OVERWRITE_ALL);
-  saga.next(AnnotationToolEnum.BRUSH);
-  saga.next(false);
-  // pass labeled mag
-  saga.next({
-    mag: [1, 1, 1],
-    zoomStep: 0,
+
+  it("should do something if changed (saga test)", () => {
+    const newState = VolumeTracingReducer(initialState, setActiveCellAction);
+    const saga = setupSavingForTracingType(
+      VolumeTracingActions.initializeVolumeTracingAction(serverVolumeTracing),
+    );
+
+    saga.next();
+    saga.next(initialState.annotation.volumes[0]);
+    saga.next(initialState.flycam);
+    saga.next(initialState.viewModeData.plane.tdCamera);
+    saga.next();
+    saga.next();
+    saga.next(true);
+    saga.next(newState.annotation.volumes[0]);
+    saga.next(newState.flycam);
+
+    const items = execCall(expect, saga.next(newState.viewModeData.plane.tdCamera));
+
+    expect(withoutUpdateTracing(items).length).toBe(0);
+    expect(items[0].value.activeSegmentId).toBe(ACTIVE_CELL_ID);
+    expectValueDeepEqual(expect, saga.next(items), put(pushSaveQueueTransaction(items)));
   });
-  saga.next(ACTIVE_CELL_ID); // pass active cell id
-  saga.next(ensureMaybeMappingIsLockedReturnValueDummy);
-  expectValueDeepEqual(
-    t,
-    saga.next([]), // pass empty additional coords
-    put(
-      VolumeTracingActions.updateSegmentAction(
-        ACTIVE_CELL_ID,
-        {
-          somePosition: startEditingAction.position,
-          someAdditionalCoordinates: [],
-        },
-        volumeTracing.tracingId,
-      ),
-    ),
-  );
-  const startEditingSaga = execCall(t, saga.next());
-  startEditingSaga.next();
-  // Pass position
-  const layer = startEditingSaga.next([1, 1, 1]).value;
-  t.is(layer.plane, OrthoViews.PLANE_XY);
-});
 
-test("VolumeTracingSaga should add values to volume layer (saga test)", (t) => {
-  const saga = editVolumeLayerAsync();
-  saga.next();
-  saga.next();
-  expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
-  saga.next(startEditingAction);
-  saga.next({
-    isBusy: false,
-  });
-  saga.next(volumeTracing);
-  saga.next(OverwriteModeEnum.OVERWRITE_ALL);
-  saga.next(AnnotationToolEnum.TRACE);
-  saga.next(false);
-  saga.next({
-    mag: [1, 1, 1],
-    zoomStep: 0,
-  }); // pass labeled mag
-
-  saga.next(ACTIVE_CELL_ID); // pass active cell id
-  saga.next(ensureMaybeMappingIsLockedReturnValueDummy);
-  expectValueDeepEqual(
-    t,
-    saga.next([]), // pass empty additional coords
-
-    put(
-      VolumeTracingActions.updateSegmentAction(
-        ACTIVE_CELL_ID,
-        {
-          somePosition: startEditingAction.position,
-          someAdditionalCoordinates: [],
-        },
-        volumeTracing.tracingId,
-      ),
-    ),
-  );
-  saga.next(); // advance from the put action
-
-  const volumeLayer = new VolumeLayer(volumeTracing.tracingId, OrthoViews.PLANE_XY, 10, [1, 1, 1]);
-  saga.next(volumeLayer);
-  saga.next(OrthoViews.PLANE_XY);
-  saga.next("action_channel");
-  saga.next(addToLayerActionFn([1, 2, 3]));
-  saga.next(OrthoViews.PLANE_XY);
-  saga.next(addToLayerActionFn([2, 3, 4]));
-  saga.next(OrthoViews.PLANE_XY);
-  saga.next(addToLayerActionFn([3, 4, 5]));
-  saga.next(OrthoViews.PLANE_XY);
-  t.deepEqual(volumeLayer.minCoord, [-1, 0, 1]);
-  t.deepEqual(volumeLayer.maxCoord, [5, 6, 7]);
-});
-
-test("VolumeTracingSaga should finish a volume layer (saga test)", (t) => {
-  const saga = editVolumeLayerAsync();
-  saga.next();
-  saga.next();
-  expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
-  saga.next(startEditingAction);
-  saga.next({
-    isBusy: false,
-  });
-  saga.next(volumeTracing);
-  saga.next(OverwriteModeEnum.OVERWRITE_ALL);
-  saga.next(AnnotationToolEnum.TRACE);
-  saga.next(false);
-  saga.next({
-    mag: [1, 1, 1],
-    zoomStep: 0,
-  }); // pass labeled mag
-
-  saga.next(ACTIVE_CELL_ID); // pass active cell id
-  saga.next(ensureMaybeMappingIsLockedReturnValueDummy);
-  expectValueDeepEqual(
-    t,
-    saga.next([]), // pass empty additional coords
-
-    put(
-      VolumeTracingActions.updateSegmentAction(
-        ACTIVE_CELL_ID,
-        {
-          somePosition: startEditingAction.position,
-          someAdditionalCoordinates: [],
-        },
-        volumeTracing.tracingId,
-      ),
-    ),
-  );
-  saga.next(); // advance from the put action
-
-  const volumeLayer = new VolumeLayer(volumeTracing.tracingId, OrthoViews.PLANE_XY, 10, [1, 1, 1]);
-  saga.next(volumeLayer);
-  saga.next(OrthoViews.PLANE_XY);
-  saga.next("action_channel");
-  saga.next(addToLayerActionFn([1, 2, 3]));
-  saga.next(OrthoViews.PLANE_XY);
-  // Validate that finishLayer was called
-  const wroteVoxelsBox = {
-    value: false,
-  };
-  expectValueDeepEqual(
-    t,
-    saga.next(finishEditingAction),
-    call(
-      finishLayer,
-      volumeLayer,
-      AnnotationToolEnum.TRACE,
-      ContourModeEnum.DRAW,
-      OverwriteModeEnum.OVERWRITE_ALL,
-      0,
-      OrthoViews.PLANE_XY,
-      wroteVoxelsBox,
-    ),
-  );
-});
-
-test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)", (t) => {
-  const saga = editVolumeLayerAsync();
-  saga.next();
-  saga.next();
-  expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
-  saga.next(startEditingAction);
-  saga.next({
-    isBusy: false,
-  });
-  saga.next({ ...volumeTracing, contourTracingMode: ContourModeEnum.DELETE });
-  saga.next(OverwriteModeEnum.OVERWRITE_ALL);
-  saga.next(AnnotationToolEnum.TRACE);
-  saga.next(false);
-  saga.next({
-    mag: [1, 1, 1],
-    zoomStep: 0,
-  }); // pass labeled mag
-  saga.next(ACTIVE_CELL_ID); // pass active cell id
-  saga.next(ensureMaybeMappingIsLockedReturnValueDummy);
-  expectValueDeepEqual(
-    t,
-    saga.next([]), // pass empty additional coords
-    put(
-      VolumeTracingActions.updateSegmentAction(
-        ACTIVE_CELL_ID,
-        {
-          somePosition: startEditingAction.position,
-          someAdditionalCoordinates: [],
-        },
-        volumeTracing.tracingId,
-      ),
-    ),
-  );
-  saga.next(); // advance from the put action
-
-  const volumeLayer = new VolumeLayer(volumeTracing.tracingId, OrthoViews.PLANE_XY, 10, [1, 1, 1]);
-  saga.next(volumeLayer);
-  saga.next(OrthoViews.PLANE_XY);
-  saga.next("action_channel");
-  saga.next(addToLayerActionFn([1, 2, 3]));
-  saga.next(OrthoViews.PLANE_XY);
-  const wroteVoxelsBox = {
-    value: false,
-  };
-  // Validate that finishLayer was called
-  expectValueDeepEqual(
-    t,
-    saga.next(finishEditingAction),
-    call(
-      finishLayer,
-      volumeLayer,
-      AnnotationToolEnum.TRACE,
-      ContourModeEnum.DELETE,
-      OverwriteModeEnum.OVERWRITE_ALL,
-      0,
-      OrthoViews.PLANE_XY,
-      wroteVoxelsBox,
-    ),
-  );
-});
-
-test("VolumeTracingSaga should ignore brush action when busy (saga test)", (t) => {
-  const saga = editVolumeLayerAsync();
-  saga.next();
-  saga.next();
-  expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
-  saga.next(startEditingAction);
-  // When isBusy is true, the saga should wait for a new START_EDITING action
-  // (thus, other actions, such as finishLayer, will be ignored).
-  expectValueDeepEqual(
-    t,
+  it("should create a volume layer (saga test)", () => {
+    const saga = editVolumeLayerAsync();
+    saga.next();
+    saga.next();
+    expectValueDeepEqual(expect, saga.next(true), take("START_EDITING"));
+    saga.next(startEditingAction);
     saga.next({
-      isBusy: true,
-    }),
-    take("START_EDITING"),
-  );
-});
+      isBusy: false,
+    });
+    saga.next(volumeTracing);
+    saga.next(OverwriteModeEnum.OVERWRITE_ALL);
+    saga.next(AnnotationToolEnum.BRUSH);
+    saga.next(false);
+    // pass labeled mag
+    saga.next({
+      mag: [1, 1, 1],
+      zoomStep: 0,
+    });
+    saga.next(ACTIVE_CELL_ID); // pass active cell id
+    saga.next(ensureMaybeMappingIsLockedReturnValueDummy);
 
-test("VolumeTracingSaga should lock an active mapping upon first volume annotation", (t) => {
-  const saga = editVolumeLayerAsync();
-  saga.next();
-  saga.next();
-  expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
-  saga.next(startEditingAction);
-  saga.next({
-    isBusy: false,
+    expectValueDeepEqual(
+      expect,
+      saga.next([]), // pass empty additional coords
+      put(
+        VolumeTracingActions.updateSegmentAction(
+          ACTIVE_CELL_ID,
+          {
+            somePosition: startEditingAction.position,
+            someAdditionalCoordinates: [],
+          },
+          volumeTracing.tracingId,
+        ),
+      ),
+    );
+    const startEditingSaga = execCall(expect, saga.next());
+    startEditingSaga.next();
+
+    // Pass position
+    const layer = startEditingSaga.next([1, 1, 1]).value;
+    expect(layer.plane).toBe(OrthoViews.PLANE_XY);
   });
-  saga.next(volumeTracing);
-  saga.next(OverwriteModeEnum.OVERWRITE_ALL);
-  saga.next(AnnotationToolEnum.BRUSH);
-  saga.next(false);
-  // pass labeled mag
-  saga.next({
-    mag: [1, 1, 1],
-    zoomStep: 0,
+
+  it("should add values to volume layer (saga test)", () => {
+    const saga = editVolumeLayerAsync();
+    saga.next();
+    saga.next();
+    expectValueDeepEqual(expect, saga.next(true), take("START_EDITING"));
+    saga.next(startEditingAction);
+    saga.next({
+      isBusy: false,
+    });
+    saga.next(volumeTracing);
+    saga.next(OverwriteModeEnum.OVERWRITE_ALL);
+    saga.next(AnnotationToolEnum.TRACE);
+    saga.next(false);
+    saga.next({
+      mag: [1, 1, 1],
+      zoomStep: 0,
+    }); // pass labeled mag
+
+    saga.next(ACTIVE_CELL_ID); // pass active cell id
+    saga.next(ensureMaybeMappingIsLockedReturnValueDummy);
+    expectValueDeepEqual(
+      expect,
+      saga.next([]), // pass empty additional coords
+      put(
+        VolumeTracingActions.updateSegmentAction(
+          ACTIVE_CELL_ID,
+          {
+            somePosition: startEditingAction.position,
+            someAdditionalCoordinates: [],
+          },
+          volumeTracing.tracingId,
+        ),
+      ),
+    );
+    saga.next(); // advance from the put action
+
+    const volumeLayer = new VolumeLayer(
+      volumeTracing.tracingId,
+      OrthoViews.PLANE_XY,
+      10,
+      [1, 1, 1],
+    );
+    saga.next(volumeLayer);
+    saga.next(OrthoViews.PLANE_XY);
+    saga.next("action_channel");
+    saga.next(addToLayerActionFn([1, 2, 3]));
+    saga.next(OrthoViews.PLANE_XY);
+    saga.next(addToLayerActionFn([2, 3, 4]));
+    saga.next(OrthoViews.PLANE_XY);
+    saga.next(addToLayerActionFn([3, 4, 5]));
+    saga.next(OrthoViews.PLANE_XY);
+    expect(volumeLayer.minCoord).toEqual([-1, 0, 1]);
+    expect(volumeLayer.maxCoord).toEqual([5, 6, 7]);
   });
-  // Test whether nested saga requestBucketModificationInVolumeTracing is called.
-  expectValueDeepEqual(
-    t,
-    saga.next(ACTIVE_CELL_ID),
-    call(requestBucketModificationInVolumeTracing, volumeTracing),
-  );
-});
 
-test("ensureMaybeActiveMappingIsLocked should lock an existing mapping to the annotation", (t) => {
-  const activeMappingByLayer = { [volumeTracing.tracingId]: dummyActiveMapping };
-  const saga = ensureMaybeActiveMappingIsLocked(volumeTracing);
-  saga.next();
-  expectValueDeepEqual(
-    t,
-    saga.next({ [volumeTracing.tracingId]: dummyActiveMapping }),
-    call(askUserForLockingActiveMapping, volumeTracing, activeMappingByLayer),
-  );
-  t.true(saga.next().done);
-});
+  it("should finish a volume layer (saga test)", () => {
+    const saga = editVolumeLayerAsync();
+    saga.next();
+    saga.next();
+    expectValueDeepEqual(expect, saga.next(true), take("START_EDITING"));
+    saga.next(startEditingAction);
+    saga.next({
+      isBusy: false,
+    });
+    saga.next(volumeTracing);
+    saga.next(OverwriteModeEnum.OVERWRITE_ALL);
+    saga.next(AnnotationToolEnum.TRACE);
+    saga.next(false);
+    saga.next({
+      mag: [1, 1, 1],
+      zoomStep: 0,
+    }); // pass labeled mag
 
-test("ensureMaybeActiveMappingIsLocked should lock 'no mapping' in case no mapping is active.", (t) => {
-  const saga = ensureMaybeActiveMappingIsLocked(volumeTracing);
-  saga.next();
-  expectValueDeepEqual(
-    t,
-    saga.next({}),
-    put(VolumeTracingActions.setMappingIsLockedAction(volumeTracing.tracingId)),
-  );
-  t.true(saga.next().done);
-});
+    saga.next(ACTIVE_CELL_ID); // pass active cell id
+    saga.next(ensureMaybeMappingIsLockedReturnValueDummy);
+    expectValueDeepEqual(
+      expect,
+      saga.next([]), // pass empty additional coords
+      put(
+        VolumeTracingActions.updateSegmentAction(
+          ACTIVE_CELL_ID,
+          {
+            somePosition: startEditingAction.position,
+            someAdditionalCoordinates: [],
+          },
+          volumeTracing.tracingId,
+        ),
+      ),
+    );
+    saga.next(); // advance from the put action
 
-test("ensureMaybeActiveMappingIsLocked should lock 'no mapping' in case a mapping is active but disabled.", (t) => {
-  const jsonDummyMapping = { ...dummyActiveMapping, mappingStatus: MappingStatusEnum.DISABLED };
-  const saga = ensureMaybeActiveMappingIsLocked(volumeTracing);
-  saga.next();
-  expectValueDeepEqual(
-    t,
-    saga.next({ [volumeTracing.tracingId]: jsonDummyMapping }),
-    put(VolumeTracingActions.setMappingIsLockedAction(volumeTracing.tracingId)),
-  );
-  t.true(saga.next().done);
-});
+    const volumeLayer = new VolumeLayer(
+      volumeTracing.tracingId,
+      OrthoViews.PLANE_XY,
+      10,
+      [1, 1, 1],
+    );
+    saga.next(volumeLayer);
+    saga.next(OrthoViews.PLANE_XY);
+    saga.next("action_channel");
+    saga.next(addToLayerActionFn([1, 2, 3]));
+    saga.next(OrthoViews.PLANE_XY);
+    // Validate that finishLayer was called
+    const wroteVoxelsBox = {
+      value: false,
+    };
+    expectValueDeepEqual(
+      expect,
+      saga.next(finishEditingAction),
+      call(
+        finishLayer,
+        volumeLayer,
+        AnnotationToolEnum.TRACE,
+        ContourModeEnum.DRAW,
+        OverwriteModeEnum.OVERWRITE_ALL,
+        0,
+        OrthoViews.PLANE_XY,
+        wroteVoxelsBox,
+      ),
+    );
+  });
 
-test("ensureMaybeActiveMappingIsLocked should lock 'no mapping' in case a JSON mapping is active.", (t) => {
-  const jsonDummyMapping = { ...dummyActiveMapping, mappingType: "JSON" };
-  const saga = ensureMaybeActiveMappingIsLocked(volumeTracing);
-  saga.next();
-  expectValueDeepEqual(
-    t,
-    saga.next({ [volumeTracing.tracingId]: jsonDummyMapping }),
-    put(VolumeTracingActions.setMappingIsLockedAction(volumeTracing.tracingId)),
-  );
-  t.true(saga.next().done);
+  it("should finish a volume layer in delete mode (saga test)", () => {
+    const saga = editVolumeLayerAsync();
+    saga.next();
+    saga.next();
+
+    expectValueDeepEqual(expect, saga.next(true), take("START_EDITING"));
+
+    saga.next(startEditingAction);
+    saga.next({
+      isBusy: false,
+    });
+    saga.next({ ...volumeTracing, contourTracingMode: ContourModeEnum.DELETE });
+    saga.next(OverwriteModeEnum.OVERWRITE_ALL);
+    saga.next(AnnotationToolEnum.TRACE);
+    saga.next(false);
+    saga.next({
+      mag: [1, 1, 1],
+      zoomStep: 0,
+    }); // pass labeled mag
+    saga.next(ACTIVE_CELL_ID); // pass active cell id
+    saga.next(ensureMaybeMappingIsLockedReturnValueDummy);
+
+    expectValueDeepEqual(
+      expect,
+      saga.next([]), // pass empty additional coords
+      put(
+        VolumeTracingActions.updateSegmentAction(
+          ACTIVE_CELL_ID,
+          {
+            somePosition: startEditingAction.position,
+            someAdditionalCoordinates: [],
+          },
+          volumeTracing.tracingId,
+        ),
+      ),
+    );
+    saga.next(); // advance from the put action
+
+    const volumeLayer = new VolumeLayer(
+      volumeTracing.tracingId,
+      OrthoViews.PLANE_XY,
+      10,
+      [1, 1, 1],
+    );
+    saga.next(volumeLayer);
+    saga.next(OrthoViews.PLANE_XY);
+    saga.next("action_channel");
+    saga.next(addToLayerActionFn([1, 2, 3]));
+    saga.next(OrthoViews.PLANE_XY);
+    const wroteVoxelsBox = {
+      value: false,
+    };
+    // Validate that finishLayer was called
+    expectValueDeepEqual(
+      expect,
+      saga.next(finishEditingAction),
+      call(
+        finishLayer,
+        volumeLayer,
+        AnnotationToolEnum.TRACE,
+        ContourModeEnum.DELETE,
+        OverwriteModeEnum.OVERWRITE_ALL,
+        0,
+        OrthoViews.PLANE_XY,
+        wroteVoxelsBox,
+      ),
+    );
+  });
+
+  it("should ignore brush action when busy (saga test)", () => {
+    const saga = editVolumeLayerAsync();
+    saga.next();
+    saga.next();
+    expectValueDeepEqual(expect, saga.next(true), take("START_EDITING"));
+    saga.next(startEditingAction);
+    // When isBusy is true, the saga should wait for a new START_EDITING action
+    // (thus, other actions, such as finishLayer, will be ignored).
+    expectValueDeepEqual(
+      expect,
+      saga.next({
+        isBusy: true,
+      }),
+      take("START_EDITING"),
+    );
+  });
+
+  it("should lock an active mapping upon first volume annotation", () => {
+    const saga = editVolumeLayerAsync();
+    saga.next();
+    saga.next();
+    expectValueDeepEqual(expect, saga.next(true), take("START_EDITING"));
+    saga.next(startEditingAction);
+    saga.next({
+      isBusy: false,
+    });
+    saga.next(volumeTracing);
+    saga.next(OverwriteModeEnum.OVERWRITE_ALL);
+    saga.next(AnnotationToolEnum.BRUSH);
+    saga.next(false);
+    // pass labeled mag
+    saga.next({
+      mag: [1, 1, 1],
+      zoomStep: 0,
+    });
+    // Test whether nested saga requestBucketModificationInVolumeTracing is called.
+    expectValueDeepEqual(
+      expect,
+      saga.next(ACTIVE_CELL_ID),
+      call(requestBucketModificationInVolumeTracing, volumeTracing),
+    );
+  });
+
+  it("ensureMaybeActiveMappingIsLocked should lock an existing mapping to the annotation", () => {
+    const activeMappingByLayer = { [volumeTracing.tracingId]: dummyActiveMapping };
+    const saga = ensureMaybeActiveMappingIsLocked(volumeTracing);
+    saga.next();
+    expectValueDeepEqual(
+      expect,
+      saga.next({ [volumeTracing.tracingId]: dummyActiveMapping }),
+      call(askUserForLockingActiveMapping, volumeTracing, activeMappingByLayer),
+    );
+    expect(saga.next().done).toBe(true);
+  });
+
+  it("ensureMaybeActiveMappingIsLocked should lock 'no mapping' in case no mapping is active.", () => {
+    const saga = ensureMaybeActiveMappingIsLocked(volumeTracing);
+    saga.next();
+    expectValueDeepEqual(
+      expect,
+      saga.next({}),
+      put(VolumeTracingActions.setMappingIsLockedAction(volumeTracing.tracingId)),
+    );
+    expect(saga.next().done).toBe(true);
+  });
+
+  it("ensureMaybeActiveMappingIsLocked should lock 'no mapping' in case a mapping is active but disabled.", () => {
+    const jsonDummyMapping = { ...dummyActiveMapping, mappingStatus: MappingStatusEnum.DISABLED };
+    const saga = ensureMaybeActiveMappingIsLocked(volumeTracing);
+    saga.next();
+    expectValueDeepEqual(
+      expect,
+      saga.next({ [volumeTracing.tracingId]: jsonDummyMapping }),
+      put(VolumeTracingActions.setMappingIsLockedAction(volumeTracing.tracingId)),
+    );
+    expect(saga.next().done).toBe(true);
+  });
+
+  it("ensureMaybeActiveMappingIsLocked should lock 'no mapping' in case a JSON mapping is active.", () => {
+    const jsonDummyMapping = { ...dummyActiveMapping, mappingType: "JSON" };
+    const saga = ensureMaybeActiveMappingIsLocked(volumeTracing);
+    saga.next();
+    expectValueDeepEqual(
+      expect,
+      saga.next({ [volumeTracing.tracingId]: jsonDummyMapping }),
+      put(VolumeTracingActions.setMappingIsLockedAction(volumeTracing.tracingId)),
+    );
+    expect(saga.next().done).toBe(true);
+  });
 });

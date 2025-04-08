@@ -174,15 +174,6 @@ jobs:
             scalableminds/webknossos-tracingstore:${{ env.NORMALIZED_BRANCH }}
             scalableminds/webknossos-tracingstore:${{ env.DOCKER_TAG }}
 
-      - name: Build webknossos docker image
-        run: |
-          docker pull scalableminds/webknossos:$NORMALIZED_BRANCH || true
-          DEV_CACHE=$NORMALIZED_BRANCH docker compose build --pull webknossos
-      - name: Build webknossos-datastore docker image
-        run: docker compose build --pull webknossos-datastore
-      - name: Build webknossos-tracingstore docker image
-        run: docker compose build --pull webknossos-tracingstore
-
       - name: Lint frontend code and check formatting
         if: ${{ github.ref_name != 'master' }}
         run: yarn run check-frontend
@@ -207,7 +198,6 @@ jobs:
           mkdir -p binaryData/Organization_X && chmod 777 binaryData/Organization_X
           for i in {1..3}; do # retry
             sbt "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false" && s=0 && break || s=$?
-            # docker compose run e2e-tests && s=0 && break || s=$?
           done
           (exit $s)
       - name: Validate frontend types

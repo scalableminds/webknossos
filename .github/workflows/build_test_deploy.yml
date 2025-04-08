@@ -213,29 +213,25 @@ jobs:
       - name: Validate frontend types
         if: ${{ github.ref_name != 'master' }}
         run: yarn typecheck
+
       - name: Start webknossos, datastore and tracingstore
-        run: docker compose up -d webknossos && docker compose up -d webknossos-datastore && docker compose up -d webknossos-tracingstore
+        run: |
+          set -e
+          docker compose --file .github/docker-compose.yml up -d webknossos
+          docker compose --file .github/docker-compose.yml up -d webknossos-datastore
+          docker compose --file .github/docker-compose.yml up -d webknossos-tracingstore
       - name: Run webknossos smoke test
-        run: |
-          for i in {1..20}; do # retry
-            curl --fail -v http://localhost:9000/api/health && s=0 && break || s=$?
-            sleep 5
-          done
-          (exit $s)
+        uses: ./.github/actions/url-health-check
+        with:
+          url: http://localhost:9000/api/health
       - name: Run webknossos-datastore smoke test
-        run: |
-          for i in {1..20}; do # retry
-            curl --fail -v http://localhost:9090/data/health && s=0 && break || s=$?
-            sleep 5
-          done
-          (exit $s)
+        uses: ./.github/actions/url-health-check
+        with:
+          url: http://localhost:9090/data/health
       - name: Run webknossos-tracingstore smoke test
-        run: |
-          for i in {1..20}; do # retry
-            curl --fail -v http://localhost:9050/tracings/health && s=0 && break || s=$?
-            sleep 5
-          done
-          (exit $s)
+        uses: ./.github/actions/url-health-check
+        with:
+          url: http://localhost:9090/tracings/health
       - name: Stop webknossos, datastore and tracingstore
         run: docker compose down --volumes --remove-orphans
 

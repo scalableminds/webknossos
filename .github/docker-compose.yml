@@ -69,7 +69,7 @@ services:
     command:
       - fossildb
       - -c
-      - skeletons,volumes,volumeData,volumeSegmentIndex,editableMappingsInfomeditableMappingsAgglomerateToGraph,editableMappingsSegmentToAgglomerate,annotations,annotationUpdates
+      - skeletons,skeletonTreeBodies,volumes,volumeData,volumeSegmentIndex,editableMappingsInfomeditableMappingsAgglomerateToGraph,editableMappingsSegmentToAgglomerate,annotations,annotationUpdates
     ports:
       - "7155:7155"
     volumes:

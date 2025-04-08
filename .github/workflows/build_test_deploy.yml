@@ -182,6 +182,7 @@ jobs:
         run: docker compose build --pull webknossos-datastore
       - name: Build webknossos-tracingstore docker image
         run: docker compose build --pull webknossos-tracingstore
+
       - name: Lint frontend code and check formatting
         if: ${{ github.ref_name != 'master' }}
         run: yarn run check-frontend

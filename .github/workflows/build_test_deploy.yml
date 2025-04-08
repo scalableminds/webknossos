@@ -195,12 +195,16 @@ jobs:
       - name: Run backend tests
         if: ${{ github.ref_name != 'master' }}
         run: sbt -v "testOnly backend.*"
+      - name: Start Fossildb
+        if: ${{ github.ref_name != 'master' }}
+        run: docker compose up -d fossildb
       - name: Run end-to-end tests
         if: ${{ github.ref_name != 'master' }}
         run: |
           mkdir -p binaryData/Organization_X && chmod 777 binaryData/Organization_X
           for i in {1..3}; do # retry
-            docker compose run e2e-tests && s=0 && break || s=$?
+            sbt "testOnly e2e.*" -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false && s=0 && break || s=$?
+            # docker compose run e2e-tests && s=0 && break || s=$?
           done
           (exit $s)
       - name: Validate frontend types

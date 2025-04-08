@@ -144,7 +144,7 @@ const modelData = {
   },
 };
 
-const { default: Store, startSagas } = require("oxalis/store");
+const { default: Store, startSaga } = require("oxalis/store");
 const rootSaga = require("oxalis/model/sagas/root_saga").default;
 const { setStore, setModel } = require("oxalis/singletons");
 const { setupApi } = require("oxalis/api/internal_api");
@@ -155,7 +155,7 @@ const { setActiveOrganizationAction } = mockRequire.reRequire(
 setModel(Model);
 setStore(Store);
 setupApi();
-startSagas(rootSaga);
+startSaga(rootSaga);
 
 const ANNOTATION_TYPE = "annotationTypeValue";
 const ANNOTATION_ID = "annotationIdValue";

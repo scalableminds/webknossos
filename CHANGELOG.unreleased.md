@@ -21,6 +21,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Fixed
 - Fixed visual alignment of actions in ai model list. [#8474](https://github.com/scalableminds/webknossos/pull/8474)
+- Fixed that is was possible to trigger the find largest segment id job on layers which are not stored as segmentation layers on the server. [#8503](https://github.com/scalableminds/webknossos/pull/8503)
 - Improve formatting of credits amount in organization management page [#8487](https://github.com/scalableminds/webknossos/pull/8487)
 - Re-enabled jobs planned to be paid with credits for organizations without a paid plan. [#8478](https://github.com/scalableminds/webknossos/pull/8478)
 - Fixed that the dataset extent tooltip in the right details bar in the dashboard did not properly update when switching datasets. [#8477](https://github.com/scalableminds/webknossos/pull/8477)

@@ -12,6 +12,11 @@ export default {
     window.materials = window.materials || [];
     window.materials[identifier] = material;
   },
+
+  destroy() {
+    window.materials = [];
+    window.managers = [];
+  },
 };
 
 function loadAceImpl(options, callback) {

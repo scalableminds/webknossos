@@ -583,6 +583,7 @@ type BaseMeshInformation = {
   readonly seedAdditionalCoordinates?: AdditionalCoordinate[] | null;
   readonly isLoading: boolean;
   readonly isVisible: boolean;
+  readonly opacity: number;
   readonly mappingName: string | null | undefined;
 };
 export type AdHocMeshInformation = BaseMeshInformation & {
@@ -663,8 +664,8 @@ const store = createStore<OxalisState, Action, unknown, unknown>(
   applyMiddleware(actionLoggerMiddleware, overwriteActionMiddleware, sagaMiddleware as Middleware),
 );
 
-export function startSagas(rootSaga: Saga<any[]>) {
-  sagaMiddleware.run(rootSaga);
+export function startSaga(saga: Saga<any[]>) {
+  sagaMiddleware.run(saga);
 }
 
 export type StoreType = typeof store;

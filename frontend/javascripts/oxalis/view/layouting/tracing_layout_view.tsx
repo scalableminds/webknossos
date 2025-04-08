@@ -11,10 +11,16 @@ import Constants from "oxalis/constants";
 import type { ControllerStatus } from "oxalis/controller";
 import OxalisController from "oxalis/controller";
 import MergerModeController from "oxalis/controller/merger_mode_controller";
+import { destroySceneController } from "oxalis/controller/scene_controller_provider";
+import UrlManager from "oxalis/controller/url_manager";
 import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
+import { cancelSagaAction } from "oxalis/model/actions/actions";
+import { resetStoreAction } from "oxalis/model/actions/actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import rootSaga from "oxalis/model/sagas/root_saga";
 import { Store } from "oxalis/singletons";
-import type { OxalisState, Theme, TraceOrViewCommand } from "oxalis/store";
+import { Model } from "oxalis/singletons";
+import { type OxalisState, type Theme, type TraceOrViewCommand, startSaga } from "oxalis/store";
 import ActionBarView from "oxalis/view/action_bar_view";
 import WkContextMenu from "oxalis/view/context_menu";
 import DistanceMeasurementTooltip from "oxalis/view/distance_measurement_tooltip";
@@ -106,7 +112,27 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     Toast.error(messages["react.rendering_error"]);
   }
 
+  componentDidMount() {
+    startSaga(rootSaga);
+  }
+
   componentWillUnmount() {
+    UrlManager.stopUrlUpdater();
+    Model.reset();
+    destroySceneController();
+    Store.dispatch(resetStoreAction());
+    Store.dispatch(cancelSagaAction());
+
+    const { activeUser } = Store.getState();
+    if (activeUser?.isSuperUser) {
+      // For super users, we don't enforce a page reload.
+      // They'll act as a guinea pig for this performance
+      // improvement for now.
+      return;
+    }
+
+    // Enforce a reload to absolutely ensure a clean slate.
+
     // Replace entire document with loading message
     if (document.body != null) {
       const mainContainer = document.getElementById("main-container");

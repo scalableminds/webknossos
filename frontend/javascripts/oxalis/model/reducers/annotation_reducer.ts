@@ -2,6 +2,7 @@ import update from "immutability-helper";
 import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 import _ from "lodash";
+import Constants from "oxalis/constants";
 import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { getDisplayedDataExtentInPlaneMode } from "oxalis/model/accessors/view_mode_accessor";
 import type { Action } from "oxalis/model/actions/actions";
@@ -279,6 +280,40 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "UPDATE_MESH_OPACITY": {
+      const { layerName, id, opacity } = action;
+      const meshDict = state.localSegmentationData[layerName].meshes;
+      if (meshDict == null) return state;
+      const currentAdditionalCoordinates = Object.keys(meshDict || {});
+      const updatedMeshes = _.reduce(
+        currentAdditionalCoordinates,
+        (updatedMeshesDict, additionalCoordKey) => {
+          const meshes = updatedMeshesDict[additionalCoordKey];
+          if (meshes == null) return updatedMeshesDict;
+          return {
+            ...updatedMeshesDict,
+            [additionalCoordKey]: update(meshes, {
+              [id]: {
+                opacity: {
+                  $set: opacity,
+                },
+              },
+            }),
+          };
+        },
+        meshDict,
+      );
+      return update(state, {
+        localSegmentationData: {
+          [layerName]: {
+            meshes: {
+              $set: updatedMeshes,
+            },
+          },
+        },
+      });
+    }
+
     case "REMOVE_MESH": {
       const { layerName, segmentId } = action;
       const newMeshes: Record<string, Record<number, MeshInformation>> = {};
@@ -323,6 +358,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         isLoading: false,
         isVisible: true,
         isPrecomputed: false,
+        opacity: Constants.DEFAULT_MESH_OPACITY,
         mappingName,
         mappingType,
       };
@@ -367,6 +403,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         isLoading: false,
         isVisible: true,
         isPrecomputed: true,
+        opacity: Constants.DEFAULT_MESH_OPACITY,
         meshFileName,
         mappingName,
       };

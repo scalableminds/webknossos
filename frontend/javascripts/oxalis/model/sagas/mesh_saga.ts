@@ -52,6 +52,7 @@ import {
   type RemoveMeshAction,
   type TriggerMeshDownloadAction,
   type TriggerMeshesDownloadAction,
+  type UpdateMeshOpacityAction,
   type UpdateMeshVisibilityAction,
   addAdHocMeshAction,
   addPrecomputedMeshAction,
@@ -1278,6 +1279,11 @@ function* handleSegmentColorChange(action: UpdateSegmentAction): Saga<void> {
   }
 }
 
+function* handleMeshOpacityChange(action: UpdateMeshOpacityAction): Saga<void> {
+  const { segmentMeshController } = yield* call(getSceneController);
+  segmentMeshController.setMeshOpacity(action.id, action.layerName, action.opacity);
+}
+
 function* handleBatchSegmentColorChange(
   batchAction: BatchUpdateGroupsAndSegmentsAction,
 ): Saga<void> {
@@ -1313,5 +1319,6 @@ export default function* meshSaga(): Saga<void> {
   yield* takeEvery("UPDATE_MESH_VISIBILITY", handleMeshVisibilityChange);
   yield* takeEvery(["START_EDITING", "COPY_SEGMENTATION_LAYER"], markEditedCellAsDirty);
   yield* takeEvery("UPDATE_SEGMENT", handleSegmentColorChange);
+  yield* takeEvery("UPDATE_MESH_OPACITY", handleMeshOpacityChange);
   yield* takeEvery("BATCH_UPDATE_GROUPS_AND_SEGMENTS", handleBatchSegmentColorChange);
 }

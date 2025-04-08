@@ -123,10 +123,8 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     Store.dispatch(resetStoreAction());
     Store.dispatch(cancelSagaAction());
 
-    // todop: remove before merging
-    const ENFORCE_FOR_TESTING = true;
     const { activeUser } = Store.getState();
-    if (ENFORCE_FOR_TESTING || activeUser?.isSuperUser) {
+    if (activeUser?.isSuperUser) {
       // For super users, we don't enforce a page reload.
       // They'll act as a guinea pig for this performance
       // improvement for now.

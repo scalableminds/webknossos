@@ -9,6 +9,7 @@ import scala.concurrent.ExecutionContext
 sealed trait DataVaultCredential {
   def userId: Option[String]
   def organization: Option[String]
+  def name: String
 
   private def isScopedToUserAndOrga: Boolean = userId.isDefined && organization.isDefined
   def assertScopedToUserAndOrga(implicit ec: ExecutionContext): Fox[Unit] =
@@ -72,6 +73,7 @@ case class LegacyDataVaultCredential(user: String, password: Option[String]) ext
                           user = Some(""),
                           organization = Some(""))
 
+  override def name: String = ""
   override def userId: Option[String] = Some("")
   override def organization: Option[String] = Some("")
 }

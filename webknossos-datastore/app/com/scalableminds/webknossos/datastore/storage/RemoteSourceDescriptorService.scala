@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.storage
 
 import com.scalableminds.util.tools.{ConfigReader, Fox}
-import com.scalableminds.util.tools.Fox.box2Fox
+import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
@@ -105,18 +105,22 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
     new CredentialConfigReader(credentialConfig).getCredential
   }
 
-  private def credentialFor(magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[DataVaultCredential] = {
-    logger.info(s"globalCredentials: ${globalCredentials.mkString(",")}")
+  private def findGlobalCredentialFor(magLocator: MagLocator)(implicit ec: ExecutionContext) =
+    magLocator.path match {
+      case Some(magPath) => globalCredentials.find(c => magPath.startsWith(c.name)).toFox
+      case None          => Fox.empty
+    }
+
+  private def credentialFor(magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[DataVaultCredential] =
     magLocator.credentialId match {
       case Some(credentialId) =>
         dSRemoteWebknossosClient.getCredential(credentialId)
       case None =>
         magLocator.credentials match {
           case Some(credential) => Fox.successful(credential)
-          case None             => Fox.empty
+          case None             => findGlobalCredentialFor(magLocator)
         }
     }
-  }
 }
 
 class CredentialConfigReader(underlyingConfig: Config) extends ConfigReader {

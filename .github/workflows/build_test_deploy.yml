@@ -29,8 +29,6 @@ env:
   USER_NAME: root
   USER_UID: 1000
   USER_GID: 1000
-  DOCKER_USER: ${{ secrets.DOCKER_USER }}
-  DOCKER_PASS: ${{ secrets.DOCKER_PASS }}
   POSTGRES_USER: "webknossos_user"
   POSTGRES_PASSWORD: "secret_password"
 
@@ -221,6 +219,10 @@ jobs:
           tags: |
             scalableminds/webknossos-tracingstore:${{ env.NORMALIZED_BRANCH }}
             scalableminds/webknossos-tracingstore:${{ env.DOCKER_TAG }}
+
+      - name: tmate session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
 
       - name: Lint frontend code and check formatting
         if: ${{ github.ref_name != 'master' }}

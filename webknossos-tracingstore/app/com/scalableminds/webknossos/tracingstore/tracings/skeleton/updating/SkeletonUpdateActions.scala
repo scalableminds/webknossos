@@ -575,100 +575,35 @@ case class DeleteUserBoundingBoxSkeletonAction(boundingBoxId: Int,
     this.copy(actionTracingId = newTracingId)
 }
 
-case class UpdateUserBoundingBoxBoundsSkeletonAction(boundingBox: NamedBoundingBox,
-                                                     actionTracingId: String,
-                                                     actionTimestamp: Option[Long] = None,
-                                                     actionAuthorId: Option[String] = None,
-                                                     info: Option[String] = None)
+case class UpdateUserBoundingBoxSkeletonAction(boundingBoxId: Int,
+                                               updatedPropKeys: List[String],
+                                               updatedProps: NamedBoundingBoxUpdate,
+                                               actionTracingId: String,
+                                               actionTimestamp: Option[Long] = None,
+                                               actionAuthorId: Option[String] = None,
+                                               info: Option[String] = None)
     extends SkeletonUpdateAction {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
     def updateUserBoundingBoxes() =
       tracing.userBoundingBoxes.map { currentBoundingBox =>
-        if (boundingBox.id == currentBoundingBox.id)
-          currentBoundingBox.copy(boundingBox = boundingBox.toProto.boundingBox)
-        else
-          currentBoundingBox
-      }
-    tracing.withUserBoundingBoxes(updateUserBoundingBoxes())
-  }
-
-  override def addTimestamp(timestamp: Long): UpdateAction =
-    this.copy(actionTimestamp = Some(timestamp))
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[String]): UpdateAction =
-    this.copy(actionAuthorId = authorId)
-  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
-    this.copy(actionTracingId = newTracingId)
-}
-
-case class UpdateUserBoundingBoxVisibilitySkeletonAction(boundingBoxId: Option[Int],
-                                                         isVisible: Boolean,
-                                                         actionTracingId: String,
-                                                         actionTimestamp: Option[Long] = None,
-                                                         actionAuthorId: Option[String] = None,
-                                                         info: Option[String] = None)
-    extends SkeletonUpdateAction {
-  override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
-    def updateUserBoundingBoxes() =
-      tracing.userBoundingBoxes.map { boundingBox =>
-        if (boundingBoxId.forall(_ == boundingBox.id))
-          boundingBox.copy(isVisible = Some(isVisible))
-        else
-          boundingBox
-      }
-
-    tracing.withUserBoundingBoxes(updateUserBoundingBoxes())
-  }
-
-  override def addTimestamp(timestamp: Long): UpdateAction =
-    this.copy(actionTimestamp = Some(timestamp))
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[String]): UpdateAction =
-    this.copy(actionAuthorId = authorId)
-  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
-    this.copy(actionTracingId = newTracingId)
-
-  override def isViewOnlyChange: Boolean = true
-}
-
-case class UpdateUserBoundingBoxNameSkeletonAction(boundingBox: NamedBoundingBox,
-                                                   actionTracingId: String,
-                                                   actionTimestamp: Option[Long] = None,
-                                                   actionAuthorId: Option[String] = None,
-                                                   info: Option[String] = None)
-    extends SkeletonUpdateAction {
-  override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
-    def updateUserBoundingBoxes() =
-      tracing.userBoundingBoxes.map { currentBoundingBox =>
-        if (boundingBox.id == currentBoundingBox.id)
-          currentBoundingBox.copy(name = boundingBox.name)
-        else
-          currentBoundingBox
-      }
-    tracing.withUserBoundingBoxes(updateUserBoundingBoxes())
-  }
-
-  override def addTimestamp(timestamp: Long): UpdateAction =
-    this.copy(actionTimestamp = Some(timestamp))
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[String]): UpdateAction =
-    this.copy(actionAuthorId = authorId)
-  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
-    this.copy(actionTracingId = newTracingId)
-}
-
-case class UpdateUserBoundingBoxColorSkeletonAction(boundingBox: NamedBoundingBox,
-                                                    actionTracingId: String,
-                                                    actionTimestamp: Option[Long] = None,
-                                                    actionAuthorId: Option[String] = None,
-                                                    info: Option[String] = None)
-    extends SkeletonUpdateAction {
-  override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
-    def updateUserBoundingBoxes() =
-      tracing.userBoundingBoxes.map { currentBoundingBox =>
-        if (boundingBox.id == currentBoundingBox.id)
-          currentBoundingBox.copy(color = boundingBox.toProto.color)
-        else
+        if (boundingBoxId == currentBoundingBox.id) {
+          currentBoundingBox.copy(
+            id = updatedProps.id.getOrElse(currentBoundingBox.id),
+            name =
+              if (updatedPropKeys.contains("name") && updatedProps.name.isDefined) updatedProps.name
+              else currentBoundingBox.name,
+            isVisible =
+              if (updatedPropKeys.contains("isVisible") && updatedProps.isVisible.isDefined) updatedProps.isVisible
+              else currentBoundingBox.isVisible,
+            color =
+              if (updatedPropKeys.contains("color") && updatedProps.color.isDefined) updatedProps.colorOptProto
+              else currentBoundingBox.color,
+            boundingBox =
+              if (updatedPropKeys.contains("boundingBox"))
+                updatedProps.boundingBoxProto.getOrElse(currentBoundingBox.boundingBox)
+              else currentBoundingBox.boundingBox
+          )
+        } else
           currentBoundingBox
       }
     tracing.withUserBoundingBoxes(updateUserBoundingBoxes())
@@ -742,19 +677,7 @@ object DeleteUserBoundingBoxSkeletonAction {
   implicit val jsonFormat: OFormat[DeleteUserBoundingBoxSkeletonAction] =
     Json.format[DeleteUserBoundingBoxSkeletonAction]
 }
-object UpdateUserBoundingBoxBoundsSkeletonAction {
-  implicit val jsonFormat: OFormat[UpdateUserBoundingBoxBoundsSkeletonAction] =
-    Json.format[UpdateUserBoundingBoxBoundsSkeletonAction]
-}
-object UpdateUserBoundingBoxVisibilitySkeletonAction {
-  implicit val jsonFormat: OFormat[UpdateUserBoundingBoxVisibilitySkeletonAction] =
-    Json.format[UpdateUserBoundingBoxVisibilitySkeletonAction]
-}
-object UpdateUserBoundingBoxNameSkeletonAction {
-  implicit val jsonFormat: OFormat[UpdateUserBoundingBoxNameSkeletonAction] =
-    Json.format[UpdateUserBoundingBoxNameSkeletonAction]
-}
-object UpdateUserBoundingBoxColorSkeletonAction {
-  implicit val jsonFormat: OFormat[UpdateUserBoundingBoxColorSkeletonAction] =
-    Json.format[UpdateUserBoundingBoxColorSkeletonAction]
+object UpdateUserBoundingBoxSkeletonAction {
+  implicit val jsonFormat: OFormat[UpdateUserBoundingBoxSkeletonAction] =
+    Json.format[UpdateUserBoundingBoxSkeletonAction]
 }

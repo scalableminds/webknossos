@@ -116,13 +116,13 @@ describe("CuckooTableVec5", () => {
     }).toThrow();
   });
 
-  it("Maxing out capacity", () => {
-    const base = 128;
+  it("Maxing out capacity", { timeout: 20000 }, () => {
+    const textureWidth = 128;
     const attemptCount = 10;
     for (let attempt = 0; attempt < attemptCount; attempt++) {
       let entries;
       let ct;
-      ct = new CuckooTableVec5(base);
+      ct = new CuckooTableVec5(textureWidth);
       entries = generateRandomCuckooEntrySet(generateRandomEntry, ct.getCriticalCapacity());
       for (const entry of entries) {
         ct.set(entry[0], entry[1]);

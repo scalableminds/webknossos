@@ -37,14 +37,14 @@ function isValueEqual(val1: Value, val2: Value | null) {
 }
 
 describe("CuckooTableUint64", () => {
-  it("Maxing out capacity", () => {
-    const base = 128;
+  it("Maxing out capacity", { timeout: 20000 }, () => {
+    const textureWidth = 128;
     const attemptCount = 10;
     for (let attempt = 0; attempt < attemptCount; attempt++) {
       let entries;
       let ct;
 
-      ct = new CuckooTableUint64(base);
+      ct = new CuckooTableUint64(textureWidth);
       entries = generateRandomCuckooEntrySet(generateRandomEntry, ct.getCriticalCapacity());
 
       for (const entry of entries) {

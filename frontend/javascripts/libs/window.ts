@@ -2,6 +2,7 @@
 
 import type TextureBucketManager from "oxalis/model/bucket_data_handling/texture_bucket_manager";
 import type { ArbitraryFunction, ArbitraryObject } from "types/globals";
+import type * as THREE from "three";
 
 // mockRequire("libs/window", myFakeWindow);
 const removeEventListener = (

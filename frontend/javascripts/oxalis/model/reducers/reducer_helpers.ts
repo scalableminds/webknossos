@@ -56,6 +56,7 @@ export function convertUserBoundingBoxesFromServerToFrontend(
     };
   });
 }
+
 export function convertUserBoundingBoxesFromFrontendToServer(
   boundingBox: UserBoundingBox,
 ): UserBoundingBoxToServer {

@@ -661,8 +661,11 @@ export function* diffBoundingBoxes(
     }
     const diffBBox = Utils.diffObjects(currentBbox, prevBbox);
     if (_.isEmpty(diffBBox)) continue;
-    //TODO_C remove
-    console.log("diffBBox", diffBBox);
+    const changedKeys = Object.keys(diffBBox);
+    if (changedKeys.includes("boundingBox")) {
+      diffBBox.boundingBox.min = currentBbox.boundingBox.min;
+      diffBBox.boundingBox.max = currentBbox.boundingBox.max;
+    }
     yield updateBBoxAction(currentBbox.id, diffBBox, tracingId);
   }
 }

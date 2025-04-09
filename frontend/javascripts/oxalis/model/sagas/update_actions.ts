@@ -1,4 +1,5 @@
-import type { Vector3 } from "oxalis/constants";
+import * as Utils from "libs/utils";
+import { EMPTY_OBJECT, type Vector3 } from "oxalis/constants";
 import type { SendBucketInfo } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import { convertUserBoundingBoxesFromFrontendToServer } from "oxalis/model/reducers/reducer_helpers";
 import type {
@@ -459,13 +460,19 @@ export function updateUserBoundingBoxInSkeletonTracingAction(
   updatedProps: Partial<UserBoundingBox>,
   actionTracingId: string,
 ) {
+  let serverBBox = EMPTY_OBJECT;
+  const { boundingBox, ...rest } = updatedProps;
   const updatedPropKeys = Object.keys(updatedProps);
+  if (updatedProps.boundingBox?.min != null && updatedProps.boundingBox?.max != null) {
+    const bb = updatedProps.boundingBox;
+    serverBBox = { boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(bb) };
+  }
   return {
-    name: "updateUserBoundingBoxSkeletonAction",
+    name: "updateUserBoundingBoxVolumeAction",
     value: {
       boundingBoxId,
       actionTracingId,
-      updatedProps,
+      updatedProps: { ...serverBBox, ...rest },
       updatedPropKeys,
     },
   } as const;
@@ -476,13 +483,19 @@ export function updateUserBoundingBoxInVolumeTracingAction(
   updatedProps: Partial<UserBoundingBox>,
   actionTracingId: string,
 ) {
+  let serverBBox = EMPTY_OBJECT;
+  const { boundingBox, ...rest } = updatedProps;
   const updatedPropKeys = Object.keys(updatedProps);
+  if (updatedProps.boundingBox?.min != null && updatedProps.boundingBox?.max != null) {
+    const bb = updatedProps.boundingBox;
+    serverBBox = { boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(bb) };
+  }
   return {
     name: "updateUserBoundingBoxVolumeAction",
     value: {
       boundingBoxId,
       actionTracingId,
-      updatedProps,
+      updatedProps: { ...serverBBox, ...rest },
       updatedPropKeys,
     },
   } as const;

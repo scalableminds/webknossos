@@ -40,6 +40,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 5
+
       - uses: actions/setup-node@v4
         with:
           node-version: 18
@@ -71,6 +72,22 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - run: corepack enable
+      - uses: actions/cache@v4
+        id: node_modules
+        with:
+          path: |
+            tools/postgres/node_modules
+            tools/proxy/node_modules
+            node_modules
+          key: node_modules-${{ hashFiles('**/yarn.lock') }}
+      - name: Install frontend dependencies
+        if: steps.node_modules.outputs.cache-hit != 'true'
+        run: yarn install --immutable
 
       - uses: actions/setup-java@v4
         with:

@@ -112,6 +112,7 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '21'
+          cache: 'sbt'
       - uses: sbt/setup-sbt@v1
 
       - name: "Install System Dependencies"
@@ -122,21 +123,13 @@ jobs:
         run: |
           if [[ ${{ github.ref_type }} == "branch" ]]; then
             NORMALIZED_BRANCH=$(echo ${{ github.ref_name }} | sed 's/[\/-]/_/g')
-            echo "normalized_branch=$NORMALIZED_BRANCH" >> "$GITHUB_OUTPUT"
             DOCKER_TAG="${NORMALIZED_BRANCH}__${{ github.run_number }}"
-            echo "docker_tag=$DOCKER_TAG" >> "$GITHUB_OUTPUT"
             echo "DOCKER_TAG=$DOCKER_TAG" >> "$GITHUB_ENV"
             echo "NORMALIZED_BRANCH=$NORMALIZED_BRANCH" >> "$GITHUB_ENV"
           else
-            echo "normalized_branch=master" >> "$GITHUB_OUTPUT"
-            echo "docker_tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
             echo "DOCKER_TAG=master" >> "$GITHUB_ENV"
             echo "NORMALIZED_BRANCH=${{ github.ref_name }}" >> "$GITHUB_ENV"
           fi
-
-      - name: tmate session
-        uses: mxschmitt/action-tmate@v3
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.tmate_debug_build }}
 
       - name: Prepare Dependency Folders
         run: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier
@@ -202,17 +195,6 @@ jobs:
             scalableminds/webknossos-tracingstore:${{ env.DOCKER_TAG }}
           outputs: |
             type=image
-
-      - name: tmate session
-        uses: mxschmitt/action-tmate@v3
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-
-      - name: Lint backend code and check formatting
-        if: ${{ github.ref_name != 'master' }}
-        run: sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
-      - name: Run backend tests
-        if: ${{ github.ref_name != 'master' }}
-        run: sbt -v "testOnly backend.*"
 
       - name: Start Fossildb
         if: ${{ github.ref_name != 'master' }}

@@ -1,3 +1,4 @@
+# For CI only
 name: webknossos-ci
 
 services:

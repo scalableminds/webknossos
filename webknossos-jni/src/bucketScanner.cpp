@@ -2,7 +2,6 @@
 
 #include "jniutils.h"
 #include <array>
-#include <cstdint>
 #include <iostream>
 #include <vector>
 #include <stdexcept>

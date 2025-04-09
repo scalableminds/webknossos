@@ -11,7 +11,7 @@ author=${author/normanrz/<@norman>}
 author=${author/philippotto/<@philipp>}
 author=${author/valentin-pinkau/<@valentin>}
 author=${author/frcroth/<@felix.roth>}
-author=${author/dieknolle3333/<@charlie.meister>}
+author=${author/knollengewaechs/<@charlie.meister>}
 channel="webknossos-bots"
 commitmsg=$(git log --format=%s -n 1)
 pullregex="(.*)#([0-9]+)(.*)"

@@ -21,6 +21,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Changed
 
+- Numbered docker image no use different and larger numbers. [#8147](https://github.com/scalableminds/webknossos/pull/8147)
+
 ### Fixed
 - Fixed visual alignment of actions in ai model list. [#8474](https://github.com/scalableminds/webknossos/pull/8474)
 - Fixed that is was possible to trigger the find largest segment id job on layers which are not stored as segmentation layers on the server. [#8503](https://github.com/scalableminds/webknossos/pull/8503)
@@ -39,3 +41,5 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Removed
 
 ### Breaking Changes
+
+- Removed `docker-compose.yml` in favor of `tools/hosting/docker-compose.yml` [#8147](https://github.com/scalableminds/webknossos/pull/8147)

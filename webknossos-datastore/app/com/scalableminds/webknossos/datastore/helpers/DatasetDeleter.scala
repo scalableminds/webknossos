@@ -51,7 +51,7 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
         new File(trashPath.toString).mkdirs()
 
         logger.info(
-          s"Deleting dataset by moving it from $dataSourcePath to $targetPath${reason.map(r => s"because $r").getOrElse("...")}")
+          s"Deleting dataset by moving it from $dataSourcePath to $targetPath ${reason.map(r => s"because $r").getOrElse("...")}")
         deleteWithRetry(dataSourcePath, targetPath)
       } else {
         Fox.successful(logger.info(
@@ -103,12 +103,14 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
     relativeTargetPath
   }
 
-  private def getMagPath(basePath: Path, magInfo: DataSourceMagInfo): Path =
-    basePath
+  private def getPossibleMagPaths(basePath: Path, magInfo: DataSourceMagInfo): List[Path] = {
+    val layerPath = basePath
       .resolve(magInfo.dataSourceId.organizationId)
       .resolve(magInfo.dataSourceId.directoryName)
       .resolve(magInfo.dataLayerName)
-      .resolve(magInfo.mag.toMagLiteral(true))
+    List(layerPath.resolve(magInfo.mag.toMagLiteral(allowScalar = true)),
+         layerPath.resolve(magInfo.mag.toMagLiteral(allowScalar = false)))
+  }
 
   private def updateDatasourceProperties(dataSourceIds: List[DataSourceId])(
       implicit ec: ExecutionContext): Fox[List[Unit]] =
@@ -145,24 +147,28 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
     })
 
   private def updateMagSymlinks(targetMagPath: Path, linkedMag: DataSourceMagInfo): Unit = {
-    val linkedMagPath = getMagPath(dataBaseDir, linkedMag)
+    val linkedMagPaths = getPossibleMagPaths(dataBaseDir, linkedMag)
     // Before deleting, check write permissions at linkedMagPath
-    if (!Files.isWritable(linkedMagPath.getParent)) {
-      throw new Exception(s"Cannot update symlink at $linkedMagPath, no write permissions!")
+    if (!Files.isWritable(linkedMagPaths.head.getParent)) {
+      throw new Exception(s"Cannot update symlink at ${linkedMagPaths.head}, no write permissions!")
     }
-    if (Files.exists(linkedMagPath) || Files.isSymbolicLink(linkedMagPath)) {
-      Files.delete(linkedMagPath)
-      logger.info(s"Deleting symlink and recreating it at $linkedMagPath")
-      Files.createSymbolicLink(linkedMagPath, relativizeSymlinkPath(targetMagPath, linkedMagPath))
-    } else {
-      if (!Files.exists(linkedMagPath) && linkedMag.path == linkedMag.realPath) {
-        // This is the case for locally explored datasets
-        // Since locally explored datasets are always fully linked layers when explored, this case can
-        // only happen if one of the mags was manually edited in the properties file.
+    val existingLinkedMagPath = linkedMagPaths.find(p => Files.exists(p) || Files.isSymbolicLink(p))
+
+    existingLinkedMagPath match {
+      case Some(linkedMagPath) =>
+        Files.delete(linkedMagPath)
+        logger.info(s"Deleting symlink and recreating it at $linkedMagPath")
         Files.createSymbolicLink(linkedMagPath, relativizeSymlinkPath(targetMagPath, linkedMagPath))
-      } else {
-        logger.warn(s"Trying to recreate symlink at mag $linkedMagPath, but it does not exist!")
-      }
+      case None =>
+        val linkedMagPath = linkedMagPaths.head
+        if (!Files.exists(linkedMagPath) && linkedMag.path == linkedMag.realPath) {
+          // This is the case for locally explored datasets
+          // Since locally explored datasets are always fully linked layers when explored, this case can
+          // only happen if one of the mags was manually edited in the properties file.
+          Files.createSymbolicLink(linkedMagPath, relativizeSymlinkPath(targetMagPath, linkedMagPath))
+        } else {
+          logger.warn(s"Trying to recreate symlink at mag $linkedMagPath, but it does not exist!")
+        }
     }
   }
 
@@ -241,7 +247,12 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
 
     layerMags.foreach { magLinkInfo =>
       val mag = magLinkInfo.mag
-      val newMagPath = targetPath.resolve(mag.mag.toMagLiteral(true))
+      val newMagPath =
+        Seq(targetPath.resolve(mag.mag.toMagLiteral(true)), targetPath.resolve(mag.mag.toMagLiteral(false)))
+          .find(Files.exists(_))
+          .getOrElse(
+            throw new Exception(s"Cleaning up move failed for $mag, no local data found ${targetPath.resolve(mag.mag
+              .toMagLiteral(true))} or ${targetPath.resolve(mag.mag.toMagLiteral(false))}, failed to create symlink!"))
       magLinkInfo.linkedMags
         .filter(linkedMag => !fullLayerLinks.contains((linkedMag.dataSourceId, linkedMag.dataLayerName))) // Filter out mags that are fully linked layers, we already handled them
         .foreach { linkedMag =>
@@ -265,22 +276,29 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
           if (magLinkInfo.linkedMags.nonEmpty) {
             if (magToDelete.hasLocalData) {
               // Move mag to a different dataset
-              val magPath = getMagPath(dataBaseDir, magToDelete)
+              val magPath = getPossibleMagPaths(dataBaseDir, magToDelete).find(Files.exists(_)).getOrElse {
+                throw new IllegalArgumentException(
+                  s"Cannot move mag $magToDelete, no local data found at ${magToDelete.path}!")
+              }
               // Select an arbitrary linked mag to move to
               val target = magLinkInfo.linkedMags.head
-              val targetPath = getMagPath(dataBaseDir, target)
+              val possibleMagTargetPaths = getPossibleMagPaths(dataBaseDir, target)
 
               // Before deleting, check write permissions at targetPath
-              if (!Files.isWritable(targetPath.getParent)) {
-                throw new Exception(s"Cannot move mag $magToDelete to $targetPath, no write permissions!")
+              if (!Files.isWritable(possibleMagTargetPaths.head.getParent)) {
+                throw new Exception(
+                  s"Cannot move mag $magToDelete to ${possibleMagTargetPaths.head.getParent}, no write permissions!")
               }
 
-              if (Files.exists(targetPath) && Files.isSymbolicLink(targetPath)) {
-                logger.info(
-                  s"Deleting existing symlink at $targetPath linking to ${magToDelete.dataSourceId}/${magToDelete.dataLayerName}/${magToDelete.mag
-                    .toMagLiteral(true)}")
-                Files.delete(targetPath)
+              val targetPathExistingSymlink = possibleMagTargetPaths.find(Files.isSymbolicLink)
+              targetPathExistingSymlink match {
+                case Some(targetPath) =>
+                  logger.info(
+                    s"Deleting existing symlink at $targetPath linking to ${Files.readSymbolicLink(targetPath)}")
+                  Files.delete(targetPath)
+                case _ => ()
               }
+              val targetPath = targetPathExistingSymlink.getOrElse(possibleMagTargetPaths.head)
               Files.move(magPath, targetPath)
 
               // Move all symlinks to this mag to link to the moved mag

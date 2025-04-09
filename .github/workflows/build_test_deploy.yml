@@ -106,7 +106,7 @@ jobs:
         id: configure
         run: |
           if [[ "${{ github.ref_type }}" == "branch" ]]; then
-            NORMALIZED_BRANCH=$(echo "${{ github.ref_name }}" | sed 's/[\/-]/_/g')
+            NORMALIZED_BRANCH=$(echo "${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" | sed 's/[\/-]/_/g')
             DOCKER_TAG="${NORMALIZED_BRANCH}__${{ github.run_id }}"
             echo "DOCKER_TAG=$DOCKER_TAG" >> "$GITHUB_ENV"
             echo "NORMALIZED_BRANCH=$NORMALIZED_BRANCH" >> "$GITHUB_ENV"

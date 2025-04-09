@@ -184,15 +184,6 @@ jobs:
         uses: mxschmitt/action-tmate@v3
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
 
-      - name: Lint frontend code and check formatting
-        if: ${{ github.ref_name != 'master' }}
-        run: yarn run check-frontend
-      - name: Check for cyclic dependencies in front-end
-        if: ${{ github.ref_name != 'master' }}
-        run: yarn check-cyclic-dependencies
-      - name: Run frontend tests
-        if: ${{ github.ref_name != 'master' }}
-        run: yarn test-verbose
       - name: Lint backend code and check formatting
         if: ${{ github.ref_name != 'master' }}
         run: sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"

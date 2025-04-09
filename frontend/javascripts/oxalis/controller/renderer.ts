@@ -40,8 +40,6 @@ function getRenderer(): THREE.WebGLRenderer {
       : {}
   ) as THREE.WebGLRenderer;
 
-  renderer.physicallyCorrectLights = true;
-
   return renderer;
 }
 

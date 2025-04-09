@@ -726,13 +726,13 @@ class DataCube {
             const neighbourBucket = this.getOrCreateBucket(neighbourBucketAddress);
 
             let shouldSkip = false;
-            if (window.bentGeometry) {
+            if (window.bentMesh) {
               const currentGlobalPosition = V3.add(
                 currentGlobalBucketPosition,
                 V3.scale3(neighbourVoxelXyz, currentMag),
               );
               const intersects = checkLineIntersection(
-                window.bentGeometry,
+                window.bentMesh,
                 originGlobalPosition,
                 currentGlobalPosition,
               );
@@ -758,15 +758,9 @@ class DataCube {
             });
 
             let shouldSkip = false;
-            if (window.bentGeometry) {
-              // const target = {};
-              // window.bentGeometry.boundsTree.closestPointToPoint(
-              //   new THREE.Vector3(...currentGlobalPosition),
-              //   target,
-              // );
-
+            if (window.bentMesh) {
               const intersects = checkLineIntersection(
-                window.bentGeometry,
+                window.bentMesh,
                 originGlobalPosition,
                 currentGlobalPosition,
               );
@@ -1038,7 +1032,8 @@ class DataCube {
 export default DataCube;
 
 // Function to check intersection
-function checkLineIntersection(geometry: THREE.BufferGeometry, _pointA: Vector3, _pointB: Vector3) {
+function checkLineIntersection(bentMesh: THREE.Mesh, _pointA: Vector3, _pointB: Vector3) {
+  const geometry = bentMesh.geometry;
   // Create BVH from geometry if not already built
   if (!geometry.boundsTree) {
     geometry.computeBoundsTree();
@@ -1060,7 +1055,7 @@ function checkLineIntersection(geometry: THREE.BufferGeometry, _pointA: Vector3,
   raycaster.far = pointA.distanceTo(pointB); // Limit to segment length
   raycaster.firstHitOnly = true;
 
-  const intersects = raycaster.intersectObject(window.bentMesh, true);
+  const intersects = raycaster.intersectObject(bentMesh, true);
   const retval = intersects.length > 0; // Returns true if an intersection is found
 
   return retval;

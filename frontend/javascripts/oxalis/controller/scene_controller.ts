@@ -47,6 +47,7 @@ import { getVoxelPerUnit } from "oxalis/model/scaleinfo";
 import { Model } from "oxalis/singletons";
 import type { OxalisState, SkeletonTracing, UserBoundingBox } from "oxalis/store";
 import Store from "oxalis/store";
+// @ts-ignore
 import PCA from "pca-js";
 import * as THREE from "three";
 import SegmentMeshController from "./segment_mesh_controller";
@@ -279,7 +280,9 @@ function computeBentSurfaceSplines(points: Vector3[]): THREE.Object3D[] {
         const prevCurvePoints = curvesByZ[zValues[curveIdx - 1]].points;
 
         const distActual = currentCurvePoints[0].distanceTo(prevCurvePoints[0]);
-        const distFlipped = currentCurvePoints.at(-1).distanceTo(prevCurvePoints[0]);
+        const distFlipped = (currentCurvePoints.at(-1) as THREE.Vector3).distanceTo(
+          prevCurvePoints[0],
+        );
 
         const shouldFlip = distFlipped < distActual;
         if (shouldFlip) {
@@ -386,8 +389,6 @@ function computeBentSurfaceSplines(points: Vector3[]): THREE.Object3D[] {
   geometry.computeVertexNormals(); // Smooth shading
   geometry.computeBoundsTree();
 
-  window.bentGeometry = geometry;
-
   // Material and Mesh
   const material = new THREE.MeshStandardMaterial({
     color: 0x0077ff, // A soft blue color
@@ -405,29 +406,6 @@ function computeBentSurfaceSplines(points: Vector3[]): THREE.Object3D[] {
   objects.push(surfaceMesh);
   return objects;
 }
-
-// function createNormalsVisualization(geometry: THREE.BufferGeometry, objects: THREE.Object3D[]) {
-//   const positions = geometry.attributes.position.array;
-//   const normals = geometry.attributes.normal.array;
-//   const normalLines: number[] = [];
-
-//   for (let i = 0; i < positions.length; i += 3) {
-//     const v = new THREE.Vector3(positions[i], positions[i + 1], positions[i + 2]);
-//     const n = new THREE.Vector3(normals[i], normals[i + 1], normals[i + 2]);
-
-//     const vEnd = v.clone().add(n.multiplyScalar(5)); // Scale normals for visibility
-
-//     normalLines.push(v.x, v.y, v.z, vEnd.x, vEnd.y, vEnd.z);
-//   }
-
-//   const normalGeometry = new THREE.BufferGeometry();
-//   normalGeometry.setAttribute("position", new THREE.Float32BufferAttribute(normalLines, 3));
-
-//   const normalMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 }); // Red for visibility
-//   const normalLinesMesh = new THREE.LineSegments(normalGeometry, normalMaterial);
-
-//   objects.push(normalLinesMesh); // Add to objects list instead of scene.add()
-// }
 
 function generatePlanePoints(planeMesh: THREE.Mesh<THREE.PlaneGeometry, any>): Vector3[] {
   const points: THREE.Vector3[] = [];
@@ -511,54 +489,6 @@ function createBentSurfaceGeometry(points: Vector3[], rows: number, cols: number
   mesh.receiveShadow = true;
   mesh.castShadow = true;
   return mesh;
-}
-
-function generateTPSMesh(points, scale, resolution = 20) {
-  if (points.length < 3) {
-    throw new Error("At least 3 points are needed to define a surface.");
-  }
-
-  const sourcePoints = points.map(projectToPlane);
-  const targetPoints = points.map((p) => [p[0], p[1], p[2]]);
-
-  // Step 3: Create the TPS transformation
-  const tps = new TPS3D(sourcePoints, targetPoints, scale);
-
-  // Step 4: Generate a grid of points in the base plane
-  const minX = Math.min(...sourcePoints.map((p) => p[0]));
-  const maxX = Math.max(...sourcePoints.map((p) => p[0]));
-  const minY = Math.min(...sourcePoints.map((p) => p[1]));
-  const maxY = Math.max(...sourcePoints.map((p) => p[1]));
-
-  const gridPoints = [];
-  for (let i = 0; i <= resolution; i++) {
-    for (let j = 0; j <= resolution; j++) {
-      const x = minX + (i / resolution) * (maxX - minX);
-      const y = minY + (j / resolution) * (maxY - minY);
-      const transformed = tps.transform(x, y, 0);
-      gridPoints.push(new THREE.Vector3(transformed[0], transformed[1], transformed[2]));
-    }
-  }
-
-  // Step 5: Perform Delaunay triangulation to create faces
-  const delaunay = Delaunator.from(gridPoints.map((p) => [p.x, p.y]));
-  const indices = delaunay.triangles;
-
-  // Step 6: Convert data into THREE.BufferGeometry
-  const geometry = new THREE.BufferGeometry();
-  const positions = new Float32Array(gridPoints.length * 3);
-
-  gridPoints.forEach((p, i) => {
-    positions[i * 3] = p.x;
-    positions[i * 3 + 1] = p.y;
-    positions[i * 3 + 2] = p.z;
-  });
-
-  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-  geometry.setIndex(new THREE.BufferAttribute(new Uint16Array(indices), 1));
-  geometry.computeVertexNormals(); // Smooth shading
-
-  return geometry;
 }
 
 class SceneController {
@@ -796,17 +726,6 @@ class SceneController {
   }
 
   addBentSurface(points: Vector3[]) {
-    // const meshGeometry = generateTPSMesh(points, [1, 1, 1], 30);
-    // // const material = new THREE.MeshStandardMaterial({ color: 0x88ccff, wireframe: true });
-    // const material = new THREE.MeshLambertMaterial({
-    //   color: "green",
-    //   wireframe: true,
-    // });
-    // material.side = THREE.FrontSide;
-    // // material.transparent = true;
-    // const surfaceMesh = new THREE.Mesh(meshGeometry, material);
-    // this.rootNode.add(surfaceMesh);
-
     if (points.length === 0) {
       return () => {};
     }

@@ -7,23 +7,6 @@ on:
   pull_request:
     branches:
       - '*'
-  workflow_dispatch:
-    inputs:
-      tmate_debug_build:
-        type: boolean
-        description: "Debug Build Job"
-        required: false
-        default: false
-      tmate_debug_e2e_tests:
-        type: boolean
-        description: "Debug e2e Tests"
-        required: false
-        default: false
-      debug_enabled:
-        type: boolean
-        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
-        required: false
-        default: false
 
 env:
   USER_UID: 1001

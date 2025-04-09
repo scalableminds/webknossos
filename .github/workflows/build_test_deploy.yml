@@ -268,3 +268,5 @@ jobs:
       - name: Slack Notification
         if: ${{ github.ref_name != 'master' }}  # TODO: Invert !=
         run: .github/slack-notification.sh
+        env:
+          SLACK_NOTIFY_TOKEN: ${{ secrets.SLACK_NOTIFY_TOKEN }}

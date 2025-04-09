@@ -1,6 +1,6 @@
 import _ from "lodash";
-import * as THREE from "three";
 import type { Vector3 } from "oxalis/constants";
+import * as THREE from "three";
 
 export default function computeSplitBoundaryMeshWithSplines(points: Vector3[]): {
   splines: THREE.Object3D[];

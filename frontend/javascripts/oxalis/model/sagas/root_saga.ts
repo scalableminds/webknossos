@@ -21,8 +21,8 @@ import { race } from "redux-saga/effects";
 import { all, call, cancel, fork, put, take, takeEvery } from "typed-redux-saga";
 import type { EscalateErrorAction } from "../actions/actions";
 import { setIsWkReadyAction } from "../actions/ui_actions";
-import splitBoundaryMeshSaga from "./split_boundary_mesh_saga";
 import maintainMaximumZoomForAllMagsSaga from "./flycam_info_cache_saga";
+import splitBoundaryMeshSaga from "./split_boundary_mesh_saga";
 import { warnIfEmailIsUnverified } from "./user_saga";
 
 let rootSagaCrashed = false;

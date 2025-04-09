@@ -30,7 +30,6 @@ function* updateBentSurface() {
   if (activeTree != null && activeTree.isVisible) {
     const nodes = Array.from(activeTree.nodes.values());
     const points = nodes.map((node) => node.untransformedPosition);
-    console.log("points", points);
     if (points.length > 3) {
       cleanUpFn = sceneController.addBentSurface(points);
     }
@@ -50,6 +49,7 @@ export function* bentSurfaceSaga(): Saga<void> {
       "SET_ACTIVE_TREE_BY_NAME",
       "CREATE_NODE",
       "DELETE_NODE",
+      "DELETE_TREE",
       "SET_TREE_VISIBILITY",
       "TOGGLE_TREE",
       "SET_NODE_POSITION",

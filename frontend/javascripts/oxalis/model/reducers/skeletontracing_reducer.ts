@@ -828,7 +828,15 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
 
         case "CREATE_TREE": {
           const { timestamp } = action;
-          return createTree(state, timestamp)
+          const isSplitWorkspaceActive = state.userConfiguration.toolWorkspace === "SPLIT_SEGMENTS";
+          return createTree(
+            state,
+            timestamp,
+            undefined,
+            undefined,
+            undefined,
+            isSplitWorkspaceActive,
+          )
             .map((tree) => {
               if (action.treeIdCallback) {
                 action.treeIdCallback(tree.treeId);

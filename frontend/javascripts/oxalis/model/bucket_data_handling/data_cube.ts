@@ -36,6 +36,7 @@ import * as THREE from "three";
 import type { AdditionalAxis, BucketDataArray, ElementClass } from "types/api_flow_types";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 import type { MagInfo } from "../helpers/mag_info";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 
 const warnAboutTooManyAllocations = _.once(() => {
   const msg =
@@ -542,6 +543,9 @@ class DataCube {
     // not all of the target area in the neighbour bucket might be filled.
 
     const floodfillBoundingBox = new BoundingBox(_floodfillBoundingBox);
+    const sceneController = getSceneController();
+    const isSplitWorkspace = Store.getState().userConfiguration.toolWorkspace === "SPLIT_SEGMENTS";
+    const splitBoundaryMesh = isSplitWorkspace ? sceneController.getBentSurface() : null;
 
     // Helper function to convert between xyz and uvw (both directions)
     const transpose = (voxel: Vector3): Vector3 =>
@@ -726,13 +730,13 @@ class DataCube {
             const neighbourBucket = this.getOrCreateBucket(neighbourBucketAddress);
 
             let shouldSkip = false;
-            if (window.bentMesh) {
+            if (splitBoundaryMesh) {
               const currentGlobalPosition = V3.add(
                 currentGlobalBucketPosition,
                 V3.scale3(neighbourVoxelXyz, currentMag),
               );
               const intersects = checkLineIntersection(
-                window.bentMesh,
+                splitBoundaryMesh,
                 originGlobalPosition,
                 currentGlobalPosition,
               );
@@ -758,9 +762,9 @@ class DataCube {
             });
 
             let shouldSkip = false;
-            if (window.bentMesh) {
+            if (splitBoundaryMesh) {
               const intersects = checkLineIntersection(
-                window.bentMesh,
+                splitBoundaryMesh,
                 originGlobalPosition,
                 currentGlobalPosition,
               );

@@ -58,6 +58,7 @@ import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import {
   createTreeAction,
   setMergerModeEnabledAction,
+  setTreeEdgeVisibilityAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setToolAction, showQuickSelectSettingsAction } from "oxalis/model/actions/ui_actions";
 import {

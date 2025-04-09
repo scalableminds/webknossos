@@ -71,8 +71,11 @@ THREE.BatchedMesh.prototype.computeBoundsTree = computeBatchedBoundsTree;
 THREE.BatchedMesh.prototype.disposeBoundsTree = disposeBatchedBoundsTree;
 THREE.BatchedMesh.prototype.raycast = acceleratedRaycast;
 
-function computeBentSurfaceSplines(points: Vector3[]): THREE.Object3D[] {
-  const objects: THREE.Object3D[] = [];
+function computeBentSurfaceSplines(points: Vector3[]): {
+  splines: THREE.Object3D[];
+  surfaceMesh: THREE.Mesh;
+} {
+  const splines: THREE.Object3D[] = [];
 
   const unfilteredPointsByZ = _.groupBy(points, (p) => p[2]);
   const pointsByZ = _.omitBy(unfilteredPointsByZ, (value) => value.length < 2);
@@ -91,9 +94,9 @@ function computeBentSurfaceSplines(points: Vector3[]): THREE.Object3D[] {
     zValues.map((zValue, curveIdx) => {
       let adaptedZ = zValue;
       if (zValue === minZ) {
-        adaptedZ -= 0.5;
+        adaptedZ -= 0.1;
       } else if (zValue === maxZ) {
-        adaptedZ += 0.5;
+        adaptedZ += 0.1;
       }
       const points2D = orderPointsMST(
         pointsByZ[zValue].map((p) => new THREE.Vector3(p[0], p[1], adaptedZ)),
@@ -169,7 +172,7 @@ function computeBentSurfaceSplines(points: Vector3[]): THREE.Object3D[] {
     const geometry = new THREE.BufferGeometry().setFromPoints(curvePoints);
     const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
     const splineObject = new THREE.Line(geometry, material);
-    objects.push(splineObject);
+    splines.push(splineObject);
   });
 
   // Generate grid of points
@@ -229,10 +232,10 @@ function computeBentSurfaceSplines(points: Vector3[]): THREE.Object3D[] {
     wireframe: false,
   });
   const surfaceMesh = new THREE.Mesh(geometry, material);
-  window.bentMesh = surfaceMesh;
-
-  objects.push(surfaceMesh);
-  return objects;
+  return {
+    splines,
+    surfaceMesh,
+  };
 }
 
 class SceneController {
@@ -261,6 +264,7 @@ class SceneController {
   // meshesRootGroup!: THREE.Object3D;
   segmentMeshController: SegmentMeshController;
   storePropertyUnsubscribers: Array<() => void>;
+  surfaceMesh: THREE.Mesh | null = null;
 
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   // element depending on the provided flycam.
@@ -474,9 +478,12 @@ class SceneController {
       return () => {};
     }
 
-    let objs: THREE.Object3D[] = [];
+    let surfaceMesh: THREE.Mesh | null = null;
+    let splines: THREE.Object3D[] = [];
     try {
-      objs = computeBentSurfaceSplines(points);
+      const objects = computeBentSurfaceSplines(points);
+      surfaceMesh = objects.surfaceMesh;
+      splines = objects.splines;
     } catch (exc) {
       console.error(exc);
       Toast.error("Could not compute surface");
@@ -484,16 +491,24 @@ class SceneController {
     }
 
     const surfaceGroup = new THREE.Group();
-    for (const obj of objs) {
-      surfaceGroup.add(obj);
+    if (surfaceMesh != null) {
+      surfaceGroup.add(surfaceMesh);
+    }
+    for (const spline of splines) {
+      surfaceGroup.add(spline);
     }
 
     this.rootGroup.add(surfaceGroup);
-    // surfaceGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.dataSource.scale.factor));
+    this.surfaceMesh = surfaceMesh;
 
     return () => {
       this.rootGroup.remove(surfaceGroup);
+      this.surfaceMesh = null;
     };
+  }
+
+  getBentSurface() {
+    return this.surfaceMesh;
   }
 
   addSkeleton(
@@ -561,9 +576,8 @@ class SceneController {
     this.taskBoundingBox?.updateForCam(id);
 
     this.segmentMeshController.meshesLODRootGroup.visible = id === OrthoViews.TDView;
-    // todop
-    if (window.bentMesh != null) {
-      window.bentMesh.visible = id === OrthoViews.TDView;
+    if (this.surfaceMesh != null) {
+      this.surfaceMesh.visible = id === OrthoViews.TDView;
     }
     // this.segmentMeshController.meshesLODRootGroup.visible = false;
     this.annotationToolsGeometryGroup.visible = id !== OrthoViews.TDView;

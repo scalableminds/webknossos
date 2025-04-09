@@ -78,6 +78,9 @@ jobs:
           java-version: '21'
       - uses: sbt/setup-sbt@v1
 
+      - name: "Install System Dependencies"
+        run: sudo apt-get update && sudo apt-get install -y libdraco-dev libblosc1
+
       - name: Lint backend code and check formatting
         if: ${{ github.ref_name != 'master' }}
         run: sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"

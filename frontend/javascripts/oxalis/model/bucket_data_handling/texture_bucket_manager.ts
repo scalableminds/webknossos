@@ -92,6 +92,7 @@ export default class TextureBucketManager {
   maximumCapacity: number;
   packingDegree: number;
   elementClass: ElementClass;
+  isDestroyed: boolean = false;
 
   constructor(textureWidth: number, dataTextureCount: number, elementClass: ElementClass) {
     // If there is one byte per voxel, we pack 4 bytes into one texel (packingDegree = 4)
@@ -179,6 +180,10 @@ export default class TextureBucketManager {
 
   // Commit "active" buckets by writing these to the dataTexture.
   processWriterQueue() {
+    if (this.isDestroyed) {
+      // Avoid new requestAnimationFrame
+      return;
+    }
     // uniqBy removes multiple write-buckets-requests for the same index.
     // It preserves the first occurrence of each duplicate, which is why
     // this queue has to be filled from the front (via unshift) und read from the
@@ -336,5 +341,16 @@ export default class TextureBucketManager {
       unlistenToLabeledFn();
       this.freeBucket(bucket);
     });
+  }
+
+  destroy() {
+    for (const texture of this.getTextures()) {
+      texture.dispose();
+    }
+    this.dataTextures = [];
+    // @ts-ignore
+    this.lookUpCuckooTable = null;
+    this.isDestroyed = true;
+    this.activeBucketToIndexMap = new Map();
   }
 }

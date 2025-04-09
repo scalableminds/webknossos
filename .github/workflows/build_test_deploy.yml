@@ -14,6 +14,8 @@ env:
   POSTGRES_URL: "jdbc:postgresql://localhost:5432/webknossos"
   POSTGRES_USER: "webknossos_user"
   POSTGRES_PASSWORD: "secret_password"
+  CERTIFICATE: ${{ secrets.CERTIFICATE }}
+  CERTIFICATE_PUBLIC_KEY: ${{ secrets.CERTIFICATE_PUBLIC_KEY }}
 
 jobs:
   frontend-tests:

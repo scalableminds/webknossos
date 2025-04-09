@@ -20,7 +20,7 @@ while [[ "$commitmsg" =~ $pullregex ]]; do
     commitmsg="${BASH_REMATCH[1]}#<https://github.com/scalableminds/webknossos/issues/${BASH_REMATCH[2]}|${BASH_REMATCH[2]}>${BASH_REMATCH[3]}"
 done
 
-buildlink="<https://circleci.com/gh/scalableminds/webknossos/${}|ready>"
+buildlink="<${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}|ready>"
 mesg="${author} WEBKNOSSOS docker image \`master__${GITHUB_RUN_ID}\` for “${commitmsg}” is ${buildlink}."
 user="ci-notify"
 token="${SLACK_NOTIFY_TOKEN:-}"

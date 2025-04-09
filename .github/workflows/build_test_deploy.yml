@@ -103,8 +103,8 @@ jobs:
       - name: "Custom environment variables"
         id: configure
         run: |
-          if [[ ${{ github.ref_type }} == "branch" ]]; then
-            NORMALIZED_BRANCH=$(echo ${{ github.ref_name }} | sed 's/[\/-]/_/g')
+          if [[ "${{ github.ref_type }}" == "branch" ]]; then
+            NORMALIZED_BRANCH=$(echo "${{ github.ref_name }}" | sed 's/[\/-]/_/g')
             DOCKER_TAG="${NORMALIZED_BRANCH}__${{ github.run_id }}"
             echo "DOCKER_TAG=$DOCKER_TAG" >> "$GITHUB_ENV"
             echo "NORMALIZED_BRANCH=$NORMALIZED_BRANCH" >> "$GITHUB_ENV"
@@ -232,37 +232,37 @@ jobs:
       - name: Push webknossos image
         uses: ./.github/actions/retry
         with:
-          run: docker push scalableminds/webknossos:${{ env.DOCKER_TAG }}
+          run: docker push "scalableminds/webknossos:${{ env.DOCKER_TAG }}"
           retries: 5
           retry_delay_seconds: 10
       - name: Push normalized webknossos image
         uses: ./.github/actions/retry
         with:
-          run: docker push scalableminds/webknossos:${{ env.NORMALIZED_BRANCH }}
+          run: docker push "scalableminds/webknossos:${{ env.NORMALIZED_BRANCH }}"
           retries: 5
           retry_delay_seconds: 10
       - name: Push webknossos-datastore image
         uses: ./.github/actions/retry
         with:
-          run: docker push scalableminds/webknossos-datastore:${{ env.DOCKER_TAG }}
+          run: docker push "scalableminds/webknossos-datastore:${{ env.DOCKER_TAG }}"
           retries: 5
           retry_delay_seconds: 10
       - name: Push normalized webknossos-datastore image
         uses: ./.github/actions/retry
         with:
-          run: docker push scalableminds/webknossos-datastore:${{ env.NORMALIZED_BRANCH }}
+          run: docker push "scalableminds/webknossos-datastore:${{ env.NORMALIZED_BRANCH }}"
           retries: 5
           retry_delay_seconds: 10
       - name: Push webknossos-tracingstore image
         uses: ./.github/actions/retry
         with:
-          run: docker push scalableminds/webknossos-tracingstore:${{ env.DOCKER_TAG }}
+          run: docker push "scalableminds/webknossos-tracingstore:${{ env.DOCKER_TAG }}"
           retries: 5
           retry_delay_seconds: 10
       - name: Push normalized webknossos-tracingstore image
         uses: ./.github/actions/retry
         with:
-          run: docker push scalableminds/webknossos-tracingstore:${{ env.NORMALIZED_BRANCH }}
+          run: docker push "scalableminds/webknossos-tracingstore:${{ env.NORMALIZED_BRANCH }}"
           retries: 5
           retry_delay_seconds: 10
       - name: Slack Notification

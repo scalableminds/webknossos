@@ -57,7 +57,7 @@ services:
       - -J-Xms1G
       - -Dconfig.file=conf/standalone-tracingstore.conf
       - -Dhttp.port=9050
-      - -Dhttp.uri=http://webknossos-datastore:9050
+      - -Dhttp.uri=http://webknossos-tracingstore:9050
       - -Dtracingstore.fossildb.address=fossildb
       - -Dtracingstore.redis.address=redis
       - -Ddatastore.webknossos.uri=webknossos:9000

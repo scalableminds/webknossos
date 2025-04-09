@@ -615,7 +615,6 @@ class SceneController {
     // For some reason, all objects have to be put into a group object. Changing
     // scene.scale does not have an effect.
     this.rootGroup = new THREE.Object3D();
-    window.rootGroup = this.rootGroup;
     this.rootGroup.add(this.getRootNode());
 
     this.highlightedBBoxId = null;

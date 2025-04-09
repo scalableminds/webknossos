@@ -1,6 +1,6 @@
 import { createExplorational } from "admin/admin_rest_api";
 import { withAuthentication } from "admin/auth/authentication_modal";
-import { Alert, Popover } from "antd";
+import { Alert, Popover, Space } from "antd";
 import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
 import { isUserAdminOrTeamManager } from "libs/utils";
 import { ArbitraryVectorInput } from "libs/vector_input";
@@ -41,6 +41,7 @@ import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
 import { StartAIJobModal, type StartAIJobModalState } from "./action-bar/starting_job_modals";
 import ButtonComponent from "./components/button_component";
 import { NumberSliderSetting } from "./components/setting_input_views";
+import ToolWorkspaceView from "./action-bar/tool_workspace_view";
 
 const VersionRestoreWarning = (
   <Alert
@@ -55,9 +56,7 @@ type StateProps = {
   dataset: APIDataset;
   activeUser: APIUser | null | undefined;
   controlMode: ControlMode;
-  hasSkeleton: boolean;
   showVersionRestore: boolean;
-  isReadOnly: boolean;
   is2d: boolean;
   viewMode: ViewMode;
   aiJobModalState: StartAIJobModalState;
@@ -192,6 +191,25 @@ function CreateAnnotationButton() {
   );
 }
 
+function ModesView() {
+  const hasSkeleton = useSelector((state: OxalisState) => state.annotation.skeleton != null);
+  const is2d = useSelector((state: OxalisState) => is2dDataset(state.dataset));
+  const controlMode = useSelector((state: OxalisState) => state.temporaryConfiguration.controlMode);
+  const isViewMode = controlMode === ControlModeEnum.VIEW;
+
+  const isArbitrarySupported = hasSkeleton || isViewMode;
+
+  // The outer div is necessary for proper spacing.
+  return (
+    <div>
+      <Space.Compact>
+        {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
+        <ToolWorkspaceView />
+      </Space.Compact>
+    </div>
+  );
+}
+
 class ActionBarView extends React.PureComponent<Props, State> {
   state: State = {
     isNewLayoutModalOpen: false,
@@ -244,20 +262,10 @@ class ActionBarView extends React.PureComponent<Props, State> {
   }
 
   render() {
-    const {
-      dataset,
-      is2d,
-      isReadOnly,
-      showVersionRestore,
-      controlMode,
-      hasSkeleton,
-      layoutProps,
-      viewMode,
-      activeUser,
-    } = this.props;
+    const { dataset, is2d, showVersionRestore, controlMode, layoutProps, viewMode, activeUser } =
+      this.props;
     const isAdminOrDatasetManager = activeUser && isUserAdminOrTeamManager(activeUser);
     const isViewMode = controlMode === ControlModeEnum.VIEW;
-    const isArbitrarySupported = hasSkeleton || isViewMode;
     const getIsAIAnalysisEnabled = () => {
       const jobsEnabled =
         dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_NEURONS) ||
@@ -304,14 +312,12 @@ class ActionBarView extends React.PureComponent<Props, State> {
           {showVersionRestore ? VersionRestoreWarning : null}
           <DatasetPositionView />
           <AdditionalCoordinatesInputView />
-          {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
+          <ModesView />
           {getIsAIAnalysisEnabled() && isAdminOrDatasetManager
             ? this.renderStartAIJobButton(shouldDisableAIJobButton, tooltip)
             : null}
           {isViewMode ? this.renderStartTracingButton() : null}
-          {constants.MODES_PLANE.indexOf(viewMode) > -1 ? (
-            <ToolbarView isReadOnly={isReadOnly} />
-          ) : null}
+          {constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
         </div>
         <AddNewLayoutModal
           addLayout={this.addNewLayout}
@@ -333,8 +339,6 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
   controlMode: state.temporaryConfiguration.controlMode,
   showVersionRestore: state.uiInformation.showVersionRestore,
-  hasSkeleton: state.annotation.skeleton != null,
-  isReadOnly: !state.annotation.restrictions.allowUpdate,
   is2d: is2dDataset(state.dataset),
   viewMode: state.temporaryConfiguration.viewMode,
   aiJobModalState: state.uiInformation.aIJobModalState,

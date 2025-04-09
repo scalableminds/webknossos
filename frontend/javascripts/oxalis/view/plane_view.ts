@@ -4,7 +4,7 @@ import VisibilityAwareRaycaster, {
 } from "libs/visibility_aware_raycaster";
 import window from "libs/window";
 import _ from "lodash";
-import type { OrthoViewMap, Vector3, Viewport } from "oxalis/constants";
+import type { OrthoViewMap, Viewport } from "oxalis/constants";
 import Constants, { OrthoViewColors, OrthoViewValues, OrthoViews } from "oxalis/constants";
 import getSceneController, {
   getSceneControllerOrNull,
@@ -20,21 +20,6 @@ import { clearCanvas, setupRenderArea } from "oxalis/view/rendering_utils";
 import * as THREE from "three";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
-
-const createDirLight = (
-  position: Vector3,
-  target: Vector3,
-  intensity: number,
-  parent: THREE.OrthographicCamera,
-) => {
-  const dirLight = new THREE.DirectionalLight(0xffffff, intensity);
-  dirLight.color.setHSL(0.1, 1, 0.95);
-  dirLight.position.set(...position);
-  parent.add(dirLight);
-  parent.add(dirLight.target);
-  dirLight.target.position.set(...target);
-  return dirLight;
-};
 
 const raycaster = new VisibilityAwareRaycaster();
 let oldRaycasterHit: MeshSceneNode | null = null;
@@ -70,7 +55,6 @@ class PlaneView {
     }
     this.cameras = cameras;
 
-    // createDirLight([10, 10, 10], [0, 0, 10], 5, this.cameras[OrthoViews.TDView]);
     this.cameras[OrthoViews.PLANE_XY].position.z = -1;
     this.cameras[OrthoViews.PLANE_YZ].position.x = 1;
     this.cameras[OrthoViews.PLANE_XZ].position.y = 1;

@@ -7,7 +7,6 @@ import {
 } from "@ant-design/icons";
 import {
   Badge,
-  Button,
   Col,
   Divider,
   Dropdown,
@@ -848,35 +847,15 @@ function calculateMediumBrushSize(maximumBrushSize: number) {
   return Math.ceil((maximumBrushSize - userSettings.brushSize.minimum) / 10) * 5;
 }
 
-export default function ToolbarView({ isReadOnly }: { isReadOnly: boolean }) {
-  const dispatch = useDispatch();
+export default function ToolbarView() {
   const hasVolume = useSelector((state: OxalisState) => state.annotation?.volumes.length > 0);
   const hasSkeleton = useSelector((state: OxalisState) => state.annotation?.skeleton != null);
-
-  const isAgglomerateMappingEnabled = useSelector(hasAgglomerateMapping);
+  const toolWorkspace = useSelector((state: OxalisState) => state.userConfiguration.toolWorkspace);
 
   const [lastForcefullyDisabledTool, setLastForcefullyDisabledTool] =
     useState<AnnotationTool | null>(null);
-  const isVolumeModificationAllowed =
-    useSelector((state: OxalisState) => !hasEditableMapping(state)) && !isReadOnly;
-  const useLegacyBindings = useSelector(
-    (state: OxalisState) => state.userConfiguration.useLegacyBindings,
-  );
-  const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
-  const maybeMagWithZoomStep = useSelector(getRenderableMagForActiveSegmentationTracing);
 
-  const labeledMag = maybeMagWithZoomStep != null ? maybeMagWithZoomStep.mag : null;
-  const hasMagWithHigherDimension = (labeledMag || []).some((val) => val > 1);
-  const multiSliceAnnotationInfoIcon = hasMagWithHigherDimension ? (
-    <FastTooltip title="You are annotating in a low magnification. Depending on the used viewport, you might be annotating multiple slices at once.">
-      <i
-        className="fas fa-layer-group"
-        style={{
-          marginLeft: 4,
-        }}
-      />
-    </FastTooltip>
-  ) : null;
+  const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
 
   const disabledInfosForTools = useSelector(getDisabledInfoForTools);
   // Ensure that no volume-tool is selected when being in merger mode.
@@ -920,254 +899,55 @@ export default function ToolbarView({ isReadOnly }: { isReadOnly: boolean }) {
     isControlOrMetaPressed,
     isAltPressed,
   );
-  const areEditableMappingsEnabled = features().editableMappingsEnabled;
-
-  const skeletonToolDescription = useLegacyBindings
-    ? "Use left-click to move around and right-click to create new skeleton nodes"
-    : "Use left-click to move around or to create/select/move nodes. Right-click opens a context menu with further options.";
-  const showEraseTraceTool =
-    adaptedActiveTool === AnnotationToolEnum.TRACE ||
-    adaptedActiveTool === AnnotationToolEnum.ERASE_TRACE;
-  const showEraseBrushTool = !showEraseTraceTool;
 
   return (
     <>
       <Radio.Group onChange={handleSetTool} value={adaptedActiveTool}>
-        <ToolRadioButton
-          name={TOOL_NAMES.MOVE}
-          description="Use left-click to move around and right-click to open a context menu."
-          disabledExplanation=""
-          disabled={false}
-          value={AnnotationToolEnum.MOVE}
-        >
-          <i className="fas fa-arrows-alt" />
-        </ToolRadioButton>
-
-        {hasSkeleton && !isReadOnly ? (
-          <ToolRadioButton
-            name={TOOL_NAMES.SKELETON}
-            description={skeletonToolDescription}
-            disabledExplanation={disabledInfosForTools[AnnotationToolEnum.SKELETON].explanation}
-            disabled={disabledInfosForTools[AnnotationToolEnum.SKELETON].isDisabled}
-            value={AnnotationToolEnum.SKELETON}
-          >
-            <i
-              style={{
-                opacity: disabledInfosForTools[AnnotationToolEnum.SKELETON].isDisabled ? 0.5 : 1,
-              }}
-              className="fas fa-project-diagram"
-            />
-          </ToolRadioButton>
+        {toolWorkspace === "ALL_TOOLS" ? (
+          <>
+            <MoveTool />
+            <SkeletonTool />
+            <BrushTool adaptedActiveTool={adaptedActiveTool} />
+            <EraseBrushTool adaptedActiveTool={adaptedActiveTool} />
+            <TraceTool adaptedActiveTool={adaptedActiveTool} />
+            <EraseTraceTool adaptedActiveTool={adaptedActiveTool} />
+            <FillCellTool adaptedActiveTool={adaptedActiveTool} />
+            <PickCellTool />
+            <QuickSelectTool />
+            <BoundingBoxTool />
+            <ProofreadTool />
+            <LineMeasurementTool />
+          </>
+        ) : null}
+        {toolWorkspace === "READ_ONLY_TOOLS" ? (
+          <>
+            <MoveTool />
+            <PickCellTool />
+            <LineMeasurementTool />
+          </>
         ) : null}
 
-        {hasVolume && isVolumeModificationAllowed ? (
-          <React.Fragment>
-            <ToolRadioButton
-              name={TOOL_NAMES.BRUSH}
-              description={
-                "Draw over the voxels you would like to label. Adjust the brush size with Shift + Mousewheel."
-              }
-              disabledExplanation={disabledInfosForTools[AnnotationToolEnum.BRUSH].explanation}
-              disabled={disabledInfosForTools[AnnotationToolEnum.BRUSH].isDisabled}
-              value={AnnotationToolEnum.BRUSH}
-            >
-              <i
-                className="fas fa-paint-brush"
-                style={{
-                  opacity: disabledInfosForTools[AnnotationToolEnum.BRUSH].isDisabled ? 0.5 : 1,
-                }}
-              />
-              {adaptedActiveTool === AnnotationToolEnum.BRUSH ? multiSliceAnnotationInfoIcon : null}
-            </ToolRadioButton>
-
-            <ToolRadioButton
-              name={TOOL_NAMES.ERASE_BRUSH}
-              description="Erase the voxels by brushing over them. Adjust the brush size with Shift + Mousewheel."
-              disabledExplanation={
-                disabledInfosForTools[AnnotationToolEnum.ERASE_BRUSH].explanation
-              }
-              disabled={disabledInfosForTools[AnnotationToolEnum.ERASE_BRUSH].isDisabled}
-              style={{
-                marginLeft: showEraseBrushTool ? 0 : -38,
-                zIndex: showEraseBrushTool ? "initial" : -10,
-                transition: "margin 0.3s",
-              }}
-              value={AnnotationToolEnum.ERASE_BRUSH}
-            >
-              <i
-                className="fas fa-eraser"
-                style={{
-                  opacity: disabledInfosForTools[AnnotationToolEnum.ERASE_BRUSH].isDisabled
-                    ? 0.5
-                    : 1,
-                }}
-              />
-              {adaptedActiveTool === AnnotationToolEnum.ERASE_BRUSH
-                ? multiSliceAnnotationInfoIcon
-                : null}
-            </ToolRadioButton>
-
-            <ToolRadioButton
-              name={TOOL_NAMES.TRACE}
-              description="Draw outlines around the voxels you would like to label."
-              disabledExplanation={disabledInfosForTools[AnnotationToolEnum.TRACE].explanation}
-              disabled={disabledInfosForTools[AnnotationToolEnum.TRACE].isDisabled}
-              value={AnnotationToolEnum.TRACE}
-            >
-              <img
-                src="/assets/images/lasso.svg"
-                alt="Trace Tool Icon"
-                style={{
-                  marginRight: 4,
-                  opacity: disabledInfosForTools[AnnotationToolEnum.TRACE].isDisabled ? 0.5 : 1,
-                  ...imgStyleForSpaceyIcons,
-                }}
-              />
-              {adaptedActiveTool === AnnotationToolEnum.TRACE ? multiSliceAnnotationInfoIcon : null}
-            </ToolRadioButton>
-
-            <ToolRadioButton
-              name={TOOL_NAMES.ERASE_TRACE}
-              description="Draw outlines around the voxel you would like to erase."
-              disabledExplanation={
-                disabledInfosForTools[AnnotationToolEnum.ERASE_TRACE].explanation
-              }
-              disabled={disabledInfosForTools[AnnotationToolEnum.ERASE_TRACE].isDisabled}
-              style={{
-                marginLeft: showEraseTraceTool ? 0 : -38,
-                zIndex: showEraseTraceTool ? "initial" : -10,
-                transition: "margin 0.3s",
-              }}
-              value={AnnotationToolEnum.ERASE_TRACE}
-            >
-              <i
-                className="fas fa-eraser"
-                style={{
-                  opacity: disabledInfosForTools[AnnotationToolEnum.ERASE_TRACE].isDisabled
-                    ? 0.5
-                    : 1,
-                }}
-              />
-              {adaptedActiveTool === AnnotationToolEnum.ERASE_TRACE
-                ? multiSliceAnnotationInfoIcon
-                : null}
-            </ToolRadioButton>
-
-            <ToolRadioButton
-              name={TOOL_NAMES.FILL_CELL}
-              description="Flood-fill the clicked region."
-              disabledExplanation={disabledInfosForTools[AnnotationToolEnum.FILL_CELL].explanation}
-              disabled={disabledInfosForTools[AnnotationToolEnum.FILL_CELL].isDisabled}
-              value={AnnotationToolEnum.FILL_CELL}
-            >
-              <i
-                className="fas fa-fill-drip"
-                style={{
-                  opacity: disabledInfosForTools[AnnotationToolEnum.FILL_CELL].isDisabled ? 0.5 : 1,
-                  transform: "scaleX(-1)",
-                }}
-              />
-              {adaptedActiveTool === AnnotationToolEnum.FILL_CELL
-                ? multiSliceAnnotationInfoIcon
-                : null}
-            </ToolRadioButton>
-            <ToolRadioButton
-              name={TOOL_NAMES.PICK_CELL}
-              description="Click on a voxel to make its segment id the active segment id."
-              disabledExplanation={disabledInfosForTools[AnnotationToolEnum.PICK_CELL].explanation}
-              disabled={disabledInfosForTools[AnnotationToolEnum.PICK_CELL].isDisabled}
-              value={AnnotationToolEnum.PICK_CELL}
-            >
-              <i
-                className="fas fa-eye-dropper"
-                style={{
-                  opacity: disabledInfosForTools[AnnotationToolEnum.PICK_CELL].isDisabled ? 0.5 : 1,
-                }}
-              />
-            </ToolRadioButton>
-            <ToolRadioButton
-              name={TOOL_NAMES.QUICK_SELECT}
-              description="Click on a segment or draw a rectangle around it to automatically detect it"
-              disabledExplanation={
-                disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].explanation
-              }
-              disabled={disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].isDisabled}
-              value={AnnotationToolEnum.QUICK_SELECT}
-            >
-              <img
-                src="/assets/images/quick-select-tool.svg"
-                alt="Quick Select Icon"
-                style={{
-                  opacity: disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].isDisabled
-                    ? 0.5
-                    : 1,
-                  ...imgStyleForSpaceyIcons,
-                }}
-              />
-            </ToolRadioButton>
-          </React.Fragment>
+        {toolWorkspace === "VOLUME_ANNOTATION" ? (
+          <>
+            <MoveTool />
+            <BrushTool adaptedActiveTool={adaptedActiveTool} />
+            <EraseBrushTool adaptedActiveTool={adaptedActiveTool} />
+            <TraceTool adaptedActiveTool={adaptedActiveTool} />
+            <EraseTraceTool adaptedActiveTool={adaptedActiveTool} />
+            <FillCellTool adaptedActiveTool={adaptedActiveTool} />
+            <PickCellTool />
+            <QuickSelectTool />
+          </>
         ) : null}
-        {!isReadOnly && (
-          <ToolRadioButton
-            name={TOOL_NAMES.BOUNDING_BOX}
-            description="Create, resize and modify bounding boxes."
-            disabledExplanation={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].explanation}
-            disabled={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled}
-            value={AnnotationToolEnum.BOUNDING_BOX}
-          >
-            <img
-              src="/assets/images/bounding-box.svg"
-              alt="Bounding Box Icon"
-              style={{
-                opacity: disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled
-                  ? 0.5
-                  : 1,
-                ...imgStyleForSpaceyIcons,
-              }}
-            />
-          </ToolRadioButton>
-        )}
-
-        {hasSkeleton && hasVolume && !isReadOnly ? (
-          <ToolRadioButton
-            name={TOOL_NAMES.PROOFREAD}
-            description={
-              "Modify an agglomerated segmentation. Other segmentation modifications, like brushing, are not allowed if this tool is used."
-            }
-            disabledExplanation={
-              areEditableMappingsEnabled
-                ? isAgglomerateMappingEnabled.reason ||
-                  disabledInfosForTools[AnnotationToolEnum.PROOFREAD].explanation
-                : "Proofreading tool is only available on webknossos.org"
-            }
-            disabled={
-              !areEditableMappingsEnabled ||
-              !isAgglomerateMappingEnabled.value ||
-              disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled
-            }
-            value={AnnotationToolEnum.PROOFREAD}
-            onMouseEnter={() => {
-              dispatch(ensureLayerMappingsAreLoadedAction());
-            }}
-          >
-            <i
-              className="fas fa-clipboard-check"
-              style={{
-                opacity: disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled ? 0.5 : 1,
-                padding: "0 4px",
-              }}
-            />
-          </ToolRadioButton>
+        {toolWorkspace === "SPLIT_SEGMENTS" ? (
+          <>
+            <MoveTool />
+            <SkeletonTool />
+            <FillCellTool adaptedActiveTool={adaptedActiveTool} />
+            <PickCellTool />
+            <BoundingBoxTool />
+          </>
         ) : null}
-        <ToolRadioButton
-          name={TOOL_NAMES.LINE_MEASUREMENT}
-          description="Use to measure distances or areas."
-          disabledExplanation=""
-          disabled={false}
-          value={AnnotationToolEnum.LINE_MEASUREMENT}
-        >
-          <i className="fas fa-ruler" />
-        </ToolRadioButton>
       </Radio.Group>
 
       <ToolSpecificSettings
@@ -1280,7 +1060,7 @@ function ToolSpecificSettings({
       {adaptedActiveTool === AnnotationToolEnum.FILL_CELL ? <FloodFillSettings /> : null}
 
       {adaptedActiveTool === AnnotationToolEnum.PROOFREAD && areEditableMappingsEnabled ? (
-        <ProofReadingComponents />
+        <ProofreadingComponents />
       ) : null}
 
       {MeasurementTools.includes(adaptedActiveTool) ? (
@@ -1427,7 +1207,7 @@ function FillModeSwitch() {
   );
 }
 
-function ProofReadingComponents() {
+function ProofreadingComponents() {
   const dispatch = useDispatch();
   const handleClearProofreading = () => dispatch(clearProofreadingByProducts());
   const autoRenderMeshes = useSelector(
@@ -1511,4 +1291,379 @@ function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
       </RadioButtonWithTooltip>
     </Radio.Group>
   );
+}
+
+function MoveTool() {
+  return (
+    <ToolRadioButton
+      name={TOOL_NAMES.MOVE}
+      description="Use left-click to move around and right-click to open a context menu."
+      disabledExplanation=""
+      disabled={false}
+      value={AnnotationToolEnum.MOVE}
+    >
+      <i className="fas fa-arrows-alt" />
+    </ToolRadioButton>
+  );
+}
+
+function SkeletonTool() {
+  const useLegacyBindings = useSelector(
+    (state: OxalisState) => state.userConfiguration.useLegacyBindings,
+  );
+  const skeletonToolDescription = useLegacyBindings
+    ? "Use left-click to move around and right-click to create new skeleton nodes"
+    : "Use left-click to move around or to create/select/move nodes. Right-click opens a context menu with further options.";
+  const disabledInfosForTools = useSelector(getDisabledInfoForTools);
+  const hasSkeleton = useSelector((state: OxalisState) => state.annotation?.skeleton != null);
+  const isReadOnly = useSelector(
+    (state: OxalisState) => !state.annotation.restrictions.allowUpdate,
+  );
+
+  if (!hasSkeleton || isReadOnly) {
+    return null;
+  }
+
+  return (
+    <ToolRadioButton
+      name={TOOL_NAMES.SKELETON}
+      description={skeletonToolDescription}
+      disabledExplanation={disabledInfosForTools[AnnotationToolEnum.SKELETON].explanation}
+      disabled={disabledInfosForTools[AnnotationToolEnum.SKELETON].isDisabled}
+      value={AnnotationToolEnum.SKELETON}
+    >
+      <i
+        style={{
+          opacity: disabledInfosForTools[AnnotationToolEnum.SKELETON].isDisabled ? 0.5 : 1,
+        }}
+        className="fas fa-project-diagram"
+      />
+    </ToolRadioButton>
+  );
+}
+
+function getIsVolumeModificationAllowed(state: OxalisState) {
+  const isReadOnly = !state.annotation.restrictions.allowUpdate;
+  const hasVolume = state.annotation?.volumes.length > 0;
+  return hasVolume && !isReadOnly && !hasEditableMapping(state);
+}
+
+function BrushTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTool }) {
+  const disabledInfosForTools = useSelector(getDisabledInfoForTools);
+  const isVolumeModificationAllowed = useSelector(getIsVolumeModificationAllowed);
+  if (!isVolumeModificationAllowed) {
+    return null;
+  }
+  return (
+    <ToolRadioButton
+      name={TOOL_NAMES.BRUSH}
+      description={
+        "Draw over the voxels you would like to label. Adjust the brush size with Shift + Mousewheel."
+      }
+      disabledExplanation={disabledInfosForTools[AnnotationToolEnum.BRUSH].explanation}
+      disabled={disabledInfosForTools[AnnotationToolEnum.BRUSH].isDisabled}
+      value={AnnotationToolEnum.BRUSH}
+    >
+      <i
+        className="fas fa-paint-brush"
+        style={{
+          opacity: disabledInfosForTools[AnnotationToolEnum.BRUSH].isDisabled ? 0.5 : 1,
+        }}
+      />
+      {adaptedActiveTool === AnnotationToolEnum.BRUSH ? (
+        <MaybeMultiSliceAnnotationInfoIcon />
+      ) : null}
+    </ToolRadioButton>
+  );
+}
+
+function EraseBrushTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTool }) {
+  const disabledInfosForTools = useSelector(getDisabledInfoForTools);
+  const showEraseTraceTool =
+    adaptedActiveTool === AnnotationToolEnum.TRACE ||
+    adaptedActiveTool === AnnotationToolEnum.ERASE_TRACE;
+  const showEraseBrushTool = !showEraseTraceTool;
+
+  const isVolumeModificationAllowed = useSelector(getIsVolumeModificationAllowed);
+  if (!isVolumeModificationAllowed) {
+    return null;
+  }
+
+  return (
+    <ToolRadioButton
+      name={TOOL_NAMES.ERASE_BRUSH}
+      description="Erase the voxels by brushing over them. Adjust the brush size with Shift + Mousewheel."
+      disabledExplanation={disabledInfosForTools[AnnotationToolEnum.ERASE_BRUSH].explanation}
+      disabled={disabledInfosForTools[AnnotationToolEnum.ERASE_BRUSH].isDisabled}
+      style={{
+        marginLeft: showEraseBrushTool ? 0 : -38,
+        zIndex: showEraseBrushTool ? "initial" : -10,
+        transition: "margin 0.3s",
+      }}
+      value={AnnotationToolEnum.ERASE_BRUSH}
+    >
+      <i
+        className="fas fa-eraser"
+        style={{
+          opacity: disabledInfosForTools[AnnotationToolEnum.ERASE_BRUSH].isDisabled ? 0.5 : 1,
+        }}
+      />
+      {adaptedActiveTool === AnnotationToolEnum.ERASE_BRUSH ? (
+        <MaybeMultiSliceAnnotationInfoIcon />
+      ) : null}
+    </ToolRadioButton>
+  );
+}
+
+function TraceTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTool }) {
+  const disabledInfosForTools = useSelector(getDisabledInfoForTools);
+  const isVolumeModificationAllowed = useSelector(getIsVolumeModificationAllowed);
+  if (!isVolumeModificationAllowed) {
+    return null;
+  }
+  return (
+    <ToolRadioButton
+      name={TOOL_NAMES.TRACE}
+      description="Draw outlines around the voxels you would like to label."
+      disabledExplanation={disabledInfosForTools[AnnotationToolEnum.TRACE].explanation}
+      disabled={disabledInfosForTools[AnnotationToolEnum.TRACE].isDisabled}
+      value={AnnotationToolEnum.TRACE}
+    >
+      <img
+        src="/assets/images/lasso.svg"
+        alt="Trace Tool Icon"
+        style={{
+          marginRight: 4,
+          opacity: disabledInfosForTools[AnnotationToolEnum.TRACE].isDisabled ? 0.5 : 1,
+          ...imgStyleForSpaceyIcons,
+        }}
+      />
+      {adaptedActiveTool === AnnotationToolEnum.TRACE ? (
+        <MaybeMultiSliceAnnotationInfoIcon />
+      ) : null}
+    </ToolRadioButton>
+  );
+}
+
+function EraseTraceTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTool }) {
+  const disabledInfosForTools = useSelector(getDisabledInfoForTools);
+  const showEraseTraceTool =
+    adaptedActiveTool === AnnotationToolEnum.TRACE ||
+    adaptedActiveTool === AnnotationToolEnum.ERASE_TRACE;
+  const isVolumeModificationAllowed = useSelector(getIsVolumeModificationAllowed);
+  if (!isVolumeModificationAllowed) {
+    return null;
+  }
+
+  return (
+    <ToolRadioButton
+      name={TOOL_NAMES.ERASE_TRACE}
+      description="Draw outlines around the voxel you would like to erase."
+      disabledExplanation={disabledInfosForTools[AnnotationToolEnum.ERASE_TRACE].explanation}
+      disabled={disabledInfosForTools[AnnotationToolEnum.ERASE_TRACE].isDisabled}
+      style={{
+        marginLeft: showEraseTraceTool ? 0 : -38,
+        zIndex: showEraseTraceTool ? "initial" : -10,
+        transition: "margin 0.3s",
+      }}
+      value={AnnotationToolEnum.ERASE_TRACE}
+    >
+      <i
+        className="fas fa-eraser"
+        style={{
+          opacity: disabledInfosForTools[AnnotationToolEnum.ERASE_TRACE].isDisabled ? 0.5 : 1,
+        }}
+      />
+      {adaptedActiveTool === AnnotationToolEnum.ERASE_TRACE ? (
+        <MaybeMultiSliceAnnotationInfoIcon />
+      ) : null}
+    </ToolRadioButton>
+  );
+}
+
+function FillCellTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTool }) {
+  const disabledInfosForTools = useSelector(getDisabledInfoForTools);
+  const isVolumeModificationAllowed = useSelector(getIsVolumeModificationAllowed);
+  if (!isVolumeModificationAllowed) {
+    return null;
+  }
+
+  return (
+    <ToolRadioButton
+      name={TOOL_NAMES.FILL_CELL}
+      description="Flood-fill the clicked region."
+      disabledExplanation={disabledInfosForTools[AnnotationToolEnum.FILL_CELL].explanation}
+      disabled={disabledInfosForTools[AnnotationToolEnum.FILL_CELL].isDisabled}
+      value={AnnotationToolEnum.FILL_CELL}
+    >
+      <i
+        className="fas fa-fill-drip"
+        style={{
+          opacity: disabledInfosForTools[AnnotationToolEnum.FILL_CELL].isDisabled ? 0.5 : 1,
+          transform: "scaleX(-1)",
+        }}
+      />
+      {adaptedActiveTool === AnnotationToolEnum.FILL_CELL ? (
+        <MaybeMultiSliceAnnotationInfoIcon />
+      ) : null}
+    </ToolRadioButton>
+  );
+}
+
+function PickCellTool() {
+  const disabledInfosForTools = useSelector(getDisabledInfoForTools);
+  const isVolumeModificationAllowed = useSelector(getIsVolumeModificationAllowed);
+  if (!isVolumeModificationAllowed) {
+    return null;
+  }
+  return (
+    <ToolRadioButton
+      name={TOOL_NAMES.PICK_CELL}
+      description="Click on a voxel to make its segment id the active segment id."
+      disabledExplanation={disabledInfosForTools[AnnotationToolEnum.PICK_CELL].explanation}
+      disabled={disabledInfosForTools[AnnotationToolEnum.PICK_CELL].isDisabled}
+      value={AnnotationToolEnum.PICK_CELL}
+    >
+      <i
+        className="fas fa-eye-dropper"
+        style={{
+          opacity: disabledInfosForTools[AnnotationToolEnum.PICK_CELL].isDisabled ? 0.5 : 1,
+        }}
+      />
+    </ToolRadioButton>
+  );
+}
+
+function QuickSelectTool() {
+  const disabledInfosForTools = useSelector(getDisabledInfoForTools);
+  const isVolumeModificationAllowed = useSelector(getIsVolumeModificationAllowed);
+  if (!isVolumeModificationAllowed) {
+    return null;
+  }
+  return (
+    <ToolRadioButton
+      name={TOOL_NAMES.QUICK_SELECT}
+      description="Click on a segment or draw a rectangle around it to automatically detect it"
+      disabledExplanation={disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].explanation}
+      disabled={disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].isDisabled}
+      value={AnnotationToolEnum.QUICK_SELECT}
+    >
+      <img
+        src="/assets/images/quick-select-tool.svg"
+        alt="Quick Select Icon"
+        style={{
+          opacity: disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].isDisabled ? 0.5 : 1,
+          ...imgStyleForSpaceyIcons,
+        }}
+      />
+    </ToolRadioButton>
+  );
+}
+
+function BoundingBoxTool() {
+  const disabledInfosForTools = useSelector(getDisabledInfoForTools);
+  const isReadOnly = useSelector(
+    (state: OxalisState) => !state.annotation.restrictions.allowUpdate,
+  );
+  if (isReadOnly) {
+    return null;
+  }
+  return (
+    <ToolRadioButton
+      name={TOOL_NAMES.BOUNDING_BOX}
+      description="Create, resize and modify bounding boxes."
+      disabledExplanation={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].explanation}
+      disabled={disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled}
+      value={AnnotationToolEnum.BOUNDING_BOX}
+    >
+      <img
+        src="/assets/images/bounding-box.svg"
+        alt="Bounding Box Icon"
+        style={{
+          opacity: disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled ? 0.5 : 1,
+          ...imgStyleForSpaceyIcons,
+        }}
+      />
+    </ToolRadioButton>
+  );
+}
+
+function ProofreadTool() {
+  const dispatch = useDispatch();
+  const isAgglomerateMappingEnabled = useSelector(hasAgglomerateMapping);
+  const disabledInfosForTools = useSelector(getDisabledInfoForTools);
+  const areEditableMappingsEnabled = features().editableMappingsEnabled;
+  const hasSkeleton = useSelector((state: OxalisState) => state.annotation?.skeleton != null);
+  const hasVolume = useSelector((state: OxalisState) => state.annotation?.volumes.length > 0);
+  const isReadOnly = useSelector(
+    (state: OxalisState) => !state.annotation.restrictions.allowUpdate,
+  );
+
+  const mayProofread = hasSkeleton && hasVolume && !isReadOnly;
+  if (!mayProofread) {
+    return null;
+  }
+
+  return (
+    <ToolRadioButton
+      name={TOOL_NAMES.PROOFREAD}
+      description={
+        "Modify an agglomerated segmentation. Other segmentation modifications, like brushing, are not allowed if this tool is used."
+      }
+      disabledExplanation={
+        areEditableMappingsEnabled
+          ? isAgglomerateMappingEnabled.reason ||
+            disabledInfosForTools[AnnotationToolEnum.PROOFREAD].explanation
+          : "Proofreading tool is only available on webknossos.org"
+      }
+      disabled={
+        !areEditableMappingsEnabled ||
+        !isAgglomerateMappingEnabled.value ||
+        disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled
+      }
+      value={AnnotationToolEnum.PROOFREAD}
+      onMouseEnter={() => {
+        dispatch(ensureLayerMappingsAreLoadedAction());
+      }}
+    >
+      <i
+        className="fas fa-clipboard-check"
+        style={{
+          opacity: disabledInfosForTools[AnnotationToolEnum.PROOFREAD].isDisabled ? 0.5 : 1,
+          padding: "0 4px",
+        }}
+      />
+    </ToolRadioButton>
+  );
+}
+
+function LineMeasurementTool() {
+  return (
+    <ToolRadioButton
+      name={TOOL_NAMES.LINE_MEASUREMENT}
+      description="Use to measure distances or areas."
+      disabledExplanation=""
+      disabled={false}
+      value={AnnotationToolEnum.LINE_MEASUREMENT}
+    >
+      <i className="fas fa-ruler" />
+    </ToolRadioButton>
+  );
+}
+
+function MaybeMultiSliceAnnotationInfoIcon() {
+  const maybeMagWithZoomStep = useSelector(getRenderableMagForActiveSegmentationTracing);
+  const labeledMag = maybeMagWithZoomStep != null ? maybeMagWithZoomStep.mag : null;
+  const hasMagWithHigherDimension = (labeledMag || []).some((val) => val > 1);
+  const maybeMultiSliceAnnotationInfoIcon = hasMagWithHigherDimension ? (
+    <FastTooltip title="You are annotating in a low magnification. Depending on the used viewport, you might be annotating multiple slices at once.">
+      <i
+        className="fas fa-layer-group"
+        style={{
+          marginLeft: 4,
+        }}
+      />
+    </FastTooltip>
+  ) : null;
+  return maybeMultiSliceAnnotationInfoIcon;
 }

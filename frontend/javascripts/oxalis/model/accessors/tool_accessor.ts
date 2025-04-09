@@ -359,7 +359,9 @@ const _getDisabledInfoForTools = (state: OxalisState): Record<AnnotationToolEnum
     ...disabledVolumeInfo,
   };
 };
-export const getDisabledInfoForTools = reuseInstanceOnEquality(_getDisabledInfoForTools);
+export const getDisabledInfoForTools = reuseInstanceOnEquality(
+  memoizeOne(_getDisabledInfoForTools),
+);
 
 export function adaptActiveToolToShortcuts(
   activeTool: AnnotationTool,

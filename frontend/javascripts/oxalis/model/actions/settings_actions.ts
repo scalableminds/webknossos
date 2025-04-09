@@ -6,6 +6,7 @@ import type {
   Mapping,
   MappingType,
   TemporaryConfiguration,
+  ToolWorkspace,
   UserConfiguration,
 } from "oxalis/store";
 import type { APIHistogramData } from "types/api_flow_types";
@@ -17,6 +18,7 @@ export type ToggleTemporarySettingAction = ReturnType<typeof toggleTemporarySett
 type UpdateLayerSettingAction = ReturnType<typeof updateLayerSettingAction>;
 export type InitializeSettingsAction = ReturnType<typeof initializeSettingsAction>;
 type SetViewModeAction = ReturnType<typeof setViewModeAction>;
+type SetToolWorkspaceAction = ReturnType<typeof setToolWorkspaceAction>;
 type SetHistogramDataForLayerAction = ReturnType<typeof setHistogramDataForLayerAction>;
 export type ReloadHistogramAction = ReturnType<typeof reloadHistogramAction>;
 export type ClipHistogramAction = ReturnType<typeof clipHistogramAction>;
@@ -40,6 +42,7 @@ export type SettingAction =
   | InitializeSettingsAction
   | UpdateLayerSettingAction
   | SetViewModeAction
+  | SetToolWorkspaceAction
   | SetFlightmodeRecordingAction
   | SetControlModeAction
   | SetMappingEnabledAction
@@ -116,6 +119,12 @@ export const setViewModeAction = (viewMode: ViewMode) =>
   ({
     type: "SET_VIEW_MODE",
     viewMode,
+  }) as const;
+
+export const setToolWorkspaceAction = (toolWorkspace: ToolWorkspace) =>
+  ({
+    type: "SET_TOOL_WORKSPACE",
+    toolWorkspace,
   }) as const;
 
 export const setHistogramDataForLayerAction = (

@@ -1037,21 +1037,6 @@ class DataCube {
 
 export default DataCube;
 
-window.test = (point: Vector3) => {
-  const geometry = window.bentGeometry;
-  let target = {};
-  const retVal = geometry.boundsTree.closestPointToPoint(new THREE.Vector3(...point), target);
-
-  console.log("retVal", retVal);
-  console.log("target", target);
-  // closestPointToPoint(
-  //   point : Vector3,
-  //   target : Object = {},
-  //   minThreshold : Number = 0,
-  //   maxThreshold : Number = Infinity
-  // )
-};
-
 // Function to check intersection
 function checkLineIntersection(geometry: THREE.BufferGeometry, _pointA: Vector3, _pointB: Vector3) {
   // Create BVH from geometry if not already built
@@ -1080,5 +1065,3 @@ function checkLineIntersection(geometry: THREE.BufferGeometry, _pointA: Vector3,
 
   return retval;
 }
-
-// window.checkLineIntersection = checkLineIntersection;

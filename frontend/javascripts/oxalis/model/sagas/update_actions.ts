@@ -455,7 +455,8 @@ export function deleteUserBoundingBoxInVolumeTracingAction(
   } as const;
 }
 
-export function updateUserBoundingBoxInSkeletonTracingAction(
+function getUpdateUserBoundingBoxAction(
+  actionName: "updateUserBoundingBoxVolumeAction" | "updateUserBoundingBoxSkeletonAction",
   boundingBoxId: number,
   updatedProps: Partial<UserBoundingBox>,
   actionTracingId: string,
@@ -463,12 +464,11 @@ export function updateUserBoundingBoxInSkeletonTracingAction(
   let serverBBox = EMPTY_OBJECT;
   const { boundingBox, ...rest } = updatedProps;
   const updatedPropKeys = Object.keys(updatedProps);
-  if (updatedProps.boundingBox?.min != null && updatedProps.boundingBox?.max != null) {
-    const bb = updatedProps.boundingBox;
-    serverBBox = { boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(bb) };
+  if (boundingBox != null) {
+    serverBBox = { boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(boundingBox) };
   }
   return {
-    name: "updateUserBoundingBoxVolumeAction",
+    name: actionName,
     value: {
       boundingBoxId,
       actionTracingId,
@@ -483,22 +483,25 @@ export function updateUserBoundingBoxInVolumeTracingAction(
   updatedProps: Partial<UserBoundingBox>,
   actionTracingId: string,
 ) {
-  let serverBBox = EMPTY_OBJECT;
-  const { boundingBox, ...rest } = updatedProps;
-  const updatedPropKeys = Object.keys(updatedProps);
-  if (updatedProps.boundingBox?.min != null && updatedProps.boundingBox?.max != null) {
-    const bb = updatedProps.boundingBox;
-    serverBBox = { boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(bb) };
-  }
-  return {
-    name: "updateUserBoundingBoxVolumeAction",
-    value: {
-      boundingBoxId,
-      actionTracingId,
-      updatedProps: { ...serverBBox, ...rest },
-      updatedPropKeys,
-    },
-  } as const;
+  return getUpdateUserBoundingBoxAction(
+    "updateUserBoundingBoxVolumeAction",
+    boundingBoxId,
+    updatedProps,
+    actionTracingId,
+  );
+}
+
+export function updateUserBoundingBoxInSkeletonTracingAction(
+  boundingBoxId: number,
+  updatedProps: Partial<UserBoundingBox>,
+  actionTracingId: string,
+) {
+  return getUpdateUserBoundingBoxAction(
+    "updateUserBoundingBoxSkeletonAction",
+    boundingBoxId,
+    updatedProps,
+    actionTracingId,
+  );
 }
 
 export function updateUserBoundingBoxesInSkeletonTracing(

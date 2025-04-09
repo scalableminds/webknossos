@@ -89,7 +89,9 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
     val allMagsLocal = linkedMags.forall(_.mag.hasLocalData)
     val allLinkedDatasetLayers = linkedMags.map(_.linkedMags.map(lm => (lm.dataSourceId, lm.dataLayerName)))
     // Get combinations of datasourceId, layerName that link to EVERY mag
-    val linkedToByAllMags = allLinkedDatasetLayers.reduce((a, b) => a.intersect(b))
+    val linkedToByAllMags =
+      if (allLinkedDatasetLayers.isEmpty) Seq()
+      else allLinkedDatasetLayers.reduce((a, b) => a.intersect(b))
     if (allMagsLocal && linkedToByAllMags.nonEmpty) {
       linkedToByAllMags
     } else {

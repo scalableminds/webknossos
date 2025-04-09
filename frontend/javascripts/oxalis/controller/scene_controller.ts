@@ -52,7 +52,6 @@ import SegmentMeshController from "./segment_mesh_controller";
 
 const CUBE_COLOR = 0x999999;
 const LAYER_CUBE_COLOR = 0xffff99;
-import { orderPointsMST } from "./splitting_stuff";
 
 import {
   acceleratedRaycast,
@@ -61,6 +60,7 @@ import {
   disposeBatchedBoundsTree,
   disposeBoundsTree,
 } from "three-mesh-bvh";
+import computeSplitBoundaryMeshWithSplines from "./compute_split_boundary_mesh_with_splines";
 
 // Add the extension functions
 THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
@@ -70,173 +70,6 @@ THREE.Mesh.prototype.raycast = acceleratedRaycast;
 THREE.BatchedMesh.prototype.computeBoundsTree = computeBatchedBoundsTree;
 THREE.BatchedMesh.prototype.disposeBoundsTree = disposeBatchedBoundsTree;
 THREE.BatchedMesh.prototype.raycast = acceleratedRaycast;
-
-function computeBentSurfaceSplines(points: Vector3[]): {
-  splines: THREE.Object3D[];
-  surfaceMesh: THREE.Mesh;
-} {
-  const splines: THREE.Object3D[] = [];
-
-  const unfilteredPointsByZ = _.groupBy(points, (p) => p[2]);
-  const pointsByZ = _.omitBy(unfilteredPointsByZ, (value) => value.length < 2);
-
-  const zValues = Object.keys(pointsByZ)
-    .map((el) => Number(el))
-    .sort();
-
-  const minZ = Math.min(...zValues);
-  const maxZ = Math.max(...zValues);
-
-  const curvesByZ: Record<number, THREE.CatmullRomCurve3> = {};
-
-  // Create curves for existing z-values
-  const curves = _.compact(
-    zValues.map((zValue, curveIdx) => {
-      let adaptedZ = zValue;
-      if (zValue === minZ) {
-        adaptedZ -= 0.1;
-      } else if (zValue === maxZ) {
-        adaptedZ += 0.1;
-      }
-      const points2D = orderPointsMST(
-        pointsByZ[zValue].map((p) => new THREE.Vector3(p[0], p[1], adaptedZ)),
-      );
-
-      if (points2D.length < 2) {
-        return null;
-      }
-
-      if (curveIdx > 0) {
-        const currentCurvePoints = points2D;
-        const prevCurvePoints = curvesByZ[zValues[curveIdx - 1]].points;
-
-        const distActual = currentCurvePoints[0].distanceTo(prevCurvePoints[0]);
-        const distFlipped = (currentCurvePoints.at(-1) as THREE.Vector3).distanceTo(
-          prevCurvePoints[0],
-        );
-
-        const shouldFlip = distFlipped < distActual;
-        if (shouldFlip) {
-          points2D.reverse();
-        }
-      }
-
-      const curve = new THREE.CatmullRomCurve3(points2D);
-      curvesByZ[zValue] = curve;
-      return curve;
-    }),
-  );
-
-  // Number of points per curve
-  const numPoints = 50;
-
-  // Sort z-values for interpolation
-  const sortedZValues = Object.keys(curvesByZ)
-    .map(Number)
-    .sort((a, b) => a - b);
-
-  // Interpolate missing z-values
-  for (let z = minZ; z <= maxZ; z++) {
-    if (curvesByZ[z]) continue; // Skip if curve already exists
-
-    // Find nearest lower and upper z-values
-    const lowerZ = Math.max(...sortedZValues.filter((v) => v < z));
-    const upperZ = Math.min(...sortedZValues.filter((v) => v > z));
-
-    if (lowerZ === Number.NEGATIVE_INFINITY || upperZ === Number.POSITIVE_INFINITY) continue;
-
-    // Get the two adjacent curves and sample 50 points from each
-    const lowerCurvePoints = curvesByZ[lowerZ].getPoints(numPoints);
-    const upperCurvePoints = curvesByZ[upperZ].getPoints(numPoints);
-
-    // Interpolate between corresponding points
-    const interpolatedPoints = lowerCurvePoints.map((lowerPoint, i) => {
-      const upperPoint = upperCurvePoints[i];
-      const alpha = (z - lowerZ) / (upperZ - lowerZ); // Interpolation factor
-
-      return new THREE.Vector3(
-        THREE.MathUtils.lerp(lowerPoint.x, upperPoint.x, alpha),
-        THREE.MathUtils.lerp(lowerPoint.y, upperPoint.y, alpha),
-        z,
-      );
-    });
-
-    // Create the interpolated curve
-    const interpolatedCurve = new THREE.CatmullRomCurve3(interpolatedPoints);
-    curvesByZ[z] = interpolatedCurve;
-  }
-
-  // Generate and display all curves
-  Object.values(curvesByZ).forEach((curve) => {
-    const curvePoints = curve.getPoints(50);
-    const geometry = new THREE.BufferGeometry().setFromPoints(curvePoints);
-    const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
-    const splineObject = new THREE.Line(geometry, material);
-    splines.push(splineObject);
-  });
-
-  // Generate grid of points
-  const gridPoints = curves.map((curve) => curve.getPoints(numPoints - 1));
-
-  // Flatten into a single array of vertices
-  const vertices: number[] = [];
-  const indices = [];
-
-  gridPoints.forEach((row) => {
-    row.forEach((point) => {
-      vertices.push(point.x, point.y, point.z); // Store as flat array for BufferGeometry
-    });
-  });
-
-  // Connect vertices with triangles
-  // console.group("Computing indices");
-  for (let i = 0; i < curves.length - 1; i++) {
-    // console.group("Curve i=" + i);
-    for (let j = 0; j < numPoints - 1; j++) {
-      // console.group("Point j=" + j);
-      let current = i * numPoints + j;
-      let next = (i + 1) * numPoints + j;
-
-      // const printFace = (x, y, z) => {
-      //   return [vertices[3 * x], vertices[3 * y], vertices[3 * z]];
-      // };
-
-      // console.log("Creating faces with", { current, next });
-      // console.log("First face:", printFace(current, next, current + 1));
-      // console.log("Second face:", printFace(next, next + 1, current + 1));
-      // Two triangles per quad
-      indices.push(current, next, current + 1);
-      indices.push(next, next + 1, current + 1);
-      // console.groupEnd();
-    }
-    // console.groupEnd();
-  }
-  // console.groupEnd();
-
-  // Convert to Three.js BufferGeometry
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
-  geometry.setIndex(indices);
-  geometry.computeVertexNormals(); // Smooth shading
-  geometry.computeBoundsTree();
-
-  // Material and Mesh
-  const material = new THREE.MeshStandardMaterial({
-    color: 0x0077ff, // A soft blue color
-    metalness: 0.5, // Slight metallic effect
-    roughness: 1, // Some surface roughness for a natural look
-    side: THREE.DoubleSide, // Render both sides
-    flatShading: false, // Ensures smooth shading with computed normals
-    opacity: 0.8,
-    transparent: true,
-    wireframe: false,
-  });
-  const surfaceMesh = new THREE.Mesh(geometry, material);
-  return {
-    splines,
-    surfaceMesh,
-  };
-}
 
 class SceneController {
   skeletons: Record<number, Skeleton> = {};
@@ -264,7 +97,7 @@ class SceneController {
   // meshesRootGroup!: THREE.Object3D;
   segmentMeshController: SegmentMeshController;
   storePropertyUnsubscribers: Array<() => void>;
-  surfaceMesh: THREE.Mesh | null = null;
+  splitBoundaryMesh: THREE.Mesh | null = null;
 
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   // element depending on the provided flycam.
@@ -473,16 +306,16 @@ class SceneController {
     this.stopPlaneMode();
   }
 
-  addBentSurface(points: Vector3[]) {
+  addSplitBoundaryMesh(points: Vector3[]) {
     if (points.length === 0) {
       return () => {};
     }
 
-    let surfaceMesh: THREE.Mesh | null = null;
+    let splitBoundaryMesh: THREE.Mesh | null = null;
     let splines: THREE.Object3D[] = [];
     try {
-      const objects = computeBentSurfaceSplines(points);
-      surfaceMesh = objects.surfaceMesh;
+      const objects = computeSplitBoundaryMeshWithSplines(points);
+      splitBoundaryMesh = objects.splitBoundaryMesh;
       splines = objects.splines;
     } catch (exc) {
       console.error(exc);
@@ -491,24 +324,24 @@ class SceneController {
     }
 
     const surfaceGroup = new THREE.Group();
-    if (surfaceMesh != null) {
-      surfaceGroup.add(surfaceMesh);
+    if (splitBoundaryMesh != null) {
+      surfaceGroup.add(splitBoundaryMesh);
     }
     for (const spline of splines) {
       surfaceGroup.add(spline);
     }
 
     this.rootGroup.add(surfaceGroup);
-    this.surfaceMesh = surfaceMesh;
+    this.splitBoundaryMesh = splitBoundaryMesh;
 
     return () => {
       this.rootGroup.remove(surfaceGroup);
-      this.surfaceMesh = null;
+      this.splitBoundaryMesh = null;
     };
   }
 
-  getBentSurface() {
-    return this.surfaceMesh;
+  getSplitBoundaryMesh() {
+    return this.splitBoundaryMesh;
   }
 
   addSkeleton(
@@ -576,8 +409,8 @@ class SceneController {
     this.taskBoundingBox?.updateForCam(id);
 
     this.segmentMeshController.meshesLODRootGroup.visible = id === OrthoViews.TDView;
-    if (this.surfaceMesh != null) {
-      this.surfaceMesh.visible = id === OrthoViews.TDView;
+    if (this.splitBoundaryMesh != null) {
+      this.splitBoundaryMesh.visible = id === OrthoViews.TDView;
     }
     // this.segmentMeshController.meshesLODRootGroup.visible = false;
     this.annotationToolsGeometryGroup.visible = id !== OrthoViews.TDView;

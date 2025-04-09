@@ -10,7 +10,7 @@ import { takeWithBatchActionSupport } from "./saga_helpers";
 
 let cleanUpFn: (() => void) | null = null;
 
-function* updateBentSurface() {
+function* updateSplitBoundaryMesh() {
   if (cleanUpFn != null) {
     cleanUpFn();
     cleanUpFn = null;
@@ -31,18 +31,18 @@ function* updateBentSurface() {
     const nodes = Array.from(activeTree.nodes.values());
     const points = nodes.map((node) => node.untransformedPosition);
     if (points.length > 3) {
-      cleanUpFn = sceneController.addBentSurface(points);
+      cleanUpFn = sceneController.addSplitBoundaryMesh(points);
     }
   }
 }
 
-export function* bentSurfaceSaga(): Saga<void> {
+export function* splitBoundaryMeshSaga(): Saga<void> {
   cleanUpFn = null;
   yield* takeWithBatchActionSupport("INITIALIZE_SKELETONTRACING");
   yield* ensureWkReady();
 
   // initial rendering
-  yield* call(updateBentSurface);
+  yield* call(updateSplitBoundaryMesh);
   yield* takeEvery(
     [
       "SET_ACTIVE_TREE",
@@ -56,8 +56,8 @@ export function* bentSurfaceSaga(): Saga<void> {
       (action: Action) =>
         action.type === "UPDATE_USER_SETTING" && action.propertyName === "toolWorkspace",
     ] as ActionPattern,
-    updateBentSurface,
+    updateSplitBoundaryMesh,
   );
 }
 
-export default bentSurfaceSaga;
+export default splitBoundaryMeshSaga;

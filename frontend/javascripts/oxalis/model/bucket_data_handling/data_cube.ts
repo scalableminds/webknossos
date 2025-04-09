@@ -545,7 +545,7 @@ class DataCube {
     const floodfillBoundingBox = new BoundingBox(_floodfillBoundingBox);
     const sceneController = getSceneController();
     const isSplitWorkspace = Store.getState().userConfiguration.toolWorkspace === "SPLIT_SEGMENTS";
-    const splitBoundaryMesh = isSplitWorkspace ? sceneController.getBentSurface() : null;
+    const splitBoundaryMesh = isSplitWorkspace ? sceneController.getSplitBoundaryMesh() : null;
 
     // Helper function to convert between xyz and uvw (both directions)
     const transpose = (voxel: Vector3): Vector3 =>

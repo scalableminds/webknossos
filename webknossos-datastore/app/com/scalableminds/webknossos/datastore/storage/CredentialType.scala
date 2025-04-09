@@ -1,4 +1,4 @@
-package models.dataset.credential
+package com.scalableminds.webknossos.datastore.storage
 
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 

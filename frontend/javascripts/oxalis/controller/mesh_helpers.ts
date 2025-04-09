@@ -18,7 +18,7 @@ export class VertexSegmentMapping {
    * Each geometry has an unmapped segment id (multiple ones can have
    * the same segment id) and various vertices.
    * All (sorted) geometries are concatenated and then indices are built
-   * to allow for fast queries.
+   * to allow for fast queries via binary search.
    * E.g., one query allows to go from a vertex index ("position", named
    * like the BufferAttribute "position") to
    * the unmapped segment id of the geometry that belongs to the vertex.

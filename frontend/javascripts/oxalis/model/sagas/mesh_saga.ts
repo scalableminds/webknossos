@@ -218,7 +218,7 @@ function* loadAdHocMeshFromAction(action: LoadAdHocMeshAction): Saga<void> {
   if (layer == null) {
     return;
   }
-  // Remove older mesh instanc if it exists already.
+  // Remove older mesh instance if it exists already.
   yield* put(removeMeshAction(layer.name, action.segmentId));
 
   yield* call(
@@ -752,7 +752,7 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
   );
   if (layer == null) return;
 
-  // Remove older mesh instanc if it exists already.
+  // Remove older mesh instance if it exists already.
   yield* put(removeMeshAction(layer.name, action.segmentId));
 
   // If a REMOVE_MESH action is dispatched and consumed

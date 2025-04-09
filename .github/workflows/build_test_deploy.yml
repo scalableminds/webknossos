@@ -243,7 +243,7 @@ jobs:
         with:
           run: |
             sbt "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false" && s=0 && break || s=$?
-          reties: 3
+          retries: 3
       - name: Validate frontend types
         if: ${{ github.ref_name != 'master' }}
         run: yarn typecheck

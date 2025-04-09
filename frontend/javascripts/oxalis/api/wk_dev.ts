@@ -32,7 +32,6 @@ export const WkDevFlags = {
   datasetComposition: {
     allowThinPlateSplines: false,
   },
-  splittingStrategy: "splines",
 };
 
 export default class WkDev {

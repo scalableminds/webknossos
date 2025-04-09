@@ -47,17 +47,11 @@ import { getVoxelPerUnit } from "oxalis/model/scaleinfo";
 import { Model } from "oxalis/singletons";
 import type { OxalisState, SkeletonTracing, UserBoundingBox } from "oxalis/store";
 import Store from "oxalis/store";
-// @ts-ignore
-import PCA from "pca-js";
 import * as THREE from "three";
 import SegmentMeshController from "./segment_mesh_controller";
 
 const CUBE_COLOR = 0x999999;
 const LAYER_CUBE_COLOR = 0xffff99;
-
-import Delaunator from "delaunator";
-import TPS3D from "libs/thin_plate_spline";
-import { WkDevFlags } from "oxalis/api/wk_dev";
 import { orderPointsMST } from "./splitting_stuff";
 
 import {
@@ -76,171 +70,6 @@ THREE.Mesh.prototype.raycast = acceleratedRaycast;
 THREE.BatchedMesh.prototype.computeBoundsTree = computeBatchedBoundsTree;
 THREE.BatchedMesh.prototype.disposeBoundsTree = disposeBatchedBoundsTree;
 THREE.BatchedMesh.prototype.raycast = acceleratedRaycast;
-
-type EigenData = { eigenvalue: number; vector: number[] };
-
-function _createPointCloud(points: Vector3[], color: string) {
-  // Convert points to Three.js geometry
-  const geometry = new THREE.BufferGeometry();
-  const vertices = new Float32Array(_.flatten(points));
-  geometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
-
-  // Create point material and add to objects list
-  const material = new THREE.PointsMaterial({ color, size: 5 });
-
-  const pointCloud = new THREE.Points(geometry, material);
-  return pointCloud;
-}
-
-const rows = 100;
-const cols = 100;
-
-function computeBentSurfaceDelauny(points3D: Vector3[]): THREE.Object3D[] {
-  const objects: THREE.Object3D[] = [];
-  // Your precomputed 2D projection (same order as points3D)
-
-  const { projectedLocalPoints } = projectPoints(points3D);
-
-  // Compute Delaunay triangulation on the projected 2D points
-  const delaunay = Delaunator.from(projectedLocalPoints.map((vec) => [vec.x, vec.y]));
-  const indices = delaunay.triangles; // Triangle indices
-
-  // Flatten 3D vertex positions for BufferGeometry
-  const vertices = points3D.flat();
-
-  // Create BufferGeometry
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
-  geometry.setIndex(Array.from(indices));
-  geometry.computeVertexNormals(); // Compute normals for shading
-
-  const material = new THREE.MeshLambertMaterial({
-    color: "green",
-    wireframe: false,
-  });
-  material.side = THREE.DoubleSide;
-  // material.transparent = true;
-  const surfaceMesh = new THREE.Mesh(geometry, material);
-  objects.push(surfaceMesh);
-  return objects;
-}
-
-function projectPoints(points: Vector3[]) {
-  const eigenData: EigenData[] = PCA.getEigenVectors(points);
-
-  const adData = PCA.computeAdjustedData(points, eigenData[0], eigenData[1]);
-  const compressed = adData.formattedAdjustedData;
-  const uncompressed = PCA.computeOriginalData(compressed, adData.selectedVectors, adData.avgData);
-  console.log("uncompressed", uncompressed);
-
-  const projectedPoints: Vector3[] = uncompressed.originalData;
-
-  // Align the plane with the principal components
-  const normal = new THREE.Vector3(...eigenData[2].vector);
-  const quaternion = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
-  const quaternionInv = quaternion.clone().invert();
-
-  // Transform projectedPoints into the plane’s local coordinate system
-  const projectedLocalPoints = projectedPoints.map((p) => {
-    const worldPoint = new THREE.Vector3(...p);
-    return worldPoint.applyQuaternion(quaternionInv); // Move to local plane space
-  });
-  return { projectedPoints, projectedLocalPoints, eigenData };
-}
-
-function computeBentSurfaceTPS(points: Vector3[]): THREE.Object3D[] {
-  const objects: THREE.Object3D[] = [];
-  const { projectedPoints, projectedLocalPoints, eigenData } = projectPoints(points);
-  // objects.push(createPointCloud(points, "red"));
-  // objects.push(createPointCloud(projectedPoints, "blue"));
-
-  // todop: adapt scale
-  const scale = [1, 1, 1] as Vector3;
-  const tps = new TPS3D(projectedPoints, points, scale);
-
-  // Align the plane with the principal components
-  const normal = new THREE.Vector3(...eigenData[2].vector);
-  const quaternion = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
-  const quaternionInv = quaternion.clone().invert();
-
-  const mean = points.reduce(
-    (acc, p) => acc.add(new THREE.Vector3(...p).divideScalar(points.length)),
-    new THREE.Vector3(0, 0, 0),
-  );
-  const projectedMean = mean.clone().applyQuaternion(quaternionInv);
-
-  // Compute min/max bounds in local plane space
-  let minX = Number.POSITIVE_INFINITY,
-    maxX = Number.NEGATIVE_INFINITY,
-    minY = Number.POSITIVE_INFINITY,
-    maxY = Number.NEGATIVE_INFINITY;
-  projectedLocalPoints.forEach((p) => {
-    minX = Math.min(minX, p.x);
-    maxX = Math.max(maxX, p.x);
-    minY = Math.min(minY, p.y);
-    maxY = Math.max(maxY, p.y);
-  });
-
-  // Compute exact plane size based on bounds
-  const planeSizeX = 2 * Math.max(maxX - projectedMean.x, projectedMean.x - minX);
-  const planeSizeY = 2 * Math.max(maxY - projectedMean.y, projectedMean.y - minY);
-
-  // Define the plane using the first two principal components
-  // const planeSizeX = Math.sqrt(eigenData[0].eigenvalue) * 10;
-  // const planeSizeY = Math.sqrt(eigenData[1].eigenvalue) * 10;
-
-  const planeGeometry = new THREE.PlaneGeometry(planeSizeX, planeSizeY);
-  const planeMaterial = new THREE.MeshBasicMaterial({
-    color: 0x00ff00,
-    side: THREE.DoubleSide,
-    opacity: 0.5,
-    transparent: true,
-  });
-  const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-
-  plane.setRotationFromQuaternion(quaternion);
-
-  // const centerLocal = new THREE.Vector3((minX + maxX) / 2, (minY + maxY) / 2, 0);
-  // centerLocal.applyMatrix4(plane.matrixWorld);
-  plane.position.copy(mean);
-
-  plane.updateMatrixWorld();
-
-  // objects.push(plane);
-
-  const gridPoints = generatePlanePoints(plane);
-  const bentSurfacePoints = gridPoints.map((point) => tps.transform(...point));
-
-  // objects.push(createPointCloud(gridPoints, "purple"));
-  // objects.push(createPointCloud(bentSurfacePoints, "orange"));
-
-  const bentMesh = createBentSurfaceGeometry(bentSurfacePoints, rows, cols);
-  objects.push(bentMesh);
-
-  // const light = new THREE.DirectionalLight(0xffffff, 1);
-  // light.position.set(100, 150, 100); // Above and slightly in front of the points
-  // light.lookAt(60, 60, 75); // Aim at the center of the point set
-  // light.updateMatrixWorld();
-
-  // const lightHelper = new THREE.DirectionalLightHelper(light, 10, 0xff0000); // The size of the helper
-
-  // const arrowHelper = new THREE.ArrowHelper(
-  //   light.position
-  //     .clone()
-  //     .normalize(), // Direction
-  //   new THREE.Vector3(60, 60, 75), // Start position (light target)
-  //   20, // Arrow length
-  //   0xff0000, // Color (red)
-  // );
-
-  // light.castShadow = true;
-
-  // objects.push(light, lightHelper, arrowHelper);
-
-  // createNormalsVisualization(bentMesh.geometry, objects);
-
-  return objects;
-}
 
 function computeBentSurfaceSplines(points: Vector3[]): THREE.Object3D[] {
   const objects: THREE.Object3D[] = [];
@@ -404,90 +233,6 @@ function computeBentSurfaceSplines(points: Vector3[]): THREE.Object3D[] {
 
   objects.push(surfaceMesh);
   return objects;
-}
-
-function generatePlanePoints(planeMesh: THREE.Mesh<THREE.PlaneGeometry, any>): Vector3[] {
-  const points: THREE.Vector3[] = [];
-  const width = planeMesh.geometry.parameters.width;
-  const height = planeMesh.geometry.parameters.height;
-
-  // Use the full transformation matrix of the plane
-  const planeMatrix = planeMesh.matrixWorld.clone();
-
-  for (let i = 0; i < rows; i++) {
-    for (let j = 0; j < cols; j++) {
-      const x = (i / (rows - 1) - 0.5) * width;
-      const y = (j / (cols - 1) - 0.5) * height;
-      let point = new THREE.Vector3(x, y, 0);
-
-      point = point.applyMatrix4(planeMatrix);
-      points.push(point);
-    }
-  }
-  return points.map((vec) => [vec.x, vec.y, vec.z]);
-}
-
-function createBentSurfaceGeometry(points: Vector3[], rows: number, cols: number): THREE.Mesh {
-  const geometry = new THREE.BufferGeometry();
-
-  // Flattened position array
-  const positions = new Float32Array(points.length * 3);
-  points.forEach((p, i) => {
-    positions[i * 3] = p[0];
-    positions[i * 3 + 1] = p[1];
-    positions[i * 3 + 2] = p[2];
-  });
-
-  // Create indices for two triangles per quad
-  const indices: number[] = [];
-  for (let i = 0; i < rows - 1; i++) {
-    for (let j = 0; j < cols - 1; j++) {
-      const a = i * cols + j;
-      const b = i * cols + (j + 1);
-      const c = (i + 1) * cols + j;
-      const d = (i + 1) * cols + (j + 1);
-
-      // Two triangles per quad
-      indices.push(a, b, d);
-      indices.push(a, d, c);
-    }
-  }
-
-  // Apply to geometry
-  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-  geometry.setIndex(indices);
-  geometry.computeVertexNormals(); // Generate normals for lighting
-
-  const material = new THREE.MeshStandardMaterial({
-    color: 0x0077ff, // A soft blue color
-    metalness: 0.5, // Slight metallic effect
-    roughness: 1, // Some surface roughness for a natural look
-    side: THREE.DoubleSide, // Render both sides
-    flatShading: false, // Ensures smooth shading with computed normals
-  });
-
-  // const material = new THREE.MeshLambertMaterial({
-  //   color: "blue",
-  //   emissive: "green",
-  //   side: THREE.DoubleSide,
-  //   transparent: true,
-  // });
-
-  // const material = new THREE.MeshPhysicalMaterial({
-  //   color: 0x0077ff,
-  //   metalness: 0.3,
-  //   roughness: 0.5,
-  //   clearcoat: 0.5, // Adds extra reflection
-  //   side: THREE.DoubleSide,
-  // });
-
-  // const material = new THREE.MeshNormalMaterial({ side: THREE.DoubleSide });
-
-  // material.transparent = true;
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.receiveShadow = true;
-  mesh.castShadow = true;
-  return mesh;
 }
 
 class SceneController {
@@ -731,16 +476,7 @@ class SceneController {
 
     let objs: THREE.Object3D[] = [];
     try {
-      if (WkDevFlags.splittingStrategy === "tps") {
-        objs = computeBentSurfaceTPS(points);
-      } else if (WkDevFlags.splittingStrategy === "splines") {
-        objs = computeBentSurfaceSplines(points);
-      } else if (WkDevFlags.splittingStrategy === "delauny") {
-        objs = computeBentSurfaceDelauny(points);
-      } else {
-        Toast.error("Unknown splitting strategy. Use tps or splines or delauny");
-        return () => {};
-      }
+      objs = computeBentSurfaceSplines(points);
     } catch (exc) {
       console.error(exc);
       Toast.error("Could not compute surface");

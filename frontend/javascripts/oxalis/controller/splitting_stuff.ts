@@ -108,21 +108,3 @@ export function orderPointsMST(points: THREE.Vector3[]): THREE.Vector3[] {
 
   return bestOrder.map((index) => points[index]);
 }
-
-export function enforceConsistentDirection(points: THREE.Vector3[]): THREE.Vector3[] {
-  if (points.length < 2) return points;
-
-  const first = points[0];
-  const last = points[points.length - 1];
-
-  // Check if the curve follows top-left → bottom-right order
-  const dx = last.x - first.x;
-  const dy = last.y - first.y;
-  const maxDelta = Math.abs(dx) > Math.abs(dy) ? dx : dy;
-
-  if (maxDelta < 0) {
-    // The curve is flipped (going bottom-right → top-left), so reverse it
-    return points.reverse();
-  }
-  return points;
-}

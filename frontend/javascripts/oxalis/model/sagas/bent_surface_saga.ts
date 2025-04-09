@@ -1,12 +1,12 @@
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
+import type { ActionPattern } from "redux-saga/effects";
 import { call, takeEvery } from "typed-redux-saga";
 import { getActiveTree } from "../accessors/skeletontracing_accessor";
+import type { Action } from "../actions/actions";
 import { ensureWkReady } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
-import type { Action } from "../actions/actions";
-import type { ActionPattern } from "redux-saga/effects";
 
 let cleanUpFn: (() => void) | null = null;
 

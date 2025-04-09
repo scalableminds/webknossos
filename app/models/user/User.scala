@@ -209,9 +209,8 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     // format: on
   }
 
-  private def payingOrganizationInfoLateralJoin =
-    q"""
-      LATERAL (
+  private def payingOrganizationInfoSubquery =
+    q"""(
          SELECT DISTINCT ON (_multiUser) _multiUser, _organization
             FROM webknossos.users
             WHERE NOT isDeactivated
@@ -301,7 +300,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         INNER JOIN agg_user_team_roles autr ON autr._user = u._id
         INNER JOIN agg_experiences aux ON aux._user = u._id
         -- left outer join to keep users that do not have a paying organization
-        LEFT JOIN $payingOrganizationInfoLateralJoin
+        LEFT JOIN $payingOrganizationInfoSubquery
         WHERE $selectionPredicates
         GROUP BY
           u._id, u.firstname, u.lastname, u.userConfiguration, u.isAdmin, u.isOrganizationOwner, u.isDatasetManager,
@@ -428,7 +427,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       resultList <- run(q"""
       SELECT COUNT(*) FROM $existingCollectionName as u
-      LEFT JOIN $payingOrganizationInfoLateralJoin
+      LEFT JOIN $payingOrganizationInfoSubquery
       WHERE u._organization = $organizationId
         AND NOT u.isDeactivated
         AND NOT u.isUnlisted

@@ -167,6 +167,7 @@ jobs:
       - name: Build webknossos docker image
         uses: docker/build-push-action@v6
         with:
+          file: .github/Dockerfile.webknossos
           context: .
           push: false
           tags: |
@@ -177,6 +178,7 @@ jobs:
       - name: Build webknossos-datastore docker image
         uses: docker/build-push-action@v6
         with:
+          file: .github/Dockerfile.datastore
           context: webknossos-datastore
           push: false
           tags: |
@@ -187,6 +189,7 @@ jobs:
       - name: Build webknossos-tracingstore docker image
         uses: docker/build-push-action@v6
         with:
+          file: .github/Dockerfile.tracingstore
           context: webknossos-tracingstore
           push: false
           tags: |

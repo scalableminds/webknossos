@@ -21,7 +21,7 @@ class AlfuCache[K, V](store: AsyncCache[K, Box[V]]) extends FoxImplicits {
         case _: Failure => remove(key) // Do not cache failures
         case _          => ()
       }
-      result <- box.toFox
+      result <- box2Fox(box)
     } yield result
 
   private def getOrLoadAdapter(key: K, loadValue: K => Future[Box[V]]): Future[Box[V]] =

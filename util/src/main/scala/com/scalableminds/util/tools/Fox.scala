@@ -16,7 +16,7 @@ trait FoxImplicits {
   implicit def futureFull2Fox[T](f: Future[Full[T]])(implicit ec: ExecutionContext): Fox[T] =
     new Fox(f)
 
-  implicit def box2Fox[T](b: Box[T])(implicit ec: ExecutionContext): Fox[T] =
+  def box2Fox[T](b: Box[T])(implicit ec: ExecutionContext): Fox[T] =
     new Fox(Future.successful(b))
 
   /**

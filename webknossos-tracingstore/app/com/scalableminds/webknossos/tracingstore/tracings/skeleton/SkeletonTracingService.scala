@@ -44,7 +44,7 @@ class SkeletonTracingService @Inject()(
       for {
         _ <- Fox.serialCombined(treeIdsToFlush) { treeId =>
           for {
-            treeBody <- extractTreeBody(tracing, treeId)
+            treeBody <- box2Fox(extractTreeBody(tracing, treeId))
             _ <- skeletonTreeBodiesPutBuffer.put(f"$tracingId/$treeId", treeBody)
           } yield ()
         }

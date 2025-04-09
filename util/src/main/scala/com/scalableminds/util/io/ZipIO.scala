@@ -168,7 +168,7 @@ object ZipIO extends LazyLogging {
 
   def withUnzipedAsync[A](file: File)(f: (Path, InputStream) => Fox[A])(implicit ec: ExecutionContext): Fox[List[A]] =
     for {
-      zip <- tryo(new java.util.zip.ZipFile(file)).toFox
+      zip <- box2Fox(tryo(new java.util.zip.ZipFile(file)))
       resultList <- withUnzipedAsync(zip)((name, is) => f(name, is))
     } yield resultList
 
@@ -211,7 +211,7 @@ object ZipIO extends LazyLogging {
           }
           innerResultFox
         case e =>
-          e.toFox
+          box2Fox(e)
       }.toFox.flatten
     }
 

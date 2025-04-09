@@ -3,6 +3,7 @@ package com.scalableminds.util.time
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.{LazyLogging, Logger}
+import net.liftweb.common.Box
 import net.liftweb.common.Box.tryo
 import play.api.libs.json._
 
@@ -57,10 +58,9 @@ object Instant extends FoxImplicits with LazyLogging with Formatter {
 
   def fromSql(sqlTime: java.sql.Timestamp): Instant = Instant(sqlTime.getTime)
 
-  def fromLocalTimeString(localTimeLiteral: String)(implicit ec: ExecutionContext): Fox[Instant] =
-    tryo(new java.text.SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ss.SSS").parse(localTimeLiteral))
-      .map(date => Instant(date.getTime))
-      .toFox
+  def fromLocalTimeString(localTimeLiteral: String): Box[Instant] =
+    tryo(new java.text.SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ss.SSS").parse(localTimeLiteral)).map(date =>
+      Instant(date.getTime))
 
   def fromNanosecondsString(nanosecondsString: String): Instant =
     Instant(nanosecondsString.substring(0, nanosecondsString.length - 6).toLong)

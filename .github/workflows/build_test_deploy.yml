@@ -103,7 +103,6 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libdraco-dev libblosc1
 
       - name: "Custom environment variables"
-        id: configure
         run: |
           CI_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
           echo "CI_BUILD=${{ github.run_id }}" >> "$GITHUB_ENV"
@@ -205,9 +204,10 @@ jobs:
       - name: Start webknossos, datastore and tracingstore
         run: |
           set -e
-          docker compose --file .github/docker-compose.yml up -d webknossos
-          docker compose --file .github/docker-compose.yml up -d webknossos-datastore
-          docker compose --file .github/docker-compose.yml up -d webknossos-tracingstore
+          docker compose --file .github/docker-compose.yml up -d \
+            webknossos \
+            webknossos-datastore \
+            webknossos-tracingstore
       - name: Run webknossos smoke test
         uses: ./.github/actions/retry
         with:

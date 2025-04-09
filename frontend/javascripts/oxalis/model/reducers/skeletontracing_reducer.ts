@@ -835,7 +835,9 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             undefined,
             undefined,
             undefined,
-            isSplitWorkspaceActive,
+            // Don't show edges for trees that were created in the split workspace,
+            // because spline curves will be shown for each section by default.
+            !isSplitWorkspaceActive,
           )
             .map((tree) => {
               if (action.treeIdCallback) {

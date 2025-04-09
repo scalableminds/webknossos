@@ -85,14 +85,53 @@ class ViewModesView extends PureComponent<Props, EmptyObject> {
       onClick: handleMenuClick,
     };
 
+    const toolWorkspaceItems: MenuProps["items"] = [
+      {
+        key: "1",
+        type: "group",
+        label: "Select Workflow",
+        children: [
+          {
+            label: "All Tools",
+            key: "1",
+          },
+          {
+            label: "View Only",
+            key: "2",
+          },
+          {
+            label: "Volume Only",
+            key: "3",
+          },
+          {
+            label: "Split Segments",
+            key: "4",
+          },
+        ],
+      },
+    ];
+
+    const toolWorkspaceMenuProps = {
+      items: toolWorkspaceItems,
+      onClick: () => {},
+    };
+
     return (
       // The outer div is necessary for proper spacing.
       <div>
-        <Dropdown menu={menuProps}>
-          <Button>
-            <Space>{VIEW_MODE_TO_ICON[this.props.viewMode]}</Space>
-          </Button>
-        </Dropdown>
+        <Space.Compact>
+          <Dropdown menu={menuProps}>
+            <Button>
+              <Space>{VIEW_MODE_TO_ICON[this.props.viewMode]}</Space>
+            </Button>
+          </Dropdown>
+
+          <Dropdown menu={toolWorkspaceMenuProps}>
+            <Button>
+              <i className="fas fa-tools" />
+            </Button>
+          </Dropdown>
+        </Space.Compact>
       </div>
     );
   }

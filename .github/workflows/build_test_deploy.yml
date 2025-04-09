@@ -26,9 +26,9 @@ on:
         default: false
 
 env:
-  USER_NAME: root
-  USER_UID: 1000
-  USER_GID: 1000
+  USER_UID: 1001
+  USER_GID: 1001
+  POSTGRES_URL: "jdbc:postgresql://localhost:5432/webknossos"
   POSTGRES_USER: "webknossos_user"
   POSTGRES_PASSWORD: "secret_password"
 
@@ -81,6 +81,9 @@ jobs:
       - name: "Install System Dependencies"
         run: sudo apt-get update && sudo apt-get install -y libdraco-dev libblosc1
 
+      - name: "Start postgres"
+        run: docker compose --file .github/docker-compose.yml up -d postgres
+
       - name: Lint backend code and check formatting
         if: ${{ github.ref_name != 'master' }}
         run: sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
@@ -91,10 +94,6 @@ jobs:
 
   build_test_deploy:
     runs-on: ubuntu-24.04
-    env:
-      USER_UID: 1001
-      USER_GID: 1001
-      POSTGRES_URL: "jdbc:postgresql://localhost:5432/webknossos"
     steps:
       - uses: actions/checkout@v4
         with:

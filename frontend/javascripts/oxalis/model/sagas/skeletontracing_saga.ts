@@ -622,7 +622,7 @@ export function* diffBoundingBoxes(
   const {
     onlyA: deletedBBoxIds,
     onlyB: addedBBoxIds,
-    both: changedBBoxIds,
+    both: maybeChangedBBoxIds,
   } = Utils.diffArrays(
     _.map(prevBoundingBoxes, (bbox) => bbox.id),
     _.map(currentBoundingBoxes, (bbox) => bbox.id),
@@ -652,7 +652,7 @@ export function* diffBoundingBoxes(
       Toast.error(getErrorMessage(id));
     }
   }
-  for (const id of changedBBoxIds) {
+  for (const id of maybeChangedBBoxIds) {
     const currentBbox = currentBoundingBoxes.find((bbox) => bbox.id === id);
     const prevBbox = prevBoundingBoxes.find((bbox) => bbox.id === id);
     if (currentBbox == null || prevBbox == null) {
@@ -660,6 +660,7 @@ export function* diffBoundingBoxes(
       continue;
     }
     const diffBBox = Utils.diffObjects(currentBbox, prevBbox);
+    if (_.isEmpty(diffBBox)) continue;
     //TODO_C remove
     console.log("diffBBox", diffBBox);
     yield updateBBoxAction(currentBbox.id, diffBBox, tracingId);

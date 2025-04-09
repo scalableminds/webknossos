@@ -114,6 +114,9 @@ class Skeleton {
   supportsPicking: boolean;
   stopStoreListening: () => void;
 
+  nodeShader: NodeShader | undefined;
+  edgeShader: EdgeShader | undefined;
+
   constructor(
     skeletonTracingSelectorFn: (state: OxalisState) => Maybe<SkeletonTracing>,
     supportsPicking: boolean,
@@ -137,6 +140,17 @@ class Skeleton {
 
   destroy() {
     this.stopStoreListening();
+    this.stopStoreListening = () => {};
+
+    this.treeColorTexture.dispose();
+    // @ts-ignore
+    this.treeColorTexture = undefined;
+
+    this.nodes.material.dispose();
+    this.edges.material.dispose();
+
+    this.nodeShader?.destroy();
+    this.edgeShader?.destroy();
   }
 
   reset(skeletonTracing: SkeletonTracing) {
@@ -156,8 +170,8 @@ class Skeleton {
       THREE.RGBAFormat,
       THREE.FloatType,
     );
-    const nodeMaterial = new NodeShader(this.treeColorTexture).getMaterial();
-    const edgeMaterial = new EdgeShader(this.treeColorTexture).getMaterial();
+    this.nodeShader = new NodeShader(this.treeColorTexture);
+    this.edgeShader = new EdgeShader(this.treeColorTexture);
 
     // delete actual GPU buffers in case there were any
     if (this.nodes != null) {
@@ -173,8 +187,16 @@ class Skeleton {
     }
 
     // create new buffers
-    this.nodes = this.initializeBufferCollection(nodeCount, nodeMaterial, NodeBufferHelperType);
-    this.edges = this.initializeBufferCollection(edgeCount, edgeMaterial, EdgeBufferHelperType);
+    this.nodes = this.initializeBufferCollection(
+      nodeCount,
+      this.nodeShader.getMaterial(),
+      NodeBufferHelperType,
+    );
+    this.edges = this.initializeBufferCollection(
+      edgeCount,
+      this.edgeShader.getMaterial(),
+      EdgeBufferHelperType,
+    );
 
     // fill buffers with data
     for (const tree of _.values(trees)) {

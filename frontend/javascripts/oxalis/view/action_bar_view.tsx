@@ -39,9 +39,9 @@ import { useHistory } from "react-router-dom";
 import type { APIDataset, APIUser } from "types/api_flow_types";
 import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
 import { StartAIJobModal, type StartAIJobModalState } from "./action-bar/starting_job_modals";
+import ToolWorkspaceView from "./action-bar/tool_workspace_view";
 import ButtonComponent from "./components/button_component";
 import { NumberSliderSetting } from "./components/setting_input_views";
-import ToolWorkspaceView from "./action-bar/tool_workspace_view";
 
 const VersionRestoreWarning = (
   <Alert

@@ -61,11 +61,11 @@ import { WkDevFlags } from "oxalis/api/wk_dev";
 import { orderPointsMST } from "./splitting_stuff";
 
 import {
-  computeBoundsTree,
-  disposeBoundsTree,
-  computeBatchedBoundsTree,
-  disposeBatchedBoundsTree,
   acceleratedRaycast,
+  computeBatchedBoundsTree,
+  computeBoundsTree,
+  disposeBatchedBoundsTree,
+  disposeBoundsTree,
 } from "three-mesh-bvh";
 
 // Add the extension functions

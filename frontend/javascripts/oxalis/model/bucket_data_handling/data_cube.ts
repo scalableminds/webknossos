@@ -32,10 +32,10 @@ import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_co
 import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "oxalis/model/volumetracing/volumelayer";
 import type { Mapping } from "oxalis/store";
 import Store from "oxalis/store";
+import * as THREE from "three";
 import type { AdditionalAxis, BucketDataArray, ElementClass } from "types/api_flow_types";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 import type { MagInfo } from "../helpers/mag_info";
-import * as THREE from "three";
 
 const warnAboutTooManyAllocations = _.once(() => {
   const msg =

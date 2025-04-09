@@ -342,6 +342,7 @@ export type APIUser = APIUserBase & {
   readonly novelUserExperienceInfos: NovelUserExperienceInfoType;
   readonly selectedTheme: APIUserTheme;
   readonly isEmailVerified: boolean;
+  readonly isGuest: boolean;
 };
 export type APITimeInterval = {
   paymentInterval: {

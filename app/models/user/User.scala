@@ -209,6 +209,21 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     // format: on
   }
 
+  private def payingOrganizationInfoLateralJoin =
+    q"""
+      LATERAL (
+         SELECT DISTINCT ON (_multiUser) _multiUser, _organization
+            FROM webknossos.users
+            WHERE NOT isDeactivated
+              AND _organization IN (
+                SELECT _id
+                FROM webknossos.organizations
+                WHERE pricingPlan IN ('Team', 'Power', 'Custom')
+              )
+            ORDER BY _multiUser, created ASC
+         ) AS payingOrganization ON payingOrganization._multiUser = u._multiUser
+     """
+
   def findAllCompactWithFilters(isEditable: Option[Boolean],
                                 isTeamManagerOrAdmin: Option[Boolean],
                                 isAdmin: Option[Boolean],
@@ -253,16 +268,6 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
             LEFT JOIN webknossos.user_team_roles utr ON utr._user = u._id
             LEFT JOIN webknossos.teams t ON t._id = utr._team -- should not cause fanout since there is only one team per team_role
             GROUP BY u._id
-          ),
-          payingOrganization AS (
-            SELECT _organization, _multiUser
-            FROM webknossos.users
-              WHERE NOT isDeactivated
-              AND _organization IN (
-                SELECT _id FROM webknossos.organizations
-                WHERE pricingPlan IN ('Team', 'Power', 'Custom')
-              )
-            ORDER BY created ASC
           )
           SELECT
             u._id,
@@ -289,19 +294,20 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
             m.isSuperUser,
             m.isEmailVerified,
             $isEditableAttribute,
-            p._organization != u._organization AS isGuest
+            (payingOrganization._organization IS NOT NULL AND u._organization != payingOrganization._organization) AS isGuest
         FROM webknossos.users AS u
         INNER JOIN webknossos.organizations o ON o._id = u._organization
         INNER JOIN webknossos.multiusers m ON u._multiuser = m._id
         INNER JOIN agg_user_team_roles autr ON autr._user = u._id
         INNER JOIN agg_experiences aux ON aux._user = u._id
-        INNER JOIN payingOrganization p ON p._multiUser = m._id
+        -- left outer join to keep users that do not have a paying organization
+        LEFT JOIN $payingOrganizationInfoLateralJoin
         WHERE $selectionPredicates
         GROUP BY
           u._id, u.firstname, u.lastname, u.userConfiguration, u.isAdmin, u.isOrganizationOwner, u.isDatasetManager,
           u.isDeactivated, u.lastActivity, u.created, u.lastTaskTypeId, o._id, m._id, m.email,
           m.novelUserExperienceinfos, m.selectedTheme, m.isSuperUser, m.isEmailVerified, autr.team_ids, autr.team_names,
-          autr.team_managers, aux.experience_values, aux.experience_domains, p._organization, u._organization
+          autr.team_managers, aux.experience_values, aux.experience_domains, payingOrganization._organization, u._organization
          """.as[UserCompactInfo])
     } yield rows.toList
 
@@ -420,9 +426,14 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def countAllForOrganization(organizationId: String): Fox[Int] =
     for {
-      resultList <- run(
-        q"SELECT COUNT(*) FROM $existingCollectionName WHERE _organization = $organizationId AND NOT isDeactivated AND NOT isUnlisted"
-          .as[Int])
+      resultList <- run(q"""
+      SELECT COUNT(*) FROM $existingCollectionName as u
+      LEFT JOIN $payingOrganizationInfoLateralJoin
+      WHERE u._organization = $organizationId
+        AND NOT u.isDeactivated
+        AND NOT u.isUnlisted
+        AND (payingOrganization._organization IS NULL OR payingOrganization._organization = $organizationId)
+      """.as[Int])
       result <- resultList.headOption
     } yield result
 

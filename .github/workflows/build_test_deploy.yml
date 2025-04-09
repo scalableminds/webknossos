@@ -180,7 +180,7 @@ jobs:
           tags: |
             scalableminds/webknossos:${{ env.NORMALIZED_BRANCH }}
             scalableminds/webknossos:${{ env.DOCKER_TAG }}
-          outpus: |
+          outputs: |
             type=image
       - name: Build webknossos-datastore docker image
         uses: docker/build-push-action@v6
@@ -190,7 +190,7 @@ jobs:
           tags: |
             scalableminds/webknossos-datastore:${{ env.NORMALIZED_BRANCH }}
             scalableminds/webknossos-datastore:${{ env.DOCKER_TAG }}
-          outpus: |
+          outputs: |
             type=image
       - name: Build webknossos-tracingstore docker image
         uses: docker/build-push-action@v6
@@ -200,7 +200,7 @@ jobs:
           tags: |
             scalableminds/webknossos-tracingstore:${{ env.NORMALIZED_BRANCH }}
             scalableminds/webknossos-tracingstore:${{ env.DOCKER_TAG }}
-          outpus: |
+          outputs: |
             type=image
 
       - name: tmate session

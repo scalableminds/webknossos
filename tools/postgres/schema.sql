@@ -355,11 +355,11 @@ CREATE TABLE webknossos.organization_usedStorage(
 
 -- Create the enum types for transaction states and credit states
 -- Pending -> The transaction is a payment for a unfinished & not crashed job
--- Complete -> The transaction is commited and the potential associated job finished successfully or was refunded.
+-- Complete -> The transaction is committed and the potential associated job finished successfully or was refunded.
 CREATE TYPE webknossos.credit_transaction_state AS ENUM ('Pending', 'Complete');
 -- Pending -> The credit_delta is yet to be completed
--- Spent -> The credit_delta is commited as reduced as the associated job finished successfully.
--- Refunded -> The credit_delta is commited as reduced but a new refunding transaction is added as the associated job finished failed.
+-- Spent -> The credit_delta is committed as reduced as the associated job finished successfully.
+-- Refunded -> The credit_delta is committed as reduced but a new refunding transaction is added as the associated job finished failed.
 -- Revoked -> The credit_delta has been fully revoked by a revoking transaction as the credit_delta expired.
 -- PartiallyRevoked -> The credit_delta has been partially revoked by a revoking transaction as the credit_delta expired but parts of it were already spent or are pending.
 -- Refunding -> Marks credit_delta as a refund for transaction associated with a failed job.

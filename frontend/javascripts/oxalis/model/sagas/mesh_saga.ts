@@ -29,8 +29,8 @@ import type { Vector3 } from "oxalis/constants";
 import { MappingStatusEnum } from "oxalis/constants";
 import {
   type BufferGeometryWithInfo,
-  VertexSegmentMapping,
   type UnmergedBufferGeometryWithInfo,
+  VertexSegmentMapping,
 } from "oxalis/controller/mesh_helpers";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import {

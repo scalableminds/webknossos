@@ -88,14 +88,12 @@ trait Formatter {
 
     def formatStackTrace(failure: Failure) =
       failure.exception match {
-        case Full(exception) if includeStackTraces => s" Stack trace: ${TextUtils.stackTraceAsString(exception)} "
-        case _                                     => ""
-      }
-
-    def firstException(failure: Failure): String =
-      failure.exception match {
-        case Full(exception) => exception.toString + ": "
-        case _               => ""
+        case Full(exception) =>
+          if (includeStackTraces)
+            s" Stack trace: ${TextUtils.stackTraceAsString(exception)} "
+          else
+            exception.toString
+        case _ => ""
       }
 
     def formatNextChain(chainBox: Box[Failure]): String = chainBox match {
@@ -114,8 +112,7 @@ trait Formatter {
       }
 
     val serverTimeMsg = if (includeTime) s"[Server Time ${Instant.now}] " else ""
-    serverTimeMsg + firstException(failure) + formatOneFailure(failure) + formatStackTrace(failure) + formatNextChain(
-      failure.chain)
+    serverTimeMsg + formatOneFailure(failure) + formatStackTrace(failure) + formatNextChain(failure.chain)
   }
 
 }

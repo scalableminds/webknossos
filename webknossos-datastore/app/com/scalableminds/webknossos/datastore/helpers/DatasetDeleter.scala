@@ -85,15 +85,15 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
       _ <- updateDatasourceProperties(affectedDataSources)
     } yield ()
 
-  private def getFullyLinkedLayers(linkedMags: List[MagLinkInfo]): Option[Seq[(DataSourceId, String)]] = {
+  private def getFullyLinkedLayers(linkedMags: List[MagLinkInfo]): Seq[(DataSourceId, String)] = {
     val allMagsLocal = linkedMags.forall(_.mag.hasLocalData)
     val allLinkedDatasetLayers = linkedMags.map(_.linkedMags.map(lm => (lm.dataSourceId, lm.dataLayerName)))
     // Get combinations of datasourceId, layerName that link to EVERY mag
     val linkedToByAllMags = allLinkedDatasetLayers.reduce((a, b) => a.intersect(b))
     if (allMagsLocal && linkedToByAllMags.nonEmpty) {
-      Some(linkedToByAllMags)
+      linkedToByAllMags
     } else {
-      None
+      Seq()
     }
   }
 
@@ -173,6 +173,12 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
     // Move layer on disk
     val layerPath =
       dataBaseDir.resolve(sourceDataSource.organizationId).resolve(sourceDataSource.directoryName).resolve(sourceLayer)
+
+    if (fullLayerLinks.isEmpty) {
+      throw new IllegalArgumentException(
+        s"Cannot move layer $sourceLayer from $sourceDataSource, no fully linked layers provided!")
+    }
+
     // Select one of the fully linked layers as target to move layer to
     // Selection of the first one is arbitrary, is there anything to distinguish between them?
     val target = fullLayerLinks.head
@@ -249,56 +255,51 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
                                   layerName: String,
                                   linkedMags: List[MagLinkInfo]): Box[Unit] =
     tryo {
-      val fullyLinkedLayersOpt = getFullyLinkedLayers(linkedMags)
-      fullyLinkedLayersOpt match {
-        case Some(fullLayerLinks) =>
-          moveLayer(dataSourceId, layerName, fullLayerLinks, linkedMags)
-        case None =>
-          logger.info(s"Found incomplete symlinks to layer; Moving mags from $dataSourceId to other datasets")
-          linkedMags.foreach { magLinkInfo =>
-            val magToDelete = magLinkInfo.mag
-            if (magLinkInfo.linkedMags.nonEmpty) {
-              if (magToDelete.hasLocalData) {
-                // Move mag to a different dataset
-                val magPath = dataBaseDir
-                  .resolve(dataSourceId.organizationId)
-                  .resolve(dataSourceId.directoryName)
-                  .resolve(layerName)
-                  .resolve(magToDelete.mag.toMagLiteral(true))
-                // Select an arbitrary linked mag to move to
-                val target = magLinkInfo.linkedMags.head
-                val targetPath = getMagPath(dataBaseDir, target)
+      val fullyLinkedLayers = getFullyLinkedLayers(linkedMags)
+      if (fullyLinkedLayers.nonEmpty) {
+        moveLayer(dataSourceId, layerName, fullyLinkedLayers, linkedMags)
+      } else {
+        logger.info(s"Found incomplete symlinks to layer; Moving mags from $dataSourceId to other datasets")
+        linkedMags.foreach { magLinkInfo =>
+          val magToDelete = magLinkInfo.mag
+          if (magLinkInfo.linkedMags.nonEmpty) {
+            if (magToDelete.hasLocalData) {
+              // Move mag to a different dataset
+              val magPath = getMagPath(dataBaseDir, magToDelete)
+              // Select an arbitrary linked mag to move to
+              val target = magLinkInfo.linkedMags.head
+              val targetPath = getMagPath(dataBaseDir, target)
 
-                // Before deleting, check write permissions at targetPath
-                if (!Files.isWritable(targetPath.getParent)) {
-                  throw new Exception(s"Cannot move mag $magToDelete to $targetPath, no write permissions!")
-                }
-
-                if (Files.exists(targetPath) && Files.isSymbolicLink(targetPath)) {
-                  logger.info(
-                    s"Deleting existing symlink at $targetPath linking to ${magToDelete.dataSourceId}/${magToDelete.dataLayerName}/${magToDelete.mag
-                      .toMagLiteral(true)}")
-                  Files.delete(targetPath)
-                }
-                Files.move(magPath, targetPath)
-
-                // Move all symlinks to this mag to link to the moved mag
-                magLinkInfo.linkedMags.tail.foreach { linkedMag =>
-                  updateMagSymlinks(targetPath, linkedMag)
-                }
-              } else {
-                // The mag has no local data but there are links to it...
-                // Mags without local data are either
-                // 1. remote and thus they have no mags that can be linked to (but also we do not need to delete anything more here)
-                // 2. are links themselves to other mags. In this case, there can't be any links to this here since they
-                // would be resolved to the other mag.
-                // 3. locally explored datasets. They don't have layer directories that could have symlinks to them, so
-                // this is also not a problem.
-                // So this should not happen.
-                logger.warn(s"Trying to move mag $magToDelete, but it has no local data!")
+              // Before deleting, check write permissions at targetPath
+              if (!Files.isWritable(targetPath.getParent)) {
+                throw new Exception(s"Cannot move mag $magToDelete to $targetPath, no write permissions!")
               }
+
+              if (Files.exists(targetPath) && Files.isSymbolicLink(targetPath)) {
+                logger.info(
+                  s"Deleting existing symlink at $targetPath linking to ${magToDelete.dataSourceId}/${magToDelete.dataLayerName}/${magToDelete.mag
+                    .toMagLiteral(true)}")
+                Files.delete(targetPath)
+              }
+              Files.move(magPath, targetPath)
+
+              // Move all symlinks to this mag to link to the moved mag
+              magLinkInfo.linkedMags.tail.foreach { linkedMag =>
+                updateMagSymlinks(targetPath, linkedMag)
+              }
+            } else {
+              // The mag has no local data but there are links to it...
+              // Mags without local data are either
+              // 1. remote and thus they have no mags that can be linked to (but also we do not need to delete anything more here)
+              // 2. are links themselves to other mags. In this case, there can't be any links to this here since they
+              // would be resolved to the other mag.
+              // 3. locally explored datasets. They don't have layer directories that could have symlinks to them, so
+              // this is also not a problem.
+              // So this should not happen.
+              logger.warn(s"Trying to move mag $magToDelete, but it has no local data!")
             }
           }
+        }
       }
     }
 }

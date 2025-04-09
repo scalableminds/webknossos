@@ -71,4 +71,6 @@ You don't have to set complete *View Configurations* in either option, as WEBKNO
 
 Offers an option to delete a dataset and completely remove it from WEBKNOSSOS. Be careful, this cannot be undone!
 
+When other datasets reference layers from this dataset, WEBKNOSSOS will try to move these layers to the dataset they are referenced in, so that it can still be accessed.
+
 ![Dataset Editing: Delete Tab](../images/delete_tab.jpeg)

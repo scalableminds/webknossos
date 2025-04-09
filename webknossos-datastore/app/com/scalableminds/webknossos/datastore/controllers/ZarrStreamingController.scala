@@ -168,7 +168,14 @@ class ZarrStreamingController @Inject()(
           s.name,
           s.boundingBox,
           s.elementClass,
-          mags = s.sortedMags.map(x => MagLocator(x, None, None, Some(AxisOrder.cAdditionalxyz(rank)), None, None)),
+          mags = s.sortedMags.map(
+            x =>
+              MagLocator(x,
+                         Some(s.name + "/" + x.toMagLiteral(allowScalar = true)),
+                         None,
+                         Some(AxisOrder.cAdditionalxyz(rank)),
+                         None,
+                         None)),
           mappings = s.mappings,
           largestSegmentId = s.largestSegmentId,
           numChannels = Some(if (s.elementClass == ElementClass.uint24) 3 else 1),
@@ -185,7 +192,14 @@ class ZarrStreamingController @Inject()(
           d.category,
           d.boundingBox,
           d.elementClass,
-          mags = d.sortedMags.map(x => MagLocator(x, None, None, Some(AxisOrder.cAdditionalxyz(rank)), None, None)),
+          mags = d.sortedMags.map(
+            x =>
+              MagLocator(x,
+                         Some(d.name + "/" + x.toMagLiteral(allowScalar = true)),
+                         None,
+                         Some(AxisOrder.cAdditionalxyz(rank)),
+                         None,
+                         None)),
           numChannels = Some(if (d.elementClass == ElementClass.uint24) 3 else 1),
           defaultViewConfiguration = d.defaultViewConfiguration,
           adminViewConfiguration = d.adminViewConfiguration,

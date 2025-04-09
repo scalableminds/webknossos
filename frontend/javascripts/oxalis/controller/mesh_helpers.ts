@@ -2,22 +2,25 @@ import _ from "lodash";
 import type * as THREE from "three";
 
 export type BufferGeometryWithInfo = THREE.BufferGeometry & {
-  positionToSegmentId?: PositionToSegmentId;
+  vertexSegmentMapping?: VertexSegmentMapping;
 };
 
 export type UnmergedBufferGeometryWithInfo = THREE.BufferGeometry & {
   unmappedSegmentId: number;
-  positionToSegmentId?: PositionToSegmentId;
+  vertexSegmentMapping?: VertexSegmentMapping;
 };
 
-export class PositionToSegmentId {
+export class VertexSegmentMapping {
   /*
-   * This class is able to deal with buffer geometries.
+   * This class creates a mapping between vertices of multiple buffer geometries
+   * and the corresponding segment id of each buffer geometry.
+   *
    * Each geometry has an unmapped segment id (multiple ones can have
    * the same segment id) and various vertices.
    * All (sorted) geometries are concatenated and then indices are built
    * to allow for fast queries.
-   * E.g., one query allows to go from a vertex index ("position") to
+   * E.g., one query allows to go from a vertex index ("position", named
+   * like the BufferAttribute "position") to
    * the unmapped segment id of the geometry that belongs to the vertex.
    * Similarily, one can obtain the range that covers all vertices
    * that belong to a certain unmapped segment id.
@@ -42,13 +45,15 @@ export class PositionToSegmentId {
       }
       cumsum += bufferGeometry.attributes.position.count;
     }
+    // Add sentinel value at the end - this implements an offset table pattern
+    // where the last entry indicates the total size of all vertices
     this.cumulativeStartPosition.push(cumsum);
   }
 
   getUnmappedSegmentIdForPosition(position: number) {
     const index = _.sortedIndex(this.cumulativeStartPosition, position) - 1;
     if (index >= this.unmappedSegmentIds.length) {
-      throw new Error(`Could not look up id for position=${position} in PositionToSegmentId.`);
+      throw new Error(`Could not look up id for position=${position} in VertexSegmentMapping.`);
     }
     return this.unmappedSegmentIds[index];
   }
@@ -56,7 +61,7 @@ export class PositionToSegmentId {
   getRangeForPosition(position: number): [number, number] {
     const index = _.sortedIndex(this.cumulativeStartPosition, position) - 1;
     if (index + 1 >= this.cumulativeStartPosition.length) {
-      throw new Error(`Could not look up range for position=${position} in PositionToSegmentId.`);
+      throw new Error(`Could not look up range for position=${position} in VertexSegmentMapping.`);
     }
     return [this.cumulativeStartPosition[index], this.cumulativeStartPosition[index + 1]];
   }

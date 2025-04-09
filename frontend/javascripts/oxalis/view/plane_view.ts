@@ -4,7 +4,7 @@ import window from "libs/window";
 import _ from "lodash";
 import type { OrthoViewMap, Vector2, Vector3, Viewport } from "oxalis/constants";
 import Constants, { OrthoViewColors, OrthoViewValues, OrthoViews } from "oxalis/constants";
-import type { PositionToSegmentId } from "oxalis/controller/mesh_helpers";
+import type { VertexSegmentMapping } from "oxalis/controller/mesh_helpers";
 import getSceneController, {
   getSceneControllerOrNull,
 } from "oxalis/controller/scene_controller_provider";
@@ -173,10 +173,11 @@ class PlaneView {
     let indexRange = null;
 
     if (hitObject && face) {
-      if ("positionToSegmentId" in hitObject.geometry) {
-        const positionToSegmentId = hitObject.geometry.positionToSegmentId as PositionToSegmentId;
-        unmappedSegmentId = positionToSegmentId.getUnmappedSegmentIdForPosition(face.a);
-        indexRange = positionToSegmentId.getRangeForUnmappedSegmentId(unmappedSegmentId);
+      if ("vertexSegmentMapping" in hitObject.geometry) {
+        const vertexSegmentMapping = hitObject.geometry
+          .vertexSegmentMapping as VertexSegmentMapping;
+        unmappedSegmentId = vertexSegmentMapping.getUnmappedSegmentIdForPosition(face.a);
+        indexRange = vertexSegmentMapping.getRangeForUnmappedSegmentId(unmappedSegmentId);
       }
     }
 

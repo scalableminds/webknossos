@@ -510,14 +510,14 @@ export default class SegmentMeshController {
       // The cast is safe because MeshSceneNode adds only optional properties
       const obj = _obj as MeshSceneNode;
 
-      const positionToSegmentId = obj.geometry.positionToSegmentId;
+      const vertexSegmentMapping = obj.geometry.vertexSegmentMapping;
 
       let indexRange = null;
       let containsSegmentId = false;
-      if (positionToSegmentId && activeUnmappedSegmentId) {
-        containsSegmentId = positionToSegmentId.containsSegmentId(activeUnmappedSegmentId);
+      if (vertexSegmentMapping && activeUnmappedSegmentId) {
+        containsSegmentId = vertexSegmentMapping.containsSegmentId(activeUnmappedSegmentId);
         if (containsSegmentId) {
-          indexRange = positionToSegmentId.getRangeForUnmappedSegmentId(activeUnmappedSegmentId);
+          indexRange = vertexSegmentMapping.getRangeForUnmappedSegmentId(activeUnmappedSegmentId);
         }
       }
 

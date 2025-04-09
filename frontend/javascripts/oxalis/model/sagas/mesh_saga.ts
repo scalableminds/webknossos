@@ -29,7 +29,7 @@ import type { Vector3 } from "oxalis/constants";
 import { MappingStatusEnum } from "oxalis/constants";
 import {
   type BufferGeometryWithInfo,
-  PositionToSegmentId,
+  VertexSegmentMapping,
   type UnmergedBufferGeometryWithInfo,
 } from "oxalis/controller/mesh_helpers";
 import getSceneController from "oxalis/controller/scene_controller_provider";
@@ -1065,7 +1065,7 @@ function* _getLoadChunksTasks(
       console.error("Merged geometry is null. Look at error above.");
       return;
     }
-    mergedGeometry.positionToSegmentId = new PositionToSegmentId(sortedBufferGeometries);
+    mergedGeometry.vertexSegmentMapping = new VertexSegmentMapping(sortedBufferGeometries);
     mergedGeometry.boundsTree = yield* call(computeBvhAsync, mergedGeometry);
 
     // Check if the mesh scale is different to all supported mags of the active segmentation scaled by the dataset scale and warn in the console to make debugging easier in such a case.

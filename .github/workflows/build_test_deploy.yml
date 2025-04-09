@@ -268,7 +268,7 @@ jobs:
           retries: 5
           retry_delay_seconds: 10
       - name: Slack Notification
-        if: ${{ github.ref_name != 'master' }}  # TODO: Invert !=
+        if: ${{ github.ref_name == 'master' }}
         run: .github/slack-notification.sh
         env:
           SLACK_NOTIFY_TOKEN: ${{ secrets.SLACK_NOTIFY_TOKEN }}

@@ -1,5 +1,8 @@
 package models.user
 
+import com.fasterxml.jackson.core.`type`.TypeReference
+import com.fasterxml.jackson.annotation.{JsonProperty, JsonCreator, JsonTypeInfo}
+import com.fasterxml.jackson.annotation.JsonTypeInfo.Id
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
@@ -12,8 +15,10 @@ import com.webauthn4j.data.attestation.statement.AttestationStatement
 import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient}
 
+import java.io.ByteArrayInputStream
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
+
 
 case class WebAuthnCredential(
     _id: ObjectId,
@@ -25,8 +30,25 @@ case class WebAuthnCredential(
     isDeleted: Boolean,
 )
 
-case class WebAuthnGenericAttestationStatement(stmt: AttestationStatement) {
-  def getFormat = stmt.getFormat
+// Define the AttestationStatementEnvelope class
+case class AttestationStatementEnvelope(@JsonProperty("attStmt") attestationStatement: AttestationStatement) {
+  // The JSON type information annotation for polymorphism
+  @JsonTypeInfo(
+    use = JsonTypeInfo.Id.NAME,
+    include = JsonTypeInfo.As.EXTERNAL_PROPERTY,
+    property = "fmt"
+  )
+  private val attStmt: AttestationStatement = attestationStatement
+
+  // Getter for the 'fmt' property
+  @JsonProperty("fmt")
+  def getFormat: String = attestationStatement.getFormat
+
+  // Getter for the AttestationStatement instance
+  def getAttestationStatement: AttestationStatement = attestationStatement
+
+  def serialize(converter: ObjectConverter): Array[Byte] =
+    converter.getJsonConverter.writeValueAsBytes(this)
 }
 
 case class WebAuthnCredential2(
@@ -36,30 +58,6 @@ case class WebAuthnCredential2(
     record: CredentialRecordImpl,
     isDeleted: Boolean,
 ) {
-  def serializeAttestationStatement() = {
-    val converter = new ObjectConverter();
-    val envelope = WebAuthnGenericAttestationStatement(record.getAttestationStatement)
-    converter.getCborConverter.writeValueAsBytes(envelope)
-  }
-
-  def serializableAttestationData() = {
-    val converter = new AttestedCredentialDataConverter(new ObjectConverter());
-    converter.convert(record.getAttestedCredentialData)
-  }
-}
-object WebAuthnCredential2 {
-  def deserializeAttestationStatement(serializedEnvelope: Array[Byte]): AttestationStatement = {
-    val converter = new ObjectConverter();
-    val envelope: WebAuthnGenericAttestationStatement = converter
-      .getCborConverter
-      .readValue[WebAuthnGenericAttestationStatement](serializedEnvelope, WebAuthnGenericAttestationStatement.getClass)
-    envelope.stmt
-  }
-
-  def deseriaizeAttestationData(serializedData: Array[Byte]): AttestedCredentialData = {
-    val converter = new AttestedCredentialDataConverter(new ObjectConverter());
-    converter.convert(serializedData)
-  }
 }
 
 class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
@@ -120,8 +118,6 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
     } yield ()
 
   def insertOne2(c: WebAuthnCredential2): Fox[Unit] = {
-    val serializedAttestationStatement = c.serializeAttestationStatement()
-    val serializedAttestationData = c.serializableAttestationData()
     for {
       _ <- run(
         q"""INSERT INTO webknossos.webauthncredentials(_id, _multiUser, keyId, name) VALUES ()""".asUpdate // TODO

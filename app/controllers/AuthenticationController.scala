@@ -637,7 +637,7 @@ class AuthenticationController @Inject()(
           ),
         user,
         )
-    } yield Ok(Json.toJson(options))
+    } yield Ok(Json.toJson(options)).withCookies(cookie)
   }
 
   def webauthnRegisterFinalize(): Action[WebAuthnRegistration] = sil.SecuredAction.async(validateJson[WebAuthnRegistration]) { implicit request =>
@@ -656,7 +656,7 @@ class AuthenticationController @Inject()(
       registrationParams = new RegistrationParameters(serverProperty, publicKeyParams.toList.asJava, false, true)
       _ <- tryo(webAuthnManager.verify(registrationData,  registrationParams)).toFox
       attestation = registrationData.getAttestationObject
-      credentialRecord = new CredentialRecordImpl(
+      credentialRecord = new CredentialRecordImpl( // TODO: Rename or minimal custom implementation
         attestation,
         null, // NOTE: Collected Client Data Not used
         null, // NOTE: Client extensions not used

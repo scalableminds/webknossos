@@ -244,7 +244,6 @@ function computeBentSurfaceTPS(points: Vector3[]): THREE.Object3D[] {
 
 function computeBentSurfaceSplines(points: Vector3[]): THREE.Object3D[] {
   const objects: THREE.Object3D[] = [];
-  console.log("fresh!");
 
   const unfilteredPointsByZ = _.groupBy(points, (p) => p[2]);
   const pointsByZ = _.omitBy(unfilteredPointsByZ, (value) => value.length < 2);

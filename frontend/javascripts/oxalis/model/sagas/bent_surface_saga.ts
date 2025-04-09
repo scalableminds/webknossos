@@ -5,23 +5,25 @@ import { call, takeEvery } from "typed-redux-saga";
 import { getActiveTree } from "../accessors/skeletontracing_accessor";
 import { ensureWkReady } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
+import type { Action } from "../actions/actions";
+import type { ActionPattern } from "redux-saga/effects";
 
 let cleanUpFn: (() => void) | null = null;
 
-function* createBentSurface() {
+function* updateBentSurface() {
   if (cleanUpFn != null) {
     cleanUpFn();
     cleanUpFn = null;
   }
 
-  const sceneController = yield* call(() => getSceneController());
+  const isSplitWorkspace = yield* select(
+    (state) => state.userConfiguration.toolWorkspace === "SPLIT_SEGMENTS",
+  );
+  if (!isSplitWorkspace) {
+    return;
+  }
 
-  // const points: Vector3[] = [
-  //   [40, 50, 60],
-  //   [50, 70, 60],
-  //   [80, 70, 90],
-  //   [50, 60, 80],
-  // ];
+  const sceneController = yield* call(() => getSceneController());
 
   const activeTree = yield* select((state) => getActiveTree(state.annotation.skeleton));
   // biome-ignore lint/complexity/useOptionalChain: <explanation>
@@ -41,7 +43,7 @@ export function* bentSurfaceSaga(): Saga<void> {
   yield* ensureWkReady();
 
   // initial rendering
-  yield* call(createBentSurface);
+  yield* call(updateBentSurface);
   yield* takeEvery(
     [
       "SET_ACTIVE_TREE",
@@ -51,8 +53,10 @@ export function* bentSurfaceSaga(): Saga<void> {
       "SET_TREE_VISIBILITY",
       "TOGGLE_TREE",
       "SET_NODE_POSITION",
-    ],
-    createBentSurface,
+      (action: Action) =>
+        action.type === "UPDATE_USER_SETTING" && action.propertyName === "toolWorkspace",
+    ] as ActionPattern,
+    updateBentSurface,
   );
 }
 

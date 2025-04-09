@@ -394,6 +394,9 @@ function SkeletonSpecificButtons() {
   const isContinuousNodeCreationEnabled = useSelector(
     (state: OxalisState) => state.userConfiguration.continuousNodeCreation,
   );
+  const isSplitWorkspace = useSelector(
+    (state: OxalisState) => state.userConfiguration.toolWorkspace === "SPLIT_SEGMENTS",
+  );
   const toggleContinuousNodeCreation = () =>
     dispatch(updateUserSettingAction("continuousNodeCreation", !isContinuousNodeCreationEnabled));
 
@@ -433,34 +436,38 @@ function SkeletonSpecificButtons() {
       }}
     >
       <CreateTreeButton />
-      <ToggleButton
-        style={NARROW_BUTTON_STYLE}
-        onClick={toggleNewNodeNewTreeMode}
-        active={isNewNodeNewTreeModeOn}
-        title="Toggle the Single node Tree (soma clicking) mode - If enabled, each node creation will create a new tree."
-      >
-        <img
-          style={imgStyleForSpaceyIcons}
-          src="/assets/images/soma-clicking-icon.svg"
-          alt="Single Node Tree Mode"
-        />
-      </ToggleButton>
-      <ToggleButton
-        active={isMergerModeEnabled}
-        style={{
-          ...NARROW_BUTTON_STYLE,
-          opacity: isMergerModeDisabled ? 0.5 : 1,
-        }}
-        onClick={toggleMergerMode}
-        disabled={isMergerModeDisabled}
-        title={mergerModeTooltipText}
-      >
-        <img
-          style={imgStyleForSpaceyIcons}
-          src="/assets/images/merger-mode-icon.svg"
-          alt="Merger Mode"
-        />
-      </ToggleButton>
+      {isSplitWorkspace ? null : (
+        <ToggleButton
+          style={NARROW_BUTTON_STYLE}
+          onClick={toggleNewNodeNewTreeMode}
+          active={isNewNodeNewTreeModeOn}
+          title="Toggle the Single node Tree (soma clicking) mode - If enabled, each node creation will create a new tree."
+        >
+          <img
+            style={imgStyleForSpaceyIcons}
+            src="/assets/images/soma-clicking-icon.svg"
+            alt="Single Node Tree Mode"
+          />
+        </ToggleButton>
+      )}
+      {isSplitWorkspace ? null : (
+        <ToggleButton
+          active={isMergerModeEnabled}
+          style={{
+            ...NARROW_BUTTON_STYLE,
+            opacity: isMergerModeDisabled ? 0.5 : 1,
+          }}
+          onClick={toggleMergerMode}
+          disabled={isMergerModeDisabled}
+          title={mergerModeTooltipText}
+        >
+          <img
+            style={imgStyleForSpaceyIcons}
+            src="/assets/images/merger-mode-icon.svg"
+            alt="Merger Mode"
+          />
+        </ToggleButton>
+      )}
       <ToggleButton
         active={isContinuousNodeCreationEnabled}
         onClick={toggleContinuousNodeCreation}

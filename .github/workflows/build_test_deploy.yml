@@ -112,7 +112,6 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '21'
-          cache: 'sbt'
       - uses: sbt/setup-sbt@v1
 
       - name: "Install System Dependencies"

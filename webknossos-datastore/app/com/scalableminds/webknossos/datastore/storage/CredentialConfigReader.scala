@@ -12,8 +12,8 @@ class CredentialConfigReader(underlyingConfig: Config) extends ConfigReader {
   def getCredential: Option[DataVaultCredential] =
     for {
       typeLiteral <- getOptional[String]("type")
-      typParsed <- CredentialType.fromString(typeLiteral)
-      credential <- typParsed match {
+      typeParsed <- CredentialType.fromString(typeLiteral)
+      credential <- typeParsed match {
         case CredentialType.S3AccessKey          => getAsS3
         case CredentialType.HttpBasicAuth        => getAsHttpsBasicAuth
         case CredentialType.GoogleServiceAccount => getAsGoogleServiceAccount

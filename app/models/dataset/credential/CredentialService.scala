@@ -21,8 +21,8 @@ class CredentialService @Inject()(credentialDAO: CredentialDAO) {
   def createCredentialOpt(uri: URI,
                           credentialIdentifier: Option[String],
                           credentialSecret: Option[String],
-                          userId: ObjectId,
-                          organizationId: String): Option[DataVaultCredential] =
+                          userId: Option[ObjectId],
+                          organizationId: Option[String]): Option[DataVaultCredential] =
     uri.getScheme match {
       case DataVaultService.schemeHttps | DataVaultService.schemeHttp =>
         credentialIdentifier.map(
@@ -30,19 +30,19 @@ class CredentialService @Inject()(credentialDAO: CredentialDAO) {
             HttpBasicAuthCredential(uri.toString,
                                     username,
                                     credentialSecret.getOrElse(""),
-                                    userId.toString,
+                                    userId.map(_.toString),
                                     organizationId))
       case DataVaultService.schemeS3 =>
         (credentialIdentifier, credentialSecret) match {
           case (Some(keyId), Some(secretKey)) =>
-            Some(S3AccessKeyCredential(uri.toString, keyId, secretKey, userId.toString, organizationId))
+            Some(S3AccessKeyCredential(uri.toString, keyId, secretKey, userId.map(_.toString), organizationId))
           case _ => None
         }
       case DataVaultService.schemeGS =>
         for {
           secret <- credentialSecret
           secretJson <- tryo(Json.parse(secret)).toOption
-        } yield GoogleServiceAccountCredential(uri.toString, secretJson, userId.toString, organizationId)
+        } yield GoogleServiceAccountCredential(uri.toString, secretJson, userId.map(_.toString), organizationId)
       case _ =>
         None
     }

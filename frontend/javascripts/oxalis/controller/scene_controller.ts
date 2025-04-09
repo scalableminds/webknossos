@@ -53,6 +53,7 @@ import SegmentMeshController from "./segment_mesh_controller";
 const CUBE_COLOR = 0x999999;
 const LAYER_CUBE_COLOR = 0xffff99;
 
+import computeSplitBoundaryMeshWithSplines from "oxalis/geometries/compute_split_boundary_mesh_with_splines";
 import {
   acceleratedRaycast,
   computeBatchedBoundsTree,
@@ -60,7 +61,6 @@ import {
   disposeBatchedBoundsTree,
   disposeBoundsTree,
 } from "three-mesh-bvh";
-import computeSplitBoundaryMeshWithSplines from "./compute_split_boundary_mesh_with_splines";
 
 // Add the extension functions
 THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;

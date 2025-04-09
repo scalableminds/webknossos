@@ -104,10 +104,9 @@ jobs:
 
       - name: "Custom environment variables"
         run: |
-          CI_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
           echo "CI_BUILD=${{ github.run_id }}" >> "$GITHUB_ENV"
           if [[ "${{ github.ref_type }}" == "branch" ]]; then
-            NORMALIZED_BRANCH="${CI_BRANCH//[\/-]/_}"
+            NORMALIZED_BRANCH="${GITHUB_HEAD_REF//[\/-]/_}"
             DOCKER_TAG="${NORMALIZED_BRANCH}__${{ github.run_id }}"
             echo "DOCKER_TAG=$DOCKER_TAG" >> "$GITHUB_ENV"
             echo "NORMALIZED_BRANCH=$NORMALIZED_BRANCH" >> "$GITHUB_ENV"

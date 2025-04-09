@@ -51,8 +51,8 @@ class CredentialController @Inject()(credentialDAO: CredentialDAO, sil: Silhouet
           HttpBasicAuthCredential(request.body.name,
                                   request.body.username,
                                   request.body.password,
-                                  request.identity._id.toString,
-                                  request.identity._organization.toString)
+                                  Some(request.identity._id.toString),
+                                  Some(request.identity._organization))
         ) ?~> "create.failed"
       } yield Ok(Json.toJson(_id))
     }
@@ -67,8 +67,8 @@ class CredentialController @Inject()(credentialDAO: CredentialDAO, sil: Silhouet
           S3AccessKeyCredential(request.body.name,
                                 request.body.accessKeyId,
                                 request.body.secretAccessKey,
-                                request.identity._id.toString,
-                                request.identity._organization.toString)
+                                Some(request.identity._id.toString),
+                                Some(request.identity._organization))
         ) ?~> "create.failed"
       } yield Ok(Json.toJson(_id))
     }
@@ -82,8 +82,8 @@ class CredentialController @Inject()(credentialDAO: CredentialDAO, sil: Silhouet
           _id,
           GoogleServiceAccountCredential(request.body.name,
                                          request.body.secretJson,
-                                         request.identity._id.toString,
-                                         request.identity._organization.toString)
+                                         Some(request.identity._id.toString),
+                                         Some(request.identity._organization))
         ) ?~> "create.failed"
       } yield Ok(Json.toJson(_id))
     }

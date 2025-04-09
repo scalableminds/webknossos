@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - The maximum available storage of an organization is now enforced during upload. [#8385](https://github.com/scalableminds/webknossos/pull/8385)
 - Performance improvements for volume annotation save requests. [#8460](https://github.com/scalableminds/webknossos/pull/8460)
 - Performance improvements for segment statistics (volume + bounding box in context menu). [#8469](https://github.com/scalableminds/webknossos/pull/8469)
+- Upgraded backend dependencies for improved performance and stability. [#8507](https://github.com/scalableminds/webknossos/pull/8507)
 
 ### Changed
 - Added a parameter to the reserve manual upload route allowing to make the request fail if the name is already taken. Moreover, the new dataset's id and directory name are returned in the response. [#8476](https://github.com/scalableminds/webknossos/pull/8476)

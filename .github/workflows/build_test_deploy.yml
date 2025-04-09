@@ -62,6 +62,8 @@ jobs:
         run: yarn typecheck
       - name: Check for cyclic dependencies in frontend
         run: yarn check-cyclic-dependencies
+      - name: Run frontend tests
+        run: yarn test-verbose
 
   build_test_deploy:
     runs-on: ubuntu-24.04
@@ -74,7 +76,7 @@ jobs:
         with:
           fetch-depth: 5
 
-      - uses: docker/setup-buildx-action@v2
+      - uses: docker/setup-buildx-action@v3
       - name: Start Docker Services
         run: docker compose --file .github/docker-compose.yml up -d postgres redis
 
@@ -155,6 +157,8 @@ jobs:
           tags: |
             scalableminds/webknossos:${{ env.NORMALIZED_BRANCH }}
             scalableminds/webknossos:${{ env.DOCKER_TAG }}
+          outpus: |
+            type=image
       - name: Build webknossos-datastore docker image
         uses: docker/build-push-action@v6
         with:
@@ -163,6 +167,8 @@ jobs:
           tags: |
             scalableminds/webknossos-datastore:${{ env.NORMALIZED_BRANCH }}
             scalableminds/webknossos-datastore:${{ env.DOCKER_TAG }}
+          outpus: |
+            type=image
       - name: Build webknossos-tracingstore docker image
         uses: docker/build-push-action@v6
         with:
@@ -171,6 +177,8 @@ jobs:
           tags: |
             scalableminds/webknossos-tracingstore:${{ env.NORMALIZED_BRANCH }}
             scalableminds/webknossos-tracingstore:${{ env.DOCKER_TAG }}
+          outpus: |
+            type=image
 
       - name: tmate session
         uses: mxschmitt/action-tmate@v3

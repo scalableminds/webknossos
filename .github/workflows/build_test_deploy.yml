@@ -14,8 +14,8 @@ env:
   POSTGRES_URL: "jdbc:postgresql://localhost:5432/webknossos"
   POSTGRES_USER: "webknossos_user"
   POSTGRES_PASSWORD: "secret_password"
-  # CERTIFICATE: ${{ secrets.CERTIFICATE_FOR_CI_ONLY }}
-  # CERTIFICATE_PUBLIC_KEY: ${{ secrets.CERTIFICATE_PUBLIC_KEY }}
+  CERTIFICATE: ${{ secrets.CERTIFICATE_FOR_CI_ONLY }}
+  CERTIFICATE_PUBLIC_KEY: ${{ secrets.CERTIFICATE_PUBLIC_KEY }}
 
 jobs:
   frontend-tests:
@@ -115,8 +115,6 @@ jobs:
             echo "DOCKER_TAG=master" >> "$GITHUB_ENV"
             echo "NORMALIZED_BRANCH=${{ github.ref_name }}" >> "$GITHUB_ENV"
           fi
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
 
       - name: Prepare Dependency Folders
         run: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier

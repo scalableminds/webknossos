@@ -20,7 +20,7 @@ env:
 jobs:
   frontend-tests:
     runs-on: ubuntu-24.04
-    if: ${{ github.ref_name != 'master' }}
+    if: github.ref != 'refs/heads/master'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -44,7 +44,7 @@ jobs:
 
   backend-tests:
     runs-on: ubuntu-24.04
-    if: ${{ github.ref_name != 'master' }}
+    if: github.ref != 'refs/heads/master'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -105,12 +105,15 @@ jobs:
       - name: "Custom environment variables"
         id: configure
         run: |
+          CI_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+          echo "CI_BUILD=${{ github.run_id }}" >> "$GITHUB_ENV"
           if [[ "${{ github.ref_type }}" == "branch" ]]; then
-            NORMALIZED_BRANCH=$(echo "${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" | sed 's/[\/-]/_/g')
+            NORMALIZED_BRANCH="${CI_BRANCH//[\/-]/_}"
             DOCKER_TAG="${NORMALIZED_BRANCH}__${{ github.run_id }}"
             echo "DOCKER_TAG=$DOCKER_TAG" >> "$GITHUB_ENV"
             echo "NORMALIZED_BRANCH=$NORMALIZED_BRANCH" >> "$GITHUB_ENV"
           else
+            echo "CI_TAG=${{ github.ref_name }}" >> "$GITHUB_ENV"
             echo "DOCKER_TAG=master" >> "$GITHUB_ENV"
             echo "NORMALIZED_BRANCH=${{ github.ref_name }}" >> "$GITHUB_ENV"
           fi
@@ -184,19 +187,19 @@ jobs:
             type=image
 
       - name: Start Fossildb
-        if: ${{ github.ref_name != 'master' }}
+        if: github.ref != 'refs/heads/master'
         run: docker compose --file .github/docker-compose.yml up -d fossildb
       - name: Prepare binaryData folder
         run: mkdir -p binaryData/Organization_X && chmod 777 binaryData/Organization_X
       - name: Run end-to-end tests
-        if: ${{ github.ref_name != 'master' }}
+        if: github.ref != 'refs/heads/master'
         uses: ./.github/actions/retry
         with:
           run: |
             sbt "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false"
           retries: 3
       - name: Validate frontend types
-        if: ${{ github.ref_name != 'master' }}
+        if: github.ref != 'refs/heads/master'
         run: yarn typecheck
 
       - name: Start webknossos, datastore and tracingstore
@@ -268,7 +271,7 @@ jobs:
           retries: 5
           retry_delay_seconds: 10
       - name: Slack Notification
-        if: ${{ github.ref_name == 'master' }}
+        if: github.ref != 'refs/heads/master'
         run: .github/slack-notification.sh
         env:
           SLACK_NOTIFY_TOKEN: ${{ secrets.SLACK_NOTIFY_TOKEN }}

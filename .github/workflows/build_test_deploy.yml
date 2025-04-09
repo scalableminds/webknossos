@@ -90,7 +90,7 @@ jobs:
         run: sbt -v "testOnly backend.*"
 
 
-  build_test_deploy:
+  build-test-e2e-deploy:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -122,7 +122,7 @@ jobs:
         run: |
           if [[ ${{ github.ref_type }} == "branch" ]]; then
             NORMALIZED_BRANCH=$(echo ${{ github.ref_name }} | sed 's/[\/-]/_/g')
-            DOCKER_TAG="${NORMALIZED_BRANCH}__${{ github.run_number }}"
+            DOCKER_TAG="${NORMALIZED_BRANCH}__${{ github.run_id }}"
             echo "DOCKER_TAG=$DOCKER_TAG" >> "$GITHUB_ENV"
             echo "NORMALIZED_BRANCH=$NORMALIZED_BRANCH" >> "$GITHUB_ENV"
           else
@@ -147,7 +147,7 @@ jobs:
       - name: Build frontend documentation
         run: yarn run docs --project-version "$WK_VERSION"
         env:
-          WK_VERSION: ${{ github.run_number }}
+          WK_VERSION: ${{ github.run_id }}
       - name: Build webknossos (webpack)
         run: yarn build
       - name: Build webknossos (sbt)
@@ -282,23 +282,6 @@ jobs:
           run: docker push scalableminds/webknossos-tracingstore:${{ env.NORMALIZED_BRANCH }}
           retries: 5
           retry_delay_seconds: 10
-#      - name: Push docker images
-#        run: |
-#          function retry() {
-#            for i in {1..5}; do
-#              "$@" && s=0 && break || s=$?
-#              sleep 10
-#            done
-#            return $s
-#          }
-#          if [ -n "${{ github.ref_name }}"]; then
-#            retry docker push scalableminds/webknossos:$NORMALIZED_BRANCH
-#            retry docker push scalableminds/webknossos:$DOCKER_TAG
-#
-#            retry docker push scalableminds/webknossos-datastore:$NORMALIZED_BRANCH
-#            retry docker push scalableminds/webknossos-datastore:$DOCKER_TAG
-#
-#            retry docker push scalableminds/webknossos-tracingstore:$NORMALIZED_BRANCH
-#            retry docker push scalableminds/webknossos-tracingstore:$DOCKER_TAG
-#          fi
-      # TODO: Slack Notification
+      - name: Slack Notification
+        if: ${{ github.ref_name != 'master' }}  # TODO: Invert !=
+        run: .github/slack-notification.sh

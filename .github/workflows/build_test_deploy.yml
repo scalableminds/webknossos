@@ -66,8 +66,9 @@ jobs:
       - name: Run frontend tests
         run: yarn test-verbose
 
-  backend_tests:
+  backend-tests:
     runs-on: ubuntu-24.04
+    if: ${{ github.ref_name != 'master' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -102,10 +103,8 @@ jobs:
         run: docker compose --file .github/docker-compose.yml up -d postgres
 
       - name: Lint backend code and check formatting
-        if: ${{ github.ref_name != 'master' }}
         run: sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
       - name: Run backend tests
-        if: ${{ github.ref_name != 'master' }}
         run: sbt -v "testOnly backend.*"
 
 

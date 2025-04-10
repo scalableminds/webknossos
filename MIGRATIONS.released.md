@@ -15,7 +15,8 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 - [126-mag-real-paths.sql](conf/evolutions/126-mag-real-paths.sql)
 - [127-job-retried-by-super-user.sql](conf/evolutions/127-job-retried-by-super-user.sql)
 - [128-allow-ai-model-sharing.sql](conf/evolutions/128-allow-ai-model-sharing.sql)
-
+- [129-credit-transactions.sql](conf/evolutions/129-credit-transactions.sql)
+- [130-replace-text-types.sql](conf/evolutions/130-replace-text-types.sql)
 
 ## [25.02.1](https://github.com/scalableminds/webknossos/releases/tag/25.02.1) - 2025-02-26
 [Commits](https://github.com/scalableminds/webknossos/compare/25.02.0...25.02.1)

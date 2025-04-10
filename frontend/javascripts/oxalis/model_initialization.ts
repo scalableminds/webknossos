@@ -272,6 +272,7 @@ export async function initialize(
 
 function maybeFixDatasetNameInURL(dataset: APIDataset, initialCommandType: TraceOrViewCommand) {
   if (initialCommandType.type === ControlModeEnum.VIEW) {
+    console.error("location.pathname", location.pathname);
     const pathnameParts = location.pathname.split("/").slice(1); // First string is empty as pathname start with a /.
     const endOfDatasetName = pathnameParts[1].lastIndexOf("-");
     if (endOfDatasetName < 0) {
@@ -281,7 +282,6 @@ function maybeFixDatasetNameInURL(dataset: APIDataset, initialCommandType: Trace
     if (dataset.name !== datasetNameInURL) {
       const pathnameWithUpdatedDatasetName = `/${pathnameParts[0]}/${dataset.name}-${dataset.id}/view`;
       UrlManager.changeBaseUrl(pathnameWithUpdatedDatasetName + location.search);
-      // window.history.replaceState({}, "", pathnameWithUpdatedDatasetName + location.search);
     }
   }
 }

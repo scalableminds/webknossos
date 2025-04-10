@@ -1,7 +1,18 @@
+import { notifyAboutDisposedRenderer } from "libs/UpdatableTexture";
 import { document } from "libs/window";
 import { Store } from "oxalis/singletons";
 import * as THREE from "three";
+
 let renderer: THREE.WebGLRenderer | null = null;
+
+export function destroyRenderer(): void {
+  if (renderer == null) {
+    return;
+  }
+  renderer.dispose();
+  renderer = null;
+  notifyAboutDisposedRenderer();
+}
 
 function getRenderer(): THREE.WebGLRenderer {
   if (renderer != null) {

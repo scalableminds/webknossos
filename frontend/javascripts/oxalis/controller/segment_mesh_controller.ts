@@ -1,7 +1,7 @@
 import app from "app";
 import { mergeVertices } from "libs/BufferGeometryUtils";
 import _ from "lodash";
-import type { Vector3 } from "oxalis/constants";
+import type { Vector2, Vector3 } from "oxalis/constants";
 import CustomLOD from "oxalis/controller/custom_lod";
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -11,25 +11,48 @@ import {
 import { NO_LOD_MESH_INDEX } from "oxalis/model/sagas/mesh_saga";
 import Store from "oxalis/store";
 import * as THREE from "three";
+import { acceleratedRaycast } from "three-mesh-bvh";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 
-const ACTIVATED_COLOR = [0.7, 0.5, 0.1] as const;
-const HOVERED_COLOR = [0.65, 0.5, 0.1] as const;
+import { computeBvhAsync } from "libs/compute_bvh_async";
+import type { BufferAttribute } from "three";
+import type { BufferGeometryWithInfo } from "./mesh_helpers";
 
-type MeshMaterial = THREE.MeshLambertMaterial & { savedHex?: number };
-export type MeshSceneNode = THREE.Mesh<THREE.BufferGeometry, MeshMaterial> & {
-  unmappedSegmentId?: number | null;
-  isMerged?: boolean;
-  isActiveUnmappedSegment?: boolean;
-  isHovered?: boolean;
+// Add the raycast function. Assumes the BVH is available on
+// the `boundsTree` variable
+THREE.Mesh.prototype.raycast = acceleratedRaycast;
+
+const hslToSRGB = (hsl: Vector3) => new THREE.Color().setHSL(...hsl).convertSRGBToLinear();
+
+const WHITE = new THREE.Color(1, 1, 1);
+const ACTIVATED_COLOR = hslToSRGB([0.7, 0.9, 0.75]);
+const HOVERED_COLOR = hslToSRGB([0.65, 0.9, 0.75]);
+const ACTIVATED_COLOR_VEC3 = ACTIVATED_COLOR.toArray() as Vector3;
+const HOVERED_COLOR_VEC3 = HOVERED_COLOR.toArray() as Vector3;
+
+type MeshMaterial = THREE.MeshLambertMaterial & { originalColor: Vector3 };
+type HighlightState = Vector2 | "full" | null;
+export type MeshSceneNode = THREE.Mesh<BufferGeometryWithInfo, MeshMaterial> & {
+  hoveredState?: HighlightState;
+  activeState?: HighlightState;
   parent: SceneGroupForMeshes;
+  isMerged: boolean;
 };
 export type SceneGroupForMeshes = THREE.Group & { segmentId: number; children: MeshSceneNode[] };
-export type BufferGeometryWithInfo = THREE.BufferGeometry & {
-  unmappedSegmentId: number;
-  isMerged?: boolean;
+
+const setRangeToColor = (
+  geometry: BufferGeometryWithInfo,
+  indexRange: Vector2 | null,
+  color: Vector3,
+) => {
+  if (indexRange == null) {
+    indexRange = [0, geometry.attributes.color.count];
+  }
+  for (let index = indexRange[0]; index < indexRange[1]; index++) {
+    (geometry.attributes.color as BufferAttribute).set(color, 3 * index);
+  }
 };
 
 type GroupForLOD = THREE.Group & {
@@ -72,12 +95,13 @@ export default class SegmentMeshController {
     );
   }
 
-  addMeshFromVertices(
+  async addMeshFromVerticesAsync(
     vertices: Float32Array,
     segmentId: number,
     layerName: string,
     additionalCoordinates?: AdditionalCoordinate[] | undefined | null,
-  ): void {
+  ): Promise<void> {
+    // Currently, this function is only used by ad hoc meshing.
     if (vertices.length === 0) return;
     let bufferGeometry = new THREE.BufferGeometry();
     bufferGeometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
@@ -85,14 +109,16 @@ export default class SegmentMeshController {
     bufferGeometry = mergeVertices(bufferGeometry);
     bufferGeometry.computeVertexNormals();
 
+    bufferGeometry.boundsTree = await computeBvhAsync(bufferGeometry);
+
     this.addMeshFromGeometry(
       bufferGeometry as BufferGeometryWithInfo,
       segmentId,
       null,
-      null,
       NO_LOD_MESH_INDEX,
       layerName,
       additionalCoordinates,
+      false,
     );
   }
 
@@ -100,21 +126,32 @@ export default class SegmentMeshController {
     segmentId: number,
     layerName: string,
     geometry: BufferGeometryWithInfo,
+    isMerged: boolean,
   ): MeshSceneNode {
     const color = this.getColorObjectForSegment(segmentId, layerName);
     const meshMaterial = new THREE.MeshLambertMaterial({
-      color,
-    });
+      vertexColors: true,
+    }) as MeshMaterial;
     meshMaterial.side = THREE.FrontSide;
     meshMaterial.transparent = true;
+    const colorArray = color.convertSRGBToLinear().toArray() as Vector3;
+    meshMaterial.originalColor = colorArray;
+
+    // Theoretically, this is not necessary for meshes that don't need non-uniform
+    // colors, but measurements showed that this only takes up ~0.03 ms per mesh
+    // (initialization, at least). We can optimize this later if necessary.
+    const colorBuffer = new Float32Array(geometry.attributes.position.count * 3);
+    for (let i = 0; i < geometry.attributes.position.count; i++) {
+      colorBuffer.set(colorArray, i * 3);
+    }
+    geometry.setAttribute("color", new THREE.BufferAttribute(colorBuffer, 3));
 
     // mesh.parent is still null at this moment, but when the mesh is
     // added to the group later, parent will be set. We'll ignore
     // this detail for now via the casting.
     const mesh = new THREE.Mesh(geometry, meshMaterial) as any as MeshSceneNode;
+    mesh.isMerged = isMerged;
 
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
     const tweenAnimation = new TWEEN.Tween({
       opacity: 0,
     });
@@ -123,7 +160,7 @@ export default class SegmentMeshController {
         {
           opacity: 1,
         },
-        500,
+        100,
       )
       .onUpdate(function onUpdate(this: { opacity: number }) {
         meshMaterial.opacity = this.opacity;
@@ -131,36 +168,27 @@ export default class SegmentMeshController {
       })
       .start();
 
-    if ("unmappedSegmentId" in geometry) {
-      mesh.unmappedSegmentId = geometry.unmappedSegmentId as number | null;
-    }
-    if ("isMerged" in geometry) {
-      mesh.isMerged = geometry.isMerged;
-    }
-
     return mesh;
   }
 
-  addMeshFromGeometries(
-    geometries: BufferGeometryWithInfo[],
+  addMeshFromGeometry(
+    geometry: BufferGeometryWithInfo,
     segmentId: number,
-    offset: Vector3 | null = null,
     scale: Vector3 | null = null,
     lod: number,
     layerName: string,
     additionalCoordinates: AdditionalCoordinate[] | null | undefined,
+    isMerged: boolean,
   ): void {
     const additionalCoordinatesString = getAdditionalCoordinatesAsString(additionalCoordinates);
     const keys = [additionalCoordinatesString, layerName, segmentId, lod];
-    const isNewlyAddedMesh =
-      this.meshesGroupsPerSegmentId[additionalCoordinatesString]?.[layerName]?.[segmentId]?.[lod] ==
-      null;
+    const isNewlyAddedMesh = _.get(this.meshesGroupsPerSegmentId, keys) == null;
     const targetGroup: SceneGroupForMeshes = _.get(
       this.meshesGroupsPerSegmentId,
       keys,
       new THREE.Group(),
     );
-    _.set(this.meshesGroupsPerSegmentId, keys, targetGroup);
+    _.setWith(this.meshesGroupsPerSegmentId, keys, targetGroup, Object);
     if (isNewlyAddedMesh) {
       if (lod === NO_LOD_MESH_INDEX) {
         this.meshesLODRootGroup.addNoLODSupportedMesh(targetGroup);
@@ -172,66 +200,50 @@ export default class SegmentMeshController {
         targetGroup.scale.copy(new THREE.Vector3(...scale));
       }
     }
-    const meshChunks = geometries.map((geometry) => {
-      const meshChunk = this.constructMesh(segmentId, layerName, geometry);
-      if (offset) {
-        meshChunk.translateX(offset[0]);
-        meshChunk.translateY(offset[1]);
-        meshChunk.translateZ(offset[2]);
-      }
-      return meshChunk;
-    });
+    const meshChunk = this.constructMesh(segmentId, layerName, geometry, isMerged);
+
     const group = new THREE.Group() as SceneGroupForMeshes;
-    for (const meshChunk of meshChunks) {
-      group.add(meshChunk);
-    }
+
+    group.add(meshChunk);
+
     group.segmentId = segmentId;
     this.addMeshToMeshGroups(additionalCoordinatesString, layerName, segmentId, lod, group);
 
     const segmentationTracing = getActiveSegmentationTracing(Store.getState());
     if (segmentationTracing != null) {
-      // addMeshFromGeometries is often called multiple times for different sets of geometries.
-      // Therefore, used a throttled variant of the highlightUnmappedSegmentId method.
-      this.throttledHighlightUnmappedSegmentId(segmentationTracing.activeUnmappedSegmentId);
+      // addMeshFromGeometry is often called multiple times for different sets of geometries.
+      // Therefore, used a throttled variant of the highlightActiveUnmappedSegmentId method.
+      this.throttledHighlightActiveUnmappedSegmentId(segmentationTracing.activeUnmappedSegmentId);
     }
   }
 
-  addMeshFromGeometry(
-    geometry: BufferGeometryWithInfo,
-    segmentId: number,
-    offset: Vector3 | null = null,
-    scale: Vector3 | null = null,
-    lod: number,
-    layerName: string,
-    additionalCoordinates: AdditionalCoordinate[] | null | undefined,
-  ): void {
-    this.addMeshFromGeometries(
-      [geometry],
-      segmentId,
-      offset,
-      scale,
-      lod,
-      layerName,
-      additionalCoordinates,
-    );
-  }
-
-  removeMeshById(segmentId: number, layerName: string): void {
+  removeMeshById(segmentId: number, layerName: string, options?: { lod: number }): void {
     const additionalCoordinates = Store.getState().flycam.additionalCoordinates;
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
     const meshGroups = this.getMeshGroups(additionalCoordKey, layerName, segmentId);
     if (meshGroups == null) {
       return;
     }
-    _.forEach(meshGroups, (meshGroup, lod) => {
-      const lodNumber = Number.parseInt(lod);
-      if (lodNumber !== NO_LOD_MESH_INDEX) {
-        this.meshesLODRootGroup.removeLODMesh(meshGroup, lodNumber);
+    _.forEach(meshGroups, (meshGroup, lodStr) => {
+      const currentLod = Number.parseInt(lodStr);
+
+      if (options && currentLod !== options.lod) {
+        // If options.lod is provided, only remove that LOD.
+        return;
+      }
+
+      if (currentLod !== NO_LOD_MESH_INDEX) {
+        this.meshesLODRootGroup.removeLODMesh(meshGroup, currentLod);
       } else {
         this.meshesLODRootGroup.removeNoLODSupportedMesh(meshGroup);
       }
+
+      this.removeMeshLODFromMeshGroups(additionalCoordKey, layerName, segmentId, currentLod);
     });
-    this.removeMeshFromMeshGroups(additionalCoordKey, layerName, segmentId);
+    if (options == null) {
+      // If options.lod is provided, the parent group should not be removed
+      this.removeMeshFromMeshGroups(additionalCoordKey, layerName, segmentId);
+    }
   }
 
   getMeshGeometryInBestLOD(
@@ -258,60 +270,98 @@ export default class SegmentMeshController {
     });
   }
 
-  setMeshColor(id: number, layerName: string): void {
-    const color = this.getColorObjectForSegment(id, layerName);
-    // If in nd-dataset, set the color for all additional coordinates
+  applyOnMeshGroupChildren = (
+    layerName: string,
+    segmentId: number,
+    functionToApply: (child: MeshSceneNode) => void,
+  ) => {
     for (const recordsOfLayers of Object.values(this.meshesGroupsPerSegmentId)) {
-      const meshDataForOneSegment = recordsOfLayers[layerName][id];
+      const meshDataForOneSegment = recordsOfLayers[layerName][segmentId];
       if (meshDataForOneSegment != null) {
         for (const lodGroup of Object.values(meshDataForOneSegment)) {
           for (const meshGroup of lodGroup.children) {
-            meshGroup.children.forEach((child: MeshSceneNode) => (child.material.color = color));
+            meshGroup.children.forEach(functionToApply);
           }
         }
       }
     }
+  };
+
+  setMeshColor(id: number, layerName: string, opacity?: number): void {
+    const color = this.getColorObjectForSegment(id, layerName);
+    const colorArray = color.toArray() as Vector3;
+    // If in nd-dataset, set the color for all additional coordinates
+    this.applyOnMeshGroupChildren(layerName, id, (child: MeshSceneNode) => {
+      child.material.originalColor = colorArray;
+      if (child.material.vertexColors) {
+        setRangeToColor(child.geometry, null, colorArray);
+        child.geometry.attributes.color.needsUpdate = true;
+      } else {
+        child.material.color = color;
+      }
+
+      if (opacity != null) child.material.opacity = opacity;
+    });
+  }
+
+  setMeshOpacity(id: number, layerName: string, opacity: number): void {
+    // If in nd-dataset, set the opacity for all additional coordinates
+    this.applyOnMeshGroupChildren(layerName, id, (child: MeshSceneNode) => {
+      child.material.opacity = opacity;
+    });
   }
 
   getColorObjectForSegment(segmentId: number, layerName: string) {
     const [hue, saturation, light] = getSegmentColorAsHSLA(Store.getState(), segmentId, layerName);
-    const color = new THREE.Color().setHSL(hue, 0.75 * saturation, light / 10);
+    const color = new THREE.Color().setHSL(hue, saturation, light);
+    color.convertSRGBToLinear();
     return color;
   }
 
   addLights(): void {
+    const settings = {
+      ambientIntensity: 0.41,
+      dirLight1Intensity: 0.54,
+      dirLight2Intensity: 0.29,
+      dirLight3Intensity: 0.29,
+      dirLight4Intensity: 0.17,
+      dirLight5Intensity: 1.03,
+      dirLight6Intensity: 0.29,
+      dirLight7Intensity: 0.17,
+      dirLight8Intensity: 0.54,
+    };
+
     // Note that the PlaneView also attaches a directional light directly to the TD camera,
     // so that the light moves along the cam.
-    const AMBIENT_INTENSITY = 30;
-    const DIRECTIONAL_INTENSITY = 5;
-    const POINT_INTENSITY = 5;
-
-    const ambientLight = new THREE.AmbientLight(2105376, AMBIENT_INTENSITY);
-
-    const directionalLight = new THREE.DirectionalLight(16777215, DIRECTIONAL_INTENSITY);
-    directionalLight.position.x = 1;
-    directionalLight.position.y = 1;
-    directionalLight.position.z = 1;
-    directionalLight.position.normalize();
-
-    const directionalLight2 = new THREE.DirectionalLight(16777215, DIRECTIONAL_INTENSITY);
-    directionalLight2.position.x = -1;
-    directionalLight2.position.y = -1;
-    directionalLight2.position.z = -1;
-    directionalLight2.position.normalize();
-
-    const pointLight = new THREE.PointLight(16777215, POINT_INTENSITY);
-    pointLight.position.x = 0;
-    pointLight.position.y = -25;
-    pointLight.position.z = 10;
-
+    const ambientLight = new THREE.AmbientLight("white", settings.ambientIntensity);
     this.meshesLODRootGroup.add(ambientLight);
-    this.meshesLODRootGroup.add(directionalLight);
-    this.meshesLODRootGroup.add(directionalLight2);
-    this.meshesLODRootGroup.add(pointLight);
+
+    const lightPositions: Vector3[] = [
+      [1, 1, 1],
+      [-1, 1, 1],
+      [1, -1, 1],
+      [-1, -1, 1],
+      [1, 1, -1],
+      [-1, 1, -1],
+      [1, -1, -1],
+      [-1, -1, -1],
+    ];
+
+    const directionalLights: THREE.DirectionalLight[] = [];
+
+    lightPositions.forEach((pos, index) => {
+      const light = new THREE.DirectionalLight(
+        WHITE,
+        // @ts-ignore
+        settings[`dirLight${index + 1}Intensity`] || 1,
+      );
+      light.position.set(...pos).normalize();
+      directionalLights.push(light);
+      this.meshesLODRootGroup.add(light);
+    });
   }
 
-  getMeshGroupsByLOD(
+  private getMeshGroupsByLOD(
     additionalCoordinates: AdditionalCoordinate[] | null | undefined,
     layerName: string,
     segmentId: number,
@@ -322,7 +372,7 @@ export default class SegmentMeshController {
     return _.get(this.meshesGroupsPerSegmentId, keys, null);
   }
 
-  getMeshGroups(
+  private getMeshGroups(
     additionalCoordKey: string,
     layerName: string,
     segmentId: number,
@@ -331,7 +381,7 @@ export default class SegmentMeshController {
     return _.get(this.meshesGroupsPerSegmentId, keys, null);
   }
 
-  addMeshToMeshGroups(
+  private addMeshToMeshGroups(
     additionalCoordKey: string,
     layerName: string,
     segmentId: number,
@@ -370,25 +420,59 @@ export default class SegmentMeshController {
     }
   }
 
-  removeMeshFromMeshGroups(additionalCoordinateKey: string, layerName: string, segmentId: number) {
+  private removeMeshFromMeshGroups(
+    additionalCoordinateKey: string,
+    layerName: string,
+    segmentId: number,
+  ) {
     delete this.meshesGroupsPerSegmentId[additionalCoordinateKey][layerName][segmentId];
+  }
+
+  private removeMeshLODFromMeshGroups(
+    additionalCoordinateKey: string,
+    layerName: string,
+    segmentId: number,
+    lod: number,
+  ) {
+    delete this.meshesGroupsPerSegmentId[additionalCoordinateKey][layerName][segmentId][lod];
   }
 
   updateMeshAppearance(
     mesh: MeshSceneNode,
     isHovered: boolean | undefined,
     isActiveUnmappedSegment?: boolean | undefined,
+    highlightState?: HighlightState,
   ) {
+    // This method has three steps:
+    // 1) Check whether (and which of) the provided parameters differ from the actual
+    //    appearance.
+    // 2) Clear old partial ranges if necessary.
+    // 3) Update the appearance.
+    const isProofreadingMode = Store.getState().uiInformation.activeTool === "PROOFREAD";
+
+    if (highlightState != null && !isProofreadingMode) {
+      // If the proofreading mode is not active and highlightState is not null,
+      // we overwrite potential requests to highlight only a range.
+      highlightState = "full";
+    }
+
     let wasChanged = false;
+    const rangesToReset: Vector2[] = [];
     if (isHovered != null) {
-      if (!!mesh.isHovered !== isHovered) {
-        mesh.isHovered = isHovered;
+      if (!_.isEqual(mesh.hoveredState, highlightState)) {
+        if (mesh.hoveredState != null && mesh.hoveredState !== "full") {
+          rangesToReset.push(mesh.hoveredState);
+        }
+        mesh.hoveredState = highlightState;
         wasChanged = true;
       }
     }
     if (isActiveUnmappedSegment != null) {
-      if (!!mesh.isActiveUnmappedSegment !== isActiveUnmappedSegment) {
-        mesh.isActiveUnmappedSegment = isActiveUnmappedSegment;
+      if (!_.isEqual(mesh.activeState, highlightState)) {
+        if (mesh.activeState != null && mesh.activeState !== "full") {
+          rangesToReset.push(mesh.activeState);
+        }
+        mesh.activeState = highlightState;
         wasChanged = true;
       }
     }
@@ -397,78 +481,105 @@ export default class SegmentMeshController {
       return;
     }
 
-    const targetOpacity = mesh.isHovered ? 0.8 : 1.0;
-
-    // mesh.parent contains all geometries that were loaded
-    // for one chunk (if isMerged is true, this is only one geometry).
-    // mesh.parent.parent contains all chunks for the current segment.
+    // mesh.parent.parent contains either
+    // - exactly one geometry (if all chunks for the current segment were merged)
+    // - one geometry per mesh chunk
     const parent = mesh.parent.parent;
     if (parent == null) {
       // Satisfy TS
       throw new Error("Unexpected null parent");
     }
-    // We update the opacity for all meshes that belong to the current
-    // segment ID (in contrast to the color) so that the user can
-    // see which other super voxels belong to the segment id of the
-    // hovered super-voxel.
-    parent.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        child.material.opacity = targetOpacity;
-      }
-    });
-    const isNotProofreadingMode = Store.getState().uiInformation.activeTool !== "PROOFREAD";
 
-    const changeMaterial = (fn: (material: MeshMaterial) => void) => {
-      if (mesh.isMerged || isNotProofreadingMode) {
-        // Update the material for all meshes that belong to the current
-        // segment ID.
-        parent.traverse((child) => {
-          if (child instanceof THREE.Mesh) {
-            fn(child.material);
-          }
-        });
-      } else {
-        // Only update the given mesh, because we only want to highlight
-        // that super-voxel.
-        fn(mesh.material);
+    // Reset ranges
+    if (mesh.material.originalColor != null) {
+      for (const rangeToReset of rangesToReset) {
+        setRangeToColor(mesh.geometry, rangeToReset, mesh.material.originalColor);
       }
-    };
-    if (mesh.isHovered || mesh.isActiveUnmappedSegment) {
-      changeMaterial((material) => {
-        if (material.savedHex == null) {
-          material.savedHex = material.color.getHex();
-        }
-        const newColor: readonly [number, number, number] = mesh.isHovered
-          ? HOVERED_COLOR
-          : ACTIVATED_COLOR;
-        material.color = new THREE.Color().setHSL(...newColor);
-        material.opacity = 1.0;
-        material.emissive.setHSL(...HOVERED_COLOR);
-      });
-    } else {
-      changeMaterial((material) => {
-        // @ts-ignore
-        material.emissive.setHex("#FF00FF");
-        if (material.savedHex != null) {
-          material.color.setHex(material.savedHex);
-        }
-        material.savedHex = undefined;
-      });
     }
+
+    const setMaterialToUniformColor = (material: MeshMaterial, color: THREE.Color) => {
+      material.vertexColors = false;
+      material.color = color;
+      material.needsUpdate = true;
+    };
+    const setMaterialToVertexColors = (material: MeshMaterial) => {
+      material.vertexColors = true;
+      // White needs to be set so that the vertex colors have precedence.
+      // The mesh will have the colors defined in the buffer attribute "color".
+      material.color = WHITE;
+      material.needsUpdate = true;
+    };
+
+    const isUniformColor = (mesh.activeState || mesh.hoveredState) === "full" || !mesh.isMerged;
+
+    if (isUniformColor) {
+      let newColor = mesh.hoveredState
+        ? HOVERED_COLOR
+        : new THREE.Color(...mesh.material.originalColor);
+
+      // Update the material for all meshes that belong to the current
+      // segment ID. Only for adhoc meshes, these will contain multiple
+      // children. For precomputed meshes, this will only affect one
+      // mesh in the scene graph.
+      parent.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          setMaterialToUniformColor(child.material, newColor);
+        }
+      });
+
+      return;
+    }
+
+    if (mesh.material.color !== WHITE || !mesh.material.vertexColors) {
+      setMaterialToVertexColors(mesh.material);
+    }
+
+    if (mesh.activeState && mesh.activeState !== "full") {
+      const newColor = ACTIVATED_COLOR_VEC3;
+      setRangeToColor(mesh.geometry, mesh.activeState, newColor);
+    }
+    // Setting the hovered part needs to happen after setting the active part,
+    // so that there is still a hover effect for an active super voxel.
+    if (mesh.hoveredState && mesh.hoveredState !== "full") {
+      const newColor = HOVERED_COLOR_VEC3;
+      setRangeToColor(mesh.geometry, mesh.hoveredState, newColor);
+    }
+    mesh.geometry.attributes.color.needsUpdate = true;
   }
 
-  highlightUnmappedSegmentId = (activeUnmappedSegmentId: number | null | undefined) => {
+  highlightActiveUnmappedSegmentId = (activeUnmappedSegmentId: number | null | undefined) => {
     const { meshesLODRootGroup } = this;
     meshesLODRootGroup.traverse((_obj) => {
+      if (!("geometry" in _obj)) {
+        return;
+      }
       // The cast is safe because MeshSceneNode adds only optional properties
       const obj = _obj as MeshSceneNode;
-      if (activeUnmappedSegmentId != null && obj.unmappedSegmentId === activeUnmappedSegmentId) {
-        this.updateMeshAppearance(obj, undefined, true);
-      } else if (obj.isActiveUnmappedSegment) {
-        this.updateMeshAppearance(obj, undefined, false);
+
+      const vertexSegmentMapping = obj.geometry.vertexSegmentMapping;
+
+      let indexRange = null;
+      let containsSegmentId = false;
+      if (vertexSegmentMapping && activeUnmappedSegmentId) {
+        containsSegmentId = vertexSegmentMapping.containsSegmentId(activeUnmappedSegmentId);
+        if (containsSegmentId) {
+          indexRange = vertexSegmentMapping.getRangeForUnmappedSegmentId(activeUnmappedSegmentId);
+        }
+      }
+
+      if (activeUnmappedSegmentId != null && containsSegmentId) {
+        // Highlight (parts of) the mesh as active
+        this.updateMeshAppearance(obj, undefined, true, indexRange);
+      } else if (obj.activeState) {
+        // The mesh has an activeState, but that id is no longer
+        // active. Therefore, clear it.
+        this.updateMeshAppearance(obj, undefined, false, null);
       }
     });
   };
 
-  throttledHighlightUnmappedSegmentId = _.throttle(this.highlightUnmappedSegmentId, 150);
+  throttledHighlightActiveUnmappedSegmentId = _.throttle(
+    this.highlightActiveUnmappedSegmentId,
+    150,
+  );
 }

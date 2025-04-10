@@ -71,6 +71,10 @@ class DataLayer {
     this.pullQueue.clear();
     this.pushQueue.clear();
     this.layerRenderingManager.destroy();
+    this.cube.destroy();
+    if (this.mappings) {
+      this.mappings.destroy();
+    }
   }
 }
 

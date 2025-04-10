@@ -19,7 +19,7 @@ import type { OxalisState } from "oxalis/store";
 import type { APIOrganization, APIUser } from "types/api_flow_types";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 import { getTransformsPerLayer } from "./dataset_layer_transformation_accessor";
-import { isSkeletonLayerTransformed } from "./skeletontracing_accessor";
+import { isSkeletonLayerTransformed, isSkeletonLayerVisible } from "./skeletontracing_accessor";
 
 export const TOOL_NAMES = {
   MOVE: "Move",
@@ -93,8 +93,11 @@ export function isBrushTool(activeTool: AnnotationTool): boolean {
 export function isTraceTool(activeTool: AnnotationTool): boolean {
   return activeTool === AnnotationToolEnum.TRACE || activeTool === AnnotationToolEnum.ERASE_TRACE;
 }
-const disabledSkeletonExplanation =
+const noSkeletonsExplanation =
   "This annotation does not have a skeleton. Please convert it to a hybrid annotation.";
+
+const disabledSkeletonExplanation =
+  "Currently all trees are invisible. To use this tool, make the skeleton layer visible by toggling the button in the left sidebar.";
 
 type DisabledInfo = {
   isDisabled: boolean;
@@ -112,8 +115,21 @@ const ALWAYS_ENABLED_TOOL_INFOS = {
   [AnnotationToolEnum.AREA_MEASUREMENT]: NOT_DISABLED_INFO,
 };
 
-function _getSkeletonToolInfo(hasSkeleton: boolean, isSkeletonLayerTransformed: boolean) {
+function _getSkeletonToolInfo(
+  hasSkeleton: boolean,
+  isSkeletonLayerTransformed: boolean,
+  areSkeletonsVisible: boolean,
+) {
   if (!hasSkeleton) {
+    return {
+      [AnnotationToolEnum.SKELETON]: {
+        isDisabled: true,
+        explanation: noSkeletonsExplanation,
+      },
+    };
+  }
+
+  if (!areSkeletonsVisible) {
     return {
       [AnnotationToolEnum.SKELETON]: {
         isDisabled: true,
@@ -232,7 +248,7 @@ function _getDisabledInfoForProofreadTool(
         activeUser,
       );
     } else {
-      explanation = disabledSkeletonExplanation;
+      explanation = noSkeletonsExplanation;
     }
   } else {
     explanation =
@@ -369,10 +385,14 @@ function getDisabledVolumeInfo(state: OxalisState) {
 
 const getVolumeDisabledWhenVolumeIsEnabled = memoizeOne(_getVolumeDisabledWhenVolumeIsEnabled);
 const _getDisabledInfoForTools = (state: OxalisState): Record<AnnotationToolEnum, DisabledInfo> => {
-  const hasSkeleton = state.annotation.skeleton != null;
+  const { annotation } = state;
+  const hasSkeleton = annotation.skeleton != null;
   const isSkeletonTransformed = isSkeletonLayerTransformed(state);
-  const skeletonToolInfo = getSkeletonToolInfo(hasSkeleton, isSkeletonTransformed);
-  // TODO: test volume only annotations & view mode only
+  const skeletonToolInfo = getSkeletonToolInfo(
+    hasSkeleton,
+    isSkeletonTransformed,
+    isSkeletonLayerVisible(annotation),
+  );
   const boundingBoxToolInfo = getBoundingBoxToolInfo(hasSkeleton, isSkeletonTransformed);
 
   const disabledVolumeInfo = getDisabledVolumeInfo(state);

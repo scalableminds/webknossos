@@ -1,4 +1,6 @@
-import type { Vector3 } from "oxalis/constants"; // This is a Map datastructure for which the key
+import type { Vector3 } from "oxalis/constants";
+
+// This is a Map data structure for which the key
 // is a Vector3.
 
 export default class ThreeDMap<T> {

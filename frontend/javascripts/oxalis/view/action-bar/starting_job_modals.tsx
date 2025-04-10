@@ -1061,7 +1061,7 @@ function CustomAiModelInferenceForm() {
   return (
     <StartJobForm
       handleClose={() => dispatch(setAIJobModalStateAction("invisible"))}
-      jobName={APIJobType.INFER_WITH_MODEL}
+      jobName={APIJobType.INFER_NEURONS}
       buttonLabel="Start inference with custom AI model"
       title="AI Inference"
       suggestedDatasetSuffix="with_custom_model"

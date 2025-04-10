@@ -748,6 +748,7 @@ export enum APIJobType {
   INFER_NEURONS = "infer_neurons",
   MATERIALIZE_VOLUME_ANNOTATION = "materialize_volume_annotation",
   TRAIN_MODEL = "train_model",
+  // Only used for backwards compatibility, e.g. to display results. Use infer_neurons for training instead
   INFER_WITH_MODEL = "infer_with_model",
   INFER_MITOCHONDRIA = "infer_mitochondria",
 }

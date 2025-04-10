@@ -161,7 +161,7 @@ class VolumeTracingService @Inject()(
                            segmentIndexBuffer: VolumeSegmentIndexBuffer,
                            volumeBucketBuffer: VolumeBucketBuffer): Fox[Unit] =
     for {
-      _ <- bool2Fox(!action.bucketPosition.hasNegativeComponent) ?~> s"Received a bucket at negative position (${action.bucketPosition}), must be positive"
+      _ <- Fox.fromBool(!action.bucketPosition.hasNegativeComponent) ?~> s"Received a bucket at negative position (${action.bucketPosition}), must be positive"
       _ <- assertMagIsValid(volumeLayer.tracing, action.mag) ?~> s"Received a mag-${action.mag.toMagLiteral(allowScalar = true)} bucket, which is invalid for this annotation."
 
       actionBucketData <- action.base64Data.map(Base64.getDecoder.decode).toFox
@@ -251,9 +251,9 @@ class VolumeTracingService @Inject()(
 
   private def assertMagIsValid(tracing: VolumeTracing, mag: Vec3Int): Fox[Unit] =
     if (tracing.mags.nonEmpty) {
-      bool2Fox(tracing.mags.exists(r => vec3IntFromProto(r) == mag))
+     Fox.fromBool(tracing.mags.exists(r => vec3IntFromProto(r) == mag))
     } else { // old volume tracings do not have a mag list, no assert possible. Check compatibility by asserting isotropic mag
-      bool2Fox(mag.isIsotropic)
+     Fox.fromBool(mag.isIsotropic)
     }
 
   def revertVolumeData(tracingId: String,
@@ -357,7 +357,7 @@ class VolumeTracingService @Inject()(
               _ <- withZipsFromMultiZipAsync(initialData)((_, dataZip) => mergedVolume.addLabelSetFromDataZip(dataZip))
               _ <- withZipsFromMultiZipAsync(initialData)((index, dataZip) =>
                 mergedVolume.addFromDataZip(index, dataZip))
-              _ <- bool2Fox(
+              _ <- Fox.fromBool(
                 ElementClass
                   .largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, tracing.elementClass)) ?~> Messages(
                 "annotation.volume.largestSegmentIdExceedsRange",
@@ -552,7 +552,7 @@ class VolumeTracingService @Inject()(
         // Adding segment index on duplication if the volume tracing allows it. This will be used in duplicateData
         hasSegmentIndex = Some(hasSegmentIndex)
       )
-      _ <- bool2Fox(newTracing.mags.nonEmpty) ?~> "magRestrictions.tooTight"
+      _ <- Fox.fromBool(newTracing.mags.nonEmpty) ?~> "magRestrictions.tooTight"
     } yield newTracing
   }
 
@@ -654,8 +654,8 @@ class VolumeTracingService @Inject()(
 
   def updateMagList(tracingId: String, tracing: VolumeTracing, mags: Set[Vec3Int]): Fox[Unit] =
     for {
-      _ <- bool2Fox(tracing.version == 0L) ?~> "Tracing has already been edited."
-      _ <- bool2Fox(mags.nonEmpty) ?~> "Initializing without any mags. No data or mag restrictions too tight?"
+      _ <- Fox.fromBool(tracing.version == 0L) ?~> "Tracing has already been edited."
+      _ <- Fox.fromBool(mags.nonEmpty) ?~> "Initializing without any mags. No data or mag restrictions too tight?"
       _ <- saveVolume(tracingId, tracing.version, tracing.copy(mags = mags.toList.sortBy(_.maxDim).map(vec3IntToProto)))
     } yield ()
 
@@ -827,7 +827,7 @@ class VolumeTracingService @Inject()(
           mergedVolume.addFromBucketStream(sourceVolumeIndex, volumeLayer.bucketStream, Some(magsIntersection))
       }
       for {
-        _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, elementClassProto)) ?~> Messages(
+        _ <- Fox.fromBool(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, elementClassProto)) ?~> Messages(
           "annotation.volume.largestSegmentIdExceedsRange",
           mergedVolume.largestSegmentId.toLong,
           elementClassProto)
@@ -898,7 +898,7 @@ class VolumeTracingService @Inject()(
           _ <- mergedVolume.addLabelSetFromDataZip(zipFile).toFox
           _ = mergedVolume.addFromBucketStream(sourceVolumeIndex = 0, volumeLayer.bucketProvider.bucketStream())
           _ <- mergedVolume.addFromDataZip(sourceVolumeIndex = 1, zipFile).toFox
-          _ <- bool2Fox(
+          _ <- Fox.fromBool(
             ElementClass
               .largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, tracing.elementClass)) ?~> Messages(
             "annotation.volume.largestSegmentIdExceedsRange",

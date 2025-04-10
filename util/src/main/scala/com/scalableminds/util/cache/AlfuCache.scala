@@ -1,7 +1,7 @@
 package com.scalableminds.util.cache
 
 import com.github.benmanes.caffeine.cache.{AsyncCache, Caffeine, RemovalCause, RemovalListener, Weigher}
-import com.scalableminds.util.tools.{Fox, FoxImplicits, OxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import net.liftweb.common.{Box, Failure}
 
 import java.util.concurrent.{CompletableFuture, Executor, TimeUnit}
@@ -12,17 +12,19 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.jdk.CollectionConverters._
 
-class AlfuCache[K, V](store: AsyncCache[K, Box[V]]) extends OxImplicits {
+class AlfuCache[K, V](store: AsyncCache[K, Box[V]]) extends FoxImplicits {
 
   def getOrLoad(key: K, loadFn: K => Fox[V])(implicit ec: ExecutionContext): Fox[V] =
-    for {
-      box <- getOrLoadAdapter(key, key => loadFn(key).futureBox)
-      _ = box match {
-        case _: Failure => remove(key) // Do not cache failures
-        case _          => ()
-      }
-      result <- box.toFox
-    } yield result
+    Fox.futureBox2Fox {
+      for {
+        box <- getOrLoadAdapter(key, key => loadFn(key).futureBox)
+        _ = box match {
+          case _: Failure => remove(key) // Do not cache failures
+          case _          => ()
+        }
+        result <- box.toFox
+      } yield result
+    }
 
   private def getOrLoadAdapter(key: K, loadValue: K => Future[Box[V]]): Future[Box[V]] =
     store.get(key, AlfuCache.toJavaMappingFunction[K, Box[V]](loadValue)).asScala

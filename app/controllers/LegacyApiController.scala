@@ -219,7 +219,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     sil.SecuredAction.async { implicit request =>
       for {
         organization <- organizationDAO.findOne(organizationName) // the old organizationName is now the organization id
-        _ <- bool2Fox(organization._id == request.identity._organization) ~> FORBIDDEN
+        _ <- Fox.fromBool(organization._id == request.identity._organization) ~> FORBIDDEN
         _ <- datasetService.assertValidDatasetName(datasetName)
       } yield Ok
     }

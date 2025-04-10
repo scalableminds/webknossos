@@ -60,7 +60,7 @@ class FossilDBClient(collection: String,
       reply: HealthCheckResponse <- wrapException(
         Grpc.guavaFuture2ScalaFuture(healthStub.check(HealthCheckRequest.getDefaultInstance)))
       replyString = reply.getStatus.toString
-      _ <- bool2Fox(replyString == "SERVING") ?~> replyString
+      _ <- Fox.fromBool(replyString == "SERVING") ?~> replyString
       _ = if (verbose)
         logger.info(f"Successfully tested FossilDB health at $authority. Reply: " + replyString)
     } yield ()
@@ -103,7 +103,7 @@ class FossilDBClient(collection: String,
                             errorMessage: Option[String],
                             mayBeEmpty: Option[Boolean] = None): Fox[Unit] =
     if (mayBeEmpty.getOrElse(false) && errorMessage.contains("No such element")) Fox.empty
-    else bool2Fox(success) ?~> errorMessage.getOrElse("")
+    elseFox.bool2Fox(success) ?~> errorMessage.getOrElse("")
 
   def get[T](key: String, version: Option[Long] = None, mayBeEmpty: Option[Boolean] = None)(
       implicit fromByteArray: Array[Byte] => Box[T]): Fox[VersionedKeyValuePair[T]] =

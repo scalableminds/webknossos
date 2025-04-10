@@ -82,7 +82,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
           case None =>
             for {
               allOrganizations <- organizationDAO.findAll
-              _ <- bool2Fox(allOrganizations.length == 1) ?~> "organization.ambiguous"
+              _ <- Fox.fromBool(allOrganizations.length == 1) ?~> "organization.ambiguous"
               defaultOrganization <- allOrganizations.headOption
             } yield defaultOrganization
         }
@@ -90,9 +90,9 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     }
 
   def assertMayCreateOrganization(requestingUser: Option[User]): Fox[Unit] = {
-    val activatedInConfig = bool2Fox(conf.Features.isWkorgInstance) ?~> "allowOrganizationCreation.notEnabled"
+    val activatedInConfig =Fox.fromBool(conf.Features.isWkorgInstance) ?~> "allowOrganizationCreation.notEnabled"
     val userIsSuperUser = requestingUser.toFox.flatMap(user =>
-      multiUserDAO.findOne(user._multiUser)(GlobalAccessContext).flatMap(multiUser => bool2Fox(multiUser.isSuperUser)))
+      multiUserDAO.findOne(user._multiUser)(GlobalAccessContext).flatMap(multiUser =>Fox.fromBool(multiUser.isSuperUser)))
 
     // If at least one of the conditions is fulfilled, success is returned.
     Fox
@@ -104,7 +104,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
   def assertNoOrganizationsPresent: Fox[Unit] =
     for {
       organizations <- organizationDAO.findAll(GlobalAccessContext)
-      _ <- bool2Fox(organizations.isEmpty) ?~> "organizationsNotEmpty"
+      _ <- Fox.fromBool(organizations.isEmpty) ?~> "organizationsNotEmpty"
     } yield ()
 
   def createOrganization(organizationIdOpt: Option[String], organizationName: String): Fox[Organization] =
@@ -115,7 +115,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         .getOrElse(normalizedName)
         .replaceAll(" ", "_")
       existingOrganization <- organizationDAO.findOne(organizationId)(GlobalAccessContext).futureBox
-      _ <- bool2Fox(existingOrganization.isEmpty) ?~> "organization.id.alreadyInUse"
+      _ <- Fox.fromBool(existingOrganization.isEmpty) ?~> "organization.id.alreadyInUse"
       initialPricingParameters = if (conf.Features.isWkorgInstance) (PricingPlan.Basic, Some(3), Some(50000000000L))
       else (PricingPlan.Custom, None, None)
       organizationRootFolder = Folder(ObjectId.generate, folderService.defaultRootName, JsArray.empty)
@@ -156,7 +156,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       organization <- organizationDAO.findOne(organizationId)
       userCount <- userDAO.countAllForOrganization(organizationId)
       _ <- Fox.runOptional(organization.includedUsers)(includedUsers =>
-        bool2Fox(userCount + usersToAddCount <= includedUsers))
+       Fox.fromBool(userCount + usersToAddCount <= includedUsers))
     } yield ()
 
   private def fallbackOnOwnerEmail(possiblyEmptyEmail: String, organization: Organization)(
@@ -176,9 +176,9 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
   def acceptTermsOfService(organizationId: String, version: Int)(implicit ctx: DBAccessContext,
                                                                  m: MessagesProvider): Fox[Unit] =
     for {
-      _ <- bool2Fox(conf.WebKnossos.TermsOfService.enabled) ?~> "termsOfService.notEnabled"
+      _ <- Fox.fromBool(conf.WebKnossos.TermsOfService.enabled) ?~> "termsOfService.notEnabled"
       requiredVersion = conf.WebKnossos.TermsOfService.version
-      _ <- bool2Fox(version == requiredVersion) ?~> Messages("termsOfService.versionMismatch", requiredVersion, version)
+      _ <- Fox.fromBool(version == requiredVersion) ?~> Messages("termsOfService.versionMismatch", requiredVersion, version)
       _ <- organizationDAO.acceptTermsOfService(organizationId, version, Instant.now)
     } yield ()
 

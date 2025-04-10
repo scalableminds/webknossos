@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.bool2Fox
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -102,7 +101,7 @@ class TemporaryTracingService @Inject()(
 
   def assertTracingStillPresent(tracingId: String)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      _ <- bool2Fox(volumeStore.contains(tracingId)) ?~> "Temporary Volume Tracing expired"
+      _ <- Fox.fromBool(volumeStore.contains(tracingId)) ?~> "Temporary Volume Tracing expired"
     } yield ()
 
   private def registerTracingId(tracingId: String) =

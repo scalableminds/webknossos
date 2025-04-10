@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.controllers
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
 import com.scalableminds.webknossos.datastore.explore.{
   ExploreRemoteDatasetRequest,
@@ -52,8 +52,7 @@ class DataSourceController @Inject()(
     val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
 )(implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext)
     extends Controller
-    with MeshMappingHelper
-    with FoxImplicits {
+    with MeshMappingHelper {
 
   override def allowRemoteOrigin: Boolean = true
 
@@ -100,7 +99,8 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDataSources(organizationName)) {
         for {
           unfinishedUploads <- dsRemoteWebknossosClient.getUnfinishedUploadsForUser(organizationName)
-          unfinishedUploadsWithUploadIds <- uploadService.addUploadIdsToUnfinishedUploads(unfinishedUploads)
+          unfinishedUploadsWithUploadIds <- Fox.future2Fox(
+            uploadService.addUploadIdsToUnfinishedUploads(unfinishedUploads))
           unfinishedUploadsWithUploadIdsWithoutDataSourceId = unfinishedUploadsWithUploadIds.map(_.withoutDataSourceId)
         } yield Ok(Json.toJson(unfinishedUploadsWithUploadIdsWithoutDataSourceId))
       }
@@ -172,8 +172,8 @@ class DataSourceController @Inject()(
                   UserAccessRequest.writeDataSource(dataSourceId)) {
                   for {
                     isKnownUpload <- uploadService.isKnownUploadByFileId(uploadFileId)
-                    _ <- bool2Fox(isKnownUpload) ?~> "dataset.upload.validation.failed"
-                    chunkFile <- request.body.file("file") ?~> "zip.file.notFound"
+                    _ <- Fox.fromBool(isKnownUpload) ?~> "dataset.upload.validation.failed"
+                    chunkFile <- request.body.file("file").toFox ?~> "zip.file.notFound"
                     _ <- uploadService.handleUploadChunk(uploadFileId,
                                                          chunkSize,
                                                          currentChunkSize,
@@ -195,7 +195,7 @@ class DataSourceController @Inject()(
         result <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataSource(dataSourceId)) {
           for {
             isKnownUpload <- uploadService.isKnownUploadByFileId(resumableIdentifier)
-            _ <- bool2Fox(isKnownUpload) ?~> "dataset.upload.validation.failed"
+            _ <- Fox.fromBool(isKnownUpload) ?~> "dataset.upload.validation.failed"
             isPresent <- uploadService.isChunkPresent(resumableIdentifier, resumableChunkNumber)
           } yield if (isPresent) Ok else NoContent
         }
@@ -478,14 +478,12 @@ class DataSourceController @Inject()(
           dataSourceService.dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName),
           organizationId)
         datasetErrorLoggingService.clearForDataset(organizationId, datasetDirectoryName)
+        val clearedVaultCacheEntriesOpt = dataSourceService.invalidateVaultCache(reloadedDataSource, layerName)
+        clearedVaultCacheEntriesOpt.foreach { clearedVaultCacheEntries =>
+          logger.info(
+            s"Reloading ${layerName.map(l => s"layer '$l' of ").getOrElse("")}dataset $organizationId/$datasetDirectoryName: closed $closedAgglomerateFileHandleCount agglomerate file handles and $closedMeshFileHandleCount mesh file handles, removed $clearedBucketProviderCount bucketProviders, $clearedVaultCacheEntries vault cache entries and $removedChunksCount image chunk cache entries.")
+        }
         for {
-          clearedVaultCacheEntriesBox <- dataSourceService.invalidateVaultCache(reloadedDataSource, layerName).futureBox
-          _ = clearedVaultCacheEntriesBox match {
-            case Full(clearedVaultCacheEntries) =>
-              logger.info(
-                s"Reloading ${layerName.map(l => s"layer '$l' of ").getOrElse("")}dataset $organizationId/$datasetDirectoryName: closed $closedAgglomerateFileHandleCount agglomerate file handles and $closedMeshFileHandleCount mesh file handles, removed $clearedBucketProviderCount bucketProviders, $clearedVaultCacheEntries vault cache entries and $removedChunksCount image chunk cache entries.")
-            case _ => ()
-          }
           _ <- dataSourceRepository.updateDataSource(reloadedDataSource)
         } yield Ok(Json.toJson(reloadedDataSource))
       }

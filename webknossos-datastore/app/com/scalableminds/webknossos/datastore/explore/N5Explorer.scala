@@ -2,7 +2,6 @@ package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.bool2Fox
 import com.scalableminds.webknossos.datastore.dataformats.layers.{N5DataLayer, N5Layer, N5SegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
@@ -52,7 +51,7 @@ trait N5Explorer extends RemoteLayerExplorer {
 
     val cOpt = if (c == -1) None else Some(c)
     for {
-      _ <- bool2Fox(x >= 0 && y >= 0 && z >= 0) ?~> s"invalid xyz axis order: $x,$y,$z."
+      _ <- Fox.fromBool(x >= 0 && y >= 0 && z >= 0) ?~> s"invalid xyz axis order: $x,$y,$z."
     } yield AxisOrder(x, y, Some(z), cOpt)
   }
 
@@ -62,7 +61,7 @@ trait N5Explorer extends RemoteLayerExplorer {
   protected def layerFromMagsWithAttributes(magsWithAttributes: List[MagWithAttributes],
                                             remotePath: VaultPath): Fox[N5Layer] =
     for {
-      _ <- bool2Fox(magsWithAttributes.nonEmpty) ?~> "zero mags in layer"
+      _ <- Fox.fromBool(magsWithAttributes.nonEmpty) ?~> "zero mags in layer"
       elementClass <- elementClassFromMags(magsWithAttributes) ?~> "Could not extract element class from mags"
       boundingBox = boundingBoxFromMags(magsWithAttributes)
       name = guessNameFromPath(remotePath)

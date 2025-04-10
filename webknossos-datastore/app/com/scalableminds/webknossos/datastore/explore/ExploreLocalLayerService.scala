@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.explore
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.{Fox, OxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayerWithMagLocators,
@@ -25,7 +25,7 @@ import scala.jdk.CollectionConverters.IteratorHasAsScala
 // Calls explorers on local datasets that have already been uploaded to the binaryData dir
 class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
     extends ExploreLayerUtils
-    with OxImplicits {
+    with FoxImplicits {
 
   def exploreLocal(path: Path, dataSourceId: DataSourceId, layerDirectory: String = "")(
       implicit ec: ExecutionContext): Fox[DataSourceWithMagLocators] =
@@ -100,19 +100,20 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
       implicit ec: ExecutionContext): Fox[DataSourceWithMagLocators] =
     for {
       // Go down subdirectories until we find a directory with an attributes.json file that matches N5Header
-      layerPath <- PathUtils
-        .recurseSubdirsUntil(
-          path,
-          (p: Path) =>
-            try {
-              val attributesBytes = Files.readAllBytes(p.resolve(N5Header.FILENAME_ATTRIBUTES_JSON))
-              Json.parse(new String(attributesBytes)).validate[N5Header].isSuccess
-            } catch {
-              case _: Exception => false
-          }
-        )
-        .toFox
-        .getOrElse(path)
+      layerPath <- Fox.future2Fox(
+        PathUtils
+          .recurseSubdirsUntil(
+            path,
+            (p: Path) =>
+              try {
+                val attributesBytes = Files.readAllBytes(p.resolve(N5Header.FILENAME_ATTRIBUTES_JSON))
+                Json.parse(new String(attributesBytes)).validate[N5Header].isSuccess
+              } catch {
+                case _: Exception => false
+            }
+          )
+          .toFox
+          .getOrElse(path))
       explored <- exploreLocalLayer(
         layers =>
           layers.map(l =>

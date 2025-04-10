@@ -33,9 +33,9 @@ class TracingStoreController @Inject()(tracingStoreService: TracingStoreService,
   def update(name: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(tracingStorePublicReads) { tracingStore =>
       for {
-        _ <- bool2Fox(request.identity.isAdmin)
+        _ <- Fox.bool2Fox(request.identity.isAdmin)
         _ <- tracingStoreDAO.findOneByName(name) ?~> "tracingStore.notFound" ~> NOT_FOUND
-        _ <- bool2Fox(tracingStore.name == name)
+        _ <- Fox.bool2Fox(tracingStore.name == name)
         _ <- tracingStoreDAO.updateOne(tracingStore) ?~> "tracingStore.create.failed"
         js <- tracingStoreService.publicWrites(tracingStore)
       } yield { Ok(Json.toJson(js)) }

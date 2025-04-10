@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.explore
 import com.scalableminds.util.geometry.BoundingBox
 import collections.SequenceUtils
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits, OxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
@@ -16,7 +16,7 @@ case class MagWithAttributes(mag: MagLocator,
                              elementClass: ElementClass.Value,
                              boundingBox: BoundingBox)
 
-trait RemoteLayerExplorer extends OxImplicits {
+trait RemoteLayerExplorer extends FoxImplicits {
 
   implicit def ec: ExecutionContext
 

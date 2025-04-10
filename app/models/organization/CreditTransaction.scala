@@ -207,7 +207,7 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
     for {
       _ <- assertUpdateAccess(transactionId)
       transactionToRefund <- findOne(transactionId)
-      _ <- bool2Fox(transactionToRefund.transactionState == CreditTransactionState.Pending) ?~> "Can only refund pending transactions."
+      _ <- Fox.fromBool(transactionToRefund.transactionState == CreditTransactionState.Pending) ?~> "Can only refund pending transactions."
       refundComment = transactionToRefund._paidJob
         .map(jobId => s"Refund for failed job $jobId.")
         .getOrElse(s"Refund for transaction $transactionId.")
@@ -241,7 +241,7 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
           .sequence(List(insertRefundTransaction, setToRefunded))
           .transactionally
           .withTransactionIsolation(Serializable))
-      _ <- bool2Fox(updatedRows.forall(_ == 1)) ?~> s"Failed to refund transaction ${transactionToRefund._id} properly."
+      _ <- Fox.fromBool(updatedRows.forall(_ == 1)) ?~> s"Failed to refund transaction ${transactionToRefund._id} properly."
     } yield ()
 
   def findTransactionForJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[CreditTransaction] =

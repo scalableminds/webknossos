@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.{Fox, JsonHelper, OxImplicits}
+import com.scalableminds.util.tools.{Fox, JsonHelper, FoxImplicits}
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReader, ChunkUtils, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataSourceId}
@@ -13,7 +13,7 @@ import ucar.ma2.{Array => MultiArray}
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
-object Zarr3Array extends LazyLogging with OxImplicits {
+object Zarr3Array extends LazyLogging with FoxImplicits {
 
   def open(path: VaultPath,
            dataSourceId: DataSourceId,
@@ -177,7 +177,7 @@ class Zarr3Array(vaultPath: VaultPath,
       parsedShardIndex <- parsedShardIndexCache.getOrLoad(shardPath, readAndParseShardIndex)
       chunkIndexInShardIndex = getChunkIndexInShardIndex(chunkIndex, shardCoordinates)
       (chunkOffset, chunkLength) = parsedShardIndex(chunkIndexInShardIndex)
-      _ <- Fox.bool2Fox(!(chunkOffset == -1 && chunkLength == -1)) ~> Fox.empty // -1 signifies empty/missing chunk
+      _ <- Fox.fromBool(!(chunkOffset == -1 && chunkLength == -1)) ~> Fox.empty // -1 signifies empty/missing chunk
       range = Range.Long(chunkOffset, chunkOffset + chunkLength, 1)
     } yield (shardPath, range)
 }

@@ -68,7 +68,7 @@ class TaskService @Inject()(conf: WkConf,
         numberOfOpen <- countOpenNonAdminTasks(user)
         teams <- if (numberOfOpen < conf.WebKnossos.Tasks.maxOpenPerUser) userService.teamIdsFor(user._id)
         else userService.teamManagerTeamIdsFor(user._id)
-        _ <- bool2Fox(teams.nonEmpty) ?~> Messages("task.tooManyOpenOnes")
+        _ <- Fox.fromBool(teams.nonEmpty) ?~> Messages("task.tooManyOpenOnes")
       } yield teams
     }
 

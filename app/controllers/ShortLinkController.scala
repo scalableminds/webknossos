@@ -23,7 +23,7 @@ class ShortLinkController @Inject()(shortLinkDAO: ShortLinkDAO, sil: Silhouette[
     val _id = ObjectId.generate
     val key = RandomIDGenerator.generateBlocking(12)
     for {
-      _ <- bool2Fox(longLink.startsWith(wkConf.Http.uri)) ?~> "Could not generate short link: URI does not match"
+      _ <- Fox.bool2Fox(longLink.startsWith(wkConf.Http.uri)) ?~> "Could not generate short link: URI does not match"
       _ <- shortLinkDAO.insertOne(ShortLink(_id, key, longLink)) ?~> "create.failed"
       inserted <- shortLinkDAO.findOne(_id)
     } yield Ok(Json.toJson(inserted))

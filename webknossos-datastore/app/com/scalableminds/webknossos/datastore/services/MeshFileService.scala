@@ -18,7 +18,7 @@ import java.io.ByteArrayInputStream
 import java.nio.file.{Path, Paths}
 import javax.inject.Inject
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 case class ListMeshChunksRequest(
     meshFile: String,
@@ -184,7 +184,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
 
   def exploreMeshFiles(organizationId: String,
                        datasetDirectoryName: String,
-                       dataLayerName: String): Fox[Set[MeshFileInfo]] = {
+                       dataLayerName: String): Future[Set[MeshFileInfo]] = {
     val layerDir = dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName).resolve(dataLayerName)
     val meshFileNames = PathUtils
       .listFiles(layerDir.resolve(meshesDir), silent = true, PathUtils.fileExtensionFilter(hdf5FileExtension))
@@ -206,7 +206,6 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
 
     for {
       mappingNameBoxes: Seq[Box[String]] <- Fox.sequence(mappingNameFoxes)
-
       mappingNameOptions = mappingNameBoxes.map(_.toOption)
       zipped = meshFileNames.lazyZip(mappingNameOptions).lazyZip(meshFileVersions)
     } yield zipped.map(MeshFileInfo(_, _, _)).toSet
@@ -218,9 +217,11 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
    */
   private def mappingNameForMeshFile(meshFilePath: Path, meshFileVersion: Long): Fox[String] = {
     val attributeName = if (meshFileVersion == 0) "metadata/mapping_name" else "mapping_name"
-    meshFileCache.withCachedHdf5(meshFilePath) { cachedMeshFile =>
-      cachedMeshFile.stringReader.getAttr("/", attributeName)
-    } ?~> "mesh.file.readEncoding.failed"
+    meshFileCache
+      .withCachedHdf5(meshFilePath) { cachedMeshFile =>
+        cachedMeshFile.stringReader.getAttr("/", attributeName)
+      }
+      .toFox ?~> "mesh.file.readEncoding.failed"
   }
 
   // Same as above but this variant constructs the meshFilePath itself and converts null to None
@@ -271,11 +272,13 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       meshChunksForUnmappedSegments: List[MeshSegmentInfo] = listMeshChunksForSegments(meshFilePath,
                                                                                        segmentIds,
                                                                                        lodScaleMultiplier)
-      _ <- bool2Fox(meshChunksForUnmappedSegments.nonEmpty) ?~> "zero chunks" ?~> Messages(
+      _ <- Fox.fromBool(meshChunksForUnmappedSegments.nonEmpty) ?~> "zero chunks" ?~> Messages(
         "mesh.file.listChunks.failed",
         segmentIds.mkString(","),
         meshFileName)
-      wkChunkInfos <- WebknossosSegmentInfo.fromMeshInfosAndMetadata(meshChunksForUnmappedSegments, encoding, transform)
+      wkChunkInfos <- WebknossosSegmentInfo
+        .fromMeshInfosAndMetadata(meshChunksForUnmappedSegments, encoding, transform)
+        .toFox
     } yield wkChunkInfos
 
   private def listMeshChunksForSegments(meshFilePath: Path,

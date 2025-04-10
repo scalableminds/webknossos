@@ -58,7 +58,7 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
         100
       else
         1000
-    bool2Fox(batchSize <= batchLimit) ?~> Messages("task.create.limitExceeded", batchLimit)
+   Fox.fromBool(batchSize <= batchLimit) ?~> Messages("task.create.limitExceeded", batchLimit)
   }
 
   // Used in create (without files) in case of base annotation
@@ -457,7 +457,7 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
   private def assertEachHasEitherSkeletonOrVolume(
       requestedTasks: List[(TaskParameters, Option[SkeletonTracing], Option[(VolumeTracing, Option[File])])])
     : Fox[Unit] =
-    bool2Fox(
+   Fox.fromBool(
       requestedTasks.forall(tuple => tuple._1.baseAnnotation.isDefined || tuple._2.isDefined || tuple._3.isDefined))
 
   private def saveVolumeTracingIfPresent(
@@ -514,7 +514,7 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
                                               requestingUser: User)(implicit ctx: DBAccessContext): Fox[Task] =
     for {
       params <- paramBox.toFox
-      _ <- bool2Fox(params.newSkeletonTracingId.isDefined || params.newVolumeTracingId.isDefined) ?~> "task.create.needsEitherSkeletonOrVolume"
+      _ <- Fox.fromBool(params.newSkeletonTracingId.isDefined || params.newVolumeTracingId.isDefined) ?~> "task.create.needsEitherSkeletonOrVolume"
       _ <- Fox.runIf(params.newSkeletonTracingId.isDefined && !params.baseAnnotation.exists(_.skeletonId.isDefined))(
         skeletonSaveResult.toFox) ?~> "task.create.saveSkeleton.failed"
       _ <- Fox.runIf(params.newVolumeTracingId.isDefined && !params.baseAnnotation.exists(_.volumeId.isDefined))(

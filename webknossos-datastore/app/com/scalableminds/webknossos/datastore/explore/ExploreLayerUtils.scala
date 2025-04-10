@@ -1,8 +1,7 @@
 package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.Fox.bool2Fox
-import com.scalableminds.util.tools.{Fox, OxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedHeader
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffGroupHeader, NgffMetadata, ZarrHeader}
@@ -17,7 +16,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import scala.concurrent.ExecutionContext
 import scala.util.Try
 
-trait ExploreLayerUtils extends OxImplicits {
+trait ExploreLayerUtils extends FoxImplicits {
 
   def adaptLayersAndVoxelSize(layersWithVoxelSizes: List[(DataLayerWithMagLocators, VoxelSize)],
                               preferredVoxelSize: Option[VoxelSize])(
@@ -78,13 +77,13 @@ trait ExploreLayerUtils extends OxImplicits {
 
     val mag = (voxelSize / minVoxelSize).round.toVec3Int
     for {
-      _ <- bool2Fox(isPowerOfTwo(mag.x) && isPowerOfTwo(mag.y) && isPowerOfTwo(mag.z)) ?~> s"invalid mag: $mag. Must all be powers of two"
+      _ <- Fox.fromBool(isPowerOfTwo(mag.x) && isPowerOfTwo(mag.y) && isPowerOfTwo(mag.z)) ?~> s"invalid mag: $mag. Must all be powers of two"
     } yield mag
   }
 
   private def checkForDuplicateMags(magGroup: List[Vec3Int])(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      _ <- bool2Fox(magGroup.length == 1) ?~> s"detected mags are not unique, found $magGroup"
+      _ <- Fox.fromBool(magGroup.length == 1) ?~> s"detected mags are not unique, found $magGroup"
     } yield ()
 
   private def findBaseVoxelSize(minVoxelSize: VoxelSize, preferredVoxelSizeOpt: Option[VoxelSize]): VoxelSize =

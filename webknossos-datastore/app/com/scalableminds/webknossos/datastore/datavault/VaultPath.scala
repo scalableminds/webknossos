@@ -4,7 +4,7 @@ import com.aayushatharva.brotli4j.Brotli4jLoader
 import com.aayushatharva.brotli4j.decoder.BrotliInputStream
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.io.ZipIO
-import com.scalableminds.util.tools.{Fox, JsonHelper, OxImplicits}
+import com.scalableminds.util.tools.{Fox, JsonHelper, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
 import org.apache.commons.lang3.builder.HashCodeBuilder
@@ -16,7 +16,7 @@ import java.nio.charset.StandardCharsets
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
-class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging with OxImplicits {
+class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging with FoxImplicits {
 
   def readBytes(range: Option[NumericRange[Long]] = None)(implicit ec: ExecutionContext,
                                                           tc: TokenContext): Fox[Array[Byte]] =

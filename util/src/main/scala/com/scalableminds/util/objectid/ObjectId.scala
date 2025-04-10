@@ -1,7 +1,7 @@
 package com.scalableminds.util.objectid
 
 import com.scalableminds.util.tools.TextUtils.parseCommaSeparated
-import com.scalableminds.util.tools.{Fox, FoxImplicits, OxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import play.api.libs.json._
 import play.api.mvc.{PathBindable, QueryStringBindable}
 import reactivemongo.api.bson.BSONObjectID
@@ -12,7 +12,7 @@ case class ObjectId(id: String) {
   override def toString: String = id
 }
 
-object ObjectId extends OxImplicits {
+object ObjectId extends FoxImplicits {
   def generate: ObjectId = fromBsonId(BSONObjectID.generate())
   def fromString(input: String)(implicit ec: ExecutionContext): Fox[ObjectId] =
     fromStringSync(input).toFox ?~> s"The passed resource id ‘$input’ is invalid"

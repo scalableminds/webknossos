@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr
 
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.{Fox, JsonHelper, OxImplicits}
+import com.scalableminds.util.tools.{Fox, JsonHelper, FoxImplicits}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, DatasetArray, DatasetHeader}
 import ucar.ma2.{Array => MultiArray}
@@ -13,7 +13,7 @@ import net.liftweb.common.Box.tryo
 
 import scala.concurrent.ExecutionContext
 
-object ZarrArray extends LazyLogging with OxImplicits {
+object ZarrArray extends LazyLogging with FoxImplicits {
   def open(path: VaultPath,
            dataSourceId: DataSourceId,
            layerName: String,

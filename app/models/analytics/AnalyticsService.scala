@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox}
+import com.scalableminds.util.tools.Fox.{fromBool, box2Fox}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import models.user.{MultiUserDAO, UserDAO}
@@ -40,7 +40,7 @@ class AnalyticsService @Inject()(rpc: RPC,
   def ingest(jsonEvents: List[AnalyticsEventJson], apiKey: String): Fox[Unit] =
     for {
       resolvedWellKnownUris <- wellKnownUris ?~> "wellKnownUris configuration is incorrect"
-      _ <- bool2Fox(jsonEvents.forall(ev => {
+      _ <- Fox.fromBool(jsonEvents.forall(ev => {
         resolvedWellKnownUris.get(ev.userProperties.webknossosUri).forall(wellKnownApiKey => wellKnownApiKey == apiKey)
       })) ?~> "Provided API key is not correct for provided webknossosUri" ~> UNAUTHORIZED
       _ <- analyticsDAO.insertMany(jsonEvents)

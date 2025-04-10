@@ -3,7 +3,7 @@ package models.voxelytics
 import com.scalableminds.util.mvc.MimeTypes
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox, option2Fox}
+import com.scalableminds.util.tools.Fox.{fromBool, box2Fox, option2Fox}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import models.voxelytics.VoxelyticsLogLevel.VoxelyticsLogLevel
@@ -34,7 +34,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val actorSystem: ActorSyste
 
   private lazy val serverStartupFuture: Fox[Unit] = {
     for {
-      _ <- bool2Fox(enabled) ?~> "Loki is not enabled."
+      _ <- Fox.fromBool(enabled) ?~> "Loki is not enabled."
       _ = logger.info("Waiting for Loki to become available.")
       _ <- pollUntilServerStartedUp(Instant.in(conf.startupTimeout)) ~> 500
     } yield ()
@@ -44,7 +44,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val actorSystem: ActorSyste
     def waitAndRecurse(until: Instant): Fox[Unit] =
       for {
         _ <- after(POLLING_INTERVAL, using = actorSystem.scheduler)(Future.successful(()))
-        _ <- bool2Fox(!until.isPast) ?~> s"Loki did not become ready within ${conf.startupTimeout}."
+        _ <- Fox.fromBool(!until.isPast) ?~> s"Loki did not become ready within ${conf.startupTimeout}."
         _ <- pollUntilServerStartedUp(until)
       } yield ()
 

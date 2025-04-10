@@ -186,7 +186,7 @@ class AuthenticationController @Inject()(
     implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
     for {
       requestingMultiUser <- multiUserDAO.findOne(request.identity._multiUser)
-      _ <- bool2Fox(requestingMultiUser.isSuperUser) ?~> Messages("user.notAuthorised") ~> FORBIDDEN
+      _ <- Fox.fromBool(requestingMultiUser.isSuperUser) ?~> Messages("user.notAuthorised") ~> FORBIDDEN
       targetUser <- userService.userFromMultiUserEmail(email) ?~> "user.notFound" ~> NOT_FOUND
       result <- switchToUser(targetUser._id)
     } yield result
@@ -199,7 +199,7 @@ class AuthenticationController @Inject()(
       _ <- userService.fillSuperUserIdentity(request.identity, organization._id)
       targetUser <- userDAO.findOneByOrgaAndMultiUser(organization._id, request.identity._multiUser)(
         GlobalAccessContext) ?~> "user.notFound" ~> NOT_FOUND
-      _ <- bool2Fox(!targetUser.isDeactivated) ?~> "user.deactivated"
+      _ <- Fox.fromBool(!targetUser.isDeactivated) ?~> "user.deactivated"
       result <- switchToUser(targetUser._id)
       _ <- multiUserDAO.updateLastLoggedInIdentity(request.identity._multiUser, targetUser._id)
     } yield result
@@ -465,7 +465,7 @@ class AuthenticationController @Inject()(
 
   def openIdCallback(): Action[AnyContent] = Action.async { implicit request =>
     for {
-      _ <- bool2Fox(isOIDCEnabled) ?~> "SSO is not enabled"
+      _ <- Fox.fromBool(isOIDCEnabled) ?~> "SSO is not enabled"
       (accessToken: JsObject, idToken: Option[JsObject]) <- openIdConnectClient.getAndValidateTokens(
         absoluteOpenIdConnectCallbackURL,
         request.queryString.get("code").flatMap(_.headOption).getOrElse("missing code"),

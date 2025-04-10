@@ -180,7 +180,7 @@ Samplecountry
 
   private def assertInitialDataEnabled: Fox[Unit] =
     for {
-      _ <- bool2Fox(conf.WebKnossos.SampleOrganization.enabled) ?~> "initialData.notEnabled"
+      _ <- Fox.fromBool(conf.WebKnossos.SampleOrganization.enabled) ?~> "initialData.notEnabled"
     } yield ()
 
   private def insertRootFolder(): Fox[Unit] =

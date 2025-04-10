@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.{bool2Fox, option2Fox}
+import com.scalableminds.util.tools.Fox.{fromBool, option2Fox}
 import com.scalableminds.webknossos.datastore.geometry.{ListOfVec3IntProto, Vec3IntProto}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
@@ -118,7 +118,7 @@ class VolumeSegmentIndexBuffer(
 
   def flush()(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      _ <- bool2Fox(!isReadOnly) ?~> "this VolumeSegmentIndexBuffer was instantiated with isReadOnly=true and cannot be flushed."
+      _ <- Fox.fromBool(!isReadOnly) ?~> "this VolumeSegmentIndexBuffer was instantiated with isReadOnly=true and cannot be flushed."
       toFlush = segmentIndexBuffer.flatMap {
         case (key, (bucketPositions, true)) => Some((key, bucketPositions))
         case _                              => None

@@ -51,7 +51,7 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
       dataStoreDAO.findOneByName(dataStore.name).futureBox.flatMap {
         case Empty =>
           for {
-            _ <- bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
+            _ <- Fox.fromBool(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
             _ <- dataStoreDAO.insertOne(dataStore) ?~> "dataStore.create.failed"
             js <- dataStoreService.publicWrites(dataStore)
           } yield { Ok(Json.toJson(js)) }
@@ -63,7 +63,7 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
   def delete(name: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       multiUser <- multiUserDAO.findOne(request.identity._multiUser)
-      _ <- bool2Fox(multiUser.isSuperUser) ?~> "notAllowed" ~> FORBIDDEN
+      _ <- Fox.fromBool(multiUser.isSuperUser) ?~> "notAllowed" ~> FORBIDDEN
       _ <- dataStoreDAO.deleteOneByName(name) ?~> "dataStore.remove.failure"
     } yield Ok
   }
@@ -71,9 +71,9 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
   def update(name: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(dataStorePublicReads) { dataStore =>
       for {
-        _ <- bool2Fox(request.identity.isAdmin)
+        _ <- Fox.fromBool(request.identity.isAdmin)
         _ <- dataStoreDAO.findOneByName(name) ?~> "dataStore.notFound" ~> NOT_FOUND
-        _ <- bool2Fox(dataStore.name == name)
+        _ <- Fox.fromBool(dataStore.name == name)
         _ <- dataStoreDAO.updateOne(dataStore) ?~> "dataStore.create.failed"
         js <- dataStoreService.publicWrites(dataStore)
       } yield { Ok(Json.toJson(js)) }

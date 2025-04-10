@@ -225,7 +225,7 @@ trait VolumeTracingBucketHelper
           flatDataFromDataStore,
           datastoreMissingBucketIndices.toSet,
           volumeLayer.expectedUncompressedBucketSize) ?~> "fallbackData.split.failed"
-        _ <- bool2Fox(bucketBoxesFromDataStore.length == indicesWhereEmpty.length) ?~> "length mismatch"
+        _ <- Fox.fromBool(bucketBoxesFromDataStore.length == indicesWhereEmpty.length) ?~> "length mismatch"
         bucketBoxesFromDataStoreIterator = bucketBoxesFromDataStore.iterator
         bucketBoxesFilled = bucketBoxesFromFossil.map {
           case Full(bucketFromFossil) => Full(bucketFromFossil)

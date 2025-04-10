@@ -20,7 +20,7 @@ class AnalyticsController @Inject()(analyticsService: AnalyticsService, conf: Wk
     implicit request =>
       {
         for {
-          _ <- bool2Fox(conf.BackendAnalytics.saveToDatabaseEnabled) ?~> "Database logging of events is not enabled"
+          _ <- Fox.bool2Fox(conf.BackendAnalytics.saveToDatabaseEnabled) ?~> "Database logging of events is not enabled"
           _ <- analyticsService.ingest(request.body.events, request.body.apiKey)
         } yield Ok
       }

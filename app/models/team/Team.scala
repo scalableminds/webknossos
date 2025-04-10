@@ -55,11 +55,11 @@ class TeamService @Inject()(organizationDAO: OrganizationDAO,
   def assertNoReferences(teamId: ObjectId)(implicit mp: MessagesProvider): Fox[Unit] =
     for {
       projectCount <- projectDAO.countForTeam(teamId)
-      _ <- bool2Fox(projectCount == 0) ?~> Messages("team.inUse.projects", projectCount)
+      _ <- Fox.fromBool(projectCount == 0) ?~> Messages("team.inUse.projects", projectCount)
       taskTypeCount <- taskTypeDAO.countForTeam(teamId)
-      _ <- bool2Fox(taskTypeCount == 0) ?~> Messages("team.inUse.taskTypes", taskTypeCount)
+      _ <- Fox.fromBool(taskTypeCount == 0) ?~> Messages("team.inUse.taskTypes", taskTypeCount)
       annotationCount <- annotationDAO.countForTeam(teamId)
-      _ <- bool2Fox(annotationCount == 0) ?~> Messages("team.inUse.annotations", annotationCount)
+      _ <- Fox.fromBool(annotationCount == 0) ?~> Messages("team.inUse.annotations", annotationCount)
     } yield ()
 
   def allowedTeamsForFolder(folderId: ObjectId, cumulative: Boolean, requestingUser: Option[User] = None)(

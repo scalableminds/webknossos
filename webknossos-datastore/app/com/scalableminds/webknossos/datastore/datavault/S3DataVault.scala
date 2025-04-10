@@ -1,8 +1,7 @@
 package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.{Fox, OxImplicits}
-import com.scalableminds.util.tools.Fox.future2Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.storage.{
   LegacyDataVaultCredential,
   RemoteSourceDescriptor,
@@ -48,7 +47,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
                   ws: WSClient,
                   implicit val ec: ExecutionContext)
     extends DataVault
-    with OxImplicits {
+    with FoxImplicits {
   private lazy val bucketName = S3DataVault.hostBucketFromUri(uri) match {
     case Some(value) => value
     case None        => throw new Exception(s"Could not parse S3 bucket for ${uri.toString}")
@@ -79,7 +78,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
   }
 
   private def notFoundToEmpty[T](resultFuture: Future[T])(implicit ec: ExecutionContext): Fox[T] =
-    resultFuture.transformWith {
+    Fox.futureBox2Fox(resultFuture.transformWith {
       case TrySuccess(value) => Fox.successful(value).futureBox
       case TryFailure(exception) =>
         val box = exception match {
@@ -94,14 +93,14 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
             BoxFailure(e.getMessage, Full(e), Empty)
         }
         Future.successful(box)
-    }
+    })
 
   private def notFoundToFailure[T](resultFuture: Future[T])(implicit ec: ExecutionContext): Fox[T] =
-    resultFuture.transformWith {
+    Fox.futureBox2Fox(resultFuture.transformWith {
       case TrySuccess(value) => Fox.successful(value).futureBox
       case TryFailure(exception) =>
         Future.successful(BoxFailure(exception.getMessage, Full(exception), Empty))
-    }
+    })
 
   override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
       implicit ec: ExecutionContext,
@@ -222,7 +221,7 @@ object S3DataVault {
       case TryFailure(_) => Future.successful("http")
     })
     for {
-      protocol <- protocolFuture.toFox
+      protocol <- Fox.future2Fox(protocolFuture)
     } yield protocol
   }
 

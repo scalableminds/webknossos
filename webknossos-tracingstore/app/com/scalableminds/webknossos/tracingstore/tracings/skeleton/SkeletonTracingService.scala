@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
-import com.scalableminds.util.tools.{Fox, OxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, TreeBody}
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SkeletonTracingDefaults}
@@ -19,7 +19,7 @@ class SkeletonTracingService @Inject()(
     with ProtoGeometryImplicits
     with BoundingBoxMerger
     with ColorGenerator
-    with OxImplicits {
+    with FoxImplicits {
 
   implicit val tracingCompanion: SkeletonTracing.type = SkeletonTracing
 

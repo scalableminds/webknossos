@@ -4,8 +4,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.Fox.bool2Fox
-import com.scalableminds.util.tools.{BoxImplicits, Fox, JsonHelper, OxImplicits}
+import com.scalableminds.util.tools.{BoxImplicits, Fox, JsonHelper, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.layers.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header.FILENAME_ATTRIBUTES_JSON
@@ -28,7 +27,7 @@ import play.api.libs.json.{Json, OFormat, Reads}
 
 import java.io.{File, RandomAccessFile}
 import java.nio.file.{Files, Path}
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 case class ReserveUploadInformation(
     uploadId: String, // upload id that was also used in chunk upload (this time without file paths)
@@ -114,7 +113,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                               datasetSymlinkService: DatasetSymlinkService)(implicit ec: ExecutionContext)
     extends DatasetDeleter
     with DirectoryConstants
-    with OxImplicits
+    with FoxImplicits
     with BoxImplicits
     with WKWDataFormatHelper
     with LazyLogging {
@@ -201,7 +200,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     } yield ()
 
   def addUploadIdsToUnfinishedUploads(
-      unfinishedUploadsWithoutIds: List[UnfinishedUpload]): Fox[List[UnfinishedUpload]] =
+      unfinishedUploadsWithoutIds: List[UnfinishedUpload]): Future[List[UnfinishedUpload]] =
     for {
       maybeUnfinishedUploads: List[Box[Option[UnfinishedUpload]]] <- Fox.sequence(
         // Previously rejected uploads may still appear in this list, but don’t have entries in redis. We can use that to filter them out here, since we don’t want to list them to the user. Those that *do* have entries in redis are then enriched using info from there (uploadId and filePaths).
@@ -234,7 +233,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       uploadDir = uploadDirectory(dataSourceId.organizationId, uploadId)
       filePathRaw = uploadFileId.split("/").tail.mkString("/")
       filePath = if (filePathRaw.charAt(0) == '/') filePathRaw.drop(1) else filePathRaw
-      _ <- bool2Fox(!isOutsideUploadDir(uploadDir, filePath)) ?~> s"Invalid file path: $filePath"
+      _ <- Fox.fromBool(!isOutsideUploadDir(uploadDir, filePath)) ?~> s"Invalid file path: $filePath"
     } yield (filePath, uploadDir)
   }
 
@@ -347,24 +346,24 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         s"Finishing dataset upload of ${dataSourceId.organizationId}/${dataSourceId.directoryName} with id $uploadId...")
       _ <- Fox.runIf(checkCompletion)(ensureAllChunksUploaded(uploadId))
       _ <- ensureDirectoryBox(unpackToDir.getParent).toFox ?~> "dataset.import.fileAccessDenied"
-      unpackResult <- unpackDataset(uploadDir, unpackToDir).futureBox
+      unpackResult <- Fox.future2Fox(unpackDataset(uploadDir, unpackToDir).futureBox)
       linkedLayerInfo <- getObjectFromRedis[LinkedLayerIdentifiers](redisKeyForLinkedLayerIdentifier(uploadId))
       _ <- cleanUpUploadedDataset(uploadDir, uploadId)
       _ <- cleanUpOnFailure(unpackResult,
                             dataSourceId,
                             datasetNeedsConversion,
                             label = s"unpacking to dataset to $unpackToDir")
-      postProcessingResult <- postProcessUploadedDataSource(datasetNeedsConversion,
-                                                            unpackToDir,
-                                                            dataSourceId,
-                                                            linkedLayerInfo.layersToLink).futureBox
+      postProcessingResult <- Fox.future2Fox(postProcessUploadedDataSource(datasetNeedsConversion,
+                                                                           unpackToDir,
+                                                                           dataSourceId,
+                                                                           linkedLayerInfo.layersToLink).futureBox)
       _ <- cleanUpOnFailure(postProcessingResult,
                             dataSourceId,
                             datasetNeedsConversion,
                             label = s"processing dataset at $unpackToDir")
       dataSource = dataSourceService.dataSourceFromDir(unpackToDir, dataSourceId.organizationId)
       _ <- dataSourceRepository.updateDataSource(dataSource)
-      datasetSizeBytes <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(new File(unpackToDir.toString)).longValue)
+      datasetSizeBytes <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(new File(unpackToDir.toString)).longValue).toFox
     } yield (dataSourceId, datasetSizeBytes)
   }
 
@@ -460,7 +459,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       fileCountString <- fileCountStringOpt.toFox ?~> "dataset.upload.noFiles"
       fileCount <- tryo(fileCountString.toLong).toFox
       fileNames <- runningUploadMetadataStore.findSet(redisKeyForFileNameSet(uploadId))
-      _ <- bool2Fox(fileCount == fileNames.size)
+      _ <- Fox.fromBool(fileCount == fileNames.size)
       list <- Fox.serialCombined(fileNames.toList) { fileName =>
         val chunkCount =
           runningUploadMetadataStore
@@ -469,7 +468,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         val chunks = runningUploadMetadataStore.findSet(redisKeyForFileChunkSet(uploadId, fileName))
         chunks.flatMap(set => chunkCount.map(_ == set.size))
       }
-      _ <- bool2Fox(list.forall(identity))
+      _ <- Fox.fromBool(list.forall(identity))
     } yield ()
 
   private def dataSourceDirFor(dataSourceId: DataSourceId, datasetNeedsConversion: Boolean): Path = {

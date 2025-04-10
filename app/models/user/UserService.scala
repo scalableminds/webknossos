@@ -77,7 +77,7 @@ class UserService @Inject()(conf: WkConf,
   def assertNotInOrgaYet(multiUserId: ObjectId, organizationId: String): Fox[Unit] =
     for {
       userBox <- userDAO.findOneByOrgaAndMultiUser(organizationId, multiUserId)(GlobalAccessContext).futureBox
-      _ <- bool2Fox(userBox.isEmpty) ?~> "organization.alreadyJoined"
+      _ <- Fox.fromBool(userBox.isEmpty) ?~> "organization.alreadyJoined"
     } yield ()
 
   def assertIsSuperUser(user: User)(implicit ctx: DBAccessContext): Fox[Unit] =

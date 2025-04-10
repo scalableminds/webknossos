@@ -184,7 +184,7 @@ class EditableMappingService @Inject()(
   }
 
   def assertTracingHasEditableMapping(tracing: VolumeTracing)(implicit ec: ExecutionContext): Fox[Unit] =
-    bool2Fox(tracing.getHasEditableMapping) ?~> "annotation.volume.noEditableMapping"
+   Fox.fromBool(tracing.getHasEditableMapping) ?~> "annotation.volume.noEditableMapping"
 
   def findSegmentIdAtPositionIfNeeded(remoteFallbackLayer: RemoteFallbackLayer,
                                       positionOpt: Option[Vec3Int],
@@ -202,7 +202,7 @@ class EditableMappingService @Inject()(
       pos <- positionOpt.toFox ?~> "segment id or position is required in editable mapping action"
       voxelAsBytes: Array[Byte] <- remoteDatastoreClient.getVoxelAtPosition(remoteFallbackLayer, pos, mag)
       voxelAsLongArray: Array[Long] <- bytesToLongs(voxelAsBytes, remoteFallbackLayer.elementClass)
-      _ <- Fox.bool2Fox(voxelAsLongArray.length == 1) ?~> s"Expected one, got ${voxelAsLongArray.length} segment id values for voxel."
+      _ <- Fox.fromBool(voxelAsLongArray.length == 1) ?~> s"Expected one, got ${voxelAsLongArray.length} segment id values for voxel."
       voxelAsLong <- voxelAsLongArray.headOption
     } yield voxelAsLong
 
@@ -380,19 +380,19 @@ class EditableMappingService @Inject()(
 
   private def bytesToLongs(bytes: Array[Byte], elementClass: ElementClassProto): Fox[Array[Long]] =
     for {
-      _ <- bool2Fox(!elementClass.isuint64)
+      _ <- Fox.fromBool(!elementClass.isuint64)
       segmentIntArray <- tryo(SegmentIntegerArray.fromByteArray(bytes, elementClass)).toFox
     } yield segmentIntArray.map(_.toLong)
 
   private def bytesToSegmentInt(bytes: Array[Byte], elementClass: ElementClassProto): Fox[Array[SegmentInteger]] =
     for {
-      _ <- bool2Fox(!elementClass.isuint64)
+      _ <- Fox.fromBool(!elementClass.isuint64)
       segmentIntArray <- tryo(SegmentIntegerArray.fromByteArray(bytes, elementClass)).toFox
     } yield segmentIntArray
 
   private def longsToBytes(longs: Array[Long], elementClass: ElementClassProto): Fox[Array[Byte]] =
     for {
-      _ <- bool2Fox(!elementClass.isuint64)
+      _ <- Fox.fromBool(!elementClass.isuint64)
       segmentIntArray: Array[SegmentInteger] = longs.map(SegmentInteger.fromLongWithElementClass(_, elementClass))
       bytes = SegmentIntegerArray.toByteArray(segmentIntArray, elementClass)
     } yield bytes

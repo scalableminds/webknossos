@@ -45,7 +45,7 @@ class CredentialController @Inject()(credentialDAO: CredentialDAO, sil: Silhouet
     sil.SecuredAction.async(validateJson[HttpBasicAuthCredentialParameters]) { implicit request =>
       val _id = ObjectId.generate
       for {
-        _ <- bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
         _ <- credentialDAO.insertOne(
           _id,
           HttpBasicAuthCredential(request.body.name,
@@ -61,7 +61,7 @@ class CredentialController @Inject()(credentialDAO: CredentialDAO, sil: Silhouet
     sil.SecuredAction.async(validateJson[S3AccessKeyCredentialParameters]) { implicit request =>
       val _id = ObjectId.generate
       for {
-        _ <- bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
         _ <- credentialDAO.insertOne(
           _id,
           S3AccessKeyCredential(request.body.name,
@@ -77,7 +77,7 @@ class CredentialController @Inject()(credentialDAO: CredentialDAO, sil: Silhouet
     sil.SecuredAction.async(validateJson[GoogleServiceAccountCredentialParameters]) { implicit request =>
       val _id = ObjectId.generate
       for {
-        _ <- bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
         _ <- credentialDAO.insertOne(
           _id,
           GoogleServiceAccountCredential(request.body.name,

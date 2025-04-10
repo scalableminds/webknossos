@@ -1,21 +1,19 @@
 package com.scalableminds.util.io
 
-import com.scalableminds.util.tools.Fox.future2Fox
-
 import java.io._
 import java.nio.file.{Files, Path, Paths}
 import java.util.zip.{GZIPOutputStream => DefaultGZIPOutputStream, _}
-import com.scalableminds.util.tools.{Fox, OxImplicits, TextUtils}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.common.Box.tryo
 import org.apache.commons.io.IOUtils
 import play.api.libs.Files.TemporaryFile
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters.EnumerationHasAsScala
 
-object ZipIO extends LazyLogging with OxImplicits {
+object ZipIO extends LazyLogging with FoxImplicits {
 
   /**
     * Representation of an opened zip file
@@ -85,7 +83,7 @@ object ZipIO extends LazyLogging with OxImplicits {
     } else {
       zip.close()
       out.close()
-      Future.successful(())
+      Fox.successful(())
     }
   }
 
@@ -194,33 +192,39 @@ object ZipIO extends LazyLogging with OxImplicits {
     }
 
     val resultFox = zipEntries.foldLeft[Fox[List[A]]](Fox.successful(List.empty)) { (results, entry) =>
-      results.futureBox.map {
-        case Full(rs) =>
-          val input: InputStream = zip.getInputStream(entry)
-          val path = commonPrefix.relativize(Paths.get(entry.getName))
-          val innerResultFox: Fox[List[A]] = f(path, input).futureBox.map {
-            case Full(result) =>
-              input.close()
-              Full(rs :+ result)
-            case Empty =>
-              input.close()
-              Empty
-            case failure: Failure =>
-              input.close()
-              failure
-          }
-          innerResultFox
-        case e =>
-          e.toFox
-      }.toFox.flatten
+      Fox
+        .future2Fox(results.futureBox)
+        .map {
+          case Full(rs) =>
+            val input: InputStream = zip.getInputStream(entry)
+            val path = commonPrefix.relativize(Paths.get(entry.getName))
+            val innerResultFox: Fox[List[A]] = Fox.futureBox2Fox(f(path, input).futureBox.map {
+              case Full(result) =>
+                input.close()
+                Full(rs :+ result)
+              case Empty =>
+                input.close()
+                Empty
+              case failure: Failure =>
+                input.close()
+                failure
+            })
+            innerResultFox
+          case e =>
+            e.toFox
+        }
+        .toFox
+        .flatten
     }
 
-    for {
-      result <- resultFox.futureBox.map { resultBox =>
-        zip.close() // close even if result is not success
-        resultBox
-      }
-    } yield result
+    Fox.futureBox2Fox {
+      for {
+        result <- resultFox.futureBox.map { resultBox =>
+          zip.close() // close even if result is not success
+          resultBox
+        }
+      } yield result
+    }
   }
 
   def withUnziped[A](zip: ZipFile,

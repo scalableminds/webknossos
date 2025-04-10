@@ -39,13 +39,13 @@ class CreditTransactionController @Inject()(organizationService: OrganizationSer
     for {
       _ <- userService.assertIsSuperUser(request.identity) ?~> "Only super users can add credits to an organization"
       moneySpentInDecimal <- tryo(BigDecimal(moneySpent)) ?~> s"moneySpent $moneySpent is not a valid decimal"
-      _ <- bool2Fox(moneySpentInDecimal > 0) ?~> "moneySpent must be a positive number"
-      _ <- bool2Fox(creditAmount > 0) ?~> "creditAmount must be a positive number"
+      _ <- Fox.fromBool(moneySpentInDecimal > 0) ?~> "moneySpent must be a positive number"
+      _ <- Fox.fromBool(creditAmount > 0) ?~> "creditAmount must be a positive number"
       commentNoOptional = comment.getOrElse(s"Adding $creditAmount credits for $moneySpentInDecimal $currency.")
       _ <- organizationService.assertOrganizationHasPaidPlan(organizationId)
       expirationDateOpt <- Fox.runOptional(expiresAt)(Instant.fromString)
       _ <- Fox
-        .runOptional(expirationDateOpt)(expirationDate => bool2Fox(!expirationDate.isPast)) ?~> "Expiration date must be in the future"
+        .runOptional(expirationDateOpt)(expirationDate =>Fox.fromBool(!expirationDate.isPast)) ?~> "Expiration date must be in the future"
       addCreditsTransaction = CreditTransaction(
         ObjectId.generate,
         organizationId,
@@ -66,7 +66,7 @@ class CreditTransactionController @Inject()(organizationService: OrganizationSer
       for {
         _ <- userService.assertIsSuperUser(request.identity) ?~> "Only super users can manually refund credits"
         transaction <- creditTransactionDAO.findOne(transactionId)
-        _ <- bool2Fox(transaction._organization == organizationId) ?~> "Transaction is not for this organization"
+        _ <- Fox.fromBool(transaction._organization == organizationId) ?~> "Transaction is not for this organization"
         _ <- organizationService.assertOrganizationHasPaidPlan(organizationId)
         _ <- creditTransactionDAO.refundTransaction(transaction._id)
       } yield Ok

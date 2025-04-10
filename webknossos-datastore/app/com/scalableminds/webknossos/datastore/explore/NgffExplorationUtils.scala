@@ -3,9 +3,8 @@ package com.scalableminds.webknossos.datastore.explore
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.image.Color
-import com.scalableminds.util.tools.Fox.bool2Fox
 import com.scalableminds.util.tools.TextUtils.normalizeStrong
-import com.scalableminds.util.tools.{Fox, OxImplicits, TextUtils}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{
   NgffAxis,
@@ -34,7 +33,7 @@ import play.api.libs.json.{JsArray, JsBoolean, JsNumber, Json}
 
 import scala.concurrent.ExecutionContext
 
-trait NgffExplorationUtils extends OxImplicits {
+trait NgffExplorationUtils extends FoxImplicits {
 
   protected case class ChannelAttributes(color: Option[Color],
                                          name: Option[String],
@@ -104,7 +103,7 @@ trait NgffExplorationUtils extends OxImplicits {
     val c = axes.indexWhere(_.`type` == "channel")
     val cOpt = if (c == -1) None else Some(c)
     for {
-      _ <- bool2Fox(x >= 0 && y >= 0) ?~> s"invalid xyz axis order: $x,$y,$z. ${x >= 0 && y >= 0}"
+      _ <- Fox.fromBool(x >= 0 && y >= 0) ?~> s"invalid xyz axis order: $x,$y,$z. ${x >= 0 && y >= 0}"
     } yield
       if (z >= 0) {
         AxisOrder(x, y, Some(z), cOpt)
@@ -143,7 +142,7 @@ trait NgffExplorationUtils extends OxImplicits {
     val combinedScale = extractAndCombineScaleTransforms(coordinateTransforms, axisOrder)
     val mag = (combinedScale / voxelSizeInAxisUnits).round.toVec3Int
     for {
-      _ <- bool2Fox(isPowerOfTwo(mag.x) && isPowerOfTwo(mag.y) && isPowerOfTwo(mag.z)) ?~> s"invalid mag: $mag. Must all be powers of two"
+      _ <- Fox.fromBool(isPowerOfTwo(mag.x) && isPowerOfTwo(mag.y) && isPowerOfTwo(mag.z)) ?~> s"invalid mag: $mag. Must all be powers of two"
     } yield mag
   }
 
@@ -168,7 +167,7 @@ trait NgffExplorationUtils extends OxImplicits {
     val scales = allCoordinateTransforms.map(t => extractAndCombineScaleTransforms(t, axisOrder))
     val smallestScaleIsUniform = scales.minBy(_.x) == scales.minBy(_.y) && scales.minBy(_.y) == scales.minBy(_.z)
     for {
-      _ <- bool2Fox(smallestScaleIsUniform) ?~> "ngff scales do not agree on smallest dimension"
+      _ <- Fox.fromBool(smallestScaleIsUniform) ?~> "ngff scales do not agree on smallest dimension"
       voxelSizeInAxisUnits = scales.minBy(_.x)
     } yield voxelSizeInAxisUnits
   }
@@ -206,7 +205,7 @@ trait NgffExplorationUtils extends OxImplicits {
           .map(axisAndIndex =>
             createAdditionalAxis(axisAndIndex._1.name, axisAndIndex._2, Array(0, shape(axisAndIndex._2))).toFox))
       duplicateNames = axes.map(_.name).diff(axes.map(_.name).distinct).distinct
-      _ <- Fox.bool2Fox(duplicateNames.isEmpty) ?~> s"Additional axes names (${duplicateNames.mkString("", ", ", "")}) are not unique."
+      _ <- Fox.fromBool(duplicateNames.isEmpty) ?~> s"Additional axes names (${duplicateNames.mkString("", ", ", "")}) are not unique."
     } yield axes
   }
 

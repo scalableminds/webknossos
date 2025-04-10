@@ -67,8 +67,10 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
     actorSystem.actorOf(RoundRobinPool(adHocMeshActorPoolSize).props(Props(new AdHocMeshActor(this, timeout.duration))))
 
   def requestAdHocMeshViaActor(request: AdHocMeshRequest): Fox[(Array[Float], List[Int])] =
-    actor.ask(request).mapTo[Box[(Array[Float], List[Int])]].recover {
-      case e: Exception => Failure(e.getMessage)
+    Fox.futureBox2Fox {
+      actor.ask(request).mapTo[Box[(Array[Float], List[Int])]].recover {
+        case e: Exception => Failure(e.getMessage)
+      }
     }
 
   def requestAdHocMesh(request: AdHocMeshRequest)(implicit tc: TokenContext): Fox[(Array[Float], List[Int])] =
@@ -191,7 +193,7 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
 
     for {
       data <- binaryDataService.handleDataRequest(dataRequest)
-      agglomerateMappedData <- applyAgglomerate(data) ?~> "failed to apply agglomerate for ad-hoc meshing"
+      agglomerateMappedData <- applyAgglomerate(data).toFox ?~> "failed to apply agglomerate for ad-hoc meshing"
       typedData = convertData(agglomerateMappedData)
       mappedData <- applyMapping(typedData)
       mappedSegmentId <- applyMapping(Array(typedSegmentId)).map(_.head)

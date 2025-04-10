@@ -70,6 +70,39 @@ function removeSubsequentUpdateNodeActions(updateActionsBatches: Array<SaveQueue
   return _.without(updateActionsBatches, ...obsoleteUpdateActions);
 }
 
+function removeSubsequentUpdateBBoxActions(updateActionsBatches: Array<SaveQueueEntry>) {
+  const obsoleteUpdateActions = [];
+
+  // Actions are obsolete, if they are for the same bounding box and for the same prop.
+  // The given action is always compared to the next next one, as usually an
+  // updateUserBoundingBoxSkeletonAction and updateUserBoundingBoxVolumeAction
+  // is sent at the same time.
+  for (let i = 0; i < updateActionsBatches.length - 2; i++) {
+    const actions1 = updateActionsBatches[i].actions;
+    const actions2 = updateActionsBatches[i + 2].actions;
+
+    if (
+      actions1.length === 1 &&
+      actions2.length === 1 &&
+      (actions1[0].name === "updateUserBoundingBoxSkeletonAction" ||
+        actions1[0].name === "updateUserBoundingBoxVolumeAction") &&
+      actions1[0].name === actions2[0].name &&
+      actions1[0].value.boundingBoxId === actions2[0].value.boundingBoxId &&
+      _.isEqual(actions1[0].value.updatedPropKeys, actions2[0].value.updatedPropKeys)
+    ) {
+      obsoleteUpdateActions.push(updateActionsBatches[i]);
+      console.log(
+        actions1[0].value.boundingBoxId,
+        actions1[0].value.updatedProps,
+        actions2[0].value.boundingBoxId,
+        actions2[0].value.updatedProps,
+      ); // TODO_c remove
+    }
+  }
+
+  return _.without(updateActionsBatches, ...obsoleteUpdateActions);
+}
+
 function removeSubsequentUpdateSegmentActions(updateActionsBatches: Array<SaveQueueEntry>) {
   const obsoleteUpdateActions = [];
 
@@ -100,10 +133,12 @@ export default function compactSaveQueue(
     (updateActionsBatch) => updateActionsBatch.actions.length > 0,
   );
 
-  return removeSubsequentUpdateSegmentActions(
-    removeSubsequentUpdateTreeActions(
-      removeSubsequentUpdateNodeActions(
-        removeAllButLastUpdateTdCameraAction(removeAllButLastUpdateTracingAction(result)),
+  return removeSubsequentUpdateBBoxActions(
+    removeSubsequentUpdateSegmentActions(
+      removeSubsequentUpdateTreeActions(
+        removeSubsequentUpdateNodeActions(
+          removeAllButLastUpdateTdCameraAction(removeAllButLastUpdateTracingAction(result)),
+        ),
       ),
     ),
   );

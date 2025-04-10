@@ -1528,6 +1528,13 @@ export function getActiveUser(options?: RequestOptions): Promise<APIUser> {
   return Request.receiveJSON("/api/user", options);
 }
 
+export function getOrganizationPayingForActiveUser(
+  activeUserId: string,
+  options?: RequestOptions,
+): Promise<string> {
+  return Request.receiveJSON(`/api/user/${activeUserId}/payingOrganization`, options);
+}
+
 export function getUserConfiguration(): Promise<UserConfiguration> {
   return Request.receiveJSON("/api/user/userConfiguration");
 }

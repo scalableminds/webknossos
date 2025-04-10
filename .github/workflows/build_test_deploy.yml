@@ -102,7 +102,29 @@ jobs:
       - name: "Install System Dependencies"
         run: sudo apt-get update && sudo apt-get install -y libdraco-dev libblosc1
 
-      - name: "Custom environment variables"
+      - name: "Custom environment variables (Pull Request)"
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          NORMALIZED_BRANCH="${GITHUB_HEAD_REF//[\/-]/_}"
+          DOCKER_TAG="${NORMALIZED_BRANCH}__${GITHUB_RUN_ID}"
+          echo "DOCKER_TAG=$DOCKER_TAG" | tee -a "$GITHUB_ENV"
+          echo "NORMALIZED_BRANCH=$NORMALIZED_BRANCH" | tee -a "$GITHUB_ENV"
+      - name: "Custom environment variables (Not Pull Request)"
+        if: ${{ github.event_name != 'pull_request' }}
+        run: |
+          CI_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          NORMALIZED_BRANCH=${CI_BRANCH//[\/-]/_}
+          DOCKER_TAG="${NORMALIZED_BRANCH}__${GITHUB_RUN_ID}"
+          echo "DOCKER_TAG=$DOCKER_TAG" | tee -a "$GITHUB_ENV"
+          if [ "$GITHUB_REF_TYPE" == "branch" ]; then
+            echo "NORMALIZED_BRANCH=$NORMALIZED_BRANCH" | tee -a "$GITHUB_ENV"
+          else
+            CI_TAG=$GITHUB_REF_NAME
+            echo "CI_TAG=$CI_TAG" | tee -a "$GITHUB_ENV"
+            echo "NORMALIZED_BRANCH=$CI_TAG" | tee -a "$GITHUB_ENV"
+          fi
+      - name: "Custom environment variables (master)"
+        if: github.ref == 'refs/heads/master'
         run: |
           echo "CI_BUILD_NUM=${{ github.run_id }}" >> "$GITHUB_ENV"
           if [[ "${{ github.ref_type }}" == "branch" ]]; then

@@ -6,7 +6,6 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.yubico.webauthn._
 import com.yubico.webauthn.data._
-import com.yubico.webauthn.exception._
 import com.webauthn4j.data.attestation.statement.COSEAlgorithmIdentifier
 import com.webauthn4j.data.client.Origin
 import com.webauthn4j.data.client.challenge.Challenge
@@ -138,6 +137,24 @@ object WebAuthnCreationOptionsUser {
   implicit val jsonFormat: OFormat[WebAuthnCreationOptionsUser] = Json.format[WebAuthnCreationOptionsUser]
 }
 
+/**
+ *  Object reference: https://developer.mozilla.org/en-US/docs/Web/API/PublicKeyCredentialRequestOptions
+ *
+ *  Omitted:
+ *  - allowCredentials: No restrictions on credentials
+ */
+case class WebAuthnPublicKeyCredentialRequestOptions(
+  challenge: Array[Byte],
+  timeout: Option[Long] = None, // In milliseconds
+  rpId: Option[String] = None, // Relying party ID
+  userVerification: Option[String] = Some("preferred"), // "required", "preferred", "discouraged"
+  extensions: Option[Map[String, Any]] = None, // Optional extensions
+  hints: Option[Seq[String]] = None // UI hints for the user-agent
+  )
+object WebAuthnPublicKeyCredentialRequestOptions {
+  implicit val jsonFormat: OFormat[WebAuthnPublicKeyCredentialRequestOptions] = Json.format[WebAuthnPublicKeyCredentialRequestOptions]
+}
+
 
 case class WebAuthnRegistration(name: String, key: JsValue)
 object WebAuthnRegistration {
@@ -177,7 +194,7 @@ class AuthenticationController @Inject()(
     emailVerificationService: EmailVerificationService,
     webAuthnCredentialRepository: WebAuthnCredentialRepository,
     webAuthnCredentialDAO: WebAuthnCredentialDAO,
-    temporaryAssertionStore: TemporaryStore[String, AssertionRequest],
+    temporaryAssertionStore: TemporaryStore[String, WebAuthnPublicKeyCredentialRequestOptions],
     temporaryRegistrationStore: TemporaryStore[String, WebAuthnChallenge],
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
@@ -554,12 +571,21 @@ class AuthenticationController @Inject()(
   }
 
   def webauthnAuthStart(): Action[AnyContent] = Action {
-    val opts = StartAssertionOptions.builder().build();
-    val assertion = relyingParty.startAssertion(opts);
     val sessionId = UUID.randomUUID().toString;
     val cookie = Cookie("webauthn-session", sessionId, maxAge = Some(120), httpOnly = true, secure = true)
+    val random = new SecureRandom() // TODO: Initialize once
+    val challenge = new Array[Byte](32) // NOTE: Minimum required length are 16 bytes.
+    random.nextBytes(challenge)
+    val assertion = WebAuthnPublicKeyCredentialRequestOptions(
+      challenge = challenge,
+      timeout = Some(120000),
+      rpId = Some(origin.getHost),
+      userVerification = None,
+      extensions = None,
+      hints = None
+    )
     temporaryAssertionStore.insert(sessionId, assertion, Some(2 minutes));
-    Ok(Json.toJson(Json.parse(assertion.toCredentialsGetJson))).withCookies(cookie)
+    Ok(Json.toJson(assertion)).withCookies(cookie)
   }
 
   def webauthnAuthFinalize(): Action[WebAuthnAuthentication] = Action.async(validateJson[WebAuthnAuthentication]) {
@@ -650,33 +676,38 @@ class AuthenticationController @Inject()(
         temporaryRegistrationStore.remove(sessionId)
         Fox.option2Fox(challenge)
       }
-      challenge <- Fox.option2Fox(temporaryRegistrationStore.get(sessionId))
       serverProperty = new ServerProperty(origin, origin.getHost, challenge)
       publicKeyParams = webAuthnPubKeyParams.map(k => new PublicKeyCredentialParameters(PublicKeyCredentialType.PUBLIC_KEY, COSEAlgorithmIdentifier.create(k.alg)))
       registrationParams = new RegistrationParameters(serverProperty, publicKeyParams.toList.asJava, false, true)
       _ <- tryo(webAuthnManager.verify(registrationData,  registrationParams)).toFox
       attestation = registrationData.getAttestationObject
       credentialRecord = new CredentialRecordImpl( // TODO: Rename or minimal custom implementation
-        attestation,
-        null, // NOTE: Collected Client Data Not used
-        null, // NOTE: Client extensions not used
-        null, // NOTE: Transports not restricted
+        attestation.getAttestationStatement,
+        null, // User Verification not used
+        null, // Backup not used
+        null, // Backup not used
+        0, // Counter is initially 0
+        attestation.getAuthenticatorData.getAttestedCredentialData,
+        attestation.getAuthenticatorData.getExtensions,
+        null, // We do not need the challenge
+        null, // Client extensions are not used
+        null // Transports are not used
       )
-      credential = WebAuthnCredential2(
+      credential = WebAuthnCredential(
         _id = ObjectId.generate,
         _multiUser = request.identity._multiUser,
         name = request.body.name,
-        record = credentialRecord,
+        credentialRecord = credentialRecord,
         isDeleted = false
       )
-      _ <- webAuthnCredentialDAO.insertOne2(credential)
+      _ <- webAuthnCredentialDAO.insertOne(credential)
     } yield Ok(Json.obj("message" -> "Key registered successfully"))
   }
 
   def webauthnListKeys: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     {
       for {
-        keys <- webAuthnCredentialDAO.listKeys(request.identity._multiUser)
+        keys <- webAuthnCredentialDAO.findAllForUser(request.identity._multiUser)
         reducedKeys = keys.map(credential => WebAuthnKeyDescriptor(credential._id, credential.name))
       } yield Ok(Json.toJson(reducedKeys))
     }

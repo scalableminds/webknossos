@@ -5,12 +5,12 @@ do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 1
 CREATE TABLE webknossos.webauthnCredentials(
   _id TEXT PRIMARY KEY,
   _multiUser CHAR(24) NOT NULL,
-  keyId BYTEA NOT NULL,
   name TEXT NOT NULL,
-  publicKeyCose BYTEA NOT NULL,
+  serializedAttestationStatement BYTEA NOT NULL,
+  serializedAttestedCredential BYTEA NOT NULL,
+  serializedExtensions BYTEA NOT NULL,
   signatureCount INTEGER NOT NULL,
-  isDeleted BOOLEAN NOT NULL DEFAULT false,
-  UNIQUE (_multiUser, keyId)
+  isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
 ALTER TABLE webknossos.webauthnCredentials

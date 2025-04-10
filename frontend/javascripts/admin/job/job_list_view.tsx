@@ -235,6 +235,17 @@ function JobListView() {
           <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
+      // INFER_NEURONS without layerName means custom model
+    } else if (
+      (job.type === APIJobType.DEPRECATED_INFER_WITH_MODEL ||
+        job.type === APIJobType.INFER_NEURONS) &&
+      linkToDataset != null
+    ) {
+      return (
+        <span>
+          Run AI segmentation with custom model on <Link to={linkToDataset}>{job.datasetName}</Link>
+        </span>
+      );
     } else if (
       job.type === APIJobType.INFER_MITOCHONDRIA &&
       linkToDataset != null &&
@@ -269,12 +280,6 @@ function JobListView() {
         <span>
           {`Train model on ${numberOfTrainingAnnotations} ${Utils.pluralize("annotation", numberOfTrainingAnnotations)}. `}
           {getShowTrainingDataLink(job.trainingAnnotations)}
-        </span>
-      );
-    } else if (job.type === APIJobType.DEPRECATED_INFER_WITH_MODEL && linkToDataset != null) {
-      return (
-        <span>
-          Run AI segmentation with custom model on <Link to={linkToDataset}>{job.datasetName}</Link>
         </span>
       );
     } else {

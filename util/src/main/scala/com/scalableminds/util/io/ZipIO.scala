@@ -1,11 +1,11 @@
 package com.scalableminds.util.io
 
-import com.scalableminds.util.tools.Fox.{box2Fox, future2Fox}
+import com.scalableminds.util.tools.Fox.future2Fox
 
 import java.io._
 import java.nio.file.{Files, Path, Paths}
 import java.util.zip.{GZIPOutputStream => DefaultGZIPOutputStream, _}
-import com.scalableminds.util.tools.{Fox, TextUtils}
+import com.scalableminds.util.tools.{Fox, OxImplicits, TextUtils}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.common.Box.tryo
@@ -15,7 +15,7 @@ import play.api.libs.Files.TemporaryFile
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.EnumerationHasAsScala
 
-object ZipIO extends LazyLogging {
+object ZipIO extends LazyLogging with OxImplicits {
 
   /**
     * Representation of an opened zip file

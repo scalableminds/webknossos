@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, OxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, TreeBody}
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SkeletonTracingDefaults}
@@ -15,12 +15,11 @@ import scala.concurrent.ExecutionContext
 class SkeletonTracingService @Inject()(
     tracingDataStore: TracingDataStore,
     temporaryTracingService: TemporaryTracingService
-)(implicit val ec: ExecutionContext)
-    extends KeyValueStoreImplicits
+) extends KeyValueStoreImplicits
     with ProtoGeometryImplicits
     with BoundingBoxMerger
     with ColorGenerator
-    with FoxImplicits {
+    with OxImplicits {
 
   implicit val tracingCompanion: SkeletonTracing.type = SkeletonTracing
 
@@ -28,7 +27,7 @@ class SkeletonTracingService @Inject()(
                    version: Long,
                    tracing: SkeletonTracing,
                    flushOnlyTheseTreeIds: Option[Set[Int]] = None,
-                   toTemporaryStore: Boolean = false): Fox[Unit] =
+                   toTemporaryStore: Boolean = false)(implicit ec: ExecutionContext): Fox[Unit] =
     if (toTemporaryStore) {
       temporaryTracingService.saveSkeleton(tracingId, tracing)
     } else {

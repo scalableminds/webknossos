@@ -276,11 +276,9 @@ class DataSourceController @Inject()(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-        skeleton <- agglomerateService.generateSkeleton(organizationId,
-                                                        datasetDirectoryName,
-                                                        dataLayerName,
-                                                        mappingName,
-                                                        agglomerateId) ?~> "agglomerateSkeleton.failed"
+        skeleton <- agglomerateService
+          .generateSkeleton(organizationId, datasetDirectoryName, dataLayerName, mappingName, agglomerateId)
+          .toFox ?~> "agglomerateSkeleton.failed"
       } yield Ok(skeleton.toByteArray).as(protobufMimeType)
     }
   }
@@ -296,9 +294,11 @@ class DataSourceController @Inject()(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-        agglomerateGraph <- agglomerateService.generateAgglomerateGraph(
-          AgglomerateFileKey(organizationId, datasetDirectoryName, dataLayerName, mappingName),
-          agglomerateId) ?~> "agglomerateGraph.failed"
+        agglomerateGraph <- agglomerateService
+          .generateAgglomerateGraph(
+            AgglomerateFileKey(organizationId, datasetDirectoryName, dataLayerName, mappingName),
+            agglomerateId)
+          .toFox ?~> "agglomerateGraph.failed"
       } yield Ok(agglomerateGraph.toByteArray).as(protobufMimeType)
     }
   }
@@ -314,9 +314,10 @@ class DataSourceController @Inject()(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-        position <- agglomerateService.positionForSegmentId(
-          AgglomerateFileKey(organizationId, datasetDirectoryName, dataLayerName, mappingName),
-          segmentId) ?~> "getSegmentPositionFromAgglomerateFile.failed"
+        position <- agglomerateService
+          .positionForSegmentId(AgglomerateFileKey(organizationId, datasetDirectoryName, dataLayerName, mappingName),
+                                segmentId)
+          .toFox ?~> "getSegmentPositionFromAgglomerateFile.failed"
       } yield Ok(Json.toJson(position))
     }
   }

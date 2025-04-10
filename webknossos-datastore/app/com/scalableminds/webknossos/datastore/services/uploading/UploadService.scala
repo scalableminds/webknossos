@@ -4,7 +4,8 @@ import com.google.inject.Inject
 import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.Fox.bool2Fox
+import com.scalableminds.util.tools.{BoxImplicits, Fox, JsonHelper, OxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.layers.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header.FILENAME_ATTRIBUTES_JSON
@@ -113,7 +114,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                               datasetSymlinkService: DatasetSymlinkService)(implicit ec: ExecutionContext)
     extends DatasetDeleter
     with DirectoryConstants
-    with FoxImplicits
+    with OxImplicits
     with BoxImplicits
     with WKWDataFormatHelper
     with LazyLogging {
@@ -212,9 +213,10 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
               updatedUploadWithFilePathsOpt <- Fox.runOptional(updatedUploadOpt)(updatedUpload =>
                 for {
                   filePathsStringOpt <- runningUploadMetadataStore.find(redisKeyForFilePaths(updatedUpload.uploadId))
-                  filePathsOpt <- filePathsStringOpt.map(JsonHelper.parseAndValidateJson[List[String]])
-                  uploadUpdatedWithFilePaths <- filePathsOpt.map(filePaths =>
-                    updatedUpload.copy(filePaths = Some(filePaths)))
+                  filePathsOpt <- filePathsStringOpt.map(JsonHelper.parseAndValidateJson[List[String]]).toFox
+                  uploadUpdatedWithFilePaths <- filePathsOpt
+                    .map(filePaths => updatedUpload.copy(filePaths = Some(filePaths)))
+                    .toFox
                 } yield uploadUpdatedWithFilePaths)
             } yield updatedUploadWithFilePathsOpt
           }
@@ -315,8 +317,10 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       if (knownUpload) {
         logger.info(
           f"Cancelling dataset upload of ${dataSourceId.organizationId}/${dataSourceId.directoryName} with id $uploadId...")
-        removeFromRedis(uploadId).flatMap(_ =>
-          PathUtils.deleteDirectoryRecursively(uploadDirectory(dataSourceId.organizationId, uploadId)))
+        for {
+          _ <- removeFromRedis(uploadId)
+          _ <- PathUtils.deleteDirectoryRecursively(uploadDirectory(dataSourceId.organizationId, uploadId)).toFox
+        } yield ()
       } else {
         Fox.failure(s"Unknown upload")
       }
@@ -332,7 +336,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       unpackToDir = dataSourceDirFor(dataSourceId, datasetNeedsConversion)
       totalFileSizeInBytesOpt <- runningUploadMetadataStore.find(redisKeyForTotalFileSizeInBytes(uploadId))
       _ <- Fox.runOptional(totalFileSizeInBytesOpt) { maxFileSize =>
-        tryo(FileUtils.sizeOfDirectoryAsBigInteger(uploadDir.toFile).longValue).map(actualFileSize =>
+        tryo(FileUtils.sizeOfDirectoryAsBigInteger(uploadDir.toFile).longValue).toFox.map(actualFileSize =>
           if (actualFileSize > maxFileSize.toLong) {
             cleanUpDatasetExceedingSize(uploadDir, uploadId)
             Fox.failure(s"Uploaded dataset exceeds the maximum allowed size of $maxFileSize bytes")
@@ -342,7 +346,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       _ = logger.info(
         s"Finishing dataset upload of ${dataSourceId.organizationId}/${dataSourceId.directoryName} with id $uploadId...")
       _ <- Fox.runIf(checkCompletion)(ensureAllChunksUploaded(uploadId))
-      _ <- ensureDirectoryBox(unpackToDir.getParent) ?~> "dataset.import.fileAccessDenied"
+      _ <- ensureDirectoryBox(unpackToDir.getParent).toFox ?~> "dataset.import.fileAccessDenied"
       unpackResult <- unpackDataset(uploadDir, unpackToDir).futureBox
       linkedLayerInfo <- getObjectFromRedis[LinkedLayerIdentifiers](redisKeyForLinkedLayerIdentifier(uploadId))
       _ <- cleanUpUploadedDataset(uploadDir, uploadId)
@@ -405,7 +409,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                                          typ: UploadedDataSourceType.Value): Fox[Option[Path]] =
     for {
       layerDirs <- typ match {
-        case UploadedDataSourceType.ZARR_MULTILAYER => getZarrLayerDirectories(path)
+        case UploadedDataSourceType.ZARR_MULTILAYER => getZarrLayerDirectories(path).toFox
         case UploadedDataSourceType.NEUROGLANCER_MULTILAYER | UploadedDataSourceType.N5_MULTILAYER =>
           PathUtils.listDirectories(path, silent = false).toFox
       }
@@ -446,14 +450,14 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                      Some("the upload failed"))
         dataSourceRepository.cleanUpDataSource(dataSourceId)
         for {
-          _ <- result ?~> f"Error while $label"
+          _ <- result.toFox ?~> f"Error while $label"
         } yield ()
     }
 
   private def ensureAllChunksUploaded(uploadId: String): Fox[Unit] =
     for {
       fileCountStringOpt <- runningUploadMetadataStore.find(redisKeyForFileCount(uploadId))
-      fileCountString <- fileCountStringOpt ?~> "dataset.upload.noFiles"
+      fileCountString <- fileCountStringOpt.toFox ?~> "dataset.upload.noFiles"
       fileCount <- tryo(fileCountString.toLong).toFox
       fileNames <- runningUploadMetadataStore.findSet(redisKeyForFileNameSet(uploadId))
       _ <- bool2Fox(fileCount == fileNames.size)
@@ -585,7 +589,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   private def looksLikeExploredDataSource(dataSourceDir: Path): Box[Boolean] =
     containsMatchingFile(List(FILENAME_DATASOURCE_PROPERTIES_JSON), dataSourceDir, 1)
 
-  private def getZarrLayerDirectories(dataSourceDir: Path): Fox[Seq[Path]] =
+  private def getZarrLayerDirectories(dataSourceDir: Path): Box[Seq[Path]] =
     for {
       potentialLayers <- PathUtils.listDirectories(dataSourceDir, silent = false)
       layerDirs = potentialLayers.filter(p => looksLikeZarrArray(p, maxDepth = 2).isDefined)
@@ -631,15 +635,17 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       _ <- if (shallowFileList.length == 1 && shallowFileList.headOption.exists(
                  _.toString.toLowerCase.endsWith(".zip"))) {
         firstFile.toFox.flatMap { file =>
-          ZipIO.unzipToDirectory(
-            new File(file.toString),
-            unpackToDir,
-            includeHiddenFiles = false,
-            hiddenFilesWhitelist = List(".zarray", ".zattrs"),
-            truncateCommonPrefix = true,
-            Some(excludeFromPrefix)
-          )
-        }.toFox.map(_ => ())
+          ZipIO
+            .unzipToDirectory(
+              new File(file.toString),
+              unpackToDir,
+              includeHiddenFiles = false,
+              hiddenFilesWhitelist = List(".zarray", ".zattrs"),
+              truncateCommonPrefix = true,
+              Some(excludeFromPrefix)
+            )
+            .toFox
+        }.map(_ => ())
       } else {
         for {
           deepFileList: List[Path] <- PathUtils.listFilesRecursive(uploadDir, silent = false, maxDepth = 10).toFox
@@ -647,7 +653,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
           strippedPrefix = PathUtils.cutOffPathAtLastOccurrenceOf(commonPrefixPreliminary, excludeFromPrefix)
           commonPrefix = PathUtils.removeSingleFileNameFromPrefix(strippedPrefix,
                                                                   deepFileList.map(_.getFileName.toString))
-          _ <- tryo(FileUtils.moveDirectory(new File(commonPrefix.toString), new File(unpackToDir.toString))) ?~> "dataset.upload.moveToTarget.failed"
+          _ <- tryo(FileUtils.moveDirectory(new File(commonPrefix.toString), new File(unpackToDir.toString))).toFox ?~> "dataset.upload.moveToTarget.failed"
         } yield ()
       }
     } yield ()
@@ -719,8 +725,9 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   private def getObjectFromRedis[T: Reads](key: String): Fox[T] =
     for {
       objectStringOption <- runningUploadMetadataStore.find(key)
-      obj <- objectStringOption.toFox.flatMap(o => Json.fromJson[T](Json.parse(o)).asOpt)
-    } yield obj
+      objectString <- objectStringOption.toFox
+      parsed <- Json.fromJson[T](Json.parse(objectString)).asOpt.toFox
+    } yield parsed
 
 }
 

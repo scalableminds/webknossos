@@ -1,12 +1,29 @@
 package com.scalableminds.util.tools
 
 import net.liftweb.common.{Box, Empty, Failure, Full, ParamFailure}
+import org.checkerframework.checker.units.qual.A
 import play.api.libs.json.{JsError, JsResult, JsSuccess}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.reflect.ClassTag
 import scala.util.{Success, Try}
+
+class Ox[+A](futureBox: Future[Box[A]]) {
+  def toFox(implicit ec: ExecutionContext) = new Fox(futureBox)
+}
+
+trait OxImplicits {
+  implicit protected def box2Ox[T](b: Box[T]): Ox[T] =
+    new Ox(Future.successful(b))
+
+  implicit protected def bool2Ox[T](b: Boolean): Ox[Unit] =
+    if (b) new Ox(Future.successful(Full(())))
+    else new Ox(Future.successful(Empty))
+
+  implicit protected def option2Ox[T](b: Option[T])(implicit ec: ExecutionContext): Ox[T] =
+    new Ox(Future.successful(Box(b)))
+}
 
 trait FoxImplicits {
 
@@ -15,9 +32,6 @@ trait FoxImplicits {
 
   implicit def futureFull2Fox[T](f: Future[Full[T]])(implicit ec: ExecutionContext): Fox[T] =
     new Fox(f)
-
-  implicit def box2Fox[T](b: Box[T])(implicit ec: ExecutionContext): Fox[T] =
-    new Fox(Future.successful(b))
 
   /**
     * Transform a Future[T] into a Fox[T] such that if the Future contains an exception, it is turned into a Fox.failure
@@ -30,9 +44,6 @@ trait FoxImplicits {
       }
       f <- fut
     } yield f
-
-  implicit def option2Fox[T](b: Option[T])(implicit ec: ExecutionContext): Fox[T] =
-    new Fox(Future.successful(Box(b)))
 
   implicit def futureOption2Fox[T](f: Future[Option[T]])(implicit ec: ExecutionContext): Fox[T] =
     new Fox(f.map(Box(_)))
@@ -55,7 +66,7 @@ trait FoxImplicits {
     else Fox.empty
 }
 
-object Fox extends FoxImplicits {
+object Fox extends OxImplicits with FoxImplicits {
   def apply[A](future: Future[Box[A]])(implicit ec: ExecutionContext): Fox[A] =
     new Fox(future)
 
@@ -233,7 +244,7 @@ object Fox extends FoxImplicits {
   def assertTrue(fox: Fox[Boolean])(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       asBoolean <- fox
-      _ <- bool2Fox(asBoolean)
+      _ <- asBoolean.toFox
     } yield ()
 
   def assertFalse(fox: Fox[Boolean])(implicit ec: ExecutionContext): Fox[Unit] =

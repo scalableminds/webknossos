@@ -29,7 +29,7 @@ export const powerPlanFeatures = [
 export const maxInludedUsersInBasicPlan = 3;
 
 export function getActiveUserCount(users: APIUser[]): number {
-  return users.filter((user) => user.isActive && !user.isSuperUser).length;
+  return users.filter((user) => user.isActive && !user.isSuperUser && !user.isGuest).length;
 }
 
 export function hasPricingPlanExpired(organization: APIOrganization): boolean {

@@ -304,7 +304,7 @@ function UserListView({ activeUser, activeOrganization }: Props) {
     marginRight: 20,
   };
   const noOtherUsers = users.length < 2;
-  const isUserInvitesDisabled = getActiveUserCount(users) >= activeOrganization.includedUsers;
+  const isNewUserInvitesDisabled = getActiveUserCount(users) >= activeOrganization.includedUsers;
 
   return (
     <div className="container test-UserListView">
@@ -338,11 +338,10 @@ function UserListView({ activeUser, activeOrganization }: Props) {
         </Button>
         <Button
           icon={<UserAddOutlined />}
-          disabled={isUserInvitesDisabled}
           style={marginRight}
           onClick={() => setIsInviteModalOpen(true)}
         >
-          Invite Users
+          Invite {isNewUserInvitesDisabled ? "Guests" : "Users"}
         </Button>
         <InviteUsersModal
           currentUserCount={getActiveUserCount(users)}
@@ -371,8 +370,8 @@ function UserListView({ activeUser, activeOrganization }: Props) {
         <div className="clearfix" />
       </div>
 
-      {isUserInvitesDisabled ? renderUpgradePlanAlert() : null}
-      {noOtherUsers && !isUserInvitesDisabled ? renderInviteUsersAlert() : null}
+      {isNewUserInvitesDisabled ? renderUpgradePlanAlert() : null}
+      {noOtherUsers && !isNewUserInvitesDisabled ? renderInviteUsersAlert() : null}
       {renderNewUsersAlert()}
 
       <Spin size="large" spinning={isLoading}>

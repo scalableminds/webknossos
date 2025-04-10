@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.explore
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, OxImplicits}
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayerWithMagLocators,
@@ -25,7 +25,7 @@ import scala.jdk.CollectionConverters.IteratorHasAsScala
 // Calls explorers on local datasets that have already been uploaded to the binaryData dir
 class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
     extends ExploreLayerUtils
-    with FoxImplicits {
+    with OxImplicits {
 
   def exploreLocal(path: Path, dataSourceId: DataSourceId, layerDirectory: String = "")(
       implicit ec: ExecutionContext): Fox[DataSourceWithMagLocators] =
@@ -50,8 +50,9 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
       layersWithVoxelSizes <- Fox.combined(magDirectories.map(dir =>
         for {
           remoteSourceDescriptor <- Fox.successful(RemoteSourceDescriptor(dir.toUri, None))
-          mag <- Fox
-            .option2Fox(Vec3Int.fromMagLiteral(dir.getFileName.toString, allowScalar = true)) ?~> s"invalid mag: ${dir.getFileName}"
+          mag <- Vec3Int
+            .fromMagLiteral(dir.getFileName.toString, allowScalar = true)
+            .toFox ?~> s"invalid mag: ${dir.getFileName}"
           vaultPath <- dataVaultService.getVaultPath(remoteSourceDescriptor) ?~> "dataVault.setup.failed"
           layersWithVoxelSizes <- new ZarrArrayExplorer(mag).explore(vaultPath, None)(TokenContext(None))
         } yield layersWithVoxelSizes))
@@ -98,7 +99,6 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
   private def exploreLocalN5Array(path: Path, dataSourceId: DataSourceId)(
       implicit ec: ExecutionContext): Fox[DataSourceWithMagLocators] =
     for {
-      _ <- Fox.successful(())
       // Go down subdirectories until we find a directory with an attributes.json file that matches N5Header
       layerPath <- PathUtils
         .recurseSubdirsUntil(
@@ -111,6 +111,7 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
               case _: Exception => false
           }
         )
+        .toFox
         .getOrElse(path)
       explored <- exploreLocalLayer(
         layers =>

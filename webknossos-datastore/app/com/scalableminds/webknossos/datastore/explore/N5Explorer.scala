@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.bool2Fox
 import com.scalableminds.webknossos.datastore.dataformats.layers.{N5DataLayer, N5Layer, N5SegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
@@ -56,7 +57,7 @@ trait N5Explorer extends RemoteLayerExplorer {
   }
 
   protected def extractVoxelSizeInAxisUnits(scale: List[Double], axisOrder: AxisOrder): Fox[Vec3Double] =
-    tryo(Vec3Double(scale(axisOrder.x), scale(axisOrder.y), scale(axisOrder.zWithFallback)))
+    tryo(Vec3Double(scale(axisOrder.x), scale(axisOrder.y), scale(axisOrder.zWithFallback))).toFox
 
   protected def layerFromMagsWithAttributes(magsWithAttributes: List[MagWithAttributes],
                                             remotePath: VaultPath): Fox[N5Layer] =

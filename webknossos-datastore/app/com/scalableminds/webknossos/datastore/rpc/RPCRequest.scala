@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.rpc
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.mvc.{Formatter, MimeTypes}
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Failure, Full}
 import play.api.http.{HeaderNames, Status}
@@ -16,8 +16,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: ExecutionContext)
-    extends FoxImplicits
-    with LazyLogging
+    extends LazyLogging
     with Formatter
     with MimeTypes {
 
@@ -249,11 +248,11 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
       }
       Json.parse(response.body).validate[T] match {
         case JsSuccess(value, _) =>
-          Full(value)
+          Fox.successful(value)
         case JsError(e) =>
           val errorMsg = s"$debugInfo returned invalid JSON: $e"
           logger.error(errorMsg)
-          Failure(errorMsg)
+          Fox.failure(errorMsg)
       }
     }
 
@@ -263,12 +262,12 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
         logger.debug(s"Successful $debugInfo, ResponseBody: <${response.body.length} bytes of protobuf data>")
       }
       try {
-        Full(companion.parseFrom(response.bodyAsBytes.toArray))
+        Fox.successful(companion.parseFrom(response.bodyAsBytes.toArray))
       } catch {
         case e: Exception =>
           val errorMsg = s"$debugInfo returned invalid Protocol Buffer Data: $e"
           logger.error(errorMsg)
-          Failure(errorMsg)
+          Fox.failure(errorMsg)
       }
     }
 

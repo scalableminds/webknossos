@@ -4,8 +4,7 @@ import com.aayushatharva.brotli4j.Brotli4jLoader
 import com.aayushatharva.brotli4j.decoder.BrotliInputStream
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.io.ZipIO
-import com.scalableminds.util.tools.{Fox, JsonHelper}
-import com.scalableminds.util.tools.Fox.box2Fox
+import com.scalableminds.util.tools.{Fox, JsonHelper, OxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
 import org.apache.commons.lang3.builder.HashCodeBuilder
@@ -17,7 +16,7 @@ import java.nio.charset.StandardCharsets
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
-class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging {
+class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging with OxImplicits {
 
   def readBytes(range: Option[NumericRange[Long]] = None)(implicit ec: ExecutionContext,
                                                           tc: TokenContext): Fox[Array[Byte]] =
@@ -36,8 +35,8 @@ class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging {
     bytesAndEncoding match {
       case (bytes, encoding) =>
         encoding match {
-          case Encoding.gzip       => tryo(ZipIO.gunzip(bytes))
-          case Encoding.brotli     => tryo(decodeBrotli(bytes))
+          case Encoding.gzip       => tryo(ZipIO.gunzip(bytes)).toFox
+          case Encoding.brotli     => tryo(decodeBrotli(bytes)).toFox
           case Encoding.`identity` => Fox.successful(bytes)
         }
     }
@@ -99,6 +98,6 @@ class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging {
     for {
       fileBytes <- this.readBytes().toFox
       fileAsString <- tryo(new String(fileBytes, StandardCharsets.UTF_8)).toFox
-      parsed <- JsonHelper.parseAndValidateJson[T](fileAsString)
+      parsed <- JsonHelper.parseAndValidateJson[T](fileAsString).toFox
     } yield parsed
 }

@@ -3,8 +3,9 @@ package com.scalableminds.webknossos.datastore.explore
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.image.Color
+import com.scalableminds.util.tools.Fox.bool2Fox
 import com.scalableminds.util.tools.TextUtils.normalizeStrong
-import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.util.tools.{Fox, OxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{
   NgffAxis,
@@ -33,7 +34,7 @@ import play.api.libs.json.{JsArray, JsBoolean, JsNumber, Json}
 
 import scala.concurrent.ExecutionContext
 
-trait NgffExplorationUtils extends FoxImplicits {
+trait NgffExplorationUtils extends OxImplicits {
 
   protected case class ChannelAttributes(color: Option[Color],
                                          name: Option[String],
@@ -62,7 +63,7 @@ trait NgffExplorationUtils extends FoxImplicits {
                                        datasetName: String,
                                        channelIndex: Int): (LayerViewConfiguration, String) =
     channelAttributes match {
-      case Some(attributes) => {
+      case Some(attributes) =>
         val thisChannelAttributes = attributes(channelIndex)
         val attributeName: String =
           thisChannelAttributes.name
@@ -91,7 +92,6 @@ trait NgffExplorationUtils extends FoxImplicits {
         } else {
           layerViewConfiguration.toMap
         }, attributeName)
-      }
       case None => (LayerViewConfiguration.empty, datasetName)
     }
 
@@ -118,7 +118,7 @@ trait NgffExplorationUtils extends FoxImplicits {
     for {
       xUnit <- axes(axisOrder.x).lengthUnit.toFox
       yUnit <- axes(axisOrder.y).lengthUnit.toFox
-      zUnitOpt <- Fox.runIf(axisOrder.hasZAxis)(axes(axisOrder.zWithFallback).lengthUnit)
+      zUnitOpt <- Fox.runIf(axisOrder.hasZAxis)(axes(axisOrder.zWithFallback).lengthUnit.toFox)
       units: List[LengthUnit] = List(Some(xUnit), Some(yUnit), zUnitOpt).flatten
     } yield units.minBy(LengthUnit.toNanometer)
 
@@ -128,7 +128,7 @@ trait NgffExplorationUtils extends FoxImplicits {
       xUnitToNm <- axes(axisOrder.x).lengthUnit.map(LengthUnit.toNanometer).toFox
       yUnitToNm <- axes(axisOrder.y).lengthUnit.map(LengthUnit.toNanometer).toFox
       zUnitToNmOpt <- Fox.runIf(axisOrder.hasZAxis)(
-        axes(axisOrder.zWithFallback).lengthUnit.map(LengthUnit.toNanometer))
+        axes(axisOrder.zWithFallback).lengthUnit.map(LengthUnit.toNanometer).toFox)
       xUnitToTarget = xUnitToNm / LengthUnit.toNanometer(unifiedAxisUnit)
       yUnitToTarget = yUnitToNm / LengthUnit.toNanometer(unifiedAxisUnit)
       zUnitToTargetOpt = zUnitToNmOpt.map(_ / LengthUnit.toNanometer(unifiedAxisUnit))
@@ -197,7 +197,7 @@ trait NgffExplorationUtils extends FoxImplicits {
     val defaultAxes = List("c", "x", "y", "z")
     for {
       // Selecting shape of first mag, assuming no mags for additional coordinates
-      dataset <- Fox.option2Fox(multiscale.datasets.headOption)
+      dataset <- multiscale.datasets.headOption.toFox
       shape <- getShape(dataset, remotePath)
       axes <- Fox.combined(
         multiscale.axes
@@ -269,7 +269,7 @@ trait NgffExplorationUtils extends FoxImplicits {
     val is2d = !multiscale.axes.exists(_.name == "z")
     val baseTranslation = if (is2d) List(1.0, 1.0) else List(1.0, 1.0, 1.0)
     multiscale.datasets.headOption match {
-      case Some(firstDataset) if firstDataset.coordinateTransformations.exists(_.`type` == "translation") => {
+      case Some(firstDataset) if firstDataset.coordinateTransformations.exists(_.`type` == "translation") =>
         var translation = firstDataset.coordinateTransformations.foldLeft(baseTranslation)((acc, ct) => {
           ct.`type` match {
             case "translation" =>
@@ -300,7 +300,6 @@ trait NgffExplorationUtils extends FoxImplicits {
                  List(0, 0, 0, 1)))
         )
         Some(List(coordinateTransformation))
-      }
       case _ => None
     }
   }

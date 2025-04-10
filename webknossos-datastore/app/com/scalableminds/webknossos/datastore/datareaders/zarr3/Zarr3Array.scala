@@ -2,8 +2,7 @@ package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.Fox.box2Fox
-import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.{Fox, JsonHelper, OxImplicits}
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReader, ChunkUtils, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataSourceId}
@@ -14,7 +13,7 @@ import ucar.ma2.{Array => MultiArray}
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
-object Zarr3Array extends LazyLogging {
+object Zarr3Array extends LazyLogging with OxImplicits {
 
   def open(path: VaultPath,
            dataSourceId: DataSourceId,
@@ -27,7 +26,7 @@ object Zarr3Array extends LazyLogging {
     for {
       headerBytes <- (path / Zarr3ArrayHeader.FILENAME_ZARR_JSON)
         .readBytes() ?~> s"Could not read header at ${Zarr3ArrayHeader.FILENAME_ZARR_JSON}"
-      header <- JsonHelper.parseAndValidateJson[Zarr3ArrayHeader](headerBytes) ?~> "Could not parse array header"
+      header <- JsonHelper.parseAndValidateJson[Zarr3ArrayHeader](headerBytes).toFox ?~> "Could not parse array header"
       array <- tryo(
         new Zarr3Array(path,
                        dataSourceId,
@@ -36,7 +35,7 @@ object Zarr3Array extends LazyLogging {
                        axisOrderOpt.getOrElse(AxisOrder.asCxyzFromRank(header.rank)),
                        channelIndex,
                        additionalAxes,
-                       sharedChunkContentsCache)) ?~> "Could not open zarr3 array"
+                       sharedChunkContentsCache)).toFox ?~> "Could not open zarr3 array"
     } yield array
 }
 
@@ -172,7 +171,7 @@ class Zarr3Array(vaultPath: VaultPath,
   override protected def getShardedChunkPathAndRange(
       chunkIndex: Array[Int])(implicit ec: ExecutionContext, tc: TokenContext): Fox[(VaultPath, NumericRange[Long])] =
     for {
-      shardCoordinates <- Fox.option2Fox(chunkIndexToShardIndex(chunkIndex).headOption)
+      shardCoordinates <- chunkIndexToShardIndex(chunkIndex).headOption.toFox
       shardFilename = getChunkFilename(shardCoordinates)
       shardPath = vaultPath / shardFilename
       parsedShardIndex <- parsedShardIndexCache.getOrLoad(shardPath, readAndParseShardIndex)

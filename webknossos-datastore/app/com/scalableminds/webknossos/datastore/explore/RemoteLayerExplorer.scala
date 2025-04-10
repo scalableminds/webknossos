@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.explore
 import com.scalableminds.util.geometry.BoundingBox
 import collections.SequenceUtils
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, OxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
@@ -16,7 +16,7 @@ case class MagWithAttributes(mag: MagLocator,
                              elementClass: ElementClass.Value,
                              boundingBox: BoundingBox)
 
-trait RemoteLayerExplorer extends FoxImplicits {
+trait RemoteLayerExplorer extends OxImplicits {
 
   implicit def ec: ExecutionContext
 
@@ -34,7 +34,9 @@ trait RemoteLayerExplorer extends FoxImplicits {
 
   protected def elementClassFromMags(magsWithAttributes: List[MagWithAttributes]): Fox[ElementClass.Value] = {
     val elementClasses = magsWithAttributes.map(_.elementClass)
-    SequenceUtils.findUniqueElement(elementClasses) ?~> s"Element class must be the same for all mags of a layer. got $elementClasses"
+    SequenceUtils
+      .findUniqueElement(elementClasses)
+      .toFox ?~> s"Element class must be the same for all mags of a layer. got $elementClasses"
   }
 
   protected def boundingBoxFromMags(magsWithAttributes: List[MagWithAttributes]): BoundingBox =

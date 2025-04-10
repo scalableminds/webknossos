@@ -1,7 +1,8 @@
 package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox.bool2Fox
+import com.scalableminds.util.tools.{Fox, OxImplicits}
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedHeader
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffGroupHeader, NgffMetadata, ZarrHeader}
@@ -16,7 +17,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import scala.concurrent.ExecutionContext
 import scala.util.Try
 
-trait ExploreLayerUtils extends FoxImplicits {
+trait ExploreLayerUtils extends OxImplicits {
 
   def adaptLayersAndVoxelSize(layersWithVoxelSizes: List[(DataLayerWithMagLocators, VoxelSize)],
                               preferredVoxelSize: Option[VoxelSize])(
@@ -131,7 +132,7 @@ trait ExploreLayerUtils extends FoxImplicits {
     val minVoxelSizeOpt = Try(allVoxelSizes.minBy(_.toNanometer.toTuple)).toOption
 
     for {
-      minVoxelSize <- option2Fox(minVoxelSizeOpt)
+      minVoxelSize <- minVoxelSizeOpt.toFox
       baseVoxelSize = findBaseVoxelSize(minVoxelSize, preferredVoxelSize)
       allMags <- Fox.combined(allVoxelSizes.map(magFromVoxelSize(baseVoxelSize, _)).toList) ?~> s"voxel sizes for layers are not uniform, got ${layersWithVoxelSizes
         .map(_._2)}"

@@ -1,1 +1,1 @@
-addSbtPlugin("com.typesafe.sbt" % "sbt-license-report" % "1.2.0")
+addSbtPlugin("com.github.sbt" % "sbt-license-report" % "1.7.0")

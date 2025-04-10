@@ -35,6 +35,7 @@ import {
 } from "oxalis/view/layouting/layout_persistence";
 import * as React from "react";
 import { connect, useDispatch, useSelector } from "react-redux";
+import { useHistory } from "react-router-dom";
 import type { APIDataset, APIUser } from "types/api_flow_types";
 import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
 import { StartAIJobModal, type StartAIJobModalState } from "./action-bar/starting_job_modals";
@@ -139,6 +140,58 @@ function AdditionalCoordinatesInputView() {
   );
 }
 
+function CreateAnnotationButton() {
+  const history = useHistory();
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+
+  const onClick = async () => {
+    const state = Store.getState();
+    const { dataset } = state;
+    // If the dataset supports creating an annotation with a fallback segmentation,
+    // use it (as the fallback can always be removed later)
+    const maybeSegmentationLayer = getVisibleSegmentationLayer(state);
+    const fallbackLayerName =
+      maybeSegmentationLayer && doesSupportVolumeWithFallback(dataset, maybeSegmentationLayer)
+        ? maybeSegmentationLayer.name
+        : null;
+
+    const mappingInfo = getMappingInfoForSupportedLayer(Store.getState());
+    let maybeMappingName = null;
+    if (
+      mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED &&
+      mappingInfo.mappingType === "HDF5"
+    ) {
+      maybeMappingName = mappingInfo.mappingName;
+    }
+
+    const annotation = await createExplorational(
+      dataset.id,
+      "hybrid",
+      false,
+      fallbackLayerName,
+      maybeMappingName,
+    );
+    history.push(`/annotations/${annotation.id}${location.hash}`);
+  };
+
+  const ButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
+    AsyncButton,
+  );
+  return (
+    <ButtonWithAuthentication
+      activeUser={activeUser}
+      authenticationMessage="You have to register or login to create an annotation."
+      style={{
+        marginLeft: 12,
+      }}
+      type="primary"
+      onClick={onClick}
+    >
+      Create Annotation
+    </ButtonWithAuthentication>
+  );
+}
+
 class ActionBarView extends React.PureComponent<Props, State> {
   state: State = {
     isNewLayoutModalOpen: false,
@@ -170,34 +223,6 @@ class ActionBarView extends React.PureComponent<Props, State> {
     }
   };
 
-  createAnnotation = async (dataset: APIDataset) => {
-    // If the dataset supports creating an annotation with a fallback segmentation,
-    // use it (as the fallback can always be removed later)
-    const maybeSegmentationLayer = getVisibleSegmentationLayer(Store.getState());
-    const fallbackLayerName =
-      maybeSegmentationLayer && doesSupportVolumeWithFallback(dataset, maybeSegmentationLayer)
-        ? maybeSegmentationLayer.name
-        : null;
-
-    const mappingInfo = getMappingInfoForSupportedLayer(Store.getState());
-    let maybeMappingName = null;
-    if (
-      mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED &&
-      mappingInfo.mappingType === "HDF5"
-    ) {
-      maybeMappingName = mappingInfo.mappingName;
-    }
-
-    const annotation = await createExplorational(
-      dataset.id,
-      "hybrid",
-      false,
-      fallbackLayerName,
-      maybeMappingName,
-    );
-    location.href = `${location.origin}/annotations/${annotation.id}${location.hash}`;
-  };
-
   renderStartAIJobButton(disabled: boolean, tooltipTextIfDisabled: string): React.ReactNode {
     const tooltipText = disabled ? tooltipTextIfDisabled : "Start a processing job using AI";
     return (
@@ -215,22 +240,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
   }
 
   renderStartTracingButton(): React.ReactNode {
-    const ButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
-      AsyncButton,
-    );
-    return (
-      <ButtonWithAuthentication
-        activeUser={this.props.activeUser}
-        authenticationMessage="You have to register or login to create an annotation."
-        style={{
-          marginLeft: 12,
-        }}
-        type="primary"
-        onClick={() => this.createAnnotation(this.props.dataset)}
-      >
-        Create Annotation
-      </ButtonWithAuthentication>
-    );
+    return <CreateAnnotationButton />;
   }
 
   render() {
@@ -323,8 +333,8 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
   controlMode: state.temporaryConfiguration.controlMode,
   showVersionRestore: state.uiInformation.showVersionRestore,
-  hasSkeleton: state.tracing.skeleton != null,
-  isReadOnly: !state.tracing.restrictions.allowUpdate,
+  hasSkeleton: state.annotation.skeleton != null,
+  isReadOnly: !state.annotation.restrictions.allowUpdate,
   is2d: is2dDataset(state.dataset),
   viewMode: state.temporaryConfiguration.viewMode,
   aiJobModalState: state.uiInformation.aIJobModalState,

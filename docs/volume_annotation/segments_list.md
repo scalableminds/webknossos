@@ -8,7 +8,7 @@ The following functionality is available for each segment:
 - naming the segment
 - [loading 3D meshes](../meshes/loading_meshes.md) for the segments (ad-hoc and precomputed if available)
 - download of 3D meshes
-- changing the color of the segment
+- changing the color of the segment, and if its mesh is visible, changing the mesh's opacity using the opacity slider of the segment color picker
 - activating the segment id (so that you can annotate with that id)
 - organizing your segments in groups
 

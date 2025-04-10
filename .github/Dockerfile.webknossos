@@ -8,13 +8,15 @@ RUN curl -sL "https://deb.nodesource.com/setup_${VERSION_NODE}" | bash - \
 RUN mkdir -p /webknossos
 WORKDIR /webknossos
 
+# Copy compiled Scala output from a previous build step, e.g. output of the Docker-dev image
 COPY target/universal/stage .
 
 RUN addgroup --system --gid 999 webknossos \
   && adduser --system --uid 999 --ingroup webknossos webknossos \
   && mkdir disk \
   && chown -R webknossos . \
-  && chmod go+x bin/webknossos \
+  && chmod +x bin/webknossos \
+  && chmod +x tools/postgres/dbtool.js \
   && chmod go+w .
 
 RUN echo '#!/bin/bash\numask 002\nbin/webknossos "$@"\n' > /docker-entrypoint.sh \

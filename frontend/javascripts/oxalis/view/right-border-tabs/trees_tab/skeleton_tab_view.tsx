@@ -222,9 +222,9 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
           const dataFile = new File([dataBlob], dataFileEntry.filename);
           await Model.ensureSavedState();
           const storeState = Store.getState();
-          const { tracing, dataset } = storeState;
+          const { annotation, dataset } = storeState;
 
-          if (tracing.volumes.length === 0) {
+          if (annotation.volumes.length === 0) {
             throw new Error("A volume tracing must already exist when importing a volume tracing.");
           }
 
@@ -237,14 +237,14 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
           }
 
           const newLargestSegmentId = await importVolumeTracing(
-            tracing,
+            annotation,
             oldVolumeTracing,
             dataFile,
-            tracing.version,
+            annotation.version,
           );
 
           Store.dispatch(importVolumeTracingAction());
-          Store.dispatch(setVersionNumberAction(tracing.version + 1));
+          Store.dispatch(setVersionNumberAction(annotation.version + 1));
           Store.dispatch(setLargestSegmentIdAction(newLargestSegmentId));
           await clearCache(dataset, oldVolumeTracing.tracingId);
           await api.data.reloadBuckets(oldVolumeTracing.tracingId);
@@ -301,7 +301,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
 // Let the user confirm the deletion of the initial node (node with id 1) of a task
 function checkAndConfirmDeletingInitialNode(treeIds: number[]) {
   const state = Store.getState();
-  const skeletonTracing = enforceSkeletonTracing(state.tracing);
+  const skeletonTracing = enforceSkeletonTracing(state.annotation);
 
   const hasNodeWithIdOne = (id: number) =>
     getTree(skeletonTracing, id).map((tree) => tree.nodes.has(1));
@@ -486,7 +486,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     const { selectedTreeIds } = this.state;
     const selectedTreeCount = selectedTreeIds.length;
 
-    if (selectedTreeCount > 0) {
+    if (selectedTreeCount > 1) {
       const deleteAllSelectedTrees = () => {
         checkAndConfirmDeletingInitialNode(selectedTreeIds).then(() => {
           this.props.onDeleteTrees(selectedTreeIds);
@@ -543,7 +543,13 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     // Wait 1 second for the Modal to render
     const [buildInfo] = await Promise.all([getBuildInfo(), Utils.sleep(1000)]);
     const state = Store.getState();
-    const nml = serializeToNml(state, state.tracing, skeletonTracing, buildInfo, applyTransforms);
+    const nml = serializeToNml(
+      state,
+      state.annotation,
+      skeletonTracing,
+      buildInfo,
+      applyTransforms,
+    );
     this.setState({
       isDownloading: false,
     });
@@ -976,11 +982,11 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 }
 
 const mapStateToProps = (state: OxalisState) => ({
-  allowUpdate: state.tracing.restrictions.allowUpdate,
-  skeletonTracing: state.tracing.skeleton,
+  allowUpdate: state.annotation.restrictions.allowUpdate,
+  skeletonTracing: state.annotation.skeleton,
   userConfiguration: state.userConfiguration,
   isSkeletonLayerTransformed: isSkeletonLayerTransformed(state),
-  isAnnotationLockedByUser: state.tracing.isLockedByOwner,
+  isAnnotationLockedByUser: state.annotation.isLockedByOwner,
   isOwner: isAnnotationOwner(state),
 });
 

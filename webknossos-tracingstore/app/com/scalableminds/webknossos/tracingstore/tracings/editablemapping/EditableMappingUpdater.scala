@@ -12,6 +12,7 @@ import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
 import com.scalableminds.webknossos.tracingstore.annotation.UpdateAction
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ReversionHelper
 import com.scalableminds.webknossos.tracingstore.tracings.{
+  FossilDBPutBuffer,
   KeyValueStoreImplicits,
   RemoteFallbackLayer,
   TracingDataStore
@@ -63,18 +64,28 @@ class EditableMappingUpdater(
       _ <- Fox.runIf(!dry)(flushUpdatedInfoToFossil(updatedEditableMappingInfo))
     } yield updatedEditableMappingInfo
 
-  def flushBuffersToFossil()(implicit ec: ExecutionContext): Fox[Unit] =
+  def flushBuffersToFossil()(implicit ec: ExecutionContext): Fox[Unit] = {
+    val segmentToAgglomeratePutBuffer =
+      new FossilDBPutBuffer(tracingDataStore.editableMappingsSegmentToAgglomerate, version = Some(newVersion))
+    val agglomerateToGraphPutBuffer =
+      new FossilDBPutBuffer(tracingDataStore.editableMappingsAgglomerateToGraph, version = Some(newVersion))
     for {
-      _ <- Fox.serialCombined(segmentToAgglomerateBuffer.keys.toList)(flushSegmentToAgglomerateChunk)
-      _ <- Fox.serialCombined(agglomerateToGraphBuffer.keys.toList)(flushAgglomerateGraph)
+      _ <- Fox.serialCombined(segmentToAgglomerateBuffer.keys.toList)(key =>
+        flushSegmentToAgglomerateChunk(key, segmentToAgglomeratePutBuffer))
+      _ <- Fox.serialCombined(agglomerateToGraphBuffer.keys.toList)(key =>
+        flushAgglomerateGraph(key, agglomerateToGraphPutBuffer))
+      _ <- segmentToAgglomeratePutBuffer.flush()
+      _ <- agglomerateToGraphPutBuffer.flush()
     } yield ()
+  }
 
   private def flushUpdatedInfoToFossil(updatedEditableMappingInfo: EditableMappingInfo): Fox[Unit] =
     for {
       _ <- tracingDataStore.editableMappingsInfo.put(tracingId, newVersion, updatedEditableMappingInfo)
     } yield ()
 
-  private def flushSegmentToAgglomerateChunk(key: String): Fox[Unit] = {
+  private def flushSegmentToAgglomerateChunk(key: String, putBuffer: FossilDBPutBuffer)(
+      implicit ec: ExecutionContext): Fox[Unit] = {
     val (chunk, isToBeReverted) = segmentToAgglomerateBuffer(key)
     val valueToFlush: Array[Byte] =
       if (isToBeReverted) revertedValue
@@ -84,13 +95,14 @@ class EditableMappingUpdater(
         })
         proto.toByteArray
       }
-    tracingDataStore.editableMappingsSegmentToAgglomerate.put(key, newVersion, valueToFlush)
+    putBuffer.put(key, valueToFlush)
   }
 
-  private def flushAgglomerateGraph(key: String): Fox[Unit] = {
+  private def flushAgglomerateGraph(key: String, putBuffer: FossilDBPutBuffer)(
+      implicit ec: ExecutionContext): Fox[Unit] = {
     val (graph, isToBeReverted) = agglomerateToGraphBuffer(key)
     val valueToFlush: Array[Byte] = if (isToBeReverted) revertedValue else graph
-    tracingDataStore.editableMappingsAgglomerateToGraph.put(key, newVersion, valueToFlush)
+    putBuffer.put(key, valueToFlush)
   }
 
   private def updateIter(mappingFox: Fox[EditableMappingInfo], remainingUpdates: List[UpdateAction])(
@@ -144,11 +156,12 @@ class EditableMappingUpdater(
         logger.warn(
           s"Split action for editable mapping $tracingId: Looking up segment id at position ${update.segmentPosition2} in mag ${update.mag} returned invalid value zero. Splitting outside of dataset?")
       (graph1, graph2) <- tryo(splitGraph(agglomerateGraph, segmentId1, segmentId2)) ?~> s"splitGraph failed while removing edge between segments $segmentId1 and $segmentId2"
+      actualSplitHappened = graph2.segments.nonEmpty // if this wasn’t the last edge holding the two sides together, everything remains in graph1.
       largestExistingAgglomerateId <- largestAgglomerateId(editableMappingInfo)
-      agglomerateId2 = largestExistingAgglomerateId + 1L
-      _ <- updateSegmentToAgglomerate(graph2.segments, agglomerateId2)
+      agglomerateId2 = if (actualSplitHappened) largestExistingAgglomerateId + 1L else largestExistingAgglomerateId
+      _ <- Fox.runIf(actualSplitHappened)(updateSegmentToAgglomerate(graph2.segments, agglomerateId2))
       _ = updateAgglomerateGraph(agglomerateId, graph1)
-      _ = updateAgglomerateGraph(agglomerateId2, graph2)
+      _ = if (actualSplitHappened) updateAgglomerateGraph(agglomerateId2, graph2)
     } yield editableMappingInfo.withLargestAgglomerateId(agglomerateId2)
 
   private def getFromSegmentToAgglomerateBuffer(chunkKey: String): Option[Map[Long, Long]] =

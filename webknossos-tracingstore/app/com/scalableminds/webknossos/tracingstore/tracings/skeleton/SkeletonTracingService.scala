@@ -40,13 +40,15 @@ class SkeletonTracingService @Inject()(
         case _ =>
           nowPresentTrees
       }
+      val skeletonTreeBodiesPutBuffer = new FossilDBPutBuffer(tracingDataStore.skeletonTreeBodies, Some(version))
       for {
         _ <- Fox.serialCombined(treeIdsToFlush) { treeId =>
           for {
             treeBody <- extractTreeBody(tracing, treeId).toFox
-            _ <- tracingDataStore.skeletonTreeBodies.put(f"$tracingId/$treeId", version, treeBody)
+            _ <- skeletonTreeBodiesPutBuffer.put(f"$tracingId/$treeId", treeBody)
           } yield ()
         }
+        _ <- skeletonTreeBodiesPutBuffer.flush()
         skeletonWithoutExtraTreeInfo = stripTreeBodies(tracing)
         _ <- tracingDataStore.skeletons.put(tracingId, version, skeletonWithoutExtraTreeInfo)
       } yield ()

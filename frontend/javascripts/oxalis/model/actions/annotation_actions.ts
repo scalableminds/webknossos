@@ -60,6 +60,7 @@ type AddNewUserBoundingBox = ReturnType<typeof addUserBoundingBoxAction>;
 type ChangeUserBoundingBoxAction = ReturnType<typeof changeUserBoundingBoxAction>;
 type DeleteUserBoundingBox = ReturnType<typeof deleteUserBoundingBoxAction>;
 export type UpdateMeshVisibilityAction = ReturnType<typeof updateMeshVisibilityAction>;
+export type UpdateMeshOpacityAction = ReturnType<typeof updateMeshOpacityAction>;
 export type MaybeFetchMeshFilesAction = ReturnType<typeof maybeFetchMeshFilesAction>;
 export type TriggerMeshDownloadAction = ReturnType<typeof triggerMeshDownloadAction>;
 export type TriggerMeshesDownloadAction = ReturnType<typeof triggerMeshesDownloadAction>;
@@ -93,6 +94,7 @@ export type AnnotationActionTypes =
   | AddUserBoundingBoxesAction
   | MaybeFetchMeshFilesAction
   | UpdateMeshVisibilityAction
+  | UpdateMeshOpacityAction
   | TriggerMeshDownloadAction
   | TriggerMeshesDownloadAction
   | RefreshMeshesAction
@@ -230,6 +232,14 @@ export const updateMeshVisibilityAction = (
     additionalCoordinates,
   }) as const;
 
+export const updateMeshOpacityAction = (layerName: string, id: number, opacity: number) =>
+  ({
+    type: "UPDATE_MESH_OPACITY",
+    id,
+    layerName,
+    opacity,
+  }) as const;
+
 export const maybeFetchMeshFilesAction = (
   segmentationLayer: APIDataLayer | null | undefined,
   dataset: APIDataset,
@@ -340,7 +350,6 @@ export const addPrecomputedMeshAction = (
   seedPosition: Vector3,
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
-  areChunksMerged: boolean,
   mappingName: string | null | undefined,
 ) =>
   ({
@@ -350,7 +359,6 @@ export const addPrecomputedMeshAction = (
     seedPosition,
     seedAdditionalCoordinates,
     meshFileName,
-    areChunksMerged,
     mappingName,
   }) as const;
 

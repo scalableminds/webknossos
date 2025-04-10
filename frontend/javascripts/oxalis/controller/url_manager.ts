@@ -93,6 +93,7 @@ export type PartialUrlManagerState = Partial<UrlManagerState>;
 class UrlManager {
   baseUrl: string = "";
   initialState: PartialUrlManagerState = {};
+  stopStoreListening?: () => void;
 
   initialize() {
     this.baseUrl = location.pathname + location.search;
@@ -232,9 +233,16 @@ class UrlManager {
   }
 
   startUrlUpdater(): void {
-    Store.subscribe(() => this.update());
+    this.stopStoreListening = Store.subscribe(() => this.update());
 
     window.onhashchange = () => this.onHashChange();
+  }
+
+  stopUrlUpdater(): void {
+    if (this.stopStoreListening != null) {
+      this.stopStoreListening();
+    }
+    window.onhashchange = null;
   }
 
   getUrlState(state: OxalisState): UrlManagerState & { mode: ViewMode } {
@@ -246,7 +254,7 @@ class UrlManager {
           rotation: Utils.map3((e) => Utils.roundTo(e, 2), getRotation(state.flycam)),
         }
       : {};
-    const activeNode = state.tracing.skeleton?.activeNodeId;
+    const activeNode = state.annotation.skeleton?.activeNodeId;
     const activeNodeOptional = activeNode != null ? { activeNode } : {};
     const stateByLayer: UrlStateByLayer = {};
 
@@ -301,9 +309,9 @@ class UrlManager {
       }
     }
 
-    const tracing = state.tracing;
-    if (tracing.skeleton != null) {
-      const skeletonTracing = enforceSkeletonTracing(tracing);
+    const annotation = state.annotation;
+    if (annotation.skeleton != null) {
+      const skeletonTracing = enforceSkeletonTracing(annotation);
       const { showSkeletons } = skeletonTracing;
       const layerName = "Skeleton";
 
@@ -358,8 +366,8 @@ class UrlManager {
     const hash = this.buildUrlHashCsv(state);
     const newBaseUrl = updateTypeAndId(
       this.baseUrl,
-      state.tracing.annotationType,
-      state.tracing.annotationId,
+      state.annotation.annotationType,
+      state.annotation.annotationId,
     );
     return `${newBaseUrl}#${hash}`;
   }

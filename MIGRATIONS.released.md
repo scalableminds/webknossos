@@ -15,7 +15,7 @@ None.
 ## [25.03.0](https://github.com/scalableminds/webknossos/releases/tag/25.03.0) - 2025-04-01
 [Commits](https://github.com/scalableminds/webknossos/compare/25.02.1...25.03.0)
 
- - FossilDB now needs to be opened with additional column family `skeletonTreeBodies`. [#8423](https://github.com/scalableminds/webknossos/pull/8423)
+- FossilDB now needs to be opened with additional column family `skeletonTreeBodies`. [#8423](https://github.com/scalableminds/webknossos/pull/8423)
 
 ### Postgres Evolutions:
 - [126-mag-real-paths.sql](conf/evolutions/126-mag-real-paths.sql)

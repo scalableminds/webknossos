@@ -53,16 +53,6 @@ class UserController @Inject()(userService: UserService,
     }
   }
 
-  def payingOrganizationOfUser(userId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    log() {
-      for {
-        _ <- bool2Fox(userId == request.identity._id) ?~> "notAllowed" ~> FORBIDDEN
-        user <- userDAO.findOne(userId) ?~> "user.notFound" ~> NOT_FOUND
-        payingOrganization <- userDAO.findPayingOrganizationIdForMultiUser(user._multiUser)
-      } yield Ok(Json.obj("payingOrganization" -> JsString(payingOrganization.toString)))
-    }
-  }
-
   def annotations(isFinished: Option[Boolean],
                   limit: Option[Int],
                   pageNumber: Option[Int] = None,

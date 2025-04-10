@@ -57,12 +57,6 @@ export type UpdateUserBoundingBoxInSkeletonTracingAction = ReturnType<
 export type UpdateUserBoundingBoxInVolumeTracingAction = ReturnType<
   typeof updateUserBoundingBoxInVolumeTracingAction
 >;
-type UpdateUserBoundingBoxesInSkeletonTracingUpdateAction = ReturnType<
-  typeof updateUserBoundingBoxesInSkeletonTracing
->;
-type UpdateUserBoundingBoxesInVolumeTracingUpdateAction = ReturnType<
-  typeof updateUserBoundingBoxesInVolumeTracing
->;
 export type UpdateBucketUpdateAction = ReturnType<typeof updateBucket>;
 export type UpdateSegmentGroupsUpdateAction = ReturnType<typeof updateSegmentGroups>;
 
@@ -108,8 +102,6 @@ export type UpdateActionWithoutIsolationRequirement =
   | DeleteUserBoundingBoxInVolumeTracingAction
   | UpdateUserBoundingBoxInSkeletonTracingAction
   | UpdateUserBoundingBoxInVolumeTracingAction
-  | UpdateUserBoundingBoxesInSkeletonTracingUpdateAction
-  | UpdateUserBoundingBoxesInVolumeTracingUpdateAction
   | CreateSegmentUpdateAction
   | UpdateSegmentUpdateAction
   | DeleteSegmentUpdateAction
@@ -504,30 +496,6 @@ export function updateUserBoundingBoxInSkeletonTracingAction(
   );
 }
 
-export function updateUserBoundingBoxesInSkeletonTracing(
-  userBoundingBoxes: Array<UserBoundingBox>,
-  actionTracingId: string,
-) {
-  return {
-    name: "updateUserBoundingBoxesInSkeletonTracing",
-    value: {
-      actionTracingId,
-      boundingBoxes: userBoundingBoxes.map(convertUserBoundingBoxesFromFrontendToServer),
-    },
-  } as const;
-}
-export function updateUserBoundingBoxesInVolumeTracing(
-  userBoundingBoxes: Array<UserBoundingBox>,
-  actionTracingId: string,
-) {
-  return {
-    name: "updateUserBoundingBoxesInVolumeTracing",
-    value: {
-      actionTracingId,
-      boundingBoxes: userBoundingBoxes.map(convertUserBoundingBoxesFromFrontendToServer),
-    },
-  } as const;
-}
 export function createSegmentVolumeAction(
   id: number,
   anchorPosition: Vector3 | null | undefined,

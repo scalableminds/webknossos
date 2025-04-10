@@ -2,7 +2,6 @@ import {
   ArrowsAltOutlined,
   BackwardOutlined,
   CodeSandboxOutlined,
-  CodepenOutlined,
   DeleteOutlined,
   EditOutlined,
   EyeOutlined,
@@ -75,14 +74,6 @@ const descriptionFns: Record<
   createTracing: (): Description => ({
     description: "Created the annotation.",
     icon: <RocketOutlined />,
-  }),
-  updateUserBoundingBoxesInSkeletonTracing: (): Description => ({
-    description: "Updated a bounding box.",
-    icon: <CodepenOutlined />,
-  }),
-  updateUserBoundingBoxesInVolumeTracing: (): Description => ({
-    description: "Updated a bounding box.",
-    icon: <CodepenOutlined />,
   }),
   addUserBoundingBoxSkeletonAction: (): Description => ({
     description: "Added a bounding box.",

@@ -286,7 +286,7 @@ export function InviteUsersModal({
         {isOrganizationLimitAlreadyReached ? (
           <p>
             As your organization has reached its user limit, you can only invite guests to your
-            organization. Those user must already be part of an organization paying for their
+            organization. Those users must already be part of an organization paying for their
             account.
           </p>
         ) : null}

@@ -8,7 +8,11 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.bool2Fox
 import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
-import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{
+  SkeletonTracing,
+  SkeletonTracings,
+  SkeletonTracingsWithIds
+}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracings}
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.annotation.{
@@ -32,7 +36,7 @@ class WKRemoteTracingStoreClient(
     tracingStore: TracingStore,
     dataset: Dataset,
     rpc: RPC,
-    tracingDataSourceTemporaryStore: TracingDataSourceTemporaryStore)(implicit ec: ExecutionContext)
+    annotationDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
   private def baseInfo = s" Dataset: ${dataset.name} Tracingstore: ${tracingStore.url}"
@@ -71,18 +75,20 @@ class WKRemoteTracingStoreClient(
         id.map(TracingSelector(_))))(VolumeTracings)
   }
 
-  def saveSkeletonTracing(tracing: SkeletonTracing): Fox[String] = {
+  def saveSkeletonTracing(tracing: SkeletonTracing, newTracingId: String): Fox[Unit] = {
     logger.debug("Called to save SkeletonTracing." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/skeleton/save").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-      .postProtoWithJsonResponse[SkeletonTracing, String](tracing)
+      .addQueryString("newTracingId" -> newTracingId)
+      .postProto[SkeletonTracing](tracing)
   }
 
-  def saveSkeletonTracings(tracings: SkeletonTracings): Fox[List[Box[Option[String]]]] = {
+  // Uses Box[Boolean] because Box[Unit] cannot be json-serialized. The boolean value should be ignored.
+  def saveSkeletonTracings(tracings: SkeletonTracingsWithIds): Fox[List[Box[Boolean]]] = {
     logger.debug("Called to save SkeletonTracings." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/skeleton/saveMultiple").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-      .postProtoWithJsonResponse[SkeletonTracings, List[Box[Option[String]]]](tracings)
+      .postProtoWithJsonResponse[SkeletonTracingsWithIds, List[Box[Boolean]]](tracings)
   }
 
   def saveAnnotationProto(annotationId: ObjectId, annotationProto: AnnotationProto): Fox[Unit] = {
@@ -112,30 +118,41 @@ class WKRemoteTracingStoreClient(
 
   // Used in task creation. History is dropped, new version will be zero.
   def duplicateSkeletonTracing(skeletonTracingId: String,
+                               newAnnotationId: ObjectId,
+                               newTracingId: String,
                                editPosition: Option[Vec3Int] = None,
                                editRotation: Option[Vec3Double] = None,
-                               boundingBox: Option[BoundingBox] = None): Fox[String] =
+                               boundingBox: Option[BoundingBox] = None): Fox[Unit] =
     rpc(s"${tracingStore.url}/tracings/skeleton/$skeletonTracingId/duplicate").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+      .addQueryString("newAnnotationId" -> newAnnotationId.toString)
+      .addQueryString("newTracingId" -> newTracingId)
       .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
       .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
       .addQueryStringOptional("boundingBox", boundingBox.map(_.toLiteral))
-      .postEmptyWithJsonResponse[String]()
+      .postEmpty()
 
   // Used in task creation. History is dropped, new version will be zero.
   def duplicateVolumeTracing(volumeTracingId: String,
+                             newAnnotationId: ObjectId,
+                             newTracingId: String,
                              magRestrictions: MagRestrictions = MagRestrictions.empty,
                              editPosition: Option[Vec3Int] = None,
                              editRotation: Option[Vec3Double] = None,
-                             boundingBox: Option[BoundingBox] = None): Fox[String] =
+                             boundingBox: Option[BoundingBox] = None,
+                             dataSource: DataSourceLike): Fox[Unit] = {
+    annotationDataSourceTemporaryStore.store(newAnnotationId, dataSource)
     rpc(s"${tracingStore.url}/tracings/volume/$volumeTracingId/duplicate").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+      .addQueryString("newAnnotationId" -> newAnnotationId.toString)
+      .addQueryString("newTracingId" -> newTracingId)
       .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
       .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
       .addQueryStringOptional("boundingBox", boundingBox.map(_.toLiteral))
       .addQueryStringOptional("minMag", magRestrictions.minStr)
       .addQueryStringOptional("maxMag", magRestrictions.maxStr)
-      .postEmptyWithJsonResponse[String]()
+      .postEmpty()
+  }
 
   def mergeAnnotationsByIds(annotationIds: List[String],
                             newAnnotationId: ObjectId,
@@ -148,55 +165,59 @@ class WKRemoteTracingStoreClient(
       .postJsonWithProtoResponse[List[String], AnnotationProto](annotationIds)(AnnotationProto)
   }
 
-  def mergeSkeletonTracingsByContents(tracings: SkeletonTracings): Fox[String] = {
+  def mergeSkeletonTracingsByContents(newTracingId: String, tracings: SkeletonTracings): Fox[Unit] = {
     logger.debug("Called to merge SkeletonTracings by contents." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/skeleton/mergedFromContents").withLongTimeout
+      .addQueryString("newTracingId" -> newTracingId)
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-      .postProtoWithJsonResponse[SkeletonTracings, String](tracings)
+      .postProto[SkeletonTracings](tracings)
   }
 
-  def mergeVolumeTracingsByContents(tracings: VolumeTracings,
+  def mergeVolumeTracingsByContents(newAnnotationId: ObjectId,
+                                    newTracingId: String,
+                                    tracings: VolumeTracings,
                                     dataSource: DataSourceLike,
-                                    initialData: List[Option[File]]): Fox[String] = {
+                                    initialData: List[Option[File]]): Fox[Unit] = {
     logger.debug("Called to merge VolumeTracings by contents." + baseInfo)
     for {
-      tracingId <- rpc(s"${tracingStore.url}/tracings/volume/mergedFromContents")
+      _ <- rpc(s"${tracingStore.url}/tracings/volume/mergedFromContents")
+        .addQueryString("newTracingId" -> newTracingId)
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-        .postProtoWithJsonResponse[VolumeTracings, String](tracings)
+        .postProto[VolumeTracings](tracings)
       packedVolumeDataZips = packVolumeDataZips(initialData.flatten)
-      _ = tracingDataSourceTemporaryStore.store(tracingId, dataSource)
-      _ <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId/initialDataMultiple").withLongTimeout
+      _ = annotationDataSourceTemporaryStore.store(newAnnotationId, dataSource)
+      _ <- rpc(s"${tracingStore.url}/tracings/volume/$newTracingId/initialDataMultiple").withLongTimeout
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+        .addQueryString("annotationId" -> newAnnotationId.toString)
         .postFile(packedVolumeDataZips)
-    } yield tracingId
+    } yield ()
   }
 
   private def packVolumeDataZips(files: List[File]): File =
     ZipIO.zipToTempFile(files)
 
-  def saveVolumeTracing(tracing: VolumeTracing,
+  def saveVolumeTracing(annotationId: ObjectId,
+                        newTracingId: String,
+                        tracing: VolumeTracing,
                         initialData: Option[File] = None,
                         magRestrictions: MagRestrictions = MagRestrictions.empty,
-                        dataSource: Option[DataSourceLike] = None,
-                        newTracingId: Option[String] = None): Fox[String] = {
-    logger.debug("Called to create VolumeTracing." + baseInfo)
+                        dataSource: DataSourceLike): Fox[Unit] = {
+    logger.debug(s"Called to save VolumeTracing at $newTracingId for annotation $annotationId." + baseInfo)
+    annotationDataSourceTemporaryStore.store(annotationId, dataSource)
     for {
-      tracingId <- rpc(s"${tracingStore.url}/tracings/volume/save")
+      _ <- rpc(s"${tracingStore.url}/tracings/volume/save")
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-        .addQueryStringOptional("newTracingId", newTracingId)
-        .postProtoWithJsonResponse[VolumeTracing, String](tracing)
-      _ = dataSource.foreach(d => tracingDataSourceTemporaryStore.store(tracingId, d))
-      _ <- initialData match {
-        case Some(file) =>
-          rpc(s"${tracingStore.url}/tracings/volume/$tracingId/initialData").withLongTimeout
-            .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-            .addQueryStringOptional("minMag", magRestrictions.minStr)
-            .addQueryStringOptional("maxMag", magRestrictions.maxStr)
-            .postFile(file)
-        case _ =>
-          Fox.successful(())
+        .addQueryString("newTracingId" -> newTracingId)
+        .postProto[VolumeTracing](tracing)
+      _ <- Fox.runOptional(initialData) { initialDataFile =>
+        rpc(s"${tracingStore.url}/tracings/volume/$newTracingId/initialData").withLongTimeout
+          .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+          .addQueryString("annotationId" -> annotationId.toString)
+          .addQueryStringOptional("minMag", magRestrictions.minStr)
+          .addQueryStringOptional("maxMag", magRestrictions.maxStr)
+          .postFile(initialDataFile)
       }
-    } yield tracingId
+    } yield ()
   }
 
   def getVolumeTracing(annotationId: ObjectId,

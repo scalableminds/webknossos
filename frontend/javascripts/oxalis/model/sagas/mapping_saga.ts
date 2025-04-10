@@ -225,7 +225,7 @@ function createBucketRetrievalSourceChannel(layerName: string) {
   }, buffers.sliding<BucketRetrievalSource>(1));
 }
 
-function* watchChangedBucketsForLayer(layerName: string): Saga<void> {
+function* watchChangedBucketsForLayer(layerName: string): Saga<never> {
   const dataCube = yield* call([Model, Model.getCubeByLayerName], layerName);
   const bucketChannel = yield* call(createBucketDataChangedChannel, dataCube);
 
@@ -427,7 +427,7 @@ function* updateLocalHdf5Mapping(
   mappingType: MappingType,
 ): Saga<void> {
   const dataset = yield* select((state) => state.dataset);
-  const annotation = yield* select((state) => state.tracing);
+  const annotation = yield* select((state) => state.annotation);
   // If there is a fallbackLayer, request mappings for that instead of the tracing segmentation layer
   const mappingLayerName =
     "fallbackLayer" in layerInfo && layerInfo.fallbackLayer != null
@@ -651,7 +651,7 @@ function* ensureMappingsAreLoadedAndRequestedMappingExists(
   );
 
   const editableMappings = yield* select((state) =>
-    state.tracing.volumes
+    state.annotation.volumes
       .filter((volumeTracing) => volumeTracing.hasEditableMapping)
       .map((volumeTracing) => volumeTracing.mappingName),
   );

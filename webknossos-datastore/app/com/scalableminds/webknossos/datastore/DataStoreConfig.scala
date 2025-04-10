@@ -2,12 +2,13 @@ package com.scalableminds.webknossos.datastore
 
 import com.google.inject.Inject
 import com.scalableminds.util.tools.ConfigReader
+import com.typesafe.config.Config
 import play.api.Configuration
 
 import scala.concurrent.duration._
 
 class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigReader {
-  override def raw: Configuration = configuration
+  override val raw: Configuration = configuration
 
   object Http {
     val uri: String = get[String]("http.uri")
@@ -55,6 +56,9 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
     }
     object ReportUsedStorage {
       val enabled: Boolean = get[Boolean]("datastore.reportUsedStorage.enabled")
+    }
+    object DataVaults {
+      val credentials: List[Config] = getList[Config]("datastore.dataVaults.credentials")
     }
     val children = List(WebKnossos, WatchFileSystem, Cache, AdHocMesh, Redis, AgglomerateSkeleton)
   }

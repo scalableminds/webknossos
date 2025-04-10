@@ -31,7 +31,7 @@ import {
 } from "oxalis/model/actions/view_mode_actions";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { voxelToUnit } from "oxalis/model/scaleinfo";
-import type { CameraData, OxalisState, Tracing } from "oxalis/store";
+import type { CameraData, OxalisState, StoreAnnotation } from "oxalis/store";
 import Store from "oxalis/store";
 import type PlaneView from "oxalis/view/plane_view";
 import * as React from "react";
@@ -83,7 +83,7 @@ const INVALID_ACTIVE_NODE_ID = -1;
 type OwnProps = {
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
   planeView?: PlaneView;
-  tracing?: Tracing;
+  annotation?: StoreAnnotation;
 };
 type StateProps = {
   voxelSize: VoxelSize;
@@ -92,8 +92,8 @@ type StateProps = {
 type Props = OwnProps & StateProps;
 
 function maybeGetActiveNodeFromProps(props: Props) {
-  return props.tracing?.skeleton?.activeNodeId != null
-    ? props.tracing.skeleton.activeNodeId
+  return props.annotation?.skeleton?.activeNodeId != null
+    ? props.annotation.skeleton.activeNodeId
     : INVALID_ACTIVE_NODE_ID;
 }
 
@@ -114,13 +114,13 @@ class TDController extends React.PureComponent<Props> {
     if (
       maybeGetActiveNodeFromProps(this.props) !== maybeGetActiveNodeFromProps(prevProps) &&
       maybeGetActiveNodeFromProps(this.props) !== INVALID_ACTIVE_NODE_ID &&
-      this.props.tracing &&
-      this.props.tracing.skeleton
+      this.props.annotation &&
+      this.props.annotation.skeleton
     ) {
       // The rotation center of this viewport is not updated to the new position after selecting a node in the viewport.
       // This happens because the selection of the node does not trigger a call to setTargetAndFixPosition directly.
       // Thus we do it manually whenever the active node changes.
-      const activeNode = getActiveNode(this.props.tracing.skeleton);
+      const activeNode = getActiveNode(this.props.annotation.skeleton);
       if (activeNode) {
         this.setTargetAndFixPosition(getNodePosition(activeNode, Store.getState()));
       }
@@ -182,7 +182,7 @@ class TDController extends React.PureComponent<Props> {
 
   getTDViewMouseControls(): Record<string, any> {
     const skeletonControls =
-      this.props.tracing?.skeleton != null && this.props.planeView != null
+      this.props.annotation?.skeleton != null && this.props.planeView != null
         ? getTDViewMouseControlsSkeleton(this.props.planeView)
         : null;
     const controls = {
@@ -205,7 +205,10 @@ class TDController extends React.PureComponent<Props> {
           return;
         }
 
-        this.props.planeView.throttledPerformMeshHitTest([position.x, position.y]);
+        this.props.planeView.performMeshHitTest([position.x, position.y]);
+      },
+      out: () => {
+        this.props.planeView?.clearLastMeshHitTest();
       },
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         if (skeletonControls != null) {
@@ -232,10 +235,7 @@ class TDController extends React.PureComponent<Props> {
         }
         const { hitPosition } = intersection;
 
-        const unscaledPosition = V3.divide3(
-          hitPosition.toArray() as Vector3,
-          this.props.voxelSize.factor,
-        );
+        const unscaledPosition = V3.divide3(hitPosition, this.props.voxelSize.factor);
 
         if (event.shiftKey) {
           Store.dispatch(setPositionAction(unscaledPosition));
@@ -276,16 +276,16 @@ class TDController extends React.PureComponent<Props> {
 
   getMeshIntersection(pos: Point2) {
     if (this.props.planeView == null) return null;
-    const intersection = this.props.planeView.performMeshHitTest([pos.x, pos.y]);
-    if (intersection == null) {
+    const hitResult = this.props.planeView.performMeshHitTest([pos.x, pos.y]);
+    if (hitResult == null) {
       return null;
     }
-    const meshId: number | null = intersection
-      ? _.get(intersection.object.parent, "segmentId", null)
+    const meshId: number | null = hitResult
+      ? _.get(hitResult.node.parent, "segmentId", null)
       : null;
-    const unmappedSegmentId: number | null = _.get(intersection?.object, "unmappedSegmentId", null);
-    const meshClickedPosition = intersection ? (intersection.point.toArray() as Vector3) : null;
-    return { meshId, unmappedSegmentId, meshClickedPosition, hitPosition: intersection.point };
+    const unmappedSegmentId: number | null = hitResult?.unmappedSegmentId || null;
+    const meshClickedPosition = hitResult ? hitResult.point : null;
+    return { meshId, unmappedSegmentId, meshClickedPosition, hitPosition: hitResult.point };
   }
 
   setTargetAndFixPosition = (position?: Vector3): void => {

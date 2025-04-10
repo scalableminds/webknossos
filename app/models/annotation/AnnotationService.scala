@@ -21,6 +21,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 }
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.annotation.AnnotationLayerParameters
+import com.scalableminds.webknossos.tracingstore.tracings.TracingId
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   MagRestrictions,
@@ -140,6 +141,9 @@ class AnnotationService @Inject()(
           remoteDatastoreClient.hasSegmentIndexFile(datasetOrganizationId, dataSource.id.directoryName, layer.name)
         case None => Fox.successful(false)
       }
+      elementClassProto <- ElementClass
+        .toProto(fallbackLayer.map(layer => layer.elementClass).getOrElse(VolumeTracingDefaults.elementClass))
+        .toFox
     } yield
       VolumeTracing(
         None,
@@ -148,8 +152,7 @@ class AnnotationService @Inject()(
         dataSource.id.directoryName,
         vec3IntToProto(startPosition.getOrElse(dataSource.center)),
         vec3DoubleToProto(startRotation.getOrElse(vec3DoubleFromProto(VolumeTracingDefaults.editRotation))),
-        elementClassToProto(
-          fallbackLayer.map(layer => layer.elementClass).getOrElse(VolumeTracingDefaults.elementClass)),
+        elementClassProto,
         fallbackLayer.map(_.name),
         combineLargestSegmentIdsByPrecedence(fromNml = None, fromFallbackLayer = fallbackLayer.map(_.largestSegmentId)),
         0,
@@ -252,6 +255,7 @@ class AnnotationService @Inject()(
       mp: MessagesProvider): Fox[List[AnnotationLayer]] =
     for {
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
+      dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable) ?~> "dataset.dataSource.notUsable"
       newAnnotationLayers <- Fox.serialCombined(allAnnotationLayerParameters) { annotationLayerParameters =>
         for {
           tracing <- createTracingForExplorational(dataset,
@@ -261,12 +265,14 @@ class AnnotationService @Inject()(
                                                    previousVersion = None)
           layerName = annotationLayerParameters.name.getOrElse(
             AnnotationLayer.defaultNameForType(annotationLayerParameters.typ))
-          tracingId <- tracing match {
-            case Left(skeleton) => tracingStoreClient.saveSkeletonTracing(skeleton)
-            case Right(volume)  => tracingStoreClient.saveVolumeTracing(volume)
+          newTracingId = TracingId.generate
+          _ <- tracing match {
+            case Left(skeleton) => tracingStoreClient.saveSkeletonTracing(skeleton, newTracingId)
+            case Right(volume) =>
+              tracingStoreClient.saveVolumeTracing(annotationId, newTracingId, volume, dataSource = dataSource)
           }
         } yield
-          AnnotationLayer(tracingId,
+          AnnotationLayer(newTracingId,
                           annotationLayerParameters.typ,
                           layerName,
                           AnnotationLayerStatistics.zeroedForType(annotationLayerParameters.typ))
@@ -287,19 +293,18 @@ class AnnotationService @Inject()(
       _ <- tracingStoreClient.saveAnnotationProto(annotationId, annotationProto)
     } yield newAnnotationLayers
 
-  def createExplorationalFor(user: User,
-                             datasetId: ObjectId,
-                             annotationLayerParameters: List[AnnotationLayerParameters])(
+  def createExplorationalFor(user: User, dataset: Dataset, annotationLayerParameters: List[AnnotationLayerParameters])(
       implicit ctx: DBAccessContext,
-      m: MessagesProvider): Fox[Annotation] =
+      m: MessagesProvider): Fox[Annotation] = {
+    val newAnnotationId = ObjectId.generate
+    val datasetId = dataset._id
     for {
-      dataset <- datasetDAO.findOne(datasetId) ?~> "dataset.noAccessById"
-      newAnnotationId = ObjectId.generate
       annotationLayers <- createLayersForExplorational(dataset, newAnnotationId, annotationLayerParameters) ?~> "annotation.createTracings.failed"
       teamId <- selectSuitableTeam(user, dataset) ?~> "annotation.create.forbidden"
       annotation = Annotation(newAnnotationId, datasetId, None, teamId, user._id, annotationLayers)
       _ <- annotationDAO.insertOne(annotation)
     } yield annotation
+  }
 
   // WARNING: needs to be repeatable, might be called multiple times for an annotation
   def finish(annotation: Annotation, user: User, restrictions: AnnotationRestrictions)(
@@ -374,10 +379,9 @@ class AnnotationService @Inject()(
       _ <- annotationDAO.updateInitialized(newAnnotation)
     } yield newAnnotation
 
-  def createSkeletonTracingBase(datasetId: ObjectId,
-                                boundingBox: Option[BoundingBox],
+  def createSkeletonTracingBase(boundingBox: Option[BoundingBox],
                                 startPosition: Vec3Int,
-                                startRotation: Vec3Double)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
+                                startRotation: Vec3Double): SkeletonTracing = {
     val initialNode = NodeDefaults.createInstance.withId(1).withPosition(startPosition).withRotation(startRotation)
     val initialTree = Tree(
       1,
@@ -389,19 +393,16 @@ class AnnotationService @Inject()(
       "",
       System.currentTimeMillis()
     )
-    for {
-      dataset <- datasetDAO.findOne(datasetId)
-    } yield
-      SkeletonTracingDefaults.createInstance.copy(
-        datasetName = dataset.name,
-        boundingBox = boundingBox.flatMap { box =>
-          if (box.isEmpty) None else Some(box)
-        },
-        editPosition = startPosition,
-        editRotation = startRotation,
-        activeNodeId = Some(1),
-        trees = Seq(initialTree)
-      )
+    SkeletonTracingDefaults.createInstance.copy(
+      datasetName = "unused",
+      boundingBox = boundingBox.flatMap { box =>
+        if (box.isEmpty) None else Some(box)
+      },
+      editPosition = startPosition,
+      editRotation = startRotation,
+      activeNodeId = Some(1),
+      trees = Seq(initialTree)
+    )
   }
 
   def createVolumeTracingBase(

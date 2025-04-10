@@ -25,7 +25,6 @@ import {
 import type { EditableMapping, Mapping, MappingType, OxalisState } from "oxalis/store";
 import { SwitchSetting } from "oxalis/view/components/setting_input_views";
 import React from "react";
-import debounceRender from "react-debounce-render";
 import { connect } from "react-redux";
 import type { APISegmentationLayer } from "types/api_flow_types";
 
@@ -280,21 +279,14 @@ function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
     mappingType: activeMappingInfo.mappingType,
     segmentationLayer,
     isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,
-    allowUpdate: state.tracing.restrictions.allowUpdate,
+    allowUpdate: state.annotation.restrictions.allowUpdate,
     editableMapping,
     isEditableMappingActive: hasEditableMapping(state, ownProps.layerName),
     isMappingLocked: isMappingLocked(state, ownProps.layerName),
-    isAnnotationLockedByOwner: state.tracing.isLockedByOwner,
+    isAnnotationLockedByOwner: state.annotation.isLockedByOwner,
     isOwner: isAnnotationOwner(state),
   };
 }
 
-const debounceTime = 100;
-const maxWait = 500;
-
 const connector = connect(mapStateToProps, mapDispatchToProps);
-export default connector(
-  debounceRender(MappingSettingsView, debounceTime, {
-    maxWait,
-  }),
-);
+export default connector(MappingSettingsView);

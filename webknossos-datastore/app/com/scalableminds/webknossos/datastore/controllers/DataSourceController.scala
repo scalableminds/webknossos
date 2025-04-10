@@ -43,7 +43,7 @@ class DataSourceController @Inject()(
     connectomeFileService: ConnectomeFileService,
     segmentIndexFileService: SegmentIndexFileService,
     storageUsageService: DSUsedStorageService,
-    datasetErrorLoggingService: DatasetErrorLoggingService,
+    datasetErrorLoggingService: DSDatasetErrorLoggingService,
     exploreRemoteLayerService: ExploreRemoteLayerService,
     uploadService: UploadService,
     composeService: ComposeService,
@@ -113,7 +113,7 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.administrateDataSources(request.body.organization)) {
         for {
-          _ <- dsRemoteWebknossosClient.reserveDataSourceUpload(
+          reservedDatasetInfo <- dsRemoteWebknossosClient.reserveDataSourceUpload(
             ReserveUploadInformation(
               "aManualUpload",
               request.body.datasetName,
@@ -121,11 +121,16 @@ class DataSourceController @Inject()(
               0,
               List.empty,
               None,
+              None,
               request.body.initialTeamIds,
-              request.body.folderId
+              request.body.folderId,
+              Some(request.body.requireUniqueName)
             )
           ) ?~> "dataset.upload.validation.failed"
-        } yield Ok
+        } yield
+          Ok(
+            Json.obj("newDatasetId" -> reservedDatasetInfo.newDatasetId,
+                     "directoryName" -> reservedDatasetInfo.directoryName))
       }
     }
 
@@ -149,16 +154,17 @@ class DataSourceController @Inject()(
         tuple(
           "resumableChunkNumber" -> number,
           "resumableChunkSize" -> number,
+          "resumableCurrentChunkSize" -> number,
           "resumableTotalChunks" -> longNumber,
           "resumableIdentifier" -> nonEmptyText
-        )).fill((-1, -1, -1, ""))
+        )).fill((-1, -1, -1, -1, ""))
 
       uploadForm
         .bindFromRequest(request.body.dataParts)
         .fold(
           hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
           success = {
-            case (chunkNumber, chunkSize, totalChunkCount, uploadFileId) =>
+            case (chunkNumber, chunkSize, currentChunkSize, totalChunkCount, uploadFileId) =>
               for {
                 dataSourceId <- uploadService.getDataSourceIdByUploadId(
                   uploadService.extractDatasetUploadId(uploadFileId)) ?~> "dataset.upload.validation.failed"
@@ -170,6 +176,7 @@ class DataSourceController @Inject()(
                     chunkFile <- request.body.file("file") ?~> "zip.file.notFound"
                     _ <- uploadService.handleUploadChunk(uploadFileId,
                                                          chunkSize,
+                                                         currentChunkSize,
                                                          totalChunkCount,
                                                          chunkNumber,
                                                          new File(chunkFile.ref.path.toString))
@@ -412,9 +419,11 @@ class DataSourceController @Inject()(
               organization = organizationId,
               totalFileCount = 1,
               filePaths = None,
+              totalFileSizeInBytes = None,
               layersToLink = None,
               initialTeams = List.empty,
               folderId = folderId,
+              requireUniqueName = Some(false),
             )
           ) ?~> "dataset.upload.validation.failed"
           datasourceId = DataSourceId(reservedAdditionalInfo.directoryName, organizationId)

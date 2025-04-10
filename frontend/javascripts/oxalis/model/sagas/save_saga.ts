@@ -7,6 +7,7 @@ import Toast from "libs/toast";
 import { sleep } from "libs/utils";
 import window, { alert, document, location } from "libs/window";
 import _ from "lodash";
+import memoizeOne from "memoize-one";
 import messages from "messages";
 import { ControlModeEnum } from "oxalis/constants";
 import { getMagInfo } from "oxalis/model/accessors/dataset_accessor";
@@ -57,7 +58,7 @@ import { takeEveryWithBatchActionSupport } from "./saga_helpers";
 
 const ONE_YEAR_MS = 365 * 24 * 3600 * 1000;
 
-export function* pushSaveQueueAsync(): Saga<void> {
+export function* pushSaveQueueAsync(): Saga<never> {
   yield* call(ensureWkReady);
 
   yield* put(setLastSaveTimestampAction());
@@ -87,7 +88,7 @@ export function* pushSaveQueueAsync(): Saga<void> {
     });
     yield* put(setSaveBusyAction(true));
 
-    // Send (parts) of the save queue to the server.
+    // Send (parts of) the save queue to the server.
     // There are two main cases:
     // 1) forcePush is true
     //    The user explicitly requested to save an annotation.
@@ -100,7 +101,7 @@ export function* pushSaveQueueAsync(): Saga<void> {
     //    The auto-save interval was reached at time T. The following code
     //    will determine how many items are in the save queue at this time T.
     //    Exactly that many items will be sent to the server.
-    //    New items that might be added to the save queue during saving, will
+    //    New items that might be added to the save queue during saving, will be
     //    ignored (they will be picked up in the next iteration of this loop).
     //    Otherwise, the risk of a high number of save-requests (see case 1)
     //    would be present here, too (note the risk would be greater, because the
@@ -118,7 +119,6 @@ export function* pushSaveQueueAsync(): Saga<void> {
         break;
       }
     }
-
     yield* put(setSaveBusyAction(false));
   }
 }
@@ -168,9 +168,9 @@ export function* sendSaveRequestToServer(): Saga<number> {
   const fullSaveQueue = yield* select((state) => state.save.queue);
   const saveQueue = sliceAppropriateBatchCount(fullSaveQueue);
   let compactedSaveQueue = compactSaveQueue(saveQueue);
-  const version = yield* select((state) => state.tracing.version);
-  const annotationId = yield* select((state) => state.tracing.annotationId);
-  const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
+  const version = yield* select((state) => state.annotation.version);
+  const annotationId = yield* select((state) => state.annotation.annotationId);
+  const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
   let versionIncrement;
   [compactedSaveQueue, versionIncrement] = addVersionNumbers(compactedSaveQueue, version);
   let retryCount = 0;
@@ -183,7 +183,6 @@ export function* sendSaveRequestToServer(): Saga<number> {
       const startTime = Date.now();
       yield* call(
         sendRequestWithToken,
-
         `${tracingStoreUrl}/tracings/annotation/${annotationId}/update?token=`,
         {
           method: "POST",
@@ -281,12 +280,16 @@ export function* sendSaveRequestToServer(): Saga<number> {
 }
 
 function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>) {
+  const getLayerAndMagInfoForTracingId = memoizeOne((tracingId: string) => {
+    const segmentationLayer = Model.getSegmentationTracingLayer(tracingId);
+    const segmentationMagInfo = getMagInfo(segmentationLayer.mags);
+    return [segmentationLayer, segmentationMagInfo] as const;
+  });
   for (const saveEntry of saveQueue) {
     for (const updateAction of saveEntry.actions) {
       if (updateAction.name === "updateBucket") {
         const { actionTracingId: tracingId } = updateAction.value;
-        const segmentationLayer = Model.getSegmentationTracingLayer(tracingId);
-        const segmentationMagInfo = yield* call(getMagInfo, segmentationLayer.mags);
+        const [segmentationLayer, segmentationMagInfo] = getLayerAndMagInfoForTracingId(tracingId);
 
         const { position, mag, additionalCoordinates } = updateAction.value;
         const magIndex = segmentationMagInfo.getIndexByMag(mag);
@@ -377,7 +380,7 @@ export function* saveTracingAsync(): Saga<void> {
 
 export function* setupSavingForTracingType(
   initializeAction: InitializeSkeletonTracingAction | InitializeVolumeTracingAction,
-): Saga<void> {
+): Saga<never> {
   /*
     Listen to changes to the annotation and derive UpdateActions from the
     old and new state.
@@ -413,7 +416,8 @@ export function* setupSavingForTracingType(
 
     // The allowUpdate setting could have changed in the meantime
     const allowUpdate = yield* select(
-      (state) => state.tracing.restrictions.allowUpdate && state.tracing.restrictions.allowSave,
+      (state) =>
+        state.annotation.restrictions.allowUpdate && state.annotation.restrictions.allowSave,
     );
     if (!allowUpdate) continue;
     const tracing = (yield* select((state) => selectTracing(state, saveQueueType, tracingId))) as
@@ -450,10 +454,11 @@ const VERSION_POLL_INTERVAL_COLLAB = 10 * 1000;
 const VERSION_POLL_INTERVAL_READ_ONLY = 60 * 1000;
 const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 30 * 1000;
 
-function* watchForSaveConflicts() {
+function* watchForSaveConflicts(): Saga<never> {
   function* checkForNewVersion() {
     const allowSave = yield* select(
-      (state) => state.tracing.restrictions.allowSave && state.tracing.restrictions.allowUpdate,
+      (state) =>
+        state.annotation.restrictions.allowSave && state.annotation.restrictions.allowUpdate,
     );
     if (allowSave) {
       // The active user is currently the only one that is allowed to mutate the annotation.
@@ -476,10 +481,10 @@ function* watchForSaveConflicts() {
       return;
     }
 
-    const maybeSkeletonTracing = yield* select((state) => state.tracing.skeleton);
-    const volumeTracings = yield* select((state) => state.tracing.volumes);
-    const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
-    const annotationId = yield* select((state) => state.tracing.annotationId);
+    const maybeSkeletonTracing = yield* select((state) => state.annotation.skeleton);
+    const volumeTracings = yield* select((state) => state.annotation.volumes);
+    const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
+    const annotationId = yield* select((state) => state.annotation.annotationId);
 
     const tracings: Array<SkeletonTracing | VolumeTracing> = _.compact([
       ...volumeTracings,
@@ -496,50 +501,48 @@ function* watchForSaveConflicts() {
       annotationId,
     );
 
-    for (const tracing of tracings) {
-      // Read the tracing version again from the store, since the
-      // old reference to tracing might be outdated now due to the
-      // immutability.
-      const versionOnClient = yield* select((state) => {
-        return state.tracing.version;
-      });
+    // Read the tracing version again from the store, since the
+    // old reference to tracing might be outdated now due to the
+    // immutability.
+    const versionOnClient = yield* select((state) => {
+      return state.annotation.version;
+    });
 
-      const toastKey = `save_conflicts_warning_${tracing.tracingId}`;
-      if (versionOnServer > versionOnClient) {
-        // The latest version on the server is greater than the most-recently
-        // stored version.
+    const toastKey = "save_conflicts_warning";
+    if (versionOnServer > versionOnClient) {
+      // The latest version on the server is greater than the most-recently
+      // stored version.
 
-        const saveQueue = yield* select((state) => state.save.queue);
+      const saveQueue = yield* select((state) => state.save.queue);
 
-        let msg = "";
-        if (!allowSave) {
-          msg =
-            "A newer version of this annotation was found on the server. Reload the page to see the newest changes.";
-        } else if (saveQueue.length > 0) {
-          msg =
-            "A newer version of this annotation was found on the server. Your current changes to this annotation cannot be saved anymore.";
-        } else {
-          msg =
-            "A newer version of this annotation was found on the server. Please reload the page to see the newer version. Otherwise, changes to the annotation cannot be saved anymore.";
-        }
-        Toast.warning(msg, {
-          sticky: true,
-          key: toastKey,
-        });
+      let msg = "";
+      if (!allowSave) {
+        msg =
+          "A newer version of this annotation was found on the server. Reload the page to see the newest changes.";
+      } else if (saveQueue.length > 0) {
+        msg =
+          "A newer version of this annotation was found on the server. Your current changes to this annotation cannot be saved anymore.";
       } else {
-        Toast.close(toastKey);
+        msg =
+          "A newer version of this annotation was found on the server. Please reload the page to see the newer version. Otherwise, changes to the annotation cannot be saved anymore.";
       }
+      Toast.warning(msg, {
+        sticky: true,
+        key: toastKey,
+      });
+    } else {
+      Toast.close(toastKey);
     }
   }
 
   function* getPollInterval(): Saga<number> {
-    const allowSave = yield* select((state) => state.tracing.restrictions.allowSave);
+    const allowSave = yield* select((state) => state.annotation.restrictions.allowSave);
     if (!allowSave) {
       // The current user may not edit/save the annotation.
       return VERSION_POLL_INTERVAL_READ_ONLY;
     }
 
-    const othersMayEdit = yield* select((state) => state.tracing.othersMayEdit);
+    const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
     if (othersMayEdit) {
       // Other users may edit the annotation.
       return VERSION_POLL_INTERVAL_COLLAB;

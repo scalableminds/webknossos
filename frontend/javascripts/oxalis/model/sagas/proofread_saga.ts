@@ -38,7 +38,6 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   dispatchMaybeFetchMeshFilesAsync,
-  refreshMeshAction,
   removeMeshAction,
 } from "oxalis/model/actions/annotation_actions";
 import type {
@@ -66,7 +65,7 @@ import {
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { select, take } from "oxalis/model/sagas/effect-generators";
+import { select } from "oxalis/model/sagas/effect-generators";
 import {
   type UpdateActionWithoutIsolationRequirement,
   mergeAgglomerate,
@@ -168,14 +167,7 @@ function* loadCoarseMesh(
   );
 
   if (meshInfo != null) {
-    if (meshInfo.isPrecomputed && meshInfo.areChunksMerged) {
-      console.log(
-        `Reloading mesh for segment ${segmentId} because its chunks should not be merged for proofreading.`,
-      );
-      yield* put(refreshMeshAction(layerName, segmentId));
-    } else {
-      console.log(`Don't load mesh for segment ${segmentId} because it already exists.`);
-    }
+    console.log(`Don't load mesh for segment ${segmentId} because it already exists.`);
     return;
   }
 
@@ -193,7 +185,6 @@ function* loadCoarseMesh(
         additionalCoordinates,
         currentMeshFile.meshFileName,
         undefined,
-        false,
       ),
     );
   } else {
@@ -227,7 +218,7 @@ function* checkForAgglomerateSkeletonModification(
     ({ nodeId, treeId } = action);
   }
 
-  const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.tracing));
+  const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.annotation));
 
   getNodeAndTree(skeletonTracing, nodeId, treeId, TreeTypeEnum.AGGLOMERATE).map((_) => {
     Toast.warning(
@@ -253,7 +244,7 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
 
   if (!proofreadUsingMeshes()) return;
 
-  /* Load a coarse ad hoc mesh of the agglomerate at the click position */
+  /* Load a coarse ad-hoc mesh of the agglomerate at the click position */
   yield* call(loadCoarseMesh, layerName, segmentId, position, additionalCoordinates);
 }
 
@@ -273,7 +264,7 @@ function* createEditableMapping(): Saga<string> {
   const layerName = volumeTracingId;
   const baseMappingName = volumeTracing.mappingName;
   yield* put(setMappingNameAction(layerName, volumeTracingId, "HDF5"));
-  yield* put(setHasEditableMappingAction());
+  yield* put(setHasEditableMappingAction(volumeTracingId));
   // Ensure a saved state so that the mapping is locked and editable before doing the first proofreading operation.
   yield* call([Model, Model.ensureSavedState]);
   const editableMapping: ServerEditableMapping = {
@@ -320,11 +311,11 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     return;
   }
 
-  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
+  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
   if (!allowUpdate) return;
 
   const { sourceNodeId, targetNodeId } = action;
-  const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.tracing));
+  const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.annotation));
   const { trees } = skeletonTracing;
   const sourceTree = findTreeByNodeId(trees, sourceNodeId);
   const targetTree = findTreeByNodeId(trees, targetNodeId);
@@ -538,7 +529,7 @@ function* performMinCut(
     return true;
   }
 
-  const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
+  const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
   const segmentsInfo = {
     segmentId1: sourceSegmentId,
     segmentId2: targetSegmentId,
@@ -604,7 +595,7 @@ function* performCutFromNeighbors(
 ): Saga<
   { didCancel: false; neighborInfo: NeighborInfo } | { didCancel: true; neighborInfo?: null }
 > {
-  const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
+  const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
   const segmentsInfo = {
     segmentId,
     mag: agglomerateFileMag,
@@ -701,7 +692,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     return;
   }
 
-  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
+  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
   if (!allowUpdate) return;
 
   const preparation = yield* call(prepareSplitOrMerge, false);
@@ -894,7 +885,7 @@ function* handleProofreadCutFromNeighbors(action: Action) {
   // This action does not depend on the active agglomerate. Instead, it
   // only depends on the rightclicked agglomerate.
 
-  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
+  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
   if (!allowUpdate) return;
 
   const preparation = yield* call(prepareSplitOrMerge, false);
@@ -1279,8 +1270,8 @@ function* splitAgglomerateInMapping(
     .filter(([_segmentId, agglomerateId]) => agglomerateId === comparableSourceAgglomerateId)
     .map(([segmentId, _agglomerateId]) => segmentId);
 
-  const annotationId = yield* select((state) => state.tracing.annotationId);
-  const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
+  const annotationId = yield* select((state) => state.annotation.annotationId);
+  const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
   // Ask the server to map the (split) segment ids. This creates a partial mapping
   // that only contains these ids.
   const mappingAfterSplit = yield* call(

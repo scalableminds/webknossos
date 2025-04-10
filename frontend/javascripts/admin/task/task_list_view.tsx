@@ -375,8 +375,7 @@ function TaskListView({ initialFieldValues }: Props) {
           </div>
           {task.status.pending > 0 ? (
             <div>
-              <LinkButton onClick={_.partial(assignTaskToUser, task)}>
-                <UserAddOutlined className="icon-margin-right" />
+              <LinkButton onClick={_.partial(assignTaskToUser, task)} icon={<UserAddOutlined />}>
                 Manually Assign to User
               </LinkButton>
             </div>
@@ -397,8 +396,7 @@ function TaskListView({ initialFieldValues }: Props) {
             </div>
           ) : null}
           <div>
-            <LinkButton onClick={_.partial(deleteTask, task)}>
-              <DeleteOutlined className="icon-margin-right" />
+            <LinkButton onClick={_.partial(deleteTask, task)} icon={<DeleteOutlined />}>
               Delete
             </LinkButton>
           </div>

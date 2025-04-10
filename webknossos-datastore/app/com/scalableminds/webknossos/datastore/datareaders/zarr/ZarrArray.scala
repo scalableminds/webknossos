@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.cache.AlfuCache
@@ -20,7 +21,8 @@ object ZarrArray extends LazyLogging {
            axisOrderOpt: Option[AxisOrder],
            channelIndex: Option[Int],
            additionalAxes: Option[Seq[AdditionalAxis]],
-           sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[ZarrArray] =
+           sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext,
+                                                                    tc: TokenContext): Fox[ZarrArray] =
     for {
       headerBytes <- (path / ZarrHeader.FILENAME_DOT_ZARRAY)
         .readBytes() ?~> s"Could not read header at ${ZarrHeader.FILENAME_DOT_ZARRAY}"

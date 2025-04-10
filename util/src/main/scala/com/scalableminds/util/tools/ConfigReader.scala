@@ -5,7 +5,7 @@ import com.typesafe.config.Config
 import play.api.{ConfigLoader, Configuration}
 
 trait ConfigReader {
-  def raw: Configuration
+  val raw: Configuration
 
   implicit val instantConfigLoader: ConfigLoader[Instant] = (rootConfig: Config, path: String) => {
     val literal = rootConfig.getString(path)
@@ -13,6 +13,11 @@ trait ConfigReader {
       throw new IllegalArgumentException(
         s"Cannot read config value “$literal” for $path as Instant. Expected ISO date like “2023-01-01T00:00:00Z”")
     }
+  }
+
+  implicit val bigDecimalConfigLoader: ConfigLoader[BigDecimal] = (rootConfig: Config, path: String) => {
+    val literal = rootConfig.getString(path)
+    BigDecimal(literal)
   }
 
   def get[A](path: String)(implicit loader: ConfigLoader[A]): A =

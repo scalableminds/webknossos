@@ -5,7 +5,7 @@ import type {
   OxalisState,
   ReadOnlyTracing,
   SkeletonTracing,
-  Tracing,
+  StoreAnnotation,
   UserBoundingBox,
   VolumeTracing,
 } from "oxalis/store";
@@ -14,22 +14,22 @@ import { TracingTypeEnum } from "types/api_flow_types";
 import BoundingBox from "../bucket_data_handling/bounding_box";
 
 export function maybeGetSomeTracing(
-  tracing: Tracing,
+  annotation: StoreAnnotation,
 ): SkeletonTracing | VolumeTracing | ReadOnlyTracing | null {
-  if (tracing.skeleton != null) {
-    return tracing.skeleton;
-  } else if (tracing.volumes.length > 0) {
-    return tracing.volumes[0];
-  } else if (tracing.readOnly != null) {
-    return tracing.readOnly;
+  if (annotation.skeleton != null) {
+    return annotation.skeleton;
+  } else if (annotation.volumes.length > 0) {
+    return annotation.volumes[0];
+  } else if (annotation.readOnly != null) {
+    return annotation.readOnly;
   }
 
   return null;
 }
 export function getSomeTracing(
-  tracing: Tracing,
+  annotation: StoreAnnotation,
 ): SkeletonTracing | VolumeTracing | ReadOnlyTracing {
-  const maybeSomeTracing = maybeGetSomeTracing(tracing);
+  const maybeSomeTracing = maybeGetSomeTracing(annotation);
 
   if (maybeSomeTracing == null) {
     throw new Error("The active annotation does not contain skeletons nor volume data");
@@ -44,12 +44,12 @@ export function getSomeServerTracing(serverTracings: Array<ServerTracing>): Serv
 
   throw new Error("The active annotation does not contain skeletons nor volume data");
 }
-export function getTracingType(tracing: Tracing): TracingType {
-  if (tracing.skeleton != null && tracing.volumes.length > 0) {
+export function getTracingType(annotation: StoreAnnotation): TracingType {
+  if (annotation.skeleton != null && annotation.volumes.length > 0) {
     return TracingTypeEnum.hybrid;
-  } else if (tracing.skeleton != null) {
+  } else if (annotation.skeleton != null) {
     return TracingTypeEnum.skeleton;
-  } else if (tracing.volumes.length > 0) {
+  } else if (annotation.volumes.length > 0) {
     return TracingTypeEnum.volume;
   }
 
@@ -64,17 +64,17 @@ export function selectTracing(
 
   switch (tracingType) {
     case "skeleton": {
-      tracing = state.tracing.skeleton;
+      tracing = state.annotation.skeleton;
       break;
     }
     case "volume": {
-      tracing = state.tracing.volumes.find(
+      tracing = state.annotation.volumes.find(
         (volumeTracing) => volumeTracing.tracingId === tracingId,
       );
       break;
     }
     case "mapping": {
-      tracing = state.tracing.mappings.find((mapping) => mapping.tracingId === tracingId);
+      tracing = state.annotation.mappings.find((mapping) => mapping.tracingId === tracingId);
       break;
     }
     default: {
@@ -90,7 +90,7 @@ export function selectTracing(
 }
 
 export const getUserBoundingBoxesFromState = (state: OxalisState): Array<UserBoundingBox> => {
-  const maybeSomeTracing = maybeGetSomeTracing(state.tracing);
+  const maybeSomeTracing = maybeGetSomeTracing(state.annotation);
   return maybeSomeTracing != null ? maybeSomeTracing.userBoundingBoxes : [];
 };
 

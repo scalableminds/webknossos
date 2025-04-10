@@ -16,7 +16,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 class MailchimpTicker @Inject()(val lifecycle: ApplicationLifecycle,
-                                val system: ActorSystem,
+                                val actorSystem: ActorSystem,
                                 multiUserDAO: MultiUserDAO,
                                 mailchimpClient: MailchimpClient)(implicit val ec: ExecutionContext)
     extends IntervalScheduler
@@ -28,13 +28,12 @@ class MailchimpTicker @Inject()(val lifecycle: ApplicationLifecycle,
 
   override protected def tickerInitialDelay: FiniteDuration = 1 hour
 
-  override protected def tick(): Unit = {
+  override protected def tick(): Fox[Unit] = {
     logger.info("Checking if any users need mailchimp tagging...")
     for {
       multiUsers: List[MultiUser] <- multiUserDAO.findAll
       _ = multiUsers.foreach(withErrorLogging(_, tagUserByActivity))
     } yield ()
-    ()
   }
 
   private def withErrorLogging(multiUser: MultiUser, block: MultiUser => Fox[Unit]): Unit =

@@ -19,7 +19,23 @@ import type { OxalisState } from "oxalis/store";
 import type { APIOrganization, APIUser } from "types/api_flow_types";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 import { getTransformsPerLayer } from "./dataset_layer_transformation_accessor";
-import { isSkeletonLayerTransformed } from "./skeletontracing_accessor";
+import { isSkeletonLayerTransformed, isSkeletonLayerVisible } from "./skeletontracing_accessor";
+
+export const TOOL_NAMES = {
+  MOVE: "Move",
+  SKELETON: "Skeleton",
+  BRUSH: "Brush",
+  ERASE_BRUSH: "Erase (via Brush)",
+  TRACE: "Trace",
+  ERASE_TRACE: "Erase",
+  FILL_CELL: "Fill Tool",
+  PICK_CELL: "Segment Picker",
+  QUICK_SELECT: "Quick Select Tool",
+  BOUNDING_BOX: "Bounding Box Tool",
+  PROOFREAD: "Proofreading Tool",
+  LINE_MEASUREMENT: "Measurement Tool",
+  AREA_MEASUREMENT: "Area Measurement Tool",
+};
 
 const zoomInToUseToolMessage =
   "Please zoom in further to use this tool. If you want to edit volume data on this zoom level, create an annotation with restricted magnifications from the extended annotation menu in the dashboard.";
@@ -77,8 +93,11 @@ export function isBrushTool(activeTool: AnnotationTool): boolean {
 export function isTraceTool(activeTool: AnnotationTool): boolean {
   return activeTool === AnnotationToolEnum.TRACE || activeTool === AnnotationToolEnum.ERASE_TRACE;
 }
-const disabledSkeletonExplanation =
+const noSkeletonsExplanation =
   "This annotation does not have a skeleton. Please convert it to a hybrid annotation.";
+
+const disabledSkeletonExplanation =
+  "Currently all trees are invisible. To use this tool, make the skeleton layer visible by toggling the button in the left sidebar.";
 
 type DisabledInfo = {
   isDisabled: boolean;
@@ -97,8 +116,21 @@ const ALWAYS_ENABLED_TOOL_INFOS = {
   [AnnotationToolEnum.BOUNDING_BOX]: NOT_DISABLED_INFO,
 };
 
-function _getSkeletonToolInfo(hasSkeleton: boolean, isSkeletonLayerTransformed: boolean) {
+function _getSkeletonToolInfo(
+  hasSkeleton: boolean,
+  isSkeletonLayerTransformed: boolean,
+  areSkeletonsVisible: boolean,
+) {
   if (!hasSkeleton) {
+    return {
+      [AnnotationToolEnum.SKELETON]: {
+        isDisabled: true,
+        explanation: noSkeletonsExplanation,
+      },
+    };
+  }
+
+  if (!areSkeletonsVisible) {
     return {
       [AnnotationToolEnum.SKELETON]: {
         isDisabled: true,
@@ -196,7 +228,7 @@ function _getDisabledInfoForProofreadTool(
         activeUser,
       );
     } else {
-      explanation = disabledSkeletonExplanation;
+      explanation = noSkeletonsExplanation;
     }
   } else {
     explanation =
@@ -269,8 +301,8 @@ function getDisabledVolumeInfo(state: OxalisState) {
   const isInMergerMode = state.temporaryConfiguration.isMergerModeEnabled;
   const { activeMappingByLayer } = state.temporaryConfiguration;
   const isZoomInvalidForTracing = isMagRestrictionViolated(state);
-  const hasVolume = state.tracing.volumes.length > 0;
-  const hasSkeleton = state.tracing.skeleton != null;
+  const hasVolume = state.annotation.volumes.length > 0;
+  const hasSkeleton = state.annotation.skeleton != null;
   const segmentationTracingLayer = getActiveSegmentationTracing(state);
   const labeledMag = getRenderableMagForSegmentationTracing(state, segmentationTracingLayer)?.mag;
   const isSegmentationTracingVisibleForMag = labeledMag != null;
@@ -333,8 +365,13 @@ function getDisabledVolumeInfo(state: OxalisState) {
 
 const getVolumeDisabledWhenVolumeIsEnabled = memoizeOne(_getVolumeDisabledWhenVolumeIsEnabled);
 const _getDisabledInfoForTools = (state: OxalisState): Record<AnnotationToolEnum, DisabledInfo> => {
-  const hasSkeleton = state.tracing.skeleton != null;
-  const skeletonToolInfo = getSkeletonToolInfo(hasSkeleton, isSkeletonLayerTransformed(state));
+  const { annotation } = state;
+  const hasSkeleton = annotation.skeleton != null;
+  const skeletonToolInfo = getSkeletonToolInfo(
+    hasSkeleton,
+    isSkeletonLayerTransformed(state),
+    isSkeletonLayerVisible(annotation),
+  );
 
   const disabledVolumeInfo = getDisabledVolumeInfo(state);
   return {
@@ -409,3 +446,11 @@ export function adaptActiveToolToShortcuts(
 
   return activeTool;
 }
+
+export const getLabelForTool = (tool: AnnotationTool) => {
+  const toolName = TOOL_NAMES[tool];
+  if (toolName.endsWith("Tool")) {
+    return toolName;
+  }
+  return `${toolName} Tool`;
+};

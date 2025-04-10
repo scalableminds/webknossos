@@ -9,7 +9,12 @@ import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappin
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
 import com.scalableminds.webknossos.tracingstore.annotation.{UpdateAction, UpdateGroupHandling}
-import com.scalableminds.webknossos.tracingstore.tracings.{FallbackDataHelper, KeyValueStoreImplicits, TracingDataStore}
+import com.scalableminds.webknossos.tracingstore.tracings.{
+  FallbackDataHelper,
+  FossilDBPutBuffer,
+  KeyValueStoreImplicits,
+  TracingDataStore
+}
 import play.api.libs.json.Json
 
 import javax.inject.Inject
@@ -33,6 +38,7 @@ class EditableMappingMergeService @Inject()(val tracingDataStore: TracingDataSto
    * The earliestAccessibleVersion property ensures that the fully merged annotation is still the earliest accessible one.
    */
   def mergeEditableMappings(annotationIds: List[String],
+                            firstVolumeAnnotationIdOpt: Option[String],
                             newAnnotationId: String,
                             newVolumeTracingId: String,
                             tracingsWithIds: List[(VolumeTracing, String)],
@@ -41,8 +47,9 @@ class EditableMappingMergeService @Inject()(val tracingDataStore: TracingDataSto
       for {
         before <- Instant.nowFox
         _ <- bool2Fox(!toTemporaryStore) ?~> "Cannot merge editable mappings to temporary store (trying to merge compound annotations?)"
+        firstVolumeAnnotationId <- firstVolumeAnnotationIdOpt.toFox
         remoteFallbackLayers <- Fox.serialCombined(tracingsWithIds)(tracingWithId =>
-          remoteFallbackLayerFromVolumeTracing(tracingWithId._1, tracingWithId._2))
+          remoteFallbackLayerForVolumeTracing(tracingWithId._1, firstVolumeAnnotationId))
         remoteFallbackLayer <- SequenceUtils.findUniqueElement(remoteFallbackLayers) ?~> "Cannot merge editable mappings based on different dataset layers"
         editableMappingInfos <- Fox.serialCombined(tracingsWithIds) { tracingWithId =>
           tracingDataStore.editableMappingsInfo.get(tracingWithId._2)(fromProtoBytes[EditableMappingInfo])
@@ -53,12 +60,15 @@ class EditableMappingMergeService @Inject()(val tracingDataStore: TracingDataSto
         targetVersion = linearizedEditableMappingUpdates.length
         _ <- Fox.runIf(!toTemporaryStore) {
           var updateVersion = 1L
-          Fox.serialCombined(linearizedEditableMappingUpdates) { update: UpdateAction =>
-            for {
-              _ <- tracingDataStore.annotationUpdates.put(newAnnotationId, updateVersion, Json.toJson(List(update)))
-              _ = updateVersion += 1
-            } yield ()
-          }
+          val annotationUpdatesPutBuffer = new FossilDBPutBuffer(tracingDataStore.annotationUpdates)
+          Fox
+            .serialCombined(linearizedEditableMappingUpdates) { update: UpdateAction =>
+              for {
+                _ <- annotationUpdatesPutBuffer.put(newAnnotationId, Json.toJson(List(update)), Some(updateVersion))
+                _ = updateVersion += 1
+              } yield ()
+            }
+            .flatMap(_ => annotationUpdatesPutBuffer.flush())
         }
         editableMappingInfo = editableMappingService.create(baseMappingName)
         updater = new EditableMappingUpdater(

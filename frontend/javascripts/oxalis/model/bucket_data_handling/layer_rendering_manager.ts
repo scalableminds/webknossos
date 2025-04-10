@@ -10,7 +10,6 @@ import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type { BucketAddress, Vector3, Vector4, ViewMode } from "oxalis/constants";
 import {
-  getByteCount,
   getElementClass,
   getLayerByName,
   getMagInfo,
@@ -40,9 +39,8 @@ const CUSTOM_COLORS_TEXTURE_WIDTH = 512;
 const LOOKUP_CUCKOO_TEXTURE_WIDTH = 256;
 
 const asyncBucketPickRaw = createWorker(AsyncBucketPickerWorker);
-const asyncBucketPick: typeof asyncBucketPickRaw = memoizeOne(
-  asyncBucketPickRaw,
-  (oldArgs, newArgs) => _.isEqual(oldArgs, newArgs),
+const asyncBucketPick = memoizeOne(asyncBucketPickRaw, (oldArgs, newArgs) =>
+  _.isEqual(oldArgs, newArgs),
 );
 const dummyBuffer = new ArrayBuffer(0);
 export type EnqueueFunction = (arg0: Vector4, arg1: number) => void;
@@ -128,6 +126,7 @@ export default class LayerRenderingManager {
   currentBucketPickerTick: number = 0;
   latestTaskExecutor: LatestTaskExecutor<ArrayBuffer> = new LatestTaskExecutor();
   additionalCoordinates: AdditionalCoordinate[] | null = null;
+  maximumZoomForAllMags: number[] | null = null;
 
   cuckooTable: CuckooTableVec3 | undefined;
   storePropertyUnsubscribers: Array<() => void> = [];
@@ -153,18 +152,16 @@ export default class LayerRenderingManager {
 
   setupDataTextures(): void {
     const { dataset } = Store.getState();
-    const bytes = getByteCount(dataset, this.name);
     const elementClass = getElementClass(dataset, this.name);
     this.textureBucketManager = new TextureBucketManager(
       this.textureWidth,
       this.dataTextureCount,
-      bytes,
       elementClass,
     );
 
     const layerIndex = getGlobalLayerIndexForLayerName(this.name);
 
-    this.textureBucketManager.setupDataTextures(bytes, getSharedLookUpCuckooTable(), layerIndex);
+    this.textureBucketManager.setupDataTextures(getSharedLookUpCuckooTable(), layerIndex);
     shaderEditor.addBucketManagers(this.textureBucketManager);
 
     if (this.cube.isSegmentation) {
@@ -214,6 +211,7 @@ export default class LayerRenderingManager {
     const isVisible = isLayerVisible(dataset, this.name, datasetConfiguration, viewMode);
     const rects = getViewportRects(state);
     const additionalCoordinates = state.flycam.additionalCoordinates;
+    const maximumZoomForAllMags = state.flycamInfoCache.maximumZoomForAllMags[this.name];
 
     if (
       !_.isEqual(this.lastZoomedMatrix, matrix) ||
@@ -222,6 +220,7 @@ export default class LayerRenderingManager {
       isVisible !== this.lastIsVisible ||
       rects !== this.lastRects ||
       !_.isEqual(additionalCoordinates, this.additionalCoordinates) ||
+      !_.isEqual(maximumZoomForAllMags, this.maximumZoomForAllMags) ||
       this.needsRefresh
     ) {
       this.lastZoomedMatrix = matrix;
@@ -232,6 +231,7 @@ export default class LayerRenderingManager {
       this.needsRefresh = false;
       this.currentBucketPickerTick++;
       this.additionalCoordinates = additionalCoordinates;
+      this.maximumZoomForAllMags = maximumZoomForAllMags;
       this.pullQueue.clear();
       let pickingPromise: Promise<ArrayBuffer> = Promise.resolve(dummyBuffer);
 
@@ -284,6 +284,15 @@ export default class LayerRenderingManager {
 
   destroy() {
     this.storePropertyUnsubscribers.forEach((fn) => fn());
+    if (this.textureBucketManager != null) {
+      // In some tests, this.textureBucketManager is null (even
+      // though it should never be null in non-tests).
+      this.textureBucketManager.destroy();
+    }
+    getSharedLookUpCuckooTable.clear();
+    asyncBucketPick.clear();
+    shaderEditor.destroy();
+    this.cuckooTable = undefined;
   }
 
   /* Methods related to custom segment colors: */

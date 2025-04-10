@@ -3,8 +3,10 @@ import DiffableMap from "libs/diffable_map";
 import * as Utils from "libs/utils";
 import { ContourModeEnum } from "oxalis/constants";
 import {
+  getLayerByName,
   getMappingInfo,
   getMaximumSegmentIdForLayer,
+  getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getRequestedOrVisibleSegmentationLayer,
@@ -88,7 +90,7 @@ function getSegmentUpdateInfo(
   }
 
   if (layer.tracingId != null) {
-    const volumeTracing = getVolumeTracingById(state.tracing, layer.tracingId);
+    const volumeTracing = getVolumeTracingById(state.annotation, layer.tracingId);
     return {
       type: "UPDATE_VOLUME_TRACING",
       volumeTracing,
@@ -277,24 +279,42 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
   return volumeTracing;
 }
 
-function VolumeTracingReducer(
-  state: OxalisState,
-  action:
-    | VolumeTracingAction
-    | SetMappingAction
-    | FinishMappingInitializationAction
-    | SetMappingEnabledAction
-    | SetMappingNameAction,
-): OxalisState {
+type VolumeTracingReducerAction =
+  | VolumeTracingAction
+  | SetMappingAction
+  | FinishMappingInitializationAction
+  | SetMappingEnabledAction
+  | SetMappingNameAction;
+
+function getVolumeTracingFromAction(state: OxalisState, action: VolumeTracingReducerAction) {
+  if ("tracingId" in action && action.tracingId != null) {
+    return getVolumeTracingById(state.annotation, action.tracingId);
+  }
+  const maybeVolumeLayer =
+    "layerName" in action && action.layerName != null
+      ? getLayerByName(state.dataset, action.layerName)
+      : getVisibleSegmentationLayer(state);
+
+  if (
+    maybeVolumeLayer == null ||
+    !("tracingId" in maybeVolumeLayer) ||
+    maybeVolumeLayer.tracingId == null
+  ) {
+    return null;
+  }
+  return getVolumeTracingById(state.annotation, maybeVolumeLayer.tracingId);
+}
+
+function VolumeTracingReducer(state: OxalisState, action: VolumeTracingReducerAction): OxalisState {
   switch (action.type) {
     case "INITIALIZE_VOLUMETRACING": {
       const volumeTracing = serverVolumeToClientVolumeTracing(action.tracing);
-      const newVolumes = state.tracing.volumes.filter(
+      const newVolumes = state.annotation.volumes.filter(
         (tracing) => tracing.tracingId !== volumeTracing.tracingId,
       );
       newVolumes.push(volumeTracing);
       const newState = update(state, {
-        tracing: {
+        annotation: {
           volumes: {
             $set: newVolumes,
           },
@@ -328,12 +348,12 @@ function VolumeTracingReducer(
         type: "mapping",
         ...action.mapping,
       };
-      const newMappings = state.tracing.mappings.filter(
+      const newMappings = state.annotation.mappings.filter(
         (tracing) => tracing.tracingId !== mapping.tracingId,
       );
       newMappings.push(mapping);
       return update(state, {
-        tracing: {
+        annotation: {
           mappings: {
             $set: newMappings,
           },
@@ -388,19 +408,16 @@ function VolumeTracingReducer(
     default: // pass
   }
 
-  if (state.tracing.volumes.length === 0) {
+  if (state.annotation.volumes.length === 0) {
     // If no volume exists yet (i.e., it wasn't initialized, yet),
     // the following reducer code should not run.
     return state;
   }
 
-  const volumeLayer = getRequestedOrVisibleSegmentationLayer(state, null);
-
-  if (volumeLayer == null || volumeLayer.tracingId == null) {
+  const volumeTracing = getVolumeTracingFromAction(state, action);
+  if (volumeTracing == null) {
     return state;
   }
-
-  const volumeTracing = getVolumeTracingById(state.tracing, volumeLayer.tracingId);
 
   switch (action.type) {
     case "SET_ACTIVE_CELL": {

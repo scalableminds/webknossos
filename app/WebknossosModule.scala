@@ -4,9 +4,10 @@ import controllers.{Application, InitialDataService}
 import files.TempFileService
 import mail.MailchimpTicker
 import models.analytics.AnalyticsSessionService
-import models.annotation.{AnnotationMutexService, AnnotationStore, TracingDataSourceTemporaryStore}
+import models.annotation.{AnnotationMutexService, AnnotationStore, AnnotationDataSourceTemporaryStore}
 import models.dataset.{DatasetService, ThumbnailCachingService}
 import models.job.{JobService, WorkerLivenessService}
+import models.organization.FreeCreditTransactionService
 import models.storage.UsedStorageService
 import models.task.TaskService
 import models.user._
@@ -39,7 +40,8 @@ class WebknossosModule extends AbstractModule {
     bind(classOf[LokiClient]).asEagerSingleton()
     bind(classOf[UsedStorageService]).asEagerSingleton()
     bind(classOf[ThumbnailCachingService]).asEagerSingleton()
-    bind(classOf[TracingDataSourceTemporaryStore]).asEagerSingleton()
+    bind(classOf[AnnotationDataSourceTemporaryStore]).asEagerSingleton()
     bind(classOf[CertificateValidationService]).asEagerSingleton()
+    bind(classOf[FreeCreditTransactionService]).asEagerSingleton()
   }
 }

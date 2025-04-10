@@ -26,12 +26,14 @@ import {
 import {
   getActiveSegmentationTracing,
   getReadableNameForLayerName,
+  getSegmentationLayerForTracing,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   setActiveNodeAction,
   setActiveTreeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
+import { getSupportedValueRangeForElementClass } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
 import { Store } from "oxalis/singletons";
 import type { OxalisState } from "oxalis/store";
@@ -39,6 +41,7 @@ import { NumberInputPopoverSetting } from "oxalis/view/components/setting_input_
 import React, { useCallback, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { AdditionalCoordinate } from "types/api_flow_types";
+import { CommandPalette } from "./components/command_palette";
 
 const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = {
@@ -46,7 +49,7 @@ const moreIconStyle = {
   color: lineColor,
 };
 const moreLinkStyle = {
-  marginLeft: 10,
+  marginLeft: 25,
   marginRight: "auto",
 };
 
@@ -152,6 +155,28 @@ function RightClickShortcut({ actionDescriptor }: { actionDescriptor: ActionDesc
   );
 }
 
+const getMoreShortcutsInfo = () => {
+  return (
+    <>
+      <CommandPalette label={<div style={{ marginLeft: 25 }}>[Ctrl+P] Commands</div>} />
+      {moreShortcutsLink}
+    </>
+  );
+};
+
+const moreShortcutsLink = (
+  <a
+    target="_blank"
+    href="https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html"
+    rel="noopener noreferrer"
+    style={moreLinkStyle}
+  >
+    <FastTooltip title="More Shortcuts">
+      <MoreOutlined rotate={90} style={moreIconStyle} />
+    </FastTooltip>
+  </a>
+);
+
 function ShortcutsInfo() {
   const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
   const useLegacyBindings = useSelector(
@@ -161,22 +186,9 @@ function ShortcutsInfo() {
   const isShiftPressed = useKeyPress("Shift");
   const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
   const isAltPressed = useKeyPress("Alt");
-  const hasSkeleton = useSelector((state: OxalisState) => state.tracing.skeleton != null);
+  const hasSkeleton = useSelector((state: OxalisState) => state.annotation.skeleton != null);
   const isTDViewportActive = useSelector(
     (state: OxalisState) => state.viewModeData.plane.activeViewport === OrthoViews.TDView,
-  );
-
-  const moreShortcutsLink = (
-    <a
-      target="_blank"
-      href="https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html"
-      rel="noopener noreferrer"
-      style={moreLinkStyle}
-    >
-      <FastTooltip title="More Shortcuts">
-        <MoreOutlined rotate={90} style={moreIconStyle} />
-      </FastTooltip>
-    </a>
   );
 
   if (!isPlaneMode) {
@@ -311,7 +323,7 @@ function ShortcutsInfo() {
           </span>{" "}
           Rotation
         </span>
-        {moreShortcutsLink}
+        {getMoreShortcutsInfo()}
       </React.Fragment>
     );
   }
@@ -352,7 +364,7 @@ function ShortcutsInfo() {
         Rotate 3D View
       </span>
       <ZoomShortcut />
-      {moreShortcutsLink}
+      {getMoreShortcutsInfo()}
     </React.Fragment>
   );
 }
@@ -404,16 +416,18 @@ function maybeLabelWithSegmentationWarning(isUint64SegmentationVisible: boolean,
 }
 
 function Infos() {
-  const isSkeletonAnnotation = useSelector((state: OxalisState) => state.tracing.skeleton != null);
+  const isSkeletonAnnotation = useSelector(
+    (state: OxalisState) => state.annotation.skeleton != null,
+  );
   const activeVolumeTracing = useSelector((state: OxalisState) =>
     getActiveSegmentationTracing(state),
   );
   const activeCellId = activeVolumeTracing?.activeCellId;
   const activeNodeId = useSelector((state: OxalisState) =>
-    state.tracing.skeleton ? state.tracing.skeleton.activeNodeId : null,
+    state.annotation.skeleton ? state.annotation.skeleton.activeNodeId : null,
   );
   const activeTreeId = useSelector((state: OxalisState) =>
-    state.tracing.skeleton ? state.tracing.skeleton.activeTreeId : null,
+    state.annotation.skeleton ? state.annotation.skeleton.activeTreeId : null,
   );
   const dispatch = useDispatch();
 
@@ -430,6 +444,15 @@ function Infos() {
     [dispatch],
   );
 
+  const validSegmentIdRange = useSelector((state: OxalisState) => {
+    if (!activeVolumeTracing) {
+      return null;
+    }
+    const segmentationLayer = getSegmentationLayerForTracing(state, activeVolumeTracing);
+    const elementClass = segmentationLayer.elementClass;
+    return getSupportedValueRangeForElementClass(elementClass);
+  });
+
   const isUint64SegmentationVisible = useSelector(hasVisibleUint64Segmentation);
 
   return (
@@ -438,12 +461,13 @@ function Infos() {
       <span className="info-element">
         <DownloadSpeedometer />
       </span>
-      {activeVolumeTracing != null ? (
+      {activeVolumeTracing != null && validSegmentIdRange != null ? (
         <span className="info-element">
           <NumberInputPopoverSetting
             value={activeCellId}
             label={maybeLabelWithSegmentationWarning(isUint64SegmentationVisible, "Active Segment")}
-            min={0}
+            min={validSegmentIdRange[0]}
+            max={validSegmentIdRange[1]}
             detailedLabel={maybeLabelWithSegmentationWarning(
               isUint64SegmentationVisible,
               "Change Active Segment ID",
@@ -506,14 +530,14 @@ function MagnificationInfo() {
     const state = Store.getState();
     const { activeMagOfEnabledLayers } = getActiveMagInfo(state);
     const dataset = state.dataset;
-    const tracing = state.tracing;
+    const annotation = state.annotation;
 
     return (
       <div style={{ width: 200 }}>
         Rendered magnification per layer:
         <ul>
           {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
-            const readableName = getReadableNameForLayerName(dataset, tracing, layerName);
+            const readableName = getReadableNameForLayerName(dataset, annotation, layerName);
 
             return (
               <li key={layerName}>

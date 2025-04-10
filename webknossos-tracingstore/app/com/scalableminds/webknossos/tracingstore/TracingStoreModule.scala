@@ -6,16 +6,16 @@ import com.scalableminds.webknossos.datastore.services.AdHocMeshServiceHolder
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
-import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{TSDatasetErrorLoggingService, VolumeTracingService}
 import com.scalableminds.webknossos.tracingstore.tracings.{TemporaryTracingService, TracingDataStore}
 import org.apache.pekko.actor.ActorSystem
 
 class TracingStoreModule extends AbstractModule {
 
-  private val system: ActorSystem = ActorSystem("webknossos-tracingstore")
+  private val actorSystem: ActorSystem = ActorSystem("webknossos-tracingstore")
 
   override def configure(): Unit = {
-    bind(classOf[ActorSystem]).annotatedWith(Names.named("webknossos-tracingstore")).toInstance(system)
+    bind(classOf[ActorSystem]).annotatedWith(Names.named("webknossos-tracingstore")).toInstance(actorSystem)
     bind(classOf[TracingDataStore]).asEagerSingleton()
     bind(classOf[VolumeTracingService]).asEagerSingleton()
     bind(classOf[TracingStoreAccessTokenService]).asEagerSingleton()
@@ -26,6 +26,7 @@ class TracingStoreModule extends AbstractModule {
     bind(classOf[AdHocMeshServiceHolder]).asEagerSingleton()
     bind(classOf[TSAnnotationService]).asEagerSingleton()
     bind(classOf[TemporaryTracingService]).asEagerSingleton()
+    bind(classOf[TSDatasetErrorLoggingService]).asEagerSingleton()
   }
 
 }

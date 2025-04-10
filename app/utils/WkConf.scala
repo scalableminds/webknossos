@@ -2,18 +2,28 @@ package utils
 
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.ConfigReader
+import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
 import play.api.Configuration
 import security.CertificateValidationService
 
 import javax.inject.Inject
 import scala.concurrent.duration._
+import scala.jdk.CollectionConverters._
 
 class WkConf @Inject()(configuration: Configuration, certificateValidationService: CertificateValidationService)
     extends ConfigReader
     with LazyLogging {
-  override def raw: Configuration = configuration
   lazy val featureOverrides: Map[String, Boolean] = certificateValidationService.getFeatureOverrides
+  override val raw: Configuration = {
+    // Applying feature overwrites to the configuration.
+    Configuration(
+      ConfigFactory
+        .parseMap(featureOverrides.map {
+          case (k, v) => s"features.$k" -> Boolean.box(v && configuration.underlying.getBoolean(s"features.$k"))
+        }.asJava)
+        .withFallback(configuration.underlying))
+  }
 
   object Http {
     val uri: String = get[String]("http.uri")
@@ -119,17 +129,20 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     val isWkorgInstance: Boolean = get[Boolean]("features.isWkorgInstance")
     val jobsEnabled: Boolean = get[Boolean]("features.jobsEnabled")
     val voxelyticsEnabled: Boolean = get[Boolean]("features.voxelyticsEnabled")
+    val neuronInferralCostPerGVx: BigDecimal = get[BigDecimal]("features.neuronInferralCostPerGVx")
+    val mitochondriaInferralCostPerGVx: BigDecimal =
+      get[BigDecimal]("features.mitochondriaInferralCostPerGVx")
+    val alignmentCostPerGVx: BigDecimal = get[BigDecimal]("features.alignmentCostPerGVx")
+    val costPerCreditInEuro: BigDecimal = get[BigDecimal]("features.costPerCreditInEuro")
+    val costPerCreditInDollar: BigDecimal = get[BigDecimal]("features.costPerCreditInDollar")
     val taskReopenAllowed: FiniteDuration = get[Int]("features.taskReopenAllowedInSeconds") seconds
     val allowDeleteDatasets: Boolean = get[Boolean]("features.allowDeleteDatasets")
     val publicDemoDatasetUrl: String = get[String]("features.publicDemoDatasetUrl")
     val exportTiffMaxVolumeMVx: Long = get[Long]("features.exportTiffMaxVolumeMVx")
     val exportTiffMaxEdgeLengthVx: Long = get[Long]("features.exportTiffMaxEdgeLengthVx")
-    val openIdConnectEnabled: Boolean =
-      featureOverrides.getOrElse("openIdConnectEnabled", get[Boolean]("features.openIdConnectEnabled"))
-    val editableMappingsEnabled: Boolean =
-      featureOverrides.getOrElse("editableMappingsEnabled", get[Boolean]("features.editableMappingsEnabled"))
-    val segmentAnythingEnabled: Boolean =
-      featureOverrides.getOrElse("segmentAnythingEnabled", get[Boolean]("features.segmentAnythingEnabled"))
+    val openIdConnectEnabled: Boolean = get[Boolean]("features.openIdConnectEnabled")
+    val editableMappingsEnabled: Boolean = get[Boolean]("features.editableMappingsEnabled")
+    val segmentAnythingEnabled: Boolean = get[Boolean]("features.segmentAnythingEnabled")
   }
 
   object Datastore {
@@ -200,6 +213,7 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
 
   object Jobs {
     val workerLivenessTimeout: FiniteDuration = get[FiniteDuration]("jobs.workerLivenessTimeout")
+    val monthlyFreeCredits: Int = get[Int]("jobs.monthlyFreeCredits")
   }
 
   object Airbrake {

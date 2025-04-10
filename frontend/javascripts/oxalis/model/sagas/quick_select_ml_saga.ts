@@ -6,7 +6,7 @@ import { map3, sleep } from "libs/utils";
 import _ from "lodash";
 import ndarray, { type NdArray } from "ndarray";
 import { WkDevFlags } from "oxalis/api/wk_dev";
-import type { OrthoView, TypedArrayWithoutBigInt, Vector2, Vector3 } from "oxalis/constants";
+import type { OrthoView, TypedArrayWithoutBigInt, Vector3 } from "oxalis/constants";
 import type {
   ComputeQuickSelectForPointAction,
   ComputeQuickSelectForRectAction,
@@ -41,7 +41,7 @@ function* getMask(
   mag: Vector3,
   activeViewport: OrthoView,
   additionalCoordinates: AdditionalCoordinate[],
-  intensityRange?: Vector2 | null,
+  intensityRange?: readonly [number, number] | null,
 ): Saga<[BoundingBox, Array<NdArray<TypedArrayWithoutBigInt>>]> {
   const usePointPrompt = userBoxMag1.getVolume() === 0;
   const trans = (vec: Vector3) => Dimensions.transDim(vec, activeViewport);
@@ -130,7 +130,10 @@ function* getMask(
   ];
 }
 
-function* showApproximatelyProgress(amount: number, expectedDurationPerItemMs: number) {
+function* showApproximatelyProgress(
+  amount: number,
+  expectedDurationPerItemMs: number,
+): Saga<never> {
   // The progress bar is split into amount + 1 chunks. The first amount
   // chunks are filled after expectedDurationPerItemMs passed.
   // Afterwards, only one chunk is missing. With each additional iteration,

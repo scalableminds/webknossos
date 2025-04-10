@@ -218,7 +218,6 @@ export default class SegmentMeshController {
   }
 
   removeMeshById(segmentId: number, layerName: string, options?: { lod: number }): void {
-    // console.log("removeMeshById for lod", options?.lod);
     const additionalCoordinates = Store.getState().flycam.additionalCoordinates;
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
     const meshGroups = this.getMeshGroups(additionalCoordKey, layerName, segmentId);

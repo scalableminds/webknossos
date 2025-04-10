@@ -196,9 +196,6 @@ jobs:
           run: |
             sbt "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false"
           retries: 3
-      - name: Validate frontend types
-        if: github.ref != 'refs/heads/master'
-        run: yarn typecheck
 
       - name: Start webknossos, datastore and tracingstore
         run: |

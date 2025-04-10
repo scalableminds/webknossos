@@ -21,6 +21,7 @@ const dummyUser: APIUser = {
   novelUserExperienceInfos: {},
   selectedTheme: "auto",
   isEmailVerified: true,
+  isGuest: false,
 };
 
 export default dummyUser;

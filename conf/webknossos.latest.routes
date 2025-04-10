@@ -56,6 +56,7 @@ GET           /user/tasks/peek                                                  
 
 GET           /users                                                                            controllers.UserController.list(isEditable: Option[Boolean], isTeamManagerOrAdmin: Option[Boolean], isAdmin: Option[Boolean])
 GET           /user                                                                             controllers.UserController.current()
+GET           /user/:id/payingOrganization                                                      controllers.UserController.payingOrganizationOfUser(id: ObjectId)
 GET           /user/tasks                                                                       controllers.UserController.tasks(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET           /user/annotations                                                                 controllers.UserController.annotations(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET           /users/:id                                                                        controllers.UserController.user(id: ObjectId)

@@ -223,6 +223,13 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
          ) AS payingOrganization ON payingOrganization._multiUser = u._multiUser
      """
 
+  def findPayingOrganizationIdForMultiUser(multiUserId: ObjectId): Fox[Option[ObjectId]] =
+    for {
+      rows <- run(q"""SELECT payingOrganization._organization FROM $existingCollectionName as u
+                      LEFT JOIN LATERAL $payingOrganizationInfoSubquery
+                      WHERE u._multiUser = $multiUserId""".as[ObjectId])
+    } yield rows.headOption
+
   def findAllCompactWithFilters(isEditable: Option[Boolean],
                                 isTeamManagerOrAdmin: Option[Boolean],
                                 isAdmin: Option[Boolean],

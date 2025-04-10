@@ -957,7 +957,6 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       Toast.info("No segment found at the clicked position");
       return;
     }
-    const isProofreadingActive = state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
 
     Store.dispatch(
       loadPrecomputedMeshAction(
@@ -966,7 +965,6 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
         additionalCoordinates,
         currentMeshFile.meshFileName,
         undefined,
-        !isProofreadingActive,
       ),
     );
   };
@@ -1387,15 +1385,15 @@ function ContextMenuInner() {
       state.temporaryConfiguration.activeMappingByLayer,
       visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
     );
-    const someTracing = maybeGetSomeTracing(state.tracing);
+    const someTracing = maybeGetSomeTracing(state.annotation);
     const { contextInfo } = state.uiInformation;
     return {
-      skeletonTracing: state.tracing.skeleton,
+      skeletonTracing: state.annotation.skeleton,
       volumeTracing: getActiveSegmentationTracing(state),
       voxelSize: state.dataset.dataSource.scale,
       activeTool: state.uiInformation.activeTool,
       dataset: state.dataset,
-      allowUpdate: state.tracing.restrictions.allowUpdate,
+      allowUpdate: state.annotation.restrictions.allowUpdate,
       visibleSegmentationLayer,
       currentMeshFile:
         visibleSegmentationLayer != null
@@ -1450,7 +1448,7 @@ function ContextMenuInner() {
   // Thus the segment id is always unambiguous / clearly defined.
   const clickedSegmentOrMeshId =
     maybeClickedMeshId != null ? maybeClickedMeshId : segmentIdAtPosition;
-  const wasSegmentOrMeshClicked = clickedSegmentOrMeshId > 0;
+  const wasSegmentOrMeshClicked = clickedSegmentOrMeshId !== 0;
 
   const dataset = useSelector((state: OxalisState) => state.dataset);
   useEffect(() => {
@@ -1472,13 +1470,18 @@ function ContextMenuInner() {
   const isLoadingVolumeAndBB = [isLoadingMessage, isLoadingMessage];
   const [segmentVolumeLabel, boundingBoxInfoLabel] = useFetch(
     async () => {
-      const { tracing, flycam } = Store.getState();
+      const { annotation, flycam } = Store.getState();
       // The value that is returned if the context menu is closed is shown if it's still loading
       if (contextMenuPosition == null || !wasSegmentOrMeshClicked) return isLoadingVolumeAndBB;
       if (visibleSegmentationLayer == null || !isSegmentIndexAvailable) return [];
       const tracingId = volumeTracing?.tracingId;
       const additionalCoordinates = flycam.additionalCoordinates;
-      const requestUrl = getVolumeRequestUrl(dataset, tracing, tracingId, visibleSegmentationLayer);
+      const requestUrl = getVolumeRequestUrl(
+        dataset,
+        annotation,
+        tracingId,
+        visibleSegmentationLayer,
+      );
       const magInfo = getMagInfo(visibleSegmentationLayer.resolutions);
       const layersFinestMag = magInfo.getFinestMag();
       const voxelSize = dataset.dataSource.scale;

@@ -27,7 +27,7 @@ import { Link } from "react-router-dom";
 import type { Dispatch } from "redux";
 import type { APIDataset, APIUser } from "types/api_flow_types";
 
-import type { OxalisState, Task, Tracing } from "oxalis/store";
+import type { OxalisState, StoreAnnotation, Task } from "oxalis/store";
 
 import { getOrganization } from "admin/admin_rest_api";
 import FastTooltip from "components/fast_tooltip";
@@ -40,7 +40,7 @@ import type { EmptyObject } from "types/globals";
 import { MarkdownModal } from "../components/markdown_modal";
 
 type StateProps = {
-  annotation: Tracing;
+  annotation: StoreAnnotation;
   dataset: APIDataset;
   task: Task | null | undefined;
   activeUser: APIUser | null | undefined;
@@ -152,7 +152,12 @@ export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
   };
 
   return (
-    <FastTooltip dynamicRenderer={renderDSExtentTooltip} placement="left" wrapper="tr">
+    <FastTooltip
+      dynamicRenderer={renderDSExtentTooltip}
+      placement="left"
+      wrapper="tr"
+      key={dataset.id}
+    >
       <td
         style={{
           paddingRight: 20,
@@ -649,7 +654,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
-  annotation: state.tracing,
+  annotation: state.annotation,
   dataset: state.dataset,
   task: state.task,
   activeUser: state.activeUser,

@@ -1,5 +1,7 @@
 package com.scalableminds.webknossos.datastore.services
 
+import com.scalableminds.util.accesscontext.TokenContext
+
 import java.nio._
 import org.apache.pekko.actor.{Actor, ActorRef, ActorSystem, Props}
 import org.apache.pekko.pattern.ask
@@ -29,6 +31,7 @@ case class AdHocMeshRequest(dataSource: Option[DataSource],
                             cuboid: Cuboid,
                             segmentId: Long,
                             voxelSizeFactor: Vec3Double, // assumed to be in dataset’s unit
+                            tokenContext: TokenContext,
                             mapping: Option[String] = None,
                             mappingType: Option[String] = None,
                             additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
@@ -44,7 +47,7 @@ class AdHocMeshActor(val service: AdHocMeshService, val timeout: FiniteDuration)
 
   def receive: Receive = {
     case request: AdHocMeshRequest =>
-      sender() ! Await.result(service.requestAdHocMesh(request).futureBox, timeout)
+      sender() ! Await.result(service.requestAdHocMesh(request)(request.tokenContext).futureBox, timeout)
     case _ =>
       sender() ! Failure("Unexpected message sent to AdHocMeshActor.")
   }
@@ -68,26 +71,28 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
       case e: Exception => Failure(e.getMessage)
     }
 
-  def requestAdHocMesh(request: AdHocMeshRequest): Fox[(Array[Float], List[Int])] =
+  def requestAdHocMesh(request: AdHocMeshRequest)(implicit tc: TokenContext): Fox[(Array[Float], List[Int])] =
     request.dataLayer.elementClass match {
-      case ElementClass.uint8 =>
+      case ElementClass.uint8 | ElementClass.int8 =>
         generateAdHocMeshImpl[Byte, ByteBuffer](request,
                                                 DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
-      case ElementClass.uint16 =>
+
+      case ElementClass.uint16 | ElementClass.int16 =>
         generateAdHocMeshImpl[Short, ShortBuffer](
           request,
           DataTypeFunctors[Short, ShortBuffer](_.asShortBuffer, _.get(_), _.toShort))
-      case ElementClass.uint32 =>
+
+      case ElementClass.uint32 | ElementClass.int32 =>
         generateAdHocMeshImpl[Int, IntBuffer](request,
                                               DataTypeFunctors[Int, IntBuffer](_.asIntBuffer, _.get(_), _.toInt))
-      case ElementClass.uint64 =>
+      case ElementClass.uint64 | ElementClass.int64 =>
         generateAdHocMeshImpl[Long, LongBuffer](request,
                                                 DataTypeFunctors[Long, LongBuffer](_.asLongBuffer, _.get(_), identity))
     }
 
   private def generateAdHocMeshImpl[T: ClassTag, B <: Buffer](
       request: AdHocMeshRequest,
-      dataTypeFunctors: DataTypeFunctors[T, B]): Fox[(Array[Float], List[Int])] = {
+      dataTypeFunctors: DataTypeFunctors[T, B])(implicit tc: TokenContext): Fox[(Array[Float], List[Int])] = {
 
     def applyMapping(data: Array[T]): Fox[Array[T]] =
       request.mapping match {

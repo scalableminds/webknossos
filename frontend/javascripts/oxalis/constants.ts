@@ -346,22 +346,24 @@ const Constants = {
   OBJECT_ID_STRING_LENGTH: 24,
   REGISTER_SEGMENTS_BB_MAX_VOLUME_VX: 512 * 512 * 512,
   REGISTER_SEGMENTS_BB_MAX_SEGMENT_COUNT: 5000,
+  DEFAULT_MESH_OPACITY: 1,
 };
 export default Constants;
 
 export type TypedArray =
-  | Int8Array
   | Uint8Array
   | Uint8ClampedArray
-  | Int16Array
+  | Int8Array
   | Uint16Array
-  | Int32Array
+  | Int16Array
   | Uint32Array
+  | Int32Array
   | Float32Array
   | Float64Array
-  | BigUint64Array;
+  | BigUint64Array
+  | BigInt64Array;
 
-export type TypedArrayWithoutBigInt = Exclude<TypedArray, BigUint64Array>;
+export type TypedArrayWithoutBigInt = Exclude<TypedArray, BigUint64Array | BigInt64Array>;
 
 export const PRIMARY_COLOR: Vector3 = [86, 96, 255];
 

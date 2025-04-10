@@ -159,7 +159,7 @@ const defaultState: OxalisState = {
     publication: null,
     usedStorageBytes: null,
   },
-  tracing: {
+  annotation: {
     ...initialAnnotationInfo,
     readOnly: {
       userBoundingBoxes: [],
@@ -199,6 +199,9 @@ const defaultState: OxalisState = {
     direction: [0, 0, 0],
     additionalCoordinates: [],
   },
+  flycamInfoCache: {
+    maximumZoomForAllMags: {},
+  },
   viewModeData: {
     plane: {
       activeViewport: OrthoViews.PLANE_XY,
@@ -232,6 +235,9 @@ const defaultState: OxalisState = {
     showDropzoneModal: false,
     showVersionRestore: false,
     showDownloadModal: false,
+    showAddScriptModal: false,
+    showMergeAnnotationModal: false,
+    showZarrPrivateLinksModal: false,
     showPythonClientModal: false,
     aIJobModalState: "invisible",
     showRenderAnimationModal: false,

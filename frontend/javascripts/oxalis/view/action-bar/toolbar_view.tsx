@@ -26,7 +26,6 @@ import { document } from "libs/window";
 import {
   type AnnotationTool,
   AnnotationToolEnum,
-  ControlModeEnum,
   FillModeEnum,
   type InterpolationMode,
   InterpolationModeEnum,
@@ -41,6 +40,7 @@ import {
 } from "oxalis/constants";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
+  TOOL_NAMES,
   adaptActiveToolToShortcuts,
   getDisabledInfoForTools,
 } from "oxalis/model/accessors/tool_accessor";
@@ -553,7 +553,7 @@ function CreateNewBoundingBoxButton() {
 
 function CreateTreeButton() {
   const dispatch = useDispatch();
-  const activeTree = useSelector((state: OxalisState) => getActiveTree(state.tracing.skeleton));
+  const activeTree = useSelector((state: OxalisState) => getActiveTree(state.annotation.skeleton));
   const rgbColorString =
     activeTree != null
       ? `rgb(${activeTree.color.map((c) => Math.round(c * 255)).join(",")})`
@@ -832,26 +832,10 @@ function calculateMediumBrushSize(maximumBrushSize: number) {
   return Math.ceil((maximumBrushSize - userSettings.brushSize.minimum) / 10) * 5;
 }
 
-const TOOL_NAMES = {
-  MOVE: "Move",
-  SKELETON: "Skeleton",
-  BRUSH: "Brush",
-  ERASE_BRUSH: "Erase (via Brush)",
-  TRACE: "Trace",
-  ERASE_TRACE: "Erase",
-  FILL_CELL: "Fill Tool",
-  PICK_CELL: "Segment Picker",
-  QUICK_SELECT: "Quick Select Tool",
-  BOUNDING_BOX: "Bounding Box Tool",
-  PROOFREAD: "Proofreading Tool",
-  LINE_MEASUREMENT: "Measurement Tool",
-  AREA_MEASUREMENT: "Area Measurement Tool",
-};
-
 export default function ToolbarView({ isReadOnly }: { isReadOnly: boolean }) {
   const dispatch = useDispatch();
-  const hasVolume = useSelector((state: OxalisState) => state.tracing?.volumes.length > 0);
-  const hasSkeleton = useSelector((state: OxalisState) => state.tracing?.skeleton != null);
+  const hasVolume = useSelector((state: OxalisState) => state.annotation?.volumes.length > 0);
+  const hasSkeleton = useSelector((state: OxalisState) => state.annotation?.skeleton != null);
 
   const isAgglomerateMappingEnabled = useSelector(hasAgglomerateMapping);
 
@@ -1381,6 +1365,7 @@ function FloodFillSettings() {
         style={{
           opacity: isRestrictedToBoundingBox ? 1 : 0.5,
           marginLeft: 12,
+          display: "inline-block",
         }}
         type={isRestrictedToBoundingBox ? "primary" : "default"}
         onClick={toggleRestrictFloodfillToBoundingBox}

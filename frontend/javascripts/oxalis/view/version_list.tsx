@@ -26,7 +26,7 @@ import {
 } from "oxalis/model/sagas/update_actions";
 import { Model } from "oxalis/singletons";
 import { api } from "oxalis/singletons";
-import type { HybridTracing, OxalisState } from "oxalis/store";
+import type { OxalisState, StoreAnnotation } from "oxalis/store";
 import Store from "oxalis/store";
 import VersionEntryGroup from "oxalis/view/version_entry_group";
 import { useEffect, useState } from "react";
@@ -49,7 +49,7 @@ const VERSION_LIST_PLACEHOLDER = {
 export async function previewVersion(version?: number) {
   const state = Store.getState();
   const { controlMode } = state.temporaryConfiguration;
-  const { annotationId, tracingStore, annotationLayers } = state.tracing;
+  const { annotationId, tracingStore, annotationLayers } = state.annotation;
 
   const annotationProto = await getAnnotationProto(tracingStore.url, annotationId, version);
 
@@ -93,7 +93,7 @@ async function handleRestoreVersion(
     Store.dispatch(setVersionRestoreVisibilityAction(false));
     Store.dispatch(setAnnotationAllowUpdateAction(true));
   } else {
-    const { annotationType, annotationId, volumes } = Store.getState().tracing;
+    const { annotationType, annotationId, volumes } = Store.getState().annotation;
     const includesVolumeFallbackData = volumes.some((volume) => volume.fallbackLayer != null);
     downloadAnnotation(annotationId, annotationType, includesVolumeFallbackData, version);
   }
@@ -103,7 +103,7 @@ export const handleCloseRestoreView = async () => {
   // This will load the newest version of both skeleton and volume tracings
   await previewVersion();
   Store.dispatch(setVersionRestoreVisibilityAction(false));
-  const { initialAllowUpdate } = Store.getState().tracing.restrictions;
+  const { initialAllowUpdate } = Store.getState().annotation.restrictions;
   Store.dispatch(setAnnotationAllowUpdateAction(initialAllowUpdate));
 };
 
@@ -126,7 +126,7 @@ const getGroupedAndChunkedVersions = _.memoize(
 );
 
 async function getUpdateActionLogPage(
-  tracing: HybridTracing,
+  annotation: StoreAnnotation,
   tracingStoreUrl: string,
   annotationId: string,
   earliestAccessibleVersion: number,
@@ -170,7 +170,7 @@ async function getUpdateActionLogPage(
   if (oldestVersionInPage === 1) {
     updateActionLog.push({
       version: 0,
-      value: [serverCreateTracing(getCreationTimestamp(tracing))],
+      value: [serverCreateTracing(getCreationTimestamp(annotation))],
     });
   }
 
@@ -186,10 +186,10 @@ async function getUpdateActionLogPage(
 }
 
 function VersionList() {
-  const tracingStoreUrl = useSelector((state: OxalisState) => state.tracing.tracingStore.url);
-  const annotationId = useSelector((state: OxalisState) => state.tracing.annotationId);
+  const tracingStoreUrl = useSelector((state: OxalisState) => state.annotation.tracingStore.url);
+  const annotationId = useSelector((state: OxalisState) => state.annotation.annotationId);
   const initialAllowUpdate = useSelector(
-    (state: OxalisState) => state.tracing.restrictions.initialAllowUpdate,
+    (state: OxalisState) => state.annotation.restrictions.initialAllowUpdate,
   );
   const newestVersion = useFetch(
     async () => {
@@ -214,13 +214,13 @@ function VersionList() {
 }
 
 function InnerVersionList(props: Props & { newestVersion: number; initialAllowUpdate: boolean }) {
-  const tracing = useSelector((state: OxalisState) => state.tracing);
+  const annotation = useSelector((state: OxalisState) => state.annotation);
   const queryClient = useQueryClient();
   // Remember the version with which the version view was opened (
   // the active version could change by the actions of the user).
   // Based on this version, the page numbers are calculated.
   const { newestVersion } = props;
-  const [initialVersion] = useState(tracing.version);
+  const [initialVersion] = useState(annotation.version);
 
   // true if another version is being restored or previewed
   const [isChangingVersion, setIsChangingVersion] = useState(false);
@@ -229,11 +229,11 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
     if (pageParam == null) {
       pageParam = Math.floor((newestVersion - initialVersion) / ENTRIES_PER_PAGE);
     }
-    const { url: tracingStoreUrl } = Store.getState().tracing.tracingStore;
-    const { annotationId, earliestAccessibleVersion } = Store.getState().tracing;
+    const { url: tracingStoreUrl } = Store.getState().annotation.tracingStore;
+    const { annotationId, earliestAccessibleVersion } = Store.getState().annotation;
 
     return getUpdateActionLogPage(
-      tracing,
+      annotation,
       tracingStoreUrl,
       annotationId,
       earliestAccessibleVersion,
@@ -242,7 +242,7 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
     );
   }
 
-  const queryKey = ["versions", tracing.annotationId];
+  const queryKey = ["versions", annotation.annotationId];
 
   useEffectOnlyOnce(() => {
     // Remove all previous existent queries so that the content of this view
@@ -347,7 +347,7 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
                 batches={batchesOrDateString}
                 initialAllowUpdate={props.initialAllowUpdate}
                 newestVersion={flattenedVersions[0].version}
-                activeVersion={tracing.version}
+                activeVersion={annotation.version}
                 onRestoreVersion={async (version) => {
                   executeUnlessSwitchingVersions(() =>
                     handleRestoreVersion(props, flattenedVersions, version),
@@ -368,9 +368,9 @@ function InnerVersionList(props: Props & { newestVersion: number; initialAllowUp
             {isFetchingNextPage ? "Loading more..." : "Load More"}
           </Button>
         </div>
-      ) : tracing.earliestAccessibleVersion > 0 ? (
+      ) : annotation.earliestAccessibleVersion > 0 ? (
         <div style={{ textAlign: "center", marginTop: 8, marginBottom: 4 }}>
-          Cannot show versions earlier than {tracing.earliestAccessibleVersion}.
+          Cannot show versions earlier than {annotation.earliestAccessibleVersion}.
         </div>
       ) : null}
     </div>

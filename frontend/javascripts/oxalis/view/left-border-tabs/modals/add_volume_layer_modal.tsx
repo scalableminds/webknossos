@@ -23,7 +23,7 @@ import {
 import { pushSaveQueueTransactionIsolated } from "oxalis/model/actions/save_actions";
 import { addLayerToAnnotation } from "oxalis/model/sagas/update_actions";
 import { Model, api } from "oxalis/singletons";
-import Store, { type Tracing } from "oxalis/store";
+import Store, { type StoreAnnotation } from "oxalis/store";
 import InputComponent from "oxalis/view/components/input_component";
 import type React from "react";
 import { useMemo, useState } from "react";
@@ -103,13 +103,13 @@ export function validateReadableLayerName(
 export default function AddVolumeLayerModal({
   dataset,
   onCancel,
-  tracing,
+  annotation,
   preselectedLayerName,
   disableLayerSelection,
 }: {
   dataset: APIDataset;
   onCancel: () => void;
-  tracing: Tracing;
+  annotation: StoreAnnotation;
   preselectedLayerName: string | undefined;
   disableLayerSelection: boolean | undefined;
 }) {
@@ -118,8 +118,8 @@ export default function AddVolumeLayerModal({
   >(preselectedLayerName);
   const dispatch = useDispatch();
   const allReadableLayerNames = useMemo(
-    () => getAllReadableLayerNames(dataset, tracing),
-    [dataset, tracing],
+    () => getAllReadableLayerNames(dataset, annotation),
+    [dataset, annotation],
   );
   // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation whether to add more dependencies.
   const initialNewLayerName = useMemo(() => {
@@ -138,7 +138,7 @@ export default function AddVolumeLayerModal({
       }
       return name;
     }
-  }, [dataset, tracing]);
+  }, [dataset, annotation]);
   const selectedSegmentationLayer =
     selectedSegmentationLayerName != null
       ? (getLayerByName(dataset, selectedSegmentationLayerName) as APISegmentationLayer)

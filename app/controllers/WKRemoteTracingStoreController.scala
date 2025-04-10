@@ -42,7 +42,7 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
                                                annotationDAO: AnnotationDAO,
                                                annotationLayerDAO: AnnotationLayerDAO,
                                                wkConf: WkConf,
-                                               tracingDataSourceTemporaryStore: TracingDataSourceTemporaryStore)(
+                                               annotationDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore)(
     implicit ec: ExecutionContext,
     playBodyParsers: PlayBodyParsers)
     extends Controller
@@ -51,29 +51,27 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
   val bearerTokenService: WebknossosBearerTokenAuthenticatorService =
     wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
-  def updateAnnotation(name: String, key: String, annotationId: String): Action[AnnotationProto] =
+  def updateAnnotation(name: String, key: String, annotationId: ObjectId): Action[AnnotationProto] =
     Action.async(validateProto[AnnotationProto]) { implicit request =>
       // tracingstore only sends this request after ensuring write access
       implicit val ctx: DBAccessContext = GlobalAccessContext
       tracingStoreService.validateAccess(name, key) { _ =>
         for {
-          annotationIdValidated <- ObjectId.fromString(annotationId)
-          existingLayers <- annotationLayerDAO.findAnnotationLayersFor(annotationIdValidated)
+          existingLayers <- annotationLayerDAO.findAnnotationLayersFor(annotationId)
           newLayersProto = request.body.annotationLayers
           existingLayerIds = existingLayers.map(_.tracingId).toSet
           newLayerIds = newLayersProto.map(_.tracingId).toSet
           layerIdsToDelete = existingLayerIds.diff(newLayerIds)
           layerIdsToUpdate = existingLayerIds.intersect(newLayerIds)
           layerIdsToInsert = newLayerIds.diff(existingLayerIds)
-          _ <- Fox.serialCombined(layerIdsToDelete.toList)(
-            annotationLayerDAO.deleteOneByTracingId(annotationIdValidated, _))
+          _ <- Fox.serialCombined(layerIdsToDelete.toList)(annotationLayerDAO.deleteOneByTracingId(annotationId, _))
           _ <- Fox.serialCombined(newLayersProto.filter(l => layerIdsToInsert.contains(l.tracingId))) { layerProto =>
-            annotationLayerDAO.insertOne(annotationIdValidated, AnnotationLayer.fromProto(layerProto))
+            annotationLayerDAO.insertOne(annotationId, AnnotationLayer.fromProto(layerProto))
           }
           _ <- Fox.serialCombined(newLayersProto.filter(l => layerIdsToUpdate.contains(l.tracingId)))(l =>
-            annotationLayerDAO.updateName(annotationIdValidated, l.tracingId, l.name))
+            annotationLayerDAO.updateName(annotationId, l.tracingId, l.name))
           // Layer stats are ignored here, they are sent eagerly when saving updates
-          _ <- annotationDAO.updateDescription(annotationIdValidated, request.body.description)
+          _ <- annotationDAO.updateDescription(annotationId, request.body.description)
         } yield Ok
       }
     }
@@ -112,28 +110,28 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
     if (annotation.state == Finished) Fox.failure("annotation already finished")
     else Fox.successful(())
 
-  def dataSourceForTracing(name: String, key: String, tracingId: String): Action[AnyContent] =
+  def dataSourceForAnnotation(name: String, key: String, annotationId: ObjectId): Action[AnyContent] =
     Action.async { implicit request =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
-        tracingDataSourceTemporaryStore.find(tracingId) match {
+        annotationDataSourceTemporaryStore.find(annotationId) match {
           case Some(dataSource) => Fox.successful(Ok(Json.toJson(dataSource)))
           case None =>
             for {
-              annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> s"No annotation for tracing $tracingId"
-              dataset <- datasetDAO.findOne(annotation._dataset)
+              annotation <- annotationDAO.findOne(annotationId) ?~> "annotation.notFound"
+              dataset <- datasetDAO.findOne(annotation._dataset) ?~> "dataset.notFound"
               dataSource <- datasetService.dataSourceFor(dataset)
             } yield Ok(Json.toJson(dataSource))
         }
       }
     }
 
-  def dataSourceIdForTracing(name: String, key: String, tracingId: String): Action[AnyContent] =
+  def dataSourceIdForAnnotation(name: String, key: String, annotationId: ObjectId): Action[AnyContent] =
     Action.async { implicit request =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
-          annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> s"No annotation for tracing $tracingId"
+          annotation <- annotationDAO.findOne(annotationId) ?~> "annotation.notFound"
           dataset <- datasetDAO.findOne(annotation._dataset)
           organization <- organizationDAO.findOne(dataset._organization)
         } yield Ok(Json.toJson(DataSourceId(dataset.directoryName, organization._id)))
@@ -175,14 +173,13 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
 
   def createTracing(name: String,
                     key: String,
-                    annotationId: String,
+                    annotationId: ObjectId,
                     previousVersion: Long): Action[AnnotationLayerParameters] =
     Action.async(validateJson[AnnotationLayerParameters]) { implicit request =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
-          annotationIdValidated <- ObjectId.fromString(annotationId)
-          annotation <- annotationDAO.findOne(annotationIdValidated) ?~> "annotation.notFound"
+          annotation <- annotationDAO.findOne(annotationId) ?~> "annotation.notFound"
           dataset <- datasetDAO.findOne(annotation._dataset)
           tracingEither <- annotationService.createTracingForExplorational(dataset,
                                                                            request.body,

@@ -20,7 +20,6 @@ import Store from "oxalis/store";
 import type { APICompoundType } from "types/api_flow_types";
 
 import { globalToLayerTransformedPosition } from "./model/accessors/dataset_layer_transformation_accessor";
-import { invertTransform, transformPointUnscaled } from "./model/helpers/transformation_helpers";
 import { initialize } from "./model_initialization";
 
 // TODO: Non-reactive
@@ -354,6 +353,17 @@ export class OxalisModel {
       await Utils.sleep(500);
     }
   };
+
+  reset() {
+    /*
+     * Destroys all layers
+     */
+
+    if (this.dataLayers != null) {
+      _.values(this.dataLayers).forEach((layer) => layer.destroy());
+      this.dataLayers = {};
+    }
+  }
 }
 const model = new OxalisModel(); // export the model as a singleton
 

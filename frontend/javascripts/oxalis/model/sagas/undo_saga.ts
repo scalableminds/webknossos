@@ -1,7 +1,7 @@
 import createProgressCallback from "libs/progress_callback";
 import Toast from "libs/toast";
 import messages from "messages";
-import { AnnotationToolEnum, type BucketAddress } from "oxalis/constants";
+import { AnnotationToolEnum } from "oxalis/constants";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
 import {
@@ -28,7 +28,6 @@ import {
   type BatchUpdateGroupsAndSegmentsAction,
   type FinishAnnotationStrokeAction,
   type ImportVolumeTracingAction,
-  type MaybeUnmergedBucketLoadedPromise,
   type RemoveSegmentAction,
   type SetSegmentGroupsAction,
   type UpdateSegmentAction,
@@ -36,45 +35,30 @@ import {
   setSegmentGroupsAction,
   setSegmentsAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
-import {
-  compressTypedArray,
-  decompressToTypedArray,
-} from "oxalis/model/helpers/bucket_compression";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { UNDO_HISTORY_SIZE } from "oxalis/model/sagas/save_saga_constants";
 import { Model } from "oxalis/singletons";
 import type { SegmentGroup, SegmentMap, SkeletonTracing, UserBoundingBox } from "oxalis/store";
-import type { Task } from "redux-saga";
-import { actionChannel, all, call, delay, fork, join, put, take } from "typed-redux-saga";
+import { actionChannel, call, delay, put, take } from "typed-redux-saga";
+import type BucketSnapshot from "../bucket_data_handling/bucket_snapshot";
 import { ensureWkReady } from "./ready_sagas";
 
 const UndoRedoRelevantBoundingBoxActions = AllUserBoundingBoxActions.filter(
   (action) => action !== "SET_USER_BOUNDING_BOXES",
 );
-type UndoBucket = {
-  zoomedBucketAddress: BucketAddress;
-  // The following arrays are Uint8Array due to the compression
-  compressedData: Uint8Array;
-  compressedBackendData?: Promise<Uint8Array>;
-  maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise;
-  pendingOperations: Array<(arg0: BucketDataArray) => void>;
-};
-type VolumeUndoBuckets = Array<UndoBucket>;
-type VolumeAnnotationBatch = {
-  buckets: VolumeUndoBuckets;
-  segments: SegmentMap;
-  segmentGroups: SegmentGroup[];
-  tracingId: string;
-};
 type SkeletonUndoState = {
   type: "skeleton";
   data: SkeletonTracing;
 };
 type VolumeUndoState = {
   type: "volume";
-  data: VolumeAnnotationBatch;
+  data: {
+    buckets: BucketSnapshot[];
+    segments: SegmentMap;
+    segmentGroups: SegmentGroup[];
+    tracingId: string;
+  };
 };
 type BoundingBoxUndoState = {
   type: "bounding_box";
@@ -160,7 +144,6 @@ export function* manageUndoStates(): Saga<never> {
   let previousAction: Action | null | undefined = null;
   let prevSkeletonTracingOrNull: SkeletonTracing | null | undefined = null;
   let prevUserBoundingBoxes: Array<UserBoundingBox> = [];
-  let pendingCompressions: Array<Task> = [];
   const volumeInfoById: Record<
     string, // volume tracing id
     {
@@ -168,7 +151,7 @@ export function* manageUndoStates(): Saga<never> {
       // operation (e.g., brushing). After a volume operation, the set is added
       // to the stack and cleared afterwards. This means the set is always
       // empty unless a volume operation is ongoing.
-      currentVolumeUndoBuckets: VolumeUndoBuckets;
+      currentBucketSnapshots: BucketSnapshot[];
       // The "old" segment list that needs to be added to the next volume undo stack
       // entry so that that segment list can be restored upon undo.
       prevSegments: SegmentMap;
@@ -179,12 +162,12 @@ export function* manageUndoStates(): Saga<never> {
   yield* call(ensureWkReady);
 
   // Initialization of the local state variables from above.
-  prevSkeletonTracingOrNull = yield* select((state) => state.tracing.skeleton);
+  prevSkeletonTracingOrNull = yield* select((state) => state.annotation.skeleton);
   prevUserBoundingBoxes = yield* select(getUserBoundingBoxesFromState);
-  const volumeTracings = yield* select((state) => getVolumeTracings(state.tracing));
+  const volumeTracings = yield* select((state) => getVolumeTracings(state.annotation));
   for (const volumeTracing of volumeTracings) {
     volumeInfoById[volumeTracing.tracingId] = {
-      currentVolumeUndoBuckets: [],
+      currentBucketSnapshots: [],
       // Segments and SegmentGroups are always handled as immutable. So, no need to copy. If there's no volume
       // tracing, prevSegments can remain empty as it's not needed.
       prevSegments: volumeTracing.segments,
@@ -195,21 +178,21 @@ export function* manageUndoStates(): Saga<never> {
   // Helper functions for functionality related to volumeInfoById.
   function* setPrevSegmentsAndGroupsToCurrent() {
     // Read the current segments map and store it in volumeInfoById for all volume layers.
-    const volumeTracings = yield* select((state) => getVolumeTracings(state.tracing));
+    const volumeTracings = yield* select((state) => getVolumeTracings(state.annotation));
     for (const volumeTracing of volumeTracings) {
       volumeInfoById[volumeTracing.tracingId].prevSegments = volumeTracing.segments;
       volumeInfoById[volumeTracing.tracingId].prevSegmentGroups = volumeTracing.segmentGroups;
     }
   }
-  function* areCurrentVolumeUndoBucketsEmpty() {
-    // Check that currentVolumeUndoBuckets is empty for all layers (see above for an
+  function* areCurrentBucketSnapshotsEmpty() {
+    // Check that currentBucketSnapshots is empty for all layers (see above for an
     // explanation of this invariant).
     // In case the invariant is violated for some reason, we forbid undo/redo.
     // The case can be provoked by brushing and hitting ctrl+z without lifting the
     // mouse button.
-    const volumeTracings = yield* select((state) => getVolumeTracings(state.tracing));
+    const volumeTracings = yield* select((state) => getVolumeTracings(state.annotation));
     for (const volumeTracing of volumeTracings) {
-      if (volumeInfoById[volumeTracing.tracingId].currentVolumeUndoBuckets.length > 0) {
+      if (volumeInfoById[volumeTracing.tracingId].currentBucketSnapshots.length > 0) {
         return false;
       }
     }
@@ -263,7 +246,7 @@ export function* manageUndoStates(): Saga<never> {
         reason: messages["undo.import_volume_tracing"],
       } as WarnUndoState);
     } else if (undo) {
-      if (!(yield* call(areCurrentVolumeUndoBucketsEmpty))) {
+      if (!(yield* call(areCurrentBucketSnapshotsEmpty))) {
         yield* call([Toast, Toast.warning], "Cannot redo at the moment. Please try again.");
         continue;
       }
@@ -280,7 +263,7 @@ export function* manageUndoStates(): Saga<never> {
         );
 
         // Since the current segments map changed, we need to update our reference to it.
-        // Note that we don't need to do this for currentVolumeUndoBuckets, as this
+        // Note that we don't need to do this for currentBucketSnapshots, as this
         // was and is empty, anyway (due to the constraint we checked above).
         yield* call(setPrevSegmentsAndGroupsToCurrent);
       }
@@ -291,7 +274,7 @@ export function* manageUndoStates(): Saga<never> {
 
       yield* put(setBusyBlockingInfoAction(false));
     } else if (redo) {
-      if (!(yield* call(areCurrentVolumeUndoBucketsEmpty))) {
+      if (!(yield* call(areCurrentBucketSnapshotsEmpty))) {
         yield* call([Toast, Toast.warning], "Cannot redo at the moment. Please try again.");
         continue;
       }
@@ -336,43 +319,23 @@ export function* manageUndoStates(): Saga<never> {
         previousAction = skeletonUserAction;
       } else if (addBucketToUndoAction) {
         shouldClearRedoState = true;
-        const {
-          zoomedBucketAddress,
-          bucketData,
-          maybeUnmergedBucketLoadedPromise,
-          pendingOperations,
-          tracingId,
-        } = addBucketToUndoAction;
+        const { bucketSnapshot } = addBucketToUndoAction;
         // The bucket's (old) state should be added to the undo
         // stack so that we can revert to its previous version.
-        // bucketData is compressed asynchronously, which is why
-        // the corresponding "task" is added to `pendingCompressions`.
-        pendingCompressions.push(
-          yield* fork(
-            compressBucketAndAddToList,
-            zoomedBucketAddress,
-            bucketData,
-            maybeUnmergedBucketLoadedPromise,
-            pendingOperations,
-            volumeInfoById[tracingId].currentVolumeUndoBuckets,
-          ),
-        );
+        const volumeInfo = volumeInfoById[bucketSnapshot.tracingId];
+        volumeInfo.currentBucketSnapshots.push(bucketSnapshot);
       } else if (finishAnnotationStrokeAction) {
         // FINISH_ANNOTATION_STROKE was dispatched which marks the end
         // of a volume transaction.
-        // All compression tasks (see `pendingCompressions`) need to be
-        // awaited to add the proper entry to the undo stack.
         shouldClearRedoState = true;
         const activeVolumeTracing = yield* select((state) =>
-          getVolumeTracingById(state.tracing, finishAnnotationStrokeAction.tracingId),
+          getVolumeTracingById(state.annotation, finishAnnotationStrokeAction.tracingId),
         );
-        yield* join(pendingCompressions);
-        pendingCompressions = [];
         const volumeInfo = volumeInfoById[activeVolumeTracing.tracingId];
         undoStack.push({
           type: "volume",
           data: {
-            buckets: volumeInfo.currentVolumeUndoBuckets,
+            buckets: volumeInfo.currentBucketSnapshots,
             segments: volumeInfo.prevSegments,
             segmentGroups: volumeInfo.prevSegmentGroups,
             tracingId: activeVolumeTracing.tracingId,
@@ -381,7 +344,7 @@ export function* manageUndoStates(): Saga<never> {
         // Segments and SegmentGroups are always handled as immutable. So, no need to copy.
         volumeInfo.prevSegments = activeVolumeTracing.segments;
         volumeInfo.prevSegmentGroups = activeVolumeTracing.segmentGroups;
-        volumeInfo.currentVolumeUndoBuckets = [];
+        volumeInfo.currentBucketSnapshots = [];
       } else if (userBoundingBoxAction) {
         const boundingBoxUndoState = getBoundingBoxToUndoState(
           userBoundingBoxAction,
@@ -414,7 +377,7 @@ export function* manageUndoStates(): Saga<never> {
         if (createNewUndoState) {
           shouldClearRedoState = true;
           const activeVolumeTracing = yield* select((state) =>
-            getVolumeTracingByLayerName(state.tracing, action.layerName),
+            getVolumeTracingByLayerName(state.annotation, action.layerName),
           );
           if (activeVolumeTracing) {
             const volumeInfo = volumeInfoById[activeVolumeTracing.tracingId];
@@ -434,7 +397,7 @@ export function* manageUndoStates(): Saga<never> {
         } else {
           // Update most recent undo stack entry in-place.
           const volumeTracing = yield* select((state) =>
-            getVolumeTracingByLayerName(state.tracing, action.layerName),
+            getVolumeTracingByLayerName(state.annotation, action.layerName),
           );
 
           // If no volume tracing exists (but a segmentation layer exists, otherwise, the action wouldn't
@@ -457,7 +420,7 @@ export function* manageUndoStates(): Saga<never> {
           throw new Error("Could not find layer name for action.");
         }
         const activeVolumeTracing = yield* select((state) =>
-          getVolumeTracingByLayerName(state.tracing, layerName),
+          getVolumeTracingByLayerName(state.annotation, layerName),
         );
         if (activeVolumeTracing) {
           const volumeInfo = volumeInfoById[activeVolumeTracing.tracingId];
@@ -487,7 +450,7 @@ export function* manageUndoStates(): Saga<never> {
     }
 
     // We need the updated tracing here
-    prevSkeletonTracingOrNull = yield* select((state) => state.tracing.skeleton);
+    prevSkeletonTracingOrNull = yield* select((state) => state.annotation.skeleton);
     prevUserBoundingBoxes = yield* select(getUserBoundingBoxesFromState);
   }
 }
@@ -513,7 +476,7 @@ function* getSkeletonTracingToUndoState(
   prevTracing: SkeletonTracing,
   previousAction: Action | null | undefined,
 ): Saga<SkeletonUndoState | null | undefined> {
-  const curTracing = yield* select((state) => enforceSkeletonTracing(state.tracing));
+  const curTracing = yield* select((state) => enforceSkeletonTracing(state.annotation));
 
   if (curTracing !== prevTracing) {
     if (shouldAddToUndoStack(skeletonUserAction, previousAction)) {
@@ -550,40 +513,6 @@ function getBoundingBoxToUndoState(
   }
 
   return null;
-}
-
-function* compressBucketAndAddToList(
-  zoomedBucketAddress: BucketAddress,
-  bucketData: BucketDataArray,
-  maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise,
-  pendingOperations: Array<(arg0: BucketDataArray) => void>,
-  undoBucketList: VolumeUndoBuckets,
-): Saga<void> {
-  // The given bucket data is compressed, wrapped into a UndoBucket instance
-  // and appended to the passed VolumeAnnotationBatch.
-  // If backend data is being downloaded (MaybeUnmergedBucketLoadedPromise exists),
-  // the backend data will also be compressed and attached to the UndoBucket.
-  const compressedData = yield* call(compressTypedArray, bucketData);
-
-  if (compressedData != null) {
-    const volumeUndoPart: UndoBucket = {
-      zoomedBucketAddress,
-      compressedData,
-      maybeUnmergedBucketLoadedPromise,
-      pendingOperations: pendingOperations.slice(),
-    };
-
-    if (maybeUnmergedBucketLoadedPromise != null) {
-      maybeUnmergedBucketLoadedPromise.then((backendBucketData) => {
-        // Once the backend data is fetched, do not directly merge it with the already saved undo data
-        // as this operation is only needed, when the volume action is undone. Additionally merging is more
-        // expensive than saving the backend data. Thus the data is only merged upon an undo action / when it is needed.
-        volumeUndoPart.compressedBackendData = compressTypedArray(backendBucketData);
-      });
-    }
-
-    undoBucketList.push(volumeUndoPart);
-  }
 }
 
 function shouldAddToUndoStack(
@@ -678,8 +607,7 @@ function* applyStateOfStack(
       successMessageDelay: 2000,
     });
     yield* call(progressCallback, false, `Performing ${direction}...`);
-    const volumeBatchToApply = stateToRestore.data;
-    const currentVolumeState = yield* call(applyAndGetRevertingVolumeBatch, volumeBatchToApply);
+    const currentVolumeState = yield* call(applyAndGetRevertingVolumeUndoState, stateToRestore);
     stackToPushTo.push(currentVolumeState);
     yield* call(progressCallback, true, `Finished ${direction}...`);
   } else if (stateToRestore.type === "bounding_box") {
@@ -697,114 +625,39 @@ function* applyStateOfStack(
   }
 }
 
-function mergeDataWithBackendDataInPlace(
-  originalData: BucketDataArray,
-  backendData: BucketDataArray,
-  pendingOperations: Array<(arg0: BucketDataArray) => void>,
-) {
-  if (originalData.length !== backendData.length) {
-    throw new Error("Cannot merge data arrays with differing lengths");
-  }
-
-  // Transfer backend to originalData
-  // The `set` operation is not problematic, since the BucketDataArray types
-  // won't be mixed (either, they are BigInt or they aren't)
-  // @ts-ignore
-  originalData.set(backendData);
-
-  for (const op of pendingOperations) {
-    op(originalData);
-  }
-}
-
-function* applyAndGetRevertingVolumeBatch(
-  volumeAnnotationBatch: VolumeAnnotationBatch,
+function* applyAndGetRevertingVolumeUndoState(
+  volumeUndoState: VolumeUndoState,
 ): Saga<VolumeUndoState> {
-  // Applies a VolumeAnnotationBatch and returns a VolumeUndoState (which simply wraps
-  // another VolumeAnnotationBatch) for reverting the undo operation.
-  const segmentationLayer = Model.getSegmentationTracingLayer(volumeAnnotationBatch.tracingId);
+  // Applies a VolumeUndoState and returns a new VolumeUndoState for reverting the undo operation.
+  const segmentationLayer = Model.getSegmentationTracingLayer(volumeUndoState.data.tracingId);
 
   if (!segmentationLayer) {
     throw new Error("Undoing a volume annotation but no volume layer exists.");
   }
 
   const { cube } = segmentationLayer;
-  const allCompressedBucketsOfCurrentState: VolumeUndoBuckets = [];
+  const allBucketSnapshotsForCurrentState: BucketSnapshot[] = [];
 
-  for (const volumeUndoBucket of volumeAnnotationBatch.buckets) {
-    const {
-      zoomedBucketAddress,
-      compressedData: compressedBucketData,
-      compressedBackendData: compressedBackendDataPromise,
-    } = volumeUndoBucket;
-    let { maybeUnmergedBucketLoadedPromise } = volumeUndoBucket;
-    const bucket = cube.getOrCreateBucket(zoomedBucketAddress);
+  yield* call(
+    [Promise, Promise.all],
+    volumeUndoState.data.buckets.map(async (bucketSnapshot) => {
+      const bucket = cube.getOrCreateBucket(bucketSnapshot.zoomedAddress);
 
-    if (bucket.type === "null") {
-      continue;
-    }
-
-    // Prepare a snapshot of the bucket's current data so that it can be
-    // saved in an VolumeUndoState.
-    let bucketData = null;
-    const currentPendingOperations = bucket.pendingOperations.slice();
-
-    if (bucket.hasData()) {
-      // The bucket's data is currently available.
-      bucketData = bucket.getData();
-
-      if (compressedBackendDataPromise != null) {
-        // If the backend data for the bucket has been fetched in the meantime,
-        // the previous getData() call already returned the newest (merged) data.
-        // There should be no need to await the data from the backend.
-        maybeUnmergedBucketLoadedPromise = null;
+      if (bucket.type === "null") {
+        return;
       }
-    } else {
-      // The bucket's data is not available, since it was gc'ed in the meantime (which
-      // means its state must have been persisted to the server). Thus, it's enough to
-      // persist an essentially empty data array (which is created by getOrCreateData)
-      // and passing maybeUnmergedBucketLoadedPromise around so that
-      // the back-end data is fetched upon undo/redo.
-      bucketData = bucket.getOrCreateData();
-      maybeUnmergedBucketLoadedPromise = bucket.maybeUnmergedBucketLoadedPromise;
-    }
 
-    // Append the compressed snapshot to allCompressedBucketsOfCurrentState.
-    yield* call(
-      compressBucketAndAddToList,
-      zoomedBucketAddress,
-      bucketData,
-      maybeUnmergedBucketLoadedPromise,
-      currentPendingOperations,
-      allCompressedBucketsOfCurrentState,
-    );
-    // Decompress the bucket data which should be applied.
-    let decompressedBucketData = null;
-    let newPendingOperations = volumeUndoBucket.pendingOperations;
+      // Prepare a snapshot of the bucket's current data so that it can be
+      // saved in an VolumeUndoState.
+      const currentBucketSnapshot = await bucket.getSnapshotBeforeRestore();
+      allBucketSnapshotsForCurrentState.push(currentBucketSnapshot);
 
-    if (compressedBackendDataPromise != null) {
-      const compressedBackendData = yield compressedBackendDataPromise;
-      let decompressedBackendData;
-      [decompressedBucketData, decompressedBackendData] = yield* all([
-        call(decompressToTypedArray, bucket, compressedBucketData),
-        call(decompressToTypedArray, bucket, compressedBackendData),
-      ]);
-      mergeDataWithBackendDataInPlace(
-        decompressedBucketData,
-        decompressedBackendData,
-        volumeUndoBucket.pendingOperations,
-      );
-      newPendingOperations = [];
-    } else {
-      decompressedBucketData = yield* call(decompressToTypedArray, bucket, compressedBucketData);
-    }
-
-    // Set the new bucket data to add the bucket directly to the pushqueue.
-    cube.setBucketData(zoomedBucketAddress, decompressedBucketData, newPendingOperations);
-  }
+      await bucket.restoreToSnapshot(bucketSnapshot);
+    }),
+  );
 
   const activeVolumeTracing = yield* select((state) =>
-    getVolumeTracingById(state.tracing, volumeAnnotationBatch.tracingId),
+    getVolumeTracingById(state.annotation, volumeUndoState.data.tracingId),
   );
   // Segments and SegmentGroups are always handled as immutable. So, no need to copy.
   const currentSegments = activeVolumeTracing.segments;
@@ -813,20 +666,20 @@ function* applyAndGetRevertingVolumeBatch(
   // re-assign the group ids if segments belong to non-existent groups.
   yield* put(
     setSegmentGroupsAction(
-      volumeAnnotationBatch.segmentGroups,
-      volumeAnnotationBatch.tracingId,
+      volumeUndoState.data.segmentGroups,
+      volumeUndoState.data.tracingId,
       true,
     ),
   );
-  yield* put(setSegmentsAction(volumeAnnotationBatch.segments, volumeAnnotationBatch.tracingId));
+  yield* put(setSegmentsAction(volumeUndoState.data.segments, volumeUndoState.data.tracingId));
   cube.triggerPushQueue();
   return {
     type: "volume",
     data: {
-      buckets: allCompressedBucketsOfCurrentState,
+      buckets: allBucketSnapshotsForCurrentState,
       segments: currentSegments,
       segmentGroups: currentSegmentGroups,
-      tracingId: volumeAnnotationBatch.tracingId,
+      tracingId: volumeUndoState.data.tracingId,
     },
   };
 }

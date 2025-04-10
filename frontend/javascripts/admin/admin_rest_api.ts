@@ -9,7 +9,7 @@ import * as Utils from "libs/utils";
 import window, { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
-import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector2, Vector3 } from "oxalis/constants";
+import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector3 } from "oxalis/constants";
 import Constants, { ControlModeEnum, AnnotationStateFilterEnum } from "oxalis/constants";
 import type BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import {
@@ -24,8 +24,8 @@ import type {
   MappingType,
   NumberLike,
   PartialDatasetConfiguration,
+  StoreAnnotation,
   TraceOrViewCommand,
-  Tracing,
   UserConfiguration,
   VolumeTracing,
 } from "oxalis/store";
@@ -905,14 +905,14 @@ export function getSegmentBoundingBoxes(
 }
 
 export async function importVolumeTracing(
-  tracing: Tracing,
+  annotation: StoreAnnotation,
   volumeTracing: VolumeTracing,
   dataFile: File,
   version: number,
 ): Promise<number> {
   return doWithToken((token) =>
     Request.sendMultipartFormReceiveJSON(
-      `${tracing.tracingStore.url}/tracings/volume/${volumeTracing.tracingId}/importVolumeData?token=${token}`,
+      `${annotation.tracingStore.url}/tracings/volume/${volumeTracing.tracingId}/importVolumeData?token=${token}`,
       {
         data: {
           dataFile,
@@ -1812,6 +1812,12 @@ export async function sendUpgradePricingPlanStorageEmail(requestedStorage: numbe
   });
 }
 
+export async function sendOrderCreditsEmail(requestedCredits: number): Promise<void> {
+  return Request.receiveJSON(`/api/pricing/requestCredits?requestedCredits=${requestedCredits}`, {
+    method: "POST",
+  });
+}
+
 export async function getPricingPlanStatus(): Promise<APIPricingPlanStatus> {
   return Request.receiveJSON("/api/pricing/status");
 }
@@ -2276,7 +2282,7 @@ export async function getSamMask(
         pointY: number; // int, relative to topleft
       },
   additionalCoordinates: AdditionalCoordinate[],
-  intensityRange?: Vector2 | null,
+  intensityRange?: readonly [number, number] | null,
 ): Promise<Uint8Array> {
   const params = new URLSearchParams();
   if (intensityRange != null) {

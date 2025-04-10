@@ -1,7 +1,7 @@
 import { useEffectOnlyOnce, useKeyPress } from "libs/react_hooks";
 import { waitForCondition } from "libs/utils";
 import _ from "lodash";
-import type { Rect, Viewport } from "oxalis/constants";
+import type { Rect, Viewport, ViewportRects } from "oxalis/constants";
 import {
   AnnotationToolEnum,
   ArbitraryViewport,
@@ -73,7 +73,7 @@ export async function initializeInputCatcherSizes() {
   recalculateInputCatcherSizes();
 }
 export function recalculateInputCatcherSizes() {
-  const viewportRects: Record<string, any> = {
+  const viewportRects: Record<string, Rect> = {
     PLANE_XY: emptyViewportRect,
     PLANE_YZ: emptyViewportRect,
     PLANE_XZ: emptyViewportRect,
@@ -93,8 +93,7 @@ export function recalculateInputCatcherSizes() {
   // will re-calculate the zoom ranges for the available magnifications
   // (which is expensive and unnecessary).
   if (!_.isEqual(viewportRects, Store.getState().viewModeData.plane.inputCatcherRects)) {
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Record<string, any>' is not assi... Remove this comment to see the full error message
-    Store.dispatch(setInputCatcherRects(viewportRects));
+    Store.dispatch(setInputCatcherRects(viewportRects as ViewportRects));
   }
 }
 
@@ -131,9 +130,7 @@ function InputCatcher({
       renderedInputCatchers.set(viewportID, domElementRef.current);
     }
     return () => {
-      if (domElementRef.current) {
-        renderedInputCatchers.delete(viewportID);
-      }
+      renderedInputCatchers.delete(viewportID);
     };
   });
 

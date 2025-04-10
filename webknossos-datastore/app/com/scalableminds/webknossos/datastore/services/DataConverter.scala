@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.services
 
 import com.scalableminds.util.tools.FoxImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
-import spire.math.{ULong, _}
+import spire.math.{UByte, UInt, ULong, UShort}
 
 import java.nio._
 import scala.reflect.ClassTag
@@ -47,14 +47,16 @@ trait DataConverter extends FoxImplicits {
     dstArray
   }
 
-  def toUnsigned(data: Array[_ >: Byte with Short with Int with Long with Float])
-    : Array[_ >: UByte with UShort with UInt with ULong with Float] =
+  def toUnsignedIfNeeded(
+      data: Array[_ >: Byte with Short with Int with Long with Float],
+      isSigned: Boolean
+  ): Array[_ >: UByte with Byte with UShort with Short with UInt with Int with ULong with Long with Float] =
     data match {
-      case d: Array[Byte]  => d.map(UByte(_))
-      case d: Array[Short] => d.map(UShort(_))
-      case d: Array[Int]   => d.map(UInt(_))
-      case d: Array[Long]  => d.map(ULong(_))
-      case d: Array[Float] => d
+      case d: Array[Byte]  => if (isSigned) d else d.map(UByte(_))
+      case d: Array[Short] => if (isSigned) d else d.map(UShort(_))
+      case d: Array[Int]   => if (isSigned) d else d.map(UInt(_))
+      case d: Array[Long]  => if (isSigned) d else d.map(ULong(_))
+      case d: Array[Float] => d // Float is always signed
     }
 
   def filterZeroes(data: Array[_ >: Byte with Short with Int with Long with Float],
@@ -73,20 +75,6 @@ trait DataConverter extends FoxImplicits {
         case d: Array[Float] => d.filter(!_.isNaN).filter(_ != 0f)
       }
     }
-
-  def toBytesSpire(typed: Array[_ >: UByte with UShort with UInt with ULong with Float],
-                   elementClass: ElementClass.Value): Array[Byte] = {
-    val numBytes = ElementClass.bytesPerElement(elementClass)
-    val byteBuffer = ByteBuffer.allocate(numBytes * typed.length).order(ByteOrder.LITTLE_ENDIAN)
-    typed match {
-      case data: Array[UByte]  => data.foreach(el => byteBuffer.put(el.signed))
-      case data: Array[UShort] => data.foreach(el => byteBuffer.putChar(el.signed))
-      case data: Array[UInt]   => data.foreach(el => byteBuffer.putInt(el.signed))
-      case data: Array[ULong]  => data.foreach(el => byteBuffer.putLong(el.signed))
-      case data: Array[Float]  => data.foreach(el => byteBuffer.putFloat(el))
-    }
-    byteBuffer.array()
-  }
 
   def toBytes(typed: Array[_ >: Byte with Short with Int with Long with Float],
               elementClass: ElementClass.Value): Array[Byte] = {

@@ -18,6 +18,7 @@ import {
   Progress,
   Row,
   Select,
+  Space,
   Spin,
   Tooltip,
 } from "antd";
@@ -43,7 +44,10 @@ import {
   DatasetNameFormItem,
   DatastoreFormItem,
 } from "admin/dataset/dataset_components";
-import { hasPricingPlanExceededStorage } from "admin/organization/pricing_plan_utils";
+import {
+  getLeftOverStorageBytes,
+  hasPricingPlanExceededStorage,
+} from "admin/organization/pricing_plan_utils";
 import type { FormInstance } from "antd/lib/form";
 import classnames from "classnames";
 import FolderSelection from "dashboard/folders/folder_selection";
@@ -169,6 +173,10 @@ function MultiLayerImageStackExample() {
   );
 }
 
+function getFileSize(files: FileWithPath[]) {
+  return files.reduce((accSize, file) => accSize + file.size, 0);
+}
+
 type UploadFormFieldTypes = {
   name: string;
   initialTeams: Array<APITeam>;
@@ -179,6 +187,20 @@ type UploadFormFieldTypes = {
   continuingOldUpload: boolean;
   datastoreUrl: string;
 };
+
+export const dataPrivacyInfo = (
+  <Space direction="horizontal" size={4}>
+    Per default, imported data is private and only visible within your organization.
+    <a
+      style={{ color: "var(--ant-color-primary)" }}
+      href="https://docs.webknossos.org/webknossos/datasets/settings.html#sharing-permissions-tab"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      Read more
+    </a>
+  </Space>
+);
 
 class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   state: State = {
@@ -316,6 +338,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       ? unfinishedUploadToContinue.uploadId
       : `${dayjs(Date.now()).format("YYYY-MM-DD_HH-mm")}__${newDatasetName}__${getRandomString()}`;
     const filePaths = formValues.zipFile.map((file) => file.path || "");
+    const totalFileSizeInBytes = getFileSize(formValues.zipFile);
     const reserveUploadInformation = {
       uploadId,
       name: newDatasetName,
@@ -324,6 +347,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       organization: activeUser.organization,
       totalFileCount: formValues.zipFile.length,
       filePaths: filePaths,
+      totalFileSizeInBytes,
       layersToLink: [],
       initialTeams: formValues.initialTeams.map((team: APITeam) => team.id),
       folderId: formValues.targetFolderId,
@@ -699,6 +723,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       (unfinishedUploads) => unfinishedUploads.uploadId !== unfinishedUploadToContinue?.uploadId,
     );
     const continuingUnfinishedUpload = unfinishedUploadToContinue != null;
+    const isActiveUserAdmin = this.props.activeUser?.isAdmin;
 
     return (
       <div
@@ -707,7 +732,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           padding: 5,
         }}
       >
-        <CardContainer withoutCard={withoutCard} title="Upload Dataset">
+        <CardContainer withoutCard={withoutCard} title="Upload Dataset" subtitle={dataPrivacyInfo}>
           {hasPricingPlanExceededStorage(this.props.organization) ? (
             <Alert
               type="error"
@@ -979,6 +1004,19 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                     // Either there are no archives, or all files are archives
                     return archives.length === 0 || archives.length === files.length;
                   }, "Archives cannot be mixed with other files."),
+                },
+                {
+                  validator: syncValidator(
+                    (files: FileWithPath[]) => {
+                      const fileSize = getFileSize(files);
+                      return getLeftOverStorageBytes(this.props.organization) >= fileSize;
+                    },
+                    `The selected files exceed the available storage of your organization. Please ${
+                      isActiveUserAdmin
+                        ? "use the organization management page to request more storage"
+                        : "ask your administrator to request more storage"
+                    }.`,
+                  ),
                 },
                 {
                   validator: syncValidator((files: FileWithPath[]) => {

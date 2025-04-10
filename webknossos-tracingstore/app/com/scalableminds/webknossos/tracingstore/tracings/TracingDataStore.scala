@@ -13,14 +13,16 @@ import scala.concurrent.{ExecutionContext, Future}
 class TracingDataStore @Inject()(config: TracingStoreConfig,
                                  lifecycle: ApplicationLifecycle,
                                  slackNotificationService: TSSlackNotificationService,
-                                 val system: ActorSystem)(implicit ec: ExecutionContext)
+                                 val actorSystem: ActorSystem)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
   val healthClient = new FossilDBClient("healthCheckOnly", config, slackNotificationService)
 
-  system.scheduler.scheduleOnce(5 seconds)(healthClient.checkHealth(verbose = true))
+  actorSystem.scheduler.scheduleOnce(5 seconds)(healthClient.checkHealth(verbose = true))
 
   lazy val skeletons = new FossilDBClient("skeletons", config, slackNotificationService)
+
+  lazy val skeletonTreeBodies = new FossilDBClient("skeletonTreeBodies", config, slackNotificationService)
 
   lazy val volumes = new FossilDBClient("volumes", config, slackNotificationService)
 
@@ -43,6 +45,7 @@ class TracingDataStore @Inject()(config: TracingStoreConfig,
   private def shutdown(): Unit = {
     healthClient.shutdown()
     skeletons.shutdown()
+    skeletonTreeBodies.shutdown()
     annotationUpdates.shutdown()
     annotations.shutdown()
     volumes.shutdown()

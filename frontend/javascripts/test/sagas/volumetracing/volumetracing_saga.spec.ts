@@ -24,12 +24,6 @@ import { withoutUpdateTracing } from "test/helpers/saveHelpers";
 import type { ActiveMappingInfo } from "oxalis/store";
 import { askUserForLockingActiveMapping } from "oxalis/model/sagas/saga_helpers";
 
-mockRequire("app", {
-  currentUser: {
-    firstName: "SCM",
-    lastName: "Boy",
-  },
-});
 mockRequire("oxalis/model/sagas/root_saga", function* () {
   yield;
 });
@@ -96,7 +90,7 @@ const volumeTracingLayer: APISegmentationLayer = {
   additionalAxes: [],
 };
 const initialState = update(defaultState, {
-  tracing: {
+  annotation: {
     volumes: {
       $set: [volumeTracing],
     },
@@ -148,13 +142,13 @@ test("VolumeTracingSaga shouldn't do anything if unchanged (saga test)", (t) => 
   );
 
   saga.next();
-  saga.next(initialState.tracing.volumes[0]);
+  saga.next(initialState.annotation.volumes[0]);
   saga.next(initialState.flycam);
   saga.next(initialState.viewModeData.plane.tdCamera);
   saga.next();
   saga.next();
   saga.next(true);
-  saga.next(initialState.tracing.volumes[0]);
+  saga.next(initialState.annotation.volumes[0]);
   saga.next(initialState.flycam);
   // only updateTracing
   const items = execCall(t, saga.next(initialState.viewModeData.plane.tdCamera));
@@ -168,13 +162,13 @@ test("VolumeTracingSaga should do something if changed (saga test)", (t) => {
   );
 
   saga.next();
-  saga.next(initialState.tracing.volumes[0]);
+  saga.next(initialState.annotation.volumes[0]);
   saga.next(initialState.flycam);
   saga.next(initialState.viewModeData.plane.tdCamera);
   saga.next();
   saga.next();
   saga.next(true);
-  saga.next(newState.tracing.volumes[0]);
+  saga.next(newState.annotation.volumes[0]);
   saga.next(newState.flycam);
   const items = execCall(t, saga.next(newState.viewModeData.plane.tdCamera));
   t.is(withoutUpdateTracing(items).length, 0);
@@ -456,7 +450,11 @@ test("ensureMaybeActiveMappingIsLocked should lock an existing mapping to the an
 test("ensureMaybeActiveMappingIsLocked should lock 'no mapping' in case no mapping is active.", (t) => {
   const saga = ensureMaybeActiveMappingIsLocked(volumeTracing);
   saga.next();
-  expectValueDeepEqual(t, saga.next({}), put(VolumeTracingActions.setMappingIsLockedAction()));
+  expectValueDeepEqual(
+    t,
+    saga.next({}),
+    put(VolumeTracingActions.setMappingIsLockedAction(volumeTracing.tracingId)),
+  );
   t.true(saga.next().done);
 });
 
@@ -467,7 +465,7 @@ test("ensureMaybeActiveMappingIsLocked should lock 'no mapping' in case a mappin
   expectValueDeepEqual(
     t,
     saga.next({ [volumeTracing.tracingId]: jsonDummyMapping }),
-    put(VolumeTracingActions.setMappingIsLockedAction()),
+    put(VolumeTracingActions.setMappingIsLockedAction(volumeTracing.tracingId)),
   );
   t.true(saga.next().done);
 });
@@ -479,7 +477,7 @@ test("ensureMaybeActiveMappingIsLocked should lock 'no mapping' in case a JSON m
   expectValueDeepEqual(
     t,
     saga.next({ [volumeTracing.tracingId]: jsonDummyMapping }),
-    put(VolumeTracingActions.setMappingIsLockedAction()),
+    put(VolumeTracingActions.setMappingIsLockedAction(volumeTracing.tracingId)),
   );
   t.true(saga.next().done);
 });

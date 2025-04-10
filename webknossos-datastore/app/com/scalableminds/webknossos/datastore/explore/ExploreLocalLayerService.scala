@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.explore
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -35,6 +36,7 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
         exploreLocalNgffV0_5Array(path, dataSourceId),
         exploreLocalZarrArray(path, dataSourceId, layerDirectory),
         exploreLocalNeuroglancerPrecomputed(path, dataSourceId, layerDirectory),
+        exploreLocalN5CompactMultiscales(path, dataSourceId, layerDirectory),
         exploreLocalN5Multiscales(path, dataSourceId, layerDirectory),
         exploreLocalN5Array(path, dataSourceId)
       )
@@ -51,7 +53,7 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
           mag <- Fox
             .option2Fox(Vec3Int.fromMagLiteral(dir.getFileName.toString, allowScalar = true)) ?~> s"invalid mag: ${dir.getFileName}"
           vaultPath <- dataVaultService.getVaultPath(remoteSourceDescriptor) ?~> "dataVault.setup.failed"
-          layersWithVoxelSizes <- new ZarrArrayExplorer(mag).explore(vaultPath, None)
+          layersWithVoxelSizes <- new ZarrArrayExplorer(mag).explore(vaultPath, None)(TokenContext(None))
         } yield layersWithVoxelSizes))
       (layers, voxelSize) <- adaptLayersAndVoxelSize(layersWithVoxelSizes.flatten, None)
       relativeLayers = layers.map(selectLastTwoDirectories)
@@ -84,6 +86,13 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
     exploreLocalLayer(
       layers => layers.map(selectLastDirectory),
       new N5MultiscalesExplorer
+    )(path, dataSourceId, layerDirectory)
+
+  private def exploreLocalN5CompactMultiscales(path: Path, dataSourceId: DataSourceId, layerDirectory: String)(
+      implicit ec: ExecutionContext): Fox[DataSourceWithMagLocators] =
+    exploreLocalLayer(
+      layers => layers.map(selectLastDirectory),
+      new N5CompactMultiscalesExplorer
     )(path, dataSourceId, layerDirectory)
 
   private def exploreLocalN5Array(path: Path, dataSourceId: DataSourceId)(
@@ -130,7 +139,7 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
       fullPath <- Fox.successful(path.resolve(layer))
       remoteSourceDescriptor <- Fox.successful(RemoteSourceDescriptor(fullPath.toUri, None))
       vaultPath <- dataVaultService.getVaultPath(remoteSourceDescriptor) ?~> "dataVault.setup.failed"
-      layersWithVoxelSizes <- explorer.explore(vaultPath, None)
+      layersWithVoxelSizes <- explorer.explore(vaultPath, None)(TokenContext(None))
       (layers, voxelSize) <- adaptLayersAndVoxelSize(layersWithVoxelSizes, None)
       relativeLayers = makeLayersRelative(layers)
       dataSource = new DataSourceWithMagLocators(dataSourceId, relativeLayers, voxelSize)

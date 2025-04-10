@@ -182,7 +182,7 @@ class AnnotationController @Inject()(
         dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
         annotation <- annotationService.createExplorationalFor(
           request.identity,
-          dataset._id,
+          dataset,
           request.body
         ) ?~> "annotation.create.failed"
         _ = analyticsService.track(CreateAnnotationEvent(request.identity: User, annotation: Annotation))

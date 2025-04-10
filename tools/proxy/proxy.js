@@ -101,7 +101,7 @@ proxy.on("error", (err, req, res) => {
       <head>
         <title>503 Service Unavailable</title>
         <script type="text/javascript">
-          let countdown = 5;
+          let countdown = 3;
           function updateCountdown() {
             document.getElementById('countdown').textContent = countdown;
             countdown--;
@@ -119,7 +119,7 @@ proxy.on("error", (err, req, res) => {
       <body>
         <h1>Bad gateway</h1>
         <p>The server might still be starting up, please try again in a few seconds or check console output.</p>
-        <p>Reloading in <span id="countdown">5</span> seconds...</p>
+        <p>Reloading in <span id="countdown">3</span> seconds...</p>
       </body>
     </html>
   `);

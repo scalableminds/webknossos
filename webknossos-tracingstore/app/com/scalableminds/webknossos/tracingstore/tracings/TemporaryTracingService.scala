@@ -5,6 +5,7 @@ import com.scalableminds.util.tools.Fox.bool2Fox
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
 import scalapb.GeneratedMessageCompanion
 
@@ -19,6 +20,7 @@ class TemporaryTracingService @Inject()(
     volumeStore: TemporaryTracingStore[VolumeTracing],
     volumeDataStore: TemporaryTracingStore[Array[Byte]],
     annotationStore: TemporaryTracingStore[AnnotationProto],
+    segmentIndexStore: TemporaryTracingStore[Set[Vec3IntProto]],
     temporaryTracingIdStore: TracingStoreRedisStore)(implicit ec: ExecutionContext) {
 
   implicit def skeletonTracingCompanion: GeneratedMessageCompanion[SkeletonTracing] = SkeletonTracing
@@ -48,8 +50,14 @@ class TemporaryTracingService @Inject()(
   def getVolumeBucket(bucketKey: String): Fox[Array[Byte]] =
     volumeDataStore.get(bucketKey)
 
+  def getVolumeBuckets(bucketKeys: Seq[String]): Seq[Option[Array[Byte]]] =
+    volumeDataStore.getMultiple(bucketKeys)
+
   def getAllVolumeBucketsWithPrefix(bucketPrefix: String): collection.Map[String, Array[Byte]] =
     volumeDataStore.getAllConditionalWithKey(key => key.startsWith(bucketPrefix))
+
+  def getVolumeSegmentIndexBufferForKey(segmentIndexKey: String): Option[Set[Vec3IntProto]] =
+    segmentIndexStore.get(segmentIndexKey)
 
   def saveSkeleton(tracingId: String, skeletonTracing: SkeletonTracing): Fox[Unit] = {
     skeletonStore.insert(tracingId, skeletonTracing, Some(temporaryStoreTimeout))
@@ -68,9 +76,21 @@ class TemporaryTracingService @Inject()(
     Fox.successful(())
   }
 
+  def saveVolumeBuckets(bucketDataByKey: Seq[(String, Array[Byte])]): Fox[Unit] = {
+    volumeDataStore.insertAll(bucketDataByKey, Some(temporaryStoreTimeout))
+    Fox.successful(())
+  }
+
   def saveAnnotationProto(annotationId: String, annotationProto: AnnotationProto): Fox[Unit] = {
     annotationStore.insert(annotationId, annotationProto, Some(temporaryStoreTimeout))
     registerAnnotationId(annotationId)
+    Fox.successful(())
+  }
+
+  def saveVolumeSegmentIndexBuffer(tracingId: String,
+                                   bucketPositionsBySegmentId: Seq[(String, Set[Vec3IntProto])]): Fox[Unit] = {
+    segmentIndexStore.insertAll(bucketPositionsBySegmentId, Some(temporaryStoreTimeout))
+    registerTracingId(tracingId)
     Fox.successful(())
   }
 

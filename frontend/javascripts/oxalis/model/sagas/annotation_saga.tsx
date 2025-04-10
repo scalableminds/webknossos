@@ -64,7 +64,7 @@ export function* pushAnnotationDescriptionUpdateAction(action: SetAnnotationDesc
 }
 
 export function* pushAnnotationUpdateAsync(action: Action) {
-  const tracing = yield* select((state) => state.tracing);
+  const annotation = yield* select((state) => state.annotation);
   const mayEdit = yield* select((state) => mayEditAnnotationProperties(state));
   if (!mayEdit) {
     return;
@@ -80,8 +80,8 @@ export function* pushAnnotationUpdateAsync(action: Action) {
   };
   // The extra type annotation is needed here for flow
   const editObject: Partial<EditableAnnotation> = {
-    name: tracing.name,
-    visibility: tracing.visibility,
+    name: annotation.name,
+    visibility: annotation.visibility,
     viewConfiguration,
   };
   try {
@@ -89,8 +89,8 @@ export function* pushAnnotationUpdateAsync(action: Action) {
       SETTINGS_MAX_RETRY_COUNT,
       SETTINGS_RETRY_DELAY,
       editAnnotation,
-      tracing.annotationId,
-      tracing.annotationType,
+      annotation.annotationId,
+      annotation.annotationType,
       editObject,
     );
   } catch (error) {
@@ -150,7 +150,7 @@ function shouldDisplaySegmentationData(): boolean {
   return !onlyViewing3dViewport;
 }
 
-export function* warnAboutSegmentationZoom(): Saga<void> {
+export function* warnAboutSegmentationZoom(): Saga<never> {
   function* warnMaybe(): Saga<void> {
     const segmentationLayer = Model.getVisibleSegmentationLayer();
 
@@ -239,12 +239,12 @@ export function* watchAnnotationAsync(): Saga<void> {
 
 export function* acquireAnnotationMutexMaybe(): Saga<void> {
   yield* call(ensureWkReady);
-  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
-  const annotationId = yield* select((storeState) => storeState.tracing.annotationId);
+  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
+  const annotationId = yield* select((storeState) => storeState.annotation.annotationId);
   if (!allowUpdate) {
     return;
   }
-  const othersMayEdit = yield* select((state) => state.tracing.othersMayEdit);
+  const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
   const activeUser = yield* select((state) => state.activeUser);
   const acquireMutexInterval = 1000 * 60;
   const RETRY_COUNT = 12;

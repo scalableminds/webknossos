@@ -14,12 +14,13 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayerLike => DataLayer
 }
 import com.scalableminds.webknossos.datastore.rpc.RPC
+import com.scalableminds.webknossos.datastore.services.DataSourcePathInfo
 import com.typesafe.scalalogging.LazyLogging
 import models.folder.FolderDAO
 import models.organization.{Organization, OrganizationDAO}
 import models.team._
 import models.user.{User, UserService}
-import net.liftweb.common.{Box, Full}
+import net.liftweb.common.{Box, Empty, EmptyBox, Full}
 import play.api.libs.json.{JsObject, Json}
 import security.RandomIDGenerator
 import utils.WkConf
@@ -33,6 +34,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                dataStoreDAO: DataStoreDAO,
                                datasetLastUsedTimesDAO: DatasetLastUsedTimesDAO,
                                datasetDataLayerDAO: DatasetLayerDAO,
+                               datasetMagsDAO: DatasetMagsDAO,
                                teamDAO: TeamDAO,
                                folderDAO: FolderDAO,
                                dataStoreService: DataStoreService,
@@ -63,12 +65,16 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- bool2Fox(!name.startsWith(".")) ?~> "dataset.layer.name.invalid.startsWithDot"
     } yield ()
 
-  def createPreliminaryDataset(datasetName: String, organizationId: String, dataStore: DataStore): Fox[Dataset] = {
+  def createPreliminaryDataset(datasetName: String,
+                               organizationId: String,
+                               dataStore: DataStore,
+                               requireUniqueName: Boolean): Fox[Dataset] = {
     val newDatasetId = ObjectId.generate
     for {
-      datasetDirectoryName <- datasetDAO
-        .doesDatasetDirectoryExistInOrganization(datasetName, organizationId)(GlobalAccessContext)
-        .map(if (_) s"$datasetName-${newDatasetId.toString}" else datasetName)
+      isDatasetNameAlreadyTaken <- datasetDAO.doesDatasetDirectoryExistInOrganization(datasetName, organizationId)(
+        GlobalAccessContext)
+      _ <- bool2Fox(!(isDatasetNameAlreadyTaken && requireUniqueName)) ?~> "dataset.name.alreadyTaken"
+      datasetDirectoryName = if (isDatasetNameAlreadyTaken) s"$datasetName-${newDatasetId.toString}" else datasetName
       unreportedDatasource = UnusableDataSource(DataSourceId(datasetDirectoryName, organizationId),
                                                 notYetUploadedStatus)
       newDataset <- createDataset(dataStore, newDatasetId, datasetName, unreportedDatasource)
@@ -256,13 +262,10 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     }
   }
 
-  def dataSourceFor(dataset: Dataset, organization: Option[Organization] = None): Fox[InboxDataSource] =
+  def dataSourceFor(dataset: Dataset): Fox[InboxDataSource] =
     (for {
-      organization <- Fox.fillOption(organization) {
-        organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> "organization.notFound"
-      }
       dataLayers <- datasetDataLayerDAO.findAllForDataset(dataset._id)
-      dataSourceId = DataSourceId(dataset.directoryName, organization._id)
+      dataSourceId = DataSourceId(dataset.directoryName, dataset._organization)
     } yield {
       if (dataset.isUsable)
         for {
@@ -338,6 +341,38 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- datasetDAO.updateUploader(dataset._id, Some(_uploader)) ?~> "dataset.uploader.forbidden"
     } yield ()
 
+  private def updateRealPath(pathInfo: DataSourcePathInfo)(implicit ctx: DBAccessContext): Fox[Unit] =
+    if (pathInfo.magPathInfos.isEmpty) {
+      Fox.successful(())
+    } else {
+      val dataset = datasetDAO.findOneByDataSourceId(pathInfo.dataSourceId).futureBox
+      dataset.flatMap {
+        case Full(dataset) => datasetMagsDAO.updateMagPathsForDataset(dataset._id, pathInfo.magPathInfos)
+        case Empty => // Dataset reported but ignored (non-existing/forbidden org)
+          Fox.successful(())
+        case e: EmptyBox =>
+          Fox.failure("dataset.notFound", e)
+      }
+    }
+
+  def updateRealPaths(pathInfos: List[DataSourcePathInfo])(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- Fox.serialCombined(pathInfos)(updateRealPath)
+    } yield ()
+
+  def getPathsForDataLayer(datasetId: ObjectId, layerName: String): Fox[List[(DatasetMagInfo, List[DatasetMagInfo])]] =
+    for {
+      magInfos <- datasetMagsDAO.findPathsForDatasetAndDatalayer(datasetId, layerName)
+      magInfosAndLinkedMags <- Fox.serialCombined(magInfos)(magInfo =>
+        magInfo.realPath match {
+          case Some(realPath) =>
+            for {
+              pathInfos <- datasetMagsDAO.findAllByRealPath(realPath)
+            } yield (magInfo, pathInfos.filter(!_.equals(magInfo)))
+          case None => Fox.successful((magInfo, List()))
+      })
+    } yield magInfosAndLinkedMags
+
   def publicWrites(dataset: Dataset,
                    requestingUserOpt: Option[User],
                    organization: Option[Organization] = None,
@@ -359,7 +394,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       isEditable <- isEditableBy(dataset, requestingUserOpt, requestingUserTeamManagerMemberships) ?~> "dataset.list.isEditableCheckFailed"
       lastUsedByUser <- lastUsedTimeFor(dataset._id, requestingUserOpt) ?~> "dataset.list.fetchLastUsedTimeFailed"
       dataStoreJs <- dataStoreService.publicWrites(dataStore) ?~> "dataset.list.dataStoreWritesFailed"
-      dataSource <- dataSourceFor(dataset, Some(organization)) ?~> "dataset.list.fetchDataSourceFailed"
+      dataSource <- dataSourceFor(dataset) ?~> "dataset.list.fetchDataSourceFailed"
       usedStorageBytes <- Fox.runIf(requestingUserOpt.exists(u => u._organization == dataset._organization))(
         organizationDAO.getUsedStorageForDataset(dataset._id))
     } yield {

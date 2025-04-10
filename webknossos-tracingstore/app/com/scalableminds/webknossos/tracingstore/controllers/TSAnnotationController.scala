@@ -164,8 +164,13 @@ class TSAnnotationController @Inject()(
                 Some(TracingSelector(l.tracingId))
               })
               .map(_.flatten)
+            firstVolumeAnnotationIndex = annotations.indexWhere(
+              _.annotationLayers.exists(_.typ == AnnotationLayerTypeProto.Volume))
+            firstVolumeAnnotationId = if (firstVolumeAnnotationIndex < 0) None
+            else Some(request.body(firstVolumeAnnotationIndex))
             mergeEditableMappingsResultBox <- editableMappingMergeService
               .mergeEditableMappings(request.body,
+                                     firstVolumeAnnotationId,
                                      newAnnotationId,
                                      newVolumeId,
                                      volumeTracings.zip(volumeLayers.map(_.tracingId)),
@@ -176,7 +181,8 @@ class TSAnnotationController @Inject()(
               case Empty               => Fox.successful((None, 0L))
               case f: Failure          => f.toFox
             }
-            mergedVolumeStats <- volumeTracingService.mergeVolumeData(volumeLayers.map(_.tracingId),
+            mergedVolumeStats <- volumeTracingService.mergeVolumeData(firstVolumeAnnotationId,
+                                                                      volumeLayers.map(_.tracingId),
                                                                       volumeTracings,
                                                                       newVolumeId,
                                                                       newVersion = newTargetVersion,
@@ -185,7 +191,7 @@ class TSAnnotationController @Inject()(
               volumeTracingService
                 .merge(volumeTracings, mergedVolumeStats, newMappingName, newVersion = newTargetVersion))
             _ <- Fox.runOptional(mergedVolumeOpt)(
-              volumeTracingService.saveVolume(_, Some(newVolumeId), version = newTargetVersion, toTemporaryStore))
+              volumeTracingService.saveVolume(newVolumeId, version = newTargetVersion, _, toTemporaryStore))
             skeletonTracings <- annotationService
               .findMultipleSkeletons(skeletonLayers.map { l =>
                 Some(TracingSelector(l.tracingId))
@@ -194,7 +200,8 @@ class TSAnnotationController @Inject()(
             mergedSkeletonOpt <- Fox.runIf(skeletonTracings.nonEmpty)(
               skeletonTracingService.merge(skeletonTracings, newVersion = newTargetVersion).toFox)
             _ <- Fox.runOptional(mergedSkeletonOpt)(
-              skeletonTracingService.saveSkeleton(_, Some(newSkeletonId), version = newTargetVersion, toTemporaryStore))
+              skeletonTracingService
+                .saveSkeleton(newSkeletonId, version = newTargetVersion, _, toTemporaryStore = toTemporaryStore))
             mergedSkeletonLayerOpt = mergedSkeletonOpt.map(
               _ =>
                 AnnotationLayerProto(name = mergedSkeletonName,

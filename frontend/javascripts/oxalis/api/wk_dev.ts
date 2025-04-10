@@ -1,8 +1,9 @@
+import app from "app";
 import showFpsMeter from "libs/fps_meter";
 import { V3 } from "libs/mjs";
 import { roundTo, sleep } from "libs/utils";
 import _ from "lodash";
-import type { Vector3 } from "oxalis/constants";
+import { type OrthoView, OrthoViews, type Vector3 } from "oxalis/constants";
 import { Store } from "oxalis/singletons";
 import type { ApiInterface } from "./api_latest";
 import type ApiLoader from "./api_loader";
@@ -22,6 +23,9 @@ export const WkDevFlags = {
     // For enforcing fallback rendering. enforcedZoomDiff == 2, means
     // that buckets of currentZoomStep + 2 are rendered.
     enforcedZoomDiff: undefined,
+    // This variable is only respected during shader compilation. Therefore,
+    // it needs to be set to true before the rendering is initialized.
+    disableLayerNameSanitization: false,
   },
   meshing: {
     marchingCubeSizeInTargetMag: [64, 64, 64] as Vector3,
@@ -39,7 +43,7 @@ export default class WkDev {
    */
   apiLoader: ApiLoader;
   _api!: ApiInterface;
-  benchmarkHistory: number[] = [];
+  benchmarkHistory: { MOVE: number[]; ROTATE: number[] } = { MOVE: [], ROTATE: [] };
 
   flags = WkDevFlags;
 
@@ -137,6 +141,10 @@ export default class WkDev {
     console.log("Created", treeCount, "trees.");
   }
 
+  resetBenchmarks() {
+    this.benchmarkHistory = { MOVE: [], ROTATE: [] };
+  }
+
   async benchmarkMove(zRange: [number, number] = [1025, 1250], repeatAmount: number = 1) {
     /*
      * Benchmark moving in z from zRange[0] to zRange[1] ${repeatAmount} times.
@@ -183,11 +191,53 @@ export default class WkDev {
     }
     const duration = performance.now() - start;
     console.timeEnd("Move Benchmark");
-    this.benchmarkHistory.push(duration);
-    if (this.benchmarkHistory.length > 1) {
+    this.benchmarkHistory.MOVE.push(duration);
+    if (this.benchmarkHistory.MOVE.length > 1) {
       console.log(
-        `Average of all ${this.benchmarkHistory.length} benchmark runs:`,
-        _.mean(this.benchmarkHistory),
+        `Mean of all ${this.benchmarkHistory.MOVE.length} benchmark runs:`,
+        _.mean(this.benchmarkHistory.MOVE),
+      );
+    }
+  }
+
+  async benchmarkRotate(n: number = 10) {
+    // Dynamic import to avoid circular imports.
+    const { rotate3DViewTo } = await import("oxalis/controller/camera_controller");
+
+    const animateAsPromise = (plane: OrthoView) => {
+      return new Promise<void>((resolve) => {
+        rotate3DViewTo(plane, false, resolve);
+      });
+    };
+
+    const start = performance.now();
+    console.time("Rotate Benchmark");
+
+    for (let i = 0; i < n; i++) {
+      app.vent.emit("forceImmediateRerender");
+      await sleep(0);
+      await animateAsPromise(OrthoViews.PLANE_XY);
+
+      app.vent.emit("forceImmediateRerender");
+      await sleep(0);
+      await animateAsPromise(OrthoViews.PLANE_YZ);
+
+      app.vent.emit("forceImmediateRerender");
+      await sleep(0);
+      await animateAsPromise(OrthoViews.PLANE_XZ);
+
+      app.vent.emit("forceImmediateRerender");
+      await sleep(0);
+      await animateAsPromise(OrthoViews.TDView);
+    }
+    console.timeEnd("Rotate Benchmark");
+
+    const duration = performance.now() - start;
+    this.benchmarkHistory.ROTATE.push(duration);
+    if (this.benchmarkHistory.ROTATE.length > 1) {
+      console.log(
+        `Mean of all ${this.benchmarkHistory.ROTATE.length} benchmark runs:`,
+        _.mean(this.benchmarkHistory.ROTATE),
       );
     }
   }

@@ -97,8 +97,8 @@ class WKExploreRemoteLayerService @Inject()(credentialService: CredentialService
       credentialOpt = credentialService.createCredentialOpt(uri,
                                                             credentialIdentifier,
                                                             credentialSecret,
-                                                            requestingUser._id,
-                                                            requestingUser._organization)
+                                                            Some(requestingUser._id),
+                                                            Some(requestingUser._organization))
       _ <- bool2Fox(uri.getScheme != null) ?~> s"Received invalid URI: $layerUri"
       credentialId <- Fox.runOptional(credentialOpt)(c => credentialService.insertOne(c)) ?~> "dataVault.credential.insert.failed"
     } yield credentialId

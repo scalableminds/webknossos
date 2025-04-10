@@ -93,8 +93,6 @@ class SceneController {
   renderer!: THREE.WebGLRenderer;
   scene!: THREE.Scene;
   rootGroup!: THREE.Object3D;
-  // Group for all meshes including a light.
-  // meshesRootGroup!: THREE.Object3D;
   segmentMeshController: SegmentMeshController;
   storePropertyUnsubscribers: Array<() => void>;
   splitBoundaryMesh: THREE.Mesh | null = null;
@@ -136,7 +134,6 @@ class SceneController {
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.rootGroup);
     this.scene.add(this.segmentMeshController.meshesLODRootGroup);
-    // this.scene.add(this.meshesRootGroup);
 
     /* Scene
      * - rootGroup

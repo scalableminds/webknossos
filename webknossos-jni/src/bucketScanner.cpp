@@ -1,6 +1,7 @@
 #include "com_scalableminds_webknossos_datastore_helpers_NativeBucketScanner.h"
 
 #include "jniutils.h"
+#include <array>
 #include <iostream>
 #include <vector>
 #include <stdexcept>

@@ -100,6 +100,7 @@ mockRequire("libs/user_local_storage", {
 mockRequire("libs/request", Request);
 mockRequire("libs/error_handling", ErrorHandling);
 mockRequire("app", app);
+mockRequire("libs/compute_bvh_async", { computeBvhAsync: null });
 mockRequire("oxalis/model/helpers/proto_helpers", protoHelpers);
 // Replace byte_array_lz4_compression.worker with a mock which supports
 // intentional slowness.

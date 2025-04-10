@@ -12,6 +12,7 @@ import { PureComponent } from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import type { EmptyObject } from "types/globals";
+import { NARROW_BUTTON_STYLE } from "./toolbar_view";
 
 type StateProps = {
   viewMode: ViewMode;
@@ -87,7 +88,7 @@ class ViewModesView extends PureComponent<Props, EmptyObject> {
 
     return (
       <Dropdown menu={menuProps}>
-        <Button>
+        <Button style={NARROW_BUTTON_STYLE}>
           <Space>{VIEW_MODE_TO_ICON[this.props.viewMode]}</Space>
         </Button>
       </Dropdown>

@@ -1,10 +1,11 @@
-import { Button, Dropdown, type MenuProps } from "antd";
+import { Badge, Button, Dropdown, type MenuProps } from "antd";
 import {
   // setToolWorkspaceAction,
   updateUserSettingAction,
 } from "oxalis/model/actions/settings_actions";
 import { Store } from "oxalis/singletons";
 import type { ToolWorkspace } from "oxalis/store";
+import { NARROW_BUTTON_STYLE } from "./toolbar_view";
 
 export default function ToolWorkspaceView() {
   const toolWorkspaceItems: MenuProps["items"] = [
@@ -55,9 +56,18 @@ export default function ToolWorkspaceView() {
 
   return (
     <Dropdown menu={toolWorkspaceMenuProps}>
-      <Button>
-        <i className="fas fa-tools" />
-      </Button>
+      <Badge
+        dot
+        style={{
+          boxShadow: "none",
+          background: "red",
+          zIndex: 1000,
+        }}
+      >
+        <Button style={NARROW_BUTTON_STYLE}>
+          <i className="fas fa-tools" />
+        </Button>
+      </Badge>
     </Dropdown>
   );
 }

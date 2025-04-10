@@ -88,7 +88,7 @@ import type { MenuInfo } from "rc-menu/lib/interface";
 import { APIJobType } from "types/api_flow_types";
 import { QuickSelectControls } from "./quick_select_settings";
 
-const NARROW_BUTTON_STYLE = {
+export const NARROW_BUTTON_STYLE = {
   paddingLeft: 10,
   paddingRight: 8,
 };

@@ -65,7 +65,7 @@ class FossilDBClient(collection: String,
         logger.info(f"Successfully tested FossilDB health at $authority. Reply: " + replyString)
     } yield ()
     for {
-      box <- resultFox.futureBox
+      box <- Fox.future2Fox(resultFox.futureBox)
       _ <- box match {
         case Full(()) => Fox.successful(())
         case Empty    => Fox.empty
@@ -78,39 +78,41 @@ class FossilDBClient(collection: String,
   }
 
   private def wrapException[T](future: Future[T]): Fox[T] =
-    future.transformWith {
-      case Success(value) =>
-        Fox.successful(value).futureBox
-      case Failure(exception) =>
-        val box = exception match {
-          case e: StatusRuntimeException if e.getStatus == Status.UNAVAILABLE =>
-            new net.liftweb.common.Failure(s"FossilDB is unavailable", Full(e), Empty) ~> 500
-          case e: Exception =>
-            val messageWithCauses = new StringBuilder
-            messageWithCauses.append(e.toString)
-            var cause: Throwable = e.getCause
-            while (cause != null) {
-              messageWithCauses.append(" <- ")
-              messageWithCauses.append(cause.toString)
-              cause = cause.getCause
-            }
-            new net.liftweb.common.Failure(s"Request to FossilDB failed: $messageWithCauses", Full(e), Empty)
-        }
-        Future.successful(box)
+    Fox.futureBox2Fox {
+      future.transformWith {
+        case Success(value) =>
+          Fox.successful(value).futureBox
+        case Failure(exception) =>
+          val box = exception match {
+            case e: StatusRuntimeException if e.getStatus == Status.UNAVAILABLE =>
+              new net.liftweb.common.Failure(s"FossilDB is unavailable", Full(e), Empty) ~> 500
+            case e: Exception =>
+              val messageWithCauses = new StringBuilder
+              messageWithCauses.append(e.toString)
+              var cause: Throwable = e.getCause
+              while (cause != null) {
+                messageWithCauses.append(" <- ")
+                messageWithCauses.append(cause.toString)
+                cause = cause.getCause
+              }
+              new net.liftweb.common.Failure(s"Request to FossilDB failed: $messageWithCauses", Full(e), Empty)
+          }
+          Future.successful(box)
+      }
     }
 
   private def assertSuccess(success: Boolean,
                             errorMessage: Option[String],
                             mayBeEmpty: Option[Boolean] = None): Fox[Unit] =
     if (mayBeEmpty.getOrElse(false) && errorMessage.contains("No such element")) Fox.empty
-    elseFox.bool2Fox(success) ?~> errorMessage.getOrElse("")
+    else Fox.fromBool(success) ?~> errorMessage.getOrElse("")
 
   def get[T](key: String, version: Option[Long] = None, mayBeEmpty: Option[Boolean] = None)(
       implicit fromByteArray: Array[Byte] => Box[T]): Fox[VersionedKeyValuePair[T]] =
     for {
       reply <- wrapException(stub.get(GetRequest(collection, key, version, mayBeEmpty)))
       _ <- assertSuccess(reply.success, reply.errorMessage, mayBeEmpty)
-      result <- fromByteArray(reply.value.toByteArray)
+      result <- fromByteArray(reply.value.toByteArray).toFox
         .map(VersionedKeyValuePair(VersionedKey(key, reply.actualVersion), _))
     } yield result
 
@@ -160,15 +162,15 @@ class FossilDBClient(collection: String,
   private def getMultipleKeysByListImpl[T](keys: Seq[String], version: Option[Long])(
       implicit fromByteArray: Array[Byte] => Box[T]): Fox[Seq[Box[VersionedKeyValuePair[T]]]] =
     for {
-      reply: GetMultipleKeysByListReply <- stub.getMultipleKeysByList(
-        GetMultipleKeysByListRequest(collection, keys, version))
+      reply: GetMultipleKeysByListReply <- Fox.future2Fox(
+        stub.getMultipleKeysByList(GetMultipleKeysByListRequest(collection, keys, version)))
       _ <- assertSuccess(reply.success, reply.errorMessage)
       parsedValues: Seq[Box[VersionedKeyValuePair[T]]] = keys.zip(reply.versionValueBoxes).map {
         case (key, versionValueBox) =>
           versionValueBox match {
             case VersionValueBoxProto(Some(versionValuePair), None, _) =>
               for {
-                parsed <- fromByteArray(versionValuePair.value.toByteArray)
+                parsed <- fromByteArray(versionValuePair.value.toByteArray).toFox
               } yield VersionedKeyValuePair(VersionedKey(key, versionValuePair.actualVersion), parsed)
             case VersionValueBoxProto(None, Some(errorMessage), _) =>
               net.liftweb.common.Failure(s"Failed to get entry from FossilDB: $errorMessage")
@@ -201,7 +203,7 @@ class FossilDBClient(collection: String,
       _ <- assertSuccess(reply.success, reply.errorMessage)
     } yield ()
     for {
-      box <- putFox.futureBox
+      box <- Fox.future2Fox(putFox.futureBox)
       _ <- box match {
         case Full(()) => Fox.successful(())
         case Empty    => Fox.empty
@@ -239,7 +241,7 @@ class FossilDBClient(collection: String,
       _ <- assertSuccess(reply.success, reply.errorMessage)
     } yield ()
     for {
-      box <- putFox.futureBox
+      box <- Fox.future2Fox(putFox.futureBox)
       _ <- box match {
         case Full(()) => Fox.successful(())
         case Empty    => Fox.empty

@@ -159,9 +159,9 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
     Fox
       .future2Fox(Fox.sequence(explorers.map { explorer =>
         {
-          Fox.futureBox2Fox(explorer.explore(path, credentialId).futureBox.flatMap {
+          Fox.future2Fox(explorer.explore(path, credentialId).futureBox).flatMap {
             handleExploreResult(_, explorer, path, reportMutable)
-          })
+          }
         }
       }))
       .map(explorationResults => Fox.firstSuccess(explorationResults.map(_.toFox)))

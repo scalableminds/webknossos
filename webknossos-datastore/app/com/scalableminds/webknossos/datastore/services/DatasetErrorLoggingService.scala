@@ -47,43 +47,39 @@ trait DatasetErrorLoggingService extends IntervalScheduler with Formatter with L
   def withErrorLoggingMultiple(dataSourceId: DataSourceId,
                                label: String,
                                resultFox: Fox[Seq[Box[Array[Byte]]]]): Fox[Seq[Box[Array[Byte]]]] =
-    Fox.futureBox2Fox {
-      resultFox.futureBox.flatMap {
-        case Full(boxes) =>
-          boxes.foreach(box => withErrorLogging(dataSourceId, label, box.toFox))
-          Fox.successful(boxes)
-        case other =>
-          withErrorLogging(dataSourceId, label, resultFox.map(_ => Array[Byte]()))
-          other.toFox
-      }
+    Fox.future2Fox(resultFox.futureBox).flatMap {
+      case Full(boxes) =>
+        boxes.foreach(box => withErrorLogging(dataSourceId, label, box.toFox))
+        Fox.successful(boxes)
+      case other =>
+        withErrorLogging(dataSourceId, label, resultFox.map(_ => Array[Byte]()))
+        other.toFox
     }
 
   def withErrorLogging(dataSourceId: DataSourceId, label: String, resultFox: Fox[Array[Byte]]): Fox[Array[Byte]] =
-    Fox.futureBox2Fox {
-      resultFox.futureBox.flatMap {
-        case Full(data) =>
-          if (data.length == 0) {
-            val msg = s"Zero-length array returned while $label for $dataSourceId"
-            if (shouldLog(dataSourceId.organizationId, dataSourceId.directoryName)) {
-              logger.warn(msg)
-              registerLogged(dataSourceId.organizationId, dataSourceId.directoryName)
-            }
-            Fox.failure(msg)
-          } else {
-            Fox.successful(data)
-          }
-        case Failure(msg, Full(e: InternalError), _) =>
-          logger.error(s"Caught internal error ($msg) while $label for $dataSourceId:", e)
-          applicationHealthService.foreach(_.pushError(e))
-          Fox.failure(msg, Full(e))
-        case f: Failure =>
+    Fox.future2Fox(resultFox.futureBox).flatMap {
+      case Full(data) =>
+        if (data.length == 0) {
+          val msg = s"Zero-length array returned while $label for $dataSourceId"
           if (shouldLog(dataSourceId.organizationId, dataSourceId.directoryName)) {
-            logger.error(s"Error while $label for $dataSourceId: ${formatFailureChain(f, includeStackTraces = true)}")
+            logger.warn(msg)
             registerLogged(dataSourceId.organizationId, dataSourceId.directoryName)
           }
-          f.toFox
-        case other => other.toFox
-      }
+          Fox.failure(msg)
+        } else {
+          Fox.successful(data)
+        }
+      case Failure(msg, Full(e: InternalError), _) =>
+        logger.error(s"Caught internal error ($msg) while $label for $dataSourceId:", e)
+        applicationHealthService.foreach(_.pushError(e))
+        Fox.failure(msg, Full(e))
+      case f: Failure =>
+        if (shouldLog(dataSourceId.organizationId, dataSourceId.directoryName)) {
+          logger.error(s"Error while $label for $dataSourceId: ${formatFailureChain(f, includeStackTraces = true)}")
+          registerLogged(dataSourceId.organizationId, dataSourceId.directoryName)
+        }
+        f.toFox
+      case other => other.toFox
     }
 
 }

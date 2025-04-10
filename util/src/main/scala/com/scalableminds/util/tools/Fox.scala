@@ -24,14 +24,7 @@ trait FoxImplicits {
     new Ox(Future.successful(Box(b)))
 }
 
-trait LegacyImplicitsForFox {
-  // TODO de-implicit this one
-  implicit def fox2FutureBox[T](f: Fox[T]): Future[Box[T]] =
-    f.futureBox
-
-}
-
-object Fox extends FoxImplicits with LegacyImplicitsForFox {
+object Fox extends FoxImplicits {
   def apply[A](future: Future[Box[A]])(implicit ec: ExecutionContext): Fox[A] =
     new Fox(future)
 
@@ -55,7 +48,7 @@ object Fox extends FoxImplicits with LegacyImplicitsForFox {
           case Success(value)        => Try(Fox.successful(value))
           case scala.util.Failure(e) => Try(Fox.failure(e.getMessage, Full(e)))
         }
-        f <- fut
+        f <- fut.futureBox
       } yield f
     )
 
@@ -249,27 +242,6 @@ object Fox extends FoxImplicits with LegacyImplicitsForFox {
       _ <- asBoolean.toFox
     } yield ()
 
-  def assertFalse(fox: Fox[Boolean])(implicit ec: ExecutionContext): Fox[Unit] =
-    for {
-      asBoolean <- fox
-      _ <- Fox.fromBool(!asBoolean)
-    } yield ()
-
-  def chainFunctions[T](functions: List[T => Fox[T]])(implicit ec: ExecutionContext): T => Fox[T] = {
-    def runNext(remainingFunctions: List[T => Fox[T]], previousResult: T): Fox[T] =
-      remainingFunctions match {
-        case head :: tail =>
-          for {
-            currentResult <- head(previousResult)
-            nextResult <- runNext(tail, currentResult)
-          } yield nextResult
-        case Nil =>
-          Fox.successful(previousResult)
-      }
-    t =>
-      runNext(functions, t)
-  }
-
   def firstSuccess[T](foxes: Seq[Fox[T]])(implicit ec: ExecutionContext): Fox[T] = {
     def runNext(remainingFoxes: Seq[Fox[T]]): Fox[T] =
       remainingFoxes match {
@@ -278,8 +250,8 @@ object Fox extends FoxImplicits with LegacyImplicitsForFox {
             for {
               resultOption <- head.toFutureOption
               nextResult <- resultOption match {
-                case Some(v) => Fox.successful(v)
-                case _       => runNext(tail)
+                case Some(v) => Fox.successful(v).futureBox
+                case _       => runNext(tail).futureBox
               }
             } yield nextResult
           }
@@ -291,7 +263,7 @@ object Fox extends FoxImplicits with LegacyImplicitsForFox {
 
 }
 
-class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) extends LegacyImplicitsForFox {
+class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
   val self: Fox[A] = this
 
   // Add error message in case of Failure and Empty (wrapping Empty in a Failure)
@@ -300,14 +272,13 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) exte
 
   // Add error message only in case of Failure, pass through Empty
   def ?=>(s: String): Fox[A] =
-    new Fox(
-      futureBox.flatMap {
-        case f: Failure =>
-          new Fox(Future.successful(f)) ?~> s
-        case Full(value) => Fox.successful(value)
-        case Empty       => Fox.empty
+    Fox.futureBox2Fox {
+      futureBox.map {
+        case Full(value) => Full(value)
+        case f: Failure  => f ?~! s
+        case Empty       => Empty
       }
-    )
+    }
 
   // Add http error code in case of Failure or Empty (wrapping Empty in a Failure)
   def ~>[T](errorCode: => T): Fox[A] =

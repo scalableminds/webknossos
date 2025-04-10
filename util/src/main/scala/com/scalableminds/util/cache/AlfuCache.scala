@@ -15,16 +15,14 @@ import scala.jdk.CollectionConverters._
 class AlfuCache[K, V](store: AsyncCache[K, Box[V]]) extends FoxImplicits {
 
   def getOrLoad(key: K, loadFn: K => Fox[V])(implicit ec: ExecutionContext): Fox[V] =
-    Fox.futureBox2Fox {
-      for {
-        box <- getOrLoadAdapter(key, key => loadFn(key).futureBox)
-        _ = box match {
-          case _: Failure => remove(key) // Do not cache failures
-          case _          => ()
-        }
-        result <- box.toFox
-      } yield result
-    }
+    for {
+      box <- Fox.future2Fox(getOrLoadAdapter(key, key => loadFn(key).futureBox))
+      _ = box match {
+        case _: Failure => remove(key) // Do not cache failures
+        case _          => ()
+      }
+      result <- box.toFox
+    } yield result
 
   private def getOrLoadAdapter(key: K, loadValue: K => Future[Box[V]]): Future[Box[V]] =
     store.get(key, AlfuCache.toJavaMappingFunction[K, Box[V]](loadValue)).asScala

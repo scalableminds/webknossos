@@ -21,7 +21,7 @@ while [[ "$commitmsg" =~ $pullregex ]]; do
 done
 
 buildlink="<${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}|ready>"
-mesg="${author} WEBKNOSSOS docker image \`master__${GITHUB_RUN_ID}\` for “${commitmsg}” is ${buildlink}."
+mesg="${author} WEBKNOSSOS docker image \`${DOCKER_TAG}\` for “${commitmsg}” is ${buildlink}."
 user="ci-notify"
 token="${SLACK_NOTIFY_TOKEN:-}"
 res=$(curl -s \

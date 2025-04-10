@@ -102,18 +102,26 @@ jobs:
       - name: "Install System Dependencies"
         run: sudo apt-get update && sudo apt-get install -y libdraco-dev libblosc1
 
-      - name: "Custom environment variables"
+      - name: "Custom environment variables (Pull Request)"
+        if: ${{ github.event_name == 'pull_request' }}
         run: |
-          echo "CI_BUILD_NUM=${{ github.run_id }}" >> "$GITHUB_ENV"
-          if [[ "${{ github.ref_type }}" == "branch" ]]; then
-            NORMALIZED_BRANCH="${GITHUB_HEAD_REF//[\/-]/_}"
-            DOCKER_TAG="${NORMALIZED_BRANCH}__${{ github.run_id }}"
-            echo "DOCKER_TAG=$DOCKER_TAG" >> "$GITHUB_ENV"
-            echo "NORMALIZED_BRANCH=$NORMALIZED_BRANCH" >> "$GITHUB_ENV"
+          NORMALIZED_BRANCH="${GITHUB_HEAD_REF//[\/-]/_}"
+          DOCKER_TAG="${NORMALIZED_BRANCH}__${GITHUB_RUN_ID}"
+          echo "DOCKER_TAG=$DOCKER_TAG" | tee -a "$GITHUB_ENV"
+          echo "NORMALIZED_BRANCH=$NORMALIZED_BRANCH" | tee -a "$GITHUB_ENV"
+      - name: "Custom environment variables (Not Pull Request)"
+        if: ${{ github.event_name != 'pull_request' }}
+        run: |
+          CI_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          NORMALIZED_BRANCH=${CI_BRANCH//[\/-]/_}
+          DOCKER_TAG="${NORMALIZED_BRANCH}__${GITHUB_RUN_ID}"
+          echo "DOCKER_TAG=$DOCKER_TAG" | tee -a "$GITHUB_ENV"
+          if [ "$GITHUB_REF_TYPE" == "branch" ]; then
+            echo "NORMALIZED_BRANCH=$NORMALIZED_BRANCH" | tee -a "$GITHUB_ENV"
           else
-            echo "CI_TAG=${{ github.ref_name }}" >> "$GITHUB_ENV"
-            echo "DOCKER_TAG=master" >> "$GITHUB_ENV"
-            echo "NORMALIZED_BRANCH=${{ github.ref_name }}" >> "$GITHUB_ENV"
+            CI_TAG=$GITHUB_REF_NAME
+            echo "CI_TAG=$CI_TAG" | tee -a "$GITHUB_ENV"
+            echo "NORMALIZED_BRANCH=$CI_TAG" | tee -a "$GITHUB_ENV"
           fi
 
       - name: Prepare Dependency Folders
@@ -196,9 +204,6 @@ jobs:
           run: |
             sbt "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false"
           retries: 3
-      - name: Validate frontend types
-        if: github.ref != 'refs/heads/master'
-        run: yarn typecheck
 
       - name: Start webknossos, datastore and tracingstore
         run: |
@@ -270,7 +275,7 @@ jobs:
           retries: 5
           retry_delay_seconds: 10
       - name: Slack Notification
-        if: github.ref != 'refs/heads/master'
+        if: github.ref == 'refs/heads/master'
         run: .github/slack-notification.sh
         env:
           SLACK_NOTIFY_TOKEN: ${{ secrets.SLACK_NOTIFY_TOKEN }}

@@ -170,7 +170,7 @@ class TSRemoteDatastoreClient @Inject()(
       result <- rpc(
         s"$dataStoreUri/data/datasets/${dataSourceId.organizationId}/${dataSourceId.directoryName}/readInboxDataSource").withTokenFromContext
         .getWithJsonResponse[InboxDataSource]
-      scale <- result.voxelSizeOpt ?~> "could not determine voxel size of dataset"
+      scale <- result.voxelSizeOpt.toFox ?~> "could not determine voxel size of dataset"
     } yield scale
 
   private def getRemoteLayerUri(remoteLayer: RemoteFallbackLayer): Fox[String] =

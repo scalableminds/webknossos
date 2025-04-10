@@ -167,7 +167,7 @@ class VolumeTracingService @Inject()(
       actionBucketData <- action.base64Data.map(Base64.getDecoder.decode).toFox
       _ <- Fox.runIf(volumeLayer.tracing.getHasSegmentIndex) {
         for {
-          previousBucketBytes <- volumeBucketBuffer.getWithFallback(action.bucketPosition).futureBox
+          previousBucketBytes <- Fox.future2Fox(volumeBucketBuffer.getWithFallback(action.bucketPosition).futureBox)
           _ <- updateSegmentIndex(
             volumeLayer,
             segmentIndexBuffer,
@@ -251,9 +251,9 @@ class VolumeTracingService @Inject()(
 
   private def assertMagIsValid(tracing: VolumeTracing, mag: Vec3Int): Fox[Unit] =
     if (tracing.mags.nonEmpty) {
-     Fox.fromBool(tracing.mags.exists(r => vec3IntFromProto(r) == mag))
+      Fox.fromBool(tracing.mags.exists(r => vec3IntFromProto(r) == mag))
     } else { // old volume tracings do not have a mag list, no assert possible. Check compatibility by asserting isotropic mag
-     Fox.fromBool(mag.isIsotropic)
+      Fox.fromBool(mag.isIsotropic)
     }
 
   def revertVolumeData(tracingId: String,
@@ -286,7 +286,7 @@ class VolumeTracingService @Inject()(
       _ <- Fox.serialCombined(bucketStreamBeforeRevert) {
         case (bucketPosition, dataBeforeRevert, version) =>
           if (version > sourceVersion) {
-            loadBucket(volumeLayer, bucketPosition, Some(sourceVersion)).futureBox.map {
+            Fox.future2Fox(loadBucket(volumeLayer, bucketPosition, Some(sourceVersion)).futureBox).map {
               case Full(dataAfterRevert) =>
                 for {
                   _ <- saveBucket(volumeLayer, bucketPosition, dataAfterRevert, newVersion)
@@ -329,7 +329,7 @@ class VolumeTracingService @Inject()(
       implicit mp: MessagesProvider,
       tc: TokenContext): Fox[Set[Vec3Int]] =
     if (tracing.version != 0L)
-      Failure("Tracing has already been edited.")
+      Fox.failure("Tracing has already been edited.")
     else {
       val magSets = new mutable.HashSet[Set[Vec3Int]]()
       for {
@@ -402,7 +402,7 @@ class VolumeTracingService @Inject()(
                          initialData: File,
                          magRestrictions: MagRestrictions)(implicit tc: TokenContext): Fox[Set[Vec3Int]] =
     if (tracing.version != 0L) {
-      Failure("Tracing has already been edited.")
+      Fox.failure("Tracing has already been edited.")
     } else {
       val volumeLayer = volumeTracingLayer(annotationId, tracingId, tracing)
       val savedMags = new mutable.HashSet[Vec3Int]()
@@ -479,7 +479,7 @@ class VolumeTracingService @Inject()(
     }
 
     val before = Instant.now
-    val zipResult = ZipIO.zip(buckets, os, level = Deflater.BEST_SPEED)
+    val zipResult = ZipIO.zip(buckets, os, level = Deflater.BEST_SPEED).futureBox
 
     zipResult.onComplete {
       case b: scala.util.Success[Box[Unit]] =>
@@ -487,7 +487,7 @@ class VolumeTracingService @Inject()(
           s"Zipping volume data for $tracingId took ${formatDuration(Instant.since(before))}. Result: ${b.get}")
       case _ => ()
     }
-    zipResult
+    Fox.futureBox2Fox(zipResult)
   }
 
   def data(annotationId: String,
@@ -827,13 +827,16 @@ class VolumeTracingService @Inject()(
           mergedVolume.addFromBucketStream(sourceVolumeIndex, volumeLayer.bucketStream, Some(magsIntersection))
       }
       for {
-        _ <- Fox.fromBool(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, elementClassProto)) ?~> Messages(
+        _ <- Fox.fromBool(
+          ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, elementClassProto)) ?~> Messages(
           "annotation.volume.largestSegmentIdExceedsRange",
           mergedVolume.largestSegmentId.toLong,
           elementClassProto)
-        mergedAdditionalAxes <- Fox.box2Fox(AdditionalAxis.mergeAndAssertSameAdditionalAxes(volumeLayers.map(l =>
-          AdditionalAxis.fromProtosAsOpt(l.tracing.additionalAxes))))
-        firstVolumeLayer <- volumeLayers.headOption ?~> "merge.noTracings"
+        mergedAdditionalAxes <- AdditionalAxis
+          .mergeAndAssertSameAdditionalAxes(
+            volumeLayers.map(l => AdditionalAxis.fromProtosAsOpt(l.tracing.additionalAxes)))
+          .toFox
+        firstVolumeLayer <- volumeLayers.headOption.toFox ?~> "merge.noTracings"
         firstVolumeAnnotationId <- firstVolumeAnnotationIdOpt.toFox
         fallbackLayer <- getFallbackLayer(firstVolumeAnnotationId, firstVolumeLayer.tracing)
         segmentIndexBuffer = new VolumeSegmentIndexBuffer(
@@ -924,7 +927,8 @@ class VolumeTracingService @Inject()(
               _ <- saveBucket(volumeLayer, bucketPosition, bucketBytes, tracing.version + 1)
               _ <- Fox.runIfOptionTrue(tracing.hasSegmentIndex) {
                 for {
-                  previousBucketBytes <- loadBucket(volumeLayer, bucketPosition, Some(tracing.version)).futureBox
+                  previousBucketBytes <- Fox.future2Fox(
+                    loadBucket(volumeLayer, bucketPosition, Some(tracing.version)).futureBox)
                   _ <- updateSegmentIndex(
                     volumeLayer,
                     segmentIndexBuffer,
@@ -948,16 +952,14 @@ class VolumeTracingService @Inject()(
                                  t => getFallbackLayerFromWebknossos(t._1, t._2))
 
   private def getFallbackLayerFromWebknossos(annotationId: String, fallbackLayerName: Option[String])(
-      implicit tc: TokenContext) =
-    Fox[Option[RemoteFallbackLayer]] {
-      for {
-        dataSource <- remoteWebknossosClient.getDataSourceForAnnotation(annotationId)
-        dataSourceId = dataSource.id
-        layerWithFallbackOpt = dataSource.dataLayers.find(_.name == fallbackLayerName.getOrElse(""))
-        fallbackLayer <- Fox.runOptional(layerWithFallbackOpt) { layerWithFallback =>
-          RemoteFallbackLayer.fromDataLayerAndDataSource(layerWithFallback, dataSourceId).toFox
-        }
-      } yield fallbackLayer
-    }
+      implicit tc: TokenContext): Fox[Option[RemoteFallbackLayer]] =
+    for {
+      dataSource <- remoteWebknossosClient.getDataSourceForAnnotation(annotationId)
+      dataSourceId = dataSource.id
+      layerWithFallbackOpt = dataSource.dataLayers.find(_.name == fallbackLayerName.getOrElse(""))
+      fallbackLayer <- Fox.runOptional(layerWithFallbackOpt) { layerWithFallback =>
+        RemoteFallbackLayer.fromDataLayerAndDataSource(layerWithFallback, dataSourceId).toFox
+      }
+    } yield fallbackLayer
 
 }

@@ -114,7 +114,7 @@ class TSAnnotationController @Inject()(
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
             for {
-              datasetBoundingBoxParsed <- Fox.runOptional(datasetBoundingBox)(BoundingBox.fromLiteral)
+              datasetBoundingBoxParsed <- Fox.runOptional(datasetBoundingBox)(b => BoundingBox.fromLiteral(b).toFox)
               annotationProto <- annotationService.duplicate(annotationId,
                                                              newAnnotationId,
                                                              version,
@@ -168,14 +168,15 @@ class TSAnnotationController @Inject()(
               _.annotationLayers.exists(_.typ == AnnotationLayerTypeProto.Volume))
             firstVolumeAnnotationId = if (firstVolumeAnnotationIndex < 0) None
             else Some(request.body(firstVolumeAnnotationIndex))
-            mergeEditableMappingsResultBox <- editableMappingMergeService
-              .mergeEditableMappings(request.body,
-                                     firstVolumeAnnotationId,
-                                     newAnnotationId,
-                                     newVolumeId,
-                                     volumeTracings.zip(volumeLayers.map(_.tracingId)),
-                                     toTemporaryStore)
-              .futureBox
+            mergeEditableMappingsResultBox <- Fox.future2Fox(
+              editableMappingMergeService
+                .mergeEditableMappings(request.body,
+                                       firstVolumeAnnotationId,
+                                       newAnnotationId,
+                                       newVolumeId,
+                                       volumeTracings.zip(volumeLayers.map(_.tracingId)),
+                                       toTemporaryStore)
+                .futureBox)
             (newMappingName: Option[String], newTargetVersion: Long) <- mergeEditableMappingsResultBox match {
               case Full(targetVersion) => Fox.successful((Some(newVolumeId), targetVersion))
               case Empty               => Fox.successful((None, 0L))
@@ -189,7 +190,8 @@ class TSAnnotationController @Inject()(
                                                                       toTemporaryStore)
             mergedVolumeOpt <- Fox.runIf(volumeTracings.nonEmpty)(
               volumeTracingService
-                .merge(volumeTracings, mergedVolumeStats, newMappingName, newVersion = newTargetVersion))
+                .merge(volumeTracings, mergedVolumeStats, newMappingName, newVersion = newTargetVersion)
+                .toFox)
             _ <- Fox.runOptional(mergedVolumeOpt)(
               volumeTracingService.saveVolume(newVolumeId, version = newTargetVersion, _, toTemporaryStore))
             skeletonTracings <- annotationService

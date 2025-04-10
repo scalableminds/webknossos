@@ -3,8 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 import collections.SequenceUtils
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.{fromBool, option2Fox}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
@@ -26,6 +25,7 @@ class EditableMappingMergeService @Inject()(val tracingDataStore: TracingDataSto
                                             editableMappingService: EditableMappingService)
     extends KeyValueStoreImplicits
     with UpdateGroupHandling
+    with FoxImplicits
     with FallbackDataHelper {
 
   /*
@@ -50,11 +50,15 @@ class EditableMappingMergeService @Inject()(val tracingDataStore: TracingDataSto
         firstVolumeAnnotationId <- firstVolumeAnnotationIdOpt.toFox
         remoteFallbackLayers <- Fox.serialCombined(tracingsWithIds)(tracingWithId =>
           remoteFallbackLayerForVolumeTracing(tracingWithId._1, firstVolumeAnnotationId))
-        remoteFallbackLayer <- SequenceUtils.findUniqueElement(remoteFallbackLayers) ?~> "Cannot merge editable mappings based on different dataset layers"
+        remoteFallbackLayer <- SequenceUtils
+          .findUniqueElement(remoteFallbackLayers)
+          .toFox ?~> "Cannot merge editable mappings based on different dataset layers"
         editableMappingInfos <- Fox.serialCombined(tracingsWithIds) { tracingWithId =>
           tracingDataStore.editableMappingsInfo.get(tracingWithId._2)(fromProtoBytes[EditableMappingInfo])
         }
-        baseMappingName <- SequenceUtils.findUniqueElement(editableMappingInfos.map(_.value.baseMappingName)) ?~> "Cannot merge editable mappings based on different base mappings"
+        baseMappingName <- SequenceUtils
+          .findUniqueElement(editableMappingInfos.map(_.value.baseMappingName))
+          .toFox ?~> "Cannot merge editable mappings based on different base mappings"
         linearizedEditableMappingUpdates: List[UpdateAction] <- mergeEditableMappingUpdates(annotationIds,
                                                                                             newVolumeTracingId)
         targetVersion = linearizedEditableMappingUpdates.length

@@ -3,8 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import java.io.{File, FileOutputStream, InputStream}
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.ZipIO
-import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
-import com.scalableminds.util.tools.{BoxImplicits, Fox, JsonHelper}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.datareaders.{
   BloscCompressor,
@@ -25,7 +24,7 @@ import java.util.zip.{ZipEntry, ZipFile}
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
-trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper with BoxImplicits with LazyLogging {
+trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper with FoxImplicits with LazyLogging {
 
   protected def withBucketsFromZip(zipFile: File)(block: (BucketPosition, Array[Byte]) => Fox[Unit])(
       implicit ec: ExecutionContext): Fox[Unit] =
@@ -149,7 +148,7 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper with 
     }
   }
 
-  protected def withZipsFromMultiZipAsync[T](multiZip: File)(block: (Int, File) => Fox[Unit])(
+  protected def withZipsFromMultiZipAsync(multiZip: File)(block: (Int, File) => Fox[Unit])(
       implicit ec: ExecutionContext): Fox[Unit] = {
     var index: Int = 0
     val unzipResult = ZipIO.withUnzipedAsync(multiZip) {

@@ -3,8 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.{fromBool, option2Fox}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
@@ -34,6 +33,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
     extends FallbackDataHelper
     with ProtoGeometryImplicits
     with FullMeshHelper
+    with FoxImplicits
     with LazyLogging {
 
   def loadFor(annotationId: String, tracingId: String, fullMeshRequest: FullMeshRequest)(

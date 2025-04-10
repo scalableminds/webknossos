@@ -170,7 +170,7 @@ class FossilDBClient(collection: String,
           versionValueBox match {
             case VersionValueBoxProto(Some(versionValuePair), None, _) =>
               for {
-                parsed <- fromByteArray(versionValuePair.value.toByteArray).toFox
+                parsed <- fromByteArray(versionValuePair.value.toByteArray)
               } yield VersionedKeyValuePair(VersionedKey(key, versionValuePair.actualVersion), parsed)
             case VersionValueBoxProto(None, Some(errorMessage), _) =>
               net.liftweb.common.Failure(s"Failed to get entry from FossilDB: $errorMessage")

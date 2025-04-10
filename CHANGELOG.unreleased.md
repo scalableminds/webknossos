@@ -24,7 +24,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - The skeleton tool can no longer be activated if the skeleton layer is invisible. [#8501](https://github.com/scalableminds/webknossos/pull/8501)
 - Improved speed of mesh rendering and mouse interaction in 3D viewport. [#8106](https://github.com/scalableminds/webknossos/pull/8106)
 
-- Numbered docker image no use different and larger numbers. [#8147](https://github.com/scalableminds/webknossos/pull/8147)
+- Numbered docker image now use different and larger numbers. [#8147](https://github.com/scalableminds/webknossos/pull/8147)
 
 ### Fixed
 - Fixed visual alignment of actions in ai model list. [#8474](https://github.com/scalableminds/webknossos/pull/8474)

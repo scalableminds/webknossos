@@ -84,7 +84,6 @@ class DefaultMails @Inject()(conf: WkConf) {
                  organizationName: String,
                  senderName: String): Mail = {
     val host = Try { new URL(uri) }.toOption.getOrElse(uri)
-    println(s"Invite mail to $recipient with link $uri/invite/$inviteTokenValue")
     Mail(
       from = defaultSender,
       subject = s"$senderName invited you to join their WEBKNOSSOS organization at $host",

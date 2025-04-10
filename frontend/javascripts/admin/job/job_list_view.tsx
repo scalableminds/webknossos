@@ -235,6 +235,17 @@ function JobListView() {
           <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
+      // INFER_NEURONS without layerName means custom model
+    } else if (
+      (job.type === APIJobType.DEPRECATED_INFER_WITH_MODEL ||
+        job.type === APIJobType.INFER_NEURONS) &&
+      linkToDataset != null
+    ) {
+      return (
+        <span>
+          Run AI segmentation with custom model on <Link to={linkToDataset}>{job.datasetName}</Link>
+        </span>
+      );
     } else if (
       job.type === APIJobType.INFER_MITOCHONDRIA &&
       linkToDataset != null &&
@@ -263,18 +274,12 @@ function JobListView() {
             : null}
         </span>
       );
-    } else if (job.type === APIJobType.TRAIN_MODEL) {
+    } else if (job.type === APIJobType.TRAIN_NEURON_MODEL) {
       const numberOfTrainingAnnotations = job.trainingAnnotations.length;
       return (
         <span>
           {`Train model on ${numberOfTrainingAnnotations} ${Utils.pluralize("annotation", numberOfTrainingAnnotations)}. `}
           {getShowTrainingDataLink(job.trainingAnnotations)}
-        </span>
-      );
-    } else if (job.type === APIJobType.INFER_WITH_MODEL && linkToDataset != null) {
-      return (
-        <span>
-          Run AI segmentation with custom model on <Link to={linkToDataset}>{job.datasetName}</Link>
         </span>
       );
     } else {
@@ -368,7 +373,7 @@ function JobListView() {
       job.type === APIJobType.INFER_NEURONS ||
       job.type === APIJobType.MATERIALIZE_VOLUME_ANNOTATION ||
       job.type === APIJobType.COMPUTE_MESH_FILE ||
-      job.type === APIJobType.INFER_WITH_MODEL ||
+      job.type === APIJobType.DEPRECATED_INFER_WITH_MODEL ||
       job.type === APIJobType.INFER_MITOCHONDRIA
     ) {
       return (
@@ -381,7 +386,7 @@ function JobListView() {
           )}
         </span>
       );
-    } else if (job.type === APIJobType.TRAIN_MODEL) {
+    } else if (job.type === APIJobType.TRAIN_NEURON_MODEL) {
       return (
         <span>
           {job.state === "SUCCESS" &&

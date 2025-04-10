@@ -17,6 +17,7 @@ import {
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
+import { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
 import constants, { ControlModeEnum, AnnotationToolEnum, type Vector3 } from "oxalis/constants";

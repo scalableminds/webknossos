@@ -8581,7 +8581,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lodash-es@npm:^4.17.21, lodash-es@npm:^4.2.1":
+"lodash-es@npm:^4.17.21":
   version: 4.17.21
   resolution: "lodash-es@npm:4.17.21"
   checksum: 10c0/fb407355f7e6cd523a9383e76e6b455321f0f153a6c9625e21a8827d10c54c2a2341bd2ae8d034358b60e07325e1330c14c224ff582d04612a46a4f0479ff2f2
@@ -8616,7 +8616,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lodash@npm:^4.17.14, lodash@npm:^4.17.15, lodash@npm:^4.17.21, lodash@npm:^4.2.1":
+"lodash@npm:^4.17.14, lodash@npm:^4.17.15, lodash@npm:^4.17.21":
   version: 4.17.21
   resolution: "lodash@npm:4.17.21"
   checksum: 10c0/d8cbea072bb08655bb4c989da418994b073a608dffa608b09ac04b43a791b12aeae7cd7ad919aa4c925f33b48490b5cfe6c1f71d827956071dae2e7bb3a6b74c
@@ -12159,14 +12159,11 @@ __metadata:
   linkType: hard
 
 "redux@npm:^4.2.0":
-  version: 3.7.2
-  resolution: "redux@npm:3.7.2"
+  version: 4.2.1
+  resolution: "redux@npm:4.2.1"
   dependencies:
-    lodash: "npm:^4.2.1"
-    lodash-es: "npm:^4.2.1"
-    loose-envify: "npm:^1.1.0"
-    symbol-observable: "npm:^1.0.3"
-  checksum: 10c0/544456f95734de33326637b370894addb57d9de2524edf36a20e4a326d0a36a0e223979d027545c5aa8a8d7a2859363981f63d1146401b72df0d16f373dd09cb
+    "@babel/runtime": "npm:^7.9.2"
+  checksum: 10c0/136d98b3d5dbed1cd6279c8c18a6a74c416db98b8a432a46836bdd668475de6279a2d4fd9d1363f63904e00f0678a8a3e7fa532c897163340baf1e71bb42c742
   languageName: node
   linkType: hard
 
@@ -13453,13 +13450,6 @@ __metadata:
   version: 1.0.0
   resolution: "supports-preserve-symlinks-flag@npm:1.0.0"
   checksum: 10c0/6c4032340701a9950865f7ae8ef38578d8d7053f5e10518076e6554a9381fa91bd9c6850193695c141f32b21f979c985db07265a758867bac95de05f7d8aeb39
-  languageName: node
-  linkType: hard
-
-"symbol-observable@npm:^1.0.3":
-  version: 1.2.0
-  resolution: "symbol-observable@npm:1.2.0"
-  checksum: 10c0/009fee50798ef80ed4b8195048288f108b03de162db07493f2e1fd993b33fafa72d659e832b584da5a2427daa78e5a738fb2a9ab027ee9454252e0bedbcd1fdc
   languageName: node
   linkType: hard
 

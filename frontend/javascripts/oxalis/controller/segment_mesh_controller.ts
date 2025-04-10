@@ -182,9 +182,7 @@ export default class SegmentMeshController {
   ): void {
     const additionalCoordinatesString = getAdditionalCoordinatesAsString(additionalCoordinates);
     const keys = [additionalCoordinatesString, layerName, segmentId, lod];
-    const isNewlyAddedMesh =
-      this.meshesGroupsPerSegmentId[additionalCoordinatesString]?.[layerName]?.[segmentId]?.[lod] ==
-      null;
+    const isNewlyAddedMesh = _.get(this.meshesGroupsPerSegmentId, keys) == null;
     const targetGroup: SceneGroupForMeshes = _.get(
       this.meshesGroupsPerSegmentId,
       keys,
@@ -219,22 +217,33 @@ export default class SegmentMeshController {
     }
   }
 
-  removeMeshById(segmentId: number, layerName: string): void {
+  removeMeshById(segmentId: number, layerName: string, options?: { lod: number }): void {
     const additionalCoordinates = Store.getState().flycam.additionalCoordinates;
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
     const meshGroups = this.getMeshGroups(additionalCoordKey, layerName, segmentId);
     if (meshGroups == null) {
       return;
     }
-    _.forEach(meshGroups, (meshGroup, lod) => {
-      const lodNumber = Number.parseInt(lod);
-      if (lodNumber !== NO_LOD_MESH_INDEX) {
-        this.meshesLODRootGroup.removeLODMesh(meshGroup, lodNumber);
+    _.forEach(meshGroups, (meshGroup, lodStr) => {
+      const currentLod = Number.parseInt(lodStr);
+
+      if (options && currentLod !== options.lod) {
+        // If options.lod is provided, only remove that LOD.
+        return;
+      }
+
+      if (currentLod !== NO_LOD_MESH_INDEX) {
+        this.meshesLODRootGroup.removeLODMesh(meshGroup, currentLod);
       } else {
         this.meshesLODRootGroup.removeNoLODSupportedMesh(meshGroup);
       }
+
+      this.removeMeshLODFromMeshGroups(additionalCoordKey, layerName, segmentId, currentLod);
     });
-    this.removeMeshFromMeshGroups(additionalCoordKey, layerName, segmentId);
+    if (options == null) {
+      // If options.lod is provided, the parent group should not be removed
+      this.removeMeshFromMeshGroups(additionalCoordKey, layerName, segmentId);
+    }
   }
 
   getMeshGeometryInBestLOD(
@@ -389,6 +398,15 @@ export default class SegmentMeshController {
     segmentId: number,
   ) {
     delete this.meshesGroupsPerSegmentId[additionalCoordinateKey][layerName][segmentId];
+  }
+
+  private removeMeshLODFromMeshGroups(
+    additionalCoordinateKey: string,
+    layerName: string,
+    segmentId: number,
+    lod: number,
+  ) {
+    delete this.meshesGroupsPerSegmentId[additionalCoordinateKey][layerName][segmentId][lod];
   }
 
   updateMeshAppearance(

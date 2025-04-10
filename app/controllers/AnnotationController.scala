@@ -105,7 +105,7 @@ class AnnotationController @Inject()(
     log() {
       for {
         annotation <- provider.provideAnnotation(id, request.identity) ?~> "annotation.notFound" ~> NOT_FOUND
-        result <- info(annotation.typ.toString, id, timestamp)(request)
+        result <- Fox.future2Fox(info(annotation.typ.toString, id, timestamp)(request))
       } yield result
 
     }
@@ -128,7 +128,7 @@ class AnnotationController @Inject()(
     sil.SecuredAction.async { implicit request =>
       for {
         annotation <- provider.provideAnnotation(id, request.identity) ?~> "annotation.notFound" ~> NOT_FOUND
-        result <- merge(annotation.typ.toString, id, mergedTyp, mergedId)(request)
+        result <- Fox.future2Fox(merge(annotation.typ.toString, id, mergedTyp, mergedId)(request))
       } yield result
     }
 
@@ -148,7 +148,8 @@ class AnnotationController @Inject()(
         isAdminOrTeamManager <- userService.isTeamManagerOrAdminOf(user, annotation._team)
         _ <- Fox.fromBool(annotation.state == AnnotationState.Finished) ?~> "annotation.reopen.notFinished"
         _ <- Fox.fromBool(isAdminOrTeamManager || annotation._user == user._id) ?~> "annotation.reopen.notAllowed"
-        _ <- Fox.fromBool(isAdminOrTeamManager || (annotation.modified + taskReopenAllowed).isPast) ?~> "annotation.reopen.tooLate"
+        _ <- Fox
+          .fromBool(isAdminOrTeamManager || (annotation.modified + taskReopenAllowed).isPast) ?~> "annotation.reopen.tooLate"
       } yield ()
 
     for {
@@ -239,13 +240,12 @@ class AnnotationController @Inject()(
     implicit request =>
       log() {
         withJsonAs[JsArray](request.body \ "annotations") { annotationIds =>
-          val results = Fox.serialSequence(annotationIds.value.toList) { jsValue =>
+          val results = Fox.serialCombined(annotationIds.value.toList) { jsValue =>
             jsValue
               .asOpt[String]
               .toFox
               .flatMap(id => finishAnnotation(typ, ObjectId(id), request.identity, Instant(timestamp)))
           }
-
           results.map { _ =>
             JsonOk(Messages("annotation.allFinished"))
           }
@@ -295,8 +295,8 @@ class AnnotationController @Inject()(
         project <- projectDAO.findOne(task._project)
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
         annotations <- annotationService.annotationsFor(task._id) ?~> "task.annotation.failed"
-        jsons <- Fox.serialSequence(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
-      } yield Ok(JsArray(jsons.flatten))
+        jsons <- Fox.serialCombined(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
+      } yield Ok(JsArray(jsons))
     }
 
   def cancel(typ: String, id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
@@ -322,7 +322,7 @@ class AnnotationController @Inject()(
   def cancelWithoutType(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
-      result <- cancel(annotation.typ.toString, id)(request)
+      result <- Fox.future2Fox(cancel(annotation.typ.toString, id)(request))
     } yield result
   }
 
@@ -416,7 +416,7 @@ class AnnotationController @Inject()(
       dataset <- datasetDAO.findOne(annotation._dataset)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation" ~> NOT_FOUND
       _ <- Fox.fromBool(dataset.isUsable) ?~> Messages("dataset.notImported", dataset.name)
       dataSource <- if (annotation._task.isDefined)
-        datasetService.dataSourceFor(dataset).flatMap(_.toUsable).map(Some(_))
+        datasetService.dataSourceFor(dataset).flatMap(_.toUsable.toFox).map(Some(_))
       else Fox.successful(None)
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
       newAnnotationId = ObjectId.generate

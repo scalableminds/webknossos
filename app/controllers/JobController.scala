@@ -334,7 +334,7 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- datasetService.assertValidLayerNameLax(layerName)
           datasetBoundingBox <- datasetService
             .dataSourceFor(dataset)
-            .flatMap(_.toUsable)
+            .flatMap(_.toUsable.toFox)
             .map(_.boundingBox) ?~> "dataset.boundingBox.unset"
           command = JobCommand.align_sections
           commandArgs = Json.obj(
@@ -385,7 +385,7 @@ class JobController @Inject()(jobDAO: JobDAO,
                                                                    additionalAxesOpt)
           threeDBBox <- BoundingBox.fromLiteral(bbox).toFox ~> "job.invalidBoundingBox"
           parsedAdditionalCoordinatesOpt <- Fox.runOptional(additionalCoordinates)(coords =>
-            Json.parse(coords).validate[Seq[AdditionalCoordinate]]) ~> "job.additionalCoordinates.invalid"
+            Json.parse(coords).validate[Seq[AdditionalCoordinate]].asOpt.toFox) ~> "job.additionalCoordinates.invalid"
           parsedAdditionalCoordinates = parsedAdditionalCoordinatesOpt.getOrElse(Seq.empty)
           additionalAxesOfNdBBox = additionalAxesOpt.map(additionalAxes =>
             additionalAxes.map(_.intersectWithAdditionalCoordinates(parsedAdditionalCoordinates)))
@@ -494,10 +494,10 @@ class JobController @Inject()(jobDAO: JobDAO,
           userOrganization <- organizationDAO.findOne(request.identity._organization)
           animationJobOptions = request.body
           _ <- Fox.runIf(!PricingPlan.isPaidPlan(userOrganization.pricingPlan)) {
-           Fox.fromBool(animationJobOptions.includeWatermark) ?~> "job.renderAnimation.mustIncludeWatermark"
+            Fox.fromBool(animationJobOptions.includeWatermark) ?~> "job.renderAnimation.mustIncludeWatermark"
           }
           _ <- Fox.runIf(!PricingPlan.isPaidPlan(userOrganization.pricingPlan)) {
-           Fox.fromBool(animationJobOptions.movieResolution == MovieResolutionSetting.SD) ?~> "job.renderAnimation.resolutionMustBeSD"
+            Fox.fromBool(animationJobOptions.movieResolution == MovieResolutionSetting.SD) ?~> "job.renderAnimation.resolutionMustBeSD"
           }
           layerName = animationJobOptions.layerName
           _ <- datasetService.assertValidLayerNameLax(layerName)
@@ -530,8 +530,8 @@ class JobController @Inject()(jobDAO: JobDAO,
       for {
         job <- jobDAO.findOne(jobId)
         dataStore <- dataStoreDAO.findOneByName(job._dataStore) ?~> "dataStore.notFound"
-        userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
-          request.identity.loginInfo)
+        userAuthToken <- Fox.future2Fox(
+          wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(request.identity.loginInfo))
         uri = s"${dataStore.publicUrl}/data/exports/$jobId/download"
       } yield Redirect(uri, Map(("token", Seq(userAuthToken.id))))
     }

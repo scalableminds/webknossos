@@ -62,7 +62,7 @@ class NMLGenerator():
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Print(an NML file.')
+    parser = argparse.ArgumentParser(description='Print an NML file.')
     parser.add_argument('nodes_per_tree', type=int, help='Number of nodes per tree')
     parser.add_argument('trees', type=int, help='Number of trees', default=1, nargs='?')
     parser.add_argument('--comments', dest='include_comments', action='store_const',

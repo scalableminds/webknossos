@@ -10,6 +10,7 @@ import {
 } from "../fixtures/skeletontracing_server_objects";
 import DATASET from "../fixtures/dataset_server_object";
 import type { OxalisModel } from "oxalis/model";
+import { location } from "libs/window";
 
 const test = anyTest as TestFn<{ model: OxalisModel }>;
 
@@ -37,6 +38,37 @@ const ErrorHandling = {
 mockRequire("libs/toast", {
   error: _.noop,
 });
+/*const viewLocation = {
+  hash: "",
+  host: "localhost:9000",
+  hostname: "localhost",
+  href: `http://localhost:9000/datasets/${DATASET.name}-${DATASET.id}/view`,
+  origin: "http://localhost:9000",
+  pathname: `/datasets/${DATASET.name}-${DATASET.id}/view`,
+  port: "9000",
+  protocol: "http:",
+};
+let performanceCounterForMocking = 0;
+mockRequire("libs/window", {
+  alert: console.log.bind(console),
+  app: null,
+  location: viewLocation,
+  requestAnimationFrame: (resolver: ArbitraryFunction) => {
+    setTimeout(resolver, 16);
+  },
+  document,
+  navigator: {
+    onLine: true,
+  },
+  pageXOffset: 0,
+  pageYOffset: 0,
+  Olvy: undefined,
+  addEventListener,
+  removeEventListener,
+  open: (_url: string) => {},
+  performance: { now: () => ++performanceCounterForMocking },
+  matchMedia: () => false,
+});*/
 mockRequire("libs/request", Request);
 mockRequire("libs/error_handling", ErrorHandling);
 mockRequire("app", {});
@@ -70,6 +102,9 @@ test.beforeEach((t) => {
   User.prototype.fetch.returns(Promise.resolve());
 });
 test("Model Initialization: should throw a model.HANDLED_ERROR for missing data layers", (t) => {
+  location.href = `http://localhost:9000/datasets/${DATASET.name}-${DATASET.id}/view`;
+  location.pathname = `/datasets/${DATASET.name}-${DATASET.id}/view`;
+
   t.plan(1);
   const { model } = t.context;
 

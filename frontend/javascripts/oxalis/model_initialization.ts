@@ -17,6 +17,7 @@ import {
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
+import { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
 import constants, { ControlModeEnum, AnnotationToolEnum, type Vector3 } from "oxalis/constants";
@@ -196,6 +197,8 @@ export async function initialize(
     datasetId,
     version,
   );
+  maybeFixDatasetNameInURL(dataset, initialCommandType);
+
   const serverVolumeTracings = getServerVolumeTracings(serverTracings);
   const serverVolumeTracingIds = serverVolumeTracings.map((volumeTracing) => volumeTracing.id);
   initializeDataset(initialFetch, dataset, serverTracings);
@@ -265,6 +268,22 @@ export async function initialize(
   }
 
   return initializationInformation;
+}
+
+function maybeFixDatasetNameInURL(dataset: APIDataset, initialCommandType: TraceOrViewCommand) {
+  if (initialCommandType.type === ControlModeEnum.VIEW) {
+    console.error("location.pathname", location.pathname);
+    const pathnameParts = location.pathname.split("/").slice(1); // First string is empty as pathname start with a /.
+    const endOfDatasetName = pathnameParts[1].lastIndexOf("-");
+    if (endOfDatasetName < 0) {
+      return;
+    }
+    const datasetNameInURL = pathnameParts[1].substring(0, endOfDatasetName);
+    if (dataset.name !== datasetNameInURL) {
+      const pathnameWithUpdatedDatasetName = `/${pathnameParts[0]}/${dataset.name}-${dataset.id}/view`;
+      UrlManager.changeBaseUrl(pathnameWithUpdatedDatasetName + location.search);
+    }
+  }
 }
 
 async function fetchParallel(

@@ -38,7 +38,6 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   dispatchMaybeFetchMeshFilesAsync,
-  refreshMeshAction,
   removeMeshAction,
 } from "oxalis/model/actions/annotation_actions";
 import type {
@@ -168,14 +167,7 @@ function* loadCoarseMesh(
   );
 
   if (meshInfo != null) {
-    if (meshInfo.isPrecomputed && meshInfo.areChunksMerged) {
-      console.log(
-        `Reloading mesh for segment ${segmentId} because its chunks should not be merged for proofreading.`,
-      );
-      yield* put(refreshMeshAction(layerName, segmentId));
-    } else {
-      console.log(`Don't load mesh for segment ${segmentId} because it already exists.`);
-    }
+    console.log(`Don't load mesh for segment ${segmentId} because it already exists.`);
     return;
   }
 
@@ -193,7 +185,6 @@ function* loadCoarseMesh(
         additionalCoordinates,
         currentMeshFile.meshFileName,
         undefined,
-        false,
       ),
     );
   } else {
@@ -253,7 +244,7 @@ function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {
 
   if (!proofreadUsingMeshes()) return;
 
-  /* Load a coarse ad hoc mesh of the agglomerate at the click position */
+  /* Load a coarse ad-hoc mesh of the agglomerate at the click position */
   yield* call(loadCoarseMesh, layerName, segmentId, position, additionalCoordinates);
 }
 

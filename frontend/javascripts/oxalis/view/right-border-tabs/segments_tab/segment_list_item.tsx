@@ -161,7 +161,7 @@ const getComputeMeshAdHocMenuItem = (
       );
     },
     disabled,
-    label: <FastTooltip title={title}>Compute Mesh (ad hoc)</FastTooltip>,
+    label: <FastTooltip title={title}>Compute Mesh (ad-hoc)</FastTooltip>,
   };
 };
 
@@ -237,7 +237,7 @@ type Props = {
   currentMeshFile: APIMeshFile | null | undefined;
   onRenameStart: () => void;
   onRenameEnd: () => void;
-  multiSelectMenu: MenuProps;
+  getMultiSelectMenu: () => MenuProps;
   activeVolumeTracing: VolumeTracing | null | undefined;
   showContextMenuAt: (xPos: number, yPos: number, menu: MenuProps) => void;
   hideContextMenu: () => void;
@@ -403,7 +403,7 @@ function _SegmentListItem({
   currentMeshFile,
   onRenameStart,
   onRenameEnd,
-  multiSelectMenu,
+  getMultiSelectMenu,
   activeVolumeTracing,
   showContextMenuAt,
   hideContextMenu,
@@ -594,7 +594,7 @@ function _SegmentListItem({
       x,
       y,
       (selectedSegmentIds || []).length > 1 && selectedSegmentIds?.includes(segment.id)
-        ? multiSelectMenu
+        ? getMultiSelectMenu()
         : createSegmentContextMenu(),
     );
   };

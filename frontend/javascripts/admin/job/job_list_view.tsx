@@ -263,7 +263,7 @@ function JobListView() {
             : null}
         </span>
       );
-    } else if (job.type === APIJobType.TRAIN_MODEL) {
+    } else if (job.type === APIJobType.TRAIN_NEURON_MODEL) {
       const numberOfTrainingAnnotations = job.trainingAnnotations.length;
       return (
         <span>
@@ -271,7 +271,7 @@ function JobListView() {
           {getShowTrainingDataLink(job.trainingAnnotations)}
         </span>
       );
-    } else if (job.type === APIJobType.INFER_WITH_MODEL && linkToDataset != null) {
+    } else if (job.type === APIJobType.DEPRECATED_INFER_WITH_MODEL && linkToDataset != null) {
       return (
         <span>
           Run AI segmentation with custom model on <Link to={linkToDataset}>{job.datasetName}</Link>
@@ -368,7 +368,7 @@ function JobListView() {
       job.type === APIJobType.INFER_NEURONS ||
       job.type === APIJobType.MATERIALIZE_VOLUME_ANNOTATION ||
       job.type === APIJobType.COMPUTE_MESH_FILE ||
-      job.type === APIJobType.INFER_WITH_MODEL ||
+      job.type === APIJobType.DEPRECATED_INFER_WITH_MODEL ||
       job.type === APIJobType.INFER_MITOCHONDRIA
     ) {
       return (
@@ -381,7 +381,7 @@ function JobListView() {
           )}
         </span>
       );
-    } else if (job.type === APIJobType.TRAIN_MODEL) {
+    } else if (job.type === APIJobType.TRAIN_NEURON_MODEL) {
       return (
         <span>
           {job.state === "SUCCESS" &&

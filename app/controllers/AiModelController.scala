@@ -142,7 +142,7 @@ class AiModelController @Inject()(
           .serialCombined(request.body.trainingAnnotations.map(_.annotationId))(annotationDAO.findOne) ?~> "annotation.notFound"
         modelId = ObjectId.generate
         organization <- organizationDAO.findOne(request.identity._organization)
-        jobCommand = JobCommand.train_model
+        jobCommand = JobCommand.train_neuron_model
         commandArgs = Json.obj(
           "training_annotations" -> Json.toJson(trainingAnnotations),
           "organization_id" -> organization._id,

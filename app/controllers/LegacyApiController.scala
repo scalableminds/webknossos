@@ -5,7 +5,6 @@ import play.silhouette.api.Silhouette
 import play.silhouette.api.actions.SecuredRequest
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.VoxelSize
-import com.scalableminds.webknossos.tracingstore.tracings.volume.MagRestrictions
 import models.dataset.{DatasetDAO, DatasetService}
 import models.organization.OrganizationDAO
 
@@ -20,14 +19,6 @@ import security.WkEnv
 import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
-
-case class LegacyCreateExplorationalParameters(typ: String,
-                                               fallbackLayerName: Option[String],
-                                               resolutionRestrictions: Option[MagRestrictions])
-object LegacyCreateExplorationalParameters {
-  implicit val jsonFormat: OFormat[LegacyCreateExplorationalParameters] =
-    Json.format[LegacyCreateExplorationalParameters]
-}
 
 case class LegacyTaskParameters(taskTypeId: ObjectId,
                                 neededExperience: Experience,
@@ -47,8 +38,7 @@ object LegacyTaskParameters {
   implicit val taskParametersFormat: Format[LegacyTaskParameters] = Json.format[LegacyTaskParameters]
 }
 
-class LegacyApiController @Inject()(annotationController: AnnotationController,
-                                    datasetController: DatasetController,
+class LegacyApiController @Inject()(datasetController: DatasetController,
                                     projectController: ProjectController,
                                     taskController: TaskController,
                                     organizationDAO: OrganizationDAO,
@@ -63,7 +53,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     implicit request =>
       for {
         _ <- Fox.successful(logVersioned(request))
-        result <- datasetController.isValidNewName(datasetName)(request)
+        result <- Fox.future2Fox(datasetController.isValidNewName(datasetName)(request))
       } yield result
   }
 
@@ -71,7 +61,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     sil.UserAwareAction.async { implicit request =>
       for {
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
-        result <- datasetController.read(dataset._id, sharingToken)(request)
+        result <- Fox.future2Fox(datasetController.read(dataset._id, sharingToken)(request))
         adaptedResult <- replaceInResult(migrateDatasetJsonToOldFormat)(result)
       } yield adaptedResult
     }
@@ -81,7 +71,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
       for {
         _ <- Fox.successful(logVersioned(request))
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
-        result <- datasetController.update(dataset._id)(request)
+        result <- Fox.future2Fox(datasetController.update(dataset._id)(request))
         adaptedResult <- replaceInResult(migrateDatasetJsonToOldFormat)(result)
       } yield adaptedResult
     }
@@ -91,7 +81,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
       for {
         _ <- Fox.successful(logVersioned(request))
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
-        result <- datasetController.updateTeams(dataset._id)(request)
+        result <- Fox.future2Fox(datasetController.updateTeams(dataset._id)(request))
       } yield result
     }
 
@@ -100,14 +90,14 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
       for {
         _ <- Fox.successful(logVersioned(request))
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
-        sharingToken <- datasetController.getSharingToken(dataset._id)(request)
+        sharingToken <- Fox.future2Fox(datasetController.getSharingToken(dataset._id)(request))
       } yield sharingToken
     }
 
   def readTaskV8(taskId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- Fox.successful(logVersioned(request))
-      result <- taskController.read(taskId)(request)
+      result <- Fox.future2Fox(taskController.read(taskId)(request))
       adaptedResult <- replaceInResult(addLegacyDataSetFieldToTask)(result)
     } yield adaptedResult
   }
@@ -122,22 +112,8 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
                                                                    request.identity._organization)
           } yield TaskParameters.fromLegacyTaskParameters(params, dataset._id))
         requestWithUpdatedBody = request.withBody(taskParametersWithDatasetId)
-        result <- taskController.create()(requestWithUpdatedBody)
+        result <- Fox.future2Fox(taskController.create()(requestWithUpdatedBody))
         adaptedResult <- replaceInResult(addLegacyDataSetFieldToTaskCreationResult)(result)
-      } yield adaptedResult
-    }
-
-  def updateTaskV8(taskId: ObjectId): Action[LegacyTaskParameters] =
-    sil.SecuredAction.async(validateJson[LegacyTaskParameters]) { implicit request =>
-      val params = request.body
-      for {
-        dataset <- datasetDAO.findOneByIdOrNameAndOrganization(params.datasetId,
-                                                               params.dataSet,
-                                                               request.identity._organization)
-        paramsWithDatasetId = TaskParameters.fromLegacyTaskParameters(params, dataset._id)
-        requestWithUpdatedBody = request.withBody(paramsWithDatasetId)
-        result <- taskController.update(taskId)(requestWithUpdatedBody)
-        adaptedResult <- replaceInResult(addLegacyDataSetFieldToTask)(result)
       } yield adaptedResult
     }
 
@@ -148,7 +124,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     sil.SecuredAction.async { implicit request =>
       for {
         _ <- Fox.successful(logVersioned(request))
-        result <- projectController.tasksForProject(id, limit, pageNumber, includeTotalCount)(request)
+        result <- Fox.future2Fox(projectController.tasksForProject(id, limit, pageNumber, includeTotalCount)(request))
         replacedResults <- replaceInResult(addLegacyDataSetFieldToTask)(result)
       } yield replacedResults
     }
@@ -208,7 +184,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     sil.UserAwareAction.async { implicit request =>
       for {
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationName)
-        result <- datasetController.read(dataset._id, sharingToken)(request)
+        result <- Fox.future2Fox(datasetController.read(dataset._id, sharingToken)(request))
         adaptedResult <- replaceInResult(replaceVoxelSize)(result)
       } yield adaptedResult
     }
@@ -257,7 +233,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     } yield adaptedJsResult
 
   private def addLegacyDataSetFieldToTask(js: JsObject): Fox[JsObject] =
-    tryo(js + ("dataSet" -> (js \ "datasetName").as[JsString]))
+    tryo(js + ("dataSet" -> (js \ "datasetName").as[JsString])).toFox
 
   private def replaceVoxelSize(jsObject: JsObject) = {
     val voxelSizeOpt = (jsObject \ "dataSource" \ "scale").asOpt[VoxelSize]

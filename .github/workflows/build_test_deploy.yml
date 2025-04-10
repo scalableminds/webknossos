@@ -123,20 +123,6 @@ jobs:
             echo "CI_TAG=$CI_TAG" | tee -a "$GITHUB_ENV"
             echo "NORMALIZED_BRANCH=$CI_TAG" | tee -a "$GITHUB_ENV"
           fi
-      - name: "Custom environment variables (master)"
-        if: github.ref == 'refs/heads/master'
-        run: |
-          echo "CI_BUILD_NUM=${{ github.run_id }}" >> "$GITHUB_ENV"
-          if [[ "${{ github.ref_type }}" == "branch" ]]; then
-            NORMALIZED_BRANCH="${GITHUB_HEAD_REF//[\/-]/_}"
-            DOCKER_TAG="${NORMALIZED_BRANCH}__${{ github.run_id }}"
-            echo "DOCKER_TAG=$DOCKER_TAG" >> "$GITHUB_ENV"
-            echo "NORMALIZED_BRANCH=$NORMALIZED_BRANCH" >> "$GITHUB_ENV"
-          else
-            echo "CI_TAG=${{ github.ref_name }}" >> "$GITHUB_ENV"
-            echo "DOCKER_TAG=master" >> "$GITHUB_ENV"
-            echo "NORMALIZED_BRANCH=${{ github.ref_name }}" >> "$GITHUB_ENV"
-          fi
 
       - name: Prepare Dependency Folders
         run: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier

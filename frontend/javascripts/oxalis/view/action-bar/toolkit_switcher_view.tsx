@@ -1,7 +1,7 @@
 import { Badge, Button, Dropdown, type MenuProps } from "antd";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { Store } from "oxalis/singletons";
-import type { Toolkit } from "oxalis/store";
+import type { Toolkit } from "oxalis/model/accessors/tool_accessor";
 import { NARROW_BUTTON_STYLE } from "./toolbar_view";
 
 export default function ToolkitView() {
@@ -21,7 +21,7 @@ export default function ToolkitView() {
         },
         {
           label: "Volume",
-          key: "VOLUME_ANNOTATION",
+          key: "VOLUME_TOOLS",
         },
         {
           label: "Split Segments",

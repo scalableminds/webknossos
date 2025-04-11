@@ -39,6 +39,7 @@ import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   adaptActiveToolToShortcuts,
   getDisabledInfoForTools,
+  ToolCollections,
 } from "oxalis/model/accessors/tool_accessor";
 import {
   getActiveSegmentationTracing,
@@ -906,51 +907,7 @@ export default function ToolbarView() {
   return (
     <>
       <Radio.Group onChange={handleSetTool} value={adaptedActiveTool}>
-        {toolkit === "ALL_TOOLS" ? (
-          <>
-            <MoveTool />
-            <SkeletonTool />
-            <BrushTool adaptedActiveTool={adaptedActiveTool} />
-            <EraseBrushTool adaptedActiveTool={adaptedActiveTool} />
-            <TraceTool adaptedActiveTool={adaptedActiveTool} />
-            <EraseTraceTool adaptedActiveTool={adaptedActiveTool} />
-            <FillCellTool adaptedActiveTool={adaptedActiveTool} />
-            <PickCellTool />
-            <QuickSelectTool />
-            <BoundingBoxTool />
-            <ProofreadTool />
-            <LineMeasurementTool />
-          </>
-        ) : null}
-        {toolkit === "READ_ONLY_TOOLS" ? (
-          <>
-            <MoveTool />
-            <PickCellTool />
-            <LineMeasurementTool />
-          </>
-        ) : null}
-
-        {toolkit === "VOLUME_ANNOTATION" ? (
-          <>
-            <MoveTool />
-            <BrushTool adaptedActiveTool={adaptedActiveTool} />
-            <EraseBrushTool adaptedActiveTool={adaptedActiveTool} />
-            <TraceTool adaptedActiveTool={adaptedActiveTool} />
-            <EraseTraceTool adaptedActiveTool={adaptedActiveTool} />
-            <FillCellTool adaptedActiveTool={adaptedActiveTool} />
-            <PickCellTool />
-            <QuickSelectTool />
-          </>
-        ) : null}
-        {toolkit === "SPLIT_SEGMENTS" ? (
-          <>
-            <MoveTool />
-            <SkeletonTool />
-            <FillCellTool adaptedActiveTool={adaptedActiveTool} />
-            <PickCellTool />
-            <BoundingBoxTool />
-          </>
-        ) : null}
+        {ToolCollections[toolkit].map((tool) => getButtonForTool(tool, adaptedActiveTool))}
       </Radio.Group>
 
       <ToolSpecificSettings
@@ -1644,6 +1601,47 @@ function LineMeasurementTool() {
       <i className="fas fa-ruler" />
     </ToolRadioButton>
   );
+}
+
+function getButtonForTool(annotationTool: AnnotationTool, adaptedActiveTool: AnnotationTool) {
+  switch (annotationTool) {
+    case AnnotationTool.MOVE: {
+      return <MoveTool />;
+    }
+    case AnnotationTool.SKELETON: {
+      return <SkeletonTool />;
+    }
+    case AnnotationTool.BRUSH: {
+      return <BrushTool adaptedActiveTool={adaptedActiveTool} />;
+    }
+    case AnnotationTool.ERASE_BRUSH: {
+      return <EraseBrushTool adaptedActiveTool={adaptedActiveTool} />;
+    }
+    case AnnotationTool.TRACE: {
+      return <TraceTool adaptedActiveTool={adaptedActiveTool} />;
+    }
+    case AnnotationTool.ERASE_TRACE: {
+      return <EraseTraceTool adaptedActiveTool={adaptedActiveTool} />;
+    }
+    case AnnotationTool.FILL_CELL: {
+      return <FillCellTool adaptedActiveTool={adaptedActiveTool} />;
+    }
+    case AnnotationTool.PICK_CELL: {
+      return <PickCellTool />;
+    }
+    case AnnotationTool.QUICK_SELECT: {
+      return <QuickSelectTool />;
+    }
+    case AnnotationTool.BOUNDING_BOX: {
+      return <BoundingBoxTool />;
+    }
+    case AnnotationTool.PROOFREAD: {
+      return <ProofreadTool />;
+    }
+    case AnnotationTool.LINE_MEASUREMENT: {
+      return <LineMeasurementTool />;
+    }
+  }
 }
 
 function MaybeMultiSliceAnnotationInfoIcon() {

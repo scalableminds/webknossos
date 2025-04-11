@@ -72,6 +72,7 @@ import type {
 import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import type { StartAIJobModalState } from "./view/action-bar/starting_job_modals";
+import type { Toolkit } from "./model/accessors/tool_accessor";
 
 export type MutableCommentType = {
   content: string;
@@ -371,8 +372,6 @@ export type QuickSelectConfig = {
   readonly erodeValue: number;
   readonly dilateValue: number;
 };
-
-export type Toolkit = "ALL_TOOLS" | "READ_ONLY_TOOLS" | "VOLUME_ANNOTATION" | "SPLIT_SEGMENTS";
 
 export type UserConfiguration = {
   readonly autoSaveLayouts: boolean;

@@ -141,6 +141,13 @@ export const ToolCollections = {
     AnnotationTool.LINE_MEASUREMENT,
     AnnotationTool.AREA_MEASUREMENT,
   ] as AnnotationTool[],
+  SPLIT_SEGMENTS: [
+    AnnotationTool.MOVE,
+    AnnotationTool.SKELETON,
+    AnnotationTool.FILL_CELL,
+    AnnotationTool.PICK_CELL,
+    AnnotationTool.BOUNDING_BOX,
+  ],
 };
 
 export const VolumeTools = ToolCollections.VOLUME_TOOLS;
@@ -152,7 +159,7 @@ export const MeasurementTools: AnnotationTool[] = [
   AnnotationTool.AREA_MEASUREMENT,
 ];
 
-export type Toolkit = "ALL_TOOLS" | "READ_ONLY_TOOLS" | "VOLUME_ANNOTATION" | "SPLIT_SEGMENTS";
+export type Toolkit = keyof typeof ToolCollections;
 
 export function getAvailableTools(_state: OxalisState) {}
 

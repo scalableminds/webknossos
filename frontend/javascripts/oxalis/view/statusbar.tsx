@@ -18,7 +18,7 @@ import {
   hasVisibleUint64Segmentation,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getActiveMagInfo } from "oxalis/model/accessors/flycam_accessor";
-import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
+import { adaptActiveToolToShortcuts, AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import {
   calculateGlobalPos,
   isPlaneMode as getIsPlaneMode,
@@ -194,8 +194,11 @@ function ShortcutsInfo() {
   if (!isPlaneMode) {
     let actionDescriptor = null;
     if (hasSkeleton && isShiftPressed) {
-      actionDescriptor = getToolClassForAnnotationTool("SKELETON").getActionDescriptors(
-        "SKELETON",
+      // todop
+      actionDescriptor = getToolClassForAnnotationTool(
+        AnnotationTool.SKELETON,
+      ).getActionDescriptors(
+        AnnotationTool.SKELETON,
         useLegacyBindings,
         isShiftPressed,
         isControlOrMetaPressed,

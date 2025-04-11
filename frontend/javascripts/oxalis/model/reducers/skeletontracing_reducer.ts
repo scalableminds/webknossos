@@ -4,7 +4,7 @@ import ColorGenerator from "libs/color_generator";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import _ from "lodash";
-import Constants, { AnnotationToolEnum, TreeTypeEnum } from "oxalis/constants";
+import Constants, { AnnotationTool, TreeTypeEnum } from "oxalis/constants";
 import {
   findTreeByNodeId,
   getNodeAndTree,
@@ -690,7 +690,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             return state;
           }
           const isProofreadingActive =
-            state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
+            state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
           const treeType = isProofreadingActive ? TreeTypeEnum.AGGLOMERATE : TreeTypeEnum.DEFAULT;
           const sourceTreeMaybe = getNodeAndTree(skeletonTracing, sourceNodeId, null, treeType);
           const targetTreeMaybe = getNodeAndTree(skeletonTracing, targetNodeId, null, treeType);
@@ -965,7 +965,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         case "MERGE_TREES": {
           const { sourceNodeId, targetNodeId } = action;
           const isProofreadingActive =
-            state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
+            state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
           const treeType = isProofreadingActive ? TreeTypeEnum.AGGLOMERATE : TreeTypeEnum.DEFAULT;
           const oldTrees = skeletonTracing.trees;
           const mergeResult = mergeTrees(oldTrees, sourceNodeId, targetNodeId, treeType);

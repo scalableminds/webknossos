@@ -1,7 +1,7 @@
 import Maybe from "data.maybe";
 import * as Utils from "libs/utils";
-import { AnnotationToolEnum } from "oxalis/constants";
-import type { AnnotationTool, BoundingBoxType } from "oxalis/constants";
+import { AnnotationTool } from "oxalis/constants";
+import type { AnnotationToolType, BoundingBoxType } from "oxalis/constants";
 import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
 import {
   isVolumeAnnotationDisallowedForZoom,
@@ -141,9 +141,9 @@ export function convertServerAdditionalAxesToFrontEnd(
   }));
 }
 
-export function getNextTool(state: OxalisState): AnnotationTool | null {
+export function getNextTool(state: OxalisState): AnnotationToolType | null {
   const disabledToolInfo = getDisabledInfoForTools(state);
-  const tools = Object.keys(AnnotationToolEnum) as AnnotationTool[];
+  const tools = Object.values(AnnotationTool);
   const currentToolIndex = tools.indexOf(state.uiInformation.activeTool);
 
   // Search for the next tool which is not disabled.
@@ -154,16 +154,16 @@ export function getNextTool(state: OxalisState): AnnotationTool | null {
   ) {
     const newTool = tools[newToolIndex % tools.length];
 
-    if (!disabledToolInfo[newTool].isDisabled) {
+    if (!disabledToolInfo[newTool.id].isDisabled) {
       return newTool;
     }
   }
 
   return null;
 }
-export function getPreviousTool(state: OxalisState): AnnotationTool | null {
+export function getPreviousTool(state: OxalisState): AnnotationToolType | null {
   const disabledToolInfo = getDisabledInfoForTools(state);
-  const tools = Object.keys(AnnotationToolEnum) as AnnotationTool[];
+  const tools = Object.values(AnnotationTool);
   const currentToolIndex = tools.indexOf(state.uiInformation.activeTool);
 
   // Search backwards for the next tool which is not disabled.
@@ -174,7 +174,7 @@ export function getPreviousTool(state: OxalisState): AnnotationTool | null {
   ) {
     const newTool = tools[(tools.length + newToolIndex) % tools.length];
 
-    if (!disabledToolInfo[newTool].isDisabled) {
+    if (!disabledToolInfo[newTool.id].isDisabled) {
       return newTool;
     }
   }

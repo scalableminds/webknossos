@@ -1,13 +1,13 @@
 import "test/mocks/lz4";
 import test from "ava";
 import _ from "lodash";
-import { AnnotationToolEnum, type AnnotationTool } from "oxalis/constants";
+import { AnnotationTool, type AnnotationToolType } from "oxalis/constants";
 import mockRequire from "mock-require";
 import { initialState } from "test/fixtures/volumetracing_object";
 import sinon from "sinon";
 const disabledInfoMock: { [key in any]?: any } = {};
-Object.values(AnnotationToolEnum).forEach((annotationTool) => {
-  disabledInfoMock[annotationTool] = {
+Object.values(AnnotationTool).forEach((annotationTool) => {
+  disabledInfoMock[annotationTool.id] = {
     isDisabled: false,
     explanation: "",
   };
@@ -114,37 +114,37 @@ test.serial("Selecting another tool should trigger a deselection of the previous
   saga.next(wkReadyAction());
   saga.next(newState.uiInformation.activeTool);
 
-  const cycleTool = (nextTool: AnnotationTool) => {
+  const cycleTool = (nextTool: AnnotationToolType) => {
     const action = setToolAction(nextTool);
     newState = UiReducer(newState, action);
     saga.next(action);
     saga.next(newState);
   };
 
-  cycleTool(AnnotationToolEnum.SKELETON);
+  cycleTool(AnnotationTool.SKELETON);
   t.true(MoveTool.onToolDeselected.calledOnce);
-  cycleTool(AnnotationToolEnum.BRUSH);
+  cycleTool(AnnotationTool.BRUSH);
   t.true(SkeletonTool.onToolDeselected.calledOnce);
-  cycleTool(AnnotationToolEnum.ERASE_BRUSH);
+  cycleTool(AnnotationTool.ERASE_BRUSH);
   t.true(DrawTool.onToolDeselected.calledOnce);
-  cycleTool(AnnotationToolEnum.TRACE);
+  cycleTool(AnnotationTool.TRACE);
   t.true(EraseTool.onToolDeselected.calledOnce);
-  cycleTool(AnnotationToolEnum.ERASE_TRACE);
+  cycleTool(AnnotationTool.ERASE_TRACE);
   t.true(DrawTool.onToolDeselected.calledTwice);
-  cycleTool(AnnotationToolEnum.FILL_CELL);
+  cycleTool(AnnotationTool.FILL_CELL);
   t.true(EraseTool.onToolDeselected.calledTwice);
-  cycleTool(AnnotationToolEnum.PICK_CELL);
+  cycleTool(AnnotationTool.PICK_CELL);
   t.true(FillCellTool.onToolDeselected.calledOnce);
-  cycleTool(AnnotationToolEnum.BOUNDING_BOX);
+  cycleTool(AnnotationTool.BOUNDING_BOX);
   t.true(PickCellTool.onToolDeselected.calledOnce);
-  cycleTool(AnnotationToolEnum.PROOFREAD);
+  cycleTool(AnnotationTool.PROOFREAD);
   t.true(BoundingBoxTool.onToolDeselected.calledOnce);
-  cycleTool(AnnotationToolEnum.LINE_MEASUREMENT);
+  cycleTool(AnnotationTool.LINE_MEASUREMENT);
   t.true(ProofreadTool.onToolDeselected.calledOnce);
-  cycleTool(AnnotationToolEnum.AREA_MEASUREMENT);
+  cycleTool(AnnotationTool.AREA_MEASUREMENT);
   t.true(LineMeasurementTool.onToolDeselected.calledOnce);
-  cycleTool(AnnotationToolEnum.MOVE);
+  cycleTool(AnnotationTool.MOVE);
   t.true(AreaMeasurementTool.onToolDeselected.calledOnce);
-  cycleTool(AnnotationToolEnum.SKELETON);
+  cycleTool(AnnotationTool.SKELETON);
   t.true(MoveTool.onToolDeselected.calledTwice);
 });

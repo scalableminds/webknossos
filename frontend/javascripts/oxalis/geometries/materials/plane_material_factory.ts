@@ -7,7 +7,7 @@ import _ from "lodash";
 import { WkDevFlags } from "oxalis/api/wk_dev";
 import { BLEND_MODES, Identity4x4, type OrthoView, type Vector3 } from "oxalis/constants";
 import {
-  AnnotationToolEnum,
+  AnnotationTool,
   MappingStatusEnum,
   OrthoViewValues,
   OrthoViews,
@@ -885,7 +885,7 @@ class PlaneMaterialFactory {
           (storeState) => storeState.uiInformation.activeTool,
           (annotationTool) => {
             this.uniforms.showBrush.value = isBrushTool(annotationTool);
-            this.uniforms.isProofreading.value = annotationTool === AnnotationToolEnum.PROOFREAD;
+            this.uniforms.isProofreading.value = annotationTool === AnnotationTool.PROOFREAD;
           },
           true,
         ),

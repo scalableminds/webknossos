@@ -1,7 +1,7 @@
 import "test/mocks/lz4";
 import update from "immutability-helper";
 import Maybe from "data.maybe";
-import { AnnotationToolEnum, type Vector3 } from "oxalis/constants";
+import { AnnotationTool, type Vector3 } from "oxalis/constants";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
 import * as UiActions from "oxalis/model/actions/ui_actions";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
@@ -135,15 +135,15 @@ test("VolumeTracing should create cells and only update the largestSegmentId aft
 });
 
 test("VolumeTracing should set trace/view tool", (t) => {
-  const setToolAction = UiActions.setToolAction(AnnotationToolEnum.TRACE);
+  const setToolAction = UiActions.setToolAction(AnnotationTool.TRACE);
   // Change tool to Trace
   const newState = UiReducer(initialState, setToolAction);
   t.not(newState, initialState);
-  t.is(newState.uiInformation.activeTool, AnnotationToolEnum.TRACE);
+  t.is(newState.uiInformation.activeTool, AnnotationTool.TRACE);
 });
 
 test("VolumeTracing should not allow to set trace tool if getActiveMagIndexForLayer(zoomStep, 'tracingId') is > 1", (t) => {
-  const setToolAction = UiActions.setToolAction(AnnotationToolEnum.TRACE);
+  const setToolAction = UiActions.setToolAction(AnnotationTool.TRACE);
   const alteredState = update(initialState, {
     flycam: {
       zoomStep: {
@@ -157,7 +157,7 @@ test("VolumeTracing should not allow to set trace tool if getActiveMagIndexForLa
   const newState = UiReducer(alteredState, setToolAction);
   t.is(alteredState, newState);
   // Tool should not have changed
-  t.is(newState.uiInformation.activeTool, AnnotationToolEnum.MOVE);
+  t.is(newState.uiInformation.activeTool, AnnotationTool.MOVE);
 });
 
 test("VolumeTracing should cycle trace/view/brush tool", (t) => {
@@ -165,29 +165,29 @@ test("VolumeTracing should cycle trace/view/brush tool", (t) => {
 
   // Cycle tool to Brush
   let newState = UiReducer(initialState, cycleToolAction());
-  t.is(newState.uiInformation.activeTool, AnnotationToolEnum.BRUSH);
+  t.is(newState.uiInformation.activeTool, AnnotationTool.BRUSH);
   newState = UiReducer(newState, cycleToolAction());
-  t.is(newState.uiInformation.activeTool, AnnotationToolEnum.ERASE_BRUSH);
+  t.is(newState.uiInformation.activeTool, AnnotationTool.ERASE_BRUSH);
   // Cycle tool to Trace
   newState = UiReducer(newState, cycleToolAction());
-  t.is(newState.uiInformation.activeTool, AnnotationToolEnum.TRACE);
+  t.is(newState.uiInformation.activeTool, AnnotationTool.TRACE);
   newState = UiReducer(newState, cycleToolAction());
-  t.is(newState.uiInformation.activeTool, AnnotationToolEnum.ERASE_TRACE);
+  t.is(newState.uiInformation.activeTool, AnnotationTool.ERASE_TRACE);
   newState = UiReducer(newState, cycleToolAction());
-  t.is(newState.uiInformation.activeTool, AnnotationToolEnum.FILL_CELL);
+  t.is(newState.uiInformation.activeTool, AnnotationTool.FILL_CELL);
   newState = UiReducer(newState, cycleToolAction());
-  t.is(newState.uiInformation.activeTool, AnnotationToolEnum.PICK_CELL);
+  t.is(newState.uiInformation.activeTool, AnnotationTool.PICK_CELL);
   newState = UiReducer(newState, cycleToolAction());
-  t.is(newState.uiInformation.activeTool, AnnotationToolEnum.QUICK_SELECT);
+  t.is(newState.uiInformation.activeTool, AnnotationTool.QUICK_SELECT);
   newState = UiReducer(newState, cycleToolAction());
-  t.is(newState.uiInformation.activeTool, AnnotationToolEnum.BOUNDING_BOX);
+  t.is(newState.uiInformation.activeTool, AnnotationTool.BOUNDING_BOX);
   newState = UiReducer(newState, cycleToolAction());
-  t.is(newState.uiInformation.activeTool, AnnotationToolEnum.LINE_MEASUREMENT);
+  t.is(newState.uiInformation.activeTool, AnnotationTool.LINE_MEASUREMENT);
   newState = UiReducer(newState, cycleToolAction());
-  t.is(newState.uiInformation.activeTool, AnnotationToolEnum.AREA_MEASUREMENT);
+  t.is(newState.uiInformation.activeTool, AnnotationTool.AREA_MEASUREMENT);
   // Cycle tool back to MOVE
   newState = UiReducer(newState, cycleToolAction());
-  t.is(newState.uiInformation.activeTool, AnnotationToolEnum.MOVE);
+  t.is(newState.uiInformation.activeTool, AnnotationTool.MOVE);
 });
 
 test("VolumeTracing should update its lastLabelActions", (t) => {

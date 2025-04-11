@@ -5,7 +5,7 @@ import _ from "lodash";
 import type { APISegmentationLayer, ServerVolumeTracing } from "types/api_flow_types";
 import {
   OrthoViews,
-  AnnotationToolEnum,
+  AnnotationTool,
   ContourModeEnum,
   OverwriteModeEnum,
   MappingStatusEnum,
@@ -187,7 +187,7 @@ test("VolumeTracingSaga should create a volume layer (saga test)", (t) => {
   });
   saga.next(volumeTracing);
   saga.next(OverwriteModeEnum.OVERWRITE_ALL);
-  saga.next(AnnotationToolEnum.BRUSH);
+  saga.next(AnnotationTool.BRUSH);
   saga.next(false);
   // pass labeled mag
   saga.next({
@@ -228,7 +228,7 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", (t) => {
   });
   saga.next(volumeTracing);
   saga.next(OverwriteModeEnum.OVERWRITE_ALL);
-  saga.next(AnnotationToolEnum.TRACE);
+  saga.next(AnnotationTool.TRACE);
   saga.next(false);
   saga.next({
     mag: [1, 1, 1],
@@ -279,7 +279,7 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", (t) => {
   });
   saga.next(volumeTracing);
   saga.next(OverwriteModeEnum.OVERWRITE_ALL);
-  saga.next(AnnotationToolEnum.TRACE);
+  saga.next(AnnotationTool.TRACE);
   saga.next(false);
   saga.next({
     mag: [1, 1, 1],
@@ -321,7 +321,7 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", (t) => {
     call(
       finishLayer,
       volumeLayer,
-      AnnotationToolEnum.TRACE,
+      AnnotationTool.TRACE,
       ContourModeEnum.DRAW,
       OverwriteModeEnum.OVERWRITE_ALL,
       0,
@@ -342,7 +342,7 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
   });
   saga.next({ ...volumeTracing, contourTracingMode: ContourModeEnum.DELETE });
   saga.next(OverwriteModeEnum.OVERWRITE_ALL);
-  saga.next(AnnotationToolEnum.TRACE);
+  saga.next(AnnotationTool.TRACE);
   saga.next(false);
   saga.next({
     mag: [1, 1, 1],
@@ -382,7 +382,7 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
     call(
       finishLayer,
       volumeLayer,
-      AnnotationToolEnum.TRACE,
+      AnnotationTool.TRACE,
       ContourModeEnum.DELETE,
       OverwriteModeEnum.OVERWRITE_ALL,
       0,
@@ -420,7 +420,7 @@ test("VolumeTracingSaga should lock an active mapping upon first volume annotati
   });
   saga.next(volumeTracing);
   saga.next(OverwriteModeEnum.OVERWRITE_ALL);
-  saga.next(AnnotationToolEnum.BRUSH);
+  saga.next(AnnotationTool.BRUSH);
   saga.next(false);
   // pass labeled mag
   saga.next({

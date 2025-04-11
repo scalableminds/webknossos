@@ -10,7 +10,7 @@ import type {
   Vector2,
   Vector3,
 } from "oxalis/constants";
-import Constants, { AnnotationToolEnum, FillModeEnum, Unicode } from "oxalis/constants";
+import Constants, { AnnotationTool, FillModeEnum, Unicode } from "oxalis/constants";
 
 import _ from "lodash";
 import { getDatasetBoundingBox, getMagInfo } from "oxalis/model/accessors/dataset_accessor";
@@ -156,7 +156,7 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
   const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
   const disabledInfosForTools = yield* select(getDisabledInfoForTools);
 
-  if (!allowUpdate || disabledInfosForTools[AnnotationToolEnum.FILL_CELL].isDisabled) {
+  if (!allowUpdate || disabledInfosForTools[AnnotationTool.FILL_CELL.id].isDisabled) {
     return;
   }
 

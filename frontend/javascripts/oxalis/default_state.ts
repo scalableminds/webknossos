@@ -6,6 +6,7 @@ import Constants, {
   TDViewDisplayModeEnum,
   InterpolationModeEnum,
   UnitLong,
+  AnnotationTool,
 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import type { OxalisState } from "oxalis/store";
@@ -232,7 +233,7 @@ const defaultState: OxalisState = {
   activeOrganization: null,
   uiInformation: {
     globalProgress: 0,
-    activeTool: "MOVE",
+    activeTool: AnnotationTool.MOVE,
     activeUserBoundingBoxId: null,
     showDropzoneModal: false,
     showVersionRestore: false,

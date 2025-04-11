@@ -3,8 +3,14 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { document } from "libs/window";
 import _ from "lodash";
-import type { AnnotationTool, OrthoView, OrthoViewMap } from "oxalis/constants";
-import { AnnotationToolEnum, OrthoViewValuesWithoutTDView, OrthoViews } from "oxalis/constants";
+import {
+  AnnotationTool,
+  type AnnotationToolId,
+  type AnnotationToolType,
+  type OrthoView,
+  type OrthoViewMap,
+} from "oxalis/constants";
+import { OrthoViewValuesWithoutTDView, OrthoViews } from "oxalis/constants";
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
 import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
 import {
@@ -102,7 +108,7 @@ const setTool = (tool: AnnotationTool) => {
 
 type StateProps = {
   annotation: StoreAnnotation;
-  activeTool: AnnotationTool;
+  activeTool: AnnotationToolType;
 };
 type Props = StateProps;
 
@@ -140,7 +146,7 @@ class SkeletonKeybindings {
   }
 
   static getExtendedKeyboardControls() {
-    return { s: () => setTool(AnnotationToolEnum.SKELETON) };
+    return { s: () => setTool(AnnotationTool.SKELETON) };
   }
 }
 
@@ -170,14 +176,14 @@ class VolumeKeybindings {
 
   static getExtendedKeyboardControls() {
     return {
-      b: () => setTool(AnnotationToolEnum.BRUSH),
-      e: () => setTool(AnnotationToolEnum.ERASE_BRUSH),
-      l: () => setTool(AnnotationToolEnum.TRACE),
-      r: () => setTool(AnnotationToolEnum.ERASE_TRACE),
-      f: () => setTool(AnnotationToolEnum.FILL_CELL),
-      p: () => setTool(AnnotationToolEnum.PICK_CELL),
-      q: () => setTool(AnnotationToolEnum.QUICK_SELECT),
-      o: () => setTool(AnnotationToolEnum.PROOFREAD),
+      b: () => setTool(AnnotationTool.BRUSH),
+      e: () => setTool(AnnotationTool.ERASE_BRUSH),
+      l: () => setTool(AnnotationTool.TRACE),
+      r: () => setTool(AnnotationTool.ERASE_TRACE),
+      f: () => setTool(AnnotationTool.FILL_CELL),
+      p: () => setTool(AnnotationTool.PICK_CELL),
+      q: () => setTool(AnnotationTool.QUICK_SELECT),
+      o: () => setTool(AnnotationTool.PROOFREAD),
     };
   }
 }
@@ -203,7 +209,7 @@ class BoundingBoxKeybindings {
   };
 
   static getExtendedKeyboardControls() {
-    return { x: () => setTool(AnnotationToolEnum.BOUNDING_BOX) };
+    return { x: () => setTool(AnnotationTool.BOUNDING_BOX) };
   }
 
   static createKeyDownAndUpHandler() {
@@ -345,20 +351,20 @@ class PlaneController extends React.PureComponent<Props> {
 
     for (const controlKey of allControlKeys) {
       controls[controlKey] = this.createToolDependentMouseHandler({
-        [AnnotationToolEnum.MOVE]: moveControls[controlKey],
+        [AnnotationTool.MOVE.id]: moveControls[controlKey],
         // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
-        [AnnotationToolEnum.SKELETON]: skeletonControls[controlKey],
-        [AnnotationToolEnum.BRUSH]: drawControls[controlKey],
-        [AnnotationToolEnum.TRACE]: drawControls[controlKey],
-        [AnnotationToolEnum.ERASE_BRUSH]: eraseControls[controlKey],
-        [AnnotationToolEnum.ERASE_TRACE]: eraseControls[controlKey],
-        [AnnotationToolEnum.PICK_CELL]: pickCellControls[controlKey],
-        [AnnotationToolEnum.FILL_CELL]: fillCellControls[controlKey],
-        [AnnotationToolEnum.BOUNDING_BOX]: boundingBoxControls[controlKey],
-        [AnnotationToolEnum.QUICK_SELECT]: quickSelectControls[controlKey],
-        [AnnotationToolEnum.PROOFREAD]: proofreadControls[controlKey],
-        [AnnotationToolEnum.LINE_MEASUREMENT]: lineMeasurementControls[controlKey],
-        [AnnotationToolEnum.AREA_MEASUREMENT]: areaMeasurementControls[controlKey],
+        [AnnotationTool.SKELETON.id]: skeletonControls[controlKey],
+        [AnnotationTool.BRUSH.id]: drawControls[controlKey],
+        [AnnotationTool.TRACE.id]: drawControls[controlKey],
+        [AnnotationTool.ERASE_BRUSH.id]: eraseControls[controlKey],
+        [AnnotationTool.ERASE_TRACE.id]: eraseControls[controlKey],
+        [AnnotationTool.PICK_CELL.id]: pickCellControls[controlKey],
+        [AnnotationTool.FILL_CELL.id]: fillCellControls[controlKey],
+        [AnnotationTool.BOUNDING_BOX.id]: boundingBoxControls[controlKey],
+        [AnnotationTool.QUICK_SELECT.id]: quickSelectControls[controlKey],
+        [AnnotationTool.PROOFREAD.id]: proofreadControls[controlKey],
+        [AnnotationTool.LINE_MEASUREMENT.id]: lineMeasurementControls[controlKey],
+        [AnnotationTool.AREA_MEASUREMENT.id]: areaMeasurementControls[controlKey],
       });
     }
 
@@ -504,7 +510,7 @@ class PlaneController extends React.PureComponent<Props> {
     };
 
     let extendedControls = {
-      m: () => setTool(AnnotationToolEnum.MOVE),
+      m: () => setTool(AnnotationTool.MOVE),
       1: () => this.handleUpdateBrushSize("small"),
       2: () => this.handleUpdateBrushSize("medium"),
       3: () => this.handleUpdateBrushSize("large"),
@@ -635,7 +641,7 @@ class PlaneController extends React.PureComponent<Props> {
       const tool = this.props.activeTool;
 
       switch (tool) {
-        case AnnotationToolEnum.MOVE: {
+        case AnnotationTool.MOVE: {
           if (viewHandler != null) {
             viewHandler(...args);
           } else if (skeletonHandler != null) {
@@ -645,7 +651,7 @@ class PlaneController extends React.PureComponent<Props> {
           return;
         }
 
-        case AnnotationToolEnum.SKELETON: {
+        case AnnotationTool.SKELETON: {
           if (skeletonHandler != null) {
             skeletonHandler(...args);
           } else if (viewHandler != null) {
@@ -655,7 +661,7 @@ class PlaneController extends React.PureComponent<Props> {
           return;
         }
 
-        case AnnotationToolEnum.BOUNDING_BOX: {
+        case AnnotationTool.BOUNDING_BOX: {
           if (boundingBoxHandler != null) {
             boundingBoxHandler(...args);
           } else if (viewHandler != null) {
@@ -677,12 +683,12 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   createToolDependentMouseHandler(
-    toolToHandlerMap: Record<AnnotationTool, (...args: Array<any>) => any>,
+    toolToHandlerMap: Record<AnnotationToolId, (...args: Array<any>) => any>,
   ): (...args: Array<any>) => any {
     return (...args) => {
       const tool = this.props.activeTool;
-      const handler = toolToHandlerMap[tool];
-      const fallbackHandler = toolToHandlerMap[AnnotationToolEnum.MOVE];
+      const handler = toolToHandlerMap[tool.id];
+      const fallbackHandler = toolToHandlerMap[AnnotationTool.MOVE.id];
 
       if (handler != null) {
         handler(...args);

@@ -1,7 +1,7 @@
 import type DiffableMap from "libs/diffable_map";
 import type { Matrix4x4 } from "libs/mjs";
 import type {
-  AnnotationTool,
+  AnnotationToolType,
   BoundingBoxType,
   ContourMode,
   ControlMode,
@@ -557,7 +557,7 @@ type UiInformation = {
   readonly showAddScriptModal: boolean;
   readonly aIJobModalState: StartAIJobModalState;
   readonly showRenderAnimationModal: boolean;
-  readonly activeTool: AnnotationTool;
+  readonly activeTool: AnnotationToolType;
   readonly activeUserBoundingBoxId: number | null | undefined;
   readonly storedLayouts: Record<string, any>;
   readonly isImportingMesh: boolean;

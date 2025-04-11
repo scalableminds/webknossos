@@ -1,4 +1,4 @@
-import type { AnnotationTool, OrthoView, Vector3 } from "oxalis/constants";
+import type { AnnotationToolType, OrthoView, Vector3 } from "oxalis/constants";
 import type { BorderOpenStatus, OxalisState, Theme } from "oxalis/store";
 import type { StartAIJobModalState } from "oxalis/view/action-bar/starting_job_modals";
 
@@ -107,7 +107,7 @@ export const setHasOrganizationsAction = (value: boolean) =>
     type: "SET_HAS_ORGANIZATIONS",
     value,
   }) as const;
-export const setToolAction = (tool: AnnotationTool) =>
+export const setToolAction = (tool: AnnotationToolType) =>
   ({
     type: "SET_TOOL",
     tool,

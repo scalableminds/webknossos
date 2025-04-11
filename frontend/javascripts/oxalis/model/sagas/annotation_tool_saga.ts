@@ -1,4 +1,4 @@
-import { AnnotationToolEnum, MeasurementTools } from "oxalis/constants";
+import { AnnotationTool, MeasurementTools } from "oxalis/constants";
 import { getToolClassForAnnotationTool } from "oxalis/controller/combinations/tool_controls";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import {
@@ -45,7 +45,7 @@ export function* watchToolReset(): Saga<never> {
     if (MeasurementTools.indexOf(activeTool) >= 0) {
       const sceneController = yield* call(() => getSceneController());
       const geometry =
-        activeTool === AnnotationToolEnum.AREA_MEASUREMENT
+        activeTool === AnnotationTool.AREA_MEASUREMENT
           ? sceneController.areaMeasurementGeometry
           : sceneController.lineMeasurementGeometry;
       geometry.hide();

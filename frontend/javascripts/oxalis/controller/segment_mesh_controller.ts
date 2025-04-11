@@ -1,7 +1,7 @@
 import app from "app";
 import { mergeVertices } from "libs/BufferGeometryUtils";
 import _ from "lodash";
-import type { Vector2, Vector3 } from "oxalis/constants";
+import { AnnotationTool, type Vector2, type Vector3 } from "oxalis/constants";
 import CustomLOD from "oxalis/controller/custom_lod";
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -420,7 +420,8 @@ export default class SegmentMeshController {
     //    appearance.
     // 2) Clear old partial ranges if necessary.
     // 3) Update the appearance.
-    const isProofreadingMode = Store.getState().uiInformation.activeTool === "PROOFREAD";
+    const isProofreadingMode =
+      Store.getState().uiInformation.activeTool === AnnotationTool.PROOFREAD;
 
     if (highlightState != null && !isProofreadingMode) {
       // If the proofreading mode is not active and highlightState is not null,

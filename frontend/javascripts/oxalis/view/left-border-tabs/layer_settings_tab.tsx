@@ -40,7 +40,12 @@ import {
   settingsTooltips,
 } from "messages";
 import type { Vector3 } from "oxalis/constants";
-import Constants, { ControlModeEnum, IdentityTransform, MappingStatusEnum } from "oxalis/constants";
+import Constants, {
+  AnnotationTool,
+  ControlModeEnum,
+  IdentityTransform,
+  MappingStatusEnum,
+} from "oxalis/constants";
 import defaultState from "oxalis/default_state";
 import {
   getDefaultValueRangeOfLayer,
@@ -937,7 +942,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       />
     );
 
-    const isProofreadingMode = this.props.activeTool === "PROOFREAD";
+    const isProofreadingMode = this.props.activeTool === AnnotationTool.PROOFREAD;
     const isSelectiveVisibilityDisabled = isProofreadingMode;
 
     const selectiveVisibilitySwitch = (

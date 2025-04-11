@@ -9,7 +9,7 @@ import {
 } from "libs/format_utils";
 import { clamp } from "libs/utils";
 import {
-  AnnotationToolEnum,
+  AnnotationTool,
   LongUnitToShortUnitMap,
   MeasurementTools,
   type Vector3,
@@ -60,7 +60,7 @@ export default function DistanceMeasurementTooltip() {
   const currentPosition = getPosition(flycam);
   const { areaMeasurementGeometry, lineMeasurementGeometry } = getSceneController();
   const activeGeometry =
-    activeTool === AnnotationToolEnum.LINE_MEASUREMENT
+    activeTool === AnnotationTool.LINE_MEASUREMENT
       ? lineMeasurementGeometry
       : areaMeasurementGeometry;
   const orthoView = activeGeometry.viewport;
@@ -91,14 +91,14 @@ export default function DistanceMeasurementTooltip() {
   let valueInMetricUnit = "";
   const notScalingFactor = [1, 1, 1] as Vector3;
 
-  if (activeTool === AnnotationToolEnum.LINE_MEASUREMENT) {
+  if (activeTool === AnnotationTool.LINE_MEASUREMENT) {
     const { lineMeasurementGeometry } = getSceneController();
     valueInVx = formatLengthAsVx(lineMeasurementGeometry.getDistance(notScalingFactor), 1);
     valueInMetricUnit = formatNumberToLength(
       lineMeasurementGeometry.getDistance(voxelSize.factor),
       LongUnitToShortUnitMap[voxelSize.unit],
     );
-  } else if (activeTool === AnnotationToolEnum.AREA_MEASUREMENT) {
+  } else if (activeTool === AnnotationTool.AREA_MEASUREMENT) {
     const { areaMeasurementGeometry } = getSceneController();
     valueInVx = formatAreaAsVx(areaMeasurementGeometry.getArea(notScalingFactor), 1);
     valueInMetricUnit = formatNumberToArea(

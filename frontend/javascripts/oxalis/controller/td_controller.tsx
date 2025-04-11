@@ -4,8 +4,7 @@ import TrackballControls from "libs/trackball_controls";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import {
-  type AnnotationTool,
-  AnnotationToolEnum,
+  AnnotationTool,
   type OrthoView,
   type OrthoViewMap,
   OrthoViews,
@@ -65,7 +64,7 @@ function getTDViewMouseControlsSkeleton(planeView: PlaneView): Record<string, an
       isTouch: boolean,
       activeTool: AnnotationTool,
     ) =>
-      activeTool === AnnotationToolEnum.PROOFREAD
+      activeTool === AnnotationTool.PROOFREAD
         ? ProofreadTool.onLeftClick(planeView, pos, plane, event, isTouch)
         : SkeletonTool.onLeftClick(
             planeView,

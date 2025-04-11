@@ -3,8 +3,16 @@ import type { ModifierKeys } from "libs/input";
 import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 import { document } from "libs/window";
-import type { AnnotationTool, OrthoView, Point2, Vector3, Viewport } from "oxalis/constants";
-import { AnnotationToolEnum, ContourModeEnum, OrthoViews } from "oxalis/constants";
+import {
+  AnnotationTool,
+  ContourModeEnum,
+  OrthoViews,
+  type AnnotationToolType,
+  type OrthoView,
+  type Point2,
+  type Vector3,
+  type Viewport,
+} from "oxalis/constants";
 import {
   type SelectedEdge,
   createBoundingBoxAndGetEdges,
@@ -139,7 +147,7 @@ export class MoveTool {
       },
       leftDoubleClick: (pos: Point2, _plane: OrthoView, _event: MouseEvent, _isTouch: boolean) => {
         const { uiInformation } = Store.getState();
-        const isMoveToolActive = uiInformation.activeTool === AnnotationToolEnum.MOVE;
+        const isMoveToolActive = uiInformation.activeTool === AnnotationTool.MOVE;
 
         if (isMoveToolActive) {
           // We want to select the clicked segment ID only in the MOVE tool. This method is
@@ -194,7 +202,7 @@ export class MoveTool {
   }
 
   static getActionDescriptors(
-    _activeTool: AnnotationTool,
+    _activeTool: AnnotationToolType,
     useLegacyBindings: boolean,
     shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
@@ -360,7 +368,7 @@ export class SkeletonTool {
   }
 
   static getActionDescriptors(
-    _activeTool: AnnotationTool,
+    _activeTool: AnnotationToolType,
     useLegacyBindings: boolean,
     shiftKey: boolean,
     ctrlOrMetaKey: boolean,
@@ -487,7 +495,7 @@ export class DrawTool {
   }
 
   static getActionDescriptors(
-    activeTool: AnnotationTool,
+    activeTool: AnnotationToolType,
     useLegacyBindings: boolean,
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
@@ -499,11 +507,11 @@ export class DrawTool {
     if (!useLegacyBindings) {
       rightClick = "Context Menu";
     } else {
-      rightClick = `Erase (${activeTool === AnnotationToolEnum.BRUSH ? "Brush" : "Trace"})`;
+      rightClick = `Erase (${activeTool === AnnotationTool.BRUSH ? "Brush" : "Trace"})`;
     }
 
     return {
-      leftDrag: activeTool === AnnotationToolEnum.BRUSH ? "Brush" : "Trace",
+      leftDrag: activeTool === AnnotationTool.BRUSH ? "Brush" : "Trace",
       rightClick,
     };
   }
@@ -546,7 +554,7 @@ export class EraseTool {
   }
 
   static getActionDescriptors(
-    activeTool: AnnotationTool,
+    activeTool: AnnotationToolType,
     _useLegacyBindings: boolean,
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
@@ -554,7 +562,7 @@ export class EraseTool {
     _isTDViewportActive: boolean,
   ): ActionDescriptor {
     return {
-      leftDrag: `Erase (${activeTool === AnnotationToolEnum.ERASE_BRUSH ? "Brush" : "Trace"})`,
+      leftDrag: `Erase (${activeTool === AnnotationTool.ERASE_BRUSH ? "Brush" : "Trace"})`,
       rightClick: "Context Menu",
     };
   }
@@ -571,7 +579,7 @@ export class PickCellTool {
   }
 
   static getActionDescriptors(
-    _activeTool: AnnotationTool,
+    _activeTool: AnnotationToolType,
     _useLegacyBindings: boolean,
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
@@ -602,7 +610,7 @@ export class FillCellTool {
   }
 
   static getActionDescriptors(
-    _activeTool: AnnotationTool,
+    _activeTool: AnnotationToolType,
     _useLegacyBindings: boolean,
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
@@ -681,7 +689,7 @@ export class BoundingBoxTool {
   }
 
   static getActionDescriptors(
-    _activeTool: AnnotationTool,
+    _activeTool: AnnotationToolType,
     _useLegacyBindings: boolean,
     _shiftKey: boolean,
     ctrlOrMetaKey: boolean,
@@ -810,7 +818,7 @@ export class QuickSelectTool {
   }
 
   static getActionDescriptors(
-    _activeTool: AnnotationTool,
+    _activeTool: AnnotationToolType,
     _useLegacyBindings: boolean,
     shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
@@ -934,7 +942,7 @@ export class LineMeasurementTool {
   }
 
   static getActionDescriptors(
-    _activeTool: AnnotationTool,
+    _activeTool: AnnotationToolType,
     _useLegacyBindings: boolean,
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
@@ -1013,7 +1021,7 @@ export class AreaMeasurementTool {
   }
 
   static getActionDescriptors(
-    _activeTool: AnnotationTool,
+    _activeTool: AnnotationToolType,
     _useLegacyBindings: boolean,
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
@@ -1073,7 +1081,7 @@ export class ProofreadTool {
   }
 
   static getActionDescriptors(
-    _activeTool: AnnotationTool,
+    _activeTool: AnnotationToolType,
     _useLegacyBindings: boolean,
     shiftKey: boolean,
     ctrlOrMetaKey: boolean,
@@ -1114,20 +1122,21 @@ export class ProofreadTool {
   static onToolDeselected() {}
 }
 const toolToToolClass = {
-  [AnnotationToolEnum.MOVE]: MoveTool,
-  [AnnotationToolEnum.SKELETON]: SkeletonTool,
-  [AnnotationToolEnum.BOUNDING_BOX]: BoundingBoxTool,
-  [AnnotationToolEnum.QUICK_SELECT]: QuickSelectTool,
-  [AnnotationToolEnum.PROOFREAD]: ProofreadTool,
-  [AnnotationToolEnum.BRUSH]: DrawTool,
-  [AnnotationToolEnum.TRACE]: DrawTool,
-  [AnnotationToolEnum.ERASE_TRACE]: EraseTool,
-  [AnnotationToolEnum.ERASE_BRUSH]: EraseTool,
-  [AnnotationToolEnum.FILL_CELL]: FillCellTool,
-  [AnnotationToolEnum.PICK_CELL]: PickCellTool,
-  [AnnotationToolEnum.LINE_MEASUREMENT]: LineMeasurementTool,
-  [AnnotationToolEnum.AREA_MEASUREMENT]: AreaMeasurementTool,
+  // todop
+  [AnnotationTool.MOVE.id]: MoveTool,
+  [AnnotationTool.SKELETON.id]: SkeletonTool,
+  [AnnotationTool.BOUNDING_BOX.id]: BoundingBoxTool,
+  [AnnotationTool.QUICK_SELECT.id]: QuickSelectTool,
+  [AnnotationTool.PROOFREAD.id]: ProofreadTool,
+  [AnnotationTool.BRUSH.id]: DrawTool,
+  [AnnotationTool.TRACE.id]: DrawTool,
+  [AnnotationTool.ERASE_TRACE.id]: EraseTool,
+  [AnnotationTool.ERASE_BRUSH.id]: EraseTool,
+  [AnnotationTool.FILL_CELL.id]: FillCellTool,
+  [AnnotationTool.PICK_CELL.id]: PickCellTool,
+  [AnnotationTool.LINE_MEASUREMENT.id]: LineMeasurementTool,
+  [AnnotationTool.AREA_MEASUREMENT.id]: AreaMeasurementTool,
 };
-export function getToolClassForAnnotationTool(activeTool: AnnotationTool) {
-  return toolToToolClass[activeTool];
+export function getToolClassForAnnotationTool(activeTool: AnnotationToolType) {
+  return toolToToolClass[activeTool.id];
 }

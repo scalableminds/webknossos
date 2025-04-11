@@ -2,12 +2,7 @@ import { useEffectOnlyOnce, useKeyPress } from "libs/react_hooks";
 import { waitForCondition } from "libs/utils";
 import _ from "lodash";
 import type { Rect, Viewport, ViewportRects } from "oxalis/constants";
-import {
-  AnnotationToolEnum,
-  ArbitraryViewport,
-  ArbitraryViews,
-  OrthoViews,
-} from "oxalis/constants";
+import { AnnotationTool, ArbitraryViewport, ArbitraryViews, OrthoViews } from "oxalis/constants";
 import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
 import { setInputCatcherRects } from "oxalis/model/actions/view_mode_actions";
 import type { BusyBlockingInfo, OxalisState } from "oxalis/store";
@@ -97,6 +92,7 @@ export function recalculateInputCatcherSizes() {
   }
 }
 
+// todop
 const cursorForTool = {
   MOVE: "move",
   SKELETON: "crosshair",
@@ -142,9 +138,9 @@ function InputCatcher({
 
   const adaptedTool =
     viewportID === ArbitraryViews.arbitraryViewport
-      ? AnnotationToolEnum.SKELETON
+      ? AnnotationTool.SKELETON
       : viewportID === OrthoViews.TDView
-        ? AnnotationToolEnum.MOVE
+        ? AnnotationTool.MOVE
         : adaptActiveToolToShortcuts(
             activeTool,
             isShiftPressed,
@@ -160,7 +156,7 @@ function InputCatcher({
       <div
         className="flexlayout-dont-overflow"
         onContextMenu={ignoreContextMenu}
-        style={{ cursor: busyBlockingInfo.isBusy ? "wait" : cursorForTool[adaptedTool] }}
+        style={{ cursor: busyBlockingInfo.isBusy ? "wait" : cursorForTool[adaptedTool.id] }}
       >
         <div
           id={`inputcatcher_${viewportID}`}

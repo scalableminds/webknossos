@@ -27,8 +27,7 @@ import { hexToRgb, rgbToHex, roundTo, truncateStringToLength } from "libs/utils"
 import messages from "messages";
 import {
   AltOrOptionKey,
-  type AnnotationTool,
-  AnnotationToolEnum,
+  AnnotationTool,
   CtrlOrCmdKey,
   LongUnitToShortUnitMap,
   type OrthoView,
@@ -58,7 +57,10 @@ import {
   getNodePosition,
   isSkeletonLayerTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
+import {
+  type AnnotationToolType,
+  getDisabledInfoForTools,
+} from "oxalis/model/accessors/tool_accessor";
 import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   getActiveCellId,
@@ -166,7 +168,7 @@ type StateProps = {
   currentMeshFile: APIMeshFile | null | undefined;
   currentConnectomeFile: APIConnectomeFile | null | undefined;
   volumeTracing: VolumeTracing | null | undefined;
-  activeTool: AnnotationTool;
+  activeTool: AnnotationToolType;
   useLegacyBindings: boolean;
   userBoundingBoxes: Array<UserBoundingBox>;
   mappingInfo: ActiveMappingInfo;
@@ -184,7 +186,7 @@ type NodeContextMenuOptionsProps = Props & {
 type NoNodeContextMenuProps = Props & {
   viewport: OrthoView;
   segmentIdAtPosition: number;
-  activeTool: AnnotationTool;
+  activeTool: AnnotationToolType;
   infoRows: ItemType[];
 };
 
@@ -416,7 +418,7 @@ function getMeshItems(
     return [];
   }
   const state = Store.getState();
-  const isProofreadingActive = state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
+  const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
   const activeCellId = getActiveCellId(volumeTracing);
   const { activeUnmappedSegmentId } = volumeTracing;
   const segments = getSegmentsForLayer(state, volumeTracing.tracingId);
@@ -571,7 +573,7 @@ function getNodeContextMenuOptions({
   currentMeshFile,
 }: NodeContextMenuOptionsProps): ItemType[] {
   const state = Store.getState();
-  const isProofreadingActive = state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
+  const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
   const isVolumeModificationAllowed = !hasEditableMapping(state);
 
   if (skeletonTracing == null) {
@@ -774,7 +776,7 @@ function getBoundingBoxMenuOptions({
 }: NoNodeContextMenuProps): ItemType[] {
   if (globalPosition == null) return [];
 
-  const isBoundingBoxToolActive = activeTool === AnnotationToolEnum.BOUNDING_BOX;
+  const isBoundingBoxToolActive = activeTool === AnnotationTool.BOUNDING_BOX;
   const newBoundingBoxMenuItem: ItemType = {
     key: "add-new-bounding-box",
     onClick: () => {
@@ -943,7 +945,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
   const isAgglomerateMappingEnabled = hasAgglomerateMapping(state);
   const isConnectomeMappingEnabled = hasConnectomeFile(state);
 
-  const isProofreadingActive = state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
+  const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
 
   Store.dispatch(maybeFetchMeshFilesAction(visibleSegmentationLayer, dataset, false));
 
@@ -1021,7 +1023,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     });
 
   const isVolumeBasedToolActive = VolumeTools.includes(activeTool);
-  const isBoundingBoxToolActive = activeTool === AnnotationToolEnum.BOUNDING_BOX;
+  const isBoundingBoxToolActive = activeTool === AnnotationTool.BOUNDING_BOX;
   const skeletonActions: ItemType[] =
     skeletonTracing != null && globalPosition != null && allowUpdate
       ? [
@@ -1235,7 +1237,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       : [];
   const boundingBoxActions = getBoundingBoxMenuOptions(props);
 
-  const isSkeletonToolActive = activeTool === AnnotationToolEnum.SKELETON;
+  const isSkeletonToolActive = activeTool === AnnotationTool.SKELETON;
   let allActions: ItemType[] = [];
 
   const meshRelatedItems = getMeshItems(

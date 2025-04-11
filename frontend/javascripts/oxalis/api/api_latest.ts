@@ -18,7 +18,7 @@ import window, { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
 import type {
-  AnnotationTool,
+  AnnotationToolId,
   BoundingBoxType,
   BucketAddress,
   ControlMode,
@@ -30,10 +30,10 @@ import type {
 import Constants, {
   ControlModeEnum,
   OrthoViews,
-  AnnotationToolEnum,
   TDViewDisplayModeEnum,
   MappingStatusEnum,
   EMPTY_OBJECT,
+  AnnotationTool,
 } from "oxalis/constants";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import { loadAgglomerateSkeletonForSegmentId } from "oxalis/controller/combinations/segmentation_handlers";
@@ -1481,8 +1481,8 @@ class TracingApi {
    * Returns the active tool which is either
    * "MOVE", "SKELETON", "TRACE", "BRUSH", "FILL_CELL" or "PICK_CELL"
    */
-  getAnnotationTool(): AnnotationTool {
-    return Store.getState().uiInformation.activeTool;
+  getAnnotationTool(): AnnotationToolId {
+    return Store.getState().uiInformation.activeTool.id;
   }
 
   /**
@@ -1490,10 +1490,11 @@ class TracingApi {
    * "MOVE", "SKELETON", "TRACE", "BRUSH", "FILL_CELL" or "PICK_CELL"
    * _Volume tracing only!_
    */
-  setAnnotationTool(tool: AnnotationTool) {
-    if (AnnotationToolEnum[tool] == null) {
+  setAnnotationTool(toolId: AnnotationToolId) {
+    const tool = AnnotationTool[toolId];
+    if (tool == null) {
       throw new Error(
-        `Annotation tool has to be one of: "${Object.keys(AnnotationToolEnum).join('", "')}".`,
+        `Annotation tool has to be one of: "${Object.keys(AnnotationTool).join('", "')}".`,
       );
     }
 
@@ -1503,14 +1504,14 @@ class TracingApi {
   /**
    * Deprecated! Use getAnnotationTool instead.
    */
-  getVolumeTool(): AnnotationTool {
+  getVolumeTool(): AnnotationToolId {
     return this.getAnnotationTool();
   }
 
   /**
    * Deprecated! Use setAnnotationTool instead.
    */
-  setVolumeTool(tool: AnnotationTool) {
+  setVolumeTool(tool: AnnotationToolId) {
     this.setAnnotationTool(tool);
   }
 

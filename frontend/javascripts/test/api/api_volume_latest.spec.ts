@@ -1,6 +1,6 @@
 // @ts-nocheck
 import "test/mocks/lz4";
-import { AnnotationToolEnum } from "oxalis/constants";
+import { AnnotationTool } from "oxalis/constants";
 import { __setupOxalis } from "test/helpers/apiHelpers";
 import test from "ava";
 import window from "libs/window";
@@ -21,14 +21,14 @@ test("setActiveCell should set the active segment id", (t) => {
 });
 test("getAnnotationTool should get the current tool", (t) => {
   const { api } = t.context;
-  t.is(api.tracing.getAnnotationTool(), AnnotationToolEnum.MOVE);
+  t.is(api.tracing.getAnnotationTool(), AnnotationTool.MOVE);
 });
 test("setAnnotationTool should set the current tool", (t) => {
   const { api } = t.context;
-  api.tracing.setAnnotationTool(AnnotationToolEnum.TRACE);
-  t.is(api.tracing.getAnnotationTool(), AnnotationToolEnum.TRACE);
-  api.tracing.setAnnotationTool(AnnotationToolEnum.BRUSH);
-  t.is(api.tracing.getAnnotationTool(), AnnotationToolEnum.BRUSH);
+  api.tracing.setAnnotationTool(AnnotationTool.TRACE);
+  t.is(api.tracing.getAnnotationTool(), AnnotationTool.TRACE);
+  api.tracing.setAnnotationTool(AnnotationTool.BRUSH);
+  t.is(api.tracing.getAnnotationTool(), AnnotationTool.BRUSH);
 });
 test("setAnnotationTool should throw an error for an invalid tool", (t) => {
   const { api } = t.context;

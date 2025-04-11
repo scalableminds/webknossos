@@ -1,5 +1,16 @@
 import type { AdditionalCoordinate } from "types/api_flow_types";
 
+export {
+  AnnotationTool,
+  AnnotationToolType,
+  AnnotationToolId,
+  VolumeTools,
+  AvailableToolsInViewMode,
+  MeasurementTools,
+  ToolsWithOverwriteCapabilities,
+  ToolsWithInterpolationCapabilities,
+} from "./model/accessors/tool_accessor";
+
 export const ViewModeValues = ["orthogonal", "flight", "oblique"] as ViewMode[];
 
 export const ViewModeValuesIndices = {
@@ -181,51 +192,7 @@ export enum ControlModeEnum {
   VIEW = "VIEW",
 }
 export type ControlMode = keyof typeof ControlModeEnum;
-export enum AnnotationToolEnum {
-  MOVE = "MOVE",
-  SKELETON = "SKELETON",
-  BRUSH = "BRUSH",
-  ERASE_BRUSH = "ERASE_BRUSH",
-  TRACE = "TRACE",
-  ERASE_TRACE = "ERASE_TRACE",
-  FILL_CELL = "FILL_CELL",
-  PICK_CELL = "PICK_CELL",
-  QUICK_SELECT = "QUICK_SELECT",
-  BOUNDING_BOX = "BOUNDING_BOX",
-  PROOFREAD = "PROOFREAD",
-  LINE_MEASUREMENT = "LINE_MEASUREMENT",
-  AREA_MEASUREMENT = "AREA_MEASUREMENT",
-}
-export const VolumeTools: Array<keyof typeof AnnotationToolEnum> = [
-  AnnotationToolEnum.BRUSH,
-  AnnotationToolEnum.ERASE_BRUSH,
-  AnnotationToolEnum.TRACE,
-  AnnotationToolEnum.ERASE_TRACE,
-  AnnotationToolEnum.FILL_CELL,
-  AnnotationToolEnum.PICK_CELL,
-  AnnotationToolEnum.QUICK_SELECT,
-];
-export const ToolsWithOverwriteCapabilities: Array<keyof typeof AnnotationToolEnum> = [
-  AnnotationToolEnum.TRACE,
-  AnnotationToolEnum.BRUSH,
-  AnnotationToolEnum.ERASE_TRACE,
-  AnnotationToolEnum.ERASE_BRUSH,
-  AnnotationToolEnum.QUICK_SELECT,
-];
-export const ToolsWithInterpolationCapabilities: Array<keyof typeof AnnotationToolEnum> = [
-  AnnotationToolEnum.TRACE,
-  AnnotationToolEnum.BRUSH,
-  AnnotationToolEnum.QUICK_SELECT,
-];
 
-export const MeasurementTools: Array<keyof typeof AnnotationToolEnum> = [
-  AnnotationToolEnum.LINE_MEASUREMENT,
-  AnnotationToolEnum.AREA_MEASUREMENT,
-];
-
-export const AvailableToolsInViewMode = [...MeasurementTools, AnnotationToolEnum.MOVE];
-
-export type AnnotationTool = keyof typeof AnnotationToolEnum;
 export enum ContourModeEnum {
   DRAW = "DRAW",
   DELETE = "DELETE",

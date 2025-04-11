@@ -4,8 +4,7 @@ import {
   isFeatureAllowedByPricingPlan,
 } from "admin/organization/pricing_plan_utils";
 import memoizeOne from "memoize-one";
-import { type AnnotationTool, IdentityTransform } from "oxalis/constants";
-import { AnnotationToolEnum } from "oxalis/constants";
+import { IdentityTransform } from "oxalis/constants";
 import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -21,21 +20,156 @@ import { reuseInstanceOnEquality } from "./accessor_helpers";
 import { getTransformsPerLayer } from "./dataset_layer_transformation_accessor";
 import { isSkeletonLayerTransformed, isSkeletonLayerVisible } from "./skeletontracing_accessor";
 
-export const TOOL_NAMES = {
-  MOVE: "Move",
-  SKELETON: "Skeleton",
-  BRUSH: "Brush",
-  ERASE_BRUSH: "Erase (via Brush)",
-  TRACE: "Trace",
-  ERASE_TRACE: "Erase",
-  FILL_CELL: "Fill Tool",
-  PICK_CELL: "Segment Picker",
-  QUICK_SELECT: "Quick Select Tool",
-  BOUNDING_BOX: "Bounding Box Tool",
-  PROOFREAD: "Proofreading Tool",
-  LINE_MEASUREMENT: "Measurement Tool",
-  AREA_MEASUREMENT: "Area Measurement Tool",
+abstract class AbstractAnnotationTool {
+  static id: keyof typeof _AnnotationToolHelper;
+  static readableName: string;
+  static hasOverwriteCapabilities: boolean = false;
+  static hasInterpolationCapabilities: boolean = false;
+}
+
+export type AnnotationToolId = (typeof AbstractAnnotationTool)["id"];
+
+const _AnnotationToolHelper = {
+  MOVE: "MOVE",
+  SKELETON: "SKELETON",
+  BRUSH: "BRUSH",
+  ERASE_BRUSH: "ERASE_BRUSH",
+  TRACE: "TRACE",
+  ERASE_TRACE: "ERASE_TRACE",
+  FILL_CELL: "FILL_CELL",
+  PICK_CELL: "PICK_CELL",
+  QUICK_SELECT: "QUICK_SELECT",
+  BOUNDING_BOX: "BOUNDING_BOX",
+  PROOFREAD: "PROOFREAD",
+  LINE_MEASUREMENT: "LINE_MEASUREMENT",
+  AREA_MEASUREMENT: "AREA_MEASUREMENT",
+} as const;
+
+class MoveTool extends AbstractAnnotationTool {
+  static id = _AnnotationToolHelper.MOVE;
+  readableName = "Move";
+}
+class SkeletonTool extends AbstractAnnotationTool {
+  static id = _AnnotationToolHelper.SKELETON;
+  readableName = "Skeleton";
+}
+class BrushTool extends AbstractAnnotationTool {
+  static id = _AnnotationToolHelper.BRUSH;
+  static readableName = "Brush";
+}
+class EraseBrushTool extends AbstractAnnotationTool {
+  static id = _AnnotationToolHelper.ERASE_BRUSH;
+  static readableName = "Erase (via Brush)";
+}
+class TraceTool extends AbstractAnnotationTool {
+  static id = _AnnotationToolHelper.TRACE;
+  static readableName = "Trace";
+}
+class EraseTraceTool extends AbstractAnnotationTool {
+  static id = _AnnotationToolHelper.ERASE_TRACE;
+  static readableName = "Erase";
+}
+class FillCellTool extends AbstractAnnotationTool {
+  static id = _AnnotationToolHelper.FILL_CELL;
+  static readableName = "Fill Tool";
+}
+class PickCellTool extends AbstractAnnotationTool {
+  static id = _AnnotationToolHelper.PICK_CELL;
+  static readableName = "Segment Picker";
+}
+class QuickSelectTool extends AbstractAnnotationTool {
+  static id = _AnnotationToolHelper.QUICK_SELECT;
+  static readableName = "Quick Select Tool";
+}
+class BoundingBoxTool extends AbstractAnnotationTool {
+  static id = _AnnotationToolHelper.BOUNDING_BOX;
+  static readableName = "Bounding Box Tool";
+}
+class ProofreadTool extends AbstractAnnotationTool {
+  static id = _AnnotationToolHelper.PROOFREAD;
+  static readableName = "Proofreading Tool";
+}
+class LineMeasurementTool extends AbstractAnnotationTool {
+  static id = _AnnotationToolHelper.LINE_MEASUREMENT;
+  static readableName = "Measurement Tool";
+}
+class AreaMeasurementTool extends AbstractAnnotationTool {
+  static id = _AnnotationToolHelper.AREA_MEASUREMENT;
+  static readableName = "Area Measurement Tool";
+}
+
+export const AnnotationTool = {
+  MOVE: MoveTool,
+  SKELETON: SkeletonTool,
+  BRUSH: BrushTool,
+  ERASE_BRUSH: EraseBrushTool,
+  TRACE: TraceTool,
+  ERASE_TRACE: EraseTraceTool,
+  FILL_CELL: FillCellTool,
+  PICK_CELL: PickCellTool,
+  QUICK_SELECT: QuickSelectTool,
+  BOUNDING_BOX: BoundingBoxTool,
+  PROOFREAD: ProofreadTool,
+  LINE_MEASUREMENT: LineMeasurementTool,
+  AREA_MEASUREMENT: AreaMeasurementTool,
 };
+
+export type AnnotationTool = (typeof AnnotationTool)[keyof typeof AnnotationTool];
+
+// todop: remove again
+export type AnnotationToolType = AnnotationTool;
+// export type AnnotationToolType = typeof AbstractAnnotationTool;
+
+export const ToolCollections = {
+  ALL_TOOLS: Object.values(AnnotationTool),
+  VOLUME_TOOLS: [
+    AnnotationTool.BRUSH,
+    AnnotationTool.ERASE_BRUSH,
+    AnnotationTool.TRACE,
+    AnnotationTool.ERASE_TRACE,
+    AnnotationTool.FILL_CELL,
+    AnnotationTool.PICK_CELL,
+    AnnotationTool.QUICK_SELECT,
+  ] as AnnotationTool[],
+  READ_ONLY_TOOLS: [
+    AnnotationTool.MOVE,
+    AnnotationTool.LINE_MEASUREMENT,
+    AnnotationTool.AREA_MEASUREMENT,
+  ] as AnnotationTool[],
+};
+
+export const VolumeTools = ToolCollections.VOLUME_TOOLS;
+
+export type ToolCollection = keyof typeof ToolCollections;
+
+export const ToolsWithOverwriteCapabilities = [
+  AnnotationTool.TRACE,
+  AnnotationTool.BRUSH,
+  AnnotationTool.ERASE_TRACE,
+  AnnotationTool.ERASE_BRUSH,
+  AnnotationTool.QUICK_SELECT,
+  // todop: remove as...?
+] as const as AnnotationTool[];
+export const ToolsWithInterpolationCapabilities = [
+  AnnotationTool.TRACE,
+  AnnotationTool.BRUSH,
+  AnnotationTool.QUICK_SELECT,
+] as const as AnnotationTool[];
+
+export const MeasurementTools = [
+  AnnotationTool.LINE_MEASUREMENT,
+  AnnotationTool.AREA_MEASUREMENT,
+] as const as AnnotationTool[];
+
+export const AvailableToolsInViewMode = [...MeasurementTools, AnnotationTool.MOVE];
+
+export type ToolWorkspace =
+  | "ALL_TOOLS"
+  | "READ_ONLY_TOOLS"
+  | "VOLUME_ANNOTATION"
+  | "SPLIT_SEGMENTS";
+
+export function getAvailableTools(_state: OxalisState) {}
 
 const zoomInToUseToolMessage =
   "Please zoom in further to use this tool. If you want to edit volume data on this zoom level, create an annotation with restricted magnifications from the extended annotation menu in the dashboard.";
@@ -79,19 +213,19 @@ const getExplanationForDisabledVolume = (
   return "Volume annotation is currently disabled.";
 };
 
-export function isVolumeDrawingTool(activeTool: AnnotationTool): boolean {
+export function isVolumeDrawingTool(activeTool: AnnotationToolType): boolean {
   return (
-    activeTool === AnnotationToolEnum.TRACE ||
-    activeTool === AnnotationToolEnum.BRUSH ||
-    activeTool === AnnotationToolEnum.ERASE_TRACE ||
-    activeTool === AnnotationToolEnum.ERASE_BRUSH
+    activeTool === AnnotationTool.TRACE ||
+    activeTool === AnnotationTool.BRUSH ||
+    activeTool === AnnotationTool.ERASE_TRACE ||
+    activeTool === AnnotationTool.ERASE_BRUSH
   );
 }
-export function isBrushTool(activeTool: AnnotationTool): boolean {
-  return activeTool === AnnotationToolEnum.BRUSH || activeTool === AnnotationToolEnum.ERASE_BRUSH;
+export function isBrushTool(activeTool: AnnotationToolType): boolean {
+  return activeTool === AnnotationTool.BRUSH || activeTool === AnnotationTool.ERASE_BRUSH;
 }
-export function isTraceTool(activeTool: AnnotationTool): boolean {
-  return activeTool === AnnotationToolEnum.TRACE || activeTool === AnnotationToolEnum.ERASE_TRACE;
+export function isTraceTool(activeTool: AnnotationToolType): boolean {
+  return activeTool === AnnotationTool.TRACE || activeTool === AnnotationTool.ERASE_TRACE;
 }
 const noSkeletonsExplanation =
   "This annotation does not have a skeleton. Please convert it to a hybrid annotation.";
@@ -110,10 +244,10 @@ const NOT_DISABLED_INFO = {
 };
 
 const ALWAYS_ENABLED_TOOL_INFOS = {
-  [AnnotationToolEnum.MOVE]: NOT_DISABLED_INFO,
-  [AnnotationToolEnum.LINE_MEASUREMENT]: NOT_DISABLED_INFO,
-  [AnnotationToolEnum.AREA_MEASUREMENT]: NOT_DISABLED_INFO,
-  [AnnotationToolEnum.BOUNDING_BOX]: NOT_DISABLED_INFO,
+  [AnnotationTool.MOVE.id]: NOT_DISABLED_INFO,
+  [AnnotationTool.LINE_MEASUREMENT.id]: NOT_DISABLED_INFO,
+  [AnnotationTool.AREA_MEASUREMENT.id]: NOT_DISABLED_INFO,
+  [AnnotationTool.BOUNDING_BOX.id]: NOT_DISABLED_INFO,
 };
 
 function _getSkeletonToolInfo(
@@ -123,7 +257,7 @@ function _getSkeletonToolInfo(
 ) {
   if (!hasSkeleton) {
     return {
-      [AnnotationToolEnum.SKELETON]: {
+      [AnnotationTool.SKELETON.id]: {
         isDisabled: true,
         explanation: noSkeletonsExplanation,
       },
@@ -132,7 +266,7 @@ function _getSkeletonToolInfo(
 
   if (!areSkeletonsVisible) {
     return {
-      [AnnotationToolEnum.SKELETON]: {
+      [AnnotationTool.SKELETON.id]: {
         isDisabled: true,
         explanation: disabledSkeletonExplanation,
       },
@@ -141,7 +275,7 @@ function _getSkeletonToolInfo(
 
   if (isSkeletonLayerTransformed) {
     return {
-      [AnnotationToolEnum.SKELETON]: {
+      [AnnotationTool.SKELETON.id]: {
         isDisabled: true,
         explanation:
           "Skeleton annotation is disabled because the skeleton layer is transformed. Use the left sidebar to render the skeleton layer without any transformations.",
@@ -150,7 +284,7 @@ function _getSkeletonToolInfo(
   }
 
   return {
-    [AnnotationToolEnum.SKELETON]: NOT_DISABLED_INFO,
+    [AnnotationTool.SKELETON.id]: NOT_DISABLED_INFO,
   };
 }
 const getSkeletonToolInfo = memoizeOne(_getSkeletonToolInfo);
@@ -180,14 +314,14 @@ function _getDisabledInfoWhenVolumeIsDisabled(
     explanation: genericDisabledExplanation,
   };
   return {
-    [AnnotationToolEnum.BRUSH]: disabledInfo,
-    [AnnotationToolEnum.ERASE_BRUSH]: disabledInfo,
-    [AnnotationToolEnum.TRACE]: disabledInfo,
-    [AnnotationToolEnum.ERASE_TRACE]: disabledInfo,
-    [AnnotationToolEnum.FILL_CELL]: disabledInfo,
-    [AnnotationToolEnum.QUICK_SELECT]: disabledInfo,
-    [AnnotationToolEnum.PICK_CELL]: disabledInfo,
-    [AnnotationToolEnum.PROOFREAD]: {
+    [AnnotationTool.BRUSH.id]: disabledInfo,
+    [AnnotationTool.ERASE_BRUSH.id]: disabledInfo,
+    [AnnotationTool.TRACE.id]: disabledInfo,
+    [AnnotationTool.ERASE_TRACE.id]: disabledInfo,
+    [AnnotationTool.FILL_CELL.id]: disabledInfo,
+    [AnnotationTool.QUICK_SELECT.id]: disabledInfo,
+    [AnnotationTool.PICK_CELL.id]: disabledInfo,
+    [AnnotationTool.PROOFREAD.id]: {
       isDisabled: isVolumeDisabled,
       explanation: genericDisabledExplanation,
     },
@@ -259,32 +393,32 @@ function _getVolumeDisabledWhenVolumeIsEnabled(
   );
 
   return {
-    [AnnotationToolEnum.BRUSH]: {
+    [AnnotationTool.BRUSH.id]: {
       isDisabled: isZoomStepTooHighForBrushing,
       explanation: zoomInToUseToolMessage,
     },
-    [AnnotationToolEnum.ERASE_BRUSH]: {
+    [AnnotationTool.ERASE_BRUSH.id]: {
       isDisabled: isZoomStepTooHighForBrushing,
       explanation: zoomInToUseToolMessage,
     },
-    [AnnotationToolEnum.ERASE_TRACE]: {
+    [AnnotationTool.ERASE_TRACE.id]: {
       isDisabled: isZoomStepTooHighForTracing,
       explanation: zoomInToUseToolMessage,
     },
-    [AnnotationToolEnum.TRACE]: {
+    [AnnotationTool.TRACE.id]: {
       isDisabled: isZoomStepTooHighForTracing,
       explanation: zoomInToUseToolMessage,
     },
-    [AnnotationToolEnum.FILL_CELL]: {
+    [AnnotationTool.FILL_CELL.id]: {
       isDisabled: isZoomStepTooHighForFilling,
       explanation: zoomInToUseToolMessage,
     },
-    [AnnotationToolEnum.PICK_CELL]: NOT_DISABLED_INFO,
-    [AnnotationToolEnum.QUICK_SELECT]: {
+    [AnnotationTool.PICK_CELL.id]: NOT_DISABLED_INFO,
+    [AnnotationTool.QUICK_SELECT.id]: {
       isDisabled: isZoomStepTooHighForFilling,
       explanation: zoomInToUseToolMessage,
     },
-    [AnnotationToolEnum.PROOFREAD]: getDisabledInfoForProofreadTool(
+    [AnnotationTool.PROOFREAD.id]: getDisabledInfoForProofreadTool(
       hasSkeleton,
       agglomerateState,
       isProofReadingToolAllowed,
@@ -353,9 +487,9 @@ function getDisabledVolumeInfo(state: OxalisState) {
     : // Volume tools are not ALL disabled, but some of them might be.
       getVolumeDisabledWhenVolumeIsEnabled(
         hasSkeleton,
-        isVolumeAnnotationDisallowedForZoom(AnnotationToolEnum.BRUSH, state),
-        isVolumeAnnotationDisallowedForZoom(AnnotationToolEnum.TRACE, state),
-        isVolumeAnnotationDisallowedForZoom(AnnotationToolEnum.FILL_CELL, state),
+        isVolumeAnnotationDisallowedForZoom(AnnotationTool.BRUSH, state),
+        isVolumeAnnotationDisallowedForZoom(AnnotationTool.TRACE, state),
+        isVolumeAnnotationDisallowedForZoom(AnnotationTool.FILL_CELL, state),
         isUneditableMappingLocked,
         hasAgglomerateMapping(state),
         state.activeOrganization,
@@ -364,7 +498,7 @@ function getDisabledVolumeInfo(state: OxalisState) {
 }
 
 const getVolumeDisabledWhenVolumeIsEnabled = memoizeOne(_getVolumeDisabledWhenVolumeIsEnabled);
-const _getDisabledInfoForTools = (state: OxalisState): Record<AnnotationToolEnum, DisabledInfo> => {
+const _getDisabledInfoForTools = (state: OxalisState): Record<AnnotationToolId, DisabledInfo> => {
   const { annotation } = state;
   const hasSkeleton = annotation.skeleton != null;
   const skeletonToolInfo = getSkeletonToolInfo(
@@ -385,42 +519,42 @@ export const getDisabledInfoForTools = reuseInstanceOnEquality(
 );
 
 export function adaptActiveToolToShortcuts(
-  activeTool: AnnotationTool,
+  activeTool: AnnotationToolType,
   isShiftPressed: boolean,
   isControlOrMetaPressed: boolean,
   isAltPressed: boolean,
-): AnnotationTool {
+): AnnotationToolType {
   if (!isShiftPressed && !isControlOrMetaPressed && !isAltPressed) {
     // No modifier is pressed
     return activeTool;
   }
 
   if (
-    activeTool === AnnotationToolEnum.MOVE ||
-    activeTool === AnnotationToolEnum.QUICK_SELECT ||
-    activeTool === AnnotationToolEnum.PROOFREAD ||
-    activeTool === AnnotationToolEnum.LINE_MEASUREMENT ||
-    activeTool === AnnotationToolEnum.AREA_MEASUREMENT
+    activeTool === AnnotationTool.MOVE ||
+    activeTool === AnnotationTool.QUICK_SELECT ||
+    activeTool === AnnotationTool.PROOFREAD ||
+    activeTool === AnnotationTool.LINE_MEASUREMENT ||
+    activeTool === AnnotationTool.AREA_MEASUREMENT
   ) {
     // These tools do not have any modifier-related behavior currently (except for ALT
     // which is already handled below)
   } else if (
-    activeTool === AnnotationToolEnum.ERASE_BRUSH ||
-    activeTool === AnnotationToolEnum.ERASE_TRACE
+    activeTool === AnnotationTool.ERASE_BRUSH ||
+    activeTool === AnnotationTool.ERASE_TRACE
   ) {
     if (isShiftPressed) {
       if (isControlOrMetaPressed) {
-        return AnnotationToolEnum.FILL_CELL;
+        return AnnotationTool.FILL_CELL;
       } else {
-        return AnnotationToolEnum.PICK_CELL;
+        return AnnotationTool.PICK_CELL;
       }
     }
   } else {
-    if (activeTool === AnnotationToolEnum.SKELETON) {
+    if (activeTool === AnnotationTool.SKELETON) {
       // The "skeleton" tool is not changed right now (since actions such as moving a node
       // don't have a dedicated tool). The only exception is "Alt" which switches to the move tool.
       if (isAltPressed && !isControlOrMetaPressed && !isShiftPressed) {
-        return AnnotationToolEnum.MOVE;
+        return AnnotationTool.MOVE;
       }
 
       return activeTool;
@@ -429,13 +563,13 @@ export function adaptActiveToolToShortcuts(
     if (isShiftPressed && !isAltPressed) {
       if (!isControlOrMetaPressed) {
         // Only shift is pressed. Switch to the picker
-        return AnnotationToolEnum.PICK_CELL;
+        return AnnotationTool.PICK_CELL;
       } else {
         // Control and shift switch to the eraser
-        if (activeTool === AnnotationToolEnum.BRUSH) {
-          return AnnotationToolEnum.ERASE_BRUSH;
-        } else if (activeTool === AnnotationToolEnum.TRACE) {
-          return AnnotationToolEnum.ERASE_TRACE;
+        if (activeTool === AnnotationTool.BRUSH) {
+          return AnnotationTool.ERASE_BRUSH;
+        } else if (activeTool === AnnotationTool.TRACE) {
+          return AnnotationTool.ERASE_TRACE;
         }
       }
     }
@@ -443,15 +577,16 @@ export function adaptActiveToolToShortcuts(
 
   if (isAltPressed) {
     // Alt switches to the move tool
-    return AnnotationToolEnum.MOVE;
+    return AnnotationTool.MOVE;
   }
 
   return activeTool;
 }
 
 export const getLabelForTool = (tool: AnnotationTool) => {
-  const toolName = TOOL_NAMES[tool];
-  if (toolName.endsWith("Tool")) {
+  // todop
+  const toolName = AnnotationTool[tool.id];
+  if (toolName.readableName.endsWith("Tool")) {
     return toolName;
   }
   return `${toolName} Tool`;

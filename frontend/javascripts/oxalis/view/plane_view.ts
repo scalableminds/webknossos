@@ -3,7 +3,12 @@ import VisibilityAwareRaycaster from "libs/visibility_aware_raycaster";
 import window from "libs/window";
 import _ from "lodash";
 import type { OrthoViewMap, Vector2, Vector3, Viewport } from "oxalis/constants";
-import Constants, { OrthoViewColors, OrthoViewValues, OrthoViews } from "oxalis/constants";
+import Constants, {
+  AnnotationTool,
+  OrthoViewColors,
+  OrthoViewValues,
+  OrthoViews,
+} from "oxalis/constants";
 import type { VertexSegmentMapping } from "oxalis/controller/mesh_helpers";
 import getSceneController, {
   getSceneControllerOrNull,
@@ -183,7 +188,7 @@ class PlaneView {
 
     // Check whether we are hitting the same object as before, since we can return early
     // in this case.
-    if (storeState.uiInformation.activeTool === "PROOFREAD") {
+    if (storeState.uiInformation.activeTool === AnnotationTool.PROOFREAD) {
       if (hitObject == null && oldRaycasterHit == null) {
         return null;
       }
@@ -321,7 +326,7 @@ class PlaneView {
           // If the proofreading tool is not active, pretend that
           // activeUnmappedSegmentId is null so that no super-voxel
           // is highlighted.
-          return storeState.uiInformation.activeTool === "PROOFREAD"
+          return storeState.uiInformation.activeTool === AnnotationTool.PROOFREAD
             ? segmentationTracing.activeUnmappedSegmentId
             : null;
         },

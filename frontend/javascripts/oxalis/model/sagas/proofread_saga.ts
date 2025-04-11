@@ -9,12 +9,7 @@ import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { SoftError, isBigInt, isNumberMap } from "libs/utils";
 import _ from "lodash";
-import {
-  AnnotationToolEnum,
-  MappingStatusEnum,
-  TreeTypeEnum,
-  type Vector3,
-} from "oxalis/constants";
+import { AnnotationTool, MappingStatusEnum, TreeTypeEnum, type Vector3 } from "oxalis/constants";
 import { getSegmentIdForPositionAsync } from "oxalis/controller/combinations/volume_handlers";
 import {
   getLayerByName,
@@ -329,7 +324,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   const isModifyingAnyAgglomerateSkeletons =
     sourceTree.type === TreeTypeEnum.AGGLOMERATE || targetTree.type === TreeTypeEnum.AGGLOMERATE;
   const isProofreadingToolActive = yield* select(
-    (state) => state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD,
+    (state) => state.uiInformation.activeTool === AnnotationTool.PROOFREAD,
   );
 
   if (isProofreadingToolActive && !isModifyingOnlyAgglomerateSkeletons) {

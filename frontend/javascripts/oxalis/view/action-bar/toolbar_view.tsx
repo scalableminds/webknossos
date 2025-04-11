@@ -24,11 +24,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { useKeyPress, usePrevious } from "libs/react_hooks";
 import { document } from "libs/window";
 import {
-  AnnotationTool,
-  MeasurementTools,
-  VolumeTools,
-} from "oxalis/model/accessors/tool_accessor";
-import {
   FillModeEnum,
   type InterpolationMode,
   InterpolationModeEnum,
@@ -37,12 +32,14 @@ import {
   OverwriteModeEnum,
   Unicode,
 } from "oxalis/constants";
+import { getDisabledInfoForTools } from "oxalis/model/accessors/disabled_tool_accessor";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
-  ToolCollections,
-  adaptActiveToolToShortcuts,
-  getDisabledInfoForTools,
+  AnnotationTool,
+  MeasurementTools,
+  VolumeTools,
 } from "oxalis/model/accessors/tool_accessor";
+import { ToolCollections, adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
 import {
   getActiveSegmentationTracing,
   getMappingInfoForVolumeTracing,
@@ -168,7 +165,7 @@ function RadioButtonWithTooltip({
   disabled?: boolean;
   children: React.ReactNode;
   style?: React.CSSProperties;
-  value: string;
+  value: unknown;
   onClick?: (event: React.MouseEvent) => void;
   onMouseEnter?: () => void;
 }) {
@@ -214,7 +211,7 @@ function ToolRadioButton({
   disabled?: boolean;
   children: React.ReactNode;
   style?: React.CSSProperties;
-  value: string;
+  value: unknown;
   onClick?: (event: React.MouseEvent) => void;
   onMouseEnter?: () => void;
 }) {
@@ -909,7 +906,9 @@ export default function ToolbarView() {
   return (
     <>
       <Radio.Group onChange={handleSetTool} value={adaptedActiveTool}>
-        {ToolCollections[toolkit].map((tool) => getButtonForTool(tool, adaptedActiveTool))}
+        {ToolCollections[toolkit].map((tool) => (
+          <ToolButton key={tool.id} tool={tool} adaptedActiveTool={adaptedActiveTool} />
+        ))}
       </Radio.Group>
 
       <ToolSpecificSettings
@@ -1232,7 +1231,7 @@ function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
       <RadioButtonWithTooltip
         title="Measure distances with connected lines by using Left Click."
         style={NARROW_BUTTON_STYLE}
-        value={AnnotationTool.LINE_MEASUREMENT.id}
+        value={AnnotationTool.LINE_MEASUREMENT}
       >
         <img src="/assets/images/line-measurement.svg" alt="Measurement Tool Icon" />
       </RadioButtonWithTooltip>
@@ -1241,7 +1240,7 @@ function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
           "Measure areas by using Left Drag. Avoid self-crossing polygon structure for accurate results."
         }
         style={NARROW_BUTTON_STYLE}
-        value={AnnotationTool.AREA_MEASUREMENT.id}
+        value={AnnotationTool.AREA_MEASUREMENT}
       >
         <img
           src="/assets/images/area-measurement.svg"
@@ -1260,7 +1259,7 @@ function MoveTool() {
       description="Use left-click to move around and right-click to open a context menu."
       disabledExplanation=""
       disabled={false}
-      value={AnnotationTool.MOVE.id}
+      value={AnnotationTool.MOVE}
     >
       <i className="fas fa-arrows-alt" />
     </ToolRadioButton>
@@ -1290,7 +1289,7 @@ function SkeletonTool() {
       description={skeletonToolDescription}
       disabledExplanation={disabledInfosForTools[AnnotationTool.SKELETON.id].explanation}
       disabled={disabledInfosForTools[AnnotationTool.SKELETON.id].isDisabled}
-      value={AnnotationTool.SKELETON.id}
+      value={AnnotationTool.SKELETON}
     >
       <i
         style={{
@@ -1322,7 +1321,7 @@ function BrushTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTool })
       }
       disabledExplanation={disabledInfosForTools[AnnotationTool.BRUSH.id].explanation}
       disabled={disabledInfosForTools[AnnotationTool.BRUSH.id].isDisabled}
-      value={AnnotationTool.BRUSH.id}
+      value={AnnotationTool.BRUSH}
     >
       <i
         className="fas fa-paint-brush"
@@ -1357,7 +1356,7 @@ function EraseBrushTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTo
         zIndex: showEraseBrushTool ? "initial" : -10,
         transition: "margin 0.3s",
       }}
-      value={AnnotationTool.ERASE_BRUSH.id}
+      value={AnnotationTool.ERASE_BRUSH}
     >
       <i
         className="fas fa-eraser"
@@ -1384,7 +1383,7 @@ function TraceTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTool })
       description="Draw outlines around the voxels you would like to label."
       disabledExplanation={disabledInfosForTools[AnnotationTool.TRACE.id].explanation}
       disabled={disabledInfosForTools[AnnotationTool.TRACE.id].isDisabled}
-      value={AnnotationTool.TRACE.id}
+      value={AnnotationTool.TRACE}
     >
       <img
         src="/assets/images/lasso.svg"
@@ -1420,7 +1419,7 @@ function EraseTraceTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTo
         zIndex: showEraseTraceTool ? "initial" : -10,
         transition: "margin 0.3s",
       }}
-      value={AnnotationTool.ERASE_TRACE.id}
+      value={AnnotationTool.ERASE_TRACE}
     >
       <i
         className="fas fa-eraser"
@@ -1448,7 +1447,7 @@ function FillCellTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTool
       description="Flood-fill the clicked region."
       disabledExplanation={disabledInfosForTools[AnnotationTool.FILL_CELL.id].explanation}
       disabled={disabledInfosForTools[AnnotationTool.FILL_CELL.id].isDisabled}
-      value={AnnotationTool.FILL_CELL.id}
+      value={AnnotationTool.FILL_CELL}
     >
       <i
         className="fas fa-fill-drip"
@@ -1476,7 +1475,7 @@ function PickCellTool() {
       description="Click on a voxel to make its segment id the active segment id."
       disabledExplanation={disabledInfosForTools[AnnotationTool.PICK_CELL.id].explanation}
       disabled={disabledInfosForTools[AnnotationTool.PICK_CELL.id].isDisabled}
-      value={AnnotationTool.PICK_CELL.id}
+      value={AnnotationTool.PICK_CELL}
     >
       <i
         className="fas fa-eye-dropper"
@@ -1500,7 +1499,7 @@ function QuickSelectTool() {
       description="Click on a segment or draw a rectangle around it to automatically detect it"
       disabledExplanation={disabledInfosForTools[AnnotationTool.QUICK_SELECT.id].explanation}
       disabled={disabledInfosForTools[AnnotationTool.QUICK_SELECT.id].isDisabled}
-      value={AnnotationTool.QUICK_SELECT.id}
+      value={AnnotationTool.QUICK_SELECT}
     >
       <img
         src="/assets/images/quick-select-tool.svg"
@@ -1528,7 +1527,7 @@ function BoundingBoxTool() {
       description="Create, resize and modify bounding boxes."
       disabledExplanation={disabledInfosForTools[AnnotationTool.BOUNDING_BOX.id].explanation}
       disabled={disabledInfosForTools[AnnotationTool.BOUNDING_BOX.id].isDisabled}
-      value={AnnotationTool.BOUNDING_BOX.id}
+      value={AnnotationTool.BOUNDING_BOX}
     >
       <img
         src="/assets/images/bounding-box.svg"
@@ -1575,7 +1574,7 @@ function ProofreadTool() {
         !isAgglomerateMappingEnabled.value ||
         disabledInfosForTools[AnnotationTool.PROOFREAD.id].isDisabled
       }
-      value={AnnotationTool.PROOFREAD.id}
+      value={AnnotationTool.PROOFREAD}
       onMouseEnter={() => {
         dispatch(ensureLayerMappingsAreLoadedAction());
       }}
@@ -1598,15 +1597,18 @@ function LineMeasurementTool() {
       description="Use to measure distances or areas."
       disabledExplanation=""
       disabled={false}
-      value={AnnotationTool.LINE_MEASUREMENT.id}
+      value={AnnotationTool.LINE_MEASUREMENT}
     >
       <i className="fas fa-ruler" />
     </ToolRadioButton>
   );
 }
 
-function getButtonForTool(annotationTool: AnnotationTool, adaptedActiveTool: AnnotationTool) {
-  switch (annotationTool) {
+function ToolButton({
+  tool,
+  adaptedActiveTool,
+}: { tool: AnnotationTool; adaptedActiveTool: AnnotationTool }) {
+  switch (tool) {
     case AnnotationTool.MOVE: {
       return <MoveTool />;
     }

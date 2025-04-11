@@ -1,10 +1,10 @@
 import app from "app";
 import { mergeVertices } from "libs/BufferGeometryUtils";
 import _ from "lodash";
-import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import type { Vector2, Vector3 } from "oxalis/constants";
 import CustomLOD from "oxalis/controller/custom_lod";
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import {
   getActiveSegmentationTracing,
   getSegmentColorAsHSLA,

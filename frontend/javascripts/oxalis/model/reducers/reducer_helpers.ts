@@ -1,8 +1,8 @@
 import Maybe from "data.maybe";
 import * as Utils from "libs/utils";
-import type { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import type { BoundingBoxType } from "oxalis/constants";
-import { ToolCollections, getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
+import type { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
+import { ToolCollections } from "oxalis/model/accessors/tool_accessor";
 import {
   isVolumeAnnotationDisallowedForZoom,
   isVolumeTool,
@@ -22,6 +22,7 @@ import type {
   ServerBoundingBox,
   UserBoundingBoxFromServer,
 } from "types/api_flow_types";
+import { getDisabledInfoForTools } from "../accessors/disabled_tool_accessor";
 
 export function convertServerBoundingBoxToBoundingBox(
   boundingBox: ServerBoundingBox,

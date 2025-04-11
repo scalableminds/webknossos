@@ -1,8 +1,8 @@
-import _ from "lodash";
 import { V2, V3 } from "libs/mjs";
 import createProgressCallback, { type ProgressCallback } from "libs/progress_callback";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
+import _ from "lodash";
 import type {
   BoundingBoxType,
   FillMode,
@@ -11,11 +11,11 @@ import type {
   Vector2,
   Vector3,
 } from "oxalis/constants";
-import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import Constants, { FillModeEnum, Unicode } from "oxalis/constants";
 import { getDatasetBoundingBox, getMagInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getDisabledInfoForTools } from "oxalis/model/accessors/disabled_tool_accessor";
 import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
-import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import { enforceActiveVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";

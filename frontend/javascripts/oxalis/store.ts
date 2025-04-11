@@ -1,6 +1,5 @@
 import type DiffableMap from "libs/diffable_map";
 import type { Matrix4x4 } from "libs/mjs";
-import type { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import type {
   BoundingBoxType,
   ContourMode,
@@ -21,6 +20,7 @@ import type {
 import type { BLEND_MODES, ControlModeEnum } from "oxalis/constants";
 import defaultState from "oxalis/default_state";
 import type { TracingStats } from "oxalis/model/accessors/annotation_accessor";
+import type { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import type { Action } from "oxalis/model/actions/actions";
 import type EdgeCollection from "oxalis/model/edge_collection";
 import actionLoggerMiddleware from "oxalis/model/helpers/action_logger_middleware";

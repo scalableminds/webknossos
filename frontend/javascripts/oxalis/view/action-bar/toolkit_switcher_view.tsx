@@ -9,7 +9,7 @@ export default function ToolkitView() {
     {
       key: "1",
       type: "group",
-      label: "Select Workflow",
+      label: "Select Toolkit",
       children: [
         {
           label: "All Tools",

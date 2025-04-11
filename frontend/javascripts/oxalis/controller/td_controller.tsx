@@ -3,7 +3,6 @@ import { V3 } from "libs/mjs";
 import TrackballControls from "libs/trackball_controls";
 import * as Utils from "libs/utils";
 import _ from "lodash";
-import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import {
   type OrthoView,
   type OrthoViewMap,
@@ -19,6 +18,7 @@ import {
 } from "oxalis/controller/combinations/tool_controls";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getActiveNode, getNodePosition } from "oxalis/model/accessors/skeletontracing_accessor";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import { getInputCatcherRect, getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";

@@ -26,7 +26,6 @@ import Toast from "libs/toast";
 import { hexToRgb, rgbToHex, roundTo, truncateStringToLength } from "libs/utils";
 import messages from "messages";
 
-import { AnnotationTool, VolumeTools } from "oxalis/model/accessors/tool_accessor";
 import {
   AltOrOptionKey,
   CtrlOrCmdKey,
@@ -51,13 +50,14 @@ import {
   getMaybeSegmentIndexAvailability,
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
+import { getDisabledInfoForTools } from "oxalis/model/accessors/disabled_tool_accessor";
 import {
   getNodeAndTree,
   getNodeAndTreeOrNull,
   getNodePosition,
   isSkeletonLayerTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
+import { AnnotationTool, VolumeTools } from "oxalis/model/accessors/tool_accessor";
 import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   getActiveCellId,

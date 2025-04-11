@@ -5,7 +5,6 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import Constants, { TreeTypeEnum } from "oxalis/constants";
-import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import {
   findTreeByNodeId,
   getNodeAndTree,
@@ -13,6 +12,7 @@ import {
   getTree,
   isSkeletonLayerTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import type { Action } from "oxalis/model/actions/actions";
 import {
   convertServerAdditionalAxesToFrontEnd,

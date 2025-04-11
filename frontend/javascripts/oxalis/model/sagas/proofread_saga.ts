@@ -9,7 +9,6 @@ import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { SoftError, isBigInt, isNumberMap } from "libs/utils";
 import _ from "lodash";
-import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import { MappingStatusEnum, TreeTypeEnum, type Vector3 } from "oxalis/constants";
 import { getSegmentIdForPositionAsync } from "oxalis/controller/combinations/volume_handlers";
 import {
@@ -24,6 +23,7 @@ import {
   getTreeNameForAgglomerateSkeleton,
   isSkeletonLayerTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import {
   getActiveSegmentationTracing,
   getActiveSegmentationTracingLayer,

@@ -336,7 +336,9 @@ function ShortcutsInfo() {
     isControlOrMetaPressed,
     isAltPressed,
   );
-  const actionDescriptor = getToolControllerForAnnotationTool(adaptedTool).getActionDescriptors(
+  const toolController = getToolControllerForAnnotationTool(adaptedTool);
+  console.log("toolController", toolController);
+  const actionDescriptor = toolController.getActionDescriptors(
     adaptedTool,
     useLegacyBindings,
     isShiftPressed,

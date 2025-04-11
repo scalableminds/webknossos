@@ -17,7 +17,6 @@ import { coalesce } from "libs/utils";
 import window, { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
-import { AnnotationTool, type AnnotationToolId } from "oxalis/model/accessors/tool_accessor";
 import type {
   BoundingBoxType,
   BucketAddress,
@@ -68,6 +67,7 @@ import {
   getTreeGroupsMap,
   mapGroups,
 } from "oxalis/model/accessors/skeletontracing_accessor";
+import { AnnotationTool, type AnnotationToolId } from "oxalis/model/accessors/tool_accessor";
 import {
   getActiveCellId,
   getActiveSegmentationTracing,

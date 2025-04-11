@@ -1,7 +1,7 @@
 import "test/mocks/lz4";
 import update from "immutability-helper";
 import test from "ava";
-import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
+import { getDisabledInfoForTools } from "oxalis/model/accessors/disabled_tool_accessor";
 import { initialState } from "test/fixtures/hybridtracing_object";
 import { AnnotationTool, VolumeTools } from "oxalis/model/accessors/tool_accessor";
 import type { CoordinateTransformation } from "types/api_flow_types";

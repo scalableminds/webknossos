@@ -6,7 +6,6 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import { WkDevFlags } from "oxalis/api/wk_dev";
 import { BLEND_MODES, Identity4x4, type OrthoView, type Vector3 } from "oxalis/constants";
-import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import { MappingStatusEnum, OrthoViewValues, OrthoViews, ViewModeValues } from "oxalis/constants";
 import {
   getColorLayers,
@@ -31,6 +30,7 @@ import {
   getUnrenderableLayerInfosForCurrentZoom,
   getZoomValue,
 } from "oxalis/model/accessors/flycam_accessor";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import { calculateGlobalPos, getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
 import {

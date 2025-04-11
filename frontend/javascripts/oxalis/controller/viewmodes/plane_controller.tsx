@@ -3,7 +3,6 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { document } from "libs/window";
 import _ from "lodash";
-import { AnnotationTool, type AnnotationToolId } from "oxalis/model/accessors/tool_accessor";
 import type { OrthoView, OrthoViewMap } from "oxalis/constants";
 import { OrthoViewValuesWithoutTDView, OrthoViews } from "oxalis/constants";
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
@@ -31,6 +30,7 @@ import {
   getMoveOffset,
   getPosition,
 } from "oxalis/model/accessors/flycam_accessor";
+import { AnnotationTool, type AnnotationToolId } from "oxalis/model/accessors/tool_accessor";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import {
   getActiveSegmentationTracing,

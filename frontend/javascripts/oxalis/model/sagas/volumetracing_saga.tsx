@@ -4,10 +4,10 @@ import Toast from "libs/toast";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type { ContourMode, OrthoView, OverwriteMode, Vector3 } from "oxalis/constants";
-import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import { ContourModeEnum, OrthoViews, OverwriteModeEnum } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "oxalis/geometries/helper_geometries";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 
 import messages from "messages";
 import {

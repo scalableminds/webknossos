@@ -40,7 +40,6 @@ import {
   settingsTooltips,
 } from "messages";
 import type { Vector3 } from "oxalis/constants";
-import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import Constants, { ControlModeEnum, IdentityTransform, MappingStatusEnum } from "oxalis/constants";
 import defaultState from "oxalis/default_state";
 import {
@@ -67,6 +66,7 @@ import {
   enforceSkeletonTracing,
   getActiveNode,
 } from "oxalis/model/accessors/skeletontracing_accessor";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import {
   getAllReadableLayerNames,
   getReadableNameByVolumeTracingId,

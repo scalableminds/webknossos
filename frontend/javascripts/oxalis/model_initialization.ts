@@ -19,7 +19,6 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
-import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import constants, { ControlModeEnum, type Vector3 } from "oxalis/constants";
 import type { PartialUrlManagerState, UrlStateByLayer } from "oxalis/controller/url_manager";
 import UrlManager from "oxalis/controller/url_manager";
@@ -37,6 +36,7 @@ import {
   isSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getNullableSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
 import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
 import {

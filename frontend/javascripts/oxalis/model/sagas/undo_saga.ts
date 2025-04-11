@@ -1,8 +1,8 @@
 import createProgressCallback from "libs/progress_callback";
 import Toast from "libs/toast";
 import messages from "messages";
-import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
 import {
   getVolumeTracingById,

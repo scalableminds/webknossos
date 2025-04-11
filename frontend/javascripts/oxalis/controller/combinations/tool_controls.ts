@@ -3,7 +3,6 @@ import type { ModifierKeys } from "libs/input";
 import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 import { document } from "libs/window";
-import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import {
   ContourModeEnum,
   type OrthoView,
@@ -30,6 +29,7 @@ import {
 import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
 import getSceneController from "oxalis/controller/scene_controller_provider";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import {

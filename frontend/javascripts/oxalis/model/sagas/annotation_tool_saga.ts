@@ -1,6 +1,6 @@
-import { AnnotationTool, MeasurementTools } from "oxalis/model/accessors/tool_accessor";
 import { getToolControllerForAnnotationTool } from "oxalis/controller/combinations/tool_controls";
 import getSceneController from "oxalis/controller/scene_controller_provider";
+import { AnnotationTool, MeasurementTools } from "oxalis/model/accessors/tool_accessor";
 import {
   type CycleToolAction,
   type SetToolAction,

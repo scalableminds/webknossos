@@ -7,8 +7,8 @@ import Constants, {
   InterpolationModeEnum,
   UnitLong,
 } from "oxalis/constants";
-import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import constants from "oxalis/constants";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import type { OxalisState } from "oxalis/store";
 import { getSystemColorTheme } from "theme";
 import type {

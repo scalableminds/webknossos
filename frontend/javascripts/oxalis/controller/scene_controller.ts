@@ -33,7 +33,10 @@ import {
   getLayerBoundingBox,
   getLayerNameToIsDisabled,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getTransformsForLayerOrNull } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
+import {
+  getTransformsForLayerOrNull,
+  getTransformsForSkeletonLayer,
+} from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import { getActiveMagIndicesForLayers, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
@@ -110,8 +113,8 @@ class SceneController {
       new THREE.Vector3(...Store.getState().dataset.dataSource.scale.factor),
     );
     // Add scene to the group, all Geometries are then added to group
+    this.rootGroup.add(this.segmentMeshController.meshesLODRootGroup);
     this.scene.add(this.rootGroup);
-    this.scene.add(this.segmentMeshController.meshesLODRootGroup);
     this.setupDebuggingMethods();
   }
 
@@ -434,6 +437,25 @@ class SceneController {
     this.rootNode.add(this.userBoundingBoxGroup);
   }
 
+  updateUserBoundingBoxesAndMeshesAccordingToTransforms(): void {
+    const state = Store.getState();
+    const transformsForGeometries = getTransformsForSkeletonLayer(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    );
+    const transformMatrix = transformsForGeometries?.affineMatrix;
+    if (transformMatrix) {
+      const matrix = new THREE.Matrix4();
+      // @ts-ignore
+      matrix.set(...transformMatrix);
+      // We need to disable matrixAutoUpdate as otherwise the update to the matrix will be lost.
+      this.userBoundingBoxGroup.matrixAutoUpdate = false;
+      this.userBoundingBoxGroup.matrix = matrix;
+      this.segmentMeshController.meshesLODRootGroup.matrixAutoUpdate = false;
+      this.segmentMeshController.meshesLODRootGroup.matrix = matrix;
+    }
+  }
+
   updateLayerBoundingBoxes(): void {
     const state = Store.getState();
     const dataset = state.dataset;
@@ -590,7 +612,10 @@ class SceneController {
       ),
       listenToStoreProperty(
         (storeState) => storeState.datasetConfiguration.nativelyRenderedLayerName,
-        () => this.updateLayerBoundingBoxes(),
+        () => {
+          this.updateLayerBoundingBoxes();
+          this.updateUserBoundingBoxesAndMeshesAccordingToTransforms();
+        },
       ),
       listenToStoreProperty(
         (storeState) => getSomeTracing(storeState.annotation).boundingBox,

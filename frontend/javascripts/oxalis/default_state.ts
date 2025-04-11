@@ -102,7 +102,7 @@ const defaultState: OxalisState = {
     },
     renderWatermark: true,
     antialiasRendering: false,
-    toolWorkspace: "ALL_TOOLS",
+    activeToolkit: "ALL_TOOLS",
   },
   temporaryConfiguration: {
     viewMode: Constants.MODE_PLANE_TRACING,

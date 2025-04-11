@@ -372,11 +372,7 @@ export type QuickSelectConfig = {
   readonly dilateValue: number;
 };
 
-export type ToolWorkspace =
-  | "ALL_TOOLS"
-  | "READ_ONLY_TOOLS"
-  | "VOLUME_ANNOTATION"
-  | "SPLIT_SEGMENTS";
+export type Toolkit = "ALL_TOOLS" | "READ_ONLY_TOOLS" | "VOLUME_ANNOTATION" | "SPLIT_SEGMENTS";
 
 export type UserConfiguration = {
   readonly autoSaveLayouts: boolean;
@@ -419,7 +415,7 @@ export type UserConfiguration = {
   readonly quickSelect: QuickSelectConfig;
   readonly renderWatermark: boolean;
   readonly antialiasRendering: boolean;
-  readonly toolWorkspace: ToolWorkspace;
+  readonly activeToolkit: Toolkit;
 };
 export type RecommendedConfiguration = Partial<
   UserConfiguration &

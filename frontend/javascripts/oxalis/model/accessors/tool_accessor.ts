@@ -152,11 +152,7 @@ export const MeasurementTools: AnnotationTool[] = [
   AnnotationTool.AREA_MEASUREMENT,
 ];
 
-export type ToolWorkspace =
-  | "ALL_TOOLS"
-  | "READ_ONLY_TOOLS"
-  | "VOLUME_ANNOTATION"
-  | "SPLIT_SEGMENTS";
+export type Toolkit = "ALL_TOOLS" | "READ_ONLY_TOOLS" | "VOLUME_ANNOTATION" | "SPLIT_SEGMENTS";
 
 export function getAvailableTools(_state: OxalisState) {}
 

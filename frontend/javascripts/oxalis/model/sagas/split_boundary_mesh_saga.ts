@@ -16,10 +16,10 @@ function* updateSplitBoundaryMesh() {
     cleanUpFn = null;
   }
 
-  const isSplitWorkspace = yield* select(
-    (state) => state.userConfiguration.toolWorkspace === "SPLIT_SEGMENTS",
+  const isSplitToolkit = yield* select(
+    (state) => state.userConfiguration.activeToolkit === "SPLIT_SEGMENTS",
   );
-  if (!isSplitWorkspace) {
+  if (!isSplitToolkit) {
     return;
   }
 
@@ -54,7 +54,7 @@ export function* splitBoundaryMeshSaga(): Saga<void> {
       "TOGGLE_TREE",
       "SET_NODE_POSITION",
       (action: Action) =>
-        action.type === "UPDATE_USER_SETTING" && action.propertyName === "toolWorkspace",
+        action.type === "UPDATE_USER_SETTING" && action.propertyName === "activeToolkit",
     ] as ActionPattern,
     updateSplitBoundaryMesh,
   );

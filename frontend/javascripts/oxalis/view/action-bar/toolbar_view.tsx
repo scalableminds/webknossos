@@ -390,8 +390,8 @@ function SkeletonSpecificButtons() {
   const isContinuousNodeCreationEnabled = useSelector(
     (state: OxalisState) => state.userConfiguration.continuousNodeCreation,
   );
-  const isSplitWorkspace = useSelector(
-    (state: OxalisState) => state.userConfiguration.toolWorkspace === "SPLIT_SEGMENTS",
+  const isSplitToolkit = useSelector(
+    (state: OxalisState) => state.userConfiguration.activeToolkit === "SPLIT_SEGMENTS",
   );
   const toggleContinuousNodeCreation = () =>
     dispatch(updateUserSettingAction("continuousNodeCreation", !isContinuousNodeCreationEnabled));
@@ -432,7 +432,7 @@ function SkeletonSpecificButtons() {
       }}
     >
       <CreateTreeButton />
-      {isSplitWorkspace ? null : (
+      {isSplitToolkit ? null : (
         <ToggleButton
           style={NARROW_BUTTON_STYLE}
           onClick={toggleNewNodeNewTreeMode}
@@ -446,7 +446,7 @@ function SkeletonSpecificButtons() {
           />
         </ToggleButton>
       )}
-      {isSplitWorkspace ? null : (
+      {isSplitToolkit ? null : (
         <ToggleButton
           active={isMergerModeEnabled}
           style={{
@@ -853,7 +853,7 @@ function calculateMediumBrushSize(maximumBrushSize: number) {
 export default function ToolbarView() {
   const hasVolume = useSelector((state: OxalisState) => state.annotation?.volumes.length > 0);
   const hasSkeleton = useSelector((state: OxalisState) => state.annotation?.skeleton != null);
-  const toolWorkspace = useSelector((state: OxalisState) => state.userConfiguration.toolWorkspace);
+  const toolkit = useSelector((state: OxalisState) => state.userConfiguration.activeToolkit);
 
   const [lastForcefullyDisabledTool, setLastForcefullyDisabledTool] =
     useState<AnnotationTool | null>(null);
@@ -906,7 +906,7 @@ export default function ToolbarView() {
   return (
     <>
       <Radio.Group onChange={handleSetTool} value={adaptedActiveTool}>
-        {toolWorkspace === "ALL_TOOLS" ? (
+        {toolkit === "ALL_TOOLS" ? (
           <>
             <MoveTool />
             <SkeletonTool />
@@ -922,7 +922,7 @@ export default function ToolbarView() {
             <LineMeasurementTool />
           </>
         ) : null}
-        {toolWorkspace === "READ_ONLY_TOOLS" ? (
+        {toolkit === "READ_ONLY_TOOLS" ? (
           <>
             <MoveTool />
             <PickCellTool />
@@ -930,7 +930,7 @@ export default function ToolbarView() {
           </>
         ) : null}
 
-        {toolWorkspace === "VOLUME_ANNOTATION" ? (
+        {toolkit === "VOLUME_ANNOTATION" ? (
           <>
             <MoveTool />
             <BrushTool adaptedActiveTool={adaptedActiveTool} />
@@ -942,7 +942,7 @@ export default function ToolbarView() {
             <QuickSelectTool />
           </>
         ) : null}
-        {toolWorkspace === "SPLIT_SEGMENTS" ? (
+        {toolkit === "SPLIT_SEGMENTS" ? (
           <>
             <MoveTool />
             <SkeletonTool />

@@ -1,14 +1,11 @@
 import { Badge, Button, Dropdown, type MenuProps } from "antd";
-import {
-  // setToolWorkspaceAction,
-  updateUserSettingAction,
-} from "oxalis/model/actions/settings_actions";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { Store } from "oxalis/singletons";
-import type { ToolWorkspace } from "oxalis/store";
+import type { Toolkit } from "oxalis/store";
 import { NARROW_BUTTON_STYLE } from "./toolbar_view";
 
-export default function ToolWorkspaceView() {
-  const toolWorkspaceItems: MenuProps["items"] = [
+export default function ToolkitView() {
+  const toolkitItems: MenuProps["items"] = [
     {
       key: "1",
       type: "group",
@@ -35,8 +32,8 @@ export default function ToolWorkspaceView() {
   ];
 
   const handleMenuClick: MenuProps["onClick"] = (args) => {
-    const toolWorkspace = args.key;
-    Store.dispatch(updateUserSettingAction("toolWorkspace", toolWorkspace as ToolWorkspace));
+    const toolkit = args.key;
+    Store.dispatch(updateUserSettingAction("activeToolkit", toolkit as Toolkit));
     // Unfortunately, antd doesn't provide the original event here
     // which is why we have to blur using document.activeElement.
     // Additionally, we need a timeout since the blurring would be done
@@ -49,13 +46,13 @@ export default function ToolWorkspaceView() {
     }, 100);
   };
 
-  const toolWorkspaceMenuProps = {
-    items: toolWorkspaceItems,
+  const toolkitMenuProps = {
+    items: toolkitItems,
     onClick: handleMenuClick,
   };
 
   return (
-    <Dropdown menu={toolWorkspaceMenuProps}>
+    <Dropdown menu={toolkitMenuProps}>
       <Badge
         dot
         style={{

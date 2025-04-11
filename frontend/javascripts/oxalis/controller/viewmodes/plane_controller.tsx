@@ -13,17 +13,17 @@ import { OrthoViewValuesWithoutTDView, OrthoViews } from "oxalis/constants";
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
 import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
 import {
-  AreaMeasurementTool,
-  BoundingBoxTool,
-  DrawTool,
-  EraseTool,
-  FillCellTool,
-  LineMeasurementTool,
-  MoveTool,
-  PickCellTool,
-  ProofreadTool,
-  QuickSelectTool,
-  SkeletonTool,
+  AreaMeasurementToolController,
+  BoundingBoxToolController,
+  DrawToolController,
+  EraseToolController,
+  FillCellToolController,
+  LineMeasurementToolController,
+  MoveToolController,
+  PickCellToolController,
+  ProofreadToolController,
+  QuickSelectToolController,
+  SkeletonToolController,
 } from "oxalis/controller/combinations/tool_controls";
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
 import getSceneController, {
@@ -320,17 +320,26 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   getPlaneMouseControls(planeId: OrthoView): MouseBindingMap {
-    const moveControls = MoveTool.getMouseControls(planeId, this.planeView);
-    const skeletonControls = SkeletonTool.getMouseControls(this.planeView);
-    const drawControls = DrawTool.getPlaneMouseControls(planeId, this.planeView);
-    const eraseControls = EraseTool.getPlaneMouseControls(planeId, this.planeView);
-    const fillCellControls = FillCellTool.getPlaneMouseControls(planeId);
-    const pickCellControls = PickCellTool.getPlaneMouseControls(planeId);
-    const boundingBoxControls = BoundingBoxTool.getPlaneMouseControls(planeId, this.planeView);
-    const quickSelectControls = QuickSelectTool.getPlaneMouseControls(planeId, this.planeView);
-    const proofreadControls = ProofreadTool.getPlaneMouseControls(planeId, this.planeView);
-    const lineMeasurementControls = LineMeasurementTool.getPlaneMouseControls();
-    const areaMeasurementControls = AreaMeasurementTool.getPlaneMouseControls();
+    const moveControls = MoveToolController.getMouseControls(planeId, this.planeView);
+    const skeletonControls = SkeletonToolController.getMouseControls(this.planeView);
+    const drawControls = DrawToolController.getPlaneMouseControls(planeId, this.planeView);
+    const eraseControls = EraseToolController.getPlaneMouseControls(planeId, this.planeView);
+    const fillCellControls = FillCellToolController.getPlaneMouseControls(planeId);
+    const pickCellControls = PickCellToolController.getPlaneMouseControls(planeId);
+    const boundingBoxControls = BoundingBoxToolController.getPlaneMouseControls(
+      planeId,
+      this.planeView,
+    );
+    const quickSelectControls = QuickSelectToolController.getPlaneMouseControls(
+      planeId,
+      this.planeView,
+    );
+    const proofreadControls = ProofreadToolController.getPlaneMouseControls(
+      planeId,
+      this.planeView,
+    );
+    const lineMeasurementControls = LineMeasurementToolController.getPlaneMouseControls();
+    const areaMeasurementControls = AreaMeasurementToolController.getPlaneMouseControls();
 
     const allControlKeys = _.union(
       Object.keys(moveControls),

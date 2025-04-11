@@ -13,7 +13,10 @@ import {
 } from "oxalis/constants";
 import CameraController from "oxalis/controller/camera_controller";
 import { handleOpenContextMenu } from "oxalis/controller/combinations/skeleton_handlers";
-import { ProofreadTool, SkeletonTool } from "oxalis/controller/combinations/tool_controls";
+import {
+  ProofreadToolController,
+  SkeletonToolController,
+} from "oxalis/controller/combinations/tool_controls";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getActiveNode, getNodePosition } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getInputCatcherRect, getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
@@ -65,8 +68,8 @@ function getTDViewMouseControlsSkeleton(planeView: PlaneView): Record<string, an
       activeTool: AnnotationTool,
     ) =>
       activeTool === AnnotationTool.PROOFREAD
-        ? ProofreadTool.onLeftClick(planeView, pos, plane, event, isTouch)
-        : SkeletonTool.onLeftClick(
+        ? ProofreadToolController.onLeftClick(planeView, pos, plane, event, isTouch)
+        : SkeletonToolController.onLeftClick(
             planeView,
             pos,
             event.shiftKey,

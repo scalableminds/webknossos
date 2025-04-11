@@ -1038,10 +1038,7 @@ function ToolSpecificSettings({
         visible={ToolsWithOverwriteCapabilities.includes(adaptedActiveTool)}
       />
 
-      {
-        // todop: search for Tool.id to get these?
-      }
-      {adaptedActiveTool.id === "QUICK_SELECT" && (
+      {adaptedActiveTool === AnnotationTool.QUICK_SELECT && (
         <>
           <ToggleButton
             active={!isQuickSelectHeuristic}

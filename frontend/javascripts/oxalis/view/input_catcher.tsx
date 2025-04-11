@@ -1,7 +1,7 @@
 import { useEffectOnlyOnce, useKeyPress } from "libs/react_hooks";
 import { waitForCondition } from "libs/utils";
 import _ from "lodash";
-import type { Rect, Viewport, ViewportRects } from "oxalis/constants";
+import type { AnnotationToolId, Rect, Viewport, ViewportRects } from "oxalis/constants";
 import { AnnotationTool, ArbitraryViewport, ArbitraryViews, OrthoViews } from "oxalis/constants";
 import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
 import { setInputCatcherRects } from "oxalis/model/actions/view_mode_actions";
@@ -92,8 +92,7 @@ export function recalculateInputCatcherSizes() {
   }
 }
 
-// todop
-const cursorForTool = {
+const cursorForTool: Record<AnnotationToolId, string> = {
   MOVE: "move",
   SKELETON: "crosshair",
   BRUSH: "url(/assets/images/paint-brush-solid-border.svg) 0 10,auto",

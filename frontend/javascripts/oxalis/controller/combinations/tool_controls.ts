@@ -71,11 +71,11 @@ export type ActionDescriptor = {
 };
 
 /*
-  This module contains classes for the different tools, such as MoveTool, SkeletonTool, DrawTool etc.
+  This module contains classes for the different tools, such as MoveToolController, SkeletonToolController, DrawToolController etc.
   Each tool class defines getMouseControls which declares how mouse bindings are mapped (depending on
   modifiers) to actions. For the actions, code from oxalis/controller/combinations is called.
 
-  If a tool does not define a specific mouse binding, the bindings of the MoveTool are used as a fallback.
+  If a tool does not define a specific mouse binding, the bindings of the MoveToolController are used as a fallback.
   See `createToolDependentMouseHandler` in plane_controller.js
 
   In general, each tool has to check the pressed modifiers and delegate to another tool if necessary.
@@ -88,7 +88,7 @@ export type ActionDescriptor = {
   so that the returned hint of class X is only rendered if `adaptActiveToolToShortcuts` returns X.
   Therefore, the returned actions of a tool class should only refer to the actions of that tool class.
 */
-export class MoveTool {
+export class MoveToolController {
   static getMouseControls(planeId: OrthoView, planeView: PlaneView): Record<string, any> {
     return {
       scroll: (delta: number, type: ModifierKeys | null | undefined) => {
@@ -191,7 +191,7 @@ export class MoveTool {
         MoveHandlers.handleMovePlane(delta);
       },
       middleDownMove: MoveHandlers.handleMovePlane,
-      rightClick: MoveTool.createRightClickHandler(planeView),
+      rightClick: MoveToolController.createRightClickHandler(planeView),
     };
   }
 
@@ -225,7 +225,7 @@ export class MoveTool {
 
   static onToolDeselected() {}
 }
-export class SkeletonTool {
+export class SkeletonToolController {
   static getMouseControls(planeView: PlaneView) {
     const legacyRightClick = (
       position: Point2,
@@ -408,7 +408,7 @@ export class SkeletonTool {
 
   static onToolDeselected() {}
 }
-export class DrawTool {
+export class DrawToolController {
   static getPlaneMouseControls(_planeId: OrthoView, planeView: PlaneView): any {
     return {
       leftDownMove: (_delta: Point2, pos: Point2) => {
@@ -517,7 +517,7 @@ export class DrawTool {
 
   static onToolDeselected() {}
 }
-export class EraseTool {
+export class EraseToolController {
   static getPlaneMouseControls(_planeId: OrthoView, planeView: PlaneView): any {
     return {
       leftDownMove: (_delta: Point2, pos: Point2) => {
@@ -568,7 +568,7 @@ export class EraseTool {
 
   static onToolDeselected() {}
 }
-export class PickCellTool {
+export class PickCellToolController {
   static getPlaneMouseControls(_planeId: OrthoView): any {
     return {
       leftClick: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
@@ -593,7 +593,7 @@ export class PickCellTool {
 
   static onToolDeselected() {}
 }
-export class FillCellTool {
+export class FillCellToolController {
   static getPlaneMouseControls(_planeId: OrthoView): any {
     return {
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
@@ -624,7 +624,7 @@ export class FillCellTool {
 
   static onToolDeselected() {}
 }
-export class BoundingBoxTool {
+export class BoundingBoxToolController {
   static getPlaneMouseControls(planeId: OrthoView, planeView: PlaneView): any {
     let primarySelectedEdge: SelectedEdge | null | undefined = null;
     let secondarySelectedEdge: SelectedEdge | null | undefined = null;
@@ -711,7 +711,7 @@ export class BoundingBoxTool {
   }
 }
 
-export class QuickSelectTool {
+export class QuickSelectToolController {
   static getPlaneMouseControls(_planeId: OrthoView, planeView: PlaneView): any {
     let startPos: Vector3 | null = null;
     let currentPos: Vector3 | null = null;
@@ -856,7 +856,7 @@ function getDoubleClickGuard() {
   return doubleClickGuard;
 }
 
-export class LineMeasurementTool {
+export class LineMeasurementToolController {
   static initialPlane: OrthoView = OrthoViews.PLANE_XY;
   static isMeasuring = false;
   static getPlaneMouseControls(): any {
@@ -964,7 +964,7 @@ export class LineMeasurementTool {
   }
 }
 
-export class AreaMeasurementTool {
+export class AreaMeasurementToolController {
   static initialPlane: OrthoView = OrthoViews.PLANE_XY;
   static isMeasuring = false;
   static getPlaneMouseControls(): any {
@@ -1042,7 +1042,7 @@ export class AreaMeasurementTool {
   }
 }
 
-export class ProofreadTool {
+export class ProofreadToolController {
   static getPlaneMouseControls(_planeId: OrthoView, planeView: PlaneView): any {
     return {
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
@@ -1120,22 +1120,21 @@ export class ProofreadTool {
 
   static onToolDeselected() {}
 }
-const toolToToolClass = {
-  // todop
-  [AnnotationTool.MOVE.id]: MoveTool,
-  [AnnotationTool.SKELETON.id]: SkeletonTool,
-  [AnnotationTool.BOUNDING_BOX.id]: BoundingBoxTool,
-  [AnnotationTool.QUICK_SELECT.id]: QuickSelectTool,
-  [AnnotationTool.PROOFREAD.id]: ProofreadTool,
-  [AnnotationTool.BRUSH.id]: DrawTool,
-  [AnnotationTool.TRACE.id]: DrawTool,
-  [AnnotationTool.ERASE_TRACE.id]: EraseTool,
-  [AnnotationTool.ERASE_BRUSH.id]: EraseTool,
-  [AnnotationTool.FILL_CELL.id]: FillCellTool,
-  [AnnotationTool.PICK_CELL.id]: PickCellTool,
-  [AnnotationTool.LINE_MEASUREMENT.id]: LineMeasurementTool,
-  [AnnotationTool.AREA_MEASUREMENT.id]: AreaMeasurementTool,
+const toolToToolController = {
+  [AnnotationTool.MOVE.id]: MoveToolController,
+  [AnnotationTool.SKELETON.id]: SkeletonToolController,
+  [AnnotationTool.BOUNDING_BOX.id]: BoundingBoxToolController,
+  [AnnotationTool.QUICK_SELECT.id]: QuickSelectToolController,
+  [AnnotationTool.PROOFREAD.id]: ProofreadToolController,
+  [AnnotationTool.BRUSH.id]: DrawToolController,
+  [AnnotationTool.TRACE.id]: DrawToolController,
+  [AnnotationTool.ERASE_TRACE.id]: EraseToolController,
+  [AnnotationTool.ERASE_BRUSH.id]: EraseToolController,
+  [AnnotationTool.FILL_CELL.id]: FillCellToolController,
+  [AnnotationTool.PICK_CELL.id]: PickCellToolController,
+  [AnnotationTool.LINE_MEASUREMENT.id]: LineMeasurementToolController,
+  [AnnotationTool.AREA_MEASUREMENT.id]: AreaMeasurementToolController,
 };
-export function getToolClassForAnnotationTool(activeTool: AnnotationTool) {
-  return toolToToolClass[activeTool.id];
+export function getToolControllerForAnnotationTool(activeTool: AnnotationTool) {
+  return toolToToolController[activeTool.id];
 }

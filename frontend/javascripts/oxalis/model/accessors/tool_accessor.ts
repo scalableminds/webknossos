@@ -47,27 +47,27 @@ const _AnnotationToolHelper = {
 
 class MoveTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.MOVE;
-  readableName = "Move";
+  readableName = "Move Tool";
 }
 class SkeletonTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.SKELETON;
-  readableName = "Skeleton";
+  readableName = "Skeleton Tool";
 }
 class BrushTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.BRUSH;
-  static readableName = "Brush";
+  static readableName = "Brush Tool";
 }
 class EraseBrushTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.ERASE_BRUSH;
-  static readableName = "Erase (via Brush)";
+  static readableName = "Erase Tool (via Brush)";
 }
 class TraceTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.TRACE;
-  static readableName = "Trace";
+  static readableName = "Trace Tool";
 }
 class EraseTraceTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.ERASE_TRACE;
-  static readableName = "Erase";
+  static readableName = "Erase Tool";
 }
 class FillCellTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.FILL_CELL;
@@ -75,7 +75,7 @@ class FillCellTool extends AbstractAnnotationTool {
 }
 class PickCellTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.PICK_CELL;
-  static readableName = "Segment Picker";
+  static readableName = "Segment Picker Tool";
 }
 class QuickSelectTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.QUICK_SELECT;
@@ -138,24 +138,23 @@ export const VolumeTools = ToolCollections.VOLUME_TOOLS;
 
 export type ToolCollection = keyof typeof ToolCollections;
 
-export const ToolsWithOverwriteCapabilities = [
+export const ToolsWithOverwriteCapabilities: AnnotationTool[] = [
   AnnotationTool.TRACE,
   AnnotationTool.BRUSH,
   AnnotationTool.ERASE_TRACE,
   AnnotationTool.ERASE_BRUSH,
   AnnotationTool.QUICK_SELECT,
-  // todop: remove as...?
-] as const as AnnotationTool[];
-export const ToolsWithInterpolationCapabilities = [
+];
+export const ToolsWithInterpolationCapabilities: AnnotationTool[] = [
   AnnotationTool.TRACE,
   AnnotationTool.BRUSH,
   AnnotationTool.QUICK_SELECT,
-] as const as AnnotationTool[];
+];
 
-export const MeasurementTools = [
+export const MeasurementTools: AnnotationTool[] = [
   AnnotationTool.LINE_MEASUREMENT,
   AnnotationTool.AREA_MEASUREMENT,
-] as const as AnnotationTool[];
+];
 
 export const AvailableToolsInViewMode = [...MeasurementTools, AnnotationTool.MOVE];
 
@@ -578,12 +577,3 @@ export function adaptActiveToolToShortcuts(
 
   return activeTool;
 }
-
-export const getLabelForTool = (tool: AnnotationTool) => {
-  // todop
-  const toolName = AnnotationTool[tool.id];
-  if (toolName.readableName.endsWith("Tool")) {
-    return toolName;
-  }
-  return `${toolName} Tool`;
-};

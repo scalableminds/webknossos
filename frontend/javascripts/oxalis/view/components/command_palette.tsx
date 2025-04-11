@@ -4,7 +4,6 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import { getAdministrationSubMenu } from "navbar";
 import { AnnotationTool, AvailableToolsInViewMode } from "oxalis/constants";
-import { getLabelForTool } from "oxalis/model/accessors/tool_accessor";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
 import { Store } from "oxalis/singletons";
@@ -165,7 +164,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     }
     availableTools.forEach((tool) => {
       commands.push({
-        name: `Switch to ${getLabelForTool(tool)}`,
+        name: `Switch to ${tool.readableName}`,
         command: () => Store.dispatch(setToolAction(tool)),
         color: commandEntryColor,
       });

@@ -10,7 +10,7 @@ import type { Vector3 } from "oxalis/constants";
 import { AltOrOptionKey, MappingStatusEnum, OrthoViews } from "oxalis/constants";
 import {
   type ActionDescriptor,
-  getToolClassForAnnotationTool,
+  getToolControllerForAnnotationTool,
 } from "oxalis/controller/combinations/tool_controls";
 import {
   getMappingInfoOrNull,
@@ -194,8 +194,7 @@ function ShortcutsInfo() {
   if (!isPlaneMode) {
     let actionDescriptor = null;
     if (hasSkeleton && isShiftPressed) {
-      // todop
-      actionDescriptor = getToolClassForAnnotationTool(
+      actionDescriptor = getToolControllerForAnnotationTool(
         AnnotationTool.SKELETON,
       ).getActionDescriptors(
         AnnotationTool.SKELETON,
@@ -337,7 +336,7 @@ function ShortcutsInfo() {
     isControlOrMetaPressed,
     isAltPressed,
   );
-  const actionDescriptor = getToolClassForAnnotationTool(adaptedTool).getActionDescriptors(
+  const actionDescriptor = getToolControllerForAnnotationTool(adaptedTool).getActionDescriptors(
     adaptedTool,
     useLegacyBindings,
     isShiftPressed,

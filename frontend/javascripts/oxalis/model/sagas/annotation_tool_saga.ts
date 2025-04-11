@@ -1,5 +1,5 @@
 import { AnnotationTool, MeasurementTools } from "oxalis/constants";
-import { getToolClassForAnnotationTool } from "oxalis/controller/combinations/tool_controls";
+import { getToolControllerForAnnotationTool } from "oxalis/controller/combinations/tool_controls";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import {
   type CycleToolAction,
@@ -31,7 +31,7 @@ export function* watchToolDeselection(): Saga<never> {
     }
 
     if (executeDeselect) {
-      getToolClassForAnnotationTool(previousTool).onToolDeselected();
+      getToolControllerForAnnotationTool(previousTool).onToolDeselected();
     }
 
     previousTool = storeState.uiInformation.activeTool;

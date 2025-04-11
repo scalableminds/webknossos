@@ -113,8 +113,8 @@ class SceneController {
       new THREE.Vector3(...Store.getState().dataset.dataSource.scale.factor),
     );
     // Add scene to the group, all Geometries are then added to group
+    this.rootGroup.add(this.segmentMeshController.meshesLODRootGroup);
     this.scene.add(this.rootGroup);
-    this.scene.add(this.segmentMeshController.meshesLODRootGroup);
     this.setupDebuggingMethods();
   }
 

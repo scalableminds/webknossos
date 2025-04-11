@@ -196,14 +196,24 @@ export default class SegmentMeshController {
         this.meshesLODRootGroup.addLODMesh(targetGroup, lod);
       }
       targetGroup.segmentId = segmentId;
-      if (scale != null) {
-        targetGroup.scale.copy(new THREE.Vector3(...scale));
-      }
     }
     const meshChunk = this.constructMesh(segmentId, layerName, geometry, isMerged);
 
     const group = new THREE.Group() as SceneGroupForMeshes;
-
+    const dsScaleFactor = Store.getState().dataset.dataSource.scale.factor;
+    // If the mesh was calculated on a different magnification level,
+    // the backend sends the scale factor of this magnification.
+    // As the meshesLODRootGroup is already scaled by the main rootGroup,
+    // this portion of the scale needs to be take out of the scale applied to the mesh.
+    // If no scale was given, the meshes coordinates are already in scale of dataset and
+    // thus the scaling done by the root group needs to be inverted.
+    scale = scale || [1, 1, 1];
+    const adaptedScale = [
+      scale[0] / dsScaleFactor[0],
+      scale[1] / dsScaleFactor[1],
+      scale[2] / dsScaleFactor[2],
+    ];
+    group.scale.copy(new THREE.Vector3(...adaptedScale));
     group.add(meshChunk);
 
     group.segmentId = segmentId;
@@ -390,34 +400,6 @@ export default class SegmentMeshController {
   ) {
     const group = this.meshesGroupsPerSegmentId[additionalCoordKey][layerName][segmentId][lod];
     group.add(mesh);
-  }
-
-  forEveryMesh(
-    apply: (
-      SceneGroupForMeshes: GroupForLOD,
-      additionalCoordKey: string,
-      layerName: string,
-      segmentId: number,
-      lod: number,
-    ) => void,
-  ) {
-    for (const additionalCoordKey of Object.keys(this.meshesGroupsPerSegmentId)) {
-      for (const layerName in Object.keys(this.meshesGroupsPerSegmentId[additionalCoordKey])) {
-        for (const segmentId in Object.keys(
-          this.meshesGroupsPerSegmentId[additionalCoordKey][layerName],
-        )) {
-          for (const lod in Object.keys(
-            this.meshesGroupsPerSegmentId[additionalCoordKey][layerName][segmentId],
-          )) {
-            const meshOuterGroup =
-              this.meshesGroupsPerSegmentId[additionalCoordKey][layerName][segmentId][lod];
-            const segmentIdNum = segmentId as unknown as number;
-            const lodNum = segmentId as unknown as number;
-            apply(meshOuterGroup, additionalCoordKey, layerName, segmentIdNum, lodNum);
-          }
-        }
-      }
-    }
   }
 
   private removeMeshFromMeshGroups(

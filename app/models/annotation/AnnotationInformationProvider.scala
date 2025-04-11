@@ -62,15 +62,13 @@ class AnnotationInformationProvider @Inject()(
   private def handlerForTyp(typ: AnnotationType) =
     annotationInformationHandlerSelector.informationHandlers(typ)
 
-  def annotationForTracing(tracingId: String)(implicit ctx: DBAccessContext): Fox[Annotation] = {
-    val annotationFox = annotationDAO.findOneByTracingId(tracingId)
+  def annotationForTracing(tracingId: String)(implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
-      annotationBox <- annotationFox.futureBox
-    } yield {
-      annotationBox match {
-        case Full(_) => annotationBox
-        case _       => annotationStore.findCachedByTracingId(tracingId)
+      annotationBox <- Fox.future2Fox(annotationDAO.findOneByTracingId(tracingId).futureBox)
+      withFallback <- annotationBox match {
+        case Full(_) => annotationBox.toFox
+        case _       => annotationStore.findCachedByTracingId(tracingId).toFox
       }
-    }
-  }
+    } yield withFallback
+
 }

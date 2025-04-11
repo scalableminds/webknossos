@@ -45,7 +45,7 @@ class AnnotationPrivateLinkController @Inject()(
   private def findAnnotationByIdAndUserToken(annotationId: String, userToken: Option[String]): Fox[Annotation] =
     for {
       annotationIdValidated <- ObjectId.fromString(annotationId)
-      userBox <- bearerTokenService.userForTokenOpt(userToken).futureBox
+      userBox <- Fox.future2Fox(bearerTokenService.userForTokenOpt(userToken).futureBox)
       ctx = DBAccessContext(userBox.toOption)
       annotation <- annotationDAO.findOne(annotationIdValidated)(ctx) ?~> "annotation.notFound"
     } yield annotation
@@ -75,7 +75,8 @@ class AnnotationPrivateLinkController @Inject()(
   def get(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       annotationPrivateLink <- annotationPrivateLinkDAO.findOne(id)
-      _ <- Fox.fromBool(annotationPrivateLink.expirationDateTime.forall(_ > Instant.now)) ?~> "Token expired" ~> NOT_FOUND
+      _ <- Fox
+        .fromBool(annotationPrivateLink.expirationDateTime.forall(_ > Instant.now)) ?~> "Token expired" ~> NOT_FOUND
       _ <- annotationDAO.findOne(annotationPrivateLink._annotation) ?~> "annotation.notFound" ~> NOT_FOUND
 
       annotationPrivateLinkJs <- annotationPrivateLinkService.publicWrites(annotationPrivateLink)

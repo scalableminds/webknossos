@@ -201,7 +201,7 @@ class AnnotationService @Inject()(
     for {
       dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim) ?~> "dataStore.notFoundForDataset"
       inboxDataSource <- datasetService.dataSourceFor(dataset)
-      dataSource <- inboxDataSource.toUsable ?~> Messages("dataset.notImported", inboxDataSource.id.directoryName)
+      dataSource <- inboxDataSource.toUsable.toFox ?~> Messages("dataset.notImported", inboxDataSource.id.directoryName)
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
 
       /*
@@ -255,7 +255,7 @@ class AnnotationService @Inject()(
       mp: MessagesProvider): Fox[List[AnnotationLayer]] =
     for {
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
-      dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable) ?~> "dataset.dataSource.notUsable"
+      dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable.toFox) ?~> "dataset.dataSource.notUsable"
       newAnnotationLayers <- Fox.serialCombined(allAnnotationLayerParameters) { annotationLayerParameters =>
         for {
           tracing <- createTracingForExplorational(dataset,
@@ -414,7 +414,7 @@ class AnnotationService @Inject()(
       magRestrictions: MagRestrictions)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[VolumeTracing] =
     for {
       dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId)
-      dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable)
+      dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable.toFox)
       dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim)
       fallbackLayer = if (volumeShowFallbackLayer) {
         dataSource.dataLayers.flatMap {
@@ -674,7 +674,7 @@ class AnnotationService @Inject()(
             zipper.addFileFromNamedStream(nml, suffix = ".nml").flatMap(_ => addToZip(tail))
           }
         case _ =>
-          Future.successful(true)
+          Fox.successful(true)
       }
 
     addToZip(nmls).map { _ =>
@@ -722,8 +722,8 @@ class AnnotationService @Inject()(
     for {
       dataset <- datasetDAO.findOne(annotation._dataset) ?~> "dataset.notFoundForAnnotation"
       organization <- organizationDAO.findOne(dataset._organization) ?~> "organization.notFound"
-      task = annotation._task.toFox.flatMap(taskId => taskDAO.findOne(taskId))
-      taskJson <- task.flatMap(t => taskService.publicWrites(t)).getOrElse(JsNull)
+      taskFox = annotation._task.toFox.flatMap(taskId => taskDAO.findOne(taskId))
+      taskJson <- Fox.future2Fox(taskFox.flatMap(t => taskService.publicWrites(t)).getOrElse(JsNull))
       userJson <- userJsonForAnnotation(annotation._user)
       settings <- settingsFor(annotation)
       restrictionsJs <- AnnotationRestrictions.writeAsJson(

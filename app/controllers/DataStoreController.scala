@@ -13,7 +13,7 @@ import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent}
 import security.WkEnv
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
                                     dataStoreService: DataStoreService,
@@ -48,14 +48,14 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
 
   def create: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(dataStoreReads) { dataStore =>
-      dataStoreDAO.findOneByName(dataStore.name).futureBox.flatMap {
+      Fox.future2Fox(dataStoreDAO.findOneByName(dataStore.name).futureBox).flatMap {
         case Empty =>
           for {
             _ <- Fox.fromBool(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
             _ <- dataStoreDAO.insertOne(dataStore) ?~> "dataStore.create.failed"
             js <- dataStoreService.publicWrites(dataStore)
           } yield { Ok(Json.toJson(js)) }
-        case _ => Future.successful(JsonBadRequest(Messages("dataStore.name.alreadyTaken")))
+        case _ => Fox.successful(JsonBadRequest(Messages("dataStore.name.alreadyTaken")))
       }
     }
   }

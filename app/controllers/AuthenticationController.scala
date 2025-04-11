@@ -83,7 +83,8 @@ class AuthenticationController @Inject()(
             } else {
               for {
                 _ <- Fox.successful(())
-                inviteBox: Box[Invite] <- inviteService.findInviteByTokenOpt(signUpData.inviteToken).futureBox
+                inviteBox: Box[Invite] <- Fox.future2Fox(
+                  inviteService.findInviteByTokenOpt(signUpData.inviteToken).futureBox)
                 organizationId = Option(signUpData.organization).filter(_.trim.nonEmpty)
                 organization <- organizationService.findOneByInviteByIdOrDefault(inviteBox.toOption, organizationId)(
                   GlobalAccessContext) ?~> Messages("organization.notFound", signUpData.organization)
@@ -188,7 +189,7 @@ class AuthenticationController @Inject()(
       requestingMultiUser <- multiUserDAO.findOne(request.identity._multiUser)
       _ <- Fox.fromBool(requestingMultiUser.isSuperUser) ?~> Messages("user.notAuthorised") ~> FORBIDDEN
       targetUser <- userService.userFromMultiUserEmail(email) ?~> "user.notFound" ~> NOT_FOUND
-      result <- switchToUser(targetUser._id)
+      result <- Fox.future2Fox(switchToUser(targetUser._id))
     } yield result
   }
 
@@ -200,7 +201,7 @@ class AuthenticationController @Inject()(
       targetUser <- userDAO.findOneByOrgaAndMultiUser(organization._id, request.identity._multiUser)(
         GlobalAccessContext) ?~> "user.notFound" ~> NOT_FOUND
       _ <- Fox.fromBool(!targetUser.isDeactivated) ?~> "user.deactivated"
-      result <- switchToUser(targetUser._id)
+      result <- Fox.future2Fox(switchToUser(targetUser._id))
       _ <- multiUserDAO.updateLastLoggedInIdentity(request.identity._multiUser, targetUser._id)
     } yield result
   }
@@ -330,7 +331,7 @@ class AuthenticationController @Inject()(
                     for {
                       _ <- Fox.successful(logger.info(s"Multiuser ${user._multiUser} changed their password."))
                       _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordHasher.hash(passwords.password1))
-                      _ <- combinedAuthenticatorService.discard(request.authenticator, Ok)
+                      _ <- Fox.future2Fox(combinedAuthenticatorService.discard(request.authenticator, Ok))
                       userEmail <- userService.emailFor(user)
                     } yield {
                       Mailer ! Send(defaultMails.changePasswordMail(user.name, userEmail))
@@ -383,8 +384,8 @@ class AuthenticationController @Inject()(
           val payload = new String(Base64.decodeBase64(sso))
           val values = play.core.parsers.FormUrlEncodedParser.parse(payload)
           for {
-            nonce <- values.get("nonce").flatMap(_.headOption) ?~> "Nonce is missing"
-            returnUrl <- values.get("return_sso_url").flatMap(_.headOption) ?~> "Return url is missing"
+            nonce <- values.get("nonce").flatMap(_.headOption).toFox ?~> "Nonce is missing"
+            returnUrl <- values.get("return_sso_url").flatMap(_.headOption).toFox ?~> "Return url is missing"
             userEmail <- userService.emailFor(user)
             _ = logger.info(f"User ${user._id} logged in via SSO.")
           } yield {
@@ -457,7 +458,7 @@ class AuthenticationController @Inject()(
             ) // Assuming email verification was done by OIDC provider
             // After registering, also login
             loginInfo = LoginInfo("credentials", user._id.toString)
-            loginResult <- loginUser(loginInfo)
+            loginResult <- Fox.future2Fox(loginUser(loginInfo))
           } yield loginResult
         case _ => Future.successful(InternalServerError)
       }
@@ -471,14 +472,17 @@ class AuthenticationController @Inject()(
         request.queryString.get("code").flatMap(_.headOption).getOrElse("missing code"),
       ) ?~> "oidc.getToken.failed" ?~> "oidc.authentication.failed"
       userInfoFromTokens <- extractUserInfoFromTokenResponses(accessToken, idToken)
-      userResult <- loginOrSignupViaOidc(userInfoFromTokens)(request)
+      userResult <- Fox.future2Fox(loginOrSignupViaOidc(userInfoFromTokens)(request))
     } yield userResult
   }
 
   private def extractUserInfoFromTokenResponses(accessToken: JsObject,
                                                 idTokenOpt: Option[JsObject]): Fox[OpenIdConnectUserInfo] = {
     val jsObjectToUse = idTokenOpt.getOrElse(accessToken)
-    jsObjectToUse.validate[OpenIdConnectUserInfo] ?~> "Failed to extract user info from id token or access token"
+    jsObjectToUse
+      .validate[OpenIdConnectUserInfo]
+      .asOpt
+      .toFox ?~> "Failed to extract user info from id token or access token"
   }
 
   private def shaHex(key: String, valueToDigest: String): String =
@@ -542,7 +546,7 @@ class AuthenticationController @Inject()(
   private def acceptTermsOfServiceForUser(user: User, termsOfServiceVersion: Option[Int])(
       implicit m: MessagesProvider): Fox[Unit] =
     for {
-      acceptedVersion <- Fox.option2Fox(termsOfServiceVersion) ?~> "Terms of service must be accepted."
+      acceptedVersion <- termsOfServiceVersion.toFox ?~> "Terms of service must be accepted."
       _ <- organizationService.acceptTermsOfService(user._organization, acceptedVersion)(DBAccessContext(Some(user)), m)
     } yield ()
 
@@ -586,9 +590,8 @@ class AuthenticationController @Inject()(
                                    email: String): Fox[(String, String, String, List[String])] = {
     var (errors, fN, lN) = normalizeName(firstName, lastName)
     for {
-      nameEmailErrorBox: Box[(String, String, String, List[String])] <- multiUserDAO
-        .findOneByEmail(email.toLowerCase)(GlobalAccessContext)
-        .futureBox
+      nameEmailError: (String, String, String, List[String]) <- Fox
+        .future2Fox(multiUserDAO.findOneByEmail(email.toLowerCase)(GlobalAccessContext).futureBox)
         .flatMap {
           case Full(_) =>
             errors ::= "user.email.alreadyInUse"
@@ -601,7 +604,7 @@ class AuthenticationController @Inject()(
             }
           case f: Failure => Fox.failure(f.msg)
         }
-    } yield nameEmailErrorBox
+    } yield nameEmailError
   }
 
   private def normalizeName(firstName: String, lastName: String) = {

@@ -14,7 +14,7 @@ import models.project.{Project, ProjectDAO}
 import models.task.{TaskType, TaskTypeDAO}
 import models.team._
 import models.user._
-import net.liftweb.common.{Box, Full}
+import net.liftweb.common.Full
 import play.api.libs.json.{JsArray, Json}
 import utils.{StoreModules, WkConf}
 
@@ -184,7 +184,7 @@ Samplecountry
     } yield ()
 
   private def insertRootFolder(): Fox[Unit] =
-    folderDAO.findOne(defaultOrganization._rootFolder).futureBox.flatMap {
+    Fox.future2Fox(folderDAO.findOne(defaultOrganization._rootFolder).futureBox).flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
         folderDAO.insertAsRoot(Folder(defaultOrganization._rootFolder, folderService.defaultRootName, JsArray.empty))
@@ -194,9 +194,8 @@ Samplecountry
                                 multiUser: MultiUser,
                                 user: User,
                                 isTeamManager: Boolean): Fox[Unit] =
-    userService
-      .userFromMultiUserEmail(userEmail)
-      .futureBox
+    Fox
+      .future2Fox(userService.userFromMultiUserEmail(userEmail).futureBox)
       .flatMap {
         case Full(_) => Fox.successful(())
         case _ =>
@@ -213,26 +212,27 @@ Samplecountry
 
   private def insertToken(): Fox[Unit] = {
     val expiryTime = conf.Silhouette.TokenAuthenticator.authenticatorExpiry
-    tokenDAO.findOneByLoginInfo("credentials", defaultUser._id.id, TokenType.Authentication).futureBox.flatMap {
-      case Full(_) => Fox.successful(())
-      case _ =>
-        val newToken = Token(
-          ObjectId.generate,
-          defaultUserToken,
-          LoginInfo("credentials", defaultUser._id.id),
-          Instant.now,
-          Instant.in(expiryTime),
-          None,
-          TokenType.Authentication
-        )
-        tokenDAO.insertOne(newToken)
-    }
+    Fox
+      .future2Fox(tokenDAO.findOneByLoginInfo("credentials", defaultUser._id.id, TokenType.Authentication).futureBox)
+      .flatMap {
+        case Full(_) => Fox.successful(())
+        case _ =>
+          val newToken = Token(
+            ObjectId.generate,
+            defaultUserToken,
+            LoginInfo("credentials", defaultUser._id.id),
+            Instant.now,
+            Instant.in(expiryTime),
+            None,
+            TokenType.Authentication
+          )
+          tokenDAO.insertOne(newToken)
+      }
   }
 
   private def insertOrganization(): Fox[Unit] =
-    organizationDAO
-      .findOne(defaultOrganization._id)
-      .futureBox
+    Fox
+      .future2Fox(organizationDAO.findOne(defaultOrganization._id).futureBox)
       .flatMap {
         case Full(_) => Fox.successful(())
         case _ =>
@@ -292,7 +292,7 @@ Samplecountry
 
   def insertLocalDataStoreIfEnabled(): Fox[Unit] =
     if (storeModules.localDataStoreEnabled) {
-      dataStoreDAO.findOneByUrl(conf.Http.uri).futureBox.flatMap { maybeStore =>
+      Fox.future2Fox(dataStoreDAO.findOneByUrl(conf.Http.uri).futureBox).flatMap { maybeStore =>
         if (maybeStore.isEmpty) {
           logger.info("Inserting local datastore")
           dataStoreDAO.insertOne(defaultDataStore)
@@ -302,7 +302,7 @@ Samplecountry
 
   private def insertLocalTracingStoreIfEnabled(): Fox[Unit] =
     if (storeModules.localTracingStoreEnabled) {
-      tracingStoreDAO.findOneByUrl(conf.Http.uri).futureBox.flatMap { maybeStore =>
+      Fox.future2Fox(tracingStoreDAO.findOneByUrl(conf.Http.uri).futureBox).flatMap { maybeStore =>
         if (maybeStore.isEmpty) {
           logger.info("Inserting local tracingstore")
           tracingStoreDAO.insertOne(
@@ -316,29 +316,25 @@ Samplecountry
 
   private def updateLocalDataStorePublicUri(): Fox[Unit] =
     if (storeModules.localDataStoreEnabled) {
-      dataStoreDAO.findOneByUrl(conf.Http.uri).futureBox.flatMap { storeOpt: Box[DataStore] =>
-        storeOpt match {
-          case Full(store) =>
-            val newPublicUri = conf.Datastore.publicUri.getOrElse(conf.Http.uri)
-            if (store.publicUrl == newPublicUri) {
-              Fox.successful(())
-            } else dataStoreDAO.updateOne(store.copy(publicUrl = newPublicUri))
-          case _ => Fox.successful(())
-        }
+      Fox.future2Fox(dataStoreDAO.findOneByUrl(conf.Http.uri).futureBox).flatMap {
+        case Full(store) =>
+          val newPublicUri = conf.Datastore.publicUri.getOrElse(conf.Http.uri)
+          if (store.publicUrl == newPublicUri) {
+            Fox.successful(())
+          } else dataStoreDAO.updateOne(store.copy(publicUrl = newPublicUri))
+        case _ => Fox.successful(())
       }
     } else Fox.successful(())
 
   private def updateLocalTracingStorePublicUri(): Fox[Unit] =
     if (storeModules.localTracingStoreEnabled) {
-      tracingStoreDAO.findOneByUrl(conf.Http.uri).futureBox.flatMap { storeOpt: Box[TracingStore] =>
-        storeOpt match {
-          case Full(store) =>
-            val newPublicUri = conf.Tracingstore.publicUri.getOrElse(conf.Http.uri)
-            if (store.publicUrl == newPublicUri) {
-              Fox.successful(())
-            } else tracingStoreDAO.updateOne(store.copy(publicUrl = newPublicUri))
-          case _ => Fox.successful(())
-        }
+      Fox.future2Fox(tracingStoreDAO.findOneByUrl(conf.Http.uri).futureBox).flatMap {
+        case Full(store) =>
+          val newPublicUri = conf.Tracingstore.publicUri.getOrElse(conf.Http.uri)
+          if (store.publicUrl == newPublicUri) {
+            Fox.successful(())
+          } else tracingStoreDAO.updateOne(store.copy(publicUrl = newPublicUri))
+        case _ => Fox.successful(())
       }
     } else Fox.successful(())
 

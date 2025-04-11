@@ -75,7 +75,7 @@ class WKRemoteDataStoreController @Inject()(
             uploadInfo.organization) ~> NOT_FOUND
           usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
           _ <- Fox.runOptional(organization.includedStorageBytes)(includedStorage =>
-           Fox.fromBool(usedStorageBytes + uploadInfo.totalFileSizeInBytes.getOrElse(0L) <= includedStorage)) ?~> "dataset.upload.storageExceeded" ~> FORBIDDEN
+            Fox.fromBool(usedStorageBytes + uploadInfo.totalFileSizeInBytes.getOrElse(0L) <= includedStorage)) ?~> "dataset.upload.storageExceeded" ~> FORBIDDEN
           _ <- Fox.fromBool(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(uploadInfo.name)
           _ <- Fox.fromBool(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> "dataset.upload.Datastore.restricted"
@@ -243,7 +243,7 @@ class WKRemoteDataStoreController @Inject()(
     dataStoreService.validateAccess(name, key) { _ =>
       for {
         datasourceId <- request.body.validate[DataSourceId].asOpt.toFox ?~> "dataStore.upload.invalid"
-        existingDataset = datasetDAO.findOneByDataSourceId(datasourceId)(GlobalAccessContext).futureBox
+        existingDataset = Fox.future2Fox(datasetDAO.findOneByDataSourceId(datasourceId)(GlobalAccessContext).futureBox)
 
         _ <- existingDataset.flatMap {
           case Full(dataset) =>

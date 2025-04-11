@@ -3,8 +3,8 @@ package models.analytics
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.{fromBool, box2Fox}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox.{box2Fox, fromBool}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import models.user.{MultiUserDAO, UserDAO}
@@ -22,7 +22,8 @@ class AnalyticsService @Inject()(rpc: RPC,
                                  analyticsLookUpService: AnalyticsLookUpService,
                                  analyticsSessionService: AnalyticsSessionService,
                                  analyticsDAO: AnalyticsDAO)(implicit ec: ExecutionContext)
-    extends LazyLogging {
+    extends LazyLogging
+    with FoxImplicits {
 
   private lazy val conf = wkConf.BackendAnalytics
   private lazy val wellKnownUris = tryo(conf.wellKnownUris.map(_.split("\\|")).map(parts => (parts(0), parts(1))).toMap)
@@ -39,7 +40,7 @@ class AnalyticsService @Inject()(rpc: RPC,
 
   def ingest(jsonEvents: List[AnalyticsEventJson], apiKey: String): Fox[Unit] =
     for {
-      resolvedWellKnownUris <- wellKnownUris ?~> "wellKnownUris configuration is incorrect"
+      resolvedWellKnownUris <- wellKnownUris.toFox ?~> "wellKnownUris configuration is incorrect"
       _ <- Fox.fromBool(jsonEvents.forall(ev => {
         resolvedWellKnownUris.get(ev.userProperties.webknossosUri).forall(wellKnownApiKey => wellKnownApiKey == apiKey)
       })) ?~> "Provided API key is not correct for provided webknossosUri" ~> UNAUTHORIZED

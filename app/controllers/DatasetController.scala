@@ -147,7 +147,7 @@ class DatasetController @Inject()(userService: UserService,
       for {
         exploreResponse <- wkExploreRemoteLayerService.exploreRemoteDatasource(List(adaptedParameters),
                                                                                request.identity)
-        dataSource <- exploreResponse.dataSource ?~> "dataset.explore.failed"
+        dataSource <- exploreResponse.dataSource.toFox ?~> "dataset.explore.failed"
         _ <- Fox.fromBool(dataSource.dataLayers.nonEmpty) ?~> "dataset.explore.zeroLayers"
         folderIdOpt <- Fox.runOptional(request.body.folderPath)(folderPath =>
           folderService.getOrCreateFromPathLiteral(folderPath, request.identity._organization)) ?~> "dataset.explore.autoAdd.getFolder.failed"
@@ -296,7 +296,7 @@ class DatasetController @Inject()(userService: UserService,
         _ <- datasetService
           .clientFor(dataset)(GlobalAccessContext)
           .flatMap(_.findPositionWithData(dataset, datalayer.name).flatMap(posWithData =>
-           Fox.fromBool(posWithData.value("position") != JsNull))) ?~> "dataset.loadingDataFailed"
+            Fox.fromBool(posWithData.value("position") != JsNull))) ?~> "dataset.loadingDataFailed"
       } yield Ok("Ok")
     }
 
@@ -444,8 +444,8 @@ class DatasetController @Inject()(userService: UserService,
           _ <- Fox.fromBool(conf.SegmentAnything.uri.nonEmpty) ?~> "segmentAnything.noUri"
           dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
           dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
-          usableDataSource <- dataSource.toUsable ?~> "dataset.notImported"
-          dataLayer <- usableDataSource.dataLayers.find(_.name == dataLayerName) ?~> "dataset.noLayers"
+          usableDataSource <- dataSource.toUsable.toFox ?~> "dataset.notImported"
+          dataLayer <- usableDataSource.dataLayers.find(_.name == dataLayerName).toFox ?~> "dataset.noLayers"
           datastoreClient <- datasetService.clientFor(dataset)(GlobalAccessContext)
           targetMagSelectedBbox: BoundingBox = request.body.surroundingBoundingBox / request.body.mag
           _ <- Fox.fromBool(targetMagSelectedBbox.size.sorted.z <= 1024 && targetMagSelectedBbox.size.sorted.y <= 1024) ?~> s"Target-mag selected bbox must be smaller than 1024×1024×depth (or transposed), got ${targetMagSelectedBbox.size}"
@@ -454,9 +454,9 @@ class DatasetController @Inject()(userService: UserService,
           _ <- Fox.fromBool(targetMagSelectedBbox.size.sorted.x <= 16) ?~> s"Target-mag selected bbox depth must be at most 16"
           _ <- Fox.fromBool(targetMagSelectedBbox.size.sorted.z == targetMagSelectedBbox.size.sorted.y) ?~> s"Target-mag selected bbox must equally sized long edges, got ${targetMagSelectedBbox.size}"
           _ <- Fox.runIf(request.body.interactionType == SAMInteractionType.BOUNDING_BOX)(
-           Fox.fromBool(request.body.selectionTopLeftX.isDefined &&
+            Fox.fromBool(request.body.selectionTopLeftX.isDefined &&
               request.body.selectionTopLeftY.isDefined && request.body.selectionBottomRightX.isDefined && request.body.selectionBottomRightY.isDefined)) ?~> "Missing selectionTopLeft and selectionBottomRight parameters for bounding box interaction."
-          _ <- Fox.runIf(request.body.interactionType == SAMInteractionType.POINT)(bool2Fox(
+          _ <- Fox.runIf(request.body.interactionType == SAMInteractionType.POINT)(Fox.fromBool(
             request.body.pointX.isDefined && request.body.pointY.isDefined)) ?~> "Missing pointX and pointY parameters for point interaction."
           beforeDataLoading = Instant.now
           data <- datastoreClient.getLayerData(

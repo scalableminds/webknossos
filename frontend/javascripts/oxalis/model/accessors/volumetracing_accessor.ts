@@ -2,14 +2,16 @@ import { V3 } from "libs/mjs";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import messages from "messages";
-import Constants, {
+import {
   AnnotationTool,
+  VolumeTools,
   type AnnotationToolId,
+} from "oxalis/model/accessors/tool_accessor";
+import Constants, {
   type ContourMode,
   MappingStatusEnum,
   type Vector3,
   type Vector4,
-  VolumeTools,
 } from "oxalis/constants";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 import {

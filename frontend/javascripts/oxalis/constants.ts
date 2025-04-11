@@ -1,12 +1,5 @@
 import type { AdditionalCoordinate } from "types/api_flow_types";
 
-export {
-  AnnotationTool,
-  type AnnotationToolId,
-  VolumeTools,
-  MeasurementTools,
-} from "./model/accessors/tool_accessor";
-
 export const ViewModeValues = ["orthogonal", "flight", "oblique"] as ViewMode[];
 
 export const ViewModeValuesIndices = {

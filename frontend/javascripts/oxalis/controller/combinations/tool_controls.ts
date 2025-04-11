@@ -3,8 +3,8 @@ import type { ModifierKeys } from "libs/input";
 import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 import { document } from "libs/window";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import {
-  AnnotationTool,
   ContourModeEnum,
   type OrthoView,
   OrthoViews,

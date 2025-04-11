@@ -17,8 +17,8 @@ import { coalesce } from "libs/utils";
 import window, { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
+import { AnnotationTool, type AnnotationToolId } from "oxalis/model/accessors/tool_accessor";
 import type {
-  AnnotationToolId,
   BoundingBoxType,
   BucketAddress,
   ControlMode,
@@ -33,7 +33,6 @@ import Constants, {
   TDViewDisplayModeEnum,
   MappingStatusEnum,
   EMPTY_OBJECT,
-  AnnotationTool,
 } from "oxalis/constants";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import { loadAgglomerateSkeletonForSegmentId } from "oxalis/controller/combinations/segmentation_handlers";

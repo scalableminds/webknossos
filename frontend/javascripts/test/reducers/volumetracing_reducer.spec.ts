@@ -1,7 +1,8 @@
 import "test/mocks/lz4";
 import update from "immutability-helper";
 import Maybe from "data.maybe";
-import { AnnotationTool, type Vector3 } from "oxalis/constants";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
+import type { Vector3 } from "oxalis/constants";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
 import * as UiActions from "oxalis/model/actions/ui_actions";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";

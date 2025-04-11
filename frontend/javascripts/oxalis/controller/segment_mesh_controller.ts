@@ -1,7 +1,8 @@
 import app from "app";
 import { mergeVertices } from "libs/BufferGeometryUtils";
 import _ from "lodash";
-import { AnnotationTool, type Vector2, type Vector3 } from "oxalis/constants";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
+import type { Vector2, Vector3 } from "oxalis/constants";
 import CustomLOD from "oxalis/controller/custom_lod";
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
 import {

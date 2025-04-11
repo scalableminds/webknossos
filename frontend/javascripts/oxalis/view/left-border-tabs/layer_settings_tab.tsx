@@ -40,12 +40,8 @@ import {
   settingsTooltips,
 } from "messages";
 import type { Vector3 } from "oxalis/constants";
-import Constants, {
-  AnnotationTool,
-  ControlModeEnum,
-  IdentityTransform,
-  MappingStatusEnum,
-} from "oxalis/constants";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
+import Constants, { ControlModeEnum, IdentityTransform, MappingStatusEnum } from "oxalis/constants";
 import defaultState from "oxalis/default_state";
 import {
   getDefaultValueRangeOfLayer,

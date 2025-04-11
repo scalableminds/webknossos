@@ -1,6 +1,6 @@
 import Maybe from "data.maybe";
 import * as Utils from "libs/utils";
-import type { AnnotationTool } from "oxalis/constants";
+import type { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import type { BoundingBoxType } from "oxalis/constants";
 import { ToolCollections, getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
 import {

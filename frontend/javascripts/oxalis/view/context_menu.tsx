@@ -25,15 +25,15 @@ import Shortcut from "libs/shortcut_component";
 import Toast from "libs/toast";
 import { hexToRgb, rgbToHex, roundTo, truncateStringToLength } from "libs/utils";
 import messages from "messages";
+
+import { AnnotationTool, VolumeTools } from "oxalis/model/accessors/tool_accessor";
 import {
   AltOrOptionKey,
-  AnnotationTool,
   CtrlOrCmdKey,
   LongUnitToShortUnitMap,
   type OrthoView,
   type UnitLong,
   type Vector3,
-  VolumeTools,
 } from "oxalis/constants";
 import {
   loadAgglomerateSkeletonAtPosition,

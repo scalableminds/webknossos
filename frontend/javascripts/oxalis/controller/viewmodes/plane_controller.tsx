@@ -3,12 +3,8 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { document } from "libs/window";
 import _ from "lodash";
-import {
-  AnnotationTool,
-  type AnnotationToolId,
-  type OrthoView,
-  type OrthoViewMap,
-} from "oxalis/constants";
+import { AnnotationTool, type AnnotationToolId } from "oxalis/model/accessors/tool_accessor";
+import type { OrthoView, OrthoViewMap } from "oxalis/constants";
 import { OrthoViewValuesWithoutTDView, OrthoViews } from "oxalis/constants";
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
 import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";

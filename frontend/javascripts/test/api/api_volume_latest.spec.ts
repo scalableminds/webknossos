@@ -1,6 +1,6 @@
 // @ts-nocheck
 import "test/mocks/lz4";
-import { AnnotationTool } from "oxalis/constants";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import { __setupOxalis } from "test/helpers/apiHelpers";
 import test from "ava";
 import window from "libs/window";

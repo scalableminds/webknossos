@@ -1,7 +1,7 @@
 import type DiffableMap from "libs/diffable_map";
 import type { Matrix4x4 } from "libs/mjs";
+import type { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import type {
-  AnnotationTool,
   BoundingBoxType,
   ContourMode,
   ControlMode,

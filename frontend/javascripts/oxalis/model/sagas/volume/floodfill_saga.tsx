@@ -1,3 +1,4 @@
+import _ from "lodash";
 import { V2, V3 } from "libs/mjs";
 import createProgressCallback, { type ProgressCallback } from "libs/progress_callback";
 import Toast from "libs/toast";
@@ -10,9 +11,8 @@ import type {
   Vector2,
   Vector3,
 } from "oxalis/constants";
-import Constants, { AnnotationTool, FillModeEnum, Unicode } from "oxalis/constants";
-
-import _ from "lodash";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
+import Constants, { FillModeEnum, Unicode } from "oxalis/constants";
 import { getDatasetBoundingBox, getMagInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
 import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";

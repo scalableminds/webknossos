@@ -3,12 +3,8 @@ import VisibilityAwareRaycaster from "libs/visibility_aware_raycaster";
 import window from "libs/window";
 import _ from "lodash";
 import type { OrthoViewMap, Vector2, Vector3, Viewport } from "oxalis/constants";
-import Constants, {
-  AnnotationTool,
-  OrthoViewColors,
-  OrthoViewValues,
-  OrthoViews,
-} from "oxalis/constants";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
+import Constants, { OrthoViewColors, OrthoViewValues, OrthoViews } from "oxalis/constants";
 import type { VertexSegmentMapping } from "oxalis/controller/mesh_helpers";
 import getSceneController, {
   getSceneControllerOrNull,

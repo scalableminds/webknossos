@@ -1,7 +1,7 @@
 import "test/mocks/lz4";
 import test from "ava";
 import _ from "lodash";
-import { AnnotationTool } from "oxalis/constants";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import mockRequire from "mock-require";
 import { initialState } from "test/fixtures/volumetracing_object";
 import sinon from "sinon";

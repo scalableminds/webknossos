@@ -4,7 +4,8 @@ import ColorGenerator from "libs/color_generator";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import _ from "lodash";
-import Constants, { AnnotationTool, TreeTypeEnum } from "oxalis/constants";
+import Constants, { TreeTypeEnum } from "oxalis/constants";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import {
   findTreeByNodeId,
   getNodeAndTree,

@@ -1,8 +1,8 @@
 /* eslint-disable no-await-in-loop */
 import "test/sagas/saga_integration.mock";
 import _ from "lodash";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import Constants, {
-  AnnotationTool,
   ContourModeEnum,
   FillModeEnum,
   OrthoViews,

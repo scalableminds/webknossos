@@ -25,15 +25,17 @@ import { useKeyPress, usePrevious } from "libs/react_hooks";
 import { document } from "libs/window";
 import {
   AnnotationTool,
+  MeasurementTools,
+  VolumeTools,
+} from "oxalis/model/accessors/tool_accessor";
+import {
   FillModeEnum,
   type InterpolationMode,
   InterpolationModeEnum,
   MappingStatusEnum,
-  MeasurementTools,
   type OverwriteMode,
   OverwriteModeEnum,
   Unicode,
-  VolumeTools,
 } from "oxalis/constants";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import {

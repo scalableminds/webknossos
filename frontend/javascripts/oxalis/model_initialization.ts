@@ -19,7 +19,8 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
-import constants, { ControlModeEnum, AnnotationTool, type Vector3 } from "oxalis/constants";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
+import constants, { ControlModeEnum, type Vector3 } from "oxalis/constants";
 import type { PartialUrlManagerState, UrlStateByLayer } from "oxalis/controller/url_manager";
 import UrlManager from "oxalis/controller/url_manager";
 import {

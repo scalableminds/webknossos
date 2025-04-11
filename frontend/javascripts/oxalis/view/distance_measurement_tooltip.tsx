@@ -8,12 +8,8 @@ import {
   formatNumberToLength,
 } from "libs/format_utils";
 import { clamp } from "libs/utils";
-import {
-  AnnotationTool,
-  LongUnitToShortUnitMap,
-  MeasurementTools,
-  type Vector3,
-} from "oxalis/constants";
+import { AnnotationTool, MeasurementTools } from "oxalis/model/accessors/tool_accessor";
+import { LongUnitToShortUnitMap, type Vector3 } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {

@@ -3,9 +3,9 @@ import { take, put, call } from "redux-saga/effects";
 import update from "immutability-helper";
 import _ from "lodash";
 import type { APISegmentationLayer, ServerVolumeTracing } from "types/api_flow_types";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import {
   OrthoViews,
-  AnnotationTool,
   ContourModeEnum,
   OverwriteModeEnum,
   MappingStatusEnum,

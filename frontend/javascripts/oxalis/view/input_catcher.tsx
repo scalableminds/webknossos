@@ -1,8 +1,9 @@
 import { useEffectOnlyOnce, useKeyPress } from "libs/react_hooks";
 import { waitForCondition } from "libs/utils";
 import _ from "lodash";
-import type { AnnotationToolId, Rect, Viewport, ViewportRects } from "oxalis/constants";
-import { AnnotationTool, ArbitraryViewport, ArbitraryViews, OrthoViews } from "oxalis/constants";
+import { AnnotationTool, type AnnotationToolId } from "oxalis/model/accessors/tool_accessor";
+import type { Rect, Viewport, ViewportRects } from "oxalis/constants";
+import { ArbitraryViewport, ArbitraryViews, OrthoViews } from "oxalis/constants";
 import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
 import { setInputCatcherRects } from "oxalis/model/actions/view_mode_actions";
 import type { BusyBlockingInfo, OxalisState } from "oxalis/store";

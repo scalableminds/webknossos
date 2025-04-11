@@ -3,8 +3,8 @@ import { V3 } from "libs/mjs";
 import TrackballControls from "libs/trackball_controls";
 import * as Utils from "libs/utils";
 import _ from "lodash";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import {
-  AnnotationTool,
   type OrthoView,
   type OrthoViewMap,
   OrthoViews,

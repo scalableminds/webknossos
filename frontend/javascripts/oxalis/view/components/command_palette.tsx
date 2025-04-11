@@ -3,7 +3,7 @@ import { capitalize, getPhraseFromCamelCaseString } from "libs/utils";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import { getAdministrationSubMenu } from "navbar";
-import { AnnotationTool } from "oxalis/constants";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import { ToolCollections } from "oxalis/model/accessors/tool_accessor";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";

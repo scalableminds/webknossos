@@ -7,7 +7,6 @@ import {
   AnnotationTool,
   ContourModeEnum,
   OrthoViews,
-  type AnnotationToolType,
   type OrthoView,
   type Point2,
   type Vector3,
@@ -202,7 +201,7 @@ export class MoveTool {
   }
 
   static getActionDescriptors(
-    _activeTool: AnnotationToolType,
+    _activeTool: AnnotationTool,
     useLegacyBindings: boolean,
     shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
@@ -368,7 +367,7 @@ export class SkeletonTool {
   }
 
   static getActionDescriptors(
-    _activeTool: AnnotationToolType,
+    _activeTool: AnnotationTool,
     useLegacyBindings: boolean,
     shiftKey: boolean,
     ctrlOrMetaKey: boolean,
@@ -495,7 +494,7 @@ export class DrawTool {
   }
 
   static getActionDescriptors(
-    activeTool: AnnotationToolType,
+    activeTool: AnnotationTool,
     useLegacyBindings: boolean,
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
@@ -554,7 +553,7 @@ export class EraseTool {
   }
 
   static getActionDescriptors(
-    activeTool: AnnotationToolType,
+    activeTool: AnnotationTool,
     _useLegacyBindings: boolean,
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
@@ -579,7 +578,7 @@ export class PickCellTool {
   }
 
   static getActionDescriptors(
-    _activeTool: AnnotationToolType,
+    _activeTool: AnnotationTool,
     _useLegacyBindings: boolean,
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
@@ -610,7 +609,7 @@ export class FillCellTool {
   }
 
   static getActionDescriptors(
-    _activeTool: AnnotationToolType,
+    _activeTool: AnnotationTool,
     _useLegacyBindings: boolean,
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
@@ -689,7 +688,7 @@ export class BoundingBoxTool {
   }
 
   static getActionDescriptors(
-    _activeTool: AnnotationToolType,
+    _activeTool: AnnotationTool,
     _useLegacyBindings: boolean,
     _shiftKey: boolean,
     ctrlOrMetaKey: boolean,
@@ -818,7 +817,7 @@ export class QuickSelectTool {
   }
 
   static getActionDescriptors(
-    _activeTool: AnnotationToolType,
+    _activeTool: AnnotationTool,
     _useLegacyBindings: boolean,
     shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
@@ -942,7 +941,7 @@ export class LineMeasurementTool {
   }
 
   static getActionDescriptors(
-    _activeTool: AnnotationToolType,
+    _activeTool: AnnotationTool,
     _useLegacyBindings: boolean,
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
@@ -1021,7 +1020,7 @@ export class AreaMeasurementTool {
   }
 
   static getActionDescriptors(
-    _activeTool: AnnotationToolType,
+    _activeTool: AnnotationTool,
     _useLegacyBindings: boolean,
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
@@ -1081,7 +1080,7 @@ export class ProofreadTool {
   }
 
   static getActionDescriptors(
-    _activeTool: AnnotationToolType,
+    _activeTool: AnnotationTool,
     _useLegacyBindings: boolean,
     shiftKey: boolean,
     ctrlOrMetaKey: boolean,
@@ -1137,6 +1136,6 @@ const toolToToolClass = {
   [AnnotationTool.LINE_MEASUREMENT.id]: LineMeasurementTool,
   [AnnotationTool.AREA_MEASUREMENT.id]: AreaMeasurementTool,
 };
-export function getToolClassForAnnotationTool(activeTool: AnnotationToolType) {
+export function getToolClassForAnnotationTool(activeTool: AnnotationTool) {
   return toolToToolClass[activeTool.id];
 }

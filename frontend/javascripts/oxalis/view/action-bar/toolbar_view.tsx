@@ -39,7 +39,6 @@ import {
 } from "oxalis/constants";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
-  type AnnotationToolType,
   adaptActiveToolToShortcuts,
   getDisabledInfoForTools,
 } from "oxalis/model/accessors/tool_accessor";
@@ -859,7 +858,7 @@ export default function ToolbarView() {
   const toolWorkspace = useSelector((state: OxalisState) => state.userConfiguration.toolWorkspace);
 
   const [lastForcefullyDisabledTool, setLastForcefullyDisabledTool] =
-    useState<AnnotationToolType | null>(null);
+    useState<AnnotationTool | null>(null);
 
   const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
 
@@ -975,7 +974,7 @@ function ToolSpecificSettings({
   isShiftPressed,
 }: {
   hasSkeleton: boolean;
-  adaptedActiveTool: AnnotationToolType;
+  adaptedActiveTool: AnnotationTool;
   hasVolume: boolean;
   isControlOrMetaPressed: boolean;
   isShiftPressed: boolean;
@@ -1357,7 +1356,7 @@ function getIsVolumeModificationAllowed(state: OxalisState) {
   return hasVolume && !isReadOnly && !hasEditableMapping(state);
 }
 
-function BrushTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationToolType }) {
+function BrushTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTool }) {
   const disabledInfosForTools = useSelector(getDisabledInfoForTools);
   const isVolumeModificationAllowed = useSelector(getIsVolumeModificationAllowed);
   if (!isVolumeModificationAllowed) {
@@ -1384,7 +1383,7 @@ function BrushTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationToolTyp
   );
 }
 
-function EraseBrushTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationToolType }) {
+function EraseBrushTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTool }) {
   const disabledInfosForTools = useSelector(getDisabledInfoForTools);
   const showEraseTraceTool =
     adaptedActiveTool === AnnotationTool.TRACE || adaptedActiveTool === AnnotationTool.ERASE_TRACE;
@@ -1421,7 +1420,7 @@ function EraseBrushTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTo
   );
 }
 
-function TraceTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationToolType }) {
+function TraceTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTool }) {
   const disabledInfosForTools = useSelector(getDisabledInfoForTools);
   const isVolumeModificationAllowed = useSelector(getIsVolumeModificationAllowed);
   if (!isVolumeModificationAllowed) {
@@ -1449,7 +1448,7 @@ function TraceTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationToolTyp
   );
 }
 
-function EraseTraceTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationToolType }) {
+function EraseTraceTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTool }) {
   const disabledInfosForTools = useSelector(getDisabledInfoForTools);
   const showEraseTraceTool =
     adaptedActiveTool === AnnotationTool.TRACE || adaptedActiveTool === AnnotationTool.ERASE_TRACE;
@@ -1484,7 +1483,7 @@ function EraseTraceTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTo
   );
 }
 
-function FillCellTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationToolType }) {
+function FillCellTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTool }) {
   const disabledInfosForTools = useSelector(getDisabledInfoForTools);
   const isVolumeModificationAllowed = useSelector(getIsVolumeModificationAllowed);
   if (!isVolumeModificationAllowed) {

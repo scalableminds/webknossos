@@ -2,7 +2,6 @@ import type { AdditionalCoordinate } from "types/api_flow_types";
 
 export {
   AnnotationTool,
-  AnnotationToolType,
   AnnotationToolId,
   VolumeTools,
   AvailableToolsInViewMode,

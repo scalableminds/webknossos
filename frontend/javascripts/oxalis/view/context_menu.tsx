@@ -57,10 +57,7 @@ import {
   getNodePosition,
   isSkeletonLayerTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import {
-  type AnnotationToolType,
-  getDisabledInfoForTools,
-} from "oxalis/model/accessors/tool_accessor";
+import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
 import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   getActiveCellId,
@@ -168,7 +165,7 @@ type StateProps = {
   currentMeshFile: APIMeshFile | null | undefined;
   currentConnectomeFile: APIConnectomeFile | null | undefined;
   volumeTracing: VolumeTracing | null | undefined;
-  activeTool: AnnotationToolType;
+  activeTool: AnnotationTool;
   useLegacyBindings: boolean;
   userBoundingBoxes: Array<UserBoundingBox>;
   mappingInfo: ActiveMappingInfo;
@@ -186,7 +183,7 @@ type NodeContextMenuOptionsProps = Props & {
 type NoNodeContextMenuProps = Props & {
   viewport: OrthoView;
   segmentIdAtPosition: number;
-  activeTool: AnnotationToolType;
+  activeTool: AnnotationTool;
   infoRows: ItemType[];
 };
 

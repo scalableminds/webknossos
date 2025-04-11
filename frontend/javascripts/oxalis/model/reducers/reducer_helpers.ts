@@ -1,7 +1,7 @@
 import Maybe from "data.maybe";
 import * as Utils from "libs/utils";
 import { AnnotationTool } from "oxalis/constants";
-import type { AnnotationToolType, BoundingBoxType } from "oxalis/constants";
+import type { BoundingBoxType } from "oxalis/constants";
 import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
 import {
   isVolumeAnnotationDisallowedForZoom,
@@ -141,7 +141,7 @@ export function convertServerAdditionalAxesToFrontEnd(
   }));
 }
 
-export function getNextTool(state: OxalisState): AnnotationToolType | null {
+export function getNextTool(state: OxalisState): AnnotationTool | null {
   const disabledToolInfo = getDisabledInfoForTools(state);
   const tools = Object.values(AnnotationTool);
   const currentToolIndex = tools.indexOf(state.uiInformation.activeTool);
@@ -161,7 +161,7 @@ export function getNextTool(state: OxalisState): AnnotationToolType | null {
 
   return null;
 }
-export function getPreviousTool(state: OxalisState): AnnotationToolType | null {
+export function getPreviousTool(state: OxalisState): AnnotationTool | null {
   const disabledToolInfo = getDisabledInfoForTools(state);
   const tools = Object.values(AnnotationTool);
   const currentToolIndex = tools.indexOf(state.uiInformation.activeTool);

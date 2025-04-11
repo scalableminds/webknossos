@@ -1,7 +1,7 @@
 import "test/mocks/lz4";
 import test from "ava";
 import _ from "lodash";
-import { AnnotationTool, type AnnotationToolType } from "oxalis/constants";
+import { AnnotationTool } from "oxalis/constants";
 import mockRequire from "mock-require";
 import { initialState } from "test/fixtures/volumetracing_object";
 import sinon from "sinon";
@@ -114,7 +114,7 @@ test.serial("Selecting another tool should trigger a deselection of the previous
   saga.next(wkReadyAction());
   saga.next(newState.uiInformation.activeTool);
 
-  const cycleTool = (nextTool: AnnotationToolType) => {
+  const cycleTool = (nextTool: AnnotationTool) => {
     const action = setToolAction(nextTool);
     newState = UiReducer(newState, action);
     saga.next(action);

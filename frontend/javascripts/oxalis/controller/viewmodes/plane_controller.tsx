@@ -6,7 +6,6 @@ import _ from "lodash";
 import {
   AnnotationTool,
   type AnnotationToolId,
-  type AnnotationToolType,
   type OrthoView,
   type OrthoViewMap,
 } from "oxalis/constants";
@@ -108,7 +107,7 @@ const setTool = (tool: AnnotationTool) => {
 
 type StateProps = {
   annotation: StoreAnnotation;
-  activeTool: AnnotationToolType;
+  activeTool: AnnotationTool;
 };
 type Props = StateProps;
 

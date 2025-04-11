@@ -116,10 +116,6 @@ export const AnnotationTool = {
 
 export type AnnotationTool = (typeof AnnotationTool)[keyof typeof AnnotationTool];
 
-// todop: remove again
-export type AnnotationToolType = AnnotationTool;
-// export type AnnotationToolType = typeof AbstractAnnotationTool;
-
 export const ToolCollections = {
   ALL_TOOLS: Object.values(AnnotationTool),
   VOLUME_TOOLS: [
@@ -213,7 +209,7 @@ const getExplanationForDisabledVolume = (
   return "Volume annotation is currently disabled.";
 };
 
-export function isVolumeDrawingTool(activeTool: AnnotationToolType): boolean {
+export function isVolumeDrawingTool(activeTool: AnnotationTool): boolean {
   return (
     activeTool === AnnotationTool.TRACE ||
     activeTool === AnnotationTool.BRUSH ||
@@ -221,10 +217,10 @@ export function isVolumeDrawingTool(activeTool: AnnotationToolType): boolean {
     activeTool === AnnotationTool.ERASE_BRUSH
   );
 }
-export function isBrushTool(activeTool: AnnotationToolType): boolean {
+export function isBrushTool(activeTool: AnnotationTool): boolean {
   return activeTool === AnnotationTool.BRUSH || activeTool === AnnotationTool.ERASE_BRUSH;
 }
-export function isTraceTool(activeTool: AnnotationToolType): boolean {
+export function isTraceTool(activeTool: AnnotationTool): boolean {
   return activeTool === AnnotationTool.TRACE || activeTool === AnnotationTool.ERASE_TRACE;
 }
 const noSkeletonsExplanation =
@@ -519,11 +515,11 @@ export const getDisabledInfoForTools = reuseInstanceOnEquality(
 );
 
 export function adaptActiveToolToShortcuts(
-  activeTool: AnnotationToolType,
+  activeTool: AnnotationTool,
   isShiftPressed: boolean,
   isControlOrMetaPressed: boolean,
   isAltPressed: boolean,
-): AnnotationToolType {
+): AnnotationTool {
   if (!isShiftPressed && !isControlOrMetaPressed && !isAltPressed) {
     // No modifier is pressed
     return activeTool;

@@ -51,9 +51,9 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
 
   def assertValidDatasetName(name: String): Fox[Unit] =
     for {
-      _ <- bool2Fox(name.matches("[A-Za-z0-9_\\-\\.]*")) ?~> "dataset.name.invalid.characters"
-      _ <- bool2Fox(!name.startsWith(".")) ?~> "dataset.name.invalid.startsWithDot"
-      _ <- bool2Fox(name.length >= 3) ?~> "dataset.name.invalid.lessThanThreeCharacters"
+      _ <- Fox.fromBool(name.matches("[A-Za-z0-9_\\-\\.]*")) ?~> "dataset.name.invalid.characters"
+      _ <- Fox.fromBool(!name.startsWith(".")) ?~> "dataset.name.invalid.startsWithDot"
+      _ <- Fox.fromBool(name.length >= 3) ?~> "dataset.name.invalid.lessThanThreeCharacters"
     } yield ()
 
   // Less strict variant than what we want for https://github.com/scalableminds/webknossos/issues/7711
@@ -61,8 +61,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   // but we don’t want to disable features for those now
   def assertValidLayerNameLax(name: String): Fox[Unit] =
     for {
-      _ <- bool2Fox(!name.contains("/")) ?~> "dataset.layer.name.invalid.characters"
-      _ <- bool2Fox(!name.startsWith(".")) ?~> "dataset.layer.name.invalid.startsWithDot"
+      _ <- Fox.fromBool(!name.contains("/")) ?~> "dataset.layer.name.invalid.characters"
+      _ <- Fox.fromBool(!name.startsWith(".")) ?~> "dataset.layer.name.invalid.startsWithDot"
     } yield ()
 
   def createPreliminaryDataset(datasetName: String,
@@ -73,7 +73,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     for {
       isDatasetNameAlreadyTaken <- datasetDAO.doesDatasetDirectoryExistInOrganization(datasetName, organizationId)(
         GlobalAccessContext)
-      _ <- bool2Fox(!(isDatasetNameAlreadyTaken && requireUniqueName)) ?~> "dataset.name.alreadyTaken"
+      _ <- Fox.fromBool(!(isDatasetNameAlreadyTaken && requireUniqueName)) ?~> "dataset.name.alreadyTaken"
       datasetDirectoryName = if (isDatasetNameAlreadyTaken) s"$datasetName-${newDatasetId.toString}" else datasetName
       unreportedDatasource = UnusableDataSource(DataSourceId(datasetDirectoryName, organizationId),
                                                 notYetUploadedStatus)
@@ -326,18 +326,18 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   def addInitialTeams(dataset: Dataset, teams: List[String], user: User)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       previousDatasetTeams <- teamService.allowedTeamIdsForDataset(dataset, cumulative = false) ?~> "allowedTeams.notFound"
-      _ <- bool2Fox(previousDatasetTeams.isEmpty) ?~> "dataset.initialTeams.teamsNotEmpty"
+      _ <- Fox.fromBool(previousDatasetTeams.isEmpty) ?~> "dataset.initialTeams.teamsNotEmpty"
       includeMemberOnlyTeams = user.isDatasetManager
       userTeams <- if (includeMemberOnlyTeams) teamDAO.findAll else teamDAO.findAllEditable
       teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.fromString(_))
-      _ <- bool2Fox(teamIdsValidated.forall(team => userTeams.map(_._id).contains(team))) ?~> "dataset.initialTeams.invalidTeams"
+      _ <- Fox.fromBool(teamIdsValidated.forall(team => userTeams.map(_._id).contains(team))) ?~> "dataset.initialTeams.invalidTeams"
       _ <- datasetDAO.assertUpdateAccess(dataset._id) ?~> "dataset.initialTeams.forbidden"
       _ <- teamDAO.updateAllowedTeamsForDataset(dataset._id, teamIdsValidated)
     } yield ()
 
   def addUploader(dataset: Dataset, _uploader: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- bool2Fox(dataset._uploader.isEmpty) ?~> "dataset.uploader.notEmpty"
+      _ <- Fox.fromBool(dataset._uploader.isEmpty) ?~> "dataset.uploader.notEmpty"
       _ <- datasetDAO.updateUploader(dataset._id, Some(_uploader)) ?~> "dataset.uploader.forbidden"
     } yield ()
 

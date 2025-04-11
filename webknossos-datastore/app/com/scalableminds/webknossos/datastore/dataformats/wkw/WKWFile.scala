@@ -3,8 +3,7 @@ package com.scalableminds.webknossos.datastore.dataformats.wkw
 import java.io._
 import org.apache.commons.io.IOUtils
 import com.google.common.io.LittleEndianDataInputStream
-import com.scalableminds.util.tools.Fox.box2Fox
-import com.scalableminds.util.tools.{BoxImplicits, Fox}
+import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import net.jpountz.lz4.LZ4Factory
 import net.liftweb.common.{Box, Failure, Full}
 import net.liftweb.common.Box.tryo
@@ -65,7 +64,7 @@ trait WKWCompressionHelper extends BoxImplicits {
   }
 }
 
-object WKWFile extends WKWCompressionHelper {
+object WKWFile extends WKWCompressionHelper with FoxImplicits {
 
   def read[T](is: InputStream)(f: (WKWHeader, Iterator[Array[Byte]]) => Fox[T])(
       implicit ec: ExecutionContext): Fox[T] = {

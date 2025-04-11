@@ -76,7 +76,7 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
   def userForToken(tokenValue: String): Fox[User] =
     for {
       tokenAuthenticator <- repository.findOneByValue(tokenValue) ?~> "auth.invalidToken"
-      _ <- bool2Fox(tokenAuthenticator.isValid) ?~> "auth.invalidToken"
+      _ <- Fox.fromBool(tokenAuthenticator.isValid) ?~> "auth.invalidToken"
       idValidated <- ObjectId.fromString(tokenAuthenticator.loginInfo.providerKey) ?~> "auth.invalidToken"
       user <- userService.findOneCached(idValidated)(GlobalAccessContext)
     } yield user

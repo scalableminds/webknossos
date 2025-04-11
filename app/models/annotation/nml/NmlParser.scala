@@ -4,8 +4,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedString}
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.box2Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.tools.JsonHelper.bool2Box
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
@@ -36,7 +35,11 @@ import scala.collection.{immutable, mutable}
 import scala.concurrent.ExecutionContext
 import scala.xml.{Attribute, NodeSeq, XML, Node => XMLNode}
 
-class NmlParser @Inject()(datasetDAO: DatasetDAO) extends LazyLogging with ProtoGeometryImplicits with ColorGenerator {
+class NmlParser @Inject()(datasetDAO: DatasetDAO)
+    extends LazyLogging
+    with ProtoGeometryImplicits
+    with ColorGenerator
+    with FoxImplicits {
 
   private val DEFAULT_TIME = 0L
   private val DEFAULT_VIEWPORT = 0

@@ -23,15 +23,17 @@ class N5CompactMultiscalesExplorer(implicit val ec: ExecutionContext) extends N5
       metadataPath <- Fox.successful(remotePath / N5Metadata.FILENAME_ATTRIBUTES_JSON)
       n5Metadata <- metadataPath
         .parseAsJson[N5CompactMultiscalesMetadata] ?~> s"Failed to read N5 header at $metadataPath"
-      _ <- bool2Fox(n5Metadata.multiScale.contains(true)) ?~> s"N5 header at $metadataPath does not have multiScale=true"
+      _ <- Fox.fromBool(n5Metadata.multiScale.contains(true)) ?~> s"N5 header at $metadataPath does not have multiScale=true"
       axisOrder <- extractAxisOrder(n5Metadata.axes.getOrElse(List("x", "y", "z")))
-      downsamplingFactors <- n5Metadata.downsamplingFactors.orElse(n5Metadata.scales) ?~> s"N5 header at $metadataPath does not have downsamplingFactors/scales"
+      downsamplingFactors <- n5Metadata.downsamplingFactors
+        .orElse(n5Metadata.scales)
+        .toFox ?~> s"N5 header at $metadataPath does not have downsamplingFactors/scales"
       voxelSize <- extractVoxelSize(axisOrder, n5Metadata)
       magsWithAttributes <- Fox.serialCombined(downsamplingFactors.zipWithIndex) {
         case (downsamplingFactor, magIndex) =>
           n5magFromDownsamplingFactor(downsamplingFactor, magIndex, axisOrder, remotePath, credentialId)
       }
-      _ <- bool2Fox(magsWithAttributes.nonEmpty) ?~> "zero mags in layer"
+      _ <- Fox.fromBool(magsWithAttributes.nonEmpty) ?~> "zero mags in layer"
       layer <- layerFromMagsWithAttributes(magsWithAttributes, remotePath)
     } yield List((layer, voxelSize))
 
@@ -57,8 +59,10 @@ class N5CompactMultiscalesExplorer(implicit val ec: ExecutionContext) extends N5
       magPath = remotePath / s"s$magIndex"
       headerPath = magPath / N5Header.FILENAME_ATTRIBUTES_JSON
       n5Header <- headerPath.parseAsJson[N5Header] ?~> s"failed to read n5 header at $headerPath"
-      elementClass <- n5Header.elementClass ?~> s"failed to read element class from n5 header at $headerPath"
-      boundingBox <- n5Header.boundingBox(axisOrder) ?~> s"failed to read bounding box from n5 header at $headerPath"
+      elementClass <- n5Header.elementClass.toFox ?~> s"failed to read element class from n5 header at $headerPath"
+      boundingBox <- n5Header
+        .boundingBox(axisOrder)
+        .toFox ?~> s"failed to read bounding box from n5 header at $headerPath"
     } yield
       MagWithAttributes(MagLocator(mag, Some(magPath.toUri.toString), None, Some(axisOrder), None, credentialId),
                         magPath,

@@ -30,7 +30,7 @@ class ConfigurationController @Inject()(
 
   def update: Action[JsValue] = sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
     for {
-      configuration <- request.body.asOpt[JsObject] ?~> "user.configuration.invalid"
+      configuration <- request.body.asOpt[JsObject].toFox ?~> "user.configuration.invalid"
       _ <- userService.updateUserConfiguration(request.identity, configuration)
     } yield JsonOk(Messages("user.configuration.updated"))
   }
@@ -53,7 +53,7 @@ class ConfigurationController @Inject()(
   def updateDatasetViewConfiguration(datasetId: ObjectId): Action[JsValue] =
     sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
       for {
-        jsConfiguration <- request.body.asOpt[JsObject] ?~> "user.configuration.dataset.invalid"
+        jsConfiguration <- request.body.asOpt[JsObject].toFox ?~> "user.configuration.dataset.invalid"
         conf = jsConfiguration.fields.toMap
         datasetConf = conf - "layers"
         layerConf = conf.get("layers")

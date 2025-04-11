@@ -37,8 +37,8 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
    */
   def getRedirectUrl(callbackUrl: String): Fox[String] =
     for {
-      _ <- bool2Fox(conf.Features.openIdConnectEnabled) ?~> "oidc.disabled"
-      _ <- bool2Fox(oidcConfig.isValid) ?~> "oidc.configuration.invalid"
+      _ <- Fox.fromBool(conf.Features.openIdConnectEnabled) ?~> "oidc.disabled"
+      _ <- Fox.fromBool(oidcConfig.isValid) ?~> "oidc.configuration.invalid"
       redirectUrl <- discover.map { serverInfos =>
         def queryParams: Map[String, String] = Map(
           "client_id" -> oidcConfig.clientId,
@@ -58,8 +58,8 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
    */
   def getAndValidateTokens(redirectUrl: String, code: String): Fox[(JsObject, Option[JsObject])] =
     for {
-      _ <- bool2Fox(conf.Features.openIdConnectEnabled) ?~> "oidc.disabled"
-      _ <- bool2Fox(oidcConfig.isValid) ?~> "oidc.configuration.invalid"
+      _ <- Fox.fromBool(conf.Features.openIdConnectEnabled) ?~> "oidc.disabled"
+      _ <- Fox.fromBool(oidcConfig.isValid) ?~> "oidc.configuration.invalid"
       serverInfos <- discover
       tokenResponse <- rpc(serverInfos.token_endpoint)
         .silentIf(!conf.SingleSignOn.OpenIdConnect.verboseLoggingEnabled)

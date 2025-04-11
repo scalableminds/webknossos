@@ -43,8 +43,12 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   protected def parse(r: TasksRow): Fox[Task] =
     for {
-      editPosition <- Vec3Int.fromList(parseArrayLiteral(r.editposition).map(_.toInt)) ?~> "could not parse edit position"
-      editRotation <- Vec3Double.fromList(parseArrayLiteral(r.editrotation).map(_.toDouble)) ?~> "could not parse edit rotation"
+      editPosition <- Vec3Int
+        .fromList(parseArrayLiteral(r.editposition).map(_.toInt))
+        .toFox ?~> "could not parse edit position"
+      editRotation <- Vec3Double
+        .fromList(parseArrayLiteral(r.editrotation).map(_.toDouble))
+        .toFox ?~> "could not parse edit rotation"
     } yield {
       Task(
         ObjectId(r._Id),
@@ -110,7 +114,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT COUNT(*) FROM $existingCollectionName WHERE _project = $projectId AND $accessQuery""".as[Int])
-      parsed <- r.headOption
+      parsed <- r.headOption.toFox
     } yield parsed
 
   private def findNextTaskQ(userId: ObjectId, teamIds: List[ObjectId], isTeamManagerOrAdmin: Boolean) =
@@ -262,7 +266,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                         FROM webknossos.tasks_
                         WHERE _project = $projectId
                         GROUP BY _project""".as[(Long, Option[Long])])
-      firstResult <- result.headOption
+      firstResult <- result.headOption.toFox
     } yield (firstResult._1, firstResult._2.getOrElse(0L))
 
   def countPendingInstancesAndTimeByProject: Fox[Map[ObjectId, (Long, Long)]] =

@@ -67,7 +67,7 @@ class FolderController @Inject()(
   def move(id: ObjectId, newParentId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       organization <- organizationDAO.findOne(request.identity._organization)
-      _ <- bool2Fox(organization._rootFolder != id) ?~> "folder.move.root"
+      _ <- Fox.fromBool(organization._rootFolder != id) ?~> "folder.move.root"
       _ <- folderDAO.findOne(id) ?~> "folder.notFound"
       _ <- folderDAO.findOne(newParentId) ?~> "folder.notFound"
       _ <- folderDAO.moveSubtree(id, newParentId)
@@ -79,12 +79,12 @@ class FolderController @Inject()(
   def delete(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       organization <- organizationDAO.findOne(request.identity._organization)
-      _ <- bool2Fox(organization._rootFolder != id) ?~> "folder.delete.root"
+      _ <- Fox.fromBool(organization._rootFolder != id) ?~> "folder.delete.root"
       _ <- folderDAO.findOne(id) ?~> "folder.notFound"
       childrenCount <- folderDAO.countChildren(id)
       datasetsCount <- datasetDAO.countByFolder(id)
-      _ <- bool2Fox(childrenCount == 0) ?~> "folder.delete.notEmpty.children"
-      _ <- bool2Fox(datasetsCount == 0) ?~> "folder.delete.notEmpty.datasets"
+      _ <- Fox.fromBool(childrenCount == 0) ?~> "folder.delete.notEmpty.children"
+      _ <- Fox.fromBool(datasetsCount == 0) ?~> "folder.delete.notEmpty.datasets"
       _ <- folderDAO.deleteOne(id)
     } yield Ok
   }

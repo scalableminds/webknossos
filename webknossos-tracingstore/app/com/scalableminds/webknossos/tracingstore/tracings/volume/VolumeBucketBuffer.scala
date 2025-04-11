@@ -31,7 +31,7 @@ class VolumeBucketBuffer(version: Long,
 
   def getWithFallback(bucketPosition: BucketPosition)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     bucketDataBuffer.get(bucketPosition) match {
-      case Some((bucketDataBox, _)) => bucketDataBox
+      case Some((bucketDataBox, _)) => bucketDataBox.toFox
       case None                     => getFromFossilOrFallbackLayer(bucketPosition)
     }
 
@@ -39,14 +39,14 @@ class VolumeBucketBuffer(version: Long,
     for {
       multiResult <- getMultipleFromFossilOrFallbackLayer(Seq(bucketPosition))
       firstBox <- multiResult.headOption.toFox
-      firstValue <- firstBox
+      firstValue <- firstBox.toFox
     } yield firstValue
 
   private def getMultipleFromFossilOrFallbackLayer(bucketPositions: Seq[BucketPosition]): Fox[Seq[Box[Array[Byte]]]] =
     for {
       bucketDataBoxes <- loadBuckets(volumeLayer, bucketPositions, Some(version))
-      _ <- bool2Box(bucketDataBoxes.length == bucketPositions.length)
-      _ <- BoxImplicits.assertNoFailure(bucketDataBoxes)
+      _ <- Fox.fromBool(bucketDataBoxes.length == bucketPositions.length)
+      _ <- BoxImplicits.assertNoFailure(bucketDataBoxes).toFox
       _ = bucketDataBoxes.zip(bucketPositions).foreach {
         case (bucketDataBox, bucketPosition) =>
           bucketDataBox match {

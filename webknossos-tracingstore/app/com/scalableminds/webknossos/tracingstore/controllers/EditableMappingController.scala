@@ -50,9 +50,8 @@ class EditableMappingController @Inject()(
             annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
             tracing <- annotationService.findVolume(annotationId, tracingId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
-            agglomerateGraphBox: Box[AgglomerateGraph] <- editableMappingService
-              .getAgglomerateGraphForId(tracingId, tracing.version, agglomerateId)
-              .futureBox
+            agglomerateGraphBox: Box[AgglomerateGraph] <- Fox.future2Fox(
+              editableMappingService.getAgglomerateGraphForId(tracingId, tracing.version, agglomerateId).futureBox)
             segmentIds <- agglomerateGraphBox match {
               case Full(agglomerateGraph) => Fox.successful(agglomerateGraph.segments)
               case Empty                  => Fox.successful(List.empty)

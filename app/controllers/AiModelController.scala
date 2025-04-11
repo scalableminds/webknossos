@@ -132,11 +132,11 @@ class AiModelController @Inject()(
       for {
         _ <- userService.assertIsSuperUser(request.identity)
         trainingAnnotations = request.body.trainingAnnotations
-        _ <- bool2Fox(trainingAnnotations.nonEmpty || request.body.workflowYaml.isDefined) ?~> "aiModel.training.zeroAnnotations"
+        _ <- Fox.fromBool(trainingAnnotations.nonEmpty || request.body.workflowYaml.isDefined) ?~> "aiModel.training.zeroAnnotations"
         firstAnnotationId <- trainingAnnotations.headOption.map(_.annotationId).toFox
         annotation <- annotationDAO.findOne(firstAnnotationId)
         dataset <- datasetDAO.findOne(annotation._dataset)
-        _ <- bool2Fox(request.identity._organization == dataset._organization) ?~> "job.trainModel.notAllowed.organization" ~> FORBIDDEN
+        _ <- Fox.fromBool(request.identity._organization == dataset._organization) ?~> "job.trainModel.notAllowed.organization" ~> FORBIDDEN
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
         _ <- Fox
           .serialCombined(request.body.trainingAnnotations.map(_.annotationId))(annotationDAO.findOne) ?~> "annotation.notFound"
@@ -151,7 +151,7 @@ class AiModelController @Inject()(
         )
         existingAiModelsCount <- aiModelDAO.countByNameAndOrganization(request.body.name,
                                                                        request.identity._organization)
-        _ <- bool2Fox(existingAiModelsCount == 0) ?~> "aiModel.nameInUse"
+        _ <- Fox.fromBool(existingAiModelsCount == 0) ?~> "aiModel.nameInUse"
         newTrainingJob <- jobService
           .submitJob(jobCommand, commandArgs, request.identity, dataStore.name) ?~> "job.couldNotRunTrainModel"
         newAiModel = AiModel(
@@ -178,7 +178,7 @@ class AiModelController @Inject()(
         organization <- organizationDAO.findOne(request.body.organizationId)(GlobalAccessContext) ?~> Messages(
           "organization.notFound",
           request.body.organizationId)
-        _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
+        _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
         dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(request.body.datasetDirectoryName, organization._id)
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
         _ <- aiModelDAO.findOne(request.body.aiModelId) ?~> "aiModel.notFound"
@@ -225,7 +225,7 @@ class AiModelController @Inject()(
         for {
           _ <- userService.assertIsSuperUser(request.identity)
           aiModel <- aiModelDAO.findOne(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
-          _ <- bool2Fox(aiModel._organization == request.identity._organization) ?~> "aiModel.notOwned"
+          _ <- Fox.fromBool(aiModel._organization == request.identity._organization) ?~> "aiModel.notOwned"
           _ <- aiModelDAO.updateOne(aiModel.copy(name = request.body.name,
                                                  comment = request.body.comment,
                                                  modified = Instant.now)) ?~> "aiModel.updatingFailed"
@@ -279,7 +279,7 @@ class AiModelController @Inject()(
       for {
         _ <- userService.assertIsSuperUser(request.identity)
         referencesCount <- aiInferenceDAO.countForModel(aiModelId)
-        _ <- bool2Fox(referencesCount == 0) ?~> "aiModel.delete.referencedByInferences"
+        _ <- Fox.fromBool(referencesCount == 0) ?~> "aiModel.delete.referencedByInferences"
         _ <- aiModelDAO.findOne(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
         _ <- aiModelDAO.deleteOne(aiModelId)
       } yield Ok

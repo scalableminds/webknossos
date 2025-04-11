@@ -21,7 +21,7 @@ class MappingService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionCo
   def handleMappingRequest(request: DataServiceMappingRequest): Fox[Array[Byte]] = {
     val readInstruction =
       MappingReadInstruction(Paths.get(config.Datastore.baseDirectory), request.dataSource, request.mapping)
-    request.dataLayer.mappingProvider.load(readInstruction)
+    request.dataLayer.mappingProvider.load(readInstruction).toFox
   }
 
   def applyMapping[T: ClassTag](request: DataServiceMappingRequest,
@@ -31,7 +31,7 @@ class MappingService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionCo
     def loadAndParseMapping(mappingRequest: DataServiceMappingRequest): Fox[AbstractDataLayerMapping] =
       for {
         rawMapping <- handleMappingRequest(request)
-        mapping <- MappingParser.parse[T](rawMapping, fromLongFn)
+        mapping <- MappingParser.parse[T](rawMapping, fromLongFn).toFox
       } yield mapping
 
     cache.withCache(request)(loadAndParseMapping) { mapping =>

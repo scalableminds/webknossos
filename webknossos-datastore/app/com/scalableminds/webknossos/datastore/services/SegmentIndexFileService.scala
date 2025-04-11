@@ -97,7 +97,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
         topLeftEnd = buckets(bucketLocalOffset)(2)
         bucketEntriesDtype <- tryo(segmentIndex.stringReader.getAttr("/", "dtype_bucket_entries")).toFox
         _ <- Fox
-          .bool2Fox(bucketEntriesDtype == "uint16") ?~> "value for dtype_bucket_entries in segment index file is not supported, only uint16 is supported"
+          .fromBool(bucketEntriesDtype == "uint16") ?~> "value for dtype_bucket_entries in segment index file is not supported, only uint16 is supported"
         topLefts = segmentIndex.uint16Reader.readMatrixBlockWithOffset("top_lefts",
                                                                        (topLeftEnd - topLeftStart).toInt,
                                                                        3,
@@ -147,7 +147,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
   def assertSegmentIndexFileExists(organizationId: String,
                                    datasetDirectoryName: String,
                                    dataLayerName: String): Fox[Path] =
-    Fox.box2Fox(getSegmentIndexFile(organizationId, datasetDirectoryName, dataLayerName)) ?~> "segmentIndexFile.notFound"
+    getSegmentIndexFile(organizationId, datasetDirectoryName, dataLayerName).toFox ?~> "segmentIndexFile.notFound"
 
   private def getDataForBucketPositions(organizationId: String,
                                         datasetDirectoryName: String,
@@ -163,8 +163,8 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                 datasetDirectoryName,
                                                                                 dataLayerName)
-      bucketData <- Fox.serialSequenceBox(bucketPositions)(bucketPosition =>
-        getDataForBucketPositions(dataSource, dataLayer, mag, Seq(bucketPosition * mag), mappingName))
+      bucketData <- Fox.future2Fox(Fox.serialSequenceBox(bucketPositions)(bucketPosition =>
+        getDataForBucketPositions(dataSource, dataLayer, mag, Seq(bucketPosition * mag), mappingName)))
     } yield (bucketData, dataLayer.elementClass)
 
   private def getBucketPositions(

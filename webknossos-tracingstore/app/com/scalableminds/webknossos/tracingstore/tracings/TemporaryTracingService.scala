@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.bool2Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -15,13 +14,13 @@ import scala.concurrent.duration.DurationInt
 
 // This services holds temporary stores, meant for temporary tracings only (e.g. compound projects)
 // They cannot be used for download or updating/versioning
-class TemporaryTracingService @Inject()(
-    skeletonStore: TemporaryTracingStore[SkeletonTracing],
-    volumeStore: TemporaryTracingStore[VolumeTracing],
-    volumeDataStore: TemporaryTracingStore[Array[Byte]],
-    annotationStore: TemporaryTracingStore[AnnotationProto],
-    segmentIndexStore: TemporaryTracingStore[Set[Vec3IntProto]],
-    temporaryTracingIdStore: TracingStoreRedisStore)(implicit ec: ExecutionContext) {
+class TemporaryTracingService @Inject()(skeletonStore: TemporaryTracingStore[SkeletonTracing],
+                                        volumeStore: TemporaryTracingStore[VolumeTracing],
+                                        volumeDataStore: TemporaryTracingStore[Array[Byte]],
+                                        annotationStore: TemporaryTracingStore[AnnotationProto],
+                                        segmentIndexStore: TemporaryTracingStore[Set[Vec3IntProto]],
+                                        temporaryTracingIdStore: TracingStoreRedisStore)(implicit ec: ExecutionContext)
+    extends FoxImplicits {
 
   implicit def skeletonTracingCompanion: GeneratedMessageCompanion[SkeletonTracing] = SkeletonTracing
   implicit def volumeTracingCompanion: GeneratedMessageCompanion[VolumeTracing] = VolumeTracing
@@ -41,14 +40,14 @@ class TemporaryTracingService @Inject()(
   private def temporaryAnnotationIdKey(tracingId: String) =
     s"temporaryTracingId___$tracingId"
 
-  def getAnnotation(annotationId: String): Fox[AnnotationProto] = annotationStore.get(annotationId)
+  def getAnnotation(annotationId: String): Fox[AnnotationProto] = annotationStore.get(annotationId).toFox
 
-  def getVolume(tracingId: String): Fox[VolumeTracing] = volumeStore.get(tracingId)
+  def getVolume(tracingId: String): Fox[VolumeTracing] = volumeStore.get(tracingId).toFox
 
-  def getSkeleton(tracingId: String): Fox[SkeletonTracing] = skeletonStore.get(tracingId)
+  def getSkeleton(tracingId: String): Fox[SkeletonTracing] = skeletonStore.get(tracingId).toFox
 
   def getVolumeBucket(bucketKey: String): Fox[Array[Byte]] =
-    volumeDataStore.get(bucketKey)
+    volumeDataStore.get(bucketKey).toFox
 
   def getVolumeBuckets(bucketKeys: Seq[String]): Seq[Option[Array[Byte]]] =
     volumeDataStore.getMultiple(bucketKeys)
@@ -102,7 +101,7 @@ class TemporaryTracingService @Inject()(
 
   def assertTracingStillPresent(tracingId: String)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      _ <- bool2Fox(volumeStore.contains(tracingId)) ?~> "Temporary Volume Tracing expired"
+      _ <- Fox.fromBool(volumeStore.contains(tracingId)) ?~> "Temporary Volume Tracing expired"
     } yield ()
 
   private def registerTracingId(tracingId: String) =

@@ -224,8 +224,8 @@ trait VolumeTracingBucketHelper
           dataRequests.length,
           flatDataFromDataStore,
           datastoreMissingBucketIndices.toSet,
-          volumeLayer.expectedUncompressedBucketSize) ?~> "fallbackData.split.failed"
-        _ <- bool2Fox(bucketBoxesFromDataStore.length == indicesWhereEmpty.length) ?~> "length mismatch"
+          volumeLayer.expectedUncompressedBucketSize).toFox ?~> "fallbackData.split.failed"
+        _ <- Fox.fromBool(bucketBoxesFromDataStore.length == indicesWhereEmpty.length) ?~> "length mismatch"
         bucketBoxesFromDataStoreIterator = bucketBoxesFromDataStore.iterator
         bucketBoxesFilled = bucketBoxesFromFossil.map {
           case Full(bucketFromFossil) => Full(bucketFromFossil)
@@ -276,7 +276,7 @@ trait VolumeTracingBucketHelper
           decompressIfNeeded(versionedVolumeBucket.value, volumeLayer.expectedUncompressedBucketSize, debugInfo))
       }
     }
-    unpackedDataFox.futureBox.flatMap {
+    Fox.future2Fox(unpackedDataFox.futureBox).flatMap {
       case Full(unpackedData) =>
         Fox.successful(unpackedData)
       case Empty =>

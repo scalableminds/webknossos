@@ -103,7 +103,7 @@ class OrganizationController @Inject()(
     implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
       invite <- inviteDAO.findOneByTokenValue(inviteToken)
-      _ <- bool2Fox(!invite.expirationDateTime.isPast)
+      _ <- Fox.fromBool(!invite.expirationDateTime.isPast)
       organization <- organizationDAO.findOne(invite._organization)
       organizationJson <- organizationService.publicWrites(organization)
     } yield Ok(organizationJson)
@@ -140,7 +140,7 @@ class OrganizationController @Inject()(
 
   def acceptTermsOfService(version: Int): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      _ <- bool2Fox(request.identity.isOrganizationOwner) ?~> "termsOfService.onlyOrganizationOwner"
+      _ <- Fox.fromBool(request.identity.isOrganizationOwner) ?~> "termsOfService.onlyOrganizationOwner"
       _ <- organizationService.acceptTermsOfService(request.identity._organization, version)
     } yield Ok
   }
@@ -151,7 +151,7 @@ class OrganizationController @Inject()(
         for {
           organization <- organizationDAO
             .findOne(organizationId) ?~> Messages("organization.notFound", organizationId) ~> NOT_FOUND
-          _ <- bool2Fox(request.identity.isAdminOf(organization._id)) ?~> "notAllowed" ~> FORBIDDEN
+          _ <- Fox.fromBool(request.identity.isAdminOf(organization._id)) ?~> "notAllowed" ~> FORBIDDEN
           _ <- organizationDAO.updateFields(organization._id, name, newUserMailingList)
           updated <- organizationDAO.findOne(organization._id)
           organizationJson <- organizationService.publicWrites(updated)
@@ -163,7 +163,7 @@ class OrganizationController @Inject()(
     for {
       organization <- organizationDAO
         .findOne(organizationId) ?~> Messages("organization.notFound", organizationId) ~> NOT_FOUND
-      _ <- bool2Fox(request.identity.isAdminOf(organization._id)) ?~> "notAllowed" ~> FORBIDDEN
+      _ <- Fox.fromBool(request.identity.isAdminOf(organization._id)) ?~> "notAllowed" ~> FORBIDDEN
       _ = logger.info(s"Deleting organization ${organization._id}")
       _ <- organizationDAO.deleteOne(organization._id)
       _ <- userDAO.deleteAllWithOrganization(organization._id)
@@ -189,7 +189,7 @@ class OrganizationController @Inject()(
 
   def sendExtendPricingPlanEmail(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      _ <- bool2Fox(request.identity.isAdmin) ?~> Messages("organization.pricingUpgrades.notAuthorized")
+      _ <- Fox.fromBool(request.identity.isAdmin) ?~> Messages("organization.pricingUpgrades.notAuthorized")
       organization <- organizationDAO
         .findOne(request.identity._organization) ?~> Messages("organization.notFound") ~> NOT_FOUND
       userEmail <- userService.emailFor(request.identity)
@@ -205,7 +205,7 @@ class OrganizationController @Inject()(
   def sendUpgradePricingPlanEmail(requestedPlan: String): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
-        _ <- bool2Fox(request.identity.isAdmin) ?~> Messages("organization.pricingUpgrades.notAuthorized")
+        _ <- Fox.fromBool(request.identity.isAdmin) ?~> Messages("organization.pricingUpgrades.notAuthorized")
         organization <- organizationDAO
           .findOne(request.identity._organization) ?~> Messages("organization.notFound") ~> NOT_FOUND
         userEmail <- userService.emailFor(request.identity)
@@ -227,7 +227,7 @@ class OrganizationController @Inject()(
   def sendUpgradePricingPlanUsersEmail(requestedUsers: Int): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        _ <- bool2Fox(request.identity.isAdmin) ?~> Messages("organization.pricingUpgrades.notAuthorized")
+        _ <- Fox.fromBool(request.identity.isAdmin) ?~> Messages("organization.pricingUpgrades.notAuthorized")
         organization <- organizationDAO.findOne(request.identity._organization) ?~> Messages("organization.notFound") ~> NOT_FOUND
         userEmail <- userService.emailFor(request.identity)
         _ = Mailer ! Send(defaultMails.upgradePricingPlanUsersMail(request.identity, userEmail, requestedUsers))
@@ -242,7 +242,7 @@ class OrganizationController @Inject()(
   def sendUpgradePricingPlanStorageEmail(requestedStorage: Int): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        _ <- bool2Fox(request.identity.isAdmin) ?~> Messages("organization.pricingUpgrades.notAuthorized")
+        _ <- Fox.fromBool(request.identity.isAdmin) ?~> Messages("organization.pricingUpgrades.notAuthorized")
         organization <- organizationDAO.findOne(request.identity._organization) ?~> Messages("organization.notFound") ~> NOT_FOUND
         userEmail <- userService.emailFor(request.identity)
         _ = Mailer ! Send(defaultMails.upgradePricingPlanStorageMail(request.identity, userEmail, requestedStorage))
@@ -257,8 +257,8 @@ class OrganizationController @Inject()(
   def sendOrderCreditsEmail(requestedCredits: Int): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        _ <- bool2Fox(requestedCredits > 0) ?~> Messages("organization.creditOrder.notPositive")
-        _ <- bool2Fox(request.identity.isOrganizationOwner) ?~> Messages("organization.creditOrder.notAuthorized")
+        _ <- Fox.fromBool(requestedCredits > 0) ?~> Messages("organization.creditOrder.notPositive")
+        _ <- Fox.fromBool(request.identity.isOrganizationOwner) ?~> Messages("organization.creditOrder.notAuthorized")
         organization <- organizationDAO.findOne(request.identity._organization) ?~> Messages("organization.notFound") ~> NOT_FOUND
         userEmail <- userService.emailFor(request.identity)
         _ = logger.info(

@@ -31,9 +31,9 @@ class TeamController @Inject()(teamDAO: TeamDAO, userDAO: UserDAO, teamService: 
 
   def delete(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      _ <- bool2Fox(request.identity.isAdmin) ?~> "user.noAdmin" ~> FORBIDDEN
+      _ <- Fox.fromBool(request.identity.isAdmin) ?~> "user.noAdmin" ~> FORBIDDEN
       team <- teamDAO.findOne(id) ?~> "team.notFound" ~> NOT_FOUND
-      _ <- bool2Fox(!team.isOrganizationTeam) ?~> "team.delete.organizationTeam" ~> FORBIDDEN
+      _ <- Fox.fromBool(!team.isOrganizationTeam) ?~> "team.delete.organizationTeam" ~> FORBIDDEN
       _ <- teamService.assertNoReferences(id) ?~> "team.delete.inUse" ~> FORBIDDEN
       _ <- teamDAO.deleteOne(id)
       _ <- userDAO.removeTeamFromAllUsers(id)
@@ -45,8 +45,8 @@ class TeamController @Inject()(teamDAO: TeamDAO, userDAO: UserDAO, teamService: 
     withJsonBodyUsing(teamNameReads) { teamName =>
       for {
         existingTeamCount <- teamDAO.countByNameAndOrganization(teamName, request.identity._organization)
-        _ <- bool2Fox(existingTeamCount == 0) ?~> "team.nameInUse"
-        _ <- bool2Fox(request.identity.isAdmin) ?~> "user.noAdmin" ~> FORBIDDEN
+        _ <- Fox.fromBool(existingTeamCount == 0) ?~> "team.nameInUse"
+        _ <- Fox.fromBool(request.identity.isAdmin) ?~> "user.noAdmin" ~> FORBIDDEN
         team = Team(ObjectId.generate, request.identity._organization, teamName)
         _ <- teamDAO.insertOne(team)
         js <- teamService.publicWrites(team)

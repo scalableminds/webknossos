@@ -8,56 +8,62 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.reflect.ClassTag
 import scala.util.{Success, Try}
 
+class Ox[+A](futureBox: Future[Box[A]]) {
+  def toFox(implicit ec: ExecutionContext) = new Fox(futureBox)
+}
+
 trait FoxImplicits {
+  implicit protected def box2Ox[T](b: Box[T]): Ox[T] =
+    new Ox(Future.successful(b))
 
-  implicit def futureBox2Fox[T](f: Future[Box[T]])(implicit ec: ExecutionContext): Fox[T] =
-    new Fox(f)
+  implicit protected def bool2Ox[T](b: Boolean): Ox[Unit] =
+    if (b) new Ox(Future.successful(Full(())))
+    else new Ox(Future.successful(Empty))
 
-  implicit def futureFull2Fox[T](f: Future[Full[T]])(implicit ec: ExecutionContext): Fox[T] =
-    new Fox(f)
-
-  implicit def box2Fox[T](b: Box[T])(implicit ec: ExecutionContext): Fox[T] =
-    new Fox(Future.successful(b))
-
-  /**
-    * Transform a Future[T] into a Fox[T] such that if the Future contains an exception, it is turned into a Fox.failure
-    */
-  implicit def future2Fox[T](f: Future[T])(implicit ec: ExecutionContext): Fox[T] =
-    for {
-      fut <- f.transform {
-        case Success(value)        => Try(Fox.successful(value))
-        case scala.util.Failure(e) => Try(Fox.failure(e.getMessage, Full(e)))
-      }
-      f <- fut
-    } yield f
-
-  implicit def option2Fox[T](b: Option[T])(implicit ec: ExecutionContext): Fox[T] =
-    new Fox(Future.successful(Box(b)))
-
-  implicit def futureOption2Fox[T](f: Future[Option[T]])(implicit ec: ExecutionContext): Fox[T] =
-    new Fox(f.map(Box(_)))
-
-  implicit def jsResult2Fox[T](result: JsResult[T])(implicit ec: ExecutionContext): Fox[T] = result match {
-    case JsSuccess(value, _) => Fox.successful(value)
-    case JsError(e)          => Fox.failure(s"Invalid json: $e")
-  }
-
-  implicit def try2Fox[T](t: Try[T])(implicit ec: ExecutionContext): Fox[T] = t match {
-    case Success(result)       => Fox.successful(result)
-    case scala.util.Failure(e) => Fox.failure(e.toString)
-  }
-
-  implicit def fox2FutureBox[T](f: Fox[T]): Future[Box[T]] =
-    f.futureBox
-
-  def bool2Fox(b: Boolean)(implicit ec: ExecutionContext): Fox[Unit] =
-    if (b) Fox.successful(())
-    else Fox.empty
+  implicit protected def option2Ox[T](b: Option[T]): Ox[T] =
+    new Ox(Future.successful(Box(b)))
 }
 
 object Fox extends FoxImplicits {
   def apply[A](future: Future[Box[A]])(implicit ec: ExecutionContext): Fox[A] =
     new Fox(future)
+
+  def fromBool(b: Boolean)(implicit ec: ExecutionContext): Fox[Unit] =
+    if (b) Fox.successful(())
+    else Fox.empty
+
+  def futureFull2Fox[T](f: Future[Full[T]])(implicit ec: ExecutionContext): Fox[T] =
+    new Fox(f)
+
+  def futureBox2Fox[T](f: Future[Box[T]])(implicit ec: ExecutionContext): Fox[T] =
+    new Fox(f)
+
+  /**
+    * Transform a Future[T] into a Fox[T] such that if the Future contains an exception, it is turned into a Fox.failure
+    */
+  def future2Fox[T](f: Future[T])(implicit ec: ExecutionContext): Fox[T] =
+    futureBox2Fox(
+      for {
+        fut <- f.transform {
+          case Success(value)        => Try(Fox.successful(value))
+          case scala.util.Failure(e) => Try(Fox.failure(e.getMessage, Full(e)))
+        }
+        f <- fut.futureBox
+      } yield f
+    )
+
+  def futureOption2Fox[T](f: Future[Option[T]])(implicit ec: ExecutionContext): Fox[T] =
+    new Fox(f.map(Box(_)))
+
+  def jsResult2Fox[T](result: JsResult[T])(implicit ec: ExecutionContext): Fox[T] = result match {
+    case JsSuccess(value, _) => Fox.successful(value)
+    case JsError(e)          => Fox.failure(s"Invalid json: $e")
+  }
+
+  def try2Fox[T](t: Try[T])(implicit ec: ExecutionContext): Fox[T] = t match {
+    case Success(result)       => Fox.successful(result)
+    case scala.util.Failure(e) => Fox.failure(e.toString)
+  }
 
   def successful[A](e: A)(implicit ec: ExecutionContext): Fox[A] =
     new Fox(Future.successful(Full(e)))
@@ -233,41 +239,22 @@ object Fox extends FoxImplicits {
   def assertTrue(fox: Fox[Boolean])(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       asBoolean <- fox
-      _ <- bool2Fox(asBoolean)
+      _ <- asBoolean.toFox
     } yield ()
-
-  def assertFalse(fox: Fox[Boolean])(implicit ec: ExecutionContext): Fox[Unit] =
-    for {
-      asBoolean <- fox
-      _ <- bool2Fox(!asBoolean)
-    } yield ()
-
-  def chainFunctions[T](functions: List[T => Fox[T]])(implicit ec: ExecutionContext): T => Fox[T] = {
-    def runNext(remainingFunctions: List[T => Fox[T]], previousResult: T): Fox[T] =
-      remainingFunctions match {
-        case head :: tail =>
-          for {
-            currentResult <- head(previousResult)
-            nextResult <- runNext(tail, currentResult)
-          } yield nextResult
-        case Nil =>
-          Fox.successful(previousResult)
-      }
-    t =>
-      runNext(functions, t)
-  }
 
   def firstSuccess[T](foxes: Seq[Fox[T]])(implicit ec: ExecutionContext): Fox[T] = {
     def runNext(remainingFoxes: Seq[Fox[T]]): Fox[T] =
       remainingFoxes match {
         case head :: tail =>
-          for {
-            resultOption <- head.toFutureOption
-            nextResult <- resultOption match {
-              case Some(v) => Fox.successful(v)
-              case _       => runNext(tail)
-            }
-          } yield nextResult
+          futureBox2Fox {
+            for {
+              resultOption <- head.toFutureOption
+              nextResult <- resultOption match {
+                case Some(v) => Fox.successful(v).futureBox
+                case _       => runNext(tail).futureBox
+              }
+            } yield nextResult
+          }
         case Nil =>
           Fox.empty
       }
@@ -285,11 +272,12 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
 
   // Add error message only in case of Failure, pass through Empty
   def ?=>(s: String): Fox[A] =
-    futureBox.flatMap {
-      case f: Failure =>
-        new Fox(Future.successful(f)) ?~> s
-      case Full(value) => Fox.successful(value)
-      case Empty       => Fox.empty
+    Fox.futureBox2Fox {
+      futureBox.map {
+        case Full(value) => Full(value)
+        case f: Failure  => f ?~! s
+        case Empty       => Empty
+      }
     }
 
   // Add http error code in case of Failure or Empty (wrapping Empty in a Failure)

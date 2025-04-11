@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.Annotation.{AnnotationLayerProto, AnnotationProto}
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
@@ -23,7 +22,8 @@ case class AnnotationWithTracings(
     annotation: AnnotationProto,
     tracingsById: Map[String, Either[SkeletonTracingWithUpdatedTreeIds, VolumeTracing]],
     editableMappingsByTracingId: Map[String, (EditableMappingInfo, EditableMappingUpdater)])
-    extends LazyLogging {
+    extends LazyLogging
+    with FoxImplicits {
 
   // Assumes that there is at most one skeleton layer per annotation. This is true as of this writing
   def getSkeletonId: Option[String] =
@@ -150,7 +150,7 @@ case class AnnotationWithTracings(
     this.copy(editableMappingsByTracingId =
       editableMappingsByTracingId.updated(volumeTracingId, (editableMappingInfo, updater)))
 
-  def applySkeletonAction(a: SkeletonUpdateAction)(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
+  def applySkeletonAction(a: SkeletonUpdateAction): Box[AnnotationWithTracings] =
     for {
       skeletonTracing <- getSkeleton(a.actionTracingId)
       previousUpdatedTreeIds <- getUpdatedTreeBodyIdsForSkeleton(a.actionTracingId)
@@ -161,7 +161,7 @@ case class AnnotationWithTracings(
         tracingsById =
           tracingsById.updated(a.actionTracingId, Left(SkeletonTracingWithUpdatedTreeIds(updated, newUpdatedTreeIds))))
 
-  def applyVolumeAction(a: ApplyableVolumeUpdateAction)(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
+  def applyVolumeAction(a: ApplyableVolumeUpdateAction): Box[AnnotationWithTracings] =
     for {
       volumeTracing <- getVolume(a.actionTracingId)
       updated = a.applyOn(volumeTracing)

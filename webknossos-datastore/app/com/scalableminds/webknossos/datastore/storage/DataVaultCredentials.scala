@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.datastore.storage
 
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.bool2Fox
 import play.api.libs.json.{JsValue, Json, OFormat}
 
 import scala.concurrent.ExecutionContext
@@ -13,7 +12,7 @@ sealed trait DataVaultCredential {
 
   private def isScopedToUserAndOrga: Boolean = userId.isDefined && organization.isDefined
   def assertScopedToUserAndOrga(implicit ec: ExecutionContext): Fox[Unit] =
-    bool2Fox(isScopedToUserAndOrga) ?~> "stored credentials must be scoped to user and organization"
+   Fox.fromBool(isScopedToUserAndOrga) ?~> "stored credentials must be scoped to user and organization"
 }
 
 object DataVaultCredential {

@@ -36,15 +36,17 @@ class ParsedMappingCache(val maxEntries: Int)
     val cachedMappingInfo = CachedMapping.fromMappingRequest(mappingRequest)
 
     def handleUncachedMapping() = {
-      val mappingFox = loadFn(mappingRequest).futureBox.map {
-        case Full(cube) =>
-          Full(cube)
-        case f: Failure =>
-          remove(cachedMappingInfo)
-          f
-        case _ =>
-          Empty
-      }.toFox
+      val mappingFox = Fox.futureBox2Fox {
+        loadFn(mappingRequest).futureBox.map {
+          case Full(cube) =>
+            Full(cube)
+          case f: Failure =>
+            remove(cachedMappingInfo)
+            f
+          case _ =>
+            Empty
+        }
+      }
 
       put(cachedMappingInfo, mappingFox)
 

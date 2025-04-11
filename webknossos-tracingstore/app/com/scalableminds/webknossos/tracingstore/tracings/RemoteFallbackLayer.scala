@@ -2,8 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.option2Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
@@ -27,7 +26,7 @@ object RemoteFallbackLayer extends ProtoGeometryImplicits {
       RemoteFallbackLayer(dataSource.organizationId, dataSource.directoryName, dataLayer.name, elementClassProto))
   }
 }
-trait FallbackDataHelper {
+trait FallbackDataHelper extends FoxImplicits {
   def remoteDatastoreClient: TSRemoteDatastoreClient
   def remoteWebknossosClient: TSRemoteWebknossosClient
 

@@ -77,7 +77,7 @@ trait AccessTokenService {
       block: => Future[Result])(implicit ec: ExecutionContext, tc: TokenContext): Fox[Result] =
     for {
       userAccessAnswer <- hasUserAccess(accessRequest) ?~> "Failed to check data access, token may be expired, consider reloading."
-      result <- executeBlockOnPositiveAnswer(userAccessAnswer, block)
+      result <- Fox.future2Fox(executeBlockOnPositiveAnswer(userAccessAnswer, block))
     } yield result
 
   private def hasUserAccess(accessRequest: UserAccessRequest)(implicit ec: ExecutionContext,
@@ -88,7 +88,7 @@ trait AccessTokenService {
   def assertUserAccess(accessRequest: UserAccessRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
     for {
       userAccessAnswer <- hasUserAccess(accessRequest) ?~> "Failed to check data access, token may be expired, consider reloading."
-      _ <- Fox.bool2Fox(userAccessAnswer.granted) ?~> userAccessAnswer.msg.getOrElse("Access forbidden.")
+      _ <- Fox.fromBool(userAccessAnswer.granted) ?~> userAccessAnswer.msg.getOrElse("Access forbidden.")
     } yield ()
 
   private def executeBlockOnPositiveAnswer(userAccessAnswer: UserAccessAnswer,

@@ -22,7 +22,7 @@ class ProjectInformationHandler @Inject()(annotationDAO: AnnotationDAO,
       implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
       project <- projectDAO.findOne(projectId) ?~> "project.notFound"
-      user <- userOpt ?~> "user.notAuthorised"
+      user <- userOpt.toFox ?~> "user.notAuthorised"
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, project._team))
       annotations <- annotationDAO.findAllFinishedForProject(project._id)
       _ <- assertAllOnSameDataset(annotations)

@@ -37,9 +37,9 @@ import {
 } from "oxalis/constants";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
+  ToolCollections,
   adaptActiveToolToShortcuts,
   getDisabledInfoForTools,
-  ToolCollections,
 } from "oxalis/model/accessors/tool_accessor";
 import {
   getActiveSegmentationTracing,

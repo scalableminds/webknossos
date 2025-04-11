@@ -4,6 +4,7 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import { getAdministrationSubMenu } from "navbar";
 import { AnnotationTool } from "oxalis/constants";
+import { ToolCollections } from "oxalis/model/accessors/tool_accessor";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
 import { Store } from "oxalis/singletons";
@@ -18,7 +19,6 @@ import {
 } from "../action-bar/tracing_actions_view";
 import { viewDatasetMenu } from "../action-bar/view_dataset_actions_view";
 import { commandPaletteDarkTheme, commandPaletteLightTheme } from "./command_palette_theme";
-import { ToolCollections } from "oxalis/model/accessors/tool_accessor";
 
 type CommandWithoutId = Omit<Command, "id">;
 

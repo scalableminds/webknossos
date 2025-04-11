@@ -1,8 +1,8 @@
 import Maybe from "data.maybe";
 import * as Utils from "libs/utils";
-import { AnnotationTool } from "oxalis/constants";
+import type { AnnotationTool } from "oxalis/constants";
 import type { BoundingBoxType } from "oxalis/constants";
-import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
+import { ToolCollections, getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
 import {
   isVolumeAnnotationDisallowedForZoom,
   isVolumeTool,
@@ -143,7 +143,7 @@ export function convertServerAdditionalAxesToFrontEnd(
 
 export function getNextTool(state: OxalisState): AnnotationTool | null {
   const disabledToolInfo = getDisabledInfoForTools(state);
-  const tools = Object.values(AnnotationTool);
+  const tools = ToolCollections[state.userConfiguration.activeToolkit];
   const currentToolIndex = tools.indexOf(state.uiInformation.activeTool);
 
   // Search for the next tool which is not disabled.
@@ -163,7 +163,7 @@ export function getNextTool(state: OxalisState): AnnotationTool | null {
 }
 export function getPreviousTool(state: OxalisState): AnnotationTool | null {
   const disabledToolInfo = getDisabledInfoForTools(state);
-  const tools = Object.values(AnnotationTool);
+  const tools = ToolCollections[state.userConfiguration.activeToolkit];
   const currentToolIndex = tools.indexOf(state.uiInformation.activeTool);
 
   // Search backwards for the next tool which is not disabled.

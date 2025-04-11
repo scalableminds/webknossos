@@ -1,4 +1,3 @@
-import { type AnnotationTool } from "oxalis/constants";
 import defaultState from "oxalis/default_state";
 import type { Action } from "oxalis/model/actions/actions";
 import { updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";

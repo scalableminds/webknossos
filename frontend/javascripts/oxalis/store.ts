@@ -69,10 +69,10 @@ import type {
   ServerEditableMapping,
   TracingType,
 } from "types/api_flow_types";
+import type { Toolkit } from "./model/accessors/tool_accessor";
 import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import type { StartAIJobModalState } from "./view/action-bar/starting_job_modals";
-import type { Toolkit } from "./model/accessors/tool_accessor";
 
 export type MutableCommentType = {
   content: string;

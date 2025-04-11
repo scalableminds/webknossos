@@ -126,7 +126,7 @@ export const AnnotationTool = {
 export type AnnotationTool = (typeof AnnotationTool)[keyof typeof AnnotationTool];
 
 export const ToolCollections = {
-  ALL_TOOLS: Object.values(AnnotationTool),
+  ALL_TOOLS: Object.values(AnnotationTool) as AnnotationTool[],
   VOLUME_TOOLS: [
     AnnotationTool.BRUSH,
     AnnotationTool.ERASE_BRUSH,
@@ -147,7 +147,7 @@ export const ToolCollections = {
     AnnotationTool.FILL_CELL,
     AnnotationTool.PICK_CELL,
     AnnotationTool.BOUNDING_BOX,
-  ],
+  ] as AnnotationTool[],
 };
 
 export const VolumeTools = ToolCollections.VOLUME_TOOLS;

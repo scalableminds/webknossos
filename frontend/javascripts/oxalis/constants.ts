@@ -2,7 +2,7 @@ import type { AdditionalCoordinate } from "types/api_flow_types";
 
 export {
   AnnotationTool,
-  AnnotationToolId,
+  type AnnotationToolId,
   VolumeTools,
   MeasurementTools,
 } from "./model/accessors/tool_accessor";

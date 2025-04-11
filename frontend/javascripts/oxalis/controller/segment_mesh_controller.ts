@@ -196,24 +196,24 @@ export default class SegmentMeshController {
         this.meshesLODRootGroup.addLODMesh(targetGroup, lod);
       }
       targetGroup.segmentId = segmentId;
+      const dsScaleFactor = Store.getState().dataset.dataSource.scale.factor;
+      // If the mesh was calculated on a different magnification level,
+      // the backend sends the scale factor of this magnification.
+      // As the meshesLODRootGroup is already scaled by the main rootGroup,
+      // this portion of the scale needs to be take out of the scale applied to the mesh.
+      // If no scale was given, the meshes coordinates are already in scale of dataset and
+      // thus the scaling done by the root group needs to be unscaled (done by 1/dsScaleFactor).
+      scale = scale || [1, 1, 1];
+      const adaptedScale = [
+        scale[0] / dsScaleFactor[0],
+        scale[1] / dsScaleFactor[1],
+        scale[2] / dsScaleFactor[2],
+      ];
+      targetGroup.scale.copy(new THREE.Vector3(...adaptedScale));
     }
     const meshChunk = this.constructMesh(segmentId, layerName, geometry, isMerged);
 
     const group = new THREE.Group() as SceneGroupForMeshes;
-    const dsScaleFactor = Store.getState().dataset.dataSource.scale.factor;
-    // If the mesh was calculated on a different magnification level,
-    // the backend sends the scale factor of this magnification.
-    // As the meshesLODRootGroup is already scaled by the main rootGroup,
-    // this portion of the scale needs to be take out of the scale applied to the mesh.
-    // If no scale was given, the meshes coordinates are already in scale of dataset and
-    // thus the scaling done by the root group needs to be inverted.
-    scale = scale || [1, 1, 1];
-    const adaptedScale = [
-      scale[0] / dsScaleFactor[0],
-      scale[1] / dsScaleFactor[1],
-      scale[2] / dsScaleFactor[2],
-    ];
-    group.scale.copy(new THREE.Vector3(...adaptedScale));
     group.add(meshChunk);
 
     group.segmentId = segmentId;

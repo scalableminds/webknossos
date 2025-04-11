@@ -4,10 +4,7 @@ export {
   AnnotationTool,
   AnnotationToolId,
   VolumeTools,
-  AvailableToolsInViewMode,
   MeasurementTools,
-  ToolsWithOverwriteCapabilities,
-  ToolsWithInterpolationCapabilities,
 } from "./model/accessors/tool_accessor";
 
 export const ViewModeValues = ["orthogonal", "flight", "oblique"] as ViewMode[];

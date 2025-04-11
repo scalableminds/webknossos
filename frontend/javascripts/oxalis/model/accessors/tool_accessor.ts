@@ -56,19 +56,26 @@ class SkeletonTool extends AbstractAnnotationTool {
 class BrushTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.BRUSH;
   static readableName = "Brush Tool";
+  static hasOverwriteCapabilities = true;
+  static hasInterpolationCapabilities = true;
 }
 class EraseBrushTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.ERASE_BRUSH;
   static readableName = "Erase Tool (via Brush)";
+  static hasOverwriteCapabilities = true;
 }
 class TraceTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.TRACE;
   static readableName = "Trace Tool";
+  static hasOverwriteCapabilities = true;
+  static hasInterpolationCapabilities = true;
 }
 class EraseTraceTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.ERASE_TRACE;
   static readableName = "Erase Tool";
+  static hasOverwriteCapabilities = true;
 }
+
 class FillCellTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.FILL_CELL;
   static readableName = "Fill Tool";
@@ -80,6 +87,8 @@ class PickCellTool extends AbstractAnnotationTool {
 class QuickSelectTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.QUICK_SELECT;
   static readableName = "Quick Select Tool";
+  static hasOverwriteCapabilities = true;
+  static hasInterpolationCapabilities = true;
 }
 class BoundingBoxTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.BOUNDING_BOX;
@@ -138,25 +147,10 @@ export const VolumeTools = ToolCollections.VOLUME_TOOLS;
 
 export type ToolCollection = keyof typeof ToolCollections;
 
-export const ToolsWithOverwriteCapabilities: AnnotationTool[] = [
-  AnnotationTool.TRACE,
-  AnnotationTool.BRUSH,
-  AnnotationTool.ERASE_TRACE,
-  AnnotationTool.ERASE_BRUSH,
-  AnnotationTool.QUICK_SELECT,
-];
-export const ToolsWithInterpolationCapabilities: AnnotationTool[] = [
-  AnnotationTool.TRACE,
-  AnnotationTool.BRUSH,
-  AnnotationTool.QUICK_SELECT,
-];
-
 export const MeasurementTools: AnnotationTool[] = [
   AnnotationTool.LINE_MEASUREMENT,
   AnnotationTool.AREA_MEASUREMENT,
 ];
-
-export const AvailableToolsInViewMode = [...MeasurementTools, AnnotationTool.MOVE];
 
 export type ToolWorkspace =
   | "ALL_TOOLS"

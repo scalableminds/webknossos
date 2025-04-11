@@ -3,7 +3,7 @@ import { capitalize, getPhraseFromCamelCaseString } from "libs/utils";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import { getAdministrationSubMenu } from "navbar";
-import { AnnotationTool, AvailableToolsInViewMode } from "oxalis/constants";
+import { AnnotationTool } from "oxalis/constants";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
 import { Store } from "oxalis/singletons";
@@ -18,6 +18,7 @@ import {
 } from "../action-bar/tracing_actions_view";
 import { viewDatasetMenu } from "../action-bar/view_dataset_actions_view";
 import { commandPaletteDarkTheme, commandPaletteLightTheme } from "./command_palette_theme";
+import { ToolCollections } from "oxalis/model/accessors/tool_accessor";
 
 type CommandWithoutId = Omit<Command, "id">;
 
@@ -160,7 +161,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     const commands: CommandWithoutId[] = [];
     let availableTools = Object.values(AnnotationTool);
     if (isViewMode || !restrictions.allowUpdate) {
-      availableTools = AvailableToolsInViewMode;
+      availableTools = ToolCollections.READ_ONLY_TOOLS;
     }
     availableTools.forEach((tool) => {
       commands.push({

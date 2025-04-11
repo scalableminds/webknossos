@@ -32,8 +32,6 @@ import {
   MeasurementTools,
   type OverwriteMode,
   OverwriteModeEnum,
-  ToolsWithInterpolationCapabilities,
-  ToolsWithOverwriteCapabilities,
   Unicode,
   VolumeTools,
 } from "oxalis/constants";
@@ -1035,7 +1033,7 @@ function ToolSpecificSettings({
       <OverwriteModeSwitch
         isControlOrMetaPressed={isControlOrMetaPressed}
         isShiftPressed={isShiftPressed}
-        visible={ToolsWithOverwriteCapabilities.includes(adaptedActiveTool)}
+        visible={adaptedActiveTool.hasOverwriteCapabilities}
       />
 
       {adaptedActiveTool === AnnotationTool.QUICK_SELECT && (
@@ -1058,9 +1056,7 @@ function ToolSpecificSettings({
         </>
       )}
 
-      {ToolsWithInterpolationCapabilities.includes(adaptedActiveTool) ? (
-        <VolumeInterpolationButton />
-      ) : null}
+      {adaptedActiveTool.hasOverwriteCapabilities ? <VolumeInterpolationButton /> : null}
 
       {adaptedActiveTool === AnnotationTool.FILL_CELL ? <FloodFillSettings /> : null}
 

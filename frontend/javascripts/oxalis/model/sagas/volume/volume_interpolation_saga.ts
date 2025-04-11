@@ -8,7 +8,6 @@ import {
   ContourModeEnum,
   InterpolationModeEnum,
   OrthoViews,
-  ToolsWithInterpolationCapabilities,
   type TypedArrayWithoutBigInt,
   type Vector3,
 } from "oxalis/constants";
@@ -267,7 +266,7 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   if (!allowUpdate) return;
 
   const activeTool = yield* select((state) => state.uiInformation.activeTool);
-  if (!ToolsWithInterpolationCapabilities.includes(activeTool)) {
+  if (!activeTool.hasInterpolationCapabilities) {
     return;
   }
 

@@ -18,7 +18,7 @@ import {
   hasVisibleUint64Segmentation,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getActiveMagInfo } from "oxalis/model/accessors/flycam_accessor";
-import { adaptActiveToolToShortcuts, AnnotationTool } from "oxalis/model/accessors/tool_accessor";
+import { AnnotationTool, adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
 import {
   calculateGlobalPos,
   isPlaneMode as getIsPlaneMode,

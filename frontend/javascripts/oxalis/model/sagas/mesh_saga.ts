@@ -6,6 +6,7 @@ import {
   sendAnalyticsEvent,
 } from "admin/admin_rest_api";
 import { saveAs } from "file-saver";
+import { mergeGeometries } from "libs/BufferGeometryUtils";
 import ThreeDMap from "libs/ThreeDMap";
 import Deferred from "libs/async/deferred";
 import processTaskWithPool from "libs/async/task_pool";
@@ -88,7 +89,6 @@ import type {
 } from "../actions/volumetracing_actions";
 import type { MagInfo } from "../helpers/mag_info";
 import { ensureSceneControllerReady, ensureWkReady } from "./ready_sagas";
-import { mergeGeometries } from "libs/BufferGeometryUtils";
 
 export const NO_LOD_MESH_INDEX = -1;
 const MAX_RETRY_COUNT = 5;

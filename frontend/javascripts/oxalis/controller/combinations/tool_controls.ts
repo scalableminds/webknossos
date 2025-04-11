@@ -6,8 +6,8 @@ import { document } from "libs/window";
 import {
   AnnotationTool,
   ContourModeEnum,
-  OrthoViews,
   type OrthoView,
+  OrthoViews,
   type Point2,
   type Vector3,
   type Viewport,

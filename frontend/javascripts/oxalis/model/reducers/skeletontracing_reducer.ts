@@ -689,8 +689,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           if (sourceNodeId === targetNodeId) {
             return state;
           }
-          const isProofreadingActive =
-            state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
+          const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
           const treeType = isProofreadingActive ? TreeTypeEnum.AGGLOMERATE : TreeTypeEnum.DEFAULT;
           const sourceTreeMaybe = getNodeAndTree(skeletonTracing, sourceNodeId, null, treeType);
           const targetTreeMaybe = getNodeAndTree(skeletonTracing, targetNodeId, null, treeType);
@@ -964,8 +963,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
 
         case "MERGE_TREES": {
           const { sourceNodeId, targetNodeId } = action;
-          const isProofreadingActive =
-            state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
+          const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
           const treeType = isProofreadingActive ? TreeTypeEnum.AGGLOMERATE : TreeTypeEnum.DEFAULT;
           const oldTrees = skeletonTracing.trees;
           const mergeResult = mergeTrees(oldTrees, sourceNodeId, targetNodeId, treeType);

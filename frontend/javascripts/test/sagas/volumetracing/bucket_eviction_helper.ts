@@ -3,7 +3,8 @@ import mockRequire from "mock-require";
 import "test/sagas/saga_integration.mock";
 import { createBucketResponseFunction } from "test/helpers/apiHelpers";
 import Store from "oxalis/store";
-import { OrthoViews, AnnotationToolEnum } from "oxalis/constants";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
+import { OrthoViews } from "oxalis/constants";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 const { setToolAction } = mockRequire.reRequire("oxalis/model/actions/ui_actions");
 const { setPositionAction } = mockRequire.reRequire("oxalis/model/actions/flycam_actions");
@@ -42,7 +43,7 @@ export async function testLabelingManyBuckets(t: any, saveInbetween: boolean) {
   ]);
 
   Store.dispatch(updateUserSettingAction("brushSize", brushSize));
-  Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH));
+  Store.dispatch(setToolAction(AnnotationTool.BRUSH));
   Store.dispatch(setActiveCellAction(newCellId));
 
   for (const paintPosition of paintPositions1) {

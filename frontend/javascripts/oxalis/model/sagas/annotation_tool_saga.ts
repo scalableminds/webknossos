@@ -1,6 +1,6 @@
-import { AnnotationToolEnum, MeasurementTools } from "oxalis/constants";
-import { getToolClassForAnnotationTool } from "oxalis/controller/combinations/tool_controls";
+import { getToolControllerForAnnotationTool } from "oxalis/controller/combinations/tool_controls";
 import getSceneController from "oxalis/controller/scene_controller_provider";
+import { AnnotationTool, MeasurementTools } from "oxalis/model/accessors/tool_accessor";
 import {
   type CycleToolAction,
   type SetToolAction,
@@ -31,7 +31,7 @@ export function* watchToolDeselection(): Saga<never> {
     }
 
     if (executeDeselect) {
-      getToolClassForAnnotationTool(previousTool).onToolDeselected();
+      getToolControllerForAnnotationTool(previousTool).onToolDeselected();
     }
 
     previousTool = storeState.uiInformation.activeTool;
@@ -45,7 +45,7 @@ export function* watchToolReset(): Saga<never> {
     if (MeasurementTools.indexOf(activeTool) >= 0) {
       const sceneController = yield* call(() => getSceneController());
       const geometry =
-        activeTool === AnnotationToolEnum.AREA_MEASUREMENT
+        activeTool === AnnotationTool.AREA_MEASUREMENT
           ? sceneController.areaMeasurementGeometry
           : sceneController.lineMeasurementGeometry;
       geometry.hide();

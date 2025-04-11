@@ -10,7 +10,7 @@ import type { Vector3 } from "oxalis/constants";
 import { AltOrOptionKey, MappingStatusEnum, OrthoViews } from "oxalis/constants";
 import {
   type ActionDescriptor,
-  getToolClassForAnnotationTool,
+  getToolControllerForAnnotationTool,
 } from "oxalis/controller/combinations/tool_controls";
 import {
   getMappingInfoOrNull,
@@ -18,7 +18,7 @@ import {
   hasVisibleUint64Segmentation,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getActiveMagInfo } from "oxalis/model/accessors/flycam_accessor";
-import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
+import { AnnotationTool, adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
 import {
   calculateGlobalPos,
   isPlaneMode as getIsPlaneMode,
@@ -194,8 +194,10 @@ function ShortcutsInfo() {
   if (!isPlaneMode) {
     let actionDescriptor = null;
     if (hasSkeleton && isShiftPressed) {
-      actionDescriptor = getToolClassForAnnotationTool("SKELETON").getActionDescriptors(
-        "SKELETON",
+      actionDescriptor = getToolControllerForAnnotationTool(
+        AnnotationTool.SKELETON,
+      ).getActionDescriptors(
+        AnnotationTool.SKELETON,
         useLegacyBindings,
         isShiftPressed,
         isControlOrMetaPressed,
@@ -334,7 +336,9 @@ function ShortcutsInfo() {
     isControlOrMetaPressed,
     isAltPressed,
   );
-  const actionDescriptor = getToolClassForAnnotationTool(adaptedTool).getActionDescriptors(
+  const toolController = getToolControllerForAnnotationTool(adaptedTool);
+  console.log("toolController", toolController);
+  const actionDescriptor = toolController.getActionDescriptors(
     adaptedTool,
     useLegacyBindings,
     isShiftPressed,

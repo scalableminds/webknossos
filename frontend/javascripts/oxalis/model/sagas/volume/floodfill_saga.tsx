@@ -2,6 +2,7 @@ import { V2, V3 } from "libs/mjs";
 import createProgressCallback, { type ProgressCallback } from "libs/progress_callback";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
+import _ from "lodash";
 import type {
   BoundingBoxType,
   FillMode,
@@ -10,12 +11,11 @@ import type {
   Vector2,
   Vector3,
 } from "oxalis/constants";
-import Constants, { AnnotationToolEnum, FillModeEnum, Unicode } from "oxalis/constants";
-
-import _ from "lodash";
+import Constants, { FillModeEnum, Unicode } from "oxalis/constants";
 import { getDatasetBoundingBox, getMagInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getDisabledInfoForTools } from "oxalis/model/accessors/disabled_tool_accessor";
 import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
-import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import { enforceActiveVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
@@ -156,7 +156,7 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
   const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
   const disabledInfosForTools = yield* select(getDisabledInfoForTools);
 
-  if (!allowUpdate || disabledInfosForTools[AnnotationToolEnum.FILL_CELL].isDisabled) {
+  if (!allowUpdate || disabledInfosForTools[AnnotationTool.FILL_CELL.id].isDisabled) {
     return;
   }
 

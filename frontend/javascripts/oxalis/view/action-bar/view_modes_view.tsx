@@ -12,6 +12,7 @@ import { PureComponent } from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import type { EmptyObject } from "types/globals";
+import { NARROW_BUTTON_STYLE } from "./toolbar_view";
 
 type StateProps = {
   viewMode: ViewMode;
@@ -44,7 +45,7 @@ class ViewModesView extends PureComponent<Props, EmptyObject> {
 
     Store.dispatch(setViewModeAction(mode));
     // Unfortunately, antd doesn't provide the original event here
-    // which is why we have to blur using document.activElement.
+    // which is why we have to blur using document.activeElement.
     // Additionally, we need a timeout since the blurring would be done
     // to early, otherwise.
     setTimeout(() => {
@@ -86,14 +87,11 @@ class ViewModesView extends PureComponent<Props, EmptyObject> {
     };
 
     return (
-      // The outer div is necessary for proper spacing.
-      <div>
-        <Dropdown menu={menuProps}>
-          <Button>
-            <Space>{VIEW_MODE_TO_ICON[this.props.viewMode]}</Space>
-          </Button>
-        </Dropdown>
-      </div>
+      <Dropdown menu={menuProps}>
+        <Button style={NARROW_BUTTON_STYLE}>
+          <Space>{VIEW_MODE_TO_ICON[this.props.viewMode]}</Space>
+        </Button>
+      </Dropdown>
     );
   }
 }

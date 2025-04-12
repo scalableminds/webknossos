@@ -21,11 +21,6 @@ trait FoxImplicits {
     case scala.util.Failure(e) => new Ox(Future.successful(Failure(e.toString)))
   }
 
-  // TODO Do we want this?
-  implicit protected def bool2Ox[T](b: Boolean): Ox[Unit] =
-    if (b) new Ox(Future.successful(Full(())))
-    else new Ox(Future.successful(Empty))
-
   implicit protected def option2Ox[T](b: Option[T]): Ox[T] =
     new Ox(Future.successful(Box(b)))
 }
@@ -235,7 +230,7 @@ object Fox extends FoxImplicits {
   def assertTrue(fox: Fox[Boolean])(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       asBoolean <- fox
-      _ <- asBoolean.toFox
+      _ <- Fox.fromBool(asBoolean)
     } yield ()
 
   def firstSuccess[T](foxes: Seq[Fox[T]])(implicit ec: ExecutionContext): Fox[T] = {
@@ -260,7 +255,7 @@ object Fox extends FoxImplicits {
 }
 
 class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
-  val self: Fox[A] = this
+  private val self: Fox[A] = this
 
   // Add error message in case of Failure and Empty (wrapping Empty in a Failure)
   def ?~>(s: String): Fox[A] =

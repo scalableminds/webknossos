@@ -133,7 +133,7 @@ class VoxelyticsController @Inject()(
         _ <- Fox.fromBool(runs.nonEmpty) ?~> "voxelytics.runNotFound" ~> NOT_FOUND
         sortedRuns = runs.sortBy(_.beginTime).reverse
         // All workflows have at least one run, because they are created at the same time
-        mostRecentRun <- sortedRuns.headOption ?~> "voxelytics.zeroRunWorkflow"
+        mostRecentRun <- sortedRuns.headOption.toFox ?~> "voxelytics.zeroRunWorkflow"
 
         // Fetch task runs for all runs
         allTaskRuns <- voxelyticsDAO.findTaskRuns(sortedRuns.map(_.id), conf.staleTimeout)
@@ -230,7 +230,7 @@ class VoxelyticsController @Inject()(
                                          Some(workflowHash),
                                          conf.staleTimeout,
                                          allowUnlisted = true)
-          _ <- runs.headOption ?~> "voxelytics.runNotFound" ~> NOT_FOUND
+          _ <- runs.headOption.toFox ?~> "voxelytics.runNotFound" ~> NOT_FOUND
           results <- voxelyticsDAO.getChunkStatistics(runs.map(_.id), taskName, conf.staleTimeout)
         } yield JsonOk(Json.toJson(results))
       }
@@ -249,7 +249,7 @@ class VoxelyticsController @Inject()(
                                          Some(workflowHash),
                                          conf.staleTimeout,
                                          allowUnlisted = true)
-          _ <- runs.headOption ?~> "voxelytics.runNotFound" ~> NOT_FOUND
+          _ <- runs.headOption.toFox ?~> "voxelytics.runNotFound" ~> NOT_FOUND
           results <- voxelyticsDAO.getArtifactChecksums(runs.map(_.id), taskName, artifactName, conf.staleTimeout)
         } yield JsonOk(Json.toJson(results))
       }

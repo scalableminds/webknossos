@@ -50,8 +50,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     } else Json.obj()
     for {
       usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
-      ownerBox <- userDAO.findOwnerByOrg(organization._id).futureBox
-
+      ownerBox <- Fox.fromFuture(userDAO.findOwnerByOrg(organization._id).futureBox)
       creditBalanceOpt <- Fox.runIf(requestingUser.exists(_._organization == organization._id))(
         creditTransactionDAO.getCreditBalance(organization._id))
       ownerNameOpt = ownerBox.toOption.map(o => s"${o.firstName} ${o.lastName}")
@@ -83,22 +82,25 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
             for {
               allOrganizations <- organizationDAO.findAll
               _ <- Fox.fromBool(allOrganizations.length == 1) ?~> "organization.ambiguous"
-              defaultOrganization <- allOrganizations.headOption
+              defaultOrganization <- allOrganizations.headOption.toFox
             } yield defaultOrganization
         }
-
     }
 
   def assertMayCreateOrganization(requestingUser: Option[User]): Fox[Unit] = {
-    val activatedInConfig =Fox.fromBool(conf.Features.isWkorgInstance) ?~> "allowOrganizationCreation.notEnabled"
-    val userIsSuperUser = requestingUser.toFox.flatMap(user =>
-      multiUserDAO.findOne(user._multiUser)(GlobalAccessContext).flatMap(multiUser =>Fox.fromBool(multiUser.isSuperUser)))
+    val activatedInConfig = Fox.fromBool(conf.Features.isWkorgInstance) ?~> "allowOrganizationCreation.notEnabled"
+    val userIsSuperUser = requestingUser.toFox.flatMap(
+      user =>
+        multiUserDAO
+          .findOne(user._multiUser)(GlobalAccessContext)
+          .flatMap(multiUser => Fox.fromBool(multiUser.isSuperUser)))
 
     // If at least one of the conditions is fulfilled, success is returned.
-    Fox
-      .sequenceOfFulls[Unit](List(assertNoOrganizationsPresent, activatedInConfig, userIsSuperUser))
-      .map(_.headOption)
-      .toFox
+    for {
+      fulls <- Fox.fromFuture(
+        Fox.sequenceOfFulls[Unit](List(assertNoOrganizationsPresent, activatedInConfig, userIsSuperUser)))
+      _ <- Fox.fromBool(fulls.nonEmpty)
+    } yield ()
   }
 
   def assertNoOrganizationsPresent: Fox[Unit] =
@@ -114,7 +116,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         .flatMap(TextUtils.normalizeStrong)
         .getOrElse(normalizedName)
         .replaceAll(" ", "_")
-      existingOrganization <- organizationDAO.findOne(organizationId)(GlobalAccessContext).futureBox
+      existingOrganization <- Fox.fromFuture(organizationDAO.findOne(organizationId)(GlobalAccessContext).futureBox)
       _ <- Fox.fromBool(existingOrganization.isEmpty) ?~> "organization.id.alreadyInUse"
       initialPricingParameters = if (conf.Features.isWkorgInstance) (PricingPlan.Basic, Some(3), Some(50000000000L))
       else (PricingPlan.Custom, None, None)
@@ -146,7 +148,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
 
     for {
       datastores <- dataStoreDAO.findAll(GlobalAccessContext)
-      _ <- Future.sequence(datastores.map(sendRPCToDataStore))
+      _ <- Fox.fromFuture(Future.sequence(datastores.map(sendRPCToDataStore)))
     } yield ()
   }
 
@@ -156,7 +158,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       organization <- organizationDAO.findOne(organizationId)
       userCount <- userDAO.countAllForOrganization(organizationId)
       _ <- Fox.runOptional(organization.includedUsers)(includedUsers =>
-       Fox.fromBool(userCount + usersToAddCount <= includedUsers))
+        Fox.fromBool(userCount + usersToAddCount <= includedUsers))
     } yield ()
 
   private def fallbackOnOwnerEmail(possiblyEmptyEmail: String, organization: Organization)(
@@ -178,7 +180,9 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     for {
       _ <- Fox.fromBool(conf.WebKnossos.TermsOfService.enabled) ?~> "termsOfService.notEnabled"
       requiredVersion = conf.WebKnossos.TermsOfService.version
-      _ <- Fox.fromBool(version == requiredVersion) ?~> Messages("termsOfService.versionMismatch", requiredVersion, version)
+      _ <- Fox.fromBool(version == requiredVersion) ?~> Messages("termsOfService.versionMismatch",
+                                                                 requiredVersion,
+                                                                 version)
       _ <- organizationDAO.acceptTermsOfService(organizationId, version, Instant.now)
     } yield ()
 

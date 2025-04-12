@@ -65,7 +65,7 @@ class UserService @Inject()(conf: WkConf,
     multiUser._lastLoggedInIdentity match {
       case Some(userId) =>
         for {
-          maybeLastLoggedInIdentity <- userDAO.findOne(userId).futureBox
+          maybeLastLoggedInIdentity <- Fox.fromFuture(userDAO.findOne(userId).futureBox)
           identity <- maybeLastLoggedInIdentity match {
             case Full(user) if !user.isDeactivated => Fox.successful(user)
             case _                                 => userDAO.findFirstByMultiUser(multiUser._id)
@@ -76,7 +76,8 @@ class UserService @Inject()(conf: WkConf,
 
   def assertNotInOrgaYet(multiUserId: ObjectId, organizationId: String): Fox[Unit] =
     for {
-      userBox <- userDAO.findOneByOrgaAndMultiUser(organizationId, multiUserId)(GlobalAccessContext).futureBox
+      userBox <- Fox.fromFuture(
+        userDAO.findOneByOrgaAndMultiUser(organizationId, multiUserId)(GlobalAccessContext).futureBox)
       _ <- Fox.fromBool(userBox.isEmpty) ?~> "organization.alreadyJoined"
     } yield ()
 
@@ -138,9 +139,8 @@ class UserService @Inject()(conf: WkConf,
   def fillSuperUserIdentity(originalUser: User, organizationId: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       multiUser <- multiUserDAO.findOne(originalUser._multiUser)
-      existingIdentity: Box[User] <- userDAO
-        .findOneByOrgaAndMultiUser(organizationId, originalUser._multiUser)(GlobalAccessContext)
-        .futureBox
+      existingIdentity: Box[User] <- Fox.fromFuture(
+        userDAO.findOneByOrgaAndMultiUser(organizationId, originalUser._multiUser)(GlobalAccessContext).futureBox)
       _ <- if (multiUser.isSuperUser && existingIdentity.isEmpty) {
         joinOrganization(originalUser, organizationId, autoActivate = true, isAdmin = true, isUnlisted = true)
       } else Fox.successful(())
@@ -379,7 +379,7 @@ class UserService @Inject()(conf: WkConf,
           .map(valueAndIndex =>
             (parseArrayLiteral(userCompactInfo.experienceDomainsAsArrayLiteral)(valueAndIndex._2),
              Json.toJsFieldJsValueWrapper(valueAndIndex._1.toInt))): _*)
-      novelUserExperienceInfos <- Json.parse(userCompactInfo.novelUserExperienceInfos).validate[JsObject]
+      novelUserExperienceInfos <- Json.parse(userCompactInfo.novelUserExperienceInfos).validate[JsObject].asOpt.toFox
     } yield {
       Json.obj(
         "id" -> userCompactInfo._id,

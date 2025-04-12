@@ -193,7 +193,7 @@ object ZipIO extends LazyLogging with FoxImplicits {
 
     val resultFox = zipEntries.foldLeft[Fox[List[A]]](Fox.successful(List.empty)) { (results, entry) =>
       Fox
-        .future2Fox(results.futureBox)
+        .fromFuture(results.futureBox)
         .map {
           case Full(rs) =>
             val input: InputStream = zip.getInputStream(entry)

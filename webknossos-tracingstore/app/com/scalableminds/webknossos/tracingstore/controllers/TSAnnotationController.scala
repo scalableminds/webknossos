@@ -168,7 +168,7 @@ class TSAnnotationController @Inject()(
               _.annotationLayers.exists(_.typ == AnnotationLayerTypeProto.Volume))
             firstVolumeAnnotationId = if (firstVolumeAnnotationIndex < 0) None
             else Some(request.body(firstVolumeAnnotationIndex))
-            mergeEditableMappingsResultBox <- Fox.future2Fox(
+            mergeEditableMappingsResultBox <- Fox.fromFuture(
               editableMappingMergeService
                 .mergeEditableMappings(request.body,
                                        firstVolumeAnnotationId,

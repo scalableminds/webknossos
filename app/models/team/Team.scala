@@ -132,7 +132,7 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       countList <- run(
         q"SELECT COUNT(*) FROM webknossos.teams WHERE name = $teamName AND _organization = $organizationId".as[Int])
-      count <- countList.headOption
+      count <- countList.headOption.toFox
     } yield count
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Team]] =

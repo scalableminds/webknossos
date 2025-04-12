@@ -60,7 +60,7 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
     headerInfoCache.getOrLoad(
       uri, { uri =>
         for {
-          response <- Fox.future2Fox(ws.url(uri.toString).withRequestTimeout(readTimeout).head())
+          response <- Fox.fromFuture(ws.url(uri.toString).withRequestTimeout(readTimeout).head())
           acceptsPartialRequests = response.headerValues("Accept-Ranges").contains("bytes")
           dataSize = response.header("Content-Length").map(_.toLong).getOrElse(0L)
         } yield (acceptsPartialRequests, dataSize)
@@ -71,7 +71,7 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
                                                                 tc: TokenContext): Fox[WSResponse] =
     for {
       _ <- ensureRangeRequestsSupported(uri)
-      response <- Fox.future2Fox(
+      response <- Fox.fromFuture(
         buildRequest(uri).withHttpHeaders("Range" -> s"bytes=${range.start}-${range.end - 1}").get())
       _ = updateRangeRequestsSupportedForResponse(response)
     } yield response
@@ -80,12 +80,12 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
                                                          tc: TokenContext): Fox[WSResponse] =
     for {
       _ <- ensureRangeRequestsSupported(uri)
-      response <- Fox.future2Fox(buildRequest(uri).withHttpHeaders("Range" -> s"bytes=-$length").get())
+      response <- Fox.fromFuture(buildRequest(uri).withHttpHeaders("Range" -> s"bytes=-$length").get())
       _ = updateRangeRequestsSupportedForResponse(response)
     } yield response
 
   private def getComplete(uri: URI)(implicit ec: ExecutionContext, tc: TokenContext): Fox[WSResponse] =
-    Fox.future2Fox(buildRequest(uri).get())
+    Fox.fromFuture(buildRequest(uri).get())
 
   private def ensureRangeRequestsSupported(uri: URI)(implicit ec: ExecutionContext): Fox[Unit] =
     for {

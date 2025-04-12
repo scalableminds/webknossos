@@ -46,10 +46,10 @@ class TracingStoreService @Inject()(
 
   def validateAccess(name: String, key: String)(block: TracingStore => Future[Result])(
       implicit m: MessagesProvider): Fox[Result] =
-    Fox.future2Fox(
+    Fox.fromFuture(
       tracingStoreDAO
         .findOneByKey(key) // Check if key is valid
-        .flatMap(tracingStore => Fox.future2Fox(block(tracingStore))) // Run underlying action
+        .flatMap(tracingStore => Fox.fromFuture(block(tracingStore))) // Run underlying action
         .getOrElse {
           logger.info(s"Denying tracing store request from $name due to unknown key.")
           Forbidden(Messages("tracingStore.notFound"))

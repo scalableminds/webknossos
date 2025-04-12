@@ -135,7 +135,7 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
         if (searchDepth > MAX_RECURSIVE_SEARCH_DEPTH) Fox.empty
         else {
           Fox
-            .future2Fox(
+            .fromFuture(
               explorePathsWithAllExplorersAndGetFirstMatch(path, explorers, credentialId, reportMutable).futureBox)
             .flatMap(
               explorationResultOfPath =>
@@ -157,9 +157,9 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
       tc: TokenContext,
       mp: MessagesProvider): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     Fox
-      .future2Fox(Fox.sequence(explorers.map { explorer =>
+      .fromFuture(Fox.sequence(explorers.map { explorer =>
         {
-          Fox.future2Fox(explorer.explore(path, credentialId).futureBox).flatMap {
+          Fox.fromFuture(explorer.explore(path, credentialId).futureBox).flatMap {
             handleExploreResult(_, explorer, path, reportMutable)
           }
         }

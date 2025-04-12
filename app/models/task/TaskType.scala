@@ -67,7 +67,7 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   protected def parse(r: TasktypesRow): Fox[TaskType] =
     for {
-      tracingType <- TracingType.fromString(r.tracingtype) ?~> "failed to parse tracing type"
+      tracingType <- TracingType.fromString(r.tracingtype).toFox ?~> "failed to parse tracing type"
       settingsAllowedModes <- Fox.combined(
         parseArrayLiteral(r.settingsAllowedmodes)
           .map(TracingMode.fromString(_).toFox)) ?~> "failed to parse tracing mode"

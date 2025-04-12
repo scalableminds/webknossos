@@ -167,7 +167,7 @@ class VolumeTracingService @Inject()(
       actionBucketData <- action.base64Data.map(Base64.getDecoder.decode).toFox
       _ <- Fox.runIf(volumeLayer.tracing.getHasSegmentIndex) {
         for {
-          previousBucketBytes <- Fox.future2Fox(volumeBucketBuffer.getWithFallback(action.bucketPosition).futureBox)
+          previousBucketBytes <- Fox.fromFuture(volumeBucketBuffer.getWithFallback(action.bucketPosition).futureBox)
           _ <- updateSegmentIndex(
             volumeLayer,
             segmentIndexBuffer,
@@ -286,7 +286,7 @@ class VolumeTracingService @Inject()(
       _ <- Fox.serialCombined(bucketStreamBeforeRevert) {
         case (bucketPosition, dataBeforeRevert, version) =>
           if (version > sourceVersion) {
-            Fox.future2Fox(loadBucket(volumeLayer, bucketPosition, Some(sourceVersion)).futureBox).map {
+            Fox.fromFuture(loadBucket(volumeLayer, bucketPosition, Some(sourceVersion)).futureBox).map {
               case Full(dataAfterRevert) =>
                 for {
                   _ <- saveBucket(volumeLayer, bucketPosition, dataAfterRevert, newVersion)
@@ -927,7 +927,7 @@ class VolumeTracingService @Inject()(
               _ <- saveBucket(volumeLayer, bucketPosition, bucketBytes, tracing.version + 1)
               _ <- Fox.runIfOptionTrue(tracing.hasSegmentIndex) {
                 for {
-                  previousBucketBytes <- Fox.future2Fox(
+                  previousBucketBytes <- Fox.fromFuture(
                     loadBucket(volumeLayer, bucketPosition, Some(tracing.version)).futureBox)
                   _ <- updateSegmentIndex(
                     volumeLayer,

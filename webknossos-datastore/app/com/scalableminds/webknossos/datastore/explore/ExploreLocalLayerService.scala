@@ -100,7 +100,7 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
       implicit ec: ExecutionContext): Fox[DataSourceWithMagLocators] =
     for {
       // Go down subdirectories until we find a directory with an attributes.json file that matches N5Header
-      layerPath <- Fox.future2Fox(
+      layerPath <- Fox.fromFuture(
         PathUtils
           .recurseSubdirsUntil(
             path,

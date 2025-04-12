@@ -184,7 +184,7 @@ Samplecountry
     } yield ()
 
   private def insertRootFolder(): Fox[Unit] =
-    Fox.future2Fox(folderDAO.findOne(defaultOrganization._rootFolder).futureBox).flatMap {
+    Fox.fromFuture(folderDAO.findOne(defaultOrganization._rootFolder).futureBox).flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
         folderDAO.insertAsRoot(Folder(defaultOrganization._rootFolder, folderService.defaultRootName, JsArray.empty))
@@ -195,7 +195,7 @@ Samplecountry
                                 user: User,
                                 isTeamManager: Boolean): Fox[Unit] =
     Fox
-      .future2Fox(userService.userFromMultiUserEmail(userEmail).futureBox)
+      .fromFuture(userService.userFromMultiUserEmail(userEmail).futureBox)
       .flatMap {
         case Full(_) => Fox.successful(())
         case _ =>
@@ -213,7 +213,7 @@ Samplecountry
   private def insertToken(): Fox[Unit] = {
     val expiryTime = conf.Silhouette.TokenAuthenticator.authenticatorExpiry
     Fox
-      .future2Fox(tokenDAO.findOneByLoginInfo("credentials", defaultUser._id.id, TokenType.Authentication).futureBox)
+      .fromFuture(tokenDAO.findOneByLoginInfo("credentials", defaultUser._id.id, TokenType.Authentication).futureBox)
       .flatMap {
         case Full(_) => Fox.successful(())
         case _ =>
@@ -232,7 +232,7 @@ Samplecountry
 
   private def insertOrganization(): Fox[Unit] =
     Fox
-      .future2Fox(organizationDAO.findOne(defaultOrganization._id).futureBox)
+      .fromFuture(organizationDAO.findOne(defaultOrganization._id).futureBox)
       .flatMap {
         case Full(_) => Fox.successful(())
         case _ =>
@@ -292,7 +292,7 @@ Samplecountry
 
   def insertLocalDataStoreIfEnabled(): Fox[Unit] =
     if (storeModules.localDataStoreEnabled) {
-      Fox.future2Fox(dataStoreDAO.findOneByUrl(conf.Http.uri).futureBox).flatMap { maybeStore =>
+      Fox.fromFuture(dataStoreDAO.findOneByUrl(conf.Http.uri).futureBox).flatMap { maybeStore =>
         if (maybeStore.isEmpty) {
           logger.info("Inserting local datastore")
           dataStoreDAO.insertOne(defaultDataStore)
@@ -302,7 +302,7 @@ Samplecountry
 
   private def insertLocalTracingStoreIfEnabled(): Fox[Unit] =
     if (storeModules.localTracingStoreEnabled) {
-      Fox.future2Fox(tracingStoreDAO.findOneByUrl(conf.Http.uri).futureBox).flatMap { maybeStore =>
+      Fox.fromFuture(tracingStoreDAO.findOneByUrl(conf.Http.uri).futureBox).flatMap { maybeStore =>
         if (maybeStore.isEmpty) {
           logger.info("Inserting local tracingstore")
           tracingStoreDAO.insertOne(
@@ -316,7 +316,7 @@ Samplecountry
 
   private def updateLocalDataStorePublicUri(): Fox[Unit] =
     if (storeModules.localDataStoreEnabled) {
-      Fox.future2Fox(dataStoreDAO.findOneByUrl(conf.Http.uri).futureBox).flatMap {
+      Fox.fromFuture(dataStoreDAO.findOneByUrl(conf.Http.uri).futureBox).flatMap {
         case Full(store) =>
           val newPublicUri = conf.Datastore.publicUri.getOrElse(conf.Http.uri)
           if (store.publicUrl == newPublicUri) {
@@ -328,7 +328,7 @@ Samplecountry
 
   private def updateLocalTracingStorePublicUri(): Fox[Unit] =
     if (storeModules.localTracingStoreEnabled) {
-      Fox.future2Fox(tracingStoreDAO.findOneByUrl(conf.Http.uri).futureBox).flatMap {
+      Fox.fromFuture(tracingStoreDAO.findOneByUrl(conf.Http.uri).futureBox).flatMap {
         case Full(store) =>
           val newPublicUri = conf.Tracingstore.publicUri.getOrElse(conf.Http.uri)
           if (store.publicUrl == newPublicUri) {

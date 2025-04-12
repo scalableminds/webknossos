@@ -45,7 +45,7 @@ class AnnotationPrivateLinkController @Inject()(
   private def findAnnotationByIdAndUserToken(annotationId: String, userToken: Option[String]): Fox[Annotation] =
     for {
       annotationIdValidated <- ObjectId.fromString(annotationId)
-      userBox <- Fox.future2Fox(bearerTokenService.userForTokenOpt(userToken).futureBox)
+      userBox <- Fox.fromFuture(bearerTokenService.userForTokenOpt(userToken).futureBox)
       ctx = DBAccessContext(userBox.toOption)
       annotation <- annotationDAO.findOne(annotationIdValidated)(ctx) ?~> "annotation.notFound"
     } yield annotation

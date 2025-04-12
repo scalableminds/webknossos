@@ -83,7 +83,7 @@ class AuthenticationController @Inject()(
             } else {
               for {
                 _ <- Fox.successful(())
-                inviteBox: Box[Invite] <- Fox.future2Fox(
+                inviteBox: Box[Invite] <- Fox.fromFuture(
                   inviteService.findInviteByTokenOpt(signUpData.inviteToken).futureBox)
                 organizationId = Option(signUpData.organization).filter(_.trim.nonEmpty)
                 organization <- organizationService.findOneByInviteByIdOrDefault(inviteBox.toOption, organizationId)(
@@ -189,7 +189,7 @@ class AuthenticationController @Inject()(
       requestingMultiUser <- multiUserDAO.findOne(request.identity._multiUser)
       _ <- Fox.fromBool(requestingMultiUser.isSuperUser) ?~> Messages("user.notAuthorised") ~> FORBIDDEN
       targetUser <- userService.userFromMultiUserEmail(email) ?~> "user.notFound" ~> NOT_FOUND
-      result <- Fox.future2Fox(switchToUser(targetUser._id))
+      result <- Fox.fromFuture(switchToUser(targetUser._id))
     } yield result
   }
 
@@ -201,7 +201,7 @@ class AuthenticationController @Inject()(
       targetUser <- userDAO.findOneByOrgaAndMultiUser(organization._id, request.identity._multiUser)(
         GlobalAccessContext) ?~> "user.notFound" ~> NOT_FOUND
       _ <- Fox.fromBool(!targetUser.isDeactivated) ?~> "user.deactivated"
-      result <- Fox.future2Fox(switchToUser(targetUser._id))
+      result <- Fox.fromFuture(switchToUser(targetUser._id))
       _ <- multiUserDAO.updateLastLoggedInIdentity(request.identity._multiUser, targetUser._id)
     } yield result
   }
@@ -331,7 +331,7 @@ class AuthenticationController @Inject()(
                     for {
                       _ <- Fox.successful(logger.info(s"Multiuser ${user._multiUser} changed their password."))
                       _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordHasher.hash(passwords.password1))
-                      _ <- Fox.future2Fox(combinedAuthenticatorService.discard(request.authenticator, Ok))
+                      _ <- Fox.fromFuture(combinedAuthenticatorService.discard(request.authenticator, Ok))
                       userEmail <- userService.emailFor(user)
                     } yield {
                       Mailer ! Send(defaultMails.changePasswordMail(user.name, userEmail))
@@ -458,7 +458,7 @@ class AuthenticationController @Inject()(
             ) // Assuming email verification was done by OIDC provider
             // After registering, also login
             loginInfo = LoginInfo("credentials", user._id.toString)
-            loginResult <- Fox.future2Fox(loginUser(loginInfo))
+            loginResult <- Fox.fromFuture(loginUser(loginInfo))
           } yield loginResult
         case _ => Future.successful(InternalServerError)
       }
@@ -472,7 +472,7 @@ class AuthenticationController @Inject()(
         request.queryString.get("code").flatMap(_.headOption).getOrElse("missing code"),
       ) ?~> "oidc.getToken.failed" ?~> "oidc.authentication.failed"
       userInfoFromTokens <- extractUserInfoFromTokenResponses(accessToken, idToken)
-      userResult <- Fox.future2Fox(loginOrSignupViaOidc(userInfoFromTokens)(request))
+      userResult <- Fox.fromFuture(loginOrSignupViaOidc(userInfoFromTokens)(request))
     } yield userResult
   }
 
@@ -591,7 +591,7 @@ class AuthenticationController @Inject()(
     var (errors, fN, lN) = normalizeName(firstName, lastName)
     for {
       nameEmailError: (String, String, String, List[String]) <- Fox
-        .future2Fox(multiUserDAO.findOneByEmail(email.toLowerCase)(GlobalAccessContext).futureBox)
+        .fromFuture(multiUserDAO.findOneByEmail(email.toLowerCase)(GlobalAccessContext).futureBox)
         .flatMap {
           case Full(_) =>
             errors ::= "user.email.alreadyInUse"

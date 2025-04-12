@@ -107,7 +107,7 @@ class EditableMappingUpdater(
 
   private def updateIter(mappingFox: Fox[EditableMappingInfo], remainingUpdates: List[UpdateAction])(
       implicit ec: ExecutionContext): Fox[EditableMappingInfo] =
-    Fox.future2Fox(mappingFox.futureBox).flatMap {
+    Fox.fromFuture(mappingFox.futureBox).flatMap {
       case Empty =>
         Fox.empty
       case Full(mapping) =>
@@ -402,7 +402,7 @@ class EditableMappingUpdater(
         case (chunkKey, _, version) =>
           if (version > sourceVersion) {
             Fox
-              .future2Fox(editableMappingService.getSegmentToAgglomerateChunk(chunkKey, Some(sourceVersion)).futureBox)
+              .fromFuture(editableMappingService.getSegmentToAgglomerateChunk(chunkKey, Some(sourceVersion)).futureBox)
               .map {
                 case Full(chunkData) => segmentToAgglomerateBuffer.put(chunkKey, (chunkData.toMap, false))
                 case Empty           => segmentToAgglomerateBuffer.put(chunkKey, (Map[Long, Long](), true))
@@ -420,7 +420,7 @@ class EditableMappingUpdater(
             for {
               agglomerateId <- agglomerateIdFromAgglomerateGraphKey(graphKey).toFox
               _ <- Fox
-                .future2Fox(
+                .fromFuture(
                   editableMappingService.getAgglomerateGraphForId(tracingId, sourceVersion, agglomerateId).futureBox)
                 .flatMap {
                   case Full(graphData) => Fox.successful(agglomerateToGraphBuffer.put(graphKey, (graphData, false)))

@@ -65,7 +65,7 @@ class FossilDBClient(collection: String,
         logger.info(f"Successfully tested FossilDB health at $authority. Reply: " + replyString)
     } yield ()
     for {
-      box <- Fox.future2Fox(resultFox.futureBox)
+      box <- Fox.fromFuture(resultFox.futureBox)
       _ <- box match {
         case Full(()) => Fox.successful(())
         case Empty    => Fox.empty
@@ -162,7 +162,7 @@ class FossilDBClient(collection: String,
   private def getMultipleKeysByListImpl[T](keys: Seq[String], version: Option[Long])(
       implicit fromByteArray: Array[Byte] => Box[T]): Fox[Seq[Box[VersionedKeyValuePair[T]]]] =
     for {
-      reply: GetMultipleKeysByListReply <- Fox.future2Fox(
+      reply: GetMultipleKeysByListReply <- Fox.fromFuture(
         stub.getMultipleKeysByList(GetMultipleKeysByListRequest(collection, keys, version)))
       _ <- assertSuccess(reply.success, reply.errorMessage)
       parsedValues: Seq[Box[VersionedKeyValuePair[T]]] = keys.zip(reply.versionValueBoxes).map {
@@ -203,7 +203,7 @@ class FossilDBClient(collection: String,
       _ <- assertSuccess(reply.success, reply.errorMessage)
     } yield ()
     for {
-      box <- Fox.future2Fox(putFox.futureBox)
+      box <- Fox.fromFuture(putFox.futureBox)
       _ <- box match {
         case Full(()) => Fox.successful(())
         case Empty    => Fox.empty
@@ -241,7 +241,7 @@ class FossilDBClient(collection: String,
       _ <- assertSuccess(reply.success, reply.errorMessage)
     } yield ()
     for {
-      box <- Fox.future2Fox(putFox.futureBox)
+      box <- Fox.fromFuture(putFox.futureBox)
       _ <- box match {
         case Full(()) => Fox.successful(())
         case Empty    => Fox.empty

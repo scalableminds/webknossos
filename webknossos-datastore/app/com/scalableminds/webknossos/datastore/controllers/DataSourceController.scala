@@ -99,7 +99,7 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDataSources(organizationName)) {
         for {
           unfinishedUploads <- dsRemoteWebknossosClient.getUnfinishedUploadsForUser(organizationName)
-          unfinishedUploadsWithUploadIds <- Fox.future2Fox(
+          unfinishedUploadsWithUploadIds <- Fox.fromFuture(
             uploadService.addUploadIdsToUnfinishedUploads(unfinishedUploads))
           unfinishedUploadsWithUploadIdsWithoutDataSourceId = unfinishedUploadsWithUploadIds.map(_.withoutDataSourceId)
         } yield Ok(Json.toJson(unfinishedUploadsWithUploadIdsWithoutDataSourceId))

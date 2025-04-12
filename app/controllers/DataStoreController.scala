@@ -48,7 +48,7 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
 
   def create: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(dataStoreReads) { dataStore =>
-      Fox.future2Fox(dataStoreDAO.findOneByName(dataStore.name).futureBox).flatMap {
+      Fox.fromFuture(dataStoreDAO.findOneByName(dataStore.name).futureBox).flatMap {
         case Empty =>
           for {
             _ <- Fox.fromBool(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN

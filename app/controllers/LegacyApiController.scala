@@ -53,7 +53,7 @@ class LegacyApiController @Inject()(datasetController: DatasetController,
     implicit request =>
       for {
         _ <- Fox.successful(logVersioned(request))
-        result <- Fox.future2Fox(datasetController.isValidNewName(datasetName)(request))
+        result <- Fox.fromFuture(datasetController.isValidNewName(datasetName)(request))
       } yield result
   }
 
@@ -61,7 +61,7 @@ class LegacyApiController @Inject()(datasetController: DatasetController,
     sil.UserAwareAction.async { implicit request =>
       for {
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
-        result <- Fox.future2Fox(datasetController.read(dataset._id, sharingToken)(request))
+        result <- Fox.fromFuture(datasetController.read(dataset._id, sharingToken)(request))
         adaptedResult <- replaceInResult(migrateDatasetJsonToOldFormat)(result)
       } yield adaptedResult
     }
@@ -71,7 +71,7 @@ class LegacyApiController @Inject()(datasetController: DatasetController,
       for {
         _ <- Fox.successful(logVersioned(request))
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
-        result <- Fox.future2Fox(datasetController.update(dataset._id)(request))
+        result <- Fox.fromFuture(datasetController.update(dataset._id)(request))
         adaptedResult <- replaceInResult(migrateDatasetJsonToOldFormat)(result)
       } yield adaptedResult
     }
@@ -81,7 +81,7 @@ class LegacyApiController @Inject()(datasetController: DatasetController,
       for {
         _ <- Fox.successful(logVersioned(request))
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
-        result <- Fox.future2Fox(datasetController.updateTeams(dataset._id)(request))
+        result <- Fox.fromFuture(datasetController.updateTeams(dataset._id)(request))
       } yield result
     }
 
@@ -90,14 +90,14 @@ class LegacyApiController @Inject()(datasetController: DatasetController,
       for {
         _ <- Fox.successful(logVersioned(request))
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
-        sharingToken <- Fox.future2Fox(datasetController.getSharingToken(dataset._id)(request))
+        sharingToken <- Fox.fromFuture(datasetController.getSharingToken(dataset._id)(request))
       } yield sharingToken
     }
 
   def readTaskV8(taskId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- Fox.successful(logVersioned(request))
-      result <- Fox.future2Fox(taskController.read(taskId)(request))
+      result <- Fox.fromFuture(taskController.read(taskId)(request))
       adaptedResult <- replaceInResult(addLegacyDataSetFieldToTask)(result)
     } yield adaptedResult
   }
@@ -112,7 +112,7 @@ class LegacyApiController @Inject()(datasetController: DatasetController,
                                                                    request.identity._organization)
           } yield TaskParameters.fromLegacyTaskParameters(params, dataset._id))
         requestWithUpdatedBody = request.withBody(taskParametersWithDatasetId)
-        result <- Fox.future2Fox(taskController.create()(requestWithUpdatedBody))
+        result <- Fox.fromFuture(taskController.create()(requestWithUpdatedBody))
         adaptedResult <- replaceInResult(addLegacyDataSetFieldToTaskCreationResult)(result)
       } yield adaptedResult
     }
@@ -124,7 +124,7 @@ class LegacyApiController @Inject()(datasetController: DatasetController,
     sil.SecuredAction.async { implicit request =>
       for {
         _ <- Fox.successful(logVersioned(request))
-        result <- Fox.future2Fox(projectController.tasksForProject(id, limit, pageNumber, includeTotalCount)(request))
+        result <- Fox.fromFuture(projectController.tasksForProject(id, limit, pageNumber, includeTotalCount)(request))
         replacedResults <- replaceInResult(addLegacyDataSetFieldToTask)(result)
       } yield replacedResults
     }
@@ -184,7 +184,7 @@ class LegacyApiController @Inject()(datasetController: DatasetController,
     sil.UserAwareAction.async { implicit request =>
       for {
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationName)
-        result <- Fox.future2Fox(datasetController.read(dataset._id, sharingToken)(request))
+        result <- Fox.fromFuture(datasetController.read(dataset._id, sharingToken)(request))
         adaptedResult <- replaceInResult(replaceVoxelSize)(result)
       } yield adaptedResult
     }

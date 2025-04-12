@@ -184,7 +184,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
         (taskId, initializingAnnotationId) <- taskDAO
           .assignNext(user._id, teams, isTeamManagerOrAdmin) ?~> "task.unavailable"
-        insertedAnnotationBox <- Fox.future2Fox(
+        insertedAnnotationBox <- Fox.fromFuture(
           annotationService.createAnnotationFor(user, taskId, initializingAnnotationId).futureBox)
         _ <- annotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
         annotation <- insertedAnnotationBox.toFox
@@ -203,7 +203,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed"
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, assignee)) ?~> "notAllowed"
         (_, initializingAnnotationId) <- taskDAO.assignOneTo(id, userId, teams) ?~> "task.unavailable"
-        insertedAnnotationBox <- Fox.future2Fox(
+        insertedAnnotationBox <- Fox.fromFuture(
           annotationService.createAnnotationFor(assignee, id, initializingAnnotationId).futureBox)
         _ <- annotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
         _ <- insertedAnnotationBox.toFox

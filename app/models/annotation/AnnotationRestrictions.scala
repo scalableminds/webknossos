@@ -68,7 +68,7 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService)(implicit
       override def allowUpdate(user: Option[User]): Fox[Boolean] =
         for {
           accessAllowed <- allowAccess(user)
-          annotationOwnerBox <- Fox.future2Fox(
+          annotationOwnerBox <- Fox.fromFuture(
             userService
               .findOneCached(annotation._user)(GlobalAccessContext)
               .futureBox) // sandbox annotations have no owner

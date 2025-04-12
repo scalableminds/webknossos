@@ -45,7 +45,7 @@ class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
   def tryAcquiringAnnotationMutex(annotationId: ObjectId, userId: ObjectId): Fox[MutexResult] =
     this.synchronized {
       for {
-        mutexBox <- Fox.future2Fox(annotationMutexDAO.findOne(annotationId).futureBox)
+        mutexBox <- Fox.fromFuture(annotationMutexDAO.findOne(annotationId).futureBox)
         result <- mutexBox match {
           case Full(mutex) =>
             if (mutex.userId == userId)

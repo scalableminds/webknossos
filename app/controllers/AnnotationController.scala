@@ -105,7 +105,7 @@ class AnnotationController @Inject()(
     log() {
       for {
         annotation <- provider.provideAnnotation(id, request.identity) ?~> "annotation.notFound" ~> NOT_FOUND
-        result <- Fox.future2Fox(info(annotation.typ.toString, id, timestamp)(request))
+        result <- Fox.fromFuture(info(annotation.typ.toString, id, timestamp)(request))
       } yield result
 
     }
@@ -128,7 +128,7 @@ class AnnotationController @Inject()(
     sil.SecuredAction.async { implicit request =>
       for {
         annotation <- provider.provideAnnotation(id, request.identity) ?~> "annotation.notFound" ~> NOT_FOUND
-        result <- Fox.future2Fox(merge(annotation.typ.toString, id, mergedTyp, mergedId)(request))
+        result <- Fox.fromFuture(merge(annotation.typ.toString, id, mergedTyp, mergedId)(request))
       } yield result
     }
 
@@ -322,7 +322,7 @@ class AnnotationController @Inject()(
   def cancelWithoutType(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
-      result <- Fox.future2Fox(cancel(annotation.typ.toString, id)(request))
+      result <- Fox.fromFuture(cancel(annotation.typ.toString, id)(request))
     } yield result
   }
 

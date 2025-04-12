@@ -723,7 +723,7 @@ class AnnotationService @Inject()(
       dataset <- datasetDAO.findOne(annotation._dataset) ?~> "dataset.notFoundForAnnotation"
       organization <- organizationDAO.findOne(dataset._organization) ?~> "organization.notFound"
       taskFox = annotation._task.toFox.flatMap(taskId => taskDAO.findOne(taskId))
-      taskJson <- Fox.future2Fox(taskFox.flatMap(t => taskService.publicWrites(t)).getOrElse(JsNull))
+      taskJson <- Fox.fromFuture(taskFox.flatMap(t => taskService.publicWrites(t)).getOrElse(JsNull))
       userJson <- userJsonForAnnotation(annotation._user)
       settings <- settingsFor(annotation)
       restrictionsJs <- AnnotationRestrictions.writeAsJson(

@@ -97,7 +97,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   protected def parse(r: UsersRow): Fox[User] =
     for {
-      userConfiguration <- parseAndValidateJson[JsObject](r.userconfiguration)
+      userConfiguration <- parseAndValidateJson[JsObject](r.userconfiguration).toFox
     } yield {
       User(
         ObjectId(r._Id),
@@ -396,7 +396,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       resultList <- run(
         q"SELECT COUNT(*) FROM $existingCollectionName WHERE _organization = $organizationId AND NOT isDeactivated AND NOT isUnlisted"
           .as[Int])
-      result <- resultList.headOption
+      result <- resultList.headOption.toFox
     } yield result
 
   def countAdminsForOrganization(organizationId: String): Fox[Int] =
@@ -404,7 +404,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       resultList <- run(
         q"SELECT COUNT(*) from $existingCollectionName WHERE _organization = $organizationId AND isAdmin AND NOT isUnlisted"
           .as[Int])
-      result <- resultList.headOption
+      result <- resultList.headOption.toFox
     } yield result
 
   def countOwnersForOrganization(organizationId: String): Fox[Int] =
@@ -412,13 +412,13 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       resultList <- run(
         q"SELECT COUNT(*) FROM $existingCollectionName WHERE _organization = $organizationId AND isOrganizationOwner AND NOT isUnlisted"
           .as[Int])
-      result <- resultList.headOption
+      result <- resultList.headOption.toFox
     } yield result
 
   def countIdentitiesForMultiUser(multiUserId: ObjectId): Fox[Int] =
     for {
       resultList <- run(q"SELECT COUNT(*) FROM $existingCollectionName WHERE _multiUser = $multiUserId".as[Int])
-      result <- resultList.headOption
+      result <- resultList.headOption.toFox
     } yield result
 
   def insertOne(u: User): Fox[Unit] =

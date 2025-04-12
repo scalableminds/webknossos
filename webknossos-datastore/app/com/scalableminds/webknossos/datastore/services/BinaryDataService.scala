@@ -44,7 +44,7 @@ class BinaryDataService(val dataBaseDir: Path,
         handleBucketRequest(request, bucket.copy(additionalCoordinates = request.settings.additionalCoordinates))
       }
     } else {
-      Fox.future2Fox {
+      Fox.fromFuture {
         Fox.sequence {
           bucketQueue.toList.map { bucket =>
             handleBucketRequest(request, bucket.copy(additionalCoordinates = request.settings.additionalCoordinates))
@@ -87,7 +87,7 @@ class BinaryDataService(val dataBaseDir: Path,
           s"Loading ${requests.length} buckets for $dataSourceId layer ${dataLayer.name}, first request: ${firstRequest.cuboid.topLeft.toBucket}",
           bucketProvider.loadMultiple(readInstructions)
         )
-        bucketBoxesConverted <- Fox.future2Fox(Fox.serialSequenceBox(requestsSelected.zip(bucketBoxes)) {
+        bucketBoxesConverted <- Fox.fromFuture(Fox.serialSequenceBox(requestsSelected.zip(bucketBoxes)) {
           case (request, Full(bucketBytes)) => convertAccordingToRequest(request, bucketBytes)
           case (_, other)                   => other.toFox
         })
@@ -135,7 +135,7 @@ class BinaryDataService(val dataBaseDir: Path,
         } yield (dataConverted, index)
     }
 
-    Fox.future2Fox {
+    Fox.fromFuture {
       Fox.sequenceOfFulls(requestData).map { l =>
         val bytesArrays = l.map { case (byteArray, _) => byteArray }
         val foundIndices = l.map { case (_, index)    => index }

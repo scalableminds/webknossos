@@ -58,7 +58,7 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
         100
       else
         1000
-   Fox.fromBool(batchSize <= batchLimit) ?~> Messages("task.create.limitExceeded", batchLimit)
+    Fox.fromBool(batchSize <= batchLimit) ?~> Messages("task.create.limitExceeded", batchLimit)
   }
 
   // Used in create (without files) in case of base annotation
@@ -101,15 +101,10 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
 
   // Used in create (without files) in case of base annotation
   private def resolveBaseAnnotationId(annotationOrTaskId: ObjectId)(implicit ctx: DBAccessContext): Fox[Annotation] =
-    annotationDAO
-      .findOne(annotationOrTaskId)
-      .futureBox
-      .map {
-        case Full(value) => Fox.successful(value)
-        case _           => resolveBaseTaskId(annotationOrTaskId)
-      }
-      .toFox
-      .flatten
+    Fox.fromFuture(annotationDAO.findOne(annotationOrTaskId).futureBox).flatMap {
+      case Full(value) => Fox.successful(value)
+      case _           => resolveBaseTaskId(annotationOrTaskId)
+    }
 
   // Used in create (without files) in case of base annotation
   @SuppressWarnings(Array("TraversableHead")) // We check if nonCancelledTaskAnnotations are empty before so head always works
@@ -256,7 +251,7 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
     if (volume.tracing.boundingBox.isEmpty) {
       for {
         dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext)
-        dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable)
+        dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable.toFox)
       } yield volume.copy(tracing = volume.tracing.copy(boundingBox = dataSource.boundingBox))
     } else Fox.successful(volume)
 
@@ -408,9 +403,11 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
       Fox.successful(TaskCreationResult.fromBoxResults(requestedTasks.map(_.map(_ => Json.obj())), List.empty[String]))
     } else {
       for {
-        datasetId <- SequenceUtils.findUniqueElement(flattenedRequestedTasks.map(_._1.datasetId)) ?~> "task.create.notOnSameDataset"
+        datasetId <- SequenceUtils
+          .findUniqueElement(flattenedRequestedTasks.map(_._1.datasetId))
+          .toFox ?~> "task.create.notOnSameDataset"
         dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId)
-        dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable) ?~> "dataset.dataSource.notUsable"
+        dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable.toFox) ?~> "dataset.dataSource.notUsable"
         _ <- assertEachHasEitherSkeletonOrVolume(flattenedRequestedTasks) ?~> "task.create.needsEitherSkeletonOrVolume"
         _ = if (flattenedRequestedTasks.exists(task => task._1.baseAnnotation.isDefined))
           slackNotificationService.noticeBaseAnnotationTaskCreation(
@@ -425,9 +422,9 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
           )
         )
         // Note that volume tracings are saved sequentially to reduce server load
-        volumeSaveResults: List[Box[Unit]] <- Fox.serialSequenceBox(requestedTasks) { requestedTask =>
+        volumeSaveResults: List[Box[Unit]] <- Fox.fromFuture(Fox.serialSequenceBox(requestedTasks) { requestedTask =>
           saveVolumeTracingIfPresent(requestedTask, tracingStoreClient, taskType, dataSource)
-        }
+        })
         requestedTasksWithTracingSaveResults = requestedTasks
           .lazyZip(skeletonSaveResults)
           .lazyZip(volumeSaveResults)
@@ -449,7 +446,7 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
         warnings <- warnIfTeamHasNoAccess(flattenedRequestedTasks.map(_._1), dataset, requestingUser)
         zippedTasksAndAnnotations = taskObjects zip createAnnotationBaseResults
         taskJsons = zippedTasksAndAnnotations.map(tuple => taskToJsonWithOtherFox(tuple._1, tuple._2))
-        result <- TaskCreationResult.fromTaskJsFoxes(taskJsons, warnings)
+        result <- Fox.fromFuture(TaskCreationResult.fromTaskJsFoxes(taskJsons, warnings))
       } yield result
     }
   }
@@ -457,7 +454,7 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
   private def assertEachHasEitherSkeletonOrVolume(
       requestedTasks: List[(TaskParameters, Option[SkeletonTracing], Option[(VolumeTracing, Option[File])])])
     : Fox[Unit] =
-   Fox.fromBool(
+    Fox.fromBool(
       requestedTasks.forall(tuple => tuple._1.baseAnnotation.isDefined || tuple._2.isDefined || tuple._3.isDefined))
 
   private def saveVolumeTracingIfPresent(
@@ -479,7 +476,7 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
                                                              magRestrictions = taskType.settings.magRestrictions,
                                                              dataSource)
         } yield saveResult
-      case f: Failure => box2Fox(f)
+      case f: Failure => f.toFox
       case _          => Fox.empty
     }
 

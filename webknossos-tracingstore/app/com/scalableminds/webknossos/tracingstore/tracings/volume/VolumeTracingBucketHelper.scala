@@ -276,7 +276,7 @@ trait VolumeTracingBucketHelper
           decompressIfNeeded(versionedVolumeBucket.value, volumeLayer.expectedUncompressedBucketSize, debugInfo))
       }
     }
-    Fox.future2Fox(unpackedDataFox.futureBox).flatMap {
+    Fox.fromFuture(unpackedDataFox.futureBox).flatMap {
       case Full(unpackedData) =>
         Fox.successful(unpackedData)
       case Empty =>

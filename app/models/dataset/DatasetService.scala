@@ -20,14 +20,14 @@ import models.folder.FolderDAO
 import models.organization.{Organization, OrganizationDAO}
 import models.team._
 import models.user.{User, UserService}
-import net.liftweb.common.{Box, Empty, EmptyBox, Full}
+import net.liftweb.common.{Empty, EmptyBox, Full}
 import play.api.libs.json.{JsObject, Json}
 import security.RandomIDGenerator
 import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                datasetDAO: DatasetDAO,
@@ -147,9 +147,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     val groupedByOrga = dataSources.groupBy(_.id.organizationId).toList
     Fox
       .serialCombined(groupedByOrga) { orgaTuple: (String, List[InboxDataSource]) =>
-        organizationDAO
-          .findOne(orgaTuple._1)
-          .futureBox
+        Fox
+          .fromFuture(organizationDAO.findOne(orgaTuple._1).futureBox)
           .flatMap {
             case Full(organization) if dataStore.onlyAllowedOrganization.exists(_ != organization._id) =>
               logger.info(
@@ -190,7 +189,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   }
 
   private def updateKnownDataSource(foundDataset: Dataset, dataSource: InboxDataSource, dataStore: DataStore)(
-      implicit ctx: DBAccessContext): Future[Box[ObjectId]] =
+      implicit ctx: DBAccessContext): Fox[ObjectId] =
     if (foundDataset.inboxSourceHash.contains(dataSource.hashCode))
       Fox.successful(foundDataset._id)
     else
@@ -206,7 +205,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   private def updateDataSourceDifferentDataStore(
       foundDataset: Dataset,
       dataSource: InboxDataSource,
-      dataStore: DataStore)(implicit ctx: DBAccessContext): Future[Box[Option[ObjectId]]] =
+      dataStore: DataStore)(implicit ctx: DBAccessContext): Fox[Option[ObjectId]] =
     // The dataset is already present (belonging to the same organization), but reported from a different datastore
     (for {
       originalDataStore <- dataStoreDAO.findOneByName(foundDataset._dataStore)
@@ -228,12 +227,12 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
           s"Dataset ${foundDataset.name}, as reported from ${dataStore.name}, is already present as id ${foundDataset._id} from datastore ${originalDataStore.name} and will not be replaced.")
         Fox.successful(None)
       }
-    }).flatten.futureBox
+    }).flatten
 
   private def insertNewDataset(dataSource: InboxDataSource, datasetName: String, dataStore: DataStore) =
     publicationForFirstDataset.flatMap { publicationId: Option[ObjectId] =>
       createDataset(dataStore, ObjectId.generate, datasetName, dataSource, publicationId).map(_._id)
-    }.futureBox
+    }
 
   private def publicationForFirstDataset: Fox[Option[ObjectId]] =
     if (conf.WebKnossos.SampleOrganization.enabled) {
@@ -250,11 +249,12 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
 
   def getSharingToken(datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[String] = {
 
-    def createAndSaveSharingToken(datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[String] =
+    def createAndSaveSharingToken(datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[String] = {
+      val tokenValue = RandomIDGenerator.generateBlocking()
       for {
-        tokenValue <- new RandomIDGenerator().generate
         _ <- datasetDAO.updateSharingTokenById(datasetId, Some(tokenValue))
       } yield tokenValue
+    }
 
     datasetDAO.getSharingTokenById(datasetId).flatMap {
       case Some(oldToken) => Fox.successful(oldToken)
@@ -293,9 +293,9 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   private def lastUsedTimeFor(datasetId: ObjectId, userOpt: Option[User]): Fox[Instant] =
     userOpt match {
       case Some(user) =>
-        (for {
-          lastUsedTime <- datasetLastUsedTimesDAO.findForDatasetAndUser(datasetId, user._id).futureBox
-        } yield lastUsedTime.toOption.getOrElse(Instant.zero)).toFox
+        for {
+          lastUsedTime <- Fox.fromFuture(datasetLastUsedTimesDAO.findForDatasetAndUser(datasetId, user._id).futureBox)
+        } yield lastUsedTime.toOption.getOrElse(Instant.zero)
       case _ => Fox.successful(Instant.zero)
     }
 
@@ -345,7 +345,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     if (pathInfo.magPathInfos.isEmpty) {
       Fox.successful(())
     } else {
-      val dataset = datasetDAO.findOneByDataSourceId(pathInfo.dataSourceId).futureBox
+      val dataset = Fox.fromFuture(datasetDAO.findOneByDataSourceId(pathInfo.dataSourceId).futureBox)
       dataset.flatMap {
         case Full(dataset) => datasetMagsDAO.updateMagPathsForDataset(dataset._id, pathInfo.magPathInfos)
         case Empty => // Dataset reported but ignored (non-existing/forbidden org)

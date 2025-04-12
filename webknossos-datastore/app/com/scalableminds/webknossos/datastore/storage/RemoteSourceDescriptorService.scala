@@ -43,7 +43,7 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
       layerName: String,
       magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[RemoteSourceDescriptor] =
     for {
-      credentialBox <- Fox.future2Fox(credentialFor(magLocator: MagLocator).futureBox)
+      credentialBox <- Fox.fromFuture(credentialFor(magLocator: MagLocator).futureBox)
       uri <- uriForMagLocator(baseDir, datasetId, layerName, magLocator).toFox
       remoteSource = RemoteSourceDescriptor(uri, credentialBox.toOption)
     } yield remoteSource

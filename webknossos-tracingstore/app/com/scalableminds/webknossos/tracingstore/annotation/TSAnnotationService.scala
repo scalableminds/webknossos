@@ -485,7 +485,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
   )(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] = {
     def updateGroupedIter(annotationWithTracingsFox: Fox[AnnotationWithTracings],
                           remainingUpdateGroups: List[(Long, List[UpdateAction])]): Fox[AnnotationWithTracings] =
-      Fox.future2Fox(annotationWithTracingsFox.futureBox).flatMap {
+      Fox.fromFuture(annotationWithTracingsFox.futureBox).flatMap {
         case Empty => Fox.empty
         case Full(annotationWithTracings) =>
           remainingUpdateGroups match {
@@ -510,7 +510,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
 
     def updateIter(annotationWithTracingsFox: Fox[AnnotationWithTracings],
                    remainingUpdates: List[UpdateAction]): Fox[AnnotationWithTracings] =
-      Fox.future2Fox(annotationWithTracingsFox.futureBox).flatMap {
+      Fox.fromFuture(annotationWithTracingsFox.futureBox).flatMap {
         case Empty => Fox.empty
         case Full(annotationWithTracings) =>
           remainingUpdates match {

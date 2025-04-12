@@ -394,7 +394,7 @@ class AnnotationIOController @Inject()(
     sil.UserAwareAction.async { implicit request =>
       for {
         annotation <- provider.provideAnnotation(id, request.identity) ?~> "annotation.notFound" ~> NOT_FOUND
-        result <- Fox.future2Fox(
+        result <- Fox.fromFuture(
           download(annotation.typ.toString, id, version, skipVolumeData, volumeDataZipFormat)(request))
       } yield result
     }

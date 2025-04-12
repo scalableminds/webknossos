@@ -137,8 +137,8 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       user <- userService.findOneCached(annotation._user)(GlobalAccessContext)
       task <- annotationService.taskFor(annotation)(GlobalAccessContext)
       project <- projectDAO.findOne(task._project)
-      annotationTime <- annotation.tracingTime ?~> "no annotation.tracingTime"
-      timeLimit <- project.expectedTime ?~> "no project.expectedTime"
+      annotationTime <- annotation.tracingTime.toFox ?~> "no annotation.tracingTime"
+      timeLimit <- project.expectedTime.toFox ?~> "no project.expectedTime"
       projectOwner <- userService.findOneCached(project._owner)(GlobalAccessContext)
       projectOwnerEmail <- userService.emailFor(projectOwner)(GlobalAccessContext)
     } yield {
@@ -153,7 +153,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       case Some(taskId) =>
         for {
           _ <- taskDAO.logTime(taskId, duration)(GlobalAccessContext) ?~> "FAILED: TaskSQLDAO.logTime"
-          _ <- signalOverTime(duration, annotation)(GlobalAccessContext).futureBox //signalOverTime is expected to fail in some cases, hence the .futureBox
+          _ <- Fox.fromFuture(signalOverTime(duration, annotation)(GlobalAccessContext).futureBox) //signalOverTime is expected to fail in some cases, hence the .futureBox
         } yield {}
       case _ =>
         Fox.successful(())
@@ -178,7 +178,8 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       _ <- Fox.serialCombined(timespansToUpdate)(t => updateTimeSpanInDb(t._1, t._2))
     } yield ()
 
-    updateResult.onComplete { x =>
+    // TODO maybe implement onComplete on the Fox?
+    updateResult.futureBox.onComplete { x =>
       if (x.isFailure || x.get.isEmpty)
         logger.warn(s"Failed to save all time updates: $x")
     }

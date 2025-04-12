@@ -221,7 +221,7 @@ object S3DataVault {
       case TryFailure(_) => Future.successful("http")
     })
     for {
-      protocol <- Fox.future2Fox(protocolFuture)
+      protocol <- Fox.fromFuture(protocolFuture)
     } yield protocol
   }
 

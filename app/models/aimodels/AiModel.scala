@@ -14,7 +14,7 @@ import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import slick.sql.SqlAction
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.Fox.{future2Fox, futureBox2Fox}
+import com.scalableminds.util.tools.Fox.{fromFuture, futureBox2Fox}
 import models.organization.OrganizationDAO
 import net.liftweb.common.Full
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
@@ -47,13 +47,13 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
                                                            ctx: DBAccessContext): Fox[JsObject] =
     for {
       dataStore <- dataStoreDAO.findOneByName(aiModel._dataStore)
-      userOpt <- Fox.future2Fox(userDAO.findOne(aiModel._user).toFutureOption)
+      userOpt <- Fox.fromFuture(userDAO.findOne(aiModel._user).toFutureOption)
       userJs <- Fox.runOptional(userOpt)(userService.compactWrites)
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
       trainingJobOpt <- Fox.runOptional(aiModel._trainingJob)(
         trainingJobId =>
           Fox
-            .future2Fox(jobDAO.findOne(trainingJobId).futureBox)
+            .fromFuture(jobDAO.findOne(trainingJobId).futureBox)
             .flatMap {
               case Full(job) => Fox.successful(Some(job))
               case _         => Fox.successful(None)

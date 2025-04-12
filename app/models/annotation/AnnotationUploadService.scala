@@ -189,7 +189,7 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService, nmlPar
     } else {
       logger.trace("Extracting from Nml file")
       for {
-        parseResult <- Fox.future2Fox(extractFromNmlFile(file, fileName, sharedParsingParameters))
+        parseResult <- Fox.fromFuture(extractFromNmlFile(file, fileName, sharedParsingParameters))
       } yield MultiNmlParseResult(List(parseResult), Map.empty)
     }
 

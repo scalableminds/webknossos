@@ -65,7 +65,7 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
       }
 
   def createAndInitDataStoreTokenForUser(user: User): Fox[String] =
-    createAndInit(user.loginInfo, TokenType.DataStore, deleteOld = false)
+    Fox.fromFuture(createAndInit(user.loginInfo, TokenType.DataStore, deleteOld = false))
 
   def createAndInit(loginInfo: LoginInfo, tokenType: TokenType, deleteOld: Boolean): Future[String] =
     for {
@@ -87,7 +87,7 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
   }
 
   def remove(tokenValue: String): Fox[Unit] =
-    repository.remove(tokenValue)
+    Fox.fromFuture(repository.remove(tokenValue))
 
   def removeExpiredTokens(): Fox[Unit] =
     repository.deleteAllExpired()

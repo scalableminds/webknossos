@@ -32,7 +32,7 @@ class TimeController @Inject()(userService: UserService,
       for {
         user <- userDAO.findOne(userId) ?~> "user.notFound" ~> NOT_FOUND
         _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
-        timeSpansBox: Box[List[TimeSpan]] <- timeSpanDAO.findAllByUser(user._id).futureBox
+        timeSpansBox: Box[List[TimeSpan]] <- Fox.fromFuture(timeSpanDAO.findAllByUser(user._id).futureBox)
         timesGrouped: Map[Month, Duration] = timeSpanService.sumTimespansPerInterval(TimeSpan.groupByMonth,
                                                                                      timeSpansBox)
         timesGroupedSorted = ListMap(timesGrouped.toSeq.sortBy(_._1): _*)
@@ -59,7 +59,8 @@ class TimeController @Inject()(userService: UserService,
         annotationStatesValidated <- AnnotationState.fromCommaSeparated(annotationStates) ?~> "invalidAnnotationState"
         user <- userService.findOneCached(userId) ?~> "user.notFound" ~> NOT_FOUND
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOf(request.identity, user)
-        _ <- Fox.fromBool(isTeamManagerOrAdmin || user._id == request.identity._id) ?~> "user.notAuthorised" ~> FORBIDDEN
+        _ <- Fox
+          .fromBool(isTeamManagerOrAdmin || user._id == request.identity._id) ?~> "user.notAuthorised" ~> FORBIDDEN
         timesByAnnotation <- timeSpanDAO.summedByAnnotationForUser(user._id,
                                                                    Instant(start),
                                                                    Instant(end),

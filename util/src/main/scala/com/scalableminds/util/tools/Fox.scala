@@ -16,6 +16,12 @@ trait FoxImplicits {
   implicit protected def box2Ox[T](b: Box[T]): Ox[T] =
     new Ox(Future.successful(b))
 
+  implicit protected def try2Ox[T](t: Try[T]): Ox[T] = t match {
+    case Success(result)       => new Ox(Future.successful(Full(result)))
+    case scala.util.Failure(e) => new Ox(Future.successful(Failure(e.toString)))
+  }
+
+  // TODO Do we want this?
   implicit protected def bool2Ox[T](b: Boolean): Ox[Unit] =
     if (b) new Ox(Future.successful(Full(())))
     else new Ox(Future.successful(Empty))
@@ -41,7 +47,7 @@ object Fox extends FoxImplicits {
   /**
     * Transform a Future[T] into a Fox[T] such that if the Future contains an exception, it is turned into a Fox.failure
     */
-  def future2Fox[T](f: Future[T])(implicit ec: ExecutionContext): Fox[T] =
+  def fromFuture[T](f: Future[T])(implicit ec: ExecutionContext): Fox[T] =
     futureBox2Fox(
       for {
         fut <- f.transform {
@@ -58,11 +64,6 @@ object Fox extends FoxImplicits {
   def jsResult2Fox[T](result: JsResult[T])(implicit ec: ExecutionContext): Fox[T] = result match {
     case JsSuccess(value, _) => Fox.successful(value)
     case JsError(e)          => Fox.failure(s"Invalid json: $e")
-  }
-
-  def try2Fox[T](t: Try[T])(implicit ec: ExecutionContext): Fox[T] = t match {
-    case Success(result)       => Fox.successful(result)
-    case scala.util.Failure(e) => Fox.failure(e.toString)
   }
 
   def successful[A](e: A)(implicit ec: ExecutionContext): Fox[A] =

@@ -20,7 +20,7 @@ class ChunkReader(header: DatasetHeader) extends FoxImplicits {
            range: Option[NumericRange[Long]],
            useSkipTypingShortcut: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[MultiArray] =
     for {
-      chunkBytesAndShapeBox: Box[(Array[Byte], Option[Array[Int]])] <- Fox.future2Fox(
+      chunkBytesAndShapeBox: Box[(Array[Byte], Option[Array[Int]])] <- Fox.fromFuture(
         readChunkBytesAndShape(path, range).futureBox)
       chunkShape: Array[Int] = chunkBytesAndShapeBox.toOption.flatMap(_._2).getOrElse(chunkShapeFromMetadata)
       typed <- chunkBytesAndShapeBox.map(_._1) match {

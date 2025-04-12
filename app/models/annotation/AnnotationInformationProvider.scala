@@ -64,7 +64,7 @@ class AnnotationInformationProvider @Inject()(
 
   def annotationForTracing(tracingId: String)(implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
-      annotationBox <- Fox.future2Fox(annotationDAO.findOneByTracingId(tracingId).futureBox)
+      annotationBox <- Fox.fromFuture(annotationDAO.findOneByTracingId(tracingId).futureBox)
       withFallback <- annotationBox match {
         case Full(_) => annotationBox.toFox
         case _       => annotationStore.findCachedByTracingId(tracingId).toFox

@@ -47,7 +47,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
                                      positions: List[Vec3Int],
                                      mag: Vec3Int)(implicit tc: TokenContext) =
     for {
-      dataBucketWise: Seq[Array[Byte]] <- Fox.future2Fox(
+      dataBucketWise: Seq[Array[Byte]] <- Fox.fromFuture(
         Fox.sequenceOfFulls(positions.map(getDataFor(dataSource, dataLayer, _, mag))))
       _ <- Fox.fromBool(dataBucketWise.nonEmpty) ?~> "dataset.noData"
       dataConcatenated = concatenateBuckets(dataBucketWise)
@@ -102,7 +102,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       positions match {
         case List() => Fox.successful(None)
         case head :: tail =>
-          Fox.future2Fox(checkIfPositionHasData(head, mag).futureBox).flatMap {
+          Fox.fromFuture(checkIfPositionHasData(head, mag).futureBox).flatMap {
             case Full(pos) => Fox.successful(Some(pos))
             case _         => searchPositionIter(tail, mag)
           }

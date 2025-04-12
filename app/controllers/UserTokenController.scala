@@ -91,7 +91,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
       Fox.successful(Ok(Json.toJson(UserAccessAnswer(granted = true))))
     } else {
       for {
-        userBox <- Fox.future2Fox(bearerTokenService.userForTokenOpt(token).futureBox)
+        userBox <- Fox.fromFuture(bearerTokenService.userForTokenOpt(token).futureBox)
         sharingTokenAccessCtx = URLSharing.fallbackTokenAccessContext(token)(DBAccessContext(userBox))
         answer <- accessRequest.resourceType match {
           case AccessResourceType.datasource =>
@@ -115,7 +115,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
 
     def tryRead: Fox[UserAccessAnswer] =
       for {
-        dataSourceBox <- Fox.future2Fox(datasetDAO.findOneByDataSourceId(dataSourceId).futureBox)
+        dataSourceBox <- Fox.fromFuture(datasetDAO.findOneByDataSourceId(dataSourceId).futureBox)
       } yield
         dataSourceBox match {
           case Full(_) => UserAccessAnswer(granted = true)
@@ -189,13 +189,13 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
     } else {
       for {
         annotationId <- ObjectId.fromString(annotationId)
-        annotationBox <- Fox.future2Fox(
+        annotationBox <- Fox.fromFuture(
           annotationInformationProvider.provideAnnotation(annotationId, userBox)(GlobalAccessContext).futureBox)
         annotation <- annotationBox match {
           case Full(_) => annotationBox.toFox
           case _       => annotationStore.findInCache(annotationId).toFox
         }
-        annotationAccessByToken <- Fox.future2Fox(
+        annotationAccessByToken <- Fox.fromFuture(
           token.map(annotationPrivateLinkDAO.findOneByAccessToken).getOrElse(Fox.empty).futureBox)
         allowedByToken = annotationAccessByToken.exists(annotation._id == _._annotation)
         restrictions <- annotationInformationProvider.restrictionsFor(
@@ -215,7 +215,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
     else {
       for {
         jobIdValidated <- ObjectId.fromString(jobId)
-        jobBox <- Fox.future2Fox(jobDAO.findOne(jobIdValidated)(DBAccessContext(userBox)).futureBox)
+        jobBox <- Fox.fromFuture(jobDAO.findOne(jobIdValidated)(DBAccessContext(userBox)).futureBox)
         answer = jobBox match {
           case Full(_) => UserAccessAnswer(granted = true)
           case _       => UserAccessAnswer(granted = false, Some(s"No $mode access to job export"))

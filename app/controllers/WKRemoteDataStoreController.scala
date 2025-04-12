@@ -243,7 +243,7 @@ class WKRemoteDataStoreController @Inject()(
     dataStoreService.validateAccess(name, key) { _ =>
       for {
         datasourceId <- request.body.validate[DataSourceId].asOpt.toFox ?~> "dataStore.upload.invalid"
-        existingDataset = Fox.future2Fox(datasetDAO.findOneByDataSourceId(datasourceId)(GlobalAccessContext).futureBox)
+        existingDataset = Fox.fromFuture(datasetDAO.findOneByDataSourceId(datasourceId)(GlobalAccessContext).futureBox)
 
         _ <- existingDataset.flatMap {
           case Full(dataset) =>

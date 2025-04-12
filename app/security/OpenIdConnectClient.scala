@@ -86,7 +86,7 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
       response: WSResponse <- rpc(oidcConfig.discoveryUrl)
         .silentIf(!conf.SingleSignOn.OpenIdConnect.verboseLoggingEnabled)
         .get
-      serverInfo <- response.json.validate[OpenIdConnectProviderInfo](OpenIdConnectProviderInfo.format)
+      serverInfo <- response.json.validate[OpenIdConnectProviderInfo](OpenIdConnectProviderInfo.format).asOpt.toFox
     } yield serverInfo
 
   private def validateOpenIdConnectTokenResponse(
@@ -105,11 +105,12 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
         .silentIf(!conf.SingleSignOn.OpenIdConnect.verboseLoggingEnabled)
         .get
       jsonWebKeySet: JsonWebKeySet <- JsonHelper.validateJsValue[JsonWebKeySet](response.json).toFox
-      firstRsaKey: JsonWebKey <- Fox.option2Fox(jsonWebKeySet.keys.find(key =>
-        key.kty == keyTypeRsa && key.use == "sig")) ?~> "No server RSA Public Key found in server key set"
-      modulusString <- firstRsaKey.n
+      firstRsaKey: JsonWebKey <- jsonWebKeySet.keys
+        .find(key => key.kty == keyTypeRsa && key.use == "sig")
+        .toFox ?~> "No server RSA Public Key found in server key set"
+      modulusString <- firstRsaKey.n.toFox
       modulus = new BigInteger(1, Base64.getUrlDecoder.decode(modulusString.getBytes))
-      exponentString <- firstRsaKey.e
+      exponentString <- firstRsaKey.e.toFox
       exponent = new BigInteger(1, Base64.getUrlDecoder.decode(exponentString.getBytes))
       publicKeySpec = new RSAPublicKeySpec(modulus, exponent)
       publicKey = KeyFactory.getInstance(keyTypeRsa).generatePublic(publicKeySpec)

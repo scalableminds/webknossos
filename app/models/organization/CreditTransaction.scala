@@ -50,8 +50,8 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
       transactionState <- CreditTransactionState.fromString(row.transactionState).toFox
       creditState <- CreditState.fromString(row.creditState).toFox
       id <- ObjectId.fromString(row._Id)
-      jobIdOpt <- Fox.runOptional(row._PaidJob)(ObjectId.fromStringSync)
-      relatedTransactionOpt <- Fox.runOptional(row._RelatedTransaction)(ObjectId.fromStringSync)
+      jobIdOpt <- Fox.runOptional(row._PaidJob)(ObjectId.fromString)
+      relatedTransactionOpt <- Fox.runOptional(row._RelatedTransaction)(ObjectId.fromString)
     } yield {
       CreditTransaction(
         id,
@@ -133,7 +133,7 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
       r <- run(
         q"SELECT COALESCE(SUM(credit_delta), 0) FROM $existingCollectionName WHERE _organization = $organizationId AND $accessQuery"
           .as[BigDecimal])
-      firstRow <- r.headOption
+      firstRow <- r.headOption.toFox
     } yield firstRow
 
   def insertNewPendingTransaction(transaction: CreditTransaction)(implicit ctx: DBAccessContext): Fox[Unit] =

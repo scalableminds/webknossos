@@ -254,7 +254,7 @@ class EditableMappingService @Inject()(
       (tracingId, chunkId, version),
       _ =>
         for {
-          chunkBox: Box[Seq[(Long, Long)]] <- Fox.future2Fox(
+          chunkBox: Box[Seq[(Long, Long)]] <- Fox.fromFuture(
             getSegmentToAgglomerateChunk(tracingId, chunkId, Some(version)).futureBox)
           segmentToAgglomerate <- chunkBox match {
             case Full(chunk) => Fox.successful(chunk)
@@ -303,7 +303,7 @@ class EditableMappingService @Inject()(
                                          remoteFallbackLayer: RemoteFallbackLayer,
                                          agglomerateId: Long)(implicit tc: TokenContext): Fox[Array[Byte]] =
     for {
-      agglomerateGraphBox <- Fox.future2Fox(getAgglomerateGraphForId(tracingId, version, agglomerateId).futureBox)
+      agglomerateGraphBox <- Fox.fromFuture(getAgglomerateGraphForId(tracingId, version, agglomerateId).futureBox)
       skeletonBytes <- agglomerateGraphBox match {
         case Full(agglomerateGraph) =>
           Fox.successful(agglomerateGraphToSkeleton(tracingId, agglomerateGraph, agglomerateId))
@@ -435,7 +435,7 @@ class EditableMappingService @Inject()(
       agglomerateId: Long,
       remoteFallbackLayer: RemoteFallbackLayer)(implicit tc: TokenContext): Fox[AgglomerateGraph] =
     for {
-      agglomerateGraphBox <- Fox.future2Fox(getAgglomerateGraphForId(tracingId, version, agglomerateId).futureBox)
+      agglomerateGraphBox <- Fox.fromFuture(getAgglomerateGraphForId(tracingId, version, agglomerateId).futureBox)
       agglomerateGraph <- agglomerateGraphBox match {
         case Full(agglomerateGraph) => Fox.successful(agglomerateGraph)
         case Empty =>

@@ -555,7 +555,7 @@ class AnnotationIOController @Inject()(
 
     for {
       user <- userOpt.toFox ?~> Messages("notAllowed") ~> FORBIDDEN
-      task <- taskDAO.findOne(taskId).toFox ?~> Messages("task.notFound") ~> NOT_FOUND
+      task <- taskDAO.findOne(taskId) ?~> Messages("task.notFound") ~> NOT_FOUND
       project <- projectDAO.findOne(task._project) ?~> Messages("project.notFound") ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, project._team)) ?~> Messages("notAllowed") ~> FORBIDDEN
       zip <- createTaskZip(task)
@@ -571,10 +571,7 @@ class AnnotationIOController @Inject()(
     def createTaskTypeZip(taskType: TaskType) =
       for {
         tasks <- taskDAO.findAllByTaskType(taskType._id)
-        annotations <- Fox
-          .serialCombined(tasks)(task => annotationService.annotationsFor(task._id))
-          .map(_.flatten)
-          .toFox
+        annotations <- Fox.serialCombined(tasks)(task => annotationService.annotationsFor(task._id)).map(_.flatten)
         finishedAnnotations = annotations.filter(_.state == Finished)
         zip <- annotationService.zipAnnotations(finishedAnnotations,
                                                 taskType.summary,

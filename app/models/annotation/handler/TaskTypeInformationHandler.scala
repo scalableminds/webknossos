@@ -27,7 +27,6 @@ class TaskTypeInformationHandler @Inject()(taskTypeDAO: TaskTypeDAO,
       annotations <- Fox
         .serialCombined(tasks)(task => annotationDAO.findAllByTaskIdAndType(task._id, AnnotationType.Task))
         .map(_.flatten)
-        .toFox
       finishedAnnotations = annotations.filter(_.state == Finished)
       _ <- assertAllOnSameDataset(finishedAnnotations)
       _ <- assertNonEmpty(finishedAnnotations) ?~> "taskType.noAnnotations"

@@ -78,7 +78,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
   }
 
   private def notFoundToEmpty[T](resultFuture: Future[T])(implicit ec: ExecutionContext): Fox[T] =
-    Fox.futureBox2Fox(resultFuture.transformWith {
+    Fox.fromFutureBox(resultFuture.transformWith {
       case TrySuccess(value) => Fox.successful(value).futureBox
       case TryFailure(exception) =>
         val box = exception match {
@@ -96,7 +96,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
     })
 
   private def notFoundToFailure[T](resultFuture: Future[T])(implicit ec: ExecutionContext): Fox[T] =
-    Fox.futureBox2Fox(resultFuture.transformWith {
+    Fox.fromFutureBox(resultFuture.transformWith {
       case TrySuccess(value) => Fox.successful(value).futureBox
       case TryFailure(exception) =>
         Future.successful(BoxFailure(exception.getMessage, Full(exception), Empty))

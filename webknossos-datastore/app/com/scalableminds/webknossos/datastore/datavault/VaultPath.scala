@@ -96,7 +96,7 @@ class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging with FoxImpl
 
   def parseAsJson[T: Reads](implicit ec: ExecutionContext, tc: TokenContext): Fox[T] =
     for {
-      fileBytes <- this.readBytes().toFox
+      fileBytes <- this.readBytes()
       fileAsString <- tryo(new String(fileBytes, StandardCharsets.UTF_8)).toFox
       parsed <- JsonHelper.parseAndValidateJson[T](fileAsString).toFox
     } yield parsed

@@ -12,7 +12,7 @@ sealed trait DataVaultCredential {
 
   private def isScopedToUserAndOrga: Boolean = userId.isDefined && organization.isDefined
   def assertScopedToUserAndOrga(implicit ec: ExecutionContext): Fox[Unit] =
-   Fox.fromBool(isScopedToUserAndOrga) ?~> "stored credentials must be scoped to user and organization"
+    Fox.fromBool(isScopedToUserAndOrga) ?~> "stored credentials must be scoped to user and organization"
 }
 
 object DataVaultCredential {

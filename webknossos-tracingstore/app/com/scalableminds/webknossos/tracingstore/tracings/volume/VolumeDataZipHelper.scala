@@ -49,22 +49,20 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper with 
     for {
       _ <- ZipIO.withUnzipedAsync(zipFile) {
         case (fileName, is) if fileName.toString.endsWith(".wkw") && !fileName.toString.endsWith("header.wkw") =>
-          WKWFile
-            .read(is) {
-              case (header, buckets) =>
-                if (header.numChunksPerShard == 1) {
-                  parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>
-                    if (buckets.hasNext) {
-                      val data = buckets.next()
-                      if (!isRevertedElement(data)) {
-                        block(bucketPosition, data)
-                      } else Fox.successful(())
+          WKWFile.read(is) {
+            case (header, buckets) =>
+              if (header.numChunksPerShard == 1) {
+                parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>
+                  if (buckets.hasNext) {
+                    val data = buckets.next()
+                    if (!isRevertedElement(data)) {
+                      block(bucketPosition, data)
                     } else Fox.successful(())
-                  }.getOrElse(Fox.successful(()))
-                } else Fox.successful(())
-              case _ => Fox.successful(())
-            }
-            .toFox
+                  } else Fox.successful(())
+                }.getOrElse(Fox.successful(()))
+              } else Fox.successful(())
+            case _ => Fox.successful(())
+          }
         case _ => Fox.successful(())
       }
     } yield ()

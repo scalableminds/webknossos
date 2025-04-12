@@ -230,16 +230,13 @@ class JobService @Inject()(wkConf: WkConf,
       creditTransaction <- creditTransactionService.reserveCredits(user._organization,
                                                                    costsInCredits,
                                                                    creditTransactionComment)
-      job <- Fox
-        .fromFuture(submitJob(command, commandArgs, user, datastoreName).futureBox)
-        .flatMap {
-          case Full(job) => Fox.successful(job)
-          case _ =>
-            creditTransactionService
-              .refundTransactionWhenStartingJobFailed(creditTransaction)
-              .flatMap(_ => Fox.failure("job.couldNotRunAlignSections"))
-        }
-        .toFox
+      job <- Fox.fromFuture(submitJob(command, commandArgs, user, datastoreName).futureBox).flatMap {
+        case Full(job) => Fox.successful(job)
+        case _ =>
+          creditTransactionService
+            .refundTransactionWhenStartingJobFailed(creditTransaction)
+            .flatMap(_ => Fox.failure("job.couldNotRunAlignSections"))
+      }
       _ <- creditTransactionService.addJobIdToTransaction(creditTransaction, job._id)
       js <- publicWrites(job)
     } yield js

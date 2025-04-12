@@ -190,8 +190,8 @@ class UserController @Inject()(userService: UserService,
       case (TeamMembership(_, true), team) =>
         for {
           _ <- Fox.fromBool(team.couldBeAdministratedBy(user)) ?~> Messages("team.admin.notPossibleBy",
-                                                                        team.name,
-                                                                        user.name) ~> FORBIDDEN
+                                                                            team.name,
+                                                                            user.name) ~> FORBIDDEN
         } yield ()
       case (_, _) =>
         Fox.successful(())
@@ -221,7 +221,8 @@ class UserController @Inject()(userService: UserService,
     if (!isActive && !user.isDeactivated) {
       for {
         activeTasks: List[ObjectId] <- annotationDAO.findActiveTaskIdsForUser(user._id)
-        _ <- Fox.fromBool(activeTasks.isEmpty) ?~> s"Cannot deactivate user with active tasks. Task ids are: ${activeTasks.mkString(";")}"
+        _ <- Fox.fromBool(activeTasks.isEmpty) ?~> s"Cannot deactivate user with active tasks. Task ids are: ${activeTasks
+          .mkString(";")}"
       } yield ()
     } else Fox.successful(())
 
@@ -278,7 +279,8 @@ class UserController @Inject()(userService: UserService,
           experiences = experiencesOpt.getOrElse(oldExperience)
           lastTaskTypeId = if (lastTaskTypeIdOpt.isEmpty) user.lastTaskTypeId.map(_.id) else lastTaskTypeIdOpt
           _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
-          _ <- Fox.fromBool(checkAdminOnlyUpdates(user, isActive, isAdmin, isDatasetManager, oldEmail, email)(issuingUser)) ?~> "notAllowed" ~> FORBIDDEN
+          _ <- Fox.fromBool(checkAdminOnlyUpdates(user, isActive, isAdmin, isDatasetManager, oldEmail, email)(
+            issuingUser)) ?~> "notAllowed" ~> FORBIDDEN
           _ <- Fox.fromBool(checkNoSelfDeactivate(user, isActive)(issuingUser)) ?~> "user.noSelfDeactivate" ~> FORBIDDEN
           _ <- checkNoDeactivateWithRemainingTask(user, isActive)
           _ <- checkNoActivateBeyondLimit(user, isActive)

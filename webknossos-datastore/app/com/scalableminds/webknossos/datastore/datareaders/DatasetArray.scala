@@ -258,5 +258,5 @@ object DatasetArray {
   private val chunkSizeLimitBytes: Int = 300 * 1024 * 1024
 
   def assertChunkSizeLimit(bytesPerChunk: Int)(implicit ec: ExecutionContext): Fox[Unit] =
-   Fox.fromBool(bytesPerChunk <= chunkSizeLimitBytes) ?~> f"Array chunk size exceeds limit of $chunkSizeLimitBytes, got $bytesPerChunk"
+    Fox.fromBool(bytesPerChunk <= chunkSizeLimitBytes) ?~> f"Array chunk size exceeds limit of $chunkSizeLimitBytes, got $bytesPerChunk"
 }

@@ -67,7 +67,7 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
     actorSystem.actorOf(RoundRobinPool(adHocMeshActorPoolSize).props(Props(new AdHocMeshActor(this, timeout.duration))))
 
   def requestAdHocMeshViaActor(request: AdHocMeshRequest): Fox[(Array[Float], List[Int])] =
-    Fox.futureBox2Fox {
+    Fox.fromFutureBox {
       actor.ask(request).mapTo[Box[(Array[Float], List[Int])]].recover {
         case e: Exception => Failure(e.getMessage)
       }

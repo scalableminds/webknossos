@@ -147,27 +147,24 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     val groupedByOrga = dataSources.groupBy(_.id.organizationId).toList
     Fox
       .serialCombined(groupedByOrga) { orgaTuple: (String, List[InboxDataSource]) =>
-        Fox
-          .fromFuture(organizationDAO.findOne(orgaTuple._1).futureBox)
-          .flatMap {
-            case Full(organization) if dataStore.onlyAllowedOrganization.exists(_ != organization._id) =>
-              logger.info(
-                s"Ignoring ${orgaTuple._2.length} reported datasets for forbidden organization ${orgaTuple._1} from organization-specific datastore ${dataStore.name}")
-              Fox.successful(List.empty)
-            case Full(organization) =>
-              for {
-                foundDatasets <- datasetDAO.findAllByDirectoryNamesAndOrganization(orgaTuple._2.map(_.id.directoryName),
-                                                                                   organization._id)
-                foundDatasetsByDirectoryName = foundDatasets.groupBy(_.directoryName)
-                existingIds <- Fox.serialCombined(orgaTuple._2)(dataSource =>
-                  updateDataSource(dataStore, dataSource, foundDatasetsByDirectoryName))
-              } yield existingIds.flatten
-            case _ =>
-              logger.info(
-                s"Ignoring ${orgaTuple._2.length} reported datasets for non-existing organization ${orgaTuple._1}")
-              Fox.successful(List.empty)
-          }
-          .toFox
+        Fox.fromFuture(organizationDAO.findOne(orgaTuple._1).futureBox).flatMap {
+          case Full(organization) if dataStore.onlyAllowedOrganization.exists(_ != organization._id) =>
+            logger.info(
+              s"Ignoring ${orgaTuple._2.length} reported datasets for forbidden organization ${orgaTuple._1} from organization-specific datastore ${dataStore.name}")
+            Fox.successful(List.empty)
+          case Full(organization) =>
+            for {
+              foundDatasets <- datasetDAO.findAllByDirectoryNamesAndOrganization(orgaTuple._2.map(_.id.directoryName),
+                                                                                 organization._id)
+              foundDatasetsByDirectoryName = foundDatasets.groupBy(_.directoryName)
+              existingIds <- Fox.serialCombined(orgaTuple._2)(dataSource =>
+                updateDataSource(dataStore, dataSource, foundDatasetsByDirectoryName))
+            } yield existingIds.flatten
+          case _ =>
+            logger.info(
+              s"Ignoring ${orgaTuple._2.length} reported datasets for non-existing organization ${orgaTuple._1}")
+            Fox.successful(List.empty)
+        }
       }
       .map(_.flatten)
   }
@@ -180,11 +177,11 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     val foundDatasetOpt = foundDatasetsByDirectoryName.get(dataSource.id.directoryName).flatMap(_.headOption)
     foundDatasetOpt match {
       case Some(foundDataset) if foundDataset._dataStore == dataStore.name =>
-        updateKnownDataSource(foundDataset, dataSource, dataStore).toFox.map(Some(_))
+        updateKnownDataSource(foundDataset, dataSource, dataStore).map(Some(_))
       case Some(foundDataset) => // This only returns None for Datasets that are present on a normal Datastore but also got reported from a scratch Datastore
         updateDataSourceDifferentDataStore(foundDataset, dataSource, dataStore)
       case _ =>
-        insertNewDataset(dataSource, dataSource.id.directoryName, dataStore).toFox.map(Some(_))
+        insertNewDataset(dataSource, dataSource.id.directoryName, dataStore).map(Some(_))
     }
   }
 
@@ -359,19 +356,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     for {
       _ <- Fox.serialCombined(pathInfos)(updateRealPath)
     } yield ()
-
-  def getPathsForDataLayer(datasetId: ObjectId, layerName: String): Fox[List[(DatasetMagInfo, List[DatasetMagInfo])]] =
-    for {
-      magInfos <- datasetMagsDAO.findPathsForDatasetAndDatalayer(datasetId, layerName)
-      magInfosAndLinkedMags <- Fox.serialCombined(magInfos)(magInfo =>
-        magInfo.realPath match {
-          case Some(realPath) =>
-            for {
-              pathInfos <- datasetMagsDAO.findAllByRealPath(realPath)
-            } yield (magInfo, pathInfos.filter(!_.equals(magInfo)))
-          case None => Fox.successful((magInfo, List()))
-      })
-    } yield magInfosAndLinkedMags
 
   def publicWrites(dataset: Dataset,
                    requestingUserOpt: Option[User],

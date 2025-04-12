@@ -49,15 +49,11 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
       userOpt <- Fox.fromFuture(userDAO.findOne(aiModel._user).toFutureOption)
       userJs <- Fox.runOptional(userOpt)(userService.compactWrites)
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
-      trainingJobOpt <- Fox.runOptional(aiModel._trainingJob)(
-        trainingJobId =>
-          Fox
-            .fromFuture(jobDAO.findOne(trainingJobId).futureBox)
-            .flatMap {
-              case Full(job) => Fox.successful(Some(job))
-              case _         => Fox.successful(None)
-            }
-            .toFox)
+      trainingJobOpt <- Fox.runOptional(aiModel._trainingJob)(trainingJobId =>
+        Fox.fromFuture(jobDAO.findOne(trainingJobId).futureBox).flatMap {
+          case Full(job) => Fox.successful(Some(job))
+          case _         => Fox.successful(None)
+      })
       trainingJobJsOpt <- Fox.runOptional(trainingJobOpt.flatten)(jobService.publicWrites)
       isOwnedByUsersOrganization = aiModel._organization == requestingUser._organization
       sharedOrganizationIds <- if (isOwnedByUsersOrganization) for {

@@ -487,7 +487,7 @@ class VolumeTracingService @Inject()(
           s"Zipping volume data for $tracingId took ${formatDuration(Instant.since(before))}. Result: ${b.get}")
       case _ => ()
     }
-    Fox.futureBox2Fox(zipResult)
+    Fox.fromFutureBox(zipResult)
   }
 
   def data(annotationId: String,
@@ -898,9 +898,9 @@ class VolumeTracingService @Inject()(
         for {
           largestSegmentId <- tracing.largestSegmentId.toFox ?~> "annotation.volume.merge.largestSegmentId.unset"
           mergedVolume = new MergedVolume(tracing.elementClass, largestSegmentId)
-          _ <- mergedVolume.addLabelSetFromDataZip(zipFile).toFox
+          _ <- mergedVolume.addLabelSetFromDataZip(zipFile)
           _ = mergedVolume.addFromBucketStream(sourceVolumeIndex = 0, volumeLayer.bucketProvider.bucketStream())
-          _ <- mergedVolume.addFromDataZip(sourceVolumeIndex = 1, zipFile).toFox
+          _ <- mergedVolume.addFromDataZip(sourceVolumeIndex = 1, zipFile)
           _ <- Fox.fromBool(
             ElementClass
               .largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, tracing.elementClass)) ?~> Messages(

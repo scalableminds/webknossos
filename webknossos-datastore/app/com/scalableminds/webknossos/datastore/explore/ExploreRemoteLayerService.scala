@@ -165,7 +165,6 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
         }
       }))
       .map(explorationResults => Fox.firstSuccess(explorationResults.map(_.toFox)))
-      .toFox
       .flatten
 
   private def handleExploreResult(explorationResult: Box[List[(DataLayerWithMagLocators, VoxelSize)]],

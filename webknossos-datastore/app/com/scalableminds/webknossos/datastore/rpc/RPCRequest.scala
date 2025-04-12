@@ -196,7 +196,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     performRequest
   }
 
-  private def performRequest: Fox[WSResponse] = Fox.futureBox2Fox {
+  private def performRequest: Fox[WSResponse] = Fox.fromFutureBox {
     val before = Instant.now
     if (verbose) {
       logger.debug(s"Sending $debugInfo, RequestBody: '$requestBodyPreview'")

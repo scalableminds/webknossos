@@ -49,7 +49,7 @@ class DatasetArrayBucketProvider(dataLayer: DataLayer,
   private def openDatasetArrayWithTimeLogging(
       readInstruction: DataReadInstruction)(implicit ec: ExecutionContext, tc: TokenContext): Fox[DatasetArray] = {
     val before = Instant.now
-    Fox.futureBox2Fox {
+    Fox.fromFutureBox {
       for {
         result <- openDatasetArray(readInstruction).futureBox
         duration = Instant.since(before)

@@ -78,7 +78,7 @@ class FossilDBClient(collection: String,
   }
 
   private def wrapException[T](future: Future[T]): Fox[T] =
-    Fox.futureBox2Fox {
+    Fox.fromFutureBox {
       future.transformWith {
         case Success(value) =>
           Fox.successful(value).futureBox

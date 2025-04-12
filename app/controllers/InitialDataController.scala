@@ -194,21 +194,18 @@ Samplecountry
                                 multiUser: MultiUser,
                                 user: User,
                                 isTeamManager: Boolean): Fox[Unit] =
-    Fox
-      .fromFuture(userService.userFromMultiUserEmail(userEmail).futureBox)
-      .flatMap {
-        case Full(_) => Fox.successful(())
-        case _ =>
-          for {
-            _ <- multiUserDAO.insertOne(multiUser)
-            _ <- userDAO.insertOne(user)
-            _ <- userExperiencesDAO.updateExperiencesForUser(user, Map("sampleExp" -> 10))
-            _ <- userDAO.insertTeamMembership(user._id,
-                                              TeamMembership(organizationTeam._id, isTeamManager = isTeamManager))
-            _ = logger.info("Inserted default user")
-          } yield ()
-      }
-      .toFox
+    Fox.fromFuture(userService.userFromMultiUserEmail(userEmail).futureBox).flatMap {
+      case Full(_) => Fox.successful(())
+      case _ =>
+        for {
+          _ <- multiUserDAO.insertOne(multiUser)
+          _ <- userDAO.insertOne(user)
+          _ <- userExperiencesDAO.updateExperiencesForUser(user, Map("sampleExp" -> 10))
+          _ <- userDAO.insertTeamMembership(user._id,
+                                            TeamMembership(organizationTeam._id, isTeamManager = isTeamManager))
+          _ = logger.info("Inserted default user")
+        } yield ()
+    }
 
   private def insertToken(): Fox[Unit] = {
     val expiryTime = conf.Silhouette.TokenAuthenticator.authenticatorExpiry
@@ -231,14 +228,11 @@ Samplecountry
   }
 
   private def insertOrganization(): Fox[Unit] =
-    Fox
-      .fromFuture(organizationDAO.findOne(defaultOrganization._id).futureBox)
-      .flatMap {
-        case Full(_) => Fox.successful(())
-        case _ =>
-          organizationDAO.insertOne(defaultOrganization)
-      }
-      .toFox
+    Fox.fromFuture(organizationDAO.findOne(defaultOrganization._id).futureBox).flatMap {
+      case Full(_) => Fox.successful(())
+      case _ =>
+        organizationDAO.insertOne(defaultOrganization)
+    }
 
   private def insertTeams(): Fox[Unit] =
     teamDAO.findAll.flatMap { teams =>
@@ -246,7 +240,7 @@ Samplecountry
         teamDAO.insertOne(organizationTeam)
       else
         Fox.successful(())
-    }.toFox
+    }
 
   private def insertTaskType(): Fox[Unit] =
     taskTypeDAO.findAll.flatMap { types =>
@@ -259,7 +253,7 @@ Samplecountry
         )
         for { _ <- taskTypeDAO.insertOne(taskType, defaultOrganization._id) } yield ()
       } else Fox.successful(())
-    }.toFox
+    }
 
   private def insertProject(): Fox[Unit] =
     projectDAO.findAll.flatMap { projects =>
@@ -276,7 +270,7 @@ Samplecountry
           for { _ <- projectDAO.insertOne(project, defaultOrganization._id) } yield ()
         }
       } else Fox.successful(())
-    }.toFox
+    }
 
   private def insertPublication(): Fox[Unit] = publicationDAO.findAll.flatMap { publications =>
     if (publications.isEmpty) {

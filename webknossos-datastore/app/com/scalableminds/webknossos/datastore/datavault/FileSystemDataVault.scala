@@ -73,7 +73,7 @@ class FileSystemDataVault extends DataVault {
         if (channel != null && channel.isOpen) channel.close()
     }
 
-    Fox.futureBox2Fox(promise.future)
+    Fox.fromFutureBox(promise.future)
   }
 
   override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =

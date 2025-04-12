@@ -27,11 +27,11 @@ class ChunkReader(header: DatasetHeader) extends FoxImplicits {
         case Full(chunkBytes) if useSkipTypingShortcut =>
           shortcutChunkTyper.wrapAndType(chunkBytes, chunkShape).toFox ?~> "chunk.shortcutWrapAndType.failed"
         case Empty if useSkipTypingShortcut =>
-          shortcutChunkTyper.createFromFillValueCached(chunkShape).toFox ?~> "chunk.shortcutCreateFromFillValue.failed"
+          shortcutChunkTyper.createFromFillValueCached(chunkShape) ?~> "chunk.shortcutCreateFromFillValue.failed"
         case Full(chunkBytes) =>
           chunkTyper.wrapAndType(chunkBytes, chunkShape).toFox ?~> "chunk.wrapAndType.failed"
         case Empty =>
-          chunkTyper.createFromFillValueCached(chunkShape).toFox ?~> "chunk.createFromFillValue.failed"
+          chunkTyper.createFromFillValueCached(chunkShape) ?~> "chunk.createFromFillValue.failed"
         case f: Failure =>
           f.toFox ?~> s"Reading chunk at $path failed"
       }

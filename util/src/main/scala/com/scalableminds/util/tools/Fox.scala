@@ -38,17 +38,14 @@ object Fox extends FoxImplicits {
     if (b) Fox.successful(())
     else Fox.empty
 
-  def futureFull2Fox[T](f: Future[Full[T]])(implicit ec: ExecutionContext): Fox[T] =
-    new Fox(f)
-
-  def futureBox2Fox[T](f: Future[Box[T]])(implicit ec: ExecutionContext): Fox[T] =
+  def fromFutureBox[T](f: Future[Box[T]])(implicit ec: ExecutionContext): Fox[T] =
     new Fox(f)
 
   /**
     * Transform a Future[T] into a Fox[T] such that if the Future contains an exception, it is turned into a Fox.failure
     */
   def fromFuture[T](f: Future[T])(implicit ec: ExecutionContext): Fox[T] =
-    futureBox2Fox(
+    fromFutureBox(
       for {
         fut <- f.transform {
           case Success(value)        => Try(Fox.successful(value))
@@ -58,9 +55,7 @@ object Fox extends FoxImplicits {
       } yield f
     )
 
-  def futureOption2Fox[T](f: Future[Option[T]])(implicit ec: ExecutionContext): Fox[T] =
-    new Fox(f.map(Box(_)))
-
+  // TODO unify
   def jsResult2Fox[T](result: JsResult[T])(implicit ec: ExecutionContext): Fox[T] = result match {
     case JsSuccess(value, _) => Fox.successful(value)
     case JsError(e)          => Fox.failure(s"Invalid json: $e")
@@ -247,7 +242,7 @@ object Fox extends FoxImplicits {
     def runNext(remainingFoxes: Seq[Fox[T]]): Fox[T] =
       remainingFoxes match {
         case head :: tail =>
-          futureBox2Fox {
+          fromFutureBox {
             for {
               resultOption <- head.toFutureOption
               nextResult <- resultOption match {
@@ -273,7 +268,7 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
 
   // Add error message only in case of Failure, pass through Empty
   def ?=>(s: String): Fox[A] =
-    Fox.futureBox2Fox {
+    Fox.fromFutureBox {
       futureBox.map {
         case Full(value) => Full(value)
         case f: Failure  => f ?~! s
@@ -359,11 +354,6 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
   @deprecated(message = "Do not use this in production code", since = "forever")
   def await(justification: String, awaitTimeout: FiniteDuration = 10 seconds): Box[A] =
     Await.result(futureBox, awaitTimeout)
-
-  /**
-    * Helper to force an implicit conversation
-    */
-  def toFox: Fox[A] = this
 
   /**
     * If the box is Empty this will create a Full. If The box is Full it will get emptied. Failures are passed through.

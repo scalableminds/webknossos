@@ -123,9 +123,11 @@ class VolumeTracingController @Inject()(
               // The annotation object may not yet exist here. Caller is responsible to save that too.
               tracing <- annotationService.findVolumeRaw(tracingId) ?~> Messages("tracing.notFound")
               magRestrictions = MagRestrictions(minMag, maxMag)
-              mags <- volumeTracingService
-                .initializeWithData(annotationId, tracingId, tracing.value, initialData, magRestrictions)
-                .toFox
+              mags <- volumeTracingService.initializeWithData(annotationId,
+                                                              tracingId,
+                                                              tracing.value,
+                                                              initialData,
+                                                              magRestrictions)
               _ <- volumeTracingService.updateMagList(tracingId, tracing.value, mags)
             } yield Ok(Json.toJson(tracingId))
           }
@@ -160,9 +162,10 @@ class VolumeTracingController @Inject()(
               initialData <- request.body.asRaw.map(_.asFile).toFox ?~> Messages("zipFile.notFound")
               // The annotation object may not yet exist here. Caller is responsible to save that too.
               tracing <- annotationService.findVolumeRaw(tracingId) ?~> Messages("tracing.notFound")
-              mags <- volumeTracingService
-                .initializeWithDataMultiple(annotationId, tracingId, tracing.value, initialData)
-                .toFox
+              mags <- volumeTracingService.initializeWithDataMultiple(annotationId,
+                                                                      tracingId,
+                                                                      tracing.value,
+                                                                      initialData)
               _ <- volumeTracingService.updateMagList(tracingId, tracing.value, mags)
             } yield Ok(Json.toJson(tracingId))
           }

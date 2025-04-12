@@ -72,7 +72,8 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService, nmlPar
     ZipIO.withUnziped(file) { (filename, inputStream) =>
       if (filename.toString.endsWith(".nml")) {
         val parsedResult = for {
-          result <- extractFromNml(inputStream, filename.toString, sharedParsingParameters, Some(file.getPath))
+          result <- Fox.fromFuture(
+            extractFromNml(inputStream, filename.toString, sharedParsingParameters, Some(file.getPath)))
         } yield if (sharedParsingParameters.useZipName) result.withName(name) else result
         pendingResults ::= parsedResult
       } else {

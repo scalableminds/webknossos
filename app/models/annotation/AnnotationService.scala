@@ -49,7 +49,7 @@ import utils.WkConf
 
 import java.io.{BufferedOutputStream, File, FileOutputStream}
 import javax.inject.Inject
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 case class DownloadAnnotation(skeletonTracingIdOpt: Option[String],
                               volumeTracingIdOpt: Option[String],

@@ -7,7 +7,6 @@ import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import models.voxelytics.VoxelyticsLogLevel.VoxelyticsLogLevel
 import net.liftweb.common.Box.tryo
-import net.liftweb.common.Full
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.pattern.after
 import play.api.http.{HeaderNames, Status}
@@ -49,9 +48,8 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val actorSystem: ActorSyste
       } yield ()
 
     for {
-      isServerAvailableBox <- rpc(s"${conf.uri}/ready").request
-        .withMethod("GET")
-        .execute()
+      isServerAvailable <- Fox
+        .fromFuture(rpc(s"${conf.uri}/ready").request.withMethod("GET").execute())
         .flatMap(result =>
           if (Status.isSuccessful(result.status)) {
             Fox.successful(true)
@@ -61,15 +59,15 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val actorSystem: ActorSyste
           } else {
             Fox.failure(s"Unexpected error code from Loki ${result.status}.")
         })
-        .recoverWith({
+      // TODO ensure exceptions get logged and propagated properly
+      /*        .recoverWith({
           case e: java.net.ConnectException =>
             logger.debug(s"Loki connection exception: $e")
             Fox.successful(false)
           case e =>
             logger.error(s"Unexpected error $e")
             Fox.failure("Unexpected error while trying to connect to Loki.", Full(e))
-        })
-      isServerAvailable <- isServerAvailableBox.toFox
+        })*/
       _ <- if (!isServerAvailable) {
         waitAndRecurse(until)
       } else {

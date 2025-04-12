@@ -79,11 +79,11 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO, jobService: JobServ
 
   def validateAccess(name: String, key: String)(block: DataStore => Future[Result])(
       implicit m: MessagesProvider): Fox[Result] =
-    (for {
+    Fox.fromFuture((for {
       dataStore <- dataStoreDAO.findOneByName(name)(GlobalAccessContext)
       _ <- Fox.fromBool(key == dataStore.key)
-      result <- block(dataStore)
-    } yield result).getOrElse(Forbidden(Json.obj("granted" -> false, "msg" -> Messages("dataStore.notFound"))))
+      result <- Fox.fromFuture(block(dataStore))
+    } yield result).getOrElse(Forbidden(Json.obj("granted" -> false, "msg" -> Messages("dataStore.notFound")))))
 }
 
 class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)

@@ -14,7 +14,6 @@ import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import slick.sql.SqlAction
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.Fox.{fromFuture, futureBox2Fox}
 import models.organization.OrganizationDAO
 import net.liftweb.common.Full
 import utils.sql.{SQLDAO, SqlClient, SqlToken}

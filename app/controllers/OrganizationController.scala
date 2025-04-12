@@ -168,7 +168,7 @@ class OrganizationController @Inject()(
       _ <- organizationDAO.deleteOne(organization._id)
       _ <- userDAO.deleteAllWithOrganization(organization._id)
       _ <- multiUserDAO.removeLastLoggedInIdentitiesWithOrga(organization._id)
-      _ <- combinedAuthenticatorService.discard(request.authenticator, Ok)
+      _ <- Fox.fromFuture(combinedAuthenticatorService.discard(request.authenticator, Ok))
     } yield Ok
   }
 
@@ -209,7 +209,7 @@ class OrganizationController @Inject()(
         organization <- organizationDAO
           .findOne(request.identity._organization) ?~> Messages("organization.notFound") ~> NOT_FOUND
         userEmail <- userService.emailFor(request.identity)
-        requestedPlan <- PricingPlan.fromString(requestedPlan)
+        requestedPlan <- PricingPlan.fromString(requestedPlan).toFox
         mail = if (requestedPlan == PricingPlan.Team) {
           defaultMails.upgradePricingPlanToTeamMail _
         } else {

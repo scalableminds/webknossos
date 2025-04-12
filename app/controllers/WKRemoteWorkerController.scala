@@ -100,7 +100,8 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
         _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
         organizationId <- jobDAO.organizationIdForJobId(id) ?~> "job.notFound"
         workflowHash = request.body
-        existingWorkflowBox <- voxelyticsDAO.findWorkflowByHashAndOrganization(organizationId, workflowHash).futureBox
+        existingWorkflowBox <- Fox.fromFuture(
+          voxelyticsDAO.findWorkflowByHashAndOrganization(organizationId, workflowHash).futureBox)
         _ <- existingWorkflowBox match {
           case Full(_)    => Fox.successful(())
           case Empty      => voxelyticsDAO.upsertWorkflow(workflowHash, "initializing worker workflow", organizationId)

@@ -16,7 +16,7 @@ import net.liftweb.common.Full
 import security.URLSharing
 import utils.WkConf
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 case class OpenGraphTags(
     title: Option[String],

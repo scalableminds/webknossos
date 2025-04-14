@@ -5,6 +5,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.webknossos.datastore.helpers.DataSourceMagInfo
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
@@ -30,6 +31,7 @@ import models.organization.OrganizationDAO
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import slick.dbio.DBIO
+import slick.jdbc.GetResult
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
@@ -705,22 +707,21 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
   }
 }
 
-case class DatasetMagInfo(datasetId: ObjectId,
-                          dataLayerName: String,
-                          mag: Vec3Int,
-                          path: Option[String],
-                          realPath: Option[String],
-                          hasLocalData: Boolean)
-
 case class MagWithPaths(layerName: String,
                         mag: Vec3Int,
                         path: Option[String],
                         realPath: Option[String],
                         hasLocalData: Boolean)
 
-object DatasetMagInfo {
-  implicit val jsonFormat: Format[DatasetMagInfo] = Json.format[DatasetMagInfo]
-}
+case class DataSourceMagRow(_dataset: ObjectId,
+                            dataLayerName: String,
+                            mag: String,
+                            path: Option[String],
+                            realPath: Option[String],
+                            hasLocalData: Boolean,
+                            _organization: String,
+                            directoryName: String)
+
 class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[MagWithPaths, DatasetMagsRow, DatasetMags](sqlClient) {
   protected val collection = DatasetMags
@@ -778,27 +779,45 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       )
     } yield ()
 
-  def findPathsForDatasetAndDatalayer(datasetId: ObjectId, dataLayerName: String): Fox[List[DatasetMagInfo]] =
-    for {
-      rows <- run(q"""SELECT $columns
-            FROM webknossos.dataset_mags
-            WHERE _dataset = $datasetId
-            AND dataLayerName = $dataLayerName""".as[DatasetMagsRow])
-      magInfos <- Fox.combined(rows.toList.map(parse))
-      datasetMagInfos = magInfos.map(magInfo =>
-        DatasetMagInfo(datasetId, magInfo.layerName, magInfo.mag, magInfo.path, magInfo.realPath, magInfo.hasLocalData))
-    } yield datasetMagInfos
+  implicit def GetResultDataSourceMagRow: GetResult[DataSourceMagRow] =
+    GetResult(
+      r =>
+        DataSourceMagRow(ObjectId(r.nextString()),
+                         r.nextString(),
+                         r.nextString(),
+                         r.nextStringOption(),
+                         r.nextStringOption(),
+                         r.nextBoolean(),
+                         r.nextString(),
+                         r.nextString()))
 
-  def findAllByRealPath(realPath: String): Fox[List[DatasetMagInfo]] =
+  private def rowsToMagInfos(rows: Vector[DataSourceMagRow]): Fox[List[DataSourceMagInfo]] =
     for {
-      rows <- run(q"""SELECT $columns
-            FROM webknossos.dataset_mags
-            WHERE realPath = $realPath""".as[DatasetMagsRow])
       mags <- Fox.serialCombined(rows.toList)(r => parseMag(r.mag))
-      magInfos = rows.toList.zip(mags).map {
-        case (row, mag) =>
-          DatasetMagInfo(ObjectId(row._Dataset), row.datalayername, mag, row.path, row.realpath, row.haslocaldata)
+      dataSources = rows.map(row => DataSourceId(row.directoryName, row._organization))
+      magInfos = rows.toList.zip(mags).zip(dataSources).map {
+        case ((row, mag), dataSource) =>
+          DataSourceMagInfo(dataSource, row.dataLayerName, mag, row.path, row.realPath, row.hasLocalData)
       }
+    } yield magInfos
+
+  def findPathsForDatasetAndDatalayer(datasetId: ObjectId, dataLayerName: String): Fox[List[DataSourceMagInfo]] =
+    for {
+      rows <- run(q"""SELECT $columns, _organization, directoryName
+            FROM webknossos.dataset_mags
+            INNER JOIN webknossos.datasets ON webknossos.dataset_mags._dataset = webknossos.datasets._id
+            WHERE _dataset = $datasetId
+            AND dataLayerName = $dataLayerName""".as[DataSourceMagRow])
+      magInfos <- rowsToMagInfos(rows)
+    } yield magInfos
+
+  def findAllByRealPath(realPath: String): Fox[List[DataSourceMagInfo]] =
+    for {
+      rows <- run(q"""SELECT $columns, _organization, directoryName
+            FROM webknossos.dataset_mags
+            INNER JOIN webknossos.datasets ON webknossos.dataset_mags._dataset = webknossos.datasets._id
+            WHERE realPath = $realPath""".as[DataSourceMagRow])
+      magInfos <- rowsToMagInfos(rows)
     } yield magInfos
 
 }

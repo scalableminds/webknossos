@@ -19,7 +19,7 @@ import type { OxalisState } from "oxalis/store";
 import type { APIOrganization, APIUser } from "types/api_flow_types";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 import { getTransformsPerLayer } from "./dataset_layer_transformation_accessor";
-import { isSkeletonLayerTransformed, isSkeletonLayerVisible } from "./skeletontracing_accessor";
+import { areGeometriesTransformed, isSkeletonLayerVisible } from "./skeletontracing_accessor";
 
 export const TOOL_NAMES = {
   MOVE: "Move",
@@ -154,14 +154,14 @@ function _getSkeletonToolInfo(
 }
 const getSkeletonToolInfo = memoizeOne(_getSkeletonToolInfo);
 
-function _getBoundingBoxToolInfo(hasSkeleton: boolean, isSkeletonLayerTransformed: boolean) {
-  if (isSkeletonLayerTransformed) {
+function _getBoundingBoxToolInfo(hasSkeleton: boolean, areGeometriesTransformed: boolean) {
+  if (areGeometriesTransformed) {
     return {
       [AnnotationToolEnum.BOUNDING_BOX]: {
         isDisabled: true,
         explanation: hasSkeleton
-          ? "The bounding box tool is disabled because the bounding boxes are rendered transformed like the skeleton layer. Use the left sidebar to render them without transformations by letting the skeleton layer render without any transformations."
-          : "The bounding box tool is disabled because the bounding boxes are rendered transformed.",
+          ? "The bounding box tool is disabled because the bounding boxes are currently transformed according to the skeleton layer. To use the tool, ensure that the skeleton layer is rendered natively in the left sidebar."
+          : "The bounding box tool is disabled because the bounding boxes are rendered with transforms.",
       },
     };
   }
@@ -387,13 +387,13 @@ const getVolumeDisabledWhenVolumeIsEnabled = memoizeOne(_getVolumeDisabledWhenVo
 const _getDisabledInfoForTools = (state: OxalisState): Record<AnnotationToolEnum, DisabledInfo> => {
   const { annotation } = state;
   const hasSkeleton = annotation.skeleton != null;
-  const isSkeletonTransformed = isSkeletonLayerTransformed(state);
+  const geometriesTransformed = areGeometriesTransformed(state);
   const skeletonToolInfo = getSkeletonToolInfo(
     hasSkeleton,
-    isSkeletonTransformed,
+    geometriesTransformed,
     isSkeletonLayerVisible(annotation),
   );
-  const boundingBoxToolInfo = getBoundingBoxToolInfo(hasSkeleton, isSkeletonTransformed);
+  const boundingBoxToolInfo = getBoundingBoxToolInfo(hasSkeleton, geometriesTransformed);
 
   const disabledVolumeInfo = getDisabledVolumeInfo(state);
   return {

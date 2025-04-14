@@ -4,11 +4,15 @@ import UrlManager, {
   updateTypeAndId,
   encodeUrlHash,
   type UrlManagerState,
+  getDatasetNameFromLocation,
+  getUpdatedPathnameWithNewDatasetName,
 } from "oxalis/controller/url_manager";
 import { location } from "libs/window";
 import Constants, { type Vector3, ViewModeValues } from "oxalis/constants";
 import defaultState from "oxalis/default_state";
 import update from "immutability-helper";
+import DATASET from "../fixtures/dataset_server_object";
+import _ from "lodash";
 
 test("UrlManager should replace tracing in url", (t) => {
   // Without annotationType (Explorational and Task don't appear in the URL)
@@ -203,4 +207,32 @@ test("UrlManager should build default url in csv format", (t) => {
   UrlManager.initialize();
   const url = UrlManager.buildUrl();
   t.is(url, "#0,0,0,0,1.3");
+});
+
+test("The dataset name should be correctly extracted from view URLs", (t) => {
+  // View
+  const datasetName1 = "extract_me";
+  location.pathname = `/datasets/${datasetName1}-${DATASET.id}/view`;
+  const extractedName1 = getDatasetNameFromLocation(location);
+  t.is(datasetName1, extractedName1 as string);
+  // Sandbox
+  const datasetName2 = "find_me";
+  location.pathname = `/datasets/${datasetName2}-${DATASET.id}/sandbox/hybrid`;
+  const extractedName2 = getDatasetNameFromLocation(location);
+  t.is(datasetName2, extractedName2 as string);
+});
+
+test("Inserting an updated dataset name in the URL should yield the correct URL", (t) => {
+  // View
+  const testDataset1 = update(_.clone(DATASET), { name: { $set: "newName" } });
+  location.pathname = `/datasets/replace_me-${testDataset1.id}/view`;
+  const newPathName1 = getUpdatedPathnameWithNewDatasetName(location, testDataset1);
+  const expectedPathname1 = `/datasets/${testDataset1.name}-${testDataset1.id}/view`;
+  t.is(expectedPathname1, newPathName1);
+  // Sandbox
+  const testDataset2 = update(_.clone(DATASET), { name: { $set: "otherName" } });
+  location.pathname = `/datasets/replace_me-${testDataset2.id}/sandbox/skeleton`;
+  const newPathName2 = getUpdatedPathnameWithNewDatasetName(location, testDataset2);
+  const expectedPathname2 = `/datasets/${testDataset2.name}-${testDataset2.id}/sandbox/skeleton`;
+  t.is(expectedPathname2, newPathName2);
 });

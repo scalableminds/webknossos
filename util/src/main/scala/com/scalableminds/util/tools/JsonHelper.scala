@@ -15,7 +15,7 @@ import java.nio.charset.StandardCharsets
 import scala.concurrent.duration._
 import scala.io.{BufferedSource, Source}
 
-object JsonHelper extends BoxImplicits with LazyLogging {
+object JsonHelper extends LazyLogging {
 
   def jsonToFile[A: Writes](path: Path, value: A): Box[Unit] =
     FileIO.printToFile(path.toFile) { printer =>

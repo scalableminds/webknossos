@@ -4,7 +4,8 @@ import com.google.inject.Inject
 import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{BoxImplicits, Fox, JsonHelper, FoxImplicits}
+import com.scalableminds.util.tools.BoxUtils.{bool2Box, jsResult2Box}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.layers.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header.FILENAME_ATTRIBUTES_JSON
@@ -114,7 +115,6 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     extends DatasetDeleter
     with DirectoryConstants
     with FoxImplicits
-    with BoxImplicits
     with WKWDataFormatHelper
     with LazyLogging {
 

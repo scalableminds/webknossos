@@ -250,6 +250,17 @@ object Fox extends FoxImplicits {
     runNext(foxes)
   }
 
+  def assertNoFailure(boxes: Seq[Box[_]])(implicit ec: ExecutionContext): Fox[Unit] = {
+    val firstFailure = boxes.find {
+      case _: Failure => true
+      case _          => false
+    }
+    firstFailure match {
+      case Some(failure) => Fox.failure(s"At least one failure contained in list of ${boxes.length} boxes: $failure")
+      case None          => Fox.successful(())
+    }
+  }
+
 }
 
 class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {

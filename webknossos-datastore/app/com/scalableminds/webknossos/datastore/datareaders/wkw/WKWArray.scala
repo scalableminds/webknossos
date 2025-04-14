@@ -3,8 +3,8 @@ package com.scalableminds.webknossos.datastore.datareaders.wkw
 import com.google.common.io.LittleEndianDataInputStream
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
+import com.scalableminds.util.tools.BoxUtils.bool2Box
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.util.tools.JsonHelper.bool2Box
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{MortonEncoding, WKWDataFormatHelper, WKWHeader}
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkUtils, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath

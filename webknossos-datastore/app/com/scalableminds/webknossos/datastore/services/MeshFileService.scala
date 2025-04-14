@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.services
 import com.google.common.io.LittleEndianDataInputStream
 import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
 import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.JsonHelper.bool2Box
+import com.scalableminds.util.tools.BoxUtils.bool2Box
 import com.scalableminds.util.tools.{ByteUtils, Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}

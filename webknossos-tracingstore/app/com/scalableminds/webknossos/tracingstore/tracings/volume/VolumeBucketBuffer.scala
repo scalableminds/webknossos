@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.{BoxImplicits, Fox}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.tracingstore.tracings.{FossilDBClient, TemporaryTracingService}
@@ -46,7 +46,7 @@ class VolumeBucketBuffer(version: Long,
     for {
       bucketDataBoxes <- loadBuckets(volumeLayer, bucketPositions, Some(version))
       _ <- Fox.fromBool(bucketDataBoxes.length == bucketPositions.length)
-      _ <- BoxImplicits.assertNoFailure(bucketDataBoxes).toFox
+      _ <- Fox.assertNoFailure(bucketDataBoxes)
       _ = bucketDataBoxes.zip(bucketPositions).foreach {
         case (bucketDataBox, bucketPosition) =>
           bucketDataBox match {

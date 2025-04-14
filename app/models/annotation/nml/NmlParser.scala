@@ -3,9 +3,9 @@ package models.annotation.nml
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.util.tools.BoxUtils.bool2Box
 import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedString}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.util.tools.JsonHelper.bool2Box
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto

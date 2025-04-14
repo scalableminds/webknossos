@@ -6,16 +6,23 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [25.03.1](https://github.com/scalableminds/webknossos/releases/tag/25.03.1) - 2025-04-10
+[Commits](https://github.com/scalableminds/webknossos/compare/25.03.0...25.03.1)
+
+### Postgres Evolutions:
+None.
+
 ## [25.03.0](https://github.com/scalableminds/webknossos/releases/tag/25.03.0) - 2025-04-01
 [Commits](https://github.com/scalableminds/webknossos/compare/25.02.1...25.03.0)
 
- - FossilDB now needs to be opened with additional column family `skeletonTreeBodies`. [#8423](https://github.com/scalableminds/webknossos/pull/8423)
+- FossilDB now needs to be opened with additional column family `skeletonTreeBodies`. [#8423](https://github.com/scalableminds/webknossos/pull/8423)
 
 ### Postgres Evolutions:
 - [126-mag-real-paths.sql](conf/evolutions/126-mag-real-paths.sql)
 - [127-job-retried-by-super-user.sql](conf/evolutions/127-job-retried-by-super-user.sql)
 - [128-allow-ai-model-sharing.sql](conf/evolutions/128-allow-ai-model-sharing.sql)
-
+- [129-credit-transactions.sql](conf/evolutions/129-credit-transactions.sql)
+- [130-replace-text-types.sql](conf/evolutions/130-replace-text-types.sql)
 
 ## [25.02.1](https://github.com/scalableminds/webknossos/releases/tag/25.02.1) - 2025-02-26
 [Commits](https://github.com/scalableminds/webknossos/compare/25.02.0...25.02.1)

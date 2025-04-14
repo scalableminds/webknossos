@@ -16,7 +16,7 @@ VOLUME /webknossos-tracingstore/tracingData /tmp
 COPY target/universal/stage .
 
 RUN chown -R webknossos . \
-  && chmod go+x bin/webknossos-tracingstore \
+  && chmod +x bin/webknossos-tracingstore \
   && chmod go+w .
 
 RUN echo '#!/bin/bash\numask 002\nbin/webknossos-tracingstore "$@"\n' > /docker-entrypoint.sh \
@@ -31,4 +31,4 @@ HEALTHCHECK \
 EXPOSE 9050
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["-J-Xmx20G", "-J-Xms1G", "-Dconfig.file=conf/standalone-tracingstore.conf", "-Dlogger.file=conf/logback-docker.xml", "-Dlogback.configurationFile=conf/logback-docker.xml", "-Dhttp.port=9090", "-Dhttp.address=0.0.0.0"]
+CMD ["-J-Xmx20G", "-J-Xms1G", "-Dconfig.file=conf/standalone-tracingstore.conf", "-Dlogger.file=conf/logback-docker.xml", "-Dlogback.configurationFile=conf/logback-docker.xml", "-Dhttp.port=9050", "-Dhttp.address=0.0.0.0"]

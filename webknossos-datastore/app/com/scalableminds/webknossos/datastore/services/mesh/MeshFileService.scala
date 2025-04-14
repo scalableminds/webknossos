@@ -161,10 +161,10 @@ object MeshSegmentInfo {
   implicit val jsonFormat: OFormat[MeshSegmentInfo] = Json.format[MeshSegmentInfo]
 }
 case class WebknossosSegmentInfo(
-    transform: Array[Array[Double]], // TODO: Is currently not lod dependant, but Neuroglancer uses different scales for different lods, need to change meshsegmentinfo.
+    transform: Array[Array[Double]],
     meshFormat: String,
     chunks: MeshSegmentInfo,
-    chunkScale: Array[Double] = Array(1.0, 1.0, 1.0) // Uses for Neuroglancer Precomputed Meshes to account for vertex quantization
+    chunkScale: Array[Double] = Array(1.0, 1.0, 1.0) // Used for Neuroglancer Precomputed Meshes to account for vertex quantization
 )
 
 object WebknossosSegmentInfo {

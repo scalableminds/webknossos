@@ -170,11 +170,8 @@ Note: If the postgres schema changed, you may see compilation errors in the form
 ## Tests and Tools
 
 ```bash
-# Frontend linting
-yarn run lint
-
-# Format frontend code
-yarn format-frontend
+# Frontend linting & Formatting
+yarn fix-frontend
 
 # Format backend code
 yarn format-backend
@@ -183,7 +180,7 @@ yarn format-backend
 yarn tsc
 
 # Frontend tests
-yarn test-verbose
+yarn test
 
 # End-to-end tests
 docker compose run e2e-tests

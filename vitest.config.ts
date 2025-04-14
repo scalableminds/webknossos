@@ -9,6 +9,10 @@ export default defineConfig({
     exclude: ["./frontend/javascripts/test/**/*.e2e.ts"],
     env: { IS_TESTING: "true" },
     testTimeout: 10000,
+    coverage: {
+      reporter: ['text', 'json-summary', 'json'],
+      reportOnFailure: true,
+    }
 
     // // for profiling
     // pool: "forks",

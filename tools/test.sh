@@ -64,45 +64,7 @@ ensureUpToDateTests() {
   fi
 }
 
-maybeWithC8() {
-  if [[ -n "$CIRCLECI" ]]; then
-    # Running in CircleCI, use c8 to gather code coverage.
-    echo "Running with c8 to gather code coverage..."
-    c8 --silent --no-clean "$@"
-  else
-    # Not running in CircleCI, execute the command directly
-    echo "Running tests without gathering code coverage..."
-    "$@"
-  fi
-}
-
-
-# For faster, local testing, you may want to remove the `c8` part of the following statement.
-if [ $cmd == "test" ]
-then
-  ensureUpToDateTests
-  export NODE_PATH="$testBundlePath" && maybeWithC8 ava $(find "$testBundlePath" -name "*.spec.js") "$@"
-elif [ $cmd == "test-debug" ]
-then
-  ensureUpToDateTests
-  export NODE_PATH="$testBundlePath" && ava debug $(find "$testBundlePath" -name "*.spec.js") "$@"
-elif [ $cmd == "test-changed" ]
-then
-  ensureUpToDateTests
-  # Find modified *.spec.* files, trim their extension (since ts != js) and look them up in the compiled bundle
-  changed_files=$(git ls-files --modified | grep \\.spec\\. | xargs -i basename {} | sed -r 's|^(.*?)\.\w+$|\1|' | xargs -i find public-test/test-bundle -name "{}*" | grep -E -v "\.(md|snap)")
-
-  if [ -z "$changed_files" ]
-  then
-    echo "No test file has local changes. Exiting."
-    exit
-  fi
-
-  echo Only running $changed_files
-  export NODE_PATH="$testBundlePath" && ava \
-    $changed_files \
-    "$@"
-elif [ $cmd == "test-e2e" ]
+if [ $cmd == "test-e2e" ]
 then
   ensureUpToDateTests
   export NODE_PATH="$testBundlePath" && maybeWithC8 ava $(find "$testBundlePath" -name "*.e2e.js") --serial -C 1 "$@"

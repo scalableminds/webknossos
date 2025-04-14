@@ -40,7 +40,14 @@ jobs:
       - name: Check for cyclic dependencies in frontend
         run: yarn check-cyclic-dependencies
       - name: Run frontend tests
-        run: yarn test-verbose
+        run: yarn run vitest run --coverage.enabled true
+      - name: 'Report Coverage'
+        # Set if: always() to also generate the report if tests are failing
+        # Only works if you set `reportOnFailure: true` in your vite config as specified above
+        if: always() 
+        uses:  davelosert/vitest-coverage-report-action@v2
+        with:
+          comment-on: none # alternative: pr
 
   backend-tests:
     runs-on: ubuntu-22.04

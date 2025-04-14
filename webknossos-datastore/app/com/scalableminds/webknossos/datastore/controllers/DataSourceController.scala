@@ -119,7 +119,7 @@ class DataSourceController @Inject()(
               request.body.datasetName,
               request.body.organization,
               0,
-              List.empty,
+              Some(List.empty),
               None,
               None,
               request.body.initialTeamIds,

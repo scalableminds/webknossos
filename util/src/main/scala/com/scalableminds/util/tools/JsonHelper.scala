@@ -29,7 +29,7 @@ object JsonHelper extends BoxImplicits with LazyLogging {
       Failure("Invalid path for json parsing.")
 
   def validatedJsonFromFile[T: Reads](path: Path, rootPath: Path): Box[T] =
-    jsonFromFile(path, rootPath).flatMap(_.validate[T])
+    jsonFromFile(path, rootPath).flatMap(_.validate[T].asOpt)
 
   private def parseJsonFromFile(path: Path, rootPath: Path): Box[JsValue] = {
     var buffer: BufferedSource = null

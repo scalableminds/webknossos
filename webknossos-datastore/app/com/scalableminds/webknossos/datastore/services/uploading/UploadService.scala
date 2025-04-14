@@ -552,7 +552,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                                                       maxDepth = 1,
                                                       filters = p => p.getFileName.toString == FILENAME_ATTRIBUTES_JSON)
       _ <- bool2Box(attributesFiles.nonEmpty)
-      _ <- Json.parse(new String(Files.readAllBytes(attributesFiles.head))).validate[N5Metadata]
+      _ <- jsResult2Box(Json.parse(new String(Files.readAllBytes(attributesFiles.head))).validate[N5Metadata])
     } yield true
 
   private def looksLikeN5Multilayer(dataSourceDir: Path): Box[Boolean] =
@@ -582,7 +582,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                                                       silent = false,
                                                       maxDepth = 1,
                                                       filters = p => p.getFileName.toString == FILENAME_ATTRIBUTES_JSON)
-      _ <- Json.parse(new String(Files.readAllBytes(attributesFiles.head))).validate[N5Header]
+      _ <- jsResult2Box(Json.parse(new String(Files.readAllBytes(attributesFiles.head))).validate[N5Header])
     } yield true
 
   private def looksLikeExploredDataSource(dataSourceDir: Path): Box[Boolean] =

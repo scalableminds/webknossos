@@ -22,7 +22,10 @@ import _ from "lodash";
 import messages from "messages";
 import constants, { ControlModeEnum, AnnotationToolEnum, type Vector3 } from "oxalis/constants";
 import type { PartialUrlManagerState, UrlStateByLayer } from "oxalis/controller/url_manager";
-import UrlManager from "oxalis/controller/url_manager";
+import UrlManager, {
+  getDatasetNameFromLocation,
+  getUpdatedPathnameWithNewDatasetName,
+} from "oxalis/controller/url_manager";
 import {
   determineAllowedModes,
   getDataLayers,
@@ -271,16 +274,16 @@ export async function initialize(
 }
 
 function maybeFixDatasetNameInURL(dataset: APIDataset, initialCommandType: TraceOrViewCommand) {
-  if (initialCommandType.type === ControlModeEnum.VIEW) {
-    console.error("location.pathname", location.pathname);
-    const pathnameParts = location.pathname.split("/").slice(1); // First string is empty as pathname start with a /.
-    const endOfDatasetName = pathnameParts[1].lastIndexOf("-");
-    if (endOfDatasetName < 0) {
-      return;
-    }
-    const datasetNameInURL = pathnameParts[1].substring(0, endOfDatasetName);
+  if (
+    initialCommandType.type === ControlModeEnum.VIEW ||
+    initialCommandType.type === ControlModeEnum.SANDBOX
+  ) {
+    const datasetNameInURL = getDatasetNameFromLocation(location);
     if (dataset.name !== datasetNameInURL) {
-      const pathnameWithUpdatedDatasetName = `/${pathnameParts[0]}/${dataset.name}-${dataset.id}/view`;
+      const pathnameWithUpdatedDatasetName = getUpdatedPathnameWithNewDatasetName(
+        location,
+        dataset,
+      );
       UrlManager.changeBaseUrl(pathnameWithUpdatedDatasetName + location.search);
     }
   }

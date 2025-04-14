@@ -211,7 +211,6 @@
     "typed-redux-saga": "^1.4.0",
     "url": "^0.11.0",
     "url-join": "^4.0.0",
-    "verb-nurbs": "^3.0.2",
     "worker-loader": "^3.0.8"
   },
   "ava": {

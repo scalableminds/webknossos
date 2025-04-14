@@ -113,7 +113,6 @@ class SceneController {
   }
 
   initialize() {
-    // this.meshesRootGroup = new THREE.Group();
     this.renderer = getRenderer();
     this.createMeshes();
     this.bindToEvents();
@@ -135,34 +134,6 @@ class SceneController {
     this.scene.add(this.rootGroup);
     this.scene.add(this.segmentMeshController.meshesLODRootGroup);
 
-    /* Scene
-     * - rootGroup
-     *   - DirectionalLight
-     *   - surfaceGroup
-     * - meshesLODRootGroup
-     *   - DirectionalLight
-     */
-
-    const dir1 = new THREE.DirectionalLight(undefined, 3 * 0.25);
-    dir1.position.set(1, 1, 1);
-    // const dir2 = new THREE.DirectionalLight(undefined, 3 * 0.25);
-    // dir2.position.set(-1, -1, -1);
-    const dir3 = new THREE.AmbientLight(undefined, 3 * 0.25);
-
-    this.rootGroup.add(dir1);
-    // this.rootGroup.add(dir2);
-    this.rootGroup.add(dir3);
-
-    const dir4 = new THREE.DirectionalLight(undefined, 3 * 0.25);
-    dir4.position.set(1, 1, 1);
-    // const dir5 = new THREE.DirectionalLight(undefined, 10);
-    // dir5.position.set(-1, -1, -1);
-    const dir6 = new THREE.AmbientLight(undefined, 3 * 0.25);
-
-    this.segmentMeshController.meshesLODRootGroup.add(dir4);
-    // this.segmentMeshController.meshesLODRootGroup.add(dir5);
-    this.segmentMeshController.meshesLODRootGroup.add(dir6);
-    this.rootGroup.add(new THREE.AmbientLight(2105376, 3 * 10));
     this.setupDebuggingMethods();
   }
 
@@ -409,7 +380,6 @@ class SceneController {
     if (this.splitBoundaryMesh != null) {
       this.splitBoundaryMesh.visible = id === OrthoViews.TDView;
     }
-    // this.segmentMeshController.meshesLODRootGroup.visible = false;
     this.annotationToolsGeometryGroup.visible = id !== OrthoViews.TDView;
     this.lineMeasurementGeometry.updateForCam(id);
 

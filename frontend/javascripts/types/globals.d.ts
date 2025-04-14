@@ -8,7 +8,6 @@ declare global {
       DEV: WkDev;
       apiReady: ApiType["apiReady"]
     };
-    bentMesh: THREE.Mesh
   }
 }
 

@@ -38,37 +38,6 @@ const ErrorHandling = {
 mockRequire("libs/toast", {
   error: _.noop,
 });
-/*const viewLocation = {
-  hash: "",
-  host: "localhost:9000",
-  hostname: "localhost",
-  href: `http://localhost:9000/datasets/${DATASET.name}-${DATASET.id}/view`,
-  origin: "http://localhost:9000",
-  pathname: `/datasets/${DATASET.name}-${DATASET.id}/view`,
-  port: "9000",
-  protocol: "http:",
-};
-let performanceCounterForMocking = 0;
-mockRequire("libs/window", {
-  alert: console.log.bind(console),
-  app: null,
-  location: viewLocation,
-  requestAnimationFrame: (resolver: ArbitraryFunction) => {
-    setTimeout(resolver, 16);
-  },
-  document,
-  navigator: {
-    onLine: true,
-  },
-  pageXOffset: 0,
-  pageYOffset: 0,
-  Olvy: undefined,
-  addEventListener,
-  removeEventListener,
-  open: (_url: string) => {},
-  performance: { now: () => ++performanceCounterForMocking },
-  matchMedia: () => false,
-});*/
 mockRequire("libs/request", Request);
 mockRequire("libs/error_handling", ErrorHandling);
 mockRequire("app", {});

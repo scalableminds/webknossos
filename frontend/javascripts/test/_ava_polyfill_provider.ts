@@ -1,6 +1,6 @@
 // @ts-nocheck
 
-import { AbortController, AbortSignal } from "abort-controller";
+const { AbortController, AbortSignal } = require("abort-controller");
 
 global.AbortController = AbortController;
 global.AbortSignal = AbortSignal;

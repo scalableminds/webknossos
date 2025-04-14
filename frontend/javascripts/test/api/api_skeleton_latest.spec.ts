@@ -141,7 +141,7 @@ describe("API Skeleton", () => {
   }) => {
     // Currently, this test only makes sure pullQueue.pull is being called and the bucketLoaded
     // event is being triggered.
-    // There is another spec for pullqueue.js
+    // There is another spec for pullqueue.ts
     const cube = model.getCubeByLayerName("segmentation");
     const position: Vector3 = [100, 100, 100];
     const zoomStep = 0;

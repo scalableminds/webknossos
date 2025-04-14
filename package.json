@@ -221,14 +221,10 @@
     },
     "require": [
       "./frontend/javascripts/test/_ava_polyfill_provider.ts",
-      "./frontend/javascripts/test/_force-exit.ts"
+      "./frontend/javascripts/test/_force-exit.mjs"
     ],
     "snapshotDir": "frontend/javascripts/test/snapshots",
-    "concurrency": 8,
-    "extensions": {
-      "ts": "module",
-      "tsx": "module"
-    }
+    "concurrency": 8
   },
   "c8": {
     "exclude": [

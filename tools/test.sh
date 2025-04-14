@@ -34,7 +34,7 @@ function prepare {
     --outdir="$testBundlePath" $($FIND frontend/javascripts \( -name "*.ts" -o -name "*.tsx" \))
 
   # Copy files which were not compiled by esbuild (e.g., snapshots).
-  find frontend/javascripts -type f -not \( -name "*.e2e.ts" -o -name "*.e2e.tsx" -o -name "*.png" \) -exec sh -c '
+  find frontend/javascripts -type f -not \( -name "*.ts" -o -name "*.tsx" -o -name "*.png" \) -exec sh -c '
     testBundlePath="public-test/test-bundle"
     file="$1"                # E.g., frontend/javascripts/test/snapshots/public-test/test-bundle/test/libs/nml.spec.js.snap
     from="$file"

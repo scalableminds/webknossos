@@ -15,6 +15,7 @@ vi.mock("oxalis/model/sagas/root_saga", function () {
 
 vi.mock("oxalis/model", function () {
   return {
+    reset: vi.fn(),
     getLayerRenderingManagerByName: () => ({
       currentBucketPickerTick: 0,
     }),

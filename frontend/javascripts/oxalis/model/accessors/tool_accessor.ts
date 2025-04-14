@@ -1,3 +1,4 @@
+import _ from "lodash";
 import type { OxalisState } from "oxalis/store";
 
 abstract class AbstractAnnotationTool {
@@ -105,7 +106,7 @@ export const AnnotationTool = {
 
 export type AnnotationTool = (typeof AnnotationTool)[keyof typeof AnnotationTool];
 
-export const ToolCollections = {
+export const Toolkits = {
   ALL_TOOLS: Object.values(AnnotationTool) as AnnotationTool[],
   VOLUME_TOOLS: [
     AnnotationTool.MOVE,
@@ -130,17 +131,17 @@ export const ToolCollections = {
     AnnotationTool.BOUNDING_BOX,
   ] as AnnotationTool[],
 };
+export type Toolkit = keyof typeof Toolkits;
 
-export const VolumeTools = ToolCollections.VOLUME_TOOLS;
+export const VolumeTools = _.without(Toolkits.VOLUME_TOOLS, AnnotationTool.MOVE);
 
-export type ToolCollection = keyof typeof ToolCollections;
-
+// MeasurementTools is not part of Toolkits as it should not
+// be shown in the UI. Also, it's important that the MOVE tool is not in
+// it because other code depends on it.
 export const MeasurementTools: AnnotationTool[] = [
   AnnotationTool.LINE_MEASUREMENT,
   AnnotationTool.AREA_MEASUREMENT,
 ];
-
-export type Toolkit = keyof typeof ToolCollections;
 
 export function getAvailableTools(_state: OxalisState) {}
 

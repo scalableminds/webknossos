@@ -8,7 +8,7 @@ import {
 } from "oxalis/model/reducers/reducer_helpers";
 import { hideBrushReducer } from "oxalis/model/reducers/volumetracing_reducer_helpers";
 import type { OxalisState } from "oxalis/store";
-import { ToolCollections } from "../accessors/tool_accessor";
+import { Toolkits } from "../accessors/tool_accessor";
 
 function UiReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
@@ -69,7 +69,7 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
 
     case "SET_TOOL": {
       if (!state.annotation.restrictions.allowUpdate) {
-        if (ToolCollections.READ_ONLY_TOOLS.includes(action.tool)) {
+        if (Toolkits.READ_ONLY_TOOLS.includes(action.tool)) {
           return setToolReducer(state, action.tool);
         }
         return state;

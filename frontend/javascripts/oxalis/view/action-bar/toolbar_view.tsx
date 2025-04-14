@@ -39,7 +39,7 @@ import {
   MeasurementTools,
   VolumeTools,
 } from "oxalis/model/accessors/tool_accessor";
-import { ToolCollections, adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
+import { Toolkits, adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
 import {
   getActiveSegmentationTracing,
   getMappingInfoForVolumeTracing,
@@ -854,44 +854,7 @@ export default function ToolbarView() {
   const hasVolume = useSelector((state: OxalisState) => state.annotation?.volumes.length > 0);
   const hasSkeleton = useSelector((state: OxalisState) => state.annotation?.skeleton != null);
   const toolkit = useSelector((state: OxalisState) => state.userConfiguration.activeToolkit);
-
-  const [lastForcefullyDisabledTool, setLastForcefullyDisabledTool] =
-    useState<AnnotationTool | null>(null);
-
   const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
-
-  const disabledInfosForTools = useSelector(getDisabledInfoForTools);
-  // Ensure that no volume-tool is selected when being in merger mode.
-  // Even though the volume toolbar is disabled, the user can still cycle through
-  // the tools via the w shortcut. In that case, the effect-hook is re-executed
-  // and the tool is switched to MOVE.
-  const disabledInfoForCurrentTool = disabledInfosForTools[activeTool.id];
-  const isLastForcefullyDisabledToolAvailable =
-    lastForcefullyDisabledTool != null &&
-    !disabledInfosForTools[lastForcefullyDisabledTool.id].isDisabled;
-
-  useEffect(() => {
-    if (disabledInfoForCurrentTool.isDisabled) {
-      setLastForcefullyDisabledTool(activeTool);
-      Store.dispatch(setToolAction(AnnotationTool.MOVE));
-    } else if (
-      lastForcefullyDisabledTool != null &&
-      isLastForcefullyDisabledToolAvailable &&
-      activeTool === AnnotationTool.MOVE
-    ) {
-      // Re-enable the tool that was disabled before.
-      setLastForcefullyDisabledTool(null);
-      Store.dispatch(setToolAction(lastForcefullyDisabledTool));
-    } else if (activeTool !== AnnotationTool.MOVE) {
-      // Forget the last disabled tool as another tool besides the move tool was selected.
-      setLastForcefullyDisabledTool(null);
-    }
-  }, [
-    activeTool,
-    disabledInfoForCurrentTool,
-    isLastForcefullyDisabledToolAvailable,
-    lastForcefullyDisabledTool,
-  ]);
 
   const isShiftPressed = useKeyPress("Shift");
   const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
@@ -906,7 +869,7 @@ export default function ToolbarView() {
   return (
     <>
       <Radio.Group onChange={handleSetTool} value={adaptedActiveTool}>
-        {ToolCollections[toolkit].map((tool) => (
+        {Toolkits[toolkit].map((tool) => (
           <ToolButton key={tool.id} tool={tool} adaptedActiveTool={adaptedActiveTool} />
         ))}
       </Radio.Group>

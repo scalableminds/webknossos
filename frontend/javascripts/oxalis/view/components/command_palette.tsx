@@ -4,7 +4,7 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import { getAdministrationSubMenu } from "navbar";
 import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
-import { ToolCollections } from "oxalis/model/accessors/tool_accessor";
+import { Toolkits } from "oxalis/model/accessors/tool_accessor";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
 import { Store } from "oxalis/singletons";
@@ -161,7 +161,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     const commands: CommandWithoutId[] = [];
     let availableTools = Object.values(AnnotationTool);
     if (isViewMode || !restrictions.allowUpdate) {
-      availableTools = ToolCollections.READ_ONLY_TOOLS;
+      availableTools = Toolkits.READ_ONLY_TOOLS;
     }
     availableTools.forEach((tool) => {
       commands.push({

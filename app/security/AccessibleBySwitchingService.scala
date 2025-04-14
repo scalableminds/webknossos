@@ -96,7 +96,7 @@ class AccessibleBySwitchingService @Inject()(
 
   private def canAccessDataset(ctx: DBAccessContext, datasetId: ObjectId): Fox[Boolean] = {
     val foundFox = datasetDAO.findOne(datasetId)(ctx)
-    Fox.fromFuture(foundFox.futureBox).map(_.isDefined)
+    foundFox.shiftBox.map(_.isDefined)
   }
 
   private def canAccessAnnotation(user: User, ctx: DBAccessContext, annotationId: String): Fox[Boolean] = {
@@ -107,14 +107,14 @@ class AccessibleBySwitchingService @Inject()(
       restrictions <- annotationProvider.restrictionsFor(AnnotationIdentifier(annotation.typ, annotationIdParsed))(ctx)
       _ <- restrictions.allowAccess(user)
     } yield ()
-    Fox.fromFuture(foundFox.futureBox).map(_.isDefined)
+    foundFox.shiftBox.map(_.isDefined)
   }
 
   private def canAccessWorkflow(user: User, workflowHash: String): Fox[Boolean] = {
     val foundFox = for {
       _ <- voxelyticsDAO.findWorkflowByHashAndOrganization(user._organization, workflowHash)
     } yield ()
-    Fox.fromFuture(foundFox.futureBox).map(_.isDefined)
+    foundFox.shiftBox.map(_.isDefined)
   }
 
 }

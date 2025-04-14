@@ -65,8 +65,8 @@ class UserService @Inject()(conf: WkConf,
     multiUser._lastLoggedInIdentity match {
       case Some(userId) =>
         for {
-          maybeLastLoggedInIdentity <- Fox.fromFuture(userDAO.findOne(userId).futureBox)
-          identity <- maybeLastLoggedInIdentity match {
+          lastLoggedInIdentityBox <- userDAO.findOne(userId).shiftBox
+          identity <- lastLoggedInIdentityBox match {
             case Full(user) if !user.isDeactivated => Fox.successful(user)
             case _                                 => userDAO.findFirstByMultiUser(multiUser._id)
           }
@@ -76,8 +76,7 @@ class UserService @Inject()(conf: WkConf,
 
   def assertNotInOrgaYet(multiUserId: ObjectId, organizationId: String): Fox[Unit] =
     for {
-      userBox <- Fox.fromFuture(
-        userDAO.findOneByOrgaAndMultiUser(organizationId, multiUserId)(GlobalAccessContext).futureBox)
+      userBox <- userDAO.findOneByOrgaAndMultiUser(organizationId, multiUserId)(GlobalAccessContext).shiftBox
       _ <- Fox.fromBool(userBox.isEmpty) ?~> "organization.alreadyJoined"
     } yield ()
 
@@ -139,8 +138,9 @@ class UserService @Inject()(conf: WkConf,
   def fillSuperUserIdentity(originalUser: User, organizationId: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       multiUser <- multiUserDAO.findOne(originalUser._multiUser)
-      existingIdentity: Box[User] <- Fox.fromFuture(
-        userDAO.findOneByOrgaAndMultiUser(organizationId, originalUser._multiUser)(GlobalAccessContext).futureBox)
+      existingIdentity: Box[User] <- userDAO
+        .findOneByOrgaAndMultiUser(organizationId, originalUser._multiUser)(GlobalAccessContext)
+        .shiftBox
       _ <- if (multiUser.isSuperUser && existingIdentity.isEmpty) {
         joinOrganization(originalUser, organizationId, autoActivate = true, isAdmin = true, isUnlisted = true)
       } else Fox.successful(())

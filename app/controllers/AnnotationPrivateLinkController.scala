@@ -31,7 +31,7 @@ class AnnotationPrivateLinkController @Inject()(
   def annotationSource(accessTokenOrId: String, userToken: Option[String]): Action[AnyContent] = Action.async {
     implicit request =>
       for {
-        annotationByLinkBox <- findAnnotationByPrivateLinkIfNotExpired(accessTokenOrId).futureBox
+        annotationByLinkBox <- findAnnotationByPrivateLinkIfNotExpired(accessTokenOrId).shiftBox
         annotation <- annotationByLinkBox match {
           case Full(a) => Fox.successful(a)
           case _       => findAnnotationByIdAndUserToken(accessTokenOrId, userToken)
@@ -45,7 +45,7 @@ class AnnotationPrivateLinkController @Inject()(
   private def findAnnotationByIdAndUserToken(annotationId: String, userToken: Option[String]): Fox[Annotation] =
     for {
       annotationIdValidated <- ObjectId.fromString(annotationId)
-      userBox <- Fox.fromFuture(bearerTokenService.userForTokenOpt(userToken).futureBox)
+      userBox <- bearerTokenService.userForTokenOpt(userToken).shiftBox
       ctx = DBAccessContext(userBox.toOption)
       annotation <- annotationDAO.findOne(annotationIdValidated)(ctx) ?~> "annotation.notFound"
     } yield annotation

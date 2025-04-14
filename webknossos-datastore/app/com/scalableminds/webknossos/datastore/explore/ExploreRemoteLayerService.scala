@@ -134,18 +134,15 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
       case (path, searchDepth) :: remainingPaths =>
         if (searchDepth > MAX_RECURSIVE_SEARCH_DEPTH) Fox.empty
         else {
-          Fox
-            .fromFuture(
-              explorePathsWithAllExplorersAndGetFirstMatch(path, explorers, credentialId, reportMutable).futureBox)
-            .flatMap(
-              explorationResultOfPath =>
-                handleExploreResultOfPath(explorationResultOfPath,
-                                          path,
-                                          searchDepth,
-                                          remainingPaths,
-                                          credentialId,
-                                          explorers,
-                                          reportMutable))
+          explorePathsWithAllExplorersAndGetFirstMatch(path, explorers, credentialId, reportMutable).shiftBox.flatMap(
+            explorationResultOfPath =>
+              handleExploreResultOfPath(explorationResultOfPath,
+                                        path,
+                                        searchDepth,
+                                        remainingPaths,
+                                        credentialId,
+                                        explorers,
+                                        reportMutable))
         }
     }
 
@@ -159,7 +156,7 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
     Fox
       .fromFuture(Fox.sequence(explorers.map { explorer =>
         {
-          Fox.fromFuture(explorer.explore(path, credentialId).futureBox).flatMap {
+          explorer.explore(path, credentialId).shiftBox.flatMap {
             handleExploreResult(_, explorer, path, reportMutable)
           }
         }

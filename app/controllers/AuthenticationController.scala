@@ -82,9 +82,7 @@ class AuthenticationController @Inject()(
               Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
             } else {
               for {
-                _ <- Fox.successful(())
-                inviteBox: Box[Invite] <- Fox.fromFuture(
-                  inviteService.findInviteByTokenOpt(signUpData.inviteToken).futureBox)
+                inviteBox <- inviteService.findInviteByTokenOpt(signUpData.inviteToken).shiftBox
                 organizationId = Option(signUpData.organization).filter(_.trim.nonEmpty)
                 organization <- organizationService.findOneByInviteByIdOrDefault(inviteBox.toOption, organizationId)(
                   GlobalAccessContext) ?~> Messages("organization.notFound", signUpData.organization)
@@ -590,20 +588,19 @@ class AuthenticationController @Inject()(
                                    email: String): Fox[(String, String, String, List[String])] = {
     var (errors, fN, lN) = normalizeName(firstName, lastName)
     for {
-      nameEmailError: (String, String, String, List[String]) <- Fox
-        .fromFuture(multiUserDAO.findOneByEmail(email.toLowerCase)(GlobalAccessContext).futureBox)
-        .flatMap {
-          case Full(_) =>
-            errors ::= "user.email.alreadyInUse"
+      nameEmailError: (String, String, String,
+      List[String]) <- multiUserDAO.findOneByEmail(email.toLowerCase)(GlobalAccessContext).shiftBox.flatMap {
+        case Full(_) =>
+          errors ::= "user.email.alreadyInUse"
+          Fox.successful(("", "", "", errors))
+        case Empty =>
+          if (errors.nonEmpty) {
             Fox.successful(("", "", "", errors))
-          case Empty =>
-            if (errors.nonEmpty) {
-              Fox.successful(("", "", "", errors))
-            } else {
-              Fox.successful((fN, lN, email.toLowerCase, List()))
-            }
-          case f: Failure => Fox.failure(f.msg)
-        }
+          } else {
+            Fox.successful((fN, lN, email.toLowerCase, List()))
+          }
+        case f: Failure => Fox.failure(f.msg)
+      }
     } yield nameEmailError
   }
 

@@ -281,6 +281,12 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
   def foreach(f: A => _): Unit =
     futureBox.map(_.map(f))
 
+  /*
+   * Returns new Fox[Box[A]] that is always successful, such that the original’s box is shifted “inwards”.
+   * Use to access the box.
+   */
+  def shiftBox: Fox[Box[A]] = Fox.fromFuture(futureBox)
+
   def toFutureOption: Future[Option[A]] =
     futureBox.map(box => box.toOption)
 

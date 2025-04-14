@@ -102,7 +102,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       positions match {
         case List() => Fox.successful(None)
         case head :: tail =>
-          Fox.fromFuture(checkIfPositionHasData(head, mag).futureBox).flatMap {
+          checkIfPositionHasData(head, mag).shiftBox.flatMap {
             case Full(pos) => Fox.successful(Some(pos))
             case _         => searchPositionIter(tail, mag)
           }

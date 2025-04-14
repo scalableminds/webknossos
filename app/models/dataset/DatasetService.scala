@@ -147,7 +147,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     val groupedByOrga = dataSources.groupBy(_.id.organizationId).toList
     Fox
       .serialCombined(groupedByOrga) { orgaTuple: (String, List[InboxDataSource]) =>
-        Fox.fromFuture(organizationDAO.findOne(orgaTuple._1).futureBox).flatMap {
+        organizationDAO.findOne(orgaTuple._1).shiftBox.flatMap {
           case Full(organization) if dataStore.onlyAllowedOrganization.exists(_ != organization._id) =>
             logger.info(
               s"Ignoring ${orgaTuple._2.length} reported datasets for forbidden organization ${orgaTuple._1} from organization-specific datastore ${dataStore.name}")
@@ -291,7 +291,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     userOpt match {
       case Some(user) =>
         for {
-          lastUsedTime <- Fox.fromFuture(datasetLastUsedTimesDAO.findForDatasetAndUser(datasetId, user._id).futureBox)
+          lastUsedTime <- datasetLastUsedTimesDAO.findForDatasetAndUser(datasetId, user._id).shiftBox
         } yield lastUsedTime.toOption.getOrElse(Instant.zero)
       case _ => Fox.successful(Instant.zero)
     }
@@ -342,7 +342,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     if (pathInfo.magPathInfos.isEmpty) {
       Fox.successful(())
     } else {
-      val dataset = Fox.fromFuture(datasetDAO.findOneByDataSourceId(pathInfo.dataSourceId).futureBox)
+      val dataset = datasetDAO.findOneByDataSourceId(pathInfo.dataSourceId).shiftBox
       dataset.flatMap {
         case Full(dataset) => datasetMagsDAO.updateMagPathsForDataset(dataset._id, pathInfo.magPathInfos)
         case Empty => // Dataset reported but ignored (non-existing/forbidden org)

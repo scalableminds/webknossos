@@ -28,7 +28,7 @@ trait TracingMigrationService[T <: GeneratedMessage] extends FoxImplicits {
       migrations match {
         case List() => tracingFox
         case head :: tail =>
-          Fox.fromFuture(tracingFox.futureBox).flatMap {
+          tracingFox.shiftBox.flatMap {
             case Full(tracing) =>
               migrateIter(head(tracing), tail)
             case x => x.toFox

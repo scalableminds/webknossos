@@ -46,11 +46,11 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
                                                            ctx: DBAccessContext): Fox[JsObject] =
     for {
       dataStore <- dataStoreDAO.findOneByName(aiModel._dataStore)
-      userOpt <- Fox.fromFuture(userDAO.findOne(aiModel._user).toFutureOption)
-      userJs <- Fox.runOptional(userOpt)(userService.compactWrites)
+      userBox <- userDAO.findOne(aiModel._user).shiftBox
+      userJs <- Fox.runOptional(userBox.toOption)(userService.compactWrites)
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
       trainingJobOpt <- Fox.runOptional(aiModel._trainingJob)(trainingJobId =>
-        Fox.fromFuture(jobDAO.findOne(trainingJobId).futureBox).flatMap {
+        jobDAO.findOne(trainingJobId).shiftBox.flatMap {
           case Full(job) => Fox.successful(Some(job))
           case _         => Fox.successful(None)
       })

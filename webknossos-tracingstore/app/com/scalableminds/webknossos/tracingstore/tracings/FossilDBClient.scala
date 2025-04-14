@@ -66,7 +66,7 @@ class FossilDBClient(collection: String,
         logger.info(f"Successfully tested FossilDB health at $authority. Reply: " + replyString)
     } yield ()
     for {
-      box <- Fox.fromFuture(resultFox.futureBox)
+      box <- resultFox.shiftBox
       _ <- box match {
         case Full(()) => Fox.successful(())
         case Empty    => Fox.empty
@@ -204,7 +204,7 @@ class FossilDBClient(collection: String,
       _ <- assertSuccess(reply.success, reply.errorMessage)
     } yield ()
     for {
-      box <- Fox.fromFuture(putFox.futureBox)
+      box <- putFox.shiftBox
       _ <- box match {
         case Full(()) => Fox.successful(())
         case Empty    => Fox.empty
@@ -242,7 +242,7 @@ class FossilDBClient(collection: String,
       _ <- assertSuccess(reply.success, reply.errorMessage)
     } yield ()
     for {
-      box <- Fox.fromFuture(putFox.futureBox)
+      box <- putFox.shiftBox
       _ <- box match {
         case Full(()) => Fox.successful(())
         case Empty    => Fox.empty

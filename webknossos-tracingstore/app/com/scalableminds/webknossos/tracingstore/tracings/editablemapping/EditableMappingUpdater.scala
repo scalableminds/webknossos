@@ -107,7 +107,7 @@ class EditableMappingUpdater(
 
   private def updateIter(mappingFox: Fox[EditableMappingInfo], remainingUpdates: List[UpdateAction])(
       implicit ec: ExecutionContext): Fox[EditableMappingInfo] =
-    Fox.fromFuture(mappingFox.futureBox).flatMap {
+    mappingFox.shiftBox.flatMap {
       case Empty =>
         Fox.empty
       case Full(mapping) =>
@@ -401,14 +401,12 @@ class EditableMappingUpdater(
       _ <- Fox.serialCombined(segmentToAgglomerateChunkNewestStream) {
         case (chunkKey, _, version) =>
           if (version > sourceVersion) {
-            Fox
-              .fromFuture(editableMappingService.getSegmentToAgglomerateChunk(chunkKey, Some(sourceVersion)).futureBox)
-              .map {
-                case Full(chunkData) => segmentToAgglomerateBuffer.put(chunkKey, (chunkData.toMap, false))
-                case Empty           => segmentToAgglomerateBuffer.put(chunkKey, (Map[Long, Long](), true))
-                case Failure(msg, _, chain) =>
-                  Fox.failure(msg, Empty, chain)
-              }
+            editableMappingService.getSegmentToAgglomerateChunk(chunkKey, Some(sourceVersion)).shiftBox.map {
+              case Full(chunkData) => segmentToAgglomerateBuffer.put(chunkKey, (chunkData.toMap, false))
+              case Empty           => segmentToAgglomerateBuffer.put(chunkKey, (Map[Long, Long](), true))
+              case Failure(msg, _, chain) =>
+                Fox.failure(msg, Empty, chain)
+            }
           } else Fox.successful(())
       }
       agglomerateToGraphNewestStream = new VersionedAgglomerateToGraphIterator(
@@ -419,9 +417,9 @@ class EditableMappingUpdater(
           if (version > sourceVersion) {
             for {
               agglomerateId <- agglomerateIdFromAgglomerateGraphKey(graphKey).toFox
-              _ <- Fox
-                .fromFuture(
-                  editableMappingService.getAgglomerateGraphForId(tracingId, sourceVersion, agglomerateId).futureBox)
+              _ <- editableMappingService
+                .getAgglomerateGraphForId(tracingId, sourceVersion, agglomerateId)
+                .shiftBox
                 .flatMap {
                   case Full(graphData) => Fox.successful(agglomerateToGraphBuffer.put(graphKey, (graphData, false)))
                   case Empty           => Fox.successful(agglomerateToGraphBuffer.put(graphKey, (emptyAgglomerateGraph, true)))

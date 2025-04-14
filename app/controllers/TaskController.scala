@@ -184,8 +184,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
         (taskId, initializingAnnotationId) <- taskDAO
           .assignNext(user._id, teams, isTeamManagerOrAdmin) ?~> "task.unavailable"
-        insertedAnnotationBox <- Fox.fromFuture(
-          annotationService.createAnnotationFor(user, taskId, initializingAnnotationId).futureBox)
+        insertedAnnotationBox <- annotationService.createAnnotationFor(user, taskId, initializingAnnotationId).shiftBox
         _ <- annotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
         annotation <- insertedAnnotationBox.toFox
         annotationJSON <- annotationService.publicWrites(annotation, Some(user))
@@ -203,8 +202,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed"
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, assignee)) ?~> "notAllowed"
         (_, initializingAnnotationId) <- taskDAO.assignOneTo(id, userId, teams) ?~> "task.unavailable"
-        insertedAnnotationBox <- Fox.fromFuture(
-          annotationService.createAnnotationFor(assignee, id, initializingAnnotationId).futureBox)
+        insertedAnnotationBox <- annotationService.createAnnotationFor(assignee, id, initializingAnnotationId).shiftBox
         _ <- annotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
         _ <- insertedAnnotationBox.toFox
         taskUpdated <- taskDAO.findOne(id)

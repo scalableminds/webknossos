@@ -17,7 +17,7 @@ import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient}
 
 import javax.inject.Inject
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 case class Project(
     _id: ObjectId,
@@ -183,11 +183,10 @@ class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userSer
     extends LazyLogging
     with FoxImplicits {
 
-  def deleteOne(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[Boolean] = {
-    val futureFox: Future[Fox[Boolean]] = for {
-      removalSuccessBox <- projectDAO.deleteOne(projectId).futureBox
-    } yield {
-      removalSuccessBox match {
+  def deleteOne(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[Boolean] =
+    for {
+      removalSuccessBox <- projectDAO.deleteOne(projectId).shiftBox
+      successBool <- removalSuccessBox match {
         case Full(_) =>
           for {
             _ <- taskDAO.removeAllWithProjectAndItsAnnotations(projectId)
@@ -197,15 +196,12 @@ class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userSer
           logger.warn(s"Tried to remove project $projectId without permission.")
           Fox.successful(false)
       }
-    }
-    Fox.fromFuture(futureFox).flatten
-  }
+    } yield successBool
 
   def publicWrites(project: Project)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
-      ownerBox <- Fox.fromFuture(
-        userService.findOneCached(project._owner).flatMap(u => userService.compactWrites(u)).futureBox)
-      teamNameBox <- Fox.fromFuture(teamDAO.findOne(project._team)(GlobalAccessContext).map(_.name).futureBox)
+      ownerBox <- userService.findOneCached(project._owner).flatMap(u => userService.compactWrites(u)).shiftBox
+      teamNameBox <- teamDAO.findOne(project._team)(GlobalAccessContext).map(_.name).shiftBox
     } yield {
       Json.obj(
         "name" -> project.name,

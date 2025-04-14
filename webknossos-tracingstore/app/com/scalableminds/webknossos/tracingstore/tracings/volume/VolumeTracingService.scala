@@ -167,7 +167,7 @@ class VolumeTracingService @Inject()(
       actionBucketData <- action.base64Data.map(Base64.getDecoder.decode).toFox
       _ <- Fox.runIf(volumeLayer.tracing.getHasSegmentIndex) {
         for {
-          previousBucketBytes <- Fox.fromFuture(volumeBucketBuffer.getWithFallback(action.bucketPosition).futureBox)
+          previousBucketBytes <- volumeBucketBuffer.getWithFallback(action.bucketPosition).shiftBox
           _ <- updateSegmentIndex(
             volumeLayer,
             segmentIndexBuffer,
@@ -286,7 +286,7 @@ class VolumeTracingService @Inject()(
       _ <- Fox.serialCombined(bucketStreamBeforeRevert) {
         case (bucketPosition, dataBeforeRevert, version) =>
           if (version > sourceVersion) {
-            Fox.fromFuture(loadBucket(volumeLayer, bucketPosition, Some(sourceVersion)).futureBox).map {
+            loadBucket(volumeLayer, bucketPosition, Some(sourceVersion)).shiftBox.map {
               case Full(dataAfterRevert) =>
                 for {
                   _ <- saveBucket(volumeLayer, bucketPosition, dataAfterRevert, newVersion)
@@ -927,14 +927,13 @@ class VolumeTracingService @Inject()(
               _ <- saveBucket(volumeLayer, bucketPosition, bucketBytes, tracing.version + 1)
               _ <- Fox.runIfOptionTrue(tracing.hasSegmentIndex) {
                 for {
-                  previousBucketBytes <- Fox.fromFuture(
-                    loadBucket(volumeLayer, bucketPosition, Some(tracing.version)).futureBox)
+                  previousBucketBytesBox <- loadBucket(volumeLayer, bucketPosition, Some(tracing.version)).shiftBox
                   _ <- updateSegmentIndex(
                     volumeLayer,
                     segmentIndexBuffer,
                     bucketPosition,
                     bucketBytes,
-                    previousBucketBytes,
+                    previousBucketBytesBox,
                     editableMappingTracingId(tracing, tracingId)
                   ) ?~> "failed to update segment index"
                 } yield ()

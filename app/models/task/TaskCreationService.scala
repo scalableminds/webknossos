@@ -101,7 +101,7 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
 
   // Used in create (without files) in case of base annotation
   private def resolveBaseAnnotationId(annotationOrTaskId: ObjectId)(implicit ctx: DBAccessContext): Fox[Annotation] =
-    Fox.fromFuture(annotationDAO.findOne(annotationOrTaskId).futureBox).flatMap {
+    annotationDAO.findOne(annotationOrTaskId).shiftBox.flatMap {
       case Full(value) => Fox.successful(value)
       case _           => resolveBaseTaskId(annotationOrTaskId)
     }

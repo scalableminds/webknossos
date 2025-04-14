@@ -174,7 +174,7 @@ class JobService @Inject()(wkConf: WkConf,
       organization <- organizationDAO.findOne(owner._organization) ?~> "organization.notFound"
       resultLink = job.resultLink(organization._id)
       ownerJson <- userService.compactWrites(owner)
-      creditTransactionBox <- Fox.fromFuture(creditTransactionService.findTransactionOfJob(job._id).futureBox)
+      creditTransactionBox <- creditTransactionService.findTransactionOfJob(job._id).shiftBox
     } yield {
       Json.obj(
         "id" -> job._id.id,
@@ -230,7 +230,7 @@ class JobService @Inject()(wkConf: WkConf,
       creditTransaction <- creditTransactionService.reserveCredits(user._organization,
                                                                    costsInCredits,
                                                                    creditTransactionComment)
-      job <- Fox.fromFuture(submitJob(command, commandArgs, user, datastoreName).futureBox).flatMap {
+      job <- submitJob(command, commandArgs, user, datastoreName).shiftBox.flatMap {
         case Full(job) => Fox.successful(job)
         case _ =>
           creditTransactionService

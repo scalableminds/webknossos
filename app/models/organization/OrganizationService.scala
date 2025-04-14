@@ -50,7 +50,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     } else Json.obj()
     for {
       usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
-      ownerBox <- Fox.fromFuture(userDAO.findOwnerByOrg(organization._id).futureBox)
+      ownerBox <- userDAO.findOwnerByOrg(organization._id).shiftBox
       creditBalanceOpt <- Fox.runIf(requestingUser.exists(_._organization == organization._id))(
         creditTransactionDAO.getCreditBalance(organization._id))
       ownerNameOpt = ownerBox.toOption.map(o => s"${o.firstName} ${o.lastName}")
@@ -116,7 +116,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         .flatMap(TextUtils.normalizeStrong)
         .getOrElse(normalizedName)
         .replaceAll(" ", "_")
-      existingOrganization <- Fox.fromFuture(organizationDAO.findOne(organizationId)(GlobalAccessContext).futureBox)
+      existingOrganization <- organizationDAO.findOne(organizationId)(GlobalAccessContext).shiftBox
       _ <- Fox.fromBool(existingOrganization.isEmpty) ?~> "organization.id.alreadyInUse"
       initialPricingParameters = if (conf.Features.isWkorgInstance) (PricingPlan.Basic, Some(3), Some(50000000000L))
       else (PricingPlan.Custom, None, None)

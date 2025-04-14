@@ -47,7 +47,7 @@ trait DatasetErrorLoggingService extends IntervalScheduler with Formatter with L
   def withErrorLoggingMultiple(dataSourceId: DataSourceId,
                                label: String,
                                resultFox: Fox[Seq[Box[Array[Byte]]]]): Fox[Seq[Box[Array[Byte]]]] =
-    Fox.fromFuture(resultFox.futureBox).flatMap {
+    resultFox.shiftBox.flatMap {
       case Full(boxes) =>
         boxes.foreach(box => withErrorLogging(dataSourceId, label, box.toFox))
         Fox.successful(boxes)
@@ -57,7 +57,7 @@ trait DatasetErrorLoggingService extends IntervalScheduler with Formatter with L
     }
 
   def withErrorLogging(dataSourceId: DataSourceId, label: String, resultFox: Fox[Array[Byte]]): Fox[Array[Byte]] =
-    Fox.fromFuture(resultFox.futureBox).flatMap {
+    resultFox.shiftBox.flatMap {
       case Full(data) =>
         if (data.length == 0) {
           val msg = s"Zero-length array returned while $label for $dataSourceId"

@@ -51,7 +51,7 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
   def getOpenGraphTags(uriPath: String, sharingToken: Option[String])(implicit ec: ExecutionContext,
                                                                       ctx: DBAccessContext): Fox[OpenGraphTags] =
     for {
-      tagsBox <- Fox.fromFuture(getOpenGraphTagsImpl(uriPath, sharingToken).futureBox)
+      tagsBox <- getOpenGraphTagsImpl(uriPath, sharingToken).shiftBox
       // In any error case, fall back to default, so the html template does not break
       tags = tagsBox match {
         case Full(tags) => tags
@@ -75,7 +75,7 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
         case OpenGraphPageType.unknown => Fox.successful(defaultTags())
       }
       // In error case (probably no access permissions), fall back to default, so the html template does not break
-      tagsBox <- Fox.fromFuture(tagsFox.futureBox)
+      tagsBox <- tagsFox.shiftBox
       tags = tagsBox match {
         case Full(tags) => tags
         case _          => defaultTags(pageType)

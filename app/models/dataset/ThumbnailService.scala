@@ -177,7 +177,7 @@ class ThumbnailCachingService @Inject()(thumbnailDAO: ThumbnailDAO) {
       (datasetId, layerName, width, height, mappingName),
       _ =>
         for {
-          fromDbBox <- Fox.fromFuture(thumbnailDAO.findOne(datasetId, layerName, width, height, mappingName).futureBox)
+          fromDbBox <- thumbnailDAO.findOne(datasetId, layerName, width, height, mappingName).shiftBox
           fromDbOrNew <- fromDbBox match {
             case Full(fromDb) =>
               Fox.successful(fromDb)

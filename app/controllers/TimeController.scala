@@ -32,7 +32,7 @@ class TimeController @Inject()(userService: UserService,
       for {
         user <- userDAO.findOne(userId) ?~> "user.notFound" ~> NOT_FOUND
         _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
-        timeSpansBox: Box[List[TimeSpan]] <- Fox.fromFuture(timeSpanDAO.findAllByUser(user._id).futureBox)
+        timeSpansBox: Box[List[TimeSpan]] <- timeSpanDAO.findAllByUser(user._id).shiftBox
         timesGrouped: Map[Month, Duration] = timeSpanService.sumTimespansPerInterval(TimeSpan.groupByMonth,
                                                                                      timeSpansBox)
         timesGroupedSorted = ListMap(timesGrouped.toSeq.sortBy(_._1): _*)

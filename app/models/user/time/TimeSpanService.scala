@@ -153,7 +153,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       case Some(taskId) =>
         for {
           _ <- taskDAO.logTime(taskId, duration)(GlobalAccessContext) ?~> "FAILED: TaskSQLDAO.logTime"
-          _ <- Fox.fromFuture(signalOverTime(duration, annotation)(GlobalAccessContext).futureBox) //signalOverTime is expected to fail in some cases, hence the .futureBox
+          _ <- signalOverTime(duration, annotation)(GlobalAccessContext).shiftBox //signalOverTime is expected to fail in some cases, hence the .shiftBox
         } yield {}
       case _ =>
         Fox.successful(())

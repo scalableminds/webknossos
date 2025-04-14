@@ -192,28 +192,25 @@ object ZipIO extends LazyLogging with FoxImplicits {
     }
 
     val resultFox = zipEntries.foldLeft[Fox[List[A]]](Fox.successful(List.empty)) { (results, entry) =>
-      Fox
-        .fromFuture(results.futureBox)
-        .map {
-          case Full(rs) =>
-            val input: InputStream = zip.getInputStream(entry)
-            val path = commonPrefix.relativize(Paths.get(entry.getName))
-            val innerResultFox: Fox[List[A]] = Fox.fromFutureBox(f(path, input).futureBox.map {
-              case Full(result) =>
-                input.close()
-                Full(rs :+ result)
-              case Empty =>
-                input.close()
-                Empty
-              case failure: Failure =>
-                input.close()
-                failure
-            })
-            innerResultFox
-          case e =>
-            e.toFox
-        }
-        .flatten
+      results.shiftBox.map {
+        case Full(rs) =>
+          val input: InputStream = zip.getInputStream(entry)
+          val path = commonPrefix.relativize(Paths.get(entry.getName))
+          val innerResultFox: Fox[List[A]] = Fox.fromFutureBox(f(path, input).futureBox.map {
+            case Full(result) =>
+              input.close()
+              Full(rs :+ result)
+            case Empty =>
+              input.close()
+              Empty
+            case failure: Failure =>
+              input.close()
+              failure
+          })
+          innerResultFox
+        case e =>
+          e.toFox
+      }.flatten
     }
 
     Fox.fromFutureBox {

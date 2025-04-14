@@ -184,7 +184,7 @@ Samplecountry
     } yield ()
 
   private def insertRootFolder(): Fox[Unit] =
-    Fox.fromFuture(folderDAO.findOne(defaultOrganization._rootFolder).futureBox).flatMap {
+    folderDAO.findOne(defaultOrganization._rootFolder).shiftBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
         folderDAO.insertAsRoot(Folder(defaultOrganization._rootFolder, folderService.defaultRootName, JsArray.empty))
@@ -194,7 +194,7 @@ Samplecountry
                                 multiUser: MultiUser,
                                 user: User,
                                 isTeamManager: Boolean): Fox[Unit] =
-    Fox.fromFuture(userService.userFromMultiUserEmail(userEmail).futureBox).flatMap {
+    userService.userFromMultiUserEmail(userEmail).shiftBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
         for {
@@ -209,26 +209,24 @@ Samplecountry
 
   private def insertToken(): Fox[Unit] = {
     val expiryTime = conf.Silhouette.TokenAuthenticator.authenticatorExpiry
-    Fox
-      .fromFuture(tokenDAO.findOneByLoginInfo("credentials", defaultUser._id.id, TokenType.Authentication).futureBox)
-      .flatMap {
-        case Full(_) => Fox.successful(())
-        case _ =>
-          val newToken = Token(
-            ObjectId.generate,
-            defaultUserToken,
-            LoginInfo("credentials", defaultUser._id.id),
-            Instant.now,
-            Instant.in(expiryTime),
-            None,
-            TokenType.Authentication
-          )
-          tokenDAO.insertOne(newToken)
-      }
+    tokenDAO.findOneByLoginInfo("credentials", defaultUser._id.id, TokenType.Authentication).shiftBox.flatMap {
+      case Full(_) => Fox.successful(())
+      case _ =>
+        val newToken = Token(
+          ObjectId.generate,
+          defaultUserToken,
+          LoginInfo("credentials", defaultUser._id.id),
+          Instant.now,
+          Instant.in(expiryTime),
+          None,
+          TokenType.Authentication
+        )
+        tokenDAO.insertOne(newToken)
+    }
   }
 
   private def insertOrganization(): Fox[Unit] =
-    Fox.fromFuture(organizationDAO.findOne(defaultOrganization._id).futureBox).flatMap {
+    organizationDAO.findOne(defaultOrganization._id).shiftBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
         organizationDAO.insertOne(defaultOrganization)
@@ -286,7 +284,7 @@ Samplecountry
 
   def insertLocalDataStoreIfEnabled(): Fox[Unit] =
     if (storeModules.localDataStoreEnabled) {
-      Fox.fromFuture(dataStoreDAO.findOneByUrl(conf.Http.uri).futureBox).flatMap { maybeStore =>
+      dataStoreDAO.findOneByUrl(conf.Http.uri).shiftBox.flatMap { maybeStore =>
         if (maybeStore.isEmpty) {
           logger.info("Inserting local datastore")
           dataStoreDAO.insertOne(defaultDataStore)
@@ -296,7 +294,7 @@ Samplecountry
 
   private def insertLocalTracingStoreIfEnabled(): Fox[Unit] =
     if (storeModules.localTracingStoreEnabled) {
-      Fox.fromFuture(tracingStoreDAO.findOneByUrl(conf.Http.uri).futureBox).flatMap { maybeStore =>
+      tracingStoreDAO.findOneByUrl(conf.Http.uri).shiftBox.flatMap { maybeStore =>
         if (maybeStore.isEmpty) {
           logger.info("Inserting local tracingstore")
           tracingStoreDAO.insertOne(
@@ -310,7 +308,7 @@ Samplecountry
 
   private def updateLocalDataStorePublicUri(): Fox[Unit] =
     if (storeModules.localDataStoreEnabled) {
-      Fox.fromFuture(dataStoreDAO.findOneByUrl(conf.Http.uri).futureBox).flatMap {
+      dataStoreDAO.findOneByUrl(conf.Http.uri).shiftBox.flatMap {
         case Full(store) =>
           val newPublicUri = conf.Datastore.publicUri.getOrElse(conf.Http.uri)
           if (store.publicUrl == newPublicUri) {
@@ -322,7 +320,7 @@ Samplecountry
 
   private def updateLocalTracingStorePublicUri(): Fox[Unit] =
     if (storeModules.localTracingStoreEnabled) {
-      Fox.fromFuture(tracingStoreDAO.findOneByUrl(conf.Http.uri).futureBox).flatMap {
+      tracingStoreDAO.findOneByUrl(conf.Http.uri).shiftBox.flatMap {
         case Full(store) =>
           val newPublicUri = conf.Tracingstore.publicUri.getOrElse(conf.Http.uri)
           if (store.publicUrl == newPublicUri) {

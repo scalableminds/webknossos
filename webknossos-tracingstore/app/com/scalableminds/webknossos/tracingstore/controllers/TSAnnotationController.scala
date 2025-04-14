@@ -168,15 +168,14 @@ class TSAnnotationController @Inject()(
               _.annotationLayers.exists(_.typ == AnnotationLayerTypeProto.Volume))
             firstVolumeAnnotationId = if (firstVolumeAnnotationIndex < 0) None
             else Some(request.body(firstVolumeAnnotationIndex))
-            mergeEditableMappingsResultBox <- Fox.fromFuture(
-              editableMappingMergeService
-                .mergeEditableMappings(request.body,
-                                       firstVolumeAnnotationId,
-                                       newAnnotationId,
-                                       newVolumeId,
-                                       volumeTracings.zip(volumeLayers.map(_.tracingId)),
-                                       toTemporaryStore)
-                .futureBox)
+            mergeEditableMappingsResultBox <- editableMappingMergeService
+              .mergeEditableMappings(request.body,
+                                     firstVolumeAnnotationId,
+                                     newAnnotationId,
+                                     newVolumeId,
+                                     volumeTracings.zip(volumeLayers.map(_.tracingId)),
+                                     toTemporaryStore)
+              .shiftBox
             (newMappingName: Option[String], newTargetVersion: Long) <- mergeEditableMappingsResultBox match {
               case Full(targetVersion) => Fox.successful((Some(newVolumeId), targetVersion))
               case Empty               => Fox.successful((None, 0L))

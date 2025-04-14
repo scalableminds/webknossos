@@ -35,8 +35,8 @@ class TaskService @Inject()(conf: WkConf,
       status <- Fox.fromFuture(statusOf(task).getOrElse(TaskStatus(-1, -1, -1)))
       taskType <- taskTypeDAO.findOne(task._taskType)(GlobalAccessContext)
       taskTypeJs <- taskTypeService.publicWrites(taskType)
-      scriptInfoBox <- Fox.fromFuture(task._script.toFox.flatMap(sid => scriptDAO.findOne(sid)).futureBox)
-      scriptJs <- Fox.fromFuture(scriptInfoBox.toFox.flatMap(s => scriptService.publicWrites(s)).futureBox)
+      scriptInfoBox <- task._script.toFox.flatMap(sid => scriptDAO.findOne(sid)).shiftBox
+      scriptJsBox <- scriptInfoBox.toFox.flatMap(s => scriptService.publicWrites(s)).shiftBox
       project <- projectDAO.findOne(task._project)
       team <- teamDAO.findOne(project._team)(GlobalAccessContext)
     } yield {
@@ -51,7 +51,7 @@ class TaskService @Inject()(conf: WkConf,
         "neededExperience" -> task.neededExperience,
         "created" -> task.created,
         "status" -> status,
-        "script" -> scriptJs.toOption,
+        "script" -> scriptJsBox.toOption,
         "tracingTime" -> task.tracingTime,
         "creationInfo" -> task.creationInfo,
         "boundingBox" -> task.boundingBox,

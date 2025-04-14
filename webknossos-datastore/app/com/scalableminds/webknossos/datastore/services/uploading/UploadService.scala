@@ -346,17 +346,17 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         s"Finishing dataset upload of ${dataSourceId.organizationId}/${dataSourceId.directoryName} with id $uploadId...")
       _ <- Fox.runIf(checkCompletion)(ensureAllChunksUploaded(uploadId))
       _ <- ensureDirectoryBox(unpackToDir.getParent).toFox ?~> "dataset.import.fileAccessDenied"
-      unpackResult <- Fox.fromFuture(unpackDataset(uploadDir, unpackToDir).futureBox)
+      unpackResult <- unpackDataset(uploadDir, unpackToDir).shiftBox
       linkedLayerInfo <- getObjectFromRedis[LinkedLayerIdentifiers](redisKeyForLinkedLayerIdentifier(uploadId))
       _ <- cleanUpUploadedDataset(uploadDir, uploadId)
       _ <- cleanUpOnFailure(unpackResult,
                             dataSourceId,
                             datasetNeedsConversion,
                             label = s"unpacking to dataset to $unpackToDir")
-      postProcessingResult <- Fox.fromFuture(postProcessUploadedDataSource(datasetNeedsConversion,
-                                                                           unpackToDir,
-                                                                           dataSourceId,
-                                                                           linkedLayerInfo.layersToLink).futureBox)
+      postProcessingResult <- postProcessUploadedDataSource(datasetNeedsConversion,
+                                                            unpackToDir,
+                                                            dataSourceId,
+                                                            linkedLayerInfo.layersToLink).shiftBox
       _ <- cleanUpOnFailure(postProcessingResult,
                             dataSourceId,
                             datasetNeedsConversion,

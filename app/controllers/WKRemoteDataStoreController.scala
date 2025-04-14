@@ -243,8 +243,7 @@ class WKRemoteDataStoreController @Inject()(
     implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          existingDatasetBox <- Fox.fromFuture(
-            datasetDAO.findOneByDataSourceId(request.body)(GlobalAccessContext).futureBox)
+          existingDatasetBox <- datasetDAO.findOneByDataSourceId(request.body)(GlobalAccessContext).shiftBox
           _ <- existingDatasetBox match {
             case Full(dataset) =>
               for {

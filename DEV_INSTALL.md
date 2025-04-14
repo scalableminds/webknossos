@@ -27,7 +27,7 @@ For non-localhost deployments, check out the [installation guide in the document
 * [Blosc](https://github.com/Blosc/c-blosc)
 * [Brotli](https://github.com/google/brotli)
 * [Draco](https://github.com/google/draco)
-* [node.js 18](http://nodejs.org/download/)
+* [node.js 22+](http://nodejs.org/download/)
 * [yarn package manager](https://yarnpkg.com/)
 * [git](http://git-scm.com/downloads)
 * [cmake](https://cmake.org/download/)

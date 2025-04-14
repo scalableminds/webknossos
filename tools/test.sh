@@ -67,7 +67,7 @@ ensureUpToDateTests() {
 if [ $cmd == "test-e2e" ]
 then
   ensureUpToDateTests
-  export NODE_PATH="$testBundlePath" && maybeWithC8 ava $(find "$testBundlePath" -name "*.e2e.js") --serial -C 1 "$@"
+  export NODE_PATH="$testBundlePath" && ava $(find "$testBundlePath" -name "*.e2e.js") --serial -C 1 "$@"
 elif [ $cmd == "test-screenshot" ]
 then
   ensureUpToDateTests

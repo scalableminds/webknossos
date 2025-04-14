@@ -28,7 +28,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
       - run: corepack enable
       - name: Install frontend dependencies
         run: yarn install --immutable
@@ -59,7 +59,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
       - run: corepack enable
 
       - uses: actions/setup-java@v4
@@ -118,7 +118,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
       - run: corepack enable
 
       - uses: actions/setup-java@v4

@@ -9,6 +9,7 @@ import {
   annotation as ANNOTATION,
 } from "../fixtures/volumetracing_server_objects";
 // All the mocking is done in the helpers file, so it can be reused for both skeleton and volume API
+
 test.beforeEach((t) => __setupOxalis(t, "volume"));
 test("getActiveCellId should get the id of the active segment", (t) => {
   const { api } = t.context;
@@ -21,14 +22,14 @@ test("setActiveCell should set the active segment id", (t) => {
 });
 test("getAnnotationTool should get the current tool", (t) => {
   const { api } = t.context;
-  t.is(api.tracing.getAnnotationTool(), AnnotationTool.MOVE);
+  t.is(api.tracing.getAnnotationTool(), AnnotationTool.MOVE.id);
 });
 test("setAnnotationTool should set the current tool", (t) => {
   const { api } = t.context;
-  api.tracing.setAnnotationTool(AnnotationTool.TRACE);
-  t.is(api.tracing.getAnnotationTool(), AnnotationTool.TRACE);
-  api.tracing.setAnnotationTool(AnnotationTool.BRUSH);
-  t.is(api.tracing.getAnnotationTool(), AnnotationTool.BRUSH);
+  api.tracing.setAnnotationTool(AnnotationTool.TRACE.id);
+  t.is(api.tracing.getAnnotationTool(), AnnotationTool.TRACE.id);
+  api.tracing.setAnnotationTool(AnnotationTool.BRUSH.id);
+  t.is(api.tracing.getAnnotationTool(), AnnotationTool.BRUSH.id);
 });
 test("setAnnotationTool should throw an error for an invalid tool", (t) => {
   const { api } = t.context;

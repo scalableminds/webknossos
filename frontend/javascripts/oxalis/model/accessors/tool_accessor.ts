@@ -108,6 +108,7 @@ export type AnnotationTool = (typeof AnnotationTool)[keyof typeof AnnotationTool
 export const ToolCollections = {
   ALL_TOOLS: Object.values(AnnotationTool) as AnnotationTool[],
   VOLUME_TOOLS: [
+    AnnotationTool.MOVE,
     AnnotationTool.BRUSH,
     AnnotationTool.ERASE_BRUSH,
     AnnotationTool.TRACE,

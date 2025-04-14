@@ -24,6 +24,7 @@ import { setIsWkReadyAction } from "../actions/ui_actions";
 import maintainMaximumZoomForAllMagsSaga from "./flycam_info_cache_saga";
 import splitBoundaryMeshSaga from "./split_boundary_mesh_saga";
 import { warnIfEmailIsUnverified } from "./user_saga";
+import toolSaga from "./tool_saga";
 
 let rootSagaCrashed = false;
 export default function* rootSaga(): Saga<void> {
@@ -84,6 +85,7 @@ function* restartableSaga(): Saga<void> {
       call(maintainMaximumZoomForAllMagsSaga),
       ...DatasetSagas.map((saga) => call(saga)),
       call(splitBoundaryMeshSaga),
+      call(toolSaga),
     ]);
   } catch (err) {
     rootSagaCrashed = true;

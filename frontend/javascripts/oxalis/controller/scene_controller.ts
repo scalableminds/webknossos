@@ -54,6 +54,13 @@ import SegmentMeshController from "./segment_mesh_controller";
 const CUBE_COLOR = 0x999999;
 const LAYER_CUBE_COLOR = 0xffff99;
 
+function Group(name: string, children: THREE.Object3D[] = []) {
+  const group = new THREE.Group();
+  group.name = name;
+  children.forEach((child) => group.add(child));
+  return group;
+}
+
 class SceneController {
   skeletons: Record<number, Skeleton> = {};
   current: number;
@@ -72,10 +79,10 @@ class SceneController {
   lineMeasurementGeometry!: LineMeasurementGeometry;
   areaMeasurementGeometry!: ContourGeometry;
   planes!: OrthoViewWithoutTDMap<Plane>;
-  rootNode!: THREE.Object3D;
+  rootNode!: THREE.Group;
   renderer!: THREE.WebGLRenderer;
   scene!: THREE.Scene;
-  rootGroup!: THREE.Object3D;
+  rootGroup!: THREE.Group;
   segmentMeshController: SegmentMeshController;
   storePropertyUnsubscribers: Array<() => void>;
 
@@ -99,22 +106,21 @@ class SceneController {
     this.createMeshes();
     this.bindToEvents();
     this.scene = new THREE.Scene();
+    this.highlightedBBoxId = null;
+    this.scene.add(
+      Group("rootGroup", [this.rootNode, this.segmentMeshController.meshesLODRootGroup]),
+    );
+    this.rootGroup = this.scene.getObjectByName("rootGroup") as THREE.Group;
     // Because the voxel coordinates do not have a cube shape but are distorted,
     // we need to distort the entire scene to provide an illustration that is
     // proportional to the actual size in nm.
     // For some reason, all objects have to be put into a group object. Changing
     // scene.scale does not have an effect.
-    this.rootGroup = new THREE.Object3D();
-    this.rootGroup.add(this.getRootNode());
-
-    this.highlightedBBoxId = null;
-    // The dimension(s) with the highest mag will not be distorted
+    // The dimension(s) with the highest mag will not be distorted.
     this.rootGroup.scale.copy(
       new THREE.Vector3(...Store.getState().dataset.dataSource.scale.factor),
     );
-    // Add scene to the group, all Geometries are then added to group
-    this.rootGroup.add(this.segmentMeshController.meshesLODRootGroup);
-    this.scene.add(this.rootGroup);
+    // Add rootGroup to scene, all Geometries are then added to the rootGroup
     this.setupDebuggingMethods();
   }
 
@@ -197,13 +203,6 @@ class SceneController {
   }
 
   createMeshes(): void {
-    this.rootNode = new THREE.Object3D();
-    this.userBoundingBoxGroup = new THREE.Group();
-    this.layerBoundingBoxGroup = new THREE.Group();
-    this.rootNode.add(this.userBoundingBoxGroup);
-    this.rootNode.add(this.layerBoundingBoxGroup);
-    this.annotationToolsGeometryGroup = new THREE.Group();
-    this.rootNode.add(this.annotationToolsGeometryGroup);
     this.userBoundingBoxes = [];
     const state = Store.getState();
     // Cubes
@@ -215,28 +214,11 @@ class SceneController {
       showCrossSections: true,
       isHighlighted: false,
     });
-    this.datasetBoundingBox.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
-    const taskBoundingBox = getSomeTracing(state.annotation).boundingBox;
-    this.buildTaskingBoundingBox(taskBoundingBox);
 
     this.contour = new ContourGeometry();
-    this.contour.getMeshes().forEach((mesh) => this.annotationToolsGeometryGroup.add(mesh));
-
     this.quickSelectGeometry = new QuickSelectGeometry();
-    this.annotationToolsGeometryGroup.add(this.quickSelectGeometry.getMeshGroup());
-
     this.lineMeasurementGeometry = new LineMeasurementGeometry();
-    this.lineMeasurementGeometry
-      .getMeshes()
-      .forEach((mesh) => this.annotationToolsGeometryGroup.add(mesh));
     this.areaMeasurementGeometry = new ContourGeometry(true);
-    this.areaMeasurementGeometry
-      .getMeshes()
-      .forEach((mesh) => this.annotationToolsGeometryGroup.add(mesh));
-
-    if (state.annotation.skeleton != null) {
-      this.addSkeleton((_state) => getSkeletonTracing(_state.annotation), true);
-    }
 
     this.planes = {
       [OrthoViews.PLANE_XY]: new Plane(OrthoViews.PLANE_XY),
@@ -247,10 +229,35 @@ class SceneController {
     this.planes[OrthoViews.PLANE_YZ].setRotation(new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0));
     this.planes[OrthoViews.PLANE_XZ].setRotation(new THREE.Euler((-1 / 2) * Math.PI, 0, 0));
 
-    for (const plane of _.values(this.planes)) {
-      plane.getMeshes().forEach((mesh: THREE.Object3D) => this.rootNode.add(mesh));
-    }
+    const planeMeshes = _.values(this.planes).flatMap((plane) => plane.getMeshes());
+    this.rootNode = Group("rootNode", [
+      Group("userBoundingBoxGroup"),
+      Group("layerBoundingBoxGroup"),
+      Group("annotationToolsGeometryGroup", [
+        ...this.contour.getMeshes(),
+        this.quickSelectGeometry.getMeshGroup(),
+        ...this.lineMeasurementGeometry.getMeshes(),
+        ...this.areaMeasurementGeometry.getMeshes(),
+      ]),
+      ...this.datasetBoundingBox.getMeshes(),
+      ...planeMeshes,
+    ]);
 
+    this.userBoundingBoxGroup = this.rootNode.getObjectByName(
+      "userBoundingBoxGroup",
+    ) as THREE.Group;
+    this.layerBoundingBoxGroup = this.rootNode.getObjectByName(
+      "layerBoundingBoxGroup",
+    ) as THREE.Group;
+    this.annotationToolsGeometryGroup = this.rootNode.getObjectByName(
+      "annotationToolsGeometryGroup",
+    ) as THREE.Group;
+
+    const taskBoundingBox = getSomeTracing(state.annotation).boundingBox;
+    this.buildTaskingBoundingBox(taskBoundingBox);
+    if (state.annotation.skeleton != null) {
+      this.addSkeleton((_state) => getSkeletonTracing(_state.annotation), true);
+    }
     // Hide all objects at first, they will be made visible later if needed
     this.stopPlaneMode();
   }

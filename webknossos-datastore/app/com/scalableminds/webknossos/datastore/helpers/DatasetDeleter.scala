@@ -228,9 +228,13 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
         // Two cases exist here: 1. The layer is a regular directory where each mag is a symlink
         // 2. The layer is a symlink to the other layer itself.
         // We can handle both by deleting the layer and creating a new symlink.
-        Files.delete(linkedLayerPath)
+        if (Files.isDirectory(linkedLayerPath)) { // Case 1
+          FileUtils.deleteDirectory(linkedLayerPath.toFile)
+        } else { // Case 2
+          Files.delete(linkedLayerPath)
+        }
         logger.info(
-          s"Deleting existing symlink at $linkedLayerPath linking to $sourceDataSource/$sourceLayer, creating new symlink")
+          s"Deleting existing symlink(s) at $linkedLayerPath linking to $sourceDataSource/$sourceLayer, creating new symlink")
         Files.createSymbolicLink(linkedLayerPath, relativizeSymlinkPath(targetPath, linkedLayerPath))
       } else {
         if (!Files.exists(linkedLayerPath)) {

@@ -10,6 +10,7 @@ class NativeDracoToStlConverter() {
                          offsetZ: Float,
                          scaleX: Double,
                          scaleY: Double,
-                         scaleZ: Double): Array[Byte]
+                         scaleZ: Double,
+                         vertexQuantizationBits: Int): Array[Byte]
 
 }

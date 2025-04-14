@@ -94,7 +94,8 @@ class NeuroglancerPrecomputedMeshService @Inject()(config: DataStoreConfig, data
   override def computeGlobalPosition(segmentInfo: NeuroglancerSegmentManifest,
                                      lod: Int,
                                      lodScaleMultiplier: Double,
-                                     currentChunk: Int): Vec3Float = segmentInfo.chunkPositions(lod)(currentChunk).toVec3Float
+                                     currentChunk: Int): Vec3Float =
+    segmentInfo.chunkPositions(lod)(currentChunk).toVec3Float
 
   override def getLodTransform(segmentInfo: NeuroglancerSegmentManifest,
                                lodScaleMultiplier: Double,

@@ -6,6 +6,25 @@ import type { OxalisState } from "oxalis/store";
 import { useSelector } from "react-redux";
 import { NARROW_BUTTON_STYLE } from "./toolbar_view";
 
+const toolkitOptions: Array<{ label: string; key: Toolkit }> = [
+  {
+    label: "All Tools",
+    key: "ALL_TOOLS",
+  },
+  {
+    label: "Read Only",
+    key: "READ_ONLY_TOOLS",
+  },
+  {
+    label: "Volume",
+    key: "VOLUME_TOOLS",
+  },
+  {
+    label: "Split Segments",
+    key: "SPLIT_SEGMENTS",
+  },
+];
+
 export default function ToolkitView() {
   const activeToolkit = useSelector((state: OxalisState) => state.userConfiguration.activeToolkit);
   const toolkitItems: MenuProps["items"] = [
@@ -13,24 +32,7 @@ export default function ToolkitView() {
       key: "1",
       type: "group",
       label: "Select Toolkit",
-      children: [
-        {
-          label: "All Tools",
-          key: "ALL_TOOLS",
-        },
-        {
-          label: "Read Only",
-          key: "READ_ONLY_TOOLS",
-        },
-        {
-          label: "Volume",
-          key: "VOLUME_TOOLS",
-        },
-        {
-          label: "Split Segments",
-          key: "SPLIT_SEGMENTS",
-        },
-      ],
+      children: toolkitOptions,
     },
   ];
 

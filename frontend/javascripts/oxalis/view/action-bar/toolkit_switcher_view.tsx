@@ -1,10 +1,10 @@
-import { Badge, Button, ConfigProvider, Dropdown, type MenuProps } from "antd";
+import { Badge, Button, Dropdown, type MenuProps } from "antd";
 import type { Toolkit } from "oxalis/model/accessors/tool_accessor";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { Store } from "oxalis/singletons";
-import { NARROW_BUTTON_STYLE } from "./toolbar_view";
+import type { OxalisState } from "oxalis/store";
 import { useSelector } from "react-redux";
-import { OxalisState } from "oxalis/store";
+import { NARROW_BUTTON_STYLE } from "./toolbar_view";
 
 export default function ToolkitView() {
   const activeToolkit = useSelector((state: OxalisState) => state.userConfiguration.activeToolkit);

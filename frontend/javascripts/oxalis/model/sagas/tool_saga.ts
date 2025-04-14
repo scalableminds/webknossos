@@ -1,10 +1,10 @@
-import { fork, put, take, type ActionPattern } from "redux-saga/effects";
+import { type ActionPattern, fork, put, take } from "redux-saga/effects";
 import { call, takeEvery } from "typed-redux-saga";
-import type { Action } from "../actions/actions";
-import { select } from "./effect-generators";
-import { AnnotationTool, Toolkits } from "../accessors/tool_accessor";
-import { setToolAction } from "../actions/ui_actions";
 import { getDisabledInfoForTools } from "../accessors/disabled_tool_accessor";
+import { AnnotationTool, Toolkits } from "../accessors/tool_accessor";
+import type { Action } from "../actions/actions";
+import { setToolAction } from "../actions/ui_actions";
+import { select } from "./effect-generators";
 import { ensureWkReady } from "./ready_sagas";
 
 function* ensureActiveToolIsInToolkit() {

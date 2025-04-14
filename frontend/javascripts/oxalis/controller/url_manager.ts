@@ -19,7 +19,7 @@ import { applyState } from "oxalis/model_initialization";
 import type { MappingType, MeshInformation, OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
 import { type APIAnnotationType, APICompoundTypeEnum } from "types/api_flow_types";
-import type { AdditionalCoordinate, APIDataset } from "types/api_flow_types";
+import type { APIDataset, AdditionalCoordinate } from "types/api_flow_types";
 import { validateUrlStateJSON } from "types/validation";
 
 const MAX_UPDATE_INTERVAL = 1000;

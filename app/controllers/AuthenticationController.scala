@@ -2,7 +2,7 @@ package controllers
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper, TextUtils}
 import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
 import models.organization.{Organization, OrganizationDAO, OrganizationService}
@@ -475,13 +475,10 @@ class AuthenticationController @Inject()(
   }
 
   private def extractUserInfoFromTokenResponses(accessToken: JsObject,
-                                                idTokenOpt: Option[JsObject]): Fox[OpenIdConnectUserInfo] = {
-    val jsObjectToUse = idTokenOpt.getOrElse(accessToken)
-    jsObjectToUse
-      .validate[OpenIdConnectUserInfo]
-      .asOpt
+                                                idTokenOpt: Option[JsObject]): Fox[OpenIdConnectUserInfo] =
+    JsonHelper
+      .as[OpenIdConnectUserInfo](idTokenOpt.getOrElse(accessToken))
       .toFox ?~> "Failed to extract user info from id token or access token"
-  }
 
   private def shaHex(key: String, valueToDigest: String): String =
     new HmacUtils(HmacAlgorithms.HMAC_SHA_256, key).hmacHex(valueToDigest)

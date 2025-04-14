@@ -1,10 +1,13 @@
-import { Badge, Button, Dropdown, type MenuProps } from "antd";
+import { Badge, Button, ConfigProvider, Dropdown, type MenuProps } from "antd";
 import type { Toolkit } from "oxalis/model/accessors/tool_accessor";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { Store } from "oxalis/singletons";
 import { NARROW_BUTTON_STYLE } from "./toolbar_view";
+import { useSelector } from "react-redux";
+import { OxalisState } from "oxalis/store";
 
 export default function ToolkitView() {
+  const activeToolkit = useSelector((state: OxalisState) => state.userConfiguration.activeToolkit);
   const toolkitItems: MenuProps["items"] = [
     {
       key: "1",
@@ -49,12 +52,14 @@ export default function ToolkitView() {
   const toolkitMenuProps = {
     items: toolkitItems,
     onClick: handleMenuClick,
+    selectable: true,
+    selectedKeys: [activeToolkit],
   };
 
   return (
     <Dropdown menu={toolkitMenuProps}>
       <Badge
-        dot
+        dot={activeToolkit !== "ALL_TOOLS"}
         style={{
           boxShadow: "none",
           background: "red",

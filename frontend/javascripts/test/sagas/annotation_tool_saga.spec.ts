@@ -6,6 +6,11 @@ import mockRequire from "mock-require";
 import { initialState } from "test/fixtures/volumetracing_object";
 import sinon from "sinon";
 const disabledInfoMock: { [key in any]?: any } = {};
+//
+
+// todop: remove again
+console.log("AnnotationTool", AnnotationTool.TRACE);
+
 Object.values(AnnotationTool).forEach((annotationTool) => {
   disabledInfoMock[annotationTool.id] = {
     isDisabled: false,

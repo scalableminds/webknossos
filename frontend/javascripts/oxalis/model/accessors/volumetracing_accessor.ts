@@ -216,10 +216,12 @@ export function getContourTracingMode(volumeTracing: VolumeTracing): ContourMode
   return contourTracingMode;
 }
 
+// todop: remove again
+console.log("AnnotationTool", AnnotationTool);
 const MAG_THRESHOLDS_FOR_ZOOM: Partial<Record<AnnotationToolId, number>> = {
-  // Note that these are relative to the lowest existing mag index.
+  // Note that these are relative to the finest existing mag index.
   // A threshold of 1 indicates that the respective tool can be used in the
-  // lowest existing magnification as well as the next highest one.
+  // finest existing magnification as well as the next coarser one.
   [AnnotationTool.TRACE.id]: 1,
   [AnnotationTool.ERASE_TRACE.id]: 1,
   [AnnotationTool.BRUSH.id]: 3,

@@ -211,8 +211,7 @@ class NeuroglancerPrecomputedMeshService @Inject()(config: DataStoreConfig, data
       output = chunks.flatten.toArray
     } yield (output, NeuroglancerMesh.meshEncoding)
 
-  def getVertexQuantizationBits(meshFilePathOpt: Option[String])(
-      implicit tc: TokenContext): Fox[Int] =
+  def getVertexQuantizationBits(meshFilePathOpt: Option[String])(implicit tc: TokenContext): Fox[Int] =
     for {
       meshFilePath <- meshFilePathOpt.toFox ?~> "Mesh file path is required"
       vaultPath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(new URI(meshFilePath), None))

@@ -263,8 +263,8 @@ function* getInfoForMeshLoading(
     meshExtraInfo.preferredQuality != null
       ? meshExtraInfo.preferredQuality
       : yield* select(
-        (state) => state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
-      );
+          (state) => state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
+        );
   const zoomStep = magInfo.getClosestExistingIndex(preferredZoomStep);
   return {
     zoomStep,
@@ -381,14 +381,14 @@ function* loadFullAdHocMesh(
     visibleSegmentationLayer?.tracingId != null;
   let positionsToRequest = usePositionsFromSegmentIndex
     ? yield* getChunkPositionsFromSegmentIndex(
-      tracingStoreHost,
-      layer,
-      segmentId,
-      cubeSize,
-      mag,
-      clippedPosition,
-      additionalCoordinates,
-    )
+        tracingStoreHost,
+        layer,
+        segmentId,
+        cubeSize,
+        mag,
+        clippedPosition,
+        additionalCoordinates,
+      )
     : [clippedPosition];
 
   if (positionsToRequest.length === 0) {

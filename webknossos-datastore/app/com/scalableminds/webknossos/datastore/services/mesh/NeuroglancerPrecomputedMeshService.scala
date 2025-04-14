@@ -35,7 +35,8 @@ object NeuroglancerPrecomputedMeshInfo {
 
 class NeuroglancerPrecomputedMeshService @Inject()(config: DataStoreConfig, dataVaultService: DataVaultService)(
     implicit ec: ExecutionContext)
-    extends FoxImplicits {
+    extends FoxImplicits
+    with NeuroglancerMeshHelper {
 
   private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
 
@@ -90,73 +91,37 @@ class NeuroglancerPrecomputedMeshService @Inject()(config: DataStoreConfig, data
         .toSet
   }
 
-  private def enrichSegmentInfo(segmentInfo: NeuroglancerSegmentManifest,
-                                lodScaleMultiplier: Double,
-                                neuroglancerOffsetStart: Long,
-                                segmentId: Long,
-                                storedToModelSpaceTransform: Array[Double]): MeshSegmentInfo = {
-    val bytesPerLod = segmentInfo.chunkByteSizes.map(_.sum)
-    val totalMeshSize = bytesPerLod.sum
-    val meshByteStartOffset = neuroglancerOffsetStart - totalMeshSize
-    val chunkByteOffsetsInLod = segmentInfo.chunkByteSizes.map(_.scanLeft(0L)(_ + _)) // builds cumulative sum
+  override def computeGlobalPosition(segmentInfo: NeuroglancerSegmentManifest,
+                                     lod: Int,
+                                     lodScaleMultiplier: Double,
+                                     currentChunk: Int): Vec3Float = segmentInfo.chunkPositions(lod)(currentChunk).toVec3Float
 
-    def getChunkByteOffset(lod: Int, currentChunk: Int): Long =
-      // get past the finer lods first, then take offset in selected lod
-      bytesPerLod.take(lod).sum + chunkByteOffsetsInLod(lod)(currentChunk)
-
-    def computeGlobalPositionAndOffset(lod: Int, currentChunk: Int): MeshChunk = {
-      val globalPosition = segmentInfo.chunkPositions(lod)(currentChunk).toVec3Float
-
-      MeshChunk(
-        position = globalPosition,
-        byteOffset = meshByteStartOffset + getChunkByteOffset(lod, currentChunk),
-        byteSize = segmentInfo.chunkByteSizes(lod)(currentChunk).toInt, // size must be int32 to fit in java array
-        unmappedSegmentId = Some(segmentId)
-      )
-    }
-
-    val lods: Seq[Int] = for (lod <- 0 until segmentInfo.numLods) yield lod
-
-    def chunkCountsWithLod(lod: Int): IndexedSeq[(Int, Int)] =
-      for (currentChunk <- 0 until segmentInfo.numChunksPerLod(lod))
-        yield (lod, currentChunk)
-
-    val chunks = lods.map(lod => chunkCountsWithLod(lod).map(x => computeGlobalPositionAndOffset(x._1, x._2)).toList)
-
+  override def getLodTransform(segmentInfo: NeuroglancerSegmentManifest,
+                               lodScaleMultiplier: Double,
+                               transform: Array[Array[Double]],
+                               lod: Int): Array[Array[Double]] = {
     val baseScale = Vec3Float(1, 1, 1) * lodScaleMultiplier * segmentInfo.chunkShape
-
-    val meshfileLods = lods
-      .map(
-        lod =>
-          MeshLodInfo(
-            scale = 1, // Not used here, applied in the transform
-            vertexOffset = segmentInfo.vertexOffsets(lod), // Not currently used by the frontend, thus we apply it in the transform
-            chunkShape = segmentInfo.chunkShape, // Not currently used by the frontend, thus we apply it in the transform
-            chunks = chunks(lod),
-            transform = Array(
-              Array(
-                baseScale.x * storedToModelSpaceTransform(0) * segmentInfo.lodScales(lod),
-                storedToModelSpaceTransform(1),
-                storedToModelSpaceTransform(2),
-                storedToModelSpaceTransform(3) + segmentInfo.gridOrigin.x + segmentInfo.vertexOffsets(lod).x
-              ),
-              Array(
-                storedToModelSpaceTransform(4),
-                baseScale.y * storedToModelSpaceTransform(5) * segmentInfo.lodScales(lod),
-                storedToModelSpaceTransform(6),
-                storedToModelSpaceTransform(7) + segmentInfo.gridOrigin.y + segmentInfo.vertexOffsets(lod).y
-              ),
-              Array(
-                storedToModelSpaceTransform(8),
-                storedToModelSpaceTransform(9),
-                baseScale.z * storedToModelSpaceTransform(10) * segmentInfo.lodScales(lod),
-                storedToModelSpaceTransform(11) + segmentInfo.gridOrigin.z + segmentInfo.vertexOffsets(lod).z
-              ),
-              Array(0.0, 0.0, 0.0, 1.0)
-            )
-        ))
-      .toList
-    MeshSegmentInfo(chunkShape = segmentInfo.chunkShape, gridOrigin = segmentInfo.gridOrigin, lods = meshfileLods)
+    Array(
+      Array(
+        baseScale.x * transform(0)(0) * segmentInfo.lodScales(lod),
+        transform(0)(1),
+        transform(0)(2),
+        transform(0)(3) + segmentInfo.gridOrigin.x + segmentInfo.vertexOffsets(lod).x
+      ),
+      Array(
+        transform(1)(0),
+        baseScale.y * transform(1)(1) * segmentInfo.lodScales(lod),
+        transform(1)(2),
+        transform(1)(3) + segmentInfo.gridOrigin.y + segmentInfo.vertexOffsets(lod).y
+      ),
+      Array(
+        transform(2)(0),
+        transform(2)(1),
+        baseScale.z * transform(2)(2) * segmentInfo.lodScales(lod),
+        transform(2)(3) + segmentInfo.gridOrigin.z + segmentInfo.vertexOffsets(lod).z
+      ),
+      Array(0.0, 0.0, 0.0, 1.0)
+    )
   }
 
   def listMeshChunksForMultipleSegments(meshFilePathOpt: Option[String], segmentId: List[Long])(
@@ -167,14 +132,9 @@ class NeuroglancerPrecomputedMeshService @Inject()(config: DataStoreConfig, data
       mesh <- neuroglancerPrecomputedMeshInfoCache.getOrLoad(vaultPath, loadRemoteMeshInfo)
       chunkScale = Array.fill(3)(1 / math.pow(2, mesh.meshInfo.vertex_quantization_bits))
       meshSegmentInfos <- Fox.serialCombined(segmentId)(id => listMeshChunks(vaultPath, mesh, id))
-      baseTransform = Array(Array(1.0, 0.0, 0.0, 0.0),
-                            Array(0.0, 1.0, 0.0, 0.0),
-                            Array(0.0, 0.0, 1.0, 0.0),
-                            Array(0.0, 0.0, 0.0, 1.0))
       segmentInfo <- WebknossosSegmentInfo.fromMeshInfosAndMetadata(meshSegmentInfos,
                                                                     NeuroglancerMesh.meshEncoding,
-                                                                    baseTransform,
-                                                                    chunkScale)
+                                                                    chunkScale = chunkScale)
     } yield segmentInfo
 
   private def listMeshChunks(vaultPath: VaultPath, mesh: NeuroglancerMesh, segmentId: Long)(
@@ -189,9 +149,9 @@ class NeuroglancerPrecomputedMeshService @Inject()(config: DataStoreConfig, data
       segmentManifest = NeuroglancerSegmentManifest.fromBytes(chunk)
       meshSegmentInfo = enrichSegmentInfo(segmentManifest,
                                           mesh.meshInfo.lod_scale_multiplier,
+                                          mesh.transformAsMatrix,
                                           chunkRange.start,
-                                          segmentId,
-                                          mesh.meshInfo.transform)
+                                          segmentId)
     } yield meshSegmentInfo
 
   def readMeshChunk(meshFilePathOpt: Option[String], meshChunkDataRequests: Seq[MeshChunkDataRequest])(

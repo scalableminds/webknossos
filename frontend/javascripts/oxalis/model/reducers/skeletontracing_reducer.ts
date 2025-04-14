@@ -6,11 +6,11 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import Constants, { AnnotationToolEnum, TreeTypeEnum } from "oxalis/constants";
 import {
+  areGeometriesTransformed,
   findTreeByNodeId,
   getNodeAndTree,
   getSkeletonTracing,
   getTree,
-  areGeometriesTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Action } from "oxalis/model/actions/actions";
 import {

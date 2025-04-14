@@ -22,11 +22,11 @@ import {
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
+  areGeometriesTransformed,
   enforceSkeletonTracing,
   findTreeByNodeId,
   getNodeAndTree,
   getTreeNameForAgglomerateSkeleton,
-  areGeometriesTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   getActiveSegmentationTracing,

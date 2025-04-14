@@ -31,9 +31,12 @@ import {
   getDataLayers,
   getDatasetBoundingBox,
   getLayerBoundingBox,
+  getLayerByName,
   getLayerNameToIsDisabled,
+  getVisibleSegmentationLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
+  getTransformsForLayer,
   getTransformsForLayerOrNull,
   getTransformsForSkeletonLayer,
 } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
@@ -44,11 +47,13 @@ import { getPlaneScalingFactor } from "oxalis/model/accessors/view_mode_accessor
 import { sceneControllerReadyAction } from "oxalis/model/actions/actions";
 import Dimensions from "oxalis/model/dimensions";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import type { Transform } from "oxalis/model/helpers/transformation_helpers";
 import { getVoxelPerUnit } from "oxalis/model/scaleinfo";
 import { Model } from "oxalis/singletons";
 import type { OxalisState, SkeletonTracing, UserBoundingBox } from "oxalis/store";
 import Store from "oxalis/store";
 import * as THREE from "three";
+import type CustomLOD from "./custom_lod";
 import SegmentMeshController from "./segment_mesh_controller";
 
 const CUBE_COLOR = 0x999999;
@@ -430,23 +435,42 @@ class SceneController {
     this.rootNode.add(this.userBoundingBoxGroup);
   }
 
-  updateUserBoundingBoxesAndMeshesAccordingToTransforms(): void {
-    const state = Store.getState();
-    const transformsForGeometries = getTransformsForSkeletonLayer(
-      state.dataset,
-      state.datasetConfiguration.nativelyRenderedLayerName,
-    );
-    const transformMatrix = transformsForGeometries?.affineMatrix;
-    if (transformMatrix) {
+  private applyTransformToGroup(transform: Transform, group: THREE.Group | CustomLOD) {
+    if (transform?.affineMatrix) {
       const matrix = new THREE.Matrix4();
       // @ts-ignore
-      matrix.set(...transformMatrix);
+      matrix.set(...transform.affineMatrix);
       // We need to disable matrixAutoUpdate as otherwise the update to the matrix will be lost.
-      this.userBoundingBoxGroup.matrixAutoUpdate = false;
-      this.userBoundingBoxGroup.matrix = matrix;
-      this.segmentMeshController.meshesLODRootGroup.matrixAutoUpdate = false;
-      this.segmentMeshController.meshesLODRootGroup.matrix = matrix;
+      group.matrixAutoUpdate = false;
+      group.matrix = matrix;
     }
+  }
+
+  updateUserBoundingBoxesAndMeshesAccordingToTransforms(): void {
+    const state = Store.getState();
+    const tracingStoringUserBBoxes = getSomeTracing(state.annotation);
+    const transformForBBoxes =
+      tracingStoringUserBBoxes.type === "volume"
+        ? getTransformsForLayer(
+            state.dataset,
+            getLayerByName(state.dataset, tracingStoringUserBBoxes.tracingId),
+            state.datasetConfiguration.nativelyRenderedLayerName,
+          )
+        : getTransformsForSkeletonLayer(
+            state.dataset,
+            state.datasetConfiguration.nativelyRenderedLayerName,
+          );
+    this.applyTransformToGroup(transformForBBoxes, this.userBoundingBoxGroup);
+    const visibleSegmentationLayers = getVisibleSegmentationLayers(state);
+    if (visibleSegmentationLayers.length === 0) {
+      return;
+    }
+    const transformForMeshes = getTransformsForLayer(
+      state.dataset,
+      visibleSegmentationLayers[0],
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    );
+    this.applyTransformToGroup(transformForMeshes, this.segmentMeshController.meshesLODRootGroup);
   }
 
   updateLayerBoundingBoxes(): void {

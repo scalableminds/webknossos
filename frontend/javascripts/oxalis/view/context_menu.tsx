@@ -53,10 +53,10 @@ import {
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
+  areGeometriesTransformed,
   getNodeAndTree,
   getNodeAndTreeOrNull,
   getNodePosition,
-  areGeometriesTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
 import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";

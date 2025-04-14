@@ -9,8 +9,7 @@ import com.scalableminds.webknossos.datastore.storage.{
   HttpBasicAuthCredential,
   S3AccessKeyCredential
 }
-import net.liftweb.common.Box.tryo
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.JsValue
 
 import java.net.URI
 import javax.inject.Inject

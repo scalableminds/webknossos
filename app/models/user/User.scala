@@ -578,8 +578,7 @@ class UserDatasetConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: UserD
                       FROM webknossos.user_datasetConfigurations
                       WHERE _dataset = $datasetId
                       AND _user = $userId""".as[String])
-      parsed = rows.map(Json.parse)
-      result <- parsed.headOption.map(_.validate[DatasetViewConfiguration].getOrElse(Map.empty)).toFox
+      result <- rows.headOption.map(JsonHelper.parseAs[DatasetViewConfiguration](_).getOrElse(Map.empty)).toFox
     } yield result
 
   def updateDatasetConfigurationForUserAndDataset(
@@ -616,7 +615,7 @@ class UserDatasetLayerConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: 
                         WHERE _dataset = $datasetId
                         AND _user = $userId
                         AND layerName in ${SqlToken.tupleFromList(layerNames)}""".as[(String, String)])
-        parsed = rows.flatMap(t => Json.parse(t._2).asOpt[LayerViewConfiguration].map((t._1, _)))
+        parsed = rows.flatMap(t => JsonHelper.parseAs[LayerViewConfiguration](t._2).toOption.map((t._1, _)))
       } yield parsed.toMap
     }
 

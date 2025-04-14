@@ -3,7 +3,7 @@ package controllers
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import play.silhouette.api.Silhouette
 import play.silhouette.api.actions.SecuredRequest
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import models.dataset.{DatasetDAO, DatasetService}
 import models.organization.OrganizationDAO
@@ -253,16 +253,15 @@ class LegacyApiController @Inject()(datasetController: DatasetController,
     if (result.header.status == 200) {
       result.body match {
         case HttpEntity.Strict(data, _) =>
-          val bodyJsonValue: JsValue = Json.parse(data.decodeString("utf-8"))
-          val newJsonFox: Fox[JsValue] = bodyJsonValue match {
-            case JsArray(value) =>
-              for { valueList <- Fox.serialCombined(value.toList)(el => replacement(el.as[JsObject])) } yield
-                Json.toJson(valueList)
-            case jsObj: JsObject => replacement(jsObj)
-            case v: JsValue      => Fox.successful(v)
-          }
           for {
-            newJson <- newJsonFox
+            bodyJsValue <- JsonHelper.parseAs[JsValue](data.toArray).toFox
+            newJson <- bodyJsValue match {
+              case JsArray(value) =>
+                for { valueList <- Fox.serialCombined(value.toList)(el => replacement(el.as[JsObject])) } yield
+                  Json.toJson(valueList)
+              case jsObj: JsObject => replacement(jsObj)
+              case v: JsValue      => Fox.successful(v)
+            }
           } yield Ok(Json.toJson(newJson)).copy(header = result.header)
         case _ => Fox.successful(BadRequest)
       }

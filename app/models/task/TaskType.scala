@@ -3,7 +3,7 @@ package models.task
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.webknossos.schema.Tables._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
@@ -72,6 +72,8 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         parseArrayLiteral(r.settingsAllowedmodes)
           .map(TracingMode.fromString(_).toFox)) ?~> "failed to parse tracing mode"
       settingsPreferredMode = r.settingsPreferredmode.flatMap(TracingMode.fromString)
+      recommendedConfiguration <- Fox.runOptional(r.recommendedconfiguration)(recCom =>
+        JsonHelper.parseAs[JsValue](recCom).toFox)
     } yield
       TaskType(
         ObjectId(r._Id),
@@ -87,7 +89,7 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           r.settingsMergermode,
           MagRestrictions(r.settingsMagrestrictionsMin, r.settingsMagrestrictionsMax)
         ),
-        r.recommendedconfiguration.map(Json.parse),
+        recommendedConfiguration,
         tracingType,
         Instant.fromSql(r.created),
         r.isdeleted

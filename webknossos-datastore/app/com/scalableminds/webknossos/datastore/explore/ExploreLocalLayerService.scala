@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.explore
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayerWithMagLocators,
@@ -107,7 +107,7 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
             (p: Path) =>
               try {
                 val attributesBytes = Files.readAllBytes(p.resolve(N5Header.FILENAME_ATTRIBUTES_JSON))
-                Json.parse(new String(attributesBytes)).validate[N5Header].isSuccess
+                JsonHelper.parseAs[N5Header](attributesBytes).isDefined
               } catch {
                 case _: Exception => false
             }

@@ -49,17 +49,16 @@ class DatasetArrayBucketProvider(dataLayer: DataLayer,
   private def openDatasetArrayWithTimeLogging(
       readInstruction: DataReadInstruction)(implicit ec: ExecutionContext, tc: TokenContext): Fox[DatasetArray] = {
     val before = Instant.now
-    Fox.fromFutureBox {
-      for {
-        result <- openDatasetArray(readInstruction).futureBox
-        duration = Instant.since(before)
-        _ = if (duration > (1 second)) {
-          logger.warn(
-            s"Opening ${dataLayer.dataFormat} DatasetArray for ${readInstruction.layerSummary} was slow ($duration)"
-          )
-        }
-      } yield result
+    val result = openDatasetArray(readInstruction)
+    result.onComplete { _ =>
+      val duration = Instant.since(before)
+      if (duration > (1 second)) {
+        logger.warn(
+          s"Opening ${dataLayer.dataFormat} DatasetArray for ${readInstruction.layerSummary} was slow ($duration)"
+        )
+      }
     }
+    result
   }
 
   private def openDatasetArray(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext,

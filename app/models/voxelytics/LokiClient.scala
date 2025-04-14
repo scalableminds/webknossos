@@ -7,6 +7,7 @@ import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import models.voxelytics.VoxelyticsLogLevel.VoxelyticsLogLevel
 import net.liftweb.common.Box.tryo
+import net.liftweb.common.{Failure, Full}
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.pattern.after
 import play.api.http.{HeaderNames, Status}
@@ -31,7 +32,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val actorSystem: ActorSyste
   private val LOG_ENTRY_QUERY_BATCH_SIZE = 5000
   private val LOG_ENTRY_INSERT_BATCH_SIZE = 1000
 
-  private lazy val serverStartupFuture: Fox[Unit] = {
+  private lazy val serverStartupFox: Fox[Unit] = {
     for {
       _ <- Fox.fromBool(enabled) ?~> "Loki is not enabled."
       _ = logger.info("Waiting for Loki to become available.")
@@ -48,26 +49,21 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val actorSystem: ActorSyste
       } yield ()
 
     for {
-      isServerAvailable <- Fox
-        .fromFuture(rpc(s"${conf.uri}/ready").request.withMethod("GET").execute())
-        .flatMap(result =>
-          if (Status.isSuccessful(result.status)) {
-            Fox.successful(true)
-          } else if (result.status >= 500 && result.status < 600) {
-            logger.debug(s"Loki status: ${result.status}")
-            Fox.successful(false)
-          } else {
-            Fox.failure(s"Unexpected error code from Loki ${result.status}.")
-        })
-      // TODO ensure exceptions get logged and propagated properly
-      /*        .recoverWith({
-          case e: java.net.ConnectException =>
-            logger.debug(s"Loki connection exception: $e")
-            Fox.successful(false)
-          case e =>
-            logger.error(s"Unexpected error $e")
-            Fox.failure("Unexpected error while trying to connect to Loki.", Full(e))
-        })*/
+      responseBox <- Fox.fromFuture(rpc(s"${conf.uri}/ready").request.withMethod("GET").execute()).shiftBox
+      isServerAvailable <- responseBox match {
+        case Full(response) if Status.isSuccessful(response.status) =>
+          Fox.successful(true)
+        case Full(response) if response.status >= 500 && response.status < 600 =>
+          logger.debug(s"Loki status: ${response.status}")
+          Fox.successful(false)
+        case Failure(_, Full(e: java.net.ConnectException), _) =>
+          logger.debug(s"Loki connection exception: $e")
+          Fox.successful(false)
+        case Failure(_, Full(e), _) =>
+          Fox.failure("Unexpected error while trying to connect to Loki.", Full(e))
+        case _ =>
+          Fox.failure("Unexpected error while trying to connect to Loki.")
+      }
       _ <- if (!isServerAvailable) {
         waitAndRecurse(until)
       } else {
@@ -161,7 +157,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val actorSystem: ActorSyste
           .map(keyValueTuple => s"${keyValueTuple._1}=${java.net.URLEncoder.encode(keyValueTuple._2, "UTF-8")}")
           .mkString("&")
       for {
-        _ <- serverStartupFuture
+        _ <- serverStartupFox
         res <- rpc(s"${conf.uri}/loki/api/v1/query_range?$queryString").silent.getWithJsonResponse[JsValue]
         logEntries <- tryo(
           (res \ "data" \ "result")
@@ -185,7 +181,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val actorSystem: ActorSyste
   private def bulkInsert(logEntries: List[JsValue], organizationId: String)(implicit ec: ExecutionContext): Fox[Unit] =
     if (logEntries.nonEmpty) {
       for {
-        _ <- serverStartupFuture
+        _ <- serverStartupFox
         logEntryGroups <- tryo(
           logEntries
             .groupBy(

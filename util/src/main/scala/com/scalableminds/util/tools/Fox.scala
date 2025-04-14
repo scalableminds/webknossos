@@ -24,6 +24,7 @@ trait FoxImplicits {
 
   implicit protected def option2Ox[T](b: Option[T]): Foxable[T] =
     new Foxable(Future.successful(Box(b)))
+
 }
 
 object Fox extends FoxImplicits {
@@ -280,6 +281,14 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
 
   def foreach(f: A => _): Unit =
     futureBox.map(_.map(f))
+
+  def onComplete(f: Box[A] => Unit): Unit =
+    futureBox.onComplete { t: Try[Box[A]] =>
+      t match {
+        case Success(resultBox)    => f(resultBox)
+        case scala.util.Failure(e) => f(Failure(e.toString, Some(e), None))
+      }
+    }
 
   /*
    * Returns new Fox[Box[A]] that is always successful, such that the original’s box is shifted “inwards”.

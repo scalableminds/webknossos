@@ -479,15 +479,14 @@ class VolumeTracingService @Inject()(
     }
 
     val before = Instant.now
-    val zipResult = ZipIO.zip(buckets, os, level = Deflater.BEST_SPEED).futureBox
+    val zipResult = ZipIO.zip(buckets, os, level = Deflater.BEST_SPEED)
 
-    zipResult.onComplete {
-      case b: scala.util.Success[Box[Unit]] =>
-        logger.info(
-          s"Zipping volume data for $tracingId took ${formatDuration(Instant.since(before))}. Result: ${b.get}")
-      case _ => ()
+    zipResult.onComplete { resultBox =>
+      logger.info(
+        s"Zipping volume data for $tracingId took ${formatDuration(Instant.since(before))}. Result: $resultBox")
     }
-    Fox.fromFutureBox(zipResult)
+
+    zipResult
   }
 
   def data(annotationId: String,

@@ -107,12 +107,13 @@ class AnnotationLayerDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionC
   private def parse(r: AnnotationLayersRow): Fox[AnnotationLayer] =
     for {
       typ <- AnnotationLayerType.fromString(r.typ).toFox
+      statistics <- JsonHelper.parseAs[JsObject](r.statistics).toFox
     } yield {
       AnnotationLayer(
         r.tracingid,
         typ,
         r.name,
-        Json.parse(r.statistics).as[JsObject],
+        statistics,
       )
     }
 
@@ -340,7 +341,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     val annotationLayerNames = parseArrayLiteral(<<[String])
     val annotationLayerTypes = parseArrayLiteral(<<[String])
     val annotationLayerStatistics =
-      parseArrayLiteral(<<[String]).map(layerStats => Json.parse(layerStats).validate[JsObject].getOrElse(Json.obj()))
+      parseArrayLiteral(<<[String]).map(layerStats => JsonHelper.parseAs[JsObject](layerStats).getOrElse(Json.obj()))
 
     // format: off
     AnnotationCompactInfo(id, typ, name,description,ownerId,ownerFirstName,ownerLastName, othersMayEdit,teamIds,

@@ -2,9 +2,9 @@ package com.scalableminds.webknossos.datastore.rpc
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.mvc.{Formatter, MimeTypes}
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Failure, Full}
+import net.liftweb.common.{Failure, Full, Empty}
 import play.api.http.{HeaderNames, Status}
 import play.api.libs.json._
 import play.api.libs.ws._
@@ -246,11 +246,12 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
       if (verbose) {
         logger.debug(s"Successful $debugInfo. ResponseBody: '${response.body.take(100)}'")
       }
-      Json.parse(response.body).validate[T] match {
-        case JsSuccess(value, _) =>
+      JsonHelper.parseAs[T](response.body) match {
+        case Full(value) =>
           Fox.successful(value)
-        case JsError(e) =>
-          val errorMsg = s"$debugInfo returned invalid JSON: $e"
+        case Empty => Fox.empty
+        case f: Failure =>
+          val errorMsg = s"$debugInfo returned invalid JSON: $f"
           logger.error(errorMsg)
           Fox.failure(errorMsg)
       }

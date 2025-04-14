@@ -178,9 +178,8 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       _ <- Fox.serialCombined(timespansToUpdate)(t => updateTimeSpanInDb(t._1, t._2))
     } yield ()
 
-    // TODO maybe implement onComplete on the Fox?
-    updateResult.futureBox.onComplete { x =>
-      if (x.isFailure || x.get.isEmpty)
+    updateResult.onComplete { x =>
+      if (x.isEmpty)
         logger.warn(s"Failed to save all time updates: $x")
     }
 

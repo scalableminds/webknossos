@@ -1,7 +1,7 @@
 package models.voxelytics
 
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, JsonHelper}
 import models.user.User
 import play.api.libs.json._
 import com.scalableminds.util.objectid.ObjectId
@@ -387,6 +387,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           row =>
             for {
               state <- VoxelyticsRunState.fromString(row._9).toFox
+              workflowConfig <- JsonHelper.parseAs[JsObject](row._8).toFox
             } yield
               RunEntry(
                 id = ObjectId(row._1),
@@ -396,7 +397,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
                 voxelyticsVersion = row._5,
                 workflowHash = row._6,
                 workflowYamlContent = row._7,
-                workflowConfig = Json.parse(row._8).as[JsObject],
+                workflowConfig = workflowConfig,
                 state = state,
                 beginTime = row._10,
                 endTime = row._11

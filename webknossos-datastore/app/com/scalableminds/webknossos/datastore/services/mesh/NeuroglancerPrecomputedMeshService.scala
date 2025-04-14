@@ -39,14 +39,14 @@ class NeuroglancerPrecomputedMeshService @Inject()(config: DataStoreConfig, data
 
   private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
 
-  private lazy val neuroglancerPrecomputedMeshInfoCache = AlfuCache[VaultPath, NeuroglancerPrecomputedMeshInfo](100)
+  private lazy val neuroglancerPrecomputedMeshInfoCache = AlfuCache[VaultPath, NeuroglancerMesh](100)
 
-  private def loadRemoteMeshInfo(meshPath: VaultPath)(implicit tc: TokenContext): Fox[NeuroglancerPrecomputedMeshInfo] =
+  private def loadRemoteMeshInfo(meshPath: VaultPath)(implicit tc: TokenContext): Fox[NeuroglancerMesh] =
     for {
       _ <- Fox.successful(())
       meshInfoPath = meshPath / NeuroglancerMesh.FILENAME_INFO
       meshInfo <- meshInfoPath.parseAsJson[NeuroglancerPrecomputedMeshInfo] ?~> "Failed to read mesh info"
-    } yield meshInfo
+    } yield NeuroglancerMesh(meshInfo)
 
   def exploreMeshes(organizationId: String, datasetName: String, dataLayerName: String)(
       implicit tc: TokenContext): Fox[Set[MeshFileInfo]] = {
@@ -56,12 +56,13 @@ class NeuroglancerPrecomputedMeshService @Inject()(config: DataStoreConfig, data
         firstMag <- dataLayerWithMagLocators.mags.headOption.toFox ?~> "No mags found"
         magPath <- firstMag.path.toFox ?~> "Mag has no path"
         remotePath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(new URI(magPath), None))
-        infoPath = remotePath.parent / PrecomputedHeader.FILENAME_INFO
+        layerPath = remotePath.parent
+        infoPath = layerPath / PrecomputedHeader.FILENAME_INFO
         precomputedHeader <- infoPath
           .parseAsJson[PrecomputedHeader] ?~> s"Failed to read neuroglancer precomputed metadata at $infoPath"
-        meshPath = remotePath.parent / precomputedHeader.meshPath
-        meshInfo <- neuroglancerPrecomputedMeshInfoCache.getOrLoad(meshPath, loadRemoteMeshInfo)
-      } yield (meshInfo, meshPath)
+        meshPath = layerPath / precomputedHeader.meshPath
+        mesh <- neuroglancerPrecomputedMeshInfoCache.getOrLoad(meshPath, loadRemoteMeshInfo)
+      } yield (mesh.meshInfo, meshPath)
 
     def isDataLayerValid(d: DataLayer) =
       d.name == dataLayerName && d.category == Category.segmentation && d.dataFormat == DataFormat.neuroglancerPrecomputed
@@ -163,9 +164,8 @@ class NeuroglancerPrecomputedMeshService @Inject()(config: DataStoreConfig, data
     for {
       meshFilePath <- meshFilePathOpt.toFox ?~> "No mesh file path provided"
       vaultPath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(new URI(meshFilePath), None))
-      meshInfo <- neuroglancerPrecomputedMeshInfoCache.getOrLoad(vaultPath, loadRemoteMeshInfo)
-      mesh = NeuroglancerMesh(meshInfo)
-      chunkScale = Array.fill(3)(1 / math.pow(2, meshInfo.vertex_quantization_bits))
+      mesh <- neuroglancerPrecomputedMeshInfoCache.getOrLoad(vaultPath, loadRemoteMeshInfo)
+      chunkScale = Array.fill(3)(1 / math.pow(2, mesh.meshInfo.vertex_quantization_bits))
       meshSegmentInfos <- Fox.serialCombined(segmentId)(id => listMeshChunks(vaultPath, mesh, id))
       baseTransform = Array(Array(1.0, 0.0, 0.0, 0.0),
                             Array(0.0, 1.0, 0.0, 0.0),
@@ -199,11 +199,8 @@ class NeuroglancerPrecomputedMeshService @Inject()(config: DataStoreConfig, data
     for {
       meshFilePath <- meshFilePathOpt.toFox ?~> "Mesh file path is required"
       vaultPath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(new URI(meshFilePath), None))
-      meshInfo <- neuroglancerPrecomputedMeshInfoCache.getOrLoad(vaultPath, loadRemoteMeshInfo)
-      mesh = NeuroglancerMesh(meshInfo)
-
+      mesh <- neuroglancerPrecomputedMeshInfoCache.getOrLoad(vaultPath, loadRemoteMeshInfo)
       segmentId <- Fox.option2Fox(meshChunkDataRequests.head.segmentId) ?~> "Segment id parameter is required" // This assumes that all requests are for the same segment
-
       minishardInfo = mesh.shardingSpecification.getMinishardInfo(segmentId)
       shardUrl = mesh.shardingSpecification.getPathForShard(vaultPath, minishardInfo._1)
       chunks <- Fox.serialCombined(meshChunkDataRequests.toList)(request =>
@@ -215,7 +212,7 @@ class NeuroglancerPrecomputedMeshService @Inject()(config: DataStoreConfig, data
     for {
       meshFilePath <- meshFilePathOpt.toFox ?~> "Mesh file path is required"
       vaultPath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(new URI(meshFilePath), None))
-      meshInfo <- neuroglancerPrecomputedMeshInfoCache.getOrLoad(vaultPath, loadRemoteMeshInfo)
-    } yield meshInfo.vertex_quantization_bits
+      mesh <- neuroglancerPrecomputedMeshInfoCache.getOrLoad(vaultPath, loadRemoteMeshInfo)
+    } yield mesh.meshInfo.vertex_quantization_bits
 
 }

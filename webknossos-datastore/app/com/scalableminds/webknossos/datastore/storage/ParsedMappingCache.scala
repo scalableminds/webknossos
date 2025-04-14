@@ -36,6 +36,7 @@ class ParsedMappingCache(val maxEntries: Int)
       val mappingFox = loadFn(mappingRequest)
       mappingFox.onComplete {
         case _: Failure => remove(cachedMappingInfo)
+        case _          => ()
       }
 
       put(cachedMappingInfo, mappingFox)

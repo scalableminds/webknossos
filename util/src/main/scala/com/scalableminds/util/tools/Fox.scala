@@ -1,7 +1,6 @@
 package com.scalableminds.util.tools
 
 import net.liftweb.common.{Box, Empty, Failure, Full, ParamFailure}
-import play.api.libs.json.{JsError, JsResult, JsSuccess}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -47,12 +46,6 @@ object Fox extends FoxImplicits {
         f <- fut.futureBox
       } yield f
     )
-
-  // TODO unify
-  def jsResult2Fox[T](result: JsResult[T])(implicit ec: ExecutionContext): Fox[T] = result match {
-    case JsSuccess(value, _) => Fox.successful(value)
-    case JsError(e)          => Fox.failure(s"Invalid json: $e")
-  }
 
   def successful[A](e: A)(implicit ec: ExecutionContext): Fox[A] =
     new Fox(Future.successful(Full(e)))
@@ -377,12 +370,12 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
     })
 
   /**
-    * Makes Fox play better with Scala 2.8 for comprehensions
+    * Makes Fox play with Scala 2.8 for comprehensions
     */
   def withFilter(p: A => Boolean): WithFilter = new WithFilter(p)
 
   /**
-    * Play Nice with the Scala 2.8 for comprehension
+    * Makes Fox play with Scala 2.8 for comprehension
     */
   class WithFilter(p: A => Boolean) {
     def map[B](f: A => B): Fox[B] = self.filter(p).map(f)

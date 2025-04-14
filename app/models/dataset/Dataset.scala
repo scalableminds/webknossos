@@ -115,10 +115,10 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
     for {
       voxelSize <- parseVoxelSizeOpt(r.voxelsizefactor, r.voxelsizeunit)
       defaultViewConfigurationOpt <- Fox.runOptional(r.defaultviewconfiguration)(
-        JsonHelper.parseAndValidateJson[DatasetViewConfiguration](_).toFox)
+        JsonHelper.parseAs[DatasetViewConfiguration](_).toFox)
       adminViewConfigurationOpt <- Fox.runOptional(r.adminviewconfiguration)(
-        JsonHelper.parseAndValidateJson[DatasetViewConfiguration](_).toFox)
-      metadata <- JsonHelper.parseAndValidateJson[JsArray](r.metadata).toFox
+        JsonHelper.parseAs[DatasetViewConfiguration](_).toFox)
+      metadata <- JsonHelper.parseAs[JsArray](r.metadata).toFox
     } yield {
       Dataset(
         ObjectId(r._Id),
@@ -819,9 +819,9 @@ class DatasetLayerDAO @Inject()(
       elementClass <- ElementClass.fromString(row.elementclass).toFox ?~> "Could not parse Layer ElementClass"
       mags <- datasetMagsDAO.findMagForLayer(datasetId, row.name) ?~> "Could not find mag for layer"
       defaultViewConfigurationOpt <- Fox.runOptional(row.defaultviewconfiguration)(
-        JsonHelper.parseAndValidateJson[LayerViewConfiguration](_).toFox)
+        JsonHelper.parseAs[LayerViewConfiguration](_).toFox)
       adminViewConfigurationOpt <- Fox.runOptional(row.adminviewconfiguration)(
-        JsonHelper.parseAndValidateJson[LayerViewConfiguration](_).toFox)
+        JsonHelper.parseAs[LayerViewConfiguration](_).toFox)
       coordinateTransformations <- datasetCoordinateTransformationsDAO.findCoordinateTransformationsForLayer(datasetId,
                                                                                                              row.name)
       coordinateTransformationsOpt = if (coordinateTransformations.isEmpty) None else Some(coordinateTransformations)
@@ -979,13 +979,13 @@ class DatasetCoordinateTransformationsDAO @Inject()(sqlClient: SqlClient)(implic
   private def parseAffine(matrixRawOpt: Option[String]): Fox[CoordinateTransformation] =
     for {
       matrixString <- matrixRawOpt.toFox
-      matrix <- JsonHelper.parseAndValidateJson[List[List[Double]]](matrixString).toFox
+      matrix <- JsonHelper.parseAs[List[List[Double]]](matrixString).toFox
     } yield CoordinateTransformation(CoordinateTransformationType.affine, Some(matrix), None)
 
   private def parseThinPlateSpline(correspondencesRawOpt: Option[String]): Fox[CoordinateTransformation] =
     for {
       correspondencesString <- correspondencesRawOpt.toFox
-      correspondences <- JsonHelper.parseAndValidateJson[ThinPlateSplineCorrespondences](correspondencesString).toFox
+      correspondences <- JsonHelper.parseAs[ThinPlateSplineCorrespondences](correspondencesString).toFox
     } yield CoordinateTransformation(CoordinateTransformationType.thin_plate_spline, None, Some(correspondences))
 
   def findCoordinateTransformationsForLayer(datasetId: ObjectId,

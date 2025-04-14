@@ -6,7 +6,7 @@ import com.google.inject.name.Named
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
@@ -105,7 +105,7 @@ class DSRemoteWebknossosClient @Inject()(
         .addQueryString("datasetSizeBytes" -> datasetSizeBytes.toString)
         .withTokenFromContext
         .postEmptyWithJsonResponse[JsValue]()
-      uploadedDatasetId <- (uploadedDatasetIdJson \ "id").validate[String].asOpt.toFox ?~> "uploadedDatasetId.invalid"
+      uploadedDatasetId <- JsonHelper.as[String](uploadedDatasetIdJson \ "id").toFox ?~> "uploadedDatasetId.invalid"
     } yield uploadedDatasetId
 
   def reportDataSources(dataSources: List[InboxDataSourceLike]): Fox[_] =

@@ -3,8 +3,7 @@ package models.user
 import play.silhouette.api.{Identity, LoginInfo}
 import com.scalableminds.util.accesscontext._
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.JsonHelper.parseAndValidateJson
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.schema.Tables._
@@ -97,7 +96,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   protected def parse(r: UsersRow): Fox[User] =
     for {
-      userConfiguration <- parseAndValidateJson[JsObject](r.userconfiguration).toFox
+      userConfiguration <- JsonHelper.parseAs[JsObject](r.userconfiguration).toFox
     } yield {
       User(
         ObjectId(r._Id),

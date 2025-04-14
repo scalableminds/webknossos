@@ -6,7 +6,6 @@ import com.scalableminds.util.io.FileIO
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
 import net.liftweb.common._
-import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.libs.json.Reads._
 import play.api.libs.json.Writes._
@@ -17,47 +16,52 @@ import scala.io.{BufferedSource, Source}
 
 object JsonHelper extends LazyLogging {
 
-  def jsonToFile[A: Writes](path: Path, value: A): Box[Unit] =
+  def parseAs[T: Reads](bytes: Array[Byte]): Box[T] =
+    parseAs[T](new String(bytes, StandardCharsets.UTF_8))
+
+  def parseAs[T: Reads](s: String): Box[T] =
+    for {
+      jsValue <- tryo(Json.parse(s)) ~> "Failed to parse json"
+      validated <- as[T](jsValue) ~> "Failed to validate json against schema"
+    } yield validated
+
+  def as[T: Reads](jsReadable: JsReadable): Box[T] =
+    jsReadable.validate[T] match {
+      case JsSuccess(parsed, _) =>
+        Full(parsed)
+      case errors: JsError =>
+        Failure("Validating Json Failed: " + JsError.toJson(errors).toString())
+    }
+
+  def parseFromFile(path: Path, rootPath: Path): Box[JsValue] =
+    if (Files.exists(path) && !Files.isDirectory(path)) {
+      var buffer: BufferedSource = null
+      try {
+        buffer = Source.fromFile(path.toFile)
+        Full(Json.parse(buffer.getLines().mkString))
+      } catch {
+        case _: java.io.EOFException =>
+          logger.warn(s"EOFException in JsonHelper while trying to extract json from file. File: ${rootPath.toString}")
+          Failure(s"An EOF exception occurred during json read. File: ${rootPath.relativize(path).toString}")
+        case _: AccessDeniedException | _: FileNotFoundException =>
+          logger.warn(
+            s"File access exception in JsonHelper while trying to extract json from file. File: ${rootPath.toString}")
+          Failure(s"Failed to parse Json in '${rootPath.relativize(path).toString}'. Access denied.")
+        case e: Exception =>
+          logger.warn(s"Json mapping issue in '${rootPath.toString}': $e")
+          Failure(s"Failed to parse Json in '${rootPath.relativize(path).toString}': $e")
+      } finally {
+        if (buffer != null) buffer.close()
+      }
+    } else Failure("Invalid path for json parsing.")
+
+  def parseFromFileAs[T: Reads](path: Path, rootPath: Path): Box[T] =
+    parseFromFile(path, rootPath).flatMap(as[T])
+
+  def writeToFile[A: Writes](path: Path, value: A): Box[Unit] =
     FileIO.printToFile(path.toFile) { printer =>
       printer.print(Json.prettyPrint(Json.toJson(value)))
     }
-
-  def jsonFromFile(path: Path, rootPath: Path): Box[JsValue] =
-    if (Files.exists(path) && !Files.isDirectory(path))
-      parseJsonFromFile(path, rootPath)
-    else
-      Failure("Invalid path for json parsing.")
-
-  def validatedJsonFromFile[T: Reads](path: Path, rootPath: Path): Box[T] =
-    jsonFromFile(path, rootPath).flatMap(_.validate[T].asOpt)
-
-  private def parseJsonFromFile(path: Path, rootPath: Path): Box[JsValue] = {
-    var buffer: BufferedSource = null
-    try {
-      buffer = Source.fromFile(path.toFile)
-      Full(Json.parse(buffer.getLines().mkString))
-    } catch {
-      case _: java.io.EOFException =>
-        logger.warn(s"EOFException in JsonHelper while trying to extract json from file. File: ${rootPath.toString}")
-        Failure(s"An EOF exception occurred during json read. File: ${rootPath.relativize(path).toString}")
-      case _: AccessDeniedException | _: FileNotFoundException =>
-        logger.warn(
-          s"File access exception in JsonHelper while trying to extract json from file. File: ${rootPath.toString}")
-        Failure(s"Failed to parse Json in '${rootPath.relativize(path).toString}'. Access denied.")
-      case e: Exception =>
-        logger.warn(s"Json mapping issue in '${rootPath.toString}': $e")
-        Failure(s"Failed to parse Json in '${rootPath.relativize(path).toString}': $e")
-    } finally {
-      if (buffer != null) buffer.close()
-    }
-  }
-
-  def jsError2HumanReadable(js: JsError)(implicit messages: Messages): String =
-    js.errors.map {
-      case (path, errors) =>
-        val errorStr = errors.map(m => Messages(m.message)).mkString(", ")
-        s"Error at json path '$path': $errorStr."
-    }.mkString("\n")
 
   implicit def boxFormat[T: Format]: Format[Box[T]] = new Format[Box[T]] {
     override def reads(json: JsValue): JsResult[Box[T]] =
@@ -75,14 +79,6 @@ object JsonHelper extends LazyLogging {
     }
   }
 
-  def oFormat[T](format: Format[T]): OFormat[T] = {
-    val oFormat: OFormat[T] = new OFormat[T]() {
-      override def writes(o: T): JsObject = format.writes(o).as[JsObject]
-      override def reads(json: JsValue): JsResult[T] = format.reads(json)
-    }
-    oFormat
-  }
-
   implicit object FiniteDurationFormat extends Format[FiniteDuration] {
     def reads(json: JsValue): JsResult[FiniteDuration] = LongReads.reads(json).map(_.seconds)
     def writes(o: FiniteDuration): JsValue = LongWrites.writes(o.toSeconds)
@@ -96,29 +92,6 @@ object JsonHelper extends LazyLogging {
       case None    => JsNull
     }
   }
-
-  def parseAndValidateJson[T: Reads](bytes: Array[Byte]): Box[T] =
-    parseAndValidateJson[T](new String(bytes, StandardCharsets.UTF_8))
-
-  def parseAndValidateJson[T: Reads](s: String): Box[T] =
-    tryo(Json.parse(s))
-      .flatMap(parsed => validateJsValue[T](parsed)) ~> "Failed to parse or validate json against data schema"
-
-  def validateJsValue[T: Reads](o: JsValue): Box[T] =
-    o.validate[T] match {
-      case JsSuccess(parsed, _) =>
-        Full(parsed)
-      case errors: JsError =>
-        Failure("Validating Json Failed: " + JsError.toJson(errors).toString())
-    }
-
-  def jsResultToOpt[T](result: JsResult[T]): Option[T] =
-    result match {
-      case JsSuccess(parsed, _) =>
-        Some(parsed)
-      case _ =>
-        None
-    }
 
   // Sometimes play-json adds a "_type" field to the json-serialized case classes,
   // when it thinks they can’t be distinguished otherwise. We need to remove it manually.

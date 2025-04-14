@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.BoxUtils.{bool2Box, jsResult2Box}
+import com.scalableminds.util.tools.BoxUtils.bool2Box
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.layers.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
@@ -212,7 +212,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
               updatedUploadWithFilePathsOpt <- Fox.runOptional(updatedUploadOpt)(updatedUpload =>
                 for {
                   filePathsStringOpt <- runningUploadMetadataStore.find(redisKeyForFilePaths(updatedUpload.uploadId))
-                  filePathsOpt <- filePathsStringOpt.map(JsonHelper.parseAndValidateJson[List[String]]).toFox
+                  filePathsOpt <- filePathsStringOpt.map(JsonHelper.parseAs[List[String]]).toFox
                   uploadUpdatedWithFilePaths <- filePathsOpt
                     .map(filePaths => updatedUpload.copy(filePaths = Some(filePaths)))
                     .toFox
@@ -552,7 +552,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                                                       maxDepth = 1,
                                                       filters = p => p.getFileName.toString == FILENAME_ATTRIBUTES_JSON)
       _ <- bool2Box(attributesFiles.nonEmpty)
-      _ <- jsResult2Box(Json.parse(new String(Files.readAllBytes(attributesFiles.head))).validate[N5Metadata])
+      _ <- JsonHelper.parseAs[N5Metadata](Files.readAllBytes(attributesFiles.head))
     } yield true
 
   private def looksLikeN5Multilayer(dataSourceDir: Path): Box[Boolean] =
@@ -582,7 +582,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                                                       silent = false,
                                                       maxDepth = 1,
                                                       filters = p => p.getFileName.toString == FILENAME_ATTRIBUTES_JSON)
-      _ <- jsResult2Box(Json.parse(new String(Files.readAllBytes(attributesFiles.head))).validate[N5Header])
+      _ <- JsonHelper.parseAs[N5Header](Files.readAllBytes(attributesFiles.head))
     } yield true
 
   private def looksLikeExploredDataSource(dataSourceDir: Path): Box[Boolean] =
@@ -725,7 +725,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     for {
       objectStringOption <- runningUploadMetadataStore.find(key)
       objectString <- objectStringOption.toFox
-      parsed <- Json.fromJson[T](Json.parse(objectString)).asOpt.toFox
+      parsed <- JsonHelper.parseAs[T](objectString).toFox
     } yield parsed
 
 }

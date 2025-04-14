@@ -33,8 +33,8 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
 import telemetry.SlackNotificationService
 import utils.WkConf
-import scala.concurrent.duration.DurationInt
 
+import scala.concurrent.duration.DurationInt
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -239,25 +239,25 @@ class WKRemoteDataStoreController @Inject()(
     }
   }
 
-  def deleteDataset(name: String, key: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
-    dataStoreService.validateAccess(name, key) { _ =>
-      for {
-        datasourceId <- request.body.validate[DataSourceId].asOpt.toFox ?~> "dataStore.upload.invalid"
-        existingDataset = Fox.fromFuture(datasetDAO.findOneByDataSourceId(datasourceId)(GlobalAccessContext).futureBox)
+  def deleteDataset(name: String, key: String): Action[DataSourceId] = Action.async(validateJson[DataSourceId]) {
+    implicit request =>
+      dataStoreService.validateAccess(name, key) { _ =>
+        for {
+          existingDatasetBox <- Fox.fromFuture(
+            datasetDAO.findOneByDataSourceId(request.body)(GlobalAccessContext).futureBox)
+          _ <- existingDatasetBox match {
+            case Full(dataset) =>
+              for {
+                annotationCount <- annotationDAO.countAllByDataset(dataset._id)(GlobalAccessContext)
+                _ = datasetDAO
+                  .deleteDataset(dataset._id, onlyMarkAsDeleted = annotationCount > 0)
+                  .flatMap(_ => usedStorageService.refreshStorageReportForDataset(dataset))
+              } yield ()
 
-        _ <- existingDataset.flatMap {
-          case Full(dataset) =>
-            for {
-              annotationCount <- annotationDAO.countAllByDataset(dataset._id)(GlobalAccessContext)
-              _ = datasetDAO
-                .deleteDataset(dataset._id, onlyMarkAsDeleted = annotationCount > 0)
-                .flatMap(_ => usedStorageService.refreshStorageReportForDataset(dataset))
-            } yield ()
-
-          case _ => Fox.successful(())
-        }
-      } yield Ok
-    }
+            case _ => Fox.successful(())
+          }
+        } yield Ok
+      }
   }
 
   def jobExportProperties(name: String, key: String, jobId: ObjectId): Action[AnyContent] = Action.async {

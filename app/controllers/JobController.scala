@@ -3,7 +3,7 @@ package controllers
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, JsonHelper}
 import models.dataset.{DataStoreDAO, DatasetDAO, DatasetLayerAdditionalAxesDAO, DatasetService}
 import models.job.{JobCommand, _}
 import models.organization.{CreditTransactionDAO, CreditTransactionService, OrganizationDAO, OrganizationService}
@@ -385,7 +385,7 @@ class JobController @Inject()(jobDAO: JobDAO,
                                                                    additionalAxesOpt)
           threeDBBox <- BoundingBox.fromLiteral(bbox).toFox ~> "job.invalidBoundingBox"
           parsedAdditionalCoordinatesOpt <- Fox.runOptional(additionalCoordinates)(coords =>
-            Json.parse(coords).validate[Seq[AdditionalCoordinate]].asOpt.toFox) ~> "job.additionalCoordinates.invalid"
+            JsonHelper.parseAs[Seq[AdditionalCoordinate]](coords).toFox) ~> "job.additionalCoordinates.invalid"
           parsedAdditionalCoordinates = parsedAdditionalCoordinatesOpt.getOrElse(Seq.empty)
           additionalAxesOfNdBBox = additionalAxesOpt.map(additionalAxes =>
             additionalAxes.map(_.intersectWithAdditionalCoordinates(parsedAdditionalCoordinates)))

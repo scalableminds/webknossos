@@ -255,7 +255,7 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig)(implicit ec: Exec
   private def typeNamesForSynapsesOrEmpty(connectomeFilePath: Path): List[String] = {
     val typeNamesPath = Paths.get(s"${connectomeFilePath.toString.dropRight(connectomeFileExtension.length)}json")
     if (new File(typeNamesPath.toString).exists()) {
-      JsonHelper.validatedJsonFromFile[ConnectomeLegend](typeNamesPath, typeNamesPath.getParent) match {
+      JsonHelper.parseFromFileAs[ConnectomeLegend](typeNamesPath, typeNamesPath.getParent) match {
         case Full(connectomeLegend) => connectomeLegend.synapse_type_names
         case _                      => List.empty
       }

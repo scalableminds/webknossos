@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
@@ -25,8 +25,8 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
     for {
       _ <- Fox.successful(())
       uriFragment <- tryo(remotePath.toUri.getFragment.drop(1)).toFox ?~> "URI has no matching fragment part"
-      spec <- Json.parse(uriFragment).validate[JsObject].asOpt.toFox ?~> "Did not find JSON object in URI"
-      layerSpecs <- (spec \ "layers").validate[JsArray].asOpt.toFox
+      spec <- JsonHelper.parseAs[JsObject](uriFragment).toFox ?~> "Did not find JSON object in URI"
+      layerSpecs <- JsonHelper.as[JsArray](spec \ "layers").toFox
       _ <- Fox.fromBool(credentialId.isEmpty) ~> "Neuroglancer URI Explorer does not support credentials"
       exploredLayers = layerSpecs.value.map(exploreNeuroglancerLayer).toList
       layerLists <- Fox.combined(exploredLayers)
@@ -38,11 +38,11 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
       implicit tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     for {
       _ <- Fox.successful(())
-      obj <- layerSpec.validate[JsObject].asOpt.toFox
-      source <- (obj \ "source").validate[JsString].asOpt.toFox
+      obj <- JsonHelper.as[JsObject](layerSpec).toFox
+      source <- JsonHelper.as[JsString](obj \ "source").toFox
       layerType = new URI(source.value).getScheme
       sourceURI = new URI(source.value.substring(f"$layerType://".length))
-      name <- (obj \ "name").validate[JsString].asOpt.toFox
+      name <- JsonHelper.as[JsString](obj \ "name").toFox
       remoteSourceDescriptor = RemoteSourceDescriptor(sourceURI, None)
       remotePath <- dataVaultService.getVaultPath(remoteSourceDescriptor) ?~> "dataVault.setup.failed"
       viewConfiguration = getViewConfig(obj)

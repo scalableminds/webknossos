@@ -25,7 +25,7 @@ object ZarrArray extends LazyLogging with FoxImplicits {
     for {
       headerBytes <- (path / ZarrHeader.FILENAME_DOT_ZARRAY)
         .readBytes() ?~> s"Could not read header at ${ZarrHeader.FILENAME_DOT_ZARRAY}"
-      header <- JsonHelper.parseAndValidateJson[ZarrHeader](headerBytes).toFox ?~> "Could not parse array header"
+      header <- JsonHelper.parseAs[ZarrHeader](headerBytes).toFox ?~> "Could not parse array header"
       _ <- DatasetArray.assertChunkSizeLimit(header.bytesPerChunk)
       array <- tryo(
         new ZarrArray(

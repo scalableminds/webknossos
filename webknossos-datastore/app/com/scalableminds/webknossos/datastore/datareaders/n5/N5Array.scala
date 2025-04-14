@@ -26,7 +26,7 @@ object N5Array extends LazyLogging with FoxImplicits {
     for {
       headerBytes <- (path / N5Header.FILENAME_ATTRIBUTES_JSON)
         .readBytes() ?~> s"Could not read header at ${N5Header.FILENAME_ATTRIBUTES_JSON}"
-      header <- JsonHelper.parseAndValidateJson[N5Header](headerBytes).toFox ?~> "Could not parse array header"
+      header <- JsonHelper.parseAs[N5Header](headerBytes).toFox ?~> "Could not parse array header"
       _ <- DatasetArray.assertChunkSizeLimit(header.bytesPerChunk)
       array <- tryo(
         new N5Array(path,

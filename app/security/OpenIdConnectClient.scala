@@ -86,7 +86,7 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
       response: WSResponse <- rpc(oidcConfig.discoveryUrl)
         .silentIf(!conf.SingleSignOn.OpenIdConnect.verboseLoggingEnabled)
         .get
-      serverInfo <- response.json.validate[OpenIdConnectProviderInfo](OpenIdConnectProviderInfo.format).asOpt.toFox
+      serverInfo <- JsonHelper.as[OpenIdConnectProviderInfo](response.json).toFox
     } yield serverInfo
 
   private def validateOpenIdConnectTokenResponse(
@@ -104,7 +104,7 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
       response: WSResponse <- rpc(serverInfos.jwks_uri)
         .silentIf(!conf.SingleSignOn.OpenIdConnect.verboseLoggingEnabled)
         .get
-      jsonWebKeySet: JsonWebKeySet <- JsonHelper.validateJsValue[JsonWebKeySet](response.json).toFox
+      jsonWebKeySet: JsonWebKeySet <- JsonHelper.as[JsonWebKeySet](response.json).toFox
       firstRsaKey: JsonWebKey <- jsonWebKeySet.keys
         .find(key => key.kty == keyTypeRsa && key.use == "sig")
         .toFox ?~> "No server RSA Public Key found in server key set"

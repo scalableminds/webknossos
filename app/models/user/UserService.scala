@@ -5,7 +5,7 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.typesafe.scalalogging.LazyLogging
@@ -379,7 +379,7 @@ class UserService @Inject()(conf: WkConf,
           .map(valueAndIndex =>
             (parseArrayLiteral(userCompactInfo.experienceDomainsAsArrayLiteral)(valueAndIndex._2),
              Json.toJsFieldJsValueWrapper(valueAndIndex._1.toInt))): _*)
-      novelUserExperienceInfos <- Json.parse(userCompactInfo.novelUserExperienceInfos).validate[JsObject].asOpt.toFox
+      novelUserExperienceInfos <- JsonHelper.parseAs[JsObject](userCompactInfo.novelUserExperienceInfos).toFox
     } yield {
       Json.obj(
         "id" -> userCompactInfo._id,

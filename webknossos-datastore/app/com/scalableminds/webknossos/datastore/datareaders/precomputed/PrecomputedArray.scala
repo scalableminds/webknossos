@@ -31,7 +31,7 @@ object PrecomputedArray extends LazyLogging with FoxImplicits {
       headerBytes <- (magPath.parent / PrecomputedHeader.FILENAME_INFO)
         .readBytes() ?~> s"Could not read header at ${PrecomputedHeader.FILENAME_INFO}"
       rootHeader <- JsonHelper
-        .parseAndValidateJson[PrecomputedHeader](headerBytes)
+        .parseAs[PrecomputedHeader](headerBytes)
         .toFox ?~> "Could not parse array header"
       scale <- rootHeader.getScale(magPath.basename).toFox ?~> s"Header does not contain scale ${magPath.basename}"
       scaleHeader = PrecomputedScaleHeader(scale, rootHeader)

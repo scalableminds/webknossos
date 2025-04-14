@@ -103,14 +103,11 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
                                mappingName: Option[String])
     : (BoundingBox, Vec3Int, Option[(Double, Double)], Option[ThumbnailColorSettings], Option[String]) = {
     val configuredCenterOpt =
-      viewConfiguration.get("position").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Vec3Int]))
+      viewConfiguration.get("position").flatMap(jsValue => JsonHelper.as[Vec3Int](jsValue).toOption)
     val centerOpt =
       configuredCenterOpt.orElse(BoundingBox.intersection(usableDataSource.dataLayers.map(_.boundingBox)).map(_.center))
     val center = centerOpt.getOrElse(layer.boundingBox.center)
-    val zoom = viewConfiguration
-      .get("zoom")
-      .flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Double]))
-      .getOrElse(1.0)
+    val zoom = viewConfiguration.get("zoom").flatMap(jsValue => JsonHelper.as[Double](jsValue).toOption).getOrElse(1.0)
     val intensityRangeOpt = readIntensityRange(viewConfiguration, layerName)
     val colorSettingsOpt = readColor(viewConfiguration, layerName)
     val mag = magForZoom(layer, zoom)

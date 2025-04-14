@@ -115,7 +115,7 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
     for {
       raw: Seq[String] <- uncommittedUpdatesStore.findAllConditional(patternFor(annotationId, transactionId))
       parsed: Seq[UpdateActionGroup] = raw.flatMap(itemAsString =>
-        JsonHelper.jsResultToOpt(Json.parse(itemAsString).validate[UpdateActionGroup]))
+        JsonHelper.parseAs[UpdateActionGroup](itemAsString).toOption)
     } yield parsed.toList.sortBy(_.transactionGroupIndex)
 
   private def saveToHandledGroupIdStore(annotationId: String,

@@ -12,7 +12,6 @@ import play.api.libs.json.Reads
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, IOException}
 import java.net.URI
-import java.nio.charset.StandardCharsets
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
@@ -97,7 +96,6 @@ class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging with FoxImpl
   def parseAsJson[T: Reads](implicit ec: ExecutionContext, tc: TokenContext): Fox[T] =
     for {
       fileBytes <- this.readBytes()
-      fileAsString <- tryo(new String(fileBytes, StandardCharsets.UTF_8)).toFox
-      parsed <- JsonHelper.parseAndValidateJson[T](fileAsString).toFox
+      parsed <- JsonHelper.parseAs[T](fileBytes).toFox
     } yield parsed
 }

@@ -148,7 +148,7 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield folderWithParent
 
   private def parseMetadata(literal: String): Fox[JsArray] =
-    JsonHelper.parseAndValidateJson[JsArray](literal).toFox
+    JsonHelper.parseAs[JsArray](literal).toFox
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     readAccessQWithPrefix(requestingUserId, q"")

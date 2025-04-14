@@ -99,7 +99,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
         file.filename.toLowerCase.endsWith(".nml") || file.filename.toLowerCase.endsWith(".zip"))
       _ <- Fox.fromBool(inputFiles.nonEmpty) ?~> "nml.file.notFound"
       jsonString <- body.dataParts.get("formJSON").flatMap(_.headOption).toFox ?~> "format.json.missing"
-      params <- JsonHelper.parseAndValidateJson[NmlTaskParameters](jsonString).toFox ?~> "task.create.failed"
+      params <- JsonHelper.parseAs[NmlTaskParameters](jsonString).toFox ?~> "task.create.failed"
       userOrganizationId = request.identity._organization
       taskType <- taskTypeDAO.findOne(params.taskTypeId) ?~> "taskType.notFound" ~> NOT_FOUND
       _ <- taskCreationService.assertBatchLimit(inputFiles.length, taskType)

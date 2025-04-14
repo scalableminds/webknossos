@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.google.protobuf.ByteString
 import com.scalableminds.fossildb.proto.fossildbapi._
-import com.scalableminds.util.tools.{BoxUtils, Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.tracingstore.TracingStoreConfig
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.typesafe.scalalogging.LazyLogging
@@ -11,7 +11,7 @@ import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder
 import io.grpc.{Status, StatusRuntimeException}
 import net.liftweb.common.{Box, Empty, Full}
 import net.liftweb.common.Box.tryo
-import play.api.libs.json.{Json, Reads, Writes}
+import play.api.libs.json.{Reads, Writes}
 import scalapb.grpc.Grpc
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
@@ -27,7 +27,7 @@ trait KeyValueStoreImplicits {
   implicit def toJsonBytes[T](o: T)(implicit w: Writes[T]): Array[Byte] = w.writes(o).toString.getBytes("UTF-8")
 
   implicit def fromJsonBytes[T](a: Array[Byte])(implicit r: Reads[T]): Box[T] =
-    BoxUtils.jsResult2Box(Json.parse(a).validate)
+    JsonHelper.parseAs[T](a)
 
   implicit def toProtoBytes[T <: GeneratedMessage](o: T): Array[Byte] = o.toByteArray
 

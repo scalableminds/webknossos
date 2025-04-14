@@ -75,7 +75,7 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper with 
         .find(entry => entry.getName.endsWith(Zarr3ArrayHeader.FILENAME_ZARR_JSON))
         .toFox
       firstHeaderString <- ZipIO.readAt(new ZipFile(zipFile), firstHeaderFilePath).toFox
-      firstHeader <- JsonHelper.parseAndValidateJson[Zarr3ArrayHeader](firstHeaderString).toFox
+      firstHeader <- JsonHelper.parseAs[Zarr3ArrayHeader](firstHeaderString).toFox
       _ <- firstHeader.assertValid.toFox
       _ <- ZipIO.withUnzipedAsync(zipFile) {
         case (filename, inputStream) =>

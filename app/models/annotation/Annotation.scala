@@ -192,7 +192,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     for {
       state <- AnnotationState.fromString(r.state).toFox
       typ <- AnnotationType.fromString(r.typ).toFox
-      viewconfigurationOpt <- Fox.runOptional(r.viewconfiguration)(JsonHelper.parseAndValidateJson[JsObject](_).toFox)
+      viewconfigurationOpt <- Fox.runOptional(r.viewconfiguration)(JsonHelper.parseAs[JsObject](_).toFox)
       visibility <- AnnotationVisibility.fromString(r.visibility).toFox
       annotationLayers <- annotationLayerDAO.findAnnotationLayersFor(ObjectId(r._Id))
     } yield {

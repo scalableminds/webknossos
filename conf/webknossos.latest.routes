@@ -10,6 +10,8 @@ POST          /analytics/:eventType                                             
 POST          /helpEmail                                                                        controllers.Application.helpEmail(message: String, currentUrl: String)
 POST          /triggers/initialData                                                             controllers.InitialDataController.triggerInsert()
 
+GET           /testScanner                                                                      controllers.Application.testScanner()
+
 # Maintenance
 GET           /maintenances/listCurrentAndUpcoming                                              controllers.MaintenanceController.listCurrentAndUpcoming()
 GET           /maintenances/listAll                                                             controllers.MaintenanceController.listAll()

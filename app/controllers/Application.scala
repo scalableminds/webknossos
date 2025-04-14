@@ -1,6 +1,8 @@
 package controllers
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.helpers.NativeBucketScanner
+import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.typesafe.config.ConfigRenderOptions
 import mail.{DefaultMails, Send}
 import models.organization.OrganizationDAO
@@ -30,6 +32,18 @@ class Application @Inject()(actorSystem: ActorSystem,
 
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
+
+  def testScanner(): Action[AnyContent] = Action {
+    val elementClass = ElementClass.uint32
+    // little endian uint16 representation of 2, 4, 500, 500
+    val array = Array[Byte](2, 0, 0, 0, 4, 0, 0, 0, 244.toByte, 1, 0, 0, 244.toByte, 1, 0, 0)
+    val scanner = new NativeBucketScanner()
+    val segmentIds = scanner.collectSegmentIds(array,
+                                               ElementClass.bytesPerElement(elementClass),
+                                               ElementClass.isSigned(elementClass),
+                                               skipZeroes = false)
+    Ok(segmentIds.mkString(","))
+  }
 
   // Note: This route is used by external applications, keep stable
   def buildInfo: Action[AnyContent] = sil.UserAwareAction.async {

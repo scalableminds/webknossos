@@ -158,6 +158,19 @@ jobs:
       - name: Checksum App Dirs
         run: find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
 
+      - name: Start Fossildb
+        if: github.ref != 'refs/heads/master'
+        run: docker compose --file .github/docker-compose.yml up -d fossildb
+      - name: Prepare binaryData folder
+        run: mkdir -p binaryData/Organization_X && chmod 777 binaryData/Organization_X
+      - name: Run end-to-end tests
+        if: github.ref != 'refs/heads/master'
+        uses: ./.github/actions/retry
+        with:
+          run: |
+            sbt "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false"
+          retries: 3
+
       - name: Build webknossos docker image
         uses: docker/build-push-action@v6
         with:
@@ -191,19 +204,6 @@ jobs:
             scalableminds/webknossos-tracingstore:${{ env.DOCKER_TAG }}
           outputs: |
             type=image
-
-      - name: Start Fossildb
-        if: github.ref != 'refs/heads/master'
-        run: docker compose --file .github/docker-compose.yml up -d fossildb
-      - name: Prepare binaryData folder
-        run: mkdir -p binaryData/Organization_X && chmod 777 binaryData/Organization_X
-      - name: Run end-to-end tests
-        if: github.ref != 'refs/heads/master'
-        uses: ./.github/actions/retry
-        with:
-          run: |
-            sbt "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false"
-          retries: 3
 
       - name: Start webknossos, datastore and tracingstore
         run: |

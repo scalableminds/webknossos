@@ -26,8 +26,6 @@ trait FoxImplicits {
 }
 
 object Fox extends FoxImplicits {
-  def apply[A](future: Future[Box[A]])(implicit ec: ExecutionContext): Fox[A] =
-    new Fox(future)
 
   def fromBool(b: Boolean)(implicit ec: ExecutionContext): Fox[Unit] =
     if (b) Fox.successful(())
@@ -103,7 +101,7 @@ object Fox extends FoxImplicits {
     Future.sequence(l.map(_.futureBox))
 
   def combined[T](l: Seq[Fox[T]])(implicit ec: ExecutionContext): Fox[List[T]] =
-    Fox(Future.sequence(l.map(_.futureBox)).map { results =>
+    new Fox(Future.sequence(l.map(_.futureBox)).map { results =>
       results.find(_.isEmpty) match {
         case Some(Empty)            => Empty
         case Some(failure: Failure) => failure

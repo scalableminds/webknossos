@@ -87,7 +87,7 @@ class BinaryDataService(val dataBaseDir: Path,
           s"Loading ${requests.length} buckets for $dataSourceId layer ${dataLayer.name}, first request: ${firstRequest.cuboid.topLeft.toBucket}",
           bucketProvider.loadMultiple(readInstructions)
         )
-        bucketBoxesConverted <- Fox.fromFuture(Fox.serialSequenceBox(requestsSelected.zip(bucketBoxes)) {
+        bucketBoxesConverted <- Fox.fromFuture(Fox.serialSequence(requestsSelected.zip(bucketBoxes)) {
           case (request, Full(bucketBytes)) => convertAccordingToRequest(request, bucketBytes)
           case (_, other)                   => other.toFox
         })

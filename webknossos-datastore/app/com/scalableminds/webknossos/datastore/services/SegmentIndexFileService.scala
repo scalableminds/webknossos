@@ -163,7 +163,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                 datasetDirectoryName,
                                                                                 dataLayerName)
-      bucketData <- Fox.fromFuture(Fox.serialSequenceBox(bucketPositions)(bucketPosition =>
+      bucketData <- Fox.fromFuture(Fox.serialSequence(bucketPositions)(bucketPosition =>
         getDataForBucketPositions(dataSource, dataLayer, mag, Seq(bucketPosition * mag), mappingName)))
     } yield (bucketData, dataLayer.elementClass)
 

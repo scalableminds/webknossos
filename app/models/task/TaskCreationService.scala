@@ -422,7 +422,7 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
           )
         )
         // Note that volume tracings are saved sequentially to reduce server load
-        volumeSaveResults: List[Box[Unit]] <- Fox.fromFuture(Fox.serialSequenceBox(requestedTasks) { requestedTask =>
+        volumeSaveResults: List[Box[Unit]] <- Fox.fromFuture(Fox.serialSequence(requestedTasks) { requestedTask =>
           saveVolumeTracingIfPresent(requestedTask, tracingStoreClient, taskType, dataSource)
         })
         requestedTasksWithTracingSaveResults = requestedTasks

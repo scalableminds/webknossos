@@ -6,7 +6,7 @@ import com.scalableminds.webknossos.datastore.services.mesh.AdHocMeshServiceHold
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
-import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{TSDatasetErrorLoggingService, VolumeTracingService}
 import com.scalableminds.webknossos.tracingstore.tracings.{TemporaryTracingService, TracingDataStore}
 import org.apache.pekko.actor.ActorSystem
 
@@ -26,6 +26,7 @@ class TracingStoreModule extends AbstractModule {
     bind(classOf[AdHocMeshServiceHolder]).asEagerSingleton()
     bind(classOf[TSAnnotationService]).asEagerSingleton()
     bind(classOf[TemporaryTracingService]).asEagerSingleton()
+    bind(classOf[TSDatasetErrorLoggingService]).asEagerSingleton()
   }
 
 }

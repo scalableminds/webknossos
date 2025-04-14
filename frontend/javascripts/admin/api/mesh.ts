@@ -19,8 +19,8 @@ export type MeshLodInfo = {
 };
 
 type MeshSegmentInfo = {
-  chunkShape: Vector3;
-  gridOrigin: Vector3;
+  chunkShape: Vector3; // unused
+  gridOrigin: Vector3; // unused
   lods: Array<MeshLodInfo>;
 };
 

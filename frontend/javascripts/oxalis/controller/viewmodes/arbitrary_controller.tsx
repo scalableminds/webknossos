@@ -235,7 +235,7 @@ class ArbitraryController extends React.PureComponent<Props> {
       // Recenter active node
       s: () => {
         const state = Store.getState();
-        const skeletonTracing = state.tracing.skeleton;
+        const skeletonTracing = state.annotation.skeleton;
 
         if (!skeletonTracing) {
           return;
@@ -258,7 +258,7 @@ class ArbitraryController extends React.PureComponent<Props> {
       },
       // Delete active node and recenter last node
       "shift + space": () => {
-        const skeletonTracing = Store.getState().tracing.skeleton;
+        const skeletonTracing = Store.getState().annotation.skeleton;
 
         if (!skeletonTracing) {
           return;
@@ -278,7 +278,7 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   nextNode(nextOne: boolean): void {
-    const skeletonTracing = Store.getState().tracing.skeleton;
+    const skeletonTracing = Store.getState().annotation.skeleton;
 
     if (!skeletonTracing) {
       return;
@@ -379,7 +379,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     }
 
     this.arbitraryView.stop();
-    this.plane.destroy();
+    this.plane.stop();
     this.isStarted = false;
   }
 
@@ -430,7 +430,7 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   pushBranch(): void {
-    if (!Store.getState().tracing.skeleton) {
+    if (!Store.getState().annotation.skeleton) {
       return;
     }
 

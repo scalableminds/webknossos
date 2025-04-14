@@ -37,7 +37,7 @@ const registerWebGlCrashHandler = (canvas) => {
       // to another one and then switching back proved to be the most robust way,
       // even though it seems a bit hacky.
       const currentViewMode = Store.getState().temporaryConfiguration.viewMode;
-      const { allowedModes } = Store.getState().tracing.restrictions;
+      const { allowedModes } = Store.getState().annotation.restrictions;
       const index = (allowedModes.indexOf(currentViewMode) + 1) % allowedModes.length;
       const newViewMode = allowedModes[index];
       console.log(

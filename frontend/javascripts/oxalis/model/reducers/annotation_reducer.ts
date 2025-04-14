@@ -2,6 +2,7 @@ import update from "immutability-helper";
 import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 import _ from "lodash";
+import Constants from "oxalis/constants";
 import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { getDisplayedDataExtentInPlaneMode } from "oxalis/model/accessors/view_mode_accessor";
 import type { Action } from "oxalis/model/actions/actions";
@@ -13,8 +14,10 @@ import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { getMeshesForAdditionalCoordinates } from "../accessors/volumetracing_accessor";
 import BoundingBox from "../bucket_data_handling/bounding_box";
 
-const updateTracing = (state: OxalisState, shape: Partial<OxalisState["tracing"]>): OxalisState =>
-  updateKey(state, "tracing", shape);
+const updateAnnotation = (
+  state: OxalisState,
+  shape: Partial<OxalisState["annotation"]>,
+): OxalisState => updateKey(state, "annotation", shape);
 
 const updateUserBoundingBoxes = (state: OxalisState, userBoundingBoxes: Array<UserBoundingBox>) => {
   const updaterObject = {
@@ -23,11 +26,11 @@ const updateUserBoundingBoxes = (state: OxalisState, userBoundingBoxes: Array<Us
     },
   };
   // We mirror/sync the user bounding boxes between all tracing objects.
-  const newVolumes = state.tracing.volumes.map((volumeTracing) => ({
+  const newVolumes = state.annotation.volumes.map((volumeTracing) => ({
     ...volumeTracing,
     userBoundingBoxes,
   }));
-  const maybeSkeletonUpdater = state.tracing.skeleton
+  const maybeSkeletonUpdater = state.annotation.skeleton
     ? {
         skeleton: updaterObject,
       }
@@ -37,13 +40,13 @@ const updateUserBoundingBoxes = (state: OxalisState, userBoundingBoxes: Array<Us
       $set: newVolumes,
     },
   };
-  const maybeReadOnlyUpdater = state.tracing.readOnly
+  const maybeReadOnlyUpdater = state.annotation.readOnly
     ? {
         readOnly: updaterObject,
       }
     : {};
   return update(state, {
-    tracing: {
+    annotation: {
       ...maybeSkeletonUpdater,
       ...maybeVolumeUpdater,
       ...maybeReadOnlyUpdater,
@@ -74,7 +77,7 @@ const maybeAddAdditionalCoordinatesToMeshState = (
 function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
     case "INITIALIZE_ANNOTATION": {
-      return updateTracing(state, {
+      return updateAnnotation(state, {
         // Clear all tracings. These will be initialized in corresponding
         // initialization actions.
         mappings: [],
@@ -86,48 +89,48 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
 
     case "SET_ANNOTATION_NAME": {
       const { name } = action;
-      return updateTracing(state, {
+      return updateAnnotation(state, {
         name,
       });
     }
 
     case "SET_ANNOTATION_VISIBILITY": {
       const { visibility } = action;
-      return updateTracing(state, {
+      return updateAnnotation(state, {
         visibility,
       });
     }
 
     case "EDIT_ANNOTATION_LAYER": {
-      const newAnnotationLayers = state.tracing.annotationLayers.map((layer) => {
+      const newAnnotationLayers = state.annotation.annotationLayers.map((layer) => {
         if (layer.tracingId !== action.tracingId) {
           return layer;
         } else {
           return { ...layer, ...action.layerProperties };
         }
       });
-      return updateTracing(state, {
+      return updateAnnotation(state, {
         annotationLayers: newAnnotationLayers,
       });
     }
 
     case "SET_ANNOTATION_DESCRIPTION": {
       const { description } = action;
-      return updateTracing(state, {
+      return updateAnnotation(state, {
         description,
       });
     }
 
     case "SET_ANNOTATION_ALLOW_UPDATE": {
       const { allowUpdate } = action;
-      return updateKey2(state, "tracing", "restrictions", {
+      return updateKey2(state, "annotation", "restrictions", {
         allowUpdate,
       });
     }
 
     case "SET_BLOCKED_BY_USER": {
       const { blockedByUser } = action;
-      return updateKey(state, "tracing", {
+      return updateKey(state, "annotation", {
         blockedByUser,
       });
     }
@@ -137,7 +140,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "CHANGE_USER_BOUNDING_BOX": {
-      const tracing = maybeGetSomeTracing(state.tracing);
+      const tracing = maybeGetSomeTracing(state.annotation);
 
       if (tracing == null) {
         return state;
@@ -160,7 +163,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "ADD_NEW_USER_BOUNDING_BOX": {
-      const tracing = maybeGetSomeTracing(state.tracing);
+      const tracing = maybeGetSomeTracing(state.annotation);
 
       if (tracing == null) {
         return state;
@@ -216,7 +219,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "ADD_USER_BOUNDING_BOXES": {
-      const tracing = maybeGetSomeTracing(state.tracing);
+      const tracing = maybeGetSomeTracing(state.annotation);
 
       if (tracing == null) {
         return state;
@@ -239,7 +242,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "DELETE_USER_BOUNDING_BOX": {
-      const tracing = maybeGetSomeTracing(state.tracing);
+      const tracing = maybeGetSomeTracing(state.annotation);
 
       if (tracing == null) {
         return state;
@@ -271,6 +274,40 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
                   },
                 },
               },
+            },
+          },
+        },
+      });
+    }
+
+    case "UPDATE_MESH_OPACITY": {
+      const { layerName, id, opacity } = action;
+      const meshDict = state.localSegmentationData[layerName].meshes;
+      if (meshDict == null) return state;
+      const currentAdditionalCoordinates = Object.keys(meshDict || {});
+      const updatedMeshes = _.reduce(
+        currentAdditionalCoordinates,
+        (updatedMeshesDict, additionalCoordKey) => {
+          const meshes = updatedMeshesDict[additionalCoordKey];
+          if (meshes == null) return updatedMeshesDict;
+          return {
+            ...updatedMeshesDict,
+            [additionalCoordKey]: update(meshes, {
+              [id]: {
+                opacity: {
+                  $set: opacity,
+                },
+              },
+            }),
+          };
+        },
+        meshDict,
+      );
+      return update(state, {
+        localSegmentationData: {
+          [layerName]: {
+            meshes: {
+              $set: updatedMeshes,
             },
           },
         },
@@ -321,6 +358,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         isLoading: false,
         isVisible: true,
         isPrecomputed: false,
+        opacity: Constants.DEFAULT_MESH_OPACITY,
         mappingName,
         mappingType,
       };
@@ -356,7 +394,6 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         seedPosition,
         seedAdditionalCoordinates,
         meshFileName,
-        areChunksMerged,
         mappingName,
       } = action;
       const meshInfo: MeshInformation = {
@@ -366,8 +403,8 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         isLoading: false,
         isVisible: true,
         isPrecomputed: true,
+        opacity: Constants.DEFAULT_MESH_OPACITY,
         meshFileName,
-        areChunksMerged,
         mappingName,
       };
       const additionalCoordinates = state.flycam.additionalCoordinates;
@@ -465,7 +502,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "SET_OTHERS_MAY_EDIT_FOR_ANNOTATION": {
-      return updateKey(state, "tracing", {
+      return updateKey(state, "annotation", {
         othersMayEdit: action.othersMayEdit,
       });
     }

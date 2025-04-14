@@ -98,7 +98,7 @@ export class MoveTool {
           }
 
           case "shift": {
-            const { uiInformation, tracing } = Store.getState();
+            const { uiInformation, annotation } = Store.getState();
             const isBrushActive = isBrushTool(uiInformation.activeTool);
 
             if (isBrushActive) {
@@ -108,7 +108,7 @@ export class MoveTool {
               } else {
                 VolumeHandlers.changeBrushSizeIfBrushIsActiveBy(-1);
               }
-            } else if (tracing.skeleton) {
+            } else if (annotation.skeleton) {
               // Different browsers send different deltas, this way the behavior is comparable
               api.tracing.setNodeRadius(delta > 0 ? 5 : -5);
             }
@@ -270,11 +270,11 @@ export class SkeletonTool {
         _id: string | null | undefined,
         event: MouseEvent,
       ) => {
-        const { tracing } = Store.getState();
+        const { annotation } = Store.getState();
         const { useLegacyBindings } = Store.getState().userConfiguration;
 
         if (
-          tracing.skeleton != null &&
+          annotation.skeleton != null &&
           (draggingNodeId != null || (useLegacyBindings && (event.ctrlKey || event.metaKey)))
         ) {
           didDragNode = true;

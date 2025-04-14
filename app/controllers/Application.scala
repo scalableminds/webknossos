@@ -1,8 +1,6 @@
 package controllers
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.helpers.NativeBucketScanner
-import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.typesafe.config.ConfigRenderOptions
 import mail.{DefaultMails, Send}
 import models.organization.OrganizationDAO

@@ -109,6 +109,8 @@ jobs:
           DOCKER_TAG="${NORMALIZED_BRANCH}__${GITHUB_RUN_ID}"
           echo "DOCKER_TAG=$DOCKER_TAG" | tee -a "$GITHUB_ENV"
           echo "NORMALIZED_BRANCH=$NORMALIZED_BRANCH" | tee -a "$GITHUB_ENV"
+          echo "CI_BUILD_NUM=$GITHUB_RUN_ID" | tee -a "$GITHUB_ENV"
+
       - name: "Custom environment variables (Not Pull Request)"
         if: ${{ github.event_name != 'pull_request' }}
         run: |
@@ -123,6 +125,7 @@ jobs:
             echo "CI_TAG=$CI_TAG" | tee -a "$GITHUB_ENV"
             echo "NORMALIZED_BRANCH=$CI_TAG" | tee -a "$GITHUB_ENV"
           fi
+          echo "CI_BUILD_NUM=$GITHUB_RUN_ID" | tee -a "$GITHUB_ENV"
 
       - name: Prepare Dependency Folders
         run: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier

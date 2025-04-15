@@ -16,6 +16,9 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Performance improvements for segment statistics (volume + bounding box in context menu). [#8469](https://github.com/scalableminds/webknossos/pull/8469)
 - Upgraded backend dependencies for improved performance and stability. [#8507](https://github.com/scalableminds/webknossos/pull/8507)
 - New config option `datastore.dataVaults.credentials` allows admins to set up global credentials for remote dataset loading. [#8509](https://github.com/scalableminds/webknossos/pull/8509)
+- Added a new "draw" mode for the skeleton tool. When enabled, one can rapidly create notes by keeping the left mouse button pressed and moving the cursor. [#8434](https://github.com/scalableminds/webknossos/pull/8434)
+- Added the concept of "toolkits". By default, all tools are available to the user (as before), but one can select a specific toolkit to only see certain tools. Some toolkits also change the behavior of the tools. For example, the "Split Segments" toolkit (see below). [#8434](https://github.com/scalableminds/webknossos/pull/8434)
+- Added a workflow for splitting segments. Select the "Split Segments" toolkit and create a bounding box in which you want to execute the split. Then, use the skeleton tool to place nodes on the boundary between two (merged) segments. The nodes will be used to construct a 3D surface. Finally, use the floodfill tool (enable 3D and bounding-box restriction) to relabel a part of the segment. the floodfill won't cross the 3D surface. [#8434](https://github.com/scalableminds/webknossos/pull/8434)
 
 ### Changed
 - When deleting a dataset / layer, layers that are referenced in other datasets are moved there instead of being deleted. [#8437](https://github.com/scalableminds/webknossos/pull/8437/)

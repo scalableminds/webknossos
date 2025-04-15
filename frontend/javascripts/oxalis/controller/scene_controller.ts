@@ -54,22 +54,12 @@ const CUBE_COLOR = 0x999999;
 const LAYER_CUBE_COLOR = 0xffff99;
 
 import computeSplitBoundaryMeshWithSplines from "oxalis/geometries/compute_split_boundary_mesh_with_splines";
-import {
-  acceleratedRaycast,
-  computeBatchedBoundsTree,
-  computeBoundsTree,
-  disposeBatchedBoundsTree,
-  disposeBoundsTree,
-} from "three-mesh-bvh";
+import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from "three-mesh-bvh";
 
 // Add the extension functions
 THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
 THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
-
-THREE.BatchedMesh.prototype.computeBoundsTree = computeBatchedBoundsTree;
-THREE.BatchedMesh.prototype.disposeBoundsTree = disposeBatchedBoundsTree;
-THREE.BatchedMesh.prototype.raycast = acceleratedRaycast;
 
 class SceneController {
   skeletons: Record<number, Skeleton> = {};

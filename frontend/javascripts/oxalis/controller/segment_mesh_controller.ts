@@ -108,7 +108,7 @@ export default class SegmentMeshController {
     bufferGeometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
 
     bufferGeometry = mergeVertices(bufferGeometry);
-    // bufferGeometry.computeVertexNormals();
+    bufferGeometry.computeVertexNormals();
 
     bufferGeometry.boundsTree = await computeBvhAsync(bufferGeometry);
 

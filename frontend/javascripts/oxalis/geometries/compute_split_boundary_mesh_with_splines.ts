@@ -1,3 +1,4 @@
+import { orderPointsWithMST } from "libs/order_points_with_mst";
 import _ from "lodash";
 import type { Vector3 } from "oxalis/constants";
 import * as THREE from "three";
@@ -29,7 +30,7 @@ export default function computeSplitBoundaryMeshWithSplines(points: Vector3[]): 
       } else if (zValue === maxZ) {
         adaptedZ += 0.1;
       }
-      const points2D = orderPointsMST(
+      const points2D = orderPointsWithMST(
         pointsByZ[zValue].map((p) => new THREE.Vector3(p[0], p[1], adaptedZ)),
       );
 
@@ -120,29 +121,16 @@ export default function computeSplitBoundaryMeshWithSplines(points: Vector3[]): 
   });
 
   // Connect vertices with triangles
-  // console.group("Computing indices");
   for (let i = 0; i < curves.length - 1; i++) {
-    // console.group("Curve i=" + i);
     for (let j = 0; j < numPoints - 1; j++) {
-      // console.group("Point j=" + j);
       let current = i * numPoints + j;
       let next = (i + 1) * numPoints + j;
 
-      // const printFace = (x, y, z) => {
-      //   return [vertices[3 * x], vertices[3 * y], vertices[3 * z]];
-      // };
-
-      // console.log("Creating faces with", { current, next });
-      // console.log("First face:", printFace(current, next, current + 1));
-      // console.log("Second face:", printFace(next, next + 1, current + 1));
       // Two triangles per quad
       indices.push(current, next, current + 1);
       indices.push(next, next + 1, current + 1);
-      // console.groupEnd();
     }
-    // console.groupEnd();
   }
-  // console.groupEnd();
 
   // Convert to Three.js BufferGeometry
   const geometry = new THREE.BufferGeometry();
@@ -167,113 +155,4 @@ export default function computeSplitBoundaryMeshWithSplines(points: Vector3[]): 
     splines,
     splitBoundaryMesh,
   };
-}
-
-class DisjointSet {
-  private parent: number[];
-  private rank: number[];
-
-  constructor(n: number) {
-    this.parent = Array.from({ length: n }, (_, i) => i);
-    this.rank = Array(n).fill(0);
-  }
-
-  find(i: number): number {
-    if (this.parent[i] !== i) this.parent[i] = this.find(this.parent[i]);
-    return this.parent[i];
-  }
-
-  union(i: number, j: number): void {
-    let rootI = this.find(i),
-      rootJ = this.find(j);
-    if (rootI !== rootJ) {
-      if (this.rank[rootI] > this.rank[rootJ]) this.parent[rootJ] = rootI;
-      else if (this.rank[rootI] < this.rank[rootJ]) this.parent[rootI] = rootJ;
-      else {
-        this.parent[rootJ] = rootI;
-        this.rank[rootI]++;
-      }
-    }
-  }
-}
-
-interface Edge {
-  i: number;
-  j: number;
-  dist: number;
-}
-
-function computeMST(points: THREE.Vector3[]): number[][] {
-  const edges: Edge[] = [];
-  const numPoints = points.length;
-
-  // Create all possible edges with distances
-  for (let i = 0; i < numPoints; i++) {
-    for (let j = i + 1; j < numPoints; j++) {
-      const dist = points[i].distanceTo(points[j]);
-      edges.push({ i, j, dist });
-    }
-  }
-
-  // Sort edges by distance (Kruskal's Algorithm)
-  edges.sort((a, b) => a.dist - b.dist);
-
-  // Compute MST using Kruskal’s Algorithm
-  const ds = new DisjointSet(numPoints);
-  const mst: number[][] = Array.from({ length: numPoints }, () => []);
-
-  for (const { i, j } of edges) {
-    if (ds.find(i) !== ds.find(j)) {
-      ds.union(i, j);
-      mst[i].push(j);
-      mst[j].push(i);
-    }
-  }
-
-  return mst;
-}
-
-function traverseMstDfs(mst: number[][], startIdx = 0): number[] {
-  const visited = new Set<number>();
-  const orderedPoints: number[] = [];
-
-  function dfs(node: number) {
-    if (visited.has(node)) return;
-    visited.add(node);
-    orderedPoints.push(node);
-    for (let neighbor of mst[node]) {
-      dfs(neighbor);
-    }
-  }
-
-  dfs(startIdx);
-  return orderedPoints;
-}
-
-function computePathLength(points: THREE.Vector3[], order: number[]): number {
-  let length = 0;
-  for (let i = 0; i < order.length - 1; i++) {
-    length += points[order[i]].distanceTo(points[order[i + 1]]);
-  }
-  return length;
-}
-
-export function orderPointsMST(points: THREE.Vector3[]): THREE.Vector3[] {
-  if (points.length === 0) return [];
-
-  const mst = computeMST(points);
-  let bestOrder: number[] = [];
-  let minLength = Number.POSITIVE_INFINITY;
-
-  for (let startIdx = 0; startIdx < points.length; startIdx++) {
-    const order = traverseMstDfs(mst, startIdx);
-    const length = computePathLength(points, order);
-
-    if (length < minLength) {
-      minLength = length;
-      bestOrder = order;
-    }
-  }
-
-  return bestOrder.map((index) => points[index]);
 }

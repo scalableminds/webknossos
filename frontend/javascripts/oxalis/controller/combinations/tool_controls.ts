@@ -58,7 +58,7 @@ import {
   hideBrushAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { api } from "oxalis/singletons";
-import Store from "oxalis/store";
+import Store, { UserConfiguration } from "oxalis/store";
 import type ArbitraryView from "oxalis/view/arbitrary_view";
 import type PlaneView from "oxalis/view/plane_view";
 import * as THREE from "three";
@@ -202,12 +202,13 @@ export class MoveToolController {
 
   static getActionDescriptors(
     _activeTool: AnnotationTool,
-    useLegacyBindings: boolean,
+    userConfiguration: UserConfiguration,
     shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
     altKey: boolean,
     _isTDViewportActive: boolean,
   ): ActionDescriptor {
+    const { useLegacyBindings } = userConfiguration;
     // In legacy mode, don't display a hint for
     // left click as it would be equal to left drag.
     // We also don't show a hint when the alt key was pressed,
@@ -279,9 +280,7 @@ export class SkeletonToolController {
         event: MouseEvent,
       ) => {
         const { annotation, userConfiguration } = Store.getState();
-        const { useLegacyBindings } = Store.getState().userConfiguration;
-
-        const { continuousNodeCreation } = userConfiguration;
+        const { useLegacyBindings, continuousNodeCreation } = userConfiguration;
 
         if (continuousNodeCreation) {
           if (
@@ -321,9 +320,9 @@ export class SkeletonToolController {
         );
       },
       rightClick: (position: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
-        const { useLegacyBindings } = Store.getState().userConfiguration;
+        const { useLegacyBindings, continuousNodeCreation } = Store.getState().userConfiguration;
 
-        if (useLegacyBindings) {
+        if (useLegacyBindings && !continuousNodeCreation) {
           legacyRightClick(position, plane, event, isTouch);
           return;
         }
@@ -343,7 +342,12 @@ export class SkeletonToolController {
     isTouch: boolean,
     allowNodeCreation: boolean = true,
   ): void {
-    const { useLegacyBindings } = Store.getState().userConfiguration;
+    const { useLegacyBindings, continuousNodeCreation } = Store.getState().userConfiguration;
+
+    if (continuousNodeCreation && allowNodeCreation) {
+      SkeletonHandlers.handleCreateNodeFromEvent(position, ctrlPressed);
+      return;
+    }
 
     // The following functions are all covered by the context menu, too.
     // (At least, in the XY/XZ/YZ viewports).
@@ -368,12 +372,22 @@ export class SkeletonToolController {
 
   static getActionDescriptors(
     _activeTool: AnnotationTool,
-    useLegacyBindings: boolean,
+    userConfiguration: UserConfiguration,
     shiftKey: boolean,
     ctrlOrMetaKey: boolean,
     altKey: boolean,
     _isTDViewportActive: boolean,
   ): ActionDescriptor {
+    const { continuousNodeCreation } = Store.getState().userConfiguration;
+    const { useLegacyBindings } = userConfiguration;
+    if (continuousNodeCreation) {
+      return {
+        leftClick: "Place node",
+        leftDrag: "Draw nodes",
+        rightClick: "Context Menu",
+      };
+    }
+
     // In legacy mode, don't display a hint for
     // left click as it would be equal to left drag
     let leftClickInfo = {};
@@ -495,13 +509,14 @@ export class DrawToolController {
 
   static getActionDescriptors(
     activeTool: AnnotationTool,
-    useLegacyBindings: boolean,
+    userConfiguration: UserConfiguration,
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
     _isTDViewportActive: boolean,
   ): ActionDescriptor {
     let rightClick;
+    const { useLegacyBindings } = userConfiguration;
 
     if (!useLegacyBindings) {
       rightClick = "Context Menu";
@@ -554,7 +569,7 @@ export class EraseToolController {
 
   static getActionDescriptors(
     activeTool: AnnotationTool,
-    _useLegacyBindings: boolean,
+    _userConfiguration: UserConfiguration,
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
@@ -579,7 +594,7 @@ export class PickCellToolController {
 
   static getActionDescriptors(
     _activeTool: AnnotationTool,
-    _useLegacyBindings: boolean,
+    _userConfiguration: UserConfiguration,
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
@@ -610,7 +625,7 @@ export class FillCellToolController {
 
   static getActionDescriptors(
     _activeTool: AnnotationTool,
-    _useLegacyBindings: boolean,
+    _userConfiguration: UserConfiguration,
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
@@ -689,7 +704,7 @@ export class BoundingBoxToolController {
 
   static getActionDescriptors(
     _activeTool: AnnotationTool,
-    _useLegacyBindings: boolean,
+    _userConfiguration: UserConfiguration,
     _shiftKey: boolean,
     ctrlOrMetaKey: boolean,
     _altKey: boolean,
@@ -818,7 +833,7 @@ export class QuickSelectToolController {
 
   static getActionDescriptors(
     _activeTool: AnnotationTool,
-    _useLegacyBindings: boolean,
+    _userConfiguration: UserConfiguration,
     shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
@@ -942,7 +957,7 @@ export class LineMeasurementToolController {
 
   static getActionDescriptors(
     _activeTool: AnnotationTool,
-    _useLegacyBindings: boolean,
+    _userConfiguration: UserConfiguration,
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
@@ -1021,7 +1036,7 @@ export class AreaMeasurementToolController {
 
   static getActionDescriptors(
     _activeTool: AnnotationTool,
-    _useLegacyBindings: boolean,
+    _userConfiguration: UserConfiguration,
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
@@ -1081,7 +1096,7 @@ export class ProofreadToolController {
 
   static getActionDescriptors(
     _activeTool: AnnotationTool,
-    _useLegacyBindings: boolean,
+    _userConfiguration: UserConfiguration,
     shiftKey: boolean,
     ctrlOrMetaKey: boolean,
     _altKey: boolean,

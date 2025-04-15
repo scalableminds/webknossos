@@ -179,9 +179,7 @@ const moreShortcutsLink = (
 
 function ShortcutsInfo() {
   const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
-  const useLegacyBindings = useSelector(
-    (state: OxalisState) => state.userConfiguration.useLegacyBindings,
-  );
+  const userConfiguration = useSelector((state: OxalisState) => state.userConfiguration);
   const isPlaneMode = useSelector((state: OxalisState) => getIsPlaneMode(state));
   const isShiftPressed = useKeyPress("Shift");
   const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
@@ -198,7 +196,7 @@ function ShortcutsInfo() {
         AnnotationTool.SKELETON,
       ).getActionDescriptors(
         AnnotationTool.SKELETON,
-        useLegacyBindings,
+        userConfiguration,
         isShiftPressed,
         isControlOrMetaPressed,
         isAltPressed,
@@ -337,10 +335,9 @@ function ShortcutsInfo() {
     isAltPressed,
   );
   const toolController = getToolControllerForAnnotationTool(adaptedTool);
-  console.log("toolController", toolController);
   const actionDescriptor = toolController.getActionDescriptors(
     adaptedTool,
-    useLegacyBindings,
+    userConfiguration,
     isShiftPressed,
     isControlOrMetaPressed,
     isAltPressed,

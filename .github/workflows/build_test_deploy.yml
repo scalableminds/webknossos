@@ -19,7 +19,7 @@ env:
 
 jobs:
   frontend-tests:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     if: github.ref != 'refs/heads/master'
     steps:
       - uses: actions/checkout@v4
@@ -43,7 +43,7 @@ jobs:
         run: yarn test-verbose
 
   backend-tests:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     if: github.ref != 'refs/heads/master'
     steps:
       - uses: actions/checkout@v4
@@ -96,8 +96,8 @@ jobs:
         run: sbt -v "testOnly backend.*"
 
 
-  build-smoketest-push:
-    runs-on: ubuntu-24.04
+  build-test-e2e-deploy:
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
         with:

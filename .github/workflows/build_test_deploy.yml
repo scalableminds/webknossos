@@ -19,7 +19,7 @@ env:
 
 jobs:
   frontend-tests:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     if: github.ref != 'refs/heads/master'
     steps:
       - uses: actions/checkout@v4
@@ -43,7 +43,7 @@ jobs:
         run: yarn test-verbose
 
   backend-tests:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     if: github.ref != 'refs/heads/master'
     steps:
       - uses: actions/checkout@v4
@@ -54,8 +54,6 @@ jobs:
         with:
           node-version: 18
       - run: corepack enable
-      - name: Install frontend dependencies
-        run: yarn install --immutable
 
       - uses: actions/setup-java@v4
         with:
@@ -63,20 +61,42 @@ jobs:
           java-version: '21'
       - uses: sbt/setup-sbt@v1
 
+      - name: Start Docker Services Postgres, Redis
+        run: docker compose --file .github/docker-compose.yml up -d postgres redis
+
+      - name: Install frontend dependencies
+        run: yarn install --immutable
+
       - name: "Install System Dependencies"
         run: sudo apt-get update && sudo apt-get install -y libdraco-dev libblosc1
 
-      - name: "Start postgres"
-        run: docker compose --file .github/docker-compose.yml up -d postgres
+      - name: Assert unique evolution numbers
+        run: tools/postgres/dbtool.js assert-unique-evolution-numbers
+      - name: Assert schema.sql and evolutions are equal
+        run: tools/postgres/dbtool.js check-evolutions-schema
+      - name: Assert that all migrations are mentioned in one migration guide and that they have a reversion counterpart.
+        run: tools/assert-complete-migrations.sh
 
       - name: Lint backend code and check formatting
         run: sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
-      - name: Run backend tests
+
+      - name: Run backend unit tests
         run: sbt -v "testOnly backend.*"
 
+      - name: Start Fossildb for e2e tests
+        run: docker compose --file .github/docker-compose.yml up -d fossildb
+      - name: Prepare binaryData folder for e2e tests
+        run: mkdir -p binaryData/Organization_X && chmod 777 binaryData/Organization_X
+      - name: Run end-to-end tests
+        uses: ./.github/actions/retry
+        with:
+          run: |
+            sbt "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false"
+          retries: 3
 
-  build-test-e2e-deploy:
-    runs-on: ubuntu-24.04
+
+  build-smoketest-push:
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -85,7 +105,8 @@ jobs:
       - uses: docker/setup-buildx-action@v3
         with:
           driver: docker
-      - name: Start Docker Services
+
+      - name: Start Docker Services Postgres, Redis
         run: docker compose --file .github/docker-compose.yml up -d postgres redis
 
       - uses: actions/setup-node@v4
@@ -109,6 +130,8 @@ jobs:
           DOCKER_TAG="${NORMALIZED_BRANCH}__${GITHUB_RUN_ID}"
           echo "DOCKER_TAG=$DOCKER_TAG" | tee -a "$GITHUB_ENV"
           echo "NORMALIZED_BRANCH=$NORMALIZED_BRANCH" | tee -a "$GITHUB_ENV"
+          echo "CI_BUILD_NUM=$GITHUB_RUN_ID" | tee -a "$GITHUB_ENV"
+
       - name: "Custom environment variables (Not Pull Request)"
         if: ${{ github.event_name != 'pull_request' }}
         run: |
@@ -123,34 +146,26 @@ jobs:
             echo "CI_TAG=$CI_TAG" | tee -a "$GITHUB_ENV"
             echo "NORMALIZED_BRANCH=$CI_TAG" | tee -a "$GITHUB_ENV"
           fi
+          echo "CI_BUILD_NUM=$GITHUB_RUN_ID" | tee -a "$GITHUB_ENV"
 
       - name: Prepare Dependency Folders
         run: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier
+
       - name: Install frontend dependencies
         run: yarn install --immutable
         env:
           PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
 
-      - name: Assert unique evolution numbers
-        run: tools/postgres/dbtool.js assert-unique-evolution-numbers
-      - name: Assert schema.sql and evolutions are equal
-        run: tools/postgres/dbtool.js check-evolutions-schema
-      - name: Assert that all migrations are mentioned in one migration guide and that they have a reversion counterpart.
-        run: tools/assert-complete-migrations.sh
-
       - name: Build frontend documentation
         run: yarn run docs --project-version "$WK_VERSION"
         env:
           WK_VERSION: ${{ github.run_id }}
+
       - name: Build webknossos (webpack)
         run: yarn build
+
       - name: Build webknossos (sbt)
-        run: |
-          if [ "${{ github.ref_name }}" == 'master' ]; then
-            sbt clean compile stage
-          else
-            sbt -DfailOnWarning compile stage
-          fi
+        run: sbt -DfailOnWarning compile stage
       - name: Build webknossos-datastore (sbt)
         run: sbt -DfailOnWarning "project webknossosDatastore" copyMessages compile stage
       - name: Build webknossos-tracingstore (sbt)
@@ -192,20 +207,7 @@ jobs:
           outputs: |
             type=image
 
-      - name: Start Fossildb
-        if: github.ref != 'refs/heads/master'
-        run: docker compose --file .github/docker-compose.yml up -d fossildb
-      - name: Prepare binaryData folder
-        run: mkdir -p binaryData/Organization_X && chmod 777 binaryData/Organization_X
-      - name: Run end-to-end tests
-        if: github.ref != 'refs/heads/master'
-        uses: ./.github/actions/retry
-        with:
-          run: |
-            sbt "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false"
-          retries: 3
-
-      - name: Start webknossos, datastore and tracingstore
+      - name: Start webknossos, datastore and tracingstore for smoke test
         run: |
           set -e
           docker compose --file .github/docker-compose.yml up -d \

@@ -725,10 +725,10 @@ export async function getTracingForAnnotationType(
   const tracingType = typ.toLowerCase() as "skeleton" | "volume";
   const params = new URLSearchParams({ annotationId: annotation.id });
   if (version != null) {
-    params.append("version", version.toString());
+    params.set("version", version.toString());
   }
   const tracingArrayBuffer = await doWithToken((token) => {
-    params.append("token", token);
+    params.set("token", token);
     return Request.receiveArraybuffer(
       `${annotation.tracingStore.url}/tracings/${tracingType}/${tracingId}?${params}`,
       {
@@ -767,12 +767,12 @@ export function getUpdateActionLog(
 ): Promise<Array<APIUpdateActionBatch>> {
   return doWithToken((token) => {
     const params = new URLSearchParams();
-    params.append("token", token);
+    params.set("token", token);
     if (oldestVersion != null) {
-      params.append("oldestVersion", oldestVersion.toString());
+      params.set("oldestVersion", oldestVersion.toString());
     }
     if (newestVersion != null) {
-      params.append("newestVersion", newestVersion.toString());
+      params.set("newestVersion", newestVersion.toString());
     }
     return Request.receiveJSON(
       `${tracingStoreUrl}/tracings/annotation/${annotationId}/updateActionLog?${params}`,
@@ -798,10 +798,10 @@ export async function getAnnotationProto(
 ): Promise<APITracingStoreAnnotation> {
   const params = new URLSearchParams();
   if (version != null) {
-    params.append("version", version.toString());
+    params.set("version", version.toString());
   }
   const annotationArrayBuffer = await doWithToken((token) => {
-    params.append("token", token);
+    params.set("token", token);
     return Request.receiveArraybuffer(
       `${tracingStoreUrl}/tracings/annotation/${annotationId}?${params}`,
       {
@@ -900,7 +900,7 @@ export async function downloadAnnotation(
 ) {
   const params = new URLSearchParams();
   if (version != null) {
-    params.append("version", version.toString());
+    params.set("version", version.toString());
   }
 
   if (includeVolumeData && showVolumeFallbackDownloadWarning) {
@@ -909,14 +909,14 @@ export async function downloadAnnotation(
     });
   }
   if (!includeVolumeData) {
-    params.append("skipVolumeData", "true");
+    params.set("skipVolumeData", "true");
   } else {
     if (downloadFileFormat === "nml") {
       throw new Error(
         "Cannot download annotation with nml-only format while includeVolumeData is true",
       );
     }
-    params.append("volumeDataZipFormat", downloadFileFormat);
+    params.set("volumeDataZipFormat", downloadFileFormat);
   }
 
   const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${params}`;
@@ -933,22 +933,22 @@ export async function getDatasets(
 ): Promise<Array<APIDatasetCompact>> {
   const params = new URLSearchParams();
   if (isUnreported != null) {
-    params.append("isUnreported", String(isUnreported));
+    params.set("isUnreported", String(isUnreported));
   }
   if (folderId != null && folderId !== "") {
-    params.append("folderId", folderId);
+    params.set("folderId", folderId);
   }
   if (searchQuery != null) {
-    params.append("searchQuery", searchQuery.trim());
+    params.set("searchQuery", searchQuery.trim());
   }
   if (limit != null) {
-    params.append("limit", String(limit));
+    params.set("limit", String(limit));
   }
   if (includeSubfolders != null) {
-    params.append("includeSubfolders", includeSubfolders ? "true" : "false");
+    params.set("includeSubfolders", includeSubfolders ? "true" : "false");
   }
 
-  params.append("compact", "true");
+  params.set("compact", "true");
 
   const datasets = await Request.receiveJSON(`/api/datasets?${params}`);
   assertResponseLimit(datasets);
@@ -1258,9 +1258,9 @@ export async function storeRemoteDataset(
 ): Promise<NewDatasetReply> {
   return doWithToken((token) => {
     const params = new URLSearchParams();
-    params.append("token", token);
+    params.set("token", token);
     if (folderId) {
-      params.append("folderId", folderId);
+      params.set("folderId", folderId);
     }
 
     return Request.sendJSONReceiveJSON(
@@ -1313,9 +1313,9 @@ export async function triggerDatasetClearCache(
 ): Promise<void> {
   await doWithToken((token) => {
     const params = new URLSearchParams();
-    params.append("token", token);
+    params.set("token", token);
     if (layerName) {
-      params.append("layerName", layerName);
+      params.set("layerName", layerName);
     }
     return Request.triggerRequest(
       `/data/triggers/reload/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}?${params}`,
@@ -1457,7 +1457,7 @@ export function getEditableMappingInfo(
       annotationId: `${annotationId}`,
     });
     if (version != null) {
-      params.append("version", version.toString());
+      params.set("version", version.toString());
     }
     return Request.receiveJSON(`${tracingStoreUrl}/tracings/mapping/${tracingId}/info?${params}`);
   });
@@ -1560,13 +1560,12 @@ export async function getTimeTrackingForUserSummedPerAnnotation(
     start: startDate.valueOf().toString(),
     end: endDate.valueOf().toString(),
   });
-  if (annotationTypes != null) params.append("annotationTypes", annotationTypes);
-  if (projectIds != null && projectIds.length > 0)
-    params.append("projectIds", projectIds.join(","));
+  if (annotationTypes != null) params.set("annotationTypes", annotationTypes);
+  if (projectIds != null && projectIds.length > 0) params.set("projectIds", projectIds.join(","));
   if (annotationState !== AnnotationStateFilterEnum.ALL) {
-    params.append("annotationStates", annotationState);
+    params.set("annotationStates", annotationState);
   } else {
-    params.append("annotationStates", "Active,Finished");
+    params.set("annotationStates", "Active,Finished");
   }
   const timeTrackingData = await Request.receiveJSON(
     `/api/time/user/${userId}/summedByAnnotation?${params}`,
@@ -1587,14 +1586,14 @@ export async function getTimeTrackingForUserSpans(
     start: startDate.toString(),
     end: endDate.toString(),
   });
-  if (annotationTypes != null) params.append("annotationTypes", annotationTypes);
+  if (annotationTypes != null) params.set("annotationTypes", annotationTypes);
   if (projectIds != null && projectIds.length > 0) {
-    params.append("projectIds", projectIds.join(","));
+    params.set("projectIds", projectIds.join(","));
   }
   if (selectedState !== AnnotationStateFilterEnum.ALL) {
-    params.append("annotationStates", selectedState);
+    params.set("annotationStates", selectedState);
   } else {
-    params.append("annotationStates", "Active,Finished");
+    params.set("annotationStates", "Active,Finished");
   }
   return await Request.receiveJSON(`/api/time/user/${userId}/spans?${params}`);
 }
@@ -1613,13 +1612,13 @@ export async function getTimeEntries(
     annotationTypes: selectedTypes,
   });
   if (selectedState !== AnnotationStateFilterEnum.ALL) {
-    params.append("annotationStates", selectedState);
+    params.set("annotationStates", selectedState);
   } else {
-    params.append("annotationStates", "Active,Finished");
+    params.set("annotationStates", "Active,Finished");
   }
   // Omit empty parameters in request
-  if (projectIds.length > 0) params.append("projectIds", projectIds.join(","));
-  if (teamIds.length > 0) params.append("teamIds", teamIds.join(","));
+  if (projectIds.length > 0) params.set("projectIds", projectIds.join(","));
+  if (teamIds.length > 0) params.set("teamIds", teamIds.join(","));
   return await Request.receiveJSON(`api/time/overview?${params}`);
 }
 
@@ -1870,7 +1869,7 @@ export function computeAdHocMesh(
 
   return doWithToken(async (token) => {
     const params = new URLSearchParams();
-    params.append("token", token);
+    params.set("token", token);
 
     const { buffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
       `${requestUrl}/adHocMesh?${params}`,
@@ -1908,7 +1907,7 @@ export function getBucketPositionsForAdHocMesh(
 ): Promise<Vector3[]> {
   return doWithToken(async (token) => {
     const params = new URLSearchParams();
-    params.append("token", token);
+    params.set("token", token);
     const positions = await Request.sendJSONReceiveJSON(
       `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentIndex/${segmentId}?${params}`,
       {
@@ -1983,14 +1982,14 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
 ): Promise<Mapping> {
   const params = new URLSearchParams({ annotationId });
   if (version != null) {
-    params.append("version", version.toString());
+    params.set("version", version.toString());
   }
   const segmentIdBuffer = serializeProtoListOfLong<T>(
     // The tracing store expects the ids to be sorted
     segmentIds.sort(<T extends NumberLike>(a: T, b: T) => Number(a - b)),
   );
   const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
-    params.append("token", token);
+    params.set("token", token);
     return Request.receiveArraybuffer(
       `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?${params}`,
       {
@@ -2251,8 +2250,8 @@ export async function getSamMask(
 ): Promise<Uint8Array> {
   const params = new URLSearchParams();
   if (intensityRange != null) {
-    params.append("intensityMin", `${intensityRange[0]}`);
-    params.append("intensityMax", `${intensityRange[1]}`);
+    params.set("intensityMin", `${intensityRange[0]}`);
+    params.set("intensityMax", `${intensityRange[1]}`);
   }
 
   const { type: interactionType, ...promptWithoutType } = prompt;
@@ -2301,7 +2300,7 @@ export function getVoxelyticsWorkflow(
 ): Promise<VoxelyticsWorkflowReport> {
   const params = new URLSearchParams();
   if (runId != null) {
-    params.append("runId", runId);
+    params.set("runId", runId);
   }
   return Request.receiveJSON(`/api/voxelytics/workflows/${workflowHash}?${params}`);
 }
@@ -2323,10 +2322,10 @@ export function getVoxelyticsLogs(
     endTimestamp: endTime.getTime().toString(),
   });
   if (taskName != null) {
-    params.append("taskName", taskName);
+    params.set("taskName", taskName);
   }
   if (limit != null) {
-    params.append("limit", limit.toString());
+    params.set("limit", limit.toString());
   }
   return Request.receiveJSON(`/api/voxelytics/logs?${params}`);
 }
@@ -2340,7 +2339,7 @@ export function getVoxelyticsChunkStatistics(
     taskName,
   });
   if (runId != null) {
-    params.append("runId", runId);
+    params.set("runId", runId);
   }
   return Request.receiveJSON(`/api/voxelytics/workflows/${workflowHash}/chunkStatistics?${params}`);
 }
@@ -2354,10 +2353,10 @@ export function getVoxelyticsArtifactChecksums(
     taskName,
   });
   if (runId != null) {
-    params.append("runId", runId);
+    params.set("runId", runId);
   }
   if (artifactName != null) {
-    params.append("artifactName", artifactName);
+    params.set("artifactName", artifactName);
   }
   return Request.receiveJSON(
     `/api/voxelytics/workflows/${workflowHash}/artifactChecksums?${params}`,

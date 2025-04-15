@@ -79,10 +79,6 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "CYCLE_TOOL": {
-      if (!state.annotation.restrictions.allowUpdate) {
-        return state;
-      }
-
       const nextTool = action.backwards ? getPreviousTool(state) : getNextTool(state);
 
       if (nextTool == null) {

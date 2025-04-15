@@ -84,7 +84,6 @@ const ALWAYS_ENABLED_TOOL_INFOS = {
   [AnnotationTool.MOVE.id]: NOT_DISABLED_INFO,
   [AnnotationTool.LINE_MEASUREMENT.id]: NOT_DISABLED_INFO,
   [AnnotationTool.AREA_MEASUREMENT.id]: NOT_DISABLED_INFO,
-  [AnnotationTool.BOUNDING_BOX.id]: NOT_DISABLED_INFO,
 };
 
 function _getSkeletonToolInfo(
@@ -266,6 +265,18 @@ function _getVolumeDisabledWhenVolumeIsEnabled(
   };
 }
 
+function getDisabledBoundingBoxToolInfo(state: OxalisState) {
+  const isViewMode = state.annotation.annotationType === "View";
+  return {
+    [AnnotationTool.BOUNDING_BOX.id]: isViewMode
+      ? {
+          isDisabled: true,
+          explanation: "Please create an annotation to use this tool.",
+        }
+      : NOT_DISABLED_INFO,
+  };
+}
+
 function getDisabledVolumeInfo(state: OxalisState) {
   // This function extracts a couple of variables from the state
   // so that it can delegate to memoized functions.
@@ -349,6 +360,7 @@ const _getDisabledInfoForTools = (state: OxalisState): Record<AnnotationToolId, 
     ...ALWAYS_ENABLED_TOOL_INFOS,
     ...skeletonToolInfo,
     ...disabledVolumeInfo,
+    ...getDisabledBoundingBoxToolInfo(state),
   };
 };
 export const getDisabledInfoForTools = reuseInstanceOnEquality(

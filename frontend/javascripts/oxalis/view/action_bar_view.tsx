@@ -204,7 +204,7 @@ function ModesView() {
     <div>
       <Space.Compact>
         {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
-        <ToolkitView />
+        {isViewMode ? null : <ToolkitView />}
       </Space.Compact>
     </div>
   );

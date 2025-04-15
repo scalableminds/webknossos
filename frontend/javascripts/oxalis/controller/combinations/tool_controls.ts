@@ -58,7 +58,7 @@ import {
   hideBrushAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { api } from "oxalis/singletons";
-import Store, { UserConfiguration } from "oxalis/store";
+import Store, { type UserConfiguration } from "oxalis/store";
 import type ArbitraryView from "oxalis/view/arbitrary_view";
 import type PlaneView from "oxalis/view/plane_view";
 import * as THREE from "three";

@@ -69,13 +69,6 @@ jobs:
       - name: Start Docker Services Postgres, Redis
         run: docker compose --file .github/docker-compose.yml up -d postgres redis
 
-      - name: Assert unique evolution numbers
-        run: tools/postgres/dbtool.js assert-unique-evolution-numbers
-#      - name: Assert schema.sql and evolutions are equal
-#        run: tools/postgres/dbtool.js check-evolutions-schema
-      - name: Assert that all migrations are mentioned in one migration guide and that they have a reversion counterpart.
-        run: tools/assert-complete-migrations.sh
-
       - name: Lint backend code and check formatting
         run: sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
 
@@ -94,6 +87,13 @@ jobs:
 
       - name: Run backend unit tests
         run: sbt -v "testOnly backend.*"
+
+      - name: Assert unique evolution numbers
+        run: tools/postgres/dbtool.js assert-unique-evolution-numbers
+      - name: Assert schema.sql and evolutions are equal
+        run: tools/postgres/dbtool.js check-evolutions-schema
+      - name: Assert that all migrations are mentioned in one migration guide and that they have a reversion counterpart.
+        run: tools/assert-complete-migrations.sh
 
 
   build-test-e2e-deploy:
@@ -162,12 +162,13 @@ jobs:
 
       - name: Build webknossos (webpack)
         run: yarn build
+
+      - name: Build webknossos (sbt)
+        run: sbt -DfailOnWarning compile stage
       - name: Build webknossos-datastore (sbt)
         run: sbt -DfailOnWarning "project webknossosDatastore" copyMessages compile stage
       - name: Build webknossos-tracingstore (sbt)
         run: sbt -DfailOnWarning "project webknossosTracingstore" copyMessages compile stage
-      - name: Build webknossos (sbt)
-        run: sbt -DfailOnWarning compile stage
       - name: Checksum App Dirs
         run: find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
 

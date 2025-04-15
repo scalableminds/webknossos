@@ -66,6 +66,8 @@ vi.mock("libs/request", () => ({
   },
 }));
 
+vi.mock("libs/compute_bvh_async", () => ({ computeBvhAsync: vi.fn().mockResolvedValue(undefined) }));
+
 function receiveJSONMockImplementation(
   url: string,
   options: any,

@@ -3,6 +3,7 @@ import _ from "lodash";
 import { describe, it, expect } from "vitest";
 import { validateObjectWithType } from "types/validation";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
+
 import DATASET from "test/fixtures/dataset_server_object";
 
 const datasetViewConfigurationType = "types::DatasetViewConfiguration";

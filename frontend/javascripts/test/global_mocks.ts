@@ -113,7 +113,10 @@ vi.mock("ListOfLong.proto", () => ({ default: JSON.stringify({ items: { typ: "in
 vi.mock("SkeletonTracing.proto", () => ({ default: JSON.stringify(SKELETON_ANNOTATION_PROTO) }));
 vi.mock("VolumeTracing.proto", () => ({ default: JSON.stringify(VOLUME_ANNOTATION_PROTO) }));
 
-// Mock lz4-wasm-nodejs
-// vi.mock("lz4-wasm", async () => {
-//   return await vi.importActual("lz4-wasm-nodejs");
-// });
+vi.mock("oxalis/model/helpers/shader_editor.ts", () => ({
+  default: {
+    addBucketManagers: vi.fn(),
+    addMaterial: vi.fn(),
+    destroy: vi.fn(),
+  },
+}));

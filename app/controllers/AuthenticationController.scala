@@ -9,7 +9,7 @@ import com.yubico.webauthn.data._
 import com.webauthn4j.data.attestation.statement.COSEAlgorithmIdentifier
 import com.webauthn4j.data.client.Origin
 import com.webauthn4j.data.client.challenge.Challenge
-import com.webauthn4j.data.{PublicKeyCredentialParameters, PublicKeyCredentialType, RegistrationParameters}
+import com.webauthn4j.data.{AuthenticationParameters, PublicKeyCredentialParameters, PublicKeyCredentialType, RegistrationParameters}
 import com.webauthn4j.server.ServerProperty
 import com.webauthn4j.WebAuthnManager
 import com.webauthn4j.credential.CredentialRecordImpl
@@ -142,13 +142,13 @@ object WebAuthnCreationOptionsUser {
  *
  *  Omitted:
  *  - allowCredentials: No restrictions on credentials
+ *  - extensions: Not used
  */
 case class WebAuthnPublicKeyCredentialRequestOptions(
   challenge: Array[Byte],
   timeout: Option[Long] = None, // In milliseconds
   rpId: Option[String] = None, // Relying party ID
   userVerification: Option[String] = Some("preferred"), // "required", "preferred", "discouraged"
-  extensions: Option[Map[String, Any]] = None, // Optional extensions
   hints: Option[Seq[String]] = None // UI hints for the user-agent
   )
 object WebAuthnPublicKeyCredentialRequestOptions {
@@ -161,7 +161,7 @@ object WebAuthnRegistration {
   implicit val jsonFormat: OFormat[WebAuthnRegistration] = Json.format[WebAuthnRegistration]
 }
 
-case class WebAuthnAuthentication(key: String)
+case class WebAuthnAuthentication(key: JsValue)
 object WebAuthnAuthentication {
   implicit val jsonFormat: OFormat[WebAuthnAuthentication] = Json.format[WebAuthnAuthentication]
 }
@@ -192,7 +192,6 @@ class AuthenticationController @Inject()(
     openIdConnectClient: OpenIdConnectClient,
     initialDataService: InitialDataService,
     emailVerificationService: EmailVerificationService,
-    webAuthnCredentialRepository: WebAuthnCredentialRepository,
     webAuthnCredentialDAO: WebAuthnCredentialDAO,
     temporaryAssertionStore: TemporaryStore[String, WebAuthnPublicKeyCredentialRequestOptions],
     temporaryRegistrationStore: TemporaryStore[String, WebAuthnChallenge],
@@ -209,12 +208,6 @@ class AuthenticationController @Inject()(
 
   private lazy val ssoKey =
     conf.WebKnossos.User.ssoKey
-
-  private lazy val relyingParty = {
-    val origin = configuration.get[String]("http.uri").split("/")(2);
-    val identity = RelyingPartyIdentity.builder().id(origin).name("WebKnossos").build();
-    RelyingParty.builder().identity(identity).credentialRepository(webAuthnCredentialRepository).build()
-  }
 
   private lazy val origin = new Origin("https://webknossos.local:9000") // TODO: Load from config
   private lazy val webAuthnPubKeyParams = Array(
@@ -581,7 +574,6 @@ class AuthenticationController @Inject()(
       timeout = Some(120000),
       rpId = Some(origin.getHost),
       userVerification = None,
-      extensions = None,
       hints = None
     )
     temporaryAssertionStore.insert(sessionId, assertion, Some(2 minutes));
@@ -590,40 +582,38 @@ class AuthenticationController @Inject()(
 
   def webauthnAuthFinalize(): Action[WebAuthnAuthentication] = Action.async(validateJson[WebAuthnAuthentication]) {
     implicit request =>
-      {
-        request.cookies.get("webauthn-session") match {
-          case None =>
-            Future.successful(BadRequest("Authentication took too long, please try again."))
-          case Some(cookie) =>
-            val sessionId = cookie.value
+        for {
+          cookie <- Fox.option2Fox(request.cookies.get("webauthn-session"))
+          sessionId = cookie.value
+          challengeData <- {
             val challengeData = temporaryAssertionStore.get(sessionId)
             temporaryAssertionStore.remove(sessionId)
-            challengeData match {
-              case None => Future.successful(Unauthorized("Authentication timeout."))
-              case Some(data) => {
-                val keyCredential = PublicKeyCredential.parseAssertionResponseJson(request.body.key);
-                val opts = FinishAssertionOptions.builder().request(data).response(keyCredential).build();
-                for {
-                  result <- Fox
-                    .future2Fox(Future { Try(relyingParty.finishAssertion(opts)) })(blockingContext); // NOTE: Prevent blocking on HTTP handler
-                  assertion <- result match {
-                    case scala.util.Success(assertion) => Fox.successful(assertion);
-                    case scala.util.Failure(e)         => Fox.failure("Authentication failed.", Full(e));
-                  };
-                  userId = WebAuthnCredentialRepository.byteArrayToObjectId(assertion.getCredential.getUserHandle);
-                  multiUser <- multiUserDAO.findOne(userId)(GlobalAccessContext);
-                  result <- multiUser._lastLoggedInIdentity match {
-                    case None => Future.successful(InternalServerError("user never logged in"))
-                    case Some(userId) => {
-                      val loginInfo = LoginInfo("credentials", userId.toString);
-                      authenticateInner(loginInfo)
-                    }
-                  }
-                } yield result;
-              }
-            }
-        }
-      }
+            Fox.option2Fox(challengeData)
+          }
+          challenge = WebAuthnChallenge(challengeData.challenge)
+          authData <- Fox.box2Fox(tryo(webAuthnManager.parseAuthenticationResponseJSON(Json.stringify(request.body.key))))
+          credentialId = authData.getCredentialId
+          multiUserId = ObjectId(new String(authData.getUserHandle))
+          multiUser <- multiUserDAO.findOne(multiUserId)(GlobalAccessContext)
+          credential <- webAuthnCredentialDAO.findByCredentialId(multiUser._id, credentialId)(GlobalAccessContext)
+          serverProperty = new ServerProperty(origin, origin.getHost, challenge)
+
+          params = new AuthenticationParameters(
+            serverProperty,
+            credential.credentialRecord,
+            null,
+            true, // TODO
+            false // TODO
+          )
+          _ <- Fox.box2Fox(tryo(webAuthnManager.verify(authData, params)))
+          _ = credential.credentialRecord.setCounter(authData.getAuthenticatorData.getSignCount)
+          _ <- webAuthnCredentialDAO.updateSignCount(credential)
+
+          // TODO: Validate
+          userId <- Fox.option2Fox(multiUser._lastLoggedInIdentity)
+          loginInfo = LoginInfo("credentials", userId.toString)
+          result <- authenticateInner(loginInfo)
+        } yield result
   }
 
   def webauthnRegisterStart(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
@@ -693,6 +683,7 @@ class AuthenticationController @Inject()(
         null, // Client extensions are not used
         null // Transports are not used
       )
+      _ = registrationData
       credential = WebAuthnCredential(
         _id = ObjectId.generate,
         _multiUser = request.identity._multiUser,

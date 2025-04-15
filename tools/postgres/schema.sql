@@ -456,12 +456,14 @@ CREATE TABLE webknossos.multiUsers(
 CREATE TABLE webknossos.webauthnCredentials(
   _id TEXT PRIMARY KEY,
   _multiUser CHAR(24) NOT NULL,
+  credentialId BYTEA NOT NULL,
   name TEXT NOT NULL,
   serializedAttestationStatement BYTEA NOT NULL,
   serializedAttestedCredential BYTEA NOT NULL,
   serializedExtensions BYTEA NOT NULL,
   signatureCount INTEGER NOT NULL,
-  isDeleted BOOLEAN NOT NULL DEFAULT false
+  isDeleted BOOLEAN NOT NULL DEFAULT false,
+  UNIQUE (_id, credentialId)
 );
 
 

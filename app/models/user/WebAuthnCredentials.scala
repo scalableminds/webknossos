@@ -2,7 +2,6 @@ package models.user
 
 import com.fasterxml.jackson.core.`type`.TypeReference
 import com.fasterxml.jackson.annotation.{JsonCreator, JsonProperty, JsonTypeInfo}
-import com.fasterxml.jackson.annotation.JsonTypeInfo.Id
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
@@ -10,14 +9,12 @@ import com.scalableminds.webknossos.schema.Tables._
 import com.webauthn4j.converter.AttestedCredentialDataConverter
 import com.webauthn4j.converter.util.ObjectConverter
 import com.webauthn4j.credential.CredentialRecordImpl
-import com.webauthn4j.data.attestation.authenticator.AttestedCredentialData
 import com.webauthn4j.data.attestation.statement.AttestationStatement
 import com.webauthn4j.data.extension.authenticator.{AuthenticationExtensionsAuthenticatorOutputs, RegistrationExtensionAuthenticatorOutput}
 import net.liftweb.common.Box.tryo
 import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient}
 
-import java.io.ByteArrayInputStream
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
@@ -96,13 +93,21 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
     } yield WebAuthnCredential(ObjectId(r._Id), ObjectId(r._Multiuser), r.name, record, r.isdeleted)
   }
 
-  def findAllForUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[WebAuthnCredential]] =
+  def findAllForUser(multiUserId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[WebAuthnCredential]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        q"SELECT $columns FROM webknossos.webauthncredentials WHERE _multiUser = $userId AND $accessQuery"
+        q"SELECT $columns FROM webknossos.webauthncredentials WHERE _multiUser = $multiUserId AND $accessQuery"
           .as[WebauthncredentialsRow])
       parsed <- parseAll(r)
+    } yield parsed
+
+  def findByCredentialId(multiUserId: ObjectId, credentialId: Array[Byte])(implicit ctx: DBAccessContext): Fox[WebAuthnCredential] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(q"SELECT $columns FROM webknossos.webauthncredentials WHERE _multiUser = $multiUserId AND credentialId = $credentialId AND $accessQuery"
+          .as[WebauthncredentialsRow])
+      parsed <- parseFirst(r, multiUserId)
     } yield parsed
 
   def insertOne(c: WebAuthnCredential): Fox[Unit] = {
@@ -110,11 +115,19 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
     val serializedAttestationStatement = c.serializeAttestationStatement(converter)
     val serializedAttestedCredential = c.serializeAttestedCredential(converter)
     val serializedAuthenticatorExtensions = c.serializedExtensions(converter)
+    val credentialId = c.credentialRecord.getAttestedCredentialData.getCredentialId
     for {
       _ <- run(
-        q"""INSERT INTO webknossos.webauthncredentials(_id, _multiUser, name, serializedAttestationStatement, serializedAttestedCredential, serializedExtensions, signatureCount)
-                       VALUES(${c._id}, ${c._multiUser}, ${c.name}, ${serializedAttestationStatement}, ${serializedAttestedCredential},
+        q"""INSERT INTO webknossos.webauthncredentials(_id, _multiUser, credentialId, name, serializedAttestationStatement, serializedAttestedCredential, serializedExtensions, signatureCount)
+                       VALUES(${c._id}, ${c._multiUser}, ${credentialId}, ${c.name}, ${serializedAttestationStatement}, ${serializedAttestedCredential},
                               ${serializedAuthenticatorExtensions}, ${c.credentialRecord.getCounter.toInt})""".asUpdate)
+    } yield ()
+  }
+
+  def updateSignCount(c: WebAuthnCredential): Fox[Unit] = {
+    val signatureCount = c.credentialRecord.getCounter
+    for {
+      _ <- run(q"""UPDATE webknossos.webauthncredentials SET signatureCount = $signatureCount WHERE _id = ${c._id}""".asUpdate)
     } yield ()
   }
 

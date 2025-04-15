@@ -144,17 +144,12 @@ jobs:
           WK_VERSION: ${{ github.run_id }}
       - name: Build webknossos (webpack)
         run: yarn build
-      - name: Build webknossos (sbt)
-        run: |
-          if [ "${{ github.ref_name }}" == 'master' ]; then
-            sbt clean compile stage
-          else
-            sbt -DfailOnWarning compile stage
-          fi
       - name: Build webknossos-datastore (sbt)
         run: sbt -DfailOnWarning "project webknossosDatastore" copyMessages compile stage
       - name: Build webknossos-tracingstore (sbt)
         run: sbt -DfailOnWarning "project webknossosTracingstore" copyMessages compile stage
+      - name: Build webknossos (sbt)
+        run: sbt -DfailOnWarning compile stage
       - name: Checksum App Dirs
         run: find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
 
@@ -168,7 +163,7 @@ jobs:
         uses: ./.github/actions/retry
         with:
           run: |
-            sbt "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false"
+            sbt -DfailOnWarning "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false"
           retries: 3
 
       - name: Build webknossos docker image

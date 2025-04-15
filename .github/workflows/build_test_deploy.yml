@@ -35,8 +35,6 @@ jobs:
 
       - name: Lint frontend code and check formatting
         run: yarn run check-frontend
-      - name: Typecheck frontend code
-        run: yarn typecheck
       - name: Check for cyclic dependencies in frontend
         run: yarn check-cyclic-dependencies
       - name: Run frontend tests
@@ -93,6 +91,8 @@ jobs:
           run: |
             sbt "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false"
           retries: 3
+      - name: Typecheck frontend code
+        run: yarn typecheck
 
 
   build-smoketest-push:

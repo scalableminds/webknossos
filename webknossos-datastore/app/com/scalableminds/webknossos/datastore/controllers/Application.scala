@@ -34,6 +34,8 @@ class Application @Inject()(redisClient: DataStoreRedisStore, applicationHealthS
     }
   }
 
+  // Test that the NativeBucketScanner works.
+  // The result is stored in a val because we expect that this continues to work if it works on startup.
   private lazy val testNativeBucketScanner = tryo {
     val elementClass = ElementClass.uint16
     // little endian uint16 representation of 2, 4, 500, 500

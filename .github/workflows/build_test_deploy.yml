@@ -66,16 +66,37 @@ jobs:
       - name: "Install System Dependencies"
         run: sudo apt-get update && sudo apt-get install -y libdraco-dev libblosc1
 
-      - name: "Start postgres"
-        run: docker compose --file .github/docker-compose.yml up -d postgres
+      - name: Assert unique evolution numbers
+        run: tools/postgres/dbtool.js assert-unique-evolution-numbers
+      - name: Assert schema.sql and evolutions are equal
+        run: tools/postgres/dbtool.js check-evolutions-schema
+      - name: Assert that all migrations are mentioned in one migration guide and that they have a reversion counterpart.
+        run: tools/assert-complete-migrations.sh
+
+      - name: Start Docker Services Postgres, Redis
+        run: docker compose --file .github/docker-compose.yml up -d postgres redis
 
       - name: Lint backend code and check formatting
         run: sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
+
+      - name: Start Fossildb
+        if: github.ref != 'refs/heads/master'
+        run: docker compose --file .github/docker-compose.yml up -d fossildb
+      - name: Prepare binaryData folder
+        run: mkdir -p binaryData/Organization_X && chmod 777 binaryData/Organization_X
+      - name: Run end-to-end tests
+        if: github.ref != 'refs/heads/master'
+        uses: ./.github/actions/retry
+        with:
+          run: |
+            sbt "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false"
+          retries: 3
+
       - name: Run backend tests
         run: sbt -v "testOnly backend.*"
 
 
-  build-test-e2e-deploy:
+  build-smoketest-push:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -85,7 +106,8 @@ jobs:
       - uses: docker/setup-buildx-action@v3
         with:
           driver: docker
-      - name: Start Docker Services
+
+      - name: Start Docker Services Postgres, Redis
         run: docker compose --file .github/docker-compose.yml up -d postgres redis
 
       - uses: actions/setup-node@v4
@@ -109,6 +131,7 @@ jobs:
           DOCKER_TAG="${NORMALIZED_BRANCH}__${GITHUB_RUN_ID}"
           echo "DOCKER_TAG=$DOCKER_TAG" | tee -a "$GITHUB_ENV"
           echo "NORMALIZED_BRANCH=$NORMALIZED_BRANCH" | tee -a "$GITHUB_ENV"
+
       - name: "Custom environment variables (Not Pull Request)"
         if: ${{ github.event_name != 'pull_request' }}
         run: |
@@ -126,22 +149,17 @@ jobs:
 
       - name: Prepare Dependency Folders
         run: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier
+
       - name: Install frontend dependencies
         run: yarn install --immutable
         env:
           PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
 
-      - name: Assert unique evolution numbers
-        run: tools/postgres/dbtool.js assert-unique-evolution-numbers
-      - name: Assert schema.sql and evolutions are equal
-        run: tools/postgres/dbtool.js check-evolutions-schema
-      - name: Assert that all migrations are mentioned in one migration guide and that they have a reversion counterpart.
-        run: tools/assert-complete-migrations.sh
-
       - name: Build frontend documentation
         run: yarn run docs --project-version "$WK_VERSION"
         env:
           WK_VERSION: ${{ github.run_id }}
+
       - name: Build webknossos (webpack)
         run: yarn build
       - name: Build webknossos-datastore (sbt)
@@ -152,19 +170,6 @@ jobs:
         run: sbt -DfailOnWarning compile stage
       - name: Checksum App Dirs
         run: find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
-
-      - name: Start Fossildb
-        if: github.ref != 'refs/heads/master'
-        run: docker compose --file .github/docker-compose.yml up -d fossildb
-      - name: Prepare binaryData folder
-        run: mkdir -p binaryData/Organization_X && chmod 777 binaryData/Organization_X
-      - name: Run end-to-end tests
-        if: github.ref != 'refs/heads/master'
-        uses: ./.github/actions/retry
-        with:
-          run: |
-            sbt -DfailOnWarning "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false"
-          retries: 3
 
       - name: Build webknossos docker image
         uses: docker/build-push-action@v6
@@ -200,7 +205,7 @@ jobs:
           outputs: |
             type=image
 
-      - name: Start webknossos, datastore and tracingstore
+      - name: Start webknossos, datastore and tracingstore for smoke test
         run: |
           set -e
           docker compose --file .github/docker-compose.yml up -d \

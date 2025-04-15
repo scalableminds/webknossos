@@ -84,12 +84,10 @@ jobs:
         run: sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
 
       - name: Start Fossildb for e2e tests
-        if: github.ref != 'refs/heads/master'
         run: docker compose --file .github/docker-compose.yml up -d fossildb
       - name: Prepare binaryData folder for e2e tests
         run: mkdir -p binaryData/Organization_X && chmod 777 binaryData/Organization_X
       - name: Run end-to-end tests
-        if: github.ref != 'refs/heads/master'
         uses: ./.github/actions/retry
         with:
           run: |

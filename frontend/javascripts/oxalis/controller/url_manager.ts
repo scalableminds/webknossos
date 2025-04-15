@@ -76,10 +76,8 @@ function mapMeshInfoToUrlMeshDescriptor(meshInfo: MeshInformation): MeshUrlDescr
   }
 }
 
-// extracts the dataset name from view or sandbox the URLs.
-export function getDatasetNameFromLocation(
-  location: (typeof window)["location"],
-): string | undefined {
+// Extracts the dataset name from view or sandbox URLs.
+export function getDatasetNameFromLocation(location: Location): string | undefined {
   // URL format: /datasets/<dataset-name>-<dataset-id>/<view|sandbox/type>...
   const pathnameParts = location.pathname.split("/").slice(1); // First string is empty as pathname start with a /.
   const endOfDatasetName = pathnameParts[1].lastIndexOf("-");

@@ -170,7 +170,6 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
         Fox.successful(None)
     }
 
-  @SuppressWarnings(Array("TryGet")) // This is okay because we check the failure case before using the try
   private def flushToDb(timespansToInsert: List[TimeSpan], timespansToUpdate: List[(TimeSpan, Instant)])(
       implicit ctx: DBAccessContext) = {
     val updateResult = for {

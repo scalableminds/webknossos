@@ -64,11 +64,11 @@ class AnnotationInformationProvider @Inject()(
 
   def annotationForTracing(tracingId: String)(implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
-      annotationBox <- annotationDAO.findOneByTracingId(tracingId).shiftBox
-      withFallback <- annotationBox match {
-        case Full(_) => annotationBox.toFox
+      storedAnnotationIdBox <- annotationDAO.findOneByTracingId(tracingId).shiftBox
+      storedOrCachedAnnotationId <- storedAnnotationIdBox match {
+        case Full(_) => storedAnnotationIdBox.toFox
         case _       => annotationStore.findCachedByTracingId(tracingId).toFox
       }
-    } yield withFallback
+    } yield storedOrCachedAnnotationId
 
 }

@@ -14,15 +14,15 @@ trait FoxImplicits {
     def toFox(implicit ec: ExecutionContext) = new Fox(futureBox)
   }
 
-  implicit protected def box2Ox[T](b: Box[T]): Foxable[T] =
+  implicit protected def box2Foxable[T](b: Box[T]): Foxable[T] =
     new Foxable(Future.successful(b))
 
-  implicit protected def try2Ox[T](t: Try[T]): Foxable[T] = t match {
+  implicit protected def try2Foxable[T](t: Try[T]): Foxable[T] = t match {
     case Success(result)       => new Foxable(Future.successful(Full(result)))
     case scala.util.Failure(e) => new Foxable(Future.successful(Failure(e.toString)))
   }
 
-  implicit protected def option2Ox[T](b: Option[T]): Foxable[T] =
+  implicit protected def option2Foxable[T](b: Option[T]): Foxable[T] =
     new Foxable(Future.successful(Box(b)))
 
 }

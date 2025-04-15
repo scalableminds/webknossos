@@ -35,6 +35,8 @@ jobs:
 
       - name: Lint frontend code and check formatting
         run: yarn run check-frontend
+      - name: Typecheck frontend code
+        run: yarn typecheck
       - name: Check for cyclic dependencies in frontend
         run: yarn check-cyclic-dependencies
       - name: Run frontend tests

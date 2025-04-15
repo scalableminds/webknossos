@@ -235,7 +235,7 @@ class AuthenticationController @Inject()(
       _ <- userService.assertNotInOrgaYet(request.identity._multiUser, organization._id)
       requestingMultiUser <- multiUserDAO.findOne(request.identity._multiUser)
       alreadyPayingOrgaForMultiUser <- userDAO.findPayingOrgaIdForMultiUser(requestingMultiUser._id)
-      _ <- Fox.runIf(!(requestingMultiUser.isSuperUser || alreadyPayingOrgaForMultiUser.isDefined))(organizationService
+      _ <- Fox.runIf(!requestingMultiUser.isSuperUser && alreadyPayingOrgaForMultiUser.isEmpty)(organizationService
         .assertUsersCanBeAdded(organization._id)(GlobalAccessContext, ec)) ?~> "organization.users.userLimitReached"
       _ <- userService.joinOrganization(request.identity,
                                         organization._id,

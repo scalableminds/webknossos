@@ -223,7 +223,7 @@ function UserListView({ activeUser, activeOrganization }: Props) {
     const noUsersMessage = (
       <React.Fragment>
         <a onClick={inviteUsersCallback}>Invite colleagues and collaboration partners</a>
-        {" to join your organization. Share datasets and collaboratively work on annotiatons."}
+        {" to join your organization. Share datasets and collaboratively work on annotations."}
       </React.Fragment>
     );
     return isLoading ? null : (
@@ -248,9 +248,16 @@ function UserListView({ activeUser, activeOrganization }: Props) {
     return (
       <Alert
         message="You reached the maximum number of users"
-        description={`You organization reached the maximum number of users included in your current plan. Consider upgrading your WEBKNOSSOS plan to accommodate more users or deactivate some user accounts. Email invites are disabled in the meantime. Your organization currently has ${getActiveUserCount(
-          users,
-        )} active users of ${activeOrganization.includedUsers} allowed by your plan.`}
+        description={
+          <>
+            Your organization has reached the maximum number of users allowed in your current plan.
+            Email invites are only permitted for existing users of paid organizations, who will join
+            as non-billed guests. <br />
+            Consider upgrading your WEBKNOSSOS plan to accommodate more new users or deactivate
+            existing user accounts. Your organization currently has {getActiveUserCount(users)}{" "}
+            active users out of {activeOrganization.includedUsers} allowed by your plan.
+          </>
+        }
         type="warning"
         showIcon
         style={{

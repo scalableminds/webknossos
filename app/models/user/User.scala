@@ -220,7 +220,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                 WHERE pricingPlan IN ('Team', 'Power', 'Custom')
               )
             ORDER BY _multiUser, created ASC
-         ) AS payingOrganization ON payingOrganization._multiUser = u._multiUser
+         )
      """
 
   def findAllCompactWithFilters(isEditable: Option[Boolean],
@@ -300,7 +300,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         INNER JOIN agg_user_team_roles autr ON autr._user = u._id
         INNER JOIN agg_experiences aux ON aux._user = u._id
         -- left outer join to keep users that do not have a paying organization
-        LEFT JOIN $payingOrganizationInfoSubquery
+        LEFT JOIN $payingOrganizationInfoSubquery AS payingOrganization ON payingOrganization._multiUser = u._multiUser
         WHERE $selectionPredicates
         GROUP BY
           u._id, u.firstname, u.lastname, u.userConfiguration, u.isAdmin, u.isOrganizationOwner, u.isDatasetManager,
@@ -392,7 +392,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                       AND NOT isDeactivated
                       AND _organization IN (
                         SELECT _id FROM webknossos.organizations
-                        WHERE pricingPlan IN ('Team', 'Power', 'Custom')
+                        WHERE pricingPlan IN (${PricingPlan.Team}, ${PricingPlan.Power}, ${PricingPlan.Custom})
                       )
                       ORDER BY created ASC
                       LIMIT 1""".as[ObjectId])
@@ -427,7 +427,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       resultList <- run(q"""
       SELECT COUNT(*) FROM $existingCollectionName as u
-      LEFT JOIN $payingOrganizationInfoSubquery
+      LEFT JOIN $payingOrganizationInfoSubquery AS payingOrganization ON payingOrganization._multiUser = u._multiUser
       WHERE u._organization = $organizationId
         AND NOT u.isDeactivated
         AND NOT u.isUnlisted

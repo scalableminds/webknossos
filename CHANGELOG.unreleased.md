@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Performance improvements for segment statistics (volume + bounding box in context menu). [#8469](https://github.com/scalableminds/webknossos/pull/8469)
 - Upgraded backend dependencies for improved performance and stability. [#8507](https://github.com/scalableminds/webknossos/pull/8507)
 - New config option `datastore.dataVaults.credentials` allows admins to set up global credentials for remote dataset loading. [#8509](https://github.com/scalableminds/webknossos/pull/8509)
+- When uploading multiple NMLs at once, the description is now kept, if all NMLs with non-empty descriptions have the same description. [#8533](https://github.com/scalableminds/webknossos/pull/8533)
 
 ### Changed
 - When deleting a dataset / layer, layers that are referenced in other datasets are moved there instead of being deleted. [#8437](https://github.com/scalableminds/webknossos/pull/8437/)
@@ -35,6 +36,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed that meshes weren't loaded correctly if the precomputed mesh file contained multiple levels-of-detail. [#8519](https://github.com/scalableminds/webknossos/pull/8519)
 
 ### Removed
+- The Annotation update route can no longer update the description of the annotation. Please set the description before uploading the annotation instead. You can still edit the description in the UI. [#8533](https://github.com/scalableminds/webknossos/pull/8533)
 
 ### Breaking Changes
 - Removed `docker-compose.yml` in favor of `tools/hosting/docker-compose.yml` [#8147](https://github.com/scalableminds/webknossos/pull/8147)

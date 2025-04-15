@@ -15,7 +15,7 @@ describe("API Volume", () => {
   });
 
   afterEach<WebknossosTestContext>((context) => {
-    context.model.getAllLayers().map((layer) => layer.pullQueue.abortRequests());
+    context.tearDownPullQueues();
   });
 
   it<WebknossosTestContext>("getActiveCellId should get the id of the active segment", ({

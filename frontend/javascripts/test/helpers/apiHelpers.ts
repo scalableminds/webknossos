@@ -50,6 +50,7 @@ export interface WebknossosTestContext extends BaseTestContext {
   };
   setSlowCompression: (enabled: boolean) => void;
   api: ApiInterface;
+  tearDownPullQueues: () => void;
 }
 
 // Create mock objects
@@ -190,6 +191,11 @@ export async function setupWebknossosForTesting(
     Request,
   };
   testContext.setSlowCompression = setSlowCompression;
+  testContext.tearDownPullQueues = () =>
+    Model.getAllLayers().map((layer) => {
+      layer.pullQueue.clear();
+      layer.pullQueue.abortRequests();
+    });
 
   const webknossos = new OxalisApi(Model);
   const annotationFixture = modelData[mode].annotation;

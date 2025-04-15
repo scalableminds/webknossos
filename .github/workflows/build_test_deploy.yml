@@ -54,8 +54,6 @@ jobs:
         with:
           node-version: 18
       - run: corepack enable
-      - name: Install frontend dependencies
-        run: yarn install --immutable
 
       - uses: actions/setup-java@v4
         with:
@@ -63,19 +61,32 @@ jobs:
           java-version: '21'
       - uses: sbt/setup-sbt@v1
 
+      - name: Start Docker Services Postgres, Redis
+        run: docker compose --file .github/docker-compose.yml up -d postgres redis
+
+      - name: Install frontend dependencies
+        run: yarn install --immutable
+
       - name: "Install System Dependencies"
         run: sudo apt-get update && sudo apt-get install -y libdraco-dev libblosc1
 
-      - name: Start Docker Services Postgres, Redis
-        run: docker compose --file .github/docker-compose.yml up -d postgres redis
+      - name: Assert unique evolution numbers
+        run: tools/postgres/dbtool.js assert-unique-evolution-numbers
+      - name: Assert schema.sql and evolutions are equal
+        run: tools/postgres/dbtool.js check-evolutions-schema
+      - name: Assert that all migrations are mentioned in one migration guide and that they have a reversion counterpart.
+        run: tools/assert-complete-migrations.sh
+
+      - name: Run backend unit tests
+        run: sbt -v "testOnly backend.*"
 
       - name: Lint backend code and check formatting
         run: sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
 
-      - name: Start Fossildb
+      - name: Start Fossildb for e2e tests
         if: github.ref != 'refs/heads/master'
         run: docker compose --file .github/docker-compose.yml up -d fossildb
-      - name: Prepare binaryData folder
+      - name: Prepare binaryData folder for e2e tests
         run: mkdir -p binaryData/Organization_X && chmod 777 binaryData/Organization_X
       - name: Run end-to-end tests
         if: github.ref != 'refs/heads/master'
@@ -84,16 +95,6 @@ jobs:
           run: |
             sbt "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false"
           retries: 3
-
-      - name: Run backend unit tests
-        run: sbt -v "testOnly backend.*"
-
-      - name: Assert unique evolution numbers
-        run: tools/postgres/dbtool.js assert-unique-evolution-numbers
-      - name: Assert schema.sql and evolutions are equal
-        run: tools/postgres/dbtool.js check-evolutions-schema
-      - name: Assert that all migrations are mentioned in one migration guide and that they have a reversion counterpart.
-        run: tools/assert-complete-migrations.sh
 
 
   build-test-e2e-deploy:

@@ -216,8 +216,6 @@ export function getContourTracingMode(volumeTracing: VolumeTracing): ContourMode
   return contourTracingMode;
 }
 
-// todop: remove again
-console.log("AnnotationTool", AnnotationTool);
 const MAG_THRESHOLDS_FOR_ZOOM: Partial<Record<AnnotationToolId, number>> = {
   // Note that these are relative to the finest existing mag index.
   // A threshold of 1 indicates that the respective tool can be used in the

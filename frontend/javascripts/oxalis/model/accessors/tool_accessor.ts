@@ -104,6 +104,8 @@ export const AnnotationTool = {
   AREA_MEASUREMENT: AreaMeasurementTool,
 };
 
+// We also declare AnnotationTool as a type so that we can both use it as a value
+// and a type.
 export type AnnotationTool = (typeof AnnotationTool)[keyof typeof AnnotationTool];
 
 export const Toolkits = {

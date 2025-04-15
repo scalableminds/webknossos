@@ -1,6 +1,6 @@
 import { AnnotationToolEnum } from "oxalis/constants";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
-import { vi, describe, it, expect, beforeEach } from "vitest";
+import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 import window from "libs/window";
 import {
   tracing as TRACING,
@@ -12,6 +12,10 @@ import {
 describe("API Volume", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
     await setupWebknossosForTesting(context, "volume");
+  });
+
+  afterEach<WebknossosTestContext>((context) => {
+    context.model.getAllLayers().map((layer) => layer.pullQueue.abortRequests());
   });
 
   it<WebknossosTestContext>("getActiveCellId should get the id of the active segment", ({

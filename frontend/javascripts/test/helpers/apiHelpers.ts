@@ -175,9 +175,6 @@ setStore(Store);
 setupApi();
 startSaga(rootSaga);
 
-// This function should always be imported at the very top since it setups
-// important mocks. The leading underscores are there to make the import
-// appear at the top when sorting the imports with importjs.
 export async function setupWebknossosForTesting(
   testContext: WebknossosTestContext,
   mode: keyof typeof modelData,

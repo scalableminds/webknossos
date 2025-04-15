@@ -20,7 +20,7 @@ class BucketScannerTestSuite extends PlaySpec {
 
     "collect segment ids in a byte array with ElementClass uint32" in {
       val elementClass = ElementClass.uint32
-      // little endian uint16 representation of 2, 4, 500, 500
+      // little endian uint32 representation of 2, 4, 500, 500
       val array = Array[Byte](2, 0, 0, 0, 4, 0, 0, 0, 244.toByte, 1, 0, 0, 244.toByte, 1, 0, 0)
       val scanner = new NativeBucketScanner()
       val segmentIds = scanner.collectSegmentIds(array,
@@ -32,7 +32,7 @@ class BucketScannerTestSuite extends PlaySpec {
 
     "skip zeroes in collectSegmentIds if requested" in {
       val elementClass = ElementClass.uint16
-      // little endian uint16 representation of 2, 4, 500, 500
+      // little endian uint16 representation of 2, 4, 500, 500, 0
       val array = Array[Byte](2, 0, 4, 0, 244.toByte, 1, 244.toByte, 1, 0, 0)
       val scanner = new NativeBucketScanner()
       val segmentIds = scanner.collectSegmentIds(array,
@@ -50,7 +50,7 @@ class BucketScannerTestSuite extends PlaySpec {
 
     "count segment voxels correctly in a byte array with ElementClass uint32" in {
       val elementClass = ElementClass.uint32
-      // little endian uint16 representation of 2, 4, 500, 500
+      // little endian uint32 representation of 2, 4, 500, 500
       val array = Array[Byte](2, 0, 0, 0, 4, 0, 0, 0, 244.toByte, 1, 0, 0, 244.toByte, 1, 0, 0)
       val scanner = new NativeBucketScanner()
       val voxelCount = scanner.countSegmentVoxels(array,

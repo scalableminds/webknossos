@@ -152,7 +152,6 @@ test("Tools should be disabled when dataset is rotated", (t) => {
     AnnotationToolEnum.MOVE,
     AnnotationToolEnum.LINE_MEASUREMENT,
     AnnotationToolEnum.AREA_MEASUREMENT,
-    AnnotationToolEnum.BOUNDING_BOX,
   ];
   const disabledInfo = getDisabledInfoForTools(rotatedState);
   for (const toolName in AnnotationToolEnum) {

@@ -49,7 +49,7 @@ class Application @Inject()(redisClient: DataStoreRedisStore, applicationHealthS
     if (!segmentIds.sorted.sameElements(expected)) {
       throw new IllegalStateException(
         s"NativeBucketScanner did not scan segment ids of test array correctly. Expected ${expected
-          .mkString(",")}, got ${expected.mkString(",")}")
+          .mkString(",")}, got ${segmentIds.mkString(",")}")
     }
   }
 

@@ -29,7 +29,7 @@ import Model from "oxalis/model";
 import UrlManager from "oxalis/controller/url_manager";
 
 import OxalisApi from "oxalis/api/api_loader";
-import { default as Store, startSagas } from "oxalis/store";
+import { default as Store, startSaga } from "oxalis/store";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import { setStore, setModel } from "oxalis/singletons";
 import { setupApi } from "oxalis/api/internal_api";
@@ -169,7 +169,7 @@ const modelData = {
 setModel(Model);
 setStore(Store);
 setupApi();
-startSagas(rootSaga);
+startSaga(rootSaga);
 
 // This function should always be imported at the very top since it setups
 // important mocks. The leading underscores are there to make the import

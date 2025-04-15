@@ -17,7 +17,11 @@ import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, Directory
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.datasource.GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.services.{DataSourceRepository, DataSourceService}
+import com.scalableminds.webknossos.datastore.services.{
+  DSRemoteWebknossosClient,
+  DataSourceRepository,
+  DataSourceService
+}
 import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
@@ -38,15 +42,18 @@ case class ReserveUploadInformation(
     totalFileSizeInBytes: Option[Long],
     layersToLink: Option[List[LinkedLayerIdentifier]],
     initialTeams: List[String], // team ids
-    folderId: Option[String])
+    folderId: Option[String],
+    requireUniqueName: Option[Boolean])
 object ReserveUploadInformation {
   implicit val reserveUploadInformation: OFormat[ReserveUploadInformation] = Json.format[ReserveUploadInformation]
 }
-case class ReserveManualUploadInformation(datasetName: String,
-                                          datasetDirectoryName: String,
-                                          organization: String,
-                                          initialTeamIds: List[String],
-                                          folderId: Option[String])
+case class ReserveManualUploadInformation(
+    datasetName: String,
+    organization: String,
+    initialTeamIds: List[String],
+    folderId: Option[String],
+    requireUniqueName: Boolean = false,
+)
 object ReserveManualUploadInformation {
   implicit val reserveUploadInformation: OFormat[ReserveManualUploadInformation] =
     Json.format[ReserveManualUploadInformation]
@@ -107,7 +114,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                               dataSourceService: DataSourceService,
                               runningUploadMetadataStore: DataStoreRedisStore,
                               exploreLocalLayerService: ExploreLocalLayerService,
-                              datasetSymlinkService: DatasetSymlinkService)(implicit ec: ExecutionContext)
+                              datasetSymlinkService: DatasetSymlinkService,
+                              val remoteWebknossosClient: DSRemoteWebknossosClient)(implicit ec: ExecutionContext)
     extends DatasetDeleter
     with DirectoryConstants
     with FoxImplicits

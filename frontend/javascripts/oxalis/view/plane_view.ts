@@ -1,12 +1,13 @@
 import app from "app";
-import VisibilityAwareRaycaster, {
-  type RaycastIntersection,
-} from "libs/visibility_aware_raycaster";
+import VisibilityAwareRaycaster from "libs/visibility_aware_raycaster";
 import window from "libs/window";
 import _ from "lodash";
-import type { OrthoViewMap, Vector3, Viewport } from "oxalis/constants";
+import type { OrthoViewMap, Vector2, Vector3, Viewport } from "oxalis/constants";
 import Constants, { OrthoViewColors, OrthoViewValues, OrthoViews } from "oxalis/constants";
-import getSceneController from "oxalis/controller/scene_controller_provider";
+import type { VertexSegmentMapping } from "oxalis/controller/mesh_helpers";
+import getSceneController, {
+  getSceneControllerOrNull,
+} from "oxalis/controller/scene_controller_provider";
 import type { MeshSceneNode, SceneGroupForMeshes } from "oxalis/controller/segment_mesh_controller";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
@@ -19,40 +20,44 @@ import * as THREE from "three";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
 
+const LIGHT_INTENSITY = 10;
+
+type RaycasterHit = {
+  node: MeshSceneNode;
+  indexRange: Vector2 | null;
+  unmappedSegmentId: number | null;
+  point: Vector3;
+} | null;
+
 const createDirLight = (
   position: Vector3,
   target: Vector3,
   intensity: number,
-  parent: THREE.OrthographicCamera,
+  camera: THREE.OrthographicCamera,
 ) => {
-  const dirLight = new THREE.DirectionalLight(0xffffff, intensity);
-  dirLight.color.setHSL(0.1, 1, 0.95);
+  // @ts-ignore
+  const dirLight = new THREE.DirectionalLight(0x888888, intensity);
   dirLight.position.set(...position);
-  parent.add(dirLight);
-  parent.add(dirLight.target);
+  camera.add(dirLight);
+  camera.add(dirLight.target);
   dirLight.target.position.set(...target);
+
   return dirLight;
 };
 
 const raycaster = new VisibilityAwareRaycaster();
-let oldRaycasterHit: MeshSceneNode | null = null;
-const MESH_HOVER_THROTTLING_DELAY = 150;
+raycaster.firstHitOnly = true;
+const MESH_HOVER_THROTTLING_DELAY = 50;
+
+let oldRaycasterHit: RaycasterHit = null;
 
 class PlaneView {
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
-  throttledPerformMeshHitTest: (
-    arg0: [number, number],
-  ) => RaycastIntersection<THREE.Object3D> | null | undefined;
-
   running: boolean;
   needsRerender: boolean;
   unsubscribeFunctions: Array<() => void> = [];
 
   constructor() {
-    this.throttledPerformMeshHitTest = _.throttle(
-      this.performMeshHitTest,
-      MESH_HOVER_THROTTLING_DELAY,
-    );
     this.running = false;
     const { scene } = getSceneController();
     // Initialize main THREE.js components
@@ -68,7 +73,8 @@ class PlaneView {
     }
     this.cameras = cameras;
 
-    createDirLight([10, 10, 10], [0, 0, 10], 5, this.cameras[OrthoViews.TDView]);
+    createDirLight([10, 10, 10], [0, 0, 10], LIGHT_INTENSITY, this.cameras[OrthoViews.TDView]);
+    createDirLight([-10, 10, 10], [0, 0, 10], LIGHT_INTENSITY, this.cameras[OrthoViews.TDView]);
     this.cameras[OrthoViews.PLANE_XY].position.z = -1;
     this.cameras[OrthoViews.PLANE_YZ].position.x = 1;
     this.cameras[OrthoViews.PLANE_XZ].position.y = 1;
@@ -131,9 +137,7 @@ class PlaneView {
     }
   }
 
-  performMeshHitTest(
-    mousePosition: [number, number],
-  ): RaycastIntersection<THREE.Object3D> | null | undefined {
+  performMeshHitTest = _.throttle((mousePosition: [number, number]): RaycasterHit => {
     const storeState = Store.getState();
     const SceneController = getSceneController();
     const { segmentMeshController } = SceneController;
@@ -163,26 +167,53 @@ class PlaneView {
     // The second parameter of intersectObjects is set to true to ensure that
     // the groups which contain the actual meshes are traversed.
     const intersections = raycaster.intersectObjects(intersectableObjects, true);
+    const face = intersections.length > 0 ? intersections[0].face : null;
     const hitObject = intersections.length > 0 ? (intersections[0].object as MeshSceneNode) : null;
+    let unmappedSegmentId = null;
+    let indexRange = null;
+
+    if (hitObject && face) {
+      if ("vertexSegmentMapping" in hitObject.geometry) {
+        const vertexSegmentMapping = hitObject.geometry
+          .vertexSegmentMapping as VertexSegmentMapping;
+        unmappedSegmentId = vertexSegmentMapping.getUnmappedSegmentIdForPosition(face.a);
+        indexRange = vertexSegmentMapping.getRangeForUnmappedSegmentId(unmappedSegmentId);
+      }
+    }
 
     // Check whether we are hitting the same object as before, since we can return early
     // in this case.
-    if (hitObject === oldRaycasterHit) {
-      return intersections.length > 0 ? intersections[0] : null;
+    if (storeState.uiInformation.activeTool === "PROOFREAD") {
+      if (hitObject == null && oldRaycasterHit == null) {
+        return null;
+      }
+      if (unmappedSegmentId != null && unmappedSegmentId === oldRaycasterHit?.unmappedSegmentId) {
+        return oldRaycasterHit;
+      }
+    } else {
+      // In proofreading, there is no highlighting of parts of the meshes.
+      // If the parent group is identical, we can reuse the old hit object.
+      if (hitObject?.parent === oldRaycasterHit?.node.parent) {
+        return oldRaycasterHit;
+      }
     }
 
     // Undo highlighting of old hit
-    if (oldRaycasterHit?.parent != null) {
-      segmentMeshController.updateMeshAppearance(oldRaycasterHit, false);
+    this.clearLastMeshHitTest();
 
-      oldRaycasterHit = null;
-    }
-
-    oldRaycasterHit = hitObject;
+    oldRaycasterHit =
+      hitObject != null
+        ? {
+            node: hitObject,
+            indexRange,
+            unmappedSegmentId,
+            point: intersections[0].point.toArray(),
+          }
+        : null;
 
     // Highlight new hit
     if (hitObject?.parent != null) {
-      segmentMeshController.updateMeshAppearance(hitObject, true);
+      segmentMeshController.updateMeshAppearance(hitObject, true, undefined, indexRange || "full");
 
       Store.dispatch(
         updateTemporarySettingAction(
@@ -190,12 +221,21 @@ class PlaneView {
           (hitObject.parent as SceneGroupForMeshes).segmentId,
         ),
       );
-      return intersections[0];
+      return oldRaycasterHit;
     } else {
       Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", null));
       return null;
     }
-  }
+  }, MESH_HOVER_THROTTLING_DELAY);
+
+  clearLastMeshHitTest = () => {
+    if (oldRaycasterHit?.node.parent != null) {
+      const SceneController = getSceneController();
+      const { segmentMeshController } = SceneController;
+      segmentMeshController.updateMeshAppearance(oldRaycasterHit.node, false, undefined, null);
+      oldRaycasterHit = null;
+    }
+  };
 
   draw(): void {
     app.vent.emit("rerender");
@@ -219,8 +259,11 @@ class PlaneView {
   stop(): void {
     this.running = false;
 
-    for (const plane of OrthoViewValues) {
-      getSceneController().scene.remove(this.cameras[plane]);
+    const sceneController = getSceneControllerOrNull();
+    if (sceneController != null) {
+      for (const plane of OrthoViewValues) {
+        sceneController.scene.remove(this.cameras[plane]);
+      }
     }
 
     window.removeEventListener("resize", this.resizeThrottled);
@@ -240,6 +283,14 @@ class PlaneView {
         this.needsRerender = true;
       }),
     );
+
+    this.unsubscribeFunctions.push(
+      // Only used for benchmarks (see WkDev)
+      app.vent.on("forceImmediateRerender", () => {
+        this.renderFunction(true);
+      }),
+    );
+
     this.unsubscribeFunctions.push(
       Store.subscribe(() => {
         // Render in the next frame after the change propagated everywhere
@@ -277,7 +328,7 @@ class PlaneView {
         (activeUnmappedSegmentId) =>
           // Note that this code is responsible for highlighting the *active*
           // (not necessarily hovered) segment.
-          segmentMeshController.highlightUnmappedSegmentId(activeUnmappedSegmentId),
+          segmentMeshController.highlightActiveUnmappedSegmentId(activeUnmappedSegmentId),
         true,
       ),
     );

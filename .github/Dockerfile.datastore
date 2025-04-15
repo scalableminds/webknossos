@@ -15,7 +15,7 @@ VOLUME /webknossos-datastore/binaryData /tmp
 COPY target/universal/stage .
 
 RUN chown -R webknossos . \
-  && chmod go+x bin/webknossos-datastore \
+  && chmod +x bin/webknossos-datastore \
   && chmod go+w .
 
 RUN echo '#!/bin/bash\numask 002\nbin/webknossos-datastore "$@"\n' > /docker-entrypoint.sh \

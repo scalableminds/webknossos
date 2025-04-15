@@ -212,18 +212,30 @@ class FossilDBClient(collection: String,
     } yield ()
   }
 
-  def putMultiple(keyValueTuple: Seq[(String, Array[Byte])], version: Long, batchSize: Int = 1000): Fox[Unit] =
+  def putMultipleWithIndividualVersions(keyValueVersionTuples: Seq[((String, Long), Array[Byte])],
+                                        batchSize: Int = 1000): Fox[Unit] = {
+    val versionedKeyValuePairs = keyValueVersionTuples.map {
+      case ((key, version), value) => VersionedKeyValuePairProto(key, version, ByteString.copyFrom(value))
+    }
     for {
-      _ <- Fox.serialCombined(keyValueTuple.grouped(batchSize))(batch => putMultipleImpl(batch, version))
+      _ <- Fox.serialCombined(versionedKeyValuePairs.grouped(batchSize))(batch => putMultipleImpl(batch))
     } yield ()
+  }
 
-  private def putMultipleImpl(keyValueTuples: Seq[(String, Array[Byte])], version: Long): Fox[Unit] = {
-    val keyValuePairs = keyValueTuples.map {
+  def putMultiple(keyValueTuples: Seq[(String, Array[Byte])], version: Long, batchSize: Int = 1000): Fox[Unit] = {
+    val versionedKeyValuePairs = keyValueTuples.map {
       case (key, value) => VersionedKeyValuePairProto(key, version, ByteString.copyFrom(value))
     }
+    for {
+      _ <- Fox.serialCombined(versionedKeyValuePairs.grouped(batchSize))(batch => putMultipleImpl(batch))
+    } yield ()
+  }
+
+  private def putMultipleImpl(versionedKeyValuePairs: Seq[VersionedKeyValuePairProto]): Fox[Unit] = {
     val putFox = for {
       reply <- wrapException(
-        stub.putMultipleKeysWithMultipleVersions(PutMultipleKeysWithMultipleVersionsRequest(collection, keyValuePairs)))
+        stub.putMultipleKeysWithMultipleVersions(
+          PutMultipleKeysWithMultipleVersionsRequest(collection, versionedKeyValuePairs)))
       _ <- assertSuccess(reply.success, reply.errorMessage)
     } yield ()
     for {

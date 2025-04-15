@@ -4,6 +4,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.helpers.DataSourceMagInfo
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
   UnusableDataSource,
   InboxDataSourceLike => InboxDataSource
@@ -65,12 +66,16 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- bool2Fox(!name.startsWith(".")) ?~> "dataset.layer.name.invalid.startsWithDot"
     } yield ()
 
-  def createPreliminaryDataset(datasetName: String, organizationId: String, dataStore: DataStore): Fox[Dataset] = {
+  def createPreliminaryDataset(datasetName: String,
+                               organizationId: String,
+                               dataStore: DataStore,
+                               requireUniqueName: Boolean): Fox[Dataset] = {
     val newDatasetId = ObjectId.generate
     for {
-      datasetDirectoryName <- datasetDAO
-        .doesDatasetDirectoryExistInOrganization(datasetName, organizationId)(GlobalAccessContext)
-        .map(if (_) s"$datasetName-${newDatasetId.toString}" else datasetName)
+      isDatasetNameAlreadyTaken <- datasetDAO.doesDatasetDirectoryExistInOrganization(datasetName, organizationId)(
+        GlobalAccessContext)
+      _ <- bool2Fox(!(isDatasetNameAlreadyTaken && requireUniqueName)) ?~> "dataset.name.alreadyTaken"
+      datasetDirectoryName = if (isDatasetNameAlreadyTaken) s"$datasetName-${newDatasetId.toString}" else datasetName
       unreportedDatasource = UnusableDataSource(DataSourceId(datasetDirectoryName, organizationId),
                                                 notYetUploadedStatus)
       newDataset <- createDataset(dataStore, newDatasetId, datasetName, unreportedDatasource)
@@ -356,7 +361,15 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- Fox.serialCombined(pathInfos)(updateRealPath)
     } yield ()
 
-  def getPathsForDataLayer(datasetId: ObjectId, layerName: String): Fox[List[(DatasetMagInfo, List[DatasetMagInfo])]] =
+  /**
+    * Returns a list of tuples, where the first element is the magInfo and the second element is a list of all magInfos
+    * that share the same realPath but have a different dataSourceId. For each mag in the data layer there is one tuple.
+    * @param datasetId id of the dataset
+    * @param layerName name of the layer in the dataset
+    * @return
+    */
+  def getPathsForDataLayer(datasetId: ObjectId,
+                           layerName: String): Fox[List[(DataSourceMagInfo, List[DataSourceMagInfo])]] =
     for {
       magInfos <- datasetMagsDAO.findPathsForDatasetAndDatalayer(datasetId, layerName)
       magInfosAndLinkedMags <- Fox.serialCombined(magInfos)(magInfo =>
@@ -364,7 +377,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
           case Some(realPath) =>
             for {
               pathInfos <- datasetMagsDAO.findAllByRealPath(realPath)
-            } yield (magInfo, pathInfos.filter(!_.equals(magInfo)))
+              filteredPathInfos = pathInfos.filter(_.dataSourceId != magInfo.dataSourceId)
+            } yield (magInfo, filteredPathInfos)
           case None => Fox.successful((magInfo, List()))
       })
     } yield magInfosAndLinkedMags

@@ -43,7 +43,7 @@ class DataSourceController @Inject()(
     connectomeFileService: ConnectomeFileService,
     segmentIndexFileService: SegmentIndexFileService,
     storageUsageService: DSUsedStorageService,
-    datasetErrorLoggingService: DatasetErrorLoggingService,
+    datasetErrorLoggingService: DSDatasetErrorLoggingService,
     exploreRemoteLayerService: ExploreRemoteLayerService,
     uploadService: UploadService,
     composeService: ComposeService,
@@ -113,7 +113,7 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.administrateDataSources(request.body.organization)) {
         for {
-          _ <- dsRemoteWebknossosClient.reserveDataSourceUpload(
+          reservedDatasetInfo <- dsRemoteWebknossosClient.reserveDataSourceUpload(
             ReserveUploadInformation(
               "aManualUpload",
               request.body.datasetName,
@@ -123,10 +123,14 @@ class DataSourceController @Inject()(
               None,
               None,
               request.body.initialTeamIds,
-              request.body.folderId
+              request.body.folderId,
+              Some(request.body.requireUniqueName)
             )
           ) ?~> "dataset.upload.validation.failed"
-        } yield Ok
+        } yield
+          Ok(
+            Json.obj("newDatasetId" -> reservedDatasetInfo.newDatasetId,
+                     "directoryName" -> reservedDatasetInfo.directoryName))
       }
     }
 
@@ -419,6 +423,7 @@ class DataSourceController @Inject()(
               layersToLink = None,
               initialTeams = List.empty,
               folderId = folderId,
+              requireUniqueName = Some(false),
             )
           ) ?~> "dataset.upload.validation.failed"
           datasourceId = DataSourceId(reservedAdditionalInfo.directoryName, organizationId)
@@ -490,7 +495,7 @@ class DataSourceController @Inject()(
       val dataSourceId = DataSourceId(datasetDirectoryName, organizationId)
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.deleteDataSource(dataSourceId)) {
         for {
-          _ <- binaryDataServiceHolder.binaryDataService.deleteOnDisk(
+          _ <- dataSourceService.deleteOnDisk(
             organizationId,
             datasetDirectoryName,
             reason = Some("the user wants to delete the dataset")) ?~> "dataset.delete.failed"

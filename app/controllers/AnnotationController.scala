@@ -260,7 +260,6 @@ class AnnotationController @Inject()(
         restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
         _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
         name = (request.body \ "name").asOpt[String]
-        description = (request.body \ "description").asOpt[String]
         visibility = (request.body \ "visibility").asOpt[AnnotationVisibility.Value]
         _ <- if (visibility.contains(AnnotationVisibility.Private))
           annotationService.updateTeamsForSharedAnnotation(annotation._id, List.empty)
@@ -268,8 +267,6 @@ class AnnotationController @Inject()(
         tags = (request.body \ "tags").asOpt[List[String]]
         viewConfiguration = (request.body \ "viewConfiguration").asOpt[JsObject]
         _ <- Fox.runOptional(name)(annotationDAO.updateName(annotation._id, _)) ?~> "annotation.edit.failed"
-        _ <- Fox
-          .runOptional(description)(annotationDAO.updateDescription(annotation._id, _)) ?~> "annotation.edit.failed"
         _ <- Fox.runOptional(visibility)(annotationDAO.updateVisibility(annotation._id, _)) ?~> "annotation.edit.failed"
         _ <- Fox.runOptional(tags)(annotationDAO.updateTags(annotation._id, _)) ?~> "annotation.edit.failed"
         _ <- Fox

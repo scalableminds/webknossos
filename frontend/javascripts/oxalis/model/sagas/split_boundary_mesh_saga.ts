@@ -26,8 +26,7 @@ function* updateSplitBoundaryMesh() {
   const sceneController = yield* call(() => getSceneController());
 
   const activeTree = yield* select((state) => getActiveTree(state.annotation.skeleton));
-  // biome-ignore lint/complexity/useOptionalChain: <explanation>
-  if (activeTree != null && activeTree.isVisible) {
+  if (activeTree?.isVisible) {
     const nodes = Array.from(activeTree.nodes.values());
     const points = nodes.map((node) => node.untransformedPosition);
     if (points.length > 3) {
@@ -41,7 +40,7 @@ export function* splitBoundaryMeshSaga(): Saga<void> {
   yield* takeWithBatchActionSupport("INITIALIZE_SKELETONTRACING");
   yield* ensureWkReady();
 
-  // initial rendering
+  // Call once for initial rendering
   yield* call(updateSplitBoundaryMesh);
   yield* takeEvery(
     [

@@ -744,7 +744,6 @@ class DataCube {
               shouldSkip = intersects;
             }
 
-            // console.log("reached bucket border. early abort for debugging");
             if (!shouldSkip && neighbourBucket.type !== "null") {
               bucketsWithXyzSeedsToFill.push([neighbourBucket, adjustedNeighbourVoxelXyz]);
             }
@@ -769,7 +768,6 @@ class DataCube {
                 currentGlobalPosition,
               );
 
-              // const { distance } = target;
               shouldSkip = intersects;
             }
 
@@ -1035,18 +1033,18 @@ class DataCube {
 
 export default DataCube;
 
-// Function to check intersection
-function checkLineIntersection(bentMesh: THREE.Mesh, _pointA: Vector3, _pointB: Vector3) {
+function checkLineIntersection(bentMesh: THREE.Mesh, pointAVec3: Vector3, pointBVec3: Vector3) {
+  /* Returns true if an intersection is found */
+
   const geometry = bentMesh.geometry;
+
   // Create BVH from geometry if not already built
   if (!geometry.boundsTree) {
     geometry.computeBoundsTree();
   }
   const scale = Store.getState().dataset.dataSource.scale.factor;
-  const mul = (vec: Vector3) => [scale[0] * vec[0], scale[1] * vec[1], scale[2] * vec[2]];
-  // geometry.boundsTree = undefined;
-  const pointA = new THREE.Vector3(...mul(_pointA));
-  const pointB = new THREE.Vector3(...mul(_pointB));
+  const pointA = new THREE.Vector3(...V3.scale3(pointAVec3, scale));
+  const pointB = new THREE.Vector3(...V3.scale3(pointBVec3, scale));
 
   // Create a ray from A to B
   const ray = new THREE.Ray();
@@ -1056,11 +1054,9 @@ function checkLineIntersection(bentMesh: THREE.Mesh, _pointA: Vector3, _pointB: 
   // Perform raycast
   const raycaster = new THREE.Raycaster();
   raycaster.ray = ray;
-  raycaster.far = pointA.distanceTo(pointB); // Limit to segment length
+  raycaster.far = pointA.distanceTo(pointB);
   raycaster.firstHitOnly = true;
 
   const intersects = raycaster.intersectObject(bentMesh, true);
-  const retval = intersects.length > 0; // Returns true if an intersection is found
-
-  return retval;
+  return intersects.length > 0;
 }

@@ -210,29 +210,43 @@ test("UrlManager should build default url in csv format", (t) => {
 });
 
 test("The dataset name should be correctly extracted from view URLs", (t) => {
+  const datasetNameEasy = "extract_me";
+  const datasetNameComplex = "$find1-me9";
   // View
-  const datasetName1 = "extract_me";
-  location.pathname = `/datasets/${datasetName1}-${DATASET.id}/view`;
-  const extractedName1 = getDatasetNameFromLocation(location);
-  t.is(datasetName1, extractedName1 as string);
+  location.pathname = `/datasets/${datasetNameEasy}-${DATASET.id}/view`;
+  t.is(datasetNameEasy, getDatasetNameFromLocation(location) as string);
   // Sandbox
-  const datasetName2 = "find_me";
-  location.pathname = `/datasets/${datasetName2}-${DATASET.id}/sandbox/hybrid`;
-  const extractedName2 = getDatasetNameFromLocation(location);
-  t.is(datasetName2, extractedName2 as string);
+  location.pathname = `/datasets/${datasetNameEasy}-${DATASET.id}/sandbox/hybrid`;
+  t.is(datasetNameEasy, getDatasetNameFromLocation(location) as string);
+  // View - complex
+  location.pathname = `/datasets/${datasetNameComplex}-${DATASET.id}/sandbox/hybrid`;
+  t.is(datasetNameComplex, getDatasetNameFromLocation(location) as string);
+  // Sandbox - complex
+  location.pathname = `/datasets/${datasetNameComplex}-${DATASET.id}/sandbox/hybrid`;
+  t.is(datasetNameComplex, getDatasetNameFromLocation(location) as string);
 });
 
 test("Inserting an updated dataset name in the URL should yield the correct URL", (t) => {
+  const testDatasetEasy = update(_.clone(DATASET), { name: { $set: "extract_me" } });
+  const testDatasetComplex = update(_.clone(DATASET), { name: { $set: "$3xtr4c7-me9" } });
   // View
-  const testDataset1 = update(_.clone(DATASET), { name: { $set: "newName" } });
-  location.pathname = `/datasets/replace_me-${testDataset1.id}/view`;
-  const newPathName1 = getUpdatedPathnameWithNewDatasetName(location, testDataset1);
-  const expectedPathname1 = `/datasets/${testDataset1.name}-${testDataset1.id}/view`;
+  location.pathname = `/datasets/replace_me-${testDatasetEasy.id}/view`;
+  const newPathName1 = getUpdatedPathnameWithNewDatasetName(location, testDatasetEasy);
+  const expectedPathname1 = `/datasets/${testDatasetEasy.name}-${testDatasetEasy.id}/view`;
   t.is(expectedPathname1, newPathName1);
   // Sandbox
-  const testDataset2 = update(_.clone(DATASET), { name: { $set: "otherName" } });
-  location.pathname = `/datasets/replace_me-${testDataset2.id}/sandbox/skeleton`;
-  const newPathName2 = getUpdatedPathnameWithNewDatasetName(location, testDataset2);
-  const expectedPathname2 = `/datasets/${testDataset2.name}-${testDataset2.id}/sandbox/skeleton`;
+  location.pathname = `/datasets/replace_me-${testDatasetEasy.id}/sandbox/skeleton`;
+  const newPathName2 = getUpdatedPathnameWithNewDatasetName(location, testDatasetEasy);
+  const expectedPathname2 = `/datasets/${testDatasetEasy.name}-${testDatasetEasy.id}/sandbox/skeleton`;
   t.is(expectedPathname2, newPathName2);
+  // View - complex
+  location.pathname = `/datasets/replace_me-${testDatasetComplex.id}/view`;
+  const newPathName3 = getUpdatedPathnameWithNewDatasetName(location, testDatasetComplex);
+  const expectedPathname3 = `/datasets/${testDatasetComplex.name}-${testDatasetComplex.id}/view`;
+  t.is(expectedPathname3, newPathName3);
+  // Sandbox - complex
+  location.pathname = `/datasets/replace_me-${testDatasetComplex.id}/sandbox/skeleton`;
+  const newPathName4 = getUpdatedPathnameWithNewDatasetName(location, testDatasetComplex);
+  const expectedPathname4 = `/datasets/${testDatasetComplex.name}-${testDatasetComplex.id}/sandbox/skeleton`;
+  t.is(expectedPathname4, newPathName4);
 });

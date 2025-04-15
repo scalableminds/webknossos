@@ -217,8 +217,6 @@ class AuthenticationController @Inject()(
   )
   private lazy val webAuthnManager = WebAuthnManager.createNonStrictWebAuthnManager()
 
-  private val blockingContext: ExecutionContext = actorSystem.dispatchers.lookup("play.context.blocking")
-
   private lazy val isOIDCEnabled = conf.Features.openIdConnectEnabled
 
   def register: Action[AnyContent] = Action.async { implicit request =>

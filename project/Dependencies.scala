@@ -107,7 +107,6 @@ object Dependencies {
     "org.postgresql" % "postgresql" % "42.7.4",
     /// WebAuthn Dependencies
     "com.webauthn4j" % "webauthn4j-core" % "0.28.6.RELEASE" exclude("com.fasterxml.jackson.core", "jackson-databind"),
-    "com.yubico" % "webauthn-server-core" % "2.6.0",
   )
 
   val dependencyOverrides: Seq[ModuleID] = Seq(

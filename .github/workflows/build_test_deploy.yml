@@ -77,11 +77,11 @@ jobs:
       - name: Assert that all migrations are mentioned in one migration guide and that they have a reversion counterpart.
         run: tools/assert-complete-migrations.sh
 
-      - name: Run backend unit tests
-        run: sbt -v "testOnly backend.*"
-
       - name: Lint backend code and check formatting
         run: sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
+
+      - name: Run backend unit tests
+        run: sbt -v "testOnly backend.*"
 
       - name: Start Fossildb for e2e tests
         run: docker compose --file .github/docker-compose.yml up -d fossildb

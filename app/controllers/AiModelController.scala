@@ -127,7 +127,7 @@ class AiModelController @Inject()(
     }
   }
 
-  def runTraining: Action[RunTrainingParameters] = sil.SecuredAction.async(validateJson[RunTrainingParameters]) {
+  def runNeuronTraining: Action[RunTrainingParameters] = sil.SecuredAction.async(validateJson[RunTrainingParameters]) {
     implicit request =>
       for {
         _ <- userService.assertIsSuperUser(request.identity)

@@ -274,11 +274,11 @@ function JobListView() {
             : null}
         </span>
       );
-    } else if (job.type === APIJobType.TRAIN_NEURON_MODEL) {
+    } else if (job.type === APIJobType.TRAIN_NEURON_MODEL || APIJobType.DEPRECATED_TRAIN_MODEL) {
       const numberOfTrainingAnnotations = job.trainingAnnotations.length;
       return (
         <span>
-          {`Train model on ${numberOfTrainingAnnotations} ${Utils.pluralize("annotation", numberOfTrainingAnnotations)}. `}
+          {`Train neuron model on ${numberOfTrainingAnnotations} ${Utils.pluralize("annotation", numberOfTrainingAnnotations)}. `}
           {getShowTrainingDataLink(job.trainingAnnotations)}
         </span>
       );
@@ -386,7 +386,10 @@ function JobListView() {
           )}
         </span>
       );
-    } else if (job.type === APIJobType.TRAIN_NEURON_MODEL) {
+    } else if (
+      job.type === APIJobType.TRAIN_NEURON_MODEL ||
+      job.type === APIJobType.DEPRECATED_TRAIN_MODEL
+    ) {
       return (
         <span>
           {job.state === "SUCCESS" &&

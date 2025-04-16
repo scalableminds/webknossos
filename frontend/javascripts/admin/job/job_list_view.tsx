@@ -228,14 +228,18 @@ function JobListView() {
           <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
-    } else if (job.type === APIJobType.INFER_NEURONS && linkToDataset != null && job.layerName) {
+    } else if (
+      job.type === APIJobType.INFER_NEURONS &&
+      linkToDataset != null &&
+      job.layerName &&
+      job.modelId == null
+    ) {
       return (
         <span>
           Neuron inferral for layer {job.layerName} of{" "}
           <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
-      // INFER_NEURONS without layerName means custom model
     } else if (
       (job.type === APIJobType.DEPRECATED_INFER_WITH_MODEL ||
         job.type === APIJobType.INFER_NEURONS) &&

@@ -39,6 +39,7 @@ function transformBackendJobToAPIJob(job: any): APIJob {
     createdAt: job.created,
     voxelyticsWorkflowHash: job.voxelyticsWorkflowHash,
     creditCost: job.creditCost,
+    modelId: job.commandArgs.model_id,
   };
 }
 

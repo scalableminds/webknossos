@@ -118,10 +118,7 @@ global.localStorage = {
   getItem: () => undefined,
   setItem: () => undefined,
 };
-// @ts-expect-error ts-migrate(2740) FIXME: Type '{ userAgent: string; }' is missing the follo... Remove this comment to see the full error message
-global.navigator = {
-  userAgent: "node.js",
-};
+
 copyProps(window, global);
 export async function writeTypeCheckingFile(
   object: Array<any> | Record<string, any>,

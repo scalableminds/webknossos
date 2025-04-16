@@ -735,7 +735,7 @@ function StartJobForm(props: StartJobFormProps) {
   );
   const jobCreditCostInfo = useFetch<JobCreditCostInfo | undefined>(
     async () =>
-      boundingBoxForJob
+      boundingBoxForJob && jobCreditCostPerGVx != null
         ? await getJobCreditCost(
             jobName,
             computeArrayFromBoundingBox(boundingBoxForJob.boundingBox),

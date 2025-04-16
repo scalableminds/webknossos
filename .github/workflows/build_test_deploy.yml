@@ -93,7 +93,7 @@ jobs:
           run: |
             sbt "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false"
           retries: 3
-      - name: Typecheck frontend code
+      - name: Check response types of e2e tests
         run: yarn typecheck
 
 

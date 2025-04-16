@@ -28,7 +28,6 @@ vi.mock("oxalis/model/bucket_data_handling/wkstore_adapter", function () {
   };
 });
 
-const tracingId = "volumeTracingId";
 vi.mock("oxalis/store", function () {
   return {
     default: {
@@ -46,8 +45,7 @@ vi.mock("oxalis/store", function () {
           },
         },
         tracing: {
-          // TODO is the variable "tracingId" defined when vitest hoists the mock implementation?
-          volumes: [{ tracingId }],
+          volumes: [{ tracingId: "volumeTracingId" }],
         },
         datasetConfiguration: {
           renderMissingDataBlack: true,

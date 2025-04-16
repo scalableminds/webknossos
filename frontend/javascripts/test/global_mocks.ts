@@ -49,12 +49,6 @@ vi.mock("libs/uid_generator", () => ({
   getUid: () => REQUEST_ID,
 }));
 
-// vi.mock("libs/date", async () => ({
-//   default: {
-//     now: () => 1494695001688,
-//   },
-// }));
-
 // mock "libs/date", Date.now() and new Date();
 export const TIMESTAMP = 1494695001688; // This variable can not be used direct in the mock function above. Vitest does not allow this.
 vi.setSystemTime(TIMESTAMP);
@@ -81,6 +75,10 @@ vi.mock("libs/error_handling", () => {
       notify: vi.fn(),
     },
   };
+});
+
+vi.mock("oxalis/workers/lz4_wasm_wrapper.ts", async () => {
+  return await vi.importActual("lz4-wasm-nodejs");
 });
 
 vi.mock("oxalis/workers/byte_array_lz4_compression.worker", async () => {

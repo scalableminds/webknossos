@@ -13,17 +13,6 @@ export default defineConfig({
       reporter: ['text', 'json-summary', 'json'],
       reportOnFailure: true,
     }
-
-    // // for profiling
-    // pool: "forks",
-    // poolOptions: {
-    //   forks: {
-    //     execArgv: ["--cpu-prof", "--cpu-prof-dir=test-runner-profile"],
-
-    //     // To generate a single profile
-    //     singleFork: true,
-    //   },
-    // },
   },
   plugins: [tsconfigPaths()],
 });

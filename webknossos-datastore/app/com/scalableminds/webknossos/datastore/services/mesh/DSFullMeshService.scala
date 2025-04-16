@@ -152,14 +152,15 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
                                                                                            layerName,
                                                                                            meshFileName,
                                                                                            segmentIds)
-      allChunkRanges: List[MeshChunk] = chunkInfos.chunks.lods.head.chunks
+      allChunkRanges: List[MeshChunk] = chunkInfos.lods.head.chunks
+      transform = chunkInfos.lods.head.transform
       stlEncodedChunks: Seq[Array[Byte]] <- Fox.serialCombined(allChunkRanges) { chunkRange: MeshChunk =>
         readMeshChunkAsStl(organizationId,
                            datasetDirectoryName,
                            layerName,
                            meshFileName,
                            chunkRange,
-                           chunkInfos.transform,
+                           transform,
                            None,
                            None,
                            None)
@@ -195,9 +196,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
               organizationId,
               datasetDirectoryName,
               layerName,
-              MeshChunkDataRequestList(meshfileName,
-                                       None,
-                                       None,
+              MeshChunkDataRequestList(MeshFileInfo(meshfileName, meshFileType, meshFilePath, None, 7),
                                        List(MeshChunkDataRequest(chunkInfo.byteOffset, chunkInfo.byteSize, None)))
             ) ?~> "mesh.file.loadChunk.failed"
           } yield (dracoMeshChunkBytes, encoding, 0)
@@ -227,10 +226,10 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
         List(fullMeshRequest.segmentId)
       )
       selectedLod = fullMeshRequest.lod.getOrElse(0)
-      allChunkRanges: List[MeshChunk] = chunkInfos.chunks.lods(selectedLod).chunks
+      allChunkRanges: List[MeshChunk] = chunkInfos.lods(selectedLod).chunks
       meshFileName <- fullMeshRequest.meshFileName.toFox ?~> "mesh file name needed"
       // Right now, only the scale is used, so we only need to supply these values
-      lodTransform = chunkInfos.chunks.lods(selectedLod).transform
+      lodTransform = chunkInfos.lods(selectedLod).transform
       chunkScale = chunkInfos.chunkScale
       transform = Array(
         Array(lodTransform(0)(0), 0, 0),

@@ -18,9 +18,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 case class ListMeshChunksRequest(
-    meshFile: String,
-    meshFilePath: Option[String],
-    meshFileType: Option[String],
+    meshFile: MeshFileInfo,
     segmentId: Long
 )
 
@@ -35,9 +33,7 @@ case class MeshChunkDataRequest(
 )
 
 case class MeshChunkDataRequestList(
-    meshFile: String,
-    meshFilePath: Option[String],
-    meshFileType: Option[String],
+    meshFile: MeshFileInfo,
     requests: Seq[MeshChunkDataRequest]
 )
 
@@ -50,9 +46,9 @@ object MeshChunkDataRequestList {
 }
 
 case class MeshFileInfo(
-    meshFileName: String,
-    meshFilePath: Option[String],
-    meshFileType: Option[String],
+    name: String,
+    path: Option[String],
+    fileType: Option[String],
     mappingName: Option[String],
     formatVersion: Long
 )
@@ -165,10 +161,10 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
         .resolve(meshesDir)
         .resolve(s"$meshFileName.$hdf5FileExtension")
       (encoding, lodScaleMultiplier, transform) <- readMeshfileMetadata(meshFilePath).toFox
-      meshChunksForUnmappedSegments: List[MeshSegmentInfo] = listMeshChunksForSegments(meshFilePath,
-                                                                                       segmentIds,
-                                                                                       lodScaleMultiplier,
-                                                                                       transform)
+      meshChunksForUnmappedSegments: List[List[MeshLodInfo]] = listMeshChunksForSegments(meshFilePath,
+                                                                                         segmentIds,
+                                                                                         lodScaleMultiplier,
+                                                                                         transform)
       _ <- bool2Fox(meshChunksForUnmappedSegments.nonEmpty) ?~> "zero chunks" ?~> Messages(
         "mesh.file.listChunks.failed",
         segmentIds.mkString(","),
@@ -179,7 +175,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
   private def listMeshChunksForSegments(meshFilePath: Path,
                                         segmentIds: List[Long],
                                         lodScaleMultiplier: Double,
-                                        transform: Array[Array[Double]]): List[MeshSegmentInfo] =
+                                        transform: Array[Array[Double]]): List[List[MeshLodInfo]] =
     meshFileCache
       .withCachedHdf5(meshFilePath) { cachedMeshFile: CachedHdf5File =>
         segmentIds.flatMap(segmentId =>
@@ -199,7 +195,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
   private def listMeshChunksForSegment(cachedMeshFile: CachedHdf5File,
                                        segmentId: Long,
                                        lodScaleMultiplier: Double,
-                                       transform: Array[Array[Double]]): Box[MeshSegmentInfo] =
+                                       transform: Array[Array[Double]]): Box[List[MeshLodInfo]] =
     tryo {
       val (neuroglancerSegmentManifestStart, neuroglancerSegmentManifestEnd) =
         getNeuroglancerSegmentManifestOffsets(segmentId, cachedMeshFile)

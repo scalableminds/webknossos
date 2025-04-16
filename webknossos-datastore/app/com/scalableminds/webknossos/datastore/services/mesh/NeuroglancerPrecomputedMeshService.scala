@@ -139,7 +139,7 @@ class NeuroglancerPrecomputedMeshService @Inject()(config: DataStoreConfig, data
     } yield segmentInfo
 
   private def listMeshChunks(vaultPath: VaultPath, mesh: NeuroglancerMesh, segmentId: Long)(
-      implicit tc: TokenContext): Fox[MeshSegmentInfo] =
+      implicit tc: TokenContext): Fox[List[MeshLodInfo]] =
     for {
       _ <- Fox.successful(())
       minishardInfo = mesh.shardingSpecification.getMinishardInfo(segmentId)

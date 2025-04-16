@@ -67,7 +67,7 @@ class DSMeshController @Inject()(
           mappingNameForMeshFile = meshFileService.mappingNameForMeshFile(organizationId,
                                                                           datasetDirectoryName,
                                                                           dataLayerName,
-                                                                          request.body.meshFile)
+                                                                          request.body.meshFile.name)
           segmentIds: List[Long] <- segmentIdsForAgglomerateIdIfNeeded(
             organizationId,
             datasetDirectoryName,
@@ -78,15 +78,15 @@ class DSMeshController @Inject()(
             mappingNameForMeshFile,
             omitMissing = false
           )
-          chunkInfos <- request.body.meshFileType match {
+          chunkInfos <- request.body.meshFile.fileType match {
             case Some(NeuroglancerMesh.meshTypeName) =>
-              neuroglancerPrecomputedMeshService.listMeshChunksForMultipleSegments(request.body.meshFilePath,
+              neuroglancerPrecomputedMeshService.listMeshChunksForMultipleSegments(request.body.meshFile.path,
                                                                                    segmentIds)
             case _ =>
               meshFileService.listMeshChunksForSegmentsMerged(organizationId,
                                                               datasetDirectoryName,
                                                               dataLayerName,
-                                                              request.body.meshFile,
+                                                              request.body.meshFile.name,
                                                               segmentIds)
           }
         } yield Ok(Json.toJson(chunkInfos))
@@ -100,9 +100,9 @@ class DSMeshController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
-          (data, encoding) <- request.body.meshFileType match {
+          (data, encoding) <- request.body.meshFile.fileType match {
             case Some(NeuroglancerMesh.meshTypeName) =>
-              neuroglancerPrecomputedMeshService.readMeshChunk(request.body.meshFilePath, request.body.requests)
+              neuroglancerPrecomputedMeshService.readMeshChunk(request.body.meshFile.path, request.body.requests)
             case _ =>
               meshFileService.readMeshChunk(organizationId, datasetDirectoryName, dataLayerName, request.body) ?~> "mesh.file.loadChunk.failed"
           }

@@ -87,43 +87,28 @@ case class MeshChunk(position: Vec3Float, byteOffset: Long, byteSize: Int, unmap
 object MeshChunk {
   implicit val jsonFormat: OFormat[MeshChunk] = Json.format[MeshChunk]
 }
-case class MeshLodInfo(scale: Int,
-                       vertexOffset: Vec3Float,
-                       chunkShape: Vec3Float,
-                       chunks: List[MeshChunk],
-                       transform: Array[Array[Double]])
+case class MeshLodInfo(chunks: List[MeshChunk], transform: Array[Array[Double]])
 
 object MeshLodInfo {
   implicit val jsonFormat: OFormat[MeshLodInfo] = Json.format[MeshLodInfo]
 }
-case class MeshSegmentInfo(chunkShape: Vec3Float, gridOrigin: Vec3Float, lods: List[MeshLodInfo])
-
-object MeshSegmentInfo {
-  implicit val jsonFormat: OFormat[MeshSegmentInfo] = Json.format[MeshSegmentInfo]
-}
 case class WebknossosSegmentInfo(
-    transform: Array[Array[Double]], // always set to identity
     meshFormat: String,
-    chunks: MeshSegmentInfo,
+    lods: List[MeshLodInfo],
     chunkScale: Array[Double] = Array(1.0, 1.0, 1.0) // Used for Neuroglancer Precomputed Meshes to account for vertex quantization
 )
 
 object WebknossosSegmentInfo {
   implicit val jsonFormat: OFormat[WebknossosSegmentInfo] = Json.format[WebknossosSegmentInfo]
 
-  def fromMeshInfosAndMetadata(chunkInfos: List[MeshSegmentInfo],
+  def fromMeshInfosAndMetadata(chunkInfos: List[List[MeshLodInfo]],
                                encoding: String,
-                               transform: Array[Array[Double]] = Array(Array(1.0, 0.0, 0.0, 0.0),
-                                                                       Array(0.0, 1.0, 0.0, 0.0),
-                                                                       Array(0.0, 0.0, 1.0, 0.0),
-                                                                       Array(0.0, 0.0, 0.0, 1.0)),
                                chunkScale: Array[Double] = Array(1.0, 1.0, 1.0)): Option[WebknossosSegmentInfo] =
     chunkInfos.headOption.flatMap { firstChunkInfo =>
       tryo {
         WebknossosSegmentInfo(
-          transform,
           meshFormat = encoding,
-          chunks = firstChunkInfo.copy(lods = chunkInfos.map(_.lods).transpose.map(mergeLod)),
+          lods = chunkInfos.transpose.map(mergeLod),
           chunkScale = chunkScale
         )
       }
@@ -151,7 +136,7 @@ trait NeuroglancerMeshHelper {
                                   lodScaleMultiplier: Double,
                                   transform: Array[Array[Double]],
                                   neuroglancerOffsetStart: Long,
-                                  segmentId: Long): MeshSegmentInfo = {
+                                  segmentId: Long): List[MeshLodInfo] = {
     val bytesPerLod = segmentInfo.chunkByteSizes.map(_.sum)
     val totalMeshSize = bytesPerLod.sum
     val meshByteStartOffset = neuroglancerOffsetStart - totalMeshSize
@@ -180,17 +165,14 @@ trait NeuroglancerMeshHelper {
 
     val chunks = lods.map(lod => chunkCountsWithLod(lod).map(x => computeGlobalPositionAndOffset(x._1, x._2)).toList)
 
-    val meshfileLods = lods
+    val meshFileLods = lods
       .map(
         lod =>
           MeshLodInfo(
-            scale = segmentInfo.lodScales(lod).toInt,
-            vertexOffset = segmentInfo.vertexOffsets(lod), // Ignored by fronted
-            chunkShape = segmentInfo.chunkShape, // Ignored by frontend
             chunks = chunks(lod),
             transform = getLodTransform(segmentInfo, lodScaleMultiplier, transform, lod),
         ))
       .toList
-    MeshSegmentInfo(chunkShape = segmentInfo.chunkShape, gridOrigin = segmentInfo.gridOrigin, lods = meshfileLods)
+    meshFileLods
   }
 }

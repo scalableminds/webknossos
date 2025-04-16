@@ -495,7 +495,7 @@ class DataSourceController @Inject()(
       val dataSourceId = DataSourceId(datasetDirectoryName, organizationId)
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.deleteDataSource(dataSourceId)) {
         for {
-          _ <- binaryDataServiceHolder.binaryDataService.deleteOnDisk(
+          _ <- dataSourceService.deleteOnDisk(
             organizationId,
             datasetDirectoryName,
             reason = Some("the user wants to delete the dataset")) ?~> "dataset.delete.failed"

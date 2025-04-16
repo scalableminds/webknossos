@@ -41,11 +41,11 @@ jobs:
         run: yarn check-cyclic-dependencies
       - name: Run frontend tests
         run: yarn run vitest run --coverage.enabled true
-      - name: Download Coverage Artifacts 
-        uses: actions/download-artifact@v4
-        with:
-          name: vitest-coverage-master
-          path: coverage
+      # - name: Download Coverage Artifacts 
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: vitest-coverage-master
+      #     path: coverage
       - name: 'Report Coverage'
         uses:  davelosert/vitest-coverage-report-action@v2
         with:

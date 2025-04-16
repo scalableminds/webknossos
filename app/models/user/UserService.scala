@@ -402,6 +402,7 @@ class UserService @Inject()(conf: WkConf,
         "lastTaskTypeId" -> userCompactInfo.lastTaskTypeId,
         "isSuperUser" -> userCompactInfo.isSuperUser,
         "isEmailVerified" -> userCompactInfo.isEmailVerified,
+        "isGuest" -> userCompactInfo.isGuest,
       )
     }
 

@@ -231,6 +231,7 @@ export function InviteUsersModal({
   maxUserCountPerOrganization?: number;
 }) {
   const [inviteesString, setInviteesString] = useState("");
+  const isOrganizationLimitAlreadyReached = currentUserCount >= maxUserCountPerOrganization;
 
   function extractEmailAddresses(): string[] {
     return inviteesString
@@ -250,12 +251,15 @@ export function InviteUsersModal({
     if (destroy != null) destroy();
   }
 
-  function getContent(isInvitesDisabled: boolean) {
-    const exceedingUserLimitAlert = isInvitesDisabled ? (
+  const doNewUsersExceedLimit =
+    currentUserCount + extractEmailAddresses().length > maxUserCountPerOrganization;
+
+  function getContent() {
+    const exceedingUserLimitAlert = doNewUsersExceedLimit ? (
       <Alert
         showIcon
         type="warning"
-        description="Inviting more users will exceed your organization's user limit. Consider upgrading your WEBKNOSSOS plan."
+        description="Inviting more new users will exceed your organization's user limit. Consider upgrading your WEBKNOSSOS plan."
         style={{ marginBottom: 10 }}
         action={
           <Link to={`/organizations/${organizationId}`}>
@@ -279,6 +283,13 @@ export function InviteUsersModal({
           Note that new users have limited access permissions by default. Please doublecheck their
           roles and team assignments after they join your organization.
         </p>
+        {isOrganizationLimitAlreadyReached ? (
+          <p>
+            As your organization has reached its user limit, you can only invite guests to your
+            organization. Those users must already be part of an organization paying for their
+            account.
+          </p>
+        ) : null}
         {exceedingUserLimitAlert}
         <Input.TextArea
           spellCheck={false}
@@ -295,20 +306,17 @@ export function InviteUsersModal({
     );
   }
 
-  const isInvitesDisabled =
-    currentUserCount + extractEmailAddresses().length > maxUserCountPerOrganization;
-
   return (
     <Modal
       open={isOpen == null ? true : isOpen}
       title={
         <>
-          <UserAddOutlined /> Invite Users
+          <UserAddOutlined /> Invite {isOrganizationLimitAlreadyReached ? "Guests" : "Users"}
         </>
       }
       width={600}
       footer={
-        <Button onClick={sendInvite} type="primary" disabled={isInvitesDisabled}>
+        <Button onClick={sendInvite} type="primary">
           Send Invite Emails
         </Button>
       }
@@ -318,7 +326,7 @@ export function InviteUsersModal({
       }}
       closable
     >
-      {getContent(isInvitesDisabled)}
+      {getContent()}
     </Modal>
   );
 }

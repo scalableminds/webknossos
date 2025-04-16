@@ -1,3 +1,4 @@
 _id_old,id,additionalinformation,logoUrl,name,_rootFolder,newusermailinglist,enableautoverify,pricingPlan,paidUntil,includedUsers,includedStorage,lastStorageScanTime,created,isdeleted
-'5ab0c6a674d0af7b003b23ac','Organization_X','lorem ipsum','/assets/images/mpi-logos.svg','Organization_X',570b9f4e4bb848d0885ea917,'',f,'Custom',,,,,0,'2000-01-01 09:30:31.91+01','2018-03-20 09:30:31.91+01',f
+'5ab0c6a674d0af7b003b23ac','Organization_X','lorem ipsum','/assets/images/mpi-logos.svg','Organization_X',570b9f4e4bb848d0885ea917,'',f,'Custom',,4,,,0,'2000-01-01 09:30:31.91+01','2018-03-20 09:30:31.91+01',f
 '6bb0c6a674d0af7b003b23bd','Organization_Y','foo bar','/assets/images/mpi-logos.svg','Organization_Y','570b9f4e4bb848d088a83aef','',f,'Custom',,,,,0,'2000-01-01 09:30:31.91+01','2018-03-24 09:30:31.91+01',f
+'6bb0c6a674d0af7b003b23be','Organization_Z','foo bar','/assets/images/mpi-logos.svg','Organization_Z','570b9f4e4bb848d088a83aff','',f,'Basic',,2,,,0,'2000-01-01 09:30:31.91+01','2018-03-24 09:30:31.91+01',f

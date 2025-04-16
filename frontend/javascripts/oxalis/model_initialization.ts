@@ -1,88 +1,95 @@
-import _ from "lodash";
-import type {
-  APIAnnotation,
-  APIDatasetId,
-  APIDataset,
-  MutableAPIDataset,
-  APIDataLayer,
-  ServerVolumeTracing,
-  ServerTracing,
-  ServerEditableMapping,
-  APICompoundType,
-  APISegmentationLayer,
-} from "types/api_flow_types";
-import type { Versions } from "oxalis/view/version_view";
 import {
-  computeDataTexturesSetup,
-  getSupportedTextureSpecs,
-  validateMinimumRequirements,
-} from "oxalis/model/bucket_data_handling/data_rendering_logic";
+  getAnnotationCompoundInformation,
+  getAnnotationProto,
+  getDataset,
+  getDatasetViewConfiguration,
+  getEditableMappingInfo,
+  getEmptySandboxAnnotationInformation,
+  getSharingTokenFromUrlParameters,
+  getTracingsForAnnotation,
+  getUnversionedAnnotationInformation,
+  getUserConfiguration,
+} from "admin/admin_rest_api";
+import {
+  PricingPlanEnum,
+  isFeatureAllowedByPricingPlan,
+} from "admin/organization/pricing_plan_utils";
+import ErrorHandling from "libs/error_handling";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import { location } from "libs/window";
+import _ from "lodash";
+import messages from "messages";
+import constants, { ControlModeEnum, AnnotationToolEnum, type Vector3 } from "oxalis/constants";
+import type { PartialUrlManagerState, UrlStateByLayer } from "oxalis/controller/url_manager";
+import UrlManager, {
+  getDatasetNameFromLocation,
+  getUpdatedPathnameWithNewDatasetName,
+} from "oxalis/controller/url_manager";
 import {
   determineAllowedModes,
-  getBitDepth,
-  getDatasetBoundingBox,
   getDataLayers,
+  getDatasetBoundingBox,
   getDatasetCenter,
+  getLayerByName,
+  getSegmentationLayerByName,
+  getSegmentationLayers,
+  getUnifiedAdditionalCoordinates,
   hasSegmentation,
   isElementClassSupported,
   isSegmentationLayer,
-  getSegmentationLayers,
-  getLayerByName,
-  getSegmentationLayerByName,
-  getUnifiedAdditionalCoordinates,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getNullableSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
 import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
+import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
 import {
-  getTracingsForAnnotation,
-  getAnnotationInformation,
-  getEmptySandboxAnnotationInformation,
-  getDataset,
-  getSharingTokenFromUrlParameters,
-  getUserConfiguration,
-  getDatasetViewConfiguration,
-  getEditableMappingInfo,
-  getAnnotationCompoundInformation,
-} from "admin/admin_rest_api";
-import {
+  batchedAnnotationInitializationAction,
   dispatchMaybeFetchMeshFilesAsync,
   initializeAnnotationAction,
   updateCurrentMeshFileAction,
 } from "oxalis/model/actions/annotation_actions";
 import {
-  initializeSettingsAction,
+  setActiveConnectomeAgglomerateIdsAction,
+  updateCurrentConnectomeFileAction,
+} from "oxalis/model/actions/connectome_actions";
+import { setDatasetAction } from "oxalis/model/actions/dataset_actions";
+import {
+  setAdditionalCoordinatesAction,
+  setPositionAction,
+  setRotationAction,
+  setZoomStepAction,
+} from "oxalis/model/actions/flycam_actions";
+import {
+  loadAdHocMeshAction,
+  loadPrecomputedMeshAction,
+} from "oxalis/model/actions/segmentation_actions";
+import {
   initializeGpuSetupAction,
+  initializeSettingsAction,
   setControlModeAction,
-  setViewModeAction,
   setMappingAction,
+  setMappingEnabledAction,
+  setViewModeAction,
   updateLayerSettingAction,
 } from "oxalis/model/actions/settings_actions";
+import {
+  initializeSkeletonTracingAction,
+  loadAgglomerateSkeletonAction,
+  setActiveNodeAction,
+  setShowSkeletonsAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import { setTaskAction } from "oxalis/model/actions/task_actions";
+import { setToolAction } from "oxalis/model/actions/ui_actions";
 import {
   initializeEditableMappingAction,
   initializeVolumeTracingAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
-  setActiveNodeAction,
-  initializeSkeletonTracingAction,
-  loadAgglomerateSkeletonAction,
-  setShowSkeletonsAction,
-} from "oxalis/model/actions/skeletontracing_actions";
-import { setDatasetAction } from "oxalis/model/actions/dataset_actions";
-import {
-  setPositionAction,
-  setZoomStepAction,
-  setRotationAction,
-  setAdditionalCoordinatesAction,
-} from "oxalis/model/actions/flycam_actions";
-import { setTaskAction } from "oxalis/model/actions/task_actions";
-import { setToolAction } from "oxalis/model/actions/ui_actions";
-import {
-  loadAdHocMeshAction,
-  loadPrecomputedMeshAction,
-} from "oxalis/model/actions/segmentation_actions";
+  computeDataTexturesSetup,
+  getSupportedTextureSpecs,
+  validateMinimumRequirements,
+} from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import DataLayer from "oxalis/model/data_layer";
-import ErrorHandling from "libs/error_handling";
 import type {
   DatasetConfiguration,
   DatasetLayerConfiguration,
@@ -90,21 +97,25 @@ import type {
   UserConfiguration,
 } from "oxalis/store";
 import Store from "oxalis/store";
-import Toast from "libs/toast";
-import type { PartialUrlManagerState, UrlStateByLayer } from "oxalis/controller/url_manager";
-import UrlManager from "oxalis/controller/url_manager";
-import * as Utils from "libs/utils";
-import constants, { ControlModeEnum, AnnotationToolEnum, Vector3 } from "oxalis/constants";
-import messages from "messages";
+import type {
+  APIAnnotation,
+  APICompoundType,
+  APIDataLayer,
+  APIDataset,
+  APISegmentationLayer,
+  APITracingStoreAnnotation,
+  MutableAPIDataset,
+  ServerEditableMapping,
+  ServerTracing,
+  ServerVolumeTracing,
+} from "types/api_flow_types";
+import type { Mutable } from "types/globals";
+import { doAllLayersHaveTheSameRotation } from "./model/accessors/dataset_layer_transformation_accessor";
+import { setVersionNumberAction } from "./model/actions/save_actions";
 import {
-  setActiveConnectomeAgglomerateIdsAction,
-  updateCurrentConnectomeFileAction,
-} from "oxalis/model/actions/connectome_actions";
-import {
-  PricingPlanEnum,
-  isFeatureAllowedByPricingPlan,
-} from "admin/organization/pricing_plan_utils";
-import { convertServerAdditionalAxesToFrontEnd } from "./model/reducers/reducer_helpers";
+  convertServerAdditionalAxesToFrontEnd,
+  convertServerAnnotationToFrontendAnnotation,
+} from "./model/reducers/reducer_helpers";
 
 export const HANDLED_ERROR = "error_was_handled";
 type DataLayerCollection = Record<string, DataLayer>;
@@ -113,7 +124,7 @@ export async function initialize(
   initialMaybeCompoundType: APICompoundType | null,
   initialCommandType: TraceOrViewCommand,
   initialFetch: boolean,
-  versions?: Versions,
+  version?: number | undefined | null,
 ): Promise<
   | {
       dataLayers: DataLayerCollection;
@@ -124,18 +135,45 @@ export async function initialize(
 > {
   Store.dispatch(setControlModeAction(initialCommandType.type));
   let annotation: APIAnnotation | null | undefined;
-  let datasetId: APIDatasetId;
+  let annotationProto: APITracingStoreAnnotation | null | undefined;
+  let datasetId: string;
 
   if (initialCommandType.type === ControlModeEnum.TRACE) {
     const { annotationId } = initialCommandType;
-    annotation =
-      initialMaybeCompoundType != null
-        ? await getAnnotationCompoundInformation(annotationId, initialMaybeCompoundType)
-        : await getAnnotationInformation(annotationId);
-    datasetId = {
-      name: annotation.dataSetName,
-      owningOrganization: annotation.organization,
-    };
+    if (initialMaybeCompoundType != null) {
+      annotation = await getAnnotationCompoundInformation(annotationId, initialMaybeCompoundType);
+    } else {
+      let unversionedAnnotation = await getUnversionedAnnotationInformation(annotationId);
+      annotationProto = await getAnnotationProto(
+        unversionedAnnotation.tracingStore.url,
+        unversionedAnnotation.id,
+        version,
+      );
+      const layersWithStats = annotationProto.annotationLayers.map((protoLayer) => {
+        return {
+          tracingId: protoLayer.tracingId,
+          name: protoLayer.name,
+          typ: protoLayer.typ,
+          stats:
+            // Only when the newest version is requested (version==null),
+            // the stats are available in unversionedAnnotation.
+            version == null
+              ? (_.find(
+                  unversionedAnnotation.annotationLayers,
+                  (layer) => layer.tracingId === protoLayer.tracingId,
+                )?.stats ?? {})
+              : {},
+        };
+      });
+      const completeAnnotation = {
+        ...unversionedAnnotation,
+        description: annotationProto.description,
+        annotationProto: annotationProto.earliestAccessibleVersion,
+        annotationLayers: layersWithStats,
+      };
+      annotation = completeAnnotation;
+    }
+    datasetId = annotation.datasetId;
 
     if (!annotation.restrictions.allowAccess) {
       Toast.error(messages["tracing.no_access"]);
@@ -147,29 +185,23 @@ export async function initialize(
     });
     Store.dispatch(setTaskAction(annotation.task));
   } else if (initialCommandType.type === ControlModeEnum.SANDBOX) {
-    const { name, owningOrganization } = initialCommandType;
-    datasetId = {
-      name,
-      owningOrganization,
-    };
+    datasetId = initialCommandType.datasetId;
     annotation = await getEmptySandboxAnnotationInformation(
       datasetId,
       initialCommandType.tracingType,
       getSharingTokenFromUrlParameters(),
     );
   } else {
-    const { name, owningOrganization } = initialCommandType;
-    datasetId = {
-      name,
-      owningOrganization,
-    };
+    datasetId = initialCommandType.datasetId;
   }
 
   const [dataset, initialUserSettings, serverTracings] = await fetchParallel(
     annotation,
     datasetId,
-    versions,
+    version,
   );
+  maybeFixDatasetNameInURL(dataset, initialCommandType);
+
   const serverVolumeTracings = getServerVolumeTracings(serverTracings);
   const serverVolumeTracingIds = serverVolumeTracings.map((volumeTracing) => volumeTracing.id);
   initializeDataset(initialFetch, dataset, serverTracings);
@@ -213,8 +245,16 @@ export async function initialize(
     const editableMappings = await fetchEditableMappings(
       annotation.tracingStore.url,
       serverVolumeTracings,
+      annotation.id,
+      version,
     );
-    initializeTracing(annotation, serverTracings, editableMappings);
+    initializeAnnotation(
+      annotation,
+      annotationProto?.version ?? 1,
+      annotationProto?.earliestAccessibleVersion ?? 0,
+      serverTracings,
+      editableMappings,
+    );
   } else {
     // In view only tracings we need to set the view mode too.
     const { allowedModes } = determineAllowedModes();
@@ -233,25 +273,43 @@ export async function initialize(
   return initializationInformation;
 }
 
+function maybeFixDatasetNameInURL(dataset: APIDataset, initialCommandType: TraceOrViewCommand) {
+  if (
+    initialCommandType.type === ControlModeEnum.VIEW ||
+    initialCommandType.type === ControlModeEnum.SANDBOX
+  ) {
+    const datasetNameInURL = getDatasetNameFromLocation(location);
+    if (dataset.name !== datasetNameInURL) {
+      const pathnameWithUpdatedDatasetName = getUpdatedPathnameWithNewDatasetName(
+        location,
+        dataset,
+      );
+      UrlManager.changeBaseUrl(pathnameWithUpdatedDatasetName + location.search);
+    }
+  }
+}
+
 async function fetchParallel(
   annotation: APIAnnotation | null | undefined,
-  datasetId: APIDatasetId,
-  versions?: Versions,
+  datasetId: string,
+  version: number | undefined | null,
 ): Promise<[APIDataset, UserConfiguration, Array<ServerTracing>]> {
   return Promise.all([
     getDataset(datasetId, getSharingTokenFromUrlParameters()),
     getUserConfiguration(), // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
-    annotation ? getTracingsForAnnotation(annotation, versions) : [],
+    annotation ? getTracingsForAnnotation(annotation, version) : [],
   ]);
 }
 
 async function fetchEditableMappings(
   tracingStoreUrl: string,
   serverVolumeTracings: ServerVolumeTracing[],
+  annotationId: string,
+  version: number | undefined | null,
 ): Promise<ServerEditableMapping[]> {
   const promises = serverVolumeTracings
-    .filter((tracing) => tracing.mappingIsEditable)
-    .map((tracing) => getEditableMappingInfo(tracingStoreUrl, tracing.id));
+    .filter((tracing) => tracing.hasEditableMapping)
+    .map((tracing) => getEditableMappingInfo(tracingStoreUrl, tracing.id, annotationId, version));
   return Promise.all(promises);
 }
 
@@ -262,7 +320,6 @@ function validateSpecsForLayers(dataset: APIDataset, requiredBucketCapacity: num
   const setupDetails = computeDataTexturesSetup(
     specs,
     layers,
-    (layer) => getBitDepth(layer) >> 3,
     hasSegmentation(dataset),
     requiredBucketCapacity,
   );
@@ -279,14 +336,14 @@ function maybeWarnAboutUnsupportedLayers(layers: Array<APIDataLayer>): void {
       });
     } else if (layer.category === "segmentation" && layer.elementClass === "uint24") {
       Toast.error(messages["dataset.unsupported_segmentation_class_uint24"]);
-    } else if (layer.category === "segmentation" && layer.elementClass === "int64") {
-      Toast.error(messages["dataset.unsupported_segmentation_class_int64"]);
     }
   }
 }
 
-function initializeTracing(
+function initializeAnnotation(
   _annotation: APIAnnotation,
+  version: number,
+  earliestAccessibleVersion: number,
   serverTracings: Array<ServerTracing>,
   editableMappings: Array<ServerEditableMapping>,
 ) {
@@ -306,7 +363,11 @@ function initializeTracing(
     if (controlMode === ControlModeEnum.SANDBOX) {
       annotation = {
         ...annotation,
-        restrictions: { ...annotation.restrictions, allowUpdate: true, allowSave: false },
+        restrictions: {
+          ...annotation.restrictions,
+          allowUpdate: true,
+          allowSave: false,
+        },
       };
     } else if (controlMode === ControlModeEnum.TRACE) {
       annotation = {
@@ -318,25 +379,32 @@ function initializeTracing(
       };
     }
 
-    Store.dispatch(initializeAnnotationAction(annotation));
+    const initializationActions = [];
+    initializationActions.push(
+      initializeAnnotationAction(
+        convertServerAnnotationToFrontendAnnotation(annotation, version, earliestAccessibleVersion),
+      ),
+    );
     getServerVolumeTracings(serverTracings).map((volumeTracing) => {
       ErrorHandling.assert(
         getSegmentationLayers(dataset).length > 0,
         messages["tracing.volume_missing_segmentation"],
       );
-      Store.dispatch(initializeVolumeTracingAction(volumeTracing));
+      initializationActions.push(initializeVolumeTracingAction(volumeTracing));
     });
 
-    editableMappings.map((mapping) => Store.dispatch(initializeEditableMappingAction(mapping)));
+    editableMappings.map((mapping) =>
+      initializationActions.push(initializeEditableMappingAction(mapping)),
+    );
 
     const skeletonTracing = getNullableSkeletonTracing(serverTracings);
 
     if (skeletonTracing != null) {
-      // To generate a huge amount of dummy trees, use:
-      // import generateDummyTrees from "./model/helpers/generate_dummy_trees";
-      // tracing.trees = generateDummyTrees(1, 200000);
-      Store.dispatch(initializeSkeletonTracingAction(skeletonTracing));
+      initializationActions.push(initializeSkeletonTracingAction(skeletonTracing));
     }
+
+    Store.dispatch(batchedAnnotationInitializationAction(initializationActions));
+    Store.dispatch(setVersionNumberAction(version));
   }
 
   // Initialize 'flight', 'oblique' or 'orthogonal' mode
@@ -357,9 +425,9 @@ function setInitialTool() {
     return;
   }
 
-  const { tracing } = Store.getState();
+  const { annotation } = Store.getState();
 
-  if (tracing.skeleton != null) {
+  if (annotation.skeleton != null) {
     // We are in a annotation which contains a skeleton. Due to the
     // enabled legacy-bindings, the user can expect to immediately create new nodes
     // with right click. Therefore, switch to the skeleton tool.
@@ -388,19 +456,20 @@ function initializeDataset(
   // Make sure subsequent fetch calls are always for the same dataset
   if (!initialFetch) {
     ErrorHandling.assert(
-      _.isEqual(dataset.dataSource.id.name, Store.getState().dataset.name),
+      _.isEqual(dataset.id, Store.getState().dataset.id),
       messages["dataset.changed_without_reload"],
     );
   }
 
   ErrorHandling.assertExtendContext({
-    dataSet: dataset.dataSource.id.name,
+    datasetName: dataset.name,
+    datasetId: dataset.id,
   });
   const mutableDataset = dataset as any as MutableAPIDataset;
   const volumeTracings = getServerVolumeTracings(serverTracings);
 
   if (volumeTracings.length > 0) {
-    const newDataLayers = setupLayerForVolumeTracing(dataset, volumeTracings);
+    const newDataLayers = getMergedDataLayersFromDatasetAndVolumeTracings(dataset, volumeTracings);
     mutableDataset.dataSource.dataLayers = newDataLayers;
     validateVolumeLayers(volumeTracings, newDataLayers);
   }
@@ -412,7 +481,10 @@ function initializeDataset(
 function initializeAdditionalCoordinates(mutableDataset: MutableAPIDataset) {
   const unifiedAdditionalCoordinates = getUnifiedAdditionalCoordinates(mutableDataset);
   const initialAdditionalCoordinates = Utils.values(unifiedAdditionalCoordinates).map(
-    ({ name, bounds }) => ({ name, value: Math.floor((bounds[1] - bounds[0]) / 2) }),
+    ({ name, bounds }) => ({
+      name,
+      value: Math.floor((bounds[1] - bounds[0]) / 2),
+    }),
   );
 
   Store.dispatch(setAdditionalCoordinatesAction(initialAdditionalCoordinates));
@@ -463,6 +535,7 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
       layer,
       textureInformation.textureSize,
       textureInformation.textureCount,
+      layer.name, // In case of a volume tracing layer the layer name will equal its tracingId.
     );
   }
 
@@ -479,7 +552,7 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
   };
 }
 
-function setupLayerForVolumeTracing(
+function getMergedDataLayersFromDatasetAndVolumeTracings(
   dataset: APIDataset,
   tracings: Array<ServerVolumeTracing>,
 ): Array<APIDataLayer> {
@@ -487,6 +560,7 @@ function setupLayerForVolumeTracing(
 
   const originalLayers = dataset.dataSource.dataLayers;
   const newLayers = originalLayers.slice();
+  const allLayersSameRotation = doAllLayersHaveTheSameRotation(originalLayers);
 
   for (const tracing of tracings) {
     // The tracing always contains the layer information for the user segmentation.
@@ -502,14 +576,24 @@ function setupLayerForVolumeTracing(
 
     const fallbackLayer = fallbackLayerIndex > -1 ? originalLayers[fallbackLayerIndex] : null;
     const boundingBox = getDatasetBoundingBox(dataset).asServerBoundingBox();
-    const resolutions = tracing.resolutions || [];
-    const tracingHasResolutionList = resolutions.length > 0;
-    // Legacy tracings don't have the `tracing.resolutions` property
-    // since they were created before WK started to maintain multiple resolution
+    const mags = tracing.mags || [];
+    const tracingHasMagList = mags.length > 0;
+    let coordinateTransformsMaybe = {};
+    if (allLayersSameRotation) {
+      coordinateTransformsMaybe = {
+        coordinateTransformations: originalLayers?.[0].coordinateTransformations,
+      };
+    } else if (fallbackLayer?.coordinateTransformations) {
+      coordinateTransformsMaybe = {
+        coordinateTransformations: fallbackLayer.coordinateTransformations,
+      };
+    }
+    // Legacy tracings don't have the `tracing.mags` property
+    // since they were created before WK started to maintain multiple magnifications
     // in volume annotations. Therefore, this code falls back to mag (1, 1, 1) for
     // that case.
-    const tracingResolutions: Vector3[] = tracingHasResolutionList
-      ? resolutions.map(({ x, y, z }) => [x, y, z])
+    const tracingMags: Vector3[] = tracingHasMagList
+      ? mags.map(({ x, y, z }) => [x, y, z])
       : [[1, 1, 1]];
     const tracingLayer: APISegmentationLayer = {
       name: tracing.id,
@@ -518,13 +602,14 @@ function setupLayerForVolumeTracing(
       category: "segmentation",
       largestSegmentId: tracing.largestSegmentId,
       boundingBox,
-      resolutions: tracingResolutions,
+      resolutions: tracingMags,
       mappings:
         fallbackLayer != null && "mappings" in fallbackLayer ? fallbackLayer.mappings : undefined,
       // Remember the name of the original layer (e.g., used to request mappings)
       fallbackLayer: tracing.fallbackLayer,
       fallbackLayerInfo: fallbackLayer,
       additionalAxes: convertServerAdditionalAxesToFrontEnd(tracing.additionalAxes),
+      ...coordinateTransformsMaybe,
     };
     if (fallbackLayerIndex > -1) {
       newLayers[fallbackLayerIndex] = tracingLayer;
@@ -620,7 +705,24 @@ function determineDefaultState(
   }
 
   const stateByLayer = urlStateByLayer ?? {};
+  // Add the default mapping to the state for each layer that does not have a mapping set in its URL settings.
+  for (const layerName in datasetConfiguration.layers) {
+    if (!(layerName in stateByLayer)) {
+      stateByLayer[layerName] = {};
+    }
+    const { mapping } = datasetConfiguration.layers[layerName];
+    if (stateByLayer[layerName].mappingInfo == null && mapping != null) {
+      stateByLayer[layerName].mappingInfo = {
+        mappingName: mapping.name,
+        mappingType: mapping.type,
+      };
+    }
+  }
 
+  // Overwriting the mapping to load for each volume layer in case
+  // - the volume tracing has a not locked mapping set and the url does not.
+  // - the volume tracing has a locked mapping set.
+  // - the volume tracing has locked that no tracing should be loaded.
   const volumeTracings = tracings.filter(
     (tracing) => tracing.typ === "Volume",
   ) as ServerVolumeTracing[];
@@ -730,11 +832,12 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
           showLoadingIndicator: true,
         }),
       );
+      Store.dispatch(setMappingEnabledAction(effectiveLayerName, true));
 
       if (agglomerateIdsToImport != null) {
-        const { tracing } = Store.getState();
+        const { annotation } = Store.getState();
 
-        if (tracing.skeleton == null) {
+        if (annotation.skeleton == null) {
           Toast.error(messages["tracing.agglomerate_skeleton.no_skeleton_tracing"]);
           continue;
         }
@@ -832,13 +935,32 @@ function applyAnnotationSpecificViewConfiguration(
    * Apply annotation-specific view configurations to the dataset settings which are persisted
    * per user per dataset. The AnnotationViewConfiguration currently only holds the "isDisabled"
    * information per layer which should override the isDisabled information in DatasetConfiguration.
+   * Moreover, due to another annotation nativelyRenderedLayerName might be set to a layer which does
+   * not exist in this view / annotation. In this case, the nativelyRenderedLayerName should be set to null.
    */
 
-  if (!annotation) {
-    return originalDatasetSettings;
+  const initialDatasetSettings: Mutable<DatasetConfiguration> =
+    _.cloneDeep(originalDatasetSettings);
+
+  if (originalDatasetSettings.nativelyRenderedLayerName) {
+    const isNativelyRenderedNamePresent =
+      dataset.dataSource.dataLayers.some(
+        (layer) =>
+          layer.name === originalDatasetSettings.nativelyRenderedLayerName ||
+          (layer.category === "segmentation" &&
+            layer.fallbackLayer === originalDatasetSettings.nativelyRenderedLayerName),
+      ) ||
+      annotation?.annotationLayers.some(
+        (layer) => layer.name === originalDatasetSettings.nativelyRenderedLayerName,
+      );
+    if (!isNativelyRenderedNamePresent) {
+      initialDatasetSettings.nativelyRenderedLayerName = null;
+    }
   }
 
-  const initialDatasetSettings: DatasetConfiguration = _.cloneDeep(originalDatasetSettings);
+  if (!annotation) {
+    return initialDatasetSettings;
+  }
 
   if (annotation.viewConfiguration) {
     // The annotation already contains a viewConfiguration. Merge that into the

@@ -1,5 +1,5 @@
-import type { Vector3, OrthoView } from "oxalis/constants";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { OrthoView, Vector3 } from "oxalis/constants";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 type ZoomInAction = ReturnType<typeof zoomInAction>;
 type ZoomOutAction = ReturnType<typeof zoomOutAction>;

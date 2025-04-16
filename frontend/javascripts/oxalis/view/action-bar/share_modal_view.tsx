@@ -1,54 +1,55 @@
-import {
-  Alert,
-  Divider,
-  Radio,
-  Modal,
-  Input,
-  Button,
-  Row,
-  Col,
-  RadioChangeEvent,
-  Tooltip,
-  Space,
-} from "antd";
 import { CompressOutlined, CopyOutlined, ShareAltOutlined } from "@ant-design/icons";
-import { useSelector } from "react-redux";
-import React, { useState, useEffect } from "react";
-import type {
-  APIDataset,
-  APIAnnotationVisibility,
-  APIAnnotationType,
-  APITeam,
-} from "types/api_flow_types";
 import {
-  getDatasetSharingToken,
-  getTeamsForSharedAnnotation,
-  updateTeamsForSharedAnnotation,
+  createShortLink,
   editAnnotation,
+  getDatasetSharingToken,
+  getSharingTokenFromUrlParameters,
+  getTeamsForSharedAnnotation,
   sendAnalyticsEvent,
   setOthersMayEditForAnnotation,
-  getSharingTokenFromUrlParameters,
-  createShortLink,
+  updateTeamsForSharedAnnotation,
 } from "admin/admin_rest_api";
+import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import {
+  Alert,
+  Button,
+  Col,
+  Divider,
+  Input,
+  Modal,
+  Radio,
+  type RadioChangeEvent,
+  Row,
+  Space,
+  Tooltip,
+} from "antd";
+import { AsyncButton } from "components/async_clickables";
+import { PricingEnforcedBlur } from "components/pricing_enforcers";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
+import { makeComponentLazy } from "libs/react_helpers";
 import Toast from "libs/toast";
 import { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
-import Store, { OxalisState } from "oxalis/store";
+import { ControlModeEnum } from "oxalis/constants";
 import UrlManager from "oxalis/controller/url_manager";
+import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_accessor";
+import { formatUserName } from "oxalis/model/accessors/user_accessor";
 import {
   setAnnotationVisibilityAction,
   setOthersMayEditForAnnotationAction,
 } from "oxalis/model/actions/annotation_actions";
 import { setShareModalVisibilityAction } from "oxalis/model/actions/ui_actions";
-import { ControlModeEnum } from "oxalis/constants";
-import { makeComponentLazy } from "libs/react_helpers";
-import { AsyncButton } from "components/async_clickables";
-import { PricingEnforcedBlur } from "components/pricing_enforcers";
-import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_accessor";
-import { formatUserName } from "oxalis/model/accessors/user_accessor";
+import Store, { type OxalisState } from "oxalis/store";
+import type React from "react";
+import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
+import type {
+  APIAnnotationType,
+  APIAnnotationVisibility,
+  APIDataset,
+  APITeam,
+} from "types/api_flow_types";
 
 const RadioGroup = Radio.Group;
 const sharingActiveNode = true;
@@ -94,7 +95,7 @@ export function useDatasetSharingToken(dataset: APIDataset) {
       return;
     }
     try {
-      const sharingToken = await getDatasetSharingToken(dataset, {
+      const sharingToken = await getDatasetSharingToken(dataset.id, {
         doNotInvestigate: true,
       });
       setDatasetToken(sharingToken);
@@ -123,7 +124,7 @@ export async function copyUrlToClipboard(url: string) {
 export function ShareButton(props: { dataset: APIDataset; style?: Record<string, any> }) {
   const { dataset, style } = props;
   const sharingToken = useDatasetSharingToken(props.dataset);
-  const annotationVisibility = useSelector((state: OxalisState) => state.tracing.visibility);
+  const annotationVisibility = useSelector((state: OxalisState) => state.annotation.visibility);
   const controlMode = useSelector((state: OxalisState) => state.temporaryConfiguration.controlMode);
   const isViewMode = controlMode === ControlModeEnum.VIEW;
   const isSandboxMode = controlMode === ControlModeEnum.SANDBOX;
@@ -176,17 +177,17 @@ export function ShareButton(props: { dataset: APIDataset; style?: Record<string,
 function _ShareModalView(props: Props) {
   const { isOpen, onOk, annotationType, annotationId } = props;
   const dataset = useSelector((state: OxalisState) => state.dataset);
-  const tracing = useSelector((state: OxalisState) => state.tracing);
+  const annotation = useSelector((state: OxalisState) => state.annotation);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  const isAnnotationLockedByUser = tracing.isLockedByOwner;
+  const isAnnotationLockedByUser = annotation.isLockedByOwner;
 
-  const annotationVisibility = tracing.visibility;
+  const annotationVisibility = annotation.visibility;
   const [visibility, setVisibility] = useState(annotationVisibility);
   const [isChangingInProgress, setIsChangingInProgress] = useState(false);
   const [sharedTeams, setSharedTeams] = useState<APITeam[]>([]);
   const sharingToken = useDatasetSharingToken(dataset);
 
-  const { othersMayEdit } = tracing;
+  const { othersMayEdit } = annotation;
   const [newOthersMayEdit, setNewOthersMayEdit] = useState(othersMayEdit);
 
   const hasUpdatePermissions = useSelector(mayEditAnnotationProperties);
@@ -304,7 +305,7 @@ function _ShareModalView(props: Props) {
     if (isAnnotationLockedByUser) {
       message = `You can't change the visibility of this annotation because it is locked by ${formatUserName(
         activeUser,
-        tracing.owner,
+        annotation.owner,
       )}.`;
     } else if (!hasUpdatePermissions) {
       message = "You don't have the permission to edit the visibility of this annotation.";
@@ -539,7 +540,7 @@ export function CopyableSharingLink({
   const linkToCopy = showShortLink ? shortUrl || longUrl : longUrl;
 
   return (
-    <Space.Compact>
+    <Space.Compact block>
       <Tooltip title="When enabled, the link is shortened automatically.">
         <Button
           type={showShortLink ? "primary" : "default"}

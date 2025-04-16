@@ -1,13 +1,13 @@
-// The typings are defined in effect-generators.js.flow.
-import { OxalisState } from "oxalis/store";
 import type { Action } from "oxalis/model/actions/actions";
-import { select as _select, take as _take } from "typed-redux-saga";
+// The typings are defined in effect-generators.js.flow.
+import type { OxalisState } from "oxalis/store";
 import type { Channel } from "redux-saga";
-import { ActionPattern } from "redux-saga/effects";
+import type { ActionPattern } from "redux-saga/effects";
+import { select as _select, take as _take } from "typed-redux-saga";
 
 // Ensures that the type of state is known. Otherwise,
 // a statement such as
-//   const tracing = yield* select((state) => state.tracing);
+//   const tracing = yield* select((state) => state.annotation);
 // would result in tracing being any.
 export function select<T>(fn: (state: OxalisState) => T) {
   return _select(fn);

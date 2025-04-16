@@ -1,17 +1,17 @@
-import _ from "lodash";
 import update from "immutability-helper";
-import type { Action } from "oxalis/model/actions/actions";
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4 } from "libs/mjs";
-import type { OxalisState } from "oxalis/store";
-import type { Vector3 } from "oxalis/constants";
-import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
-import {
-  getValidZoomRangeForUser,
-  ZOOM_STEP_INTERVAL,
-} from "oxalis/model/accessors/flycam_accessor";
-import Dimensions from "oxalis/model/dimensions";
 import * as Utils from "libs/utils";
+import _ from "lodash";
+import type { Vector3 } from "oxalis/constants";
+import {
+  ZOOM_STEP_INTERVAL,
+  getValidZoomRangeForUser,
+} from "oxalis/model/accessors/flycam_accessor";
+import type { Action } from "oxalis/model/actions/actions";
+import Dimensions from "oxalis/model/dimensions";
+import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
+import type { OxalisState } from "oxalis/store";
 import { getUnifiedAdditionalCoordinates } from "../accessors/dataset_accessor";
 
 function cloneMatrix(m: Matrix4x4): Matrix4x4 {
@@ -90,19 +90,19 @@ function rotateReducer(
   });
 }
 
-export function getMatrixScale(datasetScale: Vector3): Vector3 {
-  const scale = [1 / datasetScale[0], 1 / datasetScale[1], 1 / datasetScale[2]];
+export function getMatrixScale(voxelSize: Vector3): Vector3 {
+  const scale = [1 / voxelSize[0], 1 / voxelSize[1], 1 / voxelSize[2]];
   const maxScale = Math.max(scale[0], scale[1], scale[2]);
   const multi = 1 / maxScale;
   return [multi * scale[0], multi * scale[1], multi * scale[2]];
 }
 
-function resetMatrix(matrix: Matrix4x4, datasetScale: Vector3) {
-  const scale = getMatrixScale(datasetScale);
+function resetMatrix(matrix: Matrix4x4, voxelSize: Vector3) {
+  const scale = getMatrixScale(voxelSize);
   // Save position
   const position = [matrix[12], matrix[13], matrix[14]];
   // Reset rotation
-  const newMatrix = rotateOnAxis(M4x4.scale(scale, M4x4.identity, []), Math.PI, [0, 0, 1]);
+  const newMatrix = rotateOnAxis(M4x4.scale(scale, M4x4.identity(), []), Math.PI, [0, 0, 1]);
   // Restore position
   newMatrix[12] = position[0];
   newMatrix[13] = position[1];
@@ -113,7 +113,7 @@ function resetMatrix(matrix: Matrix4x4, datasetScale: Vector3) {
 function moveReducer(state: OxalisState, vector: Vector3): OxalisState {
   const matrix = cloneMatrix(state.flycam.currentMatrix);
 
-  if (!vector.includes(NaN)) {
+  if (!vector.includes(Number.NaN)) {
     matrix[12] += vector[0];
     matrix[13] += vector[1];
     matrix[14] += vector[2];
@@ -169,7 +169,7 @@ export function setDirectionReducer(state: OxalisState, direction: Vector3) {
 export function setRotationReducer(state: OxalisState, rotation: Vector3) {
   if (state.dataset != null) {
     const [x, y, z] = rotation;
-    let matrix = resetMatrix(state.flycam.currentMatrix, state.dataset.dataSource.scale);
+    let matrix = resetMatrix(state.flycam.currentMatrix, state.dataset.dataSource.scale.factor);
     matrix = rotateOnAxis(matrix, (-z * Math.PI) / 180, [0, 0, 1]);
     matrix = rotateOnAxis(matrix, (-y * Math.PI) / 180, [0, 1, 0]);
     matrix = rotateOnAxis(matrix, (-x * Math.PI) / 180, [1, 0, 0]);
@@ -191,7 +191,7 @@ function FlycamReducer(state: OxalisState, action: Action): OxalisState {
       return update(state, {
         flycam: {
           currentMatrix: {
-            $set: resetMatrix(state.flycam.currentMatrix, action.dataset.dataSource.scale),
+            $set: resetMatrix(state.flycam.currentMatrix, action.dataset.dataSource.scale.factor),
           },
         },
       });
@@ -289,7 +289,7 @@ function FlycamReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "MOVE_FLYCAM": {
-      if (action.vector.includes(NaN)) {
+      if (action.vector.includes(Number.NaN)) {
         // if the action vector is invalid, do not update
         return state;
       }
@@ -326,7 +326,7 @@ function FlycamReducer(state: OxalisState, action: Action): OxalisState {
         const { planeId, increaseSpeedWithZoom } = action;
         const vector = Dimensions.transDim(action.vector, planeId);
         const zoomFactor = increaseSpeedWithZoom ? state.flycam.zoomStep : 1;
-        const scaleFactor = getBaseVoxelFactors(dataset.dataSource.scale);
+        const scaleFactor = getBaseVoxelFactorsInUnit(dataset.dataSource.scale);
         const delta: Vector3 = [
           vector[0] * zoomFactor * scaleFactor[0],
           vector[1] * zoomFactor * scaleFactor[1],

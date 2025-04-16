@@ -1,10 +1,10 @@
 import { V3 } from "libs/mjs";
+import { mod } from "libs/utils"; // Attention: Note that the implemented paper uses the term "voxel" for the unit
 import type { Vector3 } from "oxalis/constants";
 import {
-  globalPositionToBucketPosition,
   getBucketExtent,
+  globalPositionToBucketPosition,
 } from "oxalis/model/helpers/position_converter";
-import { mod } from "libs/utils"; // Attention: Note that the implemented paper uses the term "voxel" for the unit
 // we usually refer to as bucket. This is reflected in comments as well as variable naming.
 // This module implements the algorithm presented in this paper:
 // "A Fast Voxel Traversal Algorithm for Ray Tracing" (http://www.cse.yorku.ca/~amana/research/grid.pdf)
@@ -14,7 +14,7 @@ import { mod } from "libs/utils"; // Attention: Note that the implemented paper 
 export default function traverse(
   startPosition: Vector3,
   endPosition: Vector3,
-  resolutions: Array<Vector3>,
+  mags: Array<Vector3>,
   zoomStep: number,
 ): Vector3[] {
   // The equation of the ray is →u + t→ v for t ≥ 0. The new traversal algorithm breaks down the ray into intervals of t,
@@ -22,11 +22,11 @@ export default function traverse(
   const u = startPosition;
   const v = V3.sub(endPosition, startPosition);
   // The initialization phase begins by identifying the voxel in which the ray origin, → u, is found.
-  const uBucket = globalPositionToBucketPosition(startPosition, resolutions, zoomStep, null);
-  const lastBucket = globalPositionToBucketPosition(endPosition, resolutions, zoomStep, null);
+  const uBucket = globalPositionToBucketPosition(startPosition, mags, zoomStep, null);
+  const lastBucket = globalPositionToBucketPosition(endPosition, mags, zoomStep, null);
   // The integer variables X and Y are initialized to the starting voxel coordinates.
   let [X, Y, Z] = uBucket;
-  const voxelSize = getBucketExtent(resolutions[zoomStep]);
+  const voxelSize = getBucketExtent(mags[zoomStep]);
   // In addition, the variables stepX and stepY are initialized to either 1 or -1 indicating whether X and Y are
   // incremented or decremented as the ray crosses voxel boundaries (this is determined by the sign of the x and y components of → v).
   const [stepX, stepY, stepZ] = v.map((el) => Math.sign(el));
@@ -177,5 +177,5 @@ function initializeTMax(
     Math.abs((step[0] > 0 ? negativeRest[0] : positiveRest[0]) / v[0]),
     Math.abs((step[1] > 0 ? negativeRest[1] : positiveRest[1]) / v[1]),
     Math.abs((step[2] > 0 ? negativeRest[2] : positiveRest[2]) / v[2]),
-  ].map((el) => (Number.isNaN(el) ? Infinity : el)) as Vector3;
+  ].map((el) => (Number.isNaN(el) ? Number.POSITIVE_INFINITY : el)) as Vector3;
 }

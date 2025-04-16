@@ -1,30 +1,28 @@
-import { getTeams, getTimeEntries, getTimeTrackingForUserSpans } from "admin/admin_rest_api";
-import { Card, Select, Spin, Button, DatePicker, type TimeRangePickerProps } from "antd";
-import { useFetch } from "libs/react_helpers";
-import _ from "lodash";
-import React, { useState } from "react";
 import { DownloadOutlined, FilterOutlined } from "@ant-design/icons";
+import { getTeams, getTimeEntries, getTimeTrackingForUserSpans } from "admin/admin_rest_api";
+import { Button, Card, DatePicker, Select, Spin, Table, type TimeRangePickerProps } from "antd";
+import FixedExpandableTable from "components/fixed_expandable_table";
+import LinkButton from "components/link_button";
+import dayjs, { type Dayjs } from "dayjs";
 import saveAs from "file-saver";
 import { formatMilliseconds } from "libs/format_utils";
-import ProjectAndAnnotationTypeDropdown, {
-  AnnotationTypeFilterEnum,
-} from "./project_and_annotation_type_dropdown";
-import { isUserAdminOrTeamManager, transformToCSVRow } from "libs/utils";
-import messages from "messages";
+import { useFetch } from "libs/react_helpers";
 import Toast from "libs/toast";
-import dayjs, { Dayjs } from "antd/node_modules/dayjs";
-import TimeTrackingDetailView from "./time_tracking_detail_view";
-import LinkButton from "components/link_button";
-import FixedExpandableTable from "components/fixed_expandable_table";
+import { isUserAdminOrTeamManager, transformToCSVRow } from "libs/utils";
 import * as Utils from "libs/utils";
-import { APITimeTrackingPerUser } from "types/api_flow_types";
+import messages from "messages";
+import { AnnotationStateFilterEnum, AnnotationTypeFilterEnum } from "oxalis/constants";
+import type { OxalisState } from "oxalis/store";
+import { useState } from "react";
 import { useSelector } from "react-redux";
-import { OxalisState } from "oxalis/store";
+import type { APITimeTrackingPerUser } from "types/api_flow_types";
+import ProjectAndAnnotationTypeDropdown from "./project_and_annotation_type_dropdown";
+import TimeTrackingDetailView from "./time_tracking_detail_view";
 const { RangePicker } = DatePicker;
 
 const TIMETRACKING_CSV_HEADER_PER_USER = ["userId,userFirstName,userLastName,timeTrackedInSeconds"];
 const TIMETRACKING_CSV_HEADER_SPANS = [
-  "userId,email,datasetOrga,datasetName,annotation,startTimeUnixTimestamp,durationInSeconds,taskId,projectName,taskTypeId,taskTypeSummary",
+  "userId,email,datasetOrga,datasetName,annotation,annotationState,startTimeUnixTimestamp,durationInSeconds,taskId,projectName,taskTypeId,taskTypeSummary",
 ];
 
 function TimeTrackingOverview() {
@@ -51,6 +49,7 @@ function TimeTrackingOverview() {
   const [selectedTypes, setSelectedTypes] = useState(
     AnnotationTypeFilterEnum.TASKS_AND_ANNOTATIONS_KEY,
   );
+  const [selectedState, setSelectedState] = useState(AnnotationStateFilterEnum.ALL);
   const [selectedTeams, setSelectedTeams] = useState(allTeams.map((team) => team.id));
   const filteredTimeEntries = useFetch(
     async () => {
@@ -60,13 +59,14 @@ function TimeTrackingOverview() {
         endDate.valueOf(),
         selectedTeams,
         selectedTypes,
+        selectedState,
         selectedProjectIds,
       );
       setIsFetching(false);
       return filteredEntries;
     },
     [],
-    [selectedTeams, selectedTypes, selectedProjectIds, startDate, endDate],
+    [selectedTeams, selectedTypes, selectedState, selectedProjectIds, startDate, endDate],
   );
   const filterStyle = { marginInline: 10 };
 
@@ -75,6 +75,7 @@ function TimeTrackingOverview() {
     start: Dayjs,
     end: Dayjs,
     annotationTypes: AnnotationTypeFilterEnum,
+    selectedState: AnnotationStateFilterEnum,
     projectIds: string[] | null | undefined,
   ) => {
     const timeSpans = await getTimeTrackingForUserSpans(
@@ -82,6 +83,7 @@ function TimeTrackingOverview() {
       start.valueOf(),
       end.valueOf(),
       annotationTypes,
+      selectedState,
       projectIds,
     );
     const timeEntriesAsString = timeSpans
@@ -92,6 +94,7 @@ function TimeTrackingOverview() {
           row.datasetOrganization,
           row.datasetName,
           row.annotationId,
+          row.annotationState,
           row.timeSpanCreated,
           Math.ceil(row.timeSpanTimeMillis / 1000),
           row.taskId,
@@ -187,16 +190,51 @@ function TimeTrackingOverview() {
         return (
           <LinkButton
             onClick={async () => {
-              downloadTimeSpans(user.id, startDate, endDate, selectedTypes, selectedProjectIds);
+              downloadTimeSpans(
+                user.id,
+                startDate,
+                endDate,
+                selectedTypes,
+                selectedState,
+                selectedProjectIds,
+              );
             }}
+            icon={<DownloadOutlined />}
           >
-            <DownloadOutlined className="icon-margin-right" />
             Download time spans
           </LinkButton>
         );
       },
     },
   ];
+
+  const getSummaryRow = (pageData: readonly APITimeTrackingPerUser[]) => {
+    if (pageData.length === 0) {
+      return null;
+    }
+    let totalNumberOfTasksAndAnnotations = 0;
+    let totalTimeMs = 0;
+    pageData.forEach(({ timeMillis, annotationCount }) => {
+      totalNumberOfTasksAndAnnotations += annotationCount;
+      totalTimeMs += timeMillis;
+    });
+    return (
+      <>
+        <Table.Summary.Row>
+          <Table.Summary.Cell index={0} />
+          <Table.Summary.Cell index={1}>
+            <b>Total</b>
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={2}> {totalNumberOfTasksAndAnnotations} </Table.Summary.Cell>
+          <Table.Summary.Cell index={3}>
+            {formatMilliseconds(totalTimeMs / totalNumberOfTasksAndAnnotations)}
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={4}> {formatMilliseconds(totalTimeMs)}</Table.Summary.Cell>
+          <Table.Summary.Cell index={5} />
+        </Table.Summary.Row>
+      </>
+    );
+  };
 
   return (
     <Card
@@ -212,6 +250,8 @@ function TimeTrackingOverview() {
         selectedProjectIds={selectedProjectIds}
         setSelectedAnnotationType={setSelectedTypes}
         selectedAnnotationType={selectedTypes}
+        selectedAnnotationState={selectedState}
+        setSelectedAnnotationState={setSelectedState}
         style={{ ...filterStyle }}
       />
       <Select
@@ -236,7 +276,7 @@ function TimeTrackingOverview() {
         style={filterStyle}
         value={[startDate, endDate]}
         presets={rangePresets}
-        onChange={(dates: null | (Dayjs | null)[]) => {
+        onChange={(dates: [Dayjs | null, Dayjs | null] | null) => {
           if (dates == null || dates[0] == null || dates[1] == null) return;
           if (Math.abs(dates[0].diff(dates[1], "days")) > 3 * 31) {
             Toast.error(messages["timetracking.date_range_too_long"]);
@@ -262,6 +302,7 @@ function TimeTrackingOverview() {
                 userId={entry.user.id}
                 dateRange={[startDate.valueOf(), endDate.valueOf()]}
                 annotationType={selectedTypes}
+                annotationState={selectedState}
                 projectIds={selectedProjectIds}
               />
             ),
@@ -269,6 +310,7 @@ function TimeTrackingOverview() {
           locale={{
             emptyText: renderPlaceholder(),
           }}
+          summary={getSummaryRow}
         />
       </Spin>
       <Button

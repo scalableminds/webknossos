@@ -1,5 +1,5 @@
 import type { AnnotationTool, OrthoView, Vector3 } from "oxalis/constants";
-import type { OxalisState, BorderOpenStatus, Theme } from "oxalis/store";
+import type { BorderOpenStatus, OxalisState, Theme } from "oxalis/store";
 import type { StartAIJobModalState } from "oxalis/view/action-bar/starting_job_modals";
 
 type SetDropzoneModalVisibilityAction = ReturnType<typeof setDropzoneModalVisibilityAction>;
@@ -14,6 +14,7 @@ export type CycleToolAction = ReturnType<typeof cycleToolAction>;
 type SetThemeAction = ReturnType<typeof setThemeAction>;
 type SetDownloadModalVisibilityAction = ReturnType<typeof setDownloadModalVisibilityAction>;
 type SetShareModalVisibilityAction = ReturnType<typeof setShareModalVisibilityAction>;
+type SetIsWkReadyAction = ReturnType<typeof setIsWkReadyAction>;
 type SetBusyBlockingInfoAction = ReturnType<typeof setBusyBlockingInfoAction>;
 type SetPythonClientModalVisibilityAction = ReturnType<typeof setPythonClientModalVisibilityAction>;
 type SetAIJobModalStateAction = ReturnType<typeof setAIJobModalStateAction>;
@@ -27,10 +28,15 @@ type SetIsMeasuringAction = ReturnType<typeof setIsMeasuringAction>;
 type SetNavbarHeightAction = ReturnType<typeof setNavbarHeightAction>;
 type ShowContextMenuAction = ReturnType<typeof showContextMenuAction>;
 type HideContextMenuAction = ReturnType<typeof hideContextMenuAction>;
+type SetActiveUserBoundingBoxId = ReturnType<typeof setActiveUserBoundingBoxId>;
+type SetGlobalProgressAction = ReturnType<typeof setGlobalProgressAction>;
 
 type SetRenderAnimationModalVisibilityAction = ReturnType<
   typeof setRenderAnimationModalVisibilityAction
 >;
+type SetUserScriptsModalVisibilityAction = ReturnType<typeof setUserScriptsModalVisibilityAction>;
+type SetZarrLinksModalVisibilityAction = ReturnType<typeof setZarrLinksModalVisibilityAction>;
+type SetMergeModalVisibilityAction = ReturnType<typeof setMergeModalVisibilityAction>;
 
 export type UiAction =
   | SetDropzoneModalVisibilityAction
@@ -48,7 +54,11 @@ export type UiAction =
   | SetShareModalVisibilityAction
   | SetAIJobModalStateAction
   | SetRenderAnimationModalVisibilityAction
+  | SetMergeModalVisibilityAction
+  | SetUserScriptsModalVisibilityAction
+  | SetZarrLinksModalVisibilityAction
   | SetBusyBlockingInfoAction
+  | SetIsWkReadyAction
   | EnterAction
   | EscapeAction
   | SetQuickSelectStateAction
@@ -58,7 +68,9 @@ export type UiAction =
   | SetIsMeasuringAction
   | SetNavbarHeightAction
   | ShowContextMenuAction
-  | HideContextMenuAction;
+  | HideContextMenuAction
+  | SetActiveUserBoundingBoxId
+  | SetGlobalProgressAction;
 
 export const setDropzoneModalVisibilityAction = (visible: boolean) =>
   ({
@@ -130,6 +142,21 @@ export const setRenderAnimationModalVisibilityAction = (visible: boolean) =>
     type: "SET_CREATE_ANIMATION_MODAL_VISIBILITY",
     visible,
   }) as const;
+export const setMergeModalVisibilityAction = (visible: boolean) =>
+  ({
+    type: "SET_MERGE_MODAL_VISIBILITY",
+    visible,
+  }) as const;
+export const setUserScriptsModalVisibilityAction = (visible: boolean) =>
+  ({
+    type: "SET_USER_SCRIPTS_MODAL_VISIBILITY",
+    visible,
+  }) as const;
+export const setZarrLinksModalVisibilityAction = (visible: boolean) =>
+  ({
+    type: "SET_ZARR_LINKS_MODAL_VISIBILITY",
+    visible,
+  }) as const;
 export const setBusyBlockingInfoAction = (isBusy: boolean, reason?: string) =>
   ({
     type: "SET_BUSY_BLOCKING_INFO_ACTION",
@@ -138,6 +165,12 @@ export const setBusyBlockingInfoAction = (isBusy: boolean, reason?: string) =>
       reason,
     },
   }) as const;
+export const setIsWkReadyAction = (isReady: boolean) =>
+  ({
+    type: "SET_IS_WK_READY",
+    isReady,
+  }) as const;
+
 export const setPythonClientModalVisibilityAction = (visible: boolean) =>
   ({
     type: "SET_PYTHON_MODAL_VISIBILITY",
@@ -210,3 +243,17 @@ export const hideContextMenuAction = () =>
   ({
     type: "HIDE_CONTEXT_MENU",
   }) as const;
+
+export const setActiveUserBoundingBoxId = (id: number | null) => {
+  return {
+    type: "SET_ACTIVE_USER_BOUNDING_BOX_ID",
+    id,
+  } as const;
+};
+
+export const setGlobalProgressAction = (value: number) => {
+  return {
+    type: "SET_GLOBAL_PROGRESS",
+    value,
+  } as const;
+};

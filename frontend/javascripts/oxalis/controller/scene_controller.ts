@@ -1,6 +1,5 @@
-import * as THREE from "three";
 import app from "app";
-import Maybe from "data.maybe";
+import type Maybe from "data.maybe";
 import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 import window from "libs/window";
@@ -17,9 +16,9 @@ import constants, {
   OrthoViewValuesWithoutTDView,
   TDViewDisplayModeEnum,
 } from "oxalis/constants";
-import { getRenderer } from "oxalis/controller/renderer";
+import { destroyRenderer, getRenderer } from "oxalis/controller/renderer";
 import { setSceneController } from "oxalis/controller/scene_controller_provider";
-import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
+import type ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import Cube from "oxalis/geometries/cube";
 import {
   ContourGeometry,
@@ -33,8 +32,8 @@ import {
   getDatasetBoundingBox,
   getLayerBoundingBox,
   getLayerNameToIsDisabled,
-  getTransformsForLayerOrNull,
 } from "oxalis/model/accessors/dataset_accessor";
+import { getTransformsForLayerOrNull } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import { getActiveMagIndicesForLayers, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
@@ -42,10 +41,11 @@ import { getPlaneScalingFactor } from "oxalis/model/accessors/view_mode_accessor
 import { sceneControllerReadyAction } from "oxalis/model/actions/actions";
 import Dimensions from "oxalis/model/dimensions";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import { getVoxelPerNM } from "oxalis/model/scaleinfo";
+import { getVoxelPerUnit } from "oxalis/model/scaleinfo";
 import { Model } from "oxalis/singletons";
 import type { OxalisState, SkeletonTracing, UserBoundingBox } from "oxalis/store";
 import Store from "oxalis/store";
+import * as THREE from "three";
 import SegmentMeshController from "./segment_mesh_controller";
 
 const CUBE_COLOR = 0x999999;
@@ -73,9 +73,8 @@ class SceneController {
   renderer!: THREE.WebGLRenderer;
   scene!: THREE.Scene;
   rootGroup!: THREE.Object3D;
-  // Group for all meshes including a light.
-  meshesRootGroup!: THREE.Object3D;
   segmentMeshController: SegmentMeshController;
+  storePropertyUnsubscribers: Array<() => void>;
 
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   // element depending on the provided flycam.
@@ -89,6 +88,7 @@ class SceneController {
     };
     this.planeShift = [0, 0, 0];
     this.segmentMeshController = new SegmentMeshController();
+    this.storePropertyUnsubscribers = [];
   }
 
   initialize() {
@@ -104,15 +104,14 @@ class SceneController {
     this.rootGroup = new THREE.Object3D();
     this.rootGroup.add(this.getRootNode());
 
-    this.meshesRootGroup = new THREE.Group();
     this.highlightedBBoxId = null;
-    // The dimension(s) with the highest resolution will not be distorted
-    this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.dataSource.scale));
+    // The dimension(s) with the highest mag will not be distorted
+    this.rootGroup.scale.copy(
+      new THREE.Vector3(...Store.getState().dataset.dataSource.scale.factor),
+    );
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.rootGroup);
     this.scene.add(this.segmentMeshController.meshesLODRootGroup);
-    this.scene.add(this.meshesRootGroup);
-    this.rootGroup.add(new THREE.DirectionalLight());
     this.setupDebuggingMethods();
   }
 
@@ -123,13 +122,13 @@ class SceneController {
     window.addBucketMesh = (
       position: Vector3,
       zoomStep: number,
-      resolution: Vector3,
+      mag: Vector3,
       optColor?: string,
     ) => {
       const bucketSize = [
-        constants.BUCKET_WIDTH * resolution[0],
-        constants.BUCKET_WIDTH * resolution[1],
-        constants.BUCKET_WIDTH * resolution[2],
+        constants.BUCKET_WIDTH * mag[0],
+        constants.BUCKET_WIDTH * mag[1],
+        constants.BUCKET_WIDTH * mag[2],
       ];
       const boxGeometry = new THREE.BoxGeometry(...bucketSize);
       const edgesGeometry = new THREE.EdgesGeometry(boxGeometry);
@@ -214,7 +213,7 @@ class SceneController {
       isHighlighted: false,
     });
     this.datasetBoundingBox.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
-    const taskBoundingBox = getSomeTracing(state.tracing).boundingBox;
+    const taskBoundingBox = getSomeTracing(state.annotation).boundingBox;
     this.buildTaskingBoundingBox(taskBoundingBox);
 
     this.contour = new ContourGeometry();
@@ -232,8 +231,8 @@ class SceneController {
       .getMeshes()
       .forEach((mesh) => this.annotationToolsGeometryGroup.add(mesh));
 
-    if (state.tracing.skeleton != null) {
-      this.addSkeleton((_state) => getSkeletonTracing(_state.tracing), true);
+    if (state.annotation.skeleton != null) {
+      this.addSkeleton((_state) => getSkeletonTracing(_state.annotation), true);
     }
 
     this.planes = {
@@ -396,7 +395,7 @@ class SceneController {
 
   setClippingDistance(value: number): void {
     // convert nm to voxel
-    const voxelPerNMVector = getVoxelPerNM(Store.getState().dataset.dataSource.scale);
+    const voxelPerNMVector = getVoxelPerUnit(Store.getState().dataset.dataSource.scale);
     V3.scale(voxelPerNMVector, value, this.planeShift);
     app.vent.emit("rerender");
   }
@@ -530,41 +529,80 @@ class SceneController {
     this.taskBoundingBox?.setVisibility(true);
   }
 
+  destroy() {
+    // @ts-ignore
+    window.addBucketMesh = undefined;
+    // @ts-ignore
+    window.addVoxelMesh = undefined;
+    // @ts-ignore
+    window.addLine = undefined;
+    // @ts-ignore
+    window.removeLines = undefined;
+    // @ts-ignore
+    window.removeBucketMesh = undefined;
+
+    for (const skeletonId of Object.keys(this.skeletons)) {
+      this.removeSkeleton(Number.parseInt(skeletonId, 10));
+    }
+
+    for (const fn of this.storePropertyUnsubscribers) {
+      fn();
+    }
+    this.storePropertyUnsubscribers = [];
+
+    destroyRenderer();
+    // @ts-ignore
+    this.renderer = null;
+
+    this.datasetBoundingBox.destroy();
+    this.userBoundingBoxes.forEach((cube) => cube.destroy());
+    Object.values(this.layerBoundingBoxes).forEach((cube) => cube.destroy());
+    this.taskBoundingBox?.destroy();
+
+    for (const plane of _.values(this.planes)) {
+      plane.destroy();
+    }
+
+    this.rootNode = new THREE.Object3D();
+  }
+
   bindToEvents(): void {
-    listenToStoreProperty(
-      (storeState) => storeState.userConfiguration.clippingDistance,
-      (clippingDistance) => this.setClippingDistance(clippingDistance),
-    );
-    listenToStoreProperty(
-      (storeState) => storeState.userConfiguration.displayCrosshair,
-      (displayCrosshair) => this.setDisplayCrosshair(displayCrosshair),
-    );
-    listenToStoreProperty(
-      (storeState) => storeState.datasetConfiguration.interpolation,
-      (interpolation) => this.setInterpolation(interpolation),
-    );
-    listenToStoreProperty(
-      (storeState) => getSomeTracing(storeState.tracing).userBoundingBoxes,
-      (bboxes) => this.setUserBoundingBoxes(bboxes),
-    );
-    listenToStoreProperty(
-      (storeState) => getDataLayers(storeState.dataset),
-      () => this.updateLayerBoundingBoxes(),
-    );
-    listenToStoreProperty(
-      (storeState) => storeState.datasetConfiguration.nativelyRenderedLayerName,
-      () => this.updateLayerBoundingBoxes(),
-    );
-    listenToStoreProperty(
-      (storeState) => getSomeTracing(storeState.tracing).boundingBox,
-      (bb) => this.buildTaskingBoundingBox(bb),
-    );
-    listenToStoreProperty(
-      (storeState) =>
-        storeState.tracing.skeleton ? storeState.tracing.skeleton.showSkeletons : false,
-      (showSkeletons) => this.setSkeletonGroupVisibility(showSkeletons),
-      true,
-    );
+    this.storePropertyUnsubscribers = [
+      listenToStoreProperty(
+        (storeState) => storeState.userConfiguration.clippingDistance,
+        (clippingDistance) => this.setClippingDistance(clippingDistance),
+      ),
+      listenToStoreProperty(
+        (storeState) => storeState.userConfiguration.displayCrosshair,
+        (displayCrosshair) => this.setDisplayCrosshair(displayCrosshair),
+      ),
+      listenToStoreProperty(
+        (storeState) => storeState.datasetConfiguration.interpolation,
+        (interpolation) => this.setInterpolation(interpolation),
+      ),
+      listenToStoreProperty(
+        (storeState) => getSomeTracing(storeState.annotation).userBoundingBoxes,
+        (bboxes) => this.setUserBoundingBoxes(bboxes),
+      ),
+      listenToStoreProperty(
+        (storeState) => getDataLayers(storeState.dataset),
+        () => this.updateLayerBoundingBoxes(),
+      ),
+      listenToStoreProperty(
+        (storeState) => storeState.datasetConfiguration.nativelyRenderedLayerName,
+        () => this.updateLayerBoundingBoxes(),
+      ),
+      listenToStoreProperty(
+        (storeState) => getSomeTracing(storeState.annotation).boundingBox,
+        (bb) => this.buildTaskingBoundingBox(bb),
+      ),
+      listenToStoreProperty(
+        (storeState) =>
+          storeState.annotation.skeleton ? storeState.annotation.skeleton.showSkeletons : false,
+        (showSkeletons) => this.setSkeletonGroupVisibility(showSkeletons),
+        true,
+      ),
+    ];
   }
 }
 

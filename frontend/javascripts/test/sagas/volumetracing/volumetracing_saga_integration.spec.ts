@@ -1,13 +1,13 @@
 /* eslint-disable no-await-in-loop */
 import "test/sagas/saga_integration.mock";
 import _ from "lodash";
-import {
+import Constants, {
   AnnotationToolEnum,
   ContourModeEnum,
   FillModeEnum,
   OrthoViews,
   OverwriteModeEnum,
-  Vector3,
+  type Vector3,
 } from "oxalis/constants";
 import { __setupOxalis, createBucketResponseFunction } from "test/helpers/apiHelpers";
 import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
@@ -15,7 +15,7 @@ import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Store from "oxalis/store";
 import mockRequire from "mock-require";
-import anyTest, { ExecutionContext, TestInterface } from "ava";
+import anyTest, { type ExecutionContext, type TestFn } from "ava";
 import { V3 } from "libs/mjs";
 import dummyUser from "test/fixtures/dummy_user";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
@@ -26,11 +26,11 @@ import {
   setSegmentGroupsAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import { type ModelType } from "oxalis/model";
-import { type RequestType } from "libs/request";
-import { type ApiInterface } from "oxalis/api/api_latest";
-import { type DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import type { ModelType } from "oxalis/model";
+import type { RequestType } from "libs/request";
+import type { ApiInterface } from "oxalis/api/api_latest";
+import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
+import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 
 const { dispatchUndoAsync, dispatchRedoAsync, discardSaveQueuesAction } = mockRequire.reRequire(
   "oxalis/model/actions/save_actions",
@@ -58,7 +58,7 @@ type Context = {
   setSlowCompression: (b: boolean) => void;
   api: ApiInterface;
 };
-const test: TestInterface<Context> = anyTest as any;
+const test = anyTest as TestFn<Context>;
 
 test.beforeEach(async (t) => {
   // Setup oxalis, this will execute model.fetch(...) and initialize the store with the tracing, etc.
@@ -176,9 +176,6 @@ test.serial("Executing a floodfill in mag 1", async (t) => {
         min: [32, 32, 32],
         max: [64, 64, 64],
       }),
-      {
-        id: `floodfill_mag1_${zoomStep}`,
-      },
     );
   }
 });
@@ -277,6 +274,7 @@ test.serial("Executing a floodfill in mag 2", async (t) => {
     );
   }
 });
+
 test.serial("Executing a floodfill in mag 1 (long operation)", async (t) => {
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
     Uint16Array,
@@ -294,6 +292,8 @@ test.serial("Executing a floodfill in mag 1 (long operation)", async (t) => {
   Store.dispatch(updateUserSettingAction("fillMode", FillModeEnum._3D));
   await dispatchFloodfillAsync(Store.dispatch, paintCenter, OrthoViews.PLANE_XY);
 
+  const EXPECTED_HALF_EXTENT = V3.scale(Constants.FLOOD_FILL_EXTENTS[FillModeEnum._3D], 0.5);
+
   async function assertFloodFilledState() {
     t.is(
       await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter, 0),
@@ -301,8 +301,8 @@ test.serial("Executing a floodfill in mag 1 (long operation)", async (t) => {
     );
     t.false(hasRootSagaCrashed());
     const cuboidData = await t.context.api.data.getDataForBoundingBox(volumeTracingLayerName, {
-      min: [128 - 64, 128 - 64, 128 - 32],
-      max: [128 + 64, 128 + 64, 128 + 32],
+      min: V3.sub(paintCenter, EXPECTED_HALF_EXTENT),
+      max: V3.add(paintCenter, EXPECTED_HALF_EXTENT),
     });
     // There should be no item which does not equal floodingCellId
     t.is(
@@ -327,7 +327,7 @@ test.serial("Executing a floodfill in mag 1 (long operation)", async (t) => {
 
   // Assert state after flood-fill
   await assertFloodFilledState();
-  // Undo created bounding box by flood fill and flood fill and assert initial state.
+  // Undo [the bounding box created by the flood fill] and [the flood fill itself] and assert initial state.
   await dispatchUndoAsync(Store.dispatch);
   await dispatchUndoAsync(Store.dispatch);
   await assertInitialState();
@@ -422,9 +422,6 @@ test.serial("Brushing/Tracing with a new segment id should update the bucket dat
       min: [0, 0, 0],
       max: [32, 32, 32],
     }),
-    {
-      id: "volumetracing_brush_without_fallback_data",
-    },
   );
 });
 test.serial("Brushing/Tracing with already existing backend data", async (t) => {
@@ -467,11 +464,9 @@ test.serial("Brushing/Tracing with already existing backend data", async (t) => 
       min: [0, 0, 0],
       max: [32, 32, 32],
     }),
-    {
-      id: "volumetracing_brush_with_fallback_data",
-    },
   );
 });
+
 // The binary parameters control whether the test will assert additional
 // constraints in between. Since getDataValue() has the side effect of awaiting
 // the loaded bucket, the test hits different execution paths. For example,
@@ -665,6 +660,60 @@ test.serial("Brushing/Tracing with undo (II)", async (t) => {
   t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [1, 0, 0]), newCellId + 1);
   t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [5, 0, 0]), oldCellId);
 });
+
+test.serial("Brushing with undo and garbage collection", async (t: ExecutionContext<Context>) => {
+  const oldCellId = 11;
+  t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
+    Uint16Array,
+    oldCellId,
+    500,
+  );
+  // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
+  // function.
+  await t.context.api.data.reloadAllBuckets();
+  const paintCenter = [0, 0, 0] as Vector3;
+  const brushSize = 10;
+  const newCellId = 2;
+  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
+  Store.dispatch(updateUserSettingAction("brushSize", brushSize));
+  Store.dispatch(setPositionAction([0, 0, 0]));
+  Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH));
+  // Brush with ${newCellId}
+  Store.dispatch(setActiveCellAction(newCellId));
+  Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
+  Store.dispatch(addToLayerAction(paintCenter));
+  Store.dispatch(finishEditingAction());
+  // Brush with ${newCellId + 1}
+  Store.dispatch(setActiveCellAction(newCellId + 1));
+  Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
+  Store.dispatch(addToLayerAction(paintCenter));
+  Store.dispatch(finishEditingAction());
+
+  t.is(
+    await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter),
+    newCellId + 1,
+    "Before undo, there should be newCellId + 1",
+  );
+
+  await t.context.api.tracing.save();
+
+  t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
+    Uint16Array,
+    newCellId + 1,
+    500,
+  );
+
+  const cube = t.context.api.data.model.getCubeByLayerName(volumeTracingLayerName);
+  cube.collectAllBuckets();
+
+  await dispatchUndoAsync(Store.dispatch);
+
+  t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter), newCellId);
+
+  await dispatchRedoAsync(Store.dispatch);
+  t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter), newCellId + 1);
+});
+
 test.serial("Brushing/Tracing with upsampling to unloaded data", async (t) => {
   const oldCellId = 11;
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
@@ -893,7 +942,7 @@ test.serial("Undo for deleting segment group (without recursion)", async (t) => 
   );
 
   const state = Store.getState();
-  const tracing = state.tracing.volumes[0];
+  const tracing = state.annotation.volumes[0];
   t.is(tracing.segmentGroups.length, 0);
   t.is(tracing.segments.size(), 4);
 
@@ -904,7 +953,7 @@ test.serial("Undo for deleting segment group (without recursion)", async (t) => 
   await dispatchUndoAsync(Store.dispatch);
 
   const stateRestored = Store.getState();
-  const tracingRestored = stateRestored.tracing.volumes[0];
+  const tracingRestored = stateRestored.annotation.volumes[0];
   t.is(tracingRestored.segmentGroups.length, 2);
   t.is(tracingRestored.segments.size(), 4);
 
@@ -945,14 +994,14 @@ test.serial("Undo for deleting segment group (with recursion)", async (t) => {
   );
 
   const state = Store.getState();
-  const tracing = state.tracing.volumes[0];
+  const tracing = state.annotation.volumes[0];
   t.is(tracing.segmentGroups.length, 0);
   t.is(tracing.segments.size(), 0);
 
   await dispatchUndoAsync(Store.dispatch);
 
   const stateRestored = Store.getState();
-  const tracingRestored = stateRestored.tracing.volumes[0];
+  const tracingRestored = stateRestored.annotation.volumes[0];
   t.is(tracingRestored.segmentGroups.length, 1);
   t.is(tracingRestored.segmentGroups[0]?.children.length || 0, 1);
   t.is(tracingRestored.segments.size(), 4);
@@ -994,7 +1043,7 @@ test.serial("Undo for deleting segment group (bug repro)", async (t) => {
   Store.dispatch(updateSegmentAction(3, { groupId: 2 }, volumeTracingLayerName));
   Store.dispatch(updateSegmentAction(4, { groupId: 2 }, volumeTracingLayerName));
 
-  t.is(Store.getState().tracing.volumes[0].segmentGroups.length, 2);
+  t.is(Store.getState().annotation.volumes[0].segmentGroups.length, 2);
 
   // Delete everything
   Store.dispatch(
@@ -1008,14 +1057,14 @@ test.serial("Undo for deleting segment group (bug repro)", async (t) => {
   );
 
   const state = Store.getState();
-  const tracing = state.tracing.volumes[0];
+  const tracing = state.annotation.volumes[0];
   t.is(tracing.segmentGroups.length, 0);
   t.is(tracing.segments.size(), 0);
 
   // Undo again
   await dispatchUndoAsync(Store.dispatch);
 
-  t.is(Store.getState().tracing.volumes[0].segmentGroups.length, 2);
+  t.is(Store.getState().annotation.volumes[0].segmentGroups.length, 2);
 
   // Delete without recursion
   Store.dispatch(
@@ -1031,7 +1080,7 @@ test.serial("Undo for deleting segment group (bug repro)", async (t) => {
   await dispatchUndoAsync(Store.dispatch);
 
   const stateRestored = Store.getState();
-  const tracingRestored = stateRestored.tracing.volumes[0];
+  const tracingRestored = stateRestored.annotation.volumes[0];
   t.is(tracingRestored.segments.size(), 4);
   t.is(tracingRestored.segmentGroups.length, 2);
 

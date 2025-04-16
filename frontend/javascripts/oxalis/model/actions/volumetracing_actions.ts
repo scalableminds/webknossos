@@ -1,20 +1,24 @@
-import type { ServerEditableMapping, ServerVolumeTracing } from "types/api_flow_types";
-import type { Vector2, Vector3, OrthoView, ContourMode, BucketAddress } from "oxalis/constants";
-import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
-import type { Segment, SegmentGroup, SegmentMap } from "oxalis/store";
 import Deferred from "libs/async/deferred";
-import type { Dispatch } from "redux";
+import type { ContourMode, OrthoView, Vector2, Vector3 } from "oxalis/constants";
+import type { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
-import { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
+import type { NumberLike, Segment, SegmentGroup, SegmentMap } from "oxalis/store";
+import type { Dispatch } from "redux";
 import { batchActions } from "redux-batched-actions";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type {
+  BucketDataArray,
+  ServerEditableMapping,
+  ServerVolumeTracing,
+} from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
+import type BucketSnapshot from "../bucket_data_handling/bucket_snapshot";
 
 export type InitializeVolumeTracingAction = ReturnType<typeof initializeVolumeTracingAction>;
 export type InitializeEditableMappingAction = ReturnType<typeof initializeEditableMappingAction>;
 export type CreateCellAction = ReturnType<typeof createCellAction>;
 type StartEditingAction = ReturnType<typeof startEditingAction>;
 type AddToLayerAction = ReturnType<typeof addToLayerAction>;
-type FloodFillAction = ReturnType<typeof floodFillAction>;
+export type FloodFillAction = ReturnType<typeof floodFillAction>;
 export type PerformMinCutAction = ReturnType<typeof performMinCutAction>;
 type FinishEditingAction = ReturnType<typeof finishEditingAction>;
 export type SetActiveCellAction = ReturnType<typeof setActiveCellAction>;
@@ -26,7 +30,7 @@ export type ClickSegmentAction = ReturnType<typeof clickSegmentAction>;
 export type InterpolateSegmentationLayerAction = ReturnType<
   typeof interpolateSegmentationLayerAction
 >;
-export type MaybeUnmergedBucketLoadedPromise = null | Promise<BucketDataArray>;
+export type MaybeUnmergedBucketLoadedPromise = Promise<BucketDataArray> | null;
 export type AddBucketToUndoAction = ReturnType<typeof addBucketToUndoAction>;
 type RegisterLabelPointAction = ReturnType<typeof registerLabelPointAction>;
 type ResetContourAction = ReturnType<typeof resetContourAction>;
@@ -42,11 +46,15 @@ export type UpdateSegmentAction = ReturnType<typeof updateSegmentAction>;
 export type RemoveSegmentAction = ReturnType<typeof removeSegmentAction>;
 export type DeleteSegmentDataAction = ReturnType<typeof deleteSegmentDataAction>;
 export type SetSegmentGroupsAction = ReturnType<typeof setSegmentGroupsAction>;
-export type SetMappingIsEditableAction = ReturnType<typeof setMappingIsEditableAction>;
+export type SetExpandedSegmentGroupsAction = ReturnType<typeof setExpandedSegmentGroupsAction>;
+export type SetHasEditableMappingAction = ReturnType<typeof setHasEditableMappingAction>;
 export type SetMappingIsLockedAction = ReturnType<typeof setMappingIsLockedAction>;
+export type SetVolumeBucketDataHasChangedAction = ReturnType<
+  typeof setVolumeBucketDataHasChangedAction
+>;
 
 export type ComputeQuickSelectForRectAction = ReturnType<typeof computeQuickSelectForRectAction>;
-export type MaybePrefetchEmbeddingAction = ReturnType<typeof maybePrefetchEmbeddingAction>;
+export type ComputeQuickSelectForPointAction = ReturnType<typeof computeQuickSelectForPointAction>;
 export type FineTuneQuickSelectAction = ReturnType<typeof fineTuneQuickSelectAction>;
 export type CancelQuickSelectAction = ReturnType<typeof cancelQuickSelectAction>;
 export type ConfirmQuickSelectAction = ReturnType<typeof confirmQuickSelectAction>;
@@ -85,18 +93,20 @@ export type VolumeTracingAction =
   | RemoveSegmentAction
   | DeleteSegmentDataAction
   | SetSegmentGroupsAction
+  | SetExpandedSegmentGroupsAction
   | AddBucketToUndoAction
   | ImportVolumeTracingAction
   | SetLargestSegmentIdAction
   | SetSelectedSegmentsOrGroupAction
-  | SetMappingIsEditableAction
+  | SetHasEditableMappingAction
   | SetMappingIsLockedAction
   | InitializeEditableMappingAction
   | ComputeQuickSelectForRectAction
-  | MaybePrefetchEmbeddingAction
+  | ComputeQuickSelectForPointAction
   | FineTuneQuickSelectAction
   | CancelQuickSelectAction
   | ConfirmQuickSelectAction
+  | SetVolumeBucketDataHasChangedAction
   | BatchUpdateGroupsAndSegmentsAction;
 
 export const VolumeTracingSaveRelevantActions = [
@@ -105,14 +115,16 @@ export const VolumeTracingSaveRelevantActions = [
   "FINISH_ANNOTATION_STROKE",
   "UPDATE_SEGMENT",
   "SET_SEGMENT_GROUPS",
+  "SET_EXPANDED_SEGMENT_GROUPS",
   "REMOVE_SEGMENT",
   "SET_SEGMENTS",
   ...AllUserBoundingBoxActions,
-  // Note that the following two actions are defined in settings_actions.ts
+  // Note that the following three actions are defined in settings_actions.ts
   "SET_MAPPING",
   "SET_MAPPING_ENABLED",
+  "FINISH_MAPPING_INITIALIZATION_ACTION",
   "BATCH_UPDATE_GROUPS_AND_SEGMENTS",
-  "SET_MAPPING_IS_EDITABLE",
+  "SET_HAS_EDITABLE_MAPPING",
   "SET_MAPPING_IS_LOCKED",
 ];
 
@@ -227,29 +239,35 @@ export const setSegmentsAction = (segments: SegmentMap, layerName: string) =>
   }) as const;
 
 export const updateSegmentAction = (
-  segmentId: number,
+  segmentId: NumberLike,
   segment: Partial<Segment>,
   layerName: string,
   timestamp: number = Date.now(),
   createsNewUndoState: boolean = false,
-) =>
-  ({
+) => {
+  if (segmentId == null) {
+    throw new Error("Segment ID must not be null.");
+  }
+  return {
     type: "UPDATE_SEGMENT",
-    segmentId,
+    // TODO: Proper 64 bit support (#6921)
+    segmentId: Number(segmentId),
     segment,
     layerName,
     timestamp,
     createsNewUndoState,
-  }) as const;
+  } as const;
+};
 
 export const removeSegmentAction = (
-  segmentId: number,
+  segmentId: NumberLike,
   layerName: string,
   timestamp: number = Date.now(),
 ) =>
   ({
     type: "REMOVE_SEGMENT",
-    segmentId,
+    // TODO: Proper 64 bit support (#6921)
+    segmentId: Number(segmentId),
     layerName,
     timestamp,
   }) as const;
@@ -278,6 +296,16 @@ export const setSegmentGroupsAction = (
     segmentGroups,
     layerName,
     calledFromUndoSaga,
+  }) as const;
+
+export const setExpandedSegmentGroupsAction = (
+  expandedSegmentGroups: Set<string>,
+  layerName: string,
+) =>
+  ({
+    type: "SET_EXPANDED_SEGMENT_GROUPS",
+    expandedSegmentGroups,
+    layerName,
   }) as const;
 
 export const interpolateSegmentationLayerAction = () =>
@@ -319,20 +347,10 @@ export const setContourTracingModeAction = (mode: ContourMode) =>
     mode,
   }) as const;
 
-export const addBucketToUndoAction = (
-  zoomedBucketAddress: BucketAddress,
-  bucketData: BucketDataArray,
-  maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise,
-  pendingOperations: Array<(arg0: BucketDataArray) => void>,
-  tracingId: string,
-) =>
+export const addBucketToUndoAction = (bucketSnapshot: BucketSnapshot) =>
   ({
     type: "ADD_BUCKET_TO_UNDO",
-    zoomedBucketAddress,
-    bucketData,
-    maybeUnmergedBucketLoadedPromise,
-    pendingOperations: pendingOperations.slice(),
-    tracingId,
+    bucketSnapshot,
   }) as const;
 
 export const importVolumeTracingAction = () =>
@@ -357,14 +375,16 @@ export const dispatchFloodfillAsync = async (
   await readyDeferred.promise();
 };
 
-export const setMappingIsEditableAction = () =>
+export const setHasEditableMappingAction = (tracingId: string) =>
   ({
-    type: "SET_MAPPING_IS_EDITABLE",
+    type: "SET_HAS_EDITABLE_MAPPING",
+    tracingId,
   }) as const;
 
-export const setMappingIsLockedAction = () =>
+export const setMappingIsLockedAction = (tracingId: string) =>
   ({
     type: "SET_MAPPING_IS_LOCKED",
+    tracingId,
   }) as const;
 
 export const computeQuickSelectForRectAction = (
@@ -379,10 +399,14 @@ export const computeQuickSelectForRectAction = (
     quickSelectGeometry,
   }) as const;
 
-export const maybePrefetchEmbeddingAction = (startPosition: Vector3) =>
+export const computeQuickSelectForPointAction = (
+  position: Vector3,
+  quickSelectGeometry: QuickSelectGeometry,
+) =>
   ({
-    type: "MAYBE_PREFETCH_EMBEDDING",
-    startPosition,
+    type: "COMPUTE_QUICK_SELECT_FOR_POINT",
+    position,
+    quickSelectGeometry,
   }) as const;
 
 export const fineTuneQuickSelectAction = (
@@ -413,3 +437,9 @@ export const batchUpdateGroupsAndSegmentsAction = (actions: BatchableUpdateSegme
 export const cancelQuickSelectAction = () => ({ type: "CANCEL_QUICK_SELECT" }) as const;
 
 export const confirmQuickSelectAction = () => ({ type: "CONFIRM_QUICK_SELECT" }) as const;
+
+export const setVolumeBucketDataHasChangedAction = (tracingId: string) =>
+  ({
+    type: "SET_VOLUME_BUCKET_DATA_HAS_CHANGED",
+    tracingId,
+  }) as const;

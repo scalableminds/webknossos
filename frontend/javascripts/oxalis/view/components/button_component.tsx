@@ -1,18 +1,19 @@
-import { Button, ButtonProps, Tooltip } from "antd";
-import * as React from "react";
+import { Button, type ButtonProps } from "antd";
+import FastTooltip, { type FastTooltipPlacement } from "components/fast_tooltip";
 import _ from "lodash";
-import { TooltipPlacement } from "antd/lib/tooltip";
-type ButtonComponentProp = ButtonProps & {
+import * as React from "react";
+
+type ButtonComponentProps = ButtonProps & {
   faIcon?: string;
-  tooltipPlacement?: TooltipPlacement | undefined;
+  tooltipPlacement?: FastTooltipPlacement | undefined;
 };
 /*
  * A lightweight wrapper around <Button> to automatically blur the button
  * after it was clicked.
  */
 
-class ButtonComponent extends React.PureComponent<ButtonComponentProp> {
-  static defaultProps: ButtonComponentProp = {
+class ButtonComponent extends React.PureComponent<ButtonComponentProps> {
+  static defaultProps: ButtonComponentProps = {
     onClick: _.noop,
   };
 
@@ -51,13 +52,18 @@ class ButtonComponent extends React.PureComponent<ButtonComponentProp> {
         </Button>
       );
     return title != null ? (
-      <Tooltip title={title} placement={tooltipPlacement}>
+      <FastTooltip title={title} placement={tooltipPlacement}>
         {button}
-      </Tooltip>
+      </FastTooltip>
     ) : (
       button
     );
   }
+}
+
+export function ToggleButton(props: { active: boolean } & ButtonComponentProps) {
+  const { active, ...restProps } = props;
+  return <ButtonComponent type={active ? "primary" : "default"} {...restProps} />;
 }
 
 export default ButtonComponent;

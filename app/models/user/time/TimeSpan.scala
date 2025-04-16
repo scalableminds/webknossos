@@ -5,10 +5,10 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation.AnnotationState.AnnotationState
 import models.annotation.AnnotationType.AnnotationType
-import play.api.libs.json.{JsArray, JsObject, JsValue, Json}
+import play.api.libs.json.{JsObject, JsValue, Json}
 import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -96,7 +96,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                 AND a.state IN ${SqlToken.tupleFromList(annotationStates)}
                 GROUP BY a._id, t._id, p.name
               )
-              SELECT ti._annotation, ti._task, ti.projectName, ti.timeSummed, JSON_AGG(al.statistics) AS layerStatistics
+              SELECT ti._annotation, ti._task, ti.projectName, ti.timeSummed, JSON_OBJECT_AGG(al.tracingId, al.statistics) AS layerStatistics
               FROM timeSummedPerAnnotation ti
               JOIN webknossos.annotation_layers al ON al._annotation = ti._annotation
               GROUP BY ti._annotation, ti._task, ti.projectName, ti.timeSummed
@@ -104,7 +104,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           """.as[(String, Option[String], Option[String], Long, String)]
         )
         parsed = tuples.map { t =>
-          val layerStats: JsArray = Json.parse(t._5).validate[JsArray].getOrElse(Json.arr())
+          val layerStats: JsObject = Json.parse(t._5).validate[JsObject].getOrElse(Json.obj())
           Json.obj(
             "annotation" -> t._1,
             "task" -> t._2,
@@ -127,7 +127,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       val projectQuery = projectIdsFilterQuery(projectIds)
       for {
         tuples <- run(
-          q"""SELECT ts._user, mu.email, o.name, d.name, a._id, t._id, p.name, tt._id, tt.summary, ts._id, ts.created, ts.time
+          q"""SELECT ts._user, mu.email, o._id, d.name, a._id, a.state, t._id, p.name, tt._id, tt.summary, ts._id, ts.created, ts.time
               FROM webknossos.timespans_ ts
               JOIN webknossos.annotations_ a on ts._annotation = a._id
               JOIN webknossos.users_ u on ts._user = u._id
@@ -149,6 +149,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                     String,
                     String,
                     String,
+                    String,
                     Option[String],
                     Option[String],
                     Option[String],
@@ -161,6 +162,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   private def formatTimespanTuple(
       tuple: (String,
+              String,
               String,
               String,
               String,
@@ -178,13 +180,14 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       "datasetOrganization" -> tuple._3,
       "datasetName" -> tuple._4,
       "annotationId" -> tuple._5,
-      "taskId" -> tuple._6,
-      "projectName" -> tuple._7,
-      "taskTypeId" -> tuple._8,
-      "taskTypeSummary" -> tuple._9,
-      "timeSpanId" -> tuple._10,
-      "timeSpanCreated" -> tuple._11,
-      "timeSpanTimeMillis" -> tuple._12
+      "annotationState" -> tuple._6,
+      "taskId" -> tuple._7,
+      "projectName" -> tuple._8,
+      "taskTypeId" -> tuple._9,
+      "taskTypeSummary" -> tuple._10,
+      "timeSpanId" -> tuple._11,
+      "timeSpanCreated" -> tuple._12,
+      "timeSpanTimeMillis" -> tuple._13
     )
 
   private def projectIdsFilterQuery(projectIds: List[ObjectId]): SqlToken =

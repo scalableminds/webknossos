@@ -1,20 +1,21 @@
-import React, { useEffect, useMemo, useState } from "react";
 import { SyncOutlined } from "@ant-design/icons";
-import { Table, Progress, Tooltip, Button, Input } from "antd";
-import { Link } from "react-router-dom";
-import { getVoxelyticsWorkflows } from "admin/admin_rest_api";
-import {
-  VoxelyticsWorkflowListingRun,
-  VoxelyticsRunState,
-  VoxelyticsWorkflowListing,
-} from "types/api_flow_types";
-import { usePolling } from "libs/react_hooks";
-import { formatCountToDataAmountUnit, formatDateMedium, formatNumber } from "libs/format_utils";
-import Toast from "libs/toast";
-import { runStateToStatus, VX_POLLING_INTERVAL } from "./utils";
-import Persistence from "libs/persistence";
-import * as Utils from "libs/utils";
 import { PropTypes } from "@scalableminds/prop-types";
+import { getVoxelyticsWorkflows } from "admin/admin_rest_api";
+import { Button, Input, Progress, Table, Tooltip } from "antd";
+import { formatCountToDataAmountUnit, formatDateMedium, formatNumber } from "libs/format_utils";
+import Persistence from "libs/persistence";
+import { usePolling } from "libs/react_hooks";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import type React from "react";
+import { type Key, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  VoxelyticsRunState,
+  type VoxelyticsWorkflowListing,
+  type VoxelyticsWorkflowListingRun,
+} from "types/api_flow_types";
+import { VX_POLLING_INTERVAL, runStateToStatus } from "./utils";
 
 const { Search } = Input;
 
@@ -100,6 +101,7 @@ export default function WorkflowListView() {
       : run.hostUserName;
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies(getUserDisplayName):
   const renderRuns: Array<RenderRunInfo> = useMemo(
     () =>
       workflows.map((workflow) => ({
@@ -122,7 +124,7 @@ export default function WorkflowListView() {
           ...run,
         })),
       })),
-    [workflows, getUserDisplayName],
+    [workflows],
   );
 
   function renderProgress(run: RenderRunInfo) {
@@ -209,7 +211,7 @@ export default function WorkflowListView() {
               text: username || "",
               value: username || "",
             })),
-            onFilter: (value: string | number | boolean, run: RenderRunInfo) =>
+            onFilter: (value: Key | boolean, run: RenderRunInfo) =>
               run.userDisplayName?.startsWith(String(value)) || false,
             filterSearch: true,
           },
@@ -221,7 +223,7 @@ export default function WorkflowListView() {
               text: hostname,
               value: hostname,
             })),
-            onFilter: (value: string | number | boolean, run: RenderRunInfo) =>
+            onFilter: (value: Key | boolean, run: RenderRunInfo) =>
               run.hostName.startsWith(String(value)),
             filterSearch: true,
           },
@@ -257,14 +259,16 @@ export default function WorkflowListView() {
             key: "begin",
             defaultSortOrder: "descend",
             sorter: (a: RenderRunInfo, b: RenderRunInfo) =>
-              (a.beginTime?.getTime() ?? Infinity) - (b.beginTime?.getTime() ?? Infinity),
+              (a.beginTime?.getTime() ?? Number.POSITIVE_INFINITY) -
+              (b.beginTime?.getTime() ?? Number.POSITIVE_INFINITY),
             render: (run: RenderRunInfo) => run.beginTime && formatDateMedium(run.beginTime),
           },
           {
             title: "End",
             key: "end",
             sorter: (a: RenderRunInfo, b: RenderRunInfo) =>
-              (a.endTime?.getTime() ?? Infinity) - (b.endTime?.getTime() ?? Infinity),
+              (a.endTime?.getTime() ?? Number.POSITIVE_INFINITY) -
+              (b.endTime?.getTime() ?? Number.POSITIVE_INFINITY),
             render: (run: RenderRunInfo) => run.endTime && formatDateMedium(run.endTime),
           },
         ]}

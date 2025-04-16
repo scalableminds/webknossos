@@ -1,48 +1,63 @@
+import type TPS3D from "libs/thin_plate_spline";
 import _ from "lodash";
-import { MAPPING_TEXTURE_WIDTH } from "oxalis/model/bucket_data_handling/mappings";
 import type { Vector3 } from "oxalis/constants";
 import constants, { ViewModeValuesIndices, OrthoViewIndices } from "oxalis/constants";
+import Constants from "oxalis/constants";
+import { PLANE_SUBDIVISION } from "oxalis/geometries/plane";
+import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
+import { MAPPING_TEXTURE_WIDTH } from "oxalis/model/bucket_data_handling/mappings";
+import type { ElementClass } from "types/api_flow_types";
+import { getBlendLayersAdditive, getBlendLayersCover } from "./blending.glsl";
+import {
+  getAbsoluteCoords,
+  getMagnification,
+  getWorldCoordUVW,
+  isOutsideOfBoundingBox,
+} from "./coords.glsl";
+import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
 import {
   convertCellIdToRGB,
   getBrushOverlay,
   getCrossHairOverlay,
   getSegmentId,
+  getSegmentationAlphaIncrement,
 } from "./segmentation.glsl";
-import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
-import {
-  getAbsoluteCoords,
-  getResolution,
-  getWorldCoordUVW,
-  isOutsideOfBoundingBox,
-} from "./coords.glsl";
-import {
-  inverse,
-  div,
-  isNan,
-  transDim,
-  isFlightMode,
-  formatNumberAsGLSLFloat,
-  almostEq,
-} from "./utils.glsl";
 import compileShader from "./shader_module_system";
-import Constants from "oxalis/constants";
-import { PLANE_SUBDIVISION } from "oxalis/geometries/plane";
-import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
-import { getBlendLayersAdditive, getBlendLayersCover } from "./blending.glsl";
-import TPS3D from "libs/thin_plate_spline";
 import {
   generateCalculateTpsOffsetFunction,
   generateTpsInitialization,
 } from "./thin_plate_spline.glsl";
+import {
+  almostEq,
+  div,
+  formatNumberAsGLSLFloat,
+  glslTypeForElementClass,
+  inverse,
+  isFlightMode,
+  isNan,
+  scaleToFloat,
+  transDim,
+} from "./utils.glsl";
 
-type Params = {
+export type Params = {
   globalLayerCount: number;
   colorLayerNames: string[];
   orderedColorLayerNames: string[];
   segmentationLayerNames: string[];
-  textureLayerInfos: Record<string, { packingDegree: number; dataTextureCount: number }>;
-  resolutionsCount: number;
-  datasetScale: Vector3;
+  textureLayerInfos: Record<
+    string,
+    {
+      packingDegree: number;
+      dataTextureCount: number;
+      isSigned: boolean;
+      glslPrefix: "" | "i" | "u";
+      elementClass: ElementClass;
+      unsanitizedName: string;
+      isColor: boolean;
+    }
+  >;
+  magnificationsCount: number;
+  voxelSizeFactor: Vector3;
   isOrthogonal: boolean;
   tpsTransformPerLayer: Record<string, TPS3D>;
 };
@@ -52,8 +67,8 @@ uniform vec2 viewportExtent;
 
 uniform float activeMagIndices[<%= globalLayerCount %>];
 uniform uint availableLayerIndexToGlobalLayerIndex[<%= globalLayerCount %>];
-uniform vec3 allResolutions[<%= resolutionsCount %>];
-uniform uint resolutionCountCumSum[<%= globalLayerCount %>];
+uniform vec3 allMagnifications[<%= magnificationsCount %>];
+uniform uint magnificationCountCumSum[<%= globalLayerCount %>];
 
 uniform highp usampler2D lookup_texture;
 uniform highp uint lookup_seeds[3];
@@ -63,7 +78,7 @@ uniform highp uint LOOKUP_CUCKOO_ELEMENTS_PER_TEXEL;
 uniform highp uint LOOKUP_CUCKOO_TWIDTH;
 
 <% _.each(layerNamesWithSegmentation, function(name) { %>
-  uniform sampler2D <%= name %>_textures[<%= textureLayerInfos[name].dataTextureCount %>];
+  uniform highp <%= textureLayerInfos[name].glslPrefix %>sampler2D <%= name %>_textures[<%= textureLayerInfos[name].dataTextureCount %>];
   uniform float <%= name %>_data_texture_width;
   uniform float <%= name %>_alpha;
   uniform float <%= name %>_gammaCorrectionValue;
@@ -74,8 +89,8 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
 
 <% _.each(colorLayerNames, function(name) { %>
   uniform vec3 <%= name %>_color;
-  uniform float <%= name %>_min;
-  uniform float <%= name %>_max;
+  uniform <%= glslTypeForElementClass(textureLayerInfos[name].elementClass) %> <%= name %>_min;
+  uniform <%= glslTypeForElementClass(textureLayerInfos[name].elementClass) %> <%= name %>_max;
   uniform float <%= name %>_is_inverted;
 <% }) %>
 
@@ -83,27 +98,34 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
   // Custom color cuckoo table
   uniform highp usampler2D custom_color_texture;
   uniform highp uint custom_color_seeds[3];
-  uniform highp uint CUCKOO_ENTRY_CAPACITY;
-  uniform highp uint CUCKOO_ELEMENTS_PER_ENTRY;
-  uniform highp uint CUCKOO_ELEMENTS_PER_TEXEL;
-  uniform highp uint CUCKOO_TWIDTH;
+  uniform highp uint COLOR_CUCKOO_ENTRY_CAPACITY;
+  uniform highp uint COLOR_CUCKOO_ELEMENTS_PER_ENTRY;
+  uniform highp uint COLOR_CUCKOO_ELEMENTS_PER_TEXEL;
+  uniform highp uint COLOR_CUCKOO_TWIDTH;
 
-  uniform vec4 activeCellIdHigh;
-  uniform vec4 activeCellIdLow;
+  uniform uint activeCellIdHigh;
+  uniform uint activeCellIdLow;
   uniform bool isMouseInActiveViewport;
   uniform bool showBrush;
   uniform bool isProofreading;
   uniform bool isUnmappedSegmentHighlighted;
   uniform float segmentationPatternOpacity;
 
-  uniform bool isMappingEnabled;
-  uniform float mappingSize;
+  uniform bool shouldApplyMappingOnGPU;
+  uniform bool mappingIsPartial;
   uniform bool hideUnmappedIds;
-  uniform sampler2D segmentation_mapping_texture;
-  uniform sampler2D segmentation_mapping_lookup_texture;
+  uniform bool is_mapping_64bit;
+  uniform highp uint mapping_seeds[3];
+  uniform highp uint MAPPING_CUCKOO_ENTRY_CAPACITY;
+  uniform highp uint MAPPING_CUCKOO_ELEMENTS_PER_ENTRY;
+  uniform highp uint MAPPING_CUCKOO_ELEMENTS_PER_TEXEL;
+  uniform highp uint MAPPING_CUCKOO_TWIDTH;
+  uniform highp usampler2D segmentation_mapping_texture;
 <% } %>
 
 uniform float sphericalCapRadius;
+uniform bool selectiveVisibilityInProofreading;
+uniform bool selectiveSegmentVisibility;
 uniform float viewMode;
 uniform float alpha;
 uniform bool renderBucketIndices;
@@ -119,13 +141,15 @@ uniform bool isMouseInCanvas;
 uniform float brushSizeInPixel;
 uniform float planeID;
 uniform vec3 addressSpaceDimensions;
-uniform vec4 hoveredSegmentIdLow;
-uniform vec4 hoveredSegmentIdHigh;
+uniform uint hoveredSegmentIdLow;
+uniform uint hoveredSegmentIdHigh;
+uniform uint hoveredUnmappedSegmentIdLow;
+uniform uint hoveredUnmappedSegmentIdHigh;
 
 // For some reason, taking the dataset scale from the uniform results in imprecise
 // rendering of the brush circle (and issues in the arbitrary modes). That's why it
 // is directly inserted into the source via templating.
-const vec3 datasetScale = <%= formatVector3AsVec3(datasetScale) %>;
+const vec3 voxelSizeFactor = <%= formatVector3AsVec3(voxelSizeFactor) %>;
 
 const vec4 fallbackGray = vec4(0.5, 0.5, 0.5, 1.0);
 const float bucketWidth = <%= bucketWidth %>;
@@ -170,9 +194,10 @@ ${compileShader(
   hasSegmentation ? getBrushOverlay : null,
   hasSegmentation ? getSegmentId : null,
   hasSegmentation ? getCrossHairOverlay : null,
+  hasSegmentation ? getSegmentationAlphaIncrement : null,
   almostEq,
+  scaleToFloat,
 )}
-
 
 void main() {
   vec3 worldCoordUVW = getWorldCoordUVW();
@@ -190,14 +215,38 @@ void main() {
   vec4 data_color = vec4(0.0);
 
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
-    vec4 <%= segmentationName%>_id_low = vec4(0.);
-    vec4 <%= segmentationName%>_id_high = vec4(0.);
-    float <%= segmentationName%>_effective_alpha = <%= segmentationName %>_alpha * (1. - <%= segmentationName %>_unrenderable);
+    uint <%= segmentationName %>_id_low = 0u;
+    uint <%= segmentationName %>_id_high = 0u;
+    uint <%= segmentationName %>_unmapped_id_low = 0u;
+    uint <%= segmentationName %>_unmapped_id_high = 0u;
+    float <%= segmentationName %>_effective_alpha = <%= segmentationName %>_alpha * (1. - <%= segmentationName %>_unrenderable);
 
-    if (<%= segmentationName%>_effective_alpha > 0.) {
-      vec4[2] segmentationId = getSegmentId_<%= segmentationName%>(worldCoordUVW);
-      <%= segmentationName%>_id_low = segmentationId[1];
-      <%= segmentationName%>_id_high = segmentationId[0];
+    // If the opacity is > 0, the segment id for the current voxel is read.
+    // Since a segmentation might be mapped, the unmapped and (potentially mapped) id
+    // is read.
+    if (<%= segmentationName %>_effective_alpha > 0.) {
+      vec4[2] unmapped_segment_id;
+      vec4[2] segment_id;
+      getSegmentId_<%= segmentationName %>(worldCoordUVW, unmapped_segment_id, segment_id);
+
+      <%
+        const vec4ToSomeIntFn =
+          textureLayerInfos[segmentationName].elementClass.endsWith("int64")
+            ? textureLayerInfos[segmentationName].isSigned ? "int64ToUint64" : "uint64ToUint64"
+            : textureLayerInfos[segmentationName].isSigned ? "int32ToUint64" : "uint32ToUint64"
+      %>
+
+      // Temporary vars to which vec4ToSomeIntFn will write
+      highp uint hpv_low;
+      highp uint hpv_high;
+
+      <%= vec4ToSomeIntFn %>(unmapped_segment_id[1], unmapped_segment_id[0], hpv_low, hpv_high);
+      <%= segmentationName %>_unmapped_id_low = uint(hpv_low);
+      <%= segmentationName %>_unmapped_id_high = uint(hpv_high);
+
+      <%= vec4ToSomeIntFn %>(segment_id[1], segment_id[0], hpv_low, hpv_high);
+      <%= segmentationName %>_id_low = uint(hpv_low);
+      <%= segmentationName %>_id_high = uint(hpv_high);
     }
 
   <% }) %>
@@ -208,7 +257,7 @@ void main() {
     <% const color_layer_index = colorLayerNames.indexOf(name); %>
     float <%= name %>_effective_alpha = <%= name %>_alpha * (1. - <%= name %>_unrenderable);
     if (<%= name %>_effective_alpha > 0.) {
-      // Get grayscale value for <%= name %>
+      // Get grayscale value for <%= textureLayerInfos[name].unsanitizedName %>
 
       <% if (tpsTransformPerLayer[name] != null) { %>
         vec3 transformedCoordUVW = worldCoordUVW + transDim(tpsOffsetXYZ_<%= name %>);
@@ -228,18 +277,59 @@ void main() {
             !<%= name %>_has_transform
           );
         bool used_fallback = maybe_filtered_color.used_fallback_color;
-        color_value = maybe_filtered_color.color.rgb;
-        <% if (textureLayerInfos[name].packingDegree === 2.0) { %>
-          // Workaround for 16-bit color layers
-          color_value = vec3(color_value.g * 256.0 + color_value.r);
-        <% } %>
-        // Keep the color in bounds of min and max
-        color_value = clamp(color_value, <%= name %>_min, <%= name %>_max);
-        // Scale the color value according to the histogram settings.
-        // Note: max == min would cause a division by 0. Thus we add 1 in this case and hide that value below
-        // via mixing.
         float is_max_and_min_equal = float(<%= name %>_max == <%= name %>_min);
-        color_value = (color_value - <%= name %>_min) / (<%= name %>_max - <%= name %>_min + is_max_and_min_equal);
+
+        // color_value is usually between 0 and 1.
+        color_value = maybe_filtered_color.color.rgb;
+
+        <% const elementClass = textureLayerInfos[name].elementClass %>
+        <% if (elementClass.endsWith("int32")) { %>
+          // Handle 32-bit color layers
+
+          <% if (elementClass === "int32") { %>
+            ivec4 four_bytes = ivec4(255. * maybe_filtered_color.color);
+            // Combine bytes into an Int32 (assuming little-endian order)
+            highp int hpv = four_bytes.r | (four_bytes.g << 8) | (four_bytes.b << 16) | (four_bytes.a << 24);
+
+            int min = <%= name %>_min;
+            int max = <%= name %>_max;
+            hpv = clamp(hpv, min, max);
+
+            color_value = vec3(
+                scaleIntToFloat(hpv, min, max)
+            );
+          <% } else { %>
+            // Scale from [0,1] to [0,255] so that we can convert to an uint
+            // below.
+            uvec4 four_bytes = uvec4(255. * maybe_filtered_color.color);
+            highp uint hpv =
+              uint(four_bytes.a) * uint(pow(256., 3.))
+              + uint(four_bytes.b) * uint(pow(256., 2.))
+              + uint(four_bytes.g) * 256u
+              + uint(four_bytes.r);
+
+            uint min = <%= name %>_min;
+            uint max = <%= name %>_max;
+            hpv = clamp(hpv, min, max);
+            color_value = vec3(
+              float(hpv - min) / (float(max - min) + is_max_and_min_equal)
+            );
+          <% } %>
+
+        <% } else { %>
+          <% if (elementClass == "uint24") { %>
+            color_value *= 255.;
+          <% } else { %>
+            color_value = vec3(color_value.x);
+          <% } %>
+
+          // Keep the color in bounds of min and max
+          color_value = clamp(color_value, <%= name %>_min, <%= name %>_max);
+          // Scale the color value according to the histogram settings.
+          color_value = vec3(
+            scaleFloatToFloat(color_value, <%= name %>_min, <%= name %>_max)
+          );
+        <% } %>
 
         color_value = pow(color_value, 1. / vec3(<%= name %>_gammaCorrectionValue));
 
@@ -269,25 +359,30 @@ void main() {
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
 
     // Color map (<= to fight rounding mistakes)
-    if ( length(<%= segmentationName%>_id_low) > 0.1 || length(<%= segmentationName%>_id_high) > 0.1 ) {
+    if ( <%= segmentationName %>_id_low != 0u || <%= segmentationName %>_id_high != 0u ) {
       // Increase cell opacity when cell is hovered or if it is the active activeCell
-      bool isHoveredCell = hoveredSegmentIdLow == <%= segmentationName%>_id_low
-        && hoveredSegmentIdHigh == <%= segmentationName%>_id_high;
-      bool isActiveCell = activeCellIdLow == <%= segmentationName%>_id_low
-         && activeCellIdHigh == <%= segmentationName%>_id_high;
-      // Highlight cell only if it's hovered or active during proofreading
-      // and if segmentation opacity is not zero
-      float hoverAlphaIncrement = isHoveredCell && <%= segmentationName%>_alpha > 0.0 ? 0.2 : 0.0;
-      float proofreadingAlphaIncrement = isActiveCell && isProofreading && <%= segmentationName%>_alpha > 0.0 ? 0.4 : 0.0;
+      bool isHoveredSegment = hoveredSegmentIdLow == <%= segmentationName %>_id_low
+        && hoveredSegmentIdHigh == <%= segmentationName %>_id_high;
+      bool isHoveredUnmappedSegment = hoveredUnmappedSegmentIdLow == <%= segmentationName %>_unmapped_id_low
+        && hoveredUnmappedSegmentIdHigh == <%= segmentationName %>_unmapped_id_high;
+      bool isActiveCell = activeCellIdLow == <%= segmentationName %>_id_low
+         && activeCellIdHigh == <%= segmentationName %>_id_high;
+      float alphaIncrement = getSegmentationAlphaIncrement(
+        <%= segmentationName %>_alpha,
+        isHoveredSegment,
+        isHoveredUnmappedSegment,
+        isActiveCell
+      );
+
       gl_FragColor = vec4(mix(
         data_color.rgb,
-        convertCellIdToRGB(<%= segmentationName%>_id_high, <%= segmentationName%>_id_low),
-        <%= segmentationName%>_alpha + max(hoverAlphaIncrement, proofreadingAlphaIncrement)
+        convertCellIdToRGB(<%= segmentationName %>_id_high, <%= segmentationName %>_id_low),
+        <%= segmentationName %>_alpha + alphaIncrement
       ), 1.0);
     }
-    vec4 <%= segmentationName%>_brushOverlayColor = getBrushOverlay(worldCoordUVW);
-    <%= segmentationName%>_brushOverlayColor.xyz = convertCellIdToRGB(activeCellIdHigh, activeCellIdLow);
-    gl_FragColor = mix(gl_FragColor, <%= segmentationName%>_brushOverlayColor, <%= segmentationName%>_brushOverlayColor.a);
+    vec4 <%= segmentationName %>_brushOverlayColor = getBrushOverlay(worldCoordUVW);
+    <%= segmentationName %>_brushOverlayColor.xyz = convertCellIdToRGB(activeCellIdHigh, activeCellIdLow);
+    gl_FragColor = mix(gl_FragColor, <%= segmentationName %>_brushOverlayColor, <%= segmentationName %>_brushOverlayColor.a);
     gl_FragColor.a = 1.0;
 
   <% }) %>
@@ -313,6 +408,7 @@ void main() {
     OrthoViewIndices: _.mapValues(OrthoViewIndices, formatNumberAsGLSLFloat),
     hasSegmentation,
     isFragment: true,
+    glslTypeForElementClass,
   });
 }
 
@@ -354,7 +450,7 @@ ${compileShader(
   isOutsideOfBoundingBox,
   getMaybeFilteredColorOrFallback,
   hasSegmentation ? getSegmentId : null,
-  getResolution,
+  getMagnification,
   almostEq,
 )}
 
@@ -411,20 +507,20 @@ void main() {
   // Invert vertical axis to make calculation more intuitive with top-left coordinates.
   index.y = PLANE_SUBDIVISION - index.y;
 
-  // d is the width/height of a bucket in the current resolution.
+  // d is the width/height of a bucket in the current magnification.
   vec2 d = transDim(vec3(bucketWidth) * representativeMagForVertexAlignment).xy;
 
-  vec3 datasetScaleUVW = transDim(datasetScale);
+  vec3 voxelSizeFactorUVW = transDim(voxelSizeFactor);
   vec3 transWorldCoord = transDim(worldCoord.xyz);
 
   if (index.x >= 1. && index.x <= PLANE_SUBDIVISION - 1.) {
     transWorldCoord.x =
       (
         // Left border of left-most bucket (probably outside of visible plane)
-        floor(worldCoordTopLeft.x / datasetScaleUVW.x / d.x) * d.x
+        floor(worldCoordTopLeft.x / voxelSizeFactorUVW.x / d.x) * d.x
         // Move by index.x buckets to the right.
         + index.x * d.x
-      ) * datasetScaleUVW.x;
+      ) * voxelSizeFactorUVW.x;
 
     transWorldCoord.x = clamp(transWorldCoord.x, worldCoordTopLeft.x, worldCoordBottomRight.x);
   }
@@ -433,10 +529,10 @@ void main() {
     transWorldCoord.y =
       (
         // Top border of top-most bucket (probably outside of visible plane)
-        floor(worldCoordTopLeft.y / datasetScaleUVW.y / d.y) * d.y
+        floor(worldCoordTopLeft.y / voxelSizeFactorUVW.y / d.y) * d.y
         // Move by index.y buckets to the bottom.
         + index.y * d.y
-      ) * datasetScaleUVW.y;
+      ) * voxelSizeFactorUVW.y;
     transWorldCoord.y = clamp(transWorldCoord.y, worldCoordTopLeft.y, worldCoordBottomRight.y);
   }
 
@@ -511,5 +607,6 @@ void main() {
     isFragment: false,
     generateTpsInitialization,
     generateCalculateTpsOffsetFunction,
+    glslTypeForElementClass,
   });
 }

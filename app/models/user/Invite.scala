@@ -2,6 +2,7 @@ package models.user
 
 import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
@@ -13,15 +14,15 @@ import models.organization.OrganizationDAO
 import security.RandomIDGenerator
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.sql.{SqlClient, SQLDAO}
-import utils.{ObjectId, WkConf}
+import utils.sql.{SQLDAO, SqlClient}
+import utils.WkConf
 
 import scala.concurrent.{ExecutionContext, Future}
 
 case class Invite(
     _id: ObjectId,
     tokenValue: String,
-    _organization: ObjectId,
+    _organization: String,
     autoActivate: Boolean,
     expirationDateTime: Instant,
     created: Instant = Instant.now,
@@ -47,14 +48,14 @@ class InviteService @Inject()(conf: WkConf,
       _ <- sendInviteMail(recipient, sender, invite)
     } yield ()
 
-  private def generateInvite(organizationID: ObjectId, autoActivate: Boolean): Future[Invite] =
+  private def generateInvite(organizationId: String, autoActivate: Boolean): Future[Invite] =
     for {
       tokenValue <- tokenValueGenerator.generate
     } yield
       Invite(
         ObjectId.generate,
         tokenValue,
-        organizationID,
+        organizationId,
         autoActivate,
         Instant.in(conf.WebKnossos.User.inviteExpiry)
       )
@@ -65,8 +66,7 @@ class InviteService @Inject()(conf: WkConf,
       organization <- organizationDAO.findOne(invite._organization)
       _ = logger.info("sending invite mail")
       _ = Mailer ! Send(
-        defaultMails
-          .inviteMail(recipient, invite.tokenValue, invite.autoActivate, organization.displayName, sender.name))
+        defaultMails.inviteMail(recipient, invite.tokenValue, invite.autoActivate, organization.name, sender.name))
     } yield ()
 
   def removeExpiredInvites(): Fox[Unit] =
@@ -96,7 +96,7 @@ class InviteDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       Invite(
         ObjectId(r._Id),
         r.tokenvalue,
-        ObjectId(r._Organization),
+        r._Organization,
         r.autoactivate,
         Instant.fromSql(r.expirationdatetime),
         Instant.fromSql(r.created),

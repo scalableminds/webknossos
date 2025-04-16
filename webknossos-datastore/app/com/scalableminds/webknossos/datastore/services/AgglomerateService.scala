@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.services
 import ch.systemsx.cisd.hdf5._
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.PathUtils
+import com.scalableminds.util.time.Instant
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, SkeletonTracing, Tree, TreeTypeProto}
@@ -21,18 +22,19 @@ import java.nio.file.{Files, Paths}
 import javax.inject.Inject
 import scala.annotation.tailrec
 import scala.collection.compat.immutable.ArraySeq
+import scala.concurrent.duration.DurationInt
 
 class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter with LazyLogging {
   private val agglomerateDir = "agglomerates"
   private val agglomerateFileExtension = "hdf5"
   private val datasetName = "/segment_to_agglomerate"
-  private val dataBaseDir = Paths.get(config.Datastore.baseFolder)
+  private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
   private val cumsumFileName = "cumsum.json"
 
   lazy val agglomerateFileCache = new AgglomerateFileCache(config.Datastore.Cache.AgglomerateFile.maxFileHandleEntries)
 
-  def exploreAgglomerates(organizationName: String, datasetName: String, dataLayerName: String): Set[String] = {
-    val layerDir = dataBaseDir.resolve(organizationName).resolve(datasetName).resolve(dataLayerName)
+  def exploreAgglomerates(organizationId: String, datasetDirectoryName: String, dataLayerName: String): Set[String] = {
+    val layerDir = dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName).resolve(dataLayerName)
     PathUtils
       .listFiles(layerDir.resolve(agglomerateDir),
                  silent = true,
@@ -74,7 +76,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
        agglomerate id in the segment-to-agglomerate array.
        The value is first converted to the primitive signed number types, and then converted
        to Long via uByteToLong, uShortToLong etc, which perform bitwise and to take care of
-       the unsigned semantics. Using functions avoids allocating intermediate UnsignedInteger objects.
+       the unsigned semantics. Using functions avoids allocating intermediate SegmentInteger objects.
        Allocating a fixed-length LongBuffer first is a further performance optimization.
      */
     convertData(data, request.dataLayer.elementClass) match {
@@ -100,7 +102,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     // We don't need to differentiate between the data types because the underlying library does the conversion for us
     reader.uint64().readArrayBlockWithOffset(hdf5Dataset, blockSize.toInt, segmentId)
 
-  // This uses the datasetName, which allows us to call it on the same hdf file in parallel.
+  // This uses the datasetDirectoryName, which allows us to call it on the same hdf file in parallel.
   private def readHDF(reader: IHDF5Reader, segmentId: Long, blockSize: Long) =
     reader.uint64().readArrayBlockWithOffset(datasetName, blockSize.toInt, segmentId)
 
@@ -114,8 +116,8 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
 
     val cumsumPath =
       dataBaseDir
-        .resolve(agglomerateFileKey.organizationName)
-        .resolve(agglomerateFileKey.datasetName)
+        .resolve(agglomerateFileKey.organizationId)
+        .resolve(agglomerateFileKey.datasetDirectoryName)
         .resolve(agglomerateFileKey.layerName)
         .resolve(agglomerateDir)
         .resolve(cumsumFileName)
@@ -135,17 +137,17 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     CachedAgglomerateFile(reader, reader.`object`().openDataSet(datasetName), agglomerateIdCache, defaultCache)
   }
 
-  def generateSkeleton(organizationName: String,
-                       datasetName: String,
+  def generateSkeleton(organizationId: String,
+                       datasetDirectoryName: String,
                        dataLayerName: String,
                        mappingName: String,
                        agglomerateId: Long): Box[SkeletonTracing] =
     try {
-      val startTime = System.nanoTime()
+      val before = Instant.now
       val hdfFile =
         dataBaseDir
-          .resolve(organizationName)
-          .resolve(datasetName)
+          .resolve(organizationId)
+          .resolve(datasetDirectoryName)
           .resolve(dataLayerName)
           .resolve(agglomerateDir)
           .resolve(s"$mappingName.$agglomerateFileExtension")
@@ -208,13 +210,15 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
         ))
 
       val skeleton = SkeletonTracingDefaults.createInstance.copy(
-        datasetName = datasetName,
+        datasetName = datasetDirectoryName,
         trees = trees
       )
-      val duration = System.nanoTime() - startTime
-      if (duration > 100 * 1e6) {
-        logger.info(s"Generating skeleton from agglomerate file took ${math
-          .round(duration / 1e6)} ms (${skeletonEdges.length} edges, ${nodes.length} nodes).")
+
+      if (Instant.since(before) > (100 milliseconds)) {
+        Instant.logSince(
+          before,
+          s"Generating skeleton from agglomerate file with ${skeletonEdges.length} edges, ${nodes.length} nodes",
+          logger)
       }
 
       Full(skeleton)
@@ -234,8 +238,8 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
   def segmentIdsForAgglomerateId(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long): Box[List[Long]] = {
     val hdfFile =
       dataBaseDir
-        .resolve(agglomerateFileKey.organizationName)
-        .resolve(agglomerateFileKey.datasetName)
+        .resolve(agglomerateFileKey.organizationId)
+        .resolve(agglomerateFileKey.datasetDirectoryName)
         .resolve(agglomerateFileKey.layerName)
         .resolve(agglomerateDir)
         .resolve(s"${agglomerateFileKey.mappingName}.$agglomerateFileExtension")
@@ -269,6 +273,15 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
       agglomerateIds
     }
 
+  }
+
+  def agglomerateIdsForAllSegmentIds(agglomerateFileKey: AgglomerateFileKey): Box[Array[Long]] = {
+    val file = agglomerateFileKey.path(dataBaseDir, agglomerateDir, agglomerateFileExtension).toFile
+    tryo {
+      val reader = HDF5FactoryProvider.get.openForReading(file)
+      val agglomerateIds: Array[Long] = reader.uint64().readArray("/segment_to_agglomerate")
+      agglomerateIds
+    }
   }
 
   def positionForSegmentId(agglomerateFileKey: AgglomerateFileKey, segmentId: Long): Box[Vec3Int] = {

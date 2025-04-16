@@ -1,5 +1,5 @@
-import { WarningFilled } from "@ant-design/icons";
-import { Alert, Layout, Tooltip } from "antd";
+import { ConfigProvider, Layout } from "antd";
+import app from "app";
 import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
 import Toast from "libs/toast";
@@ -11,12 +11,19 @@ import Constants from "oxalis/constants";
 import type { ControllerStatus } from "oxalis/controller";
 import OxalisController from "oxalis/controller";
 import MergerModeController from "oxalis/controller/merger_mode_controller";
+import { destroySceneController } from "oxalis/controller/scene_controller_provider";
+import UrlManager from "oxalis/controller/url_manager";
 import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
+import { cancelSagaAction } from "oxalis/model/actions/actions";
+import { resetStoreAction } from "oxalis/model/actions/actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import rootSaga from "oxalis/model/sagas/root_saga";
 import { Store } from "oxalis/singletons";
-import type { OxalisState, Theme, TraceOrViewCommand } from "oxalis/store";
+import { Model } from "oxalis/singletons";
+import { type OxalisState, type Theme, type TraceOrViewCommand, startSaga } from "oxalis/store";
 import ActionBarView from "oxalis/view/action_bar_view";
 import WkContextMenu from "oxalis/view/context_menu";
+import DistanceMeasurementTooltip from "oxalis/view/distance_measurement_tooltip";
 import {
   initializeInputCatcherSizes,
   recalculateInputCatcherSizes,
@@ -32,20 +39,19 @@ import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import PresentModernControls from "oxalis/view/novel_user_experiences/01-present-modern-controls";
 import WelcomeToast from "oxalis/view/novel_user_experiences/welcome_toast";
-import { importTracingFiles } from "oxalis/view/right-border-tabs/skeleton_tab_view";
+import { importTracingFiles } from "oxalis/view/right-border-tabs/trees_tab/skeleton_tab_view";
 import TracingView from "oxalis/view/tracing_view";
 import VersionView from "oxalis/view/version_view";
 import * as React from "react";
 import { connect } from "react-redux";
-import { RouteComponentProps, withRouter } from "react-router-dom";
+import { type RouteComponentProps, withRouter } from "react-router-dom";
 import type { Dispatch } from "redux";
-import { APICompoundType } from "types/api_flow_types";
-import DistanceMeasurementTooltip from "oxalis/view/distance_measurement_tooltip";
+import { NavAndStatusBarTheme } from "theme";
+import type { APICompoundType } from "types/api_flow_types";
 import TabTitle from "../components/tab_title_component";
 import { determineLayout } from "./default_layout_configs";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
 import { FloatingMobileControls } from "./floating_mobile_controls";
-import app from "app";
 
 const { Sider } = Layout;
 
@@ -106,7 +112,27 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     Toast.error(messages["react.rendering_error"]);
   }
 
+  componentDidMount() {
+    startSaga(rootSaga);
+  }
+
   componentWillUnmount() {
+    UrlManager.stopUrlUpdater();
+    Model.reset();
+    destroySceneController();
+    Store.dispatch(resetStoreAction());
+    Store.dispatch(cancelSagaAction());
+
+    const { activeUser } = Store.getState();
+    if (activeUser?.isSuperUser) {
+      // For super users, we don't enforce a page reload.
+      // They'll act as a guinea pig for this performance
+      // improvement for now.
+      return;
+    }
+
+    // Enforce a reload to absolutely ensure a clean slate.
+
     // Replace entire document with loading message
     if (document.body != null) {
       const mainContainer = document.getElementById("main-container");
@@ -194,13 +220,11 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     app.vent.emit("rerender");
 
     if (model != null) {
-      this.setState({
-        model,
+      this.setState({ model }, () => {
+        if (this.props.autoSaveLayouts) {
+          this.saveCurrentLayout(layoutName);
+        }
       });
-    }
-
-    if (this.props.autoSaveLayouts) {
-      this.saveCurrentLayout(layoutName);
     }
   };
 
@@ -258,8 +282,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       this.props.is2d,
     );
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
-    const { isDatasetOnScratchVolume, isUpdateTracingAllowed, distanceMeasurementTooltipPosition } =
-      this.props;
+    const { isUpdateTracingAllowed, distanceMeasurementTooltipPosition } = this.props;
 
     const createNewTracing = async (
       files: Array<File>,
@@ -269,8 +292,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
         data: {
           nmlFile: files,
           createGroupForEachFile,
-          datasetName: this.props.datasetName,
-          organizationName: this.props.organization,
+          datasetId: this.props.datasetId,
         },
       });
       this.props.history.push(`/annotations/${response.annotation.typ}/${response.annotation.id}`);
@@ -301,57 +323,34 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
           <CrossOriginApi />
           <Layout className="tracing-layout">
             <RenderToPortal portalId="navbarTracingSlot">
-              {status === "loaded" ? (
-                <div
-                  style={{
-                    flex: "0 1 auto",
-                    zIndex: 210,
-                    display: "flex",
-                  }}
-                >
-                  <ActionBarView
-                    layoutProps={{
-                      storedLayoutNamesForView: currentLayoutNames,
-                      activeLayout: activeLayoutName,
-                      layoutKey: layoutType,
-                      setCurrentLayout: (layoutName) => {
-                        this.setState({
-                          activeLayoutName: layoutName,
-                        });
-                        setActiveLayout(layoutType, layoutName);
-                      },
-                      saveCurrentLayout: this.saveCurrentLayout,
-                      setAutoSaveLayouts: this.props.setAutoSaveLayouts,
-                      autoSaveLayouts: this.props.autoSaveLayouts,
+              <ConfigProvider theme={NavAndStatusBarTheme}>
+                {status === "loaded" ? (
+                  <div
+                    style={{
+                      flex: "0 1 auto",
+                      zIndex: 210,
+                      display: "flex",
                     }}
-                  />
-                  {isDatasetOnScratchVolume ? (
-                    <Tooltip title={messages["dataset.is_scratch"]}>
-                      <Alert
-                        className="hide-on-small-screen"
-                        style={{
-                          height: 30,
-                          paddingTop: 4,
-                          backgroundColor: "var(--ant-color-warning)",
-                          border: "none",
-                          color: "white",
-                        }}
-                        message={
-                          <span>
-                            Dataset is on tmpscratch!{" "}
-                            <WarningFilled
-                              style={{
-                                margin: "0 0 0 6px",
-                              }}
-                            />
-                          </span>
-                        }
-                        type="error"
-                      />
-                    </Tooltip>
-                  ) : null}
-                </div>
-              ) : null}
+                  >
+                    <ActionBarView
+                      layoutProps={{
+                        storedLayoutNamesForView: currentLayoutNames,
+                        activeLayout: activeLayoutName,
+                        layoutKey: layoutType,
+                        setCurrentLayout: (layoutName) => {
+                          this.setState({
+                            activeLayoutName: layoutName,
+                          });
+                          setActiveLayout(layoutType, layoutName);
+                        },
+                        saveCurrentLayout: this.saveCurrentLayout,
+                        setAutoSaveLayouts: this.props.setAutoSaveLayouts,
+                        autoSaveLayouts: this.props.autoSaveLayouts,
+                      }}
+                    />
+                  </div>
+                ) : null}
+              </ConfigProvider>
             </RenderToPortal>
             <Layout
               style={{
@@ -380,7 +379,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
               </div>
               {this.props.showVersionRestore ? (
                 <Sider id="version-restore-sider" width={400} theme={this.props.UITheme}>
-                  <VersionView allowUpdate={isUpdateTracingAllowed} />
+                  <VersionView />
                 </Sider>
               ) : null}
             </Layout>
@@ -401,18 +400,18 @@ function mapStateToProps(state: OxalisState) {
   return {
     viewMode: state.temporaryConfiguration.viewMode,
     autoSaveLayouts: state.userConfiguration.autoSaveLayouts,
-    isUpdateTracingAllowed: state.tracing.restrictions.allowUpdate,
+    isUpdateTracingAllowed: state.annotation.restrictions.allowUpdate,
     showVersionRestore: state.uiInformation.showVersionRestore,
     storedLayouts: state.uiInformation.storedLayouts,
-    isDatasetOnScratchVolume: state.dataset.dataStore.isScratch,
-    datasetName: state.dataset.name,
+    datasetId: state.dataset.id,
     is2d: is2dDataset(state.dataset),
-    displayName: state.tracing.name ? state.tracing.name : state.dataset.name,
+    displayName: state.annotation.name ? state.annotation.name : state.dataset.name,
     organization: state.dataset.owningOrganization,
     distanceMeasurementTooltipPosition:
       state.uiInformation.measurementToolInfo.lastMeasuredPosition,
     additionalCoordinates: state.flycam.additionalCoordinates,
     UITheme: state.uiInformation.theme,
+    isWkReady: state.uiInformation.isWkReady,
   };
 }
 

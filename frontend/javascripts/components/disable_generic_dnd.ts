@@ -1,6 +1,6 @@
-import React from "react";
 import window from "libs/window";
-import { EmptyObject } from "types/globals";
+import React from "react";
+import type { EmptyObject } from "types/globals";
 export default class DisableGenericDnd extends React.Component<EmptyObject> {
   componentDidMount() {
     window.addEventListener("dragover", this.preventDefault, false);

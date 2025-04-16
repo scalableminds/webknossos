@@ -1,16 +1,7 @@
 @import "../../node_modules/@fortawesome/fontawesome-free/css/all.min.css";
-@import "../../node_modules/react-sortable-tree/style.css";
 @import "../../node_modules/flexlayout-react/style/light.css";
 @import "../../node_modules/antd/dist/reset.css";
-
-// To update the antd iconfont:
-// * Go to https://ant.design/
-// * Find the iconfont in the network tab (host: at.alicdn.com)
-// * Download .eot,.woff,.ttf,.svg to ./iconfont
-// * Rename to iconfont.*
-
-// Path is relative to the node_modules/antd/lib/style/themes/
-@icon-url: "../../../../../frontend/stylesheets/iconfont/iconfont";
+@import "../../node_modules/react-tooltip/dist/react-tooltip.css";
 
 @import "_variables.less";
 @import "_utils.less";
@@ -24,11 +15,11 @@
 @import "_help.less";
 @import "antd_overwrites.less";
 @import "olvy_overwrites.less";
-@import "react_sortable_tree_overwrites.less";
 @import "_admin.less";
 @import "flex_layout_overwrites.less";
 @import "_drawings.less";
 @import "dark.less";
+@import "command_palette.less";
 
 @font-face {
   font-family: "Nunito";
@@ -172,6 +163,10 @@ button.narrow {
   }
 }
 
+.icon-margin-left {
+  margin-inline-start: var(--ant-margin-xs);
+}
+
 .icon-margin-right {
   margin-inline-end: var(--ant-margin-xs);
 }
@@ -268,7 +263,7 @@ button.narrow {
   left: -200px;
   width: 200px;
   height: 2px;
-  background-color: var(--ant-color-text)-secondary;
+  background-color: var(--ant-color-text-secondary);
   animation: loading 1.5s ease infinite;
 }
 
@@ -437,10 +432,6 @@ button.narrow {
 .voxelytics-view {
   min-width: 1300px;
 
-  .tasks-header {
-    border-bottom: 1px solid var(--ant-color-border);
-  }
-
   .task-panel {
     height: calc(100vh - 100px);
     position: relative;
@@ -588,6 +579,11 @@ button.narrow {
   }
 }
 
+.ReactModalPortal {
+  position: absolute;
+  z-index: 1001;
+}
+
 .folder-item {
   padding: 0 4px;
   border-radius: 2px;
@@ -616,11 +612,12 @@ button.narrow {
     min-height: calc(100vh - var(--navbar-height));
     background: var(--background-blue-neurons);
   }
-
+  
   .login-content {
-    width: 600px;
+    max-width: 600px;
     padding: 80px;
-
+    margin: 0 auto;
+    
     @media @smartphones {
       padding: 20px;
       margin: 20px;
@@ -652,7 +649,7 @@ button.narrow {
 }
 
 .task-annotation-view {
-  width: 31%
+  width: 31%;
 }
 
 .organization-switch-menu > ul {
@@ -667,5 +664,34 @@ button.narrow {
 
   .ant-row {
     margin-left: 20px;
+  }
+}
+
+.global-progress-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background-color: var(--color-wk-blue);
+  transition: width 0.3s ease-in-out;
+}
+
+.hidden-global-progress-bar {
+  width: 0 !important;
+  transition: none !important;
+}
+
+.max-z-index {
+  z-index: 10000000000;
+}
+
+.registration-form-checkboxes {
+  > div:first-of-type {
+    margin-bottom: 0px;
+  }
+  
+  > div:last-of-type {
+    margin-bottom: 15px;
   }
 }

@@ -1,6 +1,7 @@
 package models.dataset
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import models.job.JobService
@@ -12,7 +13,7 @@ import play.api.mvc.{Result, Results}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
-import utils.{ObjectId, WkConf}
+import utils.WkConf
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -25,7 +26,7 @@ case class DataStore(
     isDeleted: Boolean = false,
     allowsUpload: Boolean = true,
     reportUsedStorageEnabled: Boolean = false,
-    onlyAllowedOrganization: Option[ObjectId] = None
+    onlyAllowedOrganization: Option[String] = None
 )
 
 object DataStore {
@@ -70,9 +71,9 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO, jobService: JobServ
       Json.obj(
         "name" -> dataStore.name,
         "url" -> dataStore.publicUrl,
-        "isScratch" -> dataStore.isScratch,
         "allowsUpload" -> dataStore.allowsUpload,
-        "jobsSupportedByAvailableWorkers" -> Json.toJson(jobsSupportedByAvailableWorkers),
+        "jobsSupportedByAvailableWorkers" -> Json.toJson(
+          if (conf.Features.jobsEnabled) jobsSupportedByAvailableWorkers else List.empty),
         "jobsEnabled" -> jobsEnabled
       )
 
@@ -106,7 +107,7 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
         r.isdeleted,
         r.allowsupload,
         r.reportusedstorageenabled,
-        r.onlyallowedorganization.map(ObjectId(_))
+        r.onlyallowedorganization
       ))
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataStore] =

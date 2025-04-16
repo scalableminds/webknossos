@@ -11,11 +11,17 @@ trait RedisTemporaryStore extends LazyLogging {
   implicit def ec: ExecutionContext
   protected def address: String
   protected def port: Int
+  lazy val authority: String = f"$address:$port"
   private lazy val r = new RedisClient(address, port)
 
   def find(id: String): Fox[Option[String]] =
     withExceptionHandler {
       r.get(id)
+    }
+
+  def findLong(id: String): Fox[Option[Long]] =
+    withExceptionHandler {
+      r.get(id).map(s => s.toLong)
     }
 
   def removeAllConditional(pattern: String): Fox[Unit] =
@@ -43,7 +49,21 @@ trait RedisTemporaryStore extends LazyLogging {
       r.keys(pattern).map(_.flatten).getOrElse(List())
     }
 
+  def insertKey(id: String, expirationOpt: Option[FiniteDuration] = None): Fox[Unit] =
+    insert(id, "", expirationOpt)
+
   def insert(id: String, value: String, expirationOpt: Option[FiniteDuration] = None): Fox[Unit] =
+    withExceptionHandler {
+      expirationOpt
+        .map(
+          expiration => r.setex(id, expiration.toSeconds, value)
+        )
+        .getOrElse(
+          r.set(id, value)
+        )
+    }
+
+  def insertLong(id: String, value: Long, expirationOpt: Option[FiniteDuration] = None): Fox[Unit] =
     withExceptionHandler {
       expirationOpt
         .map(
@@ -64,11 +84,15 @@ trait RedisTemporaryStore extends LazyLogging {
       r.del(id)
     }
 
+  def increaseBy(id: String, value: Long): Fox[Option[Long]] =
+    withExceptionHandler {
+      r.incrby(id, value)
+    }
+
   def checkHealth(implicit ec: ExecutionContext): Fox[Unit] =
     try {
       val reply = r.ping
       if (!reply.contains("PONG")) throw new Exception(reply.getOrElse("No Reply"))
-      logger.info(s"Successfully tested Redis health at $address:$port. Reply: $reply)")
       Fox.successful(())
     } catch {
       case e: Exception =>
@@ -91,6 +115,11 @@ trait RedisTemporaryStore extends LazyLogging {
   def insertIntoSet(id: String, value: String): Fox[Boolean] =
     withExceptionHandler {
       r.sadd(id, value).getOrElse(0L) > 0
+    }
+
+  def isContainedInSet(id: String, value: String): Fox[Boolean] =
+    withExceptionHandler {
+      r.sismember(id, value)
     }
 
   def removeFromSet(id: String, value: String): Fox[Boolean] =

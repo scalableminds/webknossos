@@ -1,10 +1,9 @@
-import { Spin, Select } from "antd";
-import * as React from "react";
-import _ from "lodash";
 import { getUsers } from "admin/admin_rest_api";
-import { useFetch } from "libs/react_helpers";
-import { useState } from "react";
+import { Select, Spin } from "antd";
 import { handleGenericError } from "libs/error_handling";
+import { useFetch } from "libs/react_helpers";
+import _ from "lodash";
+import { useState } from "react";
 
 type Props = {
   handleSelection: (arg0: string) => void;

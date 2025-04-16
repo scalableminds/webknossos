@@ -1,6 +1,6 @@
-import { Component } from "react";
 import window from "libs/window";
-import { EmptyObject } from "types/globals";
+import { Component } from "react";
+import type { EmptyObject } from "types/globals";
 type LoopProps = {
   interval: number;
   onTick: (...args: Array<any>) => any;

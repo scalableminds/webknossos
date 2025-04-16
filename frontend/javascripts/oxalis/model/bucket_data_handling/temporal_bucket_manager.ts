@@ -1,7 +1,7 @@
 import _ from "lodash";
 import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import PullQueue, { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
-import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
+import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
+import type PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
 
 class TemporalBucketManager {
   // Manages temporal buckets (i.e., buckets created for annotation where
@@ -27,10 +27,7 @@ class TemporalBucketManager {
   }
 
   pullBucket(bucket: DataBucket): void {
-    this.pullQueue.add({
-      bucket: bucket.zoomedAddress,
-      priority: PullQueueConstants.PRIORITY_HIGHEST,
-    });
+    bucket.addToPullQueueWithHighestPriority();
     this.pullQueue.pull();
   }
 

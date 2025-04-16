@@ -1,16 +1,12 @@
 package com.scalableminds.webknossos.datastore.datareaders.wkw
 
 import com.google.common.io.LittleEndianDataInputStream
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.JsonHelper.bool2Box
-import com.scalableminds.webknossos.datastore.dataformats.wkw.{
-  MortonEncoding,
-  WKWDataFormat,
-  WKWDataFormatHelper,
-  WKWHeader
-}
+import com.scalableminds.webknossos.datastore.dataformats.wkw.{MortonEncoding, WKWDataFormatHelper, WKWHeader}
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkUtils, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataSourceId}
@@ -22,14 +18,14 @@ import java.io.ByteArrayInputStream
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
-object WKWArray {
+object WKWArray extends WKWDataFormatHelper {
   def open(path: VaultPath,
            dataSourceId: DataSourceId,
            layerName: String,
-           sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[WKWArray] =
+           sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext,
+                                                                    tc: TokenContext): Fox[WKWArray] =
     for {
-      headerBytes <- (path / WKWDataFormat.FILENAME_HEADER_WKW)
-        .readBytes() ?~> s"Could not read header at ${WKWDataFormat.FILENAME_HEADER_WKW}"
+      headerBytes <- (path / FILENAME_HEADER_WKW).readBytes() ?~> s"Could not read header at ${FILENAME_HEADER_WKW}"
       dataInputStream = new LittleEndianDataInputStream(new ByteArrayInputStream(headerBytes))
       header <- WKWHeader(dataInputStream, readJumpTable = false).toFox
       array <- tryo(new WKWArray(path,
@@ -64,8 +60,8 @@ class WKWArray(vaultPath: VaultPath,
 
   private val parsedShardIndexCache: AlfuCache[VaultPath, Array[Long]] = AlfuCache()
 
-  override protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
-      implicit ec: ExecutionContext): Fox[(VaultPath, NumericRange[Long])] =
+  override protected def getShardedChunkPathAndRange(
+      chunkIndex: Array[Int])(implicit ec: ExecutionContext, tc: TokenContext): Fox[(VaultPath, NumericRange[Long])] =
     for {
       shardCoordinates <- Fox.option2Fox(chunkIndexToShardIndex(chunkIndex).headOption)
       shardFilename = getChunkFilename(shardCoordinates)
@@ -82,7 +78,8 @@ class WKWArray(vaultPath: VaultPath,
     else
       shardIndex(0) + header.numBytesPerChunk.toLong * chunkIndexInShardIndex.toLong
 
-  private def readAndParseShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext): Fox[Array[Long]] = {
+  private def readAndParseShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext,
+                                                           tc: TokenContext): Fox[Array[Long]] = {
     val skipBytes = 8 // First 8 bytes of header are other metadata
     val bytesPerShardIndexEntry = 8
     val numEntriesToRead = if (header.isCompressed) 1 + header.numChunksPerShard else 1

@@ -16,13 +16,13 @@ import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 
 case class Team(
     _id: ObjectId,
-    _organization: ObjectId,
+    _organization: String,
     name: String,
     isOrganizationTeam: Boolean = false,
     created: Instant = Instant.now,
@@ -48,7 +48,7 @@ class TeamService @Inject()(organizationDAO: OrganizationDAO,
       Json.obj(
         "id" -> team._id.toString,
         "name" -> team.name,
-        "organization" -> organization.name
+        "organization" -> organization._id
       )
     }
 
@@ -106,7 +106,7 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     Fox.successful(
       Team(
         ObjectId(r._Id),
-        ObjectId(r._Organization),
+        r._Organization,
         r.name,
         r.isorganizationteam,
         Instant.fromSql(r.created),
@@ -128,7 +128,7 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseFirst(r, id)
     } yield parsed
 
-  def countByNameAndOrganization(teamName: String, organizationId: ObjectId): Fox[Int] =
+  def countByNameAndOrganization(teamName: String, organizationId: String): Fox[Int] =
     for {
       countList <- run(
         q"SELECT COUNT(*) FROM webknossos.teams WHERE name = $teamName AND _organization = $organizationId".as[Int])
@@ -165,7 +165,7 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
-  def findAllIdsByOrganization(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] =
+  def findAllIdsByOrganization(organizationId: String)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(

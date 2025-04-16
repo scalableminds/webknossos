@@ -1,21 +1,21 @@
 import Maybe from "data.maybe";
-import _ from "lodash";
+import dayjs from "dayjs";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'java... Remove this comment to see the full error message
 import naturalSort from "javascript-natural-sort";
-import type { APIDataset, APIUser } from "types/api_flow_types";
-import type { BoundingBoxObject } from "oxalis/store";
+import window, { document, location } from "libs/window";
+import _ from "lodash";
 import type {
+  BoundingBoxType,
+  ColorObject,
+  Point3,
+  TypedArray,
   Vector3,
   Vector4,
   Vector6,
-  BoundingBoxType,
-  Point3,
-  ColorObject,
-  TypedArray,
 } from "oxalis/constants";
-import window, { document, location } from "libs/window";
-import { ArbitraryObject, Comparator } from "types/globals";
-import dayjs from "dayjs";
+import type { BoundingBoxObject, NumberLike } from "oxalis/store";
+import type { APIDataset, APIUser } from "types/api_flow_types";
+import type { ArbitraryObject, Comparator } from "types/globals";
 
 type UrlParams = Record<string, string>;
 // Fix JS modulo bug
@@ -118,6 +118,18 @@ export function unique<T>(array: Array<T>): Array<T> {
   return [...new Set(array)];
 }
 
+export function union<T>(iterables: Array<Iterable<T>>): Set<T> {
+  const set: Set<T> = new Set();
+
+  for (const iterable of iterables) {
+    for (const item of iterable) {
+      set.add(item);
+    }
+  }
+
+  return set;
+}
+
 export function enforce<A, B>(fn: (arg0: A) => B): (arg0: A | null | undefined) => B {
   return (nullableA: A | null | undefined) => {
     if (nullableA == null) {
@@ -215,7 +227,7 @@ export function rgbToHex(color: Vector3): string {
 }
 
 export function hexToRgb(hex: string): Vector3 {
-  const bigint = parseInt(hex.slice(1), 16);
+  const bigint = Number.parseInt(hex.slice(1), 16);
   const r = (bigint >> 16) & 255;
   const g = (bigint >> 8) & 255;
   const b = bigint & 255;
@@ -407,7 +419,7 @@ export function stringToNumberArray(s: string): Array<number> {
   const result = [];
 
   for (const e of stringArray) {
-    const newEl = parseFloat(e);
+    const newEl = Number.parseFloat(e);
 
     if (!Number.isNaN(newEl)) {
       result.push(newEl);
@@ -625,6 +637,26 @@ export function diffArrays<T>(
   };
 }
 
+export function diffMaps<K, V>(
+  stateA: Map<K, V>,
+  stateB: Map<K, V>,
+): {
+  changed: Iterable<K>;
+  onlyA: Iterable<K>;
+  onlyB: Iterable<K>;
+} {
+  const keysOfA = Array.from(stateA.keys());
+  const keysOfB = Array.from(stateB.keys());
+  const changed = keysOfA.filter((x) => stateB.has(x) && stateB.get(x) !== stateA.get(x));
+  const onlyA = keysOfA.filter((x) => !stateB.has(x));
+  const onlyB = keysOfB.filter((x) => !stateA.has(x));
+  return {
+    changed,
+    onlyA,
+    onlyB,
+  };
+}
+
 export function withoutValues<T>(arr: Array<T>, elements: Array<T>): Array<T> {
   // This set-based implementation avoids stackoverflow errors from which
   // _.without(arr, ...elements) suffers.
@@ -635,10 +667,6 @@ export function withoutValues<T>(arr: Array<T>, elements: Array<T>): Array<T> {
 
   const auxSet = new Set(elements);
   return arr.filter((x) => !auxSet.has(x));
-}
-
-export function zipMaybe<T, U>(maybeA: Maybe<T>, maybeB: Maybe<U>): Maybe<[T, U]> {
-  return maybeA.chain((valueA) => maybeB.map((valueB) => [valueA, valueB]));
 }
 
 // Maybes getOrElse is defined as getOrElse(defaultValue: T): T, which is why
@@ -652,45 +680,9 @@ export function filterNullValues<T>(arr: Array<T | null | undefined>): T[] {
   return arr.filter((el) => el != null);
 }
 
-// TODO: Remove this function as it's currently unused
-// Filters an array given a search string. Supports searching for several words as OR query.
-// Supports nested properties
-export function filterWithSearchQueryOR<
-  T extends Readonly<Record<string, unknown>>,
-  P extends keyof T,
->(
-  collection: Array<T>,
-  properties: Array<P | ((arg0: T) => P | Array<any> | string)>,
-  searchQuery: string,
-): Array<T> {
-  if (searchQuery === "") {
-    return collection;
-  } else {
-    const words = _.map(searchQuery.split(" "), (element) =>
-      element.toLowerCase().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&"),
-    );
-
-    const uniques = _.filter(_.uniq(words), (element) => element !== "");
-
-    const pattern = `(${uniques.join("|")})`;
-    const regexp = new RegExp(pattern, "igm");
-    return collection.filter((model) =>
-      _.some(properties, (fieldName) => {
-        const value = typeof fieldName === "function" ? fieldName(model) : model[fieldName];
-
-        if (value != null && (typeof value === "string" || value instanceof Object)) {
-          const recursiveValues = getRecursiveValues(value);
-          return _.some(recursiveValues, (v) => v?.toString().match(regexp));
-        } else {
-          return false;
-        }
-      }),
-    );
-  }
-}
-
 // Filters an array given a search string. Supports searching for several words as AND query.
-// Supports nested properties
+// Supports nested properties.
+// Its pendant was removed int #7783 as it was unused.
 export function filterWithSearchQueryAND<
   T extends Readonly<Record<string, unknown>>,
   P extends keyof T,
@@ -889,9 +881,11 @@ export function waitForElementWithId(elementId: string): Promise<any> {
 }
 
 export function convertDecToBase256(num: number): Vector4 {
+  const sign = Math.sign(num);
+
   const divMod = (n: number) => [Math.floor(n / 256), n % 256];
 
-  let tmp = num;
+  let tmp = Math.abs(num);
 
   let r: number, g: number, b: number, a: number;
   [tmp, r] = divMod(tmp);
@@ -903,31 +897,44 @@ export function convertDecToBase256(num: number): Vector4 {
   [tmp, a] = divMod(tmp);
 
   // Little endian
-  return [r, g, b, a];
+  return map4((el) => sign * el, [r, g, b, a]);
 }
 
 export function castForArrayType(uncastNumber: number, data: TypedArray): number | bigint {
-  return data instanceof BigUint64Array ? BigInt(uncastNumber) : uncastNumber;
+  return data instanceof BigUint64Array || data instanceof BigInt64Array
+    ? BigInt(uncastNumber)
+    : uncastNumber;
 }
 
-export function convertNumberTo64Bit(num: number | null): [Vector4, Vector4] {
-  if (num == null || Number.isNaN(num)) {
-    return [
-      [0, 0, 0, 0],
-      [0, 0, 0, 0],
-    ];
-  }
-  // Cast to BigInt as bit-wise operations only work with 32 bits,
-  // even though Number uses 53 bits.
-  const bigNum = BigInt(num);
-
-  const bigNumLow = Number((2n ** 32n - 1n) & bigNum);
-  const bigNumHigh = Number(bigNum >> 32n);
+export function convertNumberTo64Bit(num: number | bigint | null): [Vector4, Vector4] {
+  const [bigNumHigh, bigNumLow] = convertNumberTo64BitTuple(num);
 
   const low = convertDecToBase256(bigNumLow);
   const high = convertDecToBase256(bigNumHigh);
 
   return [high, low];
+}
+
+export function convertNumberTo64BitTuple(num: number | bigint | null): [number, number] {
+  if (num == null || Number.isNaN(num)) {
+    return [0, 0];
+  }
+
+  let sign: number | null;
+  if (typeof num === "bigint") {
+    sign = num < 0n ? -1 : 1;
+  } else {
+    sign = Math.sign(num);
+  }
+
+  // Cast to BigInt as bit-wise operations only work with 32 bits,
+  // even though Number uses 53 bits.
+  const bigNum = BigInt(sign) * BigInt(num);
+
+  const bigNumLow = sign * Number((2n ** 32n - 1n) & bigNum);
+  const bigNumHigh = sign * Number(bigNum >> 32n);
+
+  return [bigNumHigh, bigNumLow];
 }
 
 export async function promiseAllWithErrors<T>(promises: Array<Promise<T>>): Promise<{
@@ -1116,6 +1123,48 @@ export function diffObjects(
   return changes(object, base);
 }
 
+export function fastDiffSetAndMap<T>(setA: Set<T>, mapB: Map<T, T>) {
+  /*
+   * This function was designed for a special use case within the mapping saga,
+   * where a Set of (potentially new) segment IDs is passed for setA and a known mapping from
+   * id->id is passed for mapB.
+   * The function computes:
+   * - aWithoutB: segment IDs that are in setA but not in mapB.keys()
+   * - bWithoutA: segment IDs that are in mapB.keys() but not in setA
+   * - intersection: a Map only contains keys that are in both setA and mapB.keys() (the values are used from mapB).
+   */
+  const aWithoutB = new Set<T>();
+  const bWithoutA = new Set<T>();
+  // This function assumes that the returned intersection is relatively large which is common
+  // for the use case it was designed for. Under this assumption, mapB is simply copied to
+  // initialize the intersection. Afterwards, items that are not within setA are removed from
+  // the intersection.
+  const intersection = new Map(mapB);
+
+  for (const item of setA) {
+    if (!mapB.has(item)) {
+      aWithoutB.add(item);
+    }
+  }
+
+  for (const item of mapB.keys()) {
+    if (!setA.has(item)) {
+      bWithoutA.add(item);
+      intersection.delete(item);
+    }
+  }
+
+  return {
+    aWithoutB: aWithoutB,
+    bWithoutA: bWithoutA,
+    intersection: intersection,
+  };
+}
+
+export function areVec3AlmostEqual(a: Vector3, b: Vector3, epsilon: number = 1e-6): boolean {
+  return _.every(a.map((v, i) => Math.abs(v - b[i]) < epsilon));
+}
+
 export function coalesce<T extends {}>(e: T, token: any): T[keyof T] | null {
   return Object.values(e).includes(token as T[keyof T]) ? token : null;
 }
@@ -1200,6 +1249,73 @@ export function notEmpty<TValue>(value: TValue | null | undefined): value is TVa
   return value !== null && value !== undefined;
 }
 
+export function isNumberMap(x: Map<NumberLike, NumberLike>): x is Map<number, number> {
+  const { value } = x.entries().next();
+  return Boolean(value && typeof value[0] === "number");
+}
+
+export function isBigInt(x: NumberLike): x is bigint {
+  return typeof x === "bigint";
+}
+
 export function assertNever(value: never): never {
   throw new Error(`Unexpected value that is not 'never': ${JSON.stringify(value)}`);
+}
+
+/**
+ * Returns a URL safe, base 62 encoded hash code from a string
+ * @param  {String} str The string to hash.
+ * @return {string}    A 32bit integer hash code encoded in base 62.
+ * @see https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript (original link is dead)
+ */
+export function computeHash(str: string): string | undefined {
+  let hash = 0;
+  for (let i = 0, len = str.length; i < len; i++) {
+    let chr = str.charCodeAt(i);
+    hash = (hash << 5) - hash + chr;
+    hash |= 0; // Convert to 32bit integer
+  }
+  const hashString = encodeToBase62(hash);
+  return hashString;
+}
+
+export function encodeToBase62(numberToEncode: number): string {
+  const base62Chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  if (numberToEncode === 0) return base62Chars[0];
+  if (numberToEncode === -1) return base62Chars[61];
+  let encoded = "";
+  let num = numberToEncode;
+  while (num !== 0 && num !== -1) {
+    // for positive numberToEncode, num will eventually be 0, for negative numberToEncode, num will eventually be -1
+    const modulo = mod(num, 62);
+    encoded = base62Chars[modulo] + encoded;
+    num = Math.floor(num / 62);
+  }
+  return encoded;
+}
+
+export function safeNumberToStr(num: number): string {
+  if (typeof num === "number") {
+    return `${num}`;
+  }
+  return "NaN";
+}
+
+export function generateRandomId(length: number) {
+  let result = "";
+  const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const charactersLength = characters.length;
+  let counter = 0;
+  while (counter < length) {
+    result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    counter += 1;
+  }
+  return result;
+}
+
+export function getPhraseFromCamelCaseString(stringInCamelCase: string): string {
+  return stringInCamelCase
+    .split(/(?=[A-Z])/)
+    .map((word) => capitalize(word.replace(/(^|\s)td/, "$13D")))
+    .join(" ");
 }

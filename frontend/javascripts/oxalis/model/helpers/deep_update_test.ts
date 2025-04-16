@@ -5,8 +5,8 @@
 // - perform multiple invalid calls which TS should catch (--> ts-expect-error)
 // - perform one valid call
 
-import type { OxalisState } from "oxalis/store";
 import { updateKey, updateKey2, updateKey3, updateKey4 } from "oxalis/model/helpers/deep_update";
+import type { OxalisState } from "oxalis/store";
 
 export function test1(state: OxalisState) {
   // @ts-expect-error
@@ -14,16 +14,16 @@ export function test1(state: OxalisState) {
     someKey: true,
   });
 
-  updateKey(state, "tracing", {
+  updateKey(state, "annotation", {
     // @ts-expect-error
     notExisting: true,
   });
-  updateKey(state, "tracing", {
+  updateKey(state, "annotation", {
     // @ts-expect-error
     visibility: "wrong type",
   });
   // No error
-  updateKey(state, "tracing", {
+  updateKey(state, "annotation", {
     visibility: "Public",
   });
 }
@@ -33,7 +33,7 @@ export function test2(state: OxalisState) {
     someKey: true,
   });
   // @ts-expect-error
-  updateKey2(state, "tracing", "notExisting", {
+  updateKey2(state, "annotation", "notExisting", {
     notExisting: true,
   });
   updateKey2(state, "viewModeData", "plane", {

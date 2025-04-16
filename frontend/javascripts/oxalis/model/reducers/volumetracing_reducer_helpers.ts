@@ -1,36 +1,41 @@
 import update from "immutability-helper";
-import { ContourMode, OrthoViews, OrthoViewWithoutTD, Vector3 } from "oxalis/constants";
-import type {
-  EditableMapping,
-  MappingType,
-  LabelAction,
-  OxalisState,
-  VolumeTracing,
-  SegmentGroup,
-  SegmentMap,
-} from "oxalis/store";
+import {
+  type ContourMode,
+  type OrthoViewWithoutTD,
+  OrthoViews,
+  type Vector3,
+} from "oxalis/constants";
 import {
   getSegmentationLayerForTracing,
   isVolumeAnnotationDisallowedForZoom,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { setDirectionReducer } from "oxalis/model/reducers/flycam_reducer";
 import { updateKey } from "oxalis/model/helpers/deep_update";
+import { setDirectionReducer } from "oxalis/model/reducers/flycam_reducer";
+import type {
+  EditableMapping,
+  LabelAction,
+  MappingType,
+  OxalisState,
+  SegmentGroup,
+  SegmentMap,
+  VolumeTracing,
+} from "oxalis/store";
+import { isInSupportedValueRangeForLayer } from "../accessors/dataset_accessor";
 import { mapGroupsToGenerator } from "../accessors/skeletontracing_accessor";
-import { getMaximumSegmentIdForLayer } from "../accessors/dataset_accessor";
 
 export function updateVolumeTracing(
   state: OxalisState,
   volumeTracingId: string,
   shape: Partial<VolumeTracing>,
 ) {
-  const newVolumes = state.tracing.volumes.map((volume) => {
+  const newVolumes = state.annotation.volumes.map((volume) => {
     if (volume.tracingId === volumeTracingId) {
       return { ...volume, ...shape };
     } else {
       return volume;
     }
   });
-  return updateKey(state, "tracing", {
+  return updateKey(state, "annotation", {
     volumes: newVolumes,
   });
 }
@@ -39,14 +44,14 @@ export function updateEditableMapping(
   volumeTracingId: string,
   shape: Partial<EditableMapping>,
 ) {
-  const newMappings = state.tracing.mappings.map((mapping) => {
+  const newMappings = state.annotation.mappings.map((mapping) => {
     if (mapping.tracingId === volumeTracingId) {
       return { ...mapping, ...shape };
     } else {
       return mapping;
     }
   });
-  return updateKey(state, "tracing", {
+  return updateKey(state, "annotation", {
     mappings: newMappings,
   });
 }
@@ -57,8 +62,9 @@ export function setActiveCellReducer(
   activeUnmappedSegmentId: number | null | undefined,
 ) {
   const segmentationLayer = getSegmentationLayerForTracing(state, volumeTracing);
-  if (id > getMaximumSegmentIdForLayer(state.dataset, segmentationLayer.name)) {
-    // Ignore the action if the segment id is larger than the maximum segment id for the layer.
+
+  if (!isInSupportedValueRangeForLayer(state.dataset, segmentationLayer.name, id)) {
+    // Ignore the action if the segment id is not valid for the current elementClass
     return state;
   }
   return updateVolumeTracing(state, volumeTracing.tracingId, {
@@ -109,7 +115,7 @@ export function addToLayerReducer(
   volumeTracing: VolumeTracing,
   position: Vector3,
 ) {
-  const { allowUpdate } = state.tracing.restrictions;
+  const { allowUpdate } = state.annotation.restrictions;
 
   if (!allowUpdate || isVolumeAnnotationDisallowedForZoom(state.uiInformation.activeTool, state)) {
     return state;
@@ -158,14 +164,23 @@ export function setMappingNameReducer(
   mappingType: MappingType,
   isMappingEnabled: boolean = true,
 ) {
+  /*
+   * This function is responsible for updating the mapping name in the volume
+   * tracing object (which is also persisted on the back-end). Only null
+   * or the name of a HDF5 mapping is stored there, though.
+   */
   // Editable mappings or locked mappings cannot be disabled or switched for now
-  if (volumeTracing.mappingIsEditable || volumeTracing.mappingIsLocked) {
+  if (volumeTracing.hasEditableMapping || volumeTracing.mappingIsLocked) {
     return state;
   }
-  // Only HDF5 mappings are persisted in volume annotations for now
+
+  // Clear the name for Non-HDF5 mappings or when the mapping got disabled,
+  // before persisting the name in volume annotations. JSON mappings are
+  // not stored in the back-end for now.
   if (mappingType !== "HDF5" || !isMappingEnabled) {
     mappingName = null;
   }
+
   return updateVolumeTracing(state, volumeTracing.tracingId, {
     mappingName,
   });

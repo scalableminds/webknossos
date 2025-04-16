@@ -1,57 +1,60 @@
+import features from "features";
 import type { ModifierKeys } from "libs/input";
-import * as THREE from "three";
-import type { OrthoView, Point2, AnnotationTool, Vector3, Viewport } from "oxalis/constants";
-import { OrthoViews, ContourModeEnum, AnnotationToolEnum } from "oxalis/constants";
+import { V3 } from "libs/mjs";
+import * as Utils from "libs/utils";
+import { document } from "libs/window";
+import type { AnnotationTool, OrthoView, Point2, Vector3, Viewport } from "oxalis/constants";
+import { AnnotationToolEnum, ContourModeEnum, OrthoViews } from "oxalis/constants";
 import {
-  enforceActiveVolumeTracing,
-  getActiveSegmentationTracing,
-  getContourTracingMode,
-  getSegmentColorAsHSLA,
-} from "oxalis/model/accessors/volumetracing_accessor";
-import {
-  handleAgglomerateSkeletonAtClick,
-  handleClickSegment,
-} from "oxalis/controller/combinations/segmentation_handlers";
-import {
-  computeQuickSelectForRectAction,
-  confirmQuickSelectAction,
-  hideBrushAction,
-  maybePrefetchEmbeddingAction,
-} from "oxalis/model/actions/volumetracing_actions";
-import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
-import getSceneController from "oxalis/controller/scene_controller_provider";
-import { finishedResizingUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
-import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
-import PlaneView from "oxalis/view/plane_view";
-import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
-import {
+  type SelectedEdge,
   createBoundingBoxAndGetEdges,
-  SelectedEdge,
+  handleMovingBoundingBox,
 } from "oxalis/controller/combinations/bounding_box_handlers";
 import {
   getClosestHoveredBoundingBox,
   handleResizingBoundingBox,
   highlightAndSetCursorOnHoveredBoundingBox,
 } from "oxalis/controller/combinations/bounding_box_handlers";
-import Store from "oxalis/store";
-import * as Utils from "libs/utils";
+import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
+import {
+  handleAgglomerateSkeletonAtClick,
+  handleClickSegment,
+} from "oxalis/controller/combinations/segmentation_handlers";
+import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
-import { document } from "libs/window";
-import { api } from "oxalis/singletons";
+import getSceneController from "oxalis/controller/scene_controller_provider";
+import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
+import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
+import {
+  enforceActiveVolumeTracing,
+  getActiveSegmentationTracing,
+  getContourTracingMode,
+  getSegmentColorAsHSLA,
+} from "oxalis/model/accessors/volumetracing_accessor";
+import { finishedResizingUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import {
   minCutAgglomerateWithPositionAction,
   proofreadAtPosition,
   proofreadMerge,
 } from "oxalis/model/actions/proofread_actions";
-import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
-import { V3 } from "libs/mjs";
 import {
   hideMeasurementTooltipAction,
-  setQuickSelectStateAction,
-  setLastMeasuredPositionAction,
+  setActiveUserBoundingBoxId,
   setIsMeasuringAction,
+  setLastMeasuredPositionAction,
+  setQuickSelectStateAction,
 } from "oxalis/model/actions/ui_actions";
-import ArbitraryView from "oxalis/view/arbitrary_view";
+import {
+  computeQuickSelectForPointAction,
+  computeQuickSelectForRectAction,
+  confirmQuickSelectAction,
+  hideBrushAction,
+} from "oxalis/model/actions/volumetracing_actions";
+import { api } from "oxalis/singletons";
+import Store from "oxalis/store";
+import type ArbitraryView from "oxalis/view/arbitrary_view";
+import type PlaneView from "oxalis/view/plane_view";
+import * as THREE from "three";
 
 export type ActionDescriptor = {
   leftClick?: string;
@@ -95,7 +98,7 @@ export class MoveTool {
           }
 
           case "shift": {
-            const { uiInformation, tracing } = Store.getState();
+            const { uiInformation, annotation } = Store.getState();
             const isBrushActive = isBrushTool(uiInformation.activeTool);
 
             if (isBrushActive) {
@@ -105,7 +108,7 @@ export class MoveTool {
               } else {
                 VolumeHandlers.changeBrushSizeIfBrushIsActiveBy(-1);
               }
-            } else if (tracing.skeleton) {
+            } else if (annotation.skeleton) {
               // Different browsers send different deltas, this way the behavior is comparable
               api.tracing.setNodeRadius(delta > 0 ? 5 : -5);
             }
@@ -126,9 +129,27 @@ export class MoveTool {
           if (SkeletonHandlers.handleSelectNode(planeView, pos, plane, isTouch)) {
             return;
           }
+          const clickedEdge = getClosestHoveredBoundingBox(pos, planeId);
+          if (clickedEdge) {
+            Store.dispatch(setActiveUserBoundingBoxId(clickedEdge[0].boxId));
+            return;
+          }
         }
-
         handleClickSegment(pos);
+      },
+      leftDoubleClick: (pos: Point2, _plane: OrthoView, _event: MouseEvent, _isTouch: boolean) => {
+        const { uiInformation } = Store.getState();
+        const isMoveToolActive = uiInformation.activeTool === AnnotationToolEnum.MOVE;
+
+        if (isMoveToolActive) {
+          // We want to select the clicked segment ID only in the MOVE tool. This method is
+          // implemented within the Move tool, but other tool controls will fall back to this one
+          // if they didn't define the double click hook. However, for most other tools, this behavior
+          // would be suboptimal, because when doing a double click, the first click will also be registered
+          // as a simple left click. For example, doing a double click with the brush tool would brush something
+          // and then immediately select the id again which is weird.
+          VolumeHandlers.handlePickCell(pos);
+        }
       },
       middleClick: (pos: Point2, _plane: OrthoView, event: MouseEvent) => {
         if (event.shiftKey) {
@@ -139,7 +160,18 @@ export class MoveTool {
         MoveHandlers.setMousePosition(center);
         MoveHandlers.zoom(delta, true);
       },
-      mouseMove: MoveHandlers.moveWhenAltIsPressed,
+      mouseMove: (delta: Point2, position: Point2, _id: any, event: MouseEvent) => {
+        MoveHandlers.moveWhenAltIsPressed(delta, position, _id, event);
+        if (planeId !== OrthoViews.TDView) {
+          const hoveredEdgesInfo = getClosestHoveredBoundingBox(position, planeId);
+          if (hoveredEdgesInfo) {
+            const [primaryEdge] = hoveredEdgesInfo;
+            getSceneController().highlightUserBoundingBox(primaryEdge.boxId);
+          } else {
+            getSceneController().highlightUserBoundingBox(null);
+          }
+        }
+      },
       out: () => {
         MoveHandlers.setMousePosition(null);
       },
@@ -203,7 +235,7 @@ export class SkeletonTool {
       if (event.shiftKey) {
         SkeletonHandlers.handleOpenContextMenu(planeView, position, plane, isTouch, event);
       } else {
-        SkeletonHandlers.handleCreateNode(position, event.ctrlKey || event.metaKey);
+        SkeletonHandlers.handleCreateNodeFromEvent(position, event.ctrlKey || event.metaKey);
       }
     };
 
@@ -238,11 +270,11 @@ export class SkeletonTool {
         _id: string | null | undefined,
         event: MouseEvent,
       ) => {
-        const { tracing } = Store.getState();
+        const { annotation } = Store.getState();
         const { useLegacyBindings } = Store.getState().userConfiguration;
 
         if (
-          tracing.skeleton != null &&
+          annotation.skeleton != null &&
           (draggingNodeId != null || (useLegacyBindings && (event.ctrlKey || event.metaKey)))
         ) {
           didDragNode = true;
@@ -304,7 +336,7 @@ export class SkeletonTool {
 
     if (allowNodeCreation && !didSelectNode && !useLegacyBindings && !shiftPressed) {
       // Will only have an effect, when not in 3D viewport
-      SkeletonHandlers.handleCreateNode(position, ctrlPressed);
+      SkeletonHandlers.handleCreateNodeFromEvent(position, ctrlPressed);
     }
   }
 
@@ -465,11 +497,25 @@ export class EraseTool {
       leftDownMove: (_delta: Point2, pos: Point2) => {
         VolumeHandlers.handleMoveForDrawOrErase(pos);
       },
-      leftMouseDown: (pos: Point2, plane: OrthoView, _event: MouseEvent) => {
+      leftMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+        if (event.shiftKey || event.ctrlKey || event.metaKey) {
+          return;
+        }
+
         VolumeHandlers.handleEraseStart(pos, plane);
       },
       leftMouseUp: () => {
         VolumeHandlers.handleEndForDrawOrErase();
+      },
+      leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+        const isControlOrMetaPressed = event.ctrlKey || event.metaKey;
+        if (event.shiftKey) {
+          if (isControlOrMetaPressed) {
+            VolumeHandlers.handleFloodFill(pos, plane);
+          } else {
+            VolumeHandlers.handlePickCell(pos);
+          }
+        }
       },
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         SkeletonHandlers.handleOpenContextMenu(planeView, pos, plane, isTouch, event);
@@ -561,12 +607,16 @@ export class BoundingBoxTool {
         delta: Point2,
         pos: Point2,
         _id: string | null | undefined,
-        _event: MouseEvent,
+        event: MouseEvent,
       ) => {
-        if (primarySelectedEdge != null) {
-          handleResizingBoundingBox(pos, planeId, primarySelectedEdge, secondarySelectedEdge);
-        } else {
+        if (primarySelectedEdge == null) {
           MoveHandlers.handleMovePlane(delta);
+          return;
+        }
+        if (event.ctrlKey || event.metaKey) {
+          handleMovingBoundingBox(delta, planeId, primarySelectedEdge);
+        } else {
+          handleResizingBoundingBox(pos, planeId, primarySelectedEdge, secondarySelectedEdge);
         }
       },
       leftMouseDown: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
@@ -596,7 +646,13 @@ export class BoundingBoxTool {
       mouseMove: (delta: Point2, position: Point2, _id: any, event: MouseEvent) => {
         if (primarySelectedEdge == null && planeId !== OrthoViews.TDView) {
           MoveHandlers.moveWhenAltIsPressed(delta, position, _id, event);
-          highlightAndSetCursorOnHoveredBoundingBox(position, planeId);
+          highlightAndSetCursorOnHoveredBoundingBox(position, planeId, event);
+        }
+      },
+      leftClick: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
+        const currentlyHoveredEdge = getClosestHoveredBoundingBox(pos, planeId);
+        if (currentlyHoveredEdge) {
+          Store.dispatch(setActiveUserBoundingBoxId(currentlyHoveredEdge[0].boxId));
         }
       },
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
@@ -609,12 +665,12 @@ export class BoundingBoxTool {
     _activeTool: AnnotationTool,
     _useLegacyBindings: boolean,
     _shiftKey: boolean,
-    _ctrlOrMetaKey: boolean,
+    ctrlOrMetaKey: boolean,
     _altKey: boolean,
     _isTDViewportActive: boolean,
   ): ActionDescriptor {
     return {
-      leftDrag: "Create/Resize Bounding Boxes",
+      leftDrag: ctrlOrMetaKey ? "Move Bounding Boxes" : "Create/Resize Bounding Boxes",
       rightClick: "Context Menu",
     };
   }
@@ -667,8 +723,6 @@ export class QuickSelectTool {
         startPos = V3.floor(calculateGlobalPos(state, pos));
         currentPos = startPos;
         isDragging = true;
-
-        Store.dispatch(maybePrefetchEmbeddingAction(startPos));
       },
       leftMouseUp: () => {
         isDragging = false;
@@ -716,6 +770,19 @@ export class QuickSelectTool {
         currentPos = newCurrentPos;
 
         quickSelectGeometry.setCoordinates(startPos, currentPos);
+      },
+      leftClick: (pos: Point2, _plane: OrthoView, _event: MouseEvent, _isTouch: boolean) => {
+        const state = Store.getState();
+        const clickedPos = V3.floor(calculateGlobalPos(state, pos));
+        isDragging = false;
+
+        const quickSelectConfig = state.userConfiguration.quickSelect;
+        const isAISelectAvailable = features().segmentAnythingEnabled;
+        const isQuickSelectHeuristic = quickSelectConfig.useHeuristic || !isAISelectAvailable;
+
+        if (!isQuickSelectHeuristic) {
+          Store.dispatch(computeQuickSelectForPointAction(clickedPos, quickSelectGeometry));
+        }
       },
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         SkeletonHandlers.handleOpenContextMenu(planeView, pos, plane, isTouch, event);

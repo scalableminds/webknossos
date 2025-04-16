@@ -1,19 +1,19 @@
-import * as THREE from "three";
+import type Maybe from "data.maybe";
+import * as Utils from "libs/utils";
 import _ from "lodash";
-import Maybe from "data.maybe";
-import type { Tree, Node, Edge, OxalisState, SkeletonTracing } from "oxalis/store";
 import type { Vector3, Vector4 } from "oxalis/constants";
-import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
-import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import EdgeShader from "oxalis/geometries/materials/edge_shader";
 import NodeShader, {
   NodeTypes,
   COLOR_TEXTURE_WIDTH,
 } from "oxalis/geometries/materials/node_shader";
+import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
+import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
+import type { CreateActionNode, UpdateActionNode } from "oxalis/model/sagas/update_actions";
+import type { Edge, Node, OxalisState, SkeletonTracing, Tree } from "oxalis/store";
 import Store from "oxalis/throttled_store";
-import * as Utils from "libs/utils";
-import { type AdditionalCoordinate } from "types/api_flow_types";
-import { UpdateActionNode } from "oxalis/model/sagas/update_actions";
+import * as THREE from "three";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 const MAX_CAPACITY = 1000;
 
@@ -114,6 +114,9 @@ class Skeleton {
   supportsPicking: boolean;
   stopStoreListening: () => void;
 
+  nodeShader: NodeShader | undefined;
+  edgeShader: EdgeShader | undefined;
+
   constructor(
     skeletonTracingSelectorFn: (state: OxalisState) => Maybe<SkeletonTracing>,
     supportsPicking: boolean,
@@ -137,6 +140,17 @@ class Skeleton {
 
   destroy() {
     this.stopStoreListening();
+    this.stopStoreListening = () => {};
+
+    this.treeColorTexture.dispose();
+    // @ts-ignore
+    this.treeColorTexture = undefined;
+
+    this.nodes.material.dispose();
+    this.edges.material.dispose();
+
+    this.nodeShader?.destroy();
+    this.edgeShader?.destroy();
   }
 
   reset(skeletonTracing: SkeletonTracing) {
@@ -156,8 +170,8 @@ class Skeleton {
       THREE.RGBAFormat,
       THREE.FloatType,
     );
-    const nodeMaterial = new NodeShader(this.treeColorTexture).getMaterial();
-    const edgeMaterial = new EdgeShader(this.treeColorTexture).getMaterial();
+    this.nodeShader = new NodeShader(this.treeColorTexture);
+    this.edgeShader = new EdgeShader(this.treeColorTexture);
 
     // delete actual GPU buffers in case there were any
     if (this.nodes != null) {
@@ -173,8 +187,16 @@ class Skeleton {
     }
 
     // create new buffers
-    this.nodes = this.initializeBufferCollection(nodeCount, nodeMaterial, NodeBufferHelperType);
-    this.edges = this.initializeBufferCollection(edgeCount, edgeMaterial, EdgeBufferHelperType);
+    this.nodes = this.initializeBufferCollection(
+      nodeCount,
+      this.nodeShader.getMaterial(),
+      NodeBufferHelperType,
+    );
+    this.edges = this.initializeBufferCollection(
+      edgeCount,
+      this.edgeShader.getMaterial(),
+      EdgeBufferHelperType,
+    );
 
     // fill buffers with data
     for (const tree of _.values(trees)) {
@@ -316,7 +338,11 @@ class Skeleton {
    */
   refresh(skeletonTracing: SkeletonTracing) {
     const state = Store.getState();
-    const diff = cachedDiffTrees(this.prevTracing.trees, skeletonTracing.trees);
+    const diff = cachedDiffTrees(
+      skeletonTracing.tracingId,
+      this.prevTracing.trees,
+      skeletonTracing.trees,
+    );
 
     for (const update of diff) {
       switch (update.name) {
@@ -518,7 +544,7 @@ class Skeleton {
   /**
    * Creates a new node in a WebGL buffer.
    */
-  createNode(treeId: number, node: Node | UpdateActionNode) {
+  createNode(treeId: number, node: Node | UpdateActionNode | CreateActionNode) {
     const id = this.combineIds(node.id, treeId);
     this.create(
       id,

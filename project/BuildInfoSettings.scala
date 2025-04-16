@@ -1,7 +1,9 @@
-import scala.sys.process._
 import sbt.Keys.{name, sbtVersion, scalaVersion}
-import sbtbuildinfo.BuildInfoPlugin.autoImport._
+import sbtbuildinfo.BuildInfoPlugin.autoImport.*
+
 import scala.language.postfixOps
+import scala.sys.process.*
+import scala.util.Properties
 
 object BuildInfoSettings {
 
@@ -12,14 +14,15 @@ object BuildInfoSettings {
       case _: Throwable => failureMsg
     }
 
-  val ciBuild: String =
-    if (System.getenv().containsKey("CIRCLE_BUILD_NUM")) System.getenv().get("CIRCLE_BUILD_NUM") else ""
-  val ciTag: String = if (System.getenv().containsKey("CIRCLE_TAG")) System.getenv().get("CIRCLE_TAG") else ""
+  val ciBuild: String = Properties.envOrElse("CI_BUILD_NUM", "")
+  val ciTag: String = Properties.envOrElse("CI_TAG", "")
 
   def commitHash: String = getStdoutFromCommand("git rev-parse HEAD", "<getting commit hash failed>")
   def commitDate: String = getStdoutFromCommand("git log -1 --format=%cd ", "<getting git date failed>")
 
   def webknossosVersion: String = if (ciTag != "") ciTag else (if (ciBuild != "") ciBuild else "dev")
+
+  val certificatePublicKey: Option[String] = Properties.envOrNone("CERTIFICATE_PUBLIC_KEY")
 
   lazy val webknossosBuildInfoSettings = Seq(
     buildInfoKeys := Seq[BuildInfoKey](
@@ -31,7 +34,8 @@ object BuildInfoSettings {
       "ciBuild" -> ciBuild,
       "ciTag" -> ciTag,
       "version" -> webknossosVersion,
-      "datastoreApiVersion" -> "2.0"
+      "datastoreApiVersion" -> "2.0",
+      "certificatePublicKey" -> certificatePublicKey
     ),
     buildInfoPackage := "webknossos",
     buildInfoOptions := Seq(BuildInfoOption.ToJson)

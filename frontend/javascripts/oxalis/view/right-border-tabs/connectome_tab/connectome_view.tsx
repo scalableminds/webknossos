@@ -1,66 +1,66 @@
-import { Alert, Empty, Space, Tooltip, TreeProps } from "antd";
-import { connect } from "react-redux";
-import Maybe from "data.maybe";
-import React from "react";
-import _ from "lodash";
-import type {
-  APISegmentationLayer,
-  APIDataset,
-  APIConnectomeFile,
-  APIDatasetId,
-} from "types/api_flow_types";
-import { diffArrays, unique, map3 } from "libs/utils";
-import { getTreeNameForAgglomerateSkeleton } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import {
-  getSynapsesOfAgglomerates,
-  getSynapseSources,
   getSynapseDestinations,
   getSynapsePositions,
+  getSynapseSources,
   getSynapseTypes,
+  getSynapsesOfAgglomerates,
 } from "admin/admin_rest_api";
+import { Alert, Empty, Space, Tooltip, type TreeProps } from "antd";
+import Maybe from "data.maybe";
+import DiffableMap from "libs/diffable_map";
+import { stringToAntdColorPresetRgb } from "libs/format_utils";
+import Toast from "libs/toast";
+import { diffArrays, map3, unique } from "libs/utils";
+import _ from "lodash";
+import { TreeTypeEnum, type Vector3 } from "oxalis/constants";
+import Constants, { MappingStatusEnum } from "oxalis/constants";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 import {
-  getVisibleOrLastSegmentationLayer,
   getMappingInfo,
+  getVisibleOrLastSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
+import { getTreeNameForAgglomerateSkeleton } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
-  initializeConnectomeTracingAction,
-  removeConnectomeTracingAction,
-  deleteConnectomeTreesAction,
   addConnectomeTreesAction,
-  setConnectomeTreesVisibilityAction,
-  setActiveConnectomeAgglomerateIdsAction,
+  deleteConnectomeTreesAction,
+  initializeConnectomeTracingAction,
   loadConnectomeAgglomerateSkeletonAction,
   removeConnectomeAgglomerateSkeletonAction,
+  removeConnectomeTracingAction,
+  setActiveConnectomeAgglomerateIdsAction,
+  setConnectomeTreesVisibilityAction,
 } from "oxalis/model/actions/connectome_actions";
-import { stringToAntdColorPresetRgb } from "libs/format_utils";
 import { setMappingAction } from "oxalis/model/actions/settings_actions";
-import ButtonComponent from "oxalis/view/components/button_component";
-import { TreeTypeEnum, Vector3 } from "oxalis/constants";
-import Constants, { MappingStatusEnum } from "oxalis/constants";
-import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
-import InputComponent from "oxalis/view/components/input_component";
 import type {
-  OxalisState,
-  MutableTree,
-  MutableNode,
-  MutableTreeMap,
   ActiveMappingInfo,
+  MutableNode,
+  MutableTree,
+  MutableTreeMap,
+  OxalisState,
 } from "oxalis/store";
 import Store from "oxalis/store";
-import Toast from "libs/toast";
-import getSceneController from "oxalis/controller/scene_controller_provider";
+import ButtonComponent from "oxalis/view/components/button_component";
+import InputComponent from "oxalis/view/components/input_component";
+import ConnectomeFilters from "oxalis/view/right-border-tabs/connectome_tab/connectome_filters";
+import ConnectomeSettings from "oxalis/view/right-border-tabs/connectome_tab/connectome_settings";
 import type {
-  ConnectomeData,
   Agglomerate,
+  ConnectomeData,
   TreeNode,
 } from "oxalis/view/right-border-tabs/connectome_tab/synapse_tree";
 import SynapseTree, {
   convertConnectomeToTreeData,
 } from "oxalis/view/right-border-tabs/connectome_tab/synapse_tree";
-import ConnectomeFilters from "oxalis/view/right-border-tabs/connectome_tab/connectome_filters";
-import ConnectomeSettings from "oxalis/view/right-border-tabs/connectome_tab/connectome_settings";
+import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import React from "react";
+import { connect } from "react-redux";
+import type {
+  APIConnectomeFile,
+  APIDataSourceId,
+  APIDataset,
+  APISegmentationLayer,
+} from "types/api_flow_types";
 const connectomeTabId = "connectome-view";
 type StateProps = {
   dataset: APIDataset;
@@ -155,6 +155,7 @@ const synapseTreeCreator = (synapseId: number, synapseType: string): MutableTree
   groupId: null,
   type: TreeTypeEnum.DEFAULT,
   edgesAreVisible: true,
+  metadata: [],
 });
 
 const synapseNodeCreator = (synapseId: number, synapsePosition: Vector3): MutableNode => ({
@@ -162,7 +163,7 @@ const synapseNodeCreator = (synapseId: number, synapsePosition: Vector3): Mutabl
   radius: Constants.DEFAULT_NODE_RADIUS,
   rotation: [0, 0, 0],
   viewport: 0,
-  resolution: 0,
+  mag: 0,
   id: synapseId,
   timestamp: Date.now(),
   bitDepth: 8,
@@ -270,6 +271,16 @@ class ConnectomeView extends React.Component<Props, State> {
   }
 
   componentWillUnmount() {
+    if (!Store.getState().uiInformation.isWkReady) {
+      // Because inner componentWillUnmount's are executed before
+      // outer componentWillUnmount's, we have to check isWkReady
+      // here.
+      // If isWkReady is false, this indicates that the WK viewer
+      // was already torn down. In that case, the store was reset
+      // and the scene controller destroyed. Executing the below
+      // code would crash.
+      return;
+    }
     const { segmentationLayer } = this.props;
     if (segmentationLayer == null) return;
     this.removeSkeleton(segmentationLayer);
@@ -353,7 +364,7 @@ class ConnectomeView extends React.Component<Props, State> {
       activeAgglomerateIds.length === 0
     )
       return;
-    const fetchProperties: [string, APIDatasetId, string, string] = [
+    const fetchProperties: [string, APIDataSourceId, string, string] = [
       dataset.dataStore.url,
       dataset,
       getBaseSegmentationName(segmentationLayer),
@@ -645,7 +656,7 @@ class ConnectomeView extends React.Component<Props, State> {
     // @ts-ignore
     const agglomerateIds = evt.target.value
       .split(",")
-      .map((part: string) => parseInt(part, 10))
+      .map((part: string) => Number.parseInt(part, 10))
       .filter((id: number) => !Number.isNaN(id));
     this.setActiveConnectomeAgglomerateIds(agglomerateIds);
     // @ts-ignore

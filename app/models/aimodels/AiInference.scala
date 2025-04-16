@@ -10,14 +10,14 @@ import models.job.{JobDAO, JobService}
 import models.user.{User, UserDAO, UserService}
 import play.api.libs.json.{JsObject, Json}
 import slick.lifted.Rep
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 case class AiInference(_id: ObjectId,
-                       _organization: ObjectId,
+                       _organization: String,
                        _aiModel: ObjectId,
                        _newDataset: Option[ObjectId],
                        _annotation: Option[ObjectId],
@@ -48,7 +48,7 @@ class AiInferenceService @Inject()(dataStoreDAO: DataStoreDAO,
       dataStore <- dataStoreDAO.findOneByName(inferenceJob._dataStore)
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
       aiModel <- aiModelDAO.findOne(aiInference._aiModel)
-      aiModelJs <- aiModelService.publicWrites(aiModel)
+      aiModelJs <- aiModelService.publicWrites(aiModel, requestingUser)
       newDatasetOpt <- Fox.runOptional(aiInference._newDataset)(datasetDAO.findOne)
       newDatasetJsOpt <- Fox.runOptional(newDatasetOpt)(newDataset =>
         datasetService.publicWrites(newDataset, Some(requestingUser)))
@@ -83,7 +83,7 @@ class AiInferenceDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
     } yield
       AiInference(
         ObjectId(r._Id),
-        ObjectId(r._Organization),
+        r._Organization,
         ObjectId(r._Aimodel),
         r._Newdataset.map(ObjectId(_)),
         r._Annotation.map(ObjectId(_)),

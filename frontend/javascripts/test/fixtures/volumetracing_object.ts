@@ -1,13 +1,7 @@
 import update from "immutability-helper";
 import Constants, { AnnotationToolEnum } from "oxalis/constants";
-import mockRequire from "mock-require";
 import defaultState from "oxalis/default_state";
-mockRequire("app", {
-  currentUser: {
-    firstName: "SCM",
-    lastName: "Boy",
-  },
-});
+
 const volumeTracing = {
   type: "volume",
   activeCellId: 0,
@@ -24,7 +18,7 @@ const notEmptyViewportRect = {
   height: Constants.VIEWPORT_WIDTH,
 };
 export const initialState = update(defaultState, {
-  tracing: {
+  annotation: {
     annotationType: {
       $set: "Explorational",
     },
@@ -38,7 +32,7 @@ export const initialState = update(defaultState, {
         allowFinish: true,
         allowAccess: true,
         allowDownload: true,
-        resolutionRestrictions: {
+        magRestrictions: {
           // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'number | un... Remove this comment to see the full error message
           min: null,
           // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'number | un... Remove this comment to see the full error message
@@ -56,7 +50,7 @@ export const initialState = update(defaultState, {
       dataLayers: {
         $set: [
           {
-            // We need to have some resolutions. Otherwise,
+            // We need to have some mags. Otherwise,
             // getRequestLogZoomStep will always return 0
             resolutions: [
               [1, 1, 1],
@@ -64,8 +58,9 @@ export const initialState = update(defaultState, {
               [4, 4, 4],
             ],
             category: "segmentation",
-            name: "tracingId",
-            tracingId: "tracingId",
+            elementClass: "uint32",
+            name: volumeTracing.tracingId,
+            tracingId: volumeTracing.tracingId,
             // @ts-expect-error ts-migrate(2322) FIXME: Type '{ resolutions: [number, number, number][]; c... Remove this comment to see the full error message
             isDisabled: false,
             alpha: 100,
@@ -76,7 +71,7 @@ export const initialState = update(defaultState, {
   },
   datasetConfiguration: {
     layers: {
-      tracingId: {
+      [volumeTracing.tracingId]: {
         $set: {
           color: [0, 0, 0],
           alpha: 100,

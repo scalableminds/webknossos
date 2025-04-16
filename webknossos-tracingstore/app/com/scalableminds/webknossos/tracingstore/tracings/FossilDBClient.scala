@@ -53,14 +53,16 @@ class FossilDBClient(collection: String,
   private val stub = FossilDBGrpc.stub(channel)
   private val blockingStub = FossilDBGrpc.blockingStub(channel)
   private val healthStub = HealthGrpc.newFutureStub(channel)
+  lazy val authority: String = f"$address:$port"
 
-  def checkHealth: Fox[Unit] = {
+  def checkHealth(verbose: Boolean = false): Fox[Unit] = {
     val resultFox = for {
       reply: HealthCheckResponse <- wrapException(
         Grpc.guavaFuture2ScalaFuture(healthStub.check(HealthCheckRequest.getDefaultInstance)))
       replyString = reply.getStatus.toString
       _ <- bool2Fox(replyString == "SERVING") ?~> replyString
-      _ = logger.info("Successfully tested FossilDB health at " + address + ":" + port + ". Reply: " + replyString)
+      _ = if (verbose)
+        logger.info(f"Successfully tested FossilDB health at $authority. Reply: " + replyString)
     } yield ()
     for {
       box <- resultFox.futureBox
@@ -68,7 +70,7 @@ class FossilDBClient(collection: String,
         case Full(()) => Fox.successful(())
         case Empty    => Fox.empty
         case net.liftweb.common.Failure(msg, _, _) =>
-          val errorText = s"Failed to connect to FossilDB at $address:$port: $msg"
+          val errorText = s"Failed to connect to FossilDB at $authority: $msg"
           logger.error(errorText)
           Fox.failure(errorText)
       }
@@ -92,7 +94,7 @@ class FossilDBClient(collection: String,
               messageWithCauses.append(cause.toString)
               cause = cause.getCause
             }
-            new net.liftweb.common.Failure(s"Request to FossilDB failed: ${messageWithCauses}", Full(e), Empty)
+            new net.liftweb.common.Failure(s"Request to FossilDB failed: $messageWithCauses", Full(e), Empty)
         }
         Future.successful(box)
     }
@@ -148,11 +150,34 @@ class FossilDBClient(collection: String,
     }
   }
 
-  def getMultipleVersions[T](key: String, newestVersion: Option[Long] = None, oldestVersion: Option[Long] = None)(
-      implicit fromByteArray: Array[Byte] => Box[T]): Fox[List[T]] =
+  def getMultipleKeysByList[T](keys: Seq[String], version: Option[Long], batchSize: Int = 1000)(
+      implicit fromByteArray: Array[Byte] => Box[T]): Fox[Seq[Box[VersionedKeyValuePair[T]]]] =
     for {
-      versionValueTuples <- getMultipleVersionsAsVersionValueTuple(key, newestVersion, oldestVersion)
-    } yield versionValueTuples.map(_._2)
+      batchedResults <- Fox.serialCombined(keys.grouped(batchSize))(keyBatch =>
+        getMultipleKeysByListImpl(keyBatch, version))
+    } yield batchedResults.flatten
+
+  private def getMultipleKeysByListImpl[T](keys: Seq[String], version: Option[Long])(
+      implicit fromByteArray: Array[Byte] => Box[T]): Fox[Seq[Box[VersionedKeyValuePair[T]]]] =
+    for {
+      reply: GetMultipleKeysByListReply <- stub.getMultipleKeysByList(
+        GetMultipleKeysByListRequest(collection, keys, version))
+      _ <- assertSuccess(reply.success, reply.errorMessage)
+      parsedValues: Seq[Box[VersionedKeyValuePair[T]]] = keys.zip(reply.versionValueBoxes).map {
+        case (key, versionValueBox) =>
+          versionValueBox match {
+            case VersionValueBoxProto(Some(versionValuePair), None, _) =>
+              for {
+                parsed <- fromByteArray(versionValuePair.value.toByteArray)
+              } yield VersionedKeyValuePair(VersionedKey(key, versionValuePair.actualVersion), parsed)
+            case VersionValueBoxProto(None, Some(errorMessage), _) =>
+              net.liftweb.common.Failure(s"Failed to get entry from FossilDB: $errorMessage")
+            case VersionValueBoxProto(None, None, _) => Empty
+            case _                                   => net.liftweb.common.Failure("Unexpected reply format in FossilDB getMultipleKeysByList")
+          }
+        case _ => net.liftweb.common.Failure("Unexpected reply format in FossilDB getMultipleKeysByList")
+      }
+    } yield parsedValues
 
   def getMultipleVersionsAsVersionValueTuple[T](
       key: String,
@@ -182,7 +207,45 @@ class FossilDBClient(collection: String,
         case Empty    => Fox.empty
         case net.liftweb.common.Failure(msg, _, _) =>
           slackNotificationService.reportFossilWriteError("put", msg)
-          Fox.failure("could not save to FossilDB: " + msg)
+          Fox.failure("Could not save to FossilDB: " + msg)
+      }
+    } yield ()
+  }
+
+  def putMultipleWithIndividualVersions(keyValueVersionTuples: Seq[((String, Long), Array[Byte])],
+                                        batchSize: Int = 1000): Fox[Unit] = {
+    val versionedKeyValuePairs = keyValueVersionTuples.map {
+      case ((key, version), value) => VersionedKeyValuePairProto(key, version, ByteString.copyFrom(value))
+    }
+    for {
+      _ <- Fox.serialCombined(versionedKeyValuePairs.grouped(batchSize))(batch => putMultipleImpl(batch))
+    } yield ()
+  }
+
+  def putMultiple(keyValueTuples: Seq[(String, Array[Byte])], version: Long, batchSize: Int = 1000): Fox[Unit] = {
+    val versionedKeyValuePairs = keyValueTuples.map {
+      case (key, value) => VersionedKeyValuePairProto(key, version, ByteString.copyFrom(value))
+    }
+    for {
+      _ <- Fox.serialCombined(versionedKeyValuePairs.grouped(batchSize))(batch => putMultipleImpl(batch))
+    } yield ()
+  }
+
+  private def putMultipleImpl(versionedKeyValuePairs: Seq[VersionedKeyValuePairProto]): Fox[Unit] = {
+    val putFox = for {
+      reply <- wrapException(
+        stub.putMultipleKeysWithMultipleVersions(
+          PutMultipleKeysWithMultipleVersionsRequest(collection, versionedKeyValuePairs)))
+      _ <- assertSuccess(reply.success, reply.errorMessage)
+    } yield ()
+    for {
+      box <- putFox.futureBox
+      _ <- box match {
+        case Full(()) => Fox.successful(())
+        case Empty    => Fox.empty
+        case net.liftweb.common.Failure(msg, _, _) =>
+          slackNotificationService.reportFossilWriteError("multi-put", msg)
+          Fox.failure("Could not multi-put to FossilDB: " + msg)
       }
     } yield ()
   }

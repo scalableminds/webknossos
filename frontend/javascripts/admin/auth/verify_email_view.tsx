@@ -1,11 +1,11 @@
-import { Spin } from "antd";
-import React, { useEffect } from "react";
-import { useFetch } from "libs/react_helpers";
 import { requestVerificationMail, verifyEmail } from "admin/admin_rest_api";
+import { Spin } from "antd";
+import { useFetch } from "libs/react_helpers";
+import type { ServerErrorMessage } from "libs/request";
 import Toast from "libs/toast";
-import { ServerErrorMessage } from "libs/request";
-import { useHistory } from "react-router-dom";
 import { Store } from "oxalis/singletons";
+import { useEffect } from "react";
+import { useHistory } from "react-router-dom";
 
 export const VERIFICATION_ERROR_TOAST_KEY = "verificationError";
 

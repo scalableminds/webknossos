@@ -3,17 +3,17 @@ import distanceTransform from "distance-transform";
 import { V2, V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
-import ndarray, { NdArray } from "ndarray";
+import ndarray, { type NdArray } from "ndarray";
 import {
   ContourModeEnum,
   InterpolationModeEnum,
   OrthoViews,
   ToolsWithInterpolationCapabilities,
-  TypedArrayWithoutBigInt,
-  Vector3,
+  type TypedArrayWithoutBigInt,
+  type Vector3,
 } from "oxalis/constants";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
-import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getMagInfo } from "oxalis/model/accessors/dataset_accessor";
 import {
   getActiveMagIndexForLayer,
   getFlooredPosition,
@@ -33,12 +33,12 @@ import {
 import Dimensions from "oxalis/model/dimensions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
-import { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
+import type { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
 import { Model, api } from "oxalis/singletons";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 import { call, put } from "typed-redux-saga";
+import { requestBucketModificationInVolumeTracing } from "../saga_helpers";
 import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } from "./helpers";
-import { ensureMaybeActiveMappingIsLocked } from "../saga_helpers";
 
 /*
  * This saga is capable of doing segment interpolation between two slices.
@@ -57,7 +57,7 @@ import { ensureMaybeActiveMappingIsLocked } from "../saga_helpers";
 export const MAXIMUM_INTERPOLATION_DEPTH = 100;
 
 function _getInterpolationInfo(state: OxalisState, explanationPrefix: string) {
-  const isAllowed = state.tracing.restrictions.volumeInterpolationAllowed;
+  const isAllowed = state.annotation.restrictions.volumeInterpolationAllowed;
   const onlyExtrude = state.userConfiguration.interpolationMode === InterpolationModeEnum.EXTRUDE;
   const volumeTracing = getActiveSegmentationTracing(state);
   let interpolationDepth = 0;
@@ -70,7 +70,7 @@ function _getInterpolationInfo(state: OxalisState, explanationPrefix: string) {
       isDisabled: true,
       activeViewport: OrthoViews.PLANE_XY,
       previousCentroid: null,
-      labeledResolution: [1, 1, 1] as Vector3,
+      labeledMag: [1, 1, 1] as Vector3,
       labeledZoomStep: 0,
       interpolationDepth,
       directionFactor,
@@ -84,14 +84,14 @@ function _getInterpolationInfo(state: OxalisState, explanationPrefix: string) {
 
   const segmentationLayer = Model.getSegmentationTracingLayer(volumeTracing.tracingId);
   const requestedZoomStep = getActiveMagIndexForLayer(state, segmentationLayer.name);
-  const resolutionInfo = getResolutionInfo(segmentationLayer.resolutions);
-  const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
-  const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
+  const magInfo = getMagInfo(segmentationLayer.mags);
+  const labeledZoomStep = magInfo.getClosestExistingIndex(requestedZoomStep);
+  const labeledMag = magInfo.getMagByIndexOrThrow(labeledZoomStep);
 
   const previousCentroid = getLabelActionFromPreviousSlice(
     state,
     volumeTracing,
-    labeledResolution,
+    labeledMag,
     thirdDim,
   )?.centroid;
 
@@ -101,12 +101,12 @@ function _getInterpolationInfo(state: OxalisState, explanationPrefix: string) {
   if (previousCentroid != null) {
     const position = getFlooredPosition(state.flycam);
     // Note that in coarser mags (e.g., 8-8-2), the comparison of the coordinates
-    // is done while respecting how the coordinates are clipped due to that resolution.
+    // is done while respecting how the coordinates are clipped due to that magnification.
     // For example, in mag 8-8-2, the z distance needs to be divided by two, since it is measured
     // in global coordinates.
-    const adapt = (vec: Vector3) => V3.roundElementToResolution(vec, labeledResolution, thirdDim);
+    const adapt = (vec: Vector3) => V3.roundElementToMag(vec, labeledMag, thirdDim);
     const signedInterpolationDepth = Math.floor(
-      V3.sub(adapt(position), adapt(previousCentroid))[thirdDim] / labeledResolution[thirdDim],
+      V3.sub(adapt(position), adapt(previousCentroid))[thirdDim] / labeledMag[thirdDim],
     );
     directionFactor = Math.sign(signedInterpolationDepth);
     interpolationDepth = Math.abs(signedInterpolationDepth);
@@ -142,7 +142,7 @@ function _getInterpolationInfo(state: OxalisState, explanationPrefix: string) {
     isDisabled,
     activeViewport,
     previousCentroid,
-    labeledResolution,
+    labeledMag,
     labeledZoomStep,
     interpolationDepth,
     directionFactor,
@@ -263,7 +263,7 @@ function signedDist(arr: ndarray.NdArray) {
 }
 
 export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
-  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
+  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
   if (!allowUpdate) return;
 
   const activeTool = yield* select((state) => state.uiInformation.activeTool);
@@ -272,7 +272,7 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   }
 
   const isVolumeInterpolationAllowed = yield* select(
-    (state) => state.tracing.restrictions.volumeInterpolationAllowed,
+    (state) => state.annotation.restrictions.volumeInterpolationAllowed,
   );
 
   if (!isVolumeInterpolationAllowed) {
@@ -282,11 +282,11 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
 
   // Disable copy-segmentation for the same zoom steps where the brush/trace tool is forbidden, too.
-  const isResolutionTooLow = yield* select((state) =>
+  const isMagTooLow = yield* select((state) =>
     isVolumeAnnotationDisallowedForZoom(activeTool, state),
   );
 
-  if (isResolutionTooLow) {
+  if (isMagTooLow) {
     Toast.warning(
       'The "interpolate segmentation"-feature is not supported at this zoom level. Please zoom in further.',
     );
@@ -297,7 +297,7 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     activeViewport,
     previousCentroid,
     disabledExplanation,
-    labeledResolution,
+    labeledMag,
     labeledZoomStep,
     interpolationDepth,
     directionFactor,
@@ -333,11 +333,11 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   const relevantBoxMag1 = viewportBoxMag1
     // Consider the n previous/next slices
     .paddedWithSignedMargins(
-      transpose([0, 0, -directionFactor * interpolationDepth * labeledResolution[thirdDim]]),
+      transpose([0, 0, -directionFactor * interpolationDepth * labeledMag[thirdDim]]),
     )
-    .alignWithMag(labeledResolution, "grow")
+    .alignWithMag(labeledMag, "grow")
     .rounded();
-  const relevantBoxCurrentMag = relevantBoxMag1.fromMag1ToMag(labeledResolution);
+  const relevantBoxCurrentMag = relevantBoxMag1.fromMag1ToMag(labeledMag);
 
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   const inputData = yield* call(
@@ -372,8 +372,8 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
       createVolumeLayer,
       volumeTracing,
       activeViewport,
-      labeledResolution,
-      relevantBoxMag1.min[thirdDim] + labeledResolution[thirdDim] * targetOffsetW,
+      labeledMag,
+      relevantBoxMag1.min[thirdDim] + labeledMag[thirdDim] * targetOffsetW,
     );
     interpolationVoxelBuffers[targetOffsetW] = interpolationLayer.createVoxelBuffer2D(
       V2.floor(
@@ -436,8 +436,11 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     return;
   }
   // As the interpolation will be applied, the potentially existing mapping should be locked to ensure a consistent state.
-  const { isMappingLockedIfNeeded } = yield* call(ensureMaybeActiveMappingIsLocked, volumeTracing);
-  if (!isMappingLockedIfNeeded) {
+  const isModificationAllowed = yield* call(
+    requestBucketModificationInVolumeTracing,
+    volumeTracing,
+  );
+  if (!isModificationAllowed) {
     return;
   }
 

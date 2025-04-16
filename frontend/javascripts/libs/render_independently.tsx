@@ -1,6 +1,6 @@
-import React from "react";
-import ReactDOM from "react-dom";
 import { document } from "libs/window";
+import type React from "react";
+import { createRoot } from "react-dom/client";
 import { Provider } from "react-redux";
 import GlobalThemeProvider from "theme";
 
@@ -14,6 +14,7 @@ export default function renderIndependently(
     import("oxalis/throttled_store").then((_Store) => {
       const Store = _Store.default;
       const div = document.createElement("div");
+      const react_root = createRoot(div);
 
       if (!document.body) {
         resolve();
@@ -23,21 +24,20 @@ export default function renderIndependently(
       document.body.appendChild(div);
 
       function destroy() {
-        const unmountResult = ReactDOM.unmountComponentAtNode(div);
+        react_root.unmount();
 
-        if (unmountResult && div.parentNode) {
+        if (div.parentNode) {
           div.parentNode.removeChild(div);
         }
 
         resolve();
       }
 
-      ReactDOM.render(
+      react_root.render(
         // @ts-ignore
         <Provider store={Store}>
           <GlobalThemeProvider isMainProvider={false}>{getComponent(destroy)}</GlobalThemeProvider>
         </Provider>,
-        div,
       );
     });
   });

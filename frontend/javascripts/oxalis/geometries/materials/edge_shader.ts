@@ -1,23 +1,24 @@
-import * as THREE from "three";
+import { M4x4 } from "libs/mjs";
+import type TPS3D from "libs/thin_plate_spline";
+import _ from "lodash";
 import { COLOR_TEXTURE_WIDTH_FIXED } from "oxalis/geometries/materials/node_shader";
 import type { Uniforms } from "oxalis/geometries/materials/plane_material_factory";
+import { getTransformsForSkeletonLayer } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
-import { Store } from "oxalis/singletons";
-import _ from "lodash";
-import { getTransformsForSkeletonLayer } from "oxalis/model/accessors/dataset_accessor";
-import { M4x4 } from "libs/mjs";
 import {
   generateCalculateTpsOffsetFunction,
   generateTpsInitialization,
 } from "oxalis/shaders/thin_plate_spline.glsl";
-import TPS3D from "libs/thin_plate_spline";
+import { Store } from "oxalis/singletons";
+import * as THREE from "three";
 
 class EdgeShader {
   material: THREE.RawShaderMaterial;
   uniforms: Uniforms = {};
   scaledTps: TPS3D | null = null;
   oldVertexShaderCode: string | null = null;
+  storePropertyUnsubscribers: Array<() => void> = [];
 
   constructor(treeColorTexture: THREE.DataTexture) {
     this.setupUniforms(treeColorTexture);
@@ -32,16 +33,12 @@ class EdgeShader {
   }
 
   setupUniforms(treeColorTexture: THREE.DataTexture): void {
-    const state = Store.getState();
     this.uniforms = {
       activeTreeId: {
-        value: NaN,
+        value: Number.NaN,
       },
       treeColors: {
         value: treeColorTexture,
-      },
-      datasetScale: {
-        value: state.dataset.dataSource.scale,
       },
     };
 
@@ -62,39 +59,41 @@ class EdgeShader {
       };
     });
 
-    listenToStoreProperty(
-      (storeState) => storeState.flycam.additionalCoordinates,
-      (additionalCoordinates) => {
-        _.each(additionalCoordinates, (coord, idx) => {
-          this.uniforms[`currentAdditionalCoord_${idx}`].value = coord.value;
-        });
-      },
-      true,
-    );
+    this.storePropertyUnsubscribers = [
+      listenToStoreProperty(
+        (storeState) => storeState.flycam.additionalCoordinates,
+        (additionalCoordinates) => {
+          _.each(additionalCoordinates, (coord, idx) => {
+            this.uniforms[`currentAdditionalCoord_${idx}`].value = coord.value;
+          });
+        },
+        true,
+      ),
 
-    listenToStoreProperty(
-      (storeState) =>
-        getTransformsForSkeletonLayer(
-          storeState.dataset,
-          storeState.datasetConfiguration.nativelyRenderedLayerName,
-        ),
-      (skeletonTransforms) => {
-        const transforms = skeletonTransforms;
-        const { affineMatrix } = transforms;
+      listenToStoreProperty(
+        (storeState) =>
+          getTransformsForSkeletonLayer(
+            storeState.dataset,
+            storeState.datasetConfiguration.nativelyRenderedLayerName,
+          ),
+        (skeletonTransforms) => {
+          const transforms = skeletonTransforms;
+          const { affineMatrix } = transforms;
 
-        const scaledTps = transforms.type === "thin_plate_spline" ? transforms.scaledTps : null;
+          const scaledTps = transforms.type === "thin_plate_spline" ? transforms.scaledTps : null;
 
-        if (scaledTps) {
-          this.scaledTps = scaledTps;
-        } else {
-          this.scaledTps = null;
-        }
+          if (scaledTps) {
+            this.scaledTps = scaledTps;
+          } else {
+            this.scaledTps = null;
+          }
 
-        this.uniforms["transform"].value = M4x4.transpose(affineMatrix);
+          this.uniforms["transform"].value = M4x4.transpose(affineMatrix);
 
-        this.recomputeVertexShader();
-      },
-    );
+          this.recomputeVertexShader();
+        },
+      ),
+    ];
   }
 
   getMaterial(): THREE.RawShaderMaterial {
@@ -128,7 +127,6 @@ uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 uniform float activeTreeId;
 uniform sampler2D treeColors;
-uniform vec3 datasetScale;
 
 uniform mat4 transform;
 
@@ -204,6 +202,18 @@ void main()
 {
     fragColor = vec4(color, alpha);
 }`;
+  }
+
+  destroy() {
+    for (const fn of this.storePropertyUnsubscribers) {
+      fn();
+    }
+    this.storePropertyUnsubscribers = [];
+
+    // Avoid memory leaks on tear down.
+    for (const key of Object.keys(this.uniforms)) {
+      this.uniforms[key].value = null;
+    }
   }
 }
 

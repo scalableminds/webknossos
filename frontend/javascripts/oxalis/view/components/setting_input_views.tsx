@@ -1,21 +1,36 @@
 import {
-  Row,
+  BorderInnerOutlined,
+  DeleteOutlined,
+  DownloadOutlined,
+  EditOutlined,
+  EllipsisOutlined,
+  InfoCircleOutlined,
+  ScanOutlined,
+} from "@ant-design/icons";
+import {
   Col,
-  Slider,
-  InputNumber,
-  Switch,
-  Tooltip,
   Input,
-  Select,
+  InputNumber,
+  type MenuProps,
   Popover,
-  PopoverProps,
+  type PopoverProps,
+  Row,
+  Select,
+  Switch,
 } from "antd";
-import { DeleteOutlined, DownloadOutlined, EditOutlined, ScanOutlined } from "@ant-design/icons";
-import * as React from "react";
-import _ from "lodash";
-import type { Vector3, Vector6 } from "oxalis/constants";
+import FastTooltip from "components/fast_tooltip";
+import { Slider } from "components/slider";
+import Toast from "libs/toast";
 import * as Utils from "libs/utils";
+import _ from "lodash";
 import messages from "messages";
+import type { Vector3, Vector6 } from "oxalis/constants";
+import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
+import { api } from "oxalis/singletons";
+import type { OxalisState } from "oxalis/store";
+import * as React from "react";
+import { connect } from "react-redux";
+import type { APISegmentationLayer } from "types/api_flow_types";
 
 const ROW_GUTTER = 1;
 
@@ -40,6 +55,8 @@ type NumberSliderSettingProps = {
   step: number;
   disabled: boolean;
   spans: Vector3;
+  defaultValue?: number;
+  wheelFactor?: number;
 };
 export class NumberSliderSetting extends React.PureComponent<NumberSliderSettingProps> {
   static defaultProps = {
@@ -59,7 +76,17 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
     _.isNumber(_value) && _value >= this.props.min && _value <= this.props.max;
 
   render() {
-    const { value: originalValue, label, max, min, step, onChange, disabled } = this.props;
+    const {
+      value: originalValue,
+      label,
+      max,
+      min,
+      step,
+      onChange,
+      disabled,
+      defaultValue,
+      wheelFactor: stepSize,
+    } = this.props;
     // Validate the provided value. If it's not valid, fallback to the midpoint between min and max.
     // This check guards against broken settings which could be introduced before this component
     // checked more thoroughly against invalid values.
@@ -77,6 +104,8 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
             value={value}
             step={step}
             disabled={disabled}
+            defaultValue={defaultValue}
+            wheelFactor={stepSize}
           />
         </Col>
         <Col span={this.props.spans[2]}>
@@ -109,6 +138,7 @@ type LogSliderSettingProps = {
   disabled?: boolean;
   spans: Vector3;
   precision?: number;
+  defaultValue?: number;
 };
 
 const LOG_SLIDER_MIN = -100;
@@ -164,8 +194,13 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
     return Math.round(scaleValue);
   };
 
+  resetToDefaultValue = () => {
+    if (this.props.defaultValue == null) return;
+    this.onChangeInput(this.props.defaultValue);
+  };
+
   render() {
-    const { label, roundTo, value, min, max, disabled } = this.props;
+    const { label, roundTo, value, min, max, disabled, defaultValue } = this.props;
     return (
       <Row align="middle" gutter={ROW_GUTTER}>
         <Col span={this.props.spans[0]}>
@@ -179,6 +214,8 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
             onChange={this.onChangeSlider}
             value={this.getSliderValue()}
             disabled={disabled}
+            defaultValue={defaultValue}
+            onResetToDefault={this.resetToDefaultValue}
           />
         </Col>
         <Col span={this.props.spans[2]}>
@@ -202,7 +239,8 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
     );
   }
 }
-export type SwitchSettingProps = {
+
+type SwitchSettingProps = React.PropsWithChildren<{
   onChange: (value: boolean) => void | Promise<void>;
   value: boolean;
   label: string | React.ReactNode;
@@ -212,7 +250,8 @@ export type SwitchSettingProps = {
   labelSpan?: number | null;
   postSwitchIcon: React.ReactNode | null | undefined;
   disabledReason?: string | null;
-};
+}>;
+
 export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
   static defaultProps = {
     disabled: false,
@@ -232,7 +271,7 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
           <label className="setting-label">{label}</label>
         </Col>
         <Col span={rightSpanValue}>
-          <Tooltip title={tooltipText} placement="top">
+          <FastTooltip title={tooltipText} placement="top">
             {/* This div is necessary for the tooltip to be displayed */}
             <div
               style={{
@@ -241,7 +280,7 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
                 alignItems: "center",
               }}
             >
-              <Tooltip title={this.props.disabledReason}>
+              <FastTooltip title={this.props.disabledReason}>
                 <Switch
                   onChange={onChange}
                   checked={value}
@@ -249,10 +288,10 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
                   disabled={disabled}
                   loading={loading}
                 />
-              </Tooltip>
+              </FastTooltip>
               {postSwitchIcon}
             </div>
-          </Tooltip>
+          </FastTooltip>
           {this.props.children}
         </Col>
       </Row>
@@ -367,7 +406,6 @@ type UserBoundingBoxInputProps = {
   color: Vector3;
   isVisible: boolean;
   isExportEnabled: boolean;
-  tooltipTitle: string;
   onBoundingChange: (arg0: Vector6) => void;
   onDelete: () => void;
   onExport: () => void;
@@ -378,6 +416,9 @@ type UserBoundingBoxInputProps = {
   disabled: boolean;
   isLockedByOwner: boolean;
   isOwner: boolean;
+  visibleSegmentationLayer: APISegmentationLayer | null | undefined;
+  onOpenContextMenu: (menu: MenuProps, event: React.MouseEvent<HTMLDivElement>) => void;
+  onHideContextMenu?: () => void;
 };
 type State = {
   isEditing: boolean;
@@ -386,7 +427,9 @@ type State = {
   name: string;
 };
 
-export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps, State> {
+const FORMAT_TOOLTIP = "Format: minX, minY, minZ, width, height, depth";
+
+class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps, State> {
   constructor(props: UserBoundingBoxInputProps) {
     super(props);
     this.state = {
@@ -464,15 +507,24 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     }
   };
 
+  onRegisterSegmentsForBB(value: Vector6, name: string): void {
+    const min: Vector3 = [value[0], value[1], value[2]];
+    const max: Vector3 = [value[0] + value[3], value[1] + value[4], value[2] + value[5]];
+    api.tracing
+      .registerSegmentsForBoundingBox(min, max, name)
+      .catch((error) => Toast.error(error.message));
+    this.maybeCloseContextMenu();
+  }
+
+  maybeCloseContextMenu = () => {
+    if (this.props.onHideContextMenu) {
+      this.props.onHideContextMenu();
+    }
+  };
+
   render() {
     const { name } = this.state;
-    const tooltipStyle = this.state.isValid
-      ? null
-      : {
-          backgroundColor: "red",
-        };
     const {
-      tooltipTitle,
       color,
       isVisible,
       onDelete,
@@ -482,32 +534,88 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
       disabled,
       isLockedByOwner,
       isOwner,
+      onOpenContextMenu,
     } = this.props;
     const upscaledColor = color.map((colorPart) => colorPart * 255) as any as Vector3;
-    const iconStyle = {
-      marginRight: 0,
+    const marginRightStyle = {
+      marginRight: 8,
+    };
+    const marginLeftStyle = {
       marginLeft: 6,
     };
-    const disabledIconStyle = { ...iconStyle, opacity: 0.5, cursor: "not-allowed" };
-    const exportIconStyle = isExportEnabled ? iconStyle : disabledIconStyle;
-    const exportButtonTooltip = isExportEnabled
-      ? "Export data from this bounding box."
-      : messages["data.bounding_box_export_not_supported"];
-    const exportColumn = isExportEnabled ? (
-      <Col span={2}>
-        <Tooltip title={exportButtonTooltip} placement="topRight">
-          <DownloadOutlined onClick={onExport} style={exportIconStyle} />
-        </Tooltip>
-      </Col>
-    ) : null;
+    const disabledIconStyle = { ...marginRightStyle, opacity: 0.5, cursor: "not-allowed" };
+    const exportButton = (
+      <>
+        <DownloadOutlined style={isExportEnabled ? marginRightStyle : disabledIconStyle} />
+        Export data
+      </>
+    );
+    const deleteButton = (
+      <>
+        <DeleteOutlined style={disabled ? disabledIconStyle : marginRightStyle} />
+        Delete
+      </>
+    );
     const editingDisallowedExplanation = messages["tracing.read_only_mode_notification"](
       isLockedByOwner,
       isOwner,
     );
+
+    const getContextMenu = () => {
+      const items: MenuProps["items"] = [
+        {
+          key: "registerSegments",
+          label: (
+            <>
+              Register all segments in this bounding box
+              <FastTooltip title="Moves/registers all segments within this bounding box into a new segment group">
+                <InfoCircleOutlined style={marginLeftStyle} />
+              </FastTooltip>
+            </>
+          ),
+          icon: <ScanOutlined />,
+          onClick: () => this.onRegisterSegmentsForBB(this.props.value, name),
+          disabled: this.props.visibleSegmentationLayer == null || disabled,
+        },
+        {
+          key: "goToCenter",
+          label: "Go to center",
+          icon: <BorderInnerOutlined />,
+          onClick: onGoToBoundingBox,
+        },
+        {
+          key: "export",
+          label: isExportEnabled ? (
+            exportButton
+          ) : (
+            <FastTooltip title={editingDisallowedExplanation}>{exportButton}</FastTooltip>
+          ),
+          disabled: !isExportEnabled,
+          onClick: onExport,
+        },
+        {
+          key: "delete",
+          label: !disabled ? (
+            deleteButton
+          ) : (
+            <FastTooltip title={editingDisallowedExplanation}>{deleteButton}</FastTooltip>
+          ),
+          onClick: onDelete,
+          disabled,
+        },
+      ];
+
+      return { items };
+    };
+
     return (
-      <React.Fragment>
+      <div
+        onContextMenu={(evt) => onOpenContextMenu(getContextMenu(), evt)}
+        onClick={this.props.onHideContextMenu}
+      >
         <Row
           style={{
+            marginTop: 10,
             marginBottom: 10,
           }}
         >
@@ -519,11 +627,14 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
               style={{
                 margin: "auto 0px",
               }}
+              // To prevent centering the bounding box on every edit (e.g. upon visibility change)
+              // the click events are stopped from propagating to the parent div.
+              onClick={(_value, e) => e.stopPropagation()}
             />
           </Col>
 
           <Col span={SETTING_RIGHT_SPAN}>
-            <Tooltip title={disabled ? editingDisallowedExplanation : null}>
+            <FastTooltip title={disabled ? editingDisallowedExplanation : null}>
               <span>
                 <Input
                   defaultValue={name}
@@ -536,74 +647,72 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
                   onPressEnter={this.handleNameChanged}
                   onBlur={this.handleNameChanged}
                   disabled={disabled}
+                  onClick={(e) => e.stopPropagation()}
                 />
               </span>
-            </Tooltip>
+            </FastTooltip>
           </Col>
-          {exportColumn}
           <Col span={2}>
-            <Tooltip title={disabled ? editingDisallowedExplanation : "Delete this bounding box."}>
-              <DeleteOutlined
-                onClick={disabled ? () => {} : onDelete}
-                style={disabled ? disabledIconStyle : iconStyle}
-              />
-            </Tooltip>
+            <div
+              onContextMenu={(evt) => onOpenContextMenu(getContextMenu(), evt)}
+              onClick={(evt) => onOpenContextMenu(getContextMenu(), evt)}
+            >
+              <EllipsisOutlined style={marginLeftStyle} />
+            </div>
           </Col>
         </Row>
         <Row
           style={{
-            marginBottom: 20,
+            marginBottom: 10,
           }}
           align="top"
         >
           <Col span={5}>
-            <Tooltip title="The top-left corner of the bounding box followed by the width, height, and depth.">
+            <FastTooltip title="The top-left corner of the bounding box followed by the width, height, and depth.">
               <label className="settings-label"> Bounds: </label>
-            </Tooltip>
+            </FastTooltip>
           </Col>
           <Col span={SETTING_RIGHT_SPAN}>
-            <Tooltip
-              trigger={disabled ? ["hover"] : ["focus"]}
-              title={disabled ? editingDisallowedExplanation : tooltipTitle}
-              placement="topLeft"
-              // @ts-expect-error ts-migrate(2322) FIXME: Type '{ backgroundColor: string; } | null' is not ... Remove this comment to see the full error message
-              overlayStyle={tooltipStyle}
+            <FastTooltip
+              title={disabled ? editingDisallowedExplanation : FORMAT_TOOLTIP}
+              placement="top-start"
             >
-              <span>
-                <Input
-                  onChange={this.handleChange}
-                  onFocus={this.handleFocus}
-                  onBlur={this.handleBlur}
-                  value={this.state.text}
-                  placeholder="0, 0, 0, 512, 512, 512"
-                  size="small"
-                  disabled={disabled}
-                />
-              </span>
-            </Tooltip>
+              <Input
+                status={this.state.isValid ? "" : "error"}
+                onChange={this.handleChange}
+                onFocus={this.handleFocus}
+                onBlur={this.handleBlur}
+                value={this.state.text}
+                placeholder="0, 0, 0, 512, 512, 512"
+                size="small"
+                disabled={disabled}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </FastTooltip>
           </Col>
           <Col span={2}>
-            <Tooltip title={disabled ? messages["tracing.read_only_mode_notification"] : null}>
-              <span>
-                <ColorSetting
-                  value={Utils.rgbToHex(upscaledColor)}
-                  onChange={this.handleColorChange}
-                  style={iconStyle}
-                  disabled={disabled}
-                />
-              </span>
-            </Tooltip>
-          </Col>
-          <Col span={2}>
-            <Tooltip title="Go to the center of the bounding box.">
-              <ScanOutlined onClick={onGoToBoundingBox} style={{ ...iconStyle, marginTop: 6 }} />
-            </Tooltip>
+            <FastTooltip title={disabled ? editingDisallowedExplanation : null}>
+              <ColorSetting
+                value={Utils.rgbToHex(upscaledColor)}
+                onChange={this.handleColorChange}
+                style={marginLeftStyle}
+                disabled={disabled}
+              />
+            </FastTooltip>
           </Col>
         </Row>
-      </React.Fragment>
+      </div>
     );
   }
 }
+
+const mapStateToProps = (state: OxalisState) => ({
+  visibleSegmentationLayer: getVisibleSegmentationLayer(state),
+});
+
+const connector = connect(mapStateToProps)(UserBoundingBoxInput);
+export default connector;
+
 type ColorSettingPropTypes = {
   value: string;
   onChange: (value: Vector3) => void;
@@ -630,6 +739,7 @@ export class ColorSetting extends React.PureComponent<ColorSettingPropTypes> {
           backgroundColor: value,
           ...style,
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         <input
           type="color"
@@ -666,7 +776,7 @@ export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
           <label className="setting-label">{label}</label>
         </Col>
         <Col span={SETTING_RIGHT_SPAN}>
-          <Tooltip title={this.props.disabledReason}>
+          <FastTooltip title={this.props.disabledReason}>
             <Select
               onChange={onChange}
               // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'number | ... Remove this comment to see the full error message
@@ -678,7 +788,7 @@ export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
               options={this.props.options}
               disabled={this.props.disabled}
             />
-          </Tooltip>
+          </FastTooltip>
         </Col>
       </Row>
     );

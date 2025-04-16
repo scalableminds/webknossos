@@ -1,5 +1,6 @@
-import type { Dispatch, MiddlewareAPI } from "redux";
 import type { Action } from "oxalis/model/actions/actions";
+import type { Dispatch, MiddlewareAPI } from "redux";
+
 type OverwriteFunction<S, A> = (store: S, next: (action: A) => void, action: A) => A | Promise<A>;
 const overwrites: Record<string, OverwriteFunction<any, any>> = {};
 

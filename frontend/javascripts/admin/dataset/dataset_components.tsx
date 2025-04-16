@@ -1,22 +1,23 @@
-import * as React from "react";
-import { Form, Input, Select, Card, FormInstance } from "antd";
-import messages from "messages";
-import { isDatasetNameValid } from "admin/admin_rest_api";
-import type { APIDataStore, APITeam, APIUser } from "types/api_flow_types";
-import { syncValidator } from "types/validation";
+import { Card, Form, type FormInstance, Input, Select } from "antd";
 import { FormItemWithInfo } from "dashboard/dataset/helper_components";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import features from "features";
+import messages from "messages";
+import type * as React from "react";
+import type { APIDataStore, APITeam, APIUser } from "types/api_flow_types";
+import { syncValidator } from "types/validation";
 
 const FormItem = Form.Item;
 export function CardContainer({
   children,
   withoutCard,
   title,
+  subtitle,
 }: {
   children: React.ReactNode;
   withoutCard?: boolean;
   title: string;
+  subtitle?: React.ReactNode;
 }) {
   if (withoutCard) {
     return <>{children}</>;
@@ -29,21 +30,25 @@ export function CardContainer({
           marginRight: "auto",
         }}
         bordered={false}
-        title={<h3>{title}</h3>}
+        title={
+          <>
+            <h3 style={{ lineHeight: "10px", marginTop: subtitle != null ? "22px" : "12px" }}>
+              {title}
+            </h3>
+            <span style={{ fontSize: 12, marginTop: 0, marginLeft: 1, color: "grey" }}>
+              {subtitle}
+            </span>
+          </>
+        }
       >
         {children}
       </Card>
     );
   }
 }
-export const layerNameRules = [
+const sharedRules = [
   {
     min: 1,
-  },
-  // Note that these rules are also checked by the backend
-  {
-    pattern: /^[0-9a-zA-Z_.-]+$/,
-    message: "Only letters, digits and the following characters are allowed: . _ -",
   },
   {
     validator: syncValidator(
@@ -53,10 +58,15 @@ export const layerNameRules = [
   },
 ];
 
-export const getDatasetNameRules = (
-  activeUser: APIUser | null | undefined,
-  allowRenaming: boolean = true,
-) => [
+export const layerNameRules = [
+  ...sharedRules,
+  {
+    pattern: /^[0-9a-zA-Z_.\-$.]+$/,
+    message: "Only letters, digits and the following characters are allowed: . _ - $",
+  },
+];
+
+export const getDatasetNameRules = (activeUser: APIUser | null | undefined) => [
   {
     required: true,
     message: messages["dataset.import.required.name"],
@@ -64,22 +74,13 @@ export const getDatasetNameRules = (
   { min: 3, message: messages["dataset.name_length"] },
   ...layerNameRules,
   {
-    validator: async (_rule: any, value: string) => {
-      if (!allowRenaming) {
-        // Renaming is not allowed. No need to validate the (existing) name then.
-        return Promise.resolve();
-      }
+    pattern: /^[0-9a-zA-Z_.-]+$/,
+    message: "Only letters, digits and the following characters are allowed: . _ -",
+  },
+  {
+    validator: async () => {
       if (!activeUser) throw new Error("Can't do operation if no user is logged in.");
-      const reasons = await isDatasetNameValid({
-        name: value,
-        owningOrganization: activeUser.organization,
-      });
-
-      if (reasons != null) {
-        return Promise.reject(reasons);
-      } else {
-        return Promise.resolve();
-      }
+      return Promise.resolve();
     },
   },
 ];
@@ -88,10 +89,13 @@ export function DatasetNameFormItem({
   activeUser,
   initialName,
   label,
+  disabled,
 }: {
   activeUser: APIUser | null | undefined;
   initialName?: string;
   label?: string;
+  allowDuplicate?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <FormItem
@@ -102,16 +106,18 @@ export function DatasetNameFormItem({
       rules={getDatasetNameRules(activeUser)}
       validateFirst
     >
-      <Input />
+      <Input disabled={disabled} />
     </FormItem>
   );
 }
 export function DatastoreFormItem({
   datastores,
   hidden,
+  disabled,
 }: {
   datastores: Array<APIDataStore>;
   hidden?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <FormItem
@@ -131,6 +137,7 @@ export function DatastoreFormItem({
         showSearch
         placeholder="Select a Datastore"
         optionFilterProp="label"
+        disabled={disabled}
         style={{
           width: "100%",
         }}
@@ -147,12 +154,16 @@ export function AllowedTeamsFormItem({
   isDatasetManagerOrAdmin,
   selectedTeams,
   setSelectedTeams,
+  afterFetchedTeams,
   formRef,
+  disabled,
 }: {
   isDatasetManagerOrAdmin: boolean;
   selectedTeams: APITeam | Array<APITeam>;
   setSelectedTeams: (teams: APITeam | Array<APITeam>) => void;
+  afterFetchedTeams?: (arg0: Array<APITeam>) => void;
   formRef: React.RefObject<FormInstance<any>>;
+  disabled?: boolean;
 }) {
   return (
     <FormItemWithInfo
@@ -165,6 +176,7 @@ export function AllowedTeamsFormItem({
         mode="multiple"
         value={selectedTeams}
         allowNonEditableTeams={isDatasetManagerOrAdmin}
+        disabled={disabled}
         onChange={(selectedTeams) => {
           if (formRef.current == null) return;
 
@@ -179,6 +191,9 @@ export function AllowedTeamsFormItem({
           setSelectedTeams(selectedTeams);
         }}
         afterFetchedTeams={(fetchedTeams) => {
+          if (afterFetchedTeams) {
+            afterFetchedTeams(fetchedTeams);
+          }
           if (!features().isWkorgInstance) {
             return;
           }

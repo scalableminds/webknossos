@@ -1,71 +1,74 @@
-import { connect } from "react-redux";
-import * as React from "react";
+import { InputKeyboard, InputKeyboardNoLoop, InputMouse, type MouseBindingMap } from "libs/input";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import { document } from "libs/window";
 import _ from "lodash";
-import dimensions from "oxalis/model/dimensions";
+import type { AnnotationTool, OrthoView, OrthoViewMap } from "oxalis/constants";
+import { AnnotationToolEnum, OrthoViewValuesWithoutTDView, OrthoViews } from "oxalis/constants";
+import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
+import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
 import {
-  deleteNodeAsUserAction,
-  createTreeAction,
+  AreaMeasurementTool,
+  BoundingBoxTool,
+  DrawTool,
+  EraseTool,
+  FillCellTool,
+  LineMeasurementTool,
+  MoveTool,
+  PickCellTool,
+  ProofreadTool,
+  QuickSelectTool,
+  SkeletonTool,
+} from "oxalis/controller/combinations/tool_controls";
+import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
+import getSceneController, {
+  getSceneControllerOrNull,
+} from "oxalis/controller/scene_controller_provider";
+import TDController from "oxalis/controller/td_controller";
+import {
+  getActiveMagIndexForLayer,
+  getMoveOffset,
+  getPosition,
+} from "oxalis/model/accessors/flycam_accessor";
+import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
+import {
+  getActiveSegmentationTracing,
+  getMaximumBrushSize,
+} from "oxalis/model/accessors/volumetracing_accessor";
+import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import {
   createBranchPointAction,
+  createTreeAction,
+  deleteNodeAsUserAction,
   requestDeleteBranchPointAction,
   toggleAllTreesAction,
   toggleInactiveTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
-import { InputKeyboard, InputKeyboardNoLoop, InputMouse, MouseBindingMap } from "libs/input";
-import { document } from "libs/window";
-import {
-  getPosition,
-  getActiveMagIndexForLayer,
-  getMoveOffset,
-} from "oxalis/model/accessors/flycam_accessor";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { Model, api } from "oxalis/singletons";
-import PlaneView from "oxalis/view/plane_view";
-import type { BrushPresets, OxalisState, Tracing } from "oxalis/store";
-import Store from "oxalis/store";
-import TDController from "oxalis/controller/td_controller";
-import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import {
-  createCellAction,
-  interpolateSegmentationLayerAction,
-} from "oxalis/model/actions/volumetracing_actions";
 import {
   cycleToolAction,
   enterAction,
   escapeAction,
   setToolAction,
 } from "oxalis/model/actions/ui_actions";
+import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
 import {
-  MoveTool,
-  SkeletonTool,
-  DrawTool,
-  EraseTool,
-  PickCellTool,
-  FillCellTool,
-  BoundingBoxTool,
-  QuickSelectTool,
-  ProofreadTool,
-  LineMeasurementTool,
-  AreaMeasurementTool,
-} from "oxalis/controller/combinations/tool_controls";
-import type { OrthoView, OrthoViewMap, AnnotationTool } from "oxalis/constants";
-import { OrthoViewValuesWithoutTDView, OrthoViews, AnnotationToolEnum } from "oxalis/constants";
-import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
-import getSceneController from "oxalis/controller/scene_controller_provider";
-import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
-import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
-import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
-import { downloadScreenshot } from "oxalis/view/rendering_utils";
-import {
-  getActiveSegmentationTracing,
-  getMaximumBrushSize,
-} from "oxalis/model/accessors/volumetracing_accessor";
-import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
+  createCellAction,
+  interpolateSegmentationLayerAction,
+} from "oxalis/model/actions/volumetracing_actions";
+import dimensions from "oxalis/model/dimensions";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import { Model, api } from "oxalis/singletons";
+import type { BrushPresets, OxalisState, StoreAnnotation } from "oxalis/store";
+import Store from "oxalis/store";
 import { getDefaultBrushSizes } from "oxalis/view/action-bar/toolbar_view";
+import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
+import PlaneView from "oxalis/view/plane_view";
+import { downloadScreenshot } from "oxalis/view/rendering_utils";
+import * as React from "react";
+import { connect } from "react-redux";
 import { userSettings } from "types/schemas/user_settings.schema";
+import { highlightAndSetCursorOnHoveredBoundingBox } from "../combinations/bounding_box_handlers";
 
 function ensureNonConflictingHandlers(
   skeletonControls: Record<string, any>,
@@ -98,7 +101,7 @@ const setTool = (tool: AnnotationTool) => {
 };
 
 type StateProps = {
-  tracing: Tracing;
+  annotation: StoreAnnotation;
   activeTool: AnnotationTool;
 };
 type Props = StateProps;
@@ -183,11 +186,28 @@ class BoundingBoxKeybindings {
   static getKeyboardControls() {
     return {
       c: () => Store.dispatch(addUserBoundingBoxAction()),
+      meta: BoundingBoxKeybindings.createKeyDownAndUpHandler(),
+      ctrl: BoundingBoxKeybindings.createKeyDownAndUpHandler(),
     };
   }
 
+  static handleUpdateCursor = (event: KeyboardEvent) => {
+    const { viewModeData, temporaryConfiguration } = Store.getState();
+    const { mousePosition } = temporaryConfiguration;
+    if (mousePosition == null) return;
+    highlightAndSetCursorOnHoveredBoundingBox(
+      { x: mousePosition[0], y: mousePosition[1] },
+      viewModeData.plane.activeViewport,
+      event,
+    );
+  };
+
   static getExtendedKeyboardControls() {
     return { x: () => setTool(AnnotationToolEnum.BOUNDING_BOX) };
+  }
+
+  static createKeyDownAndUpHandler() {
+    return (event: KeyboardEvent) => BoundingBoxKeybindings.handleUpdateCursor(event);
   }
 }
 
@@ -220,7 +240,7 @@ function createDelayAwareMoveHandler(multiplier: number) {
 
     const thirdDim = dimensions.thirdDimensionForPlane(activeViewport);
     const voxelPerSecond =
-      state.userConfiguration.moveValue / state.dataset.dataSource.scale[thirdDim];
+      state.userConfiguration.moveValue / state.dataset.dataSource.scale.factor[thirdDim];
 
     if (state.userConfiguration.dynamicSpaceDirection) {
       // Change direction of the value connected to space, based on the last direction
@@ -364,6 +384,7 @@ class PlaneController extends React.PureComponent<Props> {
     });
     const {
       baseControls: notLoopedKeyboardControls,
+      keyUpControls,
       extendedControls: extendedNotLoopedKeyboardControls,
     } = this.getNotLoopedKeyboardControls();
     const loopedKeyboardControls = this.getLoopedKeyboardControls();
@@ -397,6 +418,7 @@ class PlaneController extends React.PureComponent<Props> {
       notLoopedKeyboardControls,
       {},
       extendedNotLoopedKeyboardControls,
+      keyUpControls,
     );
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
@@ -494,19 +516,25 @@ class PlaneController extends React.PureComponent<Props> {
       c: null,
     };
     const { c: skeletonCHandler, ...skeletonControls } =
-      this.props.tracing.skeleton != null
+      this.props.annotation.skeleton != null
         ? SkeletonKeybindings.getKeyboardControls()
         : emptyDefaultHandler;
     const { c: volumeCHandler, ...volumeControls } =
-      this.props.tracing.volumes.length > 0
+      this.props.annotation.volumes.length > 0
         ? VolumeKeybindings.getKeyboardControls()
         : emptyDefaultHandler;
-    const { c: boundingBoxCHandler } = BoundingBoxKeybindings.getKeyboardControls();
+    const {
+      c: boundingBoxCHandler,
+      meta: boundingBoxMetaHandler,
+      ctrl: boundingBoxCtrlHandler,
+    } = BoundingBoxKeybindings.getKeyboardControls();
     ensureNonConflictingHandlers(skeletonControls, volumeControls);
     const extendedSkeletonControls =
-      this.props.tracing.skeleton != null ? SkeletonKeybindings.getExtendedKeyboardControls() : {};
+      this.props.annotation.skeleton != null
+        ? SkeletonKeybindings.getExtendedKeyboardControls()
+        : {};
     const extendedVolumeControls =
-      this.props.tracing.volumes.length > 0 != null
+      this.props.annotation.volumes.length > 0 != null
         ? VolumeKeybindings.getExtendedKeyboardControls()
         : {};
     ensureNonConflictingHandlers(extendedSkeletonControls, extendedVolumeControls);
@@ -524,6 +552,12 @@ class PlaneController extends React.PureComponent<Props> {
           volumeCHandler,
           boundingBoxCHandler,
         ),
+        ctrl: this.createToolDependentKeyboardHandler(null, null, boundingBoxCtrlHandler),
+        meta: this.createToolDependentKeyboardHandler(null, null, boundingBoxMetaHandler),
+      },
+      keyUpControls: {
+        ctrl: this.createToolDependentKeyboardHandler(null, null, boundingBoxCtrlHandler),
+        meta: this.createToolDependentKeyboardHandler(null, null, boundingBoxMetaHandler),
       },
       extendedControls,
     };
@@ -532,7 +566,7 @@ class PlaneController extends React.PureComponent<Props> {
   getLoopedKeyboardControls() {
     // Note that this code needs to be adapted in case the VolumeHandlers also starts to expose
     // looped keyboard controls. For the hybrid case, these two controls would need t be combined then.
-    return this.props.tracing.skeleton != null
+    return this.props.annotation.skeleton != null
       ? SkeletonKeybindings.getLoopedKeyboardControls()
       : {};
   }
@@ -556,7 +590,12 @@ class PlaneController extends React.PureComponent<Props> {
       this.destroyInput();
     }
 
-    getSceneController().stopPlaneMode();
+    // SceneController will already be null, if the user left the dataset view
+    // because componentWillUnmount will trigger earlier for outer components and
+    // later for inner components. The outer component TracingLayoutView is responsible
+    // for the destroy call which already happened when the stop method here is called.
+    getSceneControllerOrNull()?.stopPlaneMode();
+
     this.planeView.stop();
     this.isStarted = false;
   }
@@ -661,7 +700,7 @@ class PlaneController extends React.PureComponent<Props> {
     return (
       <TDController
         cameras={this.planeView.getCameras()}
-        tracing={this.props.tracing}
+        annotation={this.props.annotation}
         planeView={this.planeView}
       />
     );
@@ -670,7 +709,7 @@ class PlaneController extends React.PureComponent<Props> {
 
 export function mapStateToProps(state: OxalisState): StateProps {
   return {
-    tracing: state.tracing,
+    annotation: state.annotation,
     activeTool: state.uiInformation.activeTool,
   };
 }

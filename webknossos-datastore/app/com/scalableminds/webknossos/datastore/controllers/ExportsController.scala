@@ -15,10 +15,10 @@ import play.api.mvc.{Action, AnyContent}
 
 import scala.concurrent.ExecutionContext
 
-case class JobExportProperties(jobId: String, runId: String, organizationName: String, exportFileName: String) {
+case class JobExportProperties(jobId: String, runId: String, organizationId: String, exportFileName: String) {
 
   def fullPathIn(baseDir: Path): Path =
-    baseDir.resolve(organizationName).resolve(".export").resolve(runId).resolve(exportFileName)
+    baseDir.resolve(organizationId).resolve(".export").resolve(runId).resolve(exportFileName)
 }
 
 object JobExportProperties {
@@ -31,12 +31,12 @@ class ExportsController @Inject()(webknossosClient: DSRemoteWebknossosClient,
     extends Controller
     with FoxImplicits {
 
-  private val dataBaseDir: Path = Paths.get(config.Datastore.baseFolder)
+  private val dataBaseDir: Path = Paths.get(config.Datastore.baseDirectory)
 
   override def allowRemoteOrigin: Boolean = true
 
-  def download(token: Option[String], jobId: String): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.downloadJobExport(jobId), urlOrHeaderToken(token, request)) {
+  def download(jobId: String): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.downloadJobExport(jobId)) {
       for {
         exportProperties <- webknossosClient.getJobExportProperties(jobId)
         fullPath = exportProperties.fullPathIn(dataBaseDir)

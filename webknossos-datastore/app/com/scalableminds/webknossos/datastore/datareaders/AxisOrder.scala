@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.{JsValue, Json, OFormat}
 
 // Defines the axis order of a DatasetArray. Note that this ignores transpose codecs/ArrayOrder.F/C.
 // Those will have to be applied on individual chunk’s contents.
@@ -40,6 +40,9 @@ object AxisOrder {
       AxisOrder(rank - 3, rank - 2, Some(rank - 1), Some(rank - 4))
 
   def cxyz: AxisOrder = asCxyzFromRank(rank = 4)
+
+  // Additional coordinates are inserted between c and xyz
+  def cAdditionalxyz(rank: Int): AxisOrder = AxisOrder(c = Some(0), x = rank - 3, y = rank - 2, z = Some(rank - 1))
   implicit val jsonFormat: OFormat[AxisOrder] = Json.format[AxisOrder]
 }
 
@@ -93,6 +96,12 @@ case class FullAxisOrder(axes: Seq[Axis]) {
 
   def permuteIndicesArrayToWk(indices: Array[Int]): Array[Int] =
     arrayToWkPermutation.map(indices(_))
+
+  def toWkLibsJson: JsValue =
+    Json.toJson(axes.zipWithIndex.collect {
+      case (axis, index) if axis.name == "x" || axis.name == "y" || axis.name == "z" =>
+        axis.name -> index
+    }.toMap)
 
 }
 

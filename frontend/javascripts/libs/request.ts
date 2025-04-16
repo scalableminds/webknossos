@@ -1,13 +1,13 @@
-import _ from "lodash";
-import urljoin from "url-join";
-import { createWorker } from "oxalis/workers/comlink_wrapper";
 import { pingMentionedDataStores } from "admin/datastore_health_check";
-import CompressWorker from "oxalis/workers/compress.worker";
-import FetchBufferWithHeadersWorker from "oxalis/workers/fetch_buffer_with_headers.worker";
-import FetchBufferWorker from "oxalis/workers/fetch_buffer.worker";
-import Toast from "libs/toast";
 import handleStatus from "libs/handle_http_status";
-import { ArbitraryObject } from "types/globals";
+import Toast from "libs/toast";
+import _ from "lodash";
+import { createWorker } from "oxalis/workers/comlink_wrapper";
+import CompressWorker from "oxalis/workers/compress.worker";
+import FetchBufferWorker from "oxalis/workers/fetch_buffer.worker";
+import FetchBufferWithHeadersWorker from "oxalis/workers/fetch_buffer_with_headers.worker";
+import type { ArbitraryObject } from "types/globals";
+import urljoin from "url-join";
 
 const fetchBufferViaWorker = createWorker(FetchBufferWorker);
 const fetchBufferWithHeaders = createWorker(FetchBufferWithHeadersWorker);
@@ -16,6 +16,7 @@ const compress = createWorker(CompressWorker);
 type method = "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH";
 
 export type RequestOptionsBase<T> = {
+  body?: ReadableStream | Blob | BufferSource | FormData | URLSearchParams | string;
   compress?: boolean;
   doNotInvestigate?: boolean;
   extractHeaders?: boolean;
@@ -310,7 +311,11 @@ class Request {
                 ...message,
                 key: json.status.toString(),
               }));
-              if (showErrorToast) Toast.messages(messages);
+              if (showErrorToast) {
+                Toast.messages(messages); // Note: Toast.error internally logs to console
+              } else {
+                console.error(messages);
+              }
               // Check whether the error chain mentions an url which belongs
               // to a datastore. Then, ping the datastore
               pingMentionedDataStores(text);
@@ -318,7 +323,11 @@ class Request {
               /* eslint-disable-next-line prefer-promise-reject-errors */
               return Promise.reject({ ...json, url: requestedUrl });
             } catch (_jsonError) {
-              if (showErrorToast) Toast.error(text);
+              if (showErrorToast) {
+                Toast.error(text); // Note: Toast.error internally logs to console
+              } else {
+                console.error(`Request failed for ${requestedUrl}:`, text);
+              }
 
               /* eslint-disable-next-line prefer-promise-reject-errors */
               return Promise.reject({

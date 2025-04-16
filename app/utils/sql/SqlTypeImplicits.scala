@@ -4,7 +4,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.time.Instant
 import play.api.libs.json.JsValue
 import slick.jdbc.{GetResult, PositionedResult}
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -14,6 +14,10 @@ trait SqlTypeImplicits {
 
   implicit protected object GetObjectId extends GetResult[ObjectId] {
     override def apply(v1: PositionedResult): ObjectId = ObjectId(v1.<<)
+  }
+
+  implicit protected object GetObjectIdOpt extends GetResult[Option[ObjectId]] {
+    override def apply(v1: PositionedResult): Option[ObjectId] = v1.nextStringOption().map(ObjectId(_))
   }
 
   implicit protected object GetInstant extends GetResult[Instant] {

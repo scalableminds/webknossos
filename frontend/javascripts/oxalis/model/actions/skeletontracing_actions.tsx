@@ -1,20 +1,20 @@
 import { Modal } from "antd";
-import React from "react";
-import type { ServerSkeletonTracing } from "types/api_flow_types";
-import type { Vector3, TreeType } from "oxalis/constants";
+import renderIndependently from "libs/render_independently";
+import messages from "messages";
+import type { TreeType, Vector3 } from "oxalis/constants";
 import {
   enforceSkeletonTracing,
   getNodeAndTree,
   getTree,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import RemoveTreeModal from "oxalis/view/remove_tree_modal";
-import type { OxalisState, SkeletonTracing, TreeGroup, MutableTreeMap } from "oxalis/store";
-import Store from "oxalis/store";
-import messages from "messages";
-import renderIndependently from "libs/render_independently";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
+import type { MutableTreeMap, OxalisState, SkeletonTracing, TreeGroup } from "oxalis/store";
+import Store from "oxalis/store";
+import RemoveTreeModal from "oxalis/view/remove_tree_modal";
+import type { Key } from "react";
 import { batchActions } from "redux-batched-actions";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { MetadataEntryProto, ServerSkeletonTracing } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 export type InitializeSkeletonTracingAction = ReturnType<typeof initializeSkeletonTracingAction>;
 export type CreateNodeAction = ReturnType<typeof createNodeAction>;
@@ -29,6 +29,8 @@ type DeleteBranchPointAction = ReturnType<typeof deleteBranchPointAction>;
 type DeleteBranchpointByIdAction = ReturnType<typeof deleteBranchpointByIdAction>;
 type ToggleTreeAction = ReturnType<typeof toggleTreeAction>;
 type SetTreeVisibilityAction = ReturnType<typeof setTreeVisibilityAction>;
+type SetExpandedTreeGroupsByKeysAction = ReturnType<typeof setExpandedTreeGroupsByKeysAction>;
+type SetExpandedTreeGroupsByIdsAction = ReturnType<typeof setExpandedTreeGroupsByIdsAction>;
 type ToggleAllTreesAction = ReturnType<typeof toggleAllTreesAction>;
 type ToggleInactiveTreesAction = ReturnType<typeof toggleInactiveTreesAction>;
 type ToggleTreeGroupAction = ReturnType<typeof toggleTreeGroupAction>;
@@ -37,6 +39,7 @@ type CreateTreeAction = ReturnType<typeof createTreeAction>;
 type SetEdgeVisibilityAction = ReturnType<typeof setTreeEdgeVisibilityAction>;
 type AddTreesAndGroupsAction = ReturnType<typeof addTreesAndGroupsAction>;
 type DeleteTreeAction = ReturnType<typeof deleteTreeAction>;
+type DeleteTreesAction = ReturnType<typeof deleteTreesAction>;
 type ResetSkeletonTracingAction = ReturnType<typeof resetSkeletonTracingAction>;
 type SetActiveTreeAction = ReturnType<typeof setActiveTreeAction>;
 type SetActiveTreeByNameAction = ReturnType<typeof setActiveTreeByNameAction>;
@@ -45,6 +48,7 @@ type SetActiveTreeGroupAction = ReturnType<typeof setActiveTreeGroupAction>;
 type DeselectActiveTreeGroupAction = ReturnType<typeof deselectActiveTreeGroupAction>;
 export type MergeTreesAction = ReturnType<typeof mergeTreesAction>;
 type SetTreeNameAction = ReturnType<typeof setTreeNameAction>;
+type SetTreeMetadataAction = ReturnType<typeof setTreeMetadataAction>;
 type SelectNextTreeAction = ReturnType<typeof selectNextTreeAction>;
 type SetTreeColorIndexAction = ReturnType<typeof setTreeColorIndexAction>;
 type ShuffleTreeColorAction = ReturnType<typeof shuffleTreeColorAction>;
@@ -62,7 +66,11 @@ type UpdateNavigationListAction = ReturnType<typeof updateNavigationListAction>;
 export type LoadAgglomerateSkeletonAction = ReturnType<typeof loadAgglomerateSkeletonAction>;
 type NoAction = ReturnType<typeof noAction>;
 
-export type BatchableUpdateTreeAction = SetTreeGroupAction | DeleteTreeAction | SetTreeGroupsAction;
+export type BatchableUpdateTreeAction =
+  | SetTreeGroupAction
+  | DeleteTreeAction
+  | DeleteTreesAction
+  | SetTreeGroupsAction;
 export type BatchUpdateGroupsAndTreesAction = {
   type: "BATCH_UPDATE_GROUPS_AND_TREES";
   payload: BatchableUpdateTreeAction[];
@@ -90,12 +98,14 @@ export type SkeletonTracingAction =
   | SetEdgeVisibilityAction
   | AddTreesAndGroupsAction
   | DeleteTreeAction
+  | DeleteTreesAction
   | ResetSkeletonTracingAction
   | SetActiveTreeAction
   | SetActiveTreeByNameAction
   | DeselectActiveTreeAction
   | MergeTreesAction
   | SetTreeNameAction
+  | SetTreeMetadataAction
   | SelectNextTreeAction
   | SetTreeColorAction
   | SetTreeTypeAction
@@ -107,6 +117,8 @@ export type SkeletonTracingAction =
   | ToggleTreeAction
   | ToggleAllTreesAction
   | SetTreeVisibilityAction
+  | SetExpandedTreeGroupsByKeysAction
+  | SetExpandedTreeGroupsByIdsAction
   | ToggleInactiveTreesAction
   | ToggleTreeGroupAction
   | NoAction
@@ -120,6 +132,7 @@ export type SkeletonTracingAction =
 
 export const SkeletonTracingSaveRelevantActions = [
   "INITIALIZE_SKELETONTRACING",
+  "INITIALIZE_ANNOTATION_WITH_TRACINGS",
   "CREATE_NODE",
   "DELETE_NODE",
   "DELETE_EDGE",
@@ -133,9 +146,11 @@ export const SkeletonTracingSaveRelevantActions = [
   "SET_EDGES_ARE_VISIBLE",
   "ADD_TREES_AND_GROUPS",
   "DELETE_TREE",
+  "DELETE_TREES",
   "SET_ACTIVE_TREE",
   "SET_ACTIVE_TREE_BY_NAME",
   "SET_TREE_NAME",
+  "SET_TREE_METADATA",
   "MERGE_TREES",
   "SELECT_NEXT_TREE",
   "SHUFFLE_TREE_COLOR",
@@ -144,6 +159,8 @@ export const SkeletonTracingSaveRelevantActions = [
   "CREATE_COMMENT",
   "DELETE_COMMENT",
   "SET_TREE_GROUPS",
+  "SET_EXPANDED_TREE_GROUPS_BY_KEYS",
+  "SET_EXPANDED_TREE_GROUPS_BY_IDS",
   "SET_TREE_GROUP",
   "SET_MERGER_MODE_ENABLED",
   "TOGGLE_TREE",
@@ -175,7 +192,7 @@ export const createNodeAction = (
   additionalCoordinates: AdditionalCoordinate[] | null,
   rotation: Vector3,
   viewport: number,
-  resolution: number,
+  mag: number,
   treeId?: number | null | undefined,
   dontActivate: boolean = false,
   timestamp: number = Date.now(),
@@ -186,7 +203,7 @@ export const createNodeAction = (
     additionalCoordinates,
     rotation,
     viewport,
-    resolution,
+    mag,
     treeId,
     dontActivate,
     timestamp,
@@ -281,9 +298,15 @@ export const requestDeleteBranchPointAction = () =>
     type: "REQUEST_DELETE_BRANCHPOINT",
   }) as const;
 
-export const createTreeAction = (timestamp: number = Date.now()) =>
+export const createTreeAction = (
+  // If the tree creation is about to succeed, this callback
+  // will be triggered with the id that will be assigned.
+  treeIdCallback?: (id: number) => void,
+  timestamp: number = Date.now(),
+) =>
   ({
     type: "CREATE_TREE",
+    treeIdCallback,
     timestamp,
   }) as const;
 
@@ -322,6 +345,19 @@ export const deleteTreeAction = (treeId?: number, suppressActivatingNextNode: bo
     suppressActivatingNextNode,
   }) as const;
 
+export const deleteTreesAction = (treeIds: number[], suppressActivatingNextNode: boolean = false) =>
+  // If suppressActivatingNextNode is true, the trees will be deleted without activating
+  // another node (nor tree). Use this in cases where you want to avoid changing
+  // the active position (due to the auto-centering). One could also suppress the auto-centering
+  // behavior, but the semantics of changing the active node might also be confusing to the user
+  // (e.g., when proofreading). So, it might be clearer to not have an active node in the first
+  // place.
+  ({
+    type: "DELETE_TREES",
+    treeIds,
+    suppressActivatingNextNode,
+  }) as const;
+
 export const resetSkeletonTracingAction = () =>
   ({
     type: "RESET_SKELETON_TRACING",
@@ -335,6 +371,18 @@ export const toggleTreeAction = (
     type: "TOGGLE_TREE",
     treeId,
     timestamp,
+  }) as const;
+
+export const setExpandedTreeGroupsByKeysAction = (expandedGroups: Set<Key>) =>
+  ({
+    type: "SET_EXPANDED_TREE_GROUPS_BY_KEYS",
+    expandedGroups,
+  }) as const;
+
+export const setExpandedTreeGroupsByIdsAction = (expandedGroups: Set<number>) =>
+  ({
+    type: "SET_EXPANDED_TREE_GROUPS_BY_IDS",
+    expandedGroups,
   }) as const;
 
 export const setTreeVisibilityAction = (treeId: number | null | undefined, isVisible: boolean) =>
@@ -404,6 +452,16 @@ export const setTreeNameAction = (
   ({
     type: "SET_TREE_NAME",
     name,
+    treeId,
+  }) as const;
+
+export const setTreeMetadataAction = (
+  metadata: MetadataEntryProto[],
+  treeId?: number | null | undefined,
+) =>
+  ({
+    type: "SET_TREE_METADATA",
+    metadata,
     treeId,
   }) as const;
 
@@ -500,7 +558,7 @@ export const deleteNodeAsUserAction = (
   nodeId?: number,
   treeId?: number,
 ): DeleteNodeAction | NoAction | DeleteTreeAction => {
-  const skeletonTracing = enforceSkeletonTracing(state.tracing);
+  const skeletonTracing = enforceSkeletonTracing(state.annotation);
   return getNodeAndTree(skeletonTracing, nodeId, treeId)
     .map(([tree, node]): DeleteNodeAction | NoAction | DeleteTreeAction => {
       if (state.task != null && node.id === 1) {
@@ -518,11 +576,15 @@ export const deleteNodeAsUserAction = (
 
       return deleteNodeAction(node.id, tree.treeId);
     }) // If the tree is empty, it will be deleted
-    .getOrElse(deleteTreeAction(treeId));
+    .getOrElse(
+      getTree(skeletonTracing, treeId)
+        .map((tree) => (tree.nodes.size() === 0 ? deleteTreeAction(tree.treeId) : noAction()))
+        .getOrElse(noAction()),
+    );
 };
 
 // Let the user confirm the deletion of the initial node (node with id 1) of a task
-function confirmDeletingInitialNode(treeId?: number) {
+function confirmDeletingInitialNode(treeId: number) {
   Modal.confirm({
     title: messages["tracing.delete_tree_with_initial_node"],
     onOk: () => {
@@ -533,15 +595,18 @@ function confirmDeletingInitialNode(treeId?: number) {
 
 export const deleteTreeAsUserAction = (treeId?: number): NoAction => {
   const state = Store.getState();
-  const skeletonTracing = enforceSkeletonTracing(state.tracing);
+  const skeletonTracing = enforceSkeletonTracing(state.annotation);
   getTree(skeletonTracing, treeId).map((tree) => {
     if (state.task != null && tree.nodes.has(1)) {
-      confirmDeletingInitialNode(treeId);
+      confirmDeletingInitialNode(tree.treeId);
     } else if (state.userConfiguration.hideTreeRemovalWarning) {
-      Store.dispatch(deleteTreeAction(treeId));
+      Store.dispatch(deleteTreeAction(tree.treeId));
     } else {
       renderIndependently((destroy) => (
-        <RemoveTreeModal onOk={() => Store.dispatch(deleteTreeAction(treeId))} destroy={destroy} />
+        <RemoveTreeModal
+          onOk={() => Store.dispatch(deleteTreeAction(tree.treeId))}
+          destroy={destroy}
+        />
       ));
     }
   });

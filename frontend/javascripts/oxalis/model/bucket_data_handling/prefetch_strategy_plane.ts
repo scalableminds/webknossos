@@ -1,15 +1,15 @@
 import _ from "lodash";
-import type { Area } from "oxalis/model/accessors/flycam_accessor";
-import type { PullQueueItem } from "oxalis/model/bucket_data_handling/pullqueue";
-import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
-import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import type { DimensionIndices } from "oxalis/model/dimensions";
-import Dimensions from "oxalis/model/dimensions";
 import type { OrthoView, OrthoViewMap, Vector3, Vector4 } from "oxalis/constants";
 import constants, { OrthoViewValuesWithoutTDView } from "oxalis/constants";
+import type { Area } from "oxalis/model/accessors/flycam_accessor";
+import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import { getPriorityWeightForPrefetch } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
-import { ResolutionInfo } from "../helpers/resolution_info";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { PullQueueItem } from "oxalis/model/bucket_data_handling/pullqueue";
+import type { DimensionIndices } from "oxalis/model/dimensions";
+import Dimensions from "oxalis/model/dimensions";
+import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
+import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { MagInfo } from "../helpers/mag_info";
 
 const { MAX_ZOOM_STEP_DIFF_PREFETCH } = constants;
 
@@ -72,9 +72,9 @@ export class AbstractPrefetchStrategy {
 }
 export class PrefetchStrategy extends AbstractPrefetchStrategy {
   velocityRangeStart = 0;
-  velocityRangeEnd = Infinity;
+  velocityRangeEnd = Number.POSITIVE_INFINITY;
   roundTripTimeRangeStart = 0;
-  roundTripTimeRangeEnd = Infinity;
+  roundTripTimeRangeEnd = Number.POSITIVE_INFINITY;
   preloadingSlides = 0;
   preloadingPriorityOffset = 0;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'w' has no initializer and is not definite... Remove this comment to see the full error message
@@ -87,11 +87,11 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
     currentZoomStep: number,
     activePlane: OrthoView,
     areas: OrthoViewMap<Area>,
-    resolutions: Vector3[],
-    resolutionInfo: ResolutionInfo,
+    mags: Vector3[],
+    magInfo: MagInfo,
     additionalCoordinates: AdditionalCoordinate[] | null,
   ): Array<PullQueueItem> {
-    const zoomStep = resolutionInfo.getIndexOrClosestHigherIndex(currentZoomStep);
+    const zoomStep = magInfo.getIndexOrClosestHigherIndex(currentZoomStep);
 
     if (zoomStep == null) {
       // The layer cannot be rendered at this zoom step, as necessary magnifications
@@ -99,7 +99,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
       return [];
     }
 
-    const maxZoomStep = resolutionInfo.getCoarsestResolutionIndex();
+    const maxZoomStep = magInfo.getCoarsestMagIndex();
     const zoomStepDiff = currentZoomStep - zoomStep;
     const queueItemsForCurrentZoomStep = this.prefetchImpl(
       cube,
@@ -109,7 +109,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
       zoomStepDiff,
       activePlane,
       areas,
-      resolutions,
+      mags,
       false,
       additionalCoordinates,
     );
@@ -125,7 +125,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
         zoomStepDiff - 1,
         activePlane,
         areas,
-        resolutions,
+        mags,
         true,
         additionalCoordinates,
       );
@@ -142,7 +142,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
     zoomStepDiff: number,
     activePlane: OrthoView,
     areas: OrthoViewMap<Area>,
-    resolutions: Vector3[],
+    mags: Vector3[],
     isFallback: boolean,
     additionalCoordinates: AdditionalCoordinate[] | null,
   ): Array<PullQueueItem> {
@@ -169,7 +169,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
       widthHeightVector[v] = areas[plane].bottom - areas[plane].top;
       const scaledWidthHeightVector = zoomedAddressToAnotherZoomStep(
         widthHeightVector,
-        resolutions,
+        mags,
         zoomStep,
       );
       const width = scaledWidthHeightVector[u];

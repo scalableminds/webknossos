@@ -9,18 +9,23 @@ import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
 import play.api.libs.json._
+import slick.jdbc.GetResult
 import slick.jdbc.GetResult._
 import slick.jdbc.PostgresProfile.api._
-import slick.jdbc.GetResult
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import slick.sql.SqlAction
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
+
+object AnnotationDefaults {
+  val defaultName: String = ""
+  val defaultDescription: String = ""
+}
 
 case class Annotation(
     _id: ObjectId,
@@ -29,9 +34,9 @@ case class Annotation(
     _team: ObjectId,
     _user: ObjectId,
     annotationLayers: List[AnnotationLayer],
-    description: String = "",
+    description: String = AnnotationDefaults.defaultDescription,
     visibility: AnnotationVisibility.Value = AnnotationVisibility.Internal,
-    name: String = "",
+    name: String = AnnotationDefaults.defaultName,
     viewConfiguration: Option[JsObject] = None,
     state: AnnotationState.Value = Active,
     isLockedByOwner: Boolean = false,
@@ -82,7 +87,7 @@ case class AnnotationCompactInfo(id: ObjectId,
                                  othersMayEdit: Boolean,
                                  teamIds: Seq[ObjectId],
                                  teamNames: Seq[String],
-                                 teamOrganizationIds: Seq[ObjectId],
+                                 teamOrganizationIds: Seq[String],
                                  modified: Instant,
                                  tags: Set[String],
                                  state: AnnotationState.Value = Active,
@@ -90,7 +95,7 @@ case class AnnotationCompactInfo(id: ObjectId,
                                  dataSetName: String,
                                  visibility: AnnotationVisibility.Value = AnnotationVisibility.Internal,
                                  tracingTime: Option[Long] = None,
-                                 organizationName: String,
+                                 organization: String,
                                  tracingIds: Seq[String],
                                  annotationLayerNames: Seq[String],
                                  annotationLayerTypes: Seq[String],
@@ -140,11 +145,18 @@ class AnnotationLayerDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionC
     q"""INSERT INTO webknossos.annotation_layers(_annotation, tracingId, typ, name, statistics)
           VALUES($annotationId, ${a.tracingId}, ${a.typ}, ${a.name}, ${a.stats})""".asUpdate
 
-  def deleteOne(annotationId: ObjectId, layerName: String): Fox[Unit] =
+  def deleteOneByName(annotationId: ObjectId, layerName: String): Fox[Unit] =
     for {
       _ <- run(q"""DELETE FROM webknossos.annotation_layers
                    WHERE _annotation = $annotationId
                    AND name = $layerName""".asUpdate)
+    } yield ()
+
+  def deleteOneByTracingId(annotationId: ObjectId, tracingId: String): Fox[Unit] =
+    for {
+      _ <- run(q"""DELETE FROM webknossos.annotation_layers
+                   WHERE _annotation = $annotationId
+                   AND tracingId = $tracingId""".asUpdate)
     } yield ()
 
   def findAnnotationIdByTracingId(tracingId: String): Fox[ObjectId] =
@@ -180,7 +192,7 @@ class AnnotationLayerDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionC
   def deleteAllForAnnotationQuery(annotationId: ObjectId): SqlAction[Int, NoStream, Effect] =
     q"DELETE FROM webknossos.annotation_layers WHERE _annotation = $annotationId".asUpdate
 
-  def updateStatistics(annotationId: ObjectId, tracingId: String, statistics: JsObject): Fox[Unit] =
+  def updateStatistics(annotationId: ObjectId, tracingId: String, statistics: JsValue): Fox[Unit] =
     for {
       _ <- run(q"""UPDATE webknossos.annotation_layers
                    SET statistics = $statistics
@@ -335,7 +347,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     val othersMayEdit = <<[Boolean]
     val teamIds = parseArrayLiteral(<<[String]).map(ObjectId(_))
     val teamNames = parseArrayLiteral(<<[String])
-    val teamOrganizationIds = parseArrayLiteral(<<[String]).map(ObjectId(_))
+    val teamOrganizationIds = parseArrayLiteral(<<[String])
     val modified = <<[Instant]
     val tags = parseArrayLiteral(<<[String]).toSet
     val state = AnnotationState.fromString(<<[String]).getOrElse(AnnotationState.Active)
@@ -344,7 +356,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     val typ = AnnotationType.fromString(<<[String]).getOrElse(AnnotationType.Explorational)
     val visibility = AnnotationVisibility.fromString(<<[String]).getOrElse(AnnotationVisibility.Internal)
     val tracingTime = Option(<<[Long])
-    val organizationName = <<[String]
+    val organizationId = <<[String]
     val tracingIds = parseArrayLiteral(<<[String])
     val annotationLayerNames = parseArrayLiteral(<<[String])
     val annotationLayerTypes = parseArrayLiteral(<<[String])
@@ -354,81 +366,132 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     // format: off
     AnnotationCompactInfo(id, typ, name,description,ownerId,ownerFirstName,ownerLastName, othersMayEdit,teamIds,
       teamNames,teamOrganizationIds,modified,tags,state,isLockedByOwner,dataSetName,visibility,tracingTime,
-      organizationName,tracingIds,annotationLayerNames,annotationLayerTypes,annotationLayerStatistics
+      organizationId,tracingIds,annotationLayerNames,annotationLayerTypes,annotationLayerStatistics
     )
     // format: on
   }
 
+  /**
+    * Find all annotations which are listable by the user specified in 'forUser'
+    *
+    * @param isFinished
+    * If set to `true`, only finished annotations are returned. If set to `false`, only active annotations are returned.
+    * If set to `None`, all non-cancelled annotations are returned.
+    * @param forUser
+    * If set, only annotations of this user are returned. If not set, all annotations are returned.
+    * @param filterOwnedOrShared
+    * If `true`, the function lists only annotations owned by the user or explicitly shared with them (used for the
+    * user's own dashboard). If `false`, it lists all annotations the viewer is allowed to see.
+    * @param limit
+    * The maximum number of annotations to return.
+    * @param pageNumber
+    * The page number to return. The first page is 0.
+    */
   def findAllListableExplorationals(
       isFinished: Option[Boolean],
       forUser: Option[ObjectId],
-      // In dashboard, list only own + explicitly shared annotations. When listing those of another user, list all of their annotations the viewer is allowed to see
-      isForOwnDashboard: Boolean,
-      typ: AnnotationType,
+      filterOwnedOrShared: Boolean,
       limit: Int,
       pageNumber: Int = 0)(implicit ctx: DBAccessContext): Fox[List[AnnotationCompactInfo]] =
     for {
-      accessQuery <- if (isForOwnDashboard) accessQueryFromAccessQWithPrefix(listAccessQ, q"a.")
+      accessQuery <- if (filterOwnedOrShared) accessQueryFromAccessQWithPrefix(listAccessQ, q"a.")
       else accessQueryFromAccessQWithPrefix(readAccessQWithPrefix, q"a.")
       stateQuery = getStateQuery(isFinished)
       userQuery = forUser.map(u => q"a._user = $u").getOrElse(q"TRUE")
-      typQuery = q"a.typ = $typ"
-
-      query = q"""WITH
-                    -- teams_agg is extracted to avoid left-join fanout.
-                    -- Note that only one of the joins in it has 1:n, so they can happen together
-                  teams_agg AS (
-                    SELECT
-                    a._id AS _annotation,
-                    ARRAY_REMOVE(ARRAY_AGG(t._id), null) AS team_ids,
-                    ARRAY_REMOVE(ARRAY_AGG(t.name), null) AS team_names,
-                    ARRAY_REMOVE(ARRAY_AGG(o._id), null) AS team_organization_ids
-                    FROM webknossos.annotations a
-                    LEFT JOIN webknossos.annotation_sharedteams ast ON ast._annotation = a._id
-                    LEFT JOIN webknossos.teams_ t ON ast._team = t._id
-                    LEFT JOIN webknossos.organizations_ o ON t._organization = o._id
-                    GROUP BY a._id
-                  )
-                  SELECT
-                    a._id,
-                    a.name,
-                    a.description,
-                    a._user,
-                    u.firstname,
-                    u.lastname,
-                    a.othersmayedit,
-                    teams_agg.team_ids,
-                    teams_agg.team_names,
-                    teams_agg.team_organization_ids,
-                    a.modified,
-                    a.tags,
-                    a.state,
-                    a.isLockedByOwner,
-                    d.name,
-                    a.typ,
-                    a.visibility,
-                    a.tracingtime,
-                    o.name,
-                    ARRAY_REMOVE(ARRAY_AGG(al.tracingid), null) AS tracing_ids,
-                    ARRAY_REMOVE(ARRAY_AGG(al.name), null) AS tracing_names,
-                    ARRAY_REMOVE(ARRAY_AGG(al.typ :: varchar), null) AS tracing_typs,
-                    ARRAY_REMOVE(ARRAY_AGG(al.statistics), null) AS annotation_layer_statistics
-                  FROM webknossos.annotations_ AS a
-                  JOIN webknossos.users_ u ON u._id = a._user
-                  JOIN teams_agg ON teams_agg._annotation = a._id
-                  JOIN webknossos.datasets_ d ON d._id = a._dataset
-                  JOIN webknossos.organizations_ AS o ON o._id = d._organization
-                  JOIN webknossos.annotation_layers AS al ON al._annotation = a._id
-                  WHERE $stateQuery AND $accessQuery AND $userQuery AND $typQuery
-                  GROUP BY
-                    a._id, a.name, a.description, a._user, a.othersmayedit, a.modified,
-                    a.tags, a.state,  a.islockedbyowner, a.typ, a.visibility, a.tracingtime,
-                    u.firstname, u.lastname,
-                    teams_agg.team_ids, teams_agg.team_names, teams_agg.team_organization_ids,
-                    d.name, o.name
-                  ORDER BY a._id DESC
-                  LIMIT $limit
-                  OFFSET ${pageNumber * limit}"""
+      typQuery = q"a.typ = ${AnnotationType.Explorational}"
+      query = q"""
+          -- We need to separate the querying of the annotation with all its inner joins from the 1:n join to collect the shared teams
+          -- This is to prevent left-join fanout.
+          -- Note that only one of the left joins in it has 1:n, so they can happen together
+          -- The WITH is structured this way round to get in the LIMIT early and not fetch the shared teams of all annotations first.
+          WITH an AS( -- select annotations with the relevant properties first
+            SELECT
+              a._id,
+              a.name,
+              a.description,
+              a._user,
+              u.firstname,
+              u.lastname,
+              a.othersmayedit,
+              a.modified,
+              a.tags,
+              a.state,
+              a.isLockedByOwner,
+              d.name AS datasetName,
+              a.typ,
+              a.visibility,
+              a.tracingtime,
+              o._id AS organizationId,
+              ARRAY_REMOVE(ARRAY_AGG(al.tracingid), null) AS tracing_ids,
+              ARRAY_REMOVE(ARRAY_AGG(al.name), null) AS tracing_names,
+              ARRAY_REMOVE(ARRAY_AGG(al.typ :: varchar), null) AS tracing_typs,
+              ARRAY_REMOVE(ARRAY_AGG(al.statistics), null) AS annotation_layer_statistics
+            FROM webknossos.annotations_ AS a
+            JOIN webknossos.users_ u ON u._id = a._user
+            JOIN webknossos.datasets_ d ON d._id = a._dataset
+            JOIN webknossos.organizations_ AS o ON o._id = d._organization
+            JOIN webknossos.annotation_layers AS al ON al._annotation = a._id
+            WHERE $stateQuery AND $accessQuery AND $userQuery AND $typQuery
+            GROUP BY
+              a._id, a.name, a.description, a._user, a.othersmayedit, a.modified,
+              a.tags, a.state,  a.islockedbyowner, a.typ, a.visibility, a.tracingtime,
+              u.firstname, u.lastname,
+              d.name, o._id
+            ORDER BY a._id DESC
+            LIMIT $limit
+            OFFSET ${pageNumber * limit}
+          )
+          SELECT  -- select now add the shared teams, and propagate everything to the output
+            an._id,
+            an.name,
+            an.description,
+            an._user,
+            an.firstname,
+            an.lastname,
+            an.othersmayedit,
+            ARRAY_REMOVE(ARRAY_AGG(t._id), null) AS team_ids,
+            ARRAY_REMOVE(ARRAY_AGG(t.name), null) AS team_names,
+            ARRAY_REMOVE(ARRAY_AGG(o._id), null) AS team_organization_ids,
+            an.modified,
+            an.tags,
+            an.state,
+            an.isLockedByOwner,
+            an.datasetName,
+            an.typ,
+            an.visibility,
+            an.tracingtime,
+            an.organizationId,
+            an.tracing_ids,
+            an.tracing_names,
+            an.tracing_typs,
+            an.annotation_layer_statistics
+          FROM an
+          LEFT JOIN webknossos.annotation_sharedteams ast ON ast._annotation = an._id
+          LEFT JOIN webknossos.teams_ t ON ast._team = t._id
+          LEFT JOIN webknossos.organizations_ o ON t._organization = o._id
+          GROUP BY
+            an._id,
+            an.name,
+            an.description,
+            an._user,
+            an.firstname,
+            an.lastname,
+            an.othersmayedit,
+            an.modified,
+            an.tags,
+            an.state,
+            an.isLockedByOwner,
+            an.datasetName,
+            an.typ,
+            an.visibility,
+            an.tracingtime,
+            an.organizationId,
+            an.tracing_ids,
+            an.tracing_names,
+            an.tracing_typs,
+            an.annotation_layer_statistics
+          ORDER BY an._id DESC
+         """
       rows <- run(query.as[AnnotationCompactInfo])
     } yield rows.toList
 
@@ -503,6 +566,18 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                    AND a.typ = ${AnnotationType.Task} """.as[ObjectId])
     } yield r.toList
 
+  def findBaseIdForTask(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[ObjectId] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(q"""SELECT _id
+                   FROM $existingCollectionName
+                   WHERE _task = $taskId
+                   AND typ = ${AnnotationType.TracingBase}
+                   AND state != ${AnnotationState.Cancelled}
+                   AND $accessQuery""".as[ObjectId])
+      firstRow <- r.headOption
+    } yield firstRow
+
   def findAllByTaskIdAndType(taskId: ObjectId, typ: AnnotationType)(
       implicit ctx: DBAccessContext): Fox[List[Annotation]] =
     for {
@@ -570,7 +645,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
       count <- countList.headOption
     } yield count
 
-  def countAllForOrganization(organizationId: ObjectId): Fox[Int] =
+  def countAllForOrganization(organizationId: String): Fox[Int] =
     for {
       countList <- run(q"""SELECT COUNT(*)
                            FROM $existingCollectionName a

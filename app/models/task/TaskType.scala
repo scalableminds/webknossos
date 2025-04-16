@@ -1,17 +1,17 @@
 package models.task
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
-import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
+import com.scalableminds.webknossos.tracingstore.tracings.volume.MagRestrictions
 import models.annotation.{AnnotationSettings, TracingMode}
 import models.team.TeamDAO
 import play.api.libs.json._
 import slick.lifted.Rep
-import utils.ObjectId
 import utils.sql.{EnumerationArrayValue, SQLDAO, SqlClient}
 
 import javax.inject.Inject
@@ -29,7 +29,7 @@ case class TaskType(
     isDeleted: Boolean = false
 )
 
-class TaskTypeService @Inject()(teamDAO: TeamDAO, taskTypeDAO: TaskTypeDAO)(implicit ec: ExecutionContext) {
+class TaskTypeService @Inject()(teamDAO: TeamDAO) {
 
   def fromForm(
       summary: String,
@@ -55,16 +55,6 @@ class TaskTypeService @Inject()(teamDAO: TeamDAO, taskTypeDAO: TaskTypeDAO)(impl
         "recommendedConfiguration" -> taskType.recommendedConfiguration,
         "tracingType" -> taskType.tracingType
       )
-
-  def containsVolumeOrHybridTaskType(taskTypeIds: List[String])(implicit ctx: DBAccessContext): Fox[Boolean] =
-    Fox
-      .serialCombined(taskTypeIds) { taskTypeId =>
-        for {
-          taskTypeIdValidated <- ObjectId.fromString(taskTypeId) ?~> "taskType.id.invalid"
-          taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
-        } yield taskType.tracingType == TracingType.volume || taskType.tracingType == TracingType.hybrid
-      }
-      .map(_.exists(_ == true))
 
 }
 
@@ -95,7 +85,7 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           r.settingsSomaclickingallowed,
           r.settingsVolumeinterpolationallowed,
           r.settingsMergermode,
-          ResolutionRestrictions(r.settingsResolutionrestrictionsMin, r.settingsResolutionrestrictionsMax)
+          MagRestrictions(r.settingsMagrestrictionsMin, r.settingsMagrestrictionsMax)
         ),
         r.recommendedconfiguration.map(Json.parse),
         tracingType,
@@ -118,7 +108,7 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseFirst(r, id.toString)
     } yield parsed
 
-  def findOneBySummaryAndOrganization(summary: String, organizationId: ObjectId)(
+  def findOneBySummaryAndOrganization(summary: String, organizationId: String)(
       implicit ctx: DBAccessContext): Fox[TaskType] =
     for {
       accessQuery <- readAccessQuery
@@ -137,12 +127,12 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
-  def insertOne(t: TaskType, organizationId: ObjectId): Fox[Unit] =
+  def insertOne(t: TaskType, organizationId: String): Fox[Unit] =
     for {
       _ <- run(q"""INSERT INTO webknossos.taskTypes(
                           _id, _organization, _team, summary, description, settings_allowedModes, settings_preferredMode,
                           settings_branchPointsAllowed, settings_somaClickingAllowed, settings_volumeInterpolationAllowed, settings_mergerMode,
-                          settings_resolutionRestrictions_min, settings_resolutionRestrictions_max,
+                          settings_magRestrictions_min, settings_magRestrictions_max,
                           recommendedConfiguration, tracingType, created, isDeleted)
                    VALUES(${t._id}, $organizationId, ${t._team}, ${t.summary}, ${t.description},
                            ${EnumerationArrayValue(t.settings.allowedModes, "webknossos.TASKTYPE_MODES")},
@@ -151,8 +141,8 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                            ${t.settings.somaClickingAllowed},
                            ${t.settings.volumeInterpolationAllowed},
                            ${t.settings.mergerMode},
-                           ${t.settings.resolutionRestrictions.min},
-                           ${t.settings.resolutionRestrictions.max},
+                           ${t.settings.magRestrictions.min},
+                           ${t.settings.magRestrictions.max},
                            ${t.recommendedConfiguration.map(Json.toJson(_))},
                            ${t.tracingType},
                            ${t.created}, ${t.isDeleted})
@@ -174,8 +164,8 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                      settings_somaClickingAllowed = ${t.settings.somaClickingAllowed},
                      settings_volumeInterpolationAllowed = ${t.settings.volumeInterpolationAllowed},
                      settings_mergerMode = ${t.settings.mergerMode},
-                     settings_resolutionRestrictions_min = ${t.settings.resolutionRestrictions.min},
-                     settings_resolutionRestrictions_max = ${t.settings.resolutionRestrictions.max},
+                     settings_magRestrictions_min = ${t.settings.magRestrictions.min},
+                     settings_magRestrictions_max = ${t.settings.magRestrictions.max},
                      recommendedConfiguration = ${t.recommendedConfiguration.map(Json.toJson(_))},
                      isDeleted = ${t.isDeleted}
                    WHERE _id = ${t._id}""".asUpdate)

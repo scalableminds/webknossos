@@ -1,54 +1,52 @@
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
+import { InboxOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
 import {
-  Row,
+  getActiveDatasetsOfMyOrganization,
+  getProjects,
+  getScripts,
+  getTaskTypes,
+  getUnversionedAnnotationInformation,
+} from "admin/admin_rest_api";
+import { createTaskFromNML, createTasks, getTask, updateTask } from "admin/api/tasks";
+import type {
+  NewNmlTask,
+  NewTask,
+  TaskCreationResponse,
+  TaskCreationResponseContainer,
+} from "admin/task/task_create_bulk_view";
+import { NUM_TASKS_PER_BATCH, normalizeFileEvent } from "admin/task/task_create_bulk_view";
+import {
+  App,
+  Button,
+  Card,
   Col,
   Divider,
   Form,
-  Select,
-  Button,
-  Card,
-  Radio,
-  Upload,
-  InputNumber,
   Input,
+  InputNumber,
+  Radio,
+  type RadioChangeEvent,
+  Row,
+  Select,
   Spin,
-  RadioChangeEvent,
   Tooltip,
-  App,
-  UploadFile,
+  Upload,
+  type UploadFile,
 } from "antd";
-import React, { useEffect, useState } from "react";
-import { InboxOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
-import _ from "lodash";
-import type { APIDataset, APITaskType, APIProject, APIScript, APITask } from "types/api_flow_types";
-import type { BoundingBoxObject } from "oxalis/store";
-import {
-  NewTask,
-  type TaskCreationResponse,
-  type TaskCreationResponseContainer,
-} from "admin/task/task_create_bulk_view";
-import { normalizeFileEvent, NUM_TASKS_PER_BATCH } from "admin/task/task_create_bulk_view";
-import { Vector3Input, Vector6Input } from "libs/vector_input";
-import type { Vector3, Vector6 } from "oxalis/constants";
-import {
-  createTaskFromNML,
-  createTasks,
-  getActiveDatasetsOfMyOrganization,
-  getAnnotationInformation,
-  getProjects,
-  getScripts,
-  getTask,
-  getTaskTypes,
-  updateTask,
-} from "admin/admin_rest_api";
-import { coalesce, tryToAwaitPromise } from "libs/utils";
-import SelectExperienceDomain from "components/select_experience_domain";
-import messages from "messages";
-import { saveAs } from "file-saver";
-import { formatDateInLocalTimeZone } from "components/formatted_date";
+import type { useAppProps } from "antd/es/app/context";
 import { AsyncButton } from "components/async_clickables";
-import { useAppProps } from "antd/es/app/context";
+import { formatDateInLocalTimeZone } from "components/formatted_date";
+import SelectExperienceDomain from "components/select_experience_domain";
+import { saveAs } from "file-saver";
+import { coalesce, tryToAwaitPromise } from "libs/utils";
+import { Vector3Input, Vector6Input } from "libs/vector_input";
+import _ from "lodash";
+import messages from "messages";
+import type { Vector3, Vector6 } from "oxalis/constants";
+import type { BoundingBoxObject } from "oxalis/store";
+import React, { useEffect, useState } from "react";
+import type { RouteComponentProps } from "react-router-dom";
+import { withRouter } from "react-router-dom";
+import type { APIDataset, APIProject, APIScript, APITask, APITaskType } from "types/api_flow_types";
 
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
@@ -59,7 +57,7 @@ const fullWidth = {
 const maxDisplayedTasksCount = 50;
 
 const TASK_CSV_HEADER =
-  "taskId,dataSet,taskTypeId,experienceDomain,minExperience,x,y,z,rotX,rotY,rotZ,instances,minX,minY,minZ,width,height,depth,project,scriptId,creationInfo";
+  "taskId,datasetName,datasetId,taskTypeId,experienceDomain,minExperience,x,y,z,rotX,rotY,rotZ,instances,minX,minY,minZ,width,height,depth,project,scriptId,creationInfo";
 
 export enum SpecificationEnum {
   Manual = "Manual",
@@ -76,7 +74,8 @@ export function taskToShortText(task: APITask) {
 export function taskToText(task: APITask) {
   const {
     id,
-    dataSet,
+    datasetName,
+    datasetId,
     type,
     neededExperience,
     editPosition,
@@ -96,7 +95,7 @@ export function taskToText(task: APITask) {
   const scriptId = script ? `${script.id}` : "";
   const creationInfoOrEmpty = creationInfo || "";
   const taskAsString =
-    `${id},${dataSet},${type.id},${neededExperienceAsString},${editPositionAsString},` +
+    `${id},${datasetName},${datasetId},${type.id},${neededExperienceAsString},${editPositionAsString},` +
     `${editRotationAsString},${totalNumberOfInstances},${boundingBoxAsString},${projectName},${scriptId},${creationInfoOrEmpty}`;
   return taskAsString;
 }
@@ -304,7 +303,8 @@ type FormValues = {
   editPosition: Vector3;
   editRotation: Vector3;
   nmlFiles: UploadFile[];
-  dataSet: string;
+  datasetId: string;
+  datasetName: string;
   projectName: string;
   neededExperience: NewTask["neededExperience"];
 };
@@ -356,7 +356,6 @@ function TaskCreateFormView({ taskId, history }: Props) {
       const validFormValues = _.omitBy(defaultValues, _.isNil);
 
       // The task type is not needed for the form and leads to antd errors if it contains null values
-      // biome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
       const { type, ...neededFormValues } = validFormValues;
       form.setFieldsValue(neededFormValues);
     }
@@ -378,7 +377,10 @@ function TaskCreateFormView({ taskId, history }: Props) {
 
     if (taskId != null) {
       // either update an existing task
-      const newTask = { ..._.omit(formValues, "nmlFiles", "baseAnnotation"), boundingBox };
+      const newTask = {
+        ..._.omit(formValues, "nmlFiles", "baseAnnotation"),
+        boundingBox,
+      };
       const confirmedTask = await updateTask(taskId, newTask);
       history.push(`/tasks/${confirmedTask.id}`);
     } else {
@@ -398,12 +400,11 @@ function TaskCreateFormView({ taskId, history }: Props) {
           for (let i = 0; i < nmlFiles.length; i += NUM_TASKS_PER_BATCH) {
             const batchOfNmls = nmlFiles.slice(i, i + NUM_TASKS_PER_BATCH);
 
-            const newTask = {
+            const newTask: NewNmlTask = {
               ..._.omit(formValues, "baseAnnotation"),
-              nmlFiles: batchOfNmls,
               boundingBox,
             };
-            const response = await createTaskFromNML(newTask);
+            const response = await createTaskFromNML(newTask, batchOfNmls);
 
             taskResponses = taskResponses.concat(response.tasks);
             warnings = warnings.concat(response.warnings);
@@ -416,7 +417,11 @@ function TaskCreateFormView({ taskId, history }: Props) {
               ? null
               : formValues.baseAnnotation;
 
-          const newTask = { ..._.omit(formValues, "nmlFiles"), boundingBox, baseAnnotation };
+          const newTask = {
+            ..._.omit(formValues, "nmlFiles", "baseAnnotation"),
+            boundingBox,
+            baseAnnotation,
+          };
           const response = await createTasks([newTask]);
 
           taskResponses = taskResponses.concat(response.tasks);
@@ -480,21 +485,16 @@ function TaskCreateFormView({ taskId, history }: Props) {
                     return Promise.resolve();
                   }
 
-                  const annotationResponse =
-                    (await tryToAwaitPromise(
-                      getAnnotationInformation(value, {
-                        showErrorToast: false,
-                      }),
-                    )) ||
-                    (await tryToAwaitPromise(
-                      getAnnotationInformation(value, {
-                        showErrorToast: false,
-                      }),
-                    ));
+                  const annotationResponse = await tryToAwaitPromise(
+                    getUnversionedAnnotationInformation(value, {
+                      showErrorToast: false,
+                    }),
+                  );
 
                   if (annotationResponse?.dataSetName != null) {
                     form.setFieldsValue({
-                      dataSet: annotationResponse.dataSetName,
+                      datasetName: annotationResponse.dataSetName,
+                      datasetId: annotationResponse.datasetId,
                     });
                     return Promise.resolve();
                   }
@@ -506,7 +506,7 @@ function TaskCreateFormView({ taskId, history }: Props) {
                   );
 
                   if (
-                    taskResponse?.dataSet != null &&
+                    taskResponse?.datasetId != null &&
                     _.isEqual(taskResponse.status, {
                       pending: 0,
                       active: 0,
@@ -514,13 +514,15 @@ function TaskCreateFormView({ taskId, history }: Props) {
                     })
                   ) {
                     form.setFieldsValue({
-                      dataSet: taskResponse.dataSet,
+                      datasetName: taskResponse.datasetName,
+                      datasetId: taskResponse.datasetId,
                     });
                     return Promise.resolve();
                   }
 
                   form.setFieldsValue({
-                    dataSet: undefined,
+                    datasetName: undefined,
+                    datasetId: undefined,
                   });
                   return Promise.reject(new Error("Invalid base annotation id."));
                 },
@@ -534,7 +536,7 @@ function TaskCreateFormView({ taskId, history }: Props) {
         <Row gutter={8} align="middle" wrap={false}>
           <Col flex="auto">
             <FormItem
-              name="dataSet"
+              name="datasetId"
               label="Dataset"
               hasFeedback
               rules={[
@@ -556,7 +558,7 @@ function TaskCreateFormView({ taskId, history }: Props) {
                 loading={isFetchingData}
                 options={datasets.map((dataset: APIDataset) => ({
                   label: dataset.name,
-                  value: dataset.name,
+                  value: dataset.id,
                 }))}
               />
             </FormItem>

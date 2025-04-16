@@ -19,7 +19,9 @@ case class DataServiceDataRequest(
     dataLayer: DataLayer,
     cuboid: Cuboid,
     settings: DataServiceRequestSettings
-)
+) {
+  def isSingleBucket: Boolean = cuboid.isSingleBucket(DataLayer.bucketLength)
+}
 
 case class DataReadInstruction(
     baseDir: Path,
@@ -28,7 +30,7 @@ case class DataReadInstruction(
     bucket: BucketPosition,
     version: Option[Long] = None
 ) {
-  def layerSummary: String = f"${dataSource.id.team}/${dataSource.id.name}/${dataLayer.name}"
+  def layerSummary: String = f"${dataSource.id.organizationId}/${dataSource.id.directoryName}/${dataLayer.name}"
 }
 
 case class DataServiceMappingRequest(

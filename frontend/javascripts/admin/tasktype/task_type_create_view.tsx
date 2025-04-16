@@ -1,30 +1,30 @@
-import { Button, Card, Checkbox, Form, Input, Radio, Select, InputNumber, Tooltip } from "antd";
-import { syncValidator } from "types/validation";
 import { InfoCircleOutlined } from "@ant-design/icons";
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
-import React, { useEffect, useState } from "react";
-import _ from "lodash";
 import {
-  APITaskType,
-  TracingType,
-  TracingTypeEnum,
-  type APIAllowedMode,
-  type APIResolutionRestrictions,
-  type APITeam,
-} from "types/api_flow_types";
-import {
-  getEditableTeams,
   createTaskType,
-  updateTaskType,
+  getEditableTeams,
   getTaskType,
+  updateTaskType,
 } from "admin/admin_rest_api";
 import RecommendedConfigurationView, {
   getDefaultRecommendedConfiguration,
 } from "admin/tasktype/recommended_configuration_view";
+import { Button, Card, Checkbox, Form, Input, InputNumber, Radio, Select, Tooltip } from "antd";
+import type { RuleObject } from "antd/es/form";
 import { useFetch } from "libs/react_helpers";
-import { RuleObject } from "antd/es/form";
 import { jsonStringify } from "libs/utils";
+import _ from "lodash";
+import { useEffect, useState } from "react";
+import type { RouteComponentProps } from "react-router-dom";
+import { withRouter } from "react-router-dom";
+import {
+  type APIAllowedMode,
+  type APIMagRestrictions,
+  type APITaskType,
+  type APITeam,
+  type TracingType,
+  TracingTypeEnum,
+} from "types/api_flow_types";
+import { syncValidator } from "types/validation";
 
 const RadioGroup = Radio.Group;
 const FormItem = Form.Item;
@@ -36,7 +36,7 @@ type Props = {
 };
 
 type FormValues = {
-  isResolutionRestricted: boolean;
+  isMagRestricted: boolean;
   summary: string;
   teamId: string;
   description: string;
@@ -48,7 +48,7 @@ type FormValues = {
     mergerMode: boolean;
     preferredMode?: APIAllowedMode;
     allowedModes: APIAllowedMode[];
-    resolutionRestrictions: APIResolutionRestrictions;
+    magRestrictions: APIMagRestrictions;
   };
   recommendedConfiguration: string | undefined;
 };
@@ -58,7 +58,7 @@ function isValidMagnification(_rule: RuleObject, value: number | undefined) {
     return Promise.resolve();
   } else {
     return Promise.reject(
-      new Error("The resolution must be stated as a power of two (e.g., 1 or 2 or 4 or 8 ...)"),
+      new Error("The magnification must be stated as a power of two (e.g., 1 or 2 or 4 or 8 ...)"),
     );
   }
 }
@@ -68,7 +68,7 @@ function isMinimumMagnifactionLargerThenMaxRule(value: number | undefined, maxMa
     return Promise.resolve();
   }
   return Promise.reject(
-    new Error("The minimum resolution needs to be smaller then the maximum mag."),
+    new Error("The minimum magnification needs to be smaller then the maximum mag."),
   );
 }
 function isMaximumMagnificationSmallerThenMinRule(value: number | undefined, minMag: number) {
@@ -76,7 +76,7 @@ function isMaximumMagnificationSmallerThenMinRule(value: number | undefined, min
     return Promise.resolve();
   }
   return Promise.reject(
-    new Error("The maximum resolution needs to be larger then the minimum mag."),
+    new Error("The maximum magnification needs to be larger then the minimum mag."),
   );
 }
 
@@ -103,13 +103,13 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
     const taskType = taskTypeId ? await getTaskType(taskTypeId) : null;
 
     const defaultValues = {
-      isResolutionRestricted: false,
+      isMagRestricted: false,
       settings: {
         somaClickingAllowed: true,
         branchPointsAllowed: true,
         volumeInterpolationAllowed: false,
         mergerMode: false,
-        resolutionRestrictions: {
+        magRestrictions: {
           min: 1,
           max: 512,
         },
@@ -130,11 +130,8 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
       );
     }
 
-    if (
-      taskType?.settings.resolutionRestrictions.min ||
-      taskType?.settings.resolutionRestrictions.max
-    )
-      form.setFieldValue(["isResolutionRestricted"], true);
+    if (taskType?.settings.magRestrictions.min || taskType?.settings.magRestrictions.max)
+      form.setFieldValue(["isMagRestricted"], true);
   }
 
   async function onFinish(formValues: FormValues) {
@@ -142,7 +139,7 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
       settings,
       teamId,
       recommendedConfiguration,
-      isResolutionRestricted: _isResolutionRestricted,
+      isMagRestricted: _isMagRestricted,
       ...rest
     } = formValues;
     const teamName = teams.find((team) => team.id === teamId)!["name"];
@@ -153,8 +150,8 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
 
     // FormItems which are not rendered/hidden are not serialized by onFinish
     // add them manually
-    if (!settings.resolutionRestrictions) {
-      settings.resolutionRestrictions = { min: undefined, max: undefined };
+    if (!settings.magRestrictions) {
+      settings.magRestrictions = { min: undefined, max: undefined };
     }
 
     const newTaskType: Omit<APITaskType, "id" | "teamName"> = {
@@ -399,7 +396,7 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
                     valuePropName="checked"
                   >
                     <Checkbox>
-                      Allow Volume Interpolation
+                      Allow Volume Interpolation{" "}
                       <Tooltip
                         title="When enabled, it suffices to only label every 2nd slice. The skipped slices will be filled automatically by interpolating between the labeled slices."
                         placement="right"
@@ -414,16 +411,16 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
           </FormItem>
 
           <FormItem
-            name={["isResolutionRestricted"]}
+            name={["isMagRestricted"]}
             valuePropName="checked"
             style={{
               marginBottom: 6,
             }}
           >
             <Checkbox disabled={isEditingMode}>
-              Restrict Resolutions{" "}
+              Restrict Magnifications{" "}
               <Tooltip
-                title="The resolutions should be specified as power-of-two numbers. For example, if users should only be able to annotate in the best and second best magnification, the minimum should be 1 and the maximum should be 2. The third and fourth resolutions can be addressed with 4 and 8."
+                title="The magnifications should be specified as power-of-two numbers. For example, if users should only be able to annotate in the best and second best mag, the minimum should be 1 and the maximum should be 2. The third and fourth mag can be addressed with 4 and 8."
                 placement="right"
               >
                 <InfoCircleOutlined />
@@ -434,19 +431,19 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
           <FormItem
             noStyle
             shouldUpdate={(prevValues, curValues) =>
-              !prevValues.isResolutionRestricted ||
-              prevValues.isResolutionRestricted !== curValues.isResolutionRestricted
+              !prevValues.isMagRestricted ||
+              prevValues.isMagRestricted !== curValues.isMagRestricted
             }
           >
             {({ getFieldValue }) =>
-              getFieldValue(["isResolutionRestricted"]) ? (
+              getFieldValue(["isMagRestricted"]) ? (
                 <div
                   style={{
                     marginLeft: 24,
                   }}
                 >
                   <FormItem
-                    name={["settings", "resolutionRestrictions", "min"]}
+                    name={["settings", "magRestrictions", "min"]}
                     hasFeedback
                     label="Minimum"
                     style={{
@@ -460,7 +457,7 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
                         validator: (_rule, value) =>
                           isMinimumMagnifactionLargerThenMaxRule(
                             value,
-                            getFieldValue(["settings", "resolutionRestrictions", "max"]),
+                            getFieldValue(["settings", "magRestrictions", "max"]),
                           ),
                       },
                     ]}
@@ -468,7 +465,7 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
                     <InputNumber min={1} size="small" disabled={isEditingMode} />
                   </FormItem>
                   <FormItem
-                    name={["settings", "resolutionRestrictions", "max"]}
+                    name={["settings", "magRestrictions", "max"]}
                     hasFeedback
                     label="Maximum"
                     rules={[
@@ -479,7 +476,7 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
                         validator: (_rule, value) =>
                           isMaximumMagnificationSmallerThenMinRule(
                             value,
-                            getFieldValue(["settings", "resolutionRestrictions", "min"]),
+                            getFieldValue(["settings", "magRestrictions", "min"]),
                           ),
                       },
                     ]}

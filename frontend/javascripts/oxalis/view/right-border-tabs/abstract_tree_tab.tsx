@@ -1,13 +1,13 @@
 import { Button } from "antd";
-import type { Dispatch } from "redux";
-import { connect } from "react-redux";
-import React, { Component } from "react";
+import window from "libs/window";
 import _ from "lodash";
-import type { OxalisState, SkeletonTracing } from "oxalis/store";
 import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";
+import type { OxalisState, SkeletonTracing } from "oxalis/store";
 import type { NodeListItem } from "oxalis/view/right-border-tabs/abstract_tree_renderer";
 import AbstractTreeRenderer from "oxalis/view/right-border-tabs/abstract_tree_renderer";
-import window from "libs/window";
+import React, { Component } from "react";
+import { connect } from "react-redux";
+import type { Dispatch } from "redux";
 type StateProps = {
   dispatch: Dispatch<any>;
   skeletonTracing: SkeletonTracing | null | undefined;
@@ -106,7 +106,7 @@ class AbstractTreeTab extends Component<Props, State> {
 
 function mapStateToProps(state: OxalisState): Partial<Props> {
   return {
-    skeletonTracing: state.tracing.skeleton,
+    skeletonTracing: state.annotation.skeleton,
   };
 }
 

@@ -2,22 +2,21 @@ import "test/mocks/lz4";
 import _ from "lodash";
 import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
 import { sleep } from "libs/utils";
-import type { TestInterface } from "ava";
-import anyTest from "ava";
+import anyTest, { type TestFn } from "ava";
 import datasetServerObject from "test/fixtures/dataset_server_object";
 import mockRequire from "mock-require";
 import runAsync from "test/helpers/run-async";
 import sinon from "sinon";
-import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import { MagInfo } from "oxalis/model/helpers/mag_info";
 import type { Vector3, Vector4 } from "oxalis/constants";
-import { assertNonNullBucket, DataBucket } from "oxalis/model/bucket_data_handling/bucket";
+import { assertNonNullBucket, type DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import DataCubeType from "oxalis/model/bucket_data_handling/data_cube";
+import type DataCubeType from "oxalis/model/bucket_data_handling/data_cube";
 
 const StoreMock = {
   getState: () => ({
     dataset: datasetServerObject,
-    tracing: {
+    annotation: {
       skeleton: skeletontracingServerObject,
     },
     datasetConfiguration: {
@@ -51,13 +50,14 @@ mockRequire("libs/toast", {
 const DataCube: typeof DataCubeType = mockRequire.reRequire(
   "oxalis/model/bucket_data_handling/data_cube",
 ).default;
-// Ava's recommendation for Flow types
-// https://github.com/avajs/ava/blob/master/docs/recipes/flow.md#typing-tcontext
-const test: TestInterface<{
+
+// Ava's recommendation for Typescript types
+// https://github.com/avajs/ava/blob/main/docs/recipes/typescript.md#typing-tcontext
+const test = anyTest as TestFn<{
   cube: DataCubeType;
   pullQueue: Record<string, any>;
   pushQueue: Record<string, any>;
-}> = anyTest as any;
+}>;
 test.beforeEach((t) => {
   const mockedLayer = {
     resolutions: [
@@ -69,11 +69,11 @@ test.beforeEach((t) => {
       [32, 32, 32],
     ] as Vector3[],
   };
-  const resolutionInfo = new ResolutionInfo(mockedLayer.resolutions);
+  const magInfo = new MagInfo(mockedLayer.resolutions);
   const cube = new DataCube(
     new BoundingBox({ min: [0, 0, 0], max: [100, 100, 100] }),
     [],
-    resolutionInfo,
+    magInfo,
     "uint32",
     false,
     "layerName",
@@ -98,7 +98,7 @@ test.beforeEach((t) => {
         const bucket = cube.getBucket(item.bucket, true);
 
         if (bucket.type === "data") {
-          bucket.markAsPulled();
+          bucket.markAsRequested();
           bucket.receiveData(new Uint8Array(4 * 32 ** 3));
         }
       }
@@ -170,7 +170,7 @@ test("Voxel Labeling should push buckets immediately if they are pulled already"
   const { cube, pushQueue } = t.context;
   const bucket = cube.getOrCreateBucket([0, 0, 0, 0, []]);
   assertNonNullBucket(bucket);
-  bucket.markAsPulled();
+  bucket.markAsRequested();
   bucket.receiveData(new Uint8Array(4 * 32 ** 3));
   await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], null, 42, 0, null);
   t.plan(1);
@@ -214,16 +214,16 @@ test("Garbage Collection should only keep 3 buckets when possible", (t) => {
   cube.getOrCreateBucket([3, 3, 3, 0]);
   t.is(cube.buckets.length, 3);
 });
-test("Garbage Collection should not collect buckets with shouldCollect() == false", (t) => {
+test("Garbage Collection should not collect buckets with mayBeGarbageCollected() == false", (t) => {
   const { cube } = t.context;
   cube.BUCKET_COUNT_SOFT_LIMIT = 3;
   const b1 = cube.getOrCreateBucket([0, 0, 0, 0, []]);
   assertNonNullBucket(b1);
-  b1.markAsPulled();
+  b1.markAsRequested();
   cube.getOrCreateBucket([1, 1, 1, 0]);
   cube.getOrCreateBucket([2, 2, 2, 0]);
   cube.getOrCreateBucket([3, 3, 3, 0]);
-  t.is(b1.shouldCollect(), false);
+  t.is(b1.mayBeGarbageCollected(true), false);
   const addresses = cube.buckets.map((b: DataBucket) => b.zoomedAddress);
   t.deepEqual(addresses, [
     [0, 0, 0, 0, []],
@@ -240,7 +240,7 @@ test("Garbage Collection should grow beyond soft limit if necessary", (t) => {
   // No bucket may be collected.
   [b1, b2, b3].map((b) => {
     assertNonNullBucket(b);
-    b.markAsPulled();
+    b.markAsRequested();
   });
   // Allocate a 4th one which should still be possible (will exceed BUCKET_COUNT_SOFT_LIMIT)
   cube.getOrCreateBucket([3, 3, 3, 0]);

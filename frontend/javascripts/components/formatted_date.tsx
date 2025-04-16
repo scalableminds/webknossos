@@ -1,6 +1,5 @@
-import { Tooltip } from "antd";
-import * as React from "react";
 import dayjs from "dayjs";
+import FastTooltip from "./fast_tooltip";
 
 const defaultTimeFormat = "YYYY-MM-DD HH:mm";
 
@@ -32,15 +31,12 @@ export default function FormattedDate({
   const _tooltipFormat = tooltipFormat || format;
 
   return (
-    <Tooltip
-      title={
-        <span>
-          The displayed time refers to your local timezone. In UTC, the time is:{" "}
-          {_timestamp.format(_tooltipFormat)}
-        </span>
-      }
+    <FastTooltip
+      title={`The displayed time refers to your local timezone. In UTC, the time is: ${_timestamp.format(
+        _tooltipFormat,
+      )}`}
     >
       {_timestamp.local().format(_format)}
-    </Tooltip>
+    </FastTooltip>
   );
 }

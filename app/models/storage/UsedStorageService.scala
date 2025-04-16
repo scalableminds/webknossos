@@ -12,13 +12,13 @@ import models.dataset.{Dataset, DatasetService, DataStore, DataStoreDAO, WKRemot
 import models.organization.{Organization, OrganizationDAO}
 import net.liftweb.common.{Failure, Full}
 import play.api.inject.ApplicationLifecycle
-import utils.{ObjectId, WkConf}
+import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-class UsedStorageService @Inject()(val system: ActorSystem,
+class UsedStorageService @Inject()(val actorSystem: ActorSystem,
                                    val lifecycle: ApplicationLifecycle,
                                    organizationDAO: OrganizationDAO,
                                    datasetService: DatasetService,
@@ -36,21 +36,12 @@ class UsedStorageService @Inject()(val system: ActorSystem,
   override protected def tickerInterval: FiniteDuration = config.WebKnossos.FetchUsedStorage.tickerInterval
   override protected def tickerInitialDelay: FiniteDuration = 1 minute
 
-  private val isRunning = new java.util.concurrent.atomic.AtomicBoolean(false)
-
   private val pauseAfterEachOrganization = 5 seconds
   private val organizationCountToScanPerTick = config.WebKnossos.FetchUsedStorage.scansPerTick
 
   implicit private val ctx: DBAccessContext = GlobalAccessContext
 
-  override protected def tick(): Unit =
-    if (isRunning.compareAndSet(false, true)) {
-      tickAsync().futureBox.onComplete { _ =>
-        isRunning.set(false)
-      }
-    }
-
-  private def tickAsync(): Fox[Unit] =
+  override protected def tick(): Fox[Unit] =
     for {
       organizations <- organizationDAO.findNotRecentlyScanned(config.WebKnossos.FetchUsedStorage.rescanInterval,
                                                               organizationCountToScanPerTick)
@@ -61,7 +52,7 @@ class UsedStorageService @Inject()(val system: ActorSystem,
         tryAndLog(organization._id, refreshStorageReports(organization, dataStores)))
     } yield ()
 
-  private def tryAndLog(organizationId: ObjectId, result: Fox[Unit]): Fox[Unit] =
+  private def tryAndLog(organizationId: String, result: Fox[Unit]): Fox[Unit] =
     for {
       box <- result.futureBox
       _ = box match {
@@ -85,7 +76,7 @@ class UsedStorageService @Inject()(val system: ActorSystem,
   private def refreshStorageReports(dataStore: DataStore,
                                     organization: Organization): Fox[List[DirectoryStorageReport]] = {
     val dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
-    dataStoreClient.fetchStorageReport(organization.name, datasetName = None)
+    dataStoreClient.fetchStorageReport(organization._id, datasetName = None)
   }
 
   private def upsertUsedStorage(organization: Organization,
@@ -100,7 +91,7 @@ class UsedStorageService @Inject()(val system: ActorSystem,
       dataStore <- datasetService.dataStoreFor(dataset)
       dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
       organization <- organizationDAO.findOne(dataset._organization)
-      report <- dataStoreClient.fetchStorageReport(organization.name, Some(dataset.name))
+      report <- dataStoreClient.fetchStorageReport(organization._id, Some(dataset.name))
       _ <- organizationDAO.deleteUsedStorageForDataset(dataset._id)
       _ <- organizationDAO.upsertUsedStorage(organization._id, dataStore.name, report)
     } yield ()

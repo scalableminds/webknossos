@@ -1,12 +1,7 @@
-import {
-  tokenUserA,
-  setCurrToken,
-  resetDatabase,
-  writeTypeCheckingFile,
-} from "test/enzyme/e2e-setup";
+import { tokenUserA, setCurrToken, resetDatabase, writeTypeCheckingFile } from "test/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import test from "ava";
-import { APIAllowedMode } from "types/api_flow_types";
+import type { APIAllowedMode } from "types/api_flow_types";
 test.before("Change token", async () => {
   resetDatabase();
   setCurrToken(tokenUserA);
@@ -16,16 +11,12 @@ test("getTaskTypes()", async (t) => {
   writeTypeCheckingFile(taskTypes, "task-type", "APITaskType", {
     isArray: true,
   });
-  t.snapshot(taskTypes, {
-    id: "taskTypes-getTaskTypes",
-  });
+  t.snapshot(taskTypes);
 });
 test("getTaskType()", async (t) => {
   const taskTypes = await api.getTaskTypes();
   const taskType = await api.getTaskType(taskTypes[0].id);
-  t.snapshot(taskType, {
-    id: "taskTypes-getTaskType",
-  });
+  t.snapshot(taskType);
 });
 test("createTaskType and deleteTaskType", async (t) => {
   const activeUser = await api.getActiveUser();
@@ -41,7 +32,7 @@ test("createTaskType and deleteTaskType", async (t) => {
       mergerMode: false,
       volumeInterpolationAllowed: false,
       allowedModes: ["orthogonal" as APIAllowedMode],
-      resolutionRestrictions: {},
+      magRestrictions: {},
     },
     recommendedConfiguration: null,
     tracingType: "skeleton" as const,
@@ -52,13 +43,9 @@ test("createTaskType and deleteTaskType", async (t) => {
   const createdTaskTypeWithFixedId = Object.assign({}, createdTaskType, {
     id: "fixed-id",
   });
-  t.snapshot(createdTaskTypeWithFixedId, {
-    id: "taskTypes-createdTaskType",
-  });
+  t.snapshot(createdTaskTypeWithFixedId);
   const response = await api.deleteTaskType(createdTaskType.id);
-  t.snapshot(response, {
-    id: "taskTypes-deleteTaskType",
-  });
+  t.snapshot(response);
 });
 test("updateTaskType()", async (t) => {
   const taskTypes = await api.getTaskTypes();
@@ -69,12 +56,8 @@ test("updateTaskType()", async (t) => {
       summary: "new-test-summary",
     }),
   );
-  t.snapshot(updatedTaskType, {
-    id: "taskTypes-updateTaskType",
-  });
+  t.snapshot(updatedTaskType);
   // Change back
   const revertedTaskType = await api.updateTaskType(taskType.id, taskType);
-  t.snapshot(revertedTaskType, {
-    id: "taskTypes-revertedTaskType",
-  });
+  t.snapshot(revertedTaskType);
 });

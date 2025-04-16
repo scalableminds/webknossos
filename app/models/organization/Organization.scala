@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.schema.Tables._
 import models.team.PricingPlan
 import models.team.PricingPlan.PricingPlan
 import slick.lifted.Rep
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject
@@ -16,11 +16,10 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
 case class Organization(
-    _id: ObjectId,
-    name: String,
+    _id: String,
     additionalInformation: String,
     logoUrl: String,
-    displayName: String,
+    name: String,
     pricingPlan: PricingPlan,
     paidUntil: Option[Instant],
     includedUsers: Option[Int], // None means unlimited
@@ -47,11 +46,10 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       pricingPlan <- PricingPlan.fromString(r.pricingplan).toFox
     } yield {
       Organization(
-        ObjectId(r._Id),
-        r.name,
+        r._Id,
         r.additionalinformation,
         r.logourl,
-        r.displayname,
+        r.name,
         pricingPlan,
         r.paiduntil.map(Instant.fromSql),
         r.includedusers,
@@ -82,44 +80,54 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       parsed <- parseAll(r)
     } yield parsed
 
-  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[Organization] =
+  def isEmpty: Fox[Boolean] =
     for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE name = $name AND $accessQuery".as[OrganizationsRow])
-      parsed <- parseFirst(r, name)
-    } yield parsed
+      rows <- run(q"SELECT COUNT(*) FROM $existingCollectionName".as[Int])
+      value <- rows.headOption
+    } yield value == 0
 
-  def findIdByName(name: String)(implicit ctx: DBAccessContext): Fox[ObjectId] =
+  @deprecated("use findOne with string type instead", since = "")
+  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Organization] =
+    Fox.failure("Cannot find organization by ObjectId. Use findOne with string type instead")
+
+  def findOne(organizationId: String)(implicit ctx: DBAccessContext): Fox[Organization] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"SELECT _id FROM $existingCollectionName WHERE name = $name AND $accessQuery".as[ObjectId])
-      parsed <- r.headOption
+      r <- run(
+        q"SELECT $columns FROM $existingCollectionName WHERE _id = $organizationId AND $accessQuery"
+          .as[OrganizationsRow])
+      parsed <- parseFirst(r, organizationId)
     } yield parsed
 
   def insertOne(o: Organization): Fox[Unit] =
     for {
       _ <- run(q"""INSERT INTO webknossos.organizations
-                   (_id, name, additionalInformation, logoUrl, displayName, _rootFolder,
+                   (_id, additionalInformation, logoUrl, name, _rootFolder,
                    newUserMailingList, enableAutoVerify,
                    pricingplan, paidUntil, includedusers, includedstorage, lastTermsOfServiceAcceptanceTime, lastTermsOfServiceAcceptanceVersion, created, isDeleted)
                    VALUES
-                   (${o._id}, ${o.name}, ${o.additionalInformation}, ${o.logoUrl}, ${o.displayName}, ${o._rootFolder},
+                   (${o._id}, ${o.additionalInformation}, ${o.logoUrl}, ${o.name}, ${o._rootFolder},
                    ${o.newUserMailingList}, ${o.enableAutoVerify},
                    ${o.pricingPlan}, ${o.paidUntil}, ${o.includedUsers}, ${o.includedStorageBytes}, ${o.lastTermsOfServiceAcceptanceTime},
                    ${o.lastTermsOfServiceAcceptanceVersion}, ${o.created}, ${o.isDeleted})
             """.asUpdate)
     } yield ()
 
-  def findOrganizationTeamId(organizationId: ObjectId): Fox[ObjectId] =
+  def deleteOne(organizationId: String): Fox[Unit] =
+    for {
+      _ <- run(q"""UPDATE webknossos.organizations SET isDeleted = TRUE WHERE _id = $organizationId""".asUpdate)
+    } yield ()
+
+  def findOrganizationTeamId(organizationId: String): Fox[ObjectId] =
     for {
       rList <- run(q"SELECT _id FROM webknossos.organizationTeams WHERE _organization = $organizationId".as[String])
       r <- rList.headOption.toFox
       parsed <- ObjectId.fromString(r)
     } yield parsed
 
-  def findOrganizationNameForAnnotation(annotationId: ObjectId): Fox[String] =
+  def findOrganizationIdForAnnotation(annotationId: ObjectId): Fox[String] =
     for {
-      rList <- run(q"""SELECT o.name
+      rList <- run(q"""SELECT o._id
                        FROM webknossos.annotations_ a
                        JOIN webknossos.datasets_ d ON a._dataset = d._id
                        JOIN webknossos.organizations_ o ON d._organization = o._id
@@ -127,18 +135,27 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       r <- rList.headOption.toFox
     } yield r
 
-  def updateFields(organizationId: ObjectId, displayName: String, newUserMailingList: String)(
+  def findOrganizationIdForDataset(datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[String] =
+    for {
+      accessQuery <- readAccessQuery
+      rList <- run(q"""SELECT o._id FROM webknossos.organizations_ o
+                       JOIN webknossos.datasets_ d ON o._id = d._organization
+                       WHERE d._id = $datasetId  WHERE $accessQuery""".as[String])
+      r <- rList.headOption.toFox
+    } yield r
+
+  def updateFields(organizationId: String, name: String, newUserMailingList: String)(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(organizationId)
       _ <- run(q"""UPDATE webknossos.organizations
                    SET
-                     displayName = $displayName,
+                     name = $name,
                      newUserMailingList = $newUserMailingList
                    WHERE _id = $organizationId""".asUpdate)
     } yield ()
 
-  def deleteUsedStorage(organizationId: ObjectId): Fox[Unit] =
+  def deleteUsedStorage(organizationId: String): Fox[Unit] =
     for {
       _ <- run(q"DELETE FROM webknossos.organization_usedStorage WHERE _organization = $organizationId".asUpdate)
     } yield ()
@@ -148,12 +165,12 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       _ <- run(q"DELETE FROM webknossos.organization_usedStorage WHERE _dataset = $datasetId".asUpdate)
     } yield ()
 
-  def updateLastStorageScanTime(organizationId: ObjectId, time: Instant): Fox[Unit] =
+  def updateLastStorageScanTime(organizationId: String, time: Instant): Fox[Unit] =
     for {
       _ <- run(q"UPDATE webknossos.organizations SET lastStorageScanTime = $time WHERE _id = $organizationId".asUpdate)
     } yield ()
 
-  def upsertUsedStorage(organizationId: ObjectId,
+  def upsertUsedStorage(organizationId: String,
                         dataStoreName: String,
                         usedStorageEntries: List[DirectoryStorageReport]): Fox[Unit] = {
     val queries = usedStorageEntries.map(entry => q"""
@@ -180,7 +197,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
     } yield ()
   }
 
-  def getUsedStorage(organizationId: ObjectId): Fox[Long] =
+  def getUsedStorage(organizationId: String): Fox[Long] =
     for {
       rows <- run(
         q"SELECT SUM(usedStorageBytes) FROM webknossos.organization_usedStorage WHERE _organization = $organizationId"
@@ -207,7 +224,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       parsed <- parseAll(rows)
     } yield parsed
 
-  def acceptTermsOfService(organizationId: ObjectId, version: Int, timestamp: Instant)(
+  def acceptTermsOfService(organizationId: String, version: Int, timestamp: Instant)(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(organizationId)
@@ -217,5 +234,10 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
                      lastTermsOfServiceAcceptanceVersion = $version
                    WHERE _id = $organizationId""".asUpdate)
     } yield ()
+
+  // While organizationId is not a valid ObjectId, we wrap it here to pass it to the generic assertUpdateAccess.
+  // There, no properties of the ObjectId are used other than its string content.
+  private def assertUpdateAccess(organizationId: String)(implicit ctx: DBAccessContext): Fox[Unit] =
+    assertUpdateAccess(ObjectId(organizationId))
 
 }

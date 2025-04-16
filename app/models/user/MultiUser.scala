@@ -10,7 +10,7 @@ import models.user.Theme.Theme
 import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json.{JsObject, Json}
 import slick.lifted.Rep
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient}
 
 import javax.inject.Inject
@@ -128,7 +128,7 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
                    WHERE _id = $multiUserId""".asUpdate)
     } yield ()
 
-  def removeLastLoggedInIdentitiesWithOrga(organizationId: ObjectId): Fox[Unit] =
+  def removeLastLoggedInIdentitiesWithOrga(organizationId: String): Fox[Unit] =
     for {
       _ <- run(q"""UPDATE webknossos.multiusers
                    SET _lastLoggedInIdentity = NULL

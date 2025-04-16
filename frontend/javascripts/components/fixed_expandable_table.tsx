@@ -1,5 +1,5 @@
-import { Button, Table, TableProps } from "antd";
-import { ColumnsType, GetRowKey } from "antd/lib/table/interface";
+import { Button, Table, type TableProps } from "antd";
+import type { ColumnsType, GetRowKey } from "antd/lib/table/interface";
 import React from "react";
 
 type State = {
@@ -16,9 +16,12 @@ type State = {
 type OwnTableProps<RecordType = any> = TableProps<RecordType> & {
   columns: ColumnsType<RecordType>;
 };
+
+const EMPTY_ARRAY: string[] = [] as const;
+
 export default class FixedExpandableTable extends React.PureComponent<OwnTableProps, State> {
   state: State = {
-    expandedRows: [],
+    expandedRows: EMPTY_ARRAY,
   };
 
   getAllRowIds(
@@ -31,7 +34,7 @@ export default class FixedExpandableTable extends React.PureComponent<OwnTablePr
 
   componentDidUpdate(prevProps: Readonly<TableProps<any>>): void {
     if (prevProps.dataSource !== this.props.dataSource) {
-      this.setState({ expandedRows: [] });
+      this.setState({ expandedRows: EMPTY_ARRAY });
     }
   }
 
@@ -53,7 +56,7 @@ export default class FixedExpandableTable extends React.PureComponent<OwnTablePr
       <Button
         className="ant-table-row-expand-icon ant-table-row-expand-icon-expanded"
         title="Collapse all rows"
-        onClick={() => this.setState({ expandedRows: [] })}
+        onClick={() => this.setState({ expandedRows: EMPTY_ARRAY })}
       />
     );
     const columnsWithAdjustedFixedProp: TableProps["columns"] = this.props.columns.map((column) => {

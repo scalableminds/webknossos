@@ -3,24 +3,25 @@ import {
   EllipsisOutlined,
   EyeOutlined,
   LoadingOutlined,
-  PlusCircleOutlined,
   PlusOutlined,
   ReloadOutlined,
   SettingOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
-import window from "libs/window";
-import { Link, LinkProps } from "react-router-dom";
-import * as React from "react";
-import type { APIDatasetId, APIDataset, APIDatasetCompact } from "types/api_flow_types";
-import { clearCache, deleteDatasetOnDisk, getDataset } from "admin/admin_rest_api";
-import Toast from "libs/toast";
-import messages from "messages";
-import CreateExplorativeModal from "dashboard/advanced_dataset/create_explorative_modal";
-import { MenuProps, Modal, Typography } from "antd";
-import { confirmAsync } from "dashboard/dataset/helper_components";
 import { useQueryClient } from "@tanstack/react-query";
+import { clearCache, deleteDatasetOnDisk, getDataset } from "admin/admin_rest_api";
+import { type MenuProps, Modal, Typography } from "antd";
+import CreateExplorativeModal from "dashboard/advanced_dataset/create_explorative_modal";
+import { confirmAsync } from "dashboard/dataset/helper_components";
+import Toast from "libs/toast";
+import window from "libs/window";
+import messages from "messages";
+import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
+import { getNoActionsAvailableMenu } from "oxalis/view/context_menu";
+import type * as React from "react";
 import { useState } from "react";
+import { Link, type LinkProps } from "react-router-dom";
+import type { APIDataset, APIDatasetCompact } from "types/api_flow_types";
 
 const disabledStyle: React.CSSProperties = {
   pointerEvents: "none",
@@ -47,7 +48,7 @@ function NewAnnotationLink({
   return (
     <div>
       <LinkWithDisabled
-        to={`/datasets/${dataset.owningOrganization}/${dataset.name}/createExplorative/hybrid?autoFallbackLayer=true`}
+        to={`/datasets/${dataset.id}/createExplorative/hybrid?autoFallbackLayer=true`}
         style={{
           display: "inline-block",
         }}
@@ -78,7 +79,7 @@ function NewAnnotationLink({
         />
       </a>
       {isCreateExplorativeModalVisible ? (
-        <CreateExplorativeModal datasetId={dataset} onClose={onCloseCreateExplorativeModal} />
+        <CreateExplorativeModal datasetId={dataset.id} onClose={onCloseCreateExplorativeModal} />
       ) : null}
     </div>
   );
@@ -86,7 +87,7 @@ function NewAnnotationLink({
 
 type Props = {
   dataset: APIDatasetCompact;
-  reloadDataset: (arg0: APIDatasetId) => Promise<void>;
+  reloadDataset: (arg0: string) => Promise<void>;
 };
 
 function LinkWithDisabled({
@@ -126,9 +127,9 @@ function DatasetActionView(props: Props) {
 
   const onClearCache = async (compactDataset: APIDatasetCompact) => {
     setIsReloading(true);
-    const dataset = await getDataset(compactDataset);
+    const dataset = await getDataset(compactDataset.id);
     await clearCache(dataset);
-    await props.reloadDataset(dataset);
+    await props.reloadDataset(dataset.id);
     Toast.success(
       messages["dataset.clear_cache_success"]({
         datasetName: dataset.name,
@@ -138,7 +139,7 @@ function DatasetActionView(props: Props) {
   };
 
   const onDeleteDataset = async () => {
-    const dataset = await getDataset(props.dataset);
+    const dataset = await getDataset(props.dataset.id);
 
     const deleteDataset = await confirmAsync({
       title: "Danger Zone",
@@ -176,10 +177,7 @@ function DatasetActionView(props: Props) {
         if (oldItems == null) {
           return oldItems;
         }
-        return oldItems.filter(
-          (item) =>
-            item.name !== dataset.name || item.owningOrganization !== dataset.owningOrganization,
-        );
+        return oldItems.filter((item) => item.id !== dataset.id);
       },
     );
     queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
@@ -193,18 +191,31 @@ function DatasetActionView(props: Props) {
       style={disabledWhenReloadingStyle}
       type="link"
     >
-      {isReloading ? <LoadingOutlined /> : <ReloadOutlined className="icon-margin-right" />}
+      {isReloading ? (
+        <LoadingOutlined className="icon-margin-right" />
+      ) : (
+        <ReloadOutlined className="icon-margin-right" />
+      )}
       Reload
     </a>
   );
-  const importLink = (
-    <div className="dataset-table-actions">
-      <Link
-        to={`/datasets/${dataset.owningOrganization}/${dataset.name}/import`}
-        className="import-dataset"
+  const datasetSettingsLink = (
+    <>
+      <LinkWithDisabled
+        to={`/datasets/${getReadableURLPart(dataset)}/edit`}
+        title="Open Dataset Settings"
+        disabled={isReloading}
       >
-        <PlusCircleOutlined className="icon-margin-right" />
-        Import
+        <SettingOutlined className="icon-margin-right" />
+        Settings
+      </LinkWithDisabled>
+    </>
+  );
+  const brokenDatasetActions = (
+    <div className="dataset-table-actions">
+      <Link to={`/datasets/${getReadableURLPart(dataset)}/edit`}>
+        <SettingOutlined className="icon-margin-right" />
+        Settings
       </Link>
       {reloadLink}
       <a
@@ -236,50 +247,44 @@ function DatasetActionView(props: Props) {
       ) : null}
     </div>
   );
+
+  const activeDatasetActions = (
+    <>
+      {" "}
+      <NewAnnotationLink
+        dataset={dataset}
+        isReloading={isReloading}
+        isCreateExplorativeModalVisible={isCreateExplorativeModalVisible}
+        onShowCreateExplorativeModal={() => setIsCreateExplorativeModalVisible(true)}
+        onCloseCreateExplorativeModal={() => setIsCreateExplorativeModalVisible(false)}
+      />
+      <LinkWithDisabled
+        to={`/datasets/${getReadableURLPart(dataset)}/view`}
+        title="View Dataset"
+        disabled={isReloading}
+      >
+        <EyeOutlined className="icon-margin-right" />
+        View
+      </LinkWithDisabled>
+      {dataset.isEditable ? datasetSettingsLink : null}
+      {reloadLink}
+    </>
+  );
   return (
     <div>
-      {dataset.isEditable && !dataset.isActive ? importLink : null}
-      {dataset.isActive ? (
-        <div className="dataset-table-actions nowrap">
-          <NewAnnotationLink
-            dataset={dataset}
-            isReloading={isReloading}
-            isCreateExplorativeModalVisible={isCreateExplorativeModalVisible}
-            onShowCreateExplorativeModal={() => setIsCreateExplorativeModalVisible(true)}
-            onCloseCreateExplorativeModal={() => setIsCreateExplorativeModalVisible(false)}
-          />
-          <LinkWithDisabled
-            to={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
-            title="View Dataset"
-            disabled={isReloading}
-          >
-            <EyeOutlined className="icon-margin-right" />
-            View
-          </LinkWithDisabled>
-          {dataset.isEditable ? (
-            <React.Fragment>
-              <LinkWithDisabled
-                to={`/datasets/${dataset.owningOrganization}/${dataset.name}/edit`}
-                title="Open Dataset Settings"
-                disabled={isReloading}
-              >
-                <SettingOutlined className="icon-margin-right" />
-                Settings
-              </LinkWithDisabled>
-              {reloadLink}
-            </React.Fragment>
-          ) : null}
-        </div>
-      ) : null}
+      {dataset.isEditable && !dataset.isActive ? brokenDatasetActions : null}
+      <div className="dataset-table-actions nowrap">
+        {dataset.isActive ? activeDatasetActions : null}
+      </div>
     </div>
   );
 }
 const onClearCache = async (
   dataset: APIDataset,
-  reloadDataset: (arg0: APIDatasetId) => Promise<void>,
+  reloadDataset: (arg0: string) => Promise<void>,
 ) => {
   await clearCache(dataset);
-  await reloadDataset(dataset);
+  await reloadDataset(dataset.id);
   Toast.success(
     messages["dataset.clear_cache_success"]({
       datasetName: dataset.name,
@@ -292,25 +297,12 @@ export function getDatasetActionContextMenu({
   datasets,
   hideContextMenu,
 }: {
-  reloadDataset: (arg0: APIDatasetId) => Promise<void>;
+  reloadDataset: (arg0: string) => Promise<void>;
   datasets: APIDatasetCompact[];
   hideContextMenu: () => void;
 }): MenuProps {
   if (datasets.length !== 1) {
-    return {
-      onClick: hideContextMenu,
-      style: {
-        borderRadius: 6,
-      },
-      mode: "vertical",
-      items: [
-        {
-          key: "view",
-          disabled: true,
-          label: "No actions available.",
-        },
-      ],
-    };
+    return getNoActionsAvailableMenu(hideContextMenu);
   }
   const dataset = datasets[0];
 
@@ -326,34 +318,25 @@ export function getDatasetActionContextMenu({
             key: "view",
             label: "View",
             onClick: () => {
-              window.location.href = `/datasets/${dataset.owningOrganization}/${dataset.name}/view`;
+              window.location.href = `/datasets/${getReadableURLPart(dataset)}/view`;
             },
           }
         : null,
-      dataset.isEditable && dataset.isActive
+      dataset.isEditable
         ? {
             key: "edit",
             label: "Open Settings",
             onClick: () => {
-              window.location.href = `/datasets/${dataset.owningOrganization}/${dataset.name}/edit`;
+              window.location.href = `/datasets/${getReadableURLPart(dataset)}/edit`;
             },
           }
         : null,
 
-      dataset.isEditable && !dataset.isActive
-        ? {
-            key: "import",
-            label: "Import",
-            onClick: () => {
-              window.location.href = `/datasets/${dataset.owningOrganization}/${dataset.name}/import`;
-            },
-          }
-        : null,
       {
         key: "reload",
         label: "Reload",
         onClick: async () => {
-          const fullDataset = await getDataset(dataset);
+          const fullDataset = await getDataset(dataset.id);
           return dataset.isActive ? onClearCache(fullDataset, reloadDataset) : null;
         },
       },

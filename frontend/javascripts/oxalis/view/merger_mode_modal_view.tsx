@@ -1,15 +1,12 @@
-import * as React from "react";
-import { Modal, Button, Spin, Tooltip, Alert } from "antd";
-import { useSelector } from "react-redux";
-import { hasVisibleUint64Segmentation } from "oxalis/model/accessors/dataset_accessor";
+import { Button, Modal, Spin, Tooltip } from "antd";
+
 type Props = {
   isCloseable: boolean;
   onClose: () => void;
   progress: number;
 };
-export default function MergerModeModalView({ isCloseable, onClose, progress }: Props) {
-  const isUint64SegmentationVisible = useSelector(hasVisibleUint64Segmentation);
 
+export default function MergerModeModalView({ isCloseable, onClose, progress }: Props) {
   const closeButton = (
     <Button type="primary" onClick={onClose} disabled={!isCloseable}>
       Close
@@ -34,16 +31,6 @@ export default function MergerModeModalView({ isCloseable, onClose, progress }: 
         </div>
       }
     >
-      {isUint64SegmentationVisible && (
-        <Alert
-          style={{ marginBottom: 12 }}
-          message="Warning"
-          description="The merger mode is limited to 32-bit. However, your current segmentation layer uses
-          64 bits. The rendering of segment ids greater than or equal to 2^32 will be incorrect."
-          type="warning"
-          showIcon
-        />
-      )}
       You just enabled the merger mode. This mode allows to merge segmentation cells by creating
       trees and nodes. Each tree maps the marked segments (the ones where nodes were created in) to
       one new segment. Create separate trees for different segments.

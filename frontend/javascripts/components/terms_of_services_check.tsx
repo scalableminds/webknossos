@@ -1,23 +1,24 @@
+import { DownOutlined } from "@ant-design/icons";
+import { getUsersOrganizations } from "admin/admin_rest_api";
 import {
-  AcceptanceInfo,
+  type AcceptanceInfo,
   acceptTermsOfService,
   getTermsOfService,
   requiresTermsOfServiceAcceptance,
 } from "admin/api/terms_of_service";
-import { Dropdown, MenuProps, Modal, Space, Spin } from "antd";
+import { Dropdown, type MenuProps, Modal, Space, Spin } from "antd";
 import { AsyncButton } from "components/async_clickables";
+import dayjs from "dayjs";
 import { useFetch } from "libs/react_helpers";
 import UserLocalStorage from "libs/user_local_storage";
-import dayjs from "dayjs";
-import type { OxalisState } from "oxalis/store";
-import React, { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
-import { formatDateInLocalTimeZone } from "./formatted_date";
-import { switchTo } from "navbar";
-import { getUsersOrganizations } from "admin/admin_rest_api";
-import { DownOutlined } from "@ant-design/icons";
 import _ from "lodash";
-import { APIUser } from "types/api_flow_types";
+import { switchTo } from "navbar";
+import type { OxalisState } from "oxalis/store";
+import type React from "react";
+import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
+import type { APIUser } from "types/api_flow_types";
+import { formatDateInLocalTimeZone } from "./formatted_date";
 
 const SNOOZE_DURATION_IN_DAYS = 3;
 const LAST_TERMS_OF_SERVICE_WARNING_KEY = "lastTermsOfServiceWarning";
@@ -53,7 +54,7 @@ export function CheckTermsOfServices() {
     }
 
     const lastWarningString = UserLocalStorage.getItem(LAST_TERMS_OF_SERVICE_WARNING_KEY);
-    const lastWarning = dayjs(lastWarningString ? parseInt(lastWarningString) : 0);
+    const lastWarning = dayjs(lastWarningString ? Number.parseInt(lastWarningString) : 0);
     const isLastWarningOld = dayjs().diff(lastWarning, "days") > SNOOZE_DURATION_IN_DAYS;
     setIsModalOpen(isLastWarningOld);
   }, [acceptanceInfo]);
@@ -95,9 +96,9 @@ function OrganizationSwitchMenu({
   activeUser: APIUser;
   style?: React.CSSProperties;
 }) {
-  const { organization: organizationName } = activeUser;
+  const { organization: organizationId } = activeUser;
   const usersOrganizations = useFetch(getUsersOrganizations, [], []);
-  const switchableOrganizations = usersOrganizations.filter((org) => org.name !== organizationName);
+  const switchableOrganizations = usersOrganizations.filter((org) => org.id !== organizationId);
   const isMultiMember = switchableOrganizations.length > 0;
 
   if (!isMultiMember) {
@@ -105,9 +106,9 @@ function OrganizationSwitchMenu({
   }
 
   const items: MenuProps["items"] = switchableOrganizations.map((org) => ({
-    key: org.name,
+    key: org.id,
     onClick: () => switchTo(org),
-    label: org.displayName || org.name,
+    label: org.name || org.id,
   }));
 
   return (
@@ -148,8 +149,13 @@ function AcceptTermsOfServiceModal({
       width={850}
       maskClosable={false}
       footer={[
-        <OrganizationSwitchMenu activeUser={activeUser} style={{ marginRight: 12 }} />,
+        <OrganizationSwitchMenu
+          activeUser={activeUser}
+          style={{ marginRight: 12 }}
+          key={"switch-org"}
+        />,
         <AsyncButton
+          key={"accept-button"}
           type="primary"
           loading={terms?.url == null}
           onClick={async () => (terms != null ? await onAccept(terms.version) : null)}
@@ -199,7 +205,7 @@ function TermsOfServiceAcceptanceMissingModal({
       open={isModalOpen}
       closable={!acceptanceInfo.acceptanceDeadlinePassed}
       onCancel={closeModal}
-      footer={[<OrganizationSwitchMenu activeUser={activeUser} />]}
+      footer={[<OrganizationSwitchMenu activeUser={activeUser} key={"switch-org"} />]}
       maskClosable={false}
     >
       Please ask the organization owner to accept the terms of services. {deadlineExplanation}

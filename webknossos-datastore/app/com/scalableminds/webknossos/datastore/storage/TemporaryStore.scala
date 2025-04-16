@@ -10,7 +10,7 @@ class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
 
   lazy val map: scala.collection.mutable.Map[K, V] = scala.collection.mutable.Map()
 
-  def find(id: K): Option[V] =
+  def get(id: K): Option[V] =
     map.synchronized {
       map.get(id)
     }
@@ -20,12 +20,17 @@ class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
       map.contains(id)
     )
 
-  def findAll: Seq[V] =
+  def getAll: Seq[V] =
     map.synchronized {
       map.values.toList
     }
 
-  def findAllConditionalWithKey(predicate: K => Boolean): scala.collection.Map[K, V] =
+  def getMultiple(ids: Seq[K]): Seq[Option[V]] =
+    map.synchronized {
+      ids.map(map.get)
+    }
+
+  def getAllConditionalWithKey(predicate: K => Boolean): scala.collection.Map[K, V] =
     map.synchronized {
       map.view.filterKeys(predicate).toMap
     }
@@ -54,13 +59,20 @@ class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
     to.foreach(system.scheduler.scheduleOnce(_)(remove(id)))
   }
 
-  def insertAll(els: (K, V)*): map.type =
+  def insertAll(elements: Seq[(K, V)], to: Option[FiniteDuration] = None)(implicit ec: ExecutionContext): Unit = {
     map.synchronized {
-      map ++= els
+      map ++= elements
     }
+    to.foreach(system.scheduler.scheduleOnce(_)(removeMultiple(elements.map(_._1))))
+  }
 
   def remove(id: K): map.type =
     map.synchronized {
       map -= id
+    }
+
+  private def removeMultiple(ids: Seq[K]): map.type =
+    map.synchronized {
+      map --= ids
     }
 }

@@ -1,30 +1,26 @@
-import _ from "lodash";
-import { V3 } from "libs/mjs";
-import { applyState } from "oxalis/model_initialization";
-import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
-import {
-  getSkeletonTracing,
-  getActiveNode,
-  enforceSkeletonTracing,
-} from "oxalis/model/accessors/skeletontracing_accessor";
-import type { OxalisState, MappingType, MeshInformation } from "oxalis/store";
-import Store from "oxalis/store";
-import * as Utils from "libs/utils";
-import type { ViewMode, Vector3 } from "oxalis/constants";
-import constants, { ViewModeValues, MappingStatusEnum } from "oxalis/constants";
-import window, { location } from "libs/window";
 import ErrorHandling from "libs/error_handling";
+import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
-import messages from "messages";
-import { validateUrlStateJSON } from "types/validation";
-import { APIAnnotationType, APICompoundTypeEnum } from "types/api_flow_types";
+import * as Utils from "libs/utils";
 import { coalesce } from "libs/utils";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import window, { location } from "libs/window";
+import _ from "lodash";
+import messages from "messages";
+import type { Vector3, ViewMode } from "oxalis/constants";
+import constants, { ViewModeValues, MappingStatusEnum } from "oxalis/constants";
+import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getMeshesForCurrentAdditionalCoordinates } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   additionalCoordinateToKeyValue,
   parseAdditionalCoordinateKey,
 } from "oxalis/model/helpers/nml_helpers";
-import { getMeshesForCurrentAdditionalCoordinates } from "oxalis/model/accessors/volumetracing_accessor";
+import { applyState } from "oxalis/model_initialization";
+import type { MappingType, MeshInformation, OxalisState } from "oxalis/store";
+import Store from "oxalis/store";
+import { type APIAnnotationType, APICompoundTypeEnum } from "types/api_flow_types";
+import type { APIDataset, AdditionalCoordinate } from "types/api_flow_types";
+import { validateUrlStateJSON } from "types/validation";
 
 const MAX_UPDATE_INTERVAL = 1000;
 const MINIMUM_VALID_CSV_LENGTH = 5;
@@ -80,6 +76,28 @@ function mapMeshInfoToUrlMeshDescriptor(meshInfo: MeshInformation): MeshUrlDescr
   }
 }
 
+// Extracts the dataset name from view or sandbox URLs.
+export function getDatasetNameFromLocation(location: Location): string | undefined {
+  // URL format: /datasets/<dataset-name>-<dataset-id>/<view|sandbox/type>...
+  const pathnameParts = location.pathname.split("/").slice(1); // First string is empty as pathname start with a /.
+  const endOfDatasetName = pathnameParts[1].lastIndexOf("-");
+  if (endOfDatasetName <= 0) {
+    return undefined;
+  }
+  const datasetNameInURL = pathnameParts[1].substring(0, endOfDatasetName);
+  return datasetNameInURL;
+}
+
+export function getUpdatedPathnameWithNewDatasetName(
+  location: (typeof window)["location"],
+  dataset: APIDataset,
+): string {
+  const pathnameParts = location.pathname.split("/").slice(1); // First string is empty as pathname start with a /.
+  const newNameAndIdPart = `${dataset.name}-${dataset.id}`;
+  const newPathname = `/${pathnameParts[0]}/${newNameAndIdPart}/${pathnameParts.slice(2).join("/")}`;
+  return newPathname;
+}
+
 // If the type of UrlManagerState changes, the following files need to be updated:
 // docs/sharing.md#sharing-link-format
 // frontend/javascripts/types/schemas/url_state.schema.ts
@@ -97,16 +115,21 @@ export type PartialUrlManagerState = Partial<UrlManagerState>;
 class UrlManager {
   baseUrl: string = "";
   initialState: PartialUrlManagerState = {};
+  stopStoreListening?: () => void;
 
   initialize() {
     this.baseUrl = location.pathname + location.search;
     this.initialState = this.parseUrlHash();
   }
 
-  reset(keepUrlState: boolean = false): void {
+  reset(keepUrlState: boolean = false, keepUrlSearch: boolean = false): void {
     // don't use location.hash = ""; since it refreshes the page
     if (!keepUrlState) {
-      window.history.replaceState({}, "", location.pathname + location.search);
+      window.history.replaceState(
+        {},
+        "",
+        location.pathname + (keepUrlSearch ? location.search : ""),
+      );
     }
 
     this.initialize();
@@ -219,7 +242,7 @@ class UrlManager {
       if (coordinateName != null) {
         additionalCoordinates.push({
           name: coordinateName,
-          value: parseFloat(value),
+          value: Number.parseFloat(value),
         });
       }
     }
@@ -232,9 +255,16 @@ class UrlManager {
   }
 
   startUrlUpdater(): void {
-    Store.subscribe(() => this.update());
+    this.stopStoreListening = Store.subscribe(() => this.update());
 
     window.onhashchange = () => this.onHashChange();
+  }
+
+  stopUrlUpdater(): void {
+    if (this.stopStoreListening != null) {
+      this.stopStoreListening();
+    }
+    window.onhashchange = null;
   }
 
   getUrlState(state: OxalisState): UrlManagerState & { mode: ViewMode } {
@@ -246,12 +276,8 @@ class UrlManager {
           rotation: Utils.map3((e) => Utils.roundTo(e, 2), getRotation(state.flycam)),
         }
       : {};
-    const activeNodeOptional = getSkeletonTracing(state.tracing)
-      .chain((skeletonTracing) => getActiveNode(skeletonTracing))
-      .map((node) => ({
-        activeNode: node.id,
-      }))
-      .getOrElse({});
+    const activeNode = state.annotation.skeleton?.activeNodeId;
+    const activeNodeOptional = activeNode != null ? { activeNode } : {};
     const stateByLayer: UrlStateByLayer = {};
 
     for (const layerName of Object.keys(state.temporaryConfiguration.activeMappingByLayer)) {
@@ -305,9 +331,9 @@ class UrlManager {
       }
     }
 
-    const tracing = state.tracing;
-    if (tracing.skeleton != null) {
-      const skeletonTracing = enforceSkeletonTracing(tracing);
+    const annotation = state.annotation;
+    if (annotation.skeleton != null) {
+      const skeletonTracing = enforceSkeletonTracing(annotation);
       const { showSkeletons } = skeletonTracing;
       const layerName = "Skeleton";
 
@@ -362,8 +388,8 @@ class UrlManager {
     const hash = this.buildUrlHashCsv(state);
     const newBaseUrl = updateTypeAndId(
       this.baseUrl,
-      state.tracing.annotationType,
-      state.tracing.annotationId,
+      state.annotation.annotationType,
+      state.annotation.annotationId,
     );
     return `${newBaseUrl}#${hash}`;
   }

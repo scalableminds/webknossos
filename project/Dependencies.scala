@@ -2,22 +2,22 @@ import play.sbt.PlayImport.{filters, _}
 import sbt._
 
 object Dependencies {
-  private val silhouetteVersion = "10.0.0"
-  private val brotliVersion = "1.16.0"
+  private val silhouetteVersion = "10.0.1"
+  private val brotliVersion = "1.17.0"
   private val scalapbVersion = scalapb.compiler.Version.scalapbVersion
   private val grpcVersion = scalapb.compiler.Version.grpcJavaVersion
 
   val utilDependencies: Seq[ModuleID] = Seq(
     // Play Web Framework. import play
-    "org.playframework" %% "play" % "3.0.3",
+    "org.playframework" %% "play" % "3.0.7",
     // Play’s JSON serialization. import play.api.libs.json
     "com.typesafe.play" %% "play-json" % "2.10.5",
     // Sending emails. import org.apache.commons.mail
     "org.apache.commons" % "commons-email" % "1.5",
     // File utils. import org.apache.commons.io
-    "commons-io" % "commons-io" % "2.16.1",
+    "commons-io" % "commons-io" % "2.17.0",
     // HashCodeBuilder. import org.apache.commons.lang3
-    "org.apache.commons" % "commons-lang3" % "3.14.0",
+    "org.apache.commons" % "commons-lang3" % "3.17.0",
     // Box/Tryo. import net.liftweb
     "net.liftweb" %% "lift-common" % "3.5.0",
     // ObjectIds. import reactivemongo.api.bson
@@ -55,14 +55,14 @@ object Dependencies {
     "cisd" % "jhdf5" % "19.04.1",
     // MultiArray (ndarray) handles. import ucar
     "edu.ucar" % "cdm-core" % "5.4.2",
-    // Amazon S3 cloud storage client. import com.amazonaws
-    "com.amazonaws" % "aws-java-sdk-s3" % "1.12.584",
+    // Amazon S3 cloud storage client. import software.amazon.awssdk
+    "software.amazon.awssdk" % "s3" % "2.26.21",
     // Google cloud storage client. import com.google.cloud.storage, import com.google.auth.oauth2
-    "com.google.cloud" % "google-cloud-storage" % "2.36.1",
+    "com.google.cloud" % "google-cloud-storage" % "2.43.1",
     // Blosc compression. import org.blosc
     "org.lasersonlab" % "jblosc" % "1.0.1",
     // Zstd compression. import org.apache.commons.compress
-    "org.apache.commons" % "commons-compress" % "1.26.1",
+    "org.apache.commons" % "commons-compress" % "1.27.1",
     // Zstd compression native bindings. not imported
     "com.github.luben" % "zstd-jni" % "1.5.5-5",
     // Brotli compression. import com.aayushatharva.brotli4j
@@ -82,7 +82,7 @@ object Dependencies {
 
   val webknossosDependencies: Seq[ModuleID] = Seq(
     // Base64, Hashing. import org.apache.commons.codec
-    "commons-codec" % "commons-codec" % "1.16.0",
+    "commons-codec" % "commons-codec" % "1.17.0",
     // End-to-end tests, backend unit tests. import org.scalatestplus.play
     "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.1" % "test",
     // Authenticated requests. import play.silhouette
@@ -96,15 +96,15 @@ object Dependencies {
     // Makes txw2 write self-closing tags in xml (which we want). Not imported.
     "org.codehaus.woodstox" % "wstx-asl" % "4.0.6",
     // Json Web Tokens (used for OIDC Auth). import pdi.jwt
-    "com.github.jwt-scala" %% "jwt-play-json" % "10.0.0",
+    "com.github.jwt-scala" %% "jwt-play-json" % "10.0.1",
     // SQL Queries. import slick
-    "com.typesafe.slick" %% "slick" % "3.5.0",
+    "com.typesafe.slick" %% "slick" % "3.5.2",
     // SQL Queries connection pool. not imported.
-    "com.typesafe.slick" %% "slick-hikaricp" % "3.5.1",
+    "com.typesafe.slick" %% "slick-hikaricp" % "3.5.2",
     // SQL Queries class generation. Started with runner as slick.codegen.SourceCodeGenerator
-    "com.typesafe.slick" %% "slick-codegen" % "3.5.1",
+    "com.typesafe.slick" %% "slick-codegen" % "3.5.2",
     // SQL Queries postgres specifics. not imported.
-    "org.postgresql" % "postgresql" % "42.7.3"
+    "org.postgresql" % "postgresql" % "42.7.4"
   )
 
   val dependencyOverrides: Seq[ModuleID] = Seq(

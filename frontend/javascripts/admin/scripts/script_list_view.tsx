@@ -1,17 +1,17 @@
-import { Link } from "react-router-dom";
-import { PropTypes } from "@scalableminds/prop-types";
-import { Table, Spin, Button, Input, App } from "antd";
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
-import * as React from "react";
-import _ from "lodash";
-import type { APIScript, APIUser } from "types/api_flow_types";
-import { getScripts, deleteScript as deleteScriptAPI } from "admin/admin_rest_api";
-import { handleGenericError } from "libs/error_handling";
+import { PropTypes } from "@scalableminds/prop-types";
+import { deleteScript as deleteScriptAPI, getScripts } from "admin/admin_rest_api";
+import { App, Button, Input, Spin, Table } from "antd";
 import LinkButton from "components/link_button";
+import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
+import _ from "lodash";
 import messages from "messages";
+import * as React from "react";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import type { APIScript, APIUser } from "types/api_flow_types";
 
 const { Column } = Table;
 const { Search } = Input;

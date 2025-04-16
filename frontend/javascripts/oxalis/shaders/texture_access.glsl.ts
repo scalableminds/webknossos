@@ -1,5 +1,5 @@
 import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
-import { getResolutionFactors, getAbsoluteCoords } from "oxalis/shaders/coords.glsl";
+import { getAbsoluteCoords, getMagnificationFactors } from "oxalis/shaders/coords.glsl";
 import { hashCombine } from "./hashing.glsl";
 import type { ShaderModule } from "./shader_module_system";
 import { transDim } from "./utils.glsl";
@@ -7,7 +7,7 @@ import { transDim } from "./utils.glsl";
 export const linearizeVec3ToIndex: ShaderModule = {
   requirements: [],
   code: `
-    // E.g., the vector [9, 5, 2]  will be linearized to the scalar index 900 + 50 + 2, when base == 10
+    // E.g., the vector [9, 5, 2] will be linearized to the scalar index 900 + 50 + 2, when base == 10
     float linearizeVec3ToIndex(vec3 position, float base) {
       return position.z * base * base + position.y * base + position.x;
     }
@@ -27,23 +27,7 @@ export const linearizeVec3ToIndexWithMod: ShaderModule = {
     }
 `,
 };
-export const getRgbaAtIndex: ShaderModule = {
-  code: `
-    vec4 getRgbaAtIndex(sampler2D dtexture, float textureWidth, float idx) {
-      int finalPosX = int(mod(idx, textureWidth));
-      int finalPosY = int(div(idx, textureWidth));
 
-      return texelFetch(
-          dtexture,
-          ivec2(
-            finalPosX,
-            finalPosY
-          ),
-          0
-      ).rgba;
-    }
-  `,
-};
 export const getRgbaAtXYIndex: ShaderModule = {
   code: `
     // Define this function for each segmentation and color layer, since iOS cannot handle
@@ -56,16 +40,44 @@ export const getRgbaAtXYIndex: ShaderModule = {
         // here which checks for each case individually. The else-if-branches are constructed via
         // lodash templates.
 
-        <% if (textureLayerInfos[name].dataTextureCount === 1) { %>
-            // Don't use if-else when there is only one data texture anyway
+        <%
+          const textureLayerInfo = textureLayerInfos[name];
+          const elementClass = textureLayerInfo.elementClass;
+        %>
 
-            return texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0).rgba;
+        <%= textureLayerInfo.glslPrefix %>vec4 val;
+        float dtype_normalizer = <%=
+          formatNumberAsGLSLFloat((() => {
+            if (textureLayerInfo.isColor && !elementClass.endsWith("int8")) {
+              return 1;
+            } else if (
+              textureLayerInfo.isSigned && !elementClass.endsWith("int32") && !elementClass.endsWith("int64")
+            ) {
+              return 127;
+            } else {
+              return 255;
+            }
+          })())
+        %>;
+
+        <% if (textureLayerInfo.dataTextureCount === 1) { %>
+            // Don't use if-else when there is only one data texture anyway
+            val = texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0);
+
+            <% if (elementClass.endsWith("int16")) { %>
+              return vec4(val.x, 0., val.y, 0.);
+            <% } else { %>
+              return dtype_normalizer * vec4(val);
+            <% }%>
         <% } else { %>
-          if (textureIdx == 0.0) {
-            return texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0).rgba;
-          } <% _.range(1, textureLayerInfos[name].dataTextureCount).forEach(textureIndex => { %>
-          else if (textureIdx == <%= formatNumberAsGLSLFloat(textureIndex) %>) {
-            return texelFetch(<%= name + "_textures" %>[<%= textureIndex %>], ivec2(x, y), 0).rgba;
+          <% _.range(0, textureLayerInfo.dataTextureCount).forEach(textureIndex => { %>
+          <%= textureIndex > 0 ? "else" : "" %> if (textureIdx == <%= formatNumberAsGLSLFloat(textureIndex) %>) {
+            val = texelFetch(<%= name + "_textures" %>[<%= textureIndex %>], ivec2(x, y), 0);
+            <% if (elementClass.endsWith("int16")) { %>
+              return vec4(val.x, 0., val.y, 0.);
+            <% } else { %>
+              return dtype_normalizer * vec4(val);
+            <% }%>
           }
           <% }) %>
           return vec4(0.5, 0.0, 0.0, 0.0);
@@ -89,10 +101,9 @@ export const getColorForCoords: ShaderModule = {
   requirements: [
     linearizeVec3ToIndex,
     linearizeVec3ToIndexWithMod,
-    getRgbaAtIndex,
     getRgbaAtXYIndex,
     getAbsoluteCoords,
-    getResolutionFactors,
+    getMagnificationFactors,
     hashCombine,
     transDim,
   ],
@@ -272,10 +283,10 @@ export const getColorForCoords: ShaderModule = {
          * If we are in the [5, _, _, 0]-bucket, we have to look into the **second** half
          * of the [2, _, _, 1]-bucket.
          * We can determine which "half" (subVolumeIndex) is relevant by doing a modulo operation
-         * with the resolution factor. A typical resolution factor is 2.
+         * with the magnification factor. A typical magnification factor is 2.
          */
 
-        vec3 magnificationFactors = getResolutionFactors(renderedMagIdx, activeMagIdx, globalLayerIndex);
+        vec3 magnificationFactors = getMagnificationFactors(renderedMagIdx, activeMagIdx, globalLayerIndex);
         vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, activeMagIdx, globalLayerIndex));
         offsetInBucket = mod(coords, bucketWidth);
         vec3 worldBucketPosition = div(coords, bucketWidth);

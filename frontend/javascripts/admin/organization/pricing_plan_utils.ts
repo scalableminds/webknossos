@@ -1,5 +1,5 @@
 import messages from "messages";
-import { APIOrganization, APIUser } from "types/api_flow_types";
+import type { APIOrganization, APIUser } from "types/api_flow_types";
 
 export enum PricingPlanEnum {
   Basic = "Basic",
@@ -45,6 +45,10 @@ export function hasPricingPlanExceededUsers(
 
 export function hasPricingPlanExceededStorage(organization: APIOrganization): boolean {
   return organization.usedStorageBytes > organization.includedStorageBytes;
+}
+
+export function getLeftOverStorageBytes(organization: APIOrganization): number {
+  return organization.includedStorageBytes - organization.usedStorageBytes;
 }
 
 export function isUserAllowedToRequestUpgrades(user: APIUser): boolean {

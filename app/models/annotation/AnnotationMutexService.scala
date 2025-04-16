@@ -2,6 +2,7 @@ package models.annotation
 
 import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
@@ -11,7 +12,7 @@ import models.user.{UserDAO, UserService}
 import net.liftweb.common.Full
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
-import utils.{ObjectId, WkConf}
+import utils.WkConf
 import utils.sql.{SimpleSQLDAO, SqlClient}
 
 import javax.inject.Inject
@@ -23,7 +24,7 @@ case class AnnotationMutex(annotationId: ObjectId, userId: ObjectId, expiry: Ins
 case class MutexResult(canEdit: Boolean, blockedByUser: Option[ObjectId])
 
 class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
-                                       val system: ActorSystem,
+                                       val actorSystem: ActorSystem,
                                        wkConf: WkConf,
                                        userDAO: UserDAO,
                                        userService: UserService,
@@ -33,12 +34,10 @@ class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
 
   override protected def tickerInterval: FiniteDuration = 1 hour
 
-  override protected def tick(): Unit = {
+  override protected def tick(): Fox[Unit] =
     for {
       deleteCount <- annotationMutexDAO.deleteExpired()
     } yield logger.info(s"Cleaned up $deleteCount expired annotation mutexes.")
-    ()
-  }
 
   private val defaultExpiryTime = wkConf.WebKnossos.Annotation.Mutex.expiryTime
 

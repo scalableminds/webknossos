@@ -1,29 +1,31 @@
+import type { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import _ from "lodash";
 import type {
-  BoundingBoxObject,
-  Edge,
-  CommentType,
-  TreeGroup,
-  RecommendedConfiguration,
-  SegmentGroup,
-  MeshInformation,
-} from "oxalis/store";
-import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
+  ColorObject,
+  LOG_LEVELS,
+  NestedMatrix4,
+  Point3,
+  TreeType,
+  UnitLong,
+  Vector3,
+  Vector6,
+} from "oxalis/constants";
 import type {
   SkeletonTracingStats,
   TracingStats,
+  VolumeTracingStats,
 } from "oxalis/model/accessors/annotation_accessor";
+import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
 import type {
-  Vector3,
-  Vector6,
-  Point3,
-  ColorObject,
-  LOG_LEVELS,
-  Vector4,
-  TreeType,
-} from "oxalis/constants";
-import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import { EmptyObject } from "./globals";
+  BoundingBoxObject,
+  CommentType,
+  Edge,
+  MeshInformation,
+  RecommendedConfiguration,
+  SegmentGroup,
+  TreeGroup,
+} from "oxalis/store";
+import type { EmptyObject } from "./globals";
 
 export type AdditionalCoordinate = { name: string; value: number };
 
@@ -40,6 +42,20 @@ export type ElementClass =
   | "int16"
   | "int32"
   | "int64";
+
+// This type needs to be adapted when a new dtype should/element class needs
+// to be supported.
+export type BucketDataArray =
+  | Uint8Array
+  | Int8Array
+  | Uint16Array
+  | Int16Array
+  | Uint32Array
+  | Int32Array
+  | Float32Array
+  | BigUint64Array
+  | BigInt64Array;
+
 export type APIMapping = {
   readonly parent?: string;
   readonly name: string;
@@ -59,15 +75,17 @@ export type ServerAdditionalAxis = {
   name: string;
 };
 
-export type CoordinateTransformation =
-  | {
-      type: "affine";
-      matrix: [Vector4, Vector4, Vector4, Vector4];
-    }
-  | {
-      type: "thin_plate_spline";
-      correspondences: { source: Vector3[]; target: Vector3[] };
-    };
+export type AffineTransformation = {
+  type: "affine";
+  matrix: NestedMatrix4; // Stored in row major order.
+};
+
+export type ThinPlateSplineTransformation = {
+  type: "thin_plate_spline";
+  correspondences: { source: Vector3[]; target: Vector3[] };
+};
+
+export type CoordinateTransformation = AffineTransformation | ThinPlateSplineTransformation;
 type APIDataLayerBase = {
   readonly name: string;
   readonly boundingBox: BoundingBoxObject;
@@ -78,7 +96,7 @@ type APIDataLayerBase = {
   readonly coordinateTransformations?: CoordinateTransformation[] | null;
   readonly hasSegmentIndex?: boolean;
 };
-type APIColorLayer = APIDataLayerBase & {
+export type APIColorLayer = APIDataLayerBase & {
   readonly category: "color";
 };
 export type APISegmentationLayer = APIDataLayerBase & {
@@ -93,11 +111,13 @@ export type APISegmentationLayer = APIDataLayerBase & {
 export type APIDataLayer = APIColorLayer | APISegmentationLayer;
 
 // Only used in rare cases to generalize over actual data layers and
-// a skeleton layer.
-export type APISkeletonLayer = { category: "skeleton" };
+// a skeleton layer. The name should be the skeleton tracing id to very likely ensure it is unique.
+export type APISkeletonLayer = { category: "skeleton"; name: string };
 
 export type LayerLink = {
-  datasetId: APIDatasetId;
+  datasetId: string;
+  dataSourceId: APIDataSourceId;
+  datasetName: string;
   sourceName: string;
   newName: string;
   transformations: CoordinateTransformation[];
@@ -119,15 +139,18 @@ type MutableAPIDataSourceBase = {
 };
 type APIDataSourceBase = Readonly<MutableAPIDataSourceBase>;
 export type APIUnimportedDatasource = APIDataSourceBase;
+export type VoxelSize = {
+  factor: Vector3;
+  unit: UnitLong;
+};
 export type MutableAPIDataSource = MutableAPIDataSourceBase & {
   dataLayers: Array<APIDataLayer>;
-  scale: Vector3;
+  scale: VoxelSize;
 };
 export type APIDataSource = Readonly<MutableAPIDataSource>;
 export type APIDataStore = {
   readonly name: string;
   readonly url: string;
-  readonly isScratch: boolean;
   readonly allowsUpload: boolean;
   readonly jobsEnabled: boolean;
   readonly jobsSupportedByAvailableWorkers: APIJobType[];
@@ -146,7 +169,7 @@ export type APIPublicationAnnotation = {
   readonly name: string;
   readonly description: string;
   readonly tracingStore: APITracingStore;
-  readonly dataSet: APIDataset;
+  readonly dataset: APIDataset;
 };
 export type APIPublication = {
   readonly id: string;
@@ -158,18 +181,38 @@ export type APIPublication = {
   readonly datasets: Array<APIDataset>;
   readonly annotations: Array<APIPublicationAnnotation>;
 };
-export type MutableAPIDatasetId = {
+export type MutableAPIDataSourceId = {
   owningOrganization: string;
-  name: string;
+  directoryName: string;
 };
-export type APIDatasetId = Readonly<MutableAPIDatasetId>;
-export type APIDatasetDetails = {
-  readonly species?: string;
-  readonly brainRegion?: string;
-  readonly acquisition?: string;
+export type APIDataSourceId = Readonly<MutableAPIDataSourceId>;
+
+export enum APIMetadataEnum {
+  STRING = "string",
+  NUMBER = "number",
+  STRING_ARRAY = "string[]",
+}
+// This type has to be defined redundantly to the above enum, unfortunately,
+// because the e2e tests assert that an object literal matches the type of
+// APIMetadataEntry. In that object literal, a string literal exists (e.g., "number").
+// TypeScript Enums don't typecheck against such literals by design (see
+// https://github.com/microsoft/TypeScript/issues/17690#issuecomment-337975541).
+// Therefore, we redundantly define the type of the enum here again and use that
+// in APIMetadataEntry.
+type APIMetadataType = "string" | "number" | "string[]";
+
+// Note that this differs from MetadataEntryProto, because
+// it's stored in sql and not in protobuf.
+// The type is used for datasets and folders.
+export type APIMetadataEntry = {
+  type: APIMetadataType;
+  key: string;
+  value: string | number | string[];
 };
 
-type MutableAPIDatasetBase = MutableAPIDatasetId & {
+type MutableAPIDatasetBase = MutableAPIDataSourceId & {
+  readonly id: string; // Should never be changed.
+  name: string;
   isUnreported: boolean;
   folderId: string;
   allowedTeams: Array<APITeam>;
@@ -177,10 +220,10 @@ type MutableAPIDatasetBase = MutableAPIDatasetId & {
   created: number;
   dataStore: APIDataStore;
   description: string | null | undefined;
-  details: APIDatasetDetails | null | undefined;
+  metadata: APIMetadataEntry[] | null | undefined;
   isEditable: boolean;
   isPublic: boolean;
-  displayName: string | null | undefined;
+  directoryName: string;
   logoUrl: string | null | undefined;
   lastUsedByUser: number;
   sortingKey: number;
@@ -214,7 +257,7 @@ export type APIDatasetCompactWithoutStatusAndLayerNames = Pick<
   | "name"
   | "folderId"
   | "isActive"
-  | "displayName"
+  | "directoryName"
   | "created"
   | "isEditable"
   | "lastUsedByUser"
@@ -222,24 +265,25 @@ export type APIDatasetCompactWithoutStatusAndLayerNames = Pick<
   | "isUnreported"
 >;
 export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
-  id?: string;
+  id: string;
   status: MutableAPIDataSourceBase["status"];
   colorLayerNames: Array<string>;
   segmentationLayerNames: Array<string>;
 };
 
 export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact {
-  const [colorLayerNames, segmentationLayerNames] = _.partition(
+  const [segmentationLayerNames, colorLayerNames] = _.partition(
     dataset.dataSource.dataLayers,
     (layer) => layer.category === "segmentation",
   ).map((layers) => layers.map((layer) => layer.name).sort());
 
   return {
+    id: dataset.id,
     owningOrganization: dataset.owningOrganization,
     name: dataset.name,
     folderId: dataset.folderId,
     isActive: dataset.isActive,
-    displayName: dataset.displayName,
+    directoryName: dataset.directoryName,
     created: dataset.created,
     isEditable: dataset.isEditable,
     lastUsedByUser: dataset.lastUsedByUser,
@@ -256,11 +300,6 @@ type APIUnimportedDataset = APIDatasetBase & {
   readonly isActive: false;
 };
 export type APIMaybeUnimportedDataset = APIUnimportedDataset | APIDataset;
-export type APIDataSourceWithMessages = {
-  readonly dataSource?: APIDataSource;
-  readonly previousDataSource?: APIDataSource | APIUnimportedDatasource;
-  readonly messages: Array<APIMessage>;
-};
 export type APITeamMembership = {
   readonly id: string;
   readonly name: string;
@@ -283,6 +322,7 @@ export type APIUserBase = APIUserCompact & {
 };
 export type NovelUserExperienceInfoType = {
   hasSeenDashboardWelcomeBanner?: boolean;
+  hasSeenSegmentAnythingWithDepth?: boolean;
   shouldSeeModernControlsModal?: boolean;
   lastViewedWhatsNewTimestamp?: number;
   hasDiscardedHelpButton?: boolean;
@@ -328,7 +368,7 @@ export type APIRestrictions = {
   readonly allowSave?: boolean;
 };
 export type APIAllowedMode = "orthogonal" | "oblique" | "flight";
-export type APIResolutionRestrictions = {
+export type APIMagRestrictions = {
   min?: number;
   max?: number;
 };
@@ -339,7 +379,7 @@ export type APISettings = {
   readonly somaClickingAllowed: boolean;
   readonly volumeInterpolationAllowed: boolean;
   readonly mergerMode: boolean;
-  readonly resolutionRestrictions: APIResolutionRestrictions;
+  readonly magRestrictions: APIMagRestrictions;
 };
 export enum APIAnnotationTypeEnum {
   Explorational = "Explorational",
@@ -363,7 +403,12 @@ export enum TracingTypeEnum {
   volume = "volume",
   hybrid = "hybrid",
 }
-export type TracingType = keyof typeof TracingTypeEnum;
+export enum AnnotationLayerEnum {
+  Skeleton = "Skeleton",
+  Volume = "Volume",
+}
+export type TracingType = "skeleton" | "volume" | "hybrid";
+export type AnnotationLayerType = "Skeleton" | "Volume";
 export type APITaskType = {
   readonly id: string;
   readonly summary: string;
@@ -425,7 +470,8 @@ export type APITask = {
   readonly boundingBoxVec6?: Vector6;
   readonly created: number;
   readonly creationInfo: string | null | undefined;
-  readonly dataSet: string;
+  readonly datasetId: string;
+  readonly datasetName: string;
   readonly editPosition: Vector3;
   readonly editRotation: Vector3;
   readonly id: string;
@@ -443,16 +489,17 @@ export type APITask = {
   readonly directLinks?: Array<string>;
 };
 export type AnnotationLayerDescriptor = {
-  name?: string | null | undefined;
+  name: string;
   tracingId: string;
-  typ: "Skeleton" | "Volume";
-  stats: TracingStats | EmptyObject;
+  typ: AnnotationLayerType;
+  stats: SkeletonTracingStats | VolumeTracingStats | EmptyObject;
 };
-export type EditableLayerProperties = Partial<{
-  name: string | null | undefined;
-}>;
+export type EditableLayerProperties = {
+  name: string;
+};
 export type APIAnnotationInfo = {
   readonly annotationLayers: Array<AnnotationLayerDescriptor>;
+  readonly datasetId: string;
   readonly dataSetName: string;
   readonly organization: string;
   readonly description: string;
@@ -461,7 +508,7 @@ export type APIAnnotationInfo = {
   readonly name: string;
   // Not used by the front-end anymore, but the
   // backend still serves this for backward-compatibility reasons.
-  readonly stats?: SkeletonTracingStats | EmptyObject;
+  readonly stats?: TracingStats | EmptyObject | null | undefined;
   readonly state: string;
   readonly isLockedByOwner: boolean;
   readonly tags: Array<string>;
@@ -479,6 +526,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     description,
     modified,
     id,
+    datasetId,
     name,
     state,
     isLockedByOwner,
@@ -492,6 +540,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
   } = annotation;
 
   return {
+    datasetId,
     annotationLayers,
     dataSetName,
     organization,
@@ -546,8 +595,21 @@ export type APITimeTrackingPerAnnotation = {
   task: string | undefined;
   projectName: string | undefined;
   timeMillis: number;
-  annotationLayerStats: Array<TracingStats>;
+  annotationLayerStats: TracingStats;
 };
+type APITracingStoreAnnotationLayer = {
+  readonly tracingId: string;
+  readonly name: string;
+  readonly typ: AnnotationLayerType;
+};
+
+export type APITracingStoreAnnotation = {
+  readonly description: string;
+  readonly version: number;
+  readonly earliestAccessibleVersion: number;
+  readonly annotationLayers: APITracingStoreAnnotationLayer[];
+};
+
 export type APITimeTrackingPerUser = {
   user: APIUserCompact & {
     email: string;
@@ -561,6 +623,7 @@ export type APITimeTrackingSpan = {
   datasetOrganization: string;
   datasetName: string;
   annotationId: string;
+  annotationState: string;
   taskId: string | undefined;
   projectName: string | undefined;
   taskTypeId: string | undefined;
@@ -589,7 +652,6 @@ export type APIAvailableTasksReport = {
 export type APIOrganizationCompact = {
   readonly id: string;
   readonly name: string;
-  readonly displayName: string;
 };
 export type APIOrganization = APIOrganizationCompact & {
   readonly additionalInformation: string;
@@ -601,6 +663,7 @@ export type APIOrganization = APIOrganizationCompact & {
   readonly includedStorageBytes: number;
   readonly usedStorageBytes: number;
   readonly ownerName?: string;
+  readonly creditBalance: string | null | undefined;
 };
 export type APIPricingPlanStatus = {
   readonly pricingPlan: PricingPlanEnum;
@@ -651,14 +714,21 @@ export type APIFeatureToggles = {
   readonly discussionBoardRequiresAdmin: boolean;
   readonly hideNavbarLogin: boolean;
   readonly isWkorgInstance: boolean;
+  readonly recommendWkorgInstance: boolean;
   readonly taskReopenAllowedInSeconds: number;
   readonly allowDeleteDatasets: boolean;
   readonly jobsEnabled: boolean;
   readonly voxelyticsEnabled: boolean;
+  readonly neuronInferralCostPerGVx: number;
+  readonly mitochondriaInferralCostPerGVx: number;
+  readonly alignmentCostPerGVx: number;
+  readonly costPerCreditInEuro: number;
+  readonly costPerCreditInDollar: number;
   readonly publicDemoDatasetUrl: string;
   readonly exportTiffMaxVolumeMVx: number;
   readonly exportTiffMaxEdgeLengthVx: number;
   readonly defaultToLegacyBindings: boolean;
+  readonly editableMappingsEnabled?: boolean;
   readonly optInTabs?: Array<string>;
   readonly openIdConnectEnabled?: boolean;
   readonly segmentAnythingEnabled?: boolean;
@@ -682,17 +752,26 @@ export enum APIJobType {
   INFER_MITOCHONDRIA = "infer_mitochondria",
 }
 
+export type WkLibsNdBoundingBox = BoundingBoxObject & {
+  axisOrder: { string: number };
+  additionalAxes: Array<AdditionalAxis>;
+};
+
 export type APIJob = {
   readonly id: string;
+  readonly datasetId: string | null | undefined;
+  readonly owner: APIUserBase;
   readonly datasetName: string | null | undefined;
+  readonly datasetDirectoryName: string | null | undefined;
   readonly exportFileName: string | null | undefined;
   readonly layerName: string | null | undefined;
   readonly annotationLayerName: string | null | undefined;
   readonly tracingId: string | null | undefined;
   readonly annotationId: string | null | undefined;
   readonly annotationType: string | null | undefined;
-  readonly organizationName: string | null | undefined;
+  readonly organizationId: string | null | undefined;
   readonly boundingBox: string | null | undefined;
+  readonly ndBoundingBox: WkLibsNdBoundingBox | null | undefined;
   readonly mergeSegments: boolean | null | undefined;
   readonly type: APIJobType;
   readonly state: APIEffectiveJobState;
@@ -702,16 +781,19 @@ export type APIJob = {
   readonly createdAt: number;
   readonly voxelyticsWorkflowHash: string | null;
   readonly trainingAnnotations: Array<{ annotationId: string }>;
+  readonly creditCost: string | null | undefined;
 };
 
 export type AiModel = {
-  id: string;
-  name: string;
-  dataStore: APIDataStore;
-  user: APIUser;
-  comment: string;
-  created: number;
-  trainingJob: APIJob | null;
+  readonly id: string;
+  readonly name: string;
+  readonly isOwnedByUsersOrganization: boolean;
+  readonly sharedOrganizationIds: string[] | null | undefined;
+  readonly dataStore: APIDataStore;
+  readonly user: APIUser | null | undefined;
+  readonly comment: string;
+  readonly created: number;
+  readonly trainingJob: APIJob | null;
 };
 
 // Tracing related datatypes
@@ -726,7 +808,7 @@ export type ServerNode = {
   rotation: Point3;
   bitDepth: number;
   viewport: number;
-  resolution: number;
+  mag: number;
   radius: number;
   createdTimestamp: number;
   interpolation: boolean;
@@ -767,6 +849,21 @@ export type ServerSkeletonTracingTree = {
   isVisible?: boolean;
   type?: TreeType;
   edgesAreVisible?: boolean;
+  metadata: MetadataEntryProto[];
+};
+
+// Note that this differs from APIMetadataEntry, because
+// it's internally stored as protobuf and not in sql.
+// The type is used for in-annotation entities (segments, trees etc.)
+export type MetadataEntryProto = {
+  key: string;
+  stringValue?: string;
+  boolValue?: boolean;
+  numberValue?: number;
+  // Note that the server always sends an empty array currently,
+  // because of the protobuf format. However, for consistency within
+  // JS land, we mark it as nullable here.
+  stringListValue?: string[];
 };
 type ServerSegment = {
   segmentId: number;
@@ -776,6 +873,7 @@ type ServerSegment = {
   creationTime: number | null | undefined;
   color: ColorObject | null;
   groupId: number | null | undefined;
+  metadata: MetadataEntryProto[];
 };
 export type ServerTracingBase = {
   id: string;
@@ -786,9 +884,12 @@ export type ServerTracingBase = {
   editPositionAdditionalCoordinates: AdditionalCoordinate[] | null;
   editRotation: Point3;
   error?: string;
-  version: number;
   zoomLevel: number;
   additionalAxes: ServerAdditionalAxis[];
+  // The backend sends the version property, but the front-end should
+  // not care about it. To ensure this, parseProtoTracing will remove
+  // the property.
+  version?: number;
 };
 export type ServerSkeletonTracing = ServerTracingBase & {
   // The following property is added when fetching the
@@ -799,6 +900,7 @@ export type ServerSkeletonTracing = ServerTracingBase & {
   boundingBox?: ServerBoundingBox;
   trees: Array<ServerSkeletonTracingTree>;
   treeGroups: Array<TreeGroup> | null | undefined;
+  storedWithExternalTreeBodies?: boolean; // unused in frontend
 };
 export type ServerVolumeTracing = ServerTracingBase & {
   // The following property is added when fetching the
@@ -812,25 +914,28 @@ export type ServerVolumeTracing = ServerTracingBase & {
   segments: Array<ServerSegment>;
   segmentGroups: Array<SegmentGroup> | null | undefined;
   largestSegmentId: number;
-  // `resolutions` will be undefined for legacy annotations
-  // which were created before the multi-resolution capabilities
+  // `mags` will be undefined for legacy annotations
+  // which were created before the multi-magnification capabilities
   // were added to volume tracings. Also see:
   // https://github.com/scalableminds/webknossos/pull/4755
-  resolutions?: Array<Point3>;
+  mags?: Array<Point3>;
   mappingName?: string | null | undefined;
-  mappingIsEditable?: boolean;
+  hasEditableMapping?: boolean;
   mappingIsLocked?: boolean;
   hasSegmentIndex?: boolean;
+  // volumeBucketDataHasChanged is automatically set to true by the back-end
+  // once a bucket was mutated. There is no need to send an explicit UpdateAction
+  // for that.
+  volumeBucketDataHasChanged?: boolean;
 };
 export type ServerTracing = ServerSkeletonTracing | ServerVolumeTracing;
 export type ServerEditableMapping = {
   createdTimestamp: number;
-  version: number;
-  mappingName: string;
   baseMappingName: string;
   // The id of the volume tracing the editable mapping belongs to
   tracingId: string;
 };
+
 export type APIMeshFile = {
   meshFileName: string;
   mappingName?: string | null | undefined;
@@ -900,6 +1005,7 @@ export type VoxelyticsArtifactConfig = {
     iframes: Record<string, string>;
     links: Record<string, string>;
   };
+  foreignWorkflow: [string, string] | null;
 };
 
 export type VoxelyticsRunInfo = {
@@ -1063,21 +1169,23 @@ export type VoxelyticsLogLine = {
   wk_url: string;
 };
 
-// Backend type
+// Backend type returned by the getFolderTree api method.
 export type FlatFolderTreeItem = {
   name: string;
   id: string;
   parent: string | null;
+  metadata: APIMetadataEntry[];
   isEditable: boolean;
 };
 
-// Frontend type
+// Frontend type of FlatFolderTreeItem with inferred nested structure.
 export type FolderItem = {
   title: string;
-  key: string;
+  key: string; // folder id
   parent: string | null | undefined;
   children: FolderItem[];
   isEditable: boolean;
+  metadata: APIMetadataEntry[];
   // Can be set so that the antd tree component can disable
   // individual folder items.
   disabled?: boolean;
@@ -1088,6 +1196,7 @@ export type Folder = {
   id: string;
   allowedTeams: APITeam[];
   allowedTeamsCumulative: APITeam[];
+  metadata: APIMetadataEntry[];
   isEditable: boolean;
 };
 
@@ -1095,6 +1204,7 @@ export type FolderUpdater = {
   id: string;
   name: string;
   allowedTeams: string[];
+  metadata: APIMetadataEntry[];
 };
 
 export enum CAMERA_POSITIONS {

@@ -1,7 +1,6 @@
 import "test/mocks/lz4";
-import _ from "lodash";
 import test from "ava";
-import { Vector3 } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 import Matrix from "ml-matrix";
 import estimateAffine, { estimateAffineMatrix4x4 } from "libs/estimate_affine";
 import { almostEqual, getPointsC555 } from "./transform_spec_helpers";

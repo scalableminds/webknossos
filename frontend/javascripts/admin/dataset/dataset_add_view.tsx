@@ -1,17 +1,19 @@
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
-import { Tabs, Modal, Button, Layout, TabsProps } from "antd";
 import { CopyOutlined, DatabaseOutlined, UploadOutlined } from "@ant-design/icons";
-import React, { useState } from "react";
-import { connect, useSelector } from "react-redux";
-import type { APIDataStore } from "types/api_flow_types";
-import type { OxalisState } from "oxalis/store";
-import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
+import { getDatastores } from "admin/admin_rest_api";
 import DatasetAddRemoteView from "admin/dataset/dataset_add_remote_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
+import { Button, Layout, Modal, Tabs, type TabsProps } from "antd";
 import features from "features";
-import { getDatastores } from "admin/admin_rest_api";
+import type { History } from "history";
 import { useFetch } from "libs/react_helpers";
+import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
+import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
+import type { OxalisState } from "oxalis/store";
+import React, { useState } from "react";
+import { connect, useSelector } from "react-redux";
+import type { RouteComponentProps } from "react-router-dom";
+import { withRouter } from "react-router-dom";
+import type { APIDataStore } from "types/api_flow_types";
 import DatasetAddComposeView from "./dataset_add_compose_view";
 
 const { Content, Sider } = Layout;
@@ -19,7 +21,7 @@ const { Content, Sider } = Layout;
 // Used for the tab keys as well as for
 // distinguishing between the add type after
 // successful import.
-enum DatasetAddType {
+export enum DatasetAddType {
   UPLOAD = "upload",
   REMOTE = "remote",
   COMPOSE = "compose",
@@ -32,80 +34,37 @@ const addTypeToVerb: Record<DatasetAddType, string> = {
 
 function DatasetAddView({ history }: RouteComponentProps) {
   const datastores = useFetch<APIDataStore[]>(getDatastores, [], []);
-  const [datasetName, setDatasetName] = useState("");
-  const [organization, setOrganization] = useState("");
+  const [datasetId, setDatasetId] = useState("");
+  const [uploadedDatasetName, setUploadedDatasetName] = useState("");
   const [datasetNeedsConversion, setDatasetNeedsConversion] = useState(false);
   const [datasetAddType, setImportType] = useState<DatasetAddType>(DatasetAddType.UPLOAD);
 
   const handleDatasetAdded = async (
     datasetAddType: DatasetAddType,
-    datasetOrganization: string,
-    uploadedDatasetName: string,
+    datasetId: string,
+    datasetName: string,
     needsConversion: boolean | null | undefined,
   ): Promise<void> => {
-    setOrganization(datasetOrganization);
-    setDatasetName(uploadedDatasetName);
+    setDatasetId(datasetId);
     setImportType(datasetAddType);
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'boolean | null | undefined' is n... Remove this comment to see the full error message
-    setDatasetNeedsConversion(needsConversion);
+    setUploadedDatasetName(datasetName);
+    if (needsConversion != null) setDatasetNeedsConversion(needsConversion);
   };
 
-  const showAfterUploadContent = datasetName !== "";
+  const showAfterUploadContent = datasetId !== "";
 
   const getAfterUploadModalContent = () => {
     if (!showAfterUploadContent) {
       return null;
     }
 
-    return (
-      <div
-        style={{
-          fontSize: 20,
-          paddingTop: 13,
-          textAlign: "center",
-        }}
-      >
-        The dataset was {addTypeToVerb[datasetAddType]} successfully
-        {datasetNeedsConversion ? " and a conversion job was started." : null}.
-        <br />
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-          }}
-        >
-          <div
-            className="centered-items"
-            style={{
-              marginTop: 10,
-            }}
-          >
-            {datasetNeedsConversion ? (
-              <React.Fragment>
-                <Button type="primary" onClick={() => history.push("/jobs")}>
-                  View the Jobs Queue
-                </Button>
-                <Button onClick={() => history.push("/dashboard/datasets")}>Go to Dashboard</Button>
-              </React.Fragment>
-            ) : (
-              <React.Fragment>
-                <Button
-                  type="primary"
-                  onClick={() => history.push(`/datasets/${organization}/${datasetName}/view`)}
-                >
-                  View the Dataset
-                </Button>
-                <Button
-                  onClick={() => history.push(`/datasets/${organization}/${datasetName}/import`)}
-                >
-                  Go to Dataset Settings
-                </Button>
-                <Button onClick={() => history.push("/dashboard/datasets")}>Go to Dashboard</Button>
-              </React.Fragment>
-            )}
-          </div>
-        </div>
-      </div>
+    return getPostUploadModal(
+      datasetNeedsConversion,
+      datasetAddType,
+      datasetId,
+      uploadedDatasetName,
+      setDatasetId,
+      history,
     );
   };
 
@@ -160,28 +119,7 @@ function DatasetAddView({ history }: RouteComponentProps) {
         </Content>
         <VoxelyticsBanner />
       </Layout>
-      <Modal
-        open={showAfterUploadContent}
-        closable={showAfterUploadContent}
-        keyboard={showAfterUploadContent}
-        maskClosable={false}
-        className="no-footer-modal"
-        cancelButtonProps={{
-          style: {
-            display: "none",
-          },
-        }}
-        okButtonProps={{
-          style: {
-            display: "none",
-          },
-        }}
-        onCancel={() => setDatasetName("")}
-        onOk={() => setDatasetName("")}
-        width={580}
-      >
-        {showAfterUploadContent && getAfterUploadModalContent()}
-      </Modal>
+      {getAfterUploadModalContent()}
     </React.Fragment>
   );
 }
@@ -244,18 +182,23 @@ const alignBanner = (
         width: "100%",
       }}
     />
-    <Button
-      href="https://webknossos.org/services/alignment"
-      target="_blank"
-      rel="noopener noreferrer"
-      style={{
-        display: "block",
-        margin: "10px auto",
-        width: "50%",
-      }}
-    >
-      Learn More
-    </Button>
+    <p>
+      <a
+        href="https://docs.webknossos.org/webknossos/automation/alignment.html"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Single-tile alignment
+      </a>{" "}
+      of image stacks can be done directly in WEBKNOSSOS.
+    </p>
+    <p>
+      For multi-tile stacks, learn about our{" "}
+      <a href="https://webknossos.org/services/alignment" target="_blank" rel="noopener noreferrer">
+        alignment service
+      </a>
+      .
+    </p>
   </div>
 );
 const manualAnnotationBanner = (
@@ -324,3 +267,84 @@ const mapStateToProps = (state: OxalisState) => ({
 
 const connector = connect(mapStateToProps);
 export default connector(withRouter(DatasetAddView));
+
+const getPostUploadModal = (
+  datasetNeedsConversion: boolean,
+  datasetAddType: DatasetAddType,
+  datasetId: string,
+  uploadedDatasetName: string,
+  setDatasetId: (arg0: string) => void,
+  history: History<unknown>,
+) => {
+  return (
+    <Modal
+      open
+      closable
+      maskClosable={false}
+      className="no-footer-modal"
+      cancelButtonProps={{
+        style: {
+          display: "none",
+        },
+      }}
+      okButtonProps={{
+        style: {
+          display: "none",
+        },
+      }}
+      onCancel={() => setDatasetId("")}
+      onOk={() => setDatasetId("")}
+      width={580}
+    >
+      <div
+        style={{
+          fontSize: 20,
+          paddingTop: 13,
+          textAlign: "center",
+        }}
+      >
+        The dataset was {addTypeToVerb[datasetAddType]} successfully
+        {datasetNeedsConversion ? " and a conversion job was started" : null}.
+        <br />
+        <div
+          className="centered-items"
+          style={{
+            marginTop: 10,
+          }}
+        >
+          {datasetNeedsConversion ? (
+            <React.Fragment>
+              <Button type="primary" onClick={() => history.push("/jobs")}>
+                View the Jobs Queue
+              </Button>
+              <Button onClick={() => history.push("/dashboard/datasets")}>Go to Dashboard</Button>
+            </React.Fragment>
+          ) : (
+            <React.Fragment>
+              <Button
+                type="primary"
+                onClick={() =>
+                  history.push(
+                    `/datasets/${getReadableURLPart({ name: uploadedDatasetName, id: datasetId })}/view`,
+                  )
+                }
+              >
+                View the Dataset
+              </Button>
+              <Button
+                onClick={() =>
+                  history.push(
+                    `/datasets/${getReadableURLPart({ name: uploadedDatasetName, id: datasetId })}/edit`,
+                  )
+                }
+              >
+                Go to Dataset Settings
+              </Button>
+              <Button onClick={() => history.push("/dashboard/datasets")}>Go to Dashboard</Button>
+            </React.Fragment>
+          )}
+        </div>
+      </div>{" "}
+    </Modal>
+  );
+};

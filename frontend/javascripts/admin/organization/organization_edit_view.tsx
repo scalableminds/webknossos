@@ -1,23 +1,25 @@
-import React, { useState, useEffect } from "react";
-import { connect } from "react-redux";
-import { Form, Button, Card, Input, Row, Col, Skeleton, Typography, Space } from "antd";
 import {
-  MailOutlined,
-  TagOutlined,
   CopyOutlined,
-  SaveOutlined,
   IdcardOutlined,
+  MailOutlined,
+  SaveOutlined,
+  TagOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { confirmAsync } from "dashboard/dataset/helper_components";
 import {
   deleteOrganization,
-  updateOrganization,
-  getUsers,
   getPricingPlanStatus,
+  getUsers,
+  updateOrganization,
 } from "admin/admin_rest_api";
+import { Button, Card, Col, Form, Input, Row, Skeleton, Space, Typography } from "antd";
+import { confirmAsync } from "dashboard/dataset/helper_components";
 import Toast from "libs/toast";
-import { APIOrganization, APIPricingPlanStatus } from "types/api_flow_types";
+import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
+import type { OxalisState } from "oxalis/store";
+import { useEffect, useState } from "react";
+import { connect } from "react-redux";
+import type { APIOrganization, APIPricingPlanStatus } from "types/api_flow_types";
 import {
   PlanAboutToExceedAlert,
   PlanDashboardCard,
@@ -25,9 +27,7 @@ import {
   PlanExpirationCard,
   PlanUpgradeCard,
 } from "./organization_cards";
-import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
 import { getActiveUserCount } from "./pricing_plan_utils";
-import type { OxalisState } from "oxalis/store";
 
 const FormItem = Form.Item;
 
@@ -63,7 +63,7 @@ const OrganizationEditView = ({ organization }: Props) => {
 
   async function onFinish(formValues: FormValues) {
     await updateOrganization(
-      organization.name,
+      organization.id,
       formValues.displayName,
       formValues.newUserMailingList,
     );
@@ -86,7 +86,7 @@ const OrganizationEditView = ({ organization }: Props) => {
           <p>
             Deleting an organization{" "}
             <Typography.Text type="danger">cannot be undone</Typography.Text>. Are you certain you
-            want to delete the organization {organization.displayName}?
+            want to delete the organization {organization.name}?
           </p>
         </div>
       ),
@@ -97,14 +97,14 @@ const OrganizationEditView = ({ organization }: Props) => {
 
     if (isDeleteConfirmed) {
       setIsDeleting(true);
-      await deleteOrganization(organization.name);
+      await deleteOrganization(organization.id);
       setIsDeleting(false);
       window.location.replace(`${window.location.origin}/dashboard`);
     }
   }
 
   async function handleCopyNameButtonClicked(): Promise<void> {
-    await navigator.clipboard.writeText(organization.name);
+    await navigator.clipboard.writeText(organization.id);
     Toast.success("Copied organization name to the clipboard.");
   }
 
@@ -135,7 +135,7 @@ const OrganizationEditView = ({ organization }: Props) => {
     >
       <Row style={{ color: "#aaa", fontSize: " 12" }}>Your Organization</Row>
       <Row style={{ marginBottom: 20 }}>
-        <h2>{organization.displayName}</h2>
+        <h2>{organization.name}</h2>
       </Row>
       {pricingPlanStatus.isExceeded ? <PlanExceededAlert organization={organization} /> : null}
       {pricingPlanStatus.isAlmostExceeded && !pricingPlanStatus.isExceeded ? (
@@ -150,7 +150,7 @@ const OrganizationEditView = ({ organization }: Props) => {
           onFinish={onFinish}
           layout="vertical"
           initialValues={{
-            displayName: organization.displayName,
+            displayName: organization.name,
             newUserMailingList: organization.newUserMailingList,
           }}
         >
@@ -158,7 +158,7 @@ const OrganizationEditView = ({ organization }: Props) => {
             <Space.Compact>
               <Input
                 prefix={<IdcardOutlined />}
-                value={organization.name}
+                value={organization.id}
                 style={{
                   width: "calc(100% - 31px)",
                 }}

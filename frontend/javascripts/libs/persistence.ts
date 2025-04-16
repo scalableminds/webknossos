@@ -1,7 +1,7 @@
 import { PropTypes } from "@scalableminds/prop-types";
-import _ from "lodash";
 import ErrorHandling from "libs/error_handling";
-import { EmptyObject } from "types/globals";
+import _ from "lodash";
+import type { EmptyObject } from "types/globals";
 
 class Persistence<T extends Record<string, any>> {
   stateProperties: Record<keyof T, any>;

@@ -2,7 +2,7 @@ version: "2.2"
 
 services:
   webknossos:
-    image: scalableminds/webknossos:${DOCKER_TAG:-23.04.0}
+    image: scalableminds/webknossos:${DOCKER_TAG:-25.03.0}
     ports:
       - "127.0.0.1:9000:9000"
     depends_on:
@@ -58,11 +58,11 @@ services:
 
   # FossilDB
   fossildb:
-    image: scalableminds/fossildb:master__442
+    image: scalableminds/fossildb:master__510
     command:
       - fossildb
       - -c
-      - skeletons,skeletonUpdates,volumes,volumeData,volumeUpdates,volumeSegmentIndex,editableMappings,editableMappingUpdates,editableMappingsInfo,editableMappingsAgglomerateToGraph,editableMappingsSegmentToAgglomerate
+      - skeletons,skeletonTreeBodies,volumes,volumeData,volumeSegmentIndex,editableMappingsInfo,editableMappingsAgglomerateToGraph,editableMappingsSegmentToAgglomerate,annotations,annotationUpdates
     user: 0:0
     volumes:
       - "./persistent/fossildb/data:/fossildb/data"

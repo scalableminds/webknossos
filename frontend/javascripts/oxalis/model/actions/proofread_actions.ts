@@ -1,6 +1,6 @@
-import { Vector3 } from "oxalis/constants";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { Vector3 } from "oxalis/constants";
 import type { Tree } from "oxalis/store";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 export type ProofreadAtPositionAction = ReturnType<typeof proofreadAtPosition>;
 export type ClearProofreadingByProductsAction = ReturnType<typeof clearProofreadingByProducts>;
@@ -50,7 +50,7 @@ export const proofreadMerge = (
 
 export const minCutAgglomerateAction = (sourceNodeId: number, targetNodeId: number) =>
   ({
-    type: "MIN_CUT_AGGLOMERATE",
+    type: "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS",
     sourceNodeId,
     targetNodeId,
   }) as const;
@@ -61,7 +61,7 @@ export const minCutAgglomerateWithPositionAction = (
   agglomerateId?: number | null,
 ) =>
   ({
-    type: "MIN_CUT_AGGLOMERATE_WITH_POSITION",
+    type: "MIN_CUT_AGGLOMERATE",
     position,
     segmentId,
     agglomerateId,

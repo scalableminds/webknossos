@@ -1,21 +1,52 @@
+import { getAgglomerateSkeleton, getEditableAgglomerateSkeleton } from "admin/admin_rest_api";
 import { Modal } from "antd";
+import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
+import ErrorHandling from "libs/error_handling";
+import { V3 } from "libs/mjs";
+import createProgressCallback from "libs/progress_callback";
+import type { Message } from "libs/toast";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
 import _ from "lodash";
-import type { Action } from "oxalis/model/actions/actions";
-import type { Saga } from "oxalis/model/sagas/effect-generators";
-import {
-  actionChannel,
-  take,
-  takeEvery,
-  throttle,
-  all,
-  call,
-  fork,
-  put,
-  race,
-} from "typed-redux-saga";
-import { select } from "oxalis/model/sagas/effect-generators";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import memoizeOne from "memoize-one";
+import messages from "messages";
 import { TreeTypeEnum } from "oxalis/constants";
+import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
+import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import {
+  enforceSkeletonTracing,
+  findTreeByName,
+  getActiveNode,
+  getBranchPoints,
+  getNodePosition,
+  getTreeNameForAgglomerateSkeleton,
+  getTreesWithType,
+} from "oxalis/model/accessors/skeletontracing_accessor";
+import type { Action } from "oxalis/model/actions/actions";
+import {
+  addConnectomeTreesAction,
+  deleteConnectomeTreesAction,
+} from "oxalis/model/actions/connectome_actions";
+import {
+  setAdditionalCoordinatesAction,
+  setPositionAction,
+  setRotationAction,
+} from "oxalis/model/actions/flycam_actions";
+import type { LoadAgglomerateSkeletonAction } from "oxalis/model/actions/skeletontracing_actions";
+import {
+  addTreesAndGroupsAction,
+  deleteBranchPointAction,
+  setTreeNameAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import EdgeCollection, { diffEdgeCollections } from "oxalis/model/edge_collection";
+import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
+import {
+  createMutableTreeMapFromTreeArray,
+  generateTreeName,
+} from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
+import { select } from "oxalis/model/sagas/effect-generators";
+import type { UpdateActionWithoutIsolationRequirement } from "oxalis/model/sagas/update_actions";
 import {
   createEdge,
   createNode,
@@ -23,44 +54,15 @@ import {
   deleteEdge,
   deleteNode,
   deleteTree,
-  updateTreeVisibility,
-  updateTreeEdgesVisibility,
   updateNode,
   updateSkeletonTracing,
-  updateUserBoundingBoxes,
   updateTree,
+  updateTreeEdgesVisibility,
   updateTreeGroups,
+  updateTreeVisibility,
+  updateUserBoundingBoxesInSkeletonTracing,
 } from "oxalis/model/sagas/update_actions";
-import { V3 } from "libs/mjs";
-import type { LoadAgglomerateSkeletonAction } from "oxalis/model/actions/skeletontracing_actions";
-import {
-  deleteBranchPointAction,
-  setTreeNameAction,
-  addTreesAndGroupsAction,
-} from "oxalis/model/actions/skeletontracing_actions";
-import {
-  generateTreeName,
-  createMutableTreeMapFromTreeArray,
-} from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import {
-  getActiveNode,
-  getBranchPoints,
-  enforceSkeletonTracing,
-  findTreeByName,
-  getTreeNameForAgglomerateSkeleton,
-  getTreesWithType,
-  getNodePosition,
-} from "oxalis/model/accessors/skeletontracing_accessor";
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
-import {
-  setAdditionalCoordinatesAction,
-  setPositionAction,
-  setRotationAction,
-} from "oxalis/model/actions/flycam_actions";
-import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
-import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
-import EdgeCollection, { diffEdgeCollections } from "oxalis/model/edge_collection";
-import ErrorHandling from "libs/error_handling";
+import { api } from "oxalis/singletons";
 import type {
   Flycam,
   Node,
@@ -71,21 +73,20 @@ import type {
   TreeMap,
 } from "oxalis/store";
 import Store from "oxalis/store";
-import type { Message } from "libs/toast";
-import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import { api } from "oxalis/singletons";
-import messages from "messages";
-import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
-import { getAgglomerateSkeleton, getEditableAgglomerateSkeleton } from "admin/admin_rest_api";
-import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
-import createProgressCallback from "libs/progress_callback";
 import {
-  addConnectomeTreesAction,
-  deleteConnectomeTreesAction,
-} from "oxalis/model/actions/connectome_actions";
+  actionChannel,
+  all,
+  call,
+  fork,
+  put,
+  race,
+  take,
+  takeEvery,
+  throttle,
+} from "typed-redux-saga";
 import type { ServerSkeletonTracing } from "types/api_flow_types";
-import memoizeOne from "memoize-one";
+import { ensureWkReady } from "./ready_sagas";
+import { takeWithBatchActionSupport } from "./saga_helpers";
 
 function* centerActiveNode(action: Action): Saga<void> {
   if ("suppressCentering" in action && action.suppressCentering) {
@@ -102,8 +103,8 @@ function* centerActiveNode(action: Action): Saga<void> {
     }
   }
 
-  const activeNode = Utils.toNullable(
-    getActiveNode(yield* select((state: OxalisState) => enforceSkeletonTracing(state.tracing))),
+  const activeNode = getActiveNode(
+    yield* select((state: OxalisState) => enforceSkeletonTracing(state.annotation)),
   );
 
   if (activeNode != null) {
@@ -133,7 +134,7 @@ function* watchBranchPointDeletion(): Saga<void> {
 
     if (deleteBranchpointAction) {
       const hasBranchPoints = yield* select(
-        (state: OxalisState) => getBranchPoints(state.tracing).getOrElse([]).length > 0,
+        (state: OxalisState) => getBranchPoints(state.annotation).getOrElse([]).length > 0,
       );
 
       if (hasBranchPoints) {
@@ -164,7 +165,7 @@ function* watchFailedNodeCreations(): Saga<void> {
   while (true) {
     yield* take("CREATE_NODE");
     const activeTreeId = yield* select(
-      (state) => enforceSkeletonTracing(state.tracing).activeTreeId,
+      (state) => enforceSkeletonTracing(state.annotation).activeTreeId,
     );
 
     if (activeTreeId == null) {
@@ -177,7 +178,7 @@ function* watchTracingConsistency(): Saga<void> {
   const state = yield* select((_state) => _state);
   const invalidTreeDetails = [];
 
-  for (const tree of _.values(enforceSkeletonTracing(state.tracing).trees)) {
+  for (const tree of _.values(enforceSkeletonTracing(state.annotation).trees)) {
     const edgeCount = tree.edges.size();
     const nodeCount = tree.nodes.size();
 
@@ -208,25 +209,19 @@ export function* watchTreeNames(): Saga<void> {
   const state = yield* select((_state) => _state);
 
   // rename trees with an empty/default tree name
-  for (const tree of _.values(enforceSkeletonTracing(state.tracing).trees)) {
+  for (const tree of _.values(enforceSkeletonTracing(state.annotation).trees)) {
     if (tree.name === "") {
       const newName = generateTreeName(state, tree.timestamp, tree.treeId);
       yield* put(setTreeNameAction(newName, tree.treeId));
     }
   }
 }
-export function* watchVersionRestoreParam(): Saga<void> {
-  const showVersionRestore = yield* call(Utils.hasUrlParam, "showVersionRestore");
 
-  if (showVersionRestore) {
-    yield* put(setVersionRestoreVisibilityAction(true));
-  }
-}
 export function* watchAgglomerateLoading(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_READY
   const channel = yield* actionChannel("LOAD_AGGLOMERATE_SKELETON");
-  yield* take("INITIALIZE_SKELETONTRACING");
-  yield* take("WK_READY");
+  yield* takeWithBatchActionSupport("INITIALIZE_SKELETONTRACING");
+  yield* call(ensureWkReady);
   yield* takeEvery(channel, loadAgglomerateSkeletonWithId);
 }
 export function* watchConnectomeAgglomerateLoading(): Saga<void> {
@@ -247,12 +242,10 @@ function* getAgglomerateSkeletonTracing(
   agglomerateId: number,
 ): Saga<ServerSkeletonTracing> {
   const dataset = yield* select((state) => state.dataset);
-  const annotation = yield* select((state) => state.tracing);
+  const annotation = yield* select((state) => state.annotation);
   const layerInfo = getLayerByName(dataset, layerName);
 
-  const editableMapping = annotation.mappings.find(
-    (mapping) => mapping.mappingName === mappingName,
-  );
+  const editableMapping = annotation.mappings.find((mapping) => mapping.tracingId === mappingName);
 
   try {
     let nmlProtoBuffer;
@@ -347,7 +340,7 @@ function handleAgglomerateLoadingError(
 export function* loadAgglomerateSkeletonWithId(
   action: LoadAgglomerateSkeletonAction,
 ): Saga<[string, number] | null> {
-  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
+  const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
   if (!allowUpdate) return null;
   const { layerName, mappingName, agglomerateId } = action;
 
@@ -358,7 +351,7 @@ export function* loadAgglomerateSkeletonWithId(
 
   const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
   const trees = yield* select((state) =>
-    getTreesWithType(enforceSkeletonTracing(state.tracing), TreeTypeEnum.AGGLOMERATE),
+    getTreesWithType(enforceSkeletonTracing(state.annotation), TreeTypeEnum.AGGLOMERATE),
   );
   const maybeTree = findTreeByName(trees, treeName);
 
@@ -457,7 +450,7 @@ function* removeConnectomeAgglomerateSkeletonWithId(
 }
 
 export function* watchSkeletonTracingAsync(): Saga<void> {
-  yield* take("INITIALIZE_SKELETONTRACING");
+  yield* takeWithBatchActionSupport("INITIALIZE_SKELETONTRACING");
   yield* takeEvery("WK_READY", watchTreeNames);
   yield* takeEvery(
     [
@@ -468,6 +461,7 @@ export function* watchSkeletonTracingAsync(): Saga<void> {
       "DELETE_BRANCHPOINT",
       "SELECT_NEXT_TREE",
       "DELETE_TREE",
+      "DELETE_TREES",
       "BATCH_UPDATE_GROUPS_AND_TREES",
       "CENTER_ACTIVE_NODE",
     ],
@@ -476,14 +470,14 @@ export function* watchSkeletonTracingAsync(): Saga<void> {
   yield* throttle(5000, "PUSH_SAVE_QUEUE_TRANSACTION", watchTracingConsistency);
   yield* fork(watchFailedNodeCreations);
   yield* fork(watchBranchPointDeletion);
-  yield* fork(watchVersionRestoreParam);
 }
 
 function* diffNodes(
+  tracingId: string,
   prevNodes: NodeMap,
   nodes: NodeMap,
   treeId: number,
-): Generator<UpdateAction, void, void> {
+): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (prevNodes === nodes) return;
   const {
     onlyA: deletedNodeIds,
@@ -492,12 +486,12 @@ function* diffNodes(
   } = diffDiffableMaps(prevNodes, nodes);
 
   for (const nodeId of deletedNodeIds) {
-    yield deleteNode(treeId, nodeId);
+    yield deleteNode(treeId, nodeId, tracingId);
   }
 
   for (const nodeId of addedNodeIds) {
     const node = nodes.getOrThrow(nodeId);
-    yield createNode(treeId, node);
+    yield createNode(treeId, node, tracingId);
   }
 
   for (const nodeId of changedNodeIds) {
@@ -505,7 +499,7 @@ function* diffNodes(
     const prevNode = prevNodes.getOrThrow(nodeId);
 
     if (updateNodePredicate(prevNode, node)) {
-      yield updateNode(treeId, node);
+      yield updateNode(treeId, node, tracingId);
     }
   }
 }
@@ -515,19 +509,20 @@ function updateNodePredicate(prevNode: Node, node: Node): boolean {
 }
 
 function* diffEdges(
+  tracingId: string,
   prevEdges: EdgeCollection,
   edges: EdgeCollection,
   treeId: number,
-): Generator<UpdateAction, void, void> {
+): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (prevEdges === edges) return;
   const { onlyA: deletedEdges, onlyB: addedEdges } = diffEdgeCollections(prevEdges, edges);
 
   for (const edge of deletedEdges) {
-    yield deleteEdge(treeId, edge.source, edge.target);
+    yield deleteEdge(treeId, edge.source, edge.target, tracingId);
   }
 
   for (const edge of addedEdges) {
-    yield createEdge(treeId, edge.source, edge.target);
+    yield createEdge(treeId, edge.source, edge.target, tracingId);
   }
 }
 
@@ -542,20 +537,26 @@ function updateTracingPredicate(
 
 function updateTreePredicate(prevTree: Tree, tree: Tree): boolean {
   return (
+    // branchPoints and comments are arrays and therefore checked for
+    // equality. This avoids unnecessary updates in certain cases (e.g.,
+    // when two trees are merged, the comments are concatenated, even
+    // if one of them is empty; thus, resulting in new instances).
     !_.isEqual(prevTree.branchPoints, tree.branchPoints) ||
+    !_.isEqual(prevTree.comments, tree.comments) ||
     prevTree.color !== tree.color ||
     prevTree.name !== tree.name ||
-    !_.isEqual(prevTree.comments, tree.comments) ||
     prevTree.timestamp !== tree.timestamp ||
     prevTree.groupId !== tree.groupId ||
-    prevTree.type !== tree.type
+    prevTree.type !== tree.type ||
+    prevTree.metadata !== tree.metadata
   );
 }
 
 export function* diffTrees(
+  tracingId: string,
   prevTrees: TreeMap,
   trees: TreeMap,
-): Generator<UpdateAction, void, void> {
+): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (prevTrees === trees) return;
   const {
     onlyA: deletedTreeIds,
@@ -568,16 +569,16 @@ export function* diffTrees(
 
   for (const treeId of deletedTreeIds) {
     const prevTree = prevTrees[treeId];
-    yield* diffNodes(prevTree.nodes, new DiffableMap(), treeId);
-    yield* diffEdges(prevTree.edges, new EdgeCollection(), treeId);
-    yield deleteTree(treeId);
+    yield* diffNodes(tracingId, prevTree.nodes, new DiffableMap(), treeId);
+    yield* diffEdges(tracingId, prevTree.edges, new EdgeCollection(), treeId);
+    yield deleteTree(treeId, tracingId);
   }
 
   for (const treeId of addedTreeIds) {
     const tree = trees[treeId];
-    yield createTree(tree);
-    yield* diffNodes(new DiffableMap(), tree.nodes, treeId);
-    yield* diffEdges(new EdgeCollection(), tree.edges, treeId);
+    yield createTree(tree, tracingId);
+    yield* diffNodes(tracingId, new DiffableMap(), tree.nodes, treeId);
+    yield* diffEdges(tracingId, new EdgeCollection(), tree.edges, treeId);
   }
 
   for (const treeId of bothTreeIds) {
@@ -585,25 +586,25 @@ export function* diffTrees(
     const prevTree: Tree = prevTrees[treeId];
 
     if (tree !== prevTree) {
-      yield* diffNodes(prevTree.nodes, tree.nodes, treeId);
-      yield* diffEdges(prevTree.edges, tree.edges, treeId);
+      yield* diffNodes(tracingId, prevTree.nodes, tree.nodes, treeId);
+      yield* diffEdges(tracingId, prevTree.edges, tree.edges, treeId);
 
       if (updateTreePredicate(prevTree, tree)) {
-        yield updateTree(tree);
+        yield updateTree(tree, tracingId);
       }
 
       if (prevTree.isVisible !== tree.isVisible) {
-        yield updateTreeVisibility(tree);
+        yield updateTreeVisibility(tree, tracingId);
       }
       if (prevTree.edgesAreVisible !== tree.edgesAreVisible) {
-        yield updateTreeEdgesVisibility(tree);
+        yield updateTreeEdgesVisibility(tree, tracingId);
       }
     }
   }
 }
 
-export const cachedDiffTrees = memoizeOne((prevTrees: TreeMap, trees: TreeMap) =>
-  Array.from(diffTrees(prevTrees, trees)),
+export const cachedDiffTrees = memoizeOne((tracingId: string, prevTrees: TreeMap, trees: TreeMap) =>
+  Array.from(diffTrees(tracingId, prevTrees, trees)),
 );
 
 export function* diffSkeletonTracing(
@@ -611,14 +612,18 @@ export function* diffSkeletonTracing(
   skeletonTracing: SkeletonTracing,
   prevFlycam: Flycam,
   flycam: Flycam,
-): Generator<UpdateAction, void, void> {
+): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (prevSkeletonTracing !== skeletonTracing) {
-    for (const action of cachedDiffTrees(prevSkeletonTracing.trees, skeletonTracing.trees)) {
+    for (const action of cachedDiffTrees(
+      skeletonTracing.tracingId,
+      prevSkeletonTracing.trees,
+      skeletonTracing.trees,
+    )) {
       yield action;
     }
 
     if (prevSkeletonTracing.treeGroups !== skeletonTracing.treeGroups) {
-      yield updateTreeGroups(skeletonTracing.treeGroups);
+      yield updateTreeGroups(skeletonTracing.treeGroups, skeletonTracing.tracingId);
     }
   }
 
@@ -633,7 +638,10 @@ export function* diffSkeletonTracing(
   }
 
   if (!_.isEqual(prevSkeletonTracing.userBoundingBoxes, skeletonTracing.userBoundingBoxes)) {
-    yield updateUserBoundingBoxes(skeletonTracing.userBoundingBoxes);
+    yield updateUserBoundingBoxesInSkeletonTracing(
+      skeletonTracing.userBoundingBoxes,
+      skeletonTracing.tracingId,
+    );
   }
 }
 export default [

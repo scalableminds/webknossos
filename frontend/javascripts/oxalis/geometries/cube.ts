@@ -1,12 +1,12 @@
-import * as THREE from "three";
+import app from "app";
 import _ from "lodash";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import type { OrthoView, OrthoViewWithoutTDMap, Vector3 } from "oxalis/constants";
 import { OrthoViewValuesWithoutTDView, OrthoViews } from "oxalis/constants";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
-import Store from "oxalis/throttled_store";
-import app from "app";
 import dimensions from "oxalis/model/dimensions";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import Store from "oxalis/throttled_store";
+import * as THREE from "three";
 type Properties = {
   min?: Vector3;
   max: Vector3;
@@ -34,6 +34,7 @@ class Cube {
   color: number;
   id: number | null | undefined;
   isHighlighted: boolean;
+  storePropertyUnsubscribers: Array<() => void> = [];
 
   constructor(properties: Properties) {
     // min/max should denote a half-open interval.
@@ -58,9 +59,11 @@ class Cube {
     }
 
     if (this.showCrossSections) {
-      listenToStoreProperty(
-        (state) => getPosition(state.flycam),
-        (position) => this.updatePositionForCrossSections(position),
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          (state) => getPosition(state.flycam),
+          (position) => this.updatePositionForCrossSections(position),
+        ),
       );
     }
   }
@@ -207,6 +210,13 @@ class Cube {
     for (const planeId of OrthoViewValuesWithoutTDView) {
       this.crossSections[planeId].visible = visible;
     }
+  }
+
+  destroy() {
+    for (const fn of this.storePropertyUnsubscribers) {
+      fn();
+    }
+    this.storePropertyUnsubscribers = [];
   }
 }
 

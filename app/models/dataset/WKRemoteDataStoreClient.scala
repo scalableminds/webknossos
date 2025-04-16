@@ -16,7 +16,7 @@ import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
 import play.api.libs.json.JsObject
 import play.utils.UriEncoding
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
@@ -26,8 +26,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
   private lazy val hasSegmentIndexFileCache: AlfuCache[(String, String, String), Boolean] =
     AlfuCache(timeToLive = 1 minute)
 
-  def getDataLayerThumbnail(organizationName: String,
-                            dataset: Dataset,
+  def getDataLayerThumbnail(dataset: Dataset,
                             dataLayerName: String,
                             mag1BoundingBox: BoundingBox,
                             mag: Vec3Int,
@@ -35,8 +34,10 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
                             intensityRangeOpt: Option[(Double, Double)],
                             colorSettingsOpt: Option[ThumbnailColorSettings]): Fox[Array[Byte]] = {
     val targetMagBoundingBox = mag1BoundingBox / mag
-    logger.debug(s"Thumbnail called for: $organizationName/${dataset.name}, Layer: $dataLayerName")
-    rpc(s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataset.urlEncodedName}/layers/$dataLayerName/thumbnail.jpg")
+    logger.debug(
+      s"Thumbnail called for: ${dataset._id}, organization: ${dataset._organization}, directoryName: ${dataset.directoryName}, Layer: $dataLayerName")
+    rpc(
+      s"${dataStore.url}/data/datasets/${urlEncode(dataset._organization)}/${urlEncode(dataset.directoryName)}/layers/$dataLayerName/thumbnail.jpg")
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .addQueryString("mag" -> mag.toMagLiteral())
       .addQueryString("x" -> mag1BoundingBox.topLeft.x.toString)
@@ -52,8 +53,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       .getWithBytesResponse
   }
 
-  def getLayerData(organizationName: String,
-                   dataset: Dataset,
+  def getLayerData(dataset: Dataset,
                    layerName: String,
                    mag1BoundingBox: BoundingBox,
                    mag: Vec3Int,
@@ -61,42 +61,42 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
     val targetMagBoundingBox = mag1BoundingBox / mag
     logger.debug(s"Fetching raw data. Mag $mag, mag1 bbox: $mag1BoundingBox, target-mag bbox: $targetMagBoundingBox")
     rpc(
-      s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataset.urlEncodedName}/layers/$layerName/readData")
+      s"${dataStore.url}/data/datasets/${urlEncode(dataset._organization)}/${urlEncode(dataset.directoryName)}/layers/$layerName/readData")
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .postJsonWithBytesResponse(
         RawCuboidRequest(mag1BoundingBox.topLeft, targetMagBoundingBox.size, mag, additionalCoordinates))
   }
 
-  def findPositionWithData(organizationName: String, dataset: Dataset, dataLayerName: String): Fox[JsObject] =
+  def findPositionWithData(dataset: Dataset, dataLayerName: String): Fox[JsObject] =
     rpc(
-      s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataset.urlEncodedName}/layers/$dataLayerName/findData")
+      s"${dataStore.url}/data/datasets/${dataset._organization}/${dataset.directoryName}/layers/$dataLayerName/findData")
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .getWithJsonResponse[JsObject]
 
   private def urlEncode(text: String) = UriEncoding.encodePathSegment(text, "UTF-8")
 
-  def fetchStorageReport(organizationName: String, datasetName: Option[String]): Fox[List[DirectoryStorageReport]] =
-    rpc(s"${dataStore.url}/data/datasets/measureUsedStorage/${urlEncode(organizationName)}")
+  def fetchStorageReport(organizationId: String, datasetName: Option[String]): Fox[List[DirectoryStorageReport]] =
+    rpc(s"${dataStore.url}/data/datasets/measureUsedStorage/${urlEncode(organizationId)}")
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .addQueryStringOptional("datasetName", datasetName)
       .silent
       .getWithJsonResponse[List[DirectoryStorageReport]]
 
-  def addDataSource(organizationName: String,
+  def addDataSource(organizationId: String,
                     datasetName: String,
                     dataSource: GenericDataSource[DataLayer],
                     folderId: Option[ObjectId],
                     userToken: String): Fox[Unit] =
     for {
-      _ <- rpc(s"${dataStore.url}/data/datasets/$organizationName/$datasetName")
+      _ <- rpc(s"${dataStore.url}/data/datasets/$organizationId/$datasetName")
         .addQueryString("token" -> userToken)
         .addQueryStringOptional("folderId", folderId.map(_.toString))
-        .put(dataSource)
+        .postJson(dataSource)
     } yield ()
 
-  def hasSegmentIndexFile(organizationName: String, datasetName: String, layerName: String)(
+  def hasSegmentIndexFile(organizationId: String, datasetName: String, layerName: String)(
       implicit ec: ExecutionContext): Fox[Boolean] = {
-    val cacheKey = (organizationName, datasetName, layerName)
+    val cacheKey = (organizationId, datasetName, layerName)
     hasSegmentIndexFileCache.getOrLoad(
       cacheKey,
       k =>
@@ -108,11 +108,11 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
   }
 
   def exploreRemoteDataset(layerParameters: List[ExploreRemoteLayerParameters],
-                           organizationName: String,
+                           organizationId: String,
                            userToken: String): Fox[ExploreRemoteDatasetResponse] =
     rpc(s"${dataStore.url}/data/datasets/exploreRemote")
       .addQueryString("token" -> userToken)
       .postJsonWithJsonResponse[ExploreRemoteDatasetRequest, ExploreRemoteDatasetResponse](
-        ExploreRemoteDatasetRequest(layerParameters, organizationName))
+        ExploreRemoteDatasetRequest(layerParameters, organizationId))
 
 }

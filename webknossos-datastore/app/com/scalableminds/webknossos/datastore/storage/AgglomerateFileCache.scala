@@ -20,15 +20,15 @@ case class CachedAgglomerateFile(reader: IHDF5Reader,
 }
 
 case class AgglomerateFileKey(
-    organizationName: String,
-    datasetName: String,
+    organizationId: String,
+    datasetDirectoryName: String,
     layerName: String,
     mappingName: String
 ) {
   def path(dataBaseDir: Path, agglomerateDir: String, agglomerateFileExtension: String): Path =
     dataBaseDir
-      .resolve(organizationName)
-      .resolve(datasetName)
+      .resolve(organizationId)
+      .resolve(datasetDirectoryName)
       .resolve(layerName)
       .resolve(agglomerateDir)
       .resolve(s"$mappingName.$agglomerateFileExtension")
@@ -36,10 +36,12 @@ case class AgglomerateFileKey(
 
 object AgglomerateFileKey {
   def fromDataRequest(dataRequest: DataServiceDataRequest): AgglomerateFileKey =
-    AgglomerateFileKey(dataRequest.dataSource.id.team,
-                       dataRequest.dataSource.id.name,
-                       dataRequest.dataLayer.name,
-                       dataRequest.settings.appliedAgglomerate.get)
+    AgglomerateFileKey(
+      dataRequest.dataSource.id.organizationId,
+      dataRequest.dataSource.id.directoryName,
+      dataRequest.dataLayer.name,
+      dataRequest.settings.appliedAgglomerate.get
+    )
 }
 
 class AgglomerateFileCache(val maxEntries: Int) extends LRUConcurrentCache[AgglomerateFileKey, CachedAgglomerateFile] {
@@ -174,7 +176,7 @@ class BoundingBoxCache(
       val isTransformed = Array.fill(input.length)(false)
       while (offset <= readerRange._2) {
         val agglomerateIds: Array[Long] =
-          readHDF(reader, offset, spire.math.min(maxReaderRange, readerRange._2 - offset) + 1)
+          readHDF(reader, offset, Math.min(maxReaderRange, readerRange._2 - offset) + 1)
         for (i <- input.indices) {
           val inputElement = input(i)
           if (!isTransformed(i) && inputElement >= offset && inputElement < offset + maxReaderRange) {

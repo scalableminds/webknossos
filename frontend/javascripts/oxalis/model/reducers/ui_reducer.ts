@@ -1,15 +1,29 @@
+import { AnnotationToolEnum, AvailableToolsInViewMode } from "oxalis/constants";
+import defaultState from "oxalis/default_state";
 import type { Action } from "oxalis/model/actions/actions";
-import type { OxalisState } from "oxalis/store";
 import { updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
 import {
-  setToolReducer,
   getNextTool,
   getPreviousTool,
+  setToolReducer,
 } from "oxalis/model/reducers/reducer_helpers";
 import { hideBrushReducer } from "oxalis/model/reducers/volumetracing_reducer_helpers";
+import type { OxalisState } from "oxalis/store";
 
 function UiReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
+    case "RESET_STORE": {
+      return {
+        ...defaultState,
+        activeUser: state.activeUser,
+        activeOrganization: state.activeOrganization,
+        uiInformation: {
+          ...defaultState.uiInformation,
+          storedLayouts: state.uiInformation.storedLayouts,
+        },
+      };
+    }
+
     case "SET_DROPZONE_MODAL_VISIBILITY": {
       return updateKey(state, "uiInformation", {
         showDropzoneModal: action.visible,
@@ -54,7 +68,10 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "SET_TOOL": {
-      if (!state.tracing.restrictions.allowUpdate) {
+      if (!state.annotation.restrictions.allowUpdate) {
+        if (AvailableToolsInViewMode.includes(AnnotationToolEnum[action.tool])) {
+          return setToolReducer(state, action.tool);
+        }
         return state;
       }
 
@@ -62,7 +79,7 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "CYCLE_TOOL": {
-      if (!state.tracing.restrictions.allowUpdate) {
+      if (!state.annotation.restrictions.allowUpdate) {
         return state;
       }
 
@@ -102,6 +119,24 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "SET_MERGE_MODAL_VISIBILITY": {
+      return updateKey(state, "uiInformation", {
+        showMergeAnnotationModal: action.visible,
+      });
+    }
+
+    case "SET_USER_SCRIPTS_MODAL_VISIBILITY": {
+      return updateKey(state, "uiInformation", {
+        showAddScriptModal: action.visible,
+      });
+    }
+
+    case "SET_ZARR_LINKS_MODAL_VISIBILITY": {
+      return updateKey(state, "uiInformation", {
+        showZarrPrivateLinksModal: action.visible,
+      });
+    }
+
     case "SET_CREATE_ANIMATION_MODAL_VISIBILITY": {
       return updateKey(state, "uiInformation", {
         showRenderAnimationModal: action.visible,
@@ -118,6 +153,13 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       return updateKey(state, "uiInformation", {
         busyBlockingInfo: action.value,
       });
+    }
+
+    case "SET_IS_WK_READY": {
+      return updateKey(state, "uiInformation", { isWkReady: action.isReady });
+    }
+    case "WK_READY": {
+      return updateKey(state, "uiInformation", { isWkReady: true });
     }
 
     case "SET_QUICK_SELECT_STATE": {
@@ -177,6 +219,17 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
         meshId: null,
         meshIntersectionPosition: null,
         unmappedSegmentId: null,
+      });
+    }
+    case "SET_ACTIVE_USER_BOUNDING_BOX_ID": {
+      return updateKey(state, "uiInformation", {
+        activeUserBoundingBoxId: action.id,
+      });
+    }
+
+    case "SET_GLOBAL_PROGRESS": {
+      return updateKey(state, "uiInformation", {
+        globalProgress: action.value,
       });
     }
 

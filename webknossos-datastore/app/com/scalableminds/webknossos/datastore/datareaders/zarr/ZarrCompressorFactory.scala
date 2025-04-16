@@ -4,9 +4,11 @@ import com.scalableminds.webknossos.datastore.datareaders.{
   BloscCompressor,
   CompressionSetting,
   Compressor,
+  IntCompressionSetting,
   NullCompressor,
   StringCompressionSetting,
-  ZlibCompressor
+  ZlibCompressor,
+  ZstdCompressor
 }
 
 object ZarrCompressorFactory {
@@ -23,6 +25,13 @@ object ZarrCompressorFactory {
       case "null"  => nullCompressor
       case "zlib"  => new ZlibCompressor(properties)
       case "blosc" => new BloscCompressor(properties)
-      case _       => throw new IllegalArgumentException("Compressor id:'" + id + "' not supported.")
+      case "zstd" => {
+        val level = properties.get("level") match {
+          case Some(IntCompressionSetting(l)) => l
+          case _                              => throw new IllegalArgumentException("Zstd level must be int")
+        }
+        new ZstdCompressor(level, checksum = false)
+      }
+      case _ => throw new IllegalArgumentException("Compressor id:'" + id + "' not supported.")
     }
 }

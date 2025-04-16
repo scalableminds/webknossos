@@ -1,8 +1,7 @@
 import mockRequire from "mock-require";
 import runAsync from "test/helpers/run-async";
 import sinon from "sinon";
-import type { TestInterface } from "ava";
-import anyTest from "ava";
+import anyTest, { type TestFn } from "ava";
 import "test/mocks/lz4";
 
 mockRequire("oxalis/model/sagas/root_saga", function* () {
@@ -14,16 +13,19 @@ const { DataBucket } = mockRequire.reRequire("oxalis/model/bucket_data_handling/
 const TemporalBucketManager = mockRequire.reRequire(
   "oxalis/model/bucket_data_handling/temporal_bucket_manager",
 ).default;
-// Ava's recommendation for Flow types
-// https://github.com/avajs/ava/blob/master/docs/recipes/flow.md#typing-tcontext
-const test: TestInterface<{
+
+// Ava's recommendation for Typescript types
+// https://github.com/avajs/ava/blob/main/docs/recipes/typescript.md#typing-tcontext
+const test = anyTest as TestFn<{
   cube: {
     isSegmentation: boolean;
     pushQueue: any;
     pullQueue: any;
+    triggerBucketDataChanged: () => void;
   };
   manager: typeof TemporalBucketManager;
-}> = anyTest as any;
+}>;
+
 test.beforeEach((t) => {
   const pullQueue = {
     add: sinon.stub(),
@@ -37,6 +39,7 @@ test.beforeEach((t) => {
     isSegmentation: true,
     pushQueue,
     pullQueue,
+    triggerBucketDataChanged: () => {},
   };
   const manager = new TemporalBucketManager(pullQueue, pushQueue);
   t.context.cube = mockedCube;
@@ -61,7 +64,7 @@ test("Add / Remove should be added when bucket has not been requested", (t) => {
 test("Add / Remove should be added when bucket has not been received", (t) => {
   const { manager } = t.context;
   const bucket = new DataBucket("uint8", [0, 0, 0, 0], manager, t.context.cube);
-  bucket.markAsPulled();
+  bucket.markAsRequested();
   t.is(bucket.needsRequest(), false);
   fakeLabel(bucket);
   t.is(manager.getCount(), 1);
@@ -69,7 +72,7 @@ test("Add / Remove should be added when bucket has not been received", (t) => {
 test("Add / Remove should not be added when bucket has been received", (t) => {
   const { manager } = t.context;
   const bucket = new DataBucket("uint8", [0, 0, 0, 0], manager, t.context.cube);
-  bucket.markAsPulled();
+  bucket.markAsRequested();
   bucket.receiveData(new Uint8Array(1 << 15));
   t.is(bucket.isLoaded(), true);
   fakeLabel(bucket);
@@ -79,7 +82,7 @@ test("Add / Remove should be removed once it is loaded", (t) => {
   const { manager } = t.context;
   const bucket = new DataBucket("uint8", [0, 0, 0, 0], manager, t.context.cube);
   fakeLabel(bucket);
-  bucket.markAsPulled();
+  bucket.markAsRequested();
   bucket.receiveData(new Uint8Array(1 << 15));
   t.is(manager.getCount(), 0);
 });
@@ -93,7 +96,7 @@ function prepareBuckets(manager, cube) {
   for (const bucket of [bucket1, bucket2]) {
     bucket.startDataMutation();
     bucket.endDataMutation();
-    bucket.markAsPulled();
+    bucket.markAsRequested();
   }
 
   return {

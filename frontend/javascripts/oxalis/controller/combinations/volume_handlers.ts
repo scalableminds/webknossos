@@ -1,18 +1,21 @@
+import { V3 } from "libs/mjs";
+import memoizeOne from "memoize-one";
 import type { OrthoView, Point2, Vector3 } from "oxalis/constants";
 import { ContourModeEnum } from "oxalis/constants";
+import { globalToLayerTransformedPosition } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import {
-  startEditingAction,
-  floodFillAction,
   addToLayerAction,
   finishEditingAction,
-  setContourTracingModeAction,
-  setActiveCellAction,
+  floodFillAction,
   resetContourAction,
+  setActiveCellAction,
+  setContourTracingModeAction,
+  startEditingAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { Model, Store, api } from "oxalis/singletons";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 export function handleDrawStart(pos: Point2, plane: OrthoView) {
   const state = Store.getState();
@@ -38,29 +41,38 @@ export function handlePickCell(pos: Point2) {
 
   return handlePickCellFromGlobalPosition(globalPos, storeState.flycam.additionalCoordinates || []);
 }
-export function getSegmentIdForPosition(globalPos: Vector3) {
-  // This function will return the currently loaded segment ID for a given position.
-  // If the corresponding bucket is not loaded at the moment, the return value will be 0.
-  // See getSegmentIdForPositionAsync if the bucket loading should be awaited before returning the ID.
-  const layer = Model.getVisibleSegmentationLayer();
-  const { additionalCoordinates } = Store.getState().flycam;
+export const getSegmentIdForPosition = memoizeOne(
+  (globalPos: Vector3) => {
+    // This function will return the currently loaded segment ID for a given position.
+    // If the corresponding bucket is not loaded at the moment, the return value will be 0.
+    // See getSegmentIdForPositionAsync if the bucket loading should be awaited before returning the ID.
+    const layer = Model.getVisibleSegmentationLayer();
+    const { additionalCoordinates } = Store.getState().flycam;
 
-  if (!layer) {
-    return 0;
-  }
+    if (!layer) {
+      return 0;
+    }
+    const posInLayerSpace = globalToLayerTransformedPosition(
+      globalPos,
+      layer.name,
+      "segmentation",
+      Store.getState(),
+    );
 
-  const segmentationCube = layer.cube;
-  const segmentationLayerName = layer.name;
-  const renderedZoomStepForCameraPosition = api.data.getRenderedZoomStepAtPosition(
-    segmentationLayerName,
-    globalPos,
-  );
-  return segmentationCube.getMappedDataValue(
-    globalPos,
-    additionalCoordinates,
-    renderedZoomStepForCameraPosition,
-  );
-}
+    const segmentationCube = layer.cube;
+    const segmentationLayerName = layer.name;
+    const renderedZoomStepForCameraPosition = api.data.getRenderedZoomStepAtPosition(
+      segmentationLayerName,
+      posInLayerSpace,
+    );
+    return segmentationCube.getMappedDataValue(
+      posInLayerSpace,
+      additionalCoordinates,
+      renderedZoomStepForCameraPosition,
+    );
+  },
+  ([a], [b]) => V3.isEqual(a, b),
+);
 export async function getSegmentIdForPositionAsync(globalPos: Vector3) {
   // This function will return the segment ID for a given position, awaiting the loading
   // of the corresponding bucket.
@@ -71,22 +83,28 @@ export async function getSegmentIdForPositionAsync(globalPos: Vector3) {
   if (!layer) {
     return 0;
   }
+  const posInLayerSpace = globalToLayerTransformedPosition(
+    globalPos,
+    layer.name,
+    "segmentation",
+    Store.getState(),
+  );
 
   const segmentationCube = layer.cube;
   const segmentationLayerName = layer.name;
   const renderedZoomStepForCameraPosition = await api.data.getUltimatelyRenderedZoomStepAtPosition(
     segmentationLayerName,
-    globalPos,
+    posInLayerSpace,
   );
   // Make sure the corresponding bucket is loaded
   await api.data.getDataValue(
     segmentationLayerName,
-    globalPos,
+    posInLayerSpace,
     renderedZoomStepForCameraPosition,
     additionalCoordinates,
   );
   return segmentationCube.getMappedDataValue(
-    globalPos,
+    posInLayerSpace,
     additionalCoordinates,
     renderedZoomStepForCameraPosition,
   );
@@ -97,7 +115,7 @@ export function handlePickCellFromGlobalPosition(
 ) {
   const segmentId = getSegmentIdForPosition(globalPos);
 
-  if (segmentId > 0) {
+  if (segmentId !== 0) {
     Store.dispatch(setActiveCellAction(segmentId, globalPos, additionalCoordinates));
   }
 }

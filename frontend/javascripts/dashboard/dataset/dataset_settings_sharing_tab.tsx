@@ -1,24 +1,26 @@
-import React, { useState, useEffect } from "react";
-import { RouteComponentProps, withRouter } from "react-router-dom";
-import { connect } from "react-redux";
-import { Button, Input, Checkbox, Tooltip, FormInstance, Collapse, Space } from "antd";
 import { CopyOutlined, InfoCircleOutlined, RetweetOutlined } from "@ant-design/icons";
-import type { APIDataset, APIDatasetId, APIUser } from "types/api_flow_types";
-import { AsyncButton } from "components/async_clickables";
 import { getDatasetSharingToken, revokeDatasetSharingToken } from "admin/admin_rest_api";
-import Toast from "libs/toast";
-import window from "libs/window";
-import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
-import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
-import { OxalisState } from "oxalis/store";
-import { isUserAdminOrDatasetManager, isUserAdminOrTeamManager } from "libs/utils";
-import { FormItemWithInfo } from "./helper_components";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import { Button, Checkbox, Collapse, type FormInstance, Input, Space, Tooltip } from "antd";
+import { AsyncButton } from "components/async_clickables";
 import { PricingEnforcedBlur } from "components/pricing_enforcers";
+import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
+import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
+import Toast from "libs/toast";
+import { isUserAdminOrDatasetManager, isUserAdminOrTeamManager } from "libs/utils";
+import window from "libs/window";
+import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
+import type { OxalisState } from "oxalis/store";
+import type React from "react";
+import { useEffect, useState } from "react";
+import { connect } from "react-redux";
+import { type RouteComponentProps, withRouter } from "react-router-dom";
+import type { APIDataset, APIUser } from "types/api_flow_types";
+import { FormItemWithInfo } from "./helper_components";
 
 type Props = {
   form: FormInstance | null;
-  datasetId: APIDatasetId;
+  datasetId: string;
   dataset: APIDataset | null | undefined;
   activeUser: APIUser | null | undefined;
 };
@@ -45,6 +47,7 @@ function DatasetSettingsSharingTab({ form, datasetId, dataset, activeUser }: Pro
     setSharingToken(newSharingToken);
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies(fetch):
   useEffect(() => {
     fetch();
   }, []);
@@ -75,9 +78,7 @@ function DatasetSettingsSharingTab({ form, datasetId, dataset, activeUser }: Pro
 
     const doesNeedToken = !form.getFieldValue("dataset.isPublic");
     const tokenSuffix = `?token=${sharingToken}`;
-    return `${window.location.origin}/datasets/${datasetId.owningOrganization}/${
-      datasetId.name
-    }/view${doesNeedToken ? tokenSuffix : ""}`;
+    return `${window.location.origin}/datasets/${dataset ? getReadableURLPart(dataset) : datasetId}/view${doesNeedToken ? tokenSuffix : ""}`;
   }
 
   function getUserAccessList() {

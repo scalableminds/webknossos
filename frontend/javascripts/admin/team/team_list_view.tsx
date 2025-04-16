@@ -1,23 +1,23 @@
-import { PropTypes } from "@scalableminds/prop-types";
-import { Table, Spin, Button, Input, Alert, Tag, App } from "antd";
 import { DeleteOutlined, PlusOutlined, UserOutlined } from "@ant-design/icons";
-import * as React from "react";
-import _ from "lodash";
-import type { APITeam, APITeamMembership, APIUser } from "types/api_flow_types";
+import { PropTypes } from "@scalableminds/prop-types";
 import {
-  getEditableTeams,
   deleteTeam as deleteTeamAPI,
+  getEditableTeams,
   getEditableUsers,
 } from "admin/admin_rest_api";
-import { handleGenericError } from "libs/error_handling";
-import LinkButton from "components/link_button";
 import CreateTeamModal from "admin/team/create_team_modal_view";
+import { Alert, App, Button, Input, Spin, Table, Tag } from "antd";
+import LinkButton from "components/link_button";
+import { handleGenericError } from "libs/error_handling";
+import { stringToColor } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
+import _ from "lodash";
 import messages from "messages";
-import { stringToColor } from "libs/format_utils";
-import EditTeamModalView from "./edit_team_modal_view";
+import * as React from "react";
 import { useEffect, useState } from "react";
+import type { APITeam, APITeamMembership, APIUser } from "types/api_flow_types";
+import EditTeamModalView from "./edit_team_modal_view";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -54,7 +54,9 @@ export function filterTeamMembersOf(team: APITeam, user: APIUser): boolean {
 export function renderUsersForTeam(
   team: APITeam,
   allUsers: APIUser[] | null,
-  renderAdditionalContent = (_teamMember: APIUser, _team: APITeam) => {},
+  renderAdditionalContent = (_teamMember: APIUser, _team: APITeam): React.ReactNode => {
+    return null;
+  },
 ) {
   if (allUsers === null) return;
   const teamMembers = allUsers.filter((user) => filterTeamMembersOf(team, user));
@@ -63,7 +65,7 @@ export function renderUsersForTeam(
   return (
     <ul>
       {teamMembers.map((teamMember) => (
-        <li>
+        <li key={`team_member_${teamMember.id}`}>
           {teamMember.firstName} {teamMember.lastName} ({teamMember.email}){" "}
           {renderTeamRolesForUser(teamMember, team)}
           {renderAdditionalContent(teamMember, team)}
@@ -174,7 +176,7 @@ function TeamListView() {
     <div className="container">
       <div className="pull-right">
         <Button
-          icon={<PlusOutlined className="icon-margin-right" />}
+          icon={<PlusOutlined />}
           style={marginRight}
           type="primary"
           onClick={() => setIsTeamCreationModalVisible(true)}
@@ -231,14 +233,13 @@ function TeamListView() {
                       setSelectedTeam(team);
                       setIsTeamEditModalVisible(true);
                     }}
+                    icon={<UserOutlined />}
                   >
-                    <UserOutlined className="icon-margin-right" />
                     Add / Remove Users
                   </LinkButton>
                 </div>
                 <div>
-                  <LinkButton onClick={_.partial(deleteTeam, team)}>
-                    <DeleteOutlined className="icon-margin-right" />
+                  <LinkButton onClick={_.partial(deleteTeam, team)} icon={<DeleteOutlined />}>
                     Delete
                   </LinkButton>
                 </div>

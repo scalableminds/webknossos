@@ -1,4 +1,4 @@
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 export const ViewModeValues = ["orthogonal", "flight", "oblique"] as ViewMode[];
 
@@ -14,6 +14,8 @@ export type Vector3 = [number, number, number];
 export type Vector4 = [number, number, number, number];
 export type Vector5 = [number, number, number, number, number];
 export type Vector6 = [number, number, number, number, number, number];
+
+export type NestedMatrix4 = [Vector4, Vector4, Vector4, Vector4]; // Represents a row major matrix.
 
 // For 3D data BucketAddress = x, y, z, mag
 // For higher dimensional data, BucketAddress = x, y, z, mag, [{name: "t", value: t}, ...]
@@ -221,6 +223,8 @@ export const MeasurementTools: Array<keyof typeof AnnotationToolEnum> = [
   AnnotationToolEnum.AREA_MEASUREMENT,
 ];
 
+export const AvailableToolsInViewMode = [...MeasurementTools, AnnotationToolEnum.MOVE];
+
 export type AnnotationTool = keyof typeof AnnotationToolEnum;
 export enum ContourModeEnum {
   DRAW = "DRAW",
@@ -333,26 +337,33 @@ const Constants = {
     _2D: (process.env.IS_TESTING ? [512, 512, 1] : [768, 768, 1]) as Vector3,
     _3D: (process.env.IS_TESTING ? [64, 64, 32] : [96, 96, 96]) as Vector3,
   },
+  // When the user uses the "isFloodfillRestrictedToBoundingBox" setting,
+  // we are more lax with the flood fill extent.
+  FLOOD_FILL_MULTIPLIER_FOR_BBOX_RESTRICTION: 10,
   MAXIMUM_DATE_TIMESTAMP: 8640000000000000,
   SCALEBAR_HEIGHT: 22,
   SCALEBAR_OFFSET: 10,
   OBJECT_ID_STRING_LENGTH: 24,
+  REGISTER_SEGMENTS_BB_MAX_VOLUME_VX: 512 * 512 * 512,
+  REGISTER_SEGMENTS_BB_MAX_SEGMENT_COUNT: 5000,
+  DEFAULT_MESH_OPACITY: 1,
 };
 export default Constants;
 
 export type TypedArray =
-  | Int8Array
   | Uint8Array
   | Uint8ClampedArray
-  | Int16Array
+  | Int8Array
   | Uint16Array
-  | Int32Array
+  | Int16Array
   | Uint32Array
+  | Int32Array
   | Float32Array
   | Float64Array
-  | BigUint64Array;
+  | BigUint64Array
+  | BigInt64Array;
 
-export type TypedArrayWithoutBigInt = Exclude<TypedArray, BigUint64Array>;
+export type TypedArrayWithoutBigInt = Exclude<TypedArray, BigUint64Array | BigInt64Array>;
 
 export const PRIMARY_COLOR: Vector3 = [86, 96, 255];
 
@@ -395,3 +406,104 @@ const isMac = (() => {
 
 export const AltOrOptionKey = isMac ? "⌥" : "Alt";
 export const CtrlOrCmdKey = isMac ? "Cmd" : "Ctrl";
+
+export enum UnitLong {
+  ym = "yoctometer",
+  zm = "zeptometer",
+  am = "attometer",
+  fm = "femtometer",
+  pm = "picometer",
+  nm = "nanometer",
+  µm = "micrometer",
+  mm = "millimeter",
+  cm = "centimeter",
+  dm = "decimeter",
+  m = "meter",
+  hm = "hectometer",
+  km = "kilometer",
+  Mm = "megameter",
+  Gm = "gigameter",
+  Tm = "terameter",
+  Pm = "petameter",
+  Em = "exameter",
+  Zm = "zettameter",
+  Ym = "yottameter",
+  Å = "angstrom",
+  in = "inch",
+  ft = "foot",
+  yd = "yard",
+  mi = "mile",
+  pc = "parsec",
+}
+
+export enum UnitShort {
+  ym = "ym",
+  zm = "zm",
+  am = "am",
+  fm = "fm",
+  pm = "pm",
+  nm = "nm",
+  µm = "µm",
+  mm = "mm",
+  cm = "cm",
+  dm = "dm",
+  m = "m",
+  hm = "hm",
+  km = "km",
+  Mm = "Mm",
+  Gm = "Gm",
+  Tm = "Tm",
+  Pm = "Pm",
+  Em = "Em",
+  Zm = "Zm",
+  Ym = "Ym",
+  Å = "Å",
+  in = "in",
+  ft = "ft",
+  yd = "yd",
+  mi = "mi",
+  pc = "pc",
+}
+
+export const LongUnitToShortUnitMap: Record<UnitLong, UnitShort> = {
+  [UnitLong.ym]: UnitShort.ym,
+  [UnitLong.zm]: UnitShort.zm,
+  [UnitLong.am]: UnitShort.am,
+  [UnitLong.fm]: UnitShort.fm,
+  [UnitLong.pm]: UnitShort.pm,
+  [UnitLong.nm]: UnitShort.nm,
+  [UnitLong.µm]: UnitShort.µm,
+  [UnitLong.mm]: UnitShort.mm,
+  [UnitLong.cm]: UnitShort.cm,
+  [UnitLong.dm]: UnitShort.dm,
+  [UnitLong.m]: UnitShort.m,
+  [UnitLong.hm]: UnitShort.hm,
+  [UnitLong.km]: UnitShort.km,
+  [UnitLong.Mm]: UnitShort.Mm,
+  [UnitLong.Gm]: UnitShort.Gm,
+  [UnitLong.Tm]: UnitShort.Tm,
+  [UnitLong.Pm]: UnitShort.Pm,
+  [UnitLong.Em]: UnitShort.Em,
+  [UnitLong.Zm]: UnitShort.Zm,
+  [UnitLong.Ym]: UnitShort.Ym,
+  [UnitLong.Å]: UnitShort.Å,
+  [UnitLong.in]: UnitShort.in,
+  [UnitLong.ft]: UnitShort.ft,
+  [UnitLong.yd]: UnitShort.yd,
+  [UnitLong.mi]: UnitShort.mi,
+  [UnitLong.pc]: UnitShort.pc,
+};
+
+export const AllUnits = Object.values(UnitLong);
+
+export enum AnnotationTypeFilterEnum {
+  ONLY_ANNOTATIONS_KEY = "Explorational",
+  ONLY_TASKS_KEY = "Task",
+  TASKS_AND_ANNOTATIONS_KEY = "Task,Explorational",
+}
+
+export enum AnnotationStateFilterEnum {
+  ALL = "All",
+  ACTIVE = "Active",
+  FINISHED_OR_ARCHIVED = "Finished",
+}

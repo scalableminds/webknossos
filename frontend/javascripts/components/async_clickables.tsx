@@ -1,6 +1,7 @@
-import { Button, ButtonProps } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
+import { Button, type ButtonProps, ConfigProvider } from "antd";
 import * as React from "react";
+import FastTooltip from "./fast_tooltip";
 const { useState, useEffect, useRef } = React;
 
 export type AsyncButtonProps = Omit<ButtonProps, "onClick"> & {
@@ -42,12 +43,17 @@ function useLoadingClickHandler(
 
 export function AsyncButton(props: AsyncButtonProps) {
   const [isLoading, onClick] = useLoadingClickHandler(props.onClick);
-  const { children, hideContentWhenLoading, ...rest } = props;
+  const { children, hideContentWhenLoading, title, ...rest } = props;
   const effectiveChildren = hideContentWhenLoading && isLoading ? null : children;
   return (
-    <Button {...rest} loading={isLoading} onClick={onClick}>
-      {effectiveChildren}
-    </Button>
+    <FastTooltip title={title}>
+      {/* Avoid weird animation when icons swap */}
+      <ConfigProvider theme={{ token: { motion: false } }}>
+        <Button {...rest} loading={isLoading} onClick={onClick}>
+          {effectiveChildren}
+        </Button>
+      </ConfigProvider>
+    </FastTooltip>
   );
 }
 export function AsyncIconButton(

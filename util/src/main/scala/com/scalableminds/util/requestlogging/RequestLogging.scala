@@ -1,5 +1,6 @@
 package com.scalableminds.util.requestlogging
 
+import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.time.Instant
 import com.typesafe.scalalogging.LazyLogging
 import play.api.http.{HttpEntity, Status}
@@ -8,7 +9,7 @@ import play.api.mvc.{Request, Result}
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
-trait AbstractRequestLogging extends LazyLogging {
+trait AbstractRequestLogging extends LazyLogging with Formatter {
 
   def logRequestFormatted(request: Request[_],
                           result: Result,
@@ -28,12 +29,12 @@ trait AbstractRequestLogging extends LazyLogging {
       case _                                => ""
     }
 
-  def logTime(notifier: String => Unit, durationThreshold: FiniteDuration = 30 seconds)(
+  def logTime(notifier: String => Unit, durationThreshold: FiniteDuration = 2 minutes)(
       block: => Future[Result])(implicit request: Request[_], ec: ExecutionContext): Future[Result] = {
     def logTimeFormatted(executionTime: FiniteDuration, request: Request[_], result: Result): Unit = {
-      val debugString = s"Request ${request.method} ${request.uri} took ${BigDecimal(executionTime.toMillis / 1000)
-        .setScale(2, BigDecimal.RoundingMode.HALF_UP)} seconds and was${if (result.header.status != 200) " not "
-      else " "}successful"
+      val debugString =
+        s"Request ${request.method} ${request.uri} took ${formatDuration(executionTime)} and was${if (result.header.status != 200) " not "
+        else " "}successful"
       logger.info(debugString)
       notifier(debugString)
     }

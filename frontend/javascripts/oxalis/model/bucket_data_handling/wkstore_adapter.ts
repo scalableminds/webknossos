@@ -1,31 +1,34 @@
-import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
-import { createWorker } from "oxalis/workers/comlink_wrapper";
 import { doWithToken } from "admin/admin_rest_api";
-import {
-  isSegmentationLayer,
-  getByteCountFromLayer,
-  getMappingInfo,
-  getResolutionInfo,
-} from "oxalis/model/accessors/dataset_accessor";
-import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
-import { parseMaybe } from "libs/utils";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import { updateBucket } from "oxalis/model/sagas/update_actions";
-import ByteArraysToLz4Base64Worker from "oxalis/workers/byte_arrays_to_lz4_base64.worker";
-import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
 import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
-import type { DataLayerType, VolumeTracing } from "oxalis/store";
-import Store from "oxalis/store";
+import { parseMaybe } from "libs/utils";
 import WebworkerPool from "libs/webworker_pool";
+import window from "libs/window";
+import _ from "lodash";
 import type { BucketAddress, Vector3 } from "oxalis/constants";
 import constants, { MappingStatusEnum } from "oxalis/constants";
-import window from "libs/window";
+import {
+  getByteCountFromLayer,
+  getMagInfo,
+  getMappingInfo,
+  isSegmentationLayer,
+} from "oxalis/model/accessors/dataset_accessor";
+import {
+  getVolumeTracingById,
+  needsLocalHdf5Mapping,
+} from "oxalis/model/accessors/volumetracing_accessor";
+import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
+import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
+import type { UpdateActionWithoutIsolationRequirement } from "oxalis/model/sagas/update_actions";
+import { updateBucket } from "oxalis/model/sagas/update_actions";
+import type { DataLayerType, VolumeTracing } from "oxalis/store";
+import Store from "oxalis/store";
+import ByteArraysToLz4Base64Worker from "oxalis/workers/byte_arrays_to_lz4_base64.worker";
+import { createWorker } from "oxalis/workers/comlink_wrapper";
+import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 import { getGlobalDataConnectionInfo } from "../data_connection_info";
-import { ResolutionInfo } from "../helpers/resolution_info";
-import { AdditionalCoordinate } from "types/api_flow_types";
-import _ from "lodash";
+import type { MagInfo } from "../helpers/mag_info";
 
 const decodeFourBit = createWorker(DecodeFourBitWorker);
 
@@ -57,12 +60,12 @@ type RequestBucketInfo = SendBucketInfo & {
 // object as expected by the server on bucket request
 const createRequestBucketInfo = (
   zoomedAddress: BucketAddress,
-  resolutionInfo: ResolutionInfo,
+  magInfo: MagInfo,
   fourBit: boolean,
   applyAgglomerate: string | null | undefined,
   version: number | null | undefined,
 ): RequestBucketInfo => ({
-  ...createSendBucketInfo(zoomedAddress, resolutionInfo),
+  ...createSendBucketInfo(zoomedAddress, magInfo),
   fourBit,
   ...(applyAgglomerate != null
     ? {
@@ -76,14 +79,11 @@ const createRequestBucketInfo = (
     : {}),
 });
 
-function createSendBucketInfo(
-  zoomedAddress: BucketAddress,
-  resolutionInfo: ResolutionInfo,
-): SendBucketInfo {
+function createSendBucketInfo(zoomedAddress: BucketAddress, magInfo: MagInfo): SendBucketInfo {
   return {
-    position: bucketPositionToGlobalAddress(zoomedAddress, resolutionInfo),
+    position: bucketPositionToGlobalAddress(zoomedAddress, magInfo),
     additionalCoordinates: zoomedAddress[4],
-    mag: resolutionInfo.getResolutionByIndexOrThrow(zoomedAddress[3]),
+    mag: magInfo.getMagByIndexOrThrow(zoomedAddress[3]),
     cubeSize: constants.BUCKET_WIDTH,
   };
 }
@@ -97,13 +97,13 @@ export async function requestWithFallback(
   batch: Array<BucketAddress>,
 ): Promise<Array<Uint8Array | null | undefined>> {
   const state = Store.getState();
-  const datasetName = state.dataset.name;
+  const datasetDirectoryName = state.dataset.directoryName;
   const organization = state.dataset.owningOrganization;
   const dataStoreHost = state.dataset.dataStore.url;
-  const tracingStoreHost = state.tracing.tracingStore.url;
+  const tracingStoreHost = state.annotation.tracingStore.url;
 
   const getDataStoreUrl = (optLayerName?: string) =>
-    `${dataStoreHost}/data/datasets/${organization}/${datasetName}/layers/${
+    `${dataStoreHost}/data/datasets/${organization}/${datasetDirectoryName}/layers/${
       optLayerName || layerInfo.name
     }`;
 
@@ -111,12 +111,26 @@ export async function requestWithFallback(
 
   const maybeVolumeTracing =
     "tracingId" in layerInfo && layerInfo.tracingId != null
-      ? getVolumeTracingById(state.tracing, layerInfo.tracingId)
+      ? getVolumeTracingById(state.annotation, layerInfo.tracingId)
       : null;
-  // For non-segmentation layers and for viewing datasets, we'll always use the datastore URL
-  const shouldUseDataStore = maybeVolumeTracing == null;
-  const requestUrl = shouldUseDataStore ? getDataStoreUrl() : getTracingStoreUrl();
-  const bucketBuffers = await requestFromStore(requestUrl, layerInfo, batch, maybeVolumeTracing);
+
+  // For non-segmentation layers and for viewing datasets, we'll always use the datastore URL.
+  // We also use the data store, if an hdf5 mapping should be locally applied. This is only the
+  // case if the proofreading tool is active or the layer was already proofread. In that case,
+  // no bucket data changes can exist on the tracing store.
+  const shouldUseDataStore =
+    maybeVolumeTracing == null || needsLocalHdf5Mapping(state, layerInfo.name);
+
+  const requestUrl = shouldUseDataStore
+    ? getDataStoreUrl(maybeVolumeTracing?.fallbackLayer)
+    : getTracingStoreUrl();
+  const bucketBuffers = await requestFromStore(
+    requestUrl,
+    layerInfo,
+    batch,
+    maybeVolumeTracing,
+    maybeVolumeTracing != null ? state.annotation.annotationId : undefined,
+  );
   const missingBucketIndices = getNullIndices(bucketBuffers);
 
   // If buckets could not be found on the tracing store (e.g. this happens when the buckets
@@ -128,7 +142,7 @@ export async function requestWithFallback(
     missingBucketIndices.length > 0 &&
     maybeVolumeTracing != null &&
     maybeVolumeTracing.fallbackLayer != null &&
-    !maybeVolumeTracing.mappingIsEditable;
+    !maybeVolumeTracing.hasEditableMapping;
 
   if (!retry) {
     return bucketBuffers;
@@ -146,6 +160,7 @@ export async function requestWithFallback(
     layerInfo,
     fallbackBatch,
     maybeVolumeTracing,
+    maybeVolumeTracing != null ? state.annotation.annotationId : undefined,
     true,
   );
   return bucketBuffers.map((bucket, idx) => {
@@ -162,36 +177,58 @@ export async function requestFromStore(
   layerInfo: DataLayerType,
   batch: Array<BucketAddress>,
   maybeVolumeTracing: VolumeTracing | null | undefined,
+  maybeAnnotationId: string | undefined,
   isVolumeFallback: boolean = false,
 ): Promise<Array<Uint8Array | null | undefined>> {
   const state = Store.getState();
   const isSegmentation = isSegmentationLayer(state.dataset, layerInfo.name);
   const fourBit = state.datasetConfiguration.fourBit && !isSegmentation;
-  const activeMapping = getMappingInfo(
-    state.temporaryConfiguration.activeMappingByLayer,
-    layerInfo.name,
-  );
-  const applyAgglomerates =
-    isSegmentation &&
-    activeMapping != null && // Start to request mapped data during mapping activation phase already
-    activeMapping.mappingStatus !== MappingStatusEnum.DISABLED &&
-    activeMapping.mappingType === "HDF5"
+
+  // Mappings can be applied in the frontend or on the server.
+  const agglomerateMappingNameToApplyOnServer = (() => {
+    if (!isSegmentation) {
+      return null;
+    }
+    if (needsLocalHdf5Mapping(state, layerInfo.name)) {
+      return null;
+    }
+    const activeMapping = getMappingInfo(
+      state.temporaryConfiguration.activeMappingByLayer,
+      layerInfo.name,
+    );
+    return activeMapping != null && // Start to request mapped data during mapping activation phase already
+      activeMapping.mappingStatus !== MappingStatusEnum.DISABLED &&
+      activeMapping.mappingType === "HDF5"
       ? activeMapping.mappingName
       : null;
-  const resolutionInfo = getResolutionInfo(layerInfo.resolutions);
+  })();
+
+  const magInfo = getMagInfo(layerInfo.resolutions);
   const version =
     !isVolumeFallback && isSegmentation && maybeVolumeTracing != null
-      ? maybeVolumeTracing.version
+      ? state.annotation.version
       : null;
   const bucketInfo = batch.map((zoomedAddress) =>
-    createRequestBucketInfo(zoomedAddress, resolutionInfo, fourBit, applyAgglomerates, version),
+    createRequestBucketInfo(
+      zoomedAddress,
+      magInfo,
+      fourBit,
+      agglomerateMappingNameToApplyOnServer,
+      version,
+    ),
   );
 
   try {
     return await doWithToken(async (token) => {
       const startingTime = window.performance.now();
+      const params = new URLSearchParams({
+        token,
+      });
+      if (maybeAnnotationId != null) {
+        params.append("annotationId", maybeAnnotationId);
+      }
       const { buffer: responseBuffer, headers } =
-        await Request.sendJSONReceiveArraybufferWithHeaders(`${dataUrl}/data?token=${token}`, {
+        await Request.sendJSONReceiveArraybufferWithHeaders(`${dataUrl}/data?${params}`, {
           data: bucketInfo,
           timeout: REQUEST_TIMEOUT,
           showErrorToast: false,
@@ -250,7 +287,7 @@ function sliceBufferIntoPieces(
 
 export async function createCompressedUpdateBucketActions(
   batch: Array<DataBucket>,
-): Promise<UpdateAction[]> {
+): Promise<UpdateActionWithoutIsolationRequirement[]> {
   return _.flatten(
     await Promise.all(
       _.chunk(batch, COMPRESSION_BATCH_SIZE).map(async (batchSubset) => {
@@ -262,8 +299,8 @@ export async function createCompressedUpdateBucketActions(
         const compressedBase64Strings = await compressionPool.submit(byteArrays);
         return compressedBase64Strings.map((compressedBase64, index) => {
           const bucket = batchSubset[index];
-          const bucketInfo = createSendBucketInfo(bucket.zoomedAddress, bucket.cube.resolutionInfo);
-          return updateBucket(bucketInfo, compressedBase64);
+          const bucketInfo = createSendBucketInfo(bucket.zoomedAddress, bucket.cube.magInfo);
+          return updateBucket(bucketInfo, compressedBase64, bucket.getTracingId());
         });
       }),
     ),

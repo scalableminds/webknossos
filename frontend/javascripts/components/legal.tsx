@@ -1,9 +1,9 @@
-import { Row, Col, Card } from "antd";
+import { getDefaultOrganization, getOperatorData } from "admin/admin_rest_api";
+import { Card, Col, Row } from "antd";
 import Markdown from "libs/markdown_adapter";
 import React from "react";
 import type { APIOrganization } from "types/api_flow_types";
-import { getOperatorData, getDefaultOrganization } from "admin/admin_rest_api";
-import { EmptyObject } from "types/globals";
+import type { EmptyObject } from "types/globals";
 type Props = EmptyObject;
 type State = {
   operatorData: string;
@@ -34,7 +34,7 @@ class LegalBase extends React.PureComponent<Props, State> {
     return (
       this.state.operatorData +
       // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
-      (this.state.defaultOrganization != null ? this.state.defaultOrganization.name : "")
+      (this.state.defaultOrganization != null ? this.state.defaultOrganization.id : "")
     );
   }
 }
@@ -139,7 +139,7 @@ export class Privacy extends LegalBase {
             <h3>Data controller</h3>
             {this.state.defaultOrganization != null ? (
               // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
-              <div key={this.state.defaultOrganization.name}>
+              <div key={this.state.defaultOrganization.id}>
                 <Markdown
                   // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
                   source={this.state.defaultOrganization.additionalInformation}

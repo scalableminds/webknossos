@@ -11,7 +11,7 @@ import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -29,6 +29,7 @@ case class Job(
     _voxelyticsWorkflowHash: Option[String] = None,
     latestRunId: Option[String] = None,
     returnValue: Option[String] = None,
+    retriedBySuperUser: Boolean = false,
     started: Option[Long] = None,
     ended: Option[Long] = None,
     created: Instant = Instant.now,
@@ -51,39 +52,54 @@ case class Job(
 
   def datasetName: Option[String] = argAsStringOpt("dataset_name")
 
-  private def argAsStringOpt(key: String) = (commandArgs \ key).toOption.flatMap(_.asOpt[String])
+  def datasetId: Option[String] = argAsStringOpt("dataset_id")
 
-  def resultLink(organizationName: String): Option[String] =
+  private def argAsStringOpt(key: String) = (commandArgs \ key).toOption.flatMap(_.asOpt[String])
+  private def argAsBooleanOpt(key: String) = (commandArgs \ key).toOption.flatMap(_.asOpt[Boolean])
+
+  def resultLink(organizationId: String): Option[String] =
     if (effectiveState != JobState.SUCCESS) None
     else {
       command match {
         case JobCommand.convert_to_wkw | JobCommand.compute_mesh_file =>
-          datasetName.map { dsName =>
-            s"/datasets/$organizationName/$dsName/view"
-          }
+          datasetId.map { datasetId =>
+            val datasetNameMaybe = datasetName.map(name => s"$name-").getOrElse("")
+            Some(s"/datasets/$datasetNameMaybe$datasetId/view")
+          }.getOrElse(datasetName.map(name => s"datasets/$organizationId/$name/view"))
         case JobCommand.export_tiff | JobCommand.render_animation =>
           Some(s"/api/jobs/${this._id}/export")
+        case JobCommand.infer_neurons if this.argAsBooleanOpt("do_evaluation").getOrElse(false) =>
+          returnValue.map { resultAnnotationLink =>
+            resultAnnotationLink
+          }
         case JobCommand.infer_nuclei | JobCommand.infer_neurons | JobCommand.materialize_volume_annotation |
             JobCommand.infer_with_model | JobCommand.infer_mitochondria | JobCommand.align_sections =>
-          returnValue.map { resultDatasetName =>
-            s"/datasets/$organizationName/$resultDatasetName/view"
+          // Old jobs before the dataset renaming changes returned the output dataset name.
+          // New jobs return the directory name. Thus, the resulting link should be
+          returnValue.map { resultDatasetDirectoryName =>
+            s"/datasets/$organizationId/$resultDatasetDirectoryName/view"
           }
         case _ => None
       }
     }
 
-  def resultLinkPublic(organizationName: String, webknossosPublicUrl: String): Option[String] =
+  def resultLinkPublic(organizationId: String, webknossosPublicUrl: String): Option[String] =
     for {
-      resultLink <- resultLink(organizationName)
+      resultLink <- resultLink(organizationId)
       resultLinkPublic = if (resultLink.startsWith("/")) s"$webknossosPublicUrl$resultLink"
       else s"$resultLink"
     } yield resultLinkPublic
 
-  def resultLinkSlackFormatted(organizationName: String, webknossosPublicUrl: String): Option[String] =
-    for {
-      resultLink <- resultLinkPublic(organizationName, webknossosPublicUrl)
+  def resultLinkSlackFormatted(organizationId: String, webknossosPublicUrl: String): String =
+    (for {
+      resultLink <- resultLinkPublic(organizationId, webknossosPublicUrl)
       resultLinkFormatted = s" <$resultLink|Result>"
-    } yield resultLinkFormatted
+    } yield resultLinkFormatted).getOrElse("")
+
+  def workflowLinkSlackFormatted(webknossosPublicUrl: String): String =
+    _voxelyticsWorkflowHash.map { hash =>
+      s" <$webknossosPublicUrl/workflows/$hash|Workflow Report>"
+    }.getOrElse("")
 }
 
 class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
@@ -111,6 +127,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         r._VoxelyticsWorkflowhash,
         r.latestrunid,
         r.returnvalue,
+        r.retriedbysuperuser,
         r.started.map(_.getTime),
         r.ended.map(_.getTime),
         Instant.fromSql(r.created),
@@ -136,7 +153,9 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
      """
 
   private def listAccessQ(requestingUserId: ObjectId) =
-    q"""_owner = $requestingUserId"""
+    q"""_owner = $requestingUserId OR
+       ((SELECT u._organization FROM webknossos.users_ u WHERE u._id = _owner) IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin))
+     """
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Job]] =
     for {
@@ -205,13 +224,13 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
-  def organizationIdForJobId(jobId: ObjectId): Fox[ObjectId] =
+  def organizationIdForJobId(jobId: ObjectId): Fox[String] =
     for {
       r <- run(q"""SELECT u._organization
            FROM webknossos.users u
            JOIN webknossos.jobs j ON j._owner = u._id
            WHERE j._id = $jobId
-           """.as[ObjectId])
+           """.as[String])
       firstRow <- r.headOption
     } yield firstRow
 
@@ -234,6 +253,15 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       _ <- assertUpdateAccess(id)
       _ <- run(q"""UPDATE webknossos.jobs SET manualState = $manualState WHERE _id = $id""".asUpdate)
+    } yield ()
+
+  def retryOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(id)
+      _ <- run(q"""UPDATE webknossos.jobs
+             SET state = 'PENDING', retriedBySuperUser = true
+             WHERE _id = $id
+             AND state = 'FAILURE'""".asUpdate)
     } yield ()
 
   def updateStatus(jobId: ObjectId, s: JobStatus): Fox[Unit] =

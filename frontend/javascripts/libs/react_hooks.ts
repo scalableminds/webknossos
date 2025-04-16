@@ -1,5 +1,6 @@
+import _ from "lodash";
 import constants from "oxalis/constants";
-import { useState, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { KEYBOARD_BUTTON_LOOP_INTERVAL } from "./input";
 
@@ -132,7 +133,7 @@ export function useRepeatedButtonTrigger(
   return {
     // Don't do anything on click to avoid that the trigger
     // is called twice on touch start.
-    onClick: () => {},
+    onClick: _.noop,
     onTouchStart,
     onTouchEnd,
   };
@@ -199,4 +200,38 @@ export function useEffectOnlyOnce(callback: () => void | (() => void)) {
   useEffect(() => {
     return callback();
   }, []);
+}
+
+// This hook allows to access the current state value in an asynchronous function call.
+// Due to the nature of hooks, the ref value might be one render cycle ahead of the state value.
+// If the ref value should preferably be one render cycle behind the state value,
+// use a different hook that uses an effect instead of a wrapped state setter.
+export function useStateWithRef<T>(initialValue: T) {
+  const [state, setState] = useState(initialValue);
+  const ref = useRef(state);
+
+  const wrappedSetState = (newState: T | ((prevState: T) => T)) => {
+    setState((prevState: T) => {
+      const nextState =
+        typeof newState === "function" ? (newState as (prevState: T) => T)(prevState) : newState;
+      ref.current = nextState;
+      return nextState;
+    });
+  };
+
+  return [state, ref, wrappedSetState] as const;
+}
+
+export function useIsMounted() {
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const isMounted = useCallback(() => isMountedRef.current, []);
+
+  return isMounted;
 }

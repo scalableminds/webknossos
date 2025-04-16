@@ -47,10 +47,10 @@ td.nowrap * {
 .centered-items {
   display: flex;
   flex-direction: row;
+  justify-content: center;
 
   & > * {
     margin: 6px;
-    font-size: 14;
   }
 
   &:first-child {
@@ -155,4 +155,29 @@ td.nowrap * {
 .is-dragging * {
   cursor: grabbing !important;
   user-select: none;
+}
+
+.resizable-two-split-pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  .child-1 {
+    overflow-y: auto;
+    flex-grow: 1;
+  }
+
+  .resizable-divider {
+    padding: 2px 0 10px;
+    cursor: row-resize;
+
+    .ant-divider {
+      margin: 0;
+    }
+  }
+
+  .child-2 {
+    overflow-y: auto;
+    flex-shrink: 1;
+  }
 }

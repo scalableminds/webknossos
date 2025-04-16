@@ -1,16 +1,15 @@
+import { updateDatasetConfiguration, updateUserConfiguration } from "admin/admin_rest_api";
+import ErrorHandling from "libs/error_handling";
+import Toast from "libs/toast";
+import messages from "messages";
+import type { UpdateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { type Saga, select, take } from "oxalis/model/sagas/effect-generators";
 import {
   SETTINGS_MAX_RETRY_COUNT,
   SETTINGS_RETRY_DELAY,
 } from "oxalis/model/sagas/save_saga_constants";
-import { type Saga, take, select } from "oxalis/model/sagas/effect-generators";
-import { all, takeEvery, debounce, call, retry } from "typed-redux-saga";
-import type { UpdateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { trackAction } from "oxalis/model/helpers/analytics";
-import { updateUserConfiguration, updateDatasetConfiguration } from "admin/admin_rest_api";
-import ErrorHandling from "libs/error_handling";
-import Toast from "libs/toast";
-import messages from "messages";
-import { DatasetConfiguration, DatasetLayerConfiguration } from "oxalis/store";
+import type { DatasetConfiguration, DatasetLayerConfiguration } from "oxalis/store";
+import { all, call, debounce, retry, takeEvery } from "typed-redux-saga";
 
 function* pushUserSettingsAsync(): Saga<void> {
   const activeUser = yield* select((state) => state.activeUser);
@@ -40,12 +39,12 @@ function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration
       SETTINGS_MAX_RETRY_COUNT,
       SETTINGS_RETRY_DELAY,
       updateDatasetConfiguration,
-      dataset,
+      dataset.id,
       maybeMaskedDatasetConfiguration,
     );
   } catch (error) {
     // We catch errors in view mode as they are not that important here and may annoy the user.
-    const tracing = yield* select((state) => state.tracing);
+    const tracing = yield* select((state) => state.annotation);
     const isViewMode = tracing.annotationType === "View";
 
     if (!isViewMode) {
@@ -97,12 +96,6 @@ function* prepareDatasetSettingsForSaving(
   return maskedDatasetConfiguration;
 }
 
-function* trackUserSettingsAsync(action: UpdateUserSettingAction): Saga<void> {
-  if (action.propertyName === "newNodeNewTree") {
-    yield* call(trackAction, `${action.value ? "Enabled" : "Disabled"} soma clicking`);
-  }
-}
-
 function* showUserSettingToast(action: UpdateUserSettingAction): Saga<void> {
   const { propertyName } = action;
 
@@ -129,7 +122,6 @@ export default function* watchPushSettingsAsync(): Saga<void> {
       pushDatasetSettingsAsync(originalDatasetSettings),
     ),
     debounce(2500, "UPDATE_LAYER_SETTING", () => pushDatasetSettingsAsync(originalDatasetSettings)),
-    takeEvery("UPDATE_USER_SETTING", trackUserSettingsAsync),
     takeEvery("UPDATE_USER_SETTING", showUserSettingToast),
   ]);
 }

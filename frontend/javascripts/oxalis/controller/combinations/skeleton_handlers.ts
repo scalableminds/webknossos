@@ -1,23 +1,11 @@
-import * as THREE from "three";
+import { V3 } from "libs/mjs";
+import { values } from "libs/utils";
+import _ from "lodash";
 import type { OrthoView, OrthoViewMap, Point2, Vector3, Viewport } from "oxalis/constants";
 import { OrthoViews } from "oxalis/constants";
-import { V3 } from "libs/mjs";
-import _ from "lodash";
-import { enforce, values } from "libs/utils";
-import {
-  enforceSkeletonTracing,
-  getSkeletonTracing,
-  getActiveNode,
-  getNodeAndTree,
-  getNodeAndTreeOrNull,
-  getNodePosition,
-  untransformNodePosition,
-} from "oxalis/model/accessors/skeletontracing_accessor";
-import {
-  getInputCatcherRect,
-  calculateGlobalPos,
-  calculateMaybeGlobalPos,
-} from "oxalis/model/accessors/view_mode_accessor";
+import { getClosestHoveredBoundingBox } from "oxalis/controller/combinations/bounding_box_handlers";
+import getSceneController from "oxalis/controller/scene_controller_provider";
+import { getEnabledColorLayers } from "oxalis/model/accessors/dataset_accessor";
 import {
   getActiveMagIndicesForLayers,
   getPosition,
@@ -25,28 +13,41 @@ import {
   isMagRestrictionViolated,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
-  setActiveNodeAction,
-  deleteEdgeAction,
-  createTreeAction,
-  createNodeAction,
+  enforceSkeletonTracing,
+  getActiveNode,
+  getNodeAndTree,
+  getNodeAndTreeOrNull,
+  getNodePosition,
+  getSkeletonTracing,
+  untransformNodePosition,
+} from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  calculateGlobalPos,
+  calculateMaybeGlobalPos,
+  getInputCatcherRect,
+} from "oxalis/model/accessors/view_mode_accessor";
+import { setDirectionAction } from "oxalis/model/actions/flycam_actions";
+import {
   createBranchPointAction,
+  createNodeAction,
+  createTreeAction,
+  deleteEdgeAction,
   mergeTreesAction,
+  setActiveNodeAction,
   setNodePositionAction,
   updateNavigationListAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { setDirectionAction } from "oxalis/model/actions/flycam_actions";
-import type PlaneView from "oxalis/view/plane_view";
-import Store from "oxalis/store";
-import type { Edge, Tree, Node } from "oxalis/store";
-import { api } from "oxalis/singletons";
-import getSceneController from "oxalis/controller/scene_controller_provider";
-import { renderToTexture } from "oxalis/view/rendering_utils";
-import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
-import Dimensions from "oxalis/model/dimensions";
-import { getClosestHoveredBoundingBox } from "oxalis/controller/combinations/bounding_box_handlers";
-import { getEnabledColorLayers } from "oxalis/model/accessors/dataset_accessor";
-import ArbitraryView from "oxalis/view/arbitrary_view";
 import { showContextMenuAction } from "oxalis/model/actions/ui_actions";
+import Dimensions from "oxalis/model/dimensions";
+import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
+import { api } from "oxalis/singletons";
+import Store from "oxalis/store";
+import type { Edge, Node, Tree } from "oxalis/store";
+import type ArbitraryView from "oxalis/view/arbitrary_view";
+import type PlaneView from "oxalis/view/plane_view";
+import { renderToTexture } from "oxalis/view/rendering_utils";
+import * as THREE from "three";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 const OrthoViewToNumber: OrthoViewMap<number> = {
   [OrthoViews.PLANE_XY]: 0,
   [OrthoViews.PLANE_YZ]: 1,
@@ -60,13 +61,14 @@ export function handleMergeTrees(
   isTouch: boolean,
 ) {
   const nodeId = maybeGetNodeIdFromPosition(view, position, plane, isTouch);
-  const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
+  const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
 
   // otherwise we have hit the background and do nothing
   if (nodeId != null && nodeId > 0) {
-    getActiveNode(skeletonTracing).map((activeNode) =>
-      Store.dispatch(mergeTreesAction(activeNode.id, nodeId)),
-    );
+    const activeNode = getActiveNode(skeletonTracing);
+    if (activeNode) {
+      Store.dispatch(mergeTreesAction(activeNode.id, nodeId));
+    }
   }
 }
 export function handleDeleteEdge(
@@ -76,13 +78,14 @@ export function handleDeleteEdge(
   isTouch: boolean,
 ) {
   const nodeId = maybeGetNodeIdFromPosition(view, position, plane, isTouch);
-  const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
+  const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
 
   // otherwise we have hit the background and do nothing
   if (nodeId != null && nodeId > 0) {
-    getActiveNode(skeletonTracing).map((activeNode) =>
-      Store.dispatch(deleteEdgeAction(activeNode.id, nodeId)),
-    );
+    const activeNode = getActiveNode(skeletonTracing);
+    if (activeNode) {
+      Store.dispatch(deleteEdgeAction(activeNode.id, nodeId));
+    }
   }
 }
 export function handleSelectNode(
@@ -101,7 +104,7 @@ export function handleSelectNode(
 
   return false;
 }
-export function handleCreateNode(position: Point2, ctrlPressed: boolean) {
+export function handleCreateNodeFromEvent(position: Point2, ctrlPressed: boolean) {
   const state = Store.getState();
 
   if (isMagRestrictionViolated(state)) {
@@ -123,7 +126,7 @@ export function handleCreateNode(position: Point2, ctrlPressed: boolean) {
   }
 
   const globalPosition = calculateGlobalPos(state, position);
-  setWaypoint(globalPosition, activeViewport, ctrlPressed);
+  handleCreateNodeFromGlobalPosition(globalPosition, activeViewport, ctrlPressed);
 }
 export function handleOpenContextMenu(
   planeView: PlaneView,
@@ -178,13 +181,13 @@ export function moveNode(
   useFloat: boolean = false,
 ) {
   // dx and dy are measured in pixel.
-  getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) =>
+  getSkeletonTracing(Store.getState().annotation).map((skeletonTracing) =>
     getNodeAndTree(skeletonTracing, nodeId).map(([activeTree, activeNode]) => {
       const state = Store.getState();
       const { activeViewport } = state.viewModeData.plane;
       const vector = Dimensions.transDim([dx, dy, 0], activeViewport);
       const zoomFactor = state.flycam.zoomStep;
-      const scaleFactor = getBaseVoxelFactors(state.dataset.dataSource.scale);
+      const scaleFactor = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
 
       const op = (val: number) => {
         if (useFloat) {
@@ -220,7 +223,7 @@ export function moveNode(
 }
 
 export function finishNodeMovement(nodeId: number) {
-  getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) =>
+  getSkeletonTracing(Store.getState().annotation).map((skeletonTracing) =>
     getNodeAndTree(skeletonTracing, nodeId).map(([activeTree, node]) => {
       Store.dispatch(
         setNodePositionAction(
@@ -233,53 +236,83 @@ export function finishNodeMovement(nodeId: number) {
   );
 }
 
-export function setWaypoint(
+export function handleCreateNodeFromGlobalPosition(
   position: Vector3,
   activeViewport: OrthoView,
   ctrlIsPressed: boolean,
 ): void {
-  const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
-  const activeNodeMaybe = getActiveNode(skeletonTracing);
-  const rotation = getRotationOrtho(activeViewport);
-  // set the new trace direction
-  activeNodeMaybe.map((activeNode) => {
-    const activeNodePosition = getNodePosition(activeNode, Store.getState());
-    return Store.dispatch(
-      setDirectionAction([
-        position[0] - activeNodePosition[0],
-        position[1] - activeNodePosition[1],
-        position[2] - activeNodePosition[2],
-      ]),
-    );
-  });
   const state = Store.getState();
   // Create a new tree automatically if the corresponding setting is true and allowed
   const createNewTree =
-    state.tracing.restrictions.somaClickingAllowed && state.userConfiguration.newNodeNewTree;
-  // Center node if the corresponding setting is true. Only pressing CTRL can override this.
-  const center = state.userConfiguration.centerNewNode && !ctrlIsPressed;
-  // Only create a branchpoint if CTRL is pressed. Unless newNodeNewTree is activated (branchpoints make no sense then)
-  const branchpoint = ctrlIsPressed && !state.userConfiguration.newNodeNewTree;
-  // Always activate the new node unless CTRL is pressed. If there is no current node,
-  // the new one is still activated regardless of CTRL (otherwise, using CTRL+click in an empty tree multiple times would
-  // not create any edges; see https://github.com/scalableminds/webknossos/issues/5303).
-  const activate = !ctrlIsPressed || activeNodeMaybe.isNothing;
-  addNode(position, rotation, createNewTree, center, branchpoint, activate);
-}
-
-function addNode(
-  position: Vector3,
-  rotation: Vector3,
-  createNewTree: boolean,
-  center: boolean,
-  branchpoint: boolean,
-  activate: boolean,
-): void {
+    state.annotation.restrictions.somaClickingAllowed && state.userConfiguration.newNodeNewTree;
   if (createNewTree) {
     Store.dispatch(createTreeAction());
   }
 
+  const {
+    additionalCoordinates,
+    rotation,
+    center,
+    branchpoint,
+    activate,
+    skipCenteringAnimationInThirdDimension,
+  } = getOptionsForCreateSkeletonNode(activeViewport, ctrlIsPressed);
+  createSkeletonNode(
+    position,
+    additionalCoordinates,
+    rotation,
+    center,
+    branchpoint,
+    activate,
+    skipCenteringAnimationInThirdDimension,
+  );
+}
+
+export function getOptionsForCreateSkeletonNode(
+  activeViewport: OrthoView | null = null,
+  ctrlIsPressed: boolean = false,
+) {
   const state = Store.getState();
+  const additionalCoordinates = state.flycam.additionalCoordinates;
+  const skeletonTracing = enforceSkeletonTracing(state.annotation);
+  const activeNode = getActiveNode(skeletonTracing);
+  const rotation = getRotationOrtho(activeViewport || state.viewModeData.plane.activeViewport);
+
+  // Center node if the corresponding setting is true. Only pressing CTRL can override this.
+  const center = state.userConfiguration.centerNewNode && !ctrlIsPressed;
+
+  // Only create a branchpoint if CTRL is pressed. Unless newNodeNewTree is activated (branchpoints make no sense then)
+  const branchpoint = ctrlIsPressed && !state.userConfiguration.newNodeNewTree;
+
+  // Always activate the new node unless CTRL is pressed. If there is no current node,
+  // the new one is still activated regardless of CTRL (otherwise, using CTRL+click in an empty tree multiple times would
+  // not create any edges; see https://github.com/scalableminds/webknossos/issues/5303).
+  const activate = !ctrlIsPressed || activeNode == null;
+
+  const skipCenteringAnimationInThirdDimension = true;
+
+  return {
+    additionalCoordinates,
+    rotation,
+    center,
+    branchpoint,
+    activate,
+    skipCenteringAnimationInThirdDimension,
+  };
+}
+
+export function createSkeletonNode(
+  position: Vector3,
+  additionalCoordinates: AdditionalCoordinate[] | null,
+  rotation: Vector3,
+  center: boolean,
+  branchpoint: boolean,
+  activate: boolean,
+  skipCenteringAnimationInThirdDimension: boolean,
+): void {
+  updateTraceDirection(position);
+
+  let state = Store.getState();
   const enabledColorLayers = getEnabledColorLayers(state.dataset, state.datasetConfiguration);
   const activeMagIndices = getActiveMagIndicesForLayers(state);
   const activeMagIndicesOfEnabledColorLayers = _.pick(
@@ -292,7 +325,7 @@ function addNode(
   Store.dispatch(
     createNodeAction(
       untransformNodePosition(position, state),
-      state.flycam.additionalCoordinates,
+      additionalCoordinates,
       rotation,
       OrthoViewToNumber[Store.getState().viewModeData.plane.activeViewport],
       // This is the magnification index at which the node was created. Since
@@ -305,18 +338,40 @@ function addNode(
     ),
   );
 
+  // We need a reference to the new store state, so that the new node exists in it.
+  state = Store.getState();
+
   if (center) {
-    // we created a new node, so get a new reference from the current store state
-    const newState = Store.getState();
-    enforce(getActiveNode)(newState.tracing.skeleton).map((newActiveNode) =>
-      // Center the position of the active node without modifying the "third" dimension (see centerPositionAnimated)
-      // This is important because otherwise the user cannot continue to trace until the animation is over
-      api.tracing.centerPositionAnimated(getNodePosition(newActiveNode, state), true),
-    );
+    const newSkeleton = enforceSkeletonTracing(state.annotation);
+    // Note that the new node isn't necessarily active
+    const newNodeId = newSkeleton.cachedMaxNodeId;
+
+    const { activeTreeId } = newSkeleton;
+    getNodeAndTree(newSkeleton, newNodeId, activeTreeId).map(([, newNode]) => {
+      api.tracing.centerPositionAnimated(
+        getNodePosition(newNode, state),
+        skipCenteringAnimationInThirdDimension,
+      );
+    });
   }
 
   if (branchpoint) {
     Store.dispatch(createBranchPointAction());
+  }
+}
+
+function updateTraceDirection(position: Vector3) {
+  const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
+  const activeNode = getActiveNode(skeletonTracing);
+  if (activeNode != null) {
+    const activeNodePosition = getNodePosition(activeNode, Store.getState());
+    return Store.dispatch(
+      setDirectionAction([
+        position[0] - activeNodePosition[0],
+        position[1] - activeNodePosition[1],
+        position[2] - activeNodePosition[2],
+      ]),
+    );
   }
 }
 
@@ -402,7 +457,7 @@ function getPrecedingNodeFromTree(
 }
 
 export function toSubsequentNode(): void {
-  const tracing = enforceSkeletonTracing(Store.getState().tracing);
+  const tracing = enforceSkeletonTracing(Store.getState().annotation);
   const { navigationList, activeNodeId, activeTreeId } = tracing;
   if (activeNodeId == null) return;
   const isValidList =
@@ -436,7 +491,7 @@ export function toSubsequentNode(): void {
   }
 }
 export function toPrecedingNode(): void {
-  const tracing = enforceSkeletonTracing(Store.getState().tracing);
+  const tracing = enforceSkeletonTracing(Store.getState().annotation);
   const { navigationList, activeNodeId, activeTreeId } = tracing;
   if (activeNodeId == null) return;
   const isValidList =

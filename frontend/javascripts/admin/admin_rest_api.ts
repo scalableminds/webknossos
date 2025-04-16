@@ -1,103 +1,103 @@
-import ResumableJS from "resumablejs";
-import _ from "lodash";
 import dayjs from "dayjs";
-import type {
-  APIActiveUser,
-  APIAnnotation,
-  APIAnnotationInfo,
-  APIAnnotationType,
-  APIAnnotationVisibility,
-  APIAnnotationWithTask,
-  APIBuildInfo,
-  APIConnectomeFile,
-  APIDataSource,
-  APIDataSourceWithMessages,
-  APIDataStore,
-  APIDataset,
-  APIDatasetId,
-  APIFeatureToggles,
-  APIHistogramData,
-  APIMapping,
-  APIMaybeUnimportedDataset,
-  APIMeshFile,
-  APIAvailableTasksReport,
-  APIOrganization,
-  APIOrganizationCompact,
-  APIProject,
-  APIProjectCreator,
-  APIProjectProgressReport,
-  APIProjectUpdater,
-  APIProjectWithStatus,
-  APIPublication,
-  APIResolutionRestrictions,
-  APIScript,
-  APIScriptCreator,
-  APIScriptUpdater,
-  APITask,
-  APITaskType,
-  APITeam,
-  APITimeInterval,
-  APITimeTrackingPerAnnotation,
-  APITimeTrackingSpan,
-  APITracingStore,
-  APIUpdateActionBatch,
-  APIUser,
-  APIUserLoggedTime,
-  APIUserTheme,
-  AnnotationLayerDescriptor,
-  AnnotationViewConfiguration,
-  EditableLayerProperties,
-  ExperienceDomainList,
-  ServerTracing,
-  TracingType,
-  ServerEditableMapping,
-  APICompoundType,
-  ZarrPrivateLink,
-  VoxelyticsWorkflowReport,
-  VoxelyticsChunkStatistics,
-  ShortLink,
-  VoxelyticsWorkflowListing,
-  APIPricingPlanStatus,
-  VoxelyticsLogLine,
-  APIUserCompact,
-  APIDatasetCompact,
-  MaintenanceInfo,
-  AdditionalCoordinate,
-  LayerLink,
-  APITimeTrackingPerUser,
-} from "types/api_flow_types";
-import { APIAnnotationTypeEnum } from "types/api_flow_types";
-import type { LOG_LEVELS, Vector2, Vector3 } from "oxalis/constants";
-import Constants, { ControlModeEnum } from "oxalis/constants";
-import type {
-  DatasetConfiguration,
-  PartialDatasetConfiguration,
-  Tracing,
-  TraceOrViewCommand,
-  MappingType,
-  VolumeTracing,
-  UserConfiguration,
-} from "oxalis/store";
-import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
-import type { QueryObject } from "admin/task/task_search_form";
 import { V3 } from "libs/mjs";
-import type { Versions } from "oxalis/view/version_view";
-import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
-import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
 import type { RequestOptions } from "libs/request";
 import Request from "libs/request";
 import type { Message } from "libs/toast";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import messages from "messages";
 import window, { location } from "libs/window";
-import { SaveQueueType } from "oxalis/model/actions/save_actions";
-import { DatasourceConfiguration } from "types/schemas/datasource.types";
-import { doWithToken } from "./api/token";
-import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import { ArbitraryObject } from "types/globals";
+import _ from "lodash";
+import messages from "messages";
+import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector3 } from "oxalis/constants";
+import Constants, { ControlModeEnum, AnnotationStateFilterEnum } from "oxalis/constants";
+import type BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
+import {
+  parseProtoAnnotation,
+  parseProtoListOfLong,
+  parseProtoTracing,
+  serializeProtoListOfLong,
+} from "oxalis/model/helpers/proto_helpers";
+import type {
+  DatasetConfiguration,
+  Mapping,
+  MappingType,
+  NumberLike,
+  PartialDatasetConfiguration,
+  StoreAnnotation,
+  TraceOrViewCommand,
+  UserConfiguration,
+  VolumeTracing,
+} from "oxalis/store";
+import ResumableJS from "resumablejs";
+import {
+  type APIAnnotation,
+  type APIAnnotationInfo,
+  type APIAnnotationType,
+  type APIAnnotationVisibility,
+  type APIAvailableTasksReport,
+  type APIBuildInfo,
+  type APICompoundType,
+  type APIConnectomeFile,
+  type APIDataSource,
+  type APIDataSourceId,
+  type APIDataStore,
+  type APIDataset,
+  type APIDatasetCompact,
+  type APIFeatureToggles,
+  type APIHistogramData,
+  type APIMagRestrictions,
+  type APIMapping,
+  type APIMaybeUnimportedDataset,
+  type APIMeshFile,
+  type APIOrganization,
+  type APIOrganizationCompact,
+  type APIPricingPlanStatus,
+  type APIProject,
+  type APIProjectCreator,
+  type APIProjectProgressReport,
+  type APIProjectUpdater,
+  type APIProjectWithStatus,
+  type APIPublication,
+  type APIScript,
+  type APIScriptCreator,
+  type APIScriptUpdater,
+  type APITaskType,
+  type APITeam,
+  type APITimeInterval,
+  type APITimeTrackingPerAnnotation,
+  type APITimeTrackingPerUser,
+  type APITimeTrackingSpan,
+  type APITracingStore,
+  type APITracingStoreAnnotation,
+  type APIUpdateActionBatch,
+  type APIUser,
+  type APIUserCompact,
+  type APIUserLoggedTime,
+  type APIUserTheme,
+  type AdditionalCoordinate,
+  type AnnotationLayerDescriptor,
+  AnnotationLayerEnum,
+  type AnnotationViewConfiguration,
+  type ExperienceDomainList,
+  type LayerLink,
+  type MaintenanceInfo,
+  type ServerEditableMapping,
+  type ServerTracing,
+  type ShortLink,
+  type TracingType,
+  type VoxelSize,
+  type VoxelyticsChunkStatistics,
+  type VoxelyticsLogLine,
+  type VoxelyticsWorkflowListing,
+  type VoxelyticsWorkflowReport,
+  type ZarrPrivateLink,
+} from "types/api_flow_types";
+import type { ArbitraryObject } from "types/globals";
+import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
+import type { DatasourceConfiguration } from "types/schemas/datasource.types";
 import { assertResponseLimit } from "./api/api_utils";
-import { AnnotationTypeFilterEnum } from "admin/statistic/project_and_annotation_type_dropdown";
+import { getDatasetIdFromNameAndOrganization } from "./api/disambiguate_legacy_routes";
+import { doWithToken } from "./api/token";
 
 export * from "./api/token";
 export * from "./api/jobs";
@@ -403,112 +403,6 @@ export async function resumeProject(projectId: string): Promise<APIProject> {
   });
   return transformProject(project);
 }
-// ### Tasks
-export function peekNextTasks(): Promise<APITask | null | undefined> {
-  return Request.receiveJSON("/api/user/tasks/peek");
-}
-export async function requestTask(): Promise<APIAnnotationWithTask> {
-  const taskWithMessages = await Request.receiveJSON("/api/user/tasks/request", {
-    method: "POST",
-  });
-  // Extract the potential messages property before returning the task to avoid
-  // failing e2e tests in annotations.e2e.ts
-  const { messages: _messages, ...task } = taskWithMessages;
-  return task;
-}
-export function getAnnotationsForTask(taskId: string): Promise<Array<APIAnnotation>> {
-  return Request.receiveJSON(`/api/tasks/${taskId}/annotations`);
-}
-export function deleteTask(taskId: string): Promise<void> {
-  return Request.receiveJSON(`/api/tasks/${taskId}`, {
-    method: "DELETE",
-  });
-}
-
-function transformTask(task: APITask): APITask {
-  const tracingTime = task.tracingTime == null ? 0 : task.tracingTime;
-  // convert bounding box
-  let boundingBoxVec6;
-
-  if (task.boundingBox != null) {
-    const { topLeft, width, height, depth } = task.boundingBox;
-    boundingBoxVec6 = Utils.numberArrayToVector6(topLeft.concat([width, height, depth]));
-  }
-
-  return { ...task, tracingTime, boundingBoxVec6 };
-}
-
-export async function getTasks(queryObject: QueryObject): Promise<APITask[]> {
-  const responses = await Request.sendJSONReceiveJSON("/api/tasks/list", {
-    data: queryObject,
-  });
-  const tasks = responses.map((response: APITask) => transformTask(response));
-  assertResponseLimit(tasks);
-  return tasks;
-}
-
-export function createTasks(tasks: NewTask[]): Promise<TaskCreationResponseContainer> {
-  return Request.sendJSONReceiveJSON("/api/tasks", {
-    data: tasks,
-  });
-}
-
-export function createTaskFromNML(task: NewTask): Promise<TaskCreationResponseContainer> {
-  return Request.sendMultipartFormReceiveJSON("/api/tasks/createFromFiles", {
-    data: {
-      nmlFiles: task.nmlFiles,
-      formJSON: JSON.stringify(task),
-    },
-  });
-}
-
-export async function getTask(taskId: string, options: RequestOptions = {}): Promise<APITask> {
-  const task = await Request.receiveJSON(`/api/tasks/${taskId}`, options);
-  return transformTask(task);
-}
-
-export async function updateTask(taskId: string, task: NewTask): Promise<APITask> {
-  const updatedTask = await Request.sendJSONReceiveJSON(`/api/tasks/${taskId}`, {
-    method: "PUT",
-    data: task,
-  });
-  return transformTask(updatedTask);
-}
-
-export function finishTask(annotationId: string): Promise<APIAnnotation> {
-  return finishAnnotation(annotationId, APIAnnotationTypeEnum.Task);
-}
-
-export function transferTask(annotationId: string, userId: string): Promise<APIAnnotation> {
-  return Request.sendJSONReceiveJSON(`/api/annotations/Task/${annotationId}/transfer`, {
-    method: "PATCH",
-    data: {
-      userId,
-    },
-  });
-}
-
-export async function transferActiveTasksOfProject(
-  projectId: string,
-  userId: string,
-): Promise<APIAnnotation> {
-  return Request.sendJSONReceiveJSON(`/api/projects/${projectId}/transferActiveTasks`, {
-    data: {
-      userId,
-    },
-    method: "POST",
-  });
-}
-
-export async function getUsersWithActiveTasks(projectId: string): Promise<Array<APIActiveUser>> {
-  return Request.receiveJSON(`/api/projects/${projectId}/usersWithActiveTasks`);
-}
-
-export async function assignTaskToUser(taskId: string, userId: string): Promise<APITask> {
-  return Request.receiveJSON(`/api/tasks/${taskId}/assign?userId=${userId}`, {
-    method: "POST",
-  });
-}
 
 // ### Private Links
 
@@ -593,7 +487,6 @@ export function reOpenAnnotation(
 
 export type EditableAnnotation = {
   name: string;
-  description: string;
   visibility: APIAnnotationVisibility;
   tags: Array<string>;
   viewConfiguration?: AnnotationViewConfiguration;
@@ -636,58 +529,14 @@ export function setOthersMayEditForAnnotation(
   );
 }
 
-export function updateAnnotationLayer(
-  annotationId: string,
-  annotationType: APIAnnotationType,
-  tracingId: string,
-  layerProperties: EditableLayerProperties,
-): Promise<{
-  name: string | null | undefined;
-}> {
-  return Request.sendJSONReceiveJSON(
-    `/api/annotations/${annotationType}/${annotationId}/editLayer/${tracingId}`,
-    {
-      method: "PATCH",
-      data: layerProperties,
-    },
-  );
-}
-
 type AnnotationLayerCreateDescriptor = {
-  typ: "Skeleton" | "Volume";
+  typ: AnnotationLayerEnum;
   name: string | null | undefined;
   autoFallbackLayer?: boolean;
   fallbackLayerName?: string | null | undefined;
   mappingName?: string | null | undefined;
-  resolutionRestrictions?: APIResolutionRestrictions | null | undefined;
+  magRestrictions?: APIMagRestrictions | null | undefined;
 };
-
-export function addAnnotationLayer(
-  annotationId: string,
-  annotationType: APIAnnotationType,
-  newAnnotationLayer: AnnotationLayerCreateDescriptor,
-): Promise<APIAnnotation> {
-  return Request.sendJSONReceiveJSON(
-    `/api/annotations/${annotationType}/${annotationId}/addAnnotationLayer`,
-    {
-      method: "PATCH",
-      data: newAnnotationLayer,
-    },
-  );
-}
-
-export function deleteAnnotationLayer(
-  annotationId: string,
-  annotationType: APIAnnotationType,
-  layerName: string,
-): Promise<void> {
-  return Request.receiveJSON(
-    `/api/annotations/${annotationType}/${annotationId}/deleteAnnotationLayer?layerName=${layerName}`,
-    {
-      method: "PATCH",
-    },
-  );
-}
 
 export function finishAnnotation(
   annotationId: string,
@@ -745,7 +594,7 @@ export function duplicateAnnotation(
   });
 }
 
-export async function getAnnotationInformation(
+export async function getUnversionedAnnotationInformation(
   annotationId: string,
   options: RequestOptions = {},
 ): Promise<APIAnnotation> {
@@ -773,59 +622,59 @@ export async function getAnnotationCompoundInformation(
 }
 
 export function getEmptySandboxAnnotationInformation(
-  datasetId: APIDatasetId,
+  datasetId: string,
   tracingType: TracingType,
   sharingToken?: string | null | undefined,
   options: RequestOptions = {},
 ): Promise<APIAnnotation> {
   const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
-  const infoUrl = `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/sandbox/${tracingType}${sharingTokenSuffix}`;
+  const infoUrl = `/api/datasets/${datasetId}/sandbox/${tracingType}${sharingTokenSuffix}`;
   return Request.receiveJSON(infoUrl, options);
 }
 
 export function createExplorational(
-  datasetId: APIDatasetId,
+  datasetId: string,
   typ: TracingType,
   autoFallbackLayer: boolean,
   fallbackLayerName?: string | null | undefined,
   mappingName?: string | null | undefined,
-  resolutionRestrictions?: APIResolutionRestrictions | null | undefined,
+  magRestrictions?: APIMagRestrictions | null | undefined,
   options: RequestOptions = {},
 ): Promise<APIAnnotation> {
-  const url = `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/createExplorational`;
+  const url = `/api/datasets/${datasetId}/createExplorational`;
   let layers: Array<AnnotationLayerCreateDescriptor> = [];
 
   if (typ === "skeleton") {
     layers = [
       {
-        typ: "Skeleton",
+        typ: AnnotationLayerEnum.Skeleton,
         name: "Skeleton",
       },
     ];
   } else if (typ === "volume") {
     layers = [
       {
-        typ: "Volume",
+        typ: AnnotationLayerEnum.Volume,
         name: fallbackLayerName,
         fallbackLayerName,
         autoFallbackLayer,
         mappingName,
-        resolutionRestrictions,
+        magRestrictions,
       },
     ];
   } else {
     layers = [
       {
-        typ: "Skeleton",
+        typ: AnnotationLayerEnum.Skeleton,
         name: "Skeleton",
       },
       {
-        typ: "Volume",
+        typ: AnnotationLayerEnum.Volume,
         name: fallbackLayerName,
         fallbackLayerName,
         autoFallbackLayer,
         mappingName,
-        resolutionRestrictions,
+        magRestrictions,
       },
     ];
   }
@@ -835,12 +684,14 @@ export function createExplorational(
 
 export async function getTracingsForAnnotation(
   annotation: APIAnnotation,
-  versions: Versions = {},
+  version?: number | null | undefined,
 ): Promise<Array<ServerTracing>> {
-  const skeletonLayers = annotation.annotationLayers.filter((layer) => layer.typ === "Skeleton");
+  const skeletonLayers = annotation.annotationLayers.filter(
+    (layer) => layer.typ === AnnotationLayerEnum.Skeleton,
+  );
   const fullAnnotationLayers = await Promise.all(
     annotation.annotationLayers.map((layer) =>
-      getTracingForAnnotationType(annotation, layer, versions),
+      getTracingForAnnotationType(annotation, layer, version),
     ),
   );
 
@@ -865,39 +716,28 @@ export async function acquireAnnotationMutex(
   return { canEdit, blockedByUser };
 }
 
-function extractVersion(
-  versions: Versions,
-  tracingId: string,
-  typ: "Volume" | "Skeleton",
-): number | null | undefined {
-  if (typ === "Skeleton") {
-    return versions.skeleton;
-  } else if (versions.volumes != null) {
-    return versions.volumes[tracingId];
-  }
-
-  return null;
-}
-
 export async function getTracingForAnnotationType(
   annotation: APIAnnotation,
   annotationLayerDescriptor: AnnotationLayerDescriptor,
-  versions: Versions = {},
+  version?: number | null | undefined,
 ): Promise<ServerTracing> {
   const { tracingId, typ } = annotationLayerDescriptor;
-  const version = extractVersion(versions, tracingId, typ);
-  const tracingType = typ.toLowerCase();
-  const possibleVersionString = version != null ? `&version=${version}` : "";
-  const tracingArrayBuffer = await doWithToken((token) =>
-    Request.receiveArraybuffer(
-      `${annotation.tracingStore.url}/tracings/${tracingType}/${tracingId}?token=${token}${possibleVersionString}`,
+  const tracingType = typ.toLowerCase() as "skeleton" | "volume";
+  const params = new URLSearchParams({ annotationId: annotation.id });
+  if (version != null) {
+    params.set("version", version.toString());
+  }
+  const tracingArrayBuffer = await doWithToken((token) => {
+    params.set("token", token);
+    return Request.receiveArraybuffer(
+      `${annotation.tracingStore.url}/tracings/${tracingType}/${tracingId}?${params}`,
       {
         headers: {
           Accept: "application/x-protobuf",
         },
       },
-    ),
-  );
+    );
+  });
   const tracing = parseProtoTracing(tracingArrayBuffer, tracingType);
 
   if (!process.env.IS_TESTING) {
@@ -911,57 +751,83 @@ export async function getTracingForAnnotationType(
   // on the tracing's structure.
   tracing.typ = typ;
 
-  // @ts-ignore Remove datasetName and organizationName as these should not be used in the front-end, anymore.
+  // @ts-ignore Remove datasetName and organizationId as these should not be used in the front-end, anymore.
   delete tracing.datasetName;
   // @ts-ignore
-  delete tracing.organizationName;
+  delete tracing.organizationId;
 
   return tracing;
 }
 
 export function getUpdateActionLog(
   tracingStoreUrl: string,
-  tracingId: string,
-  versionedObjectType: SaveQueueType,
+  annotationId: string,
   oldestVersion?: number,
   newestVersion?: number,
 ): Promise<Array<APIUpdateActionBatch>> {
   return doWithToken((token) => {
     const params = new URLSearchParams();
-    params.append("token", token);
+    params.set("token", token);
     if (oldestVersion != null) {
-      params.append("oldestVersion", oldestVersion.toString());
+      params.set("oldestVersion", oldestVersion.toString());
     }
     if (newestVersion != null) {
-      params.append("newestVersion", newestVersion.toString());
+      params.set("newestVersion", newestVersion.toString());
     }
     return Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/${versionedObjectType}/${tracingId}/updateActionLog?${params}`,
+      `${tracingStoreUrl}/tracings/annotation/${annotationId}/updateActionLog?${params}`,
     );
   });
 }
 
-export function getNewestVersionForTracing(
+export function getNewestVersionForAnnotation(
   tracingStoreUrl: string,
-  tracingId: string,
-  tracingType: "skeleton" | "volume",
+  annotationId: string,
 ): Promise<number> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/${tracingType}/${tracingId}/newestVersion?token=${token}`,
+      `${tracingStoreUrl}/tracings/annotation/${annotationId}/newestVersion?token=${token}`,
     ).then((obj) => obj.version),
   );
 }
 
+export async function getAnnotationProto(
+  tracingStoreUrl: string,
+  annotationId: string,
+  version?: number | null | undefined,
+): Promise<APITracingStoreAnnotation> {
+  const params = new URLSearchParams();
+  if (version != null) {
+    params.set("version", version.toString());
+  }
+  const annotationArrayBuffer = await doWithToken((token) => {
+    params.set("token", token);
+    return Request.receiveArraybuffer(
+      `${tracingStoreUrl}/tracings/annotation/${annotationId}?${params}`,
+      {
+        headers: {
+          Accept: "application/x-protobuf",
+        },
+      },
+    );
+  });
+  const annotationProto = parseProtoAnnotation(annotationArrayBuffer);
+  if (!process.env.IS_TESTING) {
+    // Log to console as the decoded annotationProto is hard to inspect in the devtools otherwise.
+    console.log("Parsed protobuf annotation:", annotationProto);
+  }
+  return annotationProto;
+}
+
 export function hasSegmentIndexInDataStore(
   dataStoreUrl: string,
-  dataSetName: string,
+  datasetDirectoryName: string,
   dataLayerName: string,
-  organizationName: string,
+  organizationId: string,
 ) {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${dataStoreUrl}/data/datasets/${organizationName}/${dataSetName}/layers/${dataLayerName}/hasSegmentIndex?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${organizationId}/${datasetDirectoryName}/layers/${dataLayerName}/hasSegmentIndex?token=${token}`,
     ),
   );
 }
@@ -997,32 +863,22 @@ export function getSegmentBoundingBoxes(
 }
 
 export async function importVolumeTracing(
-  tracing: Tracing,
+  annotation: StoreAnnotation,
   volumeTracing: VolumeTracing,
   dataFile: File,
+  version: number,
 ): Promise<number> {
   return doWithToken((token) =>
     Request.sendMultipartFormReceiveJSON(
-      `${tracing.tracingStore.url}/tracings/volume/${volumeTracing.tracingId}/importVolumeData?token=${token}`,
+      `${annotation.tracingStore.url}/tracings/volume/${volumeTracing.tracingId}/importVolumeData?token=${token}`,
       {
         data: {
           dataFile,
-          currentVersion: volumeTracing.version,
+          currentVersion: version,
         },
       },
     ),
   );
-}
-
-export function convertToHybridTracing(
-  annotationId: string,
-  fallbackLayerName: string | null | undefined,
-): Promise<void> {
-  return Request.receiveJSON(`/api/annotations/Explorational/${annotationId}/makeHybrid`, {
-    method: "PATCH",
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ method: "PATCH"; fallbackLayer... Remove this comment to see the full error message
-    fallbackLayerName,
-  });
 }
 
 export async function downloadWithFilename(downloadUrl: string) {
@@ -1038,16 +894,14 @@ export async function downloadAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
   showVolumeFallbackDownloadWarning: boolean = false,
-  versions: Versions = {},
+  version: number | null | undefined = null,
   downloadFileFormat: "zarr3" | "wkw" | "nml" = "wkw",
   includeVolumeData: boolean = true,
 ) {
-  const searchParams = new URLSearchParams();
-  Object.entries(versions).forEach(([key, val]) => {
-    if (val != null) {
-      searchParams.append(`${key}Version`, val.toString());
-    }
-  });
+  const params = new URLSearchParams();
+  if (version != null) {
+    params.set("version", version.toString());
+  }
 
   if (includeVolumeData && showVolumeFallbackDownloadWarning) {
     Toast.info(messages["annotation.no_fallback_data_included"], {
@@ -1055,35 +909,20 @@ export async function downloadAnnotation(
     });
   }
   if (!includeVolumeData) {
-    searchParams.append("skipVolumeData", "true");
+    params.set("skipVolumeData", "true");
   } else {
     if (downloadFileFormat === "nml") {
       throw new Error(
         "Cannot download annotation with nml-only format while includeVolumeData is true",
       );
     }
-    searchParams.append("volumeDataZipFormat", downloadFileFormat);
+    params.set("volumeDataZipFormat", downloadFileFormat);
   }
 
-  const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${searchParams}`;
+  const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${params}`;
   await downloadWithFilename(downloadUrl);
 }
 
-// When the annotation is open, please use the corresponding method
-// in api_latest.js. It will take care of saving the annotation and
-// reloading it.
-export async function downsampleSegmentation(
-  annotationId: string,
-  annotationType: APIAnnotationType,
-  tracingId: string,
-): Promise<void> {
-  await Request.receiveJSON(
-    `/api/annotations/${annotationType}/${annotationId}/downsample?tracingId=${tracingId}`,
-    {
-      method: "PATCH",
-    },
-  );
-}
 // ### Datasets
 export async function getDatasets(
   isUnreported: boolean | null | undefined = null,
@@ -1094,56 +933,47 @@ export async function getDatasets(
 ): Promise<Array<APIDatasetCompact>> {
   const params = new URLSearchParams();
   if (isUnreported != null) {
-    params.append("isUnreported", String(isUnreported));
+    params.set("isUnreported", String(isUnreported));
   }
   if (folderId != null && folderId !== "") {
-    params.append("folderId", folderId);
+    params.set("folderId", folderId);
   }
   if (searchQuery != null) {
-    params.append("searchQuery", searchQuery.trim());
+    params.set("searchQuery", searchQuery.trim());
   }
   if (limit != null) {
-    params.append("limit", String(limit));
+    params.set("limit", String(limit));
   }
   if (includeSubfolders != null) {
-    params.append("includeSubfolders", includeSubfolders ? "true" : "false");
+    params.set("includeSubfolders", includeSubfolders ? "true" : "false");
   }
 
-  params.append("compact", "true");
+  params.set("compact", "true");
 
   const datasets = await Request.receiveJSON(`/api/datasets?${params}`);
   assertResponseLimit(datasets);
   return datasets;
 }
 
-export function getDatasetDatasource(
-  dataset: APIMaybeUnimportedDataset,
-): Promise<APIDataSourceWithMessages> {
-  return doWithToken((token) =>
-    Request.receiveJSON(
-      `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.name}?token=${token}`,
-    ),
-  );
-}
-
 export function readDatasetDatasource(dataset: APIDataset): Promise<APIDataSource> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.name}/readInboxDataSource?token=${token}`,
+      `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.directoryName}/readInboxDataSource?token=${token}`,
     ),
   );
 }
 
 export async function updateDatasetDatasource(
-  datasetName: string,
+  datasetDirectoryName: string,
   dataStoreUrl: string,
   datasource: APIDataSource,
 ): Promise<void> {
   await doWithToken((token) =>
     Request.sendJSONReceiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasource.id.team}/${datasetName}?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${datasource.id.team}/${datasetDirectoryName}?token=${token}`,
       {
         data: datasource,
+        method: "PUT",
       },
     ),
   );
@@ -1156,15 +986,27 @@ export async function getActiveDatasetsOfMyOrganization(): Promise<Array<APIData
 }
 
 export function getDataset(
-  datasetId: APIDatasetId,
+  datasetId: string,
   sharingToken?: string | null | undefined,
   options: RequestOptions = {},
 ): Promise<APIDataset> {
   const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
-  return Request.receiveJSON(
-    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}${sharingTokenSuffix}`,
+  return Request.receiveJSON(`/api/datasets/${datasetId}${sharingTokenSuffix}`, options);
+}
+
+export async function getDatasetLegacy(
+  datasetOrga: string,
+  datasetName: string,
+  sharingToken?: string | null | undefined,
+  options: RequestOptions = {},
+): Promise<APIDataset> {
+  const datasetId = await getDatasetIdFromNameAndOrganization(
+    datasetName,
+    datasetOrga,
+    sharingToken,
     options,
   );
+  return getDataset(datasetId, sharingToken, options);
 }
 
 export type DatasetUpdater = {
@@ -1174,19 +1016,17 @@ export type DatasetUpdater = {
   isPublic?: boolean;
   tags?: string[];
   folderId?: string;
+  metadata?: APIDataset["metadata"];
 };
 
 export function updateDatasetPartial(
-  datasetId: APIDatasetId,
+  datasetId: string,
   updater: DatasetUpdater,
 ): Promise<APIDataset> {
-  return Request.sendJSONReceiveJSON(
-    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/updatePartial`,
-    {
-      method: "PATCH",
-      data: updater,
-    },
-  );
+  return Request.sendJSONReceiveJSON(`/api/datasets/${datasetId}/updatePartial`, {
+    method: "PATCH",
+    data: updater,
+  });
 }
 
 export async function getDatasetViewConfiguration(
@@ -1196,7 +1036,7 @@ export async function getDatasetViewConfiguration(
 ): Promise<DatasetConfiguration> {
   const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
   const settings = await Request.sendJSONReceiveJSON(
-    `/api/datasetConfigurations/${dataset.owningOrganization}/${dataset.name}${sharingTokenSuffix}`,
+    `/api/datasetConfigurations/${dataset.id}${sharingTokenSuffix}`,
     {
       data: displayedVolumeTracings,
       method: "POST",
@@ -1207,55 +1047,60 @@ export async function getDatasetViewConfiguration(
 }
 
 export function updateDatasetConfiguration(
-  datasetId: APIDatasetId,
+  datasetId: string,
   datasetConfig: PartialDatasetConfiguration,
   options: RequestOptions = {},
 ): Promise<Record<string, any>> {
-  return Request.sendJSONReceiveJSON(
-    `/api/datasetConfigurations/${datasetId.owningOrganization}/${datasetId.name}`,
-    { ...options, method: "PUT", data: datasetConfig },
-  );
+  return Request.sendJSONReceiveJSON(`/api/datasetConfigurations/${datasetId}`, {
+    ...options,
+    method: "PUT",
+    data: datasetConfig,
+  });
 }
 
-export function getDatasetDefaultConfiguration(
-  datasetId: APIDatasetId,
-): Promise<DatasetConfiguration> {
-  return Request.receiveJSON(
-    `/api/datasetConfigurations/default/${datasetId.owningOrganization}/${datasetId.name}`,
-  );
+export function getDatasetDefaultConfiguration(datasetId: string): Promise<DatasetConfiguration> {
+  return Request.receiveJSON(`/api/datasetConfigurations/default/${datasetId}`);
 }
 
 export function updateDatasetDefaultConfiguration(
-  datasetId: APIDatasetId,
+  datasetId: string,
   datasetConfiguration: DatasetConfiguration,
 ): Promise<ArbitraryObject> {
-  return Request.sendJSONReceiveJSON(
-    `/api/datasetConfigurations/default/${datasetId.owningOrganization}/${datasetId.name}`,
-    {
-      method: "PUT",
-      data: datasetConfiguration,
-    },
-  );
+  return Request.sendJSONReceiveJSON(`/api/datasetConfigurations/default/${datasetId}`, {
+    method: "PUT",
+    data: datasetConfiguration,
+  });
 }
 
-export function getDatasetAccessList(datasetId: APIDatasetId): Promise<Array<APIUser>> {
-  return Request.receiveJSON(
-    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/accessList`,
-  );
+export function getDatasetAccessList(dataset: APIDataset): Promise<Array<APIUser>> {
+  return Request.receiveJSON(`/api/datasets/${dataset.id}/accessList`);
 }
 
 type DatasetCompositionArgs = {
   newDatasetName: string;
   targetFolderId: string;
-  organizationName: string;
-  scale: Vector3;
+  organizationId: string;
+  voxelSize: VoxelSize;
   layers: LayerLink[];
 };
 
-export function createDatasetComposition(datastoreUrl: string, payload: DatasetCompositionArgs) {
+export function createDatasetComposition(
+  datastoreUrl: string,
+  payload: DatasetCompositionArgs,
+): Promise<NewDatasetReply> {
+  // Formatting the dataSourceId to the old format so that the backend can parse it.
+  // And removing the datasetId as the datastore cannot use it.
+  const updatedLayers = payload.layers.map(({ dataSourceId, datasetId, ...rest }) => ({
+    ...rest,
+    dataSourceId: { name: dataSourceId.directoryName, team: dataSourceId.owningOrganization },
+  }));
+  const payloadWithUpdatedLayers = {
+    ...payload,
+    layers: updatedLayers,
+  };
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`${datastoreUrl}/data/datasets/compose?token=${token}`, {
-      data: payload,
+      data: payloadWithUpdatedLayers,
     }),
   );
 }
@@ -1277,14 +1122,14 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
     (token) =>
       // @ts-expect-error ts-migrate(2739) FIXME: Type 'Resumable' is missing the following properti... Remove this comment to see the full error message
       new ResumableJS({
-        testChunks: false,
+        testChunks: true,
         target: `${datastoreUrl}/data/datasets?token=${token}`,
-        chunkSize: 10 * 1024 * 1024,
-        // set chunk size to 10MB
+        chunkSize: 10 * 1024 * 1024, // 10MB
         permanentErrors: [400, 403, 404, 409, 415, 500, 501],
         simultaneousUploads: 3,
         chunkRetryInterval: 2000,
         maxChunkRetries: undefined,
+        xhrTimeout: 10 * 60 * 1000, // 10m
         // @ts-expect-error ts-migrate(2322) FIXME: Type '(file: any) => string' is not assignable to ... Remove this comment to see the full error message
         generateUniqueIdentifier,
       }),
@@ -1292,9 +1137,12 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
 }
 type ReserveUploadInformation = {
   uploadId: string;
-  organization: string;
   name: string;
+  directoryName: string;
+  newDatasetId: string;
+  organization: string;
   totalFileCount: number;
+  filePaths: Array<string>;
   initialTeams: Array<string>;
   folderId: string | null;
 };
@@ -1311,10 +1159,38 @@ export function reserveDatasetUpload(
   );
 }
 
+export type UnfinishedUpload = {
+  uploadId: string;
+  datasetName: string;
+  folderId: string;
+  created: number;
+  filePaths: Array<string> | null | undefined;
+  allowedTeams: Array<string>;
+};
+
+export function getUnfinishedUploads(
+  datastoreHost: string,
+  organizationName: string,
+): Promise<UnfinishedUpload[]> {
+  return doWithToken(async (token) => {
+    const unfinishedUploads = (await Request.receiveJSON(
+      `/data/datasets/getUnfinishedUploads?token=${token}&organizationName=${organizationName}`,
+      {
+        host: datastoreHost,
+      },
+    )) as Array<UnfinishedUpload>;
+    return unfinishedUploads;
+  });
+}
+
+type NewDatasetReply = {
+  newDatasetId: string;
+};
+
 export function finishDatasetUpload(
   datastoreHost: string,
   uploadInformation: ArbitraryObject,
-): Promise<void> {
+): Promise<NewDatasetReply> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`/data/datasets/finishUpload?token=${token}`, {
       data: uploadInformation,
@@ -1376,21 +1252,21 @@ export async function exploreRemoteDataset(
 export async function storeRemoteDataset(
   datastoreUrl: string,
   datasetName: string,
-  organizationName: string,
+  organizationId: string,
   datasource: string,
   folderId: string | null,
-): Promise<void> {
+): Promise<NewDatasetReply> {
   return doWithToken((token) => {
     const params = new URLSearchParams();
-    params.append("token", token);
+    params.set("token", token);
     if (folderId) {
-      params.append("folderId", folderId);
+      params.set("folderId", folderId);
     }
 
     return Request.sendJSONReceiveJSON(
-      `${datastoreUrl}/data/datasets/${organizationName}/${datasetName}?${params}`,
+      `${datastoreUrl}/data/datasets/${organizationId}/${datasetName}?${params}`,
       {
-        method: "PUT",
+        method: "POST",
         data: datasource,
       },
     );
@@ -1398,16 +1274,12 @@ export async function storeRemoteDataset(
 }
 
 // Returns void if the name is valid. Otherwise, a string is returned which denotes the reason.
-export async function isDatasetNameValid(
-  datasetId: APIDatasetId,
-): Promise<string | null | undefined> {
-  if (datasetId.name === "") {
+export async function isDatasetNameValid(datasetName: string): Promise<string | null | undefined> {
+  if (datasetName === "") {
     return "The dataset name must not be empty.";
   }
 
-  const response = await Request.receiveJSON(
-    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/isValidNewName`,
-  );
+  const response = await Request.receiveJSON(`/api/datasets/${datasetName}/isValidNewName`);
   if (response.isValid) {
     return null;
   } else {
@@ -1416,16 +1288,13 @@ export async function isDatasetNameValid(
 }
 
 export function updateDatasetTeams(
-  datasetId: APIDatasetId,
+  datasetId: string,
   newTeams: Array<string>,
 ): Promise<APIDataset> {
-  return Request.sendJSONReceiveJSON(
-    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/teams`,
-    {
-      method: "PATCH",
-      data: newTeams,
-    },
-  );
+  return Request.sendJSONReceiveJSON(`/api/datasets/${datasetId}/teams`, {
+    method: "PATCH",
+    data: newTeams,
+  });
 }
 
 export async function triggerDatasetCheck(datastoreHost: string): Promise<void> {
@@ -1439,29 +1308,32 @@ export async function triggerDatasetCheck(datastoreHost: string): Promise<void> 
 
 export async function triggerDatasetClearCache(
   datastoreHost: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName?: string,
 ): Promise<void> {
-  await doWithToken((token) =>
-    Request.triggerRequest(
-      `/data/triggers/reload/${datasetId.owningOrganization}/${datasetId.name}?token=${token}${
-        layerName ? `&layerName=${layerName}` : ""
-      }`,
+  await doWithToken((token) => {
+    const params = new URLSearchParams();
+    params.set("token", token);
+    if (layerName) {
+      params.set("layerName", layerName);
+    }
+    return Request.triggerRequest(
+      `/data/triggers/reload/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}?${params}`,
       {
         host: datastoreHost,
         method: "POST",
       },
-    ),
-  );
+    );
+  });
 }
 
 export async function deleteDatasetOnDisk(
   datastoreHost: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
 ): Promise<void> {
   await doWithToken((token) =>
     Request.triggerRequest(
-      `/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/deleteOnDisk?token=${token}`,
+      `/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/deleteOnDisk?token=${token}`,
       {
         host: datastoreHost,
         method: "DELETE",
@@ -1470,65 +1342,52 @@ export async function deleteDatasetOnDisk(
   );
 }
 
-export async function triggerDatasetClearThumbnailCache(datasetId: APIDatasetId): Promise<void> {
-  await Request.triggerRequest(
-    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/clearThumbnailCache`,
-    {
-      method: "PUT",
-    },
-  );
+export async function triggerDatasetClearThumbnailCache(datasetId: string): Promise<void> {
+  await Request.triggerRequest(`/api/datasets/${datasetId}/clearThumbnailCache`, {
+    method: "PUT",
+  });
 }
 
 export async function clearCache(dataset: APIMaybeUnimportedDataset, layerName?: string) {
   return Promise.all([
     triggerDatasetClearCache(dataset.dataStore.url, dataset, layerName),
-    triggerDatasetClearThumbnailCache(dataset),
+    triggerDatasetClearThumbnailCache(dataset.id),
   ]);
 }
 
 export async function getDatasetSharingToken(
-  datasetId: APIDatasetId,
+  datasetId: string,
   options?: RequestOptions,
 ): Promise<string> {
   const { sharingToken } = await Request.receiveJSON(
-    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/sharingToken`,
+    `/api/datasets/${datasetId}/sharingToken`,
     options,
   );
   return sharingToken;
 }
 
-export async function revokeDatasetSharingToken(datasetId: APIDatasetId): Promise<void> {
-  await Request.triggerRequest(
-    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/sharingToken`,
-    {
-      method: "DELETE",
-    },
-  );
-}
-
-export async function getOrganizationForDataset(datasetName: string): Promise<string> {
-  const { organizationName } = await Request.receiveJSON(
-    `/api/datasets/disambiguate/${datasetName}/toNew`,
-  );
-  return organizationName;
+export async function revokeDatasetSharingToken(datasetId: string): Promise<void> {
+  await Request.triggerRequest(`/api/datasets/${datasetId}/sharingToken`, {
+    method: "DELETE",
+  });
 }
 
 export async function findDataPositionForLayer(
   datastoreUrl: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
 ): Promise<{
   position: Vector3 | null | undefined;
-  resolution: Vector3 | null | undefined;
+  mag: Vector3 | null | undefined;
 }> {
-  const { position, resolution } = await doWithToken((token) =>
+  const { position, mag } = await doWithToken((token) =>
     Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/findData?token=${token}`,
+      `${datastoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/findData?token=${token}`,
     ),
   );
   return {
     position,
-    resolution,
+    mag,
   };
 }
 
@@ -1537,25 +1396,25 @@ export async function findDataPositionForVolumeTracing(
   tracingId: string,
 ): Promise<{
   position: Vector3 | null | undefined;
-  resolution: Vector3 | null | undefined;
+  mag: Vector3 | null | undefined;
 }> {
-  const { position, resolution } = await doWithToken((token) =>
+  const { position, mag } = await doWithToken((token) =>
     Request.receiveJSON(`${tracingstoreUrl}/tracings/volume/${tracingId}/findData?token=${token}`),
   );
   return {
     position,
-    resolution,
+    mag,
   };
 }
 
 export async function getHistogramForLayer(
   datastoreUrl: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
 ): Promise<APIHistogramData> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/histogram?token=${token}`,
+      `${datastoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/histogram?token=${token}`,
       { showErrorToast: false },
     ),
   );
@@ -1563,39 +1422,25 @@ export async function getHistogramForLayer(
 
 export async function getMappingsForDatasetLayer(
   datastoreUrl: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
 ): Promise<Array<string>> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/mappings?token=${token}`,
+      `${datastoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/mappings?token=${token}`,
     ),
   );
 }
 
 export function fetchMapping(
   datastoreUrl: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
   mappingName: string,
 ): Promise<APIMapping> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/mappings/${mappingName}?token=${token}`,
-    ),
-  );
-}
-
-export function makeMappingEditable(
-  tracingStoreUrl: string,
-  tracingId: string,
-): Promise<ServerEditableMapping> {
-  return doWithToken((token) =>
-    Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/volume/${tracingId}/makeMappingEditable?token=${token}`,
-      {
-        method: "POST",
-      },
+      `${datastoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/mappings/${mappingName}?token=${token}`,
     ),
   );
 }
@@ -1603,45 +1448,37 @@ export function makeMappingEditable(
 export function getEditableMappingInfo(
   tracingStoreUrl: string,
   tracingId: string,
+  annotationId: string,
+  version: number | undefined | null,
 ): Promise<ServerEditableMapping> {
-  return doWithToken((token) =>
-    Request.receiveJSON(`${tracingStoreUrl}/tracings/mapping/${tracingId}/info?token=${token}`),
-  );
-}
-
-export function getAgglomerateIdForSegmentId(
-  tracingStoreUrl: string,
-  tracingId: string,
-  segmentId: number,
-): Promise<number> {
-  return doWithToken(async (token) => {
-    const urlParams = new URLSearchParams({
+  return doWithToken((token) => {
+    const params = new URLSearchParams({
       token,
-      segmentId: `${segmentId}`,
+      annotationId: `${annotationId}`,
     });
-    const { agglomerateId } = await Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateIdForSegmentId?${urlParams.toString()}`,
-    );
-    return agglomerateId;
+    if (version != null) {
+      params.set("version", version.toString());
+    }
+    return Request.receiveJSON(`${tracingStoreUrl}/tracings/mapping/${tracingId}/info?${params}`);
   });
 }
 
 export function getPositionForSegmentInAgglomerate(
   datastoreUrl: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
   mappingName: string,
   segmentId: number,
 ): Promise<Vector3> {
   return doWithToken(async (token) => {
-    const urlParams = new URLSearchParams({
+    const params = new URLSearchParams({
       token,
       segmentId: `${segmentId}`,
     });
     const position = await Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
-        datasetId.name
-      }/layers/${layerName}/agglomerates/${mappingName}/positionForSegment?${urlParams.toString()}`,
+      `${datastoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${
+        dataSourceId.directoryName
+      }/layers/${layerName}/agglomerates/${mappingName}/positionForSegment?${params.toString()}`,
     );
     return position;
   });
@@ -1649,12 +1486,12 @@ export function getPositionForSegmentInAgglomerate(
 
 export async function getAgglomeratesForDatasetLayer(
   datastoreUrl: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
 ): Promise<Array<string>> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/agglomerates?token=${token}`,
+      `${datastoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/agglomerates?token=${token}`,
     ),
   );
 }
@@ -1709,16 +1546,20 @@ export async function getTimeTrackingForUserSummedPerAnnotation(
   startDate: dayjs.Dayjs,
   endDate: dayjs.Dayjs,
   annotationTypes: "Explorational" | "Task" | "Task,Explorational",
+  annotationState: AnnotationStateFilterEnum,
   projectIds?: string[] | null,
 ): Promise<Array<APITimeTrackingPerAnnotation>> {
   const params = new URLSearchParams({
     start: startDate.valueOf().toString(),
     end: endDate.valueOf().toString(),
   });
-  if (annotationTypes != null) params.append("annotationTypes", annotationTypes);
-  if (projectIds != null && projectIds.length > 0)
-    params.append("projectIds", projectIds.join(","));
-  params.append("annotationStates", "Active,Finished");
+  if (annotationTypes != null) params.set("annotationTypes", annotationTypes);
+  if (projectIds != null && projectIds.length > 0) params.set("projectIds", projectIds.join(","));
+  if (annotationState !== AnnotationStateFilterEnum.ALL) {
+    params.set("annotationStates", annotationState);
+  } else {
+    params.set("annotationStates", "Active,Finished");
+  }
   const timeTrackingData = await Request.receiveJSON(
     `/api/time/user/${userId}/summedByAnnotation?${params}`,
   );
@@ -1731,16 +1572,22 @@ export async function getTimeTrackingForUserSpans(
   startDate: number,
   endDate: number,
   annotationTypes: "Explorational" | "Task" | "Task,Explorational",
+  selectedState: AnnotationStateFilterEnum,
   projectIds?: string[] | null,
 ): Promise<Array<APITimeTrackingSpan>> {
   const params = new URLSearchParams({
     start: startDate.toString(),
     end: endDate.toString(),
   });
-  if (annotationTypes != null) params.append("annotationTypes", annotationTypes);
-  if (projectIds != null && projectIds.length > 0)
-    params.append("projectIds", projectIds.join(","));
-  params.append("annotationStates", "Active,Finished");
+  if (annotationTypes != null) params.set("annotationTypes", annotationTypes);
+  if (projectIds != null && projectIds.length > 0) {
+    params.set("projectIds", projectIds.join(","));
+  }
+  if (selectedState !== AnnotationStateFilterEnum.ALL) {
+    params.set("annotationStates", selectedState);
+  } else {
+    params.set("annotationStates", "Active,Finished");
+  }
   return await Request.receiveJSON(`/api/time/user/${userId}/spans?${params}`);
 }
 
@@ -1749,6 +1596,7 @@ export async function getTimeEntries(
   endMs: number,
   teamIds: string[],
   selectedTypes: AnnotationTypeFilterEnum,
+  selectedState: AnnotationStateFilterEnum,
   projectIds: string[],
 ): Promise<Array<APITimeTrackingPerUser>> {
   const params = new URLSearchParams({
@@ -1756,10 +1604,14 @@ export async function getTimeEntries(
     end: endMs.toString(),
     annotationTypes: selectedTypes,
   });
+  if (selectedState !== AnnotationStateFilterEnum.ALL) {
+    params.set("annotationStates", selectedState);
+  } else {
+    params.set("annotationStates", "Active,Finished");
+  }
   // Omit empty parameters in request
-  if (projectIds.length > 0) params.append("projectIds", projectIds.join(","));
-  if (teamIds.length > 0) params.append("teamIds", teamIds.join(","));
-  params.append("annotationStates", "Active,Finished");
+  if (projectIds.length > 0) params.set("projectIds", projectIds.join(","));
+  if (teamIds.length > 0) params.set("teamIds", teamIds.join(","));
   return await Request.receiveJSON(`api/time/overview?${params}`);
 }
 
@@ -1794,8 +1646,8 @@ export function joinOrganization(inviteToken: string): Promise<void> {
   });
 }
 
-export async function switchToOrganization(organizationName: string): Promise<void> {
-  await Request.triggerRequest(`/api/auth/switchOrganization/${organizationName}`, {
+export async function switchToOrganization(organizationId: string): Promise<void> {
+  await Request.triggerRequest(`/api/auth/switchOrganization/${organizationId}`, {
     method: "POST",
   });
   location.reload();
@@ -1805,7 +1657,7 @@ export async function getUsersOrganizations(): Promise<Array<APIOrganizationComp
   const organizations: APIOrganizationCompact[] = await Request.receiveJSON(
     "/api/organizations?compact=true",
   );
-  const scmOrganization = organizations.find((org) => org.name === "scalable_minds");
+  const scmOrganization = organizations.find((org) => org.id === "scalable_minds");
   if (scmOrganization == null) {
     return organizations;
   }
@@ -1833,8 +1685,8 @@ export function sendInvitesForOrganization(
   });
 }
 
-export async function getOrganization(organizationName: string): Promise<APIOrganization> {
-  const organization = await Request.receiveJSON(`/api/organizations/${organizationName}`);
+export async function getOrganization(organizationId: string): Promise<APIOrganization> {
+  const organization = await Request.receiveJSON(`/api/organizations/${organizationId}`);
   return {
     ...organization,
     paidUntil: organization.paidUntil ?? Constants.MAXIMUM_DATE_TIMESTAMP,
@@ -1847,21 +1699,21 @@ export async function checkAnyOrganizationExists(): Promise<boolean> {
   return !(await Request.receiveJSON("/api/organizationsIsEmpty"));
 }
 
-export async function deleteOrganization(organizationName: string): Promise<void> {
-  return Request.triggerRequest(`/api/organizations/${organizationName}`, {
+export async function deleteOrganization(organizationId: string): Promise<void> {
+  return Request.triggerRequest(`/api/organizations/${organizationId}`, {
     method: "DELETE",
   });
 }
 
 export async function updateOrganization(
-  organizationName: string,
-  displayName: string,
+  organizationId: string,
+  name: string,
   newUserMailingList: string,
 ): Promise<APIOrganization> {
-  return Request.sendJSONReceiveJSON(`/api/organizations/${organizationName}`, {
+  return Request.sendJSONReceiveJSON(`/api/organizations/${organizationId}`, {
     method: "PATCH",
     data: {
-      displayName,
+      name,
       newUserMailingList,
     },
   });
@@ -1879,7 +1731,7 @@ export async function isDatasetAccessibleBySwitching(
     );
   } else {
     return Request.receiveJSON(
-      `/api/auth/accessibleBySwitching?organizationName=${commandType.owningOrganization}&datasetName=${commandType.name}`,
+      `/api/auth/accessibleBySwitching?datasetId=${commandType.datasetId}`,
       {
         showErrorToast: false,
       },
@@ -1913,6 +1765,12 @@ export async function sendUpgradePricingPlanUserEmail(requestedUsers: number): P
 
 export async function sendUpgradePricingPlanStorageEmail(requestedStorage: number): Promise<void> {
   return Request.receiveJSON(`/api/pricing/requestStorage?requestedStorage=${requestedStorage}`, {
+    method: "POST",
+  });
+}
+
+export async function sendOrderCreditsEmail(requestedCredits: number): Promise<void> {
+  return Request.receiveJSON(`/api/pricing/requestCredits?requestedCredits=${requestedCredits}`, {
     method: "POST",
   });
 }
@@ -1986,7 +1844,7 @@ type MeshRequest = {
   segmentId: number; // Segment to build mesh for
   // The cubeSize is in voxels in mag <mag>
   cubeSize: Vector3;
-  scale: Vector3;
+  scaleFactor: Vector3;
   mappingName: string | null | undefined;
   mappingType: MappingType | null | undefined;
   findNeighbors: boolean;
@@ -1999,19 +1857,12 @@ export function computeAdHocMesh(
   buffer: ArrayBuffer;
   neighbors: Array<number>;
 }> {
-  const {
-    position,
-    additionalCoordinates,
-    cubeSize,
-    mappingName,
-    mag,
-
-    ...rest
-  } = meshRequest;
+  const { position, additionalCoordinates, cubeSize, mappingName, scaleFactor, mag, ...rest } =
+    meshRequest;
 
   return doWithToken(async (token) => {
     const params = new URLSearchParams();
-    params.append("token", token);
+    params.set("token", token);
 
     const { buffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
       `${requestUrl}/adHocMesh?${params}`,
@@ -2025,12 +1876,13 @@ export function computeAdHocMesh(
           cubeSize: V3.toArray(V3.add(cubeSize, [1, 1, 1])), //cubeSize is in target mag
           // Name and type of mapping to apply before building mesh (optional)
           mapping: mappingName,
+          voxelSizeFactorInUnit: scaleFactor,
           mag,
           ...rest,
         },
       },
     );
-    const neighbors = Utils.parseMaybe(headers.neighbors) || [];
+    const neighbors = (Utils.parseMaybe(headers.neighbors) as number[] | null) || [];
     return {
       buffer,
       neighbors,
@@ -2048,7 +1900,7 @@ export function getBucketPositionsForAdHocMesh(
 ): Promise<Vector3[]> {
   return doWithToken(async (token) => {
     const params = new URLSearchParams();
-    params.append("token", token);
+    params.set("token", token);
     const positions = await Request.sendJSONReceiveJSON(
       `${tracingStoreUrl}/tracings/volume/${tracingId}/segmentIndex/${segmentId}?${params}`,
       {
@@ -2066,14 +1918,14 @@ export function getBucketPositionsForAdHocMesh(
 
 export function getAgglomerateSkeleton(
   dataStoreUrl: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
   mappingId: string,
   agglomerateId: number,
 ): Promise<ArrayBuffer> {
   return doWithToken((token) =>
     Request.receiveArraybuffer(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/agglomerates/${mappingId}/skeleton/${agglomerateId}?token=${token}`, // The webworker code cannot do proper error handling and always expects an array buffer from the server.
+      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/agglomerates/${mappingId}/skeleton/${agglomerateId}?token=${token}`, // The webworker code cannot do proper error handling and always expects an array buffer from the server.
       // The webworker code cannot do proper error handling and always expects an array buffer from the server.
       // However, the server might send an error json instead of an array buffer. Therefore, don't use the webworker code.
       {
@@ -2084,6 +1936,75 @@ export function getAgglomerateSkeleton(
   );
 }
 
+export async function getAgglomeratesForSegmentsFromDatastore<T extends number | bigint>(
+  dataStoreUrl: string,
+  dataSourceId: APIDataSourceId,
+  layerName: string,
+  mappingId: string,
+  segmentIds: Array<T>,
+): Promise<Mapping> {
+  const segmentIdBuffer = serializeProtoListOfLong<T>(segmentIds);
+  const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
+    const params = new URLSearchParams({ token });
+    return Request.receiveArraybuffer(
+      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?${params}`,
+      {
+        method: "POST",
+        body: segmentIdBuffer,
+        headers: {
+          "Content-Type": "application/octet-stream",
+        },
+      },
+    );
+  });
+  // Ensure that the values are bigint if the keys are bigint
+  const adaptToType = Utils.isBigInt(segmentIds[0])
+    ? (el: NumberLike) => BigInt(el)
+    : (el: NumberLike) => el;
+  const keyValues = _.zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
+  // @ts-ignore
+  return new Map(keyValues);
+}
+
+export async function getAgglomeratesForSegmentsFromTracingstore<T extends number | bigint>(
+  tracingStoreUrl: string,
+  tracingId: string,
+  segmentIds: Array<T>,
+  annotationId: string,
+  version?: number | null | undefined,
+): Promise<Mapping> {
+  const params = new URLSearchParams({ annotationId });
+  if (version != null) {
+    params.set("version", version.toString());
+  }
+  const segmentIdBuffer = serializeProtoListOfLong<T>(
+    // The tracing store expects the ids to be sorted
+    segmentIds.sort(<T extends NumberLike>(a: T, b: T) => Number(a - b)),
+  );
+  const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
+    params.set("token", token);
+    return Request.receiveArraybuffer(
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?${params}`,
+      {
+        method: "POST",
+        body: segmentIdBuffer,
+        headers: {
+          "Content-Type": "application/octet-stream",
+        },
+      },
+    );
+  });
+
+  // Ensure that the values are bigint if the keys are bigint
+  const adaptToType = Utils.isBigInt(segmentIds[0])
+    ? (el: NumberLike) => BigInt(el)
+    : (el: NumberLike) => el;
+
+  const keyValues = _.zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
+  // @ts-ignore
+  return new Map(keyValues);
+}
+
 export function getEditableAgglomerateSkeleton(
   tracingStoreUrl: string,
   tracingId: string,
@@ -2091,7 +2012,7 @@ export function getEditableAgglomerateSkeleton(
 ): Promise<ArrayBuffer> {
   return doWithToken((token) =>
     Request.receiveArraybuffer(
-      `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateSkeleton/${agglomerateId}?token=${token}`,
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateSkeleton/${agglomerateId}?token=${token}`,
       // The webworker code cannot do proper error handling and always expects an array buffer from the server.
       // However, the server might send an error json instead of an array buffer. Therefore, don't use the webworker code.
       {
@@ -2104,12 +2025,12 @@ export function getEditableAgglomerateSkeleton(
 
 export async function getMeshfilesForDatasetLayer(
   dataStoreUrl: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
 ): Promise<Array<APIMeshFile>> {
   const meshFiles: Array<APIMeshFile> = await doWithToken((token) =>
     Request.receiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/meshes?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/meshes?token=${token}`,
     ),
   );
 
@@ -2125,19 +2046,19 @@ export async function getMeshfilesForDatasetLayer(
 // ### Connectomes
 export function getConnectomeFilesForDatasetLayer(
   dataStoreUrl: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
 ): Promise<Array<APIConnectomeFile>> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/connectomes?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/connectomes?token=${token}`,
     ),
   );
 }
 
 export function getSynapsesOfAgglomerates(
   dataStoreUrl: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
   connectomeFile: string,
   agglomerateIds: Array<number>,
@@ -2149,7 +2070,7 @@ export function getSynapsesOfAgglomerates(
 > {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/connectomes/synapses?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/connectomes/synapses?token=${token}`,
       {
         data: {
           connectomeFile,
@@ -2162,7 +2083,7 @@ export function getSynapsesOfAgglomerates(
 
 function getSynapseSourcesOrDestinations(
   dataStoreUrl: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
   connectomeFile: string,
   synapseIds: Array<number>,
@@ -2170,7 +2091,7 @@ function getSynapseSourcesOrDestinations(
 ): Promise<Array<number>> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/connectomes/synapses/${srcOrDst}?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/connectomes/synapses/${srcOrDst}?token=${token}`,
       {
         data: {
           connectomeFile,
@@ -2193,14 +2114,14 @@ export function getSynapseDestinations(...args: any): Promise<Array<number>> {
 
 export function getSynapsePositions(
   dataStoreUrl: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
   connectomeFile: string,
   synapseIds: Array<number>,
 ): Promise<Array<Vector3>> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/connectomes/synapses/positions?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/connectomes/synapses/positions?token=${token}`,
       {
         data: {
           connectomeFile,
@@ -2213,7 +2134,7 @@ export function getSynapsePositions(
 
 export function getSynapseTypes(
   dataStoreUrl: string,
-  datasetId: APIDatasetId,
+  dataSourceId: APIDataSourceId,
   layerName: string,
   connectomeFile: string,
   synapseIds: Array<number>,
@@ -2223,7 +2144,7 @@ export function getSynapseTypes(
 }> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/connectomes/synapses/types?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/connectomes/synapses/types?token=${token}`,
       {
         data: {
           connectomeFile,
@@ -2244,18 +2165,24 @@ export async function getEdgesForAgglomerateMinCut(
   tracingStoreUrl: string,
   tracingId: string,
   segmentsInfo: {
-    segmentId1: number;
-    segmentId2: number;
+    segmentId1: NumberLike;
+    segmentId2: NumberLike;
     mag: Vector3;
-    agglomerateId: number;
+    agglomerateId: NumberLike;
     editableMappingId: string;
   },
 ): Promise<Array<MinCutTargetEdge>> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateGraphMinCut?token=${token}`,
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphMinCut?token=${token}`,
       {
-        data: segmentsInfo,
+        data: {
+          ...segmentsInfo,
+          // TODO: Proper 64 bit support (#6921)
+          segmentId1: Number(segmentsInfo.segmentId1),
+          segmentId2: Number(segmentsInfo.segmentId2),
+          agglomerateId: Number(segmentsInfo.agglomerateId),
+        },
       },
     ),
   );
@@ -2270,17 +2197,22 @@ export async function getNeighborsForAgglomerateNode(
   tracingStoreUrl: string,
   tracingId: string,
   segmentInfo: {
-    segmentId: number;
+    segmentId: NumberLike;
     mag: Vector3;
-    agglomerateId: number;
+    agglomerateId: NumberLike;
     editableMappingId: string;
   },
 ): Promise<NeighborInfo> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
       {
-        data: segmentInfo,
+        data: {
+          ...segmentInfo,
+          // TODO: Proper 64 bit support (#6921)
+          segmentId: Number(segmentInfo.segmentId),
+          agglomerateId: Number(segmentInfo.agglomerateId),
+        },
       },
     ),
   );
@@ -2288,28 +2220,49 @@ export async function getNeighborsForAgglomerateNode(
 
 // ### Smart Select
 
-export async function getSamEmbedding(
+export async function getSamMask(
   dataset: APIDataset,
   layerName: string,
   mag: Vector3,
-  embeddingBoxMag1: BoundingBox,
+  surroundingBoxMag1: BoundingBox, // in mag 1
+  prompt:
+    | {
+        type: "BOUNDING_BOX"; // relative to topleft
+        selectionTopLeftX: number; // int, in target mag
+        selectionTopLeftY: number; // int, in target mag
+        selectionBottomRightX: number; // int, in target mag
+        selectionBottomRightY: number; // int, in target mag
+      }
+    | {
+        type: "POINT";
+        pointX: number; // int, relative to topleft
+        pointY: number; // int, relative to topleft
+      },
   additionalCoordinates: AdditionalCoordinate[],
-  intensityRange?: Vector2 | null,
-): Promise<Float32Array> {
+  intensityRange?: readonly [number, number] | null,
+): Promise<Uint8Array> {
   const params = new URLSearchParams();
   if (intensityRange != null) {
-    params.append("intensityMin", `${intensityRange[0]}`);
-    params.append("intensityMax", `${intensityRange[1]}`);
+    params.set("intensityMin", `${intensityRange[0]}`);
+    params.set("intensityMax", `${intensityRange[1]}`);
   }
 
+  const { type: interactionType, ...promptWithoutType } = prompt;
+
   const buffer = await Request.sendJSONReceiveArraybuffer(
-    `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/segmentAnythingEmbedding?${params}`,
+    `/api/datasets/${dataset.id}/layers/${layerName}/segmentAnythingMask?${params}`,
     {
-      data: { mag, boundingBox: embeddingBoxMag1.asServerBoundingBox(), additionalCoordinates },
+      data: {
+        mag,
+        surroundingBoundingBox: surroundingBoxMag1.asServerBoundingBox(),
+        additionalCoordinates,
+        interactionType,
+        ...promptWithoutType,
+      },
       showErrorToast: false,
     },
   );
-  return new Float32Array(buffer);
+  return new Uint8Array(buffer);
 }
 
 // ### Short links
@@ -2340,7 +2293,7 @@ export function getVoxelyticsWorkflow(
 ): Promise<VoxelyticsWorkflowReport> {
   const params = new URLSearchParams();
   if (runId != null) {
-    params.append("runId", runId);
+    params.set("runId", runId);
   }
   return Request.receiveJSON(`/api/voxelytics/workflows/${workflowHash}?${params}`);
 }
@@ -2362,10 +2315,10 @@ export function getVoxelyticsLogs(
     endTimestamp: endTime.getTime().toString(),
   });
   if (taskName != null) {
-    params.append("taskName", taskName);
+    params.set("taskName", taskName);
   }
   if (limit != null) {
-    params.append("limit", limit.toString());
+    params.set("limit", limit.toString());
   }
   return Request.receiveJSON(`/api/voxelytics/logs?${params}`);
 }
@@ -2379,7 +2332,7 @@ export function getVoxelyticsChunkStatistics(
     taskName,
   });
   if (runId != null) {
-    params.append("runId", runId);
+    params.set("runId", runId);
   }
   return Request.receiveJSON(`/api/voxelytics/workflows/${workflowHash}/chunkStatistics?${params}`);
 }
@@ -2393,14 +2346,20 @@ export function getVoxelyticsArtifactChecksums(
     taskName,
   });
   if (runId != null) {
-    params.append("runId", runId);
+    params.set("runId", runId);
   }
   if (artifactName != null) {
-    params.append("artifactName", artifactName);
+    params.set("artifactName", artifactName);
   }
   return Request.receiveJSON(
     `/api/voxelytics/workflows/${workflowHash}/artifactChecksums?${params}`,
   );
+}
+
+export function deleteWorkflow(workflowHash: string): Promise<void> {
+  return Request.triggerRequest(`/api/voxelytics/workflows/${workflowHash}`, {
+    method: "DELETE",
+  });
 }
 
 // ### Help / Feedback userEmail

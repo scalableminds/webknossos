@@ -8,6 +8,11 @@
 :root {
     --color-wk-blue: #5660ff;
     --color-black: rgba(0, 0, 0, 0.85);
+    --color-white: rgba(255, 255, 255, 1);
+    --color-light-grey: rgba(255, 255, 255, 0.85);
+    --color-dark-grey: #1f1f1f;
+    --color-grey-spotlight: #424242;
+    --color-light-grey-spotlight: #f0f0f0;
     --color-blue-zircon: #59f8e8;
     --color-xy-viewport: #eb4b98;
     --color-yz-viewport: var(--color-wk-blue);
@@ -21,4 +26,12 @@
     // the <App> component is expected to be there only once and on a very high level in the DOM tree
     --background-blue-organelles: url(/assets/images/background_mixed_cells_drawn.svg) 0 / cover no-repeat, var(--ant-color-primary);
     --background-blue-neurons: url(/assets/images/background_neurons_drawn.svg) 0 / cover no-repeat, var(--ant-color-primary);
+
+    // Override react-tooltip colors
+    --rt-color-error: var(--ant-color-error);
+    --rt-color-warning: var(--ant-color-warning);
+    --rt-color-success: var(--ant-color-success);
+    --rt-color-info: var(--ant-color-info);
+    --rt-opacity: 0.95;
 }
+

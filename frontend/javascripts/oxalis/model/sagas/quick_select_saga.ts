@@ -1,26 +1,21 @@
-import _ from "lodash";
 import ErrorHandling from "libs/error_handling";
 
-import { Saga, select } from "oxalis/model/sagas/effect-generators";
-import { call, put, takeEvery, takeLatest } from "typed-redux-saga";
-import {
-  ComputeQuickSelectForRectAction,
-  MaybePrefetchEmbeddingAction,
-} from "oxalis/model/actions/volumetracing_actions";
-import Toast from "libs/toast";
 import features from "features";
+import Toast from "libs/toast";
+import type {
+  ComputeQuickSelectForPointAction,
+  ComputeQuickSelectForRectAction,
+} from "oxalis/model/actions/volumetracing_actions";
+import { type Saga, select } from "oxalis/model/sagas/effect-generators";
+import { call, put, takeEvery } from "typed-redux-saga";
 
+import getSceneController from "oxalis/controller/scene_controller_provider";
+import type { VolumeTracing } from "oxalis/store";
+import { getActiveSegmentationTracing } from "../accessors/volumetracing_accessor";
 import { setBusyBlockingInfoAction, setQuickSelectStateAction } from "../actions/ui_actions";
 import performQuickSelectHeuristic from "./quick_select_heuristic_saga";
-import performQuickSelectML, {
-  getInferenceSession,
-  prefetchEmbedding,
-} from "./quick_select_ml_saga";
-import { AnnotationToolEnum } from "oxalis/constants";
-import getSceneController from "oxalis/controller/scene_controller_provider";
-import { getActiveSegmentationTracing } from "../accessors/volumetracing_accessor";
-import { VolumeTracing } from "oxalis/store";
-import { ensureMaybeActiveMappingIsLocked } from "./saga_helpers";
+import performQuickSelectML from "./quick_select_ml_saga";
+import { requestBucketModificationInVolumeTracing } from "./saga_helpers";
 
 function* shouldUseHeuristic() {
   const useHeuristic = yield* select((state) => state.userConfiguration.quickSelect.useHeuristic);
@@ -29,23 +24,30 @@ function* shouldUseHeuristic() {
 
 export default function* listenToQuickSelect(): Saga<void> {
   yield* takeEvery(
-    "COMPUTE_QUICK_SELECT_FOR_RECT",
-    function* guard(action: ComputeQuickSelectForRectAction) {
+    ["COMPUTE_QUICK_SELECT_FOR_RECT", "COMPUTE_QUICK_SELECT_FOR_POINT"],
+    function* guard(action: ComputeQuickSelectForRectAction | ComputeQuickSelectForPointAction) {
       try {
         const volumeTracing: VolumeTracing | null | undefined = yield* select(
           getActiveSegmentationTracing,
         );
         if (volumeTracing) {
           // As changes to the volume layer will be applied, the potentially existing mapping should be locked to ensure a consistent state.
-          const { isMappingLockedIfNeeded } = yield* call(
-            ensureMaybeActiveMappingIsLocked,
+          const isModificationAllowed = yield* call(
+            requestBucketModificationInVolumeTracing,
             volumeTracing,
           );
-          if (!isMappingLockedIfNeeded) {
+          if (!isModificationAllowed) {
             return;
           }
         }
-        yield* put(setBusyBlockingInfoAction(true, "Selecting segment"));
+        const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
+        if (busyBlockingInfo.isBusy) {
+          console.warn(
+            `Ignoring ${action.type} request (reason: ${busyBlockingInfo.reason || "null"})`,
+          );
+          return;
+        }
+        yield* put(setBusyBlockingInfoAction(true, "Quick-Selecting segment"));
 
         yield* put(setQuickSelectStateAction("active"));
         if (yield* call(shouldUseHeuristic)) {
@@ -63,27 +65,6 @@ export default function* listenToQuickSelect(): Saga<void> {
       }
     },
   );
-
-  yield* takeLatest(
-    "MAYBE_PREFETCH_EMBEDDING",
-    function* guard(action: MaybePrefetchEmbeddingAction) {
-      const useHeuristic = yield* call(shouldUseHeuristic);
-      if (!useHeuristic) {
-        yield* call(prefetchEmbedding, action);
-      }
-    },
-  );
-
-  yield* takeEvery(["SET_TOOL", "CYCLE_TOOL"], function* guard() {
-    const isQuickSelectTool = yield* select(
-      (state) => state.uiInformation.activeTool === AnnotationToolEnum.QUICK_SELECT,
-    );
-    if (isQuickSelectTool && features().segmentAnythingEnabled) {
-      // Retrieve the inference session to prefetch it as soon as the tool
-      // is selected. If the session is cached, this is basically a noop.
-      yield* call(getInferenceSession);
-    }
-  });
 
   yield* takeEvery("ESCAPE", function* handler() {
     if (yield* select((state) => state.uiInformation.quickSelectState === "drawing")) {

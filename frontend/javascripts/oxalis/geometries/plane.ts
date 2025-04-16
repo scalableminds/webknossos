@@ -1,9 +1,4 @@
-import * as THREE from "three";
 import _ from "lodash";
-import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
-import Dimensions from "oxalis/model/dimensions";
-import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
-import Store from "oxalis/store";
 import type { OrthoView, Vector3 } from "oxalis/constants";
 import constants, {
   OrthoViewColors,
@@ -11,6 +6,11 @@ import constants, {
   OrthoViewGrayCrosshairColor,
   OrthoViewValues,
 } from "oxalis/constants";
+import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
+import Dimensions from "oxalis/model/dimensions";
+import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
+import Store from "oxalis/store";
+import * as THREE from "three";
 
 // A subdivision of 100 means that there will be 100 segments per axis
 // and thus 101 vertices per axis (i.e., the vertex shader is executed 101**2).
@@ -47,10 +47,10 @@ class Plane {
     this.displayCrosshair = true;
     this.lastScaleFactors = [-1, -1];
     // VIEWPORT_WIDTH means that the plane should be that many voxels wide in the
-    // dimension with the highest resolution. In all other dimensions, the plane
+    // dimension with the highest mag. In all other dimensions, the plane
     // is smaller in voxels, so that it is squared in nm.
     // --> scaleInfo.baseVoxel
-    const baseVoxelFactors = getBaseVoxelFactors(Store.getState().dataset.dataSource.scale);
+    const baseVoxelFactors = getBaseVoxelFactorsInUnit(Store.getState().dataset.dataSource.scale);
     const scaleArray = Dimensions.transDim(baseVoxelFactors, this.planeID);
     this.baseScaleVector = new THREE.Vector3(...scaleArray);
     this.createMeshes();
@@ -198,6 +198,10 @@ class Plane {
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'setUseBilinearFiltering' does not exist ... Remove this comment to see the full error message
     this.plane.material.setUseBilinearFiltering(enabled);
   };
+
+  destroy() {
+    this.materialFactory.destroy();
+  }
 }
 
 export default Plane;

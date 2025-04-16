@@ -10,6 +10,20 @@ case class AdditionalAxis(name: String, bounds: Array[Int], index: Int) {
   lazy val lowerBound: Int = bounds(0)
   lazy val upperBound: Int = bounds(1)
   lazy val highestValue: Int = upperBound - 1
+
+  // Creates a new AdditionalAxis that encloses the the position given by additional coordinates with width 1.
+  // Used to create the additional axes of an nd bounding box that encloses the given additional coordinates.
+  // For normal axes x, y, z use the normal bounding box intersection.
+  def intersectWithAdditionalCoordinates(additionalCoordinates: Seq[AdditionalCoordinate]): AdditionalAxis = {
+    val matchingCoordinate = additionalCoordinates.find(ac => ac.name == name)
+    matchingCoordinate match {
+      case Some(ac) =>
+        AdditionalAxis(name, Array(ac.value, ac.value + 1), index)
+      case None =>
+        // Use the lower bound as fallback
+        AdditionalAxis(name, Array(lowerBound, lowerBound + 1), index)
+    }
+  }
 }
 
 object AdditionalAxis {
@@ -112,5 +126,4 @@ object AdditionalAxis {
         }
       case None => Seq.empty
     }
-
 }

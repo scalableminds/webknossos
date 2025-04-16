@@ -1,24 +1,27 @@
 package models.job
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.mvc.Formatter
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
 import models.dataset.DatasetDAO
 import models.job.JobCommand.JobCommand
-import models.organization.OrganizationDAO
+import models.organization.{CreditTransactionService, OrganizationDAO, OrganizationService}
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
+import net.liftweb.common.Full
 import org.apache.pekko.actor.ActorSystem
 import play.api.libs.json.{JsObject, Json}
 import security.WkSilhouetteEnvironment
 import telemetry.SlackNotificationService
-import utils.{ObjectId, WkConf}
+import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
+import scala.math.BigDecimal.RoundingMode
 
 class JobService @Inject()(wkConf: WkConf,
                            actorSystem: ActorSystem,
@@ -32,11 +35,17 @@ class JobService @Inject()(wkConf: WkConf,
                            defaultMails: DefaultMails,
                            analyticsService: AnalyticsService,
                            userService: UserService,
+                           organizationService: OrganizationService,
+                           creditTransactionService: CreditTransactionService,
                            wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                            slackNotificationService: SlackNotificationService)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging
     with Formatter {
+
+  private val MINIMUM_COST_PER_JOB = BigDecimal(0.001)
+  private val ONE_GIGAVOXEL = BigDecimal(math.pow(10, 9))
+  private val SHOULD_DEDUCE_CREDITS = false
 
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
@@ -55,13 +64,14 @@ class JobService @Inject()(wkConf: WkConf,
       superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
       durationLabel = jobAfterChange.duration.map(d => s" after ${formatDuration(d)}").getOrElse("")
       _ = analyticsService.track(FailedJobEvent(user, jobBeforeChange.command))
-      msg = s"Job ${jobBeforeChange._id} failed$durationLabel. Command ${jobBeforeChange.command}, organization: ${organization.displayName}."
+      workflowLink = jobAfterChange.workflowLinkSlackFormatted(wkConf.Http.uri)
+      msg = s"Job ${jobBeforeChange._id} failed$durationLabel. Command ${jobBeforeChange.command}, organization: ${organization.name}.$workflowLink"
       _ = logger.warn(msg)
       _ = slackNotificationService.warn(
         s"Failed job$superUserLabel",
         msg
       )
-      _ = sendFailedEmailNotification(user, jobAfterChange)
+      _ = if (!jobAfterChange.retriedBySuperUser) sendFailedEmailNotification(user, jobAfterChange)
     } yield ()
     ()
   }
@@ -70,13 +80,13 @@ class JobService @Inject()(wkConf: WkConf,
     for {
       user <- userDAO.findOne(jobBeforeChange._owner)(GlobalAccessContext)
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
-      resultLink = jobAfterChange.resultLinkPublic(organization.name, wkConf.Http.uri)
-      resultLinkSlack = jobAfterChange.resultLinkSlackFormatted(organization.name, wkConf.Http.uri)
+      resultLink = jobAfterChange.resultLinkPublic(organization._id, wkConf.Http.uri)
+      resultLinkSlack = jobAfterChange.resultLinkSlackFormatted(organization._id, wkConf.Http.uri)
+      workflowLink = jobAfterChange.workflowLinkSlackFormatted(wkConf.Http.uri)
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
       durationLabel = jobAfterChange.duration.map(d => s" after ${formatDuration(d)}").getOrElse("")
-      msg = s"Job ${jobBeforeChange._id} succeeded$durationLabel. Command ${jobBeforeChange.command}, organization: ${organization.displayName}.${resultLinkSlack
-        .getOrElse("")}"
+      msg = s"Job ${jobBeforeChange._id} succeeded$durationLabel. Command ${jobBeforeChange.command}, organization: ${organization.name}.$resultLinkSlack$workflowLink"
       _ = logger.info(msg)
       _ = slackNotificationService.success(
         s"Successful job$superUserLabel",
@@ -147,12 +157,14 @@ class JobService @Inject()(wkConf: WkConf,
 
   def cleanUpIfFailed(job: Job): Fox[Unit] =
     if (job.state == JobState.FAILURE && job.command == JobCommand.convert_to_wkw) {
-      logger.info(s"WKW conversion job ${job._id} failed. Deleting dataset from the database, freeing the name...")
+      logger.info(
+        s"WKW conversion job ${job._id} failed. Deleting dataset from the database, freeing the directoryName...")
       val commandArgs = job.commandArgs.value
       for {
-        datasetName <- commandArgs.get("dataset_name").map(_.as[String]).toFox
-        organizationName <- commandArgs.get("organization_name").map(_.as[String]).toFox
-        dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)(GlobalAccessContext)
+        datasetDirectoryName <- commandArgs.get("dataset_directory_name").map(_.as[String]).toFox
+        organizationId <- commandArgs.get("organization_id").map(_.as[String]).toFox
+        dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(datasetDirectoryName, organizationId)(
+          GlobalAccessContext)
         _ <- datasetDAO.deleteDataset(dataset._id)
       } yield ()
     } else Fox.successful(())
@@ -161,10 +173,13 @@ class JobService @Inject()(wkConf: WkConf,
     for {
       owner <- userDAO.findOne(job._owner) ?~> "user.notFound"
       organization <- organizationDAO.findOne(owner._organization) ?~> "organization.notFound"
-      resultLink = job.resultLink(organization.name)
+      resultLink = job.resultLink(organization._id)
+      ownerJson <- userService.compactWrites(owner)
+      creditTransactionOpt <- creditTransactionService.findTransactionOfJob(job._id)
     } yield {
       Json.obj(
         "id" -> job._id.id,
+        "owner" -> ownerJson,
         "command" -> job.command,
         "commandArgs" -> (job.commandArgs - "webknossos_token" - "user_auth_token"),
         "state" -> job.state,
@@ -176,6 +191,7 @@ class JobService @Inject()(wkConf: WkConf,
         "created" -> job.created,
         "started" -> job.started,
         "ended" -> job.ended,
+        "creditCost" -> creditTransactionOpt.map(t => (t.creditDelta * -1).toString)
       )
     }
 
@@ -201,6 +217,30 @@ class JobService @Inject()(wkConf: WkConf,
       _ = analyticsService.track(RunJobEvent(owner, command))
     } yield job
 
+  def submitPaidJob(command: JobCommand,
+                    commandArgs: JsObject,
+                    jobBoundingBox: BoundingBox,
+                    creditTransactionComment: String,
+                    user: User,
+                    datastoreName: String)(implicit ctx: DBAccessContext): Fox[JsObject] =
+    for {
+      costsInCredits <- if (SHOULD_DEDUCE_CREDITS) calculateJobCostInCredits(jobBoundingBox, command)
+      else Fox.successful(BigDecimal(0))
+      _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(user._organization, costsInCredits)) ?~> "job.notEnoughCredits"
+      creditTransaction <- creditTransactionService.reserveCredits(user._organization,
+                                                                   costsInCredits,
+                                                                   creditTransactionComment)
+      job <- submitJob(command, commandArgs, user, datastoreName).futureBox.flatMap {
+        case Full(job) => Fox.successful(job)
+        case _ =>
+          creditTransactionService
+            .refundTransactionWhenStartingJobFailed(creditTransaction)
+            .flatMap(_ => Fox.failure("job.couldNotRunAlignSections"))
+      }.toFox
+      _ <- creditTransactionService.addJobIdToTransaction(creditTransaction, job._id)
+      js <- publicWrites(job)
+    } yield js
+
   def jobsSupportedByAvailableWorkers(dataStoreName: String): Fox[Set[JobCommand]] =
     for {
       workers <- workerDAO.findAllByDataStore(dataStoreName)
@@ -214,11 +254,25 @@ class JobService @Inject()(wkConf: WkConf,
 
   def assertBoundingBoxLimits(boundingBox: String, mag: Option[String]): Fox[Unit] =
     for {
-      parsedBoundingBox <- BoundingBox.fromLiteral(boundingBox).toFox ?~> "job.invalidBoundingBox"
-      parsedMag <- Vec3Int.fromMagLiteral(mag.getOrElse("1-1-1"), allowScalar = true) ?~> "job.invalidMag"
-      boundingBoxInMag = parsedBoundingBox / parsedMag
+      boundingBoxInMag <- BoundingBox.fromLiteralWithMagOpt(boundingBox, mag) ?~> "job.invalidBoundingBoxOrMag"
       _ <- bool2Fox(boundingBoxInMag.volume <= wkConf.Features.exportTiffMaxVolumeMVx * 1024 * 1024) ?~> "job.volumeExceeded"
       _ <- bool2Fox(boundingBoxInMag.size.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx) ?~> "job.edgeLengthExceeded"
     } yield ()
+
+  private def getJobCostPerGVx(jobCommand: JobCommand): Fox[BigDecimal] =
+    jobCommand match {
+      case JobCommand.infer_neurons      => Fox.successful(wkConf.Features.neuronInferralCostPerGVx)
+      case JobCommand.infer_mitochondria => Fox.successful(wkConf.Features.mitochondriaInferralCostPerGVx)
+      case JobCommand.align_sections     => Fox.successful(wkConf.Features.alignmentCostPerGVx)
+      case _                             => Fox.failure(s"Unsupported job command $jobCommand")
+    }
+
+  def calculateJobCostInCredits(boundingBoxInTargetMag: BoundingBox, jobCommand: JobCommand): Fox[BigDecimal] =
+    getJobCostPerGVx(jobCommand).map(costPerGVx => {
+      val volumeInGVx = BigDecimal(boundingBoxInTargetMag.volume) / ONE_GIGAVOXEL
+      val costInCredits = volumeInGVx * costPerGVx
+      if (costInCredits < MINIMUM_COST_PER_JOB) MINIMUM_COST_PER_JOB
+      else costInCredits.setScale(3, RoundingMode.HALF_UP)
+    })
 
 }

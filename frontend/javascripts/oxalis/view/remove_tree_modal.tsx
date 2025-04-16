@@ -1,9 +1,9 @@
-import { Modal, Checkbox } from "antd";
-import * as React from "react";
+import { Checkbox, Modal } from "antd";
+import type { CheckboxChangeEvent } from "antd/lib/checkbox";
+import messages from "messages";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Store from "oxalis/store";
-import messages from "messages";
-import { CheckboxChangeEvent } from "antd/lib/checkbox";
+import * as React from "react";
 type Props = {
   onOk: (...args: Array<any>) => any;
   destroy?: (...args: Array<any>) => any;

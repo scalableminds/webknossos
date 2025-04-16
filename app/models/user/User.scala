@@ -17,7 +17,7 @@ import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient, SqlToken}
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 
@@ -28,7 +28,7 @@ object User {
 case class User(
     _id: ObjectId,
     _multiUser: ObjectId,
-    _organization: ObjectId,
+    _organization: String,
     firstName: String,
     lastName: String,
     lastActivity: Instant = Instant.now,
@@ -53,8 +53,8 @@ case class User(
   val abbreviatedName: String =
     (firstName.take(1) + lastName).toLowerCase.replace(" ", "_")
 
-  def isAdminOf(_organization: ObjectId): Boolean =
-    isAdmin && _organization == this._organization
+  def isAdminOf(organizationId: String): Boolean =
+    isAdmin && organizationId == this._organization
 
   def isAdminOf(otherUser: User): Boolean =
     isAdminOf(otherUser._organization)
@@ -78,8 +78,7 @@ case class UserCompactInfo(
     experienceValuesAsArrayLiteral: String,
     experienceDomainsAsArrayLiteral: String,
     lastActivity: Instant,
-    organizationId: ObjectId,
-    organizationName: String,
+    organizationId: String,
     novelUserExperienceInfos: String,
     selectedTheme: String,
     created: Instant,
@@ -103,7 +102,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       User(
         ObjectId(r._Id),
         ObjectId(r._Multiuser),
-        ObjectId(r._Organization),
+        r._Organization,
         r.firstname,
         r.lastname,
         Instant.fromSql(r.lastactivity),
@@ -171,11 +170,12 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       editablePredicate = isEditableOpt match {
         case Some(isEditable) =>
           val usersInTeamsManagedByRequestingUser =
-            q"(SELECT _user FROM webknossos.user_team_roles WHERE _team IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = ${requestingUser._id}  AND isTeamManager)))"
+            q"""(SELECT 1 FROM webknossos.user_team_roles AS utr1 WHERE utr1._user = ${userPrefix}_id AND utr1._team IN
+                (SELECT _team FROM webknossos.user_team_roles AS utr2 WHERE utr2._user = ${requestingUser._id} AND utr2.isTeamManager) ))"""
           if (isEditable) {
-            q"(${userPrefix}_id IN $usersInTeamsManagedByRequestingUser OR (${requestingUser.isAdmin} AND ${userPrefix}_organization = ${requestingUser._organization})"
+            q"(EXISTS $usersInTeamsManagedByRequestingUser OR (${requestingUser.isAdmin} AND ${userPrefix}_organization = ${requestingUser._organization})"
           } else {
-            q"(${userPrefix}_id NOT IN $usersInTeamsManagedByRequestingUser AND (NOT (${requestingUser.isAdmin} AND ${userPrefix}_organization = ${requestingUser._organization}))"
+            q"(NOT EXISTS $usersInTeamsManagedByRequestingUser AND NOT (${requestingUser.isAdmin} AND ${userPrefix}_organization = ${requestingUser._organization})"
           }
         case None => q"TRUE"
       }
@@ -202,7 +202,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     import prs._
     // format: off
     UserCompactInfo(<<[ObjectId],<<[ObjectId],<<[String],<<[String],<<[String],<<[String],<<[Boolean],<<[Boolean],
-      <<[Boolean],<<[Boolean],<<[String],<<[String],<<[String],<<[String], <<[String],<<[Instant],<<[ObjectId],
+      <<[Boolean],<<[Boolean],<<[String],<<[String],<<[String],<<[String], <<[String],<<[Instant],
       <<[String],<<[String],<<[String],<<[Instant],<<?[String],<<[Boolean],<<[Boolean],<<[Boolean]
     )
     // format: on
@@ -271,7 +271,6 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
             aux.experience_domains,
             u.lastActivity,
             o._id,
-            o.name,
             m.novelUserExperienceinfos,
             m.selectedTheme,
             u.created,
@@ -315,7 +314,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
-  def findAdminsAndDatasetManagersByOrg(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[User]] =
+  def findAdminsAndDatasetManagersByOrg(organizationId: String)(implicit ctx: DBAccessContext): Fox[List[User]] =
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
       r <- run(q"""SELECT $columns
@@ -328,7 +327,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def findAdminsByOrg(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[User]] =
+  def findAdminsByOrg(organizationId: String)(implicit ctx: DBAccessContext): Fox[List[User]] =
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
       r <- run(q"""SELECT $columns
@@ -341,7 +340,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def findOwnerByOrg(organizationId: ObjectId): Fox[User] =
+  def findOwnerByOrg(organizationId: String): Fox[User] =
     for {
       r <- run(q"""SELECT $columns
                    FROM $existingCollectionName
@@ -353,7 +352,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseFirst(r, organizationId)
     } yield parsed
 
-  def findOneByOrgaAndMultiUser(organizationId: ObjectId, multiUserId: ObjectId)(
+  def findOneByOrgaAndMultiUser(organizationId: String, multiUserId: ObjectId)(
       implicit ctx: DBAccessContext): Fox[User] =
     for {
       accessQuery <- readAccessQuery
@@ -392,7 +391,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(result)
     } yield parsed
 
-  def countAllForOrganization(organizationId: ObjectId): Fox[Int] =
+  def countAllForOrganization(organizationId: String): Fox[Int] =
     for {
       resultList <- run(
         q"SELECT COUNT(*) FROM $existingCollectionName WHERE _organization = $organizationId AND NOT isDeactivated AND NOT isUnlisted"
@@ -400,7 +399,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       result <- resultList.headOption
     } yield result
 
-  def countAdminsForOrganization(organizationId: ObjectId): Fox[Int] =
+  def countAdminsForOrganization(organizationId: String): Fox[Int] =
     for {
       resultList <- run(
         q"SELECT COUNT(*) from $existingCollectionName WHERE _organization = $organizationId AND isAdmin AND NOT isUnlisted"
@@ -408,7 +407,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       result <- resultList.headOption
     } yield result
 
-  def countOwnersForOrganization(organizationId: ObjectId): Fox[Int] =
+  def countOwnersForOrganization(organizationId: String): Fox[Int] =
     for {
       resultList <- run(
         q"SELECT COUNT(*) FROM $existingCollectionName WHERE _organization = $organizationId AND isOrganizationOwner AND NOT isUnlisted"
@@ -479,7 +478,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield ()
 
   // use with care!
-  def deleteAllWithOrganization(organizationId: ObjectId): Fox[Unit] =
+  def deleteAllWithOrganization(organizationId: String): Fox[Unit] =
     for {
       _ <- run(q"""UPDATE webknossos.users SET isDeleted = true WHERE _organization = $organizationId""".asUpdate)
     } yield ()
@@ -563,7 +562,7 @@ class UserExperiencesDAO @Inject()(sqlClient: SqlClient, userDAO: UserDAO)(impli
     } yield ()
   }
 
-  def insertExperienceToListing(experienceDomain: String, organizationId: ObjectId): Fox[Unit] =
+  def insertExperienceToListing(experienceDomain: String, organizationId: String): Fox[Unit] =
     for {
       _ <- run(q"""INSERT INTO webknossos.experienceDomains(domain, _organization)
               VALUES($experienceDomain, $organizationId) ON CONFLICT DO NOTHING""".asUpdate)

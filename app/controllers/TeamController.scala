@@ -9,7 +9,7 @@ import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent}
 import security.WkEnv
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -29,16 +29,15 @@ class TeamController @Inject()(teamDAO: TeamDAO, userDAO: UserDAO, teamService: 
     } yield Ok(Json.toJson(js))
   }
 
-  def delete(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def delete(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      teamIdValidated <- ObjectId.fromString(id)
       _ <- bool2Fox(request.identity.isAdmin) ?~> "user.noAdmin" ~> FORBIDDEN
-      team <- teamDAO.findOne(teamIdValidated) ?~> "team.notFound" ~> NOT_FOUND
+      team <- teamDAO.findOne(id) ?~> "team.notFound" ~> NOT_FOUND
       _ <- bool2Fox(!team.isOrganizationTeam) ?~> "team.delete.organizationTeam" ~> FORBIDDEN
-      _ <- teamService.assertNoReferences(teamIdValidated) ?~> "team.delete.inUse" ~> FORBIDDEN
-      _ <- teamDAO.deleteOne(teamIdValidated)
-      _ <- userDAO.removeTeamFromAllUsers(teamIdValidated)
-      _ <- teamDAO.removeTeamFromAllDatasetsAndFolders(teamIdValidated)
+      _ <- teamService.assertNoReferences(id) ?~> "team.delete.inUse" ~> FORBIDDEN
+      _ <- teamDAO.deleteOne(id)
+      _ <- userDAO.removeTeamFromAllUsers(id)
+      _ <- teamDAO.removeTeamFromAllDatasetsAndFolders(id)
     } yield JsonOk(Messages("team.deleted"))
   }
 

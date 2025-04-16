@@ -1,63 +1,67 @@
+import PriorityQueue from "js-priority-queue";
 import _ from "lodash";
-import ops from "ndarray-ops";
 import moments from "ndarray-moments";
+import ops from "ndarray-ops";
 import {
   ContourModeEnum,
-  OrthoView,
-  OrthoViewWithoutTD,
-  OverwriteMode,
-  TypedArrayWithoutBigInt,
-  Vector2,
-  Vector3,
+  type OrthoView,
+  type OrthoViewWithoutTD,
+  type OverwriteMode,
+  type TypedArrayWithoutBigInt,
+  type Vector2,
+  type Vector3,
 } from "oxalis/constants";
-import PriorityQueue from "js-priority-queue";
 
-import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { call, put, race, take } from "typed-redux-saga";
-import { select } from "oxalis/model/sagas/effect-generators";
+import { sendAnalyticsEvent } from "admin/admin_rest_api";
+import morphology from "ball-morphology";
 import { V2, V3 } from "libs/mjs";
+import Toast from "libs/toast";
+import { clamp, map3, take2 } from "libs/utils";
+import ndarray from "ndarray";
+import type { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
 import {
   getActiveSegmentationTracing,
   getSegmentationLayerForTracing,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
-  CancelQuickSelectAction,
-  ComputeQuickSelectForRectAction,
-  ConfirmQuickSelectAction,
-  FineTuneQuickSelectAction,
+  type CancelQuickSelectAction,
+  type ComputeQuickSelectForPointAction,
+  type ComputeQuickSelectForRectAction,
+  type ConfirmQuickSelectAction,
+  type FineTuneQuickSelectAction,
   finishAnnotationStrokeAction,
-  MaybePrefetchEmbeddingAction,
   registerLabelPointAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
+import { select } from "oxalis/model/sagas/effect-generators";
 import { api } from "oxalis/singletons";
-import ndarray from "ndarray";
-import morphology from "ball-morphology";
-import Toast from "libs/toast";
-import {
+import type {
   DatasetLayerConfiguration,
   OxalisState,
   QuickSelectConfig,
   VolumeTracing,
 } from "oxalis/store";
-import { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
-import { clamp, map3, take2 } from "libs/utils";
-import { APIDataLayer, APIDataset } from "types/api_flow_types";
-import { sendAnalyticsEvent } from "admin/admin_rest_api";
-import { copyNdArray } from "./volume/volume_interpolation_saga";
-import { createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
-import { EnterAction, EscapeAction, showQuickSelectSettingsAction } from "../actions/ui_actions";
+import { call, put, race, take } from "typed-redux-saga";
+import type { APIDataLayer, APIDataset } from "types/api_flow_types";
 import {
   getDefaultValueRangeOfLayer,
   getEnabledColorLayers,
   getLayerBoundingBox,
-  getResolutionInfo,
-  getTransformsForLayer,
+  getMagInfo,
 } from "../accessors/dataset_accessor";
-import Dimensions, { DimensionIndices } from "../dimensions";
+import { getTransformsForLayer } from "../accessors/dataset_layer_transformation_accessor";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 import { updateUserSettingAction } from "../actions/settings_actions";
+import {
+  type EnterAction,
+  type EscapeAction,
+  showQuickSelectSettingsAction,
+} from "../actions/ui_actions";
+import Dimensions, { type DimensionIndices } from "../dimensions";
+import { createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
+import { copyNdArray } from "./volume/volume_interpolation_saga";
 
 const TOAST_KEY = "QUICKSELECT_PREVIEW_MESSAGE";
 
@@ -74,7 +78,7 @@ const warnAboutMultipleColorLayers = _.memoize((layerName: string) => {
 let wasPreviewModeToastAlreadyShown = false;
 
 export function* prepareQuickSelect(
-  action: ComputeQuickSelectForRectAction | MaybePrefetchEmbeddingAction,
+  action: ComputeQuickSelectForRectAction | ComputeQuickSelectForPointAction,
 ): Saga<{
   labeledZoomStep: number;
   firstDim: DimensionIndices;
@@ -83,7 +87,7 @@ export function* prepareQuickSelect(
   colorLayer: APIDataLayer;
   quickSelectConfig: QuickSelectConfig;
   activeViewport: OrthoViewWithoutTD;
-  labeledResolution: Vector3;
+  labeledMag: Vector3;
   volumeTracing: VolumeTracing;
 } | null> {
   const activeViewport = yield* select(
@@ -92,10 +96,8 @@ export function* prepareQuickSelect(
   if (activeViewport === "TDView") {
     // Can happen when the user ends the drag action in the 3D viewport
     console.warn("Ignoring quick select when mouse is in 3D viewport");
-    if ("quickSelectGeometry" in action) {
-      const { quickSelectGeometry } = action;
-      quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
-    }
+    const { quickSelectGeometry } = action;
+    quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
     return null;
   }
   const [firstDim, secondDim, thirdDim] = Dimensions.getIndices(activeViewport);
@@ -143,16 +145,16 @@ export function* prepareQuickSelect(
   const requestedZoomStep = yield* select((store) =>
     getActiveMagIndexForLayer(store, colorLayer.name),
   );
-  const resolutionInfo = getResolutionInfo(
+  const magInfo = getMagInfo(
     // Ensure that a magnification is used which exists in the color layer as well as the
     // target segmentation layer.
     _.intersectionBy(colorLayer.resolutions, volumeLayer.resolutions, (mag) => mag.join("-")),
   );
-  const labeledZoomStep = resolutionInfo.getClosestExistingIndex(
+  const labeledZoomStep = magInfo.getClosestExistingIndex(
     requestedZoomStep,
     "The visible color layer and the active segmentation layer don't have any magnifications in common. Cannot select segment.",
   );
-  const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
+  const labeledMag = magInfo.getMagByIndexOrThrow(labeledZoomStep);
 
   return {
     labeledZoomStep,
@@ -162,14 +164,16 @@ export function* prepareQuickSelect(
     colorLayer,
     quickSelectConfig,
     activeViewport,
-    labeledResolution,
+    labeledMag,
     volumeTracing,
   };
 }
 
-export default function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void> {
+export default function* performQuickSelect(
+  action: ComputeQuickSelectForRectAction | ComputeQuickSelectForPointAction,
+): Saga<void> {
   const preparation = yield* call(prepareQuickSelect, action);
-  if (preparation == null) {
+  if (preparation == null || action.type === "COMPUTE_QUICK_SELECT_FOR_POINT") {
     return;
   }
   const {
@@ -180,7 +184,7 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     colorLayer,
     quickSelectConfig,
     activeViewport,
-    labeledResolution,
+    labeledMag,
     volumeTracing,
   } = preparation;
   const { startPosition, endPosition, quickSelectGeometry } = action;
@@ -200,9 +204,9 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
   const inclusiveMaxW = map3((el, idx) => (idx === thirdDim ? el - 1 : el), boundingBoxMag1.max);
   quickSelectGeometry.setCoordinates(boundingBoxMag1.min, inclusiveMaxW);
 
-  const boundingBoxTarget = boundingBoxMag1.fromMag1ToMag(labeledResolution);
+  const boundingBoxInMag = boundingBoxMag1.fromMag1ToMag(labeledMag);
 
-  if (boundingBoxTarget.getVolume() === 0) {
+  if (boundingBoxInMag.getVolume() === 0) {
     Toast.warning("The drawn rectangular had a width or height of zero.");
     return;
   }
@@ -214,10 +218,10 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     labeledZoomStep,
     additionalCoordinates,
   );
-  const size = boundingBoxTarget.getSize();
+  const size = boundingBoxInMag.getSize();
   const stride = [1, size[0], size[0] * size[1]];
 
-  if (inputDataRaw instanceof BigUint64Array) {
+  if (inputDataRaw instanceof BigUint64Array || inputDataRaw instanceof BigInt64Array) {
     throw new Error("Color input layer must not be 64-bit.");
   }
 
@@ -280,16 +284,13 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
 
   if (!quickSelectConfig.showPreview) {
     sendAnalyticsEvent("used_quick_select_without_preview");
-    yield* finalizeQuickSelect(
+    yield* finalizeQuickSelectForSlice(
       quickSelectGeometry,
       volumeTracing,
       activeViewport,
-      labeledResolution,
+      labeledMag,
       boundingBoxMag1,
-      thirdDim,
-      size,
-      firstDim,
-      secondDim,
+      boundingBoxMag1.min[thirdDim],
       thresholdField,
       overwriteMode,
       labeledZoomStep,
@@ -353,16 +354,13 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     } else if (confirm || enter) {
       sendAnalyticsEvent("confirmed_quick_select_preview");
 
-      yield* finalizeQuickSelect(
+      yield* finalizeQuickSelectForSlice(
         quickSelectGeometry,
         volumeTracing,
         activeViewport,
-        labeledResolution,
+        labeledMag,
         boundingBoxMag1,
-        thirdDim,
-        size,
-        firstDim,
-        secondDim,
+        boundingBoxMag1.min[thirdDim],
         thresholdField,
         overwriteMode,
         labeledZoomStep,
@@ -447,7 +445,7 @@ function getCenterSubview(inputNdUvw: ndarray.NdArray<Uint8Array>) {
 
 function processBinaryMaskInPlaceAndAttach(
   mask: ndarray.NdArray<Uint8Array>,
-  quickSelectConfig: Omit<QuickSelectConfig, "showPreview" | "useHeuristic">,
+  quickSelectConfig: Omit<QuickSelectConfig, "showPreview" | "useHeuristic" | "predictionDepth">,
   quickSelectGeometry: QuickSelectGeometry,
 ) {
   fillHolesInPlace(mask);
@@ -499,36 +497,31 @@ function normalizeToUint8(
   return inputData;
 }
 
-export function* finalizeQuickSelect(
+export function* finalizeQuickSelectForSlice(
   quickSelectGeometry: QuickSelectGeometry,
   volumeTracing: VolumeTracing,
   activeViewport: OrthoView,
-  labeledResolution: Vector3,
+  labeledMag: Vector3,
   boundingBoxMag1: BoundingBox,
-  thirdDim: number,
-  size: Vector3,
-  firstDim: number,
-  secondDim: number,
+  w: number,
   mask: ndarray.NdArray<TypedArrayWithoutBigInt>,
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
+  skipFinishAnnotationStroke: boolean = false,
 ) {
   quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
-  const volumeLayer = yield* call(
-    createVolumeLayer,
-    volumeTracing,
-    activeViewport,
-    labeledResolution,
-    boundingBoxMag1.min[thirdDim],
-  );
+  const volumeLayer = yield* call(createVolumeLayer, volumeTracing, activeViewport, labeledMag, w);
+  const sizeUVWInMag = mask.shape;
   const voxelBuffer2D = volumeLayer.createVoxelBuffer2D(
     V2.floor(volumeLayer.globalCoordToMag2DFloat(boundingBoxMag1.min)),
-    size[firstDim],
-    size[secondDim],
+    sizeUVWInMag[0],
+    sizeUVWInMag[1],
   );
 
-  for (let u = 0; u < size[firstDim]; u++) {
-    for (let v = 0; v < size[secondDim]; v++) {
+  for (let u = 0; u < sizeUVWInMag[0]; u++) {
+    for (let v = 0; v < sizeUVWInMag[1]; v++) {
+      // w = 0 is correct because the correct 3rd dim was already sliced
+      // by the caller.
       if (mask.get(u, v, 0) > 0) {
         voxelBuffer2D.setValue(u, v, 1);
       }
@@ -543,7 +536,12 @@ export function* finalizeQuickSelect(
     labeledZoomStep,
     activeViewport,
   );
-  yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+  if (boundingBoxMag1.getCenter().some((el) => el == null)) {
+    throw new Error("invalid bbox");
+  }
+  if (!skipFinishAnnotationStroke) {
+    yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+  }
   yield* put(registerLabelPointAction(boundingBoxMag1.getCenter()));
   yield* put(
     updateSegmentAction(
@@ -644,7 +642,7 @@ function getThresholdField(
 
   // extremeThreshold is either the min or maximum value
   // of all seen values at the current time.
-  let extremeThreshold = mode === "dark" ? 0 : Infinity;
+  let extremeThreshold = mode === "dark" ? 0 : Number.POSITIVE_INFINITY;
   const extremeFn = mode === "dark" ? Math.max : Math.min;
   while (queue.length > 0) {
     const { coords, threshold } = queue.dequeue();

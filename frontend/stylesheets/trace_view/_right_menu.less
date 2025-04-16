@@ -39,7 +39,7 @@
     // Hide edit and ellipsis icon (unless hovered)
     display: none;
   }
-  &.is-selected-cell {
+  &.is-selected-segment {
     background-color: var(--ant-blue-3);
   }
 
@@ -52,10 +52,12 @@
   }
   // If a cell is hovered in the data viewports,
   // it should also be highlighted in the list.
-  &.is-hovered-cell {
+  &.is-hovered-segment {
     background-color: var(--ant-blue-1);
   }
 }
+
+
 
 #segment-list {
   height: inherit;
@@ -75,40 +77,11 @@
   height: inherit;
   display: flex;
   flex-direction: column;
-  .fa-angle-right {
-    width: 11px;
-    margin-left: 5px;
-  }
-
-  .ant-space-compact {
-    // Spacing between skeleton tab buttons and name input
+  
+  .ant-space-compact:not(.ant-tree .ant-space-compact) {
+    // Override <antd.Space> spacing between skeleton tab buttons and name input
+    // Do not affect use of <Space> in in the <Tree> elements
     margin: 0 0 10px 0;
-  }
-
-  .tree-hierarchy-header {
-    margin-left: 16px;
-    margin-right: auto;
-    position: absolute;
-    right: 12px;
-    top: 12px;
-    z-index: 1;
-  }
-
-  .selected-tree-node {
-    background-color: var(--color-blue-zircon);
-  }
-
-  .rst__rowLabel {
-    padding-right: 0px;
-    .rst__rowTitle div {
-      padding-right: 10px;
-    }
-  }
-  .rst__rowSearchMatch .rst__rowLabel {
-    background-color: var(--ant-blue-3);
-    &:hover {
-      background-color: var(--ant-blue-1);
-    }
   }
 }
 
@@ -167,6 +140,17 @@
   }
 }
 
+.compact-wrap {
+  // Should only be used with antd <Space.Compact>
+  flex-wrap: wrap;
+
+   button{
+    // Slightly shift buttons up to prevent double borders when wrapping in flex container occurs
+    margin-top: -1px;
+   }
+
+}
+
 .margin-bottom {
   margin-bottom: 10px;
 }
@@ -215,5 +199,151 @@
     text-align: center;
     width: 24px;
     height: 24px;
+  }
+}
+
+.bounding-box-table {
+  .ant-table {
+    border-bottom: none;
+  }
+  .ant-table-cell {
+    padding: 0px 20px !important;
+    cursor: pointer;
+  }
+  .ant-table-row:last-child {
+    border-bottom: none;
+    .ant-table-cell {
+      border-bottom: none;
+    }
+  }
+  .ant-table-row .ant-table-cell:first-child {
+    // Hiding the extra checkbox column rendered due to using rowSelection in the table wrapping the bounding boxes.
+    display: none;
+  }
+  .ant-table-row .ant-table-cell:nth-child(2) {
+    flex: 1 1 !important;
+  }
+  .ant-table-footer {
+    background-color: transparent;
+    padding: 8px;
+  }
+}
+
+.metadata-table {
+  // These colors are redefined in dark.less
+  --compact-table-bg1: #f7f7f7;
+  --compact-table-bg2: #fefefe;
+  --compact-table-border: #e7e7e7;
+
+  width: 100%;
+
+  .add-property-button {
+    width: 100%;
+  }
+
+  input, .ant-input-affix-wrapper, .ant-input-number {
+    &:not(:hover) {
+      background: transparent;
+    }
+    border: 0;
+    padding: 0;
+    box-shadow: none !important;
+    width: 100%;
+    height: 100%;
+  }
+
+  .ant-input-status-error, .ant-input-status-warning {
+    border: 0 !important;
+  }
+  input.ant-input-status-error,
+  .ant-input-status-error input {
+    color: var(--ant-color-error);
+  }
+  input.ant-input-status-warning,
+  .ant-input-status-warning input {
+    color: var(--ant-color-warning);
+  }
+
+  .ant-input-number-input {
+    padding: 0 !important;
+  }
+
+  .ant-select {
+    width: 100%;
+    .ant-select-selector {
+      background: transparent;
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+    &:not(.ant-select-focused) {
+      .ant-select-selection-placeholder {
+        // Align the placeholder with the other inputs
+        margin-left: -8px;
+      }
+    }
+  }
+
+
+  // Table
+  th, td {
+    padding: 2px 4px;
+    text-align: left;
+    color: var(--ant-color-text-base);
+  }
+  th {
+    font-weight: normal;
+  }
+
+  th, tr:nth-child(even) td {
+    background-color: var(--compact-table-bg1);
+  }
+  td {
+    background-color: var(--compact-table-bg2);
+  }
+
+  td:nth-child(2):not(:last-child) {
+    border-right: 0;
+  }
+  td:nth-child(3) {
+    border-left: 0;
+  }
+
+
+  tr.divider-row {
+    font-weight: bold;
+  }
+
+  // The remaining code is only for the rounded corners of the table
+  border-collapse: separate;
+  border-spacing: 0;
+
+  tr th,
+  tr td {
+    border-right: 1px solid var(--compact-table-border);
+    border-bottom: 1px solid var(--compact-table-border);
+  }
+
+  tr th:first-child,
+  tr td:first-child {
+    border-left: 1px solid var(--compact-table-border);
+  }
+  tr:first-child th {
+    border-top: solid 1px var(--compact-table-border);
+  }
+
+  tr:first-child th:first-child{
+    border-top-left-radius: var(--ant-border-radius);
+  }
+
+  tr:first-child th:last-child {
+    border-top-right-radius: var(--ant-border-radius);
+  }
+
+  tr:last-child td:first-child {
+    border-bottom-left-radius: var(--ant-border-radius);
+  }
+
+  tr:last-child td:last-child {
+    border-bottom-right-radius: var(--ant-border-radius);
   }
 }

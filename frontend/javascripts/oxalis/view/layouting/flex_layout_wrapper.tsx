@@ -1,47 +1,49 @@
-import type { Dispatch } from "redux";
-import { Layout, Tooltip } from "antd";
-import { connect } from "react-redux";
-import FlexLayout, { TabNode, TabSetNode } from "flexlayout-react";
-import * as React from "react";
-import _ from "lodash";
+import { sendAnalyticsEvent } from "admin/admin_rest_api";
+import { Layout } from "antd";
+import FastTooltip from "components/fast_tooltip";
 import features from "features";
+import * as FlexLayout from "flexlayout-react";
+import type { BorderNode, TabNode, TabSetNode } from "flexlayout-react";
+import { InputKeyboardNoLoop } from "libs/input";
+import Toast from "libs/toast";
+import _ from "lodash";
+import messages from "messages";
+import type { OrthoView } from "oxalis/constants";
+import { ArbitraryViews, BorderTabs, OrthoViews } from "oxalis/constants";
+import { setBorderOpenStatusAction } from "oxalis/model/actions/ui_actions";
+import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
+import type { BorderOpenStatus, BusyBlockingInfo, OxalisState } from "oxalis/store";
+import Store from "oxalis/store";
+import InputCatcher from "oxalis/view/input_catcher";
 import type { LayoutKeys } from "oxalis/view/layouting/default_layout_configs";
 import {
   DEFAULT_LAYOUT_NAME,
   getTabDescriptorForBorderTab,
   resetDefaultLayouts,
 } from "oxalis/view/layouting/default_layout_configs";
-import { InputKeyboardNoLoop } from "libs/input";
-import type { OrthoView } from "oxalis/constants";
-import { OrthoViews, ArbitraryViews, BorderTabs } from "oxalis/constants";
-import { sendAnalyticsEvent } from "admin/admin_rest_api";
-import { setBorderOpenStatusAction } from "oxalis/model/actions/ui_actions";
-import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
+import ControlsAndRenderingSettingsTab from "oxalis/view/left-border-tabs/controls_and_rendering_settings_tab";
+import LayerSettingsTab from "oxalis/view/left-border-tabs/layer_settings_tab";
+import RecordingSwitch from "oxalis/view/recording_switch";
 import AbstractTreeTab from "oxalis/view/right-border-tabs/abstract_tree_tab";
 import BoundingBoxTab from "oxalis/view/right-border-tabs/bounding_box_tab";
 import CommentTabView from "oxalis/view/right-border-tabs/comment_tab/comment_tab_view";
 import ConnectomeView from "oxalis/view/right-border-tabs/connectome_tab/connectome_view";
-import ControlsAndRenderingSettingsTab from "oxalis/view/left-border-tabs/controls_and_rendering_settings_tab";
 import DatasetInfoTabView from "oxalis/view/right-border-tabs/dataset_info_tab_view";
-import InputCatcher from "oxalis/view/input_catcher";
-import LayerSettingsTab from "oxalis/view/left-border-tabs/layer_settings_tab";
-import RecordingSwitch from "oxalis/view/recording_switch";
 import SegmentsView from "oxalis/view/right-border-tabs/segments_tab/segments_view";
-import SkeletonTabView from "oxalis/view/right-border-tabs/skeleton_tab_view";
+import SkeletonTabView from "oxalis/view/right-border-tabs/trees_tab/skeleton_tab_view";
 import Statusbar from "oxalis/view/statusbar";
-import type { OxalisState, BusyBlockingInfo, BorderOpenStatus } from "oxalis/store";
-import Store from "oxalis/store";
 import TDViewControls from "oxalis/view/td_view_controls";
-import Toast from "libs/toast";
-import messages from "messages";
+import * as React from "react";
+import { connect } from "react-redux";
+import type { Dispatch } from "redux";
+import BorderToggleButton from "../components/border_toggle_button";
 import {
-  getMaximizedItemId,
-  getBorderOpenStatus,
   adjustModelToBorderOpenStatus,
+  getBorderOpenStatus,
+  getMaximizedItemId,
   getPositionStatusOf,
 } from "./flex_layout_helper";
-import { layoutEmitter, getLayoutConfig } from "./layout_persistence";
-import BorderToggleButton from "../components/border_toggle_button";
+import { getLayoutConfig, layoutEmitter } from "./layout_persistence";
 
 const { Footer } = Layout;
 
@@ -205,10 +207,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   rebuildLayout() {
     const model = this.loadCurrentModel();
     this.updateToModelStateAndAdjustIt(model);
-    this.setState({
-      model,
-    });
-    setTimeout(this.onLayoutChange, 1);
+    this.setState({ model }, () => this.onLayoutChange());
 
     if (this.props.layoutName !== DEFAULT_LAYOUT_NAME) {
       sendAnalyticsEvent("load_custom_layout", {
@@ -374,9 +373,9 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         model={model}
         factory={(...args) => this.layoutFactory(...args)}
         titleFactory={(renderedNode) => (
-          <Tooltip title={BorderTabs[renderedNode.getId()].description}>
+          <FastTooltip title={BorderTabs[renderedNode.getId()].description}>
             {renderedNode.getName()}{" "}
-          </Tooltip>
+          </FastTooltip>
         )}
         onModelChange={() => {
           // Update / inform parent layout about the changes.
@@ -458,12 +457,16 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'Element'.
         document.activeElement.blur();
       }
+      if (data?.node) {
+        const node = this.state.model.getNodeById(data.node);
+        if (node) {
+          const toggledViewportId = node.getChildren()[0].getId();
 
-      const toggledViewportId = this.state.model.getNodeById(data.node).getChildren()[0].getId();
-
-      if (toggledViewportId in OrthoViews) {
-        // @ts-ignore Typescript doesn't agree that toggledViewportId exists in OrthoViews
-        this.props.setActiveViewport(OrthoViews[toggledViewportId]);
+          if (toggledViewportId in OrthoViews) {
+            // @ts-ignore Typescript doesn't agree that toggledViewportId exists in OrthoViews
+            this.props.setActiveViewport(OrthoViews[toggledViewportId]);
+          }
+        }
       }
     }
 
@@ -494,10 +497,10 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   }
 
   onRenderTabSet = (
-    tabSetNode: TabSetNode,
+    tabSetNode: TabSetNode | BorderNode,
     renderValues: {
       buttons: Array<React.ReactNode>;
-      headerContent: React.ReactNode;
+      headerContent?: React.ReactNode;
     },
   ) => {
     const { isTopMost, isRightMost } = getPositionStatusOf(tabSetNode);
@@ -556,7 +559,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
             factory={(...args) => this.layoutFactory(...args)}
             onModelChange={() => this.onLayoutChange()}
             onAction={this.onAction}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '(tabSetNode: TabSetNode, renderValues: {    ... Remove this comment to see the full error message
             onRenderTabSet={this.onRenderTabSet}
             onRenderTab={this.onRenderTab}
             classNameMapper={this.classNameMapper}
@@ -575,7 +577,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
 function mapStateToProps(state: OxalisState): StateProps {
   return {
     displayScalebars: state.userConfiguration.displayScalebars,
-    isUpdateTracingAllowed: state.tracing.restrictions.allowUpdate,
+    isUpdateTracingAllowed: state.annotation.restrictions.allowUpdate,
     busyBlockingInfo: state.uiInformation.busyBlockingInfo,
   };
 }

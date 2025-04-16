@@ -1,17 +1,17 @@
-import React from "react";
-import { Route, withRouter } from "react-router-dom";
-import { connect } from "react-redux";
 import LoginView from "admin/auth/login_view";
 import {
+  type PricingPlanEnum,
   isFeatureAllowedByPricingPlan,
-  PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
-import { APIOrganization, APIUser } from "types/api_flow_types";
 import { PageUnavailableForYourPlanView } from "components/pricing_enforcers";
-import type { ComponentType } from "react";
 import { isUserAdminOrManager } from "libs/utils";
-import type { RouteComponentProps } from "react-router-dom";
 import type { OxalisState } from "oxalis/store";
+import React from "react";
+import type { ComponentType } from "react";
+import { connect } from "react-redux";
+import { Route, withRouter } from "react-router-dom";
+import type { RouteComponentProps } from "react-router-dom";
+import type { APIOrganization, APIUser } from "types/api_flow_types";
 import { PageNotAvailableToNormalUser } from "./permission_enforcer";
 
 type StateProps = {
@@ -72,7 +72,11 @@ class SecuredRoute extends React.PureComponent<SecuredRouteProps, State> {
         {...rest}
         render={(props) => {
           if (!isCompletelyAuthenticated) {
-            return <LoginView redirect={this.props.location.pathname} />;
+            return (
+              <LoginView
+                redirect={this.props.location.pathname.concat(this.props.location.search)}
+              />
+            );
           }
 
           if (

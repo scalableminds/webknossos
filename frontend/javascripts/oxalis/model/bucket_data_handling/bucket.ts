@@ -1,21 +1,23 @@
-import { createNanoEvents, Emitter } from "nanoevents";
-import * as THREE from "three";
-import _ from "lodash";
-import type { ElementClass } from "types/api_flow_types";
-import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
-import type { MaybeUnmergedBucketLoadedPromise } from "oxalis/model/actions/volumetracing_actions";
-import { addBucketToUndoAction } from "oxalis/model/actions/volumetracing_actions";
-import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
+import ErrorHandling from "libs/error_handling";
 import { castForArrayType, mod } from "libs/utils";
+import window from "libs/window";
+import _ from "lodash";
+import { type Emitter, createNanoEvents } from "nanoevents";
 import type { BoundingBoxType, BucketAddress, Vector3 } from "oxalis/constants";
 import Constants from "oxalis/constants";
+import type { MaybeUnmergedBucketLoadedPromise } from "oxalis/model/actions/volumetracing_actions";
+import { addBucketToUndoAction } from "oxalis/model/actions/volumetracing_actions";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import ErrorHandling from "libs/error_handling";
+import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
+import type TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
+import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
 import Store from "oxalis/store";
-import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
-import window from "libs/window";
+import * as THREE from "three";
+import type { BucketDataArray, ElementClass } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import { getConstructorForElementClass, uint8ToTypedBuffer } from "../helpers/typed_buffer";
+import BucketSnapshot, { type PendingOperation } from "./bucket_snapshot";
 
 export enum BucketStateEnum {
   UNREQUESTED = "UNREQUESTED",
@@ -24,24 +26,6 @@ export enum BucketStateEnum {
   LOADED = "LOADED",
 }
 export type BucketStateEnumType = keyof typeof BucketStateEnum;
-export type BucketDataArray =
-  | Uint8Array
-  | Uint16Array
-  | Uint32Array
-  | Float32Array
-  | BigUint64Array;
-export const bucketDebuggingFlags = {
-  // For visualizing buckets which are passed to the GPU
-  visualizeBucketsOnGPU: false,
-  // For visualizing buckets which are prefetched
-  visualizePrefetchedBuckets: false,
-  // For enforcing fallback rendering. enforcedZoomDiff == 2, means
-  // that buckets of currentZoomStep + 2 are rendered.
-  enforcedZoomDiff: undefined,
-};
-// Exposing this variable allows debugging on deployed systems
-// @ts-ignore
-window.bucketDebuggingFlags = bucketDebuggingFlags;
 
 const WARNING_THROTTLE_THRESHOLD = 10000;
 
@@ -51,6 +35,10 @@ const warnMergeWithoutPendingOperations = _.throttle(() => {
   );
 }, WARNING_THROTTLE_THRESHOLD);
 
+const warnAwaitedMissingBucket = _.throttle(() => {
+  ErrorHandling.notify(new Error("Awaited missing bucket"));
+}, WARNING_THROTTLE_THRESHOLD);
+
 export function assertNonNullBucket(bucket: Bucket): asserts bucket is DataBucket {
   if (bucket.type === "null") {
     throw new Error("Unexpected null bucket.");
@@ -58,7 +46,7 @@ export function assertNonNullBucket(bucket: Bucket): asserts bucket is DataBucke
 }
 
 export class NullBucket {
-  type = "null" as const;
+  readonly type = "null" as const;
 
   hasData(): boolean {
     return false;
@@ -77,47 +65,9 @@ export class NullBucket {
   }
 }
 
-export type TypedArrayConstructor =
-  | Uint8ArrayConstructor
-  | Uint16ArrayConstructor
-  | Uint32ArrayConstructor
-  | Float32ArrayConstructor
-  | BigUint64ArrayConstructor;
-export const getConstructorForElementClass = (
-  type: ElementClass,
-): [TypedArrayConstructor, number] => {
-  switch (type) {
-    case "int8":
-    case "uint8":
-      return [Uint8Array, 1];
-
-    case "int16":
-    case "uint16":
-      return [Uint16Array, 1];
-
-    case "uint24":
-      // There is no Uint24Array and uint24 is treated in a special way (rgb) anyways
-      return [Uint8Array, 3];
-
-    case "int32":
-    case "uint32":
-      return [Uint32Array, 1];
-
-    case "float":
-      return [Float32Array, 1];
-
-    case "int64":
-    case "uint64":
-      return [BigUint64Array, 1];
-
-    default:
-      throw new Error(`This type is not supported by the DataBucket class: ${type}`);
-  }
-};
 export const NULL_BUCKET = new NullBucket();
-// The type is used within the DataBucket class which is why
-// we have to define it here.
 export type Bucket = DataBucket | NullBucket;
+
 // This set saves whether a bucket is already added to the current undo volume batch
 // and gets cleared when a volume transaction is ended (marked by the action
 // FINISH_ANNOTATION_STROKE).
@@ -127,8 +77,9 @@ export function markVolumeTransactionEnd() {
 }
 
 export class DataBucket {
-  type = "data" as const;
-  elementClass: ElementClass;
+  readonly type = "data" as const;
+  readonly elementClass: ElementClass;
+  readonly zoomedAddress: BucketAddress;
   visualizedMesh: Record<string, any> | null | undefined;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'visualizationColor' has no initializer a... Remove this comment to see the full error message
   visualizationColor: THREE.Color;
@@ -141,22 +92,21 @@ export class DataBucket {
   // - not yet created by the PushQueue, since the PushQueue creates the snapshots
   //   in a debounced manner
   dirtyCount: number = 0;
-  pendingOperations: Array<(arg0: BucketDataArray) => void> = [];
+  pendingOperations: Array<PendingOperation> = [];
   state: BucketStateEnumType;
-  accessed: boolean;
+  private accessed: boolean;
   data: BucketDataArray | null | undefined;
   temporalBucketManager: TemporalBucketManager;
-  zoomedAddress: BucketAddress;
   cube: DataCube;
   _fallbackBucket: Bucket | null | undefined;
   throttledTriggerLabeled: () => void;
   emitter: Emitter;
-  maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise;
+  private maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise;
   // Especially, for segmentation buckets, it can be interesting to
   // know whether a certain ID is contained in this bucket. To
   // speed up such requests a cached set of the contained values
   // can be stored in cachedValueSet.
-  cachedValueSet: Set<number | bigint> | null = null;
+  cachedValueSet: Set<number> | Set<bigint> | null = null;
 
   constructor(
     elementClass: ElementClass,
@@ -199,14 +149,12 @@ export class DataBucket {
   }
 
   getBoundingBox(): BoundingBoxType {
-    const min = bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.resolutionInfo);
-    const bucketResolution = this.cube.resolutionInfo.getResolutionByIndexOrThrow(
-      this.zoomedAddress[3],
-    );
+    const min = bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.magInfo);
+    const bucketMag = this.cube.magInfo.getMagByIndexOrThrow(this.zoomedAddress[3]);
     const max: Vector3 = [
-      min[0] + Constants.BUCKET_WIDTH * bucketResolution[0],
-      min[1] + Constants.BUCKET_WIDTH * bucketResolution[1],
-      min[2] + Constants.BUCKET_WIDTH * bucketResolution[2],
+      min[0] + Constants.BUCKET_WIDTH * bucketMag[0],
+      min[1] + Constants.BUCKET_WIDTH * bucketMag[1],
+      min[2] + Constants.BUCKET_WIDTH * bucketMag[2],
     ];
     return {
       min,
@@ -215,7 +163,7 @@ export class DataBucket {
   }
 
   getGlobalPosition(): Vector3 {
-    return bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.resolutionInfo);
+    return bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.magInfo);
   }
 
   getTopLeftInMag(): Vector3 {
@@ -226,13 +174,13 @@ export class DataBucket {
     ];
   }
 
-  shouldCollect(): boolean {
-    const collect =
-      !this.accessed &&
+  mayBeGarbageCollected(respectAccessedFlag: boolean): boolean {
+    const mayBeCollected =
+      (!respectAccessedFlag || !this.accessed) &&
       !this.dirty &&
       this.state !== BucketStateEnum.REQUESTED &&
       this.dirtyCount === 0;
-    return collect;
+    return mayBeCollected;
   }
 
   destroy(): void {
@@ -323,7 +271,7 @@ export class DataBucket {
     return dataClone;
   }
 
-  async label_DEPRECATED(labelFunc: (arg0: BucketDataArray) => void): Promise<void> {
+  async label_DEPRECATED(labelFunc: PendingOperation): Promise<void> {
     /*
      * It's not recommended to use this method (repeatedly), as it can be
      * very slow. See the docstring for Bucket.getOrCreateData() for alternatives.
@@ -349,6 +297,42 @@ export class DataBucket {
     }
 
     bucketsAlreadyInUndoState.add(this);
+
+    Store.dispatch(addBucketToUndoAction(this.getSnapshotBeforeMutation()));
+  }
+
+  getSnapshotBeforeMutation(): BucketSnapshot {
+    // This function is not async because we don't want to block the user during
+    // annotating.
+    return this.getSnapshot("MUTATION");
+  }
+
+  async getSnapshotBeforeRestore(): Promise<BucketSnapshot> {
+    // Note that this function is async in contrast to getSnapshotBeforeMutation.
+    // Blocking the user on undo/redo is an okay trade-off.
+    if (this.data == null) {
+      // Only await the data if no local copy exists.
+      await this.ensureLoaded();
+    }
+    return this.getSnapshot("PREPARE_RESTORE_TO_SNAPSHOT");
+  }
+
+  private getSnapshot(purpose: "MUTATION" | "PREPARE_RESTORE_TO_SNAPSHOT"): BucketSnapshot {
+    // getSnapshot is called in two use cases:
+    // 1) The user mutates data.
+    //    If this.data is null, it will be allocated and the bucket will be added
+    //    to the pullQueue and temporalBucketManager (see getOrCreateData).
+    // 2) The user uses undo/redo which will restore the bucket to another snapshot.
+    //    Before this restoration is done, the current version is snapshotted.
+    //    In that case, this.data must not be null, because we assume either
+    //      (a) a local copy of the data already exists (and the bucket is in the TemporalBucketManager).
+    //      (b) the current back-end's version is used for the snapshot and that should have been
+    //          awaited by getSnapshotBeforeRestore.
+
+    if (purpose === "PREPARE_RESTORE_TO_SNAPSHOT" && this.data == null) {
+      throw new Error("Unexpected getSnapshot call.");
+    }
+
     const dataClone = this.getCopyOfData();
 
     if (this.needsBackendData() && this.maybeUnmergedBucketLoadedPromise == null) {
@@ -361,18 +345,26 @@ export class DataBucket {
       });
     }
 
-    Store.dispatch(
-      // Always use the current state of this.maybeUnmergedBucketLoadedPromise, since
-      // this bucket could be added to multiple undo batches while it's fetched. All entries
-      // need to have the corresponding promise for the undo to work correctly.
-      addBucketToUndoAction(
-        this.zoomedAddress,
-        dataClone,
-        this.maybeUnmergedBucketLoadedPromise,
-        this.pendingOperations,
-        this.getTracingId(),
-      ),
+    return new BucketSnapshot(
+      this.zoomedAddress,
+      dataClone,
+      this.maybeUnmergedBucketLoadedPromise,
+      this.pendingOperations.slice(),
+      this.getTracingId(),
+      this.elementClass,
     );
+  }
+
+  async restoreToSnapshot(snapshot: BucketSnapshot): Promise<void> {
+    // This function is async, but can still finish offline, because
+    // getDataForRestore only needs to wait for decompression in the webworker.
+    const { newData, newPendingOperations } = await snapshot.getDataForRestore();
+    // Set the new bucket data. This will add the bucket directly to the pushqueue, too.
+    this.setData(newData, newPendingOperations);
+
+    // needsMergeWithBackendData should be irrelevant. if the snapshot is complete,
+    // the bucket should also be loaded.
+    // if it's not complete, the bucket should already be requested.
   }
 
   hasData(): boolean {
@@ -389,23 +381,13 @@ export class DataBucket {
     return data;
   }
 
-  setData(newData: BucketDataArray, newPendingOperations: Array<(arg0: BucketDataArray) => void>) {
+  setData(newData: BucketDataArray, newPendingOperations: Array<PendingOperation>) {
     this.data = newData;
     this.invalidateValueSet();
     this.pendingOperations = newPendingOperations;
     this.dirty = true;
     this.endDataMutation();
-  }
-
-  uint8ToTypedBuffer(arrayBuffer: Uint8Array | null | undefined) {
-    const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
-    return arrayBuffer != null
-      ? new TypedArrayClass(
-          arrayBuffer.buffer,
-          arrayBuffer.byteOffset,
-          arrayBuffer.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
-        )
-      : new TypedArrayClass(channelCount * Constants.BUCKET_SIZE);
+    this.cube.triggerBucketDataChanged();
   }
 
   markAsNeeded(): void {
@@ -465,7 +447,7 @@ export class DataBucket {
      * See Bucket.getDataForMutation() for a safe way of using this method.
      */
     this.cube.pushQueue.insert(this);
-    this.trigger("bucketLabeled");
+    this.throttledTriggerLabeled();
   }
 
   applyVoxelMap(
@@ -534,7 +516,7 @@ export class DataBucket {
           const voxelToLabel = out;
           voxelToLabel[thirdDimensionIndex] =
             (voxelToLabel[thirdDimensionIndex] + sliceCount) % Constants.BUCKET_WIDTH;
-          // The voxelToLabel is already within the bucket and in the correct resolution.
+          // The voxelToLabel is already within the bucket and in the correct magnification.
           const voxelAddress = this.cube.getVoxelIndexByVoxelOffset(voxelToLabel);
           const currentSegmentId = Number(data[voxelAddress]);
 
@@ -551,7 +533,7 @@ export class DataBucket {
     return wroteVoxels;
   }
 
-  markAsPulled(): void {
+  markAsRequested(): void {
     switch (this.state) {
       case BucketStateEnum.UNREQUESTED: {
         this.state = BucketStateEnum.REQUESTED;
@@ -580,8 +562,8 @@ export class DataBucket {
     }
   }
 
-  receiveData(arrayBuffer: Uint8Array | null | undefined): void {
-    const data = this.uint8ToTypedBuffer(arrayBuffer);
+  receiveData(arrayBuffer: Uint8Array | null | undefined, computeValueSet: boolean = false): void {
+    const data = uint8ToTypedBuffer(arrayBuffer, this.elementClass);
     const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
 
     if (data.length !== channelCount * Constants.BUCKET_SIZE) {
@@ -602,20 +584,24 @@ export class DataBucket {
 
     switch (this.state) {
       case BucketStateEnum.REQUESTED: {
-        // Clone the data for the unmergedBucketDataLoaded event,
-        // as the following merge operation is done in-place.
-        const dataClone = new TypedArrayClass(data);
-        this.trigger("unmergedBucketDataLoaded", dataClone);
-
         if (this.dirty) {
+          // Clone the data for the unmergedBucketDataLoaded event,
+          // as the following merge operation is done in-place.
+          const dataClone = new TypedArrayClass(data);
+          this.trigger("unmergedBucketDataLoaded", dataClone);
           this.merge(data);
         } else {
           this.data = data;
         }
         this.invalidateValueSet();
 
+        if (computeValueSet) {
+          this.ensureValueSet();
+        }
+
         this.state = BucketStateEnum.LOADED;
         this.trigger("bucketLoaded", data);
+        this.cube.triggerBucketDataChanged();
         break;
       }
 
@@ -628,16 +614,22 @@ export class DataBucket {
     this.cachedValueSet = null;
   }
 
-  private recomputeValueSet() {
-    // @ts-ignore The Set constructor accepts null and BigUint64Arrays just fine.
-    this.cachedValueSet = new Set(this.data);
+  private ensureValueSet(): asserts this is { cachedValueSet: Set<number> | Set<bigint> } {
+    if (this.cachedValueSet == null) {
+      // @ts-ignore The Set constructor accepts null and BigUint64Arrays just fine.
+      this.cachedValueSet = new Set(this.data);
+    }
   }
 
   containsValue(value: number | bigint): boolean {
-    if (this.cachedValueSet == null) {
-      this.recomputeValueSet();
-    }
-    return this.cachedValueSet!.has(value);
+    this.ensureValueSet();
+    // @ts-ignore The Set has function accepts number | bigint values just fine, regardless of what's in it.
+    return this.cachedValueSet.has(value);
+  }
+
+  getValueSet(): Set<number> | Set<bigint> {
+    this.ensureValueSet();
+    return this.cachedValueSet;
   }
 
   markAsPushed(): void {
@@ -710,9 +702,9 @@ export class DataBucket {
     if (this.zoomedAddress[3] === zoomStep) {
       // @ts-ignore
       this.visualizedMesh = window.addBucketMesh(
-        bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.resolutionInfo),
+        bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.magInfo),
         this.zoomedAddress[3],
-        this.cube.resolutionInfo.getResolutionByIndex(this.zoomedAddress[3]),
+        this.cube.magInfo.getMagByIndex(this.zoomedAddress[3]),
         colors[this.zoomedAddress[3]] || this.visualizationColor,
       );
     }
@@ -743,8 +735,18 @@ export class DataBucket {
   // Example usage:
   // bucket._logMaybe("Data of problematic bucket", bucket.data)
   _logMaybe = (...args: any[]) => {
-    if (this.zoomedAddress.join(",") === [93, 0, 0, 0].join(",")) {
-      console.log(...args);
+    const addressStr = this.zoomedAddress.slice(0, 4).join(",");
+    // console.log(addressStr, ...args);
+    if (addressStr === [19, 30, 16, 0].join(",")) {
+      console.log(addressStr, ...args);
+    }
+  };
+
+  _debuggerMaybe = () => {
+    const addressStr = this.zoomedAddress.slice(0, 4).join(",");
+    if (addressStr === [19, 30, 16, 0].join(",")) {
+      // biome-ignore lint/suspicious/noDebugger: meant for debugging
+      debugger;
     }
   };
 
@@ -754,10 +756,7 @@ export class DataBucket {
     if (this.isRequested()) {
       needsToAwaitBucket = true;
     } else if (this.needsRequest()) {
-      this.cube.pullQueue.add({
-        bucket: this.zoomedAddress,
-        priority: PullQueueConstants.PRIORITY_HIGHEST,
-      });
+      this.addToPullQueueWithHighestPriority();
       this.cube.pullQueue.pull();
       needsToAwaitBucket = true;
     } else if (this.isMissing()) {
@@ -776,7 +775,14 @@ export class DataBucket {
       // In the past, ensureLoaded() never returned if the bucket
       // was MISSING. This log might help to discover potential
       // bugs which could arise in combination with MISSING buckets.
-      console.warn("Awaited missing bucket.");
+      warnAwaitedMissingBucket();
     }
+  }
+
+  addToPullQueueWithHighestPriority() {
+    this.cube.pullQueue.add({
+      bucket: this.zoomedAddress,
+      priority: PullQueueConstants.PRIORITY_HIGHEST,
+    });
   }
 }

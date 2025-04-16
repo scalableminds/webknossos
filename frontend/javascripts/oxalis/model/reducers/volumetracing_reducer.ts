@@ -1,5 +1,52 @@
 import update from "immutability-helper";
+import DiffableMap from "libs/diffable_map";
+import * as Utils from "libs/utils";
 import { ContourModeEnum } from "oxalis/constants";
+import {
+  getLayerByName,
+  getMappingInfo,
+  getMaximumSegmentIdForLayer,
+  getVisibleSegmentationLayer,
+} from "oxalis/model/accessors/dataset_accessor";
+import {
+  getRequestedOrVisibleSegmentationLayer,
+  getSegmentationLayerForTracing,
+  getSelectedIds,
+  getVisibleSegments,
+  getVolumeTracingById,
+} from "oxalis/model/accessors/volumetracing_accessor";
+import type {
+  FinishMappingInitializationAction,
+  SetMappingAction,
+  SetMappingEnabledAction,
+  SetMappingNameAction,
+} from "oxalis/model/actions/settings_actions";
+import type {
+  ClickSegmentAction,
+  RemoveSegmentAction,
+  SetSegmentsAction,
+  UpdateSegmentAction,
+  VolumeTracingAction,
+} from "oxalis/model/actions/volumetracing_actions";
+import { updateKey2 } from "oxalis/model/helpers/deep_update";
+import {
+  convertServerAdditionalAxesToFrontEnd,
+  convertServerBoundingBoxToFrontend,
+  convertUserBoundingBoxesFromServerToFrontend,
+} from "oxalis/model/reducers/reducer_helpers";
+import {
+  addToLayerReducer,
+  createCellReducer,
+  hideBrushReducer,
+  removeMissingGroupsFromSegments,
+  resetContourReducer,
+  setActiveCellReducer,
+  setContourTracingModeReducer,
+  setLargestSegmentIdReducer,
+  setMappingNameReducer,
+  updateDirectionReducer,
+  updateVolumeTracing,
+} from "oxalis/model/reducers/volumetracing_reducer_helpers";
 import type {
   EditableMapping,
   OxalisState,
@@ -8,48 +55,14 @@ import type {
   SegmentMap,
   VolumeTracing,
 } from "oxalis/store";
-import type {
-  VolumeTracingAction,
-  UpdateSegmentAction,
-  SetSegmentsAction,
-  RemoveSegmentAction,
-} from "oxalis/model/actions/volumetracing_actions";
 import {
-  convertServerAdditionalAxesToFrontEnd,
-  convertServerBoundingBoxToFrontend,
-  convertUserBoundingBoxesFromServerToFrontend,
-} from "oxalis/model/reducers/reducer_helpers";
-import {
-  getRequestedOrVisibleSegmentationLayer,
-  getSegmentationLayerForTracing,
-  getVolumeTracingById,
-} from "oxalis/model/accessors/volumetracing_accessor";
-import {
-  setActiveCellReducer,
-  createCellReducer,
-  updateDirectionReducer,
-  addToLayerReducer,
-  resetContourReducer,
-  hideBrushReducer,
-  setContourTracingModeReducer,
-  setLargestSegmentIdReducer,
-  updateVolumeTracing,
-  setMappingNameReducer,
-  removeMissingGroupsFromSegments,
-} from "oxalis/model/reducers/volumetracing_reducer_helpers";
-import { updateKey2 } from "oxalis/model/helpers/deep_update";
-import DiffableMap from "libs/diffable_map";
-import * as Utils from "libs/utils";
+  findParentIdForGroupId,
+  getGroupNodeKey,
+} from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import type { AdditionalCoordinate, ServerVolumeTracing } from "types/api_flow_types";
-import {
-  SetMappingAction,
-  SetMappingEnabledAction,
-  SetMappingNameAction,
-} from "oxalis/model/actions/settings_actions";
-import {
-  getMappingInfo,
-  getMaximumSegmentIdForLayer,
-} from "oxalis/model/accessors/dataset_accessor";
+import { mapGroups } from "../accessors/skeletontracing_accessor";
+import { sanitizeMetadata } from "./skeletontracing_reducer";
+
 type SegmentUpdateInfo =
   | {
       readonly type: "UPDATE_VOLUME_TRACING";
@@ -77,7 +90,7 @@ function getSegmentUpdateInfo(
   }
 
   if (layer.tracingId != null) {
-    const volumeTracing = getVolumeTracingById(state.tracing, layer.tracingId);
+    const volumeTracing = getVolumeTracingById(state.annotation, layer.tracingId);
     return {
       type: "UPDATE_VOLUME_TRACING",
       volumeTracing,
@@ -175,16 +188,19 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
       // without a position.
     }
 
-    const newSegment = {
+    const metadata = sanitizeMetadata(segment.metadata || oldSegment?.metadata || []);
+
+    const newSegment: Segment = {
       // If oldSegment exists, its creationTime will be
       // used by ...oldSegment
       creationTime: action.timestamp,
       name: null,
       color: null,
-      groupId: null,
+      groupId: getSelectedIds(state)[0].group,
       someAdditionalCoordinates: someAdditionalCoordinates,
       ...oldSegment,
       ...segment,
+      metadata,
       somePosition,
       id: segmentId,
     };
@@ -192,6 +208,33 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
     const newSegmentMap = segments.set(segmentId, newSegment);
     return newSegmentMap;
   });
+}
+
+function expandSegmentParents(state: OxalisState, action: ClickSegmentAction) {
+  if (action.layerName == null) return state;
+  const getNewGroups = () => {
+    const { segments, segmentGroups } = getVisibleSegments(state);
+    if (action.layerName == null || segments == null) return segmentGroups;
+    const { segmentId } = action;
+    const segmentForId = segments.getNullable(segmentId);
+    if (segmentForId == null) return segmentGroups;
+    // Expand recursive parents of group too, if necessary
+    const pathToRoot = new Set([segmentForId.groupId]);
+    if (segmentForId.groupId != null) {
+      let currentParent = findParentIdForGroupId(segmentGroups, segmentForId.groupId);
+      while (currentParent != null) {
+        pathToRoot.add(currentParent);
+        currentParent = findParentIdForGroupId(segmentGroups, currentParent);
+      }
+    }
+    return mapGroups(segmentGroups, (group) => {
+      if (pathToRoot.has(group.groupId) && !group.isExpanded) {
+        return { ...group, isExpanded: true };
+      }
+      return group;
+    });
+  };
+  return setSegmentGroups(state, action.layerName, getNewGroups());
 }
 
 export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing): VolumeTracing {
@@ -223,32 +266,55 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
     contourList: [],
     largestSegmentId,
     tracingId: tracing.id,
-    version: tracing.version,
     boundingBox: convertServerBoundingBoxToFrontend(tracing.boundingBox),
     fallbackLayer: tracing.fallbackLayer,
     userBoundingBoxes,
     mappingName: tracing.mappingName,
-    mappingIsEditable: tracing.mappingIsEditable,
+    hasEditableMapping: tracing.hasEditableMapping,
     mappingIsLocked: tracing.mappingIsLocked,
+    volumeBucketDataHasChanged: tracing.volumeBucketDataHasChanged,
     hasSegmentIndex: tracing.hasSegmentIndex || false,
     additionalAxes: convertServerAdditionalAxesToFrontEnd(tracing.additionalAxes),
   };
   return volumeTracing;
 }
 
-function VolumeTracingReducer(
-  state: OxalisState,
-  action: VolumeTracingAction | SetMappingAction | SetMappingEnabledAction | SetMappingNameAction,
-): OxalisState {
+type VolumeTracingReducerAction =
+  | VolumeTracingAction
+  | SetMappingAction
+  | FinishMappingInitializationAction
+  | SetMappingEnabledAction
+  | SetMappingNameAction;
+
+function getVolumeTracingFromAction(state: OxalisState, action: VolumeTracingReducerAction) {
+  if ("tracingId" in action && action.tracingId != null) {
+    return getVolumeTracingById(state.annotation, action.tracingId);
+  }
+  const maybeVolumeLayer =
+    "layerName" in action && action.layerName != null
+      ? getLayerByName(state.dataset, action.layerName)
+      : getVisibleSegmentationLayer(state);
+
+  if (
+    maybeVolumeLayer == null ||
+    !("tracingId" in maybeVolumeLayer) ||
+    maybeVolumeLayer.tracingId == null
+  ) {
+    return null;
+  }
+  return getVolumeTracingById(state.annotation, maybeVolumeLayer.tracingId);
+}
+
+function VolumeTracingReducer(state: OxalisState, action: VolumeTracingReducerAction): OxalisState {
   switch (action.type) {
     case "INITIALIZE_VOLUMETRACING": {
       const volumeTracing = serverVolumeToClientVolumeTracing(action.tracing);
-      const newVolumes = state.tracing.volumes.filter(
+      const newVolumes = state.annotation.volumes.filter(
         (tracing) => tracing.tracingId !== volumeTracing.tracingId,
       );
       newVolumes.push(volumeTracing);
       const newState = update(state, {
-        tracing: {
+        annotation: {
           volumes: {
             $set: newVolumes,
           },
@@ -282,12 +348,12 @@ function VolumeTracingReducer(
         type: "mapping",
         ...action.mapping,
       };
-      const newMappings = state.tracing.mappings.filter(
+      const newMappings = state.annotation.mappings.filter(
         (tracing) => tracing.tracingId !== mapping.tracingId,
       );
       newMappings.push(mapping);
       return update(state, {
-        tracing: {
+        annotation: {
           mappings: {
             $set: newMappings,
           },
@@ -307,27 +373,51 @@ function VolumeTracingReducer(
       return handleRemoveSegment(state, action);
     }
 
+    case "SET_EXPANDED_SEGMENT_GROUPS": {
+      const { expandedSegmentGroups, layerName } = action;
+      const { segmentGroups } = getVisibleSegments(state);
+      const newGroups = mapGroups(segmentGroups, (group) => {
+        const shouldBeExpanded = expandedSegmentGroups.has(getGroupNodeKey(group.groupId));
+        if (shouldBeExpanded !== group.isExpanded) {
+          return {
+            ...group,
+            isExpanded: shouldBeExpanded,
+          };
+        } else {
+          return group;
+        }
+      });
+      return setSegmentGroups(state, layerName, newGroups);
+    }
+
     case "SET_SEGMENT_GROUPS": {
       const { segmentGroups } = action;
       return setSegmentGroups(state, action.layerName, segmentGroups);
     }
 
+    case "CLICK_SEGMENT": {
+      return expandSegmentParents(state, action);
+    }
+
+    case "SET_VOLUME_BUCKET_DATA_HAS_CHANGED": {
+      return updateVolumeTracing(state, action.tracingId, {
+        volumeBucketDataHasChanged: true,
+      });
+    }
+
     default: // pass
   }
 
-  if (state.tracing.volumes.length === 0) {
+  if (state.annotation.volumes.length === 0) {
     // If no volume exists yet (i.e., it wasn't initialized, yet),
     // the following reducer code should not run.
     return state;
   }
 
-  const volumeLayer = getRequestedOrVisibleSegmentationLayer(state, null);
-
-  if (volumeLayer == null || volumeLayer.tracingId == null) {
+  const volumeTracing = getVolumeTracingFromAction(state, action);
+  if (volumeTracing == null) {
     return state;
   }
-
-  const volumeTracing = getVolumeTracingById(state.tracing, volumeLayer.tracingId);
 
   switch (action.type) {
     case "SET_ACTIVE_CELL": {
@@ -383,7 +473,16 @@ function VolumeTracingReducer(
     }
 
     case "SET_MAPPING": {
+      // We only need to store the name of the mapping here. Also see the settings_reducer where
+      // SET_MAPPING is also handled.
       return setMappingNameReducer(state, volumeTracing, action.mappingName, action.mappingType);
+    }
+    case "FINISH_MAPPING_INITIALIZATION": {
+      const { mappingName, mappingType } = getMappingInfo(
+        state.temporaryConfiguration.activeMappingByLayer,
+        action.layerName,
+      );
+      return setMappingNameReducer(state, volumeTracing, mappingName, mappingType, true);
     }
 
     case "SET_MAPPING_ENABLED": {
@@ -402,19 +501,19 @@ function VolumeTracingReducer(
 
     case "SET_MAPPING_NAME": {
       // Editable mappings cannot be disabled or switched for now
-      if (volumeTracing.mappingIsEditable || volumeTracing.mappingIsLocked) return state;
+      if (volumeTracing.hasEditableMapping || volumeTracing.mappingIsLocked) return state;
 
       const { mappingName, mappingType } = action;
       return setMappingNameReducer(state, volumeTracing, mappingName, mappingType);
     }
 
-    case "SET_MAPPING_IS_EDITABLE": {
+    case "SET_HAS_EDITABLE_MAPPING": {
       // Editable mappings cannot be disabled or switched for now.
-      if (volumeTracing.mappingIsEditable || volumeTracing.mappingIsLocked) return state;
+      if (volumeTracing.hasEditableMapping || volumeTracing.mappingIsLocked) return state;
 
       // An editable mapping is always locked.
       return updateVolumeTracing(state, volumeTracing.tracingId, {
-        mappingIsEditable: true,
+        hasEditableMapping: true,
         mappingIsLocked: true,
       });
     }

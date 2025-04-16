@@ -5,6 +5,7 @@ import com.scalableminds.util.io.{NamedFunctionStream, NamedStream}
 import com.scalableminds.util.tools.ByteUtils
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.layers.Zarr3SegmentationLayer
+import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
 import com.scalableminds.webknossos.datastore.datareaders.zarr3._
 import com.scalableminds.webknossos.datastore.datareaders.{
   AxisOrder,
@@ -19,7 +20,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   DataSourceId,
   GenericDataSource
 }
-import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
+import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, VoxelSize}
 import play.api.libs.json.Json
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -27,7 +28,8 @@ import scala.concurrent.{ExecutionContext, Future}
 // Creates data zip from volume tracings
 class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLayer: Boolean)
     extends ProtoGeometryImplicits
-    with VolumeBucketReversionHelper
+    with ReversionHelper
+    with Zarr3OutputHelper
     with ByteUtils {
 
   private lazy val defaultLayerName = "volumeAnnotationData"
@@ -36,45 +38,13 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
   private lazy val rank = layer.additionalAxes.getOrElse(Seq.empty).length + 4
   private lazy val additionalAxesSorted = reorderAdditionalAxes(layer.additionalAxes.getOrElse(Seq.empty))
 
-  def apply(bucketStream: Iterator[(BucketPosition, Array[Byte])], mags: Seq[Vec3Int], voxelSize: Option[Vec3Double])(
+  def apply(bucketStream: Iterator[(BucketPosition, Array[Byte])], mags: Seq[Vec3Int], voxelSize: Option[VoxelSize])(
       implicit ec: ExecutionContext): Iterator[NamedStream] = {
 
-    val header = Zarr3ArrayHeader(
-      zarr_format = 3,
-      node_type = "array",
-      // channel, additional axes, XYZ
-      shape = Array(1) ++ additionalAxesSorted.map(_.highestValue).toArray ++ layer.boundingBox.bottomRight.toArray,
-      data_type = Left(layer.elementClass.toString),
-      chunk_grid = Left(
-        ChunkGridSpecification(
-          "regular",
-          ChunkGridConfiguration(
-            chunk_shape = Array.fill(1 + additionalAxesSorted.length)(1) ++ Array(DataLayer.bucketLength,
-                                                                                  DataLayer.bucketLength,
-                                                                                  DataLayer.bucketLength))
-        )),
-      chunk_key_encoding =
-        ChunkKeyEncoding("default",
-                         configuration = Some(ChunkKeyEncodingConfiguration(separator = Some(dimensionSeparator)))),
-      fill_value = Right(0),
-      attributes = None,
-      codecs = Seq(
-        TransposeCodecConfiguration(TransposeSetting.fOrderFromRank(rank)),
-        BytesCodecConfiguration(Some("little")),
-        BloscCodecConfiguration(
-          BloscCompressor.defaultCname,
-          BloscCompressor.defaultCLevel,
-          StringCompressionSetting(BloscCodecConfiguration.shuffleSettingFromInt(BloscCompressor.defaultShuffle)),
-          Some(BloscCompressor.defaultTypesize),
-          BloscCompressor.defaultBlocksize
-        )
-      ),
-      storage_transformers = None,
-      dimension_names = Some(Array("c") ++ additionalAxesSorted.map(_.name).toArray ++ Seq("x", "y", "z"))
-    )
+    val header = Zarr3ArrayHeader.fromDataLayer(layer, mags.headOption.getOrElse(Vec3Int.ones))
     bucketStream.flatMap {
       case (bucket, data) =>
-        val skipBucket = if (tracingHasFallbackLayer) isAllZero(data) else isRevertedBucket(data)
+        val skipBucket = if (tracingHasFallbackLayer) isAllZero(data) else isRevertedElement(data)
         if (skipBucket) {
           // If the tracing has no fallback segmentation, all-zero buckets can be omitted entirely
           None
@@ -97,10 +67,9 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
       ))
   }
 
-  private def createVolumeDataSource(voxelSize: Option[Vec3Double]): GenericDataSource[DataLayer] = {
-    val magLocators = layer.tracing.resolutions.map { mag =>
-      MagLocator(mag = vec3IntToProto(mag),
-                 axisOrder = Some(AxisOrder(c = Some(0), x = rank - 3, y = rank - 2, z = Some(rank - 1))))
+  private def createVolumeDataSource(voxelSize: Option[VoxelSize]): GenericDataSource[DataLayer] = {
+    val magLocators = layer.tracing.mags.map { mag =>
+      MagLocator(mag = vec3IntToProto(mag), axisOrder = Some(AxisOrder.cAdditionalxyz(rank)))
     }
     GenericDataSource(
       id = DataSourceId("", ""),
@@ -114,16 +83,8 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
             if (additionalAxesSorted.isEmpty) None
             else Some(additionalAxesSorted)
         )),
-      scale = voxelSize.getOrElse(Vec3Double.ones) // Download should still be available if the dataset no longer exists. In that case, the voxel size is unknown
+      scale = voxelSize.getOrElse(VoxelSize.fromFactorWithDefaultUnit(Vec3Double.ones)) // Download should still be available if the dataset no longer exists. In that case, the voxel size is unknown
     )
-  }
-
-  private def reorderAdditionalAxes(additionalAxes: Seq[AdditionalAxis]): Seq[AdditionalAxis] = {
-    val additionalAxesStartIndex = 1 // channel comes first
-    val sorted = additionalAxes.sortBy(_.index)
-    sorted.zipWithIndex.map {
-      case (axis, index) => axis.copy(index = index + additionalAxesStartIndex)
-    }
   }
 
   private def reorderAdditionalCoordinates(additionalCoordinates: Seq[AdditionalCoordinate],

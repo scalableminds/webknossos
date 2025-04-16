@@ -67,3 +67,12 @@
 .selected-layout-item {
   font-weight: bold;
 }
+
+.undo-redo-button {
+  // Avoid width-flickering when clicking the button
+  width: 36px !important;
+  // Fix vertical align getting messed up when the buttons turns
+  // into a loading state (then, .ant-btn-icon-only is active which uses
+  // vertical-align: -3px)
+  vertical-align: 0;
+}

@@ -226,6 +226,12 @@ label.ant-checkbox-wrapper {
   }
 }
 
+#tree-list {
+  .ant-tree-title {
+    // Make the tree elements in the tree list full-width
+    width: 100%;
+  }
+}
 .ant-tree-directory .ant-tree-title {
   // Make the directory tree element full-width (subtract the width of the
   // directory icon)
@@ -240,6 +246,9 @@ label.ant-checkbox-wrapper {
 
 .ant-tree-node-content-wrapper {
   display: flex;
+  // Set padding to 0 so that the contained title span fills the
+  // wrapper entirely. Otherwise, ugly borders would appear on hovering.
+  padding: 0 !important;
 }
 
 .ant-tree.ant-tree-directory .ant-tree-treenode-selected:hover::before,
@@ -281,4 +290,9 @@ label.ant-checkbox-wrapper {
 
 .ant-radio-button-wrapper-disabled:first-child{
   opacity: 0.5;
+}
+
+
+.no-padding {
+  padding: 0 !important;
 }

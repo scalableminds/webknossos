@@ -1,46 +1,46 @@
-import { Alert, Popover } from "antd";
-import { connect, useDispatch, useSelector } from "react-redux";
-import * as React from "react";
-import type { APIDataset, APIUser } from "types/api_flow_types";
 import { createExplorational } from "admin/admin_rest_api";
-import {
-  layoutEmitter,
-  deleteLayout,
-  getLayoutConfig,
-  addNewLayout,
-} from "oxalis/view/layouting/layout_persistence";
-import { trackAction } from "oxalis/model/helpers/analytics";
-import AddNewLayoutModal from "oxalis/view/action-bar/add_new_layout_modal";
 import { withAuthentication } from "admin/auth/authentication_modal";
-import { ViewMode, ControlMode, MappingStatusEnum } from "oxalis/constants";
+import { Alert, Popover } from "antd";
+import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
+import { isUserAdminOrTeamManager } from "libs/utils";
+import { ArbitraryVectorInput } from "libs/vector_input";
+import { type ControlMode, MappingStatusEnum, type ViewMode } from "oxalis/constants";
 import constants, { ControlModeEnum } from "oxalis/constants";
-import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
+import {
+  doesSupportVolumeWithFallback,
+  getColorLayers,
+  getMappingInfoForSupportedLayer,
+  getUnifiedAdditionalCoordinates,
+  getVisibleSegmentationLayer,
+  is2dDataset,
+} from "oxalis/model/accessors/dataset_accessor";
+import { setAdditionalCoordinatesAction } from "oxalis/model/actions/flycam_actions";
+import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
 import type { OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
+import AddNewLayoutModal from "oxalis/view/action-bar/add_new_layout_modal";
+import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
+import ToolbarView from "oxalis/view/action-bar/toolbar_view";
 import TracingActionsView, {
   getLayoutMenu,
-  LayoutProps,
+  type LayoutProps,
 } from "oxalis/view/action-bar/tracing_actions_view";
 import ViewDatasetActionsView from "oxalis/view/action-bar/view_dataset_actions_view";
 import ViewModesView from "oxalis/view/action-bar/view_modes_view";
-import ToolbarView from "oxalis/view/action-bar/toolbar_view";
 import {
-  is2dDataset,
-  doesSupportVolumeWithFallback,
-  getVisibleSegmentationLayer,
-  getMappingInfoForSupportedLayer,
-  getUnifiedAdditionalCoordinates,
-  getColorLayers,
-} from "oxalis/model/accessors/dataset_accessor";
-import { AsyncButton, AsyncButtonProps } from "components/async_clickables";
-import { setAdditionalCoordinatesAction } from "oxalis/model/actions/flycam_actions";
-import { NumberSliderSetting } from "./components/setting_input_views";
-import { ArbitraryVectorInput } from "libs/vector_input";
+  addNewLayout,
+  deleteLayout,
+  getLayoutConfig,
+  layoutEmitter,
+} from "oxalis/view/layouting/layout_persistence";
+import * as React from "react";
+import { connect, useDispatch, useSelector } from "react-redux";
+import { useHistory } from "react-router-dom";
+import type { APIDataset, APIUser } from "types/api_flow_types";
 import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
+import { StartAIJobModal, type StartAIJobModalState } from "./action-bar/starting_job_modals";
 import ButtonComponent from "./components/button_component";
-import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
-import { type StartAIJobModalState, StartAIJobModal } from "./action-bar/starting_job_modals";
-import { isUserAdminOrTeamManager } from "libs/utils";
+import { NumberSliderSetting } from "./components/setting_input_views";
 
 const VersionRestoreWarning = (
   <Alert
@@ -121,6 +121,7 @@ function AdditionalCoordinatesInputView() {
                   };
                   changeAdditionalCoordinates(newCoords);
                 }}
+                wheelFactor={0.05}
               />
             );
           })}
@@ -136,6 +137,58 @@ function AdditionalCoordinatesInputView() {
         addonBefore={additionalCoordinates.map((coord) => coord.name).join("")}
       />
     </Popover>
+  );
+}
+
+function CreateAnnotationButton() {
+  const history = useHistory();
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+
+  const onClick = async () => {
+    const state = Store.getState();
+    const { dataset } = state;
+    // If the dataset supports creating an annotation with a fallback segmentation,
+    // use it (as the fallback can always be removed later)
+    const maybeSegmentationLayer = getVisibleSegmentationLayer(state);
+    const fallbackLayerName =
+      maybeSegmentationLayer && doesSupportVolumeWithFallback(dataset, maybeSegmentationLayer)
+        ? maybeSegmentationLayer.name
+        : null;
+
+    const mappingInfo = getMappingInfoForSupportedLayer(Store.getState());
+    let maybeMappingName = null;
+    if (
+      mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED &&
+      mappingInfo.mappingType === "HDF5"
+    ) {
+      maybeMappingName = mappingInfo.mappingName;
+    }
+
+    const annotation = await createExplorational(
+      dataset.id,
+      "hybrid",
+      false,
+      fallbackLayerName,
+      maybeMappingName,
+    );
+    history.push(`/annotations/${annotation.id}${location.hash}`);
+  };
+
+  const ButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
+    AsyncButton,
+  );
+  return (
+    <ButtonWithAuthentication
+      activeUser={activeUser}
+      authenticationMessage="You have to register or login to create an annotation."
+      style={{
+        marginLeft: 12,
+      }}
+      type="primary"
+      onClick={onClick}
+    >
+      Create Annotation
+    </ButtonWithAuthentication>
   );
 }
 
@@ -170,43 +223,12 @@ class ActionBarView extends React.PureComponent<Props, State> {
     }
   };
 
-  createAnnotation = async (dataset: APIDataset) => {
-    // If the dataset supports creating an annotation with a fallback segmentation,
-    // use it (as the fallback can always be removed later)
-    const maybeSegmentationLayer = getVisibleSegmentationLayer(Store.getState());
-    const fallbackLayerName =
-      maybeSegmentationLayer && doesSupportVolumeWithFallback(dataset, maybeSegmentationLayer)
-        ? maybeSegmentationLayer.name
-        : null;
-
-    const mappingInfo = getMappingInfoForSupportedLayer(Store.getState());
-    let maybeMappingName = null;
-    if (
-      mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED &&
-      mappingInfo.mappingType === "HDF5"
-    ) {
-      maybeMappingName = mappingInfo.mappingName;
-    }
-
-    const annotation = await createExplorational(
-      dataset,
-      "hybrid",
-      false,
-      fallbackLayerName,
-      maybeMappingName,
-    );
-    trackAction("Create hybrid tracing (from view mode)");
-    location.href = `${location.origin}/annotations/${annotation.typ}/${annotation.id}${location.hash}`;
-  };
-
-  renderStartAIJobButton(disabled: boolean): React.ReactNode {
-    const tooltipText = disabled
-      ? "The dataset needs to have a color layer to start AI processing jobs."
-      : "Start a processing job using AI";
+  renderStartAIJobButton(disabled: boolean, tooltipTextIfDisabled: string): React.ReactNode {
+    const tooltipText = disabled ? tooltipTextIfDisabled : "Start a processing job using AI";
     return (
       <ButtonComponent
         key="ai-job-button"
-        onClick={() => Store.dispatch(setAIJobModalStateAction("neuron_inferral"))}
+        onClick={() => Store.dispatch(setAIJobModalStateAction(APIJobType.INFER_NEURONS))}
         style={{ marginLeft: 12, pointerEvents: "auto" }}
         disabled={disabled}
         title={tooltipText}
@@ -218,22 +240,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
   }
 
   renderStartTracingButton(): React.ReactNode {
-    const ButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
-      AsyncButton,
-    );
-    return (
-      <ButtonWithAuthentication
-        activeUser={this.props.activeUser}
-        authenticationMessage="You have to register or login to create an annotation."
-        style={{
-          marginLeft: 12,
-        }}
-        type="primary"
-        onClick={() => this.createAnnotation(this.props.dataset)}
-      >
-        Create Annotation
-      </ButtonWithAuthentication>
-    );
+    return <CreateAnnotationButton />;
   }
 
   render() {
@@ -251,7 +258,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
     const isAdminOrDatasetManager = activeUser && isUserAdminOrTeamManager(activeUser);
     const isViewMode = controlMode === ControlModeEnum.VIEW;
     const isArbitrarySupported = hasSkeleton || isViewMode;
-    const isAIAnalysisEnabled = () => {
+    const getIsAIAnalysisEnabled = () => {
       const jobsEnabled =
         dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_NEURONS) ||
         dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_MITOCHONDRIA) ||
@@ -272,7 +279,19 @@ class ActionBarView extends React.PureComponent<Props, State> {
       onDeleteLayout: this.handleLayoutDeleted,
     });
 
-    const datasetHasColorLayer = getColorLayers(dataset).length > 0;
+    const colorLayers = getColorLayers(dataset);
+    const datasetHasNoColorLayer = colorLayers.length === 0;
+    const isNd = (colorLayers[0]?.additionalAxes ?? []).length > 0;
+    const is2DOrNDDataset = isNd || is2d;
+    const isAIAnalysisDisabled = !getIsAIAnalysisEnabled();
+    const shouldDisableAIJobButton =
+      isAIAnalysisDisabled || datasetHasNoColorLayer || is2DOrNDDataset;
+    let tooltip = "AI analysis is not enabled for this dataset.";
+    if (datasetHasNoColorLayer) {
+      tooltip = "The dataset needs to have a color layer to start AI processing jobs.";
+    } else if (is2DOrNDDataset) {
+      tooltip = `AI Analysis is not supported for ${is2d ? "2D" : "ND"} datasets.`;
+    }
 
     return (
       <React.Fragment>
@@ -286,11 +305,13 @@ class ActionBarView extends React.PureComponent<Props, State> {
           <DatasetPositionView />
           <AdditionalCoordinatesInputView />
           {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
-          {isAIAnalysisEnabled() && isAdminOrDatasetManager
-            ? this.renderStartAIJobButton(!datasetHasColorLayer)
+          {getIsAIAnalysisEnabled() && isAdminOrDatasetManager
+            ? this.renderStartAIJobButton(shouldDisableAIJobButton, tooltip)
             : null}
-          {!isReadOnly && constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
           {isViewMode ? this.renderStartTracingButton() : null}
+          {constants.MODES_PLANE.indexOf(viewMode) > -1 ? (
+            <ToolbarView isReadOnly={isReadOnly} />
+          ) : null}
         </div>
         <AddNewLayoutModal
           addLayout={this.addNewLayout}
@@ -312,8 +333,8 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
   controlMode: state.temporaryConfiguration.controlMode,
   showVersionRestore: state.uiInformation.showVersionRestore,
-  hasSkeleton: state.tracing.skeleton != null,
-  isReadOnly: !state.tracing.restrictions.allowUpdate,
+  hasSkeleton: state.annotation.skeleton != null,
+  isReadOnly: !state.annotation.restrictions.allowUpdate,
   is2d: is2dDataset(state.dataset),
   viewMode: state.temporaryConfiguration.viewMode,
   aiJobModalState: state.uiInformation.aIJobModalState,

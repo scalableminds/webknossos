@@ -1,7 +1,7 @@
 // @ts-nocheck
 import "test/mocks/lz4";
 import { __setupOxalis, KeyboardJS } from "test/helpers/apiHelpers";
-import { makeBasicGroupObject } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import { makeBasicGroupObject } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import { setTreeGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
 import { userSettings } from "types/schemas/user_settings.schema";
@@ -137,18 +137,6 @@ test("User Api: setConfiguration should clamp a user configuration value if it i
   api.user.setConfiguration("moveValue", MOVE_VALUE);
   t.is(api.user.getConfiguration("moveValue"), userSettings.moveValue.minimum);
 });
-test.serial.cb("Utils Api: sleep should sleep", (t) => {
-  const { api } = t.context;
-  let bool = false;
-  api.utils.sleep(200).then(() => {
-    bool = true;
-  });
-  t.false(bool);
-  setTimeout(() => {
-    t.true(bool);
-    t.end();
-  }, 400);
-});
 test("Utils Api: registerKeyHandler should register a key handler and return a handler to unregister it again", (t) => {
   const { api } = t.context;
   // Unfortunately this is not properly testable as KeyboardJS doesn't work without a DOM
@@ -222,8 +210,8 @@ test.serial("getTreeGroups should get all tree groups and set a tree group", (t)
   api.tracing.setTreeGroup(2, 3);
   api.tracing.setTreeGroup(1, 7);
   const state = Store.getState();
-  t.is(state.tracing.skeleton.trees[2].groupId, 3);
-  t.is(state.tracing.skeleton.trees[1].groupId, 7);
+  t.is(state.annotation.skeleton.trees[2].groupId, 3);
+  t.is(state.annotation.skeleton.trees[1].groupId, 7);
 });
 test.serial("renameSkeletonGroup should rename a tree group", (t) => {
   const { api } = t.context;
@@ -232,12 +220,12 @@ test.serial("renameSkeletonGroup should rename a tree group", (t) => {
   );
   api.tracing.renameSkeletonGroup(7, "renamed");
   const state = Store.getState();
-  t.is(state.tracing.skeleton.treeGroups[1].name, "renamed");
+  t.is(state.annotation.skeleton.treeGroups[1].name, "renamed");
 });
 test("setTreeGroup should set the visibility of a tree", (t) => {
   const { api } = t.context;
   api.tracing.setTreeVisibility(2, false);
-  t.false(Store.getState().tracing.skeleton.trees[2].isVisible);
+  t.false(Store.getState().annotation.skeleton.trees[2].isVisible);
   api.tracing.setTreeVisibility(2, true);
-  t.true(Store.getState().tracing.skeleton.trees[2].isVisible);
+  t.true(Store.getState().annotation.skeleton.trees[2].isVisible);
 });

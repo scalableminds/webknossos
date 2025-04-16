@@ -6,17 +6,15 @@ Option[String], openGraphImage: Option[String] )
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <meta name="commit-hash" content="@(webknossos.BuildInfo.commitHash)" />
     <meta name="selected-theme" content="@(selectedTheme)" />
-    @if(conf.GoogleAnalytics.trackingId.nonEmpty) {
-    <meta name="google-analytics-tracking-id" content="@(conf.GoogleAnalytics.trackingId)" />
+    @if(selectedTheme == "auto") {
+    <style>@@media (prefers-color-scheme: dark) { html { background: black } }</style>
     }
+    @if(selectedTheme == "dark") {<style>html { background: black }</style>}
     <title>@(conf.WebKnossos.tabTitle)</title>
-    @openGraphTitle.map { ogt =>
-    <meta property="og:title" content="@ogt" />
-    } @openGraphDescription.map { ogd =>
-    <meta property="og:description" content="@ogd" />
-    } @openGraphImage.map { ogi =>
-    <meta property="og:image" content="@ogi" />
-    } @if(conf.Features.isWkorgInstance){
+    @openGraphTitle.map { ogt =><meta property="og:title" content="@ogt" />}
+    @openGraphDescription.map { ogd => <meta property="og:description" content="@ogd" />}
+    @openGraphImage.map { ogi => <meta property="og:image" content="@ogi" />}
+    @if(conf.Features.isWkorgInstance){
     <meta
       name="description"
       content="Annotate and explore large 3D datasets with WEBKNOSSOS. Fast neurite skeletonization. 3D voxel painting. Collaboration, sharing and crowdsourcing."
@@ -52,25 +50,5 @@ Option[String], openGraphImage: Option[String] )
   </head>
   <body>
     <main id="main-container"></main>
-
-    @if(conf.GoogleAnalytics.trackingId.nonEmpty) {
-    <script
-      async
-      src="https://www.googletagmanager.com/gtag/js?id=@(conf.GoogleAnalytics.trackingId)"
-    ></script>
-    <script>
-      const metaElement = document.querySelector("meta[name='google-analytics-tracking-id']");
-      const googleAnalyticsTrackingId = metaElement ? metaElement.getAttribute("content") : null;
-      window.dataLayer = window.dataLayer || [];
-      function gtag() {
-        dataLayer.push(arguments);
-      }
-      gtag("js", new Date());
-      gtag("config", googleAnalyticsTrackingId, {
-        anonymize_ip: true,
-        cookie_expires: 0,
-      });
-    </script>
-    }
   </body>
 </html>

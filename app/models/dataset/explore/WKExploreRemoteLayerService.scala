@@ -2,13 +2,13 @@ package models.dataset.explore
 
 import collections.SequenceUtils
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.explore.{
   ExploreLayerUtils,
   ExploreRemoteDatasetResponse,
   ExploreRemoteLayerParameters
 }
+import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
@@ -19,7 +19,7 @@ import models.user.User
 import net.liftweb.common.Box.tryo
 import play.api.libs.json.{Json, OFormat}
 import security.WkSilhouetteEnvironment
-import utils.ObjectId
+import com.scalableminds.util.objectid.ObjectId
 
 import java.net.URI
 import javax.inject.Inject
@@ -28,7 +28,7 @@ import scala.concurrent.ExecutionContext
 case class WKExploreRemoteLayerParameters(remoteUri: String,
                                           credentialIdentifier: Option[String],
                                           credentialSecret: Option[String],
-                                          preferredVoxelSize: Option[Vec3Double],
+                                          preferredVoxelSize: Option[VoxelSize],
                                           dataStoreName: Option[String])
 
 object WKExploreRemoteLayerParameters {
@@ -76,7 +76,7 @@ class WKExploreRemoteLayerService @Inject()(credentialService: CredentialService
       client: WKRemoteDataStoreClient = new WKRemoteDataStoreClient(datastore, rpc)
       organization <- organizationDAO.findOne(requestingUser._organization)(GlobalAccessContext)
       userToken <- bearerTokenService.createAndInitDataStoreTokenForUser(requestingUser)
-      exploreResponse <- client.exploreRemoteDataset(parametersWithCredentialId, organization.name, userToken)
+      exploreResponse <- client.exploreRemoteDataset(parametersWithCredentialId, organization._id, userToken)
     } yield exploreResponse
 
   private def selectDataStore(dataStoreNames: List[Option[String]])(implicit ec: ExecutionContext): Fox[DataStore] =
@@ -97,8 +97,8 @@ class WKExploreRemoteLayerService @Inject()(credentialService: CredentialService
       credentialOpt = credentialService.createCredentialOpt(uri,
                                                             credentialIdentifier,
                                                             credentialSecret,
-                                                            requestingUser._id,
-                                                            requestingUser._organization)
+                                                            Some(requestingUser._id),
+                                                            Some(requestingUser._organization))
       _ <- bool2Fox(uri.getScheme != null) ?~> s"Received invalid URI: $layerUri"
       credentialId <- Fox.runOptional(credentialOpt)(c => credentialService.insertOne(c)) ?~> "dataVault.credential.insert.failed"
     } yield credentialId
@@ -111,10 +111,9 @@ class WKExploreRemoteLayerService @Inject()(credentialService: CredentialService
       organization <- organizationDAO.findOne(user._organization)
       dataStore <- dataStoreDAO.findOneWithUploadsAllowed
       _ <- datasetService.assertValidDatasetName(datasetName)
-      _ <- datasetService.assertNewDatasetName(datasetName, organization._id) ?~> "dataset.name.alreadyTaken"
       client = new WKRemoteDataStoreClient(dataStore, rpc)
       userToken <- bearerTokenService.createAndInitDataStoreTokenForUser(user)
-      _ <- client.addDataSource(organization.name, datasetName, dataSource, folderId, userToken)
+      _ <- client.addDataSource(organization._id, datasetName, dataSource, folderId, userToken)
     } yield ()
 
 }

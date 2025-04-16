@@ -1,34 +1,37 @@
+import { hasSegmentIndexInDataStore } from "admin/admin_rest_api";
 import { Modal } from "antd";
-import type { APIDataLayer, APIDataset, APISegmentationLayer } from "types/api_flow_types";
-import type { ActiveMappingInfo, HybridTracing, Segment } from "oxalis/store";
-import Store from "oxalis/store";
-import { MappingStatusEnum } from "oxalis/constants";
-import { setMappingAction, setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
+import type { BasicDataNode } from "antd/es/tree";
 import { waitForCondition } from "libs/utils";
+import { MappingStatusEnum } from "oxalis/constants";
 import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import {
   getEditableMappingForVolumeTracingId,
   getVolumeTracingById,
 } from "oxalis/model/accessors/volumetracing_accessor";
+import { setMappingAction, setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
+import type { ActiveMappingInfo, Segment, StoreAnnotation } from "oxalis/store";
+import Store from "oxalis/store";
 import type { MenuClickEventHandler } from "rc-menu/lib/interface";
-import { hasSegmentIndexInDataStore } from "admin/admin_rest_api";
+import type { APIDataLayer, APIDataset, APISegmentationLayer } from "types/api_flow_types";
 
 const { confirm } = Modal;
 
-export type SegmentHierarchyGroup = {
+export type SegmentHierarchyGroup = BasicDataNode & {
   title: string;
   type: "group";
   name: string | null | undefined;
   id: number;
   key: string;
+  isExpanded?: boolean;
   children: Array<SegmentHierarchyNode>;
 };
 
-export type SegmentHierarchyLeaf = Segment & {
-  type: "segment";
-  key: string;
-  title: string;
-};
+export type SegmentHierarchyLeaf = BasicDataNode &
+  Segment & {
+    type: "segment";
+    key: string;
+    title: string;
+  };
 
 export type SegmentHierarchyNode = SegmentHierarchyLeaf | SegmentHierarchyGroup;
 
@@ -41,14 +44,14 @@ export function getBaseSegmentationName(segmentationLayer: APIDataLayer) {
 
 export function getVolumeRequestUrl(
   dataset: APIDataset,
-  tracing: HybridTracing | null,
+  annotation: StoreAnnotation | null,
   tracingId: string | undefined,
   visibleSegmentationLayer: APISegmentationLayer | APIDataLayer,
 ) {
-  if (tracing == null || tracingId == null) {
-    return `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${visibleSegmentationLayer.name}`;
+  if (annotation == null || tracingId == null) {
+    return `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.directoryName}/layers/${visibleSegmentationLayer.name}`;
   } else {
-    const tracingStoreHost = tracing?.tracingStore.url;
+    const tracingStoreHost = annotation?.tracingStore.url;
     return `${tracingStoreHost}/tracings/volume/${tracingId}`;
   }
 }
@@ -56,19 +59,19 @@ export function getVolumeRequestUrl(
 export async function hasSegmentIndex(
   visibleSegmentationLayer: APIDataLayer,
   dataset: APIDataset,
-  tracing: HybridTracing | null | undefined,
+  annotation: StoreAnnotation | null | undefined,
 ) {
   const maybeVolumeTracing =
     "tracingId" in visibleSegmentationLayer &&
     visibleSegmentationLayer.tracingId != null &&
-    tracing != null
-      ? getVolumeTracingById(tracing, visibleSegmentationLayer.tracingId)
+    annotation != null
+      ? getVolumeTracingById(annotation, visibleSegmentationLayer.tracingId)
       : null;
   let segmentIndexInDataStore = false;
   if (maybeVolumeTracing == null) {
     segmentIndexInDataStore = await hasSegmentIndexInDataStore(
       dataset.dataStore.url,
-      dataset.name,
+      dataset.directoryName,
       visibleSegmentationLayer.name,
       dataset.owningOrganization,
     );

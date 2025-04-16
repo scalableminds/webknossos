@@ -1,4 +1,11 @@
-import type { ServerVolumeTracing, APIAnnotation } from "types/api_flow_types";
+import {
+  type ServerVolumeTracing,
+  type APIAnnotation,
+  AnnotationLayerEnum,
+  type APITracingStoreAnnotation,
+} from "types/api_flow_types";
+
+const TRACING_ID = "tracingId-1234";
 export const tracing: ServerVolumeTracing = {
   typ: "Volume",
   activeSegmentId: 10000,
@@ -31,9 +38,8 @@ export const tracing: ServerVolumeTracing = {
   elementClass: "uint16",
   id: "segmentation",
   largestSegmentId: 21890,
-  version: 0,
   zoomLevel: 0,
-  resolutions: [
+  mags: [
     {
       x: 1,
       y: 1,
@@ -67,6 +73,7 @@ export const tracing: ServerVolumeTracing = {
   ],
 };
 export const annotation: APIAnnotation = {
+  datasetId: "66f3c82966010034942e9740",
   description: "",
   state: "Active",
   id: "598b52293c00009906f043e7",
@@ -85,8 +92,8 @@ export const annotation: APIAnnotation = {
   annotationLayers: [
     {
       name: "volume",
-      tracingId: "tracingId-1234",
-      typ: "Volume",
+      tracingId: TRACING_ID,
+      typ: AnnotationLayerEnum.Volume,
       stats: {},
     },
   ],
@@ -95,7 +102,6 @@ export const annotation: APIAnnotation = {
   dataStore: {
     name: "localhost",
     url: "http://localhost:9000",
-    isScratch: false,
     allowsUpload: true,
     jobsEnabled: false,
     jobsSupportedByAvailableWorkers: [],
@@ -110,11 +116,23 @@ export const annotation: APIAnnotation = {
     somaClickingAllowed: true,
     volumeInterpolationAllowed: false,
     mergerMode: false,
-    resolutionRestrictions: {},
+    magRestrictions: {},
   },
   tags: ["ROI2017_wkw", "volume"],
   tracingTime: 0,
   contributors: [],
   othersMayEdit: false,
   isLockedByOwner: false,
+};
+export const annotationProto: APITracingStoreAnnotation = {
+  description: "volume-annotation-description",
+  version: 1,
+  earliestAccessibleVersion: 0,
+  annotationLayers: [
+    {
+      tracingId: TRACING_ID,
+      name: "volume",
+      typ: AnnotationLayerEnum.Volume,
+    },
+  ],
 };

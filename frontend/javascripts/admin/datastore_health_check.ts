@@ -1,7 +1,7 @@
-import _ from "lodash";
-import Request from "libs/request";
 import * as RestAPI from "admin/admin_rest_api";
+import Request from "libs/request";
 import Toast from "libs/toast";
+import _ from "lodash";
 import messages from "messages";
 
 // Create a throttled function which depends on its arguments.
@@ -34,10 +34,10 @@ const pingDataStoreIfAppropriate = memoizedThrottle(async (requestedUrl: string)
     return;
   }
 
-  // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
-  const stores = datastores
-    .map((datastore) => ({ ...datastore, path: "data" }))
-    .concat({ ...tracingstore, path: "tracings" });
+  const stores = [
+    { ...tracingstore, path: "tracings" },
+    ...datastores.map((datastore) => ({ ...datastore, path: "data" })),
+  ];
 
   if (isInMaintenance) {
     Toast.warning(messages.planned_maintenance);

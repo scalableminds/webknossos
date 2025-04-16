@@ -1,9 +1,4 @@
-import {
-  tokenUserA,
-  setCurrToken,
-  resetDatabase,
-  writeTypeCheckingFile,
-} from "test/enzyme/e2e-setup";
+import { tokenUserA, setCurrToken, resetDatabase, writeTypeCheckingFile } from "test/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import test from "ava";
 test.before("Reset database", async () => {
@@ -14,18 +9,14 @@ test.before("Change token", async () => {
 });
 test("getScripts()", async (t) => {
   const scripts = await api.getScripts();
-  t.snapshot(scripts, {
-    id: "scripts-getScripts",
-  });
+  t.snapshot(scripts);
 });
 test("getScript()", async (t) => {
   const scripts = await api.getScripts();
   const firstScript = scripts[0];
   const script = await api.getScript(firstScript.id);
   writeTypeCheckingFile(script, "script", "APIScript");
-  t.snapshot(script, {
-    id: "scripts-getScript",
-  });
+  t.snapshot(script);
 });
 test("createScript(), updateScript(), and deleteScript()", async (t) => {
   const activeUser = await api.getActiveUser();
@@ -42,9 +33,7 @@ test("createScript(), updateScript(), and deleteScript()", async (t) => {
   const createdScriptWithFixedId = Object.assign({}, createdScript, {
     id: "fixed-script-id",
   });
-  t.snapshot(createdScriptWithFixedId, {
-    id: "scripts-createScript",
-  });
+  t.snapshot(createdScriptWithFixedId);
   // Update Script
   const newData = Object.assign({}, createdScript, {
     name: "MegaScript",
@@ -54,12 +43,8 @@ test("createScript(), updateScript(), and deleteScript()", async (t) => {
   const updatedScriptWithFixedId = Object.assign({}, updatedScript, {
     id: "fixed-script-id",
   });
-  t.snapshot(updatedScriptWithFixedId, {
-    id: "scripts-updatedScript",
-  });
+  t.snapshot(updatedScriptWithFixedId);
   // Delete Script
   const response = await api.deleteScript(createdScript.id);
-  t.snapshot(response, {
-    id: "scripts-deleteScript",
-  });
+  t.snapshot(response);
 });

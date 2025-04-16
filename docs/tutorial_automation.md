@@ -12,7 +12,7 @@ Here is full tutorial video, alternatively continue reading below.
 
 ## Download and Export
 
-WEBKNOSSOS makes it easy to [download and export annotations as Tiff images or OME-Tiff](./export.md#data-export-through-the-ui).
+WEBKNOSSOS makes it easy to [download and export annotations as Tiff images or OME-Tiff](./data/export_ui.md).
 Start by creating a bounding box with the bounding box tool. Adjust it so that it covers the desired area.
 
 ![type:video](https://static.webknossos.org/assets/docs/tutorial-automation/01_create_bounding_box.mp4){: autoplay loop muted}
@@ -24,8 +24,8 @@ The Tiff stack will be downloaded to your computer.
 
 ![type:video](https://static.webknossos.org/assets/docs/tutorial-automation/02_export_as_tiff.mp4){: autoplay loop muted}
 
-To [automate this process with Python](./export.md#data-export-through-python), follow the same initial steps.
-Select “Python client” in the download modal, then copy the provided code snippet to get started.
+To [automate this process with Python](./data/export_python.md), follow the same initial steps.
+Select “Python client” in the download dialog, then copy the provided code snippet to get started.
 You can also use the [Python library documentation](https://docs.webknossos.org/webknossos-py/) for more code examples on interacting with your data.
 
 ![type:video](https://static.webknossos.org/assets/docs/tutorial-automation/03_copy_python_code.mp4){: autoplay loop muted}
@@ -39,7 +39,7 @@ The Python libraries offer both "normal" download of datasets and streaming acce
 ## Interoperability with Other Software Tools
 
 WEBKNOSSOS integrates seamlessly with other analysis software tools, enabling you to work with datasets from tools like Neuroglancer and Fiji. 
-Let’s see an example of [importing a Neuroglancer dataset](./datasets.md#streaming-from-remote-servers-and-the-cloud) into WEBKNOSSOS.
+Let’s see an example of [importing a Neuroglancer dataset](./data/streaming.md) into WEBKNOSSOS.
 
 First, find a released dataset in OME-Zarr, N5 or Neuroglancer-Precomputed format that you would like to import and that is hosted in the cloud (S3, Google Cloud) or on any HTTPS server.
 Copy the URL pointing to the data.

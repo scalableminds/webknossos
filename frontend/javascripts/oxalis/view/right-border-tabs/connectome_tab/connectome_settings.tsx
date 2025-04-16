@@ -1,21 +1,22 @@
-import { Popover, Select, Tooltip, Row, Col } from "antd";
 import { SettingOutlined } from "@ant-design/icons";
-import { connect } from "react-redux";
-import React from "react";
-import type { APISegmentationLayer, APIConnectomeFile, APIDataset } from "types/api_flow_types";
-import type { OxalisState } from "oxalis/store";
-import Store from "oxalis/store";
-import ButtonComponent from "oxalis/view/components/button_component";
 import { getConnectomeFilesForDatasetLayer } from "admin/admin_rest_api";
+import { Col, Popover, Row, Select, Tooltip } from "antd";
+import { settings } from "messages";
+import defaultState from "oxalis/default_state";
 import {
   updateConnectomeFileListAction,
   updateCurrentConnectomeFileAction,
 } from "oxalis/model/actions/connectome_actions";
-import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
-import { userSettings } from "types/schemas/user_settings.schema";
-import { settings } from "messages";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import type { OxalisState } from "oxalis/store";
+import Store from "oxalis/store";
+import ButtonComponent from "oxalis/view/components/button_component";
 import { NumberSliderSetting } from "oxalis/view/components/setting_input_views";
+import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import React from "react";
+import { connect } from "react-redux";
+import type { APIConnectomeFile, APIDataset, APISegmentationLayer } from "types/api_flow_types";
+import { userSettings } from "types/schemas/user_settings.schema";
 const { Option } = Select;
 type OwnProps = {
   segmentationLayer: APISegmentationLayer | null | undefined;
@@ -157,6 +158,7 @@ class ConnectomeFilters extends React.Component<Props> {
               step={0.1}
               value={particleSize}
               onChange={this.updateParticleSize}
+              defaultValue={defaultState.userConfiguration.particleSize}
             />
           </Col>
         </Row>

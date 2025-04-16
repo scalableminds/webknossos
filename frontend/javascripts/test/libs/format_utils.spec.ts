@@ -1,110 +1,111 @@
 import test from "ava";
+import { UnitShort, Unicode } from "oxalis/constants";
 import { formatNumberToArea, formatNumberToLength, formatNumberToVolume } from "libs/format_utils";
-import _ from "lodash";
-import { Unicode } from "oxalis/constants";
 
 const { ThinSpace } = Unicode;
-test("Format number to length", (t) => {
-  const simpleLengthsInNm = _.range(-5, 15).map((exp) => Math.pow(10, exp));
-  t.deepEqual(
-    [
-      `0.0${ThinSpace}pm`,
-      `0.1${ThinSpace}pm`,
-      `1${ThinSpace}pm`,
-      `10${ThinSpace}pm`,
-      `0.1${ThinSpace}nm`,
-      `1${ThinSpace}nm`,
-      `10${ThinSpace}nm`,
-      `0.1${ThinSpace}µm`,
-      `1${ThinSpace}µm`,
-      `10${ThinSpace}µm`,
-      `0.1${ThinSpace}mm`,
-      `1${ThinSpace}mm`,
-      `10${ThinSpace}mm`,
-      `0.1${ThinSpace}m`,
-      `1${ThinSpace}m`,
-      `10${ThinSpace}m`,
-      `0.1${ThinSpace}km`,
-      `1${ThinSpace}km`,
-      `10${ThinSpace}km`,
-      `100${ThinSpace}km`,
-    ],
-    simpleLengthsInNm.map((length) => formatNumberToLength(length)),
-  );
 
-  const lengthsWithFactorInNm = _.range(-5, 1).map((exp) => 107 * Math.pow(10, exp));
-  t.deepEqual(
-    [
-      `1.1${ThinSpace}pm`,
-      `10.7${ThinSpace}pm`,
-      `0.1${ThinSpace}nm`,
-      `1.1${ThinSpace}nm`,
-      `10.7${ThinSpace}nm`,
-      `0.1${ThinSpace}µm`,
-    ],
-    lengthsWithFactorInNm.map((length) => formatNumberToLength(length)),
-  );
+test("Format number to length with cm", (t) => {
+  t.is(`0.0${ThinSpace}cm`, formatNumberToLength(0, UnitShort.cm));
+  t.is(`0.1${ThinSpace}cm`, formatNumberToLength(0.1, UnitShort.cm, 1, true));
+  t.is(`1.0${ThinSpace}cm`, formatNumberToLength(10, UnitShort.mm));
+  t.is(`4.8${ThinSpace}cm`, formatNumberToLength(48, UnitShort.mm));
+  t.is(`1.6${ThinSpace}cm`, formatNumberToLength(16000, UnitShort.µm));
+  t.is(`1.2${ThinSpace}cm`, formatNumberToLength(0.012, UnitShort.m));
+});
 
-  const advancedLengthsInNm = [1e6, 12, 1e-5, 1234e12];
-  t.deepEqual(
-    [`1${ThinSpace}mm`, `12${ThinSpace}nm`, `0.0${ThinSpace}pm`, `1234${ThinSpace}km`],
-    advancedLengthsInNm.map((length) => formatNumberToLength(length)),
-  );
+test("Format number to area with cm", (t) => {
+  t.is(`0.0${ThinSpace}cm²`, formatNumberToArea(0, UnitShort.cm));
+  t.is(`10.0${ThinSpace}mm²`, formatNumberToArea(0.1, UnitShort.cm));
+  t.is(`10.0${ThinSpace}mm²`, formatNumberToArea(10, UnitShort.mm));
+  t.is(`1.0${ThinSpace}cm²`, formatNumberToArea(100, UnitShort.mm));
+  t.is(`48.0${ThinSpace}mm²`, formatNumberToArea(48, UnitShort.mm));
+  t.is(`16.0${ThinSpace}cm²`, formatNumberToArea(1600000000, UnitShort.µm));
+  t.is(`1.2${ThinSpace}cm²`, formatNumberToArea(0.00012, UnitShort.m));
+});
 
-  t.deepEqual(`0.01${ThinSpace}pm`, formatNumberToLength(1e-5, 2));
+test("Format number to volume with cm", (t) => {
+  t.is(`0.0${ThinSpace}cm³`, formatNumberToVolume(0, UnitShort.cm));
+  t.is(`100.0${ThinSpace}mm³`, formatNumberToVolume(0.1, UnitShort.cm));
+  t.is(`100.0${ThinSpace}mm³`, formatNumberToVolume(100, UnitShort.mm));
+  t.is(`1.0${ThinSpace}cm³`, formatNumberToVolume(1000, UnitShort.mm));
+  t.is(`4.8${ThinSpace}cm³`, formatNumberToVolume(4800, UnitShort.mm));
+  t.is(`16.0${ThinSpace}cm³`, formatNumberToVolume(16e12, UnitShort.µm));
+  t.is(`120.0${ThinSpace}cm³`, formatNumberToVolume(0.00012, UnitShort.m));
+});
+
+test("Format conversion in length", (t) => {
+  t.is(`1.2${ThinSpace}pm`, formatNumberToLength(0.0012, UnitShort.nm));
+  t.is(`12.0${ThinSpace}fm`, formatNumberToLength(0.000012, UnitShort.nm));
+  t.is(`1.2${ThinSpace}mm`, formatNumberToLength(1.2e6, UnitShort.nm));
+  t.is(`12.0${ThinSpace}nm`, formatNumberToLength(12, UnitShort.nm));
+  t.is(`10.0${ThinSpace}fm`, formatNumberToLength(1e-5, UnitShort.nm));
+  t.is(`0.0${ThinSpace}ym`, formatNumberToLength(1e-17, UnitShort.nm));
+  t.is(`1.2${ThinSpace}Mm`, formatNumberToLength(1234e12, UnitShort.nm));
+  t.is(`1234.0${ThinSpace}Ym`, formatNumberToLength(1234e33, UnitShort.nm));
 });
 
 test("Format number to area", (t) => {
-  const areasInNm2 = [
-    1e-6, 1e-5, 1e-4, 1e-3, 1, 107e-6, 107, 107e6, 107e12, 107e18, 107e22, 107e23, 107e24, 107e25,
-  ];
-  t.deepEqual(
-    [
-      `1${ThinSpace}pm²`,
-      `10.0${ThinSpace}pm²`, // because of floating point representation, also true for some examples below
-      `100.0${ThinSpace}pm²`,
-      `1000.0${ThinSpace}pm²`,
-      `1${ThinSpace}nm²`,
-      `107${ThinSpace}pm²`,
-      `107${ThinSpace}nm²`,
-      `107${ThinSpace}µm²`,
-      `107${ThinSpace}mm²`,
-      `107${ThinSpace}m²`,
-      `1.1${ThinSpace}km²`,
-      `10.7${ThinSpace}km²`,
-      `107.0${ThinSpace}km²`,
-      `1070${ThinSpace}km²`,
-    ],
-    areasInNm2.map((area) => formatNumberToArea(area)),
-  );
-  t.deepEqual(`0.10${ThinSpace}pm²`, formatNumberToArea(1e-7, 2));
+  t.is(`100000.0${ThinSpace}fm²`, formatNumberToArea(1e-7, UnitShort.nm));
+  t.is(`0.0${ThinSpace}ym²`, formatNumberToArea(1e-33, UnitShort.nm));
+  t.is(`12.0${ThinSpace}cm²`, formatNumberToArea(0.0012, UnitShort.m));
+  t.is(`12.0${ThinSpace}mm²`, formatNumberToArea(0.000012, UnitShort.m));
+  t.is(`1.0${ThinSpace}km²`, formatNumberToArea(1e6, UnitShort.m));
+  t.is(`12.0${ThinSpace}m²`, formatNumberToArea(12, UnitShort.m));
+  t.is(`10.0${ThinSpace}mm²`, formatNumberToArea(1e-5, UnitShort.m));
+  t.is(`10.0${ThinSpace}nm²`, formatNumberToArea(1e-17, UnitShort.m));
+  t.is(`1234.0${ThinSpace}Mm²`, formatNumberToArea(1234e12, UnitShort.m));
+  t.is(`1.2${ThinSpace}Em²`, formatNumberToArea(1234e33, UnitShort.m));
 });
 
 test("Format number to volume", (t) => {
-  const volumesInNm3 = [
-    1e-9, 1e-6, 107e-9, 107, 107e9, 107e10, 107e11, 107e12, 107e13, 107e14, 107e15, 107e16, 107e17,
-    107e18, 107e27, 107e36,
-  ];
-  t.deepEqual(
-    [
-      `1${ThinSpace}pm³`,
-      `1000.0${ThinSpace}pm³`, // because of floating point representation
-      `107${ThinSpace}pm³`,
-      `107${ThinSpace}nm³`,
-      `107${ThinSpace}µm³`,
-      `1070${ThinSpace}µm³`,
-      `10700${ThinSpace}µm³`,
-      `107000${ThinSpace}µm³`,
-      `1070000${ThinSpace}µm³`,
-      `10700000${ThinSpace}µm³`,
-      `0.1${ThinSpace}mm³`,
-      `1.1${ThinSpace}mm³`,
-      `10.7${ThinSpace}mm³`,
-      `107${ThinSpace}mm³`,
-      `107${ThinSpace}m³`,
-      `107${ThinSpace}km³`,
-    ],
-    volumesInNm3.map((volume) => formatNumberToVolume(volume)),
-  );
-  t.deepEqual(`0.01${ThinSpace}nm³`, formatNumberToVolume(1e-2, 2));
+  t.is(`100000000.0${ThinSpace}pm³`, formatNumberToVolume(1e-1, UnitShort.nm));
+  t.is(`1000.0${ThinSpace}zm³`, formatNumberToVolume(1e-33, UnitShort.nm));
+  t.is(`1200.0${ThinSpace}cm³`, formatNumberToVolume(0.0012, UnitShort.m));
+  t.is(`12.0${ThinSpace}cm³`, formatNumberToVolume(0.000012, UnitShort.m));
+  t.is(`1000000.0${ThinSpace}m³`, formatNumberToVolume(1e6, UnitShort.m));
+  t.is(`12.0${ThinSpace}m³`, formatNumberToVolume(12, UnitShort.m));
+  t.is(`10.0${ThinSpace}cm³`, formatNumberToVolume(1e-5, UnitShort.m));
+  t.is(`10.0${ThinSpace}µm³`, formatNumberToVolume(1e-17, UnitShort.m));
+  t.is(`1234000.0${ThinSpace}km³`, formatNumberToVolume(1234e12, UnitShort.m));
+  t.is(`1.2${ThinSpace}Tm³`, formatNumberToVolume(1234e33, UnitShort.m));
+});
+
+test("Test uncommon number formats", (t) => {
+  t.is(`1.0${ThinSpace}m`, formatNumberToLength(10, UnitShort.dm, 2));
+  t.is(`5500.0${ThinSpace}cm³`, formatNumberToVolume(5.5, UnitShort.dm, 2));
+  t.is(`1.0${ThinSpace}km`, formatNumberToLength(10, UnitShort.hm, 2));
+  t.is(`550.0${ThinSpace}m`, formatNumberToLength(5.5, UnitShort.hm, 2));
+  t.is(`1.0${ThinSpace}nm`, formatNumberToLength(10, UnitShort.Å, 2));
+  t.is(`55000.0${ThinSpace}pm²`, formatNumberToArea(5.5, UnitShort.Å, 2));
+  t.is(`25.4${ThinSpace}cm`, formatNumberToLength(10, UnitShort.in, 2));
+  t.is(`13.97${ThinSpace}cm`, formatNumberToLength(5.5, UnitShort.in, 2));
+  t.is(`3.05${ThinSpace}m`, formatNumberToLength(10, UnitShort.ft, 2));
+  t.is(`1.68${ThinSpace}m`, formatNumberToLength(5.5, UnitShort.ft, 2));
+  t.is(`9.14${ThinSpace}m`, formatNumberToLength(10, UnitShort.yd, 2));
+  t.is(`5.03${ThinSpace}m`, formatNumberToLength(5.5, UnitShort.yd, 2));
+  t.is(`16.09${ThinSpace}km`, formatNumberToLength(10, UnitShort.mi, 2));
+  t.is(`8.85${ThinSpace}km`, formatNumberToLength(5.5, UnitShort.mi, 2));
+  t.is(`308.57${ThinSpace}Pm`, formatNumberToLength(10, UnitShort.pc, 2));
+  t.is(`169.71${ThinSpace}Pm`, formatNumberToLength(5.5, UnitShort.pc, 2));
+});
+
+test("Test precision in formatting numbers", (t) => {
+  t.is(`1.2${ThinSpace}cm`, formatNumberToLength(1.23456789, UnitShort.cm));
+  t.is(`1.23${ThinSpace}cm`, formatNumberToLength(1.23456789, UnitShort.cm, 2));
+  t.is(`1.235${ThinSpace}cm²`, formatNumberToArea(1.23456789, UnitShort.cm, 3));
+  t.is(`1.2346${ThinSpace}cm²`, formatNumberToArea(1.23456789, UnitShort.cm, 4));
+  t.is(`1.23457${ThinSpace}cm³`, formatNumberToVolume(1.23456789, UnitShort.cm, 5));
+  t.is(`1.234568${ThinSpace}cm³`, formatNumberToVolume(1.23456789, UnitShort.cm, 6));
+});
+
+test("Test preferShorterDecimals in formatting numbers", (t) => {
+  t.is(`0.1${ThinSpace}m`, formatNumberToLength(0.1, UnitShort.m, 1, true));
+  t.is(`1.2${ThinSpace}cm`, formatNumberToLength(1.23456789, UnitShort.cm, 1, true));
+  t.is(`0.3${ThinSpace}m`, formatNumberToLength(0.35, UnitShort.m, 1, true));
+});
+
+test("Test formatting cuts off trailing zeros", (t) => {
+  t.is(`10.0${ThinSpace}cm`, formatNumberToLength(0.1, UnitShort.m, 3));
+  t.is(`12.0${ThinSpace}cm`, formatNumberToLength(0.12, UnitShort.m, 3));
+  t.is(`0.001${ThinSpace}km`, formatNumberToLength(1, UnitShort.m, 3, true));
 });

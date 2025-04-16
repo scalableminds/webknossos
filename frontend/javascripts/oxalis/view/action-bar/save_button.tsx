@@ -1,28 +1,29 @@
-import { connect } from "react-redux";
-import React from "react";
-import _ from "lodash";
-import Store, { SaveState } from "oxalis/store";
-import type { OxalisState, IsBusyInfo } from "oxalis/store";
-import { isBusy } from "oxalis/model/accessors/save_accessor";
-import ButtonComponent from "oxalis/view/components/button_component";
-import { Model } from "oxalis/singletons";
-import window from "libs/window";
-import { Tooltip } from "antd";
 import {
   CheckOutlined,
   ExclamationCircleOutlined,
   HourglassOutlined,
   LoadingOutlined,
 } from "@ant-design/icons";
+import { Tooltip } from "antd";
+import FastTooltip from "components/fast_tooltip";
 import ErrorHandling from "libs/error_handling";
-import * as Utils from "libs/utils";
+import window from "libs/window";
+import _ from "lodash";
+import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
+import { Model } from "oxalis/singletons";
+import Store, { type SaveState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
+import ButtonComponent from "oxalis/view/components/button_component";
+import React from "react";
+import { connect } from "react-redux";
+
 type OwnProps = {
   onClick: (arg0: React.MouseEvent<HTMLButtonElement, MouseEvent>) => Promise<any>;
   className?: string;
 };
 type StateProps = {
   progressFraction: number | null | undefined;
-  isBusyInfo: IsBusyInfo;
+  isBusy: boolean;
 };
 type Props = OwnProps & StateProps;
 type State = {
@@ -85,26 +86,20 @@ class SaveButton extends React.PureComponent<Props, State> {
       reportUnsavedDurationThresholdExceeded();
     }
 
-    const {
-      compressingBucketCount,
-      waitingForCompressionBucketCount,
-      outstandingBucketDownloadCount,
-    } = Model.getPushQueueStats();
+    const newSaveInfo = this.getPushQueueStats();
     this.setState({
       isStateSaved,
       showUnsavedWarning,
-      saveInfo: {
-        outstandingBucketDownloadCount,
-        compressingBucketCount,
-        waitingForCompressionBucketCount,
-      },
+      saveInfo: newSaveInfo,
     });
   };
+
+  getPushQueueStats = reuseInstanceOnEquality(Model.getPushQueueStats);
 
   getSaveButtonIcon() {
     if (this.state.isStateSaved) {
       return <CheckOutlined />;
-    } else if (isBusy(this.props.isBusyInfo)) {
+    } else if (this.props.isBusy) {
       return <LoadingOutlined />;
     } else {
       return <HourglassOutlined />;
@@ -112,7 +107,7 @@ class SaveButton extends React.PureComponent<Props, State> {
   }
 
   shouldShowProgress(): boolean {
-    return isBusy(this.props.isBusyInfo) && this.props.progressFraction != null;
+    return this.props.isBusy && this.props.progressFraction != null;
   }
 
   render() {
@@ -134,7 +129,7 @@ class SaveButton extends React.PureComponent<Props, State> {
           background: showUnsavedWarning ? "var(--ant-color-error)" : undefined,
         }}
       >
-        <Tooltip
+        <FastTooltip
           title={
             // Downloading the buckets often takes longer and the progress
             // is visible (as the count will decrease continually).
@@ -159,7 +154,7 @@ class SaveButton extends React.PureComponent<Props, State> {
           ) : (
             <span className="hide-on-small-screen">Save</span>
           )}
-        </Tooltip>
+        </FastTooltip>
         {showUnsavedWarning ? (
           <Tooltip
             open
@@ -179,27 +174,17 @@ class SaveButton extends React.PureComponent<Props, State> {
 function getOldestUnsavedTimestamp(saveQueue: SaveState["queue"]): number | null | undefined {
   let oldestUnsavedTimestamp;
 
-  if (saveQueue.skeleton.length > 0) {
-    oldestUnsavedTimestamp = saveQueue.skeleton[0].timestamp;
-  }
-
-  for (const volumeQueue of Utils.values(saveQueue.volumes)) {
-    if (volumeQueue.length > 0) {
-      const oldestVolumeTimestamp = volumeQueue[0].timestamp;
-      oldestUnsavedTimestamp = Math.min(
-        oldestUnsavedTimestamp != null ? oldestUnsavedTimestamp : Infinity,
-        oldestVolumeTimestamp,
-      );
-    }
+  if (saveQueue.length > 0) {
+    oldestUnsavedTimestamp = saveQueue[0].timestamp;
   }
 
   return oldestUnsavedTimestamp;
 }
 
 function mapStateToProps(state: OxalisState): StateProps {
-  const { progressInfo, isBusyInfo } = state.save;
+  const { progressInfo, isBusy } = state.save;
   return {
-    isBusyInfo,
+    isBusy,
     // For a low action count, the progress info would show only for a very short amount of time.
     // Therefore, the progressFraction is set to null, if the count is low.
     progressFraction:

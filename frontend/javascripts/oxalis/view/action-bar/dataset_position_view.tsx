@@ -1,21 +1,23 @@
-import { Space, Tooltip } from "antd";
 import { PushpinOutlined, ReloadOutlined } from "@ant-design/icons";
-import { connect } from "react-redux";
-import React, { PureComponent } from "react";
-import type { APIDataset } from "types/api_flow_types";
+import { Space } from "antd";
+import FastTooltip from "components/fast_tooltip";
 import { V3 } from "libs/mjs";
+import Toast from "libs/toast";
 import { Vector3Input } from "libs/vector_input";
+import message from "messages";
+import type { Vector3, ViewMode } from "oxalis/constants";
+import constants from "oxalis/constants";
+import { getDatasetExtentInVoxel } from "oxalis/model/accessors/dataset_accessor";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
-import { getDatasetExtentInVoxel } from "oxalis/model/accessors/dataset_accessor";
-import ButtonComponent from "oxalis/view/components/button_component";
-import type { OxalisState, Flycam, Task } from "oxalis/store";
+import type { Flycam, OxalisState, Task } from "oxalis/store";
 import Store from "oxalis/store";
-import Toast from "libs/toast";
-import type { ViewMode, Vector3 } from "oxalis/constants";
-import constants from "oxalis/constants";
-import message from "messages";
 import { ShareButton } from "oxalis/view/action-bar/share_modal_view";
+import ButtonComponent from "oxalis/view/components/button_component";
+import type React from "react";
+import { PureComponent } from "react";
+import { connect } from "react-redux";
+import type { APIDataset } from "types/api_flow_types";
 
 type Props = {
   flycam: Flycam;
@@ -122,7 +124,7 @@ class DatasetPositionView extends PureComponent<Props> {
             whiteSpace: "nowrap",
           }}
         >
-          <Tooltip title={message["tracing.copy_position"]} placement="bottomLeft">
+          <FastTooltip title={message["tracing.copy_position"]} placement="bottom-start">
             <ButtonComponent
               onClick={this.copyPositionToClipboard}
               style={{ padding: "0 10px", ...iconColoringStyle }}
@@ -130,7 +132,7 @@ class DatasetPositionView extends PureComponent<Props> {
             >
               <PushpinOutlined style={positionIconStyle} />
             </ButtonComponent>
-          </Tooltip>
+          </FastTooltip>
           <Vector3Input
             value={position}
             onChange={this.handleChangePosition}
@@ -147,7 +149,7 @@ class DatasetPositionView extends PureComponent<Props> {
               marginLeft: 10,
             }}
           >
-            <Tooltip title={message["tracing.copy_rotation"]} placement="bottomLeft">
+            <FastTooltip title={message["tracing.copy_rotation"]} placement="bottom-start">
               <ButtonComponent
                 onClick={this.copyRotationToClipboard}
                 style={{
@@ -157,7 +159,7 @@ class DatasetPositionView extends PureComponent<Props> {
               >
                 <ReloadOutlined />
               </ButtonComponent>
-            </Tooltip>
+            </FastTooltip>
             <Vector3Input
               value={rotation}
               onChange={this.handleChangeRotation}
@@ -171,7 +173,11 @@ class DatasetPositionView extends PureComponent<Props> {
         ) : null}
       </div>
     );
-    return <Tooltip title={maybeErrorMessage || null}>{positionView}</Tooltip>;
+    return (
+      <FastTooltip title={maybeErrorMessage || null} wrapper="div">
+        {positionView}
+      </FastTooltip>
+    );
   }
 }
 

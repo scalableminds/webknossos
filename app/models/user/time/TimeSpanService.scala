@@ -1,6 +1,7 @@
 package models.user.time
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -8,13 +9,12 @@ import mail.{DefaultMails, Send}
 
 import javax.inject.Inject
 import models.annotation._
-import models.organization.{OrganizationDAO, OrganizationService}
 import models.project.ProjectDAO
 import models.task.TaskDAO
 import models.user.{User, UserService}
 import net.liftweb.common.{Box, Full}
 import org.apache.pekko.actor.{ActorSelection, ActorSystem}
-import utils.{ObjectId, WkConf}
+import utils.WkConf
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
@@ -24,9 +24,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
                                 userService: UserService,
                                 taskDAO: TaskDAO,
                                 annotationService: AnnotationService,
-                                organizationService: OrganizationService,
                                 projectDAO: ProjectDAO,
-                                organizationDAO: OrganizationDAO,
                                 timeSpanDAO: TimeSpanDAO,
                                 defaultMails: DefaultMails,
                                 conf: WkConf,

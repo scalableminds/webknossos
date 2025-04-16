@@ -3,143 +3,63 @@ package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, TreeBody}
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
-import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
-import com.scalableminds.webknossos.tracingstore.tracings.UpdateAction.SkeletonUpdateAction
 import com.scalableminds.webknossos.tracingstore.tracings._
-import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
-import com.scalableminds.webknossos.tracingstore.tracings.volume.MergedVolumeStats
-import net.liftweb.common.{Box, Empty, Full}
-import play.api.i18n.MessagesProvider
-import play.api.libs.json.{JsObject, JsValue, Json}
+import net.liftweb.common.{Box, Full}
 
 import scala.concurrent.ExecutionContext
 
 class SkeletonTracingService @Inject()(
     tracingDataStore: TracingDataStore,
-    val temporaryTracingStore: TemporaryTracingStore[SkeletonTracing],
-    val handledGroupIdStore: TracingStoreRedisStore,
-    val temporaryTracingIdStore: TracingStoreRedisStore,
-    val uncommittedUpdatesStore: TracingStoreRedisStore,
-    val tracingMigrationService: SkeletonTracingMigrationService)(implicit val ec: ExecutionContext)
-    extends TracingService[SkeletonTracing]
-    with KeyValueStoreImplicits
+    temporaryTracingService: TemporaryTracingService
+)(implicit val ec: ExecutionContext)
+    extends KeyValueStoreImplicits
     with ProtoGeometryImplicits
+    with BoundingBoxMerger
+    with ColorGenerator
     with FoxImplicits {
-
-  val tracingType: TracingType.Value = TracingType.skeleton
-
-  val tracingStore: FossilDBClient = tracingDataStore.skeletons
 
   implicit val tracingCompanion: SkeletonTracing.type = SkeletonTracing
 
-  implicit val updateActionJsonFormat: SkeletonUpdateAction.skeletonUpdateActionFormat.type =
-    SkeletonUpdateAction.skeletonUpdateActionFormat
-
-  def currentVersion(tracingId: String): Fox[Long] =
-    tracingDataStore.skeletonUpdates.getVersion(tracingId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
-
-  def currentVersion(tracing: SkeletonTracing): Long = tracing.version
-
-  def handleUpdateGroup(tracingId: String,
-                        updateActionGroup: UpdateActionGroup[SkeletonTracing],
-                        previousVersion: Long,
-                        userToken: Option[String]): Fox[_] =
-    tracingDataStore.skeletonUpdates.put(
-      tracingId,
-      updateActionGroup.version,
-      updateActionGroup.actions
-        .map(_.addTimestamp(updateActionGroup.timestamp).addAuthorId(updateActionGroup.authorId)) match { //to the first action in the group, attach the group's info
-        case Nil           => Nil
-        case first :: rest => first.addInfo(updateActionGroup.info) :: rest
+  def saveSkeleton(tracingId: String,
+                   version: Long,
+                   tracing: SkeletonTracing,
+                   flushOnlyTheseTreeIds: Option[Set[Int]] = None,
+                   toTemporaryStore: Boolean = false): Fox[Unit] =
+    if (toTemporaryStore) {
+      temporaryTracingService.saveSkeleton(tracingId, tracing)
+    } else {
+      val nowPresentTrees = tracing.trees.map(_.treeId).toSet
+      val wasPreviouslyStoredWithExternalTreeBodies = tracing.getStoredWithExternalTreeBodies
+      val treeIdsToFlush = flushOnlyTheseTreeIds match {
+        case Some(requestedTreeIdsToFlush) if wasPreviouslyStoredWithExternalTreeBodies =>
+          nowPresentTrees.intersect(requestedTreeIdsToFlush)
+        case _ =>
+          nowPresentTrees
       }
-    )
-
-  override def applyPendingUpdates(tracing: SkeletonTracing,
-                                   tracingId: String,
-                                   desiredVersion: Option[Long]): Fox[SkeletonTracing] = {
-    val existingVersion = tracing.version
-    findDesiredOrNewestPossibleVersion(tracing, tracingId, desiredVersion).flatMap { newVersion =>
-      if (newVersion > existingVersion) {
-        for {
-          pendingUpdates <- findPendingUpdates(tracingId, existingVersion, newVersion)
-          updatedTracing <- update(tracing, tracingId, pendingUpdates, newVersion)
-          _ <- save(updatedTracing, Some(tracingId), newVersion)
-        } yield updatedTracing
-      } else {
-        Full(tracing)
-      }
-    }
-  }
-
-  private def findDesiredOrNewestPossibleVersion(tracing: SkeletonTracing,
-                                                 tracingId: String,
-                                                 desiredVersion: Option[Long]): Fox[Long] =
-    /*
-     * Determines the newest saved version from the updates column.
-     * if there are no updates at all, assume tracing is brand new (possibly created from NML,
-     * hence the emptyFallbck tracing.version)
-     */
-    for {
-      newestUpdateVersion <- tracingDataStore.skeletonUpdates.getVersion(tracingId,
-                                                                         mayBeEmpty = Some(true),
-                                                                         emptyFallback = Some(tracing.version))
-    } yield {
-      desiredVersion match {
-        case None              => newestUpdateVersion
-        case Some(desiredSome) => math.min(desiredSome, newestUpdateVersion)
-      }
-    }
-
-  private def findPendingUpdates(tracingId: String,
-                                 existingVersion: Long,
-                                 desiredVersion: Long): Fox[List[SkeletonUpdateAction]] =
-    if (desiredVersion == existingVersion) Fox.successful(List())
-    else {
+      val skeletonTreeBodiesPutBuffer = new FossilDBPutBuffer(tracingDataStore.skeletonTreeBodies, Some(version))
       for {
-        updateActionGroups <- tracingDataStore.skeletonUpdates.getMultipleVersions(
-          tracingId,
-          Some(desiredVersion),
-          Some(existingVersion + 1))(fromJsonBytes[List[SkeletonUpdateAction]])
-      } yield updateActionGroups.reverse.flatten
+        _ <- Fox.serialCombined(treeIdsToFlush) { treeId =>
+          for {
+            treeBody <- extractTreeBody(tracing, treeId).toFox
+            _ <- skeletonTreeBodiesPutBuffer.put(f"$tracingId/$treeId", treeBody)
+          } yield ()
+        }
+        _ <- skeletonTreeBodiesPutBuffer.flush()
+        skeletonWithoutExtraTreeInfo = stripTreeBodies(tracing)
+        _ <- tracingDataStore.skeletons.put(tracingId, version, skeletonWithoutExtraTreeInfo)
+      } yield ()
     }
 
-  private def update(tracing: SkeletonTracing,
-                     tracingId: String,
-                     updates: List[SkeletonUpdateAction],
-                     newVersion: Long): Fox[SkeletonTracing] = {
-    def updateIter(tracingFox: Fox[SkeletonTracing],
-                   remainingUpdates: List[SkeletonUpdateAction]): Fox[SkeletonTracing] =
-      tracingFox.futureBox.flatMap {
-        case Empty => Fox.empty
-        case Full(tracing) =>
-          remainingUpdates match {
-            case List() => Fox.successful(tracing)
-            case RevertToVersionAction(sourceVersion, _, _, _) :: tail =>
-              val sourceTracing = find(tracingId, Some(sourceVersion), useCache = false, applyUpdates = true)
-              updateIter(sourceTracing, tail)
-            case update :: tail => updateIter(Full(update.applyOn(tracing)), tail)
-          }
-        case _ => tracingFox
-      }
-
-    updates match {
-      case List() => Full(tracing)
-      case _ :: _ =>
-        for {
-          updated <- updateIter(Some(tracing), updates)
-        } yield updated.withVersion(newVersion)
-    }
-  }
-
-  def duplicate(tracing: SkeletonTracing,
-                fromTask: Boolean,
-                editPosition: Option[Vec3Int],
-                editRotation: Option[Vec3Double],
-                boundingBox: Option[BoundingBox]): Fox[String] = {
+  def adaptSkeletonForDuplicate(tracing: SkeletonTracing,
+                                fromTask: Boolean,
+                                editPosition: Option[Vec3Int],
+                                editRotation: Option[Vec3Double],
+                                boundingBox: Option[BoundingBox],
+                                newVersion: Long): SkeletonTracing = {
     val taskBoundingBox = if (fromTask) {
       tracing.boundingBox.map { bb =>
         val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
@@ -154,22 +74,21 @@ class SkeletonTracingService @Inject()(
           editPosition = editPosition.map(vec3IntToProto).getOrElse(tracing.editPosition),
           editRotation = editRotation.map(vec3DoubleToProto).getOrElse(tracing.editRotation),
           boundingBox = boundingBoxOptToProto(boundingBox).orElse(tracing.boundingBox),
-          version = 0
+          version = newVersion,
+          storedWithExternalTreeBodies = Some(false)
         )
         .addAllUserBoundingBoxes(taskBoundingBox)
-    val finalTracing = if (fromTask) newTracing.clearBoundingBox else newTracing
-    save(finalTracing, None, finalTracing.version)
+    if (fromTask) newTracing.clearBoundingBox else newTracing
   }
 
-  def merge(tracings: Seq[SkeletonTracing],
-            mergedVolumeStats: MergedVolumeStats,
-            newEditableMappingIdOpt: Option[String]): Box[SkeletonTracing] =
+  def merge(tracings: Seq[SkeletonTracing], newVersion: Long): Box[SkeletonTracing] =
     for {
       tracing <- tracings.map(Full(_)).reduceLeft(mergeTwo)
     } yield
       tracing.copy(
         createdTimestamp = System.currentTimeMillis(),
-        version = 0L,
+        version = newVersion,
+        storedWithExternalTreeBodies = Some(false)
       )
 
   private def mergeTwo(tracingA: Box[SkeletonTracing], tracingB: Box[SkeletonTracing]): Box[SkeletonTracing] =
@@ -198,59 +117,20 @@ class SkeletonTracingService @Inject()(
       )
 
   // Can be removed again when https://github.com/scalableminds/webknossos/issues/5009 is fixed
-  override def remapTooLargeTreeIds(skeletonTracing: SkeletonTracing): SkeletonTracing =
+  def remapTooLargeTreeIds(skeletonTracing: SkeletonTracing): SkeletonTracing =
     if (skeletonTracing.trees.exists(_.treeId > 1048576)) {
       val newTrees = for ((tree, index) <- skeletonTracing.trees.zipWithIndex) yield tree.withTreeId(index + 1)
       skeletonTracing.withTrees(newTrees)
     } else skeletonTracing
 
-  def mergeVolumeData(tracingSelectors: Seq[TracingSelector],
-                      tracings: Seq[SkeletonTracing],
-                      newId: String,
-                      newVersion: Long,
-                      toCache: Boolean,
-                      userToken: Option[String])(implicit mp: MessagesProvider): Fox[MergedVolumeStats] =
-    Fox.successful(MergedVolumeStats.empty())
-
-  def updateActionLog(tracingId: String, newestVersion: Option[Long], oldestVersion: Option[Long]): Fox[JsValue] = {
-    def versionedTupleToJson(tuple: (Long, List[SkeletonUpdateAction])): JsObject =
-      Json.obj(
-        "version" -> tuple._1,
-        "value" -> Json.toJson(tuple._2)
-      )
-    for {
-      updateActionGroups <- tracingDataStore.skeletonUpdates.getMultipleVersionsAsVersionValueTuple(
-        tracingId,
-        newestVersion,
-        oldestVersion)(fromJsonBytes[List[SkeletonUpdateAction]])
-      updateActionGroupsJs = updateActionGroups.map(versionedTupleToJson)
-    } yield Json.toJson(updateActionGroupsJs)
-  }
-
-  def updateActionStatistics(tracingId: String): Fox[JsObject] =
-    for {
-      updateActionGroups <- tracingDataStore.skeletonUpdates.getMultipleVersions(tracingId)(
-        fromJsonBytes[List[SkeletonUpdateAction]])
-      updateActions = updateActionGroups.flatten
-    } yield {
-      Json.obj(
-        "updateTracingActionCount" -> updateActions.count {
-          case _: UpdateTracingSkeletonAction => true
-          case _                              => false
-        },
-        "createNodeActionCount" -> updateActions.count {
-          case _: CreateNodeSkeletonAction => true
-          case _                           => false
-        },
-        "deleteNodeActionCount" -> updateActions.count {
-          case _: DeleteNodeSkeletonAction => true
-          case _                           => false
-        }
-      )
-    }
-
   def dummyTracing: SkeletonTracing = SkeletonTracingDefaults.createInstance
 
-  def mergeEditableMappings(tracingsWithIds: List[(SkeletonTracing, String)], userToken: Option[String]): Fox[String] =
-    Fox.empty
+  private def extractTreeBody(tracing: SkeletonTracing, treeId: Int): Box[TreeBody] =
+    for {
+      tree <- tracing.trees.find(_.treeId == treeId)
+    } yield TreeBody(nodes = tree.nodes, edges = tree.edges)
+
+  private def stripTreeBodies(tracing: SkeletonTracing): SkeletonTracing =
+    tracing.copy(trees = tracing.trees.map(_.copy(nodes = Seq(), edges = Seq())),
+                 storedWithExternalTreeBodies = Some(true))
 }

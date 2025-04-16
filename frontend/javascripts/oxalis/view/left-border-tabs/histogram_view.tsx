@@ -1,14 +1,16 @@
-import type { Dispatch } from "redux";
-import { Alert, Slider, Row, Col, InputNumber, Spin, Tooltip } from "antd";
-import { connect } from "react-redux";
-import * as React from "react";
-import * as _ from "lodash";
-import { PRIMARY_COLOR, Vector2, Vector3 } from "oxalis/constants";
-import type { APIHistogramData, HistogramDatum, ElementClass } from "types/api_flow_types";
+import { CloseOutlined } from "@ant-design/icons";
+import { Alert, Col, InputNumber, Row, Spin } from "antd";
+import FastTooltip from "components/fast_tooltip";
+import { Slider } from "components/slider";
 import { roundTo } from "libs/utils";
+import * as _ from "lodash";
+import { PRIMARY_COLOR, type Vector3 } from "oxalis/constants";
 import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
 import type { DatasetLayerConfiguration } from "oxalis/store";
-import { CloseOutlined } from "@ant-design/icons";
+import * as React from "react";
+import { connect } from "react-redux";
+import type { Dispatch } from "redux";
+import type { APIHistogramData, ElementClass, HistogramDatum } from "types/api_flow_types";
 
 type OwnProps = {
   data: APIHistogramData | null | undefined;
@@ -18,7 +20,8 @@ type OwnProps = {
   min?: number;
   max?: number;
   isInEditMode: boolean;
-  defaultMinMax: Vector2;
+  defaultMinMax: readonly [number, number];
+  supportFractions: boolean;
   reloadHistogram: () => void;
 };
 type HistogramProps = OwnProps & {
@@ -38,11 +41,17 @@ const uint24Colors = [
   [46, 204, 64],
   [24, 144, 255],
 ];
-const canvasHeight = 100;
-const canvasWidth = 318;
+const CANVAS_HEIGHT = 100;
+const CANVAS_WIDTH = 318;
 
 export function isHistogramSupported(elementClass: ElementClass): boolean {
-  return ["int8", "uint8", "int16", "uint16", "float", "uint24"].includes(elementClass);
+  // This function needs to be adapted when a new dtype should/element class needs
+  // to be supported.
+  // Note that histograms are only supported for color layers. This is why
+  // (u)int64 is not listed here.
+  return ["int8", "uint8", "int16", "uint16", "uint24", "uint32", "int32", "float"].includes(
+    elementClass,
+  );
 }
 
 function getMinAndMax(props: HistogramProps) {
@@ -74,6 +83,18 @@ function getPrecisionOf(num: number): number {
   const decimals = num.toString().split(".")[1];
   return decimals ? decimals.length : 0;
 }
+
+const DUMMY_HISTOGRAM_DATA = [
+  // Define a dummy histogram with a gaussian curve (mean=128 and std=30).
+  // This is used as a fallback for a nicer look. On top of that, an error
+  // message will be rendered.
+  {
+    numberOfElements: 255,
+    elementCounts: _.range(255).map((idx) => Math.exp(-0.5 * ((idx - 128) / 30) ** 2)),
+    min: 0,
+    max: 255,
+  },
+];
 
 class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
   canvasRef: HTMLCanvasElement | null | undefined;
@@ -114,7 +135,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     if (ctx == null) {
       return;
     }
-    ctx.translate(0, canvasHeight);
+    ctx.translate(0, CANVAS_HEIGHT);
     ctx.scale(1, -1);
     ctx.lineWidth = 1;
     ctx.lineJoin = "round";
@@ -130,11 +151,10 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     if (ctx == null) {
       return;
     }
-    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-    const { min, max } = getMinAndMax(this.props);
-    const { data } = this.props;
-
-    if (data == null) return;
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    const { min, max } =
+      this.props.data != null ? getMinAndMax(this.props) : DUMMY_HISTOGRAM_DATA[0];
+    const data = this.props.data ?? DUMMY_HISTOGRAM_DATA;
 
     // Compute the overall maximum count, so the RGB curves are scaled correctly relative to each other.
     const maxValue = Math.max(
@@ -178,14 +198,14 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     ctx.strokeStyle = `rgba(${color.join(",")})`;
     ctx.beginPath();
     // Scale data to the height of the histogram canvas.
-    const downscaledData = elementCounts.map((value) => (value / maxValue) * canvasHeight);
+    const downscaledData = elementCounts.map((value) => (value / maxValue) * CANVAS_HEIGHT);
     const activeRegion = new Path2D();
     ctx.moveTo(0, 0);
-    activeRegion.moveTo(((intensityRangeMin - minRange) / fullLength) * canvasWidth, 0);
+    activeRegion.moveTo(((intensityRangeMin - minRange) / fullLength) * CANVAS_WIDTH, 0);
 
     for (let i = 0; i < downscaledData.length; i++) {
       const xInHistogramScale = (i * histogramLength) / downscaledData.length;
-      const xInCanvasScale = ((xOffset + xInHistogramScale) * canvasWidth) / fullLength;
+      const xInCanvasScale = ((xOffset + xInHistogramScale) * CANVAS_WIDTH) / fullLength;
       const xValue = histogramMin + xInHistogramScale;
 
       if (xValue >= intensityRangeMin && xValue <= intensityRangeMax) {
@@ -199,8 +219,8 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     ctx.closePath();
     const activeRegionRightLimit = Math.min(histogramMax, intensityRangeMax);
     const activeRegionLeftLimit = Math.max(histogramMin, intensityRangeMin);
-    activeRegion.lineTo(((activeRegionRightLimit - minRange) / fullLength) * canvasWidth, 0);
-    activeRegion.lineTo(((activeRegionLeftLimit - minRange) / fullLength) * canvasWidth, 0);
+    activeRegion.lineTo(((activeRegionRightLimit - minRange) / fullLength) * CANVAS_WIDTH, 0);
+    activeRegion.lineTo(((activeRegionLeftLimit - minRange) / fullLength) * CANVAS_WIDTH, 0);
     activeRegion.closePath();
     ctx.fill(activeRegion);
   };
@@ -239,8 +259,8 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     const { intensityRangeMin, intensityRangeMax, isInEditMode, defaultMinMax, layerName, data } =
       this.props;
 
-    if (data === null) {
-      return (
+    const maybeWarning =
+      data === null ? (
         <Alert
           type="warning"
           style={{ margin: 10 }}
@@ -254,8 +274,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
           }
           showIcon
         />
-      );
-    }
+      ) : null;
 
     const { currentMin, currentMax } = this.state;
     const { min: minRange, max: maxRange } = getMinAndMax(this.props);
@@ -266,9 +285,18 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     const minMaxInputStyle = {
       width: "100%",
     };
+    const maybeCeilFn = this.props.supportFractions ? (val: number) => val : Math.ceil;
     return (
       <Spin spinning={data === undefined}>
-        <canvas ref={this.onCanvasRefChange} width={canvasWidth} height={canvasHeight} />
+        <div style={{ display: "grid", placeItems: "center", position: "relative" }}>
+          {maybeWarning && <div style={{ position: "absolute", zIndex: 1 }}>{maybeWarning}</div>}
+          <canvas
+            ref={this.onCanvasRefChange}
+            width={CANVAS_WIDTH}
+            height={CANVAS_HEIGHT}
+            style={{ opacity: maybeWarning ? 0.5 : 1 }}
+          />
+        </div>
         <Slider
           range
           value={[intensityRangeMin, intensityRangeMax]}
@@ -277,10 +305,10 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
           defaultValue={[minRange, maxRange]}
           onChange={this.onThresholdChange}
           onChangeComplete={this.onThresholdChange}
-          step={(maxRange - minRange) / 255}
+          step={maybeCeilFn((maxRange - minRange) / 255)}
           tooltip={{ formatter: this.tipFormatter }}
           style={{
-            width: canvasWidth,
+            width: CANVAS_WIDTH,
             margin: 0,
             marginTop: 6,
           }}
@@ -296,7 +324,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
               <label className="setting-label">Min:</label>
             </Col>
             <Col span={8}>
-              <Tooltip title={tooltipTitleFor("minimum")}>
+              <FastTooltip title={tooltipTitleFor("minimum")}>
                 <InputNumber
                   size="small"
                   min={defaultMinMax[0]}
@@ -306,7 +334,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
                   variant="borderless"
                   onChange={(value) => {
                     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
-                    value = parseFloat(value);
+                    value = Number.parseFloat(value);
 
                     if (value <= maxRange) {
                       this.setState({
@@ -317,7 +345,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
                   }}
                   style={minMaxInputStyle}
                 />
-              </Tooltip>
+              </FastTooltip>
             </Col>
             <Col span={3}>
               <label
@@ -331,7 +359,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
               </label>
             </Col>
             <Col span={8}>
-              <Tooltip title={tooltipTitleFor("maximum")}>
+              <FastTooltip title={tooltipTitleFor("maximum")}>
                 <InputNumber
                   size="small"
                   min={minRange}
@@ -341,7 +369,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
                   variant="borderless"
                   onChange={(value) => {
                     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
-                    value = parseFloat(value);
+                    value = Number.parseFloat(value);
 
                     if (value >= minRange) {
                       this.setState({
@@ -352,9 +380,9 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
                   }}
                   style={minMaxInputStyle}
                 />
-              </Tooltip>
+              </FastTooltip>
             </Col>
-            <Tooltip title="Stop editing histogram range">
+            <FastTooltip title="Stop editing histogram range">
               <Col
                 span={2}
                 style={{ textAlign: "right", cursor: "pointer" }}
@@ -362,7 +390,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
               >
                 <CloseOutlined />
               </Col>
-            </Tooltip>
+            </FastTooltip>
           </Row>
         ) : null}
       </Spin>

@@ -1,12 +1,11 @@
 import { MinusCircleOutlined, PlusCircleOutlined } from "@ant-design/icons";
 import { getEditableUsers, updateUser } from "admin/admin_rest_api";
-import { Modal, AutoComplete, Input, Spin, Tooltip } from "antd";
-import { DefaultOptionType } from "antd/lib/select";
-import * as React from "react";
-import { useState } from "react";
-import { APITeam, APITeamMembership, APIUser } from "types/api_flow_types";
-import { filterTeamMembersOf, renderUsersForTeam } from "./team_list_view";
+import { AutoComplete, Input, Modal, Spin, Tooltip } from "antd";
+import type { DefaultOptionType } from "antd/lib/select";
 import { useEffectOnlyOnce } from "libs/react_hooks";
+import { useState } from "react";
+import type { APITeam, APITeamMembership, APIUser } from "types/api_flow_types";
+import { filterTeamMembersOf, renderUsersForTeam } from "./team_list_view";
 
 type Props = {
   onCancel: (...args: Array<any>) => any;
@@ -163,6 +162,7 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
       title="Add / Remove Users"
       className="edit-team-modal"
       footer={null}
+      width={800}
     >
       <Spin spinning={!usersHaveLoaded}>{usersHaveLoaded ? renderModalBody() : null}</Spin>
     </Modal>

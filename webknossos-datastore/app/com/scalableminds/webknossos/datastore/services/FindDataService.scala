@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.services
 
 import com.google.inject.Inject
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, ElementClass}
@@ -22,12 +23,10 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
     with FoxImplicits {
   val binaryDataService: BinaryDataService = dataServicesHolder.binaryDataService
 
-  private def getDataFor(dataSource: DataSource,
-                         dataLayer: DataLayer,
-                         position: Vec3Int,
-                         resolution: Vec3Int): Fox[Array[Byte]] = {
+  private def getDataFor(dataSource: DataSource, dataLayer: DataLayer, position: Vec3Int, mag: Vec3Int)(
+      implicit tc: TokenContext): Fox[Array[Byte]] = {
     val request = DataRequest(
-      VoxelPosition(position.x, position.y, position.z, resolution),
+      VoxelPosition(position.x, position.y, position.z, mag),
       DataLayer.bucketLength,
       DataLayer.bucketLength,
       DataLayer.bucketLength
@@ -46,10 +45,10 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
   private def getConcatenatedDataFor(dataSource: DataSource,
                                      dataLayer: DataLayer,
                                      positions: List[Vec3Int],
-                                     resolution: Vec3Int) =
+                                     mag: Vec3Int)(implicit tc: TokenContext) =
     for {
       dataBucketWise: Seq[Array[Byte]] <- Fox
-        .sequenceOfFulls(positions.map(getDataFor(dataSource, dataLayer, _, resolution)))
+        .sequenceOfFulls(positions.map(getDataFor(dataSource, dataLayer, _, mag)))
         .toFox
       _ <- bool2Fox(dataBucketWise.nonEmpty) ?~> "dataset.noData"
       dataConcatenated = concatenateBuckets(dataBucketWise)
@@ -97,27 +96,27 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
     positions.map(_.alignWithGridFloor(Vec3Int.full(DataLayer.bucketLength))).distinct
   }
 
-  private def checkAllPositionsForData(dataSource: DataSource,
-                                       dataLayer: DataLayer): Fox[Option[(Vec3Int, Vec3Int)]] = {
+  private def checkAllPositionsForData(dataSource: DataSource, dataLayer: DataLayer)(
+      implicit tc: TokenContext): Fox[Option[(Vec3Int, Vec3Int)]] = {
 
-    def searchPositionIter(positions: List[Vec3Int], resolution: Vec3Int): Fox[Option[Vec3Int]] =
+    def searchPositionIter(positions: List[Vec3Int], mag: Vec3Int): Fox[Option[Vec3Int]] =
       positions match {
         case List() => Fox.successful(None)
         case head :: tail =>
-          checkIfPositionHasData(head, resolution).futureBox.flatMap {
+          checkIfPositionHasData(head, mag).futureBox.flatMap {
             case Full(pos) => Fox.successful(Some(pos))
-            case _         => searchPositionIter(tail, resolution)
+            case _         => searchPositionIter(tail, mag)
           }
       }
 
-    def checkIfPositionHasData(position: Vec3Int, resolution: Vec3Int) =
+    def checkIfPositionHasData(position: Vec3Int, mag: Vec3Int) =
       for {
-        data <- getDataFor(dataSource, dataLayer, position, resolution)
+        data <- getDataFor(dataSource, dataLayer, position, mag)
         position <- getPositionOfNonZeroData(data, position, dataLayer.bytesPerElement)
       } yield position
 
-    def resolutionIter(positions: List[Vec3Int], remainingResolutions: List[Vec3Int]): Fox[Option[(Vec3Int, Vec3Int)]] =
-      remainingResolutions match {
+    def magIter(positions: List[Vec3Int], remainingMags: List[Vec3Int]): Fox[Option[(Vec3Int, Vec3Int)]] =
+      remainingMags match {
         case List() => Fox.successful(None)
         case head :: tail =>
           (for {
@@ -125,25 +124,34 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
           } yield
             foundPosition match {
               case Some(position) => Fox.successful(Some((position, head)))
-              case None           => resolutionIter(positions, tail)
+              case None           => magIter(positions, tail)
             }).flatten
       }
 
-    resolutionIter(createPositions(dataLayer).distinct, dataLayer.resolutions.sortBy(_.maxDim))
+    magIter(createPositions(dataLayer).distinct, dataLayer.resolutions.sortBy(_.maxDim))
   }
 
-  def findPositionWithData(dataSource: DataSource, dataLayer: DataLayer): Fox[Option[(Vec3Int, Vec3Int)]] =
+  def findPositionWithData(dataSource: DataSource, dataLayer: DataLayer)(
+      implicit tc: TokenContext): Fox[Option[(Vec3Int, Vec3Int)]] =
     for {
-      positionAndResolutionOpt <- checkAllPositionsForData(dataSource, dataLayer)
-    } yield positionAndResolutionOpt
+      positionAndMagOpt <- checkAllPositionsForData(dataSource, dataLayer)
+    } yield positionAndMagOpt
 
-  def createHistogram(dataSource: DataSource, dataLayer: DataLayer): Fox[List[Histogram]] = {
+  def createHistogram(dataSource: DataSource, dataLayer: DataLayer)(implicit tc: TokenContext): Fox[List[Histogram]] = {
 
-    def calculateHistogramValues(data: Array[_ >: UByte with UShort with UInt with ULong with Float],
-                                 bytesPerElement: Int,
-                                 isUint24: Boolean) = {
+    def calculateHistogramValues(
+        data: Array[_ >: UByte with Byte with UShort with Short with UInt with Int with ULong with Long with Float],
+        bytesPerElement: Int,
+        elementClass: ElementClass.Value) = {
+      val isUint24 = dataLayer.elementClass == ElementClass.uint24
       val counts = if (isUint24) Array.ofDim[Long](768) else Array.ofDim[Long](256)
-      var extrema: (Double, Double) = (0, math.pow(256, bytesPerElement) - 1)
+      var extrema: (Double, Double) =
+        (
+          if (ElementClass.isSigned(elementClass))
+            (-math.pow(2, 8 * bytesPerElement - 1), math.pow(2, 8 * bytesPerElement - 1) - 1)
+          else
+            (0, math.pow(2, 8 * bytesPerElement) - 1)
+        )
 
       if (data.nonEmpty) {
         data match {
@@ -157,10 +165,19 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
               extrema = (0, 255)
             } else
               byteData.foreach(el => counts(el.toInt) += 1)
-          case shortData: Array[UShort] =>
+          case byteData: Array[Byte] => {
+            byteData.foreach(el => counts(el.toInt + 128) += 1)
+          }
+          case shortData: Array[UShort] => {
             shortData.foreach(el => counts((el / UShort(256)).toInt) += 1)
-          case intData: Array[UInt] =>
-            intData.foreach(el => counts((el / UInt(16777216)).toInt) += 1)
+          }
+          case shortData: Array[Short] => {
+            shortData.foreach(el => counts((el / 256.toShort + 128).toInt) += 1)
+          }
+          case uintData: Array[UInt] =>
+            uintData.foreach(el => counts((el / UInt(16777216)).toInt) += 1)
+          case intData: Array[Int] =>
+            intData.foreach(el => counts((el / 16777216 + 128).toInt) += 1)
           case longData: Array[ULong] =>
             longData.foreach(el => counts((el / ULong(math.pow(2, 56).toLong)).toInt) += 1)
           case floatData: Array[Float] =>
@@ -182,16 +199,19 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
         List(Histogram(counts, data.length, extrema._1, extrema._2))
     }
 
-    def histogramForPositions(positions: List[Vec3Int], resolution: Vec3Int) =
+    def histogramForPositions(positions: List[Vec3Int], mag: Vec3Int) =
       for {
-        dataConcatenated <- getConcatenatedDataFor(dataSource, dataLayer, positions, resolution) ?~> "dataset.noData"
+        dataConcatenated <- getConcatenatedDataFor(dataSource, dataLayer, positions, mag) ?~> "dataset.noData"
         isUint24 = dataLayer.elementClass == ElementClass.uint24
-        convertedData = toUnsigned(filterZeroes(convertData(dataConcatenated, dataLayer.elementClass), skip = isUint24))
-      } yield calculateHistogramValues(convertedData, dataLayer.bytesPerElement, isUint24)
+        convertedData = toUnsignedIfNeeded(
+          filterZeroes(convertData(dataConcatenated, dataLayer.elementClass), skip = isUint24),
+          ElementClass.isSigned(dataLayer.elementClass)
+        )
+      } yield calculateHistogramValues(convertedData, dataLayer.bytesPerElement, dataLayer.elementClass)
 
     if (dataLayer.resolutions.nonEmpty)
       histogramForPositions(createPositions(dataLayer, 2).distinct, dataLayer.resolutions.minBy(_.maxDim))
     else
-      Fox.empty ?~> "dataset.noResolutions"
+      Fox.empty ?~> "dataset.noMags"
   }
 }

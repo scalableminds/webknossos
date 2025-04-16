@@ -1,58 +1,61 @@
-import React, { useEffect, useState, useMemo } from "react";
 import {
-  Collapse,
-  Input,
-  Row,
-  Col,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  CloseCircleOutlined,
+  ExclamationCircleOutlined,
+  ExportOutlined,
+  FieldTimeOutlined,
+  LeftOutlined,
+  MinusCircleOutlined,
+  SyncOutlined,
+} from "@ant-design/icons";
+import {
+  App,
   Button,
+  Col,
+  Collapse,
+  type CollapseProps,
   Dropdown,
-  notification,
-  message,
+  Input,
+  type MenuProps,
+  Row,
+  Select,
   Tag,
   Tooltip,
-  Select,
-  MenuProps,
-  App,
-  CollapseProps,
+  message,
+  notification,
 } from "antd";
-import {
-  ClockCircleOutlined,
-  MinusCircleOutlined,
-  CloseCircleOutlined,
-  SyncOutlined,
-  CheckCircleOutlined,
-  ExclamationCircleOutlined,
-  LeftOutlined,
-  FieldTimeOutlined,
-} from "@ant-design/icons";
 import MiniSearch from "minisearch";
+import React, { useEffect, useState, useMemo } from "react";
 
-import { Link, useHistory, useLocation, useParams } from "react-router-dom";
+import { deleteWorkflow, getVoxelyticsLogs } from "admin/admin_rest_api";
 import dayjs from "dayjs";
-import { useSearchParams, useUpdateEvery } from "libs/react_hooks";
-import {
-  VoxelyticsRunState,
-  VoxelyticsTaskConfig,
-  VoxelyticsTaskConfigWithHierarchy,
-  VoxelyticsTaskConfigWithName,
-  VoxelyticsTaskInfo,
-  VoxelyticsWorkflowReport,
-} from "types/api_flow_types";
 import {
   formatDateMedium,
-  formatDistance,
-  formatDistanceStrict,
   formatDurationStrict,
+  formatTimeInterval,
+  formatTimeIntervalStrict,
 } from "libs/format_utils";
-import DAGView, { colorHasher } from "./dag_view";
-import TaskView from "./task_view";
-import { formatLog } from "./log_tab";
-import { addAfterPadding, addBeforePadding } from "./utils";
-import { LOG_LEVELS } from "oxalis/constants";
-import { getVoxelyticsLogs } from "admin/admin_rest_api";
-import ArtifactsDiskUsageList from "./artifacts_disk_usage_list";
+import { useSearchParams, useUpdateEvery } from "libs/react_hooks";
 import { notEmpty } from "libs/utils";
-import { ArrayElement } from "types/globals";
+import { LOG_LEVELS } from "oxalis/constants";
+import type { OxalisState } from "oxalis/store";
+import { useSelector } from "react-redux";
+import { Link, useHistory, useLocation, useParams } from "react-router-dom";
+import {
+  VoxelyticsRunState,
+  type VoxelyticsTaskConfig,
+  type VoxelyticsTaskConfigWithHierarchy,
+  type VoxelyticsTaskConfigWithName,
+  type VoxelyticsTaskInfo,
+  type VoxelyticsWorkflowReport,
+} from "types/api_flow_types";
+import type { ArrayElement } from "types/globals";
+import ArtifactsDiskUsageList from "./artifacts_disk_usage_list";
+import DAGView, { colorHasher } from "./dag_view";
+import { formatLog } from "./log_tab";
+import TaskView from "./task_view";
+import { addAfterPadding, addBeforePadding } from "./utils";
 
 const { Search } = Input;
 
@@ -181,7 +184,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             timed out
           </Tag>{" "}
           {dayjs(taskInfo.endTime).fromNow()}, after{" "}
-          {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
+          {formatTimeInterval(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
     case VoxelyticsRunState.CANCELLED:
@@ -191,7 +194,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             <>
               End Time: {formatDateMedium(taskInfo.endTime)}
               <br />
-              Duration: {formatDistanceStrict(taskInfo.endTime, taskInfo.beginTime)}
+              Duration: {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
             </>
           }
         >
@@ -199,7 +202,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             cancelled
           </Tag>{" "}
           {dayjs(taskInfo.endTime).fromNow()}, after{" "}
-          {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
+          {formatTimeInterval(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
     case VoxelyticsRunState.FAILED:
@@ -209,7 +212,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             <>
               End Time: {formatDateMedium(taskInfo.endTime)}
               <br />
-              Duration: {formatDistanceStrict(taskInfo.endTime, taskInfo.beginTime)}
+              Duration: {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
             </>
           }
         >
@@ -217,7 +220,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             failed
           </Tag>{" "}
           {dayjs(taskInfo.endTime).fromNow()}, after{" "}
-          {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
+          {formatTimeInterval(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
     case VoxelyticsRunState.COMPLETE:
@@ -227,7 +230,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             <>
               End Time: {formatDateMedium(taskInfo.endTime)}
               <br />
-              Duration: {formatDistanceStrict(taskInfo.endTime, taskInfo.beginTime)}
+              Duration: {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
             </>
           }
         >
@@ -235,7 +238,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             completed
           </Tag>{" "}
           {dayjs(taskInfo.endTime).fromNow()},{" "}
-          {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
+          {formatTimeInterval(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
     default:
@@ -270,6 +273,8 @@ export default function TaskListView({
   const params = useParams<{ highlightedTask?: string }>();
   const highlightedTask = params.highlightedTask || "";
   const location = useLocation();
+
+  const isCurrentUserSuperUser = useSelector((state: OxalisState) => state.activeUser?.isSuperUser);
 
   const singleRunId = report.runs.length === 1 ? report.runs[0].id : runId;
 
@@ -420,6 +425,26 @@ export default function TaskListView({
     }
   }
 
+  async function deleteWorkflowReport() {
+    await modal.confirm({
+      title: "Delete Workflow Report",
+      content:
+        "Are you sure you want to delete this workflow report? This can not be undone. Note that if the workflow is still running, this may cause it to fail.",
+      okText: "Delete",
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await deleteWorkflow(report.workflow.hash);
+          history.push("/workflows");
+          message.success("Workflow report deleted.");
+        } catch (error) {
+          console.error(error);
+          message.error("Could not delete workflow report.");
+        }
+      },
+    });
+  }
+
   const overflowMenu: MenuProps = {
     items: [
       { key: "1", onClick: copyAllArtifactPaths, label: "Copy All Artifact Paths" },
@@ -441,6 +466,12 @@ export default function TaskListView({
       { key: "5", onClick: showArtifactsDiskUsageList, label: "Show Disk Usage of Artifacts" },
     ],
   };
+  if (isCurrentUserSuperUser)
+    overflowMenu.items?.push({
+      key: "6",
+      onClick: deleteWorkflowReport,
+      label: "Delete Workflow Report",
+    });
 
   type ItemType = ArrayElement<CollapseProps["items"]>;
 
@@ -512,6 +543,12 @@ export default function TaskListView({
       return undefined;
     }
 
+    const taskArtifacts = report.artifacts[task.taskName] || {};
+    let foreignWorkflow: null | [string, string] = null;
+    if (taskInfo.state === VoxelyticsRunState.SKIPPED) {
+      foreignWorkflow = Object.values(taskArtifacts)[0]?.foreignWorkflow ?? null;
+    }
+
     return {
       key: task.taskName,
       id: `task-panel-${task.taskName}`,
@@ -527,7 +564,17 @@ export default function TaskListView({
               backgroundColor: colorHasher.hex(task.task),
             }}
           />
-          {task.taskName}
+          {foreignWorkflow != null ? (
+            <>
+              <Link to={`/workflows/${foreignWorkflow[0]}?runId=${foreignWorkflow[1]}`}>
+                {task.taskName}
+                &nbsp;
+                <ExportOutlined />
+              </Link>
+            </>
+          ) : (
+            task.taskName
+          )}
           <wbr />
           {task.config.name != null && <span className="task-panel-name">{task.config.name}</span>}
           <wbr />
@@ -542,7 +589,7 @@ export default function TaskListView({
           workflowHash={report.workflow.hash}
           runId={singleRunId}
           task={task}
-          artifacts={report.artifacts[task.taskName] || []}
+          artifacts={taskArtifacts}
           dag={report.dag}
           taskInfo={taskInfo}
           onSelectTask={handleSelectTask}
@@ -565,8 +612,8 @@ export default function TaskListView({
     workflow: { name: readableWorkflowName },
   } = report;
   const runBeginTimeString = report.runs.reduce(
-    (r, a) => Math.min(r, a.beginTime != null ? a.beginTime.getTime() : Infinity),
-    Infinity,
+    (r, a) => Math.min(r, a.beginTime != null ? a.beginTime.getTime() : Number.POSITIVE_INFINITY),
+    Number.POSITIVE_INFINITY,
   );
 
   return (
@@ -590,7 +637,7 @@ export default function TaskListView({
         <h4 style={{ color: "#51686e" }}>
           {formatDateMedium(new Date(runBeginTimeString))}{" "}
           <Tooltip title={formatDurationStrict(totalRuntime)}>
-            <FieldTimeOutlined style={{ marginLeft: 20 }} />
+            <FieldTimeOutlined style={{ marginLeft: 20 }} className="icon-margin-right" />
             {totalRuntime.humanize()}
           </Tooltip>
         </h4>
@@ -667,8 +714,18 @@ export default function TaskListView({
 
 function aggregateTimes(taskInfos: Array<VoxelyticsTaskInfo>): [Date, Date] {
   return [
-    new Date(taskInfos.reduce((r, a) => Math.min(r, a.beginTime?.getTime() ?? Infinity), Infinity)),
-    new Date(taskInfos.reduce((r, a) => Math.max(r, a.endTime?.getTime() ?? -Infinity), -Infinity)),
+    new Date(
+      taskInfos.reduce(
+        (r, a) => Math.min(r, a.beginTime?.getTime() ?? Number.POSITIVE_INFINITY),
+        Number.POSITIVE_INFINITY,
+      ),
+    ),
+    new Date(
+      taskInfos.reduce(
+        (r, a) => Math.max(r, a.endTime?.getTime() ?? Number.NEGATIVE_INFINITY),
+        Number.NEGATIVE_INFINITY,
+      ),
+    ),
   ];
 }
 

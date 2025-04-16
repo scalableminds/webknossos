@@ -1,9 +1,9 @@
-import test, { ExecutionContext } from "ava";
+import test, { type ExecutionContext } from "ava";
 import _ from "lodash";
 import mockRequire from "mock-require";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 import { createMockTask } from "@redux-saga/testing-utils";
-import { take, put } from "redux-saga/effects";
+import { put, call } from "redux-saga/effects";
 import dummyUser from "test/fixtures/dummy_user";
 import defaultState from "oxalis/default_state";
 import { expectValueDeepEqual } from "test/helpers/sagaHelpers";
@@ -12,14 +12,15 @@ import {
   setBlockedByUserAction,
   setOthersMayEditForAnnotationAction,
 } from "oxalis/model/actions/annotation_actions";
+import { ensureWkReady } from "oxalis/model/sagas/ready_sagas";
 
 const createInitialState = (othersMayEdit: boolean, allowUpdate: boolean = true): OxalisState => ({
   ...defaultState,
   activeUser: dummyUser,
-  tracing: {
-    ...defaultState.tracing,
+  annotation: {
+    ...defaultState.annotation,
     restrictions: {
-      ...defaultState.tracing.restrictions,
+      ...defaultState.annotation.restrictions,
       allowUpdate,
     },
     volumes: [],
@@ -51,8 +52,8 @@ test.serial(
     const saga = acquireAnnotationMutexMaybe();
     saga.next();
     saga.next(wkReadyAction());
-    saga.next(storeState.tracing.restrictions.allowUpdate);
-    saga.next(storeState.tracing.annotationId);
+    saga.next(storeState.annotation.restrictions.allowUpdate);
+    saga.next(storeState.annotation.annotationId);
     t.deepEqual(saga.next().done, true, "The saga should terminate.");
   },
 );
@@ -62,24 +63,24 @@ function prepareTryAcquireMutexSaga(t: ExecutionContext, othersMayEdit: boolean)
   const listenForOthersMayEditMocked = createMockTask();
   const storeState = createInitialState(othersMayEdit);
   const saga = acquireAnnotationMutexMaybe();
-  expectValueDeepEqual(t, saga.next(), take("WK_READY"));
+  expectValueDeepEqual(t, saga.next(), call(ensureWkReady));
   t.deepEqual(
     saga.next(wkReadyAction()).value.type,
     "SELECT",
     "The saga should select the allowUpdate next.",
   );
   t.deepEqual(
-    saga.next(storeState.tracing.restrictions.allowUpdate).value.type,
+    saga.next(storeState.annotation.restrictions.allowUpdate).value.type,
     "SELECT",
     "The saga should select the annotationId next.",
   );
   t.deepEqual(
-    saga.next(storeState.tracing.annotationId).value.type,
+    saga.next(storeState.annotation.annotationId).value.type,
     "SELECT",
     "The saga should select the othersMayEdit next.",
   );
   t.deepEqual(
-    saga.next(storeState.tracing.othersMayEdit).value.type,
+    saga.next(storeState.annotation.othersMayEdit).value.type,
     "SELECT",
     "The saga should select the activeUser next.",
   );

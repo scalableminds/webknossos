@@ -1,8 +1,10 @@
 package com.scalableminds.webknossos.datastore.explore
 
-import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
+import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerWithMagLocators, LayerViewConfiguration}
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
@@ -17,8 +19,8 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
     with ExploreLayerUtils {
   override def name: String = "Neuroglancer URI Explorer"
 
-  override def explore(remotePath: VaultPath,
-                       credentialId: Option[String]): Fox[List[(DataLayerWithMagLocators, Vec3Double)]] =
+  override def explore(remotePath: VaultPath, credentialId: Option[String])(
+      implicit tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     for {
       _ <- Fox.successful(())
       uriFragment <- tryo(remotePath.toUri.getFragment.drop(1)) ?~> "URI has no matching fragment part"
@@ -31,7 +33,8 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
       renamedLayers = makeLayerNamesUnique(layers.map(_._1))
     } yield renamedLayers.zip(layers.map(_._2))
 
-  private def exploreNeuroglancerLayer(layerSpec: JsValue): Fox[List[(DataLayerWithMagLocators, Vec3Double)]] =
+  private def exploreNeuroglancerLayer(layerSpec: JsValue)(
+      implicit tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     for {
       _ <- Fox.successful(())
       obj <- layerSpec.validate[JsObject].toFox
@@ -46,18 +49,24 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
       layerWithViewConfiguration <- assignViewConfiguration(layer, viewConfiguration)
     } yield layerWithViewConfiguration
 
-  private def exploreLayer(layerType: String,
-                           remotePath: VaultPath,
-                           name: String): Fox[List[(DataLayerWithMagLocators, Vec3Double)]] =
+  private def exploreLayer(layerType: String, remotePath: VaultPath, name: String)(
+      implicit tc: TokenContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     layerType match {
       case "n5" =>
         Fox.firstSuccess(
-          Seq(new N5ArrayExplorer().explore(remotePath, None), new N5MultiscalesExplorer().explore(remotePath, None)))
+          Seq(
+            new N5ArrayExplorer().explore(remotePath, None),
+            new N5MultiscalesExplorer().explore(remotePath, None),
+            new N5CompactMultiscalesExplorer().explore(remotePath, None)
+          ))
       case "precomputed" => new PrecomputedExplorer().explore(remotePath, None)
       case "zarr" | "zarr2" =>
         Fox.firstSuccess(
-          Seq(new NgffExplorer().explore(remotePath, None),
-              new ZarrArrayExplorer(Vec3Int.ones).explore(remotePath, None)))
+          Seq(
+            new NgffV0_4Explorer().explore(remotePath, None),
+            new NgffV0_5Explorer().explore(remotePath, None),
+            new ZarrArrayExplorer(Vec3Int.ones).explore(remotePath, None)
+          ))
       case "zarr3" => new Zarr3ArrayExplorer().explore(remotePath, None)
       case _       => Fox.failure(f"Can not explore layer of $layerType type")
     }
@@ -70,8 +79,8 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
   }
 
   private def assignViewConfiguration(
-      value: List[(DataLayerWithMagLocators, Vec3Double)],
-      configuration: LayerViewConfiguration.LayerViewConfiguration): Fox[List[(DataLayerWithMagLocators, Vec3Double)]] =
+      value: List[(DataLayerWithMagLocators, VoxelSize)],
+      configuration: LayerViewConfiguration.LayerViewConfiguration): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     for {
       _ <- Fox.successful(())
       layers = value.map(_._1)

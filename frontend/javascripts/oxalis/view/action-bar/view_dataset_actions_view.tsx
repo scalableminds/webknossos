@@ -1,25 +1,25 @@
-import React from "react";
-import { useSelector } from "react-redux";
-import { Dropdown, MenuProps } from "antd";
 import {
-  ShareAltOutlined,
-  DownOutlined,
-  VideoCameraOutlined,
   CameraOutlined,
+  DownOutlined,
   DownloadOutlined,
+  ShareAltOutlined,
+  VideoCameraOutlined,
 } from "@ant-design/icons";
-import ButtonComponent from "oxalis/view/components/button_component";
-import ShareViewDatasetModalView from "oxalis/view/action-bar/share_view_dataset_modal_view";
-import { downloadScreenshot } from "oxalis/view/rendering_utils";
+import { ConfigProvider, Dropdown, type MenuProps } from "antd";
+import type { MenuItemType, SubMenuType } from "antd/lib/menu/interface";
 import {
   setPythonClientModalVisibilityAction,
-  setShareModalVisibilityAction,
   setRenderAnimationModalVisibilityAction,
+  setShareModalVisibilityAction,
 } from "oxalis/model/actions/ui_actions";
-import Store, { OxalisState } from "oxalis/store";
-import { MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
-import DownloadModalView from "./download_modal_view";
+import Store, { type OxalisState } from "oxalis/store";
+import ShareViewDatasetModalView from "oxalis/view/action-bar/share_view_dataset_modal_view";
+import ButtonComponent from "oxalis/view/components/button_component";
+import { downloadScreenshot } from "oxalis/view/rendering_utils";
+import { useSelector } from "react-redux";
+import { getAntdTheme, getThemeFromUser } from "theme";
 import CreateAnimationModal from "./create_animation_modal";
+import DownloadModalView from "./download_modal_view";
 
 type Props = {
   layoutMenu: SubMenuType;
@@ -39,6 +39,27 @@ export const renderAnimationMenuItem: MenuItemType = {
     Store.dispatch(setRenderAnimationModalVisibilityAction(true));
   },
 };
+
+const shareModalMenuItem: MenuItemType = {
+  key: "share-button",
+  onClick: () => Store.dispatch(setShareModalVisibilityAction(true)),
+  icon: <ShareAltOutlined />,
+  label: "Share",
+};
+
+const pythonClientMenuItem: MenuItemType = {
+  key: "python-client-button",
+  onClick: () => Store.dispatch(setPythonClientModalVisibilityAction(true)),
+  icon: <DownloadOutlined />,
+  label: "Download",
+};
+
+export const viewDatasetMenu = [
+  shareModalMenuItem,
+  screenshotMenuItem,
+  renderAnimationMenuItem,
+  pythonClientMenuItem,
+];
 
 export default function ViewDatasetActionsView(props: Props) {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
@@ -64,25 +85,7 @@ export default function ViewDatasetActionsView(props: Props) {
       onClose={() => Store.dispatch(setPythonClientModalVisibilityAction(false))}
     />
   );
-  const overlayMenu: MenuProps = {
-    items: [
-      {
-        key: "share-button",
-        onClick: () => Store.dispatch(setShareModalVisibilityAction(true)),
-        icon: <ShareAltOutlined />,
-        label: "Share",
-      },
-      screenshotMenuItem,
-      renderAnimationMenuItem,
-      {
-        key: "python-client-button",
-        onClick: () => Store.dispatch(setPythonClientModalVisibilityAction(true)),
-        icon: <DownloadOutlined />,
-        label: "Download",
-      },
-      props.layoutMenu,
-    ],
-  };
+  const overlayMenu: MenuProps = { items: [...viewDatasetMenu, props.layoutMenu] };
 
   const renderAnimationModal = (
     <CreateAnimationModal
@@ -91,15 +94,19 @@ export default function ViewDatasetActionsView(props: Props) {
     />
   );
 
+  const userTheme = getThemeFromUser(activeUser);
+
   return (
     <div
       style={{
         marginLeft: 10,
       }}
     >
-      {shareDatasetModal}
-      {pythonClientModal}
-      {activeUser?.isSuperUser ? renderAnimationModal : null}
+      <ConfigProvider theme={getAntdTheme(userTheme)}>
+        {shareDatasetModal}
+        {pythonClientModal}
+        {renderAnimationModal}
+      </ConfigProvider>
       <Dropdown menu={overlayMenu} trigger={["click"]}>
         <ButtonComponent
           style={{

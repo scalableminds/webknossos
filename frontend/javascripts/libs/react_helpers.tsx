@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from "react";
-import { useSelector, useStore } from "react-redux";
-import type { OxalisState } from "oxalis/store";
-import { ArbitraryFunction } from "types/globals";
 import { isUserAdminOrManager } from "libs/utils";
+import type { OxalisState } from "oxalis/store";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
+import { useSelector, useStore } from "react-redux";
+import type { ArbitraryFunction } from "types/globals";
 import Toast from "./toast";
 
 // From https://overreacted.io/making-setinterval-declarative-with-react-hooks/
@@ -79,6 +80,7 @@ export function useGuardedFetch<T>(
     }
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies(loadData):
   useEffect(() => {
     loadData();
   }, dependencies);
@@ -95,8 +97,8 @@ export function useGuardedFetch<T>(
   updates.
  */
 export function usePolledState(callback: (arg0: OxalisState) => void, interval: number = 1000) {
-  const store = useStore();
-  const oldState = useRef(null);
+  const store = useStore<OxalisState>();
+  const oldState = useRef<OxalisState | null>(null);
   useInterval(() => {
     const state = store.getState();
 

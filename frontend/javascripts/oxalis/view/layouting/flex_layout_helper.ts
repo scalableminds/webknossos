@@ -1,6 +1,6 @@
-import { Model, Actions, TabSetNode } from "flexlayout-react";
+import { Actions, type BorderNode, type Model, type TabSetNode } from "flexlayout-react";
 import type { BorderOpenStatus } from "oxalis/store";
-import { ModelConfig } from "./flex_layout_types";
+import type { ModelConfig } from "./flex_layout_types";
 
 export function getMaximizedItemId(model: Model): string | null | undefined {
   const maximizedTabset = model.getMaximizedTabset();
@@ -40,7 +40,7 @@ type NodePositionStatus = {
   isLeftMost: boolean;
   isRightMost: boolean;
 };
-export function getPositionStatusOf(tabSetNode: TabSetNode): NodePositionStatus {
+export function getPositionStatusOf(tabSetNode: TabSetNode | BorderNode): NodePositionStatus {
   // We have to determine whether the current tabset is part of the most upper tabsets directly below the header.
   const tabSetNodeRect = tabSetNode.getRect();
   const isTopMost = tabSetNodeRect.y === 0;

@@ -1,59 +1,34 @@
-import { createStore, applyMiddleware } from "redux";
-import { enableBatching } from "redux-batched-actions";
-import createSagaMiddleware, { type Saga } from "redux-saga";
+import type DiffableMap from "libs/diffable_map";
+import type { Matrix4x4 } from "libs/mjs";
 import type {
-  APIAllowedMode,
-  APIAnnotationType,
-  APIAnnotationVisibility,
-  APIConnectomeFile,
-  APIDataLayer,
-  APIDataStore,
-  APIDataset,
-  APIDatasetId,
-  APIHistogramData,
-  APIRestrictions,
-  APIScript,
-  APISettings,
-  APITask,
-  APITracingStore,
-  APIUser,
-  APIUserBase,
-  AnnotationLayerDescriptor,
-  TracingType,
-  APIMeshFile,
-  ServerEditableMapping,
-  APIOrganization,
-  APIUserCompact,
-  AdditionalCoordinate,
-  AdditionalAxis,
-} from "types/api_flow_types";
-import type { TracingStats } from "oxalis/model/accessors/annotation_accessor";
-import type { Action } from "oxalis/model/actions/actions";
-import type {
+  AnnotationTool,
   BoundingBoxType,
   ContourMode,
-  OverwriteMode,
-  FillMode,
   ControlMode,
-  TDViewDisplayMode,
-  ViewMode,
+  FillMode,
+  InterpolationMode,
+  MappingStatus,
   OrthoView,
+  OrthoViewWithoutTD,
+  OverwriteMode,
   Rect,
+  TDViewDisplayMode,
+  TreeType,
   Vector2,
   Vector3,
-  AnnotationTool,
-  MappingStatus,
-  OrthoViewWithoutTD,
-  InterpolationMode,
-  TreeType,
+  ViewMode,
 } from "oxalis/constants";
 import type { BLEND_MODES, ControlModeEnum } from "oxalis/constants";
-import type { Matrix4x4 } from "libs/mjs";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
-import DatasetReducer from "oxalis/model/reducers/dataset_reducer";
-import type DiffableMap from "libs/diffable_map";
+import defaultState from "oxalis/default_state";
+import type { TracingStats } from "oxalis/model/accessors/annotation_accessor";
+import type { Action } from "oxalis/model/actions/actions";
 import type EdgeCollection from "oxalis/model/edge_collection";
+import actionLoggerMiddleware from "oxalis/model/helpers/action_logger_middleware";
+import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
+import reduceReducers from "oxalis/model/helpers/reduce_reducers";
+import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
+import ConnectomeReducer from "oxalis/model/reducers/connectome_reducer";
+import DatasetReducer from "oxalis/model/reducers/dataset_reducer";
 import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
 import SaveReducer from "oxalis/model/reducers/save_reducer";
 import SettingsReducer from "oxalis/model/reducers/settings_reducer";
@@ -63,11 +38,38 @@ import UiReducer from "oxalis/model/reducers/ui_reducer";
 import UserReducer from "oxalis/model/reducers/user_reducer";
 import ViewModeReducer from "oxalis/model/reducers/view_mode_reducer";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
-import actionLoggerMiddleware from "oxalis/model/helpers/action_logger_middleware";
-import defaultState from "oxalis/default_state";
-import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
-import reduceReducers from "oxalis/model/helpers/reduce_reducers";
-import ConnectomeReducer from "oxalis/model/reducers/connectome_reducer";
+import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import { type Middleware, applyMiddleware, createStore } from "redux";
+import { enableBatching } from "redux-batched-actions";
+import createSagaMiddleware, { type Saga } from "redux-saga";
+import type {
+  APIAllowedMode,
+  APIAnnotationType,
+  APIAnnotationVisibility,
+  APIConnectomeFile,
+  APIDataLayer,
+  APIDataSourceId,
+  APIDataStore,
+  APIDataset,
+  APIHistogramData,
+  APIMeshFile,
+  APIOrganization,
+  APIRestrictions,
+  APIScript,
+  APISettings,
+  APITask,
+  APITracingStore,
+  APIUser,
+  APIUserBase,
+  APIUserCompact,
+  AdditionalAxis,
+  AdditionalCoordinate,
+  AnnotationLayerDescriptor,
+  MetadataEntryProto,
+  ServerEditableMapping,
+  TracingType,
+} from "types/api_flow_types";
+import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import type { StartAIJobModalState } from "./view/action-bar/starting_job_modals";
 
@@ -88,7 +90,7 @@ export type MutableNode = {
   rotation: Vector3;
   bitDepth: number;
   viewport: number;
-  resolution: number;
+  mag: number;
   radius: number;
   timestamp: number;
   interpolation: boolean;
@@ -129,45 +131,50 @@ export type UserBoundingBoxWithoutId = {
 export type UserBoundingBox = UserBoundingBoxWithoutId & {
   id: number;
 };
+// When changing MutableTree, remember to also update Tree
 export type MutableTree = {
   treeId: number;
   groupId: number | null | undefined;
   color: Vector3;
   name: string;
   timestamp: number;
-  comments: Array<MutableCommentType>;
-  branchPoints: Array<MutableBranchPoint>;
+  comments: MutableCommentType[];
+  branchPoints: MutableBranchPoint[];
   edges: EdgeCollection;
   isVisible: boolean;
   nodes: MutableNodeMap;
   type: TreeType;
   edgesAreVisible: boolean;
+  metadata: MetadataEntryProto[];
 };
+// When changing Tree, remember to also update MutableTree
 export type Tree = {
   readonly treeId: number;
   readonly groupId: number | null | undefined;
   readonly color: Vector3;
   readonly name: string;
   readonly timestamp: number;
-  readonly comments: Array<CommentType>;
-  readonly branchPoints: Array<BranchPoint>;
+  readonly comments: CommentType[];
+  readonly branchPoints: BranchPoint[];
   readonly edges: EdgeCollection;
   readonly isVisible: boolean;
   readonly nodes: NodeMap;
   readonly type: TreeType;
   readonly edgesAreVisible: boolean;
+  readonly metadata: MetadataEntryProto[];
 };
 export type TreeGroupTypeFlat = {
   readonly name: string;
   readonly groupId: number;
+  readonly isExpanded?: boolean;
 };
 export type TreeGroup = TreeGroupTypeFlat & {
-  readonly children: Array<TreeGroup>;
+  readonly children: TreeGroup[];
 };
 export type MutableTreeGroup = {
   name: string;
   groupId: number;
-  children: Array<MutableTreeGroup>;
+  children: MutableTreeGroup[];
 };
 
 export type SegmentGroupTypeFlat = TreeGroupTypeFlat;
@@ -175,7 +182,7 @@ export type SegmentGroup = TreeGroup;
 export type MutableSegmentGroup = MutableTreeGroup;
 
 export type DataLayerType = APIDataLayer;
-export type Restrictions = APIRestrictions;
+export type Restrictions = APIRestrictions & { initialAllowUpdate: boolean };
 export type AllowedMode = APIAllowedMode;
 export type Settings = APISettings;
 export type DataStoreInfo = APIDataStore;
@@ -185,12 +192,22 @@ export type AnnotationVisibility = APIAnnotationVisibility;
 export type RestrictionsAndSettings = Restrictions & Settings;
 export type Annotation = {
   readonly annotationId: string;
+  // This is the version that the front-end considers as
+  // most recently saved. Usually, this will be identical
+  // to the version stored in the back-end. Only if another
+  // actor has saved a newer version to the front-end, the
+  // versions won't match (=> conflict).
+  // Unsaved changes don't change this version field.
+  readonly version: number;
+  readonly earliestAccessibleVersion: number;
   readonly restrictions: RestrictionsAndSettings;
   readonly visibility: AnnotationVisibility;
   readonly annotationLayers: Array<AnnotationLayerDescriptor>;
   readonly tags: Array<string>;
+  readonly stats: TracingStats | null | undefined;
   readonly description: string;
   readonly name: string;
+  readonly organization: string;
   readonly tracingStore: APITracingStore;
   readonly annotationType: APIAnnotationType;
   readonly owner: APIUserBase | null | undefined;
@@ -201,7 +218,6 @@ export type Annotation = {
 };
 type TracingBase = {
   readonly createdTimestamp: number;
-  readonly version: number;
   readonly tracingId: string;
   readonly boundingBox: BoundingBoxType | null | undefined;
   readonly userBoundingBoxes: Array<UserBoundingBox>;
@@ -230,6 +246,7 @@ export type Segment = {
   readonly creationTime: number | null | undefined;
   readonly color: Vector3 | null;
   readonly groupId: number | null | undefined;
+  readonly metadata: MetadataEntryProto[];
 };
 export type SegmentMap = DiffableMap<number, Segment>;
 
@@ -254,9 +271,10 @@ export type VolumeTracing = TracingBase & {
   readonly contourList: Array<Vector3>;
   readonly fallbackLayer?: string;
   readonly mappingName?: string | null | undefined;
-  readonly mappingIsEditable?: boolean;
+  readonly hasEditableMapping?: boolean;
   readonly mappingIsLocked?: boolean;
   readonly hasSegmentIndex: boolean;
+  readonly volumeBucketDataHasChanged?: boolean;
 };
 export type ReadOnlyTracing = TracingBase & {
   readonly type: "readonly";
@@ -264,37 +282,42 @@ export type ReadOnlyTracing = TracingBase & {
 export type EditableMapping = Readonly<ServerEditableMapping> & {
   readonly type: "mapping";
 };
-export type HybridTracing = Annotation & {
+export type StoreAnnotation = Annotation & {
   readonly skeleton: SkeletonTracing | null | undefined;
   readonly volumes: Array<VolumeTracing>;
   readonly readOnly: ReadOnlyTracing | null | undefined;
   readonly mappings: Array<EditableMapping>;
 };
-export type Tracing = HybridTracing;
+export type LegacyViewCommand = APIDataSourceId & {
+  readonly type: typeof ControlModeEnum.VIEW;
+};
 export type TraceOrViewCommand =
-  | (APIDatasetId & {
+  | {
+      readonly datasetId: string;
       readonly type: typeof ControlModeEnum.VIEW;
-    })
+    }
   | {
       readonly type: typeof ControlModeEnum.TRACE;
       readonly annotationId: string;
     }
-  | (APIDatasetId & {
+  | {
+      readonly datasetId: string;
       readonly type: typeof ControlModeEnum.SANDBOX;
       readonly tracingType: TracingType;
-    });
+    };
 export type DatasetLayerConfiguration = {
   readonly color: Vector3;
   readonly brightness?: number;
   readonly contrast?: number;
   readonly alpha: number;
-  readonly intensityRange?: Vector2;
+  readonly intensityRange?: readonly [number, number];
   readonly min?: number;
   readonly max?: number;
   readonly isDisabled: boolean;
   readonly isInverted: boolean;
   readonly isInEditMode: boolean;
   readonly gammaCorrectionValue: number;
+  readonly mapping?: { name: string; type: MappingType } | null | undefined;
 };
 export type LoadingStrategy = "BEST_QUALITY_FIRST" | "PROGRESSIVE_QUALITY";
 
@@ -315,16 +338,20 @@ export type DatasetConfiguration = {
   readonly renderMissingDataBlack: boolean;
   readonly loadingStrategy: LoadingStrategy;
   readonly segmentationPatternOpacity: number;
+  readonly selectiveSegmentVisibility: boolean;
   readonly blendMode: BLEND_MODES;
   // If nativelyRenderedLayerName is not-null, the layer with
   // that name (or id) should be rendered without any transforms.
   // This means, that all other layers should be transformed so that
   // they still correlated with each other.
+  // If other layers have the same transformation they will also be rendered
+  // natively as their transform and the inverse transform of the nativelyRenderedLayer
+  // layer cancel each other out.
   // If nativelyRenderedLayerName is null, all layers are rendered
   // as their transforms property signal it.
-  // Currently, the skeleton layer does not have transforms as a stored
-  // property. So, to render the skeleton layer natively, nativelyRenderedLayerName
-  // can be set to null.
+  // Currently, skeleton layers and volume layers without fallback do not have transforms
+  // as a stored property. So, to render the skeleton layer natively,
+  // nativelyRenderedLayerName can be set to null.
   readonly nativelyRenderedLayerName: string | null;
 };
 
@@ -334,6 +361,9 @@ export type PartialDatasetConfiguration = Partial<Omit<DatasetConfiguration, "la
 
 export type QuickSelectConfig = {
   readonly useHeuristic: boolean;
+  // Only relevant for useHeuristic=false:
+  readonly predictionDepth?: number;
+  // Only relevant for useHeuristic=true:
   readonly showPreview: boolean;
   readonly segmentMode: "dark" | "light";
   readonly threshold: number;
@@ -345,6 +375,7 @@ export type QuickSelectConfig = {
 export type UserConfiguration = {
   readonly autoSaveLayouts: boolean;
   readonly autoRenderMeshInProofreading: boolean;
+  readonly selectiveVisibilityInProofreading: boolean;
   readonly brushSize: number;
   readonly clippingDistance: number;
   readonly clippingDistanceArbitrary: number;
@@ -375,6 +406,7 @@ export type UserConfiguration = {
   // how volume annotations overwrite existing voxels.
   readonly overwriteMode: OverwriteMode;
   readonly fillMode: FillMode;
+  readonly isFloodfillRestrictedToBoundingBox: boolean;
   readonly interpolationMode: InterpolationMode;
   readonly useLegacyBindings: boolean;
   readonly quickSelect: QuickSelectConfig;
@@ -391,7 +423,10 @@ export type RecommendedConfiguration = Partial<
 // A histogram value of undefined indicates that the histogram hasn't been fetched yet
 // whereas a value of null indicates that the histogram couldn't be fetched
 export type HistogramDataForAllLayers = Record<string, APIHistogramData | null>;
-export type Mapping = Map<number, number>;
+export type Mapping = Map<number, number> | Map<bigint, bigint>;
+export type NumberLike = number | bigint;
+export type NumberLikeMap = Map<NumberLike, NumberLike>;
+
 export type MappingType = "JSON" | "HDF5";
 export type ActiveMappingInfo = {
   readonly mappingName: string | null | undefined;
@@ -399,8 +434,8 @@ export type ActiveMappingInfo = {
   readonly mappingColors: number[] | null | undefined;
   readonly hideUnmappedIds: boolean;
   readonly mappingStatus: MappingStatus;
-  readonly mappingSize: number;
   readonly mappingType: MappingType;
+  readonly isMergerModeMapping?: boolean;
 };
 export type TemporaryConfiguration = {
   readonly histogramData: HistogramDataForAllLayers;
@@ -409,6 +444,7 @@ export type TemporaryConfiguration = {
   readonly controlMode: ControlMode;
   readonly mousePosition: Vector2 | null | undefined;
   readonly hoveredSegmentId: number | null;
+  readonly hoveredUnmappedSegmentId: number | null;
   readonly activeMappingByLayer: Record<string, ActiveMappingInfo>;
   readonly isMergerModeEnabled: boolean;
   readonly gpuSetup: {
@@ -441,23 +477,10 @@ export type ProgressInfo = {
   readonly processedActionCount: number;
   readonly totalActionCount: number;
 };
-export type IsBusyInfo = {
-  readonly skeleton: boolean;
-  readonly volumes: Record<string, boolean>;
-  readonly mappings: Record<string, boolean>;
-};
 export type SaveState = {
-  readonly isBusyInfo: IsBusyInfo;
-  readonly queue: {
-    readonly skeleton: Array<SaveQueueEntry>;
-    readonly volumes: Record<string, Array<SaveQueueEntry>>;
-    readonly mappings: Record<string, Array<SaveQueueEntry>>;
-  };
-  readonly lastSaveTimestamp: {
-    readonly skeleton: number;
-    readonly volumes: Record<string, number>;
-    readonly mappings: Record<string, number>;
-  };
+  readonly isBusy: boolean;
+  readonly queue: Array<SaveQueueEntry>;
+  readonly lastSaveTimestamp: number;
   readonly progressInfo: ProgressInfo;
 };
 export type Flycam = {
@@ -515,20 +538,26 @@ export type BusyBlockingInfo = {
   reason?: string;
 };
 type UiInformation = {
+  readonly globalProgress: number; // 0 to 1
   readonly showDropzoneModal: boolean;
   readonly showVersionRestore: boolean;
   readonly showDownloadModal: boolean;
   readonly showPythonClientModal: boolean;
   readonly showShareModal: boolean;
+  readonly showMergeAnnotationModal: boolean;
+  readonly showZarrPrivateLinksModal: boolean;
+  readonly showAddScriptModal: boolean;
   readonly aIJobModalState: StartAIJobModalState;
   readonly showRenderAnimationModal: boolean;
   readonly activeTool: AnnotationTool;
+  readonly activeUserBoundingBoxId: number | null | undefined;
   readonly storedLayouts: Record<string, any>;
   readonly isImportingMesh: boolean;
   readonly isInAnnotationView: boolean;
   readonly hasOrganizations: boolean;
   readonly borderOpenStatus: BorderOpenStatus;
   readonly theme: Theme;
+  readonly isWkReady: boolean;
   readonly busyBlockingInfo: BusyBlockingInfo;
   readonly quickSelectState:
     | "inactive"
@@ -554,6 +583,7 @@ type BaseMeshInformation = {
   readonly seedAdditionalCoordinates?: AdditionalCoordinate[] | null;
   readonly isLoading: boolean;
   readonly isVisible: boolean;
+  readonly opacity: number;
   readonly mappingName: string | null | undefined;
 };
 export type AdHocMeshInformation = BaseMeshInformation & {
@@ -563,7 +593,6 @@ export type AdHocMeshInformation = BaseMeshInformation & {
 export type PrecomputedMeshInformation = BaseMeshInformation & {
   readonly isPrecomputed: true;
   readonly meshFileName: string;
-  readonly areChunksMerged: boolean;
 };
 export type MeshInformation = AdHocMeshInformation | PrecomputedMeshInformation;
 export type ConnectomeData = {
@@ -578,10 +607,13 @@ export type OxalisState = {
   readonly userConfiguration: UserConfiguration;
   readonly temporaryConfiguration: TemporaryConfiguration;
   readonly dataset: APIDataset;
-  readonly tracing: Tracing;
+  readonly annotation: StoreAnnotation;
   readonly task: Task | null | undefined;
   readonly save: SaveState;
   readonly flycam: Flycam;
+  readonly flycamInfoCache: {
+    readonly maximumZoomForAllMags: Record<string, number[]>;
+  };
   readonly viewModeData: ViewModeData;
   readonly activeUser: APIUser | null | undefined;
   readonly activeOrganization: APIOrganization | null;
@@ -595,7 +627,7 @@ export type OxalisState = {
       readonly availableMeshFiles: Array<APIMeshFile> | null | undefined;
       readonly currentMeshFile: APIMeshFile | null | undefined;
       // Note that for a volume tracing, this information should be stored
-      // in state.tracing.volume.segments, as this is also persisted on the
+      // in state.annotation.volume.segments, as this is also persisted on the
       // server (i.e., not "local").
       // The `segments` here should only be used for non-annotation volume
       // layers.
@@ -617,6 +649,7 @@ const combinedReducers = reduceReducers(
   TaskReducer,
   SaveReducer,
   FlycamReducer,
+  FlycamInfoCacheReducer,
   ViewModeReducer,
   AnnotationReducer,
   UserReducer,
@@ -625,14 +658,14 @@ const combinedReducers = reduceReducers(
   OrganizationReducer,
 );
 
-const store = createStore<OxalisState>(
+const store = createStore<OxalisState, Action, unknown, unknown>(
   enableBatching(combinedReducers),
   defaultState,
-  applyMiddleware(actionLoggerMiddleware, overwriteActionMiddleware, sagaMiddleware),
+  applyMiddleware(actionLoggerMiddleware, overwriteActionMiddleware, sagaMiddleware as Middleware),
 );
 
-export function startSagas(rootSaga: Saga<any[]>) {
-  sagaMiddleware.run(rootSaga);
+export function startSaga(saga: Saga<any[]>) {
+  sagaMiddleware.run(saga);
 }
 
 export type StoreType = typeof store;

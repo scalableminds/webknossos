@@ -13,14 +13,14 @@ import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.pattern.after
 import play.api.http.{HeaderNames, Status}
 import play.api.libs.json.{JsArray, JsObject, JsValue, Json}
-import utils.{ObjectId, WkConf}
+import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.math.Ordering.Implicits.infixOrderingOps
 
-class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(implicit ec: ExecutionContext)
+class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val actorSystem: ActorSystem)(implicit ec: ExecutionContext)
     extends LazyLogging
     with MimeTypes {
 
@@ -43,7 +43,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
   private def pollUntilServerStartedUp(until: Instant): Fox[Unit] = {
     def waitAndRecurse(until: Instant): Fox[Unit] =
       for {
-        _ <- after(POLLING_INTERVAL, using = system.scheduler)(Future.successful(()))
+        _ <- after(POLLING_INTERVAL, using = actorSystem.scheduler)(Future.successful(()))
         _ <- bool2Fox(!until.isPast) ?~> s"Loki did not become ready within ${conf.startupTimeout}."
         _ <- pollUntilServerStartedUp(until)
       } yield ()
@@ -80,8 +80,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
   }
 
   def queryLogsBatched(runName: String,
-                       organizationId: ObjectId,
-                       organizationName: String,
+                       organizationId: String,
                        taskName: Option[String],
                        minLevel: VoxelyticsLogLevel = VoxelyticsLogLevel.INFO,
                        startTime: Instant,
@@ -95,7 +94,6 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
       for {
         headBatch <- queryLogs(runName,
                                organizationId,
-                               organizationName,
                                taskName,
                                minLevel,
                                currentStartTime,
@@ -110,7 +108,6 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
               tailBatch <- queryLogsBatched(
                 runName,
                 organizationId,
-                organizationName,
                 taskName,
                 minLevel,
                 startTime,
@@ -126,7 +123,6 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
             tailBatch <- queryLogsBatched(
               runName,
               organizationId,
-              organizationName,
               taskName,
               minLevel,
               startTime,
@@ -142,8 +138,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
   }
 
   private def queryLogs(runName: String,
-                        organizationId: ObjectId,
-                        organizationName: String,
+                        organizationId: String,
                         taskName: Option[String],
                         minLevel: VoxelyticsLogLevel,
                         startTime: Instant,
@@ -157,7 +152,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
         Some(s"""level=~"(${levels.mkString("|")})"""")
       ).flatten.mkString(" | ")
       val logQL =
-        s"""{vx_run_name="$runName",wk_org=~"${organizationId.id}|$organizationName",wk_url="${wkConf.Http.uri}"} | json vx_task_name,level | $logQLFilter"""
+        s"""{vx_run_name="$runName",wk_org=~"$organizationId",wk_url="${wkConf.Http.uri}"} | json vx_task_name,level | $logQLFilter"""
 
       val queryString =
         List("query" -> logQL,
@@ -184,13 +179,12 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
       } yield logEntries
     } else Fox.successful(List())
 
-  def bulkInsertBatched(logEntries: List[JsValue], organizationName: String)(implicit ec: ExecutionContext): Fox[Unit] =
+  def bulkInsertBatched(logEntries: List[JsValue], organizationId: String)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      _ <- Fox.serialCombined(logEntries.grouped(LOG_ENTRY_INSERT_BATCH_SIZE).toList)(bulkInsert(_, organizationName))
+      _ <- Fox.serialCombined(logEntries.grouped(LOG_ENTRY_INSERT_BATCH_SIZE).toList)(bulkInsert(_, organizationId))
     } yield ()
 
-  private def bulkInsert(logEntries: List[JsValue], organizationName: String)(
-      implicit ec: ExecutionContext): Fox[Unit] =
+  private def bulkInsert(logEntries: List[JsValue], organizationId: String)(implicit ec: ExecutionContext): Fox[Unit] =
     if (logEntries.nonEmpty) {
       for {
         _ <- serverStartupFuture
@@ -210,7 +204,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
                 for {
                   timestampString <- tryo((entry \ "@timestamp").as[String]).toFox
                   timestamp <- if (timestampString.endsWith("Z"))
-                    Instant.fromString(timestampString)
+                    Instant.fromString(timestampString).toFox
                   else
                     Instant.fromLocalTimeString(timestampString)
                   values <- tryo(
@@ -248,13 +242,13 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val system: ActorSystem)(im
                   "vx_run_name" -> keyValueTuple._1._2,
                   "pid" -> keyValueTuple._1._3,
                   "wk_url" -> wkConf.Http.uri,
-                  "wk_org" -> organizationName
+                  "wk_org" -> organizationId
                 ),
                 "values" -> JsArray(values)
             ))
         _ <- rpc(s"${conf.uri}/loki/api/v1/push").silent
           .addHttpHeaders(HeaderNames.CONTENT_TYPE -> jsonMimeType)
-          .post[JsValue](Json.obj("streams" -> streams))
+          .postJson[JsValue](Json.obj("streams" -> streams))
       } yield ()
     } else {
       Fox.successful(())

@@ -44,7 +44,7 @@ arch -x86_64 /bin/zsh
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 # Install git, node.js, postgres, sbt, gfind, gsed, draco
-brew install openjdk draco openssl git node postgresql sbt findutils coreutils gnu-sed redis yarn c-blosc brotli wget
+brew install openjdk draco openssl git node postgresql sbt findutils coreutils gnu-sed redis c-blosc brotli wget
 
 # Set env variables for openjdk and openssl
 # You probably want to add these lines manually to avoid conflicts in your zshrc
@@ -67,6 +67,9 @@ psql -c "CREATE USER postgres WITH ENCRYPTED PASSWORD 'postgres';"
 psql -c "ALTER USER postgres WITH SUPERUSER;"
 psql -c "GRANT ALL PRIVILEGES ON DATABASE webknossos TO postgres;"
 
+# Enable corepack for nodeJs and yarn
+corepack enable
+
 # Checkout the WEBKNOSSOS git repository
 git clone git@github.com:scalableminds/webknossos.git
 ```
@@ -76,20 +79,14 @@ Note: On arm64-based Macs (e.g. M1), you need to run WEBKNOSSOS in an x86_64 env
 ## Ubuntu 22.04 LTS
 
 ```bash
-sudo apt install -y curl ca-certificates wget
+sudo apt update
+sudo apt install -y curl ca-certificates wget git postgresql postgresql-client unzip zip redis-server build-essential libblosc1 libbrotli1 libdraco-dev cmake
 
 # Install nvm, node 18
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 source ~/.bashrc
 nvm install 18
 nvm use 18
-
-# Adding repositories for yarn
-curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
-echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
-
-sudo apt update
-sudo apt install -y git postgresql postgresql-client unzip zip yarn redis-server build-essential libblosc1 libbrotli1 libdraco-dev cmake
 
  # Install sdkman, java, scala and sbt
 curl -s "https://get.sdkman.io" | bash
@@ -102,8 +99,14 @@ source "$HOME/.sdkman/bin/sdkman-init.sh"
 
 # Assign a password to PostgreSQL user
 sudo -u postgres psql -c "ALTER USER postgres WITH ENCRYPTED PASSWORD 'postgres';"
+
 # Clone the git repo to the current directory
 git clone git@github.com:scalableminds/webknossos.git
+cd webknossos
+
+# Enable node corepack to select the right yarn, install node packages
+corepack enable
+yarn install
 ```
 
 On older Ubuntu distributions: Please make sure to have the correct versions of node, PostgreSQL and java installed.
@@ -132,8 +135,10 @@ On older Ubuntu distributions: Please make sure to have the correct versions of 
 ### node.js & yarn
 
 * Install node from [http://nodejs.org/download/](http://nodejs.org/download/)
-* node version **16 to 18 is required**
-* Install yarn package manager: `npm install -g yarn`
+* node version **18 is required**
+* Use `corepack` to install `yarn`
+* `corepack enable`&& `yarn install`
+
 
 ## Run locally
 

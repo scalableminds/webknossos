@@ -8,16 +8,17 @@ import FormattedDate from "components/formatted_date";
 import dayjs from "dayjs";
 import { useFetch, useInterval } from "libs/react_helpers";
 import { parseCTimeDefaultDate } from "libs/utils";
+import * as Utils from "libs/utils";
 import _ from "lodash";
 import constants from "oxalis/constants";
 import { setNavbarHeightAction } from "oxalis/model/actions/ui_actions";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { Store } from "oxalis/singletons";
-import { OxalisState } from "oxalis/store";
-import React, { useEffect, useState } from "react";
+import type { OxalisState } from "oxalis/store";
+import type React from "react";
+import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
-import { MaintenanceInfo } from "types/api_flow_types";
-import * as Utils from "libs/utils";
+import type { MaintenanceInfo } from "types/api_flow_types";
 
 const INITIAL_DELAY = 5000;
 const INTERVAL_TO_FETCH_MAINTENANCES_MS = 60000; // 1min
@@ -141,6 +142,7 @@ export function MaintenanceBanner() {
     }
   }, [currentMaintenance, closestUpcomingMaintenance, shouldShowUpcomingMaintenanceBanner]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies(pollMaintenances):
   useEffect(() => {
     // Do an initial fetch of the maintenance status so that users are notified
     // quickly in case of ongoing maintenances.

@@ -1,7 +1,8 @@
 import { Select, Spin } from "antd";
 import type { SelectProps } from "antd/es/select";
 import debounce from "lodash/debounce";
-import React, { useMemo, useRef, useState } from "react";
+import type React from "react";
+import { useMemo, useRef, useState } from "react";
 
 // This module is inspired by the "Search and Select Users" example
 // in the antd documentation (for version 4).

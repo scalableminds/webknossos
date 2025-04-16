@@ -119,4 +119,21 @@ object JsonHelper extends BoxImplicits with LazyLogging {
       case _ =>
         None
     }
+
+  // Sometimes play-json adds a "_type" field to the json-serialized case classes,
+  // when it thinks they can’t be distinguished otherwise. We need to remove it manually.
+  def removeGeneratedTypeFieldFromJsonRecursively(jsValue: JsValue): JsValue =
+    removeKeyRecursively(jsValue, "_type")
+
+  private def removeKeyRecursively(jsValue: JsValue, keyToRemove: String): JsValue =
+    jsValue match {
+      case JsObject(fields) =>
+        val processedAsMap = fields.filter { case (k, _) => k != keyToRemove }.view.mapValues { value: JsValue =>
+          removeKeyRecursively(value, keyToRemove)
+        }.toMap
+        Json.toJson(processedAsMap)
+      case JsArray(fields) =>
+        Json.toJson(fields.map(value => removeKeyRecursively(value, keyToRemove)))
+      case _ => jsValue
+    }
 }

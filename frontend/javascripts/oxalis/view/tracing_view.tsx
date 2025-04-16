@@ -1,10 +1,10 @@
-import * as React from "react";
+import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import messages from "messages";
-import ErrorHandling from "libs/error_handling";
-import Store from "oxalis/store";
 import { setViewModeAction } from "oxalis/model/actions/settings_actions";
 import { api } from "oxalis/singletons";
+import Store from "oxalis/store";
+import type * as React from "react";
 
 const WEBGL_CONTEXT_LOST_KEY = "WEBGL_CONTEXT_LOST_KEY";
 
@@ -23,7 +23,7 @@ const registerWebGlCrashHandler = (canvas) => {
         key: WEBGL_CONTEXT_LOST_KEY,
       });
       console.error("Webgl context lost", e);
-      ErrorHandling.notify(e);
+      ErrorHandling.notify(new Error("WebGLContextLost"));
     },
     false,
   );
@@ -37,7 +37,7 @@ const registerWebGlCrashHandler = (canvas) => {
       // to another one and then switching back proved to be the most robust way,
       // even though it seems a bit hacky.
       const currentViewMode = Store.getState().temporaryConfiguration.viewMode;
-      const { allowedModes } = Store.getState().tracing.restrictions;
+      const { allowedModes } = Store.getState().annotation.restrictions;
       const index = (allowedModes.indexOf(currentViewMode) + 1) % allowedModes.length;
       const newViewMode = allowedModes[index];
       console.log(
@@ -65,7 +65,7 @@ const registerWebGlCrashHandler = (canvas) => {
 
 export default function TracingView() {
   const handleContextMenu = (event: React.SyntheticEvent) => {
-    // hide contextmenu, while right-clicking a canvas
+    // hide context menu, while right-clicking a canvas
     event.preventDefault();
   };
 

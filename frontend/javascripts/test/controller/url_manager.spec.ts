@@ -3,11 +3,15 @@ import UrlManager, {
   updateTypeAndId,
   encodeUrlHash,
   type UrlManagerState,
+  getDatasetNameFromLocation,
+  getUpdatedPathnameWithNewDatasetName,
 } from "oxalis/controller/url_manager";
 import { location } from "libs/window";
 import Constants, { type Vector3, ViewModeValues } from "oxalis/constants";
 import defaultState from "oxalis/default_state";
 import update from "immutability-helper";
+import DATASET from "../fixtures/dataset_server_object";
+import _ from "lodash";
 
 describe("UrlManager", () => {
   it("should replace tracing in url", () => {
@@ -206,5 +210,47 @@ describe("UrlManager", () => {
     UrlManager.initialize();
     const url = UrlManager.buildUrl();
     expect(url).toBe("#0,0,0,0,1.3");
+  });
+
+  it("The dataset name should be correctly extracted from view URLs", () => {
+    const datasetNameEasy = "extract_me";
+    const datasetNameComplex = "$find1-me9";
+    // View
+    location.pathname = `/datasets/${datasetNameEasy}-${DATASET.id}/view`;
+    expect(getDatasetNameFromLocation(location)).toBe(datasetNameEasy);
+    // Sandbox
+    location.pathname = `/datasets/${datasetNameEasy}-${DATASET.id}/sandbox/hybrid`;
+    expect(getDatasetNameFromLocation(location)).toBe(datasetNameEasy);
+    // View - complex
+    location.pathname = `/datasets/${datasetNameComplex}-${DATASET.id}/sandbox/hybrid`;
+    expect(getDatasetNameFromLocation(location)).toBe(datasetNameComplex);
+    // Sandbox - complex
+    location.pathname = `/datasets/${datasetNameComplex}-${DATASET.id}/sandbox/hybrid`;
+    expect(getDatasetNameFromLocation(location)).toBe(datasetNameComplex);
+  });
+
+  it("Inserting an updated dataset name in the URL should yield the correct URL", () => {
+    const testDatasetEasy = update(_.clone(DATASET), { name: { $set: "extract_me" } });
+    const testDatasetComplex = update(_.clone(DATASET), { name: { $set: "$3xtr4c7-me9" } });
+    // View
+    location.pathname = `/datasets/replace_me-${testDatasetEasy.id}/view`;
+    const newPathName1 = getUpdatedPathnameWithNewDatasetName(location, testDatasetEasy);
+    const expectedPathname1 = `/datasets/${testDatasetEasy.name}-${testDatasetEasy.id}/view`;
+    expect(newPathName1).toBe(expectedPathname1);
+    // Sandbox
+    location.pathname = `/datasets/replace_me-${testDatasetEasy.id}/sandbox/skeleton`;
+    const newPathName2 = getUpdatedPathnameWithNewDatasetName(location, testDatasetEasy);
+    const expectedPathname2 = `/datasets/${testDatasetEasy.name}-${testDatasetEasy.id}/sandbox/skeleton`;
+    expect(newPathName2).toBe(expectedPathname2);
+    // View - complex
+    location.pathname = `/datasets/replace_me-${testDatasetComplex.id}/view`;
+    const newPathName3 = getUpdatedPathnameWithNewDatasetName(location, testDatasetComplex);
+    const expectedPathname3 = `/datasets/${testDatasetComplex.name}-${testDatasetComplex.id}/view`;
+    expect(newPathName3).toBe(expectedPathname3);
+    // Sandbox - complex
+    location.pathname = `/datasets/replace_me-${testDatasetComplex.id}/sandbox/skeleton`;
+    const newPathName4 = getUpdatedPathnameWithNewDatasetName(location, testDatasetComplex);
+    const expectedPathname4 = `/datasets/${testDatasetComplex.name}-${testDatasetComplex.id}/sandbox/skeleton`;
+    expect(newPathName4).toBe(expectedPathname4);
   });
 });

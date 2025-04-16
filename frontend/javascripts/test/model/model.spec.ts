@@ -9,6 +9,7 @@ import DATASET from "../fixtures/dataset_server_object";
 import Model, { type OxalisModel } from "oxalis/model";
 import { HANDLED_ERROR } from "oxalis/model_initialization";
 import Request from "libs/request";
+import { location } from "libs/window";
 
 const ANNOTATION_TYPE = null;
 const ANNOTATION_ID = "annotationIdValue";
@@ -50,6 +51,9 @@ describe("Model Initialization", () => {
   it<TestContext>("should throw a model.HANDLED_ERROR for missing data layers", async ({
     model,
   }) => {
+    location.href = `http://localhost:9000/datasets/${DATASET.name}-${DATASET.id}/view`;
+    location.pathname = `/datasets/${DATASET.name}-${DATASET.id}/view`;
+
     const datasetObject = _.clone(DATASET);
 
     // @ts-expect-error still delete dataLayers on the cloned object.

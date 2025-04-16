@@ -8,7 +8,7 @@ exports[`NML > NML serializer should escape special characters and multilines 1`
   <meta name="annotationId" content="annotationId" />
   <meta name="taskId" content="5b1fd1cb97000027049c67ec" />
   <parameters>
-    <experiment datasetId="dummy-dataset-id" name="Loading" description="Multiline dataset&#xa;description&#xa;with special &amp;&apos;&lt;&gt;&quot; chars." organization="" wkUrl="http://localhost" />
+    <experiment datasetId="dummy-dataset-id" name="Loading" description="Multiline dataset&#xa;description&#xa;with special &amp;&apos;&lt;&gt;&quot; chars." organization="" wkUrl="http://localhost:9000" />
     <scale x="5" y="5" z="5" unit="nanometer" />
     <offset x="0" y="0" z="0" />
     <time ms="0" />
@@ -67,7 +67,7 @@ exports[`NML > NML serializer should produce correct NMLs 1`] = `
   <meta name="annotationId" content="annotationId" />
   <meta name="taskId" content="5b1fd1cb97000027049c67ec" />
   <parameters>
-    <experiment datasetId="dummy-dataset-id" name="Loading" description="" organization="" wkUrl="http://localhost" />
+    <experiment datasetId="dummy-dataset-id" name="Loading" description="" organization="" wkUrl="http://localhost:9000" />
     <scale x="5" y="5" z="5" unit="nanometer" />
     <offset x="0" y="0" z="0" />
     <time ms="0" />
@@ -125,7 +125,7 @@ exports[`NML > NML serializer should produce correct NMLs with additional coordi
   <meta name="annotationId" content="annotationId" />
   <meta name="taskId" content="5b1fd1cb97000027049c67ec" />
   <parameters>
-    <experiment datasetId="dummy-dataset-id" name="Loading" description="" organization="" wkUrl="http://localhost" />
+    <experiment datasetId="dummy-dataset-id" name="Loading" description="" organization="" wkUrl="http://localhost:9000" />
     <scale x="5" y="5" z="5" unit="nanometer" />
     <offset x="0" y="0" z="0" />
     <time ms="0" />

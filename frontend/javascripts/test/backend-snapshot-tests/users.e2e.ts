@@ -1,5 +1,7 @@
 import {
   tokenUserA,
+  tokenUserE,
+  tokenUserF,
   setCurrToken,
   resetDatabase,
   replaceVolatileValues,
@@ -9,9 +11,27 @@ import * as api from "admin/admin_rest_api";
 import test from "ava";
 test.before("Reset database and change token", async () => {
   resetDatabase();
+});
+test.beforeEach("Reset user token", () => {
   setCurrToken(tokenUserA);
 });
-test("getUsers()", async (t) => {
+test("getUsers() Orga X", async (t) => {
+  const users = await api.getUsers();
+  writeTypeCheckingFile(users, "user", "APIUser", {
+    isArray: true,
+  });
+  t.snapshot(replaceVolatileValues(users));
+});
+test("getUsers() Orga Y", async (t) => {
+  setCurrToken(tokenUserE);
+  const users = await api.getUsers();
+  writeTypeCheckingFile(users, "user", "APIUser", {
+    isArray: true,
+  });
+  t.snapshot(replaceVolatileValues(users));
+});
+test("getUsers() Orga Z", async (t) => {
+  setCurrToken(tokenUserF);
   const users = await api.getUsers();
   writeTypeCheckingFile(users, "user", "APIUser", {
     isArray: true,

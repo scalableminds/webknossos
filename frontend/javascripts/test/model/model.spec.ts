@@ -10,6 +10,7 @@ import {
 } from "../fixtures/skeletontracing_server_objects";
 import DATASET from "../fixtures/dataset_server_object";
 import type { OxalisModel } from "oxalis/model";
+import { location } from "libs/window";
 
 const test = anyTest as TestFn<{ model: OxalisModel }>;
 
@@ -70,6 +71,9 @@ test.beforeEach((t) => {
   User.prototype.fetch.returns(Promise.resolve());
 });
 test("Model Initialization: should throw a model.HANDLED_ERROR for missing data layers", (t) => {
+  location.href = `http://localhost:9000/datasets/${DATASET.name}-${DATASET.id}/view`;
+  location.pathname = `/datasets/${DATASET.name}-${DATASET.id}/view`;
+
   t.plan(1);
   const { model } = t.context;
 

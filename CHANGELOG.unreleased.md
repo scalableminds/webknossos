@@ -14,6 +14,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - The opacity of meshes can be adjusted using the 'Change Segment Color' context menu entry in the segments tab. [#8443](https://github.com/scalableminds/webknossos/pull/8443)
 - Performance improvements for volume annotation save requests. [#8460](https://github.com/scalableminds/webknossos/pull/8460)
 - Performance improvements for segment statistics (volume + bounding box in context menu). [#8469](https://github.com/scalableminds/webknossos/pull/8469)
+- Added that the dataset name is automatically corrected in view mode URLs upon loading. [#8514](https://github.com/scalableminds/webknossos/pull/8514)
 - Upgraded backend dependencies for improved performance and stability. [#8507](https://github.com/scalableminds/webknossos/pull/8507)
 - New config option `datastore.dataVaults.credentials` allows admins to set up global credentials for remote dataset loading. [#8509](https://github.com/scalableminds/webknossos/pull/8509)
 
@@ -25,6 +26,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Numbered docker image now use different and larger numbers. [#8147](https://github.com/scalableminds/webknossos/pull/8147)
 
 ### Fixed
+- Fixed a Bug where the "Save view configuration as default" modal's text included undefined.  [#8514](https://github.com/scalableminds/webknossos/pull/8514)
 - Fixed the alignment of the button that allows restricting floodfill operations to a bounding box. [#8388](https://github.com/scalableminds/webknossos/pull/8388) 
 - Fixed that it was possible to trigger the find largest segment id job on layers which are not stored as segmentation layers on the server. [#8503](https://github.com/scalableminds/webknossos/pull/8503)
 - Fixed a rare and subtle bug related to volume annotation and undo/redo. [#7506](https://github.com/scalableminds/webknossos/pull/7506)

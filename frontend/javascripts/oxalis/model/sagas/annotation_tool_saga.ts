@@ -19,6 +19,7 @@ import { getDisabledInfoForTools } from "../accessors/disabled_tool_accessor";
 import { Toolkits } from "../accessors/tool_accessor";
 import type { Action } from "../actions/actions";
 import { setToolAction } from "../actions/ui_actions";
+import { updateUserSettingAction } from "../actions/settings_actions";
 
 function* ensureActiveToolIsInToolkit() {
   const activeToolkit = yield* select((state) => state.userConfiguration.activeToolkit);
@@ -127,6 +128,11 @@ export function* watchToolReset(): Saga<never> {
 
 export default function* toolSaga() {
   yield* call(ensureWkReady);
+
+  const isViewMode = yield* select((state) => state.annotation.annotationType === "View");
+  if (isViewMode) {
+    yield* put(updateUserSettingAction("activeToolkit", "ALL_TOOLS"));
+  }
 
   yield fork(watchToolDeselection);
   yield fork(watchToolReset);

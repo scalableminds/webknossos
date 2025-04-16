@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(130);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(131);
 COMMIT TRANSACTION;
 
 
@@ -203,6 +203,13 @@ CREATE TABLE webknossos.dataset_thumbnails(
   mag1BoundingBox webknossos.BOUNDING_BOX NOT NULL,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (_dataset, dataLayerName, width, height, mappingName)
+);
+
+CREATE TABLE webknossos.dataset_special_files(
+  _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
+  path TEXT NOT NULL,
+  type TEXT NOT NULL,
+  layerName TEXT
 );
 
 CREATE TYPE webknossos.DATASTORE_TYPE AS ENUM ('webknossos-store');

@@ -19,6 +19,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   CoordinateTransformationType,
   DataSourceId,
   ElementClass,
+  SpecialFile,
   ThinPlateSplineCorrespondences,
   DataLayerLike => DataLayer
 }
@@ -93,8 +94,10 @@ object DatasetCompactInfo {
   implicit val jsonFormat: Format[DatasetCompactInfo] = Json.format[DatasetCompactInfo]
 }
 
-class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDAO, organizationDAO: OrganizationDAO)(
-    implicit ec: ExecutionContext)
+class DatasetDAO @Inject()(sqlClient: SqlClient,
+                           datasetLayerDAO: DatasetLayerDAO,
+                           datasetSpecialFilesDAO: DatasetSpecialFilesDAO,
+                           organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
     extends SQLDAO[Dataset, DatasetsRow, Datasets](sqlClient) {
   protected val collection = Datasets
 
@@ -642,6 +645,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                      voxelSizeUnit = ${source.voxelSizeOpt.map(_.unit)},
                      status = ${source.statusOpt.getOrElse("").take(1024)}
                    WHERE _id = $id""".asUpdate)
+      _ <- Fox.runIf(source.specialFiles.nonEmpty)(datasetSpecialFilesDAO.updateSpecialFiles(id, source.specialFiles))
       _ <- datasetLayerDAO.updateLayers(id, source)
     } yield ()
 
@@ -984,6 +988,25 @@ class DatasetLastUsedTimesDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execu
                retryCount = 50,
                retryIfErrorContains = List(transactionSerializationError))
     } yield ()
+  }
+}
+
+class DatasetSpecialFilesDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+    extends SimpleSQLDAO(sqlClient) {
+  def updateSpecialFiles(datasetId: ObjectId, specialFiles: List[SpecialFile]): Fox[Unit] = {
+    val clearQuery =
+      q"DELETE FROM webknossos.dataset_special_files WHERE _dataset = $datasetId".asUpdate
+    val insertQueries = specialFiles.map { specialFile =>
+      specialFile.layer match {
+        case Some(layerName) => q"""INSERT INTO webknossos.dataset_special_files(_dataset, path, type, layerName)
+            VALUES($datasetId, ${specialFile.source.toString}, ${specialFile.typ}, $layerName)""".asUpdate
+        case None =>
+          q"""INSERT INTO webknossos.dataset_special_files(_dataset, path, type)
+            VALUES($datasetId, ${specialFile.source.toString}, ${specialFile.typ})""".asUpdate
+      }
+
+    }
+    replaceSequentiallyAsTransaction(clearQuery, insertQueries)
   }
 }
 

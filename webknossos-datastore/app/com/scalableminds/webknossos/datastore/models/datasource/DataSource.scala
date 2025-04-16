@@ -38,7 +38,8 @@ package object datasource {
   case class GenericDataSource[+T <: DataLayerLike](id: DataSourceId,
                                                     dataLayers: List[T],
                                                     scale: VoxelSize,
-                                                    defaultViewConfiguration: Option[DatasetViewConfiguration] = None)
+                                                    defaultViewConfiguration: Option[DatasetViewConfiguration] = None,
+                                                    specialFiles: List[SpecialFile] = Nil)
       extends GenericInboxDataSource[T] {
 
     val toUsable: Option[GenericDataSource[T]] = Some(this)

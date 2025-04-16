@@ -18,8 +18,8 @@ import { takeEvery } from "typed-redux-saga";
 import { getDisabledInfoForTools } from "../accessors/disabled_tool_accessor";
 import { Toolkits } from "../accessors/tool_accessor";
 import type { Action } from "../actions/actions";
-import { setToolAction } from "../actions/ui_actions";
 import { updateUserSettingAction } from "../actions/settings_actions";
+import { setToolAction } from "../actions/ui_actions";
 
 function* ensureActiveToolIsInToolkit() {
   const activeToolkit = yield* select((state) => state.userConfiguration.activeToolkit);

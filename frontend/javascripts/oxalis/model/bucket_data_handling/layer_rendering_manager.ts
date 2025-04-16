@@ -324,12 +324,20 @@ export default class LayerRenderingManager {
               updateAction.name === "deleteSegment"
             ) {
               const { id } = updateAction.value;
-              const color = "color" in updateAction.value ? updateAction.value.color : null;
-              if (color != null) {
-                cuckoo.set(
-                  id,
-                  map3((el) => el * 255, color),
-                );
+              const isVisible =
+                "isVisible" in updateAction.value ? updateAction.value.isVisible : undefined;
+              const color = "color" in updateAction.value ? updateAction.value.color : undefined;
+
+              if (isVisible === false) {
+                if (color == null) {
+                  cuckoo.set(id, [0, 0, 0]);
+                } else {
+                  const blueChannel = 2 * Math.floor((255 * color[2]) / 2);
+                  cuckoo.set(id, [255 * color[0], 255 * color[1], blueChannel]);
+                }
+              } else if (color != null) {
+                const blueChannel = 2 * Math.floor((255 * color[2]) / 2) + 1;
+                cuckoo.set(id, [255 * color[0], 255 * color[1], blueChannel]);
               } else {
                 cuckoo.unset(id);
               }

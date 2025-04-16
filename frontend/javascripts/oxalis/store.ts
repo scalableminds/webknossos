@@ -246,6 +246,7 @@ export type Segment = {
   readonly creationTime: number | null | undefined;
   readonly color: Vector3 | null;
   readonly groupId: number | null | undefined;
+  readonly isVisible: boolean;
   readonly metadata: MetadataEntryProto[];
 };
 export type SegmentMap = DiffableMap<number, Segment>;

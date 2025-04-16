@@ -63,11 +63,10 @@ export function ColoredDotIcon({ colorRGBA }: { colorRGBA: Vector4 }) {
     <span
       className="circle"
       style={{
-        paddingLeft: 10,
         backgroundColor: rgbaCss,
         alignSelf: "flex-start",
         marginTop: 5,
-        marginLeft: 1,
+        marginLeft: 5,
       }}
     />
   );
@@ -314,7 +313,7 @@ function _MeshInfoItem(props: {
     </FastTooltip>
   );
   const toggleVisibilityCheckbox = (
-    <FastTooltip title="Change visibility">
+    <FastTooltip title="Change visibility of mesh">
       <Checkbox
         checked={isVisible}
         onChange={(event: CheckboxChangeEvent) => {
@@ -614,6 +613,33 @@ function _SegmentListItem({
     >
       <div>
         <div style={{ display: "inline-flex", alignItems: "center", width: "100%" }}>
+          <FastTooltip title="Change visibility of segment">
+            <Checkbox
+              checked={segment.isVisible}
+              onChange={(event: CheckboxChangeEvent) => {
+                if (!visibleSegmentationLayer) {
+                  return;
+                }
+                const isVisible = event.target.checked;
+                updateSegment(
+                  segment.id,
+                  {
+                    isVisible,
+                  },
+                  visibleSegmentationLayer.name,
+                  true,
+                );
+                // Usually, when toggling the checkbox, the
+                // mouse cursor will hover the list item.
+                // When the user makes the segment invisible,
+                // the segment shouldn't be "hovered", anymore
+                // (otherwise, it would still be visible as long
+                // as the mouse is not moved).
+                setHoveredSegmentId(isVisible ? segment.id : null);
+              }}
+            />
+          </FastTooltip>
+
           <ColoredDotIcon colorRGBA={segmentColorRGBA} />
           <EditableTextLabel
             value={getSegmentName(segment)}

@@ -468,6 +468,7 @@ function* uncachedDiffSegmentLists(
         segment.groupId,
         segment.metadata,
         tracingId,
+        segment.isVisible,
         segment.creationTime,
       );
     }

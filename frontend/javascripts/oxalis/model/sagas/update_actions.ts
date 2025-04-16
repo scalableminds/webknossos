@@ -435,6 +435,7 @@ export function updateSegmentVolumeAction(
   groupId: number | null | undefined,
   metadata: Array<MetadataEntryProto>,
   actionTracingId: string,
+  isVisible: boolean,
   creationTime: number | null | undefined = Date.now(),
 ) {
   return {
@@ -448,6 +449,7 @@ export function updateSegmentVolumeAction(
       color,
       groupId,
       metadata: enforceValidMetadata(metadata),
+      isVisible,
       creationTime,
     },
   } as const;

@@ -196,6 +196,7 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
       creationTime: action.timestamp,
       name: null,
       color: null,
+      isVisible: true,
       groupId: getSelectedIds(state)[0].group,
       someAdditionalCoordinates: someAdditionalCoordinates,
       ...oldSegment,
@@ -246,9 +247,8 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
     createdTimestamp: tracing.createdTimestamp,
     type: "volume" as const,
     segments: new DiffableMap(
-      tracing.segments.map((segment) => [
-        segment.segmentId,
-        {
+      tracing.segments.map((segment) => {
+        const clientSegment: Segment = {
           ...segment,
           id: segment.segmentId,
           somePosition: segment.anchorPosition
@@ -256,8 +256,10 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
             : undefined,
           someAdditionalCoordinates: segment.additionalCoordinates,
           color: segment.color != null ? Utils.colorObjectToRGBArray(segment.color) : null,
-        } as Segment,
-      ]),
+          isVisible: segment.isVisible ?? true,
+        };
+        return [segment.segmentId, clientSegment];
+      }),
     ),
     segmentGroups: tracing.segmentGroups || [],
     activeCellId: tracing.activeSegmentId ?? 0,

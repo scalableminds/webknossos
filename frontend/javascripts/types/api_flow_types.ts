@@ -873,6 +873,7 @@ type ServerSegment = {
   creationTime: number | null | undefined;
   color: ColorObject | null;
   groupId: number | null | undefined;
+  isVisible?: boolean;
   metadata: MetadataEntryProto[];
 };
 export type ServerTracingBase = {

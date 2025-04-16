@@ -16,10 +16,16 @@ import {
   parseAdditionalCoordinateKey,
 } from "oxalis/model/helpers/nml_helpers";
 import { applyState } from "oxalis/model_initialization";
-import type { MappingType, MeshInformation, OxalisState } from "oxalis/store";
+import type {
+  DatasetLayerConfiguration,
+  MappingType,
+  MeshInformation,
+  OxalisState,
+} from "oxalis/store";
 import Store from "oxalis/store";
 import { type APIAnnotationType, APICompoundTypeEnum } from "types/api_flow_types";
 import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { Mutable } from "types/globals";
 import { validateUrlStateJSON } from "types/validation";
 
 const MAX_UPDATE_INTERVAL = 1000;
@@ -40,6 +46,14 @@ type PrecomputedMeshUrlDescriptor = BaseMeshUrlDescriptor & {
   meshFileName: string;
 };
 type MeshUrlDescriptor = AdHocMeshUrlDescriptor | PrecomputedMeshUrlDescriptor;
+export type DirectLayerSpecificProps = Mutable<
+  Partial<
+    Pick<
+      DatasetLayerConfiguration,
+      "isDisabled" | "intensityRange" | "color" | "isInverted" | "gammaCorrectionValue"
+    >
+  >
+>;
 export type UrlStateByLayer = Record<
   string,
   {
@@ -56,8 +70,7 @@ export type UrlStateByLayer = Record<
       connectomeName: string;
       agglomerateIdsToImport?: Array<number>;
     };
-    isDisabled?: boolean;
-  }
+  } & DirectLayerSpecificProps
 >;
 
 function mapMeshInfoToUrlMeshDescriptor(meshInfo: MeshInformation): MeshUrlDescriptor {
@@ -305,6 +318,14 @@ class UrlManager {
         stateByLayer[layerName] = {
           ...stateByLayer[layerName],
           isDisabled: layerConfiguration.isDisabled,
+          // manually setting the tuple is needed due to layerConfiguration.intensityRange being readonly.
+          intensityRange: layerConfiguration.intensityRange && [
+            layerConfiguration.intensityRange[0],
+            layerConfiguration.intensityRange[1],
+          ],
+          color: layerConfiguration.color,
+          isInverted: layerConfiguration.isInverted,
+          gammaCorrectionValue: layerConfiguration.gammaCorrectionValue,
         };
       }
     }

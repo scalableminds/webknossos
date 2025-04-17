@@ -201,11 +201,19 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
   );
   const splitBoundaryMesh = isSplitToolkit ? sceneController.getSplitBoundaryMesh() : null;
 
-  if (isSplitToolkit && !splitBoundaryMesh) {
-    Toast.warning(
-      `No split boundary found. Ensure that the active tree has at least two nodes. If you want to execute a normal floodfill operation, please switch to another toolkit (currently, the "Split Segments" toolkit is active).`,
-    );
-    return;
+  if (isSplitToolkit) {
+    if (!splitBoundaryMesh) {
+      Toast.warning(
+        `No split boundary found. Ensure that the active tree has at least two nodes. If you want to execute a normal fill operation, please switch to another toolkit (currently, the "Split Segments" toolkit is active).`,
+      );
+      return;
+    }
+    if (planeId !== "PLANE_XY") {
+      Toast.warning(
+        `Within the "Split Segments" toolkit, the fill tool is only supported in the XY viewport. Please use the tool in the XY viewport or switch to another toolkit.`,
+      );
+      return;
+    }
   }
 
   const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);

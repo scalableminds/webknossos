@@ -153,6 +153,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         Fox.successful(annotationWithTracings.updateLayerMetadata(a))
       case a: UpdateMetadataAnnotationAction =>
         Fox.successful(annotationWithTracings.updateMetadata(a))
+      case a: UpdateCameraAnnotationAction =>
+        Fox.successful(annotationWithTracings.updateCamera(a))
       case a: SkeletonUpdateAction =>
         annotationWithTracings.applySkeletonAction(a) ?~> "applyUpdate.skeletonAction.failed"
       case a: UpdateMappingNameVolumeAction if a.isEditable.contains(true) =>

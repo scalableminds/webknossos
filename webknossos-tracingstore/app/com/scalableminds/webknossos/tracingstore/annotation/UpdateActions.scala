@@ -22,6 +22,8 @@ trait UpdateAction {
 
 trait ApplyImmediatelyUpdateAction extends UpdateAction
 
+trait UserStateUpdateAction extends UpdateAction
+
 trait LayerUpdateAction extends UpdateAction {
   def actionTracingId: String
   def withActionTracingId(newTracingId: String): LayerUpdateAction
@@ -86,6 +88,7 @@ object UpdateAction {
           case "revertToVersion"            => deserialize[RevertToVersionAnnotationAction](jsonValue)
           case "resetToBase"                => deserialize[ResetToBaseAnnotationAction](jsonValue)
           case "updateTdCamera"             => deserialize[UpdateTdCameraAnnotationAction](jsonValue)
+          case "updateCamera"               => deserialize[UpdateCameraAnnotationAction](jsonValue)
 
           case unknownAction: String => JsError(s"Invalid update action s'$unknownAction'")
         }
@@ -200,6 +203,8 @@ object UpdateAction {
         Json.obj("name" -> "resetToBase", "value" -> Json.toJson(s)(ResetToBaseAnnotationAction.jsonFormat))
       case s: UpdateTdCameraAnnotationAction =>
         Json.obj("name" -> "updateTdCamera", "value" -> Json.toJson(s)(UpdateTdCameraAnnotationAction.jsonFormat))
+      case s: UpdateCameraAnnotationAction =>
+        Json.obj("name" -> "updateCamera", "value" -> Json.toJson(s)(UpdateCameraAnnotationAction.jsonFormat))
     }
   }
 }

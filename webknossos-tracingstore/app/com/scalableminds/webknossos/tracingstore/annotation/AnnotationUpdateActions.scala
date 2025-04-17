@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
+import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
@@ -120,6 +121,25 @@ case class UpdateTdCameraAnnotationAction(actionTimestamp: Option[Long] = None,
   override def isViewOnlyChange: Boolean = true
 }
 
+case class UpdateCameraAnnotationAction(editPosition: com.scalableminds.util.geometry.Vec3Int,
+                                        editRotation: com.scalableminds.util.geometry.Vec3Double,
+                                        zoomLevel: Double,
+                                        editPositionAdditionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
+                                        actionTracingId: String,
+                                        actionTimestamp: Option[Long] = None,
+                                        actionAuthorId: Option[String] = None,
+                                        info: Option[String] = None)
+    extends AnnotationUpdateAction
+    with UserStateUpdateAction {
+
+  override def addTimestamp(timestamp: Long): UpdateAction =
+    this.copy(actionTimestamp = Some(timestamp))
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
+    this.copy(actionAuthorId = authorId)
+  override def isViewOnlyChange: Boolean = true
+}
+
 object AddLayerAnnotationAction {
   implicit val jsonFormat: OFormat[AddLayerAnnotationAction] = Json.format[AddLayerAnnotationAction]
 }
@@ -144,4 +164,7 @@ object ResetToBaseAnnotationAction {
 }
 object UpdateTdCameraAnnotationAction {
   implicit val jsonFormat: OFormat[UpdateTdCameraAnnotationAction] = Json.format[UpdateTdCameraAnnotationAction]
+}
+object UpdateCameraAnnotationAction {
+  implicit val jsonFormat: OFormat[UpdateCameraAnnotationAction] = Json.format[UpdateCameraAnnotationAction]
 }

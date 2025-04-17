@@ -1,5 +1,5 @@
 import type { DatasetLayerConfiguration, PartialDatasetConfiguration } from "oxalis/store";
-import "test/mocks/lz4";
+import "test/mocks/ava_only_mock_lz4";
 import {
   assertDatasetIds,
   createAnnotationForDatasetScreenshot,

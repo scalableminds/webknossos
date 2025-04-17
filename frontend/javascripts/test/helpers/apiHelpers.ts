@@ -73,7 +73,7 @@ vi.mock("libs/compute_bvh_async", () => ({
 
 function receiveJSONMockImplementation(
   url: string,
-  options: RequestOptions,
+  options: RequestOptions = {},
   annotationFixture: typeof SKELETON_ANNOTATION | typeof VOLUME_ANNOTATION | typeof TASK_ANNOTATION,
 ) {
   if (

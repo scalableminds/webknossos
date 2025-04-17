@@ -17,6 +17,7 @@ import {
   type RadioChangeEvent,
   Row,
   Space,
+  Tag,
 } from "antd";
 import React, { useEffect, useCallback, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -855,6 +856,7 @@ export default function ToolbarView() {
   const hasSkeleton = useSelector((state: OxalisState) => state.annotation?.skeleton != null);
   const toolkit = useSelector((state: OxalisState) => state.userConfiguration.activeToolkit);
   const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
+  const isSplitToolkit = toolkit === "SPLIT_SEGMENTS";
 
   const isShiftPressed = useKeyPress("Shift");
   const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
@@ -881,6 +883,16 @@ export default function ToolbarView() {
         isControlOrMetaPressed={isControlOrMetaPressed}
         isShiftPressed={isShiftPressed}
       />
+
+      {isSplitToolkit ? (
+        <FastTooltip
+          title={`Some tools behave differently because the "Split Segments" toolkit is active. Read more in the documentation.`}
+        >
+          <Tag style={{ marginLeft: 12 }} color="blue">
+            Split Workflow
+          </Tag>
+        </FastTooltip>
+      ) : null}
     </>
   );
 }
@@ -1241,26 +1253,38 @@ function SkeletonTool() {
   const isReadOnly = useSelector(
     (state: OxalisState) => !state.annotation.restrictions.allowUpdate,
   );
+  const isSplitToolkit = useSelector(
+    (state: OxalisState) => state.userConfiguration.activeToolkit === "SPLIT_SEGMENTS",
+  );
 
   if (!hasSkeleton || isReadOnly) {
     return null;
   }
 
   return (
-    <ToolRadioButton
-      name={AnnotationTool.SKELETON.readableName}
-      description={skeletonToolDescription}
-      disabledExplanation={disabledInfosForTools[AnnotationTool.SKELETON.id].explanation}
-      disabled={disabledInfosForTools[AnnotationTool.SKELETON.id].isDisabled}
-      value={AnnotationTool.SKELETON}
+    <Badge
+      dot={isSplitToolkit}
+      style={{
+        boxShadow: "none",
+        background: "red",
+        zIndex: 1000,
+      }}
     >
-      <i
-        style={{
-          opacity: disabledInfosForTools[AnnotationTool.SKELETON.id].isDisabled ? 0.5 : 1,
-        }}
-        className="fas fa-project-diagram"
-      />
-    </ToolRadioButton>
+      <ToolRadioButton
+        name={AnnotationTool.SKELETON.readableName}
+        description={`${skeletonToolDescription} Note that this tool differently because the "Split Segments" toolkit is active. Read more in the documentation.`}
+        disabledExplanation={disabledInfosForTools[AnnotationTool.SKELETON.id].explanation}
+        disabled={disabledInfosForTools[AnnotationTool.SKELETON.id].isDisabled}
+        value={AnnotationTool.SKELETON}
+      >
+        <i
+          style={{
+            opacity: disabledInfosForTools[AnnotationTool.SKELETON.id].isDisabled ? 0.5 : 1,
+          }}
+          className="fas fa-project-diagram"
+        />
+      </ToolRadioButton>
+    </Badge>
   );
 }
 
@@ -1400,29 +1424,41 @@ function EraseTraceTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTo
 function FillCellTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTool }) {
   const disabledInfosForTools = useSelector(getDisabledInfoForTools);
   const isVolumeModificationAllowed = useSelector(getIsVolumeModificationAllowed);
+  const isSplitToolkit = useSelector(
+    (state: OxalisState) => state.userConfiguration.activeToolkit === "SPLIT_SEGMENTS",
+  );
   if (!isVolumeModificationAllowed) {
     return null;
   }
 
   return (
-    <ToolRadioButton
-      name={AnnotationTool.FILL_CELL.readableName}
-      description="Flood-fill the clicked region."
-      disabledExplanation={disabledInfosForTools[AnnotationTool.FILL_CELL.id].explanation}
-      disabled={disabledInfosForTools[AnnotationTool.FILL_CELL.id].isDisabled}
-      value={AnnotationTool.FILL_CELL}
+    <Badge
+      dot={isSplitToolkit}
+      style={{
+        boxShadow: "none",
+        background: "red",
+        zIndex: 1000,
+      }}
     >
-      <i
-        className="fas fa-fill-drip"
-        style={{
-          opacity: disabledInfosForTools[AnnotationTool.FILL_CELL.id].isDisabled ? 0.5 : 1,
-          transform: "scaleX(-1)",
-        }}
-      />
-      {adaptedActiveTool === AnnotationTool.FILL_CELL ? (
-        <MaybeMultiSliceAnnotationInfoIcon />
-      ) : null}
-    </ToolRadioButton>
+      <ToolRadioButton
+        name={AnnotationTool.FILL_CELL.readableName}
+        description={`Flood-fill the clicked region. Note that this tool differently because the "Split Segments" toolkit is active. Read more in the documentation.`}
+        disabledExplanation={disabledInfosForTools[AnnotationTool.FILL_CELL.id].explanation}
+        disabled={disabledInfosForTools[AnnotationTool.FILL_CELL.id].isDisabled}
+        value={AnnotationTool.FILL_CELL}
+      >
+        <i
+          className="fas fa-fill-drip"
+          style={{
+            opacity: disabledInfosForTools[AnnotationTool.FILL_CELL.id].isDisabled ? 0.5 : 1,
+            transform: "scaleX(-1)",
+          }}
+        />
+        {adaptedActiveTool === AnnotationTool.FILL_CELL ? (
+          <MaybeMultiSliceAnnotationInfoIcon />
+        ) : null}
+      </ToolRadioButton>
+    </Badge>
   );
 }
 

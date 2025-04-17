@@ -1,4 +1,4 @@
-import "test/mocks/lz4";
+import "test/mocks/ava_only_mock_lz4";
 import path from "node:path";
 import { compareScreenshot, isPixelEquivalent } from "./screenshot_helpers";
 import {

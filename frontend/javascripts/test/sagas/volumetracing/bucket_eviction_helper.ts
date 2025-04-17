@@ -13,21 +13,7 @@ import {
   finishEditingAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import type { Vector3 } from "oxalis/constants";
-import type Model from "oxalis/model";
-import type { ApiInterface } from "oxalis/api/api_latest";
 import { vi } from "vitest";
-
-// These variables are set by WebknossosTestContext
-declare const api: ApiInterface;
-declare const model: typeof Model;
-declare const mocks: {
-  Request: {
-    sendJSONReceiveArraybufferWithHeaders: (
-      url: string,
-      payload: { data: Array<unknown> },
-    ) => Promise<{ buffer: ArrayBuffer; headers: { "missing-buckets": string } }>;
-  };
-};
 
 export async function testLabelingManyBuckets(
   context: WebknossosTestContext,

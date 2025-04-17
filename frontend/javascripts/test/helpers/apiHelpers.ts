@@ -109,16 +109,6 @@ function sendJSONReceiveJSONMockImplementation(url: string, _options?: any) {
   return Promise.resolve({});
 }
 
-// // Create a modified version of wkstoreAdapter
-// vi.mock("oxalis/model/bucket_data_handling/wkstore_adapter", async (originalImport) => {
-//     const wkstoreAdapter = await originalImport();
-//     return {
-//       ...wkstoreAdapter as object,
-//       // requestWithFallback: vi.fn().mockReturnValue([new Uint8Array()]),
-//       requestFromStore: vi.fn().mockReturnValue([new Uint8Array()]),
-//     }
-// });
-
 vi.mock("oxalis/model/bucket_data_handling/data_rendering_logic", async (importOriginal) => {
   const orginalDataRenderingLogicModule = await importOriginal();
 

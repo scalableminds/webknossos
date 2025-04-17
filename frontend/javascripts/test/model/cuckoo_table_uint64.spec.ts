@@ -2,19 +2,11 @@ import { describe, it, expect } from "vitest";
 
 import "test/mocks/updatable_texture.mock";
 import { generateRandomCuckooEntrySet } from "./cuckoo_table_helpers";
+import { CuckooTableUint64 } from "libs/cuckoo/cuckoo_table_uint64";
 
 type Key = [number, number];
 type Value = [number, number];
 type Entry = [Key, Value];
-
-// // Mock the CuckooTableUint64 module before importing it
-// vi.mock("libs/cuckoo/cuckoo_table_uint64", async () => {
-//   // Import the actual module
-//   const actual = await import("libs/cuckoo/cuckoo_table_uint64");
-//   // Return it as is (we're just ensuring it's mocked so that it uses our mocked dependencies)
-//   return actual;
-// });
-import { CuckooTableUint64 } from "libs/cuckoo/cuckoo_table_uint64";
 
 function generateRandomEntry(): Entry {
   return [

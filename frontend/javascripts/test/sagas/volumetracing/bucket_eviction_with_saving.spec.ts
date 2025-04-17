@@ -14,12 +14,6 @@ import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { testLabelingManyBuckets } from "./bucket_eviction_helper";
 import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 
-// vi.mock("libs/request", () => ({
-//   default: {
-//     sendJSONReceiveArraybufferWithHeaders: createBucketResponseFunction(Uint16Array, 0, 0),
-//   },
-// }));
-
 describe("Bucket Eviction With Saving", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
     // Setup oxalis, this will execute model.fetch(...) and initialize the store with the tracing, etc.

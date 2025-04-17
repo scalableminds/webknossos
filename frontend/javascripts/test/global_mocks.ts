@@ -11,7 +11,6 @@ global.performance = {
 };
 
 // Mock common utility functions
-// Mock modules instead of using mockRequire
 vi.mock("libs/keyboard", () => ({
   default: {
     bind: vi.fn(),
@@ -28,12 +27,6 @@ vi.mock("libs/toast", () => ({
     success: vi.fn(),
   },
 }));
-
-vi.mock("libs/window", async (importOriginal) => {
-  return {
-    ...(await importOriginal<typeof import("libs/window")>()),
-  };
-});
 
 vi.mock("libs/user_local_storage", () => ({
   default: {
@@ -61,7 +54,6 @@ vi.mock("libs/request", () => {
       receiveArraybuffer: vi.fn(),
       sendJSONReceiveArraybuffer: vi.fn(),
       sendJSONReceiveArraybufferWithHeaders: vi.fn(),
-      always: () => Promise.resolve(),
     },
   };
 });
@@ -106,8 +98,16 @@ vi.mock("oxalis/model/helpers/proto_helpers", () => {
 });
 
 // Mock the proto imports
-vi.mock("Annotation.proto", () => ({ default: JSON.stringify({ TODO: "TODO" }) })); // ???
-vi.mock("ListOfLong.proto", () => ({ default: JSON.stringify({ items: { typ: "int64" } }) })); // ???
+vi.mock("Annotation.proto", () => ({
+  default: JSON.stringify({
+    NOT_USED_IN_TESTS: "currently the actual proto content is not used in the tests",
+  }),
+}));
+vi.mock("ListOfLong.proto", () => ({
+  default: JSON.stringify({
+    NOT_USED_IN_TESTS: "currently the actual proto content is not used in the tests",
+  }),
+}));
 vi.mock("SkeletonTracing.proto", () => ({ default: JSON.stringify(SKELETON_ANNOTATION_PROTO) }));
 vi.mock("VolumeTracing.proto", () => ({ default: JSON.stringify(VOLUME_ANNOTATION_PROTO) }));
 

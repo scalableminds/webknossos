@@ -114,7 +114,7 @@ import AutoSizer from "react-virtualized-auto-sizer";
 import type { Dispatch } from "redux";
 import type {
   APIDataset,
-  APIMeshFile,
+  APIMeshFileInfo,
   APISegmentationLayer,
   APIUser,
   MetadataEntryProto,
@@ -167,8 +167,8 @@ type StateProps = {
   allowUpdate: boolean;
   organization: string;
   datasetName: string;
-  availableMeshFiles: Array<APIMeshFile> | null | undefined;
-  currentMeshFile: APIMeshFile | null | undefined;
+  availableMeshFiles: Array<APIMeshFileInfo> | null | undefined;
+  currentMeshFile: APIMeshFileInfo | null | undefined;
   activeUser: APIUser | null | undefined;
   activeCellId: number | null | undefined;
   preferredQualityForMeshPrecomputation: number;
@@ -348,10 +348,12 @@ const formatMagWithLabel = (mag: Vector3, index: number) => {
   return `${labels[clampedIndex]} (Mag ${mag.join("-")})`;
 };
 
-const formatMeshFile = (meshFile: APIMeshFile | null | undefined): string | null | undefined => {
+const formatMeshFile = (
+  meshFile: APIMeshFileInfo | null | undefined,
+): string | null | undefined => {
   if (meshFile == null) return null;
-  if (meshFile.mappingName == null) return meshFile.meshFileName;
-  return `${meshFile.meshFileName} (${meshFile.mappingName})`;
+  if (meshFile.mappingName == null) return meshFile.name;
+  return `${meshFile.name} (${meshFile.mappingName})`;
 };
 
 function renderEmptyMeshFileSelect() {
@@ -970,17 +972,15 @@ class SegmentsView extends React.Component<Props, State> {
               display: "inline-block",
             }}
             placeholder="Select a mesh file"
-            value={
-              this.props.currentMeshFile != null ? this.props.currentMeshFile.meshFileName : null
-            }
+            value={this.props.currentMeshFile != null ? this.props.currentMeshFile.name : null}
             onChange={this.handleMeshFileSelected}
             size="small"
             loading={this.props.availableMeshFiles == null}
             popupMatchSelectWidth={false}
           >
             {this.props.availableMeshFiles ? (
-              this.props.availableMeshFiles.map((meshFile: APIMeshFile) => (
-                <Option key={meshFile.meshFileName} value={meshFile.meshFileName}>
+              this.props.availableMeshFiles.map((meshFile: APIMeshFileInfo) => (
+                <Option key={meshFile.name} value={meshFile.name}>
                   {formatMeshFile(meshFile)}
                 </Option>
               ))
@@ -1445,7 +1445,7 @@ class SegmentsView extends React.Component<Props, State> {
         segment.id,
         segment.somePosition,
         segment.someAdditionalCoordinates,
-        this.props.currentMeshFile.meshFileName,
+        this.props.currentMeshFile.name,
       );
     });
   };

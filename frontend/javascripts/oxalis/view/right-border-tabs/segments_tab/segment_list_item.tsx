@@ -49,7 +49,7 @@ import type {
 import Store from "oxalis/store";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import { getContextMenuPositionFromEvent } from "oxalis/view/context_menu";
-import type { APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
+import type { APIMeshFileInfo, APISegmentationLayer } from "types/api_flow_types";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 import { LoadMeshMenuItemLabel } from "./load_mesh_menu_item_label";
 import { withMappingActivationConfirmation } from "./segments_view_helper";
@@ -75,7 +75,7 @@ export function ColoredDotIcon({ colorRGBA }: { colorRGBA: Vector4 }) {
 
 const getLoadPrecomputedMeshMenuItem = (
   segment: Segment,
-  currentMeshFile: APIMeshFile | null | undefined,
+  currentMeshFile: APIMeshFileInfo | null | undefined,
   loadPrecomputedMesh: (
     segmentId: number,
     seedPosition: Vector3,
@@ -111,7 +111,7 @@ const getLoadPrecomputedMeshMenuItem = (
             segment.id,
             segment.somePosition,
             segment.someAdditionalCoordinates,
-            currentMeshFile?.meshFileName,
+            currentMeshFile?.name,
           ),
         );
       },
@@ -234,7 +234,7 @@ type Props = {
   setAdditionalCoordinates: (
     additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   ) => void;
-  currentMeshFile: APIMeshFile | null | undefined;
+  currentMeshFile: APIMeshFileInfo | null | undefined;
   onRenameStart: () => void;
   onRenameEnd: () => void;
   getMultiSelectMenu: () => MenuProps;

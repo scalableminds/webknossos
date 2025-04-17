@@ -14,6 +14,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - The opacity of meshes can be adjusted using the 'Change Segment Color' context menu entry in the segments tab. [#8443](https://github.com/scalableminds/webknossos/pull/8443)
 - Performance improvements for volume annotation save requests. [#8460](https://github.com/scalableminds/webknossos/pull/8460)
 - Performance improvements for segment statistics (volume + bounding box in context menu). [#8469](https://github.com/scalableminds/webknossos/pull/8469)
+- Added that the dataset name is automatically corrected in view mode URLs upon loading. [#8514](https://github.com/scalableminds/webknossos/pull/8514)
 - Upgraded backend dependencies for improved performance and stability. [#8507](https://github.com/scalableminds/webknossos/pull/8507)
 - New config option `datastore.dataVaults.credentials` allows admins to set up global credentials for remote dataset loading. [#8509](https://github.com/scalableminds/webknossos/pull/8509)
 
@@ -25,6 +26,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Numbered docker image now use different and larger numbers. [#8147](https://github.com/scalableminds/webknossos/pull/8147)
 
 ### Fixed
+- Fixed a Bug where the "Save view configuration as default" modal's text included undefined.  [#8514](https://github.com/scalableminds/webknossos/pull/8514)
 - Fixed the alignment of the button that allows restricting floodfill operations to a bounding box. [#8388](https://github.com/scalableminds/webknossos/pull/8388) 
 - Fixed that it was possible to trigger the find largest segment id job on layers which are not stored as segmentation layers on the server. [#8503](https://github.com/scalableminds/webknossos/pull/8503)
 - Fixed a rare and subtle bug related to volume annotation and undo/redo. [#7506](https://github.com/scalableminds/webknossos/pull/7506)
@@ -33,6 +35,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where outbound zarr streaming would contain a typo in the zarr header dimension_separator field. [#8510](https://github.com/scalableminds/webknossos/pull/8510)
 - Fixed a bug where sometimes large skeletons were not saved correctly, making them inaccessible on the next load. [#8513](https://github.com/scalableminds/webknossos/pull/8513)
 - Fixed that meshes weren't loaded correctly if the precomputed mesh file contained multiple levels-of-detail. [#8519](https://github.com/scalableminds/webknossos/pull/8519)
+- Fixed that authentication-related token renewal did not work properly in certain scenarios. [#8532](https://github.com/scalableminds/webknossos/pull/8532)
 
 ### Removed
 

@@ -166,7 +166,7 @@ export default function compactToggleActions(
     hashMap,
     toggleActions as UpdateTreeVisibilityUpdateAction[],
   );
-  // commonVisibility is the new visibility which should by applied to all ascendants
+  // commonVisibility is the new visibility which should be applied to all ascendants
   // of the common ancestor. The exceptions array lists all trees which differ from
   // that common visibility. These will receive separate updateActions.
   const [commonVisibility, exceptions, affectedTreeCount] = isCommonAncestorToggler(

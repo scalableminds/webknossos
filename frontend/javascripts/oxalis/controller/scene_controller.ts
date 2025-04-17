@@ -31,9 +31,15 @@ import {
   getDataLayers,
   getDatasetBoundingBox,
   getLayerBoundingBox,
+  getLayerByName,
   getLayerNameToIsDisabled,
+  getVisibleSegmentationLayers,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getTransformsForLayerOrNull } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
+import {
+  getTransformsForLayer,
+  getTransformsForLayerOrNull,
+  getTransformsForSkeletonLayer,
+} from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import { getActiveMagIndicesForLayers, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
@@ -41,11 +47,13 @@ import { getPlaneScalingFactor } from "oxalis/model/accessors/view_mode_accessor
 import { sceneControllerReadyAction } from "oxalis/model/actions/actions";
 import Dimensions from "oxalis/model/dimensions";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import type { Transform } from "oxalis/model/helpers/transformation_helpers";
 import { getVoxelPerUnit } from "oxalis/model/scaleinfo";
 import { Model } from "oxalis/singletons";
 import type { OxalisState, SkeletonTracing, UserBoundingBox } from "oxalis/store";
 import Store from "oxalis/store";
 import * as THREE from "three";
+import type CustomLOD from "./custom_lod";
 import SegmentMeshController from "./segment_mesh_controller";
 
 const CUBE_COLOR = 0x999999;
@@ -69,10 +77,10 @@ class SceneController {
   lineMeasurementGeometry!: LineMeasurementGeometry;
   areaMeasurementGeometry!: ContourGeometry;
   planes!: OrthoViewWithoutTDMap<Plane>;
-  rootNode!: THREE.Object3D;
+  rootNode!: THREE.Group;
   renderer!: THREE.WebGLRenderer;
   scene!: THREE.Scene;
-  rootGroup!: THREE.Object3D;
+  rootGroup!: THREE.Group;
   segmentMeshController: SegmentMeshController;
   storePropertyUnsubscribers: Array<() => void>;
 
@@ -96,22 +104,21 @@ class SceneController {
     this.createMeshes();
     this.bindToEvents();
     this.scene = new THREE.Scene();
+    this.highlightedBBoxId = null;
+    this.rootGroup = new THREE.Group();
+    this.scene.add(
+      this.rootGroup.add(this.rootNode, this.segmentMeshController.meshesLODRootGroup),
+    );
     // Because the voxel coordinates do not have a cube shape but are distorted,
     // we need to distort the entire scene to provide an illustration that is
     // proportional to the actual size in nm.
     // For some reason, all objects have to be put into a group object. Changing
     // scene.scale does not have an effect.
-    this.rootGroup = new THREE.Object3D();
-    this.rootGroup.add(this.getRootNode());
-
-    this.highlightedBBoxId = null;
-    // The dimension(s) with the highest mag will not be distorted
+    // The dimension(s) with the highest mag will not be distorted.
     this.rootGroup.scale.copy(
       new THREE.Vector3(...Store.getState().dataset.dataSource.scale.factor),
     );
-    // Add scene to the group, all Geometries are then added to group
-    this.scene.add(this.rootGroup);
-    this.scene.add(this.segmentMeshController.meshesLODRootGroup);
+    // Add rootGroup to scene, all Geometries are then added to the rootGroup
     this.setupDebuggingMethods();
   }
 
@@ -194,14 +201,10 @@ class SceneController {
   }
 
   createMeshes(): void {
-    this.rootNode = new THREE.Object3D();
+    this.userBoundingBoxes = [];
     this.userBoundingBoxGroup = new THREE.Group();
     this.layerBoundingBoxGroup = new THREE.Group();
-    this.rootNode.add(this.userBoundingBoxGroup);
-    this.rootNode.add(this.layerBoundingBoxGroup);
     this.annotationToolsGeometryGroup = new THREE.Group();
-    this.rootNode.add(this.annotationToolsGeometryGroup);
-    this.userBoundingBoxes = [];
     const state = Store.getState();
     // Cubes
     const { min, max } = getDatasetBoundingBox(state.dataset);
@@ -212,28 +215,11 @@ class SceneController {
       showCrossSections: true,
       isHighlighted: false,
     });
-    this.datasetBoundingBox.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
-    const taskBoundingBox = getSomeTracing(state.annotation).boundingBox;
-    this.buildTaskingBoundingBox(taskBoundingBox);
 
     this.contour = new ContourGeometry();
-    this.contour.getMeshes().forEach((mesh) => this.annotationToolsGeometryGroup.add(mesh));
-
     this.quickSelectGeometry = new QuickSelectGeometry();
-    this.annotationToolsGeometryGroup.add(this.quickSelectGeometry.getMeshGroup());
-
     this.lineMeasurementGeometry = new LineMeasurementGeometry();
-    this.lineMeasurementGeometry
-      .getMeshes()
-      .forEach((mesh) => this.annotationToolsGeometryGroup.add(mesh));
     this.areaMeasurementGeometry = new ContourGeometry(true);
-    this.areaMeasurementGeometry
-      .getMeshes()
-      .forEach((mesh) => this.annotationToolsGeometryGroup.add(mesh));
-
-    if (state.annotation.skeleton != null) {
-      this.addSkeleton((_state) => getSkeletonTracing(_state.annotation), true);
-    }
 
     this.planes = {
       [OrthoViews.PLANE_XY]: new Plane(OrthoViews.PLANE_XY),
@@ -244,10 +230,25 @@ class SceneController {
     this.planes[OrthoViews.PLANE_YZ].setRotation(new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0));
     this.planes[OrthoViews.PLANE_XZ].setRotation(new THREE.Euler((-1 / 2) * Math.PI, 0, 0));
 
-    for (const plane of _.values(this.planes)) {
-      plane.getMeshes().forEach((mesh: THREE.Object3D) => this.rootNode.add(mesh));
-    }
+    const planeMeshes = _.values(this.planes).flatMap((plane) => plane.getMeshes());
+    this.rootNode = new THREE.Group().add(
+      this.userBoundingBoxGroup,
+      this.layerBoundingBoxGroup,
+      this.annotationToolsGeometryGroup.add(
+        ...this.contour.getMeshes(),
+        this.quickSelectGeometry.getMeshGroup(),
+        ...this.lineMeasurementGeometry.getMeshes(),
+        ...this.areaMeasurementGeometry.getMeshes(),
+      ),
+      ...this.datasetBoundingBox.getMeshes(),
+      ...planeMeshes,
+    );
 
+    const taskBoundingBox = getSomeTracing(state.annotation).boundingBox;
+    this.buildTaskingBoundingBox(taskBoundingBox);
+    if (state.annotation.skeleton != null) {
+      this.addSkeleton((_state) => getSkeletonTracing(_state.annotation), true);
+    }
     // Hide all objects at first, they will be made visible later if needed
     this.stopPlaneMode();
   }
@@ -434,6 +435,44 @@ class SceneController {
     this.rootNode.add(this.userBoundingBoxGroup);
   }
 
+  private applyTransformToGroup(transform: Transform, group: THREE.Group | CustomLOD) {
+    if (transform?.affineMatrix) {
+      const matrix = new THREE.Matrix4();
+      // @ts-ignore
+      matrix.set(...transform.affineMatrix);
+      // We need to disable matrixAutoUpdate as otherwise the update to the matrix will be lost.
+      group.matrixAutoUpdate = false;
+      group.matrix = matrix;
+    }
+  }
+
+  updateUserBoundingBoxesAndMeshesAccordingToTransforms(): void {
+    const state = Store.getState();
+    const tracingStoringUserBBoxes = getSomeTracing(state.annotation);
+    const transformForBBoxes =
+      tracingStoringUserBBoxes.type === "volume"
+        ? getTransformsForLayer(
+            state.dataset,
+            getLayerByName(state.dataset, tracingStoringUserBBoxes.tracingId),
+            state.datasetConfiguration.nativelyRenderedLayerName,
+          )
+        : getTransformsForSkeletonLayer(
+            state.dataset,
+            state.datasetConfiguration.nativelyRenderedLayerName,
+          );
+    this.applyTransformToGroup(transformForBBoxes, this.userBoundingBoxGroup);
+    const visibleSegmentationLayers = getVisibleSegmentationLayers(state);
+    if (visibleSegmentationLayers.length === 0) {
+      return;
+    }
+    const transformForMeshes = getTransformsForLayer(
+      state.dataset,
+      visibleSegmentationLayers[0],
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    );
+    this.applyTransformToGroup(transformForMeshes, this.segmentMeshController.meshesLODRootGroup);
+  }
+
   updateLayerBoundingBoxes(): void {
     const state = Store.getState();
     const dataset = state.dataset;
@@ -563,7 +602,7 @@ class SceneController {
       plane.destroy();
     }
 
-    this.rootNode = new THREE.Object3D();
+    this.rootNode = new THREE.Group();
   }
 
   bindToEvents(): void {
@@ -590,7 +629,10 @@ class SceneController {
       ),
       listenToStoreProperty(
         (storeState) => storeState.datasetConfiguration.nativelyRenderedLayerName,
-        () => this.updateLayerBoundingBoxes(),
+        () => {
+          this.updateLayerBoundingBoxes();
+          this.updateUserBoundingBoxesAndMeshesAccordingToTransforms();
+        },
       ),
       listenToStoreProperty(
         (storeState) => getSomeTracing(storeState.annotation).boundingBox,

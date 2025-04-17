@@ -217,7 +217,7 @@ export function getNodeAndTreeOrNull(
     });
 }
 
-export function isSkeletonLayerTransformed(state: OxalisState) {
+export function areGeometriesTransformed(state: OxalisState) {
   const transformation = getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull(
     state.dataset,
     state.datasetConfiguration.nativelyRenderedLayerName,

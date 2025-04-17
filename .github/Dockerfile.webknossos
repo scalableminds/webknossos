@@ -1,5 +1,5 @@
 FROM eclipse-temurin:21-jammy
-ARG VERSION_NODE="18.x"
+ARG VERSION_NODE="22.x"
 
 RUN curl -sL "https://deb.nodesource.com/setup_${VERSION_NODE}" | bash - \
   && apt-get -y install libblosc1 libbrotli1 postgresql-client libdraco4 git nodejs \

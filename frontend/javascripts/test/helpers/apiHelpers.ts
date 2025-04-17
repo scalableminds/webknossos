@@ -34,7 +34,7 @@ import rootSaga from "oxalis/model/sagas/root_saga";
 import { setStore, setModel } from "oxalis/singletons";
 import { setupApi } from "oxalis/api/internal_api";
 import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
-import Request from "libs/request";
+import Request, { type RequestOptions } from "libs/request";
 import { parseProtoAnnotation, parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
 import app from "app";
 
@@ -73,7 +73,7 @@ vi.mock("libs/compute_bvh_async", () => ({
 
 function receiveJSONMockImplementation(
   url: string,
-  options: any,
+  options: RequestOptions,
   annotationFixture: typeof SKELETON_ANNOTATION | typeof VOLUME_ANNOTATION | typeof TASK_ANNOTATION,
 ) {
   if (
@@ -102,7 +102,7 @@ function receiveJSONMockImplementation(
   return Promise.resolve({});
 }
 
-function sendJSONReceiveJSONMockImplementation(url: string, _options?: any) {
+function sendJSONReceiveJSONMockImplementation(url: string, _options?: RequestOptions) {
   if (url === `/api/users/${dummyUser.id}/taskTypeId`) {
     return Promise.resolve(dummyUser);
   }
@@ -219,7 +219,11 @@ export async function setupWebknossosForTesting(
     testContext.api = api;
   } catch (error) {
     console.error("model.fetch() failed", error);
-    // @ts-ignore
-    throw new Error(error.message);
+    if (error instanceof Error) {
+      throw error;
+    } else {
+      // @ts-ignore
+      throw new Error(error.message);
+    }
   }
 }

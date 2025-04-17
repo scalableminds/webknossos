@@ -32,6 +32,7 @@ import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_co
 import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "oxalis/model/volumetracing/volumelayer";
 import type { Mapping } from "oxalis/store";
 import Store from "oxalis/store";
+import * as THREE from "three";
 import type { AdditionalAxis, BucketDataArray, ElementClass } from "types/api_flow_types";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 import type { MagInfo } from "../helpers/mag_info";
@@ -524,6 +525,7 @@ class DataCube {
     zoomStep: number,
     progressCallback: ProgressCallback,
     use3D: boolean,
+    splitBoundaryMesh: THREE.Mesh | null,
   ): Promise<{
     bucketsWithLabeledVoxelsMap: LabelMasksByBucketAndW;
     wasBoundingBoxExceeded: boolean;
@@ -700,7 +702,12 @@ class DataCube {
 
       // Iterating over all neighbours from the initialAddress.
       while (!neighbourVoxelStackUvw.isEmpty()) {
-        const neighbours = neighbourVoxelStackUvw.getVoxelAndGetNeighbors();
+        const { origin, neighbors: neighbours } = neighbourVoxelStackUvw.getVoxelAndGetNeighbors();
+
+        const originGlobalPosition = V3.add(
+          currentGlobalBucketPosition,
+          V3.scale3(origin, currentMag),
+        );
 
         for (let neighbourIndex = 0; neighbourIndex < neighbours.length; ++neighbourIndex) {
           const neighbourVoxelUvw = neighbours[neighbourIndex];
@@ -719,7 +726,22 @@ class DataCube {
             // Add the bucket to the list of buckets to flood fill.
             const neighbourBucket = this.getOrCreateBucket(neighbourBucketAddress);
 
-            if (neighbourBucket.type !== "null") {
+            let shouldSkip = false;
+            if (splitBoundaryMesh) {
+              const currentGlobalPosition = V3.add(
+                currentGlobalBucketPosition,
+                V3.scale3(neighbourVoxelXyz, currentMag),
+              );
+              const intersects = checkLineIntersection(
+                splitBoundaryMesh,
+                originGlobalPosition,
+                currentGlobalPosition,
+              );
+
+              shouldSkip = intersects;
+            }
+
+            if (!shouldSkip && neighbourBucket.type !== "null") {
               bucketsWithXyzSeedsToFill.push([neighbourBucket, adjustedNeighbourVoxelXyz]);
             }
           } else {
@@ -735,7 +757,18 @@ class DataCube {
               max: V3.add(currentGlobalPosition, currentMag),
             });
 
-            if (bucketData[neighbourVoxelIndex] === sourceSegmentId) {
+            let shouldSkip = false;
+            if (splitBoundaryMesh) {
+              const intersects = checkLineIntersection(
+                splitBoundaryMesh,
+                originGlobalPosition,
+                currentGlobalPosition,
+              );
+
+              shouldSkip = intersects;
+            }
+
+            if (!shouldSkip && bucketData[neighbourVoxelIndex] === sourceSegmentId) {
               if (floodfillBoundingBox.intersectedWith(voxelBoundingBoxInMag1).getVolume() > 0) {
                 bucketData[neighbourVoxelIndex] = segmentId;
                 markUvwInSliceAsLabeled(neighbourVoxelUvw);
@@ -996,3 +1029,31 @@ class DataCube {
 }
 
 export default DataCube;
+
+function checkLineIntersection(bentMesh: THREE.Mesh, pointAVec3: Vector3, pointBVec3: Vector3) {
+  /* Returns true if an intersection is found */
+
+  const geometry = bentMesh.geometry;
+
+  // Create BVH from geometry if not already built
+  if (!geometry.boundsTree) {
+    geometry.computeBoundsTree();
+  }
+  const scale = Store.getState().dataset.dataSource.scale.factor;
+  const pointA = new THREE.Vector3(...V3.scale3(pointAVec3, scale));
+  const pointB = new THREE.Vector3(...V3.scale3(pointBVec3, scale));
+
+  // Create a ray from A to B
+  const ray = new THREE.Ray();
+  ray.origin.copy(pointA);
+  ray.direction.subVectors(pointB, pointA).normalize();
+
+  // Perform raycast
+  const raycaster = new THREE.Raycaster();
+  raycaster.ray = ray;
+  raycaster.far = pointA.distanceTo(pointB);
+  raycaster.firstHitOnly = true;
+
+  const intersects = raycaster.intersectObject(bentMesh, true);
+  return intersects.length > 0;
+}

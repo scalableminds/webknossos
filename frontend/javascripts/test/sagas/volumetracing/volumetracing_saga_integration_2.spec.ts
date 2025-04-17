@@ -1,6 +1,6 @@
 import "test/sagas/saga_integration.mock";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import Constants, {
-  AnnotationToolEnum,
   ContourModeEnum,
   FillModeEnum,
   OrthoViews,
@@ -77,7 +77,7 @@ describe("Volume Tracing", () => {
 
     Store.dispatch(updateUserSettingAction("brushSize", brushSize));
     Store.dispatch(setPositionAction([0, 0, 43]));
-    Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH));
+    Store.dispatch(setToolAction(AnnotationTool.BRUSH));
     Store.dispatch(setActiveCellAction(newCellId));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
     Store.dispatch(addToLayerAction(paintCenter));
@@ -167,7 +167,7 @@ describe("Volume Tracing", () => {
 
     Store.dispatch(updateUserSettingAction("brushSize", brushSize));
     Store.dispatch(setPositionAction([0, 0, 43]));
-    Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH));
+    Store.dispatch(setToolAction(AnnotationTool.BRUSH));
     Store.dispatch(setActiveCellAction(newCellId));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
     Store.dispatch(addToLayerAction(paintCenter));
@@ -331,7 +331,7 @@ describe("Volume Tracing", () => {
 
     Store.dispatch(updateUserSettingAction("brushSize", brushSize));
     Store.dispatch(setPositionAction([0, 0, 0]));
-    Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH));
+    Store.dispatch(setToolAction(AnnotationTool.BRUSH));
     Store.dispatch(setActiveCellAction(newCellId));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
     Store.dispatch(addToLayerAction(paintCenter));
@@ -404,7 +404,7 @@ describe("Volume Tracing", () => {
 
     Store.dispatch(updateUserSettingAction("brushSize", brushSize));
     Store.dispatch(setPositionAction([0, 0, 0]));
-    Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH));
+    Store.dispatch(setToolAction(AnnotationTool.BRUSH));
     Store.dispatch(setActiveCellAction(newCellId));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
     Store.dispatch(addToLayerAction(paintCenter));
@@ -478,7 +478,7 @@ describe("Volume Tracing", () => {
 
     Store.dispatch(updateUserSettingAction("brushSize", brushSize));
     Store.dispatch(setPositionAction([0, 0, 0]));
-    Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH));
+    Store.dispatch(setToolAction(AnnotationTool.BRUSH));
     // Brush with ${newCellId}
     Store.dispatch(setActiveCellAction(newCellId));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
@@ -539,7 +539,7 @@ describe("Volume Tracing", () => {
     Store.dispatch(updateUserSettingAction("overwriteMode", OverwriteModeEnum.OVERWRITE_ALL));
     Store.dispatch(updateUserSettingAction("brushSize", brushSize));
     Store.dispatch(setPositionAction([0, 0, 0]));
-    Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH));
+    Store.dispatch(setToolAction(AnnotationTool.BRUSH));
     // Brush with ${newCellId}
     Store.dispatch(setActiveCellAction(newCellId));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
@@ -552,7 +552,7 @@ describe("Volume Tracing", () => {
     Store.dispatch(finishEditingAction());
     // Erase everything
     Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));
-    Store.dispatch(setToolAction(AnnotationToolEnum.ERASE_BRUSH));
+    Store.dispatch(setToolAction(AnnotationTool.ERASE_BRUSH));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
     Store.dispatch(addToLayerAction(paintCenter));
     Store.dispatch(finishEditingAction());
@@ -618,7 +618,7 @@ describe("Volume Tracing", () => {
 
     Store.dispatch(updateUserSettingAction("brushSize", brushSize));
     Store.dispatch(setPositionAction([0, 0, 0]));
-    Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH));
+    Store.dispatch(setToolAction(AnnotationTool.BRUSH));
     Store.dispatch(setActiveCellAction(newCellId));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
     Store.dispatch(addToLayerAction(paintCenter));

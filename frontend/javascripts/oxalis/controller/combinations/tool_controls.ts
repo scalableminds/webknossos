@@ -3,8 +3,14 @@ import type { ModifierKeys } from "libs/input";
 import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 import { document } from "libs/window";
-import type { AnnotationTool, OrthoView, Point2, Vector3, Viewport } from "oxalis/constants";
-import { AnnotationToolEnum, ContourModeEnum, OrthoViews } from "oxalis/constants";
+import {
+  ContourModeEnum,
+  type OrthoView,
+  OrthoViews,
+  type Point2,
+  type Vector3,
+  type Viewport,
+} from "oxalis/constants";
 import {
   type SelectedEdge,
   createBoundingBoxAndGetEdges,
@@ -23,6 +29,7 @@ import {
 import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
 import getSceneController from "oxalis/controller/scene_controller_provider";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import {
@@ -51,7 +58,7 @@ import {
   hideBrushAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { api } from "oxalis/singletons";
-import Store from "oxalis/store";
+import Store, { type UserConfiguration } from "oxalis/store";
 import type ArbitraryView from "oxalis/view/arbitrary_view";
 import type PlaneView from "oxalis/view/plane_view";
 import * as THREE from "three";
@@ -64,11 +71,11 @@ export type ActionDescriptor = {
 };
 
 /*
-  This module contains classes for the different tools, such as MoveTool, SkeletonTool, DrawTool etc.
+  This module contains classes for the different tools, such as MoveToolController, SkeletonToolController, DrawToolController etc.
   Each tool class defines getMouseControls which declares how mouse bindings are mapped (depending on
   modifiers) to actions. For the actions, code from oxalis/controller/combinations is called.
 
-  If a tool does not define a specific mouse binding, the bindings of the MoveTool are used as a fallback.
+  If a tool does not define a specific mouse binding, the bindings of the MoveToolController are used as a fallback.
   See `createToolDependentMouseHandler` in plane_controller.js
 
   In general, each tool has to check the pressed modifiers and delegate to another tool if necessary.
@@ -81,7 +88,7 @@ export type ActionDescriptor = {
   so that the returned hint of class X is only rendered if `adaptActiveToolToShortcuts` returns X.
   Therefore, the returned actions of a tool class should only refer to the actions of that tool class.
 */
-export class MoveTool {
+export class MoveToolController {
   static getMouseControls(planeId: OrthoView, planeView: PlaneView): Record<string, any> {
     return {
       scroll: (delta: number, type: ModifierKeys | null | undefined) => {
@@ -139,7 +146,7 @@ export class MoveTool {
       },
       leftDoubleClick: (pos: Point2, _plane: OrthoView, _event: MouseEvent, _isTouch: boolean) => {
         const { uiInformation } = Store.getState();
-        const isMoveToolActive = uiInformation.activeTool === AnnotationToolEnum.MOVE;
+        const isMoveToolActive = uiInformation.activeTool === AnnotationTool.MOVE;
 
         if (isMoveToolActive) {
           // We want to select the clicked segment ID only in the MOVE tool. This method is
@@ -184,7 +191,7 @@ export class MoveTool {
         MoveHandlers.handleMovePlane(delta);
       },
       middleDownMove: MoveHandlers.handleMovePlane,
-      rightClick: MoveTool.createRightClickHandler(planeView),
+      rightClick: MoveToolController.createRightClickHandler(planeView),
     };
   }
 
@@ -195,12 +202,13 @@ export class MoveTool {
 
   static getActionDescriptors(
     _activeTool: AnnotationTool,
-    useLegacyBindings: boolean,
+    userConfiguration: UserConfiguration,
     shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
     altKey: boolean,
     _isTDViewportActive: boolean,
   ): ActionDescriptor {
+    const { useLegacyBindings } = userConfiguration;
     // In legacy mode, don't display a hint for
     // left click as it would be equal to left drag.
     // We also don't show a hint when the alt key was pressed,
@@ -218,7 +226,7 @@ export class MoveTool {
 
   static onToolDeselected() {}
 }
-export class SkeletonTool {
+export class SkeletonToolController {
   static getMouseControls(planeView: PlaneView) {
     const legacyRightClick = (
       position: Point2,
@@ -240,6 +248,7 @@ export class SkeletonTool {
     };
 
     let draggingNodeId: number | null | undefined = null;
+    let lastContinouslyPlacedNodeTimestamp: number | null = null;
     let didDragNode: boolean = false;
     return {
       leftMouseDown: (pos: Point2, plane: OrthoView, _event: MouseEvent, isTouch: boolean) => {
@@ -266,21 +275,37 @@ export class SkeletonTool {
       },
       leftDownMove: (
         delta: Point2,
-        _pos: Point2,
-        _id: string | null | undefined,
+        pos: Point2,
+        plane: string | null | undefined,
         event: MouseEvent,
       ) => {
-        const { annotation } = Store.getState();
-        const { useLegacyBindings } = Store.getState().userConfiguration;
+        const { annotation, userConfiguration } = Store.getState();
+        const { useLegacyBindings, continuousNodeCreation } = userConfiguration;
 
-        if (
-          annotation.skeleton != null &&
-          (draggingNodeId != null || (useLegacyBindings && (event.ctrlKey || event.metaKey)))
-        ) {
-          didDragNode = true;
-          SkeletonHandlers.moveNode(delta.x, delta.y, draggingNodeId, true);
+        if (continuousNodeCreation) {
+          if (
+            lastContinouslyPlacedNodeTimestamp &&
+            Date.now() - lastContinouslyPlacedNodeTimestamp < 200
+          ) {
+            return;
+          }
+          lastContinouslyPlacedNodeTimestamp = Date.now();
+
+          if (plane) {
+            const globalPosition = calculateGlobalPos(Store.getState(), pos);
+            // SkeletonHandlers.handleCreateNodeFromEvent(pos, false);
+            api.tracing.createNode(globalPosition, { center: false });
+          }
         } else {
-          MoveHandlers.handleMovePlane(delta);
+          if (
+            annotation.skeleton != null &&
+            (draggingNodeId != null || (useLegacyBindings && (event.ctrlKey || event.metaKey)))
+          ) {
+            didDragNode = true;
+            SkeletonHandlers.moveNode(delta.x, delta.y, draggingNodeId, true);
+          } else {
+            MoveHandlers.handleMovePlane(delta);
+          }
         }
       },
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
@@ -295,9 +320,9 @@ export class SkeletonTool {
         );
       },
       rightClick: (position: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
-        const { useLegacyBindings } = Store.getState().userConfiguration;
+        const { useLegacyBindings, continuousNodeCreation } = Store.getState().userConfiguration;
 
-        if (useLegacyBindings) {
+        if (useLegacyBindings && !continuousNodeCreation) {
           legacyRightClick(position, plane, event, isTouch);
           return;
         }
@@ -317,7 +342,12 @@ export class SkeletonTool {
     isTouch: boolean,
     allowNodeCreation: boolean = true,
   ): void {
-    const { useLegacyBindings } = Store.getState().userConfiguration;
+    const { useLegacyBindings, continuousNodeCreation } = Store.getState().userConfiguration;
+
+    if (continuousNodeCreation && allowNodeCreation) {
+      SkeletonHandlers.handleCreateNodeFromEvent(position, ctrlPressed);
+      return;
+    }
 
     // The following functions are all covered by the context menu, too.
     // (At least, in the XY/XZ/YZ viewports).
@@ -342,12 +372,22 @@ export class SkeletonTool {
 
   static getActionDescriptors(
     _activeTool: AnnotationTool,
-    useLegacyBindings: boolean,
+    userConfiguration: UserConfiguration,
     shiftKey: boolean,
     ctrlOrMetaKey: boolean,
     altKey: boolean,
     _isTDViewportActive: boolean,
   ): ActionDescriptor {
+    const { continuousNodeCreation } = Store.getState().userConfiguration;
+    const { useLegacyBindings } = userConfiguration;
+    if (continuousNodeCreation) {
+      return {
+        leftClick: "Place node",
+        leftDrag: "Draw nodes",
+        rightClick: "Context Menu",
+      };
+    }
+
     // In legacy mode, don't display a hint for
     // left click as it would be equal to left drag
     let leftClickInfo = {};
@@ -382,7 +422,7 @@ export class SkeletonTool {
 
   static onToolDeselected() {}
 }
-export class DrawTool {
+export class DrawToolController {
   static getPlaneMouseControls(_planeId: OrthoView, planeView: PlaneView): any {
     return {
       leftDownMove: (_delta: Point2, pos: Point2) => {
@@ -469,29 +509,30 @@ export class DrawTool {
 
   static getActionDescriptors(
     activeTool: AnnotationTool,
-    useLegacyBindings: boolean,
+    userConfiguration: UserConfiguration,
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
     _isTDViewportActive: boolean,
   ): ActionDescriptor {
     let rightClick;
+    const { useLegacyBindings } = userConfiguration;
 
     if (!useLegacyBindings) {
       rightClick = "Context Menu";
     } else {
-      rightClick = `Erase (${activeTool === AnnotationToolEnum.BRUSH ? "Brush" : "Trace"})`;
+      rightClick = `Erase (${activeTool === AnnotationTool.BRUSH ? "Brush" : "Trace"})`;
     }
 
     return {
-      leftDrag: activeTool === AnnotationToolEnum.BRUSH ? "Brush" : "Trace",
+      leftDrag: activeTool === AnnotationTool.BRUSH ? "Brush" : "Trace",
       rightClick,
     };
   }
 
   static onToolDeselected() {}
 }
-export class EraseTool {
+export class EraseToolController {
   static getPlaneMouseControls(_planeId: OrthoView, planeView: PlaneView): any {
     return {
       leftDownMove: (_delta: Point2, pos: Point2) => {
@@ -528,21 +569,21 @@ export class EraseTool {
 
   static getActionDescriptors(
     activeTool: AnnotationTool,
-    _useLegacyBindings: boolean,
+    _userConfiguration: UserConfiguration,
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
     _isTDViewportActive: boolean,
   ): ActionDescriptor {
     return {
-      leftDrag: `Erase (${activeTool === AnnotationToolEnum.ERASE_BRUSH ? "Brush" : "Trace"})`,
+      leftDrag: `Erase (${activeTool === AnnotationTool.ERASE_BRUSH ? "Brush" : "Trace"})`,
       rightClick: "Context Menu",
     };
   }
 
   static onToolDeselected() {}
 }
-export class PickCellTool {
+export class PickCellToolController {
   static getPlaneMouseControls(_planeId: OrthoView): any {
     return {
       leftClick: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
@@ -553,7 +594,7 @@ export class PickCellTool {
 
   static getActionDescriptors(
     _activeTool: AnnotationTool,
-    _useLegacyBindings: boolean,
+    _userConfiguration: UserConfiguration,
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
@@ -567,7 +608,7 @@ export class PickCellTool {
 
   static onToolDeselected() {}
 }
-export class FillCellTool {
+export class FillCellToolController {
   static getPlaneMouseControls(_planeId: OrthoView): any {
     return {
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
@@ -584,7 +625,7 @@ export class FillCellTool {
 
   static getActionDescriptors(
     _activeTool: AnnotationTool,
-    _useLegacyBindings: boolean,
+    _userConfiguration: UserConfiguration,
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
@@ -598,7 +639,7 @@ export class FillCellTool {
 
   static onToolDeselected() {}
 }
-export class BoundingBoxTool {
+export class BoundingBoxToolController {
   static getPlaneMouseControls(planeId: OrthoView, planeView: PlaneView): any {
     let primarySelectedEdge: SelectedEdge | null | undefined = null;
     let secondarySelectedEdge: SelectedEdge | null | undefined = null;
@@ -663,7 +704,7 @@ export class BoundingBoxTool {
 
   static getActionDescriptors(
     _activeTool: AnnotationTool,
-    _useLegacyBindings: boolean,
+    _userConfiguration: UserConfiguration,
     _shiftKey: boolean,
     ctrlOrMetaKey: boolean,
     _altKey: boolean,
@@ -685,7 +726,7 @@ export class BoundingBoxTool {
   }
 }
 
-export class QuickSelectTool {
+export class QuickSelectToolController {
   static getPlaneMouseControls(_planeId: OrthoView, planeView: PlaneView): any {
     let startPos: Vector3 | null = null;
     let currentPos: Vector3 | null = null;
@@ -792,7 +833,7 @@ export class QuickSelectTool {
 
   static getActionDescriptors(
     _activeTool: AnnotationTool,
-    _useLegacyBindings: boolean,
+    _userConfiguration: UserConfiguration,
     shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
@@ -830,7 +871,7 @@ function getDoubleClickGuard() {
   return doubleClickGuard;
 }
 
-export class LineMeasurementTool {
+export class LineMeasurementToolController {
   static initialPlane: OrthoView = OrthoViews.PLANE_XY;
   static isMeasuring = false;
   static getPlaneMouseControls(): any {
@@ -916,7 +957,7 @@ export class LineMeasurementTool {
 
   static getActionDescriptors(
     _activeTool: AnnotationTool,
-    _useLegacyBindings: boolean,
+    _userConfiguration: UserConfiguration,
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
@@ -938,7 +979,7 @@ export class LineMeasurementTool {
   }
 }
 
-export class AreaMeasurementTool {
+export class AreaMeasurementToolController {
   static initialPlane: OrthoView = OrthoViews.PLANE_XY;
   static isMeasuring = false;
   static getPlaneMouseControls(): any {
@@ -995,7 +1036,7 @@ export class AreaMeasurementTool {
 
   static getActionDescriptors(
     _activeTool: AnnotationTool,
-    _useLegacyBindings: boolean,
+    _userConfiguration: UserConfiguration,
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
@@ -1016,7 +1057,7 @@ export class AreaMeasurementTool {
   }
 }
 
-export class ProofreadTool {
+export class ProofreadToolController {
   static getPlaneMouseControls(_planeId: OrthoView, planeView: PlaneView): any {
     return {
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
@@ -1055,7 +1096,7 @@ export class ProofreadTool {
 
   static getActionDescriptors(
     _activeTool: AnnotationTool,
-    _useLegacyBindings: boolean,
+    _userConfiguration: UserConfiguration,
     shiftKey: boolean,
     ctrlOrMetaKey: boolean,
     _altKey: boolean,
@@ -1094,21 +1135,21 @@ export class ProofreadTool {
 
   static onToolDeselected() {}
 }
-const toolToToolClass = {
-  [AnnotationToolEnum.MOVE]: MoveTool,
-  [AnnotationToolEnum.SKELETON]: SkeletonTool,
-  [AnnotationToolEnum.BOUNDING_BOX]: BoundingBoxTool,
-  [AnnotationToolEnum.QUICK_SELECT]: QuickSelectTool,
-  [AnnotationToolEnum.PROOFREAD]: ProofreadTool,
-  [AnnotationToolEnum.BRUSH]: DrawTool,
-  [AnnotationToolEnum.TRACE]: DrawTool,
-  [AnnotationToolEnum.ERASE_TRACE]: EraseTool,
-  [AnnotationToolEnum.ERASE_BRUSH]: EraseTool,
-  [AnnotationToolEnum.FILL_CELL]: FillCellTool,
-  [AnnotationToolEnum.PICK_CELL]: PickCellTool,
-  [AnnotationToolEnum.LINE_MEASUREMENT]: LineMeasurementTool,
-  [AnnotationToolEnum.AREA_MEASUREMENT]: AreaMeasurementTool,
+const toolToToolController = {
+  [AnnotationTool.MOVE.id]: MoveToolController,
+  [AnnotationTool.SKELETON.id]: SkeletonToolController,
+  [AnnotationTool.BOUNDING_BOX.id]: BoundingBoxToolController,
+  [AnnotationTool.QUICK_SELECT.id]: QuickSelectToolController,
+  [AnnotationTool.PROOFREAD.id]: ProofreadToolController,
+  [AnnotationTool.BRUSH.id]: DrawToolController,
+  [AnnotationTool.TRACE.id]: DrawToolController,
+  [AnnotationTool.ERASE_TRACE.id]: EraseToolController,
+  [AnnotationTool.ERASE_BRUSH.id]: EraseToolController,
+  [AnnotationTool.FILL_CELL.id]: FillCellToolController,
+  [AnnotationTool.PICK_CELL.id]: PickCellToolController,
+  [AnnotationTool.LINE_MEASUREMENT.id]: LineMeasurementToolController,
+  [AnnotationTool.AREA_MEASUREMENT.id]: AreaMeasurementToolController,
 };
-export function getToolClassForAnnotationTool(activeTool: AnnotationTool) {
-  return toolToToolClass[activeTool];
+export function getToolControllerForAnnotationTool(activeTool: AnnotationTool) {
+  return toolToToolController[activeTool.id];
 }

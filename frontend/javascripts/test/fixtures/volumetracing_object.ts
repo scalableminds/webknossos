@@ -1,11 +1,12 @@
 import update from "immutability-helper";
-import Constants, { AnnotationToolEnum } from "oxalis/constants";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
+import Constants from "oxalis/constants";
 import defaultState from "oxalis/default_state";
 
 const volumeTracing = {
   type: "volume",
   activeCellId: 0,
-  activeTool: AnnotationToolEnum.MOVE,
+  activeTool: AnnotationTool.MOVE,
   largestSegmentId: 0,
   contourList: [],
   lastLabelActions: [],

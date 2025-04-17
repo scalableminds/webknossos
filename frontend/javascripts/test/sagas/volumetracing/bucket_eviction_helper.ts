@@ -2,7 +2,8 @@ import _ from "lodash";
 import "test/sagas/saga_integration.mock";
 import { createBucketResponseFunction, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import Store from "oxalis/store";
-import { OrthoViews, AnnotationToolEnum } from "oxalis/constants";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
+import { OrthoViews } from "oxalis/constants";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
@@ -50,7 +51,7 @@ export async function testLabelingManyBuckets(
   );
 
   Store.dispatch(updateUserSettingAction("brushSize", brushSize));
-  Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH));
+  Store.dispatch(setToolAction(AnnotationTool.BRUSH));
   Store.dispatch(setActiveCellAction(newCellId));
 
   for (const paintPosition of paintPositions1) {

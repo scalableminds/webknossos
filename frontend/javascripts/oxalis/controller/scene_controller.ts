@@ -1,9 +1,11 @@
 import app from "app";
 import type Maybe from "data.maybe";
 import { V3 } from "libs/mjs";
+import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import window from "libs/window";
 import _ from "lodash";
+
 import type {
   BoundingBoxType,
   OrthoView,
@@ -51,6 +53,14 @@ import SegmentMeshController from "./segment_mesh_controller";
 const CUBE_COLOR = 0x999999;
 const LAYER_CUBE_COLOR = 0xffff99;
 
+import computeSplitBoundaryMeshWithSplines from "oxalis/geometries/compute_split_boundary_mesh_with_splines";
+import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from "three-mesh-bvh";
+
+// Add the extension functions
+THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
+THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
+THREE.Mesh.prototype.raycast = acceleratedRaycast;
+
 class SceneController {
   skeletons: Record<number, Skeleton> = {};
   current: number;
@@ -75,6 +85,7 @@ class SceneController {
   rootGroup!: THREE.Object3D;
   segmentMeshController: SegmentMeshController;
   storePropertyUnsubscribers: Array<() => void>;
+  splitBoundaryMesh: THREE.Mesh | null = null;
 
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   // element depending on the provided flycam.
@@ -112,6 +123,7 @@ class SceneController {
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.rootGroup);
     this.scene.add(this.segmentMeshController.meshesLODRootGroup);
+
     this.setupDebuggingMethods();
   }
 
@@ -252,6 +264,44 @@ class SceneController {
     this.stopPlaneMode();
   }
 
+  addSplitBoundaryMesh(points: Vector3[]) {
+    if (points.length === 0) {
+      return () => {};
+    }
+
+    let splitBoundaryMesh: THREE.Mesh | null = null;
+    let splines: THREE.Object3D[] = [];
+    try {
+      const objects = computeSplitBoundaryMeshWithSplines(points);
+      splitBoundaryMesh = objects.splitBoundaryMesh;
+      splines = objects.splines;
+    } catch (exc) {
+      console.error(exc);
+      Toast.error("Could not compute surface");
+      return () => {};
+    }
+
+    const surfaceGroup = new THREE.Group();
+    if (splitBoundaryMesh != null) {
+      surfaceGroup.add(splitBoundaryMesh);
+    }
+    for (const spline of splines) {
+      surfaceGroup.add(spline);
+    }
+
+    this.rootGroup.add(surfaceGroup);
+    this.splitBoundaryMesh = splitBoundaryMesh;
+
+    return () => {
+      this.rootGroup.remove(surfaceGroup);
+      this.splitBoundaryMesh = null;
+    };
+  }
+
+  getSplitBoundaryMesh() {
+    return this.splitBoundaryMesh;
+  }
+
   addSkeleton(
     skeletonTracingSelector: (arg0: OxalisState) => Maybe<SkeletonTracing>,
     supportsPicking: boolean,
@@ -317,6 +367,9 @@ class SceneController {
     this.taskBoundingBox?.updateForCam(id);
 
     this.segmentMeshController.meshesLODRootGroup.visible = id === OrthoViews.TDView;
+    if (this.splitBoundaryMesh != null) {
+      this.splitBoundaryMesh.visible = id === OrthoViews.TDView;
+    }
     this.annotationToolsGeometryGroup.visible = id !== OrthoViews.TDView;
     this.lineMeasurementGeometry.updateForCam(id);
 

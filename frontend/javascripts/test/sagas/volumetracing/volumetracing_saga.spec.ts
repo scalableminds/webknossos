@@ -2,9 +2,9 @@ import { vi, it, expect, describe } from "vitest";
 import { take, put, call } from "redux-saga/effects";
 import update from "immutability-helper";
 import type { APISegmentationLayer, ServerVolumeTracing } from "types/api_flow_types";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import {
   OrthoViews,
-  AnnotationToolEnum,
   ContourModeEnum,
   OverwriteModeEnum,
   MappingStatusEnum,
@@ -177,7 +177,7 @@ describe("VolumeTracingSaga", () => {
     });
     saga.next(volumeTracing);
     saga.next(OverwriteModeEnum.OVERWRITE_ALL);
-    saga.next(AnnotationToolEnum.BRUSH);
+    saga.next(AnnotationTool.BRUSH);
     saga.next(false);
     // pass labeled mag
     saga.next({
@@ -220,7 +220,7 @@ describe("VolumeTracingSaga", () => {
     });
     saga.next(volumeTracing);
     saga.next(OverwriteModeEnum.OVERWRITE_ALL);
-    saga.next(AnnotationToolEnum.TRACE);
+    saga.next(AnnotationTool.TRACE);
     saga.next(false);
     saga.next({
       mag: [1, 1, 1],
@@ -275,7 +275,7 @@ describe("VolumeTracingSaga", () => {
     });
     saga.next(volumeTracing);
     saga.next(OverwriteModeEnum.OVERWRITE_ALL);
-    saga.next(AnnotationToolEnum.TRACE);
+    saga.next(AnnotationTool.TRACE);
     saga.next(false);
     saga.next({
       mag: [1, 1, 1],
@@ -321,7 +321,7 @@ describe("VolumeTracingSaga", () => {
       call(
         finishLayer,
         volumeLayer,
-        AnnotationToolEnum.TRACE,
+        AnnotationTool.TRACE,
         ContourModeEnum.DRAW,
         OverwriteModeEnum.OVERWRITE_ALL,
         0,
@@ -344,7 +344,7 @@ describe("VolumeTracingSaga", () => {
     });
     saga.next({ ...volumeTracing, contourTracingMode: ContourModeEnum.DELETE });
     saga.next(OverwriteModeEnum.OVERWRITE_ALL);
-    saga.next(AnnotationToolEnum.TRACE);
+    saga.next(AnnotationTool.TRACE);
     saga.next(false);
     saga.next({
       mag: [1, 1, 1],
@@ -390,7 +390,7 @@ describe("VolumeTracingSaga", () => {
       call(
         finishLayer,
         volumeLayer,
-        AnnotationToolEnum.TRACE,
+        AnnotationTool.TRACE,
         ContourModeEnum.DELETE,
         OverwriteModeEnum.OVERWRITE_ALL,
         0,
@@ -428,7 +428,7 @@ describe("VolumeTracingSaga", () => {
     });
     saga.next(volumeTracing);
     saga.next(OverwriteModeEnum.OVERWRITE_ALL);
-    saga.next(AnnotationToolEnum.BRUSH);
+    saga.next(AnnotationTool.BRUSH);
     saga.next(false);
     // pass labeled mag
     saga.next({

@@ -1,4 +1,5 @@
-import type { AnnotationTool, OrthoView, Vector3 } from "oxalis/constants";
+import type { OrthoView, Vector3 } from "oxalis/constants";
+import type { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import type { BorderOpenStatus, OxalisState, Theme } from "oxalis/store";
 import type { StartAIJobModalState } from "oxalis/view/action-bar/starting_job_modals";
 

@@ -2,10 +2,16 @@ package com.scalableminds.webknossos.tracingstore.annotation
 
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
-import com.scalableminds.webknossos.datastore.Annotation.{AnnotationLayerProto, AnnotationProto}
+import com.scalableminds.webknossos.datastore.Annotation.{
+  AnnotationLayerProto,
+  AnnotationProto,
+  AnnotationUserStateProto
+}
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingUpdateAction,
@@ -23,7 +29,8 @@ case class AnnotationWithTracings(
     annotation: AnnotationProto,
     tracingsById: Map[String, Either[SkeletonTracingWithUpdatedTreeIds, VolumeTracing]],
     editableMappingsByTracingId: Map[String, (EditableMappingInfo, EditableMappingUpdater)])
-    extends LazyLogging {
+    extends LazyLogging
+    with ProtoGeometryImplicits {
 
   // Assumes that there is at most one skeleton layer per annotation. This is true as of this writing
   def getSkeletonId: Option[String] =
@@ -122,6 +129,32 @@ case class AnnotationWithTracings(
     a.description.map { newDescription =>
       this.copy(annotation = annotation.copy(description = newDescription))
     }.getOrElse(this)
+
+  def updateCamera(a: UpdateCameraAnnotationAction): AnnotationWithTracings = {
+    val actionAuthorId = a.actionAuthorId.get // TODO fox
+    val userStateAlreadyPresent = annotation.userState.exists(state => actionAuthorId == state.userId)
+    if (userStateAlreadyPresent) {
+      this.copy(annotation = annotation.copy(userState = annotation.userState.map {
+        case userState if actionAuthorId == userState.userId =>
+          userState.copy(
+            userId = actionAuthorId,
+            editPosition = a.editPosition,
+            editRotation = a.editRotation,
+            zoomLevel = a.zoomLevel,
+            editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(a.editPositionAdditionalCoordinates),
+          )
+        case userState => userState
+      }))
+    } else
+      this.copy(
+        annotation = annotation.copy(userState = annotation.userState :+ AnnotationUserStateProto(
+          userId = actionAuthorId,
+          editPosition = a.editPosition,
+          editRotation = a.editRotation,
+          zoomLevel = a.zoomLevel,
+          editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(a.editPositionAdditionalCoordinates),
+        )))
+  }
 
   def withVersion(newVersion: Long): AnnotationWithTracings = {
     val tracingsUpdated = tracingsById.view.mapValues {

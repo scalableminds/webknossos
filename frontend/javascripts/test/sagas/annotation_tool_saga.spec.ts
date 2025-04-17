@@ -116,9 +116,9 @@ describe("Annotation Tool Saga", () => {
 
   it("Selecting another tool should trigger a deselection of the previous tool.", () => {
     let newState = initialState;
+
     const saga = watchToolDeselection();
     saga.next();
-    saga.next(wkReadyAction());
     saga.next(newState.uiInformation.activeTool);
 
     const cycleTool = (nextTool: AnnotationTool) => {

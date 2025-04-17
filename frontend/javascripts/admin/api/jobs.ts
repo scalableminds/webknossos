@@ -39,6 +39,7 @@ function transformBackendJobToAPIJob(job: any): APIJob {
     createdAt: job.created,
     voxelyticsWorkflowHash: job.voxelyticsWorkflowHash,
     creditCost: job.creditCost,
+    modelId: job.commandArgs.model_id,
   };
 }
 
@@ -367,8 +368,8 @@ type RunTrainingParameters = {
   workflowYaml?: string;
 };
 
-export function runTraining(params: RunTrainingParameters) {
-  return Request.sendJSONReceiveJSON("/api/aiModels/runTraining", {
+export function runNeuronTraining(params: RunTrainingParameters) {
+  return Request.sendJSONReceiveJSON("/api/aiModels/runNeuronTraining", {
     method: "POST",
     data: JSON.stringify(params),
   });

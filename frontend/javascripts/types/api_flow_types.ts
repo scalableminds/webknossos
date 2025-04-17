@@ -747,9 +747,11 @@ export enum APIJobType {
   INFER_NUCLEI = "infer_nuclei",
   INFER_NEURONS = "infer_neurons",
   MATERIALIZE_VOLUME_ANNOTATION = "materialize_volume_annotation",
-  TRAIN_MODEL = "train_model",
-  INFER_WITH_MODEL = "infer_with_model",
+  TRAIN_NEURON_MODEL = "train_neuron_model",
   INFER_MITOCHONDRIA = "infer_mitochondria",
+  // Only used for backwards compatibility, e.g. to display results.
+  DEPRECATED_INFER_WITH_MODEL = "infer_with_model",
+  DEPRECATED_TRAIN_MODEL = "train_model",
 }
 
 export type WkLibsNdBoundingBox = BoundingBoxObject & {
@@ -782,6 +784,7 @@ export type APIJob = {
   readonly voxelyticsWorkflowHash: string | null;
   readonly trainingAnnotations: Array<{ annotationId: string }>;
   readonly creditCost: string | null | undefined;
+  readonly modelId: string | null | undefined;
 };
 
 export type AiModel = {

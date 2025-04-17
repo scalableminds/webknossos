@@ -2,7 +2,7 @@ import {
   getDataset,
   getTracingForAnnotationType,
   getUnversionedAnnotationInformation,
-  runTraining,
+  runNeuronTraining,
 } from "admin/admin_rest_api";
 import { getAnnotationsForTask } from "admin/api/tasks";
 import {
@@ -263,7 +263,7 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | StoreA
       await ensureSavedState();
     }
 
-    await runTraining({
+    await runNeuronTraining({
       trainingAnnotations: getTrainingAnnotations(values),
       name: values.modelName,
       aiModelCategory: values.modelCategory,

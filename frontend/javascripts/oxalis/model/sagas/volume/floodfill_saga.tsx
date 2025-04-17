@@ -33,6 +33,7 @@ import { Model } from "oxalis/singletons";
 import { call, put, takeEvery } from "typed-redux-saga";
 import { getUserBoundingBoxesThatContainPosition } from "../../accessors/tracing_accessor";
 import { applyLabeledVoxelMapToAllMissingMags } from "./helpers";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 
 const NO_FLOODFILL_BBOX_TOAST_KEY = "NO_FLOODFILL_BBOX";
 const NO_SUCCESS_MSG_WHEN_WITHIN_MS = 500;
@@ -194,6 +195,19 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
     return;
   }
 
+  const sceneController = getSceneController();
+  const isSplitToolkit = yield* select(
+    (state) => state.userConfiguration.activeToolkit === "SPLIT_SEGMENTS",
+  );
+  const splitBoundaryMesh = isSplitToolkit ? sceneController.getSplitBoundaryMesh() : null;
+
+  if (isSplitToolkit && !splitBoundaryMesh) {
+    Toast.warning(
+      `No split boundary found. Ensure that the active tree has at least two nodes. If you want to execute a normal floodfill operation, please switch to another toolkit (currently, the "Split Segments" toolkit is active).`,
+    );
+    return;
+  }
+
   const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
 
   if (busyBlockingInfo.isBusy) {
@@ -248,6 +262,7 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
     labeledZoomStep,
     progressCallback,
     fillMode === FillModeEnum._3D,
+    splitBoundaryMesh,
   );
   console.timeEnd("cube.floodFill");
   yield* call(progressCallback, false, "Finalizing floodfill...");

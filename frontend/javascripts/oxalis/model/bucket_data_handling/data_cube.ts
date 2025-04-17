@@ -526,6 +526,7 @@ class DataCube {
     zoomStep: number,
     progressCallback: ProgressCallback,
     use3D: boolean,
+    splitBoundaryMesh: THREE.Mesh | null,
   ): Promise<{
     bucketsWithLabeledVoxelsMap: LabelMasksByBucketAndW;
     wasBoundingBoxExceeded: boolean;
@@ -543,9 +544,6 @@ class DataCube {
     // not all of the target area in the neighbour bucket might be filled.
 
     const floodfillBoundingBox = new BoundingBox(_floodfillBoundingBox);
-    const sceneController = getSceneController();
-    const isSplitToolkit = Store.getState().userConfiguration.activeToolkit === "SPLIT_SEGMENTS";
-    const splitBoundaryMesh = isSplitToolkit ? sceneController.getSplitBoundaryMesh() : null;
 
     // Helper function to convert between xyz and uvw (both directions)
     const transpose = (voxel: Vector3): Vector3 =>

@@ -19,12 +19,25 @@ export default function computeSplitBoundaryMeshWithSplines(points: Vector3[]): 
   const minZ = Math.min(...zValues);
   const maxZ = Math.max(...zValues);
 
+  if (minZ === maxZ) {
+    // All nodes are in the same section. Duplicate them to the next
+    // and previous section to get a surface with a depth.
+    return computeSplitBoundaryMeshWithSplines([
+      ...points.map((p) => [p[0], p[1], p[2] - 1] as Vector3),
+      ...points,
+      ...points.map((p) => [p[0], p[1], p[2] + 1] as Vector3),
+    ]);
+  }
+
   const curvesByZ: Record<number, THREE.CatmullRomCurve3> = {};
 
   // Create curves for existing z-values
   const curves = _.compact(
     zValues.map((zValue, curveIdx) => {
       let adaptedZ = zValue;
+      // We make the surface a bit larger by offsetting points in Z
+      // if they are at the z-start or z-end. This avoids numerical
+      // problems for the floodfill.
       if (zValue === minZ) {
         adaptedZ -= 0.1;
       } else if (zValue === maxZ) {
@@ -100,7 +113,7 @@ export default function computeSplitBoundaryMeshWithSplines(points: Vector3[]): 
 
   // Generate and display all curves
   Object.values(curvesByZ).forEach((curve) => {
-    const curvePoints = curve.getPoints(50);
+    const curvePoints = curve.getPoints(numPoints);
     const geometry = new THREE.BufferGeometry().setFromPoints(curvePoints);
     const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
     const splineObject = new THREE.Line(geometry, material);

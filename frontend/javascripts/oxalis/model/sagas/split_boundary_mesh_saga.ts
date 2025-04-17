@@ -29,7 +29,7 @@ function* updateSplitBoundaryMesh() {
   if (activeTree?.isVisible) {
     const nodes = Array.from(activeTree.nodes.values());
     const points = nodes.map((node) => node.untransformedPosition);
-    if (points.length > 3) {
+    if (points.length >= 2) {
       cleanUpFn = sceneController.addSplitBoundaryMesh(points);
     }
   }

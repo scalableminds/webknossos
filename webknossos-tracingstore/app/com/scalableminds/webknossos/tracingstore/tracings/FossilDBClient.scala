@@ -82,7 +82,7 @@ class FossilDBClient(collection: String,
     Fox.fromFutureBox {
       future.transformWith {
         case Success(value) =>
-          Fox.successful(value).futureBox
+          Future.successful(Full(value))
         case Failure(exception) =>
           val box = exception match {
             case e: StatusRuntimeException if e.getStatus == Status.UNAVAILABLE =>

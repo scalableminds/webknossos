@@ -19,7 +19,7 @@ trait FoxImplicits {
 
   implicit protected def try2Foxable[T](t: Try[T]): Foxable[T] = t match {
     case Success(result)       => new Foxable(Future.successful(Full(result)))
-    case scala.util.Failure(e) => new Foxable(Future.successful(Failure(e.toString)))
+    case scala.util.Failure(e) => new Foxable(Future.successful(Failure(e.toString, Full(e), Empty)))
   }
 
   implicit protected def option2Foxable[T](b: Option[T]): Foxable[T] =
@@ -42,12 +42,12 @@ object Fox extends FoxImplicits {
   def fromFuture[T](f: Future[T])(implicit ec: ExecutionContext): Fox[T] =
     fromFutureBox(
       for {
-        fut <- f.transform {
+        fox: Fox[T] <- f.transform {
           case Success(value)        => Try(Fox.successful(value))
-          case scala.util.Failure(e) => Try(Fox.failure(e.getMessage, Full(e)))
+          case scala.util.Failure(e) => Try(Fox.failure(e.toString, Full(e)))
         }
-        f <- fut.futureBox
-      } yield f
+        box: Box[T] <- fox.futureBox
+      } yield box
     )
 
   def successful[A](e: A)(implicit ec: ExecutionContext): Fox[A] =

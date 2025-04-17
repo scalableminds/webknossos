@@ -828,17 +828,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
 
         case "CREATE_TREE": {
           const { timestamp } = action;
-          const isSplitToolkitActive = state.userConfiguration.activeToolkit === "SPLIT_SEGMENTS";
-          return createTree(
-            state,
-            timestamp,
-            undefined,
-            undefined,
-            undefined,
-            // Don't show edges for trees that were created in the split toolkit,
-            // because spline curves will be shown for each section by default.
-            !isSplitToolkitActive,
-          )
+          return createTree(state, timestamp)
             .map((tree) => {
               if (action.treeIdCallback) {
                 action.treeIdCallback(tree.treeId);

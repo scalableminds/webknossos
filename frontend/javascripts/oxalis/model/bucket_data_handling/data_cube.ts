@@ -17,7 +17,6 @@ import type {
   Vector3,
 } from "oxalis/constants";
 import constants, { MappingStatusEnum } from "oxalis/constants";
-import getSceneController from "oxalis/controller/scene_controller_provider";
 import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";

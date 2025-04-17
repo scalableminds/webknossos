@@ -12,6 +12,7 @@ import type {
   Vector3,
 } from "oxalis/constants";
 import Constants, { FillModeEnum, Unicode } from "oxalis/constants";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 import { getDatasetBoundingBox, getMagInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getDisabledInfoForTools } from "oxalis/model/accessors/disabled_tool_accessor";
 import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
@@ -33,7 +34,6 @@ import { Model } from "oxalis/singletons";
 import { call, put, takeEvery } from "typed-redux-saga";
 import { getUserBoundingBoxesThatContainPosition } from "../../accessors/tracing_accessor";
 import { applyLabeledVoxelMapToAllMissingMags } from "./helpers";
-import getSceneController from "oxalis/controller/scene_controller_provider";
 
 const NO_FLOODFILL_BBOX_TOAST_KEY = "NO_FLOODFILL_BBOX";
 const NO_SUCCESS_MSG_WHEN_WITHIN_MS = 500;

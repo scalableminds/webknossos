@@ -11,9 +11,9 @@ vi.mock("antd", () => {
     message: {
       hide: vi.fn(),
       // These return a "hide function"
-      show: vi.fn(),
-      loading: vi.fn(),
-      success: vi.fn(),
+      show: vi.fn(() => () => {}),
+      loading: vi.fn(() => () => {}),
+      success: vi.fn(() => () => {}),
     },
     Modal: {
       confirm: vi.fn(),

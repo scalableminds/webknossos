@@ -48,7 +48,6 @@ function upsampleVoxelMap(
     const labeledBucket = dataCube.getOrCreateBucket(labeledBucketZoomedAddress);
 
     if (labeledBucket.type === "null") {
-      warnAboutCouldNotCreate(labeledBucketZoomedAddress);
       continue;
     }
 
@@ -178,7 +177,6 @@ function downsampleVoxelMap(
     const labeledBucket = dataCube.getOrCreateBucket(labeledBucketZoomedAddress);
 
     if (labeledBucket.type === "null") {
-      warnAboutCouldNotCreate(labeledBucketZoomedAddress);
       continue;
     }
 

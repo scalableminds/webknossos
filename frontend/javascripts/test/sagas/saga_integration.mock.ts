@@ -1,32 +1,30 @@
-import mockRequire from "mock-require";
-import * as antd from "antd";
-import _ from "lodash";
-import "test/mocks/lz4";
+import "antd";
+import { vi } from "vitest";
 
-const REQUEST_ID = "dummyRequestId";
-const UidMock = {
-  getUid: () => REQUEST_ID,
-};
-
-mockRequire("libs/uid_generator", UidMock);
-
-mockRequire("antd", {
-  ...antd,
-  Dropdown: {},
-  message: {
-    hide: () => {},
-    // These return a "hide function"
-    show: () => () => {},
-    loading: () => () => {},
-    success: () => () => {},
-  },
+vi.mock("antd", () => {
+  return {
+    theme: {
+      getDesignToken: () => ({ colorPrimary: "white" }),
+      defaultAlgorithm: {},
+    },
+    Dropdown: {},
+    message: {
+      hide: vi.fn(),
+      // These return a "hide function"
+      show: vi.fn(() => () => {}),
+      loading: vi.fn(() => () => {}),
+      success: vi.fn(() => () => {}),
+    },
+    Modal: {
+      confirm: vi.fn(),
+    },
+    Select: {
+      Option: {},
+    },
+    Form: {
+      Item: {},
+    },
+  };
 });
 
-mockRequire("libs/toast", {
-  error: _.noop,
-  warning: _.noop,
-  close: _.noop,
-  success: _.noop,
-});
-
-mockRequire("libs/render_independently", _.noop);
+vi.mock("libs/render_independently", () => ({ default: vi.fn() }));

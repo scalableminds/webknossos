@@ -1,6 +1,6 @@
 import Base64 from "base64-js";
-import * as lz4wasm from "lz4-wasm";
 import { expose } from "./comlink_wrapper";
+import { default as lz4wasm } from "./lz4_wasm_wrapper";
 
 function compressLz4Block(data: Uint8Array): Uint8Array {
   // The backend expects the block (frame-less) version of lz4.

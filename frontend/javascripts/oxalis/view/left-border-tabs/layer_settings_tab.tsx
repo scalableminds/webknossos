@@ -957,7 +957,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           <SwitchSetting
             onChange={_.partial(this.props.onChange, "selectiveSegmentVisibility")}
             value={this.props.datasetConfiguration.selectiveSegmentVisibility}
-            label="Selective Visibility"
+            label={settings.selectiveSegmentVisibility}
             disabled={isSelectiveVisibilityDisabled}
           />
         </div>

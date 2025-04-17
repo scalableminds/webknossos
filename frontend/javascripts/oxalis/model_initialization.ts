@@ -17,11 +17,15 @@ import {
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
+import { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
 import constants, { ControlModeEnum, type Vector3 } from "oxalis/constants";
 import type { PartialUrlManagerState, UrlStateByLayer } from "oxalis/controller/url_manager";
-import UrlManager from "oxalis/controller/url_manager";
+import UrlManager, {
+  getDatasetNameFromLocation,
+  getUpdatedPathnameWithNewDatasetName,
+} from "oxalis/controller/url_manager";
 import {
   determineAllowedModes,
   getDataLayers,
@@ -197,6 +201,8 @@ export async function initialize(
     datasetId,
     version,
   );
+  maybeFixDatasetNameInURL(dataset, initialCommandType);
+
   const serverVolumeTracings = getServerVolumeTracings(serverTracings);
   const serverVolumeTracingIds = serverVolumeTracings.map((volumeTracing) => volumeTracing.id);
   initializeDataset(initialFetch, dataset, serverTracings);
@@ -266,6 +272,22 @@ export async function initialize(
   }
 
   return initializationInformation;
+}
+
+function maybeFixDatasetNameInURL(dataset: APIDataset, initialCommandType: TraceOrViewCommand) {
+  if (
+    initialCommandType.type === ControlModeEnum.VIEW ||
+    initialCommandType.type === ControlModeEnum.SANDBOX
+  ) {
+    const datasetNameInURL = getDatasetNameFromLocation(location);
+    if (dataset.name !== datasetNameInURL) {
+      const pathnameWithUpdatedDatasetName = getUpdatedPathnameWithNewDatasetName(
+        location,
+        dataset,
+      );
+      UrlManager.changeBaseUrl(pathnameWithUpdatedDatasetName + location.search);
+    }
+  }
 }
 
 async function fetchParallel(

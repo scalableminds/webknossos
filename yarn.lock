@@ -2833,6 +2833,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/glob@npm:~7.2.0":
+  version: 7.2.0
+  resolution: "@types/glob@npm:7.2.0"
+  dependencies:
+    "@types/minimatch": "npm:*"
+    "@types/node": "npm:*"
+  checksum: 10c0/a8eb5d5cb5c48fc58c7ca3ff1e1ddf771ee07ca5043da6e4871e6757b4472e2e73b4cfef2644c38983174a4bc728c73f8da02845c28a1212f98cabd293ecae98
+  languageName: node
+  linkType: hard
+
 "@types/hast@npm:^2.0.0":
   version: 2.3.5
   resolution: "@types/hast@npm:2.3.5"
@@ -2960,6 +2970,13 @@ __metadata:
   version: 1.3.2
   resolution: "@types/mime@npm:1.3.2"
   checksum: 10c0/61d144e5170c6cdf6de334ec0ee4bb499b1a0fb0233834a9e8cec6d289b0e3042bedf35cbc1c995d71a247635770dae3f13a9ddae69098bb54b933429bc08d35
+  languageName: node
+  linkType: hard
+
+"@types/minimatch@npm:*":
+  version: 5.1.2
+  resolution: "@types/minimatch@npm:5.1.2"
+  checksum: 10c0/83cf1c11748891b714e129de0585af4c55dd4c2cafb1f1d5233d79246e5e1e19d1b5ad9e8db449667b3ffa2b6c80125c429dbee1054e9efb45758dbc4e118562
   languageName: node
   linkType: hard
 
@@ -3187,6 +3204,16 @@ __metadata:
     "@types/mime": "npm:*"
     "@types/node": "npm:*"
   checksum: 10c0/811d1a2f7e74a872195e7a013bcd87a2fb1edf07eaedcb9dcfd20c1eb4bc56ad4ea0d52141c13192c91ccda7c8aeb8a530d8a7e60b9c27f5990d7e62e0fecb03
+  languageName: node
+  linkType: hard
+
+"@types/shelljs@npm:^0.8.5":
+  version: 0.8.15
+  resolution: "@types/shelljs@npm:0.8.15"
+  dependencies:
+    "@types/glob": "npm:~7.2.0"
+    "@types/node": "npm:*"
+  checksum: 10c0/8cee3c2cee993d4e4b534712dbf3b47000f22e14cbc4fff5c09fd774272e2bfb9b7dfc654d81349a11ade93a94f3a75771e403cd31509565102c33f518185da8
   languageName: node
   linkType: hard
 
@@ -15528,6 +15555,7 @@ __metadata:
     "@types/react-command-palette": "npm:^0.18.4"
     "@types/react-dom": "npm:^18.3.0"
     "@types/react-router-dom": "npm:^5.3.3"
+    "@types/shelljs": "npm:^0.8.5"
     "@types/three": "npm:^0.142.0"
     "@types/url-join": "npm:^4.0.0"
     "@vitest/coverage-v8": "npm:3.1.1"

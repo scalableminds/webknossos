@@ -92,7 +92,7 @@ describe("Task API  (E2E)", () => {
 
     const transferredAnnotation = await transferTask(taskAnnotationId, newUserId);
     expect(transferredAnnotation.owner?.id).toBe(newUserId);
-    
+
     const revertedTask = await transferTask(transferredAnnotation.id, userId);
     expect(revertedTask.owner?.id).toBe(userId);
   });
@@ -135,12 +135,12 @@ describe("Task API  (E2E)", () => {
     const createdTaskWrappers = createTaskResponse.tasks;
 
     expect(createdTaskWrappers.length).toBe(1);
-    
+
     const createdTaskWrapper = createdTaskWrappers[0];
     const newTaskAnnotation = await requestTask();
-    
+
     writeTypeCheckingFile(newTaskAnnotation, "annotation-with-task", "APIAnnotationWithTask");
-    
+
     expect(replaceVolatileValues(newTaskAnnotation)).toMatchSnapshot();
 
     if (createdTaskWrapper.success != null) {

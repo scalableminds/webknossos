@@ -2,87 +2,97 @@ import _ from "lodash";
 import {
   tokenUserA,
   tokenUserC,
-  setCurrToken,
+  setUserAuthToken,
   resetDatabase,
   replaceVolatileValues,
   writeTypeCheckingFile,
 } from "test/e2e-setup";
 import Request from "libs/request";
 import * as foldersApi from "admin/api/folders";
-import test from "ava";
+import { describe, it, beforeAll, expect } from "vitest";
 import { APIMetadataEnum } from "types/api_flow_types";
-test.before("Reset database and change token", async () => {
+
+// Reset database and change token
+beforeAll(async () => {
   resetDatabase();
-  setCurrToken(tokenUserA);
+  setUserAuthToken(tokenUserA);
 });
-test("getFolderTree", async (t) => {
-  const folderTree = _.sortBy(
-    await foldersApi.getFolderTree(),
-    (folderWithParent) => folderWithParent.name,
-  );
 
-  writeTypeCheckingFile(folderTree, "folderTree", "FlatFolderTreeItem", {
-    isArray: true,
-  });
-  t.snapshot(folderTree);
-});
-const organizationXRootFolderId = "570b9f4e4bb848d0885ea917";
-test("getFolder", async (t) => {
-  const folder = await foldersApi.getFolder(organizationXRootFolderId);
+describe("Folder API (E2E))", () => {
+  it("getFolderTree", async () => {
+    const folderTree = _.sortBy(
+      await foldersApi.getFolderTree(),
+      (folderWithParent) => folderWithParent.name,
+    );
 
-  writeTypeCheckingFile(folder, "folder", "Folder");
-  t.snapshot(folder);
-});
-test("updateFolder", async (t) => {
-  const newName = "renamed organization x root folder";
-  const updatedFolder = await foldersApi.updateFolder({
-    id: organizationXRootFolderId,
-    allowedTeams: [],
-    name: newName,
-    metadata: [],
-  });
-  t.is(updatedFolder.name, newName);
-
-  t.snapshot(updatedFolder);
-});
-test("createFolder", async (t) => {
-  const newName = "a newly created folder!";
-  const folder = await foldersApi.createFolder(organizationXRootFolderId, newName);
-  t.is(folder.name, newName);
-
-  t.snapshot(replaceVolatileValues(folder));
-});
-test("addAllowedTeamToFolder", async (t) => {
-  const subFolderId = "570b9f4e4bb848d08880712a";
-  const anotherSubFolderId = "570b9f4e4bb848d08880712b";
-  const teamId = "570b9f4b2a7c0e3b008da6ec";
-
-  await Request.receiveJSON(`/api/folders/${subFolderId}`);
-
-  const updatedFolderWithTeam = await foldersApi.updateFolder({
-    id: subFolderId,
-    allowedTeams: [teamId],
-    name: "A subfolder!",
-    metadata: [{ type: APIMetadataEnum.STRING, key: "foo", value: "bar" }],
+    writeTypeCheckingFile(folderTree, "folderTree", "FlatFolderTreeItem", {
+      isArray: true,
+    });
+    expect(folderTree).toMatchSnapshot();
   });
 
-  t.snapshot(updatedFolderWithTeam);
+  const organizationXRootFolderId = "570b9f4e4bb848d0885ea917";
 
-  setCurrToken(tokenUserC);
-  /*
-   * user c does not have elevated permissions, but is a member of the team
-   * we expect that they can see the subfolder we add the team to, but not the other.
-   */
+  it("getFolder", async () => {
+    const folder = await foldersApi.getFolder(organizationXRootFolderId);
 
-  const subFolderSeenByUserC = await foldersApi.getFolder(subFolderId);
+    writeTypeCheckingFile(folder, "folder", "Folder");
+    expect(folder).toMatchSnapshot();
+  });
 
-  t.snapshot(subFolderSeenByUserC);
+  it("updateFolder", async () => {
+    const newName = "renamed organization x root folder";
+    const updatedFolder = await foldersApi.updateFolder({
+      id: organizationXRootFolderId,
+      allowedTeams: [],
+      name: newName,
+      metadata: [],
+    });
+    expect(updatedFolder.name).toBe(newName);
 
-  await t.throwsAsync(async () => {
-    try {
-      await Request.receiveJSON(`/api/folders/${anotherSubFolderId}`);
-    } catch {
-      throw new Error("request failed");
-    }
+    expect(updatedFolder).toMatchSnapshot();
+  });
+
+  it("createFolder", async () => {
+    const newName = "a newly created folder!";
+    const folder = await foldersApi.createFolder(organizationXRootFolderId, newName);
+    expect(folder.name).toBe(newName);
+
+    expect(replaceVolatileValues(folder)).toMatchSnapshot();
+  });
+
+  it("addAllowedTeamToFolder", async () => {
+    const subFolderId = "570b9f4e4bb848d08880712a";
+    const anotherSubFolderId = "570b9f4e4bb848d08880712b";
+    const teamId = "570b9f4b2a7c0e3b008da6ec";
+
+    await Request.receiveJSON(`/api/folders/${subFolderId}`);
+
+    const updatedFolderWithTeam = await foldersApi.updateFolder({
+      id: subFolderId,
+      allowedTeams: [teamId],
+      name: "A subfolder!",
+      metadata: [{ type: APIMetadataEnum.STRING, key: "foo", value: "bar" }],
+    });
+
+    expect(updatedFolderWithTeam).toMatchSnapshot();
+
+    setUserAuthToken(tokenUserC);
+    /*
+     * user c does not have elevated permissions, but is a member of the team
+     * we expect that they can see the subfolder we add the team to, but not the other.
+     */
+
+    const subFolderSeenByUserC = await foldersApi.getFolder(subFolderId);
+
+    expect(subFolderSeenByUserC).toMatchSnapshot();
+
+    await expect(async () => {
+      try {
+        await Request.receiveJSON(`/api/folders/${anotherSubFolderId}`);
+      } catch {
+        throw new Error("request failed");
+      }
+    }).rejects.toThrow("request failed");
   });
 });

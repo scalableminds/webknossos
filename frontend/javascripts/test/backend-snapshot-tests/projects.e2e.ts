@@ -2,7 +2,7 @@ import _ from "lodash";
 import {
   tokenUserA,
   tokenUserD,
-  setCurrToken,
+  setUserAuthToken,
   replaceVolatileValues,
   resetDatabase,
   writeTypeCheckingFile,
@@ -16,7 +16,7 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
-  setCurrToken(tokenUserA);
+  setUserAuthToken(tokenUserA);
 });
 
 describe("Project API (E2E)", () => {
@@ -60,7 +60,7 @@ describe("Project API (E2E)", () => {
       isBlacklistedFromReport: true,
     };
     const createdProject = await api.createProject(newProject);
-    
+
     // Since the id will change after re-runs, we fix it here for easy
     // snapshotting
     const createdProjectWithFixedId = Object.assign({}, createdProject);
@@ -83,28 +83,28 @@ describe("Project API (E2E)", () => {
     const projectWithNewPriority: APIProjectUpdater = Object.assign({}, projectWithOwnerId, {
       priority: 1337,
     });
-    
+
     const updatedProject = await api.updateProject(projectId, projectWithNewPriority);
     expect(replaceVolatileValues(updatedProject)).toMatchSnapshot();
-    
+
     const revertedProject = await api.updateProject(projectId, projectWithOwnerId);
     expect(replaceVolatileValues(revertedProject)).toMatchSnapshot();
   });
 
   it("increaseProjectTaskInstances", async ({ expect }) => {
-    await setCurrToken(tokenUserD);
+    await setUserAuthToken(tokenUserD);
     const projectId = (await api.getProjects())[0].id;
     const updatedProject = await api.increaseProjectTaskInstances(projectId, 10);
-    
+
     expect(replaceVolatileValues(updatedProject)).toMatchSnapshot();
   });
 
   it("pauseProject and resumeProject", async ({ expect }) => {
     const projectId = (await api.getProjects())[0].id;
-    
+
     const pausedProject = await api.pauseProject(projectId);
     expect(replaceVolatileValues(pausedProject)).toMatchSnapshot();
-    
+
     const resumedProject = await api.resumeProject(projectId);
     expect(replaceVolatileValues(resumedProject)).toMatchSnapshot();
   });

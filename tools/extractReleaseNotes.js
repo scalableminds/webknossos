@@ -1,8 +1,5 @@
-// @noflow
 // Parse PR descriptions for release notes
-/* eslint-disable import/no-extraneous-dependencies, global-require, import/no-dynamic-require */
-const fetch = require("node-fetch");
-const fs = require("fs");
+const fs = require("node:fs");
 
 // Set this path to the cached json file to avoid hitting the github api limit while developing
 const CACHED_RESPONSE_PATH = "";

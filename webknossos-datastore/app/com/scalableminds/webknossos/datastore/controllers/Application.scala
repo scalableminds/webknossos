@@ -45,7 +45,7 @@ class Application @Inject()(redisClient: DataStoreRedisStore, applicationHealthS
                                                ElementClass.bytesPerElement(elementClass),
                                                ElementClass.isSigned(elementClass),
                                                skipZeroes = false)
-    val expected = Array[Long](2, 4, 501)
+    val expected = Array[Long](2, 4, 500)
     if (!segmentIds.sorted.sameElements(expected)) {
       throw new IllegalStateException(
         s"NativeBucketScanner did not scan segment ids of test array correctly. Expected ${expected

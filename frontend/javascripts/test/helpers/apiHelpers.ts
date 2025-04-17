@@ -22,7 +22,7 @@ import {
 } from "../fixtures/volumetracing_server_objects";
 import DATASET from "../fixtures/dataset_server_object";
 import type { ApiInterface } from "oxalis/api/api_latest";
-import type ModelType from "oxalis/model";
+import type { ModelType } from "oxalis/model";
 
 import { setSlowCompression } from "oxalis/workers/slow_byte_array_lz4_compression.worker";
 import Model from "oxalis/model";
@@ -44,7 +44,7 @@ const ANNOTATION_ID = "annotationIdValue";
 
 // Define extended test context
 export interface WebknossosTestContext extends BaseTestContext {
-  model: typeof ModelType;
+  model: ModelType;
   mocks: {
     Request: typeof Request;
   };

@@ -183,7 +183,7 @@ function* loadCoarseMesh(
         segmentId,
         position,
         additionalCoordinates,
-        currentMeshFile.meshFileName,
+        currentMeshFile.name,
         undefined,
       ),
     );

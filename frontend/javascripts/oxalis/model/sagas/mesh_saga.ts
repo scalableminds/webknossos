@@ -7,7 +7,7 @@ import { chunkDynamically, sleep } from "libs/utils";
 import _ from "lodash";
 import type { ActionPattern } from "redux-saga/effects";
 import type * as THREE from "three";
-import type { APIDataset, APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
+import type { APIDataset, APIMeshFileInfo, APISegmentationLayer } from "types/api_flow_types";
 
 import {
   computeAdHocMesh,
@@ -693,7 +693,7 @@ function* _refreshMeshWithMap(
 
 // Avoid redundant fetches of mesh files for the same layer by
 // storing Deferreds per layer lazily.
-let fetchDeferredsPerLayer: Record<string, Deferred<Array<APIMeshFile>, unknown>> = {};
+let fetchDeferredsPerLayer: Record<string, Deferred<Array<APIMeshFileInfo>, unknown>> = {};
 function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
   const { segmentationLayer, dataset, mustRequest, autoActivate, callback } = action;
 
@@ -704,12 +704,12 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
 
   const layerName = segmentationLayer.name;
 
-  function* maybeActivateMeshFile(availableMeshFiles: APIMeshFile[]) {
+  function* maybeActivateMeshFile(availableMeshFiles: APIMeshFileInfo[]) {
     const currentMeshFile = yield* select(
       (state) => state.localSegmentationData[layerName].currentMeshFile,
     );
     if (!currentMeshFile && availableMeshFiles.length > 0 && autoActivate) {
-      yield* put(updateCurrentMeshFileAction(layerName, availableMeshFiles[0].meshFileName));
+      yield* put(updateCurrentMeshFileAction(layerName, availableMeshFiles[0].name));
     }
   }
 
@@ -727,7 +727,7 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
   // If mustRequest is true and an old deferred exists, a new deferred will be created which
   // replaces the old one (old references to the first Deferred will still
   // work and will be resolved by the corresponding saga execution).
-  const deferred = new Deferred<Array<APIMeshFile>, unknown>();
+  const deferred = new Deferred<Array<APIMeshFileInfo>, unknown>();
   fetchDeferredsPerLayer[layerName] = deferred;
 
   const availableMeshFiles = yield* call(
@@ -812,7 +812,7 @@ function* loadPrecomputedMeshForSegmentId(
     false,
   );
 
-  const meshFile = availableMeshFiles.find((file) => file.meshFileName === meshFileName);
+  const meshFile = availableMeshFiles.find((file) => file.name === meshFileName);
   if (!meshFile) {
     Toast.error("Could not load mesh, since the requested mesh file was not found.");
     return;
@@ -823,7 +823,6 @@ function* loadPrecomputedMeshForSegmentId(
   }
 
   let availableChunksMap: ChunksMap = {};
-  let uniformScale: Vector3 | null = null;
   let chunkScale: Vector3 | null = null;
   let loadingOrder: number[] | null = null;
   let lods: MeshLodInfo[] | null = null;
@@ -835,9 +834,8 @@ function* loadPrecomputedMeshForSegmentId(
       segmentationLayer,
       meshFile,
     );
-    lods = chunkDescriptors.segmentInfo.chunks.lods;
+    lods = chunkDescriptors.segmentInfo.lods;
     availableChunksMap = chunkDescriptors.availableChunksMap;
-    uniformScale = chunkDescriptors.uniformScale;
     chunkScale = chunkDescriptors.segmentInfo.chunkScale;
     loadingOrder = chunkDescriptors.loadingOrder;
   } catch (exception) {
@@ -863,7 +861,7 @@ function* loadPrecomputedMeshForSegmentId(
       seedPosition,
       availableChunksMap,
       lod,
-      (lod: number) => V3.scale3(uniformScale, extractScaleFromMatrix(lods[lod].transform)),
+      (lod: number) => extractScaleFromMatrix(lods[lod].transform),
       chunkScale,
       additionalCoordinates,
     );
@@ -888,15 +886,13 @@ function* _getChunkLoadingDescriptors(
   id: number,
   dataset: APIDataset,
   segmentationLayer: APISegmentationLayer,
-  meshFile: APIMeshFile,
+  meshFile: APIMeshFileInfo,
 ) {
   const availableChunksMap: ChunksMap = {};
-  let uniformScale: Vector3 | null = null;
   let loadingOrder: number[] = [];
 
   const { segmentMeshController } = getSceneController();
   const version = meshFile.formatVersion;
-  const { meshFileName, meshFileType, meshFilePath } = meshFile;
 
   const editableMapping = yield* select((state) =>
     getEditableMappingForVolumeTracingId(state, segmentationLayer.tracingId),
@@ -922,7 +918,7 @@ function* _getChunkLoadingDescriptors(
     dataset.dataStore.url,
     dataset,
     getBaseSegmentationName(segmentationLayer),
-    meshFileName,
+    meshFile,
     id,
     // The back-end should only receive a non-null mapping name,
     // if it should perform extra (reverse) look ups to compute a mesh
@@ -930,11 +926,8 @@ function* _getChunkLoadingDescriptors(
     // without a mapping.
     meshFile.mappingName == null ? mappingName : null,
     editableMapping != null && tracing ? tracing.tracingId : null,
-    meshFileType,
-    meshFilePath,
   );
-  uniformScale = extractScaleFromMatrix(segmentInfo.transform);
-  segmentInfo.chunks.lods.forEach((meshLodInfo, lodIndex) => {
+  segmentInfo.lods.forEach((meshLodInfo, lodIndex) => {
     availableChunksMap[lodIndex] = meshLodInfo?.chunks;
     loadingOrder.push(lodIndex);
     meshLodInfo.transform;
@@ -951,7 +944,6 @@ function* _getChunkLoadingDescriptors(
 
   return {
     availableChunksMap,
-    uniformScale,
     loadingOrder,
     segmentInfo,
   };
@@ -963,7 +955,7 @@ function extractScaleFromMatrix(transform: [Vector4, Vector4, Vector4]): Vector3
 function* loadPrecomputedMeshesInChunksForLod(
   dataset: APIDataset,
   layerName: string,
-  meshFile: APIMeshFile,
+  meshFile: APIMeshFileInfo,
   segmentationLayer: APISegmentationLayer,
   segmentId: number,
   seedPosition: Vector3,
@@ -974,7 +966,6 @@ function* loadPrecomputedMeshesInChunksForLod(
   additionalCoordinates: AdditionalCoordinate[] | null,
 ) {
   const { segmentMeshController } = getSceneController();
-  const { meshFileName, meshFileType, meshFilePath } = meshFile;
   const loader = getDracoLoader();
   if (availableChunksMap[lod] == null) {
     return;
@@ -999,9 +990,7 @@ function* loadPrecomputedMeshesInChunksForLod(
           dataset,
           getBaseSegmentationName(segmentationLayer),
           {
-            meshFile: meshFileName,
-            meshFileType,
-            meshFilePath,
+            meshFile,
             // Only extract the relevant properties
             requests: chunks.map(({ byteOffset, byteSize }) => ({
               byteOffset,
@@ -1076,9 +1065,10 @@ function* loadPrecomputedMeshesInChunksForLod(
     (geometryWithInfo) => geometryWithInfo.unmappedSegmentId,
   );
 
-  const mergedGeometry = mergeGeometries(
-    sortedBufferGeometries,
-    false,
+  // mergeGeometries will crash if the array is empty. Even if it's not empty,
+  // the function might return null in case of another error.
+  const mergedGeometry = (
+    sortedBufferGeometries.length > 0 ? mergeGeometries(sortedBufferGeometries, false) : null
   ) as BufferGeometryWithInfo | null;
 
   if (mergedGeometry == null) {

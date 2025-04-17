@@ -259,8 +259,14 @@ class AnnotationIOController @Inject()(
     else
       None
 
-  private def descriptionForNMLs(descriptions: Seq[Option[String]]) =
-    if (descriptions.size == 1) descriptions.headOption.flatten.getOrElse("") else ""
+  private def descriptionForNMLs(descriptions: Seq[Option[String]]) = {
+    val nonEmptyDescriptions = descriptions.flatMap {
+      case Some("")  => None
+      case None      => None
+      case Some(str) => Some(str.trim)
+    }
+    SequenceUtils.findUniqueElement(nonEmptyDescriptions).getOrElse("")
+  }
 
   private def wkUrlsForNMLs(wkUrls: Seq[Option[String]]) =
     if (wkUrls.toSet.size == 1) wkUrls.headOption.flatten.getOrElse("") else ""

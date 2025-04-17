@@ -62,7 +62,7 @@ trait NgffExplorationUtils extends FoxImplicits {
                                        datasetName: String,
                                        channelIndex: Int): (LayerViewConfiguration, String) =
     channelAttributes match {
-      case Some(attributes) => {
+      case Some(attributes) =>
         val thisChannelAttributes = attributes(channelIndex)
         val attributeName: String =
           thisChannelAttributes.name
@@ -91,7 +91,6 @@ trait NgffExplorationUtils extends FoxImplicits {
         } else {
           layerViewConfiguration.toMap
         }, attributeName)
-      }
       case None => (LayerViewConfiguration.empty, datasetName)
     }
 
@@ -104,7 +103,7 @@ trait NgffExplorationUtils extends FoxImplicits {
     val c = axes.indexWhere(_.`type` == "channel")
     val cOpt = if (c == -1) None else Some(c)
     for {
-      _ <- bool2Fox(x >= 0 && y >= 0) ?~> s"invalid xyz axis order: $x,$y,$z. ${x >= 0 && y >= 0}"
+      _ <- Fox.fromBool(x >= 0 && y >= 0) ?~> s"invalid xyz axis order: $x,$y,$z. ${x >= 0 && y >= 0}"
     } yield
       if (z >= 0) {
         AxisOrder(x, y, Some(z), cOpt)
@@ -118,7 +117,7 @@ trait NgffExplorationUtils extends FoxImplicits {
     for {
       xUnit <- axes(axisOrder.x).lengthUnit.toFox
       yUnit <- axes(axisOrder.y).lengthUnit.toFox
-      zUnitOpt <- Fox.runIf(axisOrder.hasZAxis)(axes(axisOrder.zWithFallback).lengthUnit)
+      zUnitOpt <- Fox.runIf(axisOrder.hasZAxis)(axes(axisOrder.zWithFallback).lengthUnit.toFox)
       units: List[LengthUnit] = List(Some(xUnit), Some(yUnit), zUnitOpt).flatten
     } yield units.minBy(LengthUnit.toNanometer)
 
@@ -128,7 +127,7 @@ trait NgffExplorationUtils extends FoxImplicits {
       xUnitToNm <- axes(axisOrder.x).lengthUnit.map(LengthUnit.toNanometer).toFox
       yUnitToNm <- axes(axisOrder.y).lengthUnit.map(LengthUnit.toNanometer).toFox
       zUnitToNmOpt <- Fox.runIf(axisOrder.hasZAxis)(
-        axes(axisOrder.zWithFallback).lengthUnit.map(LengthUnit.toNanometer))
+        axes(axisOrder.zWithFallback).lengthUnit.map(LengthUnit.toNanometer).toFox)
       xUnitToTarget = xUnitToNm / LengthUnit.toNanometer(unifiedAxisUnit)
       yUnitToTarget = yUnitToNm / LengthUnit.toNanometer(unifiedAxisUnit)
       zUnitToTargetOpt = zUnitToNmOpt.map(_ / LengthUnit.toNanometer(unifiedAxisUnit))
@@ -143,7 +142,7 @@ trait NgffExplorationUtils extends FoxImplicits {
     val combinedScale = extractAndCombineScaleTransforms(coordinateTransforms, axisOrder)
     val mag = (combinedScale / voxelSizeInAxisUnits).round.toVec3Int
     for {
-      _ <- bool2Fox(isPowerOfTwo(mag.x) && isPowerOfTwo(mag.y) && isPowerOfTwo(mag.z)) ?~> s"invalid mag: $mag. Must all be powers of two"
+      _ <- Fox.fromBool(isPowerOfTwo(mag.x) && isPowerOfTwo(mag.y) && isPowerOfTwo(mag.z)) ?~> s"invalid mag: $mag. Must all be powers of two"
     } yield mag
   }
 
@@ -168,7 +167,7 @@ trait NgffExplorationUtils extends FoxImplicits {
     val scales = allCoordinateTransforms.map(t => extractAndCombineScaleTransforms(t, axisOrder))
     val smallestScaleIsUniform = scales.minBy(_.x) == scales.minBy(_.y) && scales.minBy(_.y) == scales.minBy(_.z)
     for {
-      _ <- bool2Fox(smallestScaleIsUniform) ?~> "ngff scales do not agree on smallest dimension"
+      _ <- Fox.fromBool(smallestScaleIsUniform) ?~> "ngff scales do not agree on smallest dimension"
       voxelSizeInAxisUnits = scales.minBy(_.x)
     } yield voxelSizeInAxisUnits
   }
@@ -197,7 +196,7 @@ trait NgffExplorationUtils extends FoxImplicits {
     val defaultAxes = List("c", "x", "y", "z")
     for {
       // Selecting shape of first mag, assuming no mags for additional coordinates
-      dataset <- Fox.option2Fox(multiscale.datasets.headOption)
+      dataset <- multiscale.datasets.headOption.toFox
       shape <- getShape(dataset, remotePath)
       axes <- Fox.combined(
         multiscale.axes
@@ -206,7 +205,7 @@ trait NgffExplorationUtils extends FoxImplicits {
           .map(axisAndIndex =>
             createAdditionalAxis(axisAndIndex._1.name, axisAndIndex._2, Array(0, shape(axisAndIndex._2))).toFox))
       duplicateNames = axes.map(_.name).diff(axes.map(_.name).distinct).distinct
-      _ <- Fox.bool2Fox(duplicateNames.isEmpty) ?~> s"Additional axes names (${duplicateNames.mkString("", ", ", "")}) are not unique."
+      _ <- Fox.fromBool(duplicateNames.isEmpty) ?~> s"Additional axes names (${duplicateNames.mkString("", ", ", "")}) are not unique."
     } yield axes
   }
 
@@ -269,7 +268,7 @@ trait NgffExplorationUtils extends FoxImplicits {
     val is2d = !multiscale.axes.exists(_.name == "z")
     val baseTranslation = if (is2d) List(1.0, 1.0) else List(1.0, 1.0, 1.0)
     multiscale.datasets.headOption match {
-      case Some(firstDataset) if firstDataset.coordinateTransformations.exists(_.`type` == "translation") => {
+      case Some(firstDataset) if firstDataset.coordinateTransformations.exists(_.`type` == "translation") =>
         var translation = firstDataset.coordinateTransformations.foldLeft(baseTranslation)((acc, ct) => {
           ct.`type` match {
             case "translation" =>
@@ -300,7 +299,6 @@ trait NgffExplorationUtils extends FoxImplicits {
                  List(0, 0, 0, 1)))
         )
         Some(List(coordinateTransformation))
-      }
       case _ => None
     }
   }

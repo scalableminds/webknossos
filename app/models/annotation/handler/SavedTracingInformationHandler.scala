@@ -4,6 +4,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.TextUtils._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+
 import javax.inject.Inject
 import models.annotation._
 import models.dataset.DatasetDAO
@@ -24,8 +25,8 @@ class SavedTracingInformationHandler @Inject()(annotationDAO: AnnotationDAO,
 
   override def nameForAnnotation(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[String] =
     for {
-      userBox <- userService.findOneCached(annotation._user)(GlobalAccessContext).futureBox
-      userName <- userBox.map(_.abbreviatedName).getOrElse("")
+      userBox <- userService.findOneCached(annotation._user)(GlobalAccessContext).shiftBox
+      userName = userBox.map(_.abbreviatedName).getOrElse("")
       datasetName <- datasetDAO.findOne(annotation._dataset)(GlobalAccessContext).map(_.name)
       task = annotation._task.map(_.toString).getOrElse("explorational")
     } yield {

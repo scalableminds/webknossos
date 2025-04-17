@@ -14,7 +14,6 @@ import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import slick.sql.SqlAction
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.Fox.{future2Fox, futureBox2Fox}
 import models.organization.OrganizationDAO
 import net.liftweb.common.Full
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
@@ -47,18 +46,14 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
                                                            ctx: DBAccessContext): Fox[JsObject] =
     for {
       dataStore <- dataStoreDAO.findOneByName(aiModel._dataStore)
-      userOpt <- userDAO.findOne(aiModel._user).futureBox.toFutureOption.toFox
-      userJs <- Fox.runOptional(userOpt)(userService.compactWrites)
+      userBox <- userDAO.findOne(aiModel._user).shiftBox
+      userJs <- Fox.runOptional(userBox.toOption)(userService.compactWrites)
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
-      trainingJobOpt <- Fox.runOptional(aiModel._trainingJob)(
-        jobDAO
-          .findOne(_)
-          .futureBox
-          .flatMap {
-            case Full(job) => Fox.successful(Some(job))
-            case _         => Fox.successful(None)
-          }
-          .toFox)
+      trainingJobOpt <- Fox.runOptional(aiModel._trainingJob)(trainingJobId =>
+        jobDAO.findOne(trainingJobId).shiftBox.flatMap {
+          case Full(job) => Fox.successful(Some(job))
+          case _         => Fox.successful(None)
+      })
       trainingJobJsOpt <- Fox.runOptional(trainingJobOpt.flatten)(jobService.publicWrites)
       isOwnedByUsersOrganization = aiModel._organization == requestingUser._organization
       sharedOrganizationIds <- if (isOwnedByUsersOrganization) for {
@@ -145,7 +140,7 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       countList <- run(
         q"SELECT COUNT(*) FROM webknossos.aiModels WHERE name = $aiModelName AND _organization = $organizationId"
           .as[Int])
-      count <- countList.headOption
+      count <- countList.headOption.toFox
     } yield count
 
   def insertOne(a: AiModel): Fox[Unit] = {

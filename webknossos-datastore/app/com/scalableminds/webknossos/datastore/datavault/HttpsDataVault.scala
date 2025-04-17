@@ -2,8 +2,7 @@ package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.{box2Fox, future2Fox}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.storage.{
   DataVaultCredential,
   HttpBasicAuthCredential,
@@ -22,7 +21,8 @@ import scala.concurrent.ExecutionContext
 
 class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, dataStoreHost: String)
     extends DataVault
-    with LazyLogging {
+    with LazyLogging
+    with FoxImplicits {
 
   private val readTimeout = 10 minutes
 
@@ -60,7 +60,7 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
     headerInfoCache.getOrLoad(
       uri, { uri =>
         for {
-          response <- ws.url(uri.toString).withRequestTimeout(readTimeout).head().toFox
+          response <- Fox.fromFuture(ws.url(uri.toString).withRequestTimeout(readTimeout).head())
           acceptsPartialRequests = response.headerValues("Accept-Ranges").contains("bytes")
           dataSize = response.header("Content-Length").map(_.toLong).getOrElse(0L)
         } yield (acceptsPartialRequests, dataSize)
@@ -71,7 +71,8 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
                                                                 tc: TokenContext): Fox[WSResponse] =
     for {
       _ <- ensureRangeRequestsSupported(uri)
-      response <- buildRequest(uri).withHttpHeaders("Range" -> s"bytes=${range.start}-${range.end - 1}").get().toFox
+      response <- Fox.fromFuture(
+        buildRequest(uri).withHttpHeaders("Range" -> s"bytes=${range.start}-${range.end - 1}").get())
       _ = updateRangeRequestsSupportedForResponse(response)
     } yield response
 
@@ -79,12 +80,12 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
                                                          tc: TokenContext): Fox[WSResponse] =
     for {
       _ <- ensureRangeRequestsSupported(uri)
-      response <- buildRequest(uri).withHttpHeaders("Range" -> s"bytes=-$length").get().toFox
+      response <- Fox.fromFuture(buildRequest(uri).withHttpHeaders("Range" -> s"bytes=-$length").get())
       _ = updateRangeRequestsSupportedForResponse(response)
     } yield response
 
   private def getComplete(uri: URI)(implicit ec: ExecutionContext, tc: TokenContext): Fox[WSResponse] =
-    buildRequest(uri).get().toFox
+    Fox.fromFuture(buildRequest(uri).get())
 
   private def ensureRangeRequestsSupported(uri: URI)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
@@ -103,7 +104,7 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
             }
           }
       }
-      _ <- Fox.bool2Fox(supported) ?~> s"Range requests are not supported for this data vault at $uri"
+      _ <- Fox.fromBool(supported) ?~> s"Range requests are not supported for this data vault at $uri"
     } yield ()
 
   private def updateRangeRequestsSupportedForResponse(response: WSResponse): Unit =

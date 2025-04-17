@@ -43,7 +43,7 @@ class InviteService @Inject()(conf: WkConf,
   def inviteOneRecipient(recipient: String, sender: User, autoActivate: Boolean)(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      invite <- generateInvite(sender._organization, autoActivate)
+      invite <- Fox.fromFuture(generateInvite(sender._organization, autoActivate))
       _ <- inviteDAO.insertOne(invite)
       _ <- sendInviteMail(recipient, sender, invite)
     } yield ()

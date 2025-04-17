@@ -2,7 +2,6 @@ package com.scalableminds.webknossos.tracingstore.annotation
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox.bool2Fox
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   BucketMutatingVolumeUpdateAction,
@@ -102,9 +101,8 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
                                                                                       tc: TokenContext): Fox[Long] =
     for {
       previousActionGroupsToCommit <- getAllUncommittedFor(annotationId, updateGroup.transactionId)
-      _ <- bool2Fox(
-        previousActionGroupsToCommit
-          .exists(_.transactionGroupIndex == 0) || updateGroup.transactionGroupCount == 1) ?~> s"Trying to commit a transaction without a group that has transactionGroupIndex 0."
+      _ <- Fox.fromBool(previousActionGroupsToCommit
+        .exists(_.transactionGroupIndex == 0) || updateGroup.transactionGroupCount == 1) ?~> s"Trying to commit a transaction without a group that has transactionGroupIndex 0."
       concatenatedGroup = concatenateUpdateGroupsOfTransaction(previousActionGroupsToCommit, updateGroup)
       commitResult <- commitUpdates(annotationId, List(concatenatedGroup))
       _ <- removeAllUncommittedFor(annotationId, updateGroup.transactionId)
@@ -117,7 +115,7 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
     for {
       raw: Seq[String] <- uncommittedUpdatesStore.findAllConditional(patternFor(annotationId, transactionId))
       parsed: Seq[UpdateActionGroup] = raw.flatMap(itemAsString =>
-        JsonHelper.jsResultToOpt(Json.parse(itemAsString).validate[UpdateActionGroup]))
+        JsonHelper.parseAs[UpdateActionGroup](itemAsString).toOption)
     } yield parsed.toList.sortBy(_.transactionGroupIndex)
 
   private def saveToHandledGroupIdStore(annotationId: String,

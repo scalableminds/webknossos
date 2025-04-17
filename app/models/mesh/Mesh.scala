@@ -62,14 +62,14 @@ class MeshDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected def isDeletedColumn(x: Meshes): Rep[Boolean] = x.isdeleted
 
   private val infoColumns = SqlToken.raw((columnsList diff Seq("data")).mkString(", "))
-  type InfoTuple = (ObjectId, ObjectId, String, String, Instant, Boolean)
+  private type InfoTuple = (ObjectId, ObjectId, String, String, Instant, Boolean)
 
   override protected def parse(r: MeshesRow): Fox[MeshInfo] =
     Fox.failure("not implemented, use parseInfo or get the data directly")
 
   private def parseInfo(r: InfoTuple): Fox[MeshInfo] =
     for {
-      position <- Vec3Int.fromList(parseArrayLiteral(r._4).map(_.toInt)) ?~> "could not parse mesh position"
+      position <- Vec3Int.fromList(parseArrayLiteral(r._4).map(_.toInt)).toFox ?~> "could not parse mesh position"
     } yield {
       MeshInfo(
         r._1, //_id

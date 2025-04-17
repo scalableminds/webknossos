@@ -47,10 +47,9 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
                                      positions: List[Vec3Int],
                                      mag: Vec3Int)(implicit tc: TokenContext) =
     for {
-      dataBucketWise: Seq[Array[Byte]] <- Fox
-        .sequenceOfFulls(positions.map(getDataFor(dataSource, dataLayer, _, mag)))
-        .toFox
-      _ <- bool2Fox(dataBucketWise.nonEmpty) ?~> "dataset.noData"
+      dataBucketWise: Seq[Array[Byte]] <- Fox.fromFuture(
+        Fox.sequenceOfFulls(positions.map(getDataFor(dataSource, dataLayer, _, mag))))
+      _ <- Fox.fromBool(dataBucketWise.nonEmpty) ?~> "dataset.noData"
       dataConcatenated = concatenateBuckets(dataBucketWise)
     } yield dataConcatenated
 
@@ -103,7 +102,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       positions match {
         case List() => Fox.successful(None)
         case head :: tail =>
-          checkIfPositionHasData(head, mag).futureBox.flatMap {
+          checkIfPositionHasData(head, mag).shiftBox.flatMap {
             case Full(pos) => Fox.successful(Some(pos))
             case _         => searchPositionIter(tail, mag)
           }
@@ -112,7 +111,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
     def checkIfPositionHasData(position: Vec3Int, mag: Vec3Int) =
       for {
         data <- getDataFor(dataSource, dataLayer, position, mag)
-        position <- getPositionOfNonZeroData(data, position, dataLayer.bytesPerElement)
+        position <- getPositionOfNonZeroData(data, position, dataLayer.bytesPerElement).toFox
       } yield position
 
     def magIter(positions: List[Vec3Int], remainingMags: List[Vec3Int]): Fox[Option[(Vec3Int, Vec3Int)]] =
@@ -168,12 +167,10 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
           case byteData: Array[Byte] => {
             byteData.foreach(el => counts(el.toInt + 128) += 1)
           }
-          case shortData: Array[UShort] => {
+          case shortData: Array[UShort] =>
             shortData.foreach(el => counts((el / UShort(256)).toInt) += 1)
-          }
-          case shortData: Array[Short] => {
+          case shortData: Array[Short] =>
             shortData.foreach(el => counts((el / 256.toShort + 128).toInt) += 1)
-          }
           case uintData: Array[UInt] =>
             uintData.foreach(el => counts((el / UInt(16777216)).toInt) += 1)
           case intData: Array[Int] =>

@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.explore
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayerWithMagLocators,
@@ -50,8 +50,9 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
       layersWithVoxelSizes <- Fox.combined(magDirectories.map(dir =>
         for {
           remoteSourceDescriptor <- Fox.successful(RemoteSourceDescriptor(dir.toUri, None))
-          mag <- Fox
-            .option2Fox(Vec3Int.fromMagLiteral(dir.getFileName.toString, allowScalar = true)) ?~> s"invalid mag: ${dir.getFileName}"
+          mag <- Vec3Int
+            .fromMagLiteral(dir.getFileName.toString, allowScalar = true)
+            .toFox ?~> s"invalid mag: ${dir.getFileName}"
           vaultPath <- dataVaultService.getVaultPath(remoteSourceDescriptor) ?~> "dataVault.setup.failed"
           layersWithVoxelSizes <- new ZarrArrayExplorer(mag).explore(vaultPath, None)(TokenContext(None))
         } yield layersWithVoxelSizes))
@@ -98,20 +99,21 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
   private def exploreLocalN5Array(path: Path, dataSourceId: DataSourceId)(
       implicit ec: ExecutionContext): Fox[DataSourceWithMagLocators] =
     for {
-      _ <- Fox.successful(())
       // Go down subdirectories until we find a directory with an attributes.json file that matches N5Header
-      layerPath <- PathUtils
-        .recurseSubdirsUntil(
-          path,
-          (p: Path) =>
-            try {
-              val attributesBytes = Files.readAllBytes(p.resolve(N5Header.FILENAME_ATTRIBUTES_JSON))
-              Json.parse(new String(attributesBytes)).validate[N5Header].isSuccess
-            } catch {
-              case _: Exception => false
-          }
-        )
-        .getOrElse(path)
+      layerPath <- Fox.fromFuture(
+        PathUtils
+          .recurseSubdirsUntil(
+            path,
+            (p: Path) =>
+              try {
+                val attributesBytes = Files.readAllBytes(p.resolve(N5Header.FILENAME_ATTRIBUTES_JSON))
+                JsonHelper.parseAs[N5Header](attributesBytes).isDefined
+              } catch {
+                case _: Exception => false
+            }
+          )
+          .toFox
+          .getOrElse(path))
       explored <- exploreLocalLayer(
         layers =>
           layers.map(l =>

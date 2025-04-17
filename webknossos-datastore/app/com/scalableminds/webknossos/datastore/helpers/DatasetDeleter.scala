@@ -1,5 +1,5 @@
 package com.scalableminds.webknossos.datastore.helpers
-import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayerWithMagLocators,
   DataSource,
@@ -18,7 +18,7 @@ import java.nio.file.{Files, Path}
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 
-trait DatasetDeleter extends LazyLogging with DirectoryConstants {
+trait DatasetDeleter extends LazyLogging with DirectoryConstants with FoxImplicits {
   def dataBaseDir: Path
 
   def deleteOnDisk(organizationId: String,
@@ -78,7 +78,7 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
       layersAndLinkedMags <- remoteWebknossosClient.fetchPaths(dataSourceId)
       exceptionBoxes = layersAndLinkedMags.map(layerMagLinkInfo =>
         handleLayerSymlinks(dataSourceId, layerMagLinkInfo.layerName, layerMagLinkInfo.magLinkInfos.toList))
-      _ <- Fox.combined(exceptionBoxes.map(Fox.box2Fox)) ?~> "Failed to move symlinks"
+      _ <- Fox.assertNoFailure(exceptionBoxes) ?~> "Failed to move symlinks"
       affectedDataSources = layersAndLinkedMags
         .flatMap(_.magLinkInfos.map(m => m.linkedMags.map(_.dataSourceId)))
         .flatten
@@ -124,7 +124,7 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
         .resolve(dataSourceId.directoryName)
         .resolve(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
       if (Files.exists(propertiesPath)) {
-        JsonHelper.validatedJsonFromFile[DataSource](propertiesPath, dataBaseDir) match {
+        JsonHelper.parseFromFileAs[DataSource](propertiesPath, dataBaseDir) match {
           case Full(dataSource) =>
             val updatedDataSource = dataSource.copy(dataLayers = dataSource.dataLayers.map {
               case dl: DataLayerWithMagLocators =>
@@ -138,13 +138,13 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants {
             })
             // Write properties back
             tryo(Files.delete(propertiesPath)) match {
-              case Full(_) => JsonHelper.jsonToFile(propertiesPath, updatedDataSource)
-              case e       => e
+              case Full(_) => JsonHelper.writeToFile(propertiesPath, updatedDataSource).toFox
+              case e       => e.toFox
             }
-          case _ => Full(())
+          case _ => Fox.successful(())
         }
       } else {
-        Full(())
+        Fox.successful(())
       }
     })
 

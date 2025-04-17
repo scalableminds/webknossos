@@ -16,7 +16,7 @@ class AlfuCache[K, V](store: AsyncCache[K, Box[V]]) extends FoxImplicits {
 
   def getOrLoad(key: K, loadFn: K => Fox[V])(implicit ec: ExecutionContext): Fox[V] =
     for {
-      box <- getOrLoadAdapter(key, key => loadFn(key).futureBox)
+      box <- Fox.fromFuture(getOrLoadAdapter(key, key => loadFn(key).futureBox))
       _ = box match {
         case _: Failure => remove(key) // Do not cache failures
         case _          => ()

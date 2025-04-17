@@ -54,7 +54,7 @@ class TSRemoteDatastoreClient @Inject()(
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
       response <- rpc(s"$remoteLayerUri/data").withTokenFromContext.silent.postJson(dataRequests)
-      _ <- bool2Fox(Status.isSuccessful(response.status))
+      _ <- Fox.fromBool(Status.isSuccessful(response.status))
       bytes = response.bodyAsBytes.toArray
       indices <- parseMissingBucketHeader(response.header(missingBucketsHeader)) ?~> "failed to parse missing bucket header"
     } yield (bytes, indices)
@@ -170,7 +170,7 @@ class TSRemoteDatastoreClient @Inject()(
       result <- rpc(
         s"$dataStoreUri/data/datasets/${dataSourceId.organizationId}/${dataSourceId.directoryName}/readInboxDataSource").withTokenFromContext
         .getWithJsonResponse[InboxDataSource]
-      scale <- result.voxelSizeOpt ?~> "could not determine voxel size of dataset"
+      scale <- result.voxelSizeOpt.toFox ?~> "could not determine voxel size of dataset"
     } yield scale
 
   private def getRemoteLayerUri(remoteLayer: RemoteFallbackLayer): Fox[String] =

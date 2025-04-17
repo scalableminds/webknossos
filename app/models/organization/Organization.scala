@@ -83,7 +83,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
   def isEmpty: Fox[Boolean] =
     for {
       rows <- run(q"SELECT COUNT(*) FROM $existingCollectionName".as[Int])
-      value <- rows.headOption
+      value <- rows.headOption.toFox
     } yield value == 0
 
   @deprecated("use findOne with string type instead", since = "")
@@ -202,14 +202,14 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       rows <- run(
         q"SELECT SUM(usedStorageBytes) FROM webknossos.organization_usedStorage WHERE _organization = $organizationId"
           .as[Long])
-      firstRow <- rows.headOption
+      firstRow <- rows.headOption.toFox
     } yield firstRow
 
   def getUsedStorageForDataset(datasetId: ObjectId): Fox[Long] =
     for {
       rows <- run(
         q"SELECT SUM(usedStorageBytes) FROM webknossos.organization_usedStorage WHERE _dataset = $datasetId".as[Long])
-      firstRow <- rows.headOption
+      firstRow <- rows.headOption.toFox
     } yield firstRow
 
   def findNotRecentlyScanned(rescanInterval: FiniteDuration, limit: Int): Fox[List[Organization]] =

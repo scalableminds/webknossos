@@ -28,10 +28,10 @@ trait TracingMigrationService[T <: GeneratedMessage] extends FoxImplicits {
       migrations match {
         case List() => tracingFox
         case head :: tail =>
-          tracingFox.futureBox.flatMap {
+          tracingFox.shiftBox.flatMap {
             case Full(tracing) =>
               migrateIter(head(tracing), tail)
-            case x => box2Fox(x)
+            case x => x.toFox
           }
       }
 

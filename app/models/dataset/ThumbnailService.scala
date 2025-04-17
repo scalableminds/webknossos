@@ -5,8 +5,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.image.Color
 import com.scalableminds.util.mvc.MimeTypes
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox.option2Fox
-import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, GenericDataSource}
 import com.typesafe.scalalogging.LazyLogging
@@ -28,6 +27,7 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
                                  datasetDAO: DatasetDAO,
                                  thumbnailDAO: ThumbnailDAO)
     extends LazyLogging
+    with FoxImplicits
     with MimeTypes {
 
   private val DefaultThumbnailWidth = 400
@@ -63,7 +63,9 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
     for {
       dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
       usableDataSource <- dataSource.toUsable.toFox ?~> "dataset.notImported"
-      layer <- usableDataSource.dataLayers.find(_.name == layerName) ?~> Messages("dataLayer.notFound", layerName) ~> NOT_FOUND
+      layer <- usableDataSource.dataLayers
+        .find(_.name == layerName)
+        .toFox ?~> Messages("dataLayer.notFound", layerName) ~> NOT_FOUND
       viewConfiguration <- datasetConfigurationService.getDatasetViewConfigurationForDataset(List.empty, dataset._id)(
         ctx)
       (mag1BoundingBox, mag, intensityRangeOpt, colorSettingsOpt, mapping) = selectParameters(viewConfiguration,
@@ -101,14 +103,11 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
                                mappingName: Option[String])
     : (BoundingBox, Vec3Int, Option[(Double, Double)], Option[ThumbnailColorSettings], Option[String]) = {
     val configuredCenterOpt =
-      viewConfiguration.get("position").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Vec3Int]))
+      viewConfiguration.get("position").flatMap(jsValue => JsonHelper.as[Vec3Int](jsValue).toOption)
     val centerOpt =
       configuredCenterOpt.orElse(BoundingBox.intersection(usableDataSource.dataLayers.map(_.boundingBox)).map(_.center))
     val center = centerOpt.getOrElse(layer.boundingBox.center)
-    val zoom = viewConfiguration
-      .get("zoom")
-      .flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Double]))
-      .getOrElse(1.0)
+    val zoom = viewConfiguration.get("zoom").flatMap(jsValue => JsonHelper.as[Double](jsValue).toOption).getOrElse(1.0)
     val intensityRangeOpt = readIntensityRange(viewConfiguration, layerName)
     val colorSettingsOpt = readColor(viewConfiguration, layerName)
     val mag = magForZoom(layer, zoom)
@@ -178,7 +177,7 @@ class ThumbnailCachingService @Inject()(thumbnailDAO: ThumbnailDAO) {
       (datasetId, layerName, width, height, mappingName),
       _ =>
         for {
-          fromDbBox <- thumbnailDAO.findOne(datasetId, layerName, width, height, mappingName).futureBox
+          fromDbBox <- thumbnailDAO.findOne(datasetId, layerName, width, height, mappingName).shiftBox
           fromDbOrNew <- fromDbBox match {
             case Full(fromDb) =>
               Fox.successful(fromDb)
@@ -212,7 +211,7 @@ class ThumbnailDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionContext
                      AND width = $width
                      AND height = $height
                      AND mappingName = $mappingName""".as[Array[Byte]])
-      head <- rows.headOption
+      head <- rows.headOption.toFox
     } yield head
   }
 

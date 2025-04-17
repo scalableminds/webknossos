@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.datavault
 import com.google.auth.oauth2.ServiceAccountCredentials
 import com.google.cloud.storage.{BlobId, BlobInfo, Storage, StorageException, StorageOptions}
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.storage.{GoogleServiceAccountCredential, RemoteSourceDescriptor}
 import net.liftweb.common.Box.tryo
 import org.apache.commons.lang3.builder.HashCodeBuilder
@@ -14,7 +14,9 @@ import java.nio.ByteBuffer
 import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters.IterableHasAsScala
 
-class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCredential]) extends DataVault {
+class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCredential])
+    extends DataVault
+    with FoxImplicits {
 
   private lazy val storageOptions: StorageOptions = credential match {
     case Some(credential: GoogleServiceAccountCredential) =>
@@ -70,8 +72,8 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
           else Fox.failure(s.getMessage)
         case t: Throwable => Fox.failure(t.getMessage)
       }
-      blobInfo <- tryo(BlobInfo.newBuilder(blobId).setContentType("text/plain").build)
-      encoding <- Encoding.fromRfc7231String(Option(blobInfo.getContentEncoding).getOrElse(""))
+      blobInfo <- tryo(BlobInfo.newBuilder(blobId).setContentType("text/plain").build).toFox
+      encoding <- Encoding.fromRfc7231String(Option(blobInfo.getContentEncoding).getOrElse("")).toFox
     } yield (bytes, encoding)
   }
 
@@ -84,7 +86,7 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
       val paths = subDirectories.map(dirBlob =>
         new VaultPath(new URI(s"${uri.getScheme}://$bucket/${dirBlob.getBlobId.getName}"), this))
       paths
-    })
+    }).toFox
 
   private def getUri = uri
   private def getCredential = credential

@@ -52,7 +52,7 @@ class EditableMappingController @Inject()(
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             agglomerateGraphBox: Box[AgglomerateGraph] <- editableMappingService
               .getAgglomerateGraphForId(tracingId, tracing.version, agglomerateId)
-              .futureBox
+              .shiftBox
             segmentIds <- agglomerateGraphBox match {
               case Full(agglomerateGraph) => Fox.successful(agglomerateGraph.segments)
               case Empty                  => Fox.successful(List.empty)

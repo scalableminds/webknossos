@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Double
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.layers.{ZarrDataLayer, ZarrLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
@@ -14,7 +14,10 @@ import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataF
 
 import scala.concurrent.ExecutionContext
 
-class NgffV0_4Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExplorer with NgffExplorationUtils {
+class NgffV0_4Explorer(implicit val ec: ExecutionContext)
+    extends RemoteLayerExplorer
+    with NgffExplorationUtils
+    with FoxImplicits {
 
   override def name: String = "OME NGFF Zarr v0.4"
 
@@ -45,11 +48,11 @@ class NgffV0_4Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
                             datasetName: String,
                             voxelSizeInAxisUnits: Vec3Double,
                             axisOrder: AxisOrder,
-                            isSegmentation: Boolean)(implicit tc: TokenContext): Fox[(ZarrLayer)] =
+                            isSegmentation: Boolean)(implicit tc: TokenContext): Fox[ZarrLayer] =
     for {
       magsWithAttributes <- Fox.serialCombined(multiscale.datasets)(d =>
         zarrMagFromNgffDataset(d, remotePath, voxelSizeInAxisUnits, axisOrder, credentialId, Some(channelIndex)))
-      _ <- bool2Fox(magsWithAttributes.nonEmpty) ?~> "zero mags in layer"
+      _ <- Fox.fromBool(magsWithAttributes.nonEmpty) ?~> "zero mags in layer"
       elementClassRaw <- elementClassFromMags(magsWithAttributes) ?~> "Could not extract element class from mags"
       elementClass = if (isSegmentation) ensureElementClassForSegmentationLayer(elementClassRaw)
       else elementClassRaw
@@ -111,8 +114,10 @@ class NgffV0_4Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
       magPath = layerPath / ngffDataset.path
       zarrayPath = magPath / ZarrHeader.FILENAME_DOT_ZARRAY
       zarrHeader <- getZarrHeader(ngffDataset, layerPath)
-      elementClass <- zarrHeader.elementClass ?~> s"failed to read element class from zarr header at $zarrayPath"
-      boundingBox <- zarrHeader.boundingBox(axisOrder) ?~> s"failed to read bounding box from zarr header at $zarrayPath"
+      elementClass <- zarrHeader.elementClass.toFox ?~> s"failed to read element class from zarr header at $zarrayPath"
+      boundingBox <- zarrHeader
+        .boundingBox(axisOrder)
+        .toFox ?~> s"failed to read bounding box from zarr header at $zarrayPath"
     } yield
       MagWithAttributes(
         MagLocator(mag, Some(magPath.toUri.toString), None, Some(axisOrder), channelIndex, credentialId),

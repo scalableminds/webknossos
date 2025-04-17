@@ -51,17 +51,17 @@ trait N5Explorer extends RemoteLayerExplorer {
 
     val cOpt = if (c == -1) None else Some(c)
     for {
-      _ <- bool2Fox(x >= 0 && y >= 0 && z >= 0) ?~> s"invalid xyz axis order: $x,$y,$z."
+      _ <- Fox.fromBool(x >= 0 && y >= 0 && z >= 0) ?~> s"invalid xyz axis order: $x,$y,$z."
     } yield AxisOrder(x, y, Some(z), cOpt)
   }
 
   protected def extractVoxelSizeInAxisUnits(scale: List[Double], axisOrder: AxisOrder): Fox[Vec3Double] =
-    tryo(Vec3Double(scale(axisOrder.x), scale(axisOrder.y), scale(axisOrder.zWithFallback)))
+    tryo(Vec3Double(scale(axisOrder.x), scale(axisOrder.y), scale(axisOrder.zWithFallback))).toFox
 
   protected def layerFromMagsWithAttributes(magsWithAttributes: List[MagWithAttributes],
                                             remotePath: VaultPath): Fox[N5Layer] =
     for {
-      _ <- bool2Fox(magsWithAttributes.nonEmpty) ?~> "zero mags in layer"
+      _ <- Fox.fromBool(magsWithAttributes.nonEmpty) ?~> "zero mags in layer"
       elementClass <- elementClassFromMags(magsWithAttributes) ?~> "Could not extract element class from mags"
       boundingBox = boundingBoxFromMags(magsWithAttributes)
       name = guessNameFromPath(remotePath)

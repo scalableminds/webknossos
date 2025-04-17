@@ -12,6 +12,7 @@ ThisBuild / scalacOptions ++= Seq(
   "-language:postfixOps",
   "-Xlint:unused",
   "-Xlint:deprecation",
+  "-Xmaxerrs:500",
   s"-Wconf:src=target/.*:s",
   s"-Wconf:src=webknossos-datastore/target/.*:s",
   s"-Wconf:src=webknossos-tracingstore/target/.*:s"

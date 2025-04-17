@@ -31,7 +31,7 @@ class AnnotationPrivateLinkController @Inject()(
   def annotationSource(accessTokenOrId: String, userToken: Option[String]): Action[AnyContent] = Action.async {
     implicit request =>
       for {
-        annotationByLinkBox <- findAnnotationByPrivateLinkIfNotExpired(accessTokenOrId).futureBox
+        annotationByLinkBox <- findAnnotationByPrivateLinkIfNotExpired(accessTokenOrId).shiftBox
         annotation <- annotationByLinkBox match {
           case Full(a) => Fox.successful(a)
           case _       => findAnnotationByIdAndUserToken(accessTokenOrId, userToken)
@@ -45,7 +45,7 @@ class AnnotationPrivateLinkController @Inject()(
   private def findAnnotationByIdAndUserToken(annotationId: String, userToken: Option[String]): Fox[Annotation] =
     for {
       annotationIdValidated <- ObjectId.fromString(annotationId)
-      userBox <- bearerTokenService.userForTokenOpt(userToken).futureBox
+      userBox <- bearerTokenService.userForTokenOpt(userToken).shiftBox
       ctx = DBAccessContext(userBox.toOption)
       annotation <- annotationDAO.findOne(annotationIdValidated)(ctx) ?~> "annotation.notFound"
     } yield annotation
@@ -53,7 +53,7 @@ class AnnotationPrivateLinkController @Inject()(
   private def findAnnotationByPrivateLinkIfNotExpired(accessToken: String): Fox[Annotation] =
     for {
       annotationPrivateLink <- annotationPrivateLinkDAO.findOneByAccessToken(accessToken)
-      _ <- bool2Fox(annotationPrivateLink.expirationDateTime.forall(_ > Instant.now)) ?~> "Token expired" ~> 404
+      _ <- Fox.fromBool(annotationPrivateLink.expirationDateTime.forall(_ > Instant.now)) ?~> "Token expired" ~> 404
       annotation <- annotationDAO.findOne(annotationPrivateLink._annotation)(GlobalAccessContext)
     } yield annotation
 
@@ -75,7 +75,8 @@ class AnnotationPrivateLinkController @Inject()(
   def get(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       annotationPrivateLink <- annotationPrivateLinkDAO.findOne(id)
-      _ <- bool2Fox(annotationPrivateLink.expirationDateTime.forall(_ > Instant.now)) ?~> "Token expired" ~> NOT_FOUND
+      _ <- Fox
+        .fromBool(annotationPrivateLink.expirationDateTime.forall(_ > Instant.now)) ?~> "Token expired" ~> NOT_FOUND
       _ <- annotationDAO.findOne(annotationPrivateLink._annotation) ?~> "annotation.notFound" ~> NOT_FOUND
 
       annotationPrivateLinkJs <- annotationPrivateLinkService.publicWrites(annotationPrivateLink)

@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, WebknossosDataRequest}
@@ -179,7 +179,7 @@ trait VolumeTracingBucketHelper
 
     for {
       bucketKeyValueBoxesFromFossil <- if (volumeLayer.isTemporaryTracing) {
-        Fox.successful(temporaryTracingService.getVolumeBuckets(bucketKeys).map(option2Box))
+        Fox.successful(temporaryTracingService.getVolumeBuckets(bucketKeys).map(Box(_)))
       } else {
         volumeDataStore.getMultipleKeysByList(bucketKeys, version).map(_.map(_.map(_.value)))
       }
@@ -204,7 +204,7 @@ trait VolumeTracingBucketHelper
       for {
         remoteFallbackLayer <- volumeLayer.volumeTracingService
           .remoteFallbackLayerForVolumeTracing(volumeLayer.tracing, volumeLayer.annotationId)
-        _ <- BoxImplicits.assertNoFailure(bucketBoxesFromFossil).toFox
+        _ <- Fox.assertNoFailure(bucketBoxesFromFossil)
         indicesWhereEmpty = bucketBoxesFromFossil.zipWithIndex.collect { case (dataBox, idx) if dataBox.isEmpty => idx }
         dataRequests = indicesWhereEmpty.map { idx =>
           val bucketPosition = bucketPositions(idx)
@@ -224,8 +224,8 @@ trait VolumeTracingBucketHelper
           dataRequests.length,
           flatDataFromDataStore,
           datastoreMissingBucketIndices.toSet,
-          volumeLayer.expectedUncompressedBucketSize) ?~> "fallbackData.split.failed"
-        _ <- bool2Fox(bucketBoxesFromDataStore.length == indicesWhereEmpty.length) ?~> "length mismatch"
+          volumeLayer.expectedUncompressedBucketSize).toFox ?~> "fallbackData.split.failed"
+        _ <- Fox.fromBool(bucketBoxesFromDataStore.length == indicesWhereEmpty.length) ?~> "length mismatch"
         bucketBoxesFromDataStoreIterator = bucketBoxesFromDataStore.iterator
         bucketBoxesFilled = bucketBoxesFromFossil.map {
           case Full(bucketFromFossil) => Full(bucketFromFossil)
@@ -276,7 +276,7 @@ trait VolumeTracingBucketHelper
           decompressIfNeeded(versionedVolumeBucket.value, volumeLayer.expectedUncompressedBucketSize, debugInfo))
       }
     }
-    unpackedDataFox.futureBox.flatMap {
+    unpackedDataFox.shiftBox.flatMap {
       case Full(unpackedData) =>
         Fox.successful(unpackedData)
       case Empty =>

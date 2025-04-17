@@ -6,7 +6,7 @@ import java.io.{File, FileInputStream, InputStream}
 import java.nio.file.{Files, Path, StandardCopyOption}
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.mvc.Formatter
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, TreeGroup}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{SegmentGroup, VolumeTracing}
 import com.typesafe.scalalogging.LazyLogging
@@ -19,7 +19,7 @@ import net.liftweb.common.{Empty, Failure, Full}
 import net.liftweb.common.Box.tryo
 import play.api.i18n.MessagesProvider
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 case class UploadedVolumeLayer(tracing: VolumeTracing, dataZipLocation: String, name: Option[String]) {
   def getDataZipFrom(otherFiles: Map[String, File]): Option[File] =
@@ -33,12 +33,13 @@ case class SharedParsingParameters(useZipName: Boolean,
 
 class AnnotationUploadService @Inject()(tempFileService: TempFileService, nmlParser: NmlParser)
     extends LazyLogging
+    with FoxImplicits
     with Formatter {
 
   private def extractFromNmlFile(file: File, name: String, sharedParsingParameters: SharedParsingParameters)(
       implicit m: MessagesProvider,
       ec: ExecutionContext,
-      ctx: DBAccessContext): Fox[NmlParseResult] =
+      ctx: DBAccessContext): Future[NmlParseResult] =
     extractFromNml(new FileInputStream(file), name, sharedParsingParameters)
 
   private def extractFromNml(inputStream: InputStream,
@@ -46,7 +47,7 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService, nmlPar
                              sharedParsingParameters: SharedParsingParameters,
                              basePath: Option[String] = None)(implicit m: MessagesProvider,
                                                               ec: ExecutionContext,
-                                                              ctx: DBAccessContext): Fox[NmlParseResult] = {
+                                                              ctx: DBAccessContext): Future[NmlParseResult] = {
     val parserOutput =
       nmlParser.parse(
         name,
@@ -71,7 +72,8 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService, nmlPar
     ZipIO.withUnziped(file) { (filename, inputStream) =>
       if (filename.toString.endsWith(".nml")) {
         val parsedResult = for {
-          result <- extractFromNml(inputStream, filename.toString, sharedParsingParameters, Some(file.getPath))
+          result <- Fox.fromFuture(
+            extractFromNml(inputStream, filename.toString, sharedParsingParameters, Some(file.getPath)))
         } yield if (sharedParsingParameters.useZipName) result.withName(name) else result
         pendingResults ::= parsedResult
       } else {
@@ -188,7 +190,7 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService, nmlPar
     } else {
       logger.trace("Extracting from Nml file")
       for {
-        parseResult <- extractFromNmlFile(file, fileName, sharedParsingParameters)
+        parseResult <- Fox.fromFuture(extractFromNmlFile(file, fileName, sharedParsingParameters))
       } yield MultiNmlParseResult(List(parseResult), Map.empty)
     }
 

@@ -4,8 +4,7 @@ import com.aayushatharva.brotli4j.Brotli4jLoader
 import com.aayushatharva.brotli4j.decoder.BrotliInputStream
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.io.ZipIO
-import com.scalableminds.util.tools.{Fox, JsonHelper}
-import com.scalableminds.util.tools.Fox.box2Fox
+import com.scalableminds.util.tools.{Fox, JsonHelper, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
 import org.apache.commons.lang3.builder.HashCodeBuilder
@@ -13,11 +12,10 @@ import play.api.libs.json.Reads
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, IOException}
 import java.net.URI
-import java.nio.charset.StandardCharsets
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
-class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging {
+class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging with FoxImplicits {
 
   def readBytes(range: Option[NumericRange[Long]] = None)(implicit ec: ExecutionContext,
                                                           tc: TokenContext): Fox[Array[Byte]] =
@@ -36,8 +34,8 @@ class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging {
     bytesAndEncoding match {
       case (bytes, encoding) =>
         encoding match {
-          case Encoding.gzip       => tryo(ZipIO.gunzip(bytes))
-          case Encoding.brotli     => tryo(decodeBrotli(bytes))
+          case Encoding.gzip       => tryo(ZipIO.gunzip(bytes)).toFox
+          case Encoding.brotli     => tryo(decodeBrotli(bytes)).toFox
           case Encoding.`identity` => Fox.successful(bytes)
         }
     }
@@ -97,8 +95,7 @@ class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging {
 
   def parseAsJson[T: Reads](implicit ec: ExecutionContext, tc: TokenContext): Fox[T] =
     for {
-      fileBytes <- this.readBytes().toFox
-      fileAsString <- tryo(new String(fileBytes, StandardCharsets.UTF_8)).toFox
-      parsed <- JsonHelper.parseAndValidateJson[T](fileAsString)
+      fileBytes <- this.readBytes()
+      parsed <- JsonHelper.parseAs[T](fileBytes).toFox
     } yield parsed
 }

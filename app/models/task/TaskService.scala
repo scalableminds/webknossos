@@ -32,11 +32,11 @@ class TaskService @Inject()(conf: WkConf,
     for {
       annotationBase <- annotationBaseFor(task._id)
       dataset <- datasetDAO.findOne(annotationBase._dataset)
-      status <- statusOf(task).getOrElse(TaskStatus(-1, -1, -1))
+      status <- Fox.fromFuture(statusOf(task).getOrElse(TaskStatus(-1, -1, -1)))
       taskType <- taskTypeDAO.findOne(task._taskType)(GlobalAccessContext)
       taskTypeJs <- taskTypeService.publicWrites(taskType)
-      scriptInfo <- task._script.toFox.flatMap(sid => scriptDAO.findOne(sid)).futureBox
-      scriptJs <- scriptInfo.toFox.flatMap(s => scriptService.publicWrites(s)).futureBox
+      scriptInfoBox <- task._script.toFox.flatMap(sid => scriptDAO.findOne(sid)).shiftBox
+      scriptJsBox <- scriptInfoBox.toFox.flatMap(s => scriptService.publicWrites(s)).shiftBox
       project <- projectDAO.findOne(task._project)
       team <- teamDAO.findOne(project._team)(GlobalAccessContext)
     } yield {
@@ -51,7 +51,7 @@ class TaskService @Inject()(conf: WkConf,
         "neededExperience" -> task.neededExperience,
         "created" -> task.created,
         "status" -> status,
-        "script" -> scriptJs.toOption,
+        "script" -> scriptJsBox.toOption,
         "tracingTime" -> task.tracingTime,
         "creationInfo" -> task.creationInfo,
         "boundingBox" -> task.boundingBox,
@@ -68,7 +68,7 @@ class TaskService @Inject()(conf: WkConf,
         numberOfOpen <- countOpenNonAdminTasks(user)
         teams <- if (numberOfOpen < conf.WebKnossos.Tasks.maxOpenPerUser) userService.teamIdsFor(user._id)
         else userService.teamManagerTeamIdsFor(user._id)
-        _ <- bool2Fox(teams.nonEmpty) ?~> Messages("task.tooManyOpenOnes")
+        _ <- Fox.fromBool(teams.nonEmpty) ?~> Messages("task.tooManyOpenOnes")
       } yield teams
     }
 
@@ -85,7 +85,7 @@ class TaskService @Inject()(conf: WkConf,
 
   private def statusOf(task: Task)(implicit ctx: DBAccessContext): Fox[TaskStatus] =
     for {
-      activeCount <- annotationDAO.countActiveByTask(task._id, AnnotationType.Task).getOrElse(0)
+      activeCount <- Fox.fromFuture(annotationDAO.countActiveByTask(task._id, AnnotationType.Task).getOrElse(0))
     } yield TaskStatus(task.pendingInstances, activeCount, task.totalInstances - (activeCount + task.pendingInstances))
 
 }

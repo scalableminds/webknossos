@@ -39,17 +39,19 @@ case class NamedFileStream(name: String, file: File) extends NamedStream {
   def stream(): InputStream = new FileInputStream(file)
 
   def writeTo(out: OutputStream)(implicit ec: ExecutionContext): Fox[Unit] =
-    Future {
-      blocking {
-        val in = stream()
-        val buffer = new Array[Byte](1024)
-        var len = 0
-        do {
-          len = in.read(buffer)
-          if (len > 0)
-            out.write(buffer, 0, len)
-        } while (len > 0)
-        in.close()
+    Fox.fromFuture {
+      Future {
+        blocking {
+          val in = stream()
+          val buffer = new Array[Byte](1024)
+          var len = 0
+          do {
+            len = in.read(buffer)
+            if (len > 0)
+              out.write(buffer, 0, len)
+          } while (len > 0)
+          in.close()
+        }
       }
     }
 }

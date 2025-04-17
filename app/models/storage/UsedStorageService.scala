@@ -54,7 +54,7 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
 
   private def tryAndLog(organizationId: String, result: Fox[Unit]): Fox[Unit] =
     for {
-      box <- result.futureBox
+      box <- result.shiftBox
       _ = box match {
         case Full(_)    => ()
         case f: Failure => logger.error(f"Error during storage scan for organization with id $organizationId: $f")

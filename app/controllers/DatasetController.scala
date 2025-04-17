@@ -141,8 +141,8 @@ class DatasetController @Inject()(userService: UserService,
       for {
         exploreResponse <- wkExploreRemoteLayerService.exploreRemoteDatasource(List(adaptedParameters),
                                                                                request.identity)
-        dataSource <- exploreResponse.dataSource ?~> "dataset.explore.failed"
-        _ <- bool2Fox(dataSource.dataLayers.nonEmpty) ?~> "dataset.explore.zeroLayers"
+        dataSource <- exploreResponse.dataSource.toFox ?~> "dataset.explore.failed"
+        _ <- Fox.fromBool(dataSource.dataLayers.nonEmpty) ?~> "dataset.explore.zeroLayers"
         folderIdOpt <- Fox.runOptional(request.body.folderPath)(folderPath =>
           folderService.getOrCreateFromPathLiteral(folderPath, request.identity._organization)) ?~> "dataset.explore.autoAdd.getFolder.failed"
         _ <- wkExploreRemoteLayerService.addRemoteDatasource(dataSource,
@@ -290,7 +290,7 @@ class DatasetController @Inject()(userService: UserService,
         _ <- datasetService
           .clientFor(dataset)(GlobalAccessContext)
           .flatMap(_.findPositionWithData(dataset, datalayer.name).flatMap(posWithData =>
-            bool2Fox(posWithData.value("position") != JsNull))) ?~> "dataset.loadingDataFailed"
+            Fox.fromBool(posWithData.value("position") != JsNull))) ?~> "dataset.loadingDataFailed"
       } yield Ok("Ok")
     }
 
@@ -354,7 +354,7 @@ class DatasetController @Inject()(userService: UserService,
     sil.SecuredAction.async { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
-        _ <- bool2Fox(dataset._organization == request.identity._organization) ~> FORBIDDEN
+        _ <- Fox.fromBool(dataset._organization == request.identity._organization) ~> FORBIDDEN
         token <- datasetService.getSharingToken(dataset._id)
       } yield Ok(Json.obj("sharingToken" -> token.trim))
     }
@@ -363,7 +363,7 @@ class DatasetController @Inject()(userService: UserService,
     sil.SecuredAction.async { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
-        _ <- bool2Fox(dataset._organization == request.identity._organization) ~> FORBIDDEN
+        _ <- Fox.fromBool(dataset._organization == request.identity._organization) ~> FORBIDDEN
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
         _ <- datasetDAO.updateSharingTokenById(datasetId, None)
       } yield Ok
@@ -434,23 +434,23 @@ class DatasetController @Inject()(userService: UserService,
     sil.SecuredAction.async(validateJson[SegmentAnythingMaskParameters]) { implicit request =>
       log() {
         for {
-          _ <- bool2Fox(conf.Features.segmentAnythingEnabled) ?~> "segmentAnything.notEnabled"
-          _ <- bool2Fox(conf.SegmentAnything.uri.nonEmpty) ?~> "segmentAnything.noUri"
+          _ <- Fox.fromBool(conf.Features.segmentAnythingEnabled) ?~> "segmentAnything.notEnabled"
+          _ <- Fox.fromBool(conf.SegmentAnything.uri.nonEmpty) ?~> "segmentAnything.noUri"
           dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
           dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
-          usableDataSource <- dataSource.toUsable ?~> "dataset.notImported"
-          dataLayer <- usableDataSource.dataLayers.find(_.name == dataLayerName) ?~> "dataset.noLayers"
+          usableDataSource <- dataSource.toUsable.toFox ?~> "dataset.notImported"
+          dataLayer <- usableDataSource.dataLayers.find(_.name == dataLayerName).toFox ?~> "dataset.noLayers"
           datastoreClient <- datasetService.clientFor(dataset)(GlobalAccessContext)
           targetMagSelectedBbox: BoundingBox = request.body.surroundingBoundingBox / request.body.mag
-          _ <- bool2Fox(targetMagSelectedBbox.size.sorted.z <= 1024 && targetMagSelectedBbox.size.sorted.y <= 1024) ?~> s"Target-mag selected bbox must be smaller than 1024×1024×depth (or transposed), got ${targetMagSelectedBbox.size}"
+          _ <- Fox.fromBool(targetMagSelectedBbox.size.sorted.z <= 1024 && targetMagSelectedBbox.size.sorted.y <= 1024) ?~> s"Target-mag selected bbox must be smaller than 1024×1024×depth (or transposed), got ${targetMagSelectedBbox.size}"
           // The maximum depth of 16 also needs to be adapted in the front-end
           // (at the time of writing, in MAX_DEPTH_FOR_SAM in quick_select_settings.tsx).
-          _ <- bool2Fox(targetMagSelectedBbox.size.sorted.x <= 16) ?~> s"Target-mag selected bbox depth must be at most 16"
-          _ <- bool2Fox(targetMagSelectedBbox.size.sorted.z == targetMagSelectedBbox.size.sorted.y) ?~> s"Target-mag selected bbox must equally sized long edges, got ${targetMagSelectedBbox.size}"
+          _ <- Fox.fromBool(targetMagSelectedBbox.size.sorted.x <= 16) ?~> s"Target-mag selected bbox depth must be at most 16"
+          _ <- Fox.fromBool(targetMagSelectedBbox.size.sorted.z == targetMagSelectedBbox.size.sorted.y) ?~> s"Target-mag selected bbox must equally sized long edges, got ${targetMagSelectedBbox.size}"
           _ <- Fox.runIf(request.body.interactionType == SAMInteractionType.BOUNDING_BOX)(
-            bool2Fox(request.body.selectionTopLeftX.isDefined &&
+            Fox.fromBool(request.body.selectionTopLeftX.isDefined &&
               request.body.selectionTopLeftY.isDefined && request.body.selectionBottomRightX.isDefined && request.body.selectionBottomRightY.isDefined)) ?~> "Missing selectionTopLeft and selectionBottomRight parameters for bounding box interaction."
-          _ <- Fox.runIf(request.body.interactionType == SAMInteractionType.POINT)(bool2Fox(
+          _ <- Fox.runIf(request.body.interactionType == SAMInteractionType.POINT)(Fox.fromBool(
             request.body.pointX.isDefined && request.body.pointY.isDefined)) ?~> "Missing pointX and pointY parameters for point interaction."
           beforeDataLoading = Instant.now
           data <- datastoreClient.getLayerData(
@@ -463,7 +463,7 @@ class DatasetController @Inject()(userService: UserService,
           _ = Instant.logSince(beforeDataLoading, "Data loading for SAM", logger)
           _ = logger.debug(
             s"Sending ${data.length} bytes to SAM server, element class is ${dataLayer.elementClass}, range: $intensityMin-$intensityMax...")
-          _ <- bool2Fox(
+          _ <- Fox.fromBool(
             !(dataLayer.elementClass == ElementClass.float || dataLayer.elementClass == ElementClass.double) || (intensityMin.isDefined && intensityMax.isDefined)) ?~> "For float and double data, a supplied intensity range is required."
           beforeMask = Instant.now
           mask <- wKRemoteSegmentAnythingClient.getMask(

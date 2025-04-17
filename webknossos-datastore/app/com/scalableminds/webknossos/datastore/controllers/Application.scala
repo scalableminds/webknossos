@@ -22,7 +22,7 @@ class Application @Inject()(redisClient: DataStoreRedisStore, applicationHealthS
         before <- Instant.nowFox
         _ <- redisClient.checkHealth
         afterRedis = Instant.now
-        _ <- Fox.bool2Fox(applicationHealthService.getRecentProblem().isEmpty) ?~> "Java Internal Errors detected"
+        _ <- Fox.fromBool(applicationHealthService.getRecentProblem().isEmpty) ?~> "Java Internal Errors detected"
         _ = logger.info(
           s"Answering ok for Datastore health check, took ${formatDuration(afterRedis - before)} (Redis at ${redisClient.authority} ${formatDuration(
             afterRedis - before)})")

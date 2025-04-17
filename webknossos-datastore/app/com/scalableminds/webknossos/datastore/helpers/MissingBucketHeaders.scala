@@ -21,9 +21,9 @@ trait MissingBucketHeaders extends FoxImplicits {
     for {
       headerLiteral: String <- headerLiteralOpt.toFox
       headerLiteralTrim = headerLiteral.trim
-      _ <- bool2Fox(headerLiteralTrim.startsWith("[") && headerLiteralTrim.endsWith("]"))
+      _ <- Fox.fromBool(headerLiteralTrim.startsWith("[") && headerLiteralTrim.endsWith("]"))
       indicesStr = headerLiteralTrim.drop(1).dropRight(1).split(",").toList.filter(_.nonEmpty)
-      indices <- Fox.serialCombined(indicesStr)(indexStr => tryo(indexStr.trim.toInt))
+      indices <- Fox.serialCombined(indicesStr)(indexStr => tryo(indexStr.trim.toInt).toFox)
     } yield indices
 
 }

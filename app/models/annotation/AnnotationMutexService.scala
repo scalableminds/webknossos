@@ -4,7 +4,7 @@ import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.schema.Tables.AnnotationMutexesRow
 import com.typesafe.scalalogging.LazyLogging
@@ -30,6 +30,7 @@ class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
                                        userService: UserService,
                                        annotationMutexDAO: AnnotationMutexDAO)(implicit val ec: ExecutionContext)
     extends IntervalScheduler
+    with FoxImplicits
     with LazyLogging {
 
   override protected def tickerInterval: FiniteDuration = 1 hour
@@ -44,7 +45,7 @@ class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
   def tryAcquiringAnnotationMutex(annotationId: ObjectId, userId: ObjectId): Fox[MutexResult] =
     this.synchronized {
       for {
-        mutexBox <- annotationMutexDAO.findOne(annotationId).futureBox
+        mutexBox <- annotationMutexDAO.findOne(annotationId).shiftBox
         result <- mutexBox match {
           case Full(mutex) =>
             if (mutex.userId == userId)
@@ -95,7 +96,7 @@ class AnnotationMutexDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionC
             FROM webknossos.annotation_mutexes
             WHERE _annotation = $annotationId
             AND expiry > NOW()""".as[AnnotationMutexesRow])
-      first <- rows.headOption
+      first <- rows.headOption.toFox
       parsed = parse(first)
     } yield parsed
 

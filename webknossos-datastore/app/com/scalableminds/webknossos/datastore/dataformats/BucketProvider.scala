@@ -12,7 +12,7 @@ trait BucketProvider {
 
   def loadMultiple(readInstructions: Seq[DataReadInstruction])(implicit ec: ExecutionContext,
                                                                tc: TokenContext): Fox[Seq[Box[Array[Byte]]]] =
-    Fox.serialSequenceBox(readInstructions) { readInstruction =>
+    Fox.fromFuture(Fox.serialSequence(readInstructions) { readInstruction =>
       load(readInstruction)
-    }
+    })
 }

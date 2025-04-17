@@ -1,10 +1,9 @@
 package com.scalableminds.webknossos.datastore.storage
 
-import com.scalableminds.util.tools.ConfigReader
+import com.scalableminds.util.tools.{ConfigReader, JsonHelper}
 import com.typesafe.config.Config
-import net.liftweb.common.Box.tryo
 import play.api.Configuration
-import play.api.libs.json.Json
+import play.api.libs.json.JsValue
 
 class CredentialConfigReader(underlyingConfig: Config) extends ConfigReader {
   override val raw: Configuration = Configuration(underlyingConfig)
@@ -54,7 +53,7 @@ class CredentialConfigReader(underlyingConfig: Config) extends ConfigReader {
     for {
       name <- getOptional[String]("name")
       secret <- getOptional[String]("secret")
-      secretJson <- tryo(Json.parse(secret)).toOption
+      secretJson <- JsonHelper.parseAs[JsValue](secret).toOption
     } yield
       GoogleServiceAccountCredential(
         name,

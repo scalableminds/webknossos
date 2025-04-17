@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.dataformats.wkw
 
 import com.google.common.io.{LittleEndianDataInputStream => DataInputStream}
-import com.scalableminds.util.tools.BoxImplicits
+import com.scalableminds.util.tools.BoxUtils.bool2Box
 import com.scalableminds.webknossos.datastore.dataformats.wkw.util.ResourceBox
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
@@ -111,7 +111,7 @@ case class WKWHeader(
   override def isSharded: Boolean = true
 }
 
-object WKWHeader extends BoxImplicits {
+object WKWHeader {
 
   private def error(msg: String, expected: Any, actual: Any): String =
     s"""Error reading WKW header: $msg [expected: $expected, actual: $actual]."""
@@ -119,8 +119,8 @@ object WKWHeader extends BoxImplicits {
   private def error(msg: String): String =
     s"""Error reading WKW header: $msg."""
 
-  val magicBytes: Array[Byte] = "WKW".getBytes
-  val currentVersion = 1
+  private val magicBytes: Array[Byte] = "WKW".getBytes
+  private val currentVersion = 1
 
   def apply(dataStream: DataInputStream, readJumpTable: Boolean): Box[WKWHeader] = {
     val magicByteBuffer: Array[Byte] = IOUtils.toByteArray(dataStream, magicBytes.length)

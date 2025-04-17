@@ -91,7 +91,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
       Fox.successful(Ok(Json.toJson(UserAccessAnswer(granted = true))))
     } else {
       for {
-        userBox <- bearerTokenService.userForTokenOpt(token).futureBox
+        userBox <- bearerTokenService.userForTokenOpt(token).shiftBox
         sharingTokenAccessCtx = URLSharing.fallbackTokenAccessContext(token)(DBAccessContext(userBox))
         answer <- accessRequest.resourceType match {
           case AccessResourceType.datasource =>
@@ -115,7 +115,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
 
     def tryRead: Fox[UserAccessAnswer] =
       for {
-        dataSourceBox <- datasetDAO.findOneByDataSourceId(dataSourceId).futureBox
+        dataSourceBox <- datasetDAO.findOneByDataSourceId(dataSourceId).shiftBox
       } yield
         dataSourceBox match {
           case Full(_) => UserAccessAnswer(granted = true)
@@ -144,7 +144,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
 
     def tryDelete: Fox[UserAccessAnswer] =
       for {
-        _ <- bool2Fox(conf.Features.allowDeleteDatasets) ?~> "dataset.delete.disabled"
+        _ <- Fox.fromBool(conf.Features.allowDeleteDatasets) ?~> "dataset.delete.disabled"
         dataset <- datasetDAO.findOneByDataSourceId(dataSourceId)(GlobalAccessContext) ?~> "datasource.notFound"
         user <- userBox.toFox ?~> "auth.token.noUser"
       } yield UserAccessAnswer(user._organization == dataset._organization && user.isAdmin)
@@ -191,7 +191,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
         annotationId <- ObjectId.fromString(annotationId)
         annotationBox <- annotationInformationProvider
           .provideAnnotation(annotationId, userBox)(GlobalAccessContext)
-          .futureBox
+          .shiftBox
         annotation <- annotationBox match {
           case Full(_) => annotationBox.toFox
           case _       => annotationStore.findInCache(annotationId).toFox
@@ -199,7 +199,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
         annotationAccessByToken <- token
           .map(annotationPrivateLinkDAO.findOneByAccessToken)
           .getOrElse(Fox.empty)
-          .futureBox
+          .shiftBox
         allowedByToken = annotationAccessByToken.exists(annotation._id == _._annotation)
         restrictions <- annotationInformationProvider.restrictionsFor(
           AnnotationIdentifier(annotation.typ, annotation._id))(GlobalAccessContext) ?~> "restrictions.notFound"
@@ -218,7 +218,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
     else {
       for {
         jobIdValidated <- ObjectId.fromString(jobId)
-        jobBox <- jobDAO.findOne(jobIdValidated)(DBAccessContext(userBox)).futureBox
+        jobBox <- jobDAO.findOne(jobIdValidated)(DBAccessContext(userBox)).shiftBox
         answer = jobBox match {
           case Full(_) => UserAccessAnswer(granted = true)
           case _       => UserAccessAnswer(granted = false, Some(s"No $mode access to job export"))

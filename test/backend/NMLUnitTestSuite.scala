@@ -17,10 +17,10 @@ import play.api.i18n.{DefaultMessagesApi, Messages, MessagesProvider}
 import play.api.test.FakeRequest
 
 import javax.inject.Inject
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
 
 class NMLUnitTestSuite @Inject()(nmlParser: NmlParser) extends PlaySpec {
+  private val handleFoxJustification = "Handling Fox in Unit Test Context"
+
   implicit val messagesProvider: MessagesProvider = new MessagesProvider {
     val m = new DefaultMessagesApi()
     override def messages: Messages = m.preferred({ FakeRequest("GET", "/") })
@@ -48,9 +48,9 @@ class NMLUnitTestSuite @Inject()(nmlParser: NmlParser) extends PlaySpec {
         volumeDataZipFormat = VolumeDataZipFormat.wkw
       )
     val os = new ByteArrayOutputStream()
-    Await.result(nmlFunctionStream.writeTo(os)(scala.concurrent.ExecutionContext.global), Duration.Inf)
+    nmlFunctionStream.writeTo(os)(scala.concurrent.ExecutionContext.global).await(handleFoxJustification)
     val array = os.toByteArray
-    val parsed = Await.result(
+    val parsed =
       nmlParser
         .parse(
           "",
@@ -61,9 +61,7 @@ class NMLUnitTestSuite @Inject()(nmlParser: NmlParser) extends PlaySpec {
                                   isTaskUpload = true),
           basePath = None
         )(messagesProvider, scala.concurrent.ExecutionContext.global, GlobalAccessContext)
-        .futureBox,
-      Duration.Inf
-    )
+        .await(handleFoxJustification)
     parsed
   }
 

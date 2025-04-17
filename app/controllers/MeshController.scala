@@ -67,7 +67,7 @@ class MeshController @Inject()(meshDAO: MeshDAO,
     for {
       meshInfo <- meshDAO.findOne(id) ?~> "mesh.notFound" ~> NOT_FOUND
       _ <- annotationDAO.assertUpdateAccess(meshInfo._annotation) ?~> "notAllowed" ~> FORBIDDEN
-      byteString <- request.body.asBytes(maxLength = 1024 * 1024 * 1024) ?~> "mesh.data.read.failed"
+      byteString <- request.body.asBytes(maxLength = 1024 * 1024 * 1024).toFox ?~> "mesh.data.read.failed"
       _ <- meshDAO.updateData(id, byteString.toArray) ?~> "mesh.data.save.failed"
     } yield Ok
   }

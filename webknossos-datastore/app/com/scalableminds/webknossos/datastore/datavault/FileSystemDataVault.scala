@@ -2,7 +2,6 @@ package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.bool2Fox
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import net.liftweb.common.{Box, Full}
 import org.apache.commons.lang3.builder.HashCodeBuilder
@@ -74,30 +73,31 @@ class FileSystemDataVault extends DataVault {
         if (channel != null && channel.isOpen) channel.close()
     }
 
-    promise.future
+    Fox.fromFutureBox(promise.future)
   }
 
   override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
-    vaultPathToLocalPath(path).map(
-      localPath =>
-        if (Files.isDirectory(localPath))
-          Files
-            .list(localPath)
-            .filter(file => Files.isDirectory(file))
-            .collect(Collectors.toList())
-            .asScala
-            .toList
-            .map(dir => new VaultPath(dir.toUri, this))
-            .take(maxItems)
-        else List.empty)
+    for {
+      localPath <- vaultPathToLocalPath(path)
+      listing = if (Files.isDirectory(localPath)) {
+        Files
+          .list(localPath)
+          .filter(file => Files.isDirectory(file))
+          .collect(Collectors.toList())
+          .asScala
+          .toList
+          .map(dir => new VaultPath(dir.toUri, this))
+          .take(maxItems)
+      } else List.empty
+    } yield listing
 
   private def vaultPathToLocalPath(path: VaultPath)(implicit ec: ExecutionContext): Fox[Path] = {
     val uri = path.toUri
     for {
-      _ <- bool2Fox(uri.getScheme == DataVaultService.schemeFile) ?~> "trying to read from FileSystemDataVault, but uri scheme is not file"
-      _ <- bool2Fox(uri.getHost == null || uri.getHost.isEmpty) ?~> s"trying to read from FileSystemDataVault, but hostname ${uri.getHost} is non-empty"
+      _ <- Fox.fromBool(uri.getScheme == DataVaultService.schemeFile) ?~> "trying to read from FileSystemDataVault, but uri scheme is not file"
+      _ <- Fox.fromBool(uri.getHost == null || uri.getHost.isEmpty) ?~> s"trying to read from FileSystemDataVault, but hostname ${uri.getHost} is non-empty"
       localPath = Paths.get(uri.getPath)
-      _ <- bool2Fox(localPath.isAbsolute) ?~> "trying to read from FileSystemDataVault, but hostname is non-empty"
+      _ <- Fox.fromBool(localPath.isAbsolute) ?~> "trying to read from FileSystemDataVault, but hostname is non-empty"
     } yield localPath
   }
 

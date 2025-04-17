@@ -50,8 +50,8 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
       transactionState <- CreditTransactionState.fromString(row.transactionState).toFox
       creditState <- CreditState.fromString(row.creditState).toFox
       id <- ObjectId.fromString(row._Id)
-      jobIdOpt <- Fox.runOptional(row._PaidJob)(ObjectId.fromStringSync)
-      relatedTransactionOpt <- Fox.runOptional(row._RelatedTransaction)(ObjectId.fromStringSync)
+      jobIdOpt <- Fox.runOptional(row._PaidJob)(ObjectId.fromString)
+      relatedTransactionOpt <- Fox.runOptional(row._RelatedTransaction)(ObjectId.fromString)
     } yield {
       CreditTransaction(
         id,
@@ -133,7 +133,7 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
       r <- run(
         q"SELECT COALESCE(SUM(credit_delta), 0) FROM $existingCollectionName WHERE _organization = $organizationId AND $accessQuery"
           .as[BigDecimal])
-      firstRow <- r.headOption
+      firstRow <- r.headOption.toFox
     } yield firstRow
 
   def insertNewPendingTransaction(transaction: CreditTransaction)(implicit ctx: DBAccessContext): Fox[Unit] =
@@ -207,7 +207,7 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
     for {
       _ <- assertUpdateAccess(transactionId)
       transactionToRefund <- findOne(transactionId)
-      _ <- bool2Fox(transactionToRefund.transactionState == CreditTransactionState.Pending) ?~> "Can only refund pending transactions."
+      _ <- Fox.fromBool(transactionToRefund.transactionState == CreditTransactionState.Pending) ?~> "Can only refund pending transactions."
       refundComment = transactionToRefund._paidJob
         .map(jobId => s"Refund for failed job $jobId.")
         .getOrElse(s"Refund for transaction $transactionId.")
@@ -241,7 +241,7 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
           .sequence(List(insertRefundTransaction, setToRefunded))
           .transactionally
           .withTransactionIsolation(Serializable))
-      _ <- bool2Fox(updatedRows.forall(_ == 1)) ?~> s"Failed to refund transaction ${transactionToRefund._id} properly."
+      _ <- Fox.fromBool(updatedRows.forall(_ == 1)) ?~> s"Failed to refund transaction ${transactionToRefund._id} properly."
     } yield ()
 
   def findTransactionForJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[CreditTransaction] =

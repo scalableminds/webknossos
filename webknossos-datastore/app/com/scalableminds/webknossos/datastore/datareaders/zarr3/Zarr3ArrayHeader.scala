@@ -1,7 +1,8 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.{BoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.BoxUtils.bool2Box
+import com.scalableminds.util.tools.JsonHelper
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
@@ -33,8 +34,7 @@ case class Zarr3ArrayHeader(
     codecs: Seq[CodecConfiguration],
     storage_transformers: Option[Seq[StorageTransformerSpecification]],
     dimension_names: Option[Array[String]]
-) extends DatasetHeader
-    with BoxImplicits {
+) extends DatasetHeader {
 
   override def datasetShape: Option[Array[Int]] = Some(shape)
 

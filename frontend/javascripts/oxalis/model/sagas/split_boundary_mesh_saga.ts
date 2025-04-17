@@ -48,10 +48,12 @@ export function* splitBoundaryMeshSaga(): Saga<void> {
       "SET_ACTIVE_TREE_BY_NAME",
       "CREATE_NODE",
       "DELETE_NODE",
+      "CREATE_TREE",
       "DELETE_TREE",
       "SET_TREE_VISIBILITY",
       "TOGGLE_TREE",
       "SET_NODE_POSITION",
+      "SET_TRACING",
       (action: Action) =>
         action.type === "UPDATE_USER_SETTING" && action.propertyName === "activeToolkit",
     ] as ActionPattern,

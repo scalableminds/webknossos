@@ -11,3 +11,7 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 - NodeJs version `22+` is required. [#8479](https://github.com/scalableminds/webknossos/pull/8479)
 
 ### Postgres Evolutions:
+
+- [129-credit-transactions.sql](conf/evolutions/129-credit-transactions.sql)
+- [130-replace-text-types.sql](conf/evolutions/130-replace-text-types.sql)
+- [131-add-webauthn-credentials.sql](./conf/evolutions/131-add-webauthn-credentials.sql)

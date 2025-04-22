@@ -235,7 +235,7 @@ function findEvolutionFiles() {
     .readdirSync(evolutionsPath)
     .filter((filename) => filename.endsWith(".sql"))
     .map((filename) => {
-      const num = Number.Number.parseInt(filename.split("-")[0], 10);
+      const num = Number.parseInt(filename.split("-")[0], 10);
       return [num, filename];
     })
     .sort((a, b) => a[0] - b[0]);

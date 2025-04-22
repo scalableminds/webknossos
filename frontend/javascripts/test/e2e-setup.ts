@@ -64,7 +64,7 @@ export function replaceVolatileValues(obj: ArbitraryObject | null | undefined) {
 }
 
 vi.mock("libs/request", async (importOriginal) => {
-  // The request lib is globally mocked. In the E2E tests, we actually want to run the proper fetch calls
+  // The request lib is globally mocked. In the E2E tests, we actually want to run the proper fetch calls so we revert to the original implementation
   return await importOriginal();
 });
 
@@ -83,18 +83,9 @@ global.fetch = function fetchWrapper(url, options) {
 
   const promise = originalFetch(newUrl, options);
   requests.push(promise);
-  console.log("Fetching", newUrl);
 
   return promise;
 };
-
-// global.Headers = Headers;
-// global.Request = Request;
-// global.Response = Response;
-// // @ts-ignore FIXME: Element implicitly has an 'any' type because type ... Remove this comment to see the full error message
-// global.FetchError = FetchError;
-// global.FormData = FormData;
-// global.File = File;
 
 // set pretendToBeVisual to true, so that window.requestAnimationFrame is available from JSDOM
 const jsdom = new JSDOM("<!doctype html><html><body></body></html>", {
@@ -111,8 +102,6 @@ window.matchMedia = vi.fn().mockImplementation(() => ({
   removeListener: vi.fn(),
 }));
 
-// global.window = window;
-// global.document = window.document;
 global.localStorage = {
   getItem: vi.fn().mockReturnValue(undefined),
   setItem: vi.fn(),

@@ -137,7 +137,7 @@ user_A, user_B, user_C, user_D, user_E
     setUserAuthToken(tokenUserE);
 
     await expect(getTask("58135c192faeb34c0081c058")).rejects.toMatchObject(
-      getExpectedErrorObject("Task could not be found")
+      getExpectedErrorObject("Task could not be found"),
     );
   });
 

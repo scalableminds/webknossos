@@ -12,6 +12,10 @@ import { getTask } from "admin/api/tasks";
 import * as api from "admin/admin_rest_api";
 import { describe, test, beforeAll, expect } from "vitest";
 
+function getExpectedErrorObject(errorMessage: string) {
+  return { errors: [JSON.stringify({ messages: [{ error: errorMessage }] })] };
+}
+
 describe("Team Structure Tests (E2E)", () => {
   /*
 TEAM STRUCTURE USED FOR TESTING:
@@ -77,8 +81,8 @@ user_A, user_B, user_C, user_D, user_E
     // the teamManager is not allowed to delete the team
     setUserAuthToken(tokenUserD);
 
-    await expect(api.deleteTeam("69882b370d889b84020efd4f")).rejects.toThrow(
-      "Access denied. Only admin users can execute this operation.",
+    await expect(api.deleteTeam("69882b370d889b84020efd4f")).rejects.toMatchObject(
+      getExpectedErrorObject("Access denied. Only admin users can execute this operation."),
     );
   });
 
@@ -89,8 +93,8 @@ user_A, user_B, user_C, user_D, user_E
     const newTeam = {
       name: "test-team-name",
     };
-    await expect(api.createTeam(newTeam)).rejects.toThrow(
-      "Access denied. Only admin users can execute this operation.",
+    await expect(api.createTeam(newTeam)).rejects.toMatchObject(
+      getExpectedErrorObject("Access denied. Only admin users can execute this operation."),
     );
   });
 
@@ -124,13 +128,17 @@ user_A, user_B, user_C, user_D, user_E
   test("tasks_user_D", async () => {
     setUserAuthToken(tokenUserD);
 
-    await expect(getTask("58135c192faeb34c0081c058")).rejects.toThrow("Task could not be found");
+    await expect(getTask("58135c192faeb34c0081c058")).rejects.toMatchObject(
+      getExpectedErrorObject("Task could not be found"),
+    );
   });
 
   test("tasks_user_E", async () => {
     setUserAuthToken(tokenUserE);
 
-    await expect(getTask("58135c192faeb34c0081c058")).rejects.toThrow("Task could not be found");
+    await expect(getTask("58135c192faeb34c0081c058")).rejects.toMatchObject(
+      getExpectedErrorObject("Task could not be found")
+    );
   });
 
   test("tasks_user_C", async () => {
@@ -152,8 +160,8 @@ user_A, user_B, user_C, user_D, user_E
       isActive: false,
     });
 
-    await expect(api.updateUser(newUser)).rejects.toThrow(
-      "You are not authorized to view or edit this resource",
+    await expect(api.updateUser(newUser)).rejects.toMatchObject(
+      getExpectedErrorObject("You are not authorized to view or edit this resource"),
     );
   });
 
@@ -163,6 +171,8 @@ user_A, user_B, user_C, user_D, user_E
     setUserAuthToken(tokenUserE);
 
     const projectId = "58135bfd2faeb3190181c057";
-    await expect(api.deleteProject(projectId)).rejects.toThrow("Project could not be found");
+    await expect(api.deleteProject(projectId)).rejects.toMatchObject(
+      getExpectedErrorObject("Project could not be found"),
+    );
   });
 });

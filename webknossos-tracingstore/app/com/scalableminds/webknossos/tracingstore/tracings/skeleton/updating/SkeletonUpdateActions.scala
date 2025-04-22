@@ -5,7 +5,7 @@ import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, Node, SkeletonTracing, Tree, TreeGroup}
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction}
+import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction, UserStateUpdateAction}
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.TreeType.TreeType
 import play.api.libs.json._
 
@@ -396,6 +396,25 @@ case class UpdateTreeGroupsSkeletonAction(treeGroups: List[UpdateActionTreeGroup
     this.copy(actionTracingId = newTracingId)
 }
 
+case class UpdateTreeGroupsExpandedStateSkeletonAction(groupIds: List[Int],
+                                                       isExpaneded: List[Boolean],
+                                                       actionTracingId: String,
+                                                       actionTimestamp: Option[Long] = None,
+                                                       actionAuthorId: Option[String] = None,
+                                                       info: Option[String] = None)
+    extends SkeletonUpdateAction
+    with UserStateUpdateAction {
+  override def addTimestamp(timestamp: Long): SkeletonUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def addAuthorId(authorId: Option[String]): SkeletonUpdateAction =
+    this.copy(actionAuthorId = authorId)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
+
+  // TODO apply in user state
+  override def applyOn(tracing: SkeletonTracing): SkeletonTracing = ???
+}
+
 case class UpdateTracingSkeletonAction(activeNode: Option[Int],
                                        editPosition: com.scalableminds.util.geometry.Vec3Int,
                                        editRotation: com.scalableminds.util.geometry.Vec3Double,
@@ -423,6 +442,32 @@ case class UpdateTracingSkeletonAction(activeNode: Option[Int],
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
   override def addAuthorId(authorId: Option[String]): UpdateAction =
     this.copy(actionAuthorId = authorId)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
+
+  override def isViewOnlyChange: Boolean = true
+}
+
+case class UpdateUserStateSkeletonAction(activeNode: Option[Int],
+                                         actionTracingId: String,
+                                         actionTimestamp: Option[Long] = None,
+                                         actionAuthorId: Option[String] = None,
+                                         info: Option[String] = None)
+    extends SkeletonUpdateAction
+    with UserStateUpdateAction {
+  override def applyOn(tracing: SkeletonTracing): SkeletonTracing =
+    tracing.copy(
+      activeNodeId = activeNode
+    )
+
+  override def addTimestamp(timestamp: Long): UpdateAction =
+    this.copy(actionTimestamp = Some(timestamp))
+
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
+    this.copy(actionAuthorId = authorId)
+
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 
@@ -545,7 +590,8 @@ case class UpdateUserBoundingBoxVisibilitySkeletonAction(boundingBoxId: Option[I
                                                          actionTimestamp: Option[Long] = None,
                                                          actionAuthorId: Option[String] = None,
                                                          info: Option[String] = None)
-    extends SkeletonUpdateAction {
+    extends SkeletonUpdateAction
+    with UserStateUpdateAction {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
     def updateUserBoundingBoxes() =
       tracing.userBoundingBoxes.map { boundingBox =>
@@ -605,6 +651,9 @@ object UpdateTreeGroupsSkeletonAction {
 object UpdateTracingSkeletonAction {
   implicit val jsonFormat: OFormat[UpdateTracingSkeletonAction] = Json.format[UpdateTracingSkeletonAction]
 }
+object UpdateUserStateSkeletonAction {
+  implicit val jsonFormat: OFormat[UpdateUserStateSkeletonAction] = Json.format[UpdateUserStateSkeletonAction]
+}
 object UpdateTreeVisibilitySkeletonAction {
   implicit val jsonFormat: OFormat[UpdateTreeVisibilitySkeletonAction] = Json.format[UpdateTreeVisibilitySkeletonAction]
 }
@@ -623,4 +672,8 @@ object UpdateUserBoundingBoxesSkeletonAction {
 object UpdateUserBoundingBoxVisibilitySkeletonAction {
   implicit val jsonFormat: OFormat[UpdateUserBoundingBoxVisibilitySkeletonAction] =
     Json.format[UpdateUserBoundingBoxVisibilitySkeletonAction]
+}
+object UpdateTreeGroupsExpandedStateSkeletonAction {
+  implicit val jsonFormat: OFormat[UpdateTreeGroupsExpandedStateSkeletonAction] =
+    Json.format[UpdateTreeGroupsExpandedStateSkeletonAction]
 }

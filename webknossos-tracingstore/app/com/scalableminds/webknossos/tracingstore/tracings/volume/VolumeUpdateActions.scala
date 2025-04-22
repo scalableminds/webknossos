@@ -5,7 +5,7 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGro
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
-import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction}
+import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction, UserStateUpdateAction}
 import com.scalableminds.webknossos.tracingstore.tracings.{MetadataEntry, NamedBoundingBox}
 import play.api.libs.json._
 
@@ -97,6 +97,43 @@ case class UpdateTracingVolumeAction(
       zoomLevel = zoomLevel,
       editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(editPositionAdditionalCoordinates)
     )
+}
+
+case class UpdateUserStateVolumeAction(activeSegmentId: Long,
+                                       actionTracingId: String,
+                                       actionTimestamp: Option[Long] = None,
+                                       actionAuthorId: Option[String] = None,
+                                       info: Option[String] = None)
+    extends ApplyableVolumeUpdateAction
+    with UserStateUpdateAction {
+  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
+
+  override def isViewOnlyChange: Boolean = true
+
+  override def applyOn(tracing: VolumeTracing): VolumeTracing =
+    tracing.copy(activeSegmentId = Some(activeSegmentId))
+}
+
+case class UpdateLargestSegmentIdVolumeAction(largestSegmentId: Long,
+                                              actionTracingId: String,
+                                              actionTimestamp: Option[Long] = None,
+                                              actionAuthorId: Option[String] = None,
+                                              info: Option[String] = None)
+    extends ApplyableVolumeUpdateAction {
+  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
+
+  override def applyOn(tracing: VolumeTracing): VolumeTracing =
+    tracing.copy(largestSegmentId = Some(largestSegmentId))
 }
 
 case class UpdateUserBoundingBoxesVolumeAction(boundingBoxes: List[NamedBoundingBox],
@@ -351,6 +388,23 @@ case class UpdateSegmentGroupsVolumeAction(segmentGroups: List[UpdateActionSegme
     this.copy(actionTracingId = newTracingId)
 }
 
+case class UpdateSegmentGroupsExpandedStateVolumeAction(groupIds: List[Int],
+                                                        isExpaneded: List[Boolean],
+                                                        actionTracingId: String,
+                                                        actionTimestamp: Option[Long] = None,
+                                                        actionAuthorId: Option[String] = None,
+                                                        info: Option[String] = None)
+    extends VolumeUpdateAction
+    with UserStateUpdateAction {
+  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
+  // TODO apply in user state
+}
+
 // Only used to represent legacy update actions from the db where not all fields are set
 // This is from a time when volume actions were not applied lazily
 // (Before https://github.com/scalableminds/webknossos/pull/7917)
@@ -396,6 +450,12 @@ object UpdateBucketVolumeAction {
 object UpdateTracingVolumeAction {
   implicit val jsonFormat: OFormat[UpdateTracingVolumeAction] = Json.format[UpdateTracingVolumeAction]
 }
+object UpdateUserStateVolumeAction {
+  implicit val jsonFormat: OFormat[UpdateUserStateVolumeAction] = Json.format[UpdateUserStateVolumeAction]
+}
+object UpdateLargestSegmentIdVolumeAction {
+  implicit val jsonFormat: OFormat[UpdateLargestSegmentIdVolumeAction] = Json.format[UpdateLargestSegmentIdVolumeAction]
+}
 object UpdateUserBoundingBoxesVolumeAction {
   implicit val jsonFormat: OFormat[UpdateUserBoundingBoxesVolumeAction] =
     Json.format[UpdateUserBoundingBoxesVolumeAction]
@@ -430,4 +490,8 @@ object UpdateMappingNameVolumeAction {
 }
 object UpdateSegmentGroupsVolumeAction {
   implicit val jsonFormat: OFormat[UpdateSegmentGroupsVolumeAction] = Json.format[UpdateSegmentGroupsVolumeAction]
+}
+object UpdateSegmentGroupsExpandedStateVolumeAction {
+  implicit val jsonFormat: OFormat[UpdateSegmentGroupsExpandedStateVolumeAction] =
+    Json.format[UpdateSegmentGroupsExpandedStateVolumeAction]
 }

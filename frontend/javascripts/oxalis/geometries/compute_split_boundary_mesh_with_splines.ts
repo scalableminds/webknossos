@@ -47,10 +47,6 @@ export default function computeSplitBoundaryMeshWithSplines(points: Vector3[]): 
         pointsByZ[zValue].map((p) => new THREE.Vector3(p[0], p[1], adaptedZ)),
       );
 
-      if (points2D.length < 2) {
-        return null;
-      }
-
       if (curveIdx > 0) {
         const currentCurvePoints = points2D;
         const prevCurvePoints = curvesByZ[zValues[curveIdx - 1]].points;

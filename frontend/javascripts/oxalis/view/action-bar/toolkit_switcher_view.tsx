@@ -39,14 +39,8 @@ export default function ToolkitView() {
   const handleMenuClick: MenuProps["onClick"] = (args) => {
     const toolkit = args.key;
     Store.dispatch(updateUserSettingAction("activeToolkit", toolkit as Toolkit));
-    // Unfortunately, antd doesn't provide the original event here
-    // which is why we have to blur using document.activeElement.
-    // Additionally, we need a timeout since the blurring would be done
-    // to early, otherwise.
-    setTimeout(() => {
-      document.activeElement?.blur();
-      }
-    }, 100);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'Element'.
+    args.domEvent.target.blur();
   };
 
   const toolkitMenuProps = {

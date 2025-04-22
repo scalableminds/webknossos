@@ -7,6 +7,33 @@ export default function computeSplitBoundaryMeshWithSplines(points: Vector3[]): 
   splines: THREE.Object3D[];
   splitBoundaryMesh: THREE.Mesh;
 } {
+  /**
+   * Generates a smooth, interpolated 3D boundary mesh and corresponding spline visualizations
+   * from a set of unordered 3D points.
+   *
+   * This function processes a collection of 3D points that are assumed to lie on or near
+   * horizontal slices (constant Z-values). It groups the points by their Z-coordinate,
+   * constructs a spline for each slice using a minimum spanning tree (MST)
+   * strategy to find a good continuous order, and interpolates intermediate slices if gaps in the Z-axis
+   * are detected.
+   *
+   * The output consists of:
+   * 1. A set of 3D spline objects that represent the ordered splines at each Z level.
+   * 2. A triangulated boundary surface mesh constructed from these splines.
+   *
+   * The process includes:
+   * - Grouping input points by their Z-coordinate, filtering out groups with fewer than 2 points.
+   * - Creating smooth Catmull-Rom splines from the ordered boundary points for each slice.
+   * - Ensuring geometric consistency by flipping curves when necessary to prevent twists.
+   * - Interpolating curves for missing Z-levels to produce a continuous surface.
+   * - Generating a structured grid of vertices from these curves and triangulating them
+   *   to form a closed 3D mesh.
+   * - Applying smoothing and basic material setup for visualization.
+   *
+   * If all points lie on a single Z-level, the function duplicates the layer at adjacent Z-values
+   * to ensure a valid 3D surface can still be formed.
+   *
+   */
   const splines: THREE.Object3D[] = [];
 
   const unfilteredPointsByZ = _.groupBy(points, (p) => p[2]);
@@ -48,6 +75,9 @@ export default function computeSplitBoundaryMeshWithSplines(points: Vector3[]): 
       );
 
       if (curveIdx > 0) {
+        // Find out whether we should flip the order of points2D by checking
+        // whether the first point of the last and the current curve is
+        // close to each other.
         const currentCurvePoints = points2D;
         const prevCurvePoints = curvesByZ[zValues[curveIdx - 1]].points;
 

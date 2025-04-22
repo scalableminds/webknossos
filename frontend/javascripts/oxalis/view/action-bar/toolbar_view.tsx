@@ -888,7 +888,8 @@ export default function ToolbarView() {
         <FastTooltip
           title={`Some tools behave differently because the "Split Segments" toolkit is active. Read more in the documentation.`}
         >
-          <Tag style={{ marginLeft: 12 }} color="blue">
+          <Tag style={{ marginLeft: 12 }} color="orange">
+            <InfoCircleOutlined style={{ marginRight: 4 }} />
             Split Workflow
           </Tag>
         </FastTooltip>
@@ -1262,29 +1263,20 @@ function SkeletonTool() {
   }
 
   return (
-    <Badge
-      dot={isSplitToolkit}
-      style={{
-        boxShadow: "none",
-        background: "red",
-        zIndex: 1000,
-      }}
+    <ToolRadioButton
+      name={AnnotationTool.SKELETON.readableName}
+      description={`${skeletonToolDescription} Note that this tool differently because the "Split Segments" toolkit is active. Read more in the documentation.`}
+      disabledExplanation={disabledInfosForTools[AnnotationTool.SKELETON.id].explanation}
+      disabled={disabledInfosForTools[AnnotationTool.SKELETON.id].isDisabled}
+      value={AnnotationTool.SKELETON}
     >
-      <ToolRadioButton
-        name={AnnotationTool.SKELETON.readableName}
-        description={`${skeletonToolDescription} Note that this tool differently because the "Split Segments" toolkit is active. Read more in the documentation.`}
-        disabledExplanation={disabledInfosForTools[AnnotationTool.SKELETON.id].explanation}
-        disabled={disabledInfosForTools[AnnotationTool.SKELETON.id].isDisabled}
-        value={AnnotationTool.SKELETON}
-      >
-        <i
-          style={{
-            opacity: disabledInfosForTools[AnnotationTool.SKELETON.id].isDisabled ? 0.5 : 1,
-          }}
-          className="fas fa-project-diagram"
-        />
-      </ToolRadioButton>
-    </Badge>
+      <i
+        style={{
+          opacity: disabledInfosForTools[AnnotationTool.SKELETON.id].isDisabled ? 0.5 : 1,
+        }}
+        className="fas fa-project-diagram"
+      />
+    </ToolRadioButton>
   );
 }
 
@@ -1432,33 +1424,24 @@ function FillCellTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTool
   }
 
   return (
-    <Badge
-      dot={isSplitToolkit}
-      style={{
-        boxShadow: "none",
-        background: "red",
-        zIndex: 1000,
-      }}
+    <ToolRadioButton
+      name={AnnotationTool.FILL_CELL.readableName}
+      description={`Flood-fill the clicked region. Note that this tool differently because the "Split Segments" toolkit is active. Read more in the documentation.`}
+      disabledExplanation={disabledInfosForTools[AnnotationTool.FILL_CELL.id].explanation}
+      disabled={disabledInfosForTools[AnnotationTool.FILL_CELL.id].isDisabled}
+      value={AnnotationTool.FILL_CELL}
     >
-      <ToolRadioButton
-        name={AnnotationTool.FILL_CELL.readableName}
-        description={`Flood-fill the clicked region. Note that this tool differently because the "Split Segments" toolkit is active. Read more in the documentation.`}
-        disabledExplanation={disabledInfosForTools[AnnotationTool.FILL_CELL.id].explanation}
-        disabled={disabledInfosForTools[AnnotationTool.FILL_CELL.id].isDisabled}
-        value={AnnotationTool.FILL_CELL}
-      >
-        <i
-          className="fas fa-fill-drip"
-          style={{
-            opacity: disabledInfosForTools[AnnotationTool.FILL_CELL.id].isDisabled ? 0.5 : 1,
-            transform: "scaleX(-1)",
-          }}
-        />
-        {adaptedActiveTool === AnnotationTool.FILL_CELL ? (
-          <MaybeMultiSliceAnnotationInfoIcon />
-        ) : null}
-      </ToolRadioButton>
-    </Badge>
+      <i
+        className="fas fa-fill-drip"
+        style={{
+          opacity: disabledInfosForTools[AnnotationTool.FILL_CELL.id].isDisabled ? 0.5 : 1,
+          transform: "scaleX(-1)",
+        }}
+      />
+      {adaptedActiveTool === AnnotationTool.FILL_CELL ? (
+        <MaybeMultiSliceAnnotationInfoIcon />
+      ) : null}
+    </ToolRadioButton>
   );
 }
 

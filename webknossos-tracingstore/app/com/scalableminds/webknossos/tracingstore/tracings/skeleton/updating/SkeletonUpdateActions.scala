@@ -2,7 +2,14 @@ package com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating
 
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
-import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, Node, SkeletonTracing, Tree, TreeGroup}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{
+  Edge,
+  Node,
+  SkeletonTracing,
+  SkeletonUserStateProto,
+  Tree,
+  TreeGroup
+}
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction, UserStateUpdateAction}
@@ -405,14 +412,43 @@ case class UpdateTreeGroupsExpandedStateSkeletonAction(groupIds: List[Int],
     extends SkeletonUpdateAction
     with UserStateUpdateAction {
   override def addTimestamp(timestamp: Long): SkeletonUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+
   override def addAuthorId(authorId: Option[String]): SkeletonUpdateAction =
     this.copy(actionAuthorId = authorId)
+
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 
   // TODO apply in user state
-  override def applyOn(tracing: SkeletonTracing): SkeletonTracing = ???
+  override def applyOn(tracing: SkeletonTracing): SkeletonTracing = actionAuthorId match {
+    case None => tracing
+    case Some(actionUserId) => // TODO extract to trait, implement applyOnUserState
+      val userStateAlreadyPresent = tracing.userState.exists(state => actionUserId == state.userId)
+      if (userStateAlreadyPresent) {
+        tracing.copy(userState = tracing.userState.map {
+          case userState if actionUserId == userState.userId =>
+            userState.copy(
+              userId = actionUserId,
+              treeGroupIds = List(1, 2, 3),
+              treeGroupVisibilities = List(true, true, true)
+            )
+          case userState => userState
+        })
+      } else {
+        tracing.copy(
+          userState = tracing.userState :+ SkeletonUserStateProto(
+            userId = actionUserId,
+            treeGroupIds = List(1, 2, 3),
+            treeGroupVisibilities = List(true, true, true),
+            boundingBoxIds = Seq.empty,
+            boundingBoxVisibilities = Seq.empty,
+            treeIds = Seq.empty,
+            treeVisibilities = Seq.empty // TODO other properties from tracing legacy state?
+          ))
+      }
+  }
 }
 
 case class UpdateTracingSkeletonAction(activeNode: Option[Int],

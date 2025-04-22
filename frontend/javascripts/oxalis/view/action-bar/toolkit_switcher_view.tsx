@@ -44,9 +44,7 @@ export default function ToolkitView() {
     // Additionally, we need a timeout since the blurring would be done
     // to early, otherwise.
     setTimeout(() => {
-      if (document.activeElement != null) {
-        // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'Element'.
-        document.activeElement.blur();
+      document.activeElement?.blur();
       }
     }, 100);
   };

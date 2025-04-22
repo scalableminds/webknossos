@@ -16,7 +16,7 @@ import getSceneController from "oxalis/controller/scene_controller_provider";
 import { getDatasetBoundingBox, getMagInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getDisabledInfoForTools } from "oxalis/model/accessors/disabled_tool_accessor";
 import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
-import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
+import { AnnotationTool, Toolkit } from "oxalis/model/accessors/tool_accessor";
 import { enforceActiveVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
@@ -197,7 +197,7 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
 
   const sceneController = getSceneController();
   const isSplitToolkit = yield* select(
-    (state) => state.userConfiguration.activeToolkit === "SPLIT_SEGMENTS",
+    (state) => state.userConfiguration.activeToolkit === Toolkit.SPLIT_SEGMENTS,
   );
   const splitBoundaryMesh = isSplitToolkit ? sceneController.getSplitBoundaryMesh() : null;
 

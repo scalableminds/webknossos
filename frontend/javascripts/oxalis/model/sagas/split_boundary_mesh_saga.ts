@@ -4,6 +4,7 @@ import { select } from "oxalis/model/sagas/effect-generators";
 import type { ActionPattern } from "redux-saga/effects";
 import { call, put, takeEvery } from "typed-redux-saga";
 import { getActiveTree } from "../accessors/skeletontracing_accessor";
+import { Toolkit } from "../accessors/tool_accessor";
 import type { Action } from "../actions/actions";
 import { setTreeEdgeVisibilityAction } from "../actions/skeletontracing_actions";
 import { ensureWkReady } from "./ready_sagas";
@@ -41,7 +42,7 @@ function* updateSplitBoundaryMesh() {
   }
 
   const isSplitToolkit = yield* select(
-    (state) => state.userConfiguration.activeToolkit === "SPLIT_SEGMENTS",
+    (state) => state.userConfiguration.activeToolkit === Toolkit.SPLIT_SEGMENTS,
   );
   if (!isSplitToolkit) {
     yield* call(restoreApperanceOfTree);

@@ -1,6 +1,6 @@
 import { getToolControllerForAnnotationTool } from "oxalis/controller/combinations/tool_controls";
 import getSceneController from "oxalis/controller/scene_controller_provider";
-import { AnnotationTool, MeasurementTools } from "oxalis/model/accessors/tool_accessor";
+import { AnnotationTool, MeasurementTools, Toolkit } from "oxalis/model/accessors/tool_accessor";
 import {
   type CycleToolAction,
   type SetToolAction,
@@ -133,7 +133,7 @@ export default function* toolSaga() {
 
   const isViewMode = yield* select((state) => state.annotation.annotationType === "View");
   if (isViewMode) {
-    yield* put(updateUserSettingAction("activeToolkit", "ALL_TOOLS"));
+    yield* put(updateUserSettingAction("activeToolkit", Toolkit.ALL_TOOLS));
   }
 
   yield fork(watchToolDeselection);

@@ -8,7 +8,7 @@ import Constants, {
   UnitLong,
 } from "oxalis/constants";
 import constants from "oxalis/constants";
-import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
+import { AnnotationTool, Toolkit } from "oxalis/model/accessors/tool_accessor";
 import type { OxalisState } from "oxalis/store";
 import { getSystemColorTheme } from "theme";
 import type {
@@ -102,7 +102,7 @@ const defaultState: OxalisState = {
     },
     renderWatermark: true,
     antialiasRendering: false,
-    activeToolkit: "ALL_TOOLS",
+    activeToolkit: Toolkit.ALL_TOOLS,
   },
   temporaryConfiguration: {
     viewMode: Constants.MODE_PLANE_TRACING,

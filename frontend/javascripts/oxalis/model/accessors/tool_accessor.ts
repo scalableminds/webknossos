@@ -108,7 +108,15 @@ export const AnnotationTool = {
 // and a type.
 export type AnnotationTool = (typeof AnnotationTool)[keyof typeof AnnotationTool];
 
-export const Toolkits = {
+export const Toolkit = {
+  ALL_TOOLS: "ALL_TOOLS",
+  VOLUME_TOOLS: "VOLUME_TOOLS",
+  READ_ONLY_TOOLS: "READ_ONLY_TOOLS",
+  SPLIT_SEGMENTS: "SPLIT_SEGMENTS",
+} as const;
+export type Toolkit = (typeof Toolkit)[keyof typeof Toolkit];
+
+export const Toolkits: Record<Toolkit, AnnotationTool[]> = {
   ALL_TOOLS: Object.values(AnnotationTool) as AnnotationTool[],
   VOLUME_TOOLS: [
     AnnotationTool.MOVE,
@@ -133,7 +141,6 @@ export const Toolkits = {
     AnnotationTool.BOUNDING_BOX,
   ] as AnnotationTool[],
 };
-export type Toolkit = keyof typeof Toolkits;
 
 export const VolumeTools = _.without(Toolkits.VOLUME_TOOLS, AnnotationTool.MOVE);
 

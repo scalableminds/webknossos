@@ -45,7 +45,6 @@ import {
   AreaMeasurementToolController,
 } from "oxalis/controller/combinations/tool_controls";
 import UiReducer from "oxalis/model/reducers/ui_reducer";
-import { wkReadyAction } from "oxalis/model/actions/actions";
 import { cycleToolAction, setToolAction } from "oxalis/model/actions/ui_actions";
 import { watchToolDeselection } from "oxalis/model/sagas/annotation_tool_saga";
 

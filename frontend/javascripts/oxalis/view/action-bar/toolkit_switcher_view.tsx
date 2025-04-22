@@ -1,5 +1,5 @@
 import { Badge, Button, Dropdown, type MenuProps } from "antd";
-import type { Toolkit } from "oxalis/model/accessors/tool_accessor";
+import { Toolkit } from "oxalis/model/accessors/tool_accessor";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { Store } from "oxalis/singletons";
 import type { OxalisState } from "oxalis/store";
@@ -9,19 +9,19 @@ import { NARROW_BUTTON_STYLE } from "./toolbar_view";
 const toolkitOptions: Array<{ label: string; key: Toolkit }> = [
   {
     label: "All Tools",
-    key: "ALL_TOOLS",
+    key: Toolkit.ALL_TOOLS,
   },
   {
     label: "Read Only",
-    key: "READ_ONLY_TOOLS",
+    key: Toolkit.READ_ONLY_TOOLS,
   },
   {
     label: "Volume",
-    key: "VOLUME_TOOLS",
+    key: Toolkit.VOLUME_TOOLS,
   },
   {
     label: "Split Segments",
-    key: "SPLIT_SEGMENTS",
+    key: Toolkit.SPLIT_SEGMENTS,
   },
 ];
 
@@ -53,7 +53,7 @@ export default function ToolkitView() {
   return (
     <Dropdown menu={toolkitMenuProps}>
       <Badge
-        dot={activeToolkit !== "ALL_TOOLS"}
+        dot={activeToolkit !== Toolkit.ALL_TOOLS}
         style={{
           boxShadow: "none",
           background: "red",

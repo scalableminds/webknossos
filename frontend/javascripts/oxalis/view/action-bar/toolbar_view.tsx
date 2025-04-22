@@ -38,6 +38,7 @@ import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   AnnotationTool,
   MeasurementTools,
+  Toolkit,
   VolumeTools,
 } from "oxalis/model/accessors/tool_accessor";
 import { Toolkits, adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
@@ -392,7 +393,7 @@ function SkeletonSpecificButtons() {
     (state: OxalisState) => state.userConfiguration.continuousNodeCreation,
   );
   const isSplitToolkit = useSelector(
-    (state: OxalisState) => state.userConfiguration.activeToolkit === "SPLIT_SEGMENTS",
+    (state: OxalisState) => state.userConfiguration.activeToolkit === Toolkit.SPLIT_SEGMENTS,
   );
   const toggleContinuousNodeCreation = () =>
     dispatch(updateUserSettingAction("continuousNodeCreation", !isContinuousNodeCreationEnabled));
@@ -856,7 +857,7 @@ export default function ToolbarView() {
   const hasSkeleton = useSelector((state: OxalisState) => state.annotation?.skeleton != null);
   const toolkit = useSelector((state: OxalisState) => state.userConfiguration.activeToolkit);
   const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
-  const isSplitToolkit = toolkit === "SPLIT_SEGMENTS";
+  const isSplitToolkit = toolkit === Toolkit.SPLIT_SEGMENTS;
 
   const isShiftPressed = useKeyPress("Shift");
   const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
@@ -1254,9 +1255,6 @@ function SkeletonTool() {
   const isReadOnly = useSelector(
     (state: OxalisState) => !state.annotation.restrictions.allowUpdate,
   );
-  const isSplitToolkit = useSelector(
-    (state: OxalisState) => state.userConfiguration.activeToolkit === "SPLIT_SEGMENTS",
-  );
 
   if (!hasSkeleton || isReadOnly) {
     return null;
@@ -1416,9 +1414,6 @@ function EraseTraceTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTo
 function FillCellTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTool }) {
   const disabledInfosForTools = useSelector(getDisabledInfoForTools);
   const isVolumeModificationAllowed = useSelector(getIsVolumeModificationAllowed);
-  const isSplitToolkit = useSelector(
-    (state: OxalisState) => state.userConfiguration.activeToolkit === "SPLIT_SEGMENTS",
-  );
   if (!isVolumeModificationAllowed) {
     return null;
   }

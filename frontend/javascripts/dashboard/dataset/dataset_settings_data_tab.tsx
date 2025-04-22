@@ -359,7 +359,7 @@ function SimpleLayerForm({
   form: FormInstance;
   dataset: APIDataset | null | undefined;
 }) {
-  const layerCategorySavedOnServer = dataset?.dataSource.dataLayers[index].category;
+  const layerCategorySavedOnServer = dataset?.dataSource.dataLayers[index]?.category;
   const isStoredAsSegmentationLayer = layerCategorySavedOnServer === "segmentation";
   const dataLayers = Form.useWatch(["dataSource", "dataLayers"]);
   const category = Form.useWatch(["dataSource", "dataLayers", index, "category"]);

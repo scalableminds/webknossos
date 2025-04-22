@@ -1,4 +1,4 @@
-import "test/mocks/lz4";
+import "test/mocks/ava_only_mock_lz4";
 import _ from "lodash";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'deep... Remove this comment to see the full error message
 import deepForEach from "deep-for-each";
@@ -87,7 +87,8 @@ global.FetchError = FetchError;
 global.FormData = FormData;
 global.File = File;
 
-const { JSDOM } = require("jsdom");
+// @ts-ignore
+import { JSDOM } from "jsdom";
 
 // set pretendToBeVisual to true, so that window.requestAnimationFrame is available from JSDOM
 const jsdom = new JSDOM("<!doctype html><html><body></body></html>", {
@@ -117,10 +118,7 @@ global.localStorage = {
   getItem: () => undefined,
   setItem: () => undefined,
 };
-// @ts-expect-error ts-migrate(2740) FIXME: Type '{ userAgent: string; }' is missing the follo... Remove this comment to see the full error message
-global.navigator = {
-  userAgent: "node.js",
-};
+
 copyProps(window, global);
 export async function writeTypeCheckingFile(
   object: Array<any> | Record<string, any>,

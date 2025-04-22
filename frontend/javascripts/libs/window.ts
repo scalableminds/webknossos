@@ -3,7 +3,6 @@
 import type TextureBucketManager from "oxalis/model/bucket_data_handling/texture_bucket_manager";
 import type { ArbitraryFunction, ArbitraryObject } from "types/globals";
 
-// mockRequire("libs/window", myFakeWindow);
 const removeEventListener = (
   _type: string,
   _fn: ArbitraryFunction,
@@ -32,16 +31,17 @@ export const document =
         },
       } as any as Document)
     : window.document;
+
 // See https://github.com/facebook/flow/blob/master/lib/bom.js#L294-L311
 const dummyLocation = {
   ancestorOrigins: [],
   hash: "",
-  host: "localhost",
-  hostname: "",
-  href: "",
-  origin: "",
+  host: "localhost:9000",
+  hostname: "localhost",
+  href: "http://localhost:9000/",
+  origin: "http://localhost:9000",
   pathname: "",
-  port: "",
+  port: "9000",
   protocol: "http:",
   search: "",
   reload: () => {},

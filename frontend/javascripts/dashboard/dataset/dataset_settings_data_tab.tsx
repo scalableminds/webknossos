@@ -301,7 +301,7 @@ function SimpleDatasetForm({
             </Row>
             <Row gutter={48}>
               <Col span={24} xl={12} />
-              <Col span={24} xl={6}>
+              <Col span={24} xl={12}>
                 <AxisRotationSettingForDataset form={form} />
               </Col>
             </Row>

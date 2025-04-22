@@ -104,7 +104,7 @@ export function getMaximumGroupId(groups: Array<TreeGroup>): number {
   return maxGroupId != null && maxGroupId >= 0 ? maxGroupId : 0;
 }
 
-function forEachGroups(groups: Array<TreeGroup>, callback: (arg0: TreeGroup) => any) {
+export function forEachGroups(groups: Array<TreeGroup>, callback: (arg0: TreeGroup) => any) {
   for (const group of groups) {
     callback(group);
 

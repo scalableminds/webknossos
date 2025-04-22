@@ -8,6 +8,7 @@ import {
   ExpandAltOutlined,
   EyeInvisibleOutlined,
   EyeOutlined,
+  FolderOutlined,
   LoadingOutlined,
   PlusOutlined,
   ReloadOutlined,
@@ -30,6 +31,7 @@ import {
   Modal,
   Popover,
   Select,
+  type TreeProps,
 } from "antd";
 import type { ItemType } from "antd/lib/menu/interface";
 import type { DataNode } from "antd/lib/tree";
@@ -82,6 +84,8 @@ import {
   setActiveCellAction,
   setExpandedSegmentGroupsAction,
   setSelectedSegmentsOrGroupAction,
+  toggleAllSegmentsAction,
+  toggleSegmentGroupAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import type { MagInfo } from "oxalis/model/helpers/mag_info";
@@ -131,6 +135,7 @@ import {
   additionallyExpandGroup,
   createGroupToParentMap,
   createGroupToSegmentsMap,
+  deepFlatFilter,
   findGroup,
   findParentIdForGroupId,
   getExpandedGroups,
@@ -387,6 +392,7 @@ function constructTreeData(
       key: getGroupNodeKey(groupId),
       id: groupId,
       type: "group",
+      isChecked: false, // todop: why?
       children: constructTreeData(group.children, groupToSegmentsMap).concat(
         _.sortBy(segments, "id").map(
           (segment): SegmentHierarchyNode => ({
@@ -395,6 +401,7 @@ function constructTreeData(
             type: "segment",
             key: `segment-${segment.id}`,
             id: segment.id,
+            isChecked: segment.isVisible,
           }),
         ),
       ),
@@ -627,7 +634,7 @@ class SegmentsView extends React.Component<Props, State> {
       ) {
         for (const node of nodes) {
           callback(node);
-          if ("children" in node) {
+          if ("children" in node && node.children != null) {
             visitAllItems(node.children, callback);
           }
         }
@@ -1671,6 +1678,33 @@ class SegmentsView extends React.Component<Props, State> {
     };
   };
 
+  onCheck: TreeProps<SegmentHierarchyNode>["onCheck"] = (_checkedKeysValue, info) => {
+    const visibleSegmentationLayer = getVisibleSegmentationLayer(Store.getState());
+    if (!visibleSegmentationLayer) {
+      return;
+    }
+    const { id, type } = info.node;
+
+    if (type === "segment") {
+      // todop refac: toggle in reducer
+      Store.dispatch(
+        updateSegmentAction(
+          id,
+          {
+            isVisible: !(this.props.segments?.getNullable(id)?.isVisible ?? false),
+          },
+          visibleSegmentationLayer.name,
+          undefined,
+          true,
+        ),
+      );
+    } else if (id === MISSING_GROUP_ID) {
+      Store.dispatch(toggleAllSegmentsAction(visibleSegmentationLayer.name));
+    } else {
+      Store.dispatch(toggleSegmentGroupAction(id, visibleSegmentationLayer.name));
+    }
+  };
+
   render() {
     const { groupToDelete } = this.state;
 
@@ -1790,6 +1824,7 @@ class SegmentsView extends React.Component<Props, State> {
 
                 return (
                   <div onContextMenu={onOpenContextMenu}>
+                    <FolderOutlined className="icon-margin-right" />
                     <EditableTextLabel
                       value={displayableName}
                       label="Group Name"
@@ -1802,7 +1837,7 @@ class SegmentsView extends React.Component<Props, State> {
                           );
                         }
                       }}
-                      margin="0 5px"
+                      margin={0}
                       // The root group must not be removed or renamed
                       disableEditing={!this.props.allowUpdate || id === MISSING_GROUP_ID}
                       onRenameStart={this.onRenameStart}
@@ -1813,6 +1848,11 @@ class SegmentsView extends React.Component<Props, State> {
                 );
               }
             };
+
+            // checkedKeys includes all nodes with a "selected" checkbox
+            const checkedKeys = deepFlatFilter(this.state.groupTree, (node) => node.isChecked).map(
+              (node) => node.key,
+            );
 
             return (
               <React.Fragment>
@@ -1880,12 +1920,15 @@ class SegmentsView extends React.Component<Props, State> {
                                 multiple
                                 showLine
                                 selectedKeys={this.getSelectedItemKeys()}
+                                onCheck={this.onCheck}
+                                checkedKeys={checkedKeys}
+                                checkable
                                 switcherIcon={<DownOutlined />}
                                 treeData={this.state.groupTree}
                                 titleRender={titleRender}
                                 style={{
                                   marginTop: 12,
-                                  marginLeft: -26, // hide switcherIcon for root group
+                                  marginLeft: -14, // hide switcherIcon for root group
                                   flex: "1 1 auto",
                                   overflow: "auto", // use hidden when not using virtualization
                                 }}

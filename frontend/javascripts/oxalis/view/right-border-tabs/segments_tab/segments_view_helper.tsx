@@ -23,6 +23,7 @@ export type SegmentHierarchyGroup = BasicDataNode & {
   id: number;
   key: string;
   isExpanded?: boolean;
+  isChecked: boolean;
   children: Array<SegmentHierarchyNode>;
 };
 
@@ -31,6 +32,8 @@ export type SegmentHierarchyLeaf = BasicDataNode &
     type: "segment";
     key: string;
     title: string;
+    children?: undefined;
+    isChecked: boolean;
   };
 
 export type SegmentHierarchyNode = SegmentHierarchyLeaf | SegmentHierarchyGroup;

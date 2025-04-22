@@ -60,8 +60,10 @@ import {
   getGroupNodeKey,
 } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import type { AdditionalCoordinate, ServerVolumeTracing } from "types/api_flow_types";
-import { mapGroups } from "../accessors/skeletontracing_accessor";
+import { mapGroups, mapGroupsToGenerator } from "../accessors/skeletontracing_accessor";
 import { sanitizeMetadata } from "./skeletontracing_reducer";
+import _ from "lodash";
+import { forEachGroups } from "./skeletontracing_reducer_helpers";
 
 type SegmentUpdateInfo =
   | {
@@ -307,6 +309,77 @@ function getVolumeTracingFromAction(state: OxalisState, action: VolumeTracingRed
   return getVolumeTracingById(state.annotation, maybeVolumeLayer.tracingId);
 }
 
+export function toggleSegmentGroupReducer(
+  state: OxalisState,
+  layerName: string,
+  groupId: number,
+  targetVisibility?: boolean,
+): OxalisState {
+  const updateInfo = getSegmentUpdateInfo(state, layerName);
+
+  if (updateInfo.type === "UPDATE_VOLUME_TRACING") {
+    const { volumeTracing } = updateInfo;
+
+    let toggledGroup;
+    forEachGroups(volumeTracing.segmentGroups, (group) => {
+      if (group.groupId === groupId) toggledGroup = group;
+    });
+    if (toggledGroup == null) return state;
+    // Assemble a list that contains the toggled groupId and the groupIds of all child groups
+    const affectedGroupIds = new Set(
+      mapGroupsToGenerator([toggledGroup], (group) => group.groupId),
+    );
+    // Let's make all segments visible if there is one invisible segment in one of the affected groups
+    const shouldBecomeVisible =
+      targetVisibility != null
+        ? targetVisibility
+        : Array.from(volumeTracing.segments.values()).some(
+            (segment) =>
+              typeof segment.groupId === "number" &&
+              affectedGroupIds.has(segment.groupId) &&
+              !segment.isVisible,
+          );
+
+    const newSegments = volumeTracing.segments.clone();
+
+    Array.from(volumeTracing.segments.values()).forEach((segment) => {
+      if (typeof segment.groupId === "number" && affectedGroupIds.has(segment.groupId)) {
+        newSegments.mutableSet(segment.id, { ...segment, isVisible: shouldBecomeVisible });
+      }
+    });
+
+    return updateSegments(state, layerName, (_oldSegments) => newSegments);
+  }
+
+  // todop
+  return state;
+}
+
+export function toggleAllSegmentsReducer(state: OxalisState, layerName: string): OxalisState {
+  const updateInfo = getSegmentUpdateInfo(state, layerName);
+
+  if (updateInfo.type === "UPDATE_VOLUME_TRACING") {
+    const { volumeTracing } = updateInfo;
+
+    const shouldBecomeVisible = Array.from(volumeTracing.segments.values()).some(
+      (segment) => !segment.isVisible,
+    );
+
+    const newSegments = volumeTracing.segments.clone();
+
+    Array.from(volumeTracing.segments.values()).forEach((segment) => {
+      if (segment.isVisible !== shouldBecomeVisible) {
+        newSegments.mutableSet(segment.id, { ...segment, isVisible: shouldBecomeVisible });
+      }
+    });
+
+    return updateSegments(state, layerName, (_oldSegments) => newSegments);
+  }
+
+  // todop
+  return state;
+}
+
 function VolumeTracingReducer(state: OxalisState, action: VolumeTracingReducerAction): OxalisState {
   switch (action.type) {
     case "INITIALIZE_VOLUMETRACING": {
@@ -390,6 +463,14 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingReducerAc
         }
       });
       return setSegmentGroups(state, layerName, newGroups);
+    }
+
+    case "TOGGLE_SEGMENT_GROUP": {
+      return toggleSegmentGroupReducer(state, action.layerName, action.groupId);
+    }
+
+    case "TOGGLE_ALL_SEGMENTS": {
+      return toggleAllSegmentsReducer(state, action.layerName);
     }
 
     case "SET_SEGMENT_GROUPS": {

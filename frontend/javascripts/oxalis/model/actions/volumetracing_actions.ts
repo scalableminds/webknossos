@@ -47,6 +47,8 @@ export type RemoveSegmentAction = ReturnType<typeof removeSegmentAction>;
 export type DeleteSegmentDataAction = ReturnType<typeof deleteSegmentDataAction>;
 export type SetSegmentGroupsAction = ReturnType<typeof setSegmentGroupsAction>;
 export type SetExpandedSegmentGroupsAction = ReturnType<typeof setExpandedSegmentGroupsAction>;
+export type ToggleSegmentGroupAction = ReturnType<typeof toggleSegmentGroupAction>;
+export type ToggleAllSegmentsAction = ReturnType<typeof toggleAllSegmentsAction>;
 export type SetHasEditableMappingAction = ReturnType<typeof setHasEditableMappingAction>;
 export type SetMappingIsLockedAction = ReturnType<typeof setMappingIsLockedAction>;
 export type SetVolumeBucketDataHasChangedAction = ReturnType<
@@ -94,6 +96,8 @@ export type VolumeTracingAction =
   | DeleteSegmentDataAction
   | SetSegmentGroupsAction
   | SetExpandedSegmentGroupsAction
+  | ToggleSegmentGroupAction
+  | ToggleAllSegmentsAction
   | AddBucketToUndoAction
   | ImportVolumeTracingAction
   | SetLargestSegmentIdAction
@@ -305,6 +309,19 @@ export const setExpandedSegmentGroupsAction = (
   ({
     type: "SET_EXPANDED_SEGMENT_GROUPS",
     expandedSegmentGroups,
+    layerName,
+  }) as const;
+
+export const toggleSegmentGroupAction = (groupId: number, layerName: string) =>
+  ({
+    type: "TOGGLE_SEGMENT_GROUP",
+    groupId,
+    layerName,
+  }) as const;
+
+export const toggleAllSegmentsAction = (layerName: string) =>
+  ({
+    type: "TOGGLE_ALL_SEGMENTS",
     layerName,
   }) as const;
 

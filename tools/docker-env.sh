@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Start Docker
-export POSTGRES_URL=jdbc:postgresql://localhost/webknossos
+export POSTGRES_URL=jdbc:postgresql://localhost:5434/webknossos
 export POSTGRES_USER="webknossos"
 export POSTGRES_PASSWORD="secret"
 

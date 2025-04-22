@@ -11,7 +11,7 @@ on:
 env:
   USER_UID: 1001
   USER_GID: 1001
-  POSTGRES_URL: "jdbc:postgresql://localhost:5432/webknossos"
+  POSTGRES_URL: "jdbc:postgresql://localhost:5434/webknossos"
   POSTGRES_USER: "webknossos_user"
   POSTGRES_PASSWORD: "secret_password"
   CERTIFICATE: ${{ secrets.CERTIFICATE_FOR_CI_ONLY }}

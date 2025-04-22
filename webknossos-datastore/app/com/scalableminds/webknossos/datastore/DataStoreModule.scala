@@ -5,7 +5,7 @@ import com.google.inject.AbstractModule
 import com.google.inject.name.Names
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.uploading.UploadService
-import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptorService}
 
 class DataStoreModule extends AbstractModule {
 
@@ -25,7 +25,8 @@ class DataStoreModule extends AbstractModule {
     bind(classOf[AgglomerateService]).asEagerSingleton()
     bind(classOf[AdHocMeshServiceHolder]).asEagerSingleton()
     bind(classOf[ApplicationHealthService]).asEagerSingleton()
-    bind(classOf[DatasetErrorLoggingService]).asEagerSingleton()
+    bind(classOf[DSDatasetErrorLoggingService]).asEagerSingleton()
     bind(classOf[MeshFileService]).asEagerSingleton()
+    bind(classOf[RemoteSourceDescriptorService]).asEagerSingleton()
   }
 }

@@ -19,7 +19,7 @@ import { applyState } from "oxalis/model_initialization";
 import type { MappingType, MeshInformation, OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
 import { type APIAnnotationType, APICompoundTypeEnum } from "types/api_flow_types";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { APIDataset, AdditionalCoordinate } from "types/api_flow_types";
 import { validateUrlStateJSON } from "types/validation";
 
 const MAX_UPDATE_INTERVAL = 1000;
@@ -76,6 +76,28 @@ function mapMeshInfoToUrlMeshDescriptor(meshInfo: MeshInformation): MeshUrlDescr
   }
 }
 
+// Extracts the dataset name from view or sandbox URLs.
+export function getDatasetNameFromLocation(location: Location): string | undefined {
+  // URL format: /datasets/<dataset-name>-<dataset-id>/<view|sandbox/type>...
+  const pathnameParts = location.pathname.split("/").slice(1); // First string is empty as pathname start with a /.
+  const endOfDatasetName = pathnameParts[1].lastIndexOf("-");
+  if (endOfDatasetName <= 0) {
+    return undefined;
+  }
+  const datasetNameInURL = pathnameParts[1].substring(0, endOfDatasetName);
+  return datasetNameInURL;
+}
+
+export function getUpdatedPathnameWithNewDatasetName(
+  location: (typeof window)["location"],
+  dataset: APIDataset,
+): string {
+  const pathnameParts = location.pathname.split("/").slice(1); // First string is empty as pathname start with a /.
+  const newNameAndIdPart = `${dataset.name}-${dataset.id}`;
+  const newPathname = `/${pathnameParts[0]}/${newNameAndIdPart}/${pathnameParts.slice(2).join("/")}`;
+  return newPathname;
+}
+
 // If the type of UrlManagerState changes, the following files need to be updated:
 // docs/sharing.md#sharing-link-format
 // frontend/javascripts/types/schemas/url_state.schema.ts
@@ -93,6 +115,7 @@ export type PartialUrlManagerState = Partial<UrlManagerState>;
 class UrlManager {
   baseUrl: string = "";
   initialState: PartialUrlManagerState = {};
+  stopStoreListening?: () => void;
 
   initialize() {
     this.baseUrl = location.pathname + location.search;
@@ -232,9 +255,16 @@ class UrlManager {
   }
 
   startUrlUpdater(): void {
-    Store.subscribe(() => this.update());
+    this.stopStoreListening = Store.subscribe(() => this.update());
 
     window.onhashchange = () => this.onHashChange();
+  }
+
+  stopUrlUpdater(): void {
+    if (this.stopStoreListening != null) {
+      this.stopStoreListening();
+    }
+    window.onhashchange = null;
   }
 
   getUrlState(state: OxalisState): UrlManagerState & { mode: ViewMode } {

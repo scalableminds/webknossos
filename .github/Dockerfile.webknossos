@@ -1,5 +1,5 @@
 FROM eclipse-temurin:21-jammy
-ARG VERSION_NODE="18.x"
+ARG VERSION_NODE="22.x"
 
 RUN curl -sL "https://deb.nodesource.com/setup_${VERSION_NODE}" | bash - \
   && apt-get -y install libblosc1 libbrotli1 postgresql-client libdraco4 git nodejs \
@@ -8,13 +8,15 @@ RUN curl -sL "https://deb.nodesource.com/setup_${VERSION_NODE}" | bash - \
 RUN mkdir -p /webknossos
 WORKDIR /webknossos
 
+# Copy compiled Scala output from a previous build step, e.g. output of the Docker-dev image
 COPY target/universal/stage .
 
 RUN addgroup --system --gid 999 webknossos \
   && adduser --system --uid 999 --ingroup webknossos webknossos \
   && mkdir disk \
   && chown -R webknossos . \
-  && chmod go+x bin/webknossos \
+  && chmod +x bin/webknossos \
+  && chmod +x tools/postgres/dbtool.js \
   && chmod go+w .
 
 RUN echo '#!/bin/bash\numask 002\nbin/webknossos "$@"\n' > /docker-entrypoint.sh \

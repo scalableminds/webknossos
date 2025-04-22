@@ -1,13 +1,299 @@
 name: CI Pipeline
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - '*'
+
+env:
+  USER_UID: 1001
+  USER_GID: 1001
+  POSTGRES_URL: "jdbc:postgresql://localhost:5432/webknossos"
+  POSTGRES_USER: "webknossos_user"
+  POSTGRES_PASSWORD: "secret_password"
+  CERTIFICATE: ${{ secrets.CERTIFICATE_FOR_CI_ONLY }}
+  CERTIFICATE_PUBLIC_KEY: ${{ secrets.CERTIFICATE_PUBLIC_KEY }}
 
 jobs:
-  foo:
-    runs-on: ubuntu-20.04
+  frontend-tests:
+    runs-on: ubuntu-22.04
+    if: github.ref != 'refs/heads/master'
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 5
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable
+      - name: Install frontend dependencies
+        run: yarn install --immutable
+
+      - name: Lint frontend code and check formatting
+        run: yarn run check-frontend
+      - name: Typecheck frontend code
+        run: yarn typecheck
+      - name: Check for cyclic dependencies in frontend
+        run: yarn check-cyclic-dependencies
+      - name: Run frontend tests
+        run: yarn run vitest run --coverage.enabled true
+      # - name: Download Coverage Artifacts 
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: vitest-coverage-master
+      #     path: coverage
+      - name: 'Report Coverage'
+        uses:  davelosert/vitest-coverage-report-action@v2
+        with:
+          comment-on: none # alternative: pr
+          # json-summary-compare-path: coverage-main/coverage-summary.json
+      - name: "Upload Coverage"
+        if: github.ref == 'refs/heads/master'
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-coverage-master
+          path: coverage
+
+  backend-tests:
+    runs-on: ubuntu-22.04
+    if: github.ref != 'refs/heads/master'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+      - uses: sbt/setup-sbt@v1
+
+      - name: Start Docker Services Postgres, Redis
+        run: docker compose --file .github/docker-compose.yml up -d postgres redis
+
+      - name: Install frontend dependencies
+        run: yarn install --immutable
+
+      - name: "Install System Dependencies"
+        run: sudo apt-get update && sudo apt-get install -y libdraco-dev libblosc1
+
+      - name: Assert unique evolution numbers
+        run: tools/postgres/dbtool.js assert-unique-evolution-numbers
+      - name: Assert schema.sql and evolutions are equal
+        run: tools/postgres/dbtool.js check-evolutions-schema
+      - name: Assert that all migrations are mentioned in one migration guide and that they have a reversion counterpart.
+        run: tools/assert-complete-migrations.sh
+
+      - name: Lint backend code and check formatting
+        run: sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
+
+      - name: Run backend unit tests
+        run: sbt -v "testOnly backend.*"
+
+      - name: Start Fossildb for e2e tests
+        run: docker compose --file .github/docker-compose.yml up -d fossildb
+      - name: Prepare binaryData folder for e2e tests
+        run: mkdir -p binaryData/Organization_X && chmod 777 binaryData/Organization_X
+      - name: Run end-to-end tests
+        uses: ./.github/actions/retry
+        with:
+          run: |
+            sbt "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false"
+          retries: 3
+
+
+  build-smoketest-push:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 5
+
+      - uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker
+
+      - name: Start Docker Services Postgres, Redis
+        run: docker compose --file .github/docker-compose.yml up -d postgres redis
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+      - uses: sbt/setup-sbt@v1
+
+      - name: "Install System Dependencies"
+        run: sudo apt-get update && sudo apt-get install -y libdraco-dev libblosc1
+
+      - name: "Custom environment variables (Pull Request)"
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          NORMALIZED_BRANCH="${GITHUB_HEAD_REF//[\/-]/_}"
+          DOCKER_TAG="${NORMALIZED_BRANCH}__${GITHUB_RUN_ID}"
+          echo "DOCKER_TAG=$DOCKER_TAG" | tee -a "$GITHUB_ENV"
+          echo "NORMALIZED_BRANCH=$NORMALIZED_BRANCH" | tee -a "$GITHUB_ENV"
+          echo "CI_BUILD_NUM=$GITHUB_RUN_ID" | tee -a "$GITHUB_ENV"
+
+      - name: "Custom environment variables (Not Pull Request)"
+        if: ${{ github.event_name != 'pull_request' }}
+        run: |
+          CI_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          NORMALIZED_BRANCH=${CI_BRANCH//[\/-]/_}
+          DOCKER_TAG="${NORMALIZED_BRANCH}__${GITHUB_RUN_ID}"
+          echo "DOCKER_TAG=$DOCKER_TAG" | tee -a "$GITHUB_ENV"
+          if [ "$GITHUB_REF_TYPE" == "branch" ]; then
+            echo "NORMALIZED_BRANCH=$NORMALIZED_BRANCH" | tee -a "$GITHUB_ENV"
+          else
+            CI_TAG=$GITHUB_REF_NAME
+            echo "CI_TAG=$CI_TAG" | tee -a "$GITHUB_ENV"
+            echo "NORMALIZED_BRANCH=$CI_TAG" | tee -a "$GITHUB_ENV"
+          fi
+          echo "CI_BUILD_NUM=$GITHUB_RUN_ID" | tee -a "$GITHUB_ENV"
+
+      - name: Prepare Dependency Folders
+        run: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier
+
+      - name: Install frontend dependencies
+        run: yarn install --immutable
+        env:
+          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
+
+      - name: Build frontend documentation
+        run: yarn run docs --project-version "$WK_VERSION"
+        env:
+          WK_VERSION: ${{ github.run_id }}
+
+      - name: Build webknossos (webpack)
+        run: yarn build
+
+      - name: Build webknossos (sbt)
+        run: sbt -DfailOnWarning compile stage
+      - name: Build webknossos-datastore (sbt)
+        run: sbt -DfailOnWarning "project webknossosDatastore" copyMessages compile stage
+      - name: Build webknossos-tracingstore (sbt)
+        run: sbt -DfailOnWarning "project webknossosTracingstore" copyMessages compile stage
+      - name: Checksum App Dirs
+        run: find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
+
+      - name: Build webknossos docker image
+        uses: docker/build-push-action@v6
+        with:
+          file: .github/Dockerfile.webknossos
+          context: .
+          push: false
+          tags: |
+            scalableminds/webknossos:${{ env.NORMALIZED_BRANCH }}
+            scalableminds/webknossos:${{ env.DOCKER_TAG }}
+          outputs: |
+            type=image
+      - name: Build webknossos-datastore docker image
+        uses: docker/build-push-action@v6
+        with:
+          file: .github/Dockerfile.datastore
+          context: webknossos-datastore
+          push: false
+          tags: |
+            scalableminds/webknossos-datastore:${{ env.NORMALIZED_BRANCH }}
+            scalableminds/webknossos-datastore:${{ env.DOCKER_TAG }}
+          outputs: |
+            type=image
+      - name: Build webknossos-tracingstore docker image
+        uses: docker/build-push-action@v6
+        with:
+          file: .github/Dockerfile.tracingstore
+          context: webknossos-tracingstore
+          push: false
+          tags: |
+            scalableminds/webknossos-tracingstore:${{ env.NORMALIZED_BRANCH }}
+            scalableminds/webknossos-tracingstore:${{ env.DOCKER_TAG }}
+          outputs: |
+            type=image
+
+      - name: Start webknossos, datastore and tracingstore for smoke test
+        run: |
+          set -e
+          docker compose --file .github/docker-compose.yml up -d \
+            webknossos \
+            webknossos-datastore \
+            webknossos-tracingstore
+      - name: Run webknossos smoke test
+        uses: ./.github/actions/retry
+        with:
+          run: curl -v --fail-with-body "http://localhost:9000/api/health"
+          retries: 20
+          retry_delay_seconds: 5
+      - name: Run webknossos-datastore smoke test
+        uses: ./.github/actions/retry
+        with:
+          run: curl -v --fail-with-body "http://localhost:9090/data/health"
+          retries: 20
+          retry_delay_seconds: 5
+      - name: Run webknossos-tracingstore smoke test
+        uses: ./.github/actions/retry
+        with:
+          run: curl -v --fail-with-body "http://localhost:9050/tracings/health"
+          retries: 20
+          retry_delay_seconds: 5
+      - name: Stop webknossos, datastore and tracingstore
+        run: docker compose --file .github/docker-compose.yml down --volumes --remove-orphans
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASS }}
+
+      - name: Push webknossos image
+        uses: ./.github/actions/retry
+        with:
+          run: docker push "scalableminds/webknossos:${{ env.DOCKER_TAG }}"
+          retries: 5
+          retry_delay_seconds: 10
+      - name: Push normalized webknossos image
+        uses: ./.github/actions/retry
+        with:
+          run: docker push "scalableminds/webknossos:${{ env.NORMALIZED_BRANCH }}"
+          retries: 5
+          retry_delay_seconds: 10
+      - name: Push webknossos-datastore image
+        uses: ./.github/actions/retry
+        with:
+          run: docker push "scalableminds/webknossos-datastore:${{ env.DOCKER_TAG }}"
+          retries: 5
+          retry_delay_seconds: 10
+      - name: Push normalized webknossos-datastore image
+        uses: ./.github/actions/retry
+        with:
+          run: docker push "scalableminds/webknossos-datastore:${{ env.NORMALIZED_BRANCH }}"
+          retries: 5
+          retry_delay_seconds: 10
+      - name: Push webknossos-tracingstore image
+        uses: ./.github/actions/retry
+        with:
+          run: docker push "scalableminds/webknossos-tracingstore:${{ env.DOCKER_TAG }}"
+          retries: 5
+          retry_delay_seconds: 10
+      - name: Push normalized webknossos-tracingstore image
+        uses: ./.github/actions/retry
+        with:
+          run: docker push "scalableminds/webknossos-tracingstore:${{ env.NORMALIZED_BRANCH }}"
+          retries: 5
+          retry_delay_seconds: 10
+      - name: Slack Notification
+        if: github.ref == 'refs/heads/master'
+        run: .github/slack-notification.sh
+        env:
+          SLACK_NOTIFY_TOKEN: ${{ secrets.SLACK_NOTIFY_TOKEN }}

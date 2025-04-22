@@ -5,6 +5,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
+import com.scalableminds.webknossos.datastore.helpers.{LayerMagLinkInfo, MagLinkInfo}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
@@ -33,8 +34,8 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
 import telemetry.SlackNotificationService
 import utils.WkConf
-import scala.concurrent.duration.DurationInt
 
+import scala.concurrent.duration.DurationInt
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -47,6 +48,7 @@ class WKRemoteDataStoreController @Inject()(
     organizationDAO: OrganizationDAO,
     usedStorageService: UsedStorageService,
     datasetDAO: DatasetDAO,
+    datasetLayerDAO: DatasetLayerDAO,
     userDAO: UserDAO,
     folderDAO: FolderDAO,
     teamDAO: TeamDAO,
@@ -83,7 +85,11 @@ class WKRemoteDataStoreController @Inject()(
           _ <- folderDAO.assertUpdateAccess(folderId)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
           layersToLinkWithDatasetId <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l =>
             validateLayerToLink(l, user)) ?~> "dataset.upload.invalidLinkedLayers"
-          dataset <- datasetService.createPreliminaryDataset(uploadInfo.name, uploadInfo.organization, dataStore) ?~> "dataset.name.alreadyTaken"
+          dataset <- datasetService.createPreliminaryDataset(
+            uploadInfo.name,
+            uploadInfo.organization,
+            dataStore,
+            uploadInfo.requireUniqueName.getOrElse(false)) ?~> "dataset.upload.creation.failed"
           _ <- datasetDAO.updateFolder(dataset._id, folderId)(GlobalAccessContext)
           _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeams, user)(AuthorizedAccessContext(user))
           _ <- datasetService.addUploader(dataset, user._id)(AuthorizedAccessContext(user))
@@ -234,6 +240,23 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
   }
+
+  def getPaths(name: String, key: String, organizationId: String, directoryName: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      dataStoreService.validateAccess(name, key) { _ =>
+        for {
+          organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext)
+          dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(directoryName, organization._id)(
+            GlobalAccessContext)
+          layers <- datasetLayerDAO.findAllForDataset(dataset._id)
+          magsAndLinkedMags <- Fox.serialCombined(layers)(l => datasetService.getPathsForDataLayer(dataset._id, l.name))
+          magLinkInfos = magsAndLinkedMags.map(_.map { case (mag, linkedMags) => MagLinkInfo(mag, linkedMags) })
+          layersAndMagLinkInfos = layers.zip(magLinkInfos).map {
+            case (layer, magLinkInfo) => LayerMagLinkInfo(layer.name, magLinkInfo)
+          }
+        } yield Ok(Json.toJson(layersAndMagLinkInfos))
+      }
+    }
 
   def deleteDataset(name: String, key: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
     dataStoreService.validateAccess(name, key) { _ =>

@@ -1,8 +1,8 @@
 import sbt._
 
 ThisBuild / version := "wk"
-ThisBuild / scalaVersion := "2.13.14"
-ThisBuild / scapegoatVersion := "2.1.6"
+ThisBuild / scalaVersion := "2.13.16"
+ThisBuild / scapegoatVersion := "3.1.8"
 val failOnWarning = if (sys.props.contains("failOnWarning")) Seq("-Xfatal-warnings") else Seq()
 ThisBuild / scalacOptions ++= Seq(
   "-release:11",
@@ -53,7 +53,8 @@ lazy val copyMessagesFilesSetting = {
   lazy val copyMessages = taskKey[Unit]("Copy messages file to data- and tracing stores")
   copyMessages := {
     val messagesFile = baseDirectory.value / ".." / "conf" / "messages"
-    java.nio.file.Files.copy(messagesFile.toPath, (baseDirectory.value / "conf" / "messages").toPath)
+    val targetPath = (baseDirectory.value / "conf" / "messages").toPath
+    java.nio.file.Files.copy(messagesFile.toPath, targetPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
   }
 }
 

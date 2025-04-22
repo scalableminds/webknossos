@@ -108,7 +108,11 @@ class SceneController {
     this.highlightedBBoxId = null;
     this.rootGroup = new THREE.Group();
     this.scene.add(
-      this.rootGroup.add(this.rootNode, this.segmentMeshController.meshesLayerLODRootGroup),
+      this.rootGroup.add(
+        this.rootNode,
+        this.segmentMeshController.meshesLayerLODRootGroup,
+        this.segmentMeshController.lightsGroup,
+      ),
     );
     // Because the voxel coordinates do not have a cube shape but are distorted,
     // we need to distort the entire scene to provide an illustration that is

@@ -7,7 +7,7 @@ export POSTGRES_PASSWORD="secret"
 
 cd .github || exit
 docker compose down -v
-docker compose up -d postgres redis fossildb
+docker compose up -d postgres fossildb
 cd .. || exit
 
 "$@"

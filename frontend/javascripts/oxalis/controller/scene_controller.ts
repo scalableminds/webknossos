@@ -33,6 +33,7 @@ import {
   getLayerBoundingBox,
   getLayerByName,
   getLayerNameToIsDisabled,
+  getSegmentationLayers,
   getVisibleSegmentationLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
@@ -61,7 +62,6 @@ const LAYER_CUBE_COLOR = 0xffff99;
 
 class SceneController {
   skeletons: Record<number, Skeleton> = {};
-  current: number;
   isPlaneVisible: OrthoViewMap<boolean>;
   planeShift: Vector3;
   datasetBoundingBox!: Cube;
@@ -83,11 +83,12 @@ class SceneController {
   rootGroup!: THREE.Group;
   segmentMeshController: SegmentMeshController;
   storePropertyUnsubscribers: Array<() => void>;
+  // Used to cache visible segmentation layers to only update the meshes visibility when this changes.
+  visibleSegmentationLayerNames: Array<string> = [];
 
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   // element depending on the provided flycam.
   constructor() {
-    this.current = 0;
     this.isPlaneVisible = {
       [OrthoViews.PLANE_XY]: true,
       [OrthoViews.PLANE_YZ]: true,
@@ -107,7 +108,7 @@ class SceneController {
     this.highlightedBBoxId = null;
     this.rootGroup = new THREE.Group();
     this.scene.add(
-      this.rootGroup.add(this.rootNode, this.segmentMeshController.meshesLODRootGroup),
+      this.rootGroup.add(this.rootNode, this.segmentMeshController.meshesLayerLODRootGroup),
     );
     // Because the voxel coordinates do not have a cube shape but are distorted,
     // we need to distort the entire scene to provide an illustration that is
@@ -317,7 +318,7 @@ class SceneController {
 
     this.taskBoundingBox?.updateForCam(id);
 
-    this.segmentMeshController.meshesLODRootGroup.visible = id === OrthoViews.TDView;
+    this.segmentMeshController.meshesLayerLODRootGroup.visible = id === OrthoViews.TDView;
     this.annotationToolsGeometryGroup.visible = id !== OrthoViews.TDView;
     this.lineMeasurementGeometry.updateForCam(id);
 
@@ -436,7 +437,7 @@ class SceneController {
   }
 
   private applyTransformToGroup(transform: Transform, group: THREE.Group | CustomLOD) {
-    if (transform?.affineMatrix) {
+    if (transform.affineMatrix) {
       const matrix = new THREE.Matrix4();
       // @ts-ignore
       matrix.set(...transform.affineMatrix);
@@ -465,12 +466,29 @@ class SceneController {
     if (visibleSegmentationLayers.length === 0) {
       return;
     }
+    // Use transforms of active segmentation layer to transform the meshes.
+    // All meshes not belonging to this layer should be hidden via updateMeshesAccordingToLayerVisibility anyway.
     const transformForMeshes = getTransformsForLayer(
       state.dataset,
       visibleSegmentationLayers[0],
       state.datasetConfiguration.nativelyRenderedLayerName,
     );
-    this.applyTransformToGroup(transformForMeshes, this.segmentMeshController.meshesLODRootGroup);
+    this.applyTransformToGroup(
+      transformForMeshes,
+      this.segmentMeshController.meshesLayerLODRootGroup,
+    );
+  }
+
+  updateMeshesAccordingToLayerVisibility(): void {
+    const state = Store.getState();
+    const visibleSegmentationLayers = getVisibleSegmentationLayers(state);
+    const allSegmentationLayers = getSegmentationLayers(state.dataset);
+    allSegmentationLayers.forEach((layer) => {
+      const layerName = layer.name;
+      const isLayerVisible =
+        visibleSegmentationLayers.find((layer) => layer.name === layerName) !== undefined;
+      this.segmentMeshController.setVisibilityOfMeshesOfLayer(layerName, isLayerVisible);
+    });
   }
 
   updateLayerBoundingBoxes(): void {
@@ -552,8 +570,8 @@ class SceneController {
 
     this.taskBoundingBox?.setVisibility(false);
 
-    if (this.segmentMeshController.meshesLODRootGroup != null) {
-      this.segmentMeshController.meshesLODRootGroup.visible = false;
+    if (this.segmentMeshController.meshesLayerLODRootGroup != null) {
+      this.segmentMeshController.meshesLayerLODRootGroup.visible = false;
     }
   }
 
@@ -633,6 +651,20 @@ class SceneController {
           this.updateLayerBoundingBoxes();
           this.updateUserBoundingBoxesAndMeshesAccordingToTransforms();
         },
+      ),
+      listenToStoreProperty(
+        (storeState) => {
+          const visibleSegmentationLayerNames = getVisibleSegmentationLayers(storeState).map(
+            (l) => l.name,
+          );
+          if (_.isEqual(this.visibleSegmentationLayerNames, visibleSegmentationLayerNames)) {
+            return this.visibleSegmentationLayerNames;
+          } else {
+            this.visibleSegmentationLayerNames = visibleSegmentationLayerNames;
+            return visibleSegmentationLayerNames;
+          }
+        },
+        () => this.updateMeshesAccordingToLayerVisibility(),
       ),
       listenToStoreProperty(
         (storeState) => getSomeTracing(storeState.annotation).boundingBox,

@@ -27,6 +27,7 @@ import messages from "messages";
 import { WkDevFlags } from "oxalis/api/wk_dev";
 import type { Vector3 } from "oxalis/constants";
 import { MappingStatusEnum } from "oxalis/constants";
+import CustomLOD from "oxalis/controller/custom_lod";
 import {
   type BufferGeometryWithInfo,
   type UnmergedBufferGeometryWithInfo,
@@ -930,13 +931,10 @@ function* _getChunkLoadingDescriptors(
     availableChunksMap[lodIndex] = chunks?.chunks;
     loadingOrder.push(lodIndex);
   });
-  const currentLODIndex = yield* call(
-    {
-      context: segmentMeshController.meshesLODRootGroup,
-      fn: segmentMeshController.meshesLODRootGroup.getCurrentLOD,
-    },
-    Math.max(...loadingOrder),
-  );
+  const currentLODGroup: CustomLOD =
+    (yield* call(segmentMeshController.getLODGroupOfLayer, segmentationLayer.name)) ??
+    new CustomLOD();
+  const currentLODIndex = yield* call(currentLODGroup.getCurrentLOD, Math.max(...loadingOrder));
   // Load the chunks closest to the current LOD first.
   loadingOrder.sort((a, b) => Math.abs(a - currentLODIndex) - Math.abs(b - currentLODIndex));
 

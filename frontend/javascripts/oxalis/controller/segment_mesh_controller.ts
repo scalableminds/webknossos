@@ -61,9 +61,19 @@ type GroupForLOD = THREE.Group & {
 };
 
 export default class SegmentMeshController {
-  // meshesLODRootGroup holds lights and one group per segment id.
-  // Each group can hold multiple meshes.
-  meshesLODRootGroup: CustomLOD;
+  lightsGroup: THREE.Group;
+  // meshesLayerLODRootGroup holds a CustomLOD for each segmentation layer with meshes.
+  // Each CustomLOD group can hold multiple meshes.
+  // meshesLayerLODRootGroup
+  // - layer 1
+  //  - CustomLOD
+  //    - LOD X
+  //      - meshes
+  // - layer 2
+  //  - CustomLOD
+  //    - LOD X
+  //      - meshes
+  meshesLayerLODRootGroup: THREE.Group;
 
   meshesGroupsPerSegmentId: Record<
     string, // additionalCoordinatesString
@@ -80,7 +90,8 @@ export default class SegmentMeshController {
   > = {};
 
   constructor() {
-    this.meshesLODRootGroup = new CustomLOD();
+    this.lightsGroup = new THREE.Group();
+    this.meshesLayerLODRootGroup = new THREE.Group();
     this.addLights();
   }
 
@@ -189,11 +200,19 @@ export default class SegmentMeshController {
       new THREE.Group(),
     );
     _.setWith(this.meshesGroupsPerSegmentId, keys, targetGroup, Object);
+    let layerLODGroup = this.meshesLayerLODRootGroup.getObjectByName(layerName) as
+      | CustomLOD
+      | undefined;
+    if (layerLODGroup == null) {
+      layerLODGroup = new CustomLOD();
+      layerLODGroup.name = layerName;
+      this.meshesLayerLODRootGroup.add(layerLODGroup);
+    }
     if (isNewlyAddedMesh) {
       if (lod === NO_LOD_MESH_INDEX) {
-        this.meshesLODRootGroup.addNoLODSupportedMesh(targetGroup);
+        layerLODGroup.addNoLODSupportedMesh(targetGroup);
       } else {
-        this.meshesLODRootGroup.addLODMesh(targetGroup, lod);
+        layerLODGroup.addLODMesh(targetGroup, lod);
       }
       targetGroup.segmentId = segmentId;
       const dsScaleFactor = Store.getState().dataset.dataSource.scale.factor;
@@ -241,11 +260,12 @@ export default class SegmentMeshController {
         // If options.lod is provided, only remove that LOD.
         return;
       }
+      const parentLODGroup = meshGroup.parent as CustomLOD;
 
       if (currentLod !== NO_LOD_MESH_INDEX) {
-        this.meshesLODRootGroup.removeLODMesh(meshGroup, currentLod);
+        parentLODGroup.removeLODMesh(meshGroup, currentLod);
       } else {
-        this.meshesLODRootGroup.removeNoLODSupportedMesh(meshGroup);
+        parentLODGroup.removeNoLODSupportedMesh(meshGroup);
       }
 
       this.removeMeshLODFromMeshGroups(additionalCoordKey, layerName, segmentId, currentLod);
@@ -278,6 +298,19 @@ export default class SegmentMeshController {
     _.forEach(this.getMeshGroups(additionalCoordKey, layerName, id), (meshGroup) => {
       meshGroup.visible = visibility;
     });
+  }
+
+  getLODGroupOfLayer(layerName: string): CustomLOD | undefined {
+    return this.meshesLayerLODRootGroup.getObjectByName(layerName) as CustomLOD | undefined;
+  }
+
+  setVisibilityOfMeshesOfLayer(layerName: string, visibility: boolean): void {
+    const layerLODGroup = this.meshesLayerLODRootGroup.getObjectByName(layerName) as
+      | CustomLOD
+      | undefined;
+    if (layerLODGroup != null) {
+      layerLODGroup.visible = visibility;
+    }
   }
 
   applyOnMeshGroupChildren = (
@@ -344,7 +377,7 @@ export default class SegmentMeshController {
     // Note that the PlaneView also attaches a directional light directly to the TD camera,
     // so that the light moves along the cam.
     const ambientLight = new THREE.AmbientLight("white", settings.ambientIntensity);
-    this.meshesLODRootGroup.add(ambientLight);
+    this.lightsGroup.add(ambientLight);
 
     const lightPositions: Vector3[] = [
       [1, 1, 1],
@@ -367,7 +400,7 @@ export default class SegmentMeshController {
       );
       light.position.set(...pos).normalize();
       directionalLights.push(light);
-      this.meshesLODRootGroup.add(light);
+      this.lightsGroup.add(light);
     });
   }
 
@@ -530,8 +563,7 @@ export default class SegmentMeshController {
   }
 
   highlightActiveUnmappedSegmentId = (activeUnmappedSegmentId: number | null | undefined) => {
-    const { meshesLODRootGroup } = this;
-    meshesLODRootGroup.traverse((_obj) => {
+    this.meshesLayerLODRootGroup.traverse((_obj) => {
       if (!("geometry" in _obj)) {
         return;
       }

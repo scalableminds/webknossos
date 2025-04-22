@@ -100,6 +100,7 @@ export default function computeSplitBoundaryMeshWithSplines(points: Vector3[]): 
 
   // Number of points per curve
   const numPoints = 50;
+  const numDivisions = numPoints - 1;
 
   // Sort z-values for interpolation
   const sortedZValues = Object.keys(curvesByZ)
@@ -117,8 +118,8 @@ export default function computeSplitBoundaryMeshWithSplines(points: Vector3[]): 
     if (lowerZ === Number.NEGATIVE_INFINITY || upperZ === Number.POSITIVE_INFINITY) continue;
 
     // Get the two adjacent curves and sample 50 points from each
-    const lowerCurvePoints = curvesByZ[lowerZ].getPoints(numPoints);
-    const upperCurvePoints = curvesByZ[upperZ].getPoints(numPoints);
+    const lowerCurvePoints = curvesByZ[lowerZ].getPoints(numDivisions);
+    const upperCurvePoints = curvesByZ[upperZ].getPoints(numDivisions);
 
     // Interpolate between corresponding points
     const interpolatedPoints = lowerCurvePoints.map((lowerPoint, i) => {
@@ -139,7 +140,7 @@ export default function computeSplitBoundaryMeshWithSplines(points: Vector3[]): 
 
   // Generate and display all curves
   Object.values(curvesByZ).forEach((curve) => {
-    const curvePoints = curve.getPoints(numPoints);
+    const curvePoints = curve.getPoints(numDivisions);
     const geometry = new THREE.BufferGeometry().setFromPoints(curvePoints);
     const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
     const splineObject = new THREE.Line(geometry, material);
@@ -147,7 +148,7 @@ export default function computeSplitBoundaryMeshWithSplines(points: Vector3[]): 
   });
 
   // Generate grid of points
-  const gridPoints = curves.map((curve) => curve.getPoints(numPoints - 1));
+  const gridPoints = curves.map((curve) => curve.getPoints(numDivisions));
 
   // Flatten into a single array of vertices
   const vertices: number[] = [];

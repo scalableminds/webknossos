@@ -20,7 +20,7 @@ message Segment {
 message VolumeUserStateProto {
   required string userId = 1;
   repeated int32 segmentGroupIds = 2;
-  repeated bool segmentGroupVisibilities = 3;
+  repeated bool segmentGroupExpandedStates = 3;
   repeated int32 boundingBoxIds = 4;
   repeated int32 boundingBoxVisibilities = 5;
 }

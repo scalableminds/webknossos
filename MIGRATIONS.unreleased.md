@@ -11,3 +11,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 - NodeJs version `22+` is required. [#8479](https://github.com/scalableminds/webknossos/pull/8479)
 
 ### Postgres Evolutions:
+- [131-more-indices-on-users.sql](conf/evolutions/131-more-indices-on-users.sql)

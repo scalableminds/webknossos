@@ -397,7 +397,7 @@ case class UpdateTreeGroupsSkeletonAction(treeGroups: List[UpdateActionTreeGroup
 }
 
 case class UpdateTreeGroupsExpandedStateSkeletonAction(groupIds: List[Int],
-                                                       isExpaneded: List[Boolean],
+                                                       areExpanded: Boolean,
                                                        actionTracingId: String,
                                                        actionTimestamp: Option[Long] = None,
                                                        actionAuthorId: Option[String] = None,

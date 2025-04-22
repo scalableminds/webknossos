@@ -389,7 +389,7 @@ case class UpdateSegmentGroupsVolumeAction(segmentGroups: List[UpdateActionSegme
 }
 
 case class UpdateSegmentGroupsExpandedStateVolumeAction(groupIds: List[Int],
-                                                        isExpaneded: List[Boolean],
+                                                        areExpanded: Boolean,
                                                         actionTracingId: String,
                                                         actionTimestamp: Option[Long] = None,
                                                         actionAuthorId: Option[String] = None,

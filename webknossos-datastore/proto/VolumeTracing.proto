@@ -16,6 +16,15 @@ message Segment {
   repeated MetadataEntryProto metadata = 11;
 }
 
+
+message VolumeUserStateProto {
+  required string userId = 1;
+  repeated int32 segmentGroupIds = 2;
+  repeated bool segmentGroupVisibilities = 3;
+  repeated int32 boundingBoxIds = 4;
+  repeated int32 boundingBoxVisibilities = 5;
+}
+
 message VolumeTracing {
   // Do not use with floating point element classes
   enum ElementClassProto {
@@ -55,6 +64,7 @@ message VolumeTracing {
   repeated AdditionalAxisProto additionalAxes = 22; // Additional axes for which this tracing is defined
   optional bool mappingIsLocked = 23; // user may not select another mapping (e.g. because they have already mutated buckets)
   optional bool volumeBucketDataHasChanged = 24; // The volume bucket data has been edited at least once
+  repeated VolumeUserStateProto userState = 25;
 }
 
 message SegmentGroup {

@@ -66,6 +66,16 @@ message TreeGroup {
   optional bool isExpanded = 4;
 }
 
+message SkeletonUserStateProto {
+  required string userId = 1;
+  repeated int32 treeGroupIds = 2;
+  repeated bool treeGroupVisibilities = 3;
+  repeated int32 boundingBoxIds = 4;
+  repeated int32 boundingBoxVisibilities = 5;
+  repeated int32 treeIds = 6;
+  repeated bool treeVisibilities = 7;
+}
+
 message SkeletonTracing {
   required string datasetName = 1; // used when parsing and handling nmls, not used in tracing store anymore, do not rely on correct values
   repeated Tree trees = 2;
@@ -83,6 +93,7 @@ message SkeletonTracing {
   repeated AdditionalCoordinateProto editPositionAdditionalCoordinates = 21;
   repeated AdditionalAxisProto additionalAxes = 22; // Additional axes for which this tracing is defined
   optional bool storedWithExternalTreeBodies = 23; // Only set to true on storing. If false, all trees will be stored
+  repeated SkeletonUserStateProto userState = 24;
 }
 
 message SkeletonTracingOpt {

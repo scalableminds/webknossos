@@ -41,15 +41,20 @@ jobs:
       - name: Run frontend tests
         run: yarn run vitest run --coverage.enabled true
       - name: Download Coverage Artifacts 
-        uses: actions/download-artifact@v4
-        with:
-          name: vitest-coverage-master
-          path: coverage
+          # Can not use actions/download-artifact@v4 because it does not support downloading artifacts from other GA runs
+        run: |
+            gh_last_success_run_id=$(gh run list --workflow "CI Pipeline" --json conclusion,headBranch,databaseId --branch master --jq 'first(.[] | select(.conclusion | contains("success"))) | .databaseId')
+            [ -z "$gh_last_success_run_id" ] && echo "No successful run found" && exit 1 || true
+            gh run download $gh_last_success_run_id -n $ARTIFACT_NAME -D $OUTPUT_DIR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ARTIFACT_NAME: vitest-coverage-master
+          OUTPUT_DIR: coverage-master
       - name: 'Report Coverage'
         uses:  davelosert/vitest-coverage-report-action@v2
         with:
           comment-on: none # alternative: pr
-          json-summary-compare-path: coverage/coverage-summary.json
+          json-summary-compare-path: coverage-master/coverage-summary.json
       - name: "Upload Coverage"
         if: github.ref == 'refs/heads/master'
         uses: actions/upload-artifact@v4

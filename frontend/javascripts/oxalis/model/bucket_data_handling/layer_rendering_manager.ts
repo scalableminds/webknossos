@@ -5,7 +5,6 @@ import { CuckooTableVec3 } from "libs/cuckoo/cuckoo_table_vec3";
 import { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
 import DiffableMap from "libs/diffable_map";
 import { M4x4, type Matrix4x4 } from "libs/mjs";
-import { map3 } from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type { BucketAddress, Vector3, Vector4, ViewMode } from "oxalis/constants";

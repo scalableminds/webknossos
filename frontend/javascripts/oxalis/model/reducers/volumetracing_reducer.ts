@@ -62,7 +62,6 @@ import {
 import type { AdditionalCoordinate, ServerVolumeTracing } from "types/api_flow_types";
 import { mapGroups, mapGroupsToGenerator } from "../accessors/skeletontracing_accessor";
 import { sanitizeMetadata } from "./skeletontracing_reducer";
-import _ from "lodash";
 import { forEachGroups } from "./skeletontracing_reducer_helpers";
 
 type SegmentUpdateInfo =

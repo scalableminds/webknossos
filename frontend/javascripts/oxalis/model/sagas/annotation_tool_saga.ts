@@ -13,7 +13,7 @@ import { select } from "oxalis/model/sagas/effect-generators";
 import { call, put, take } from "typed-redux-saga";
 import { ensureWkReady } from "./ready_sagas";
 
-import { type ActionPattern, fork } from "redux-saga/effects";
+import { type ActionPattern, delay, fork } from "redux-saga/effects";
 import { takeEvery } from "typed-redux-saga";
 import { getDisabledInfoForTools } from "../accessors/disabled_tool_accessor";
 import { Toolkits } from "../accessors/tool_accessor";
@@ -70,6 +70,8 @@ function* switchAwayFromDisabledTool(): Saga<never> {
     let continueWaiting = true;
     while (continueWaiting) {
       yield take();
+      // Debounce so that we don't process ALL actions.
+      yield delay(50);
       const newActiveTool = yield* select((state) => state.uiInformation.activeTool);
       if (newActiveTool !== activeTool) {
         activeTool = newActiveTool;

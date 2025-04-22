@@ -250,6 +250,11 @@ export default class SegmentMeshController {
     const additionalCoordinates = Store.getState().flycam.additionalCoordinates;
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
     const meshGroups = this.getMeshGroups(additionalCoordKey, layerName, segmentId);
+    const lodMeshGroupForLayer = this.getLODGroupOfLayer(layerName);
+    if (lodMeshGroupForLayer == null) {
+      // No meshes for this layer
+      return;
+    }
     if (meshGroups == null) {
       return;
     }
@@ -260,12 +265,11 @@ export default class SegmentMeshController {
         // If options.lod is provided, only remove that LOD.
         return;
       }
-      const parentLODGroup = meshGroup.parent as CustomLOD;
 
       if (currentLod !== NO_LOD_MESH_INDEX) {
-        parentLODGroup.removeLODMesh(meshGroup, currentLod);
+        lodMeshGroupForLayer.removeLODMesh(meshGroup, currentLod);
       } else {
-        parentLODGroup.removeNoLODSupportedMesh(meshGroup);
+        lodMeshGroupForLayer.removeNoLODSupportedMesh(meshGroup);
       }
 
       this.removeMeshLODFromMeshGroups(additionalCoordKey, layerName, segmentId, currentLod);

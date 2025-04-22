@@ -7,8 +7,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
-## [25.04.1](https://github.com/scalableminds/webknossos/releases/tag/25.04.1) - 2025-04-22
-[Commits](https://github.com/scalableminds/webknossos/compare/25.03.1...25.04.1)
+## [25.04.0](https://github.com/scalableminds/webknossos/releases/tag/25.04.0) - 2025-04-22
+[Commits](https://github.com/scalableminds/webknossos/compare/25.03.1...25.04.0)
 
 ### Highlights
 - The opacity of meshes can be adjusted using the 'Change Segment Color' context menu entry in the segments tab. [#8443](https://github.com/scalableminds/webknossos/pull/8443)

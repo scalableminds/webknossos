@@ -254,7 +254,7 @@ class DataSourceService @Inject()(
         "Layer names must be unique. At least two layers have the same name."
       ),
       Check(
-        dataSource.dataLayers.flatMap(_.mags.map(_.path)).flatten.forall(pathOk),
+        dataSource.dataLayers.flatMap(_.mags).flatMap(_.path).forall(pathOk),
         "Mags with explicit paths must stay within the organization directory."
       )
     ).flatten

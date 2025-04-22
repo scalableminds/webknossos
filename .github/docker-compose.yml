@@ -101,7 +101,7 @@ services:
     command:
       - redis-server
     ports:
-      - 6379:6379
+      - 6381:6379
     healthcheck:
       test:
         - CMD

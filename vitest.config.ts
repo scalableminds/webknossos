@@ -5,7 +5,7 @@ export default defineConfig({
   test: {
     globals: true,
     setupFiles: ["./frontend/javascripts/test/global_mocks.ts"],
-    include: ["./frontend/javascripts/test/**/*.spec.ts", "./frontend/javascripts/test/**/*.e2e.ts"],
+    include: ["./frontend/javascripts/test/**/*.{spec,e2e}.ts"],
     exclude: ["./frontend/javascripts/test/puppeteer/*"],
     env: { IS_TESTING: "true" },
     testTimeout: 10000,

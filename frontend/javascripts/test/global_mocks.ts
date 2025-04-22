@@ -1,8 +1,6 @@
 // Add more essential global mocks
 import { vi } from "vitest";
-
-import { annotationProto as SKELETON_ANNOTATION_PROTO } from "./fixtures/skeletontracing_server_objects";
-import { annotationProto as VOLUME_ANNOTATION_PROTO } from "./fixtures/volumetracing_server_objects";
+import protobuf from "protobufjs";
 
 // Mock global objects
 global.performance = {
@@ -90,26 +88,32 @@ vi.mock("libs/progress_callback", () => {
   };
 });
 
-vi.mock("oxalis/model/helpers/proto_helpers", () => {
-  return {
-    parseProtoTracing: vi.fn(),
-    parseProtoAnnotation: vi.fn(),
-  };
+// Compile the protobuf imports
+const PROTO_DIR = "webknossos-datastore/proto";
+vi.mock("Annotation.proto", () => {
+  const proto = protobuf.loadSync(`${PROTO_DIR}/Annotation.proto`);
+  return { default: proto.toJSON() };
+});
+vi.mock("ListOfLong.proto", () => {
+  const proto = protobuf.loadSync(`${PROTO_DIR}/ListOfLong.proto`);
+  return { default: proto.toJSON() };
+});
+vi.mock("SkeletonTracing.proto", () => {
+  const proto = protobuf.loadSync(`${PROTO_DIR}/SkeletonTracing.proto`);
+  return { default: proto.toJSON() };
+});
+vi.mock("VolumeTracing.proto", () => {
+  const proto = protobuf.loadSync(`${PROTO_DIR}/VolumeTracing.proto`);
+  return { default: proto.toJSON() };
 });
 
-// Mock the proto imports
-vi.mock("Annotation.proto", () => ({
-  default: JSON.stringify({
-    NOT_USED_IN_TESTS: "currently the actual proto content is not used in the tests",
-  }),
-}));
-vi.mock("ListOfLong.proto", () => ({
-  default: JSON.stringify({
-    NOT_USED_IN_TESTS: "currently the actual proto content is not used in the tests",
-  }),
-}));
-vi.mock("SkeletonTracing.proto", () => ({ default: JSON.stringify(SKELETON_ANNOTATION_PROTO) }));
-vi.mock("VolumeTracing.proto", () => ({ default: JSON.stringify(VOLUME_ANNOTATION_PROTO) }));
+// vi.mock("ListOfLong.proto", () => ({
+//   default: JSON.stringify({
+//     NOT_USED_IN_TESTS: "currently the actual proto content is not used in the tests",
+//   }),
+// }));
+// vi.mock("SkeletonTracing.proto", () => ({ default: JSON.stringify(SKELETON_ANNOTATION_PROTO) }));
+// vi.mock("VolumeTracing.proto", () => ({ default: JSON.stringify(VOLUME_ANNOTATION_PROTO) }));
 
 vi.mock("oxalis/model/helpers/shader_editor.ts", () => ({
   default: {

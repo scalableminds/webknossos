@@ -2,13 +2,13 @@ import { tokenUserA, setUserAuthToken, resetDatabase, writeTypeCheckingFile } fr
 import * as api from "admin/admin_rest_api";
 import { describe, it, beforeAll, expect } from "vitest";
 
-beforeAll(async () => {
-  // Reset database and change token
-  resetDatabase();
-  setUserAuthToken(tokenUserA);
-});
-
 describe("Scripts API (E2E)", () => {
+  beforeAll(async () => {
+    // Reset database and change token
+    resetDatabase();
+    setUserAuthToken(tokenUserA);
+  });
+
   it("getScripts()", async () => {
     const scripts = await api.getScripts();
     expect(scripts).toMatchSnapshot();

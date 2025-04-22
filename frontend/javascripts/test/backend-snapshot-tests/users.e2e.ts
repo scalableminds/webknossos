@@ -8,13 +8,13 @@ import {
 import * as api from "admin/admin_rest_api";
 import { describe, it, beforeAll, expect } from "vitest";
 
-beforeAll(async () => {
-  // Reset database and change token
-  resetDatabase();
-  setUserAuthToken(tokenUserA);
-});
-
 describe("Users API (E2E)", () => {
+  beforeAll(async () => {
+    // Reset database and change token
+    resetDatabase();
+    setUserAuthToken(tokenUserA);
+  });
+
   it("getUsers()", async () => {
     const users = await api.getUsers();
     writeTypeCheckingFile(users, "user", "APIUser", {

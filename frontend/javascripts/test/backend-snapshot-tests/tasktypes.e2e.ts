@@ -3,12 +3,12 @@ import * as api from "admin/admin_rest_api";
 import { describe, beforeAll, expect, it } from "vitest";
 import type { APIAllowedMode } from "types/api_flow_types";
 
-beforeAll(async () => {
-  resetDatabase();
-  setUserAuthToken(tokenUserA);
-});
-
 describe("Task Types API (E2E)", () => {
+  beforeAll(async () => {
+    resetDatabase();
+    setUserAuthToken(tokenUserA);
+  });
+
   it("getTaskTypes()", async () => {
     const taskTypes = await api.getTaskTypes();
 

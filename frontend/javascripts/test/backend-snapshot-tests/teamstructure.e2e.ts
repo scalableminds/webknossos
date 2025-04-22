@@ -12,12 +12,8 @@ import { getTask } from "admin/api/tasks";
 import * as api from "admin/admin_rest_api";
 import { describe, test, beforeAll, expect } from "vitest";
 
-beforeAll(async () => {
-  // Reset database
-  resetDatabase();
-});
-
-/*
+describe("Team Structure Tests (E2E)", () => {
+  /*
 TEAM STRUCTURE USED FOR TESTING:
 
 Organizations:
@@ -41,7 +37,11 @@ user_A, user_B, user_C, user_D, user_E
 ++----------------------------------+---------------------------+---------------------------+---------------------------++--------------------------------------++
  */
 
-describe("Team Structure Tests (E2E)", () => {
+  beforeAll(async () => {
+    // Reset database
+    resetDatabase();
+  });
+
   // Teams
   test("teams_userDefault", async () => {
     setUserAuthToken(tokenUserA);

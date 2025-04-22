@@ -25,13 +25,13 @@ process.on("unhandledRejection", (err, promise) => {
   console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");
 });
 
-// Reset database
-beforeAll(async () => {
-  resetDatabase();
-  setUserAuthToken(tokenUserA);
-});
-
 describe("Annotation API (E2E)", () => {
+  // Reset database
+  beforeAll(async () => {
+    resetDatabase();
+    setUserAuthToken(tokenUserA);
+  });
+
   it("getAnnotationInformation()", async () => {
     const annotationId = "570ba0092a7c0e980056fe9b";
     const annotation = await api.getUnversionedAnnotationInformation(annotationId);

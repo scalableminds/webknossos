@@ -14,11 +14,11 @@ import {
 import { describe, test, beforeAll, expect } from "vitest";
 import type { Vector3 } from "oxalis/constants";
 
-beforeAll(async () => {
-  resetDatabase();
-});
-
 describe("Task API  (E2E)", () => {
+  beforeAll(async () => {
+    resetDatabase();
+  });
+
   test("getTasks()", async () => {
     const allTasks = (await getTasks({})).filter(
       (task) => task.projectName !== "Test_Project3(for_annotation_mutations)",

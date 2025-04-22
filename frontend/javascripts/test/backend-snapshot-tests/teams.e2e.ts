@@ -3,12 +3,12 @@ import { tokenUserA, setUserAuthToken, resetDatabase, writeTypeCheckingFile } fr
 import * as api from "admin/admin_rest_api";
 import { describe, beforeAll, expect, it } from "vitest";
 
-beforeAll(async () => {
-  resetDatabase();
-  setUserAuthToken(tokenUserA);
-});
-
 describe("Teams API (E2E)", () => {
+  beforeAll(async () => {
+    resetDatabase();
+    setUserAuthToken(tokenUserA);
+  });
+
   it("getTeams()", async () => {
     const teams = _.sortBy(await api.getTeams(), (team) => team.name);
 

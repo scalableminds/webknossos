@@ -8,13 +8,13 @@ import {
 import * as api from "admin/admin_rest_api";
 import { describe, it, beforeAll } from "vitest";
 
-// Reset database and change token
-beforeAll(async () => {
-  resetDatabase();
-  setUserAuthToken(tokenUserA);
-});
-
 describe("Misc APIs (E2E) ", () => {
+  beforeAll(async () => {
+    // Reset database and change token
+    resetDatabase();
+    setUserAuthToken(tokenUserA);
+  });
+
   it("datastores()", async ({ expect }) => {
     const datastores = await api.getDatastores();
 

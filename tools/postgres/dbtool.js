@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-const { spawnSync } = require("child_process");
-const path = require("path");
-const fs = require("fs");
+const { spawnSync } = require("node:child_process");
+const path = require("node:path");
+const fs = require("node:fs");
 const { Command } = require("commander");
 
 const schemaPath = path.join(__dirname, "schema.sql");
@@ -235,7 +235,7 @@ function findEvolutionFiles() {
     .readdirSync(evolutionsPath)
     .filter((filename) => filename.endsWith(".sql"))
     .map((filename) => {
-      const num = parseInt(filename.split("-")[0], 10);
+      const num = Number.Number.parseInt(filename.split("-")[0], 10);
       return [num, filename];
     })
     .sort((a, b) => a[0] - b[0]);
@@ -272,7 +272,7 @@ function checkEvolutionsSchema() {
 }
 
 function applyEvolutions() {
-  const schemaVersion = parseInt(
+  const schemaVersion = Number.parseInt(
     callPsql("SELECT schemaVersion FROM webknossos.releaseInformation;").trim(),
     10,
   );
@@ -309,7 +309,7 @@ function applyEvolutions() {
 function assertUniqueEvolutionNumbers() {
   const groupedEvolutions = new Map();
   for (const filename of fs.readdirSync(evolutionsPath)) {
-    const num = parseInt(filename.split("-")[0], 10);
+    const num = Number.parseInt(filename.split("-")[0], 10);
     if (isNaN(num)) {
       console.log("Found invalid evolution filename:", filename);
     }

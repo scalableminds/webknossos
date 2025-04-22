@@ -11,15 +11,14 @@ import type { APIProject, APIProjectUpdater } from "types/api_flow_types";
 import * as api from "admin/admin_rest_api";
 import { describe, it, beforeAll, beforeEach } from "vitest";
 
-beforeAll(() => {
-  resetDatabase();
-});
-
-beforeEach(() => {
-  setUserAuthToken(tokenUserA);
-});
-
 describe("Project API (E2E)", () => {
+  beforeAll(() => {
+    resetDatabase();
+  });
+
+  beforeEach(() => {
+    setUserAuthToken(tokenUserA);
+  });
   it("getProjects()", async ({ expect }) => {
     const projects = _.sortBy(await api.getProjects(), (p) => p.name);
 

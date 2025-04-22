@@ -17,20 +17,19 @@ import fs from "node:fs";
 
 async function getFirstDataset(): Promise<APIDataset> {
   const datasets = await api.getActiveDatasetsOfMyOrganization();
-
   const dataset = _.sortBy(datasets, (d) => d.name)[0];
 
   return dataset;
 }
 
-// Reset database and change token
-beforeAll(async () => {
-  resetDatabase();
-  setUserAuthToken(tokenUserA);
-  await api.triggerDatasetCheck("http://localhost:9000");
-});
-
 describe("Dataset API (E2E)", () => {
+  beforeAll(async () => {
+    // Reset database and change token
+    resetDatabase();
+    setUserAuthToken(tokenUserA);
+    await api.triggerDatasetCheck("http://localhost:9000");
+  });
+
   it("getDatasets", async () => {
     let datasets = await api.getDatasets();
     let retry = 0;
@@ -57,7 +56,6 @@ describe("Dataset API (E2E)", () => {
 
   it("getDatasetAccessList", async () => {
     const dataset = await getFirstDataset();
-
     const accessList = _.sortBy(await api.getDatasetAccessList(dataset), (user) => user.id);
 
     expect(replaceVolatileValues(accessList)).toMatchSnapshot();
@@ -80,9 +78,11 @@ describe("Dataset API (E2E)", () => {
 
   it("It should correctly disambiguate old dataset links", async () => {
     let datasets = await api.getActiveDatasetsOfMyOrganization();
+
     for (const dataset of datasets) {
       const organizationId = await getOrganizationForDataset(dataset.name);
       expect(organizationId).toBe(dataset.owningOrganization);
+
       const datasetId = await getDatasetIdFromNameAndOrganization(dataset.name, organizationId);
       expect(datasetId).toBe(dataset.id);
     }
@@ -233,6 +233,7 @@ describe("Dataset API (E2E)", () => {
     const result = await fetch(`/api/datasets/${newDatasetId}/health`, {
       headers: new Headers(),
     });
+
     if (result.status !== 200) {
       expect.fail("Dataset health check after upload failed");
     }

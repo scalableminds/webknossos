@@ -12,13 +12,13 @@ import * as foldersApi from "admin/api/folders";
 import { describe, it, beforeAll, expect } from "vitest";
 import { APIMetadataEnum } from "types/api_flow_types";
 
-// Reset database and change token
-beforeAll(async () => {
-  resetDatabase();
-  setUserAuthToken(tokenUserA);
-});
-
 describe("Folder API (E2E))", () => {
+  beforeAll(async () => {
+    // Reset database and change token
+    resetDatabase();
+    setUserAuthToken(tokenUserA);
+  });
+
   it("getFolderTree", async () => {
     const folderTree = _.sortBy(
       await foldersApi.getFolderTree(),

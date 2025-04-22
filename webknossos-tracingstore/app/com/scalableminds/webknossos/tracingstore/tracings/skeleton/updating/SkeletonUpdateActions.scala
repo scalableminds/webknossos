@@ -432,7 +432,7 @@ case class UpdateTreeGroupsExpandedStateSkeletonAction(groupIds: List[Int],
             userState.copy(
               userId = actionUserId,
               treeGroupIds = List(1, 2, 3),
-              treeGroupVisibilities = List(true, true, true)
+              treeGroupExpandedStates = List(true, true, true)
             )
           case userState => userState
         })
@@ -440,8 +440,8 @@ case class UpdateTreeGroupsExpandedStateSkeletonAction(groupIds: List[Int],
         tracing.copy(
           userState = tracing.userState :+ SkeletonUserStateProto(
             userId = actionUserId,
-            treeGroupIds = List(1, 2, 3),
-            treeGroupVisibilities = List(true, true, true),
+            treeGroupIds = groupIds,
+            treeGroupExpandedStates = List.fill[Boolean](groupIds.length)(areExpanded),
             boundingBoxIds = Seq.empty,
             boundingBoxVisibilities = Seq.empty,
             treeIds = Seq.empty,

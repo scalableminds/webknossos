@@ -69,7 +69,7 @@ message TreeGroup {
 message SkeletonUserStateProto {
   required string userId = 1;
   repeated int32 treeGroupIds = 2;
-  repeated bool treeGroupVisibilities = 3;
+  repeated bool treeGroupExpandedStates = 3;
   repeated int32 boundingBoxIds = 4;
   repeated int32 boundingBoxVisibilities = 5;
   repeated int32 treeIds = 6;

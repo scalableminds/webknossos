@@ -31,6 +31,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a Bug where the "Save view configuration as default" modal's text included undefined.  [#8514](https://github.com/scalableminds/webknossos/pull/8514)
 - Fixed the alignment of the button that allows restricting floodfill operations to a bounding box. [#8388](https://github.com/scalableminds/webknossos/pull/8388) 
 - Fixed that it was possible to trigger the find largest segment id job on layers which are not stored as segmentation layers on the server. [#8503](https://github.com/scalableminds/webknossos/pull/8503)
+- Fixed resolution of legacy links having dataset names with `-`. [#8548](https://github.com/scalableminds/webknossos/pull/8548)
 - Fixed that adding a layer using the dataset settings' advanced tab would crash WEBKNOSSOS. Bug was introduced by [#8503](https://github.com/scalableminds/webknossos/pull/8503).  [#8550](https://github.com/scalableminds/webknossos/pull/8550)
 - Fixed a rare and subtle bug related to volume annotation and undo/redo. [#7506](https://github.com/scalableminds/webknossos/pull/7506)
 - Fixed a bug where segment statistics would sometimes be wrong in case of an on-disk segmentation fallback layer with segment index file. [#8460](https://github.com/scalableminds/webknossos/pull/8460)

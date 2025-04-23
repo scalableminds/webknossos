@@ -89,7 +89,7 @@ services:
     ports:
       - "5434:5432"
     volumes:
-      - "../pg/db:/var/lib/postgresql/data"
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -d webknossos -U ${POSTGRES_USER} -h 127.0.0.1 -p 5432"]
       interval: 2s
@@ -111,3 +111,7 @@ services:
       timeout: 1s
       interval: 5s
       retries: 10
+
+volumes:
+  postgres_data:
+    external: false

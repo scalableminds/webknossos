@@ -3,8 +3,9 @@
 #include "jniutils.h"
 #include <draco/compression/decode.h>
 #include <draco/compression/encode.h>
-#include <string>
-#include <math.h>
+#include <cstring>
+#include <cstdint>      // for uint16_t / uint32_t
+#include <cmath>        // for std::pow
 
 uint16_t extractUint16(float value) {
         uint32_t as_int;

@@ -47,6 +47,7 @@ class NeuroglancerPrecomputedMeshService @Inject()(config: DataStoreConfig, data
       _ <- Fox.successful(())
       meshInfoPath = meshPath / NeuroglancerMesh.FILENAME_INFO
       meshInfo <- meshInfoPath.parseAsJson[NeuroglancerPrecomputedMeshInfo] ?~> "Failed to read mesh info"
+      _ <- Fox.bool2Fox(meshInfo.transform.length == 12) ?~> "Invalid mesh info: transform has to be of length 12"
     } yield NeuroglancerMesh(meshInfo)
 
   def exploreMeshes(organizationId: String, datasetName: String, dataLayerName: String)(
@@ -161,7 +162,8 @@ class NeuroglancerPrecomputedMeshService @Inject()(config: DataStoreConfig, data
       meshFilePath <- meshFilePathOpt.toFox ?~> "Mesh file path is required"
       vaultPath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(new URI(meshFilePath), None))
       mesh <- neuroglancerPrecomputedMeshInfoCache.getOrLoad(vaultPath, loadRemoteMeshInfo)
-      segmentId <- Fox.option2Fox(meshChunkDataRequests.head.segmentId) ?~> "Segment id parameter is required" // This assumes that all requests are for the same segment
+      segmentId <- Fox.option2Fox(meshChunkDataRequests.head.segmentId) ?~> "Segment id parameter is required"
+      _ = Fox.bool2Fox(meshChunkDataRequests.flatMap(_.segmentId).distinct.length == 1) ?~> "All requests must have the same segment id"
       minishardInfo = mesh.shardingSpecification.getMinishardInfo(segmentId)
       shardUrl = mesh.shardingSpecification.getPathForShard(vaultPath, minishardInfo._1)
       chunks <- Fox.serialCombined(meshChunkDataRequests.toList)(request =>

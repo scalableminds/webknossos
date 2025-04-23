@@ -115,7 +115,8 @@ object MurmurHash3 {
     h3 = (h1 + h3) & 0xFFFFFFFF
     h4 = (h1 + h4) & 0xFFFFFFFF
 
-    BigInt(h4) << 96 | BigInt(h3) << 64 | BigInt(h2) << 32 | BigInt(h1)
+    BigInt(h4 & 0xFFFFFFFFL) << 96 | BigInt(h3 & 0xFFFFFFFFL) << 64 | BigInt(h2 & 0xFFFFFFFFL) << 32 | BigInt(
+      h1 & 0xFFFFFFFFL)
   }
 
   def hash64(key: Array[Byte], seed: Int = 0): Long = {

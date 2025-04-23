@@ -88,6 +88,7 @@ class PrecomputedArray(vaultPath: VaultPath,
     val minishardInfo = shardingSpecification.getMinishardInfo(chunkIdentifier)
     val shardPath = shardingSpecification.getPathForShard(vaultPath, minishardInfo._1)
     for {
+      _ <- Fox.bool2Fox(minishardInfo._2 <= Int.MaxValue) ?~> "Minishard number is too large"
       minishardIndex <- getMinishardIndex(shardPath, minishardInfo._2.toInt) ?~> f"Could not get minishard index for chunkIndex ${chunkIndex
         .mkString(",")}"
       chunkRange: NumericRange.Exclusive[Long] <- getChunkRange(chunkIdentifier, minishardIndex) ?~> s"Could not get chunk range for chunkIndex ${chunkIndex

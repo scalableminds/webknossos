@@ -152,7 +152,6 @@ class BinaryDataService(val dataBaseDir: Path,
         )
       }.fillEmpty(Fox.successful(clippedData)) ?~> "Failed to apply agglomerate mapping"
       mappedData <- mappedDataFox
-      _ = request.dataLayer.boundingBox
       resultData <- convertIfNecessary(request.settings.halfByte, mappedData, convertToHalfByte, request)
     } yield resultData
 

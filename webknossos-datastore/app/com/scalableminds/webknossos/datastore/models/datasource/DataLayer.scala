@@ -221,6 +221,8 @@ trait DataLayerLike {
   // n-dimensional datasets = 3-dimensional datasets with additional coordinate axes
   def additionalAxes: Option[Seq[AdditionalAxis]]
 
+  def specialFiles: Option[Seq[SpecialFile]]
+
 }
 
 object DataLayerLike {
@@ -416,7 +418,8 @@ case class AbstractDataLayer(
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
-    additionalAxes: Option[Seq[AdditionalAxis]] = None
+    additionalAxes: Option[Seq[AdditionalAxis]] = None,
+    specialFiles: Option[Seq[SpecialFile]] = None
 ) extends DataLayerLike
 
 object AbstractDataLayer {
@@ -448,7 +451,8 @@ case class AbstractSegmentationLayer(
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
-    additionalAxes: Option[Seq[AdditionalAxis]] = None
+    additionalAxes: Option[Seq[AdditionalAxis]] = None,
+    specialFiles: Option[Seq[SpecialFile]] = None
 ) extends SegmentationLayerLike
 
 object AbstractSegmentationLayer {

@@ -20,8 +20,6 @@ package object inbox {
     def statusOpt: Option[String]
 
     def defaultViewConfiguration: Option[DatasetViewConfiguration]
-
-    def specialFiles: List[SpecialFile]
   }
 
   object GenericInboxDataSource {
@@ -50,8 +48,6 @@ package object inbox {
     val statusOpt: Option[String] = Some(status)
 
     val defaultViewConfiguration: Option[DatasetViewConfiguration] = None
-
-    val specialFiles: List[SpecialFile] = Nil
 
     def withUpdatedId(newId: DataSourceId): UnusableDataSource[T] = copy(id = newId)
   }

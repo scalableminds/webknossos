@@ -84,6 +84,7 @@ case class VolumeTracingLayer(
     tracing: VolumeTracing,
     tokenContext: TokenContext,
     additionalAxes: Option[Seq[AdditionalAxis]],
+    specialFiles: Option[Seq[SpecialFile]] = None,
     volumeDataStore: FossilDBClient,
 )(implicit val ec: ExecutionContext)
     extends SegmentationLayer

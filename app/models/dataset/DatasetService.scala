@@ -36,7 +36,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                datasetLastUsedTimesDAO: DatasetLastUsedTimesDAO,
                                datasetDataLayerDAO: DatasetLayerDAO,
                                datasetMagsDAO: DatasetMagsDAO,
-                               datasetSpecialFilesDAO: DatasetSpecialFilesDAO,
+                               datasetSpecialFilesDAO: DatasetLayerSpecialFilesDAO,
                                teamDAO: TeamDAO,
                                folderDAO: FolderDAO,
                                dataStoreService: DataStoreService,
@@ -140,8 +140,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- datasetDAO.insertOne(dataset)
       _ <- datasetDataLayerDAO.updateLayers(datasetId, dataSource)
       _ <- teamDAO.updateAllowedTeamsForDataset(datasetId, List())
-      _ <- Fox.runIf(dataSource.specialFiles.nonEmpty)(
-        datasetSpecialFilesDAO.updateSpecialFiles(datasetId, dataSource.specialFiles))
     } yield dataset
   }
 

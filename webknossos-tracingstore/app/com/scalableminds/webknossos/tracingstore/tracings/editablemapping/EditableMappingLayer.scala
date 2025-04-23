@@ -10,15 +10,7 @@ import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MagLo
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  AdditionalAxis,
-  CoordinateTransformation,
-  DataFormat,
-  DataLayer,
-  DataSourceId,
-  ElementClass,
-  SegmentationLayer
-}
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, CoordinateTransformation, DataFormat, DataLayer, DataSourceId, ElementClass, SegmentationLayer, SpecialFile}
 import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
@@ -103,6 +95,8 @@ case class EditableMappingLayer(name: String, // set to tracing id
   override def adminViewConfiguration: Option[LayerViewConfiguration] = None
 
   override def additionalAxes: Option[Seq[AdditionalAxis]] = None
+
+  override def specialFiles: Option[Seq[SpecialFile]] = None
 
   def version: Long = tracing.version
 

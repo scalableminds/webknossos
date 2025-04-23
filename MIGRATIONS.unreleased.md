@@ -10,3 +10,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 - New FossilDB version `0.1.37` (`master__525:` on dockerhub) is required. [#8460](https://github.com/scalableminds/webknossos/pull/8460)
 
 ### Postgres Evolutions:
+- [131-special-files](conf/evolutions/131-special-files.sql)

@@ -104,14 +104,6 @@ vi.mock("VolumeTracing.proto", () => {
   return { default: proto.toJSON() };
 });
 
-// vi.mock("ListOfLong.proto", () => ({
-//   default: JSON.stringify({
-//     NOT_USED_IN_TESTS: "currently the actual proto content is not used in the tests",
-//   }),
-// }));
-// vi.mock("SkeletonTracing.proto", () => ({ default: JSON.stringify(SKELETON_ANNOTATION_PROTO) }));
-// vi.mock("VolumeTracing.proto", () => ({ default: JSON.stringify(VOLUME_ANNOTATION_PROTO) }));
-
 vi.mock("oxalis/model/helpers/shader_editor.ts", () => ({
   default: {
     addBucketManagers: vi.fn(),

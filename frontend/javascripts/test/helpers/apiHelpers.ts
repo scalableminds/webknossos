@@ -71,7 +71,14 @@ vi.mock("libs/compute_bvh_async", () => ({
   computeBvhAsync: vi.fn().mockResolvedValue(undefined),
 }));
 
-function receiveJSONMockImplementation(
+vi.mock("oxalis/model/helpers/proto_helpers", () => {
+  return {
+    parseProtoTracing: vi.fn(),
+    parseProtoAnnotation: vi.fn(),
+  };
+});
+
+function  receiveJSONMockImplementation(
   url: string,
   options: RequestOptions = {},
   annotationFixture: typeof SKELETON_ANNOTATION | typeof VOLUME_ANNOTATION | typeof TASK_ANNOTATION,

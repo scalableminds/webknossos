@@ -410,7 +410,7 @@ export function addUserBoundingBoxInSkeletonTracingAction(
   actionTracingId: string,
 ) {
   return {
-    name: "addUserBoundingBoxSkeletonAction",
+    name: "addUserBoundingBoxSkeleton",
     value: {
       boundingBox: convertUserBoundingBoxesFromFrontendToServer(boundingBox),
       actionTracingId,
@@ -423,7 +423,7 @@ export function addUserBoundingBoxInVolumeTracingAction(
   actionTracingId: string,
 ) {
   return {
-    name: "addUserBoundingBoxVolumeAction",
+    name: "addUserBoundingBoxVolume",
     value: {
       boundingBox: convertUserBoundingBoxesFromFrontendToServer(boundingBox),
       actionTracingId,
@@ -436,7 +436,7 @@ export function deleteUserBoundingBoxInSkeletonTracingAction(
   actionTracingId: string,
 ) {
   return {
-    name: "deleteUserBoundingBoxSkeletonAction",
+    name: "deleteUserBoundingBoxSkeleton",
     value: {
       boundingBoxId,
       actionTracingId,
@@ -449,7 +449,7 @@ export function deleteUserBoundingBoxInVolumeTracingAction(
   actionTracingId: string,
 ) {
   return {
-    name: "deleteUserBoundingBoxVolumeAction",
+    name: "deleteUserBoundingBoxVolume",
     value: {
       boundingBoxId,
       actionTracingId,
@@ -458,7 +458,7 @@ export function deleteUserBoundingBoxInVolumeTracingAction(
 }
 
 function getUpdateUserBoundingBoxAction(
-  actionName: "updateUserBoundingBoxVolumeAction" | "updateUserBoundingBoxSkeletonAction",
+  actionName: "updateUserBoundingBoxVolume" | "updateUserBoundingBoxSkeleton",
   boundingBoxId: number,
   updatedProps: PartialBoundingBoxWithoutVisibility,
   actionTracingId: string,
@@ -486,7 +486,7 @@ export function updateUserBoundingBoxInVolumeTracingAction(
   actionTracingId: string,
 ) {
   return getUpdateUserBoundingBoxAction(
-    "updateUserBoundingBoxVolumeAction",
+    "updateUserBoundingBoxVolume",
     boundingBoxId,
     updatedProps,
     actionTracingId,
@@ -499,7 +499,7 @@ export function updateUserBoundingBoxInSkeletonTracingAction(
   actionTracingId: string,
 ) {
   return getUpdateUserBoundingBoxAction(
-    "updateUserBoundingBoxSkeletonAction",
+    "updateUserBoundingBoxSkeleton",
     boundingBoxId,
     updatedProps,
     actionTracingId,
@@ -512,7 +512,7 @@ export function updateUserBoundingBoxVisibilityInSkeletonTracingAction(
   actionTracingId: string,
 ) {
   return {
-    name: "updateUserBoundingBoxVisibilitySkeletonAction",
+    name: "updateUserBoundingBoxVisibilitySkeleton",
     value: {
       boundingBoxId,
       actionTracingId,
@@ -526,7 +526,7 @@ export function updateUserBoundingBoxVisibilityInVolumeTracingAction(
   actionTracingId: string,
 ) {
   return {
-    name: "updateUserBoundingBoxVisibilityVolumeAction",
+    name: "updateUserBoundingBoxVisibilityVolume",
     value: {
       boundingBoxId,
       actionTracingId,

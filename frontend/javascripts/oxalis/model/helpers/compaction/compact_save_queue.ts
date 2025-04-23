@@ -84,8 +84,8 @@ function removeSubsequentUpdateBBoxActions(updateActionsBatches: Array<SaveQueue
     if (
       actions1.length === 1 &&
       actions2.length === 1 &&
-      (actions1[0].name === "updateUserBoundingBoxSkeletonAction" ||
-        actions1[0].name === "updateUserBoundingBoxVolumeAction") &&
+      (actions1[0].name === "updateUserBoundingBoxSkeleton" ||
+        actions1[0].name === "updateUserBoundingBoxVolume") &&
       actions1[0].name === actions2[0].name &&
       actions1[0].value.boundingBoxId === actions2[0].value.boundingBoxId &&
       _.isEqual(actions1[0].value.updatedPropKeys, actions2[0].value.updatedPropKeys)

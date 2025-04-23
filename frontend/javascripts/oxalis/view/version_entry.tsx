@@ -75,35 +75,35 @@ const descriptionFns: Record<
     description: "Created the annotation.",
     icon: <RocketOutlined />,
   }),
-  addUserBoundingBoxSkeletonAction: (): Description => ({
+  addUserBoundingBoxSkeleton: (): Description => ({
     description: "Added a bounding box.",
     icon: <PlusOutlined />,
   }),
-  addUserBoundingBoxVolumeAction: (): Description => ({
+  addUserBoundingBoxVolume: (): Description => ({
     description: "Added a bounding box.",
     icon: <PlusOutlined />,
   }),
-  deleteUserBoundingBoxSkeletonAction: (): Description => ({
+  deleteUserBoundingBoxSkeleton: (): Description => ({
     description: "Deleted a bounding box.",
     icon: <DeleteOutlined />,
   }),
-  deleteUserBoundingBoxVolumeAction: (): Description => ({
+  deleteUserBoundingBoxVolume: (): Description => ({
     description: "Deleted a bounding box.",
     icon: <DeleteOutlined />,
   }),
-  updateUserBoundingBoxSkeletonAction: (): Description => ({
+  updateUserBoundingBoxSkeleton: (): Description => ({
     description: "Updated a bounding box.",
     icon: <EditOutlined />,
   }),
-  updateUserBoundingBoxVolumeAction: (): Description => ({
+  updateUserBoundingBoxVolume: (): Description => ({
     description: "Updated a bounding box.",
     icon: <EditOutlined />,
   }),
-  updateUserBoundingBoxVisibilitySkeletonAction: (): Description => ({
+  updateUserBoundingBoxVisibilitySkeleton: (): Description => ({
     description: "Toggled the visibility of a bounding box.",
     icon: <EditOutlined />,
   }),
-  updateUserBoundingBoxVisibilityVolumeAction: (): Description => ({
+  updateUserBoundingBoxVisibilityVolume: (): Description => ({
     description: "Toggled the visibility of a bounding box.",
     icon: <EditOutlined />,
   }),
@@ -215,9 +215,8 @@ const descriptionFns: Record<
     icon: <img src="/assets/images/hide-skeleton-edges-icon.svg" alt="Hide Tree Edges Icon" />,
   }),
   updateTreeGroupVisibility: (action: UpdateTreeGroupVisibilityUpdateAction): Description => ({
-    description: `Updated the visibility of the group with id ${
-      action.value.treeGroupId != null ? action.value.treeGroupId : MISSING_GROUP_ID
-    }.`,
+    description: `Updated the visibility of the group with id ${action.value.treeGroupId != null ? action.value.treeGroupId : MISSING_GROUP_ID
+      }.`,
     icon: <EyeOutlined />,
   }),
   createEdge: (action: CreateEdgeUpdateAction): Description => ({

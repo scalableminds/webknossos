@@ -195,7 +195,6 @@ export default class SegmentMeshController {
       } else {
         this.meshesLODRootGroup.addLODMesh(targetGroup, lod);
       }
-      console.log("Mesh using scale and lod ", scale, lod);
       targetGroup.segmentId = segmentId;
       if (scale != null) {
         targetGroup.scale.copy(new THREE.Vector3(...scale));

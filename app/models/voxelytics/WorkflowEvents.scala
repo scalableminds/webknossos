@@ -4,6 +4,8 @@ import com.scalableminds.util.time.Instant
 import models.voxelytics.VoxelyticsRunState.VoxelyticsRunState
 import play.api.libs.json._
 
+import java.util.Base64
+
 trait WorkflowEvent {}
 
 case class RunStateChangeEvent(state: VoxelyticsRunState, timestamp: Instant) extends WorkflowEvent
@@ -18,7 +20,8 @@ case class ChunkStateChangeEvent(taskName: String,
                                  executionId: String,
                                  chunkName: String,
                                  timestamp: Instant,
-                                 state: VoxelyticsRunState)
+                                 state: VoxelyticsRunState,
+                                 payload: Option[Array[Byte]])
     extends WorkflowEvent
 
 case class RunHeartbeatEvent(timestamp: Instant) extends WorkflowEvent
@@ -55,6 +58,16 @@ object TaskStateChangeEvent {
 
 object ChunkStateChangeEvent {
   implicit val jsonFormat: OFormat[ChunkStateChangeEvent] = Json.format[ChunkStateChangeEvent]
+}
+
+object Base64ByteArray {
+  implicit object base64ByteArrayFormat extends Format[Array[Byte]] {
+    override def reads(json: JsValue): JsResult[Array[Byte]] =
+      json.validate[String].map(Base64.getDecoder.decode)
+
+    override def writes(a: Array[Byte]): JsValue =
+      Json.toJson(Base64.getEncoder.encode(a))
+  }
 }
 
 object RunHeartbeatEvent {

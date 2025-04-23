@@ -1,10 +1,10 @@
 package utils.sql
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import play.api.libs.json.JsValue
 import slick.jdbc.{GetResult, PositionedResult}
-import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -30,6 +30,10 @@ trait SqlTypeImplicits {
 
   implicit protected object GetByteArray extends GetResult[Array[Byte]] {
     override def apply(v1: PositionedResult): Array[Byte] = v1.nextBytes()
+  }
+
+  implicit protected object GetByteArrayOpt extends GetResult[Option[Array[Byte]]] {
+    override def apply(v1: PositionedResult): Option[Array[Byte]] = v1.nextBytesOption()
   }
 
   // Conversions of values to SqlValue

@@ -1,11 +1,11 @@
 package models.voxelytics
 
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.User
 import models.voxelytics.VoxelyticsRunState.VoxelyticsRunState
 import play.api.libs.json.{JsArray, JsObject, Json, OFormat}
-import com.scalableminds.util.objectid.ObjectId
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -145,6 +145,18 @@ case class ArtifactChecksumEntry(taskName: String,
 
 object ArtifactChecksumEntry {
   implicit val jsonFormat: OFormat[ArtifactChecksumEntry] = Json.format[ArtifactChecksumEntry]
+}
+
+case class ChunkEntry(taskName: String,
+                      executionId: String,
+                      chunkName: String,
+                      beginTime: Option[Instant],
+                      endTime: Option[Instant],
+                      state: VoxelyticsRunState,
+                      payload: Option[Array[Byte]])
+
+object ChunkEntry {
+  implicit val jsonFormat: OFormat[ChunkEntry] = Json.format[ChunkEntry]
 }
 
 class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: ExecutionContext) extends FoxImplicits {

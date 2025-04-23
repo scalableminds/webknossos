@@ -255,6 +255,26 @@ class VoxelyticsController @Inject()(
       }
     }
 
+  def getChunk(taskId: ObjectId, executionId: String, chunkName: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      {
+        for {
+          _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
+          chunk <- voxelyticsDAO.getChunk(taskId, executionId, chunkName)
+        } yield JsonOk(Json.toJson(chunk))
+      }
+    }
+
+  def getChunks(taskId: ObjectId, executionId: Option[String]): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      {
+        for {
+          _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
+          chunks <- voxelyticsDAO.getChunks(taskId, executionId)
+        } yield JsonOk(Json.toJson(chunks))
+      }
+    }
+
   def appendLogs: Action[List[JsObject]] =
     sil.SecuredAction.async(validateJson[List[JsObject]]) { implicit request =>
       for {

@@ -319,5 +319,7 @@ DELETE        /voxelytics/workflows/:workflowHash                               
 POST          /voxelytics/workflows/:workflowHash/events                                        controllers.VoxelyticsController.storeWorkflowEvents(workflowHash: String, runName: String)
 GET           /voxelytics/workflows/:workflowHash/chunkStatistics                               controllers.VoxelyticsController.getChunkStatistics(workflowHash: String, runId: Option[ObjectId], taskName: String)
 GET           /voxelytics/workflows/:workflowHash/artifactChecksums                             controllers.VoxelyticsController.getArtifactChecksums(workflowHash: String, runId: Option[ObjectId], taskName: String, artifactName: Option[String])
+GET           /voxelytics/tasks/:taskId/chunks                                                  controllers.VoxelyticsController.getChunks(taskId: ObjectId, executionId: Option[String])
+GET           /voxelytics/tasks/:taskId/chunks/:executionId/:chunkName                          controllers.VoxelyticsController.getChunk(taskId: ObjectId, executionId: String, chunkName: String)
 POST          /voxelytics/logs                                                                  controllers.VoxelyticsController.appendLogs()
 GET           /voxelytics/logs                                                                  controllers.VoxelyticsController.getLogs(runId: ObjectId, taskName: Option[String], minLevel: Option[String], startTimestamp:Long, endTimestamp: Long, limit: Option[Int])

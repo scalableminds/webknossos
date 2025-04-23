@@ -630,17 +630,26 @@ CREATE TYPE webknossos.VOXELYTICS_RUN_STATE AS ENUM ('PENDING', 'SKIPPED', 'RUNN
 
 CREATE TABLE webknossos.voxelytics_artifacts(
     _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') NOT NULL,
-    _task TEXT CONSTRAINT _task_objectId CHECK (_task ~ '^[0-9a-f]{24}$') NOT NULL,
+    _created TEXT CONSTRAINT _created_objectId CHECK (_task ~ '^[0-9a-f]{24}$') NOT NULL,
+    _modified TEXT CONSTRAINT _modified_objectId CHECK (_task ~ '^[0-9a-f]{24}$') NOT NULL,
     name TEXT NOT NULL,
     path TEXT NOT NULL,
     fileSize INT8 NOT NULL,
     inodeCount INT8 NOT NULL,
     version TEXT NOT NULL DEFAULT '0',
     metadata JSONB,
+    isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
     PRIMARY KEY (_id),
-    UNIQUE (_task, name),
-    UNIQUE (_task, path),
+    UNIQUE (_created, name),
+    UNIQUE (_created, path),
     CONSTRAINT metadataIsJsonObject CHECK(jsonb_typeof(metadata) = 'object')
+);
+
+CREATE TABLE webknossos.voxelytics_artifactDependencies(
+    _artifact TEXT CONSTRAINT _artifact_objectId CHECK (_id ~ '^[0-9a-f]{24}$') NOT NULL,
+    _dependency TEXT CONSTRAINT _dependency_objectId CHECK (_id ~ '^[0-9a-f]{24}$') NOT NULL,
+    path TEXT,
+    PRIMARY KEY (_artifact, _dependency)
 );
 
 CREATE TABLE webknossos.voxelytics_runs(
@@ -683,6 +692,7 @@ CREATE TABLE webknossos.voxelytics_chunks(
     chunkName TEXT NOT NULL,
     beginTime TIMESTAMPTZ,
     endTime TIMESTAMPTZ,
+    payload BYTEA,
     state webknossos.voxelytics_run_state NOT NULL DEFAULT 'PENDING',
     PRIMARY KEY (_id),
     UNIQUE (_task, executionId, chunkName)
@@ -888,7 +898,9 @@ ALTER TABLE webknossos.dataset_layer_coordinateTransformations
 ALTER TABLE webknossos.dataset_layer_additionalAxes
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_artifacts
-  ADD FOREIGN KEY (_task) REFERENCES webknossos.voxelytics_tasks(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+  ADD FOREIGN KEY (_created) REFERENCES webknossos.voxelytics_tasks(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.voxelytics_artifacts
+  ADD FOREIGN KEY (_modified) REFERENCES webknossos.voxelytics_tasks(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_runs
   ADD CONSTRAINT organization_ref FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
   -- explicit naming for this constraint, as different postgres versions give different names to tuple key constraints
@@ -905,6 +917,10 @@ ALTER TABLE webknossos.voxelytics_chunkProfilingEvents
   ADD FOREIGN KEY (_chunk) REFERENCES webknossos.voxelytics_chunks(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_artifactFileChecksumEvents
   ADD FOREIGN KEY (_artifact) REFERENCES webknossos.voxelytics_artifacts(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.voxelytics_artifactDependencies
+  ADD FOREIGN KEY (_artifact) REFERENCES webknossos.voxelytics_artifacts(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.voxelytics_artifactDependencies
+  ADD FOREIGN KEY (_dependency) REFERENCES webknossos.voxelytics_artifacts(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.aiModels
   ADD CONSTRAINT organization_ref FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
   ADD FOREIGN KEY (_dataStore) REFERENCES webknossos.datastores(name) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,

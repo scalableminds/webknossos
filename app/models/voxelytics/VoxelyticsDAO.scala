@@ -1,10 +1,10 @@
 package models.voxelytics
 
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import models.user.User
 import play.api.libs.json._
-import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SimpleSQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject
@@ -784,6 +784,62 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
             lastModified = row._9
         ))
 
+  def getChunk(taskId: ObjectId, executionId: String, chunkName: String): Fox[ChunkEntry] =
+    for {
+      r <- run(q"""
+        SELECT
+          t.taskName,
+          c.beginTime,
+          c.endTime,
+          c.state,
+          c.payload
+        FROM webknossos.voxelytics_chunks c
+        JOIN webknossos.voxelytics_tasks t ON t._id = c._task
+        WHERE c._task = ${taskId} AND c.executionId = ${executionId} AND c.chunkName = ${chunkName}
+        ORDER BY af.path
+        """.as[(String, Option[Instant], Option[Instant], String, Option[Array[Byte]])])
+      row <- option2Fox(r.headOption)
+      state <- VoxelyticsRunState.fromString(row._4).toFox
+    } yield
+      ChunkEntry(taskName = row._1,
+                 executionId = executionId,
+                 chunkName = chunkName,
+                 beginTime = row._2,
+                 endTime = row._3,
+                 state = state,
+                 payload = row._5)
+
+  def getChunks(taskId: ObjectId, executionId: Option[String]): Fox[List[ChunkEntry]] =
+    for {
+      r <- run(q"""
+        SELECT
+          t.taskName,
+          c.executionId,
+          c.chunkName,
+          c.beginTime,
+          c.endTime,
+          c.state
+        FROM webknossos.voxelytics_chunks c
+        JOIN webknossos.voxelytics_tasks t ON t._id = c._task
+        WHERE c._task = ${taskId} ${executionId.map(a => q"AND c.executionId = $a").getOrElse(q"")}
+        ORDER BY af.path
+        """.as[(String, String, String, Option[Instant], Option[Instant], String)])
+      results <- Fox.combined(
+        r.toList.map(
+          row =>
+            for {
+              state <- VoxelyticsRunState.fromString(row._6).toFox
+            } yield
+              ChunkEntry(taskName = row._1,
+                         executionId = row._2,
+                         chunkName = row._3,
+                         beginTime = row._4,
+                         endTime = row._5,
+                         state = state,
+                         payload = None)
+        ))
+    } yield results
+
   def upsertArtifactChecksumEvents(runId: ObjectId, events: List[ArtifactFileChecksumEvent]): Fox[Unit] =
     for {
       _ <- run(q"""
@@ -896,15 +952,16 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           } else {
             None
           },
-          ev.state
+          ev.state,
+          ev.payload
       ))
 
     for {
       _ <- run(q"""
-        WITH insert_values(_run, taskName, _chunk, executionId, chunkName, beginTime, endTime, state) AS (
+        WITH insert_values(_run, taskName, _chunk, executionId, chunkName, beginTime, endTime, state, payload) AS (
           VALUES ${SqlToken.joinByComma(values)}
         )
-        INSERT INTO webknossos.voxelytics_chunks AS u (_id, _task, executionId, chunkName, beginTime, endTime, state)
+        INSERT INTO webknossos.voxelytics_chunks AS u (_id, _task, executionId, chunkName, beginTime, endTime, state, payload)
         SELECT
           iv._chunk,
           t._id,
@@ -912,14 +969,16 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           iv.chunkName,
           iv.beginTime::TIMESTAMPTZ,
           iv.endTime::TIMESTAMPTZ,
-          iv.state::webknossos.voxelytics_run_state
+          iv.state::webknossos.voxelytics_run_state,
+          iv.payload
         FROM insert_values iv
         JOIN webknossos.voxelytics_tasks t ON t._run = iv._run AND t.name = iv.taskName
         ON CONFLICT (_task, executionId, chunkName)
           DO UPDATE SET
             state = EXCLUDED.state,
             beginTime = COALESCE(EXCLUDED.beginTime, u.beginTime),
-            endTime = COALESCE(EXCLUDED.endTime, u.endTime)
+            endTime = COALESCE(EXCLUDED.endTime, u.endTime),
+            payload = COALESCE(EXCLUDED.payload, u.payload)
         """.asUpdate)
     } yield ()
   }

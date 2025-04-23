@@ -46,7 +46,7 @@ import {
   rgbToHex,
 } from "libs/utils";
 import _ from "lodash";
-import { ControlModeEnum, Unicode, type Vector3 } from "oxalis/constants";
+import { ControlModeEnum, Unicode, type Vector3, type Vector6 } from "oxalis/constants";
 import { getColorLayers, getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
 import {
@@ -74,6 +74,9 @@ import DEFAULT_PREDICT_WORKFLOW from "./default-predict-workflow-template";
 import { isBoundingBoxExportable } from "./download_modal_view";
 
 const { ThinSpace } = Unicode;
+
+const MIN_MAG1_BBOX_EXTENT_FOR_AI_INFERRAL: Vector3 = [16, 16, 4];
+const MIN_MAG1_DATASET_EXTENT_FOR_AI_INFERRAL: Vector3 = [32, 32, 8];
 
 export type StartAIJobModalState =
   | APIJobType.INFER_NEURONS
@@ -898,9 +901,10 @@ export function NucleiDetectionForm() {
       jobName={APIJobType.INFER_NUCLEI}
       title="AI Nuclei Segmentation"
       suggestedDatasetSuffix="with_nuclei"
-      jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer }) =>
-        startNucleiInferralJob(dataset.id, colorLayer.name, newDatasetName)
-      }
+      jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer }) => {
+        // TODO maybe enforce min size of color layer like in NeuronSegmentationForm
+        startNucleiInferralJob(dataset.id, colorLayer.name, newDatasetName);
+      }}
       description={
         <>
           <p>
@@ -921,6 +925,22 @@ export function NucleiDetectionForm() {
     />
   );
 }
+
+const isBBoxTooSmall = (
+  bbox: Vector6 | Vector3,
+  minExtent: Vector3 = MIN_MAG1_BBOX_EXTENT_FOR_AI_INFERRAL,
+) => {
+  const bboxExtent = bbox.length === 6 ? bbox.slice(3) : bbox;
+  for (let i = 0; i < 3; i++) {
+    if (bboxExtent[i] < minExtent[i]) {
+      return true;
+    }
+  }
+};
+
+const BBOX_TOO_SMALL_MESSAGE = `The bounding box is too small. Please select a bounding box with the minimal extent ${MIN_MAG1_BBOX_EXTENT_FOR_AI_INFERRAL} vx.`;
+const DS_TOO_SMALL_MESSAGE = `The dataset is too small. Please try another dataset with the minimal extent ${MIN_MAG1_DATASET_EXTENT_FOR_AI_INFERRAL} vx.`;
+
 export function NeuronSegmentationForm() {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const { neuronInferralCostPerGVx } = features();
@@ -953,6 +973,21 @@ export function NeuronSegmentationForm() {
         }
 
         const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
+        if (isBBoxTooSmall(bbox)) {
+          Toast.error(BBOX_TOO_SMALL_MESSAGE);
+          return;
+        }
+
+        const datasetExtent: Vector3 = [
+          colorLayer.boundingBox.width,
+          colorLayer.boundingBox.height,
+          colorLayer.boundingBox.depth,
+        ];
+        if (isBBoxTooSmall(datasetExtent, MIN_MAG1_DATASET_EXTENT_FOR_AI_INFERRAL)) {
+          Toast.error(DS_TOO_SMALL_MESSAGE);
+          return;
+        }
+
         if (!doSplitMergerEvaluation) {
           return startNeuronInferralJob(
             dataset.id,
@@ -1019,6 +1054,20 @@ export function MitochondriaSegmentationForm() {
         }
 
         const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
+        if (isBBoxTooSmall(bbox)) {
+          Toast.error(BBOX_TOO_SMALL_MESSAGE);
+          return;
+        }
+
+        const datasetExtent: Vector3 = [
+          colorLayer.boundingBox.width,
+          colorLayer.boundingBox.height,
+          colorLayer.boundingBox.depth,
+        ];
+        if (isBBoxTooSmall(datasetExtent, MIN_MAG1_DATASET_EXTENT_FOR_AI_INFERRAL)) {
+          Toast.error(DS_TOO_SMALL_MESSAGE);
+          return;
+        }
         return startMitochondriaInferralJob(dataset.id, colorLayer.name, bbox, newDatasetName);
       }}
       description={

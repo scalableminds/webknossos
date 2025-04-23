@@ -852,6 +852,20 @@ function calculateMediumBrushSize(maximumBrushSize: number) {
   return Math.ceil((maximumBrushSize - userSettings.brushSize.minimum) / 10) * 5;
 }
 
+function toolToRadioGroupValue(adaptedActiveTool: AnnotationTool): AnnotationTool {
+  /*
+   * The tool radio buttons only contain one button for both measurement tools (area
+   * and line). The selection of the "sub tool" can be done when one of them is active
+   * with extra buttons next to the radio group.
+   * To ensure that the highlighting of the generic measurement tool button works properly,
+   * we map both measurement tools to the line tool here.
+   */
+  if (adaptedActiveTool === AnnotationTool.AREA_MEASUREMENT) {
+    return AnnotationTool.LINE_MEASUREMENT;
+  }
+  return adaptedActiveTool;
+}
+
 export default function ToolbarView() {
   const hasVolume = useSelector((state: OxalisState) => state.annotation?.volumes.length > 0);
   const hasSkeleton = useSelector((state: OxalisState) => state.annotation?.skeleton != null);
@@ -871,7 +885,7 @@ export default function ToolbarView() {
 
   return (
     <>
-      <Radio.Group onChange={handleSetTool} value={adaptedActiveTool}>
+      <Radio.Group onChange={handleSetTool} value={toolToRadioGroupValue(adaptedActiveTool)}>
         {Toolkits[toolkit].map((tool) => (
           <ToolButton key={tool.id} tool={tool} adaptedActiveTool={adaptedActiveTool} />
         ))}

@@ -37,6 +37,7 @@ import { getDisabledInfoForTools } from "oxalis/model/accessors/disabled_tool_ac
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   AnnotationTool,
+  type AnnotationToolId,
   MeasurementTools,
   Toolkit,
   VolumeTools,
@@ -152,6 +153,8 @@ const handleSetOverwriteMode = (event: {
 }) => {
   Store.dispatch(updateUserSettingAction("overwriteMode", event.target.value));
 };
+
+type ToolButtonProps = { adaptedActiveTool: AnnotationTool };
 
 function RadioButtonWithTooltip({
   title,
@@ -886,9 +889,10 @@ export default function ToolbarView() {
   return (
     <>
       <Radio.Group onChange={handleSetTool} value={toolToRadioGroupValue(adaptedActiveTool)}>
-        {Toolkits[toolkit].map((tool) => (
-          <ToolButton key={tool.id} tool={tool} adaptedActiveTool={adaptedActiveTool} />
-        ))}
+        {Toolkits[toolkit].map((tool) => {
+          const ToolButton = ToolIdToComponent[tool.id];
+          return <ToolButton key={tool.id} adaptedActiveTool={adaptedActiveTool} />;
+        })}
       </Radio.Group>
 
       <ToolSpecificSettings
@@ -1243,7 +1247,7 @@ function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
   );
 }
 
-function MoveTool() {
+function MoveTool(_props: ToolButtonProps) {
   return (
     <ToolRadioButton
       name={AnnotationTool.MOVE.readableName}
@@ -1257,7 +1261,7 @@ function MoveTool() {
   );
 }
 
-function SkeletonTool() {
+function SkeletonTool(_props: ToolButtonProps) {
   const useLegacyBindings = useSelector(
     (state: OxalisState) => state.userConfiguration.useLegacyBindings,
   );
@@ -1298,7 +1302,7 @@ function getIsVolumeModificationAllowed(state: OxalisState) {
   return hasVolume && !isReadOnly && !hasEditableMapping(state);
 }
 
-function BrushTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTool }) {
+function BrushTool({ adaptedActiveTool }: ToolButtonProps) {
   const disabledInfosForTools = useSelector(getDisabledInfoForTools);
   const isVolumeModificationAllowed = useSelector(getIsVolumeModificationAllowed);
   if (!isVolumeModificationAllowed) {
@@ -1325,7 +1329,7 @@ function BrushTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTool })
   );
 }
 
-function EraseBrushTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTool }) {
+function EraseBrushTool({ adaptedActiveTool }: ToolButtonProps) {
   const disabledInfosForTools = useSelector(getDisabledInfoForTools);
   const showEraseTraceTool =
     adaptedActiveTool === AnnotationTool.TRACE || adaptedActiveTool === AnnotationTool.ERASE_TRACE;
@@ -1362,7 +1366,7 @@ function EraseBrushTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTo
   );
 }
 
-function TraceTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTool }) {
+function TraceTool({ adaptedActiveTool }: ToolButtonProps) {
   const disabledInfosForTools = useSelector(getDisabledInfoForTools);
   const isVolumeModificationAllowed = useSelector(getIsVolumeModificationAllowed);
   if (!isVolumeModificationAllowed) {
@@ -1390,7 +1394,7 @@ function TraceTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTool })
   );
 }
 
-function EraseTraceTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTool }) {
+function EraseTraceTool({ adaptedActiveTool }: ToolButtonProps) {
   const disabledInfosForTools = useSelector(getDisabledInfoForTools);
   const showEraseTraceTool =
     adaptedActiveTool === AnnotationTool.TRACE || adaptedActiveTool === AnnotationTool.ERASE_TRACE;
@@ -1425,7 +1429,7 @@ function EraseTraceTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTo
   );
 }
 
-function FillCellTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTool }) {
+function FillCellTool({ adaptedActiveTool }: ToolButtonProps) {
   const disabledInfosForTools = useSelector(getDisabledInfoForTools);
   const isVolumeModificationAllowed = useSelector(getIsVolumeModificationAllowed);
   if (!isVolumeModificationAllowed) {
@@ -1454,7 +1458,7 @@ function FillCellTool({ adaptedActiveTool }: { adaptedActiveTool: AnnotationTool
   );
 }
 
-function PickCellTool() {
+function PickCellTool(_props: ToolButtonProps) {
   const disabledInfosForTools = useSelector(getDisabledInfoForTools);
   const isVolumeModificationAllowed = useSelector(getIsVolumeModificationAllowed);
   if (!isVolumeModificationAllowed) {
@@ -1478,7 +1482,7 @@ function PickCellTool() {
   );
 }
 
-function QuickSelectTool() {
+function QuickSelectTool(_props: ToolButtonProps) {
   const disabledInfosForTools = useSelector(getDisabledInfoForTools);
   const isVolumeModificationAllowed = useSelector(getIsVolumeModificationAllowed);
   if (!isVolumeModificationAllowed) {
@@ -1504,7 +1508,7 @@ function QuickSelectTool() {
   );
 }
 
-function BoundingBoxTool() {
+function BoundingBoxTool(_props: ToolButtonProps) {
   const disabledInfosForTools = useSelector(getDisabledInfoForTools);
   const isReadOnly = useSelector(
     (state: OxalisState) => !state.annotation.restrictions.allowUpdate,
@@ -1532,7 +1536,7 @@ function BoundingBoxTool() {
   );
 }
 
-function ProofreadTool() {
+function ProofreadTool(_props: ToolButtonProps) {
   const dispatch = useDispatch();
   const isAgglomerateMappingEnabled = useSelector(hasAgglomerateMapping);
   const disabledInfosForTools = useSelector(getDisabledInfoForTools);
@@ -1581,7 +1585,7 @@ function ProofreadTool() {
   );
 }
 
-function LineMeasurementTool() {
+function LineMeasurementTool(_props: ToolButtonProps) {
   return (
     <ToolRadioButton
       name={AnnotationTool.LINE_MEASUREMENT.readableName}
@@ -1595,49 +1599,21 @@ function LineMeasurementTool() {
   );
 }
 
-function ToolButton({
-  tool,
-  adaptedActiveTool,
-}: { tool: AnnotationTool; adaptedActiveTool: AnnotationTool }) {
-  switch (tool) {
-    case AnnotationTool.MOVE: {
-      return <MoveTool />;
-    }
-    case AnnotationTool.SKELETON: {
-      return <SkeletonTool />;
-    }
-    case AnnotationTool.BRUSH: {
-      return <BrushTool adaptedActiveTool={adaptedActiveTool} />;
-    }
-    case AnnotationTool.ERASE_BRUSH: {
-      return <EraseBrushTool adaptedActiveTool={adaptedActiveTool} />;
-    }
-    case AnnotationTool.TRACE: {
-      return <TraceTool adaptedActiveTool={adaptedActiveTool} />;
-    }
-    case AnnotationTool.ERASE_TRACE: {
-      return <EraseTraceTool adaptedActiveTool={adaptedActiveTool} />;
-    }
-    case AnnotationTool.FILL_CELL: {
-      return <FillCellTool adaptedActiveTool={adaptedActiveTool} />;
-    }
-    case AnnotationTool.PICK_CELL: {
-      return <PickCellTool />;
-    }
-    case AnnotationTool.QUICK_SELECT: {
-      return <QuickSelectTool />;
-    }
-    case AnnotationTool.BOUNDING_BOX: {
-      return <BoundingBoxTool />;
-    }
-    case AnnotationTool.PROOFREAD: {
-      return <ProofreadTool />;
-    }
-    case AnnotationTool.LINE_MEASUREMENT: {
-      return <LineMeasurementTool />;
-    }
-  }
-}
+const ToolIdToComponent: Record<AnnotationToolId, (p: ToolButtonProps) => JSX.Element | null> = {
+  [AnnotationTool.MOVE.id]: MoveTool,
+  [AnnotationTool.SKELETON.id]: SkeletonTool,
+  [AnnotationTool.BRUSH.id]: BrushTool,
+  [AnnotationTool.ERASE_BRUSH.id]: EraseBrushTool,
+  [AnnotationTool.TRACE.id]: TraceTool,
+  [AnnotationTool.ERASE_TRACE.id]: EraseTraceTool,
+  [AnnotationTool.FILL_CELL.id]: FillCellTool,
+  [AnnotationTool.PICK_CELL.id]: PickCellTool,
+  [AnnotationTool.QUICK_SELECT.id]: QuickSelectTool,
+  [AnnotationTool.BOUNDING_BOX.id]: BoundingBoxTool,
+  [AnnotationTool.PROOFREAD.id]: ProofreadTool,
+  [AnnotationTool.LINE_MEASUREMENT.id]: LineMeasurementTool,
+  [AnnotationTool.AREA_MEASUREMENT.id]: () => null,
+};
 
 function MaybeMultiSliceAnnotationInfoIcon() {
   const maybeMagWithZoomStep = useSelector(getRenderableMagForActiveSegmentationTracing);

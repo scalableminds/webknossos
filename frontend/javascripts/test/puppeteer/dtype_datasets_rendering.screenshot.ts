@@ -250,7 +250,7 @@ describe("DType Dataset Rendering", () => {
                 }, actions);
               };
 
-              console.time("Taking screenshot...");
+              console.time("Taking Datasetscreenshot...");
               const { screenshot, width, height } = await screenshotDataset(
                 page,
                 URL,
@@ -263,7 +263,7 @@ describe("DType Dataset Rendering", () => {
                   ignore3DViewport: true,
                 },
               );
-              console.timeEnd("Taking screenshot...");
+              console.timeEnd("Taking Dataset screenshot...");
 
               console.time("Comparing screenshot...");
               const changedPixels = await compareScreenshot(
@@ -296,11 +296,11 @@ describe("DType Dataset Rendering", () => {
                 }, actions);
                 console.timeEnd("evaluate");
 
-                console.time("Taking screenshot...");
+                console.time("Taking TracingView screenshot...");
                 const { screenshot, width, height } = await screenshotTracingView(page, true);
                 console.timeEnd("Taking screenshot...");
 
-                console.time("Comparing screenshot...");
+                console.time("Comparing TracingView screenshot...");
                 const changedPixels = await compareScreenshot(
                   screenshot,
                   width,

@@ -80,6 +80,7 @@ import {
   removeFallbackLayer,
   updateMappingName,
   updateSegmentGroups,
+  updateSegmentVisibilityVolumeAction,
   updateSegmentVolumeAction,
   updateUserBoundingBoxesInVolumeTracing,
   updateVolumeTracing,
@@ -458,7 +459,10 @@ function* uncachedDiffSegmentLists(
     const segment = newSegments.getOrThrow(segmentId);
     const prevSegment = prevSegments.getOrThrow(segmentId);
 
-    if (segment !== prevSegment) {
+    const { isVisible: _prevIsVisible, ...prevSegmentWithoutIsVisible } = prevSegment;
+    const { isVisible: _isVisible, ...segmentWithoutIsVisible } = segment;
+
+    if (!_.isEqual(prevSegmentWithoutIsVisible, segmentWithoutIsVisible)) {
       yield updateSegmentVolumeAction(
         segment.id,
         segment.somePosition,
@@ -468,9 +472,12 @@ function* uncachedDiffSegmentLists(
         segment.groupId,
         segment.metadata,
         tracingId,
-        segment.isVisible,
         segment.creationTime,
       );
+    }
+
+    if (segment.isVisible !== prevSegment.isVisible) {
+      yield updateSegmentVisibilityVolumeAction(segment.id, segment.isVisible, tracingId);
     }
   }
 }

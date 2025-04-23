@@ -130,6 +130,8 @@ export const VolumeTracingSaveRelevantActions = [
   "BATCH_UPDATE_GROUPS_AND_SEGMENTS",
   "SET_HAS_EDITABLE_MAPPING",
   "SET_MAPPING_IS_LOCKED",
+  "TOGGLE_SEGMENT_GROUP",
+  "TOGGLE_ALL_SEGMENTS",
 ];
 
 export const VolumeTracingUndoRelevantActions = ["START_EDITING", "COPY_SEGMENTATION_LAYER"];

@@ -36,6 +36,9 @@ export type UpdateSkeletonTracingUpdateAction = ReturnType<typeof updateSkeleton
 type UpdateVolumeTracingUpdateAction = ReturnType<typeof updateVolumeTracing>;
 export type CreateSegmentUpdateAction = ReturnType<typeof createSegmentVolumeAction>;
 export type UpdateSegmentUpdateAction = ReturnType<typeof updateSegmentVolumeAction>;
+export type UpdateSegmentVisibilityVolumeAction = ReturnType<
+  typeof updateSegmentVisibilityVolumeAction
+>;
 export type DeleteSegmentUpdateAction = ReturnType<typeof deleteSegmentVolumeAction>;
 export type DeleteSegmentDataUpdateAction = ReturnType<typeof deleteSegmentDataVolumeAction>;
 type UpdateUserBoundingBoxesInSkeletonTracingUpdateAction = ReturnType<
@@ -86,6 +89,7 @@ export type UpdateActionWithoutIsolationRequirement =
   | UpdateUserBoundingBoxesInSkeletonTracingUpdateAction
   | UpdateUserBoundingBoxesInVolumeTracingUpdateAction
   | CreateSegmentUpdateAction
+  | UpdateSegmentVolumeAction
   | UpdateSegmentUpdateAction
   | DeleteSegmentUpdateAction
   | DeleteSegmentDataUpdateAction
@@ -435,7 +439,6 @@ export function updateSegmentVolumeAction(
   groupId: number | null | undefined,
   metadata: Array<MetadataEntryProto>,
   actionTracingId: string,
-  isVisible: boolean,
   creationTime: number | null | undefined = Date.now(),
 ) {
   return {
@@ -449,11 +452,26 @@ export function updateSegmentVolumeAction(
       color,
       groupId,
       metadata: enforceValidMetadata(metadata),
-      isVisible,
       creationTime,
     },
   } as const;
 }
+
+export function updateSegmentVisibilityVolumeAction(
+  id: number,
+  isVisible: boolean,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateSegmentVisibility",
+    value: {
+      id,
+      actionTracingId,
+      isVisible,
+    },
+  } as const;
+}
+
 export function deleteSegmentVolumeAction(id: number, actionTracingId: string) {
   return {
     name: "deleteSegment",

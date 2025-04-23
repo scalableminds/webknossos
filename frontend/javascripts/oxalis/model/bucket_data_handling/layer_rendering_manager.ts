@@ -320,12 +320,13 @@ export default class LayerRenderingManager {
             if (
               updateAction.name === "updateSegment" ||
               updateAction.name === "createSegment" ||
-              updateAction.name === "deleteSegment"
+              updateAction.name === "deleteSegment" ||
+              updateAction.name === "updateSegmentVisibility"
             ) {
               const { id } = updateAction.value;
-              const isVisible =
-                "isVisible" in updateAction.value ? updateAction.value.isVisible : undefined;
-              const color = "color" in updateAction.value ? updateAction.value.color : undefined;
+              const newSegment = newSegments.getNullable(id);
+              const isVisible = newSegment?.isVisible;
+              const color = newSegment?.color;
 
               if (isVisible === false) {
                 if (color == null) {

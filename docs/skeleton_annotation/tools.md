@@ -59,6 +59,14 @@ The following additional modes are available for the skeleton tool beyond the ba
 - Useful for correcting over-segmentation
 - Learn more about [Merger Mode](../proofreading/merger_mode.md)
 
+
+![Skeleton Pen Mode](./images/pen-mode-modifier.jpg){align=left width="60"} 
+**Skeleton Pen Mode**
+
+- If this mode is enabled, the skeleton tool behaves similarly to the brush tool: holding down the left mouse button and dragging the mouse will continuously create nodes.
+- Selecting or moving nodes via drag-and-drop is disabled in this mode.
+
+
 ## Skeleton Keyboard Shortcuts 
 
 The following common keyboard shortcuts are handy for speeding up your annotation workflow:

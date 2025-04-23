@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.models.requests
 
-import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, VoxelPosition}
 
 /**
@@ -51,4 +51,12 @@ case class Cuboid(topLeft: VoxelPosition, width: Int, height: Int, depth: Int) {
     height * mag.y,
     depth * mag.z
   )
+
+  def toMag1BoundingBox: BoundingBox = {
+    val mag1Cuboid = this.toMag1
+    BoundingBox(Vec3Int(mag1Cuboid.topLeft.mag1X, mag1Cuboid.topLeft.mag1Y, mag1Cuboid.topLeft.mag1Z),
+                mag1Cuboid.width,
+                mag1Cuboid.height,
+                mag1Cuboid.depth)
+  }
 }

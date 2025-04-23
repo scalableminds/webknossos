@@ -45,6 +45,9 @@ case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
     BoundingBox(Vec3Int(x, y, z), w, h, d)
   }
 
+  def isFullyContainedIn(other: BoundingBox): Boolean =
+    this.intersection(other).contains(this)
+
   def isEmpty: Boolean =
     width <= 0 || height <= 0 || depth <= 0
 

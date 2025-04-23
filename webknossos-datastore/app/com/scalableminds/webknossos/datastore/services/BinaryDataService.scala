@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.services
 import collections.SequenceUtils
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
@@ -106,17 +106,31 @@ class BinaryDataService(val dataBaseDir: Path,
                                                   conversionFunc(inputArray))
     else Full(inputArray)
 
+  private def clipToBoundingBox(request: DataServiceDataRequest)(inputArray: Array[Byte]): Box[Array[Byte]] = {
+    val requestCuboid = request.cuboid
+    val layerBbox = request.dataLayer.boundingBox
+    val layerBboxInMag = layerBbox / request.mag
+    val bytesPerElement = request.dataLayer.bytesPerElement
+    Full(inputArray)
+  }
+
   private def convertAccordingToRequest(request: DataServiceDataRequest, inputArray: Array[Byte]): Fox[Array[Byte]] =
     for {
+      clippedData <- convertIfNecessary(
+        request.cuboid.toMag1BoundingBox.isFullyContainedIn(request.dataLayer.boundingBox),
+        inputArray,
+        clipToBoundingBox(request),
+        request)
       mappedDataFox <- agglomerateServiceOpt.map { agglomerateService =>
         convertIfNecessary(
           request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation && request.cuboid.mag.maxDim <= MaxMagForAgglomerateMapping,
-          inputArray,
+          clippedData,
           agglomerateService.applyAgglomerate(request),
           request
         )
-      }.fillEmpty(Fox.successful(inputArray)) ?~> "Failed to apply agglomerate mapping"
+      }.fillEmpty(Fox.successful(clippedData)) ?~> "Failed to apply agglomerate mapping"
       mappedData <- mappedDataFox
+      _ = request.dataLayer.boundingBox
       resultData <- convertIfNecessary(request.settings.halfByte, mappedData, convertToHalfByte, request)
     } yield resultData
 

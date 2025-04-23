@@ -40,6 +40,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where sometimes large skeletons were not saved correctly, making them inaccessible on the next load. [#8513](https://github.com/scalableminds/webknossos/pull/8513)
 - Fixed that meshes weren't loaded correctly if the precomputed mesh file contained multiple levels-of-detail. [#8519](https://github.com/scalableminds/webknossos/pull/8519)
 - Fixed that authentication-related token renewal did not work properly in certain scenarios. [#8532](https://github.com/scalableminds/webknossos/pull/8532)
+- Fixed resolution of legacy links having dataset names with `-`. [#8548](https://github.com/scalableminds/webknossos/pull/8548)
+- Fixed that adding a layer using the dataset settings' advanced tab would crash WEBKNOSSOS. Bug was introduced by [#8503](https://github.com/scalableminds/webknossos/pull/8503). [#8550](https://github.com/scalableminds/webknossos/pull/8550)
 
 ### Breaking Changes
 - Removed `docker-compose.yml` in favor of `tools/hosting/docker-compose.yml` [#8147](https://github.com/scalableminds/webknossos/pull/8147)

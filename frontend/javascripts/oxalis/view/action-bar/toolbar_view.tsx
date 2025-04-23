@@ -1281,7 +1281,7 @@ function SkeletonTool(_props: ToolButtonProps) {
   return (
     <ToolRadioButton
       name={AnnotationTool.SKELETON.readableName}
-      description={`${skeletonToolDescription} Note that this tool differently because the "Split Segments" toolkit is active. Read more in the documentation.`}
+      description={skeletonToolDescription}
       disabledExplanation={disabledInfosForTools[AnnotationTool.SKELETON.id].explanation}
       disabled={disabledInfosForTools[AnnotationTool.SKELETON.id].isDisabled}
       value={AnnotationTool.SKELETON}
@@ -1439,7 +1439,7 @@ function FillCellTool({ adaptedActiveTool }: ToolButtonProps) {
   return (
     <ToolRadioButton
       name={AnnotationTool.FILL_CELL.readableName}
-      description={`Flood-fill the clicked region. Note that this tool differently because the "Split Segments" toolkit is active. Read more in the documentation.`}
+      description="Flood-fill the clicked region."
       disabledExplanation={disabledInfosForTools[AnnotationTool.FILL_CELL.id].explanation}
       disabled={disabledInfosForTools[AnnotationTool.FILL_CELL.id].isDisabled}
       value={AnnotationTool.FILL_CELL}

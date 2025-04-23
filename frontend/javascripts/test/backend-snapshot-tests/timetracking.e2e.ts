@@ -15,20 +15,20 @@ import { AnnotationStateFilterEnum } from "oxalis/constants";
 let activeUser: APIUser;
 let firstTeam: APITeam;
 
-beforeAll(async () => {
-  // Reset database and initialize values
-  resetDatabase();
-  setUserAuthToken(tokenUserA);
-  activeUser = await api.getActiveUser();
-
-  const teams = _.sortBy(await api.getTeams(), (team) => team.name);
-
-  firstTeam = teams[0];
-});
-
-// Note: /api/users/:userId/loggedTime is tested in users.e2e.ts
-
 describe("Time Tracking API (E2E)", () => {
+  // Note: /api/users/:userId/loggedTime is tested in users.e2e.ts
+
+  beforeAll(async () => {
+    // Reset database and initialize values
+    resetDatabase();
+    setUserAuthToken(tokenUserA);
+    activeUser = await api.getActiveUser();
+
+    const teams = _.sortBy(await api.getTeams(), (team) => team.name);
+
+    firstTeam = teams[0];
+  });
+
   test("getTimeTrackingForUserSpans", async () => {
     const timeTrackingForUser = await api.getTimeTrackingForUserSpans(
       activeUser.id,

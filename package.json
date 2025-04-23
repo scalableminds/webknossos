@@ -115,8 +115,6 @@
     "enable-jobs": "sed -i -e 's/jobsEnabled = false/jobsEnabled = true/g' ./conf/application.conf; sed -i -e 's/voxelyticsEnabled = false/voxelyticsEnabled = true/g' ./conf/application.conf; ./tools/postgres/dbtool.js enable-jobs",
     "disable-jobs": "sed -i -e 's/jobsEnabled = true/jobsEnabled = false/g' ./conf/application.conf; sed -i -e 's/voxelyticsEnabled = true/voxelyticsEnabled = false/g' ./conf/application.conf; ./tools/postgres/dbtool.js disable-jobs",
     "insert-local-datastore": "./tools/postgres/dbtool.js insert-local-datastore",
-    "coverage-local": "c8 report --reporter=html && echo Success! Open coverage/index.html",
-    "coverage": "c8 report --reporter=text-lcov | coveralls",
     "apply-evolutions": "tools/postgres/dbtool.js apply-evolutions",
     "postinstall": "cd tools/proxy && yarn install && cd ../postgres && yarn install",
     "typecheck": "yarn tsc",

@@ -728,5 +728,5 @@ export function getDatasetIdOrNameFromReadableURLPart(datasetNameAndId: string) 
   const isId = /^[a-f0-9]{24}$/.test(datasetIdOrName || "");
   return isId
     ? { datasetId: datasetIdOrName, datasetName: null }
-    : { datasetId: null, datasetName: datasetIdOrName };
+    : { datasetId: null, datasetName: datasetNameAndId };
 }

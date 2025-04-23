@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.services
 import collections.SequenceUtils
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
@@ -106,15 +106,17 @@ class BinaryDataService(val dataBaseDir: Path,
                                                   conversionFunc(inputArray))
     else Full(inputArray)
 
-  private def clipToBoundingBox(request: DataServiceDataRequest)(inputArray: Array[Byte]): Box[Array[Byte]] = {
+  /*
+   * Everything outside of the layer bounding box is set to black (zero) so data outside of the specified
+   *  bounding box is not exposed to the user
+   */
+  private def clipToLayerBoundingBox(request: DataServiceDataRequest)(inputArray: Array[Byte]): Box[Array[Byte]] = {
     val bytesPerElement = request.dataLayer.bytesPerElement
-    val layerBbox = request.dataLayer.boundingBox
     val requestBboxInMag = request.cuboid.toBoundingBoxInMag
-    val layerBboxInMag = layerBbox / request.mag
+    val layerBboxInMag = request.dataLayer.boundingBox / request.mag // Note that this div is implemented to round to the bigger bbox so we don’t lose voxels inside.
     val intersectionOpt = requestBboxInMag.intersection(layerBboxInMag).map(_.move(-requestBboxInMag.topLeft))
-    val outputArray = Array.fill[Byte](inputArray.length * bytesPerElement)(0)
+    val outputArray = Array.fill[Byte](inputArray.length)(0)
     intersectionOpt.foreach { intersection =>
-      println(s"intersection.topLeft.x: ${intersection.topLeft.x}")
       for {
         z <- intersection.topLeft.z until intersection.bottomRight.z
         y <- intersection.topLeft.y until intersection.bottomRight.y
@@ -139,7 +141,7 @@ class BinaryDataService(val dataBaseDir: Path,
       clippedData <- convertIfNecessary(
         !request.cuboid.toMag1BoundingBox.isFullyContainedIn(request.dataLayer.boundingBox),
         inputArray,
-        clipToBoundingBox(request),
+        clipToLayerBoundingBox(request),
         request)
       mappedDataFox <- agglomerateServiceOpt.map { agglomerateService =>
         convertIfNecessary(
@@ -198,7 +200,6 @@ class BinaryDataService(val dataBaseDir: Path,
   private def cutOutCuboid(request: DataServiceDataRequest, rs: List[(BucketPosition, Array[Byte])]): Array[Byte] = {
     val bytesPerElement = request.dataLayer.bytesPerElement
     val cuboid = request.cuboid
-    val subsamplingStrides = Vec3Int.ones
 
     val resultShape = Vec3Int(cuboid.width, cuboid.height, cuboid.depth)
     val result = new Array[Byte](cuboid.volume * bytesPerElement)
@@ -224,9 +225,9 @@ class BinaryDataService(val dataBaseDir: Path,
               y % bucketLength * bucketLength +
               z % bucketLength * bucketLength * bucketLength) * bytesPerElement
 
-          val rx = (xMin - cuboid.topLeft.voxelXInMag) / subsamplingStrides.x
-          val ry = (y - cuboid.topLeft.voxelYInMag) / subsamplingStrides.y
-          val rz = (z - cuboid.topLeft.voxelZInMag) / subsamplingStrides.z
+          val rx = xMin - cuboid.topLeft.voxelXInMag
+          val ry = y - cuboid.topLeft.voxelYInMag
+          val rz = z - cuboid.topLeft.voxelZInMag
 
           val resultOffset = (rx + ry * resultShape.x + rz * resultShape.x * resultShape.y) * bytesPerElement
           System.arraycopy(data, dataOffset, result, resultOffset, (xMax - xMin) * bytesPerElement)

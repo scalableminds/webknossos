@@ -82,11 +82,11 @@ Note: On arm64-based Macs (e.g. M1), you need to run WEBKNOSSOS in an x86_64 env
 sudo apt update
 sudo apt install -y curl ca-certificates wget git postgresql postgresql-client unzip zip redis-server build-essential libblosc1 libbrotli1 libdraco-dev cmake
 
-# Install nvm, node 18
+# Install nvm, node 22
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 source ~/.bashrc
-nvm install 18
-nvm use 18
+nvm install 22
+nvm use 22
 
  # Install sdkman, java, scala and sbt
 curl -s "https://get.sdkman.io" | bash
@@ -134,8 +134,8 @@ On older Ubuntu distributions: Please make sure to have the correct versions of 
 
 ### node.js & yarn
 
-* Install node from [http://nodejs.org/download/](http://nodejs.org/download/)
-* node version **18 is required**
+* Install node from [http://nodejs.org/](http://nodejs.org/)
+* node version **22+ is required**
 * Use `corepack` to install `yarn`
 * `corepack enable`&& `yarn install`
 

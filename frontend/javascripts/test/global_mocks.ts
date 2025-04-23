@@ -1,10 +1,16 @@
-// Add more essential global mocks
+// This file is imported before each test is executed (see vitest.config.ts).
+// All modules mocked here are globally mocked for all tests.
+// These mocks have to work with the unit, E2E and screenshot tests alike.
+
 import { vi } from "vitest";
 import protobuf from "protobufjs";
+import { performance } from "node:perf_hooks";
 
 // Mock global objects
+
+// Use the Node.js performance API (which slightly differs from the browser performance API for compatiblity reasons)
 global.performance = {
-  ...global.performance,
+  ...performance,
   now: vi.fn(() => Date.now()),
 };
 

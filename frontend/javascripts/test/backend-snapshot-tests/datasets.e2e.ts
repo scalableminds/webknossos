@@ -138,6 +138,10 @@ describe("Dataset API (E2E)", () => {
     expect(base64).toMatchSnapshot();
   });
 
+  /**
+   * WARNING: This test creates a side effect by uploading and saving a dataset in your binaryData folder.
+   * There is no clean up after the test, and the dataset will remain after each test run.
+   */
   it("Dataset upload", async () => {
     const uploadId = "test-dataset-upload-" + Date.now();
 

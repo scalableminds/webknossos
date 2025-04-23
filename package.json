@@ -94,7 +94,7 @@
     "test-backend": "sbt \"testOnly backend.*\"",
     "test-prepare": "tools/test.sh prepare",
     "test-prepare-watch": "tools/test.sh prepare -w --verbose",
-    "test-e2e": "vitest --fileParallelism=false frontend/javascripts/test/**/*.e2e.ts",
+    "test-e2e": "vitest run --fileParallelism=false frontend/javascripts/test/**/*.e2e.ts",
     "test-screenshot": "tools/test.sh test-screenshot --timeout=5m",
     "test-wkorg-screenshot": "tools/test.sh test-wkorg-screenshot --timeout=5m",
     "refresh-screenshots": "rm -rf frontend/javascripts/test/screenshots/** && docker compose up screenshot-tests",

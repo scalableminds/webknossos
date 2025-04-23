@@ -42,12 +42,17 @@ import {
   clamp,
   computeArrayFromBoundingBox,
   computeBoundingBoxFromBoundingBoxObject,
+  computeBoundingBoxObjectFromBoundingBox,
   pluralize,
   rgbToHex,
 } from "libs/utils";
 import _ from "lodash";
 import { ControlModeEnum, Unicode, type Vector3, type Vector6 } from "oxalis/constants";
-import { getColorLayers, getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getColorLayers,
+  getMagInfo,
+  getSegmentationLayers,
+} from "oxalis/model/accessors/dataset_accessor";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
 import {
   getActiveSegmentationTracingLayer,
@@ -60,6 +65,7 @@ import {
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { MagInfo } from "oxalis/model/helpers/mag_info";
+import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
 import { Model, Store } from "oxalis/singletons";
 import type { OxalisState, UserBoundingBox } from "oxalis/store";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
@@ -972,8 +978,15 @@ export function NeuronSegmentationForm() {
           return;
         }
 
+        const bboxInFinestMag = computeBoundingBoxObjectFromBoundingBox(
+          selectedBoundingBox.boundingBox,
+        );
+        const magInfo = getMagInfo(colorLayer.resolutions);
+        const finestMag = magInfo.getFinestMag();
+        const bboxInMag1 = getBoundingBoxInMag1(bboxInFinestMag, finestMag);
+        const bboxExtentMag1: Vector3 = [bboxInMag1.width, bboxInMag1.height, bboxInMag1.depth];
         const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
-        if (isBBoxTooSmall(bbox)) {
+        if (isBBoxTooSmall(bboxExtentMag1)) {
           Toast.error(BBOX_TOO_SMALL_MESSAGE);
           return;
         }
@@ -983,6 +996,7 @@ export function NeuronSegmentationForm() {
           colorLayer.boundingBox.height,
           colorLayer.boundingBox.depth,
         ];
+        //todo mag1
         if (isBBoxTooSmall(datasetExtent, MIN_MAG1_DATASET_EXTENT_FOR_AI_INFERRAL)) {
           Toast.error(DS_TOO_SMALL_MESSAGE);
           return;

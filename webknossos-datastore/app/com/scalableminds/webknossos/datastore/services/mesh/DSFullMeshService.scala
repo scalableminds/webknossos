@@ -220,11 +220,11 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
       layerName: String,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
-      // TODO: Mapping
       chunkInfos: WebknossosSegmentInfo <- neuroglancerPrecomputedMeshService.listMeshChunksForMultipleSegments(
         fullMeshRequest.meshFilePath,
         List(fullMeshRequest.segmentId)
       )
+      _ <- Fox.bool2Fox(fullMeshRequest.mappingName.isEmpty) ?~> "Mapping is not supported for remote neuroglancer mesh files"
       selectedLod = fullMeshRequest.lod.getOrElse(0)
       allChunkRanges: List[MeshChunk] = chunkInfos.lods(selectedLod).chunks
       meshFileName <- fullMeshRequest.meshFileName.toFox ?~> "mesh file name needed"

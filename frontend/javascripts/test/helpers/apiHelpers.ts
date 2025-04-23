@@ -78,7 +78,7 @@ vi.mock("oxalis/model/helpers/proto_helpers", () => {
   };
 });
 
-function  receiveJSONMockImplementation(
+function receiveJSONMockImplementation(
   url: string,
   options: RequestOptions = {},
   annotationFixture: typeof SKELETON_ANNOTATION | typeof VOLUME_ANNOTATION | typeof TASK_ANNOTATION,

@@ -7,6 +7,11 @@ import type { ArbitraryObject } from "types/globals";
 import { vi } from "vitest";
 import { JSDOM } from "jsdom";
 
+vi.mock("libs/request", async (importOriginal) => {
+  // The request lib is globally mocked. In the E2E tests, we actually want to run the proper fetch calls so we revert to the original implementation
+  return await importOriginal();
+});
+
 const requests = [];
 const tokenUserA =
   "1b88db86331a38c21a0b235794b9e459856490d70408bcffb767f64ade0f83d2bdb4c4e181b9a9a30cdece7cb7c65208cc43b6c1bb5987f5ece00d348b1a905502a266f8fc64f0371cd6559393d72e031d0c2d0cabad58cccf957bb258bc86f05b5dc3d4fff3d5e3d9c0389a6027d861a21e78e3222fb6c5b7944520ef21761e";
@@ -41,6 +46,10 @@ const volatileKeys: Array<string | number | symbol> = [
   "sortingKey",
 ];
 
+/**
+ * Replaces values of certain volatile keys (e.g. timestamps, IDs) with deterministic values to make test snapshots more stable.
+ * This is useful for ensuring consistent snapshot tests when dealing with properties that change between test runs.
+ */
 export function replaceVolatileValues(obj: ArbitraryObject | null | undefined) {
   if (obj == null) return obj;
 
@@ -62,11 +71,6 @@ export function replaceVolatileValues(obj: ArbitraryObject | null | undefined) {
   );
   return newObj;
 }
-
-vi.mock("libs/request", async (importOriginal) => {
-  // The request lib is globally mocked. In the E2E tests, we actually want to run the proper fetch calls so we revert to the original implementation
-  return await importOriginal();
-});
 
 const originalFetch = fetch;
 global.fetch = function fetchWrapper(url, options) {
@@ -111,6 +115,10 @@ global.localStorage = {
   key: vi.fn(),
 };
 
+/**
+ * Writes a TypeScript file that type-checks an object against a given type using the regular TS compiler.
+ * Useful for verifying that API responses match their expected TypeScript interfaces during testing.
+ */
 export async function writeTypeCheckingFile(
   object: Array<any> | Record<string, any>,
   name: string,

@@ -8,7 +8,6 @@ import { performance } from "node:perf_hooks";
 
 // Mock global objects
 
-
 // @ts-ignore Use the Node.js performance API (which slightly differs from the browser performance API for compatiblity reasons)
 global.performance = {
   ...performance,

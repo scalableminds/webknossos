@@ -2,7 +2,7 @@
   "name": "webknossos",
   "license": "AGPL-3.0",
   "engines": {
-    "node": ">=16"
+    "node": ">=22"
   },
   "repository": {
     "type": "git",
@@ -49,7 +49,7 @@
     "espree": "^3.5.4",
     "husky": "^9.1.5",
     "jsdoc": "^3.5.5",
-    "jsdom": "^23.2.0",
+    "jsdom": "^26.1.0",
     "json-loader": "^0.5.7",
     "less": "^4.0.0",
     "less-loader": "^10.2.0",

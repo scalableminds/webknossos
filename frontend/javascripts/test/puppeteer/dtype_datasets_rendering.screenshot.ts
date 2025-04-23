@@ -250,7 +250,7 @@ describe("DType Dataset Rendering", () => {
                 }, actions);
               };
 
-              console.time("Taking Datasetscreenshot...");
+              console.time("Taking Dataset screenshot...");
               const { screenshot, width, height } = await screenshotDataset(
                 page,
                 URL,

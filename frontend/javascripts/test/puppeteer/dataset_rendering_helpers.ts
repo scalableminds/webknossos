@@ -12,7 +12,12 @@ import { createExplorational, updateDatasetConfiguration } from "../../admin/adm
 import { sleep } from "libs/utils";
 import type { APIAnnotation } from "types/api_flow_types";
 import type Semaphore from "semaphore-promise";
-import type { TestContext } from "vitest";
+import { vi, type TestContext } from "vitest";
+
+vi.mock("libs/request", async (importOriginal) => {
+  // The request lib is globally mocked for the unit tests. In the screenshot tests, we actually want to run the proper fetch calls so we revert to the original implementation
+  return await importOriginal();
+});
 
 export const { WK_AUTH_TOKEN } = process.env;
 
@@ -33,6 +38,7 @@ export function getDefaultRequestOptions(baseUrl: string): RequestOptions {
   if (!WK_AUTH_TOKEN) {
     throw new Error("No WK_AUTH_TOKEN specified.");
   }
+
   return {
     host: baseUrl,
     doNotInvestigate: true,
@@ -140,6 +146,7 @@ async function _screenshotAnnotationHelper(
     options?.onLoaded,
     options?.viewOverride,
   );
+
   return screenshotTracingView(page, options?.ignore3DViewport);
 }
 
@@ -176,6 +183,7 @@ export async function screenshotDatasetWithMapping(
     `webknossos.apiReady().then(async api => api.data.activateMapping("${mappingName}"))`,
   );
   await waitForMappingEnabled(page);
+
   return screenshotTracingView(page);
 }
 export async function screenshotDatasetWithMappingLink(
@@ -196,6 +204,7 @@ export async function screenshotDatasetWithMappingLink(
   );
   await openTracingView(page, baseUrl, createdExplorational.id, undefined, viewOverride);
   await waitForMappingEnabled(page);
+
   return screenshotTracingView(page);
 }
 export async function screenshotSandboxWithMappingLink(
@@ -206,6 +215,7 @@ export async function screenshotSandboxWithMappingLink(
 ): Promise<Screenshot> {
   await openSandboxView(page, baseUrl, datasetId, viewOverride);
   await waitForMappingEnabled(page);
+
   return screenshotTracingView(page);
 }
 
@@ -381,6 +391,7 @@ export async function screenshotTracingView(
   await revertOpacityIfNecessary();
   // Concatenate all screenshots
   const img = await mergeImg(screenshots);
+
   return new Promise((resolve) => {
     img.getBuffer("image/png", (_, buffer) =>
       resolve({
@@ -394,6 +405,7 @@ export async function screenshotTracingView(
 
 export async function getNewPage(browser: Browser) {
   const page = await browser.newPage();
+
   page.setViewport({
     width: PAGE_WIDTH,
     height: PAGE_HEIGHT,
@@ -402,6 +414,7 @@ export async function getNewPage(browser: Browser) {
     // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | undefined' is not assignable to typ... Remove this comment to see the full error message
     "X-Auth-Token": WK_AUTH_TOKEN,
   });
+
   return page;
 }
 
@@ -443,7 +456,7 @@ export async function setupBeforeEach(context: ScreenshotTestContext, semaphore?
             "--no-sandbox",
             "--disable-setuid-sandbox",
             "--disable-dev-shm-usage",
-            "--use-angle=gl-egl",
+            // "--use-angle=gl-egl",
           ]
         : [],
       headless: HEADLESS ? "new" : false, // use "new" to suppress warnings
@@ -489,6 +502,7 @@ async function getBrowserstackSessionId(browser: Browser) {
   )) as unknown as string;
 
   const sessionDetails = await JSON.parse(response);
+
   return sessionDetails.hashed_id;
 }
 

@@ -123,6 +123,7 @@ describe("Dataset Rendering", () => {
           3,
           async () => {
             const page = await getNewPage(browser);
+
             const { screenshot, width, height } = await screenshotDataset(
               page,
               URL,
@@ -168,6 +169,7 @@ describe("Dataset Rendering", () => {
           3,
           async () => {
             const page = await getNewPage(browser);
+
             const { screenshot, width, height } = await screenshotAnnotation(
               page,
               URL,
@@ -178,6 +180,7 @@ describe("Dataset Rendering", () => {
                 datasetConfigOverride: datasetConfigOverrides[datasetName],
               },
             );
+
             const changedPixels = await compareScreenshot(
               screenshot,
               width,
@@ -186,6 +189,7 @@ describe("Dataset Rendering", () => {
               `annotation_${datasetName}_${fallbackLabel}`,
             );
             await page.close();
+
             return isPixelEquivalent(changedPixels, width, height);
           },
           (condition) => {
@@ -204,16 +208,19 @@ describe("Dataset Rendering", () => {
     async ({ browser }) => {
       const datasetName = "ROI2017_wkw";
       const mappingName = "astrocyte";
+
       await withRetry(
         3,
         async () => {
           const page = await getNewPage(browser);
+
           const { screenshot, width, height } = await screenshotDatasetWithMapping(
             page,
             URL,
             datasetNameToId[datasetName],
             mappingName,
           );
+
           const changedPixels = await compareScreenshot(
             screenshot,
             width,
@@ -222,6 +229,7 @@ describe("Dataset Rendering", () => {
             `${datasetName}_with_mapping_${mappingName}`,
           );
           await page.close();
+
           return isPixelEquivalent(changedPixels, width, height);
         },
         (condition) => {
@@ -239,16 +247,19 @@ describe("Dataset Rendering", () => {
     async ({ browser }) => {
       const datasetName = "test-agglomerate-file";
       const viewOverride = viewOverrides[datasetName];
+
       await withRetry(
         3,
         async () => {
           const page = await getNewPage(browser);
+
           const { screenshot, width, height } = await screenshotDatasetWithMappingLink(
             page,
             URL,
             datasetNameToId[datasetName],
             viewOverride,
           );
+
           const changedPixels = await compareScreenshot(
             screenshot,
             width,
@@ -257,6 +268,7 @@ describe("Dataset Rendering", () => {
             `${datasetName}_with_mapping_link`,
           );
           await page.close();
+
           return isPixelEquivalent(changedPixels, width, height);
         },
         (condition) => {
@@ -274,6 +286,7 @@ describe("Dataset Rendering", () => {
     async ({ browser }) => {
       const datasetName = "test-agglomerate-file";
       const viewOverride = viewOverrides[datasetName];
+
       await withRetry(
         3,
         async () => {
@@ -309,6 +322,7 @@ describe("Dataset Rendering", () => {
     async ({ browser }) => {
       const datasetName = "test-agglomerate-file";
       const viewOverride = viewOverrides["test-agglomerate-file-with-meshes"];
+
       await withRetry(
         3,
         async () => {

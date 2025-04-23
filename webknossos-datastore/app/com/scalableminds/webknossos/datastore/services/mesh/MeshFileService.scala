@@ -252,7 +252,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       .resolve(datasetDirectoryName)
       .resolve(dataLayerName)
       .resolve(meshesDir)
-      .resolve(s"${meshChunkDataRequests.meshFile}.$hdf5FileExtension")
+      .resolve(s"${meshChunkDataRequests.meshFile.name}.$hdf5FileExtension")
     for {
       resultBox <- meshFileCache.withCachedHdf5(meshFilePath) { cachedMeshFile =>
         readMeshChunkFromCachedMeshfile(cachedMeshFile, meshChunkDataRequests)

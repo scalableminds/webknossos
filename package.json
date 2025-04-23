@@ -98,7 +98,7 @@
     "test-e2e": "tools/postgres/dbtool.js prepare-test-db && tools/test.sh test-e2e --timeout=60s --verbose",
     "test-screenshot": "tools/test.sh test-screenshot --timeout=5m",
     "test-wkorg-screenshot": "tools/test.sh test-wkorg-screenshot --timeout=5m",
-    "refresh-screenshots": "rm -rf frontend/javascripts/test/screenshots/** && ./tools/docker-env.sh bash -c 'for i in {1..3}; do yarn test-screenshot && break; done'",
+    "refresh-screenshots": "tools/refresh-screenshots.sh",
     "test-help": "echo For development it is recommended to run yarn test-prepare-watch in one terminal and yarn test-watch in another. This is the fastest way to perform incremental testing. If you are only interested in running test once, use yarn test.",
     "remove-e2e-snapshots": "rm -rf frontend/javascripts/test/snapshots/public-test/test-bundle/test/backend-snapshot-tests/ && rm -rf frontend/javascripts/test/snapshots/public-test/test-bundle/test/enzyme/",
     "remove-all-snapshots": "rm -rf frontend/javascripts/test/snapshots/",

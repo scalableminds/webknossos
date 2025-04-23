@@ -9,7 +9,7 @@ import {
   withRetry,
 } from "./dataset_rendering_helpers";
 import { encodeUrlHash } from "oxalis/controller/url_manager";
-import { describe, it, beforeEach, afterEach } from "vitest";
+import { describe, it, beforeEach, afterEach, expect } from "vitest";
 
 process.on("unhandledRejection", (err, promise) => {
   console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");

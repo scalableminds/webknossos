@@ -3,6 +3,7 @@ import ViewConfigurationSchema from "types/schemas/dataset_view_configuration.sc
 import DatasourceSchema from "types/schemas/datasource.schema";
 import UrlStateSchema from "types/schemas/url_state.schema";
 import UserSettingsSchema from "types/schemas/user_settings.schema";
+
 const validator = new jsonschema.Validator();
 // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '{ definitions: { "types::Vector3... Remove this comment to see the full error message
 validator.addSchema(DatasourceSchema, "/");
@@ -53,17 +54,23 @@ export const validateObjectWithType = (type: string, json: Record<string, any>) 
     return result.errors;
   }
 };
+
 export const validateDatasourceJSON = validateWithSchema("types::DatasourceConfiguration");
+
 export const isDatasourceJSONValid = (json: Record<string, any>) =>
   validator.validate(json, {
     $ref: "#/definitions/types::DatasourceConfiguration",
   }).valid;
+
 export const validateUserSettingsJSON = validateWithSchema("types::UserSettings");
+
 export const validateLayerViewConfigurationObjectJSON = validateWithSchema(
   "types::LayerViewConfigurationObject",
 );
+
 export const validateUrlStateJSON = (value: string) =>
   validateWithSchemaSync("types::UrlManagerState", value);
+
 export const isValidJSON = (json: string) => {
   try {
     JSON.parse(json);
@@ -72,6 +79,7 @@ export const isValidJSON = (json: string) => {
     return false;
   }
 };
+
 export function syncValidator<T>(validateValueFn: (arg0: T) => boolean, errMessage: string) {
   return (_rule: Record<string, any>, value: T) =>
     validateValueFn(value) ? Promise.resolve() : Promise.reject(new Error(errMessage));

@@ -1,4 +1,4 @@
-import "test/mocks/lz4";
+import "test/mocks/ava_only_mock_lz4";
 import type { PartialDatasetConfiguration } from "oxalis/store";
 import {
   compareScreenshot,

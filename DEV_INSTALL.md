@@ -27,7 +27,7 @@ For non-localhost deployments, check out the [installation guide in the document
 * [Blosc](https://github.com/Blosc/c-blosc)
 * [Brotli](https://github.com/google/brotli)
 * [Draco](https://github.com/google/draco)
-* [node.js 18](http://nodejs.org/download/)
+* [node.js 22+](http://nodejs.org/download/)
 * [yarn package manager](https://yarnpkg.com/)
 * [git](http://git-scm.com/downloads)
 * [cmake](https://cmake.org/download/)
@@ -170,11 +170,8 @@ Note: If the postgres schema changed, you may see compilation errors in the form
 ## Tests and Tools
 
 ```bash
-# Frontend linting
-yarn run lint
-
-# Format frontend code
-yarn format-frontend
+# Frontend linting & Formatting
+yarn fix-frontend
 
 # Format backend code
 yarn format-backend
@@ -183,7 +180,7 @@ yarn format-backend
 yarn tsc
 
 # Frontend tests
-yarn test-verbose
+yarn test
 
 # End-to-end tests
 docker compose run e2e-tests

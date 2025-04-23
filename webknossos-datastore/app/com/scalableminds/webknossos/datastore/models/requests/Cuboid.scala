@@ -52,6 +52,9 @@ case class Cuboid(topLeft: VoxelPosition, width: Int, height: Int, depth: Int) {
     depth * mag.z
   )
 
+  def toBoundingBoxInMag: BoundingBox =
+    BoundingBox(Vec3Int(topLeft.voxelXInMag, topLeft.voxelYInMag, topLeft.voxelZInMag), width, height, depth)
+
   def toMag1BoundingBox: BoundingBox = {
     val mag1Cuboid = this.toMag1
     BoundingBox(Vec3Int(mag1Cuboid.topLeft.mag1X, mag1Cuboid.topLeft.mag1Y, mag1Cuboid.topLeft.mag1Z),

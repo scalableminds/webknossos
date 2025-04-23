@@ -107,17 +107,37 @@ class BinaryDataService(val dataBaseDir: Path,
     else Full(inputArray)
 
   private def clipToBoundingBox(request: DataServiceDataRequest)(inputArray: Array[Byte]): Box[Array[Byte]] = {
-    val requestCuboid = request.cuboid
-    val layerBbox = request.dataLayer.boundingBox
-    val layerBboxInMag = layerBbox / request.mag
     val bytesPerElement = request.dataLayer.bytesPerElement
-    Full(inputArray)
+    val layerBbox = request.dataLayer.boundingBox
+    val requestBboxInMag = request.cuboid.toBoundingBoxInMag
+    val layerBboxInMag = layerBbox / request.mag
+    val intersectionOpt = requestBboxInMag.intersection(layerBboxInMag).map(_.move(-requestBboxInMag.topLeft))
+    val outputArray = Array.fill[Byte](inputArray.length * bytesPerElement)(0)
+    intersectionOpt.foreach { intersection =>
+      println(s"intersection.topLeft.x: ${intersection.topLeft.x}")
+      for {
+        z <- intersection.topLeft.z until intersection.bottomRight.z
+        y <- intersection.topLeft.y until intersection.bottomRight.y
+        // We can bulk copy a row of voxels and do not need to iterate in the x dimension
+      } {
+        val offset =
+          (intersection.topLeft.x +
+            y * requestBboxInMag.width +
+            z * requestBboxInMag.width * requestBboxInMag.height) * bytesPerElement
+        System.arraycopy(inputArray,
+                         offset,
+                         outputArray,
+                         offset,
+                         (intersection.bottomRight.x - intersection.topLeft.x) * bytesPerElement)
+      }
+    }
+    Full(outputArray)
   }
 
   private def convertAccordingToRequest(request: DataServiceDataRequest, inputArray: Array[Byte]): Fox[Array[Byte]] =
     for {
       clippedData <- convertIfNecessary(
-        request.cuboid.toMag1BoundingBox.isFullyContainedIn(request.dataLayer.boundingBox),
+        !request.cuboid.toMag1BoundingBox.isFullyContainedIn(request.dataLayer.boundingBox),
         inputArray,
         clipToBoundingBox(request),
         request)

@@ -8,7 +8,8 @@ import { performance } from "node:perf_hooks";
 
 // Mock global objects
 
-// Use the Node.js performance API (which slightly differs from the browser performance API for compatiblity reasons)
+
+// @ts-ignore Use the Node.js performance API (which slightly differs from the browser performance API for compatiblity reasons)
 global.performance = {
   ...performance,
   now: vi.fn(() => Date.now()),

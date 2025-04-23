@@ -95,7 +95,7 @@
     "test-prepare": "tools/test.sh prepare",
     "test-prepare-watch": "tools/test.sh prepare -w --verbose",
     "test-e2e": "vitest run --fileParallelism=false frontend/javascripts/test/**/*.e2e.ts",
-    "test-screenshot": "tools/test.sh test-screenshot --timeout=5m",
+    "test-screenshot": "vitest run --fileParallelism=false frontend/javascripts/test/puppeteer/**/*.screenshot.ts",
     "test-wkorg-screenshot": "tools/test.sh test-wkorg-screenshot --timeout=5m",
     "refresh-screenshots": "rm -rf frontend/javascripts/test/screenshots/** && docker compose up screenshot-tests",
     "test-help": "echo For development it is recommended to run yarn test-prepare-watch in one terminal and yarn test-watch in another. This is the fastest way to perform incremental testing. If you are only interested in running test once, use yarn test.",

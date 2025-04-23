@@ -1,4 +1,3 @@
-import "test/mocks/ava_only_mock_lz4";
 import type { PartialDatasetConfiguration } from "oxalis/store";
 import {
   compareScreenshot,
@@ -7,19 +6,20 @@ import {
   SCREENSHOTS_BASE_PATH,
 } from "./screenshot_helpers";
 import {
-  test,
   getNewPage,
   screenshotAnnotation,
   screenshotDataset,
   screenshotDatasetWithMapping,
   screenshotDatasetWithMappingLink,
   screenshotSandboxWithMappingLink,
-  setupBeforeEachAndAfterEach,
+  setupAfterEach,
+  setupBeforeEach,
+  type ScreenshotTestContext,
   withRetry,
   WK_AUTH_TOKEN,
   writeDatasetNameToIdMapping,
-  assertDatasetIds,
 } from "./dataset_rendering_helpers";
+import { describe, it, beforeAll, beforeEach, afterEach, expect } from "vitest";
 
 if (!WK_AUTH_TOKEN) {
   throw new Error("No WK_AUTH_TOKEN specified.");
@@ -32,8 +32,6 @@ process.on("unhandledRejection", (err, promise) => {
 const URL = getUrlForScreenshotTests();
 
 console.log(`[Info] Executing tests on URL ${URL}.`);
-
-setupBeforeEachAndAfterEach();
 
 // These datasets are available on our dev instance (e.g., master.webknossos.xyz)
 const datasetNames = [
@@ -95,76 +93,233 @@ const datasetConfigOverrides: Record<string, PartialDatasetConfiguration> = {
 };
 
 const datasetNameToId: Record<string, string> = {};
-test.before("Retrieve dataset ids", async () => {
-  await writeDatasetNameToIdMapping(
-    URL,
-    datasetNames.concat(["test-agglomerate-file"]),
-    datasetNameToId,
-  );
-});
 
-test.serial("Dataset IDs were retrieved successfully", (t) => {
-  assertDatasetIds(t, datasetNames, datasetNameToId);
-});
+describe("Dataset Rendering", () => {
+  beforeEach<ScreenshotTestContext>(async (context) => {
+    await setupBeforeEach(context);
+  });
 
-datasetNames.map(async (datasetName) => {
-  test.serial(`it should render dataset ${datasetName} correctly`, async (t) => {
-    await withRetry(
-      3,
-      async () => {
-        const page = await getNewPage(t.context.browser);
-        const { screenshot, width, height } = await screenshotDataset(
-          page,
-          URL,
-          datasetNameToId[datasetName],
-          undefined,
-          {
-            viewOverride: viewOverrides[datasetName],
-            datasetConfigOverride: datasetConfigOverrides[datasetName],
+  afterEach<ScreenshotTestContext>(async (context) => {
+    await setupAfterEach(context);
+  });
+
+  beforeAll(async () => {
+    await writeDatasetNameToIdMapping(
+      URL,
+      datasetNames.concat(["test-agglomerate-file"]),
+      datasetNameToId,
+    );
+  });
+
+  it("Dataset IDs were retrieved successfully", () => {
+    expect(datasetNames.every((name) => !!datasetNameToId[name])).toBe(true);
+  });
+
+  for (const datasetName of datasetNames) {
+    it.sequential<ScreenshotTestContext>(
+      `should render dataset ${datasetName} correctly`,
+      async ({ browser }) => {
+        await withRetry(
+          3,
+          async () => {
+            const page = await getNewPage(browser);
+            const { screenshot, width, height } = await screenshotDataset(
+              page,
+              URL,
+              datasetNameToId[datasetName],
+              undefined,
+              {
+                viewOverride: viewOverrides[datasetName],
+                datasetConfigOverride: datasetConfigOverrides[datasetName],
+              },
+            );
+            const changedPixels = await compareScreenshot(
+              screenshot,
+              width,
+              height,
+              SCREENSHOTS_BASE_PATH,
+              datasetName,
+            );
+            await page.close();
+
+            return isPixelEquivalent(changedPixels, width, height);
           },
-        );
-        const changedPixels = await compareScreenshot(
-          screenshot,
-          width,
-          height,
-          SCREENSHOTS_BASE_PATH,
-          datasetName,
-        );
-        await page.close();
-        return isPixelEquivalent(changedPixels, width, height);
-      },
-      (condition) => {
-        t.true(
-          condition,
-          `Dataset with name: "${datasetName}" does not look the same, see ${datasetName}.diff.png for the difference and ${datasetName}.new.png for the new screenshot.`,
+          (condition) => {
+            expect(
+              condition,
+              `Dataset with name: "${datasetName}" does not look the same, see ${datasetName}.diff.png for the difference and ${datasetName}.new.png for the new screenshot.`,
+            ).toBe(true);
+          },
         );
       },
     );
-  });
-});
+  }
 
-annotationSpecs.map(async (annotationSpec) => {
-  const [datasetName, fallbackLayerName] = annotationSpec;
-  const fallbackLabel = fallbackLayerName ?? "without_fallback";
+  for (const [datasetName, fallbackLayerName] of annotationSpecs) {
+    const fallbackLabel = fallbackLayerName ?? "without_fallback";
 
-  test.serial(
-    `It should render an annotation for ${datasetName} with fallback_layer=${fallbackLayerName} correctly`,
-    async (t) => {
-      console.log(
-        `It should render an annotation for ${datasetName} with fallback_layer=${fallbackLayerName} correctly`,
-      );
+    it.sequential<ScreenshotTestContext>(
+      `should render an annotation for ${datasetName} with fallback_layer=${fallbackLayerName} correctly`,
+      async ({ browser }) => {
+        console.log(
+          `It should render an annotation for ${datasetName} with fallback_layer=${fallbackLayerName} correctly`,
+        );
+        await withRetry(
+          3,
+          async () => {
+            const page = await getNewPage(browser);
+            const { screenshot, width, height } = await screenshotAnnotation(
+              page,
+              URL,
+              datasetNameToId[datasetName],
+              fallbackLayerName,
+              {
+                viewOverride: viewOverrides[datasetName],
+                datasetConfigOverride: datasetConfigOverrides[datasetName],
+              },
+            );
+            const changedPixels = await compareScreenshot(
+              screenshot,
+              width,
+              height,
+              SCREENSHOTS_BASE_PATH,
+              `annotation_${datasetName}_${fallbackLabel}`,
+            );
+            await page.close();
+            return isPixelEquivalent(changedPixels, width, height);
+          },
+          (condition) => {
+            expect(
+              condition,
+              `Annotation for dataset with name: "${datasetName}" does not look the same, see annotation_${datasetName}_${fallbackLayerName}.diff.png for the difference and annotation_${datasetName}_${fallbackLayerName}.new.png for the new screenshot.`,
+            ).toBe(true);
+          },
+        );
+      },
+    );
+  }
+
+  it.sequential<ScreenshotTestContext>(
+    "should render a dataset with mappings correctly",
+    async ({ browser }) => {
+      const datasetName = "ROI2017_wkw";
+      const mappingName = "astrocyte";
       await withRetry(
         3,
         async () => {
-          const page = await getNewPage(t.context.browser);
-          const { screenshot, width, height } = await screenshotAnnotation(
+          const page = await getNewPage(browser);
+          const { screenshot, width, height } = await screenshotDatasetWithMapping(
             page,
             URL,
             datasetNameToId[datasetName],
-            fallbackLayerName,
+            mappingName,
+          );
+          const changedPixels = await compareScreenshot(
+            screenshot,
+            width,
+            height,
+            SCREENSHOTS_BASE_PATH,
+            `${datasetName}_with_mapping_${mappingName}`,
+          );
+          await page.close();
+          return isPixelEquivalent(changedPixels, width, height);
+        },
+        (condition) => {
+          expect(
+            condition,
+            `Dataset with name: "${datasetName}" and mapping: "${mappingName}" does not look the same.`,
+          ).toBe(true);
+        },
+      );
+    },
+  );
+
+  it.sequential<ScreenshotTestContext>(
+    "should render a dataset linked to with an active mapping and agglomerate skeleton correctly",
+    async ({ browser }) => {
+      const datasetName = "test-agglomerate-file";
+      const viewOverride = viewOverrides[datasetName];
+      await withRetry(
+        3,
+        async () => {
+          const page = await getNewPage(browser);
+          const { screenshot, width, height } = await screenshotDatasetWithMappingLink(
+            page,
+            URL,
+            datasetNameToId[datasetName],
+            viewOverride,
+          );
+          const changedPixels = await compareScreenshot(
+            screenshot,
+            width,
+            height,
+            SCREENSHOTS_BASE_PATH,
+            `${datasetName}_with_mapping_link`,
+          );
+          await page.close();
+          return isPixelEquivalent(changedPixels, width, height);
+        },
+        (condition) => {
+          expect(
+            condition,
+            `Dataset with name: "${datasetName}", mapping link and loaded agglomerate skeleton does not look the same.`,
+          ).toBe(true);
+        },
+      );
+    },
+  );
+
+  it.sequential<ScreenshotTestContext>(
+    "should render a dataset sandbox linked to with an active mapping and agglomerate skeleton correctly",
+    async ({ browser }) => {
+      const datasetName = "test-agglomerate-file";
+      const viewOverride = viewOverrides[datasetName];
+      await withRetry(
+        3,
+        async () => {
+          const page = await getNewPage(browser);
+          const { screenshot, width, height } = await screenshotSandboxWithMappingLink(
+            page,
+            URL,
+            datasetNameToId[datasetName],
+            viewOverride,
+          );
+          const changedPixels = await compareScreenshot(
+            screenshot,
+            width,
+            height,
+            SCREENSHOTS_BASE_PATH, // Should look the same as an explorative tracing on the same dataset with the same mapping link
+            `${datasetName}_with_mapping_link`,
+          );
+          await page.close();
+          return isPixelEquivalent(changedPixels, width, height);
+        },
+        (condition) => {
+          expect(
+            condition,
+            `Sandbox of dataset with name: "${datasetName}", mapping link and loaded agglomerate skeleton does not look the same.`,
+          ).toBe(true);
+        },
+      );
+    },
+  );
+
+  it.sequential<ScreenshotTestContext>(
+    "should render a dataset linked to with ad-hoc and precomputed meshes correctly",
+    async ({ browser }) => {
+      const datasetName = "test-agglomerate-file";
+      const viewOverride = viewOverrides["test-agglomerate-file-with-meshes"];
+      await withRetry(
+        3,
+        async () => {
+          const page = await getNewPage(browser);
+          const { screenshot, width, height } = await screenshotDataset(
+            page,
+            URL,
+            datasetNameToId[datasetName],
+            undefined,
             {
-              viewOverride: viewOverrides[datasetName],
-              datasetConfigOverride: datasetConfigOverrides[datasetName],
+              viewOverride: viewOverride,
             },
           );
           const changedPixels = await compareScreenshot(
@@ -172,155 +327,18 @@ annotationSpecs.map(async (annotationSpec) => {
             width,
             height,
             SCREENSHOTS_BASE_PATH,
-            `annotation_${datasetName}_${fallbackLabel}`,
+            `${datasetName}_with_meshes_link`,
           );
           await page.close();
           return isPixelEquivalent(changedPixels, width, height);
         },
         (condition) => {
-          t.true(
+          expect(
             condition,
-            `Annotation for dataset with name: "${datasetName}" does not look the same, see annotation_${datasetName}_${fallbackLayerName}.diff.png for the difference and annotation_${datasetName}_${fallbackLayerName}.new.png for the new screenshot.`,
-          );
+            `Dataset with name: "${datasetName}", ad-hoc and precomputed meshes does not look the same.`,
+          ).toBe(true);
         },
       );
     },
   );
 });
-
-test.serial("it should render a dataset with mappings correctly", async (t) => {
-  const datasetName = "ROI2017_wkw";
-  const mappingName = "astrocyte";
-  await withRetry(
-    3,
-    async () => {
-      const page = await getNewPage(t.context.browser);
-      const { screenshot, width, height } = await screenshotDatasetWithMapping(
-        page,
-        URL,
-        datasetNameToId[datasetName],
-        mappingName,
-      );
-      const changedPixels = await compareScreenshot(
-        screenshot,
-        width,
-        height,
-        SCREENSHOTS_BASE_PATH,
-        `${datasetName}_with_mapping_${mappingName}`,
-      );
-      await page.close();
-      return isPixelEquivalent(changedPixels, width, height);
-    },
-    (condition) => {
-      t.true(
-        condition,
-        `Dataset with name: "${datasetName}" and mapping: "${mappingName}" does not look the same.`,
-      );
-    },
-  );
-});
-test.serial(
-  "it should render a dataset linked to with an active mapping and agglomerate skeleton correctly",
-  async (t) => {
-    const datasetName = "test-agglomerate-file";
-    const viewOverride = viewOverrides[datasetName];
-    await withRetry(
-      3,
-      async () => {
-        const page = await getNewPage(t.context.browser);
-        const { screenshot, width, height } = await screenshotDatasetWithMappingLink(
-          page,
-          URL,
-          datasetNameToId[datasetName],
-          viewOverride,
-        );
-        const changedPixels = await compareScreenshot(
-          screenshot,
-          width,
-          height,
-          SCREENSHOTS_BASE_PATH,
-          `${datasetName}_with_mapping_link`,
-        );
-        await page.close();
-        return isPixelEquivalent(changedPixels, width, height);
-      },
-      (condition) => {
-        t.true(
-          condition,
-          `Dataset with name: "${datasetName}", mapping link and loaded agglomerate skeleton does not look the same.`,
-        );
-      },
-    );
-  },
-);
-test.serial(
-  "it should render a dataset sandbox linked to with an active mapping and agglomerate skeleton correctly",
-  async (t) => {
-    const datasetName = "test-agglomerate-file";
-    const viewOverride = viewOverrides[datasetName];
-    await withRetry(
-      3,
-      async () => {
-        const page = await getNewPage(t.context.browser);
-        const { screenshot, width, height } = await screenshotSandboxWithMappingLink(
-          page,
-          URL,
-          datasetNameToId[datasetName],
-          viewOverride,
-        );
-        const changedPixels = await compareScreenshot(
-          screenshot,
-          width,
-          height,
-          SCREENSHOTS_BASE_PATH, // Should look the same as an explorative tracing on the same dataset with the same mapping link
-          `${datasetName}_with_mapping_link`,
-        );
-        await page.close();
-        return isPixelEquivalent(changedPixels, width, height);
-      },
-      (condition) => {
-        t.true(
-          condition,
-          `Sandbox of dataset with name: "${datasetName}", mapping link and loaded agglomerate skeleton does not look the same.`,
-        );
-      },
-    );
-  },
-);
-test.serial(
-  "it should render a dataset linked to with ad-hoc and precomputed meshes correctly",
-  async (t) => {
-    const datasetName = "test-agglomerate-file";
-    const viewOverride = viewOverrides["test-agglomerate-file-with-meshes"];
-    await withRetry(
-      3,
-      async () => {
-        const page = await getNewPage(t.context.browser);
-        const { screenshot, width, height } = await screenshotDataset(
-          page,
-          URL,
-          datasetNameToId[datasetName],
-          undefined,
-          {
-            viewOverride: viewOverride,
-          },
-        );
-        const changedPixels = await compareScreenshot(
-          screenshot,
-          width,
-          height,
-          SCREENSHOTS_BASE_PATH,
-          `${datasetName}_with_meshes_link`,
-        );
-        await page.close();
-        return isPixelEquivalent(changedPixels, width, height);
-      },
-      (condition) => {
-        t.true(
-          condition,
-          `Dataset with name: "${datasetName}", ad-hoc and precomputed meshes does not look the same.`,
-        );
-      },
-    );
-  },
-);

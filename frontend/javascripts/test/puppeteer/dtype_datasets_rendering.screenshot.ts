@@ -1,13 +1,12 @@
 import type { DatasetLayerConfiguration, PartialDatasetConfiguration } from "oxalis/store";
-import "test/mocks/ava_only_mock_lz4";
 import {
-  assertDatasetIds,
   createAnnotationForDatasetScreenshot,
   getNewPage,
   screenshotDataset,
+  type ScreenshotTestContext,
   screenshotTracingView,
-  setupBeforeEachAndAfterEach,
-  test,
+  setupAfterEach,
+  setupBeforeEach,
   withRetry,
   writeDatasetNameToIdMapping,
 } from "./dataset_rendering_helpers";
@@ -30,6 +29,7 @@ import {
 } from "oxalis/model/actions/settings_actions";
 import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import type { Action } from "oxalis/model/actions/actions";
+import { describe, it, beforeAll, beforeEach, afterEach, expect } from "vitest";
 
 const semaphore = new Semaphore(1);
 const testColor = true;
@@ -55,8 +55,6 @@ process.on("unhandledRejection", (err, promise) => {
 const URL = getUrlForScreenshotTests();
 
 console.log(`[Info] Executing tests on URL ${URL}.`);
-
-setupBeforeEachAndAfterEach(semaphore);
 
 // These datasets are available on our dev instance (e.g., master.webknossos.xyz)
 
@@ -187,120 +185,146 @@ const specs: Array<Spec> = _.flatten(
 const datasetNames = _.uniq(specs.map((spec) => spec.datasetName));
 
 const datasetNameToId: Record<string, string> = {};
-test.before("Retrieve dataset ids", async () => {
-  await writeDatasetNameToIdMapping(URL, datasetNames, datasetNameToId);
-});
-test.serial("Dataset IDs were retrieved successfully", (t) => {
-  assertDatasetIds(t, datasetNames, datasetNameToId);
-});
 
-datasetNames.map(async (datasetName) => {
-  test(`it should render ${datasetName} correctly`, async (t) => {
-    console.time("Creating annotation...");
-    const annotation = await createAnnotationForDatasetScreenshot(
-      URL,
-      datasetNameToId[datasetName],
-    );
-    console.timeEnd("Creating annotation...");
-    const page = await getNewPage(t.context.browser);
-    for (const spec of specs.filter((spec) => spec.datasetName === datasetName)) {
-      await withRetry(
-        1,
-        async () => {
-          console.log(`Starting: ${spec.name}...`);
-          const { datasetConfig } = spec;
-          const onLoaded = async () => {
-            const [x, y, z, _, zoomValue] = spec.viewOverride
-              .split(",")
-              .map((el) => Number.parseFloat(el));
+describe("DType Dataset Rendering", () => {
+  beforeEach<ScreenshotTestContext>(async (context) => {
+    await setupBeforeEach(context, semaphore);
+  });
 
-            const actions: Action[] = [
-              updateDatasetSettingAction("selectiveSegmentVisibility", false),
-              updateTemporarySettingAction("hoveredSegmentId", null),
-              setPositionAction([x, y, z]),
-              setZoomStepAction(zoomValue),
-            ];
-            if (datasetConfig?.layers != null) {
-              const layerName = Object.keys(datasetConfig.layers)[0];
-              const { intensityRange } = datasetConfig.layers[layerName];
+  afterEach<ScreenshotTestContext>(async (context) => {
+    await setupAfterEach(context);
+  });
 
-              actions.push(updateLayerSettingAction(layerName, "intensityRange", intensityRange));
-            }
+  beforeAll(async () => {
+    // Retrieve dataset ids
+    await writeDatasetNameToIdMapping(URL, datasetNames, datasetNameToId);
+  });
 
-            await page.evaluate((actions) => {
-              return window.webknossos.apiReady().then(() => {
-                for (const action of actions) {
-                  window.webknossos.DEV.store.dispatch(action);
+  it("Dataset IDs were retrieved successfully", () => {
+    expect(datasetNames.every((name) => !!datasetNameToId[name])).toBe(true);
+  });
+
+  for (const datasetName of datasetNames) {
+    it.sequential<ScreenshotTestContext>(
+      `should render ${datasetName} correctly`,
+      async ({ browser }) => {
+        console.time("Creating annotation...");
+        const annotation = await createAnnotationForDatasetScreenshot(
+          URL,
+          datasetNameToId[datasetName],
+        );
+        console.timeEnd("Creating annotation...");
+        const page = await getNewPage(browser);
+        for (const spec of specs.filter((spec) => spec.datasetName === datasetName)) {
+          await withRetry(
+            1,
+            async () => {
+              console.log(`Starting: ${spec.name}...`);
+              const { datasetConfig } = spec;
+              const onLoaded = async () => {
+                const [x, y, z, _, zoomValue] = spec.viewOverride
+                  .split(",")
+                  .map((el) => Number.parseFloat(el));
+
+                const actions: Action[] = [
+                  updateDatasetSettingAction("selectiveSegmentVisibility", false),
+                  updateTemporarySettingAction("hoveredSegmentId", null),
+                  setPositionAction([x, y, z]),
+                  setZoomStepAction(zoomValue),
+                ];
+                if (datasetConfig?.layers != null) {
+                  const layerName = Object.keys(datasetConfig.layers)[0];
+                  const { intensityRange } = datasetConfig.layers[layerName];
+
+                  actions.push(
+                    updateLayerSettingAction(layerName, "intensityRange", intensityRange),
+                  );
                 }
-              });
-            }, actions);
-          };
-          console.time("Making screenshot...");
-          const { screenshot, width, height } = await screenshotDataset(
-            page,
-            URL,
-            datasetNameToId[spec.datasetName],
-            annotation,
-            {
-              onLoaded,
-              viewOverride: spec.viewOverride,
-              datasetConfigOverride: spec.datasetConfig,
-              ignore3DViewport: true,
+
+                await page.evaluate((actions) => {
+                  return window.webknossos.apiReady().then(() => {
+                    for (const action of actions) {
+                      window.webknossos.DEV.store.dispatch(action);
+                    }
+                  });
+                }, actions);
+              };
+
+              console.time("Taking screenshot...");
+              const { screenshot, width, height } = await screenshotDataset(
+                page,
+                URL,
+                datasetNameToId[spec.datasetName],
+                annotation,
+                {
+                  onLoaded,
+                  viewOverride: spec.viewOverride,
+                  datasetConfigOverride: spec.datasetConfig,
+                  ignore3DViewport: true,
+                },
+              );
+              console.timeEnd("Taking screenshot...");
+
+              console.time("Comparing screenshot...");
+              const changedPixels = await compareScreenshot(
+                screenshot,
+                width,
+                height,
+                SCREENSHOTS_BASE_PATH,
+                spec.name,
+              );
+              console.timeEnd("Comparing screenshot...");
+
+              let success = true;
+              if (
+                spec.alsoTestSelectiveSegmentId &&
+                selectiveSegmentIdByDtype[spec.dtype] != null
+              ) {
+                const actions = [
+                  updateDatasetSettingAction("selectiveSegmentVisibility", true),
+                  updateTemporarySettingAction(
+                    "hoveredSegmentId",
+                    selectiveSegmentIdByDtype[spec.dtype] ?? null,
+                  ),
+                ];
+
+                console.time("evaluate");
+                await page.evaluate((actions) => {
+                  for (const action of actions) {
+                    window.webknossos.DEV.store.dispatch(action);
+                  }
+                }, actions);
+                console.timeEnd("evaluate");
+
+                console.time("Taking screenshot...");
+                const { screenshot, width, height } = await screenshotTracingView(page, true);
+                console.timeEnd("Taking screenshot...");
+
+                console.time("Comparing screenshot...");
+                const changedPixels = await compareScreenshot(
+                  screenshot,
+                  width,
+                  height,
+                  SCREENSHOTS_BASE_PATH,
+                  spec.name + "_selective_segment",
+                );
+                console.timeEnd("Comparing screenshot...");
+
+                success = isPixelEquivalent(changedPixels, width, height);
+              }
+
+              return success && isPixelEquivalent(changedPixels, width, height);
+            },
+            (condition) => {
+              expect(
+                condition,
+                `Dataset spec with name: "${spec.name}" does not look the same, see ${spec.name}.diff.png for the difference and ${spec.name}.new.png for the new screenshot.`,
+              ).toBe(true);
             },
           );
-          console.timeEnd("Making screenshot...");
-          console.time("Comparing screenshot...");
-          const changedPixels = await compareScreenshot(
-            screenshot,
-            width,
-            height,
-            SCREENSHOTS_BASE_PATH,
-            spec.name,
-          );
-          console.timeEnd("Comparing screenshot...");
-
-          let success = true;
-          if (spec.alsoTestSelectiveSegmentId && selectiveSegmentIdByDtype[spec.dtype] != null) {
-            const actions = [
-              updateDatasetSettingAction("selectiveSegmentVisibility", true),
-              updateTemporarySettingAction(
-                "hoveredSegmentId",
-                selectiveSegmentIdByDtype[spec.dtype] ?? null,
-              ),
-            ];
-            console.time("evaluate");
-            await page.evaluate((actions) => {
-              for (const action of actions) {
-                window.webknossos.DEV.store.dispatch(action);
-              }
-            }, actions);
-            console.timeEnd("evaluate");
-            console.time("Making screenshot...");
-            const { screenshot, width, height } = await screenshotTracingView(page, true);
-            console.timeEnd("Making screenshot...");
-            console.time("Comparing screenshot...");
-            const changedPixels = await compareScreenshot(
-              screenshot,
-              width,
-              height,
-              SCREENSHOTS_BASE_PATH,
-              spec.name + "_selective_segment",
-            );
-            console.timeEnd("Comparing screenshot...");
-
-            success = isPixelEquivalent(changedPixels, width, height);
-          }
-
-          return success && isPixelEquivalent(changedPixels, width, height);
-        },
-        (condition) => {
-          t.true(
-            condition,
-            `Dataset spec with name: "${spec.name}" does not look the same, see ${spec.name}.diff.png for the difference and ${spec.name}.new.png for the new screenshot.`,
-          );
-        },
-      );
-    }
-    await page.close();
-  });
+        }
+        await page.close();
+      },
+    );
+  }
 });

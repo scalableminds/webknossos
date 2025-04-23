@@ -21,6 +21,8 @@ export type NodeWithTreeId = {
   treeId: number;
 } & Node;
 
+type PartialBoundingBoxWithoutVisibility = Partial<Omit<UserBoundingBox, "isVisible">>;
+
 export type UpdateTreeUpdateAction = ReturnType<typeof updateTree> | ReturnType<typeof createTree>;
 export type DeleteTreeUpdateAction = ReturnType<typeof deleteTree>;
 export type MoveTreeComponentUpdateAction = ReturnType<typeof moveTreeComponent>;
@@ -56,6 +58,12 @@ export type UpdateUserBoundingBoxInSkeletonTracingAction = ReturnType<
 >;
 export type UpdateUserBoundingBoxInVolumeTracingAction = ReturnType<
   typeof updateUserBoundingBoxInVolumeTracingAction
+>;
+export type UpdateUserBoundingBoxVisibilityInSkeletonTracingAction = ReturnType<
+  typeof updateUserBoundingBoxVisibilityInSkeletonTracingAction
+>;
+export type UpdateUserBoundingBoxVisibilityInVolumeTracingAction = ReturnType<
+  typeof updateUserBoundingBoxVisibilityInVolumeTracingAction
 >;
 export type UpdateBucketUpdateAction = ReturnType<typeof updateBucket>;
 export type UpdateSegmentGroupsUpdateAction = ReturnType<typeof updateSegmentGroups>;
@@ -102,6 +110,8 @@ export type UpdateActionWithoutIsolationRequirement =
   | DeleteUserBoundingBoxInVolumeTracingAction
   | UpdateUserBoundingBoxInSkeletonTracingAction
   | UpdateUserBoundingBoxInVolumeTracingAction
+  | UpdateUserBoundingBoxVisibilityInSkeletonTracingAction
+  | UpdateUserBoundingBoxVisibilityInVolumeTracingAction
   | CreateSegmentUpdateAction
   | UpdateSegmentUpdateAction
   | DeleteSegmentUpdateAction
@@ -450,7 +460,7 @@ export function deleteUserBoundingBoxInVolumeTracingAction(
 function getUpdateUserBoundingBoxAction(
   actionName: "updateUserBoundingBoxVolumeAction" | "updateUserBoundingBoxSkeletonAction",
   boundingBoxId: number,
-  updatedProps: Partial<UserBoundingBox>,
+  updatedProps: PartialBoundingBoxWithoutVisibility,
   actionTracingId: string,
 ) {
   let serverBBox = EMPTY_OBJECT;
@@ -472,7 +482,7 @@ function getUpdateUserBoundingBoxAction(
 
 export function updateUserBoundingBoxInVolumeTracingAction(
   boundingBoxId: number,
-  updatedProps: Partial<UserBoundingBox>,
+  updatedProps: PartialBoundingBoxWithoutVisibility,
   actionTracingId: string,
 ) {
   return getUpdateUserBoundingBoxAction(
@@ -494,6 +504,35 @@ export function updateUserBoundingBoxInSkeletonTracingAction(
     updatedProps,
     actionTracingId,
   );
+}
+
+export function updateUserBoundingBoxVisibilityInSkeletonTracingAction(
+  boundingBoxId: number,
+  isVisible: boolean,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateUserBoundingBoxVisibilitySkeletonAction",
+    value: {
+      boundingBoxId,
+      actionTracingId,
+      isVisible,
+    },
+  } as const;
+}
+export function updateUserBoundingBoxVisibilityInVolumeTracingAction(
+  boundingBoxId: number,
+  isVisible: boolean,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateUserBoundingBoxVisibilityVolumeAction",
+    value: {
+      boundingBoxId,
+      actionTracingId,
+      isVisible,
+    },
+  } as const;
 }
 
 export function createSegmentVolumeAction(

@@ -66,6 +66,8 @@ import {
   updateTreeVisibility,
   updateUserBoundingBoxInSkeletonTracingAction,
   updateUserBoundingBoxInVolumeTracingAction,
+  updateUserBoundingBoxVisibilityInSkeletonTracingAction,
+  updateUserBoundingBoxVisibilityInVolumeTracingAction,
 } from "oxalis/model/sagas/update_actions";
 import { api } from "oxalis/singletons";
 import type {
@@ -639,6 +641,10 @@ export function* diffBoundingBoxes(
     tracingType === AnnotationLayerEnum.Skeleton
       ? updateUserBoundingBoxInSkeletonTracingAction
       : updateUserBoundingBoxInVolumeTracingAction;
+  const updateBBoxVisibilityAction =
+    tracingType === AnnotationLayerEnum.Skeleton
+      ? updateUserBoundingBoxVisibilityInSkeletonTracingAction
+      : updateUserBoundingBoxVisibilityInVolumeTracingAction;
   const getErrorMessage = (id: number) =>
     `User bounding box with id ${id} not found in ${tracingType} tracing.`;
   for (const id of deletedBBoxIds) {
@@ -662,6 +668,10 @@ export function* diffBoundingBoxes(
     const diffBBox = Utils.diffObjects(currentBbox, prevBbox);
     if (_.isEmpty(diffBBox)) continue;
     const changedKeys = Object.keys(diffBBox);
+    if (changedKeys.includes("isVisible")) {
+      yield updateBBoxVisibilityAction(currentBbox.id, currentBbox.isVisible, tracingId);
+      continue;
+    }
     if (changedKeys.includes("boundingBox")) {
       diffBBox.boundingBox.min = currentBbox.boundingBox.min;
       diffBBox.boundingBox.max = currentBbox.boundingBox.max;

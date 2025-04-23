@@ -99,6 +99,14 @@ const descriptionFns: Record<
     description: "Updated a bounding box.",
     icon: <EditOutlined />,
   }),
+  updateUserBoundingBoxVisibilitySkeletonAction: (): Description => ({
+    description: "Toggled the visibility of a bounding box.",
+    icon: <EditOutlined />,
+  }),
+  updateUserBoundingBoxVisibilityVolumeAction: (): Description => ({
+    description: "Toggled the visibility of a bounding box.",
+    icon: <EditOutlined />,
+  }),
   removeFallbackLayer: (): Description => ({
     description: "Removed the segmentation fallback layer.",
     icon: <DeleteOutlined />,

@@ -9,3 +9,5 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/25.04.0...HEAD)
 
 ### Postgres Evolutions:
+
+- [131-remove-stored-meshes.sql](conf/evolutions/131-remove-stored-meshes.sql)

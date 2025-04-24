@@ -1672,6 +1672,115 @@ class SegmentsView extends React.Component<Props, State> {
     }
   };
 
+  titleRender = (treeItem: SegmentHierarchyNode) => {
+    if (treeItem.type === "segment") {
+      const segment = treeItem;
+      return (
+        <SegmentListItem
+          showContextMenuAt={this.showContextMenuAt}
+          hideContextMenu={this.hideContextMenu}
+          key={segment.id}
+          segment={segment}
+          selectedSegmentIds={this.props.selectedIds.segments}
+          onSelectSegment={this.onSelectSegment}
+          mesh={this.props.meshes[segment.id]}
+          mappingInfo={this.props.mappingInfo}
+          activeCellId={this.props.activeCellId}
+          setHoveredSegmentId={this.props.setHoveredSegmentId}
+          allowUpdate={this.props.allowUpdate}
+          updateSegment={this.props.updateSegment}
+          removeSegment={this.props.removeSegment}
+          setMeshOpacity={this.props.changeMeshOpacity}
+          deleteSegmentData={this.props.deleteSegmentData}
+          visibleSegmentationLayer={this.props.visibleSegmentationLayer}
+          loadAdHocMesh={this.props.loadAdHocMesh}
+          loadPrecomputedMesh={this.props.loadPrecomputedMesh}
+          setActiveCell={this.props.setActiveCell}
+          setPosition={this.props.setPosition}
+          setAdditionalCoordinates={this.props.setAdditionalCoordinates}
+          currentMeshFile={this.props.currentMeshFile}
+          onRenameStart={this.onRenameStart}
+          onRenameEnd={this.onRenameEnd}
+          getMultiSelectMenu={this.getMultiSelectMenu}
+          activeVolumeTracing={this.props.activeVolumeTracing}
+        />
+      );
+    } else {
+      const { id, name } = treeItem;
+      const isEditingDisabled = !this.props.allowUpdate;
+      const onOpenContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
+        event.preventDefault();
+        const getMenu = (): MenuProps => ({
+          items: _.flatten([
+            {
+              key: "create",
+              onClick: () => {
+                this.createGroup(id);
+                this.hideContextMenu();
+              },
+              disabled: isEditingDisabled,
+              icon: <PlusOutlined />,
+              label: "Create new group",
+            },
+            {
+              key: "delete",
+              disabled: isEditingDisabled,
+              onClick: () => {
+                this.handleDeleteGroup(id);
+                this.hideContextMenu();
+              },
+              icon: <DeleteOutlined />,
+              label: "Delete group",
+            },
+            this.getExpandSubgroupsItem(id),
+            this.getCollapseSubgroupsItem(id),
+            this.getMoveSegmentsHereMenuItem(id),
+            {
+              key: "groupAndMeshActionDivider",
+              label: <Divider style={{ marginBottom: 0, marginTop: 0 }} />,
+              disabled: true,
+            },
+            this.getSetGroupColorMenuItem(id),
+            this.getShowSegmentStatistics(id),
+            this.getLoadMeshesFromFileMenuItem(id),
+            this.getComputeMeshesAdHocMenuItem(id),
+            this.getReloadMenuItem(id),
+            this.getRemoveMeshesMenuItem(id),
+            this.maybeGetShowOrHideMeshesMenuItems(id),
+            this.getDownLoadMeshesMenuItem(id),
+          ]),
+        });
+
+        const [x, y] = getContextMenuPositionFromEvent(event, "segment-list-context-menu-overlay");
+        this.showContextMenuAt(x, y, getMenu());
+      };
+
+      // Make sure the displayed name is not empty
+      const displayableName = name?.trim() || "<Unnamed Group>";
+
+      return (
+        <div onContextMenu={onOpenContextMenu}>
+          <FolderOutlined className="icon-margin-right" />
+          <EditableTextLabel
+            value={displayableName}
+            label="Group Name"
+            onChange={(name) => {
+              if (this.props.visibleSegmentationLayer != null) {
+                api.tracing.renameSegmentGroup(id, name, this.props.visibleSegmentationLayer.name);
+              }
+            }}
+            margin={0}
+            // The root group must not be removed or renamed
+            disableEditing={!this.props.allowUpdate || id === MISSING_GROUP_ID}
+            onRenameStart={this.onRenameStart}
+            onRenameEnd={this.onRenameEnd}
+          />
+          {this.getSegmentStatisticsModal(id)}
+        </div>
+      );
+    }
+  };
+
   render() {
     const { groupToDelete } = this.state;
 
@@ -1699,122 +1808,6 @@ class SegmentsView extends React.Component<Props, State> {
                 />
               );
             }
-
-            const titleRender = (treeItem: SegmentHierarchyNode) => {
-              if (treeItem.type === "segment") {
-                const segment = treeItem;
-                return (
-                  <SegmentListItem
-                    showContextMenuAt={this.showContextMenuAt}
-                    hideContextMenu={this.hideContextMenu}
-                    key={segment.id}
-                    segment={segment}
-                    selectedSegmentIds={this.props.selectedIds.segments}
-                    onSelectSegment={this.onSelectSegment}
-                    mesh={this.props.meshes[segment.id]}
-                    mappingInfo={this.props.mappingInfo}
-                    activeCellId={this.props.activeCellId}
-                    setHoveredSegmentId={this.props.setHoveredSegmentId}
-                    allowUpdate={this.props.allowUpdate}
-                    updateSegment={this.props.updateSegment}
-                    removeSegment={this.props.removeSegment}
-                    setMeshOpacity={this.props.changeMeshOpacity}
-                    deleteSegmentData={this.props.deleteSegmentData}
-                    visibleSegmentationLayer={this.props.visibleSegmentationLayer}
-                    loadAdHocMesh={this.props.loadAdHocMesh}
-                    loadPrecomputedMesh={this.props.loadPrecomputedMesh}
-                    setActiveCell={this.props.setActiveCell}
-                    setPosition={this.props.setPosition}
-                    setAdditionalCoordinates={this.props.setAdditionalCoordinates}
-                    currentMeshFile={this.props.currentMeshFile}
-                    onRenameStart={this.onRenameStart}
-                    onRenameEnd={this.onRenameEnd}
-                    getMultiSelectMenu={this.getMultiSelectMenu}
-                    activeVolumeTracing={this.props.activeVolumeTracing}
-                  />
-                );
-              } else {
-                const { id, name } = treeItem;
-                const isEditingDisabled = !this.props.allowUpdate;
-                const onOpenContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
-                  event.preventDefault();
-                  const getMenu = (): MenuProps => ({
-                    items: _.flatten([
-                      {
-                        key: "create",
-                        onClick: () => {
-                          this.createGroup(id);
-                          this.hideContextMenu();
-                        },
-                        disabled: isEditingDisabled,
-                        icon: <PlusOutlined />,
-                        label: "Create new group",
-                      },
-                      {
-                        key: "delete",
-                        disabled: isEditingDisabled,
-                        onClick: () => {
-                          this.handleDeleteGroup(id);
-                          this.hideContextMenu();
-                        },
-                        icon: <DeleteOutlined />,
-                        label: "Delete group",
-                      },
-                      this.getExpandSubgroupsItem(id),
-                      this.getCollapseSubgroupsItem(id),
-                      this.getMoveSegmentsHereMenuItem(id),
-                      {
-                        key: "groupAndMeshActionDivider",
-                        label: <Divider style={{ marginBottom: 0, marginTop: 0 }} />,
-                        disabled: true,
-                      },
-                      this.getSetGroupColorMenuItem(id),
-                      this.getShowSegmentStatistics(id),
-                      this.getLoadMeshesFromFileMenuItem(id),
-                      this.getComputeMeshesAdHocMenuItem(id),
-                      this.getReloadMenuItem(id),
-                      this.getRemoveMeshesMenuItem(id),
-                      this.maybeGetShowOrHideMeshesMenuItems(id),
-                      this.getDownLoadMeshesMenuItem(id),
-                    ]),
-                  });
-
-                  const [x, y] = getContextMenuPositionFromEvent(
-                    event,
-                    "segment-list-context-menu-overlay",
-                  );
-                  this.showContextMenuAt(x, y, getMenu());
-                };
-
-                // Make sure the displayed name is not empty
-                const displayableName = name?.trim() || "<Unnamed Group>";
-
-                return (
-                  <div onContextMenu={onOpenContextMenu}>
-                    <FolderOutlined className="icon-margin-right" />
-                    <EditableTextLabel
-                      value={displayableName}
-                      label="Group Name"
-                      onChange={(name) => {
-                        if (this.props.visibleSegmentationLayer != null) {
-                          api.tracing.renameSegmentGroup(
-                            id,
-                            name,
-                            this.props.visibleSegmentationLayer.name,
-                          );
-                        }
-                      }}
-                      margin={0}
-                      // The root group must not be removed or renamed
-                      disableEditing={!this.props.allowUpdate || id === MISSING_GROUP_ID}
-                      onRenameStart={this.onRenameStart}
-                      onRenameEnd={this.onRenameEnd}
-                    />
-                    {this.getSegmentStatisticsModal(id)}
-                  </div>
-                );
-              }
-            };
 
             // checkedKeys includes all nodes with a "selected" checkbox
             const checkedKeys = deepFlatFilter(this.state.groupTree, (node) => node.isChecked).map(
@@ -1895,7 +1888,7 @@ class SegmentsView extends React.Component<Props, State> {
                                 }
                                 switcherIcon={<DownOutlined />}
                                 treeData={this.state.groupTree}
-                                titleRender={titleRender}
+                                titleRender={this.titleRender}
                                 style={{
                                   marginTop: 12,
                                   marginLeft: -14, // hide switcherIcon for root group

@@ -5,6 +5,7 @@ import { CuckooTableVec3 } from "libs/cuckoo/cuckoo_table_vec3";
 import { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
 import DiffableMap from "libs/diffable_map";
 import { M4x4, type Matrix4x4 } from "libs/mjs";
+import Toast from "libs/toast";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type { BucketAddress, Vector3, Vector4, ViewMode } from "oxalis/constants";
@@ -32,7 +33,6 @@ import { getViewportRects } from "../accessors/view_mode_accessor";
 import { getSegmentsForLayer } from "../accessors/volumetracing_accessor";
 import { listenToStoreProperty } from "../helpers/listener_helpers";
 import { cachedDiffSegmentLists } from "../sagas/volumetracing_saga";
-import Toast from "libs/toast";
 
 // 512**2 (entries) * 0.25 (load capacity) == 65_536 custom segment colors
 const CUSTOM_COLORS_TEXTURE_WIDTH = 512;

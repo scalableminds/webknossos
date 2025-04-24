@@ -86,8 +86,11 @@ describe("CuckooTableVec3", () => {
         ct.set(entry[0], entry[1]);
         const readValue = ct.get(entry[0]);
         isValueEqual(entry[1], readValue);
+        expect(ct.entryCount).toBe(1);
       }
     }
+    ct.unset(1);
+    expect(ct.entryCount).toBe(0);
   });
 
   it("Should throw error when exceeding capacity", () => {
@@ -112,8 +115,13 @@ describe("CuckooTableVec3", () => {
 
       ct = new CuckooTableVec3(textureWidth);
       entries = generateRandomCuckooEntrySet(generateRandomEntry, ct.getCriticalCapacity());
+      let count = 0;
       for (const entry of entries) {
         ct.set(entry[0], entry[1]);
+        ct.unset(entry[0]);
+        ct.set(entry[0], entry[1]);
+        count++;
+        expect(ct.entryCount).toBe(count);
       }
 
       // Check that all previously set items are still intact

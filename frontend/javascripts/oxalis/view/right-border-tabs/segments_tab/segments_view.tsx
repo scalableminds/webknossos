@@ -88,18 +88,8 @@ import {
   toggleSegmentGroupAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import type { MagInfo } from "oxalis/model/helpers/mag_info";
 import { api } from "oxalis/singletons";
-import type {
-  ActiveMappingInfo,
-  MeshInformation,
-  OxalisState,
-  Segment,
-  SegmentGroup,
-  SegmentMap,
-  TreeGroup,
-  VolumeTracing,
-} from "oxalis/store";
+import type { MeshInformation, OxalisState, Segment, SegmentGroup, TreeGroup } from "oxalis/store";
 import Store from "oxalis/store";
 import ButtonComponent from "oxalis/view/components/button_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
@@ -116,13 +106,7 @@ import React, { type Key } from "react";
 import { connect, useSelector } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import type { Dispatch } from "redux";
-import type {
-  APIDataset,
-  APIMeshFile,
-  APISegmentationLayer,
-  APIUser,
-  MetadataEntryProto,
-} from "types/api_flow_types";
+import type { APIMeshFile, MetadataEntryProto } from "types/api_flow_types";
 import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import DeleteGroupModalView from "../delete_group_modal_view";
@@ -158,30 +142,9 @@ export const stlMeshConstants = {
 };
 const segmentsTabId = "segment-list";
 
-type StateProps = {
-  meshes: Record<number, MeshInformation>;
-  dataset: APIDataset;
-  mappingInfo: ActiveMappingInfo;
-  hasVolumeTracing: boolean | undefined;
-  isSegmentIndexAvailable: boolean | undefined;
-  segments: SegmentMap | null | undefined;
-  segmentGroups: Array<SegmentGroup>;
-  selectedIds: { segments: number[]; group: number | null };
-  visibleSegmentationLayer: APISegmentationLayer | null | undefined;
-  activeVolumeTracing: VolumeTracing | null | undefined;
-  allowUpdate: boolean;
-  organization: string;
-  datasetName: string;
-  availableMeshFiles: Array<APIMeshFile> | null | undefined;
-  currentMeshFile: APIMeshFile | null | undefined;
-  activeUser: APIUser | null | undefined;
-  activeCellId: number | null | undefined;
-  preferredQualityForMeshPrecomputation: number;
-  preferredQualityForMeshAdHocComputation: number;
-  magInfoOfVisibleSegmentationLayer: MagInfo;
-};
+type StateProps = ReturnType<typeof mapStateToProps>;
 
-const mapStateToProps = (state: OxalisState): StateProps => {
+const mapStateToProps = (state: OxalisState) => {
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
   const activeVolumeTracing = getActiveSegmentationTracing(state);
   const mappingInfo = getMappingInfo(
@@ -206,13 +169,17 @@ const mapStateToProps = (state: OxalisState): StateProps => {
 
   return {
     activeCellId: activeVolumeTracing?.activeCellId,
-    meshes: meshesForCurrentAdditionalCoordinates || EMPTY_OBJECT, // satisfy ts
+    meshes: (meshesForCurrentAdditionalCoordinates || EMPTY_OBJECT) as Record<
+      number,
+      MeshInformation
+    >, // satisfy ts
     dataset: state.dataset,
     mappingInfo,
     hasVolumeTracing: state.annotation.volumes.length > 0,
     isSegmentIndexAvailable,
     segments,
     segmentGroups,
+    datasetConfiguration: state.datasetConfiguration,
     selectedIds: getCleanedSelectedSegmentsOrGroup(state),
     visibleSegmentationLayer,
     activeVolumeTracing,
@@ -1922,7 +1889,10 @@ class SegmentsView extends React.Component<Props, State> {
                                 selectedKeys={this.getSelectedItemKeys()}
                                 onCheck={this.onCheck}
                                 checkedKeys={checkedKeys}
-                                checkable
+                                checkable={
+                                  // todop: respect proofreading
+                                  !this.props.datasetConfiguration.selectiveSegmentVisibility
+                                }
                                 switcherIcon={<DownOutlined />}
                                 treeData={this.state.groupTree}
                                 titleRender={titleRender}

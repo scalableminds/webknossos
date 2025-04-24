@@ -32,7 +32,9 @@ import { getViewportRects } from "../accessors/view_mode_accessor";
 import { getSegmentsForLayer } from "../accessors/volumetracing_accessor";
 import { listenToStoreProperty } from "../helpers/listener_helpers";
 import { cachedDiffSegmentLists } from "../sagas/volumetracing_saga";
+import Toast from "libs/toast";
 
+// 512**2 (entries) * 0.25 (load capacity) == 65_536 custom segment colors
 const CUSTOM_COLORS_TEXTURE_WIDTH = 512;
 // 256**2 (entries) * 0.25 (load capacity) / 8 (layers) == 2048 buckets/layer
 const LOOKUP_CUCKOO_TEXTURE_WIDTH = 256;
@@ -311,6 +313,12 @@ export default class LayerRenderingManager {
 
   listenToCustomSegmentColors() {
     let prevSegments: SegmentMap = new DiffableMap();
+    const ignoreCustomColors = () => {
+      const cuckoo = this.getCustomColorCuckooTable();
+      throttledShowTooManyCustomColorsWarning();
+      prevSegments = new DiffableMap();
+      cuckoo.clear();
+    };
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) => getSegmentsForLayer(storeState, this.name),
@@ -328,18 +336,28 @@ export default class LayerRenderingManager {
               const isVisible = newSegment?.isVisible;
               const color = newSegment?.color;
 
-              if (isVisible === false) {
-                if (color == null) {
-                  cuckoo.set(id, [0, 0, 0]);
-                } else {
-                  const blueChannel = 2 * Math.floor((255 * color[2]) / 2);
+              if (cuckoo.entryCount >= cuckoo.getCriticalCapacity()) {
+                ignoreCustomColors();
+                return;
+              }
+
+              try {
+                if (isVisible === false) {
+                  if (color == null) {
+                    cuckoo.set(id, [0, 0, 0]);
+                  } else {
+                    const blueChannel = 2 * Math.floor((255 * color[2]) / 2);
+                    cuckoo.set(id, [255 * color[0], 255 * color[1], blueChannel]);
+                  }
+                } else if (color != null) {
+                  const blueChannel = 2 * Math.floor((255 * color[2]) / 2) + 1;
                   cuckoo.set(id, [255 * color[0], 255 * color[1], blueChannel]);
+                } else {
+                  cuckoo.unset(id);
                 }
-              } else if (color != null) {
-                const blueChannel = 2 * Math.floor((255 * color[2]) / 2) + 1;
-                cuckoo.set(id, [255 * color[0], 255 * color[1], blueChannel]);
-              } else {
-                cuckoo.unset(id);
+              } catch {
+                ignoreCustomColors();
+                return;
               }
             }
           }
@@ -350,3 +368,12 @@ export default class LayerRenderingManager {
     );
   }
 }
+function showTooManyCustomColorsWarning() {
+  Toast.warning(
+    "There are too many segments with custom colors/visibilities. Default rendering will be used for now.",
+  );
+}
+
+const throttledShowTooManyCustomColorsWarning = _.throttle(showTooManyCustomColorsWarning, 5000, {
+  leading: true,
+});

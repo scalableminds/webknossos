@@ -298,9 +298,9 @@ describe("DType Dataset Rendering", () => {
 
                 console.time("Taking TracingView screenshot...");
                 const { screenshot, width, height } = await screenshotTracingView(page, true);
-                console.timeEnd("Taking screenshot...");
+                console.timeEnd("Taking TracingView screenshot...");
 
-                console.time("Comparing TracingView screenshot...");
+                console.time("Comparing screenshot...");
                 const changedPixels = await compareScreenshot(
                   screenshot,
                   width,

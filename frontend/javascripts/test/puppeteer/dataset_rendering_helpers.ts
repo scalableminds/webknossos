@@ -24,7 +24,7 @@ export const { WK_AUTH_TOKEN } = process.env;
 const PAGE_WIDTH = 1920;
 const PAGE_HEIGHT = 1080;
 
-const USE_LOCAL_CHROME = true;
+const USE_LOCAL_CHROME = false;
 // Only relevant when USE_LOCAL_CHROME. Set to false to actually see the browser open.
 const HEADLESS = true;
 
@@ -456,12 +456,13 @@ export async function setupBeforeEach(context: ScreenshotTestContext, semaphore?
             "--no-sandbox",
             "--disable-setuid-sandbox",
             "--disable-dev-shm-usage",
-            // "--use-angle=gl-egl",
+            "--use-angle=gl-egl",
           ]
         : [],
       headless: HEADLESS ? "new" : false, // use "new" to suppress warnings
       dumpio: true,
-      executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", // this might need to be adapted to your local setup; // "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      executablePath: "/usr/bin/google-chrome", // Linux; this might need to be adapted to your local setup
+      // executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", // Mac
     });
   } else {
     checkBrowserstackCredentials();

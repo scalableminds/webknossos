@@ -93,7 +93,7 @@ message SkeletonTracing {
   repeated AdditionalCoordinateProto editPositionAdditionalCoordinates = 21;
   repeated AdditionalAxisProto additionalAxes = 22; // Additional axes for which this tracing is defined
   optional bool storedWithExternalTreeBodies = 23; // Only set to true on storing. If false, all trees will be stored
-  repeated SkeletonUserStateProto userState = 24;
+  repeated SkeletonUserStateProto userStates = 24;
 }
 
 message SkeletonTracingOpt {

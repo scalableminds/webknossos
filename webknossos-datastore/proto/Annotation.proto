@@ -15,7 +15,7 @@ message AnnotationProto {
   required int64 earliestAccessibleVersion = 4;
   optional bool skeletonMayHavePendingUpdates = 5; // relevant only for annotations migrated by https://github.com/scalableminds/webknossos/pull/7917
   optional bool editableMappingsMayHavePendingUpdates = 6; // relevant only for annotations migrated by https://github.com/scalableminds/webknossos/pull/7917
-  repeated AnnotationUserStateProto userState = 7;
+  repeated AnnotationUserStateProto userStates = 7;
 }
 
 message AnnotationLayerProto {

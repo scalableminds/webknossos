@@ -132,9 +132,9 @@ case class AnnotationWithTracings(
 
   def updateCamera(a: UpdateCameraAnnotationAction): AnnotationWithTracings = {
     val actionAuthorId = a.actionAuthorId.get // TODO fox
-    val userStateAlreadyPresent = annotation.userState.exists(state => actionAuthorId == state.userId)
+    val userStateAlreadyPresent = annotation.userStates.exists(state => actionAuthorId == state.userId)
     if (userStateAlreadyPresent) {
-      this.copy(annotation = annotation.copy(userState = annotation.userState.map {
+      this.copy(annotation = annotation.copy(userStates = annotation.userStates.map {
         case userState if actionAuthorId == userState.userId =>
           userState.copy(
             userId = actionAuthorId,
@@ -147,7 +147,7 @@ case class AnnotationWithTracings(
       }))
     } else
       this.copy(
-        annotation = annotation.copy(userState = annotation.userState :+ AnnotationUserStateProto(
+        annotation = annotation.copy(userStates = annotation.userStates :+ AnnotationUserStateProto(
           userId = actionAuthorId,
           editPosition = a.editPosition,
           editRotation = a.editRotation,

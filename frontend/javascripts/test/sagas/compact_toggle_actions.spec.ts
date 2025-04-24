@@ -134,6 +134,7 @@ const createStateWithSegments = (
         tracingId,
         segmentGroups,
         segments: new DiffableMap(segments.map((s) => [s.id, s])),
+        hideUnregisteredSegments: false,
       },
     ],
   },

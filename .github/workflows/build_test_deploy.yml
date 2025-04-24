@@ -39,7 +39,7 @@ jobs:
       - name: Check for cyclic dependencies in frontend
         run: yarn check-cyclic-dependencies
       - name: Run frontend tests
-        run: yarn run vitest run --coverage.enabled true
+        run: yarn run vitest run --coverage.enabled true frontend/javascripts/test/**/*.spec.ts
       - name: Download Coverage Artifacts 
           # Can not use actions/download-artifact@v4 because it does not support downloading artifacts from other GA runs
         run: |

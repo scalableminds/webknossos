@@ -17,11 +17,19 @@ import {
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
+import { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
 import constants, { ControlModeEnum, AnnotationToolEnum, type Vector3 } from "oxalis/constants";
-import type { PartialUrlManagerState, UrlStateByLayer } from "oxalis/controller/url_manager";
-import UrlManager from "oxalis/controller/url_manager";
+import type {
+  DirectLayerSpecificProps,
+  PartialUrlManagerState,
+  UrlStateByLayer,
+} from "oxalis/controller/url_manager";
+import UrlManager, {
+  getDatasetNameFromLocation,
+  getUpdatedPathnameWithNewDatasetName,
+} from "oxalis/controller/url_manager";
 import {
   determineAllowedModes,
   getDataLayers,
@@ -196,6 +204,8 @@ export async function initialize(
     datasetId,
     version,
   );
+  maybeFixDatasetNameInURL(dataset, initialCommandType);
+
   const serverVolumeTracings = getServerVolumeTracings(serverTracings);
   const serverVolumeTracingIds = serverVolumeTracings.map((volumeTracing) => volumeTracing.id);
   initializeDataset(initialFetch, dataset, serverTracings);
@@ -265,6 +275,22 @@ export async function initialize(
   }
 
   return initializationInformation;
+}
+
+function maybeFixDatasetNameInURL(dataset: APIDataset, initialCommandType: TraceOrViewCommand) {
+  if (
+    initialCommandType.type === ControlModeEnum.VIEW ||
+    initialCommandType.type === ControlModeEnum.SANDBOX
+  ) {
+    const datasetNameInURL = getDatasetNameFromLocation(location);
+    if (dataset.name !== datasetNameInURL) {
+      const pathnameWithUpdatedDatasetName = getUpdatedPathnameWithNewDatasetName(
+        location,
+        dataset,
+      );
+      UrlManager.changeBaseUrl(pathnameWithUpdatedDatasetName + location.search);
+    }
+  }
 }
 
 async function fetchParallel(
@@ -770,7 +796,7 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
 
     const { dataset } = Store.getState();
 
-    if (layerName === "Skeleton" && layerState.isDisabled != null) {
+    if (layerName === "Skeleton" && "isDisabled" in layerState) {
       Store.dispatch(setShowSkeletonsAction(!layerState.isDisabled));
       // The remaining options are only valid for data layers
       continue;
@@ -792,11 +818,18 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
       continue;
     }
 
-    if (layerState.isDisabled != null) {
-      Store.dispatch(
-        updateLayerSettingAction(effectiveLayerName, "isDisabled", layerState.isDisabled),
-      );
-    }
+    const layerSettingsKeys = [
+      "isDisabled",
+      "intensityRange",
+      "color",
+      "isInverted",
+      "gammaCorrectionValue",
+    ] as (keyof DirectLayerSpecificProps)[];
+    layerSettingsKeys.forEach((key) => {
+      if (key in layerState) {
+        Store.dispatch(updateLayerSettingAction(effectiveLayerName, key, layerState[key]));
+      }
+    });
 
     if (!isSegmentationLayer(dataset, effectiveLayerName)) {
       // The remaining options are only valid for segmentation layers

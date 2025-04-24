@@ -7,9 +7,7 @@
  * process a "plan". Each plan defines the order of events that happen
  * and the expected result.
  */
-
-import test, { type ExecutionContext } from "ava";
-import "test/mocks/lz4";
+import { describe, it, expect } from "vitest";
 import BucketSnapshot, {
   type PendingOperation,
 } from "oxalis/model/bucket_data_handling/bucket_snapshot";
@@ -118,22 +116,22 @@ type ExpectParams = {
   backendData: BucketDataArray | undefined;
 };
 
-const expectUnmerged = (t: ExecutionContext<unknown>, p: ExpectParams) => {
-  t.deepEqual(p.newPendingOperations, p.pendingOperations);
-  t.true(p.needsMergeWithBackendData);
-  t.deepEqual(p.newData, p.localData);
+const expectUnmerged = (p: ExpectParams) => {
+  expect(p.newPendingOperations).toEqual(p.pendingOperations);
+  expect(p.needsMergeWithBackendData).toBeTruthy();
+  expect(p.newData).toEqual(p.localData);
 };
 
-const expectMerged = (t: ExecutionContext<unknown>, p: ExpectParams) => {
-  t.deepEqual(p.newPendingOperations, []);
-  t.false(p.needsMergeWithBackendData);
+const expectMerged = (p: ExpectParams) => {
+  expect(p.newPendingOperations).toEqual([]);
+  expect(p.needsMergeWithBackendData).toBeFalsy();
 
   const mergedData = p.backendData || p.localData;
   for (const fn of p.pendingOperations) {
     fn(mergedData);
   }
 
-  t.deepEqual(p.newData, mergedData);
+  expect(p.newData).toEqual(mergedData);
 };
 
 const plans = [
@@ -227,61 +225,51 @@ const plans = [
   },
 ];
 
-for (const [idx, plan] of plans.entries()) {
-  test(`BucketSnapshot with unmerged state should retrieve merged data (${idx + 1})`, async (t) => {
-    const mockCompressor = new MockCompressor();
-    const maybeUnmergedBucketLoadedDeferred = new Deferred<void, void>();
+describe("BucketSnapshot", () => {
+  for (const [idx, plan] of plans.entries()) {
+    it(`BucketSnapshot with unmerged state should retrieve merged data (${idx + 1})`, async () => {
+      const mockCompressor = new MockCompressor();
+      const maybeUnmergedBucketLoadedDeferred = new Deferred<void, void>();
 
-    const planExecutor = new PlanExecutor(plan, mockCompressor, maybeUnmergedBucketLoadedDeferred);
+      const planExecutor = new PlanExecutor(
+        plan,
+        mockCompressor,
+        maybeUnmergedBucketLoadedDeferred,
+      );
 
-    const localData = new Uint8Array(8);
-    const pendingOperations: PendingOperation[] = [
-      (data) => {
-        data[1] = 1;
-        data[3] = 4;
-      },
-    ];
-    pendingOperations.forEach((fn) => fn(localData));
+      const localData = new Uint8Array(8);
+      const pendingOperations: PendingOperation[] = [
+        (data) => {
+          data[1] = 1;
+          data[3] = 4;
+        },
+      ];
+      pendingOperations.forEach((fn) => fn(localData));
 
-    const backendData = new Uint8Array(8);
-    backendData[3] = 3;
-    backendData[4] = 4;
-    backendData[5] = 5;
+      const backendData = new Uint8Array(8);
+      backendData[3] = 3;
+      backendData[4] = 4;
+      backendData[5] = 5;
 
-    await planExecutor.executeStep("beforeInstantiation");
+      await planExecutor.executeStep("beforeInstantiation");
 
-    const snapshot = new BucketSnapshot(
-      [0, 0, 0, 0],
-      new Uint8Array(localData),
-      maybeUnmergedBucketLoadedDeferred.promise().then(() => backendData),
-      pendingOperations,
-      "tracingId",
-      "uint8",
-      mockCompressor,
-    );
-    await planExecutor.executeStep("beforeRestore1");
+      const snapshot = new BucketSnapshot(
+        [0, 0, 0, 0],
+        new Uint8Array(localData),
+        maybeUnmergedBucketLoadedDeferred.promise().then(() => backendData),
+        pendingOperations,
+        "tracingId",
+        "uint8",
+        mockCompressor,
+      );
+      await planExecutor.executeStep("beforeRestore1");
 
-    const { newData, newPendingOperations, needsMergeWithBackendData } =
-      await snapshot.getDataForRestore();
-
-    await planExecutor.executeStep("afterRestore1");
-
-    plan.expect1(t, {
-      newPendingOperations,
-      pendingOperations,
-      needsMergeWithBackendData,
-      newData,
-      localData,
-      backendData,
-    });
-
-    t.is(newData[3], 4);
-    await planExecutor.executeStep("beforeRestore2");
-
-    {
       const { newData, newPendingOperations, needsMergeWithBackendData } =
         await snapshot.getDataForRestore();
-      plan.expect2(t, {
+
+      await planExecutor.executeStep("afterRestore1");
+
+      plan.expect1({
         newPendingOperations,
         pendingOperations,
         needsMergeWithBackendData,
@@ -289,9 +277,25 @@ for (const [idx, plan] of plans.entries()) {
         localData,
         backendData,
       });
-    }
 
-    t.is(mockCompressor.resolveCompressionCounter, 0);
-    t.is(mockCompressor.resolveDecompressionCounter, 0);
-  });
-}
+      expect(newData[3]).toBe(4);
+      await planExecutor.executeStep("beforeRestore2");
+
+      {
+        const { newData, newPendingOperations, needsMergeWithBackendData } =
+          await snapshot.getDataForRestore();
+        plan.expect2({
+          newPendingOperations,
+          pendingOperations,
+          needsMergeWithBackendData,
+          newData,
+          localData,
+          backendData,
+        });
+      }
+
+      expect(mockCompressor.resolveCompressionCounter).toBe(0);
+      expect(mockCompressor.resolveDecompressionCounter).toBe(0);
+    });
+  }
+});

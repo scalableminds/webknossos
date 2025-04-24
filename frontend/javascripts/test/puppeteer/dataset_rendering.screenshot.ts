@@ -19,7 +19,7 @@ import {
   WK_AUTH_TOKEN,
   writeDatasetNameToIdMapping,
 } from "./dataset_rendering_helpers";
-import { describe, it, beforeAll, beforeEach, afterEach, expect } from "vitest";
+import { describe, it, beforeAll, beforeEach, afterEach, expect, test } from "vitest";
 
 if (!WK_AUTH_TOKEN) {
   throw new Error("No WK_AUTH_TOKEN specified.");
@@ -118,93 +118,95 @@ describe("Dataset Rendering", () => {
     expect(allRetrieved).toBe(true);
   });
 
-  for (const datasetName of datasetNames) {
-    it.sequential<ScreenshotTestContext>(
-      `should render dataset ${datasetName} correctly`,
-      async ({ browser }) => {
-        await withRetry(
-          3,
-          async () => {
-            const page = await getNewPage(browser);
+  test.sequential.for(datasetNames)(
+    "should render dataset %s correctly",
+    async (datasetName, context) => {
+      // Type assertion to ensure context has browser property
+      const { browser } = context as ScreenshotTestContext;
 
-            const { screenshot, width, height } = await screenshotDataset(
-              page,
-              URL,
-              datasetNameToId[datasetName],
-              undefined,
-              {
-                viewOverride: viewOverrides[datasetName],
-                datasetConfigOverride: datasetConfigOverrides[datasetName],
-              },
-            );
-            const changedPixels = await compareScreenshot(
-              screenshot,
-              width,
-              height,
-              SCREENSHOTS_BASE_PATH,
-              datasetName,
-            );
-            await page.close();
+      await withRetry(
+        3,
+        async () => {
+          const page = await getNewPage(browser);
 
-            return isPixelEquivalent(changedPixels, width, height);
-          },
-          (condition) => {
-            expect(
-              condition,
-              `Dataset with name: "${datasetName}" does not look the same, see ${datasetName}.diff.png for the difference and ${datasetName}.new.png for the new screenshot.`,
-            ).toBe(true);
-          },
-        );
-      },
-    );
-  }
+          const { screenshot, width, height } = await screenshotDataset(
+            page,
+            URL,
+            datasetNameToId[datasetName],
+            undefined,
+            {
+              viewOverride: viewOverrides[datasetName],
+              datasetConfigOverride: datasetConfigOverrides[datasetName],
+            },
+          );
+          const changedPixels = await compareScreenshot(
+            screenshot,
+            width,
+            height,
+            SCREENSHOTS_BASE_PATH,
+            datasetName,
+          );
+          await page.close();
 
-  for (const [datasetName, fallbackLayerName] of annotationSpecs) {
-    const fallbackLabel = fallbackLayerName ?? "without_fallback";
+          return isPixelEquivalent(changedPixels, width, height);
+        },
+        (condition) => {
+          expect(
+            condition,
+            `Dataset with name: "${datasetName}" does not look the same, see ${datasetName}.diff.png for the difference and ${datasetName}.new.png for the new screenshot.`,
+          ).toBe(true);
+        },
+      );
+    },
+  );
 
-    it.sequential<ScreenshotTestContext>(
-      `should render an annotation for ${datasetName} with fallback_layer=${fallbackLayerName} correctly`,
-      async ({ browser }) => {
-        console.log(
-          `It should render an annotation for ${datasetName} with fallback_layer=${fallbackLayerName} correctly`,
-        );
-        await withRetry(
-          3,
-          async () => {
-            const page = await getNewPage(browser);
+  test.sequential.for(annotationSpecs)(
+    "should render an annotation for %s with fallback_layer=%s correctly",
+    async ([datasetName, fallbackLayerName], context) => {
+      const fallbackLabel = fallbackLayerName ?? "without_fallback";
+      // Type assertion to ensure context has browser property
+      const { browser } = context as ScreenshotTestContext;
 
-            const { screenshot, width, height } = await screenshotAnnotation(
-              page,
-              URL,
-              datasetNameToId[datasetName],
-              fallbackLayerName,
-              {
-                viewOverride: viewOverrides[datasetName],
-                datasetConfigOverride: datasetConfigOverrides[datasetName],
-              },
-            );
+      console.log(
+        `It should render an annotation for ${datasetName} with fallback_layer=${fallbackLayerName} correctly`,
+      );
 
-            const changedPixels = await compareScreenshot(
-              screenshot,
-              width,
-              height,
-              SCREENSHOTS_BASE_PATH,
-              `annotation_${datasetName}_${fallbackLabel}`,
-            );
-            await page.close();
+      await withRetry(
+        3,
+        async () => {
+          const page = await getNewPage(browser);
 
-            return isPixelEquivalent(changedPixels, width, height);
-          },
-          (condition) => {
-            expect(
-              condition,
-              `Annotation for dataset with name: "${datasetName}" does not look the same, see annotation_${datasetName}_${fallbackLayerName}.diff.png for the difference and annotation_${datasetName}_${fallbackLayerName}.new.png for the new screenshot.`,
-            ).toBe(true);
-          },
-        );
-      },
-    );
-  }
+          const { screenshot, width, height } = await screenshotAnnotation(
+            page,
+            URL,
+            datasetNameToId[datasetName],
+            fallbackLayerName,
+            {
+              viewOverride: viewOverrides[datasetName],
+              datasetConfigOverride: datasetConfigOverrides[datasetName],
+            },
+          );
+
+          const changedPixels = await compareScreenshot(
+            screenshot,
+            width,
+            height,
+            SCREENSHOTS_BASE_PATH,
+            `annotation_${datasetName}_${fallbackLabel}`,
+          );
+          await page.close();
+
+          return isPixelEquivalent(changedPixels, width, height);
+        },
+        (condition) => {
+          expect(
+            condition,
+            `Annotation for dataset with name: "${datasetName}" does not look the same, see annotation_${datasetName}_${fallbackLayerName}.diff.png for the difference and annotation_${datasetName}_${fallbackLayerName}.new.png for the new screenshot.`,
+          ).toBe(true);
+        },
+      );
+    },
+  );
 
   it.sequential<ScreenshotTestContext>(
     "should render a dataset with mappings correctly",

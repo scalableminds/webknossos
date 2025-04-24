@@ -136,6 +136,7 @@ export const VolumeTracingSaveRelevantActions = [
   "SET_MAPPING_IS_LOCKED",
   "TOGGLE_SEGMENT_GROUP",
   "TOGGLE_ALL_SEGMENTS",
+  "SET_HIDE_UNREGISTERED_SEGMENTS",
 ];
 
 export const VolumeTracingUndoRelevantActions = ["START_EDITING", "COPY_SEGMENTATION_LAYER"];

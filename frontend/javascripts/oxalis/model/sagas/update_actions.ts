@@ -381,6 +381,7 @@ export function updateVolumeTracingAction(
       editPositionAdditionalCoordinates,
       editRotation: rotation,
       largestSegmentId: tracing.largestSegmentId,
+      hideUnregisteredSegments: tracing.hideUnregisteredSegments,
       zoomLevel,
     },
   } as const;

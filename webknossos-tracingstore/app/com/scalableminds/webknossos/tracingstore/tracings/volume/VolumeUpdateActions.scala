@@ -96,7 +96,8 @@ case class UpdateTracingVolumeAction(
       editRotation = editRotation,
       largestSegmentId = largestSegmentId,
       zoomLevel = zoomLevel,
-      editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(editPositionAdditionalCoordinates)
+      editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(editPositionAdditionalCoordinates),
+      hideUnregisteredSegments = hideUnregisteredSegments
     )
 }
 

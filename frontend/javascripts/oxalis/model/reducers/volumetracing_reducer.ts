@@ -278,6 +278,7 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
     volumeBucketDataHasChanged: tracing.volumeBucketDataHasChanged,
     hasSegmentIndex: tracing.hasSegmentIndex || false,
     additionalAxes: convertServerAdditionalAxesToFrontEnd(tracing.additionalAxes),
+    hideUnregisteredSegments: tracing.hideUnregisteredSegments ?? false,
   };
   return volumeTracing;
 }

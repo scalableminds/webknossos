@@ -12819,13 +12819,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"semaphore-promise@npm:^1.4.2":
-  version: 1.4.2
-  resolution: "semaphore-promise@npm:1.4.2"
-  checksum: 10c0/cdfd858a892ab1bafeda72b8d67661429459990033c718cbfe13286e3dd2e26e7fd4c800aff2531b5f777e80541db034da184d23ad47c257c048a1a2d2b6dd5a
-  languageName: node
-  linkType: hard
-
 "semver@npm:4.3.2":
   version: 4.3.2
   resolution: "semver@npm:4.3.2"
@@ -14919,7 +14912,6 @@ __metadata:
     redux-saga: "npm:^1.3.0"
     resumablejs: "npm:^1.1.0"
     saxophone: "npm:^0.8.0"
-    semaphore-promise: "npm:^1.4.2"
     shelljs: "npm:^0.8.5"
     three: "npm:^0.169.0"
     three-mesh-bvh: "npm:^0.9.0"

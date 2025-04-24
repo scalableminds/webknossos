@@ -11,7 +11,6 @@ import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
 import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
 import { sleep } from "libs/utils";
 import type { APIAnnotation } from "types/api_flow_types";
-import type Semaphore from "semaphore-promise";
 import { vi, type TestContext } from "vitest";
 
 vi.mock("libs/request", async (importOriginal) => {
@@ -439,13 +438,9 @@ export async function withRetry(
 // Define the test context type to be compatible with the test files
 export interface ScreenshotTestContext extends TestContext {
   browser: Browser;
-  release?: () => void;
 }
 
-export async function setupBeforeEach(context: ScreenshotTestContext, semaphore?: Semaphore) {
-  if (semaphore) {
-    context.release = await semaphore.acquire();
-  }
+export async function setupBeforeEach(context: ScreenshotTestContext) {
   if (USE_LOCAL_CHROME) {
     // Use this for connecting to local Chrome browser instance
     context.browser = await puppeteer.launch({
@@ -489,9 +484,6 @@ export async function setupBeforeEach(context: ScreenshotTestContext, semaphore?
 }
 
 export async function setupAfterEach(context: ScreenshotTestContext) {
-  if (context.release != null) {
-    context.release();
-  }
   await context.browser.close();
 }
 

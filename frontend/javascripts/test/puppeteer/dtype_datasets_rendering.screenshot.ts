@@ -21,7 +21,6 @@ import {
   getDtypeConfigForElementClass,
   getSupportedValueRangeForElementClass,
 } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import Semaphore from "semaphore-promise";
 import {
   updateDatasetSettingAction,
   updateLayerSettingAction,
@@ -31,7 +30,6 @@ import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flyca
 import type { Action } from "oxalis/model/actions/actions";
 import { describe, it, beforeAll, beforeEach, afterEach, expect } from "vitest";
 
-const semaphore = new Semaphore(1);
 const testColor = true;
 const testSegmentation = true;
 
@@ -188,7 +186,7 @@ const datasetNameToId: Record<string, string> = {};
 
 describe("DType Dataset Rendering", () => {
   beforeEach<ScreenshotTestContext>(async (context) => {
-    await setupBeforeEach(context, semaphore);
+    await setupBeforeEach(context);
   });
 
   afterEach<ScreenshotTestContext>(async (context) => {

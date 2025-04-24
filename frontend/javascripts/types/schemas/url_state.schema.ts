@@ -1,3 +1,6 @@
+import _ from "lodash";
+import { layerViewConfiguration } from "./dataset_view_configuration.schema";
+
 export default {
   $schema: "http://json-schema.org/draft-06/schema#",
   definitions: {
@@ -156,9 +159,13 @@ export default {
             additionalProperties: false,
             required: ["connectomeName"],
           },
-          isDisabled: {
-            type: "boolean",
-          },
+          ..._.pick(layerViewConfiguration, [
+            "isDisabled",
+            "intensityRange",
+            "color",
+            "isInverted",
+            "gammaCorrectionValue",
+          ]),
         },
         additionalProperties: false,
       },

@@ -112,7 +112,10 @@ describe("Dataset Rendering", () => {
   });
 
   it("Dataset IDs were retrieved successfully", () => {
-    expect(datasetNames.every((name) => !!datasetNameToId[name])).toBe(true);
+    const allRetrieved = [...datasetNames, "test-agglomerate-file"].every(
+      (name) => !!datasetNameToId[name],
+    );
+    expect(allRetrieved).toBe(true);
   });
 
   for (const datasetName of datasetNames) {

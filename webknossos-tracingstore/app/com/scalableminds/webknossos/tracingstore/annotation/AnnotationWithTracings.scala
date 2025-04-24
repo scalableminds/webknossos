@@ -130,31 +130,33 @@ case class AnnotationWithTracings(
       this.copy(annotation = annotation.copy(description = newDescription))
     }.getOrElse(this)
 
-  def updateCamera(a: UpdateCameraAnnotationAction): AnnotationWithTracings = {
-    val actionAuthorId = a.actionAuthorId.get // TODO fox
-    val userStateAlreadyPresent = annotation.userStates.exists(state => actionAuthorId == state.userId)
-    if (userStateAlreadyPresent) {
-      this.copy(annotation = annotation.copy(userStates = annotation.userStates.map {
-        case userState if actionAuthorId == userState.userId =>
-          userState.copy(
-            userId = actionAuthorId,
-            editPosition = a.editPosition,
-            editRotation = a.editRotation,
-            zoomLevel = a.zoomLevel,
-            editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(a.editPositionAdditionalCoordinates),
-          )
-        case userState => userState
-      }))
-    } else
-      this.copy(
-        annotation = annotation.copy(userStates = annotation.userStates :+ AnnotationUserStateProto(
-          userId = actionAuthorId,
-          editPosition = a.editPosition,
-          editRotation = a.editRotation,
-          zoomLevel = a.zoomLevel,
-          editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(a.editPositionAdditionalCoordinates),
-        )))
-  }
+  def updateCamera(a: UpdateCameraAnnotationAction): AnnotationWithTracings =
+    a.actionAuthorId match {
+      case None => this
+      case Some(actionUserId) =>
+        val userStateAlreadyPresent = annotation.userStates.exists(state => actionUserId == state.userId)
+        if (userStateAlreadyPresent) {
+          this.copy(annotation = annotation.copy(userStates = annotation.userStates.map {
+            case userState if actionUserId == userState.userId =>
+              userState.copy(
+                userId = actionUserId,
+                editPosition = a.editPosition,
+                editRotation = a.editRotation,
+                zoomLevel = a.zoomLevel,
+                editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(a.editPositionAdditionalCoordinates),
+              )
+            case userState => userState
+          }))
+        } else
+          this.copy(
+            annotation = annotation.copy(userStates = annotation.userStates :+ AnnotationUserStateProto(
+              userId = actionUserId,
+              editPosition = a.editPosition,
+              editRotation = a.editRotation,
+              zoomLevel = a.zoomLevel,
+              editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(a.editPositionAdditionalCoordinates),
+            )))
+    }
 
   def withVersion(newVersion: Long): AnnotationWithTracings = {
     val tracingsUpdated = tracingsById.view.mapValues {

@@ -72,7 +72,7 @@ message SkeletonUserStateProto {
   repeated int32 treeGroupIds = 3;
   repeated bool treeGroupExpandedStates = 4;
   repeated int32 boundingBoxIds = 5;
-  repeated int32 boundingBoxVisibilities = 6;
+  repeated bool boundingBoxVisibilities = 6;
   repeated int32 treeIds = 7;
   repeated bool treeVisibilities = 8;
 }

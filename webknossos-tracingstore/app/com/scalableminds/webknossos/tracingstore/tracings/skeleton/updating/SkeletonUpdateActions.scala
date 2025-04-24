@@ -662,8 +662,28 @@ case class UpdateUserBoundingBoxVisibilitySkeletonAction(boundingBoxId: Option[I
                                                          actionTimestamp: Option[Long] = None,
                                                          actionAuthorId: Option[String] = None,
                                                          info: Option[String] = None)
-    extends SkeletonUpdateAction
-    with UserStateUpdateAction {
+    extends UserStateSkeletonUpdateAction {
+
+  override def applyOnUserState(tracing: SkeletonTracing,
+                                actionUserId: String,
+                                existingUserStateOpt: Option[SkeletonUserStateProto]): SkeletonUserStateProto = {
+    val bboxIdsToUpdate = boundingBoxId.map(Seq(_)).getOrElse(tracing.userBoundingBoxes.map(_.id))
+    existingUserStateOpt.map { existingUserState =>
+      val visibilityMapMutable: mutable.Map[Int, Boolean] =
+        existingUserState.boundingBoxIds.zip(existingUserState.boundingBoxVisibilities).to(collection.mutable.Map)
+      bboxIdsToUpdate.foreach(visibilityMapMutable(_) = isVisible)
+      val (bboxIds, bboxVisibilities) = visibilityMapMutable.unzip
+      existingUserState.copy(
+        boundingBoxIds = bboxIds.toSeq,
+        boundingBoxVisibilities = bboxVisibilities.toSeq
+      )
+    }.getOrElse(
+      SkeletonTracingDefaults
+        .emptyUserState(actionUserId)
+        .copy(boundingBoxIds = bboxIdsToUpdate,
+              boundingBoxVisibilities = Seq.fill[Boolean](bboxIdsToUpdate.length)(isVisible)))
+  }
+
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
     def updateUserBoundingBoxes() =
       tracing.userBoundingBoxes.map { boundingBox =>

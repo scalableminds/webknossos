@@ -39,6 +39,9 @@ export type UpdateSegmentUpdateAction = ReturnType<typeof updateSegmentVolumeAct
 export type UpdateSegmentVisibilityVolumeAction = ReturnType<
   typeof updateSegmentVisibilityVolumeAction
 >;
+export type UpdateSegmentGroupVisibilityVolumeAction = ReturnType<
+  typeof updateSegmentGroupVisibilityVolumeAction
+>;
 export type DeleteSegmentUpdateAction = ReturnType<typeof deleteSegmentVolumeAction>;
 export type DeleteSegmentDataUpdateAction = ReturnType<typeof deleteSegmentDataVolumeAction>;
 type UpdateUserBoundingBoxesInSkeletonTracingUpdateAction = ReturnType<
@@ -89,8 +92,8 @@ export type UpdateActionWithoutIsolationRequirement =
   | UpdateUserBoundingBoxesInSkeletonTracingUpdateAction
   | UpdateUserBoundingBoxesInVolumeTracingUpdateAction
   | CreateSegmentUpdateAction
-  | UpdateSegmentVolumeAction
   | UpdateSegmentUpdateAction
+  | UpdateSegmentVisibilityVolumeAction
   | DeleteSegmentUpdateAction
   | DeleteSegmentDataUpdateAction
   | UpdateBucketUpdateAction
@@ -98,6 +101,7 @@ export type UpdateActionWithoutIsolationRequirement =
   | UpdateTreeEdgesVisibilityUpdateAction
   | UpdateTreeGroupVisibilityUpdateAction
   | UpdateSegmentGroupsUpdateAction
+  | UpdateSegmentGroupVisibilityVolumeAction
   | UpdateTreeGroupsUpdateAction
   | RemoveFallbackLayerUpdateAction
   | UpdateTdCameraUpdateAction
@@ -511,6 +515,21 @@ export function updateSegmentGroups(segmentGroups: Array<SegmentGroup>, actionTr
     value: {
       actionTracingId,
       segmentGroups,
+    },
+  } as const;
+}
+
+export function updateSegmentGroupVisibilityVolumeAction(
+  groupId: number | null,
+  isVisible: boolean,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateSegmentGroupVisibility",
+    value: {
+      actionTracingId,
+      groupId,
+      isVisible,
     },
   } as const;
 }

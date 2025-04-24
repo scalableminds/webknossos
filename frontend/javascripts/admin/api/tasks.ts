@@ -20,6 +20,7 @@ import { assertResponseLimit } from "./api_utils";
 export function peekNextTasks(): Promise<APITask | null | undefined> {
   return Request.receiveJSON("/api/user/tasks/peek");
 }
+
 export async function requestTask(): Promise<APIAnnotationWithTask> {
   const taskWithMessages = await Request.receiveJSON("/api/user/tasks/request", {
     method: "POST",
@@ -29,12 +30,14 @@ export async function requestTask(): Promise<APIAnnotationWithTask> {
   const { messages: _messages, ...task } = taskWithMessages;
   return task;
 }
+
 export function getAnnotationsForTask(
   taskId: string,
   options?: RequestOptions,
 ): Promise<Array<APIAnnotation>> {
   return Request.receiveJSON(`/api/tasks/${taskId}/annotations`, options);
 }
+
 export function deleteTask(taskId: string): Promise<void> {
   return Request.receiveJSON(`/api/tasks/${taskId}`, {
     method: "DELETE",

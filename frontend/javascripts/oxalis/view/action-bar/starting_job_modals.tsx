@@ -4,7 +4,7 @@ import {
   getAiModels,
   getJobCreditCost,
   getOrganization,
-  runInferenceJob,
+  runNeuronInferenceWithAiModelJob,
   startAlignSectionsJob,
   startMaterializingVolumeAnnotationJob,
   startMitochondriaInferralJob,
@@ -1078,7 +1078,7 @@ function CustomAiModelInferenceForm() {
         const boundingBox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
 
         const maybeAnnotationId = isViewMode ? {} : { annotationId };
-        return runInferenceJob({
+        return runNeuronInferenceWithAiModelJob({
           ...maybeAnnotationId,
           aiModelId: form.getFieldValue("aiModel"),
           workflowYaml: useCustomWorkflow ? form.getFieldValue("workflowYaml") : undefined,

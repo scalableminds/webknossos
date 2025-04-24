@@ -171,7 +171,7 @@ class AiModelController @Inject()(
       } yield Ok(newAiModelJs)
   }
 
-  def runInference: Action[RunInferenceParameters] =
+  def runCustomNeuronInference: Action[RunInferenceParameters] =
     sil.SecuredAction.async(validateJson[RunInferenceParameters]) { implicit request =>
       for {
         _ <- userService.assertIsSuperUser(request.identity)

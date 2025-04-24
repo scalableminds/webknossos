@@ -281,7 +281,7 @@ GET           /jobs/:id/export                                                  
 
 # AI Models
 POST          /aiModels/runNeuronTraining                                                       controllers.AiModelController.runNeuronTraining
-POST          /aiModels/inferences/runInference                                                 controllers.AiModelController.runInference
+POST          /aiModels/inferences/runCustomNeuronInference                                     controllers.AiModelController.runCustomNeuronInference
 GET           /aiModels/inferences/:id                                                          controllers.AiModelController.readAiInferenceInfo(id: ObjectId)
 GET           /aiModels/inferences                                                              controllers.AiModelController.listAiInferences
 GET           /aiModels                                                                         controllers.AiModelController.listAiModels

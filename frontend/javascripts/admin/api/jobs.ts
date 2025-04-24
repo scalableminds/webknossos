@@ -387,8 +387,8 @@ type RunInferenceParameters = {
   // maskAnnotationLayerName?: string | null
 };
 
-export function runInferenceJob(params: RunInferenceParameters) {
-  return Request.sendJSONReceiveJSON("/api/aiModels/inferences/runInference", {
+export function runNeuronInferenceWithAiModelJob(params: RunInferenceParameters) {
+  return Request.sendJSONReceiveJSON("/api/aiModels/inferences/runCustomNeuronInference", {
     method: "POST",
     data: JSON.stringify({ ...params, boundingBox: params.boundingBox.join(",") }),
   });

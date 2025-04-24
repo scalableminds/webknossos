@@ -33,7 +33,7 @@ export type DeleteNodeUpdateAction = ReturnType<typeof deleteNode>;
 export type CreateEdgeUpdateAction = ReturnType<typeof createEdge>;
 export type DeleteEdgeUpdateAction = ReturnType<typeof deleteEdge>;
 export type UpdateSkeletonTracingUpdateAction = ReturnType<typeof updateSkeletonTracing>;
-type UpdateVolumeTracingUpdateAction = ReturnType<typeof updateVolumeTracing>;
+type UpdateVolumeTracingUpdateAction = ReturnType<typeof updateVolumeTracingAction>;
 export type CreateSegmentUpdateAction = ReturnType<typeof createSegmentVolumeAction>;
 export type UpdateSegmentUpdateAction = ReturnType<typeof updateSegmentVolumeAction>;
 export type UpdateSegmentVisibilityVolumeAction = ReturnType<
@@ -365,7 +365,7 @@ export function moveTreeComponent(
     },
   } as const;
 }
-export function updateVolumeTracing(
+export function updateVolumeTracingAction(
   tracing: VolumeTracing,
   position: Vector3,
   editPositionAdditionalCoordinates: AdditionalCoordinate[] | null,

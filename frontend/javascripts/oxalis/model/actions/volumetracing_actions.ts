@@ -22,6 +22,9 @@ export type FloodFillAction = ReturnType<typeof floodFillAction>;
 export type PerformMinCutAction = ReturnType<typeof performMinCutAction>;
 type FinishEditingAction = ReturnType<typeof finishEditingAction>;
 export type SetActiveCellAction = ReturnType<typeof setActiveCellAction>;
+export type SetHideUnregisteredSegmentsAction = ReturnType<
+  typeof setHideUnregisteredSegmentsAction
+>;
 // A simple "click segment" is dispatched when clicking
 // with the MOVE tool. Currently, this has the side-effect
 // of adding the clicked segment to the segment list (if one
@@ -82,6 +85,7 @@ export type VolumeTracingAction =
   | PerformMinCutAction
   | FinishEditingAction
   | SetActiveCellAction
+  | SetHideUnregisteredSegmentsAction
   | ClickSegmentAction
   | RegisterLabelPointAction
   | ResetContourAction
@@ -211,6 +215,12 @@ export const setActiveCellAction = (
     activeUnmappedSegmentId,
   }) as const;
 
+export const setHideUnregisteredSegmentsAction = (value: boolean) =>
+  ({
+    type: "SET_HIDE_UNREGISTERED_SEGMENTS",
+    value,
+  }) as const;
+
 export const clickSegmentAction = (
   segmentId: number,
   somePosition: Vector3,
@@ -321,10 +331,11 @@ export const toggleSegmentGroupAction = (groupId: number, layerName: string) =>
     layerName,
   }) as const;
 
-export const toggleAllSegmentsAction = (layerName: string) =>
+export const toggleAllSegmentsAction = (layerName: string, isVisible?: boolean) =>
   ({
     type: "TOGGLE_ALL_SEGMENTS",
     layerName,
+    isVisible,
   }) as const;
 
 export const interpolateSegmentationLayerAction = () =>

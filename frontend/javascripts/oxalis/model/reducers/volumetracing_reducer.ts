@@ -354,15 +354,19 @@ export function toggleSegmentGroupReducer(
   return state;
 }
 
-export function toggleAllSegmentsReducer(state: OxalisState, layerName: string): OxalisState {
+export function toggleAllSegmentsReducer(
+  state: OxalisState,
+  layerName: string,
+  isVisible: boolean | undefined,
+): OxalisState {
   const updateInfo = getSegmentUpdateInfo(state, layerName);
 
   if (updateInfo.type === "UPDATE_VOLUME_TRACING") {
     const { volumeTracing } = updateInfo;
 
-    const shouldBecomeVisible = Array.from(volumeTracing.segments.values()).some(
-      (segment) => !segment.isVisible,
-    );
+    const shouldBecomeVisible =
+      isVisible ??
+      Array.from(volumeTracing.segments.values()).some((segment) => !segment.isVisible);
 
     const newSegments = volumeTracing.segments.clone();
 
@@ -469,7 +473,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingReducerAc
     }
 
     case "TOGGLE_ALL_SEGMENTS": {
-      return toggleAllSegmentsReducer(state, action.layerName);
+      return toggleAllSegmentsReducer(state, action.layerName, action.isVisible);
     }
 
     case "SET_SEGMENT_GROUPS": {
@@ -509,6 +513,12 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingReducerAc
         action.segmentId,
         action.activeUnmappedSegmentId,
       );
+    }
+
+    case "SET_HIDE_UNREGISTERED_SEGMENTS": {
+      return updateVolumeTracing(state, volumeTracing.tracingId, {
+        hideUnregisteredSegments: action.value,
+      });
     }
 
     case "CREATE_CELL": {

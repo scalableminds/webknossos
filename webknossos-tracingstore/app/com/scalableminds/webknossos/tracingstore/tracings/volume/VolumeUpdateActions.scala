@@ -73,6 +73,7 @@ case class UpdateTracingVolumeAction(
     largestSegmentId: Option[Long],
     zoomLevel: Double,
     editPositionAdditionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
+    hideUnregisteredSegments: Option[Boolean] = None,
     actionTracingId: String,
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[String] = None,

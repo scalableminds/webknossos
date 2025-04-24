@@ -179,8 +179,8 @@ export const convertCellIdToRGB: ShaderModule = {
       if (customColor.r != -1.) {
         // Look up succeeded => a custom color / custom alpha value was found.
         if (customColor == vec3(0.)) {
-          // Segment should have default color, but should be invisible
-          alpha = 0.;
+          // Segment should have default color, but should be (in)visible (depending on hideUnregisteredSegments)
+          alpha = hideUnregisteredSegments ? 1. : 0.;
         } else {
           if (mod(255. * customColor.b, 2.) - 0.5 < 0.) {
             alpha = 0.;
@@ -189,6 +189,11 @@ export const convertCellIdToRGB: ShaderModule = {
           colorHue = customHSV.x;
           colorSaturation = customHSV.y;
           colorValue = customHSV.z;
+        }
+      } else {
+        // Look up failed => no custom color/alpha found
+        if (hideUnregisteredSegments) {
+          alpha = 0.;
         }
       }
 

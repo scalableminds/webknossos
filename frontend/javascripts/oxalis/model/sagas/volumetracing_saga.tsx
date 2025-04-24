@@ -83,7 +83,7 @@ import {
   updateSegmentVisibilityVolumeAction,
   updateSegmentVolumeAction,
   updateUserBoundingBoxesInVolumeTracing,
-  updateVolumeTracing,
+  updateVolumeTracingAction,
 } from "oxalis/model/sagas/update_actions";
 import type VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import { Model, api } from "oxalis/singletons";
@@ -488,7 +488,7 @@ export function* diffVolumeTracing(
   flycam: Flycam,
 ): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (updateTracingPredicate(prevVolumeTracing, volumeTracing, prevFlycam, flycam)) {
-    yield updateVolumeTracing(
+    yield updateVolumeTracingAction(
       volumeTracing,
       V3.floor(getPosition(flycam)),
       flycam.additionalCoordinates,

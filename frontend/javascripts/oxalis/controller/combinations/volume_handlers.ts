@@ -2,6 +2,7 @@ import { V3 } from "libs/mjs";
 import memoizeOne from "memoize-one";
 import type { OrthoView, Point2, Vector3 } from "oxalis/constants";
 import { ContourModeEnum } from "oxalis/constants";
+import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { globalToLayerTransformedPosition } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
@@ -13,6 +14,7 @@ import {
   setActiveCellAction,
   setContourTracingModeAction,
   startEditingAction,
+  updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { Model, Store, api } from "oxalis/singletons";
 import type { AdditionalCoordinate } from "types/api_flow_types";
@@ -115,9 +117,26 @@ export function handlePickCellFromGlobalPosition(
 ) {
   const segmentId = getSegmentIdForPosition(globalPos);
 
-  if (segmentId !== 0) {
-    Store.dispatch(setActiveCellAction(segmentId, globalPos, additionalCoordinates));
+  if (segmentId === 0) {
+    return;
   }
+  Store.dispatch(setActiveCellAction(segmentId, globalPos, additionalCoordinates));
+
+  const visibleSegmentationLayer = getVisibleSegmentationLayer(Store.getState());
+  if (visibleSegmentationLayer == null) {
+    return;
+  }
+  Store.dispatch(
+    updateSegmentAction(
+      segmentId,
+      {
+        isVisible: true,
+      },
+      visibleSegmentationLayer.name,
+      undefined,
+      true,
+    ),
+  );
 }
 export function handleFloodFill(pos: Point2, plane: OrthoView) {
   const globalPos = calculateGlobalPos(Store.getState(), pos);

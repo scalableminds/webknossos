@@ -110,6 +110,7 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
   uniform bool isProofreading;
   uniform bool isUnmappedSegmentHighlighted;
   uniform float segmentationPatternOpacity;
+  uniform bool hideUnregisteredSegments;
 
   uniform bool shouldApplyMappingOnGPU;
   uniform bool mappingIsPartial;

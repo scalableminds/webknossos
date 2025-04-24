@@ -406,6 +406,53 @@ export function getVisibleSegments(state: OxalisState): {
   return { segments, segmentGroups: EMPTY_SEGMENT_GROUPS };
 }
 
+export function getHideUnregisteredSegmentsForVisibleSegmentationLayer(
+  state: OxalisState,
+): boolean {
+  const layer = getVisibleSegmentationLayer(state);
+
+  if (layer == null) {
+    return true;
+  }
+
+  if (layer.tracingId != null) {
+    const { hideUnregisteredSegments } = getVolumeTracingById(state.annotation, layer.tracingId);
+    return hideUnregisteredSegments ?? true;
+  }
+
+  return true;
+}
+
+export function getHideUnregisteredSegmentsForLayer(
+  state: OxalisState,
+  layerName: string,
+): boolean {
+  const layer = getSegmentationLayerByName(state.dataset, layerName);
+
+  if (layer.tracingId != null) {
+    return (
+      getVolumeTracingById(state.annotation, layer.tracingId).hideUnregisteredSegments ?? false
+    );
+  }
+
+  return state.localSegmentationData[layer.name].hideUnregisteredSegments;
+}
+
+// todop: get this to work
+// export function getPropertyForLayer<P extends keyof (LocalSegmentationData & VolumeTracing)>(
+//   state: OxalisState,
+//   layerName: string,
+//   property: P,
+// ): (LocalSegmentationData & VolumeTracing)[P] {
+//   const layer = getSegmentationLayerByName(state.dataset, layerName);
+
+//   if (layer.tracingId != null) {
+//     return getVolumeTracingById(state.annotation, layer.tracingId)[property];
+//   }
+
+//   return state.localSegmentationData[layer.name][property];
+// }
+
 // Next to returning a clean list of selected segments or group, this method returns
 // a callback function that updates the selectedIds in store if segments are stored
 // there that are not visible in the segments view tab.

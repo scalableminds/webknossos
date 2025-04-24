@@ -30,7 +30,10 @@ import {
   invertAndTranspose,
 } from "../accessors/dataset_layer_transformation_accessor";
 import { getViewportRects } from "../accessors/view_mode_accessor";
-import { getSegmentsForLayer } from "../accessors/volumetracing_accessor";
+import {
+  getHideUnregisteredSegmentsForLayer,
+  getSegmentsForLayer,
+} from "../accessors/volumetracing_accessor";
 import { listenToStoreProperty } from "../helpers/listener_helpers";
 import { cachedDiffSegmentLists } from "../sagas/volumetracing_saga";
 
@@ -129,8 +132,8 @@ export default class LayerRenderingManager {
   additionalCoordinates: AdditionalCoordinate[] | null = null;
   maximumZoomForAllMags: number[] | null = null;
 
-  cuckooTable: CuckooTableVec3 | undefined;
-  storePropertyUnsubscribers: Array<() => void> = [];
+  private colorCuckooTable: CuckooTableVec3 | undefined;
+  private storePropertyUnsubscribers: Array<() => void> = [];
 
   constructor(
     name: string,
@@ -293,79 +296,115 @@ export default class LayerRenderingManager {
     getSharedLookUpCuckooTable.clear();
     asyncBucketPick.clear();
     shaderEditor.destroy();
-    this.cuckooTable = undefined;
+    this.colorCuckooTable = undefined;
   }
 
   /* Methods related to custom segment colors: */
 
   getCustomColorCuckooTable() {
-    if (this.cuckooTable != null) {
-      return this.cuckooTable;
+    if (this.colorCuckooTable != null) {
+      return this.colorCuckooTable;
     }
     if (!this.cube.isSegmentation) {
       throw new Error(
         "getCustomColorCuckooTable should not be called for non-segmentation layers.",
       );
     }
-    this.cuckooTable = new CuckooTableVec3(CUSTOM_COLORS_TEXTURE_WIDTH);
-    return this.cuckooTable;
+    this.colorCuckooTable = new CuckooTableVec3(CUSTOM_COLORS_TEXTURE_WIDTH);
+    return this.colorCuckooTable;
   }
 
   listenToCustomSegmentColors() {
     let prevSegments: SegmentMap = new DiffableMap();
-    const ignoreCustomColors = () => {
+    const clear = () => {
       const cuckoo = this.getCustomColorCuckooTable();
-      throttledShowTooManyCustomColorsWarning();
       prevSegments = new DiffableMap();
       cuckoo.clear();
+    };
+    const ignoreCustomColors = () => {
+      throttledShowTooManyCustomColorsWarning();
+      clear();
     };
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) => getSegmentsForLayer(storeState, this.name),
         (newSegments) => {
-          const cuckoo = this.getCustomColorCuckooTable();
-          for (const updateAction of cachedDiffSegmentLists(this.name, prevSegments, newSegments)) {
-            if (
-              updateAction.name === "updateSegment" ||
-              updateAction.name === "createSegment" ||
-              updateAction.name === "deleteSegment" ||
-              updateAction.name === "updateSegmentVisibility"
-            ) {
-              const { id } = updateAction.value;
-              const newSegment = newSegments.getNullable(id);
-              const isVisible = newSegment?.isVisible;
-              const color = newSegment?.color;
-
-              if (cuckoo.entryCount >= cuckoo.getCriticalCapacity()) {
-                ignoreCustomColors();
-                return;
-              }
-
-              try {
-                if (isVisible === false) {
-                  if (color == null) {
-                    cuckoo.set(id, [0, 0, 0]);
-                  } else {
-                    const blueChannel = 2 * Math.floor((255 * color[2]) / 2);
-                    cuckoo.set(id, [255 * color[0], 255 * color[1], blueChannel]);
-                  }
-                } else if (color != null) {
-                  const blueChannel = 2 * Math.floor((255 * color[2]) / 2) + 1;
-                  cuckoo.set(id, [255 * color[0], 255 * color[1], blueChannel]);
-                } else {
-                  cuckoo.unset(id);
-                }
-              } catch {
-                ignoreCustomColors();
-                return;
-              }
-            }
-          }
-
-          prevSegments = newSegments;
+          updateToNewSegments(newSegments);
         },
       ),
     );
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        (storeState) => getHideUnregisteredSegmentsForLayer(storeState, this.name),
+        () => {
+          // Rebuild
+          clear();
+          const newSegments = getSegmentsForLayer(Store.getState(), this.name);
+          updateToNewSegments(newSegments);
+        },
+      ),
+    );
+
+    const updateToNewSegments = (newSegments: SegmentMap) => {
+      const cuckoo = this.getCustomColorCuckooTable();
+      const hideUnregisteredSegments = getHideUnregisteredSegmentsForLayer(
+        Store.getState(),
+        this.name,
+      );
+      for (const updateAction of cachedDiffSegmentLists(this.name, prevSegments, newSegments)) {
+        if (
+          updateAction.name === "updateSegment" ||
+          updateAction.name === "createSegment" ||
+          updateAction.name === "deleteSegment" ||
+          updateAction.name === "updateSegmentVisibility"
+        ) {
+          const { id } = updateAction.value;
+          const newSegment = newSegments.getNullable(id);
+          const isVisible = newSegment?.isVisible;
+          const color = newSegment?.color;
+
+          if (cuckoo.entryCount >= cuckoo.getCriticalCapacity()) {
+            ignoreCustomColors();
+            return;
+          }
+
+          try {
+            if (!isVisible) {
+              if (color == null) {
+                if (hideUnregisteredSegments) {
+                  // remove from cuckoo
+                  cuckoo.unset(id);
+                } else {
+                  // set to [0, 0, 0] because it should be INVISIBLE
+                  cuckoo.set(id, [0, 0, 0]);
+                }
+              } else {
+                // set to adapted color because it should be INVISIBLE
+                const blueChannel = 2 * Math.floor((255 * color[2]) / 2);
+                cuckoo.set(id, [255 * color[0], 255 * color[1], blueChannel]);
+              }
+            } else if (color != null) {
+              // set to adapted color because it should be VISIBLE
+              const blueChannel = 2 * Math.floor((255 * color[2]) / 2) + 1;
+              cuckoo.set(id, [255 * color[0], 255 * color[1], blueChannel]);
+            } else {
+              if (hideUnregisteredSegments) {
+                // set to [0, 0, 0] because it should be VISIBLE
+                cuckoo.set(id, [0, 0, 0]);
+              } else {
+                // remove from cuckoo
+                cuckoo.unset(id);
+              }
+            }
+          } catch {
+            ignoreCustomColors();
+            return;
+          }
+        }
+      }
+
+      prevSegments = newSegments;
+    };
   }
 }
 function showTooManyCustomColorsWarning() {

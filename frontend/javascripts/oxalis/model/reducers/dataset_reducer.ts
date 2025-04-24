@@ -37,6 +37,7 @@ function DatasetReducer(state: OxalisState, action: Action): OxalisState {
             segments: [],
             group: null,
           },
+          hideUnregisteredSegments: false,
         })),
         temporaryConfiguration: {
           ...state.temporaryConfiguration,

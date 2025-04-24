@@ -276,6 +276,7 @@ export type VolumeTracing = TracingBase & {
   readonly mappingIsLocked?: boolean;
   readonly hasSegmentIndex: boolean;
   readonly volumeBucketDataHasChanged?: boolean;
+  readonly hideUnregisteredSegments?: boolean;
 };
 export type ReadOnlyTracing = TracingBase & {
   readonly type: "readonly";
@@ -603,6 +604,25 @@ export type ConnectomeData = {
   readonly activeAgglomerateIds: Array<number>;
   readonly skeleton: SkeletonTracing | null | undefined;
 };
+export type LocalSegmentationData = {
+  // For meshes, the string represents additional coordinates, number is the segment ID.
+  // The undefined types were added to enforce null checks when using this structure.
+  readonly meshes: Record<string, Record<number, MeshInformation> | undefined> | undefined;
+  readonly availableMeshFiles: Array<APIMeshFile> | null | undefined;
+  readonly currentMeshFile: APIMeshFile | null | undefined;
+  // Note that for a volume tracing, this information should be stored
+  // in state.annotation.volume.segments, as this is also persisted on the
+  // server (i.e., not "local").
+  // The `segments` here should only be used for non-annotation volume
+  // layers.
+  readonly segments: SegmentMap;
+  // Note that segments that are not in the segment tab could be stored as selected.
+  // To get only available segments or group, use getSelectedIds() in volumetracing_accessor.
+  readonly selectedIds: { segments: number[]; group: number | null };
+  readonly connectomeData: ConnectomeData;
+  readonly hideUnregisteredSegments: boolean;
+};
+
 export type OxalisState = {
   readonly datasetConfiguration: DatasetConfiguration;
   readonly userConfiguration: UserConfiguration;
@@ -620,24 +640,8 @@ export type OxalisState = {
   readonly activeOrganization: APIOrganization | null;
   readonly uiInformation: UiInformation;
   readonly localSegmentationData: Record<
-    string, //layerName
-    {
-      // For meshes, the string represents additional coordinates, number is the segment ID.
-      // The undefined types were added to enforce null checks when using this structure.
-      readonly meshes: Record<string, Record<number, MeshInformation> | undefined> | undefined;
-      readonly availableMeshFiles: Array<APIMeshFile> | null | undefined;
-      readonly currentMeshFile: APIMeshFile | null | undefined;
-      // Note that for a volume tracing, this information should be stored
-      // in state.annotation.volume.segments, as this is also persisted on the
-      // server (i.e., not "local").
-      // The `segments` here should only be used for non-annotation volume
-      // layers.
-      readonly segments: SegmentMap;
-      // Note that segments that are not in the segment tab could be stored as selected.
-      // To get only available segments or group, use getSelectedIds() in volumetracing_accessor.
-      readonly selectedIds: { segments: number[]; group: number | null };
-      readonly connectomeData: ConnectomeData;
-    }
+    string, // layerName
+    LocalSegmentationData
   >;
 };
 const sagaMiddleware = createSagaMiddleware();

@@ -52,6 +52,7 @@ import {
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
 import {
   getActiveSegmentationTracing,
+  getHideUnregisteredSegmentsForVisibleSegmentationLayer,
   getMeshesForCurrentAdditionalCoordinates,
   getSegmentName,
   getSelectedIds,
@@ -83,6 +84,7 @@ import {
   removeSegmentAction,
   setActiveCellAction,
   setExpandedSegmentGroupsAction,
+  setHideUnregisteredSegmentsAction,
   setSelectedSegmentsOrGroupAction,
   toggleAllSegmentsAction,
   toggleSegmentGroupAction,
@@ -174,6 +176,7 @@ const mapStateToProps = (state: OxalisState) => {
       MeshInformation
     >, // satisfy ts
     dataset: state.dataset,
+    hideUnregisteredSegments: getHideUnregisteredSegmentsForVisibleSegmentationLayer(state),
     mappingInfo,
     hasVolumeTracing: state.annotation.volumes.length > 0,
     isSegmentIndexAvailable,
@@ -378,9 +381,19 @@ function constructTreeData(
 }
 
 const rootGroup = {
-  name: "Root",
+  name: "Listed Segments",
   groupId: MISSING_GROUP_ID,
   key: getGroupNodeKey(MISSING_GROUP_ID),
+  children: [],
+  isExpanded: true,
+};
+
+const unlistedRootSymbol = Symbol("Unlisted Segments");
+
+const unlistedRootGroup = {
+  name: "Unlisted Segments",
+  groupId: unlistedRootSymbol,
+  key: unlistedRootSymbol, // getGroupNodeKey(s),
   children: [],
   isExpanded: true,
 };
@@ -1761,20 +1774,29 @@ class SegmentsView extends React.Component<Props, State> {
       return (
         <div onContextMenu={onOpenContextMenu}>
           <FolderOutlined className="icon-margin-right" />
-          <EditableTextLabel
-            value={displayableName}
-            label="Group Name"
-            onChange={(name) => {
-              if (this.props.visibleSegmentationLayer != null) {
-                api.tracing.renameSegmentGroup(id, name, this.props.visibleSegmentationLayer.name);
-              }
-            }}
-            margin={0}
-            // The root group must not be removed or renamed
-            disableEditing={!this.props.allowUpdate || id === MISSING_GROUP_ID}
-            onRenameStart={this.onRenameStart}
-            onRenameEnd={this.onRenameEnd}
-          />
+          {/* todop */}
+          {id === -2 ? (
+            <i>{displayableName}</i>
+          ) : (
+            <EditableTextLabel
+              value={displayableName}
+              label="Group Name"
+              onChange={(name) => {
+                if (this.props.visibleSegmentationLayer != null) {
+                  api.tracing.renameSegmentGroup(
+                    id,
+                    name,
+                    this.props.visibleSegmentationLayer.name,
+                  );
+                }
+              }}
+              margin={0}
+              // The root group must not be removed or renamed
+              disableEditing={!this.props.allowUpdate || id === MISSING_GROUP_ID || id === -2}
+              onRenameStart={this.onRenameStart}
+              onRenameEnd={this.onRenameEnd}
+            />
+          )}
           {this.getSegmentStatisticsModal(id)}
         </div>
       );
@@ -1786,6 +1808,21 @@ class SegmentsView extends React.Component<Props, State> {
 
     return (
       <div id={segmentsTabId} className="padded-tab-content">
+        <Button
+          onClick={() => {
+            if (this.props.visibleSegmentationLayer != null) {
+              Store.dispatch(
+                setHideUnregisteredSegmentsAction(
+                  // todop: remove again
+                  // this.props.visibleSegmentationLayer.name,
+                  !this.props.hideUnregisteredSegments,
+                ),
+              );
+            }
+          }}
+        >
+          {this.props.hideUnregisteredSegments ? "true" : "false"}
+        </Button>
         <ContextMenuContainer
           hideContextMenu={this.hideContextMenu}
           contextMenuPosition={this.state.contextMenuPosition}
@@ -1862,6 +1899,19 @@ class SegmentsView extends React.Component<Props, State> {
                               }}
                             >
                               <ScrollableVirtualizedTree
+                                // todop
+                                treeData={[
+                                  {
+                                    ...unlistedRootGroup,
+                                    title: unlistedRootGroup.name,
+                                    key: unlistedRootSymbol.toString(),
+                                    id: -2,
+                                    type: "group",
+                                    isChecked: false, // todop: why?
+                                    children: [],
+                                  },
+                                  ...this.state.groupTree,
+                                ]}
                                 allowDrop={this.allowDrop}
                                 onDrop={this.onDrop}
                                 onSelect={this.onSelectTreeItem}
@@ -1887,7 +1937,6 @@ class SegmentsView extends React.Component<Props, State> {
                                   !this.props.datasetConfiguration.selectiveSegmentVisibility
                                 }
                                 switcherIcon={<DownOutlined />}
-                                treeData={this.state.groupTree}
                                 titleRender={this.titleRender}
                                 style={{
                                   marginTop: 12,

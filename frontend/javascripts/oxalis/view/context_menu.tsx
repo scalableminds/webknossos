@@ -63,7 +63,9 @@ import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   getActiveCellId,
   getActiveSegmentationTracing,
+  getHideUnregisteredSegmentsForVisibleSegmentationLayer,
   getSegmentsForLayer,
+  getVisibleSegments,
   hasAgglomerateMapping,
   hasConnectomeFile,
   hasEditableMapping,
@@ -108,6 +110,9 @@ import {
   clickSegmentAction,
   performMinCutAction,
   setActiveCellAction,
+  setHideUnregisteredSegmentsAction,
+  toggleAllSegmentsAction,
+  updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { extractPathAsNewTree } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { isBoundingBoxUsableForMinCut } from "oxalis/model/sagas/min_cut_saga";
@@ -987,6 +992,62 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     );
   };
 
+  const onlyShowSegment = () => {
+    if (!visibleSegmentationLayer || globalPosition == null) {
+      return;
+    }
+    const clickedSegmentId = getSegmentIdForPosition(globalPosition);
+    if (clickedSegmentId === 0) {
+      Toast.info("No segment found at the clicked position");
+      return;
+    }
+
+    Store.dispatch(setHideUnregisteredSegmentsAction(true));
+    Store.dispatch(toggleAllSegmentsAction(visibleSegmentationLayer.name, false));
+    Store.dispatch(
+      updateSegmentAction(
+        clickedSegmentId,
+        {
+          isVisible: true,
+        },
+        visibleSegmentationLayer.name,
+        undefined,
+        true,
+      ),
+    );
+  };
+
+  const toggleSegmentVisibility = () => {
+    if (!visibleSegmentationLayer || globalPosition == null) {
+      return;
+    }
+    const clickedSegmentId = getSegmentIdForPosition(globalPosition);
+    if (clickedSegmentId === 0) {
+      Toast.info("No segment found at the clicked position");
+      return;
+    }
+
+    const { segments } = getVisibleSegments(state);
+    if (segments == null) {
+      return;
+    }
+    const hideUnregisteredSegments = getHideUnregisteredSegmentsForVisibleSegmentationLayer(state);
+    const segment = segments.getNullable(clickedSegmentId);
+    const oldIsVisible = segment?.isVisible ?? !hideUnregisteredSegments;
+
+    Store.dispatch(
+      updateSegmentAction(
+        clickedSegmentId,
+        {
+          isVisible: !oldIsVisible,
+        },
+        visibleSegmentationLayer.name,
+        undefined,
+        true,
+      ),
+    );
+  };
+
   const computeMeshAdHoc = () => {
     if (!visibleSegmentationLayer || globalPosition == null) {
       return;
@@ -1178,6 +1239,16 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     onClick: maybeFocusSegment,
     label: "Focus in Segment List",
   };
+  const onlyShowThisSegmentItem: MenuItemType = {
+    key: "only-show-this-segment",
+    onClick: onlyShowSegment,
+    label: "Only Show This Segment",
+  };
+  const toggleSegmentVisibilityItem: MenuItemType = {
+    key: "toggle-segment-visibility",
+    onClick: toggleSegmentVisibility,
+    label: "Toggle Visibility Of This Segment",
+  };
   const loadPrecomputedMeshItem: MenuItemType = {
     key: "load-precomputed-mesh",
     disabled: !currentMeshFile,
@@ -1221,6 +1292,8 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                 ),
               }
             : null,
+          segmentIdAtPosition > 0 ? onlyShowThisSegmentItem : null,
+          segmentIdAtPosition > 0 ? toggleSegmentVisibilityItem : null,
           focusInSegmentListItem,
           loadPrecomputedMeshItem,
           computeMeshAdHocItem,

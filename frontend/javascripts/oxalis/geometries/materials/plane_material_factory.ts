@@ -160,6 +160,9 @@ class PlaneMaterialFactory {
       selectiveSegmentVisibility: {
         value: false,
       },
+      hideUnregisteredSegments: {
+        value: false,
+      },
       is3DViewBeingRendered: {
         value: true,
       },
@@ -821,6 +824,20 @@ class PlaneMaterialFactory {
           true,
         ),
       );
+
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          (storeState) => {
+            const activeSegmentationTracing = getActiveSegmentationTracing(storeState);
+            return activeSegmentationTracing?.hideUnregisteredSegments ?? false;
+          },
+          (value) => {
+            this.uniforms.hideUnregisteredSegments.value = value;
+          },
+          true,
+        ),
+      );
+
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => getActiveSegmentationTracing(storeState)?.activeUnmappedSegmentId,

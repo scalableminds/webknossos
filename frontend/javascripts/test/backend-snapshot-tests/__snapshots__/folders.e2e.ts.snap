@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`Folder API (E2E)) > addAllowedTeamToFolder 1`] = `
+exports[`Folder API (E2E) > addAllowedTeamToFolder 1`] = `
 {
   "allowedTeams": [
     {
@@ -29,7 +29,7 @@ exports[`Folder API (E2E)) > addAllowedTeamToFolder 1`] = `
 }
 `;
 
-exports[`Folder API (E2E)) > addAllowedTeamToFolder 2`] = `
+exports[`Folder API (E2E) > addAllowedTeamToFolder 2`] = `
 {
   "allowedTeams": [
     {
@@ -58,7 +58,7 @@ exports[`Folder API (E2E)) > addAllowedTeamToFolder 2`] = `
 }
 `;
 
-exports[`Folder API (E2E)) > createFolder 1`] = `
+exports[`Folder API (E2E) > createFolder 1`] = `
 {
   "allowedTeams": [],
   "allowedTeamsCumulative": [],
@@ -69,7 +69,7 @@ exports[`Folder API (E2E)) > createFolder 1`] = `
 }
 `;
 
-exports[`Folder API (E2E)) > getFolder 1`] = `
+exports[`Folder API (E2E) > getFolder 1`] = `
 {
   "allowedTeams": [],
   "allowedTeamsCumulative": [],
@@ -86,7 +86,7 @@ exports[`Folder API (E2E)) > getFolder 1`] = `
 }
 `;
 
-exports[`Folder API (E2E)) > getFolderTree 1`] = `
+exports[`Folder API (E2E) > getFolderTree 1`] = `
 [
   {
     "id": "570b9f4e4bb848d08880712a",
@@ -118,7 +118,7 @@ exports[`Folder API (E2E)) > getFolderTree 1`] = `
 ]
 `;
 
-exports[`Folder API (E2E)) > updateFolder 1`] = `
+exports[`Folder API (E2E) > updateFolder 1`] = `
 {
   "allowedTeams": [],
   "allowedTeamsCumulative": [],

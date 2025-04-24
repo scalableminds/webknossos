@@ -7,7 +7,7 @@ export default defineConfig({
     setupFiles: ["./frontend/javascripts/test/global_mocks.ts"],
     include: [
       "./frontend/javascripts/test/**/*.{spec,e2e}.ts",
-      "./frontend/javascripts/test/puppeteer/*.screenshot.ts",
+      "./frontend/javascripts/test/puppeteer/*.{wkorg_screenshot,screenshot}.ts",
     ],
     exclude: [],
     env: { IS_TESTING: "true" },

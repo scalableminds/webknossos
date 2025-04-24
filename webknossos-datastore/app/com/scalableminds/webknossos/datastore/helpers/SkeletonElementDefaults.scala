@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.helpers
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
-import com.scalableminds.webknossos.datastore.SkeletonTracing.{Node, SkeletonTracing}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{Node, SkeletonTracing, SkeletonUserStateProto}
 
 object SkeletonTracingDefaults extends ProtoGeometryImplicits {
   private val datasetName = ""
@@ -26,6 +26,18 @@ object SkeletonTracingDefaults extends ProtoGeometryImplicits {
                     zoomLevel,
                     version,
                     userBoundingBox)
+
+  def emptyUserState(userId: String): SkeletonUserStateProto =
+    SkeletonUserStateProto(
+      userId = userId,
+      activeNodeId = None,
+      treeGroupIds = Seq.empty,
+      treeGroupExpandedStates = Seq.empty,
+      boundingBoxIds = Seq.empty,
+      boundingBoxVisibilities = Seq.empty,
+      treeIds = Seq.empty,
+      treeVisibilities = Seq.empty
+    )
 }
 
 object NodeDefaults extends ProtoGeometryImplicits {

@@ -7,10 +7,9 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.{
   Node,
   SkeletonTracing,
   SkeletonUserStateProto,
-  Tree,
-  TreeGroup
+  Tree
 }
-import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits}
+import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction, UserStateUpdateAction}
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.TreeType.TreeType
@@ -26,7 +25,8 @@ trait SkeletonUpdateAction extends LayerUpdateAction {
 
 trait UserStateSkeletonUpdateAction extends SkeletonUpdateAction with UserStateUpdateAction {
   def actionAuthorId: Option[String]
-  def applyOnUserState(actionUserId: String,
+  def applyOnUserState(tracing: SkeletonTracing,
+                       actionUserId: String,
                        existingUserStateOpt: Option[SkeletonUserStateProto]): SkeletonUserStateProto
 
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = actionAuthorId match {
@@ -35,11 +35,11 @@ trait UserStateSkeletonUpdateAction extends SkeletonUpdateAction with UserStateU
       val userStateAlreadyExists = tracing.userStates.exists(state => actionUserId == state.userId)
       if (userStateAlreadyExists) {
         tracing.copy(userStates = tracing.userStates.map {
-          case userState if actionUserId == userState.userId => applyOnUserState(actionUserId, Some(userState))
+          case userState if actionUserId == userState.userId => applyOnUserState(tracing, actionUserId, Some(userState))
           case userState                                     => userState
         })
       } else {
-        tracing.copy(userStates = tracing.userStates :+ applyOnUserState(actionUserId, None))
+        tracing.copy(userStates = tracing.userStates :+ applyOnUserState(tracing, actionUserId, None))
       }
   }
 }
@@ -442,7 +442,8 @@ case class UpdateTreeGroupsExpandedStateSkeletonAction(groupIds: List[Int],
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 
-  def applyOnUserState(actionUserId: String,
+  def applyOnUserState(tracing: SkeletonTracing,
+                       actionUserId: String,
                        existingUserStateOpt: Option[SkeletonUserStateProto]): SkeletonUserStateProto =
     existingUserStateOpt.map { existingUserState =>
       val expandedStateMapMutable: mutable.Map[Int, Boolean] =
@@ -454,15 +455,12 @@ case class UpdateTreeGroupsExpandedStateSkeletonAction(groupIds: List[Int],
         treeGroupExpandedStates = expandedStates.toSeq
       )
     }.getOrElse(
-      SkeletonUserStateProto(
-        userId = actionUserId,
-        treeGroupIds = groupIds,
-        treeGroupExpandedStates = List.fill[Boolean](groupIds.length)(areExpanded),
-        boundingBoxIds = Seq.empty,
-        boundingBoxVisibilities = Seq.empty,
-        treeIds = Seq.empty,
-        treeVisibilities = Seq.empty
-      )
+      SkeletonTracingDefaults
+        .emptyUserState(actionUserId)
+        .copy(
+          treeGroupIds = groupIds,
+          treeGroupExpandedStates = List.fill[Boolean](groupIds.length)(areExpanded)
+        )
     )
 }
 
@@ -504,12 +502,11 @@ case class UpdateUserStateSkeletonAction(activeNode: Option[Int],
                                          actionTimestamp: Option[Long] = None,
                                          actionAuthorId: Option[String] = None,
                                          info: Option[String] = None)
-    extends SkeletonUpdateAction
-    with UserStateUpdateAction {
-  override def applyOn(tracing: SkeletonTracing): SkeletonTracing =
-    tracing.copy(
-      activeNodeId = activeNode
-    )
+    extends UserStateSkeletonUpdateAction {
+  override def applyOnUserState(tracing: SkeletonTracing,
+                                actionUserId: String,
+                                existingUserStateOpt: Option[SkeletonUserStateProto]): SkeletonUserStateProto =
+    existingUserStateOpt.getOrElse(SkeletonTracingDefaults.emptyUserState(actionUserId)).copy(activeNodeId = activeNode)
 
   override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
@@ -533,7 +530,8 @@ case class UpdateTreeVisibilitySkeletonAction(treeId: Int,
                                               info: Option[String] = None)
     extends UserStateSkeletonUpdateAction
     with SkeletonUpdateActionHelper {
-  override def applyOnUserState(actionUserId: String,
+  override def applyOnUserState(tracing: SkeletonTracing,
+                                actionUserId: String,
                                 existingUserStateOpt: Option[SkeletonUserStateProto]): SkeletonUserStateProto =
     existingUserStateOpt.map { existingUserState =>
       val visibilityMap: mutable.Map[Int, Boolean] =
@@ -545,15 +543,12 @@ case class UpdateTreeVisibilitySkeletonAction(treeId: Int,
         treeVisibilities = visibilities.toSeq
       )
     }.getOrElse(
-      SkeletonUserStateProto(
-        userId = actionUserId,
-        treeGroupIds = Seq.empty,
-        treeGroupExpandedStates = Seq.empty,
-        boundingBoxIds = Seq.empty,
-        boundingBoxVisibilities = Seq.empty,
-        treeIds = Seq(treeId),
-        treeVisibilities = Seq(isVisible),
-      )
+      SkeletonTracingDefaults
+        .emptyUserState(actionUserId)
+        .copy(
+          treeIds = Seq(treeId),
+          treeVisibilities = Seq(isVisible),
+        )
     )
 
   override def addTimestamp(timestamp: Long): UpdateAction =
@@ -573,28 +568,37 @@ case class UpdateTreeGroupVisibilitySkeletonAction(treeGroupId: Option[Int],
                                                    actionTimestamp: Option[Long] = None,
                                                    actionAuthorId: Option[String] = None,
                                                    info: Option[String] = None)
-    extends SkeletonUpdateAction
+    extends UserStateSkeletonUpdateAction
     with SkeletonUpdateActionHelper {
-  override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
-    def updateTreeGroups(treeGroups: Seq[TreeGroup]) = {
-      def treeTransform(tree: Tree) =
-        if (treeGroups.exists(group => tree.groupId.contains(group.groupId)))
-          tree.copy(isVisible = Some(isVisible))
-        else tree
 
-      tracing.withTrees(mapAllTrees(tracing, treeTransform))
-    }
-
-    def allTreeTransform(tree: Tree) = tree.copy(isVisible = Some(isVisible))
-
-    treeGroupId match {
-      case None => tracing.withTrees(mapAllTrees(tracing, allTreeTransform))
+  override def applyOnUserState(tracing: SkeletonTracing,
+                                actionUserId: String,
+                                existingUserStateOpt: Option[SkeletonUserStateProto]): SkeletonUserStateProto = {
+    val treeIdsToUpdate: Seq[Int] = treeGroupId match {
+      case None => tracing.trees.map(tree => tree.treeId)
       case Some(groupId) =>
-        tracing.treeGroups
-          .find(_.groupId == groupId)
-          .map(group => updateTreeGroups(GroupUtils.getAllChildrenTreeGroups(group)))
-          .getOrElse(tracing)
+        (for {
+          treeGroup <- tracing.treeGroups.find(_.groupId == groupId)
+          treeGroups = GroupUtils.getAllChildrenTreeGroups(treeGroup)
+          treeIds = tracing.trees
+            .filter(tree => treeGroups.exists(group => tree.groupId.contains(group.groupId)))
+            .map(_.treeId)
+        } yield treeIds).getOrElse(Seq.empty)
     }
+    existingUserStateOpt.map { existingUserState =>
+      val visibilityMapMutable: mutable.Map[Int, Boolean] =
+        existingUserState.treeIds.zip(existingUserState.treeVisibilities).to(collection.mutable.Map)
+      treeIdsToUpdate.foreach(visibilityMapMutable(_) = isVisible)
+      val (treeIds, treeVisibilities) = visibilityMapMutable.unzip
+      existingUserState.copy(
+        treeGroupIds = treeIds.toSeq,
+        treeVisibilities = treeVisibilities.toSeq
+      )
+    }.getOrElse(
+      SkeletonTracingDefaults
+        .emptyUserState(actionUserId)
+        .copy(treeIds = treeIdsToUpdate, treeVisibilities = Seq.fill[Boolean](treeIdsToUpdate.length)(isVisible))
+    )
   }
 
   override def addTimestamp(timestamp: Long): UpdateAction =

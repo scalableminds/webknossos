@@ -19,10 +19,11 @@ message Segment {
 
 message VolumeUserStateProto {
   required string userId = 1;
-  repeated int32 segmentGroupIds = 2;
-  repeated bool segmentGroupExpandedStates = 3;
-  repeated int32 boundingBoxIds = 4;
-  repeated int32 boundingBoxVisibilities = 5;
+  optional int64 activeSegmentId = 2;
+  repeated int32 segmentGroupIds = 3;
+  repeated bool segmentGroupExpandedStates = 4;
+  repeated int32 boundingBoxIds = 5;
+  repeated bool boundingBoxVisibilities = 6;
 }
 
 message VolumeTracing {

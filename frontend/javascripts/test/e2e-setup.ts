@@ -1,13 +1,17 @@
-import "test/mocks/ava_only_mock_lz4";
 import _ from "lodash";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'deep... Remove this comment to see the full error message
+// @ts-ignore
 import deepForEach from "deep-for-each";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'node... Remove this comment to see the full error message
-import fetch, { Headers, FormData, Request, Response, FetchError, File } from "node-fetch";
 import fs from "node:fs";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'shel... Remove this comment to see the full error message
 import shell from "shelljs";
 import type { ArbitraryObject } from "types/globals";
+import { vi } from "vitest";
+import { JSDOM } from "jsdom";
+
+vi.mock("libs/request", async (importOriginal) => {
+  // The request lib is globally mocked. In the E2E tests, we actually want to run the proper fetch calls so we revert to the original implementation
+  return await importOriginal();
+});
+
 const requests = [];
 const tokenUserA =
   "1b88db86331a38c21a0b235794b9e459856490d70408bcffb767f64ade0f83d2bdb4c4e181b9a9a30cdece7cb7c65208cc43b6c1bb5987f5ece00d348b1a905502a266f8fc64f0371cd6559393d72e031d0c2d0cabad58cccf957bb258bc86f05b5dc3d4fff3d5e3d9c0389a6027d861a21e78e3222fb6c5b7944520ef21761e";
@@ -19,10 +23,10 @@ const tokenUserD =
   "4e88db86331a38c21a0b235794b9e459856490d70408bcffb767f64ade0f83d2bdb4c4e181b9a9a30cdece7cb7c65208cc43b6c1bb5987f5ece00d348b1a905502a266f8fc64f0371cd6559393d72e031d0c2d0cabad58cccf957bb258bc86f05b5dc3d4fff3d5e3d9c0389a6027d861a21e78e3222fb6c5b7944520ef21764e";
 const tokenUserE =
   "5f88db86331a38c21a0b235794b9e459856490d70408bcffb767f64ade0f83d2bdb4c4e181b9a9a30cdece7cb7c65208cc43b6c1bb5987f5ece00d348b1a905502a266f8fc64f0371cd6559393d72e031d0c2d0cabad58cccf957bb258bc86f05b5dc3d4fff3d5e3d9c0389a6027d861a21e78e3222fb6c5b7944520ef21765e";
-let currToken = tokenUserA;
+let currentUserAuthToken = tokenUserA;
 
-function setCurrToken(token: string) {
-  currToken = token;
+function setUserAuthToken(token: string) {
+  currentUserAuthToken = token;
 }
 
 // The values of these keys change if objects are newly created by the backend
@@ -41,6 +45,11 @@ const volatileKeys: Array<string | number | symbol> = [
   "tracingId",
   "sortingKey",
 ];
+
+/**
+ * Replaces values of certain volatile keys (e.g. timestamps, IDs) with deterministic values to make test snapshots more stable.
+ * This is useful for ensuring consistent snapshot tests when dealing with properties that change between test runs.
+ */
 export function replaceVolatileValues(obj: ArbitraryObject | null | undefined) {
   if (obj == null) return obj;
 
@@ -63,32 +72,24 @@ export function replaceVolatileValues(obj: ArbitraryObject | null | undefined) {
   return newObj;
 }
 
+const originalFetch = fetch;
 global.fetch = function fetchWrapper(url, options) {
   let newUrl = url;
 
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'indexOf' does not exist on type 'Request... Remove this comment to see the full error message
-  if (url.indexOf("http:") === -1 && url.indexOf("https:") === -1) {
+  if (typeof url === "string" && url.indexOf("http:") === -1 && url.indexOf("https:") === -1) {
     newUrl = `http://localhost:9000${url}`;
   }
 
-  // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
-  options.headers.set("X-Auth-Token", currToken);
-  const promise = fetch(newUrl, options);
+  // Add the token to headers if they exist
+  if (options?.headers instanceof Headers) {
+    options.headers.set("X-Auth-Token", currentUserAuthToken);
+  }
+
+  const promise = originalFetch(newUrl, options);
   requests.push(promise);
-  console.log("Fetching", newUrl);
+
   return promise;
 };
-
-global.Headers = Headers;
-global.Request = Request;
-global.Response = Response;
-// @ts-ignore FIXME: Element implicitly has an 'any' type because type ... Remove this comment to see the full error message
-global.FetchError = FetchError;
-global.FormData = FormData;
-global.File = File;
-
-// @ts-ignore
-import { JSDOM } from "jsdom";
 
 // set pretendToBeVisual to true, so that window.requestAnimationFrame is available from JSDOM
 const jsdom = new JSDOM("<!doctype html><html><body></body></html>", {
@@ -99,27 +100,25 @@ const { window } = jsdom;
 
 // JSDOM does not support matchMedia yet which is why we mock it.
 // https://github.com/jsdom/jsdom/issues/3522
-window.matchMedia = () => false;
+window.matchMedia = vi.fn().mockImplementation(() => ({
+  matches: false,
+  addListener: vi.fn(),
+  removeListener: vi.fn(),
+}));
 
-function copyProps(src: any, target: any) {
-  const props: Record<string, any> = {};
-  Object.getOwnPropertyNames(src)
-    .filter((prop: string) => typeof target[prop] === "undefined")
-    .forEach((prop: string) => {
-      props[prop] = Object.getOwnPropertyDescriptor(src, prop);
-    });
-  Object.defineProperties(target, props);
-}
-
-global.window = window;
-global.document = window.document;
 global.localStorage = {
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'undefined' is not assignable to type 'string... Remove this comment to see the full error message
-  getItem: () => undefined,
-  setItem: () => undefined,
+  getItem: vi.fn().mockReturnValue(undefined),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+  length: 0,
+  key: vi.fn(),
 };
 
-copyProps(window, global);
+/**
+ * Writes a TypeScript file that type-checks an object against a given type using the regular TS compiler.
+ * Useful for verifying that API responses match their expected TypeScript interfaces during testing.
+ */
 export async function writeTypeCheckingFile(
   object: Array<any> | Record<string, any>,
   name: string,
@@ -144,4 +143,5 @@ export function resetDatabase() {
   shell.config.fatal = true;
   shell.exec("tools/postgres/dbtool.js prepare-test-db", { silent: true });
 }
-export { tokenUserA, tokenUserB, tokenUserC, tokenUserD, tokenUserE, setCurrToken };
+
+export { tokenUserA, tokenUserB, tokenUserC, tokenUserD, tokenUserE, setUserAuthToken };

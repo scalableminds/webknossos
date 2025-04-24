@@ -20,16 +20,16 @@ For non-localhost deployments, check out the [installation guide in the document
 
 ## Dependencies
 
-* [Oracle JDK 21](http://www.oracle.com/technetwork/java/javase/downloads/index.html) or [Eclipse Temurin JDK 21](https://adoptium.net/temurin/releases/) (full JDK, JRE is not enough)
-* [sbt](http://www.scala-sbt.org/)
+* [Oracle JDK 21](https://www.oracle.com/technetwork/java/javase/downloads/index.html) or [Eclipse Temurin JDK 21](https://adoptium.net/temurin/releases/) (full JDK, JRE is not enough)
+* [sbt](https://www.scala-sbt.org/)
 * [PostgreSQL 10+](https://www.postgresql.org/)
 * [Redis 5+](https://redis.io/)
 * [Blosc](https://github.com/Blosc/c-blosc)
 * [Brotli](https://github.com/google/brotli)
 * [Draco](https://github.com/google/draco)
-* [node.js 22+](http://nodejs.org/download/)
+* [node.js 22+](https://nodejs.org/)
 * [yarn package manager](https://yarnpkg.com/)
-* [git](http://git-scm.com/downloads)
+* [git](https://git-scm.com/downloads)
 * [cmake](https://cmake.org/download/)
 
 * For some development tasks like refreshing snapshots, Docker 19.03.0+ and Docker Compose 2.+ are required
@@ -82,11 +82,11 @@ Note: On arm64-based Macs (e.g. M1), you need to run WEBKNOSSOS in an x86_64 env
 sudo apt update
 sudo apt install -y curl ca-certificates wget git postgresql postgresql-client unzip zip redis-server build-essential libblosc1 libbrotli1 libdraco-dev cmake
 
-# Install nvm, node 18
+# Install nvm, node 22
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 source ~/.bashrc
-nvm install 18
-nvm use 18
+nvm install 22
+nvm use 22
 
  # Install sdkman, java, scala and sbt
 curl -s "https://get.sdkman.io" | bash
@@ -121,7 +121,7 @@ On older Ubuntu distributions: Please make sure to have the correct versions of 
 
 ### sbt
 
-* See: [http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html](http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html)
+* See: [https://www.scala-sbt.org/release/docs/Getting-Started/Setup.html](https://www.scala-sbt.org/release/docs/Getting-Started/Setup.html)
 
 ### PostgreSQL
 
@@ -134,8 +134,8 @@ On older Ubuntu distributions: Please make sure to have the correct versions of 
 
 ### node.js & yarn
 
-* Install node from [http://nodejs.org/download/](http://nodejs.org/download/)
-* node version **18 is required**
+* Install node from [https://nodejs.org/](https://nodejs.org/)
+* node version **22+ is required**
 * Use `corepack` to install `yarn`
 * `corepack enable`&& `yarn install`
 

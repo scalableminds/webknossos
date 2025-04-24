@@ -1,35 +1,44 @@
 import _ from "lodash";
-import { tokenUserA, setCurrToken, resetDatabase, writeTypeCheckingFile } from "test/e2e-setup";
+import { tokenUserA, setUserAuthToken, resetDatabase, writeTypeCheckingFile } from "test/e2e-setup";
 import * as api from "admin/admin_rest_api";
-import test from "ava";
-test.before("Reset database and change token", async () => {
-  resetDatabase();
-  setCurrToken(tokenUserA);
-});
-test("getTeams()", async (t) => {
-  const teams = _.sortBy(await api.getTeams(), (team) => team.name);
+import { describe, beforeAll, expect, it } from "vitest";
 
-  writeTypeCheckingFile(teams, "team", "APITeam", {
-    isArray: true,
+describe("Teams API (E2E)", () => {
+  beforeAll(async () => {
+    resetDatabase();
+    setUserAuthToken(tokenUserA);
   });
-  t.snapshot(teams);
-});
-test("getEditableTeams()", async (t) => {
-  const editableTeams = _.sortBy(await api.getEditableTeams(), (team) => team.name);
 
-  t.snapshot(editableTeams);
-});
-test("createTeam and deleteTeam", async (t) => {
-  const newTeam = {
-    name: "test-team-name",
-  };
-  const createdTeam = await api.createTeam(newTeam);
-  // Since the id will change after re-runs, we fix it here for easy
-  // snapshotting
-  const createdTeamWithFixedId = Object.assign({}, createdTeam, {
-    id: "fixed-team-id",
+  it("getTeams()", async () => {
+    const teams = _.sortBy(await api.getTeams(), (team) => team.name);
+
+    writeTypeCheckingFile(teams, "team", "APITeam", {
+      isArray: true,
+    });
+
+    expect(teams).toMatchSnapshot();
   });
-  t.snapshot(createdTeamWithFixedId);
-  const response = await api.deleteTeam(createdTeam.id);
-  t.snapshot(response);
+
+  it("getEditableTeams()", async () => {
+    const editableTeams = _.sortBy(await api.getEditableTeams(), (team) => team.name);
+
+    expect(editableTeams).toMatchSnapshot();
+  });
+
+  it("createTeam and deleteTeam", async () => {
+    const newTeam = {
+      name: "test-team-name",
+    };
+    const createdTeam = await api.createTeam(newTeam);
+
+    // Since the id will change after re-runs, we fix it here for easy
+    // snapshotting
+    const createdTeamWithFixedId = Object.assign({}, createdTeam, {
+      id: "fixed-team-id",
+    });
+    expect(createdTeamWithFixedId).toMatchSnapshot();
+
+    const response = await api.deleteTeam(createdTeam.id);
+    expect(response).toMatchSnapshot();
+  });
 });

@@ -27,6 +27,7 @@ export function parseProtoTracing(
   const protoRoot = Root.fromJSON(PROTO_FILES[annotationType]);
   const messageType = protoRoot.lookupType(PROTO_TYPES[annotationType]);
   const message = messageType.decode(new Uint8Array(tracingArrayBuffer));
+
   const tracing = messageType.toObject(message, {
     arrays: true,
     objects: true,
@@ -34,6 +35,7 @@ export function parseProtoTracing(
     longs: Number,
   }) as ServerTracing;
   delete tracing.version;
+
   return tracing;
 }
 
@@ -50,8 +52,10 @@ export function serializeProtoListOfLong<T extends number | bigint>(
   const protoRoot = Root.fromJSON(ListOfLongProto);
   const messageType = protoRoot.lookupType(`${PROTO_PACKAGE}.ListOfLong`);
   const errMsg = messageType.verify(listOfLong);
+
   if (errMsg) throw Error(errMsg);
   const message = messageType.create(listOfLong);
+
   return messageType.encode(message).finish();
 }
 
@@ -61,6 +65,7 @@ export function parseProtoListOfLong<T extends number | bigint>(
   const protoRoot = Root.fromJSON(ListOfLongProto);
   const messageType = protoRoot.lookupType(`${PROTO_PACKAGE}.ListOfLong`);
   const message = messageType.decode(new Uint8Array(listArrayBuffer));
+
   return messageType.toObject(message, {
     arrays: true,
     objects: true,
@@ -73,6 +78,7 @@ export function parseProtoAnnotation(annotationArrayBuffer: ArrayBuffer): any {
   const protoRoot = Root.fromJSON(AnnotationProto);
   const messageType = protoRoot.lookupType(`${PROTO_PACKAGE}.AnnotationProto`);
   const message = messageType.decode(new Uint8Array(annotationArrayBuffer));
+
   return messageType.toObject(message, {
     arrays: true,
     objects: true,

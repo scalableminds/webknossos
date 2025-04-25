@@ -21,7 +21,11 @@ import { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
 import constants, { ControlModeEnum, type Vector3 } from "oxalis/constants";
-import type { PartialUrlManagerState, UrlStateByLayer } from "oxalis/controller/url_manager";
+import type {
+  DirectLayerSpecificProps,
+  PartialUrlManagerState,
+  UrlStateByLayer,
+} from "oxalis/controller/url_manager";
 import UrlManager, {
   getDatasetNameFromLocation,
   getUpdatedPathnameWithNewDatasetName,
@@ -793,7 +797,7 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
 
     const { dataset } = Store.getState();
 
-    if (layerName === "Skeleton" && layerState.isDisabled != null) {
+    if (layerName === "Skeleton" && "isDisabled" in layerState) {
       Store.dispatch(setShowSkeletonsAction(!layerState.isDisabled));
       // The remaining options are only valid for data layers
       continue;
@@ -815,11 +819,18 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
       continue;
     }
 
-    if (layerState.isDisabled != null) {
-      Store.dispatch(
-        updateLayerSettingAction(effectiveLayerName, "isDisabled", layerState.isDisabled),
-      );
-    }
+    const layerSettingsKeys = [
+      "isDisabled",
+      "intensityRange",
+      "color",
+      "isInverted",
+      "gammaCorrectionValue",
+    ] as (keyof DirectLayerSpecificProps)[];
+    layerSettingsKeys.forEach((key) => {
+      if (key in layerState) {
+        Store.dispatch(updateLayerSettingAction(effectiveLayerName, key, layerState[key]));
+      }
+    });
 
     if (!isSegmentationLayer(dataset, effectiveLayerName)) {
       // The remaining options are only valid for segmentation layers

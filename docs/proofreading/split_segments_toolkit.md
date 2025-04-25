@@ -12,7 +12,7 @@ The recommended steps for splitting a segment are as follows:
 - Create a new skeleton tree and place nodes on the boundary that should split the segment into two. Consider activating the "Pen" mode within the skeleton tool so that you can rapidly draw nodes by dragging the mouse while it's pressed down.
 - Go to the last z slice of the bounding box and repeat the previous step.
 - Now you can inspect all the slices in between. A smooth spline curve will be shown in each slice that is derived from interpolating between adjacent slices. If you want to correct the interpolation, you can create new nodes on a slice. A new spline curve will be computed from these points and the interpolation will be updated.
-- If you are satisfied with the (interpolated) boundary, you can switch to the fill tool. Ensure to enable the 3D mode as well as the "Restrict to Bounding Box" mode.
+- If you are satisfied with the (interpolated) boundary, you can switch to the fill tool and relabel one side, effectively splitting a segment into two. Ensure to enable the 3D mode as well as the "Restrict to Bounding Box" mode.
 
 ## Troubleshooting
 

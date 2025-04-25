@@ -238,9 +238,12 @@ function TaskTypeListView({ initialSearchValue }: Props) {
             fixed="right"
             render={(__, taskType: APITaskType) => (
               <span>
-                <Link to={`/annotations/CompoundTaskType/${taskType.id}`} title="View">
+                <Link
+                  to={`/annotations/CompoundTaskType/${taskType.id}`}
+                  title="Show a compound annotation of all finished tasks for this taskType"
+                >
                   <EyeOutlined className="icon-margin-right" />
-                  View
+                  View merged
                 </Link>
                 <br />
                 <Link to={`/taskTypes/${taskType.id}/edit`} title="Edit taskType">

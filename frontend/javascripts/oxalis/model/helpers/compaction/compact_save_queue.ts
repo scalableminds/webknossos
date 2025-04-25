@@ -75,7 +75,7 @@ function removeSubsequentUpdateBBoxActions(updateActionsBatches: Array<SaveQueue
 
   // Actions are obsolete, if they are for the same bounding box and for the same prop.
   // The given action is always compared to the next next one, as usually an
-  // updateUserBoundingBoxSkeletonAction and updateUserBoundingBoxVolumeAction
+  // updateUserBoundingBoxInSkeletonTracingAction and updateUserBoundingBoxInVolumeTracingAction
   // is sent at the same time.
   for (let i = 0; i < updateActionsBatches.length - 2; i++) {
     const actions1 = updateActionsBatches[i].actions;
@@ -84,8 +84,8 @@ function removeSubsequentUpdateBBoxActions(updateActionsBatches: Array<SaveQueue
     if (
       actions1.length === 1 &&
       actions2.length === 1 &&
-      (actions1[0].name === "updateUserBoundingBoxSkeleton" ||
-        actions1[0].name === "updateUserBoundingBoxVolume") &&
+      (actions1[0].name === "updateUserBoundingBoxInSkeletonTracing" ||
+        actions1[0].name === "updateUserBoundingBoxInVolumeTracing") &&
       actions1[0].name === actions2[0].name &&
       actions1[0].value.boundingBoxId === actions2[0].value.boundingBoxId &&
       _.isEqual(actions1[0].value.updatedPropKeys, actions2[0].value.updatedPropKeys)

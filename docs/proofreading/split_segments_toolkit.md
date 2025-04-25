@@ -28,4 +28,4 @@ By activating that toolkit, WEBKNOSSOS behaves differently in the following way:
 
 - The active tree will be rendered without any edges. Instead, for each slice in which multiple nodes exist, a spline curve is calculated that goes through these nodes.
 - Using the spline curves from before, a 3D surface is generated that interpolates through these curves. The surface can be seen in the 3D viewport.
-- The floodfill tool will respect the surface by not crossing it.
+- The flood-fill tool will respect the splitting surface by not crossing it.

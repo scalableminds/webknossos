@@ -80,14 +80,20 @@ type MinimalBoundingBoxExtent = {
   mag: Vector3;
 };
 
+// The following minimal bounding box extents are based on the default model that is used for neuron and mitochondria segmentation.
+// Thus when changing the default model, consider changing these values as well.
+// See https://github.com/scalableminds/webknossos/issues/8198#issuecomment-2782684436
 const MIN_BBOX_EXTENT_FOR_NEURON_SEGMENTATION: MinimalBoundingBoxExtent = {
   minExtent: [16, 16, 4],
   mag: [1, 1, 1],
 };
+
 const MIN_BBOX_EXTENT_FOR_MITO_SEGMENTATION: MinimalBoundingBoxExtent = {
   minExtent: [16, 16, 4],
   mag: [1, 1, 1],
 };
+
+const MIN_DATASET_RATIO_COMPARED_TO_MIN_BBOX = 2; // dataset needs to be x times the size of the minimal bounding box
 
 export type StartAIJobModalState =
   | APIJobType.INFER_NEURONS
@@ -719,9 +725,9 @@ const isBBoxTooSmall = (
       : MIN_BBOX_EXTENT_FOR_MITO_SEGMENTATION;
   let minExtentInMag1 = minBBoxExtent.minExtent;
   if (!_.isEqual(minBBoxExtent.mag, [1, 1, 1]) || bboxOrDS === "dataset") {
-    const factorForDataset = bboxOrDS === "dataset" ? 2 : 1; // dataset needs to be 2x the size of the minimal bounding box
+    const extentFactor = bboxOrDS === "dataset" ? MIN_DATASET_RATIO_COMPARED_TO_MIN_BBOX : 1;
     minExtentInMag1 = minBBoxExtent.minExtent.map(
-      (extent, i) => extent * minBBoxExtent.mag[i] * factorForDataset,
+      (extent, i) => extent * minBBoxExtent.mag[i] * extentFactor,
     ) as Vector3;
   }
   const bboxExtent = bbox.length === 6 ? bbox.slice(3) : bbox;

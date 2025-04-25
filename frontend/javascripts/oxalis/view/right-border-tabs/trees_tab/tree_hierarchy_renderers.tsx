@@ -122,6 +122,8 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
   const isAgglomerateSkeleton = tree.type === TreeTypeEnum.AGGLOMERATE;
 
   return {
+    // @ts-ignore We enforce a new key for each tree to enforce menu rerendering once the tree changes.
+    key: `tree-list-context-menu-${tree.treeId}`,
     items: [
       {
         key: "changeTreeColor",
@@ -367,6 +369,8 @@ const createMenuForTreeGroup = (
   }
 
   return {
+    // @ts-ignore We enforce a new key for each group to enforce menu rerendering once the group changes.
+    key: `tree-list-context-menu-group-${id}`,
     items: [
       {
         key: "create",

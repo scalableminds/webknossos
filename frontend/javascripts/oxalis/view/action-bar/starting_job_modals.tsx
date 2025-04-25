@@ -75,8 +75,19 @@ import { isBoundingBoxExportable } from "./download_modal_view";
 
 const { ThinSpace } = Unicode;
 
-const MIN_MAG1_BBOX_EXTENT_FOR_AI_INFERRAL: Vector3 = [16, 16, 4];
-const MIN_MAG1_DATASET_EXTENT_FOR_AI_INFERRAL: Vector3 = [32, 32, 8];
+type MinimalBoundingBoxExtent = {
+  minExtent: Vector3;
+  mag: Vector3;
+};
+
+const MIN_BBOX_EXTENT_FOR_NEURON_SEGMENTATION: MinimalBoundingBoxExtent = {
+  minExtent: [16, 16, 4],
+  mag: [1, 1, 1],
+};
+const MIN_BBOX_EXTENT_FOR_MITO_SEGMENTATION: MinimalBoundingBoxExtent = {
+  minExtent: [16, 16, 4],
+  mag: [1, 1, 1],
+};
 
 export type StartAIJobModalState =
   | APIJobType.INFER_NEURONS
@@ -697,6 +708,53 @@ function useCurrentlySelectedBoundingBox(
   return currentlySelectedBoundingBox;
 }
 
+const isBBoxTooSmall = (
+  bbox: Vector6 | Vector3,
+  segmentationType: APIJobType.INFER_NEURONS | APIJobType.INFER_MITOCHONDRIA,
+  bboxOrDS: "bbox" | "dataset" = "bbox",
+) => {
+  const minBBoxExtent =
+    segmentationType === APIJobType.INFER_NEURONS
+      ? MIN_BBOX_EXTENT_FOR_NEURON_SEGMENTATION
+      : MIN_BBOX_EXTENT_FOR_MITO_SEGMENTATION;
+  let minExtentInMag1 = minBBoxExtent.minExtent;
+  if (!_.isEqual(minBBoxExtent.mag, [1, 1, 1]) || bboxOrDS === "dataset") {
+    const factorForDataset = bboxOrDS === "dataset" ? 2 : 1; // dataset needs to be 2x the size of the minimal bounding box
+    minExtentInMag1 = minBBoxExtent.minExtent.map(
+      (extent, i) => extent * minBBoxExtent.mag[i] * factorForDataset,
+    ) as Vector3;
+  }
+  const bboxExtent = bbox.length === 6 ? bbox.slice(3) : bbox;
+  for (let i = 0; i < 3; i++) {
+    if (bboxExtent[i] < minExtentInMag1[i]) {
+      const boundingBoxOrDSMessage = bboxOrDS === "bbox" ? "bounding box" : "dataset";
+      const tooSmallMessage = `The ${boundingBoxOrDSMessage} is too small. Please select a ${boundingBoxOrDSMessage} with the minimal extent ${minExtentInMag1} Vx.`;
+      Toast.error(tooSmallMessage);
+      return true;
+    }
+  }
+  return false;
+};
+
+const isBoundingBoxOrDatasetTooSmall = (
+  bbox: Vector6 | Vector3,
+  colorLayer: APIDataLayer,
+  segmentationType: APIJobType.INFER_NEURONS | APIJobType.INFER_MITOCHONDRIA,
+): boolean => {
+  if (isBBoxTooSmall(bbox, segmentationType)) {
+    return true;
+  }
+  const datasetExtent: Vector3 = [
+    colorLayer.boundingBox.width,
+    colorLayer.boundingBox.height,
+    colorLayer.boundingBox.depth,
+  ];
+  if (isBBoxTooSmall(datasetExtent, segmentationType, "dataset")) {
+    return true;
+  }
+  return false;
+};
+
 function StartJobForm(props: StartJobFormProps) {
   const isBoundingBoxConfigurable = props.isBoundingBoxConfigurable || false;
   const isSkeletonSelectable = props.isSkeletonSelectable || false;
@@ -926,21 +984,6 @@ export function NucleiDetectionForm() {
   );
 }
 
-const isBBoxTooSmall = (
-  bbox: Vector6 | Vector3,
-  minExtent: Vector3 = MIN_MAG1_BBOX_EXTENT_FOR_AI_INFERRAL,
-) => {
-  const bboxExtent = bbox.length === 6 ? bbox.slice(3) : bbox;
-  for (let i = 0; i < 3; i++) {
-    if (bboxExtent[i] < minExtent[i]) {
-      return true;
-    }
-  }
-};
-
-const BBOX_TOO_SMALL_MESSAGE = `The bounding box is too small. Please select a bounding box with the minimal extent ${MIN_MAG1_BBOX_EXTENT_FOR_AI_INFERRAL} vx.`;
-const DS_TOO_SMALL_MESSAGE = `The dataset is too small. Please try another dataset with the minimal extent ${MIN_MAG1_DATASET_EXTENT_FOR_AI_INFERRAL} vx.`;
-
 export function NeuronSegmentationForm() {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const { neuronInferralCostPerGVx } = features();
@@ -973,18 +1016,7 @@ export function NeuronSegmentationForm() {
         }
 
         const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
-        if (isBBoxTooSmall(bbox)) {
-          Toast.error(BBOX_TOO_SMALL_MESSAGE);
-          return;
-        }
-
-        const datasetExtent: Vector3 = [
-          colorLayer.boundingBox.width,
-          colorLayer.boundingBox.height,
-          colorLayer.boundingBox.depth,
-        ];
-        if (isBBoxTooSmall(datasetExtent, MIN_MAG1_DATASET_EXTENT_FOR_AI_INFERRAL)) {
-          Toast.error(DS_TOO_SMALL_MESSAGE);
+        if (isBoundingBoxOrDatasetTooSmall(bbox, colorLayer, APIJobType.INFER_NEURONS)) {
           return;
         }
 
@@ -1054,18 +1086,7 @@ export function MitochondriaSegmentationForm() {
         }
 
         const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
-        if (isBBoxTooSmall(bbox)) {
-          Toast.error(BBOX_TOO_SMALL_MESSAGE);
-          return;
-        }
-
-        const datasetExtent: Vector3 = [
-          colorLayer.boundingBox.width,
-          colorLayer.boundingBox.height,
-          colorLayer.boundingBox.depth,
-        ];
-        if (isBBoxTooSmall(datasetExtent, MIN_MAG1_DATASET_EXTENT_FOR_AI_INFERRAL)) {
-          Toast.error(DS_TOO_SMALL_MESSAGE);
+        if (isBoundingBoxOrDatasetTooSmall(bbox, colorLayer, APIJobType.INFER_MITOCHONDRIA)) {
           return;
         }
         return startMitochondriaInferralJob(dataset.id, colorLayer.name, bbox, newDatasetName);

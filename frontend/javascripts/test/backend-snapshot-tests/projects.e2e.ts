@@ -19,6 +19,7 @@ describe("Project API (E2E)", () => {
   beforeEach(() => {
     setUserAuthToken(tokenUserA);
   });
+
   it("getProjects()", async ({ expect }) => {
     const projects = _.sortBy(await api.getProjects(), (p) => p.name);
 

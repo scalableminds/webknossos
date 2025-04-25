@@ -84,4 +84,4 @@ The following common keyboard shortcuts are handy for speeding up your annotatio
 | ++c++           | Create New Tree                                    |
 
 !!! tip "Keyboard Shortcuts"
-    For faster workflow, refer to the [keyboard shortcuts](../ui/keyboard_shortcuts.md) guide.
+    For faster workflows, refer to the [keyboard shortcuts](../ui/keyboard_shortcuts.md) guide.

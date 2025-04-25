@@ -743,20 +743,20 @@ const isBBoxTooSmall = (
   return false;
 };
 
-const isBoundingBoxOrDatasetTooSmall = (
+const isDatasetOrBoundingBoxTooSmall = (
   bbox: Vector6 | Vector3,
   colorLayer: APIDataLayer,
   segmentationType: APIJobType.INFER_NEURONS | APIJobType.INFER_MITOCHONDRIA,
 ): boolean => {
-  if (isBBoxTooSmall(bbox, segmentationType)) {
-    return true;
-  }
   const datasetExtent: Vector3 = [
     colorLayer.boundingBox.width,
     colorLayer.boundingBox.height,
     colorLayer.boundingBox.depth,
   ];
   if (isBBoxTooSmall(datasetExtent, segmentationType, "dataset")) {
+    return true;
+  }
+  if (isBBoxTooSmall(bbox, segmentationType)) {
     return true;
   }
   return false;
@@ -1023,7 +1023,7 @@ export function NeuronSegmentationForm() {
         }
 
         const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
-        if (isBoundingBoxOrDatasetTooSmall(bbox, colorLayer, APIJobType.INFER_NEURONS)) {
+        if (isDatasetOrBoundingBoxTooSmall(bbox, colorLayer, APIJobType.INFER_NEURONS)) {
           return;
         }
 
@@ -1093,7 +1093,7 @@ export function MitochondriaSegmentationForm() {
         }
 
         const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
-        if (isBoundingBoxOrDatasetTooSmall(bbox, colorLayer, APIJobType.INFER_MITOCHONDRIA)) {
+        if (isDatasetOrBoundingBoxTooSmall(bbox, colorLayer, APIJobType.INFER_MITOCHONDRIA)) {
           return;
         }
         return startMitochondriaInferralJob(dataset.id, colorLayer.name, bbox, newDatasetName);

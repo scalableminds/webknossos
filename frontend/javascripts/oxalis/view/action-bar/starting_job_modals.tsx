@@ -734,8 +734,9 @@ const isBBoxTooSmall = (
   for (let i = 0; i < 3; i++) {
     if (bboxExtent[i] < minExtentInMag1[i]) {
       const boundingBoxOrDSMessage = bboxOrDS === "bbox" ? "bounding box" : "dataset";
-      const tooSmallMessage = `The ${boundingBoxOrDSMessage} is too small. Please select a ${boundingBoxOrDSMessage} with the minimal extent ${minExtentInMag1} Vx.`;
-      Toast.error(tooSmallMessage);
+      Toast.error(
+        `The ${boundingBoxOrDSMessage} is too small. Please select a ${boundingBoxOrDSMessage} with the minimal extent ${minExtentInMag1} Vx.`,
+      );
       return true;
     }
   }

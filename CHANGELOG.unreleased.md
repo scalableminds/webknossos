@@ -20,6 +20,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Updated screenshot tests to use `vitest` framework instead of `ava`. [#8553](https://github.com/scalableminds/webknossos/pull/8553)
 
 ### Fixed
+- Fixed that the minimum size of bounding boxes for AI neuron and mitochondria inferral was not checked before starting the job. [#8561](https://github.com/scalableminds/webknossos/pull/8561)
 
 ### Removed
 - The Annotation update route can no longer update the description of the annotation. Please set the description before uploading the annotation instead. You can still edit the description in the UI. [#8533](https://github.com/scalableminds/webknossos/pull/8533)

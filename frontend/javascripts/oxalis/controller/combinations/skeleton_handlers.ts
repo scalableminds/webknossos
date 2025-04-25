@@ -15,10 +15,10 @@ import {
 import {
   enforceSkeletonTracing,
   getActiveNode,
-  getTreeAndNode,
   getNodeAndTreeOrNull,
   getNodePosition,
   getSkeletonTracing,
+  getTreeAndNode,
   untransformNodePosition,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
@@ -184,10 +184,10 @@ export function moveNode(
   const skeletonTracing = getSkeletonTracing(Store.getState().annotation);
   if (!skeletonTracing) return;
 
-  const nodeAndTree = getTreeAndNode(skeletonTracing, nodeId);
-  if (!nodeAndTree) return;
+  const treeAndNode = getTreeAndNode(skeletonTracing, nodeId);
+  if (!treeAndNode) return;
 
-  const [activeTree, activeNode] = nodeAndTree;
+  const [activeTree, activeNode] = treeAndNode;
 
   const state = Store.getState();
   const { activeViewport } = state.viewModeData.plane;
@@ -231,10 +231,10 @@ export function finishNodeMovement(nodeId: number) {
   const skeletonTracing = getSkeletonTracing(Store.getState().annotation);
   if (!skeletonTracing) return;
 
-  const nodeAndTree = getTreeAndNode(skeletonTracing, nodeId);
-  if (!nodeAndTree) return;
+  const treeAndNode = getTreeAndNode(skeletonTracing, nodeId);
+  if (!treeAndNode) return;
 
-  const [activeTree, node] = nodeAndTree;
+  const [activeTree, node] = treeAndNode;
 
   Store.dispatch(
     setNodePositionAction(
@@ -355,10 +355,10 @@ export function createSkeletonNode(
     // Note that the new node isn't necessarily active
     const newNodeId = newSkeleton.cachedMaxNodeId;
 
-    const nodeAndTree = getTreeAndNode(newSkeleton, newNodeId, newSkeleton.activeTreeId);
-    if (!nodeAndTree) return;
+    const treeAndNode = getTreeAndNode(newSkeleton, newNodeId, newSkeleton.activeTreeId);
+    if (!treeAndNode) return;
 
-    const [_activeTree, newNode] = nodeAndTree;
+    const [_activeTree, newNode] = treeAndNode;
 
     api.tracing.centerPositionAnimated(
       getNodePosition(newNode, state),

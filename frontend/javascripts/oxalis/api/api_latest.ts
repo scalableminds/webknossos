@@ -62,10 +62,10 @@ import {
   getActiveTree,
   getActiveTreeGroup,
   getFlatTreeGroups,
-  getTreeAndNode,
   getNodeAndTreeOrNull,
   getNodePosition,
   getTree,
+  getTreeAndNode,
   getTreeGroupsMap,
   mapGroups,
 } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -1167,10 +1167,10 @@ class TracingApi {
    */
   setNodeRadius(delta: number, nodeId?: number, treeId?: number): void {
     const skeletonTracing = assertSkeleton(Store.getState().annotation);
-    const nodeAndTree = getTreeAndNode(skeletonTracing, nodeId, treeId);
-    if (!nodeAndTree) return;
+    const treeAndNode = getTreeAndNode(skeletonTracing, nodeId, treeId);
+    if (!treeAndNode) return;
 
-    const [_activeTree, node] = nodeAndTree;
+    const [_activeTree, node] = treeAndNode;
     Store.dispatch(setNodeRadiusAction(node.radius * Math.pow(1.05, delta), nodeId, treeId));
   }
 
@@ -1182,10 +1182,10 @@ class TracingApi {
    */
   centerNode = (nodeId?: number): void => {
     const skeletonTracing = assertSkeleton(Store.getState().annotation);
-    const nodeAndTree = getTreeAndNode(skeletonTracing, nodeId);
-    if (!nodeAndTree) return;
+    const treeAndNode = getTreeAndNode(skeletonTracing, nodeId);
+    if (!treeAndNode) return;
 
-    const [_activeTree, node] = nodeAndTree;
+    const [_activeTree, node] = treeAndNode;
     Store.dispatch(setPositionAction(getNodePosition(node, Store.getState())));
   };
 

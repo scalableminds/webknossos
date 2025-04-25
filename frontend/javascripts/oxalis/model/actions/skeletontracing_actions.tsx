@@ -4,8 +4,8 @@ import messages from "messages";
 import type { TreeType, Vector3 } from "oxalis/constants";
 import {
   enforceSkeletonTracing,
-  getTreeAndNode,
   getTree,
+  getTreeAndNode,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
 import type { MutableTreeMap, OxalisState, SkeletonTracing, TreeGroup } from "oxalis/store";
@@ -559,15 +559,15 @@ export const deleteNodeAsUserAction = (
   treeId?: number,
 ): DeleteNodeAction | NoAction | DeleteTreeAction => {
   const skeletonTracing = enforceSkeletonTracing(state.annotation);
-  const nodeAndTree = getTreeAndNode(skeletonTracing, nodeId, treeId);
-  if (!nodeAndTree) {
+  const treeAndNode = getTreeAndNode(skeletonTracing, nodeId, treeId);
+  if (!treeAndNode) {
     const tree = getTree(skeletonTracing, treeId);
     if (!tree) return noAction();
 
     return tree.nodes.size() === 0 ? deleteTreeAction(tree.treeId) : noAction();
   }
 
-  const [tree, node] = nodeAndTree;
+  const [tree, node] = treeAndNode;
 
   if (state.task != null && node.id === 1) {
     // Let the user confirm the deletion of the initial node (node with id 1) of a task

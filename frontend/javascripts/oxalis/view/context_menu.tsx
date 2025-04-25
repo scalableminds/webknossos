@@ -53,9 +53,10 @@ import {
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
-  getTreeAndNode,
+  getActiveNode,
   getNodeAndTreeOrNull,
   getNodePosition,
+  getTreeAndNode,
   isSkeletonLayerTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
@@ -1520,18 +1521,15 @@ function ContextMenuInner() {
     [contextMenuPosition, clickedSegmentOrMeshId, lastTimeSegmentInfoShouldBeFetched],
   );
 
-  const activeTreeId = skeletonTracing != null ? skeletonTracing.activeTreeId : null;
-  const activeNodeId = skeletonTracing?.activeNodeId;
-
   let nodeContextMenuTree: Tree | null = null;
   let nodeContextMenuNode: MutableNode | null = null;
 
   if (skeletonTracing != null && maybeClickedNodeId != null) {
-    const nodeAndTree = getTreeAndNode(skeletonTracing, maybeClickedNodeId);
-    if (nodeAndTree) {
-      nodeContextMenuNode = nodeAndTree[0];
-      nodeContextMenuTree = nodeAndTree[1];
-    });
+    const treeAndNode = getTreeAndNode(skeletonTracing, maybeClickedNodeId);
+    if (treeAndNode) {
+      nodeContextMenuTree = treeAndNode[0];
+      nodeContextMenuNode = treeAndNode[1];
+    }
   }
   // TS doesn't understand the above initialization and assumes the values
   // are always null. The following NOOP helps TS with the correct typing.
@@ -1543,10 +1541,7 @@ function ContextMenuInner() {
 
   const positionToMeasureDistanceTo =
     nodeContextMenuNode != null ? clickedNodesPosition : globalPosition;
-  const activeNode =
-    activeNodeId != null && skeletonTracing != null
-      ? getTreeAndNode(skeletonTracing, activeNodeId, activeTreeId).get()[1]
-      : null;
+  const activeNode = skeletonTracing != null ? getActiveNode(skeletonTracing) : null;
 
   const getActiveNodePosition = () => {
     if (activeNode == null) {

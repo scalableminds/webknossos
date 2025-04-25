@@ -6,9 +6,9 @@ import _ from "lodash";
 import Constants, { AnnotationToolEnum, TreeTypeEnum } from "oxalis/constants";
 import {
   findTreeByNodeId,
-  getTreeAndNode,
   getSkeletonTracing,
   getTree,
+  getTreeAndNode,
   isSkeletonLayerTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Action } from "oxalis/model/actions/actions";
@@ -165,12 +165,12 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         radius,
         userSettings.nodeRadius.maximum,
       );
-      const nodeAndTree = getTreeAndNode(skeletonTracing, nodeId, treeId);
-      if (nodeAndTree == null) {
+      const treeAndNode = getTreeAndNode(skeletonTracing, nodeId, treeId);
+      if (treeAndNode == null) {
         return state;
       }
 
-      const [tree, node] = nodeAndTree;
+      const [tree, node] = treeAndNode;
       const diffableMap = skeletonTracing.trees[tree.treeId].nodes;
       const newDiffableMap = diffableMap.set(
         node.id,
@@ -677,12 +677,12 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
 
     case "DELETE_NODE": {
       const { timestamp, nodeId, treeId } = action;
-      const nodeAndTree = getTreeAndNode(skeletonTracing, nodeId, treeId, TreeTypeEnum.DEFAULT);
-      if (nodeAndTree == null) {
+      const treeAndNode = getTreeAndNode(skeletonTracing, nodeId, treeId, TreeTypeEnum.DEFAULT);
+      if (treeAndNode == null) {
         return state;
       }
 
-      const [tree, node] = nodeAndTree;
+      const [tree, node] = treeAndNode;
       const deleteResult = deleteNode(state, tree, node, timestamp);
       if (deleteResult == null) {
         return state;
@@ -767,12 +767,12 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         return state;
       }
       const { position, nodeId, treeId } = action;
-      const nodeAndTree = getTreeAndNode(skeletonTracing, nodeId, treeId, TreeTypeEnum.DEFAULT);
-      if (nodeAndTree == null) {
+      const treeAndNode = getTreeAndNode(skeletonTracing, nodeId, treeId, TreeTypeEnum.DEFAULT);
+      if (treeAndNode == null) {
         return state;
       }
 
-      const [tree, node] = nodeAndTree;
+      const [tree, node] = treeAndNode;
       const diffableMap = skeletonTracing.trees[tree.treeId].nodes;
       const newDiffableMap = diffableMap.set(
         node.id,
@@ -801,12 +801,12 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
 
     case "CREATE_BRANCHPOINT": {
       const { timestamp, nodeId, treeId } = action;
-      const nodeAndTree = getTreeAndNode(skeletonTracing, nodeId, treeId);
-      if (nodeAndTree == null) {
+      const treeAndNode = getTreeAndNode(skeletonTracing, nodeId, treeId);
+      if (treeAndNode == null) {
         return state;
       }
 
-      const [tree, node] = nodeAndTree;
+      const [tree, node] = treeAndNode;
       const branchPoint = createBranchPoint(tree, node, timestamp, restrictions);
       if (branchPoint == null) {
         return state;
@@ -1114,12 +1114,12 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
 
     case "CREATE_COMMENT": {
       const { commentText, nodeId, treeId } = action;
-      const nodeAndTree = getTreeAndNode(skeletonTracing, nodeId, treeId);
-      if (nodeAndTree == null) {
+      const treeAndNode = getTreeAndNode(skeletonTracing, nodeId, treeId);
+      if (treeAndNode == null) {
         return state;
       }
 
-      const [tree, node] = nodeAndTree;
+      const [tree, node] = treeAndNode;
       const comments = createComment(skeletonTracing, tree, node, commentText);
       if (comments == null) {
         return state;
@@ -1141,12 +1141,12 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
     }
 
     case "DELETE_COMMENT": {
-      const nodeAndTree = getTreeAndNode(skeletonTracing, action.nodeId, action.treeId);
-      if (nodeAndTree == null) {
+      const treeAndNode = getTreeAndNode(skeletonTracing, action.nodeId, action.treeId);
+      if (treeAndNode == null) {
         return state;
       }
 
-      const [tree, node] = nodeAndTree;
+      const [tree, node] = treeAndNode;
       const comments = deleteComment(skeletonTracing, tree, node);
       if (comments == null) {
         return state;

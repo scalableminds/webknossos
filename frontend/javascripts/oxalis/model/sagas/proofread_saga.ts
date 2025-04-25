@@ -24,7 +24,7 @@ import {
 import {
   enforceSkeletonTracing,
   findTreeByNodeId,
-  getNodeAndTree,
+  getTreeAndNode,
   getTreeNameForAgglomerateSkeleton,
   isSkeletonLayerTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -220,12 +220,12 @@ function* checkForAgglomerateSkeletonModification(
 
   const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.annotation));
 
-  getNodeAndTree(skeletonTracing, nodeId, treeId, TreeTypeEnum.AGGLOMERATE).map((_) => {
+  if (getTreeAndNode(skeletonTracing, nodeId, treeId, TreeTypeEnum.AGGLOMERATE)) {
     Toast.warning(
       "Agglomerate skeletons can only be modified when using the proofreading tool to add or delete edges. Consider switching to the proofreading tool or converting the skeleton to a normal tree via right-click in the Skeleton tab.",
       { timeout: 10000 },
     );
-  });
+  }
 }
 
 function* proofreadAtPosition(action: ProofreadAtPositionAction): Saga<void> {

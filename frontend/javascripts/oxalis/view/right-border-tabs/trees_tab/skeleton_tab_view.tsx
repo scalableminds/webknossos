@@ -303,8 +303,7 @@ function checkAndConfirmDeletingInitialNode(treeIds: number[]) {
   const state = Store.getState();
   const skeletonTracing = enforceSkeletonTracing(state.annotation);
 
-  const hasNodeWithIdOne = (id: number) =>
-    getTree(skeletonTracing, id).map((tree) => tree.nodes.has(1));
+  const hasNodeWithIdOne = (id: number) => getTree(skeletonTracing, id)?.nodes.has(1);
 
   const needsCheck = state.task != null && treeIds.find(hasNodeWithIdOne) != null;
   return new Promise<void>((resolve, reject) => {
@@ -814,9 +813,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
     const { showSkeletons, trees, treeGroups } = skeletonTracing;
     const activeTreeName = getActiveTree(skeletonTracing)?.name ?? "";
-    const activeGroupName = getActiveTreeGroup(skeletonTracing)
-      .map((activeGroup) => activeGroup.name)
-      .getOrElse("");
+    const activeGroupName = getActiveTreeGroup(skeletonTracing)?.name ?? "";
     const noTreesAndGroups = _.size(trees) === 0 && _.size(treeGroups) === 0;
     const orderAttribute = this.props.userConfiguration.sortTreesByName ? "name" : "timestamp";
     // Avoid that the title switches to the other title during the fadeout of the Modal

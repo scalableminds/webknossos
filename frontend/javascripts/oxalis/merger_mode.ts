@@ -482,7 +482,7 @@ function resetState(mergerModeState: Partial<MergerModeState> = {}) {
     nodes: getAllNodesWithTreeId(),
     segmentationLayerName,
     nodeToUnmappedSegmentMap: {},
-    prevTracing: getSkeletonTracing(state.annotation).get(),
+    prevTracing: getSkeletonTracing(state.annotation)!,
   };
   // Keep the object identity when resetting
   return Object.assign(mergerModeState, defaults);
@@ -502,21 +502,23 @@ export async function enableMergerMode(
   unsubscribeFunctions.push(
     Store.subscribe(() => {
       const state = Store.getState();
-      getSkeletonTracing(state.annotation).map((skeletonTracing) => {
-        const { segmentationLayerName } = mergerModeState;
+      const skeletonTracing = getSkeletonTracing(state.annotation);
+      if (!skeletonTracing) {
+        return;
+      }
+      const { segmentationLayerName } = mergerModeState;
 
-        if (!segmentationLayerName) {
-          return;
-        }
+      if (!segmentationLayerName) {
+        return;
+      }
 
-        if (skeletonTracing.tracingId !== mergerModeState.prevTracing.tracingId) {
-          // Correctly reset merger mode state in task hotswap
-          resetState(mergerModeState);
-          api.data.setMappingEnabled(false, segmentationLayerName);
-        } else {
-          updateState(mergerModeState, skeletonTracing);
-        }
-      });
+      if (skeletonTracing.tracingId !== mergerModeState.prevTracing.tracingId) {
+        // Correctly reset merger mode state in task hotswap
+        resetState(mergerModeState);
+        api.data.setMappingEnabled(false, segmentationLayerName);
+      } else {
+        updateState(mergerModeState, skeletonTracing);
+      }
     }),
   );
   // Register for single CREATE_NODE actions to avoid setting nodes outside of segments

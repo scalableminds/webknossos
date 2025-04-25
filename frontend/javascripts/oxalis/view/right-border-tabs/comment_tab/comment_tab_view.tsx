@@ -560,9 +560,7 @@ function CommentTabViewWrapper() {
   // 1. Prevent excessive re-renders
   // 2. Safe-guard that a skeleton tracing is available
 
-  const skeletonTracing = useSelector((state: OxalisState) =>
-    getSkeletonTracing(state.annotation).getOrElse(null),
-  );
+  const skeletonTracing = useSelector((state: OxalisState) => getSkeletonTracing(state.annotation));
 
   if (skeletonTracing) return <CommentTabViewMemo skeletonTracing={skeletonTracing} />;
 

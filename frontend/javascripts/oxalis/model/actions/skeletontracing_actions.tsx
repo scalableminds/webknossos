@@ -4,7 +4,7 @@ import messages from "messages";
 import type { TreeType, Vector3 } from "oxalis/constants";
 import {
   enforceSkeletonTracing,
-  getNodeAndTree,
+  getTreeAndNode,
   getTree,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
@@ -559,28 +559,30 @@ export const deleteNodeAsUserAction = (
   treeId?: number,
 ): DeleteNodeAction | NoAction | DeleteTreeAction => {
   const skeletonTracing = enforceSkeletonTracing(state.annotation);
-  return getNodeAndTree(skeletonTracing, nodeId, treeId)
-    .map(([tree, node]): DeleteNodeAction | NoAction | DeleteTreeAction => {
-      if (state.task != null && node.id === 1) {
-        // Let the user confirm the deletion of the initial node (node with id 1) of a task
-        Modal.confirm({
-          title: messages["tracing.delete_initial_node"],
-          onOk: () => {
-            Store.dispatch(deleteNodeAction(node.id, tree.treeId));
-          },
-        });
-        // As Modal.confirm is async, return noAction() and the modal will dispatch the real action
-        // if the user confirms
-        return noAction();
-      }
+  const nodeAndTree = getTreeAndNode(skeletonTracing, nodeId, treeId);
+  if (!nodeAndTree) {
+    const tree = getTree(skeletonTracing, treeId);
+    if (!tree) return noAction();
 
-      return deleteNodeAction(node.id, tree.treeId);
-    }) // If the tree is empty, it will be deleted
-    .getOrElse(
-      getTree(skeletonTracing, treeId)
-        .map((tree) => (tree.nodes.size() === 0 ? deleteTreeAction(tree.treeId) : noAction()))
-        .getOrElse(noAction()),
-    );
+    return tree.nodes.size() === 0 ? deleteTreeAction(tree.treeId) : noAction();
+  }
+
+  const [tree, node] = nodeAndTree;
+
+  if (state.task != null && node.id === 1) {
+    // Let the user confirm the deletion of the initial node (node with id 1) of a task
+    Modal.confirm({
+      title: messages["tracing.delete_initial_node"],
+      onOk: () => {
+        Store.dispatch(deleteNodeAction(node.id, tree.treeId));
+      },
+    });
+    // As Modal.confirm is async, return noAction() and the modal will dispatch the real action
+    // if the user confirms
+    return noAction();
+  }
+  // If the tree is empty, it will be deleted
+  return deleteNodeAction(node.id, tree.treeId);
 };
 
 // Let the user confirm the deletion of the initial node (node with id 1) of a task
@@ -596,20 +598,21 @@ function confirmDeletingInitialNode(treeId: number) {
 export const deleteTreeAsUserAction = (treeId?: number): NoAction => {
   const state = Store.getState();
   const skeletonTracing = enforceSkeletonTracing(state.annotation);
-  getTree(skeletonTracing, treeId).map((tree) => {
-    if (state.task != null && tree.nodes.has(1)) {
-      confirmDeletingInitialNode(tree.treeId);
-    } else if (state.userConfiguration.hideTreeRemovalWarning) {
-      Store.dispatch(deleteTreeAction(tree.treeId));
-    } else {
-      renderIndependently((destroy) => (
-        <RemoveTreeModal
-          onOk={() => Store.dispatch(deleteTreeAction(tree.treeId))}
-          destroy={destroy}
-        />
-      ));
-    }
-  });
+  const tree = getTree(skeletonTracing, treeId);
+  if (!tree) return noAction();
+
+  if (state.task != null && tree.nodes.has(1)) {
+    confirmDeletingInitialNode(tree.treeId);
+  } else if (state.userConfiguration.hideTreeRemovalWarning) {
+    Store.dispatch(deleteTreeAction(tree.treeId));
+  } else {
+    renderIndependently((destroy) => (
+      <RemoveTreeModal
+        onOk={() => Store.dispatch(deleteTreeAction(tree.treeId))}
+        destroy={destroy}
+      />
+    ));
+  }
   // As Modal.confirm is async, return noAction() and the modal will dispatch the real action
   // if the user confirms
   return noAction();

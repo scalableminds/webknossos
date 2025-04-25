@@ -53,7 +53,7 @@ import {
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
-  getNodeAndTree,
+  getTreeAndNode,
   getNodeAndTreeOrNull,
   getNodePosition,
   isSkeletonLayerTransformed,
@@ -245,7 +245,7 @@ function extractShortestPathAsNewTree(
   targetNodeId: number,
 ) {
   const { shortestPath } = api.tracing.findShortestPathBetweenNodes(sourceNodeId, targetNodeId);
-  const newTree = extractPathAsNewTree(Store.getState(), sourceTree, shortestPath).getOrElse(null);
+  const newTree = extractPathAsNewTree(Store.getState(), sourceTree, shortestPath);
   if (newTree != null) {
     const treeMap = { [newTree.treeId]: newTree };
     Store.dispatch(addTreesAndGroupsAction(treeMap, null));
@@ -1527,9 +1527,10 @@ function ContextMenuInner() {
   let nodeContextMenuNode: MutableNode | null = null;
 
   if (skeletonTracing != null && maybeClickedNodeId != null) {
-    getNodeAndTree(skeletonTracing, maybeClickedNodeId).map(([tree, node]) => {
-      nodeContextMenuNode = node;
-      nodeContextMenuTree = tree;
+    const nodeAndTree = getTreeAndNode(skeletonTracing, maybeClickedNodeId);
+    if (nodeAndTree) {
+      nodeContextMenuNode = nodeAndTree[0];
+      nodeContextMenuTree = nodeAndTree[1];
     });
   }
   // TS doesn't understand the above initialization and assumes the values
@@ -1544,7 +1545,7 @@ function ContextMenuInner() {
     nodeContextMenuNode != null ? clickedNodesPosition : globalPosition;
   const activeNode =
     activeNodeId != null && skeletonTracing != null
-      ? getNodeAndTree(skeletonTracing, activeNodeId, activeTreeId).get()[1]
+      ? getTreeAndNode(skeletonTracing, activeNodeId, activeTreeId).get()[1]
       : null;
 
   const getActiveNodePosition = () => {

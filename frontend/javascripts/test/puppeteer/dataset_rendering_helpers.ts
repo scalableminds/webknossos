@@ -1,10 +1,8 @@
 /* eslint no-await-in-loop: 0 */
 import urljoin from "url-join";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'node... Remove this comment to see the full error message
-import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
+
 import type { Browser, Page } from "puppeteer-core";
 import puppeteer from "puppeteer-core";
-import anyTest, { type ExecutionContext, type TestFn } from "ava";
 import type { PartialDatasetConfiguration } from "oxalis/store";
 import mergeImg from "merge-img";
 import pixelmatch from "pixelmatch";
@@ -13,7 +11,12 @@ import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
 import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
 import { sleep } from "libs/utils";
 import type { APIAnnotation } from "types/api_flow_types";
-import type Semaphore from "semaphore-promise";
+import { vi, type TestContext } from "vitest";
+
+vi.mock("libs/request", async (importOriginal) => {
+  // The request lib is globally mocked for the unit tests. In the screenshot tests, we actually want to run the proper fetch calls so we revert to the original implementation
+  return await importOriginal();
+});
 
 export const { WK_AUTH_TOKEN } = process.env;
 
@@ -34,6 +37,7 @@ export function getDefaultRequestOptions(baseUrl: string): RequestOptions {
   if (!WK_AUTH_TOKEN) {
     throw new Error("No WK_AUTH_TOKEN specified.");
   }
+
   return {
     host: baseUrl,
     doNotInvestigate: true,
@@ -62,16 +66,6 @@ export async function writeDatasetNameToIdMapping(
       },
       () => {},
     );
-  }
-}
-
-export function assertDatasetIds(
-  t: ExecutionContext<{ browser: Browser; release?: () => void }>,
-  datasetNames: string[],
-  datasetNameToId: Record<string, string>,
-) {
-  for (const datasetName of datasetNames) {
-    t.truthy(datasetNameToId[datasetName], `Dataset ID not found for "${datasetName}"`);
   }
 }
 
@@ -151,6 +145,7 @@ async function _screenshotAnnotationHelper(
     options?.onLoaded,
     options?.viewOverride,
   );
+
   return screenshotTracingView(page, options?.ignore3DViewport);
 }
 
@@ -187,6 +182,7 @@ export async function screenshotDatasetWithMapping(
     `webknossos.apiReady().then(async api => api.data.activateMapping("${mappingName}"))`,
   );
   await waitForMappingEnabled(page);
+
   return screenshotTracingView(page);
 }
 export async function screenshotDatasetWithMappingLink(
@@ -207,6 +203,7 @@ export async function screenshotDatasetWithMappingLink(
   );
   await openTracingView(page, baseUrl, createdExplorational.id, undefined, viewOverride);
   await waitForMappingEnabled(page);
+
   return screenshotTracingView(page);
 }
 export async function screenshotSandboxWithMappingLink(
@@ -217,6 +214,7 @@ export async function screenshotSandboxWithMappingLink(
 ): Promise<Screenshot> {
   await openSandboxView(page, baseUrl, datasetId, viewOverride);
   await waitForMappingEnabled(page);
+
   return screenshotTracingView(page);
 }
 
@@ -294,15 +292,19 @@ async function openTracingView(
 ) {
   const urlSlug = viewOverride != null ? `#${viewOverride}` : "";
   const url = urljoin(baseUrl, `/annotations/${annotationId}${urlSlug}`);
+
   console.log(`Opening annotation view at ${url}`);
   await page.goto(url, {
     timeout: 0,
   });
+
   await waitForTracingViewLoad(page);
   console.log("Loaded annotation view");
+
   if (onLoaded != null) {
     await onLoaded();
   }
+
   await waitForRenderingFinish(page);
   console.log("Finished rendering annotation view");
 }
@@ -314,12 +316,14 @@ async function openDatasetView(
 ) {
   const urlSlug = viewOverride != null ? `#${viewOverride}` : "";
   const url = urljoin(baseUrl, `/view${urlSlug}`);
+
   console.log(`Opening dataset view at ${url}`);
   await page.goto(url, {
     timeout: 0,
   });
   await waitForTracingViewLoad(page);
   console.log("Loaded dataset view");
+
   await waitForRenderingFinish(page);
   console.log("Finished rendering dataset view");
 }
@@ -332,12 +336,14 @@ async function openSandboxView(
 ) {
   const urlSlug = viewOverride != null ? `#${viewOverride}` : "";
   const url = urljoin(baseUrl, `/datasets/${datasetId}/sandbox/skeleton${urlSlug}`);
+
   console.log(`Opening sandbox annotation view at ${url}`);
   await page.goto(url, {
     timeout: 0,
   });
   await waitForTracingViewLoad(page);
   console.log("Loaded annotation view");
+
   await waitForRenderingFinish(page);
   console.log("Finished rendering annotation view");
 }
@@ -384,6 +390,7 @@ export async function screenshotTracingView(
   await revertOpacityIfNecessary();
   // Concatenate all screenshots
   const img = await mergeImg(screenshots);
+
   return new Promise((resolve) => {
     img.getBuffer("image/png", (_, buffer) =>
       resolve({
@@ -397,6 +404,7 @@ export async function screenshotTracingView(
 
 export async function getNewPage(browser: Browser) {
   const page = await browser.newPage();
+
   page.setViewport({
     width: PAGE_WIDTH,
     height: PAGE_HEIGHT,
@@ -405,6 +413,7 @@ export async function getNewPage(browser: Browser) {
     // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | undefined' is not assignable to typ... Remove this comment to see the full error message
     "X-Auth-Token": WK_AUTH_TOKEN,
   });
+
   return page;
 }
 
@@ -426,71 +435,56 @@ export async function withRetry(
   }
 }
 
-// Ava's recommendation for Typescript types
-// https://github.com/avajs/ava/blob/main/docs/recipes/typescript.md#typing-tcontext
-export const test = anyTest as TestFn<{
+// Define the test context type to be compatible with the test files
+export interface ScreenshotTestContext extends TestContext {
   browser: Browser;
-  release?: () => void;
-}>;
+}
 
-export function setupBeforeEachAndAfterEach(semaphore?: Semaphore) {
-  test.beforeEach(async (t) => {
-    if (semaphore) {
-      t.context.release = await semaphore.acquire();
-    }
-    if (USE_LOCAL_CHROME) {
-      // Use this for connecting to local Chrome browser instance
-      t.context.browser = await puppeteer.launch({
-        args: HEADLESS
-          ? [
-              "--headless=false",
-              "--hide-scrollbars",
-              "--no-sandbox",
-              "--disable-setuid-sandbox",
-              "--disable-dev-shm-usage",
-              "--use-angle=gl-egl",
-            ]
-          : [],
-        headless: HEADLESS ? "new" : false, // use "new" to suppress warnings
-        dumpio: true,
-        executablePath: "/usr/bin/google-chrome", // this might need to be adapted to your local setup
-      });
-    } else {
-      checkBrowserstackCredentials();
+export async function setupBeforeEach(context: ScreenshotTestContext) {
+  if (USE_LOCAL_CHROME) {
+    // Use this for connecting to local Chrome browser instance
+    context.browser = await puppeteer.launch({
+      args: HEADLESS
+        ? [
+            "--headless=false",
+            "--hide-scrollbars",
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--use-angle=gl-egl",
+          ]
+        : [],
+      headless: HEADLESS ? "new" : false, // use "new" to suppress warnings
+      dumpio: true,
+      executablePath: "/usr/bin/google-chrome", // Linux; this might need to be adapted to your local setup
+      // executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", // Mac
+    });
+  } else {
+    checkBrowserstackCredentials();
 
-      const caps = {
-        browser: "chrome",
-        browser_version: "latest",
-        os: "os x",
-        os_version: "mojave",
-        name: t.title, // add test name to BrowserStack session
-        "browserstack.username": process.env.BROWSERSTACK_USERNAME,
-        "browserstack.accessKey": process.env.BROWSERSTACK_ACCESS_KEY,
-      };
-      const browser = await puppeteer.connect({
-        browserWSEndpoint: `ws://cdp.browserstack.com/puppeteer?caps=${encodeURIComponent(
-          JSON.stringify(caps),
-        )}`,
-      });
-      t.context.browser = browser;
-      console.log(`\nBrowserStack Session Id ${await getBrowserstackSessionId(browser)}\n`);
-    }
+    const caps = {
+      browser: "chrome",
+      browser_version: "latest",
+      os: "os x",
+      os_version: "mojave",
+      name: context.task.name, // add test name to BrowserStack session
+      "browserstack.username": process.env.BROWSERSTACK_USERNAME,
+      "browserstack.accessKey": process.env.BROWSERSTACK_ACCESS_KEY,
+    };
+    const browser = await puppeteer.connect({
+      browserWSEndpoint: `ws://cdp.browserstack.com/puppeteer?caps=${encodeURIComponent(
+        JSON.stringify(caps),
+      )}`,
+    });
+    context.browser = browser;
+    console.log(`\nBrowserStack Session Id ${await getBrowserstackSessionId(browser)}\n`);
+  }
 
-    console.log(`\nRunning chrome version ${await t.context.browser.version()}\n`);
-    global.Headers = Headers;
-    global.fetch = fetch;
-    global.Request = Request;
-    global.Response = Response;
-    // @ts-expect-error ts-migrate(7017) FIXME: Element implicitly has an 'any' type because type ... Remove this comment to see the full error message
-    global.FetchError = FetchError;
-  });
+  console.log(`\nRunning chrome version ${await context.browser.version()}\n`);
+}
 
-  test.afterEach.always(async (t) => {
-    if (t.context.release != null) {
-      t.context.release();
-    }
-    await t.context.browser.close();
-  });
+export async function setupAfterEach(context: ScreenshotTestContext) {
+  await context.browser.close();
 }
 
 async function getBrowserstackSessionId(browser: Browser) {
@@ -501,6 +495,7 @@ async function getBrowserstackSessionId(browser: Browser) {
   )) as unknown as string;
 
   const sessionDetails = await JSON.parse(response);
+
   return sessionDetails.hashed_id;
 }
 
@@ -511,5 +506,3 @@ export function checkBrowserstackCredentials() {
     );
   }
 }
-
-export default {};

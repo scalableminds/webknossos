@@ -20,6 +20,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Updated screenshot tests to use `vitest` framework instead of `ava`. [#8553](https://github.com/scalableminds/webknossos/pull/8553)
 
 ### Fixed
+- Fixed a bug in the trees tab where the color change of a tree would affect the tree on which the context menu was previously opened. [#8562](https://github.com/scalableminds/webknossos/pull/8562)
 
 ### Removed
 - The Annotation update route can no longer update the description of the annotation. Please set the description before uploading the annotation instead. You can still edit the description in the UI. [#8533](https://github.com/scalableminds/webknossos/pull/8533)

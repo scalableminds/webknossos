@@ -347,8 +347,6 @@ export default class SegmentMeshController {
       [-1, -1, -1],
     ];
 
-    const directionalLights: THREE.DirectionalLight[] = [];
-
     lightPositions.forEach((pos, index) => {
       const light = new THREE.DirectionalLight(
         WHITE,
@@ -356,7 +354,6 @@ export default class SegmentMeshController {
         settings[`dirLight${index + 1}Intensity`] || 1,
       );
       light.position.set(...pos).normalize();
-      directionalLights.push(light);
       this.meshesLODRootGroup.add(light);
     });
   }

@@ -1656,10 +1656,7 @@ class SegmentsView extends React.Component<Props, State> {
 
   getMultiSelectMenu = (): MenuProps => {
     const doSelectedSegmentsHaveAnyMeshes = this.doesGroupHaveAnyMeshes(null);
-    const keyLength = 5;
     return {
-      // @ts-ignore We enforce a new key for each rendered menu. As there is no clear id for the segments / groups selected we pick a random number.
-      key: `segment-list-context-menu-multi-${Math.floor(Math.random() * 10 ** keyLength)}`,
       items: _.flatten([
         this.getLoadMeshesFromFileMenuItem(null),
         this.getComputeMeshesAdHocMenuItem(null),

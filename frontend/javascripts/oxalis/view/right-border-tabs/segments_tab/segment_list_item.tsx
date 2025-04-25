@@ -432,8 +432,6 @@ function _SegmentListItem({
       mesh != null ? mesh.opacity : Constants.DEFAULT_MESH_OPACITY,
     ];
     return {
-      // @ts-ignore We enforce a new key for each segment to enforce menu rerendering once the segment changes.
-      key: `segment-list-context-menu-${segment.id}`,
       items: [
         getLoadPrecomputedMeshMenuItem(
           segment,

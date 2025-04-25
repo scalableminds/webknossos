@@ -16,7 +16,7 @@ The recommended steps for splitting a segment are as follows:
 
 ## Troubleshooting
 
-- It can easily happen that the floodfill operation relabels the entire segment instead of only the part you intended to relabel. The cause of this is usually that the 3D surface doesn't cut the segment completely. Instead, the surface might only go very close to the edge. In that case, the floodfill operation can traverse over that edge and thus relabel everything (see image below). If this happens, you should undo the fill operation and double-check the surface. To avoid this problem, it is recommended to make the surface a bit bigger than usual.
+- It can easily happen that the flood-fill operation relabels the entire segment instead of only the part you intended to relabel. This is usually caused by the 3D surface not completely cutting through the segment. Instead, the surface might only go very close to the edge. In that case, the flood-fill operation can traverse over that edge and thus relabel everything (see image below). If this happens, you should undo the fill operation and double-check the surface. To avoid this problem, it is recommended to draw the splitting surface a bit bigger than the actual segment boundaries.
 - If multiple spline curves appear per slice, this is often due to a configuration issue. Please adapt the clipping distance in the left sidebar ("Layers" -> "Skeleton").
 
 ![A visualization of a floodfill operation "bleeding" across the boundary because the boundary is not precise enough](../images/splitting-floodfill-visualization.png)

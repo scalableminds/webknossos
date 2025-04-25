@@ -1,7 +1,7 @@
 # Split Segments Toolkit
 
 As explained in the [Toolkits](../ui/toolbar.md#Toolkits) section, there is a dedicated toolkit for splitting segments in your volume annotation.
-When this toolkit is activated, you can create a curved 3D surface and use it to split a segment into two.
+With this toolkit activated, you can draw a curved 3D surface to split a segment into two along this interface.
 
 ## Workflow
 

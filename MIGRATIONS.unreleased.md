@@ -9,3 +9,7 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/25.04.0...HEAD)
 
 ### Postgres Evolutions:
+
+- [129-credit-transactions.sql](conf/evolutions/129-credit-transactions.sql)
+- [130-replace-text-types.sql](conf/evolutions/130-replace-text-types.sql)
+- [131-add-webauthn-credentials.sql](./conf/evolutions/131-add-webauthn-credentials.sql)

@@ -97,13 +97,13 @@ function getNearestTreeId(treeId: number, trees: TreeMap): number {
   return sortedTreeIds[higherOrNearestId];
 }
 
-export function getMaximumGroupId(groups: Array<TreeGroup>): number {
+export function getMaximumGroupId(groups: TreeGroup[]): number {
   const maxGroupId = _.max(Array.from(mapGroupsToGenerator(groups, (group) => group.groupId)));
 
   return maxGroupId != null && maxGroupId >= 0 ? maxGroupId : 0;
 }
 
-function forEachGroups(groups: Array<TreeGroup>, callback: (arg0: TreeGroup) => any) {
+function forEachGroups(groups: TreeGroup[], callback: (arg0: TreeGroup) => any) {
   for (const group of groups) {
     callback(group);
 
@@ -266,8 +266,8 @@ function splitTreeByNodes(
   state: OxalisState,
   skeletonTracing: SkeletonTracing,
   activeTree: Tree,
-  newTreeRootIds: Array<number>,
-  deletedEdges: Array<Edge>,
+  newTreeRootIds: number[],
+  deletedEdges: Edge[],
   timestamp: number,
 ): TreeMap {
   // This function splits a given tree by deleting the given edges and making the
@@ -880,12 +880,12 @@ function serverBranchPointToMutableBranchPoint(b: ServerBranchPoint): MutableBra
 }
 
 export function createMutableTreeMapFromTreeArray(
-  trees: Array<ServerSkeletonTracingTree>,
+  trees: ServerSkeletonTracingTree[],
 ): MutableTreeMap {
   return _.keyBy(
     trees.map(
       (tree): MutableTree => ({
-        comments: tree.comments as any as Array<MutableCommentType>,
+        comments: tree.comments as any as MutableCommentType[],
         edges: EdgeCollection.loadFromArray(tree.edges),
         name: tree.name,
         treeId: tree.treeId,
@@ -908,12 +908,12 @@ export function createMutableTreeMapFromTreeArray(
     "treeId",
   );
 }
-export function createTreeMapFromTreeArray(trees: Array<ServerSkeletonTracingTree>): TreeMap {
+export function createTreeMapFromTreeArray(trees: ServerSkeletonTracingTree[]): TreeMap {
   return createMutableTreeMapFromTreeArray(trees) as any as TreeMap;
 }
 export function removeMissingGroupsFromTrees(
   skeletonTracing: SkeletonTracing,
-  treeGroups: Array<TreeGroup>,
+  treeGroups: TreeGroup[],
 ): TreeMap {
   // Change the groupId of trees for groups that no longer exist
   const groupIds = new Set(mapGroupsToGenerator(treeGroups, (group) => group.groupId));

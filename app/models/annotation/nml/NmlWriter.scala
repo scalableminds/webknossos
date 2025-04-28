@@ -8,7 +8,7 @@ import com.scalableminds.util.xml.Xml
 import com.scalableminds.webknossos.datastore.Annotation.{AnnotationProto, AnnotationUserStateProto}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
-import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup}
+import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing}
 import com.scalableminds.webknossos.datastore.geometry._
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayerType, FetchedAnnotationLayer}
@@ -63,11 +63,12 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
       os => {
         implicit val writer: IndentingXMLStreamWriter =
           new IndentingXMLStreamWriter(outputService.createXMLStreamWriter(os))
-
+        val annotationLayersWithAppliedUserState =
+          renderUserState(annotationProto, annotationLayers, requestingUser, annotationOwner)
         for {
           nml <- toNmlWithImplicitWriter(
             annotationProto,
-            annotationLayers,
+            annotationLayersWithAppliedUserState,
             annotation,
             scale,
             volumeFilename,
@@ -78,27 +79,90 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
             annotationOwner,
             annotationTask,
             skipVolumeData,
-            volumeDataZipFormat,
-            requestingUser
+            volumeDataZipFormat
           )
         } yield nml
       }
     )
 
-  private def toNmlWithImplicitWriter(annotationProto: AnnotationProto,
-                                      annotationLayers: List[FetchedAnnotationLayer],
-                                      annotation: Option[Annotation],
-                                      voxelSize: Option[VoxelSize],
-                                      volumeFilename: Option[String],
-                                      organizationId: String,
-                                      wkUrl: String,
-                                      datasetName: String,
-                                      datasetId: ObjectId,
-                                      annotationOwner: User,
-                                      annotationTask: Option[Task],
-                                      skipVolumeData: Boolean,
-                                      volumeDataZipFormat: VolumeDataZipFormat,
-                                      requestingUser: Option[User])(implicit writer: XMLStreamWriter): Fox[Unit] =
+  // TODO move to trait
+  private def renderUserState(annotationProto: AnnotationProto,
+                              annotationLayers: List[FetchedAnnotationLayer],
+                              requestingUser: Option[User],
+                              annotationOwner: User): List[FetchedAnnotationLayer] = {
+    val annotationUserState = findBestUserStateFor(annotationProto, requestingUser, annotationOwner)
+    annotationLayers.map { annotationLayer =>
+      annotationLayer.copy(
+        tracing =
+          renderUserStateForTracing(annotationLayer.tracing, annotationUserState, requestingUser, annotationOwner))
+    }
+  }
+
+  // TODO move to trait
+  private def findBestUserStateFor(annotationProto: AnnotationProto,
+                                   requestingUserOpt: Option[User],
+                                   annotationOwner: User): Option[AnnotationUserStateProto] =
+    annotationProto.userStates
+      .find(_.userId == requestingUserOpt.getOrElse(annotationOwner)._id.toString)
+      .orElse(annotationProto.userStates.find(_.userId == annotationOwner._id.toString))
+
+  // TODO move to trait
+  private def renderUserStateForTracing(tracing: Either[SkeletonTracing, VolumeTracing],
+                                        annotationUserState: Option[AnnotationUserStateProto],
+                                        requestingUser: Option[User],
+                                        annotationOwner: User): Either[SkeletonTracing, VolumeTracing] = tracing match {
+    case Left(s: SkeletonTracing) =>
+      val requestingUserTreeVisibilityMap: Map[Int, Boolean] = requestingUser
+        .flatMap(u => s.userStates.find(_.userId == u._id.toString))
+        .map(userState => userState.treeIds.zip(userState.treeVisibilities).toMap)
+        .getOrElse(Map.empty[Int, Boolean])
+      val ownerTreeVisibilityMap: Map[Int, Boolean] = s.userStates
+        .find(_.userId == annotationOwner._id.toString)
+        .map(userState => userState.treeIds.zip(userState.treeVisibilities).toMap)
+        .getOrElse(Map.empty[Int, Boolean])
+      Left(
+        s.copy(
+          editPosition = annotationUserState.map(_.editPosition).getOrElse(s.editPosition),
+          editRotation = annotationUserState.map(_.editRotation).getOrElse(s.editRotation),
+          zoomLevel = annotationUserState.map(_.zoomLevel).getOrElse(s.zoomLevel),
+          editPositionAdditionalCoordinates =
+            annotationUserState.map(_.editPositionAdditionalCoordinates).getOrElse(s.editPositionAdditionalCoordinates),
+          trees = s.trees.map { tree =>
+            tree.copy(
+              isVisible = requestingUserTreeVisibilityMap
+                .get(tree.treeId)
+                .orElse(ownerTreeVisibilityMap.get(tree.treeId))
+                .orElse(tree.isVisible)
+            )
+          }
+        )
+      )
+    case Right(v: VolumeTracing) =>
+      Right(
+        v.copy(
+          editPosition = annotationUserState.map(_.editPosition).getOrElse(v.editPosition),
+          editRotation = annotationUserState.map(_.editRotation).getOrElse(v.editRotation),
+          zoomLevel = annotationUserState.map(_.zoomLevel).getOrElse(v.zoomLevel),
+          editPositionAdditionalCoordinates =
+            annotationUserState.map(_.editPositionAdditionalCoordinates).getOrElse(v.editPositionAdditionalCoordinates)
+        )
+      )
+  }
+
+  private def toNmlWithImplicitWriter(
+      annotationProto: AnnotationProto,
+      annotationLayers: List[FetchedAnnotationLayer],
+      annotation: Option[Annotation],
+      voxelSize: Option[VoxelSize],
+      volumeFilename: Option[String],
+      organizationId: String,
+      wkUrl: String,
+      datasetName: String,
+      datasetId: ObjectId,
+      annotationOwner: User,
+      annotationTask: Option[Task],
+      skipVolumeData: Boolean,
+      volumeDataZipFormat: VolumeDataZipFormat)(implicit writer: XMLStreamWriter): Fox[Unit] =
     for {
       _ <- Xml.withinElement("things") {
         for {
@@ -108,7 +172,6 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
           _ <- Fox.fromBool(skeletonLayers.length <= 1) ?~> "annotation.download.multipleSkeletons"
           _ <- Fox.fromBool(volumeFilename.isEmpty || volumeLayers.length <= 1) ?~> "annotation.download.volumeNameForMultiple"
           parameters <- extractTracingParameters(
-            annotationProto,
             skeletonLayers,
             volumeLayers,
             annotation: Option[Annotation],
@@ -116,9 +179,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
             wkUrl,
             datasetName,
             datasetId,
-            voxelSize,
-            annotationOwner,
-            requestingUser
+            voxelSize
           )
           _ = writeParameters(parameters)
           _ = annotationLayers.filter(_.typ == AnnotationLayerType.Skeleton).map(_.tracing).foreach {
@@ -140,28 +201,16 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
       _ = writer.close()
     } yield ()
 
-  // TODO move to trait
-  private def findBestUserStateFor(annotationProto: AnnotationProto,
-                                   requestingUserOpt: Option[User],
-                                   annotationOwner: User): Option[AnnotationUserStateProto] =
-    annotationProto.userStates
-      .find(_.userId == requestingUserOpt.getOrElse(annotationOwner)._id.toString)
-      .orElse(annotationProto.userStates.find(_.userId == annotationOwner._id.toString))
-
-  private def extractTracingParameters(annotationProto: AnnotationProto,
-                                       skeletonLayers: List[FetchedAnnotationLayer],
+  private def extractTracingParameters(skeletonLayers: List[FetchedAnnotationLayer],
                                        volumeLayers: List[FetchedAnnotationLayer],
                                        annotation: Option[Annotation],
                                        organizationId: String,
                                        wkUrl: String,
                                        datasetName: String,
                                        datasetId: ObjectId,
-                                       voxelSize: Option[VoxelSize],
-                                       annotationOwner: User,
-                                       requestingUser: Option[User]): Fox[NmlParameters] =
+                                       voxelSize: Option[VoxelSize]): Fox[NmlParameters] =
     for {
       parameterSourceAnnotationLayer <- selectLayerWithPrecedenceFetched(skeletonLayers, volumeLayers)
-      annotationUserState = findBestUserStateFor(annotationProto, requestingUser, annotationOwner)
       nmlParameters = parameterSourceAnnotationLayer.tracing match {
         case Left(s) =>
           NmlParameters(
@@ -172,14 +221,14 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
             wkUrl,
             voxelSize,
             s.createdTimestamp,
-            annotationUserState.map(_.editPosition).getOrElse(s.editPosition),
-            annotationUserState.map(_.editRotation).getOrElse(s.editRotation),
-            annotationUserState.map(_.zoomLevel).getOrElse(s.zoomLevel),
+            s.editPosition,
+            s.editRotation,
+            s.zoomLevel,
             s.activeNodeId,
             s.userBoundingBoxes ++ s.userBoundingBox.map(NamedBoundingBoxProto(0, None, None, None, _)),
             s.boundingBox,
             s.additionalAxes,
-            annotationUserState.map(_.editPositionAdditionalCoordinates).getOrElse(s.editPositionAdditionalCoordinates)
+            s.editPositionAdditionalCoordinates
           )
         case Right(v) =>
           NmlParameters(
@@ -190,14 +239,14 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
             wkUrl,
             voxelSize,
             v.createdTimestamp,
-            annotationUserState.map(_.editPosition).getOrElse(v.editPosition),
-            annotationUserState.map(_.editRotation).getOrElse(v.editRotation),
-            annotationUserState.map(_.zoomLevel).getOrElse(v.zoomLevel),
+            v.editPosition,
+            v.editRotation,
+            v.zoomLevel,
             None,
             v.userBoundingBoxes ++ v.userBoundingBox.map(NamedBoundingBoxProto(0, None, None, None, _)),
             if (annotation.exists(_._task.isDefined)) Some(v.boundingBox) else None,
             v.additionalAxes,
-            annotationUserState.map(_.editPositionAdditionalCoordinates).getOrElse(v.editPositionAdditionalCoordinates)
+            v.editPositionAdditionalCoordinates
           )
       }
     } yield nmlParameters

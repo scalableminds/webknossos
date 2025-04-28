@@ -6,7 +6,7 @@ import play.api.libs.json.{JsObject, Json}
 
 case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
 
-  val bottomRight: Vec3Int = topLeft.move(width, height, depth)
+  lazy val bottomRight: Vec3Int = topLeft.move(width, height, depth)
 
   def intersects(other: BoundingBox): Boolean =
     math.max(topLeft.x, other.topLeft.x) < math.min(bottomRight.x, other.bottomRight.x) &&
@@ -45,6 +45,9 @@ case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
     BoundingBox(Vec3Int(x, y, z), w, h, d)
   }
 
+  def isFullyContainedIn(other: BoundingBox): Boolean =
+    this.intersection(other).contains(this)
+
   def isEmpty: Boolean =
     width <= 0 || height <= 0 || depth <= 0
 
@@ -60,6 +63,9 @@ case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
   def /(that: Vec3Int): BoundingBox =
     // Since floorDiv is used for topLeft, ceilDiv is used for the size to avoid voxels being lost at the border
     BoundingBox(topLeft / that, ceilDiv(width, that.x), ceilDiv(height, that.y), ceilDiv(depth, that.z))
+
+  def move(delta: Vec3Int): BoundingBox =
+    this.copy(topLeft = this.topLeft + delta)
 
   def toSql: List[Int] =
     List(topLeft.x, topLeft.y, topLeft.z, width, height, depth)

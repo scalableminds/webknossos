@@ -434,7 +434,8 @@ object AbstractDataLayer {
       layer.defaultViewConfiguration,
       layer.adminViewConfiguration,
       layer.coordinateTransformations,
-      layer.additionalAxes
+      layer.additionalAxes,
+      layer.specialFiles
     )
 
   implicit val jsonFormat: OFormat[AbstractDataLayer] = Json.format[AbstractDataLayer]
@@ -469,7 +470,8 @@ object AbstractSegmentationLayer {
       layer.defaultViewConfiguration,
       layer.adminViewConfiguration,
       layer.coordinateTransformations,
-      layer.additionalAxes
+      layer.additionalAxes,
+      layer.specialFiles
     )
 
   implicit val jsonFormat: OFormat[AbstractSegmentationLayer] = Json.format[AbstractSegmentationLayer]

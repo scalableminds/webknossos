@@ -93,9 +93,8 @@ object DatasetCompactInfo {
   implicit val jsonFormat: Format[DatasetCompactInfo] = Json.format[DatasetCompactInfo]
 }
 
-class DatasetDAO @Inject()(sqlClient: SqlClient,
-                           datasetLayerDAO: DatasetLayerDAO,
-                           organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
+class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDAO, organizationDAO: OrganizationDAO)(
+    implicit ec: ExecutionContext)
     extends SQLDAO[Dataset, DatasetsRow, Datasets](sqlClient) {
   protected val collection = Datasets
 
@@ -997,7 +996,7 @@ class DatasetLayerSpecialFilesDAO @Inject()(sqlClient: SqlClient)(implicit ec: E
     val insertQueries = dataLayersOpt.getOrElse(List.empty).flatMap { layer: DataLayer =>
       layer.specialFiles.getOrElse(List.empty).map { specialFile =>
         {
-          q"""INSERT INTO webknossos.dataset_layer_special_files(_dataset, layerName, fileName, fileType)
+          q"""INSERT INTO webknossos.dataset_layer_special_files(_dataset, layerName, path, type)
               values(
               $datasetId, ${layer.name}, ${specialFile.source.toString}, ${specialFile.typ})
               """.asUpdate

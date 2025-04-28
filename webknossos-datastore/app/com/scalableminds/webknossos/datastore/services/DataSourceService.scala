@@ -212,7 +212,7 @@ class DataSourceService @Inject()(
       .exploreMappings(dataBaseDir.resolve(organizationId).resolve(datasetName).resolve(dataLayerName))
       .getOrElse(Set())
 
-  private def validateDataSource(dataSource: DataSource): Box[Unit] = {
+  private def validateDataSource(dataSource: DataSource, organizationDir: Path): Box[Unit] = {
     def Check(expression: Boolean, msg: String): Option[String] = if (!expression) Some(msg) else None
 
     // Check that when mags are sorted by max dimension, all dimensions are sorted.
@@ -221,6 +221,16 @@ class DataSourceService @Inject()(
     val magsXIsSorted = magsSorted.map(_.map(_.x)) == magsSorted.map(_.map(_.x).sorted)
     val magsYIsSorted = magsSorted.map(_.map(_.y)) == magsSorted.map(_.map(_.y).sorted)
     val magsZIsSorted = magsSorted.map(_.map(_.z)) == magsSorted.map(_.map(_.z).sorted)
+
+    def pathOk(pathStr: String): Boolean = {
+      val uri = new URI(pathStr)
+      if (DataVaultService.isRemoteScheme(uri.getScheme)) true
+      else {
+        val path = Path.of(new URI(pathStr).getPath).normalize().toAbsolutePath
+        val allowedParent = organizationDir.toAbsolutePath
+        if (path.startsWith(allowedParent)) true else false
+      }
+    }
 
     val errors = List(
       Check(dataSource.scale.factor.isStrictlyPositive, "DataSource voxel size (scale) is invalid"),
@@ -242,6 +252,10 @@ class DataSourceService @Inject()(
       Check(
         dataSource.dataLayers.map(_.name).distinct.length == dataSource.dataLayers.length,
         "Layer names must be unique. At least two layers have the same name."
+      ),
+      Check(
+        dataSource.dataLayers.flatMap(_.mags).flatMap(_.path).forall(pathOk),
+        "Mags with explicit paths must stay within the organization directory."
       )
     ).flatten
 
@@ -252,10 +266,11 @@ class DataSourceService @Inject()(
     }
   }
 
-  def updateDataSource(dataSource: DataSource, expectExisting: Boolean): Fox[Unit] =
+  def updateDataSource(dataSource: DataSource, expectExisting: Boolean): Fox[Unit] = {
+    val organizationDir = dataBaseDir.resolve(dataSource.id.organizationId)
+    val dataSourcePath = organizationDir.resolve(dataSource.id.directoryName)
     for {
-      _ <- validateDataSource(dataSource).toFox
-      dataSourcePath = dataBaseDir.resolve(dataSource.id.organizationId).resolve(dataSource.id.directoryName)
+      _ <- validateDataSource(dataSource, organizationDir).toFox
       propertiesFile = dataSourcePath.resolve(propertiesFileName)
       _ <- Fox.runIf(!expectExisting)(ensureDirectoryBox(dataSourcePath).toFox)
       _ <- Fox.runIf(!expectExisting)(Fox.fromBool(!Files.exists(propertiesFile))) ?~> "dataSource.alreadyPresent"
@@ -263,6 +278,7 @@ class DataSourceService @Inject()(
       _ <- JsonHelper.writeToFile(propertiesFile, dataSource).toFox ?~> "Could not update datasource-properties.json"
       _ <- dataSourceRepository.updateDataSource(dataSource)
     } yield ()
+  }
 
   private def backupPreviousProperties(dataSourcePath: Path): Box[Unit] = {
     val propertiesFile = dataSourcePath.resolve(propertiesFileName)

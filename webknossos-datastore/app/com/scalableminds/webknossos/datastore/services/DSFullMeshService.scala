@@ -4,8 +4,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox, option2Fox}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, VoxelPosition}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, SegmentationLayer}
@@ -43,6 +42,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
                                   adHocMeshServiceHolder: AdHocMeshServiceHolder)
     extends LazyLogging
     with FullMeshHelper
+    with FoxImplicits
     with MeshMappingHelper {
 
   val binaryDataService: BinaryDataService = binaryDataServiceHolder.binaryDataService
@@ -166,14 +166,16 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
                                  chunkInfo: MeshChunk,
                                  transform: Array[Array[Double]])(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
-      (dracoMeshChunkBytes, encoding) <- meshFileService.readMeshChunk(
-        organizationId,
-        datasetDirectoryName,
-        layerName,
-        MeshChunkDataRequestList(meshfileName, List(MeshChunkDataRequest(chunkInfo.byteOffset, chunkInfo.byteSize)))
-      ) ?~> "mesh.file.loadChunk.failed"
-      _ <- bool2Fox(encoding == "draco") ?~> s"meshfile encoding is $encoding, only draco is supported"
-      scale <- tryo(Vec3Double(transform(0)(0), transform(1)(1), transform(2)(2))) ?~> "could not extract scale from meshfile transform attribute"
+      (dracoMeshChunkBytes, encoding) <- meshFileService
+        .readMeshChunk(
+          organizationId,
+          datasetDirectoryName,
+          layerName,
+          MeshChunkDataRequestList(meshfileName, List(MeshChunkDataRequest(chunkInfo.byteOffset, chunkInfo.byteSize)))
+        )
+        .toFox ?~> "mesh.file.loadChunk.failed"
+      _ <- Fox.fromBool(encoding == "draco") ?~> s"meshfile encoding is $encoding, only draco is supported"
+      scale <- tryo(Vec3Double(transform(0)(0), transform(1)(1), transform(2)(2))).toFox ?~> "could not extract scale from meshfile transform attribute"
       stlEncodedChunk <- tryo(
         dracoToStlConverter.dracoToStl(dracoMeshChunkBytes,
                                        chunkInfo.position.x,
@@ -181,7 +183,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
                                        chunkInfo.position.z,
                                        scale.x,
                                        scale.y,
-                                       scale.z))
+                                       scale.z)).toFox
     } yield stlEncodedChunk
 
 }

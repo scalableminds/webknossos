@@ -5,6 +5,7 @@ import type { Vector3 } from "oxalis/constants";
 import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { getInverseSegmentationTransformer } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import {
+  enforceSkeletonTracing,
   getNodePosition,
   getSkeletonTracing,
   transformNodePosition,
@@ -475,6 +476,7 @@ function resetState(mergerModeState: Partial<MergerModeState> = {}) {
   const state = Store.getState();
   const visibleLayer = getVisibleSegmentationLayer(state);
   const segmentationLayerName = visibleLayer != null ? visibleLayer.name : null;
+
   const defaults: MergerModeState = {
     treeIdToRepresentativeSegmentId: {},
     idMapping: new Map(),
@@ -482,7 +484,7 @@ function resetState(mergerModeState: Partial<MergerModeState> = {}) {
     nodes: getAllNodesWithTreeId(),
     segmentationLayerName,
     nodeToUnmappedSegmentMap: {},
-    prevTracing: getSkeletonTracing(state.annotation)!,
+    prevTracing: enforceSkeletonTracing(state.annotation),
   };
   // Keep the object identity when resetting
   return Object.assign(mergerModeState, defaults);

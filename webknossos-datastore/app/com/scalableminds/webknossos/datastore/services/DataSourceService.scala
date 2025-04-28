@@ -63,7 +63,7 @@ class DataSourceService @Inject()(
   def assertDataDirWritable(organizationId: String): Fox[Unit] = {
     val orgaPath = dataBaseDir.resolve(organizationId)
     if (orgaPath.toFile.exists()) {
-      Fox.bool2Fox(Files.isWritable(dataBaseDir.resolve(organizationId))) ?~> "Datastore cannot write to organization data directory."
+      Fox.fromBool(Files.isWritable(dataBaseDir.resolve(organizationId))) ?~> "Datastore cannot write to organization data directory."
     } else {
       tryo {
         Files.createDirectory(orgaPath)
@@ -272,10 +272,10 @@ class DataSourceService @Inject()(
     for {
       _ <- validateDataSource(dataSource, organizationDir).toFox
       propertiesFile = dataSourcePath.resolve(propertiesFileName)
-      _ <- Fox.runIf(!expectExisting)(ensureDirectoryBox(dataSourcePath))
-      _ <- Fox.runIf(!expectExisting)(bool2Fox(!Files.exists(propertiesFile))) ?~> "dataSource.alreadyPresent"
-      _ <- Fox.runIf(expectExisting)(backupPreviousProperties(dataSourcePath)) ?~> "Could not update datasource-properties.json"
-      _ <- JsonHelper.jsonToFile(propertiesFile, dataSource) ?~> "Could not update datasource-properties.json"
+      _ <- Fox.runIf(!expectExisting)(ensureDirectoryBox(dataSourcePath).toFox)
+      _ <- Fox.runIf(!expectExisting)(Fox.fromBool(!Files.exists(propertiesFile))) ?~> "dataSource.alreadyPresent"
+      _ <- Fox.runIf(expectExisting)(backupPreviousProperties(dataSourcePath).toFox) ?~> "Could not update datasource-properties.json"
+      _ <- JsonHelper.writeToFile(propertiesFile, dataSource).toFox ?~> "Could not update datasource-properties.json"
       _ <- dataSourceRepository.updateDataSource(dataSource)
     } yield ()
   }
@@ -322,7 +322,7 @@ class DataSourceService @Inject()(
     val propertiesFile = path.resolve(propertiesFileName)
 
     if (new File(propertiesFile.toString).exists()) {
-      JsonHelper.validatedJsonFromFile[DataSource](propertiesFile, path) match {
+      JsonHelper.parseFromFileAs[DataSource](propertiesFile, path) match {
         case Full(dataSource) =>
           if (dataSource.dataLayers.nonEmpty) dataSource.copy(id)
           else
@@ -330,14 +330,14 @@ class DataSourceService @Inject()(
         case e =>
           UnusableDataSource(id,
                              s"Error: Invalid json format in $propertiesFile: $e",
-                             existingDataSourceProperties = JsonHelper.jsonFromFile(propertiesFile, path).toOption)
+                             existingDataSourceProperties = JsonHelper.parseFromFile(propertiesFile, path).toOption)
       }
     } else {
       UnusableDataSource(id, "Not imported yet.")
     }
   }
 
-  def invalidateVaultCache(dataSource: InboxDataSource, dataLayerName: Option[String]): Fox[Int] =
+  def invalidateVaultCache(dataSource: InboxDataSource, dataLayerName: Option[String]): Option[Int] =
     for {
       genericDataSource <- dataSource.toUsable
       dataLayers = dataLayerName match {

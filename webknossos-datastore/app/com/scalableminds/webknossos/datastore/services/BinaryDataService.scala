@@ -42,10 +42,12 @@ class BinaryDataService(val dataBaseDir: Path,
         handleBucketRequest(request, bucket.copy(additionalCoordinates = request.settings.additionalCoordinates))
       }
     } else {
-      Fox.sequence {
-        bucketQueue.toList.map { bucket =>
-          handleBucketRequest(request, bucket.copy(additionalCoordinates = request.settings.additionalCoordinates))
-            .map(r => bucket -> r)
+      Fox.fromFuture {
+        Fox.sequence {
+          bucketQueue.toList.map { bucket =>
+            handleBucketRequest(request, bucket.copy(additionalCoordinates = request.settings.additionalCoordinates))
+              .map(r => bucket -> r)
+          }
         }
       }.map(buckets => cutOutCuboid(request, buckets.flatten))
     }
@@ -57,7 +59,7 @@ class BinaryDataService(val dataBaseDir: Path,
     if (requests.isEmpty) Fox.successful(Seq.empty)
     else {
       for {
-        _ <- bool2Fox(requests.forall(_.isSingleBucket)) ?~> "data requests handed to handleMultipleBucketRequests don’t contain bucket requests"
+        _ <- Fox.fromBool(requests.forall(_.isSingleBucket)) ?~> "data requests handed to handleMultipleBucketRequests don’t contain bucket requests"
         dataLayer <- SequenceUtils.findUniqueElement(requests.map(_.dataLayer)).toFox
         dataSource <- SequenceUtils.findUniqueElement(requests.map(_.dataSource)).toFox
         // dataSource is null and unused for volume tracings. Insert dummy DataSourceId (also unused in that case, except for logging)
@@ -83,11 +85,11 @@ class BinaryDataService(val dataBaseDir: Path,
           s"Loading ${requests.length} buckets for $dataSourceId layer ${dataLayer.name}, first request: ${firstRequest.cuboid.topLeft.toBucket}",
           bucketProvider.loadMultiple(readInstructions)
         )
-        bucketBoxesConverted <- Fox.serialSequenceBox(requestsSelected.zip(bucketBoxes)) {
+        bucketBoxesConverted <- Fox.fromFuture(Fox.serialSequence(requestsSelected.zip(bucketBoxes)) {
           case (request, Full(bucketBytes)) => convertAccordingToRequest(request, bucketBytes)
-          case (_, other)                   => other
-        }
-        _ <- bool2Fox(bucketBoxesConverted.length + indicesWhereOutsideRange.size == requests.length) ?~> "multipleBuckets.resultCountMismatch"
+          case (_, other)                   => other.toFox
+        })
+        _ <- Fox.fromBool(bucketBoxesConverted.length + indicesWhereOutsideRange.size == requests.length) ?~> "multipleBuckets.resultCountMismatch"
         bucketBoxesIterator = bucketBoxesConverted.iterator
         allBucketBoxes = requests.indices.map { index =>
           if (indicesWhereOutsideRange.contains(index)) Empty
@@ -104,7 +106,7 @@ class BinaryDataService(val dataBaseDir: Path,
       datasetErrorLoggingService.withErrorLogging(request.dataSource.id,
                                                   "converting bucket data",
                                                   conversionFunc(inputArray))
-    else Full(inputArray)
+    else Fox.successful(inputArray)
 
   /*
    * Everything outside of the layer bounding box is set to black (zero) so data outside of the specified
@@ -141,16 +143,17 @@ class BinaryDataService(val dataBaseDir: Path,
       clippedData <- convertIfNecessary(
         !request.cuboid.toMag1BoundingBox.isFullyContainedIn(request.dataLayer.boundingBox),
         inputArray,
-        clipToLayerBoundingBox(request),
-        request)
+        data => clipToLayerBoundingBox(request)(data).toFox,
+        request
+      )
       mappedDataFox <- agglomerateServiceOpt.map { agglomerateService =>
         convertIfNecessary(
           request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation && request.cuboid.mag.maxDim <= MaxMagForAgglomerateMapping,
           clippedData,
-          agglomerateService.applyAgglomerate(request),
+          data => agglomerateService.applyAgglomerate(request)(data).toFox,
           request
         )
-      }.fillEmpty(Fox.successful(clippedData)) ?~> "Failed to apply agglomerate mapping"
+      }.toFox.fillEmpty(Fox.successful(clippedData)) ?~> "Failed to apply agglomerate mapping"
       mappedData <- mappedDataFox
       resultData <- convertIfNecessary(request.settings.halfByte, mappedData, convertToHalfByte, request)
     } yield resultData
@@ -166,11 +169,13 @@ class BinaryDataService(val dataBaseDir: Path,
         } yield (dataConverted, index)
     }
 
-    Fox.sequenceOfFulls(requestData).map { l =>
-      val bytesArrays = l.map { case (byteArray, _) => byteArray }
-      val foundIndices = l.map { case (_, index)    => index }
-      val notFoundIndices = List.range(0, requestsCount).diff(foundIndices)
-      (bytesArrays.appendArrays, notFoundIndices)
+    Fox.fromFuture {
+      Fox.sequenceOfFulls(requestData).map { l =>
+        val bytesArrays = l.map { case (byteArray, _) => byteArray }
+        val foundIndices = l.map { case (_, index)    => index }
+        val notFoundIndices = List.range(0, requestsCount).diff(foundIndices)
+        (bytesArrays.appendArrays, notFoundIndices)
+      }
     }
   }
 
@@ -235,20 +240,21 @@ class BinaryDataService(val dataBaseDir: Path,
     result
   }
 
-  private def convertToHalfByte(a: Array[Byte]): Box[Array[Byte]] = tryo {
-    val aSize = a.length
-    val compressedSize = (aSize + 1) / 2
-    val compressed = new Array[Byte](compressedSize)
-    var i = 0
-    while (i * 2 + 1 < aSize) {
-      val first = (a(i * 2) & 0xF0).toByte
-      val second = (a(i * 2 + 1) & 0xF0).toByte >> 4 & 0x0F
-      val value = (first | second).asInstanceOf[Byte]
-      compressed(i) = value
-      i += 1
-    }
-    compressed
-  }
+  private def convertToHalfByte(a: Array[Byte]): Fox[Array[Byte]] =
+    tryo {
+      val aSize = a.length
+      val compressedSize = (aSize + 1) / 2
+      val compressed = new Array[Byte](compressedSize)
+      var i = 0
+      while (i * 2 + 1 < aSize) {
+        val first = (a(i * 2) & 0xF0).toByte
+        val second = (a(i * 2 + 1) & 0xF0).toByte >> 4 & 0x0F
+        val value = (first | second).asInstanceOf[Byte]
+        compressed(i) = value
+        i += 1
+      }
+      compressed
+    }.toFox
 
   def clearCache(organizationId: String, datasetDirectoryName: String, layerName: Option[String]): (Int, Int, Int) = {
     val dataSourceId = DataSourceId(datasetDirectoryName, organizationId)

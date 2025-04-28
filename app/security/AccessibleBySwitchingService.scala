@@ -3,7 +3,6 @@ package security
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.bool2Fox
 import models.annotation.AnnotationState.Cancelled
 import models.annotation.{AnnotationDAO, AnnotationIdentifier, AnnotationInformationProvider}
 import models.dataset.DatasetDAO
@@ -39,7 +38,7 @@ class AccessibleBySwitchingService @Inject()(
         accessibleBySwitchingForSuperUser(datasetId, annotationId, workflowHash)
       else
         accessibleBySwitchingForMultiUser(user._multiUser, datasetId, annotationId, workflowHash)
-      _ <- bool2Fox(selectedOrganization._id != user._organization) // User is already in correct orga, but still could not see dataset. Assume this had a reason.
+      _ <- Fox.fromBool(selectedOrganization._id != user._organization) // User is already in correct orga, but still could not see dataset. Assume this had a reason.
     } yield selectedOrganization
 
   private def accessibleBySwitchingForSuperUser(datasetIdOpt: Option[ObjectId],
@@ -97,25 +96,25 @@ class AccessibleBySwitchingService @Inject()(
 
   private def canAccessDataset(ctx: DBAccessContext, datasetId: ObjectId): Fox[Boolean] = {
     val foundFox = datasetDAO.findOne(datasetId)(ctx)
-    foundFox.futureBox.map(_.isDefined)
+    foundFox.shiftBox.map(_.isDefined)
   }
 
   private def canAccessAnnotation(user: User, ctx: DBAccessContext, annotationId: String): Fox[Boolean] = {
     val foundFox = for {
       annotationIdParsed <- ObjectId.fromString(annotationId)
       annotation <- annotationDAO.findOne(annotationIdParsed)(GlobalAccessContext)
-      _ <- bool2Fox(annotation.state != Cancelled)
+      _ <- Fox.fromBool(annotation.state != Cancelled)
       restrictions <- annotationProvider.restrictionsFor(AnnotationIdentifier(annotation.typ, annotationIdParsed))(ctx)
       _ <- restrictions.allowAccess(user)
     } yield ()
-    foundFox.futureBox.map(_.isDefined)
+    foundFox.shiftBox.map(_.isDefined)
   }
 
   private def canAccessWorkflow(user: User, workflowHash: String): Fox[Boolean] = {
     val foundFox = for {
       _ <- voxelyticsDAO.findWorkflowByHashAndOrganization(user._organization, workflowHash)
     } yield ()
-    foundFox.futureBox.map(_.isDefined)
+    foundFox.shiftBox.map(_.isDefined)
   }
 
 }

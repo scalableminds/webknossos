@@ -480,8 +480,7 @@ class PlaneMaterialFactory {
           ),
         () => this.updateVertexAlignment(),
       ),
-    );
-    this.storePropertyUnsubscribers.push(
+
       listenToStoreProperty(
         (storeState) => getViewportExtents(storeState),
         (extents) => {
@@ -489,9 +488,6 @@ class PlaneMaterialFactory {
         },
         true,
       ),
-    );
-
-    this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) =>
           getUnrenderableLayerInfosForCurrentZoom(storeState).map(({ layer }) => layer),
@@ -507,8 +503,6 @@ class PlaneMaterialFactory {
         },
         true,
       ),
-    );
-    this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) => storeState.userConfiguration.sphericalCapRadius,
         (sphericalCapRadius) => {
@@ -516,8 +510,6 @@ class PlaneMaterialFactory {
         },
         true,
       ),
-    );
-    this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) => storeState.userConfiguration.selectiveVisibilityInProofreading,
         (selectiveVisibilityInProofreading) => {
@@ -525,9 +517,6 @@ class PlaneMaterialFactory {
         },
         true,
       ),
-    );
-
-    this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) => storeState.datasetConfiguration.selectiveSegmentVisibility,
         (selectiveSegmentVisibility) => {
@@ -535,9 +524,6 @@ class PlaneMaterialFactory {
         },
         true,
       ),
-    );
-
-    this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) => getMagInfoByLayer(storeState.dataset),
         (magInfosByLayer) => {
@@ -562,9 +548,6 @@ class PlaneMaterialFactory {
         },
         true,
       ),
-    );
-
-    this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) => getZoomValue(storeState.flycam),
         (zoomValue) => {
@@ -572,8 +555,7 @@ class PlaneMaterialFactory {
         },
         true,
       ),
-    );
-    this.storePropertyUnsubscribers.push(
+
       listenToStoreProperty(
         (storeState) => getMappingInfoForSupportedLayer(storeState).hideUnmappedIds,
         (hideUnmappedIds) => {
@@ -581,8 +563,6 @@ class PlaneMaterialFactory {
         },
         true,
       ),
-    );
-    this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) => storeState.temporaryConfiguration.viewMode,
         (viewMode) => {
@@ -590,8 +570,6 @@ class PlaneMaterialFactory {
         },
         true,
       ),
-    );
-    this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) => storeState.viewModeData.plane.activeViewport === this.planeID,
         (isMouseInActiveViewport) => {
@@ -599,8 +577,6 @@ class PlaneMaterialFactory {
         },
         true,
       ),
-    );
-    this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) => storeState.dataset,
         (dataset) => {
@@ -610,8 +586,6 @@ class PlaneMaterialFactory {
         },
         true,
       ),
-    );
-    this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) => storeState.datasetConfiguration.blendMode,
         (blendMode) => {
@@ -701,24 +675,18 @@ class PlaneMaterialFactory {
           },
           true,
         ),
-      );
-      this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => getSegmentationLayerWithMappingSupport(storeState),
           (_segmentationLayer) => {
             this.attachSegmentationMappingTextures();
           },
         ),
-      );
-      this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => getVisibleSegmentationLayer(storeState),
           (_segmentationLayer) => {
             this.attachSegmentationColorTexture();
           },
         ),
-      );
-      this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => storeState.userConfiguration.brushSize,
           (brushSize) => {
@@ -726,8 +694,7 @@ class PlaneMaterialFactory {
           },
           true,
         ),
-      );
-      this.storePropertyUnsubscribers.push(
+
         listenToStoreProperty(
           (storeState) => storeState.datasetConfiguration.segmentationPatternOpacity,
           (segmentationPatternOpacity) => {
@@ -735,8 +702,6 @@ class PlaneMaterialFactory {
           },
           true,
         ),
-      );
-      this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => storeState.temporaryConfiguration.hoveredSegmentId,
           (hoveredSegmentId) => {
@@ -748,8 +713,6 @@ class PlaneMaterialFactory {
             this.uniforms.hoveredSegmentIdHigh.value = high;
           },
         ),
-      );
-      this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => storeState.temporaryConfiguration.hoveredUnmappedSegmentId,
           (hoveredUnmappedSegmentId) => {
@@ -761,8 +724,6 @@ class PlaneMaterialFactory {
             this.uniforms.hoveredUnmappedSegmentIdHigh.value = high;
           },
         ),
-      );
-      this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => {
             const activeSegmentationTracing = getActiveSegmentationTracing(storeState);
@@ -771,29 +732,21 @@ class PlaneMaterialFactory {
           () => this.updateActiveCellId(),
           true,
         ),
-      );
-      this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => getActiveSegmentationTracing(storeState)?.activeUnmappedSegmentId,
           (activeUnmappedSegmentId) =>
             (this.uniforms.isUnmappedSegmentHighlighted.value = activeUnmappedSegmentId != null),
           true,
         ),
-      );
-      this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) =>
             getMappingInfoForSupportedLayer(storeState).mappingStatus === MappingStatusEnum.ENABLED,
           () => this.updateActiveCellId(),
         ),
-      );
-      this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => getMappingInfoForSupportedLayer(storeState).mapping,
           () => this.updateActiveCellId(),
         ),
-      );
-      this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => {
             const layer = getSegmentationLayerWithMappingSupport(storeState);
@@ -814,8 +767,6 @@ class PlaneMaterialFactory {
             this.uniforms.shouldApplyMappingOnGPU.value = shouldApplyMappingOnGPU;
           },
         ),
-      );
-      this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => {
             const layer = getSegmentationLayerWithMappingSupport(storeState);
@@ -840,8 +791,7 @@ class PlaneMaterialFactory {
           },
           true,
         ),
-      );
-      this.storePropertyUnsubscribers.push(
+
         listenToStoreProperty(
           (storeState) => getActiveSegmentPosition(storeState),
           (activeSegmentPosition) => {

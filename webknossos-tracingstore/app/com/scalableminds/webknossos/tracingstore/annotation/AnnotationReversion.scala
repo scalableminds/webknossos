@@ -1,8 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.VersionedKeyValuePair
@@ -11,7 +10,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingSe
 
 import scala.concurrent.ExecutionContext
 
-trait AnnotationReversion {
+trait AnnotationReversion extends FoxImplicits {
 
   def volumeTracingService: VolumeTracingService
 

@@ -56,8 +56,10 @@ class N5MultiscalesExplorer(implicit val ec: ExecutionContext) extends N5Explore
       magPath = layerPath / n5Dataset.path
       headerPath = magPath / N5Header.FILENAME_ATTRIBUTES_JSON
       n5Header <- headerPath.parseAsJson[N5Header] ?~> s"failed to read n5 header at $headerPath"
-      elementClass <- n5Header.elementClass ?~> s"failed to read element class from n5 header at $headerPath"
-      boundingBox <- n5Header.boundingBox(axisOrder) ?~> s"failed to read bounding box from n5 header at $headerPath"
+      elementClass <- n5Header.elementClass.toFox ?~> s"failed to read element class from n5 header at $headerPath"
+      boundingBox <- n5Header
+        .boundingBox(axisOrder)
+        .toFox ?~> s"failed to read bounding box from n5 header at $headerPath"
     } yield
       MagWithAttributes(MagLocator(mag, Some(magPath.toUri.toString), None, Some(axisOrder), None, credentialId),
                         magPath,
@@ -68,7 +70,7 @@ class N5MultiscalesExplorer(implicit val ec: ExecutionContext) extends N5Explore
     for {
       magVoxelSize <- voxelSizeFromTransform(transform)
       mag = (magVoxelSize / voxelSize).round.toVec3Int
-      _ <- bool2Fox(mag.isAllPowersOfTwo) ?~> s"invalid mag: $mag. Must all be powers of two"
+      _ <- Fox.fromBool(mag.isAllPowersOfTwo) ?~> s"invalid mag: $mag. Must all be powers of two"
     } yield mag
 
 }

@@ -2,7 +2,7 @@ package controllers
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper, TextUtils}
 import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
 import models.organization.{Organization, OrganizationDAO, OrganizationService}
@@ -82,8 +82,7 @@ class AuthenticationController @Inject()(
               Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
             } else {
               for {
-                _ <- Fox.successful(())
-                inviteBox: Box[Invite] <- inviteService.findInviteByTokenOpt(signUpData.inviteToken).futureBox
+                inviteBox <- inviteService.findInviteByTokenOpt(signUpData.inviteToken).shiftBox
                 organizationId = Option(signUpData.organization).filter(_.trim.nonEmpty)
                 organization <- organizationService.findOneByInviteByIdOrDefault(inviteBox.toOption, organizationId)(
                   GlobalAccessContext) ?~> Messages("organization.notFound", signUpData.organization)
@@ -186,9 +185,9 @@ class AuthenticationController @Inject()(
     implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
     for {
       requestingMultiUser <- multiUserDAO.findOne(request.identity._multiUser)
-      _ <- bool2Fox(requestingMultiUser.isSuperUser) ?~> Messages("user.notAuthorised") ~> FORBIDDEN
+      _ <- Fox.fromBool(requestingMultiUser.isSuperUser) ?~> Messages("user.notAuthorised") ~> FORBIDDEN
       targetUser <- userService.userFromMultiUserEmail(email) ?~> "user.notFound" ~> NOT_FOUND
-      result <- switchToUser(targetUser._id)
+      result <- Fox.fromFuture(switchToUser(targetUser._id))
     } yield result
   }
 
@@ -199,8 +198,8 @@ class AuthenticationController @Inject()(
       _ <- userService.fillSuperUserIdentity(request.identity, organization._id)
       targetUser <- userDAO.findOneByOrgaAndMultiUser(organization._id, request.identity._multiUser)(
         GlobalAccessContext) ?~> "user.notFound" ~> NOT_FOUND
-      _ <- bool2Fox(!targetUser.isDeactivated) ?~> "user.deactivated"
-      result <- switchToUser(targetUser._id)
+      _ <- Fox.fromBool(!targetUser.isDeactivated) ?~> "user.deactivated"
+      result <- Fox.fromFuture(switchToUser(targetUser._id))
       _ <- multiUserDAO.updateLastLoggedInIdentity(request.identity._multiUser, targetUser._id)
     } yield result
   }
@@ -330,7 +329,7 @@ class AuthenticationController @Inject()(
                     for {
                       _ <- Fox.successful(logger.info(s"Multiuser ${user._multiUser} changed their password."))
                       _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordHasher.hash(passwords.password1))
-                      _ <- combinedAuthenticatorService.discard(request.authenticator, Ok)
+                      _ <- Fox.fromFuture(combinedAuthenticatorService.discard(request.authenticator, Ok))
                       userEmail <- userService.emailFor(user)
                     } yield {
                       Mailer ! Send(defaultMails.changePasswordMail(user.name, userEmail))
@@ -383,8 +382,8 @@ class AuthenticationController @Inject()(
           val payload = new String(Base64.decodeBase64(sso))
           val values = play.core.parsers.FormUrlEncodedParser.parse(payload)
           for {
-            nonce <- values.get("nonce").flatMap(_.headOption) ?~> "Nonce is missing"
-            returnUrl <- values.get("return_sso_url").flatMap(_.headOption) ?~> "Return url is missing"
+            nonce <- values.get("nonce").flatMap(_.headOption).toFox ?~> "Nonce is missing"
+            returnUrl <- values.get("return_sso_url").flatMap(_.headOption).toFox ?~> "Return url is missing"
             userEmail <- userService.emailFor(user)
             _ = logger.info(f"User ${user._id} logged in via SSO.")
           } yield {
@@ -457,7 +456,7 @@ class AuthenticationController @Inject()(
             ) // Assuming email verification was done by OIDC provider
             // After registering, also login
             loginInfo = LoginInfo("credentials", user._id.toString)
-            loginResult <- loginUser(loginInfo)
+            loginResult <- Fox.fromFuture(loginUser(loginInfo))
           } yield loginResult
         case _ => Future.successful(InternalServerError)
       }
@@ -465,21 +464,21 @@ class AuthenticationController @Inject()(
 
   def openIdCallback(): Action[AnyContent] = Action.async { implicit request =>
     for {
-      _ <- bool2Fox(isOIDCEnabled) ?~> "SSO is not enabled"
+      _ <- Fox.fromBool(isOIDCEnabled) ?~> "SSO is not enabled"
       (accessToken: JsObject, idToken: Option[JsObject]) <- openIdConnectClient.getAndValidateTokens(
         absoluteOpenIdConnectCallbackURL,
         request.queryString.get("code").flatMap(_.headOption).getOrElse("missing code"),
       ) ?~> "oidc.getToken.failed" ?~> "oidc.authentication.failed"
       userInfoFromTokens <- extractUserInfoFromTokenResponses(accessToken, idToken)
-      userResult <- loginOrSignupViaOidc(userInfoFromTokens)(request)
+      userResult <- Fox.fromFuture(loginOrSignupViaOidc(userInfoFromTokens)(request))
     } yield userResult
   }
 
   private def extractUserInfoFromTokenResponses(accessToken: JsObject,
-                                                idTokenOpt: Option[JsObject]): Fox[OpenIdConnectUserInfo] = {
-    val jsObjectToUse = idTokenOpt.getOrElse(accessToken)
-    jsObjectToUse.validate[OpenIdConnectUserInfo] ?~> "Failed to extract user info from id token or access token"
-  }
+                                                idTokenOpt: Option[JsObject]): Fox[OpenIdConnectUserInfo] =
+    JsonHelper
+      .as[OpenIdConnectUserInfo](idTokenOpt.getOrElse(accessToken))
+      .toFox ?~> "Failed to extract user info from id token or access token"
 
   private def shaHex(key: String, valueToDigest: String): String =
     new HmacUtils(HmacAlgorithms.HMAC_SHA_256, key).hmacHex(valueToDigest)
@@ -542,7 +541,7 @@ class AuthenticationController @Inject()(
   private def acceptTermsOfServiceForUser(user: User, termsOfServiceVersion: Option[Int])(
       implicit m: MessagesProvider): Fox[Unit] =
     for {
-      acceptedVersion <- Fox.option2Fox(termsOfServiceVersion) ?~> "Terms of service must be accepted."
+      acceptedVersion <- termsOfServiceVersion.toFox ?~> "Terms of service must be accepted."
       _ <- organizationService.acceptTermsOfService(user._organization, acceptedVersion)(DBAccessContext(Some(user)), m)
     } yield ()
 
@@ -586,22 +585,20 @@ class AuthenticationController @Inject()(
                                    email: String): Fox[(String, String, String, List[String])] = {
     var (errors, fN, lN) = normalizeName(firstName, lastName)
     for {
-      nameEmailErrorBox: Box[(String, String, String, List[String])] <- multiUserDAO
-        .findOneByEmail(email.toLowerCase)(GlobalAccessContext)
-        .futureBox
-        .flatMap {
-          case Full(_) =>
-            errors ::= "user.email.alreadyInUse"
+      nameEmailError: (String, String, String,
+      List[String]) <- multiUserDAO.findOneByEmail(email.toLowerCase)(GlobalAccessContext).shiftBox.flatMap {
+        case Full(_) =>
+          errors ::= "user.email.alreadyInUse"
+          Fox.successful(("", "", "", errors))
+        case Empty =>
+          if (errors.nonEmpty) {
             Fox.successful(("", "", "", errors))
-          case Empty =>
-            if (errors.nonEmpty) {
-              Fox.successful(("", "", "", errors))
-            } else {
-              Fox.successful((fN, lN, email.toLowerCase, List()))
-            }
-          case f: Failure => Fox.failure(f.msg)
-        }
-    } yield nameEmailErrorBox
+          } else {
+            Fox.successful((fN, lN, email.toLowerCase, List()))
+          }
+        case f: Failure => Fox.failure(f.msg)
+      }
+    } yield nameEmailError
   }
 
   private def normalizeName(firstName: String, lastName: String) = {

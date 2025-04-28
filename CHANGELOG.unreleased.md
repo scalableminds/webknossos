@@ -20,6 +20,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Updated screenshot tests to use `vitest` framework instead of `ava`. [#8553](https://github.com/scalableminds/webknossos/pull/8553)
 
 ### Fixed
+- Fixed rendering bug that could occur for transformed datasets when toggling the transform. [#8568](https://github.com/scalableminds/webknossos/pull/8568)
 
 ### Removed
 - The Annotation update route can no longer update the description of the annotation. Please set the description before uploading the annotation instead. You can still edit the description in the UI. [#8533](https://github.com/scalableminds/webknossos/pull/8533)

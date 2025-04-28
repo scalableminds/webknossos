@@ -2,10 +2,10 @@ START TRANSACTION;
 
 do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 131, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
 
-DROP INDEX IF EXISTS ON webknossos.users(created);
-DROP INDEX IF EXISTS ON webknossos.users(_organization);
-DROP INDEX IF EXISTS ON webknossos.users(isDeactivated);
-DROP INDEX IF EXISTS ON webknossos.users(isUnlisted);
+DROP INDEX IF EXISTS ON users__organization_idx;
+DROP INDEX IF EXISTS ON users_created_idx;
+DROP INDEX IF EXISTS ON users_isdeactivated_idx;
+DROP INDEX IF EXISTS ON users_isunlisted_idx;
 
 -- Make spelling of false to be written in lower case.
 CREATE OR REPLACE FUNCTION webknossos.countsAsTaskInstance(a webknossos.annotations) RETURNS BOOLEAN AS $$

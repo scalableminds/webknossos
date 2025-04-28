@@ -60,7 +60,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
       let activeTreeId = null;
 
       // Find active tree based on active node or pick the last tree
-      if (activeNodeId) {
+      if (activeNodeId != null) {
         // use activeNodeId to find active tree
         const tree = findTreeByNodeId(trees, activeNodeId);
         if (tree) {

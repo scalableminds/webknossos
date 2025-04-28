@@ -597,11 +597,11 @@ function confirmDeletingInitialNode(treeId: number) {
   });
 }
 
-export const deleteTreeAsUserAction = (treeId?: number): NoAction => {
+export const handleDeleteTreeByUser = (treeId?: number) => {
   const state = Store.getState();
   const skeletonTracing = enforceSkeletonTracing(state.annotation);
   const tree = getTree(skeletonTracing, treeId);
-  if (!tree) return noAction();
+  if (!tree) return;
 
   if (state.task != null && tree.nodes.has(1)) {
     confirmDeletingInitialNode(tree.treeId);
@@ -615,10 +615,8 @@ export const deleteTreeAsUserAction = (treeId?: number): NoAction => {
       />
     ));
   }
-  // As Modal.confirm is async, return noAction() and the modal will dispatch the real action
-  // if the user confirms
-  return noAction();
 };
+
 export const updateNavigationListAction = (list: Array<number>, activeIndex: number) =>
   ({
     type: "UPDATE_NAVIGATION_LIST",

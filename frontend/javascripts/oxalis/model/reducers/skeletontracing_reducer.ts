@@ -548,7 +548,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
 
       const activeTree = getTree(skeletonTracing);
       if (activeTree == null) {
-        return toggleAllTreesReducer(state, skeletonTracing);
+        return state;
       }
 
       return update(toggleAllTreesReducer(state, skeletonTracing), {
@@ -566,9 +566,8 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
       });
     }
 
-    case "TOGGLE_TREE_GROUP": {
+    case "TOGGLE_TREE_GROUP":
       return toggleTreeGroupReducer(state, skeletonTracing, action.groupId);
-    }
 
     case "UPDATE_NAVIGATION_LIST": {
       const { list, activeIndex } = action;
@@ -722,12 +721,8 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
       const treeType = isProofreadingActive ? TreeTypeEnum.AGGLOMERATE : TreeTypeEnum.DEFAULT;
 
       const sourceTree = getTreeAndNode(skeletonTracing, sourceNodeId, null, treeType);
-      if (sourceTree == null) {
-        return state;
-      }
-
       const targetTree = getTreeAndNode(skeletonTracing, targetNodeId, null, treeType);
-      if (targetTree == null) {
+      if (sourceTree == null || targetTree == null) {
         return state;
       }
 

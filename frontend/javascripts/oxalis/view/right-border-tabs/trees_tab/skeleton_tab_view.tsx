@@ -36,10 +36,10 @@ import {
   addTreesAndGroupsAction,
   batchUpdateGroupsAndTreesAction,
   createTreeAction,
-  deleteTreeAsUserAction,
   deleteTreesAction,
   deselectActiveTreeAction,
   deselectActiveTreeGroupAction,
+  handleDeleteTreeByUser,
   selectNextTreeAction,
   setActiveTreeAction,
   setActiveTreeGroupAction,
@@ -1009,7 +1009,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 
   onDeleteTree() {
-    dispatch(deleteTreeAsUserAction());
+    dispatch(handleDeleteTreeByUser());
   },
 
   onDeleteTrees(treeIds: number[]) {

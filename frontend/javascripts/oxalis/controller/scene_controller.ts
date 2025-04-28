@@ -27,6 +27,7 @@ import {
 } from "oxalis/geometries/helper_geometries";
 import Plane from "oxalis/geometries/plane";
 import Skeleton from "oxalis/geometries/skeleton";
+import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 import {
   getDataLayers,
   getDatasetBoundingBox,
@@ -56,16 +57,13 @@ import Store from "oxalis/store";
 import * as THREE from "three";
 import type CustomLOD from "./custom_lod";
 import SegmentMeshController from "./segment_mesh_controller";
-import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 
 const CUBE_COLOR = 0x999999;
 const LAYER_CUBE_COLOR = 0xffff99;
 
-const getVisibleSegmentationLayerNames = reuseInstanceOnEquality(  
-  (storeState: OxalisState) => getVisibleSegmentationLayers(storeState).map(  
-    (l) => l.name,  
-  )  
-)  
+const getVisibleSegmentationLayerNames = reuseInstanceOnEquality((storeState: OxalisState) =>
+  getVisibleSegmentationLayers(storeState).map((l) => l.name),
+);
 
 class SceneController {
   skeletons: Record<number, Skeleton> = {};
@@ -662,9 +660,8 @@ class SceneController {
           this.updateUserBoundingBoxesAndMeshesAccordingToTransforms();
         },
       ),
-      listenToStoreProperty(
-        getVisibleSegmentationLayerNames,
-        () => this.updateMeshesAccordingToLayerVisibility(),
+      listenToStoreProperty(getVisibleSegmentationLayerNames, () =>
+        this.updateMeshesAccordingToLayerVisibility(),
       ),
       listenToStoreProperty(
         (storeState) => getSomeTracing(storeState.annotation).boundingBox,

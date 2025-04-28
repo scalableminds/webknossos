@@ -277,7 +277,7 @@ export function getMaxNodeId(skeletonTracing: SkeletonTracing): number | null {
     skeletonTracing.trees,
     (r, tree) => {
       const treeMaxId = getMaxNodeIdInTree(tree);
-      return Math.max(r, treeMaxId != null ? treeMaxId : Number.NEGATIVE_INFINITY);
+      return Math.max(r, treeMaxId ?? Number.NEGATIVE_INFINITY);
     },
     Number.NEGATIVE_INFINITY,
   );

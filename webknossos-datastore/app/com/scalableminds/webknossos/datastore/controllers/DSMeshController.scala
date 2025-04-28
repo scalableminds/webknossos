@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.services.mesh.{
   MeshFileService,
   MeshMappingHelper,
   NeuroglancerMesh,
-  NeuroglancerPrecomputedMeshService
+  NeuroglancerPrecomputedMeshFileService
 }
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -22,7 +22,7 @@ import scala.concurrent.ExecutionContext
 class DSMeshController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
     meshFileService: MeshFileService,
-    neuroglancerPrecomputedMeshService: NeuroglancerPrecomputedMeshService,
+    neuroglancerPrecomputedMeshService: NeuroglancerPrecomputedMeshFileService,
     fullMeshService: DSFullMeshService,
     val dsRemoteWebknossosClient: DSRemoteWebknossosClient,
     val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
@@ -39,9 +39,9 @@ class DSMeshController @Inject()(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
           meshFiles <- meshFileService.exploreMeshFiles(organizationId, datasetDirectoryName, dataLayerName)
-          neuroglancerMeshFiles <- neuroglancerPrecomputedMeshService.exploreMeshes(organizationId,
-                                                                                    datasetDirectoryName,
-                                                                                    dataLayerName)
+          neuroglancerMeshFiles <- neuroglancerPrecomputedMeshService.exploreMeshFiles(organizationId,
+                                                                                       datasetDirectoryName,
+                                                                                       dataLayerName)
           allMeshFiles = meshFiles ++ neuroglancerMeshFiles
         } yield Ok(Json.toJson(allMeshFiles))
       }

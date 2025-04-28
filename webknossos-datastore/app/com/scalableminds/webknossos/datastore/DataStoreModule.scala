@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.mesh.{
   AdHocMeshServiceHolder,
   MeshFileService,
-  NeuroglancerPrecomputedMeshService
+  NeuroglancerPrecomputedMeshFileService
 }
 import com.scalableminds.webknossos.datastore.services.uploading.UploadService
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptorService}
@@ -32,7 +32,7 @@ class DataStoreModule extends AbstractModule {
     bind(classOf[ApplicationHealthService]).asEagerSingleton()
     bind(classOf[DSDatasetErrorLoggingService]).asEagerSingleton()
     bind(classOf[MeshFileService]).asEagerSingleton()
-    bind(classOf[NeuroglancerPrecomputedMeshService]).asEagerSingleton()
+    bind(classOf[NeuroglancerPrecomputedMeshFileService]).asEagerSingleton()
     bind(classOf[RemoteSourceDescriptorService]).asEagerSingleton()
   }
 }

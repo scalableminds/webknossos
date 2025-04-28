@@ -37,7 +37,7 @@ object FullMeshRequest {
 
 class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
                                   meshFileService: MeshFileService,
-                                  neuroglancerPrecomputedMeshService: NeuroglancerPrecomputedMeshService,
+                                  neuroglancerPrecomputedMeshService: NeuroglancerPrecomputedMeshFileService,
                                   val binaryDataServiceHolder: BinaryDataServiceHolder,
                                   val dsRemoteWebknossosClient: DSRemoteWebknossosClient,
                                   val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,

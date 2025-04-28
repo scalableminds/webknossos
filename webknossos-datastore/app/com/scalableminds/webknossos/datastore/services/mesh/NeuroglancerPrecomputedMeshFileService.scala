@@ -33,7 +33,7 @@ object NeuroglancerPrecomputedMeshInfo {
   implicit val jsonFormat: OFormat[NeuroglancerPrecomputedMeshInfo] = Json.format[NeuroglancerPrecomputedMeshInfo]
 }
 
-class NeuroglancerPrecomputedMeshService @Inject()(config: DataStoreConfig, dataVaultService: DataVaultService)(
+class NeuroglancerPrecomputedMeshFileService @Inject()(config: DataStoreConfig, dataVaultService: DataVaultService)(
     implicit ec: ExecutionContext)
     extends FoxImplicits
     with NeuroglancerMeshHelper {
@@ -50,7 +50,7 @@ class NeuroglancerPrecomputedMeshService @Inject()(config: DataStoreConfig, data
       _ <- Fox.fromBool(meshInfo.transform.length == 12) ?~> "Invalid mesh info: transform has to be of length 12"
     } yield NeuroglancerMesh(meshInfo)
 
-  def exploreMeshes(organizationId: String, datasetName: String, dataLayerName: String)(
+  def exploreMeshFiles(organizationId: String, datasetName: String, dataLayerName: String)(
       implicit tc: TokenContext): Fox[Set[MeshFileInfo]] = {
     def exploreMeshesForLayer(dataLayer: DataLayer): Fox[(NeuroglancerPrecomputedMeshInfo, VaultPath)] =
       for {

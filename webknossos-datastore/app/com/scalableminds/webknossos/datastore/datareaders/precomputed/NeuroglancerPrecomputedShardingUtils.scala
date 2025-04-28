@@ -15,7 +15,7 @@ import scala.concurrent.ExecutionContext
 trait NeuroglancerPrecomputedShardingUtils extends FoxImplicits {
 
   // SHARDING
-  // Implemented according to https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/sharded.md,
+  // Implemented according to https://github.com/google/neuroglancer/blob/233fc39b07a0480a8e1c90fc5ca835330a0bf287/src/datasource/precomputed/sharded.md,
   // directly adapted from https://github.com/scalableminds/webknossos-connect/blob/master/wkconnect/backends/neuroglancer/sharding.py.
 
   val shardingSpecification: ShardingSpecification
@@ -40,7 +40,7 @@ trait NeuroglancerPrecomputedShardingUtils extends FoxImplicits {
     shardPath.readBytes(Some(shardIndexRange))
 
   private def parseShardIndex(index: Array[Byte]): Seq[(Long, Long)] =
-    // See https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/sharded.md#shard-index-format
+    // See https://github.com/google/neuroglancer/blob/233fc39b07a0480a8e1c90fc5ca835330a0bf287/src/datasource/precomputed/sharded.md#shard-index-format
     index
       .grouped(16) // 16 Bytes: 2 uint64 numbers: start_offset, end_offset
       .map((bytes: Array[Byte]) => {
@@ -65,7 +65,7 @@ trait NeuroglancerPrecomputedShardingUtils extends FoxImplicits {
   private def parseMinishardIndex(input: Array[Byte]): Box[Array[(Long, Long, Long)]] = tryo {
     val bytes = decodeMinishardIndex(input)
     /*
-     From: https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/sharded.md#minishard-index-format
+     From: https://github.com/google/neuroglancer/blob/233fc39b07a0480a8e1c90fc5ca835330a0bf287/src/datasource/precomputed/sharded.md#minishard-index-format
      The decoded "minishard index" is a binary string of 24*n bytes, specifying a contiguous C-order array of [3, n]
       uint64le values.
      */
@@ -79,7 +79,7 @@ trait NeuroglancerPrecomputedShardingUtils extends FoxImplicits {
     buf.asLongBuffer().get(longArray)
     // longArray is row major / C-order
     /*
-     From: https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/sharded.md#minishard-index-format
+     From: https://github.com/google/neuroglancer/blob/233fc39b07a0480a8e1c90fc5ca835330a0bf287/src/datasource/precomputed/sharded.md#minishard-index-format
      Values array[0, 0], ..., array[0, n-1] specify the chunk IDs in the minishard, and are delta encoded, such that
      array[0, 0] is equal to the ID of the first chunk, and the ID of chunk i is equal to the sum
      of array[0, 0], ..., array[0, i].
@@ -90,7 +90,7 @@ trait NeuroglancerPrecomputedShardingUtils extends FoxImplicits {
       chunkIds(i) = longArray(i) + chunkIds(i - 1)
     }
     /*
-     From: https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/sharded.md#minishard-index-format
+     From: https://github.com/google/neuroglancer/blob/233fc39b07a0480a8e1c90fc5ca835330a0bf287/src/datasource/precomputed/sharded.md#minishard-index-format
      The size of the data for chunk i is stored as array[2, i].
      Values array[1, 0], ..., array[1, n-1] specify the starting offsets in the shard file of the data corresponding to
      each chunk, and are also delta encoded relative to the end of the prior chunk, such that the starting offset of the
@@ -126,7 +126,7 @@ trait NeuroglancerPrecomputedShardingUtils extends FoxImplicits {
   }
 
   def getChunkRange(chunkId: Long, minishardIndex: Array[(Long, Long, Long)])(
-    implicit ec: ExecutionContext): Fox[NumericRange.Exclusive[Long]] =
+      implicit ec: ExecutionContext): Fox[NumericRange.Exclusive[Long]] =
     for {
       chunkSpecification <- minishardIndex
         .find(_._1 == chunkId)

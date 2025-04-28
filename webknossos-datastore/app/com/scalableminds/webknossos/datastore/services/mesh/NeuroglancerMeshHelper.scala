@@ -8,6 +8,11 @@ import play.api.libs.json.{Json, OFormat}
 import java.io.ByteArrayInputStream
 import scala.collection.mutable.ListBuffer
 
+/**
+  * Represents the multi-resolution mesh manifest file format for Neuroglancer Precomputed.
+  * https://github.com/google/neuroglancer/blob/233fc39b07a0480a8e1c90fc5ca835330a0bf287/src/datasource/precomputed/meshes.md#multi-resolution-mesh-manifest-file-format
+  * This is used for Neuroglancer Precomputed Meshes and local meshes.
+  */
 case class NeuroglancerSegmentManifest(chunkShape: Vec3Float,
                                        gridOrigin: Vec3Float,
                                        numLods: Int,

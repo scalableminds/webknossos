@@ -62,10 +62,10 @@ import {
   getActiveTree,
   getActiveTreeGroup,
   getFlatTreeGroups,
-  getTreeAndNodeOrNull,
   getNodePosition,
   getTree,
   getTreeAndNode,
+  getTreeAndNodeOrNull,
   getTreeGroupsMap,
   mapGroups,
 } from "oxalis/model/accessors/skeletontracing_accessor";

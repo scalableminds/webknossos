@@ -15,10 +15,10 @@ import {
 import {
   enforceSkeletonTracing,
   getActiveNode,
-  getTreeAndNodeOrNull,
   getNodePosition,
   getSkeletonTracing,
   getTreeAndNode,
+  getTreeAndNodeOrNull,
   untransformNodePosition,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {

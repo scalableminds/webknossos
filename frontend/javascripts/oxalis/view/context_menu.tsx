@@ -54,9 +54,9 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getActiveNode,
-  getTreeAndNodeOrNull,
   getNodePosition,
   getTreeAndNode,
+  getTreeAndNodeOrNull,
   isSkeletonLayerTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";

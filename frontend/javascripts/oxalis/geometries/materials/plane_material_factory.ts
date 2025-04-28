@@ -473,7 +473,11 @@ class PlaneMaterialFactory {
         true,
       ),
       listenToStoreProperty(
-        (storeState) => storeState.datasetConfiguration.nativelyRenderedLayerName,
+        (storeState) =>
+          getTransformsPerLayer(
+            storeState.dataset,
+            storeState.datasetConfiguration.nativelyRenderedLayerName,
+          ),
         () => this.updateVertexAlignment(),
       ),
     );

@@ -403,6 +403,7 @@ class UserService @Inject()(conf: WkConf,
         "isSuperUser" -> userCompactInfo.isSuperUser,
         "isEmailVerified" -> userCompactInfo.isEmailVerified,
         "isGuest" -> userCompactInfo.isGuest,
+        "isUnlisted" -> userCompactInfo.isUnlisted
       )
     }
 

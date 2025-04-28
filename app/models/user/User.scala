@@ -85,7 +85,8 @@ case class UserCompactInfo(
     isSuperUser: Boolean,
     isEmailVerified: Boolean,
     isEditable: Boolean,
-    isGuest: Boolean
+    isGuest: Boolean,
+    isUnlisted: Boolean
 )
 
 class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
@@ -202,8 +203,8 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     import prs._
     // format: off
     UserCompactInfo(<<[ObjectId],<<[ObjectId],<<[String],<<[String],<<[String],<<[String],<<[Boolean],<<[Boolean],
-      <<[Boolean],<<[Boolean],<<[String],<<[String],<<[String],<<[String], <<[String],<<[Instant],
-      <<[String],<<[String],<<[String],<<[Instant],<<?[String],<<[Boolean],<<[Boolean],<<[Boolean],<<[Boolean]
+      <<[Boolean],<<[Boolean],<<[String],<<[String],<<[String],<<[String], <<[String],<<[Instant],<<[String],
+      <<[String],<<[String],<<[Instant],<<?[String],<<[Boolean],<<[Boolean],<<[Boolean],<<[Boolean],<<[Boolean]
     )
     // format: on
   }
@@ -292,7 +293,8 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
             m.isSuperUser,
             m.isEmailVerified,
             $isEditableAttribute,
-            (payingOrganization._organization IS NOT NULL AND u._organization != payingOrganization._organization) AS isGuest
+            (payingOrganization._organization IS NOT NULL AND u._organization != payingOrganization._organization) AS isGuest,
+            u.isUnlisted
         FROM webknossos.users AS u
         INNER JOIN webknossos.organizations o ON o._id = u._organization
         INNER JOIN webknossos.multiusers m ON u._multiuser = m._id

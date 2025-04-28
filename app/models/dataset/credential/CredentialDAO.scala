@@ -1,6 +1,6 @@
 package models.dataset.credential
 
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.webknossos.datastore.storage.{
   CredentialType,
   DataVaultCredential,
@@ -9,8 +9,7 @@ import com.scalableminds.webknossos.datastore.storage.{
   S3AccessKeyCredential
 }
 import com.scalableminds.webknossos.schema.Tables.{Credentials, CredentialsRow}
-import net.liftweb.common.Box.tryo
-import play.api.libs.json.Json
+import play.api.libs.json.JsValue
 import utils.sql.{SecuredSQLDAO, SqlClient, SqlToken}
 import com.scalableminds.util.objectid.ObjectId
 
@@ -53,7 +52,7 @@ class CredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
   private def parseAsGoogleServiceAccountCredential(r: CredentialsRow): Fox[GoogleServiceAccountCredential] =
     for {
       secret <- r.secret.toFox
-      secretJson <- tryo(Json.parse(secret)).toFox
+      secretJson <- JsonHelper.parseAs[JsValue](secret).toFox
     } yield
       GoogleServiceAccountCredential(
         r.name,

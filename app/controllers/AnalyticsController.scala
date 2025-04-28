@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.tools.Fox
 import models.analytics.{AnalyticsEventsIngestJson, AnalyticsService, FrontendAnalyticsEvent}
 import play.api.libs.json.JsObject
 import play.api.mvc.{Action, PlayBodyParsers}
@@ -20,7 +21,7 @@ class AnalyticsController @Inject()(analyticsService: AnalyticsService, conf: Wk
     implicit request =>
       {
         for {
-          _ <- bool2Fox(conf.BackendAnalytics.saveToDatabaseEnabled) ?~> "Database logging of events is not enabled"
+          _ <- Fox.fromBool(conf.BackendAnalytics.saveToDatabaseEnabled) ?~> "Database logging of events is not enabled"
           _ <- analyticsService.ingest(request.body.events, request.body.apiKey)
         } yield Ok
       }

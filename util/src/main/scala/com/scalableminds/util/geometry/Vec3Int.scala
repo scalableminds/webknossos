@@ -23,6 +23,9 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
   def /(that: Vec3Int): Vec3Int =
     Vec3Int(x / that.x, y / that.y, z / that.z)
 
+  def unary_- : Vec3Int =
+    Vec3Int(-x, -y, -z)
+
   def scale(s: Float): Vec3Int =
     Vec3Int((x * s).toInt, (y * s).toInt, (z * s).toInt)
 
@@ -52,8 +55,6 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
 
   def move(other: Vec3Int): Vec3Int =
     move(other.x, other.y, other.z)
-
-  def negate: Vec3Int = Vec3Int(-x, -y, -z)
 
   def to(bottomRight: Vec3Int): Seq[Vec3Int] =
     range(bottomRight, _ to _)

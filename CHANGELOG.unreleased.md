@@ -20,6 +20,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Updated screenshot tests to use `vitest` framework instead of `ava`. [#8553](https://github.com/scalableminds/webknossos/pull/8553)
 
 ### Fixed
+- Fixed that the Version Restore sidebar did load forever when very large volume annotations were created. [#8574](https://github.com/scalableminds/webknossos/pull/8574)
 
 ### Removed
 - The Annotation update route can no longer update the description of the annotation. Please set the description before uploading the annotation instead. You can still edit the description in the UI. [#8533](https://github.com/scalableminds/webknossos/pull/8533)

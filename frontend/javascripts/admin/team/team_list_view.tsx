@@ -35,7 +35,7 @@ export function renderTeamRolesAndPermissionsForUser(user: APIUser) {
                 [
                   "Guest User",
                   "lime",
-                  "Guest users do not count against your organizations user quota.",
+                  "Guest users do not count against your organization’s user quota.",
                 ],
               ]
             : []),

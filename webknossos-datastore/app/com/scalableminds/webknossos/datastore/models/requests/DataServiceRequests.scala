@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.models.requests
 
-import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, SegmentationLayer}
 
@@ -22,7 +21,6 @@ case class DataServiceDataRequest(
     settings: DataServiceRequestSettings
 ) {
   def isSingleBucket: Boolean = cuboid.isSingleBucket(DataLayer.bucketLength)
-  def mag: Vec3Int = cuboid.mag
 }
 
 case class DataReadInstruction(

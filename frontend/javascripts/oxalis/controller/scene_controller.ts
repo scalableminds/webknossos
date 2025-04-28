@@ -56,9 +56,16 @@ import Store from "oxalis/store";
 import * as THREE from "three";
 import type CustomLOD from "./custom_lod";
 import SegmentMeshController from "./segment_mesh_controller";
+import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 
 const CUBE_COLOR = 0x999999;
 const LAYER_CUBE_COLOR = 0xffff99;
+
+const getVisibleSegmentationLayerNames = reuseInstanceOnEquality(  
+  (storeState: OxalisState) => getVisibleSegmentationLayers(storeState).map(  
+    (l) => l.name,  
+  )  
+)  
 
 class SceneController {
   skeletons: Record<number, Skeleton> = {};
@@ -83,8 +90,6 @@ class SceneController {
   rootGroup!: THREE.Group;
   segmentMeshController: SegmentMeshController;
   storePropertyUnsubscribers: Array<() => void>;
-  // Used to cache visible segmentation layers to only update the meshes visibility when this changes.
-  visibleSegmentationLayerNames: Array<string> = [];
 
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   // element depending on the provided flycam.
@@ -485,6 +490,7 @@ class SceneController {
 
   updateMeshesAccordingToLayerVisibility(): void {
     const state = Store.getState();
+    console.log("updating according to visible layers");
     const visibleSegmentationLayers = getVisibleSegmentationLayers(state);
     const allSegmentationLayers = getSegmentationLayers(state.dataset);
     allSegmentationLayers.forEach((layer) => {
@@ -657,17 +663,7 @@ class SceneController {
         },
       ),
       listenToStoreProperty(
-        (storeState) => {
-          const visibleSegmentationLayerNames = getVisibleSegmentationLayers(storeState).map(
-            (l) => l.name,
-          );
-          if (_.isEqual(this.visibleSegmentationLayerNames, visibleSegmentationLayerNames)) {
-            return this.visibleSegmentationLayerNames;
-          } else {
-            this.visibleSegmentationLayerNames = visibleSegmentationLayerNames;
-            return visibleSegmentationLayerNames;
-          }
-        },
+        getVisibleSegmentationLayerNames,
         () => this.updateMeshesAccordingToLayerVisibility(),
       ),
       listenToStoreProperty(

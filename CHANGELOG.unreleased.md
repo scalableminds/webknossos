@@ -21,6 +21,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - The mapping dropdown for segmentation is wider now so that mapping names are fully readable. [#8570](https://github.com/scalableminds/webknossos/pull/8570)
 
 ### Fixed
+- Fixed rendering bug that could occur for transformed datasets when toggling the transform. [#8568](https://github.com/scalableminds/webknossos/pull/8568)
 - Fixed a bug in the trees tab where the color change of a tree would affect the tree on which the context menu was previously opened. [#8562](https://github.com/scalableminds/webknossos/pull/8562)
 
 ### Removed

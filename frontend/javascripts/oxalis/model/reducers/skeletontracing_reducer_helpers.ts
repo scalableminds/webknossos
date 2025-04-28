@@ -132,7 +132,7 @@ export function createNode(
   }
 
   // Use the same radius as current active node or revert to default value
-  const radius = activeNode != null ? activeNode.radius : Constants.DEFAULT_NODE_RADIUS;
+  const radius = activeNode?.radius ?? Constants.DEFAULT_NODE_RADIUS;
 
   // Find new node id by increasing the max node id.
   const nextNewId = skeletonTracing.cachedMaxNodeId + 1;

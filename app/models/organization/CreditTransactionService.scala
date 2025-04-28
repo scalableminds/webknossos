@@ -68,8 +68,8 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
       implicit ctx: DBAccessContext): Fox[Unit] =
     creditTransactionDAO.addJobIdToTransaction(creditTransaction, jobId)
 
-  def findTransactionOfJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Option[CreditTransaction]] =
-    creditTransactionDAO.findTransactionForJob(jobId).futureBox.toFutureOption
+  def findTransactionOfJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[CreditTransaction] =
+    creditTransactionDAO.findTransactionForJob(jobId)
 
   def publicWrites(transaction: CreditTransaction): Fox[JsObject] =
     Fox.successful(

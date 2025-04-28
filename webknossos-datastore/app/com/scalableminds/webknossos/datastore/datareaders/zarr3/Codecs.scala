@@ -1,7 +1,8 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
 import com.scalableminds.util.enumeration.ExtendedEnumeration
-import com.scalableminds.util.tools.{BoxImplicits, ByteUtils}
+import com.scalableminds.util.tools.BoxUtils.bool2Box
+import com.scalableminds.util.tools.ByteUtils
 import com.scalableminds.webknossos.datastore.datareaders.{
   BloscCompressor,
   BoolCompressionSetting,
@@ -295,8 +296,7 @@ final case class ShardingCodecConfiguration(chunk_shape: Array[Int],
                                             index_codecs: Seq[CodecConfiguration],
                                             index_location: IndexLocationSetting.IndexLocationSetting =
                                               IndexLocationSetting.end)
-    extends CodecConfiguration
-    with BoxImplicits {
+    extends CodecConfiguration {
   override def name: String = ShardingCodecConfiguration.name
   def isSupported: Box[Unit] =
     for {

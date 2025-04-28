@@ -5,6 +5,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.xml.Xml
+import com.scalableminds.webknossos.datastore.Annotation.{AnnotationProto, AnnotationUserStateProto}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup}
@@ -43,6 +44,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
   private lazy val outputService = XMLOutputFactory.newInstance()
 
   def toNmlStream(name: String,
+                  annotationProto: AnnotationProto,
                   annotationLayers: List[FetchedAnnotationLayer],
                   annotation: Option[Annotation],
                   scale: Option[VoxelSize],
@@ -51,10 +53,11 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
                   wkUrl: String,
                   datasetName: String,
                   datasetId: ObjectId,
-                  annotationOwner: Option[User],
+                  annotationOwner: User,
                   annotationTask: Option[Task],
                   skipVolumeData: Boolean = false,
-                  volumeDataZipFormat: VolumeDataZipFormat): NamedFunctionStream =
+                  volumeDataZipFormat: VolumeDataZipFormat,
+                  requestingUser: Option[User]): NamedFunctionStream =
     NamedFunctionStream(
       name,
       os => {
@@ -63,6 +66,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
 
         for {
           nml <- toNmlWithImplicitWriter(
+            annotationProto,
             annotationLayers,
             annotation,
             scale,
@@ -74,25 +78,27 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
             annotationOwner,
             annotationTask,
             skipVolumeData,
-            volumeDataZipFormat
+            volumeDataZipFormat,
+            requestingUser
           )
         } yield nml
       }
     )
 
-  private def toNmlWithImplicitWriter(
-      annotationLayers: List[FetchedAnnotationLayer],
-      annotation: Option[Annotation],
-      voxelSize: Option[VoxelSize],
-      volumeFilename: Option[String],
-      organizationId: String,
-      wkUrl: String,
-      datasetName: String,
-      datasetId: ObjectId,
-      annotationOwner: Option[User],
-      annotationTask: Option[Task],
-      skipVolumeData: Boolean,
-      volumeDataZipFormat: VolumeDataZipFormat)(implicit writer: XMLStreamWriter): Fox[Unit] =
+  private def toNmlWithImplicitWriter(annotationProto: AnnotationProto,
+                                      annotationLayers: List[FetchedAnnotationLayer],
+                                      annotation: Option[Annotation],
+                                      voxelSize: Option[VoxelSize],
+                                      volumeFilename: Option[String],
+                                      organizationId: String,
+                                      wkUrl: String,
+                                      datasetName: String,
+                                      datasetId: ObjectId,
+                                      annotationOwner: User,
+                                      annotationTask: Option[Task],
+                                      skipVolumeData: Boolean,
+                                      volumeDataZipFormat: VolumeDataZipFormat,
+                                      requestingUser: Option[User])(implicit writer: XMLStreamWriter): Fox[Unit] =
     for {
       _ <- Xml.withinElement("things") {
         for {
@@ -101,14 +107,19 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
           volumeLayers = annotationLayers.filter(_.typ == AnnotationLayerType.Volume)
           _ <- Fox.fromBool(skeletonLayers.length <= 1) ?~> "annotation.download.multipleSkeletons"
           _ <- Fox.fromBool(volumeFilename.isEmpty || volumeLayers.length <= 1) ?~> "annotation.download.volumeNameForMultiple"
-          parameters <- extractTracingParameters(skeletonLayers,
-                                                 volumeLayers,
-                                                 annotation: Option[Annotation],
-                                                 organizationId,
-                                                 wkUrl,
-                                                 datasetName,
-                                                 datasetId,
-                                                 voxelSize)
+          parameters <- extractTracingParameters(
+            annotationProto,
+            skeletonLayers,
+            volumeLayers,
+            annotation: Option[Annotation],
+            organizationId,
+            wkUrl,
+            datasetName,
+            datasetId,
+            voxelSize,
+            annotationOwner,
+            requestingUser
+          )
           _ = writeParameters(parameters)
           _ = annotationLayers.filter(_.typ == AnnotationLayerType.Skeleton).map(_.tracing).foreach {
             case Left(skeletonTracing) => writeSkeletonThings(skeletonTracing)
@@ -129,16 +140,28 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
       _ = writer.close()
     } yield ()
 
-  private def extractTracingParameters(skeletonLayers: List[FetchedAnnotationLayer],
+  // TODO move to trait
+  private def findBestUserStateFor(annotationProto: AnnotationProto,
+                                   requestingUserOpt: Option[User],
+                                   annotationOwner: User): Option[AnnotationUserStateProto] =
+    annotationProto.userStates
+      .find(_.userId == requestingUserOpt.getOrElse(annotationOwner)._id.toString)
+      .orElse(annotationProto.userStates.find(_.userId == annotationOwner._id.toString))
+
+  private def extractTracingParameters(annotationProto: AnnotationProto,
+                                       skeletonLayers: List[FetchedAnnotationLayer],
                                        volumeLayers: List[FetchedAnnotationLayer],
                                        annotation: Option[Annotation],
                                        organizationId: String,
                                        wkUrl: String,
                                        datasetName: String,
                                        datasetId: ObjectId,
-                                       voxelSize: Option[VoxelSize]): Fox[NmlParameters] =
+                                       voxelSize: Option[VoxelSize],
+                                       annotationOwner: User,
+                                       requestingUser: Option[User]): Fox[NmlParameters] =
     for {
       parameterSourceAnnotationLayer <- selectLayerWithPrecedenceFetched(skeletonLayers, volumeLayers)
+      annotationUserState = findBestUserStateFor(annotationProto, requestingUser, annotationOwner)
       nmlParameters = parameterSourceAnnotationLayer.tracing match {
         case Left(s) =>
           NmlParameters(
@@ -149,14 +172,14 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
             wkUrl,
             voxelSize,
             s.createdTimestamp,
-            s.editPosition,
-            s.editRotation,
-            s.zoomLevel,
+            annotationUserState.map(_.editPosition).getOrElse(s.editPosition),
+            annotationUserState.map(_.editRotation).getOrElse(s.editRotation),
+            annotationUserState.map(_.zoomLevel).getOrElse(s.zoomLevel),
             s.activeNodeId,
             s.userBoundingBoxes ++ s.userBoundingBox.map(NamedBoundingBoxProto(0, None, None, None, _)),
             s.boundingBox,
             s.additionalAxes,
-            s.editPositionAdditionalCoordinates
+            annotationUserState.map(_.editPositionAdditionalCoordinates).getOrElse(s.editPositionAdditionalCoordinates)
           )
         case Right(v) =>
           NmlParameters(
@@ -167,14 +190,14 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
             wkUrl,
             voxelSize,
             v.createdTimestamp,
-            v.editPosition,
-            v.editRotation,
-            v.zoomLevel,
+            annotationUserState.map(_.editPosition).getOrElse(v.editPosition),
+            annotationUserState.map(_.editRotation).getOrElse(v.editRotation),
+            annotationUserState.map(_.zoomLevel).getOrElse(v.zoomLevel),
             None,
             v.userBoundingBoxes ++ v.userBoundingBox.map(NamedBoundingBoxProto(0, None, None, None, _)),
             if (annotation.exists(_._task.isDefined)) Some(v.boundingBox) else None,
             v.additionalAxes,
-            v.editPositionAdditionalCoordinates
+            annotationUserState.map(_.editPositionAdditionalCoordinates).getOrElse(v.editPositionAdditionalCoordinates)
           )
       }
     } yield nmlParameters
@@ -413,7 +436,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
       }
     }
 
-  private def writeMetaData(annotationOpt: Option[Annotation], userOpt: Option[User], taskOpt: Option[Task])(
+  private def writeMetaData(annotationOpt: Option[Annotation], annotationOwner: User, taskOpt: Option[Task])(
       implicit writer: XMLStreamWriter): Unit = {
     Xml.withinElementSync("meta") {
       writer.writeAttribute("name", "writer")
@@ -433,11 +456,9 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
         writer.writeAttribute("content", annotation.id)
       }
     }
-    userOpt.foreach { user =>
-      Xml.withinElementSync("meta") {
-        writer.writeAttribute("name", "username")
-        writer.writeAttribute("content", user.name)
-      }
+    Xml.withinElementSync("meta") {
+      writer.writeAttribute("name", "username")
+      writer.writeAttribute("content", annotationOwner.name)
     }
     taskOpt.foreach { task =>
       Xml.withinElementSync("meta") {

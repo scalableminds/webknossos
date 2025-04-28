@@ -99,6 +99,8 @@ class WKRemoteTracingStoreClient(
       .postProto[AnnotationProto](annotationProto)
   }
 
+  def getAnnotationProto(annotationId: ObjectId, version: Option[Long]): Fox[AnnotationProto] = ??? // TODO
+
   // Used in duplicate route. History and version are kept
   def duplicateAnnotation(annotationId: ObjectId,
                           newAnnotationId: ObjectId,

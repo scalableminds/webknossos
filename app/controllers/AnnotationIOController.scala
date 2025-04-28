@@ -407,7 +407,7 @@ class AnnotationIOController @Inject()(
 
   private def downloadExplorational(annotationId: ObjectId,
                                     typ: String,
-                                    issuingUser: Option[User],
+                                    requestingUser: Option[User],
                                     version: Option[Long],
                                     skipVolumeData: Boolean,
                                     volumeDataZipFormat: VolumeDataZipFormat)(implicit ctx: DBAccessContext) = {
@@ -419,10 +419,12 @@ class AnnotationIOController @Inject()(
         tracingStoreClient <- tracingStoreService.clientFor(dataset)
         fetchedAnnotationLayers <- Fox.serialCombined(annotation.skeletonAnnotationLayers)(
           tracingStoreClient.getSkeletonTracing(annotation._id, _, version))
+        annotationProto <- tracingStoreClient.getAnnotationProto(annotation._id, version)
         user <- userService.findOneCached(annotation._user)(GlobalAccessContext)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
         nmlStream = nmlWriter.toNmlStream(
           "temp",
+          annotationProto,
           fetchedAnnotationLayers,
           Some(annotation),
           dataset.voxelSize,
@@ -431,10 +433,11 @@ class AnnotationIOController @Inject()(
           conf.Http.uri,
           dataset.name,
           dataset._id,
-          Some(user),
+          user,
           taskOpt,
           skipVolumeData,
-          volumeDataZipFormat
+          volumeDataZipFormat,
+          requestingUser
         )
         nmlTemporaryFile = temporaryFileCreator.create()
         temporaryFileStream = new BufferedOutputStream(new FileOutputStream(nmlTemporaryFile))
@@ -463,8 +466,10 @@ class AnnotationIOController @Inject()(
         } ?~> "annotation.download.fetchSkeletonLayer.failed"
         user <- userService.findOneCached(annotation._user)(GlobalAccessContext) ?~> "annotation.download.findUser.failed"
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne(_)(GlobalAccessContext)) ?~> "task.notFound"
+        annotationProto <- tracingStoreClient.getAnnotationProto(annotation._id, version)
         nmlStream = nmlWriter.toNmlStream(
           name,
+          annotationProto,
           fetchedSkeletonLayers ::: fetchedVolumeLayers,
           Some(annotation),
           dataset.voxelSize,
@@ -473,10 +478,11 @@ class AnnotationIOController @Inject()(
           conf.Http.uri,
           dataset.name,
           dataset._id,
-          Some(user),
+          user,
           taskOpt,
           skipVolumeData,
-          volumeDataZipFormat
+          volumeDataZipFormat,
+          requestingUser
         )
         temporaryFile = temporaryFileCreator.create()
         zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(temporaryFile.path.toString))))
@@ -514,13 +520,13 @@ class AnnotationIOController @Inject()(
         zipMimeType
 
     for {
-      annotation <- provider.provideAnnotation(typ, annotationId, issuingUser) ~> NOT_FOUND
+      annotation <- provider.provideAnnotation(typ, annotationId, requestingUser) ~> NOT_FOUND
       restrictions <- provider.restrictionsFor(typ, annotationId) ?~> "annotation.restrictions.unavailable"
       name <- provider.nameFor(annotation) ?~> "annotation.name.impossible"
       fileExtension = exportExtensionForAnnotation(annotation)
       fileName = name + fileExtension
       mimeType = exportMimeTypeForAnnotation(annotation)
-      _ <- restrictions.allowDownload(issuingUser) ?~> "annotation.download.notAllowed" ~> FORBIDDEN
+      _ <- restrictions.allowDownload(requestingUser) ?~> "annotation.download.notAllowed" ~> FORBIDDEN
       dataset <- datasetDAO.findOne(annotation._dataset)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation" ~> NOT_FOUND
       organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> "organization.notFound" ~> NOT_FOUND
       temporaryFile <- annotationToTemporaryFile(dataset, annotation, name, organization._id) ?~> "annotation.writeTemporaryFile.failed"

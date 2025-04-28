@@ -62,7 +62,7 @@ import {
   getActiveTree,
   getActiveTreeGroup,
   getFlatTreeGroups,
-  getNodeAndTreeOrNull,
+  getTreeAndNodeOrNull,
   getNodePosition,
   getTree,
   getTreeAndNode,
@@ -1284,11 +1284,11 @@ class TracingApi {
     shortestPath: number[];
   } {
     const skeletonTracing = assertSkeleton(Store.getState().annotation);
-    const { node: sourceNode, tree: sourceTree } = getNodeAndTreeOrNull(
+    const { node: sourceNode, tree: sourceTree } = getTreeAndNodeOrNull(
       skeletonTracing,
       sourceNodeId,
     );
-    const { node: targetNode, tree: targetTree } = getNodeAndTreeOrNull(
+    const { node: targetNode, tree: targetTree } = getTreeAndNodeOrNull(
       skeletonTracing,
       targetNodeId,
     );

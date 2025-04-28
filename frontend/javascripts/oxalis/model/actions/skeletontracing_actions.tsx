@@ -560,10 +560,12 @@ export const deleteNodeAsUserAction = (
 ): DeleteNodeAction | NoAction | DeleteTreeAction => {
   const skeletonTracing = enforceSkeletonTracing(state.annotation);
   const treeAndNode = getTreeAndNode(skeletonTracing, nodeId, treeId);
+
   if (!treeAndNode) {
     const tree = getTree(skeletonTracing, treeId);
     if (!tree) return noAction();
 
+    // If the tree is empty, it will be deleted
     return tree.nodes.size() === 0 ? deleteTreeAction(tree.treeId) : noAction();
   }
 
@@ -581,7 +583,7 @@ export const deleteNodeAsUserAction = (
     // if the user confirms
     return noAction();
   }
-  // If the tree is empty, it will be deleted
+
   return deleteNodeAction(node.id, tree.treeId);
 };
 

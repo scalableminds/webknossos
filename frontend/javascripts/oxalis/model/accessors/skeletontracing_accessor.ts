@@ -206,7 +206,7 @@ export function getTreeAndNode(
   return null;
 }
 
-export function getNodeAndTreeOrNull(
+export function getTreeAndNodeOrNull(
   skeletonTracing: SkeletonTracing,
   nodeId?: number | null | undefined,
   treeId?: number | null | undefined,

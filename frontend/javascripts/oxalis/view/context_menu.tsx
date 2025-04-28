@@ -54,7 +54,7 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getActiveNode,
-  getNodeAndTreeOrNull,
+  getTreeAndNodeOrNull,
   getNodePosition,
   getTreeAndNode,
   isSkeletonLayerTransformed,
@@ -583,7 +583,7 @@ function getNodeContextMenuOptions({
 
   const { userBoundingBoxes } = skeletonTracing;
   const { activeTreeId, activeNodeId } = skeletonTracing;
-  const { node: clickedNode, tree: clickedTree } = getNodeAndTreeOrNull(
+  const { node: clickedNode, tree: clickedTree } = getTreeAndNodeOrNull(
     skeletonTracing,
     clickedNodeId,
   );

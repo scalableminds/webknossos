@@ -15,7 +15,7 @@ import {
 import {
   enforceSkeletonTracing,
   getActiveNode,
-  getNodeAndTreeOrNull,
+  getTreeAndNodeOrNull,
   getNodePosition,
   getSkeletonTracing,
   getTreeAndNode,
@@ -484,7 +484,7 @@ export function toSubsequentNode(): void {
     Store.dispatch(updateNavigationListAction(navigationList.list, navigationList.activeIndex + 1));
   } else {
     // search for subsequent node in tree
-    const { tree, node } = getNodeAndTreeOrNull(tracing, activeNodeId, activeTreeId);
+    const { tree, node } = getTreeAndNodeOrNull(tracing, activeNodeId, activeTreeId);
     if (!tree || !node) return;
     const nextNodeId = getSubsequentNodeFromTree(
       tree,
@@ -514,7 +514,7 @@ export function toPrecedingNode(): void {
     Store.dispatch(updateNavigationListAction(navigationList.list, navigationList.activeIndex - 1));
   } else {
     // search for preceding node in tree
-    const { tree, node } = getNodeAndTreeOrNull(tracing, activeNodeId, activeTreeId);
+    const { tree, node } = getTreeAndNodeOrNull(tracing, activeNodeId, activeTreeId);
     if (!tree || !node) return;
     const nextNodeId = getPrecedingNodeFromTree(
       tree,

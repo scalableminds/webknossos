@@ -5,7 +5,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayerLike}
 import models.annotation.AnnotationDAO
 import models.dataset.{Dataset, DatasetDAO, DatasetLayerDAO}
@@ -16,7 +16,7 @@ import net.liftweb.common.Full
 import security.URLSharing
 import utils.WkConf
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 case class OpenGraphTags(
     title: Option[String],
@@ -33,7 +33,8 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
                                  datasetLayerDAO: DatasetLayerDAO,
                                  annotationDAO: AnnotationDAO,
                                  shortLinkDAO: ShortLinkDAO,
-                                 conf: WkConf) {
+                                 conf: WkConf)
+    extends FoxImplicits {
 
   private val thumbnailWidth = 1000
   private val thumbnailHeight = 300
@@ -48,9 +49,9 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
   private val annotationRouteRegex = "^/annotations/([^/^#]+)".r
 
   def getOpenGraphTags(uriPath: String, sharingToken: Option[String])(implicit ec: ExecutionContext,
-                                                                      ctx: DBAccessContext): Future[OpenGraphTags] =
+                                                                      ctx: DBAccessContext): Fox[OpenGraphTags] =
     for {
-      tagsBox <- getOpenGraphTagsImpl(uriPath, sharingToken).futureBox
+      tagsBox <- getOpenGraphTagsImpl(uriPath, sharingToken).shiftBox
       // In any error case, fall back to default, so the html template does not break
       tags = tagsBox match {
         case Full(tags) => tags
@@ -74,7 +75,7 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
         case OpenGraphPageType.unknown => Fox.successful(defaultTags())
       }
       // In error case (probably no access permissions), fall back to default, so the html template does not break
-      tagsBox <- tagsFox.futureBox
+      tagsBox <- tagsFox.shiftBox
       tags = tagsBox match {
         case Full(tags) => tags
         case _          => defaultTags(pageType)
@@ -87,7 +88,7 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
       case shortLinkRouteRegex(key) =>
         for {
           shortLink <- shortLinkDAO.findOneByKey(key)
-          asUri <- tryo(Uri(shortLink.longLink))
+          asUri <- tryo(Uri(shortLink.longLink)).toFox
         } yield (asUri.path.toString, asUri.query().get("token").orElse(asUri.query().get("sharingToken")))
       case _ => Fox.successful(uriPath, sharingToken)
     }

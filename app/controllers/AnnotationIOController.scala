@@ -109,8 +109,8 @@ class AnnotationIOController @Inject()(
           parsedFilesWrapped = annotationUploadService.wrapOrPrefixGroups(parsedFiles.parseResults,
                                                                           shouldCreateGroupForEachFile)
           parseResultsFiltered: List[NmlParseResult] = parsedFilesWrapped.filter(_.succeeded)
-          _ <- bool2Fox(parseResultsFiltered.nonEmpty) orElse returnError(parsedFiles)
-          parseSuccesses <- Fox.serialCombined(parseResultsFiltered)(r => r.toSuccessBox)
+          _ <- Fox.fromBool(parseResultsFiltered.nonEmpty) orElse returnError(parsedFiles)
+          parseSuccesses <- Fox.serialCombined(parseResultsFiltered)(r => r.toSuccessBox.toFox)
           name = nameForUploaded(parseResultsFiltered.map(_.fileName))
           description = descriptionForNMLs(parseResultsFiltered.map(_.description))
           wkUrl = wkUrlsForNMLs(parseResultsFiltered.map(_.wkUrl))
@@ -250,7 +250,7 @@ class AnnotationIOController @Inject()(
                                                     } else {
                                                       Messages("dataset.noAccess", datasetId)
                                                     }) ~> FORBIDDEN
-      _ <- bool2Fox(organizationId == dataset._organization) ?~> Messages("dataset.noAccess", datasetId) ~> FORBIDDEN
+      _ <- Fox.fromBool(organizationId == dataset._organization) ?~> Messages("dataset.noAccess", datasetId) ~> FORBIDDEN
     } yield dataset
 
   private def nameForUploaded(fileNames: Seq[String]) =
@@ -259,8 +259,14 @@ class AnnotationIOController @Inject()(
     else
       None
 
-  private def descriptionForNMLs(descriptions: Seq[Option[String]]) =
-    if (descriptions.size == 1) descriptions.headOption.flatten.getOrElse("") else ""
+  private def descriptionForNMLs(descriptions: Seq[Option[String]]) = {
+    val nonEmptyDescriptions = descriptions.flatMap {
+      case Some("")  => None
+      case None      => None
+      case Some(str) => Some(str.trim)
+    }
+    SequenceUtils.findUniqueElement(nonEmptyDescriptions).getOrElse("")
+  }
 
   private def wkUrlsForNMLs(wkUrls: Seq[Option[String]]) =
     if (wkUrls.toSet.size == 1) wkUrls.headOption.flatten.getOrElse("") else ""
@@ -284,7 +290,7 @@ class AnnotationIOController @Inject()(
     // Note that organizationIds are optional. Tracings with no organization attribute are ignored here
     val organizationIds = skeletons.flatMap(_.organizationId) ::: volumes.flatMap(_.tracing.organizationId)
     for {
-      _ <- Fox.runOptional(organizationIds.headOption)(name => bool2Fox(organizationIds.forall(_ == name)))
+      _ <- Fox.runOptional(organizationIds.headOption)(name => Fox.fromBool(organizationIds.forall(_ == name)))
     } yield organizationIds.headOption
   }
 
@@ -394,7 +400,8 @@ class AnnotationIOController @Inject()(
     sil.UserAwareAction.async { implicit request =>
       for {
         annotation <- provider.provideAnnotation(id, request.identity) ?~> "annotation.notFound" ~> NOT_FOUND
-        result <- download(annotation.typ.toString, id, version, skipVolumeData, volumeDataZipFormat)(request)
+        result <- Fox.fromFuture(
+          download(annotation.typ.toString, id, version, skipVolumeData, volumeDataZipFormat)(request))
       } yield result
     }
 
@@ -554,7 +561,7 @@ class AnnotationIOController @Inject()(
 
     for {
       user <- userOpt.toFox ?~> Messages("notAllowed") ~> FORBIDDEN
-      task <- taskDAO.findOne(taskId).toFox ?~> Messages("task.notFound") ~> NOT_FOUND
+      task <- taskDAO.findOne(taskId) ?~> Messages("task.notFound") ~> NOT_FOUND
       project <- projectDAO.findOne(task._project) ?~> Messages("project.notFound") ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, project._team)) ?~> Messages("notAllowed") ~> FORBIDDEN
       zip <- createTaskZip(task)
@@ -570,10 +577,7 @@ class AnnotationIOController @Inject()(
     def createTaskTypeZip(taskType: TaskType) =
       for {
         tasks <- taskDAO.findAllByTaskType(taskType._id)
-        annotations <- Fox
-          .serialCombined(tasks)(task => annotationService.annotationsFor(task._id))
-          .map(_.flatten)
-          .toFox
+        annotations <- Fox.serialCombined(tasks)(task => annotationService.annotationsFor(task._id)).map(_.flatten)
         finishedAnnotations = annotations.filter(_.state == Finished)
         zip <- annotationService.zipAnnotations(finishedAnnotations,
                                                 taskType.summary,

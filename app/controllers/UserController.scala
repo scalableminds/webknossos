@@ -189,9 +189,9 @@ class UserController @Inject()(userService: UserService,
     Fox.combined(teams.map {
       case (TeamMembership(_, true), team) =>
         for {
-          _ <- bool2Fox(team.couldBeAdministratedBy(user)) ?~> Messages("team.admin.notPossibleBy",
-                                                                        team.name,
-                                                                        user.name) ~> FORBIDDEN
+          _ <- Fox.fromBool(team.couldBeAdministratedBy(user)) ?~> Messages("team.admin.notPossibleBy",
+                                                                            team.name,
+                                                                            user.name) ~> FORBIDDEN
         } yield ()
       case (_, _) =>
         Fox.successful(())
@@ -221,7 +221,8 @@ class UserController @Inject()(userService: UserService,
     if (!isActive && !user.isDeactivated) {
       for {
         activeTasks: List[ObjectId] <- annotationDAO.findActiveTaskIdsForUser(user._id)
-        _ <- bool2Fox(activeTasks.isEmpty) ?~> s"Cannot deactivate user with active tasks. Task ids are: ${activeTasks.mkString(";")}"
+        _ <- Fox.fromBool(activeTasks.isEmpty) ?~> s"Cannot deactivate user with active tasks. Task ids are: ${activeTasks
+          .mkString(";")}"
       } yield ()
     } else Fox.successful(())
 
@@ -232,14 +233,14 @@ class UserController @Inject()(userService: UserService,
       for {
         count <- userDAO.countIdentitiesForMultiUser(user._multiUser)
         issuingMultiUser <- multiUserDAO.findOne(issuingUser._multiUser)
-        _ <- bool2Fox(count <= 1 || issuingMultiUser.isSuperUser) ?~> "user.email.onlySuperUserCanChange"
+        _ <- Fox.fromBool(count <= 1 || issuingMultiUser.isSuperUser) ?~> "user.email.onlySuperUserCanChange"
       } yield ()
 
   private def preventZeroAdmins(user: User, isAdmin: Boolean) =
     if (user.isAdmin && !isAdmin) {
       for {
         adminCount <- userDAO.countAdminsForOrganization(user._organization)
-        _ <- bool2Fox(adminCount > 1) ?~> "user.lastAdmin"
+        _ <- Fox.fromBool(adminCount > 1) ?~> "user.lastAdmin"
       } yield ()
     } else Fox.successful(())
 
@@ -247,7 +248,7 @@ class UserController @Inject()(userService: UserService,
     if (user.isOrganizationOwner && !user.isDeactivated && !isActive) {
       for {
         ownerCount <- userDAO.countOwnersForOrganization(user._organization)
-        _ <- bool2Fox(ownerCount > 1) ?~> "user.lastOwner"
+        _ <- Fox.fromBool(ownerCount > 1) ?~> "user.lastOwner"
       } yield ()
     } else Fox.successful(())
 
@@ -278,8 +279,9 @@ class UserController @Inject()(userService: UserService,
           experiences = experiencesOpt.getOrElse(oldExperience)
           lastTaskTypeId = if (lastTaskTypeIdOpt.isEmpty) user.lastTaskTypeId.map(_.id) else lastTaskTypeIdOpt
           _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
-          _ <- bool2Fox(checkAdminOnlyUpdates(user, isActive, isAdmin, isDatasetManager, oldEmail, email)(issuingUser)) ?~> "notAllowed" ~> FORBIDDEN
-          _ <- bool2Fox(checkNoSelfDeactivate(user, isActive)(issuingUser)) ?~> "user.noSelfDeactivate" ~> FORBIDDEN
+          _ <- Fox.fromBool(checkAdminOnlyUpdates(user, isActive, isAdmin, isDatasetManager, oldEmail, email)(
+            issuingUser)) ?~> "notAllowed" ~> FORBIDDEN
+          _ <- Fox.fromBool(checkNoSelfDeactivate(user, isActive)(issuingUser)) ?~> "user.noSelfDeactivate" ~> FORBIDDEN
           _ <- checkNoDeactivateWithRemainingTask(user, isActive)
           _ <- checkNoActivateBeyondLimit(user, isActive)
           _ <- checkSuperUserOnlyUpdates(user, oldEmail, email)(issuingUser)
@@ -319,7 +321,7 @@ class UserController @Inject()(userService: UserService,
         for {
           user <- userDAO.findOne(userId) ?~> "user.notFound" ~> NOT_FOUND
           isEditable <- userService.isEditableBy(user, request.identity) ?~> "notAllowed" ~> FORBIDDEN
-          _ <- bool2Fox(isEditable | user._id == issuingUser._id)
+          _ <- Fox.fromBool(isEditable | user._id == issuingUser._id)
           _ <- userService.updateLastTaskTypeId(user, lastTaskTypeId)
           updatedUser <- userDAO.findOne(userId)
           updatedJs <- userService.publicWrites(updatedUser, request.identity)
@@ -330,7 +332,7 @@ class UserController @Inject()(userService: UserService,
   def updateNovelUserExperienceInfos(userId: ObjectId): Action[JsObject] =
     sil.SecuredAction.async(validateJson[JsObject]) { implicit request =>
       for {
-        _ <- bool2Fox(request.identity._id == userId) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.fromBool(request.identity._id == userId) ?~> "notAllowed" ~> FORBIDDEN
         _ <- multiUserDAO.updateNovelUserExperienceInfos(request.identity._multiUser, request.body)
         updatedUser <- userDAO.findOne(userId)
         updatedJs <- userService.publicWrites(updatedUser, request.identity)
@@ -340,7 +342,7 @@ class UserController @Inject()(userService: UserService,
   def updateSelectedTheme(userId: ObjectId): Action[Theme] =
     sil.SecuredAction.async(validateJson[Theme]) { implicit request =>
       for {
-        _ <- bool2Fox(request.identity._id == userId) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.fromBool(request.identity._id == userId) ?~> "notAllowed" ~> FORBIDDEN
         _ <- multiUserDAO.updateSelectedTheme(request.identity._multiUser, request.body)
         updatedUser <- userDAO.findOne(userId)
         updatedJs <- userService.publicWrites(updatedUser, request.identity)

@@ -17,7 +17,7 @@ import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient}
 
 import javax.inject.Inject
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 case class Project(
     _id: ObjectId,
@@ -171,7 +171,7 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def countForTeam(teamId: ObjectId): Fox[Int] =
     for {
       countList <- run(q"SELECT count(*) FROM $existingCollectionName WHERE _team = $teamId".as[Int])
-      count <- countList.headOption
+      count <- countList.headOption.toFox
     } yield count
 
   override def deleteOne(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
@@ -183,11 +183,10 @@ class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userSer
     extends LazyLogging
     with FoxImplicits {
 
-  def deleteOne(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[Boolean] = {
-    val futureFox: Future[Fox[Boolean]] = for {
-      removalSuccessBox <- projectDAO.deleteOne(projectId).futureBox
-    } yield {
-      removalSuccessBox match {
+  def deleteOne(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[Boolean] =
+    for {
+      removalSuccessBox <- projectDAO.deleteOne(projectId).shiftBox
+      successBool <- removalSuccessBox match {
         case Full(_) =>
           for {
             _ <- taskDAO.removeAllWithProjectAndItsAnnotations(projectId)
@@ -197,20 +196,18 @@ class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userSer
           logger.warn(s"Tried to remove project $projectId without permission.")
           Fox.successful(false)
       }
-    }
-    futureFox.toFox.flatten
-  }
+    } yield successBool
 
   def publicWrites(project: Project)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
-      owner <- userService.findOneCached(project._owner).flatMap(u => userService.compactWrites(u)).futureBox
-      teamNameOpt <- teamDAO.findOne(project._team)(GlobalAccessContext).map(_.name).toFutureOption
+      ownerBox <- userService.findOneCached(project._owner).flatMap(u => userService.compactWrites(u)).shiftBox
+      teamNameBox <- teamDAO.findOne(project._team)(GlobalAccessContext).map(_.name).shiftBox
     } yield {
       Json.obj(
         "name" -> project.name,
         "team" -> project._team.toString,
-        "teamName" -> teamNameOpt,
-        "owner" -> owner.toOption,
+        "teamName" -> teamNameBox.toOption,
+        "owner" -> ownerBox.toOption,
         "priority" -> project.priority,
         "paused" -> project.paused,
         "expectedTime" -> project.expectedTime,

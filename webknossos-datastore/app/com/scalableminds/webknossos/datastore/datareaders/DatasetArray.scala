@@ -3,8 +3,7 @@ package com.scalableminds.webknossos.datastore.datareaders
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox, option2Fox}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
@@ -26,7 +25,8 @@ class DatasetArray(vaultPath: VaultPath,
                    axisOrder: AxisOrder,
                    channelIndex: Option[Int],
                    additionalAxes: Option[Seq[AdditionalAxis]],
-                   sharedChunkContentsCache: AlfuCache[String, MultiArray]) {
+                   sharedChunkContentsCache: AlfuCache[String, MultiArray])
+    extends FoxImplicits {
 
   protected lazy val fullAxisOrder: FullAxisOrder =
     FullAxisOrder.fromAxisOrderAndAdditionalAxes(rank, axisOrder, additionalAxes)
@@ -75,7 +75,7 @@ class DatasetArray(vaultPath: VaultPath,
         shapeXYZ,
         offsetXYZ,
         additionalCoordinatesOpt,
-        shouldReadUint24)) ?~> "failed to construct shape and offset array for requested coordinates"
+        shouldReadUint24)).toFox ?~> "failed to construct shape and offset array for requested coordinates"
       bytes <- readBytes(shapeArray, offsetArray)
     } yield bytes
 
@@ -120,7 +120,7 @@ class DatasetArray(vaultPath: VaultPath,
                                                                tc: TokenContext): Fox[Array[Byte]] =
     for {
       typedMultiArray <- readAsFortranOrder(shape, offset)
-      asBytes <- BytesConverter.toByteArray(typedMultiArray, header.resolvedDataType, ByteOrder.LITTLE_ENDIAN)
+      asBytes <- BytesConverter.toByteArray(typedMultiArray, header.resolvedDataType, ByteOrder.LITTLE_ENDIAN).toFox
     } yield asBytes
 
   private def printAsInner(values: Array[Int], flip: Boolean = false): String = {
@@ -172,7 +172,7 @@ class DatasetArray(vaultPath: VaultPath,
           sourceChunkInWkFOrder: MultiArray = MultiArrayUtils
             .axisOrderXYZViewF(sourceChunk, fullAxisOrder, sourceIsF = header.order == ArrayOrder.F)
           offsetInChunkFOrder = computeOffsetInChunk(chunkIndex, totalOffset).reverse
-          _ <- tryo(MultiArrayUtils.copyRange(offsetInChunkFOrder, sourceChunkInWkFOrder, targetMultiArray)) ?~> formatCopyRangeError(
+          _ <- tryo(MultiArrayUtils.copyRange(offsetInChunkFOrder, sourceChunkInWkFOrder, targetMultiArray)).toFox ?~> formatCopyRangeError(
             offsetInChunkFOrder,
             sourceChunkInWkFOrder,
             targetMultiArray)
@@ -258,5 +258,5 @@ object DatasetArray {
   private val chunkSizeLimitBytes: Int = 300 * 1024 * 1024
 
   def assertChunkSizeLimit(bytesPerChunk: Int)(implicit ec: ExecutionContext): Fox[Unit] =
-    bool2Fox(bytesPerChunk <= chunkSizeLimitBytes) ?~> f"Array chunk size exceeds limit of $chunkSizeLimitBytes, got $bytesPerChunk"
+    Fox.fromBool(bytesPerChunk <= chunkSizeLimitBytes) ?~> f"Array chunk size exceeds limit of $chunkSizeLimitBytes, got $bytesPerChunk"
 }

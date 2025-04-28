@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.webknossos.datastore.helpers.DataSourceMagInfo
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
@@ -30,7 +30,6 @@ import javax.inject.Inject
 import models.organization.OrganizationDAO
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
-import play.utils.UriEncoding
 import slick.dbio.DBIO
 import slick.jdbc.GetResult
 import slick.jdbc.PostgresProfile.api._
@@ -64,11 +63,6 @@ case class Dataset(_id: ObjectId,
                    tags: List[String] = List.empty,
                    created: Instant = Instant.now,
                    isDeleted: Boolean = false)
-    extends FoxImplicits {
-
-  def urlEncodedName: String =
-    UriEncoding.encodePathSegment(name, "UTF-8")
-}
 
 case class DatasetCompactInfo(
     id: ObjectId,
@@ -111,8 +105,10 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
     case Some(factorLiteral) =>
       for {
         factor <- Vec3Double
-          .fromList(parseArrayLiteral(factorLiteral).map(_.toDouble)) ?~> "could not parse dataset voxel size"
-        unitOpt <- Fox.runOptional(unitLiteralOpt)(LengthUnit.fromString) ?~> "could not parse dataset voxel size unit"
+          .fromList(parseArrayLiteral(factorLiteral).map(_.toDouble))
+          .toFox ?~> "could not parse dataset voxel size"
+        unitOpt <- Fox
+          .runOptional(unitLiteralOpt)(LengthUnit.fromString(_).toFox) ?~> "could not parse dataset voxel size unit"
       } yield Some(unitOpt.map(unit => VoxelSize(factor, unit)).getOrElse(VoxelSize.fromFactorWithDefaultUnit(factor)))
     case None => Fox.successful(None)
   }
@@ -121,10 +117,10 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
     for {
       voxelSize <- parseVoxelSizeOpt(r.voxelsizefactor, r.voxelsizeunit)
       defaultViewConfigurationOpt <- Fox.runOptional(r.defaultviewconfiguration)(
-        JsonHelper.parseAndValidateJson[DatasetViewConfiguration](_))
+        JsonHelper.parseAs[DatasetViewConfiguration](_).toFox)
       adminViewConfigurationOpt <- Fox.runOptional(r.adminviewconfiguration)(
-        JsonHelper.parseAndValidateJson[DatasetViewConfiguration](_))
-      metadata <- JsonHelper.parseAndValidateJson[JsArray](r.metadata)
+        JsonHelper.parseAs[DatasetViewConfiguration](_).toFox)
+      metadata <- JsonHelper.parseAs[JsArray](r.metadata).toFox
     } yield {
       Dataset(
         ObjectId(r._Id),
@@ -390,19 +386,19 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
   def countByFolder(folderId: ObjectId): Fox[Int] =
     for {
       rows <- run(q"SELECT COUNT(*) FROM $existingCollectionName WHERE _folder = $folderId".as[Int])
-      firstRow <- rows.headOption
+      firstRow <- rows.headOption.toFox
     } yield firstRow
 
   def isEmpty: Fox[Boolean] =
     for {
       r <- run(q"SELECT COUNT(*) FROM $existingCollectionName LIMIT 1".as[Int])
-      firstRow <- r.headOption
+      firstRow <- r.headOption.toFox
     } yield firstRow == 0
 
   def countAllForOrganization(organizationId: String): Fox[Int] =
     for {
       rList <- run(q"SELECT COUNT(*) FROM $existingCollectionName WHERE _organization = $organizationId".as[Int])
-      r <- rList.headOption
+      r <- rList.headOption.toFox
     } yield r
 
   def findOneByDirectoryNameAndOrganization(directoryName: String, organizationId: String)(
@@ -431,7 +427,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                    AND _organization = $organizationId
                    AND $accessQuery
                    LIMIT 1)""".as[Boolean])
-      exists <- r.headOption
+      exists <- r.headOption.toFox
     } yield exists
 
   // Legacy links to Datasets used their name and organizationId as identifier. In #8075 name was changed to directoryName.
@@ -736,12 +732,12 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
 
   protected def parse(row: DatasetMagsRow): Fox[MagWithPaths] =
     for {
-      mag <- Vec3Int.fromList(parseArrayLiteral(row.mag).map(_.toInt)) ?~> "could not parse mag"
+      mag <- Vec3Int.fromList(parseArrayLiteral(row.mag).map(_.toInt)).toFox ?~> "could not parse mag"
     } yield MagWithPaths(row.datalayername, mag, row.path, row.realpath, hasLocalData = row.haslocaldata)
 
   private def parseMag(magArrayLiteral: String): Fox[Vec3Int] =
     for {
-      mag <- Vec3Int.fromList(parseArrayLiteral(magArrayLiteral).map(_.toInt)) ?~> "could not parse mag"
+      mag <- Vec3Int.fromList(parseArrayLiteral(magArrayLiteral).map(_.toInt)).toFox ?~> "could not parse mag"
     } yield mag
 
   def findMagForLayer(datasetId: ObjectId, dataLayerName: String): Fox[List[Vec3Int]] =
@@ -842,9 +838,9 @@ class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
       elementClass <- ElementClass.fromString(row.elementclass).toFox ?~> "Could not parse Layer ElementClass"
       mags <- datasetMagsDAO.findMagForLayer(datasetId, row.name) ?~> "Could not find mag for layer"
       defaultViewConfigurationOpt <- Fox.runOptional(row.defaultviewconfiguration)(
-        JsonHelper.parseAndValidateJson[LayerViewConfiguration](_))
+        JsonHelper.parseAs[LayerViewConfiguration](_).toFox)
       adminViewConfigurationOpt <- Fox.runOptional(row.adminviewconfiguration)(
-        JsonHelper.parseAndValidateJson[LayerViewConfiguration](_))
+        JsonHelper.parseAs[LayerViewConfiguration](_).toFox)
       coordinateTransformations <- datasetCoordinateTransformationsDAO.findCoordinateTransformationsForLayer(datasetId,
                                                                                                              row.name)
       coordinateTransformationsOpt = if (coordinateTransformations.isEmpty) None else Some(coordinateTransformations)
@@ -1023,13 +1019,13 @@ class DatasetCoordinateTransformationsDAO @Inject()(sqlClient: SqlClient)(implic
   private def parseAffine(matrixRawOpt: Option[String]): Fox[CoordinateTransformation] =
     for {
       matrixString <- matrixRawOpt.toFox
-      matrix <- JsonHelper.parseAndValidateJson[List[List[Double]]](matrixString)
+      matrix <- JsonHelper.parseAs[List[List[Double]]](matrixString).toFox
     } yield CoordinateTransformation(CoordinateTransformationType.affine, Some(matrix), None)
 
   private def parseThinPlateSpline(correspondencesRawOpt: Option[String]): Fox[CoordinateTransformation] =
     for {
       correspondencesString <- correspondencesRawOpt.toFox
-      correspondences <- JsonHelper.parseAndValidateJson[ThinPlateSplineCorrespondences](correspondencesString)
+      correspondences <- JsonHelper.parseAs[ThinPlateSplineCorrespondences](correspondencesString).toFox
     } yield CoordinateTransformation(CoordinateTransformationType.thin_plate_spline, None, Some(correspondences))
 
   def findCoordinateTransformationsForLayer(datasetId: ObjectId,

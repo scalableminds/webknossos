@@ -16,10 +16,16 @@ import {
   parseAdditionalCoordinateKey,
 } from "oxalis/model/helpers/nml_helpers";
 import { applyState } from "oxalis/model_initialization";
-import type { MappingType, MeshInformation, OxalisState } from "oxalis/store";
+import type {
+  DatasetLayerConfiguration,
+  MappingType,
+  MeshInformation,
+  OxalisState,
+} from "oxalis/store";
 import Store from "oxalis/store";
 import { type APIAnnotationType, APICompoundTypeEnum } from "types/api_flow_types";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { APIDataset, AdditionalCoordinate } from "types/api_flow_types";
+import type { Mutable } from "types/globals";
 import { validateUrlStateJSON } from "types/validation";
 
 const MAX_UPDATE_INTERVAL = 1000;
@@ -40,6 +46,14 @@ type PrecomputedMeshUrlDescriptor = BaseMeshUrlDescriptor & {
   meshFileName: string;
 };
 type MeshUrlDescriptor = AdHocMeshUrlDescriptor | PrecomputedMeshUrlDescriptor;
+export type DirectLayerSpecificProps = Mutable<
+  Partial<
+    Pick<
+      DatasetLayerConfiguration,
+      "isDisabled" | "intensityRange" | "color" | "isInverted" | "gammaCorrectionValue"
+    >
+  >
+>;
 export type UrlStateByLayer = Record<
   string,
   {
@@ -56,8 +70,7 @@ export type UrlStateByLayer = Record<
       connectomeName: string;
       agglomerateIdsToImport?: Array<number>;
     };
-    isDisabled?: boolean;
-  }
+  } & DirectLayerSpecificProps
 >;
 
 function mapMeshInfoToUrlMeshDescriptor(meshInfo: MeshInformation): MeshUrlDescriptor {
@@ -74,6 +87,28 @@ function mapMeshInfoToUrlMeshDescriptor(meshInfo: MeshInformation): MeshUrlDescr
     const { mappingName, mappingType } = meshInfo;
     return { ...baseUrlDescriptor, isPrecomputed: false, mappingName, mappingType };
   }
+}
+
+// Extracts the dataset name from view or sandbox URLs.
+export function getDatasetNameFromLocation(location: Location): string | undefined {
+  // URL format: /datasets/<dataset-name>-<dataset-id>/<view|sandbox/type>...
+  const pathnameParts = location.pathname.split("/").slice(1); // First string is empty as pathname start with a /.
+  const endOfDatasetName = pathnameParts[1].lastIndexOf("-");
+  if (endOfDatasetName <= 0) {
+    return undefined;
+  }
+  const datasetNameInURL = pathnameParts[1].substring(0, endOfDatasetName);
+  return datasetNameInURL;
+}
+
+export function getUpdatedPathnameWithNewDatasetName(
+  location: (typeof window)["location"],
+  dataset: APIDataset,
+): string {
+  const pathnameParts = location.pathname.split("/").slice(1); // First string is empty as pathname start with a /.
+  const newNameAndIdPart = `${dataset.name}-${dataset.id}`;
+  const newPathname = `/${pathnameParts[0]}/${newNameAndIdPart}/${pathnameParts.slice(2).join("/")}`;
+  return newPathname;
 }
 
 // If the type of UrlManagerState changes, the following files need to be updated:
@@ -305,6 +340,14 @@ class UrlManager {
         stateByLayer[layerName] = {
           ...stateByLayer[layerName],
           isDisabled: layerConfiguration.isDisabled,
+          // manually setting the tuple is needed due to layerConfiguration.intensityRange being readonly.
+          intensityRange: layerConfiguration.intensityRange && [
+            layerConfiguration.intensityRange[0],
+            layerConfiguration.intensityRange[1],
+          ],
+          color: layerConfiguration.color,
+          isInverted: layerConfiguration.isInverted,
+          gammaCorrectionValue: layerConfiguration.gammaCorrectionValue,
         };
       }
     }

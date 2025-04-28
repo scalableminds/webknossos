@@ -932,9 +932,17 @@ function* _getChunkLoadingDescriptors(
     loadingOrder.push(lodIndex);
   });
   const currentLODGroup: CustomLOD =
-    (yield* call(segmentMeshController.getLODGroupOfLayer, segmentationLayer.name)) ??
+    (yield* call(
+      {
+        context: segmentMeshController,
+        fn: segmentMeshController.getLODGroupOfLayer,
+      }, segmentationLayer.name)) ??
     new CustomLOD();
-  const currentLODIndex = yield* call(currentLODGroup.getCurrentLOD, Math.max(...loadingOrder));
+  const currentLODIndex = yield* call(
+    {
+      context: currentLODGroup,
+      fn: currentLODGroup.getCurrentLOD,
+    }, Math.max(...loadingOrder));
   // Load the chunks closest to the current LOD first.
   loadingOrder.sort((a, b) => Math.abs(a - currentLODIndex) - Math.abs(b - currentLODIndex));
 

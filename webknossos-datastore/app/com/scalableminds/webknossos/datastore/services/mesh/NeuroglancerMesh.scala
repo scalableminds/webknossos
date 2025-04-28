@@ -22,8 +22,6 @@ case class NeuroglancerMesh(meshInfo: NeuroglancerPrecomputedMeshInfo) extends N
 object NeuroglancerMesh {
   val FILENAME_INFO = "info"
 
-  val meshTypeName = "neuroglancerPrecomputed"
-
   val meshName = "mesh"
 
   val meshEncoding = "draco"

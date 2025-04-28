@@ -62,7 +62,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
                                                 tc: TokenContext): Fox[Array[Byte]] =
     fullMeshRequest.meshFileName match {
       case Some(_) if fullMeshRequest.meshFilePath.isDefined =>
-        loadFullMeshFromRemoteNeuroglancerMeshFile(organizationId, datasetDirectoryName, dataLayerName, fullMeshRequest)
+        loadFullMeshFromRemoteNeuroglancerMeshFile(fullMeshRequest)
       case Some(_) =>
         loadFullMeshFromMeshfile(organizationId, datasetDirectoryName, dataLayerName, fullMeshRequest)
       case None => loadFullMeshFromAdHoc(organizationId, datasetDirectoryName, dataLayerName, fullMeshRequest)
@@ -155,67 +155,33 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
       allChunkRanges: List[MeshChunk] = chunkInfos.lods.head.chunks
       transform = chunkInfos.lods.head.transform
       stlEncodedChunks: Seq[Array[Byte]] <- Fox.serialCombined(allChunkRanges) { chunkRange: MeshChunk =>
-        readMeshChunkAsStl(organizationId,
-                           datasetDirectoryName,
-                           layerName,
-                           meshFileName,
-                           chunkRange,
-                           transform,
-                           None,
-                           None,
-                           None,
-                           0)
+        readMeshChunkAsStl(organizationId, datasetDirectoryName, layerName, meshFileName, chunkRange, transform)
       }
       stlOutput = combineEncodedChunksToStl(stlEncodedChunks)
       _ = logMeshingDuration(before, "meshfile", stlOutput.length)
     } yield stlOutput
 
-  private def readMeshChunkAsStl(
-      organizationId: String,
-      datasetDirectoryName: String,
-      layerName: String,
-      meshfileName: String,
-      chunkInfo: MeshChunk,
-      transform: Array[Array[Double]],
-      meshFileType: Option[String],
-      meshFilePath: Option[String],
-      segmentId: Option[Long],
-      vertexQuantizationBits: Int)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
+  private def readMeshChunkAsStl(organizationId: String,
+                                 datasetDirectoryName: String,
+                                 layerName: String,
+                                 meshFileName: String,
+                                 chunkInfo: MeshChunk,
+                                 transform: Array[Array[Double]])(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
-      (dracoMeshChunkBytes, encoding) <- meshFileType match {
-        case Some("neuroglancerPrecomputed") =>
-          neuroglancerPrecomputedMeshService.readMeshChunk(
-            meshFilePath,
-            Seq(MeshChunkDataRequest(chunkInfo.byteOffset, chunkInfo.byteSize, segmentId))
-          ) ?~> "mesh.file.loadChunk.failed"
-        case _ =>
-          meshFileService
-            .readMeshChunk(
-              organizationId,
-              datasetDirectoryName,
-              layerName,
-              MeshChunkDataRequestList(MeshFileInfo(meshfileName, meshFileType, meshFilePath, None, 7),
-                                       List(MeshChunkDataRequest(chunkInfo.byteOffset, chunkInfo.byteSize, None)))
-            )
-            .toFox ?~> "mesh.file.loadChunk.failed"
-      }
-      _ <- Fox.fromBool(encoding == "draco") ?~> s"meshfile encoding is $encoding, only draco is supported"
-      scale <- tryo(Vec3Double(transform(0)(0), transform(1)(1), transform(2)(2))).toFox ?~> "could not extract scale from meshfile transform attribute"
-      stlEncodedChunk <- tryo(
-        dracoToStlConverter.dracoToStl(dracoMeshChunkBytes,
-                                       chunkInfo.position.x,
-                                       chunkInfo.position.y,
-                                       chunkInfo.position.z,
-                                       scale.x,
-                                       scale.y,
-                                       scale.z,
-                                       vertexQuantizationBits)).toFox
+      (dracoMeshChunkBytes, encoding) <- meshFileService
+        .readMeshChunk(
+          organizationId,
+          datasetDirectoryName,
+          layerName,
+          MeshChunkDataRequestList(MeshFileInfo(meshFileName, None, None, None, 7),
+                                   List(MeshChunkDataRequest(chunkInfo.byteOffset, chunkInfo.byteSize, None)))
+        )
+        .toFox ?~> "mesh.file.loadChunk.failed"
+      _ <- Fox.fromBool(encoding == "draco") ?~> s"mesh file encoding is $encoding, only draco is supported"
+      stlEncodedChunk <- getStlEncodedChunkFromDraco(chunkInfo, transform, dracoMeshChunkBytes)
     } yield stlEncodedChunk
 
   private def loadFullMeshFromRemoteNeuroglancerMeshFile(
-      organizationId: String,
-      datasetDirectoryName: String,
-      layerName: String,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       chunkInfos: WebknossosSegmentInfo <- neuroglancerPrecomputedMeshService.listMeshChunksForMultipleSegments(
@@ -236,14 +202,9 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
       vertexQuantizationBits <- neuroglancerPrecomputedMeshService.getVertexQuantizationBits(
         fullMeshRequest.meshFilePath)
       stlEncodedChunks: Seq[Array[Byte]] <- Fox.serialCombined(allChunkRanges) { chunkRange: MeshChunk =>
-        readMeshChunkAsStl(
-          organizationId,
-          datasetDirectoryName,
-          layerName,
-          meshFileName,
+        readNeuroglancerPrecomputedMeshChunkAsStl(
           chunkRange,
           transform,
-          fullMeshRequest.meshFileType,
           fullMeshRequest.meshFilePath,
           Some(fullMeshRequest.segmentId),
           vertexQuantizationBits
@@ -251,5 +212,38 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
       }
       stlOutput = combineEncodedChunksToStl(stlEncodedChunks)
     } yield stlOutput
+
+  private def readNeuroglancerPrecomputedMeshChunkAsStl(
+      chunkInfo: MeshChunk,
+      transform: Array[Array[Double]],
+      meshFilePath: Option[String],
+      segmentId: Option[Long],
+      vertexQuantizationBits: Int)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
+    for {
+      (dracoMeshChunkBytes, encoding) <- neuroglancerPrecomputedMeshService.readMeshChunk(
+        meshFilePath,
+        Seq(MeshChunkDataRequest(chunkInfo.byteOffset, chunkInfo.byteSize, segmentId))
+      ) ?~> "mesh.file.loadChunk.failed"
+      _ <- Fox.fromBool(encoding == "draco") ?~> s"mesh file encoding is $encoding, only draco is supported"
+      stlEncodedChunk <- getStlEncodedChunkFromDraco(chunkInfo, transform, dracoMeshChunkBytes, vertexQuantizationBits)
+    } yield stlEncodedChunk
+
+  private def getStlEncodedChunkFromDraco(
+      chunkInfo: MeshChunk,
+      transform: Array[Array[Double]],
+      dracoBytes: Array[Byte],
+      vertexQuantizationBits: Int = 0)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+    for {
+      scale <- tryo(Vec3Double(transform(0)(0), transform(1)(1), transform(2)(2))).toFox ?~> "could not extract scale from meshfile transform attribute"
+      stlEncodedChunk <- tryo(
+        dracoToStlConverter.dracoToStl(dracoBytes,
+                                       chunkInfo.position.x,
+                                       chunkInfo.position.y,
+                                       chunkInfo.position.z,
+                                       scale.x,
+                                       scale.y,
+                                       scale.z,
+                                       vertexQuantizationBits)).toFox
+    } yield stlEncodedChunk
 
 }

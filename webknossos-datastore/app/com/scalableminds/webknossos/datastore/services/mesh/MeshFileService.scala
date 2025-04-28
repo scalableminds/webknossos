@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
+import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.geometry.Vec3Float
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{ByteUtils, Fox, FoxImplicits}
@@ -11,7 +12,7 @@ import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Box, Full}
 import org.apache.commons.io.FilenameUtils
 import play.api.i18n.{Messages, MessagesProvider}
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.{Format, JsResult, JsString, JsValue, Json, OFormat}
 
 import java.nio.file.{Path, Paths}
 import javax.inject.Inject
@@ -45,13 +46,28 @@ object MeshChunkDataRequestList {
   implicit val jsonFormat: OFormat[MeshChunkDataRequestList] = Json.format[MeshChunkDataRequestList]
 }
 
+object MeshFileType extends ExtendedEnumeration {
+  type MeshFileType = Value
+  val local, neuroglancerPrecomputed = Value
+
+  implicit object MeshFileTypeFormat extends Format[MeshFileType] {
+    def reads(json: JsValue): JsResult[MeshFileType] =
+      json.validate[String].map(MeshFileType.withName)
+
+    def writes(meshFileType: MeshFileType): JsValue = JsString(meshFileType.toString)
+  }
+}
+
 case class MeshFileInfo(
     name: String,
     path: Option[String],
-    fileType: Option[String],
+    fileType: Option[MeshFileType.MeshFileType],
     mappingName: Option[String],
     formatVersion: Long
-)
+) {
+  def isNeuroglancerPrecomputed: Boolean =
+    fileType.contains(MeshFileType.neuroglancerPrecomputed)
+}
 
 object MeshFileInfo {
   implicit val jsonFormat: OFormat[MeshFileInfo] = Json.format[MeshFileInfo]
@@ -99,7 +115,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       zipped
         .map({
           case (fileName, mappingName, fileVersion) =>
-            MeshFileInfo(fileName, None, Some("local"), mappingName, fileVersion)
+            MeshFileInfo(fileName, None, Some(MeshFileType.local), mappingName, fileVersion)
         })
         .toSet
   }

@@ -11,7 +11,6 @@ import com.scalableminds.webknossos.datastore.services.mesh.{
   MeshChunkDataRequestList,
   MeshFileService,
   MeshMappingHelper,
-  NeuroglancerMesh,
   NeuroglancerPrecomputedMeshFileService
 }
 import play.api.libs.json.Json
@@ -77,16 +76,14 @@ class DSMeshController @Inject()(
             mappingNameForMeshFile,
             omitMissing = false
           )
-          chunkInfos <- request.body.meshFile.fileType match {
-            case Some(NeuroglancerMesh.meshTypeName) =>
-              neuroglancerPrecomputedMeshService.listMeshChunksForMultipleSegments(request.body.meshFile.path,
-                                                                                   segmentIds)
-            case _ =>
-              meshFileService.listMeshChunksForSegmentsMerged(organizationId,
-                                                              datasetDirectoryName,
-                                                              dataLayerName,
-                                                              request.body.meshFile.name,
-                                                              segmentIds)
+          chunkInfos <- if (request.body.meshFile.isNeuroglancerPrecomputed) {
+            neuroglancerPrecomputedMeshService.listMeshChunksForMultipleSegments(request.body.meshFile.path, segmentIds)
+          } else {
+            meshFileService.listMeshChunksForSegmentsMerged(organizationId,
+                                                            datasetDirectoryName,
+                                                            dataLayerName,
+                                                            request.body.meshFile.name,
+                                                            segmentIds)
           }
         } yield Ok(Json.toJson(chunkInfos))
       }
@@ -99,13 +96,12 @@ class DSMeshController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
-          (data, encoding) <- request.body.meshFile.fileType match {
-            case Some(NeuroglancerMesh.meshTypeName) =>
-              neuroglancerPrecomputedMeshService.readMeshChunk(request.body.meshFile.path, request.body.requests)
-            case _ =>
-              meshFileService
-                .readMeshChunk(organizationId, datasetDirectoryName, dataLayerName, request.body)
-                .toFox ?~> "mesh.file.loadChunk.failed"
+          (data, encoding) <- if (request.body.meshFile.isNeuroglancerPrecomputed) {
+            neuroglancerPrecomputedMeshService.readMeshChunk(request.body.meshFile.path, request.body.requests)
+          } else {
+            meshFileService
+              .readMeshChunk(organizationId, datasetDirectoryName, dataLayerName, request.body)
+              .toFox ?~> "mesh.file.loadChunk.failed"
           }
         } yield {
           if (encoding.contains("gzip")) {

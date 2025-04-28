@@ -159,6 +159,7 @@ export function createNode(
     target: nextNewId,
   };
   const edges = tree.edges.addEdge(newEdge);
+
   return [node, edges];
 }
 export function deleteNode(
@@ -186,7 +187,7 @@ export function deleteNode(
     },
   });
   // Do we need to split trees? Are there edges leading to/from it?
-  const neighborIds = [];
+  const neighborIds: number[] = [];
   const deletedEdges = activeTree.edges.getEdgesForNode(node.id);
 
   for (const edge of deletedEdges) {
@@ -422,6 +423,7 @@ function splitTreeByNodes(
       },
     });
   });
+
   return newTrees;
 }
 
@@ -449,6 +451,7 @@ export function createBranchPoint(
 
   return null;
 }
+
 export function deleteBranchPoint(
   skeletonTracing: SkeletonTracing,
   restrictions: RestrictionsAndSettings,
@@ -484,6 +487,7 @@ export function deleteBranchPoint(
 
   return null;
 }
+
 export function createTree(
   state: OxalisState,
   timestamp: number,
@@ -526,6 +530,7 @@ export function createTree(
   };
   return tree;
 }
+
 export function getOrCreateTree(
   state: OxalisState,
   skeletonTracing: SkeletonTracing,
@@ -547,6 +552,7 @@ export function getOrCreateTree(
 
   return null;
 }
+
 export function ensureTreeNames(state: OxalisState, trees: MutableTreeMap) {
   // Assign a new tree name for trees without a name
   for (const tree of Utils.values(trees)) {
@@ -557,6 +563,7 @@ export function ensureTreeNames(state: OxalisState, trees: MutableTreeMap) {
 
   return trees;
 }
+
 export function addTreesAndGroups(
   skeletonTracing: SkeletonTracing,
   trees: MutableTreeMap,
@@ -641,6 +648,7 @@ export function addTreesAndGroups(
 
   return [newTrees, treeGroups, newNodeId - 1];
 }
+
 export function deleteTrees(
   skeletonTracing: SkeletonTracing,
   treeIds: number[],
@@ -657,13 +665,16 @@ export function deleteTrees(
     // Setting the tree active whose id is the next highest compared to the ids of the deleted trees.
     const maximumTreeId = _.max(treeIds) || Constants.MIN_TREE_ID;
     newActiveTreeId = getNearestTreeId(maximumTreeId, newTrees);
-    // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-    newActiveNodeId = +_.first(Array.from(newTrees[newActiveTreeId].nodes.keys())) || null;
+
+    const firstKey = _.first(Array.from(newTrees[newActiveTreeId].nodes.keys()));
+    newActiveNodeId = firstKey != null ? Number(firstKey) : null;
   }
 
   const newMaxNodeId = getMaximumNodeId(newTrees);
+
   return [newTrees, newActiveTreeId, newActiveNodeId, newMaxNodeId];
 }
+
 export function mergeTrees(
   trees: TreeMap,
   sourceNodeId: number,
@@ -715,19 +726,18 @@ export function mergeTrees(
   });
   return [newTrees, sourceTree.treeId, sourceNodeId];
 }
-export function shuffleTreeColor(
-  skeletonTracing: SkeletonTracing,
-  tree: Tree,
-): [Tree, number] | null {
+
+export function shuffleTreeColor(skeletonTracing: SkeletonTracing, tree: Tree): [Tree, number] {
   const randomId = _.random(0, 10000, false);
 
   return setTreeColorIndex(skeletonTracing, tree, randomId);
 }
+
 export function setTreeColorIndex(
   _skeletonTracing: SkeletonTracing,
   tree: Tree,
   colorIndex: number,
-): [Tree, number] | null {
+): [Tree, number] {
   const newTree = update(tree, {
     color: {
       $set: ColorGenerator.distinctColorForId(colorIndex),
@@ -735,12 +745,13 @@ export function setTreeColorIndex(
   });
   return [newTree, tree.treeId];
 }
+
 export function createComment(
   _skeletonTracing: SkeletonTracing,
   tree: Tree,
   node: Node,
   commentText: string,
-): CommentType[] | null {
+): CommentType[] {
   // Gather all comments other than the activeNode's comments
   const { comments } = tree;
   const commentsWithoutActiveNodeComment = comments.filter((comment) => comment.nodeId !== node.id);
@@ -749,17 +760,21 @@ export function createComment(
     content: commentText,
   };
   const newComments = commentsWithoutActiveNodeComment.concat([newComment]);
+
   return newComments;
 }
+
 export function deleteComment(
   _skeletonTracing: SkeletonTracing,
   tree: Tree,
   node: Node,
-): CommentType[] | null {
+): CommentType[] {
   const { comments } = tree;
   const commentsWithoutActiveNodeComment = comments.filter((comment) => comment.nodeId !== node.id);
+
   return commentsWithoutActiveNodeComment;
 }
+
 export function toggleAllTreesReducer(
   state: OxalisState,
   skeletonTracing: SkeletonTracing,
@@ -784,6 +799,7 @@ export function toggleAllTreesReducer(
     },
   });
 }
+
 export function toggleTreeGroupReducer(
   state: OxalisState,
   skeletonTracing: SkeletonTracing,

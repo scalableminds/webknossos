@@ -3,8 +3,7 @@ package models.user
 import play.silhouette.api.{Identity, LoginInfo}
 import com.scalableminds.util.accesscontext._
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.JsonHelper.parseAndValidateJson
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.schema.Tables._
@@ -98,7 +97,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   protected def parse(r: UsersRow): Fox[User] =
     for {
-      userConfiguration <- parseAndValidateJson[JsObject](r.userconfiguration)
+      userConfiguration <- JsonHelper.parseAs[JsObject](r.userconfiguration).toFox
     } yield {
       User(
         ObjectId(r._Id),
@@ -433,7 +432,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         AND NOT u.isUnlisted
         AND (payingOrganization._organization IS NULL OR payingOrganization._organization = $organizationId)
       """.as[Int])
-      result <- resultList.headOption
+      result <- resultList.headOption.toFox
     } yield result
 
   def countAdminsForOrganization(organizationId: String): Fox[Int] =
@@ -441,7 +440,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       resultList <- run(
         q"SELECT COUNT(*) from $existingCollectionName WHERE _organization = $organizationId AND isAdmin AND NOT isUnlisted"
           .as[Int])
-      result <- resultList.headOption
+      result <- resultList.headOption.toFox
     } yield result
 
   def countOwnersForOrganization(organizationId: String): Fox[Int] =
@@ -449,13 +448,13 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       resultList <- run(
         q"SELECT COUNT(*) FROM $existingCollectionName WHERE _organization = $organizationId AND isOrganizationOwner AND NOT isUnlisted"
           .as[Int])
-      result <- resultList.headOption
+      result <- resultList.headOption.toFox
     } yield result
 
   def countIdentitiesForMultiUser(multiUserId: ObjectId): Fox[Int] =
     for {
       resultList <- run(q"SELECT COUNT(*) FROM $existingCollectionName WHERE _multiUser = $multiUserId".as[Int])
-      result <- resultList.headOption
+      result <- resultList.headOption.toFox
     } yield result
 
   def insertOne(u: User): Fox[Unit] =
@@ -616,8 +615,7 @@ class UserDatasetConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: UserD
                       FROM webknossos.user_datasetConfigurations
                       WHERE _dataset = $datasetId
                       AND _user = $userId""".as[String])
-      parsed = rows.map(Json.parse)
-      result <- parsed.headOption.map(_.validate[DatasetViewConfiguration].getOrElse(Map.empty)).toFox
+      result <- rows.headOption.map(JsonHelper.parseAs[DatasetViewConfiguration](_).getOrElse(Map.empty)).toFox
     } yield result
 
   def updateDatasetConfigurationForUserAndDataset(
@@ -654,7 +652,7 @@ class UserDatasetLayerConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: 
                         WHERE _dataset = $datasetId
                         AND _user = $userId
                         AND layerName in ${SqlToken.tupleFromList(layerNames)}""".as[(String, String)])
-        parsed = rows.flatMap(t => Json.parse(t._2).asOpt[LayerViewConfiguration].map((t._1, _)))
+        parsed = rows.flatMap(t => JsonHelper.parseAs[LayerViewConfiguration](t._2).toOption.map((t._1, _)))
       } yield parsed.toMap
     }
 

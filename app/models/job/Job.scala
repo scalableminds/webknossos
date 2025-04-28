@@ -2,7 +2,7 @@ package models.job
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.webknossos.schema.Tables._
 import models.job.JobState.JobState
 import models.job.JobCommand.JobCommand
@@ -111,16 +111,17 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   protected def parse(r: JobsRow): Fox[Job] =
     for {
-      manualStateOpt <- Fox.runOptional(r.manualstate)(JobState.fromString)
-      state <- JobState.fromString(r.state)
-      command <- JobCommand.fromString(r.command)
+      manualStateOpt <- Fox.runOptional(r.manualstate)(JobState.fromString(_).toFox)
+      state <- JobState.fromString(r.state).toFox
+      command <- JobCommand.fromString(r.command).toFox
+      commandArgs <- JsonHelper.parseAs[JsObject](r.commandargs).toFox
     } yield {
       Job(
         ObjectId(r._Id),
         ObjectId(r._Owner),
         r._Datastore.trim,
         command,
-        Json.parse(r.commandargs).as[JsObject],
+        commandArgs,
         state,
         manualStateOpt,
         r._Worker.map(ObjectId(_)),
@@ -181,7 +182,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    AND manualState IS NULL
                    AND _dataStore = $dataStoreName
                    AND _worker IS NULL""".as[Int])
-        head <- r.headOption
+        head <- r.headOption.toFox
       } yield head
     }
 
@@ -195,7 +196,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                      AND state IN ${SqlToken.tupleFromValues(JobState.PENDING, JobState.STARTED)}
                      AND command IN ${SqlToken.tupleFromList(jobCommands)}
                      AND manualState IS NULL""".as[Int])
-        head <- r.headOption
+        head <- r.headOption.toFox
       } yield head
     }
 
@@ -231,7 +232,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
            JOIN webknossos.jobs j ON j._owner = u._id
            WHERE j._id = $jobId
            """.as[String])
-      firstRow <- r.headOption
+      firstRow <- r.headOption.toFox
     } yield firstRow
 
   def insertOne(j: Job): Fox[Unit] =

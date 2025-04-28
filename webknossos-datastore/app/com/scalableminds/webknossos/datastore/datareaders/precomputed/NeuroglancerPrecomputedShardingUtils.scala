@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.datareaders.precomputed
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.io.ZipIO
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import net.liftweb.common.Box
 import net.liftweb.common.Box.tryo
@@ -12,7 +12,7 @@ import java.nio.{ByteBuffer, ByteOrder}
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
-trait NeuroglancerPrecomputedShardingUtils {
+trait NeuroglancerPrecomputedShardingUtils extends FoxImplicits {
 
   // SHARDING
   // Implemented according to https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/sharded.md,
@@ -121,14 +121,16 @@ trait NeuroglancerPrecomputedShardingUtils {
       parsedIndex = parseShardIndex(index)
       minishardIndexRange = getMinishardIndexRange(minishardNumber, parsedIndex)
       indexRaw <- vaultPath.readBytes(Some(minishardIndexRange))
-      minishardIndex <- parseMinishardIndex(indexRaw)
+      minishardIndex <- parseMinishardIndex(indexRaw).toFox
     } yield minishardIndex
   }
 
   def getChunkRange(chunkId: Long, minishardIndex: Array[(Long, Long, Long)])(
-      implicit ec: ExecutionContext): Fox[NumericRange.Exclusive[Long]] =
+    implicit ec: ExecutionContext): Fox[NumericRange.Exclusive[Long]] =
     for {
-      chunkSpecification <- Fox.option2Fox(minishardIndex.find(_._1 == chunkId)) ?~> s"Could not find chunk id $chunkId in minishard index"
+      chunkSpecification <- minishardIndex
+        .find(_._1 == chunkId)
+        .toFox ?~> s"Could not find chunk id $chunkId in minishard index"
       chunkStart = (shardIndexRange.end) + chunkSpecification._2
       chunkEnd = (shardIndexRange.end) + chunkSpecification._2 + chunkSpecification._3
     } yield Range.Long(chunkStart, chunkEnd, 1)

@@ -1,7 +1,7 @@
 package models.annotation
 
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.{
@@ -29,7 +29,7 @@ case class RedundantTracingProperties(
     editPositionAdditionalCoordinates: Seq[AdditionalCoordinateProto],
 )
 
-trait AnnotationLayerPrecedence {
+trait AnnotationLayerPrecedence extends FoxImplicits {
 
   protected def combineLargestSegmentIdsByPrecedence(fromNml: Option[Long],
                                                      fromFallbackLayer: Option[Option[Long]]): Option[Long] =

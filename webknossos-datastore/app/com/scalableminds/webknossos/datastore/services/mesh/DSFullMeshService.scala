@@ -4,8 +4,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox, option2Fox}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, SegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.requests.Cuboid
@@ -47,6 +46,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
                                   adHocMeshServiceHolder: AdHocMeshServiceHolder)
     extends LazyLogging
     with FullMeshHelper
+    with FoxImplicits
     with MeshMappingHelper {
 
   val binaryDataService: BinaryDataService = binaryDataServiceHolder.binaryDataService
@@ -189,16 +189,18 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
             Seq(MeshChunkDataRequest(chunkInfo.byteOffset, chunkInfo.byteSize, segmentId))
           ) ?~> "mesh.file.loadChunk.failed"
         case _ =>
-          meshFileService.readMeshChunk(
-            organizationId,
-            datasetDirectoryName,
-            layerName,
-            MeshChunkDataRequestList(MeshFileInfo(meshfileName, meshFileType, meshFilePath, None, 7),
-                                     List(MeshChunkDataRequest(chunkInfo.byteOffset, chunkInfo.byteSize, None)))
-          ) ?~> "mesh.file.loadChunk.failed"
+          meshFileService
+            .readMeshChunk(
+              organizationId,
+              datasetDirectoryName,
+              layerName,
+              MeshChunkDataRequestList(MeshFileInfo(meshfileName, meshFileType, meshFilePath, None, 7),
+                                       List(MeshChunkDataRequest(chunkInfo.byteOffset, chunkInfo.byteSize, None)))
+            )
+            .toFox ?~> "mesh.file.loadChunk.failed"
       }
-      _ <- bool2Fox(encoding == "draco") ?~> s"meshfile encoding is $encoding, only draco is supported"
-      scale <- tryo(Vec3Double(transform(0)(0), transform(1)(1), transform(2)(2))) ?~> "could not extract scale from meshfile transform attribute"
+      _ <- Fox.fromBool(encoding == "draco") ?~> s"meshfile encoding is $encoding, only draco is supported"
+      scale <- tryo(Vec3Double(transform(0)(0), transform(1)(1), transform(2)(2))).toFox ?~> "could not extract scale from meshfile transform attribute"
       stlEncodedChunk <- tryo(
         dracoToStlConverter.dracoToStl(dracoMeshChunkBytes,
                                        chunkInfo.position.x,
@@ -207,7 +209,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
                                        scale.x,
                                        scale.y,
                                        scale.z,
-                                       vertexQuantizationBits))
+                                       vertexQuantizationBits)).toFox
     } yield stlEncodedChunk
 
   private def loadFullMeshFromRemoteNeuroglancerMeshFile(
@@ -220,7 +222,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
         fullMeshRequest.meshFilePath,
         List(fullMeshRequest.segmentId)
       )
-      _ <- Fox.bool2Fox(fullMeshRequest.mappingName.isEmpty) ?~> "Mapping is not supported for remote neuroglancer mesh files"
+      _ <- Fox.fromBool(fullMeshRequest.mappingName.isEmpty) ?~> "Mapping is not supported for remote neuroglancer mesh files"
       selectedLod = fullMeshRequest.lod.getOrElse(0)
       allChunkRanges: List[MeshChunk] = chunkInfos.lods(selectedLod).chunks
       meshFileName <- fullMeshRequest.meshFileName.toFox ?~> "mesh file name needed"

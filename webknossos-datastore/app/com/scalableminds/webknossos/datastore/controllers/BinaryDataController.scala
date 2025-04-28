@@ -207,8 +207,8 @@ class BinaryDataController @Inject()(
         dataWithFallback = if (data.length == 0)
           new Array[Byte](width * height * dataLayer.bytesPerElement)
         else data
-        spriteSheet <- ImageCreator.spriteSheetFor(dataWithFallback, params) ?~> "image.create.failed"
-        firstSheet <- spriteSheet.pages.headOption ?~> "image.page.failed"
+        spriteSheet <- ImageCreator.spriteSheetFor(dataWithFallback, params).toFox ?~> "image.create.failed"
+        firstSheet <- spriteSheet.pages.headOption.toFox ?~> "image.page.failed"
         outputStream = new ByteArrayOutputStream()
         _ = new JPEGWriter().writeToOutputStream(firstSheet.image)(outputStream)
       } yield Ok(outputStream.toByteArray).as(jpegMimeType)

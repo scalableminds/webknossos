@@ -12,10 +12,9 @@ import net.liftweb.common.Box.tryo
 
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
-import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
 import ucar.ma2.{Array => MultiArray}
 
-object PrecomputedArray extends LazyLogging {
+object PrecomputedArray extends LazyLogging with FoxImplicits {
   def open(magPath: VaultPath,
            dataSourceId: DataSourceId,
            layerName: String,
@@ -27,8 +26,8 @@ object PrecomputedArray extends LazyLogging {
     for {
       headerBytes <- (magPath.parent / PrecomputedHeader.FILENAME_INFO)
         .readBytes() ?~> s"Could not read header at ${PrecomputedHeader.FILENAME_INFO}"
-      rootHeader <- JsonHelper.parseAndValidateJson[PrecomputedHeader](headerBytes) ?~> "Could not parse array header"
-      scale <- rootHeader.getScale(magPath.basename) ?~> s"Header does not contain scale ${magPath.basename}"
+      rootHeader <- JsonHelper.parseAs[PrecomputedHeader](headerBytes).toFox ?~> "Could not parse array header"
+      scale <- rootHeader.getScale(magPath.basename).toFox ?~> s"Header does not contain scale ${magPath.basename}"
       scaleHeader = PrecomputedScaleHeader(scale, rootHeader)
       _ <- DatasetArray.assertChunkSizeLimit(scaleHeader.bytesPerChunk)
       array <- tryo(
@@ -41,7 +40,7 @@ object PrecomputedArray extends LazyLogging {
           channelIndex,
           additionalAxes,
           sharedChunkContentsCache
-        )) ?~> "Could not open neuroglancerPrecomputed array"
+        )).toFox ?~> "Could not open neuroglancerPrecomputed array"
     } yield array
 }
 
@@ -61,7 +60,6 @@ class PrecomputedArray(vaultPath: VaultPath,
                          channelIndex,
                          additionalAxes,
                          sharedChunkContentsCache)
-    with FoxImplicits
     with LazyLogging
     with NeuroglancerPrecomputedShardingUtils {
 
@@ -88,7 +86,7 @@ class PrecomputedArray(vaultPath: VaultPath,
     val minishardInfo = shardingSpecification.getMinishardInfo(chunkIdentifier)
     val shardPath = shardingSpecification.getPathForShard(vaultPath, minishardInfo._1)
     for {
-      _ <- Fox.bool2Fox(minishardInfo._2 <= Int.MaxValue) ?~> "Minishard number is too large"
+      _ <- Fox.fromBool(minishardInfo._2 <= Int.MaxValue) ?~> "Minishard number is too large"
       minishardIndex <- getMinishardIndex(shardPath, minishardInfo._2.toInt) ?~> f"Could not get minishard index for chunkIndex ${chunkIndex
         .mkString(",")}"
       chunkRange: NumericRange.Exclusive[Long] <- getChunkRange(chunkIdentifier, minishardIndex) ?~> s"Could not get chunk range for chunkIndex ${chunkIndex

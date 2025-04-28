@@ -162,13 +162,13 @@ class VolumeTracingService @Inject()(
                            segmentIndexBuffer: VolumeSegmentIndexBuffer,
                            volumeBucketBuffer: VolumeBucketBuffer): Fox[Unit] =
     for {
-      _ <- bool2Fox(!action.bucketPosition.hasNegativeComponent) ?~> s"Received a bucket at negative position (${action.bucketPosition}), must be positive"
+      _ <- Fox.fromBool(!action.bucketPosition.hasNegativeComponent) ?~> s"Received a bucket at negative position (${action.bucketPosition}), must be positive"
       _ <- assertMagIsValid(volumeLayer.tracing, action.mag) ?~> s"Received a mag-${action.mag.toMagLiteral(allowScalar = true)} bucket, which is invalid for this annotation."
 
       actionBucketData <- action.base64Data.map(Base64.getDecoder.decode).toFox
       _ <- Fox.runIf(volumeLayer.tracing.getHasSegmentIndex) {
         for {
-          previousBucketBytes <- volumeBucketBuffer.getWithFallback(action.bucketPosition).futureBox
+          previousBucketBytes <- volumeBucketBuffer.getWithFallback(action.bucketPosition).shiftBox
           _ <- updateSegmentIndex(
             volumeLayer,
             segmentIndexBuffer,
@@ -252,9 +252,9 @@ class VolumeTracingService @Inject()(
 
   private def assertMagIsValid(tracing: VolumeTracing, mag: Vec3Int): Fox[Unit] =
     if (tracing.mags.nonEmpty) {
-      bool2Fox(tracing.mags.exists(r => vec3IntFromProto(r) == mag))
+      Fox.fromBool(tracing.mags.exists(r => vec3IntFromProto(r) == mag))
     } else { // old volume tracings do not have a mag list, no assert possible. Check compatibility by asserting isotropic mag
-      bool2Fox(mag.isIsotropic)
+      Fox.fromBool(mag.isIsotropic)
     }
 
   def revertVolumeData(tracingId: String,
@@ -287,7 +287,7 @@ class VolumeTracingService @Inject()(
       _ <- Fox.serialCombined(bucketStreamBeforeRevert) {
         case (bucketPosition, dataBeforeRevert, version) =>
           if (version > sourceVersion) {
-            loadBucket(volumeLayer, bucketPosition, Some(sourceVersion)).futureBox.map {
+            loadBucket(volumeLayer, bucketPosition, Some(sourceVersion)).shiftBox.map {
               case Full(dataAfterRevert) =>
                 for {
                   _ <- saveBucket(volumeLayer, bucketPosition, dataAfterRevert, newVersion)
@@ -330,7 +330,7 @@ class VolumeTracingService @Inject()(
       implicit mp: MessagesProvider,
       tc: TokenContext): Fox[Set[Vec3Int]] =
     if (tracing.version != 0L)
-      Failure("Tracing has already been edited.")
+      Fox.failure("Tracing has already been edited.")
     else {
       val magSets = new mutable.HashSet[Set[Vec3Int]]()
       for {
@@ -358,7 +358,7 @@ class VolumeTracingService @Inject()(
               _ <- withZipsFromMultiZipAsync(initialData)((_, dataZip) => mergedVolume.addLabelSetFromDataZip(dataZip))
               _ <- withZipsFromMultiZipAsync(initialData)((index, dataZip) =>
                 mergedVolume.addFromDataZip(index, dataZip))
-              _ <- bool2Fox(
+              _ <- Fox.fromBool(
                 ElementClass
                   .largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, tracing.elementClass)) ?~> Messages(
                 "annotation.volume.largestSegmentIdExceedsRange",
@@ -403,7 +403,7 @@ class VolumeTracingService @Inject()(
                          initialData: File,
                          magRestrictions: MagRestrictions)(implicit tc: TokenContext): Fox[Set[Vec3Int]] =
     if (tracing.version != 0L) {
-      Failure("Tracing has already been edited.")
+      Fox.failure("Tracing has already been edited.")
     } else {
       val volumeLayer = volumeTracingLayer(annotationId, tracingId, tracing)
       val savedMags = new mutable.HashSet[Vec3Int]()
@@ -482,12 +482,11 @@ class VolumeTracingService @Inject()(
     val before = Instant.now
     val zipResult = ZipIO.zip(buckets, os, level = Deflater.BEST_SPEED)
 
-    zipResult.onComplete {
-      case b: scala.util.Success[Box[Unit]] =>
-        logger.info(
-          s"Zipping volume data for $tracingId took ${formatDuration(Instant.since(before))}. Result: ${b.get}")
-      case _ => ()
+    zipResult.onComplete { resultBox =>
+      logger.info(
+        s"Zipping volume data for $tracingId took ${formatDuration(Instant.since(before))}. Result: $resultBox")
     }
+
     zipResult
   }
 
@@ -553,7 +552,7 @@ class VolumeTracingService @Inject()(
         // Adding segment index on duplication if the volume tracing allows it. This will be used in duplicateData
         hasSegmentIndex = Some(hasSegmentIndex)
       )
-      _ <- bool2Fox(newTracing.mags.nonEmpty) ?~> "magRestrictions.tooTight"
+      _ <- Fox.fromBool(newTracing.mags.nonEmpty) ?~> "magRestrictions.tooTight"
     } yield newTracing
   }
 
@@ -655,8 +654,8 @@ class VolumeTracingService @Inject()(
 
   def updateMagList(tracingId: String, tracing: VolumeTracing, mags: Set[Vec3Int]): Fox[Unit] =
     for {
-      _ <- bool2Fox(tracing.version == 0L) ?~> "Tracing has already been edited."
-      _ <- bool2Fox(mags.nonEmpty) ?~> "Initializing without any mags. No data or mag restrictions too tight?"
+      _ <- Fox.fromBool(tracing.version == 0L) ?~> "Tracing has already been edited."
+      _ <- Fox.fromBool(mags.nonEmpty) ?~> "Initializing without any mags. No data or mag restrictions too tight?"
       _ <- saveVolume(tracingId, tracing.version, tracing.copy(mags = mags.toList.sortBy(_.maxDim).map(vec3IntToProto)))
     } yield ()
 
@@ -828,13 +827,16 @@ class VolumeTracingService @Inject()(
           mergedVolume.addFromBucketStream(sourceVolumeIndex, volumeLayer.bucketStream, Some(magsIntersection))
       }
       for {
-        _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, elementClassProto)) ?~> Messages(
+        _ <- Fox.fromBool(
+          ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, elementClassProto)) ?~> Messages(
           "annotation.volume.largestSegmentIdExceedsRange",
           mergedVolume.largestSegmentId.toLong,
           elementClassProto)
-        mergedAdditionalAxes <- Fox.box2Fox(AdditionalAxis.mergeAndAssertSameAdditionalAxes(volumeLayers.map(l =>
-          AdditionalAxis.fromProtosAsOpt(l.tracing.additionalAxes))))
-        firstVolumeLayer <- volumeLayers.headOption ?~> "merge.noTracings"
+        mergedAdditionalAxes <- AdditionalAxis
+          .mergeAndAssertSameAdditionalAxes(
+            volumeLayers.map(l => AdditionalAxis.fromProtosAsOpt(l.tracing.additionalAxes)))
+          .toFox
+        firstVolumeLayer <- volumeLayers.headOption.toFox ?~> "merge.noTracings"
         firstVolumeAnnotationId <- firstVolumeAnnotationIdOpt.toFox
         fallbackLayer <- getFallbackLayer(firstVolumeAnnotationId, firstVolumeLayer.tracing)
         segmentIndexBuffer = new VolumeSegmentIndexBuffer(
@@ -896,10 +898,10 @@ class VolumeTracingService @Inject()(
         for {
           largestSegmentId <- tracing.largestSegmentId.toFox ?~> "annotation.volume.merge.largestSegmentId.unset"
           mergedVolume = new MergedVolume(tracing.elementClass, largestSegmentId)
-          _ <- mergedVolume.addLabelSetFromDataZip(zipFile).toFox
+          _ <- mergedVolume.addLabelSetFromDataZip(zipFile)
           _ = mergedVolume.addFromBucketStream(sourceVolumeIndex = 0, volumeLayer.bucketProvider.bucketStream())
-          _ <- mergedVolume.addFromDataZip(sourceVolumeIndex = 1, zipFile).toFox
-          _ <- bool2Fox(
+          _ <- mergedVolume.addFromDataZip(sourceVolumeIndex = 1, zipFile)
+          _ <- Fox.fromBool(
             ElementClass
               .largestSegmentIdIsInRange(mergedVolume.largestSegmentId.toLong, tracing.elementClass)) ?~> Messages(
             "annotation.volume.largestSegmentIdExceedsRange",
@@ -925,13 +927,13 @@ class VolumeTracingService @Inject()(
               _ <- saveBucket(volumeLayer, bucketPosition, bucketBytes, tracing.version + 1)
               _ <- Fox.runIfOptionTrue(tracing.hasSegmentIndex) {
                 for {
-                  previousBucketBytes <- loadBucket(volumeLayer, bucketPosition, Some(tracing.version)).futureBox
+                  previousBucketBytesBox <- loadBucket(volumeLayer, bucketPosition, Some(tracing.version)).shiftBox
                   _ <- updateSegmentIndex(
                     volumeLayer,
                     segmentIndexBuffer,
                     bucketPosition,
                     bucketBytes,
-                    previousBucketBytes,
+                    previousBucketBytesBox,
                     editableMappingTracingId(tracing, tracingId)
                   ) ?~> "failed to update segment index"
                 } yield ()
@@ -949,16 +951,14 @@ class VolumeTracingService @Inject()(
                                  t => getFallbackLayerFromWebknossos(t._1, t._2))
 
   private def getFallbackLayerFromWebknossos(annotationId: String, fallbackLayerName: Option[String])(
-      implicit tc: TokenContext) =
-    Fox[Option[RemoteFallbackLayer]] {
-      for {
-        dataSource <- remoteWebknossosClient.getDataSourceForAnnotation(annotationId)
-        dataSourceId = dataSource.id
-        layerWithFallbackOpt = dataSource.dataLayers.find(_.name == fallbackLayerName.getOrElse(""))
-        fallbackLayer <- Fox.runOptional(layerWithFallbackOpt) { layerWithFallback =>
-          RemoteFallbackLayer.fromDataLayerAndDataSource(layerWithFallback, dataSourceId).toFox
-        }
-      } yield fallbackLayer
-    }
+      implicit tc: TokenContext): Fox[Option[RemoteFallbackLayer]] =
+    for {
+      dataSource <- remoteWebknossosClient.getDataSourceForAnnotation(annotationId)
+      dataSourceId = dataSource.id
+      layerWithFallbackOpt = dataSource.dataLayers.find(_.name == fallbackLayerName.getOrElse(""))
+      fallbackLayer <- Fox.runOptional(layerWithFallbackOpt) { layerWithFallback =>
+        RemoteFallbackLayer.fromDataLayerAndDataSource(layerWithFallback, dataSourceId).toFox
+      }
+    } yield fallbackLayer
 
 }

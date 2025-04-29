@@ -844,6 +844,7 @@ exports[`Annotation API (E2E) > Send complex update actions and compare resultin
   ],
   "typ": "Skeleton",
   "userBoundingBoxes": [],
+  "userStates": [],
   "zoomLevel": 2,
 }
 `;
@@ -869,6 +870,7 @@ exports[`Annotation API (E2E) > Send update actions and compare resulting tracin
   "trees": [],
   "typ": "Skeleton",
   "userBoundingBoxes": [],
+  "userStates": [],
   "zoomLevel": 2,
 }
 `;
@@ -1718,6 +1720,7 @@ exports[`Annotation API (E2E) > Update Metadata for Skeleton Tracing 1`] = `
   ],
   "typ": "Skeleton",
   "userBoundingBoxes": [],
+  "userStates": [],
   "zoomLevel": 2,
 }
 `;
@@ -2944,6 +2947,7 @@ exports[`Annotation API (E2E) > getTracingsForAnnotation() 1`] = `
   "trees": [],
   "typ": "Skeleton",
   "userBoundingBoxes": [],
+  "userStates": [],
   "zoomLevel": 2,
 }
 `;
@@ -2970,6 +2974,7 @@ exports[`Annotation API (E2E) > getTracingsForAnnotation() for hybrid 1`] = `
     "trees": [],
     "typ": "Skeleton",
     "userBoundingBoxes": [],
+    "userStates": [],
     "zoomLevel": 2,
   },
   "volume": {
@@ -3031,6 +3036,7 @@ exports[`Annotation API (E2E) > getTracingsForAnnotation() for hybrid 1`] = `
     "segments": [],
     "typ": "Volume",
     "userBoundingBoxes": [],
+    "userStates": [],
     "volumeBucketDataHasChanged": false,
     "zoomLevel": 1,
   },
@@ -3097,6 +3103,7 @@ exports[`Annotation API (E2E) > getTracingsForAnnotation() for volume 1`] = `
   "segments": [],
   "typ": "Volume",
   "userBoundingBoxes": [],
+  "userStates": [],
   "volumeBucketDataHasChanged": false,
   "zoomLevel": 1,
 }

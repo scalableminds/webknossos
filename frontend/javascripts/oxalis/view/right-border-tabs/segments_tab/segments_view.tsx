@@ -1763,29 +1763,20 @@ class SegmentsView extends React.Component<Props, State> {
       return (
         <div onContextMenu={onOpenContextMenu}>
           <FolderOutlined className="icon-margin-right" />
-          {/* todop */}
-          {id === -2 ? (
-            <i>{displayableName}</i>
-          ) : (
-            <EditableTextLabel
-              value={displayableName}
-              label="Group Name"
-              onChange={(name) => {
-                if (this.props.visibleSegmentationLayer != null) {
-                  api.tracing.renameSegmentGroup(
-                    id,
-                    name,
-                    this.props.visibleSegmentationLayer.name,
-                  );
-                }
-              }}
-              margin={0}
-              // The root group must not be removed or renamed
-              disableEditing={!this.props.allowUpdate || id === MISSING_GROUP_ID || id === -2}
-              onRenameStart={this.onRenameStart}
-              onRenameEnd={this.onRenameEnd}
-            />
-          )}
+          <EditableTextLabel
+            value={displayableName}
+            label="Group Name"
+            onChange={(name) => {
+              if (this.props.visibleSegmentationLayer != null) {
+                api.tracing.renameSegmentGroup(id, name, this.props.visibleSegmentationLayer.name);
+              }
+            }}
+            margin={0}
+            // The root group must not be removed or renamed
+            disableEditing={!this.props.allowUpdate || id === MISSING_GROUP_ID}
+            onRenameStart={this.onRenameStart}
+            onRenameEnd={this.onRenameEnd}
+          />
           {this.getSegmentStatisticsModal(id)}
         </div>
       );

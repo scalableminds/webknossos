@@ -61,7 +61,6 @@ class BinaryDataService(val dataBaseDir: Path,
       for {
         _ <- Fox.fromBool(requests.forall(_.isSingleBucket)) ?~> "data requests handed to handleMultipleBucketRequests don’t contain bucket requests"
         dataLayer <- SequenceUtils.findUniqueElement(requests.map(_.dataLayer)).toFox
-        dataSourceIdOpt <- SequenceUtils.findUniqueElement(requests.map(_.dataSourceId)).toFox
         // dataSource is None and unused for volume tracings. Insert dummy DataSourceId (also unused in that case, except for logging)
         dataSourceId <- SequenceUtils.findUniqueElement(requests.map(_.dataSourceIdOrVolumeDummy)).toFox
         firstRequest <- requests.headOption.toFox

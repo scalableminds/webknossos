@@ -16,7 +16,7 @@ object DataServiceRequestSettings {
 }
 
 case class DataServiceDataRequest(
-    dataSourceId: Option[DataSourceId], // None for volume tracings
+    dataSourceId: Option[DataSourceId], // None in case of volume tracings
     dataLayer: DataLayer,
     cuboid: Cuboid,
     settings: DataServiceRequestSettings
@@ -31,7 +31,7 @@ case class DataServiceDataRequest(
 
 case class DataReadInstruction(
     baseDir: Path,
-    dataSourceId: DataSourceId, // Dummy value for volume tracings
+    dataSourceId: DataSourceId, // Dummy value in case of volume tracings
     dataLayer: DataLayer,
     bucket: BucketPosition,
     version: Option[Long] = None
@@ -40,7 +40,7 @@ case class DataReadInstruction(
 }
 
 case class DataServiceMappingRequest(
-    dataSourceId: Option[DataSourceId],
+    dataSourceId: Option[DataSourceId], // None in case of volume tracings
     dataLayer: SegmentationLayer,
     mapping: String
 ) {
@@ -51,6 +51,6 @@ case class DataServiceMappingRequest(
 
 case class MappingReadInstruction(
     baseDir: Path,
-    dataSourceId: DataSourceId,
+    dataSourceId: DataSourceId, // Dummy value in case of volume tracings
     mapping: String
 )

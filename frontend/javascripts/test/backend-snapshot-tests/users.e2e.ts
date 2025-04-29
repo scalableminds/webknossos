@@ -8,12 +8,15 @@ import {
   writeTypeCheckingFile,
 } from "test/e2e-setup";
 import * as api from "admin/admin_rest_api";
-import { describe, it, beforeAll, expect } from "vitest";
+import { describe, it, beforeAll, expect, beforeEach } from "vitest";
 
 describe("Users API (E2E)", () => {
   beforeAll(async () => {
     // Reset database and change token
     resetDatabase();
+  });
+  beforeEach(() => {
+    // Reset database and change token
     setUserAuthToken(tokenUserA);
   });
 

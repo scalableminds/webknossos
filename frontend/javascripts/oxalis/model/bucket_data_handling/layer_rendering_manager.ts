@@ -360,7 +360,7 @@ export default class LayerRenderingManager {
         ) {
           const { id } = updateAction.value;
           const newSegment = newSegments.getNullable(id);
-          const isVisible = newSegment?.isVisible;
+          const isVisible = newSegment?.isVisible ?? !hideUnregisteredSegments;
           const color = newSegment?.color;
 
           if (cuckoo.entryCount >= cuckoo.getCriticalCapacity()) {

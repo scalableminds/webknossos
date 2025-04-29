@@ -128,6 +128,7 @@ import {
   getGroupNodeKey,
 } from "../trees_tab/tree_hierarchy_view_helpers";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
+import { getUpdateSegmentActionToToggleVisibility } from "oxalis/model/actions/volumetracing_action_helpers";
 
 const SCROLL_DELAY_MS = 50;
 
@@ -1655,18 +1656,10 @@ class SegmentsView extends React.Component<Props, State> {
     const { id, type } = info.node;
 
     if (type === "segment") {
-      // todop refac: toggle in reducer
-      Store.dispatch(
-        updateSegmentAction(
-          id,
-          {
-            isVisible: !(this.props.segments?.getNullable(id)?.isVisible ?? false),
-          },
-          visibleSegmentationLayer.name,
-          undefined,
-          true,
-        ),
-      );
+      const action = getUpdateSegmentActionToToggleVisibility(Store.getState(), id);
+      if (action != null) {
+        Store.dispatch(action);
+      }
     } else if (id === MISSING_GROUP_ID) {
       Store.dispatch(toggleAllSegmentsAction(visibleSegmentationLayer.name));
     } else {

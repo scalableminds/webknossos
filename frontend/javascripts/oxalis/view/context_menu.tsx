@@ -62,9 +62,7 @@ import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   getActiveCellId,
   getActiveSegmentationTracing,
-  getHideUnregisteredSegmentsForVisibleSegmentationLayer,
   getSegmentsForLayer,
-  getVisibleSegments,
   hasAgglomerateMapping,
   hasConnectomeFile,
   hasEditableMapping,
@@ -145,6 +143,7 @@ import type {
 } from "types/api_flow_types";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 import { LoadMeshMenuItemLabel } from "./right-border-tabs/segments_tab/load_mesh_menu_item_label";
+import { getUpdateSegmentActionToToggleVisibility } from "oxalis/model/actions/volumetracing_action_helpers";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
@@ -1035,25 +1034,10 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       return;
     }
 
-    const { segments } = getVisibleSegments(state);
-    if (segments == null) {
-      return;
+    const action = getUpdateSegmentActionToToggleVisibility(Store.getState(), clickedSegmentId);
+    if (action != null) {
+      Store.dispatch(action);
     }
-    const hideUnregisteredSegments = getHideUnregisteredSegmentsForVisibleSegmentationLayer(state);
-    const segment = segments.getNullable(clickedSegmentId);
-    const oldIsVisible = segment?.isVisible ?? !hideUnregisteredSegments;
-
-    Store.dispatch(
-      updateSegmentAction(
-        clickedSegmentId,
-        {
-          isVisible: !oldIsVisible,
-        },
-        visibleSegmentationLayer.name,
-        undefined,
-        true,
-      ),
-    );
   };
 
   const computeMeshAdHoc = () => {

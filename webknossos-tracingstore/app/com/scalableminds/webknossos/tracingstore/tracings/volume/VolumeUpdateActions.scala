@@ -363,8 +363,8 @@ case class UpdateSegmentVisibilityVolumeAction(id: Long,
     with VolumeUpdateActionHelper {
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
-    tracing.withSegments(tracing.segments.map(segment =>
-      if (segment.segmentId == id) segment.withIsVisible(isVisible) else segment))
+    tracing.withSegments(
+      tracing.segments.map(segment => if (segment.segmentId == id) segment.withIsVisible(isVisible) else segment))
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =

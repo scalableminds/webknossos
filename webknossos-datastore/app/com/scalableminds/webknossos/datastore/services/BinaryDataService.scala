@@ -102,11 +102,14 @@ class BinaryDataService(val dataBaseDir: Path,
                                  inputArray: Array[Byte],
                                  conversionFunc: Array[Byte] => Fox[Array[Byte]],
                                  request: DataServiceDataRequest): Fox[Array[Byte]] =
-    if (isNecessary)
-      datasetErrorLoggingService.withErrorLogging(request.dataSource.id,
+    if (isNecessary) {
+      val dataSourceIdForLogging =
+        if (request.dataSource != null) request.dataSource.id
+        else DataSourceId("Volume Annotation Layer", request.dataLayer.name)
+      datasetErrorLoggingService.withErrorLogging(dataSourceIdForLogging,
                                                   "converting bucket data",
                                                   conversionFunc(inputArray))
-    else Fox.successful(inputArray)
+    } else Fox.successful(inputArray)
 
   /*
    * Everything outside of the layer bounding box is set to black (zero) so data outside of the specified

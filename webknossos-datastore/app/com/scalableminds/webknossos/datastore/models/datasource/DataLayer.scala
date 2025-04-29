@@ -307,9 +307,7 @@ object DataLayer {
           case (DataFormat.`zarr3`, _)                     => json.validate[Zarr3DataLayer]
           case _                                           => json.validate[WKWDataLayer]
         }
-      } yield {
-        layer
-      }
+      } yield layer
 
     override def writes(layer: DataLayer): JsValue =
       (layer match {

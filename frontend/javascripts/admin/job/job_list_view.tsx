@@ -228,11 +228,26 @@ function JobListView() {
           <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
-    } else if (job.type === APIJobType.INFER_NEURONS && linkToDataset != null && job.layerName) {
+    } else if (
+      job.type === APIJobType.INFER_NEURONS &&
+      linkToDataset != null &&
+      job.layerName &&
+      job.modelId == null
+    ) {
       return (
         <span>
           Neuron inferral for layer {job.layerName} of{" "}
           <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
+        </span>
+      );
+    } else if (
+      (job.type === APIJobType.DEPRECATED_INFER_WITH_MODEL ||
+        job.type === APIJobType.INFER_NEURONS) &&
+      linkToDataset != null
+    ) {
+      return (
+        <span>
+          Run AI segmentation with custom model on <Link to={linkToDataset}>{job.datasetName}</Link>
         </span>
       );
     } else if (
@@ -263,18 +278,12 @@ function JobListView() {
             : null}
         </span>
       );
-    } else if (job.type === APIJobType.TRAIN_MODEL) {
+    } else if (job.type === APIJobType.TRAIN_NEURON_MODEL || APIJobType.DEPRECATED_TRAIN_MODEL) {
       const numberOfTrainingAnnotations = job.trainingAnnotations.length;
       return (
         <span>
-          {`Train model on ${numberOfTrainingAnnotations} ${Utils.pluralize("annotation", numberOfTrainingAnnotations)}. `}
+          {`Train neuron model on ${numberOfTrainingAnnotations} ${Utils.pluralize("annotation", numberOfTrainingAnnotations)}. `}
           {getShowTrainingDataLink(job.trainingAnnotations)}
-        </span>
-      );
-    } else if (job.type === APIJobType.INFER_WITH_MODEL && linkToDataset != null) {
-      return (
-        <span>
-          Run AI segmentation with custom model on <Link to={linkToDataset}>{job.datasetName}</Link>
         </span>
       );
     } else {
@@ -368,7 +377,7 @@ function JobListView() {
       job.type === APIJobType.INFER_NEURONS ||
       job.type === APIJobType.MATERIALIZE_VOLUME_ANNOTATION ||
       job.type === APIJobType.COMPUTE_MESH_FILE ||
-      job.type === APIJobType.INFER_WITH_MODEL ||
+      job.type === APIJobType.DEPRECATED_INFER_WITH_MODEL ||
       job.type === APIJobType.INFER_MITOCHONDRIA
     ) {
       return (
@@ -381,7 +390,10 @@ function JobListView() {
           )}
         </span>
       );
-    } else if (job.type === APIJobType.TRAIN_MODEL) {
+    } else if (
+      job.type === APIJobType.TRAIN_NEURON_MODEL ||
+      job.type === APIJobType.DEPRECATED_TRAIN_MODEL
+    ) {
       return (
         <span>
           {job.state === "SUCCESS" &&

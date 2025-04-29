@@ -66,10 +66,8 @@ import {
   enforceSkeletonTracing,
   getActiveNode,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import {
   getAllReadableLayerNames,
-  getHideUnregisteredSegmentsForLayer,
   getReadableNameByVolumeTracingId,
   getVolumeDescriptorById,
   getVolumeTracingById,
@@ -91,10 +89,8 @@ import {
   setNodeRadiusAction,
   setShowSkeletonsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { setHideUnregisteredSegmentsAction } from "oxalis/model/actions/volumetracing_actions";
 import { addLayerToAnnotation, deleteAnnotationLayer } from "oxalis/model/sagas/update_actions";
-import { Model } from "oxalis/singletons";
-import { api } from "oxalis/singletons";
+import { Model, api } from "oxalis/singletons";
 import type {
   DatasetConfiguration,
   DatasetLayerConfiguration,
@@ -135,6 +131,7 @@ import {
 import { getSpecificDefaultsForLayer } from "types/schemas/dataset_view_configuration_defaults";
 import { userSettings } from "types/schemas/user_settings.schema";
 import { confirmAsync } from "../../../dashboard/dataset/helper_components";
+import { HideUnregisteredSegmentsSwitch } from "./hide_unregistered_segments_switch";
 import Histogram, { isHistogramSupported } from "./histogram_view";
 import MappingSettingsView from "./mapping_settings_view";
 import AddVolumeLayerModal, { validateReadableLayerName } from "./modals/add_volume_layer_modal";
@@ -940,44 +937,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       />
     );
 
-    const isProofreadingMode = this.props.activeTool === AnnotationTool.PROOFREAD;
-    const isHideUnregisteredSegmentsDisabled =
-      isProofreadingMode && this.props.userConfiguration.selectiveVisibilityInProofreading;
-    const hideUnregisteredSegments = getHideUnregisteredSegmentsForLayer(
-      // todop: dont use getState here
-      Store.getState(),
-      layerName,
-    );
-
-    const selectiveVisibilitySwitch = (
-      <FastTooltip
-        title={
-          isHideUnregisteredSegmentsDisabled
-            ? "This behavior is overridden by the enabled 'selective segment visibility' feature in the toolbar that belongs to the proofreading tool."
-            : "When enabled, segments that were not added to the segment list are hidden by default."
-        }
-      >
-        <div
-          style={{
-            marginBottom: 6,
-          }}
-        >
-          <SwitchSetting
-            onChange={() => {
-              Store.dispatch(setHideUnregisteredSegmentsAction(!hideUnregisteredSegments));
-            }}
-            value={hideUnregisteredSegments}
-            label={"Hide unlisted segments"}
-            disabled={isHideUnregisteredSegmentsDisabled}
-          />
-        </div>
-      </FastTooltip>
-    );
-
     return (
       <div>
         {segmentationOpacitySetting}
-        {selectiveVisibilitySwitch}
+        <HideUnregisteredSegmentsSwitch layerName={layerName} />
         <MappingSettingsView layerName={layerName} />
       </div>
     );
@@ -1618,7 +1581,6 @@ const mapStateToProps = (state: OxalisState) => ({
     state.activeUser != null ? Utils.isUserAdminOrDatasetManager(state.activeUser) : false,
   isAdminOrManager: state.activeUser != null ? Utils.isUserAdminOrManager(state.activeUser) : false,
   isSuperUser: state.activeUser?.isSuperUser || false,
-  activeTool: state.uiInformation.activeTool,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

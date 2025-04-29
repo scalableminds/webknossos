@@ -38,6 +38,7 @@ import {
   getActiveSegmentPosition,
   getActiveSegmentationTracing,
   getBucketRetrievalSourceFn,
+  getHideUnregisteredSegmentsForLayer,
   needsLocalHdf5Mapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getDtypeConfigForElementClass } from "oxalis/model/bucket_data_handling/data_rendering_logic";
@@ -725,8 +726,10 @@ class PlaneMaterialFactory {
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => {
-            const activeSegmentationTracing = getActiveSegmentationTracing(storeState);
-            return activeSegmentationTracing?.hideUnregisteredSegments ?? false;
+            const layer = getVisibleSegmentationLayer(storeState);
+            return layer != null
+              ? getHideUnregisteredSegmentsForLayer(storeState, layer.name)
+              : false;
           },
           (value) => {
             this.uniforms.hideUnregisteredSegments.value = value;

@@ -216,10 +216,11 @@ export const setActiveCellAction = (
     activeUnmappedSegmentId,
   }) as const;
 
-export const setHideUnregisteredSegmentsAction = (value: boolean) =>
+export const setHideUnregisteredSegmentsAction = (value: boolean, layerName?: string) =>
   ({
     type: "SET_HIDE_UNREGISTERED_SEGMENTS",
     value,
+    layerName,
   }) as const;
 
 export const clickSegmentAction = (

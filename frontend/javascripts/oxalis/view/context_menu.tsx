@@ -1000,7 +1000,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       return;
     }
 
-    Store.dispatch(setHideUnregisteredSegmentsAction(true));
+    Store.dispatch(setHideUnregisteredSegmentsAction(true, visibleSegmentationLayer.name));
     Store.dispatch(toggleAllSegmentsAction(visibleSegmentationLayer.name, false));
     Store.dispatch(
       updateSegmentAction(
@@ -1020,7 +1020,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       return;
     }
 
-    Store.dispatch(setHideUnregisteredSegmentsAction(false));
+    Store.dispatch(setHideUnregisteredSegmentsAction(false, visibleSegmentationLayer.name));
     Store.dispatch(toggleAllSegmentsAction(visibleSegmentationLayer.name, true));
   };
 

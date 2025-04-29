@@ -1009,7 +1009,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 
   onDeleteTree() {
-    dispatch(handleDeleteTreeByUser());
+    handleDeleteTreeByUser();
   },
 
   onDeleteTrees(treeIds: number[]) {

@@ -69,6 +69,7 @@ import {
 import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import {
   getAllReadableLayerNames,
+  getHideUnregisteredSegmentsForLayer,
   getReadableNameByVolumeTracingId,
   getVolumeDescriptorById,
   getVolumeTracingById,
@@ -90,6 +91,7 @@ import {
   setNodeRadiusAction,
   setShowSkeletonsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import { setHideUnregisteredSegmentsAction } from "oxalis/model/actions/volumetracing_actions";
 import { addLayerToAnnotation, deleteAnnotationLayer } from "oxalis/model/sagas/update_actions";
 import { Model } from "oxalis/singletons";
 import { api } from "oxalis/singletons";
@@ -939,14 +941,20 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     );
 
     const isProofreadingMode = this.props.activeTool === AnnotationTool.PROOFREAD;
-    const isSelectiveVisibilityDisabled = isProofreadingMode;
+    const isHideUnregisteredSegmentsDisabled =
+      isProofreadingMode && this.props.userConfiguration.selectiveVisibilityInProofreading;
+    const hideUnregisteredSegments = getHideUnregisteredSegmentsForLayer(
+      // todop: dont use getState here
+      Store.getState(),
+      layerName,
+    );
 
     const selectiveVisibilitySwitch = (
       <FastTooltip
         title={
-          isSelectiveVisibilityDisabled
-            ? "This behavior is overridden by the 'selective segment visibility' button in the toolbar, because the proofreading tool is active."
-            : "When enabled, only hovered or active segments will be shown."
+          isHideUnregisteredSegmentsDisabled
+            ? "This behavior is overridden by the enabled 'selective segment visibility' feature in the toolbar that belongs to the proofreading tool."
+            : "When enabled, segments that were not added to the segment list are hidden by default."
         }
       >
         <div
@@ -955,10 +963,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           }}
         >
           <SwitchSetting
-            onChange={_.partial(this.props.onChange, "selectiveSegmentVisibility")}
-            value={this.props.datasetConfiguration.selectiveSegmentVisibility}
-            label={settings.selectiveSegmentVisibility}
-            disabled={isSelectiveVisibilityDisabled}
+            onChange={() => {
+              Store.dispatch(setHideUnregisteredSegmentsAction(!hideUnregisteredSegments));
+            }}
+            value={hideUnregisteredSegments}
+            label={"Hide unlisted segments"}
+            disabled={isHideUnregisteredSegmentsDisabled}
           />
         </div>
       </FastTooltip>

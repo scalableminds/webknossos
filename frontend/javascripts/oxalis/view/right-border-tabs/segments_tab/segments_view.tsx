@@ -84,7 +84,6 @@ import {
   removeSegmentAction,
   setActiveCellAction,
   setExpandedSegmentGroupsAction,
-  setHideUnregisteredSegmentsAction,
   setSelectedSegmentsOrGroupAction,
   toggleAllSegmentsAction,
   toggleSegmentGroupAction,
@@ -1798,21 +1797,6 @@ class SegmentsView extends React.Component<Props, State> {
 
     return (
       <div id={segmentsTabId} className="padded-tab-content">
-        <Button
-          onClick={() => {
-            if (this.props.visibleSegmentationLayer != null) {
-              Store.dispatch(
-                setHideUnregisteredSegmentsAction(
-                  // todop: remove again
-                  // this.props.visibleSegmentationLayer.name,
-                  !this.props.hideUnregisteredSegments,
-                ),
-              );
-            }
-          }}
-        >
-          {this.props.hideUnregisteredSegments ? "true" : "false"}
-        </Button>
         <ContextMenuContainer
           hideContextMenu={this.hideContextMenu}
           contextMenuPosition={this.state.contextMenuPosition}

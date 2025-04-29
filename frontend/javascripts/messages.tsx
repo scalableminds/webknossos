@@ -48,7 +48,6 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   renderWatermark: "Logo in Screenshots",
   antialiasRendering: "Antialiasing",
   colorLayerOrder: "Color Layer Order",
-  selectiveSegmentVisibility: "Selective Visibility",
 };
 export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, string>> = {
   loadingStrategy: `You can choose between loading the best quality first

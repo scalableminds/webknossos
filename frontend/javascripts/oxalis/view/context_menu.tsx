@@ -1016,6 +1016,15 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     );
   };
 
+  const showAllSegments = () => {
+    if (!visibleSegmentationLayer) {
+      return;
+    }
+
+    Store.dispatch(setHideUnregisteredSegmentsAction(false));
+    Store.dispatch(toggleAllSegmentsAction(visibleSegmentationLayer.name, true));
+  };
+
   const toggleSegmentVisibility = () => {
     if (!visibleSegmentationLayer || globalPosition == null) {
       return;
@@ -1248,6 +1257,11 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     onClick: toggleSegmentVisibility,
     label: "Toggle Visibility Of This Segment",
   };
+  const showAllSegmentsItem: MenuItemType = {
+    key: "show-all-segments",
+    onClick: showAllSegments,
+    label: "Show all segments",
+  };
   const loadPrecomputedMeshItem: MenuItemType = {
     key: "load-precomputed-mesh",
     disabled: !currentMeshFile,
@@ -1293,6 +1307,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
             : null,
           segmentIdAtPosition > 0 ? onlyShowThisSegmentItem : null,
           segmentIdAtPosition > 0 ? toggleSegmentVisibilityItem : null,
+          segmentIdAtPosition > 0 ? showAllSegmentsItem : null,
           focusInSegmentListItem,
           loadPrecomputedMeshItem,
           computeMeshAdHocItem,

@@ -301,7 +301,7 @@ function SimpleDatasetForm({
             </Row>
             <Row gutter={48}>
               <Col span={24} xl={12} />
-              <Col span={24} xl={6}>
+              <Col span={24} xl={12}>
                 <AxisRotationSettingForDataset form={form} />
               </Col>
             </Row>
@@ -359,7 +359,7 @@ function SimpleLayerForm({
   form: FormInstance;
   dataset: APIDataset | null | undefined;
 }) {
-  const layerCategorySavedOnServer = dataset?.dataSource.dataLayers[index].category;
+  const layerCategorySavedOnServer = dataset?.dataSource.dataLayers[index]?.category;
   const isStoredAsSegmentationLayer = layerCategorySavedOnServer === "segmentation";
   const dataLayers = Form.useWatch(["dataSource", "dataLayers"]);
   const category = Form.useWatch(["dataSource", "dataLayers", index, "category"]);

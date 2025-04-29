@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedFunctionStream, NamedStream}
-import com.scalableminds.util.tools.ByteUtils
+import com.scalableminds.util.tools.{ByteUtils, Fox}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.layers.Zarr3SegmentationLayer
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
@@ -23,7 +23,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, VoxelSize}
 import play.api.libs.json.Json
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 // Creates data zip from volume tracings
 class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLayer: Boolean)
@@ -53,7 +53,7 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
           Some(
             NamedFunctionStream(
               filePath,
-              os => Future.successful(os.write(compressor.compress(data)))
+              os => Fox.successful(os.write(compressor.compress(data)))
             )
           )
         }

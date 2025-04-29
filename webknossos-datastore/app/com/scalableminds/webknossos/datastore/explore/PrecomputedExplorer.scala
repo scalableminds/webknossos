@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.layers.{
   PrecomputedDataLayer,
@@ -17,7 +17,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{Category, Eleme
 
 import scala.concurrent.ExecutionContext
 
-class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplorer {
+class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplorer with FoxImplicits {
   override def name: String = "Neuroglancer Precomputed"
 
   override def explore(remotePath: VaultPath, credentialId: Option[String])(
@@ -38,17 +38,17 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
       boundingBox <- BoundingBox
         .fromTopLeftAndSize(firstScale.voxel_offset.getOrElse(Array(0, 0, 0)), firstScale.size)
         .toFox
-      elementClass: ElementClass.Value <- elementClassFromPrecomputedDataType(precomputedHeader.data_type) ?~> s"Unknown data type ${precomputedHeader.data_type}"
+      elementClass: ElementClass.Value <- elementClassFromPrecomputedDataType(precomputedHeader.data_type).toFox ?~> s"Unknown data type ${precomputedHeader.data_type}"
       smallestResolution = firstScale.resolution
       voxelSize <- Vec3Double.fromArray(smallestResolution).toFox
       mags: List[MagLocator] <- Fox.serialCombined(precomputedHeader.scales)(
-        getMagFromScale(_, smallestResolution, remotePath, credentialId))
+        getMagFromScale(_, smallestResolution, remotePath, credentialId).toFox)
       layer = if (precomputedHeader.describesSegmentationLayer) {
         PrecomputedSegmentationLayer(name, boundingBox, elementClass, mags, None)
       } else PrecomputedDataLayer(name, boundingBox, Category.color, elementClass, mags)
     } yield (layer, VoxelSize.fromFactorWithDefaultUnit(voxelSize))
 
-  private def elementClassFromPrecomputedDataType(precomputedDataType: String): Fox[ElementClass.Value] =
+  private def elementClassFromPrecomputedDataType(precomputedDataType: String): Option[ElementClass.Value] =
     precomputedDataType.toLowerCase match {
       case "uint8"   => Some(ElementClass.uint8)
       case "uint16"  => Some(ElementClass.uint16)
@@ -61,7 +61,7 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
   private def getMagFromScale(scale: PrecomputedScale,
                               minimalResolution: Array[Double],
                               remotePath: VaultPath,
-                              credentialId: Option[String]): Fox[MagLocator] = {
+                              credentialId: Option[String]): Option[MagLocator] = {
     val normalizedResolution = scale.resolution.zip(minimalResolution).map { case (r, m) => (r / m).toInt }
     for {
       mag <- Vec3Int.fromList(normalizedResolution.toList)

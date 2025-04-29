@@ -1,5 +1,5 @@
 import _ from "lodash";
-import "test/mocks/lz4";
+import { describe, it, expect } from "vitest";
 import type { Flycam, OxalisState, Tree, TreeGroup, TreeMap } from "oxalis/store";
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -9,7 +9,6 @@ import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
 import compactToggleActions from "oxalis/model/helpers/compaction/compact_toggle_actions";
 import defaultState from "oxalis/default_state";
-import test from "ava";
 
 const createTree = (id: number, groupId: number | null, isVisible: boolean): Tree => ({
   treeId: id,
@@ -133,69 +132,74 @@ function getActions(initialState: OxalisState, newState: OxalisState) {
   return [compactedActions, updateActions];
 }
 
-test("compactUpdateActions shouldn't compact a single action", (t) => {
-  const testState = createState(
-    [
-      createTree(1, null, true),
-      createTree(2, 1, true),
-      createTree(3, 2, true),
-      createTree(4, 3, false),
-      createTree(5, 3, true),
-      createTree(6, 4, true),
-    ],
-    treeGroups,
-  );
-  const [compactedActions, updateActions] = getActions(allVisible, testState);
-  t.deepEqual(compactedActions, updateActions);
-});
-test("compactUpdateActions should compact when toggling all trees", (t) => {
-  const testState = createState(
-    [
-      createTree(1, null, false),
-      createTree(2, 1, false),
-      createTree(3, 2, false),
-      createTree(4, 3, false),
-      createTree(5, 3, false),
-      createTree(6, 4, false),
-    ],
-    treeGroups,
-  );
-  const [compactedActions] = getActions(allVisible, testState);
-  // Root group should be toggled
-  t.deepEqual(compactedActions, [updateTreeGroupVisibility(undefined, false, tracingId)]);
-});
-test("compactUpdateActions should compact when toggling a group", (t) => {
-  // Let's toggle group 3 (which contains group 4)
-  const testState = createState(
-    [
-      createTree(1, null, true),
-      createTree(2, 1, true),
-      createTree(3, 2, true),
-      createTree(4, 3, false),
-      createTree(5, 3, false),
-      createTree(6, 4, false),
-    ],
-    treeGroups,
-  );
-  const [compactedActions] = getActions(allVisible, testState);
-  t.deepEqual(compactedActions, [updateTreeGroupVisibility(3, false, tracingId)]);
-});
-test("compactUpdateActions should compact when toggling a group except for one tree", (t) => {
-  // Let's make all trees invisible except for tree 3. Compaction should yield a toggle-root and toggle 3 action
-  const testState = createState(
-    [
-      createTree(1, null, false),
-      createTree(2, 1, false),
-      createTree(3, 2, true),
-      createTree(4, 3, false),
-      createTree(5, 3, false),
-      createTree(6, 4, false),
-    ],
-    treeGroups,
-  );
-  const [compactedActions] = getActions(allVisible, testState);
-  t.deepEqual(compactedActions, [
-    updateTreeGroupVisibility(undefined, false, tracingId),
-    _updateTreeVisibility(3, true),
-  ]);
+describe("Compact Toggle Actions", () => {
+  it("compactUpdateActions shouldn't compact a single action", () => {
+    const testState = createState(
+      [
+        createTree(1, null, true),
+        createTree(2, 1, true),
+        createTree(3, 2, true),
+        createTree(4, 3, false),
+        createTree(5, 3, true),
+        createTree(6, 4, true),
+      ],
+      treeGroups,
+    );
+    const [compactedActions, updateActions] = getActions(allVisible, testState);
+    expect(compactedActions).toEqual(updateActions);
+  });
+
+  it("compactUpdateActions should compact when toggling all trees", () => {
+    const testState = createState(
+      [
+        createTree(1, null, false),
+        createTree(2, 1, false),
+        createTree(3, 2, false),
+        createTree(4, 3, false),
+        createTree(5, 3, false),
+        createTree(6, 4, false),
+      ],
+      treeGroups,
+    );
+    const [compactedActions] = getActions(allVisible, testState);
+    // Root group should be toggled
+    expect(compactedActions).toEqual([updateTreeGroupVisibility(undefined, false, tracingId)]);
+  });
+
+  it("compactUpdateActions should compact when toggling a group", () => {
+    // Let's toggle group 3 (which contains group 4)
+    const testState = createState(
+      [
+        createTree(1, null, true),
+        createTree(2, 1, true),
+        createTree(3, 2, true),
+        createTree(4, 3, false),
+        createTree(5, 3, false),
+        createTree(6, 4, false),
+      ],
+      treeGroups,
+    );
+    const [compactedActions] = getActions(allVisible, testState);
+    expect(compactedActions).toEqual([updateTreeGroupVisibility(3, false, tracingId)]);
+  });
+
+  it("compactUpdateActions should compact when toggling a group except for one tree", () => {
+    // Let's make all trees invisible except for tree 3. Compaction should yield a toggle-root and toggle 3 action
+    const testState = createState(
+      [
+        createTree(1, null, false),
+        createTree(2, 1, false),
+        createTree(3, 2, true),
+        createTree(4, 3, false),
+        createTree(5, 3, false),
+        createTree(6, 4, false),
+      ],
+      treeGroups,
+    );
+    const [compactedActions] = getActions(allVisible, testState);
+    expect(compactedActions).toEqual([
+      updateTreeGroupVisibility(undefined, false, tracingId),
+      _updateTreeVisibility(3, true),
+    ]);
+  });
 });

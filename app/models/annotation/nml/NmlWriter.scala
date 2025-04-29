@@ -99,8 +99,8 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
           _ <- Fox.successful(writeMetaData(annotation, annotationOwner, annotationTask))
           skeletonLayers = annotationLayers.filter(_.typ == AnnotationLayerType.Skeleton)
           volumeLayers = annotationLayers.filter(_.typ == AnnotationLayerType.Volume)
-          _ <- bool2Fox(skeletonLayers.length <= 1) ?~> "annotation.download.multipleSkeletons"
-          _ <- bool2Fox(volumeFilename.isEmpty || volumeLayers.length <= 1) ?~> "annotation.download.volumeNameForMultiple"
+          _ <- Fox.fromBool(skeletonLayers.length <= 1) ?~> "annotation.download.multipleSkeletons"
+          _ <- Fox.fromBool(volumeFilename.isEmpty || volumeLayers.length <= 1) ?~> "annotation.download.volumeNameForMultiple"
           parameters <- extractTracingParameters(skeletonLayers,
                                                  volumeLayers,
                                                  annotation: Option[Annotation],

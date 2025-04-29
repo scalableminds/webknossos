@@ -1,13 +1,12 @@
 import type { DatasetLayerConfiguration, PartialDatasetConfiguration } from "oxalis/store";
-import "test/mocks/lz4";
 import {
-  assertDatasetIds,
   createAnnotationForDatasetScreenshot,
   getNewPage,
   screenshotDataset,
+  type ScreenshotTestContext,
   screenshotTracingView,
-  setupBeforeEachAndAfterEach,
-  test,
+  setupAfterEach,
+  setupBeforeEach,
   withRetry,
   writeDatasetNameToIdMapping,
 } from "./dataset_rendering_helpers";
@@ -22,7 +21,6 @@ import {
   getDtypeConfigForElementClass,
   getSupportedValueRangeForElementClass,
 } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import Semaphore from "semaphore-promise";
 import {
   updateDatasetSettingAction,
   updateLayerSettingAction,
@@ -30,8 +28,8 @@ import {
 } from "oxalis/model/actions/settings_actions";
 import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import type { Action } from "oxalis/model/actions/actions";
+import { describe, it, beforeAll, beforeEach, afterEach, expect, test } from "vitest";
 
-const semaphore = new Semaphore(1);
 const testColor = true;
 const testSegmentation = true;
 
@@ -55,8 +53,6 @@ process.on("unhandledRejection", (err, promise) => {
 const URL = getUrlForScreenshotTests();
 
 console.log(`[Info] Executing tests on URL ${URL}.`);
-
-setupBeforeEachAndAfterEach(semaphore);
 
 // These datasets are available on our dev instance (e.g., master.webknossos.xyz)
 
@@ -187,22 +183,36 @@ const specs: Array<Spec> = _.flatten(
 const datasetNames = _.uniq(specs.map((spec) => spec.datasetName));
 
 const datasetNameToId: Record<string, string> = {};
-test.before("Retrieve dataset ids", async () => {
-  await writeDatasetNameToIdMapping(URL, datasetNames, datasetNameToId);
-});
-test.serial("Dataset IDs were retrieved successfully", (t) => {
-  assertDatasetIds(t, datasetNames, datasetNameToId);
-});
 
-datasetNames.map(async (datasetName) => {
-  test(`it should render ${datasetName} correctly`, async (t) => {
+describe("DType Dataset Rendering", () => {
+  beforeEach<ScreenshotTestContext>(async (context) => {
+    await setupBeforeEach(context);
+  });
+
+  afterEach<ScreenshotTestContext>(async (context) => {
+    await setupAfterEach(context);
+  });
+
+  beforeAll(async () => {
+    // Retrieve dataset ids
+    await writeDatasetNameToIdMapping(URL, datasetNames, datasetNameToId);
+  });
+
+  it("Dataset IDs were retrieved successfully", () => {
+    expect(datasetNames.every((name) => !!datasetNameToId[name])).toBe(true);
+  });
+
+  test.sequential.for(datasetNames)("should render %s correctly", async (datasetName, context) => {
+    // Type assertion to ensure context has browser property
+    const testContext = context as ScreenshotTestContext;
+
     console.time("Creating annotation...");
     const annotation = await createAnnotationForDatasetScreenshot(
       URL,
       datasetNameToId[datasetName],
     );
     console.timeEnd("Creating annotation...");
-    const page = await getNewPage(t.context.browser);
+    const page = await getNewPage(testContext.browser);
     for (const spec of specs.filter((spec) => spec.datasetName === datasetName)) {
       await withRetry(
         1,
@@ -235,7 +245,8 @@ datasetNames.map(async (datasetName) => {
               });
             }, actions);
           };
-          console.time("Making screenshot...");
+
+          console.time("Taking Dataset screenshot...");
           const { screenshot, width, height } = await screenshotDataset(
             page,
             URL,
@@ -248,7 +259,8 @@ datasetNames.map(async (datasetName) => {
               ignore3DViewport: true,
             },
           );
-          console.timeEnd("Making screenshot...");
+          console.timeEnd("Taking Dataset screenshot...");
+
           console.time("Comparing screenshot...");
           const changedPixels = await compareScreenshot(
             screenshot,
@@ -268,6 +280,7 @@ datasetNames.map(async (datasetName) => {
                 selectiveSegmentIdByDtype[spec.dtype] ?? null,
               ),
             ];
+
             console.time("evaluate");
             await page.evaluate((actions) => {
               for (const action of actions) {
@@ -275,9 +288,11 @@ datasetNames.map(async (datasetName) => {
               }
             }, actions);
             console.timeEnd("evaluate");
-            console.time("Making screenshot...");
+
+            console.time("Taking TracingView screenshot...");
             const { screenshot, width, height } = await screenshotTracingView(page, true);
-            console.timeEnd("Making screenshot...");
+            console.timeEnd("Taking TracingView screenshot...");
+
             console.time("Comparing screenshot...");
             const changedPixels = await compareScreenshot(
               screenshot,
@@ -294,10 +309,10 @@ datasetNames.map(async (datasetName) => {
           return success && isPixelEquivalent(changedPixels, width, height);
         },
         (condition) => {
-          t.true(
+          expect(
             condition,
             `Dataset spec with name: "${spec.name}" does not look the same, see ${spec.name}.diff.png for the difference and ${spec.name}.new.png for the new screenshot.`,
-          );
+          ).toBe(true);
         },
       );
     }

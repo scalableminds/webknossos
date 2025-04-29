@@ -21,6 +21,7 @@ import constants, {
 import { destroyRenderer, getRenderer } from "oxalis/controller/renderer";
 import { setSceneController } from "oxalis/controller/scene_controller_provider";
 import type ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
+import computeSplitBoundaryMeshWithSplines from "oxalis/geometries/compute_split_boundary_mesh_with_splines";
 import Cube from "oxalis/geometries/cube";
 import {
   ContourGeometry,
@@ -57,10 +58,9 @@ import { Model } from "oxalis/singletons";
 import type { OxalisState, SkeletonTracing, UserBoundingBox } from "oxalis/store";
 import Store from "oxalis/store";
 import * as THREE from "three";
+import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from "three-mesh-bvh";
 import type CustomLOD from "./custom_lod";
 import SegmentMeshController from "./segment_mesh_controller";
-import computeSplitBoundaryMeshWithSplines from "oxalis/geometries/compute_split_boundary_mesh_with_splines";
-import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from "three-mesh-bvh";
 
 // Add the extension functions
 THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;

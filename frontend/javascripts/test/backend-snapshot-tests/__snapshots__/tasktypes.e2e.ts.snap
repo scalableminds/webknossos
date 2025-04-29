@@ -1,0 +1,162 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Task Types API (E2E) > createTaskType and deleteTaskType 1`] = `
+{
+  "description": "description",
+  "id": "fixed-id",
+  "recommendedConfiguration": null,
+  "settings": {
+    "allowedModes": [
+      "orthogonal",
+    ],
+    "branchPointsAllowed": true,
+    "magRestrictions": {},
+    "mergerMode": false,
+    "somaClickingAllowed": true,
+    "volumeInterpolationAllowed": false,
+  },
+  "summary": "summary",
+  "teamId": "570b9f4b2a7c0e3b008da6ec",
+  "teamName": "team_X1",
+  "tracingType": "skeleton",
+}
+`;
+
+exports[`Task Types API (E2E) > createTaskType and deleteTaskType 2`] = `
+{
+  "messages": [
+    {
+      "success": "Task type “summary” successfully deleted",
+    },
+  ],
+}
+`;
+
+exports[`Task Types API (E2E) > getTaskType() 1`] = `
+{
+  "description": "Check those cells out!",
+  "id": "570b9f4c2a7c0e4c008da6ee",
+  "recommendedConfiguration": null,
+  "settings": {
+    "allowedModes": [
+      "orthogonal",
+      "oblique",
+      "flight",
+    ],
+    "branchPointsAllowed": true,
+    "magRestrictions": {},
+    "mergerMode": false,
+    "somaClickingAllowed": true,
+    "volumeInterpolationAllowed": false,
+  },
+  "summary": "ek_0563_BipolarCells",
+  "teamId": "570b9f4b2a7c0e3b008da6ec",
+  "teamName": "team_X1",
+  "tracingType": "skeleton",
+}
+`;
+
+exports[`Task Types API (E2E) > getTaskTypes() 1`] = `
+[
+  {
+    "description": "Check those cells out!",
+    "id": "570b9f4c2a7c0e4c008da6ee",
+    "recommendedConfiguration": null,
+    "settings": {
+      "allowedModes": [
+        "orthogonal",
+        "oblique",
+        "flight",
+      ],
+      "branchPointsAllowed": true,
+      "magRestrictions": {},
+      "mergerMode": false,
+      "somaClickingAllowed": true,
+      "volumeInterpolationAllowed": false,
+    },
+    "summary": "ek_0563_BipolarCells",
+    "teamId": "570b9f4b2a7c0e3b008da6ec",
+    "teamName": "team_X1",
+    "tracingType": "skeleton",
+  },
+  {
+    "description": "Check those cells out!",
+    "id": "570b9f4c2a7c0e4c008da6ff",
+    "recommendedConfiguration": null,
+    "settings": {
+      "allowedModes": [
+        "orthogonal",
+        "oblique",
+        "flight",
+      ],
+      "branchPointsAllowed": true,
+      "magRestrictions": {},
+      "mergerMode": true,
+      "somaClickingAllowed": true,
+      "volumeInterpolationAllowed": false,
+    },
+    "summary": "ek_0674_BipolarCells",
+    "teamId": "69882b370d889b84020efd4f",
+    "teamName": "team_X2",
+    "tracingType": "skeleton",
+  },
+]
+`;
+
+exports[`Task Types API (E2E) > updateTaskType() 1`] = `
+{
+  "description": "Check those cells out!",
+  "id": "570b9f4c2a7c0e4c008da6ee",
+  "messages": [
+    {
+      "success": "Task type successfully edited",
+    },
+  ],
+  "recommendedConfiguration": null,
+  "settings": {
+    "allowedModes": [
+      "orthogonal",
+      "oblique",
+      "flight",
+    ],
+    "branchPointsAllowed": true,
+    "magRestrictions": {},
+    "mergerMode": false,
+    "somaClickingAllowed": true,
+    "volumeInterpolationAllowed": false,
+  },
+  "summary": "new-test-summary",
+  "teamId": "570b9f4b2a7c0e3b008da6ec",
+  "teamName": "team_X1",
+  "tracingType": "skeleton",
+}
+`;
+
+exports[`Task Types API (E2E) > updateTaskType() 2`] = `
+{
+  "description": "Check those cells out!",
+  "id": "570b9f4c2a7c0e4c008da6ee",
+  "messages": [
+    {
+      "success": "Task type successfully edited",
+    },
+  ],
+  "recommendedConfiguration": null,
+  "settings": {
+    "allowedModes": [
+      "orthogonal",
+      "oblique",
+      "flight",
+    ],
+    "branchPointsAllowed": true,
+    "magRestrictions": {},
+    "mergerMode": false,
+    "somaClickingAllowed": true,
+    "volumeInterpolationAllowed": false,
+  },
+  "summary": "ek_0563_BipolarCells",
+  "teamId": "570b9f4b2a7c0e3b008da6ec",
+  "teamName": "team_X1",
+  "tracingType": "skeleton",
+}
+`;

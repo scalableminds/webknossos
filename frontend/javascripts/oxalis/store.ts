@@ -1,7 +1,6 @@
 import type DiffableMap from "libs/diffable_map";
 import type { Matrix4x4 } from "libs/mjs";
 import type {
-  AnnotationTool,
   BoundingBoxType,
   ContourMode,
   ControlMode,
@@ -21,6 +20,7 @@ import type {
 import type { BLEND_MODES, ControlModeEnum } from "oxalis/constants";
 import defaultState from "oxalis/default_state";
 import type { TracingStats } from "oxalis/model/accessors/annotation_accessor";
+import type { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import type { Action } from "oxalis/model/actions/actions";
 import type EdgeCollection from "oxalis/model/edge_collection";
 import actionLoggerMiddleware from "oxalis/model/helpers/action_logger_middleware";
@@ -69,6 +69,7 @@ import type {
   ServerEditableMapping,
   TracingType,
 } from "types/api_flow_types";
+import type { Toolkit } from "./model/accessors/tool_accessor";
 import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import type { StartAIJobModalState } from "./view/action-bar/starting_job_modals";
@@ -392,6 +393,7 @@ export type UserConfiguration = {
   readonly moveValue3d: number;
   readonly moveValue: number;
   readonly newNodeNewTree: boolean;
+  readonly continuousNodeCreation: boolean;
   readonly centerNewNode: boolean;
   readonly overrideNodeRadius: boolean;
   readonly particleSize: number;
@@ -414,6 +416,7 @@ export type UserConfiguration = {
   readonly quickSelect: QuickSelectConfig;
   readonly renderWatermark: boolean;
   readonly antialiasRendering: boolean;
+  readonly activeToolkit: Toolkit;
 };
 export type RecommendedConfiguration = Partial<
   UserConfiguration &

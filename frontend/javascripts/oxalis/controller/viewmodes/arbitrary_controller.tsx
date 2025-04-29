@@ -46,7 +46,7 @@ import Store from "oxalis/store";
 import ArbitraryView from "oxalis/view/arbitrary_view";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
 import * as React from "react";
-import { SkeletonTool } from "../combinations/tool_controls";
+import { SkeletonToolController } from "../combinations/tool_controls";
 
 const arbitraryViewportId = "inputcatcher_arbitraryViewport";
 type Props = {
@@ -96,7 +96,7 @@ class ArbitraryController extends React.PureComponent<Props> {
         arbitraryViewportId,
         {
           leftClick: (pos: Point2, viewport: string, event: MouseEvent, isTouch: boolean) => {
-            SkeletonTool.onLeftClick(
+            SkeletonToolController.onLeftClick(
               this.arbitraryView,
               pos,
               event.shiftKey,

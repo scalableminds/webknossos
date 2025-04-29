@@ -9,12 +9,7 @@ import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { SoftError, isBigInt, isNumberMap } from "libs/utils";
 import _ from "lodash";
-import {
-  AnnotationToolEnum,
-  MappingStatusEnum,
-  TreeTypeEnum,
-  type Vector3,
-} from "oxalis/constants";
+import { MappingStatusEnum, TreeTypeEnum, type Vector3 } from "oxalis/constants";
 import { getSegmentIdForPositionAsync } from "oxalis/controller/combinations/volume_handlers";
 import {
   getLayerByName,
@@ -28,6 +23,7 @@ import {
   getNodeAndTree,
   getTreeNameForAgglomerateSkeleton,
 } from "oxalis/model/accessors/skeletontracing_accessor";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import {
   getActiveSegmentationTracing,
   getActiveSegmentationTracingLayer,
@@ -329,7 +325,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   const isModifyingAnyAgglomerateSkeletons =
     sourceTree.type === TreeTypeEnum.AGGLOMERATE || targetTree.type === TreeTypeEnum.AGGLOMERATE;
   const isProofreadingToolActive = yield* select(
-    (state) => state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD,
+    (state) => state.uiInformation.activeTool === AnnotationTool.PROOFREAD,
   );
 
   if (isProofreadingToolActive && !isModifyingOnlyAgglomerateSkeletons) {

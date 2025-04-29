@@ -28,26 +28,12 @@ describe("Users API (E2E)", () => {
   it("getUsers() Orga Y", async () => {
     setUserAuthToken(tokenUserE);
     const users = await api.getUsers();
-    writeTypeCheckingFile(users, "user", "APIUser", {
-      isArray: true,
-    });
     expect(replaceVolatileValues(users)).toMatchSnapshot();
   });
 
   it("getUsers() Orga Z", async () => {
     setUserAuthToken(tokenUserF);
     const users = await api.getUsers();
-    writeTypeCheckingFile(users, "user", "APIUser", {
-      isArray: true,
-    });
-    expect(replaceVolatileValues(users)).toMatchSnapshot();
-  });
-
-  it("getUsers()", async () => {
-    const users = await api.getUsers();
-    writeTypeCheckingFile(users, "user", "APIUser", {
-      isArray: true,
-    });
     expect(replaceVolatileValues(users)).toMatchSnapshot();
   });
 

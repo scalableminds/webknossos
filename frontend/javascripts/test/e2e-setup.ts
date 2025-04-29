@@ -8,7 +8,7 @@ import { vi } from "vitest";
 import { JSDOM } from "jsdom";
 
 vi.mock("libs/request", async (importOriginal) => {
-  // The request lib is globally mocked. In the E2E tests, we actually want to run the proper fetch calls so we revert to the original implementation
+  // The request lib is globally mocked for the unit tests. In the E2E tests, we actually want to run the proper fetch calls so we revert to the original implementation
   return await importOriginal();
 });
 

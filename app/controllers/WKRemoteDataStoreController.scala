@@ -77,10 +77,10 @@ class WKRemoteDataStoreController @Inject()(
             uploadInfo.organization) ~> NOT_FOUND
           usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
           _ <- Fox.runOptional(organization.includedStorageBytes)(includedStorage =>
-            bool2Fox(usedStorageBytes + uploadInfo.totalFileSizeInBytes.getOrElse(0L) <= includedStorage)) ?~> "dataset.upload.storageExceeded" ~> FORBIDDEN
-          _ <- bool2Fox(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
+            Fox.fromBool(usedStorageBytes + uploadInfo.totalFileSizeInBytes.getOrElse(0L) <= includedStorage)) ?~> "dataset.upload.storageExceeded" ~> FORBIDDEN
+          _ <- Fox.fromBool(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(uploadInfo.name)
-          _ <- bool2Fox(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> "dataset.upload.Datastore.restricted"
+          _ <- Fox.fromBool(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> "dataset.upload.Datastore.restricted"
           folderId <- ObjectId.fromString(uploadInfo.folderId.getOrElse(organization._rootFolder.toString)) ?~> "dataset.upload.folderId.invalid"
           _ <- folderDAO.assertUpdateAccess(folderId)(AuthorizedAccessContext(user)) ?~> "folder.noWriteAccess"
           layersToLinkWithDatasetId <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l =>
@@ -112,7 +112,7 @@ class WKRemoteDataStoreController @Inject()(
           organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Messages(
             "organization.notFound",
             user._organization) ~> NOT_FOUND
-          _ <- bool2Fox(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
+          _ <- Fox.fromBool(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
           datasets <- datasetService.getAllUnfinishedDatasetUploadsOfUser(user._id, user._organization)(
             GlobalAccessContext) ?~> "dataset.upload.couldNotLoadUnfinishedUploads"
           teamIdsPerDataset <- Fox.combined(datasets.map(dataset => teamDAO.findAllowedTeamIdsForDataset(dataset.id)))
@@ -140,7 +140,7 @@ class WKRemoteDataStoreController @Inject()(
       dataset <- datasetDAO.findOneByNameAndOrganization(layerIdentifier.dataSetName, organization._id)(
         AuthorizedAccessContext(requestingUser)) ?~> Messages("dataset.notFound", layerIdentifier.dataSetName)
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(requestingUser, dataset._organization)
-      _ <- Fox.bool2Fox(isTeamManagerOrAdmin || requestingUser.isDatasetManager || dataset.isPublic) ?~> "dataset.upload.linkRestricted"
+      _ <- Fox.fromBool(isTeamManagerOrAdmin || requestingUser.isDatasetManager || dataset.isPublic) ?~> "dataset.upload.linkRestricted"
     } yield layerIdentifier.copy(datasetDirectoryName = Some(dataset.directoryName))
 
   def reportDatasetUpload(name: String,
@@ -223,6 +223,25 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
+  def deleteDataset(name: String, key: String): Action[DataSourceId] = Action.async(validateJson[DataSourceId]) {
+    implicit request =>
+      dataStoreService.validateAccess(name, key) { _ =>
+        for {
+          existingDatasetBox <- datasetDAO.findOneByDataSourceId(request.body)(GlobalAccessContext).shiftBox
+          _ <- existingDatasetBox match {
+            case Full(dataset) =>
+              for {
+                annotationCount <- annotationDAO.countAllByDataset(dataset._id)(GlobalAccessContext)
+                _ = datasetDAO
+                  .deleteDataset(dataset._id, onlyMarkAsDeleted = annotationCount > 0)
+                  .flatMap(_ => usedStorageService.refreshStorageReportForDataset(dataset))
+              } yield ()
+            case _ => Fox.successful(())
+          }
+        } yield Ok
+      }
+  }
+
   def getPaths(name: String, key: String, organizationId: String, directoryName: String): Action[AnyContent] =
     Action.async { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
@@ -239,25 +258,6 @@ class WKRemoteDataStoreController @Inject()(
         } yield Ok(Json.toJson(layersAndMagLinkInfos))
       }
     }
-
-  def deleteDataset(name: String, key: String): Action[DataSourceId] = Action.async(validateJson[DataSourceId]) {
-    implicit request =>
-      dataStoreService.validateAccess(name, key) { _ =>
-        for {
-          existingDataset <- datasetDAO.findOneByDataSourceId(request.body)(GlobalAccessContext).futureBox
-          _ <- existingDataset match {
-            case Full(dataset) =>
-              for {
-                annotationCount <- annotationDAO.countAllByDataset(dataset._id)(GlobalAccessContext)
-                _ = datasetDAO
-                  .deleteDataset(dataset._id, onlyMarkAsDeleted = annotationCount > 0)
-                  .flatMap(_ => usedStorageService.refreshStorageReportForDataset(dataset))
-              } yield ()
-            case _ => Fox.successful(())
-          }
-        } yield Ok
-      }
-  }
 
   def jobExportProperties(name: String, key: String, jobId: ObjectId): Action[AnyContent] = Action.async {
     implicit request =>

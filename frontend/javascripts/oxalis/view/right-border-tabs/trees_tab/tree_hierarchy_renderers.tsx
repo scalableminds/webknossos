@@ -129,6 +129,7 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
         icon: <i className="fas fa-eye-dropper fa-sm " />,
         label: (
           <ChangeColorMenuItemContent
+            key={`changeTreeColor-${tree.treeId}`}
             title="Change Tree Color"
             isDisabled={isEditingDisabled}
             onSetColor={(color) => {
@@ -444,6 +445,7 @@ const createMenuForTreeGroup = (
         icon: <i className="fas fa-eye-dropper fa-sm " />,
         label: (
           <ChangeColorMenuItemContent
+            key={`changeTreeGroupColor-${id}`}
             title="Change Tree Group Color"
             isDisabled={isEditingDisabled}
             onSetColor={(color) => {

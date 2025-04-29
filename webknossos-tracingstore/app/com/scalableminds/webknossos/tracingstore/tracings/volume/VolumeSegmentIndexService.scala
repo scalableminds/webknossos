@@ -3,8 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.box2Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, ElementClass}
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
@@ -46,6 +45,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
     with VolumeBucketCompression
     with SegmentIndexKeyHelper
     with ReversionHelper
+    with FoxImplicits
     with LazyLogging {
 
   private val volumeSegmentIndexClient: FossilDBClient = tracingDataStore.volumeSegmentIndex
@@ -69,9 +69,11 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
                              volumeLayer.expectedUncompressedBucketSize,
                              "updating segment index, new bucket data")).toFox
       }
-      previousBucketBytesWithEmptyFallback <- segmentIndexBuffer.bytesWithEmptyFallback(previousBucketBytesBox) ?~> "volumeSegmentIndex.update.getPreviousBucket.failed"
+      previousBucketBytesWithEmptyFallback <- segmentIndexBuffer
+        .bytesWithEmptyFallback(previousBucketBytesBox)
+        .toFox ?~> "volumeSegmentIndex.update.getPreviousBucket.failed"
       segmentIds: Set[Long] <- collectSegmentIds(bucketBytesDecompressed, volumeLayer.elementClass).toFox
-      previousSegmentIds: Set[Long] <- collectSegmentIds(previousBucketBytesWithEmptyFallback, volumeLayer.elementClass) ?~> "volumeSegmentIndex.update.collectSegmentIds.failed"
+      previousSegmentIds: Set[Long] <- collectSegmentIds(previousBucketBytesWithEmptyFallback, volumeLayer.elementClass).toFox ?~> "volumeSegmentIndex.update.collectSegmentIds.failed"
       additions = segmentIds.diff(previousSegmentIds)
       removals = previousSegmentIds.diff(segmentIds)
       _ <- Fox.serialCombined(removals.toList)(
@@ -116,7 +118,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
         bucketPosition.mag,
         editableMappingTracingId,
         bucketPosition.additionalCoordinates)
-      _ <- previousBucketPositionsBySegment.foreach {
+      _ = previousBucketPositionsBySegment.foreach {
         case (segmentId, previousBucketPositions) =>
           val newBucketPositions = previousBucketPositions + bucketPosition.toVec3IntProto
           segmentIndexBuffer.put(segmentId,

@@ -1,8 +1,7 @@
 package models.folder
 
 import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.tools.{Fox, JsonHelper}
-import com.scalableminds.util.tools.Fox.{bool2Fox, option2Fox}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
 import models.organization.{Organization, OrganizationDAO}
@@ -32,7 +31,8 @@ class FolderService @Inject()(teamDAO: TeamDAO,
                               teamService: TeamService,
                               folderDAO: FolderDAO,
                               organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
-    extends LazyLogging {
+    extends LazyLogging
+    with FoxImplicits {
 
   val defaultRootName: String = "Datasets"
 
@@ -80,7 +80,7 @@ class FolderService @Inject()(teamDAO: TeamDAO,
     } yield ()
 
   def assertValidFolderName(name: String): Fox[Unit] =
-    bool2Fox(!name.contains("/")) ?~> "folder.nameMustNotContainSlash"
+    Fox.fromBool(!name.contains("/")) ?~> "folder.nameMustNotContainSlash"
 
   def getOrCreateFromPathLiteral(folderPathLiteral: String, organizationId: String)(
       implicit ctx: DBAccessContext): Fox[ObjectId] =
@@ -88,10 +88,10 @@ class FolderService @Inject()(teamDAO: TeamDAO,
       organization <- organizationDAO.findOne(organizationId)
       foldersWithParents: Seq[FolderWithParent] <- folderDAO.findTreeOf(organization._rootFolder)
       root <- foldersWithParents.find(_._parent.isEmpty).toFox
-      _ <- bool2Fox(folderPathLiteral.startsWith("/")) ?~> "pathLiteral.mustStartWithSlash"
+      _ <- Fox.fromBool(folderPathLiteral.startsWith("/")) ?~> "pathLiteral.mustStartWithSlash"
       pathNames = folderPathLiteral.drop(1).split("/").toList
       suppliedRootName <- pathNames.headOption.toFox
-      _ <- bool2Fox(suppliedRootName == root.name) ?~> "pathLiteral.mustStartAtOrganizationRootFolder"
+      _ <- Fox.fromBool(suppliedRootName == root.name) ?~> "pathLiteral.mustStartAtOrganizationRootFolder"
       (existingFolderId, remainingPathNames) = findLowestMatchingFolder(root, foldersWithParents, pathNames)
       _ = if (remainingPathNames.nonEmpty) {
         logger.info(s"Creating new folder(s) under $existingFolderId by path literal: $remainingPathNames...")
@@ -148,7 +148,7 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield folderWithParent
 
   private def parseMetadata(literal: String): Fox[JsArray] =
-    JsonHelper.parseAndValidateJson[JsArray](literal)
+    JsonHelper.parseAs[JsArray](literal).toFox
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     readAccessQWithPrefix(requestingUserId, q"")
@@ -249,7 +249,7 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def countChildren(folderId: ObjectId): Fox[Int] =
     for {
       rows <- run(q"SELECT COUNT(*) FROM webknossos.folder_paths WHERE _ancestor = $folderId AND depth = 1".as[Int])
-      firstRow <- rows.headOption
+      firstRow <- rows.headOption.toFox
     } yield firstRow
 
   def updateName(folderId: ObjectId, name: String)(implicit ctx: DBAccessContext): Fox[Unit] =
@@ -280,7 +280,7 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                 AND $updateAccessQuery
               )
            """.as[Boolean])
-      result <- rows.headOption
+      result <- rows.headOption.toFox
     } yield result
 
   def findTreeOf(folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[FolderWithParent]] =

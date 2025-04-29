@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.handler.AnnotationInformationHandlerSelector
 import models.user.User
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.common.{Box, Empty, Full}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -21,12 +21,7 @@ class AnnotationStore @Inject()(
   private val cacheTimeout = 60 minutes
 
   def requestAnnotation(id: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
-    requestFromCache(id).getOrElse(requestFromHandler(id, user)).futureBox.recover {
-      case e =>
-        logger.error("AnnotationStore ERROR: " + e)
-        e.printStackTrace()
-        Failure("AnnotationStore ERROR: " + e)
-    }
+    requestFromCache(id).getOrElse(requestFromHandler(id, user))
 
   private def requestFromCache(id: AnnotationIdentifier): Option[Fox[Annotation]] = {
     val handler = annotationInformationHandlerSelector.informationHandlers(id.annotationType)

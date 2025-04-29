@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - master
+    tags:
+      - '*'
   pull_request:
     branches:
       - '*'
@@ -40,7 +42,7 @@ jobs:
         run: yarn check-cyclic-dependencies
       - name: Run frontend tests
         run: yarn run vitest run --coverage.enabled true frontend/javascripts/test/**/*.spec.ts
-      - name: Download Coverage Artifacts 
+      - name: Download Coverage Artifacts
           # Can not use actions/download-artifact@v4 because it does not support downloading artifacts from other GA runs
         run: |
             gh_last_success_run_id=$(gh run list --workflow "CI Pipeline" --json conclusion,headBranch,databaseId --branch master --jq 'first(.[] | select(.conclusion | contains("success"))) | .databaseId')

@@ -13,9 +13,9 @@ class InstantTestSuite extends PlaySpec {
       assert(Instant.fromString("2024-02-08T10:50:59.123Z").contains(Instant(1707389459123L)))
     }
     "be parsed from json in different formats" in {
-      assert(JsonHelper.parseAndValidateJson[Instant]("1707389459123").contains(Instant(1707389459123L)))
-      assert(JsonHelper.parseAndValidateJson[Instant]("\"1707389459123\"").contains(Instant(1707389459123L)))
-      assert(JsonHelper.parseAndValidateJson[Instant]("\"2024-02-08T10:50:59.123Z\"").contains(Instant(1707389459123L)))
+      assert(JsonHelper.parseAs[Instant]("1707389459123").contains(Instant(1707389459123L)))
+      assert(JsonHelper.parseAs[Instant]("\"1707389459123\"").contains(Instant(1707389459123L)))
+      assert(JsonHelper.parseAs[Instant]("\"2024-02-08T10:50:59.123Z\"").contains(Instant(1707389459123L)))
     }
     "be serialized to iso string" in {
       assert(Instant(1707389459123L).toString == "2024-02-08T10:50:59.123Z")

@@ -96,7 +96,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[List[Array[Float]]] = {
     val adHocMeshRequest = AdHocMeshRequest(
-      Some(dataSource),
+      Some(dataSource.id),
       segmentationLayer,
       Cuboid(topLeft, chunkSize.x + 1, chunkSize.y + 1, chunkSize.z + 1),
       fullMeshRequest.segmentId,

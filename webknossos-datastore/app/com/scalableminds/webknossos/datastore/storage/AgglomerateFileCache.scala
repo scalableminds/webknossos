@@ -37,8 +37,8 @@ case class AgglomerateFileKey(
 object AgglomerateFileKey {
   def fromDataRequest(dataRequest: DataServiceDataRequest): AgglomerateFileKey =
     AgglomerateFileKey(
-      dataRequest.dataSource.id.organizationId,
-      dataRequest.dataSource.id.directoryName,
+      dataRequest.dataSourceIdOrVolumeDummy.organizationId,
+      dataRequest.dataSourceIdOrVolumeDummy.directoryName,
       dataRequest.dataLayer.name,
       dataRequest.settings.appliedAgglomerate.get
     )

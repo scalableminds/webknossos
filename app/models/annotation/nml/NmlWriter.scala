@@ -67,7 +67,6 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
           renderUserState(annotationProto, annotationLayers, requestingUser, annotationOwner)
         for {
           nml <- toNmlWithImplicitWriter(
-            annotationProto,
             annotationLayersWithAppliedUserState,
             annotation,
             scale,
@@ -112,13 +111,26 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
                                         requestingUser: Option[User],
                                         annotationOwner: User): Either[SkeletonTracing, VolumeTracing] = tracing match {
     case Left(s: SkeletonTracing) =>
-      val requestingUserTreeVisibilityMap: Map[Int, Boolean] = requestingUser
-        .flatMap(u => s.userStates.find(_.userId == u._id.toString))
+      val requestingUserState = requestingUser.flatMap(u => s.userStates.find(_.userId == u._id.toString))
+      val ownerUserState = s.userStates.find(_.userId == annotationOwner._id.toString)
+      val requestingUserTreeVisibilityMap: Map[Int, Boolean] = requestingUserState
         .map(userState => userState.treeIds.zip(userState.treeVisibilities).toMap)
         .getOrElse(Map.empty[Int, Boolean])
-      val ownerTreeVisibilityMap: Map[Int, Boolean] = s.userStates
-        .find(_.userId == annotationOwner._id.toString)
-        .map(userState => userState.treeIds.zip(userState.treeVisibilities).toMap)
+      val ownerTreeVisibilityMap: Map[Int, Boolean] =
+        ownerUserState
+          .map(userState => userState.treeIds.zip(userState.treeVisibilities).toMap)
+          .getOrElse(Map.empty[Int, Boolean])
+      val requestingUserBoundingBoxVisibilityMap: Map[Int, Boolean] = requestingUserState
+        .map(userState => userState.boundingBoxIds.zip(userState.boundingBoxVisibilities).toMap)
+        .getOrElse(Map.empty[Int, Boolean])
+      val ownerBoundingBoxVisibilityMap: Map[Int, Boolean] = ownerUserState
+        .map(userState => userState.boundingBoxIds.zip(userState.boundingBoxVisibilities).toMap)
+        .getOrElse(Map.empty[Int, Boolean])
+      val requestingUserTreeGroupExpandedMap: Map[Int, Boolean] = requestingUserState
+        .map(userState => userState.treeGroupIds.zip(userState.treeGroupExpandedStates).toMap)
+        .getOrElse(Map.empty[Int, Boolean])
+      val ownerTreeGroupExpandedMap: Map[Int, Boolean] = ownerUserState
+        .map(userState => userState.treeGroupIds.zip(userState.treeGroupExpandedStates).toMap)
         .getOrElse(Map.empty[Int, Boolean])
       Left(
         s.copy(
@@ -127,6 +139,10 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
           zoomLevel = annotationUserState.map(_.zoomLevel).getOrElse(s.zoomLevel),
           editPositionAdditionalCoordinates =
             annotationUserState.map(_.editPositionAdditionalCoordinates).getOrElse(s.editPositionAdditionalCoordinates),
+          activeNodeId = requestingUserState
+            .flatMap(_.activeNodeId)
+            .orElse(ownerUserState.flatMap(_.activeNodeId))
+            .orElse(s.activeNodeId),
           trees = s.trees.map { tree =>
             tree.copy(
               isVisible = requestingUserTreeVisibilityMap
@@ -134,23 +150,70 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
                 .orElse(ownerTreeVisibilityMap.get(tree.treeId))
                 .orElse(tree.isVisible)
             )
+          },
+          userBoundingBoxes = s.userBoundingBoxes.map { bbox =>
+            bbox.copy(
+              isVisible = requestingUserBoundingBoxVisibilityMap
+                .get(bbox.id)
+                .orElse(ownerBoundingBoxVisibilityMap.get(bbox.id))
+                .orElse(bbox.isVisible)
+            )
+          },
+          treeGroups = s.treeGroups.map { treeGroup =>
+            treeGroup.copy(
+              isExpanded = requestingUserTreeGroupExpandedMap
+                .get(treeGroup.groupId)
+                .orElse(ownerTreeGroupExpandedMap.get(treeGroup.groupId).orElse(treeGroup.isExpanded))
+            )
           }
         )
       )
     case Right(v: VolumeTracing) =>
+      val requestingUserState = requestingUser.flatMap(u => v.userStates.find(_.userId == u._id.toString))
+      val ownerUserState = v.userStates.find(_.userId == annotationOwner._id.toString)
+      val requestingUserBoundingBoxVisibilityMap: Map[Int, Boolean] = requestingUserState
+        .map(userState => userState.boundingBoxIds.zip(userState.boundingBoxVisibilities).toMap)
+        .getOrElse(Map.empty[Int, Boolean])
+      val ownerBoundingBoxVisibilityMap: Map[Int, Boolean] = ownerUserState
+        .map(userState => userState.boundingBoxIds.zip(userState.boundingBoxVisibilities).toMap)
+        .getOrElse(Map.empty[Int, Boolean])
+      val requestingUserSegmentGroupExpandedMap: Map[Int, Boolean] = requestingUserState
+        .map(userState => userState.segmentGroupIds.zip(userState.segmentGroupExpandedStates).toMap)
+        .getOrElse(Map.empty[Int, Boolean])
+      val ownerSegmentGroupExpandedMap: Map[Int, Boolean] = ownerUserState
+        .map(userState => userState.segmentGroupIds.zip(userState.segmentGroupExpandedStates).toMap)
+        .getOrElse(Map.empty[Int, Boolean])
       Right(
         v.copy(
           editPosition = annotationUserState.map(_.editPosition).getOrElse(v.editPosition),
           editRotation = annotationUserState.map(_.editRotation).getOrElse(v.editRotation),
           zoomLevel = annotationUserState.map(_.zoomLevel).getOrElse(v.zoomLevel),
           editPositionAdditionalCoordinates =
-            annotationUserState.map(_.editPositionAdditionalCoordinates).getOrElse(v.editPositionAdditionalCoordinates)
+            annotationUserState.map(_.editPositionAdditionalCoordinates).getOrElse(v.editPositionAdditionalCoordinates),
+          activeSegmentId = requestingUserState
+            .flatMap(_.activeSegmentId)
+            .orElse(ownerUserState.flatMap(_.activeSegmentId))
+            .orElse(v.activeSegmentId),
+          userBoundingBoxes = v.userBoundingBoxes.map { bbox =>
+            bbox.copy(
+              isVisible = requestingUserBoundingBoxVisibilityMap
+                .get(bbox.id)
+                .orElse(ownerBoundingBoxVisibilityMap.get(bbox.id))
+                .orElse(bbox.isVisible)
+            )
+          },
+          segmentGroups = v.segmentGroups.map { segmentGroup =>
+            segmentGroup.copy(
+              isExpanded = requestingUserSegmentGroupExpandedMap
+                .get(segmentGroup.groupId)
+                .orElse(ownerSegmentGroupExpandedMap.get(segmentGroup.groupId).orElse(segmentGroup.isExpanded))
+            )
+          }
         )
       )
   }
 
   private def toNmlWithImplicitWriter(
-      annotationProto: AnnotationProto,
       annotationLayers: List[FetchedAnnotationLayer],
       annotation: Option[Annotation],
       voxelSize: Option[VoxelSize],

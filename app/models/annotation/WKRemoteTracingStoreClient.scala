@@ -99,7 +99,11 @@ class WKRemoteTracingStoreClient(
       .postProto[AnnotationProto](annotationProto)
   }
 
-  def getAnnotationProto(annotationId: ObjectId, version: Option[Long]): Fox[AnnotationProto] = ??? // TODO
+  def getAnnotationProto(annotationId: ObjectId, version: Option[Long]): Fox[AnnotationProto] =
+    rpc(s"${tracingStore.url}/tracings/annotation/$annotationId")
+      .addQueryStringOptional("version", version.map(_.toString))
+      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+      .getWithProtoResponse[AnnotationProto](AnnotationProto)
 
   // Used in duplicate route. History and version are kept
   def duplicateAnnotation(annotationId: ObjectId,

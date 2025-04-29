@@ -26,7 +26,7 @@ export function orderPointsWithMST(points: THREE.Vector3[]): THREE.Vector3[] {
   return bestOrder.map((index) => points[index]);
 }
 
-// Mostly generated with ChatGPT:
+// Mostly generated with ChatGPT (treat with care):
 
 class DisjointSet {
   // Union find datastructure

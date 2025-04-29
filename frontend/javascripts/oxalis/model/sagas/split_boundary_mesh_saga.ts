@@ -49,7 +49,7 @@ function* updateSplitBoundaryMesh() {
     return;
   }
 
-  const sceneController = yield* call(() => getSceneController());
+  const sceneController = yield* call(getSceneController);
 
   const activeTree = yield* select((state) => getActiveTree(state.annotation.skeleton));
 

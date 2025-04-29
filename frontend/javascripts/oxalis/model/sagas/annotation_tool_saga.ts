@@ -115,7 +115,7 @@ export function* watchToolReset(): Saga<never> {
     yield* take("ESCAPE");
     const activeTool = yield* select((state) => state.uiInformation.activeTool);
     if (MeasurementTools.indexOf(activeTool) >= 0) {
-      const sceneController = yield* call(() => getSceneController());
+      const sceneController = yield* call(getSceneController);
       const geometry =
         activeTool === AnnotationTool.AREA_MEASUREMENT
           ? sceneController.areaMeasurementGeometry

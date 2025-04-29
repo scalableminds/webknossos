@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services._
 import play.api.libs.json.Json
@@ -18,8 +18,7 @@ class DSMeshController @Inject()(
     val binaryDataServiceHolder: BinaryDataServiceHolder
 )(implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext)
     extends Controller
-    with MeshMappingHelper
-    with FoxImplicits {
+    with MeshMappingHelper {
 
   override def allowRemoteOrigin: Boolean = true
 
@@ -79,10 +78,9 @@ class DSMeshController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
-          (data, encoding) <- meshFileService.readMeshChunk(organizationId,
-                                                            datasetDirectoryName,
-                                                            dataLayerName,
-                                                            request.body) ?~> "mesh.file.loadChunk.failed"
+          (data, encoding) <- meshFileService
+            .readMeshChunk(organizationId, datasetDirectoryName, dataLayerName, request.body)
+            .toFox ?~> "mesh.file.loadChunk.failed"
         } yield {
           if (encoding.contains("gzip")) {
             Ok(data).withHeaders("Content-Encoding" -> "gzip")

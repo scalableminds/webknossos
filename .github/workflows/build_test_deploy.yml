@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - master
+    tags:
+      - '*'
   pull_request:
     branches:
       - '*'
@@ -20,7 +22,6 @@ env:
 jobs:
   frontend-tests:
     runs-on: ubuntu-22.04
-    if: github.ref != 'refs/heads/master'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,7 +29,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
       - run: corepack enable
       - name: Install frontend dependencies
         run: yarn install --immutable
@@ -40,7 +41,28 @@ jobs:
       - name: Check for cyclic dependencies in frontend
         run: yarn check-cyclic-dependencies
       - name: Run frontend tests
-        run: yarn test-verbose
+        run: yarn run vitest run --coverage.enabled true frontend/javascripts/test/**/*.spec.ts
+      - name: Download Coverage Artifacts
+          # Can not use actions/download-artifact@v4 because it does not support downloading artifacts from other GA runs
+        run: |
+            gh_last_success_run_id=$(gh run list --workflow "CI Pipeline" --json conclusion,headBranch,databaseId --branch master --jq 'first(.[] | select(.conclusion | contains("success"))) | .databaseId')
+            [ -z "$gh_last_success_run_id" ] && echo "No successful run found" && exit 1 || true
+            gh run download $gh_last_success_run_id -n $ARTIFACT_NAME -D $OUTPUT_DIR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ARTIFACT_NAME: vitest-coverage-master
+          OUTPUT_DIR: coverage-master
+      - name: 'Report Coverage'
+        uses:  davelosert/vitest-coverage-report-action@v2
+        with:
+          comment-on: none # alternative: pr
+          json-summary-compare-path: coverage-master/coverage-summary.json
+      - name: "Upload Coverage"
+        if: github.ref == 'refs/heads/master'
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-coverage-master
+          path: coverage
 
   backend-tests:
     runs-on: ubuntu-22.04
@@ -52,7 +74,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
       - run: corepack enable
 
       - uses: actions/setup-java@v4
@@ -111,7 +133,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
       - run: corepack enable
 
       - uses: actions/setup-java@v4
@@ -217,19 +239,19 @@ jobs:
       - name: Run webknossos smoke test
         uses: ./.github/actions/retry
         with:
-          run: curl -v --fail "http://localhost:9000/api/health"
+          run: curl -v --fail-with-body "http://localhost:9000/api/health"
           retries: 20
           retry_delay_seconds: 5
       - name: Run webknossos-datastore smoke test
         uses: ./.github/actions/retry
         with:
-          run: curl -v --fail "http://localhost:9090/data/health"
+          run: curl -v --fail-with-body "http://localhost:9090/data/health"
           retries: 20
           retry_delay_seconds: 5
       - name: Run webknossos-tracingstore smoke test
         uses: ./.github/actions/retry
         with:
-          run: curl -v --fail "http://localhost:9050/tracings/health"
+          run: curl -v --fail-with-body "http://localhost:9050/tracings/health"
           retries: 20
           retry_delay_seconds: 5
       - name: Stop webknossos, datastore and tracingstore
@@ -241,6 +263,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASS }}
 
       - name: Push webknossos image
+        if: ${{ ! startsWith(github.ref, 'refs/tags/') }}
         uses: ./.github/actions/retry
         with:
           run: docker push "scalableminds/webknossos:${{ env.DOCKER_TAG }}"
@@ -253,6 +276,7 @@ jobs:
           retries: 5
           retry_delay_seconds: 10
       - name: Push webknossos-datastore image
+        if: ${{ ! startsWith(github.ref, 'refs/tags/') }}
         uses: ./.github/actions/retry
         with:
           run: docker push "scalableminds/webknossos-datastore:${{ env.DOCKER_TAG }}"
@@ -265,6 +289,7 @@ jobs:
           retries: 5
           retry_delay_seconds: 10
       - name: Push webknossos-tracingstore image
+        if: ${{ ! startsWith(github.ref, 'refs/tags/') }}
         uses: ./.github/actions/retry
         with:
           run: docker push "scalableminds/webknossos-tracingstore:${{ env.DOCKER_TAG }}"

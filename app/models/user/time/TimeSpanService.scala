@@ -137,8 +137,8 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       user <- userService.findOneCached(annotation._user)(GlobalAccessContext)
       task <- annotationService.taskFor(annotation)(GlobalAccessContext)
       project <- projectDAO.findOne(task._project)
-      annotationTime <- annotation.tracingTime ?~> "no annotation.tracingTime"
-      timeLimit <- project.expectedTime ?~> "no project.expectedTime"
+      annotationTime <- annotation.tracingTime.toFox ?~> "no annotation.tracingTime"
+      timeLimit <- project.expectedTime.toFox ?~> "no project.expectedTime"
       projectOwner <- userService.findOneCached(project._owner)(GlobalAccessContext)
       projectOwnerEmail <- userService.emailFor(projectOwner)(GlobalAccessContext)
     } yield {
@@ -153,7 +153,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       case Some(taskId) =>
         for {
           _ <- taskDAO.logTime(taskId, duration)(GlobalAccessContext) ?~> "FAILED: TaskSQLDAO.logTime"
-          _ <- signalOverTime(duration, annotation)(GlobalAccessContext).futureBox //signalOverTime is expected to fail in some cases, hence the .futureBox
+          _ <- signalOverTime(duration, annotation)(GlobalAccessContext).shiftBox //signalOverTime is expected to fail in some cases, hence the .shiftBox
         } yield {}
       case _ =>
         Fox.successful(())
@@ -170,7 +170,6 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
         Fox.successful(None)
     }
 
-  @SuppressWarnings(Array("TryGet")) // This is okay because we check the failure case before using the try
   private def flushToDb(timespansToInsert: List[TimeSpan], timespansToUpdate: List[(TimeSpan, Instant)])(
       implicit ctx: DBAccessContext) = {
     val updateResult = for {
@@ -179,7 +178,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     } yield ()
 
     updateResult.onComplete { x =>
-      if (x.isFailure || x.get.isEmpty)
+      if (x.isEmpty)
         logger.warn(s"Failed to save all time updates: $x")
     }
 

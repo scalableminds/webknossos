@@ -6,13 +6,7 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import { WkDevFlags } from "oxalis/api/wk_dev";
 import { BLEND_MODES, Identity4x4, type OrthoView, type Vector3 } from "oxalis/constants";
-import {
-  AnnotationToolEnum,
-  MappingStatusEnum,
-  OrthoViewValues,
-  OrthoViews,
-  ViewModeValues,
-} from "oxalis/constants";
+import { MappingStatusEnum, OrthoViewValues, OrthoViews, ViewModeValues } from "oxalis/constants";
 import {
   getColorLayers,
   getDataLayers,
@@ -36,6 +30,7 @@ import {
   getUnrenderableLayerInfosForCurrentZoom,
   getZoomValue,
 } from "oxalis/model/accessors/flycam_accessor";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import { calculateGlobalPos, getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
 import {
@@ -469,68 +464,18 @@ class PlaneMaterialFactory {
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) => getActiveMagIndicesForLayers(storeState),
-        (activeMagIndices) => {
-          this.uniforms.activeMagIndices.value = Object.values(activeMagIndices);
-
-          // The vertex shader looks up the buckets for rendering so that the
-          // fragment shader doesn't need to do so. Currently, this only works
-          // for layers that don't have a transformation (otherwise, the differing
-          // grids wouldn't align with each other).
-          // To align the vertices with the buckets, the current magnification is
-          // needed. Since the current mag can differ from layer to layer, the shader
-          // needs to know which mag is safe to use.
-          // For this purpose, we define the representativeMagForVertexAlignment which is
-          // a virtual mag (meaning, there's not necessarily a layer with that exact
-          // mag). It is derived from the layers that are not transformed by considering
-          // the minimum for each axis. That way, the vertices are aligned using the
-          // lowest common multiple.
-          // For example, one layer might render mag 4-4-1, whereas another layer renders
-          // 2-2-2. The representative mag would be 2-2-1.
-          // If all layers have a transform, the representativeMagForVertexAlignment
-          // isn't relevant which is why it can default to [1, 1, 1].
-
-          let representativeMagForVertexAlignment: Vector3 = [
-            Number.POSITIVE_INFINITY,
-            Number.POSITIVE_INFINITY,
-            Number.POSITIVE_INFINITY,
-          ];
-          const state = Store.getState();
-          for (const [layerName, activeMagIndex] of Object.entries(activeMagIndices)) {
-            const layer = getLayerByName(state.dataset, layerName);
-            const magInfo = getMagInfo(layer.resolutions);
-            // If the active mag doesn't exist, a fallback mag is likely rendered. Use that
-            // to determine a representative mag.
-            const suitableMagIndex = magInfo.getIndexOrClosestHigherIndex(activeMagIndex);
-            const suitableMag =
-              suitableMagIndex != null ? magInfo.getMagByIndex(suitableMagIndex) : null;
-
-            const hasTransform = !_.isEqual(
-              getTransformsForLayer(
-                state.dataset,
-                layer,
-                state.datasetConfiguration.nativelyRenderedLayerName,
-              ).affineMatrix,
-              Identity4x4,
-            );
-            if (!hasTransform && suitableMag) {
-              representativeMagForVertexAlignment = V3.min(
-                representativeMagForVertexAlignment,
-                suitableMag,
-              );
-            }
-          }
-
-          if (Math.max(...representativeMagForVertexAlignment) === Number.POSITIVE_INFINITY) {
-            representativeMagForVertexAlignment = [1, 1, 1];
-          }
-          this.uniforms.representativeMagForVertexAlignment = {
-            value: representativeMagForVertexAlignment,
-          };
-        },
+        () => this.updateVertexAlignment(),
         true,
       ),
-    );
-    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        (storeState) =>
+          getTransformsPerLayer(
+            storeState.dataset,
+            storeState.datasetConfiguration.nativelyRenderedLayerName,
+          ),
+        () => this.updateVertexAlignment(),
+      ),
+
       listenToStoreProperty(
         (storeState) => getViewportExtents(storeState),
         (extents) => {
@@ -538,9 +483,6 @@ class PlaneMaterialFactory {
         },
         true,
       ),
-    );
-
-    this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) =>
           getUnrenderableLayerInfosForCurrentZoom(storeState).map(({ layer }) => layer),
@@ -556,8 +498,6 @@ class PlaneMaterialFactory {
         },
         true,
       ),
-    );
-    this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) => storeState.userConfiguration.sphericalCapRadius,
         (sphericalCapRadius) => {
@@ -565,8 +505,6 @@ class PlaneMaterialFactory {
         },
         true,
       ),
-    );
-    this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) => storeState.userConfiguration.selectiveVisibilityInProofreading,
         (selectiveVisibilityInProofreading) => {
@@ -574,9 +512,6 @@ class PlaneMaterialFactory {
         },
         true,
       ),
-    );
-
-    this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) => storeState.datasetConfiguration.selectiveSegmentVisibility,
         (selectiveSegmentVisibility) => {
@@ -584,9 +519,6 @@ class PlaneMaterialFactory {
         },
         true,
       ),
-    );
-
-    this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) => getMagInfoByLayer(storeState.dataset),
         (magInfosByLayer) => {
@@ -611,9 +543,6 @@ class PlaneMaterialFactory {
         },
         true,
       ),
-    );
-
-    this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) => getZoomValue(storeState.flycam),
         (zoomValue) => {
@@ -621,8 +550,7 @@ class PlaneMaterialFactory {
         },
         true,
       ),
-    );
-    this.storePropertyUnsubscribers.push(
+
       listenToStoreProperty(
         (storeState) => getMappingInfoForSupportedLayer(storeState).hideUnmappedIds,
         (hideUnmappedIds) => {
@@ -630,8 +558,6 @@ class PlaneMaterialFactory {
         },
         true,
       ),
-    );
-    this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) => storeState.temporaryConfiguration.viewMode,
         (viewMode) => {
@@ -639,8 +565,6 @@ class PlaneMaterialFactory {
         },
         true,
       ),
-    );
-    this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) => storeState.viewModeData.plane.activeViewport === this.planeID,
         (isMouseInActiveViewport) => {
@@ -648,8 +572,6 @@ class PlaneMaterialFactory {
         },
         true,
       ),
-    );
-    this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) => storeState.dataset,
         (dataset) => {
@@ -659,8 +581,6 @@ class PlaneMaterialFactory {
         },
         true,
       ),
-    );
-    this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) => storeState.datasetConfiguration.blendMode,
         (blendMode) => {
@@ -750,24 +670,18 @@ class PlaneMaterialFactory {
           },
           true,
         ),
-      );
-      this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => getSegmentationLayerWithMappingSupport(storeState),
           (_segmentationLayer) => {
             this.attachSegmentationMappingTextures();
           },
         ),
-      );
-      this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => getVisibleSegmentationLayer(storeState),
           (_segmentationLayer) => {
             this.attachSegmentationColorTexture();
           },
         ),
-      );
-      this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => storeState.userConfiguration.brushSize,
           (brushSize) => {
@@ -775,8 +689,7 @@ class PlaneMaterialFactory {
           },
           true,
         ),
-      );
-      this.storePropertyUnsubscribers.push(
+
         listenToStoreProperty(
           (storeState) => storeState.datasetConfiguration.segmentationPatternOpacity,
           (segmentationPatternOpacity) => {
@@ -784,8 +697,6 @@ class PlaneMaterialFactory {
           },
           true,
         ),
-      );
-      this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => storeState.temporaryConfiguration.hoveredSegmentId,
           (hoveredSegmentId) => {
@@ -797,8 +708,6 @@ class PlaneMaterialFactory {
             this.uniforms.hoveredSegmentIdHigh.value = high;
           },
         ),
-      );
-      this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => storeState.temporaryConfiguration.hoveredUnmappedSegmentId,
           (hoveredUnmappedSegmentId) => {
@@ -810,8 +719,6 @@ class PlaneMaterialFactory {
             this.uniforms.hoveredUnmappedSegmentIdHigh.value = high;
           },
         ),
-      );
-      this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => {
             const activeSegmentationTracing = getActiveSegmentationTracing(storeState);
@@ -820,29 +727,21 @@ class PlaneMaterialFactory {
           () => this.updateActiveCellId(),
           true,
         ),
-      );
-      this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => getActiveSegmentationTracing(storeState)?.activeUnmappedSegmentId,
           (activeUnmappedSegmentId) =>
             (this.uniforms.isUnmappedSegmentHighlighted.value = activeUnmappedSegmentId != null),
           true,
         ),
-      );
-      this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) =>
             getMappingInfoForSupportedLayer(storeState).mappingStatus === MappingStatusEnum.ENABLED,
           () => this.updateActiveCellId(),
         ),
-      );
-      this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => getMappingInfoForSupportedLayer(storeState).mapping,
           () => this.updateActiveCellId(),
         ),
-      );
-      this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => {
             const layer = getSegmentationLayerWithMappingSupport(storeState);
@@ -863,8 +762,6 @@ class PlaneMaterialFactory {
             this.uniforms.shouldApplyMappingOnGPU.value = shouldApplyMappingOnGPU;
           },
         ),
-      );
-      this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => {
             const layer = getSegmentationLayerWithMappingSupport(storeState);
@@ -885,12 +782,11 @@ class PlaneMaterialFactory {
           (storeState) => storeState.uiInformation.activeTool,
           (annotationTool) => {
             this.uniforms.showBrush.value = isBrushTool(annotationTool);
-            this.uniforms.isProofreading.value = annotationTool === AnnotationToolEnum.PROOFREAD;
+            this.uniforms.isProofreading.value = annotationTool === AnnotationTool.PROOFREAD;
           },
           true,
         ),
-      );
-      this.storePropertyUnsubscribers.push(
+
         listenToStoreProperty(
           (storeState) => getActiveSegmentPosition(storeState),
           (activeSegmentPosition) => {
@@ -941,6 +837,64 @@ class PlaneMaterialFactory {
         true,
       ),
     );
+  }
+
+  updateVertexAlignment(): void {
+    const storeState = Store.getState();
+    const activeMagIndices = getActiveMagIndicesForLayers(storeState);
+    const { nativelyRenderedLayerName } = storeState.datasetConfiguration;
+
+    this.uniforms.activeMagIndices.value = Object.values(activeMagIndices);
+
+    // The vertex shader looks up the buckets for rendering so that the
+    // fragment shader doesn't need to do so. Currently, this only works
+    // for layers that don't have a transformation (otherwise, the differing
+    // grids wouldn't align with each other).
+    // To align the vertices with the buckets, the current magnification is
+    // needed. Since the current mag can differ from layer to layer, the shader
+    // needs to know which mag is safe to use.
+    // For this purpose, we define the representativeMagForVertexAlignment which is
+    // a virtual mag (meaning, there's not necessarily a layer with that exact
+    // mag). It is derived from the layers that are not transformed by considering
+    // the minimum for each axis. That way, the vertices are aligned using the
+    // lowest common multiple.
+    // For example, one layer might render mag 4-4-1, whereas another layer renders
+    // 2-2-2. The representative mag would be 2-2-1.
+    // If all layers have a transform, the representativeMagForVertexAlignment
+    // isn't relevant which is why it can default to [1, 1, 1].
+
+    let representativeMagForVertexAlignment: Vector3 = [
+      Number.POSITIVE_INFINITY,
+      Number.POSITIVE_INFINITY,
+      Number.POSITIVE_INFINITY,
+    ];
+    const state = Store.getState();
+    for (const [layerName, activeMagIndex] of Object.entries(activeMagIndices)) {
+      const layer = getLayerByName(state.dataset, layerName);
+      const magInfo = getMagInfo(layer.resolutions);
+      // If the active mag doesn't exist, a fallback mag is likely rendered. Use that
+      // to determine a representative mag.
+      const suitableMagIndex = magInfo.getIndexOrClosestHigherIndex(activeMagIndex);
+      const suitableMag = suitableMagIndex != null ? magInfo.getMagByIndex(suitableMagIndex) : null;
+
+      const hasTransform = !_.isEqual(
+        getTransformsForLayer(state.dataset, layer, nativelyRenderedLayerName).affineMatrix,
+        Identity4x4,
+      );
+      if (!hasTransform && suitableMag) {
+        representativeMagForVertexAlignment = V3.min(
+          representativeMagForVertexAlignment,
+          suitableMag,
+        );
+      }
+    }
+
+    if (Math.max(...representativeMagForVertexAlignment) === Number.POSITIVE_INFINITY) {
+      representativeMagForVertexAlignment = [1, 1, 1];
+    }
+    this.uniforms.representativeMagForVertexAlignment = {
+      value: representativeMagForVertexAlignment,
+    };
   }
 
   updateActiveCellId() {

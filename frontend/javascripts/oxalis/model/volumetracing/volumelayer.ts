@@ -3,8 +3,9 @@ import { V2, V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import _ from "lodash";
 import messages from "messages";
-import type { AnnotationTool, OrthoView, Vector2, Vector3 } from "oxalis/constants";
+import type { OrthoView, Vector2, Vector3 } from "oxalis/constants";
 import Constants, { OrthoViews, Vector3Indicies, Vector2Indicies } from "oxalis/constants";
+import type { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
@@ -89,9 +90,9 @@ export class VoxelNeighborQueue3D {
     return this.queue.length === 0;
   }
 
-  getVoxelAndGetNeighbors(): Array<Vector3> {
+  getVoxelAndGetNeighbors(): { origin: Vector3; neighbors: Array<Vector3> } {
     if (this.isEmpty()) {
-      return [];
+      return { origin: [0, 0, 0], neighbors: [] };
     }
 
     const currentVoxel = this.queue.shift();
@@ -102,20 +103,23 @@ export class VoxelNeighborQueue3D {
     }
 
     // 6-neighborhood in 3D
-    return [
-      [currentVoxel[0] + 1, currentVoxel[1], currentVoxel[2]],
-      [currentVoxel[0] - 1, currentVoxel[1], currentVoxel[2]],
-      [currentVoxel[0], currentVoxel[1] + 1, currentVoxel[2]],
-      [currentVoxel[0], currentVoxel[1] - 1, currentVoxel[2]],
-      [currentVoxel[0], currentVoxel[1], currentVoxel[2] + 1],
-      [currentVoxel[0], currentVoxel[1], currentVoxel[2] - 1],
-    ];
+    return {
+      origin: currentVoxel,
+      neighbors: [
+        [currentVoxel[0] + 1, currentVoxel[1], currentVoxel[2]],
+        [currentVoxel[0] - 1, currentVoxel[1], currentVoxel[2]],
+        [currentVoxel[0], currentVoxel[1] + 1, currentVoxel[2]],
+        [currentVoxel[0], currentVoxel[1] - 1, currentVoxel[2]],
+        [currentVoxel[0], currentVoxel[1], currentVoxel[2] + 1],
+        [currentVoxel[0], currentVoxel[1], currentVoxel[2] - 1],
+      ],
+    };
   }
 }
 export class VoxelNeighborQueue2D extends VoxelNeighborQueue3D {
-  getVoxelAndGetNeighbors(): Array<Vector3> {
+  getVoxelAndGetNeighbors(): { origin: Vector3; neighbors: Array<Vector3> } {
     if (this.isEmpty()) {
-      return [];
+      return { origin: [0, 0, 0], neighbors: [] };
     }
 
     const currentVoxel = this.queue.shift();
@@ -126,12 +130,15 @@ export class VoxelNeighborQueue2D extends VoxelNeighborQueue3D {
     }
 
     // 4-neighborhood in 2D
-    return [
-      [currentVoxel[0] + 1, currentVoxel[1], currentVoxel[2]],
-      [currentVoxel[0] - 1, currentVoxel[1], currentVoxel[2]],
-      [currentVoxel[0], currentVoxel[1] + 1, currentVoxel[2]],
-      [currentVoxel[0], currentVoxel[1] - 1, currentVoxel[2]],
-    ];
+    return {
+      origin: currentVoxel,
+      neighbors: [
+        [currentVoxel[0] + 1, currentVoxel[1], currentVoxel[2]],
+        [currentVoxel[0] - 1, currentVoxel[1], currentVoxel[2]],
+        [currentVoxel[0], currentVoxel[1] + 1, currentVoxel[2]],
+        [currentVoxel[0], currentVoxel[1] - 1, currentVoxel[2]],
+      ],
+    };
   }
 }
 

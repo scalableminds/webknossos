@@ -62,7 +62,7 @@ import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { Model, api } from "oxalis/singletons";
 import type { BrushPresets, OxalisState, StoreAnnotation } from "oxalis/store";
 import Store from "oxalis/store";
-import { getDefaultBrushSizes } from "oxalis/view/action-bar/toolbar_view";
+import { getDefaultBrushSizes } from "oxalis/view/action-bar/tools/brush_presets";
 import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
 import PlaneView from "oxalis/view/plane_view";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";

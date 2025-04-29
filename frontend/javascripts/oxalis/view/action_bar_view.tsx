@@ -20,7 +20,7 @@ import type { OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
 import AddNewLayoutModal from "oxalis/view/action-bar/add_new_layout_modal";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
-import ToolbarView from "oxalis/view/action-bar/toolbar_view";
+import ToolbarView from "oxalis/view/action-bar/tools/toolbar_view";
 import TracingActionsView, {
   getLayoutMenu,
   type LayoutProps,
@@ -39,7 +39,7 @@ import { useHistory } from "react-router-dom";
 import type { APIDataset, APIUser } from "types/api_flow_types";
 import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
 import { StartAIJobModal, type StartAIJobModalState } from "./action-bar/starting_job_modals";
-import ToolkitView from "./action-bar/toolkit_switcher_view";
+import ToolkitView from "./action-bar/tools/toolkit_switcher_view";
 import ButtonComponent from "./components/button_component";
 import { NumberSliderSetting } from "./components/setting_input_views";
 

@@ -12,7 +12,7 @@ import { PureComponent } from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import type { EmptyObject } from "types/globals";
-import { NARROW_BUTTON_STYLE } from "./toolbar_view";
+import { NARROW_BUTTON_STYLE } from "./tools/tool_helpers";
 
 type StateProps = {
   viewMode: ViewMode;

@@ -4,7 +4,7 @@ import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { Store } from "oxalis/singletons";
 import type { OxalisState } from "oxalis/store";
 import { useSelector } from "react-redux";
-import { NARROW_BUTTON_STYLE } from "./toolbar_view";
+import { NARROW_BUTTON_STYLE } from "./tool_helpers";
 
 const toolkitOptions: Array<{ label: string; key: Toolkit }> = [
   {

@@ -59,7 +59,7 @@ export function MoveTool(_props: ToolButtonProps) {
       description="Use left-click to move around and right-click to open a context menu."
       disabledExplanation=""
       disabled={false}
-      value={AnnotationTool.MOVE}
+      value={AnnotationTool.MOVE.id}
     >
       <i className="fas fa-arrows-alt" />
     </ToolRadioButton>
@@ -89,7 +89,7 @@ export function SkeletonTool(_props: ToolButtonProps) {
       description={skeletonToolDescription}
       disabledExplanation={disabledInfosForTools[AnnotationTool.SKELETON.id].explanation}
       disabled={disabledInfosForTools[AnnotationTool.SKELETON.id].isDisabled}
-      value={AnnotationTool.SKELETON}
+      value={AnnotationTool.SKELETON.id}
     >
       <i
         style={{
@@ -121,7 +121,7 @@ export function BrushTool({ adaptedActiveTool }: ToolButtonProps) {
       }
       disabledExplanation={disabledInfosForTools[AnnotationTool.BRUSH.id].explanation}
       disabled={disabledInfosForTools[AnnotationTool.BRUSH.id].isDisabled}
-      value={AnnotationTool.BRUSH}
+      value={AnnotationTool.BRUSH.id}
     >
       <i
         className="fas fa-paint-brush"
@@ -156,7 +156,7 @@ export function EraseBrushTool({ adaptedActiveTool }: ToolButtonProps) {
         zIndex: showEraseBrushTool ? "initial" : -10,
         transition: "margin 0.3s",
       }}
-      value={AnnotationTool.ERASE_BRUSH}
+      value={AnnotationTool.ERASE_BRUSH.id}
     >
       <i
         className="fas fa-eraser"
@@ -183,7 +183,7 @@ export function TraceTool({ adaptedActiveTool }: ToolButtonProps) {
       description="Draw outlines around the voxels you would like to label."
       disabledExplanation={disabledInfosForTools[AnnotationTool.TRACE.id].explanation}
       disabled={disabledInfosForTools[AnnotationTool.TRACE.id].isDisabled}
-      value={AnnotationTool.TRACE}
+      value={AnnotationTool.TRACE.id}
     >
       <img
         src="/assets/images/lasso.svg"
@@ -219,7 +219,7 @@ export function EraseTraceTool({ adaptedActiveTool }: ToolButtonProps) {
         zIndex: showEraseTraceTool ? "initial" : -10,
         transition: "margin 0.3s",
       }}
-      value={AnnotationTool.ERASE_TRACE}
+      value={AnnotationTool.ERASE_TRACE.id}
     >
       <i
         className="fas fa-eraser"
@@ -247,7 +247,7 @@ export function FillCellTool({ adaptedActiveTool }: ToolButtonProps) {
       description="Flood-fill the clicked region."
       disabledExplanation={disabledInfosForTools[AnnotationTool.FILL_CELL.id].explanation}
       disabled={disabledInfosForTools[AnnotationTool.FILL_CELL.id].isDisabled}
-      value={AnnotationTool.FILL_CELL}
+      value={AnnotationTool.FILL_CELL.id}
     >
       <i
         className="fas fa-fill-drip"
@@ -275,7 +275,7 @@ export function PickCellTool(_props: ToolButtonProps) {
       description="Click on a voxel to make its segment id the active segment id."
       disabledExplanation={disabledInfosForTools[AnnotationTool.PICK_CELL.id].explanation}
       disabled={disabledInfosForTools[AnnotationTool.PICK_CELL.id].isDisabled}
-      value={AnnotationTool.PICK_CELL}
+      value={AnnotationTool.PICK_CELL.id}
     >
       <i
         className="fas fa-eye-dropper"
@@ -299,7 +299,7 @@ export function QuickSelectTool(_props: ToolButtonProps) {
       description="Click on a segment or draw a rectangle around it to automatically detect it"
       disabledExplanation={disabledInfosForTools[AnnotationTool.QUICK_SELECT.id].explanation}
       disabled={disabledInfosForTools[AnnotationTool.QUICK_SELECT.id].isDisabled}
-      value={AnnotationTool.QUICK_SELECT}
+      value={AnnotationTool.QUICK_SELECT.id}
     >
       <img
         src="/assets/images/quick-select-tool.svg"
@@ -327,7 +327,7 @@ export function BoundingBoxTool(_props: ToolButtonProps) {
       description="Create, resize and modify bounding boxes."
       disabledExplanation={disabledInfosForTools[AnnotationTool.BOUNDING_BOX.id].explanation}
       disabled={disabledInfosForTools[AnnotationTool.BOUNDING_BOX.id].isDisabled}
-      value={AnnotationTool.BOUNDING_BOX}
+      value={AnnotationTool.BOUNDING_BOX.id}
     >
       <img
         src="/assets/images/bounding-box.svg"
@@ -374,7 +374,7 @@ export function ProofreadTool(_props: ToolButtonProps) {
         !isAgglomerateMappingEnabled.value ||
         disabledInfosForTools[AnnotationTool.PROOFREAD.id].isDisabled
       }
-      value={AnnotationTool.PROOFREAD}
+      value={AnnotationTool.PROOFREAD.id}
       onMouseEnter={() => {
         dispatch(ensureLayerMappingsAreLoadedAction());
       }}
@@ -397,7 +397,7 @@ export function LineMeasurementTool(_props: ToolButtonProps) {
       description="Use to measure distances or areas."
       disabledExplanation=""
       disabled={false}
-      value={AnnotationTool.LINE_MEASUREMENT}
+      value={AnnotationTool.LINE_MEASUREMENT.id}
     >
       <i className="fas fa-ruler" />
     </ToolRadioButton>

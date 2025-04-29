@@ -4,7 +4,7 @@ set -xe
 
 rm -rf frontend/javascripts/test/screenshots/**
 
-docker run --rm -t \
+docker run --rm \
   -e "URL=$URL" \
   -e "WK_AUTH_TOKEN=$WK_AUTH_TOKEN" \
   -w "/home/pptruser/webknossos" \

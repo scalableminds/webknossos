@@ -10,7 +10,7 @@ import type { Vector3 } from "oxalis/constants";
 import { AltOrOptionKey, MappingStatusEnum, OrthoViews } from "oxalis/constants";
 import {
   type ActionDescriptor,
-  getToolClassForAnnotationTool,
+  getToolControllerForAnnotationTool,
 } from "oxalis/controller/combinations/tool_controls";
 import {
   getMappingInfoOrNull,
@@ -18,7 +18,7 @@ import {
   hasVisibleUint64Segmentation,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getActiveMagInfo } from "oxalis/model/accessors/flycam_accessor";
-import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
+import { AnnotationTool, adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
 import {
   calculateGlobalPos,
   isPlaneMode as getIsPlaneMode,
@@ -179,9 +179,7 @@ const moreShortcutsLink = (
 
 function ShortcutsInfo() {
   const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
-  const useLegacyBindings = useSelector(
-    (state: OxalisState) => state.userConfiguration.useLegacyBindings,
-  );
+  const userConfiguration = useSelector((state: OxalisState) => state.userConfiguration);
   const isPlaneMode = useSelector((state: OxalisState) => getIsPlaneMode(state));
   const isShiftPressed = useKeyPress("Shift");
   const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
@@ -194,9 +192,11 @@ function ShortcutsInfo() {
   if (!isPlaneMode) {
     let actionDescriptor = null;
     if (hasSkeleton && isShiftPressed) {
-      actionDescriptor = getToolClassForAnnotationTool("SKELETON").getActionDescriptors(
-        "SKELETON",
-        useLegacyBindings,
+      actionDescriptor = getToolControllerForAnnotationTool(
+        AnnotationTool.SKELETON,
+      ).getActionDescriptors(
+        AnnotationTool.SKELETON,
+        userConfiguration,
         isShiftPressed,
         isControlOrMetaPressed,
         isAltPressed,
@@ -334,9 +334,10 @@ function ShortcutsInfo() {
     isControlOrMetaPressed,
     isAltPressed,
   );
-  const actionDescriptor = getToolClassForAnnotationTool(adaptedTool).getActionDescriptors(
+  const toolController = getToolControllerForAnnotationTool(adaptedTool);
+  const actionDescriptor = toolController.getActionDescriptors(
     adaptedTool,
-    useLegacyBindings,
+    userConfiguration,
     isShiftPressed,
     isControlOrMetaPressed,
     isAltPressed,

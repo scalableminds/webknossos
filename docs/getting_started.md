@@ -82,7 +82,7 @@ Now you know the basics of WEBKNOSSOS.
 Feel free to explore more features of WEBKNOSSOS in this documentation.
 
 - [Dashboard](./dashboard/index.md)
-- [Volume Annotations & Proof-Reading](./volume_annotation/index.md)
+- [Volume Annotations & Proofreading](./volume_annotation/index.md)
 - [Skeleton Annotations](./skeleton_annotation/index.md)
 - [Understanding the User Interface](./ui/index.md)
 - [Keyboard Shortcuts](./ui/keyboard_shortcuts.md)

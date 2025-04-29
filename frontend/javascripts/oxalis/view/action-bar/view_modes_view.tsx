@@ -12,6 +12,7 @@ import { PureComponent } from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import type { EmptyObject } from "types/globals";
+import { NARROW_BUTTON_STYLE } from "./tools/tool_helpers";
 
 type StateProps = {
   viewMode: ViewMode;
@@ -31,7 +32,11 @@ const VIEW_MODE_TO_ICON = {
 };
 
 class ViewModesView extends PureComponent<Props, EmptyObject> {
-  handleChange = (mode: ViewMode) => {
+  handleChange: MenuProps["onClick"] = (args) => {
+    if (!ViewModeValues.includes(args.key as ViewMode)) {
+      return;
+    }
+    const mode = args.key as ViewMode;
     // If we switch back from any arbitrary mode we stop recording.
     // This prevents that when the user switches back to any arbitrary mode,
     // a new node is instantly created at the screen's center.
@@ -43,16 +48,8 @@ class ViewModesView extends PureComponent<Props, EmptyObject> {
     }
 
     Store.dispatch(setViewModeAction(mode));
-    // Unfortunately, antd doesn't provide the original event here
-    // which is why we have to blur using document.activElement.
-    // Additionally, we need a timeout since the blurring would be done
-    // to early, otherwise.
-    setTimeout(() => {
-      if (document.activeElement != null) {
-        // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'Element'.
-        document.activeElement.blur();
-      }
-    }, 100);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'Element'.
+    args.domEvent.target.blur();
   };
 
   isDisabled(mode: ViewMode) {
@@ -60,12 +57,6 @@ class ViewModesView extends PureComponent<Props, EmptyObject> {
   }
 
   render() {
-    const handleMenuClick: MenuProps["onClick"] = (args) => {
-      if (ViewModeValues.includes(args.key as ViewMode)) {
-        this.handleChange(args.key as ViewMode);
-      }
-    };
-
     const MENU_ITEMS: MenuProps["items"] = [
       {
         key: "1",
@@ -82,18 +73,15 @@ class ViewModesView extends PureComponent<Props, EmptyObject> {
 
     const menuProps = {
       items: MENU_ITEMS,
-      onClick: handleMenuClick,
+      onClick: this.handleChange,
     };
 
     return (
-      // The outer div is necessary for proper spacing.
-      <div>
-        <Dropdown menu={menuProps}>
-          <Button>
-            <Space>{VIEW_MODE_TO_ICON[this.props.viewMode]}</Space>
-          </Button>
-        </Dropdown>
-      </div>
+      <Dropdown menu={menuProps}>
+        <Button style={NARROW_BUTTON_STYLE}>
+          <Space>{VIEW_MODE_TO_ICON[this.props.viewMode]}</Space>
+        </Button>
+      </Dropdown>
     );
   }
 }

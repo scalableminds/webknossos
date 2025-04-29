@@ -66,6 +66,7 @@ import {
   enforceSkeletonTracing,
   getActiveNode,
 } from "oxalis/model/accessors/skeletontracing_accessor";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import {
   getAllReadableLayerNames,
   getReadableNameByVolumeTracingId,
@@ -937,7 +938,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       />
     );
 
-    const isProofreadingMode = this.props.activeTool === "PROOFREAD";
+    const isProofreadingMode = this.props.activeTool === AnnotationTool.PROOFREAD;
     const isSelectiveVisibilityDisabled = isProofreadingMode;
 
     const selectiveVisibilitySwitch = (

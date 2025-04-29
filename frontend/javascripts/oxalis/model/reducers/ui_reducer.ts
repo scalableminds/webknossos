@@ -1,4 +1,3 @@
-import { AnnotationToolEnum, AvailableToolsInViewMode } from "oxalis/constants";
 import defaultState from "oxalis/default_state";
 import type { Action } from "oxalis/model/actions/actions";
 import { updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
@@ -9,6 +8,7 @@ import {
 } from "oxalis/model/reducers/reducer_helpers";
 import { hideBrushReducer } from "oxalis/model/reducers/volumetracing_reducer_helpers";
 import type { OxalisState } from "oxalis/store";
+import { Toolkits } from "../accessors/tool_accessor";
 
 function UiReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
@@ -69,7 +69,7 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
 
     case "SET_TOOL": {
       if (!state.annotation.restrictions.allowUpdate) {
-        if (AvailableToolsInViewMode.includes(AnnotationToolEnum[action.tool])) {
+        if (Toolkits.READ_ONLY_TOOLS.includes(action.tool)) {
           return setToolReducer(state, action.tool);
         }
         return state;
@@ -79,10 +79,6 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "CYCLE_TOOL": {
-      if (!state.annotation.restrictions.allowUpdate) {
-        return state;
-      }
-
       const nextTool = action.backwards ? getPreviousTool(state) : getNextTool(state);
 
       if (nextTool == null) {

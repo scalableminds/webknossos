@@ -73,7 +73,7 @@ class DatasetArrayBucketProvider(dataLayer: DataLayer,
           case Some(remoteSourceDescriptorService: RemoteSourceDescriptorService) =>
             for {
               magPath: VaultPath <- remoteSourceDescriptorService.vaultPathFor(readInstruction.baseDir,
-                                                                               readInstruction.dataSource.id,
+                                                                               readInstruction.dataSourceId,
                                                                                readInstruction.dataLayer.name,
                                                                                magLocator)
               chunkContentsCache <- sharedChunkContentsCacheOpt.toFox

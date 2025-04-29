@@ -62,7 +62,7 @@ class BinaryDataController @Inject()(
           (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                     datasetDirectoryName,
                                                                                     dataLayerName) ~> NOT_FOUND
-          (data, indices) <- requestData(dataSource, dataLayer, request.body)
+          (data, indices) <- requestData(dataSource.id, dataLayer, request.body)
           duration = Instant.since(t)
           _ = if (duration > (10 seconds))
             logger.info(
@@ -110,7 +110,7 @@ class BinaryDataController @Inject()(
           depth,
           DataServiceRequestSettings(halfByte = halfByte, appliedAgglomerate = mappingName)
         )
-        (data, indices) <- requestData(dataSource, dataLayer, dataRequest)
+        (data, indices) <- requestData(dataSource.id, dataLayer, dataRequest)
       } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
     }
   }
@@ -126,7 +126,7 @@ class BinaryDataController @Inject()(
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                   datasetDirectoryName,
                                                                                   dataLayerName) ~> NOT_FOUND
-        (data, indices) <- requestData(dataSource, dataLayer, request.body)
+        (data, indices) <- requestData(dataSource.id, dataLayer, request.body)
       } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
     }
   }
@@ -154,7 +154,7 @@ class BinaryDataController @Inject()(
           cubeSize,
           cubeSize
         )
-        (data, indices) <- requestData(dataSource, dataLayer, dataRequest)
+        (data, indices) <- requestData(dataSource.id, dataLayer, dataRequest)
       } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
     }
   }
@@ -188,7 +188,7 @@ class BinaryDataController @Inject()(
           depth = 1,
           DataServiceRequestSettings(appliedAgglomerate = mappingName)
         )
-        (data, _) <- requestData(dataSource, dataLayer, dataRequest)
+        (data, _) <- requestData(dataSource.id, dataLayer, dataRequest)
         intensityRange: Option[(Double, Double)] = intensityMin.flatMap(min => intensityMax.map(max => (min, max)))
         layerColor = color.flatMap(Color.fromHTML)
         params = ImageCreatorParameters(
@@ -227,7 +227,7 @@ class BinaryDataController @Inject()(
                                                                                   datasetDirectoryName,
                                                                                   dataLayerName) ~> NOT_FOUND
         segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Messages("dataLayer.notFound")
-        mappingRequest = DataServiceMappingRequest(dataSource, segmentationLayer, mappingName)
+        mappingRequest = DataServiceMappingRequest(Some(dataSource.id), segmentationLayer, mappingName)
         result <- mappingService.handleMappingRequest(mappingRequest)
       } yield Ok(result)
     }
@@ -248,7 +248,7 @@ class BinaryDataController @Inject()(
                                                                                     dataLayerName) ~> NOT_FOUND
           segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> "dataLayer.mustBeSegmentation"
           adHocMeshRequest = AdHocMeshRequest(
-            Some(dataSource),
+            Some(dataSource.id),
             segmentationLayer,
             request.body.cuboid(dataLayer),
             request.body.segmentId,
@@ -286,7 +286,7 @@ class BinaryDataController @Inject()(
           (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                     datasetDirectoryName,
                                                                                     dataLayerName) ~> NOT_FOUND
-          positionAndMagOpt <- findDataService.findPositionWithData(dataSource, dataLayer)
+          positionAndMagOpt <- findDataService.findPositionWithData(dataSource.id, dataLayer)
         } yield Ok(Json.obj("position" -> positionAndMagOpt.map(_._1), "mag" -> positionAndMagOpt.map(_._2)))
       }
     }
@@ -300,19 +300,19 @@ class BinaryDataController @Inject()(
                                                                                     datasetDirectoryName,
                                                                                     dataLayerName) ?~> Messages(
             "dataSource.notFound") ~> NOT_FOUND ?~> Messages("histogram.layerMissing", dataLayerName)
-          listOfHistograms <- findDataService.createHistogram(dataSource, dataLayer) ?~> Messages("histogram.failed",
-                                                                                                  dataLayerName)
+          listOfHistograms <- findDataService.createHistogram(dataSource.id, dataLayer) ?~> Messages("histogram.failed",
+                                                                                                     dataLayerName)
         } yield Ok(Json.toJson(listOfHistograms))
       }
     }
 
   private def requestData(
-      dataSource: DataSource,
+      dataSourceId: DataSourceId,
       dataLayer: DataLayer,
       dataRequests: DataRequestCollection
   )(implicit tc: TokenContext): Fox[(Array[Byte], List[Int])] = {
     val requests =
-      dataRequests.map(r => DataServiceDataRequest(dataSource, dataLayer, r.cuboid(dataLayer), r.settings))
+      dataRequests.map(r => DataServiceDataRequest(Some(dataSourceId), dataLayer, r.cuboid(dataLayer), r.settings))
     binaryDataService.handleDataRequests(requests)
   }
 

@@ -61,10 +61,9 @@ class BinaryDataService(val dataBaseDir: Path,
       for {
         _ <- Fox.fromBool(requests.forall(_.isSingleBucket)) ?~> "data requests handed to handleMultipleBucketRequests don’t contain bucket requests"
         dataLayer <- SequenceUtils.findUniqueElement(requests.map(_.dataLayer)).toFox
-        dataSource <- SequenceUtils.findUniqueElement(requests.map(_.dataSource)).toFox
-        // dataSource is null and unused for volume tracings. Insert dummy DataSourceId (also unused in that case, except for logging)
-        dataSourceId = if (dataSource != null) dataSource.id
-        else DataSourceId("Volume Annotation Layer", dataLayer.name)
+        dataSourceIdOpt <- SequenceUtils.findUniqueElement(requests.map(_.dataSourceId)).toFox
+        // dataSource is None and unused for volume tracings. Insert dummy DataSourceId (also unused in that case, except for logging)
+        dataSourceId <- SequenceUtils.findUniqueElement(requests.map(_.dataSourceIdOrVolumeDummy)).toFox
         firstRequest <- requests.headOption.toFox
         // Requests outside of the layer range can be skipped. They will be answered with Empty below.
         indicesWhereOutsideRange: Set[Int] = requests.zipWithIndex.collect {
@@ -77,7 +76,7 @@ class BinaryDataService(val dataBaseDir: Path,
           case (request, idx) if !indicesWhereOutsideRange.contains(idx) => request
         }
         readInstructions = requestsSelected.map(r =>
-          DataReadInstruction(dataBaseDir, dataSource, dataLayer, r.cuboid.topLeft.toBucket, r.settings.version))
+          DataReadInstruction(dataBaseDir, dataSourceId, dataLayer, r.cuboid.topLeft.toBucket, r.settings.version))
         bucketProvider = bucketProviderCache.getOrLoadAndPut((dataSourceId, dataLayer.bucketProviderCacheKey))(_ =>
           dataLayer.bucketProvider(remoteSourceDescriptorServiceOpt, dataSourceId, sharedChunkContentsCache))
         bucketBoxes <- datasetErrorLoggingService.withErrorLoggingMultiple(
@@ -103,10 +102,7 @@ class BinaryDataService(val dataBaseDir: Path,
                                  conversionFunc: Array[Byte] => Fox[Array[Byte]],
                                  request: DataServiceDataRequest): Fox[Array[Byte]] =
     if (isNecessary) {
-      val dataSourceIdForLogging =
-        if (request.dataSource != null) request.dataSource.id
-        else DataSourceId("Volume Annotation Layer", request.dataLayer.name)
-      datasetErrorLoggingService.withErrorLogging(dataSourceIdForLogging,
+      datasetErrorLoggingService.withErrorLogging(request.dataSourceIdOrVolumeDummy,
                                                   "converting bucket data",
                                                   conversionFunc(inputArray))
     } else Fox.successful(inputArray)
@@ -186,11 +182,12 @@ class BinaryDataService(val dataBaseDir: Path,
       implicit tc: TokenContext): Fox[Array[Byte]] =
     if (request.dataLayer.doesContainBucket(bucket) && request.dataLayer.containsMag(bucket.mag)) {
       val readInstruction =
-        DataReadInstruction(dataBaseDir, request.dataSource, request.dataLayer, bucket, request.settings.version)
-      // dataSource is null and unused for volume tracings. Insert dummy DataSourceId (also unused in that case, except for logging)
-      val dataSourceId =
-        if (request.dataSource != null) request.dataSource.id
-        else DataSourceId("Volume Annotation Layer", request.dataLayer.name)
+        DataReadInstruction(dataBaseDir,
+                            request.dataSourceIdOrVolumeDummy,
+                            request.dataLayer,
+                            bucket,
+                            request.settings.version)
+      val dataSourceId = request.dataSourceIdOrVolumeDummy
       val bucketProvider =
         bucketProviderCache.getOrLoadAndPut((dataSourceId, request.dataLayer.bucketProviderCacheKey))(_ =>
           request.dataLayer.bucketProvider(remoteSourceDescriptorServiceOpt, dataSourceId, sharedChunkContentsCache))

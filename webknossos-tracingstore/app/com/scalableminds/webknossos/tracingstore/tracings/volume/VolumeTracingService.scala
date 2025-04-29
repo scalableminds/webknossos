@@ -502,7 +502,7 @@ class VolumeTracingService @Inject()(
                                        isTemporaryTracing,
                                        includeFallbackDataIfAvailable)
       requests = dataRequests.map(r =>
-        DataServiceDataRequest(null, volumeLayer, r.cuboid(volumeLayer), r.settings.copy(appliedAgglomerate = None)))
+        DataServiceDataRequest(None, volumeLayer, r.cuboid(volumeLayer), r.settings.copy(appliedAgglomerate = None)))
       data <- binaryDataService.handleDataRequests(requests)
     } yield data
 
@@ -520,7 +520,7 @@ class VolumeTracingService @Inject()(
                                        isTemporaryTracing,
                                        includeFallbackDataIfAvailable)
       requests = dataRequests.map(r =>
-        DataServiceDataRequest(null, volumeLayer, r.cuboid(volumeLayer), r.settings.copy(appliedAgglomerate = None)))
+        DataServiceDataRequest(None, volumeLayer, r.cuboid(volumeLayer), r.settings.copy(appliedAgglomerate = None)))
       data <- binaryDataService.handleMultipleBucketRequests(requests)
     } yield data
 

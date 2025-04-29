@@ -126,7 +126,6 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
 
 uniform float sphericalCapRadius;
 uniform bool selectiveVisibilityInProofreading;
-uniform bool selectiveSegmentVisibility;
 uniform float viewMode;
 uniform float alpha;
 uniform bool renderBucketIndices;

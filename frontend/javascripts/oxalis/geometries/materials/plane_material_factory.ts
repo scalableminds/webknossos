@@ -152,9 +152,6 @@ class PlaneMaterialFactory {
       selectiveVisibilityInProofreading: {
         value: true,
       },
-      selectiveSegmentVisibility: {
-        value: false,
-      },
       hideUnregisteredSegments: {
         value: false,
       },
@@ -512,13 +509,6 @@ class PlaneMaterialFactory {
         (storeState) => storeState.userConfiguration.selectiveVisibilityInProofreading,
         (selectiveVisibilityInProofreading) => {
           this.uniforms.selectiveVisibilityInProofreading.value = selectiveVisibilityInProofreading;
-        },
-        true,
-      ),
-      listenToStoreProperty(
-        (storeState) => storeState.datasetConfiguration.selectiveSegmentVisibility,
-        (selectiveSegmentVisibility) => {
-          this.uniforms.selectiveSegmentVisibility.value = selectiveSegmentVisibility;
         },
         true,
       ),

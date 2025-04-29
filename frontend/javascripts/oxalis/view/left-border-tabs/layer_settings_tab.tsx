@@ -1379,7 +1379,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         "loadingStrategy",
         "segmentationPatternOpacity",
         "blendMode",
-        "selectiveSegmentVisibility",
       ] as Array<keyof RecommendedConfiguration>
     ).map((key) => ({
       name: settings[key] as string,

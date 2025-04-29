@@ -81,7 +81,6 @@ export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, st
   antialiasRendering: "Antialias rendering (can impact performance)",
   colorLayerOrder:
     "Set the order in which color layers are rendered. This setting is only relevant if the cover blend mode is active.",
-  selectiveSegmentVisibility: "When enabled, only the active and hovered segments are visible.",
 };
 export const layerViewConfigurations: Partial<Record<keyof DatasetLayerConfiguration, string>> = {
   color: "Color",

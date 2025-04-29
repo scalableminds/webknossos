@@ -103,6 +103,7 @@ import {
   setTreeVisibilityAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { hideContextMenuAction, setActiveUserBoundingBoxId } from "oxalis/model/actions/ui_actions";
+import { getUpdateSegmentActionToToggleVisibility } from "oxalis/model/actions/volumetracing_action_helpers";
 import {
   clickSegmentAction,
   performMinCutAction,
@@ -143,7 +144,6 @@ import type {
 } from "types/api_flow_types";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 import { LoadMeshMenuItemLabel } from "./right-border-tabs/segments_tab/load_mesh_menu_item_label";
-import { getUpdateSegmentActionToToggleVisibility } from "oxalis/model/actions/volumetracing_action_helpers";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);

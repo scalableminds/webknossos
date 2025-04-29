@@ -50,6 +50,7 @@ import {
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import {
   getActiveSegmentationTracing,
   getHideUnregisteredSegmentsForVisibleSegmentationLayer,
@@ -78,6 +79,7 @@ import {
   loadPrecomputedMeshAction,
 } from "oxalis/model/actions/segmentation_actions";
 import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
+import { getUpdateSegmentActionToToggleVisibility } from "oxalis/model/actions/volumetracing_action_helpers";
 import {
   batchUpdateGroupsAndSegmentsAction,
   deleteSegmentDataAction,
@@ -128,7 +130,6 @@ import {
   getGroupNodeKey,
 } from "../trees_tab/tree_hierarchy_view_helpers";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
-import { getUpdateSegmentActionToToggleVisibility } from "oxalis/model/actions/volumetracing_action_helpers";
 
 const SCROLL_DELAY_MS = 50;
 
@@ -168,6 +169,7 @@ const mapStateToProps = (state: OxalisState) => {
     state.dataset,
     visibleSegmentationLayer?.name,
   );
+  const isProofreadingMode = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
 
   return {
     activeCellId: activeVolumeTracing?.activeCellId,
@@ -204,6 +206,8 @@ const mapStateToProps = (state: OxalisState) => {
     preferredQualityForMeshAdHocComputation:
       state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
     magInfoOfVisibleSegmentationLayer: getMagInfoOfVisibleSegmentationLayer(state),
+    showCheckboxes:
+      !isProofreadingMode || !state.userConfiguration.selectiveVisibilityInProofreading,
   };
 };
 
@@ -1878,10 +1882,7 @@ class SegmentsView extends React.Component<Props, State> {
                                 selectedKeys={this.getSelectedItemKeys()}
                                 onCheck={this.onCheck}
                                 checkedKeys={checkedKeys}
-                                checkable={
-                                  // todop: respect proofreading
-                                  !this.props.datasetConfiguration.selectiveSegmentVisibility
-                                }
+                                checkable={this.props.showCheckboxes}
                                 switcherIcon={<DownOutlined />}
                                 titleRender={this.titleRender}
                                 style={{

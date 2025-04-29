@@ -481,8 +481,6 @@ export const getSegmentationAlphaIncrement: ShaderModule = {
 
       if (isHoveredSegment) {
         return 0.2;
-      } else if (selectiveSegmentVisibility) {
-        return isActiveCell ? 0.15 : -alpha;
       } else {
         return 0.;
       }

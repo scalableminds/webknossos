@@ -46,6 +46,7 @@ import {
   SEARCH_RESULTS_LIMIT,
   useFolderQuery,
 } from "./dataset/queries";
+import FastTooltip from "components/fast_tooltip";
 
 type Props = {
   user: APIUser;
@@ -302,7 +303,7 @@ export function DatasetRefreshButton({ context }: { context: DatasetCollectionCo
   const showLoadingIndicator = context.isLoading || context.isChecking;
 
   return (
-    <Tooltip
+    <FastTooltip
       title={showLoadingIndicator ? "Refreshing the dataset list." : "Refresh the dataset list."}
     >
       <Dropdown.Button
@@ -313,7 +314,7 @@ export function DatasetRefreshButton({ context }: { context: DatasetCollectionCo
       >
         {showLoadingIndicator ? <LoadingOutlined /> : <ReloadOutlined />} Refresh
       </Dropdown.Button>
-    </Tooltip>
+    </FastTooltip>
   );
 }
 

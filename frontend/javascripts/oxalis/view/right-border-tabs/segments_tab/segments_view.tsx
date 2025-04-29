@@ -381,19 +381,9 @@ function constructTreeData(
 }
 
 const rootGroup = {
-  name: "Listed Segments",
+  name: "Root",
   groupId: MISSING_GROUP_ID,
   key: getGroupNodeKey(MISSING_GROUP_ID),
-  children: [],
-  isExpanded: true,
-};
-
-const unlistedRootSymbol = Symbol("Unlisted Segments");
-
-const unlistedRootGroup = {
-  name: "Unlisted Segments",
-  groupId: unlistedRootSymbol,
-  key: unlistedRootSymbol, // getGroupNodeKey(s),
   children: [],
   isExpanded: true,
 };
@@ -1899,19 +1889,7 @@ class SegmentsView extends React.Component<Props, State> {
                               }}
                             >
                               <ScrollableVirtualizedTree
-                                // todop
-                                treeData={[
-                                  {
-                                    ...unlistedRootGroup,
-                                    title: unlistedRootGroup.name,
-                                    key: unlistedRootSymbol.toString(),
-                                    id: -2,
-                                    type: "group",
-                                    isChecked: false, // todop: why?
-                                    children: [],
-                                  },
-                                  ...this.state.groupTree,
-                                ]}
+                                treeData={this.state.groupTree}
                                 allowDrop={this.allowDrop}
                                 onDrop={this.onDrop}
                                 onSelect={this.onSelectTreeItem}

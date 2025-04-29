@@ -16,7 +16,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.{DataFormat, Dat
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Empty
 
 import scala.concurrent.duration._
 import ucar.ma2.{Array => MultiArray}
@@ -50,15 +49,16 @@ class DatasetArrayBucketProvider(dataLayer: DataLayer,
   private def openDatasetArrayWithTimeLogging(
       readInstruction: DataReadInstruction)(implicit ec: ExecutionContext, tc: TokenContext): Fox[DatasetArray] = {
     val before = Instant.now
-    for {
-      result <- openDatasetArray(readInstruction).futureBox
-      duration = Instant.since(before)
-      _ = if (duration > (1 second)) {
+    val result = openDatasetArray(readInstruction)
+    result.onComplete { _ =>
+      val duration = Instant.since(before)
+      if (duration > (1 second)) {
         logger.warn(
           s"Opening ${dataLayer.dataFormat} DatasetArray for ${readInstruction.layerSummary} was slow ($duration)"
         )
       }
-    } yield result
+    }
+    result
   }
 
   private def openDatasetArray(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext,
@@ -115,7 +115,7 @@ class DatasetArrayBucketProvider(dataLayer: DataLayer,
                 case _ => Fox.failure(s"Cannot open ${dataLayer.dataFormat} layer “${dataLayer.name}” as DatasetArray")
               }
             } yield datasetArray
-          case None => Empty
+          case None => Fox.empty
         }
     }
   }

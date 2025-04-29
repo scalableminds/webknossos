@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Double
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.layers.{Zarr3DataLayer, Zarr3Layer, Zarr3SegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
@@ -15,7 +15,10 @@ import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataL
 
 import scala.concurrent.ExecutionContext
 
-class NgffV0_5Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExplorer with NgffExplorationUtils {
+class NgffV0_5Explorer(implicit val ec: ExecutionContext)
+    extends RemoteLayerExplorer
+    with NgffExplorationUtils
+    with FoxImplicits {
 
   override def name: String = "OME NGFF Zarr v0.5"
 
@@ -51,7 +54,7 @@ class NgffV0_5Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
     for {
       magsWithAttributes <- Fox.serialCombined(multiscale.datasets)(d =>
         zarrMagFromNgffDataset(d, remotePath, voxelSizeInAxisUnits, axisOrder, credentialId, Some(channelIndex)))
-      _ <- bool2Fox(magsWithAttributes.nonEmpty) ?~> "zero mags in layer"
+      _ <- Fox.fromBool(magsWithAttributes.nonEmpty) ?~> "zero mags in layer"
       elementClassRaw <- elementClassFromMags(magsWithAttributes) ?~> "Could not extract element class from mags"
       elementClass = if (isSegmentation) ensureElementClassForSegmentationLayer(elementClassRaw)
       else elementClassRaw
@@ -108,8 +111,10 @@ class NgffV0_5Explorer(implicit val ec: ExecutionContext) extends RemoteLayerExp
       magPath = layerPath / ngffDataset.path
       zarrJsonPath = magPath / Zarr3ArrayHeader.FILENAME_ZARR_JSON
       zarrHeader <- getZarrHeader(ngffDataset, layerPath)
-      elementClass <- zarrHeader.elementClass ?~> s"failed to read element class from zarr header at $zarrJsonPath"
-      boundingBox <- zarrHeader.boundingBox(axisOrder) ?~> s"failed to read bounding box from zarr header at $zarrJsonPath"
+      elementClass <- zarrHeader.elementClass.toFox ?~> s"failed to read element class from zarr header at $zarrJsonPath"
+      boundingBox <- zarrHeader
+        .boundingBox(axisOrder)
+        .toFox ?~> s"failed to read bounding box from zarr header at $zarrJsonPath"
     } yield
       MagWithAttributes(
         MagLocator(mag, Some(magPath.toUri.toString), None, Some(axisOrder), channelIndex, credentialId),

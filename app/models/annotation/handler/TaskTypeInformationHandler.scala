@@ -27,11 +27,10 @@ class TaskTypeInformationHandler @Inject()(taskTypeDAO: TaskTypeDAO,
       annotations <- Fox
         .serialCombined(tasks)(task => annotationDAO.findAllByTaskIdAndType(task._id, AnnotationType.Task))
         .map(_.flatten)
-        .toFox
       finishedAnnotations = annotations.filter(_.state == Finished)
       _ <- assertAllOnSameDataset(finishedAnnotations)
       _ <- assertNonEmpty(finishedAnnotations) ?~> "taskType.noAnnotations"
-      user <- userOpt ?~> "user.notAuthorised"
+      user <- userOpt.toFox ?~> "user.notAuthorised"
       datasetId <- finishedAnnotations.headOption.map(_._dataset).toFox
       mergedAnnotation <- annotationMerger.mergeN(taskTypeId,
                                                   toTemporaryStore = true,

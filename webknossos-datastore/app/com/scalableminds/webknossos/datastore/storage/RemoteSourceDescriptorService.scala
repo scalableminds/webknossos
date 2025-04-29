@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.datastore.storage
 
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
@@ -21,7 +20,8 @@ case class RemoteSourceDescriptor(uri: URI, credential: Option[DataVaultCredenti
 class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemoteWebknossosClient,
                                               dataStoreConfig: DataStoreConfig,
                                               dataVaultService: DataVaultService)
-    extends LazyLogging {
+    extends LazyLogging
+    with FoxImplicits {
 
   def vaultPathFor(baseDir: Path, datasetId: DataSourceId, layerName: String, magLocator: MagLocator)(
       implicit ec: ExecutionContext): Fox[VaultPath] =
@@ -43,7 +43,7 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
       layerName: String,
       magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[RemoteSourceDescriptor] =
     for {
-      credentialBox <- credentialFor(magLocator: MagLocator).futureBox
+      credentialBox <- credentialFor(magLocator: MagLocator).shiftBox
       uri <- uriForMagLocator(baseDir, datasetId, layerName, magLocator).toFox
       remoteSource = RemoteSourceDescriptor(uri, credentialBox.toOption)
     } yield remoteSource

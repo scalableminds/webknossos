@@ -155,10 +155,10 @@ jobs:
           echo "CI_BUILD_NUM=$GITHUB_RUN_ID" | tee -a "$GITHUB_ENV"
 
       - name: "Custom environment variables (Not Pull Request)"
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.event_name == 'push' }}
         run: |
-          CI_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-          NORMALIZED_BRANCH=${CI_BRANCH//[\/-]/_}
+          CI_BRANCH="${GITHUB_REF_NAME}"
+          NORMALIZED_BRANCH="${CI_BRANCH//[\/-]/_}"
           DOCKER_TAG="${NORMALIZED_BRANCH}__${GITHUB_RUN_ID}"
           echo "DOCKER_TAG=$DOCKER_TAG" | tee -a "$GITHUB_ENV"
           if [ "$GITHUB_REF_TYPE" == "branch" ]; then

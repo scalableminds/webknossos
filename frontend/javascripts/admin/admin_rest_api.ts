@@ -91,7 +91,7 @@ import {
   type VoxelyticsWorkflowListing,
   type VoxelyticsWorkflowReport,
   type ZarrPrivateLink,
-} from "types/api_flow_types";
+} from "types/api_types";
 import type { ArbitraryObject } from "types/globals";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import type { DatasourceConfiguration } from "types/schemas/datasource.types";

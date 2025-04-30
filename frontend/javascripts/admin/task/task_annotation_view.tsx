@@ -29,7 +29,7 @@ import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_acces
 import type { OxalisState } from "oxalis/store";
 import { useEffect, useState } from "react";
 import { connect } from "react-redux";
-import type { APIAnnotation, APITask, APIUser } from "types/api_flow_types";
+import type { APIAnnotation, APITask, APIUser } from "types/api_types";
 
 type OwnProps = {
   task: APITask;

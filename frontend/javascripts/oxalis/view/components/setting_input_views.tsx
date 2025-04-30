@@ -30,7 +30,7 @@ import { api } from "oxalis/singletons";
 import type { OxalisState } from "oxalis/store";
 import * as React from "react";
 import { connect } from "react-redux";
-import type { APISegmentationLayer } from "types/api_flow_types";
+import type { APISegmentationLayer } from "types/api_types";
 
 const ROW_GUTTER = 1;
 

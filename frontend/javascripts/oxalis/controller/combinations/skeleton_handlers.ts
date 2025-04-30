@@ -47,7 +47,7 @@ import type ArbitraryView from "oxalis/view/arbitrary_view";
 import type PlaneView from "oxalis/view/plane_view";
 import { renderToTexture } from "oxalis/view/rendering_utils";
 import * as THREE from "three";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_types";
 const OrthoViewToNumber: OrthoViewMap<number> = {
   [OrthoViews.PLANE_XY]: 0,
   [OrthoViews.PLANE_YZ]: 1,

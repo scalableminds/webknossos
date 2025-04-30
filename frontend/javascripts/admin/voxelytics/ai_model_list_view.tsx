@@ -25,7 +25,7 @@ import { useState } from "react";
 import type { Key } from "react";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
-import type { APIAnnotation, AiModel } from "types/api_flow_types";
+import type { APIAnnotation, AiModel } from "types/api_types";
 
 export default function AiModelListView() {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
@@ -206,7 +206,10 @@ const renderActionsForModel = (model: AiModel, onChangeSharedOrganizations: () =
       {voxelyticsWorkflowHash != null ? (
         /* margin left is needed  as organizationSharingButton is a button with a 16 margin */
         <Row style={{ marginLeft: 16 }}>
-          <FileTextOutlined />
+          <FileTextOutlined
+            className="icon-margin-right"
+            style={{ color: "var(--ant-color-primary)" }}
+          />
           <Link to={`/workflows/${voxelyticsWorkflowHash}`}>Voxelytics Report</Link>
         </Row>
       ) : null}

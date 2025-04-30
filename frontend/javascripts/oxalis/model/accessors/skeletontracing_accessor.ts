@@ -23,7 +23,7 @@ import {
   AnnotationLayerEnum,
   type ServerSkeletonTracing,
   type ServerTracing,
-} from "types/api_flow_types";
+} from "types/api_types";
 import { invertTransform, transformPointUnscaled } from "../helpers/transformation_helpers";
 import {
   getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull,
@@ -217,7 +217,7 @@ export function getNodeAndTreeOrNull(
     });
 }
 
-export function isSkeletonLayerTransformed(state: OxalisState) {
+export function areGeometriesTransformed(state: OxalisState) {
   const transformation = getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull(
     state.dataset,
     state.datasetConfiguration.nativelyRenderedLayerName,

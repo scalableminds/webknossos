@@ -26,7 +26,7 @@ import {
   type FolderItem,
   type FolderUpdater,
   convertDatasetToCompact,
-} from "types/api_flow_types";
+} from "types/api_types";
 
 export const SEARCH_RESULTS_LIMIT = 100;
 export const MINIMUM_SEARCH_QUERY_LENGTH = 3;

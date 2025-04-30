@@ -8,7 +8,7 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import { useState } from "react";
-import type { APIUser, ExperienceDomainList } from "types/api_flow_types";
+import type { APIUser, ExperienceDomainList } from "types/api_types";
 
 const { Column } = Table;
 

@@ -19,7 +19,7 @@ import {
   type VoxelyticsTaskConfigWithName,
   type VoxelyticsWorkflowDag,
   type VoxelyticsWorkflowDagEdge,
-} from "types/api_flow_types";
+} from "types/api_types";
 
 export const colorHasher = new ColorHash({ lightness: [0.35, 0.5, 0.65] });
 

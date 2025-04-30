@@ -14,7 +14,7 @@ import type {
   Vector6,
 } from "oxalis/constants";
 import type { BoundingBoxObject, NumberLike } from "oxalis/store";
-import type { APIDataset, APIUser } from "types/api_flow_types";
+import type { APIDataset, APIUser } from "types/api_types";
 import type { ArbitraryObject, Comparator } from "types/globals";
 
 type UrlParams = Record<string, string>;

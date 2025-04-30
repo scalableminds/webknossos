@@ -6,7 +6,7 @@ import messages from "messages";
 import { useEffect, useState } from "react";
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
-import type { APIDataset } from "types/api_flow_types";
+import type { APIDataset } from "types/api_types";
 import { confirmAsync } from "./helper_components";
 
 type Props = {

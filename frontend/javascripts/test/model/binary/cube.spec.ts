@@ -179,7 +179,7 @@ describe("DataCube", () => {
     ]);
   });
 
-  it<TestContext>("Voxel Labeling should only instantiate one bucket when labelling the same bucket twice", async ({
+  it<TestContext>("Voxel Labeling should only instantiate one bucket when labeling the same bucket twice", async ({
     cube,
   }) => {
     // Creates bucket

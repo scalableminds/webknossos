@@ -8,7 +8,7 @@ import Toast from "libs/toast";
 import _ from "lodash";
 import messages from "messages";
 import { useState } from "react";
-import type { APIActiveUser, APIProject, APIUser } from "types/api_flow_types";
+import type { APIActiveUser, APIProject, APIUser } from "types/api_types";
 
 type Props = {
   project: APIProject | null | undefined;

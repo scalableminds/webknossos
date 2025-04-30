@@ -34,7 +34,7 @@ import { checkLandmarksForThinPlateSpline } from "oxalis/model/helpers/transform
 import type { OxalisState } from "oxalis/store";
 import React, { useState } from "react";
 import { useSelector } from "react-redux";
-import type { APIDataLayer, APIDataset, APITeam, LayerLink } from "types/api_flow_types";
+import type { APIDataLayer, APIDataset, APITeam, LayerLink } from "types/api_types";
 import { syncValidator } from "types/validation";
 import type { WizardComponentProps } from "./common";
 

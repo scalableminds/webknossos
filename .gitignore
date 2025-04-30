@@ -79,7 +79,6 @@ lifttemplate.iws
 conf/github.conf
 tmp/
 errorShots/
-flow-coverage/
 
 
 # Sublime 

@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - master
+    tags:
+      - '*'
   pull_request:
     branches:
       - '*'
@@ -11,7 +13,7 @@ on:
 env:
   USER_UID: 1001
   USER_GID: 1001
-  POSTGRES_URL: "jdbc:postgresql://localhost:5432/webknossos"
+  POSTGRES_URL: "jdbc:postgresql://localhost:5434/webknossos"
   POSTGRES_USER: "webknossos_user"
   POSTGRES_PASSWORD: "secret_password"
   CERTIFICATE: ${{ secrets.CERTIFICATE_FOR_CI_ONLY }}
@@ -40,7 +42,7 @@ jobs:
         run: yarn check-cyclic-dependencies
       - name: Run frontend tests
         run: yarn run vitest run --coverage.enabled true frontend/javascripts/test/**/*.spec.ts
-      - name: Download Coverage Artifacts 
+      - name: Download Coverage Artifacts
           # Can not use actions/download-artifact@v4 because it does not support downloading artifacts from other GA runs
         run: |
             gh_last_success_run_id=$(gh run list --workflow "CI Pipeline" --json conclusion,headBranch,databaseId --branch master --jq 'first(.[] | select(.conclusion | contains("success"))) | .databaseId')
@@ -261,6 +263,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASS }}
 
       - name: Push webknossos image
+        if: ${{ ! startsWith(github.ref, 'refs/tags/') }}
         uses: ./.github/actions/retry
         with:
           run: docker push "scalableminds/webknossos:${{ env.DOCKER_TAG }}"
@@ -273,6 +276,7 @@ jobs:
           retries: 5
           retry_delay_seconds: 10
       - name: Push webknossos-datastore image
+        if: ${{ ! startsWith(github.ref, 'refs/tags/') }}
         uses: ./.github/actions/retry
         with:
           run: docker push "scalableminds/webknossos-datastore:${{ env.DOCKER_TAG }}"
@@ -285,6 +289,7 @@ jobs:
           retries: 5
           retry_delay_seconds: 10
       - name: Push webknossos-tracingstore image
+        if: ${{ ! startsWith(github.ref, 'refs/tags/') }}
         uses: ./.github/actions/retry
         with:
           run: docker push "scalableminds/webknossos-tracingstore:${{ env.DOCKER_TAG }}"

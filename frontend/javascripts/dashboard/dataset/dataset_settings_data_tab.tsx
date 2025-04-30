@@ -30,7 +30,7 @@ import { getSupportedValueRangeForElementClass } from "oxalis/model/bucket_data_
 import type { BoundingBoxObject, OxalisState } from "oxalis/store";
 import * as React from "react";
 import { useSelector } from "react-redux";
-import { type APIDataLayer, type APIDataset, APIJobType } from "types/api_flow_types";
+import { type APIDataLayer, type APIDataset, APIJobType } from "types/api_types";
 import type { ArbitraryObject } from "types/globals";
 import type { DataLayer } from "types/schemas/datasource.types";
 import { isValidJSON, syncValidator, validateDatasourceJSON } from "types/validation";

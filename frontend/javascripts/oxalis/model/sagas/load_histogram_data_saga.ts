@@ -1,4 +1,4 @@
-import { getHistogramForLayer } from "admin/admin_rest_api";
+import { getHistogramForLayer } from "admin/rest_api";
 import type { Vector2 } from "oxalis/constants";
 import {
   type ReloadHistogramAction,

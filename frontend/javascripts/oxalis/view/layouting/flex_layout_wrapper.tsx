@@ -1,4 +1,4 @@
-import { sendAnalyticsEvent } from "admin/admin_rest_api";
+import { sendAnalyticsEvent } from "admin/rest_api";
 import { Layout } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";

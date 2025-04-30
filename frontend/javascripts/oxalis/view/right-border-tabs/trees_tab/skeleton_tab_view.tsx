@@ -7,7 +7,7 @@ import {
   WarningOutlined,
 } from "@ant-design/icons";
 import { BlobReader, BlobWriter, type Entry, ZipReader } from "@zip.js/zip.js";
-import { clearCache, getBuildInfo, importVolumeTracing } from "admin/admin_rest_api";
+import { clearCache, getBuildInfo, importVolumeTracing } from "admin/rest_api";
 import { Dropdown, Empty, type MenuProps, Modal, Space, Spin, Tooltip, notification } from "antd";
 import { saveAs } from "file-saver";
 import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";

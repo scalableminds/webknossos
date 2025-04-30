@@ -1,4 +1,8 @@
 import {
+  PricingPlanEnum,
+  isFeatureAllowedByPricingPlan,
+} from "admin/organization/pricing_plan_utils";
+import {
   getAnnotationCompoundInformation,
   getAnnotationProto,
   getDataset,
@@ -9,11 +13,7 @@ import {
   getTracingsForAnnotation,
   getUnversionedAnnotationInformation,
   getUserConfiguration,
-} from "admin/admin_rest_api";
-import {
-  PricingPlanEnum,
-  isFeatureAllowedByPricingPlan,
-} from "admin/organization/pricing_plan_utils";
+} from "admin/rest_api";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";

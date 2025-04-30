@@ -1,6 +1,6 @@
 import { DownOutlined, DownloadOutlined, RetweetOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
-import { getEditableUsers, getProjects, getTaskTypes } from "admin/admin_rest_api";
+import { getEditableUsers, getProjects, getTaskTypes } from "admin/rest_api";
 import { Button, Col, Dropdown, Form, Input, Row, Select } from "antd";
 import Persistence from "libs/persistence";
 import { useEffectOnlyOnce } from "libs/react_hooks";

@@ -28,7 +28,7 @@ import {
 import MiniSearch from "minisearch";
 import React, { useEffect, useState, useMemo } from "react";
 
-import { deleteWorkflow, getVoxelyticsLogs } from "admin/admin_rest_api";
+import { deleteWorkflow, getVoxelyticsLogs } from "admin/rest_api";
 import dayjs from "dayjs";
 import {
   formatDateMedium,

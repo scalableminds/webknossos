@@ -1,5 +1,5 @@
 import { CopyOutlined, SwapOutlined } from "@ant-design/icons";
-import { getAuthToken, revokeAuthToken } from "admin/admin_rest_api";
+import { getAuthToken, revokeAuthToken } from "admin/rest_api";
 import { Button, Col, Form, Input, Row, Space, Spin } from "antd";
 import Toast from "libs/toast";
 import type { WebknossosState } from "oxalis/store";

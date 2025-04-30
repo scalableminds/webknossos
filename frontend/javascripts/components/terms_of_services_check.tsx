@@ -1,11 +1,11 @@
 import { DownOutlined } from "@ant-design/icons";
-import { getUsersOrganizations } from "admin/admin_rest_api";
 import {
   type AcceptanceInfo,
   acceptTermsOfService,
   getTermsOfService,
   requiresTermsOfServiceAcceptance,
 } from "admin/api/terms_of_service";
+import { getUsersOrganizations } from "admin/rest_api";
 import { Dropdown, type MenuProps, Modal, Space, Spin } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import dayjs from "dayjs";

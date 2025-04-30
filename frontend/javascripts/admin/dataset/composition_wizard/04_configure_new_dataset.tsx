@@ -1,10 +1,10 @@
 import { DeleteOutlined } from "@ant-design/icons";
-import { createDatasetComposition, updateDatasetPartial } from "admin/admin_rest_api";
 import {
   AllowedTeamsFormItem,
   DatasetNameFormItem,
   layerNameRules,
 } from "admin/dataset/dataset_components";
+import { createDatasetComposition, updateDatasetPartial } from "admin/rest_api";
 import {
   Button,
   Checkbox,

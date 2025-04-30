@@ -11,12 +11,12 @@ import {
   UserAddOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
-import { downloadAnnotation as downloadAnnotationAPI } from "admin/admin_rest_api";
 import {
   assignTaskToUser as assignTaskToUserAPI,
   deleteTask as deleteTaskAPI,
   getTasks,
 } from "admin/api/tasks";
+import { downloadAnnotation as downloadAnnotationAPI } from "admin/rest_api";
 import TaskAnnotationView from "admin/task/task_annotation_view";
 import { downloadTasksAsCSV } from "admin/task/task_create_form_view";
 import type { QueryObject, TaskFormFieldValues } from "admin/task/task_search_form";

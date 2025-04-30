@@ -42,7 +42,7 @@ import Store, { type WebknossosState } from "oxalis/store";
 import ButtonComponent, { ToggleButton } from "oxalis/view/components/button_component";
 import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
 
-import { updateNovelUserExperienceInfos } from "admin/admin_rest_api";
+import { updateNovelUserExperienceInfos } from "admin/rest_api";
 import FastTooltip from "components/fast_tooltip";
 import { clearProofreadingByProducts } from "oxalis/model/actions/proofread_actions";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";

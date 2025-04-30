@@ -1,4 +1,4 @@
-import { sendHelpEmail, updateNovelUserExperienceInfos } from "admin/admin_rest_api";
+import { sendHelpEmail, updateNovelUserExperienceInfos } from "admin/rest_api";
 import { Alert, Input, Modal, message } from "antd";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import type { WebknossosState } from "oxalis/store";

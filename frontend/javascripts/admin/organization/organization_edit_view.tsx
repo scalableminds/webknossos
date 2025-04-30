@@ -11,7 +11,7 @@ import {
   getPricingPlanStatus,
   getUsers,
   updateOrganization,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
 import { Button, Card, Col, Form, Input, Row, Skeleton, Space, Typography } from "antd";
 import { confirmAsync } from "dashboard/dataset/helper_components";
 import Toast from "libs/toast";

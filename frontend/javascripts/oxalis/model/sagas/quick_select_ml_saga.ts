@@ -1,4 +1,4 @@
-import { getSamMask, sendAnalyticsEvent } from "admin/admin_rest_api";
+import { getSamMask, sendAnalyticsEvent } from "admin/rest_api";
 import { estimateBBoxInMask } from "libs/find_bounding_box_in_nd";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";

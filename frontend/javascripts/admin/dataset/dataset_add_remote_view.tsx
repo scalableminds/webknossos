@@ -1,6 +1,6 @@
 import { UnlockOutlined } from "@ant-design/icons";
-import { exploreRemoteDataset, isDatasetNameValid, storeRemoteDataset } from "admin/admin_rest_api";
 import { CardContainer, DatastoreFormItem } from "admin/dataset/dataset_components";
+import { exploreRemoteDataset, isDatasetNameValid, storeRemoteDataset } from "admin/rest_api";
 import {
   Button,
   Col,

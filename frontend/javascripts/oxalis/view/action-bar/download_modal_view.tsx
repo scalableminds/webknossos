@@ -1,12 +1,12 @@
 import { CopyOutlined } from "@ant-design/icons";
+import { useStartAndPollJob } from "admin/job/job_hooks";
 import {
   doWithToken,
   downloadAnnotation,
   downloadWithFilename,
   getAuthToken,
   startExportTiffJob,
-} from "admin/admin_rest_api";
-import { useStartAndPollJob } from "admin/job/job_hooks";
+} from "admin/rest_api";
 import {
   Alert,
   Button,

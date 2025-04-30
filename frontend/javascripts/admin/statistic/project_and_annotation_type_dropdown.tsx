@@ -1,4 +1,4 @@
-import { getProjects } from "admin/admin_rest_api";
+import { getProjects } from "admin/rest_api";
 import { Select } from "antd";
 import { useFetch } from "libs/react_helpers";
 import { isUserAdminOrTeamManager } from "libs/utils";

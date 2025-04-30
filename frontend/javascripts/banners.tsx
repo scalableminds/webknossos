@@ -2,7 +2,7 @@ import {
   getBuildInfo,
   listCurrentAndUpcomingMaintenances,
   updateNovelUserExperienceInfos,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
 import { Alert, Button, Space } from "antd";
 import FormattedDate from "components/formatted_date";
 import dayjs from "dayjs";

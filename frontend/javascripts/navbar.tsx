@@ -28,6 +28,8 @@ import { useEffect, useRef, useState } from "react";
 import { connect, useSelector } from "react-redux";
 import { Link, useLocation } from "react-router-dom";
 
+import LoginForm from "admin/auth/login_form";
+import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import {
   getBuildInfo,
   getUsersOrganizations,
@@ -35,9 +37,7 @@ import {
   switchToOrganization,
   updateNovelUserExperienceInfos,
   updateSelectedThemeOfUser,
-} from "admin/admin_rest_api";
-import LoginForm from "admin/auth/login_form";
-import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+} from "admin/rest_api";
 import type { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
 import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";

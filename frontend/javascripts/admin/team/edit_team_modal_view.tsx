@@ -1,5 +1,5 @@
 import { MinusCircleOutlined, PlusCircleOutlined } from "@ant-design/icons";
-import { getEditableUsers, updateUser } from "admin/admin_rest_api";
+import { getEditableUsers, updateUser } from "admin/rest_api";
 import { AutoComplete, Input, Modal, Spin, Tooltip } from "antd";
 import type { DefaultOptionType } from "antd/lib/select";
 import { useEffectOnlyOnce } from "libs/react_hooks";

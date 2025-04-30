@@ -10,14 +10,14 @@ import {
   RollbackOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
+import { getAnnotationsForTask } from "admin/api/tasks";
 import {
   deleteAnnotation as deleteAnnotationAPI,
   downloadAnnotation as downloadAnnotationAPI,
   finishAnnotation as finishAnnotationAPI,
   reOpenAnnotation as reOpenAnnotationAPI,
   resetAnnotation as resetAnnotationAPI,
-} from "admin/admin_rest_api";
-import { getAnnotationsForTask } from "admin/api/tasks";
+} from "admin/rest_api";
 import { App, Dropdown, type MenuProps, Tooltip } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";

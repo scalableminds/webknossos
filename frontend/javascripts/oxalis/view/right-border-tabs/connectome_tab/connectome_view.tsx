@@ -4,7 +4,7 @@ import {
   getSynapseSources,
   getSynapseTypes,
   getSynapsesOfAgglomerates,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
 import { Alert, Empty, Space, Tooltip, type TreeProps } from "antd";
 import Maybe from "data.maybe";
 import DiffableMap from "libs/diffable_map";

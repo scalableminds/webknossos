@@ -1,12 +1,12 @@
 import { InboxOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
+import { createTaskFromNML, createTasks, getTask, updateTask } from "admin/api/tasks";
 import {
   getActiveDatasetsOfMyOrganization,
   getProjects,
   getScripts,
   getTaskTypes,
   getUnversionedAnnotationInformation,
-} from "admin/admin_rest_api";
-import { createTaskFromNML, createTasks, getTask, updateTask } from "admin/api/tasks";
+} from "admin/rest_api";
 import type {
   NewNmlTask,
   NewTask,

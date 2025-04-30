@@ -11,7 +11,7 @@ import {
   QuestionCircleTwoTone,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
-import { cancelJob, getJobs, retryJob } from "admin/admin_rest_api";
+import { cancelJob, getJobs, retryJob } from "admin/rest_api";
 import { Input, Modal, Spin, Table, Tooltip, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";

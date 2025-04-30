@@ -25,7 +25,7 @@ import NewTaskDescriptionModal from "oxalis/view/new_task_description_modal";
 import RecommendedConfigurationModal from "oxalis/view/recommended_configuration_modal";
 import React from "react";
 import { call, delay, put, take } from "typed-redux-saga";
-import type { APITaskType } from "types/api_flow_types";
+import type { APITaskType } from "types/api_types";
 import { ensureWkReady } from "./ready_sagas";
 
 function* maybeShowNewTaskTypeModal(taskType: APITaskType): Saga<void> {

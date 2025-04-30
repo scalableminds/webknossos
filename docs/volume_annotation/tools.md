@@ -35,7 +35,7 @@ Volume annotation in WEBKNOSSOS allows you to label and segment 3D structures in
     The AI mode works across various imaging modalities and can significantly speed up annotation workflows. See the [Quick-select tool](#quick-select-tool) section for detailed usage.
 
 ![Proofreading Tool](../ui/images/proofreading-tool.jpg){align=left width="60"} 
-**Proofreading**: Fix merge and split errors in automated segmentations using the underlying super-voxel graph by combining and breaking apart segments. Read more about [proofreading](../proofreading/tools.md).
+**Proofreading**: Fix merge and split errors in automated segmentations using the underlying super-voxel graph by combining and breaking apart segments. Read more about [proofreading](../proofreading/proofreading_tool.md).
 
 
 In the [Segments tab](./segments_list.md) on the right-hand side panel, you can find all segment IDs which are available in your annotation. You can rename and organize segments as needed.
@@ -137,4 +137,4 @@ WEBKNOSSOS supports volumetric flood fills (3D) to relabel a segment with a new 
 - For merge errors: You have to manually split two segments at their intersection/border, e.g. a cell boundary. Use the eraser brush and make sure to establish a clear cut between both segments on a slice-by-slice basis. Both segments must not touch any longer. Create a new segment ID from the toolbar and apply it to one of the partial segments that you just divided.
 
 !!! note "Performance Consideration"
-    For performance reasons, 3D flood-fills only work in a small, local bounding box. For large-scale modifications, consider using the [proofreading tool](../proofreading/tools.md) instead of 3D flood-fills, as it's optimized for handling larger volumes.
+    For performance reasons, 3D flood-fills only work in a small, local bounding box. For large-scale modifications, consider using the [proofreading tool](../proofreading/proofreading_tool.md) instead of 3D flood-fills, as it's optimized for handling larger volumes.

@@ -21,7 +21,7 @@ import type {
   ServerAdditionalAxis,
   ServerBoundingBox,
   UserBoundingBoxFromServer,
-} from "types/api_flow_types";
+} from "types/api_types";
 import { getDisabledInfoForTools } from "../accessors/disabled_tool_accessor";
 
 export function convertServerBoundingBoxToBoundingBox(

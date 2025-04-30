@@ -36,8 +36,8 @@ import {
 import * as React from "react";
 import { connect, useDispatch, useSelector } from "react-redux";
 import { useHistory } from "react-router-dom";
-import type { APIDataset, APIUser } from "types/api_flow_types";
-import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
+import type { APIDataset, APIUser } from "types/api_types";
+import { APIJobType, type AdditionalCoordinate } from "types/api_types";
 import { StartAIJobModal, type StartAIJobModalState } from "./action-bar/starting_job_modals";
 import ToolkitView from "./action-bar/tools/toolkit_switcher_view";
 import ButtonComponent from "./components/button_component";

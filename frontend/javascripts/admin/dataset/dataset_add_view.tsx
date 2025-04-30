@@ -13,7 +13,7 @@ import React, { useState } from "react";
 import { connect, useSelector } from "react-redux";
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
-import type { APIDataStore } from "types/api_flow_types";
+import type { APIDataStore } from "types/api_types";
 import DatasetAddComposeView from "./dataset_add_compose_view";
 
 const { Content, Sider } = Layout;

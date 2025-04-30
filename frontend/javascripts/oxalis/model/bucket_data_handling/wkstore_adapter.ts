@@ -26,7 +26,7 @@ import Store from "oxalis/store";
 import ByteArraysToLz4Base64Worker from "oxalis/workers/byte_arrays_to_lz4_base64.worker";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_types";
 import { getGlobalDataConnectionInfo } from "../data_connection_info";
 import type { MagInfo } from "../helpers/mag_info";
 

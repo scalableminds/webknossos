@@ -8,7 +8,7 @@ import Messages from "messages";
 import type { Vector3 } from "oxalis/constants";
 import type { BoundingBoxObject } from "oxalis/store";
 import { useState } from "react";
-import type { APITask } from "types/api_flow_types";
+import type { APITask } from "types/api_types";
 
 const FormItem = Form.Item;
 const { TextArea } = Input;

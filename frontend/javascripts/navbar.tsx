@@ -67,7 +67,7 @@ import type {
   APIUser,
   APIUserCompact,
   APIUserTheme,
-} from "types/api_flow_types";
+} from "types/api_types";
 
 const { Header } = Layout;
 

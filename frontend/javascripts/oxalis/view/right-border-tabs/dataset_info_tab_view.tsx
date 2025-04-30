@@ -25,7 +25,7 @@ import React, { type CSSProperties } from "react";
 import { connect } from "react-redux";
 import { Link } from "react-router-dom";
 import type { Dispatch } from "redux";
-import type { APIDataset, APIUser } from "types/api_flow_types";
+import type { APIDataset, APIUser } from "types/api_types";
 
 import type { OxalisState, StoreAnnotation, Task } from "oxalis/store";
 

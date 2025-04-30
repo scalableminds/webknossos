@@ -7,7 +7,7 @@ import Toast from "libs/toast";
 import messages from "messages";
 import { useEffect, useState } from "react";
 import { Link, useHistory } from "react-router-dom";
-import type { APIOrganization } from "types/api_flow_types";
+import type { APIOrganization } from "types/api_types";
 
 function RegistrationViewGeneric() {
   const history = useHistory();

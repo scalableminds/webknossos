@@ -15,7 +15,7 @@ import * as THREE from "three";
 import { acceleratedRaycast } from "three-mesh-bvh";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_types";
 
 import { computeBvhAsync } from "libs/compute_bvh_async";
 import type { BufferAttribute } from "three";

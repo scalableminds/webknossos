@@ -13,7 +13,7 @@ import {
 import type { MagInfo } from "oxalis/model/helpers/mag_info";
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
+import type { APIDataset, APISegmentationLayer } from "types/api_types";
 
 type Props = {
   datasetId: string;

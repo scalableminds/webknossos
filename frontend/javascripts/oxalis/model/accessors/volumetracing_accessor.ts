@@ -58,7 +58,7 @@ import type {
   AnnotationLayerDescriptor,
   ServerTracing,
   ServerVolumeTracing,
-} from "types/api_flow_types";
+} from "types/api_types";
 import { setSelectedSegmentsOrGroupAction } from "../actions/volumetracing_actions";
 import { MagInfo } from "../helpers/mag_info";
 

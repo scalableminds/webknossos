@@ -65,7 +65,7 @@ import type { OxalisState, UserBoundingBox } from "oxalis/store";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import React, { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { type APIDataLayer, type APIJob, APIJobType } from "types/api_flow_types";
+import { type APIDataLayer, type APIJob, APIJobType } from "types/api_types";
 import {
   CollapsibleWorkflowYamlEditor,
   TrainAiModelFromAnnotationTab,

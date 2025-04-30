@@ -10,7 +10,7 @@ import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { useHistory } from "react-router-dom";
-import type { APITeam, APIUser } from "types/api_flow_types";
+import type { APITeam, APIUser } from "types/api_types";
 import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
 
 const FormItem = Form.Item;

@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useKeyPress } from "libs/react_hooks";
 import {
   AnnotationTool,
-  AnnotationToolId,
+  type AnnotationToolId,
   MeasurementTools,
   Toolkit,
   Toolkits,

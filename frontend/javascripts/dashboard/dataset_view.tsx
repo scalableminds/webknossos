@@ -26,6 +26,7 @@ import {
   Tooltip,
 } from "antd";
 import type { ItemType } from "antd/es/menu/interface";
+import FastTooltip from "components/fast_tooltip";
 import FormattedDate from "components/formatted_date";
 import { PricingEnforcedButton } from "components/pricing_enforcers";
 import DatasetTable from "dashboard/advanced_dataset/dataset_table";
@@ -46,7 +47,6 @@ import {
   SEARCH_RESULTS_LIMIT,
   useFolderQuery,
 } from "./dataset/queries";
-import FastTooltip from "components/fast_tooltip";
 
 type Props = {
   user: APIUser;

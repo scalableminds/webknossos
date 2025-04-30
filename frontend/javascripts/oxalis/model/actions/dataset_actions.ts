@@ -1,4 +1,4 @@
-import type { APIDataset, CoordinateTransformation } from "types/api_flow_types";
+import type { APIDataset, CoordinateTransformation } from "types/api_types";
 type SetDatasetAction = ReturnType<typeof setDatasetAction>;
 type SetLayerMappingsAction = ReturnType<typeof setLayerMappingsAction>;
 type SetLayerTransformsAction = ReturnType<typeof setLayerTransformsAction>;

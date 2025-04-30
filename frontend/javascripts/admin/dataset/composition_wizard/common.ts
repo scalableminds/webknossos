@@ -3,7 +3,7 @@ import type { UploadFile } from "antd";
 import Toast from "libs/toast";
 import type { Vector3 } from "oxalis/constants";
 import { Store } from "oxalis/singletons";
-import type { APIDataStore, APIDataset } from "types/api_flow_types";
+import type { APIDataStore, APIDataset } from "types/api_types";
 
 export type FileList = UploadFile<any>[];
 

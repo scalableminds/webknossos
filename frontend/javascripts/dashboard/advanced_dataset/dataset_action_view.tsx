@@ -21,7 +21,7 @@ import { getNoActionsAvailableMenu } from "oxalis/view/context_menu";
 import type * as React from "react";
 import { useState } from "react";
 import { Link, type LinkProps } from "react-router-dom";
-import type { APIDataset, APIDatasetCompact } from "types/api_flow_types";
+import type { APIDataset, APIDatasetCompact } from "types/api_types";
 
 const disabledStyle: React.CSSProperties = {
   pointerEvents: "none",

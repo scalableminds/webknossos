@@ -17,7 +17,7 @@ import ButtonComponent from "oxalis/view/components/button_component";
 import type React from "react";
 import { PureComponent } from "react";
 import { connect } from "react-redux";
-import type { APIDataset } from "types/api_flow_types";
+import type { APIDataset } from "types/api_types";
 
 type Props = {
   flycam: Flycam;

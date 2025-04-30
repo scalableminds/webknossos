@@ -64,7 +64,7 @@ import {
   type APIUser,
   type APIUserCompact,
   annotationToCompact,
-} from "types/api_flow_types";
+} from "types/api_types";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 
 const { Search } = Input;

@@ -4,7 +4,7 @@ import _ from "lodash";
 import type { Vector3, Vector6 } from "oxalis/constants";
 import InputComponent from "oxalis/view/components/input_component";
 import * as React from "react";
-import type { ServerBoundingBoxTypeTuple } from "types/api_flow_types";
+import type { ServerBoundingBoxTypeTuple } from "types/api_types";
 
 const CHARACTER_WIDTH_PX = 8;
 

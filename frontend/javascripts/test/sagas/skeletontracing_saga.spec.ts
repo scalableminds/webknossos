@@ -12,7 +12,7 @@ import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { TreeTypeEnum } from "oxalis/constants";
 import type { Action } from "oxalis/model/actions/actions";
-import type { ServerSkeletonTracing } from "types/api_flow_types";
+import type { ServerSkeletonTracing } from "types/api_types";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { UpdateActionWithoutIsolationRequirement } from "oxalis/model/sagas/update_actions";
 import type { TracingStats } from "oxalis/model/accessors/annotation_accessor";

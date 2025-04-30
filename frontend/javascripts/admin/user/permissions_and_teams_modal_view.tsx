@@ -6,7 +6,7 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
 import React, { type Key, useEffect, useState } from "react";
-import type { APITeam, APITeamMembership, APIUser } from "types/api_flow_types";
+import type { APITeam, APITeamMembership, APIUser } from "types/api_types";
 const RadioButton = Radio.Button;
 const RadioGroup = Radio.Group;
 

@@ -34,8 +34,8 @@ import type {
 } from "oxalis/store";
 import { findGroup } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import Saxophone from "saxophone";
-import type { APIBuildInfo, MetadataEntryProto } from "types/api_flow_types";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { APIBuildInfo, MetadataEntryProto } from "types/api_types";
+import type { AdditionalCoordinate } from "types/api_types";
 import { getTransformsForSkeletonLayer } from "../accessors/dataset_layer_transformation_accessor";
 import { getNodePosition } from "../accessors/skeletontracing_accessor";
 

@@ -34,12 +34,7 @@ import React, { type Key, useEffect, useState } from "react";
 import { connect } from "react-redux";
 import type { RouteComponentProps } from "react-router-dom";
 import { Link } from "react-router-dom";
-import type {
-  APIOrganization,
-  APITeamMembership,
-  APIUser,
-  ExperienceMap,
-} from "types/api_flow_types";
+import type { APIOrganization, APITeamMembership, APIUser, ExperienceMap } from "types/api_types";
 import { logoutUserAction } from "../../oxalis/model/actions/user_actions";
 import Store from "../../oxalis/store";
 

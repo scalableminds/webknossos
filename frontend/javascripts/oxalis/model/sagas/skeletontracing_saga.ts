@@ -84,7 +84,7 @@ import {
   takeEvery,
   throttle,
 } from "typed-redux-saga";
-import type { ServerSkeletonTracing } from "types/api_flow_types";
+import type { ServerSkeletonTracing } from "types/api_types";
 import { ensureWkReady } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
 

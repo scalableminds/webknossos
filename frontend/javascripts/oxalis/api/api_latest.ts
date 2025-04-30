@@ -177,8 +177,8 @@ import {
   moveGroupsHelper,
 } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import TWEEN from "tween.js";
-import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_flow_types";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_types";
+import type { AdditionalCoordinate } from "types/api_types";
 
 type TransformSpec =
   | { type: "scale"; args: [Vector3, Vector3] }

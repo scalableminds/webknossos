@@ -14,7 +14,7 @@ import Store from "oxalis/store";
 import * as THREE from "three";
 import { acceleratedRaycast } from "three-mesh-bvh";
 import TWEEN from "tween.js";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_types";
 
 import { computeBvhAsync } from "libs/compute_bvh_async";
 import type { BufferAttribute } from "three";

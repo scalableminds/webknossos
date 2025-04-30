@@ -31,7 +31,7 @@ import Store from "oxalis/store";
 import VersionEntryGroup from "oxalis/view/version_entry_group";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
-import type { APIUpdateActionBatch } from "types/api_flow_types";
+import type { APIUpdateActionBatch } from "types/api_types";
 
 // This used to be 5000 but we had logs where lots of UPDATE_BUCKET
 // update actions existed in one batch. The JSON payload exceeded a length

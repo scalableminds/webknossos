@@ -7,7 +7,7 @@ import {
   resetDatabase,
   writeTypeCheckingFile,
 } from "test/e2e-setup";
-import type { APIProject, APIProjectUpdater } from "types/api_flow_types";
+import type { APIProject, APIProjectUpdater } from "types/api_types";
 import * as api from "admin/admin_rest_api";
 import { describe, it, beforeAll, beforeEach } from "vitest";
 

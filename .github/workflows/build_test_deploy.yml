@@ -96,7 +96,7 @@ jobs:
       - name: Assert non-empty e2e files
         run: bash -c '[ $(ls -1 frontend/javascripts/test/snapshots/type-check | wc -l) -gt 0 ]'
       - name: Check response types of e2e tests
-        run: yarn tsc frontend/javascripts/test/snapshots/type-check/**/*.{ts,d.ts,tsx}
+        run: bash -c "yarn tsc frontend/javascripts/test/snapshots/type-check/**/*.{ts,d.ts,tsx}"
 
 
   build-smoketest-push:

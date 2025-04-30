@@ -13,6 +13,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Added
 
 ### Changed
+- Renamed the button to view the compound annotation of all tasks of a tasktype to be more descriptive. [#8565](https://github.com/scalableminds/webknossos/pull/8565)
 
 ### Fixed
 

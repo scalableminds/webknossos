@@ -18,6 +18,7 @@ import {
   computeBoundingBoxObjectFromBoundingBox,
 } from "libs/utils";
 import type { Vector3 } from "oxalis/constants";
+import { getSceneControllerOrNull } from "oxalis/controller/scene_controller_provider";
 import {
   getColorLayers,
   getEffectiveIntensityRange,
@@ -37,7 +38,6 @@ import {
   type RenderAnimationOptions,
 } from "types/api_types";
 import { BoundingBoxSelection } from "./starting_job_modals";
-import { getSceneControllerOrNull } from "oxalis/controller/scene_controller_provider";
 
 type Props = {
   isOpen: boolean;

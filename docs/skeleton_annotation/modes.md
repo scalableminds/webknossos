@@ -1,6 +1,6 @@
-# Annotation Modes
+# View Modes
 
-WEBKNOSSOS supports several modes for displaying your dataset & interacting with skeleton annotations.
+WEBKNOSSOS supports several modes for displaying your dataset & interacting with (skeleton) annotations.
 
 ## Orthogonal Mode
 

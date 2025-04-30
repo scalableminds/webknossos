@@ -1,8 +1,7 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.box2Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import net.liftweb.common.Box
 import net.liftweb.common.Box.tryo
 
@@ -24,7 +23,7 @@ object ChunkTyper {
   }
 }
 
-abstract class ChunkTyper {
+abstract class ChunkTyper extends FoxImplicits {
   val header: DatasetHeader
 
   def ma2DataType: MADataType

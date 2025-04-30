@@ -5,13 +5,8 @@
  */
 import "test/sagas/saga_integration.mock";
 import _ from "lodash";
-import {
-  AnnotationToolEnum,
-  ContourModeEnum,
-  OrthoViews,
-  OverwriteModeEnum,
-  type Vector3,
-} from "oxalis/constants";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
+import { ContourModeEnum, OrthoViews, OverwriteModeEnum, type Vector3 } from "oxalis/constants";
 import {
   setupWebknossosForTesting,
   createBucketResponseFunction,
@@ -88,7 +83,7 @@ describe("Volume Tracing", () => {
 
     Store.dispatch(updateUserSettingAction("brushSize", brushSize));
     Store.dispatch(setPositionAction([0, 0, 0]));
-    Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH));
+    Store.dispatch(setToolAction(AnnotationTool.BRUSH));
     // Brush with ${newCellId}
     Store.dispatch(setActiveCellAction(newCellId));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
@@ -145,7 +140,7 @@ describe("Volume Tracing", () => {
     Store.dispatch(updateUserSettingAction("overwriteMode", OverwriteModeEnum.OVERWRITE_EMPTY));
     Store.dispatch(updateUserSettingAction("brushSize", brushSize));
     Store.dispatch(setPositionAction([0, 0, 0]));
-    Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH));
+    Store.dispatch(setToolAction(AnnotationTool.BRUSH));
     Store.dispatch(setActiveCellAction(newCellId));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
     Store.dispatch(addToLayerAction(paintCenter));
@@ -200,7 +195,7 @@ describe("Volume Tracing", () => {
     Store.dispatch(updateUserSettingAction("overwriteMode", OverwriteModeEnum.OVERWRITE_ALL));
     Store.dispatch(updateUserSettingAction("brushSize", brushSize));
     Store.dispatch(setPositionAction([0, 0, 0]));
-    Store.dispatch(setToolAction(AnnotationToolEnum.ERASE_BRUSH));
+    Store.dispatch(setToolAction(AnnotationTool.ERASE_BRUSH));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
     Store.dispatch(addToLayerAction(paintCenter));
     Store.dispatch(finishEditingAction());
@@ -250,7 +245,7 @@ describe("Volume Tracing", () => {
     Store.dispatch(updateUserSettingAction("overwriteMode", OverwriteModeEnum.OVERWRITE_ALL));
     Store.dispatch(updateUserSettingAction("brushSize", brushSize));
     Store.dispatch(setPositionAction([0, 0, 0]));
-    Store.dispatch(setToolAction(AnnotationToolEnum.ERASE_BRUSH));
+    Store.dispatch(setToolAction(AnnotationTool.ERASE_BRUSH));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
     Store.dispatch(addToLayerAction(paintCenter));
     Store.dispatch(finishEditingAction());
@@ -296,7 +291,7 @@ describe("Volume Tracing", () => {
     Store.dispatch(updateUserSettingAction("overwriteMode", OverwriteModeEnum.OVERWRITE_ALL));
     Store.dispatch(updateUserSettingAction("brushSize", brushSize));
     Store.dispatch(setPositionAction([0, 0, 0]));
-    Store.dispatch(setToolAction(AnnotationToolEnum.ERASE_BRUSH));
+    Store.dispatch(setToolAction(AnnotationTool.ERASE_BRUSH));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
     Store.dispatch(addToLayerAction(paintCenter));
     Store.dispatch(finishEditingAction());

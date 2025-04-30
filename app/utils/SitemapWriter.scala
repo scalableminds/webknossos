@@ -11,7 +11,7 @@ import models.dataset.PublicationDAO
 import org.apache.commons.io.output.ByteArrayOutputStream
 
 import java.nio.charset.StandardCharsets
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 case class SitemapURL(url: String,
                       lastMod: Option[String] = None,
@@ -40,7 +40,7 @@ class SitemapWriter @Inject()(publicationDAO: PublicationDAO, wkConf: WkConf)(im
       _ = writer.writeStartDocument()
       _ <- Xml.withinElement("urlset") {
         for {
-          _ <- Future.successful(writer.writeAttribute("xmlns", "http://www.sitemaps.org/schemas/sitemap/0.9"))
+          _ <- Fox.successful(writer.writeAttribute("xmlns", "http://www.sitemaps.org/schemas/sitemap/0.9"))
           allUrls <- getAllURLs
           _ = allUrls.foreach(writeURL(_, prefix))
         } yield ()

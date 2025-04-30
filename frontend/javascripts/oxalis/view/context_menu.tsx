@@ -119,6 +119,7 @@ import { voxelToVolumeInUnit } from "oxalis/model/scaleinfo";
 import { api } from "oxalis/singletons";
 import type {
   ActiveMappingInfo,
+  ContextMenuInfo,
   MutableNode,
   OxalisState,
   SegmentMap,
@@ -149,15 +150,8 @@ type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
 
 type Props = {
-  contextMenuPosition: Readonly<[number, number]> | null | undefined;
-  maybeClickedNodeId: number | null | undefined;
-  maybeClickedMeshId: number | null | undefined;
-  maybeUnmappedSegmentId: number | null | undefined;
-  maybeMeshIntersectionPosition: Vector3 | null | undefined;
-  clickedBoundingBoxId: number | null | undefined;
-  globalPosition: Vector3 | null | undefined;
+  contextInfo: ContextMenuInfo;
   additionalCoordinates: AdditionalCoordinate[] | undefined;
-  maybeViewport: OrthoView | null | undefined;
   skeletonTracing: SkeletonTracing | null | undefined;
   voxelSize: VoxelSize;
   visibleSegmentationLayer: APIDataLayer | null | undefined;
@@ -398,13 +392,16 @@ function getMaybeMinCutItem(
 
 function getMeshItems(
   volumeTracing: VolumeTracing | null | undefined,
-  clickedMeshId: number | null | undefined,
-  meshIntersectionPosition: Vector3 | null | undefined,
-  maybeUnmappedSegmentId: number | null | undefined,
+  contextInfo: ContextMenuInfo,
   visibleSegmentationLayer: APIDataLayer | null | undefined,
   voxelSizeFactor: Vector3,
   meshFileMappingName: string | null | undefined,
 ): MenuItemType[] {
+  const {
+    meshId: clickedMeshId,
+    meshIntersectionPosition,
+    unmappedSegmentId: maybeUnmappedSegmentId,
+  } = contextInfo;
   if (
     clickedMeshId == null ||
     meshIntersectionPosition == null ||
@@ -557,9 +554,7 @@ function getMeshItems(
 function getNodeContextMenuOptions({
   skeletonTracing,
   clickedNodeId,
-  maybeClickedMeshId,
-  maybeMeshIntersectionPosition,
-  maybeUnmappedSegmentId,
+  contextInfo,
   visibleSegmentationLayer,
   voxelSize,
   useLegacyBindings,
@@ -603,9 +598,7 @@ function getNodeContextMenuOptions({
 
   const meshItems = getMeshItems(
     volumeTracing,
-    maybeClickedMeshId,
-    maybeMeshIntersectionPosition,
-    maybeUnmappedSegmentId,
+    contextInfo,
     visibleSegmentationLayer,
     voxelSize.factor,
     currentMeshFile?.mappingName,
@@ -764,12 +757,12 @@ function getNodeContextMenuOptions({
 }
 
 function getBoundingBoxMenuOptions({
-  globalPosition,
+  contextInfo,
   activeTool,
-  clickedBoundingBoxId,
   userBoundingBoxes,
   allowUpdate,
 }: NoNodeContextMenuProps): ItemType[] {
+  const { globalPosition, clickedBoundingBoxId } = contextInfo;
   if (globalPosition == null) return [];
 
   const isBoundingBoxToolActive = activeTool === AnnotationTool.BOUNDING_BOX;
@@ -916,14 +909,11 @@ function getBoundingBoxMenuOptions({
 
 function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] {
   const {
+    contextInfo,
     skeletonTracing,
     volumeTracing,
     activeTool,
-    globalPosition,
     additionalCoordinates,
-    maybeClickedMeshId,
-    maybeMeshIntersectionPosition,
-    maybeUnmappedSegmentId,
     viewport,
     visibleSegmentationLayer,
     segmentIdAtPosition,
@@ -935,6 +925,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     infoRows,
     allowUpdate,
   } = props;
+  const { globalPosition } = contextInfo;
 
   const state = Store.getState();
   const disabledVolumeInfo = getDisabledInfoForTools(state);
@@ -1306,9 +1297,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
 
   const meshRelatedItems = getMeshItems(
     volumeTracing,
-    maybeClickedMeshId,
-    maybeMeshIntersectionPosition,
-    maybeUnmappedSegmentId,
+    contextInfo,
     visibleSegmentationLayer,
     voxelSize.factor,
     currentMeshFile?.mappingName,
@@ -1490,14 +1479,6 @@ function ContextMenuInner() {
   );
   const contextInfo = useSelector((state: OxalisState) => state.uiInformation.contextInfo);
 
-  const {
-    globalPosition,
-    contextMenuPosition,
-    meshId: maybeClickedMeshId,
-    clickedNodeId: maybeClickedNodeId,
-    viewport: maybeViewport,
-  } = contextInfo;
-
   const props: Props = {
     skeletonTracing,
     visibleSegmentationLayer,
@@ -1513,16 +1494,16 @@ function ContextMenuInner() {
     segments,
     mappingInfo,
     additionalCoordinates,
-    // todop: avoid these?
-    maybeClickedNodeId: contextInfo.clickedNodeId,
-    clickedBoundingBoxId: contextInfo.clickedBoundingBoxId,
-    globalPosition: contextInfo.globalPosition,
-    contextMenuPosition: contextInfo.contextMenuPosition,
-    maybeViewport: contextInfo.viewport,
-    maybeClickedMeshId: contextInfo.meshId,
-    maybeMeshIntersectionPosition: contextInfo.meshIntersectionPosition,
-    maybeUnmappedSegmentId: contextInfo.unmappedSegmentId,
+    contextInfo,
   };
+
+  const {
+    globalPosition,
+    contextMenuPosition,
+    meshId: maybeClickedMeshId,
+    clickedNodeId: maybeClickedNodeId,
+    viewport: maybeViewport,
+  } = contextInfo;
 
   const [lastTimeSegmentInfoShouldBeFetched, setLastTimeSegmentInfoShouldBeFetched] = useState(
     new Date(),

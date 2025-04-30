@@ -541,6 +541,16 @@ export type BusyBlockingInfo = {
   isBusy: boolean;
   reason?: string;
 };
+export type ContextMenuInfo = {
+  readonly contextMenuPosition: Readonly<[number, number]> | null | undefined;
+  readonly clickedNodeId: number | null | undefined;
+  readonly meshId: number | null | undefined;
+  readonly meshIntersectionPosition: Vector3 | null | undefined;
+  readonly clickedBoundingBoxId: number | null | undefined;
+  readonly globalPosition: Vector3 | null | undefined;
+  readonly viewport: OrthoView | null | undefined;
+  readonly unmappedSegmentId?: number | null;
+};
 type UiInformation = {
   readonly globalProgress: number; // 0 to 1
   readonly showDropzoneModal: boolean;
@@ -570,16 +580,7 @@ type UiInformation = {
   readonly areQuickSelectSettingsOpen: boolean;
   readonly measurementToolInfo: { lastMeasuredPosition: Vector3 | null; isMeasuring: boolean };
   readonly navbarHeight: number;
-  readonly contextInfo: {
-    readonly contextMenuPosition: Readonly<[number, number]> | null | undefined;
-    readonly clickedNodeId: number | null | undefined;
-    readonly meshId: number | null | undefined;
-    readonly meshIntersectionPosition: Vector3 | null | undefined;
-    readonly clickedBoundingBoxId: number | null | undefined;
-    readonly globalPosition: Vector3 | null | undefined;
-    readonly viewport: OrthoView | null | undefined;
-    readonly unmappedSegmentId?: number | null;
-  };
+  readonly contextInfo: ContextMenuInfo;
 };
 type BaseMeshInformation = {
   readonly segmentId: number;

@@ -781,7 +781,7 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
 type ChunksMap = Record<number, Vector3[] | meshApi.MeshChunk[] | null | undefined>;
 
 function* loadPrecomputedMeshForSegmentId(
-  id: number,
+  segmentId: number,
   seedPosition: Vector3,
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
@@ -792,14 +792,14 @@ function* loadPrecomputedMeshForSegmentId(
   yield* put(
     addPrecomputedMeshAction(
       layerName,
-      id,
+      segmentId,
       seedPosition,
       seedAdditionalCoordinates,
       meshFileName,
       mappingName,
     ),
   );
-  yield* put(startedLoadingMeshAction(layerName, id));
+  yield* put(startedLoadingMeshAction(layerName, segmentId));
   const dataset = yield* select((state) => state.dataset);
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
 
@@ -817,7 +817,7 @@ function* loadPrecomputedMeshForSegmentId(
     Toast.error("Could not load mesh, since the requested mesh file was not found.");
     return;
   }
-  if (id === 0) {
+  if (segmentId === 0) {
     Toast.error("Could not load mesh, since the clicked segment ID is 0.");
     return;
   }
@@ -829,7 +829,7 @@ function* loadPrecomputedMeshForSegmentId(
   try {
     const chunkDescriptors = yield* call(
       _getChunkLoadingDescriptors,
-      id,
+      segmentId,
       dataset,
       segmentationLayer,
       meshFile,
@@ -839,14 +839,14 @@ function* loadPrecomputedMeshForSegmentId(
     chunkScale = chunkDescriptors.segmentInfo.chunkScale;
     loadingOrder = chunkDescriptors.loadingOrder;
   } catch (exception) {
-    Toast.warning(messages["tracing.mesh_listing_failed"](id));
+    Toast.warning(messages["tracing.mesh_listing_failed"](segmentId));
     console.warn(
-      `Mesh chunks for segment ${id} couldn't be loaded due to`,
+      `Mesh chunks for segment ${segmentId} couldn't be loaded due to`,
       exception,
       "\nOne possible explanation could be that the segment was not included in the mesh file because it's smaller than the dust threshold that was specified for the mesh computation.",
     );
-    yield* put(finishedLoadingMeshAction(layerName, id));
-    yield* put(removeMeshAction(layerName, id));
+    yield* put(finishedLoadingMeshAction(layerName, segmentId));
+    yield* put(removeMeshAction(layerName, segmentId));
     return;
   }
 
@@ -857,7 +857,7 @@ function* loadPrecomputedMeshForSegmentId(
       layerName,
       meshFile,
       segmentationLayer,
-      id,
+      segmentId,
       seedPosition,
       availableChunksMap,
       lod,
@@ -867,7 +867,7 @@ function* loadPrecomputedMeshForSegmentId(
     );
   }
 
-  yield* put(finishedLoadingMeshAction(layerName, id));
+  yield* put(finishedLoadingMeshAction(layerName, segmentId));
 }
 
 function* getMappingName(segmentationLayer: APISegmentationLayer) {
@@ -883,7 +883,7 @@ function* getMappingName(segmentationLayer: APISegmentationLayer) {
 }
 
 function* _getChunkLoadingDescriptors(
-  id: number,
+  segmentId: number,
   dataset: APIDataset,
   segmentationLayer: APISegmentationLayer,
   meshFile: APIMeshFileInfo,
@@ -919,7 +919,7 @@ function* _getChunkLoadingDescriptors(
     dataset,
     getBaseSegmentationName(segmentationLayer),
     meshFile,
-    id,
+    segmentId,
     // The back-end should only receive a non-null mapping name,
     // if it should perform extra (reverse) look ups to compute a mesh
     // with a specific mapping from a mesh file that was computed

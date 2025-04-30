@@ -50,7 +50,7 @@ const TARGET_TEXTURE_SIZE = 2000; // in pixels
 
 // Maximum number of triangles allowed in an animation to not overload the server
 // Remember: The backend worker code only simplifies meshes with >100.000 polygons; all other meshes are rendered as is
-const MAX_TRIANGLES_PER_ANIMATION = 20000000; // 20 million triangles
+const MAX_TRIANGLES_PER_ANIMATION = 20e6; // 20 million triangles
 
 function selectMagForTextureCreation(
   colorLayer: APIDataLayer,

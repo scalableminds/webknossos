@@ -1,4 +1,4 @@
-import { doWithToken } from "admin/admin_rest_api";
+import { doWithToken } from "admin/rest_api";
 import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
 import { parseMaybe } from "libs/utils";

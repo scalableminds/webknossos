@@ -13,7 +13,7 @@ import { getNullableSkeletonTracing } from "oxalis/model/accessors/skeletontraci
 import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
 import { sendRequestWithToken, addVersionNumbers } from "oxalis/model/sagas/save_saga";
 import * as UpdateActions from "oxalis/model/sagas/update_actions";
-import * as api from "admin/admin_rest_api";
+import * as api from "admin/rest_api";
 import generateDummyTrees from "oxalis/model/helpers/generate_dummy_trees";
 import { describe, it, beforeAll, expect } from "vitest";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";

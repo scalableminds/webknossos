@@ -1,4 +1,4 @@
-import { getPublications } from "admin/admin_rest_api";
+import { getPublications } from "admin/rest_api";
 import { Input, List, Spin } from "antd";
 import PublicationCard from "dashboard/publication_card";
 import { handleGenericError } from "libs/error_handling";

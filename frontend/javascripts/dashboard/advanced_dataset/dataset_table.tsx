@@ -1,5 +1,5 @@
 import { FileOutlined, FolderOpenOutlined, PlusOutlined, WarningOutlined } from "@ant-design/icons";
-import type { DatasetUpdater } from "admin/admin_rest_api";
+import type { DatasetUpdater } from "admin/rest_api";
 import { Dropdown, type MenuProps, type TableProps, Tag, Tooltip } from "antd";
 import type { FilterValue, SorterResult, TablePaginationConfig } from "antd/lib/table/interface";
 import classNames from "classnames";

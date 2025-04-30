@@ -1,4 +1,4 @@
-import { hasSegmentIndexInDataStore } from "admin/admin_rest_api";
+import { hasSegmentIndexInDataStore } from "admin/rest_api";
 import { Modal } from "antd";
 import type { BasicDataNode } from "antd/es/tree";
 import { waitForCondition } from "libs/utils";

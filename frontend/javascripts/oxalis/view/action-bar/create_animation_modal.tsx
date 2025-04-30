@@ -2,7 +2,7 @@ import { Alert, Button, Checkbox, Col, Divider, Modal, Radio, Row, Space, Toolti
 import React, { useState } from "react";
 import { useSelector } from "react-redux";
 
-import { startRenderAnimationJob } from "admin/admin_rest_api";
+import { startRenderAnimationJob } from "admin/rest_api";
 import Toast from "libs/toast";
 import Store, { type MeshInformation, type OxalisState, type UserBoundingBox } from "oxalis/store";
 

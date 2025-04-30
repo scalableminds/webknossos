@@ -9,7 +9,7 @@ import {
   WarningOutlined,
 } from "@ant-design/icons";
 import { useQueryClient } from "@tanstack/react-query";
-import { clearCache, deleteDatasetOnDisk, getDataset } from "admin/admin_rest_api";
+import { clearCache, deleteDatasetOnDisk, getDataset } from "admin/rest_api";
 import { type MenuProps, Modal, Typography } from "antd";
 import CreateExplorativeModal from "dashboard/advanced_dataset/create_explorative_modal";
 import { confirmAsync } from "dashboard/dataset/helper_components";

@@ -1,4 +1,5 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
+import { DatasetNameFormItem } from "admin/dataset/dataset_components";
 import {
   type JobCreditCostInfo,
   getAiModels,
@@ -10,8 +11,7 @@ import {
   startMitochondriaInferralJob,
   startNeuronInferralJob,
   startNucleiInferralJob,
-} from "admin/admin_rest_api";
-import { DatasetNameFormItem } from "admin/dataset/dataset_components";
+} from "admin/rest_api";
 import {
   Alert,
   Button,

@@ -1,4 +1,4 @@
-import { finishAnnotation } from "admin/admin_rest_api";
+import { finishAnnotation } from "admin/rest_api";
 import type {
   NewNmlTask,
   NewTask,

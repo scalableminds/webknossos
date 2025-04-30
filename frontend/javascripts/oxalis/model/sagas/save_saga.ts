@@ -1,4 +1,4 @@
-import { doWithToken, getNewestVersionForAnnotation } from "admin/admin_rest_api";
+import { doWithToken, getNewestVersionForAnnotation } from "admin/rest_api";
 import Date from "libs/date";
 import ErrorHandling from "libs/error_handling";
 import type { RequestOptionsWithData } from "libs/request";

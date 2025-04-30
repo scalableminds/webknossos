@@ -1,4 +1,5 @@
 import { CompressOutlined, CopyOutlined, ShareAltOutlined } from "@ant-design/icons";
+import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import {
   createShortLink,
   editAnnotation,
@@ -8,8 +9,7 @@ import {
   sendAnalyticsEvent,
   setOthersMayEditForAnnotation,
   updateTeamsForSharedAnnotation,
-} from "admin/admin_rest_api";
-import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+} from "admin/rest_api";
 import {
   Alert,
   Button,

@@ -1,4 +1,4 @@
-import { getVoxelyticsWorkflow, isWorkflowAccessibleBySwitching } from "admin/admin_rest_api";
+import { getVoxelyticsWorkflow, isWorkflowAccessibleBySwitching } from "admin/rest_api";
 import BrainSpinner, { BrainSpinnerWithError } from "components/brain_spinner";
 import { usePolling, useSearchParams } from "libs/react_hooks";
 import Toast from "libs/toast";

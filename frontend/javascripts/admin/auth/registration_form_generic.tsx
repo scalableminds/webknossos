@@ -1,6 +1,6 @@
 import { LockOutlined, MailOutlined, UserOutlined } from "@ant-design/icons";
-import { loginUser } from "admin/admin_rest_api";
 import { getTermsOfService } from "admin/api/terms_of_service";
+import { loginUser } from "admin/rest_api";
 import { Button, Checkbox, Col, Form, Input, Row } from "antd";
 import { useFetch } from "libs/react_helpers";
 import Request from "libs/request";

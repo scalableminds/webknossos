@@ -1,5 +1,5 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
-import { getAgglomeratesForDatasetLayer, getMappingsForDatasetLayer } from "admin/admin_rest_api";
+import { getAgglomeratesForDatasetLayer, getMappingsForDatasetLayer } from "admin/rest_api";
 import {
   Alert,
   Checkbox,

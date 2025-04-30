@@ -203,7 +203,7 @@ function CreateAnimationModal(props: Props) {
     const isTooManyTriangles = totalTriangles > MAX_TRIANGLES_PER_ANIMATION;
     if (isTooManyTriangles)
       errorMessages.push(
-        `You selected too many triangles for the animation. Please keep the total triangle count below ${(MAX_TRIANGLES_PER_ANIMATION / 1000).toFixed(0)}k to create an animation. Current count: ${(totalTriangles / 1000).toFixed(1)}k triangles.`,
+        `You selected too many meshes for the animation. Please keep the total triangle count below ${(MAX_TRIANGLES_PER_ANIMATION / 1000).toFixed(0)}k to create an animation. Current count: ${(totalTriangles / 1000).toFixed(1)}k triangles.`,
       );
 
     const isBoundingBoxEmpty = selectedBoundingBox.getVolume() === 0;

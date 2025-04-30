@@ -1,0 +1,85 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Misc APIs (E2E)  > activeUser() 1`] = `
+{
+  "created": "created",
+  "email": "user_A@scalableminds.com",
+  "experiences": {
+    "abc": 5,
+  },
+  "firstName": "user_A",
+  "id": "id",
+  "isActive": true,
+  "isAdmin": true,
+  "isAnonymous": false,
+  "isDatasetManager": true,
+  "isEditable": true,
+  "isEmailVerified": true,
+  "isOrganizationOwner": true,
+  "isSuperUser": true,
+  "lastActivity": "lastActivity",
+  "lastName": "last_A",
+  "lastTaskTypeId": null,
+  "novelUserExperienceInfos": {},
+  "organization": "Organization_X",
+  "selectedTheme": "auto",
+  "teams": [
+    {
+      "id": "id",
+      "isTeamManager": true,
+      "name": "team_X1",
+    },
+    {
+      "id": "id",
+      "isTeamManager": false,
+      "name": "team_X3",
+    },
+    {
+      "id": "id",
+      "isTeamManager": true,
+      "name": "team_X4",
+    },
+  ],
+}
+`;
+
+exports[`Misc APIs (E2E)  > datastores() 1`] = `
+[
+  {
+    "allowsUpload": true,
+    "jobsEnabled": false,
+    "jobsSupportedByAvailableWorkers": [],
+    "name": "localhost",
+    "url": "http://localhost:9000",
+  },
+]
+`;
+
+exports[`Misc APIs (E2E)  > getFeatureToggles() 1`] = `
+{
+  "alignmentCostPerGVx": 0.5,
+  "allowDeleteDatasets": true,
+  "costPerCreditInDollar": 5.75,
+  "costPerCreditInEuro": 5,
+  "defaultToLegacyBindings": false,
+  "discussionBoard": "https://forum.image.sc/tag/webknossos",
+  "discussionBoardRequiresAdmin": false,
+  "editableMappingsEnabled": true,
+  "exportTiffMaxEdgeLengthVx": 8192,
+  "exportTiffMaxVolumeMVx": 1024,
+  "hideNavbarLogin": false,
+  "isWkorgInstance": false,
+  "jobsEnabled": false,
+  "mitochondriaInferralCostPerGVx": 0.5,
+  "neuronInferralCostPerGVx": 1,
+  "openIdConnectEnabled": false,
+  "optInTabs": [
+    "ConnectomeView",
+  ],
+  "publicDemoDatasetUrl": "https://webknossos.org/datasets/scalable_minds/l4dense_motta_et_al_demo",
+  "recommendWkorgInstance": true,
+  "segmentAnythingEnabled": false,
+  "taskReopenAllowedInSeconds": 30,
+  "voxelyticsEnabled": false,
+}
+`;

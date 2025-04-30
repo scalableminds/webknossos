@@ -7,8 +7,6 @@ import ButtonComponent from "oxalis/view/components/button_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import * as React from "react";
 
-const PRIMARY_COLOR = "var(--ant-color-primary)";
-
 type Props<S> = {
   data: S[];
   searchKey: keyof S | ((item: S) => string);
@@ -125,7 +123,7 @@ export default class AdvancedSearchPopover<
             color: "red",
           }
         : {};
-    const selectAllMatchesButtonColor = areAllMatchesSelected ? PRIMARY_COLOR : undefined;
+
     return (
       <React.Fragment>
         {provideShortcut ? (
@@ -227,9 +225,8 @@ export default class AdvancedSearchPopover<
                     <ButtonComponent
                       style={{
                         width: 40,
-                        color: selectAllMatchesButtonColor,
-                        borderColor: selectAllMatchesButtonColor,
                       }}
+                      type={areAllMatchesSelected ? "primary" : "default"}
                       onClick={
                         this.props.onSelectAllMatches != null
                           ? () => {

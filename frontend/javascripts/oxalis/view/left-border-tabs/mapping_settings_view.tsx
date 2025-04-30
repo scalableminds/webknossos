@@ -234,6 +234,7 @@ class MappingSettingsView extends React.Component<Props, State> {
                   onChange={this.handleChangeMapping}
                   notFoundContent="No mappings found."
                   disabled={isDisabled}
+                  popupMatchSelectWidth={false}
                 >
                   {renderCategoryOptions(availableMappings, "JSON")}
                   {renderCategoryOptions(availableAgglomerates, "HDF5")}

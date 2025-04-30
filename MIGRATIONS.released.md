@@ -6,6 +6,20 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [25.05.0](https://github.com/scalableminds/webknossos/releases/tag/25.05.0) - 2025-04-29
+[Commits](https://github.com/scalableminds/webknossos/compare/25.04.0...25.05.0)
+
+### Postgres Evolutions:
+None.
+
+## [25.04.0](https://github.com/scalableminds/webknossos/releases/tag/25.04.0) - 2025-04-22
+[Commits](https://github.com/scalableminds/webknossos/compare/25.03.1...25.04.0)
+- New FossilDB version `0.1.37` (`master__525:` on dockerhub) is required. [#8460](https://github.com/scalableminds/webknossos/pull/8460)
+- NodeJs version `22+` is required. [#8479](https://github.com/scalableminds/webknossos/pull/8479)
+
+### Postgres Evolutions:
+None.
+
 ## [25.03.1](https://github.com/scalableminds/webknossos/releases/tag/25.03.1) - 2025-04-10
 [Commits](https://github.com/scalableminds/webknossos/compare/25.03.0...25.03.1)
 

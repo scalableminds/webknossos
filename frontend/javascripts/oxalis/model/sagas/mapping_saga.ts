@@ -4,7 +4,7 @@ import {
   getAgglomeratesForSegmentsFromDatastore,
   getAgglomeratesForSegmentsFromTracingstore,
   getMappingsForDatasetLayer,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
 import { message } from "antd";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";

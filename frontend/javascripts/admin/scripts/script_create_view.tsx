@@ -1,9 +1,4 @@
-import {
-  createScript,
-  getScript,
-  getTeamManagerOrAdminUsers,
-  updateScript,
-} from "admin/admin_rest_api";
+import { createScript, getScript, getTeamManagerOrAdminUsers, updateScript } from "admin/rest_api";
 import { Button, Card, Form, Input, Select } from "antd";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import type { OxalisState } from "oxalis/store";

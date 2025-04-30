@@ -2,7 +2,7 @@ import {
   getAnnotationCompoundInformation,
   getTracingForAnnotationType,
   getUnversionedAnnotationInformation,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
 import { Alert, Button, Form, Modal, Select, Spin, Tooltip } from "antd";
 import { makeComponentLazy } from "libs/react_helpers";
 import Request from "libs/request";

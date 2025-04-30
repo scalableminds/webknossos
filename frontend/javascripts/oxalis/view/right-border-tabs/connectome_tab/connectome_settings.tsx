@@ -1,5 +1,5 @@
 import { SettingOutlined } from "@ant-design/icons";
-import { getConnectomeFilesForDatasetLayer } from "admin/admin_rest_api";
+import { getConnectomeFilesForDatasetLayer } from "admin/rest_api";
 import { Col, Popover, Row, Select, Tooltip } from "antd";
 import { settings } from "messages";
 import defaultState from "oxalis/default_state";

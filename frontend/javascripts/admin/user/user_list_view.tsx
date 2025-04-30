@@ -11,9 +11,9 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
-import { getEditableUsers, updateUser } from "admin/admin_rest_api";
 import { InviteUsersModal } from "admin/onboarding";
 import { getActiveUserCount } from "admin/organization/pricing_plan_utils";
+import { getEditableUsers, updateUser } from "admin/rest_api";
 import { renderTeamRolesAndPermissionsForUser } from "admin/team/team_list_view";
 import ExperienceModalView from "admin/user/experience_modal_view";
 import PermissionsAndTeamsModalView from "admin/user/permissions_and_teams_modal_view";

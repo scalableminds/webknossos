@@ -14,7 +14,7 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import { api } from "oxalis/singletons";
 import { Store } from "oxalis/singletons";
-import type { Tree, TreeGroup, TreeMap } from "oxalis/store";
+import type { OxalisState, Tree, TreeGroup, TreeMap } from "oxalis/store";
 import {
   GroupTypeEnum,
   MISSING_GROUP_ID,
@@ -29,6 +29,7 @@ import {
   moveGroupsHelper,
 } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";
+import { useSelector } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import type { MetadataEntryProto } from "types/api_flow_types";
 import { InputWithUpdateOnBlur } from "../../components/input_with_update_on_blur";
@@ -68,6 +69,8 @@ function TreeHierarchyView(props: Props) {
 
   const treeRef = useRef<GetRef<typeof AntdTree>>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
+
+  const activeNode = useSelector((state: OxalisState) => state.annotation.skeleton?.activeNodeId);
 
   useEffect(() => {
     // equivalent of LifeCycle hook "getDerivedStateFromProps"
@@ -110,7 +113,7 @@ function TreeHierarchyView(props: Props) {
   }, [props.activeTreeId, props.onSingleSelectTree]);
 
   useEffect(() => {
-    // scroll to active group if it changes
+    // expand and scroll to active group if it changes
     if (treeRef.current && props.activeGroupId) {
       const activeGroupKey = getNodeKey(GroupTypeEnum.GROUP, props.activeGroupId);
       treeRef.current.scrollTo({ key: activeGroupKey, align: "auto" });
@@ -268,6 +271,14 @@ function TreeHierarchyView(props: Props) {
     () => treeRef.current?.scrollTo({ key: selectedKeys[0], align: "auto" }),
     [selectedKeys[0]],
   );
+
+  useEffect(() => {
+    if (props.activeTreeId == null) return;
+    const sourceNode = props.trees[props.activeTreeId];
+    const parentNodeKey = getNodeKey(GroupTypeEnum.GROUP, sourceNode.groupId || MISSING_GROUP_ID);
+    if (!(parentNodeKey in expandedNodeKeys))
+      setExpandedNodeKeys([...expandedNodeKeys, parentNodeKey]);
+  }, [activeNode]);
 
   return (
     <>

@@ -52,10 +52,10 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { getDisabledInfoForTools } from "oxalis/model/accessors/disabled_tool_accessor";
 import {
+  areGeometriesTransformed,
   getNodeAndTree,
   getNodeAndTreeOrNull,
   getNodePosition,
-  isSkeletonLayerTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { AnnotationTool, VolumeTools } from "oxalis/model/accessors/tool_accessor";
 import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
@@ -1028,7 +1028,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
             key: "create-node",
             onClick: () => handleCreateNodeFromGlobalPosition(globalPosition, viewport, false),
             label: "Create Node here",
-            disabled: isSkeletonLayerTransformed(state),
+            disabled: areGeometriesTransformed(state),
           },
           {
             key: "create-node-with-tree",
@@ -1044,7 +1044,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                   : null}
               </>
             ),
-            disabled: isSkeletonLayerTransformed(state),
+            disabled: areGeometriesTransformed(state),
           },
           {
             key: "load-agglomerate-skeleton",

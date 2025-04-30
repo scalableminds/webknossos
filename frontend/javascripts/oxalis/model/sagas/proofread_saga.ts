@@ -17,11 +17,11 @@ import {
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
+  areGeometriesTransformed,
   enforceSkeletonTracing,
   findTreeByNodeId,
   getNodeAndTree,
   getTreeNameForAgglomerateSkeleton,
-  isSkeletonLayerTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import {
@@ -357,7 +357,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
 
   // Use untransformedPosition because agglomerate trees should not have
   // any transforms, anyway.
-  if (yield* select((state) => isSkeletonLayerTransformed(state))) {
+  if (yield* select((state) => areGeometriesTransformed(state))) {
     Toast.error("Proofreading is currently not supported when the skeleton layer is transformed.");
     return;
   }
@@ -543,7 +543,7 @@ function* performMinCut(
 
   // Use untransformedPosition below because agglomerate trees should not have
   // any transforms, anyway.
-  if (yield* select((state) => isSkeletonLayerTransformed(state))) {
+  if (yield* select((state) => areGeometriesTransformed(state))) {
     Toast.error("Proofreading is currently not supported when the skeleton layer is transformed.");
     return true;
   }

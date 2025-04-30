@@ -49,6 +49,7 @@ type Props = {
 const TARGET_TEXTURE_SIZE = 2000; // in pixels
 
 // Maximum number of triangles allowed in an animation to not overload the server
+// Remember: The backend worker code only simplifies meshes with >100.000 polygons
 const MAX_TRIANGLES_PER_ANIMATION = 1000000; // 1 million triangles
 
 function selectMagForTextureCreation(

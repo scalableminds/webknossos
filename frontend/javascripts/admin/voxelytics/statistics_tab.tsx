@@ -1,5 +1,5 @@
 import { SyncOutlined } from "@ant-design/icons";
-import { getVoxelyticsChunkStatistics } from "admin/admin_rest_api";
+import { getVoxelyticsChunkStatistics } from "admin/rest_api";
 import { Button, Tooltip } from "antd";
 import dayjs from "dayjs";
 import {

@@ -5,8 +5,8 @@ import {
   SyncOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
-import { getAiModels, getUsersOrganizations, updateAiModel } from "admin/admin_rest_api";
 import { JobState, getShowTrainingDataLink } from "admin/job/job_list_view";
+import { getAiModels, getUsersOrganizations, updateAiModel } from "admin/rest_api";
 import { Button, Col, Modal, Row, Select, Space, Table, Typography } from "antd";
 import FormattedDate from "components/formatted_date";
 import { PageNotAvailableToNormalUser } from "components/permission_enforcer";

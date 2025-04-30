@@ -8,9 +8,9 @@ import {
   SettingOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
-import { getJobs } from "admin/admin_rest_api";
 import { TOOLTIP_MESSAGES_AND_ICONS } from "admin/job/job_list_view";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import { getJobs } from "admin/rest_api";
 import {
   Alert,
   Badge,

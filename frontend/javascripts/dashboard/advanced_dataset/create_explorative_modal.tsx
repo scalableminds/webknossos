@@ -1,5 +1,5 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
-import { getDataset } from "admin/admin_rest_api";
+import { getDataset } from "admin/rest_api";
 import { Button, Modal, Radio, Spin, Tooltip } from "antd";
 import { Slider } from "components/slider";
 import { useFetch } from "libs/react_helpers";

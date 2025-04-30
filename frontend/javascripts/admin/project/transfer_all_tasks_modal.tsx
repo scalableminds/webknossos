@@ -1,5 +1,5 @@
-import { getUsers } from "admin/admin_rest_api";
 import { getUsersWithActiveTasks, transferActiveTasksOfProject } from "admin/api/tasks";
+import { getUsers } from "admin/rest_api";
 import UserSelectionComponent from "admin/user/user_selection_component";
 import { Modal, Spin, Table } from "antd";
 import { handleGenericError } from "libs/error_handling";

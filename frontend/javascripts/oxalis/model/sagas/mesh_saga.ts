@@ -4,7 +4,7 @@ import {
   getMeshfilesForDatasetLayer,
   meshApi,
   sendAnalyticsEvent,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
 import { saveAs } from "file-saver";
 import { mergeGeometries } from "libs/BufferGeometryUtils";
 import ThreeDMap from "libs/ThreeDMap";

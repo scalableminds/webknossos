@@ -11,6 +11,8 @@ import {
   TeamOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import { getTasks } from "admin/api/tasks";
+import TransferAllTasksModal from "admin/project/transfer_all_tasks_modal";
 import {
   deleteProject as deleteProjectAPI,
   downloadAnnotation,
@@ -20,9 +22,7 @@ import {
   increaseProjectTaskInstances as increaseProjectTaskInstancesAPI,
   pauseProject,
   resumeProject,
-} from "admin/admin_rest_api";
-import { getTasks } from "admin/api/tasks";
-import TransferAllTasksModal from "admin/project/transfer_all_tasks_modal";
+} from "admin/rest_api";
 import { App, Button, Input, Spin, Table, Tooltip } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";

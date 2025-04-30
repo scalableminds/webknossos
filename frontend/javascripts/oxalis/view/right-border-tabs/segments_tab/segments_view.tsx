@@ -15,12 +15,12 @@ import {
   SettingOutlined,
   ShrinkOutlined,
 } from "@ant-design/icons";
-import { getJobs, startComputeMeshFileJob } from "admin/admin_rest_api";
 import {
   PricingPlanEnum,
   getFeatureNotAvailableInPlanMessage,
   isFeatureAllowedByPricingPlan,
 } from "admin/organization/pricing_plan_utils";
+import { getJobs, startComputeMeshFileJob } from "admin/rest_api";
 import {
   Button,
   ConfigProvider,

@@ -256,9 +256,11 @@ export default class SegmentMeshController {
       // No meshes for this layer
       return;
     }
+
     if (meshGroups == null) {
       return;
     }
+
     _.forEach(meshGroups, (meshGroup, lodStr) => {
       const currentLod = Number.parseInt(lodStr);
 
@@ -290,6 +292,7 @@ export default class SegmentMeshController {
     const meshGroups = this.getMeshGroups(additionalCoordKey, layerName, segmentId);
     if (meshGroups == null) return null;
     const bestLod = Math.min(...Object.keys(meshGroups).map((lodVal) => Number.parseInt(lodVal)));
+
     return this.getMeshGroupsByLOD(additionalCoordinates, layerName, segmentId, bestLod);
   }
 
@@ -479,6 +482,7 @@ export default class SegmentMeshController {
 
     let wasChanged = false;
     const rangesToReset: Vector2[] = [];
+
     if (isHovered != null) {
       if (!_.isEqual(mesh.hoveredState, highlightState)) {
         if (mesh.hoveredState != null && mesh.hoveredState !== "full") {
@@ -488,6 +492,7 @@ export default class SegmentMeshController {
         wasChanged = true;
       }
     }
+
     if (isActiveUnmappedSegment != null) {
       if (!_.isEqual(mesh.activeState, highlightState)) {
         if (mesh.activeState != null && mesh.activeState !== "full") {
@@ -497,6 +502,7 @@ export default class SegmentMeshController {
         wasChanged = true;
       }
     }
+
     if (!wasChanged) {
       // Nothing to do
       return;

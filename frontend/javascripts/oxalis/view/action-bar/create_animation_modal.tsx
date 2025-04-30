@@ -29,6 +29,7 @@ import {
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
+import type { Mesh } from "three";
 import {
   type APIDataLayer,
   APIJobType,
@@ -96,13 +97,14 @@ function countTrianglesInMeshes(meshes: RenderAnimationOptions["meshes"]): numbe
     );
 
     if (meshGroup) {
-      meshGroup.traverse((child: any) => {
-        if (child.geometry?.index) {
+      meshGroup.traverse((child) => {
+        const mesh = child as Mesh;
+        if (mesh.geometry?.index) {
           // For indexed geometries, count triangles from the index
-          totalTriangles += child.geometry.index.count / 3;
-        } else if (child.geometry?.attributes.position) {
+          totalTriangles += mesh.geometry.index.count / 3;
+        } else if (mesh.geometry?.attributes.position) {
           // For non-indexed geometries, count triangles from position attribute
-          totalTriangles += child.geometry.attributes.position.count / 3;
+          totalTriangles += mesh.geometry.attributes.position.count / 3;
         }
       });
     }
@@ -196,7 +198,7 @@ function CreateAnimationModal(props: Props) {
     if (!isDataset3D) errorMessages.push("Sorry, animations are only supported for 3D datasets.");
 
     // Count triangles in all meshes
-    const totalTriangles = countTrianglesInMeshes(meshes as RenderAnimationOptions["meshes"]);
+    const totalTriangles = countTrianglesInMeshes(meshes);
     const isTooManyTriangles = totalTriangles > MAX_TRIANGLES_PER_ANIMATION;
     if (isTooManyTriangles)
       errorMessages.push(

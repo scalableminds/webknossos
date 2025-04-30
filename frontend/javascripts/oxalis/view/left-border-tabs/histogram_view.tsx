@@ -10,7 +10,7 @@ import type { DatasetLayerConfiguration } from "oxalis/store";
 import * as React from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import type { APIHistogramData, ElementClass, HistogramDatum } from "types/api_flow_types";
+import type { APIHistogramData, ElementClass, HistogramDatum } from "types/api_types";
 
 type OwnProps = {
   data: APIHistogramData | null | undefined;

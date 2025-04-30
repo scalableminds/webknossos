@@ -21,7 +21,7 @@ import Toast from "libs/toast";
 import messages from "messages";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import type { APIOrganization } from "types/api_flow_types";
+import type { APIOrganization } from "types/api_types";
 import { TeamAndPowerPlanUpgradeCards } from "./organization_cards";
 import { powerPlanFeatures, teamPlanFeatures } from "./pricing_plan_utils";
 import { PricingPlanEnum } from "./pricing_plan_utils";

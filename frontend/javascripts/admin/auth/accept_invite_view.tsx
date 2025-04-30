@@ -12,7 +12,7 @@ import Toast from "libs/toast";
 import { location } from "libs/window";
 import { useState } from "react";
 import { useHistory } from "react-router-dom";
-import type { APIUser } from "types/api_flow_types";
+import type { APIUser } from "types/api_types";
 
 const { Content } = Layout;
 

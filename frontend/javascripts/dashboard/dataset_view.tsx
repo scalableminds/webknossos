@@ -39,7 +39,7 @@ import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import type { MenuProps } from "rc-menu";
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import type { APIDatasetCompact, APIJob, APIUser, FolderItem } from "types/api_flow_types";
+import type { APIDatasetCompact, APIJob, APIUser, FolderItem } from "types/api_types";
 import type { DatasetCollectionContextValue } from "./dataset/dataset_collection_context";
 import {
   MINIMUM_SEARCH_QUERY_LENGTH,

@@ -39,7 +39,7 @@ import type PlaneView from "oxalis/view/plane_view";
 import * as React from "react";
 import { connect } from "react-redux";
 import * as THREE from "three";
-import type { VoxelSize } from "types/api_flow_types";
+import type { VoxelSize } from "types/api_types";
 
 export function threeCameraToCameraData(camera: THREE.OrthographicCamera): CameraData {
   const { position, up, near, far, left, right, top, bottom } = camera;

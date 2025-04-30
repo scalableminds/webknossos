@@ -1,6 +1,6 @@
 import type { BucketAddress, Vector3, Vector4 } from "oxalis/constants";
 import constants from "oxalis/constants";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_types";
 import type { MagInfo } from "./mag_info";
 
 export function globalPositionToBucketPosition(

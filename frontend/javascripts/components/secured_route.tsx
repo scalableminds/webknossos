@@ -11,7 +11,7 @@ import type { ComponentType } from "react";
 import { connect } from "react-redux";
 import { Route, withRouter } from "react-router-dom";
 import type { RouteComponentProps } from "react-router-dom";
-import type { APIOrganization, APIUser } from "types/api_flow_types";
+import type { APIOrganization, APIUser } from "types/api_types";
 import { PageNotAvailableToNormalUser } from "./permission_enforcer";
 
 type StateProps = {

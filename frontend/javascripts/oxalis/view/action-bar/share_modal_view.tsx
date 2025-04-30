@@ -49,7 +49,7 @@ import type {
   APIAnnotationVisibility,
   APIDataset,
   APITeam,
-} from "types/api_flow_types";
+} from "types/api_types";
 
 const RadioGroup = Radio.Group;
 const sharingActiveNode = true;

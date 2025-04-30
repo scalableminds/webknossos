@@ -5,7 +5,7 @@ import * as Utils from "libs/utils";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import type { APIDatasetCompact, APIUser, FolderItem } from "types/api_flow_types";
+import type { APIDatasetCompact, APIUser, FolderItem } from "types/api_types";
 import DatasetCollectionContextProvider, {
   useDatasetCollectionContext,
 } from "./dataset/dataset_collection_context";

@@ -13,7 +13,7 @@ import type { CreateActionNode, UpdateActionNode } from "oxalis/model/sagas/upda
 import type { Edge, Node, OxalisState, SkeletonTracing, Tree } from "oxalis/store";
 import Store from "oxalis/throttled_store";
 import * as THREE from "three";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_types";
 
 const MAX_CAPACITY = 1000;
 

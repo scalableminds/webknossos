@@ -46,7 +46,7 @@ import type { BoundingBoxObject } from "oxalis/store";
 import React, { useEffect, useState } from "react";
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
-import type { APIDataset, APIProject, APIScript, APITask, APITaskType } from "types/api_flow_types";
+import type { APIDataset, APIProject, APIScript, APITask, APITaskType } from "types/api_types";
 
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;

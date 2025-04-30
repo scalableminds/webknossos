@@ -137,8 +137,8 @@ import type {
   APIDataset,
   APIMeshFile,
   VoxelSize,
-} from "types/api_flow_types";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+} from "types/api_types";
+import type { AdditionalCoordinate } from "types/api_types";
 import { LoadMeshMenuItemLabel } from "./right-border-tabs/segments_tab/load_mesh_menu_item_label";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;

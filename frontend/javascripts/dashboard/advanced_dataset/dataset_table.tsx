@@ -36,11 +36,7 @@ import { DndProvider, DragPreviewImage, useDrag } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
-import type {
-  APIDatasetCompact,
-  APIMaybeUnimportedDataset,
-  FolderItem,
-} from "types/api_flow_types";
+import type { APIDatasetCompact, APIMaybeUnimportedDataset, FolderItem } from "types/api_types";
 import type { EmptyObject } from "types/globals";
 
 type FolderItemWithName = FolderItem & { name: string };

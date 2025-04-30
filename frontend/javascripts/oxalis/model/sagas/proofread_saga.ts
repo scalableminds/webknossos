@@ -70,7 +70,7 @@ import {
 import { Model, Store, api } from "oxalis/singletons";
 import type { ActiveMappingInfo, Mapping, NumberLikeMap, Tree, VolumeTracing } from "oxalis/store";
 import { all, call, put, spawn, takeEvery } from "typed-redux-saga";
-import type { AdditionalCoordinate, ServerEditableMapping } from "types/api_flow_types";
+import type { AdditionalCoordinate, ServerEditableMapping } from "types/api_types";
 import { getCurrentMag } from "../accessors/flycam_accessor";
 import type { Action } from "../actions/actions";
 import { ensureWkReady } from "./ready_sagas";

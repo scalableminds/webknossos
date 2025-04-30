@@ -25,7 +25,7 @@ import { useState } from "react";
 import type { Key } from "react";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
-import type { APIAnnotation, AiModel } from "types/api_flow_types";
+import type { APIAnnotation, AiModel } from "types/api_types";
 
 export default function AiModelListView() {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);

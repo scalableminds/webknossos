@@ -3,7 +3,7 @@ import {
   type APIAnnotation,
   AnnotationLayerEnum,
   type APITracingStoreAnnotation,
-} from "types/api_flow_types";
+} from "types/api_types";
 
 const TRACING_ID = "47e37793-d0be-4240-a371-87ce68561a13";
 export const tracing: ServerSkeletonTracing = {

@@ -8,7 +8,7 @@ import type { PullQueueItem } from "oxalis/model/bucket_data_handling/pullqueue"
 import type { DimensionIndices } from "oxalis/model/dimensions";
 import Dimensions from "oxalis/model/dimensions";
 import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_types";
 import type { MagInfo } from "../helpers/mag_info";
 
 const { MAX_ZOOM_STEP_DIFF_PREFETCH } = constants;

@@ -48,7 +48,7 @@ import {
   type APIDataset,
   AnnotationLayerEnum,
   type ServerVolumeTracing,
-} from "types/api_flow_types";
+} from "types/api_types";
 
 const { TextArea } = Input;
 const FormItem = Form.Item;

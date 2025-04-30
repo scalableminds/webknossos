@@ -1,7 +1,7 @@
 import { tokenUserA, setUserAuthToken, resetDatabase, writeTypeCheckingFile } from "test/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import { describe, beforeAll, expect, it } from "vitest";
-import type { APIAllowedMode } from "types/api_flow_types";
+import type { APIAllowedMode } from "types/api_types";
 
 describe("Task Types API (E2E)", () => {
   beforeAll(async () => {

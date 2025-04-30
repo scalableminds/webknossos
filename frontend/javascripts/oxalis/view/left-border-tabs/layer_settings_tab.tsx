@@ -124,7 +124,7 @@ import {
   AnnotationLayerEnum,
   type AnnotationLayerType,
   type EditableLayerProperties,
-} from "types/api_flow_types";
+} from "types/api_types";
 import type { ValueOf } from "types/globals";
 import {
   defaultDatasetViewConfigurationWithoutNull,

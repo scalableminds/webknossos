@@ -58,7 +58,7 @@ import {
   APIJobType,
   type AdditionalAxis,
   type VoxelSize,
-} from "types/api_flow_types";
+} from "types/api_types";
 const { Paragraph, Text } = Typography;
 
 type TabKeys = "download" | "export" | "python";

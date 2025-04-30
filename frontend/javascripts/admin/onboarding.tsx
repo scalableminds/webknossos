@@ -27,7 +27,7 @@ import Store from "oxalis/store";
 import React, { useState } from "react";
 import { connect } from "react-redux";
 import { Link, type RouteComponentProps, withRouter } from "react-router-dom";
-import type { APIDataStore, APIUser } from "types/api_flow_types";
+import type { APIDataStore, APIUser } from "types/api_types";
 
 const { Step } = Steps;
 const FormItem = Form.Item;

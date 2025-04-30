@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { deleteDatasetOnDisk, getDataset } from "admin/admin_rest_api";
+import { deleteDatasetOnDisk, getDataset } from "admin/rest_api";
 import { Button } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";

@@ -4,7 +4,7 @@ import {
   getAnnotationProto,
   getNewestVersionForAnnotation,
   getUpdateActionLog,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
 import { Button, List, Spin } from "antd";
 import dayjs from "dayjs";
 import { handleGenericError } from "libs/error_handling";

@@ -1,5 +1,5 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
-import { getEditableTeams, updateUser } from "admin/admin_rest_api";
+import { getEditableTeams, updateUser } from "admin/rest_api";
 import { App, Checkbox, Col, Divider, Modal, Radio, type RadioChangeEvent, Row } from "antd";
 import { useFetch } from "libs/react_helpers";
 import * as Utils from "libs/utils";

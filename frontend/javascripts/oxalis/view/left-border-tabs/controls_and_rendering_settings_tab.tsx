@@ -1,6 +1,6 @@
 import { ExclamationCircleOutlined } from "@ant-design/icons";
-import { clearCache } from "admin/admin_rest_api";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import { clearCache } from "admin/rest_api";
 import { Collapse, type CollapseProps } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { PricingEnforcedSwitchSetting } from "components/pricing_enforcers";

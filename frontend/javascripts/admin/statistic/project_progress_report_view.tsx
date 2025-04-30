@@ -1,5 +1,5 @@
 import { PauseCircleOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons";
-import { getProjectProgressReport } from "admin/admin_rest_api";
+import { getProjectProgressReport } from "admin/rest_api";
 import { Badge, Card, Spin, Table } from "antd";
 import FormattedDate from "components/formatted_date";
 import Loop from "components/loop";

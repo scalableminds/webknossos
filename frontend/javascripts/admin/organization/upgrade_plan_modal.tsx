@@ -10,7 +10,7 @@ import {
   sendUpgradePricingPlanEmail,
   sendUpgradePricingPlanStorageEmail,
   sendUpgradePricingPlanUserEmail,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
 import { Button, Divider, InputNumber, Modal } from "antd";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import dayjs from "dayjs";

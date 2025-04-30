@@ -29,7 +29,7 @@ import type { APIDataset, APIUser } from "types/api_types";
 
 import type { OxalisState, StoreAnnotation, Task } from "oxalis/store";
 
-import { getOrganization } from "admin/admin_rest_api";
+import { getOrganization } from "admin/rest_api";
 import FastTooltip from "components/fast_tooltip";
 import { mayUserEditDataset, pluralize, safeNumberToStr } from "libs/utils";
 import messages from "messages";

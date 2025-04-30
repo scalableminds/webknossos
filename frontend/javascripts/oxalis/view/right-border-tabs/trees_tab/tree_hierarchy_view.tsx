@@ -19,6 +19,7 @@ import {
   GroupTypeEnum,
   MISSING_GROUP_ID,
   type TreeNode,
+  additionallyExpandGroup,
   createGroupToTreesMap,
   deepFlatFilter,
   findGroup,
@@ -272,12 +273,16 @@ function TreeHierarchyView(props: Props) {
     [selectedKeys[0]],
   );
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: The other dependencies change too often, they were omitted due to performance reasons
   useEffect(() => {
     if (props.activeTreeId == null) return;
     const sourceNode = props.trees[props.activeTreeId];
-    const parentNodeKey = getNodeKey(GroupTypeEnum.GROUP, sourceNode.groupId || MISSING_GROUP_ID);
-    if (!(parentNodeKey in expandedNodeKeys))
-      setExpandedNodeKeys([...expandedNodeKeys, parentNodeKey]);
+    if (sourceNode.groupId == null) return; // tree is a direct child of the root group which is always expanded
+    const expandedGroups = additionallyExpandGroup(props.treeGroups, sourceNode.groupId, (id) =>
+      getNodeKey(GroupTypeEnum.GROUP, id),
+    );
+    if (expandedGroups == null) return;
+    setExpandedNodeKeys(Array.from(expandedGroups));
   }, [activeNode]);
 
   return (

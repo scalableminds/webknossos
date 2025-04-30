@@ -114,7 +114,7 @@ function TreeHierarchyView(props: Props) {
   }, [props.activeTreeId, props.onSingleSelectTree]);
 
   useEffect(() => {
-    // expand and scroll to active group if it changes
+    // scroll to active group if it changes
     if (treeRef.current && props.activeGroupId) {
       const activeGroupKey = getNodeKey(GroupTypeEnum.GROUP, props.activeGroupId);
       treeRef.current.scrollTo({ key: activeGroupKey, align: "auto" });
@@ -282,7 +282,8 @@ function TreeHierarchyView(props: Props) {
       getNodeKey(GroupTypeEnum.GROUP, id),
     );
     if (expandedGroups == null) return;
-    setExpandedNodeKeys(Array.from(expandedGroups));
+    // props.treeGroups are used to get the newly expanded groups but can be outdated, so the union needs to be used here
+    setExpandedNodeKeys(Utils.unique([...expandedNodeKeys, ...Array.from(expandedGroups)]));
   }, [activeNode]);
 
   return (

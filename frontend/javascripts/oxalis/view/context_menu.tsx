@@ -148,8 +148,7 @@ import { LoadMeshMenuItemLabel } from "./right-border-tabs/segments_tab/load_mes
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
 
-// The newest eslint version thinks the props listed below aren't used.
-type OwnProps = {
+type Props = {
   contextMenuPosition: Readonly<[number, number]> | null | undefined;
   maybeClickedNodeId: number | null | undefined;
   maybeClickedMeshId: number | null | undefined;
@@ -159,9 +158,6 @@ type OwnProps = {
   globalPosition: Vector3 | null | undefined;
   additionalCoordinates: AdditionalCoordinate[] | undefined;
   maybeViewport: OrthoView | null | undefined;
-};
-
-type StateProps = {
   skeletonTracing: SkeletonTracing | null | undefined;
   voxelSize: VoxelSize;
   visibleSegmentationLayer: APIDataLayer | null | undefined;
@@ -176,7 +172,6 @@ type StateProps = {
   allowUpdate: boolean;
   segments: SegmentMap | null | undefined;
 };
-type Props = OwnProps & StateProps;
 
 type NodeContextMenuOptionsProps = Props & {
   viewport: OrthoView;
@@ -1450,66 +1445,89 @@ function getInfoMenuItem(
 }
 
 function ContextMenuInner() {
-  const props = useSelector((state: OxalisState) => {
-    const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
-    const mappingInfo = getMappingInfo(
-      state.temporaryConfiguration.activeMappingByLayer,
-      visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
-    );
+  const visibleSegmentationLayer = useSelector(getVisibleSegmentationLayer);
+  const activeMappingByLayer = useSelector(
+    (state: OxalisState) => state.temporaryConfiguration.activeMappingByLayer,
+  );
+  const mappingInfo = getMappingInfo(
+    activeMappingByLayer,
+    visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
+  );
+  const skeletonTracing = useSelector((state: OxalisState) => state.annotation.skeleton);
+  const volumeTracing = useSelector(getActiveSegmentationTracing);
+  const voxelSize = useSelector((state: OxalisState) => state.dataset.dataSource.scale);
+  const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
+  const dataset = useSelector((state: OxalisState) => state.dataset);
+  const allowUpdate = useSelector(
+    (state: OxalisState) => state.annotation.restrictions.allowUpdate,
+  );
+  const currentMeshFile = useSelector((state: OxalisState) =>
+    visibleSegmentationLayer != null
+      ? state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile
+      : null,
+  );
+  const currentConnectomeFile = useSelector((state: OxalisState) =>
+    visibleSegmentationLayer != null
+      ? state.localSegmentationData[visibleSegmentationLayer.name].connectomeData
+          .currentConnectomeFile
+      : null,
+  );
+
+  const userBoundingBoxes = useSelector((state: OxalisState) => {
     const someTracing = maybeGetSomeTracing(state.annotation);
-    const { contextInfo } = state.uiInformation;
-    return {
-      skeletonTracing: state.annotation.skeleton,
-      volumeTracing: getActiveSegmentationTracing(state),
-      voxelSize: state.dataset.dataSource.scale,
-      activeTool: state.uiInformation.activeTool,
-      dataset: state.dataset,
-      allowUpdate: state.annotation.restrictions.allowUpdate,
-      visibleSegmentationLayer,
-      currentMeshFile:
-        visibleSegmentationLayer != null
-          ? state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile
-          : null,
-      currentConnectomeFile:
-        visibleSegmentationLayer != null
-          ? state.localSegmentationData[visibleSegmentationLayer.name].connectomeData
-              .currentConnectomeFile
-          : null,
-      useLegacyBindings: state.userConfiguration.useLegacyBindings,
-      userBoundingBoxes: someTracing != null ? someTracing.userBoundingBoxes : [],
-      segments:
-        visibleSegmentationLayer != null
-          ? getSegmentsForLayer(state, visibleSegmentationLayer.name)
-          : null,
-      mappingInfo,
-      maybeClickedNodeId: contextInfo.clickedNodeId,
-      clickedBoundingBoxId: contextInfo.clickedBoundingBoxId,
-      globalPosition: contextInfo.globalPosition,
-      additionalCoordinates: state.flycam.additionalCoordinates || undefined,
-      contextMenuPosition: contextInfo.contextMenuPosition,
-      maybeViewport: contextInfo.viewport,
-      maybeClickedMeshId: contextInfo.meshId,
-      maybeMeshIntersectionPosition: contextInfo.meshIntersectionPosition,
-      maybeUnmappedSegmentId: contextInfo.unmappedSegmentId,
-    };
+    return someTracing != null ? someTracing.userBoundingBoxes : [];
   });
+  const segments = useSelector((state: OxalisState) =>
+    visibleSegmentationLayer != null
+      ? getSegmentsForLayer(state, visibleSegmentationLayer.name)
+      : null,
+  );
+  const useLegacyBindings = useSelector(
+    (state: OxalisState) => state.userConfiguration.useLegacyBindings,
+  );
+  const additionalCoordinates = useSelector(
+    (state: OxalisState) => state.flycam.additionalCoordinates || undefined,
+  );
+  const contextInfo = useSelector((state: OxalisState) => state.uiInformation.contextInfo);
+
+  const {
+    globalPosition,
+    contextMenuPosition,
+    meshId: maybeClickedMeshId,
+    clickedNodeId: maybeClickedNodeId,
+    viewport: maybeViewport,
+  } = contextInfo;
+
+  const props: Props = {
+    skeletonTracing,
+    visibleSegmentationLayer,
+    volumeTracing,
+    voxelSize,
+    activeTool,
+    dataset,
+    allowUpdate,
+    currentMeshFile,
+    currentConnectomeFile,
+    useLegacyBindings,
+    userBoundingBoxes,
+    segments,
+    mappingInfo,
+    additionalCoordinates,
+    // todop: avoid these?
+    maybeClickedNodeId: contextInfo.clickedNodeId,
+    clickedBoundingBoxId: contextInfo.clickedBoundingBoxId,
+    globalPosition: contextInfo.globalPosition,
+    contextMenuPosition: contextInfo.contextMenuPosition,
+    maybeViewport: contextInfo.viewport,
+    maybeClickedMeshId: contextInfo.meshId,
+    maybeMeshIntersectionPosition: contextInfo.meshIntersectionPosition,
+    maybeUnmappedSegmentId: contextInfo.unmappedSegmentId,
+  };
 
   const [lastTimeSegmentInfoShouldBeFetched, setLastTimeSegmentInfoShouldBeFetched] = useState(
     new Date(),
   );
   const inputRef = useContext(ContextMenuContext);
-  const {
-    skeletonTracing,
-    maybeClickedNodeId,
-    maybeClickedMeshId,
-    contextMenuPosition,
-    segments,
-    voxelSize,
-    globalPosition,
-    maybeViewport,
-    visibleSegmentationLayer,
-    volumeTracing,
-  } = props;
 
   const segmentIdAtPosition = globalPosition != null ? getSegmentIdForPosition(globalPosition) : 0;
 
@@ -1521,7 +1539,6 @@ function ContextMenuInner() {
     maybeClickedMeshId != null ? maybeClickedMeshId : segmentIdAtPosition;
   const wasSegmentOrMeshClicked = clickedSegmentOrMeshId !== 0;
 
-  const dataset = useSelector((state: OxalisState) => state.dataset);
   useEffect(() => {
     Store.dispatch(ensureSegmentIndexIsLoadedAction(visibleSegmentationLayer?.name));
   }, [visibleSegmentationLayer]);

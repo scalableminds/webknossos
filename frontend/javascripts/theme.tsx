@@ -7,7 +7,7 @@ import type { OxalisState, Theme } from "oxalis/store";
 import type React from "react";
 import { useEffect } from "react";
 import { useSelector } from "react-redux";
-import type { APIUser } from "types/api_flow_types";
+import type { APIUser } from "types/api_types";
 
 const ColorWKBlue = "#5660ff"; // WK ~blue/purple
 const ColorWKLinkHover = "#a8b4ff"; // slightly brighter WK Blue

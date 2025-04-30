@@ -44,7 +44,7 @@ import {
   type APIUser,
   type APIUserBase,
   TracingTypeEnum,
-} from "types/api_flow_types";
+} from "types/api_types";
 
 const { Column } = Table;
 const { Search } = Input;

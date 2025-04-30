@@ -9,8 +9,8 @@ import type {
   UserBoundingBox,
   VolumeTracing,
 } from "oxalis/store";
-import type { ServerTracing, TracingType } from "types/api_flow_types";
-import { TracingTypeEnum } from "types/api_flow_types";
+import type { ServerTracing, TracingType } from "types/api_types";
+import { TracingTypeEnum } from "types/api_types";
 import BoundingBox from "../bucket_data_handling/bounding_box";
 
 export function maybeGetSomeTracing(

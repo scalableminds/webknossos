@@ -11,7 +11,7 @@ import messages from "messages";
 import * as React from "react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import type { APIScript, APIUser } from "types/api_flow_types";
+import type { APIScript, APIUser } from "types/api_types";
 
 const { Column } = Table;
 const { Search } = Input;

@@ -19,7 +19,7 @@ import {
   type VoxelyticsWorkflowDagEdge,
   type VoxelyticsWorkflowDagNode,
   type VoxelyticsWorkflowReport,
-} from "types/api_flow_types";
+} from "types/api_types";
 import TaskListView from "./task_list_view";
 import { VX_POLLING_INTERVAL } from "./utils";
 

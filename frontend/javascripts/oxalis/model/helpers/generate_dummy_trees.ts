@@ -1,5 +1,5 @@
 import _ from "lodash";
-import type { ServerSkeletonTracingTree } from "types/api_flow_types"; // This is a quick'n'dirty code to generate a huge amount of mocked trees.
+import type { ServerSkeletonTracingTree } from "types/api_types"; // This is a quick'n'dirty code to generate a huge amount of mocked trees.
 
 // Since the server cannot handle such big tracings at the moment, we'll
 // use this code to test the front-end performance.

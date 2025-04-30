@@ -113,7 +113,7 @@ import type {
   ServerEditableMapping,
   ServerTracing,
   ServerVolumeTracing,
-} from "types/api_flow_types";
+} from "types/api_types";
 import type { Mutable } from "types/globals";
 import { doAllLayersHaveTheSameRotation } from "./model/accessors/dataset_layer_transformation_accessor";
 import { setVersionNumberAction } from "./model/actions/save_actions";

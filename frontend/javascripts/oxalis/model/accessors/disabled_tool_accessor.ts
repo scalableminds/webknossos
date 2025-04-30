@@ -8,7 +8,7 @@ import { IdentityTransform } from "oxalis/constants";
 import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
 import type { OxalisState } from "oxalis/store";
-import type { APIOrganization, APIUser } from "types/api_flow_types";
+import type { APIOrganization, APIUser } from "types/api_types";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 import { getTransformsPerLayer } from "./dataset_layer_transformation_accessor";
 import { isSkeletonLayerTransformed, isSkeletonLayerVisible } from "./skeletontracing_accessor";

@@ -4,7 +4,7 @@ import { byteArraysToLz4Base64 } from "oxalis/workers/byte_arrays_to_lz4_base64.
 import datasetServerObject from "test/fixtures/dataset_server_object";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import { MagInfo } from "oxalis/model/helpers/mag_info";
-import type { APIDataLayer } from "types/api_flow_types";
+import type { APIDataLayer } from "types/api_types";
 import type { PushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
 import { requestWithFallback } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";

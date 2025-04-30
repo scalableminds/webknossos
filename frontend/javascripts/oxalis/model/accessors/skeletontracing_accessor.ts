@@ -23,7 +23,7 @@ import {
   AnnotationLayerEnum,
   type ServerSkeletonTracing,
   type ServerTracing,
-} from "types/api_flow_types";
+} from "types/api_types";
 import { invertTransform, transformPointUnscaled } from "../helpers/transformation_helpers";
 import {
   getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull,

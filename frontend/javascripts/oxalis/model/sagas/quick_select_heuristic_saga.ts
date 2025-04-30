@@ -44,7 +44,7 @@ import type {
   VolumeTracing,
 } from "oxalis/store";
 import { call, put, race, take } from "typed-redux-saga";
-import type { APIDataLayer, APIDataset } from "types/api_flow_types";
+import type { APIDataLayer, APIDataset } from "types/api_types";
 import {
   getDefaultValueRangeOfLayer,
   getEnabledColorLayers,

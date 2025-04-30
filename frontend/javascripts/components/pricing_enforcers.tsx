@@ -17,7 +17,7 @@ import { SwitchSetting } from "oxalis/view/components/setting_input_views";
 import React from "react";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
-import type { APIOrganization, APIUser } from "types/api_flow_types";
+import type { APIOrganization, APIUser } from "types/api_types";
 
 const PRIMARY_COLOR_HEX = rgbToHex(PRIMARY_COLOR);
 

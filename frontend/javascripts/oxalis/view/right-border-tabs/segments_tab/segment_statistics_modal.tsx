@@ -16,7 +16,7 @@ import { voxelToVolumeInUnit } from "oxalis/model/scaleinfo";
 import { api } from "oxalis/singletons";
 import type { OxalisState, Segment } from "oxalis/store";
 import { useSelector } from "react-redux";
-import type { APISegmentationLayer, VoxelSize } from "types/api_flow_types";
+import type { APISegmentationLayer, VoxelSize } from "types/api_types";
 import {
   type SegmentHierarchyGroup,
   type SegmentHierarchyNode,

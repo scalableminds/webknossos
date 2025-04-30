@@ -10,7 +10,7 @@ import type {
   APIDatasetCompact,
   APIDatasetCompactWithoutStatusAndLayerNames,
   FolderItem,
-} from "types/api_flow_types";
+} from "types/api_types";
 import {
   useCreateFolderMutation,
   useDatasetSearchQuery,

@@ -22,7 +22,7 @@ import type React from "react";
 import { PureComponent } from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import { type APIAnnotation, APIAnnotationTypeEnum } from "types/api_flow_types";
+import { type APIAnnotation, APIAnnotationTypeEnum } from "types/api_types";
 type ProjectInfo = {
   id: string;
   label: string;

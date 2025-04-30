@@ -17,7 +17,7 @@ import type { OxalisState } from "oxalis/store";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
-import type { APIUser } from "types/api_flow_types";
+import type { APIUser } from "types/api_types";
 import { formatDateInLocalTimeZone } from "./formatted_date";
 
 const SNOOZE_DURATION_IN_DAYS = 3;

@@ -43,7 +43,7 @@ import {
   takeEvery,
   takeLatest,
 } from "typed-redux-saga";
-import type { APIUserCompact } from "types/api_flow_types";
+import type { APIUserCompact } from "types/api_types";
 import { mayEditAnnotationProperties } from "../accessors/annotation_accessor";
 import { needsLocalHdf5Mapping } from "../accessors/volumetracing_accessor";
 import { pushSaveQueueTransaction } from "../actions/save_actions";

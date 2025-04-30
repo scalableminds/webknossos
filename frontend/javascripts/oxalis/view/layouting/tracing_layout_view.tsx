@@ -47,7 +47,7 @@ import { connect } from "react-redux";
 import { type RouteComponentProps, withRouter } from "react-router-dom";
 import type { Dispatch } from "redux";
 import { NavAndStatusBarTheme } from "theme";
-import type { APICompoundType } from "types/api_flow_types";
+import type { APICompoundType } from "types/api_types";
 import TabTitle from "../components/tab_title_component";
 import { determineLayout } from "./default_layout_configs";
 import FlexLayoutWrapper from "./flex_layout_wrapper";

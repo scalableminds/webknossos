@@ -5,7 +5,7 @@ import { AsyncButton } from "components/async_clickables";
 import messages from "messages";
 import type * as React from "react";
 import { Link } from "react-router-dom";
-import type { APIOrganization } from "types/api_flow_types";
+import type { APIOrganization } from "types/api_types";
 
 type Props = {
   message?: React.ReactNode;

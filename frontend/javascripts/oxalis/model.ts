@@ -17,7 +17,7 @@ import type DataLayer from "oxalis/model/data_layer";
 import { getTotalSaveQueueLength } from "oxalis/model/reducers/save_reducer";
 import type { TraceOrViewCommand } from "oxalis/store";
 import Store from "oxalis/store";
-import type { APICompoundType } from "types/api_flow_types";
+import type { APICompoundType } from "types/api_types";
 
 import { globalToLayerTransformedPosition } from "./model/accessors/dataset_layer_transformation_accessor";
 import { initialize } from "./model_initialization";

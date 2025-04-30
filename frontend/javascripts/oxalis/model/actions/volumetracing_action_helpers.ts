@@ -1,4 +1,6 @@
+import type { Vector3 } from "oxalis/constants";
 import type { OxalisState } from "oxalis/store";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 import { getVisibleSegmentationLayer } from "../accessors/dataset_accessor";
 import {
   getHideUnregisteredSegmentsForVisibleSegmentationLayer,
@@ -9,6 +11,8 @@ import { updateSegmentAction } from "./volumetracing_actions";
 export const getUpdateSegmentActionToToggleVisibility = (
   storeState: OxalisState,
   segmentId: number,
+  somePosition?: Vector3,
+  someAdditionalCoordinates?: AdditionalCoordinate[],
 ) => {
   const visibleSegmentationLayer = getVisibleSegmentationLayer(storeState);
   const { segments } = getVisibleSegments(storeState);
@@ -18,10 +22,13 @@ export const getUpdateSegmentActionToToggleVisibility = (
   if (visibleSegmentationLayer == null) {
     return null;
   }
+  const oldSegment = segments?.getNullable(segmentId);
   return updateSegmentAction(
     segmentId,
     {
-      isVisible: !(segments?.getNullable(segmentId)?.isVisible ?? !hideUnregisteredSegments),
+      isVisible: !(oldSegment?.isVisible ?? !hideUnregisteredSegments),
+      somePosition: oldSegment?.somePosition ?? somePosition,
+      someAdditionalCoordinates: oldSegment?.someAdditionalCoordinates ?? someAdditionalCoordinates,
     },
     visibleSegmentationLayer.name,
     undefined,

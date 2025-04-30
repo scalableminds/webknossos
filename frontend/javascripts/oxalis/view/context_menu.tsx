@@ -993,6 +993,8 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
         clickedSegmentId,
         {
           isVisible: true,
+          somePosition: globalPosition,
+          someAdditionalCoordinates: additionalCoordinates,
         },
         visibleSegmentationLayer.name,
         undefined,
@@ -1020,7 +1022,12 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       return;
     }
 
-    const action = getUpdateSegmentActionToToggleVisibility(Store.getState(), clickedSegmentId);
+    const action = getUpdateSegmentActionToToggleVisibility(
+      Store.getState(),
+      clickedSegmentId,
+      globalPosition,
+      additionalCoordinates,
+    );
     if (action != null) {
       Store.dispatch(action);
     }
@@ -1220,17 +1227,17 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
   const onlyShowThisSegmentItem: MenuItemType = {
     key: "only-show-this-segment",
     onClick: onlyShowSegment,
-    label: "Only Show This Segment",
+    label: "Only show this Segment",
   };
   const toggleSegmentVisibilityItem: MenuItemType = {
     key: "toggle-segment-visibility",
     onClick: toggleSegmentVisibility,
-    label: "Toggle Visibility Of This Segment",
+    label: "Toggle visibility of this Segment",
   };
   const showAllSegmentsItem: MenuItemType = {
     key: "show-all-segments",
     onClick: showAllSegments,
-    label: "Show all segments",
+    label: "Show all Segments",
   };
   const loadPrecomputedMeshItem: MenuItemType = {
     key: "load-precomputed-mesh",

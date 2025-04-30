@@ -23,7 +23,7 @@ import {
   type APITeam,
   type TracingType,
   TracingTypeEnum,
-} from "types/api_flow_types";
+} from "types/api_types";
 import { syncValidator } from "types/validation";
 
 const RadioGroup = Radio.Group;

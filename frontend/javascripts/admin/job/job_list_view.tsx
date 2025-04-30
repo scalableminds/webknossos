@@ -28,7 +28,7 @@ import type * as React from "react";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
-import { type APIJob, APIJobType, type APIUserBase } from "types/api_flow_types";
+import { type APIJob, APIJobType, type APIUserBase } from "types/api_types";
 
 // Unfortunately, the twoToneColor (nor the style) prop don't support
 // CSS variables.

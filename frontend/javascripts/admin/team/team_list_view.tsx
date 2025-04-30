@@ -16,7 +16,7 @@ import _ from "lodash";
 import messages from "messages";
 import * as React from "react";
 import { useEffect, useState } from "react";
-import type { APITeam, APITeamMembership, APIUser } from "types/api_flow_types";
+import type { APITeam, APITeamMembership, APIUser } from "types/api_types";
 import EditTeamModalView from "./edit_team_modal_view";
 
 const { Column } = Table;

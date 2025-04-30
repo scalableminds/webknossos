@@ -13,7 +13,7 @@ import {
 import type React from "react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import type { APIDataset, APIPublication, APIPublicationAnnotation } from "types/api_flow_types";
+import type { APIDataset, APIPublication, APIPublicationAnnotation } from "types/api_types";
 
 type DatasetDetails = {
   species?: string;

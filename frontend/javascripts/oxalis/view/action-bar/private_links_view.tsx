@@ -43,7 +43,7 @@ import { getDataLayers } from "oxalis/model/accessors/dataset_accessor";
 import { getReadableNameByVolumeTracingId } from "oxalis/model/accessors/volumetracing_accessor";
 import type { OxalisState } from "oxalis/store";
 import { useSelector } from "react-redux";
-import type { ZarrPrivateLink } from "types/api_flow_types";
+import type { ZarrPrivateLink } from "types/api_types";
 
 // TODO Remove explicit (error) type declaration when updating to tanstack/query >= 5
 // https://github.com/TanStack/query/pull/4706

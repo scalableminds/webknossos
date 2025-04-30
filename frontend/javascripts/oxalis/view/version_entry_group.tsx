@@ -4,7 +4,7 @@ import FormattedDate from "components/formatted_date";
 import _ from "lodash";
 import VersionEntry from "oxalis/view/version_entry";
 import * as React from "react";
-import type { APIUpdateActionBatch } from "types/api_flow_types";
+import type { APIUpdateActionBatch } from "types/api_types";
 
 type Props = {
   batches: APIUpdateActionBatch[];

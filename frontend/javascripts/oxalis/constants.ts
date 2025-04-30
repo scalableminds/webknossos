@@ -1,4 +1,4 @@
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_types";
 
 export const ViewModeValues = ["orthogonal", "flight", "oblique"] as ViewMode[];
 

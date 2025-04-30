@@ -19,7 +19,7 @@ import { enforceActiveOrganization } from "oxalis/model/accessors/organization_a
 import type { OxalisState } from "oxalis/store";
 import { useEffect, useState } from "react";
 import { connect } from "react-redux";
-import type { APIOrganization, APIPricingPlanStatus } from "types/api_flow_types";
+import type { APIOrganization, APIPricingPlanStatus } from "types/api_types";
 import {
   PlanAboutToExceedAlert,
   PlanDashboardCard,

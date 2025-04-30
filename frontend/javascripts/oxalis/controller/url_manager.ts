@@ -23,8 +23,8 @@ import type {
   OxalisState,
 } from "oxalis/store";
 import Store from "oxalis/store";
-import { type APIAnnotationType, APICompoundTypeEnum } from "types/api_flow_types";
-import type { APIDataset, AdditionalCoordinate } from "types/api_flow_types";
+import { type APIAnnotationType, APICompoundTypeEnum } from "types/api_types";
+import type { APIDataset, AdditionalCoordinate } from "types/api_types";
 import type { Mutable } from "types/globals";
 import { validateUrlStateJSON } from "types/validation";
 

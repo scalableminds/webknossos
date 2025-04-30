@@ -4,7 +4,7 @@ import { handleGenericError } from "libs/error_handling";
 import { stringToColor } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
 import * as React from "react";
-import type { APIDataset, APIUser } from "types/api_flow_types";
+import type { APIDataset, APIUser } from "types/api_types";
 
 type Props = {
   dataset: APIDataset;

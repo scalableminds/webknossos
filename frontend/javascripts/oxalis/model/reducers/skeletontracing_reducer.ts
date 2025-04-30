@@ -46,7 +46,7 @@ import {
   GroupTypeEnum,
   getNodeKey,
 } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import type { MetadataEntryProto } from "types/api_flow_types";
+import type { MetadataEntryProto } from "types/api_types";
 import { userSettings } from "types/schemas/user_settings.schema";
 
 function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState {

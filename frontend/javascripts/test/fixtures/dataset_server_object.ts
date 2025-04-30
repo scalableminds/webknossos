@@ -1,5 +1,5 @@
 import { UnitLong } from "oxalis/constants";
-import type { APIDataset } from "types/api_flow_types";
+import type { APIDataset } from "types/api_types";
 
 const apiDataset: APIDataset = {
   id: "66f3c82966010034942e9740",

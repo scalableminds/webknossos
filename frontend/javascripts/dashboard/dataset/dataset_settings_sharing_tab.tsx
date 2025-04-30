@@ -15,7 +15,7 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import { connect } from "react-redux";
 import { type RouteComponentProps, withRouter } from "react-router-dom";
-import type { APIDataset, APIUser } from "types/api_flow_types";
+import type { APIDataset, APIUser } from "types/api_types";
 import { FormItemWithInfo } from "./helper_components";
 
 type Props = {

@@ -33,7 +33,7 @@ import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
 import type { OxalisState } from "oxalis/store";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
-import type { APIAnnotation, APITaskWithAnnotation, APIUser } from "types/api_flow_types";
+import type { APIAnnotation, APITaskWithAnnotation, APIUser } from "types/api_types";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 
 const pageLength: number = 1000;

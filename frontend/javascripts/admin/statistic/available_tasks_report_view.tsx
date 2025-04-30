@@ -4,7 +4,7 @@ import { Card, Spin, Table, Tag, Tooltip, Typography } from "antd";
 import { handleGenericError } from "libs/error_handling";
 import * as Utils from "libs/utils";
 import { useState } from "react";
-import type { APIAvailableTasksReport } from "types/api_flow_types";
+import type { APIAvailableTasksReport } from "types/api_types";
 import TeamSelectionForm from "./team_selection_form";
 
 const { Column } = Table;

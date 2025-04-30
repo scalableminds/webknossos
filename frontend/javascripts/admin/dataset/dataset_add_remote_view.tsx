@@ -37,7 +37,7 @@ import { Hint } from "oxalis/view/action-bar/download_modal_view";
 import React, { useEffect, useState } from "react";
 import { connect } from "react-redux";
 import { useHistory } from "react-router-dom";
-import type { APIDataStore, APIUser } from "types/api_flow_types";
+import type { APIDataStore, APIUser } from "types/api_types";
 import type { ArbitraryObject } from "types/globals";
 import type { DataLayer, DatasourceConfiguration } from "types/schemas/datasource.types";
 import { dataPrivacyInfo } from "./dataset_upload_view";

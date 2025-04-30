@@ -71,7 +71,7 @@ import {
   type APIOrganization,
   type APITeam,
   type APIUser,
-} from "types/api_flow_types";
+} from "types/api_types";
 import { syncValidator } from "types/validation";
 import { FormItemWithInfo, confirmAsync } from "../../dashboard/dataset/helper_components";
 

@@ -2,7 +2,7 @@ import { getDefaultOrganization, getOperatorData } from "admin/admin_rest_api";
 import { Card, Col, Row } from "antd";
 import Markdown from "libs/markdown_adapter";
 import React from "react";
-import type { APIOrganization } from "types/api_flow_types";
+import type { APIOrganization } from "types/api_types";
 import type { EmptyObject } from "types/globals";
 type Props = EmptyObject;
 type State = {

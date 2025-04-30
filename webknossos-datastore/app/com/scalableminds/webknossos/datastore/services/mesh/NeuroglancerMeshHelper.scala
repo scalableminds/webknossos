@@ -162,7 +162,7 @@ trait NeuroglancerMeshHelper {
       )
     }
 
-    val lods: Seq[Int] = for (lod <- 0 until segmentInfo.numLods) yield lod
+    val lods: Seq[Int] = 0 until segmentInfo.numLods
 
     def chunkCountsWithLod(lod: Int): IndexedSeq[(Int, Int)] =
       for (currentChunk <- 0 until segmentInfo.numChunksPerLod(lod))

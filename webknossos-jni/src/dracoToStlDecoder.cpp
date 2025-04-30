@@ -1,20 +1,19 @@
 #include "com_scalableminds_webknossos_datastore_draco_NativeDracoToStlConverter.h"
 
 #include "jniutils.h"
+#include <cmath>   // for std::pow
+#include <cstdint> // for uint16_t / uint32_t
+#include <cstring>
 #include <draco/compression/decode.h>
 #include <draco/compression/encode.h>
-#include <cstring>
-#include <cstdint>      // for uint16_t / uint32_t
-#include <cmath>        // for std::pow
 
 uint16_t extractUint16(float value) {
-        uint32_t as_int;
-        std::memcpy(&as_int, &value, sizeof(float)); // safely copy bits
+    uint32_t as_int;
+    std::memcpy(&as_int, &value, sizeof(float)); // safely copy bits
 
-        uint16_t last_16_bits = static_cast<uint16_t>(as_int & 0xFFFF); // mask lower 16 bits
-        return last_16_bits;
+    uint16_t last_16_bits = static_cast<uint16_t>(as_int & 0xFFFF); // mask lower 16 bits
+    return last_16_bits;
 }
-
 
 // Takes a byte array containing a DRACO-Encoded mesh, adds offsetX, offsetY, offsetZ to each vertex
 // And encodes the results as STL faces (50 bytes per face)
@@ -39,7 +38,6 @@ JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_draco_N
             // Successfully decoded DRACO bytes into a draco::Mesh object. Now encode it as STL faces.
             draco::EncoderBuffer encodeBuffer;
 
-
             const int positionAttributeId = mesh->GetNamedAttributeId(draco::GeometryAttribute::POSITION);
             uint16_t unused = 0;
 
@@ -52,23 +50,22 @@ JNIEXPORT jbyteArray JNICALL Java_com_scalableminds_webknossos_datastore_draco_N
                 positionAttribute->GetMappedValue(face[1], &pos[1][0]);
                 positionAttribute->GetMappedValue(face[2], &pos[2][0]);
 
-                if(vertexQuantizationBits > 0) {
-                  auto vertexQuantizationFactor = 1 / (pow(2, double(vertexQuantizationBits)) - 1);
-                  pos[0][0] = float(extractUint16(pos[0][0])) * vertexQuantizationFactor;
-                  pos[0][1] = float(extractUint16(pos[0][1])) * vertexQuantizationFactor;
-                  pos[0][2] = float(extractUint16(pos[0][2])) * vertexQuantizationFactor;
-                  pos[1][0] = float(extractUint16(pos[1][0])) * vertexQuantizationFactor;
-                  pos[1][1] = float(extractUint16(pos[1][1])) * vertexQuantizationFactor;
-                  pos[1][2] = float(extractUint16(pos[1][2])) * vertexQuantizationFactor;
-                  pos[2][0] = float(extractUint16(pos[2][0])) * vertexQuantizationFactor;
-                  pos[2][1] = float(extractUint16(pos[2][1])) * vertexQuantizationFactor;
-                  pos[2][2] = float(extractUint16(pos[2][2])) * vertexQuantizationFactor;
+                if (vertexQuantizationBits > 0) {
+                    auto vertexQuantizationFactor = 1 / (pow(2, double(vertexQuantizationBits)) - 1);
+                    pos[0][0] = float(extractUint16(pos[0][0])) * vertexQuantizationFactor;
+                    pos[0][1] = float(extractUint16(pos[0][1])) * vertexQuantizationFactor;
+                    pos[0][2] = float(extractUint16(pos[0][2])) * vertexQuantizationFactor;
+                    pos[1][0] = float(extractUint16(pos[1][0])) * vertexQuantizationFactor;
+                    pos[1][1] = float(extractUint16(pos[1][1])) * vertexQuantizationFactor;
+                    pos[1][2] = float(extractUint16(pos[1][2])) * vertexQuantizationFactor;
+                    pos[2][0] = float(extractUint16(pos[2][0])) * vertexQuantizationFactor;
+                    pos[2][1] = float(extractUint16(pos[2][1])) * vertexQuantizationFactor;
+                    pos[2][2] = float(extractUint16(pos[2][2])) * vertexQuantizationFactor;
                 }
 
                 draco::Vector3f norm = draco::CrossProduct(pos[1] - pos[0], pos[2] - pos[0]);
                 norm.Normalize();
                 encodeBuffer.Encode(norm.data(), sizeof(float) * 3);
-
 
                 for (int vertexIndex = 0; vertexIndex < 3; ++vertexIndex) {
                     pos[vertexIndex][0] += offsetX;

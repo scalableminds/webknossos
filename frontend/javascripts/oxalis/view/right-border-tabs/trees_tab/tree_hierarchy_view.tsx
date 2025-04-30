@@ -268,13 +268,9 @@ function TreeHierarchyView(props: Props) {
     ? [getNodeKey(GroupTypeEnum.GROUP, props.activeGroupId)]
     : props.selectedTreeIds.map((treeId) => getNodeKey(GroupTypeEnum.TREE, treeId));
 
-  useEffect(
-    () => treeRef.current?.scrollTo({ key: selectedKeys[0], align: "auto" }),
-    [selectedKeys[0]],
-  );
-
   // biome-ignore lint/correctness/useExhaustiveDependencies: The other dependencies change too often, they were omitted due to performance reasons
   useEffect(() => {
+    // maybe expand group of the active tree
     if (props.activeTreeId == null) return;
     const sourceNode = props.trees[props.activeTreeId];
     if (sourceNode.groupId == null) return; // tree is a direct child of the root group which is always expanded
@@ -284,7 +280,19 @@ function TreeHierarchyView(props: Props) {
     if (expandedGroups == null) return;
     // props.treeGroups are used to get the newly expanded groups but can be outdated, so the union needs to be used here
     setExpandedNodeKeys(Utils.unique([...expandedNodeKeys, ...Array.from(expandedGroups)]));
+    setTimeout(() => {
+      if (treeRef.current && props.activeTreeId)
+        treeRef.current.scrollTo({
+          key: getNodeKey(GroupTypeEnum.TREE, props.activeTreeId),
+          align: "auto",
+        });
+    }, 300);
   }, [activeNode]);
+
+  useEffect(
+    () => treeRef.current?.scrollTo({ key: selectedKeys[0], align: "auto" }),
+    [selectedKeys[0]],
+  );
 
   return (
     <>

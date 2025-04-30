@@ -2,6 +2,10 @@
 
 WEBKNOSSOS supports several modes for displaying your dataset & interacting with (skeleton) annotations.
 
+Switch between different view modes using the buttons in the toolbar.
+
+![Switch between different annotation modes using the buttons in the toolbar](../images/view_modes.png)
+
 ## Orthogonal Mode
 
 Orthogonal mode shows the dataset from three orthogonal views along the x, y, and z axes.
@@ -10,21 +14,19 @@ You can move the camera along any of the main axes.
 This view lets you see your data in the highest quality along its main imaging axis, usually XY
 You can view your dataset slice by slice.
 
-Most skeleton annotation operations and keyboard shortcuts are tailored for the Orthogonal Mode.
-
-![Switch between different annotation modes using the buttons in the toolbar](../images/view_modes.png)
+Most skeleton annotation operations and [keyboard shortcuts](https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html#orthogonal-mode) are tailored for the Orthogonal Mode.
 
 ## Oblique Mode
 
 Oblique mode lets you slice the data at any angle.
-Unlike Orthogonal mode, you can rotate the camera and slice the data in any direction.
+Unlike Orthogonal mode, you can rotate the camera and slice the data in any direction.  For controls, see the [mouse and keyboard shortcuts](https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html#flight-oblique-mode).
 
 ![Viewport in Oblique Mode showing an arbitrarily-resliced view through the data.](../images/tracing_ui_obliquemode.jpeg)
 
 ## Flight Mode
 
 Flight mode gives you another way to slice the data.
-Unlike Oblique mode, Flight mode projects the data on a sphere around the camera.
+Unlike Oblique mode, Flight mode projects the data on a sphere around the camera.  For controls, see the [mouse and keyboard shortcuts](https://docs.webknossos.org/webknossos/ui/keyboard_shortcuts.html#flight-oblique-mode).
 
 ![Annotate processes, e.g. neurites, efficiently in Flight mode](../images/tracing_ui_flightmode.jpeg)
 

@@ -12,7 +12,7 @@ import { isUserAdminOrTeamManager, transformToCSVRow } from "libs/utils";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import { AnnotationStateFilterEnum, AnnotationTypeFilterEnum } from "oxalis/constants";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { useState } from "react";
 import { useSelector } from "react-redux";
 import type { APITimeTrackingPerUser } from "types/api_types";
@@ -30,7 +30,7 @@ function TimeTrackingOverview() {
   const [startDate, setStartDate] = useState(currentTime.startOf("month"));
   const [endDate, setEndeDate] = useState(currentTime);
   const [isFetching, setIsFetching] = useState(false);
-  const isCurrentUserAdminOrManager = useSelector((state: OxalisState) => {
+  const isCurrentUserAdminOrManager = useSelector((state: WebknossosState) => {
     const activeUser = state.activeUser;
     return activeUser != null && isUserAdminOrTeamManager(activeUser);
   });

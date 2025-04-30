@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { describe, it, expect } from "vitest";
-import type { Flycam, OxalisState, Tree, TreeGroup, TreeMap } from "oxalis/store";
+import type { Flycam, WebknossosState, Tree, TreeGroup, TreeMap } from "oxalis/store";
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { updateTreeGroupVisibility, updateTreeVisibility } from "oxalis/model/sagas/update_actions";
@@ -54,7 +54,7 @@ const treeGroups: TreeGroup[] = [
 ];
 const flycamMock = {} as any as Flycam;
 const tracingId = "someTracingId";
-const createState = (trees: Tree[], _treeGroups: TreeGroup[]): OxalisState => ({
+const createState = (trees: Tree[], _treeGroups: TreeGroup[]): WebknossosState => ({
   ...defaultState,
   annotation: {
     ...defaultState.annotation,
@@ -93,7 +93,7 @@ const allVisible = createState(
   treeGroups,
 );
 
-function testDiffing(prevState: OxalisState, nextState: OxalisState) {
+function testDiffing(prevState: WebknossosState, nextState: WebknossosState) {
   // Let's remove updateTree actions as well, as these will occur here
   // because we don't do shallow updates within the tests (instead, we are
   // are creating completely new trees, so that we don't have to go through the
@@ -120,7 +120,7 @@ function _updateTreeVisibility(treeId: number, isVisible: boolean) {
   return updateTreeVisibility(tree, tracingId);
 }
 
-function getActions(initialState: OxalisState, newState: OxalisState) {
+function getActions(initialState: WebknossosState, newState: WebknossosState) {
   const updateActions = testDiffing(initialState, newState);
 
   if (newState.annotation.skeleton == null) {

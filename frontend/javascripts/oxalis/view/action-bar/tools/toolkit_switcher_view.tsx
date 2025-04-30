@@ -2,7 +2,7 @@ import { Badge, Button, Dropdown, type MenuProps } from "antd";
 import { Toolkit } from "oxalis/model/accessors/tool_accessor";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { Store } from "oxalis/singletons";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { useSelector } from "react-redux";
 import { NARROW_BUTTON_STYLE } from "./tool_helpers";
 
@@ -26,7 +26,9 @@ const toolkitOptions: Array<{ label: string; key: Toolkit }> = [
 ];
 
 export default function ToolkitView() {
-  const activeToolkit = useSelector((state: OxalisState) => state.userConfiguration.activeToolkit);
+  const activeToolkit = useSelector(
+    (state: WebknossosState) => state.userConfiguration.activeToolkit,
+  );
   const toolkitItems: MenuProps["items"] = [
     {
       key: "1",

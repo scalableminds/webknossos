@@ -8,7 +8,7 @@ import type { History } from "history";
 import { useFetch } from "libs/react_helpers";
 import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import React, { useState } from "react";
 import { connect, useSelector } from "react-redux";
 import type { RouteComponentProps } from "react-router-dom";
@@ -248,7 +248,7 @@ const banners = [segmentationBanner, alignBanner, manualAnnotationBanner];
 
 function VoxelyticsBanner() {
   const [bannerIndex] = useState(Math.floor(Math.random() * banners.length));
-  const theme = useSelector((state: OxalisState) => state.uiInformation.theme);
+  const theme = useSelector((state: WebknossosState) => state.uiInformation.theme);
 
   if (!features().isWkorgInstance) {
     return null;
@@ -261,7 +261,7 @@ function VoxelyticsBanner() {
   );
 }
 
-const mapStateToProps = (state: OxalisState) => ({
+const mapStateToProps = (state: WebknossosState) => ({
   activeUser: enforceActiveUser(state.activeUser),
 });
 

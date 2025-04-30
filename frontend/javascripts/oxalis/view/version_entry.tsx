@@ -49,7 +49,7 @@ import type {
   UpdateTreeUpdateAction,
   UpdateTreeVisibilityUpdateAction,
 } from "oxalis/model/sagas/update_actions";
-import type { OxalisState, StoreAnnotation } from "oxalis/store";
+import type { StoreAnnotation, WebknossosState } from "oxalis/store";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { useSelector } from "react-redux";
 type Description = {
@@ -427,10 +427,10 @@ export default function VersionEntry({
   onPreviewVersion,
 }: Props) {
   const lastTimestamp = _.max(actions.map((action) => action.value.actionTimestamp));
-  const contributors = useSelector((state: OxalisState) => state.annotation.contributors);
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  const owner = useSelector((state: OxalisState) => state.annotation.owner);
-  const annotation = useSelector((state: OxalisState) => state.annotation);
+  const contributors = useSelector((state: WebknossosState) => state.annotation.contributors);
+  const activeUser = useSelector((state: WebknossosState) => state.activeUser);
+  const owner = useSelector((state: WebknossosState) => state.annotation.owner);
+  const annotation = useSelector((state: WebknossosState) => state.annotation);
 
   const liClassName = classNames("version-entry", {
     "active-version-entry": isActive,

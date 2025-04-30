@@ -2,13 +2,13 @@ import { CopyOutlined, SwapOutlined } from "@ant-design/icons";
 import { getAuthToken, revokeAuthToken } from "admin/admin_rest_api";
 import { Button, Col, Form, Input, Row, Space, Spin } from "antd";
 import Toast from "libs/toast";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 const FormItem = Form.Item;
 
 function AuthTokenView() {
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useSelector((state: WebknossosState) => state.activeUser);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [currentToken, setCurrentToken] = useState<string>("");
   const [form] = Form.useForm();

@@ -8,7 +8,7 @@ import {
   getTree,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
-import type { MutableTreeMap, OxalisState, SkeletonTracing, TreeGroup } from "oxalis/store";
+import type { MutableTreeMap, SkeletonTracing, TreeGroup, WebknossosState } from "oxalis/store";
 import Store from "oxalis/store";
 import RemoveTreeModal from "oxalis/view/remove_tree_modal";
 import type { Key } from "react";
@@ -554,7 +554,7 @@ export const setMergerModeEnabledAction = (active: boolean) =>
 // For example, the deleteNodeAsUserAction also initiates the deletion of a tree,
 // when the current tree is empty.
 export const deleteNodeAsUserAction = (
-  state: OxalisState,
+  state: WebknossosState,
   nodeId?: number,
   treeId?: number,
 ): DeleteNodeAction | NoAction | DeleteTreeAction => {

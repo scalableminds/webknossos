@@ -89,12 +89,12 @@ import { api } from "oxalis/singletons";
 import type {
   ActiveMappingInfo,
   MeshInformation,
-  OxalisState,
   Segment,
   SegmentGroup,
   SegmentMap,
   TreeGroup,
   VolumeTracing,
+  WebknossosState,
 } from "oxalis/store";
 import Store from "oxalis/store";
 import ButtonComponent from "oxalis/view/components/button_component";
@@ -176,7 +176,7 @@ type StateProps = {
   magInfoOfVisibleSegmentationLayer: MagInfo;
 };
 
-const mapStateToProps = (state: OxalisState): StateProps => {
+const mapStateToProps = (state: WebknossosState): StateProps => {
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
   const activeVolumeTracing = getActiveSegmentationTracing(state);
   const mappingInfo = getMappingInfo(
@@ -232,7 +232,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
   };
 };
 
-const getCleanedSelectedSegmentsOrGroup = (state: OxalisState) => {
+const getCleanedSelectedSegmentsOrGroup = (state: WebknossosState) => {
   const [cleanedSelectedIds, maybeUpdateStoreAction] = getSelectedIds(state);
   if (maybeUpdateStoreAction != null) {
     maybeUpdateStoreAction();
@@ -716,8 +716,8 @@ class SegmentsView extends React.Component<Props, State> {
     let title = "";
     let disabled = true;
 
-    const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
-    const activeUser = useSelector((state: OxalisState) => state.activeUser);
+    const activeOrganization = useSelector((state: WebknossosState) => state.activeOrganization);
+    const activeUser = useSelector((state: WebknossosState) => state.activeUser);
     if (!isFeatureAllowedByPricingPlan(activeOrganization, PricingPlanEnum.Team)) {
       return {
         disabled: true,

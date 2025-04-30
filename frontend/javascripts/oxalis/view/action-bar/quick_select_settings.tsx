@@ -11,7 +11,7 @@ import {
   confirmQuickSelectAction,
   fineTuneQuickSelectAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { useDispatch, useSelector } from "react-redux";
 import ButtonComponent from "../components/button_component";
 import { NumberSliderSetting, SwitchSetting } from "../components/setting_input_views";
@@ -27,7 +27,7 @@ const OPTIONS_WITH_DISABLED = [
 
 export function QuickSelectControls() {
   const quickSelectConfig = useSelector(
-    (state: OxalisState) => state.userConfiguration.quickSelect,
+    (state: WebknossosState) => state.userConfiguration.quickSelect,
   );
   const isAISelectAvailable = features().segmentAnythingEnabled;
   const isQuickSelectHeuristic = quickSelectConfig.useHeuristic || !isAISelectAvailable;
@@ -37,7 +37,7 @@ export function QuickSelectControls() {
 
 export function AiQuickSelectControls() {
   const quickSelectConfig = useSelector(
-    (state: OxalisState) => state.userConfiguration.quickSelect,
+    (state: WebknossosState) => state.userConfiguration.quickSelect,
   );
 
   const dispatch = useDispatch();
@@ -88,10 +88,10 @@ export function AiQuickSelectControls() {
 }
 export function HeuristicQuickSelectControls() {
   const quickSelectConfig = useSelector(
-    (state: OxalisState) => state.userConfiguration.quickSelect,
+    (state: WebknossosState) => state.userConfiguration.quickSelect,
   );
   const isQuickSelectActive = useSelector(
-    (state: OxalisState) => state.uiInformation.quickSelectState === "active",
+    (state: WebknossosState) => state.uiInformation.quickSelectState === "active",
   );
 
   const dispatch = useDispatch();

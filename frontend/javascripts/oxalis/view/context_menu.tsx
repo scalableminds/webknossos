@@ -116,12 +116,12 @@ import { api } from "oxalis/singletons";
 import type {
   ActiveMappingInfo,
   MutableNode,
-  OxalisState,
   SegmentMap,
   SkeletonTracing,
   Tree,
   UserBoundingBox,
   VolumeTracing,
+  WebknossosState,
 } from "oxalis/store";
 import Store from "oxalis/store";
 import {
@@ -1350,7 +1350,7 @@ export function GenericContextMenuContainer(props: {
 }
 
 function WkContextMenu() {
-  const contextMenuPosition = useSelector((state: OxalisState) => {
+  const contextMenuPosition = useSelector((state: WebknossosState) => {
     return state.uiInformation.contextInfo.contextMenuPosition;
   });
 
@@ -1378,7 +1378,7 @@ function getInfoMenuItem(
 }
 
 function ContextMenuInner() {
-  const props = useSelector((state: OxalisState) => {
+  const props = useSelector((state: WebknossosState) => {
     const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
     const mappingInfo = getMappingInfo(
       state.temporaryConfiguration.activeMappingByLayer,
@@ -1449,7 +1449,7 @@ function ContextMenuInner() {
     maybeClickedMeshId != null ? maybeClickedMeshId : segmentIdAtPosition;
   const wasSegmentOrMeshClicked = clickedSegmentOrMeshId !== 0;
 
-  const dataset = useSelector((state: OxalisState) => state.dataset);
+  const dataset = useSelector((state: WebknossosState) => state.dataset);
   useEffect(() => {
     Store.dispatch(ensureSegmentIndexIsLoadedAction(visibleSegmentationLayer?.name));
   }, [visibleSegmentationLayer]);
@@ -1457,7 +1457,7 @@ function ContextMenuInner() {
     dataset,
     visibleSegmentationLayer?.name,
   );
-  const mappingName: string | null | undefined = useSelector((state: OxalisState) => {
+  const mappingName: string | null | undefined = useSelector((state: WebknossosState) => {
     if (volumeTracing?.mappingName != null) return volumeTracing?.mappingName;
     const mappingInfo = getMappingInfo(
       state.temporaryConfiguration.activeMappingByLayer,

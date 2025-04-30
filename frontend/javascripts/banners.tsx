@@ -14,7 +14,7 @@ import constants from "oxalis/constants";
 import { setNavbarHeightAction } from "oxalis/model/actions/ui_actions";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { Store } from "oxalis/singletons";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
@@ -37,7 +37,7 @@ function setNavbarHeight(newNavbarHeight: number) {
 }
 
 function UpcomingMaintenanceBanner({ maintenanceInfo }: { maintenanceInfo: MaintenanceInfo }) {
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useSelector((state: WebknossosState) => state.activeUser);
   const { startTime, endTime, message } = maintenanceInfo;
 
   const startDate = new Date(startTime);
@@ -92,7 +92,7 @@ function CurrentMaintenanceBanner({ maintenanceInfo }: { maintenanceInfo: Mainte
 }
 
 export function MaintenanceBanner() {
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useSelector((state: WebknossosState) => state.activeUser);
 
   const [closestUpcomingMaintenance, setClosestUpcomingMaintenance] = useState<
     MaintenanceInfo | undefined
@@ -180,7 +180,7 @@ export function UpgradeVersionBanner() {
   };
   const currentDate = dayjs();
 
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useSelector((state: WebknossosState) => state.activeUser);
 
   const isVersionOutdated = useFetch(
     async () => {

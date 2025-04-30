@@ -11,9 +11,9 @@ import { updateKey } from "oxalis/model/helpers/deep_update";
 import type {
   Annotation,
   BoundingBoxObject,
-  OxalisState,
   UserBoundingBox,
   UserBoundingBoxToServer,
+  WebknossosState,
 } from "oxalis/store";
 import type {
   APIAnnotation,
@@ -142,7 +142,7 @@ export function convertServerAdditionalAxesToFrontEnd(
   }));
 }
 
-export function getNextTool(state: OxalisState): AnnotationTool | null {
+export function getNextTool(state: WebknossosState): AnnotationTool | null {
   const disabledToolInfo = getDisabledInfoForTools(state);
   const tools = Toolkits[state.userConfiguration.activeToolkit];
   const currentToolIndex = tools.indexOf(state.uiInformation.activeTool);
@@ -162,7 +162,7 @@ export function getNextTool(state: OxalisState): AnnotationTool | null {
 
   return null;
 }
-export function getPreviousTool(state: OxalisState): AnnotationTool | null {
+export function getPreviousTool(state: WebknossosState): AnnotationTool | null {
   const disabledToolInfo = getDisabledInfoForTools(state);
   const tools = Toolkits[state.userConfiguration.activeToolkit];
   const currentToolIndex = tools.indexOf(state.uiInformation.activeTool);
@@ -182,7 +182,7 @@ export function getPreviousTool(state: OxalisState): AnnotationTool | null {
 
   return null;
 }
-export function setToolReducer(state: OxalisState, tool: AnnotationTool) {
+export function setToolReducer(state: WebknossosState, tool: AnnotationTool) {
   if (tool === state.uiInformation.activeTool) {
     return state;
   }

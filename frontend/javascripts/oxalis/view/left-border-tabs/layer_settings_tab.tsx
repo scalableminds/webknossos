@@ -96,9 +96,9 @@ import { api } from "oxalis/singletons";
 import type {
   DatasetConfiguration,
   DatasetLayerConfiguration,
-  OxalisState,
   UserConfiguration,
   VolumeTracing,
+  WebknossosState,
 } from "oxalis/store";
 import Store from "oxalis/store";
 import { MaterializeVolumeAnnotationModal } from "oxalis/view/action-bar/starting_job_modals";
@@ -192,7 +192,7 @@ function DummyDragHandle({ tooltipTitle }: { tooltipTitle: string }) {
 
 function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer }) {
   const dispatch = useDispatch();
-  const transform = useSelector((state: OxalisState) =>
+  const transform = useSelector((state: WebknossosState) =>
     getTransformsForLayerOrNull(
       state.dataset,
       layer,
@@ -201,10 +201,10 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
   );
   const canLayerHaveTransforms = !isLayerWithoutTransformationConfigSupport(layer);
   const hasLayerTransformsConfigured = useSelector(
-    (state: OxalisState) => getTransformsForLayerOrNull(state.dataset, layer, null) != null,
+    (state: WebknossosState) => getTransformsForLayerOrNull(state.dataset, layer, null) != null,
   );
 
-  const showIcon = useSelector((state: OxalisState) => hasDatasetTransforms(state.dataset));
+  const showIcon = useSelector((state: WebknossosState) => hasDatasetTransforms(state.dataset));
   if (!showIcon) {
     return null;
   }
@@ -1596,7 +1596,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   }
 }
 
-const mapStateToProps = (state: OxalisState) => ({
+const mapStateToProps = (state: WebknossosState) => ({
   userConfiguration: state.userConfiguration,
   datasetConfiguration: state.datasetConfiguration,
   histogramData: state.temporaryConfiguration.histogramData,

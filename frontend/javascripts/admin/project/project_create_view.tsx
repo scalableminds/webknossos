@@ -7,6 +7,7 @@ import {
 } from "admin/admin_rest_api";
 import { Button, Card, Checkbox, Form, Input, InputNumber, Select } from "antd";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
+import type { WebknossosState } from "oxalis/store";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { useHistory } from "react-router-dom";
@@ -26,8 +27,7 @@ function ProjectCreateView({ projectId }: PropsWithRouter) {
   const [isFetchingData, setIsFetchingData] = useState<boolean>(false);
   const [form] = Form.useForm();
   const history = useHistory();
-  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'OxalisState'.
-  const activeUser = useSelector((state: OxalisState) => enforceActiveUser(state.activeUser));
+  const activeUser = useSelector((state: WebknossosState) => enforceActiveUser(state.activeUser));
   useEffect(() => {
     fetchData();
     applyDefaults();

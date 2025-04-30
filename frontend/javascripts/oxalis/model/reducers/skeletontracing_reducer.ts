@@ -41,7 +41,7 @@ import {
   toggleAllTreesReducer,
   toggleTreeGroupReducer,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import type { OxalisState, SkeletonTracing, Tree, TreeGroup } from "oxalis/store";
+import type { SkeletonTracing, Tree, TreeGroup, WebknossosState } from "oxalis/store";
 import {
   GroupTypeEnum,
   getNodeKey,
@@ -49,7 +49,7 @@ import {
 import type { MetadataEntryProto } from "types/api_types";
 import { userSettings } from "types/schemas/user_settings.schema";
 
-function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState {
+function SkeletonTracingReducer(state: WebknossosState, action: Action): WebknossosState {
   switch (action.type) {
     case "INITIALIZE_SKELETONTRACING": {
       const trees = createTreeMapFromTreeArray(action.tracing.trees);

@@ -1,4 +1,4 @@
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import type { CSSProperties, StyleHTMLAttributes } from "react";
 import { useSelector } from "react-redux";
 
@@ -9,7 +9,7 @@ export function HideTreeEdgesIcon({
   style?: StyleHTMLAttributes<HTMLSpanElement>;
   className?: string;
 }) {
-  const isDarkTheme = useSelector((state: OxalisState) => state.uiInformation.theme === "dark");
+  const isDarkTheme = useSelector((state: WebknossosState) => state.uiInformation.theme === "dark");
 
   const imageUrl = isDarkTheme
     ? 'url("/assets/images/icon-hide-skeleton-edges-light.svg")'

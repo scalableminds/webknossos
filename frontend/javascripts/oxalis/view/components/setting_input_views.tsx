@@ -27,7 +27,7 @@ import messages from "messages";
 import type { Vector3, Vector6 } from "oxalis/constants";
 import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { api } from "oxalis/singletons";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import * as React from "react";
 import { connect } from "react-redux";
 import type { APISegmentationLayer } from "types/api_types";
@@ -706,7 +706,7 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
   }
 }
 
-const mapStateToProps = (state: OxalisState) => ({
+const mapStateToProps = (state: WebknossosState) => ({
   visibleSegmentationLayer: getVisibleSegmentationLayer(state),
 });
 

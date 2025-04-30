@@ -13,7 +13,7 @@ import { useFetch } from "libs/react_helpers";
 import UserLocalStorage from "libs/user_local_storage";
 import _ from "lodash";
 import { switchTo } from "navbar";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
@@ -29,7 +29,7 @@ export function CheckTermsOfServices() {
     UserLocalStorage.setItem(LAST_TERMS_OF_SERVICE_WARNING_KEY, String(Date.now()));
     setIsModalOpen(false);
   };
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useSelector((state: WebknossosState) => state.activeUser);
   const [recheckCounter, setRecheckCounter] = useState(0);
   const acceptanceInfo = useFetch(
     async () => {

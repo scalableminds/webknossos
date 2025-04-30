@@ -14,7 +14,7 @@ import Markdown from "libs/markdown_adapter";
 import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
 import _ from "lodash";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import {
   DatasetExtentRow,
   OwningOrganizationRow,
@@ -93,7 +93,7 @@ function getMaybeSelectMessage(datasetCount: number) {
 function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompact }) {
   const context = useDatasetCollectionContext();
   const { data: fullDataset, isFetching } = useDatasetQuery(selectedDataset.id);
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useSelector((state: WebknossosState) => state.activeUser);
   const { data: owningOrganization } = useQuery(
     ["organizations", selectedDataset.owningOrganization],
     () => getOrganization(selectedDataset.owningOrganization),

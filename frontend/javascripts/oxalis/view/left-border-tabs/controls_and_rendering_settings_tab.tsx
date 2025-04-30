@@ -18,7 +18,7 @@ import {
 } from "oxalis/model/actions/settings_actions";
 import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { api } from "oxalis/singletons";
-import type { DatasetConfiguration, OxalisState, UserConfiguration } from "oxalis/store";
+import type { DatasetConfiguration, UserConfiguration, WebknossosState } from "oxalis/store";
 import {
   DropdownSetting,
   LogSliderSetting,
@@ -444,7 +444,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
   }
 }
 
-const mapStateToProps = (state: OxalisState) => ({
+const mapStateToProps = (state: WebknossosState) => ({
   activeUser: state.activeUser,
   userConfiguration: state.userConfiguration,
   zoomStep: state.flycam.zoomStep,

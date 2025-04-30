@@ -6,7 +6,7 @@ import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
 import { getMoveOffset, getMoveOffset3d } from "oxalis/model/accessors/flycam_accessor";
 import { moveFlycamAction } from "oxalis/model/actions/flycam_actions";
 import { Store } from "oxalis/singletons";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { layoutEmitter } from "oxalis/view/layouting/layout_persistence";
 import type * as React from "react";
 import { useSelector } from "react-redux";
@@ -26,7 +26,7 @@ const BUTTON_STYLE = { userSelect: "none", WebkitUserSelect: "none" } as const;
 const ICON_TRANSFORM_VALUE = "scale(1)";
 
 export function FloatingMobileControls() {
-  const viewMode = useSelector((store: OxalisState) => store.temporaryConfiguration.viewMode);
+  const viewMode = useSelector((store: WebknossosState) => store.temporaryConfiguration.viewMode);
 
   const moveForwardProps = useRepeatedButtonTrigger(
     viewMode === "orthogonal" ? moveForward : moveForwardArbitrary,
@@ -35,7 +35,7 @@ export function FloatingMobileControls() {
     viewMode === "orthogonal" ? moveBackward : moveBackwardArbitrary,
   );
   const activeViewport = useSelector(
-    (store: OxalisState) => store.viewModeData.plane.activeViewport,
+    (store: WebknossosState) => store.viewModeData.plane.activeViewport,
   );
   const handleContextMenu = (event: React.SyntheticEvent) => {
     event.preventDefault();

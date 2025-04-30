@@ -9,7 +9,7 @@ import Constants, {
 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import { AnnotationTool, Toolkit } from "oxalis/model/accessors/tool_accessor";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { getSystemColorTheme } from "theme";
 import type { APIAllowedMode, APIAnnotationType, APIAnnotationVisibility } from "types/api_types";
 import { defaultDatasetViewConfigurationWithoutNull } from "types/schemas/dataset_view_configuration.schema";
@@ -48,7 +48,7 @@ const initialAnnotationInfo = {
   meshes: [],
 };
 
-const defaultState: OxalisState = {
+const defaultState: WebknossosState = {
   datasetConfiguration: defaultDatasetViewConfigurationWithoutNull,
   userConfiguration: {
     autoSaveLayouts: true,

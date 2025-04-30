@@ -69,11 +69,11 @@ import { Model } from "oxalis/singletons";
 import { api } from "oxalis/singletons";
 import type {
   MutableTreeMap,
-  OxalisState,
   Tree,
   TreeGroup,
   TreeMap,
   UserBoundingBox,
+  WebknossosState,
 } from "oxalis/store";
 import Store from "oxalis/store";
 import ButtonComponent from "oxalis/view/components/button_component";
@@ -981,7 +981,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
   }
 }
 
-const mapStateToProps = (state: OxalisState) => ({
+const mapStateToProps = (state: WebknossosState) => ({
   allowUpdate: state.annotation.restrictions.allowUpdate,
   skeletonTracing: state.annotation.skeleton,
   userConfiguration: state.userConfiguration,

@@ -1,7 +1,7 @@
 import { sendHelpEmail, updateNovelUserExperienceInfos } from "admin/admin_rest_api";
 import { Alert, Input, Modal, message } from "antd";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import type React from "react";
 import { type CSSProperties, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -10,7 +10,7 @@ function HelpButton() {
   const [isModalOpen, setModalOpen] = useState(false);
 
   const dispatch = useDispatch();
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useSelector((state: WebknossosState) => state.activeUser);
 
   const discardButton = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
     // prevent the modal from also being shown

@@ -17,7 +17,7 @@ import type {
   UpdateActionNode,
 } from "oxalis/model/sagas/update_actions";
 import { api } from "oxalis/singletons";
-import type { OxalisState, SkeletonTracing, StoreType, TreeMap } from "oxalis/store";
+import type { SkeletonTracing, StoreType, TreeMap, WebknossosState } from "oxalis/store";
 import Store from "oxalis/throttled_store";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { CreateNodeAction } from "./model/actions/skeletontracing_actions";
@@ -233,7 +233,7 @@ async function onCreateNode(
 }
 
 async function getUnmappedSegmentId(
-  state: OxalisState,
+  state: WebknossosState,
   segmentationLayerName: string,
   untransformedPosition: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | null,

@@ -56,7 +56,7 @@ import {
 import { formatUserName } from "oxalis/model/accessors/user_accessor";
 import { setThemeAction } from "oxalis/model/actions/ui_actions";
 import { logoutUserAction, setActiveUserAction } from "oxalis/model/actions/user_actions";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import Store from "oxalis/store";
 import { HelpModal } from "oxalis/view/help_modal";
 import { PortalTarget } from "oxalis/view/layouting/portal_utils";
@@ -713,7 +713,7 @@ function LoggedInAvatar({
 
 function AnonymousAvatar() {
   const bannerHeight = useSelector(
-    (state: OxalisState) => state.uiInformation.navbarHeight - constants.DEFAULT_NAVBAR_HEIGHT,
+    (state: WebknossosState) => state.uiInformation.navbarHeight - constants.DEFAULT_NAVBAR_HEIGHT,
   );
   return (
     <Popover
@@ -999,7 +999,9 @@ function Navbar({
 }
 
 function GlobalProgressBar() {
-  const globalProgress = useSelector((state: OxalisState) => state.uiInformation.globalProgress);
+  const globalProgress = useSelector(
+    (state: WebknossosState) => state.uiInformation.globalProgress,
+  );
   const hide = globalProgress === 0;
   return (
     <div
@@ -1009,7 +1011,7 @@ function GlobalProgressBar() {
   );
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   activeUser: state.activeUser,
   isInAnnotationView: state.uiInformation.isInAnnotationView,
   hasOrganizations: state.uiInformation.hasOrganizations,

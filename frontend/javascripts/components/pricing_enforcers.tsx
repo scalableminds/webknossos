@@ -12,7 +12,7 @@ import type { TooltipPlacement } from "antd/lib/tooltip";
 import { rgbToHex } from "libs/utils";
 import _ from "lodash";
 import { PRIMARY_COLOR } from "oxalis/constants";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { SwitchSetting } from "oxalis/view/components/setting_input_views";
 import React from "react";
 import { useSelector } from "react-redux";
@@ -47,8 +47,8 @@ function getUpgradeNowButton(
 }
 
 const useActiveUserAndOrganization = (): [APIUser | null | undefined, APIOrganization | null] => {
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
+  const activeUser = useSelector((state: WebknossosState) => state.activeUser);
+  const activeOrganization = useSelector((state: WebknossosState) => state.activeOrganization);
   return [activeUser, activeOrganization];
 };
 

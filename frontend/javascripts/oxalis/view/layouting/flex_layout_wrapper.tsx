@@ -12,7 +12,7 @@ import type { OrthoView } from "oxalis/constants";
 import { ArbitraryViews, BorderTabs, OrthoViews } from "oxalis/constants";
 import { setBorderOpenStatusAction } from "oxalis/model/actions/ui_actions";
 import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
-import type { BorderOpenStatus, BusyBlockingInfo, OxalisState } from "oxalis/store";
+import type { BorderOpenStatus, BusyBlockingInfo, WebknossosState } from "oxalis/store";
 import Store from "oxalis/store";
 import InputCatcher from "oxalis/view/input_catcher";
 import type { LayoutKeys } from "oxalis/view/layouting/default_layout_configs";
@@ -574,7 +574,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   }
 }
 
-function mapStateToProps(state: OxalisState): StateProps {
+function mapStateToProps(state: WebknossosState): StateProps {
   return {
     displayScalebars: state.userConfiguration.displayScalebars,
     isUpdateTracingAllowed: state.annotation.restrictions.allowUpdate,

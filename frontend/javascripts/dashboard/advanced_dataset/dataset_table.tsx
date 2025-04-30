@@ -23,7 +23,7 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import { Unicode } from "oxalis/constants";
 import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import CategorizationLabel from "oxalis/view/components/categorization_label";
 import EditableTextIcon from "oxalis/view/components/editable_text_icon";
 import {
@@ -232,7 +232,7 @@ const DraggableDatasetRow = ({
   ...restProps
 }: DraggableDatasetRowProps) => {
   const ref = React.useRef<HTMLTableRowElement>(null);
-  const theme = useSelector((state: OxalisState) => state.uiInformation.theme);
+  const theme = useSelector((state: WebknossosState) => state.uiInformation.theme);
   // @ts-ignore
 
   const datasetId = restProps["data-row-key"];

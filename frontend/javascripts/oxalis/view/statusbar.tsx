@@ -36,7 +36,7 @@ import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions"
 import { getSupportedValueRangeForElementClass } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
 import { Store } from "oxalis/singletons";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { NumberInputPopoverSetting } from "oxalis/view/components/setting_input_views";
 import React, { useCallback, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -178,15 +178,15 @@ const moreShortcutsLink = (
 );
 
 function ShortcutsInfo() {
-  const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
-  const userConfiguration = useSelector((state: OxalisState) => state.userConfiguration);
-  const isPlaneMode = useSelector((state: OxalisState) => getIsPlaneMode(state));
+  const activeTool = useSelector((state: WebknossosState) => state.uiInformation.activeTool);
+  const userConfiguration = useSelector((state: WebknossosState) => state.userConfiguration);
+  const isPlaneMode = useSelector((state: WebknossosState) => getIsPlaneMode(state));
   const isShiftPressed = useKeyPress("Shift");
   const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
   const isAltPressed = useKeyPress("Alt");
-  const hasSkeleton = useSelector((state: OxalisState) => state.annotation.skeleton != null);
+  const hasSkeleton = useSelector((state: WebknossosState) => state.annotation.skeleton != null);
   const isTDViewportActive = useSelector(
-    (state: OxalisState) => state.viewModeData.plane.activeViewport === OrthoViews.TDView,
+    (state: WebknossosState) => state.viewModeData.plane.activeViewport === OrthoViews.TDView,
   );
 
   if (!isPlaneMode) {
@@ -371,18 +371,18 @@ function ShortcutsInfo() {
 }
 
 function SegmentInfo() {
-  const visibleSegmentationLayer = useSelector((state: OxalisState) =>
+  const visibleSegmentationLayer = useSelector((state: WebknossosState) =>
     getVisibleSegmentationLayer(state),
   );
   const hasVisibleSegmentation = visibleSegmentationLayer != null;
-  const activeMappingInfo = useSelector((state: OxalisState) =>
+  const activeMappingInfo = useSelector((state: WebknossosState) =>
     getMappingInfoOrNull(
       state.temporaryConfiguration.activeMappingByLayer,
       visibleSegmentationLayer?.name,
     ),
   );
   const hoveredSegmentId = useSelector(
-    (state: OxalisState) => state.temporaryConfiguration.hoveredSegmentId,
+    (state: WebknossosState) => state.temporaryConfiguration.hoveredSegmentId,
   );
 
   if (hasVisibleSegmentation == null) {
@@ -418,16 +418,16 @@ function maybeLabelWithSegmentationWarning(isUint64SegmentationVisible: boolean,
 
 function Infos() {
   const isSkeletonAnnotation = useSelector(
-    (state: OxalisState) => state.annotation.skeleton != null,
+    (state: WebknossosState) => state.annotation.skeleton != null,
   );
-  const activeVolumeTracing = useSelector((state: OxalisState) =>
+  const activeVolumeTracing = useSelector((state: WebknossosState) =>
     getActiveSegmentationTracing(state),
   );
   const activeCellId = activeVolumeTracing?.activeCellId;
-  const activeNodeId = useSelector((state: OxalisState) =>
+  const activeNodeId = useSelector((state: WebknossosState) =>
     state.annotation.skeleton ? state.annotation.skeleton.activeNodeId : null,
   );
-  const activeTreeId = useSelector((state: OxalisState) =>
+  const activeTreeId = useSelector((state: WebknossosState) =>
     state.annotation.skeleton ? state.annotation.skeleton.activeTreeId : null,
   );
   const dispatch = useDispatch();
@@ -445,7 +445,7 @@ function Infos() {
     [dispatch],
   );
 
-  const validSegmentIdRange = useSelector((state: OxalisState) => {
+  const validSegmentIdRange = useSelector((state: WebknossosState) => {
     if (!activeVolumeTracing) {
       return null;
     }
@@ -575,13 +575,13 @@ function SegmentAndMousePosition() {
   // This component depends on the mouse position which is a fast-changing property.
   // For the sake of performance, it is isolated as a single component.
   const mousePosition = useSelector(
-    (state: OxalisState) => state.temporaryConfiguration.mousePosition,
+    (state: WebknossosState) => state.temporaryConfiguration.mousePosition,
   );
   const additionalCoordinates = useSelector(
-    (state: OxalisState) => state.flycam.additionalCoordinates,
+    (state: WebknossosState) => state.flycam.additionalCoordinates,
   );
-  const isPlaneMode = useSelector((state: OxalisState) => getIsPlaneMode(state));
-  const globalMousePosition = useSelector((state: OxalisState) => {
+  const isPlaneMode = useSelector((state: WebknossosState) => getIsPlaneMode(state));
+  const globalMousePosition = useSelector((state: WebknossosState) => {
     const { activeViewport } = state.viewModeData.plane;
 
     if (mousePosition && activeViewport !== OrthoViews.TDView) {

@@ -3,7 +3,7 @@ import type { AliasToken, OverrideToken } from "antd/lib/theme/interface";
 import { ToastContextMountRoot } from "libs/toast";
 import window from "libs/window";
 import _ from "lodash";
-import type { OxalisState, Theme } from "oxalis/store";
+import type { Theme, WebknossosState } from "oxalis/store";
 import type React from "react";
 import { useEffect } from "react";
 import { useSelector } from "react-redux";
@@ -121,7 +121,7 @@ export default function GlobalThemeProvider({
   children,
   isMainProvider = true,
 }: { children?: React.ReactNode; isMainProvider?: boolean }) {
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useSelector((state: WebknossosState) => state.activeUser);
   const userTheme = getThemeFromUser(activeUser);
   const antdTheme = getAntdTheme(userTheme);
   const isDarkMode = userTheme === "dark";

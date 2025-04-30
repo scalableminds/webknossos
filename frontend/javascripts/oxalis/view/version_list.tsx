@@ -26,7 +26,7 @@ import {
 } from "oxalis/model/sagas/update_actions";
 import { Model } from "oxalis/singletons";
 import { api } from "oxalis/singletons";
-import type { OxalisState, StoreAnnotation } from "oxalis/store";
+import type { StoreAnnotation, WebknossosState } from "oxalis/store";
 import Store from "oxalis/store";
 import VersionEntryGroup from "oxalis/view/version_entry_group";
 import { useEffect, useState } from "react";
@@ -191,10 +191,12 @@ async function getUpdateActionLogPage(
 }
 
 function VersionList() {
-  const tracingStoreUrl = useSelector((state: OxalisState) => state.annotation.tracingStore.url);
-  const annotationId = useSelector((state: OxalisState) => state.annotation.annotationId);
+  const tracingStoreUrl = useSelector(
+    (state: WebknossosState) => state.annotation.tracingStore.url,
+  );
+  const annotationId = useSelector((state: WebknossosState) => state.annotation.annotationId);
   const initialAllowUpdate = useSelector(
-    (state: OxalisState) => state.annotation.restrictions.initialAllowUpdate,
+    (state: WebknossosState) => state.annotation.restrictions.initialAllowUpdate,
   );
   const newestVersion = useFetch(
     async () => {
@@ -219,7 +221,7 @@ function VersionList() {
 }
 
 function InnerVersionList(props: Props & { newestVersion: number; initialAllowUpdate: boolean }) {
-  const annotation = useSelector((state: OxalisState) => state.annotation);
+  const annotation = useSelector((state: WebknossosState) => state.annotation);
   const queryClient = useQueryClient();
   // Remember the version with which the version view was opened (
   // the active version could change by the actions of the user).

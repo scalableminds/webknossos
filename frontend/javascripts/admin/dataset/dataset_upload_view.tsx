@@ -61,7 +61,7 @@ import _ from "lodash";
 import messages from "messages";
 import { AllUnits, LongUnitToShortUnitMap, UnitLong, type Vector3 } from "oxalis/constants";
 import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { type FileWithPath, useDropzone } from "react-dropzone";
 import { Link, type RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
@@ -1370,7 +1370,7 @@ function FileUploadArea({
   );
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   activeUser: state.activeUser,
   organization: enforceActiveOrganization(state.activeOrganization),
 });

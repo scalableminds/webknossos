@@ -2,9 +2,13 @@ import { Alert, Button, Checkbox, Col, Divider, Modal, Radio, Row, Space, Toolti
 import React, { useState } from "react";
 import { useSelector } from "react-redux";
 
-import { startRenderAnimationJob } from "admin/admin_rest_api";
+import { startRenderAnimationJob } from "admin/rest_api";
 import Toast from "libs/toast";
-import Store, { type MeshInformation, type OxalisState, type UserBoundingBox } from "oxalis/store";
+import Store, {
+  type MeshInformation,
+  type WebknossosState,
+  type UserBoundingBox,
+} from "oxalis/store";
 
 import { InfoCircleOutlined } from "@ant-design/icons";
 import {
@@ -18,6 +22,7 @@ import {
   computeBoundingBoxObjectFromBoundingBox,
 } from "libs/utils";
 import type { Vector3 } from "oxalis/constants";
+import { getSceneControllerOrNull } from "oxalis/controller/scene_controller_provider";
 import {
   getColorLayers,
   getEffectiveIntensityRange,
@@ -28,6 +33,7 @@ import {
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
+import type { Mesh } from "three";
 import {
   type APIDataLayer,
   APIJobType,
@@ -45,7 +51,10 @@ type Props = {
 
 // When creating the texture for the dataset animation, we aim for for texture with the largest side of roughly this size
 const TARGET_TEXTURE_SIZE = 2000; // in pixels
-const MAX_MESHES_PER_ANIMATION = 40; // arbitrary limit to not overload the server when rendering many large STL files
+
+// Maximum number of triangles allowed in an animation to not overload the server
+// Remember: The backend worker code only simplifies meshes with >100.000 polygons; all other meshes are rendered as is
+const MAX_TRIANGLES_PER_ANIMATION = 20000000; // 20 million triangles
 
 function selectMagForTextureCreation(
   colorLayer: APIDataLayer,
@@ -73,8 +82,44 @@ function selectMagForTextureCreation(
   return [bestMag, bestDifference];
 }
 
+// Count triangles in a mesh or group of meshes
+function countTrianglesInMeshes(meshes: RenderAnimationOptions["meshes"]): number {
+  const sceneController = getSceneControllerOrNull();
+  if (!sceneController) return 0;
+
+  const { segmentMeshController } = sceneController;
+  let totalTriangles = 0;
+
+  meshes.forEach((meshInfo) => {
+    // meshInfo can contain different properties depending on the mesh source
+    const segmentId = meshInfo.segmentId;
+    if (segmentId == null) return;
+
+    const meshGroup = segmentMeshController.getMeshGeometryInBestLOD(
+      segmentId,
+      meshInfo.layerName,
+      meshInfo.seedAdditionalCoordinates || null,
+    );
+
+    if (meshGroup) {
+      meshGroup.traverse((child) => {
+        const mesh = child as Mesh;
+        if (mesh.geometry?.index) {
+          // For indexed geometries, count triangles from the index
+          totalTriangles += mesh.geometry.index.count / 3;
+        } else if (mesh.geometry?.attributes.position) {
+          // For non-indexed geometries, count triangles from position attribute
+          totalTriangles += mesh.geometry.attributes.position.count / 3;
+        }
+      });
+    }
+  });
+
+  return totalTriangles;
+}
+
 export default function CreateAnimationModalWrapper(props: Props) {
-  const dataset = useSelector((state: OxalisState) => state.dataset);
+  const dataset = useSelector((state: WebknossosState) => state.dataset);
 
   // early stop if no color layer exists
   const colorLayers = getColorLayers(dataset);
@@ -92,9 +137,9 @@ export default function CreateAnimationModalWrapper(props: Props) {
 
 function CreateAnimationModal(props: Props) {
   const { isOpen, onClose } = props;
-  const dataset = useSelector((state: OxalisState) => state.dataset);
-  const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const dataset = useSelector((state: WebknossosState) => state.dataset);
+  const activeOrganization = useSelector((state: WebknossosState) => state.activeOrganization);
+  const activeUser = useSelector((state: WebknossosState) => state.activeUser);
 
   const colorLayers = getColorLayers(dataset);
 
@@ -105,7 +150,7 @@ function CreateAnimationModal(props: Props) {
   const [isValid, setIsValid] = useState(true);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
-  const rawUserBoundingBoxes = useSelector((state: OxalisState) =>
+  const rawUserBoundingBoxes = useSelector((state: WebknossosState) =>
     getUserBoundingBoxesFromState(state),
   );
   const userBoundingBoxes = [
@@ -134,7 +179,7 @@ function CreateAnimationModal(props: Props) {
     colorLayer: APIDataLayer,
     selectedBoundingBox: BoundingBox,
     renderingBoundingBox: BoundingBox,
-    meshes: Partial<MeshInformation>[],
+    meshes: RenderAnimationOptions["meshes"],
   ) => {
     //  Validate the select parameters and dataset to make sure it actually works and does not overload the server
 
@@ -157,10 +202,12 @@ function CreateAnimationModal(props: Props) {
       !is2dDataset(state.dataset) && (colorLayer.additionalAxes?.length || 0) === 0;
     if (!isDataset3D) errorMessages.push("Sorry, animations are only supported for 3D datasets.");
 
-    const isTooManyMeshes = meshes.length > MAX_MESHES_PER_ANIMATION;
-    if (isTooManyMeshes)
+    // Count triangles in all meshes
+    const totalTriangles = countTrianglesInMeshes(meshes);
+    const isTooManyTriangles = totalTriangles > MAX_TRIANGLES_PER_ANIMATION;
+    if (isTooManyTriangles)
       errorMessages.push(
-        `You selected too many meshes for the animation. Please keep the number of meshes below ${MAX_MESHES_PER_ANIMATION} to create an animation.`,
+        `You selected too many triangles for the animation. Please keep the total triangle count below ${(MAX_TRIANGLES_PER_ANIMATION / 1000).toFixed(0)}k to create an animation. Current count: ${(totalTriangles / 1000).toFixed(1)}k triangles.`,
       );
 
     const isBoundingBoxEmpty = selectedBoundingBox.getVolume() === 0;
@@ -179,7 +226,7 @@ function CreateAnimationModal(props: Props) {
       hasEnoughMags &&
       isDtypeSupported &&
       isDataset3D &&
-      !isTooManyMeshes &&
+      !isTooManyTriangles &&
       !isBoundingBoxEmpty &&
       !isRenderingBoundingBoxEmpty;
 

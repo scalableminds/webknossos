@@ -5,7 +5,7 @@ import Dimensions from "oxalis/model/dimensions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 
 export function* getHalfViewportExtentsInVx(activeViewport: OrthoView): Saga<Vector2> {
   const zoom = yield* select((state) => state.flycam.zoomStep);
@@ -24,7 +24,7 @@ export function* getHalfViewportExtentsInVx(activeViewport: OrthoView): Saga<Vec
 }
 
 export function getHalfViewportExtentsInUnitFromState(
-  state: OxalisState,
+  state: WebknossosState,
   activeViewport: OrthoView,
 ): Vector2 {
   const zoom = state.flycam.zoomStep;

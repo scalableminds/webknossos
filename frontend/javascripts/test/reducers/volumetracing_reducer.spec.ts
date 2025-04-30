@@ -8,7 +8,7 @@ import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
 import UiReducer from "oxalis/model/reducers/ui_reducer";
 import { describe, it, expect } from "vitest";
 import { initialState } from "test/fixtures/volumetracing_object";
-import type { OxalisState, StoreAnnotation, VolumeTracing } from "oxalis/store";
+import type { WebknossosState, StoreAnnotation, VolumeTracing } from "oxalis/store";
 import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
 
 // biome-ignore lint/suspicious/noExportsInTest:
@@ -104,7 +104,7 @@ describe("VolumeTracing", () => {
 
   it("should create cells and only update the largestSegmentId after a voxel was annotated", () => {
     const LARGEST_SEGMENT_ID = 5;
-    const getCreateCellAction = (state: OxalisState) =>
+    const getCreateCellAction = (state: WebknossosState) =>
       VolumeTracingActions.createCellAction(
         state.annotation.volumes[0].activeCellId as number,
         LARGEST_SEGMENT_ID,
@@ -272,7 +272,7 @@ describe("VolumeTracing", () => {
   });
 });
 
-const prepareContourListTest = (state: OxalisState) => {
+const prepareContourListTest = (state: WebknossosState) => {
   const contourList = [
     [4, 6, 9],
     [1, 2, 3],

@@ -11,7 +11,7 @@ import {
   createTreeAction,
   setMergerModeEnabledAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { MaterializeVolumeAnnotationModal } from "oxalis/view/action-bar/starting_job_modals";
 import ButtonComponent, { ToggleButton } from "oxalis/view/components/button_component";
 
@@ -22,26 +22,26 @@ import { IMG_STYLE_FOR_SPACEY_ICONS, NARROW_BUTTON_STYLE } from "./tool_helpers"
 export function SkeletonSpecificButtons() {
   const dispatch = useDispatch();
   const isMergerModeEnabled = useSelector(
-    (state: OxalisState) => state.temporaryConfiguration.isMergerModeEnabled,
+    (state: WebknossosState) => state.temporaryConfiguration.isMergerModeEnabled,
   );
   const [showMaterializeVolumeAnnotationModal, setShowMaterializeVolumeAnnotationModal] =
     useState<boolean>(false);
   const isNewNodeNewTreeModeOn = useSelector(
-    (state: OxalisState) => state.userConfiguration.newNodeNewTree,
+    (state: WebknossosState) => state.userConfiguration.newNodeNewTree,
   );
   const isContinuousNodeCreationEnabled = useSelector(
-    (state: OxalisState) => state.userConfiguration.continuousNodeCreation,
+    (state: WebknossosState) => state.userConfiguration.continuousNodeCreation,
   );
   const isSplitToolkit = useSelector(
-    (state: OxalisState) => state.userConfiguration.activeToolkit === Toolkit.SPLIT_SEGMENTS,
+    (state: WebknossosState) => state.userConfiguration.activeToolkit === Toolkit.SPLIT_SEGMENTS,
   );
   const toggleContinuousNodeCreation = () =>
     dispatch(updateUserSettingAction("continuousNodeCreation", !isContinuousNodeCreationEnabled));
 
-  const dataset = useSelector((state: OxalisState) => state.dataset);
+  const dataset = useSelector((state: WebknossosState) => state.dataset);
   const isUserAdminOrManager = useIsActiveUserAdminOrManager();
 
-  const segmentationTracingLayer = useSelector((state: OxalisState) =>
+  const segmentationTracingLayer = useSelector((state: WebknossosState) =>
     getActiveSegmentationTracing(state),
   );
   const isEditableMappingActive =
@@ -135,7 +135,9 @@ export function SkeletonSpecificButtons() {
 
 function CreateTreeButton() {
   const dispatch = useDispatch();
-  const activeTree = useSelector((state: OxalisState) => getActiveTree(state.annotation.skeleton));
+  const activeTree = useSelector((state: WebknossosState) =>
+    getActiveTree(state.annotation.skeleton),
+  );
   const rgbColorString =
     activeTree != null
       ? `rgb(${activeTree.color.map((c) => Math.round(c * 255)).join(",")})`

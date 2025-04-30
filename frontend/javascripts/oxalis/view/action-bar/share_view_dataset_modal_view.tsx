@@ -2,7 +2,7 @@ import { CopyOutlined } from "@ant-design/icons";
 import { Button, Col, Dropdown, Input, Modal, Row, Space } from "antd";
 import { makeComponentLazy } from "libs/react_helpers";
 import messages from "messages";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { useSelector } from "react-redux";
 import { useZarrLinkMenu } from "./private_links_view";
 import { CopyableSharingLink, getUrl, useDatasetSharingToken } from "./share_modal_view";
@@ -16,7 +16,7 @@ type Props = {
 
 function _ShareViewDatasetModalView(props: Props) {
   const { isOpen, onOk } = props;
-  const dataset = useSelector((state: OxalisState) => state.dataset);
+  const dataset = useSelector((state: WebknossosState) => state.dataset);
   const sharingToken = useDatasetSharingToken(dataset);
   const longUrl = getUrl(sharingToken, !dataset.isPublic);
 

@@ -7,7 +7,7 @@ import { Unicode } from "oxalis/constants";
 import { getMaximumBrushSize } from "oxalis/model/accessors/volumetracing_accessor";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setMousePositionAction } from "oxalis/model/actions/volumetracing_actions";
-import Store, { type BrushPresets, type OxalisState } from "oxalis/store";
+import Store, { type BrushPresets, type WebknossosState } from "oxalis/store";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
 import { userSettings } from "types/schemas/user_settings.schema";
@@ -60,13 +60,13 @@ export function getDefaultBrushSizes(maximumSize: number, minimumSize: number) {
 
 export function ChangeBrushSizePopover() {
   const dispatch = useDispatch();
-  const brushSize = useSelector((state: OxalisState) => state.userConfiguration.brushSize);
+  const brushSize = useSelector((state: WebknossosState) => state.userConfiguration.brushSize);
   const [isBrushSizePopoverOpen, setIsBrushSizePopoverOpen] = useState(false);
-  const maximumBrushSize = useSelector((state: OxalisState) => getMaximumBrushSize(state));
+  const maximumBrushSize = useSelector((state: WebknossosState) => getMaximumBrushSize(state));
 
   const defaultBrushSizes = getDefaultBrushSizes(maximumBrushSize, userSettings.brushSize.minimum);
   const presetBrushSizes = useSelector(
-    (state: OxalisState) => state.userConfiguration.presetBrushSizes,
+    (state: WebknossosState) => state.userConfiguration.presetBrushSizes,
   );
   // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation whether defaultBrushSizes is needed as dependency.
   useEffect(() => {

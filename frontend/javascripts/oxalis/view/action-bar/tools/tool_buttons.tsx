@@ -7,7 +7,7 @@ import {
   hasAgglomerateMapping,
   hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
@@ -68,15 +68,15 @@ export function MoveTool(_props: ToolButtonProps) {
 
 export function SkeletonTool(_props: ToolButtonProps) {
   const useLegacyBindings = useSelector(
-    (state: OxalisState) => state.userConfiguration.useLegacyBindings,
+    (state: WebknossosState) => state.userConfiguration.useLegacyBindings,
   );
   const skeletonToolDescription = useLegacyBindings
     ? "Use left-click to move around and right-click to create new skeleton nodes"
     : "Use left-click to move around or to create/select/move nodes. Right-click opens a context menu with further options.";
   const disabledInfosForTools = useSelector(getDisabledInfoForTools);
-  const hasSkeleton = useSelector((state: OxalisState) => state.annotation?.skeleton != null);
+  const hasSkeleton = useSelector((state: WebknossosState) => state.annotation?.skeleton != null);
   const isReadOnly = useSelector(
-    (state: OxalisState) => !state.annotation.restrictions.allowUpdate,
+    (state: WebknossosState) => !state.annotation.restrictions.allowUpdate,
   );
 
   if (!hasSkeleton || isReadOnly) {
@@ -101,7 +101,7 @@ export function SkeletonTool(_props: ToolButtonProps) {
   );
 }
 
-function getIsVolumeModificationAllowed(state: OxalisState) {
+function getIsVolumeModificationAllowed(state: WebknossosState) {
   const isReadOnly = !state.annotation.restrictions.allowUpdate;
   const hasVolume = state.annotation?.volumes.length > 0;
   return hasVolume && !isReadOnly && !hasEditableMapping(state);
@@ -316,7 +316,7 @@ export function QuickSelectTool(_props: ToolButtonProps) {
 export function BoundingBoxTool(_props: ToolButtonProps) {
   const disabledInfosForTools = useSelector(getDisabledInfoForTools);
   const isReadOnly = useSelector(
-    (state: OxalisState) => !state.annotation.restrictions.allowUpdate,
+    (state: WebknossosState) => !state.annotation.restrictions.allowUpdate,
   );
   if (isReadOnly) {
     return null;
@@ -346,10 +346,10 @@ export function ProofreadTool(_props: ToolButtonProps) {
   const isAgglomerateMappingEnabled = useSelector(hasAgglomerateMapping);
   const disabledInfosForTools = useSelector(getDisabledInfoForTools);
   const areEditableMappingsEnabled = features().editableMappingsEnabled;
-  const hasSkeleton = useSelector((state: OxalisState) => state.annotation?.skeleton != null);
-  const hasVolume = useSelector((state: OxalisState) => state.annotation?.volumes.length > 0);
+  const hasSkeleton = useSelector((state: WebknossosState) => state.annotation?.skeleton != null);
+  const hasVolume = useSelector((state: WebknossosState) => state.annotation?.volumes.length > 0);
   const isReadOnly = useSelector(
-    (state: OxalisState) => !state.annotation.restrictions.allowUpdate,
+    (state: WebknossosState) => !state.annotation.restrictions.allowUpdate,
   );
 
   const mayProofread = hasSkeleton && hasVolume && !isReadOnly;

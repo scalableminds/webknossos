@@ -7,7 +7,7 @@ import memoizeOne from "memoize-one";
 import { IdentityTransform } from "oxalis/constants";
 import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import type { APIOrganization, APIUser } from "types/api_types";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 import { getTransformsPerLayer } from "./dataset_layer_transformation_accessor";
@@ -286,7 +286,7 @@ function _getVolumeDisabledWhenVolumeIsEnabled(
   };
 }
 
-function getDisabledVolumeInfo(state: OxalisState) {
+function getDisabledVolumeInfo(state: WebknossosState) {
   // This function extracts a couple of variables from the state
   // so that it can delegate to memoized functions.
   const isInMergerMode = state.temporaryConfiguration.isMergerModeEnabled;
@@ -355,7 +355,9 @@ function getDisabledVolumeInfo(state: OxalisState) {
 }
 
 const getVolumeDisabledWhenVolumeIsEnabled = memoizeOne(_getVolumeDisabledWhenVolumeIsEnabled);
-const _getDisabledInfoForTools = (state: OxalisState): Record<AnnotationToolId, DisabledInfo> => {
+const _getDisabledInfoForTools = (
+  state: WebknossosState,
+): Record<AnnotationToolId, DisabledInfo> => {
   const { annotation } = state;
   const hasSkeleton = annotation.skeleton != null;
   const geometriesTransformed = areGeometriesTransformed(state);

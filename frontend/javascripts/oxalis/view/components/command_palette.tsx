@@ -9,7 +9,7 @@ import { Toolkits } from "oxalis/model/accessors/tool_accessor";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
 import { Store } from "oxalis/singletons";
-import type { OxalisState, UserConfiguration } from "oxalis/store";
+import type { UserConfiguration, WebknossosState } from "oxalis/store";
 import type { Command } from "react-command-palette";
 import ReactCommandPalette from "react-command-palette";
 import { useSelector } from "react-redux";
@@ -55,23 +55,23 @@ const getLabelForPath = (key: string) =>
   getPhraseFromCamelCaseString(capitalize(key.split("/")[1])) || key;
 
 export const CommandPalette = ({ label }: { label: string | JSX.Element | null }) => {
-  const userConfig = useSelector((state: OxalisState) => state.userConfiguration);
+  const userConfig = useSelector((state: WebknossosState) => state.userConfiguration);
   const isViewMode = useSelector(
-    (state: OxalisState) => state.temporaryConfiguration.controlMode === "VIEW",
+    (state: WebknossosState) => state.temporaryConfiguration.controlMode === "VIEW",
   );
   const isInTracingView = useSelector(
-    (state: OxalisState) => state.uiInformation.isInAnnotationView,
+    (state: WebknossosState) => state.uiInformation.isInAnnotationView,
   );
 
-  const restrictions = useSelector((state: OxalisState) => state.annotation.restrictions);
-  const task = useSelector((state: OxalisState) => state.task);
-  const annotationType = useSelector((state: OxalisState) => state.annotation.annotationType);
-  const annotationId = useSelector((state: OxalisState) => state.annotation.annotationId);
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const restrictions = useSelector((state: WebknossosState) => state.annotation.restrictions);
+  const task = useSelector((state: WebknossosState) => state.task);
+  const annotationType = useSelector((state: WebknossosState) => state.annotation.annotationType);
+  const annotationId = useSelector((state: WebknossosState) => state.annotation.annotationId);
+  const activeUser = useSelector((state: WebknossosState) => state.activeUser);
   const isAnnotationLockedByUser = useSelector(
-    (state: OxalisState) => state.annotation.isLockedByOwner,
+    (state: WebknossosState) => state.annotation.isLockedByOwner,
   );
-  const annotationOwner = useSelector((state: OxalisState) => state.annotation.owner);
+  const annotationOwner = useSelector((state: WebknossosState) => state.annotation.owner);
 
   const props: TracingViewMenuProps = {
     restrictions,

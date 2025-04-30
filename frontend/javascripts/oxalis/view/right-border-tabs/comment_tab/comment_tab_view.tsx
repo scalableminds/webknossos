@@ -27,10 +27,10 @@ import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import type {
   CommentType,
   MutableCommentType,
-  OxalisState,
   SkeletonTracing,
   Tree,
   TreeMap,
+  WebknossosState,
 } from "oxalis/store";
 import ButtonComponent from "oxalis/view/components/button_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
@@ -112,16 +112,18 @@ function CommentTabView(props: Props) {
   const dispatch = useDispatch();
 
   const allowUpdate = useSelector(
-    (state: OxalisState) => state.annotation.restrictions.allowUpdate,
+    (state: WebknossosState) => state.annotation.restrictions.allowUpdate,
   );
-  const keyboardDelay = useSelector((state: OxalisState) => state.userConfiguration.keyboardDelay);
+  const keyboardDelay = useSelector(
+    (state: WebknossosState) => state.userConfiguration.keyboardDelay,
+  );
 
   const isAnnotationLockedByUser = useSelector(
-    (state: OxalisState) => state.annotation.isLockedByOwner,
+    (state: WebknossosState) => state.annotation.isLockedByOwner,
   );
-  const isOwner = useSelector((state: OxalisState) => isAnnotationOwner(state));
+  const isOwner = useSelector((state: WebknossosState) => isAnnotationOwner(state));
 
-  const activeComment = useSelector((_state: OxalisState) => getActiveComment());
+  const activeComment = useSelector((_state: WebknossosState) => getActiveComment());
 
   useEffectOnlyOnce(() => {
     // expand all trees by default
@@ -560,7 +562,7 @@ function CommentTabViewWrapper() {
   // 1. Prevent excessive re-renders
   // 2. Safe-guard that a skeleton tracing is available
 
-  const skeletonTracing = useSelector((state: OxalisState) =>
+  const skeletonTracing = useSelector((state: WebknossosState) =>
     getSkeletonTracing(state.annotation).getOrElse(null),
   );
 

@@ -20,7 +20,7 @@ import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import { Store } from "oxalis/singletons";
 import { Model } from "oxalis/singletons";
-import { type OxalisState, type Theme, type TraceOrViewCommand, startSaga } from "oxalis/store";
+import { type Theme, type TraceOrViewCommand, type WebknossosState, startSaga } from "oxalis/store";
 import ActionBarView from "oxalis/view/action_bar_view";
 import WkContextMenu from "oxalis/view/context_menu";
 import DistanceMeasurementTooltip from "oxalis/view/distance_measurement_tooltip";
@@ -396,7 +396,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 });
 
-function mapStateToProps(state: OxalisState) {
+function mapStateToProps(state: WebknossosState) {
   return {
     viewMode: state.temporaryConfiguration.viewMode,
     autoSaveLayouts: state.userConfiguration.autoSaveLayouts,

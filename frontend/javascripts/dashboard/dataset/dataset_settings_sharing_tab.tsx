@@ -10,7 +10,7 @@ import Toast from "libs/toast";
 import { isUserAdminOrDatasetManager, isUserAdminOrTeamManager } from "libs/utils";
 import window from "libs/window";
 import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { connect } from "react-redux";
@@ -162,7 +162,7 @@ function DatasetSettingsSharingTab({ form, datasetId, dataset, activeUser }: Pro
   ) : null;
 }
 
-const mapStateToProps = (state: OxalisState) => ({
+const mapStateToProps = (state: WebknossosState) => ({
   activeUser: state.activeUser,
 });
 

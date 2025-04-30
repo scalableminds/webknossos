@@ -10,7 +10,7 @@ import NodeShader, {
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import type { CreateActionNode, UpdateActionNode } from "oxalis/model/sagas/update_actions";
-import type { Edge, Node, OxalisState, SkeletonTracing, Tree } from "oxalis/store";
+import type { Edge, Node, SkeletonTracing, Tree, WebknossosState } from "oxalis/store";
 import Store from "oxalis/throttled_store";
 import * as THREE from "three";
 import type { AdditionalCoordinate } from "types/api_types";
@@ -118,7 +118,7 @@ class Skeleton {
   edgeShader: EdgeShader | undefined;
 
   constructor(
-    skeletonTracingSelectorFn: (state: OxalisState) => Maybe<SkeletonTracing>,
+    skeletonTracingSelectorFn: (state: WebknossosState) => Maybe<SkeletonTracing>,
     supportsPicking: boolean,
   ) {
     this.supportsPicking = supportsPicking;

@@ -17,7 +17,7 @@ import {
 } from "oxalis/model/actions/annotation_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import { setActiveUserBoundingBoxId } from "oxalis/model/actions/ui_actions";
-import type { OxalisState, UserBoundingBox } from "oxalis/store";
+import type { UserBoundingBox, WebknossosState } from "oxalis/store";
 import UserBoundingBoxInput from "oxalis/view/components/setting_input_views";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -35,13 +35,13 @@ export default function BoundingBoxTab() {
   const bboxTableRef: Parameters<typeof Table>[0]["ref"] = useRef(null);
   const [selectedBoundingBoxForExport, setSelectedBoundingBoxForExport] =
     useState<UserBoundingBox | null>(null);
-  const annotation = useSelector((state: OxalisState) => state.annotation);
+  const annotation = useSelector((state: WebknossosState) => state.annotation);
   const allowUpdate = annotation.restrictions.allowUpdate;
   const isLockedByOwner = annotation.isLockedByOwner;
-  const isOwner = useSelector((state: OxalisState) => isAnnotationOwner(state));
-  const dataset = useSelector((state: OxalisState) => state.dataset);
+  const isOwner = useSelector((state: WebknossosState) => isAnnotationOwner(state));
+  const dataset = useSelector((state: WebknossosState) => state.dataset);
   const activeBoundingBoxId = useSelector(
-    (state: OxalisState) => state.uiInformation.activeUserBoundingBoxId,
+    (state: WebknossosState) => state.uiInformation.activeUserBoundingBoxId,
   );
   const { userBoundingBoxes } = getSomeTracing(annotation);
   const [contextMenuPosition, setContextMenuPosition] = useState<[number, number] | null>(null);
@@ -112,7 +112,7 @@ export default function BoundingBoxTab() {
   }
 
   const isViewMode = useSelector(
-    (state: OxalisState) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
+    (state: WebknossosState) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
 
   let maybeUneditableExplanation;

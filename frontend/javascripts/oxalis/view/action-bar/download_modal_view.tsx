@@ -47,7 +47,7 @@ import {
   hasVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { Model } from "oxalis/singletons";
-import type { OxalisState, StoreAnnotation, UserBoundingBox } from "oxalis/store";
+import type { StoreAnnotation, UserBoundingBox, WebknossosState } from "oxalis/store";
 import { BoundingBoxSelection, MagSlider } from "oxalis/view/action-bar/starting_job_modals";
 import type React from "react";
 import { useState } from "react";
@@ -276,18 +276,18 @@ function _DownloadModalView({
   initialTab,
   initialBoundingBoxId,
 }: Props): JSX.Element {
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  const annotation = useSelector((state: OxalisState) => state.annotation);
-  const dataset = useSelector((state: OxalisState) => state.dataset);
-  const rawUserBoundingBoxes = useSelector((state: OxalisState) =>
+  const activeUser = useSelector((state: WebknossosState) => state.activeUser);
+  const annotation = useSelector((state: WebknossosState) => state.annotation);
+  const dataset = useSelector((state: WebknossosState) => state.dataset);
+  const rawUserBoundingBoxes = useSelector((state: WebknossosState) =>
     getUserBoundingBoxesFromState(state),
   );
   const currentAdditionalCoordinates = useSelector(
-    (state: OxalisState) => state.flycam.additionalCoordinates,
+    (state: WebknossosState) => state.flycam.additionalCoordinates,
   );
   const typeName = isAnnotation ? "annotation" : "dataset";
   const isMergerModeEnabled = useSelector(
-    (state: OxalisState) => state.temporaryConfiguration.isMergerModeEnabled,
+    (state: WebknossosState) => state.temporaryConfiguration.isMergerModeEnabled,
   );
   const hasVolumeFallback = annotation.volumes.some((volume) => volume.fallbackLayer != null);
   const isVolumeNDimensional = annotation.volumes.some(

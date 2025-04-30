@@ -42,9 +42,9 @@ import { rgbaToCSS } from "oxalis/shaders/utils.glsl";
 import type {
   ActiveMappingInfo,
   MeshInformation,
-  OxalisState,
   Segment,
   VolumeTracing,
+  WebknossosState,
 } from "oxalis/store";
 import Store from "oxalis/store";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
@@ -253,7 +253,7 @@ function _MeshInfoItem(props: {
   setAdditionalCoordinates: (additionalCoordinates: AdditionalCoordinate[] | undefined) => void;
 }) {
   const additionalCoordinates = useSelector(
-    (state: OxalisState) => state.flycam.additionalCoordinates,
+    (state: WebknossosState) => state.flycam.additionalCoordinates,
   );
   const dispatch = useDispatch();
   const onChangeMeshVisibility = (layerName: string, id: number, isVisible: boolean) => {
@@ -412,14 +412,14 @@ function _SegmentListItem({
   const isEditingDisabled = !allowUpdate;
 
   const segmentColorRGBA = useSelector(
-    (state: OxalisState) => getSegmentColorAsRGBA(state, segment.id),
+    (state: WebknossosState) => getSegmentColorAsRGBA(state, segment.id),
     (a: Vector4, b: Vector4) => V4.isEqual(a, b),
   );
 
   const isHoveredSegmentId = useSelector(
-    (state: OxalisState) => state.temporaryConfiguration.hoveredSegmentId === segment.id,
+    (state: WebknossosState) => state.temporaryConfiguration.hoveredSegmentId === segment.id,
   );
-  const isCentered = useSelector((state: OxalisState) => {
+  const isCentered = useSelector((state: WebknossosState) => {
     const centeredSegmentId = getSegmentIdForPosition(getPosition(state.flycam));
     return centeredSegmentId === segment.id;
   });

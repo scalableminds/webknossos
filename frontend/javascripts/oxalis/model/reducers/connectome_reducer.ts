@@ -8,10 +8,10 @@ import {
   addTreesAndGroups,
   getMaximumNodeId,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import type { OxalisState, SkeletonTracing, TreeMap } from "oxalis/store";
+import type { SkeletonTracing, TreeMap, WebknossosState } from "oxalis/store";
 
 function getSkeletonTracingForConnectome(
-  state: OxalisState,
+  state: WebknossosState,
   layerName: string,
 ): Maybe<SkeletonTracing> {
   if (state.localSegmentationData[layerName].connectomeData.skeleton != null) {
@@ -22,11 +22,11 @@ function getSkeletonTracingForConnectome(
 }
 
 function setConnectomeTreesVisibilityReducer(
-  state: OxalisState,
+  state: WebknossosState,
   layerName: string,
   treeIds: Array<number>,
   visibility: boolean,
-): OxalisState {
+): WebknossosState {
   const updateTreesObject = {};
   const isVisibleUpdater = {
     isVisible: {
@@ -61,7 +61,7 @@ export function deleteConnectomeTrees(
   return Maybe.Just([newTrees, newMaxNodeId]);
 }
 
-function ConnectomeReducer(state: OxalisState, action: Action): OxalisState {
+function ConnectomeReducer(state: WebknossosState, action: Action): WebknossosState {
   switch (action.type) {
     case "INITIALIZE_CONNECTOME_TRACING": {
       const { layerName } = action;

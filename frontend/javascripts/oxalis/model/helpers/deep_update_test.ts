@@ -6,9 +6,9 @@
 // - perform one valid call
 
 import { updateKey, updateKey2, updateKey3, updateKey4 } from "oxalis/model/helpers/deep_update";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 
-export function test1(state: OxalisState) {
+export function test1(state: WebknossosState) {
   // @ts-expect-error
   updateKey(state, "notExisting", {
     someKey: true,
@@ -27,7 +27,7 @@ export function test1(state: OxalisState) {
     visibility: "Public",
   });
 }
-export function test2(state: OxalisState) {
+export function test2(state: WebknossosState) {
   // @ts-expect-error
   updateKey2(state, "notExisting", "notExisting", {
     someKey: true,
@@ -49,7 +49,7 @@ export function test2(state: OxalisState) {
     activeViewport: "PLANE_XY",
   });
 }
-export function test3(state: OxalisState) {
+export function test3(state: WebknossosState) {
   // @ts-expect-error
   updateKey3(state, "notExisting", "notExisting", "notExisting", {
     someKey: true,
@@ -68,7 +68,7 @@ export function test3(state: OxalisState) {
   });
 }
 
-export function test4(state: OxalisState) {
+export function test4(state: WebknossosState) {
   // @ts-expect-error
   updateKey4(state, "notExisting", "notExisting", "notExisting", "notExisting", {
     someKey: true,

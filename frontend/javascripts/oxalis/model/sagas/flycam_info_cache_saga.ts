@@ -5,7 +5,7 @@ import type { OrthoViewRects, Vector3, ViewMode } from "oxalis/constants";
 import constants from "oxalis/constants";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { call, select, take } from "oxalis/model/sagas/effect-generators";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import type { LoadingStrategy } from "oxalis/store";
 import AsyncGetMaximumZoomForAllMags from "oxalis/workers/async_get_maximum_zoom_for_all_mags.worker";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
@@ -82,7 +82,7 @@ export default function* maintainMaximumZoomForAllMagsSaga(): Saga<void> {
   yield* call(ensureWkReady);
   while (true) {
     yield* take(channel);
-    const state: OxalisState = yield* select((state) => state);
+    const state: WebknossosState = yield* select((state) => state);
     const layers = getDataLayers(state.dataset);
 
     for (const layer of layers) {

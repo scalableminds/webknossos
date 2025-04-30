@@ -159,7 +159,6 @@ import type {
   MappingType,
   MutableNode,
   Node,
-  OxalisState,
   Segment,
   SegmentGroup,
   SkeletonTracing,
@@ -168,6 +167,7 @@ import type {
   TreeMap,
   UserConfiguration,
   VolumeTracing,
+  WebknossosState,
 } from "oxalis/store";
 import Store from "oxalis/store";
 import {
@@ -199,7 +199,7 @@ export function assertSkeleton(annotation: StoreAnnotation): SkeletonTracing {
 
   return annotation.skeleton;
 }
-export function assertVolume(state: OxalisState): VolumeTracing {
+export function assertVolume(state: WebknossosState): VolumeTracing {
   if (state.annotation.volumes.length === 0) {
     throw new Error(
       "This api function should only be called when a volume annotation layer exists.",

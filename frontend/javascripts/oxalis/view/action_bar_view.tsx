@@ -16,7 +16,7 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { setAdditionalCoordinatesAction } from "oxalis/model/actions/flycam_actions";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import Store from "oxalis/store";
 import AddNewLayoutModal from "oxalis/view/action-bar/add_new_layout_modal";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
@@ -70,11 +70,11 @@ type State = {
 };
 
 function AdditionalCoordinatesInputView() {
-  const additionalAxes = useSelector((state: OxalisState) =>
+  const additionalAxes = useSelector((state: WebknossosState) =>
     getUnifiedAdditionalCoordinates(state.dataset),
   );
   const additionalCoordinates = useSelector(
-    (state: OxalisState) => state.flycam.additionalCoordinates,
+    (state: WebknossosState) => state.flycam.additionalCoordinates,
   );
   const dispatch = useDispatch();
   const changeAdditionalCoordinates = (values: AdditionalCoordinate[] | null) => {
@@ -141,7 +141,7 @@ function AdditionalCoordinatesInputView() {
 
 function CreateAnnotationButton() {
   const history = useHistory();
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useSelector((state: WebknossosState) => state.activeUser);
 
   const onClick = async () => {
     const state = Store.getState();
@@ -192,9 +192,11 @@ function CreateAnnotationButton() {
 }
 
 function ModesView() {
-  const hasSkeleton = useSelector((state: OxalisState) => state.annotation.skeleton != null);
-  const is2d = useSelector((state: OxalisState) => is2dDataset(state.dataset));
-  const controlMode = useSelector((state: OxalisState) => state.temporaryConfiguration.controlMode);
+  const hasSkeleton = useSelector((state: WebknossosState) => state.annotation.skeleton != null);
+  const is2d = useSelector((state: WebknossosState) => is2dDataset(state.dataset));
+  const controlMode = useSelector(
+    (state: WebknossosState) => state.temporaryConfiguration.controlMode,
+  );
   const isViewMode = controlMode === ControlModeEnum.VIEW;
 
   const isArbitrarySupported = hasSkeleton || isViewMode;
@@ -334,7 +336,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
   }
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   dataset: state.dataset,
   activeUser: state.activeUser,
   controlMode: state.temporaryConfiguration.controlMode,

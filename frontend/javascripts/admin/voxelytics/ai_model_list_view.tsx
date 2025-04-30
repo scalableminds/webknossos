@@ -16,7 +16,7 @@ import _ from "lodash";
 import type { Vector3 } from "oxalis/constants";
 import { getMagInfo, getSegmentationLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { formatUserName } from "oxalis/model/accessors/user_accessor";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import {
   type AnnotationInfoForAITrainingJob,
   TrainAiModelTab,
@@ -28,7 +28,7 @@ import { Link } from "react-router-dom";
 import type { APIAnnotation, AiModel } from "types/api_types";
 
 export default function AiModelListView() {
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useSelector((state: WebknossosState) => state.activeUser);
   const [refreshCounter, setRefreshCounter] = useState(0);
   const [isTrainModalVisible, setIsTrainModalVisible] = useState(false);
   const [currentlyEditedModel, setCurrentlyEditedModel] = useState<AiModel | null>(null);

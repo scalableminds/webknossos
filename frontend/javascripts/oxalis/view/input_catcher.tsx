@@ -6,7 +6,7 @@ import { ArbitraryViewport, ArbitraryViews, OrthoViews } from "oxalis/constants"
 import { AnnotationTool, type AnnotationToolId } from "oxalis/model/accessors/tool_accessor";
 import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
 import { setInputCatcherRects } from "oxalis/model/actions/view_mode_actions";
-import type { BusyBlockingInfo, OxalisState } from "oxalis/store";
+import type { BusyBlockingInfo, WebknossosState } from "oxalis/store";
 import Store from "oxalis/store";
 import makeRectRelativeToCanvas from "oxalis/view/layouting/layout_canvas_adapter";
 import Scalebar from "oxalis/view/scalebar";
@@ -130,7 +130,7 @@ function InputCatcher({
     };
   });
 
-  const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
+  const activeTool = useSelector((state: WebknossosState) => state.uiInformation.activeTool);
 
   const isShiftPressed = useKeyPress("Shift");
   const isControlOrMetaPressed = useKeyPress("ControlOrMeta");

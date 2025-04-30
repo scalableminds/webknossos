@@ -1,5 +1,5 @@
 import { message } from "antd";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { useSelector } from "react-redux";
 import { VoxelyticsRunState } from "types/api_types";
 
@@ -52,7 +52,7 @@ const theme = {
 };
 
 export function useTheme(): [typeof theme, boolean] {
-  const selectedTheme = useSelector((state: OxalisState) => state.uiInformation.theme);
+  const selectedTheme = useSelector((state: WebknossosState) => state.uiInformation.theme);
   return [theme, selectedTheme === "light"];
 }
 

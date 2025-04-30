@@ -41,7 +41,7 @@ import { makeComponentLazy } from "libs/react_helpers";
 import Toast from "libs/toast";
 import { getDataLayers } from "oxalis/model/accessors/dataset_accessor";
 import { getReadableNameByVolumeTracingId } from "oxalis/model/accessors/volumetracing_accessor";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { useSelector } from "react-redux";
 import type { ZarrPrivateLink } from "types/api_types";
 
@@ -138,8 +138,8 @@ function useDeleteLinkMutation(annotationId: string) {
 }
 
 export function useZarrLinkMenu(maybeAccessToken: string | null) {
-  const dataset = useSelector((state: OxalisState) => state.dataset);
-  const annotation = useSelector((state: OxalisState) => state.annotation);
+  const dataset = useSelector((state: WebknossosState) => state.dataset);
+  const annotation = useSelector((state: WebknossosState) => state.annotation);
   const dataStoreURL = dataset.dataStore.url;
   const dataLayers = getDataLayers(dataset);
 

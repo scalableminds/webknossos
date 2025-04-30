@@ -33,7 +33,7 @@ import {
 } from "oxalis/model/actions/view_mode_actions";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { voxelToUnit } from "oxalis/model/scaleinfo";
-import type { CameraData, OxalisState, StoreAnnotation } from "oxalis/store";
+import type { CameraData, StoreAnnotation, WebknossosState } from "oxalis/store";
 import Store from "oxalis/store";
 import type PlaneView from "oxalis/view/plane_view";
 import * as React from "react";
@@ -364,7 +364,7 @@ class TDController extends React.PureComponent<Props> {
   }
 }
 
-export function mapStateToProps(state: OxalisState): StateProps {
+export function mapStateToProps(state: WebknossosState): StateProps {
   return {
     voxelSize: state.dataset.dataSource.scale,
     activeTool: state.uiInformation.activeTool,

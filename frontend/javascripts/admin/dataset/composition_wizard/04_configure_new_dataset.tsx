@@ -31,7 +31,7 @@ import type { Vector3 } from "oxalis/constants";
 import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
 import { flatToNestedMatrix } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import { checkLandmarksForThinPlateSpline } from "oxalis/model/helpers/transformation_helpers";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import React, { useState } from "react";
 import { useSelector } from "react-redux";
 import type { APIDataLayer, APIDataset, APITeam, LayerLink } from "types/api_types";
@@ -51,7 +51,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
   };
 
   const [isLoading, setIsLoading] = useState(false);
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useSelector((state: WebknossosState) => state.activeUser);
   const isDatasetManagerOrAdmin = Utils.isUserAdminOrDatasetManager(activeUser);
   const [form] = Form.useForm();
   const [selectedTeams, setSelectedTeams] = useState<APITeam | Array<APITeam>>([]);

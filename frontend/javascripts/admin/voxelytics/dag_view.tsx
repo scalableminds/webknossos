@@ -12,7 +12,7 @@ import { ExpandOutlined, MinusOutlined, PlusOutlined } from "@ant-design/icons";
 import { Button } from "antd";
 import ColorHash from "color-hash";
 import { memoize } from "lodash";
-import type { OxalisState, Theme } from "oxalis/store";
+import type { Theme, WebknossosState } from "oxalis/store";
 import { useSelector } from "react-redux";
 import {
   VoxelyticsRunState,
@@ -221,7 +221,7 @@ function DAGView({
 }) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const allTaskIds = dag.nodes.map((node) => node.id);
-  const theme = useSelector((state: OxalisState) => state.uiInformation.theme);
+  const theme = useSelector((state: WebknossosState) => state.uiInformation.theme);
   const reactFlowRef = useRef<ReactFlowInstance | null>(null);
 
   const handleNodeClick = (_event: any, element: FlowNode) => {

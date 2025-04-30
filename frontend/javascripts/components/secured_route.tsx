@@ -5,7 +5,7 @@ import {
 } from "admin/organization/pricing_plan_utils";
 import { PageUnavailableForYourPlanView } from "components/pricing_enforcers";
 import { isUserAdminOrManager } from "libs/utils";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import React from "react";
 import type { ComponentType } from "react";
 import { connect } from "react-redux";
@@ -108,7 +108,7 @@ class SecuredRoute extends React.PureComponent<SecuredRouteProps, State> {
     );
   }
 }
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   activeOrganization: state.activeOrganization,
   activeUser: state.activeUser,
 });

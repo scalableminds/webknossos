@@ -7,7 +7,7 @@ With this toolkit activated, you can draw a curved 3D surface to split a segment
 
 The recommended steps for splitting a segment are as follows:
 
-1. Use the bounding box tool to create a box around the merge error you want to correct. Theoretically, this step is optional, but keep in mind that relabeling large parts of a segment requires a lot of computing resources and is limited by your computer performance. Consider using the [proofreading tool](../proofreading/proofreading_tool.html) for large-scale corrections. If you want to correct data for the purpose of ground-truth, it is often enough to only do a local correction instead of proofreading the whole dataset.
+1. Use the bounding box tool to create a box around the merge error you want to correct. Theoretically, this step is optional, but keep in mind that relabeling large parts of a segment requires a lot of computing resources and is limited by your computer performance. Consider using the [proofreading tool](../proofreading/proofreading_tool.md) for large-scale corrections. If you want to correct data for the purpose of ground-truth, it is often enough to only do a local correction instead of proofreading the whole dataset.
 2. Go to the first z slice of the bounding box.
 3. Create a new skeleton tree and place nodes on the boundary that should split the segment into two. Consider activating the "Pen" mode within the skeleton tool so that you can rapidly draw nodes by dragging the mouse while it's pressed down.
 4. Go to the last z slice of the bounding box and repeat the previous step.

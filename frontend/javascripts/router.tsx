@@ -57,7 +57,7 @@ import {
   type APIMagRestrictions,
   type APIUser,
   TracingTypeEnum,
-} from "types/api_flow_types";
+} from "types/api_types";
 
 import {
   getDatasetIdFromNameAndOrganization,

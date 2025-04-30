@@ -60,7 +60,7 @@ import type {
   APIDataSourceId,
   APIDataset,
   APISegmentationLayer,
-} from "types/api_flow_types";
+} from "types/api_types";
 const connectomeTabId = "connectome-view";
 type StateProps = {
   dataset: APIDataset;

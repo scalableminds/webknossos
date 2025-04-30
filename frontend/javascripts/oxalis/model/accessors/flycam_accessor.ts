@@ -31,7 +31,7 @@ import * as scaleInfo from "oxalis/model/scaleinfo";
 import { getBaseVoxelInUnit } from "oxalis/model/scaleinfo";
 import type { DataLayerType, Flycam, LoadingStrategy, OxalisState } from "oxalis/store";
 import * as THREE from "three";
-import type { AdditionalCoordinate, VoxelSize } from "types/api_flow_types";
+import type { AdditionalCoordinate, VoxelSize } from "types/api_types";
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import type { SmallerOrHigherInfo } from "../helpers/mag_info";
 import {

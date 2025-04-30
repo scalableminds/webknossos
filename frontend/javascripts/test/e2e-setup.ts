@@ -131,7 +131,7 @@ export async function writeTypeCheckingFile(
   fs.writeFileSync(
     `frontend/javascripts/test/snapshots/type-check/test-type-checking-${name}.ts`,
     `
-import type { ${typeString} } from "types/api_flow_types";
+import type { ${typeString} } from "types/api_types";
 const a: ${fullTypeAnnotation} = ${JSON.stringify(object)}`,
   );
 }

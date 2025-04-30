@@ -178,8 +178,8 @@ import {
 } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
-import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_flow_types";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_types";
+import type { AdditionalCoordinate } from "types/api_types";
 
 type TransformSpec =
   | { type: "scale"; args: [Vector3, Vector3] }

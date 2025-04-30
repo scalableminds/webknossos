@@ -1,4 +1,4 @@
-import type { APIBuildInfo } from "types/api_flow_types";
+import type { APIBuildInfo } from "types/api_types";
 
 export const buildInfo: APIBuildInfo = {
   webknossos: {

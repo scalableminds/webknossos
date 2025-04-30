@@ -8,7 +8,7 @@ import type {
   TemporaryConfiguration,
   UserConfiguration,
 } from "oxalis/store";
-import type { APIHistogramData } from "types/api_flow_types";
+import type { APIHistogramData } from "types/api_types";
 
 export type UpdateUserSettingAction = ReturnType<typeof updateUserSettingAction>;
 type UpdateDatasetSettingAction = ReturnType<typeof updateDatasetSettingAction>;

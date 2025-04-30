@@ -18,7 +18,7 @@ import type {
   APISkeletonLayer,
   AffineTransformation,
   CoordinateTransformation,
-} from "types/api_flow_types";
+} from "types/api_types";
 import type BoundingBox from "../bucket_data_handling/bounding_box";
 import {
   type Transform,

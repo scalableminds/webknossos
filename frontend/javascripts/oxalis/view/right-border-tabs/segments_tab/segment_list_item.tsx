@@ -49,8 +49,8 @@ import type {
 import Store from "oxalis/store";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import { getContextMenuPositionFromEvent } from "oxalis/view/context_menu";
-import type { APIMeshFileInfo, APISegmentationLayer } from "types/api_flow_types";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { APIMeshFileInfo, APISegmentationLayer } from "types/api_types";
+import type { AdditionalCoordinate } from "types/api_types";
 import { LoadMeshMenuItemLabel } from "./load_mesh_menu_item_label";
 import { withMappingActivationConfirmation } from "./segments_view_helper";
 

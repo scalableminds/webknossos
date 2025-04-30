@@ -10,7 +10,7 @@ import type { RequestOptions } from "libs/request";
 import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
 import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
 import { sleep } from "libs/utils";
-import type { APIAnnotation } from "types/api_flow_types";
+import type { APIAnnotation } from "types/api_types";
 import { vi, type TestContext } from "vitest";
 
 vi.mock("libs/request", async (importOriginal) => {

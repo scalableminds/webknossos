@@ -24,6 +24,7 @@ import messages from "messages";
 import { WkDevFlags } from "oxalis/api/wk_dev";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import { MappingStatusEnum } from "oxalis/constants";
+import CustomLOD from "oxalis/controller/custom_lod";
 import {
   type BufferGeometryWithInfo,
   type UnmergedBufferGeometryWithInfo,
@@ -79,8 +80,8 @@ import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_
 import type { ActionPattern } from "redux-saga/effects";
 import type * as THREE from "three";
 import { actionChannel, all, call, put, race, take, takeEvery } from "typed-redux-saga";
-import type { APIDataset, APIMeshFileInfo, APISegmentationLayer } from "types/api_flow_types";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { APIDataset, APIMeshFileInfo, APISegmentationLayer } from "types/api_types";
+import type { AdditionalCoordinate } from "types/api_types";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import type { FlycamAction } from "../actions/flycam_actions";
 import type {
@@ -931,10 +932,18 @@ function* _getChunkLoadingDescriptors(
     loadingOrder.push(lodIndex);
     meshLodInfo.transform;
   });
+  const currentLODGroup: CustomLOD =
+    (yield* call(
+      {
+        context: segmentMeshController,
+        fn: segmentMeshController.getLODGroupOfLayer,
+      },
+      segmentationLayer.name,
+    )) ?? new CustomLOD();
   const currentLODIndex = yield* call(
     {
-      context: segmentMeshController.meshesLODRootGroup,
-      fn: segmentMeshController.meshesLODRootGroup.getCurrentLOD,
+      context: currentLODGroup,
+      fn: currentLODGroup.getCurrentLOD,
     },
     Math.max(...loadingOrder),
   );

@@ -17,8 +17,8 @@ import type {
   APIMeshFileInfo,
   APIUserCompact,
   EditableLayerProperties,
-} from "types/api_flow_types";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+} from "types/api_types";
+import type { AdditionalCoordinate } from "types/api_types";
 import type { InitializeSkeletonTracingAction } from "./skeletontracing_actions";
 import type {
   InitializeEditableMappingAction,

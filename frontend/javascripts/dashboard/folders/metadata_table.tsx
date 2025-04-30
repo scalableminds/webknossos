@@ -33,7 +33,7 @@ import {
   type APIMetadataEntry,
   APIMetadataEnum,
   type Folder,
-} from "types/api_flow_types";
+} from "types/api_types";
 
 export type APIMetadataWithError = APIMetadataEntry & { error?: string | null };
 

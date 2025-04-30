@@ -28,7 +28,7 @@ import {
 import React, { PureComponent } from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import type { APIDataset, APIUser } from "types/api_flow_types";
+import type { APIDataset, APIUser } from "types/api_types";
 import type { ArrayElement } from "types/globals";
 import { userSettings } from "types/schemas/user_settings.schema";
 

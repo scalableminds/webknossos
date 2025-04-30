@@ -10,7 +10,7 @@ import {
 import Request from "libs/request";
 import * as foldersApi from "admin/api/folders";
 import { describe, it, beforeAll, expect } from "vitest";
-import { APIMetadataEnum } from "types/api_flow_types";
+import { APIMetadataEnum } from "types/api_types";
 
 describe("Folder API (E2E)", () => {
   beforeAll(async () => {

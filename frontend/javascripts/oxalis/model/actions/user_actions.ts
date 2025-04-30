@@ -1,4 +1,4 @@
-import type { APIUser } from "types/api_flow_types";
+import type { APIUser } from "types/api_types";
 
 export type SetActiveUser = ReturnType<typeof setActiveUserAction>;
 type LogoutUser = ReturnType<typeof logoutUserAction>;

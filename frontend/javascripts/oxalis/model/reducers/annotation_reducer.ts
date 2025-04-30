@@ -8,7 +8,7 @@ import { getDisplayedDataExtentInPlaneMode } from "oxalis/model/accessors/view_m
 import type { Action } from "oxalis/model/actions/actions";
 import { updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
 import type { MeshInformation, OxalisState, UserBoundingBox } from "oxalis/store";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_types";
 import { getDatasetBoundingBox } from "../accessors/dataset_accessor";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { getMeshesForAdditionalCoordinates } from "../accessors/volumetracing_accessor";

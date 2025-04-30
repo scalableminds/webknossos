@@ -1,7 +1,7 @@
 import { WarningOutlined } from "@ant-design/icons";
 import FastTooltip from "components/fast_tooltip";
 import type { VolumeTracing } from "oxalis/store";
-import type { APIMeshFileInfo } from "types/api_flow_types";
+import type { APIMeshFileInfo } from "types/api_types";
 
 type Props = {
   currentMeshFile: APIMeshFileInfo | null | undefined;

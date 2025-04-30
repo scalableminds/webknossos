@@ -15,7 +15,7 @@ import { AnnotationStateFilterEnum, AnnotationTypeFilterEnum } from "oxalis/cons
 import type { OxalisState } from "oxalis/store";
 import { useState } from "react";
 import { useSelector } from "react-redux";
-import type { APITimeTrackingPerUser } from "types/api_flow_types";
+import type { APITimeTrackingPerUser } from "types/api_types";
 import ProjectAndAnnotationTypeDropdown from "./project_and_annotation_type_dropdown";
 import TimeTrackingDetailView from "./time_tracking_detail_view";
 const { RangePicker } = DatePicker;

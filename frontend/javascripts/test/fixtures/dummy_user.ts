@@ -1,4 +1,4 @@
-import type { APIUser } from "types/api_flow_types";
+import type { APIUser } from "types/api_types";
 
 const dummyUser: APIUser = {
   email: "dummy@email.com",

@@ -1,7 +1,7 @@
 import { getExistingExperienceDomains } from "admin/admin_rest_api";
 import { Select, Tooltip } from "antd";
 import * as React from "react";
-import type { ExperienceDomainList } from "types/api_flow_types";
+import type { ExperienceDomainList } from "types/api_types";
 type Props = {
   value?: string | Array<string>;
   width: number;

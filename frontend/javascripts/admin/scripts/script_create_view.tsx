@@ -11,7 +11,7 @@ import { useEffect, useState } from "react";
 import { connect } from "react-redux";
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
-import type { APIUser } from "types/api_flow_types";
+import type { APIUser } from "types/api_types";
 
 const FormItem = Form.Item;
 type OwnProps = {

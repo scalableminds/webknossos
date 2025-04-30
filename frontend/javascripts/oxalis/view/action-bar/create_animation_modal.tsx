@@ -35,7 +35,7 @@ import {
   CAMERA_POSITIONS,
   MOVIE_RESOLUTIONS,
   type RenderAnimationOptions,
-} from "types/api_flow_types";
+} from "types/api_types";
 import { BoundingBoxSelection } from "./starting_job_modals";
 
 type Props = {

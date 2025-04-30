@@ -6,7 +6,7 @@ import {
   writeTypeCheckingFile,
   replaceVolatileValues,
 } from "test/e2e-setup";
-import type { APIDataset } from "types/api_flow_types";
+import type { APIDataset } from "types/api_types";
 import * as api from "admin/admin_rest_api";
 import { describe, it, beforeAll, expect } from "vitest";
 import {

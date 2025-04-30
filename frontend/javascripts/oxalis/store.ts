@@ -68,7 +68,7 @@ import type {
   MetadataEntryProto,
   ServerEditableMapping,
   TracingType,
-} from "types/api_flow_types";
+} from "types/api_types";
 import type { Toolkit } from "./model/accessors/tool_accessor";
 import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";

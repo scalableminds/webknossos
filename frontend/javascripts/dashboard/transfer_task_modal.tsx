@@ -3,7 +3,7 @@ import UserSelectionComponent from "admin/user/user_selection_component";
 import { Button, Modal } from "antd";
 import { handleGenericError } from "libs/error_handling";
 import * as React from "react";
-import type { APIAnnotation } from "types/api_flow_types";
+import type { APIAnnotation } from "types/api_types";
 
 type Props = {
   onChange: (updatedAnnotation: APIAnnotation) => void;

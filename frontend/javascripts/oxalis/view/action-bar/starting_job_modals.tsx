@@ -80,18 +80,14 @@ type MinimalBoundingBoxExtent = {
   mag: Vector3;
 };
 
-// The following minimal bounding box extents are based on the default model that is used for neuron and mitochondria segmentation.
+// The following minimal bounding box extents and mean voxel sizes are based on the default model that is used for neuron and mitochondria segmentation.
 // Thus when changing the default model, consider changing these values as well.
 // See https://github.com/scalableminds/webknossos/issues/8198#issuecomment-2782684436
-const MIN_BBOX_EXTENT_FOR_NEURON_SEGMENTATION: MinimalBoundingBoxExtent = {
-  minExtent: [16, 16, 4],
-  mag: [1, 1, 1],
-};
-
-const MIN_BBOX_EXTENT_FOR_MITO_SEGMENTATION: MinimalBoundingBoxExtent = {
-  minExtent: [16, 16, 4],
-  mag: [1, 1, 1],
-};
+const MIN_BBOX_EXTENT_FOR_NEURON_SEGMENTATION = [16, 16, 4];
+const MIN_VX_SIZE_FOR_NEURON_SEGMENTATION = [7.96, 7.96, 31.2];
+const MIN_BBOX_EXTENT_FOR_MITO_SEGMENTATION = [16, 16, 4]; // trained with finest available mag
+const MIN_BBOX_EXTENT_FOR_NUCLEI_INFERRAL = [4, 4, 4];
+const MEAN_VX_SIZE_FOR_NUCLEI_INFERRAL = [179.84, 179.84, 224.0];
 
 const MIN_DATASET_RATIO_COMPARED_TO_MIN_BBOX = 2; // dataset needs to be x times the size of the minimal bounding box
 
@@ -715,8 +711,11 @@ function useCurrentlySelectedBoundingBox(
 }
 
 const isBBoxTooSmall = (
-  bbox: Vector6 | Vector3,
-  segmentationType: APIJobType.INFER_NEURONS | APIJobType.INFER_MITOCHONDRIA,
+  bbox: Vector3,
+  segmentationType:
+    | APIJobType.INFER_NEURONS
+    | APIJobType.INFER_MITOCHONDRIA
+    | APIJobType.INFER_NUCLEI,
   bboxOrDS: "bbox" | "dataset" = "bbox",
 ) => {
   const minBBoxExtent =
@@ -730,12 +729,11 @@ const isBBoxTooSmall = (
       (extent, i) => extent * minBBoxExtent.mag[i] * extentFactor,
     ) as Vector3;
   }
-  const bboxExtent = bbox.length === 6 ? bbox.slice(3) : bbox;
   for (let i = 0; i < 3; i++) {
-    if (bboxExtent[i] < minExtentInMag1[i]) {
+    if (bbox[i] < minExtentInMag1[i]) {
       const boundingBoxOrDSMessage = bboxOrDS === "bbox" ? "bounding box" : "dataset";
       Toast.error(
-        `The ${boundingBoxOrDSMessage} is too small. Please select a ${boundingBoxOrDSMessage} with the minimal extent ${minExtentInMag1} Vx.`,
+        `The ${boundingBoxOrDSMessage} is too small. Please select a ${boundingBoxOrDSMessage} with the minimal extent ${minExtentInMag1} vx.`,
       );
       return true;
     }
@@ -756,7 +754,8 @@ const isDatasetOrBoundingBoxTooSmall = (
   if (isBBoxTooSmall(datasetExtent, segmentationType, "dataset")) {
     return true;
   }
-  if (isBBoxTooSmall(bbox, segmentationType)) {
+  const bboxExtent = bbox.length === 6 ? (bbox.slice(3) as Vector3) : bbox;
+  if (isBBoxTooSmall(bboxExtent, segmentationType)) {
     return true;
   }
   return false;
@@ -1091,7 +1090,6 @@ export function MitochondriaSegmentationForm() {
         if (!selectedBoundingBox) {
           return;
         }
-
         const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
         if (isDatasetOrBoundingBoxTooSmall(bbox, colorLayer, APIJobType.INFER_MITOCHONDRIA)) {
           return;

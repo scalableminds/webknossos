@@ -710,6 +710,31 @@ function useCurrentlySelectedBoundingBox(
   return currentlySelectedBoundingBox;
 }
 
+const getBestMag = (
+  colorLayer: APIDataLayer,
+  meanVoxelSizeInMag1: Vector3,
+  meanVoxelSizeInUnknownMag: Vector3,
+) => {
+  let bestMag = colorLayer.resolutions[0];
+  let bestDifference = [
+    Number.POSITIVE_INFINITY,
+    Number.POSITIVE_INFINITY,
+    Number.POSITIVE_INFINITY,
+  ];
+
+  for (const mag of colorLayer.resolutions) {
+    const diff = meanVoxelSizeInUnknownMag.map(
+      (dim, i) => Math.log(dim * mag[i]) - Math.log(meanVoxelSizeInMag1[i]),
+    );
+
+    if (Math.abs(bestDifference[0]) > Math.abs(diff[0])) {
+      bestDifference = diff;
+      bestMag = mag;
+    }
+  }
+  return [bestMag, bestDifference];
+};
+
 const isBBoxTooSmall = (
   bbox: Vector3,
   segmentationType:

@@ -24,6 +24,7 @@ import {
   deepFlatFilter,
   findGroup,
   findParentGroupNode,
+  forEachTreeNode,
   getGroupByIdWithSubgroups,
   getNodeKey,
   insertTreesAndTransform,
@@ -278,8 +279,12 @@ function TreeHierarchyView(props: Props) {
       getNodeKey(GroupTypeEnum.GROUP, id),
     );
     if (expandedGroups == null) return;
-    // props.treeGroups are used to get the newly expanded groups but can be outdated, so the union needs to be used here
-    setExpandedNodeKeys(Utils.unique([...expandedNodeKeys, ...Array.from(expandedGroups)]));
+    const copyOfUITreeData = UITreeData;
+    forEachTreeNode(UITreeData, (node) => {
+      if (node.type === GroupTypeEnum.GROUP && expandedGroups.has(node.key as string))
+        node.expanded = true;
+    });
+    setUITreeData(copyOfUITreeData);
     setTimeout(() => {
       if (treeRef.current && props.activeTreeId)
         treeRef.current.scrollTo({

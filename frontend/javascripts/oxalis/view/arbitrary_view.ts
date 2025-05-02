@@ -43,6 +43,7 @@ class ArbitraryView {
   group: THREE.Object3D;
   cameraPosition: Array<number>;
   unsubscribeFunctions: Array<() => void> = [];
+  baseRotation = new THREE.Euler(0, 0, 0);
 
   constructor() {
     this.animate = this.animateImpl.bind(this);
@@ -74,6 +75,10 @@ class ArbitraryView {
   getCameras(): OrthoViewMap<THREE.OrthographicCamera> {
     return this.cameras;
   }
+
+  setBaseRotation = (rotVec: THREE.Euler): void => {
+    this.baseRotation.copy(rotVec);
+  };
 
   start(): void {
     if (!this.isRunning) {

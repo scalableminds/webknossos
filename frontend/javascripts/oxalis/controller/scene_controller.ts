@@ -243,9 +243,11 @@ class SceneController {
       [OrthoViews.PLANE_YZ]: new Plane(OrthoViews.PLANE_YZ),
       [OrthoViews.PLANE_XZ]: new Plane(OrthoViews.PLANE_XZ),
     };
-    this.planes[OrthoViews.PLANE_XY].setRotation(new THREE.Euler(Math.PI, 0, 0));
-    this.planes[OrthoViews.PLANE_YZ].setRotation(new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0));
-    this.planes[OrthoViews.PLANE_XZ].setRotation(new THREE.Euler((-1 / 2) * Math.PI, 0, 0));
+    this.planes[OrthoViews.PLANE_XY].setBaseRotation(new THREE.Euler(Math.PI, 0, 0));
+    this.planes[OrthoViews.PLANE_YZ].setBaseRotation(
+      new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0),
+    );
+    this.planes[OrthoViews.PLANE_XZ].setBaseRotation(new THREE.Euler((-1 / 2) * Math.PI, 0, 0));
 
     const planeMeshes = _.values(this.planes).flatMap((plane) => plane.getMeshes());
     this.rootNode = new THREE.Group().add(
@@ -384,15 +386,17 @@ class SceneController {
       for (const planeId of OrthoViewValuesWithoutTDView) {
         if (planeId === id) {
           this.planes[planeId].setOriginalCrosshairColor();
-          this.planes[planeId].setVisible(!hidePlanes);
+          this.planes[planeId].setVisible(id === "PLANE_XY");
 
           const pos = _.clone(originalPosition);
+          //TODOM: adjust rotation of the plane
 
           const ind = Dimensions.getIndices(planeId);
           // Offset the plane so the user can see the skeletonTracing behind the plane
+          // TODO: Fix z positioning!!!
           pos[ind[2]] +=
             planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
-          this.planes[planeId].setPosition(pos, originalPosition);
+          // this.planes[planeId].setPosition(pos, originalPosition);
 
           this.quickSelectGeometry.adaptVisibilityForRendering(originalPosition, ind[2]);
         } else {
@@ -402,10 +406,10 @@ class SceneController {
       }
     } else {
       for (const planeId of OrthoViewValuesWithoutTDView) {
-        this.planes[planeId].setPosition(originalPosition);
+        // this.planes[planeId].setPosition(originalPosition);
         this.planes[planeId].setGrayCrosshairColor();
         this.planes[planeId].setVisible(
-          tdViewDisplayPlanes !== TDViewDisplayModeEnum.NONE,
+          planeId === "PLANE_XY" && tdViewDisplayPlanes !== TDViewDisplayModeEnum.NONE,
           this.isPlaneVisible[planeId] && tdViewDisplayPlanes === TDViewDisplayModeEnum.DATA,
         );
         this.planes[planeId].materialFactory.uniforms.is3DViewBeingRendered.value = true;
@@ -426,6 +430,7 @@ class SceneController {
       );
     }
 
+    // TODO: maybe this needs to be removed!!!
     if (!optArbitraryPlane) {
       for (const currentPlane of _.values<Plane>(this.planes)) {
         const [scaleX, scaleY] = getPlaneScalingFactor(state, flycam, currentPlane.planeID);

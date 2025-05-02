@@ -3,12 +3,18 @@ import VisibilityAwareRaycaster from "libs/visibility_aware_raycaster";
 import window from "libs/window";
 import _ from "lodash";
 import type { OrthoViewMap, Vector2, Vector3, Viewport } from "oxalis/constants";
-import Constants, { OrthoViewColors, OrthoViewValues, OrthoViews } from "oxalis/constants";
+import Constants, {
+  OrthoViewColors,
+  OrthoViewValues,
+  OrthoViewValuesWithoutTDView,
+  OrthoViews,
+} from "oxalis/constants";
 import type { VertexSegmentMapping } from "oxalis/controller/mesh_helpers";
 import getSceneController, {
   getSceneControllerOrNull,
 } from "oxalis/controller/scene_controller_provider";
 import type { MeshSceneNode, SceneGroupForMeshes } from "oxalis/controller/segment_mesh_controller";
+import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
@@ -105,16 +111,20 @@ class PlaneView {
     // This is the main render function.
     // All 3D meshes and the trianglesplane are rendered here.
     TWEEN.update();
-    const SceneController = getSceneController();
+    const sceneController = getSceneController();
 
     // skip rendering if nothing has changed
     // This prevents the GPU/CPU from constantly
     // working and keeps your lap cool
     // ATTENTION: this limits the FPS to 60 FPS (depending on the keypress update frequency)
     if (forceRender || this.needsRerender) {
-      const { renderer, scene } = SceneController;
-      SceneController.update();
+      const { renderer, scene, planes } = sceneController;
+      sceneController.update();
       const storeState = Store.getState();
+      const zoomedFlycamMatrix = getZoomedMatrix(storeState.flycam);
+      for (const planeId of OrthoViewValuesWithoutTDView) {
+        planes[planeId].updateToFlycamMatrix(zoomedFlycamMatrix);
+      }
       const viewport = {
         [OrthoViews.PLANE_XY]: getInputCatcherRect(storeState, "PLANE_XY"),
         [OrthoViews.PLANE_YZ]: getInputCatcherRect(storeState, "PLANE_YZ"),
@@ -125,7 +135,7 @@ class PlaneView {
       clearCanvas(renderer);
 
       for (const plane of OrthoViewValues) {
-        SceneController.updateSceneForCam(plane);
+        sceneController.updateSceneForCam(plane);
         const { left, top, width, height } = viewport[plane];
 
         if (width > 0 && height > 0) {

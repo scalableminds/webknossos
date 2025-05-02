@@ -1,3 +1,4 @@
+import type { Matrix4x4 } from "libs/mjs";
 import _ from "lodash";
 import type { OrthoView, Vector3 } from "oxalis/constants";
 import constants, {
@@ -6,6 +7,7 @@ import constants, {
   OrthoViewGrayCrosshairColor,
   OrthoViewValues,
 } from "oxalis/constants";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
 import Dimensions from "oxalis/model/dimensions";
 import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
@@ -31,7 +33,7 @@ class Plane {
   // This class is supposed to collect all the Geometries that belong to one single plane such as
   // the plane itself, its texture, borders and crosshairs.
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'plane' has no initializer and is not def... Remove this comment to see the full error message
-  plane: THREE.Mesh;
+  plane: THREE.Mesh<PlaneGeometry, ShaderMaterial, Object3DEventMap>;
   planeID: OrthoView;
   materialFactory!: PlaneMaterialFactory;
   displayCrosshair: boolean;
@@ -41,11 +43,15 @@ class Plane {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'TDViewBorders' has no initializer and is... Remove this comment to see the full error message
   TDViewBorders: THREE.Line;
   lastScaleFactors: [number, number];
+  isDirty: boolean;
+  baseRotation: THREE.Euler;
+  stopStoreListening: () => void;
 
   constructor(planeID: OrthoView) {
     this.planeID = planeID;
     this.displayCrosshair = true;
     this.lastScaleFactors = [-1, -1];
+    this.isDirty = true;
     // VIEWPORT_WIDTH means that the plane should be that many voxels wide in the
     // dimension with the highest mag. In all other dimensions, the plane
     // is smaller in voxels, so that it is squared in nm.
@@ -53,7 +59,11 @@ class Plane {
     const baseVoxelFactors = getBaseVoxelFactorsInUnit(Store.getState().dataset.dataSource.scale);
     const scaleArray = Dimensions.transDim(baseVoxelFactors, this.planeID);
     this.baseScaleVector = new THREE.Vector3(...scaleArray);
+    this.baseRotation = new THREE.Euler(0, 0, 0);
     this.createMeshes();
+    this.stopStoreListening = Store.subscribe(() => {
+      this.isDirty = true;
+    });
   }
 
   createMeshes(): void {
@@ -62,11 +72,13 @@ class Plane {
     const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, PLANE_SUBDIVISION, PLANE_SUBDIVISION);
     this.materialFactory = new PlaneMaterialFactory(
       this.planeID,
-      true,
+      false,
       OrthoViewValues.indexOf(this.planeID),
     );
     const textureMaterial = this.materialFactory.setup().getMaterial();
     this.plane = new THREE.Mesh(planeGeo, textureMaterial);
+    this.plane.matrixAutoUpdate = false;
+    this.plane.material.side = THREE.DoubleSide;
     // create crosshair
     const crosshairGeometries = [];
     this.crosshair = new Array(2);
@@ -140,6 +152,7 @@ class Plane {
   };
 
   setScale(xFactor: number, yFactor: number): void {
+    // TODOM: This scale  will likely be overwritten by the flycam matrix
     if (this.lastScaleFactors[0] === xFactor && this.lastScaleFactors[1] === yFactor) {
       return;
     }
@@ -156,10 +169,8 @@ class Plane {
     this.crosshair[1].scale.copy(scaleVec);
   }
 
-  setRotation = (rotVec: THREE.Euler): void => {
-    [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]].map((mesh) =>
-      mesh.setRotationFromEuler(rotVec),
-    );
+  setBaseRotation = (rotVec: THREE.Euler): void => {
+    this.baseRotation.copy(rotVec);
   };
 
   // In case the plane's position was offset to make geometries
@@ -174,10 +185,8 @@ class Plane {
     this.plane.position.set(x, y, z);
 
     if (originalPosition == null) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'setGlobalPosition' does not exist on typ... Remove this comment to see the full error message
       this.plane.material.setGlobalPosition(x, y, z);
     } else {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'setGlobalPosition' does not exist on typ... Remove this comment to see the full error message
       this.plane.material.setGlobalPosition(
         originalPosition[0],
         originalPosition[1],
@@ -185,6 +194,46 @@ class Plane {
       );
     }
   };
+
+  updateToFlycamMatrix(flycamMatrix: Matrix4x4): void {
+    // TODO: Copied from ArbitraryPlane. This should be refactored to a common function maybe.
+    if (this.isDirty) {
+      const updateMesh = (mesh: THREE.Mesh | THREE.Line | null | undefined) => {
+        if (!mesh) {
+          return;
+        }
+
+        const meshMatrix = new THREE.Matrix4();
+        meshMatrix.set(
+          flycamMatrix[0],
+          flycamMatrix[4],
+          flycamMatrix[8],
+          flycamMatrix[12],
+          flycamMatrix[1],
+          flycamMatrix[5],
+          flycamMatrix[9],
+          flycamMatrix[13],
+          flycamMatrix[2],
+          flycamMatrix[6],
+          flycamMatrix[10],
+          flycamMatrix[14],
+          flycamMatrix[3],
+          flycamMatrix[7],
+          flycamMatrix[11],
+          flycamMatrix[15],
+        );
+        mesh.matrix.identity();
+        mesh.matrix.multiply(meshMatrix);
+        mesh.matrix.multiply(new THREE.Matrix4().makeRotationFromEuler(this.baseRotation));
+        mesh.matrixWorldNeedsUpdate = true;
+      };
+      this.getMeshes().forEach(updateMesh);
+
+      this.isDirty = false;
+      // TODOM: ignore error for now.
+      getSceneController().update();
+    }
+  }
 
   setVisible = (isVisible: boolean, isDataVisible?: boolean): void => {
     this.plane.visible = isDataVisible != null ? isDataVisible : isVisible;
@@ -195,11 +244,11 @@ class Plane {
 
   getMeshes = () => [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]];
   setLinearInterpolationEnabled = (enabled: boolean) => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setUseBilinearFiltering' does not exist ... Remove this comment to see the full error message
     this.plane.material.setUseBilinearFiltering(enabled);
   };
 
   destroy() {
+    this.stopStoreListening();
     this.materialFactory.destroy();
   }
 }

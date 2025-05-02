@@ -70,6 +70,8 @@ export class AbstractPrefetchStrategy {
     return buckets;
   }
 }
+
+// TODOM: in case of rotation, a PrefetchStrategyArbitrary is needed for every viewport
 export class PrefetchStrategy extends AbstractPrefetchStrategy {
   velocityRangeStart = 0;
   velocityRangeEnd = Number.POSITIVE_INFINITY;

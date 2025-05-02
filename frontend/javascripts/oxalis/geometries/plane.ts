@@ -77,6 +77,7 @@ class Plane {
     );
     const textureMaterial = this.materialFactory.setup().getMaterial();
     this.plane = new THREE.Mesh(planeGeo, textureMaterial);
+    this.plane.name = `${this.planeID}-plane`;
     this.plane.matrixAutoUpdate = false;
     this.plane.material.side = THREE.DoubleSide;
     // create crosshair
@@ -106,6 +107,8 @@ class Plane {
       // The default renderOrder is 0. In order for the crosshairs to be shown
       // render them AFTER the plane has been rendered.
       this.crosshair[i].renderOrder = 1;
+      this.crosshair[i].name = `${this.planeID}-crosshair-${i}`;
+      this.crosshair[i].matrixAutoUpdate = false;
     }
 
     // create borders
@@ -121,6 +124,8 @@ class Plane {
       tdViewBordersGeo,
       this.getLineBasicMaterial(OrthoViewColors[this.planeID], 1),
     );
+    this.TDViewBorders.name = `${this.planeID}-TDViewBorders`;
+    this.TDViewBorders.matrixAutoUpdate = false;
   }
 
   setDisplayCrosshair = (value: boolean): void => {
@@ -198,33 +203,35 @@ class Plane {
   updateToFlycamMatrix(flycamMatrix: Matrix4x4): void {
     // TODO: Copied from ArbitraryPlane. This should be refactored to a common function maybe.
     if (this.isDirty) {
+      const meshMatrix = new THREE.Matrix4();
+      meshMatrix.set(
+        flycamMatrix[0],
+        flycamMatrix[4],
+        flycamMatrix[8],
+        flycamMatrix[12],
+        flycamMatrix[1],
+        flycamMatrix[5],
+        flycamMatrix[9],
+        flycamMatrix[13],
+        flycamMatrix[2],
+        flycamMatrix[6],
+        flycamMatrix[10],
+        flycamMatrix[14],
+        flycamMatrix[3],
+        flycamMatrix[7],
+        flycamMatrix[11],
+        flycamMatrix[15],
+      );
       const updateMesh = (mesh: THREE.Mesh | THREE.Line | null | undefined) => {
         if (!mesh) {
           return;
         }
-
-        const meshMatrix = new THREE.Matrix4();
-        meshMatrix.set(
-          flycamMatrix[0],
-          flycamMatrix[4],
-          flycamMatrix[8],
-          flycamMatrix[12],
-          flycamMatrix[1],
-          flycamMatrix[5],
-          flycamMatrix[9],
-          flycamMatrix[13],
-          flycamMatrix[2],
-          flycamMatrix[6],
-          flycamMatrix[10],
-          flycamMatrix[14],
-          flycamMatrix[3],
-          flycamMatrix[7],
-          flycamMatrix[11],
-          flycamMatrix[15],
-        );
         mesh.matrix.identity();
         mesh.matrix.multiply(meshMatrix);
         mesh.matrix.multiply(new THREE.Matrix4().makeRotationFromEuler(this.baseRotation));
+        if (this.planeID === "PLANE_XY") {
+          console.log("matrix plane", mesh.name, mesh.matrix);
+        }
         mesh.matrixWorldNeedsUpdate = true;
       };
       this.getMeshes().forEach(updateMesh);

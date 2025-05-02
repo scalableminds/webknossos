@@ -5,12 +5,8 @@ import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actio
 import type { NumberLike, Segment, SegmentGroup, SegmentMap } from "oxalis/store";
 import type { Dispatch } from "redux";
 import { batchActions } from "redux-batched-actions";
-import type {
-  BucketDataArray,
-  ServerEditableMapping,
-  ServerVolumeTracing,
-} from "types/api_flow_types";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { BucketDataArray, ServerEditableMapping, ServerVolumeTracing } from "types/api_types";
+import type { AdditionalCoordinate } from "types/api_types";
 import type BucketSnapshot from "../bucket_data_handling/bucket_snapshot";
 
 export type InitializeVolumeTracingAction = ReturnType<typeof initializeVolumeTracingAction>;

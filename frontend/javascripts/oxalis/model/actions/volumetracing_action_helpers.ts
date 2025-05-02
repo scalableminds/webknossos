@@ -1,6 +1,6 @@
 import type { Vector3 } from "oxalis/constants";
 import type { OxalisState } from "oxalis/store";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_types";
 import { getVisibleSegmentationLayer } from "../accessors/dataset_accessor";
 import {
   getHideUnregisteredSegmentsForVisibleSegmentationLayer,

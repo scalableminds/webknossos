@@ -1,6 +1,6 @@
 import type { Vector3 } from "oxalis/constants";
 import type { MappingType } from "oxalis/store";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_types";
 
 export type AdHocMeshInfo = {
   mappingName: string | null | undefined;

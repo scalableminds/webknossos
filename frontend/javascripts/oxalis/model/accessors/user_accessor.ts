@@ -1,7 +1,7 @@
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import messages from "messages";
-import type { APIUser, APIUserBase } from "types/api_flow_types";
+import type { APIUser, APIUserBase } from "types/api_types";
 
 export function enforceActiveUser(activeUser: APIUser | null | undefined): APIUser {
   if (activeUser) {

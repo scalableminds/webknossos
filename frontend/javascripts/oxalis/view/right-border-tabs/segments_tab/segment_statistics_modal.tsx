@@ -1,4 +1,4 @@
-import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/admin_rest_api";
+import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/rest_api";
 import { Alert, Modal, Spin, Table } from "antd";
 import saveAs from "file-saver";
 import { formatNumberToVolume } from "libs/format_utils";
@@ -16,7 +16,7 @@ import { voxelToVolumeInUnit } from "oxalis/model/scaleinfo";
 import { api } from "oxalis/singletons";
 import type { OxalisState, Segment } from "oxalis/store";
 import { useSelector } from "react-redux";
-import type { APISegmentationLayer, VoxelSize } from "types/api_flow_types";
+import type { APISegmentationLayer, VoxelSize } from "types/api_types";
 import {
   type SegmentHierarchyGroup,
   type SegmentHierarchyNode,

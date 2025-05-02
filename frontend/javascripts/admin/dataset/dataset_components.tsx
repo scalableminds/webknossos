@@ -4,7 +4,7 @@ import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import features from "features";
 import messages from "messages";
 import type * as React from "react";
-import type { APIDataStore, APITeam, APIUser } from "types/api_flow_types";
+import type { APIDataStore, APITeam, APIUser } from "types/api_types";
 import { syncValidator } from "types/validation";
 
 const FormItem = Form.Item;

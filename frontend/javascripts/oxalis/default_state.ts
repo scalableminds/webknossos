@@ -11,11 +11,7 @@ import constants from "oxalis/constants";
 import { AnnotationTool, Toolkit } from "oxalis/model/accessors/tool_accessor";
 import type { OxalisState } from "oxalis/store";
 import { getSystemColorTheme } from "theme";
-import type {
-  APIAllowedMode,
-  APIAnnotationType,
-  APIAnnotationVisibility,
-} from "types/api_flow_types";
+import type { APIAllowedMode, APIAnnotationType, APIAnnotationVisibility } from "types/api_types";
 import { defaultDatasetViewConfigurationWithoutNull } from "types/schemas/dataset_view_configuration.schema";
 
 const defaultViewportRect = {

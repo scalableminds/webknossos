@@ -1,9 +1,9 @@
+import { PlanAboutToExceedAlert, PlanExceededAlert } from "admin/organization/organization_cards";
 import {
   cachedGetPricingPlanStatus,
   getUser,
   updateNovelUserExperienceInfos,
-} from "admin/admin_rest_api";
-import { PlanAboutToExceedAlert, PlanExceededAlert } from "admin/organization/organization_cards";
+} from "admin/rest_api";
 import { WhatsNextHeader } from "admin/welcome_ui";
 import { Spin, Tabs } from "antd";
 import DashboardTaskListView from "dashboard/dashboard_task_list_view";
@@ -25,7 +25,7 @@ import { connect } from "react-redux";
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import type { Dispatch } from "redux";
-import type { APIOrganization, APIPricingPlanStatus, APIUser } from "types/api_flow_types";
+import type { APIOrganization, APIPricingPlanStatus, APIUser } from "types/api_types";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import { DatasetFolderView } from "./dataset_folder_view";
 

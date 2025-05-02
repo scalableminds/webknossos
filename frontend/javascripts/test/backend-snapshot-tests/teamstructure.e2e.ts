@@ -9,7 +9,7 @@ import {
   resetDatabase,
 } from "test/e2e-setup";
 import { getTask } from "admin/api/tasks";
-import * as api from "admin/admin_rest_api";
+import * as api from "admin/rest_api";
 import { describe, test, beforeAll, expect } from "vitest";
 
 function getExpectedErrorObject(errorMessage: string) {

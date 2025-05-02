@@ -27,8 +27,8 @@ import * as React from "react";
 import { connect } from "react-redux";
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
-import { APIAnnotationTypeEnum, type APICompoundType } from "types/api_flow_types";
-import type { APIOrganization, APIUser } from "types/api_flow_types";
+import { APIAnnotationTypeEnum, type APICompoundType } from "types/api_types";
+import type { APIOrganization, APIUser } from "types/api_types";
 import type DataLayer from "./model/data_layer";
 
 export type ControllerStatus = "loading" | "loaded" | "failedLoading";

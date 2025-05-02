@@ -24,7 +24,7 @@ import Store, { type PlaneRects, type SegmentMap } from "oxalis/store";
 import AsyncBucketPickerWorker from "oxalis/workers/async_bucket_picker.worker";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import type * as THREE from "three";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_types";
 import {
   getTransformsForLayer,
   invertAndTranspose,

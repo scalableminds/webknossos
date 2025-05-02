@@ -12,7 +12,7 @@ import {
   type Vector3,
 } from "oxalis/constants";
 
-import { sendAnalyticsEvent } from "admin/admin_rest_api";
+import { sendAnalyticsEvent } from "admin/rest_api";
 import morphology from "ball-morphology";
 import { V2, V3 } from "libs/mjs";
 import Toast from "libs/toast";
@@ -44,7 +44,7 @@ import type {
   VolumeTracing,
 } from "oxalis/store";
 import { call, put, race, take } from "typed-redux-saga";
-import type { APIDataLayer, APIDataset } from "types/api_flow_types";
+import type { APIDataLayer, APIDataset } from "types/api_types";
 import {
   getDefaultValueRangeOfLayer,
   getEnabledColorLayers,

@@ -7,7 +7,7 @@ import { getTDViewZoom, getViewportExtents } from "oxalis/model/accessors/view_m
 import { getBaseVoxelInUnit } from "oxalis/model/scaleinfo";
 import type { OxalisState } from "oxalis/store";
 import { connect } from "react-redux";
-import type { APIDataset } from "types/api_flow_types";
+import type { APIDataset } from "types/api_types";
 
 const { ThinSpace, MultiplicationSymbol } = Unicode;
 

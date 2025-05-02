@@ -6,7 +6,7 @@ import Constants from "oxalis/constants";
 import { PLANE_SUBDIVISION } from "oxalis/geometries/plane";
 import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { MAPPING_TEXTURE_WIDTH } from "oxalis/model/bucket_data_handling/mappings";
-import type { ElementClass } from "types/api_flow_types";
+import type { ElementClass } from "types/api_types";
 import { getBlendLayersAdditive, getBlendLayersCover } from "./blending.glsl";
 import {
   getAbsoluteCoords,

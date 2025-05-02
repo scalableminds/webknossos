@@ -278,9 +278,9 @@ function TreeHierarchyView(props: Props) {
     const expandedGroups = additionallyExpandGroup(props.treeGroups, sourceNode.groupId, (id) =>
       getNodeKey(GroupTypeEnum.GROUP, id),
     );
-    if (expandedGroups == null) return;
+    if (expandedGroups == null || UITreeData.length === 0) return;
     const copyOfUITreeData = UITreeData;
-    forEachTreeNode(UITreeData, (node) => {
+    forEachTreeNode(copyOfUITreeData, (node) => {
       if (node.type === GroupTypeEnum.GROUP && expandedGroups.has(node.key as string))
         node.expanded = true;
     });

@@ -269,9 +269,16 @@ class SceneController {
     this.rootNode.remove(skeletonGroup);
   }
 
-  buildTaskBoundingBox(
+  updateTaskBoundingBoxes(
     taskCubeByTracingId: Record<string, BoundingBoxType | null | undefined>,
   ): void {
+    /*
+     Ensures that a green task bounding box is rendered in the scene for
+     each layer.
+     The update is implemented by simply removing the old geometry and
+     adding a new one. Since this function is executed very rarely,
+     this is not a performance problem.
+     */
     for (const [tracingId, boundingBox] of Object.entries(taskCubeByTracingId)) {
       let taskCube = this.taskCubeByTracingId[tracingId];
       // Remove the old box if it exists
@@ -608,7 +615,7 @@ class SceneController {
       ),
       listenToStoreProperty(
         (storeState) => getTaskBoundingBoxes(storeState.annotation),
-        (boundingBoxesByTracingId) => this.buildTaskBoundingBox(boundingBoxesByTracingId),
+        (boundingBoxesByTracingId) => this.updateTaskBoundingBoxes(boundingBoxesByTracingId),
         true,
       ),
       listenToStoreProperty(

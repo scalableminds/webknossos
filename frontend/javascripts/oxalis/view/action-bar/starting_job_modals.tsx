@@ -47,7 +47,11 @@ import {
 } from "libs/utils";
 import _ from "lodash";
 import { ControlModeEnum, Unicode, type Vector3, type Vector6 } from "oxalis/constants";
-import { getColorLayers, getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getColorLayers,
+  getMagInfo,
+  getSegmentationLayers,
+} from "oxalis/model/accessors/dataset_accessor";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
 import {
   getActiveSegmentationTracingLayer,
@@ -75,21 +79,28 @@ import { isBoundingBoxExportable } from "./download_modal_view";
 
 const { ThinSpace } = Unicode;
 
-type MinimalBoundingBoxExtent = {
-  minExtent: Vector3;
-  mag: Vector3;
-};
-
 // The following minimal bounding box extents and mean voxel sizes are based on the default model that is used for neuron and mitochondria segmentation.
 // Thus when changing the default model, consider changing these values as well.
 // See https://github.com/scalableminds/webknossos/issues/8198#issuecomment-2782684436
-const MIN_BBOX_EXTENT_FOR_NEURON_SEGMENTATION = [16, 16, 4];
-const MIN_VX_SIZE_FOR_NEURON_SEGMENTATION = [7.96, 7.96, 31.2];
-const MIN_BBOX_EXTENT_FOR_MITO_SEGMENTATION = [16, 16, 4]; // trained with finest available mag
-const MIN_BBOX_EXTENT_FOR_NUCLEI_INFERRAL = [4, 4, 4];
-const MEAN_VX_SIZE_FOR_NUCLEI_INFERRAL = [179.84, 179.84, 224.0];
+
+const MIN_BBOX_EXTENT: Record<ModalJobTypes, Vector3> = {
+  infer_neurons: [16, 16, 4],
+  infer_nuclei: [4, 4, 4],
+  infer_mitochondria: [16, 16, 4],
+};
+
+const MEAN_VX_SIZE: Record<APIJobType.INFER_NEURONS | APIJobType.INFER_NUCLEI, Vector3> = {
+  infer_neurons: [7.96, 7.96, 31.2],
+  infer_nuclei: [179.84, 179.84, 224.0],
+  // "infer_mitochondria" trained with finest available mag
+};
 
 const MIN_DATASET_RATIO_COMPARED_TO_MIN_BBOX = 2; // dataset needs to be x times the size of the minimal bounding box
+
+type ModalJobTypes =
+  | APIJobType.INFER_NEURONS
+  | APIJobType.INFER_NUCLEI
+  | APIJobType.INFER_MITOCHONDRIA;
 
 export type StartAIJobModalState =
   | APIJobType.INFER_NEURONS
@@ -713,8 +724,14 @@ function useCurrentlySelectedBoundingBox(
 const getBestMag = (
   colorLayer: APIDataLayer,
   meanVoxelSizeInMag1: Vector3,
-  meanVoxelSizeInUnknownMag: Vector3,
+  jobType: APIJobType.INFER_MITOCHONDRIA | APIJobType.INFER_NEURONS | APIJobType.INFER_NUCLEI,
 ) => {
+  if (jobType === APIJobType.INFER_MITOCHONDRIA) {
+    // infer mitochondria model is trained on finest available mag
+    const magInfo = getMagInfo(colorLayer.resolutions);
+    return magInfo.getFinestMag();
+  }
+  const meanVoxelSizeInUnknownMag = MEAN_VX_SIZE[jobType];
   let bestMag = colorLayer.resolutions[0];
   let bestDifference = [
     Number.POSITIVE_INFINITY,
@@ -724,15 +741,23 @@ const getBestMag = (
 
   for (const mag of colorLayer.resolutions) {
     const diff = meanVoxelSizeInUnknownMag.map(
-      (dim, i) => Math.log(dim * mag[i]) - Math.log(meanVoxelSizeInMag1[i]),
+      (dim, i) => Math.log2(dim * mag[i]) - Math.log2(meanVoxelSizeInMag1[i]),
     );
-
+    console.log("mag", mag, diff); //TODO_c remove
     if (Math.abs(bestDifference[0]) > Math.abs(diff[0])) {
       bestDifference = diff;
       bestMag = mag;
     }
   }
-  return [bestMag, bestDifference];
+  //TODO_c remove
+  console.log(
+    "get best mag, dataset scale, meanVxInUnknownMag, bestDiff, bestMag ",
+    meanVoxelSizeInMag1,
+    meanVoxelSizeInUnknownMag,
+    bestDifference,
+    bestMag,
+  );
+  return bestMag;
 };
 
 const isBBoxTooSmall = (
@@ -741,19 +766,14 @@ const isBBoxTooSmall = (
     | APIJobType.INFER_NEURONS
     | APIJobType.INFER_MITOCHONDRIA
     | APIJobType.INFER_NUCLEI,
+  mag: Vector3,
   bboxOrDS: "bbox" | "dataset" = "bbox",
 ) => {
-  const minBBoxExtent =
-    segmentationType === APIJobType.INFER_NEURONS
-      ? MIN_BBOX_EXTENT_FOR_NEURON_SEGMENTATION
-      : MIN_BBOX_EXTENT_FOR_MITO_SEGMENTATION;
-  let minExtentInMag1 = minBBoxExtent.minExtent;
-  if (!_.isEqual(minBBoxExtent.mag, [1, 1, 1]) || bboxOrDS === "dataset") {
-    const extentFactor = bboxOrDS === "dataset" ? MIN_DATASET_RATIO_COMPARED_TO_MIN_BBOX : 1;
-    minExtentInMag1 = minBBoxExtent.minExtent.map(
-      (extent, i) => extent * minBBoxExtent.mag[i] * extentFactor,
-    ) as Vector3;
-  }
+  const minBBoxExtentInModelMag = MIN_BBOX_EXTENT[segmentationType];
+  const extentFactor = bboxOrDS === "dataset" ? MIN_DATASET_RATIO_COMPARED_TO_MIN_BBOX : 1;
+  const minExtentInMag1 = minBBoxExtentInModelMag.map(
+    (extent, i) => extent * mag[i] * extentFactor,
+  ) as Vector3;
   for (let i = 0; i < 3; i++) {
     if (bbox[i] < minExtentInMag1[i]) {
       const boundingBoxOrDSMessage = bboxOrDS === "bbox" ? "bounding box" : "dataset";
@@ -768,19 +788,23 @@ const isBBoxTooSmall = (
 
 const isDatasetOrBoundingBoxTooSmall = (
   bbox: Vector6 | Vector3,
+  mag: Vector3,
   colorLayer: APIDataLayer,
-  segmentationType: APIJobType.INFER_NEURONS | APIJobType.INFER_MITOCHONDRIA,
+  segmentationType:
+    | APIJobType.INFER_NEURONS
+    | APIJobType.INFER_MITOCHONDRIA
+    | APIJobType.INFER_NUCLEI,
 ): boolean => {
   const datasetExtent: Vector3 = [
     colorLayer.boundingBox.width,
     colorLayer.boundingBox.height,
     colorLayer.boundingBox.depth,
   ];
-  if (isBBoxTooSmall(datasetExtent, segmentationType, "dataset")) {
+  if (isBBoxTooSmall(datasetExtent, segmentationType, mag, "dataset")) {
     return true;
   }
   const bboxExtent = bbox.length === 6 ? (bbox.slice(3) as Vector3) : bbox;
-  if (isBBoxTooSmall(bboxExtent, segmentationType)) {
+  if (isBBoxTooSmall(bboxExtent, segmentationType, mag)) {
     return true;
   }
   return false;
@@ -1047,7 +1071,12 @@ export function NeuronSegmentationForm() {
         }
 
         const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
-        if (isDatasetOrBoundingBoxTooSmall(bbox, colorLayer, APIJobType.INFER_NEURONS)) {
+        const mag = getBestMag(
+          colorLayer,
+          dataset.dataSource.scale.factor,
+          APIJobType.INFER_NEURONS,
+        );
+        if (isDatasetOrBoundingBoxTooSmall(bbox, mag, colorLayer, APIJobType.INFER_NEURONS)) {
           return;
         }
 
@@ -1116,7 +1145,12 @@ export function MitochondriaSegmentationForm() {
           return;
         }
         const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
-        if (isDatasetOrBoundingBoxTooSmall(bbox, colorLayer, APIJobType.INFER_MITOCHONDRIA)) {
+        const mag = getBestMag(
+          colorLayer,
+          dataset.dataSource.scale.factor,
+          APIJobType.INFER_MITOCHONDRIA,
+        );
+        if (isDatasetOrBoundingBoxTooSmall(bbox, mag, colorLayer, APIJobType.INFER_MITOCHONDRIA)) {
           return;
         }
         return startMitochondriaInferralJob(dataset.id, colorLayer.name, bbox, newDatasetName);

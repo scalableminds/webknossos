@@ -33,8 +33,8 @@ import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "oxalis/model/volumet
 import type { Mapping } from "oxalis/store";
 import Store from "oxalis/store";
 import * as THREE from "three";
-import type { AdditionalAxis, BucketDataArray, ElementClass } from "types/api_flow_types";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalAxis, BucketDataArray, ElementClass } from "types/api_types";
+import type { AdditionalCoordinate } from "types/api_types";
 import type { MagInfo } from "../helpers/mag_info";
 
 const warnAboutTooManyAllocations = _.once(() => {

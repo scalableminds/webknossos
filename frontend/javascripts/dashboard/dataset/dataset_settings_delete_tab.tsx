@@ -1,12 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { deleteDatasetOnDisk, getDataset } from "admin/admin_rest_api";
+import { deleteDatasetOnDisk, getDataset } from "admin/rest_api";
 import { Button } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
 import { useEffect, useState } from "react";
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
-import type { APIDataset } from "types/api_flow_types";
+import type { APIDataset } from "types/api_types";
 import { confirmAsync } from "./helper_components";
 
 type Props = {

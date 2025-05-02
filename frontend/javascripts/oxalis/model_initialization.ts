@@ -1,4 +1,8 @@
 import {
+  PricingPlanEnum,
+  isFeatureAllowedByPricingPlan,
+} from "admin/organization/pricing_plan_utils";
+import {
   getAnnotationCompoundInformation,
   getAnnotationProto,
   getDataset,
@@ -9,11 +13,7 @@ import {
   getTracingsForAnnotation,
   getUnversionedAnnotationInformation,
   getUserConfiguration,
-} from "admin/admin_rest_api";
-import {
-  PricingPlanEnum,
-  isFeatureAllowedByPricingPlan,
-} from "admin/organization/pricing_plan_utils";
+} from "admin/rest_api";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
@@ -113,7 +113,7 @@ import type {
   ServerEditableMapping,
   ServerTracing,
   ServerVolumeTracing,
-} from "types/api_flow_types";
+} from "types/api_types";
 import type { Mutable } from "types/globals";
 import { doAllLayersHaveTheSameRotation } from "./model/accessors/dataset_layer_transformation_accessor";
 import { setVersionNumberAction } from "./model/actions/save_actions";

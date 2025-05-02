@@ -13,6 +13,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Added
 
 ### Changed
+- Updated `View Modes` documentation page with links for mouse and keyboard shortcuts. [#8582](https://github.com/scalableminds/webknossos/pull/8582)
+- Renamed the button to view the compound annotation of all tasks of a tasktype to be more descriptive. [#8565](https://github.com/scalableminds/webknossos/pull/8565)
 
 ### Fixed
 - When selecting a skeleton node in a viewport, it is focused and scrolled to in the skeleton tab, even if its parent group was collapsed before. [#8585](https://github.com/scalableminds/webknossos/pull/8585)

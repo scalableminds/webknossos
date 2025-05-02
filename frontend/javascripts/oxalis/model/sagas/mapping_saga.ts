@@ -4,7 +4,7 @@ import {
   getAgglomeratesForSegmentsFromDatastore,
   getAgglomeratesForSegmentsFromTracingstore,
   getMappingsForDatasetLayer,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
 import { message } from "antd";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
@@ -68,7 +68,7 @@ import {
   takeEvery,
   takeLatest,
 } from "typed-redux-saga";
-import type { APIDataLayer, APIMapping } from "types/api_flow_types";
+import type { APIDataLayer, APIMapping } from "types/api_types";
 import type { Action } from "../actions/actions";
 import { updateSegmentAction } from "../actions/volumetracing_actions";
 import type DataCube from "../bucket_data_handling/data_cube";

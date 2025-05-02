@@ -16,7 +16,7 @@ import { MaterializeVolumeAnnotationModal } from "oxalis/view/action-bar/startin
 import ButtonComponent, { ToggleButton } from "oxalis/view/components/button_component";
 
 import { useIsActiveUserAdminOrManager } from "libs/react_helpers";
-import { APIJobType } from "types/api_flow_types";
+import { APIJobType } from "types/api_types";
 import { IMG_STYLE_FOR_SPACEY_ICONS, NARROW_BUTTON_STYLE } from "./tool_helpers";
 
 export function SkeletonSpecificButtons() {

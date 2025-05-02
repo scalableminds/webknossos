@@ -6,11 +6,11 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import Constants, { TreeTypeEnum } from "oxalis/constants";
 import {
+  areGeometriesTransformed,
   findTreeByNodeId,
   getNodeAndTree,
   getSkeletonTracing,
   getTree,
-  isSkeletonLayerTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import type { Action } from "oxalis/model/actions/actions";
@@ -46,7 +46,7 @@ import {
   GroupTypeEnum,
   getNodeKey,
 } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import type { MetadataEntryProto } from "types/api_flow_types";
+import type { MetadataEntryProto } from "types/api_types";
 import { userSettings } from "types/schemas/user_settings.schema";
 
 function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState {
@@ -593,7 +593,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
 
       switch (action.type) {
         case "CREATE_NODE": {
-          if (isSkeletonLayerTransformed(state)) {
+          if (areGeometriesTransformed(state)) {
             // Don't create nodes if the skeleton layer is rendered with transforms.
             return state;
           }
@@ -718,7 +718,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         }
 
         case "SET_NODE_POSITION": {
-          if (isSkeletonLayerTransformed(state)) {
+          if (areGeometriesTransformed(state)) {
             // Don't move node if the skeleton layer is rendered with transforms.
             return state;
           }

@@ -21,7 +21,7 @@ import {
   findDataPositionForVolumeTracing,
   startComputeSegmentIndexFileJob,
   updateDatasetDefaultConfiguration,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
 import { Button, Col, Divider, Dropdown, type MenuProps, Modal, Row, Switch } from "antd";
 import classnames from "classnames";
 import FastTooltip from "components/fast_tooltip";
@@ -124,7 +124,7 @@ import {
   AnnotationLayerEnum,
   type AnnotationLayerType,
   type EditableLayerProperties,
-} from "types/api_flow_types";
+} from "types/api_types";
 import type { ValueOf } from "types/globals";
 import {
   defaultDatasetViewConfigurationWithoutNull,

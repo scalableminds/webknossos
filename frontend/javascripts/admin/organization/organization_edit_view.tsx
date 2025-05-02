@@ -11,7 +11,7 @@ import {
   getPricingPlanStatus,
   getUsers,
   updateOrganization,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
 import { Button, Card, Col, Form, Input, Row, Skeleton, Space, Typography } from "antd";
 import { confirmAsync } from "dashboard/dataset/helper_components";
 import Toast from "libs/toast";
@@ -19,7 +19,7 @@ import { enforceActiveOrganization } from "oxalis/model/accessors/organization_a
 import type { OxalisState } from "oxalis/store";
 import { useEffect, useState } from "react";
 import { connect } from "react-redux";
-import type { APIOrganization, APIPricingPlanStatus } from "types/api_flow_types";
+import type { APIOrganization, APIPricingPlanStatus } from "types/api_types";
 import {
   PlanAboutToExceedAlert,
   PlanDashboardCard,

@@ -26,7 +26,7 @@ import type { EditableMapping, Mapping, MappingType, OxalisState } from "oxalis/
 import { SwitchSetting } from "oxalis/view/components/setting_input_views";
 import React from "react";
 import { connect } from "react-redux";
-import type { APISegmentationLayer } from "types/api_flow_types";
+import type { APISegmentationLayer } from "types/api_types";
 
 const { Option, OptGroup } = Select;
 

@@ -1,5 +1,5 @@
 import { SettingOutlined } from "@ant-design/icons";
-import { getConnectomeFilesForDatasetLayer } from "admin/admin_rest_api";
+import { getConnectomeFilesForDatasetLayer } from "admin/rest_api";
 import { Col, Popover, Row, Select, Tooltip } from "antd";
 import { settings } from "messages";
 import defaultState from "oxalis/default_state";
@@ -15,7 +15,7 @@ import { NumberSliderSetting } from "oxalis/view/components/setting_input_views"
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import React from "react";
 import { connect } from "react-redux";
-import type { APIConnectomeFile, APIDataset, APISegmentationLayer } from "types/api_flow_types";
+import type { APIConnectomeFile, APIDataset, APISegmentationLayer } from "types/api_types";
 import { userSettings } from "types/schemas/user_settings.schema";
 const { Option } = Select;
 type OwnProps = {

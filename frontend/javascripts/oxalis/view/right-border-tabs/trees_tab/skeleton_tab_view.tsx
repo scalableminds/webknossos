@@ -7,7 +7,7 @@ import {
   WarningOutlined,
 } from "@ant-design/icons";
 import { BlobReader, BlobWriter, type Entry, ZipReader } from "@zip.js/zip.js";
-import { clearCache, getBuildInfo, importVolumeTracing } from "admin/admin_rest_api";
+import { clearCache, getBuildInfo, importVolumeTracing } from "admin/rest_api";
 import { Dropdown, Empty, type MenuProps, Modal, Space, Spin, Tooltip, notification } from "antd";
 import { saveAs } from "file-saver";
 import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
@@ -20,11 +20,11 @@ import messages from "messages";
 import { LongUnitToShortUnitMap } from "oxalis/constants";
 import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
 import {
+  areGeometriesTransformed,
   enforceSkeletonTracing,
   getActiveTree,
   getActiveTreeGroup,
   getTree,
-  isSkeletonLayerTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import type { Action } from "oxalis/model/actions/actions";
@@ -985,7 +985,7 @@ const mapStateToProps = (state: OxalisState) => ({
   allowUpdate: state.annotation.restrictions.allowUpdate,
   skeletonTracing: state.annotation.skeleton,
   userConfiguration: state.userConfiguration,
-  isSkeletonLayerTransformed: isSkeletonLayerTransformed(state),
+  isSkeletonLayerTransformed: areGeometriesTransformed(state),
   isAnnotationLockedByUser: state.annotation.isLockedByOwner,
   isOwner: isAnnotationOwner(state),
 });

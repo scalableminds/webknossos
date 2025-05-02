@@ -9,7 +9,7 @@ import {
   updateDatasetDefaultConfiguration,
   updateDatasetPartial,
   updateDatasetTeams,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
 import { Alert, Button, Card, Form, type FormInstance, Spin, Tabs, Tooltip } from "antd";
 import dayjs from "dayjs";
 import features from "features";
@@ -35,12 +35,7 @@ import * as React from "react";
 import { connect } from "react-redux";
 import type { RouteComponentProps } from "react-router-dom";
 import { Link, withRouter } from "react-router-dom";
-import type {
-  APIDataSource,
-  APIDataset,
-  APIMessage,
-  MutableAPIDataset,
-} from "types/api_flow_types";
+import type { APIDataSource, APIDataset, APIMessage, MutableAPIDataset } from "types/api_types";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import type { DatasetRotationAndMirroringSettings } from "./dataset_rotation_form_item";
 import DatasetSettingsDataTab, { syncDataSourceFields } from "./dataset_settings_data_tab";

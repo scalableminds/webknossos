@@ -10,7 +10,7 @@ import type {
   AdditionalCoordinate,
   AiModel,
   RenderAnimationOptions,
-} from "types/api_flow_types";
+} from "types/api_types";
 import { assertResponseLimit } from "./api_utils";
 
 function transformBackendJobToAPIJob(job: any): APIJob {

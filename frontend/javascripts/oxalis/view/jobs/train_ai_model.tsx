@@ -1,10 +1,10 @@
+import { getAnnotationsForTask } from "admin/api/tasks";
 import {
   getDataset,
   getTracingForAnnotationType,
   getUnversionedAnnotationInformation,
   runNeuronTraining,
-} from "admin/admin_rest_api";
-import { getAnnotationsForTask } from "admin/api/tasks";
+} from "admin/rest_api";
 import {
   Alert,
   Button,
@@ -48,7 +48,7 @@ import {
   type APIDataset,
   AnnotationLayerEnum,
   type ServerVolumeTracing,
-} from "types/api_flow_types";
+} from "types/api_types";
 
 const { TextArea } = Input;
 const FormItem = Form.Item;

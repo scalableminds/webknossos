@@ -28,7 +28,7 @@ import {
 import MiniSearch from "minisearch";
 import React, { useEffect, useState, useMemo } from "react";
 
-import { deleteWorkflow, getVoxelyticsLogs } from "admin/admin_rest_api";
+import { deleteWorkflow, getVoxelyticsLogs } from "admin/rest_api";
 import dayjs from "dayjs";
 import {
   formatDateMedium,
@@ -49,7 +49,7 @@ import {
   type VoxelyticsTaskConfigWithName,
   type VoxelyticsTaskInfo,
   type VoxelyticsWorkflowReport,
-} from "types/api_flow_types";
+} from "types/api_types";
 import type { ArrayElement } from "types/globals";
 import ArtifactsDiskUsageList from "./artifacts_disk_usage_list";
 import DAGView, { colorHasher } from "./dag_view";

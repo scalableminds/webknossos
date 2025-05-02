@@ -32,7 +32,7 @@ import {
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
-import type { MetadataEntryProto } from "types/api_flow_types";
+import type { MetadataEntryProto } from "types/api_types";
 import { InputWithUpdateOnBlur } from "../../components/input_with_update_on_blur";
 import { getContextMenuPositionFromEvent } from "../../context_menu";
 import { MetadataEntryTableRows } from "../metadata_table";

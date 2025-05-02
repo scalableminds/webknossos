@@ -35,11 +35,12 @@ import {
 } from "antd";
 import type { ItemType } from "antd/lib/menu/interface";
 import type { DataNode } from "antd/lib/tree";
+import app from "app";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import FastTooltip from "components/fast_tooltip";
 import { SimpleRow } from "dashboard/folders/metadata_table";
 import Toast from "libs/toast";
-import { pluralize } from "libs/utils";
+import { pluralize, sleep } from "libs/utils";
 import _, { isNumber, memoize } from "lodash";
 import type { Vector3 } from "oxalis/constants";
 import { EMPTY_OBJECT, MappingStatusEnum } from "oxalis/constants";
@@ -394,6 +395,7 @@ const rootGroup = {
 
 class SegmentsView extends React.Component<Props, State> {
   intervalID: ReturnType<typeof setTimeout> | null | undefined;
+  unmountBenchmarkListener: (() => void) | undefined;
   state: State = {
     renamingCounter: 0,
     activeMeshJobId: null,
@@ -427,7 +429,37 @@ class SegmentsView extends React.Component<Props, State> {
     }
 
     Store.dispatch(ensureSegmentIndexIsLoadedAction(this.props.visibleSegmentationLayer?.name));
+
+    this.unmountBenchmarkListener = app.vent.on(
+      "benchmark:segmentlist:scroll",
+      this.benchmarkScroll,
+    );
   }
+
+  benchmarkScroll = async (itemCount: number, done: () => void) => {
+    if (this.tree?.current == null || this.props.segments == null) {
+      return;
+    }
+
+    let counter = 0;
+    // Iterate through the existing segments list until we visited itemCount
+    // items.
+    while (counter < itemCount) {
+      for (const segment of this.props.segments.values()) {
+        if (counter >= itemCount) {
+          break;
+        }
+        await sleep(0);
+        this.tree.current.scrollTo({ key: `segment-${segment.id}` });
+        counter++;
+      }
+      if (counter === 0) {
+        // Guard against empty segment list
+        break;
+      }
+    }
+    done();
+  };
 
   componentDidUpdate(prevProps: Props) {
     if (prevProps.visibleSegmentationLayer !== this.props.visibleSegmentationLayer) {
@@ -460,6 +492,9 @@ class SegmentsView extends React.Component<Props, State> {
   componentWillUnmount() {
     if (this.intervalID != null) {
       clearTimeout(this.intervalID);
+    }
+    if (this.unmountBenchmarkListener) {
+      this.unmountBenchmarkListener();
     }
   }
 
@@ -1812,7 +1847,6 @@ class SegmentsView extends React.Component<Props, State> {
             const checkedKeys = deepFlatFilter(this.state.groupTree, (node) => node.isChecked).map(
               (node) => node.key,
             );
-
             return (
               <React.Fragment>
                 <div style={{ flex: 0 }}>

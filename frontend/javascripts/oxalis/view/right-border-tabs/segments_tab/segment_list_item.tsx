@@ -599,10 +599,7 @@ function _SegmentListItem({
   };
   return (
     <List.Item
-      style={{
-        padding: 0,
-      }}
-      className={`segment-list-item ${isHoveredSegmentId ? "is-hovered-segment" : ""}`}
+      className={`segment-list-item no-padding ${isHoveredSegmentId ? "is-hovered-segment" : ""}`}
       onMouseEnter={() => {
         setHoveredSegmentId(segment.id);
       }}

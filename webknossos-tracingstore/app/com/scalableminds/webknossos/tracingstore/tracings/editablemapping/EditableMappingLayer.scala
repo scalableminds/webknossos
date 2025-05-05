@@ -9,7 +9,16 @@ import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MagLo
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, CoordinateTransformation, DataFormat, DataLayer, DataSourceId, ElementClass, SegmentationLayer, SpecialFile}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  AdditionalAxis,
+  CoordinateTransformation,
+  DataFormat,
+  DataLayer,
+  DataSourceId,
+  ElementClass,
+  SegmentationLayer,
+  SpecialFile
+}
 import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService

@@ -16,7 +16,7 @@ declare module 'javascript-natural-sort' {
    * @param b - Second value to compare
    * @returns -1 if a < b, 1 if a > b, 0 if a == b
    */
-  declare function naturalSort(a: string | numer, b: string | numer): -1 | 0 | 1;
+  declare function naturalSort(a: string | number, b: string | number): -1 | 0 | 1;
 
   /**
    * Additional properties for the naturalSort function

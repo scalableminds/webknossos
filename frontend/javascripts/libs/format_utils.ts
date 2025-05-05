@@ -16,7 +16,7 @@ import { Unicode } from "oxalis/constants";
 
 import type { Duration } from "dayjs/plugin/duration";
 import type { BoundingBoxObject } from "oxalis/store";
-import type { VoxelSize, WkLibsNdBoundingBox } from "types/api_flow_types";
+import type { VoxelSize, WkLibsNdBoundingBox } from "types/api_types";
 
 dayjs.extend(updateLocale);
 dayjs.extend(duration);

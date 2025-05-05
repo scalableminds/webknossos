@@ -20,7 +20,7 @@ import type {
 import { api } from "oxalis/singletons";
 import type { OxalisState, SkeletonTracing, StoreType, TreeMap } from "oxalis/store";
 import Store from "oxalis/throttled_store";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_types";
 import type { CreateNodeAction } from "./model/actions/skeletontracing_actions";
 
 type MergerModeState = {

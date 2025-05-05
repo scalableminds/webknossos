@@ -12,7 +12,7 @@ import Constants from "oxalis/constants";
 import type { OxalisState } from "oxalis/store";
 import type React from "react";
 import { useSelector } from "react-redux";
-import type { APIOrganization } from "types/api_flow_types";
+import type { APIOrganization } from "types/api_types";
 import {
   PricingPlanEnum,
   hasPricingPlanExceededStorage,

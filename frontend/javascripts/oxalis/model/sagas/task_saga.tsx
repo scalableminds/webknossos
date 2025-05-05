@@ -1,4 +1,4 @@
-import { updateLastTaskTypeIdOfUser } from "admin/admin_rest_api";
+import { updateLastTaskTypeIdOfUser } from "admin/rest_api";
 import { Button } from "antd";
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
@@ -25,7 +25,7 @@ import NewTaskDescriptionModal from "oxalis/view/new_task_description_modal";
 import RecommendedConfigurationModal from "oxalis/view/recommended_configuration_modal";
 import React from "react";
 import { call, delay, put, take } from "typed-redux-saga";
-import type { APITaskType } from "types/api_flow_types";
+import type { APITaskType } from "types/api_types";
 import { ensureWkReady } from "./ready_sagas";
 
 function* maybeShowNewTaskTypeModal(taskType: APITaskType): Saga<void> {

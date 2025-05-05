@@ -1,5 +1,6 @@
 import update from "immutability-helper";
-import { AnnotationToolEnum, type Vector3 } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
 import * as UiActions from "oxalis/model/actions/ui_actions";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
@@ -142,16 +143,15 @@ describe("VolumeTracing", () => {
   });
 
   it("should set trace/view tool", () => {
-    const setToolAction = UiActions.setToolAction(AnnotationToolEnum.TRACE);
-
+    const setToolAction = UiActions.setToolAction(AnnotationTool.TRACE);
     // Change tool to Trace
     const newState = UiReducer(initialState, setToolAction);
     expect(newState).not.toBe(initialState);
-    expect(newState.uiInformation.activeTool).toBe(AnnotationToolEnum.TRACE);
+    expect(newState.uiInformation.activeTool).toBe(AnnotationTool.TRACE);
   });
 
   it("should not allow to set trace tool if getActiveMagIndexForLayer(zoomStep, 'tracingId') is > 1", () => {
-    const setToolAction = UiActions.setToolAction(AnnotationToolEnum.TRACE);
+    const setToolAction = UiActions.setToolAction(AnnotationTool.TRACE);
     const alteredState = update(initialState, {
       flycam: {
         zoomStep: {
@@ -167,7 +167,7 @@ describe("VolumeTracing", () => {
     expect(alteredState).toBe(newState);
 
     // Tool should not have changed
-    expect(newState.uiInformation.activeTool).toBe(AnnotationToolEnum.MOVE);
+    expect(newState.uiInformation.activeTool).toBe(AnnotationTool.MOVE);
   });
 
   it("should cycle trace/view/brush tool", () => {
@@ -175,31 +175,31 @@ describe("VolumeTracing", () => {
 
     // Cycle tool to Brush
     let newState = UiReducer(initialState, cycleToolAction());
-    expect(newState.uiInformation.activeTool).toBe(AnnotationToolEnum.BRUSH);
+    expect(newState.uiInformation.activeTool).toBe(AnnotationTool.BRUSH);
     newState = UiReducer(newState, cycleToolAction());
-    expect(newState.uiInformation.activeTool).toBe(AnnotationToolEnum.ERASE_BRUSH);
+    expect(newState.uiInformation.activeTool).toBe(AnnotationTool.ERASE_BRUSH);
 
     // Cycle tool to Trace
     newState = UiReducer(newState, cycleToolAction());
-    expect(newState.uiInformation.activeTool).toBe(AnnotationToolEnum.TRACE);
+    expect(newState.uiInformation.activeTool).toBe(AnnotationTool.TRACE);
     newState = UiReducer(newState, cycleToolAction());
-    expect(newState.uiInformation.activeTool).toBe(AnnotationToolEnum.ERASE_TRACE);
+    expect(newState.uiInformation.activeTool).toBe(AnnotationTool.ERASE_TRACE);
     newState = UiReducer(newState, cycleToolAction());
-    expect(newState.uiInformation.activeTool).toBe(AnnotationToolEnum.FILL_CELL);
+    expect(newState.uiInformation.activeTool).toBe(AnnotationTool.FILL_CELL);
     newState = UiReducer(newState, cycleToolAction());
-    expect(newState.uiInformation.activeTool).toBe(AnnotationToolEnum.PICK_CELL);
+    expect(newState.uiInformation.activeTool).toBe(AnnotationTool.PICK_CELL);
     newState = UiReducer(newState, cycleToolAction());
-    expect(newState.uiInformation.activeTool).toBe(AnnotationToolEnum.QUICK_SELECT);
+    expect(newState.uiInformation.activeTool).toBe(AnnotationTool.QUICK_SELECT);
     newState = UiReducer(newState, cycleToolAction());
-    expect(newState.uiInformation.activeTool).toBe(AnnotationToolEnum.BOUNDING_BOX);
+    expect(newState.uiInformation.activeTool).toBe(AnnotationTool.BOUNDING_BOX);
     newState = UiReducer(newState, cycleToolAction());
-    expect(newState.uiInformation.activeTool).toBe(AnnotationToolEnum.LINE_MEASUREMENT);
+    expect(newState.uiInformation.activeTool).toBe(AnnotationTool.LINE_MEASUREMENT);
     newState = UiReducer(newState, cycleToolAction());
-    expect(newState.uiInformation.activeTool).toBe(AnnotationToolEnum.AREA_MEASUREMENT);
+    expect(newState.uiInformation.activeTool).toBe(AnnotationTool.AREA_MEASUREMENT);
 
     // Cycle tool back to MOVE
     newState = UiReducer(newState, cycleToolAction());
-    expect(newState.uiInformation.activeTool).toBe(AnnotationToolEnum.MOVE);
+    expect(newState.uiInformation.activeTool).toBe(AnnotationTool.MOVE);
   });
 
   it("should update its lastLabelActions", () => {

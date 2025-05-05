@@ -41,8 +41,8 @@ import type {
   ServerBranchPoint,
   ServerNode,
   ServerSkeletonTracingTree,
-} from "types/api_flow_types";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+} from "types/api_types";
+import type { AdditionalCoordinate } from "types/api_types";
 
 export function generateTreeName(state: OxalisState, timestamp: number, treeId: number) {
   let user = "";

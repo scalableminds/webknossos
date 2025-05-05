@@ -1,7 +1,7 @@
 import ErrorHandling from "libs/error_handling";
 import { alert } from "libs/window";
 import AnnotationSagas from "oxalis/model/sagas/annotation_saga";
-import { watchToolDeselection, watchToolReset } from "oxalis/model/sagas/annotation_tool_saga";
+import toolSaga from "oxalis/model/sagas/annotation_tool_saga";
 import listenToClipHistogramSaga from "oxalis/model/sagas/clip_histogram_saga";
 import DatasetSagas from "oxalis/model/sagas/dataset_saga";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
@@ -22,6 +22,7 @@ import { all, call, cancel, fork, put, take, takeEvery } from "typed-redux-saga"
 import type { EscalateErrorAction } from "../actions/actions";
 import { setIsWkReadyAction } from "../actions/ui_actions";
 import maintainMaximumZoomForAllMagsSaga from "./flycam_info_cache_saga";
+import splitBoundaryMeshSaga from "./split_boundary_mesh_saga";
 import { warnIfEmailIsUnverified } from "./user_saga";
 
 let rootSagaCrashed = false;
@@ -70,8 +71,6 @@ function* restartableSaga(): Saga<void> {
       call(meshSaga),
       call(watchTasksAsync),
       call(MappingSaga),
-      call(watchToolDeselection),
-      call(watchToolReset),
       call(ProofreadSaga),
       ...AnnotationSagas.map((saga) => call(saga)),
       ...SaveSagas.map((saga) => call(saga)),
@@ -82,6 +81,8 @@ function* restartableSaga(): Saga<void> {
       call(handleAdditionalCoordinateUpdate),
       call(maintainMaximumZoomForAllMagsSaga),
       ...DatasetSagas.map((saga) => call(saga)),
+      call(splitBoundaryMeshSaga),
+      call(toolSaga),
     ]);
   } catch (err) {
     rootSagaCrashed = true;

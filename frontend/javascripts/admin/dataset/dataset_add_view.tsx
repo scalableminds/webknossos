@@ -1,7 +1,7 @@
 import { CopyOutlined, DatabaseOutlined, UploadOutlined } from "@ant-design/icons";
-import { getDatastores } from "admin/admin_rest_api";
 import DatasetAddRemoteView from "admin/dataset/dataset_add_remote_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
+import { getDatastores } from "admin/rest_api";
 import { Button, Layout, Modal, Tabs, type TabsProps } from "antd";
 import features from "features";
 import type { History } from "history";
@@ -13,7 +13,7 @@ import React, { useState } from "react";
 import { connect, useSelector } from "react-redux";
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
-import type { APIDataStore } from "types/api_flow_types";
+import type { APIDataStore } from "types/api_types";
 import DatasetAddComposeView from "./dataset_add_compose_view";
 
 const { Content, Sider } = Layout;

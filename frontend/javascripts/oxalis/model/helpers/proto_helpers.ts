@@ -8,7 +8,7 @@ import SkeletonTracingProto from "SkeletonTracing.proto";
 import VolumeTracingProto from "VolumeTracing.proto";
 import { isBigInt } from "libs/utils";
 import { Root } from "protobufjs/light";
-import type { APITracingStoreAnnotation, ServerTracing } from "types/api_flow_types";
+import type { APITracingStoreAnnotation, ServerTracing } from "types/api_types";
 
 const PROTO_FILES = {
   skeleton: SkeletonTracingProto,

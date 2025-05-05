@@ -1,5 +1,5 @@
 import { SyncOutlined } from "@ant-design/icons";
-import { getVoxelyticsLogs } from "admin/admin_rest_api";
+import { getVoxelyticsLogs } from "admin/rest_api";
 import Ansi from "ansi-to-react";
 import { Button, Select, Switch, message } from "antd";
 import chalk from "chalk";
@@ -7,7 +7,7 @@ import classnames from "classnames";
 import { usePolling } from "libs/react_hooks";
 import { LOG_LEVELS } from "oxalis/constants";
 import { useMemo, useState } from "react";
-import type { VoxelyticsLogLine } from "types/api_flow_types";
+import type { VoxelyticsLogLine } from "types/api_types";
 import { type Result, VX_POLLING_INTERVAL, addAfterPadding, addBeforePadding } from "./utils";
 
 type LogResult = Result<Array<VoxelyticsLogLine>>;

@@ -24,14 +24,14 @@ import {
   VerticalLeftOutlined,
   VerticalRightOutlined,
 } from "@ant-design/icons";
+import { withAuthentication } from "admin/auth/authentication_modal";
 import {
   createExplorational,
   duplicateAnnotation,
   editLockedState,
   finishAnnotation,
   reOpenAnnotation,
-} from "admin/admin_rest_api";
-import { withAuthentication } from "admin/auth/authentication_modal";
+} from "admin/rest_api";
 import { Button, ConfigProvider, Dropdown, Modal, Space, Tooltip } from "antd";
 import type { SubMenuType } from "antd/es/menu/interface";
 import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
@@ -79,8 +79,8 @@ import { mapLayoutKeysToLanguage } from "oxalis/view/layouting/default_layout_co
 import * as React from "react";
 import { connect } from "react-redux";
 import { getAntdTheme, getThemeFromUser } from "theme";
-import type { APIAnnotationType, APIUser, APIUserBase } from "types/api_flow_types";
-import { APIAnnotationTypeEnum, TracingTypeEnum } from "types/api_flow_types";
+import type { APIAnnotationType, APIUser, APIUserBase } from "types/api_types";
+import { APIAnnotationTypeEnum, TracingTypeEnum } from "types/api_types";
 import CreateAnimationModal from "./create_animation_modal";
 import { PrivateLinksModal } from "./private_links_view";
 

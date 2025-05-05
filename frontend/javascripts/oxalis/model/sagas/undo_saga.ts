@@ -1,8 +1,8 @@
 import createProgressCallback from "libs/progress_callback";
 import Toast from "libs/toast";
 import messages from "messages";
-import { AnnotationToolEnum } from "oxalis/constants";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
 import {
   getVolumeTracingById,
@@ -554,7 +554,7 @@ function* applyStateOfStack(
   }
 
   const activeTool = yield* select((state) => state.uiInformation.activeTool);
-  if (activeTool === AnnotationToolEnum.PROOFREAD) {
+  if (activeTool === AnnotationTool.PROOFREAD) {
     const warningMessage =
       direction === "undo"
         ? messages["undo.no_undo_during_proofread"]

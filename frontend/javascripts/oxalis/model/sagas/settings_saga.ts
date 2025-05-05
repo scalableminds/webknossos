@@ -1,4 +1,4 @@
-import { updateDatasetConfiguration, updateUserConfiguration } from "admin/admin_rest_api";
+import { updateDatasetConfiguration, updateUserConfiguration } from "admin/rest_api";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -44,8 +44,8 @@ function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration
     );
   } catch (error) {
     // We catch errors in view mode as they are not that important here and may annoy the user.
-    const tracing = yield* select((state) => state.annotation);
-    const isViewMode = tracing.annotationType === "View";
+    const annotation = yield* select((state) => state.annotation);
+    const isViewMode = annotation.annotationType === "View";
 
     if (!isViewMode) {
       throw error;

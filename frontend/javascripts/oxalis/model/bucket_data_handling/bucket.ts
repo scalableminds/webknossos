@@ -13,8 +13,8 @@ import type TemporalBucketManager from "oxalis/model/bucket_data_handling/tempor
 import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
 import Store from "oxalis/store";
 import * as THREE from "three";
-import type { BucketDataArray, ElementClass } from "types/api_flow_types";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { BucketDataArray, ElementClass } from "types/api_types";
+import type { AdditionalCoordinate } from "types/api_types";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 import { getConstructorForElementClass, uint8ToTypedBuffer } from "../helpers/typed_buffer";
 import BucketSnapshot, { type PendingOperation } from "./bucket_snapshot";

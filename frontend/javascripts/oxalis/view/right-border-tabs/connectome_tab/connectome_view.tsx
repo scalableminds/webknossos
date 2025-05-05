@@ -4,7 +4,7 @@ import {
   getSynapseSources,
   getSynapseTypes,
   getSynapsesOfAgglomerates,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
 import { Alert, Empty, Space, Tooltip, type TreeProps } from "antd";
 import DiffableMap from "libs/diffable_map";
 import { stringToAntdColorPresetRgb } from "libs/format_utils";
@@ -59,7 +59,7 @@ import type {
   APIDataSourceId,
   APIDataset,
   APISegmentationLayer,
-} from "types/api_flow_types";
+} from "types/api_types";
 const connectomeTabId = "connectome-view";
 type StateProps = {
   dataset: APIDataset;

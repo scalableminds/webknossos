@@ -20,8 +20,8 @@ import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
 import { api } from "oxalis/singletons";
 import type { MutableNode, Node } from "oxalis/store";
 import { call, put } from "typed-redux-saga";
-import type { APISegmentationLayer } from "types/api_flow_types";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { APISegmentationLayer } from "types/api_types";
+import type { AdditionalCoordinate } from "types/api_types";
 import type { MagInfo } from "../helpers/mag_info";
 
 // By default, a new bounding box is created around

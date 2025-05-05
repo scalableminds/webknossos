@@ -12,7 +12,7 @@ import type { CreateActionNode, UpdateActionNode } from "oxalis/model/sagas/upda
 import type { Edge, Node, OxalisState, SkeletonTracing, Tree } from "oxalis/store";
 import Store from "oxalis/throttled_store";
 import * as THREE from "three";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_types";
 
 const MAX_CAPACITY = 1000;
 
@@ -563,15 +563,11 @@ class Skeleton {
             attributeAdditionalCoordinates.set([node.additionalCoordinates[idx].value], index);
           }
         }
-        // @ts-expect-error ts-migrate(2542) FIXME: Index signature in type 'any[] | ArrayLike<number>... Remove this comment to see the full error message
         attributes.radius.array[index] = node.radius;
-        // @ts-expect-error ts-migrate(2542) FIXME: Index signature in type 'any[] | ArrayLike<number>... Remove this comment to see the full error message
         attributes.type.array[index] = NodeTypes.NORMAL;
         // @ts-expect-error ts-migrate(2542) FIXME: Index signature in type 'any[] | ArrayLike<number>... Remove this comment to see the full error message
         attributes.isCommented.array[index] = false;
-        // @ts-expect-error ts-migrate(2542) FIXME: Index signature in type 'any[] | ArrayLike<number>... Remove this comment to see the full error message
         attributes.nodeId.array[index] = node.id;
-        // @ts-expect-error ts-migrate(2542) FIXME: Index signature in type 'any[] | ArrayLike<number>... Remove this comment to see the full error message
         attributes.treeId.array[index] = treeId;
         return _.values(attributes);
       },
@@ -585,7 +581,6 @@ class Skeleton {
     const id = this.combineIds(nodeId, treeId);
     this.delete(id, this.nodes, ({ buffer, index }) => {
       const attribute = buffer.geometry.attributes.type;
-      // @ts-expect-error ts-migrate(2542) FIXME: Index signature in type 'ArrayLike<number>' only p... Remove this comment to see the full error message
       attribute.array[index] = NodeTypes.INVALID;
       return [attribute];
     });
@@ -598,7 +593,6 @@ class Skeleton {
     const id = this.combineIds(nodeId, treeId);
     this.update(id, this.nodes, ({ buffer, index }) => {
       const attribute = buffer.geometry.attributes.radius;
-      // @ts-expect-error ts-migrate(2542) FIXME: Index signature in type 'ArrayLike<number>' only p... Remove this comment to see the full error message
       attribute.array[index] = radius;
       return [attribute];
     });
@@ -659,7 +653,6 @@ class Skeleton {
     const id = this.combineIds(nodeId, treeId);
     this.update(id, this.nodes, ({ buffer, index }) => {
       const attribute = buffer.geometry.attributes.type;
-      // @ts-expect-error ts-migrate(2542) FIXME: Index signature in type 'ArrayLike<number>' only p... Remove this comment to see the full error message
       attribute.array[index] = type;
       return [attribute];
     });

@@ -5,7 +5,7 @@ import {
 } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { describe, it, expect } from "vitest";
 import constants from "oxalis/constants";
-import type { ElementClass } from "types/api_flow_types";
+import type { ElementClass } from "types/api_types";
 
 const { GPU_FACTOR_MULTIPLIER, DEFAULT_GPU_MEMORY_FACTOR } = constants;
 const DEFAULT_REQUIRED_BUCKET_CAPACITY = GPU_FACTOR_MULTIPLIER * DEFAULT_GPU_MEMORY_FACTOR;

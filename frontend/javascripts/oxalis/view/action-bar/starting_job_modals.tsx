@@ -1,4 +1,5 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
+import { DatasetNameFormItem } from "admin/dataset/dataset_components";
 import {
   type JobCreditCostInfo,
   getAiModels,
@@ -10,8 +11,7 @@ import {
   startMitochondriaInferralJob,
   startNeuronInferralJob,
   startNucleiInferralJob,
-} from "admin/admin_rest_api";
-import { DatasetNameFormItem } from "admin/dataset/dataset_components";
+} from "admin/rest_api";
 import {
   Alert,
   Button,
@@ -65,7 +65,7 @@ import type { OxalisState, UserBoundingBox } from "oxalis/store";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import React, { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { type APIDataLayer, type APIJob, APIJobType } from "types/api_flow_types";
+import { type APIDataLayer, type APIJob, APIJobType } from "types/api_types";
 import {
   CollapsibleWorkflowYamlEditor,
   TrainAiModelFromAnnotationTab,

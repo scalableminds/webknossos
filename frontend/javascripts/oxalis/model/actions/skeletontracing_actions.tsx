@@ -13,8 +13,8 @@ import Store from "oxalis/store";
 import RemoveTreeModal from "oxalis/view/remove_tree_modal";
 import type { Key } from "react";
 import { batchActions } from "redux-batched-actions";
-import type { MetadataEntryProto, ServerSkeletonTracing } from "types/api_flow_types";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { MetadataEntryProto, ServerSkeletonTracing } from "types/api_types";
+import type { AdditionalCoordinate } from "types/api_types";
 
 export type InitializeSkeletonTracingAction = ReturnType<typeof initializeSkeletonTracingAction>;
 export type CreateNodeAction = ReturnType<typeof createNodeAction>;

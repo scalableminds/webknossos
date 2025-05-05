@@ -1,5 +1,5 @@
 import { useIsMutating } from "@tanstack/react-query";
-import { type DatasetUpdater, getDatastores, triggerDatasetCheck } from "admin/admin_rest_api";
+import { type DatasetUpdater, getDatastores, triggerDatasetCheck } from "admin/rest_api";
 import { useEffectOnlyOnce, usePrevious } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
 import _ from "lodash";
@@ -10,7 +10,7 @@ import type {
   APIDatasetCompact,
   APIDatasetCompactWithoutStatusAndLayerNames,
   FolderItem,
-} from "types/api_flow_types";
+} from "types/api_types";
 import {
   useCreateFolderMutation,
   useDatasetSearchQuery,

@@ -23,7 +23,7 @@ import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
-import { APIJobType } from "types/api_flow_types";
+import { APIJobType } from "types/api_types";
 import DownloadModalView from "../action-bar/download_modal_view";
 import { getContextMenuPositionFromEvent } from "../context_menu";
 import { ContextMenuContainer } from "./sidebar_context_menu";

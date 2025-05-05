@@ -2,6 +2,7 @@ import { QuestionCircleOutlined } from "@ant-design/icons";
 import { Radio, type RadioChangeEvent } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
+import { useWkSelector } from "libs/react_hooks";
 import Shortcut from "libs/shortcut_component";
 import defaultState from "oxalis/default_state";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";

@@ -2,7 +2,7 @@ import _ from "lodash";
 import constants from "oxalis/constants";
 import type { WebknossosState } from "oxalis/store";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useSelector } from "react-redux";
+import { type EqualityFn, useSelector } from "react-redux";
 import { useLocation } from "react-router-dom";
 import { KEYBOARD_BUTTON_LOOP_INTERVAL } from "./input";
 
@@ -289,6 +289,6 @@ export function useIsMounted() {
  * @param fn - Selector function that receives the Webknossos state
  * @returns Selected state value
  */
-export function useWkSelector<T>(fn: (state: WebknossosState) => T): T {
-  return useSelector(fn);
+export function useWkSelector<T>(fn: (state: WebknossosState) => T, equalityFn?: EqualityFn<T>): T {
+  return useSelector(fn, equalityFn);
 }

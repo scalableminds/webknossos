@@ -1,4 +1,5 @@
 import { Badge, Button, Dropdown, type MenuProps } from "antd";
+import { useWkSelector } from "libs/react_hooks";
 import { Toolkit } from "oxalis/model/accessors/tool_accessor";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { Store } from "oxalis/singletons";

@@ -563,7 +563,7 @@ function CommentTabViewWrapper() {
   // 2. Safe-guard that a skeleton tracing is available
 
   const skeletonTracing = useSelector((state: WebknossosState) =>
-    getSkeletonTracing(state.annotation).getOrElse(null),
+    getSkeletonTracing(state.annotation),
   );
 
   if (skeletonTracing) return <CommentTabViewMemo skeletonTracing={skeletonTracing} />;

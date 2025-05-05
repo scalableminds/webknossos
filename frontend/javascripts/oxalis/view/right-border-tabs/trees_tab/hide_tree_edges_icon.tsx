@@ -1,4 +1,4 @@
-import { useWkSelector } from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import type { CSSProperties, StyleHTMLAttributes } from "react";
 
 export function HideTreeEdgesIcon({

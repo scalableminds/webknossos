@@ -1,7 +1,7 @@
 import { sendHelpEmail, updateNovelUserExperienceInfos } from "admin/rest_api";
 import { Alert, Input, Modal, message } from "antd";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
-import { useWkSelector } from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import type React from "react";
 import { type CSSProperties, useState } from "react";
 import { useDispatch } from "react-redux";

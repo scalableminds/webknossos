@@ -1,5 +1,6 @@
 import { isUserAdminOrManager } from "libs/utils";
-import { type WebknossosState, useWkSelector } from "oxalis/store";
+import { type WebknossosState } from "oxalis/store";
+import { useWkSelector } from "./react_hooks";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "react-redux";

@@ -13,7 +13,7 @@ import { useFetch } from "libs/react_helpers";
 import UserLocalStorage from "libs/user_local_storage";
 import _ from "lodash";
 import { switchTo } from "navbar";
-import { useWkSelector } from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import type React from "react";
 import { useEffect, useState } from "react";
 import type { APIUser } from "types/api_types";

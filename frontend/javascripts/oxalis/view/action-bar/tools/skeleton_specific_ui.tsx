@@ -11,7 +11,8 @@ import {
   createTreeAction,
   setMergerModeEnabledAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { type WebknossosState, useWkSelector } from "oxalis/store";
+import { type WebknossosState } from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import { MaterializeVolumeAnnotationModal } from "oxalis/view/action-bar/starting_job_modals";
 import ButtonComponent, { ToggleButton } from "oxalis/view/components/button_component";
 

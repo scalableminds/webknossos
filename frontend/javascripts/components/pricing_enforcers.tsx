@@ -12,7 +12,7 @@ import type { TooltipPlacement } from "antd/lib/tooltip";
 import { rgbToHex } from "libs/utils";
 import _ from "lodash";
 import { PRIMARY_COLOR } from "oxalis/constants";
-import { useWkSelector } from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import { SwitchSetting } from "oxalis/view/components/setting_input_views";
 import React from "react";
 import { Link } from "react-router-dom";

@@ -18,7 +18,8 @@ import {
 } from "oxalis/model/accessors/view_mode_accessor";
 import { hideMeasurementTooltipAction } from "oxalis/model/actions/ui_actions";
 import dimensions from "oxalis/model/dimensions";
-import { type WebknossosState, useWkSelector } from "oxalis/store";
+import { type WebknossosState } from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import { useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 

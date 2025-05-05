@@ -36,7 +36,8 @@ import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions"
 import { getSupportedValueRangeForElementClass } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
 import { Store } from "oxalis/singletons";
-import { type WebknossosState, useWkSelector } from "oxalis/store";
+import { type WebknossosState } from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import { NumberInputPopoverSetting } from "oxalis/view/components/setting_input_views";
 import React, { useCallback, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";

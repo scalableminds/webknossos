@@ -96,7 +96,8 @@ import type {
   VolumeTracing,
   WebknossosState,
 } from "oxalis/store";
-import Store, { useWkSelector } from "oxalis/store";
+import Store from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import ButtonComponent from "oxalis/view/components/button_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";

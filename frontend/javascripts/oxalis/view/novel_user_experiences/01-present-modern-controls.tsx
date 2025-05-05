@@ -1,7 +1,7 @@
 import { updateNovelUserExperienceInfos } from "admin/rest_api";
 import { Button, Modal } from "antd";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { useWkSelector } from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import * as React from "react";
 import { useDispatch } from "react-redux";
 

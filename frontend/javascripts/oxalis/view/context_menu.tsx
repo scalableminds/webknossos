@@ -123,7 +123,8 @@ import type {
   UserBoundingBox,
   VolumeTracing,
 } from "oxalis/store";
-import Store, { useWkSelector } from "oxalis/store";
+import Store from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import {
   getVolumeRequestUrl,
   withMappingActivationConfirmation,

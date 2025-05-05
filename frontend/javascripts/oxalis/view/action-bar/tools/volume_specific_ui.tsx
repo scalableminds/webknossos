@@ -38,7 +38,8 @@ import {
   interpolateSegmentationLayerAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { Model } from "oxalis/singletons";
-import Store, { useWkSelector, type WebknossosState } from "oxalis/store";
+import Store, { type WebknossosState } from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import ButtonComponent, { ToggleButton } from "oxalis/view/components/button_component";
 import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
 

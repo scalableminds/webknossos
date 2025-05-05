@@ -12,7 +12,8 @@ import {
   setRenderAnimationModalVisibilityAction,
   setShareModalVisibilityAction,
 } from "oxalis/model/actions/ui_actions";
-import Store, { useWkSelector, type WebknossosState } from "oxalis/store";
+import Store, { type WebknossosState } from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import ShareViewDatasetModalView from "oxalis/view/action-bar/share_view_dataset_modal_view";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";

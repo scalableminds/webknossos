@@ -40,7 +40,8 @@ import {
   setOthersMayEditForAnnotationAction,
 } from "oxalis/model/actions/annotation_actions";
 import { setShareModalVisibilityAction } from "oxalis/model/actions/ui_actions";
-import Store, { useWkSelector, type WebknossosState } from "oxalis/store";
+import Store, { type WebknossosState } from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";

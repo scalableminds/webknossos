@@ -7,7 +7,8 @@ import {
   hasAgglomerateMapping,
   hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { type WebknossosState, useWkSelector } from "oxalis/store";
+import { type WebknossosState } from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 
 import FastTooltip from "components/fast_tooltip";
 import features from "features";

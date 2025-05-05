@@ -7,7 +7,7 @@ import {
 } from "admin/rest_api";
 import { Button, Card, Checkbox, Form, Input, InputNumber, Select } from "antd";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import { useWkSelector } from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import { useEffect, useState } from "react";
 import { useHistory } from "react-router-dom";
 import type { APITeam, APIUser } from "types/api_types";

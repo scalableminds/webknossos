@@ -9,7 +9,7 @@ import { formatDateInLocalTimeZone } from "components/formatted_date";
 import dayjs from "dayjs";
 import { formatCountToDataAmountUnit, formatCreditsString } from "libs/format_utils";
 import Constants from "oxalis/constants";
-import { useWkSelector } from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import type React from "react";
 import type { APIOrganization } from "types/api_types";
 import {

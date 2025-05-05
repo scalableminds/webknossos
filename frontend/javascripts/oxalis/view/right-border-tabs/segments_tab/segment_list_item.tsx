@@ -46,7 +46,8 @@ import type {
   VolumeTracing,
   WebknossosState,
 } from "oxalis/store";
-import Store, { useWkSelector } from "oxalis/store";
+import Store from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import { getContextMenuPositionFromEvent } from "oxalis/view/context_menu";
 import type { APIMeshFile, APISegmentationLayer } from "types/api_types";

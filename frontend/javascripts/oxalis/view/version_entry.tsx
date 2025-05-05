@@ -49,7 +49,8 @@ import type {
   UpdateTreeUpdateAction,
   UpdateTreeVisibilityUpdateAction,
 } from "oxalis/model/sagas/update_actions";
-import { type StoreAnnotation, useWkSelector } from "oxalis/store";
+import { type StoreAnnotation } from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 type Description = {
   description: string;

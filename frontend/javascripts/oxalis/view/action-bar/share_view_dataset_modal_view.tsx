@@ -2,7 +2,7 @@ import { CopyOutlined } from "@ant-design/icons";
 import { Button, Col, Dropdown, Input, Modal, Row, Space } from "antd";
 import { makeComponentLazy } from "libs/react_helpers";
 import messages from "messages";
-import { useWkSelector } from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import { useZarrLinkMenu } from "./private_links_view";
 import { CopyableSharingLink, getUrl, useDatasetSharingToken } from "./share_modal_view";
 

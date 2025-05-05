@@ -14,7 +14,7 @@ import Markdown from "libs/markdown_adapter";
 import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
 import _ from "lodash";
-import { useWkSelector } from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import {
   DatasetExtentRow,
   OwningOrganizationRow,

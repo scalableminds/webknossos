@@ -12,7 +12,7 @@ import { isUserAdminOrTeamManager, transformToCSVRow } from "libs/utils";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import { AnnotationStateFilterEnum, AnnotationTypeFilterEnum } from "oxalis/constants";
-import { useWkSelector } from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import { useState } from "react";
 import type { APITimeTrackingPerUser } from "types/api_types";
 import ProjectAndAnnotationTypeDropdown from "./project_and_annotation_type_dropdown";

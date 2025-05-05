@@ -3,7 +3,8 @@ import React, { useState } from "react";
 
 import { startRenderAnimationJob } from "admin/rest_api";
 import Toast from "libs/toast";
-import Store, { type MeshInformation, type UserBoundingBox, useWkSelector } from "oxalis/store";
+import Store, { type MeshInformation, type UserBoundingBox } from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 
 import { InfoCircleOutlined } from "@ant-design/icons";
 import {

@@ -16,7 +16,7 @@ import _ from "lodash";
 import type { Vector3 } from "oxalis/constants";
 import { getMagInfo, getSegmentationLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { formatUserName } from "oxalis/model/accessors/user_accessor";
-import { useWkSelector } from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import {
   type AnnotationInfoForAITrainingJob,
   TrainAiModelTab,

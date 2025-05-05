@@ -47,12 +47,8 @@ import {
   hasVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { Model } from "oxalis/singletons";
-import {
-  type StoreAnnotation,
-  type UserBoundingBox,
-  type WebknossosState,
-  useWkSelector,
-} from "oxalis/store";
+import { type StoreAnnotation, type UserBoundingBox, type WebknossosState } from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import { BoundingBoxSelection, MagSlider } from "oxalis/view/action-bar/starting_job_modals";
 import type React from "react";
 import { useState } from "react";

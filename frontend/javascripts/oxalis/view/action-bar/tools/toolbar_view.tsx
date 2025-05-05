@@ -14,7 +14,8 @@ import {
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
-import Store, { useWkSelector, type WebknossosState } from "oxalis/store";
+import Store, { type WebknossosState } from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import ButtonComponent, { ToggleButton } from "oxalis/view/components/button_component";
 
 import FastTooltip from "components/fast_tooltip";

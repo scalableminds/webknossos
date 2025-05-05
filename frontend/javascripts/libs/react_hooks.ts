@@ -3,6 +3,8 @@ import constants from "oxalis/constants";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { KEYBOARD_BUTTON_LOOP_INTERVAL } from "./input";
+import type { WebknossosState } from "oxalis/store";
+import { useSelector } from "react-redux";
 
 // Adapted from: https://usehooks.com/usePrevious/
 export function usePrevious<T>(value: T, ignoreNullAndUndefined: boolean = false): T | null {
@@ -234,4 +236,7 @@ export function useIsMounted() {
   const isMounted = useCallback(() => isMountedRef.current, []);
 
   return isMounted;
+}
+export function useWkSelector<T>(fn: (state: WebknossosState) => T): T {
+  return useSelector(fn);
 }

@@ -31,7 +31,7 @@ import type { Vector3 } from "oxalis/constants";
 import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
 import { flatToNestedMatrix } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import { checkLandmarksForThinPlateSpline } from "oxalis/model/helpers/transformation_helpers";
-import { useWkSelector } from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import React, { useState } from "react";
 import type { APIDataLayer, APIDataset, APITeam, LayerLink } from "types/api_types";
 import { syncValidator } from "types/validation";

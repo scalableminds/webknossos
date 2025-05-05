@@ -17,7 +17,8 @@ import {
 } from "oxalis/model/actions/annotation_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import { setActiveUserBoundingBoxId } from "oxalis/model/actions/ui_actions";
-import { type UserBoundingBox, type WebknossosState, useWkSelector } from "oxalis/store";
+import { type UserBoundingBox, type WebknossosState } from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import UserBoundingBoxInput from "oxalis/view/components/setting_input_views";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";

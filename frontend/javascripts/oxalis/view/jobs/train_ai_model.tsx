@@ -39,12 +39,8 @@ import { MagInfo } from "oxalis/model/helpers/mag_info";
 import { convertUserBoundingBoxesFromServerToFrontend } from "oxalis/model/reducers/reducer_helpers";
 import { serverVolumeToClientVolumeTracing } from "oxalis/model/reducers/volumetracing_reducer";
 import { Model } from "oxalis/singletons";
-import {
-  type StoreAnnotation,
-  type UserBoundingBox,
-  type VolumeTracing,
-  useWkSelector,
-} from "oxalis/store";
+import { type StoreAnnotation, type UserBoundingBox, type VolumeTracing } from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import React, { useRef, useState } from "react";
 import {
   type APIAnnotation,

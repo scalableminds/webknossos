@@ -100,7 +100,8 @@ import type {
   VolumeTracing,
   WebknossosState,
 } from "oxalis/store";
-import Store, { useWkSelector } from "oxalis/store";
+import Store from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import { MaterializeVolumeAnnotationModal } from "oxalis/view/action-bar/starting_job_modals";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import {

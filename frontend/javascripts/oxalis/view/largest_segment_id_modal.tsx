@@ -12,7 +12,8 @@ import {
   setLargestSegmentIdAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { getSupportedValueRangeForElementClass } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import { type VolumeTracing, type WebknossosState, useWkSelector } from "oxalis/store";
+import { type VolumeTracing, type WebknossosState } from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import Store from "oxalis/throttled_store";
 import * as React from "react";
 import { useDispatch, useSelector } from "react-redux";

@@ -23,7 +23,7 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import { Unicode } from "oxalis/constants";
 import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
-import { useWkSelector } from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import CategorizationLabel from "oxalis/view/components/categorization_label";
 import EditableTextIcon from "oxalis/view/components/editable_text_icon";
 import {

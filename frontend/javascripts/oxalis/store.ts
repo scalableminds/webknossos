@@ -39,7 +39,6 @@ import UserReducer from "oxalis/model/reducers/user_reducer";
 import ViewModeReducer from "oxalis/model/reducers/view_mode_reducer";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import { useSelector } from "react-redux";
 import { type Middleware, applyMiddleware, createStore } from "redux";
 import { enableBatching } from "redux-batched-actions";
 import createSagaMiddleware, { type Saga } from "redux-saga";
@@ -671,10 +670,6 @@ const store = createStore<WebknossosState, Action, unknown, unknown>(
 export function startSaga(saga: Saga<any[]>) {
   sagaMiddleware.run(saga);
 }
-export function useWkSelector<T>(fn: (state: WebknossosState) => T): T {
-  return useSelector(fn);
-}
-
 export type StoreType = typeof store;
 
 export default store;

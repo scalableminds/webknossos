@@ -27,7 +27,8 @@ import {
 import { Model } from "oxalis/singletons";
 import { api } from "oxalis/singletons";
 import type { StoreAnnotation, WebknossosState } from "oxalis/store";
-import Store, { useWkSelector } from "oxalis/store";
+import Store from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import VersionEntryGroup from "oxalis/view/version_entry_group";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";

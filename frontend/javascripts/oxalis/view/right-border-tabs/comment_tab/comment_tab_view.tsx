@@ -31,8 +31,8 @@ import {
   type Tree,
   type TreeMap,
   type WebknossosState,
-  useWkSelector,
 } from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import ButtonComponent from "oxalis/view/components/button_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import InputComponent from "oxalis/view/components/input_component";

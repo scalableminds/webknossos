@@ -17,7 +17,8 @@ import {
 import { setAdditionalCoordinatesAction } from "oxalis/model/actions/flycam_actions";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
 import type { WebknossosState } from "oxalis/store";
-import Store, { useWkSelector } from "oxalis/store";
+import Store from "oxalis/store";
+import { useWkSelector } from "libs/react_hooks";
 import AddNewLayoutModal from "oxalis/view/action-bar/add_new_layout_modal";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
 import ToolbarView from "oxalis/view/action-bar/tools/toolbar_view";

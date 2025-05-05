@@ -1,4 +1,4 @@
-import { getVoxelyticsWorkflow, isWorkflowAccessibleBySwitching } from "admin/admin_rest_api";
+import { getVoxelyticsWorkflow, isWorkflowAccessibleBySwitching } from "admin/rest_api";
 import BrainSpinner, { BrainSpinnerWithError } from "components/brain_spinner";
 import { usePolling, useSearchParams } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -19,7 +19,7 @@ import {
   type VoxelyticsWorkflowDagEdge,
   type VoxelyticsWorkflowDagNode,
   type VoxelyticsWorkflowReport,
-} from "types/api_flow_types";
+} from "types/api_types";
 import TaskListView from "./task_list_view";
 import { VX_POLLING_INTERVAL } from "./utils";
 

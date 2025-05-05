@@ -1,6 +1,6 @@
 import { CopyOutlined, InfoCircleOutlined, RetweetOutlined } from "@ant-design/icons";
-import { getDatasetSharingToken, revokeDatasetSharingToken } from "admin/admin_rest_api";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import { getDatasetSharingToken, revokeDatasetSharingToken } from "admin/rest_api";
 import { Button, Checkbox, Collapse, type FormInstance, Input, Space, Tooltip } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import { PricingEnforcedBlur } from "components/pricing_enforcers";
@@ -15,7 +15,7 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import { connect } from "react-redux";
 import { type RouteComponentProps, withRouter } from "react-router-dom";
-import type { APIDataset, APIUser } from "types/api_flow_types";
+import type { APIDataset, APIUser } from "types/api_types";
 import { FormItemWithInfo } from "./helper_components";
 
 type Props = {

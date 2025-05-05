@@ -1,7 +1,7 @@
 import { CopyOutlined, DeleteOutlined } from "@ant-design/icons";
-import { startFindLargestSegmentIdJob } from "admin/admin_rest_api";
 import { getDatasetNameRules, layerNameRules } from "admin/dataset/dataset_components";
 import { useStartAndPollJob } from "admin/job/job_hooks";
+import { startFindLargestSegmentIdJob } from "admin/rest_api";
 import {
   Button,
   Col,
@@ -30,7 +30,7 @@ import { getSupportedValueRangeForElementClass } from "oxalis/model/bucket_data_
 import type { BoundingBoxObject, OxalisState } from "oxalis/store";
 import * as React from "react";
 import { useSelector } from "react-redux";
-import { type APIDataLayer, type APIDataset, APIJobType } from "types/api_flow_types";
+import { type APIDataLayer, type APIDataset, APIJobType } from "types/api_types";
 import type { ArbitraryObject } from "types/globals";
 import type { DataLayer } from "types/schemas/datasource.types";
 import { isValidJSON, syncValidator, validateDatasourceJSON } from "types/validation";
@@ -301,7 +301,7 @@ function SimpleDatasetForm({
             </Row>
             <Row gutter={48}>
               <Col span={24} xl={12} />
-              <Col span={24} xl={6}>
+              <Col span={24} xl={12}>
                 <AxisRotationSettingForDataset form={form} />
               </Col>
             </Row>
@@ -359,7 +359,7 @@ function SimpleLayerForm({
   form: FormInstance;
   dataset: APIDataset | null | undefined;
 }) {
-  const layerCategorySavedOnServer = dataset?.dataSource.dataLayers[index].category;
+  const layerCategorySavedOnServer = dataset?.dataSource.dataLayers[index]?.category;
   const isStoredAsSegmentationLayer = layerCategorySavedOnServer === "segmentation";
   const dataLayers = Form.useWatch(["dataSource", "dataLayers"]);
   const category = Form.useWatch(["dataSource", "dataLayers", index, "category"]);

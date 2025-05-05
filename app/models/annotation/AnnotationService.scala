@@ -5,7 +5,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.Annotation.{AnnotationLayerProto, AnnotationProto}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
@@ -49,7 +49,7 @@ import utils.WkConf
 
 import java.io.{BufferedOutputStream, File, FileOutputStream}
 import javax.inject.Inject
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 case class DownloadAnnotation(skeletonTracingIdOpt: Option[String],
                               volumeTracingIdOpt: Option[String],
@@ -91,8 +91,7 @@ class AnnotationService @Inject()(
     conf: WkConf,
     rpc: RPC
 )(implicit ec: ExecutionContext, val materializer: Materializer)
-    extends BoxImplicits
-    with FoxImplicits
+    extends FoxImplicits
     with ProtoGeometryImplicits
     with AnnotationLayerPrecedence
     with LazyLogging {
@@ -112,7 +111,7 @@ class AnnotationService @Inject()(
         case None =>
           for {
             isTeamManagerOrAdminOfOrg <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
-            _ <- bool2Fox(isTeamManagerOrAdminOfOrg || dataset.isPublic || user.isDatasetManager)
+            _ <- Fox.fromBool(isTeamManagerOrAdminOfOrg || dataset.isPublic || user.isDatasetManager)
             organizationTeamId <- organizationDAO.findOrganizationTeamId(user._organization)
           } yield organizationTeamId
       }
@@ -134,7 +133,7 @@ class AnnotationService @Inject()(
     val additionalAxes =
       fallbackLayer.map(_.additionalAxes).getOrElse(dataSource.additionalAxesUnion)
     for {
-      _ <- bool2Fox(magsRestricted.nonEmpty) ?~> "annotation.volume.magRestrictionsTooTight"
+      _ <- Fox.fromBool(magsRestricted.nonEmpty) ?~> "annotation.volume.magRestrictionsTooTight"
       remoteDatastoreClient = new WKRemoteDataStoreClient(datasetDataStore, rpc)
       fallbackLayerHasSegmentIndex <- fallbackLayer match {
         case Some(layer) =>
@@ -190,7 +189,7 @@ class AnnotationService @Inject()(
           }
           .headOption
           .toFox
-        _ <- bool2Fox(
+        _ <- Fox.fromBool(
           ElementClass
             .largestSegmentIdIsInRange(fallbackLayer.largestSegmentId, fallbackLayer.elementClass)) ?~> Messages(
           "annotation.volume.largestSegmentIdExceedsRange",
@@ -201,7 +200,7 @@ class AnnotationService @Inject()(
     for {
       dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim) ?~> "dataStore.notFoundForDataset"
       inboxDataSource <- datasetService.dataSourceFor(dataset)
-      dataSource <- inboxDataSource.toUsable ?~> Messages("dataset.notImported", inboxDataSource.id.directoryName)
+      dataSource <- inboxDataSource.toUsable.toFox ?~> Messages("dataset.notImported", inboxDataSource.id.directoryName)
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
 
       /*
@@ -255,7 +254,7 @@ class AnnotationService @Inject()(
       mp: MessagesProvider): Fox[List[AnnotationLayer]] =
     for {
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
-      dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable) ?~> "dataset.dataSource.notUsable"
+      dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable.toFox) ?~> "dataset.dataSource.notUsable"
       newAnnotationLayers <- Fox.serialCombined(allAnnotationLayerParameters) { annotationLayerParameters =>
         for {
           tracing <- createTracingForExplorational(dataset,
@@ -356,7 +355,7 @@ class AnnotationService @Inject()(
       annotationBase <- annotationDAO.findOne(annotationBaseId) ?~> "Failed to retrieve annotation base."
       datasetName <- datasetDAO.getNameById(annotationBase._dataset)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation"
       dataset <- datasetDAO.findOne(annotationBase._dataset) ?~> Messages("dataset.noAccess", datasetName)
-      _ <- bool2Fox(dataset.isUsable) ?~> Messages("dataset.notImported", dataset.name)
+      _ <- Fox.fromBool(dataset.isUsable) ?~> Messages("dataset.notImported", dataset.name)
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
       _ = logger.info(
         f"task assignment. creating annotation $initializingAnnotationId from base $annotationBaseId for task $taskId")
@@ -414,7 +413,7 @@ class AnnotationService @Inject()(
       magRestrictions: MagRestrictions)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[VolumeTracing] =
     for {
       dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId)
-      dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable)
+      dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable.toFox)
       dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim)
       fallbackLayer = if (volumeShowFallbackLayer) {
         dataSource.dataLayers.flatMap {
@@ -422,7 +421,7 @@ class AnnotationService @Inject()(
           case _                        => None
         }.headOption
       } else None
-      _ <- bool2Fox(fallbackLayer.forall(_.largestSegmentId.exists(_ >= 0L))) ?~> "annotation.volume.invalidLargestSegmentId"
+      _ <- Fox.fromBool(fallbackLayer.forall(_.largestSegmentId.exists(_ >= 0L))) ?~> "annotation.volume.invalidLargestSegmentId"
 
       volumeTracing <- createVolumeTracing(
         dataSource,
@@ -460,7 +459,7 @@ class AnnotationService @Inject()(
       task <- taskFox
       skeletonIdOpt <- skeletonTracingIdBox.toFox
       volumeIdOpt <- volumeTracingIdBox.toFox
-      _ <- bool2Fox(skeletonIdOpt.isDefined || volumeIdOpt.isDefined) ?~> "annotation.needsAtleastOne"
+      _ <- Fox.fromBool(skeletonIdOpt.isDefined || volumeIdOpt.isDefined) ?~> "annotation.needsAtleastOne"
       project <- projectDAO.findOne(task._project)
       annotationLayers <- AnnotationLayer.layersFromIds(skeletonIdOpt, volumeIdOpt)
       annotationBase = Annotation(ObjectId.generate,
@@ -674,7 +673,7 @@ class AnnotationService @Inject()(
             zipper.addFileFromNamedStream(nml, suffix = ".nml").flatMap(_ => addToZip(tail))
           }
         case _ =>
-          Future.successful(true)
+          Fox.successful(true)
       }
 
     addToZip(nmls).map { _ =>
@@ -695,7 +694,7 @@ class AnnotationService @Inject()(
 
   def resetToBase(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- bool2Fox(annotation.typ == AnnotationType.Task) ?~> "annotation.revert.tasksOnly"
+      _ <- Fox.fromBool(annotation.typ == AnnotationType.Task) ?~> "annotation.revert.tasksOnly"
       dataset <- datasetDAO.findOne(annotation._dataset)
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
       _ <- tracingStoreClient.resetToBase(annotation._id) ?~> "annotation.revert.failed"
@@ -722,8 +721,8 @@ class AnnotationService @Inject()(
     for {
       dataset <- datasetDAO.findOne(annotation._dataset) ?~> "dataset.notFoundForAnnotation"
       organization <- organizationDAO.findOne(dataset._organization) ?~> "organization.notFound"
-      task = annotation._task.toFox.flatMap(taskId => taskDAO.findOne(taskId))
-      taskJson <- task.flatMap(t => taskService.publicWrites(t)).getOrElse(JsNull)
+      taskFox = annotation._task.toFox.flatMap(taskId => taskDAO.findOne(taskId))
+      taskJson <- Fox.fromFuture(taskFox.flatMap(t => taskService.publicWrites(t)).getOrElse(JsNull))
       userJson <- userJsonForAnnotation(annotation._user)
       settings <- settingsFor(annotation)
       restrictionsJs <- AnnotationRestrictions.writeAsJson(

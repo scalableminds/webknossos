@@ -1,6 +1,6 @@
 import type { Vector3 } from "oxalis/constants";
 import type { Tree } from "oxalis/store";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_types";
 
 export type ProofreadAtPositionAction = ReturnType<typeof proofreadAtPosition>;
 export type ClearProofreadingByProductsAction = ReturnType<typeof clearProofreadingByProducts>;

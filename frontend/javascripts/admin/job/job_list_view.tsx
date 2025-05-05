@@ -11,7 +11,7 @@ import {
   QuestionCircleTwoTone,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
-import { cancelJob, getJobs, retryJob } from "admin/admin_rest_api";
+import { cancelJob, getJobs, retryJob } from "admin/rest_api";
 import { Input, Modal, Spin, Table, Tooltip, Typography } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
@@ -28,7 +28,7 @@ import type * as React from "react";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
-import { type APIJob, APIJobType, type APIUserBase } from "types/api_flow_types";
+import { type APIJob, APIJobType, type APIUserBase } from "types/api_types";
 
 // Unfortunately, the twoToneColor (nor the style) prop don't support
 // CSS variables.
@@ -228,11 +228,26 @@ function JobListView() {
           <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
         </span>
       );
-    } else if (job.type === APIJobType.INFER_NEURONS && linkToDataset != null && job.layerName) {
+    } else if (
+      job.type === APIJobType.INFER_NEURONS &&
+      linkToDataset != null &&
+      job.layerName &&
+      job.modelId == null
+    ) {
       return (
         <span>
           Neuron inferral for layer {job.layerName} of{" "}
           <Link to={linkToDataset}>{job.datasetName}</Link>{" "}
+        </span>
+      );
+    } else if (
+      (job.type === APIJobType.DEPRECATED_INFER_WITH_MODEL ||
+        job.type === APIJobType.INFER_NEURONS) &&
+      linkToDataset != null
+    ) {
+      return (
+        <span>
+          Run AI segmentation with custom model on <Link to={linkToDataset}>{job.datasetName}</Link>
         </span>
       );
     } else if (
@@ -263,18 +278,12 @@ function JobListView() {
             : null}
         </span>
       );
-    } else if (job.type === APIJobType.TRAIN_MODEL) {
+    } else if (job.type === APIJobType.TRAIN_NEURON_MODEL || APIJobType.DEPRECATED_TRAIN_MODEL) {
       const numberOfTrainingAnnotations = job.trainingAnnotations.length;
       return (
         <span>
-          {`Train model on ${numberOfTrainingAnnotations} ${Utils.pluralize("annotation", numberOfTrainingAnnotations)}. `}
+          {`Train neuron model on ${numberOfTrainingAnnotations} ${Utils.pluralize("annotation", numberOfTrainingAnnotations)}. `}
           {getShowTrainingDataLink(job.trainingAnnotations)}
-        </span>
-      );
-    } else if (job.type === APIJobType.INFER_WITH_MODEL && linkToDataset != null) {
-      return (
-        <span>
-          Run AI segmentation with custom model on <Link to={linkToDataset}>{job.datasetName}</Link>
         </span>
       );
     } else {
@@ -368,7 +377,7 @@ function JobListView() {
       job.type === APIJobType.INFER_NEURONS ||
       job.type === APIJobType.MATERIALIZE_VOLUME_ANNOTATION ||
       job.type === APIJobType.COMPUTE_MESH_FILE ||
-      job.type === APIJobType.INFER_WITH_MODEL ||
+      job.type === APIJobType.DEPRECATED_INFER_WITH_MODEL ||
       job.type === APIJobType.INFER_MITOCHONDRIA
     ) {
       return (
@@ -381,7 +390,10 @@ function JobListView() {
           )}
         </span>
       );
-    } else if (job.type === APIJobType.TRAIN_MODEL) {
+    } else if (
+      job.type === APIJobType.TRAIN_NEURON_MODEL ||
+      job.type === APIJobType.DEPRECATED_TRAIN_MODEL
+    ) {
       return (
         <span>
           {job.state === "SUCCESS" &&

@@ -1,4 +1,4 @@
-import { getAgglomerateSkeleton, getEditableAgglomerateSkeleton } from "admin/admin_rest_api";
+import { getAgglomerateSkeleton, getEditableAgglomerateSkeleton } from "admin/rest_api";
 import { Modal } from "antd";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import ErrorHandling from "libs/error_handling";
@@ -84,7 +84,7 @@ import {
   takeEvery,
   throttle,
 } from "typed-redux-saga";
-import type { ServerSkeletonTracing } from "types/api_flow_types";
+import type { ServerSkeletonTracing } from "types/api_types";
 import { ensureWkReady } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
 

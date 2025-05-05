@@ -1,8 +1,8 @@
 import Maybe from "data.maybe";
 import * as Utils from "libs/utils";
-import { AnnotationToolEnum } from "oxalis/constants";
-import type { AnnotationTool, BoundingBoxType } from "oxalis/constants";
-import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
+import type { BoundingBoxType } from "oxalis/constants";
+import type { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
+import { Toolkits } from "oxalis/model/accessors/tool_accessor";
 import {
   isVolumeAnnotationDisallowedForZoom,
   isVolumeTool,
@@ -21,7 +21,8 @@ import type {
   ServerAdditionalAxis,
   ServerBoundingBox,
   UserBoundingBoxFromServer,
-} from "types/api_flow_types";
+} from "types/api_types";
+import { getDisabledInfoForTools } from "../accessors/disabled_tool_accessor";
 
 export function convertServerBoundingBoxToBoundingBox(
   boundingBox: ServerBoundingBox,
@@ -143,7 +144,7 @@ export function convertServerAdditionalAxesToFrontEnd(
 
 export function getNextTool(state: OxalisState): AnnotationTool | null {
   const disabledToolInfo = getDisabledInfoForTools(state);
-  const tools = Object.keys(AnnotationToolEnum) as AnnotationTool[];
+  const tools = Toolkits[state.userConfiguration.activeToolkit];
   const currentToolIndex = tools.indexOf(state.uiInformation.activeTool);
 
   // Search for the next tool which is not disabled.
@@ -154,7 +155,7 @@ export function getNextTool(state: OxalisState): AnnotationTool | null {
   ) {
     const newTool = tools[newToolIndex % tools.length];
 
-    if (!disabledToolInfo[newTool].isDisabled) {
+    if (!disabledToolInfo[newTool.id].isDisabled) {
       return newTool;
     }
   }
@@ -163,7 +164,7 @@ export function getNextTool(state: OxalisState): AnnotationTool | null {
 }
 export function getPreviousTool(state: OxalisState): AnnotationTool | null {
   const disabledToolInfo = getDisabledInfoForTools(state);
-  const tools = Object.keys(AnnotationToolEnum) as AnnotationTool[];
+  const tools = Toolkits[state.userConfiguration.activeToolkit];
   const currentToolIndex = tools.indexOf(state.uiInformation.activeTool);
 
   // Search backwards for the next tool which is not disabled.
@@ -174,7 +175,7 @@ export function getPreviousTool(state: OxalisState): AnnotationTool | null {
   ) {
     const newTool = tools[(tools.length + newToolIndex) % tools.length];
 
-    if (!disabledToolInfo[newTool].isDisabled) {
+    if (!disabledToolInfo[newTool.id].isDisabled) {
       return newTool;
     }
   }

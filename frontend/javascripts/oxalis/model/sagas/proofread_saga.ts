@@ -4,17 +4,12 @@ import {
   getEdgesForAgglomerateMinCut,
   getNeighborsForAgglomerateNode,
   getPositionForSegmentInAgglomerate,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { SoftError, isBigInt, isNumberMap } from "libs/utils";
 import _ from "lodash";
-import {
-  AnnotationToolEnum,
-  MappingStatusEnum,
-  TreeTypeEnum,
-  type Vector3,
-} from "oxalis/constants";
+import { MappingStatusEnum, TreeTypeEnum, type Vector3 } from "oxalis/constants";
 import { getSegmentIdForPositionAsync } from "oxalis/controller/combinations/volume_handlers";
 import {
   getLayerByName,
@@ -22,12 +17,13 @@ import {
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
+  areGeometriesTransformed,
   enforceSkeletonTracing,
   findTreeByNodeId,
   getNodeAndTree,
   getTreeNameForAgglomerateSkeleton,
-  isSkeletonLayerTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import {
   getActiveSegmentationTracing,
   getActiveSegmentationTracingLayer,
@@ -74,7 +70,7 @@ import {
 import { Model, Store, api } from "oxalis/singletons";
 import type { ActiveMappingInfo, Mapping, NumberLikeMap, Tree, VolumeTracing } from "oxalis/store";
 import { all, call, put, spawn, takeEvery } from "typed-redux-saga";
-import type { AdditionalCoordinate, ServerEditableMapping } from "types/api_flow_types";
+import type { AdditionalCoordinate, ServerEditableMapping } from "types/api_types";
 import { getCurrentMag } from "../accessors/flycam_accessor";
 import type { Action } from "../actions/actions";
 import { ensureWkReady } from "./ready_sagas";
@@ -329,7 +325,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   const isModifyingAnyAgglomerateSkeletons =
     sourceTree.type === TreeTypeEnum.AGGLOMERATE || targetTree.type === TreeTypeEnum.AGGLOMERATE;
   const isProofreadingToolActive = yield* select(
-    (state) => state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD,
+    (state) => state.uiInformation.activeTool === AnnotationTool.PROOFREAD,
   );
 
   if (isProofreadingToolActive && !isModifyingOnlyAgglomerateSkeletons) {
@@ -361,7 +357,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
 
   // Use untransformedPosition because agglomerate trees should not have
   // any transforms, anyway.
-  if (yield* select((state) => isSkeletonLayerTransformed(state))) {
+  if (yield* select((state) => areGeometriesTransformed(state))) {
     Toast.error("Proofreading is currently not supported when the skeleton layer is transformed.");
     return;
   }
@@ -547,7 +543,7 @@ function* performMinCut(
 
   // Use untransformedPosition below because agglomerate trees should not have
   // any transforms, anyway.
-  if (yield* select((state) => isSkeletonLayerTransformed(state))) {
+  if (yield* select((state) => areGeometriesTransformed(state))) {
     Toast.error("Proofreading is currently not supported when the skeleton layer is transformed.");
     return true;
   }

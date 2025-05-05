@@ -8,7 +8,7 @@ import { api } from "oxalis/singletons";
 import Store from "oxalis/store";
 import React from "react";
 import AutoSizer from "react-virtualized-auto-sizer";
-import type { APIConnectomeFile } from "types/api_flow_types";
+import type { APIConnectomeFile } from "types/api_types";
 type BaseSynapse = {
   id: number;
   position: Vector3;

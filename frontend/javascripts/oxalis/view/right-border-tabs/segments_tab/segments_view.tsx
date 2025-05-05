@@ -15,12 +15,12 @@ import {
   SettingOutlined,
   ShrinkOutlined,
 } from "@ant-design/icons";
-import { getJobs, startComputeMeshFileJob } from "admin/admin_rest_api";
 import {
   PricingPlanEnum,
   getFeatureNotAvailableInPlanMessage,
   isFeatureAllowedByPricingPlan,
 } from "admin/organization/pricing_plan_utils";
+import { getJobs, startComputeMeshFileJob } from "admin/rest_api";
 import {
   Button,
   ConfigProvider,
@@ -118,8 +118,8 @@ import type {
   APISegmentationLayer,
   APIUser,
   MetadataEntryProto,
-} from "types/api_flow_types";
-import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
+} from "types/api_types";
+import { APIJobType, type AdditionalCoordinate } from "types/api_types";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import DeleteGroupModalView from "../delete_group_modal_view";
 import { MetadataEntryTableRows } from "../metadata_table";

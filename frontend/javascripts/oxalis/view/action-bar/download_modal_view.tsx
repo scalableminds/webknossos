@@ -1,12 +1,12 @@
 import { CopyOutlined } from "@ant-design/icons";
+import { useStartAndPollJob } from "admin/job/job_hooks";
 import {
   doWithToken,
   downloadAnnotation,
   downloadWithFilename,
   getAuthToken,
   startExportTiffJob,
-} from "admin/admin_rest_api";
-import { useStartAndPollJob } from "admin/job/job_hooks";
+} from "admin/rest_api";
 import {
   Alert,
   Button,
@@ -58,7 +58,7 @@ import {
   APIJobType,
   type AdditionalAxis,
   type VoxelSize,
-} from "types/api_flow_types";
+} from "types/api_types";
 const { Paragraph, Text } = Typography;
 
 type TabKeys = "download" | "export" | "python";

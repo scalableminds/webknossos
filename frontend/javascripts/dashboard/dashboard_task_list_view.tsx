@@ -15,8 +15,8 @@ import * as React from "react";
 import { connect } from "react-redux";
 import { Link } from "react-router-dom";
 
-import { deleteAnnotation, downloadAnnotation, resetAnnotation } from "admin/admin_rest_api";
 import { finishTask, peekNextTasks, requestTask } from "admin/api/tasks";
+import { deleteAnnotation, downloadAnnotation, resetAnnotation } from "admin/rest_api";
 import classNames from "classnames";
 import { AsyncButton, AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
@@ -33,7 +33,7 @@ import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
 import type { OxalisState } from "oxalis/store";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
-import type { APIAnnotation, APITaskWithAnnotation, APIUser } from "types/api_flow_types";
+import type { APIAnnotation, APITaskWithAnnotation, APIUser } from "types/api_types";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 
 const pageLength: number = 1000;

@@ -6,7 +6,7 @@ import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import Shortcut from "libs/shortcut_component";
 import { useEffect, useRef } from "react";
 
-import type { APITeam } from "types/api_flow_types";
+import type { APITeam } from "types/api_types";
 
 export function EditFolderModal({ folderId, onClose }: { folderId: string; onClose: () => void }) {
   const { data: folder, isFetching } = useFolderQuery(folderId);

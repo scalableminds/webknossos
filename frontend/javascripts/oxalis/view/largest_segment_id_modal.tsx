@@ -16,7 +16,7 @@ import type { OxalisState, VolumeTracing } from "oxalis/store";
 import Store from "oxalis/throttled_store";
 import * as React from "react";
 import { useDispatch, useSelector } from "react-redux";
-import type { APISegmentationLayer } from "types/api_flow_types";
+import type { APISegmentationLayer } from "types/api_types";
 
 const TOAST_KEY = "enter-largest-segment-id";
 

@@ -9,6 +9,7 @@ import getSceneController, {
   getSceneControllerOrNull,
 } from "oxalis/controller/scene_controller_provider";
 import type { MeshSceneNode, SceneGroupForMeshes } from "oxalis/controller/segment_mesh_controller";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
@@ -141,7 +142,7 @@ class PlaneView {
     const storeState = Store.getState();
     const SceneController = getSceneController();
     const { segmentMeshController } = SceneController;
-    const { meshesLODRootGroup } = segmentMeshController;
+    const { meshesLayerLODRootGroup } = segmentMeshController;
     const tdViewport = getInputCatcherRect(storeState, "TDView");
     const { hoveredSegmentId } = storeState.temporaryConfiguration;
 
@@ -163,7 +164,7 @@ class PlaneView {
       ((mousePosition[1] / tdViewport.height) * 2 - 1) * -1,
     );
     raycaster.setFromCamera(mouse, this.cameras[OrthoViews.TDView]);
-    const intersectableObjects = meshesLODRootGroup.children;
+    const intersectableObjects = meshesLayerLODRootGroup.children;
     // The second parameter of intersectObjects is set to true to ensure that
     // the groups which contain the actual meshes are traversed.
     const intersections = raycaster.intersectObjects(intersectableObjects, true);
@@ -183,7 +184,7 @@ class PlaneView {
 
     // Check whether we are hitting the same object as before, since we can return early
     // in this case.
-    if (storeState.uiInformation.activeTool === "PROOFREAD") {
+    if (storeState.uiInformation.activeTool === AnnotationTool.PROOFREAD) {
       if (hitObject == null && oldRaycasterHit == null) {
         return null;
       }
@@ -321,7 +322,7 @@ class PlaneView {
           // If the proofreading tool is not active, pretend that
           // activeUnmappedSegmentId is null so that no super-voxel
           // is highlighted.
-          return storeState.uiInformation.activeTool === "PROOFREAD"
+          return storeState.uiInformation.activeTool === AnnotationTool.PROOFREAD
             ? segmentationTracing.activeUnmappedSegmentId
             : null;
         },

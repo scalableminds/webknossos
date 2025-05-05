@@ -10,6 +10,7 @@ import Constants, {
   OrthoViews,
 } from "oxalis/constants";
 import type { VertexSegmentMapping } from "oxalis/controller/mesh_helpers";
+import { OrthoBaseRotations } from "oxalis/controller/scene_controller";
 import getSceneController, {
   getSceneControllerOrNull,
 } from "oxalis/controller/scene_controller_provider";
@@ -19,6 +20,7 @@ import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
+import Dimensions from "oxalis/model/dimensions";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Store from "oxalis/store";
 import { getGroundTruthLayoutRect } from "oxalis/view/layouting/default_layout_configs";
@@ -79,6 +81,7 @@ class PlaneView {
       scene.add(cameras[plane]);
     }
     this.cameras = cameras;
+    // TODOM: next up rotate the cameras as well
 
     createDirLight([10, 10, 10], [0, 0, 10], LIGHT_INTENSITY, this.cameras[OrthoViews.TDView]);
     createDirLight([-10, 10, 10], [0, 0, 10], LIGHT_INTENSITY, this.cameras[OrthoViews.TDView]);
@@ -90,6 +93,10 @@ class PlaneView {
     this.cameras[OrthoViews.PLANE_YZ].up = new THREE.Vector3(0, -1, 0);
     this.cameras[OrthoViews.PLANE_XZ].up = new THREE.Vector3(0, 0, -1);
     this.cameras[OrthoViews.TDView].up = new THREE.Vector3(0, 0, -1);
+    this.cameras[OrthoViews.PLANE_XY].matrixAutoUpdate = false;
+    this.cameras[OrthoViews.PLANE_YZ].matrixAutoUpdate = false;
+    this.cameras[OrthoViews.PLANE_XZ].matrixAutoUpdate = false;
+    this.cameras[OrthoViews.TDView].matrixAutoUpdate = true;
 
     for (const plane of OrthoViewValues) {
       this.cameras[plane].lookAt(new THREE.Vector3(0, 0, 0));
@@ -124,6 +131,29 @@ class PlaneView {
       const zoomedFlycamMatrix = getZoomedMatrix(storeState.flycam);
       for (const planeId of OrthoViewValuesWithoutTDView) {
         planes[planeId].updateToFlycamMatrix(zoomedFlycamMatrix);
+        // TODOM: camera adjustment here!!!
+        const camera = this.cameras[planeId];
+        const m = zoomedFlycamMatrix;
+        // biome-ignore format: don't format array
+        camera.matrix.set(
+        m[0], m[4], m[8], m[12],
+        m[1], m[5], m[9], m[13],
+        m[2], m[6], m[10], m[14],
+        m[3], m[7], m[11], m[15],
+      );
+        const planeShift = sceneController.planeShift;
+        camera.matrix.multiply(
+          new THREE.Matrix4().makeRotationFromEuler(OrthoBaseRotations[planeId]),
+        );
+        const positionOffset: [number, number, number] = [0, 0, 0];
+
+        const ind = Dimensions.getIndices(planeId);
+        // Offset the plane so the user can see the skeletonTracing behind the plane
+        // TODO: Fix z positioning!!!
+        positionOffset[ind[2]] +=
+          planeId === OrthoViews.PLANE_XY ? planeShift[ind[2]] : -planeShift[ind[2]];
+        camera.matrix.multiply(new THREE.Matrix4().makeTranslation(...positionOffset));
+        camera.matrixWorldNeedsUpdate = true;
       }
       const viewport = {
         [OrthoViews.PLANE_XY]: getInputCatcherRect(storeState, "PLANE_XY"),

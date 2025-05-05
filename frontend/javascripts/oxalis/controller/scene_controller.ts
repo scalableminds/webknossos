@@ -70,6 +70,13 @@ THREE.Mesh.prototype.raycast = acceleratedRaycast;
 const CUBE_COLOR = 0x999999;
 const LAYER_CUBE_COLOR = 0xffff99;
 
+export const OrthoBaseRotations = {
+  [OrthoViews.PLANE_XY]: new THREE.Euler(Math.PI, 0, 0),
+  [OrthoViews.PLANE_YZ]: new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0),
+  [OrthoViews.PLANE_XZ]: new THREE.Euler((-1 / 2) * Math.PI, 0, 0),
+  [OrthoViews.TDView]: new THREE.Euler(Math.PI / 4, Math.PI / 4, Math.PI / 4),
+};
+
 const getVisibleSegmentationLayerNames = reuseInstanceOnEquality((storeState: OxalisState) =>
   getVisibleSegmentationLayers(storeState).map((l) => l.name),
 );
@@ -243,11 +250,9 @@ class SceneController {
       [OrthoViews.PLANE_YZ]: new Plane(OrthoViews.PLANE_YZ),
       [OrthoViews.PLANE_XZ]: new Plane(OrthoViews.PLANE_XZ),
     };
-    this.planes[OrthoViews.PLANE_XY].setBaseRotation(new THREE.Euler(Math.PI, 0, 0));
-    this.planes[OrthoViews.PLANE_YZ].setBaseRotation(
-      new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0),
-    );
-    this.planes[OrthoViews.PLANE_XZ].setBaseRotation(new THREE.Euler((-1 / 2) * Math.PI, 0, 0));
+    this.planes[OrthoViews.PLANE_XY].setBaseRotation(OrthoBaseRotations[OrthoViews.PLANE_XY]);
+    this.planes[OrthoViews.PLANE_YZ].setBaseRotation(OrthoBaseRotations[OrthoViews.PLANE_YZ]);
+    this.planes[OrthoViews.PLANE_XZ].setBaseRotation(OrthoBaseRotations[OrthoViews.PLANE_XZ]);
 
     const planeMeshes = _.values(this.planes).flatMap((plane) => plane.getMeshes());
     this.rootNode = new THREE.Group().add(
@@ -386,7 +391,7 @@ class SceneController {
       for (const planeId of OrthoViewValuesWithoutTDView) {
         if (planeId === id) {
           this.planes[planeId].setOriginalCrosshairColor();
-          this.planes[planeId].setVisible(id === "PLANE_XY");
+          this.planes[planeId].setVisible(!hidePlanes);
 
           const pos = _.clone(originalPosition);
           //TODOM: adjust rotation of the plane
@@ -409,7 +414,7 @@ class SceneController {
         // this.planes[planeId].setPosition(originalPosition);
         this.planes[planeId].setGrayCrosshairColor();
         this.planes[planeId].setVisible(
-          planeId === "PLANE_XY" && tdViewDisplayPlanes !== TDViewDisplayModeEnum.NONE,
+          tdViewDisplayPlanes !== TDViewDisplayModeEnum.NONE,
           this.isPlaneVisible[planeId] && tdViewDisplayPlanes === TDViewDisplayModeEnum.DATA,
         );
         this.planes[planeId].materialFactory.uniforms.is3DViewBeingRendered.value = true;

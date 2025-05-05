@@ -69,7 +69,7 @@ class Plane {
   createMeshes(): void {
     const pWidth = constants.VIEWPORT_WIDTH;
     // create plane
-    const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, PLANE_SUBDIVISION, PLANE_SUBDIVISION);
+    const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1);
     this.materialFactory = new PlaneMaterialFactory(
       this.planeID,
       false,

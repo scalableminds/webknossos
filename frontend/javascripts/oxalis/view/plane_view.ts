@@ -4,6 +4,7 @@ import window from "libs/window";
 import _ from "lodash";
 import type { OrthoViewMap, Vector2, Vector3, Viewport } from "oxalis/constants";
 import Constants, {
+  ARBITRARY_CAM_DISTANCE,
   OrthoViewColors,
   OrthoViewValues,
   OrthoViewValuesWithoutTDView,
@@ -114,6 +115,17 @@ class PlaneView {
     window.requestAnimationFrame(() => this.animate());
   }
 
+  logMatrix(m: THREE.Matrix4): void {
+    const scale = new THREE.Vector3();
+    const rotation = new THREE.Quaternion();
+    const position = new THREE.Vector3();
+    m.decompose(position, rotation, scale);
+    const euler = new THREE.Euler();
+    euler.setFromQuaternion(rotation);
+    console.log("position", position, "rotation", euler, "scale", scale);
+    console.log("matrix", m);
+  }
+
   renderFunction(forceRender: boolean = false): void {
     // This is the main render function.
     // All 3D meshes and the trianglesplane are rendered here.
@@ -134,25 +146,24 @@ class PlaneView {
         // TODOM: camera adjustment here!!!
         const camera = this.cameras[planeId];
         const m = zoomedFlycamMatrix;
+        //this.logMatrix(camera.matrix);
         // biome-ignore format: don't format array
         camera.matrix.set(
-        m[0], m[4], m[8], m[12],
-        m[1], m[5], m[9], m[13],
-        m[2], m[6], m[10], m[14],
-        m[3], m[7], m[11], m[15],
-      );
-        const planeShift = sceneController.planeShift;
-        camera.matrix.multiply(
-          new THREE.Matrix4().makeRotationFromEuler(OrthoBaseRotations[planeId]),
+          m[0], m[4], m[8], m[12],
+          m[1], m[5], m[9], m[13],
+          m[2], m[6], m[10], m[14],
+          m[3], m[7], m[11], m[15],
         );
-        const positionOffset: [number, number, number] = [0, 0, 0];
+        //this.logMatrix(camera.matrix);
+        const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(
+          OrthoBaseRotations[planeId],
+        );
+        camera.matrix.multiply(rotationMatrix);
+        camera.matrix.multiply(new THREE.Matrix4().makeTranslation(0, 0, ARBITRARY_CAM_DISTANCE));
 
-        const ind = Dimensions.getIndices(planeId);
-        // Offset the plane so the user can see the skeletonTracing behind the plane
-        // TODO: Fix z positioning!!!
-        positionOffset[ind[2]] +=
-          planeId === OrthoViews.PLANE_XY ? planeShift[ind[2]] : -planeShift[ind[2]];
-        camera.matrix.multiply(new THREE.Matrix4().makeTranslation(...positionOffset));
+        //this.logMatrix(camera.matrix);
+
+        //this.logMatrix(camera.matrix);
         camera.matrixWorldNeedsUpdate = true;
       }
       const viewport = {

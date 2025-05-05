@@ -71,7 +71,7 @@ const CUBE_COLOR = 0x999999;
 const LAYER_CUBE_COLOR = 0xffff99;
 
 export const OrthoBaseRotations = {
-  [OrthoViews.PLANE_XY]: new THREE.Euler(Math.PI, 0, 0),
+  [OrthoViews.PLANE_XY]: new THREE.Euler(0, Math.PI, 0),
   [OrthoViews.PLANE_YZ]: new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0),
   [OrthoViews.PLANE_XZ]: new THREE.Euler((-1 / 2) * Math.PI, 0, 0),
   [OrthoViews.TDView]: new THREE.Euler(Math.PI / 4, Math.PI / 4, Math.PI / 4),
@@ -393,15 +393,17 @@ class SceneController {
           this.planes[planeId].setOriginalCrosshairColor();
           this.planes[planeId].setVisible(!hidePlanes);
 
-          const pos = _.clone(originalPosition);
-          //TODOM: adjust rotation of the plane
-
           const ind = Dimensions.getIndices(planeId);
           // Offset the plane so the user can see the skeletonTracing behind the plane
-          // TODO: Fix z positioning!!!
-          pos[ind[2]] +=
+          const positionOffset: [number, number, number] = [0, 0, 0];
+          positionOffset[ind[2]] +=
             planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
-          // this.planes[planeId].setPosition(pos, originalPosition);
+          //TODOM: adjust rotation of the plane
+
+          this.planes[planeId].offsetForRenderingOrthoView(
+            new THREE.Vector3(...positionOffset),
+            originalPosition,
+          );
 
           this.quickSelectGeometry.adaptVisibilityForRendering(originalPosition, ind[2]);
         } else {
@@ -416,6 +418,15 @@ class SceneController {
         this.planes[planeId].setVisible(
           tdViewDisplayPlanes !== TDViewDisplayModeEnum.NONE,
           this.isPlaneVisible[planeId] && tdViewDisplayPlanes === TDViewDisplayModeEnum.DATA,
+        );
+        const ind = Dimensions.getIndices(planeId);
+        // Offset the plane so the user can see the skeletonTracing behind the plane
+        const positionOffset: [number, number, number] = [0, 0, 0];
+        positionOffset[ind[2]] +=
+          planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
+        this.planes[planeId].dontOffsetForRenderingTDView(
+          new THREE.Vector3(...positionOffset),
+          originalPosition,
         );
         this.planes[planeId].materialFactory.uniforms.is3DViewBeingRendered.value = true;
       }

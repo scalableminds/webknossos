@@ -46,12 +46,15 @@ class Plane {
   isDirty: boolean;
   baseRotation: THREE.Euler;
   stopStoreListening: () => void;
+  // Stores whether the meshes are currently offset for rendering one of the ortho views. This should not be the case when rendering the TD view.
+  areMeshesOffsetForOrthoViewRendering: boolean;
 
   constructor(planeID: OrthoView) {
     this.planeID = planeID;
     this.displayCrosshair = true;
     this.lastScaleFactors = [-1, -1];
     this.isDirty = true;
+    this.areMeshesOffsetForOrthoViewRendering = false;
     // VIEWPORT_WIDTH means that the plane should be that many voxels wide in the
     // dimension with the highest mag. In all other dimensions, the plane
     // is smaller in voxels, so that it is squared in nm.
@@ -69,7 +72,7 @@ class Plane {
   createMeshes(): void {
     const pWidth = constants.VIEWPORT_WIDTH;
     // create plane
-    const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1);
+    const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 100, 100);
     this.materialFactory = new PlaneMaterialFactory(
       this.planeID,
       false,
@@ -156,6 +159,7 @@ class Plane {
     });
   };
 
+  // Is always called after updateToFlycamMatrix. thus, adding the new scale on top should be fine (I think).
   setScale(xFactor: number, yFactor: number): void {
     // TODOM: This scale  will likely be overwritten by the flycam matrix
     if (this.lastScaleFactors[0] === xFactor && this.lastScaleFactors[1] === yFactor) {
@@ -163,6 +167,13 @@ class Plane {
     }
     this.lastScaleFactors[0] = xFactor;
     this.lastScaleFactors[1] = yFactor;
+    /*const additionalScale = new THREE.Vector3(xFactor, yFactor, 1);
+    this.getMeshes().forEach((mesh) => {
+      console.log("mesh", mesh.name, mesh.matrix.elements);
+      mesh.matrix.multiply(new THREE.Matrix4().makeScale(...additionalScale.toArray()));
+      console.log("mesh", mesh.name, mesh.matrix.elements);
+      mesh.matrixWorldNeedsUpdate = true;
+    });
 
     const scaleVec = new THREE.Vector3().multiplyVectors(
       new THREE.Vector3(xFactor, yFactor, 1),
@@ -171,7 +182,7 @@ class Plane {
     this.plane.scale.copy(scaleVec);
     this.TDViewBorders.scale.copy(scaleVec);
     this.crosshair[0].scale.copy(scaleVec);
-    this.crosshair[1].scale.copy(scaleVec);
+    this.crosshair[1].scale.copy(scaleVec);*/
   }
 
   setBaseRotation = (rotVec: THREE.Euler): void => {
@@ -200,8 +211,68 @@ class Plane {
     }
   };
 
+  offsetForRenderingOrthoView = (offset: THREE.Vector3, original: Vector3): void => {
+    if (this.areMeshesOffsetForOrthoViewRendering) {
+      return;
+    }
+    this.getMeshes().forEach((mesh) => {
+      mesh.matrix.multiply(new THREE.Matrix4().makeTranslation(offset));
+    });
+    // TODO: Test whether this.plane.position is up to date with what stored in the matrix
+    // get position from matrix
+    const currentPosition = new THREE.Vector3(
+      this.plane.matrix.elements[12],
+      this.plane.matrix.elements[13],
+      this.plane.matrix.elements[14],
+    );
+    this.plane.material.setGlobalPosition(
+      currentPosition.x + offset.x,
+      currentPosition.y + offset.y,
+      currentPosition.z + offset.z,
+    );
+    console.log(
+      "offsetForRenderingOrthoView",
+      offset,
+      currentPosition,
+      this.plane.material.globalPosition,
+      "original",
+      original,
+    );
+    this.areMeshesOffsetForOrthoViewRendering = true;
+  };
+
+  dontOffsetForRenderingTDView = (offset: THREE.Vector3, original: Vector3): void => {
+    if (!this.areMeshesOffsetForOrthoViewRendering) {
+      return;
+    }
+    offset.negate();
+    this.getMeshes().forEach((mesh) => {
+      mesh.matrix.multiply(new THREE.Matrix4().makeTranslation(offset));
+    });
+    // TODO: Test whether this.plane.position is up to date with what stored in the matrix
+    const currentPosition = new THREE.Vector3(
+      this.plane.matrix.elements[12],
+      this.plane.matrix.elements[13],
+      this.plane.matrix.elements[14],
+    );
+    this.plane.material.setGlobalPosition(
+      currentPosition.x + offset.x,
+      currentPosition.y + offset.y,
+      currentPosition.z + offset.z,
+    );
+    console.log(
+      "offsetForRenderingOrthoView",
+      offset,
+      this.plane.position,
+      currentPosition.sub(offset),
+      "original",
+      original,
+    );
+    this.areMeshesOffsetForOrthoViewRendering = false;
+  };
+
   updateToFlycamMatrix(flycamMatrix: Matrix4x4): void {
-    // TODO: Copied from ArbitraryPlane. This should be refactored to a common function maybe.
+    // TODOM:
     if (this.isDirty) {
       const meshMatrix = new THREE.Matrix4();
       meshMatrix.set(
@@ -229,8 +300,11 @@ class Plane {
         mesh.matrix.identity();
         mesh.matrix.multiply(meshMatrix);
         mesh.matrix.multiply(new THREE.Matrix4().makeRotationFromEuler(this.baseRotation));
+        mesh.matrix.multiply(
+          new THREE.Matrix4().makeScale(this.lastScaleFactors[0], this.lastScaleFactors[1], 1),
+        );
         if (this.planeID === "PLANE_XY") {
-          console.log("matrix plane", mesh.name, mesh.matrix);
+          // console.log("matrix plane", mesh.name, mesh.matrix);
         }
         mesh.matrixWorldNeedsUpdate = true;
       };

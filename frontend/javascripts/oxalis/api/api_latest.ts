@@ -60,10 +60,10 @@ import {
   getActiveTree,
   getActiveTreeGroup,
   getFlatTreeGroups,
-  getNodeAndTree,
-  getNodeAndTreeOrNull,
   getNodePosition,
   getTree,
+  getTreeAndNode,
+  getTreeAndNodeOrNull,
   getTreeGroupsMap,
   mapGroups,
 } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -193,7 +193,7 @@ export function assertExists<T>(value: any, message: string): asserts value is N
 }
 export function assertSkeleton(annotation: StoreAnnotation): SkeletonTracing {
   if (annotation.skeleton == null) {
-    throw new Error("This api function should only be called in a skeleton annotation.");
+    throw new Error("This API function should only be called in a skeleton annotation.");
   }
 
   return annotation.skeleton;
@@ -201,7 +201,7 @@ export function assertSkeleton(annotation: StoreAnnotation): SkeletonTracing {
 export function assertVolume(state: OxalisState): VolumeTracing {
   if (state.annotation.volumes.length === 0) {
     throw new Error(
-      "This api function should only be called when a volume annotation layer exists.",
+      "This API function should only be called when a volume annotation layer exists.",
     );
   }
 
@@ -209,7 +209,7 @@ export function assertVolume(state: OxalisState): VolumeTracing {
 
   if (tracing == null) {
     throw new Error(
-      "This api function should only be called when a volume annotation layer is visible.",
+      "This API function should only be called when a volume annotation layer is visible.",
     );
   }
 
@@ -265,9 +265,7 @@ class TracingApi {
    */
   getActiveTreeGroupId(): number | null | undefined {
     const tracing = assertSkeleton(Store.getState().annotation);
-    return getActiveTreeGroup(tracing)
-      .map((group) => group.groupId)
-      .getOrElse(null);
+    return getActiveTreeGroup(tracing)?.groupId ?? null;
   }
 
   /**
@@ -1006,9 +1004,12 @@ class TracingApi {
    */
   getTreeName(treeId?: number) {
     const tracing = assertSkeleton(Store.getState().annotation);
-    return getTree(tracing, treeId)
-      .map((activeTree) => activeTree.name)
-      .get();
+    const treeName = getTree(tracing, treeId)?.name;
+
+    if (!treeName) {
+      throw new Error(`Tree with id ${treeId} does not exist.`);
+    }
+    return treeName;
   }
 
   /**
@@ -1164,9 +1165,11 @@ class TracingApi {
    */
   setNodeRadius(delta: number, nodeId?: number, treeId?: number): void {
     const skeletonTracing = assertSkeleton(Store.getState().annotation);
-    getNodeAndTree(skeletonTracing, nodeId, treeId).map(([, node]) =>
-      Store.dispatch(setNodeRadiusAction(node.radius * Math.pow(1.05, delta), nodeId, treeId)),
-    );
+    const treeAndNode = getTreeAndNode(skeletonTracing, nodeId, treeId);
+    if (!treeAndNode) return;
+
+    const [_activeTree, node] = treeAndNode;
+    Store.dispatch(setNodeRadiusAction(node.radius * Math.pow(1.05, delta), nodeId, treeId));
   }
 
   /**
@@ -1177,9 +1180,11 @@ class TracingApi {
    */
   centerNode = (nodeId?: number): void => {
     const skeletonTracing = assertSkeleton(Store.getState().annotation);
-    getNodeAndTree(skeletonTracing, nodeId).map(([, node]) => {
-      return Store.dispatch(setPositionAction(getNodePosition(node, Store.getState())));
-    });
+    const treeAndNode = getTreeAndNode(skeletonTracing, nodeId);
+    if (!treeAndNode) return;
+
+    const [_activeTree, node] = treeAndNode;
+    Store.dispatch(setPositionAction(getNodePosition(node, Store.getState())));
   };
 
   /**
@@ -1277,11 +1282,11 @@ class TracingApi {
     shortestPath: number[];
   } {
     const skeletonTracing = assertSkeleton(Store.getState().annotation);
-    const { node: sourceNode, tree: sourceTree } = getNodeAndTreeOrNull(
+    const { node: sourceNode, tree: sourceTree } = getTreeAndNodeOrNull(
       skeletonTracing,
       sourceNodeId,
     );
-    const { node: targetNode, tree: targetTree } = getNodeAndTreeOrNull(
+    const { node: targetNode, tree: targetTree } = getTreeAndNodeOrNull(
       skeletonTracing,
       targetNodeId,
     );

@@ -1,4 +1,3 @@
-import Maybe from "data.maybe";
 import * as Utils from "libs/utils";
 import type { BoundingBoxType } from "oxalis/constants";
 import type { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
@@ -38,9 +37,8 @@ export function convertServerBoundingBoxToBoundingBox(
 export function convertServerBoundingBoxToFrontend(
   boundingBox: ServerBoundingBox | null | undefined,
 ): BoundingBoxType | null | undefined {
-  return Maybe.fromNullable(boundingBox)
-    .map((bb) => convertServerBoundingBoxToBoundingBox(bb))
-    .getOrElse(null);
+  if (!boundingBox) return null;
+  return convertServerBoundingBoxToBoundingBox(boundingBox);
 }
 export function convertUserBoundingBoxesFromServerToFrontend(
   boundingBoxes: Array<UserBoundingBoxFromServer>,

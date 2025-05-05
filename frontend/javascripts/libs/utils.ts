@@ -1,4 +1,3 @@
-import Maybe from "data.maybe";
 import dayjs from "dayjs";
 import naturalSort from "javascript-natural-sort";
 import window, { document, location } from "libs/window";
@@ -137,10 +136,6 @@ export function enforce<A, B>(fn: (arg0: A) => B): (arg0: A | null | undefined) 
 
     return fn(nullableA);
   };
-}
-
-export function maybe<A, B>(fn: (arg0: A) => B): (arg0: A | null | undefined) => Maybe<B> {
-  return (nullableA: A | null | undefined) => Maybe.fromNullable(nullableA).map(fn);
 }
 
 export function parseMaybe(str: string | null | undefined): unknown | null {
@@ -666,12 +661,6 @@ export function withoutValues<T>(arr: Array<T>, elements: Array<T>): Array<T> {
 
   const auxSet = new Set(elements);
   return arr.filter((x) => !auxSet.has(x));
-}
-
-// Maybes getOrElse is defined as getOrElse(defaultValue: T): T, which is why
-// you can't do getOrElse(null) without flow complaining
-export function toNullable<T>(_maybe: Maybe<T>): T | null | undefined {
-  return _maybe.isJust ? _maybe.get() : null;
 }
 
 export function filterNullValues<T>(arr: Array<T | null | undefined>): T[] {

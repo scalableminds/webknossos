@@ -1,10 +1,6 @@
 import { GiftTwoTone } from "@ant-design/icons";
-import {
-  getOrganizationByInvite,
-  joinOrganization,
-  switchToOrganization,
-} from "admin/admin_rest_api";
 import AuthenticationModal from "admin/auth/authentication_modal";
+import { getOrganizationByInvite, joinOrganization, switchToOrganization } from "admin/rest_api";
 import { Button, Layout, Result, Spin } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import { useFetch } from "libs/react_helpers";

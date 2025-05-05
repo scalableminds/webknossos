@@ -21,7 +21,7 @@ import {
   findDataPositionForVolumeTracing,
   startComputeSegmentIndexFileJob,
   updateDatasetDefaultConfiguration,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
 import { Button, Col, Divider, Dropdown, type MenuProps, Modal, Row, Switch } from "antd";
 import classnames from "classnames";
 import FastTooltip from "components/fast_tooltip";

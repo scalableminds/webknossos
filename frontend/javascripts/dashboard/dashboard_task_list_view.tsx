@@ -15,8 +15,8 @@ import * as React from "react";
 import { connect } from "react-redux";
 import { Link } from "react-router-dom";
 
-import { deleteAnnotation, downloadAnnotation, resetAnnotation } from "admin/admin_rest_api";
 import { finishTask, peekNextTasks, requestTask } from "admin/api/tasks";
+import { deleteAnnotation, downloadAnnotation, resetAnnotation } from "admin/rest_api";
 import classNames from "classnames";
 import { AsyncButton, AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";

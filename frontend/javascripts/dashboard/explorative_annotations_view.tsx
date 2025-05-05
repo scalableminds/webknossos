@@ -21,7 +21,7 @@ import {
   getCompactAnnotationsForUser,
   getReadableAnnotations,
   reOpenAnnotation,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
 import {
   Button,
   Card,

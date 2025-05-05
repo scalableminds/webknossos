@@ -1,4 +1,4 @@
-import { getJob, getJobs } from "admin/admin_rest_api";
+import { getJob, getJobs } from "admin/rest_api";
 import features from "features";
 import { useEffectOnlyOnce, usePolling } from "libs/react_hooks";
 import _ from "lodash";

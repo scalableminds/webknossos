@@ -1,4 +1,4 @@
-import { isDatasetAccessibleBySwitching } from "admin/admin_rest_api";
+import { isDatasetAccessibleBySwitching } from "admin/rest_api";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import type { Vector3 } from "oxalis/constants";

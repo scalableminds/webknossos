@@ -1,5 +1,5 @@
 import { CopyOutlined, PushpinOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
-import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/admin_rest_api";
+import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/rest_api";
 import {
   ConfigProvider,
   Dropdown,

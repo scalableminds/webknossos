@@ -1,6 +1,6 @@
 import { SyncOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
-import { getVoxelyticsWorkflows } from "admin/admin_rest_api";
+import { getVoxelyticsWorkflows } from "admin/rest_api";
 import { Button, Input, Progress, Table, Tooltip } from "antd";
 import { formatCountToDataAmountUnit, formatDateMedium, formatNumber } from "libs/format_utils";
 import Persistence from "libs/persistence";

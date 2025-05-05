@@ -1,6 +1,6 @@
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
-import { deleteScript as deleteScriptAPI, getScripts } from "admin/admin_rest_api";
+import { deleteScript as deleteScriptAPI, getScripts } from "admin/rest_api";
 import { App, Button, Input, Spin, Table } from "antd";
 import LinkButton from "components/link_button";
 import { handleGenericError } from "libs/error_handling";

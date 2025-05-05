@@ -1,6 +1,8 @@
 /**
  * Type definitions for package saxophone
  * https://github.com/matteodelabre/saxophone
+ * 
+ * Created by AI Agent 
  */
 
 declare module 'saxophone' {

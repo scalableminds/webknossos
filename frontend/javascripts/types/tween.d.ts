@@ -1,3 +1,10 @@
+/**
+ * Type definitions for package TweenJs
+ * https://github.com/tweenjs/tween.js
+ * 
+ * Created by AI Agent 
+ */
+
 declare namespace TWEEN {
   export function getAll(): Tween[];
   export function removeAll(): void;

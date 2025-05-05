@@ -1,6 +1,8 @@
 /**
  * Type definitions for package deep-freeze
  * https://github.com/Bill4Time/deep-freeze
+ * 
+ * Created by AI Agent
  */
 
 declare module 'deep-freeze' {

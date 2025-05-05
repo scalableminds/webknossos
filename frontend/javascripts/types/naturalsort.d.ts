@@ -22,7 +22,7 @@ declare module 'javascript-natural-sort' {
    * Additional properties for the naturalSort function
    */
   interface NaturalSortFunction {
-    (a: string | numer, b: string | numer): -1 | 0 | 1;
+    (a: string | number, b: string | number): -1 | 0 | 1;
     /**
      * When true, comparisons are case-insensitive
      */

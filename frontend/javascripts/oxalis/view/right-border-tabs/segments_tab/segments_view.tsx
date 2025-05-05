@@ -96,7 +96,7 @@ import type {
   VolumeTracing,
   WebknossosState,
 } from "oxalis/store";
-import Store from "oxalis/store";
+import Store, { useWkSelector } from "oxalis/store";
 import ButtonComponent from "oxalis/view/components/button_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
@@ -109,7 +109,7 @@ import {
 } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import type RcTree from "rc-tree";
 import React, { type Key } from "react";
-import { connect, useSelector } from "react-redux";
+import { connect } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import type { Dispatch } from "redux";
 import type {
@@ -716,8 +716,8 @@ class SegmentsView extends React.Component<Props, State> {
     let title = "";
     let disabled = true;
 
-    const activeOrganization = useSelector((state: WebknossosState) => state.activeOrganization);
-    const activeUser = useSelector((state: WebknossosState) => state.activeUser);
+    const activeOrganization = useWkSelector((state) => state.activeOrganization);
+    const activeUser = useWkSelector((state) => state.activeUser);
     if (!isFeatureAllowedByPricingPlan(activeOrganization, PricingPlanEnum.Team)) {
       return {
         disabled: true,

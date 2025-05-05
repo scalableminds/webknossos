@@ -17,7 +17,7 @@ import {
 import { setAdditionalCoordinatesAction } from "oxalis/model/actions/flycam_actions";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
 import type { WebknossosState } from "oxalis/store";
-import Store from "oxalis/store";
+import Store, { useWkSelector } from "oxalis/store";
 import AddNewLayoutModal from "oxalis/view/action-bar/add_new_layout_modal";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
 import ToolbarView from "oxalis/view/action-bar/tools/toolbar_view";
@@ -70,9 +70,7 @@ type State = {
 };
 
 function AdditionalCoordinatesInputView() {
-  const additionalAxes = useSelector((state: WebknossosState) =>
-    getUnifiedAdditionalCoordinates(state.dataset),
-  );
+  const additionalAxes = useWkSelector((state) => getUnifiedAdditionalCoordinates(state.dataset));
   const additionalCoordinates = useSelector(
     (state: WebknossosState) => state.flycam.additionalCoordinates,
   );
@@ -141,7 +139,7 @@ function AdditionalCoordinatesInputView() {
 
 function CreateAnnotationButton() {
   const history = useHistory();
-  const activeUser = useSelector((state: WebknossosState) => state.activeUser);
+  const activeUser = useWkSelector((state) => state.activeUser);
 
   const onClick = async () => {
     const state = Store.getState();
@@ -192,8 +190,8 @@ function CreateAnnotationButton() {
 }
 
 function ModesView() {
-  const hasSkeleton = useSelector((state: WebknossosState) => state.annotation.skeleton != null);
-  const is2d = useSelector((state: WebknossosState) => is2dDataset(state.dataset));
+  const hasSkeleton = useWkSelector((state) => state.annotation.skeleton != null);
+  const is2d = useWkSelector((state) => is2dDataset(state.dataset));
   const controlMode = useSelector(
     (state: WebknossosState) => state.temporaryConfiguration.controlMode,
   );

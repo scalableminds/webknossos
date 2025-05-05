@@ -1,13 +1,13 @@
 import { updateNovelUserExperienceInfos } from "admin/rest_api";
 import { Button, Modal } from "antd";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import type { WebknossosState } from "oxalis/store";
+import { useWkSelector } from "oxalis/store";
 import * as React from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 
 export default function PresentModernControls() {
   const dispatch = useDispatch();
-  const activeUser = useSelector((state: WebknossosState) => state.activeUser);
+  const activeUser = useWkSelector((state) => state.activeUser);
   const [isModalVisible, setIsModalVisible] = React.useState(
     activeUser?.novelUserExperienceInfos.shouldSeeModernControlsModal,
   );

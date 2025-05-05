@@ -36,7 +36,7 @@ import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions"
 import { getSupportedValueRangeForElementClass } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
 import { Store } from "oxalis/singletons";
-import type { WebknossosState } from "oxalis/store";
+import { type WebknossosState, useWkSelector } from "oxalis/store";
 import { NumberInputPopoverSetting } from "oxalis/view/components/setting_input_views";
 import React, { useCallback, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -178,13 +178,13 @@ const moreShortcutsLink = (
 );
 
 function ShortcutsInfo() {
-  const activeTool = useSelector((state: WebknossosState) => state.uiInformation.activeTool);
-  const userConfiguration = useSelector((state: WebknossosState) => state.userConfiguration);
-  const isPlaneMode = useSelector((state: WebknossosState) => getIsPlaneMode(state));
+  const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
+  const userConfiguration = useWkSelector((state) => state.userConfiguration);
+  const isPlaneMode = useWkSelector((state) => getIsPlaneMode(state));
   const isShiftPressed = useKeyPress("Shift");
   const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
   const isAltPressed = useKeyPress("Alt");
-  const hasSkeleton = useSelector((state: WebknossosState) => state.annotation.skeleton != null);
+  const hasSkeleton = useWkSelector((state) => state.annotation.skeleton != null);
   const isTDViewportActive = useSelector(
     (state: WebknossosState) => state.viewModeData.plane.activeViewport === OrthoViews.TDView,
   );
@@ -371,11 +371,9 @@ function ShortcutsInfo() {
 }
 
 function SegmentInfo() {
-  const visibleSegmentationLayer = useSelector((state: WebknossosState) =>
-    getVisibleSegmentationLayer(state),
-  );
+  const visibleSegmentationLayer = useWkSelector((state) => getVisibleSegmentationLayer(state));
   const hasVisibleSegmentation = visibleSegmentationLayer != null;
-  const activeMappingInfo = useSelector((state: WebknossosState) =>
+  const activeMappingInfo = useWkSelector((state) =>
     getMappingInfoOrNull(
       state.temporaryConfiguration.activeMappingByLayer,
       visibleSegmentationLayer?.name,
@@ -420,14 +418,12 @@ function Infos() {
   const isSkeletonAnnotation = useSelector(
     (state: WebknossosState) => state.annotation.skeleton != null,
   );
-  const activeVolumeTracing = useSelector((state: WebknossosState) =>
-    getActiveSegmentationTracing(state),
-  );
+  const activeVolumeTracing = useWkSelector((state) => getActiveSegmentationTracing(state));
   const activeCellId = activeVolumeTracing?.activeCellId;
-  const activeNodeId = useSelector((state: WebknossosState) =>
+  const activeNodeId = useWkSelector((state) =>
     state.annotation.skeleton ? state.annotation.skeleton.activeNodeId : null,
   );
-  const activeTreeId = useSelector((state: WebknossosState) =>
+  const activeTreeId = useWkSelector((state) =>
     state.annotation.skeleton ? state.annotation.skeleton.activeTreeId : null,
   );
   const dispatch = useDispatch();
@@ -445,7 +441,7 @@ function Infos() {
     [dispatch],
   );
 
-  const validSegmentIdRange = useSelector((state: WebknossosState) => {
+  const validSegmentIdRange = useWkSelector((state) => {
     if (!activeVolumeTracing) {
       return null;
     }
@@ -580,8 +576,8 @@ function SegmentAndMousePosition() {
   const additionalCoordinates = useSelector(
     (state: WebknossosState) => state.flycam.additionalCoordinates,
   );
-  const isPlaneMode = useSelector((state: WebknossosState) => getIsPlaneMode(state));
-  const globalMousePosition = useSelector((state: WebknossosState) => {
+  const isPlaneMode = useWkSelector((state) => getIsPlaneMode(state));
+  const globalMousePosition = useWkSelector((state) => {
     const { activeViewport } = state.viewModeData.plane;
 
     if (mousePosition && activeViewport !== OrthoViews.TDView) {

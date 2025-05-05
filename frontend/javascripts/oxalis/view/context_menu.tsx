@@ -122,15 +122,13 @@ import type {
   Tree,
   UserBoundingBox,
   VolumeTracing,
-  WebknossosState,
 } from "oxalis/store";
-import Store from "oxalis/store";
+import Store, { useWkSelector } from "oxalis/store";
 import {
   getVolumeRequestUrl,
   withMappingActivationConfirmation,
 } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import React, { createContext, type MouseEvent, useContext, useEffect, useState } from "react";
-import { useSelector } from "react-redux";
 import type { Dispatch } from "redux";
 import type {
   APIConnectomeFile,
@@ -1351,7 +1349,7 @@ export function GenericContextMenuContainer(props: {
 }
 
 function WkContextMenu() {
-  const contextMenuPosition = useSelector((state: WebknossosState) => {
+  const contextMenuPosition = useWkSelector((state) => {
     return state.uiInformation.contextInfo.contextMenuPosition;
   });
 
@@ -1379,7 +1377,7 @@ function getInfoMenuItem(
 }
 
 function ContextMenuInner() {
-  const props = useSelector((state: WebknossosState) => {
+  const props = useWkSelector((state) => {
     const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
     const mappingInfo = getMappingInfo(
       state.temporaryConfiguration.activeMappingByLayer,
@@ -1450,7 +1448,7 @@ function ContextMenuInner() {
     maybeClickedMeshId != null ? maybeClickedMeshId : segmentIdAtPosition;
   const wasSegmentOrMeshClicked = clickedSegmentOrMeshId !== 0;
 
-  const dataset = useSelector((state: WebknossosState) => state.dataset);
+  const dataset = useWkSelector((state) => state.dataset);
   useEffect(() => {
     Store.dispatch(ensureSegmentIndexIsLoadedAction(visibleSegmentationLayer?.name));
   }, [visibleSegmentationLayer]);
@@ -1458,7 +1456,7 @@ function ContextMenuInner() {
     dataset,
     visibleSegmentationLayer?.name,
   );
-  const mappingName: string | null | undefined = useSelector((state: WebknossosState) => {
+  const mappingName: string | null | undefined = useWkSelector((state) => {
     if (volumeTracing?.mappingName != null) return volumeTracing?.mappingName;
     const mappingInfo = getMappingInfo(
       state.temporaryConfiguration.activeMappingByLayer,

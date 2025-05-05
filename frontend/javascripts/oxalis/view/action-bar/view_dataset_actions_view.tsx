@@ -12,7 +12,7 @@ import {
   setRenderAnimationModalVisibilityAction,
   setShareModalVisibilityAction,
 } from "oxalis/model/actions/ui_actions";
-import Store, { type WebknossosState } from "oxalis/store";
+import Store, { useWkSelector, type WebknossosState } from "oxalis/store";
 import ShareViewDatasetModalView from "oxalis/view/action-bar/share_view_dataset_modal_view";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
@@ -62,7 +62,7 @@ export const viewDatasetMenu = [
 ];
 
 export default function ViewDatasetActionsView(props: Props) {
-  const activeUser = useSelector((state: WebknossosState) => state.activeUser);
+  const activeUser = useWkSelector((state) => state.activeUser);
   const isShareModalOpen = useSelector(
     (state: WebknossosState) => state.uiInformation.showShareModal,
   );

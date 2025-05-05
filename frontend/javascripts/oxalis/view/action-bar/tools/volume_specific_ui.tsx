@@ -38,7 +38,7 @@ import {
   interpolateSegmentationLayerAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { Model } from "oxalis/singletons";
-import Store, { type WebknossosState } from "oxalis/store";
+import Store, { useWkSelector, type WebknossosState } from "oxalis/store";
 import ButtonComponent, { ToggleButton } from "oxalis/view/components/button_component";
 import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
 
@@ -197,7 +197,7 @@ export function VolumeInterpolationButton() {
     dispatch(interpolateSegmentationLayerAction());
   };
 
-  const { tooltipTitle, isDisabled } = useSelector((state: WebknossosState) =>
+  const { tooltipTitle, isDisabled } = useWkSelector((state) =>
     getInterpolationInfo(state, "Not available since"),
   );
 
@@ -268,7 +268,7 @@ export function CreateSegmentButton() {
   const unmappedActiveCellId = useSelector(
     (state: WebknossosState) => getActiveSegmentationTracing(state)?.activeCellId || 0,
   );
-  const { mappingStatus } = useSelector((state: WebknossosState) =>
+  const { mappingStatus } = useWkSelector((state) =>
     getMappingInfoForVolumeTracing(state, volumeTracingId),
   );
   const isMappingEnabled = mappingStatus === MappingStatusEnum.ENABLED;
@@ -277,7 +277,7 @@ export function CreateSegmentButton() {
     ? mapId(volumeTracingId, unmappedActiveCellId)
     : unmappedActiveCellId;
 
-  const activeCellColor = useSelector((state: WebknossosState) => {
+  const activeCellColor = useWkSelector((state) => {
     if (!activeCellId) {
       return null;
     }
@@ -314,7 +314,7 @@ function IdentityComponent({ children }: { children: React.ReactNode }) {
 
 function NuxPopConfirm({ children }: { children: React.ReactNode }) {
   const dispatch = useDispatch();
-  const activeUser = useSelector((state: WebknossosState) => state.activeUser);
+  const activeUser = useWkSelector((state) => state.activeUser);
   return (
     <Popconfirm
       open
@@ -344,7 +344,7 @@ export function QuickSelectSettingsPopover() {
     (state: WebknossosState) => state.uiInformation,
   );
   const isQuickSelectActive = quickSelectState === "active";
-  const activeUser = useSelector((state: WebknossosState) => state.activeUser);
+  const activeUser = useWkSelector((state) => state.activeUser);
 
   const showNux =
     activeUser != null && !activeUser.novelUserExperienceInfos.hasSeenSegmentAnythingWithDepth;
@@ -418,7 +418,7 @@ export function FloodFillSettings() {
 }
 
 function FillModeSwitch() {
-  const fillMode = useSelector((state: WebknossosState) => state.userConfiguration.fillMode);
+  const fillMode = useWkSelector((state) => state.userConfiguration.fillMode);
   return (
     <Radio.Group
       value={fillMode}

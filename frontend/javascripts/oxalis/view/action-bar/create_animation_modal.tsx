@@ -1,14 +1,9 @@
 import { Alert, Button, Checkbox, Col, Divider, Modal, Radio, Row, Space, Tooltip } from "antd";
 import React, { useState } from "react";
-import { useSelector } from "react-redux";
 
 import { startRenderAnimationJob } from "admin/rest_api";
 import Toast from "libs/toast";
-import Store, {
-  type MeshInformation,
-  type WebknossosState,
-  type UserBoundingBox,
-} from "oxalis/store";
+import Store, { type MeshInformation, type UserBoundingBox, useWkSelector } from "oxalis/store";
 
 import { InfoCircleOutlined } from "@ant-design/icons";
 import {
@@ -119,7 +114,7 @@ function countTrianglesInMeshes(meshes: RenderAnimationOptions["meshes"]): numbe
 }
 
 export default function CreateAnimationModalWrapper(props: Props) {
-  const dataset = useSelector((state: WebknossosState) => state.dataset);
+  const dataset = useWkSelector((state) => state.dataset);
 
   // early stop if no color layer exists
   const colorLayers = getColorLayers(dataset);
@@ -137,9 +132,9 @@ export default function CreateAnimationModalWrapper(props: Props) {
 
 function CreateAnimationModal(props: Props) {
   const { isOpen, onClose } = props;
-  const dataset = useSelector((state: WebknossosState) => state.dataset);
-  const activeOrganization = useSelector((state: WebknossosState) => state.activeOrganization);
-  const activeUser = useSelector((state: WebknossosState) => state.activeUser);
+  const dataset = useWkSelector((state) => state.dataset);
+  const activeOrganization = useWkSelector((state) => state.activeOrganization);
+  const activeUser = useWkSelector((state) => state.activeUser);
 
   const colorLayers = getColorLayers(dataset);
 
@@ -150,9 +145,7 @@ function CreateAnimationModal(props: Props) {
   const [isValid, setIsValid] = useState(true);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
-  const rawUserBoundingBoxes = useSelector((state: WebknossosState) =>
-    getUserBoundingBoxesFromState(state),
-  );
+  const rawUserBoundingBoxes = useWkSelector((state) => getUserBoundingBoxesFromState(state));
   const userBoundingBoxes = [
     ...rawUserBoundingBoxes,
     {

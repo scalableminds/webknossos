@@ -46,7 +46,7 @@ import type {
   VolumeTracing,
   WebknossosState,
 } from "oxalis/store";
-import Store from "oxalis/store";
+import Store, { useWkSelector } from "oxalis/store";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import { getContextMenuPositionFromEvent } from "oxalis/view/context_menu";
 import type { APIMeshFile, APISegmentationLayer } from "types/api_types";
@@ -419,7 +419,7 @@ function _SegmentListItem({
   const isHoveredSegmentId = useSelector(
     (state: WebknossosState) => state.temporaryConfiguration.hoveredSegmentId === segment.id,
   );
-  const isCentered = useSelector((state: WebknossosState) => {
+  const isCentered = useWkSelector((state) => {
     const centeredSegmentId = getSegmentIdForPosition(getPosition(state.flycam));
     return centeredSegmentId === segment.id;
   });

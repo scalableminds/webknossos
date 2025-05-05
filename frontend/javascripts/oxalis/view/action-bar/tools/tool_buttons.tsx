@@ -7,7 +7,7 @@ import {
   hasAgglomerateMapping,
   hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import type { WebknossosState } from "oxalis/store";
+import { type WebknossosState, useWkSelector } from "oxalis/store";
 
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
@@ -74,7 +74,7 @@ export function SkeletonTool(_props: ToolButtonProps) {
     ? "Use left-click to move around and right-click to create new skeleton nodes"
     : "Use left-click to move around or to create/select/move nodes. Right-click opens a context menu with further options.";
   const disabledInfosForTools = useSelector(getDisabledInfoForTools);
-  const hasSkeleton = useSelector((state: WebknossosState) => state.annotation?.skeleton != null);
+  const hasSkeleton = useWkSelector((state) => state.annotation?.skeleton != null);
   const isReadOnly = useSelector(
     (state: WebknossosState) => !state.annotation.restrictions.allowUpdate,
   );
@@ -346,8 +346,8 @@ export function ProofreadTool(_props: ToolButtonProps) {
   const isAgglomerateMappingEnabled = useSelector(hasAgglomerateMapping);
   const disabledInfosForTools = useSelector(getDisabledInfoForTools);
   const areEditableMappingsEnabled = features().editableMappingsEnabled;
-  const hasSkeleton = useSelector((state: WebknossosState) => state.annotation?.skeleton != null);
-  const hasVolume = useSelector((state: WebknossosState) => state.annotation?.volumes.length > 0);
+  const hasSkeleton = useWkSelector((state) => state.annotation?.skeleton != null);
+  const hasVolume = useWkSelector((state) => state.annotation?.volumes.length > 0);
   const isReadOnly = useSelector(
     (state: WebknossosState) => !state.annotation.restrictions.allowUpdate,
   );

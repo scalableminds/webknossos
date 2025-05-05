@@ -3,10 +3,9 @@ import BrainSpinner, { BrainSpinnerWithError } from "components/brain_spinner";
 import { usePolling, useSearchParams } from "libs/react_hooks";
 import Toast from "libs/toast";
 import _ from "lodash";
-import type { WebknossosState } from "oxalis/store";
+import { useWkSelector } from "oxalis/store";
 import TabTitle from "oxalis/view/components/tab_title_component";
 import { useEffect, useMemo, useState } from "react";
-import { useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
 import {
   type APIOrganization,
@@ -321,7 +320,7 @@ function shouldCollapseId(id: string, expandedKeys: Record<string, boolean>): [s
 export default function WorkflowView() {
   const { workflowName } = useParams<{ workflowName: string }>();
   const { metatask } = useSearchParams();
-  const user = useSelector((state: WebknossosState) => state.activeUser);
+  const user = useWkSelector((state) => state.activeUser);
 
   const [loadingState, setLoadingState] = useState<LoadingState>({ status: "PENDING" });
   const [report, setReport] = useState<VoxelyticsWorkflowReport | null>(null);

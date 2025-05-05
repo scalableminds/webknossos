@@ -3,10 +3,9 @@ import type { AliasToken, OverrideToken } from "antd/lib/theme/interface";
 import { ToastContextMountRoot } from "libs/toast";
 import window from "libs/window";
 import _ from "lodash";
-import type { Theme, WebknossosState } from "oxalis/store";
+import { type Theme, useWkSelector } from "oxalis/store";
 import type React from "react";
 import { useEffect } from "react";
-import { useSelector } from "react-redux";
 import type { APIUser } from "types/api_types";
 
 const ColorWKBlue = "#5660ff"; // WK ~blue/purple
@@ -121,7 +120,7 @@ export default function GlobalThemeProvider({
   children,
   isMainProvider = true,
 }: { children?: React.ReactNode; isMainProvider?: boolean }) {
-  const activeUser = useSelector((state: WebknossosState) => state.activeUser);
+  const activeUser = useWkSelector((state) => state.activeUser);
   const userTheme = getThemeFromUser(activeUser);
   const antdTheme = getAntdTheme(userTheme);
   const isDarkMode = userTheme === "dark";

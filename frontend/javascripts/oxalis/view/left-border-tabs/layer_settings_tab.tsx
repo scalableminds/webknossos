@@ -100,7 +100,7 @@ import type {
   VolumeTracing,
   WebknossosState,
 } from "oxalis/store";
-import Store from "oxalis/store";
+import Store, { useWkSelector } from "oxalis/store";
 import { MaterializeVolumeAnnotationModal } from "oxalis/view/action-bar/starting_job_modals";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import {
@@ -192,7 +192,7 @@ function DummyDragHandle({ tooltipTitle }: { tooltipTitle: string }) {
 
 function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer }) {
   const dispatch = useDispatch();
-  const transform = useSelector((state: WebknossosState) =>
+  const transform = useWkSelector((state) =>
     getTransformsForLayerOrNull(
       state.dataset,
       layer,
@@ -204,7 +204,7 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
     (state: WebknossosState) => getTransformsForLayerOrNull(state.dataset, layer, null) != null,
   );
 
-  const showIcon = useSelector((state: WebknossosState) => hasDatasetTransforms(state.dataset));
+  const showIcon = useWkSelector((state) => hasDatasetTransforms(state.dataset));
   if (!showIcon) {
     return null;
   }

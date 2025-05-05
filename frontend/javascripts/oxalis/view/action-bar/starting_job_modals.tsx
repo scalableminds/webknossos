@@ -61,7 +61,7 @@ import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { MagInfo } from "oxalis/model/helpers/mag_info";
 import { Model, Store } from "oxalis/singletons";
-import type { UserBoundingBox, WebknossosState } from "oxalis/store";
+import { type UserBoundingBox, type WebknossosState, useWkSelector } from "oxalis/store";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import React, { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -209,7 +209,7 @@ function BoundingBoxSelectionFormItem({
   onChangeSelectedBoundingBox,
   value: selectedBoundingBoxId,
 }: BoundingBoxSelectionProps): JSX.Element {
-  const dataset = useSelector((state: WebknossosState) => state.dataset);
+  const dataset = useWkSelector((state) => state.dataset);
   const isInDatasetViewMode = useSelector(
     (state: WebknossosState) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
@@ -503,7 +503,7 @@ function AlignmentTab() {
 }
 
 function ShouldUseTreesFormItem() {
-  const annotation = useSelector((state: WebknossosState) => state.annotation);
+  const annotation = useWkSelector((state) => state.annotation);
   const trees = annotation.skeleton ? Object.values(annotation.skeleton.trees) : [];
   return (
     <div>
@@ -711,14 +711,12 @@ function StartJobForm(props: StartJobFormProps) {
     jobSpecificInputFields,
   } = props;
   const [form] = Form.useForm();
-  const rawUserBoundingBoxes = useSelector((state: WebknossosState) =>
-    getUserBoundingBoxesFromState(state),
-  );
+  const rawUserBoundingBoxes = useWkSelector((state) => getUserBoundingBoxesFromState(state));
 
   const dispatch = useDispatch();
-  const dataset = useSelector((state: WebknossosState) => state.dataset);
-  const annotation = useSelector((state: WebknossosState) => state.annotation);
-  const activeUser = useSelector((state: WebknossosState) => state.activeUser);
+  const dataset = useWkSelector((state) => state.dataset);
+  const annotation = useWkSelector((state) => state.annotation);
+  const activeUser = useWkSelector((state) => state.activeUser);
   const isActiveUserSuperUser = activeUser?.isSuperUser || false;
   const colorLayers = getColorLayers(dataset);
   const organizationCredits = useSelector(
@@ -891,7 +889,7 @@ function StartJobForm(props: StartJobFormProps) {
 }
 
 export function NucleiDetectionForm() {
-  const dataset = useSelector((state: WebknossosState) => state.dataset);
+  const dataset = useWkSelector((state) => state.dataset);
   const dispatch = useDispatch();
   return (
     <StartJobForm
@@ -924,7 +922,7 @@ export function NucleiDetectionForm() {
   );
 }
 export function NeuronSegmentationForm() {
-  const dataset = useSelector((state: WebknossosState) => state.dataset);
+  const dataset = useWkSelector((state) => state.dataset);
   const { neuronInferralCostPerGVx } = features();
   const hasSkeletonAnnotation = useSelector(
     (state: WebknossosState) => state.annotation.skeleton != null,
@@ -1003,7 +1001,7 @@ export function NeuronSegmentationForm() {
 }
 
 export function MitochondriaSegmentationForm() {
-  const dataset = useSelector((state: WebknossosState) => state.dataset);
+  const dataset = useWkSelector((state) => state.dataset);
   const { mitochondriaInferralCostPerGVx } = features();
   const dispatch = useDispatch();
   return (
@@ -1041,8 +1039,8 @@ export function MitochondriaSegmentationForm() {
 }
 
 function CustomAiModelInferenceForm() {
-  const dataset = useSelector((state: WebknossosState) => state.dataset);
-  const annotationId = useSelector((state: WebknossosState) => state.annotation.annotationId);
+  const dataset = useWkSelector((state) => state.dataset);
+  const annotationId = useWkSelector((state) => state.annotation.annotationId);
   const isViewMode = useSelector(
     (state: WebknossosState) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
@@ -1117,7 +1115,7 @@ function CustomAiModelInferenceForm() {
 }
 
 export function AlignSectionsForm() {
-  const dataset = useSelector((state: WebknossosState) => state.dataset);
+  const dataset = useWkSelector((state) => state.dataset);
   const dispatch = useDispatch();
   const { alignmentCostPerGVx } = features();
   return (
@@ -1160,8 +1158,8 @@ export function MaterializeVolumeAnnotationModal({
   selectedVolumeLayer,
   handleClose,
 }: MaterializeVolumeAnnotationModalProps) {
-  const dataset = useSelector((state: WebknossosState) => state.dataset);
-  const tracing = useSelector((state: WebknossosState) => state.annotation);
+  const dataset = useWkSelector((state) => state.dataset);
+  const tracing = useWkSelector((state) => state.annotation);
   let includesEditableMapping = false;
   const activeSegmentationTracingLayer = useSelector(getActiveSegmentationTracingLayer);
   const fixedSelectedLayer = selectedVolumeLayer || activeSegmentationTracingLayer;

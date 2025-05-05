@@ -39,14 +39,13 @@ import { MagInfo } from "oxalis/model/helpers/mag_info";
 import { convertUserBoundingBoxesFromServerToFrontend } from "oxalis/model/reducers/reducer_helpers";
 import { serverVolumeToClientVolumeTracing } from "oxalis/model/reducers/volumetracing_reducer";
 import { Model } from "oxalis/singletons";
-import type {
-  StoreAnnotation,
-  UserBoundingBox,
-  VolumeTracing,
-  WebknossosState,
+import {
+  type StoreAnnotation,
+  type UserBoundingBox,
+  type VolumeTracing,
+  useWkSelector,
 } from "oxalis/store";
 import React, { useRef, useState } from "react";
-import { useSelector } from "react-redux";
 import {
   type APIAnnotation,
   type APIDataLayer,
@@ -140,8 +139,8 @@ const AiModelCommentFormItem = () => (
 );
 
 export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void }) {
-  const annotation = useSelector((state: WebknossosState) => state.annotation);
-  const dataset = useSelector((state: WebknossosState) => state.dataset);
+  const annotation = useWkSelector((state) => state.annotation);
+  const dataset = useWkSelector((state) => state.dataset);
 
   const getMagsForSegmentationLayer = (_annotationId: string, layerName: string) => {
     const segmentationLayer = getSegmentationLayerByHumanReadableName(

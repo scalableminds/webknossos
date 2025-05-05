@@ -24,13 +24,14 @@ import {
   setActiveNodeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
-import type {
-  CommentType,
-  MutableCommentType,
-  SkeletonTracing,
-  Tree,
-  TreeMap,
-  WebknossosState,
+import {
+  type CommentType,
+  type MutableCommentType,
+  type SkeletonTracing,
+  type Tree,
+  type TreeMap,
+  type WebknossosState,
+  useWkSelector,
 } from "oxalis/store";
 import ButtonComponent from "oxalis/view/components/button_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
@@ -121,7 +122,7 @@ function CommentTabView(props: Props) {
   const isAnnotationLockedByUser = useSelector(
     (state: WebknossosState) => state.annotation.isLockedByOwner,
   );
-  const isOwner = useSelector((state: WebknossosState) => isAnnotationOwner(state));
+  const isOwner = useWkSelector((state) => isAnnotationOwner(state));
 
   const activeComment = useSelector((_state: WebknossosState) => getActiveComment());
 
@@ -562,9 +563,7 @@ function CommentTabViewWrapper() {
   // 1. Prevent excessive re-renders
   // 2. Safe-guard that a skeleton tracing is available
 
-  const skeletonTracing = useSelector((state: WebknossosState) =>
-    getSkeletonTracing(state.annotation),
-  );
+  const skeletonTracing = useWkSelector((state) => getSkeletonTracing(state.annotation));
 
   if (skeletonTracing) return <CommentTabViewMemo skeletonTracing={skeletonTracing} />;
 

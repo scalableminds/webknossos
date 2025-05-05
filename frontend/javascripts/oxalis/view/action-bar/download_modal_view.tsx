@@ -47,7 +47,12 @@ import {
   hasVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { Model } from "oxalis/singletons";
-import type { StoreAnnotation, UserBoundingBox, WebknossosState } from "oxalis/store";
+import {
+  type StoreAnnotation,
+  type UserBoundingBox,
+  type WebknossosState,
+  useWkSelector,
+} from "oxalis/store";
 import { BoundingBoxSelection, MagSlider } from "oxalis/view/action-bar/starting_job_modals";
 import type React from "react";
 import { useState } from "react";
@@ -276,12 +281,10 @@ function _DownloadModalView({
   initialTab,
   initialBoundingBoxId,
 }: Props): JSX.Element {
-  const activeUser = useSelector((state: WebknossosState) => state.activeUser);
-  const annotation = useSelector((state: WebknossosState) => state.annotation);
-  const dataset = useSelector((state: WebknossosState) => state.dataset);
-  const rawUserBoundingBoxes = useSelector((state: WebknossosState) =>
-    getUserBoundingBoxesFromState(state),
-  );
+  const activeUser = useWkSelector((state) => state.activeUser);
+  const annotation = useWkSelector((state) => state.annotation);
+  const dataset = useWkSelector((state) => state.dataset);
+  const rawUserBoundingBoxes = useWkSelector((state) => getUserBoundingBoxesFromState(state));
   const currentAdditionalCoordinates = useSelector(
     (state: WebknossosState) => state.flycam.additionalCoordinates,
   );

@@ -11,7 +11,7 @@ import {
   createTreeAction,
   setMergerModeEnabledAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import type { WebknossosState } from "oxalis/store";
+import { type WebknossosState, useWkSelector } from "oxalis/store";
 import { MaterializeVolumeAnnotationModal } from "oxalis/view/action-bar/starting_job_modals";
 import ButtonComponent, { ToggleButton } from "oxalis/view/components/button_component";
 
@@ -38,12 +38,10 @@ export function SkeletonSpecificButtons() {
   const toggleContinuousNodeCreation = () =>
     dispatch(updateUserSettingAction("continuousNodeCreation", !isContinuousNodeCreationEnabled));
 
-  const dataset = useSelector((state: WebknossosState) => state.dataset);
+  const dataset = useWkSelector((state) => state.dataset);
   const isUserAdminOrManager = useIsActiveUserAdminOrManager();
 
-  const segmentationTracingLayer = useSelector((state: WebknossosState) =>
-    getActiveSegmentationTracing(state),
-  );
+  const segmentationTracingLayer = useWkSelector((state) => getActiveSegmentationTracing(state));
   const isEditableMappingActive =
     segmentationTracingLayer != null && !!segmentationTracingLayer.hasEditableMapping;
   const isMappingLockedWithNonNull =
@@ -135,9 +133,7 @@ export function SkeletonSpecificButtons() {
 
 function CreateTreeButton() {
   const dispatch = useDispatch();
-  const activeTree = useSelector((state: WebknossosState) =>
-    getActiveTree(state.annotation.skeleton),
-  );
+  const activeTree = useWkSelector((state) => getActiveTree(state.annotation.skeleton));
   const rgbColorString =
     activeTree != null
       ? `rgb(${activeTree.color.map((c) => Math.round(c * 255)).join(",")})`

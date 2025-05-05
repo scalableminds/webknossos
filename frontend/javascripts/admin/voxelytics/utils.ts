@@ -1,6 +1,5 @@
 import { message } from "antd";
-import type { WebknossosState } from "oxalis/store";
-import { useSelector } from "react-redux";
+import { useWkSelector } from "oxalis/store";
 import { VoxelyticsRunState } from "types/api_types";
 
 export const VX_POLLING_INTERVAL = null; // disabled for now. 30 * 1000; // 30s
@@ -52,7 +51,7 @@ const theme = {
 };
 
 export function useTheme(): [typeof theme, boolean] {
-  const selectedTheme = useSelector((state: WebknossosState) => state.uiInformation.theme);
+  const selectedTheme = useWkSelector((state) => state.uiInformation.theme);
   return [theme, selectedTheme === "light"];
 }
 

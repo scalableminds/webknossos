@@ -9,7 +9,7 @@ import { Toolkits } from "oxalis/model/accessors/tool_accessor";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
 import { Store } from "oxalis/singletons";
-import type { UserConfiguration, WebknossosState } from "oxalis/store";
+import { type UserConfiguration, type WebknossosState, useWkSelector } from "oxalis/store";
 import type { Command } from "react-command-palette";
 import ReactCommandPalette from "react-command-palette";
 import { useSelector } from "react-redux";
@@ -55,7 +55,7 @@ const getLabelForPath = (key: string) =>
   getPhraseFromCamelCaseString(capitalize(key.split("/")[1])) || key;
 
 export const CommandPalette = ({ label }: { label: string | JSX.Element | null }) => {
-  const userConfig = useSelector((state: WebknossosState) => state.userConfiguration);
+  const userConfig = useWkSelector((state) => state.userConfiguration);
   const isViewMode = useSelector(
     (state: WebknossosState) => state.temporaryConfiguration.controlMode === "VIEW",
   );
@@ -63,15 +63,15 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     (state: WebknossosState) => state.uiInformation.isInAnnotationView,
   );
 
-  const restrictions = useSelector((state: WebknossosState) => state.annotation.restrictions);
-  const task = useSelector((state: WebknossosState) => state.task);
-  const annotationType = useSelector((state: WebknossosState) => state.annotation.annotationType);
-  const annotationId = useSelector((state: WebknossosState) => state.annotation.annotationId);
-  const activeUser = useSelector((state: WebknossosState) => state.activeUser);
+  const restrictions = useWkSelector((state) => state.annotation.restrictions);
+  const task = useWkSelector((state) => state.task);
+  const annotationType = useWkSelector((state) => state.annotation.annotationType);
+  const annotationId = useWkSelector((state) => state.annotation.annotationId);
+  const activeUser = useWkSelector((state) => state.activeUser);
   const isAnnotationLockedByUser = useSelector(
     (state: WebknossosState) => state.annotation.isLockedByOwner,
   );
-  const annotationOwner = useSelector((state: WebknossosState) => state.annotation.owner);
+  const annotationOwner = useWkSelector((state) => state.annotation.owner);
 
   const props: TracingViewMenuProps = {
     restrictions,

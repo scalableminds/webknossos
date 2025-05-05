@@ -23,7 +23,7 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import { Unicode } from "oxalis/constants";
 import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
-import type { WebknossosState } from "oxalis/store";
+import { useWkSelector } from "oxalis/store";
 import CategorizationLabel from "oxalis/view/components/categorization_label";
 import EditableTextIcon from "oxalis/view/components/editable_text_icon";
 import {
@@ -34,7 +34,6 @@ import {
 import * as React from "react";
 import { DndProvider, DragPreviewImage, useDrag } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import type { APIDatasetCompact, APIMaybeUnimportedDataset, FolderItem } from "types/api_types";
 import type { EmptyObject } from "types/globals";
@@ -232,7 +231,7 @@ const DraggableDatasetRow = ({
   ...restProps
 }: DraggableDatasetRowProps) => {
   const ref = React.useRef<HTMLTableRowElement>(null);
-  const theme = useSelector((state: WebknossosState) => state.uiInformation.theme);
+  const theme = useWkSelector((state) => state.uiInformation.theme);
   // @ts-ignore
 
   const datasetId = restProps["data-row-key"];

@@ -18,7 +18,7 @@ import {
 } from "oxalis/model/accessors/view_mode_accessor";
 import { hideMeasurementTooltipAction } from "oxalis/model/actions/ui_actions";
 import dimensions from "oxalis/model/dimensions";
-import type { WebknossosState } from "oxalis/store";
+import { type WebknossosState, useWkSelector } from "oxalis/store";
 import { useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -47,10 +47,10 @@ export default function DistanceMeasurementTooltip() {
   const isMeasuring = useSelector(
     (state: WebknossosState) => state.uiInformation.measurementToolInfo.isMeasuring,
   );
-  const flycam = useSelector((state: WebknossosState) => state.flycam);
-  const state = useSelector((state: WebknossosState) => state);
-  const activeTool = useSelector((state: WebknossosState) => state.uiInformation.activeTool);
-  const voxelSize = useSelector((state: WebknossosState) => state.dataset.dataSource.scale);
+  const flycam = useWkSelector((state) => state.flycam);
+  const state = useWkSelector((state) => state);
+  const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
+  const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const dispatch = useDispatch();
   const currentPosition = getPosition(flycam);

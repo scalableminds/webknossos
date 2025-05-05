@@ -1,8 +1,8 @@
 import { isUserAdminOrManager } from "libs/utils";
-import type { WebknossosState } from "oxalis/store";
+import { type WebknossosState, useWkSelector } from "oxalis/store";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { useSelector, useStore } from "react-redux";
+import { useStore } from "react-redux";
 import type { ArbitraryFunction } from "types/globals";
 import Toast from "./toast";
 
@@ -130,7 +130,7 @@ export function makeComponentLazy<T extends { isOpen: boolean }>(
 }
 
 export function useIsActiveUserAdminOrManager() {
-  const user = useSelector((state: WebknossosState) => state.activeUser);
+  const user = useWkSelector((state) => state.activeUser);
   return user != null && isUserAdminOrManager(user);
 }
 

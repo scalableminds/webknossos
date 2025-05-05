@@ -7,9 +7,8 @@ import {
 } from "admin/rest_api";
 import { Button, Card, Checkbox, Form, Input, InputNumber, Select } from "antd";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import type { WebknossosState } from "oxalis/store";
+import { useWkSelector } from "oxalis/store";
 import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
 import { useHistory } from "react-router-dom";
 import type { APITeam, APIUser } from "types/api_types";
 import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
@@ -27,7 +26,7 @@ function ProjectCreateView({ projectId }: PropsWithRouter) {
   const [isFetchingData, setIsFetchingData] = useState<boolean>(false);
   const [form] = Form.useForm();
   const history = useHistory();
-  const activeUser = useSelector((state: WebknossosState) => enforceActiveUser(state.activeUser));
+  const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
   useEffect(() => {
     fetchData();
     applyDefaults();

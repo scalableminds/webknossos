@@ -40,7 +40,7 @@ import {
   setOthersMayEditForAnnotationAction,
 } from "oxalis/model/actions/annotation_actions";
 import { setShareModalVisibilityAction } from "oxalis/model/actions/ui_actions";
-import Store, { type WebknossosState } from "oxalis/store";
+import Store, { useWkSelector, type WebknossosState } from "oxalis/store";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
@@ -77,7 +77,7 @@ function Hint({ children, style }: { children: React.ReactNode; style: React.CSS
 }
 
 export function useDatasetSharingToken(dataset: APIDataset) {
-  const activeUser = useSelector((state: WebknossosState) => state.activeUser);
+  const activeUser = useWkSelector((state) => state.activeUser);
   const [datasetToken, setDatasetToken] = useState("");
 
   const getAndSetToken = async () => {
@@ -124,7 +124,7 @@ export async function copyUrlToClipboard(url: string) {
 export function ShareButton(props: { dataset: APIDataset; style?: Record<string, any> }) {
   const { dataset, style } = props;
   const sharingToken = useDatasetSharingToken(props.dataset);
-  const annotationVisibility = useSelector((state: WebknossosState) => state.annotation.visibility);
+  const annotationVisibility = useWkSelector((state) => state.annotation.visibility);
   const controlMode = useSelector(
     (state: WebknossosState) => state.temporaryConfiguration.controlMode,
   );
@@ -178,9 +178,9 @@ export function ShareButton(props: { dataset: APIDataset; style?: Record<string,
 
 function _ShareModalView(props: Props) {
   const { isOpen, onOk, annotationType, annotationId } = props;
-  const dataset = useSelector((state: WebknossosState) => state.dataset);
-  const annotation = useSelector((state: WebknossosState) => state.annotation);
-  const activeUser = useSelector((state: WebknossosState) => state.activeUser);
+  const dataset = useWkSelector((state) => state.dataset);
+  const annotation = useWkSelector((state) => state.annotation);
+  const activeUser = useWkSelector((state) => state.activeUser);
   const isAnnotationLockedByUser = annotation.isLockedByOwner;
 
   const annotationVisibility = annotation.visibility;

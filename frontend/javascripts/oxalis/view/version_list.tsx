@@ -27,7 +27,7 @@ import {
 import { Model } from "oxalis/singletons";
 import { api } from "oxalis/singletons";
 import type { StoreAnnotation, WebknossosState } from "oxalis/store";
-import Store from "oxalis/store";
+import Store, { useWkSelector } from "oxalis/store";
 import VersionEntryGroup from "oxalis/view/version_entry_group";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
@@ -194,7 +194,7 @@ function VersionList() {
   const tracingStoreUrl = useSelector(
     (state: WebknossosState) => state.annotation.tracingStore.url,
   );
-  const annotationId = useSelector((state: WebknossosState) => state.annotation.annotationId);
+  const annotationId = useWkSelector((state) => state.annotation.annotationId);
   const initialAllowUpdate = useSelector(
     (state: WebknossosState) => state.annotation.restrictions.initialAllowUpdate,
   );
@@ -221,7 +221,7 @@ function VersionList() {
 }
 
 function InnerVersionList(props: Props & { newestVersion: number; initialAllowUpdate: boolean }) {
-  const annotation = useSelector((state: WebknossosState) => state.annotation);
+  const annotation = useWkSelector((state) => state.annotation);
   const queryClient = useQueryClient();
   // Remember the version with which the version view was opened (
   // the active version could change by the actions of the user).

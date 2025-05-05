@@ -17,7 +17,7 @@ import {
 } from "oxalis/model/actions/annotation_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import { setActiveUserBoundingBoxId } from "oxalis/model/actions/ui_actions";
-import type { UserBoundingBox, WebknossosState } from "oxalis/store";
+import { type UserBoundingBox, type WebknossosState, useWkSelector } from "oxalis/store";
 import UserBoundingBoxInput from "oxalis/view/components/setting_input_views";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -35,11 +35,11 @@ export default function BoundingBoxTab() {
   const bboxTableRef: Parameters<typeof Table>[0]["ref"] = useRef(null);
   const [selectedBoundingBoxForExport, setSelectedBoundingBoxForExport] =
     useState<UserBoundingBox | null>(null);
-  const annotation = useSelector((state: WebknossosState) => state.annotation);
+  const annotation = useWkSelector((state) => state.annotation);
   const allowUpdate = annotation.restrictions.allowUpdate;
   const isLockedByOwner = annotation.isLockedByOwner;
-  const isOwner = useSelector((state: WebknossosState) => isAnnotationOwner(state));
-  const dataset = useSelector((state: WebknossosState) => state.dataset);
+  const isOwner = useWkSelector((state) => isAnnotationOwner(state));
+  const dataset = useWkSelector((state) => state.dataset);
   const activeBoundingBoxId = useSelector(
     (state: WebknossosState) => state.uiInformation.activeUserBoundingBoxId,
   );

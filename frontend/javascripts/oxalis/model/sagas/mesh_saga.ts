@@ -1,11 +1,11 @@
+import type { MeshLodInfo } from "admin/api/mesh";
 import {
   computeAdHocMesh,
   getBucketPositionsForAdHocMesh,
   getMeshfilesForDatasetLayer,
   meshApi,
   sendAnalyticsEvent,
-} from "admin/admin_rest_api";
-import type { MeshLodInfo } from "admin/api/mesh";
+} from "admin/rest_api";
 import { saveAs } from "file-saver";
 import { mergeGeometries } from "libs/BufferGeometryUtils";
 import ThreeDMap from "libs/ThreeDMap";

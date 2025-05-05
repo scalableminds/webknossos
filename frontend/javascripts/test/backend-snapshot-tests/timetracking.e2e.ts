@@ -7,7 +7,7 @@ import {
   writeTypeCheckingFile,
   replaceVolatileValues,
 } from "test/e2e-setup";
-import * as api from "admin/admin_rest_api";
+import * as api from "admin/rest_api";
 import { describe, test, beforeAll, expect } from "vitest";
 import type { APITeam, APIUser } from "types/api_types";
 import { AnnotationStateFilterEnum } from "oxalis/constants";

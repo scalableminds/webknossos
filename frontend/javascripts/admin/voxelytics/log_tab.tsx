@@ -1,5 +1,5 @@
 import { SyncOutlined } from "@ant-design/icons";
-import { getVoxelyticsLogs } from "admin/admin_rest_api";
+import { getVoxelyticsLogs } from "admin/rest_api";
 import Ansi from "ansi-to-react";
 import { Button, Select, Switch, message } from "antd";
 import chalk from "chalk";

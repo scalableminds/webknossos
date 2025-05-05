@@ -1,10 +1,10 @@
+import { requestTask } from "admin/api/tasks";
 import {
   doWithToken,
   finishAnnotation,
   getMappingsForDatasetLayer,
   sendAnalyticsEvent,
-} from "admin/admin_rest_api";
-import { requestTask } from "admin/api/tasks";
+} from "admin/rest_api";
 import PriorityQueue from "js-priority-queue";
 import { InputKeyboardNoLoop } from "libs/input";
 import { M4x4, type Matrix4x4, V3, type Vector16 } from "libs/mjs";

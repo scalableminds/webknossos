@@ -1,6 +1,6 @@
 import { CopyOutlined, InfoCircleOutlined, RetweetOutlined } from "@ant-design/icons";
-import { getDatasetSharingToken, revokeDatasetSharingToken } from "admin/admin_rest_api";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import { getDatasetSharingToken, revokeDatasetSharingToken } from "admin/rest_api";
 import { Button, Checkbox, Collapse, type FormInstance, Input, Space, Tooltip } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import { PricingEnforcedBlur } from "components/pricing_enforcers";

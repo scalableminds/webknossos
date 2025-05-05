@@ -1,6 +1,6 @@
-import { getDefaultOrganization } from "admin/admin_rest_api";
 import RegistrationFormGeneric from "admin/auth/registration_form_generic";
 import RegistrationFormWKOrg from "admin/auth/registration_form_wkorg";
+import { getDefaultOrganization } from "admin/rest_api";
 import { Card, Col, Row, Spin } from "antd";
 import features from "features";
 import Toast from "libs/toast";

@@ -1,4 +1,4 @@
-import { getTimeTrackingForUserSummedPerAnnotation } from "admin/admin_rest_api";
+import { getTimeTrackingForUserSummedPerAnnotation } from "admin/rest_api";
 import { Col, Divider, Row } from "antd";
 import dayjs from "dayjs";
 import { formatMilliseconds } from "libs/format_utils";

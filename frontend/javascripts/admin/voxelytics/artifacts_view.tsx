@@ -1,5 +1,5 @@
 import { CopyOutlined, ExportOutlined } from "@ant-design/icons";
-import { getVoxelyticsArtifactChecksums } from "admin/admin_rest_api";
+import { getVoxelyticsArtifactChecksums } from "admin/rest_api";
 import { Button, Card, message } from "antd";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
 import { JSONTree } from "react-json-tree";

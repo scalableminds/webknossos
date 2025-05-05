@@ -4,7 +4,7 @@ import {
   getEdgesForAgglomerateMinCut,
   getNeighborsForAgglomerateNode,
   getPositionForSegmentInAgglomerate,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { SoftError, isBigInt, isNumberMap } from "libs/utils";

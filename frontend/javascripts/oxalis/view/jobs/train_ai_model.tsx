@@ -1,10 +1,10 @@
+import { getAnnotationsForTask } from "admin/api/tasks";
 import {
   getDataset,
   getTracingForAnnotationType,
   getUnversionedAnnotationInformation,
   runNeuronTraining,
-} from "admin/admin_rest_api";
-import { getAnnotationsForTask } from "admin/api/tasks";
+} from "admin/rest_api";
 import {
   Alert,
   Button,

@@ -1,4 +1,4 @@
-import { getEditableTeams, getTeams } from "admin/admin_rest_api";
+import { getEditableTeams, getTeams } from "admin/rest_api";
 import { Select } from "antd";
 import _ from "lodash";
 import * as React from "react";

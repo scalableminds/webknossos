@@ -4,7 +4,7 @@ import {
   getProject,
   getUsers,
   updateProject,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
 import { Button, Card, Checkbox, Form, Input, InputNumber, Select } from "antd";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import { useEffect, useState } from "react";

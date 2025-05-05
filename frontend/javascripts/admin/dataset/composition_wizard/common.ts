@@ -1,4 +1,4 @@
-import { getDataset, getDatasetLegacy } from "admin/admin_rest_api";
+import { getDataset, getDatasetLegacy } from "admin/rest_api";
 import type { UploadFile } from "antd";
 import Toast from "libs/toast";
 import type { Vector3 } from "oxalis/constants";

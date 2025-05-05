@@ -24,14 +24,14 @@ import {
   VerticalLeftOutlined,
   VerticalRightOutlined,
 } from "@ant-design/icons";
+import { withAuthentication } from "admin/auth/authentication_modal";
 import {
   createExplorational,
   duplicateAnnotation,
   editLockedState,
   finishAnnotation,
   reOpenAnnotation,
-} from "admin/admin_rest_api";
-import { withAuthentication } from "admin/auth/authentication_modal";
+} from "admin/rest_api";
 import { Button, ConfigProvider, Dropdown, Modal, Space, Tooltip } from "antd";
 import type { SubMenuType } from "antd/es/menu/interface";
 import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";

@@ -9,7 +9,7 @@ import {
   updateDatasetDefaultConfiguration,
   updateDatasetPartial,
   updateDatasetTeams,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
 import { Alert, Button, Card, Form, type FormInstance, Spin, Tabs, Tooltip } from "antd";
 import dayjs from "dayjs";
 import features from "features";

@@ -1,5 +1,5 @@
-import { createExplorational } from "admin/admin_rest_api";
 import { withAuthentication } from "admin/auth/authentication_modal";
+import { createExplorational } from "admin/rest_api";
 import { Alert, Popover, Space } from "antd";
 import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
 import { isUserAdminOrTeamManager } from "libs/utils";

@@ -1,4 +1,4 @@
-import { getDefaultOrganization, getOperatorData } from "admin/admin_rest_api";
+import { getDefaultOrganization, getOperatorData } from "admin/rest_api";
 import { Card, Col, Row } from "antd";
 import Markdown from "libs/markdown_adapter";
 import React from "react";

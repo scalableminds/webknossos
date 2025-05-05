@@ -7,7 +7,7 @@ import {
   SearchOutlined,
 } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
-import { getOrganization } from "admin/admin_rest_api";
+import { getOrganization } from "admin/rest_api";
 import { Result, Spin, Tag, Tooltip } from "antd";
 import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";

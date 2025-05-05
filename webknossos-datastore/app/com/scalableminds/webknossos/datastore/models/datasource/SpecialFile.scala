@@ -24,4 +24,20 @@ case class SpecialFile(
 
 object SpecialFile {
   implicit val specialFileFormat: Format[SpecialFile] = Json.format[SpecialFile]
+
+  def localFileURIPrefix = "file://"
+
+  private def agglomerateFileExtension = "hdf5"
+  private def segmentIndexFileExtension = "hdf5"
+  private def meshFileExtension = "hdf5"
+
+  private def meshFilesDirectory = "meshes"
+  private def agglomerateFilesDirectory = "agglomerates"
+  private def segmentIndexFilesDirectory = "segmentIndex"
+
+  def types: Seq[(SpecialFileType.Value, String, String)] = Seq(
+    (SpecialFileType.mesh, meshFileExtension, meshFilesDirectory),
+    (SpecialFileType.agglomerate, agglomerateFileExtension, agglomerateFilesDirectory),
+    (SpecialFileType.segmentIndex, segmentIndexFileExtension, segmentIndexFilesDirectory)
+  )
 }

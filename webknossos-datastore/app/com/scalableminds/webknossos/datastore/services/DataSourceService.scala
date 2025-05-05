@@ -326,7 +326,7 @@ class DataSourceService @Inject()(
         case Full(dataSource) =>
           if (dataSource.dataLayers.nonEmpty) {
             val dataSourceWithSpecialFiles = dataSource.copy(
-              dataLayers = exploreSpecialFiles(path, dataSource)
+              dataLayers = scanForSpecialFiles(path, dataSource)
             )
             if (true) { // TODO Decide: Should we always rewrite the JSON file ? Never? Sometimes?
               // Rewriting the JSON in this file could e.g. remove custom fields that are not in the schema
@@ -346,37 +346,24 @@ class DataSourceService @Inject()(
     }
   }
 
-  private def exploreSpecialFiles(dataSourcePath: Path, dataSource: DataSource) =
+  private def scanForSpecialFiles(dataSourcePath: Path, dataSource: DataSource) =
     dataSource.dataLayers.map(dataLayer => {
-      val discoveredSpecialFiles: Box[List[SpecialFile]] = for {
-        _ <- Full(())
-        dataLayerPath = dataSourcePath.resolve(dataLayer.name)
-        meshesDir = dataLayerPath.resolve("meshes")
-        meshFilePaths <- if (Files.exists(meshesDir))
-          PathUtils.listFiles(meshesDir, silent = true, PathUtils.fileExtensionFilter("hdf5"))
-        else Full(List())
-        meshFiles = meshFilePaths.map(path =>
-          SpecialFile(new URI(DataVaultService.schemeFile + "://" + path.toString), SpecialFileType.mesh))
-        segmentIndexDir = dataLayerPath.resolve("segmentIndex")
-        segmentIndexPaths <- if (Files.exists(segmentIndexDir))
-          PathUtils.listFiles(segmentIndexDir, silent = true, PathUtils.fileExtensionFilter("hdf5"))
-        else Full(List())
-        segmentIndexFiles = segmentIndexPaths.map(path =>
-          SpecialFile(new URI(DataVaultService.schemeFile + "://" + path.toString), SpecialFileType.segmentIndex))
-        agglomeratesDir = dataLayerPath.resolve("agglomerates")
-        agglomerateFilePaths <- if (Files.exists(agglomeratesDir))
-          PathUtils.listFiles(agglomeratesDir, silent = true, PathUtils.fileExtensionFilter("hdf5"))
-        else Full(List())
-        agglomerateFiles = agglomerateFilePaths.map(path =>
-          SpecialFile(new URI(DataVaultService.schemeFile + "://" + path.toString), SpecialFileType.agglomerate))
-        specialFiles = meshFiles ++ segmentIndexFiles ++ agglomerateFiles
-      } yield specialFiles
-      discoveredSpecialFiles match {
-        case Full(specialFiles) if specialFiles.nonEmpty =>
-          dataLayer.withSpecialFiles(specialFiles)
-        case _ =>
-          dataLayer
-      }
+      val dataLayerPath = dataSourcePath.resolve(dataLayer.name)
+      val discoveredSpecialFiles = SpecialFile.types.flatMap {
+        case (typ, extension, directory) =>
+          val dir = dataLayerPath.resolve(directory)
+          if (Files.exists(dir)) {
+            val paths: Box[List[Path]] =
+              PathUtils.listFiles(dir, silent = true, PathUtils.fileExtensionFilter(extension))
+            paths match {
+              case Full(p) => p.map(path => SpecialFile(new URI(SpecialFile.localFileURIPrefix + path.toString), typ))
+              case _       => logger.warn(s"Failed to list special files in $dir"); List()
+            }
+          } else {
+            List()
+          }
+      }.toList
+      dataLayer.withSpecialFiles(discoveredSpecialFiles)
     })
 
   def invalidateVaultCache(dataSource: InboxDataSource, dataLayerName: Option[String]): Option[Int] =

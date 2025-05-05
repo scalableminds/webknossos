@@ -1,4 +1,4 @@
-import { requestVerificationMail, verifyEmail } from "admin/admin_rest_api";
+import { requestVerificationMail, verifyEmail } from "admin/rest_api";
 import { Spin } from "antd";
 import { useFetch } from "libs/react_helpers";
 import type { ServerErrorMessage } from "libs/request";

@@ -4,9 +4,8 @@ import {
   getSynapseSources,
   getSynapseTypes,
   getSynapsesOfAgglomerates,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
 import { Alert, Empty, Space, Tooltip, type TreeProps } from "antd";
-import Maybe from "data.maybe";
 import DiffableMap from "libs/diffable_map";
 import { stringToAntdColorPresetRgb } from "libs/format_utils";
 import Toast from "libs/toast";
@@ -317,9 +316,7 @@ class ConnectomeView extends React.Component<Props, State> {
     Store.dispatch(initializeConnectomeTracingAction(segmentationLayer.name));
     this.skeletonId = getSceneController().addSkeleton(
       (state) =>
-        Maybe.fromNullable(
-          state.localSegmentationData[segmentationLayer.name].connectomeData.skeleton,
-        ),
+        state.localSegmentationData[segmentationLayer.name].connectomeData.skeleton ?? null,
       false,
     );
   }

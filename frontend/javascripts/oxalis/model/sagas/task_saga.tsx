@@ -1,4 +1,4 @@
-import { updateLastTaskTypeIdOfUser } from "admin/admin_rest_api";
+import { updateLastTaskTypeIdOfUser } from "admin/rest_api";
 import { Button } from "antd";
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";

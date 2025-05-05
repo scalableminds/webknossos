@@ -1,5 +1,5 @@
-import type { EditableAnnotation } from "admin/admin_rest_api";
-import { acquireAnnotationMutex, editAnnotation } from "admin/admin_rest_api";
+import type { EditableAnnotation } from "admin/rest_api";
+import { acquireAnnotationMutex, editAnnotation } from "admin/rest_api";
 import { Button } from "antd";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";

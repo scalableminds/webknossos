@@ -1,5 +1,5 @@
 import { CopyOutlined, PushpinOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
-import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/admin_rest_api";
+import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/rest_api";
 import {
   ConfigProvider,
   Dropdown,
@@ -53,9 +53,10 @@ import {
 import { getDisabledInfoForTools } from "oxalis/model/accessors/disabled_tool_accessor";
 import {
   areGeometriesTransformed,
-  getNodeAndTree,
-  getNodeAndTreeOrNull,
+  getActiveNode,
   getNodePosition,
+  getTreeAndNode,
+  getTreeAndNodeOrNull,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { AnnotationTool, VolumeTools } from "oxalis/model/accessors/tool_accessor";
 import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
@@ -244,7 +245,7 @@ function extractShortestPathAsNewTree(
   targetNodeId: number,
 ) {
   const { shortestPath } = api.tracing.findShortestPathBetweenNodes(sourceNodeId, targetNodeId);
-  const newTree = extractPathAsNewTree(Store.getState(), sourceTree, shortestPath).getOrElse(null);
+  const newTree = extractPathAsNewTree(Store.getState(), sourceTree, shortestPath);
   if (newTree != null) {
     const treeMap = { [newTree.treeId]: newTree };
     Store.dispatch(addTreesAndGroupsAction(treeMap, null));
@@ -581,7 +582,7 @@ function getNodeContextMenuOptions({
 
   const { userBoundingBoxes } = skeletonTracing;
   const { activeTreeId, activeNodeId } = skeletonTracing;
-  const { node: clickedNode, tree: clickedTree } = getNodeAndTreeOrNull(
+  const { node: clickedNode, tree: clickedTree } = getTreeAndNodeOrNull(
     skeletonTracing,
     clickedNodeId,
   );
@@ -1519,17 +1520,15 @@ function ContextMenuInner() {
     [contextMenuPosition, clickedSegmentOrMeshId, lastTimeSegmentInfoShouldBeFetched],
   );
 
-  const activeTreeId = skeletonTracing != null ? skeletonTracing.activeTreeId : null;
-  const activeNodeId = skeletonTracing?.activeNodeId;
-
   let nodeContextMenuTree: Tree | null = null;
   let nodeContextMenuNode: MutableNode | null = null;
 
   if (skeletonTracing != null && maybeClickedNodeId != null) {
-    getNodeAndTree(skeletonTracing, maybeClickedNodeId).map(([tree, node]) => {
-      nodeContextMenuNode = node;
-      nodeContextMenuTree = tree;
-    });
+    const treeAndNode = getTreeAndNode(skeletonTracing, maybeClickedNodeId);
+    if (treeAndNode) {
+      nodeContextMenuTree = treeAndNode[0];
+      nodeContextMenuNode = treeAndNode[1];
+    }
   }
   // TS doesn't understand the above initialization and assumes the values
   // are always null. The following NOOP helps TS with the correct typing.
@@ -1541,10 +1540,7 @@ function ContextMenuInner() {
 
   const positionToMeasureDistanceTo =
     nodeContextMenuNode != null ? clickedNodesPosition : globalPosition;
-  const activeNode =
-    activeNodeId != null && skeletonTracing != null
-      ? getNodeAndTree(skeletonTracing, activeNodeId, activeTreeId).get()[1]
-      : null;
+  const activeNode = skeletonTracing != null ? getActiveNode(skeletonTracing) : null;
 
   const getActiveNodePosition = () => {
     if (activeNode == null) {

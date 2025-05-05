@@ -12,7 +12,7 @@ import {
   type Vector3,
 } from "oxalis/constants";
 
-import { sendAnalyticsEvent } from "admin/admin_rest_api";
+import { sendAnalyticsEvent } from "admin/rest_api";
 import morphology from "ball-morphology";
 import { V2, V3 } from "libs/mjs";
 import Toast from "libs/toast";

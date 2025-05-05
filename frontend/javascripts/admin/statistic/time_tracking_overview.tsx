@@ -1,5 +1,5 @@
 import { DownloadOutlined, FilterOutlined } from "@ant-design/icons";
-import { getTeams, getTimeEntries, getTimeTrackingForUserSpans } from "admin/admin_rest_api";
+import { getTeams, getTimeEntries, getTimeTrackingForUserSpans } from "admin/rest_api";
 import { Button, Card, DatePicker, Select, Spin, Table, type TimeRangePickerProps } from "antd";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import LinkButton from "components/link_button";

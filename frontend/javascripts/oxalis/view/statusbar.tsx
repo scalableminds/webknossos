@@ -4,6 +4,7 @@ import { formatCountToDataAmountUnit } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { useInterval } from "libs/react_helpers";
 import { useKeyPress } from "libs/react_hooks";
+import { useWkSelector } from "libs/react_hooks";
 import message from "messages";
 import messages from "messages";
 import type { Vector3 } from "oxalis/constants";
@@ -36,8 +37,7 @@ import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions"
 import { getSupportedValueRangeForElementClass } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
 import { Store } from "oxalis/singletons";
-import { type WebknossosState } from "oxalis/store";
-import { useWkSelector } from "libs/react_hooks";
+import type { WebknossosState } from "oxalis/store";
 import { NumberInputPopoverSetting } from "oxalis/view/components/setting_input_views";
 import React, { useCallback, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";

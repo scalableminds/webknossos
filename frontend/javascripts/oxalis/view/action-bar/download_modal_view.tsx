@@ -25,6 +25,7 @@ import { LayerSelection } from "components/layer_selection";
 import features from "features";
 import { formatCountToDataAmountUnit, formatScale } from "libs/format_utils";
 import { makeComponentLazy, useFetch } from "libs/react_helpers";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import {
   computeArrayFromBoundingBox,
@@ -47,8 +48,7 @@ import {
   hasVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { Model } from "oxalis/singletons";
-import { type StoreAnnotation, type UserBoundingBox, type WebknossosState } from "oxalis/store";
-import { useWkSelector } from "libs/react_hooks";
+import type { StoreAnnotation, UserBoundingBox, WebknossosState } from "oxalis/store";
 import { BoundingBoxSelection, MagSlider } from "oxalis/view/action-bar/starting_job_modals";
 import type React from "react";
 import { useState } from "react";

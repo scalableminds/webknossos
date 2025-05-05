@@ -1,10 +1,10 @@
 import { isUserAdminOrManager } from "libs/utils";
-import { type WebknossosState } from "oxalis/store";
-import { useWkSelector } from "./react_hooks";
+import type { WebknossosState } from "oxalis/store";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "react-redux";
 import type { ArbitraryFunction } from "types/globals";
+import { useWkSelector } from "./react_hooks";
 import Toast from "./toast";
 
 // From https://overreacted.io/making-setinterval-declarative-with-react-hooks/

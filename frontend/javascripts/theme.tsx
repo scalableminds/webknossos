@@ -1,10 +1,10 @@
 import { App, ConfigProvider, type ThemeConfig, theme } from "antd";
 import type { AliasToken, OverrideToken } from "antd/lib/theme/interface";
+import { useWkSelector } from "libs/react_hooks";
 import { ToastContextMountRoot } from "libs/toast";
 import window from "libs/window";
 import _ from "lodash";
-import { type Theme } from "oxalis/store";
-import { useWkSelector } from "libs/react_hooks";
+import type { Theme } from "oxalis/store";
 import type React from "react";
 import { useEffect } from "react";
 import type { APIUser } from "types/api_types";

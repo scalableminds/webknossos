@@ -12,6 +12,7 @@ import type { EventDataNode } from "antd/es/tree";
 import { useLifecycle } from "beautiful-react-hooks";
 import { InputKeyboard } from "libs/input";
 import { useEffectOnlyOnce } from "libs/react_hooks";
+import { useWkSelector } from "libs/react_hooks";
 import { compareBy, localeCompareBy } from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
@@ -24,15 +25,14 @@ import {
   setActiveNodeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
-import {
-  type CommentType,
-  type MutableCommentType,
-  type SkeletonTracing,
-  type Tree,
-  type TreeMap,
-  type WebknossosState,
+import type {
+  CommentType,
+  MutableCommentType,
+  SkeletonTracing,
+  Tree,
+  TreeMap,
+  WebknossosState,
 } from "oxalis/store";
-import { useWkSelector } from "libs/react_hooks";
 import ButtonComponent from "oxalis/view/components/button_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import InputComponent from "oxalis/view/components/input_component";

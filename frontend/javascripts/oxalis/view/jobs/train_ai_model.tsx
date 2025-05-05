@@ -22,6 +22,7 @@ import { LayerSelection, LayerSelectionFormItem } from "components/layer_selecti
 import { MagSelectionFormItem } from "components/mag_selection";
 import { formatVoxels } from "libs/format_utils";
 import { V3 } from "libs/mjs";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { computeArrayFromBoundingBox } from "libs/utils";
@@ -39,8 +40,7 @@ import { MagInfo } from "oxalis/model/helpers/mag_info";
 import { convertUserBoundingBoxesFromServerToFrontend } from "oxalis/model/reducers/reducer_helpers";
 import { serverVolumeToClientVolumeTracing } from "oxalis/model/reducers/volumetracing_reducer";
 import { Model } from "oxalis/singletons";
-import { type StoreAnnotation, type UserBoundingBox, type VolumeTracing } from "oxalis/store";
-import { useWkSelector } from "libs/react_hooks";
+import type { StoreAnnotation, UserBoundingBox, VolumeTracing } from "oxalis/store";
 import React, { useRef, useState } from "react";
 import {
   type APIAnnotation,

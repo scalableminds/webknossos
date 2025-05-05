@@ -29,6 +29,7 @@ import { HoverIconButton } from "components/hover_icon_button";
 import update from "immutability-helper";
 import ErrorHandling from "libs/error_handling";
 import { M4x4, V3 } from "libs/mjs";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import _ from "lodash";
@@ -101,7 +102,6 @@ import type {
   WebknossosState,
 } from "oxalis/store";
 import Store from "oxalis/store";
-import { useWkSelector } from "libs/react_hooks";
 import { MaterializeVolumeAnnotationModal } from "oxalis/view/action-bar/starting_job_modals";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import {

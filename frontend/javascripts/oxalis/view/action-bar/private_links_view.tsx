@@ -38,10 +38,10 @@ import { AsyncButton, AsyncIconButton } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import dayjs from "dayjs";
 import { makeComponentLazy } from "libs/react_helpers";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { getDataLayers } from "oxalis/model/accessors/dataset_accessor";
 import { getReadableNameByVolumeTracingId } from "oxalis/model/accessors/volumetracing_accessor";
-import { useWkSelector } from "libs/react_hooks";
 import type { ZarrPrivateLink } from "types/api_types";
 
 // TODO Remove explicit (error) type declaration when updating to tanstack/query >= 5

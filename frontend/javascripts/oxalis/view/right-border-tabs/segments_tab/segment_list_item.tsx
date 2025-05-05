@@ -19,6 +19,7 @@ import {
 } from "components/color_picker";
 import FastTooltip from "components/fast_tooltip";
 import { V4 } from "libs/mjs";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import type { Vector3, Vector4 } from "oxalis/constants";
@@ -47,7 +48,6 @@ import type {
   WebknossosState,
 } from "oxalis/store";
 import Store from "oxalis/store";
-import { useWkSelector } from "libs/react_hooks";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import { getContextMenuPositionFromEvent } from "oxalis/view/context_menu";
 import type { APIMeshFile, APISegmentationLayer } from "types/api_types";

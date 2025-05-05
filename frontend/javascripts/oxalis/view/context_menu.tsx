@@ -26,6 +26,7 @@ import Toast from "libs/toast";
 import { hexToRgb, rgbToHex, roundTo, truncateStringToLength } from "libs/utils";
 import messages from "messages";
 
+import { useWkSelector } from "libs/react_hooks";
 import {
   AltOrOptionKey,
   CtrlOrCmdKey,
@@ -124,7 +125,6 @@ import type {
   VolumeTracing,
 } from "oxalis/store";
 import Store from "oxalis/store";
-import { useWkSelector } from "libs/react_hooks";
 import {
   getVolumeRequestUrl,
   withMappingActivationConfirmation,

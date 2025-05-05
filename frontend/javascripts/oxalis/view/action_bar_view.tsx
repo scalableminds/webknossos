@@ -2,6 +2,7 @@ import { withAuthentication } from "admin/auth/authentication_modal";
 import { createExplorational } from "admin/rest_api";
 import { Alert, Popover, Space } from "antd";
 import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
+import { useWkSelector } from "libs/react_hooks";
 import { isUserAdminOrTeamManager } from "libs/utils";
 import { ArbitraryVectorInput } from "libs/vector_input";
 import { type ControlMode, MappingStatusEnum, type ViewMode } from "oxalis/constants";
@@ -18,7 +19,6 @@ import { setAdditionalCoordinatesAction } from "oxalis/model/actions/flycam_acti
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
 import type { WebknossosState } from "oxalis/store";
 import Store from "oxalis/store";
-import { useWkSelector } from "libs/react_hooks";
 import AddNewLayoutModal from "oxalis/view/action-bar/add_new_layout_modal";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
 import ToolbarView from "oxalis/view/action-bar/tools/toolbar_view";

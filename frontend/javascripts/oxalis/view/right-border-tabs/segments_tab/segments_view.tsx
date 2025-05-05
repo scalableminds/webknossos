@@ -36,6 +36,7 @@ import type { DataNode } from "antd/lib/tree";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import FastTooltip from "components/fast_tooltip";
 import { SimpleRow } from "dashboard/folders/metadata_table";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
 import _, { isNumber, memoize } from "lodash";
@@ -97,7 +98,6 @@ import type {
   WebknossosState,
 } from "oxalis/store";
 import Store from "oxalis/store";
-import { useWkSelector } from "libs/react_hooks";
 import ButtonComponent from "oxalis/view/components/button_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";

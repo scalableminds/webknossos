@@ -1,4 +1,5 @@
 import type { ItemType } from "antd/lib/menu/interface";
+import { useWkSelector } from "libs/react_hooks";
 import { capitalize, getPhraseFromCamelCaseString } from "libs/utils";
 import * as Utils from "libs/utils";
 import _ from "lodash";
@@ -9,8 +10,7 @@ import { Toolkits } from "oxalis/model/accessors/tool_accessor";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
 import { Store } from "oxalis/singletons";
-import { type UserConfiguration, type WebknossosState } from "oxalis/store";
-import { useWkSelector } from "libs/react_hooks";
+import type { UserConfiguration, WebknossosState } from "oxalis/store";
 import type { Command } from "react-command-palette";
 import ReactCommandPalette from "react-command-palette";
 import { useSelector } from "react-redux";

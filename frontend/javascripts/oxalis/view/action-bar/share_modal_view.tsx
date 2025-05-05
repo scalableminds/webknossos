@@ -27,6 +27,7 @@ import { AsyncButton } from "components/async_clickables";
 import { PricingEnforcedBlur } from "components/pricing_enforcers";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import { makeComponentLazy } from "libs/react_helpers";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { location } from "libs/window";
 import _ from "lodash";
@@ -41,7 +42,6 @@ import {
 } from "oxalis/model/actions/annotation_actions";
 import { setShareModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import Store, { type WebknossosState } from "oxalis/store";
-import { useWkSelector } from "libs/react_hooks";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";

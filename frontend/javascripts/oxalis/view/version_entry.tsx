@@ -17,6 +17,7 @@ import * as React from "react";
 
 import classNames from "classnames";
 import FormattedDate from "components/formatted_date";
+import { useWkSelector } from "libs/react_hooks";
 import { formatUserName, getContributorById } from "oxalis/model/accessors/user_accessor";
 import { getReadableNameByVolumeTracingId } from "oxalis/model/accessors/volumetracing_accessor";
 import type {
@@ -49,8 +50,7 @@ import type {
   UpdateTreeUpdateAction,
   UpdateTreeVisibilityUpdateAction,
 } from "oxalis/model/sagas/update_actions";
-import { type StoreAnnotation } from "oxalis/store";
-import { useWkSelector } from "libs/react_hooks";
+import type { StoreAnnotation } from "oxalis/store";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 type Description = {
   description: string;

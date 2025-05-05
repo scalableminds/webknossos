@@ -18,6 +18,7 @@ import React, { useCallback, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
 import { usePrevious } from "libs/react_hooks";
+import { useWkSelector } from "libs/react_hooks";
 import {
   FillModeEnum,
   type InterpolationMode,
@@ -39,7 +40,6 @@ import {
 } from "oxalis/model/actions/volumetracing_actions";
 import { Model } from "oxalis/singletons";
 import Store, { type WebknossosState } from "oxalis/store";
-import { useWkSelector } from "libs/react_hooks";
 import ButtonComponent, { ToggleButton } from "oxalis/view/components/button_component";
 import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
 

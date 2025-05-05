@@ -1,9 +1,9 @@
 import { getVoxelyticsWorkflow, isWorkflowAccessibleBySwitching } from "admin/rest_api";
 import BrainSpinner, { BrainSpinnerWithError } from "components/brain_spinner";
 import { usePolling, useSearchParams } from "libs/react_hooks";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import _ from "lodash";
-import { useWkSelector } from "libs/react_hooks";
 import TabTitle from "oxalis/view/components/tab_title_component";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";

@@ -3,6 +3,7 @@ import { Badge, Space } from "antd";
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
+import { useWkSelector } from "libs/react_hooks";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import { Toolkit } from "oxalis/model/accessors/tool_accessor";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
@@ -11,8 +12,7 @@ import {
   createTreeAction,
   setMergerModeEnabledAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { type WebknossosState } from "oxalis/store";
-import { useWkSelector } from "libs/react_hooks";
+import type { WebknossosState } from "oxalis/store";
 import { MaterializeVolumeAnnotationModal } from "oxalis/view/action-bar/starting_job_modals";
 import ButtonComponent, { ToggleButton } from "oxalis/view/components/button_component";
 

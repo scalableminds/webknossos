@@ -1,9 +1,9 @@
 import { getProjects } from "admin/rest_api";
 import { Select } from "antd";
 import { useFetch } from "libs/react_helpers";
+import { useWkSelector } from "libs/react_hooks";
 import { isUserAdminOrTeamManager } from "libs/utils";
 import { AnnotationStateFilterEnum, AnnotationTypeFilterEnum } from "oxalis/constants";
-import { useWkSelector } from "libs/react_hooks";
 import type React from "react";
 import { useEffect, useState } from "react";
 

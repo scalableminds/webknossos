@@ -37,6 +37,7 @@ import features from "features";
 import { formatCreditsString, formatVoxels } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { useFetch, useGuardedFetch } from "libs/react_helpers";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import {
   clamp,
@@ -61,8 +62,7 @@ import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { MagInfo } from "oxalis/model/helpers/mag_info";
 import { Model, Store } from "oxalis/singletons";
-import { type UserBoundingBox, type WebknossosState } from "oxalis/store";
-import { useWkSelector } from "libs/react_hooks";
+import type { UserBoundingBox, WebknossosState } from "oxalis/store";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import React, { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";

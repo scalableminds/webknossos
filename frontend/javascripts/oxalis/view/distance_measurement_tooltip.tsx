@@ -7,6 +7,7 @@ import {
   formatNumberToArea,
   formatNumberToLength,
 } from "libs/format_utils";
+import { useWkSelector } from "libs/react_hooks";
 import { clamp } from "libs/utils";
 import { LongUnitToShortUnitMap, type Vector3 } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
@@ -18,8 +19,7 @@ import {
 } from "oxalis/model/accessors/view_mode_accessor";
 import { hideMeasurementTooltipAction } from "oxalis/model/actions/ui_actions";
 import dimensions from "oxalis/model/dimensions";
-import { type WebknossosState } from "oxalis/store";
-import { useWkSelector } from "libs/react_hooks";
+import type { WebknossosState } from "oxalis/store";
 import { useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 

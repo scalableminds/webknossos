@@ -1,5 +1,6 @@
 import { PlusSquareOutlined } from "@ant-design/icons";
 import { type MenuProps, Table, Tooltip, Typography } from "antd";
+import { useWkSelector } from "libs/react_hooks";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import {
@@ -17,8 +18,7 @@ import {
 } from "oxalis/model/actions/annotation_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import { setActiveUserBoundingBoxId } from "oxalis/model/actions/ui_actions";
-import { type UserBoundingBox, type WebknossosState } from "oxalis/store";
-import { useWkSelector } from "libs/react_hooks";
+import type { UserBoundingBox, WebknossosState } from "oxalis/store";
 import UserBoundingBoxInput from "oxalis/view/components/setting_input_views";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";

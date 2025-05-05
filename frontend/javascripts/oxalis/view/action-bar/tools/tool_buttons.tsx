@@ -1,5 +1,6 @@
 import { useDispatch, useSelector } from "react-redux";
 
+import { useWkSelector } from "libs/react_hooks";
 import { getDisabledInfoForTools } from "oxalis/model/accessors/disabled_tool_accessor";
 import { AnnotationTool, type AnnotationToolId } from "oxalis/model/accessors/tool_accessor";
 import {
@@ -7,8 +8,7 @@ import {
   hasAgglomerateMapping,
   hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { type WebknossosState } from "oxalis/store";
-import { useWkSelector } from "libs/react_hooks";
+import type { WebknossosState } from "oxalis/store";
 
 import FastTooltip from "components/fast_tooltip";
 import features from "features";

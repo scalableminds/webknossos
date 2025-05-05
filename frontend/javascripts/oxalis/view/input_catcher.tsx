@@ -1,4 +1,5 @@
 import { useEffectOnlyOnce, useKeyPress } from "libs/react_hooks";
+import { useWkSelector } from "libs/react_hooks";
 import { waitForCondition } from "libs/utils";
 import _ from "lodash";
 import type { Rect, Viewport, ViewportRects } from "oxalis/constants";
@@ -8,7 +9,6 @@ import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor
 import { setInputCatcherRects } from "oxalis/model/actions/view_mode_actions";
 import type { BusyBlockingInfo } from "oxalis/store";
 import Store from "oxalis/store";
-import { useWkSelector } from "libs/react_hooks";
 import makeRectRelativeToCanvas from "oxalis/view/layouting/layout_canvas_adapter";
 import Scalebar from "oxalis/view/scalebar";
 import ViewportStatusIndicator from "oxalis/view/viewport_status_indicator";

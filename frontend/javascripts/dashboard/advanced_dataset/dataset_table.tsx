@@ -18,12 +18,12 @@ import {
 } from "dashboard/folders/folder_tree";
 import { diceCoefficient as dice } from "dice-coefficient";
 import { stringToColor } from "libs/format_utils";
+import { useWkSelector } from "libs/react_hooks";
 import Shortcut from "libs/shortcut_component";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import { Unicode } from "oxalis/constants";
 import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
-import { useWkSelector } from "libs/react_hooks";
 import CategorizationLabel from "oxalis/view/components/categorization_label";
 import EditableTextIcon from "oxalis/view/components/editable_text_icon";
 import {

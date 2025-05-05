@@ -16,6 +16,7 @@ import * as THREE from "three";
 import type { BucketDataArray, ElementClass } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
+import Dimensions from "../dimensions";
 import { getConstructorForElementClass, uint8ToTypedBuffer } from "../helpers/typed_buffer";
 import BucketSnapshot, { type PendingOperation } from "./bucket_snapshot";
 
@@ -76,6 +77,19 @@ export function markVolumeTransactionEnd() {
   bucketsAlreadyInUndoState.clear();
 }
 
+export type Containment =
+  | {
+      type: "no";
+    }
+  | { type: "full" }
+  | {
+      type: "partial";
+      // min is inclusive
+      min: Vector3;
+      // max is exclusive
+      max: Vector3;
+    };
+
 export class DataBucket {
   readonly type = "data" as const;
   readonly elementClass: ElementClass;
@@ -112,6 +126,7 @@ export class DataBucket {
     elementClass: ElementClass,
     zoomedAddress: BucketAddress,
     temporalBucketManager: TemporalBucketManager,
+    public containment: Containment,
     cube: DataCube,
   ) {
     this.emitter = createNanoEvents();
@@ -454,7 +469,7 @@ export class DataBucket {
     voxelMap: Uint8Array,
     segmentId: number,
     get3DAddress: (arg0: number, arg1: number, arg2: Vector3 | Float32Array) => void,
-    sliceCount: number,
+    sliceOffset: number,
     thirdDimensionIndex: 0 | 1 | 2, // If shouldOverwrite is false, a voxel is only overwritten if
     // its old value is equal to overwritableValue.
     shouldOverwrite: boolean = true,
@@ -473,7 +488,7 @@ export class DataBucket {
           voxelMap,
           segmentId,
           get3DAddress,
-          sliceCount,
+          sliceOffset,
           thirdDimensionIndex,
           shouldOverwrite,
           overwritableValue,
@@ -486,7 +501,7 @@ export class DataBucket {
       voxelMap,
       segmentId,
       get3DAddress,
-      sliceCount,
+      sliceOffset,
       thirdDimensionIndex,
       shouldOverwrite,
       overwritableValue,
@@ -498,8 +513,9 @@ export class DataBucket {
     voxelMap: Uint8Array,
     uncastSegmentId: number,
     get3DAddress: (arg0: number, arg1: number, arg2: Vector3 | Float32Array) => void,
-    sliceCount: number,
-    thirdDimensionIndex: 0 | 1 | 2, // If shouldOverwrite is false, a voxel is only overwritten if
+    sliceOffset: number,
+    thirdDimensionIndex: 0 | 1 | 2,
+    // If shouldOverwrite is false, a voxel is only overwritten if
     // its old value is equal to overwritableValue.
     shouldOverwrite: boolean = true,
     overwritableValue: number = 0,
@@ -509,13 +525,28 @@ export class DataBucket {
 
     const segmentId = castForArrayType(uncastSegmentId, data);
 
-    for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
-      for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {
+    const limits = {
+      firstDim: [0, Constants.BUCKET_WIDTH],
+      secondDim: [0, Constants.BUCKET_WIDTH],
+    };
+
+    if (this.containment.type === "partial") {
+      const plane = Dimensions.planeForThirdDimension(thirdDimensionIndex);
+      const [u, v, _w] = Dimensions.getIndices(plane);
+      limits.firstDim[0] = this.containment.min[u];
+      limits.firstDim[1] = this.containment.max[u];
+
+      limits.secondDim[0] = this.containment.min[v];
+      limits.secondDim[1] = this.containment.max[v];
+    }
+
+    for (let firstDim = limits.firstDim[0]; firstDim < limits.firstDim[1]; firstDim++) {
+      for (let secondDim = limits.secondDim[0]; secondDim < limits.secondDim[1]; secondDim++) {
         if (voxelMap[firstDim * Constants.BUCKET_WIDTH + secondDim] === 1) {
           get3DAddress(firstDim, secondDim, out);
           const voxelToLabel = out;
           voxelToLabel[thirdDimensionIndex] =
-            (voxelToLabel[thirdDimensionIndex] + sliceCount) % Constants.BUCKET_WIDTH;
+            (voxelToLabel[thirdDimensionIndex] + sliceOffset) % Constants.BUCKET_WIDTH;
           // The voxelToLabel is already within the bucket and in the correct magnification.
           const voxelAddress = this.cube.getVoxelIndexByVoxelOffset(voxelToLabel);
           const currentSegmentId = Number(data[voxelAddress]);

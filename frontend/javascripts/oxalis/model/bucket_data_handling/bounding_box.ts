@@ -42,34 +42,72 @@ class BoundingBox {
     return [u, v];
   }
 
-  getBoxForZoomStep = _.memoize((mag: Vector3): BoundingBoxType => {
-    // No `map` for performance reasons
-    const min = [0, 0, 0] as Vector3;
-    const max = [0, 0, 0] as Vector3;
+  static fromBucketAddress([x, y, z, _zoomStep]: Vector4, mag: Vector3): BoundingBox | null {
+    const bucketSize = constants.BUCKET_WIDTH;
 
-    for (let i = 0; i < 3; i++) {
-      const divisor = constants.BUCKET_WIDTH * mag[i];
-      min[i] = Math.floor(this.min[i] / divisor);
-      max[i] = Math.ceil(this.max[i] / divisor);
+    // Precompute scaled sizes once
+    const sx = bucketSize * mag[0];
+    const sy = bucketSize * mag[1];
+    const sz = bucketSize * mag[2];
+
+    // Bucket bounds in world space
+    const bxMin = x * sx;
+    const byMin = y * sy;
+    const bzMin = z * sz;
+    const bxMax = bxMin + sx;
+    const byMax = byMin + sy;
+    const bzMax = bzMin + sz;
+
+    return new BoundingBox({ min: [bxMin, byMin, bzMin], max: [bxMax, byMax, bzMax] });
+  }
+
+  containsBucket([x, y, z, zoomStep]: Vector4, magInfo: MagInfo): "no" | "partial" | "full" {
+    const mag = magInfo.getMagByIndex(zoomStep);
+    if (mag == null) return "no";
+
+    const bucketSize = constants.BUCKET_WIDTH;
+
+    // Precompute scaled sizes once
+    const sx = bucketSize * mag[0];
+    const sy = bucketSize * mag[1];
+    const sz = bucketSize * mag[2];
+
+    // Bucket bounds in world space
+    const bxMin = x * sx;
+    const byMin = y * sy;
+    const bzMin = z * sz;
+    const bxMax = bxMin + sx;
+    const byMax = byMin + sy;
+    const bzMax = bzMin + sz;
+
+    const bbMin = this.min;
+    const bbMax = this.max;
+
+    // Fast early-out if there's no intersection
+    if (
+      bxMax <= bbMin[0] ||
+      bxMin >= bbMax[0] ||
+      byMax <= bbMin[1] ||
+      byMin >= bbMax[1] ||
+      bzMax <= bbMin[2] ||
+      bzMin >= bbMax[2]
+    ) {
+      return "no";
     }
 
-    return {
-      min,
-      max,
-    };
-  });
-
-  containsBucket([x, y, z, zoomStep]: Vector4, magInfo: MagInfo): boolean {
-    /* Checks whether a bucket is contained in the active bounding box.
-     * If the passed magInfo does not contain the passed zoomStep, this method
-     * returns false.
-     */
-    const magIndex = magInfo.getMagByIndex(zoomStep);
-    if (magIndex == null) {
-      return false;
+    // Check if fully contained
+    if (
+      bxMin >= bbMin[0] &&
+      bxMax <= bbMax[0] &&
+      byMin >= bbMin[1] &&
+      byMax <= bbMax[1] &&
+      bzMin >= bbMin[2] &&
+      bzMax <= bbMax[2]
+    ) {
+      return "full";
     }
-    const { min, max } = this.getBoxForZoomStep(magIndex);
-    return min[0] <= x && x < max[0] && min[1] <= y && y < max[1] && min[2] <= z && z < max[2];
+
+    return "partial";
   }
 
   containsPoint(vec3: Vector3) {

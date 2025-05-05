@@ -340,10 +340,10 @@ export function applyVoxelMap(
     get3DAddress(0, 0, out);
     const thirdDimensionValueInBucket = out[2];
 
-    for (let sliceCount = 0; sliceCount < numberOfSlicesToApply; sliceCount++) {
-      const newThirdDimValue = thirdDimensionValueInBucket + sliceCount;
+    for (let sliceOffset = 0; sliceOffset < numberOfSlicesToApply; sliceOffset++) {
+      const newThirdDimValue = thirdDimensionValueInBucket + sliceOffset;
 
-      if (sliceCount > 0 && newThirdDimValue % constants.BUCKET_WIDTH === 0) {
+      if (sliceOffset > 0 && newThirdDimValue % constants.BUCKET_WIDTH === 0) {
         // The current slice is in the next bucket in the third direction.
         const nextBucketZoomedAddress: BucketAddress = [...labeledBucketZoomedAddress];
         nextBucketZoomedAddress[thirdDimensionIndex]++;
@@ -361,7 +361,7 @@ export function applyVoxelMap(
           voxelMap,
           segmentId,
           get3DAddress,
-          sliceCount,
+          sliceOffset,
           thirdDimensionIndex,
           shouldOverwrite,
           overwritableValue,

@@ -86,7 +86,7 @@ describe("DataCube", () => {
         await sleep(10);
 
         for (const item of this.queue) {
-          const bucket = cube.getBucket(item.bucket, true);
+          const bucket = cube.getBucket(item.bucket);
 
           if (bucket.type === "data") {
             bucket.markAsRequested();

@@ -35,6 +35,7 @@ const buildBucket = (zoomedAddress: Vector4, firstByte: number) => {
     "uint8",
     zoomedAddress,
     temporalBucketManagerMock as any,
+    { type: "full" },
     mockedCube as any,
   );
   bucket._fallbackBucket = NULL_BUCKET;

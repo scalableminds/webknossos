@@ -17,10 +17,11 @@ import type {
   Vector3,
 } from "oxalis/constants";
 import constants, { MappingStatusEnum } from "oxalis/constants";
+import Constants from "oxalis/constants";
 import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import type { Bucket } from "oxalis/model/bucket_data_handling/bucket";
+import type { Bucket, Containment } from "oxalis/model/bucket_data_handling/bucket";
 import { DataBucket, NULL_BUCKET, NullBucket } from "oxalis/model/bucket_data_handling/bucket";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import type PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
@@ -67,6 +68,9 @@ class CubeEntry {
 
 const FLOODFILL_VOXEL_THRESHOLD = 5 * 1000000;
 const USE_FLOODFILL_VOXEL_THRESHOLD = false;
+
+const NoContainment = { type: "no" } as const;
+const FullContainment = { type: "full" } as const;
 
 class DataCube {
   BUCKET_COUNT_SOFT_LIMIT = constants.MAXIMUM_BUCKET_COUNT_PER_LAYER;
@@ -212,21 +216,55 @@ class DataCube {
     return [zoomStep, ...relevantCoords.map((el) => el.value)].join("-");
   }
 
-  isWithinBounds([x, y, z, zoomStep, coords]: BucketAddress): boolean {
+  private checkContainment([x, y, z, zoomStep, coords]: BucketAddress): Containment {
     const cube = this.getOrCreateCubeEntry(zoomStep, coords);
     if (cube == null) {
-      return false;
+      return NoContainment;
     }
 
-    return this.boundingBox.containsBucket([x, y, z, zoomStep], this.magInfo);
+    const mag = this.magInfo.getMagByIndex(zoomStep);
+    if (mag == null) {
+      return NoContainment;
+    }
+
+    const bucketBBox = BoundingBox.fromBucketAddress([x, y, z, zoomStep], mag);
+    if (bucketBBox == null) {
+      return NoContainment;
+    }
+
+    const intersectionBBox = this.boundingBox.intersectedWith(bucketBBox);
+
+    const intersectionSize = intersectionBBox.getSize();
+    if (V3.equals(intersectionSize, bucketBBox.getSize())) {
+      return FullContainment;
+    }
+    if (V3.prod(intersectionSize) === 0) {
+      return NoContainment;
+    }
+
+    const { min, max } = intersectionBBox;
+
+    this.boundingBox.containsBucket([x, y, z, zoomStep], this.magInfo);
+
+    const makeLocal = (el: number) => {
+      return Math.floor(el) % Constants.BUCKET_WIDTH;
+    };
+    const makeLocal2 = (el: number) => {
+      const modded = Math.floor(el) % Constants.BUCKET_WIDTH;
+      return modded === 0 ? Constants.BUCKET_WIDTH : modded;
+    };
+
+    return {
+      type: "partial",
+      min: [makeLocal(min[0] / mag[0]), makeLocal(min[1] / mag[1]), makeLocal(min[2] / mag[2])],
+      max: [makeLocal2(max[0] / mag[0]), makeLocal2(max[1] / mag[1]), makeLocal2(max[2] / mag[2])],
+    };
   }
 
   getBucketIndexAndCube([x, y, z, zoomStep, coords]: BucketAddress): [
     number | null | undefined,
     CubeEntry | null,
   ] {
-    // Removed for performance reasons
-    // ErrorHandling.assert(this.isWithinBounds([x, y, z, zoomStep]));
     const cube = this.getOrCreateCubeEntry(zoomStep, coords);
 
     if (cube != null) {
@@ -272,25 +310,23 @@ class DataCube {
   // NULL_BUCKET if the bucket cannot possibly exist, e.g. because it is
   // outside the dataset's bounding box.
   getOrCreateBucket(address: BucketAddress): Bucket {
-    if (!this.isWithinBounds(address)) {
+    // todop: only check containment if getBucket did not find anything
+    const containment = this.checkContainment(address);
+    if (containment.type === "no") {
       return this.getNullBucket();
     }
 
-    let bucket = this.getBucket(address, true);
+    let bucket = this.getBucket(address);
 
     if (bucket instanceof NullBucket) {
-      bucket = this.createBucket(address);
+      bucket = this.createBucket(address, containment);
     }
 
     return bucket;
   }
 
   // Returns the Bucket object if it exists, or NULL_BUCKET otherwise.
-  getBucket(address: BucketAddress, skipBoundsCheck: boolean = false): Bucket {
-    if (!skipBoundsCheck && !this.isWithinBounds(address)) {
-      return this.getNullBucket();
-    }
-
+  getBucket(address: BucketAddress): Bucket {
     const [bucketIndex, cube] = this.getBucketIndexAndCube(address);
 
     if (bucketIndex != null && cube != null) {
@@ -304,8 +340,14 @@ class DataCube {
     return this.getNullBucket();
   }
 
-  createBucket(address: BucketAddress): Bucket {
-    const bucket = new DataBucket(this.elementClass, address, this.temporalBucketManager, this);
+  createBucket(address: BucketAddress, containment: Containment): Bucket {
+    const bucket = new DataBucket(
+      this.elementClass,
+      address,
+      this.temporalBucketManager,
+      containment,
+      this,
+    );
     this.addBucketToGarbageCollection(bucket);
     const [bucketIndex, cube] = this.getBucketIndexAndCube(address);
 

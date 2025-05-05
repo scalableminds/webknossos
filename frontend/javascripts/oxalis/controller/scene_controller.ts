@@ -1,5 +1,4 @@
 import app from "app";
-import type Maybe from "data.maybe";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
@@ -308,7 +307,7 @@ class SceneController {
   }
 
   addSkeleton(
-    skeletonTracingSelector: (arg0: OxalisState) => Maybe<SkeletonTracing>,
+    skeletonTracingSelector: (arg0: OxalisState) => SkeletonTracing | null,
     supportsPicking: boolean,
   ): number {
     const skeleton = new Skeleton(skeletonTracingSelector, supportsPicking);

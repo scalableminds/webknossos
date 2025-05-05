@@ -480,7 +480,7 @@ void main() {
   // Remember the original z position, since it can subtly diverge in the
   // following calculations due to floating point inaccuracies. This can
   // result in artifacts, such as the crosshair disappearing.
-  float originalZ = gl_Position.z;
+  /*float originalZ = gl_Position.z;
 
   // Remember, the top of the viewport has Y=1 whereas the left has X=-1.
   vec3 worldCoordTopLeft     = transDim((modelMatrix * vec4(-PLANE_WIDTH/2.,  PLANE_WIDTH/2., 0., 1.)).xyz);
@@ -590,7 +590,7 @@ void main() {
       }
     }
   }
-  <% }) %>
+  <% }) %>*/
 }
   `)({
     ...params,

@@ -274,6 +274,39 @@ trait DataLayer extends DataLayerLike {
     ElementClass.bytesPerElement(elementClass)
 
   def mags: List[MagLocator]
+
+  def withSpecialFiles(specialFiles: List[SpecialFile]): DataLayer = {
+    def mergeSpecialFiles(existingSpecialFiles: Option[Seq[SpecialFile]],
+                          newSpecialFiles: Seq[SpecialFile]): Option[Seq[SpecialFile]] =
+      existingSpecialFiles match {
+        case None => Some(newSpecialFiles)
+        case Some(existingFiles) =>
+          val existingFileURIs = existingFiles.map(_.source.toString).toSet
+          val newFiles = newSpecialFiles.filterNot(file => existingFileURIs.contains(file.source.toString))
+          if (newFiles.isEmpty) {
+            existingSpecialFiles
+          } else {
+            Some(existingFiles ++ newFiles)
+          }
+      }
+    if (specialFiles.nonEmpty) {
+      this match {
+        case l: N5DataLayer                  => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
+        case l: N5SegmentationLayer          => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
+        case l: PrecomputedDataLayer         => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
+        case l: PrecomputedSegmentationLayer => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
+        case l: Zarr3DataLayer               => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
+        case l: Zarr3SegmentationLayer       => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
+        case l: ZarrDataLayer                => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
+        case l: ZarrSegmentationLayer        => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
+        case l: WKWDataLayer                 => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
+        case l: WKWSegmentationLayer         => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
+        case _                               => this
+      }
+    } else {
+      this
+    }
+  }
 }
 
 object DataLayer {

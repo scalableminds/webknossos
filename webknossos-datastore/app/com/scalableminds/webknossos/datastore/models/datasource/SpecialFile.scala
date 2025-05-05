@@ -18,7 +18,7 @@ object SpecialFileType extends ExtendedEnumeration {
 }
 
 case class SpecialFile(
-    source: URI, // Where to find the file. For local files, the URI is file://... relative to the dataset directory
+    source: URI, // Where to find the file. For local files, the URI is file://...
     typ: SpecialFileType.SpecialFileType
 )
 

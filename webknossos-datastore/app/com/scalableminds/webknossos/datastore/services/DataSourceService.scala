@@ -9,18 +9,6 @@ import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.dataformats.layers.{
-  N5DataLayer,
-  N5SegmentationLayer,
-  PrecomputedDataLayer,
-  PrecomputedSegmentationLayer,
-  WKWDataLayer,
-  WKWSegmentationLayer,
-  Zarr3DataLayer,
-  Zarr3SegmentationLayer,
-  ZarrDataLayer,
-  ZarrSegmentationLayer
-}
 import com.scalableminds.webknossos.datastore.dataformats.{MagLocator, MappingProvider}
 import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, IntervalScheduler}
 import com.scalableminds.webknossos.datastore.models.datasource._
@@ -340,6 +328,11 @@ class DataSourceService @Inject()(
             val dataSourceWithSpecialFiles = dataSource.copy(
               dataLayers = exploreSpecialFiles(path, dataSource)
             )
+            if (true) { // TODO Decide: Should we always rewrite the JSON file ? Never? Sometimes?
+              // Rewriting the JSON in this file could e.g. remove custom fields that are not in the schema
+              // Also if there is an error somewhere here, the files could get corrupted
+              JsonHelper.writeToFile(propertiesFile, dataSourceWithSpecialFiles).toOption
+            }
             dataSourceWithSpecialFiles.copy(id)
           } else
             UnusableDataSource(id, "Error: Zero layer Dataset", Some(dataSource.scale), Some(Json.toJson(dataSource)))
@@ -362,37 +355,25 @@ class DataSourceService @Inject()(
         meshFilePaths <- if (Files.exists(meshesDir))
           PathUtils.listFiles(meshesDir, silent = true, PathUtils.fileExtensionFilter("hdf5"))
         else Full(List())
-        meshFiles = meshFilePaths.map(path => SpecialFile(new URI(path.toString), SpecialFileType.mesh))
+        meshFiles = meshFilePaths.map(path =>
+          SpecialFile(new URI(DataVaultService.schemeFile + "://" + path.toString), SpecialFileType.mesh))
         segmentIndexDir = dataLayerPath.resolve("segmentIndex")
         segmentIndexPaths <- if (Files.exists(segmentIndexDir))
           PathUtils.listFiles(segmentIndexDir, silent = true, PathUtils.fileExtensionFilter("hdf5"))
         else Full(List())
         segmentIndexFiles = segmentIndexPaths.map(path =>
-          SpecialFile(new URI(path.toString), SpecialFileType.segmentIndex))
+          SpecialFile(new URI(DataVaultService.schemeFile + "://" + path.toString), SpecialFileType.segmentIndex))
         agglomeratesDir = dataLayerPath.resolve("agglomerates")
         agglomerateFilePaths <- if (Files.exists(agglomeratesDir))
           PathUtils.listFiles(agglomeratesDir, silent = true, PathUtils.fileExtensionFilter("hdf5"))
         else Full(List())
         agglomerateFiles = agglomerateFilePaths.map(path =>
-          SpecialFile(new URI(path.toString), SpecialFileType.agglomerate))
+          SpecialFile(new URI(DataVaultService.schemeFile + "://" + path.toString), SpecialFileType.agglomerate))
         specialFiles = meshFiles ++ segmentIndexFiles ++ agglomerateFiles
       } yield specialFiles
       discoveredSpecialFiles match {
         case Full(specialFiles) if specialFiles.nonEmpty =>
-          logger.info("Found special files: " + specialFiles.mkString(", "))
-          dataLayer match {
-            case l: N5DataLayer                  => l.copy(specialFiles = Some(specialFiles))
-            case l: N5SegmentationLayer          => l.copy(specialFiles = Some(specialFiles))
-            case l: PrecomputedDataLayer         => l.copy(specialFiles = Some(specialFiles))
-            case l: PrecomputedSegmentationLayer => l.copy(specialFiles = Some(specialFiles))
-            case l: Zarr3DataLayer               => l.copy(specialFiles = Some(specialFiles))
-            case l: Zarr3SegmentationLayer       => l.copy(specialFiles = Some(specialFiles))
-            case l: ZarrDataLayer                => l.copy(specialFiles = Some(specialFiles))
-            case l: ZarrSegmentationLayer        => l.copy(specialFiles = Some(specialFiles))
-            case l: WKWDataLayer                 => l.copy(specialFiles = Some(specialFiles))
-            case l: WKWSegmentationLayer         => l.copy(specialFiles = Some(specialFiles))
-            case _                               => dataLayer
-          }
+          dataLayer.withSpecialFiles(specialFiles)
         case _ =>
           dataLayer
       }

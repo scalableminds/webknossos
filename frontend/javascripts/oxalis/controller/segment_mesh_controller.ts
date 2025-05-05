@@ -13,7 +13,6 @@ import { NO_LOD_MESH_INDEX } from "oxalis/model/sagas/mesh_saga";
 import Store from "oxalis/store";
 import * as THREE from "three";
 import { acceleratedRaycast } from "three-mesh-bvh";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
 import type { AdditionalCoordinate } from "types/api_types";
 
@@ -204,11 +203,13 @@ export default class SegmentMeshController {
     let layerLODGroup = this.meshesLayerLODRootGroup.getObjectByName(layerName) as
       | CustomLOD
       | undefined;
+
     if (layerLODGroup == null) {
       layerLODGroup = new CustomLOD();
       layerLODGroup.name = layerName;
       this.meshesLayerLODRootGroup.add(layerLODGroup);
     }
+
     if (isNewlyAddedMesh) {
       if (lod === NO_LOD_MESH_INDEX) {
         layerLODGroup.addNoLODSupportedMesh(targetGroup);
@@ -290,7 +291,9 @@ export default class SegmentMeshController {
   ): THREE.Group | null {
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
     const meshGroups = this.getMeshGroups(additionalCoordKey, layerName, segmentId);
+
     if (meshGroups == null) return null;
+
     const bestLod = Math.min(...Object.keys(meshGroups).map((lodVal) => Number.parseInt(lodVal)));
 
     return this.getMeshGroupsByLOD(additionalCoordinates, layerName, segmentId, bestLod);
@@ -366,6 +369,7 @@ export default class SegmentMeshController {
     const [hue, saturation, light] = getSegmentColorAsHSLA(Store.getState(), segmentId, layerName);
     const color = new THREE.Color().setHSL(hue, saturation, light);
     color.convertSRGBToLinear();
+
     return color;
   }
 
@@ -420,6 +424,7 @@ export default class SegmentMeshController {
   ): THREE.Group | null {
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
     const keys = [additionalCoordKey, layerName, segmentId, lod];
+
     return _.get(this.meshesGroupsPerSegmentId, keys, null);
   }
 

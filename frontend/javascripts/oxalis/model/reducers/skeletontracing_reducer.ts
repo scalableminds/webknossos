@@ -40,7 +40,7 @@ import {
   toggleAllTreesReducer,
   toggleTreeGroupReducer,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import type { WebknossosState, SkeletonTracing, TreeGroup } from "oxalis/store";
+import type { SkeletonTracing, TreeGroup, WebknossosState } from "oxalis/store";
 import {
   GroupTypeEnum,
   getNodeKey,

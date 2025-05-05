@@ -48,11 +48,10 @@ import {
   hasVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { Model } from "oxalis/singletons";
-import type { StoreAnnotation, UserBoundingBox, WebknossosState } from "oxalis/store";
+import type { StoreAnnotation, UserBoundingBox } from "oxalis/store";
 import { BoundingBoxSelection, MagSlider } from "oxalis/view/action-bar/starting_job_modals";
 import type React from "react";
 import { useState } from "react";
-import { useSelector } from "react-redux";
 import {
   type APIDataLayer,
   type APIDataset,
@@ -281,12 +280,10 @@ function _DownloadModalView({
   const annotation = useWkSelector((state) => state.annotation);
   const dataset = useWkSelector((state) => state.dataset);
   const rawUserBoundingBoxes = useWkSelector((state) => getUserBoundingBoxesFromState(state));
-  const currentAdditionalCoordinates = useSelector(
-    (state: WebknossosState) => state.flycam.additionalCoordinates,
-  );
+  const currentAdditionalCoordinates = useWkSelector((state) => state.flycam.additionalCoordinates);
   const typeName = isAnnotation ? "annotation" : "dataset";
-  const isMergerModeEnabled = useSelector(
-    (state: WebknossosState) => state.temporaryConfiguration.isMergerModeEnabled,
+  const isMergerModeEnabled = useWkSelector(
+    (state) => state.temporaryConfiguration.isMergerModeEnabled,
   );
   const hasVolumeFallback = annotation.volumes.some((volume) => volume.fallbackLayer != null);
   const isVolumeNDimensional = annotation.volumes.some(

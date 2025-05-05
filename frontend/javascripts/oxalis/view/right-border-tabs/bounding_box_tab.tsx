@@ -18,11 +18,11 @@ import {
 } from "oxalis/model/actions/annotation_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import { setActiveUserBoundingBoxId } from "oxalis/model/actions/ui_actions";
-import type { UserBoundingBox, WebknossosState } from "oxalis/store";
+import type { UserBoundingBox } from "oxalis/store";
 import UserBoundingBoxInput from "oxalis/view/components/setting_input_views";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { APIJobType } from "types/api_types";
 import DownloadModalView from "../action-bar/download_modal_view";
@@ -41,9 +41,7 @@ export default function BoundingBoxTab() {
   const isLockedByOwner = annotation.isLockedByOwner;
   const isOwner = useWkSelector((state) => isAnnotationOwner(state));
   const dataset = useWkSelector((state) => state.dataset);
-  const activeBoundingBoxId = useSelector(
-    (state: WebknossosState) => state.uiInformation.activeUserBoundingBoxId,
-  );
+  const activeBoundingBoxId = useWkSelector((state) => state.uiInformation.activeUserBoundingBoxId);
   const { userBoundingBoxes } = getSomeTracing(annotation);
   const [contextMenuPosition, setContextMenuPosition] = useState<[number, number] | null>(null);
   const [menu, setMenu] = useState<MenuProps | null>(null);
@@ -112,8 +110,8 @@ export default function BoundingBoxTab() {
     hideContextMenu();
   }
 
-  const isViewMode = useSelector(
-    (state: WebknossosState) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
+  const isViewMode = useWkSelector(
+    (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
 
   let maybeUneditableExplanation;

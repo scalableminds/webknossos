@@ -37,10 +37,9 @@ import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions"
 import { getSupportedValueRangeForElementClass } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
 import { Store } from "oxalis/singletons";
-import type { WebknossosState } from "oxalis/store";
 import { NumberInputPopoverSetting } from "oxalis/view/components/setting_input_views";
 import React, { useCallback, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import type { AdditionalCoordinate } from "types/api_types";
 import { CommandPalette } from "./components/command_palette";
 
@@ -186,8 +185,8 @@ function ShortcutsInfo() {
   const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
   const isAltPressed = useKeyPress("Alt");
   const hasSkeleton = useWkSelector((state) => state.annotation.skeleton != null);
-  const isTDViewportActive = useSelector(
-    (state: WebknossosState) => state.viewModeData.plane.activeViewport === OrthoViews.TDView,
+  const isTDViewportActive = useWkSelector(
+    (state) => state.viewModeData.plane.activeViewport === OrthoViews.TDView,
   );
 
   if (!isPlaneMode) {
@@ -380,9 +379,7 @@ function SegmentInfo() {
       visibleSegmentationLayer?.name,
     ),
   );
-  const hoveredSegmentId = useSelector(
-    (state: WebknossosState) => state.temporaryConfiguration.hoveredSegmentId,
-  );
+  const hoveredSegmentId = useWkSelector((state) => state.temporaryConfiguration.hoveredSegmentId);
 
   if (hasVisibleSegmentation == null) {
     return null;
@@ -416,9 +413,7 @@ function maybeLabelWithSegmentationWarning(isUint64SegmentationVisible: boolean,
 }
 
 function Infos() {
-  const isSkeletonAnnotation = useSelector(
-    (state: WebknossosState) => state.annotation.skeleton != null,
-  );
+  const isSkeletonAnnotation = useWkSelector((state) => state.annotation.skeleton != null);
   const activeVolumeTracing = useWkSelector((state) => getActiveSegmentationTracing(state));
   const activeCellId = activeVolumeTracing?.activeCellId;
   const activeNodeId = useWkSelector((state) =>
@@ -451,7 +446,7 @@ function Infos() {
     return getSupportedValueRangeForElementClass(elementClass);
   });
 
-  const isUint64SegmentationVisible = useSelector(hasVisibleUint64Segmentation);
+  const isUint64SegmentationVisible = useWkSelector(hasVisibleUint64Segmentation);
 
   return (
     <React.Fragment>
@@ -522,7 +517,7 @@ function DownloadSpeedometer() {
 }
 
 function MagnificationInfo() {
-  const { representativeMag, isActiveMagGlobal } = useSelector(getActiveMagInfo);
+  const { representativeMag, isActiveMagGlobal } = useWkSelector(getActiveMagInfo);
 
   const renderMagTooltipContent = useCallback(() => {
     const state = Store.getState();
@@ -571,12 +566,8 @@ function MagnificationInfo() {
 function SegmentAndMousePosition() {
   // This component depends on the mouse position which is a fast-changing property.
   // For the sake of performance, it is isolated as a single component.
-  const mousePosition = useSelector(
-    (state: WebknossosState) => state.temporaryConfiguration.mousePosition,
-  );
-  const additionalCoordinates = useSelector(
-    (state: WebknossosState) => state.flycam.additionalCoordinates,
-  );
+  const mousePosition = useWkSelector((state) => state.temporaryConfiguration.mousePosition);
+  const additionalCoordinates = useWkSelector((state) => state.flycam.additionalCoordinates);
   const isPlaneMode = useWkSelector((state) => getIsPlaneMode(state));
   const globalMousePosition = useWkSelector((state) => {
     const { activeViewport } = state.viewModeData.plane;

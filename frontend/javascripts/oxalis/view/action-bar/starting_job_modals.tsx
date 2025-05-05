@@ -62,10 +62,10 @@ import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { MagInfo } from "oxalis/model/helpers/mag_info";
 import { Model, Store } from "oxalis/singletons";
-import type { UserBoundingBox, WebknossosState } from "oxalis/store";
+import type { UserBoundingBox } from "oxalis/store";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import React, { useEffect, useState, useMemo } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import { type APIDataLayer, type APIJob, APIJobType } from "types/api_types";
 import {
   CollapsibleWorkflowYamlEditor,
@@ -211,8 +211,8 @@ function BoundingBoxSelectionFormItem({
   value: selectedBoundingBoxId,
 }: BoundingBoxSelectionProps): JSX.Element {
   const dataset = useWkSelector((state) => state.dataset);
-  const isInDatasetViewMode = useSelector(
-    (state: WebknossosState) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
+  const isInDatasetViewMode = useWkSelector(
+    (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
   const colorLayer = getColorLayers(dataset)[0];
   const mag1 = colorLayer.resolutions[0];
@@ -309,9 +309,7 @@ export function MagSlider({
 
 export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
   const onClose = () => Store.dispatch(setAIJobModalStateAction("invisible"));
-  const isSuperUser = useSelector(
-    (state: WebknossosState) => state.activeUser?.isSuperUser || false,
-  );
+  const isSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser || false);
   const tabs = _.compact([
     {
       label: "Run a model",
@@ -557,8 +555,8 @@ function JobCreditCostInformation({
   jobCreditCostInfo: JobCreditCostInfo | undefined;
   jobCreditCostPerGVx: number;
 }) {
-  const organizationCreditsFromStore = useSelector(
-    (state: WebknossosState) => state.activeOrganization?.creditBalance || "0",
+  const organizationCreditsFromStore = useWkSelector(
+    (state) => state.activeOrganization?.creditBalance || "0",
   );
   const organizationCredits =
     jobCreditCostInfo?.organizationCredits || organizationCreditsFromStore;
@@ -720,8 +718,8 @@ function StartJobForm(props: StartJobFormProps) {
   const activeUser = useWkSelector((state) => state.activeUser);
   const isActiveUserSuperUser = activeUser?.isSuperUser || false;
   const colorLayers = getColorLayers(dataset);
-  const organizationCredits = useSelector(
-    (state: WebknossosState) => state.activeOrganization?.creditBalance || "0",
+  const organizationCredits = useWkSelector(
+    (state) => state.activeOrganization?.creditBalance || "0",
   );
   const layers = chooseSegmentationLayer ? getSegmentationLayers(dataset) : colorLayers;
   const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
@@ -925,9 +923,7 @@ export function NucleiDetectionForm() {
 export function NeuronSegmentationForm() {
   const dataset = useWkSelector((state) => state.dataset);
   const { neuronInferralCostPerGVx } = features();
-  const hasSkeletonAnnotation = useSelector(
-    (state: WebknossosState) => state.annotation.skeleton != null,
-  );
+  const hasSkeletonAnnotation = useWkSelector((state) => state.annotation.skeleton != null);
   const dispatch = useDispatch();
   const [doSplitMergerEvaluation, setDoSplitMergerEvaluation] = React.useState(false);
   return (
@@ -1042,8 +1038,8 @@ export function MitochondriaSegmentationForm() {
 function CustomAiModelInferenceForm() {
   const dataset = useWkSelector((state) => state.dataset);
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
-  const isViewMode = useSelector(
-    (state: WebknossosState) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
+  const isViewMode = useWkSelector(
+    (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
   const dispatch = useDispatch();
 
@@ -1162,7 +1158,7 @@ export function MaterializeVolumeAnnotationModal({
   const dataset = useWkSelector((state) => state.dataset);
   const tracing = useWkSelector((state) => state.annotation);
   let includesEditableMapping = false;
-  const activeSegmentationTracingLayer = useSelector(getActiveSegmentationTracingLayer);
+  const activeSegmentationTracingLayer = useWkSelector(getActiveSegmentationTracingLayer);
   const fixedSelectedLayer = selectedVolumeLayer || activeSegmentationTracingLayer;
   const readableVolumeLayerName =
     fixedSelectedLayer && getReadableNameOfVolumeLayer(fixedSelectedLayer, tracing);
@@ -1170,8 +1166,8 @@ export function MaterializeVolumeAnnotationModal({
     fixedSelectedLayer && "tracingId" in fixedSelectedLayer
       ? fixedSelectedLayer.fallbackLayer != null
       : false;
-  const isMergerModeEnabled = useSelector(
-    (state: WebknossosState) => state.temporaryConfiguration.isMergerModeEnabled,
+  const isMergerModeEnabled = useWkSelector(
+    (state) => state.temporaryConfiguration.isMergerModeEnabled,
   );
   const jobName = "materialize_volume_annotation";
   let description = (

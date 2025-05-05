@@ -25,14 +25,7 @@ import {
   setActiveNodeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
-import type {
-  CommentType,
-  MutableCommentType,
-  SkeletonTracing,
-  Tree,
-  TreeMap,
-  WebknossosState,
-} from "oxalis/store";
+import type { CommentType, MutableCommentType, SkeletonTracing, Tree, TreeMap } from "oxalis/store";
 import ButtonComponent from "oxalis/view/components/button_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import InputComponent from "oxalis/view/components/input_component";
@@ -40,7 +33,7 @@ import { MarkdownModal } from "oxalis/view/components/markdown_modal";
 import { Comment, commentListId } from "oxalis/view/right-border-tabs/comment_tab/comment";
 import type { MenuProps } from "rc-menu";
 import React, { useEffect, useRef, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import type { Comparator } from "types/globals";
 import AdvancedSearchPopover from "../advanced_search_popover";
@@ -112,19 +105,13 @@ function CommentTabView(props: Props) {
 
   const dispatch = useDispatch();
 
-  const allowUpdate = useSelector(
-    (state: WebknossosState) => state.annotation.restrictions.allowUpdate,
-  );
-  const keyboardDelay = useSelector(
-    (state: WebknossosState) => state.userConfiguration.keyboardDelay,
-  );
+  const allowUpdate = useWkSelector((state) => state.annotation.restrictions.allowUpdate);
+  const keyboardDelay = useWkSelector((state) => state.userConfiguration.keyboardDelay);
 
-  const isAnnotationLockedByUser = useSelector(
-    (state: WebknossosState) => state.annotation.isLockedByOwner,
-  );
+  const isAnnotationLockedByUser = useWkSelector((state) => state.annotation.isLockedByOwner);
   const isOwner = useWkSelector((state) => isAnnotationOwner(state));
 
-  const activeComment = useSelector((_state: WebknossosState) => getActiveComment());
+  const activeComment = useWkSelector((_state) => getActiveComment());
 
   useEffectOnlyOnce(() => {
     // expand all trees by default

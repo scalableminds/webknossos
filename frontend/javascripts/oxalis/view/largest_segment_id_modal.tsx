@@ -13,10 +13,10 @@ import {
   setLargestSegmentIdAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { getSupportedValueRangeForElementClass } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import type { VolumeTracing, WebknossosState } from "oxalis/store";
+import type { VolumeTracing } from "oxalis/store";
 import Store from "oxalis/throttled_store";
 import * as React from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import type { APISegmentationLayer } from "types/api_types";
 
 const TOAST_KEY = "enter-largest-segment-id";
@@ -56,8 +56,8 @@ export default function EnterLargestSegmentIdModal({
   const activeUser = useWkSelector((state) => state.activeUser);
   const dataset = useWkSelector((state) => state.dataset);
   const activeCellId =
-    useSelector(
-      (state: WebknossosState) =>
+    useWkSelector(
+      (state) =>
         getVolumeTracingByLayerName(state.annotation, segmentationLayer.name)?.activeCellId,
     ) || 0;
 

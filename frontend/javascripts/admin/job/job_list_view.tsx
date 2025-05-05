@@ -23,10 +23,8 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
-import type { WebknossosState } from "oxalis/store";
 import type * as React from "react";
 import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import { type APIJob, APIJobType, type APIUserBase } from "types/api_types";
 
@@ -137,9 +135,7 @@ function JobListView() {
   const [isLoading, setIsLoading] = useState(true);
   const [jobs, setJobs] = useState<APIJob[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const isCurrentUserSuperUser = useSelector(
-    (state: WebknossosState) => state.activeUser?.isSuperUser,
-  );
+  const isCurrentUserSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser);
 
   useEffect(() => {
     fetchData();

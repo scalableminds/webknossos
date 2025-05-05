@@ -114,7 +114,7 @@ import {
   SwitchSetting,
 } from "oxalis/view/components/setting_input_views";
 import React, { useCallback } from "react";
-import { connect, useDispatch, useSelector } from "react-redux";
+import { connect, useDispatch } from "react-redux";
 import type { Dispatch } from "redux";
 import {
   APIAnnotationTypeEnum,
@@ -201,8 +201,8 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
     ),
   );
   const canLayerHaveTransforms = !isLayerWithoutTransformationConfigSupport(layer);
-  const hasLayerTransformsConfigured = useSelector(
-    (state: WebknossosState) => getTransformsForLayerOrNull(state.dataset, layer, null) != null,
+  const hasLayerTransformsConfigured = useWkSelector(
+    (state) => getTransformsForLayerOrNull(state.dataset, layer, null) != null,
   );
 
   const showIcon = useWkSelector((state) => hasDatasetTransforms(state.dataset));

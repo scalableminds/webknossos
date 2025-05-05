@@ -9,7 +9,7 @@ import {
 import { App, List, type MenuProps } from "antd";
 import Checkbox, { type CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
 import React from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 
 import type { MenuItemType } from "antd/es/menu/interface";
 import classnames from "classnames";
@@ -40,13 +40,7 @@ import {
   updateMeshVisibilityAction,
 } from "oxalis/model/actions/annotation_actions";
 import { rgbaToCSS } from "oxalis/shaders/utils.glsl";
-import type {
-  ActiveMappingInfo,
-  MeshInformation,
-  Segment,
-  VolumeTracing,
-  WebknossosState,
-} from "oxalis/store";
+import type { ActiveMappingInfo, MeshInformation, Segment, VolumeTracing } from "oxalis/store";
 import Store from "oxalis/store";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import { getContextMenuPositionFromEvent } from "oxalis/view/context_menu";
@@ -253,9 +247,7 @@ function _MeshInfoItem(props: {
   setPosition: (arg0: Vector3) => void;
   setAdditionalCoordinates: (additionalCoordinates: AdditionalCoordinate[] | undefined) => void;
 }) {
-  const additionalCoordinates = useSelector(
-    (state: WebknossosState) => state.flycam.additionalCoordinates,
-  );
+  const additionalCoordinates = useWkSelector((state) => state.flycam.additionalCoordinates);
   const dispatch = useDispatch();
   const onChangeMeshVisibility = (layerName: string, id: number, isVisible: boolean) => {
     dispatch(updateMeshVisibilityAction(layerName, id, isVisible, mesh?.seedAdditionalCoordinates));
@@ -412,13 +404,13 @@ function _SegmentListItem({
   const { modal } = App.useApp();
   const isEditingDisabled = !allowUpdate;
 
-  const segmentColorRGBA = useSelector(
-    (state: WebknossosState) => getSegmentColorAsRGBA(state, segment.id),
+  const segmentColorRGBA = useWkSelector(
+    (state) => getSegmentColorAsRGBA(state, segment.id),
     (a: Vector4, b: Vector4) => V4.isEqual(a, b),
   );
 
-  const isHoveredSegmentId = useSelector(
-    (state: WebknossosState) => state.temporaryConfiguration.hoveredSegmentId === segment.id,
+  const isHoveredSegmentId = useWkSelector(
+    (state) => state.temporaryConfiguration.hoveredSegmentId === segment.id,
   );
   const isCentered = useWkSelector((state) => {
     const centeredSegmentId = getSegmentIdForPosition(getPosition(state.flycam));

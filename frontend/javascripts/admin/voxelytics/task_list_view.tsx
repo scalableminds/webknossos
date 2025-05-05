@@ -36,11 +36,9 @@ import {
   formatTimeInterval,
   formatTimeIntervalStrict,
 } from "libs/format_utils";
-import { useSearchParams, useUpdateEvery } from "libs/react_hooks";
+import { useSearchParams, useUpdateEvery, useWkSelector } from "libs/react_hooks";
 import { notEmpty } from "libs/utils";
 import { LOG_LEVELS } from "oxalis/constants";
-import type { WebknossosState } from "oxalis/store";
-import { useSelector } from "react-redux";
 import { Link, useHistory, useLocation, useParams } from "react-router-dom";
 import {
   VoxelyticsRunState,
@@ -274,9 +272,7 @@ export default function TaskListView({
   const highlightedTask = params.highlightedTask || "";
   const location = useLocation();
 
-  const isCurrentUserSuperUser = useSelector(
-    (state: WebknossosState) => state.activeUser?.isSuperUser,
-  );
+  const isCurrentUserSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser);
 
   const singleRunId = report.runs.length === 1 ? report.runs[0].id : runId;
 

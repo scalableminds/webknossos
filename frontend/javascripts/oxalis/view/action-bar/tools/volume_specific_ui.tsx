@@ -15,7 +15,7 @@ import {
   Space,
 } from "antd";
 import React, { useCallback, useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 
 import { usePrevious } from "libs/react_hooks";
 import { useWkSelector } from "libs/react_hooks";
@@ -39,7 +39,7 @@ import {
   interpolateSegmentationLayerAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { Model } from "oxalis/singletons";
-import Store, { type WebknossosState } from "oxalis/store";
+import Store from "oxalis/store";
 import ButtonComponent, { ToggleButton } from "oxalis/view/components/button_component";
 import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
 
@@ -106,9 +106,7 @@ export function OverwriteModeSwitch({
 }) {
   // Only CTRL should modify the overwrite mode. CTRL + Shift can be used to switch to the
   // erase tool, which should not affect the default overwrite mode.
-  const overwriteMode = useSelector(
-    (state: WebknossosState) => state.userConfiguration.overwriteMode,
-  );
+  const overwriteMode = useWkSelector((state) => state.userConfiguration.overwriteMode);
   const previousIsControlOrMetaPressed = usePrevious(isControlOrMetaPressed);
   const previousIsShiftPressed = usePrevious(isShiftPressed);
   // biome-ignore lint/correctness/useExhaustiveDependencies: overwriteMode does not need to be a dependency.
@@ -189,9 +187,7 @@ const INTERPOLATION_ICON = {
 
 export function VolumeInterpolationButton() {
   const dispatch = useDispatch();
-  const interpolationMode = useSelector(
-    (state: WebknossosState) => state.userConfiguration.interpolationMode,
-  );
+  const interpolationMode = useWkSelector((state) => state.userConfiguration.interpolationMode);
 
   const onInterpolateClick = (e: React.MouseEvent<HTMLElement> | null) => {
     e?.currentTarget.blur();
@@ -263,11 +259,9 @@ const mapId = (volumeTracingId: string | null | undefined, id: number) => {
 };
 
 export function CreateSegmentButton() {
-  const volumeTracingId = useSelector(
-    (state: WebknossosState) => getActiveSegmentationTracing(state)?.tracingId,
-  );
-  const unmappedActiveCellId = useSelector(
-    (state: WebknossosState) => getActiveSegmentationTracing(state)?.activeCellId || 0,
+  const volumeTracingId = useWkSelector((state) => getActiveSegmentationTracing(state)?.tracingId);
+  const unmappedActiveCellId = useWkSelector(
+    (state) => getActiveSegmentationTracing(state)?.activeCellId || 0,
   );
   const { mappingStatus } = useWkSelector((state) =>
     getMappingInfoForVolumeTracing(state, volumeTracingId),
@@ -341,8 +335,8 @@ function NuxPopConfirm({ children }: { children: React.ReactNode }) {
 
 export function QuickSelectSettingsPopover() {
   const dispatch = useDispatch();
-  const { quickSelectState, areQuickSelectSettingsOpen } = useSelector(
-    (state: WebknossosState) => state.uiInformation,
+  const { quickSelectState, areQuickSelectSettingsOpen } = useWkSelector(
+    (state) => state.uiInformation,
   );
   const isQuickSelectActive = quickSelectState === "active";
   const activeUser = useWkSelector((state) => state.activeUser);
@@ -384,8 +378,8 @@ const handleSetFillMode = (event: RadioChangeEvent) => {
 
 export function FloodFillSettings() {
   const dispatch = useDispatch();
-  const isRestrictedToBoundingBox = useSelector(
-    (state: WebknossosState) => state.userConfiguration.isFloodfillRestrictedToBoundingBox,
+  const isRestrictedToBoundingBox = useWkSelector(
+    (state) => state.userConfiguration.isFloodfillRestrictedToBoundingBox,
   );
   const toggleRestrictFloodfillToBoundingBox = () => {
     dispatch(
@@ -449,11 +443,11 @@ function FillModeSwitch() {
 export function ProofreadingComponents() {
   const dispatch = useDispatch();
   const handleClearProofreading = () => dispatch(clearProofreadingByProducts());
-  const autoRenderMeshes = useSelector(
-    (state: WebknossosState) => state.userConfiguration.autoRenderMeshInProofreading,
+  const autoRenderMeshes = useWkSelector(
+    (state) => state.userConfiguration.autoRenderMeshInProofreading,
   );
-  const selectiveVisibilityInProofreading = useSelector(
-    (state: WebknossosState) => state.userConfiguration.selectiveVisibilityInProofreading,
+  const selectiveVisibilityInProofreading = useWkSelector(
+    (state) => state.userConfiguration.selectiveVisibilityInProofreading,
   );
 
   return (

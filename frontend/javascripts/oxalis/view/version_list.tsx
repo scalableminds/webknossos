@@ -27,11 +27,10 @@ import {
 } from "oxalis/model/sagas/update_actions";
 import { Model } from "oxalis/singletons";
 import { api } from "oxalis/singletons";
-import type { StoreAnnotation, WebknossosState } from "oxalis/store";
+import type { StoreAnnotation } from "oxalis/store";
 import Store from "oxalis/store";
 import VersionEntryGroup from "oxalis/view/version_entry_group";
 import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
 import type { APIUpdateActionBatch } from "types/api_types";
 
 // This used to be 5000 but we had logs where lots of UPDATE_BUCKET
@@ -192,12 +191,10 @@ async function getUpdateActionLogPage(
 }
 
 function VersionList() {
-  const tracingStoreUrl = useSelector(
-    (state: WebknossosState) => state.annotation.tracingStore.url,
-  );
+  const tracingStoreUrl = useWkSelector((state) => state.annotation.tracingStore.url);
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
-  const initialAllowUpdate = useSelector(
-    (state: WebknossosState) => state.annotation.restrictions.initialAllowUpdate,
+  const initialAllowUpdate = useWkSelector(
+    (state) => state.annotation.restrictions.initialAllowUpdate,
   );
   const newestVersion = useFetch(
     async () => {

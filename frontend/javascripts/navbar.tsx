@@ -25,7 +25,7 @@ import {
 import classnames from "classnames";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { connect, useSelector } from "react-redux";
+import { connect } from "react-redux";
 import { Link, useLocation } from "react-router-dom";
 
 import LoginForm from "admin/auth/login_form";
@@ -43,6 +43,7 @@ import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import features from "features";
 import { useFetch, useInterval } from "libs/react_helpers";
+import { useWkSelector } from "libs/react_hooks";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
@@ -712,8 +713,8 @@ function LoggedInAvatar({
 }
 
 function AnonymousAvatar() {
-  const bannerHeight = useSelector(
-    (state: WebknossosState) => state.uiInformation.navbarHeight - constants.DEFAULT_NAVBAR_HEIGHT,
+  const bannerHeight = useWkSelector(
+    (state) => state.uiInformation.navbarHeight - constants.DEFAULT_NAVBAR_HEIGHT,
   );
   return (
     <Popover
@@ -999,9 +1000,7 @@ function Navbar({
 }
 
 function GlobalProgressBar() {
-  const globalProgress = useSelector(
-    (state: WebknossosState) => state.uiInformation.globalProgress,
-  );
+  const globalProgress = useWkSelector((state) => state.uiInformation.globalProgress);
   const hide = globalProgress === 0;
   return (
     <div

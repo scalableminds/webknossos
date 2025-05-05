@@ -14,8 +14,7 @@ import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_acces
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
 import { voxelToVolumeInUnit } from "oxalis/model/scaleinfo";
 import { api } from "oxalis/singletons";
-import type { Segment, WebknossosState } from "oxalis/store";
-import { useSelector } from "react-redux";
+import type { Segment } from "oxalis/store";
 import type { APISegmentationLayer, VoxelSize } from "types/api_types";
 import {
   type SegmentHierarchyGroup,
@@ -104,9 +103,7 @@ export function SegmentStatisticsModal({
   parentGroup,
   groupTree,
 }: Props) {
-  const { dataset, annotation, temporaryConfiguration } = useSelector(
-    (state: WebknossosState) => state,
-  );
+  const { dataset, annotation, temporaryConfiguration } = useWkSelector((state) => state);
   const magInfo = getMagInfo(visibleSegmentationLayer.resolutions);
   const layersFinestMag = magInfo.getFinestMag();
   const voxelSize = dataset.dataSource.scale;
@@ -118,9 +115,7 @@ export function SegmentStatisticsModal({
     visibleSegmentationLayer.tracingId,
     visibleSegmentationLayer,
   );
-  const additionalCoordinates = useSelector(
-    (state: WebknossosState) => state.flycam.additionalCoordinates,
-  );
+  const additionalCoordinates = useWkSelector((state) => state.flycam.additionalCoordinates);
   const hasAdditionalCoords = hasAdditionalCoordinates(additionalCoordinates);
   const additionalCoordinateStringForModal = getAdditionalCoordinatesAsString(
     additionalCoordinates,

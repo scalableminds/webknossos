@@ -1,7 +1,7 @@
 import { ExportOutlined } from "@ant-design/icons";
 import { Badge, Space } from "antd";
 import { useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 
 import { useWkSelector } from "libs/react_hooks";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -12,7 +12,6 @@ import {
   createTreeAction,
   setMergerModeEnabledAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import type { WebknossosState } from "oxalis/store";
 import { MaterializeVolumeAnnotationModal } from "oxalis/view/action-bar/starting_job_modals";
 import ButtonComponent, { ToggleButton } from "oxalis/view/components/button_component";
 
@@ -22,19 +21,17 @@ import { IMG_STYLE_FOR_SPACEY_ICONS, NARROW_BUTTON_STYLE } from "./tool_helpers"
 
 export function SkeletonSpecificButtons() {
   const dispatch = useDispatch();
-  const isMergerModeEnabled = useSelector(
-    (state: WebknossosState) => state.temporaryConfiguration.isMergerModeEnabled,
+  const isMergerModeEnabled = useWkSelector(
+    (state) => state.temporaryConfiguration.isMergerModeEnabled,
   );
   const [showMaterializeVolumeAnnotationModal, setShowMaterializeVolumeAnnotationModal] =
     useState<boolean>(false);
-  const isNewNodeNewTreeModeOn = useSelector(
-    (state: WebknossosState) => state.userConfiguration.newNodeNewTree,
+  const isNewNodeNewTreeModeOn = useWkSelector((state) => state.userConfiguration.newNodeNewTree);
+  const isContinuousNodeCreationEnabled = useWkSelector(
+    (state) => state.userConfiguration.continuousNodeCreation,
   );
-  const isContinuousNodeCreationEnabled = useSelector(
-    (state: WebknossosState) => state.userConfiguration.continuousNodeCreation,
-  );
-  const isSplitToolkit = useSelector(
-    (state: WebknossosState) => state.userConfiguration.activeToolkit === Toolkit.SPLIT_SEGMENTS,
+  const isSplitToolkit = useWkSelector(
+    (state) => state.userConfiguration.activeToolkit === Toolkit.SPLIT_SEGMENTS,
   );
   const toggleContinuousNodeCreation = () =>
     dispatch(updateUserSettingAction("continuousNodeCreation", !isContinuousNodeCreationEnabled));

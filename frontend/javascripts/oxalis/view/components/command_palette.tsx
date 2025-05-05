@@ -10,10 +10,9 @@ import { Toolkits } from "oxalis/model/accessors/tool_accessor";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
 import { Store } from "oxalis/singletons";
-import type { UserConfiguration, WebknossosState } from "oxalis/store";
+import type { UserConfiguration } from "oxalis/store";
 import type { Command } from "react-command-palette";
 import ReactCommandPalette from "react-command-palette";
-import { useSelector } from "react-redux";
 import { getThemeFromUser } from "theme";
 import {
   type TracingViewMenuProps,
@@ -57,21 +56,15 @@ const getLabelForPath = (key: string) =>
 
 export const CommandPalette = ({ label }: { label: string | JSX.Element | null }) => {
   const userConfig = useWkSelector((state) => state.userConfiguration);
-  const isViewMode = useSelector(
-    (state: WebknossosState) => state.temporaryConfiguration.controlMode === "VIEW",
-  );
-  const isInTracingView = useSelector(
-    (state: WebknossosState) => state.uiInformation.isInAnnotationView,
-  );
+  const isViewMode = useWkSelector((state) => state.temporaryConfiguration.controlMode === "VIEW");
+  const isInTracingView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
 
   const restrictions = useWkSelector((state) => state.annotation.restrictions);
   const task = useWkSelector((state) => state.task);
   const annotationType = useWkSelector((state) => state.annotation.annotationType);
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
   const activeUser = useWkSelector((state) => state.activeUser);
-  const isAnnotationLockedByUser = useSelector(
-    (state: WebknossosState) => state.annotation.isLockedByOwner,
-  );
+  const isAnnotationLockedByUser = useWkSelector((state) => state.annotation.isLockedByOwner);
   const annotationOwner = useWkSelector((state) => state.annotation.owner);
 
   const props: TracingViewMenuProps = {

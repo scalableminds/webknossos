@@ -41,10 +41,9 @@ import {
   setOthersMayEditForAnnotationAction,
 } from "oxalis/model/actions/annotation_actions";
 import { setShareModalVisibilityAction } from "oxalis/model/actions/ui_actions";
-import Store, { type WebknossosState } from "oxalis/store";
+import Store from "oxalis/store";
 import type React from "react";
 import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
 import type {
   APIAnnotationType,
   APIAnnotationVisibility,
@@ -126,9 +125,7 @@ export function ShareButton(props: { dataset: APIDataset; style?: Record<string,
   const { dataset, style } = props;
   const sharingToken = useDatasetSharingToken(props.dataset);
   const annotationVisibility = useWkSelector((state) => state.annotation.visibility);
-  const controlMode = useSelector(
-    (state: WebknossosState) => state.temporaryConfiguration.controlMode,
-  );
+  const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
   const isViewMode = controlMode === ControlModeEnum.VIEW;
   const isSandboxMode = controlMode === ControlModeEnum.SANDBOX;
   const isTraceMode = controlMode === ControlModeEnum.TRACE;
@@ -193,7 +190,7 @@ function _ShareModalView(props: Props) {
   const { othersMayEdit } = annotation;
   const [newOthersMayEdit, setNewOthersMayEdit] = useState(othersMayEdit);
 
-  const hasUpdatePermissions = useSelector(mayEditAnnotationProperties);
+  const hasUpdatePermissions = useWkSelector(mayEditAnnotationProperties);
   useEffect(() => setVisibility(annotationVisibility), [annotationVisibility]);
 
   const fetchAndSetSharedTeams = async () => {

@@ -1,4 +1,4 @@
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 
 import { useWkSelector } from "libs/react_hooks";
 import { getDisabledInfoForTools } from "oxalis/model/accessors/disabled_tool_accessor";
@@ -37,7 +37,7 @@ export const ToolIdToComponent: Record<
 };
 
 function MaybeMultiSliceAnnotationInfoIcon() {
-  const maybeMagWithZoomStep = useSelector(getRenderableMagForActiveSegmentationTracing);
+  const maybeMagWithZoomStep = useWkSelector(getRenderableMagForActiveSegmentationTracing);
   const labeledMag = maybeMagWithZoomStep != null ? maybeMagWithZoomStep.mag : null;
   const hasMagWithHigherDimension = (labeledMag || []).some((val) => val > 1);
   const maybeMultiSliceAnnotationInfoIcon = hasMagWithHigherDimension ? (
@@ -68,17 +68,13 @@ export function MoveTool(_props: ToolButtonProps) {
 }
 
 export function SkeletonTool(_props: ToolButtonProps) {
-  const useLegacyBindings = useSelector(
-    (state: WebknossosState) => state.userConfiguration.useLegacyBindings,
-  );
+  const useLegacyBindings = useWkSelector((state) => state.userConfiguration.useLegacyBindings);
   const skeletonToolDescription = useLegacyBindings
     ? "Use left-click to move around and right-click to create new skeleton nodes"
     : "Use left-click to move around or to create/select/move nodes. Right-click opens a context menu with further options.";
-  const disabledInfosForTools = useSelector(getDisabledInfoForTools);
+  const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
   const hasSkeleton = useWkSelector((state) => state.annotation?.skeleton != null);
-  const isReadOnly = useSelector(
-    (state: WebknossosState) => !state.annotation.restrictions.allowUpdate,
-  );
+  const isReadOnly = useWkSelector((state) => !state.annotation.restrictions.allowUpdate);
 
   if (!hasSkeleton || isReadOnly) {
     return null;
@@ -109,8 +105,8 @@ function getIsVolumeModificationAllowed(state: WebknossosState) {
 }
 
 export function BrushTool({ adaptedActiveTool }: ToolButtonProps) {
-  const disabledInfosForTools = useSelector(getDisabledInfoForTools);
-  const isVolumeModificationAllowed = useSelector(getIsVolumeModificationAllowed);
+  const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
+  const isVolumeModificationAllowed = useWkSelector(getIsVolumeModificationAllowed);
   if (!isVolumeModificationAllowed) {
     return null;
   }
@@ -136,12 +132,12 @@ export function BrushTool({ adaptedActiveTool }: ToolButtonProps) {
 }
 
 export function EraseBrushTool({ adaptedActiveTool }: ToolButtonProps) {
-  const disabledInfosForTools = useSelector(getDisabledInfoForTools);
+  const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
   const showEraseTraceTool =
     adaptedActiveTool === AnnotationTool.TRACE || adaptedActiveTool === AnnotationTool.ERASE_TRACE;
   const showEraseBrushTool = !showEraseTraceTool;
 
-  const isVolumeModificationAllowed = useSelector(getIsVolumeModificationAllowed);
+  const isVolumeModificationAllowed = useWkSelector(getIsVolumeModificationAllowed);
   if (!isVolumeModificationAllowed) {
     return null;
   }
@@ -173,8 +169,8 @@ export function EraseBrushTool({ adaptedActiveTool }: ToolButtonProps) {
 }
 
 export function TraceTool({ adaptedActiveTool }: ToolButtonProps) {
-  const disabledInfosForTools = useSelector(getDisabledInfoForTools);
-  const isVolumeModificationAllowed = useSelector(getIsVolumeModificationAllowed);
+  const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
+  const isVolumeModificationAllowed = useWkSelector(getIsVolumeModificationAllowed);
   if (!isVolumeModificationAllowed) {
     return null;
   }
@@ -201,10 +197,10 @@ export function TraceTool({ adaptedActiveTool }: ToolButtonProps) {
 }
 
 export function EraseTraceTool({ adaptedActiveTool }: ToolButtonProps) {
-  const disabledInfosForTools = useSelector(getDisabledInfoForTools);
+  const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
   const showEraseTraceTool =
     adaptedActiveTool === AnnotationTool.TRACE || adaptedActiveTool === AnnotationTool.ERASE_TRACE;
-  const isVolumeModificationAllowed = useSelector(getIsVolumeModificationAllowed);
+  const isVolumeModificationAllowed = useWkSelector(getIsVolumeModificationAllowed);
   if (!isVolumeModificationAllowed) {
     return null;
   }
@@ -236,8 +232,8 @@ export function EraseTraceTool({ adaptedActiveTool }: ToolButtonProps) {
 }
 
 export function FillCellTool({ adaptedActiveTool }: ToolButtonProps) {
-  const disabledInfosForTools = useSelector(getDisabledInfoForTools);
-  const isVolumeModificationAllowed = useSelector(getIsVolumeModificationAllowed);
+  const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
+  const isVolumeModificationAllowed = useWkSelector(getIsVolumeModificationAllowed);
   if (!isVolumeModificationAllowed) {
     return null;
   }
@@ -265,8 +261,8 @@ export function FillCellTool({ adaptedActiveTool }: ToolButtonProps) {
 }
 
 export function PickCellTool(_props: ToolButtonProps) {
-  const disabledInfosForTools = useSelector(getDisabledInfoForTools);
-  const isVolumeModificationAllowed = useSelector(getIsVolumeModificationAllowed);
+  const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
+  const isVolumeModificationAllowed = useWkSelector(getIsVolumeModificationAllowed);
   if (!isVolumeModificationAllowed) {
     return null;
   }
@@ -289,8 +285,8 @@ export function PickCellTool(_props: ToolButtonProps) {
 }
 
 export function QuickSelectTool(_props: ToolButtonProps) {
-  const disabledInfosForTools = useSelector(getDisabledInfoForTools);
-  const isVolumeModificationAllowed = useSelector(getIsVolumeModificationAllowed);
+  const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
+  const isVolumeModificationAllowed = useWkSelector(getIsVolumeModificationAllowed);
   if (!isVolumeModificationAllowed) {
     return null;
   }
@@ -315,10 +311,8 @@ export function QuickSelectTool(_props: ToolButtonProps) {
 }
 
 export function BoundingBoxTool(_props: ToolButtonProps) {
-  const disabledInfosForTools = useSelector(getDisabledInfoForTools);
-  const isReadOnly = useSelector(
-    (state: WebknossosState) => !state.annotation.restrictions.allowUpdate,
-  );
+  const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
+  const isReadOnly = useWkSelector((state) => !state.annotation.restrictions.allowUpdate);
   if (isReadOnly) {
     return null;
   }
@@ -344,14 +338,12 @@ export function BoundingBoxTool(_props: ToolButtonProps) {
 
 export function ProofreadTool(_props: ToolButtonProps) {
   const dispatch = useDispatch();
-  const isAgglomerateMappingEnabled = useSelector(hasAgglomerateMapping);
-  const disabledInfosForTools = useSelector(getDisabledInfoForTools);
+  const isAgglomerateMappingEnabled = useWkSelector(hasAgglomerateMapping);
+  const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
   const areEditableMappingsEnabled = features().editableMappingsEnabled;
   const hasSkeleton = useWkSelector((state) => state.annotation?.skeleton != null);
   const hasVolume = useWkSelector((state) => state.annotation?.volumes.length > 0);
-  const isReadOnly = useSelector(
-    (state: WebknossosState) => !state.annotation.restrictions.allowUpdate,
-  );
+  const isReadOnly = useWkSelector((state) => !state.annotation.restrictions.allowUpdate);
 
   const mayProofread = hasSkeleton && hasVolume && !isReadOnly;
   if (!mayProofread) {

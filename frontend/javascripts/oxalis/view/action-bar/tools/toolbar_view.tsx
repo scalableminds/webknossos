@@ -1,6 +1,6 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { Radio, type RadioChangeEvent, Space, Tag } from "antd";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 
 import { useKeyPress } from "libs/react_hooks";
 import { useWkSelector } from "libs/react_hooks";
@@ -15,7 +15,7 @@ import {
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
-import Store, { type WebknossosState } from "oxalis/store";
+import Store from "oxalis/store";
 import ButtonComponent, { ToggleButton } from "oxalis/view/components/button_component";
 
 import FastTooltip from "components/fast_tooltip";
@@ -148,9 +148,7 @@ function ToolSpecificSettings({
     (adaptedActiveTool === AnnotationTool.BRUSH ||
       adaptedActiveTool === AnnotationTool.ERASE_BRUSH);
   const dispatch = useDispatch();
-  const quickSelectConfig = useSelector(
-    (state: WebknossosState) => state.userConfiguration.quickSelect,
-  );
+  const quickSelectConfig = useWkSelector((state) => state.userConfiguration.quickSelect);
   const isAISelectAvailable = features().segmentAnythingEnabled;
   const isQuickSelectHeuristic = quickSelectConfig.useHeuristic || !isAISelectAvailable;
   const quickSelectTooltipText = isAISelectAvailable

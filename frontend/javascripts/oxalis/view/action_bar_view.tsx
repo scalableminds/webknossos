@@ -35,7 +35,7 @@ import {
   layoutEmitter,
 } from "oxalis/view/layouting/layout_persistence";
 import * as React from "react";
-import { connect, useDispatch, useSelector } from "react-redux";
+import { connect, useDispatch } from "react-redux";
 import { useHistory } from "react-router-dom";
 import type { APIDataset, APIUser } from "types/api_types";
 import { APIJobType, type AdditionalCoordinate } from "types/api_types";
@@ -72,9 +72,7 @@ type State = {
 
 function AdditionalCoordinatesInputView() {
   const additionalAxes = useWkSelector((state) => getUnifiedAdditionalCoordinates(state.dataset));
-  const additionalCoordinates = useSelector(
-    (state: WebknossosState) => state.flycam.additionalCoordinates,
-  );
+  const additionalCoordinates = useWkSelector((state) => state.flycam.additionalCoordinates);
   const dispatch = useDispatch();
   const changeAdditionalCoordinates = (values: AdditionalCoordinate[] | null) => {
     if (values != null) {
@@ -193,9 +191,7 @@ function CreateAnnotationButton() {
 function ModesView() {
   const hasSkeleton = useWkSelector((state) => state.annotation.skeleton != null);
   const is2d = useWkSelector((state) => is2dDataset(state.dataset));
-  const controlMode = useSelector(
-    (state: WebknossosState) => state.temporaryConfiguration.controlMode,
-  );
+  const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
   const isViewMode = controlMode === ControlModeEnum.VIEW;
 
   const isArbitrarySupported = hasSkeleton || isViewMode;

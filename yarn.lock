@@ -5375,13 +5375,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"data.maybe@npm:^1.2.2":
-  version: 1.2.3
-  resolution: "data.maybe@npm:1.2.3"
-  checksum: 10c0/77ae87a5953e4b04ba78499fea829cf4b6a3a3e855270491cefd741989eec4016669b220336925a4f868ff7d725a18514fef7aa8ba562bbe785144e1742fb8c8
-  languageName: node
-  linkType: hard
-
 "dayjs@npm:^1.11.11, dayjs@npm:^1.11.13":
   version: 1.11.13
   resolution: "dayjs@npm:1.11.13"
@@ -14886,7 +14879,6 @@ __metadata:
     css-loader: "npm:^6.5.1"
     cwise: "npm:^1.0.10"
     dagre: "npm:^0.8.5"
-    data.maybe: "npm:^1.2.2"
     dayjs: "npm:^1.11.13"
     deep-for-each: "npm:^2.0.3"
     deep-freeze: "npm:0.0.1"

@@ -15,10 +15,10 @@ import {
 import {
   enforceSkeletonTracing,
   getActiveNode,
-  getNodeAndTree,
-  getNodeAndTreeOrNull,
   getNodePosition,
   getSkeletonTracing,
+  getTreeAndNode,
+  getTreeAndNodeOrNull,
   untransformNodePosition,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
@@ -181,58 +181,67 @@ export function moveNode(
   useFloat: boolean = false,
 ) {
   // dx and dy are measured in pixel.
-  getSkeletonTracing(Store.getState().annotation).map((skeletonTracing) =>
-    getNodeAndTree(skeletonTracing, nodeId).map(([activeTree, activeNode]) => {
-      const state = Store.getState();
-      const { activeViewport } = state.viewModeData.plane;
-      const vector = Dimensions.transDim([dx, dy, 0], activeViewport);
-      const zoomFactor = state.flycam.zoomStep;
-      const scaleFactor = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
+  const skeletonTracing = getSkeletonTracing(Store.getState().annotation);
+  if (!skeletonTracing) return;
 
-      const op = (val: number) => {
-        if (useFloat) {
-          return val;
-        }
-        // Zero diffs should stay zero.
-        // Other values should be rounded, but should at least
-        // have an absolute value of 1 (otherwise, the node
-        // wouldn't move).
-        const sign = Math.sign(val);
-        if (sign === 0) {
-          return 0;
-        }
-        const positiveVal = sign * val;
-        return sign * Math.max(1, Math.round(positiveVal));
-      };
+  const treeAndNode = getTreeAndNode(skeletonTracing, nodeId);
+  if (!treeAndNode) return;
 
-      const delta = [
-        op(vector[0] * zoomFactor * scaleFactor[0]),
-        op(vector[1] * zoomFactor * scaleFactor[1]),
-        op(vector[2] * zoomFactor * scaleFactor[2]),
-      ];
-      const [x, y, z] = getNodePosition(activeNode, state);
-      Store.dispatch(
-        setNodePositionAction(
-          untransformNodePosition([x + delta[0], y + delta[1], z + delta[2]], state),
-          activeNode.id,
-          activeTree.treeId,
-        ),
-      );
-    }),
+  const [activeTree, activeNode] = treeAndNode;
+
+  const state = Store.getState();
+  const { activeViewport } = state.viewModeData.plane;
+  const vector = Dimensions.transDim([dx, dy, 0], activeViewport);
+  const zoomFactor = state.flycam.zoomStep;
+  const scaleFactor = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
+
+  const op = (val: number) => {
+    if (useFloat) {
+      return val;
+    }
+    // Zero diffs should stay zero.
+    // Other values should be rounded, but should at least
+    // have an absolute value of 1 (otherwise, the node
+    // wouldn't move).
+    const sign = Math.sign(val);
+    if (sign === 0) {
+      return 0;
+    }
+    const positiveVal = sign * val;
+    return sign * Math.max(1, Math.round(positiveVal));
+  };
+
+  const delta = [
+    op(vector[0] * zoomFactor * scaleFactor[0]),
+    op(vector[1] * zoomFactor * scaleFactor[1]),
+    op(vector[2] * zoomFactor * scaleFactor[2]),
+  ];
+  const [x, y, z] = getNodePosition(activeNode, state);
+
+  Store.dispatch(
+    setNodePositionAction(
+      untransformNodePosition([x + delta[0], y + delta[1], z + delta[2]], state),
+      activeNode.id,
+      activeTree.treeId,
+    ),
   );
 }
 
 export function finishNodeMovement(nodeId: number) {
-  getSkeletonTracing(Store.getState().annotation).map((skeletonTracing) =>
-    getNodeAndTree(skeletonTracing, nodeId).map(([activeTree, node]) => {
-      Store.dispatch(
-        setNodePositionAction(
-          V3.round(node.untransformedPosition, [0, 0, 0]),
-          node.id,
-          activeTree.treeId,
-        ),
-      );
-    }),
+  const skeletonTracing = getSkeletonTracing(Store.getState().annotation);
+  if (!skeletonTracing) return;
+
+  const treeAndNode = getTreeAndNode(skeletonTracing, nodeId);
+  if (!treeAndNode) return;
+
+  const [activeTree, node] = treeAndNode;
+
+  Store.dispatch(
+    setNodePositionAction(
+      V3.round(node.untransformedPosition, [0, 0, 0]),
+      node.id,
+      activeTree.treeId,
+    ),
   );
 }
 
@@ -346,13 +355,15 @@ export function createSkeletonNode(
     // Note that the new node isn't necessarily active
     const newNodeId = newSkeleton.cachedMaxNodeId;
 
-    const { activeTreeId } = newSkeleton;
-    getNodeAndTree(newSkeleton, newNodeId, activeTreeId).map(([, newNode]) => {
-      api.tracing.centerPositionAnimated(
-        getNodePosition(newNode, state),
-        skipCenteringAnimationInThirdDimension,
-      );
-    });
+    const treeAndNode = getTreeAndNode(newSkeleton, newNodeId, newSkeleton.activeTreeId);
+    if (!treeAndNode) return;
+
+    const [_activeTree, newNode] = treeAndNode;
+
+    api.tracing.centerPositionAnimated(
+      getNodePosition(newNode, state),
+      skipCenteringAnimationInThirdDimension,
+    );
   }
 
   if (branchpoint) {
@@ -473,7 +484,7 @@ export function toSubsequentNode(): void {
     Store.dispatch(updateNavigationListAction(navigationList.list, navigationList.activeIndex + 1));
   } else {
     // search for subsequent node in tree
-    const { tree, node } = getNodeAndTreeOrNull(tracing, activeNodeId, activeTreeId);
+    const { tree, node } = getTreeAndNodeOrNull(tracing, activeNodeId, activeTreeId);
     if (!tree || !node) return;
     const nextNodeId = getSubsequentNodeFromTree(
       tree,
@@ -503,7 +514,7 @@ export function toPrecedingNode(): void {
     Store.dispatch(updateNavigationListAction(navigationList.list, navigationList.activeIndex - 1));
   } else {
     // search for preceding node in tree
-    const { tree, node } = getNodeAndTreeOrNull(tracing, activeNodeId, activeTreeId);
+    const { tree, node } = getTreeAndNodeOrNull(tracing, activeNodeId, activeTreeId);
     if (!tree || !node) return;
     const nextNodeId = getPrecedingNodeFromTree(
       tree,

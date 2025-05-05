@@ -9,6 +9,6 @@ CREATE TABLE webknossos.dataset_layer_special_files(
    type TEXT NOT NULL
 );
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 129;
+UPDATE webknossos.releaseInformation SET schemaVersion = 131;
 
 COMMIT TRANSACTION;

@@ -134,7 +134,7 @@ function* watchBranchPointDeletion(): Saga<void> {
 
     if (deleteBranchpointAction) {
       const hasBranchPoints = yield* select(
-        (state: OxalisState) => getBranchPoints(state.annotation).getOrElse([]).length > 0,
+        (state: OxalisState) => (getBranchPoints(state.annotation) ?? []).length > 0,
       );
 
       if (hasBranchPoints) {

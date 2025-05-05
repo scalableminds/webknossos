@@ -532,14 +532,14 @@ class SceneController {
     const transformForBBoxes =
       tracingStoringUserBBoxes.type === "volume"
         ? getTransformsForLayer(
-          state.dataset,
-          getLayerByName(state.dataset, tracingStoringUserBBoxes.tracingId),
-          state.datasetConfiguration.nativelyRenderedLayerName,
-        )
+            state.dataset,
+            getLayerByName(state.dataset, tracingStoringUserBBoxes.tracingId),
+            state.datasetConfiguration.nativelyRenderedLayerName,
+          )
         : getTransformsForSkeletonLayer(
-          state.dataset,
-          state.datasetConfiguration.nativelyRenderedLayerName,
-        );
+            state.dataset,
+            state.datasetConfiguration.nativelyRenderedLayerName,
+          );
     this.applyTransformToGroup(transformForBBoxes, this.userBoundingBoxGroup);
     const visibleSegmentationLayers = getVisibleSegmentationLayers(state);
     if (visibleSegmentationLayers.length === 0) {

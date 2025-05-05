@@ -231,7 +231,6 @@ class SceneController {
       showCrossSections: true,
       isHighlighted: false,
     });
-    this.datasetBoundingBox.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
 
     this.contour = new ContourGeometry();
     this.quickSelectGeometry = new QuickSelectGeometry();

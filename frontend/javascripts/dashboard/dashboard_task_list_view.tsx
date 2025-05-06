@@ -31,7 +31,7 @@ import messages from "messages";
 import { getSkeletonDescriptor } from "oxalis/model/accessors/skeletontracing_accessor";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import type { APIAnnotation, APITaskWithAnnotation, APIUser } from "types/api_types";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
@@ -595,7 +595,7 @@ function TopBar({
   );
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
 });
 

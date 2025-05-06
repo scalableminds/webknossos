@@ -16,7 +16,7 @@ import { Button, Card, Col, Form, Input, Row, Skeleton, Space, Typography } from
 import { confirmAsync } from "dashboard/dataset/helper_components";
 import Toast from "libs/toast";
 import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { useEffect, useState } from "react";
 import { connect } from "react-redux";
 import type { APIOrganization, APIPricingPlanStatus } from "types/api_types";
@@ -240,7 +240,7 @@ const OrganizationEditView = ({ organization }: Props) => {
   );
 };
 
-const mapStateToProps = (state: OxalisState): Props => ({
+const mapStateToProps = (state: WebknossosState): Props => ({
   organization: enforceActiveOrganization(state.activeOrganization),
 });
 export default connect(mapStateToProps)(OrganizationEditView);

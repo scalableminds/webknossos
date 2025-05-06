@@ -26,6 +26,7 @@ import Toast from "libs/toast";
 import { hexToRgb, rgbToHex, roundTo, truncateStringToLength } from "libs/utils";
 import messages from "messages";
 
+import { useWkSelector } from "libs/react_hooks";
 import {
   AltOrOptionKey,
   CtrlOrCmdKey,
@@ -117,7 +118,6 @@ import { api } from "oxalis/singletons";
 import type {
   ActiveMappingInfo,
   MutableNode,
-  OxalisState,
   SegmentMap,
   SkeletonTracing,
   Tree,
@@ -130,7 +130,6 @@ import {
   withMappingActivationConfirmation,
 } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import React, { createContext, type MouseEvent, useContext, useEffect, useState } from "react";
-import { useSelector } from "react-redux";
 import type { Dispatch } from "redux";
 import type {
   APIConnectomeFile,
@@ -1351,7 +1350,7 @@ export function GenericContextMenuContainer(props: {
 }
 
 function WkContextMenu() {
-  const contextMenuPosition = useSelector((state: OxalisState) => {
+  const contextMenuPosition = useWkSelector((state) => {
     return state.uiInformation.contextInfo.contextMenuPosition;
   });
 
@@ -1379,7 +1378,7 @@ function getInfoMenuItem(
 }
 
 function ContextMenuInner() {
-  const props = useSelector((state: OxalisState) => {
+  const props = useWkSelector((state) => {
     const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
     const mappingInfo = getMappingInfo(
       state.temporaryConfiguration.activeMappingByLayer,
@@ -1450,7 +1449,7 @@ function ContextMenuInner() {
     maybeClickedMeshId != null ? maybeClickedMeshId : segmentIdAtPosition;
   const wasSegmentOrMeshClicked = clickedSegmentOrMeshId !== 0;
 
-  const dataset = useSelector((state: OxalisState) => state.dataset);
+  const dataset = useWkSelector((state) => state.dataset);
   useEffect(() => {
     Store.dispatch(ensureSegmentIndexIsLoadedAction(visibleSegmentationLayer?.name));
   }, [visibleSegmentationLayer]);
@@ -1458,7 +1457,7 @@ function ContextMenuInner() {
     dataset,
     visibleSegmentationLayer?.name,
   );
-  const mappingName: string | null | undefined = useSelector((state: OxalisState) => {
+  const mappingName: string | null | undefined = useWkSelector((state) => {
     if (volumeTracing?.mappingName != null) return volumeTracing?.mappingName;
     const mappingInfo = getMappingInfo(
       state.temporaryConfiguration.activeMappingByLayer,

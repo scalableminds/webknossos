@@ -1,11 +1,20 @@
 import _ from "lodash";
 import constants from "oxalis/constants";
+import type { WebknossosState } from "oxalis/store";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { type EqualityFn, useSelector } from "react-redux";
 import { useLocation } from "react-router-dom";
 import { KEYBOARD_BUTTON_LOOP_INTERVAL } from "./input";
 
-// Adapted from: https://usehooks.com/usePrevious/
+/**
+ * Hook that returns the previous value of a state or prop.
+ * @param value - The current value to track
+ * @param ignoreNullAndUndefined - If true, null/undefined values won't update the previous value
+ * @returns The previous value, or null if no previous value exists
+ */
 export function usePrevious<T>(value: T, ignoreNullAndUndefined: boolean = false): T | null {
+  // Adapted from: https://usehooks.com/usePrevious/
+
   // The ref object is a generic container whose current property is mutable ...
   // ... and can hold any value, similar to an instance property on a class
   const ref = useRef<T | null>(null);
@@ -29,8 +38,14 @@ const extractModifierState = <K extends keyof WindowEventMap>(event: WindowEvent
   ControlOrMeta: event.ctrlKey || event.metaKey,
 });
 
-// Adapted from: https://gist.github.com/gragland/b61b8f46114edbcf2a9e4bd5eb9f47f5
+/**
+ * Hook that tracks whether a specific modifier key (Shift, Alt, or Control/Meta) is pressed.
+ * @param targetKey - The modifier key to track ("Shift", "Alt", or "ControlOrMeta")
+ * @returns Boolean indicating if the key is currently pressed
+ */
 export function useKeyPress(targetKey: "Shift" | "Alt" | "ControlOrMeta") {
+  // Adapted from: https://gist.github.com/gragland/b61b8f46114edbcf2a9e4bd5eb9f47f5
+
   // State for keeping track of whether key is pressed
   const [keyPressed, setKeyPressed] = useState(false);
 
@@ -93,6 +108,12 @@ export function useKeyPress(targetKey: "Shift" | "Alt" | "ControlOrMeta") {
   return keyPressed;
 }
 
+/**
+ * Hook that triggers a callback repeatedly while a button is pressed, with configurable delay.
+ * @param triggerCallback - Function to call repeatedly, receives timeFactor and isFirst flag
+ * @param repeatDelay - Delay between triggers in milliseconds
+ * @returns Object with touch event handlers for the button
+ */
 export function useRepeatedButtonTrigger(
   triggerCallback: (timeFactor: number, isFirst: boolean) => void,
   repeatDelay: number = KEYBOARD_BUTTON_LOOP_INTERVAL,
@@ -139,11 +160,19 @@ export function useRepeatedButtonTrigger(
   };
 }
 
+/**
+ * Hook that returns the current URL search parameters as an object.
+ * @returns Object containing all URL search parameters
+ */
 export function useSearchParams() {
   const location = useLocation();
   return Object.fromEntries(new URLSearchParams(location.search).entries());
 }
 
+/**
+ * Hook that triggers a re-render at specified intervals.
+ * @param interval - Time between updates in milliseconds
+ */
 export function useUpdateEvery(interval: number) {
   const [, setSeconds] = useState(0);
 
@@ -155,6 +184,12 @@ export function useUpdateEvery(interval: number) {
   }, [interval]);
 }
 
+/**
+ * Hook that polls a callback function at specified intervals.
+ * @param callback - Async function to call repeatedly
+ * @param delay - Time between polls in milliseconds, or null to stop polling
+ * @param dependencies - Array of dependencies that should trigger a restart of polling
+ */
 export function usePolling(
   callback: () => Promise<void>,
   delay: number | null,
@@ -195,6 +230,10 @@ export function usePolling(
   }, [delay, ...dependencies]);
 }
 
+/**
+ * Hook that runs an effect only once when the component mounts.
+ * @param callback - Function to run on mount, can return cleanup function
+ */
 export function useEffectOnlyOnce(callback: () => void | (() => void)) {
   // biome-ignore lint/correctness/useExhaustiveDependencies: Explicitly run only once.
   useEffect(() => {
@@ -202,11 +241,16 @@ export function useEffectOnlyOnce(callback: () => void | (() => void)) {
   }, []);
 }
 
-// This hook allows to access the current state value in an asynchronous function call.
-// Due to the nature of hooks, the ref value might be one render cycle ahead of the state value.
-// If the ref value should preferably be one render cycle behind the state value,
-// use a different hook that uses an effect instead of a wrapped state setter.
+/**
+ * Hook that provides both state and a ref to the current state value.
+ * Useful for accessing current state in async functions.
+ * @param initialValue - Initial state value
+ * @returns Tuple containing [state, ref, setState]
+ */
 export function useStateWithRef<T>(initialValue: T) {
+  // Due to the nature of hooks, the ref value might be one render cycle ahead of the state value.
+  // If the ref value should preferably be one render cycle behind the state value,
+  // use a different hook that uses an effect instead of a wrapped state setter.
   const [state, setState] = useState(initialValue);
   const ref = useRef(state);
 
@@ -222,6 +266,10 @@ export function useStateWithRef<T>(initialValue: T) {
   return [state, ref, wrappedSetState] as const;
 }
 
+/**
+ * Hook that provides a function to check if the component is still mounted.
+ * @returns Function that returns true if component is mounted, false otherwise
+ */
 export function useIsMounted() {
   const isMountedRef = useRef(true);
 
@@ -234,4 +282,13 @@ export function useIsMounted() {
   const isMounted = useCallback(() => isMountedRef.current, []);
 
   return isMounted;
+}
+
+/**
+ * Hook that provides type-safe access to the Webknossos Redux store.
+ * @param fn - Selector function that receives the Webknossos state
+ * @returns Selected state value
+ */
+export function useWkSelector<T>(fn: (state: WebknossosState) => T, equalityFn?: EqualityFn<T>): T {
+  return useSelector(fn, equalityFn);
 }

@@ -12,7 +12,7 @@ import _ from "lodash";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 import { Model } from "oxalis/singletons";
 import Store, { type SaveState } from "oxalis/store";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import ButtonComponent from "oxalis/view/components/button_component";
 import React from "react";
 import { connect } from "react-redux";
@@ -181,7 +181,7 @@ function getOldestUnsavedTimestamp(saveQueue: SaveState["queue"]): number | null
   return oldestUnsavedTimestamp;
 }
 
-function mapStateToProps(state: OxalisState): StateProps {
+function mapStateToProps(state: WebknossosState): StateProps {
   const { progressInfo, isBusy } = state.save;
   return {
     isBusy,

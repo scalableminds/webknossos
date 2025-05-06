@@ -1,6 +1,6 @@
 import { vi, describe, it, expect } from "vitest";
 import dummyUser from "test/fixtures/dummy_user";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 import type { UpdateActionWithoutIsolationRequirement } from "oxalis/model/sagas/update_actions";
 
@@ -25,7 +25,7 @@ const initialState = {
       totalActionCount: 0,
     },
   },
-} as any as OxalisState;
+} as any as WebknossosState;
 
 describe("Save Reducer", () => {
   it("should add update actions to the queue", () => {

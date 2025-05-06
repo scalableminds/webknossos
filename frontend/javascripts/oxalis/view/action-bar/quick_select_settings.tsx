@@ -2,6 +2,7 @@ import { QuestionCircleOutlined } from "@ant-design/icons";
 import { Radio, type RadioChangeEvent } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
+import { useWkSelector } from "libs/react_hooks";
 import Shortcut from "libs/shortcut_component";
 import defaultState from "oxalis/default_state";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
@@ -11,8 +12,7 @@ import {
   confirmQuickSelectAction,
   fineTuneQuickSelectAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import type { OxalisState } from "oxalis/store";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import ButtonComponent from "../components/button_component";
 import { NumberSliderSetting, SwitchSetting } from "../components/setting_input_views";
 
@@ -26,9 +26,7 @@ const OPTIONS_WITH_DISABLED = [
 ];
 
 export function QuickSelectControls() {
-  const quickSelectConfig = useSelector(
-    (state: OxalisState) => state.userConfiguration.quickSelect,
-  );
+  const quickSelectConfig = useWkSelector((state) => state.userConfiguration.quickSelect);
   const isAISelectAvailable = features().segmentAnythingEnabled;
   const isQuickSelectHeuristic = quickSelectConfig.useHeuristic || !isAISelectAvailable;
 
@@ -36,9 +34,7 @@ export function QuickSelectControls() {
 }
 
 export function AiQuickSelectControls() {
-  const quickSelectConfig = useSelector(
-    (state: OxalisState) => state.userConfiguration.quickSelect,
-  );
+  const quickSelectConfig = useWkSelector((state) => state.userConfiguration.quickSelect);
 
   const dispatch = useDispatch();
 
@@ -87,11 +83,9 @@ export function AiQuickSelectControls() {
   );
 }
 export function HeuristicQuickSelectControls() {
-  const quickSelectConfig = useSelector(
-    (state: OxalisState) => state.userConfiguration.quickSelect,
-  );
-  const isQuickSelectActive = useSelector(
-    (state: OxalisState) => state.uiInformation.quickSelectState === "active",
+  const quickSelectConfig = useWkSelector((state) => state.userConfiguration.quickSelect);
+  const isQuickSelectActive = useWkSelector(
+    (state) => state.uiInformation.quickSelectState === "active",
   );
 
   const dispatch = useDispatch();

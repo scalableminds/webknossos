@@ -29,7 +29,7 @@ import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_st
 import Dimensions from "oxalis/model/dimensions";
 import * as scaleInfo from "oxalis/model/scaleinfo";
 import { getBaseVoxelInUnit } from "oxalis/model/scaleinfo";
-import type { DataLayerType, Flycam, LoadingStrategy, OxalisState } from "oxalis/store";
+import type { DataLayerType, Flycam, LoadingStrategy, WebknossosState } from "oxalis/store";
 import * as THREE from "three";
 import type { AdditionalCoordinate, VoxelSize } from "types/api_types";
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
@@ -198,7 +198,7 @@ export const _getDummyFlycamMatrix = memoizeOne((scale: Vector3) => {
   return rotateOnAxis(M4x4.scale(scaleMatrix, M4x4.identity(), []), Math.PI, [0, 0, 1]);
 });
 
-export function getMoveOffset(state: OxalisState, timeFactor: number) {
+export function getMoveOffset(state: WebknossosState, timeFactor: number) {
   return (
     (state.userConfiguration.moveValue * timeFactor) /
     getBaseVoxelInUnit(state.dataset.dataSource.scale.factor) /
@@ -206,13 +206,16 @@ export function getMoveOffset(state: OxalisState, timeFactor: number) {
   );
 }
 
-export function getMoveOffset3d(state: OxalisState, timeFactor: number) {
+export function getMoveOffset3d(state: WebknossosState, timeFactor: number) {
   const { moveValue3d } = state.userConfiguration;
   const baseVoxel = getBaseVoxelInUnit(state.dataset.dataSource.scale.factor);
   return (moveValue3d * timeFactor) / baseVoxel / constants.FPS;
 }
 
-function getMaximumZoomForAllMagsFromStore(state: OxalisState, layerName: string): Array<number> {
+function getMaximumZoomForAllMagsFromStore(
+  state: WebknossosState,
+  layerName: string,
+): Array<number> {
   const zoomValues = state.flycamInfoCache.maximumZoomForAllMags[layerName];
   if (zoomValues) {
     return zoomValues;
@@ -233,7 +236,7 @@ function getMaximumZoomForAllMagsFromStore(state: OxalisState, layerName: string
 export function getNewPositionAndZoomChangeFromTransformationChange(
   activeTransformation: Transform,
   nextTransform: Transform,
-  state: OxalisState,
+  state: WebknossosState,
 ) {
   // Calculate the difference between the current and the next transformation.
   const currentTransformInverted = invertTransform(activeTransformation);
@@ -317,7 +320,7 @@ export const getFlooredPosition = memoizeOne(_getFlooredPosition);
 export const getRotation = memoizeOne(_getRotation);
 export const getZoomedMatrix = memoizeOne(_getZoomedMatrix);
 
-function _getActiveMagIndicesForLayers(state: OxalisState): { [layerName: string]: number } {
+function _getActiveMagIndicesForLayers(state: WebknossosState): { [layerName: string]: number } {
   const magIndices: { [layerName: string]: number } = {};
 
   for (const layer of getDataLayers(state.dataset)) {
@@ -347,7 +350,7 @@ export const getActiveMagIndicesForLayers = reuseInstanceOnEquality(_getActiveMa
   Note that the return value indicates which mag can be rendered theoretically for the given layer
    (ignoring which mags actually exist). This means the return mag index might not exist for the given layer.
  */
-export function getActiveMagIndexForLayer(state: OxalisState, layerName: string): number {
+export function getActiveMagIndexForLayer(state: WebknossosState, layerName: string): number {
   return getActiveMagIndicesForLayers(state)[layerName];
 }
 
@@ -356,7 +359,10 @@ export function getActiveMagIndexForLayer(state: OxalisState, layerName: string)
   is independent of the actually loaded data. If null is returned, the layer cannot be rendered,
   because no appropriate mag exists.
  */
-export function getCurrentMag(state: OxalisState, layerName: string): Vector3 | null | undefined {
+export function getCurrentMag(
+  state: WebknossosState,
+  layerName: string,
+): Vector3 | null | undefined {
   const magInfo = getMagInfo(getLayerByName(state.dataset, layerName).resolutions);
   const magIndex = getActiveMagIndexForLayer(state, layerName);
   const existingMagIndex = magInfo.getIndexOrClosestHigherIndex(magIndex);
@@ -366,7 +372,7 @@ export function getCurrentMag(state: OxalisState, layerName: string): Vector3 | 
   return magInfo.getMagByIndex(existingMagIndex);
 }
 
-function _getValidZoomRangeForUser(state: OxalisState): [number, number] {
+function _getValidZoomRangeForUser(state: WebknossosState): [number, number] {
   const maxOfLayers = _.max(
     getDataLayers(state.dataset).map((layer) => {
       const maximumZoomSteps = getMaximumZoomForAllMagsFromStore(state, layer.name);
@@ -382,7 +388,7 @@ function _getValidZoomRangeForUser(state: OxalisState): [number, number] {
 export const getValidZoomRangeForUser = reuseInstanceOnEquality(_getValidZoomRangeForUser);
 
 export function getMaxZoomValueForMag(
-  state: OxalisState,
+  state: WebknossosState,
   layerName: string,
   targetMag: Vector3,
 ): number {
@@ -397,7 +403,7 @@ export function getMaxZoomValueForMag(
 }
 
 function getValidZoomRangeForMag(
-  state: OxalisState,
+  state: WebknossosState,
   layerName: string,
   magIdentifier: number,
 ): Vector2 | [null, null] {
@@ -421,7 +427,7 @@ export function getZoomValue(flycam: Flycam): number {
   return flycam.zoomStep;
 }
 export function getValidTaskZoomRange(
-  state: OxalisState,
+  state: WebknossosState,
   respectRestriction: boolean = false,
 ): [number, number] {
   const defaultRange = [
@@ -457,7 +463,7 @@ export function getValidTaskZoomRange(
   return [min, max];
 }
 
-export function isMagRestrictionViolated(state: OxalisState): boolean {
+export function isMagRestrictionViolated(state: WebknossosState): boolean {
   const { magRestrictions } = state.annotation.restrictions;
   // We use the first color layer as a heuristic to check the validity of the zoom range,
   // as we don't know to which layer a restriction is meant to be applied.
@@ -553,7 +559,7 @@ function getAreas(
   };
 }
 
-export function getAreasFromState(state: OxalisState): OrthoViewMap<Area> {
+export function getAreasFromState(state: WebknossosState): OrthoViewMap<Area> {
   const position = getPosition(state.flycam);
   const rects = getViewportRects(state);
   const { zoomStep } = state.flycam;
@@ -573,7 +579,7 @@ type UnrenderableLayersInfos = {
   The function takes fallback mags into account if renderMissingDataBlack is disabled.
  */
 function _getUnrenderableLayerInfosForCurrentZoom(
-  state: OxalisState,
+  state: WebknossosState,
 ): Array<UnrenderableLayersInfos> {
   const { dataset } = state;
   const activeMagIndices = getActiveMagIndicesForLayers(state);
@@ -621,7 +627,7 @@ export const getUnrenderableLayerInfosForCurrentZoom = reuseInstanceOnEquality(
   _getUnrenderableLayerInfosForCurrentZoom,
 );
 
-function _getActiveMagInfo(state: OxalisState) {
+function _getActiveMagInfo(state: WebknossosState) {
   const enabledLayers = getEnabledLayers(state.dataset, state.datasetConfiguration);
   const activeMagIndices = getActiveMagIndicesForLayers(state);
   const activeMagIndicesOfEnabledLayers = Object.fromEntries(

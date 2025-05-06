@@ -60,7 +60,7 @@ import {
 import dimensions from "oxalis/model/dimensions";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { Model, api } from "oxalis/singletons";
-import type { BrushPresets, OxalisState, StoreAnnotation } from "oxalis/store";
+import type { BrushPresets, StoreAnnotation, WebknossosState } from "oxalis/store";
 import Store from "oxalis/store";
 import { getDefaultBrushSizes } from "oxalis/view/action-bar/tools/brush_presets";
 import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
@@ -717,7 +717,7 @@ class PlaneController extends React.PureComponent<Props> {
   }
 }
 
-export function mapStateToProps(state: OxalisState): StateProps {
+export function mapStateToProps(state: WebknossosState): StateProps {
   return {
     annotation: state.annotation,
     activeTool: state.uiInformation.activeTool,

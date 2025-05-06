@@ -30,7 +30,7 @@ import {
   doAllLayersHaveTheSameRotation,
   getRotationSettingsFromTransformationIn90DegreeSteps,
 } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
-import type { DatasetConfiguration, OxalisState } from "oxalis/store";
+import type { DatasetConfiguration, WebknossosState } from "oxalis/store";
 import * as React from "react";
 import { connect } from "react-redux";
 import type { RouteComponentProps } from "react-router-dom";
@@ -709,7 +709,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
   }
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   isUserAdmin: state.activeUser?.isAdmin || false,
 });
 

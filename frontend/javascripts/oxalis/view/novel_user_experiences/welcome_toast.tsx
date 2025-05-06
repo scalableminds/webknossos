@@ -2,9 +2,8 @@ import { App, Button } from "antd";
 import type { NotificationInstance } from "antd/es/notification/interface";
 import features from "features";
 import { useEffectOnlyOnce } from "libs/react_hooks";
+import { useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
-import type { OxalisState } from "oxalis/store";
-import { useSelector } from "react-redux";
 
 function showWelcomeToast(notification: NotificationInstance) {
   notification.open({
@@ -45,7 +44,7 @@ function showWelcomeToast(notification: NotificationInstance) {
 }
 
 export default function WelcomeToast() {
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useWkSelector((state) => state.activeUser);
   const { notification } = App.useApp();
 
   useEffectOnlyOnce(() => {

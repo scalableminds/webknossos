@@ -16,7 +16,7 @@ import _ from "lodash";
 import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { PortalTarget } from "oxalis/view/layouting/portal_utils";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import type React from "react";
@@ -299,7 +299,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
   }
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
   activeOrganization: enforceActiveOrganization(state.activeOrganization),
 });

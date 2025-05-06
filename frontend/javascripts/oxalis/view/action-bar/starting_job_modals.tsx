@@ -37,6 +37,7 @@ import features from "features";
 import { formatCreditsString, formatVoxels } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { useFetch, useGuardedFetch } from "libs/react_helpers";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import {
   clamp,
@@ -61,10 +62,10 @@ import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { MagInfo } from "oxalis/model/helpers/mag_info";
 import { Model, Store } from "oxalis/singletons";
-import type { OxalisState, UserBoundingBox } from "oxalis/store";
+import type { UserBoundingBox } from "oxalis/store";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import React, { useEffect, useState, useMemo } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import { type APIDataLayer, type APIJob, APIJobType } from "types/api_types";
 import {
   CollapsibleWorkflowYamlEditor,
@@ -209,9 +210,9 @@ function BoundingBoxSelectionFormItem({
   onChangeSelectedBoundingBox,
   value: selectedBoundingBoxId,
 }: BoundingBoxSelectionProps): JSX.Element {
-  const dataset = useSelector((state: OxalisState) => state.dataset);
-  const isInDatasetViewMode = useSelector(
-    (state: OxalisState) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
+  const dataset = useWkSelector((state) => state.dataset);
+  const isInDatasetViewMode = useWkSelector(
+    (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
   const colorLayer = getColorLayers(dataset)[0];
   const mag1 = colorLayer.resolutions[0];
@@ -308,7 +309,7 @@ export function MagSlider({
 
 export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
   const onClose = () => Store.dispatch(setAIJobModalStateAction("invisible"));
-  const isSuperUser = useSelector((state: OxalisState) => state.activeUser?.isSuperUser || false);
+  const isSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser || false);
   const tabs = _.compact([
     {
       label: "Run a model",
@@ -501,7 +502,7 @@ function AlignmentTab() {
 }
 
 function ShouldUseTreesFormItem() {
-  const annotation = useSelector((state: OxalisState) => state.annotation);
+  const annotation = useWkSelector((state) => state.annotation);
   const trees = annotation.skeleton ? Object.values(annotation.skeleton.trees) : [];
   return (
     <div>
@@ -554,8 +555,8 @@ function JobCreditCostInformation({
   jobCreditCostInfo: JobCreditCostInfo | undefined;
   jobCreditCostPerGVx: number;
 }) {
-  const organizationCreditsFromStore = useSelector(
-    (state: OxalisState) => state.activeOrganization?.creditBalance || "0",
+  const organizationCreditsFromStore = useWkSelector(
+    (state) => state.activeOrganization?.creditBalance || "0",
   );
   const organizationCredits =
     jobCreditCostInfo?.organizationCredits || organizationCreditsFromStore;
@@ -709,18 +710,16 @@ function StartJobForm(props: StartJobFormProps) {
     jobSpecificInputFields,
   } = props;
   const [form] = Form.useForm();
-  const rawUserBoundingBoxes = useSelector((state: OxalisState) =>
-    getUserBoundingBoxesFromState(state),
-  );
+  const rawUserBoundingBoxes = useWkSelector((state) => getUserBoundingBoxesFromState(state));
 
   const dispatch = useDispatch();
-  const dataset = useSelector((state: OxalisState) => state.dataset);
-  const annotation = useSelector((state: OxalisState) => state.annotation);
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const dataset = useWkSelector((state) => state.dataset);
+  const annotation = useWkSelector((state) => state.annotation);
+  const activeUser = useWkSelector((state) => state.activeUser);
   const isActiveUserSuperUser = activeUser?.isSuperUser || false;
   const colorLayers = getColorLayers(dataset);
-  const organizationCredits = useSelector(
-    (state: OxalisState) => state.activeOrganization?.creditBalance || "0",
+  const organizationCredits = useWkSelector(
+    (state) => state.activeOrganization?.creditBalance || "0",
   );
   const layers = chooseSegmentationLayer ? getSegmentationLayers(dataset) : colorLayers;
   const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
@@ -889,7 +888,7 @@ function StartJobForm(props: StartJobFormProps) {
 }
 
 export function NucleiDetectionForm() {
-  const dataset = useSelector((state: OxalisState) => state.dataset);
+  const dataset = useWkSelector((state) => state.dataset);
   const dispatch = useDispatch();
   return (
     <StartJobForm
@@ -922,11 +921,9 @@ export function NucleiDetectionForm() {
   );
 }
 export function NeuronSegmentationForm() {
-  const dataset = useSelector((state: OxalisState) => state.dataset);
+  const dataset = useWkSelector((state) => state.dataset);
   const { neuronInferralCostPerGVx } = features();
-  const hasSkeletonAnnotation = useSelector(
-    (state: OxalisState) => state.annotation.skeleton != null,
-  );
+  const hasSkeletonAnnotation = useWkSelector((state) => state.annotation.skeleton != null);
   const dispatch = useDispatch();
   const [doSplitMergerEvaluation, setDoSplitMergerEvaluation] = React.useState(false);
   return (
@@ -1001,7 +998,7 @@ export function NeuronSegmentationForm() {
 }
 
 export function MitochondriaSegmentationForm() {
-  const dataset = useSelector((state: OxalisState) => state.dataset);
+  const dataset = useWkSelector((state) => state.dataset);
   const { mitochondriaInferralCostPerGVx } = features();
   const dispatch = useDispatch();
   return (
@@ -1039,10 +1036,10 @@ export function MitochondriaSegmentationForm() {
 }
 
 function CustomAiModelInferenceForm() {
-  const dataset = useSelector((state: OxalisState) => state.dataset);
-  const annotationId = useSelector((state: OxalisState) => state.annotation.annotationId);
-  const isViewMode = useSelector(
-    (state: OxalisState) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
+  const dataset = useWkSelector((state) => state.dataset);
+  const annotationId = useWkSelector((state) => state.annotation.annotationId);
+  const isViewMode = useWkSelector(
+    (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
   const dispatch = useDispatch();
 
@@ -1115,7 +1112,7 @@ function CustomAiModelInferenceForm() {
 }
 
 export function AlignSectionsForm() {
-  const dataset = useSelector((state: OxalisState) => state.dataset);
+  const dataset = useWkSelector((state) => state.dataset);
   const dispatch = useDispatch();
   const { alignmentCostPerGVx } = features();
   return (
@@ -1158,10 +1155,10 @@ export function MaterializeVolumeAnnotationModal({
   selectedVolumeLayer,
   handleClose,
 }: MaterializeVolumeAnnotationModalProps) {
-  const dataset = useSelector((state: OxalisState) => state.dataset);
-  const tracing = useSelector((state: OxalisState) => state.annotation);
+  const dataset = useWkSelector((state) => state.dataset);
+  const tracing = useWkSelector((state) => state.annotation);
   let includesEditableMapping = false;
-  const activeSegmentationTracingLayer = useSelector(getActiveSegmentationTracingLayer);
+  const activeSegmentationTracingLayer = useWkSelector(getActiveSegmentationTracingLayer);
   const fixedSelectedLayer = selectedVolumeLayer || activeSegmentationTracingLayer;
   const readableVolumeLayerName =
     fixedSelectedLayer && getReadableNameOfVolumeLayer(fixedSelectedLayer, tracing);
@@ -1169,8 +1166,8 @@ export function MaterializeVolumeAnnotationModal({
     fixedSelectedLayer && "tracingId" in fixedSelectedLayer
       ? fixedSelectedLayer.fallbackLayer != null
       : false;
-  const isMergerModeEnabled = useSelector(
-    (state: OxalisState) => state.temporaryConfiguration.isMergerModeEnabled,
+  const isMergerModeEnabled = useWkSelector(
+    (state) => state.temporaryConfiguration.isMergerModeEnabled,
   );
   const jobName = "materialize_volume_annotation";
   let description = (

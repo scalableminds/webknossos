@@ -1,7 +1,7 @@
 import { Button } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { V2 } from "libs/mjs";
-import type { BorderOpenStatus, OxalisState } from "oxalis/store";
+import type { BorderOpenStatus, WebknossosState } from "oxalis/store";
 import * as React from "react";
 import { connect } from "react-redux";
 type OwnProps = {
@@ -78,7 +78,7 @@ function BorderToggleButton(props: Props) {
   );
 }
 
-function mapStateToProps(state: OxalisState) {
+function mapStateToProps(state: WebknossosState) {
   return {
     borderOpenStatus: state.uiInformation.borderOpenStatus,
   };

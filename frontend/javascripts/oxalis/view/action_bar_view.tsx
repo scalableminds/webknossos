@@ -2,6 +2,7 @@ import { withAuthentication } from "admin/auth/authentication_modal";
 import { createExplorational } from "admin/rest_api";
 import { Alert, Popover, Space } from "antd";
 import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
+import { useWkSelector } from "libs/react_hooks";
 import { isUserAdminOrTeamManager } from "libs/utils";
 import { ArbitraryVectorInput } from "libs/vector_input";
 import { type ControlMode, MappingStatusEnum, type ViewMode } from "oxalis/constants";
@@ -16,7 +17,7 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { setAdditionalCoordinatesAction } from "oxalis/model/actions/flycam_actions";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import Store from "oxalis/store";
 import AddNewLayoutModal from "oxalis/view/action-bar/add_new_layout_modal";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
@@ -34,7 +35,7 @@ import {
   layoutEmitter,
 } from "oxalis/view/layouting/layout_persistence";
 import * as React from "react";
-import { connect, useDispatch, useSelector } from "react-redux";
+import { connect, useDispatch } from "react-redux";
 import { useHistory } from "react-router-dom";
 import type { APIDataset, APIUser } from "types/api_types";
 import { APIJobType, type AdditionalCoordinate } from "types/api_types";
@@ -70,12 +71,8 @@ type State = {
 };
 
 function AdditionalCoordinatesInputView() {
-  const additionalAxes = useSelector((state: OxalisState) =>
-    getUnifiedAdditionalCoordinates(state.dataset),
-  );
-  const additionalCoordinates = useSelector(
-    (state: OxalisState) => state.flycam.additionalCoordinates,
-  );
+  const additionalAxes = useWkSelector((state) => getUnifiedAdditionalCoordinates(state.dataset));
+  const additionalCoordinates = useWkSelector((state) => state.flycam.additionalCoordinates);
   const dispatch = useDispatch();
   const changeAdditionalCoordinates = (values: AdditionalCoordinate[] | null) => {
     if (values != null) {
@@ -141,7 +138,7 @@ function AdditionalCoordinatesInputView() {
 
 function CreateAnnotationButton() {
   const history = useHistory();
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useWkSelector((state) => state.activeUser);
 
   const onClick = async () => {
     const state = Store.getState();
@@ -192,9 +189,9 @@ function CreateAnnotationButton() {
 }
 
 function ModesView() {
-  const hasSkeleton = useSelector((state: OxalisState) => state.annotation.skeleton != null);
-  const is2d = useSelector((state: OxalisState) => is2dDataset(state.dataset));
-  const controlMode = useSelector((state: OxalisState) => state.temporaryConfiguration.controlMode);
+  const hasSkeleton = useWkSelector((state) => state.annotation.skeleton != null);
+  const is2d = useWkSelector((state) => is2dDataset(state.dataset));
+  const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
   const isViewMode = controlMode === ControlModeEnum.VIEW;
 
   const isArbitrarySupported = hasSkeleton || isViewMode;
@@ -334,7 +331,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
   }
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   dataset: state.dataset,
   activeUser: state.activeUser,
   controlMode: state.temporaryConfiguration.controlMode,

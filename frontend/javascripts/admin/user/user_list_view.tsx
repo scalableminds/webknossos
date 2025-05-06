@@ -28,7 +28,7 @@ import _ from "lodash";
 import messages from "messages";
 import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import React, { type Key, useEffect, useState } from "react";
 import { connect } from "react-redux";
@@ -644,7 +644,7 @@ function UserListView({ activeUser, activeOrganization }: Props) {
   );
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
   activeOrganization: enforceActiveOrganization(state.activeOrganization),
 });

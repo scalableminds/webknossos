@@ -1,13 +1,14 @@
 import { SettingOutlined } from "@ant-design/icons";
 import { Col, Divider, Dropdown, type MenuProps, Popover, Row } from "antd";
 import { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 
+import { useWkSelector } from "libs/react_hooks";
 import { Unicode } from "oxalis/constants";
 import { getMaximumBrushSize } from "oxalis/model/accessors/volumetracing_accessor";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setMousePositionAction } from "oxalis/model/actions/volumetracing_actions";
-import Store, { type BrushPresets, type OxalisState } from "oxalis/store";
+import Store, { type BrushPresets } from "oxalis/store";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
 import { userSettings } from "types/schemas/user_settings.schema";
@@ -60,14 +61,12 @@ export function getDefaultBrushSizes(maximumSize: number, minimumSize: number) {
 
 export function ChangeBrushSizePopover() {
   const dispatch = useDispatch();
-  const brushSize = useSelector((state: OxalisState) => state.userConfiguration.brushSize);
+  const brushSize = useWkSelector((state) => state.userConfiguration.brushSize);
   const [isBrushSizePopoverOpen, setIsBrushSizePopoverOpen] = useState(false);
-  const maximumBrushSize = useSelector((state: OxalisState) => getMaximumBrushSize(state));
+  const maximumBrushSize = useWkSelector((state) => getMaximumBrushSize(state));
 
   const defaultBrushSizes = getDefaultBrushSizes(maximumBrushSize, userSettings.brushSize.minimum);
-  const presetBrushSizes = useSelector(
-    (state: OxalisState) => state.userConfiguration.presetBrushSizes,
-  );
+  const presetBrushSizes = useWkSelector((state) => state.userConfiguration.presetBrushSizes);
   // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation whether defaultBrushSizes is needed as dependency.
   useEffect(() => {
     if (presetBrushSizes == null) {

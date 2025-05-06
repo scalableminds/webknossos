@@ -8,7 +8,7 @@ import _ from "lodash";
 import messages from "messages";
 import type { Vector3, ViewMode } from "oxalis/constants";
 import constants, { ViewModeValues, MappingStatusEnum } from "oxalis/constants";
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import { getPosition, getRotationInDegrees } from "oxalis/model/accessors/flycam_accessor";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getMeshesForCurrentAdditionalCoordinates } from "oxalis/model/accessors/volumetracing_accessor";
 import {
@@ -286,7 +286,7 @@ class UrlManager {
     const zoomStep = Utils.roundTo(state.flycam.zoomStep, 3);
     const rotationOptional = constants.MODES_ARBITRARY.includes(mode)
       ? {
-          rotation: Utils.map3((e) => Utils.roundTo(e, 2), getRotation(state.flycam)),
+          rotation: Utils.map3((e) => Utils.roundTo(e, 2), getRotationInDegrees(state.flycam)),
         }
       : {};
     const activeNode = state.annotation.skeleton?.activeNodeId;

@@ -4,7 +4,7 @@ import { UnitLong, OrthoViews } from "oxalis/constants";
 import update from "immutability-helper";
 import {
   getPosition,
-  getRotation,
+  getRotationInDegrees,
   getUp,
   getLeft,
   getZoomedMatrix,
@@ -73,7 +73,7 @@ describe("Flycam", () => {
   it("should set the rotation the flycam", () => {
     const rotateAction = FlycamActions.setRotationAction([180, 0, 0]);
     const newState = FlycamReducer(initialState, rotateAction);
-    equalWithEpsilon(getRotation(newState.flycam), [180, 0, 0]);
+    equalWithEpsilon(getRotationInDegrees(newState.flycam), [180, 0, 0]);
     equalWithEpsilon(getUp(newState.flycam), [0, 1, -0]);
     equalWithEpsilon(getLeft(newState.flycam), [-1, 0, 0]);
   });
@@ -100,33 +100,33 @@ describe("Flycam", () => {
     const rotateAction = FlycamActions.rotateFlycamAction(0.5 * Math.PI, [1, 1, 0]);
     const newState = FlycamReducer(initialState, rotateAction);
     equalWithEpsilon(getPosition(newState.flycam), [0, 0, 0]);
-    equalWithEpsilon(V3.floor(getRotation(newState.flycam)), [270, 315, 135]);
+    equalWithEpsilon(V3.floor(getRotationInDegrees(newState.flycam)), [270, 315, 135]);
   });
 
   it("should pitch the flycam", () => {
     const rotateAction = FlycamActions.pitchFlycamAction(0.5 * Math.PI);
     const newState = FlycamReducer(initialState, rotateAction);
     equalWithEpsilon(getPosition(newState.flycam), [0, 0, 0]);
-    equalWithEpsilon(getRotation(newState.flycam), [270, 0, 180]);
+    equalWithEpsilon(getRotationInDegrees(newState.flycam), [270, 0, 180]);
   });
 
   it("should pitch the flycam with spherical cap radius", () => {
     const rotateAction = FlycamActions.pitchFlycamAction(0.5 * Math.PI, true);
     const newState = FlycamReducer(initialState, rotateAction);
     equalWithEpsilon(getPosition(newState.flycam), [0, -200, -200]);
-    equalWithEpsilon(getRotation(newState.flycam), [270, 0, 180]);
+    equalWithEpsilon(getRotationInDegrees(newState.flycam), [270, 0, 180]);
   });
 
   it("should yaw the flycam", () => {
     const rotateAction = FlycamActions.yawFlycamAction(0.5 * Math.PI);
     const newState = FlycamReducer(initialState, rotateAction);
-    equalWithEpsilon(getRotation(newState.flycam), [0, 270, 180]);
+    equalWithEpsilon(getRotationInDegrees(newState.flycam), [0, 270, 180]);
   });
 
   it("should roll the flycam", () => {
     const rotateAction = FlycamActions.rollFlycamAction(0.5 * Math.PI);
     const newState = FlycamReducer(initialState, rotateAction);
-    equalWithEpsilon(getRotation(newState.flycam), [0, 0, 90]);
+    equalWithEpsilon(getRotationInDegrees(newState.flycam), [0, 0, 90]);
   });
 
   it("should move in ortho mode", () => {

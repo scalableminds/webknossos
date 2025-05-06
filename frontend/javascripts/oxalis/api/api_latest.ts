@@ -52,7 +52,7 @@ import { flatToNestedMatrix } from "oxalis/model/accessors/dataset_layer_transfo
 import {
   getActiveMagIndexForLayer,
   getPosition,
-  getRotation,
+  getRotationInDegrees,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
   findTreeByNodeId,
@@ -1396,7 +1396,7 @@ class TracingApi {
         ? dimensions.thirdDimensionForPlane(activeViewport)
         : null;
     const curPosition = getPosition(Store.getState().flycam);
-    const curRotation = getRotation(Store.getState().flycam);
+    const curRotation = getRotationInDegrees(Store.getState().flycam);
     if (!Array.isArray(rotation)) rotation = curRotation;
     rotation = this.getShortestRotation(curRotation, rotation);
 

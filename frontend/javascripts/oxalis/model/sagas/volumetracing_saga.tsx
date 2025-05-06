@@ -14,7 +14,7 @@ import {
   getSupportedValueRangeOfLayer,
   isInSupportedValueRangeForLayer,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import { getPosition, getRotationInDegrees } from "oxalis/model/accessors/flycam_accessor";
 import {
   isBrushTool,
   isTraceTool,
@@ -474,7 +474,7 @@ export function* diffVolumeTracing(
       volumeTracing,
       V3.floor(getPosition(flycam)),
       flycam.additionalCoordinates,
-      getRotation(flycam),
+      getRotationInDegrees(flycam),
       flycam.zoomStep,
     );
   }

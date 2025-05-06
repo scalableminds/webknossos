@@ -13,7 +13,7 @@ import {
   type Vector3,
 } from "oxalis/constants";
 import Constants from "oxalis/constants";
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import { getPosition, getRotationInDegrees } from "oxalis/model/accessors/flycam_accessor";
 import EdgeCollection from "oxalis/model/edge_collection";
 import {
   getMaximumGroupId,
@@ -242,7 +242,7 @@ function serializeParameters(
   const editPositionAdditionalCoordinates = state.flycam.additionalCoordinates;
   const { additionalAxes } = skeletonTracing;
 
-  const editRotation = getRotation(state.flycam);
+  const editRotation = getRotationInDegrees(state.flycam);
   const userBBoxes = skeletonTracing.userBoundingBoxes;
   const taskBB = skeletonTracing.boundingBox;
   return [

@@ -297,16 +297,38 @@ function _getFlooredPosition(flycam: Flycam): Vector3 {
   return map3((x) => Math.floor(x), _getPosition(flycam));
 }
 
-function _getRotation(flycam: Flycam): Vector3 {
+function _getRotationInRadianFixed(flycam: Flycam): Vector3 {
+  const object = new THREE.Object3D();
+  const matrix = new THREE.Matrix4().fromArray(flycam.currentMatrix).transpose();
+  object.applyMatrix4(matrix);
+  const rotation: Vector3 = [object.rotation.x, object.rotation.y - Math.PI, object.rotation.z];
+  return [
+    mod(rotation[0], Math.PI*2),
+    mod(rotation[1], Math.PI*2),
+    mod(rotation[2], Math.PI*2),
+  ];
+}
+
+function _getRotationInRadian(flycam: Flycam): Vector3 {
   const object = new THREE.Object3D();
   const matrix = new THREE.Matrix4().fromArray(flycam.currentMatrix).transpose();
   object.applyMatrix4(matrix);
   const rotation: Vector3 = [object.rotation.x, object.rotation.y, object.rotation.z - Math.PI];
   return [
-    mod((180 / Math.PI) * rotation[0], 360),
-    mod((180 / Math.PI) * rotation[1], 360),
-    mod((180 / Math.PI) * rotation[2], 360),
+    mod(rotation[0], Math.PI*2),
+    mod(rotation[1], Math.PI*2),
+    mod(rotation[2], Math.PI*2),
   ];
+}
+
+function _getRotationInDegrees(flycam: Flycam): Vector3 {
+  const rotationInRadian = getRotationInRadian(flycam);
+  // Modulo operation not needed as already done in getRotationInRadian.
+  return [
+    (180 / Math.PI) * rotationInRadian[0],
+    (180 / Math.PI) * rotationInRadian[1],
+    (180 / Math.PI) * rotationInRadian[2],
+  ]
 }
 
 function _getZoomedMatrix(flycam: Flycam): Matrix4x4 {
@@ -317,7 +339,9 @@ export const getUp = memoizeOne(_getUp);
 export const getLeft = memoizeOne(_getLeft);
 export const getPosition = memoizeOne(_getPosition);
 export const getFlooredPosition = memoizeOne(_getFlooredPosition);
-export const getRotation = memoizeOne(_getRotation);
+export const getRotationInRadianFixed = memoizeOne(_getRotationInRadianFixed);
+export const getRotationInRadian = memoizeOne(_getRotationInRadian);
+export const getRotationInDegrees = memoizeOne(_getRotationInDegrees);
 export const getZoomedMatrix = memoizeOne(_getZoomedMatrix);
 
 function _getActiveMagIndicesForLayers(state: WebknossosState): { [layerName: string]: number } {

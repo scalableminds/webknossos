@@ -11,7 +11,7 @@ import getSceneController from "oxalis/controller/scene_controller_provider";
 import TDController from "oxalis/controller/td_controller";
 import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import Crosshair from "oxalis/geometries/crosshair";
-import { getMoveOffset3d, getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import { getMoveOffset3d, getPosition, getRotationInDegrees } from "oxalis/model/accessors/flycam_accessor";
 import {
   getActiveNode,
   getMaxNodeId,
@@ -402,7 +402,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     }
     const state = Store.getState();
     const position = getPosition(state.flycam);
-    const rotation = getRotation(state.flycam);
+    const rotation = getRotationInDegrees(state.flycam);
     const additionalCoordinates = state.flycam.additionalCoordinates;
     Store.dispatch(
       createNodeAction(

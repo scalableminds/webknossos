@@ -44,7 +44,7 @@ import {
   getTransformsForLayerOrNull,
   getTransformsForSkeletonLayer,
 } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
-import { getActiveMagIndicesForLayers, getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { getActiveMagIndicesForLayers, getPosition,   getRotationInRadian } from "oxalis/model/accessors/flycam_accessor";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getSomeTracing, getTaskBoundingBoxes } from "oxalis/model/accessors/tracing_accessor";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/view_mode_accessor";
@@ -383,15 +383,16 @@ class SceneController {
     // This method is called for each of the four cams. Even
     // though they are all looking at the same scene, some
     // things have to be changed for each cam.
+    const {datasetConfiguration, userConfiguration, flycam} = Store.getState();
     const { tdViewDisplayPlanes, tdViewDisplayDatasetBorders, tdViewDisplayLayerBorders } =
-      Store.getState().userConfiguration;
+    userConfiguration;
     // Only set the visibility of the dataset bounding box for the TDView.
     // This has to happen before updateForCam is called as otherwise cross section visibility
     // might be changed unintentionally.
     this.datasetBoundingBox.setVisibility(id !== OrthoViews.TDView || tdViewDisplayDatasetBorders);
     this.datasetBoundingBox.updateForCam(id);
     this.userBoundingBoxes.forEach((bbCube) => bbCube.updateForCam(id));
-    const layerNameToIsDisabled = getLayerNameToIsDisabled(Store.getState().datasetConfiguration);
+    const layerNameToIsDisabled = getLayerNameToIsDisabled(datasetConfiguration);
     Object.keys(this.layerBoundingBoxes).forEach((layerName) => {
       const bbCube = this.layerBoundingBoxes[layerName];
       const visible =
@@ -409,7 +410,8 @@ class SceneController {
     this.annotationToolsGeometryGroup.visible = id !== OrthoViews.TDView;
     this.lineMeasurementGeometry.updateForCam(id);
 
-    const originalPosition = getPosition(Store.getState().flycam);
+    const originalPosition = getPosition(flycam);
+    const rotation = getRotationInRadian(flycam);
     if (id !== OrthoViews.TDView) {
       for (const planeId of OrthoViewValuesWithoutTDView) {
         if (planeId === id) {
@@ -423,6 +425,7 @@ class SceneController {
           pos[ind[2]] +=
             planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
           this.planes[planeId].setPosition(pos, originalPosition);
+          this.planes[planeId].setRotation(new THREE.Euler(rotation[0], rotation[1], rotation[2]));
 
           this.quickSelectGeometry.adaptVisibilityForRendering(originalPosition, ind[2]);
         } else {
@@ -448,7 +451,7 @@ class SceneController {
     const { flycam } = state;
     const globalPosition = getPosition(flycam);
 
-    const magIndices = getActiveMagIndicesForLayers(Store.getState());
+    const magIndices = getActiveMagIndicesForLayers(state);
     for (const dataLayer of Model.getAllLayers()) {
       dataLayer.layerRenderingManager.updateDataTextures(
         globalPosition,

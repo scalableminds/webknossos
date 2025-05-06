@@ -4,7 +4,7 @@ import _ from "lodash";
 import type { OrthoView, OrthoViewMap, OrthoViewRects, Vector3 } from "oxalis/constants";
 import { OrthoViewValuesWithoutTDView, OrthoViews } from "oxalis/constants";
 import { getDatasetCenter, getDatasetExtentInUnit } from "oxalis/model/accessors/dataset_accessor";
-import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { getPosition, getRotationInDegrees, getRotationInRadian, getRotationInRadianFixed } from "oxalis/model/accessors/flycam_accessor";
 import {
   getInputCatcherAspectRatio,
   getPlaneExtentInVoxelFromStore,
@@ -18,6 +18,7 @@ import Store from "oxalis/store";
 import * as React from "react";
 import * as THREE from "three";
 import TWEEN from "tween.js";
+import { OrthoBaseRotations } from "./scene_controller";
 
 type Props = {
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
@@ -159,6 +160,15 @@ class CameraController extends React.PureComponent<Props> {
     this.props.cameras[OrthoViews.PLANE_XY].position.set(cPos[0], cPos[1], cPos[2]);
     this.props.cameras[OrthoViews.PLANE_YZ].position.set(cPos[0], cPos[1], cPos[2]);
     this.props.cameras[OrthoViews.PLANE_XZ].position.set(cPos[0], cPos[1], cPos[2]);
+    // Now set rotation for all cameras respecting the base rotation of each camera.
+    const gRot = getRotationInRadianFixed(state.flycam);
+    const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(gRot[0], gRot[1], gRot[2]));
+    const baseRotationMatrixXY = new THREE.Matrix4().makeRotationFromEuler(OrthoBaseRotations[OrthoViews.PLANE_XY]);
+    const baseRotationMatrixYZ = new THREE.Matrix4().makeRotationFromEuler(OrthoBaseRotations[OrthoViews.PLANE_YZ]);
+    const baseRotationMatrixXZ = new THREE.Matrix4().makeRotationFromEuler(OrthoBaseRotations[OrthoViews.PLANE_XZ]);
+    this.props.cameras[OrthoViews.PLANE_XY].setRotationFromMatrix(rotationMatrix.multiply(baseRotationMatrixXY));
+    this.props.cameras[OrthoViews.PLANE_YZ].setRotationFromMatrix(rotationMatrix.multiply(baseRotationMatrixYZ));
+    this.props.cameras[OrthoViews.PLANE_XZ].setRotationFromMatrix(rotationMatrix.multiply(baseRotationMatrixXZ));
   }
 
   bindToEvents() {

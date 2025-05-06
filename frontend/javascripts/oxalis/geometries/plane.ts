@@ -99,7 +99,6 @@ class Plane {
       // render them AFTER the plane has been rendered.
       this.crosshair[i].renderOrder = 1;
       this.crosshair[i].name = `${this.planeID}-crosshair-${i}`;
-      this.crosshair[i].matrixAutoUpdate = false;
     }
 
     // create borders
@@ -116,7 +115,6 @@ class Plane {
       this.getLineBasicMaterial(OrthoViewColors[this.planeID], 1),
     );
     this.TDViewBorders.name = `${this.planeID}-TDViewBorders`;
-    this.TDViewBorders.matrixAutoUpdate = false;
   }
 
   setDisplayCrosshair = (value: boolean): void => {
@@ -171,7 +169,7 @@ class Plane {
   setRotation = (rotVec: THREE.Euler): void => {
     const baseRotationMatrix = new THREE.Matrix4().makeRotationFromEuler(this.baseRotation);
     const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(rotVec);
-    const combinedMatrix = baseRotationMatrix.multiply(rotationMatrix);
+    const combinedMatrix = rotationMatrix.multiply(baseRotationMatrix);
     this.getMeshes().map((mesh) =>
       mesh.setRotationFromMatrix(combinedMatrix),
     );

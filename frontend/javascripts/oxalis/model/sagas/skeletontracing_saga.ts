@@ -12,7 +12,7 @@ import memoizeOne from "memoize-one";
 import messages from "messages";
 import { TreeTypeEnum } from "oxalis/constants";
 import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import { getPosition, getRotationInDegrees } from "oxalis/model/accessors/flycam_accessor";
 import {
   enforceSkeletonTracing,
   findTreeByName,
@@ -632,7 +632,7 @@ export function* diffSkeletonTracing(
       skeletonTracing,
       V3.floor(getPosition(flycam)),
       flycam.additionalCoordinates,
-      getRotation(flycam),
+      getRotationInDegrees(flycam),
       flycam.zoomStep,
     );
   }

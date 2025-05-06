@@ -278,8 +278,7 @@ function TreeHierarchyView(props: Props) {
       getNodeKey(GroupTypeEnum.GROUP, id),
     );
     if (expandedGroups == null) return;
-    // props.treeGroups are used to get the newly expanded groups but can be outdated, so the union needs to be used here
-    setExpandedGroups(new Set([...expandedNodeKeys, ...Array.from(expandedGroups)]));
+    setExpandedGroups(expandedGroups);
     setTimeout(() => {
       if (treeRef.current && props.activeTreeId)
         treeRef.current.scrollTo({

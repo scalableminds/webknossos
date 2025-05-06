@@ -31,7 +31,7 @@ class Plane {
   // This class is supposed to collect all the Geometries that belong to one single plane such as
   // the plane itself, its texture, borders and crosshairs.
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'plane' has no initializer and is not def... Remove this comment to see the full error message
-  plane: THREE.Mesh;
+  plane: THREE.Mesh<PlaneGeometry, ShaderMaterial, Object3DEventMap>;
   planeID: OrthoView;
   materialFactory!: PlaneMaterialFactory;
   displayCrosshair: boolean;
@@ -41,6 +41,7 @@ class Plane {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'TDViewBorders' has no initializer and is... Remove this comment to see the full error message
   TDViewBorders: THREE.Line;
   lastScaleFactors: [number, number];
+  baseRotation: THREE.Euler;
 
   constructor(planeID: OrthoView) {
     this.planeID = planeID;
@@ -53,6 +54,7 @@ class Plane {
     const baseVoxelFactors = getBaseVoxelFactorsInUnit(Store.getState().dataset.dataSource.scale);
     const scaleArray = Dimensions.transDim(baseVoxelFactors, this.planeID);
     this.baseScaleVector = new THREE.Vector3(...scaleArray);
+    this.baseRotation = new THREE.Euler(0, 0, 0);
     this.createMeshes();
   }
 
@@ -62,11 +64,13 @@ class Plane {
     const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, PLANE_SUBDIVISION, PLANE_SUBDIVISION);
     this.materialFactory = new PlaneMaterialFactory(
       this.planeID,
-      true,
+      false,
       OrthoViewValues.indexOf(this.planeID),
     );
     const textureMaterial = this.materialFactory.setup().getMaterial();
     this.plane = new THREE.Mesh(planeGeo, textureMaterial);
+    this.plane.name = `${this.planeID}-plane`;
+    this.plane.material.side = THREE.DoubleSide;
     // create crosshair
     const crosshairGeometries = [];
     this.crosshair = new Array(2);
@@ -94,6 +98,8 @@ class Plane {
       // The default renderOrder is 0. In order for the crosshairs to be shown
       // render them AFTER the plane has been rendered.
       this.crosshair[i].renderOrder = 1;
+      this.crosshair[i].name = `${this.planeID}-crosshair-${i}`;
+      this.crosshair[i].matrixAutoUpdate = false;
     }
 
     // create borders
@@ -109,6 +115,8 @@ class Plane {
       tdViewBordersGeo,
       this.getLineBasicMaterial(OrthoViewColors[this.planeID], 1),
     );
+    this.TDViewBorders.name = `${this.planeID}-TDViewBorders`;
+    this.TDViewBorders.matrixAutoUpdate = false;
   }
 
   setDisplayCrosshair = (value: boolean): void => {
@@ -156,9 +164,16 @@ class Plane {
     this.crosshair[1].scale.copy(scaleVec);
   }
 
+  setBaseRotation = (rotVec: THREE.Euler): void => {
+    this.baseRotation.copy(rotVec);
+  };
+
   setRotation = (rotVec: THREE.Euler): void => {
-    [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]].map((mesh) =>
-      mesh.setRotationFromEuler(rotVec),
+    const baseRotationMatrix = new THREE.Matrix4().makeRotationFromEuler(this.baseRotation);
+    const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(rotVec);
+    const combinedMatrix = baseRotationMatrix.multiply(rotationMatrix);
+    this.getMeshes().map((mesh) =>
+      mesh.setRotationFromMatrix(combinedMatrix),
     );
   };
 
@@ -174,10 +189,8 @@ class Plane {
     this.plane.position.set(x, y, z);
 
     if (originalPosition == null) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'setGlobalPosition' does not exist on typ... Remove this comment to see the full error message
       this.plane.material.setGlobalPosition(x, y, z);
     } else {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'setGlobalPosition' does not exist on typ... Remove this comment to see the full error message
       this.plane.material.setGlobalPosition(
         originalPosition[0],
         originalPosition[1],
@@ -195,7 +208,6 @@ class Plane {
 
   getMeshes = () => [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]];
   setLinearInterpolationEnabled = (enabled: boolean) => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setUseBilinearFiltering' does not exist ... Remove this comment to see the full error message
     this.plane.material.setUseBilinearFiltering(enabled);
   };
 

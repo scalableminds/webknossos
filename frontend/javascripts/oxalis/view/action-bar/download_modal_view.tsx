@@ -25,6 +25,7 @@ import { LayerSelection } from "components/layer_selection";
 import features from "features";
 import { formatCountToDataAmountUnit, formatScale } from "libs/format_utils";
 import { makeComponentLazy, useFetch } from "libs/react_helpers";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import {
   computeArrayFromBoundingBox,
@@ -47,11 +48,10 @@ import {
   hasVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { Model } from "oxalis/singletons";
-import type { OxalisState, StoreAnnotation, UserBoundingBox } from "oxalis/store";
+import type { StoreAnnotation, UserBoundingBox } from "oxalis/store";
 import { BoundingBoxSelection, MagSlider } from "oxalis/view/action-bar/starting_job_modals";
 import type React from "react";
 import { useState } from "react";
-import { useSelector } from "react-redux";
 import {
   type APIDataLayer,
   type APIDataset,
@@ -276,18 +276,14 @@ function _DownloadModalView({
   initialTab,
   initialBoundingBoxId,
 }: Props): JSX.Element {
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  const annotation = useSelector((state: OxalisState) => state.annotation);
-  const dataset = useSelector((state: OxalisState) => state.dataset);
-  const rawUserBoundingBoxes = useSelector((state: OxalisState) =>
-    getUserBoundingBoxesFromState(state),
-  );
-  const currentAdditionalCoordinates = useSelector(
-    (state: OxalisState) => state.flycam.additionalCoordinates,
-  );
+  const activeUser = useWkSelector((state) => state.activeUser);
+  const annotation = useWkSelector((state) => state.annotation);
+  const dataset = useWkSelector((state) => state.dataset);
+  const rawUserBoundingBoxes = useWkSelector((state) => getUserBoundingBoxesFromState(state));
+  const currentAdditionalCoordinates = useWkSelector((state) => state.flycam.additionalCoordinates);
   const typeName = isAnnotation ? "annotation" : "dataset";
-  const isMergerModeEnabled = useSelector(
-    (state: OxalisState) => state.temporaryConfiguration.isMergerModeEnabled,
+  const isMergerModeEnabled = useWkSelector(
+    (state) => state.temporaryConfiguration.isMergerModeEnabled,
   );
   const hasVolumeFallback = annotation.volumes.some((volume) => volume.fallbackLayer != null);
   const isVolumeNDimensional = annotation.volumes.some(

@@ -21,7 +21,7 @@ import type { TDViewDisplayMode } from "oxalis/constants";
 import { TDViewDisplayModeEnum } from "oxalis/constants";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { api } from "oxalis/singletons";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 type Props = {
@@ -140,7 +140,7 @@ function TDViewControls({
   );
 }
 
-function mapStateToProps(state: OxalisState) {
+function mapStateToProps(state: WebknossosState) {
   return {
     tdViewDisplayPlanes: state.userConfiguration.tdViewDisplayPlanes,
     tdViewDisplayDatasetBorders: state.userConfiguration.tdViewDisplayDatasetBorders,

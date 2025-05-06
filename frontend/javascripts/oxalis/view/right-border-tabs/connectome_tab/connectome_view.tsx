@@ -6,7 +6,6 @@ import {
   getSynapsesOfAgglomerates,
 } from "admin/rest_api";
 import { Alert, Empty, Space, Tooltip, type TreeProps } from "antd";
-import Maybe from "data.maybe";
 import DiffableMap from "libs/diffable_map";
 import { stringToAntdColorPresetRgb } from "libs/format_utils";
 import Toast from "libs/toast";
@@ -37,7 +36,7 @@ import type {
   MutableNode,
   MutableTree,
   MutableTreeMap,
-  OxalisState,
+  WebknossosState,
 } from "oxalis/store";
 import Store from "oxalis/store";
 import ButtonComponent from "oxalis/view/components/button_component";
@@ -73,7 +72,7 @@ type StateProps = {
   mappingInfo: ActiveMappingInfo | null | undefined;
 };
 
-const mapStateToProps = (state: OxalisState): StateProps => {
+const mapStateToProps = (state: WebknossosState): StateProps => {
   const segmentationLayer = getVisibleOrLastSegmentationLayer(state);
   const connectomeData =
     segmentationLayer != null
@@ -317,9 +316,7 @@ class ConnectomeView extends React.Component<Props, State> {
     Store.dispatch(initializeConnectomeTracingAction(segmentationLayer.name));
     this.skeletonId = getSceneController().addSkeleton(
       (state) =>
-        Maybe.fromNullable(
-          state.localSegmentationData[segmentationLayer.name].connectomeData.skeleton,
-        ),
+        state.localSegmentationData[segmentationLayer.name].connectomeData.skeleton ?? null,
       false,
     );
   }

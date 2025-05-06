@@ -20,7 +20,7 @@ import type {
   DatasetLayerConfiguration,
   MappingType,
   MeshInformation,
-  OxalisState,
+  WebknossosState,
 } from "oxalis/store";
 import Store from "oxalis/store";
 import { type APIAnnotationType, APICompoundTypeEnum } from "types/api_types";
@@ -280,7 +280,7 @@ class UrlManager {
     window.onhashchange = null;
   }
 
-  getUrlState(state: OxalisState): UrlManagerState & { mode: ViewMode } {
+  getUrlState(state: WebknossosState): UrlManagerState & { mode: ViewMode } {
     const position: Vector3 = V3.floor(getPosition(state.flycam));
     const { viewMode: mode } = state.temporaryConfiguration;
     const zoomStep = Utils.roundTo(state.flycam.zoomStep, 3);
@@ -381,7 +381,7 @@ class UrlManager {
     };
   }
 
-  buildUrlHashCsv(state: OxalisState): string {
+  buildUrlHashCsv(state: WebknossosState): string {
     const { position = [], mode, zoomStep, rotation = [], activeNode } = this.getUrlState(state);
     const viewModeIndex = ViewModeValues.indexOf(mode);
     const activeNodeArray = activeNode != null ? [activeNode] : [];
@@ -399,7 +399,7 @@ class UrlManager {
     ].join(",");
   }
 
-  buildUrlHashJson(state: OxalisState): string {
+  buildUrlHashJson(state: WebknossosState): string {
     const urlState = this.getUrlState(state);
     return encodeUrlHash(JSON.stringify(urlState));
   }

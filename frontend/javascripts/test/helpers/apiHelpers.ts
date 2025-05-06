@@ -28,7 +28,7 @@ import { setSlowCompression } from "oxalis/workers/slow_byte_array_lz4_compressi
 import Model from "oxalis/model";
 import UrlManager from "oxalis/controller/url_manager";
 
-import OxalisApi from "oxalis/api/api_loader";
+import WebknossosApi from "oxalis/api/api_loader";
 import { default as Store, startSaga } from "oxalis/store";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import { setStore, setModel } from "oxalis/singletons";
@@ -194,7 +194,7 @@ export async function setupWebknossosForTesting(
       layer.pullQueue.abortRequests();
     });
 
-  const webknossos = new OxalisApi(Model);
+  const webknossos = new WebknossosApi(Model);
   const annotationFixture = modelData[mode].annotation;
 
   vi.mocked(Request).receiveJSON.mockImplementation((url, options) =>

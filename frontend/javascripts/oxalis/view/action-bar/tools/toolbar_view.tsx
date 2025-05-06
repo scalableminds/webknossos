@@ -1,8 +1,9 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { Radio, type RadioChangeEvent, Space, Tag } from "antd";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 
 import { useKeyPress } from "libs/react_hooks";
+import { useWkSelector } from "libs/react_hooks";
 import {
   AnnotationTool,
   MeasurementTools,
@@ -14,7 +15,7 @@ import {
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
-import Store, { type OxalisState } from "oxalis/store";
+import Store from "oxalis/store";
 import ButtonComponent, { ToggleButton } from "oxalis/view/components/button_component";
 
 import FastTooltip from "components/fast_tooltip";
@@ -79,10 +80,10 @@ const handleSetTool = (event: RadioChangeEvent) => {
 };
 
 export default function ToolbarView() {
-  const hasVolume = useSelector((state: OxalisState) => state.annotation?.volumes.length > 0);
-  const hasSkeleton = useSelector((state: OxalisState) => state.annotation?.skeleton != null);
-  const toolkit = useSelector((state: OxalisState) => state.userConfiguration.activeToolkit);
-  const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
+  const hasVolume = useWkSelector((state) => state.annotation?.volumes.length > 0);
+  const hasSkeleton = useWkSelector((state) => state.annotation?.skeleton != null);
+  const toolkit = useWkSelector((state) => state.userConfiguration.activeToolkit);
+  const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
   const isSplitToolkit = toolkit === Toolkit.SPLIT_SEGMENTS;
 
   const isShiftPressed = useKeyPress("Shift");
@@ -147,9 +148,7 @@ function ToolSpecificSettings({
     (adaptedActiveTool === AnnotationTool.BRUSH ||
       adaptedActiveTool === AnnotationTool.ERASE_BRUSH);
   const dispatch = useDispatch();
-  const quickSelectConfig = useSelector(
-    (state: OxalisState) => state.userConfiguration.quickSelect,
-  );
+  const quickSelectConfig = useWkSelector((state) => state.userConfiguration.quickSelect);
   const isAISelectAvailable = features().segmentAnythingEnabled;
   const isQuickSelectHeuristic = quickSelectConfig.useHeuristic || !isAISelectAvailable;
   const quickSelectTooltipText = isAISelectAvailable

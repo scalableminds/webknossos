@@ -32,7 +32,7 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
 import { Unicode } from "oxalis/constants";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { Hint } from "oxalis/view/action-bar/download_modal_view";
 import React, { useEffect, useState } from "react";
 import { connect } from "react-redux";
@@ -729,7 +729,7 @@ function AddRemoteLayer({
   );
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   activeUser: state.activeUser,
 });
 

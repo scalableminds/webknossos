@@ -144,7 +144,6 @@
     "comlink": "^4.3.0",
     "cwise": "^1.0.10",
     "dagre": "^0.8.5",
-    "data.maybe": "^1.2.2",
     "dayjs": "^1.11.13",
     "deep-for-each": "^2.0.3",
     "deep-freeze": "0.0.1",

@@ -44,7 +44,7 @@ import window from "libs/window";
 import _ from "lodash";
 import Navbar from "navbar";
 import { ControlModeEnum } from "oxalis/constants";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import HelpButton from "oxalis/view/help_modal";
 import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
 import React from "react";
@@ -802,7 +802,7 @@ class ReactRouter extends React.Component<Props> {
   }
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   activeUser: state.activeUser,
   pricingPlan: state.activeOrganization
     ? state.activeOrganization.pricingPlan

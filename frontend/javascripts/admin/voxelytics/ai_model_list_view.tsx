@@ -11,24 +11,24 @@ import { Button, Col, Modal, Row, Select, Space, Table, Typography } from "antd"
 import FormattedDate from "components/formatted_date";
 import { PageNotAvailableToNormalUser } from "components/permission_enforcer";
 import { useFetch, useGuardedFetch } from "libs/react_helpers";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import _ from "lodash";
 import type { Vector3 } from "oxalis/constants";
 import { getMagInfo, getSegmentationLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { formatUserName } from "oxalis/model/accessors/user_accessor";
-import type { OxalisState } from "oxalis/store";
 import {
   type AnnotationInfoForAITrainingJob,
   TrainAiModelTab,
 } from "oxalis/view/jobs/train_ai_model";
 import { useState } from "react";
 import type { Key } from "react";
-import { useSelector } from "react-redux";
+
 import { Link } from "react-router-dom";
 import type { APIAnnotation, AiModel } from "types/api_types";
 
 export default function AiModelListView() {
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useWkSelector((state) => state.activeUser);
   const [refreshCounter, setRefreshCounter] = useState(0);
   const [isTrainModalVisible, setIsTrainModalVisible] = useState(false);
   const [currentlyEditedModel, setCurrentlyEditedModel] = useState<AiModel | null>(null);

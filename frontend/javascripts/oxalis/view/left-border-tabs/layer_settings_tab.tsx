@@ -29,6 +29,7 @@ import { HoverIconButton } from "components/hover_icon_button";
 import update from "immutability-helper";
 import ErrorHandling from "libs/error_handling";
 import { M4x4, V3 } from "libs/mjs";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import _ from "lodash";
@@ -96,9 +97,9 @@ import { api } from "oxalis/singletons";
 import type {
   DatasetConfiguration,
   DatasetLayerConfiguration,
-  OxalisState,
   UserConfiguration,
   VolumeTracing,
+  WebknossosState,
 } from "oxalis/store";
 import Store from "oxalis/store";
 import { MaterializeVolumeAnnotationModal } from "oxalis/view/action-bar/starting_job_modals";
@@ -113,7 +114,7 @@ import {
   SwitchSetting,
 } from "oxalis/view/components/setting_input_views";
 import React, { useCallback } from "react";
-import { connect, useDispatch, useSelector } from "react-redux";
+import { connect, useDispatch } from "react-redux";
 import type { Dispatch } from "redux";
 import {
   APIAnnotationTypeEnum,
@@ -192,7 +193,7 @@ function DummyDragHandle({ tooltipTitle }: { tooltipTitle: string }) {
 
 function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer }) {
   const dispatch = useDispatch();
-  const transform = useSelector((state: OxalisState) =>
+  const transform = useWkSelector((state) =>
     getTransformsForLayerOrNull(
       state.dataset,
       layer,
@@ -200,11 +201,11 @@ function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer 
     ),
   );
   const canLayerHaveTransforms = !isLayerWithoutTransformationConfigSupport(layer);
-  const hasLayerTransformsConfigured = useSelector(
-    (state: OxalisState) => getTransformsForLayerOrNull(state.dataset, layer, null) != null,
+  const hasLayerTransformsConfigured = useWkSelector(
+    (state) => getTransformsForLayerOrNull(state.dataset, layer, null) != null,
   );
 
-  const showIcon = useSelector((state: OxalisState) => hasDatasetTransforms(state.dataset));
+  const showIcon = useWkSelector((state) => hasDatasetTransforms(state.dataset));
   if (!showIcon) {
     return null;
   }
@@ -1596,7 +1597,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   }
 }
 
-const mapStateToProps = (state: OxalisState) => ({
+const mapStateToProps = (state: WebknossosState) => ({
   userConfiguration: state.userConfiguration,
   datasetConfiguration: state.datasetConfiguration,
   histogramData: state.temporaryConfiguration.histogramData,

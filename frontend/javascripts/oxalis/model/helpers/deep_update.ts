@@ -5,39 +5,39 @@
 // updateKey2(state, "viewModeData", "plane", { activeViewport: "PLANE_XY" });
 // The last parameter can hold multiple key-value pairs. Only the used keys will be updated.
 
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 
-export function updateKey<Key1 extends keyof OxalisState>(
-  state: OxalisState,
-  key: keyof OxalisState,
-  shape: Partial<OxalisState[Key1]>,
-): OxalisState {
+export function updateKey<Key1 extends keyof WebknossosState>(
+  state: WebknossosState,
+  key: keyof WebknossosState,
+  shape: Partial<WebknossosState[Key1]>,
+): WebknossosState {
   return { ...state, [key]: { ...state[key], ...shape } };
 }
 
 export function updateKey2<
-  TKey1 extends keyof OxalisState & string,
-  TKey2 extends keyof OxalisState[TKey1] & string,
+  TKey1 extends keyof WebknossosState & string,
+  TKey2 extends keyof WebknossosState[TKey1] & string,
 >(
-  state: OxalisState,
+  state: WebknossosState,
   key1: TKey1,
   key2: TKey2,
-  shape: Partial<OxalisState[TKey1][TKey2]>,
-): OxalisState {
+  shape: Partial<WebknossosState[TKey1][TKey2]>,
+): WebknossosState {
   // @ts-expect-error
   return { ...state, [key1]: { ...state[key1], [key2]: { ...state[key1][key2], ...shape } } };
 }
 export function updateKey3<
-  TKey1 extends keyof OxalisState & string,
-  TKey2 extends keyof OxalisState[TKey1] & string,
-  TKey3 extends keyof OxalisState[TKey1][TKey2] & string,
+  TKey1 extends keyof WebknossosState & string,
+  TKey2 extends keyof WebknossosState[TKey1] & string,
+  TKey3 extends keyof WebknossosState[TKey1][TKey2] & string,
 >(
-  state: OxalisState,
+  state: WebknossosState,
   key1: TKey1,
   key2: TKey2,
   key3: TKey3,
-  shape: Partial<OxalisState[TKey1][TKey2][TKey3]>,
-): OxalisState {
+  shape: Partial<WebknossosState[TKey1][TKey2][TKey3]>,
+): WebknossosState {
   return {
     ...state,
     [key1]: {
@@ -48,18 +48,18 @@ export function updateKey3<
   };
 }
 export function updateKey4<
-  TKey1 extends keyof OxalisState & string,
-  TKey2 extends keyof OxalisState[TKey1] & string,
-  TKey3 extends keyof OxalisState[TKey1][TKey2] & string,
-  TKey4 extends keyof OxalisState[TKey1][TKey2][TKey3] & (string | number),
+  TKey1 extends keyof WebknossosState & string,
+  TKey2 extends keyof WebknossosState[TKey1] & string,
+  TKey3 extends keyof WebknossosState[TKey1][TKey2] & string,
+  TKey4 extends keyof WebknossosState[TKey1][TKey2][TKey3] & (string | number),
 >(
-  state: OxalisState,
+  state: WebknossosState,
   key1: TKey1,
   key2: TKey2,
   key3: TKey3,
   key4: TKey4,
-  shape: Partial<OxalisState[TKey1][TKey2][TKey3][TKey4]>,
-): OxalisState {
+  shape: Partial<WebknossosState[TKey1][TKey2][TKey3][TKey4]>,
+): WebknossosState {
   return {
     ...state,
     [key1]: {

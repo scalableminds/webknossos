@@ -1,12 +1,11 @@
 import { getProjects } from "admin/rest_api";
 import { Select } from "antd";
 import { useFetch } from "libs/react_helpers";
+import { useWkSelector } from "libs/react_hooks";
 import { isUserAdminOrTeamManager } from "libs/utils";
 import { AnnotationStateFilterEnum, AnnotationTypeFilterEnum } from "oxalis/constants";
-import type { OxalisState } from "oxalis/store";
 import type React from "react";
 import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
 
 type ProjectAndTypeDropdownProps = {
   selectedProjectIds: string[];
@@ -57,7 +56,7 @@ function ProjectAndAnnotationTypeDropdown({
   // It is mainly used to determine the selected items in the multiselect form item.
   const [selectedFilters, setSelectedFilters] = useState(Array<string>);
   const [filterOptions, setFilterOptions] = useState<Array<NestedSelectOptions>>([]);
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useWkSelector((state) => state.activeUser);
   const allProjects = useFetch(
     async () => {
       if (activeUser == null || !isUserAdminOrTeamManager(activeUser)) return [];

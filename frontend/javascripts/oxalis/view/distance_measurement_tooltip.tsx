@@ -7,6 +7,7 @@ import {
   formatNumberToArea,
   formatNumberToLength,
 } from "libs/format_utils";
+import { useWkSelector } from "libs/react_hooks";
 import { clamp } from "libs/utils";
 import { LongUnitToShortUnitMap, type Vector3 } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
@@ -18,9 +19,8 @@ import {
 } from "oxalis/model/accessors/view_mode_accessor";
 import { hideMeasurementTooltipAction } from "oxalis/model/actions/ui_actions";
 import dimensions from "oxalis/model/dimensions";
-import type { OxalisState } from "oxalis/store";
 import { useEffect, useRef } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 
 const TOOLTIP_HEIGHT = 48;
 const ADDITIONAL_OFFSET = 12;
@@ -41,16 +41,14 @@ function DistanceEntry({ distance }: { distance: string }) {
 }
 
 export default function DistanceMeasurementTooltip() {
-  const position = useSelector(
-    (state: OxalisState) => state.uiInformation.measurementToolInfo.lastMeasuredPosition,
+  const position = useWkSelector(
+    (state) => state.uiInformation.measurementToolInfo.lastMeasuredPosition,
   );
-  const isMeasuring = useSelector(
-    (state: OxalisState) => state.uiInformation.measurementToolInfo.isMeasuring,
-  );
-  const flycam = useSelector((state: OxalisState) => state.flycam);
-  const state = useSelector((state: OxalisState) => state);
-  const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
-  const voxelSize = useSelector((state: OxalisState) => state.dataset.dataSource.scale);
+  const isMeasuring = useWkSelector((state) => state.uiInformation.measurementToolInfo.isMeasuring);
+  const flycam = useWkSelector((state) => state.flycam);
+  const state = useWkSelector((state) => state);
+  const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
+  const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const dispatch = useDispatch();
   const currentPosition = getPosition(flycam);

@@ -38,14 +38,14 @@ class BoundingBox {
     return [u, v];
   }
 
-  static fromBucketAddress(address: Vector4, mag: Vector3): BoundingBox | null {
+  static fromBucketAddress(address: Vector4, mag: Vector3): BoundingBox {
     return new BoundingBox(this.fromBucketAddressFast(address, mag));
   }
 
   static fromBucketAddressFast(
     [x, y, z, _zoomStep]: Vector4,
     mag: Vector3,
-  ): { min: Vector3; max: Vector3 } | null {
+  ): { min: Vector3; max: Vector3 } {
     /*
      The fast variant does not allocate a Bounding Box instance which can be helpful for tight loops.
      */

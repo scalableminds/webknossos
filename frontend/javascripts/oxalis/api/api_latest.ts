@@ -2186,7 +2186,10 @@ class DataApi {
   ) {
     const state = Store.getState();
     const allowUpdate = state.annotation.restrictions.allowUpdate;
-    const additionalCoordinates = optAdditionalCoordinates ?? state.flycam.additionalCoordinates;
+    const additionalCoordinates =
+      optAdditionalCoordinates === undefined
+        ? state.flycam.additionalCoordinates
+        : optAdditionalCoordinates;
     if (!allowUpdate || globalPositionsMag1.length === 0) return;
 
     const volumeTracing = enforceActiveVolumeTracing(state);

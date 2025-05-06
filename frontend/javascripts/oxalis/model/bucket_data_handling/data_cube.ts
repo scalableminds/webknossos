@@ -520,33 +520,6 @@ class DataCube {
     }
   }
 
-  async _labelVoxelInAllResolutions_DEPRECATED(
-    voxel: Vector3,
-    additionalCoordinates: AdditionalCoordinate[] | null,
-    label: number,
-    activeSegmentId?: number | null | undefined,
-  ): Promise<void> {
-    // This function is only provided for the wK front-end api and should not be used internally,
-    // since it only operates on one voxel and therefore is not performance-optimized.
-    // Please make use of a LabeledVoxelsMap instead.
-    const promises = [];
-
-    for (const [magIndex] of this.magInfo.getMagsWithIndices()) {
-      promises.push(
-        this._labelVoxelInResolution_DEPRECATED(
-          voxel,
-          additionalCoordinates,
-          label,
-          magIndex,
-          activeSegmentId,
-        ),
-      );
-    }
-
-    await Promise.all(promises);
-    this.triggerPushQueue();
-  }
-
   async _labelVoxelInResolution_DEPRECATED(
     voxel: Vector3,
     additionalCoordinates: AdditionalCoordinate[] | null,
@@ -554,6 +527,10 @@ class DataCube {
     zoomStep: number,
     activeSegmentId: number | null | undefined,
   ): Promise<void> {
+    // This function is only provided for testing purposes and should not be used internally,
+    // since it only operates on one voxel and therefore is not performance-optimized. It should
+    // be refactored away.
+    // Please make use of a LabeledVoxelsMap instead.
     const voxelInCube = this.boundingBox.containsPoint(voxel);
 
     if (voxelInCube) {

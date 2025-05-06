@@ -448,7 +448,7 @@ describe("Volume Tracing", () => {
     Group 2
       Segment 3
       Segment 4
-  */
+    */
     Store.dispatch(
       setSegmentGroupsAction(
         [

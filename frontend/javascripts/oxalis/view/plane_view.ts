@@ -3,16 +3,25 @@ import VisibilityAwareRaycaster from "libs/visibility_aware_raycaster";
 import window from "libs/window";
 import _ from "lodash";
 import type { OrthoViewMap, Vector2, Vector3, Viewport } from "oxalis/constants";
-import Constants, { OrthoViewColors, OrthoViewValues, OrthoViews } from "oxalis/constants";
+import Constants, {
+  ARBITRARY_CAM_DISTANCE,
+  OrthoViewColors,
+  OrthoViewValues,
+  OrthoViewValuesWithoutTDView,
+  OrthoViews,
+} from "oxalis/constants";
 import type { VertexSegmentMapping } from "oxalis/controller/mesh_helpers";
+import { OrthoBaseRotations } from "oxalis/controller/scene_controller";
 import getSceneController, {
   getSceneControllerOrNull,
 } from "oxalis/controller/scene_controller_provider";
 import type { MeshSceneNode, SceneGroupForMeshes } from "oxalis/controller/segment_mesh_controller";
+import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
+import Dimensions from "oxalis/model/dimensions";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Store from "oxalis/store";
 import { getGroundTruthLayoutRect } from "oxalis/view/layouting/default_layout_configs";
@@ -72,6 +81,7 @@ class PlaneView {
       scene.add(cameras[plane]);
     }
     this.cameras = cameras;
+    // TODOM: next up rotate the cameras as well
 
     createDirLight([10, 10, 10], [0, 0, 10], LIGHT_INTENSITY, this.cameras[OrthoViews.TDView]);
     createDirLight([-10, 10, 10], [0, 0, 10], LIGHT_INTENSITY, this.cameras[OrthoViews.TDView]);
@@ -83,6 +93,10 @@ class PlaneView {
     this.cameras[OrthoViews.PLANE_YZ].up = new THREE.Vector3(0, -1, 0);
     this.cameras[OrthoViews.PLANE_XZ].up = new THREE.Vector3(0, 0, -1);
     this.cameras[OrthoViews.TDView].up = new THREE.Vector3(0, 0, -1);
+    this.cameras[OrthoViews.PLANE_XY].matrixAutoUpdate = false;
+    this.cameras[OrthoViews.PLANE_YZ].matrixAutoUpdate = false;
+    this.cameras[OrthoViews.PLANE_XZ].matrixAutoUpdate = false;
+    this.cameras[OrthoViews.TDView].matrixAutoUpdate = true;
 
     for (const plane of OrthoViewValues) {
       this.cameras[plane].lookAt(new THREE.Vector3(0, 0, 0));
@@ -100,20 +114,57 @@ class PlaneView {
     window.requestAnimationFrame(() => this.animate());
   }
 
+  logMatrix(m: THREE.Matrix4): void {
+    const scale = new THREE.Vector3();
+    const rotation = new THREE.Quaternion();
+    const position = new THREE.Vector3();
+    m.decompose(position, rotation, scale);
+    const euler = new THREE.Euler();
+    euler.setFromQuaternion(rotation);
+    console.log("position", position, "rotation", euler, "scale", scale);
+    console.log("matrix", m);
+  }
+
   renderFunction(forceRender: boolean = false): void {
     // This is the main render function.
     // All 3D meshes and the trianglesplane are rendered here.
     TWEEN.update();
-    const SceneController = getSceneController();
+    const sceneController = getSceneController();
 
     // skip rendering if nothing has changed
     // This prevents the GPU/CPU from constantly
     // working and keeps your lap cool
     // ATTENTION: this limits the FPS to 60 FPS (depending on the keypress update frequency)
     if (forceRender || this.needsRerender) {
-      const { renderer, scene } = SceneController;
-      SceneController.update();
+      const { renderer, scene, planes } = sceneController;
+      sceneController.update();
       const storeState = Store.getState();
+      const zoomedFlycamMatrix = getZoomedMatrix(storeState.flycam);
+      for (const planeId of OrthoViewValuesWithoutTDView) {
+        planes[planeId].updateToFlycamMatrix(zoomedFlycamMatrix);
+        // TODOM: camera adjustment here!!!
+        const camera = this.cameras[planeId];
+        const m = zoomedFlycamMatrix;
+        //this.logMatrix(camera.matrix);
+        // biome-ignore format: don't format array
+        camera.matrix.set(
+          m[0], m[4], m[8], m[12],
+          m[1], m[5], m[9], m[13],
+          m[2], m[6], m[10], m[14],
+          m[3], m[7], m[11], m[15],
+        );
+        //this.logMatrix(camera.matrix);
+        const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(
+          OrthoBaseRotations[planeId],
+        );
+        camera.matrix.multiply(rotationMatrix);
+        camera.matrix.multiply(new THREE.Matrix4().makeTranslation(0, 0, ARBITRARY_CAM_DISTANCE));
+
+        //this.logMatrix(camera.matrix);
+
+        //this.logMatrix(camera.matrix);
+        camera.matrixWorldNeedsUpdate = true;
+      }
       const viewport = {
         [OrthoViews.PLANE_XY]: getInputCatcherRect(storeState, "PLANE_XY"),
         [OrthoViews.PLANE_YZ]: getInputCatcherRect(storeState, "PLANE_YZ"),
@@ -124,7 +175,7 @@ class PlaneView {
       clearCanvas(renderer);
 
       for (const plane of OrthoViewValues) {
-        SceneController.updateSceneForCam(plane);
+        sceneController.updateSceneForCam(plane);
         const { left, top, width, height } = viewport[plane];
 
         if (width > 0 && height > 0) {

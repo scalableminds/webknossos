@@ -1,5 +1,5 @@
 import _ from "lodash";
-import constants, { OrthoViews } from "oxalis/constants";
+import constants, { OrthoView, OrthoViews } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
@@ -27,12 +27,15 @@ type ArbitraryMeshes = {
 class ArbitraryPlane {
   meshes: ArbitraryMeshes;
   isDirty: boolean;
+  planeID: OrthoView;
   stopStoreListening: () => void;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'materialFactory' has no initializer and ... Remove this comment to see the full error message
   materialFactory: PlaneMaterialFactory;
+  baseRotation: THREE.Euler = new THREE.Euler(0, 0, 0);
 
-  constructor() {
+  constructor(planeID: OrthoView) {
     this.isDirty = true;
+    this.planeID = planeID;
     this.meshes = this.createMeshes();
     this.stopStoreListening = Store.subscribe(() => {
       this.isDirty = true;
@@ -43,6 +46,9 @@ class ArbitraryPlane {
     this.stopStoreListening();
     this.materialFactory.stopListening();
   }
+  setBaseRotation = (rotation: THREE.Euler) => {
+    this.baseRotation = rotation;
+  };
 
   setPosition = (x: number, y: number, z: number) => {
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'setGlobalPosition' does not exist on typ... Remove this comment to see the full error message
@@ -66,6 +72,7 @@ class ArbitraryPlane {
           return;
         }
 
+        // TODOM: This needs to be done to the plane view planes as well
         const meshMatrix = new THREE.Matrix4();
         meshMatrix.set(
           matrix[0],
@@ -87,7 +94,7 @@ class ArbitraryPlane {
         );
         mesh.matrix.identity();
         mesh.matrix.multiply(meshMatrix);
-        mesh.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
+        mesh.matrix.multiply(new THREE.Matrix4().makeRotationFromEuler(this.baseRotation));
         mesh.matrixWorldNeedsUpdate = true;
       };
 
@@ -106,7 +113,7 @@ class ArbitraryPlane {
       return _plane;
     };
 
-    this.materialFactory = new PlaneMaterialFactory(OrthoViews.PLANE_XY, false, 4);
+    this.materialFactory = new PlaneMaterialFactory(this.planeID, false, 4);
     const textureMaterial = this.materialFactory.setup().getMaterial();
     const mainPlane = adaptPlane(
       new THREE.Mesh(

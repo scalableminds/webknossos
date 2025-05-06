@@ -1,3 +1,4 @@
+import type { Matrix4x4 } from "libs/mjs";
 import _ from "lodash";
 import type { OrthoView, Vector3 } from "oxalis/constants";
 import constants, {
@@ -6,6 +7,7 @@ import constants, {
   OrthoViewGrayCrosshairColor,
   OrthoViewValues,
 } from "oxalis/constants";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
 import Dimensions from "oxalis/model/dimensions";
 import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
@@ -31,7 +33,7 @@ class Plane {
   // This class is supposed to collect all the Geometries that belong to one single plane such as
   // the plane itself, its texture, borders and crosshairs.
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'plane' has no initializer and is not def... Remove this comment to see the full error message
-  plane: THREE.Mesh;
+  plane: THREE.Mesh<PlaneGeometry, ShaderMaterial, Object3DEventMap>;
   planeID: OrthoView;
   materialFactory!: PlaneMaterialFactory;
   displayCrosshair: boolean;
@@ -41,11 +43,18 @@ class Plane {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'TDViewBorders' has no initializer and is... Remove this comment to see the full error message
   TDViewBorders: THREE.Line;
   lastScaleFactors: [number, number];
+  isDirty: boolean;
+  baseRotation: THREE.Euler;
+  stopStoreListening: () => void;
+  // Stores whether the meshes are currently offset for rendering one of the ortho views. This should not be the case when rendering the TD view.
+  areMeshesOffsetForOrthoViewRendering: boolean;
 
   constructor(planeID: OrthoView) {
     this.planeID = planeID;
     this.displayCrosshair = true;
     this.lastScaleFactors = [-1, -1];
+    this.isDirty = true;
+    this.areMeshesOffsetForOrthoViewRendering = false;
     // VIEWPORT_WIDTH means that the plane should be that many voxels wide in the
     // dimension with the highest mag. In all other dimensions, the plane
     // is smaller in voxels, so that it is squared in nm.
@@ -53,20 +62,27 @@ class Plane {
     const baseVoxelFactors = getBaseVoxelFactorsInUnit(Store.getState().dataset.dataSource.scale);
     const scaleArray = Dimensions.transDim(baseVoxelFactors, this.planeID);
     this.baseScaleVector = new THREE.Vector3(...scaleArray);
+    this.baseRotation = new THREE.Euler(0, 0, 0);
     this.createMeshes();
+    this.stopStoreListening = Store.subscribe(() => {
+      this.isDirty = true;
+    });
   }
 
   createMeshes(): void {
     const pWidth = constants.VIEWPORT_WIDTH;
     // create plane
-    const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, PLANE_SUBDIVISION, PLANE_SUBDIVISION);
+    const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 100, 100);
     this.materialFactory = new PlaneMaterialFactory(
       this.planeID,
-      true,
+      false,
       OrthoViewValues.indexOf(this.planeID),
     );
     const textureMaterial = this.materialFactory.setup().getMaterial();
     this.plane = new THREE.Mesh(planeGeo, textureMaterial);
+    this.plane.name = `${this.planeID}-plane`;
+    this.plane.matrixAutoUpdate = false;
+    this.plane.material.side = THREE.DoubleSide;
     // create crosshair
     const crosshairGeometries = [];
     this.crosshair = new Array(2);
@@ -94,6 +110,8 @@ class Plane {
       // The default renderOrder is 0. In order for the crosshairs to be shown
       // render them AFTER the plane has been rendered.
       this.crosshair[i].renderOrder = 1;
+      this.crosshair[i].name = `${this.planeID}-crosshair-${i}`;
+      this.crosshair[i].matrixAutoUpdate = false;
     }
 
     // create borders
@@ -109,6 +127,8 @@ class Plane {
       tdViewBordersGeo,
       this.getLineBasicMaterial(OrthoViewColors[this.planeID], 1),
     );
+    this.TDViewBorders.name = `${this.planeID}-TDViewBorders`;
+    this.TDViewBorders.matrixAutoUpdate = false;
   }
 
   setDisplayCrosshair = (value: boolean): void => {
@@ -139,12 +159,21 @@ class Plane {
     });
   };
 
+  // Is always called after updateToFlycamMatrix. thus, adding the new scale on top should be fine (I think).
   setScale(xFactor: number, yFactor: number): void {
+    // TODOM: This scale  will likely be overwritten by the flycam matrix
     if (this.lastScaleFactors[0] === xFactor && this.lastScaleFactors[1] === yFactor) {
       return;
     }
     this.lastScaleFactors[0] = xFactor;
     this.lastScaleFactors[1] = yFactor;
+    /*const additionalScale = new THREE.Vector3(xFactor, yFactor, 1);
+    this.getMeshes().forEach((mesh) => {
+      console.log("mesh", mesh.name, mesh.matrix.elements);
+      mesh.matrix.multiply(new THREE.Matrix4().makeScale(...additionalScale.toArray()));
+      console.log("mesh", mesh.name, mesh.matrix.elements);
+      mesh.matrixWorldNeedsUpdate = true;
+    });
 
     const scaleVec = new THREE.Vector3().multiplyVectors(
       new THREE.Vector3(xFactor, yFactor, 1),
@@ -153,13 +182,11 @@ class Plane {
     this.plane.scale.copy(scaleVec);
     this.TDViewBorders.scale.copy(scaleVec);
     this.crosshair[0].scale.copy(scaleVec);
-    this.crosshair[1].scale.copy(scaleVec);
+    this.crosshair[1].scale.copy(scaleVec);*/
   }
 
-  setRotation = (rotVec: THREE.Euler): void => {
-    [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]].map((mesh) =>
-      mesh.setRotationFromEuler(rotVec),
-    );
+  setBaseRotation = (rotVec: THREE.Euler): void => {
+    this.baseRotation.copy(rotVec);
   };
 
   // In case the plane's position was offset to make geometries
@@ -174,10 +201,8 @@ class Plane {
     this.plane.position.set(x, y, z);
 
     if (originalPosition == null) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'setGlobalPosition' does not exist on typ... Remove this comment to see the full error message
       this.plane.material.setGlobalPosition(x, y, z);
     } else {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'setGlobalPosition' does not exist on typ... Remove this comment to see the full error message
       this.plane.material.setGlobalPosition(
         originalPosition[0],
         originalPosition[1],
@@ -185,6 +210,111 @@ class Plane {
       );
     }
   };
+
+  offsetForRenderingOrthoView = (offset: THREE.Vector3, original: Vector3): void => {
+    if (this.areMeshesOffsetForOrthoViewRendering) {
+      return;
+    }
+    this.getMeshes().forEach((mesh) => {
+      mesh.matrix.multiply(new THREE.Matrix4().makeTranslation(offset));
+    });
+    // TODO: Test whether this.plane.position is up to date with what stored in the matrix
+    // get position from matrix
+    const currentPosition = new THREE.Vector3(
+      this.plane.matrix.elements[12],
+      this.plane.matrix.elements[13],
+      this.plane.matrix.elements[14],
+    );
+    this.plane.material.setGlobalPosition(
+      currentPosition.x + offset.x,
+      currentPosition.y + offset.y,
+      currentPosition.z + offset.z,
+    );
+    console.log(
+      "offsetForRenderingOrthoView",
+      offset,
+      currentPosition,
+      this.plane.material.globalPosition,
+      "original",
+      original,
+    );
+    this.areMeshesOffsetForOrthoViewRendering = true;
+  };
+
+  dontOffsetForRenderingTDView = (offset: THREE.Vector3, original: Vector3): void => {
+    if (!this.areMeshesOffsetForOrthoViewRendering) {
+      return;
+    }
+    offset.negate();
+    this.getMeshes().forEach((mesh) => {
+      mesh.matrix.multiply(new THREE.Matrix4().makeTranslation(offset));
+    });
+    // TODO: Test whether this.plane.position is up to date with what stored in the matrix
+    const currentPosition = new THREE.Vector3(
+      this.plane.matrix.elements[12],
+      this.plane.matrix.elements[13],
+      this.plane.matrix.elements[14],
+    );
+    this.plane.material.setGlobalPosition(
+      currentPosition.x + offset.x,
+      currentPosition.y + offset.y,
+      currentPosition.z + offset.z,
+    );
+    console.log(
+      "offsetForRenderingOrthoView",
+      offset,
+      this.plane.position,
+      currentPosition.sub(offset),
+      "original",
+      original,
+    );
+    this.areMeshesOffsetForOrthoViewRendering = false;
+  };
+
+  updateToFlycamMatrix(flycamMatrix: Matrix4x4): void {
+    // TODOM:
+    if (this.isDirty) {
+      const meshMatrix = new THREE.Matrix4();
+      meshMatrix.set(
+        flycamMatrix[0],
+        flycamMatrix[4],
+        flycamMatrix[8],
+        flycamMatrix[12],
+        flycamMatrix[1],
+        flycamMatrix[5],
+        flycamMatrix[9],
+        flycamMatrix[13],
+        flycamMatrix[2],
+        flycamMatrix[6],
+        flycamMatrix[10],
+        flycamMatrix[14],
+        flycamMatrix[3],
+        flycamMatrix[7],
+        flycamMatrix[11],
+        flycamMatrix[15],
+      );
+      const updateMesh = (mesh: THREE.Mesh | THREE.Line | null | undefined) => {
+        if (!mesh) {
+          return;
+        }
+        mesh.matrix.identity();
+        mesh.matrix.multiply(meshMatrix);
+        mesh.matrix.multiply(new THREE.Matrix4().makeRotationFromEuler(this.baseRotation));
+        mesh.matrix.multiply(
+          new THREE.Matrix4().makeScale(this.lastScaleFactors[0], this.lastScaleFactors[1], 1),
+        );
+        if (this.planeID === "PLANE_XY") {
+          // console.log("matrix plane", mesh.name, mesh.matrix);
+        }
+        mesh.matrixWorldNeedsUpdate = true;
+      };
+      this.getMeshes().forEach(updateMesh);
+
+      this.isDirty = false;
+      // TODOM: ignore error for now.
+      getSceneController().update();
+    }
+  }
 
   setVisible = (isVisible: boolean, isDataVisible?: boolean): void => {
     this.plane.visible = isDataVisible != null ? isDataVisible : isVisible;
@@ -195,11 +325,11 @@ class Plane {
 
   getMeshes = () => [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]];
   setLinearInterpolationEnabled = (enabled: boolean) => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setUseBilinearFiltering' does not exist ... Remove this comment to see the full error message
     this.plane.material.setUseBilinearFiltering(enabled);
   };
 
   destroy() {
+    this.stopStoreListening();
     this.materialFactory.destroy();
   }
 }

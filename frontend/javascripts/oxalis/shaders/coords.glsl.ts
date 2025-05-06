@@ -54,11 +54,8 @@ export const getWorldCoordUVW: ShaderModule = {
         // In orthogonal mode, the planes are offset in 3D space to allow skeletons to be rendered before
         // each plane. Since w (e.g., z for xy plane) is
         // the same for all texels computed in this shader, we simply use globalPosition[w] instead
-        <% if (isOrthogonal) { %>
-          getW(globalPosition)
-        <% } else { %>
-          worldCoordUVW.z / voxelSizeFactorUVW.z
-        <% } %>
+        // TODOM: if not rotated, getW can be used
+        worldCoordUVW.z / voxelSizeFactorUVW.z
       );
 
       return worldCoordUVW;

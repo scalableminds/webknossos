@@ -6,7 +6,6 @@ import Toast from "libs/toast";
 import { Vector3Input } from "libs/vector_input";
 import message from "messages";
 import type { Vector3, ViewMode } from "oxalis/constants";
-import constants from "oxalis/constants";
 import { getDatasetExtentInVoxel } from "oxalis/model/accessors/dataset_accessor";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
@@ -112,7 +111,6 @@ class DatasetPositionView extends PureComponent<Props> {
     }
 
     const rotation = V3.round(getRotation(this.props.flycam));
-    const isArbitraryMode = constants.MODES_ARBITRARY.includes(this.props.viewMode);
     const positionView = (
       <div
         style={{
@@ -142,7 +140,7 @@ class DatasetPositionView extends PureComponent<Props> {
           />
           <ShareButton dataset={this.props.dataset} style={iconColoringStyle} />
         </Space.Compact>
-        {isArbitraryMode ? (
+        {
           <Space.Compact
             style={{
               whiteSpace: "nowrap",
@@ -170,7 +168,7 @@ class DatasetPositionView extends PureComponent<Props> {
               allowDecimals
             />
           </Space.Compact>
-        ) : null}
+        }
       </div>
     );
     return (

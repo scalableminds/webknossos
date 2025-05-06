@@ -69,6 +69,13 @@ THREE.Mesh.prototype.raycast = acceleratedRaycast;
 const CUBE_COLOR = 0x999999;
 const LAYER_CUBE_COLOR = 0xffff99;
 
+export const OrthoBaseRotations = {
+  [OrthoViews.PLANE_XY]: new THREE.Euler(0, Math.PI, 0),
+  [OrthoViews.PLANE_YZ]: new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0),
+  [OrthoViews.PLANE_XZ]: new THREE.Euler((-1 / 2) * Math.PI, 0, 0),
+  [OrthoViews.TDView]: new THREE.Euler(Math.PI / 4, Math.PI / 4, Math.PI / 4),
+};
+
 const getVisibleSegmentationLayerNames = reuseInstanceOnEquality((storeState: OxalisState) =>
   getVisibleSegmentationLayers(storeState).map((l) => l.name),
 );
@@ -242,9 +249,9 @@ class SceneController {
       [OrthoViews.PLANE_YZ]: new Plane(OrthoViews.PLANE_YZ),
       [OrthoViews.PLANE_XZ]: new Plane(OrthoViews.PLANE_XZ),
     };
-    this.planes[OrthoViews.PLANE_XY].setRotation(new THREE.Euler(Math.PI, 0, 0));
-    this.planes[OrthoViews.PLANE_YZ].setRotation(new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0));
-    this.planes[OrthoViews.PLANE_XZ].setRotation(new THREE.Euler((-1 / 2) * Math.PI, 0, 0));
+    this.planes[OrthoViews.PLANE_XY].setBaseRotation(OrthoBaseRotations[OrthoViews.PLANE_XY]);
+    this.planes[OrthoViews.PLANE_YZ].setBaseRotation(OrthoBaseRotations[OrthoViews.PLANE_YZ]);
+    this.planes[OrthoViews.PLANE_XZ].setBaseRotation(OrthoBaseRotations[OrthoViews.PLANE_XZ]);
 
     const planeMeshes = _.values(this.planes).flatMap((plane) => plane.getMeshes());
     this.rootNode = new THREE.Group().add(
@@ -407,13 +414,17 @@ class SceneController {
           this.planes[planeId].setOriginalCrosshairColor();
           this.planes[planeId].setVisible(!hidePlanes);
 
-          const pos = _.clone(originalPosition);
-
           const ind = Dimensions.getIndices(planeId);
           // Offset the plane so the user can see the skeletonTracing behind the plane
-          pos[ind[2]] +=
+          const positionOffset: [number, number, number] = [0, 0, 0];
+          positionOffset[ind[2]] +=
             planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
-          this.planes[planeId].setPosition(pos, originalPosition);
+          //TODOM: adjust rotation of the plane
+
+          this.planes[planeId].offsetForRenderingOrthoView(
+            new THREE.Vector3(...positionOffset),
+            originalPosition,
+          );
 
           this.quickSelectGeometry.adaptVisibilityForRendering(originalPosition, ind[2]);
         } else {
@@ -423,11 +434,20 @@ class SceneController {
       }
     } else {
       for (const planeId of OrthoViewValuesWithoutTDView) {
-        this.planes[planeId].setPosition(originalPosition);
+        // this.planes[planeId].setPosition(originalPosition);
         this.planes[planeId].setGrayCrosshairColor();
         this.planes[planeId].setVisible(
           tdViewDisplayPlanes !== TDViewDisplayModeEnum.NONE,
           this.isPlaneVisible[planeId] && tdViewDisplayPlanes === TDViewDisplayModeEnum.DATA,
+        );
+        const ind = Dimensions.getIndices(planeId);
+        // Offset the plane so the user can see the skeletonTracing behind the plane
+        const positionOffset: [number, number, number] = [0, 0, 0];
+        positionOffset[ind[2]] +=
+          planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
+        this.planes[planeId].dontOffsetForRenderingTDView(
+          new THREE.Vector3(...positionOffset),
+          originalPosition,
         );
         this.planes[planeId].materialFactory.uniforms.is3DViewBeingRendered.value = true;
       }
@@ -447,6 +467,7 @@ class SceneController {
       );
     }
 
+    // TODO: maybe this needs to be removed!!!
     if (!optArbitraryPlane) {
       for (const currentPlane of _.values<Plane>(this.planes)) {
         const [scaleX, scaleY] = getPlaneScalingFactor(state, flycam, currentPlane.planeID);

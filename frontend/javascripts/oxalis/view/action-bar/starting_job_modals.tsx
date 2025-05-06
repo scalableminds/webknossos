@@ -721,18 +721,20 @@ function useCurrentlySelectedBoundingBox(
   return currentlySelectedBoundingBox;
 }
 
-const getBestMag = (
+// this function mirrors the selection of the mag
+// in voxelytics/worker/job_utils/voxelytics_utils.py select_mag_for_model_prediction
+const getBestFittingMagComparedToTrainingDS = (
   colorLayer: APIDataLayer,
-  meanVoxelSizeInMag1: Vector3,
+  datasetScaleMag1: Vector3,
   jobType: APIJobType.INFER_MITOCHONDRIA | APIJobType.INFER_NEURONS | APIJobType.INFER_NUCLEI,
 ) => {
   if (jobType === APIJobType.INFER_MITOCHONDRIA) {
-    // infer mitochondria model is trained on finest available mag
+    // infer_mitochondria_model always infers on the finest mag of the current dataset
     const magInfo = getMagInfo(colorLayer.resolutions);
     return magInfo.getFinestMag();
   }
-  const meanVoxelSizeInUnknownMag = MEAN_VX_SIZE[jobType];
-  let bestMag = colorLayer.resolutions[0];
+  const modelScale = MEAN_VX_SIZE[jobType];
+  let closestMagOfCurrentDS = colorLayer.resolutions[0];
   let bestDifference = [
     Number.POSITIVE_INFINITY,
     Number.POSITIVE_INFINITY,
@@ -740,24 +742,22 @@ const getBestMag = (
   ];
 
   for (const mag of colorLayer.resolutions) {
-    const diff = meanVoxelSizeInUnknownMag.map(
-      (dim, i) => Math.log2(dim * mag[i]) - Math.log2(meanVoxelSizeInMag1[i]),
+    const diff = datasetScaleMag1.map(
+      (dim, i) => Math.log2(dim * mag[i]) - Math.log2(modelScale[i]),
     );
-    console.log("mag", mag, diff); //TODO_c remove
     if (Math.abs(bestDifference[0]) > Math.abs(diff[0])) {
       bestDifference = diff;
-      bestMag = mag;
+      closestMagOfCurrentDS = mag;
     }
   }
-  //TODO_c remove
-  console.log(
-    "get best mag, dataset scale, meanVxInUnknownMag, bestDiff, bestMag ",
-    meanVoxelSizeInMag1,
-    meanVoxelSizeInUnknownMag,
-    bestDifference,
-    bestMag,
-  );
-  return bestMag;
+  const maxDistance = Math.max(...bestDifference);
+  const resultText = `Using mag [${closestMagOfCurrentDS}]. This results in an effective scale of [${datasetScaleMag1.map((scale, i) => Math.round(scale * closestMagOfCurrentDS[i]))}](compared to scale [${modelScale.map((scale) => Math.round(scale))}] used during training).`;
+  if (maxDistance > Math.log2(2)) {
+    Toast.warning(resultText);
+  } else {
+    Toast.info(resultText);
+  }
+  return closestMagOfCurrentDS;
 };
 
 const isBBoxTooSmall = (
@@ -771,8 +771,8 @@ const isBBoxTooSmall = (
 ) => {
   const minBBoxExtentInModelMag = MIN_BBOX_EXTENT[segmentationType];
   const extentFactor = bboxOrDS === "dataset" ? MIN_DATASET_RATIO_COMPARED_TO_MIN_BBOX : 1;
-  const minExtentInMag1 = minBBoxExtentInModelMag.map(
-    (extent, i) => extent * mag[i] * extentFactor,
+  const minExtentInMag1 = minBBoxExtentInModelMag.map((extent, i) =>
+    Math.round(extent * mag[i] * extentFactor),
   ) as Vector3;
   for (let i = 0; i < 3; i++) {
     if (bbox[i] < minExtentInMag1[i]) {
@@ -787,7 +787,7 @@ const isBBoxTooSmall = (
 };
 
 const isDatasetOrBoundingBoxTooSmall = (
-  bbox: Vector6 | Vector3,
+  bbox: Vector6,
   mag: Vector3,
   colorLayer: APIDataLayer,
   segmentationType:
@@ -803,7 +803,7 @@ const isDatasetOrBoundingBoxTooSmall = (
   if (isBBoxTooSmall(datasetExtent, segmentationType, mag, "dataset")) {
     return true;
   }
-  const bboxExtent = bbox.length === 6 ? (bbox.slice(3) as Vector3) : bbox;
+  const bboxExtent = bbox.slice(3) as Vector3;
   if (isBBoxTooSmall(bboxExtent, segmentationType, mag)) {
     return true;
   }
@@ -1071,7 +1071,7 @@ export function NeuronSegmentationForm() {
         }
 
         const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
-        const mag = getBestMag(
+        const mag = getBestFittingMagComparedToTrainingDS(
           colorLayer,
           dataset.dataSource.scale.factor,
           APIJobType.INFER_NEURONS,
@@ -1145,7 +1145,7 @@ export function MitochondriaSegmentationForm() {
           return;
         }
         const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
-        const mag = getBestMag(
+        const mag = getBestFittingMagComparedToTrainingDS(
           colorLayer,
           dataset.dataSource.scale.factor,
           APIJobType.INFER_MITOCHONDRIA,

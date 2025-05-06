@@ -171,6 +171,9 @@ function handleRemoveSegment(state: OxalisState, action: RemoveSegmentAction) {
 function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
   return updateSegments(state, action.layerName, (segments) => {
     const { segmentId, segment } = action;
+    if (segmentId === 0) {
+      return segments;
+    }
     const oldSegment = segments.getNullable(segmentId);
 
     let somePosition;

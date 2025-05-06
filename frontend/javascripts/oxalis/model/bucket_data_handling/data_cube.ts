@@ -48,7 +48,7 @@ const warnAboutTooManyAllocations = _.once(() => {
 });
 
 class CubeEntry {
-  data: Map<number, Bucket>;
+  data: Map<number, DataBucket>;
   boundary: Vector3;
 
   constructor(boundary: Vector3) {
@@ -310,15 +310,13 @@ class DataCube {
   // NULL_BUCKET if the bucket cannot possibly exist, e.g. because it is
   // outside the dataset's bounding box.
   getOrCreateBucket(address: BucketAddress): Bucket {
-    // todop: only check containment if getBucket did not find anything
-    const containment = this.checkContainment(address);
-    if (containment.type === "no") {
-      return this.getNullBucket();
-    }
-
     let bucket = this.getBucket(address);
 
     if (bucket instanceof NullBucket) {
+      const containment = this.checkContainment(address);
+      if (containment.type === "no") {
+        return this.getNullBucket();
+      }
       bucket = this.createBucket(address, containment);
     }
 
@@ -332,7 +330,7 @@ class DataCube {
     if (bucketIndex != null && cube != null) {
       const bucket = cube.data.get(bucketIndex);
 
-      if (bucket != null) {
+      if (bucket != null && _.isEqual(address, bucket.zoomedAddress)) {
         return bucket;
       }
     }

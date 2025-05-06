@@ -1,10 +1,10 @@
 import { Alert, Button, Checkbox, Col, Divider, Modal, Radio, Row, Space, Tooltip } from "antd";
 import React, { useState } from "react";
-import { useSelector } from "react-redux";
 
 import { startRenderAnimationJob } from "admin/rest_api";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import Store, { type MeshInformation, type OxalisState, type UserBoundingBox } from "oxalis/store";
+import Store, { type MeshInformation, type UserBoundingBox } from "oxalis/store";
 
 import { InfoCircleOutlined } from "@ant-design/icons";
 import {
@@ -50,7 +50,7 @@ const TARGET_TEXTURE_SIZE = 2000; // in pixels
 
 // Maximum number of triangles allowed in an animation to not overload the server
 // Remember: The backend worker code only simplifies meshes with >100.000 polygons; all other meshes are rendered as is
-const MAX_TRIANGLES_PER_ANIMATION = 20e6; // 20 million triangles
+const MAX_TRIANGLES_PER_ANIMATION = 20_000_000; // 20 million triangles
 
 function selectMagForTextureCreation(
   colorLayer: APIDataLayer,
@@ -115,7 +115,7 @@ function countTrianglesInMeshes(meshes: RenderAnimationOptions["meshes"]): numbe
 }
 
 export default function CreateAnimationModalWrapper(props: Props) {
-  const dataset = useSelector((state: OxalisState) => state.dataset);
+  const dataset = useWkSelector((state) => state.dataset);
 
   // early stop if no color layer exists
   const colorLayers = getColorLayers(dataset);
@@ -133,9 +133,9 @@ export default function CreateAnimationModalWrapper(props: Props) {
 
 function CreateAnimationModal(props: Props) {
   const { isOpen, onClose } = props;
-  const dataset = useSelector((state: OxalisState) => state.dataset);
-  const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const dataset = useWkSelector((state) => state.dataset);
+  const activeOrganization = useWkSelector((state) => state.activeOrganization);
+  const activeUser = useWkSelector((state) => state.activeUser);
 
   const colorLayers = getColorLayers(dataset);
 
@@ -146,9 +146,7 @@ function CreateAnimationModal(props: Props) {
   const [isValid, setIsValid] = useState(true);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
-  const rawUserBoundingBoxes = useSelector((state: OxalisState) =>
-    getUserBoundingBoxesFromState(state),
-  );
+  const rawUserBoundingBoxes = useWkSelector((state) => getUserBoundingBoxesFromState(state));
   const userBoundingBoxes = [
     ...rawUserBoundingBoxes,
     {

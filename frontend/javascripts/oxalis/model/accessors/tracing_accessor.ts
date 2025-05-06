@@ -3,12 +3,12 @@ import type { Vector3 } from "oxalis/constants";
 import type { SaveQueueType } from "oxalis/model/actions/save_actions";
 import type {
   EditableMapping,
-  OxalisState,
   ReadOnlyTracing,
   SkeletonTracing,
   StoreAnnotation,
   UserBoundingBox,
   VolumeTracing,
+  WebknossosState,
 } from "oxalis/store";
 import type { ServerTracing, TracingType } from "types/api_types";
 import { TracingTypeEnum } from "types/api_types";
@@ -58,7 +58,7 @@ export function getTracingType(annotation: StoreAnnotation): TracingType {
   throw new Error("The active annotation does not contain skeletons nor volume data");
 }
 export function selectTracing(
-  state: OxalisState,
+  state: WebknossosState,
   tracingType: SaveQueueType,
   tracingId: string,
 ): SkeletonTracing | VolumeTracing | EditableMapping {
@@ -99,15 +99,15 @@ function _getTaskBoundingBoxes(annotation: StoreAnnotation) {
 
 export const getTaskBoundingBoxes = reuseInstanceOnEquality(_getTaskBoundingBoxes);
 
-export const getUserBoundingBoxesFromState = (state: OxalisState): Array<UserBoundingBox> => {
+export const getUserBoundingBoxesFromState = (state: WebknossosState): UserBoundingBox[] => {
   const maybeSomeTracing = maybeGetSomeTracing(state.annotation);
   return maybeSomeTracing != null ? maybeSomeTracing.userBoundingBoxes : [];
 };
 
 export const getUserBoundingBoxesThatContainPosition = (
-  state: OxalisState,
+  state: WebknossosState,
   position: Vector3,
-): Array<UserBoundingBox> => {
+): UserBoundingBox[] => {
   const bboxes = getUserBoundingBoxesFromState(state);
 
   return bboxes.filter((el) => new BoundingBox(el.boundingBox).containsPoint(position));

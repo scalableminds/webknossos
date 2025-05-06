@@ -8,10 +8,9 @@ import { Alert, Button, Card, Col, Progress, Row, Tooltip } from "antd";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import dayjs from "dayjs";
 import { formatCountToDataAmountUnit, formatCreditsString } from "libs/format_utils";
+import { useWkSelector } from "libs/react_hooks";
 import Constants from "oxalis/constants";
-import type { OxalisState } from "oxalis/store";
 import type React from "react";
-import { useSelector } from "react-redux";
 import type { APIOrganization } from "types/api_types";
 import {
   PricingPlanEnum,
@@ -325,7 +324,7 @@ export function PlanDashboardCard({
 
 export function PlanExceededAlert({ organization }: { organization: APIOrganization }) {
   const hasPlanExpired = hasPricingPlanExpired(organization);
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useWkSelector((state) => state.activeUser);
 
   const message = hasPlanExpired
     ? "Your WEBKNOSSOS plan has expired. Renew your plan now to avoid being downgraded, users being blocked, and losing access to features."
@@ -361,7 +360,7 @@ export function PlanExceededAlert({ organization }: { organization: APIOrganizat
 
 export function PlanAboutToExceedAlert({ organization }: { organization: APIOrganization }) {
   const alerts = [];
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useWkSelector((state) => state.activeUser);
   const isAboutToExpire =
     dayjs.duration(dayjs(organization.paidUntil).diff(dayjs())).asWeeks() <= 6 &&
     !hasPricingPlanExpired(organization);

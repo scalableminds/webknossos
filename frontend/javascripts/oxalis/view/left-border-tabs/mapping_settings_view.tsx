@@ -22,7 +22,7 @@ import {
   setMappingAction,
   setMappingEnabledAction,
 } from "oxalis/model/actions/settings_actions";
-import type { EditableMapping, Mapping, MappingType, OxalisState } from "oxalis/store";
+import type { EditableMapping, Mapping, MappingType, WebknossosState } from "oxalis/store";
 import { SwitchSetting } from "oxalis/view/components/setting_input_views";
 import React from "react";
 import { connect } from "react-redux";
@@ -264,7 +264,7 @@ const mapDispatchToProps = {
   ensureLayerMappingsAreLoaded: ensureLayerMappingsAreLoadedAction,
 };
 
-function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
+function mapStateToProps(state: WebknossosState, ownProps: OwnProps) {
   const activeMappingInfo = getMappingInfo(
     state.temporaryConfiguration.activeMappingByLayer,
     ownProps.layerName,

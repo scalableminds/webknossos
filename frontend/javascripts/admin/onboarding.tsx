@@ -22,7 +22,7 @@ import LinkButton from "components/link_button";
 import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
 import features from "features";
 import Toast from "libs/toast";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import Store from "oxalis/store";
 import React, { useState } from "react";
 import { connect } from "react-redux";
@@ -728,7 +728,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
   }
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   activeUser: state.activeUser,
 });
 

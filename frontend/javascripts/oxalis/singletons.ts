@@ -1,13 +1,13 @@
 import type { Store as ReduxStore } from "redux";
 import type { ApiInterface } from "./api/api_latest";
 import type { OxalisModel } from "./model";
-import type { OxalisState } from "./store";
+import type { WebknossosState } from "./store";
 
-export let Store: ReduxStore<OxalisState>;
+export let Store: ReduxStore<WebknossosState>;
 export let Model: OxalisModel;
 export let api: ApiInterface;
 
-export const setStore = (_store: ReduxStore<OxalisState>) => {
+export const setStore = (_store: ReduxStore<WebknossosState>) => {
   Store = _store;
 };
 

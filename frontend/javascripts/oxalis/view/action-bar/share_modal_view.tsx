@@ -27,6 +27,7 @@ import { AsyncButton } from "components/async_clickables";
 import { PricingEnforcedBlur } from "components/pricing_enforcers";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import { makeComponentLazy } from "libs/react_helpers";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { location } from "libs/window";
 import _ from "lodash";
@@ -40,10 +41,9 @@ import {
   setOthersMayEditForAnnotationAction,
 } from "oxalis/model/actions/annotation_actions";
 import { setShareModalVisibilityAction } from "oxalis/model/actions/ui_actions";
-import Store, { type OxalisState } from "oxalis/store";
+import Store from "oxalis/store";
 import type React from "react";
 import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
 import type {
   APIAnnotationType,
   APIAnnotationVisibility,
@@ -77,7 +77,7 @@ function Hint({ children, style }: { children: React.ReactNode; style: React.CSS
 }
 
 export function useDatasetSharingToken(dataset: APIDataset) {
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useWkSelector((state) => state.activeUser);
   const [datasetToken, setDatasetToken] = useState("");
 
   const getAndSetToken = async () => {
@@ -124,8 +124,8 @@ export async function copyUrlToClipboard(url: string) {
 export function ShareButton(props: { dataset: APIDataset; style?: Record<string, any> }) {
   const { dataset, style } = props;
   const sharingToken = useDatasetSharingToken(props.dataset);
-  const annotationVisibility = useSelector((state: OxalisState) => state.annotation.visibility);
-  const controlMode = useSelector((state: OxalisState) => state.temporaryConfiguration.controlMode);
+  const annotationVisibility = useWkSelector((state) => state.annotation.visibility);
+  const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
   const isViewMode = controlMode === ControlModeEnum.VIEW;
   const isSandboxMode = controlMode === ControlModeEnum.SANDBOX;
   const isTraceMode = controlMode === ControlModeEnum.TRACE;
@@ -176,9 +176,9 @@ export function ShareButton(props: { dataset: APIDataset; style?: Record<string,
 
 function _ShareModalView(props: Props) {
   const { isOpen, onOk, annotationType, annotationId } = props;
-  const dataset = useSelector((state: OxalisState) => state.dataset);
-  const annotation = useSelector((state: OxalisState) => state.annotation);
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const dataset = useWkSelector((state) => state.dataset);
+  const annotation = useWkSelector((state) => state.annotation);
+  const activeUser = useWkSelector((state) => state.activeUser);
   const isAnnotationLockedByUser = annotation.isLockedByOwner;
 
   const annotationVisibility = annotation.visibility;
@@ -190,7 +190,7 @@ function _ShareModalView(props: Props) {
   const { othersMayEdit } = annotation;
   const [newOthersMayEdit, setNewOthersMayEdit] = useState(othersMayEdit);
 
-  const hasUpdatePermissions = useSelector(mayEditAnnotationProperties);
+  const hasUpdatePermissions = useWkSelector(mayEditAnnotationProperties);
   useEffect(() => setVisibility(annotationVisibility), [annotationVisibility]);
 
   const fetchAndSetSharedTeams = async () => {

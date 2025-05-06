@@ -1,7 +1,7 @@
 import { createScript, getScript, getTeamManagerOrAdminUsers, updateScript } from "admin/rest_api";
 import { Button, Card, Form, Input, Select } from "antd";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { useEffect, useState } from "react";
 import { connect } from "react-redux";
 import type { RouteComponentProps } from "react-router-dom";
@@ -130,7 +130,7 @@ function ScriptCreateView({ scriptId, activeUser, history }: PropsWithRouter) {
   );
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
 });
 

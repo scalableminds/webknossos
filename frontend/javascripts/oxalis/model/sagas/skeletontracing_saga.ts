@@ -67,10 +67,10 @@ import type {
   Flycam,
   Node,
   NodeMap,
-  OxalisState,
   SkeletonTracing,
   Tree,
   TreeMap,
+  WebknossosState,
 } from "oxalis/store";
 import Store from "oxalis/store";
 import {
@@ -94,7 +94,7 @@ function* centerActiveNode(action: Action): Saga<void> {
   }
   if (["DELETE_NODE", "DELETE_BRANCHPOINT"].includes(action.type)) {
     const centerNewNode = yield* select(
-      (state: OxalisState) => state.userConfiguration.centerNewNode,
+      (state: WebknossosState) => state.userConfiguration.centerNewNode,
     );
 
     if (!centerNewNode) {
@@ -104,11 +104,11 @@ function* centerActiveNode(action: Action): Saga<void> {
   }
 
   const activeNode = getActiveNode(
-    yield* select((state: OxalisState) => enforceSkeletonTracing(state.annotation)),
+    yield* select((state: WebknossosState) => enforceSkeletonTracing(state.annotation)),
   );
 
   if (activeNode != null) {
-    const activeNodePosition = yield* select((state: OxalisState) =>
+    const activeNodePosition = yield* select((state: WebknossosState) =>
       getNodePosition(activeNode, state),
     );
     if ("suppressAnimation" in action && action.suppressAnimation) {
@@ -134,7 +134,7 @@ function* watchBranchPointDeletion(): Saga<void> {
 
     if (deleteBranchpointAction) {
       const hasBranchPoints = yield* select(
-        (state: OxalisState) => (getBranchPoints(state.annotation) ?? []).length > 0,
+        (state: WebknossosState) => (getBranchPoints(state.annotation) ?? []).length > 0,
       );
 
       if (hasBranchPoints) {

@@ -54,7 +54,7 @@ import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import type { Transform } from "oxalis/model/helpers/transformation_helpers";
 import { getVoxelPerUnit } from "oxalis/model/scaleinfo";
 import { Model } from "oxalis/singletons";
-import type { OxalisState, SkeletonTracing, UserBoundingBox } from "oxalis/store";
+import type { SkeletonTracing, UserBoundingBox, WebknossosState } from "oxalis/store";
 import Store from "oxalis/store";
 import * as THREE from "three";
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from "three-mesh-bvh";
@@ -69,7 +69,7 @@ THREE.Mesh.prototype.raycast = acceleratedRaycast;
 const CUBE_COLOR = 0x999999;
 const LAYER_CUBE_COLOR = 0xffff99;
 
-const getVisibleSegmentationLayerNames = reuseInstanceOnEquality((storeState: OxalisState) =>
+const getVisibleSegmentationLayerNames = reuseInstanceOnEquality((storeState: WebknossosState) =>
   getVisibleSegmentationLayers(storeState).map((l) => l.name),
 );
 
@@ -306,7 +306,7 @@ class SceneController {
   }
 
   addSkeleton(
-    skeletonTracingSelector: (arg0: OxalisState) => SkeletonTracing | null,
+    skeletonTracingSelector: (arg0: WebknossosState) => SkeletonTracing | null,
     supportsPicking: boolean,
   ): number {
     const skeleton = new Skeleton(skeletonTracingSelector, supportsPicking);

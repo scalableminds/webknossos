@@ -25,12 +25,12 @@ import type {
   MutableTree,
   MutableTreeMap,
   NodeMap,
-  OxalisState,
   SkeletonTracing,
   StoreAnnotation,
   Tree,
   TreeGroup,
   UserBoundingBox,
+  WebknossosState,
 } from "oxalis/store";
 import { findGroup } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import Saxophone from "saxophone";
@@ -115,7 +115,7 @@ function serializeXmlComment(comment: string) {
   return `<!-- ${comment} -->`;
 }
 
-export function getNmlName(state: OxalisState): string {
+export function getNmlName(state: WebknossosState): string {
   // Use the same naming convention as the backend
   const { activeUser, dataset, task, annotation } = state;
   if (annotation.name !== "") return `${annotation.name}.nml`;
@@ -130,7 +130,7 @@ export function getNmlName(state: OxalisState): string {
   return `${datasetName}__${annotationTypeOrTaskId}__${userName}__${shortAnnotationId}.nml`;
 }
 export function serializeToNml(
-  state: OxalisState,
+  state: WebknossosState,
   annotation: StoreAnnotation,
   tracing: SkeletonTracing,
   buildInfo: APIBuildInfo,
@@ -157,7 +157,7 @@ export function serializeToNml(
 }
 
 function serializeMetaInformation(
-  state: OxalisState,
+  state: WebknossosState,
   annotation: StoreAnnotation,
   buildInfo: APIBuildInfo,
 ): Array<string> {
@@ -233,7 +233,7 @@ function serializeUserBoundingBox(bb: UserBoundingBox, tagName: string): string 
 }
 
 function serializeParameters(
-  state: OxalisState,
+  state: WebknossosState,
   annotation: StoreAnnotation,
   skeletonTracing: SkeletonTracing,
   applyTransform: boolean,
@@ -309,7 +309,7 @@ function serializeParameters(
   ];
 }
 
-function serializeTransform(state: OxalisState): string[] {
+function serializeTransform(state: WebknossosState): string[] {
   const transform = getTransformsForSkeletonLayer(
     state.dataset,
     state.datasetConfiguration.nativelyRenderedLayerName,
@@ -357,7 +357,7 @@ function serializeTransform(state: OxalisState): string[] {
 }
 
 function serializeTrees(
-  state: OxalisState,
+  state: WebknossosState,
   trees: Array<Tree>,
   applyTransform: boolean,
 ): Array<string> {
@@ -391,7 +391,7 @@ function serializeTrees(
 }
 
 function serializeNodes(
-  state: OxalisState,
+  state: WebknossosState,
   nodes: NodeMap,
   applyTransform: boolean,
 ): Array<string> {

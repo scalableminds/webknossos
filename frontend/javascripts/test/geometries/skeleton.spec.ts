@@ -6,7 +6,7 @@ import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_a
 import * as Utils from "libs/utils";
 import { describe, it, beforeAll, expect } from "vitest";
 import type { Vector3 } from "oxalis/constants";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { tracing, annotation } from "../fixtures/skeletontracing_server_objects";
 import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reducers/reducer_helpers";
 import { batchedAnnotationInitializationAction } from "oxalis/model/actions/annotation_actions";
@@ -25,7 +25,7 @@ import {
 import { initializeAnnotationAction } from "oxalis/model/actions/annotation_actions";
 
 const skeletonCreator = () =>
-  new Skeleton((state: OxalisState) => enforceSkeletonTracing(state.annotation), true);
+  new Skeleton((state: WebknossosState) => enforceSkeletonTracing(state.annotation), true);
 
 describe("Skeleton", () => {
   beforeAll(() => {

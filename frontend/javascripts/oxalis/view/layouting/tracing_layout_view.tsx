@@ -9,7 +9,7 @@ import messages from "messages";
 import CrossOriginApi from "oxalis/api/cross_origin_api";
 import Constants from "oxalis/constants";
 import type { ControllerStatus } from "oxalis/controller";
-import OxalisController from "oxalis/controller";
+import WebKnossosController from "oxalis/controller";
 import MergerModeController from "oxalis/controller/merger_mode_controller";
 import { destroySceneController } from "oxalis/controller/scene_controller_provider";
 import UrlManager from "oxalis/controller/url_manager";
@@ -314,7 +314,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
           isUpdateAllowed={isUpdateTracingAllowed}
         >
           <TabTitle title={this.getTabTitle()} />
-          <OxalisController
+          <WebKnossosController
             initialMaybeCompoundType={this.props.initialMaybeCompoundType}
             initialCommandType={this.props.initialCommandType}
             controllerStatus={status}

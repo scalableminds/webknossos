@@ -10,7 +10,7 @@ import constants from "oxalis/constants";
 import { getDatasetExtentInVoxel } from "oxalis/model/accessors/dataset_accessor";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
-import type { Flycam, OxalisState, Task } from "oxalis/store";
+import type { Flycam, Task, WebknossosState } from "oxalis/store";
 import Store from "oxalis/store";
 import { ShareButton } from "oxalis/view/action-bar/share_modal_view";
 import ButtonComponent from "oxalis/view/components/button_component";
@@ -181,7 +181,7 @@ class DatasetPositionView extends PureComponent<Props> {
   }
 }
 
-function mapStateToProps(state: OxalisState): Props {
+function mapStateToProps(state: WebknossosState): Props {
   return {
     flycam: state.flycam,
     viewMode: state.temporaryConfiguration.viewMode,

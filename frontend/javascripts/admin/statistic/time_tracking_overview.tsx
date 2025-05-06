@@ -7,14 +7,13 @@ import dayjs, { type Dayjs } from "dayjs";
 import saveAs from "file-saver";
 import { formatMilliseconds } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { isUserAdminOrTeamManager, transformToCSVRow } from "libs/utils";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import { AnnotationStateFilterEnum, AnnotationTypeFilterEnum } from "oxalis/constants";
-import type { OxalisState } from "oxalis/store";
 import { useState } from "react";
-import { useSelector } from "react-redux";
 import type { APITimeTrackingPerUser } from "types/api_types";
 import ProjectAndAnnotationTypeDropdown from "./project_and_annotation_type_dropdown";
 import TimeTrackingDetailView from "./time_tracking_detail_view";
@@ -30,7 +29,7 @@ function TimeTrackingOverview() {
   const [startDate, setStartDate] = useState(currentTime.startOf("month"));
   const [endDate, setEndeDate] = useState(currentTime);
   const [isFetching, setIsFetching] = useState(false);
-  const isCurrentUserAdminOrManager = useSelector((state: OxalisState) => {
+  const isCurrentUserAdminOrManager = useWkSelector((state) => {
     const activeUser = state.activeUser;
     return activeUser != null && isUserAdminOrTeamManager(activeUser);
   });

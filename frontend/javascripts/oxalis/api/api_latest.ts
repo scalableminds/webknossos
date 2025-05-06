@@ -41,7 +41,7 @@ import {
   getOptionsForCreateSkeletonNode,
 } from "oxalis/controller/combinations/skeleton_handlers";
 import UrlManager from "oxalis/controller/url_manager";
-import type { OxalisModel } from "oxalis/model";
+import type { WebKnossosModel } from "oxalis/model";
 import {
   getLayerBoundingBox,
   getLayerByName,
@@ -61,10 +61,10 @@ import {
   getActiveTree,
   getActiveTreeGroup,
   getFlatTreeGroups,
-  getNodeAndTree,
-  getNodeAndTreeOrNull,
   getNodePosition,
   getTree,
+  getTreeAndNode,
+  getTreeAndNodeOrNull,
   getTreeGroupsMap,
   mapGroups,
 } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -166,7 +166,6 @@ import type {
   MappingType,
   MutableNode,
   Node,
-  OxalisState,
   Segment,
   SegmentGroup,
   SkeletonTracing,
@@ -175,6 +174,7 @@ import type {
   TreeMap,
   UserConfiguration,
   VolumeTracing,
+  WebknossosState,
 } from "oxalis/store";
 import Store from "oxalis/store";
 import {
@@ -183,7 +183,6 @@ import {
   createGroupToSegmentsMap,
   moveGroupsHelper,
 } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
 import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
@@ -201,15 +200,15 @@ export function assertExists<T>(value: any, message: string): asserts value is N
 }
 export function assertSkeleton(annotation: StoreAnnotation): SkeletonTracing {
   if (annotation.skeleton == null) {
-    throw new Error("This api function should only be called in a skeleton annotation.");
+    throw new Error("This API function should only be called in a skeleton annotation.");
   }
 
   return annotation.skeleton;
 }
-export function assertVolume(state: OxalisState): VolumeTracing {
+export function assertVolume(state: WebknossosState): VolumeTracing {
   if (state.annotation.volumes.length === 0) {
     throw new Error(
-      "This api function should only be called when a volume annotation layer exists.",
+      "This API function should only be called when a volume annotation layer exists.",
     );
   }
 
@@ -217,7 +216,7 @@ export function assertVolume(state: OxalisState): VolumeTracing {
 
   if (tracing == null) {
     throw new Error(
-      "This api function should only be called when a volume annotation layer is visible.",
+      "This API function should only be called when a volume annotation layer is visible.",
     );
   }
 
@@ -236,7 +235,7 @@ export function assertVolume(state: OxalisState): VolumeTracing {
  */
 
 class TracingApi {
-  model: OxalisModel;
+  model: WebKnossosModel;
 
   /**
    * @private
@@ -246,7 +245,7 @@ class TracingApi {
   /**
    * @private
    */
-  constructor(model: OxalisModel) {
+  constructor(model: WebKnossosModel) {
     this.model = model;
   }
 
@@ -273,9 +272,7 @@ class TracingApi {
    */
   getActiveTreeGroupId(): number | null | undefined {
     const tracing = assertSkeleton(Store.getState().annotation);
-    return getActiveTreeGroup(tracing)
-      .map((group) => group.groupId)
-      .getOrElse(null);
+    return getActiveTreeGroup(tracing)?.groupId ?? null;
   }
 
   /**
@@ -1015,9 +1012,12 @@ class TracingApi {
    */
   getTreeName(treeId?: number) {
     const tracing = assertSkeleton(Store.getState().annotation);
-    return getTree(tracing, treeId)
-      .map((activeTree) => activeTree.name)
-      .get();
+    const treeName = getTree(tracing, treeId)?.name;
+
+    if (!treeName) {
+      throw new Error(`Tree with id ${treeId} does not exist.`);
+    }
+    return treeName;
   }
 
   /**
@@ -1173,9 +1173,11 @@ class TracingApi {
    */
   setNodeRadius(delta: number, nodeId?: number, treeId?: number): void {
     const skeletonTracing = assertSkeleton(Store.getState().annotation);
-    getNodeAndTree(skeletonTracing, nodeId, treeId).map(([, node]) =>
-      Store.dispatch(setNodeRadiusAction(node.radius * Math.pow(1.05, delta), nodeId, treeId)),
-    );
+    const treeAndNode = getTreeAndNode(skeletonTracing, nodeId, treeId);
+    if (!treeAndNode) return;
+
+    const [_activeTree, node] = treeAndNode;
+    Store.dispatch(setNodeRadiusAction(node.radius * Math.pow(1.05, delta), nodeId, treeId));
   }
 
   /**
@@ -1186,9 +1188,11 @@ class TracingApi {
    */
   centerNode = (nodeId?: number): void => {
     const skeletonTracing = assertSkeleton(Store.getState().annotation);
-    getNodeAndTree(skeletonTracing, nodeId).map(([, node]) => {
-      return Store.dispatch(setPositionAction(getNodePosition(node, Store.getState())));
-    });
+    const treeAndNode = getTreeAndNode(skeletonTracing, nodeId);
+    if (!treeAndNode) return;
+
+    const [_activeTree, node] = treeAndNode;
+    Store.dispatch(setPositionAction(getNodePosition(node, Store.getState())));
   };
 
   /**
@@ -1286,11 +1290,11 @@ class TracingApi {
     shortestPath: number[];
   } {
     const skeletonTracing = assertSkeleton(Store.getState().annotation);
-    const { node: sourceNode, tree: sourceTree } = getNodeAndTreeOrNull(
+    const { node: sourceNode, tree: sourceTree } = getTreeAndNodeOrNull(
       skeletonTracing,
       sourceNodeId,
     );
-    const { node: targetNode, tree: targetTree } = getNodeAndTreeOrNull(
+    const { node: targetNode, tree: targetTree } = getTreeAndNodeOrNull(
       skeletonTracing,
       targetNodeId,
     );
@@ -1541,9 +1545,9 @@ class TracingApi {
  */
 
 class DataApi {
-  model: OxalisModel;
+  model: WebKnossosModel;
 
-  constructor(model: OxalisModel) {
+  constructor(model: WebKnossosModel) {
     this.model = model;
   }
 
@@ -2741,9 +2745,9 @@ class DataApi {
  */
 
 class UserApi {
-  model: OxalisModel;
+  model: WebKnossosModel;
 
-  constructor(model: OxalisModel) {
+  constructor(model: WebKnossosModel) {
     this.model = model;
   }
 
@@ -2820,9 +2824,9 @@ export type UnregisterHandler = {
  */
 
 class UtilsApi {
-  model: OxalisModel;
+  model: WebKnossosModel;
 
-  constructor(model: OxalisModel) {
+  constructor(model: WebKnossosModel) {
     this.model = model;
   }
 
@@ -2920,7 +2924,7 @@ export type ApiInterface = {
   user: UserApi;
   utils: UtilsApi;
 };
-export default function createApiInterface(model: OxalisModel): ApiInterface {
+export default function createApiInterface(model: WebKnossosModel): ApiInterface {
   return {
     tracing: new TracingApi(model),
     data: new DataApi(model),

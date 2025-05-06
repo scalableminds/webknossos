@@ -14,7 +14,7 @@ import type {
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { call, cancel, fork, put } from "typed-redux-saga";
 import type { APIDataset, AdditionalCoordinate } from "types/api_types";
 import { getPlaneExtentInVoxelFromStore } from "../accessors/view_mode_accessor";
@@ -66,7 +66,7 @@ function* getMask(
   const maskTopLeftMag1 = V3.alignWithMag(V3.sub(centerMag1, V3.scale(sizeInMag1, 0.5)), mag);
 
   const depth = yield* select(
-    (state: OxalisState) => state.userConfiguration.quickSelect.predictionDepth || 1,
+    (state: WebknossosState) => state.userConfiguration.quickSelect.predictionDepth || 1,
   );
 
   // Effectively, zero the first and second dimension in the mag.
@@ -170,7 +170,7 @@ export default function* performQuickSelect(
     return;
   }
   const depth = yield* select(
-    (state: OxalisState) => state.userConfiguration.quickSelect.predictionDepth || 1,
+    (state: WebknossosState) => state.userConfiguration.quickSelect.predictionDepth || 1,
   );
   const progressSaga = yield* fork(
     showApproximatelyProgress,
@@ -213,7 +213,7 @@ export default function* performQuickSelect(
     quickSelectGeometry.setCoordinates(unalignedUserBoxMag1.min, inclusiveMaxW);
 
     const alignedUserBoxMag1 = unalignedUserBoxMag1.alignWithMag(labeledMag, "floor");
-    const dataset = yield* select((state: OxalisState) => state.dataset);
+    const dataset = yield* select((state: WebknossosState) => state.dataset);
     const layerConfiguration = yield* select(
       (state) => state.datasetConfiguration.layers[colorLayer.name],
     );
@@ -239,7 +239,7 @@ export default function* performQuickSelect(
     }
 
     const overwriteMode = yield* select(
-      (state: OxalisState) => state.userConfiguration.overwriteMode,
+      (state: WebknossosState) => state.userConfiguration.overwriteMode,
     );
 
     sendAnalyticsEvent("used_quick_select_with_ai");

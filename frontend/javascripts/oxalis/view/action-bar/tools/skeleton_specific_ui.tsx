@@ -1,8 +1,9 @@
 import { ExportOutlined } from "@ant-design/icons";
 import { Badge, Space } from "antd";
 import { useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 
+import { useWkSelector } from "libs/react_hooks";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import { Toolkit } from "oxalis/model/accessors/tool_accessor";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
@@ -11,7 +12,6 @@ import {
   createTreeAction,
   setMergerModeEnabledAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import type { OxalisState } from "oxalis/store";
 import { MaterializeVolumeAnnotationModal } from "oxalis/view/action-bar/starting_job_modals";
 import ButtonComponent, { ToggleButton } from "oxalis/view/components/button_component";
 
@@ -21,29 +21,25 @@ import { IMG_STYLE_FOR_SPACEY_ICONS, NARROW_BUTTON_STYLE } from "./tool_helpers"
 
 export function SkeletonSpecificButtons() {
   const dispatch = useDispatch();
-  const isMergerModeEnabled = useSelector(
-    (state: OxalisState) => state.temporaryConfiguration.isMergerModeEnabled,
+  const isMergerModeEnabled = useWkSelector(
+    (state) => state.temporaryConfiguration.isMergerModeEnabled,
   );
   const [showMaterializeVolumeAnnotationModal, setShowMaterializeVolumeAnnotationModal] =
     useState<boolean>(false);
-  const isNewNodeNewTreeModeOn = useSelector(
-    (state: OxalisState) => state.userConfiguration.newNodeNewTree,
+  const isNewNodeNewTreeModeOn = useWkSelector((state) => state.userConfiguration.newNodeNewTree);
+  const isContinuousNodeCreationEnabled = useWkSelector(
+    (state) => state.userConfiguration.continuousNodeCreation,
   );
-  const isContinuousNodeCreationEnabled = useSelector(
-    (state: OxalisState) => state.userConfiguration.continuousNodeCreation,
-  );
-  const isSplitToolkit = useSelector(
-    (state: OxalisState) => state.userConfiguration.activeToolkit === Toolkit.SPLIT_SEGMENTS,
+  const isSplitToolkit = useWkSelector(
+    (state) => state.userConfiguration.activeToolkit === Toolkit.SPLIT_SEGMENTS,
   );
   const toggleContinuousNodeCreation = () =>
     dispatch(updateUserSettingAction("continuousNodeCreation", !isContinuousNodeCreationEnabled));
 
-  const dataset = useSelector((state: OxalisState) => state.dataset);
+  const dataset = useWkSelector((state) => state.dataset);
   const isUserAdminOrManager = useIsActiveUserAdminOrManager();
 
-  const segmentationTracingLayer = useSelector((state: OxalisState) =>
-    getActiveSegmentationTracing(state),
-  );
+  const segmentationTracingLayer = useWkSelector((state) => getActiveSegmentationTracing(state));
   const isEditableMappingActive =
     segmentationTracingLayer != null && !!segmentationTracingLayer.hasEditableMapping;
   const isMappingLockedWithNonNull =
@@ -135,7 +131,7 @@ export function SkeletonSpecificButtons() {
 
 function CreateTreeButton() {
   const dispatch = useDispatch();
-  const activeTree = useSelector((state: OxalisState) => getActiveTree(state.annotation.skeleton));
+  const activeTree = useWkSelector((state) => getActiveTree(state.annotation.skeleton));
   const rgbColorString =
     activeTree != null
       ? `rgb(${activeTree.color.map((c) => Math.round(c * 255)).join(",")})`

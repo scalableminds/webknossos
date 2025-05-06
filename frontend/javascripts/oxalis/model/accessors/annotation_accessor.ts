@@ -1,8 +1,8 @@
 import _ from "lodash";
-import type { OxalisState, StoreAnnotation } from "oxalis/store";
+import type { StoreAnnotation, WebknossosState } from "oxalis/store";
 import type { EmptyObject } from "types/globals";
 
-export function mayEditAnnotationProperties(state: OxalisState) {
+export function mayEditAnnotationProperties(state: WebknossosState) {
   const { owner, restrictions } = state.annotation;
   const activeUser = state.activeUser;
 
@@ -15,14 +15,14 @@ export function mayEditAnnotationProperties(state: OxalisState) {
   );
 }
 
-export function isAnnotationOwner(state: OxalisState) {
+export function isAnnotationOwner(state: WebknossosState) {
   const activeUser = state.activeUser;
   const owner = state.annotation.owner;
 
   return !!(activeUser && owner?.id === activeUser.id);
 }
 
-export function isAnnotationFromDifferentOrganization(state: OxalisState) {
+export function isAnnotationFromDifferentOrganization(state: WebknossosState) {
   const activeUser = state.activeUser;
 
   return !!(activeUser && activeUser?.organization !== state.annotation.organization);

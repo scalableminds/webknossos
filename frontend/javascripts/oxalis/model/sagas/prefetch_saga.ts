@@ -19,7 +19,7 @@ import type DataLayer from "oxalis/model/data_layer";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { Model } from "oxalis/singletons";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { call, throttle } from "typed-redux-saga";
 import { ensureWkReady } from "./ready_sagas";
 
@@ -91,7 +91,7 @@ function getTraceDirection(
   return direction;
 }
 
-function getTracingTypes(state: OxalisState) {
+function getTracingTypes(state: WebknossosState) {
   return {
     [PrefetchContentTypes.SKELETON]: state.annotation.skeleton != null,
     [PrefetchContentTypes.VOLUME]: state.annotation.volumes.length > 0,

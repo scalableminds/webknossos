@@ -8,7 +8,7 @@ import {
   updateCurrentConnectomeFileAction,
 } from "oxalis/model/actions/connectome_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import Store from "oxalis/store";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { NumberSliderSetting } from "oxalis/view/components/setting_input_views";
@@ -30,7 +30,7 @@ type StateProps = {
 };
 type Props = OwnProps & StateProps;
 
-const mapStateToProps = (state: OxalisState, ownProps: OwnProps): StateProps => {
+const mapStateToProps = (state: WebknossosState, ownProps: OwnProps): StateProps => {
   const { segmentationLayer } = ownProps;
   const connectomeData =
     segmentationLayer != null

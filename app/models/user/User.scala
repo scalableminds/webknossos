@@ -311,6 +311,16 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
          """.as[UserCompactInfo])
     } yield rows.toList
 
+  def isUserAGuest(userId: ObjectId): Fox[Boolean] =
+    for {
+      rows <- run(
+        q"""SELECT (payingOrganization._organization IS NOT NULL AND u._organization != payingOrganization._organization) AS isGuest
+            FROM webknossos.users as u
+            LEFT JOIN $payingOrganizationInfoSubquery AS payingOrganization ON payingOrganization._multiUser = u._multiUser
+            WHERE _id = $userId""".as[Boolean])
+      result <- rows.headOption.toFox
+    } yield result
+
   // NOTE: This will not return admins. They have “access to all teams”. Consider fetching those too when you use this
   def findAllByTeams(teamIds: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[User]] =
     if (teamIds.isEmpty) Fox.successful(List())

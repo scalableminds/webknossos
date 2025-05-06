@@ -22,7 +22,11 @@ import Constants from "oxalis/constants";
 import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import type { Bucket, Containment } from "oxalis/model/bucket_data_handling/bucket";
+import type {
+  Bucket,
+  Containment,
+  SomeContainment,
+} from "oxalis/model/bucket_data_handling/bucket";
 import { DataBucket, NULL_BUCKET, NullBucket } from "oxalis/model/bucket_data_handling/bucket";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import type PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
@@ -362,7 +366,7 @@ class DataCube {
     return this.getNullBucket();
   }
 
-  createBucket(address: BucketAddress, containment: Containment): Bucket {
+  createBucket(address: BucketAddress, containment: SomeContainment): Bucket {
     const bucket = new DataBucket(
       this.elementClass,
       address,

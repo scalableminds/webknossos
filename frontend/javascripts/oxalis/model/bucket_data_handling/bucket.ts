@@ -77,10 +77,7 @@ export function markVolumeTransactionEnd() {
   bucketsAlreadyInUndoState.clear();
 }
 
-export type Containment =
-  | {
-      type: "no";
-    }
+export type SomeContainment =
   | { type: "full" }
   | {
       type: "partial";
@@ -88,6 +85,11 @@ export type Containment =
       min: Vector3;
       // max is exclusive
       max: Vector3;
+    };
+export type Containment =
+  | SomeContainment
+  | {
+      type: "no";
     };
 
 export class DataBucket {
@@ -126,7 +128,7 @@ export class DataBucket {
     elementClass: ElementClass,
     zoomedAddress: BucketAddress,
     temporalBucketManager: TemporalBucketManager,
-    public containment: Containment,
+    public containment: SomeContainment,
     cube: DataCube,
   ) {
     this.emitter = createNanoEvents();

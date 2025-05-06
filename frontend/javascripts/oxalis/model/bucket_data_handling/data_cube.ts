@@ -254,18 +254,6 @@ class DataCube {
       return NoContainment;
     }
 
-    // old slow
-    // const intersectionBBox = this.boundingBox.intersectedWith(bucketBBox);
-
-    // const intersectionSize = intersectionBBox.getSize();
-    // if (V3.equals(intersectionSize, bucketBBox.getSize())) {
-    //   return FullContainment;
-    // }
-    // if (V3.prod(intersectionSize) === 0) {
-    //   return NoContainment;
-    // }
-
-    // new fast
     const intersectionBBox = this.boundingBox.intersectedWithFast(bucketBBox);
 
     if (

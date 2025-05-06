@@ -5,7 +5,6 @@ import type { BoundingBoxType, OrthoView, Vector2, Vector3, Vector4 } from "oxal
 import constants from "oxalis/constants";
 import type { BoundingBoxObject } from "oxalis/store";
 import Dimensions from "../dimensions";
-import type { MagInfo } from "../helpers/mag_info";
 
 class BoundingBox {
   // Min is including, max is excluding

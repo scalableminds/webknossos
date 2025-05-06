@@ -1,4 +1,4 @@
-import { map3 } from "libs/utils";
+import { type Writeable, map3 } from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
 import type { BucketAddress, LabeledVoxelsMap, Vector3 } from "oxalis/constants";
@@ -345,7 +345,8 @@ export function applyVoxelMap(
 
       if (sliceOffset > 0 && newThirdDimValue % constants.BUCKET_WIDTH === 0) {
         // The current slice is in the next bucket in the third direction.
-        const nextBucketZoomedAddress: BucketAddress = [...labeledBucketZoomedAddress];
+        const nextBucketZoomedAddress: Writeable<BucketAddress> = [...labeledBucketZoomedAddress];
+
         nextBucketZoomedAddress[thirdDimensionIndex]++;
         postprocessBucket(bucket);
         bucket = dataCube.getOrCreateBucket(nextBucketZoomedAddress);

@@ -13,7 +13,7 @@ import type { ToastStyle } from "libs/toast";
 import Toast from "libs/toast";
 import UserLocalStorage from "libs/user_local_storage";
 import * as Utils from "libs/utils";
-import { coalesce } from "libs/utils";
+import { type Writeable, coalesce } from "libs/utils";
 import window, { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
@@ -1991,7 +1991,7 @@ class DataApi {
       bucketPositionToGlobalAddress(bucketAddress, new MagInfo(magnifications));
 
     const nextBucketInDim = (bucket: BucketAddress, dim: 0 | 1 | 2) => {
-      const copy = bucket.slice() as BucketAddress;
+      const copy = bucket.slice() as Writeable<BucketAddress>;
       copy[dim]++;
       return copy;
     };

@@ -2173,12 +2173,12 @@ class DataApi {
    *
    * @example
    * // Set the segmentation id for some voxels to 1337
-   * await api.data.labelVoxels([[1,1,1], [1,2,1], [2,1,1], [2,2,1]], 1337);
+   * api.data.labelVoxels([[1,1,1], [1,2,1], [2,1,1], [2,2,1]], 1337);
    */
-  async labelVoxels(
+  labelVoxels(
     globalPositionsMag1: Vector3[],
     label: number,
-    optAdditionalCoordinates?: AdditionalCoordinate[],
+    optAdditionalCoordinates?: AdditionalCoordinate[] | null,
   ) {
     const state = Store.getState();
     const allowUpdate = state.annotation.restrictions.allowUpdate;

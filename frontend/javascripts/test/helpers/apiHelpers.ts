@@ -190,8 +190,7 @@ export async function setupWebknossosForTesting(
   testContext.setSlowCompression = setSlowCompression;
   testContext.tearDownPullQueues = () =>
     Model.getAllLayers().map((layer) => {
-      layer.pullQueue.clear();
-      layer.pullQueue.abortRequests();
+      layer.pullQueue.destroy();
     });
 
   const webknossos = new OxalisApi(Model);

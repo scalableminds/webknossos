@@ -1,6 +1,7 @@
 import { DownOutlined } from "@ant-design/icons";
 import { type Tree as AntdTree, type GetRef, type MenuProps, Modal, type TreeProps } from "antd";
 import { SimpleRow } from "dashboard/folders/metadata_table";
+import { useWkSelector } from "libs/react_hooks";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -14,7 +15,7 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import { api } from "oxalis/singletons";
 import { Store } from "oxalis/singletons";
-import type { OxalisState, Tree, TreeGroup, TreeMap } from "oxalis/store";
+import type { Tree, TreeGroup, TreeMap } from "oxalis/store";
 import {
   GroupTypeEnum,
   MISSING_GROUP_ID,
@@ -30,7 +31,6 @@ import {
   moveGroupsHelper,
 } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";
-import { useSelector } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import type { MetadataEntryProto } from "types/api_types";
 import { InputWithUpdateOnBlur } from "../../components/input_with_update_on_blur";
@@ -71,7 +71,7 @@ function TreeHierarchyView(props: Props) {
   const treeRef = useRef<GetRef<typeof AntdTree>>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  const activeNode = useSelector((state: OxalisState) => state.annotation.skeleton?.activeNodeId);
+  const activeNode = useWkSelector((state) => state.annotation.skeleton?.activeNodeId);
 
   useEffect(() => {
     // equivalent of LifeCycle hook "getDerivedStateFromProps"

@@ -348,7 +348,13 @@ class DataCube {
     if (bucketIndex != null && cube != null) {
       const bucket = cube.data.get(bucketIndex);
 
-      if (bucket != null && _.isEqual(address, bucket.zoomedAddress)) {
+      // We double-check that the address of the bucket matches the requested
+      // address. If the address is outside of the layer's bbox, the linearization
+      // of the address into one index might collide with another bucket (that is
+      // within the bbox) which is why the check is necessary.
+      // We use slice to ignore the additional coordinates (this is mostly done
+      // to ignore annoying cases like null vs [] which have identical semantics).
+      if (bucket != null && _.isEqual(address.slice(0, 4), bucket.zoomedAddress.slice(0, 4))) {
         return bucket;
       }
     }

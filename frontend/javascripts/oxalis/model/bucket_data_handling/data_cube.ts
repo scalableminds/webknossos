@@ -6,6 +6,7 @@ import {
   areBoundingBoxesOverlappingOrTouching,
   castForArrayType,
   isNumberMap,
+  mod,
   union,
 } from "libs/utils";
 import _ from "lodash";
@@ -71,6 +72,24 @@ const USE_FLOODFILL_VOXEL_THRESHOLD = false;
 
 const NoContainment = { type: "no" } as const;
 const FullContainment = { type: "full" } as const;
+
+const zeroToBucketWidth = (el: number) => {
+  return el !== 0 ? el : Constants.BUCKET_WIDTH;
+};
+const makeLocalMin = (min: Vector3, mag: Vector3): Vector3 => {
+  return [
+    mod(Math.floor(min[0] / mag[0]), Constants.BUCKET_WIDTH),
+    mod(Math.floor(min[1] / mag[1]), Constants.BUCKET_WIDTH),
+    mod(Math.floor(min[2] / mag[2]), Constants.BUCKET_WIDTH),
+  ];
+};
+const makeLocalMax = (max: Vector3, mag: Vector3): Vector3 => {
+  return [
+    zeroToBucketWidth(mod(Math.floor(max[0] / mag[0]), Constants.BUCKET_WIDTH)),
+    zeroToBucketWidth(mod(Math.floor(max[1] / mag[1]), Constants.BUCKET_WIDTH)),
+    zeroToBucketWidth(mod(Math.floor(max[2] / mag[2]), Constants.BUCKET_WIDTH)),
+  ];
+};
 
 class DataCube {
   BUCKET_COUNT_SOFT_LIMIT = constants.MAXIMUM_BUCKET_COUNT_PER_LAYER;
@@ -210,9 +229,12 @@ class DataCube {
   }
 
   private getCubeKey(zoomStep: number, allCoords: AdditionalCoordinate[] | undefined | null) {
-    const relevantCoords = (allCoords ?? []).filter(
-      (coord) => this.additionalAxes[coord.name] != null,
-    );
+    if (allCoords == null) {
+      // Instead of defaulting from null to [] for allCoords, we early-out with this simple
+      // return value for performance reasons.
+      return `${zoomStep}`;
+    }
+    const relevantCoords = allCoords.filter((coord) => this.additionalAxes[coord.name] != null);
     return [zoomStep, ...relevantCoords.map((el) => el.value)].join("-");
   }
 
@@ -227,37 +249,45 @@ class DataCube {
       return NoContainment;
     }
 
-    const bucketBBox = BoundingBox.fromBucketAddress([x, y, z, zoomStep], mag);
+    const bucketBBox = BoundingBox.fromBucketAddressFast([x, y, z, zoomStep], mag);
     if (bucketBBox == null) {
       return NoContainment;
     }
 
-    const intersectionBBox = this.boundingBox.intersectedWith(bucketBBox);
+    // old slow
+    // const intersectionBBox = this.boundingBox.intersectedWith(bucketBBox);
 
-    const intersectionSize = intersectionBBox.getSize();
-    if (V3.equals(intersectionSize, bucketBBox.getSize())) {
-      return FullContainment;
-    }
-    if (V3.prod(intersectionSize) === 0) {
+    // const intersectionSize = intersectionBBox.getSize();
+    // if (V3.equals(intersectionSize, bucketBBox.getSize())) {
+    //   return FullContainment;
+    // }
+    // if (V3.prod(intersectionSize) === 0) {
+    //   return NoContainment;
+    // }
+
+    // new fast
+    const intersectionBBox = this.boundingBox.intersectedWithFast(bucketBBox);
+
+    if (
+      intersectionBBox.min[0] === intersectionBBox.max[0] ||
+      intersectionBBox.min[1] === intersectionBBox.max[1] ||
+      intersectionBBox.min[2] === intersectionBBox.max[2]
+    ) {
       return NoContainment;
+    }
+    if (
+      V3.equals(intersectionBBox.min, bucketBBox.min) &&
+      V3.equals(intersectionBBox.max, bucketBBox.max)
+    ) {
+      return FullContainment;
     }
 
     const { min, max } = intersectionBBox;
 
-    this.boundingBox.containsBucket([x, y, z, zoomStep], this.magInfo);
-
-    const makeLocal = (el: number) => {
-      return Math.floor(el) % Constants.BUCKET_WIDTH;
-    };
-    const makeLocal2 = (el: number) => {
-      const modded = Math.floor(el) % Constants.BUCKET_WIDTH;
-      return modded === 0 ? Constants.BUCKET_WIDTH : modded;
-    };
-
     return {
       type: "partial",
-      min: [makeLocal(min[0] / mag[0]), makeLocal(min[1] / mag[1]), makeLocal(min[2] / mag[2])],
-      max: [makeLocal2(max[0] / mag[0]), makeLocal2(max[1] / mag[1]), makeLocal2(max[2] / mag[2])],
+      min: makeLocalMin(min, mag),
+      max: makeLocalMax(max, mag),
     };
   }
 

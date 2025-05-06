@@ -2168,6 +2168,7 @@ class DataApi {
   ): Promise<void> {
     assertVolume(Store.getState());
     const segmentationLayer = this.model.getEnforcedSegmentationTracingLayer();
+    // todop: replace this with something else.
     await Promise.all(
       voxels.map((voxel) =>
         segmentationLayer.cube._labelVoxelInAllResolutions_DEPRECATED(

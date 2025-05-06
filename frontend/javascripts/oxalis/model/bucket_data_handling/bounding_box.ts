@@ -2,26 +2,23 @@ import { V3 } from "libs/mjs";
 import { map3, mod } from "libs/utils";
 import _ from "lodash";
 import type { BoundingBoxType, OrthoView, Vector2, Vector3, Vector4 } from "oxalis/constants";
-import constants, { Vector3Indicies } from "oxalis/constants";
+import constants from "oxalis/constants";
 import type { BoundingBoxObject } from "oxalis/store";
 import Dimensions from "../dimensions";
 import type { MagInfo } from "../helpers/mag_info";
 
 class BoundingBox {
+  // Min is including, max is excluding
   min: Vector3;
   max: Vector3;
 
   constructor(boundingBox: BoundingBoxType | null | undefined) {
-    // Min is including
-    this.min = [Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY];
-    // Max is excluding
-    this.max = [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY];
-
-    if (boundingBox != null) {
-      for (const i of Vector3Indicies) {
-        this.min[i] = Math.max(this.min[i], boundingBox.min[i]);
-        this.max[i] = Math.min(this.max[i], boundingBox.max[i]);
-      }
+    if (boundingBox == null) {
+      this.min = [Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY];
+      this.max = [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY];
+    } else {
+      this.min = boundingBox.min.slice() as Vector3;
+      this.max = boundingBox.max.slice() as Vector3;
     }
   }
 
@@ -42,29 +39,17 @@ class BoundingBox {
     return [u, v];
   }
 
-  static fromBucketAddress([x, y, z, _zoomStep]: Vector4, mag: Vector3): BoundingBox | null {
-    const bucketSize = constants.BUCKET_WIDTH;
-
-    // Precompute scaled sizes once
-    const sx = bucketSize * mag[0];
-    const sy = bucketSize * mag[1];
-    const sz = bucketSize * mag[2];
-
-    // Bucket bounds in world space
-    const bxMin = x * sx;
-    const byMin = y * sy;
-    const bzMin = z * sz;
-    const bxMax = bxMin + sx;
-    const byMax = byMin + sy;
-    const bzMax = bzMin + sz;
-
-    return new BoundingBox({ min: [bxMin, byMin, bzMin], max: [bxMax, byMax, bzMax] });
+  static fromBucketAddress(address: Vector4, mag: Vector3): BoundingBox | null {
+    return new BoundingBox(this.fromBucketAddressFast(address, mag));
   }
 
-  containsBucket([x, y, z, zoomStep]: Vector4, magInfo: MagInfo): "no" | "partial" | "full" {
-    const mag = magInfo.getMagByIndex(zoomStep);
-    if (mag == null) return "no";
-
+  static fromBucketAddressFast(
+    [x, y, z, _zoomStep]: Vector4,
+    mag: Vector3,
+  ): { min: Vector3; max: Vector3 } | null {
+    /*
+     The fast variant does not allocate a Bounding Box instance which can be helpful for tight loops.
+     */
     const bucketSize = constants.BUCKET_WIDTH;
 
     // Precompute scaled sizes once
@@ -80,34 +65,7 @@ class BoundingBox {
     const byMax = byMin + sy;
     const bzMax = bzMin + sz;
 
-    const bbMin = this.min;
-    const bbMax = this.max;
-
-    // Fast early-out if there's no intersection
-    if (
-      bxMax <= bbMin[0] ||
-      bxMin >= bbMax[0] ||
-      byMax <= bbMin[1] ||
-      byMin >= bbMax[1] ||
-      bzMax <= bbMin[2] ||
-      bzMin >= bbMax[2]
-    ) {
-      return "no";
-    }
-
-    // Check if fully contained
-    if (
-      bxMin >= bbMin[0] &&
-      bxMax <= bbMax[0] &&
-      byMin >= bbMin[1] &&
-      byMax <= bbMax[1] &&
-      bzMin >= bbMin[2] &&
-      bzMax <= bbMax[2]
-    ) {
-      return "full";
-    }
-
-    return "partial";
+    return { min: [bxMin, byMin, bzMin], max: [bxMax, byMax, bzMax] };
   }
 
   containsPoint(vec3: Vector3) {
@@ -125,6 +83,13 @@ class BoundingBox {
   }
 
   intersectedWith(other: BoundingBox): BoundingBox {
+    return new BoundingBox(this.intersectedWithFast(other));
+  }
+
+  intersectedWithFast(other: { min: Vector3; max: Vector3 }): { min: Vector3; max: Vector3 } {
+    /*
+     The fast variant does not allocate a Bounding Box instance which can be helpful for tight loops.
+     */
     const newMin = V3.max(this.min, other.min);
     const uncheckedMax = V3.min(this.max, other.max);
 
@@ -132,10 +97,10 @@ class BoundingBox {
     // extent.
     const newMax = V3.max(newMin, uncheckedMax);
 
-    return new BoundingBox({
+    return {
       min: newMin,
       max: newMax,
-    });
+    };
   }
 
   extend(other: BoundingBox): BoundingBox {

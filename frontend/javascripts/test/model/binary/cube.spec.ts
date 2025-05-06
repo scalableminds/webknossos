@@ -269,3 +269,46 @@ describe("DataCube", () => {
     expect(index).toBe(10570);
   });
 });
+
+// This is not executed in the tests, but can be activated when needed
+// to make performance measurements for getOrCreateBucket
+describe.skip("DataCube Benchmark", () => {
+  it("Benchmark", () => {
+    const mockedLayer = {
+      resolutions: [[1, 1, 1]] as Vector3[],
+    };
+    const magInfo = new MagInfo(mockedLayer.resolutions);
+    const cube = new DataCube(
+      new BoundingBox({ min: [1024, 1024, 1024], max: [2048, 2048, 2048] }),
+      [],
+      magInfo,
+      "uint32",
+      false,
+      "layerName",
+    );
+
+    console.time("outside");
+    for (let i = 0; i < 15; i++) {
+      for (let x = 0; x < 32; x++) {
+        for (let y = 0; y < 32; y++) {
+          for (let z = 0; z < 32; z++) {
+            cube.getOrCreateBucket([x, y, z, 0]);
+          }
+        }
+      }
+    }
+    console.timeEnd("outside");
+
+    console.time("inside");
+    for (let i = 0; i < 15; i++) {
+      for (let x = 32; x < 64; x++) {
+        for (let y = 32; y < 64; y++) {
+          for (let z = 32; z < 64; z++) {
+            cube.getOrCreateBucket([x, y, z, 0]);
+          }
+        }
+      }
+    }
+    console.timeEnd("inside");
+  });
+});

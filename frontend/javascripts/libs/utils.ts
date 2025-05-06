@@ -18,6 +18,7 @@ import type { APIDataset, APIUser } from "types/api_types";
 import type { ArbitraryObject, Comparator } from "types/globals";
 
 type UrlParams = Record<string, string>;
+
 // Fix JS modulo bug
 // http://javascript.about.com/od/problemsolving/a/modulobug.htm
 export function mod(x: number, n: number) {

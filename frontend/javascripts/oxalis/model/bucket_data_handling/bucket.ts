@@ -526,39 +526,39 @@ export class DataBucket {
     const segmentId = castForArrayType(uncastSegmentId, data);
 
     const limits = {
-      firstDim: [0, Constants.BUCKET_WIDTH],
-      secondDim: [0, Constants.BUCKET_WIDTH],
-      thirdDim: [0, Constants.BUCKET_WIDTH],
+      u: { min: 0, max: Constants.BUCKET_WIDTH },
+      v: { min: 0, max: Constants.BUCKET_WIDTH },
+      w: { min: 0, max: Constants.BUCKET_WIDTH },
     };
 
     if (this.containment.type === "partial") {
       const plane = Dimensions.planeForThirdDimension(thirdDimensionIndex);
       const [u, v, w] = Dimensions.getIndices(plane);
-      limits.firstDim[0] = this.containment.min[u];
-      limits.firstDim[1] = this.containment.max[u];
+      limits.u.min = this.containment.min[u];
+      limits.u.max = this.containment.max[u];
 
-      limits.secondDim[0] = this.containment.min[v];
-      limits.secondDim[1] = this.containment.max[v];
+      limits.v.min = this.containment.min[v];
+      limits.v.max = this.containment.max[v];
 
-      limits.thirdDim[0] = this.containment.min[w];
-      limits.thirdDim[1] = this.containment.max[w];
+      limits.w.min = this.containment.min[w];
+      limits.w.max = this.containment.max[w];
     }
 
-    for (let firstDim = limits.firstDim[0]; firstDim < limits.firstDim[1]; firstDim++) {
-      for (let secondDim = limits.secondDim[0]; secondDim < limits.secondDim[1]; secondDim++) {
+    for (let firstDim = limits.u.min; firstDim < limits.u.max; firstDim++) {
+      for (let secondDim = limits.v.min; secondDim < limits.v.max; secondDim++) {
         if (voxelMap[firstDim * Constants.BUCKET_WIDTH + secondDim] === 1) {
           get3DAddress(firstDim, secondDim, out);
           const voxelToLabel = out;
           voxelToLabel[thirdDimensionIndex] =
             (voxelToLabel[thirdDimensionIndex] + sliceOffset) % Constants.BUCKET_WIDTH;
 
-          if (this.containment.type === "partial") {
-            const isOutside =
-              voxelToLabel[thirdDimensionIndex] < limits.thirdDim[0] ||
-              voxelToLabel[thirdDimensionIndex] >= limits.thirdDim[1];
-            if (isOutside) {
-              continue;
-            }
+          if (
+            // The is-partial check is only done as a performance improvement.
+            this.containment.type === "partial" &&
+            (voxelToLabel[thirdDimensionIndex] < limits.w.min ||
+              voxelToLabel[thirdDimensionIndex] >= limits.w.max)
+          ) {
+            continue;
           }
 
           // The voxelToLabel is already within the bucket and in the correct magnification.

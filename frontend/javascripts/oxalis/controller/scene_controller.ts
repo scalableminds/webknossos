@@ -70,7 +70,7 @@ const CUBE_COLOR = 0x999999;
 const LAYER_CUBE_COLOR = 0xffff99;
 
 export const OrthoBaseRotations = {
-  [OrthoViews.PLANE_XY]: new THREE.Euler(0, Math.PI, 0),
+  [OrthoViews.PLANE_XY]: new THREE.Euler(Math.PI, 0, 0),
   [OrthoViews.PLANE_YZ]: new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0),
   [OrthoViews.PLANE_XZ]: new THREE.Euler((-1 / 2) * Math.PI, 0, 0),
   [OrthoViews.TDView]: new THREE.Euler(Math.PI / 4, Math.PI / 4, Math.PI / 4),

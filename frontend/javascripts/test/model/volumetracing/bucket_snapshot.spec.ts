@@ -12,7 +12,7 @@ import BucketSnapshot, {
   type PendingOperation,
 } from "oxalis/model/bucket_data_handling/bucket_snapshot";
 import Deferred from "libs/async/deferred";
-import type { BucketDataArray, ElementClass } from "types/api_flow_types";
+import type { BucketDataArray, ElementClass } from "types/api_types";
 import { uint8ToTypedBuffer } from "oxalis/model/helpers/typed_buffer";
 
 /*

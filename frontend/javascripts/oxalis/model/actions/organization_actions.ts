@@ -1,4 +1,4 @@
-import type { APIOrganization } from "types/api_flow_types";
+import type { APIOrganization } from "types/api_types";
 
 type SetActiveOrganization = ReturnType<typeof setActiveOrganizationAction>;
 type SetActiveOrganizationsCreditBalance = ReturnType<typeof setActiveOrganizationsCreditBalance>;

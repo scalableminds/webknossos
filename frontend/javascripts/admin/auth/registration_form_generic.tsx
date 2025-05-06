@@ -1,6 +1,6 @@
 import { LockOutlined, MailOutlined, UserOutlined } from "@ant-design/icons";
-import { loginUser } from "admin/admin_rest_api";
 import { getTermsOfService } from "admin/api/terms_of_service";
+import { loginUser } from "admin/rest_api";
 import { Button, Checkbox, Col, Form, Input, Row } from "antd";
 import { useFetch } from "libs/react_helpers";
 import Request from "libs/request";
@@ -10,7 +10,7 @@ import { setHasOrganizationsAction } from "oxalis/model/actions/ui_actions";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import Store from "oxalis/throttled_store";
 import React from "react";
-import type { APIOrganization } from "types/api_flow_types";
+import type { APIOrganization } from "types/api_types";
 import { TOSCheckFormItem } from "./tos_check_form_item";
 
 const FormItem = Form.Item;

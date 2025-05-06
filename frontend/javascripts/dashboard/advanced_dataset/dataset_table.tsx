@@ -1,5 +1,5 @@
 import { FileOutlined, FolderOpenOutlined, PlusOutlined, WarningOutlined } from "@ant-design/icons";
-import type { DatasetUpdater } from "admin/admin_rest_api";
+import type { DatasetUpdater } from "admin/rest_api";
 import { Dropdown, type MenuProps, type TableProps, Tag, Tooltip } from "antd";
 import type { FilterValue, SorterResult, TablePaginationConfig } from "antd/lib/table/interface";
 import classNames from "classnames";
@@ -36,11 +36,7 @@ import { DndProvider, DragPreviewImage, useDrag } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
-import type {
-  APIDatasetCompact,
-  APIMaybeUnimportedDataset,
-  FolderItem,
-} from "types/api_flow_types";
+import type { APIDatasetCompact, APIMaybeUnimportedDataset, FolderItem } from "types/api_types";
 import type { EmptyObject } from "types/globals";
 
 type FolderItemWithName = FolderItem & { name: string };

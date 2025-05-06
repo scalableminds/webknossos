@@ -24,7 +24,7 @@ import type {
   APISegmentationLayer,
   AdditionalAxis,
   ElementClass,
-} from "types/api_flow_types";
+} from "types/api_types";
 import type { DataLayer } from "types/schemas/datasource.types";
 import BoundingBox from "../bucket_data_handling/bounding_box";
 import { getSupportedValueRangeForElementClass } from "../bucket_data_handling/data_rendering_logic";

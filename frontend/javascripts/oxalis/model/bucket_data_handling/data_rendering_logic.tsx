@@ -4,7 +4,7 @@ import { document } from "libs/window";
 import _ from "lodash";
 import constants from "oxalis/constants";
 import * as THREE from "three";
-import type { ElementClass } from "types/api_flow_types";
+import type { ElementClass } from "types/api_types";
 import type { TypedArrayConstructor } from "../helpers/typed_buffer";
 
 type GpuSpecs = {

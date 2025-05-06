@@ -1,4 +1,4 @@
-import { isDatasetAccessibleBySwitching } from "admin/admin_rest_api";
+import { isDatasetAccessibleBySwitching } from "admin/rest_api";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import type { Vector3 } from "oxalis/constants";
@@ -17,7 +17,7 @@ import type DataLayer from "oxalis/model/data_layer";
 import { getTotalSaveQueueLength } from "oxalis/model/reducers/save_reducer";
 import type { TraceOrViewCommand } from "oxalis/store";
 import Store from "oxalis/store";
-import type { APICompoundType } from "types/api_flow_types";
+import type { APICompoundType } from "types/api_types";
 
 import { globalToLayerTransformedPosition } from "./model/accessors/dataset_layer_transformation_accessor";
 import { initialize } from "./model_initialization";

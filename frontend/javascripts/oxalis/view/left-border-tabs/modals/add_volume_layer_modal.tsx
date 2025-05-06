@@ -28,7 +28,7 @@ import InputComponent from "oxalis/view/components/input_component";
 import type React from "react";
 import { useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
-import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
+import type { APIDataset, APISegmentationLayer } from "types/api_types";
 
 export type ValidationResult = { isValid: boolean; message: string };
 export function checkForLayerNameDuplication(

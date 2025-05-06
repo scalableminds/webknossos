@@ -1,5 +1,5 @@
 import Constants from "oxalis/constants";
-import type { ElementClass } from "types/api_flow_types";
+import type { ElementClass } from "types/api_types";
 
 export type TypedArrayConstructor =
   | Int8ArrayConstructor

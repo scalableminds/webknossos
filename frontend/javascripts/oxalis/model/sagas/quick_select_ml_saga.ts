@@ -1,4 +1,4 @@
-import { getSamMask, sendAnalyticsEvent } from "admin/admin_rest_api";
+import { getSamMask, sendAnalyticsEvent } from "admin/rest_api";
 import { estimateBBoxInMask } from "libs/find_bounding_box_in_nd";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
@@ -16,7 +16,7 @@ import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
 import type { OxalisState } from "oxalis/store";
 import { call, cancel, fork, put } from "typed-redux-saga";
-import type { APIDataset, AdditionalCoordinate } from "types/api_flow_types";
+import type { APIDataset, AdditionalCoordinate } from "types/api_types";
 import { getPlaneExtentInVoxelFromStore } from "../accessors/view_mode_accessor";
 import { setGlobalProgressAction } from "../actions/ui_actions";
 import Dimensions from "../dimensions";

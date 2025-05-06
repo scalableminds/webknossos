@@ -1,4 +1,8 @@
 import {
+  PricingPlanEnum,
+  isFeatureAllowedByPricingPlan,
+} from "admin/organization/pricing_plan_utils";
+import {
   getAnnotationCompoundInformation,
   getAnnotationProto,
   getDataset,
@@ -9,18 +13,14 @@ import {
   getTracingsForAnnotation,
   getUnversionedAnnotationInformation,
   getUserConfiguration,
-} from "admin/admin_rest_api";
-import {
-  PricingPlanEnum,
-  isFeatureAllowedByPricingPlan,
-} from "admin/organization/pricing_plan_utils";
+} from "admin/rest_api";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
-import constants, { ControlModeEnum, AnnotationToolEnum, type Vector3 } from "oxalis/constants";
+import constants, { ControlModeEnum, type Vector3 } from "oxalis/constants";
 import type {
   DirectLayerSpecificProps,
   PartialUrlManagerState,
@@ -44,6 +44,7 @@ import {
   isSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getNullableSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
 import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
 import {
@@ -112,7 +113,7 @@ import type {
   ServerEditableMapping,
   ServerTracing,
   ServerVolumeTracing,
-} from "types/api_flow_types";
+} from "types/api_types";
 import type { Mutable } from "types/globals";
 import { doAllLayersHaveTheSameRotation } from "./model/accessors/dataset_layer_transformation_accessor";
 import { setVersionNumberAction } from "./model/actions/save_actions";
@@ -435,7 +436,7 @@ function setInitialTool() {
     // We are in a annotation which contains a skeleton. Due to the
     // enabled legacy-bindings, the user can expect to immediately create new nodes
     // with right click. Therefore, switch to the skeleton tool.
-    Store.dispatch(setToolAction(AnnotationToolEnum.SKELETON));
+    Store.dispatch(setToolAction(AnnotationTool.SKELETON));
   }
 }
 

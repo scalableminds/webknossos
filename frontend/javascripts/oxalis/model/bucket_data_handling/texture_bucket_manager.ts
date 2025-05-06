@@ -14,7 +14,7 @@ import {
   getDtypeConfigForElementClass,
 } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import type * as THREE from "three";
-import type { ElementClass } from "types/api_flow_types";
+import type { ElementClass } from "types/api_types";
 
 // A TextureBucketManager instance is responsible for making buckets available
 // to the GPU.

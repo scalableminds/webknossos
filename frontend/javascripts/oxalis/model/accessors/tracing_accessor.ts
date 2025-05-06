@@ -1,3 +1,4 @@
+import _ from "lodash";
 import type { Vector3 } from "oxalis/constants";
 import type { SaveQueueType } from "oxalis/model/actions/save_actions";
 import type {
@@ -9,9 +10,10 @@ import type {
   UserBoundingBox,
   VolumeTracing,
 } from "oxalis/store";
-import type { ServerTracing, TracingType } from "types/api_flow_types";
-import { TracingTypeEnum } from "types/api_flow_types";
+import type { ServerTracing, TracingType } from "types/api_types";
+import { TracingTypeEnum } from "types/api_types";
 import BoundingBox from "../bucket_data_handling/bounding_box";
+import { reuseInstanceOnEquality } from "./accessor_helpers";
 
 export function maybeGetSomeTracing(
   annotation: StoreAnnotation,
@@ -88,6 +90,14 @@ export function selectTracing(
 
   return tracing;
 }
+
+function _getTaskBoundingBoxes(annotation: StoreAnnotation) {
+  const layers = _.compact([annotation.skeleton, ...annotation.volumes, annotation.readOnly]);
+
+  return Object.fromEntries(layers.map((l) => [l.tracingId, l.boundingBox]));
+}
+
+export const getTaskBoundingBoxes = reuseInstanceOnEquality(_getTaskBoundingBoxes);
 
 export const getUserBoundingBoxesFromState = (state: OxalisState): Array<UserBoundingBox> => {
   const maybeSomeTracing = maybeGetSomeTracing(state.annotation);

@@ -1,13 +1,13 @@
 import update from "immutability-helper";
 import { describe, it, expect } from "vitest";
-import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
+import { getDisabledInfoForTools } from "oxalis/model/accessors/disabled_tool_accessor";
 import { initialState } from "test/fixtures/hybridtracing_object";
-import { AnnotationToolEnum, VolumeTools } from "oxalis/constants";
-import type { CoordinateTransformation } from "types/api_flow_types";
+import { AnnotationTool, VolumeTools } from "oxalis/model/accessors/tool_accessor";
+import type { CoordinateTransformation } from "types/api_types";
 
 const zoomSensitiveVolumeTools = VolumeTools.filter(
-  (name) => name !== AnnotationToolEnum.PICK_CELL,
-) as AnnotationToolEnum[];
+  (name) => name !== AnnotationTool.PICK_CELL,
+) as AnnotationTool[];
 
 const zoomedInInitialState = update(initialState, {
   flycam: { zoomStep: { $set: 0.1 } },
@@ -123,11 +123,11 @@ describe("Annotation Tool Disabled Info", () => {
   it("Zoomed in main tools should be enabled.", () => {
     const disabledInfo = getDisabledInfoForTools(zoomedInInitialState);
 
-    for (const toolName in AnnotationToolEnum) {
-      if (toolName === AnnotationToolEnum.PROOFREAD) {
-        expect(disabledInfo[toolName]?.isDisabled).toBe(true);
+    for (const tool of Object.values(AnnotationTool)) {
+      if (tool === AnnotationTool.PROOFREAD) {
+        expect(disabledInfo[tool.id]?.isDisabled).toBe(true);
       } else {
-        expect(disabledInfo[toolName as AnnotationToolEnum]?.isDisabled).toBe(false);
+        expect(disabledInfo[tool.id]?.isDisabled).toBe(false);
       }
     }
   });
@@ -135,35 +135,33 @@ describe("Annotation Tool Disabled Info", () => {
   it("Volume tools should be disabled when zoomed out.", () => {
     const disabledInfo = getDisabledInfoForTools(zoomedOutState);
 
-    for (const toolName in AnnotationToolEnum) {
+    for (const tool of Object.values(AnnotationTool)) {
       if (
-        toolName === AnnotationToolEnum.PROOFREAD ||
-        zoomSensitiveVolumeTools.includes(toolName as AnnotationToolEnum)
+        tool === AnnotationTool.PROOFREAD ||
+        zoomSensitiveVolumeTools.includes(tool as AnnotationTool)
       ) {
-        expect(disabledInfo[toolName as AnnotationToolEnum]?.isDisabled).toBe(true);
+        expect(disabledInfo[tool.id]?.isDisabled).toBe(true);
       } else {
-        expect(disabledInfo[toolName as AnnotationToolEnum]?.isDisabled).toBe(false);
+        expect(disabledInfo[tool.id]?.isDisabled).toBe(false);
       }
     }
   });
 
   it("Tools should be disabled when dataset is rotated", () => {
     const toolsDisregardingRotation = [
-      AnnotationToolEnum.MOVE,
-      AnnotationToolEnum.LINE_MEASUREMENT,
-      AnnotationToolEnum.AREA_MEASUREMENT,
-      AnnotationToolEnum.BOUNDING_BOX,
-    ];
+      AnnotationTool.MOVE,
+      AnnotationTool.LINE_MEASUREMENT,
+      AnnotationTool.AREA_MEASUREMENT,
+    ] as AnnotationTool[];
     const disabledInfo = getDisabledInfoForTools(rotatedState);
-    for (const toolName in AnnotationToolEnum) {
-      if (toolsDisregardingRotation.includes(toolName as AnnotationToolEnum)) {
-        expect(disabledInfo[toolName as AnnotationToolEnum]?.isDisabled).toBe(false);
+    for (const tool of Object.values(AnnotationTool)) {
+      if (toolsDisregardingRotation.includes(tool)) {
+        expect(disabledInfo[tool.id]?.isDisabled).toBe(false);
       } else {
-        expect(disabledInfo[toolName as AnnotationToolEnum]?.isDisabled).toBe(true);
+        expect(disabledInfo[tool.id]?.isDisabled).toBe(true);
       }
     }
   });
-
   it("Tools should not be disabled when dataset rotation is toggled off", () => {
     const rotationTurnedOffState = update(rotatedState, {
       datasetConfiguration: {
@@ -171,11 +169,11 @@ describe("Annotation Tool Disabled Info", () => {
       },
     });
     const disabledInfo = getDisabledInfoForTools(rotationTurnedOffState);
-    for (const toolName in AnnotationToolEnum) {
-      if (toolName === AnnotationToolEnum.PROOFREAD) {
-        expect(disabledInfo[toolName]?.isDisabled).toBe(true);
+    for (const tool of Object.values(AnnotationTool)) {
+      if (tool === AnnotationTool.PROOFREAD) {
+        expect(disabledInfo[tool.id]?.isDisabled).toBe(true);
       } else {
-        expect(disabledInfo[toolName as AnnotationToolEnum]?.isDisabled).toBe(false);
+        expect(disabledInfo[tool.id]?.isDisabled).toBe(false);
       }
     }
   });

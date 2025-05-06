@@ -7,7 +7,7 @@ import {
   SearchOutlined,
 } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
-import { getOrganization } from "admin/admin_rest_api";
+import { getOrganization } from "admin/rest_api";
 import { Result, Spin, Tag, Tooltip } from "antd";
 import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
@@ -22,7 +22,7 @@ import {
 } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import { useEffect } from "react";
 import { useSelector } from "react-redux";
-import type { APIDatasetCompact, Folder } from "types/api_flow_types";
+import type { APIDatasetCompact, Folder } from "types/api_types";
 import { DatasetLayerTags, DatasetTags, TeamTags } from "../advanced_dataset/dataset_table";
 import { useDatasetCollectionContext } from "../dataset/dataset_collection_context";
 import { SEARCH_RESULTS_LIMIT, useDatasetQuery, useFolderQuery } from "../dataset/queries";

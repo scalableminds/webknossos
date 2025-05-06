@@ -3,13 +3,11 @@ import _ from "lodash";
 import memoizeOne from "memoize-one";
 import messages from "messages";
 import Constants, {
-  type AnnotationTool,
   type ContourMode,
   MappingStatusEnum,
   type Vector3,
   type Vector4,
 } from "oxalis/constants";
-import { AnnotationToolEnum, VolumeTools } from "oxalis/constants";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 import {
   getDataLayers,
@@ -26,6 +24,11 @@ import {
   getAdditionalCoordinatesAsString,
   getFlooredPosition,
 } from "oxalis/model/accessors/flycam_accessor";
+import {
+  AnnotationTool,
+  type AnnotationToolId,
+  VolumeTools,
+} from "oxalis/model/accessors/tool_accessor";
 import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { jsConvertCellIdToRGBA } from "oxalis/shaders/segmentation.glsl";
 import { jsRgb2hsl } from "oxalis/shaders/utils.glsl";
@@ -55,7 +58,7 @@ import type {
   AnnotationLayerDescriptor,
   ServerTracing,
   ServerVolumeTracing,
-} from "types/api_flow_types";
+} from "types/api_types";
 import { setSelectedSegmentsOrGroupAction } from "../actions/volumetracing_actions";
 import { MagInfo } from "../helpers/mag_info";
 
@@ -213,15 +216,15 @@ export function getContourTracingMode(volumeTracing: VolumeTracing): ContourMode
   return contourTracingMode;
 }
 
-const MAG_THRESHOLDS_FOR_ZOOM: Partial<Record<AnnotationTool, number>> = {
-  // Note that these are relative to the lowest existing mag index.
+const MAG_THRESHOLDS_FOR_ZOOM: Partial<Record<AnnotationToolId, number>> = {
+  // Note that these are relative to the finest existing mag index.
   // A threshold of 1 indicates that the respective tool can be used in the
-  // lowest existing magnification as well as the next highest one.
-  [AnnotationToolEnum.TRACE]: 1,
-  [AnnotationToolEnum.ERASE_TRACE]: 1,
-  [AnnotationToolEnum.BRUSH]: 3,
-  [AnnotationToolEnum.ERASE_BRUSH]: 3,
-  [AnnotationToolEnum.FILL_CELL]: 1,
+  // finest existing magnification as well as the next coarser one.
+  [AnnotationTool.TRACE.id]: 1,
+  [AnnotationTool.ERASE_TRACE.id]: 1,
+  [AnnotationTool.BRUSH.id]: 3,
+  [AnnotationTool.ERASE_BRUSH.id]: 3,
+  [AnnotationTool.FILL_CELL.id]: 1,
 };
 export function isVolumeTool(tool: AnnotationTool): boolean {
   return VolumeTools.indexOf(tool) > -1;
@@ -232,7 +235,7 @@ export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state:
     return true;
   }
 
-  const threshold = MAG_THRESHOLDS_FOR_ZOOM[tool];
+  const threshold = MAG_THRESHOLDS_FOR_ZOOM[tool.id];
 
   if (threshold == null) {
     // If there is no threshold for the provided tool, it doesn't need to be
@@ -864,8 +867,7 @@ export function needsLocalHdf5Mapping(state: OxalisState, layerName: string) {
     // An annotation that has an editable mapping is likely proofread a lot.
     // Switching between tools should not require a reload which is why
     // needsLocalHdf5Mapping() will always return true in that case.
-    volumeTracing.hasEditableMapping ||
-    state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD
+    volumeTracing.hasEditableMapping || state.uiInformation.activeTool === AnnotationTool.PROOFREAD
   );
 }
 

@@ -12,10 +12,10 @@ import {
   UserAddOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { getDatastores, sendInvitesForOrganization } from "admin/admin_rest_api";
 import RegistrationFormGeneric from "admin/auth/registration_form_generic";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import { maxInludedUsersInBasicPlan } from "admin/organization/pricing_plan_utils";
+import { getDatastores, sendInvitesForOrganization } from "admin/rest_api";
 import { Alert, AutoComplete, Button, Card, Col, Form, Input, Modal, Row, Steps } from "antd";
 import CreditsFooter from "components/credits_footer";
 import LinkButton from "components/link_button";
@@ -27,7 +27,7 @@ import Store from "oxalis/store";
 import React, { useState } from "react";
 import { connect } from "react-redux";
 import { Link, type RouteComponentProps, withRouter } from "react-router-dom";
-import type { APIDataStore, APIUser } from "types/api_flow_types";
+import type { APIDataStore, APIUser } from "types/api_types";
 
 const { Step } = Steps;
 const FormItem = Form.Item;

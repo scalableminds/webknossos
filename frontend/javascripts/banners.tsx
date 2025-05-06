@@ -2,7 +2,7 @@ import {
   getBuildInfo,
   listCurrentAndUpcomingMaintenances,
   updateNovelUserExperienceInfos,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
 import { Alert, Button, Space } from "antd";
 import FormattedDate from "components/formatted_date";
 import dayjs from "dayjs";
@@ -18,7 +18,7 @@ import type { OxalisState } from "oxalis/store";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
-import type { MaintenanceInfo } from "types/api_flow_types";
+import type { MaintenanceInfo } from "types/api_types";
 
 const INITIAL_DELAY = 5000;
 const INTERVAL_TO_FETCH_MAINTENANCES_MS = 60000; // 1min

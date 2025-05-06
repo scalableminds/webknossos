@@ -1,4 +1,4 @@
-import { hasSegmentIndexInDataStore } from "admin/admin_rest_api";
+import { hasSegmentIndexInDataStore } from "admin/rest_api";
 import { Modal } from "antd";
 import type { BasicDataNode } from "antd/es/tree";
 import { waitForCondition } from "libs/utils";
@@ -12,7 +12,7 @@ import { setMappingAction, setMappingEnabledAction } from "oxalis/model/actions/
 import type { ActiveMappingInfo, Segment, StoreAnnotation } from "oxalis/store";
 import Store from "oxalis/store";
 import type { MenuClickEventHandler } from "rc-menu/lib/interface";
-import type { APIDataLayer, APIDataset, APISegmentationLayer } from "types/api_flow_types";
+import type { APIDataLayer, APIDataset, APISegmentationLayer } from "types/api_types";
 
 const { confirm } = Modal;
 

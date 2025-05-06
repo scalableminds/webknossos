@@ -7,7 +7,7 @@ import {
   WarningOutlined,
 } from "@ant-design/icons";
 import { BlobReader, BlobWriter, type Entry, ZipReader } from "@zip.js/zip.js";
-import { clearCache, getBuildInfo, importVolumeTracing } from "admin/admin_rest_api";
+import { clearCache, getBuildInfo, importVolumeTracing } from "admin/rest_api";
 import { Dropdown, Empty, type MenuProps, Modal, Space, Spin, Tooltip, notification } from "antd";
 import { saveAs } from "file-saver";
 import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
@@ -20,11 +20,11 @@ import messages from "messages";
 import { LongUnitToShortUnitMap } from "oxalis/constants";
 import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
 import {
+  areGeometriesTransformed,
   enforceSkeletonTracing,
   getActiveTree,
   getActiveTreeGroup,
   getTree,
-  isSkeletonLayerTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import type { Action } from "oxalis/model/actions/actions";
@@ -36,10 +36,10 @@ import {
   addTreesAndGroupsAction,
   batchUpdateGroupsAndTreesAction,
   createTreeAction,
-  deleteTreeAsUserAction,
   deleteTreesAction,
   deselectActiveTreeAction,
   deselectActiveTreeGroupAction,
+  handleDeleteTreeByUser,
   selectNextTreeAction,
   setActiveTreeAction,
   setActiveTreeGroupAction,
@@ -303,8 +303,7 @@ function checkAndConfirmDeletingInitialNode(treeIds: number[]) {
   const state = Store.getState();
   const skeletonTracing = enforceSkeletonTracing(state.annotation);
 
-  const hasNodeWithIdOne = (id: number) =>
-    getTree(skeletonTracing, id).map((tree) => tree.nodes.has(1));
+  const hasNodeWithIdOne = (id: number) => getTree(skeletonTracing, id)?.nodes.has(1);
 
   const needsCheck = state.task != null && treeIds.find(hasNodeWithIdOne) != null;
   return new Promise<void>((resolve, reject) => {
@@ -814,9 +813,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
     const { showSkeletons, trees, treeGroups } = skeletonTracing;
     const activeTreeName = getActiveTree(skeletonTracing)?.name ?? "";
-    const activeGroupName = getActiveTreeGroup(skeletonTracing)
-      .map((activeGroup) => activeGroup.name)
-      .getOrElse("");
+    const activeGroupName = getActiveTreeGroup(skeletonTracing)?.name ?? "";
     const noTreesAndGroups = _.size(trees) === 0 && _.size(treeGroups) === 0;
     const orderAttribute = this.props.userConfiguration.sortTreesByName ? "name" : "timestamp";
     // Avoid that the title switches to the other title during the fadeout of the Modal
@@ -985,7 +982,7 @@ const mapStateToProps = (state: OxalisState) => ({
   allowUpdate: state.annotation.restrictions.allowUpdate,
   skeletonTracing: state.annotation.skeleton,
   userConfiguration: state.userConfiguration,
-  isSkeletonLayerTransformed: isSkeletonLayerTransformed(state),
+  isSkeletonLayerTransformed: areGeometriesTransformed(state),
   isAnnotationLockedByUser: state.annotation.isLockedByOwner,
   isOwner: isAnnotationOwner(state),
 });
@@ -1012,7 +1009,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 
   onDeleteTree() {
-    dispatch(deleteTreeAsUserAction());
+    handleDeleteTreeByUser();
   },
 
   onDeleteTrees(treeIds: number[]) {

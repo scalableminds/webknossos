@@ -40,7 +40,7 @@ import {
   getOptionsForCreateSkeletonNode,
 } from "oxalis/controller/combinations/skeleton_handlers";
 import UrlManager from "oxalis/controller/url_manager";
-import type { OxalisModel } from "oxalis/model";
+import type { WebKnossosModel } from "oxalis/model";
 import {
   getLayerBoundingBox,
   getLayerByName,
@@ -228,7 +228,7 @@ export function assertVolume(state: WebknossosState): VolumeTracing {
  */
 
 class TracingApi {
-  model: OxalisModel;
+  model: WebKnossosModel;
 
   /**
    * @private
@@ -238,7 +238,7 @@ class TracingApi {
   /**
    * @private
    */
-  constructor(model: OxalisModel) {
+  constructor(model: WebKnossosModel) {
     this.model = model;
   }
 
@@ -1537,9 +1537,9 @@ class TracingApi {
  */
 
 class DataApi {
-  model: OxalisModel;
+  model: WebKnossosModel;
 
-  constructor(model: OxalisModel) {
+  constructor(model: WebKnossosModel) {
     this.model = model;
   }
 
@@ -2653,9 +2653,9 @@ class DataApi {
  */
 
 class UserApi {
-  model: OxalisModel;
+  model: WebKnossosModel;
 
-  constructor(model: OxalisModel) {
+  constructor(model: WebKnossosModel) {
     this.model = model;
   }
 
@@ -2732,9 +2732,9 @@ export type UnregisterHandler = {
  */
 
 class UtilsApi {
-  model: OxalisModel;
+  model: WebKnossosModel;
 
-  constructor(model: OxalisModel) {
+  constructor(model: WebKnossosModel) {
     this.model = model;
   }
 
@@ -2830,7 +2830,7 @@ export type ApiInterface = {
   user: UserApi;
   utils: UtilsApi;
 };
-export default function createApiInterface(model: OxalisModel): ApiInterface {
+export default function createApiInterface(model: WebKnossosModel): ApiInterface {
   return {
     tracing: new TracingApi(model),
     data: new DataApi(model),

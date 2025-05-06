@@ -528,16 +528,20 @@ export class DataBucket {
     const limits = {
       firstDim: [0, Constants.BUCKET_WIDTH],
       secondDim: [0, Constants.BUCKET_WIDTH],
+      thirdDim: [0, Constants.BUCKET_WIDTH],
     };
 
     if (this.containment.type === "partial") {
       const plane = Dimensions.planeForThirdDimension(thirdDimensionIndex);
-      const [u, v, _w] = Dimensions.getIndices(plane);
+      const [u, v, w] = Dimensions.getIndices(plane);
       limits.firstDim[0] = this.containment.min[u];
       limits.firstDim[1] = this.containment.max[u];
 
       limits.secondDim[0] = this.containment.min[v];
       limits.secondDim[1] = this.containment.max[v];
+
+      limits.thirdDim[0] = this.containment.min[w];
+      limits.thirdDim[1] = this.containment.max[w];
     }
 
     for (let firstDim = limits.firstDim[0]; firstDim < limits.firstDim[1]; firstDim++) {
@@ -547,6 +551,16 @@ export class DataBucket {
           const voxelToLabel = out;
           voxelToLabel[thirdDimensionIndex] =
             (voxelToLabel[thirdDimensionIndex] + sliceOffset) % Constants.BUCKET_WIDTH;
+
+          if (this.containment.type === "partial") {
+            const isOutside =
+              voxelToLabel[thirdDimensionIndex] < limits.thirdDim[0] ||
+              voxelToLabel[thirdDimensionIndex] >= limits.thirdDim[1];
+            if (isOutside) {
+              continue;
+            }
+          }
+
           // The voxelToLabel is already within the bucket and in the correct magnification.
           const voxelAddress = this.cube.getVoxelIndexByVoxelOffset(voxelToLabel);
           const currentSegmentId = Number(data[voxelAddress]);

@@ -693,6 +693,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       <TreeHierarchyView
         trees={this.props.skeletonTracing.trees}
         treeGroups={this.props.skeletonTracing.treeGroups}
+        activeTreeId={this.props.skeletonTracing.activeTreeId}
         activeGroupId={this.props.skeletonTracing.activeGroupId}
         allowUpdate={this.props.allowUpdate}
         sortBy={sortBy}

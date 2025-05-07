@@ -71,8 +71,7 @@ function TreeHierarchyView(props: Props) {
   const treeRef = useRef<GetRef<typeof AntdTree>>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  const activeNode = useWkSelector((state) => state.annotation.skeleton?.activeNodeId);
-  const activeTreeId = useWkSelector((state) => state.annotation.skeleton?.activeTreeId);
+  const { activeTreeId } = props;
 
   useEffect(() => {
     // equivalent of LifeCycle hook "getDerivedStateFromProps"
@@ -287,7 +286,7 @@ function TreeHierarchyView(props: Props) {
           align: "auto",
         });
     }, 300);
-  }, [activeNode]);
+  }, [activeTreeId]);
 
   useEffect(
     () => treeRef.current?.scrollTo({ key: selectedKeys[0], align: "auto" }),

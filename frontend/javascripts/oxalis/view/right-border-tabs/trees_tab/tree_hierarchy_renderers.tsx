@@ -57,6 +57,7 @@ import { ColoredDotIcon } from "../segments_tab/segment_list_item";
 import { HideTreeEdgesIcon } from "./hide_tree_edges_icon";
 
 export type Props = {
+  activeTreeId: number | null | undefined;
   activeGroupId: number | null | undefined;
   treeGroups: TreeGroup[];
   sortBy: string;
@@ -68,7 +69,6 @@ export type Props = {
   deselectAllTrees: () => void;
   onDeleteGroup: (arg0: number) => void;
   allowUpdate: boolean;
-  activeTreeId?: number | null | undefined;
 };
 
 export function renderTreeNode(

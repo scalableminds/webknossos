@@ -9,4 +9,7 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/25.05.0...HEAD)
 
 ### Postgres Evolutions:
-- [131-special-files](conf/evolutions/131-special-files.sql)
+
+- [131-more-indices-on-users.sql](conf/evolutions/131-more-indices-on-users.sql)
+- [132-special-files.sql](conf/evolutions/132-special-files.sql)
+

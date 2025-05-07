@@ -46,7 +46,7 @@ import {
 } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import { getActiveMagIndicesForLayers, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import { getSomeTracing, getTaskBoundingBoxes } from "oxalis/model/accessors/tracing_accessor";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/view_mode_accessor";
 import { sceneControllerReadyAction } from "oxalis/model/actions/actions";
 import Dimensions from "oxalis/model/dimensions";
@@ -54,7 +54,7 @@ import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import type { Transform } from "oxalis/model/helpers/transformation_helpers";
 import { getVoxelPerUnit } from "oxalis/model/scaleinfo";
 import { Model } from "oxalis/singletons";
-import type { OxalisState, SkeletonTracing, UserBoundingBox } from "oxalis/store";
+import type { SkeletonTracing, UserBoundingBox, WebknossosState } from "oxalis/store";
 import Store from "oxalis/store";
 import * as THREE from "three";
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from "three-mesh-bvh";
@@ -69,7 +69,7 @@ THREE.Mesh.prototype.raycast = acceleratedRaycast;
 const CUBE_COLOR = 0x999999;
 const LAYER_CUBE_COLOR = 0xffff99;
 
-const getVisibleSegmentationLayerNames = reuseInstanceOnEquality((storeState: OxalisState) =>
+const getVisibleSegmentationLayerNames = reuseInstanceOnEquality((storeState: WebknossosState) =>
   getVisibleSegmentationLayers(storeState).map((l) => l.name),
 );
 
@@ -84,7 +84,7 @@ class SceneController {
   layerBoundingBoxes!: { [layerName: string]: Cube };
   annotationToolsGeometryGroup!: THREE.Group;
   highlightedBBoxId: number | null | undefined;
-  taskBoundingBox: Cube | null | undefined;
+  taskCubeByTracingId: Record<string, Cube | null | undefined> = {};
   contour!: ContourGeometry;
   quickSelectGeometry!: QuickSelectGeometry;
   lineMeasurementGeometry!: LineMeasurementGeometry;
@@ -260,8 +260,6 @@ class SceneController {
       ...planeMeshes,
     );
 
-    const taskBoundingBox = getSomeTracing(state.annotation).boundingBox;
-    this.buildTaskingBoundingBox(taskBoundingBox);
     if (state.annotation.skeleton != null) {
       this.addSkeleton((_state) => getSkeletonTracing(_state.annotation), true);
     }
@@ -308,7 +306,7 @@ class SceneController {
   }
 
   addSkeleton(
-    skeletonTracingSelector: (arg0: OxalisState) => SkeletonTracing | null,
+    skeletonTracingSelector: (arg0: WebknossosState) => SkeletonTracing | null,
     supportsPicking: boolean,
   ): number {
     const skeleton = new Skeleton(skeletonTracingSelector, supportsPicking);
@@ -326,24 +324,48 @@ class SceneController {
     this.rootNode.remove(skeletonGroup);
   }
 
-  buildTaskingBoundingBox(taskBoundingBox: BoundingBoxType | null | undefined): void {
-    if (taskBoundingBox != null) {
-      if (this.taskBoundingBox != null) {
-        this.taskBoundingBox.getMeshes().forEach((mesh) => this.rootNode.remove(mesh));
+  updateTaskBoundingBoxes(
+    taskCubeByTracingId: Record<string, BoundingBoxType | null | undefined>,
+  ): void {
+    /*
+     Ensures that a green task bounding box is rendered in the scene for
+     each layer.
+     The update is implemented by simply removing the old geometry and
+     adding a new one. Since this function is executed very rarely,
+     this is not a performance problem.
+     */
+    for (const [tracingId, boundingBox] of Object.entries(taskCubeByTracingId)) {
+      let taskCube = this.taskCubeByTracingId[tracingId];
+      // Remove the old box if it exists
+      if (taskCube != null) {
+        taskCube.getMeshes().forEach((mesh) => this.rootNode.remove(mesh));
       }
-
+      this.taskCubeByTracingId[tracingId] = null;
+      if (boundingBox == null || Store.getState().task == null) {
+        continue;
+      }
       const { viewMode } = Store.getState().temporaryConfiguration;
-      this.taskBoundingBox = new Cube({
-        min: taskBoundingBox.min,
-        max: taskBoundingBox.max,
+      taskCube = new Cube({
+        min: boundingBox.min,
+        max: boundingBox.max,
         color: 0x00ff00,
         showCrossSections: true,
         isHighlighted: false,
       });
-      this.taskBoundingBox.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
+      taskCube.getMeshes().forEach((mesh) => this.rootNode.add(mesh));
 
       if (constants.MODES_ARBITRARY.includes(viewMode)) {
-        this.taskBoundingBox?.setVisibility(false);
+        taskCube?.setVisibility(false);
+      }
+
+      this.taskCubeByTracingId[tracingId] = taskCube;
+    }
+  }
+
+  forEachTaskCube(fn: (cube: Cube) => void) {
+    for (const cube of Object.values(this.taskCubeByTracingId)) {
+      if (cube != null) {
+        fn(cube);
       }
     }
   }
@@ -369,7 +391,7 @@ class SceneController {
       bbCube.updateForCam(id);
     });
 
-    this.taskBoundingBox?.updateForCam(id);
+    this.forEachTaskCube((cube) => cube.updateForCam(id));
 
     this.segmentMeshController.meshesLayerLODRootGroup.visible = id === OrthoViews.TDView;
     if (this.splitBoundaryMesh != null) {
@@ -623,8 +645,7 @@ class SceneController {
 
     this.datasetBoundingBox.setVisibility(false);
     this.userBoundingBoxGroup.visible = false;
-
-    this.taskBoundingBox?.setVisibility(false);
+    this.forEachTaskCube((cube) => cube.setVisibility(false));
 
     if (this.segmentMeshController.meshesLayerLODRootGroup != null) {
       this.segmentMeshController.meshesLayerLODRootGroup.visible = false;
@@ -639,7 +660,7 @@ class SceneController {
     this.datasetBoundingBox.setVisibility(true);
     this.userBoundingBoxGroup.visible = true;
 
-    this.taskBoundingBox?.setVisibility(true);
+    this.forEachTaskCube((cube) => cube.setVisibility(true));
   }
 
   destroy() {
@@ -670,7 +691,7 @@ class SceneController {
     this.datasetBoundingBox.destroy();
     this.userBoundingBoxes.forEach((cube) => cube.destroy());
     Object.values(this.layerBoundingBoxes).forEach((cube) => cube.destroy());
-    this.taskBoundingBox?.destroy();
+    this.forEachTaskCube((cube) => cube.destroy());
 
     for (const plane of _.values(this.planes)) {
       plane.destroy();
@@ -712,8 +733,9 @@ class SceneController {
         this.updateMeshesAccordingToLayerVisibility(),
       ),
       listenToStoreProperty(
-        (storeState) => getSomeTracing(storeState.annotation).boundingBox,
-        (bb) => this.buildTaskingBoundingBox(bb),
+        (storeState) => getTaskBoundingBoxes(storeState.annotation),
+        (boundingBoxesByTracingId) => this.updateTaskBoundingBoxes(boundingBoxesByTracingId),
+        true,
       ),
       listenToStoreProperty(
         (storeState) =>

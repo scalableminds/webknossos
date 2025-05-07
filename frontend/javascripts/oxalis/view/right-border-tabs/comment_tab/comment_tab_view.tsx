@@ -12,6 +12,7 @@ import type { EventDataNode } from "antd/es/tree";
 import { useLifecycle } from "beautiful-react-hooks";
 import { InputKeyboard } from "libs/input";
 import { useEffectOnlyOnce } from "libs/react_hooks";
+import { useWkSelector } from "libs/react_hooks";
 import { compareBy, localeCompareBy } from "libs/utils";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
@@ -24,14 +25,7 @@ import {
   setActiveNodeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
-import type {
-  CommentType,
-  MutableCommentType,
-  OxalisState,
-  SkeletonTracing,
-  Tree,
-  TreeMap,
-} from "oxalis/store";
+import type { CommentType, MutableCommentType, SkeletonTracing, Tree, TreeMap } from "oxalis/store";
 import ButtonComponent from "oxalis/view/components/button_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import InputComponent from "oxalis/view/components/input_component";
@@ -39,7 +33,7 @@ import { MarkdownModal } from "oxalis/view/components/markdown_modal";
 import { Comment, commentListId } from "oxalis/view/right-border-tabs/comment_tab/comment";
 import type { MenuProps } from "rc-menu";
 import React, { useEffect, useRef, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import type { Comparator } from "types/globals";
 import AdvancedSearchPopover from "../advanced_search_popover";
@@ -111,17 +105,13 @@ function CommentTabView(props: Props) {
 
   const dispatch = useDispatch();
 
-  const allowUpdate = useSelector(
-    (state: OxalisState) => state.annotation.restrictions.allowUpdate,
-  );
-  const keyboardDelay = useSelector((state: OxalisState) => state.userConfiguration.keyboardDelay);
+  const allowUpdate = useWkSelector((state) => state.annotation.restrictions.allowUpdate);
+  const keyboardDelay = useWkSelector((state) => state.userConfiguration.keyboardDelay);
 
-  const isAnnotationLockedByUser = useSelector(
-    (state: OxalisState) => state.annotation.isLockedByOwner,
-  );
-  const isOwner = useSelector((state: OxalisState) => isAnnotationOwner(state));
+  const isAnnotationLockedByUser = useWkSelector((state) => state.annotation.isLockedByOwner);
+  const isOwner = useWkSelector((state) => isAnnotationOwner(state));
 
-  const activeComment = useSelector((_state: OxalisState) => getActiveComment());
+  const activeComment = useWkSelector((_state) => getActiveComment());
 
   useEffectOnlyOnce(() => {
     // expand all trees by default
@@ -560,7 +550,7 @@ function CommentTabViewWrapper() {
   // 1. Prevent excessive re-renders
   // 2. Safe-guard that a skeleton tracing is available
 
-  const skeletonTracing = useSelector((state: OxalisState) => getSkeletonTracing(state.annotation));
+  const skeletonTracing = useWkSelector((state) => getSkeletonTracing(state.annotation));
 
   if (skeletonTracing) return <CommentTabViewMemo skeletonTracing={skeletonTracing} />;
 

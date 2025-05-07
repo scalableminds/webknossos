@@ -1,5 +1,4 @@
 import dayjs from "dayjs";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'java... Remove this comment to see the full error message
 import naturalSort from "javascript-natural-sort";
 import window, { document, location } from "libs/window";
 import _ from "lodash";

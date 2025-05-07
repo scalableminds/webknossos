@@ -36,7 +36,7 @@ import type {
   MutableNode,
   MutableTree,
   MutableTreeMap,
-  OxalisState,
+  WebknossosState,
 } from "oxalis/store";
 import Store from "oxalis/store";
 import ButtonComponent from "oxalis/view/components/button_component";
@@ -72,7 +72,7 @@ type StateProps = {
   mappingInfo: ActiveMappingInfo | null | undefined;
 };
 
-const mapStateToProps = (state: OxalisState): StateProps => {
+const mapStateToProps = (state: WebknossosState): StateProps => {
   const segmentationLayer = getVisibleOrLastSegmentationLayer(state);
   const connectomeData =
     segmentationLayer != null

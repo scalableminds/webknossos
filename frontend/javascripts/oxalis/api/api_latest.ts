@@ -40,7 +40,7 @@ import {
   getOptionsForCreateSkeletonNode,
 } from "oxalis/controller/combinations/skeleton_handlers";
 import UrlManager from "oxalis/controller/url_manager";
-import type { OxalisModel } from "oxalis/model";
+import type { WebKnossosModel } from "oxalis/model";
 import {
   getLayerBoundingBox,
   getLayerByName,
@@ -159,7 +159,6 @@ import type {
   MappingType,
   MutableNode,
   Node,
-  OxalisState,
   Segment,
   SegmentGroup,
   SkeletonTracing,
@@ -168,6 +167,7 @@ import type {
   TreeMap,
   UserConfiguration,
   VolumeTracing,
+  WebknossosState,
 } from "oxalis/store";
 import Store from "oxalis/store";
 import {
@@ -176,7 +176,6 @@ import {
   createGroupToSegmentsMap,
   moveGroupsHelper,
 } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
 import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
@@ -199,7 +198,7 @@ export function assertSkeleton(annotation: StoreAnnotation): SkeletonTracing {
 
   return annotation.skeleton;
 }
-export function assertVolume(state: OxalisState): VolumeTracing {
+export function assertVolume(state: WebknossosState): VolumeTracing {
   if (state.annotation.volumes.length === 0) {
     throw new Error(
       "This API function should only be called when a volume annotation layer exists.",
@@ -229,7 +228,7 @@ export function assertVolume(state: OxalisState): VolumeTracing {
  */
 
 class TracingApi {
-  model: OxalisModel;
+  model: WebKnossosModel;
 
   /**
    * @private
@@ -239,7 +238,7 @@ class TracingApi {
   /**
    * @private
    */
-  constructor(model: OxalisModel) {
+  constructor(model: WebKnossosModel) {
     this.model = model;
   }
 
@@ -1538,9 +1537,9 @@ class TracingApi {
  */
 
 class DataApi {
-  model: OxalisModel;
+  model: WebKnossosModel;
 
-  constructor(model: OxalisModel) {
+  constructor(model: WebKnossosModel) {
     this.model = model;
   }
 
@@ -2654,9 +2653,9 @@ class DataApi {
  */
 
 class UserApi {
-  model: OxalisModel;
+  model: WebKnossosModel;
 
-  constructor(model: OxalisModel) {
+  constructor(model: WebKnossosModel) {
     this.model = model;
   }
 
@@ -2733,9 +2732,9 @@ export type UnregisterHandler = {
  */
 
 class UtilsApi {
-  model: OxalisModel;
+  model: WebKnossosModel;
 
-  constructor(model: OxalisModel) {
+  constructor(model: WebKnossosModel) {
     this.model = model;
   }
 
@@ -2831,7 +2830,7 @@ export type ApiInterface = {
   user: UserApi;
   utils: UtilsApi;
 };
-export default function createApiInterface(model: OxalisModel): ApiInterface {
+export default function createApiInterface(model: WebKnossosModel): ApiInterface {
   return {
     tracing: new TracingApi(model),
     data: new DataApi(model),

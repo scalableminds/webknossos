@@ -1,5 +1,5 @@
 import _ from "lodash";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 
 abstract class AbstractAnnotationTool {
   static id: keyof typeof _AnnotationToolHelper;
@@ -152,7 +152,7 @@ export const MeasurementTools: AnnotationTool[] = [
   AnnotationTool.AREA_MEASUREMENT,
 ];
 
-export function getAvailableTools(_state: OxalisState) {}
+export function getAvailableTools(_state: WebknossosState) {}
 
 export function isVolumeDrawingTool(activeTool: AnnotationTool): boolean {
   return (

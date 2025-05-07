@@ -36,12 +36,12 @@ import { Store } from "oxalis/singletons";
 import type {
   ActiveMappingInfo,
   LabelAction,
-  OxalisState,
   Segment,
   SegmentGroup,
   SegmentMap,
   StoreAnnotation,
   VolumeTracing,
+  WebknossosState,
 } from "oxalis/store";
 import type { SegmentHierarchyNode } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import {
@@ -179,13 +179,13 @@ export function getReadableNameForLayerName(
 }
 
 export function getSegmentationLayerForTracing(
-  state: OxalisState,
+  state: WebknossosState,
   volumeTracing: VolumeTracing,
 ): APISegmentationLayer {
   return getSegmentationLayerByName(state.dataset, volumeTracing.tracingId);
 }
 
-function _getMagInfoOfActiveSegmentationTracingLayer(state: OxalisState): MagInfo {
+function _getMagInfoOfActiveSegmentationTracingLayer(state: WebknossosState): MagInfo {
   const volumeTracing = getActiveSegmentationTracing(state);
 
   if (!volumeTracing) {
@@ -230,7 +230,7 @@ export function isVolumeTool(tool: AnnotationTool): boolean {
   return VolumeTools.indexOf(tool) > -1;
 }
 
-export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state: OxalisState) {
+export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state: WebknossosState) {
   if (state.annotation.volumes.length === 0) {
     return true;
   }
@@ -259,7 +259,7 @@ export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state:
 }
 
 const MAX_BRUSH_SIZE_FOR_MAG1 = 300;
-export function getMaximumBrushSize(state: OxalisState) {
+export function getMaximumBrushSize(state: WebknossosState) {
   const volumeMags = getMagInfoOfActiveSegmentationTracingLayer(state);
 
   if (volumeMags.mags.length === 0) {
@@ -273,7 +273,7 @@ export function getMaximumBrushSize(state: OxalisState) {
 }
 
 export function getRequestedOrVisibleSegmentationLayer(
-  state: OxalisState,
+  state: WebknossosState,
   layerName: string | null | undefined,
 ): APISegmentationLayer | null | undefined {
   const requestedLayer =
@@ -282,7 +282,7 @@ export function getRequestedOrVisibleSegmentationLayer(
 }
 
 export function getTracingForSegmentationLayer(
-  state: OxalisState,
+  state: WebknossosState,
   layer: APISegmentationLayer,
 ): VolumeTracing | null | undefined {
   if (layer.tracingId != null) {
@@ -293,7 +293,7 @@ export function getTracingForSegmentationLayer(
 }
 
 export function getRequestedOrDefaultSegmentationTracingLayer(
-  state: OxalisState,
+  state: WebknossosState,
   layerName: string | null | undefined,
 ): VolumeTracing | null | undefined {
   // If a layerName is passed, the corresponding volume tracing layer is returned.
@@ -326,14 +326,14 @@ export function getRequestedOrDefaultSegmentationTracingLayer(
   return getTracingForSegmentationLayer(state, visibleLayer);
 }
 
-function _getActiveSegmentationTracing(state: OxalisState): VolumeTracing | null | undefined {
+function _getActiveSegmentationTracing(state: WebknossosState): VolumeTracing | null | undefined {
   return getRequestedOrDefaultSegmentationTracingLayer(state, null);
 }
 
 export const getActiveSegmentationTracing = memoizeOne(_getActiveSegmentationTracing);
 
 export function getActiveSegmentationTracingLayer(
-  state: OxalisState,
+  state: WebknossosState,
 ): APISegmentationLayer | null | undefined {
   const tracing = getRequestedOrDefaultSegmentationTracingLayer(state, null);
 
@@ -344,7 +344,7 @@ export function getActiveSegmentationTracingLayer(
   return getSegmentationLayerForTracing(state, tracing);
 }
 
-export function enforceActiveVolumeTracing(state: OxalisState): VolumeTracing {
+export function enforceActiveVolumeTracing(state: WebknossosState): VolumeTracing {
   const tracing = getActiveSegmentationTracing(state);
 
   if (tracing == null) {
@@ -355,7 +355,7 @@ export function enforceActiveVolumeTracing(state: OxalisState): VolumeTracing {
 }
 
 export function getRequestedOrVisibleSegmentationLayerEnforced(
-  state: OxalisState,
+  state: WebknossosState,
   layerName: string | null | undefined,
 ): APISegmentationLayer {
   const effectiveLayer = getRequestedOrVisibleSegmentationLayer(state, layerName);
@@ -371,14 +371,14 @@ export function getRequestedOrVisibleSegmentationLayerEnforced(
 }
 
 export function getNameOfRequestedOrVisibleSegmentationLayer(
-  state: OxalisState,
+  state: WebknossosState,
   layerName: string | null | undefined,
 ): string | null | undefined {
   const layer = getRequestedOrVisibleSegmentationLayer(state, layerName);
   return layer != null ? layer.name : null;
 }
 
-export function getSegmentsForLayer(state: OxalisState, layerName: string): SegmentMap {
+export function getSegmentsForLayer(state: WebknossosState, layerName: string): SegmentMap {
   const layer = getSegmentationLayerByName(state.dataset, layerName);
 
   if (layer.tracingId != null) {
@@ -389,7 +389,7 @@ export function getSegmentsForLayer(state: OxalisState, layerName: string): Segm
 }
 
 const EMPTY_SEGMENT_GROUPS: SegmentGroup[] = [];
-export function getVisibleSegments(state: OxalisState): {
+export function getVisibleSegments(state: WebknossosState): {
   segments: SegmentMap | null | undefined;
   segmentGroups: Array<SegmentGroup>;
 } {
@@ -413,7 +413,7 @@ export function getVisibleSegments(state: OxalisState): {
 // a callback function that updates the selectedIds in store if segments are stored
 // there that are not visible in the segments view tab.
 // The returned segment and group ids are all visible in the segments view tab.
-function _getSelectedIds(state: OxalisState): [
+function _getSelectedIds(state: WebknossosState): [
   {
     segments: number[];
     group: number | null;
@@ -465,7 +465,7 @@ function _getSelectedIds(state: OxalisState): [
 
 export const getSelectedIds = reuseInstanceOnEquality(_getSelectedIds);
 
-export function getActiveSegmentPosition(state: OxalisState): Vector3 | null | undefined {
+export function getActiveSegmentPosition(state: WebknossosState): Vector3 | null | undefined {
   const layer = getVisibleSegmentationLayer(state);
   if (layer == null) return null;
 
@@ -485,7 +485,7 @@ export function getActiveSegmentPosition(state: OxalisState): Vector3 | null | u
   when labeling volume data.
  */
 function _getRenderableMagForSegmentationTracing(
-  state: OxalisState,
+  state: WebknossosState,
   segmentationTracing: VolumeTracing | null | undefined,
 ):
   | {
@@ -547,7 +547,7 @@ export const getRenderableMagForSegmentationTracing = reuseInstanceOnEquality(
   _getRenderableMagForSegmentationTracing,
 );
 
-function _getRenderableMagForActiveSegmentationTracing(state: OxalisState):
+function _getRenderableMagForActiveSegmentationTracing(state: WebknossosState):
   | {
       mag: Vector3;
       zoomStep: number;
@@ -563,14 +563,14 @@ export const getRenderableMagForActiveSegmentationTracing = reuseInstanceOnEqual
 );
 
 export function getMappingInfoForVolumeTracing(
-  state: OxalisState,
+  state: WebknossosState,
   tracingIdOrLayerName: string | null | undefined,
 ): ActiveMappingInfo {
   return getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingIdOrLayerName);
 }
 
 function getVolumeTracingForLayerName(
-  state: OxalisState,
+  state: WebknossosState,
   layerName?: string | null | undefined,
 ): VolumeTracing | null | undefined {
   if (layerName != null) {
@@ -589,7 +589,7 @@ function getVolumeTracingForLayerName(
 }
 
 export function hasEditableMapping(
-  state: OxalisState,
+  state: WebknossosState,
   layerName?: string | null | undefined,
 ): boolean {
   const volumeTracing = getVolumeTracingForLayerName(state, layerName);
@@ -600,7 +600,7 @@ export function hasEditableMapping(
 }
 
 export function isMappingLocked(
-  state: OxalisState,
+  state: WebknossosState,
   layerName?: string | null | undefined,
 ): boolean {
   const volumeTracing = getVolumeTracingForLayerName(state, layerName);
@@ -611,7 +611,7 @@ export function isMappingLocked(
 }
 
 export function isMappingActivationAllowed(
-  state: OxalisState,
+  state: WebknossosState,
   mappingName: string | null | undefined,
   layerName?: string | null | undefined,
   isMergerModeMapping?: boolean,
@@ -645,7 +645,7 @@ export function isMappingActivationAllowed(
 }
 
 export function getEditableMappingForVolumeTracingId(
-  state: OxalisState,
+  state: WebknossosState,
   tracingId: string | null | undefined,
 ) {
   if (tracingId == null) {
@@ -659,7 +659,7 @@ export function getLastLabelAction(volumeTracing: VolumeTracing): LabelAction | 
 }
 
 export function getLabelActionFromPreviousSlice(
-  state: OxalisState,
+  state: WebknossosState,
   volumeTracing: VolumeTracing,
   mag: Vector3,
   dim: 0 | 1 | 2,
@@ -684,7 +684,7 @@ export function getSegmentName(
 }
 
 function getMeshOpacity(
-  state: OxalisState,
+  state: WebknossosState,
   segmentId: number,
   layerName: string,
 ): number | undefined {
@@ -699,7 +699,7 @@ function getMeshOpacity(
 
 // Output is in [0,1] for R, G, B, and A
 export function getSegmentColorAsRGBA(
-  state: OxalisState,
+  state: WebknossosState,
   mappedId: number,
   layerName?: string | null | undefined,
 ): Vector4 {
@@ -724,7 +724,7 @@ export function getSegmentColorAsRGBA(
 
 // Output is in [0,1] for H, S, L, and A
 export function getSegmentColorAsHSLA(
-  state: OxalisState,
+  state: WebknossosState,
   mappedId: number,
   layerName?: string | null | undefined,
 ): Vector4 {
@@ -775,7 +775,7 @@ const CONNECTOME_STATES = {
   },
 };
 
-export function hasConnectomeFile(state: OxalisState) {
+export function hasConnectomeFile(state: WebknossosState) {
   const segmentationLayer = getVisibleOrLastSegmentationLayer(state);
 
   if (segmentationLayer == null) {
@@ -794,7 +794,7 @@ export function hasConnectomeFile(state: OxalisState) {
 
 export type AgglomerateState = (typeof AGGLOMERATE_STATES)[keyof typeof AGGLOMERATE_STATES];
 
-export function hasAgglomerateMapping(state: OxalisState) {
+export function hasAgglomerateMapping(state: WebknossosState) {
   const segmentation = getVisibleSegmentationLayer(state);
 
   if (!segmentation) {
@@ -826,7 +826,7 @@ export function hasAgglomerateMapping(state: OxalisState) {
 }
 
 export function getMeshesForAdditionalCoordinates(
-  state: OxalisState,
+  state: WebknossosState,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
   layerName: string,
 ) {
@@ -838,12 +838,15 @@ export function getMeshesForAdditionalCoordinates(
   return null;
 }
 
-export function getMeshesForCurrentAdditionalCoordinates(state: OxalisState, layerName: string) {
+export function getMeshesForCurrentAdditionalCoordinates(
+  state: WebknossosState,
+  layerName: string,
+) {
   return getMeshesForAdditionalCoordinates(state, state.flycam.additionalCoordinates, layerName);
 }
 
 export function getMeshInfoForSegment(
-  state: OxalisState,
+  state: WebknossosState,
   additionalCoordinates: AdditionalCoordinate[] | null,
   layerName: string,
   segmentId: number,
@@ -857,7 +860,7 @@ export function getMeshInfoForSegment(
   return meshesForAddCoords[segmentId];
 }
 
-export function needsLocalHdf5Mapping(state: OxalisState, layerName: string) {
+export function needsLocalHdf5Mapping(state: WebknossosState, layerName: string) {
   const volumeTracing = getVolumeTracingByLayerName(state.annotation, layerName);
   if (volumeTracing == null) {
     return false;
@@ -882,7 +885,7 @@ export const getBucketRetrievalSourceFn =
   // to create a function that ensures that identical BucketRetrievalSource tuples will be re-used between
   // consecutive calls.
   _.memoize((layerName: string) =>
-    reuseInstanceOnEquality((state: OxalisState): BucketRetrievalSource => {
+    reuseInstanceOnEquality((state: WebknossosState): BucketRetrievalSource => {
       const usesLocalHdf5Mapping = needsLocalHdf5Mapping(state, layerName);
 
       const mappingInfo = getMappingInfoForVolumeTracing(state, layerName);

@@ -4,7 +4,7 @@ import { MappingStatusEnum } from "oxalis/constants";
 import { getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
 import type { Action } from "oxalis/model/actions/actions";
 import { updateKey2 } from "oxalis/model/helpers/deep_update";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 
 function createDictWithKeysAndValue<T>(
   keys: Array<string>,
@@ -13,7 +13,7 @@ function createDictWithKeysAndValue<T>(
   return Object.fromEntries(keys.map((key) => [key, makeDefaultValue()]));
 }
 
-function DatasetReducer(state: OxalisState, action: Action): OxalisState {
+function DatasetReducer(state: WebknossosState, action: Action): WebknossosState {
   switch (action.type) {
     case "SET_DATASET": {
       const { dataset } = action;

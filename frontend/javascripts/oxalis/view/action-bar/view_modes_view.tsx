@@ -6,7 +6,7 @@ import {
   setFlightmodeRecordingAction,
   setViewModeAction,
 } from "oxalis/model/actions/settings_actions";
-import type { AllowedMode, OxalisState } from "oxalis/store";
+import type { AllowedMode, WebknossosState } from "oxalis/store";
 import Store from "oxalis/store";
 import { PureComponent } from "react";
 import { connect } from "react-redux";
@@ -92,7 +92,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 });
 
-function mapStateToProps(state: OxalisState): StateProps {
+function mapStateToProps(state: WebknossosState): StateProps {
   return {
     viewMode: state.temporaryConfiguration.viewMode,
     allowedModes: state.annotation.restrictions.allowedModes,

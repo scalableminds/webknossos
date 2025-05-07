@@ -7,10 +7,10 @@ import {
   setToolReducer,
 } from "oxalis/model/reducers/reducer_helpers";
 import { hideBrushReducer } from "oxalis/model/reducers/volumetracing_reducer_helpers";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { Toolkits } from "../accessors/tool_accessor";
 
-function UiReducer(state: OxalisState, action: Action): OxalisState {
+function UiReducer(state: WebknossosState, action: Action): WebknossosState {
   switch (action.type) {
     case "RESET_STORE": {
       return {

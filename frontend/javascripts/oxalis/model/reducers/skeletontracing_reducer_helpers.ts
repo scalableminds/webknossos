@@ -29,12 +29,12 @@ import type {
   MutableTreeGroup,
   MutableTreeMap,
   Node,
-  OxalisState,
   RestrictionsAndSettings,
   SkeletonTracing,
   Tree,
   TreeGroup,
   TreeMap,
+  WebknossosState,
 } from "oxalis/store";
 import type {
   MetadataEntryProto,
@@ -44,7 +44,7 @@ import type {
 } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
 
-export function generateTreeName(state: OxalisState, timestamp: number, treeId: number) {
+export function generateTreeName(state: WebknossosState, timestamp: number, treeId: number) {
   let user = "";
 
   if (state.activeUser) {
@@ -114,7 +114,7 @@ function forEachGroups(groups: TreeGroup[], callback: (arg0: TreeGroup) => any) 
 }
 
 export function createNode(
-  state: OxalisState,
+  state: WebknossosState,
   skeletonTracing: SkeletonTracing,
   tree: Tree,
   positionFloat: Vector3,
@@ -163,7 +163,7 @@ export function createNode(
   return [node, edges];
 }
 export function deleteNode(
-  state: OxalisState,
+  state: WebknossosState,
   tree: Tree,
   node: Node,
   timestamp: number,
@@ -220,7 +220,7 @@ export function deleteNode(
   return [newTrees, newActiveTreeId, newActiveNodeId, newMaxNodeId];
 }
 export function deleteEdge(
-  state: OxalisState,
+  state: WebknossosState,
   sourceTree: Tree,
   sourceNode: Node,
   targetTree: Tree,
@@ -264,7 +264,7 @@ export function deleteEdge(
 }
 
 function splitTreeByNodes(
-  state: OxalisState,
+  state: WebknossosState,
   skeletonTracing: SkeletonTracing,
   activeTree: Tree,
   newTreeRootIds: number[],
@@ -489,7 +489,7 @@ export function deleteBranchPoint(
 }
 
 export function createTree(
-  state: OxalisState,
+  state: WebknossosState,
   timestamp: number,
   addToActiveGroup: boolean = true,
   name?: string,
@@ -532,7 +532,7 @@ export function createTree(
 }
 
 export function getOrCreateTree(
-  state: OxalisState,
+  state: WebknossosState,
   skeletonTracing: SkeletonTracing,
   treeId: number | null | undefined,
   timestamp: number,
@@ -553,7 +553,7 @@ export function getOrCreateTree(
   return null;
 }
 
-export function ensureTreeNames(state: OxalisState, trees: MutableTreeMap) {
+export function ensureTreeNames(state: WebknossosState, trees: MutableTreeMap) {
   // Assign a new tree name for trees without a name
   for (const tree of Utils.values(trees)) {
     if (tree.name === "") {
@@ -776,9 +776,9 @@ export function deleteComment(
 }
 
 export function toggleAllTreesReducer(
-  state: OxalisState,
+  state: WebknossosState,
   skeletonTracing: SkeletonTracing,
-): OxalisState {
+): WebknossosState {
   // Let's make all trees visible if there is one invisible tree
   const shouldBecomeVisible = _.values(skeletonTracing.trees).some((tree) => !tree.isVisible);
 
@@ -801,11 +801,11 @@ export function toggleAllTreesReducer(
 }
 
 export function toggleTreeGroupReducer(
-  state: OxalisState,
+  state: WebknossosState,
   skeletonTracing: SkeletonTracing,
   groupId: number,
   targetVisibility?: boolean,
-): OxalisState {
+): WebknossosState {
   let toggledGroup;
   forEachGroups(skeletonTracing.treeGroups, (group) => {
     if (group.groupId === groupId) toggledGroup = group;
@@ -846,9 +846,9 @@ export function toggleTreeGroupReducer(
 }
 
 export function setExpandedTreeGroups(
-  state: OxalisState,
+  state: WebknossosState,
   shouldBeExpanded: (arg: TreeGroup) => boolean,
-): OxalisState {
+): WebknossosState {
   const currentTreeGroups = state.annotation?.skeleton?.treeGroups;
   if (currentTreeGroups == null) {
     return state;
@@ -945,7 +945,7 @@ export function removeMissingGroupsFromTrees(
   return changedTrees;
 }
 export function extractPathAsNewTree(
-  state: OxalisState,
+  state: WebknossosState,
   sourceTree: Tree,
   pathOfNodeIds: number[],
 ): Tree | null {

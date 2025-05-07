@@ -1,15 +1,13 @@
 import { CaretDownOutlined, CaretUpOutlined, ExpandAltOutlined } from "@ant-design/icons";
 import { Space, Tooltip } from "antd";
-import { useRepeatedButtonTrigger } from "libs/react_hooks";
+import { useRepeatedButtonTrigger, useWkSelector } from "libs/react_hooks";
 import { OrthoViews, OrthoViewsToName } from "oxalis/constants";
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
 import { getMoveOffset, getMoveOffset3d } from "oxalis/model/accessors/flycam_accessor";
 import { moveFlycamAction } from "oxalis/model/actions/flycam_actions";
 import { Store } from "oxalis/singletons";
-import type { OxalisState } from "oxalis/store";
 import { layoutEmitter } from "oxalis/view/layouting/layout_persistence";
 import type * as React from "react";
-import { useSelector } from "react-redux";
 import ButtonComponent from "../components/button_component";
 
 const moveForward = (timeFactor: number, isFirst: boolean) =>
@@ -26,7 +24,7 @@ const BUTTON_STYLE = { userSelect: "none", WebkitUserSelect: "none" } as const;
 const ICON_TRANSFORM_VALUE = "scale(1)";
 
 export function FloatingMobileControls() {
-  const viewMode = useSelector((store: OxalisState) => store.temporaryConfiguration.viewMode);
+  const viewMode = useWkSelector((state) => state.temporaryConfiguration.viewMode);
 
   const moveForwardProps = useRepeatedButtonTrigger(
     viewMode === "orthogonal" ? moveForward : moveForwardArbitrary,
@@ -34,9 +32,7 @@ export function FloatingMobileControls() {
   const moveBackwardProps = useRepeatedButtonTrigger(
     viewMode === "orthogonal" ? moveBackward : moveBackwardArbitrary,
   );
-  const activeViewport = useSelector(
-    (store: OxalisState) => store.viewModeData.plane.activeViewport,
-  );
+  const activeViewport = useWkSelector((state) => state.viewModeData.plane.activeViewport);
   const handleContextMenu = (event: React.SyntheticEvent) => {
     event.preventDefault();
   };

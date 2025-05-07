@@ -25,7 +25,7 @@ import {
 import classnames from "classnames";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { connect, useSelector } from "react-redux";
+import { connect } from "react-redux";
 import { Link, useLocation } from "react-router-dom";
 
 import LoginForm from "admin/auth/login_form";
@@ -43,6 +43,7 @@ import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import features from "features";
 import { useFetch, useInterval } from "libs/react_helpers";
+import { useWkSelector } from "libs/react_hooks";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
@@ -56,7 +57,7 @@ import {
 import { formatUserName } from "oxalis/model/accessors/user_accessor";
 import { setThemeAction } from "oxalis/model/actions/ui_actions";
 import { logoutUserAction, setActiveUserAction } from "oxalis/model/actions/user_actions";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import Store from "oxalis/store";
 import { HelpModal } from "oxalis/view/help_modal";
 import { PortalTarget } from "oxalis/view/layouting/portal_utils";
@@ -712,8 +713,8 @@ function LoggedInAvatar({
 }
 
 function AnonymousAvatar() {
-  const bannerHeight = useSelector(
-    (state: OxalisState) => state.uiInformation.navbarHeight - constants.DEFAULT_NAVBAR_HEIGHT,
+  const bannerHeight = useWkSelector(
+    (state) => state.uiInformation.navbarHeight - constants.DEFAULT_NAVBAR_HEIGHT,
   );
   return (
     <Popover
@@ -999,7 +1000,7 @@ function Navbar({
 }
 
 function GlobalProgressBar() {
-  const globalProgress = useSelector((state: OxalisState) => state.uiInformation.globalProgress);
+  const globalProgress = useWkSelector((state) => state.uiInformation.globalProgress);
   const hide = globalProgress === 0;
   return (
     <div
@@ -1009,7 +1010,7 @@ function GlobalProgressBar() {
   );
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   activeUser: state.activeUser,
   isInAnnotationView: state.uiInformation.isInAnnotationView,
   hasOrganizations: state.uiInformation.hasOrganizations,

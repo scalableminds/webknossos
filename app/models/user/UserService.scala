@@ -336,6 +336,7 @@ class UserService @Inject()(conf: WkConf,
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       novelUserExperienceInfos = multiUser.novelUserExperienceInfos
       teamMembershipsJs <- Fox.serialCombined(teamMemberships)(tm => teamMembershipService.publicWrites(tm))
+      isGuest <- userDAO.isUserAGuest(user._id)
       experiences <- experiencesFor(user._id)
     } yield {
       Json.obj(
@@ -359,6 +360,8 @@ class UserService @Inject()(conf: WkConf,
         "lastTaskTypeId" -> user.lastTaskTypeId.map(_.toString),
         "isSuperUser" -> multiUser.isSuperUser,
         "isEmailVerified" -> (multiUser.isEmailVerified || !conf.WebKnossos.User.EmailVerification.activated),
+        "isUnlisted" -> user.isUnlisted,
+        "isGuest" -> isGuest
       )
     }
   }
@@ -402,6 +405,8 @@ class UserService @Inject()(conf: WkConf,
         "lastTaskTypeId" -> userCompactInfo.lastTaskTypeId,
         "isSuperUser" -> userCompactInfo.isSuperUser,
         "isEmailVerified" -> userCompactInfo.isEmailVerified,
+        "isGuest" -> userCompactInfo.isGuest,
+        "isUnlisted" -> userCompactInfo.isUnlisted
       )
     }
 

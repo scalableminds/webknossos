@@ -27,7 +27,7 @@ import { Link } from "react-router-dom";
 import type { Dispatch } from "redux";
 import type { APIDataset, APIUser } from "types/api_types";
 
-import type { OxalisState, StoreAnnotation, Task } from "oxalis/store";
+import type { StoreAnnotation, Task, WebknossosState } from "oxalis/store";
 
 import { getOrganization } from "admin/rest_api";
 import FastTooltip from "components/fast_tooltip";
@@ -653,7 +653,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   }
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   annotation: state.annotation,
   dataset: state.dataset,
   task: state.task,

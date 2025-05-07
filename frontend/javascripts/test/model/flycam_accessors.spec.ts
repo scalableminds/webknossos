@@ -1,5 +1,5 @@
 import update from "immutability-helper";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
 import * as accessors from "oxalis/model/accessors/flycam_accessor";
 import constants, { Identity4x4, UnitLong, type Vector3 } from "oxalis/constants";
@@ -13,7 +13,7 @@ const boundingBox = {
   height: 100,
   depth: 100,
 };
-const initialState: OxalisState = {
+const initialState: WebknossosState = {
   ...defaultState,
   dataset: {
     ...defaultState.dataset,

@@ -19,13 +19,13 @@ import constants, {
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
-import type { Flycam, OxalisState } from "oxalis/store";
+import type { Flycam, WebknossosState } from "oxalis/store";
 
-export function getTDViewportSize(state: OxalisState): [number, number] {
+export function getTDViewportSize(state: WebknossosState): [number, number] {
   const camera = state.viewModeData.plane.tdCamera;
   return [camera.right - camera.left, camera.top - camera.bottom];
 }
-export function getTDViewZoom(state: OxalisState) {
+export function getTDViewZoom(state: WebknossosState) {
   const { width } = getInputCatcherRect(state, OrthoViews.TDView);
   const [viewplaneWidth] = getTDViewportSize(state);
   const { factor } = state.dataset.dataSource.scale;
@@ -33,7 +33,7 @@ export function getTDViewZoom(state: OxalisState) {
   const scaleX = viewplaneWidth / (width * factor[0]);
   return scaleX;
 }
-export function getInputCatcherRect(state: OxalisState, viewport: Viewport): Rect {
+export function getInputCatcherRect(state: WebknossosState, viewport: Viewport): Rect {
   if (viewport === ArbitraryViewport) {
     return state.viewModeData.arbitrary.inputCatcherRect;
   } else {
@@ -52,14 +52,14 @@ const _getViewportExtents = memoizeOne((rects) => {
   };
 });
 
-export function getViewportRects(state: OxalisState) {
+export function getViewportRects(state: WebknossosState) {
   return state.viewModeData.plane.inputCatcherRects;
 }
-export function getViewportExtents(state: OxalisState): OrthoViewExtents {
+export function getViewportExtents(state: WebknossosState): OrthoViewExtents {
   const rects = state.viewModeData.plane.inputCatcherRects;
   return _getViewportExtents(rects);
 }
-export function getInputCatcherAspectRatio(state: OxalisState, viewport: Viewport): number {
+export function getInputCatcherAspectRatio(state: WebknossosState, viewport: Viewport): number {
   const { width, height } = getInputCatcherRect(state, viewport);
 
   if (width === 0 || height === 0) {
@@ -83,7 +83,7 @@ export function getInputCatcherAspectRatio(state: OxalisState, viewport: Viewpor
 //   return [scaledWidth, scaledHeight];
 // }
 // Returns the ratio between VIEWPORT_WIDTH and the actual extent of the viewport for width and height
-export function getViewportScale(state: OxalisState, viewport: Viewport): [number, number] {
+export function getViewportScale(state: WebknossosState, viewport: Viewport): [number, number] {
   const { width, height } = getInputCatcherRect(state, viewport);
   const xScale = width / constants.VIEWPORT_WIDTH;
   const yScale = height / constants.VIEWPORT_WIDTH;
@@ -91,7 +91,7 @@ export function getViewportScale(state: OxalisState, viewport: Viewport): [numbe
 }
 
 function _calculateMaybeGlobalPos(
-  state: OxalisState,
+  state: WebknossosState,
   clickPos: Point2,
   planeId?: OrthoView | null | undefined,
 ): Vector3 | null | undefined {
@@ -141,7 +141,7 @@ function _calculateMaybeGlobalPos(
 }
 
 function _calculateMaybePlaneScreenPos(
-  state: OxalisState,
+  state: WebknossosState,
   globalPosition: Vector3,
   planeId?: OrthoView | null | undefined,
 ): Point2 | null | undefined {
@@ -192,7 +192,7 @@ function _calculateMaybePlaneScreenPos(
 }
 
 function _calculateMaybeGlobalDelta(
-  state: OxalisState,
+  state: WebknossosState,
   delta: Point2,
   planeId?: OrthoView | null | undefined,
 ): Vector3 | null | undefined {
@@ -226,7 +226,7 @@ function _calculateMaybeGlobalDelta(
 }
 
 function _calculateGlobalPos(
-  state: OxalisState,
+  state: WebknossosState,
   clickPos: Point2,
   planeId?: OrthoView | null | undefined,
 ): Vector3 {
@@ -241,7 +241,7 @@ function _calculateGlobalPos(
 }
 
 function _calculateGlobalDelta(
-  state: OxalisState,
+  state: WebknossosState,
   delta: Point2,
   planeId?: OrthoView | null | undefined,
 ): Vector3 {
@@ -255,7 +255,7 @@ function _calculateGlobalDelta(
   return position;
 }
 
-export function getDisplayedDataExtentInPlaneMode(state: OxalisState) {
+export function getDisplayedDataExtentInPlaneMode(state: WebknossosState) {
   const planeRatio = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
   const curGlobalCenterPos = getPosition(state.flycam);
   const extents = OrthoViewValuesWithoutTDView.map((orthoView) =>
@@ -289,16 +289,16 @@ export const calculateMaybeGlobalPos = reuseInstanceOnEquality(_calculateMaybeGl
 export const calculateGlobalPos = reuseInstanceOnEquality(_calculateGlobalPos);
 export const calculateGlobalDelta = reuseInstanceOnEquality(_calculateGlobalDelta);
 export const calculateMaybePlaneScreenPos = reuseInstanceOnEquality(_calculateMaybePlaneScreenPos);
-export function getViewMode(state: OxalisState): ViewMode {
+export function getViewMode(state: WebknossosState): ViewMode {
   return state.temporaryConfiguration.viewMode;
 }
-export function isPlaneMode(state: OxalisState): boolean {
+export function isPlaneMode(state: WebknossosState): boolean {
   const viewMode = getViewMode(state);
   return constants.MODES_PLANE.includes(viewMode);
 }
 
 export function getPlaneScalingFactor(
-  state: OxalisState,
+  state: WebknossosState,
   flycam: Flycam,
   planeID: OrthoView,
 ): [number, number] {
@@ -306,7 +306,7 @@ export function getPlaneScalingFactor(
   return [width / constants.VIEWPORT_WIDTH, height / constants.VIEWPORT_WIDTH];
 }
 export function getPlaneExtentInVoxelFromStore(
-  state: OxalisState,
+  state: WebknossosState,
   zoomStep: number,
   planeID: OrthoView,
 ): [number, number] {

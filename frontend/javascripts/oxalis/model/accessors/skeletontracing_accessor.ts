@@ -4,13 +4,13 @@ import type {
   BranchPoint,
   Node,
   NumberLike,
-  OxalisState,
   SkeletonTracing,
   StoreAnnotation,
   Tree,
   TreeGroup,
   TreeGroupTypeFlat,
   TreeMap,
+  WebknossosState,
 } from "oxalis/store";
 import {
   MISSING_GROUP_ID,
@@ -231,7 +231,7 @@ export function getTreeAndNodeOrNull(
   };
 }
 
-export function areGeometriesTransformed(state: OxalisState) {
+export function areGeometriesTransformed(state: WebknossosState) {
   const transformation = getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull(
     state.dataset,
     state.datasetConfiguration.nativelyRenderedLayerName,
@@ -244,18 +244,18 @@ export function isSkeletonLayerVisible(annotation: StoreAnnotation) {
   return skeletonLayer == null ? false : skeletonLayer.showSkeletons;
 }
 
-export function getNodePosition(node: Node, state: OxalisState): Vector3 {
+export function getNodePosition(node: Node, state: WebknossosState): Vector3 {
   return transformNodePosition(node.untransformedPosition, state);
 }
 
-export function transformNodePosition(position: Vector3, state: OxalisState): Vector3 {
+export function transformNodePosition(position: Vector3, state: WebknossosState): Vector3 {
   const dataset = state.dataset;
   const { nativelyRenderedLayerName } = state.datasetConfiguration;
   const currentTransforms = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName);
   return transformPointUnscaled(currentTransforms)(position);
 }
 
-export function untransformNodePosition(position: Vector3, state: OxalisState): Vector3 {
+export function untransformNodePosition(position: Vector3, state: WebknossosState): Vector3 {
   const dataset = state.dataset;
   const { nativelyRenderedLayerName } = state.datasetConfiguration;
   const currentTransforms = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName);

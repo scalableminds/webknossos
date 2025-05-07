@@ -626,7 +626,7 @@ export type LocalSegmentationData = {
   readonly hideUnregisteredSegments: boolean;
 };
 
-export type OxalisState = {
+export type WebknossosState = {
   readonly datasetConfiguration: DatasetConfiguration;
   readonly userConfiguration: UserConfiguration;
   readonly temporaryConfiguration: TemporaryConfiguration;
@@ -648,7 +648,7 @@ export type OxalisState = {
   >;
 };
 const sagaMiddleware = createSagaMiddleware();
-export type Reducer = (state: OxalisState, action: Action) => OxalisState;
+export type Reducer = (state: WebknossosState, action: Action) => WebknossosState;
 const combinedReducers = reduceReducers(
   SettingsReducer,
   DatasetReducer,
@@ -666,7 +666,7 @@ const combinedReducers = reduceReducers(
   OrganizationReducer,
 );
 
-const store = createStore<OxalisState, Action, unknown, unknown>(
+const store = createStore<WebknossosState, Action, unknown, unknown>(
   enableBatching(combinedReducers),
   defaultState,
   applyMiddleware(actionLoggerMiddleware, overwriteActionMiddleware, sagaMiddleware as Middleware),
@@ -675,7 +675,6 @@ const store = createStore<OxalisState, Action, unknown, unknown>(
 export function startSaga(saga: Saga<any[]>) {
   sagaMiddleware.run(saga);
 }
-
 export type StoreType = typeof store;
 
 export default store;

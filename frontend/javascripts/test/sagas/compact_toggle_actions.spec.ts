@@ -2,7 +2,7 @@ import _ from "lodash";
 import { describe, it, expect } from "vitest";
 import type {
   Flycam,
-  OxalisState,
+  WebknossosState,
   Segment,
   SegmentGroup,
   Tree,
@@ -84,7 +84,7 @@ const genericGroups: TreeGroup[] = [
 ];
 const flycamMock = {} as any as Flycam;
 const tracingId = "someTracingId";
-const createStateWithTrees = (trees: Tree[], genericGroups: TreeGroup[]): OxalisState => ({
+const createStateWithTrees = (trees: Tree[], genericGroups: TreeGroup[]): WebknossosState => ({
   ...defaultState,
   annotation: {
     ...defaultState.annotation,
@@ -114,7 +114,7 @@ const createStateWithTrees = (trees: Tree[], genericGroups: TreeGroup[]): Oxalis
 const createStateWithSegments = (
   segments: Segment[],
   segmentGroups: SegmentGroup[],
-): OxalisState => ({
+): WebknossosState => ({
   ...defaultState,
   annotation: {
     ...defaultState.annotation,
@@ -164,7 +164,7 @@ const allVisibleSegments = createStateWithSegments(
   genericGroups,
 );
 
-function testSkeletonDiffing(prevState: OxalisState, nextState: OxalisState) {
+function testSkeletonDiffing(prevState: WebknossosState, nextState: WebknossosState) {
   // Let's remove updateTree actions as well, as these will occur here
   // because we don't do shallow updates within the tests (instead, we are
   // are creating completely new trees, so that we don't have to go through the
@@ -183,7 +183,7 @@ function testSkeletonDiffing(prevState: OxalisState, nextState: OxalisState) {
   );
 }
 
-function testVolumeDiffing(prevState: OxalisState, nextState: OxalisState) {
+function testVolumeDiffing(prevState: WebknossosState, nextState: WebknossosState) {
   // Let's remove updateTree actions as well, as these will occur here
   // because we don't do shallow updates within the tests (instead, we are
   // are creating completely new trees, so that we don't have to go through the
@@ -210,7 +210,7 @@ function _updateTreeVisibility(treeId: number, isVisible: boolean) {
   return updateTreeVisibility(tree, tracingId);
 }
 
-function getSkeletonActions(initialState: OxalisState, newState: OxalisState) {
+function getSkeletonActions(initialState: WebknossosState, newState: WebknossosState) {
   const updateActions = testSkeletonDiffing(initialState, newState);
 
   if (newState.annotation.skeleton == null) {
@@ -222,7 +222,7 @@ function getSkeletonActions(initialState: OxalisState, newState: OxalisState) {
   return [compactedActions, updateActions];
 }
 
-function getVolumeActions(initialState: OxalisState, newState: OxalisState) {
+function getVolumeActions(initialState: WebknossosState, newState: WebknossosState) {
   const updateActions = testVolumeDiffing(initialState, newState);
 
   const compactedActions = compactToggleActions(updateActions, newState.annotation.volumes[0]);

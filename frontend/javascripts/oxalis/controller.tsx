@@ -21,7 +21,7 @@ import { setViewModeAction, updateLayerSettingAction } from "oxalis/model/action
 import { setIsInAnnotationViewAction } from "oxalis/model/actions/ui_actions";
 import { HANDLED_ERROR } from "oxalis/model_initialization";
 import { Model } from "oxalis/singletons";
-import type { OxalisState, TraceOrViewCommand } from "oxalis/store";
+import type { TraceOrViewCommand, WebknossosState } from "oxalis/store";
 import Store from "oxalis/store";
 import * as React from "react";
 import { connect } from "react-redux";
@@ -348,7 +348,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   }
 }
 
-function mapStateToProps(state: OxalisState): StateProps {
+function mapStateToProps(state: WebknossosState): StateProps {
   return {
     viewMode: state.temporaryConfiguration.viewMode,
     user: state.activeUser,

@@ -2,11 +2,11 @@
 // Ensure singletons are set up
 import "test/helpers/apiHelpers";
 import _ from "lodash";
-import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import * as Utils from "libs/utils";
 import { describe, it, beforeAll, expect } from "vitest";
 import type { Vector3 } from "oxalis/constants";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { tracing, annotation } from "../fixtures/skeletontracing_server_objects";
 import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reducers/reducer_helpers";
 import { batchedAnnotationInitializationAction } from "oxalis/model/actions/annotation_actions";
@@ -25,7 +25,7 @@ import {
 import { initializeAnnotationAction } from "oxalis/model/actions/annotation_actions";
 
 const skeletonCreator = () =>
-  new Skeleton((state: OxalisState) => getSkeletonTracing(state.annotation), true);
+  new Skeleton((state: WebknossosState) => enforceSkeletonTracing(state.annotation), true);
 
 describe("Skeleton", () => {
   beforeAll(() => {
@@ -50,79 +50,77 @@ describe("Skeleton", () => {
       Store.dispatch(createNodeAction([i, i, i] as Vector3, null, rotation, viewport, mag));
     }
 
-    getSkeletonTracing(Store.getState().annotation).map((skeletonTracing) => {
-      const trees = skeletonTracing.trees;
-      expect(_.size(trees)).toBe(20);
+    const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
+    const trees = skeletonTracing.trees;
+    expect(_.size(trees)).toBe(20);
 
-      for (const tree of Utils.values(trees)) {
-        expect(tree.nodes.size()).toBe(100);
-      }
-    });
+    for (const tree of Utils.values(trees)) {
+      expect(tree.nodes.size()).toBe(100);
+    }
   });
 
   it("should initialize correctly using the store's state", () => {
-    getSkeletonTracing(Store.getState().annotation).map((skeletonTracing) => {
-      const trees = skeletonTracing.trees;
-      const skeleton = skeletonCreator();
-      expect(skeleton.nodes.buffers.length).toBe(1);
-      expect(skeleton.edges.buffers.length).toBe(1);
-      const nodeCapacity = 2000;
-      const edgeCapacity = 1980;
-      let nodePositions: Vector3[] = [];
-      const nodeTypes: number[] = [];
-      const nodeRadii: number[] = [];
-      const nodeIds: number[] = [];
-      const nodeTreeIds: number[] = [];
-      let edgePositions: Vector3[] = [];
-      const edgeTreeIds: number[] = [];
-      let treeColors = [0, 0, 0, 0]; // tree ids start at index 1 so add one bogus RGB value
+    const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
+    const trees = skeletonTracing.trees;
+    const skeleton = skeletonCreator();
+    expect(skeleton.nodes.buffers.length).toBe(1);
+    expect(skeleton.edges.buffers.length).toBe(1);
+    const nodeCapacity = 2000;
+    const edgeCapacity = 1980;
+    let nodePositions: Vector3[] = [];
+    const nodeTypes: number[] = [];
+    const nodeRadii: number[] = [];
+    const nodeIds: number[] = [];
+    const nodeTreeIds: number[] = [];
+    let edgePositions: Vector3[] = [];
+    const edgeTreeIds: number[] = [];
+    let treeColors = [0, 0, 0, 0]; // tree ids start at index 1 so add one bogus RGB value
 
-      for (const tree of Utils.values(trees)) {
-        treeColors = treeColors.concat(
-          skeleton.getTreeRGBA(tree.color, tree.isVisible, tree.edgesAreVisible),
-        );
+    for (const tree of Utils.values(trees)) {
+      treeColors = treeColors.concat(
+        skeleton.getTreeRGBA(tree.color, tree.isVisible, tree.edgesAreVisible),
+      );
 
-        for (const node of Array.from(tree.nodes.values())) {
-          nodePositions = nodePositions.concat(node.untransformedPosition);
-          nodeTreeIds.push(tree.treeId);
-          nodeRadii.push(node.radius);
-          nodeIds.push(node.id);
-          nodeTypes.push(NodeTypes.NORMAL);
-        }
-
-        for (const edge of tree.edges.all()) {
-          const sourcePosition = tree.nodes.getOrThrow(edge.source).untransformedPosition;
-          const targetPosition = tree.nodes.getOrThrow(edge.target).untransformedPosition;
-          edgePositions = edgePositions.concat(sourcePosition).concat(targetPosition);
-          edgeTreeIds.push(tree.treeId, tree.treeId);
-        }
+      for (const node of Array.from(tree.nodes.values())) {
+        nodePositions = nodePositions.concat(node.untransformedPosition);
+        nodeTreeIds.push(tree.treeId);
+        nodeRadii.push(node.radius);
+        nodeIds.push(node.id);
+        nodeTypes.push(NodeTypes.NORMAL);
       }
 
-      const nodeBufferGeometryAttributes = skeleton.nodes.buffers[0].geometry.attributes;
-      expect(nodeBufferGeometryAttributes.position.array.length).toBe(3 * nodeCapacity);
-      expect(nodeBufferGeometryAttributes.radius.array.length).toBe(nodeCapacity);
-      expect(nodeBufferGeometryAttributes.type.array.length).toBe(nodeCapacity);
-      expect(nodeBufferGeometryAttributes.nodeId.array.length).toBe(nodeCapacity);
-      expect(nodeBufferGeometryAttributes.treeId.array.length).toBe(nodeCapacity);
-      expect(nodeBufferGeometryAttributes.position.array).toEqual(
-        new Float32Array(nodePositions as any as number[]),
-      );
-      expect(nodeBufferGeometryAttributes.radius.array).toEqual(new Float32Array(nodeRadii));
-      expect(nodeBufferGeometryAttributes.type.array).toEqual(new Float32Array(nodeTypes));
-      expect(nodeBufferGeometryAttributes.nodeId.array).toEqual(new Float32Array(nodeIds));
-      expect(nodeBufferGeometryAttributes.treeId.array).toEqual(new Float32Array(nodeTreeIds));
-      const edgeBufferGeometryAttributes = skeleton.edges.buffers[0].geometry.attributes;
-      expect(edgeBufferGeometryAttributes.position.array.length).toBe(6 * edgeCapacity);
-      expect(edgeBufferGeometryAttributes.treeId.array.length).toBe(2 * edgeCapacity);
-      expect(edgeBufferGeometryAttributes.position.array).toEqual(
-        new Float32Array(edgePositions as any as number[]),
-      );
-      expect(edgeBufferGeometryAttributes.treeId.array).toEqual(new Float32Array(edgeTreeIds));
-      const textureData = new Float32Array(COLOR_TEXTURE_WIDTH * COLOR_TEXTURE_WIDTH * 4);
-      textureData.set(treeColors);
-      // Using isEqual from lodash as noted in the original test
-      expect(_.isEqual(skeleton.treeColorTexture.image.data, textureData)).toBe(true);
-    });
+      for (const edge of tree.edges.all()) {
+        const sourcePosition = tree.nodes.getOrThrow(edge.source).untransformedPosition;
+        const targetPosition = tree.nodes.getOrThrow(edge.target).untransformedPosition;
+        edgePositions = edgePositions.concat(sourcePosition).concat(targetPosition);
+        edgeTreeIds.push(tree.treeId, tree.treeId);
+      }
+    }
+
+    const nodeBufferGeometryAttributes = skeleton.nodes.buffers[0].geometry.attributes;
+    expect(nodeBufferGeometryAttributes.position.array.length).toBe(3 * nodeCapacity);
+    expect(nodeBufferGeometryAttributes.radius.array.length).toBe(nodeCapacity);
+    expect(nodeBufferGeometryAttributes.type.array.length).toBe(nodeCapacity);
+    expect(nodeBufferGeometryAttributes.nodeId.array.length).toBe(nodeCapacity);
+    expect(nodeBufferGeometryAttributes.treeId.array.length).toBe(nodeCapacity);
+    expect(nodeBufferGeometryAttributes.position.array).toEqual(
+      new Float32Array(nodePositions as any as number[]),
+    );
+    expect(nodeBufferGeometryAttributes.radius.array).toEqual(new Float32Array(nodeRadii));
+    expect(nodeBufferGeometryAttributes.type.array).toEqual(new Float32Array(nodeTypes));
+    expect(nodeBufferGeometryAttributes.nodeId.array).toEqual(new Float32Array(nodeIds));
+    expect(nodeBufferGeometryAttributes.treeId.array).toEqual(new Float32Array(nodeTreeIds));
+    const edgeBufferGeometryAttributes = skeleton.edges.buffers[0].geometry.attributes;
+    expect(edgeBufferGeometryAttributes.position.array.length).toBe(6 * edgeCapacity);
+    expect(edgeBufferGeometryAttributes.treeId.array.length).toBe(2 * edgeCapacity);
+    expect(edgeBufferGeometryAttributes.position.array).toEqual(
+      new Float32Array(edgePositions as any as number[]),
+    );
+    expect(edgeBufferGeometryAttributes.treeId.array).toEqual(new Float32Array(edgeTreeIds));
+    const textureData = new Float32Array(COLOR_TEXTURE_WIDTH * COLOR_TEXTURE_WIDTH * 4);
+    textureData.set(treeColors);
+    // Using isEqual from lodash as noted in the original test
+    expect(_.isEqual(skeleton.treeColorTexture.image.data, textureData)).toBe(true);
   });
 
   it("should increase its buffers once the max capacity is reached", async () => {
@@ -170,7 +168,7 @@ describe("Skeleton", () => {
 
   it("should update node radius", async () => {
     const skeleton = skeletonCreator();
-    const skeletonTracing = getSkeletonTracing(Store.getState().annotation).get();
+    const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
     const { activeNodeId, activeTreeId } = skeletonTracing;
 
     Store.dispatch(setNodeRadiusAction(2));
@@ -183,7 +181,7 @@ describe("Skeleton", () => {
   it("should update tree colors upon tree creation", async () => {
     const skeleton = skeletonCreator();
     Store.dispatch(createTreeAction());
-    const skeletonTracing = getSkeletonTracing(Store.getState().annotation).get();
+    const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
     const { activeTreeId, trees } = skeletonTracing;
 
     if (activeTreeId != null) {

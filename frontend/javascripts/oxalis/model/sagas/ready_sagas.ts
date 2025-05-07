@@ -1,5 +1,5 @@
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { select, take, takeEvery } from "typed-redux-saga";
 
 let isSceneControllerReady = false;
@@ -18,7 +18,7 @@ function* listenForSceneControllerReady(): Saga<void> {
 // until the action is dispatched.
 
 export function* ensureWkReady(): Saga<void> {
-  const isWkReady = yield* select((state: OxalisState) => state.uiInformation.isWkReady);
+  const isWkReady = yield* select((state: WebknossosState) => state.uiInformation.isWkReady);
   if (isWkReady) return;
   yield* take("WK_READY");
 }

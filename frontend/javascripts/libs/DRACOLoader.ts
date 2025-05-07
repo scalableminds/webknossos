@@ -1,5 +1,5 @@
 // @ts-nocheck
-/* eslint-disable */
+
 // Copied from https://github.com/mrdoob/three.js/pull/25475 / DRACOLoader.js to fix ERR_REQUIRE_ESM error.
 // Adapted to avoid using `new Blob(...)` to create the worker but instead use a static worker file.
 // This removes support for devices that don't support WebAssembly, but enables a more secure Content Security Policy.

@@ -4,9 +4,9 @@ import { ArbitraryViewport } from "oxalis/constants";
 import { getTDViewportSize } from "oxalis/model/accessors/view_mode_accessor";
 import type { Action } from "oxalis/model/actions/actions";
 import { zoomReducer } from "oxalis/model/reducers/flycam_reducer";
-import type { OxalisState, PartialCameraData } from "oxalis/store";
+import type { PartialCameraData, WebknossosState } from "oxalis/store";
 
-function ViewModeReducer(state: OxalisState, action: Action): OxalisState {
+function ViewModeReducer(state: WebknossosState, action: Action): WebknossosState {
   switch (action.type) {
     case "SET_VIEWPORT": {
       return update(state, {
@@ -66,7 +66,7 @@ function ViewModeReducer(state: OxalisState, action: Action): OxalisState {
   }
 }
 
-function setInputCatcherRect(state: OxalisState, viewport: Viewport, rect: Rect) {
+function setInputCatcherRect(state: WebknossosState, viewport: Viewport, rect: Rect) {
   if (viewport === ArbitraryViewport) {
     return update(state, {
       viewModeData: {
@@ -92,7 +92,7 @@ function setInputCatcherRect(state: OxalisState, viewport: Viewport, rect: Rect)
   }
 }
 
-function moveTDViewByVectorReducer(state: OxalisState, x: number, y: number): OxalisState {
+function moveTDViewByVectorReducer(state: WebknossosState, x: number, y: number): WebknossosState {
   const camera = state.viewModeData.plane.tdCamera;
   return update(state, {
     viewModeData: {
@@ -110,7 +110,10 @@ function moveTDViewByVectorReducer(state: OxalisState, x: number, y: number): Ox
   });
 }
 
-function setTDCameraReducer(state: OxalisState, cameraData: PartialCameraData): OxalisState {
+function setTDCameraReducer(
+  state: WebknossosState,
+  cameraData: PartialCameraData,
+): WebknossosState {
   return update(state, {
     viewModeData: {
       plane: {
@@ -122,7 +125,7 @@ function setTDCameraReducer(state: OxalisState, cameraData: PartialCameraData): 
   });
 }
 
-function centerTDViewReducer(state: OxalisState): OxalisState {
+function centerTDViewReducer(state: WebknossosState): WebknossosState {
   const camera = state.viewModeData.plane.tdCamera;
   return moveTDViewByVectorReducer(
     state,
@@ -132,12 +135,12 @@ function centerTDViewReducer(state: OxalisState): OxalisState {
 }
 
 function zoomTDView(
-  state: OxalisState,
+  state: WebknossosState,
   value: number,
   targetPosition: Point2 | null | undefined,
   curWidth: number,
   curHeight: number,
-): OxalisState {
+): WebknossosState {
   const camera = state.viewModeData.plane.tdCamera;
   const factor = Math.pow(0.9, value);
   const middleX = (camera.left + camera.right) / 2;

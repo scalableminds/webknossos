@@ -23,7 +23,7 @@ import { globalToLayerTransformedPosition } from "./model/accessors/dataset_laye
 import { initialize } from "./model_initialization";
 
 // TODO: Non-reactive
-export class OxalisModel {
+export class WebKnossosModel {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'dataLayers' has no initializer and is no... Remove this comment to see the full error message
   dataLayers: Record<string, DataLayer>;
   maximumTextureCountForLayer: number = 0;
@@ -365,7 +365,7 @@ export class OxalisModel {
     }
   }
 }
-const model = new OxalisModel(); // export the model as a singleton
+const model = new WebKnossosModel(); // export the model as a singleton
 
 export type ModelType = typeof model;
 

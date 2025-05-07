@@ -26,6 +26,7 @@ import Toast from "libs/toast";
 import { hexToRgb, rgbToHex, roundTo, truncateStringToLength } from "libs/utils";
 import messages from "messages";
 
+import { useWkSelector } from "libs/react_hooks";
 import {
   AltOrOptionKey,
   CtrlOrCmdKey,
@@ -53,9 +54,10 @@ import {
 import { getDisabledInfoForTools } from "oxalis/model/accessors/disabled_tool_accessor";
 import {
   areGeometriesTransformed,
-  getNodeAndTree,
-  getNodeAndTreeOrNull,
+  getActiveNode,
   getNodePosition,
+  getTreeAndNode,
+  getTreeAndNodeOrNull,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { AnnotationTool, VolumeTools } from "oxalis/model/accessors/tool_accessor";
 import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
@@ -121,7 +123,6 @@ import type {
   ActiveMappingInfo,
   ContextMenuInfo,
   MutableNode,
-  OxalisState,
   SegmentMap,
   SkeletonTracing,
   Tree,
@@ -134,7 +135,6 @@ import {
   withMappingActivationConfirmation,
 } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import React, { createContext, type MouseEvent, useContext, useEffect, useState } from "react";
-import { useSelector } from "react-redux";
 import type { Dispatch } from "redux";
 import type {
   APIConnectomeFile,
@@ -237,7 +237,7 @@ function extractShortestPathAsNewTree(
   targetNodeId: number,
 ) {
   const { shortestPath } = api.tracing.findShortestPathBetweenNodes(sourceNodeId, targetNodeId);
-  const newTree = extractPathAsNewTree(Store.getState(), sourceTree, shortestPath).getOrElse(null);
+  const newTree = extractPathAsNewTree(Store.getState(), sourceTree, shortestPath);
   if (newTree != null) {
     const treeMap = { [newTree.treeId]: newTree };
     Store.dispatch(addTreesAndGroupsAction(treeMap, null));
@@ -575,7 +575,7 @@ function getNodeContextMenuOptions({
 
   const { userBoundingBoxes } = skeletonTracing;
   const { activeTreeId, activeNodeId } = skeletonTracing;
-  const { node: clickedNode, tree: clickedTree } = getNodeAndTreeOrNull(
+  const { node: clickedNode, tree: clickedTree } = getTreeAndNodeOrNull(
     skeletonTracing,
     clickedNodeId,
   );
@@ -1413,7 +1413,7 @@ export function GenericContextMenuContainer(props: {
 }
 
 function WkContextMenu() {
-  const contextMenuPosition = useSelector((state: OxalisState) => {
+  const contextMenuPosition = useWkSelector((state) => {
     return state.uiInformation.contextInfo.contextMenuPosition;
   });
 
@@ -1441,50 +1441,46 @@ function getInfoMenuItem(
 }
 
 function ContextMenuInner() {
-  const visibleSegmentationLayer = useSelector(getVisibleSegmentationLayer);
-  const activeMappingByLayer = useSelector(
-    (state: OxalisState) => state.temporaryConfiguration.activeMappingByLayer,
+  const visibleSegmentationLayer = useWkSelector(getVisibleSegmentationLayer);
+  const activeMappingByLayer = useWkSelector(
+    (state) => state.temporaryConfiguration.activeMappingByLayer,
   );
   const mappingInfo = getMappingInfo(
     activeMappingByLayer,
     visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
   );
-  const skeletonTracing = useSelector((state: OxalisState) => state.annotation.skeleton);
-  const volumeTracing = useSelector(getActiveSegmentationTracing);
-  const voxelSize = useSelector((state: OxalisState) => state.dataset.dataSource.scale);
-  const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
-  const dataset = useSelector((state: OxalisState) => state.dataset);
-  const allowUpdate = useSelector(
-    (state: OxalisState) => state.annotation.restrictions.allowUpdate,
-  );
-  const currentMeshFile = useSelector((state: OxalisState) =>
+  const skeletonTracing = useWkSelector((state) => state.annotation.skeleton);
+  const volumeTracing = useWkSelector(getActiveSegmentationTracing);
+  const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
+  const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
+  const dataset = useWkSelector((state) => state.dataset);
+  const allowUpdate = useWkSelector((state) => state.annotation.restrictions.allowUpdate);
+  const currentMeshFile = useWkSelector((state) =>
     visibleSegmentationLayer != null
       ? state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile
       : null,
   );
-  const currentConnectomeFile = useSelector((state: OxalisState) =>
+  const currentConnectomeFile = useWkSelector((state) =>
     visibleSegmentationLayer != null
       ? state.localSegmentationData[visibleSegmentationLayer.name].connectomeData
           .currentConnectomeFile
       : null,
   );
 
-  const userBoundingBoxes = useSelector((state: OxalisState) => {
+  const userBoundingBoxes = useWkSelector((state) => {
     const someTracing = maybeGetSomeTracing(state.annotation);
     return someTracing != null ? someTracing.userBoundingBoxes : [];
   });
-  const segments = useSelector((state: OxalisState) =>
+  const segments = useWkSelector((state) =>
     visibleSegmentationLayer != null
       ? getSegmentsForLayer(state, visibleSegmentationLayer.name)
       : null,
   );
-  const useLegacyBindings = useSelector(
-    (state: OxalisState) => state.userConfiguration.useLegacyBindings,
+  const useLegacyBindings = useWkSelector((state) => state.userConfiguration.useLegacyBindings);
+  const additionalCoordinates = useWkSelector(
+    (state) => state.flycam.additionalCoordinates || undefined,
   );
-  const additionalCoordinates = useSelector(
-    (state: OxalisState) => state.flycam.additionalCoordinates || undefined,
-  );
-  const contextInfo = useSelector((state: OxalisState) => state.uiInformation.contextInfo);
+  const contextInfo = useWkSelector((state) => state.uiInformation.contextInfo);
 
   const props: Props = {
     skeletonTracing,
@@ -1534,7 +1530,7 @@ function ContextMenuInner() {
     dataset,
     visibleSegmentationLayer?.name,
   );
-  const mappingName: string | null | undefined = useSelector((state: OxalisState) => {
+  const mappingName: string | null | undefined = useWkSelector((state) => {
     if (volumeTracing?.mappingName != null) return volumeTracing?.mappingName;
     const mappingInfo = getMappingInfo(
       state.temporaryConfiguration.activeMappingByLayer,
@@ -1596,17 +1592,15 @@ function ContextMenuInner() {
     [contextMenuPosition, clickedSegmentOrMeshId, lastTimeSegmentInfoShouldBeFetched],
   );
 
-  const activeTreeId = skeletonTracing != null ? skeletonTracing.activeTreeId : null;
-  const activeNodeId = skeletonTracing?.activeNodeId;
-
   let nodeContextMenuTree: Tree | null = null;
   let nodeContextMenuNode: MutableNode | null = null;
 
   if (skeletonTracing != null && maybeClickedNodeId != null) {
-    getNodeAndTree(skeletonTracing, maybeClickedNodeId).map(([tree, node]) => {
-      nodeContextMenuNode = node;
-      nodeContextMenuTree = tree;
-    });
+    const treeAndNode = getTreeAndNode(skeletonTracing, maybeClickedNodeId);
+    if (treeAndNode) {
+      nodeContextMenuTree = treeAndNode[0];
+      nodeContextMenuNode = treeAndNode[1];
+    }
   }
   // TS doesn't understand the above initialization and assumes the values
   // are always null. The following NOOP helps TS with the correct typing.
@@ -1618,10 +1612,7 @@ function ContextMenuInner() {
 
   const positionToMeasureDistanceTo =
     nodeContextMenuNode != null ? clickedNodesPosition : globalPosition;
-  const activeNode =
-    activeNodeId != null && skeletonTracing != null
-      ? getNodeAndTree(skeletonTracing, activeNodeId, activeTreeId).get()[1]
-      : null;
+  const activeNode = skeletonTracing != null ? getActiveNode(skeletonTracing) : null;
 
   const getActiveNodePosition = () => {
     if (activeNode == null) {

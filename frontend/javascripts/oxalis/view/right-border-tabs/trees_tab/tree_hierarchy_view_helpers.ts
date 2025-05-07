@@ -149,7 +149,7 @@ export function callDeepWithChildren(
   });
 }
 
-export function findGroup(groups: TreeGroup[], groupId: number): TreeGroup | null | undefined {
+export function findGroup(groups: TreeGroup[], groupId: number): TreeGroup | null {
   let foundGroup = null;
   callDeep(groups, groupId, (group, _index, _groups) => {
     foundGroup = group;

@@ -49,12 +49,12 @@ import {
 } from "oxalis/model/reducers/volumetracing_reducer_helpers";
 import type {
   EditableMapping,
-  OxalisState,
   Segment,
   SegmentGroup,
   SegmentMap,
   TreeGroup,
   VolumeTracing,
+  WebknossosState,
 } from "oxalis/store";
 import {
   findParentIdForGroupId,
@@ -83,7 +83,7 @@ type SegmentUpdateInfo =
     };
 
 function getSegmentUpdateInfo(
-  state: OxalisState,
+  state: WebknossosState,
   layerName: string | null | undefined,
 ): SegmentUpdateInfo {
   // Returns an object describing how to update a segment in the specified layer.
@@ -114,7 +114,7 @@ function getSegmentUpdateInfo(
 }
 
 function updateSegments(
-  state: OxalisState,
+  state: WebknossosState,
   layerName: string,
   mapFn: (segments: SegmentMap) => SegmentMap,
 ) {
@@ -143,7 +143,11 @@ function updateSegments(
   });
 }
 
-function setSegmentGroups(state: OxalisState, layerName: string, newSegmentGroups: SegmentGroup[]) {
+function setSegmentGroups(
+  state: WebknossosState,
+  layerName: string,
+  newSegmentGroups: SegmentGroup[],
+) {
   const updateInfo = getSegmentUpdateInfo(state, layerName);
 
   if (updateInfo.type === "NOOP") {
@@ -169,16 +173,16 @@ function setSegmentGroups(state: OxalisState, layerName: string, newSegmentGroup
   return state;
 }
 
-function handleSetSegments(state: OxalisState, action: SetSegmentsAction) {
+function handleSetSegments(state: WebknossosState, action: SetSegmentsAction) {
   const { segments, layerName } = action;
   return updateSegments(state, layerName, (_oldSegments) => segments);
 }
 
-function handleRemoveSegment(state: OxalisState, action: RemoveSegmentAction) {
+function handleRemoveSegment(state: WebknossosState, action: RemoveSegmentAction) {
   return updateSegments(state, action.layerName, (segments) => segments.delete(action.segmentId));
 }
 
-function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
+function handleUpdateSegment(state: WebknossosState, action: UpdateSegmentAction) {
   return updateSegments(state, action.layerName, (segments) => {
     const { segmentId, segment } = action;
     const oldSegment = segments.getNullable(segmentId);
@@ -221,7 +225,7 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
   });
 }
 
-function expandSegmentParents(state: OxalisState, action: ClickSegmentAction) {
+function expandSegmentParents(state: WebknossosState, action: ClickSegmentAction) {
   if (action.layerName == null) return state;
   const getNewGroups = () => {
     const { segments, segmentGroups } = getVisibleSegments(state);
@@ -299,7 +303,7 @@ type VolumeTracingReducerAction =
   | SetMappingEnabledAction
   | SetMappingNameAction;
 
-function getVolumeTracingFromAction(state: OxalisState, action: VolumeTracingReducerAction) {
+function getVolumeTracingFromAction(state: WebknossosState, action: VolumeTracingReducerAction) {
   if ("tracingId" in action && action.tracingId != null) {
     return getVolumeTracingById(state.annotation, action.tracingId);
   }
@@ -319,11 +323,11 @@ function getVolumeTracingFromAction(state: OxalisState, action: VolumeTracingRed
 }
 
 export function toggleSegmentGroupReducer(
-  state: OxalisState,
+  state: WebknossosState,
   layerName: string,
   groupId: number,
   targetVisibility?: boolean,
-): OxalisState {
+): WebknossosState {
   const updateInfo = getSegmentUpdateInfo(state, layerName);
 
   if (updateInfo.type === "NOOP") {
@@ -361,10 +365,10 @@ export function toggleSegmentGroupReducer(
 }
 
 export function toggleAllSegmentsReducer(
-  state: OxalisState,
+  state: WebknossosState,
   layerName: string,
   isVisible: boolean | undefined,
-): OxalisState {
+): WebknossosState {
   const updateInfo = getSegmentUpdateInfo(state, layerName);
 
   if (updateInfo.type === "NOOP") {
@@ -386,7 +390,10 @@ export function toggleAllSegmentsReducer(
   return updateSegments(state, layerName, (_oldSegments) => newSegments);
 }
 
-function VolumeTracingReducer(state: OxalisState, action: VolumeTracingReducerAction): OxalisState {
+function VolumeTracingReducer(
+  state: WebknossosState,
+  action: VolumeTracingReducerAction,
+): WebknossosState {
   switch (action.type) {
     case "INITIALIZE_VOLUMETRACING": {
       const volumeTracing = serverVolumeToClientVolumeTracing(action.tracing);

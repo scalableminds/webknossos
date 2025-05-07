@@ -39,6 +39,7 @@ import app from "app";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import FastTooltip from "components/fast_tooltip";
 import { SimpleRow } from "dashboard/folders/metadata_table";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { pluralize, sleep } from "libs/utils";
 import _, { isNumber, memoize } from "lodash";
@@ -93,7 +94,13 @@ import {
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { api } from "oxalis/singletons";
-import type { MeshInformation, OxalisState, Segment, SegmentGroup, TreeGroup } from "oxalis/store";
+import type {
+  MeshInformation,
+  WebknossosState,
+  Segment,
+  SegmentGroup,
+  TreeGroup,
+} from "oxalis/store";
 import Store from "oxalis/store";
 import ButtonComponent from "oxalis/view/components/button_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
@@ -107,7 +114,7 @@ import {
 } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import type RcTree from "rc-tree";
 import React, { type Key } from "react";
-import { connect, useSelector } from "react-redux";
+import { connect } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import type { Dispatch } from "redux";
 import type { APIMeshFile, MetadataEntryProto } from "types/api_types";
@@ -148,7 +155,7 @@ const segmentsTabId = "segment-list";
 
 type StateProps = ReturnType<typeof mapStateToProps>;
 
-const mapStateToProps = (state: OxalisState) => {
+const mapStateToProps = (state: WebknossosState) => {
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
   const activeVolumeTracing = getActiveSegmentationTracing(state);
   const mappingInfo = getMappingInfo(
@@ -212,7 +219,7 @@ const mapStateToProps = (state: OxalisState) => {
   };
 };
 
-const getCleanedSelectedSegmentsOrGroup = (state: OxalisState) => {
+const getCleanedSelectedSegmentsOrGroup = (state: WebknossosState) => {
   const [cleanedSelectedIds, maybeUpdateStoreAction] = getSelectedIds(state);
   if (maybeUpdateStoreAction != null) {
     maybeUpdateStoreAction();
@@ -732,8 +739,8 @@ class SegmentsView extends React.Component<Props, State> {
     let title = "";
     let disabled = true;
 
-    const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
-    const activeUser = useSelector((state: OxalisState) => state.activeUser);
+    const activeOrganization = useWkSelector((state) => state.activeOrganization);
+    const activeUser = useWkSelector((state) => state.activeUser);
     if (!isFeatureAllowedByPricingPlan(activeOrganization, PricingPlanEnum.Team)) {
       return {
         disabled: true,

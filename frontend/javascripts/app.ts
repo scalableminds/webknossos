@@ -1,6 +1,6 @@
 import { createNanoEvents } from "nanoevents";
 
-class OxalisApplication {
+class WebknossosApplication {
   // This event emitter is currently only used for two types of events:
   // 1) webknossos:ready
   //    When WK is done with initialization, the front-end API can be constructed.
@@ -11,6 +11,6 @@ class OxalisApplication {
   vent = createNanoEvents();
 }
 
-const app = new OxalisApplication();
+const app = new WebknossosApplication();
 
 export default app;

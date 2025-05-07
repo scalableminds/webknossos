@@ -1,22 +1,21 @@
 import FastTooltip from "components/fast_tooltip";
+import { useWkSelector } from "libs/react_hooks";
 import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import { getHideUnregisteredSegmentsForLayer } from "oxalis/model/accessors/volumetracing_accessor";
 import { setHideUnregisteredSegmentsAction } from "oxalis/model/actions/volumetracing_actions";
-import type { OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
 import { SwitchSetting } from "oxalis/view/components/setting_input_views";
-import { useSelector } from "react-redux";
 
 export function HideUnregisteredSegmentsSwitch({ layerName }: { layerName: string }) {
-  const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
+  const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
 
   const isProofreadingMode = activeTool === AnnotationTool.PROOFREAD;
-  const selectiveVisibilityInProofreading = useSelector(
-    (state: OxalisState) => state.userConfiguration.selectiveVisibilityInProofreading,
+  const selectiveVisibilityInProofreading = useWkSelector(
+    (state) => state.userConfiguration.selectiveVisibilityInProofreading,
   );
   const isHideUnregisteredSegmentsDisabled =
     isProofreadingMode && selectiveVisibilityInProofreading;
-  const hideUnregisteredSegments = useSelector((state: OxalisState) =>
+  const hideUnregisteredSegments = useWkSelector((state) =>
     getHideUnregisteredSegmentsForLayer(state, layerName),
   );
 

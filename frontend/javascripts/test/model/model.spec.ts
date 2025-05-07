@@ -6,7 +6,7 @@ import {
   annotation as ANNOTATION,
 } from "../fixtures/skeletontracing_server_objects";
 import DATASET from "../fixtures/dataset_server_object";
-import Model, { type OxalisModel } from "oxalis/model";
+import Model, { type WebKnossosModel } from "oxalis/model";
 import { HANDLED_ERROR } from "oxalis/model_initialization";
 import Request from "libs/request";
 import { location } from "libs/window";
@@ -21,7 +21,7 @@ vi.mock("libs/request", () => ({
 }));
 
 interface TestContext {
-  model: OxalisModel;
+  model: WebKnossosModel;
 }
 
 // The following code assumes a skeleton tracing (note that ANNOTATION is imported from

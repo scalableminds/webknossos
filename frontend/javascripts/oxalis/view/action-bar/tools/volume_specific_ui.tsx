@@ -15,9 +15,10 @@ import {
   Space,
 } from "antd";
 import React, { useCallback, useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 
 import { usePrevious } from "libs/react_hooks";
+import { useWkSelector } from "libs/react_hooks";
 import {
   FillModeEnum,
   type InterpolationMode,
@@ -38,7 +39,7 @@ import {
   interpolateSegmentationLayerAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { Model } from "oxalis/singletons";
-import Store, { type OxalisState } from "oxalis/store";
+import Store from "oxalis/store";
 import ButtonComponent, { ToggleButton } from "oxalis/view/components/button_component";
 import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
 
@@ -105,7 +106,7 @@ export function OverwriteModeSwitch({
 }) {
   // Only CTRL should modify the overwrite mode. CTRL + Shift can be used to switch to the
   // erase tool, which should not affect the default overwrite mode.
-  const overwriteMode = useSelector((state: OxalisState) => state.userConfiguration.overwriteMode);
+  const overwriteMode = useWkSelector((state) => state.userConfiguration.overwriteMode);
   const previousIsControlOrMetaPressed = usePrevious(isControlOrMetaPressed);
   const previousIsShiftPressed = usePrevious(isShiftPressed);
   // biome-ignore lint/correctness/useExhaustiveDependencies: overwriteMode does not need to be a dependency.
@@ -186,16 +187,14 @@ const INTERPOLATION_ICON = {
 
 export function VolumeInterpolationButton() {
   const dispatch = useDispatch();
-  const interpolationMode = useSelector(
-    (state: OxalisState) => state.userConfiguration.interpolationMode,
-  );
+  const interpolationMode = useWkSelector((state) => state.userConfiguration.interpolationMode);
 
   const onInterpolateClick = (e: React.MouseEvent<HTMLElement> | null) => {
     e?.currentTarget.blur();
     dispatch(interpolateSegmentationLayerAction());
   };
 
-  const { tooltipTitle, isDisabled } = useSelector((state: OxalisState) =>
+  const { tooltipTitle, isDisabled } = useWkSelector((state) =>
     getInterpolationInfo(state, "Not available since"),
   );
 
@@ -260,13 +259,11 @@ const mapId = (volumeTracingId: string | null | undefined, id: number) => {
 };
 
 export function CreateSegmentButton() {
-  const volumeTracingId = useSelector(
-    (state: OxalisState) => getActiveSegmentationTracing(state)?.tracingId,
+  const volumeTracingId = useWkSelector((state) => getActiveSegmentationTracing(state)?.tracingId);
+  const unmappedActiveCellId = useWkSelector(
+    (state) => getActiveSegmentationTracing(state)?.activeCellId || 0,
   );
-  const unmappedActiveCellId = useSelector(
-    (state: OxalisState) => getActiveSegmentationTracing(state)?.activeCellId || 0,
-  );
-  const { mappingStatus } = useSelector((state: OxalisState) =>
+  const { mappingStatus } = useWkSelector((state) =>
     getMappingInfoForVolumeTracing(state, volumeTracingId),
   );
   const isMappingEnabled = mappingStatus === MappingStatusEnum.ENABLED;
@@ -275,7 +272,7 @@ export function CreateSegmentButton() {
     ? mapId(volumeTracingId, unmappedActiveCellId)
     : unmappedActiveCellId;
 
-  const activeCellColor = useSelector((state: OxalisState) => {
+  const activeCellColor = useWkSelector((state) => {
     if (!activeCellId) {
       return null;
     }
@@ -312,7 +309,7 @@ function IdentityComponent({ children }: { children: React.ReactNode }) {
 
 function NuxPopConfirm({ children }: { children: React.ReactNode }) {
   const dispatch = useDispatch();
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useWkSelector((state) => state.activeUser);
   return (
     <Popconfirm
       open
@@ -338,11 +335,11 @@ function NuxPopConfirm({ children }: { children: React.ReactNode }) {
 
 export function QuickSelectSettingsPopover() {
   const dispatch = useDispatch();
-  const { quickSelectState, areQuickSelectSettingsOpen } = useSelector(
-    (state: OxalisState) => state.uiInformation,
+  const { quickSelectState, areQuickSelectSettingsOpen } = useWkSelector(
+    (state) => state.uiInformation,
   );
   const isQuickSelectActive = quickSelectState === "active";
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useWkSelector((state) => state.activeUser);
 
   const showNux =
     activeUser != null && !activeUser.novelUserExperienceInfos.hasSeenSegmentAnythingWithDepth;
@@ -381,8 +378,8 @@ const handleSetFillMode = (event: RadioChangeEvent) => {
 
 export function FloodFillSettings() {
   const dispatch = useDispatch();
-  const isRestrictedToBoundingBox = useSelector(
-    (state: OxalisState) => state.userConfiguration.isFloodfillRestrictedToBoundingBox,
+  const isRestrictedToBoundingBox = useWkSelector(
+    (state) => state.userConfiguration.isFloodfillRestrictedToBoundingBox,
   );
   const toggleRestrictFloodfillToBoundingBox = () => {
     dispatch(
@@ -416,7 +413,7 @@ export function FloodFillSettings() {
 }
 
 function FillModeSwitch() {
-  const fillMode = useSelector((state: OxalisState) => state.userConfiguration.fillMode);
+  const fillMode = useWkSelector((state) => state.userConfiguration.fillMode);
   return (
     <Radio.Group
       value={fillMode}
@@ -446,11 +443,11 @@ function FillModeSwitch() {
 export function ProofreadingComponents() {
   const dispatch = useDispatch();
   const handleClearProofreading = () => dispatch(clearProofreadingByProducts());
-  const autoRenderMeshes = useSelector(
-    (state: OxalisState) => state.userConfiguration.autoRenderMeshInProofreading,
+  const autoRenderMeshes = useWkSelector(
+    (state) => state.userConfiguration.autoRenderMeshInProofreading,
   );
-  const selectiveVisibilityInProofreading = useSelector(
-    (state: OxalisState) => state.userConfiguration.selectiveVisibilityInProofreading,
+  const selectiveVisibilityInProofreading = useWkSelector(
+    (state) => state.userConfiguration.selectiveVisibilityInProofreading,
   );
 
   return (

@@ -1,5 +1,5 @@
 import type { Vector3 } from "oxalis/constants";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import type { AdditionalCoordinate } from "types/api_types";
 import { getVisibleSegmentationLayer } from "../accessors/dataset_accessor";
 import {
@@ -9,7 +9,7 @@ import {
 import { updateSegmentAction } from "./volumetracing_actions";
 
 export const getUpdateSegmentActionToToggleVisibility = (
-  storeState: OxalisState,
+  storeState: WebknossosState,
   segmentId: number,
   somePosition?: Vector3,
   someAdditionalCoordinates?: AdditionalCoordinate[],

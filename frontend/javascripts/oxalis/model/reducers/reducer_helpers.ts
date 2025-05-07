@@ -1,4 +1,3 @@
-import Maybe from "data.maybe";
 import * as Utils from "libs/utils";
 import type { BoundingBoxType } from "oxalis/constants";
 import type { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
@@ -11,9 +10,9 @@ import { updateKey } from "oxalis/model/helpers/deep_update";
 import type {
   Annotation,
   BoundingBoxObject,
-  OxalisState,
   UserBoundingBox,
   UserBoundingBoxToServer,
+  WebknossosState,
 } from "oxalis/store";
 import type {
   APIAnnotation,
@@ -38,9 +37,8 @@ export function convertServerBoundingBoxToBoundingBox(
 export function convertServerBoundingBoxToFrontend(
   boundingBox: ServerBoundingBox | null | undefined,
 ): BoundingBoxType | null | undefined {
-  return Maybe.fromNullable(boundingBox)
-    .map((bb) => convertServerBoundingBoxToBoundingBox(bb))
-    .getOrElse(null);
+  if (!boundingBox) return null;
+  return convertServerBoundingBoxToBoundingBox(boundingBox);
 }
 export function convertUserBoundingBoxesFromServerToFrontend(
   boundingBoxes: Array<UserBoundingBoxFromServer>,
@@ -142,7 +140,7 @@ export function convertServerAdditionalAxesToFrontEnd(
   }));
 }
 
-export function getNextTool(state: OxalisState): AnnotationTool | null {
+export function getNextTool(state: WebknossosState): AnnotationTool | null {
   const disabledToolInfo = getDisabledInfoForTools(state);
   const tools = Toolkits[state.userConfiguration.activeToolkit];
   const currentToolIndex = tools.indexOf(state.uiInformation.activeTool);
@@ -162,7 +160,7 @@ export function getNextTool(state: OxalisState): AnnotationTool | null {
 
   return null;
 }
-export function getPreviousTool(state: OxalisState): AnnotationTool | null {
+export function getPreviousTool(state: WebknossosState): AnnotationTool | null {
   const disabledToolInfo = getDisabledInfoForTools(state);
   const tools = Toolkits[state.userConfiguration.activeToolkit];
   const currentToolIndex = tools.indexOf(state.uiInformation.activeTool);
@@ -182,7 +180,7 @@ export function getPreviousTool(state: OxalisState): AnnotationTool | null {
 
   return null;
 }
-export function setToolReducer(state: OxalisState, tool: AnnotationTool) {
+export function setToolReducer(state: WebknossosState, tool: AnnotationTool) {
   if (tool === state.uiInformation.activeTool) {
     return state;
   }

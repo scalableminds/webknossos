@@ -5,7 +5,7 @@ import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
 import { describe, it, expect } from "vitest";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import type { OxalisState, Node, Tree, MutableNode } from "oxalis/store";
+import type { WebknossosState, Node, Tree, MutableNode } from "oxalis/store";
 import { TreeTypeEnum, type Vector3 } from "oxalis/constants";
 import type { Action } from "oxalis/model/actions/actions";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -16,7 +16,7 @@ import {
 import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
 import * as SkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
 
-const initialState: OxalisState = update(defaultState, {
+const initialState: WebknossosState = update(defaultState, {
   annotation: {
     restrictions: {
       allowUpdate: {
@@ -156,9 +156,9 @@ describe("SkeletonTracing", () => {
 
   it("should delete the tree if 'delete node as user' is initiated for an empty tree", () => {
     const { createTreeAction, deleteNodeAsUserAction } = SkeletonTracingActions;
-    const newState = ChainReducer<OxalisState, Action>(initialStateWithActiveTreeId2)
+    const newState = ChainReducer<WebknossosState, Action>(initialStateWithActiveTreeId2)
       .apply(SkeletonTracingReducer, createTreeAction())
-      .apply(SkeletonTracingReducer, (currentState: OxalisState) =>
+      .apply(SkeletonTracingReducer, (currentState: WebknossosState) =>
         deleteNodeAsUserAction(currentState),
       )
       .unpack();
@@ -230,7 +230,7 @@ describe("SkeletonTracing", () => {
     );
 
     const emptySkeletonTracing = enforceSkeletonTracing(emptyTreeState.annotation);
-    const newState = ChainReducer<OxalisState, Action>(emptyTreeState)
+    const newState = ChainReducer<WebknossosState, Action>(emptyTreeState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, deleteNodeAction)
@@ -367,7 +367,7 @@ describe("SkeletonTracing", () => {
     );
     const deleteEdgeAction = SkeletonTracingActions.deleteEdgeAction(0, 3);
     // Create a couple of nodes
-    const newState = ChainReducer<OxalisState, Action>(initialState)
+    const newState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
@@ -392,7 +392,7 @@ describe("SkeletonTracing", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     const deleteEdgeAction = SkeletonTracingActions.deleteEdgeAction(0, 2);
     // Create a couple of nodes
-    const newState = ChainReducer<OxalisState, Action>(initialState)
+    const newState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
@@ -812,7 +812,7 @@ describe("SkeletonTracing", () => {
   it("should add a several new trees", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     // create three trees
-    const newState = ChainReducer<OxalisState, Action>(initialState)
+    const newState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, createTreeAction)
@@ -828,7 +828,7 @@ describe("SkeletonTracing", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     const deleteTreeAction = SkeletonTracingActions.deleteTreeAction();
     // create a tree and delete it again
-    const newState = ChainReducer<OxalisState, Action>(initialStateWithActiveTreeId2)
+    const newState = ChainReducer<WebknossosState, Action>(initialStateWithActiveTreeId2)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, deleteTreeAction)
       .unpack();
@@ -839,7 +839,7 @@ describe("SkeletonTracing", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     const deleteTreeAction = SkeletonTracingActions.deleteTreeAction();
     // create trees and delete them
-    const newState = ChainReducer<OxalisState, Action>(initialState)
+    const newState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, deleteTreeAction)
       .apply(SkeletonTracingReducer, deleteTreeAction)
@@ -854,7 +854,7 @@ describe("SkeletonTracing", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     const deleteTreesAction = SkeletonTracingActions.deleteTreesAction([1, 2, 3, 4]);
     // create trees and delete them
-    const newState = ChainReducer<OxalisState, Action>(initialState)
+    const newState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, deleteTreesAction)
@@ -867,7 +867,7 @@ describe("SkeletonTracing", () => {
   it("should set a new active tree", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     const setActiveTreeAction = SkeletonTracingActions.setActiveTreeAction(2);
-    const newState = ChainReducer<OxalisState, Action>(initialState)
+    const newState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, setActiveTreeAction)
       .unpack();
@@ -887,7 +887,7 @@ describe("SkeletonTracing", () => {
     );
     const setActiveTreeAction = SkeletonTracingActions.setActiveTreeAction(3);
     // create a second tree with two nodes and set it active
-    const newState = ChainReducer<OxalisState, Action>(initialState)
+    const newState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
@@ -915,7 +915,7 @@ describe("SkeletonTracing", () => {
     );
     const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(3, 1);
     // create a node in first tree, then create a second tree with three nodes and merge them
-    const newState = ChainReducer<OxalisState, Action>(initialState)
+    const newState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
@@ -953,7 +953,7 @@ describe("SkeletonTracing", () => {
     );
     const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 3);
     // create a node in first tree, then create a second tree with three nodes and merge them
-    const testState = ChainReducer<OxalisState, Action>(initialState)
+    const testState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
@@ -974,7 +974,7 @@ describe("SkeletonTracing", () => {
     const createCommentAction = SkeletonTracingActions.createCommentAction("foo");
     const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
     // create a node in first tree, then create a second tree with three nodes and merge them
-    const newState = ChainReducer<OxalisState, Action>(initialState)
+    const newState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createCommentAction)
       .apply(SkeletonTracingReducer, createBranchPointAction)
@@ -1090,7 +1090,7 @@ describe("SkeletonTracing", () => {
       mag,
     );
     // Create a new agglomerate tree with 3 nodes; then add two nodes to the first tree of type default.
-    const newState = ChainReducer<OxalisState, Action>(initialStateWithAgglomerateNodes)
+    const newState = ChainReducer<WebknossosState, Action>(initialStateWithAgglomerateNodes)
       // Add two more nodes to tree with id 1.
       .apply(SkeletonTracingReducer, createNodeAction) // For tree 1
       .apply(SkeletonTracingReducer, createNodeAction) // For tree 1
@@ -1125,7 +1125,7 @@ describe("SkeletonTracing", () => {
     const setActiveTreeAction = SkeletonTracingActions.setActiveTreeAction(1);
     const selectNextTreeAction = SkeletonTracingActions.selectNextTreeAction();
     // create a second tree, set first tree active then increase activeTreeId
-    const newState = ChainReducer<OxalisState, Action>(initialState)
+    const newState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, setActiveTreeAction)
       .apply(SkeletonTracingReducer, selectNextTreeAction)
@@ -1138,7 +1138,7 @@ describe("SkeletonTracing", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     const selectNextTreeAction = SkeletonTracingActions.selectNextTreeAction(false);
     // create a second tree then decrease activeTreeId
-    const newState = ChainReducer<OxalisState, Action>(initialState)
+    const newState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, selectNextTreeAction)
       .apply(SkeletonTracingReducer, selectNextTreeAction)
@@ -1151,7 +1151,7 @@ describe("SkeletonTracing", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     const selectNextTreeAction = SkeletonTracingActions.selectNextTreeAction(false);
     // create a second tree then decrease activeTreeId twice
-    const newState = ChainReducer<OxalisState, Action>(initialState)
+    const newState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, selectNextTreeAction)
       .apply(SkeletonTracingReducer, selectNextTreeAction)
@@ -1166,7 +1166,7 @@ describe("SkeletonTracing", () => {
     const deleteTreeAction = SkeletonTracingActions.deleteTreeAction(3);
     const selectNextTreeAction = SkeletonTracingActions.selectNextTreeAction();
     // create a second tree then decrease activeTreeId twice
-    const newState = ChainReducer<OxalisState, Action>(initialState)
+    const newState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, deleteTreeAction)
@@ -1196,7 +1196,7 @@ describe("SkeletonTracing", () => {
     );
     const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
     // create a single node with a comment
-    const newState = ChainReducer<OxalisState, Action>(initialState)
+    const newState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createCommentAction)
       .unpack();
@@ -1225,7 +1225,7 @@ describe("SkeletonTracing", () => {
     );
     const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
     // create a node and add the same comment three times
-    const newState = ChainReducer<OxalisState, Action>(initialState)
+    const newState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createCommentAction)
       .apply(SkeletonTracingReducer, createCommentAction)
@@ -1246,7 +1246,7 @@ describe("SkeletonTracing", () => {
       mag,
     );
     // create two nodes with a different comment each
-    const newState = ChainReducer<OxalisState, Action>(initialState)
+    const newState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, SkeletonTracingActions.createCommentAction(commentText1))
       .apply(SkeletonTracingReducer, createNodeAction)
@@ -1271,7 +1271,7 @@ describe("SkeletonTracing", () => {
     );
     const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
     const createTreeAction = SkeletonTracingActions.createTreeAction();
-    const newState = ChainReducer<OxalisState, Action>(initialState)
+    const newState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createCommentAction)
@@ -1294,7 +1294,7 @@ describe("SkeletonTracing", () => {
     const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
     const deleteCommentAction = SkeletonTracingActions.deleteCommentAction();
     // create a node with a comment, then delete it
-    const newState = ChainReducer<OxalisState, Action>(initialState)
+    const newState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createCommentAction)
       .apply(SkeletonTracingReducer, deleteCommentAction)
@@ -1316,7 +1316,7 @@ describe("SkeletonTracing", () => {
     const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
     const deleteCommentAction = SkeletonTracingActions.deleteCommentAction();
     // create two nodes with a comment each and delete the comment for the last node
-    const newState = ChainReducer<OxalisState, Action>(initialState)
+    const newState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createCommentAction)
       .apply(SkeletonTracingReducer, createNodeAction)
@@ -1342,7 +1342,7 @@ describe("SkeletonTracing", () => {
     );
 
     // create a few trees and add a node to a specific one
-    const newState = ChainReducer<OxalisState, Action>(initialState)
+    const newState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
@@ -1365,7 +1365,7 @@ describe("SkeletonTracing", () => {
     );
     const deleteNodeAction = SkeletonTracingActions.deleteNodeAction(2, 1);
     // create three nodes and delete a specific one
-    const newState = ChainReducer<OxalisState, Action>(initialState)
+    const newState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
@@ -1391,7 +1391,7 @@ describe("SkeletonTracing", () => {
     const deleteNodeAction = SkeletonTracingActions.deleteNodeAction(2);
 
     // create three nodes and delete a specific one
-    const newState = ChainReducer<OxalisState, Action>(initialState)
+    const newState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
@@ -1418,7 +1418,7 @@ describe("SkeletonTracing", () => {
     const createBranchPointAction = SkeletonTracingActions.createBranchPointAction(2, 1);
 
     // create some nodes and then set a specific one as branchpoint
-    const newState = ChainReducer<OxalisState, Action>(initialState)
+    const newState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
@@ -1442,7 +1442,7 @@ describe("SkeletonTracing", () => {
     const createBranchPointAction = SkeletonTracingActions.createBranchPointAction(2, 1);
     // create some nodes and then set a specific one as branchpoint
 
-    const newState = ChainReducer<OxalisState, Action>(initialState)
+    const newState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
@@ -1460,7 +1460,7 @@ describe("SkeletonTracing", () => {
     const deleteTreeAction = SkeletonTracingActions.deleteTreeAction(2);
 
     // create some trees and delete a specific one
-    const newState = ChainReducer<OxalisState, Action>(initialState)
+    const newState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, deleteTreeAction)
@@ -1478,7 +1478,7 @@ describe("SkeletonTracing", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     const setTreeNameAction = SkeletonTracingActions.setTreeNameAction(newName, 2);
 
-    const newState = ChainReducer<OxalisState, Action>(initialState)
+    const newState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, setTreeNameAction)
@@ -1503,7 +1503,7 @@ describe("SkeletonTracing", () => {
     const createCommentAction = SkeletonTracingActions.createCommentAction(commentText, 2);
 
     // create a few nodes and adds one comment
-    const newState = ChainReducer<OxalisState, Action>(initialState)
+    const newState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
@@ -1530,7 +1530,7 @@ describe("SkeletonTracing", () => {
     const deleteCommentAction = SkeletonTracingActions.deleteCommentAction(2);
 
     // create nodes with comments, then delete a specific comment
-    const newState = ChainReducer<OxalisState, Action>(initialState)
+    const newState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createCommentAction)
       .apply(SkeletonTracingReducer, createNodeAction)

@@ -1,5 +1,5 @@
 import { disableMergerMode, enableMergerMode } from "oxalis/merger_mode";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import MergerModeModalView from "oxalis/view/merger_mode_modal_view";
 import { PureComponent } from "react";
 import { connect } from "react-redux";
@@ -85,7 +85,7 @@ class MergerModeController extends PureComponent<MergerModeControllerProps, Stat
   }
 }
 
-const mapStateToProps = (state: OxalisState) => ({
+const mapStateToProps = (state: WebknossosState) => ({
   isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,
 });
 

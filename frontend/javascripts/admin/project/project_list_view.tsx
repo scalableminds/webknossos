@@ -34,7 +34,7 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import React, { useEffect, useState } from "react";
 import { connect } from "react-redux";
 import { Link } from "react-router-dom";
@@ -475,7 +475,7 @@ function ProjectListView({ initialSearchValue, taskTypeId, activeUser }: Props) 
   );
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
 });
 

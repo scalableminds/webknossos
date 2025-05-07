@@ -18,6 +18,7 @@ import com.scalableminds.webknossos.datastore.models.requests.{
 }
 import com.scalableminds.webknossos.datastore.models._
 import com.scalableminds.webknossos.datastore.services._
+import com.scalableminds.webknossos.datastore.services.mesh.{AdHocMeshRequest, AdHocMeshService, AdHocMeshServiceHolder}
 import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
 import net.liftweb.common.Box.tryo
 import play.api.i18n.Messages

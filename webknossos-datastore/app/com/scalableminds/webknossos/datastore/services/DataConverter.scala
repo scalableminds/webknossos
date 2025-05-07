@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.services
 
 import com.scalableminds.util.tools.FoxImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
+import com.scalableminds.webknossos.datastore.services.mesh.DataTypeFunctors
 import spire.math.{UByte, UInt, ULong, UShort}
 
 import java.nio._

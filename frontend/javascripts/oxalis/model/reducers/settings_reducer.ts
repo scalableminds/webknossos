@@ -12,7 +12,7 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import type { Action } from "oxalis/model/actions/actions";
 import { updateKey, updateKey2, updateKey3 } from "oxalis/model/helpers/deep_update";
-import type { ActiveMappingInfo, OxalisState } from "oxalis/store";
+import type { ActiveMappingInfo, WebknossosState } from "oxalis/store";
 import { userSettings } from "types/schemas/user_settings.schema";
 import { setRotationReducer } from "./flycam_reducer";
 
@@ -20,22 +20,22 @@ import { setRotationReducer } from "./flycam_reducer";
 // Update helpers
 //
 const updateUserConfig = (
-  state: OxalisState,
-  shape: Partial<OxalisState["userConfiguration"]>,
-): OxalisState => updateKey(state, "userConfiguration", shape);
+  state: WebknossosState,
+  shape: Partial<WebknossosState["userConfiguration"]>,
+): WebknossosState => updateKey(state, "userConfiguration", shape);
 
 const updateDatasetConfig = (
-  state: OxalisState,
-  shape: Partial<OxalisState["datasetConfiguration"]>,
+  state: WebknossosState,
+  shape: Partial<WebknossosState["datasetConfiguration"]>,
 ) => updateKey(state, "datasetConfiguration", shape);
 
 const updateTemporaryConfig = (
-  state: OxalisState,
-  shape: Partial<OxalisState["temporaryConfiguration"]>,
+  state: WebknossosState,
+  shape: Partial<WebknossosState["temporaryConfiguration"]>,
 ) => updateKey(state, "temporaryConfiguration", shape);
 
 const updateActiveMapping = (
-  state: OxalisState,
+  state: WebknossosState,
   shape: Partial<ActiveMappingInfo>,
   layerName: string,
 ) => {
@@ -53,7 +53,7 @@ const updateActiveMapping = (
   );
 };
 
-function disableAllSegmentationLayers(state: OxalisState): OxalisState {
+function disableAllSegmentationLayers(state: WebknossosState): WebknossosState {
   let newState = state;
 
   for (const segmentationLayer of getSegmentationLayers(state.dataset)) {
@@ -65,7 +65,7 @@ function disableAllSegmentationLayers(state: OxalisState): OxalisState {
   return newState;
 }
 
-function ensureOnlyOneVisibleSegmentationLayer(state: OxalisState): OxalisState {
+function ensureOnlyOneVisibleSegmentationLayer(state: WebknossosState): WebknossosState {
   const visibleSegmentationLayers = getVisibleSegmentationLayers(state);
 
   if (visibleSegmentationLayers.length === 0) {
@@ -91,7 +91,7 @@ function ensureOnlyOneVisibleSegmentationLayer(state: OxalisState): OxalisState 
 //
 // Reducer
 //
-function SettingsReducer(state: OxalisState, action: Action): OxalisState {
+function SettingsReducer(state: WebknossosState, action: Action): WebknossosState {
   switch (action.type) {
     case "UPDATE_USER_SETTING": {
       const { propertyName } = action;

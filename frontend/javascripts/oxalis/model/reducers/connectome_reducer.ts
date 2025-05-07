@@ -1,4 +1,3 @@
-import Maybe from "data.maybe";
 import update from "immutability-helper";
 import _ from "lodash";
 import Constants from "oxalis/constants";
@@ -8,25 +7,25 @@ import {
   addTreesAndGroups,
   getMaximumNodeId,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import type { OxalisState, SkeletonTracing, TreeMap } from "oxalis/store";
+import type { SkeletonTracing, TreeMap, WebknossosState } from "oxalis/store";
 
 function getSkeletonTracingForConnectome(
-  state: OxalisState,
+  state: WebknossosState,
   layerName: string,
-): Maybe<SkeletonTracing> {
+): SkeletonTracing | null {
   if (state.localSegmentationData[layerName].connectomeData.skeleton != null) {
-    return Maybe.Just(state.localSegmentationData[layerName].connectomeData.skeleton);
+    return state.localSegmentationData[layerName].connectomeData.skeleton;
   }
 
-  return Maybe.Nothing();
+  return null;
 }
 
 function setConnectomeTreesVisibilityReducer(
-  state: OxalisState,
+  state: WebknossosState,
   layerName: string,
   treeIds: Array<number>,
   visibility: boolean,
-): OxalisState {
+): WebknossosState {
   const updateTreesObject = {};
   const isVisibleUpdater = {
     isVisible: {
@@ -53,15 +52,15 @@ function setConnectomeTreesVisibilityReducer(
 export function deleteConnectomeTrees(
   skeletonTracing: SkeletonTracing,
   treeIds: Array<number>,
-): Maybe<[TreeMap, number]> {
+): [TreeMap, number] | null {
   // Delete trees
   const newTrees = _.omit(skeletonTracing.trees, treeIds);
 
   const newMaxNodeId = getMaximumNodeId(newTrees);
-  return Maybe.Just([newTrees, newMaxNodeId]);
+  return [newTrees, newMaxNodeId];
 }
 
-function ConnectomeReducer(state: OxalisState, action: Action): OxalisState {
+function ConnectomeReducer(state: WebknossosState, action: Action): WebknossosState {
   switch (action.type) {
     case "INITIALIZE_CONNECTOME_TRACING": {
       const { layerName } = action;
@@ -103,67 +102,72 @@ function ConnectomeReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
     case "ADD_CONNECTOME_TREES": {
       const { trees, layerName } = action;
-      return getSkeletonTracingForConnectome(state, layerName)
-        .map((skeletonTracing) =>
-          addTreesAndGroups(skeletonTracing, trees, [])
-            .map(([updatedTrees, _treeGroups, newMaxNodeId]) =>
-              update(state, {
-                localSegmentationData: {
-                  [layerName]: {
-                    connectomeData: {
-                      skeleton: {
-                        trees: {
-                          $merge: updatedTrees,
-                        },
-                        cachedMaxNodeId: {
-                          $set: newMaxNodeId,
-                        },
-                      },
-                    },
-                  },
+      const skeletonTracing = getSkeletonTracingForConnectome(state, layerName);
+      if (skeletonTracing == null) {
+        return state;
+      }
+
+      const treesAndGroups = addTreesAndGroups(skeletonTracing, trees, []);
+      if (treesAndGroups == null) {
+        return state;
+      }
+
+      const [updatedTrees, _treeGroups, newMaxNodeId] = treesAndGroups;
+      return update(state, {
+        localSegmentationData: {
+          [layerName]: {
+            connectomeData: {
+              skeleton: {
+                trees: {
+                  $merge: updatedTrees,
                 },
-              }),
-            )
-            .getOrElse(state),
-        )
-        .getOrElse(state);
+                cachedMaxNodeId: {
+                  $set: newMaxNodeId,
+                },
+              },
+            },
+          },
+        },
+      });
     }
 
     case "DELETE_CONNECTOME_TREES": {
       const { treeIds, layerName } = action;
-      return getSkeletonTracingForConnectome(state, layerName)
-        .map((skeletonTracing) =>
-          deleteConnectomeTrees(skeletonTracing, treeIds)
-            .map(([trees, newMaxNodeId]) =>
-              update(state, {
-                localSegmentationData: {
-                  [layerName]: {
-                    connectomeData: {
-                      skeleton: {
-                        trees: {
-                          $set: trees,
-                        },
-                        cachedMaxNodeId: {
-                          $set: newMaxNodeId,
-                        },
-                      },
-                    },
-                  },
+      const skeletonTracing = getSkeletonTracingForConnectome(state, layerName);
+      if (skeletonTracing == null) {
+        return state;
+      }
+
+      const treesAndmaxNodeId = deleteConnectomeTrees(skeletonTracing, treeIds);
+      if (treesAndmaxNodeId == null) {
+        return state;
+      }
+      const [trees, newMaxNodeId] = treesAndmaxNodeId;
+      return update(state, {
+        localSegmentationData: {
+          [layerName]: {
+            connectomeData: {
+              skeleton: {
+                trees: {
+                  $set: trees,
                 },
-              }),
-            )
-            .getOrElse(state),
-        )
-        .getOrElse(state);
+                cachedMaxNodeId: {
+                  $set: newMaxNodeId,
+                },
+              },
+            },
+          },
+        },
+      });
     }
 
     case "SET_CONNECTOME_TREES_VISIBILITY": {
       const { treeIds, isVisible, layerName } = action;
-      return getSkeletonTracingForConnectome(state, layerName)
-        .map((_skeletonTracing) =>
-          setConnectomeTreesVisibilityReducer(state, layerName, treeIds, isVisible),
-        )
-        .getOrElse(state);
+      const skeletonTracing = getSkeletonTracingForConnectome(state, layerName);
+      if (skeletonTracing == null) {
+        return state;
+      }
+      return setConnectomeTreesVisibilityReducer(state, layerName, treeIds, isVisible);
     }
 
     case "UPDATE_CONNECTOME_FILE_LIST": {

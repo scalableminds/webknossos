@@ -22,14 +22,14 @@ import {
   RetryingErrorBoundary,
   jsonEditStyle,
 } from "dashboard/dataset/helper_components";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { jsonStringify, parseMaybe } from "libs/utils";
 import { BoundingBoxInput, Vector3Input } from "libs/vector_input";
 import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "oxalis/constants";
 import { getSupportedValueRangeForElementClass } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import type { BoundingBoxObject, OxalisState } from "oxalis/store";
+import type { BoundingBoxObject } from "oxalis/store";
 import * as React from "react";
-import { useSelector } from "react-redux";
 import { type APIDataLayer, type APIDataset, APIJobType } from "types/api_types";
 import type { ArbitraryObject } from "types/globals";
 import type { DataLayer } from "types/schemas/datasource.types";
@@ -178,7 +178,7 @@ function SimpleDatasetForm({
   form: FormInstance;
   dataset: APIDataset | null | undefined;
 }) {
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useWkSelector((state) => state.activeUser);
   const onRemoveLayer = (layer: DataLayer) => {
     const oldLayers = form.getFieldValue(["dataSource", "dataLayers"]);
     const newLayers = oldLayers.filter(

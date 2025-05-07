@@ -1,4 +1,3 @@
-import type Maybe from "data.maybe";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import type { Vector3, Vector4 } from "oxalis/constants";
@@ -10,7 +9,7 @@ import NodeShader, {
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import type { CreateActionNode, UpdateActionNode } from "oxalis/model/sagas/update_actions";
-import type { Edge, Node, OxalisState, SkeletonTracing, Tree } from "oxalis/store";
+import type { Edge, Node, SkeletonTracing, Tree, WebknossosState } from "oxalis/store";
 import Store from "oxalis/throttled_store";
 import * as THREE from "three";
 import type { AdditionalCoordinate } from "types/api_types";
@@ -118,23 +117,25 @@ class Skeleton {
   edgeShader: EdgeShader | undefined;
 
   constructor(
-    skeletonTracingSelectorFn: (state: OxalisState) => Maybe<SkeletonTracing>,
+    skeletonTracingSelectorFn: (state: WebknossosState) => SkeletonTracing | null,
     supportsPicking: boolean,
   ) {
     this.supportsPicking = supportsPicking;
     this.rootGroup = new THREE.Group();
     this.pickingNode = new THREE.Object3D();
-    skeletonTracingSelectorFn(Store.getState()).map((skeletonTracing) => {
+    const skeletonTracing = skeletonTracingSelectorFn(Store.getState());
+    if (skeletonTracing != null) {
       this.reset(skeletonTracing);
-    });
+    }
     this.stopStoreListening = Store.subscribe(() => {
-      skeletonTracingSelectorFn(Store.getState()).map((skeletonTracing) => {
+      const skeletonTracing = skeletonTracingSelectorFn(Store.getState());
+      if (skeletonTracing != null) {
         if (skeletonTracing.tracingId !== this.prevTracing.tracingId) {
           this.reset(skeletonTracing);
         } else {
           this.refresh(skeletonTracing);
         }
-      });
+      }
     });
   }
 

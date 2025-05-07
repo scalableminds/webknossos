@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { createMockTask } from "@redux-saga/testing-utils";
 import { put, call } from "redux-saga/effects";
 import dummyUser from "test/fixtures/dummy_user";
@@ -14,7 +14,10 @@ import { ensureWkReady } from "oxalis/model/sagas/ready_sagas";
 import { wkReadyAction } from "oxalis/model/actions/actions";
 import { acquireAnnotationMutexMaybe } from "oxalis/model/sagas/annotation_saga";
 
-const createInitialState = (othersMayEdit: boolean, allowUpdate: boolean = true): OxalisState => ({
+const createInitialState = (
+  othersMayEdit: boolean,
+  allowUpdate: boolean = true,
+): WebknossosState => ({
   ...defaultState,
   activeUser: dummyUser,
   annotation: {

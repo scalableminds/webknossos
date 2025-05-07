@@ -1,4 +1,5 @@
 import type { ItemType } from "antd/lib/menu/interface";
+import { useWkSelector } from "libs/react_hooks";
 import { capitalize, getPhraseFromCamelCaseString } from "libs/utils";
 import * as Utils from "libs/utils";
 import _ from "lodash";
@@ -9,10 +10,9 @@ import { Toolkits } from "oxalis/model/accessors/tool_accessor";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
 import { Store } from "oxalis/singletons";
-import type { OxalisState, UserConfiguration } from "oxalis/store";
+import type { UserConfiguration } from "oxalis/store";
 import type { Command } from "react-command-palette";
 import ReactCommandPalette from "react-command-palette";
-import { useSelector } from "react-redux";
 import { getThemeFromUser } from "theme";
 import {
   type TracingViewMenuProps,
@@ -55,23 +55,17 @@ const getLabelForPath = (key: string) =>
   getPhraseFromCamelCaseString(capitalize(key.split("/")[1])) || key;
 
 export const CommandPalette = ({ label }: { label: string | JSX.Element | null }) => {
-  const userConfig = useSelector((state: OxalisState) => state.userConfiguration);
-  const isViewMode = useSelector(
-    (state: OxalisState) => state.temporaryConfiguration.controlMode === "VIEW",
-  );
-  const isInTracingView = useSelector(
-    (state: OxalisState) => state.uiInformation.isInAnnotationView,
-  );
+  const userConfig = useWkSelector((state) => state.userConfiguration);
+  const isViewMode = useWkSelector((state) => state.temporaryConfiguration.controlMode === "VIEW");
+  const isInTracingView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
 
-  const restrictions = useSelector((state: OxalisState) => state.annotation.restrictions);
-  const task = useSelector((state: OxalisState) => state.task);
-  const annotationType = useSelector((state: OxalisState) => state.annotation.annotationType);
-  const annotationId = useSelector((state: OxalisState) => state.annotation.annotationId);
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  const isAnnotationLockedByUser = useSelector(
-    (state: OxalisState) => state.annotation.isLockedByOwner,
-  );
-  const annotationOwner = useSelector((state: OxalisState) => state.annotation.owner);
+  const restrictions = useWkSelector((state) => state.annotation.restrictions);
+  const task = useWkSelector((state) => state.task);
+  const annotationType = useWkSelector((state) => state.annotation.annotationType);
+  const annotationId = useWkSelector((state) => state.annotation.annotationId);
+  const activeUser = useWkSelector((state) => state.activeUser);
+  const isAnnotationLockedByUser = useWkSelector((state) => state.annotation.isLockedByOwner);
+  const annotationOwner = useWkSelector((state) => state.annotation.owner);
 
   const props: TracingViewMenuProps = {
     restrictions,

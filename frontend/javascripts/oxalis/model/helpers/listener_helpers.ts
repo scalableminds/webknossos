@@ -1,4 +1,4 @@
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import Store from "oxalis/store";
 
 // Allows to listen on a certain property of the store.
@@ -14,7 +14,7 @@ import Store from "oxalis/store";
 // );
 // Don't forget to call unsubscribe(); if the handler is not needed anymore.
 export function listenToStoreProperty<T>(
-  select: (arg0: OxalisState) => T,
+  select: (arg0: WebknossosState) => T,
   onChange: (value: T) => void,
   callHandlerOnSubscribe: boolean | null | undefined = false,
 ): () => void {

@@ -36,6 +36,7 @@ import type { DataNode } from "antd/lib/tree";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import FastTooltip from "components/fast_tooltip";
 import { SimpleRow } from "dashboard/folders/metadata_table";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
 import _, { isNumber, memoize } from "lodash";
@@ -89,12 +90,12 @@ import { api } from "oxalis/singletons";
 import type {
   ActiveMappingInfo,
   MeshInformation,
-  OxalisState,
   Segment,
   SegmentGroup,
   SegmentMap,
   TreeGroup,
   VolumeTracing,
+  WebknossosState,
 } from "oxalis/store";
 import Store from "oxalis/store";
 import ButtonComponent from "oxalis/view/components/button_component";
@@ -109,7 +110,7 @@ import {
 } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import type RcTree from "rc-tree";
 import React, { type Key } from "react";
-import { connect, useSelector } from "react-redux";
+import { connect } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import type { Dispatch } from "redux";
 import type {
@@ -176,7 +177,7 @@ type StateProps = {
   magInfoOfVisibleSegmentationLayer: MagInfo;
 };
 
-const mapStateToProps = (state: OxalisState): StateProps => {
+const mapStateToProps = (state: WebknossosState): StateProps => {
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
   const activeVolumeTracing = getActiveSegmentationTracing(state);
   const mappingInfo = getMappingInfo(
@@ -232,7 +233,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
   };
 };
 
-const getCleanedSelectedSegmentsOrGroup = (state: OxalisState) => {
+const getCleanedSelectedSegmentsOrGroup = (state: WebknossosState) => {
   const [cleanedSelectedIds, maybeUpdateStoreAction] = getSelectedIds(state);
   if (maybeUpdateStoreAction != null) {
     maybeUpdateStoreAction();
@@ -718,8 +719,8 @@ class SegmentsView extends React.Component<Props, State> {
     let title = "";
     let disabled = true;
 
-    const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
-    const activeUser = useSelector((state: OxalisState) => state.activeUser);
+    const activeOrganization = useWkSelector((state) => state.activeOrganization);
+    const activeUser = useWkSelector((state) => state.activeUser);
     if (!isFeatureAllowedByPricingPlan(activeOrganization, PricingPlanEnum.Team)) {
       return {
         disabled: true,

@@ -2,7 +2,7 @@ import { Button } from "antd";
 import window from "libs/window";
 import _ from "lodash";
 import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";
-import type { OxalisState, SkeletonTracing } from "oxalis/store";
+import type { SkeletonTracing, WebknossosState } from "oxalis/store";
 import type { NodeListItem } from "oxalis/view/right-border-tabs/abstract_tree_renderer";
 import AbstractTreeRenderer from "oxalis/view/right-border-tabs/abstract_tree_renderer";
 import React, { Component } from "react";
@@ -104,7 +104,7 @@ class AbstractTreeTab extends Component<Props, State> {
   }
 }
 
-function mapStateToProps(state: OxalisState): Partial<Props> {
+function mapStateToProps(state: WebknossosState): Partial<Props> {
   return {
     skeletonTracing: state.annotation.skeleton,
   };

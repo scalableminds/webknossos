@@ -16,7 +16,7 @@ import {
 import type { DimensionIndices, DimensionMap } from "oxalis/model/dimensions";
 import Dimension from "oxalis/model/dimensions";
 import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
-import Store, { type OxalisState, type UserBoundingBox } from "oxalis/store";
+import Store, { type WebknossosState, type UserBoundingBox } from "oxalis/store";
 
 const BOUNDING_BOX_HOVERING_THROTTLE_TIME = 100;
 const getNeighbourEdgeIndexByEdgeIndex: { [key: number]: Vector2 } = {
@@ -302,7 +302,7 @@ export const highlightAndSetCursorOnHoveredBoundingBox = _.throttle(
 
 function getBoundingBoxOfPrimaryEdge(
   primaryEdge: SelectedEdge,
-  state: OxalisState,
+  state: WebknossosState,
 ): UserBoundingBox | undefined {
   const { userBoundingBoxes } = getSomeTracing(state.annotation);
   return userBoundingBoxes.find((bbox) => bbox.id === primaryEdge.boxId);

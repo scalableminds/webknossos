@@ -1,6 +1,6 @@
 import _ from "lodash";
 import update from "immutability-helper";
-import type { Node, SkeletonTracing, OxalisState } from "oxalis/store";
+import type { Node, SkeletonTracing, WebknossosState } from "oxalis/store";
 import defaultState from "oxalis/default_state";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
@@ -157,7 +157,7 @@ const initialSkeletonTracing: SkeletonTracing = {
   additionalAxes: [],
 };
 
-const initialState: OxalisState = _.extend({}, defaultState, {
+const initialState: WebknossosState = _.extend({}, defaultState, {
   dataset: {
     ...defaultState.dataset,
     name: "Test Dataset",
@@ -178,7 +178,7 @@ const initialState: OxalisState = _.extend({}, defaultState, {
   task: TASK_ANNOTATION.task,
 });
 
-async function testThatParserThrowsWithState(invalidState: OxalisState, key: string) {
+async function testThatParserThrowsWithState(invalidState: WebknossosState, key: string) {
   // Serialize the NML using the invalidState, then parse it again, which should throw an NMLParseError
   const nmlWithInvalidContent = serializeToNml(
     invalidState,

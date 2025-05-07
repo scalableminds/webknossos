@@ -7,16 +7,16 @@ import {
 } from "@ant-design/icons";
 import { ConfigProvider, Dropdown, type MenuProps } from "antd";
 import type { MenuItemType, SubMenuType } from "antd/lib/menu/interface";
+import { useWkSelector } from "libs/react_hooks";
 import {
   setPythonClientModalVisibilityAction,
   setRenderAnimationModalVisibilityAction,
   setShareModalVisibilityAction,
 } from "oxalis/model/actions/ui_actions";
-import Store, { type OxalisState } from "oxalis/store";
+import Store from "oxalis/store";
 import ShareViewDatasetModalView from "oxalis/view/action-bar/share_view_dataset_modal_view";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
-import { useSelector } from "react-redux";
 import { getAntdTheme, getThemeFromUser } from "theme";
 import CreateAnimationModal from "./create_animation_modal";
 import DownloadModalView from "./download_modal_view";
@@ -62,13 +62,13 @@ export const viewDatasetMenu = [
 ];
 
 export default function ViewDatasetActionsView(props: Props) {
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  const isShareModalOpen = useSelector((state: OxalisState) => state.uiInformation.showShareModal);
-  const isPythonClientModalOpen = useSelector(
-    (state: OxalisState) => state.uiInformation.showPythonClientModal,
+  const activeUser = useWkSelector((state) => state.activeUser);
+  const isShareModalOpen = useWkSelector((state) => state.uiInformation.showShareModal);
+  const isPythonClientModalOpen = useWkSelector(
+    (state) => state.uiInformation.showPythonClientModal,
   );
-  const isRenderAnimationModalOpen = useSelector(
-    (state: OxalisState) => state.uiInformation.showRenderAnimationModal,
+  const isRenderAnimationModalOpen = useWkSelector(
+    (state) => state.uiInformation.showRenderAnimationModal,
   );
 
   const shareDatasetModal = (

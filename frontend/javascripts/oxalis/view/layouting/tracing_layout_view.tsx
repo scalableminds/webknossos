@@ -9,7 +9,7 @@ import messages from "messages";
 import CrossOriginApi from "oxalis/api/cross_origin_api";
 import Constants from "oxalis/constants";
 import type { ControllerStatus } from "oxalis/controller";
-import OxalisController from "oxalis/controller";
+import WebKnossosController from "oxalis/controller";
 import MergerModeController from "oxalis/controller/merger_mode_controller";
 import { destroySceneController } from "oxalis/controller/scene_controller_provider";
 import UrlManager from "oxalis/controller/url_manager";
@@ -20,7 +20,7 @@ import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import { Store } from "oxalis/singletons";
 import { Model } from "oxalis/singletons";
-import { type OxalisState, type Theme, type TraceOrViewCommand, startSaga } from "oxalis/store";
+import { type Theme, type TraceOrViewCommand, type WebknossosState, startSaga } from "oxalis/store";
 import ActionBarView from "oxalis/view/action_bar_view";
 import WkContextMenu from "oxalis/view/context_menu";
 import DistanceMeasurementTooltip from "oxalis/view/distance_measurement_tooltip";
@@ -314,7 +314,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
           isUpdateAllowed={isUpdateTracingAllowed}
         >
           <TabTitle title={this.getTabTitle()} />
-          <OxalisController
+          <WebKnossosController
             initialMaybeCompoundType={this.props.initialMaybeCompoundType}
             initialCommandType={this.props.initialCommandType}
             controllerStatus={status}
@@ -396,7 +396,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 });
 
-function mapStateToProps(state: OxalisState) {
+function mapStateToProps(state: WebknossosState) {
   return {
     viewMode: state.temporaryConfiguration.viewMode,
     autoSaveLayouts: state.userConfiguration.autoSaveLayouts,

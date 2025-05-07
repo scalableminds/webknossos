@@ -23,8 +23,10 @@ export type SegmentHierarchyGroup = BasicDataNode & {
   id: number;
   key: string;
   isExpanded?: boolean;
-  isChecked: boolean;
   children: Array<SegmentHierarchyNode>;
+  // This type does not have an isChecked property, because that will
+  // be determined automatically by antd by looking at isChecked of
+  // the children.
 };
 
 export type SegmentHierarchyLeaf = BasicDataNode &

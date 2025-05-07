@@ -374,7 +374,6 @@ function constructTreeData(
       key: getGroupNodeKey(groupId),
       id: groupId,
       type: "group",
-      isChecked: false, // todop: why?
       children: constructTreeData(group.children, groupToSegmentsMap).concat(
         _.sortBy(segments, "id").map(
           (segment): SegmentHierarchyNode => ({
@@ -1851,9 +1850,10 @@ class SegmentsView extends React.Component<Props, State> {
             }
 
             // checkedKeys includes all nodes with a "selected" checkbox
-            const checkedKeys = deepFlatFilter(this.state.groupTree, (node) => node.isChecked).map(
-              (node) => node.key,
-            );
+            const checkedKeys = deepFlatFilter(
+              this.state.groupTree,
+              (node) => node.type === "segment" && node.isChecked,
+            ).map((node) => node.key);
             return (
               <React.Fragment>
                 <div style={{ flex: 0 }}>

@@ -100,8 +100,8 @@ function TreeHierarchyView(props: Props) {
 
   useEffect(() => {
     // scroll to active tree if it changes
-    if (treeRef.current && props.activeTreeId) {
-      const activeTreeKey = getNodeKey(GroupTypeEnum.TREE, props.activeTreeId);
+    if (treeRef.current && activeTreeId) {
+      const activeTreeKey = getNodeKey(GroupTypeEnum.TREE, activeTreeId);
 
       // For some React rendering/timing reasons, the target element might not be rendered yet. That messes with calculating the offsets for scrolling. Hence delay this a bit
       setTimeout(() => {
@@ -110,9 +110,9 @@ function TreeHierarchyView(props: Props) {
 
       // Make sure to select the active tree (for highlighting etc)
       // Remember, the active tree can be changed by actions outside of this component
-      props.onSingleSelectTree(props.activeTreeId, false);
+      props.onSingleSelectTree(activeTreeId, false);
     }
-  }, [props.activeTreeId, props.onSingleSelectTree]);
+  }, [activeTreeId, props.onSingleSelectTree]);
 
   useEffect(() => {
     // scroll to active group if it changes
@@ -166,10 +166,10 @@ function TreeHierarchyView(props: Props) {
     if (evt.ctrlKey || evt.metaKey) {
       // Select two or more individual nodes
       props.onMultiSelectTree(selectedTreeId);
-    } else if (evt.shiftKey && props.activeTreeId) {
+    } else if (evt.shiftKey && activeTreeId) {
       // SHIFT click to select a whole range of nodes.
       // Selection will only work for nodes within the same group/hierarchy level.
-      const sourceNode = props.trees[props.activeTreeId];
+      const sourceNode = props.trees[activeTreeId];
       const sourceNodeParent = findParentGroupNode(
         UITreeData,
         sourceNode.groupId ?? MISSING_GROUP_ID,
@@ -281,9 +281,9 @@ function TreeHierarchyView(props: Props) {
     if (expandedGroups == null) return;
     setExpandedGroups(expandedGroups);
     setTimeout(() => {
-      if (treeRef.current && props.activeTreeId)
+      if (treeRef.current && activeTreeId)
         treeRef.current.scrollTo({
-          key: getNodeKey(GroupTypeEnum.TREE, props.activeTreeId),
+          key: getNodeKey(GroupTypeEnum.TREE, activeTreeId),
           align: "auto",
         });
     }, 300);

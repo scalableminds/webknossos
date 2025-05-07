@@ -86,7 +86,7 @@ const { ThinSpace } = Unicode;
 const MIN_BBOX_EXTENT: Record<ModalJobTypes, Vector3> = {
   infer_neurons: [16, 16, 4],
   infer_nuclei: [4, 4, 4],
-  infer_mitochondria: [16, 16, 4],
+  infer_mitochondria: [16, 16, 4], //TODO_c
 };
 
 const MEAN_VX_SIZE: Record<APIJobType.INFER_NEURONS | APIJobType.INFER_NUCLEI, Vector3> = {
@@ -1014,8 +1014,19 @@ export function NucleiDetectionForm() {
       jobName={APIJobType.INFER_NUCLEI}
       title="AI Nuclei Segmentation"
       suggestedDatasetSuffix="with_nuclei"
-      jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer }) => {
-        // TODO maybe enforce min size of color layer like in NeuronSegmentationForm
+      jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer, selectedBoundingBox }) => {
+        if (!selectedBoundingBox) {
+          return;
+        }
+        const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
+        const mag = getBestFittingMagComparedToTrainingDS(
+          colorLayer,
+          dataset.dataSource.scale.factor,
+          APIJobType.INFER_NUCLEI,
+        );
+        if (isDatasetOrBoundingBoxTooSmall(bbox, mag, colorLayer, APIJobType.INFER_NUCLEI)) {
+          return;
+        }
         startNucleiInferralJob(dataset.id, colorLayer.name, newDatasetName);
       }}
       description={

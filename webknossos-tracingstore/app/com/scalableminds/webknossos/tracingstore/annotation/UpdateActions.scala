@@ -5,7 +5,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   SplitAgglomerateUpdateAction
 }
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
-import com.scalableminds.webknossos.tracingstore.tracings.volume._
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{UpdateUserBoundingBoxVolumeAction, _}
 import play.api.libs.json._
 
 trait UpdateAction {
@@ -54,6 +54,10 @@ object UpdateAction {
           case "updateTreeEdgesVisibility" => deserialize[UpdateTreeEdgesVisibilitySkeletonAction](jsonValue)
           case "updateUserBoundingBoxesInSkeletonTracing" =>
             deserialize[UpdateUserBoundingBoxesSkeletonAction](jsonValue)
+          case "addUserBoundingBoxInSkeletonTracing"    => deserialize[AddUserBoundingBoxSkeletonAction](jsonValue)
+          case "deleteUserBoundingBoxInSkeletonTracing" => deserialize[DeleteUserBoundingBoxSkeletonAction](jsonValue)
+          case "updateUserBoundingBoxInSkeletonTracing" =>
+            deserialize[UpdateUserBoundingBoxSkeletonAction](jsonValue)
           case "updateUserBoundingBoxVisibilityInSkeletonTracing" =>
             deserialize[UpdateUserBoundingBoxVisibilitySkeletonAction](jsonValue)
 
@@ -62,6 +66,10 @@ object UpdateAction {
           case "updateVolumeTracing" => deserialize[UpdateTracingVolumeAction](jsonValue)
           case "updateUserBoundingBoxesInVolumeTracing" =>
             deserialize[UpdateUserBoundingBoxesVolumeAction](jsonValue)
+          case "addUserBoundingBoxInVolumeTracing"    => deserialize[AddUserBoundingBoxVolumeAction](jsonValue)
+          case "deleteUserBoundingBoxInVolumeTracing" => deserialize[DeleteUserBoundingBoxVolumeAction](jsonValue)
+          case "updateUserBoundingBoxInVolumeTracing" =>
+            deserialize[UpdateUserBoundingBoxVolumeAction](jsonValue)
           case "updateUserBoundingBoxVisibilityInVolumeTracing" =>
             deserialize[UpdateUserBoundingBoxVisibilityVolumeAction](jsonValue)
           case "removeFallbackLayer" => deserialize[RemoveFallbackLayerVolumeAction](jsonValue)
@@ -140,9 +148,15 @@ object UpdateAction {
       case s: UpdateUserBoundingBoxesSkeletonAction =>
         Json.obj("name" -> "updateUserBoundingBoxesInSkeletonTracing",
                  "value" -> Json.toJson(s)(UpdateUserBoundingBoxesSkeletonAction.jsonFormat))
-      case s: UpdateUserBoundingBoxVisibilitySkeletonAction =>
-        Json.obj("name" -> "updateUserBoundingBoxVisibilityInSkeletonTracing",
-                 "value" -> Json.toJson(s)(UpdateUserBoundingBoxVisibilitySkeletonAction.jsonFormat))
+      case s: UpdateUserBoundingBoxSkeletonAction =>
+        Json.obj("name" -> "updateUserBoundingBoxSkeletonAction",
+                 "value" -> Json.toJson(s)(UpdateUserBoundingBoxSkeletonAction.jsonFormat))
+      case s: AddUserBoundingBoxSkeletonAction =>
+        Json.obj("name" -> "addUserBoundingBoxSkeletonAction",
+                 "value" -> Json.toJson(s)(AddUserBoundingBoxSkeletonAction.jsonFormat))
+      case s: DeleteUserBoundingBoxSkeletonAction =>
+        Json.obj("name" -> "deleteUserBoundingBoxSkeletonAction",
+                 "value" -> Json.toJson(s)(DeleteUserBoundingBoxSkeletonAction.jsonFormat))
 
       // Volume
       case s: UpdateBucketVolumeAction =>
@@ -152,9 +166,15 @@ object UpdateAction {
       case s: UpdateUserBoundingBoxesVolumeAction =>
         Json.obj("name" -> "updateUserBoundingBoxesInVolumeTracing",
                  "value" -> Json.toJson(s)(UpdateUserBoundingBoxesVolumeAction.jsonFormat))
-      case s: UpdateUserBoundingBoxVisibilityVolumeAction =>
-        Json.obj("name" -> "updateUserBoundingBoxVisibilityInVolumeTracing",
-                 "value" -> Json.toJson(s)(UpdateUserBoundingBoxVisibilityVolumeAction.jsonFormat))
+      case s: UpdateUserBoundingBoxVolumeAction =>
+        Json.obj("name" -> "updateUserBoundingBoxVolumeAction",
+                 "value" -> Json.toJson(s)(UpdateUserBoundingBoxVolumeAction.jsonFormat))
+      case s: AddUserBoundingBoxVolumeAction =>
+        Json.obj("name" -> "addUserBoundingBoxVolumeAction",
+                 "value" -> Json.toJson(s)(AddUserBoundingBoxVolumeAction.jsonFormat))
+      case s: DeleteUserBoundingBoxVolumeAction =>
+        Json.obj("name" -> "deleteUserBoundingBoxVolumeAction",
+                 "value" -> Json.toJson(s)(DeleteUserBoundingBoxVolumeAction.jsonFormat))
       case s: RemoveFallbackLayerVolumeAction =>
         Json.obj("name" -> "removeFallbackLayer", "value" -> Json.toJson(s)(RemoveFallbackLayerVolumeAction.jsonFormat))
       case s: ImportVolumeDataVolumeAction =>

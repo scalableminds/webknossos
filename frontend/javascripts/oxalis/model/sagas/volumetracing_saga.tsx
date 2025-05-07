@@ -77,7 +77,7 @@ import { Model, api } from "oxalis/singletons";
 import type { Flycam, SegmentMap, VolumeTracing } from "oxalis/store";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
-import { AnnotationLayerEnum } from "types/api_flow_types";
+import { AnnotationLayerEnum } from "types/api_types";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { ensureWkReady } from "./ready_sagas";
 import { diffBoundingBoxes } from "./skeletontracing_saga";

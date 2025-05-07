@@ -4,7 +4,7 @@ import _ from "lodash";
 import type { OrthoView, OrthoViewMap, OrthoViewRects, Vector3 } from "oxalis/constants";
 import { OrthoViewValuesWithoutTDView, OrthoViews } from "oxalis/constants";
 import { getDatasetCenter, getDatasetExtentInUnit } from "oxalis/model/accessors/dataset_accessor";
-import { getPosition, getRotationInDegrees, getRotationInRadian, getRotationInRadianFixed } from "oxalis/model/accessors/flycam_accessor";
+import { getPosition, getRotationInRadian } from "oxalis/model/accessors/flycam_accessor";
 import {
   getInputCatcherAspectRatio,
   getPlaneExtentInVoxelFromStore,
@@ -129,7 +129,7 @@ class CameraController extends React.PureComponent<Props> {
       // of clippingDistance. Theoretically, `far` could be set here too, however,
       // this leads to imprecision related bugs which cause the planes to not render
       // for certain clippingDistance values.
-      this.props.cameras[planeId].near = -clippingDistance;
+      this.props.cameras[planeId].near = -1000000000000;
       this.props.cameras[planeId].updateProjectionMatrix();
     }
 
@@ -163,15 +163,33 @@ class CameraController extends React.PureComponent<Props> {
     // Now set rotation for all cameras respecting the base rotation of each camera.
     const gRot = getRotationInRadian(state.flycam);
     // Copies are needed because multiply modifies the matrix in-place.
-    const rotationMatrixXY = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(gRot[0], gRot[1], gRot[2]));
-    const rotationMatrixYZ = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(gRot[0], gRot[1], gRot[2]));
-    const rotationMatrixXZ = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(gRot[0], gRot[1], gRot[2]));
-    const baseRotationMatrixXY = new THREE.Matrix4().makeRotationFromEuler(OrthoBaseRotations[OrthoViews.PLANE_XY]);
-    const baseRotationMatrixYZ = new THREE.Matrix4().makeRotationFromEuler(OrthoBaseRotations[OrthoViews.PLANE_YZ]);
-    const baseRotationMatrixXZ = new THREE.Matrix4().makeRotationFromEuler(OrthoBaseRotations[OrthoViews.PLANE_XZ]);
-    this.props.cameras[OrthoViews.PLANE_XY].setRotationFromMatrix(rotationMatrixXY.multiply(baseRotationMatrixXY));
-    this.props.cameras[OrthoViews.PLANE_YZ].setRotationFromMatrix(rotationMatrixYZ.multiply(baseRotationMatrixYZ));
-    this.props.cameras[OrthoViews.PLANE_XZ].setRotationFromMatrix(rotationMatrixXZ.multiply(baseRotationMatrixXZ));
+    const rotationMatrixXY = new THREE.Matrix4().makeRotationFromEuler(
+      new THREE.Euler(gRot[0], gRot[1], gRot[2]),
+    );
+    const rotationMatrixYZ = new THREE.Matrix4().makeRotationFromEuler(
+      new THREE.Euler(gRot[0], gRot[1], gRot[2]),
+    );
+    const rotationMatrixXZ = new THREE.Matrix4().makeRotationFromEuler(
+      new THREE.Euler(gRot[0], gRot[1], gRot[2]),
+    );
+    const baseRotationMatrixXY = new THREE.Matrix4().makeRotationFromEuler(
+      OrthoBaseRotations[OrthoViews.PLANE_XY],
+    );
+    const baseRotationMatrixYZ = new THREE.Matrix4().makeRotationFromEuler(
+      OrthoBaseRotations[OrthoViews.PLANE_YZ],
+    );
+    const baseRotationMatrixXZ = new THREE.Matrix4().makeRotationFromEuler(
+      OrthoBaseRotations[OrthoViews.PLANE_XZ],
+    );
+    this.props.cameras[OrthoViews.PLANE_XY].setRotationFromMatrix(
+      rotationMatrixXY.multiply(baseRotationMatrixXY),
+    );
+    this.props.cameras[OrthoViews.PLANE_YZ].setRotationFromMatrix(
+      rotationMatrixYZ.multiply(baseRotationMatrixYZ),
+    );
+    this.props.cameras[OrthoViews.PLANE_XZ].setRotationFromMatrix(
+      rotationMatrixXZ.multiply(baseRotationMatrixXZ),
+    );
     this.props.cameras[OrthoViews.PLANE_XY].updateProjectionMatrix();
     this.props.cameras[OrthoViews.PLANE_YZ].updateProjectionMatrix();
     this.props.cameras[OrthoViews.PLANE_XZ].updateProjectionMatrix();

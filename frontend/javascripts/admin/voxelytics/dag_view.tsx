@@ -11,15 +11,15 @@ import ReactFlow, {
 import { ExpandOutlined, MinusOutlined, PlusOutlined } from "@ant-design/icons";
 import { Button } from "antd";
 import ColorHash from "color-hash";
+import { useWkSelector } from "libs/react_hooks";
 import { memoize } from "lodash";
-import type { OxalisState, Theme } from "oxalis/store";
-import { useSelector } from "react-redux";
+import type { Theme } from "oxalis/store";
 import {
   VoxelyticsRunState,
   type VoxelyticsTaskConfigWithName,
   type VoxelyticsWorkflowDag,
   type VoxelyticsWorkflowDagEdge,
-} from "types/api_flow_types";
+} from "types/api_types";
 
 export const colorHasher = new ColorHash({ lightness: [0.35, 0.5, 0.65] });
 
@@ -221,7 +221,7 @@ function DAGView({
 }) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const allTaskIds = dag.nodes.map((node) => node.id);
-  const theme = useSelector((state: OxalisState) => state.uiInformation.theme);
+  const theme = useWkSelector((state) => state.uiInformation.theme);
   const reactFlowRef = useRef<ReactFlowInstance | null>(null);
 
   const handleNodeClick = (_event: any, element: FlowNode) => {

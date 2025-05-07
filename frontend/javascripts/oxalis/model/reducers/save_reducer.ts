@@ -6,7 +6,7 @@ import type { Action } from "oxalis/model/actions/actions";
 import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";
 import { updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
 import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "oxalis/model/sagas/save_saga_constants";
-import type { OxalisState, SaveState } from "oxalis/store";
+import type { SaveState, WebknossosState } from "oxalis/store";
 
 // These update actions are not idempotent. Having them
 // twice in the save queue causes a corruption of the current annotation.
@@ -24,7 +24,7 @@ export function getTotalSaveQueueLength(queueObj: SaveState["queue"]) {
   return queueObj.length;
 }
 
-function SaveReducer(state: OxalisState, action: Action): OxalisState {
+function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
   switch (action.type) {
     case "PUSH_SAVE_QUEUE_TRANSACTION": {
       // Use `dispatchedAction` to better distinguish this variable from

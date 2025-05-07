@@ -3,8 +3,7 @@ package models.user
 import play.silhouette.api.{Identity, LoginInfo}
 import com.scalableminds.util.accesscontext._
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.JsonHelper.parseAndValidateJson
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.schema.Tables._
@@ -85,7 +84,9 @@ case class UserCompactInfo(
     lastTaskTypeId: Option[String],
     isSuperUser: Boolean,
     isEmailVerified: Boolean,
-    isEditable: Boolean
+    isEditable: Boolean,
+    isGuest: Boolean,
+    isUnlisted: Boolean
 )
 
 class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
@@ -97,7 +98,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   protected def parse(r: UsersRow): Fox[User] =
     for {
-      userConfiguration <- parseAndValidateJson[JsObject](r.userconfiguration)
+      userConfiguration <- JsonHelper.parseAs[JsObject](r.userconfiguration).toFox
     } yield {
       User(
         ObjectId(r._Id),
@@ -202,11 +203,25 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     import prs._
     // format: off
     UserCompactInfo(<<[ObjectId],<<[ObjectId],<<[String],<<[String],<<[String],<<[String],<<[Boolean],<<[Boolean],
-      <<[Boolean],<<[Boolean],<<[String],<<[String],<<[String],<<[String], <<[String],<<[Instant],
-      <<[String],<<[String],<<[String],<<[Instant],<<?[String],<<[Boolean],<<[Boolean],<<[Boolean]
+      <<[Boolean],<<[Boolean],<<[String],<<[String],<<[String],<<[String], <<[String],<<[Instant],<<[String],
+      <<[String],<<[String],<<[Instant],<<?[String],<<[Boolean],<<[Boolean],<<[Boolean],<<[Boolean],<<[Boolean]
     )
     // format: on
   }
+
+  private def payingOrganizationInfoSubquery =
+    q"""(
+         SELECT DISTINCT ON (_multiUser) _multiUser, _organization
+            FROM webknossos.users
+            WHERE NOT isDeactivated
+              AND _organization IN (
+                SELECT _id
+                FROM webknossos.organizations
+                WHERE pricingPlan IN ('Team', 'Power', 'Custom')
+              )
+            ORDER BY _multiUser, created ASC
+         )
+     """
 
   def findAllCompactWithFilters(isEditable: Option[Boolean],
                                 isTeamManagerOrAdmin: Option[Boolean],
@@ -277,20 +292,34 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
             u.lastTaskTypeId,
             m.isSuperUser,
             m.isEmailVerified,
-            $isEditableAttribute
+            $isEditableAttribute,
+            (payingOrganization._organization IS NOT NULL AND u._organization != payingOrganization._organization) AS isGuest,
+            u.isUnlisted
         FROM webknossos.users AS u
         INNER JOIN webknossos.organizations o ON o._id = u._organization
         INNER JOIN webknossos.multiusers m ON u._multiuser = m._id
         INNER JOIN agg_user_team_roles autr ON autr._user = u._id
         INNER JOIN agg_experiences aux ON aux._user = u._id
+        -- left outer join to keep users that do not have a paying organization
+        LEFT JOIN $payingOrganizationInfoSubquery AS payingOrganization ON payingOrganization._multiUser = u._multiUser
         WHERE $selectionPredicates
         GROUP BY
           u._id, u.firstname, u.lastname, u.userConfiguration, u.isAdmin, u.isOrganizationOwner, u.isDatasetManager,
-          u.isDeactivated, u.lastActivity, u.created, u.lastTaskTypeId, o._id,
-          m._id, m.email, m.novelUserExperienceinfos, m.selectedTheme, m.isSuperUser, m.isEmailVerified,
-          autr.team_ids, autr.team_names, autr.team_managers, aux.experience_values, aux.experience_domains
+          u.isDeactivated, u.lastActivity, u.created, u.lastTaskTypeId, o._id, m._id, m.email,
+          m.novelUserExperienceinfos, m.selectedTheme, m.isSuperUser, m.isEmailVerified, autr.team_ids, autr.team_names,
+          autr.team_managers, aux.experience_values, aux.experience_domains, payingOrganization._organization, u._organization
          """.as[UserCompactInfo])
     } yield rows.toList
+
+  def isUserAGuest(userId: ObjectId): Fox[Boolean] =
+    for {
+      rows <- run(
+        q"""SELECT (payingOrganization._organization IS NOT NULL AND u._organization != payingOrganization._organization) AS isGuest
+            FROM webknossos.users as u
+            LEFT JOIN $payingOrganizationInfoSubquery AS payingOrganization ON payingOrganization._multiUser = u._multiUser
+            WHERE _id = $userId""".as[Boolean])
+      result <- rows.headOption.toFox
+    } yield result
 
   // NOTE: This will not return admins. They have “access to all teams”. Consider fetching those too when you use this
   def findAllByTeams(teamIds: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[User]] =
@@ -366,6 +395,20 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parse(result)
     } yield parsed
 
+  def findPayingOrgaIdForMultiUser(multiUserId: ObjectId): Fox[Option[ObjectId]] =
+    for {
+      rows <- run(q"""SELECT _organization
+                      FROM $existingCollectionName
+                      WHERE _multiUser = $multiUserId
+                      AND NOT isDeactivated
+                      AND _organization IN (
+                        SELECT _id FROM webknossos.organizations
+                        WHERE pricingPlan IN (${PricingPlan.Team}, ${PricingPlan.Power}, ${PricingPlan.Custom})
+                      )
+                      ORDER BY created ASC
+                      LIMIT 1""".as[ObjectId])
+    } yield rows.headOption
+
   def findFirstByMultiUser(multiUserId: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
     for {
       accessQuery <- readAccessQuery
@@ -393,10 +436,15 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def countAllForOrganization(organizationId: String): Fox[Int] =
     for {
-      resultList <- run(
-        q"SELECT COUNT(*) FROM $existingCollectionName WHERE _organization = $organizationId AND NOT isDeactivated AND NOT isUnlisted"
-          .as[Int])
-      result <- resultList.headOption
+      resultList <- run(q"""
+      SELECT COUNT(*) FROM $existingCollectionName as u
+      LEFT JOIN $payingOrganizationInfoSubquery AS payingOrganization ON payingOrganization._multiUser = u._multiUser
+      WHERE u._organization = $organizationId
+        AND NOT u.isDeactivated
+        AND NOT u.isUnlisted
+        AND (payingOrganization._organization IS NULL OR payingOrganization._organization = $organizationId)
+      """.as[Int])
+      result <- resultList.headOption.toFox
     } yield result
 
   def countAdminsForOrganization(organizationId: String): Fox[Int] =
@@ -404,7 +452,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       resultList <- run(
         q"SELECT COUNT(*) from $existingCollectionName WHERE _organization = $organizationId AND isAdmin AND NOT isUnlisted"
           .as[Int])
-      result <- resultList.headOption
+      result <- resultList.headOption.toFox
     } yield result
 
   def countOwnersForOrganization(organizationId: String): Fox[Int] =
@@ -412,13 +460,13 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       resultList <- run(
         q"SELECT COUNT(*) FROM $existingCollectionName WHERE _organization = $organizationId AND isOrganizationOwner AND NOT isUnlisted"
           .as[Int])
-      result <- resultList.headOption
+      result <- resultList.headOption.toFox
     } yield result
 
   def countIdentitiesForMultiUser(multiUserId: ObjectId): Fox[Int] =
     for {
       resultList <- run(q"SELECT COUNT(*) FROM $existingCollectionName WHERE _multiUser = $multiUserId".as[Int])
-      result <- resultList.headOption
+      result <- resultList.headOption.toFox
     } yield result
 
   def insertOne(u: User): Fox[Unit] =
@@ -579,8 +627,7 @@ class UserDatasetConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: UserD
                       FROM webknossos.user_datasetConfigurations
                       WHERE _dataset = $datasetId
                       AND _user = $userId""".as[String])
-      parsed = rows.map(Json.parse)
-      result <- parsed.headOption.map(_.validate[DatasetViewConfiguration].getOrElse(Map.empty)).toFox
+      result <- rows.headOption.map(JsonHelper.parseAs[DatasetViewConfiguration](_).getOrElse(Map.empty)).toFox
     } yield result
 
   def updateDatasetConfigurationForUserAndDataset(
@@ -617,7 +664,7 @@ class UserDatasetLayerConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: 
                         WHERE _dataset = $datasetId
                         AND _user = $userId
                         AND layerName in ${SqlToken.tupleFromList(layerNames)}""".as[(String, String)])
-        parsed = rows.flatMap(t => Json.parse(t._2).asOpt[LayerViewConfiguration].map((t._1, _)))
+        parsed = rows.flatMap(t => JsonHelper.parseAs[LayerViewConfiguration](t._2).toOption.map((t._1, _)))
       } yield parsed.toMap
     }
 

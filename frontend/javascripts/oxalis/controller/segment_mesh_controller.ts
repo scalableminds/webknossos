@@ -4,6 +4,7 @@ import _ from "lodash";
 import type { Vector2, Vector3 } from "oxalis/constants";
 import CustomLOD from "oxalis/controller/custom_lod";
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import {
   getActiveSegmentationTracing,
   getSegmentColorAsHSLA,
@@ -12,9 +13,8 @@ import { NO_LOD_MESH_INDEX } from "oxalis/model/sagas/mesh_saga";
 import Store from "oxalis/store";
 import * as THREE from "three";
 import { acceleratedRaycast } from "three-mesh-bvh";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_types";
 
 import { computeBvhAsync } from "libs/compute_bvh_async";
 import type { BufferAttribute } from "three";
@@ -61,9 +61,19 @@ type GroupForLOD = THREE.Group & {
 };
 
 export default class SegmentMeshController {
-  // meshesLODRootGroup holds lights and one group per segment id.
-  // Each group can hold multiple meshes.
-  meshesLODRootGroup: CustomLOD;
+  lightsGroup: THREE.Group;
+  // meshesLayerLODRootGroup holds a CustomLOD for each segmentation layer with meshes.
+  // Each CustomLOD group can hold multiple meshes.
+  // meshesLayerLODRootGroup
+  // - layer 1
+  //  - CustomLOD
+  //    - LOD X
+  //      - meshes
+  // - layer 2
+  //  - CustomLOD
+  //    - LOD X
+  //      - meshes
+  meshesLayerLODRootGroup: THREE.Group;
 
   meshesGroupsPerSegmentId: Record<
     string, // additionalCoordinatesString
@@ -80,7 +90,8 @@ export default class SegmentMeshController {
   > = {};
 
   constructor() {
-    this.meshesLODRootGroup = new CustomLOD();
+    this.lightsGroup = new THREE.Group();
+    this.meshesLayerLODRootGroup = new THREE.Group();
     this.addLights();
   }
 
@@ -189,21 +200,41 @@ export default class SegmentMeshController {
       new THREE.Group(),
     );
     _.setWith(this.meshesGroupsPerSegmentId, keys, targetGroup, Object);
+    let layerLODGroup = this.meshesLayerLODRootGroup.getObjectByName(layerName) as
+      | CustomLOD
+      | undefined;
+
+    if (layerLODGroup == null) {
+      layerLODGroup = new CustomLOD();
+      layerLODGroup.name = layerName;
+      this.meshesLayerLODRootGroup.add(layerLODGroup);
+    }
+
     if (isNewlyAddedMesh) {
       if (lod === NO_LOD_MESH_INDEX) {
-        this.meshesLODRootGroup.addNoLODSupportedMesh(targetGroup);
+        layerLODGroup.addNoLODSupportedMesh(targetGroup);
       } else {
-        this.meshesLODRootGroup.addLODMesh(targetGroup, lod);
+        layerLODGroup.addLODMesh(targetGroup, lod);
       }
       targetGroup.segmentId = segmentId;
-      if (scale != null) {
-        targetGroup.scale.copy(new THREE.Vector3(...scale));
-      }
+      const dsScaleFactor = Store.getState().dataset.dataSource.scale.factor;
+      // If the mesh was calculated on a different magnification level,
+      // the backend sends the scale factor of this magnification.
+      // As the meshesLODRootGroup is already scaled by the main rootGroup,
+      // this portion of the scale needs to be taken out of the scale applied to the mesh.
+      // If no scale was given, the meshes coordinates are already in scale of dataset and
+      // thus the scaling done by the root group needs to be unscaled (done by 1/dsScaleFactor).
+      scale = scale || [1, 1, 1];
+      const adaptedScale = [
+        scale[0] / dsScaleFactor[0],
+        scale[1] / dsScaleFactor[1],
+        scale[2] / dsScaleFactor[2],
+      ];
+      targetGroup.scale.copy(new THREE.Vector3(...adaptedScale));
     }
     const meshChunk = this.constructMesh(segmentId, layerName, geometry, isMerged);
 
     const group = new THREE.Group() as SceneGroupForMeshes;
-
     group.add(meshChunk);
 
     group.segmentId = segmentId;
@@ -221,9 +252,16 @@ export default class SegmentMeshController {
     const additionalCoordinates = Store.getState().flycam.additionalCoordinates;
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
     const meshGroups = this.getMeshGroups(additionalCoordKey, layerName, segmentId);
+    const lodMeshGroupForLayer = this.getLODGroupOfLayer(layerName);
+    if (lodMeshGroupForLayer == null) {
+      // No meshes for this layer
+      return;
+    }
+
     if (meshGroups == null) {
       return;
     }
+
     _.forEach(meshGroups, (meshGroup, lodStr) => {
       const currentLod = Number.parseInt(lodStr);
 
@@ -233,9 +271,9 @@ export default class SegmentMeshController {
       }
 
       if (currentLod !== NO_LOD_MESH_INDEX) {
-        this.meshesLODRootGroup.removeLODMesh(meshGroup, currentLod);
+        lodMeshGroupForLayer.removeLODMesh(meshGroup, currentLod);
       } else {
-        this.meshesLODRootGroup.removeNoLODSupportedMesh(meshGroup);
+        lodMeshGroupForLayer.removeNoLODSupportedMesh(meshGroup);
       }
 
       this.removeMeshLODFromMeshGroups(additionalCoordKey, layerName, segmentId, currentLod);
@@ -253,8 +291,11 @@ export default class SegmentMeshController {
   ): THREE.Group | null {
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
     const meshGroups = this.getMeshGroups(additionalCoordKey, layerName, segmentId);
+
     if (meshGroups == null) return null;
+
     const bestLod = Math.min(...Object.keys(meshGroups).map((lodVal) => Number.parseInt(lodVal)));
+
     return this.getMeshGroupsByLOD(additionalCoordinates, layerName, segmentId, bestLod);
   }
 
@@ -268,6 +309,19 @@ export default class SegmentMeshController {
     _.forEach(this.getMeshGroups(additionalCoordKey, layerName, id), (meshGroup) => {
       meshGroup.visible = visibility;
     });
+  }
+
+  getLODGroupOfLayer(layerName: string): CustomLOD | undefined {
+    return this.meshesLayerLODRootGroup.getObjectByName(layerName) as CustomLOD | undefined;
+  }
+
+  setVisibilityOfMeshesOfLayer(layerName: string, visibility: boolean): void {
+    const layerLODGroup = this.meshesLayerLODRootGroup.getObjectByName(layerName) as
+      | CustomLOD
+      | undefined;
+    if (layerLODGroup != null) {
+      layerLODGroup.visible = visibility;
+    }
   }
 
   applyOnMeshGroupChildren = (
@@ -315,6 +369,7 @@ export default class SegmentMeshController {
     const [hue, saturation, light] = getSegmentColorAsHSLA(Store.getState(), segmentId, layerName);
     const color = new THREE.Color().setHSL(hue, saturation, light);
     color.convertSRGBToLinear();
+
     return color;
   }
 
@@ -334,7 +389,7 @@ export default class SegmentMeshController {
     // Note that the PlaneView also attaches a directional light directly to the TD camera,
     // so that the light moves along the cam.
     const ambientLight = new THREE.AmbientLight("white", settings.ambientIntensity);
-    this.meshesLODRootGroup.add(ambientLight);
+    this.lightsGroup.add(ambientLight);
 
     const lightPositions: Vector3[] = [
       [1, 1, 1],
@@ -354,7 +409,7 @@ export default class SegmentMeshController {
         settings[`dirLight${index + 1}Intensity`] || 1,
       );
       light.position.set(...pos).normalize();
-      this.meshesLODRootGroup.add(light);
+      this.lightsGroup.add(light);
     });
   }
 
@@ -366,6 +421,7 @@ export default class SegmentMeshController {
   ): THREE.Group | null {
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
     const keys = [additionalCoordKey, layerName, segmentId, lod];
+
     return _.get(this.meshesGroupsPerSegmentId, keys, null);
   }
 
@@ -417,7 +473,8 @@ export default class SegmentMeshController {
     //    appearance.
     // 2) Clear old partial ranges if necessary.
     // 3) Update the appearance.
-    const isProofreadingMode = Store.getState().uiInformation.activeTool === "PROOFREAD";
+    const isProofreadingMode =
+      Store.getState().uiInformation.activeTool === AnnotationTool.PROOFREAD;
 
     if (highlightState != null && !isProofreadingMode) {
       // If the proofreading mode is not active and highlightState is not null,
@@ -427,6 +484,7 @@ export default class SegmentMeshController {
 
     let wasChanged = false;
     const rangesToReset: Vector2[] = [];
+
     if (isHovered != null) {
       if (!_.isEqual(mesh.hoveredState, highlightState)) {
         if (mesh.hoveredState != null && mesh.hoveredState !== "full") {
@@ -436,6 +494,7 @@ export default class SegmentMeshController {
         wasChanged = true;
       }
     }
+
     if (isActiveUnmappedSegment != null) {
       if (!_.isEqual(mesh.activeState, highlightState)) {
         if (mesh.activeState != null && mesh.activeState !== "full") {
@@ -445,6 +504,7 @@ export default class SegmentMeshController {
         wasChanged = true;
       }
     }
+
     if (!wasChanged) {
       // Nothing to do
       return;
@@ -517,8 +577,7 @@ export default class SegmentMeshController {
   }
 
   highlightActiveUnmappedSegmentId = (activeUnmappedSegmentId: number | null | undefined) => {
-    const { meshesLODRootGroup } = this;
-    meshesLODRootGroup.traverse((_obj) => {
+    this.meshesLayerLODRootGroup.traverse((_obj) => {
       if (!("geometry" in _obj)) {
         return;
       }

@@ -1,25 +1,42 @@
 import {
   tokenUserA,
+  tokenUserE,
+  tokenUserF,
   setUserAuthToken,
   resetDatabase,
   replaceVolatileValues,
   writeTypeCheckingFile,
 } from "test/e2e-setup";
-import * as api from "admin/admin_rest_api";
-import { describe, it, beforeAll, expect } from "vitest";
+import * as api from "admin/rest_api";
+import { describe, it, beforeAll, expect, beforeEach } from "vitest";
 
 describe("Users API (E2E)", () => {
   beforeAll(async () => {
     // Reset database and change token
     resetDatabase();
+  });
+  beforeEach(() => {
+    // Reset database and change token
     setUserAuthToken(tokenUserA);
   });
 
-  it("getUsers()", async () => {
+  it("getUsers() Orga X", async () => {
     const users = await api.getUsers();
     writeTypeCheckingFile(users, "user", "APIUser", {
       isArray: true,
     });
+    expect(replaceVolatileValues(users)).toMatchSnapshot();
+  });
+
+  it("getUsers() Orga Y", async () => {
+    setUserAuthToken(tokenUserE);
+    const users = await api.getUsers();
+    expect(replaceVolatileValues(users)).toMatchSnapshot();
+  });
+
+  it("getUsers() Orga Z", async () => {
+    setUserAuthToken(tokenUserF);
+    const users = await api.getUsers();
     expect(replaceVolatileValues(users)).toMatchSnapshot();
   });
 

@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { getDefaultValueRangeOfLayer, isColorLayer } from "oxalis/model/accessors/dataset_accessor";
-import type { APIDataset, APIMaybeUnimportedDataset } from "types/api_flow_types";
+import type { APIDataset, APIMaybeUnimportedDataset } from "types/api_types";
 import {
   defaultDatasetViewConfiguration,
   getDefaultLayerViewConfiguration,

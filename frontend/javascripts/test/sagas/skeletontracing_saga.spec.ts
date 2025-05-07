@@ -1,4 +1,4 @@
-import type { Flycam, OxalisState, SkeletonTracing, StoreAnnotation } from "oxalis/store";
+import type { Flycam, WebknossosState, SkeletonTracing, StoreAnnotation } from "oxalis/store";
 import ChainReducer from "test/helpers/chainReducer";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
@@ -12,7 +12,7 @@ import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { TreeTypeEnum } from "oxalis/constants";
 import type { Action } from "oxalis/model/actions/actions";
-import type { ServerSkeletonTracing } from "types/api_flow_types";
+import type { ServerSkeletonTracing } from "types/api_types";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { UpdateActionWithoutIsolationRequirement } from "oxalis/model/sagas/update_actions";
 import type { TracingStats } from "oxalis/model/accessors/annotation_accessor";
@@ -216,7 +216,7 @@ describe("SkeletonTracingSaga", () => {
   });
 
   it("should emit createNode and createEdge update actions", () => {
-    const newState = ChainReducer<OxalisState, Action>(initialState)
+    const newState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
       .unpack();
@@ -254,7 +254,7 @@ describe("SkeletonTracingSaga", () => {
   });
 
   it("should emit createNode and createTree update actions", () => {
-    const newState = ChainReducer<OxalisState, Action>(initialState)
+    const newState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
@@ -294,7 +294,7 @@ describe("SkeletonTracingSaga", () => {
 
   it("should emit first deleteNode and then createNode update actions", () => {
     const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 2);
-    const testState = ChainReducer<OxalisState, Action>(initialState)
+    const testState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
@@ -363,7 +363,7 @@ describe("SkeletonTracingSaga", () => {
   });
 
   it("should emit a deleteEdge update action", () => {
-    const testState = ChainReducer<OxalisState, Action>(initialState)
+    const testState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
       .unpack();
@@ -433,7 +433,7 @@ describe("SkeletonTracingSaga", () => {
   });
 
   it("should emit an updateNode update action 2", () => {
-    const testState = ChainReducer<OxalisState, Action>(initialState)
+    const testState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, setNodeRadiusAction)
       .unpack();
@@ -475,7 +475,7 @@ describe("SkeletonTracingSaga", () => {
   });
 
   it("shouldn't emit an updateTree update actions (comments)", () => {
-    const testState = ChainReducer<OxalisState, Action>(initialState)
+    const testState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createCommentAction)
       .unpack();
@@ -519,7 +519,7 @@ describe("SkeletonTracingSaga", () => {
   it("should emit update actions on merge tree", () => {
     const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(3, 1);
     // create a node in first tree, then create a second tree with three nodes and merge them
-    const testState = ChainReducer<OxalisState, Action>(initialState)
+    const testState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
@@ -572,7 +572,7 @@ describe("SkeletonTracingSaga", () => {
   it("should emit update actions on split tree", () => {
     const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(3, 1);
     // create a node in first tree, then create a second tree with three nodes and merge them
-    const testState = ChainReducer<OxalisState, Action>(initialState)
+    const testState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
@@ -676,7 +676,7 @@ describe("SkeletonTracingSaga", () => {
   it("compactUpdateActions should detect a tree merge (1/3)", () => {
     const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(4, 1);
     // Create three nodes in the first tree, then create a second tree with one node and merge them
-    const testState = ChainReducer<OxalisState, Action>(initialState)
+    const testState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
@@ -733,7 +733,7 @@ describe("SkeletonTracingSaga", () => {
     // In this test multiple diffs are performed and concatenated before compactUpdateActions is invoked
     const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(5, 1);
     // Create three nodes in the first tree, then create a second tree with one node
-    const testState = ChainReducer<OxalisState, Action>(initialState)
+    const testState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
@@ -747,7 +747,7 @@ describe("SkeletonTracingSaga", () => {
       testDiffing(testState.annotation, newState1.annotation, testState.flycam, newState1.flycam),
     );
     // Merge the two trees (b), then create another tree and node (c)
-    const newState2 = ChainReducer<OxalisState, Action>(newState1)
+    const newState2 = ChainReducer<WebknossosState, Action>(newState1)
       .apply(SkeletonTracingReducer, mergeTreesAction)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
@@ -822,7 +822,7 @@ describe("SkeletonTracingSaga", () => {
     const firstMergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 4);
     const secondMergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 6);
     // Create three nodes in the first tree, then create a second tree with one node
-    const testState = ChainReducer<OxalisState, Action>(initialState)
+    const testState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
@@ -842,7 +842,7 @@ describe("SkeletonTracingSaga", () => {
       ),
     );
     // Create another tree and two nodes (b)
-    const newState = ChainReducer<OxalisState, Action>(stateAfterFirstMerge)
+    const newState = ChainReducer<WebknossosState, Action>(stateAfterFirstMerge)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
@@ -944,7 +944,7 @@ describe("SkeletonTracingSaga", () => {
   it("compactUpdateActions should detect a tree split (1/3)", () => {
     const deleteMiddleNodeAction = SkeletonTracingActions.deleteNodeAction(2);
     // Create four nodes
-    const testState = ChainReducer<OxalisState, Action>(initialState)
+    const testState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
@@ -1005,7 +1005,7 @@ describe("SkeletonTracingSaga", () => {
     const setActiveNodeAction = SkeletonTracingActions.setActiveNodeAction(2);
     // Create four nodes, then set node 2 as active and create another three nodes
     // Node 2 now has three neighbors
-    const testState = ChainReducer<OxalisState, Action>(initialState)
+    const testState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
@@ -1084,7 +1084,7 @@ describe("SkeletonTracingSaga", () => {
     const deleteMiddleNodeAction = SkeletonTracingActions.deleteNodeAction(2);
     const deleteOtherMiddleNodeAction = SkeletonTracingActions.deleteNodeAction(4);
     // Create six nodes
-    const testState = ChainReducer<OxalisState, Action>(initialState)
+    const testState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
@@ -1183,12 +1183,12 @@ describe("SkeletonTracingSaga", () => {
     // it could however exist in the future and this test makes sure things won't break then
     const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(2, 1);
     // Create three nodes in the first tree, then create a second tree with one node and merge them
-    const testState = ChainReducer<OxalisState, Action>(initialState)
+    const testState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
       .unpack();
 
     // Create the tree that is merged to and merge the trees at the same time
-    const newState = ChainReducer<OxalisState, Action>(testState)
+    const newState = ChainReducer<WebknossosState, Action>(testState)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, mergeTreesAction)
@@ -1217,7 +1217,7 @@ describe("SkeletonTracingSaga", () => {
   });
 
   it("compactUpdateActions should detect a deleted tree", () => {
-    const testState = ChainReducer<OxalisState, Action>(initialState)
+    const testState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
@@ -1225,7 +1225,7 @@ describe("SkeletonTracingSaga", () => {
       .unpack();
 
     // Delete the tree
-    const newState = ChainReducer<OxalisState, Action>(testState)
+    const newState = ChainReducer<WebknossosState, Action>(testState)
       .apply(SkeletonTracingReducer, deleteTreeAction)
       .unpack();
 
@@ -1253,7 +1253,7 @@ describe("SkeletonTracingSaga", () => {
   });
 
   it("compactUpdateActions should not detect a deleted tree if there is no deleted tree", () => {
-    const testState = ChainReducer<OxalisState, Action>(initialState)
+    const testState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
@@ -1261,7 +1261,7 @@ describe("SkeletonTracingSaga", () => {
       .unpack();
 
     // Delete almost all nodes from the tree
-    const newState = ChainReducer<OxalisState, Action>(testState)
+    const newState = ChainReducer<WebknossosState, Action>(testState)
       .apply(SkeletonTracingReducer, deleteNodeAction)
       .apply(SkeletonTracingReducer, deleteNodeAction)
       .unpack();

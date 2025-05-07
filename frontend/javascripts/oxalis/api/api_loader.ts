@@ -1,6 +1,6 @@
 import app from "app";
 // only relative imports are followed by documentationjs
-import type { OxalisModel } from "oxalis/model";
+import type { WebKnossosModel } from "oxalis/model";
 import createApiLatest, { type ApiInterface } from "./api_latest";
 import WkDev from "./wk_dev";
 const latestVersion = 3;
@@ -8,15 +8,15 @@ const latestVersion = 3;
 class ApiLoader {
   readyPromise: Promise<void>;
   apiInterface!: ApiInterface;
-  model: OxalisModel;
+  model: WebKnossosModel;
   // See docstrings in WkDev
   DEV: WkDev;
 
-  constructor(oxalisModel: OxalisModel) {
+  constructor(webKnossosModel: WebKnossosModel) {
     this.readyPromise = new Promise((resolve) => {
       app.vent.on("webknossos:ready", resolve);
     });
-    this.model = oxalisModel;
+    this.model = webKnossosModel;
     this.DEV = new WkDev(this);
   }
 

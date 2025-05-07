@@ -10,7 +10,7 @@ import {
   type Vector3,
   type Vector4,
 } from "oxalis/constants";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import * as THREE from "three";
 import type {
   APIDataLayer,
@@ -18,7 +18,7 @@ import type {
   APISkeletonLayer,
   AffineTransformation,
   CoordinateTransformation,
-} from "types/api_flow_types";
+} from "types/api_types";
 import type BoundingBox from "../bucket_data_handling/bounding_box";
 import {
   type Transform,
@@ -337,7 +337,7 @@ function _getTransformsPerLayer(
 export const getTransformsPerLayer = memoizeWithTwoKeys(_getTransformsPerLayer);
 
 export function getInverseSegmentationTransformer(
-  state: OxalisState,
+  state: WebknossosState,
   segmentationLayerName: string,
 ) {
   const { dataset } = state;
@@ -488,7 +488,7 @@ export function globalToLayerTransformedPosition(
   globalPos: Vector3,
   layerName: string,
   layerCategory: APIDataLayer["category"] | "skeleton",
-  state: OxalisState,
+  state: WebknossosState,
 ): Vector3 {
   const layerDescriptor =
     layerCategory !== "skeleton"

@@ -63,12 +63,12 @@ case class Annotation(
 
   def skeletonTracingId(implicit ec: ExecutionContext): Fox[Option[String]] =
     for {
-      _ <- bool2Fox(annotationLayers.count(_.typ == AnnotationLayerType.Skeleton) <= 1) ?~> "annotation.multiLayers.skeleton.notImplemented"
+      _ <- Fox.fromBool(annotationLayers.count(_.typ == AnnotationLayerType.Skeleton) <= 1) ?~> "annotation.multiLayers.skeleton.notImplemented"
     } yield annotationLayers.find(_.typ == AnnotationLayerType.Skeleton).map(_.tracingId)
 
   def volumeTracingId(implicit ec: ExecutionContext): Fox[Option[String]] =
     for {
-      _ <- bool2Fox(annotationLayers.count(_.typ == AnnotationLayerType.Volume) <= 1) ?~> "annotation.multiLayers.volume.notImplemented"
+      _ <- Fox.fromBool(annotationLayers.count(_.typ == AnnotationLayerType.Volume) <= 1) ?~> "annotation.multiLayers.volume.notImplemented"
     } yield annotationLayers.find(_.typ == AnnotationLayerType.Volume).map(_.tracingId)
 
   def volumeAnnotationLayers: List[AnnotationLayer] = annotationLayers.filter(_.typ == AnnotationLayerType.Volume)
@@ -106,13 +106,14 @@ class AnnotationLayerDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionC
 
   private def parse(r: AnnotationLayersRow): Fox[AnnotationLayer] =
     for {
-      typ <- AnnotationLayerType.fromString(r.typ)
+      typ <- AnnotationLayerType.fromString(r.typ).toFox
+      statistics <- JsonHelper.parseAs[JsObject](r.statistics).toFox
     } yield {
       AnnotationLayer(
         r.tracingid,
         typ,
         r.name,
-        Json.parse(r.statistics).as[JsObject],
+        statistics,
       )
     }
 
@@ -124,11 +125,6 @@ class AnnotationLayerDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionC
                       ORDER BY tracingId""".as[AnnotationLayersRow])
       parsed <- Fox.serialCombined(rows.toList)(parse)
     } yield parsed
-
-  def insertForAnnotation(annotationId: ObjectId, annotationLayers: List[AnnotationLayer]): Fox[Unit] =
-    for {
-      _ <- Fox.serialCombined(annotationLayers)(insertOne(annotationId, _))
-    } yield ()
 
   def insertOne(annotationId: ObjectId, annotationLayer: AnnotationLayer): Fox[Unit] =
     for {
@@ -165,22 +161,6 @@ class AnnotationLayerDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionC
       head <- rList.headOption.toFox
     } yield head
 
-  def findAllVolumeLayers: Fox[List[AnnotationLayer]] =
-    for {
-      rows <- run(q"""SELECT _annotation, tracingId, typ, name, statistics
-                      FROM webknossos.annotation_layers
-                      WHERE typ = 'Volume'""".as[AnnotationLayersRow])
-      parsed <- Fox.serialCombined(rows.toList)(parse)
-    } yield parsed
-
-  def replaceTracingId(annotationId: ObjectId, oldTracingId: String, newTracingId: String): Fox[Unit] =
-    for {
-      _ <- run(q"""UPDATE webknossos.annotation_layers
-                   SET tracingId = $newTracingId
-                   WHERE _annotation = $annotationId
-                   AND tracingId = $oldTracingId""".asUpdate)
-    } yield ()
-
   def updateName(annotationId: ObjectId, tracingId: String, newName: String): Fox[Unit] =
     for {
       _ <- run(q"""UPDATE webknossos.annotation_layers
@@ -213,7 +193,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     for {
       state <- AnnotationState.fromString(r.state).toFox
       typ <- AnnotationType.fromString(r.typ).toFox
-      viewconfigurationOpt <- Fox.runOptional(r.viewconfiguration)(JsonHelper.parseAndValidateJson[JsObject](_))
+      viewconfigurationOpt <- Fox.runOptional(r.viewconfiguration)(JsonHelper.parseAs[JsObject](_).toFox)
       visibility <- AnnotationVisibility.fromString(r.visibility).toFox
       annotationLayers <- annotationLayerDAO.findAnnotationLayersFor(ObjectId(r._Id))
     } yield {
@@ -361,7 +341,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     val annotationLayerNames = parseArrayLiteral(<<[String])
     val annotationLayerTypes = parseArrayLiteral(<<[String])
     val annotationLayerStatistics =
-      parseArrayLiteral(<<[String]).map(layerStats => Json.parse(layerStats).validate[JsObject].getOrElse(Json.obj()))
+      parseArrayLiteral(<<[String]).map(layerStats => JsonHelper.parseAs[JsObject](layerStats).getOrElse(Json.obj()))
 
     // format: off
     AnnotationCompactInfo(id, typ, name,description,ownerId,ownerFirstName,ownerLastName, othersMayEdit,teamIds,
@@ -531,14 +511,14 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                    AND typ = $annotationType
                    AND $stateQuery
                    AND $accessQuery""".as[Int])
-      parsed <- r.headOption
+      parsed <- r.headOption.toFox
     } yield parsed
   }
 
   def countForTeam(teamId: ObjectId): Fox[Int] =
     for {
       countList <- run(q"SELECT COUNT(*) FROM $existingCollectionName WHERE _team = $teamId".as[Int])
-      count <- countList.headOption
+      count <- countList.headOption.toFox
     } yield count
 
   // Does not use access query (because they dont support prefixes). Use only after separate access check!
@@ -575,7 +555,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                    AND typ = ${AnnotationType.TracingBase}
                    AND state != ${AnnotationState.Cancelled}
                    AND $accessQuery""".as[ObjectId])
-      firstRow <- r.headOption
+      firstRow <- r.headOption.toFox
     } yield firstRow
 
   def findAllByTaskIdAndType(taskId: ObjectId, typ: AnnotationType)(
@@ -630,7 +610,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                              WHERE $excludeTeamsQ
                            ) q
                          """.as[Int])
-      count <- countList.headOption
+      count <- countList.headOption.toFox
     } yield count
 
   def countActiveByTask(taskId: ObjectId, typ: AnnotationType)(implicit ctx: DBAccessContext): Fox[Int] =
@@ -642,7 +622,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                            AND typ = $typ
                            AND state = ${AnnotationState.Active}
                            AND $accessQuery""".as[Int])
-      count <- countList.headOption
+      count <- countList.headOption.toFox
     } yield count
 
   def countAllForOrganization(organizationId: String): Fox[Int] =
@@ -651,7 +631,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                            FROM $existingCollectionName a
                            JOIN webknossos.users_ u ON a._user = u._id
                            WHERE u._organization = $organizationId""".as[Int])
-      count <- countList.headOption
+      count <- countList.headOption.toFox
     } yield count
 
   def countAllByDataset(datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[Int] =
@@ -661,7 +641,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                            FROM $existingCollectionName
                            WHERE _dataset = $datasetId
                            AND $accessQuery""".as[Int])
-      count <- countList.headOption
+      count <- countList.headOption.toFox
     } yield count
 
   // update operations

@@ -1,7 +1,6 @@
 import type DiffableMap from "libs/diffable_map";
 import type { Matrix4x4 } from "libs/mjs";
 import type {
-  AnnotationTool,
   BoundingBoxType,
   ContourMode,
   ControlMode,
@@ -21,6 +20,7 @@ import type {
 import type { BLEND_MODES, ControlModeEnum } from "oxalis/constants";
 import defaultState from "oxalis/default_state";
 import type { TracingStats } from "oxalis/model/accessors/annotation_accessor";
+import type { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import type { Action } from "oxalis/model/actions/actions";
 import type EdgeCollection from "oxalis/model/edge_collection";
 import actionLoggerMiddleware from "oxalis/model/helpers/action_logger_middleware";
@@ -68,7 +68,8 @@ import type {
   MetadataEntryProto,
   ServerEditableMapping,
   TracingType,
-} from "types/api_flow_types";
+} from "types/api_types";
+import type { Toolkit } from "./model/accessors/tool_accessor";
 import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import type { StartAIJobModalState } from "./view/action-bar/starting_job_modals";
@@ -390,6 +391,7 @@ export type UserConfiguration = {
   readonly moveValue3d: number;
   readonly moveValue: number;
   readonly newNodeNewTree: boolean;
+  readonly continuousNodeCreation: boolean;
   readonly centerNewNode: boolean;
   readonly overrideNodeRadius: boolean;
   readonly particleSize: number;
@@ -412,6 +414,7 @@ export type UserConfiguration = {
   readonly quickSelect: QuickSelectConfig;
   readonly renderWatermark: boolean;
   readonly antialiasRendering: boolean;
+  readonly activeToolkit: Toolkit;
 };
 export type RecommendedConfiguration = Partial<
   UserConfiguration &
@@ -602,7 +605,7 @@ export type ConnectomeData = {
   readonly activeAgglomerateIds: Array<number>;
   readonly skeleton: SkeletonTracing | null | undefined;
 };
-export type OxalisState = {
+export type WebknossosState = {
   readonly datasetConfiguration: DatasetConfiguration;
   readonly userConfiguration: UserConfiguration;
   readonly temporaryConfiguration: TemporaryConfiguration;
@@ -640,7 +643,7 @@ export type OxalisState = {
   >;
 };
 const sagaMiddleware = createSagaMiddleware();
-export type Reducer = (state: OxalisState, action: Action) => OxalisState;
+export type Reducer = (state: WebknossosState, action: Action) => WebknossosState;
 const combinedReducers = reduceReducers(
   SettingsReducer,
   DatasetReducer,
@@ -658,7 +661,7 @@ const combinedReducers = reduceReducers(
   OrganizationReducer,
 );
 
-const store = createStore<OxalisState, Action, unknown, unknown>(
+const store = createStore<WebknossosState, Action, unknown, unknown>(
   enableBatching(combinedReducers),
   defaultState,
   applyMiddleware(actionLoggerMiddleware, overwriteActionMiddleware, sagaMiddleware as Middleware),
@@ -667,7 +670,6 @@ const store = createStore<OxalisState, Action, unknown, unknown>(
 export function startSaga(saga: Saga<any[]>) {
   sagaMiddleware.run(saga);
 }
-
 export type StoreType = typeof store;
 
 export default store;

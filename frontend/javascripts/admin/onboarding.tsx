@@ -12,22 +12,22 @@ import {
   UserAddOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { getDatastores, sendInvitesForOrganization } from "admin/admin_rest_api";
 import RegistrationFormGeneric from "admin/auth/registration_form_generic";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import { maxInludedUsersInBasicPlan } from "admin/organization/pricing_plan_utils";
+import { getDatastores, sendInvitesForOrganization } from "admin/rest_api";
 import { Alert, AutoComplete, Button, Card, Col, Form, Input, Modal, Row, Steps } from "antd";
 import CreditsFooter from "components/credits_footer";
 import LinkButton from "components/link_button";
 import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
 import features from "features";
 import Toast from "libs/toast";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import Store from "oxalis/store";
 import React, { useState } from "react";
 import { connect } from "react-redux";
 import { Link, type RouteComponentProps, withRouter } from "react-router-dom";
-import type { APIDataStore, APIUser } from "types/api_flow_types";
+import type { APIDataStore, APIUser } from "types/api_types";
 
 const { Step } = Steps;
 const FormItem = Form.Item;
@@ -231,6 +231,7 @@ export function InviteUsersModal({
   maxUserCountPerOrganization?: number;
 }) {
   const [inviteesString, setInviteesString] = useState("");
+  const isOrganizationLimitAlreadyReached = currentUserCount >= maxUserCountPerOrganization;
 
   function extractEmailAddresses(): string[] {
     return inviteesString
@@ -250,12 +251,15 @@ export function InviteUsersModal({
     if (destroy != null) destroy();
   }
 
-  function getContent(isInvitesDisabled: boolean) {
-    const exceedingUserLimitAlert = isInvitesDisabled ? (
+  const doNewUsersExceedLimit =
+    currentUserCount + extractEmailAddresses().length > maxUserCountPerOrganization;
+
+  function getContent() {
+    const exceedingUserLimitAlert = doNewUsersExceedLimit ? (
       <Alert
         showIcon
         type="warning"
-        description="Inviting more users will exceed your organization's user limit. Consider upgrading your WEBKNOSSOS plan."
+        description="Inviting more new users will exceed your organization's user limit. Consider upgrading your WEBKNOSSOS plan."
         style={{ marginBottom: 10 }}
         action={
           <Link to={`/organizations/${organizationId}`}>
@@ -279,6 +283,13 @@ export function InviteUsersModal({
           Note that new users have limited access permissions by default. Please doublecheck their
           roles and team assignments after they join your organization.
         </p>
+        {isOrganizationLimitAlreadyReached ? (
+          <p>
+            As your organization has reached its user limit, you can only invite guests to your
+            organization. Those users must already be part of an organization paying for their
+            account.
+          </p>
+        ) : null}
         {exceedingUserLimitAlert}
         <Input.TextArea
           spellCheck={false}
@@ -295,20 +306,17 @@ export function InviteUsersModal({
     );
   }
 
-  const isInvitesDisabled =
-    currentUserCount + extractEmailAddresses().length > maxUserCountPerOrganization;
-
   return (
     <Modal
       open={isOpen == null ? true : isOpen}
       title={
         <>
-          <UserAddOutlined /> Invite Users
+          <UserAddOutlined /> Invite {isOrganizationLimitAlreadyReached ? "Guests" : "Users"}
         </>
       }
       width={600}
       footer={
-        <Button onClick={sendInvite} type="primary" disabled={isInvitesDisabled}>
+        <Button onClick={sendInvite} type="primary">
           Send Invite Emails
         </Button>
       }
@@ -318,7 +326,7 @@ export function InviteUsersModal({
       }}
       closable
     >
-      {getContent(isInvitesDisabled)}
+      {getContent()}
     </Modal>
   );
 }
@@ -720,7 +728,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
   }
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   activeUser: state.activeUser,
 });
 

@@ -6,7 +6,7 @@ import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { TreeTypeEnum } from "oxalis/constants";
-import type { APIColorLayer } from "types/api_flow_types";
+import type { APIColorLayer } from "types/api_types";
 
 const colorLayer: APIColorLayer = {
   name: "color",

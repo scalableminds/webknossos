@@ -2,6 +2,7 @@ import { V2, V3 } from "libs/mjs";
 import createProgressCallback, { type ProgressCallback } from "libs/progress_callback";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
+import _ from "lodash";
 import type {
   BoundingBoxType,
   FillMode,
@@ -10,12 +11,12 @@ import type {
   Vector2,
   Vector3,
 } from "oxalis/constants";
-import Constants, { AnnotationToolEnum, FillModeEnum, Unicode } from "oxalis/constants";
-
-import _ from "lodash";
+import Constants, { FillModeEnum, Unicode } from "oxalis/constants";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 import { getDatasetBoundingBox, getMagInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getDisabledInfoForTools } from "oxalis/model/accessors/disabled_tool_accessor";
 import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
-import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
+import { AnnotationTool, Toolkit } from "oxalis/model/accessors/tool_accessor";
 import { enforceActiveVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
@@ -156,7 +157,7 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
   const allowUpdate = yield* select((state) => state.annotation.restrictions.allowUpdate);
   const disabledInfosForTools = yield* select(getDisabledInfoForTools);
 
-  if (!allowUpdate || disabledInfosForTools[AnnotationToolEnum.FILL_CELL].isDisabled) {
+  if (!allowUpdate || disabledInfosForTools[AnnotationTool.FILL_CELL.id].isDisabled) {
     return;
   }
 
@@ -192,6 +193,27 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
   if (activeCellId === oldSegmentIdAtSeed) {
     Toast.warning("The clicked voxel's id is already equal to the active segment id.");
     return;
+  }
+
+  const sceneController = getSceneController();
+  const isSplitToolkit = yield* select(
+    (state) => state.userConfiguration.activeToolkit === Toolkit.SPLIT_SEGMENTS,
+  );
+  const splitBoundaryMesh = isSplitToolkit ? sceneController.getSplitBoundaryMesh() : null;
+
+  if (isSplitToolkit) {
+    if (!splitBoundaryMesh) {
+      Toast.warning(
+        `No split boundary found. Ensure that the active tree has at least two nodes. If you want to execute a normal fill operation, please switch to another toolkit (currently, the "Split Segments" toolkit is active).`,
+      );
+      return;
+    }
+    if (planeId !== "PLANE_XY") {
+      Toast.warning(
+        `Within the "Split Segments" toolkit, the fill tool is only supported in the XY viewport. Please use the tool in the XY viewport or switch to another toolkit.`,
+      );
+      return;
+    }
   }
 
   const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
@@ -248,6 +270,7 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
     labeledZoomStep,
     progressCallback,
     fillMode === FillModeEnum._3D,
+    splitBoundaryMesh,
   );
   console.timeEnd("cube.floodFill");
   yield* call(progressCallback, false, "Finalizing floodfill...");

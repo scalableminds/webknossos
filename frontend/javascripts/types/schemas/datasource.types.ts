@@ -2,7 +2,7 @@
 // Types which were used for creating the datasource.schema.js
 // The `flow2schema` node module has been used for conversion.
 
-import type { VoxelSize } from "types/api_flow_types";
+import type { VoxelSize } from "types/api_types";
 
 // Please note that some manual changes to the schema are required.
 type Vector2 = [number, number];

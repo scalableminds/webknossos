@@ -1,6 +1,6 @@
 import type { BucketAddress } from "oxalis/constants";
 import type { MaybeUnmergedBucketLoadedPromise } from "oxalis/model/actions/volumetracing_actions";
-import type { BucketDataArray, ElementClass } from "types/api_flow_types";
+import type { BucketDataArray, ElementClass } from "types/api_types";
 import { compressTypedArray, decompressToTypedArray } from "../helpers/bucket_compression";
 
 export type PendingOperation = (data: BucketDataArray) => void;

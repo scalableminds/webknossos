@@ -2,7 +2,7 @@ import { FileOutlined, InboxOutlined } from "@ant-design/icons";
 import { Alert, Avatar, Button, Checkbox, List, Modal, Spin } from "antd";
 import FormattedDate from "components/formatted_date";
 import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import prettyBytes from "pretty-bytes";
 import * as React from "react";
 import Dropzone, { type DropzoneInputProps } from "react-dropzone";
@@ -306,7 +306,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
   }
 }
 
-const mapStateToProps = (state: OxalisState) => ({
+const mapStateToProps = (state: WebknossosState) => ({
   showDropzoneModal: state.uiInformation.showDropzoneModal,
   navbarHeight: state.uiInformation.navbarHeight,
 });

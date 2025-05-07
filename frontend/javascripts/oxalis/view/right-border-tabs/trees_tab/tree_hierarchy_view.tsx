@@ -72,6 +72,7 @@ function TreeHierarchyView(props: Props) {
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   const activeNode = useWkSelector((state) => state.annotation.skeleton?.activeNodeId);
+  const activeTreeId = useWkSelector((state) => state.annotation.skeleton?.activeTreeId);
 
   useEffect(() => {
     // equivalent of LifeCycle hook "getDerivedStateFromProps"
@@ -271,10 +272,10 @@ function TreeHierarchyView(props: Props) {
   // biome-ignore lint/correctness/useExhaustiveDependencies: The other dependencies change too often, they were omitted due to performance reasons
   useEffect(() => {
     // maybe expand group of the active tree
-    if (props.activeTreeId == null) return;
-    const sourceNode = props.trees[props.activeTreeId];
-    if (sourceNode.groupId == null) return; // tree is a direct child of the root group which is always expanded
-    const expandedGroups = additionallyExpandGroup(props.treeGroups, sourceNode.groupId, (id) =>
+    if (activeTreeId == null) return;
+    const activeTree = props.trees[activeTreeId];
+    if (activeTree.groupId == null) return; // tree is a direct child of the root group which is always expanded
+    const expandedGroups = additionallyExpandGroup(props.treeGroups, activeTree.groupId, (id) =>
       getNodeKey(GroupTypeEnum.GROUP, id),
     );
     if (expandedGroups == null) return;

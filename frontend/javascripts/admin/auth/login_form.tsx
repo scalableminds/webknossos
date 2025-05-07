@@ -1,5 +1,5 @@
 import { LockOutlined, MailOutlined } from "@ant-design/icons";
-import { loginUser, requestSingleSignOnLogin } from "admin/admin_rest_api";
+import { loginUser, requestSingleSignOnLogin } from "admin/rest_api";
 import { Alert, Button, Form, Input } from "antd";
 import features from "features";
 import { getIsInIframe } from "libs/utils";

@@ -1,6 +1,6 @@
 import compressLz4Block from "oxalis/workers/byte_array_lz4_compression.worker";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
-import type { BucketDataArray, ElementClass } from "types/api_flow_types";
+import type { BucketDataArray, ElementClass } from "types/api_types";
 import { uint8ToTypedBuffer } from "./typed_buffer";
 
 const _byteArrayToLz4Array = createWorker(compressLz4Block);

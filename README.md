@@ -2,7 +2,7 @@
 <img align="right" src="https://raw.githubusercontent.com/scalableminds/webknossos/master/public/images/logo-icon-only.svg" alt="WEBKNOSSOS Logo" width="150" />
 WEBKNOSSOS is an open-source tool for annotating and exploring large 3D image datasets.
 
-* Fly through your data for fast skeletonization and proof-reading
+* Fly through your data for fast skeletonization and proofreading
 * Create 3D training data for automated segmentations efficiently
 * Scale data reconstruction projects with crowdsourcing workflows
 * Share datasets and annotations with collaborating scientists
@@ -25,7 +25,7 @@ WEBKNOSSOS is an open-source tool for annotating and exploring large 3D image da
 * Optimized performance for large annotations
 * User and task management for high-throughput crowdsourcing
 * Sharing and collaboration features
-* Proof-Reading tools for working with large (over)-segmentations
+* Proofreading tools for working with large (over)-segmentations
 * [Standalone datastore component](https://github.com/scalableminds/webknossos/tree/master/webknossos-datastore) for flexible deployments
 * Supported dataset formats: [WKW](https://github.com/scalableminds/webknossos-wrap), [Neuroglancer Precomputed](https://github.com/google/neuroglancer/tree/master/src/datasource/precomputed), [Zarr](https://zarr.dev), [N5](https://github.com/saalfeldlab/n5)
 * Supported image formats: Grayscale, Segmentation Maps, RGB, Multi-Channel

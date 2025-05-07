@@ -4,13 +4,13 @@ import {
   getProject,
   getUsers,
   updateProject,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
 import { Button, Card, Checkbox, Form, Input, InputNumber, Select } from "antd";
+import { useWkSelector } from "libs/react_hooks";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
 import { useHistory } from "react-router-dom";
-import type { APITeam, APIUser } from "types/api_flow_types";
+import type { APITeam, APIUser } from "types/api_types";
 import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
 
 const FormItem = Form.Item;
@@ -26,8 +26,7 @@ function ProjectCreateView({ projectId }: PropsWithRouter) {
   const [isFetchingData, setIsFetchingData] = useState<boolean>(false);
   const [form] = Form.useForm();
   const history = useHistory();
-  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'OxalisState'.
-  const activeUser = useSelector((state: OxalisState) => enforceActiveUser(state.activeUser));
+  const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
   useEffect(() => {
     fetchData();
     applyDefaults();

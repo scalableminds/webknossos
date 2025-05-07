@@ -1,5 +1,5 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
-import { getDataset } from "admin/admin_rest_api";
+import { getDataset } from "admin/rest_api";
 import { Button, Modal, Radio, Spin, Tooltip } from "antd";
 import { Slider } from "components/slider";
 import { useFetch } from "libs/react_helpers";
@@ -13,7 +13,7 @@ import {
 import type { MagInfo } from "oxalis/model/helpers/mag_info";
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
+import type { APIDataset, APISegmentationLayer } from "types/api_types";
 
 type Props = {
   datasetId: string;

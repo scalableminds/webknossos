@@ -1,6 +1,6 @@
 import _ from "lodash";
 import type { Vector3, Vector4 } from "oxalis/constants";
-import type { ElementClass } from "types/api_flow_types";
+import type { ElementClass } from "types/api_types";
 import type { ShaderModule } from "./shader_module_system";
 
 export const hsvToRgb: ShaderModule = {
@@ -383,7 +383,7 @@ export const scaleToFloat: ShaderModule = {
       } else {
         // For large intervals, floating point precision can collapse
         // to 0. Therefore, we make all values a bit smaller before
-        // doing further arithmetics.
+        // doing further arithmetic.
         float mul = 0.25;
         vec3 nom = mul * x - mul * a;
         float denom = mul * b - mul * a;

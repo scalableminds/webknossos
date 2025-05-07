@@ -1,4 +1,4 @@
-import { getAgglomerateSkeleton, getEditableAgglomerateSkeleton } from "admin/admin_rest_api";
+import { getAgglomerateSkeleton, getEditableAgglomerateSkeleton } from "admin/rest_api";
 import { Modal } from "antd";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import ErrorHandling from "libs/error_handling";
@@ -74,11 +74,11 @@ import type {
   Flycam,
   Node,
   NodeMap,
-  OxalisState,
   SkeletonTracing,
   Tree,
   TreeMap,
   UserBoundingBox,
+  WebknossosState,
 } from "oxalis/store";
 import Store from "oxalis/store";
 import {
@@ -92,7 +92,7 @@ import {
   takeEvery,
   throttle,
 } from "typed-redux-saga";
-import { AnnotationLayerEnum, type ServerSkeletonTracing } from "types/api_flow_types";
+import { AnnotationLayerEnum, type ServerSkeletonTracing } from "types/api_types";
 import { ensureWkReady } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
 
@@ -102,7 +102,7 @@ function* centerActiveNode(action: Action): Saga<void> {
   }
   if (["DELETE_NODE", "DELETE_BRANCHPOINT"].includes(action.type)) {
     const centerNewNode = yield* select(
-      (state: OxalisState) => state.userConfiguration.centerNewNode,
+      (state: WebknossosState) => state.userConfiguration.centerNewNode,
     );
 
     if (!centerNewNode) {
@@ -112,11 +112,11 @@ function* centerActiveNode(action: Action): Saga<void> {
   }
 
   const activeNode = getActiveNode(
-    yield* select((state: OxalisState) => enforceSkeletonTracing(state.annotation)),
+    yield* select((state: WebknossosState) => enforceSkeletonTracing(state.annotation)),
   );
 
   if (activeNode != null) {
-    const activeNodePosition = yield* select((state: OxalisState) =>
+    const activeNodePosition = yield* select((state: WebknossosState) =>
       getNodePosition(activeNode, state),
     );
     if ("suppressAnimation" in action && action.suppressAnimation) {
@@ -142,7 +142,7 @@ function* watchBranchPointDeletion(): Saga<void> {
 
     if (deleteBranchpointAction) {
       const hasBranchPoints = yield* select(
-        (state: OxalisState) => getBranchPoints(state.annotation).getOrElse([]).length > 0,
+        (state: WebknossosState) => (getBranchPoints(state.annotation) ?? []).length > 0,
       );
 
       if (hasBranchPoints) {

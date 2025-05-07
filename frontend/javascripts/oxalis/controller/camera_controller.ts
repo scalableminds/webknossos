@@ -17,7 +17,6 @@ import type { CameraData } from "oxalis/store";
 import Store from "oxalis/store";
 import * as React from "react";
 import * as THREE from "three";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
 
 type Props = {
@@ -214,7 +213,11 @@ type TweenState = {
   top: number;
   bottom: number;
 };
-export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
+export function rotate3DViewTo(
+  id: OrthoView,
+  animate: boolean = true,
+  onComplete?: () => void,
+): void {
   const state = Store.getState();
   const { dataset } = state;
   const { tdCamera } = state.viewModeData.plane;
@@ -341,9 +344,13 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
         // parameter.
         updateCameraTDView(this, t);
       })
+      .onComplete(() => {
+        onComplete?.();
+      })
       .start();
   } else {
     updateCameraTDView(to, 1);
+    onComplete?.();
   }
 }
 export default CameraController;

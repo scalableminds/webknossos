@@ -5,9 +5,9 @@ import constants, { Unicode, OrthoViews, LongUnitToShortUnitMap } from "oxalis/c
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { getTDViewZoom, getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
 import { getBaseVoxelInUnit } from "oxalis/model/scaleinfo";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { connect } from "react-redux";
-import type { APIDataset } from "types/api_flow_types";
+import type { APIDataset } from "types/api_types";
 
 const { ThinSpace, MultiplicationSymbol } = Unicode;
 
@@ -119,7 +119,7 @@ function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInP
   );
 }
 
-const mapStateToProps = (state: OxalisState, ownProps: OwnProps): StateProps => {
+const mapStateToProps = (state: WebknossosState, ownProps: OwnProps): StateProps => {
   const [width, height] = getViewportExtents(state)[ownProps.viewportID];
   const zoomValue =
     ownProps.viewportID === OrthoViews.TDView ? getTDViewZoom(state) : getZoomValue(state.flycam);

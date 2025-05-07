@@ -6,10 +6,10 @@ import com.google.inject.name.Named
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
-import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
+import com.scalableminds.webknossos.datastore.helpers.{IntervalScheduler, LayerMagLinkInfo}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationSource
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
@@ -105,7 +105,7 @@ class DSRemoteWebknossosClient @Inject()(
         .addQueryString("datasetSizeBytes" -> datasetSizeBytes.toString)
         .withTokenFromContext
         .postEmptyWithJsonResponse[JsValue]()
-      uploadedDatasetId <- (uploadedDatasetIdJson \ "id").validate[String].asOpt.toFox ?~> "uploadedDatasetId.invalid"
+      uploadedDatasetId <- JsonHelper.as[String](uploadedDatasetIdJson \ "id").toFox ?~> "uploadedDatasetId.invalid"
     } yield uploadedDatasetId
 
   def reportDataSources(dataSources: List[InboxDataSourceLike]): Fox[_] =
@@ -119,6 +119,12 @@ class DSRemoteWebknossosClient @Inject()(
       .addQueryString("key" -> dataStoreKey)
       .silent
       .putJson(dataSourcePaths)
+
+  def fetchPaths(dataSourceId: DataSourceId): Fox[List[LayerMagLinkInfo]] =
+    rpc(
+      s"$webknossosUri/api/datastores/$dataStoreName/datasources/${dataSourceId.organizationId}/${dataSourceId.directoryName}/paths")
+      .addQueryString("key" -> dataStoreKey)
+      .getWithJsonResponse[List[LayerMagLinkInfo]]
 
   def reserveDataSourceUpload(info: ReserveUploadInformation)(
       implicit tc: TokenContext): Fox[ReserveAdditionalInformation] =

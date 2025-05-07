@@ -83,11 +83,12 @@ class DataVaultTestSuite extends PlaySpec {
           }
           "using invalid credentials" in {
             val vaultPath =
-              new VaultPath(uri,
-                            GoogleCloudDataVault.create(
-                              RemoteSourceDescriptor(
-                                uri,
-                                Some(GoogleServiceAccountCredential("name", JsString("secret"), "user", "org")))))
+              new VaultPath(
+                uri,
+                GoogleCloudDataVault.create(
+                  RemoteSourceDescriptor(
+                    uri,
+                    Some(GoogleServiceAccountCredential("name", JsString("secret"), Some("user"), Some("org"))))))
             val result = (vaultPath / dataKey)
               .readBytes(Some(Range.Long(-10, 10, 1)))(globalExecutionContext, emptyTokenContext)
               .await(handleFoxJustification)

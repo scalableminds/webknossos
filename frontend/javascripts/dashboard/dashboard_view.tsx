@@ -1,9 +1,9 @@
+import { PlanAboutToExceedAlert, PlanExceededAlert } from "admin/organization/organization_cards";
 import {
   cachedGetPricingPlanStatus,
   getUser,
   updateNovelUserExperienceInfos,
-} from "admin/admin_rest_api";
-import { PlanAboutToExceedAlert, PlanExceededAlert } from "admin/organization/organization_cards";
+} from "admin/rest_api";
 import { WhatsNextHeader } from "admin/welcome_ui";
 import { Spin, Tabs } from "antd";
 import DashboardTaskListView from "dashboard/dashboard_task_list_view";
@@ -16,7 +16,7 @@ import _ from "lodash";
 import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { PortalTarget } from "oxalis/view/layouting/portal_utils";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import type React from "react";
@@ -25,7 +25,7 @@ import { connect } from "react-redux";
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import type { Dispatch } from "redux";
-import type { APIOrganization, APIPricingPlanStatus, APIUser } from "types/api_flow_types";
+import type { APIOrganization, APIPricingPlanStatus, APIUser } from "types/api_types";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import { DatasetFolderView } from "./dataset_folder_view";
 
@@ -299,7 +299,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
   }
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
   activeOrganization: enforceActiveOrganization(state.activeOrganization),
 });

@@ -4,8 +4,6 @@ import TrackballControls from "libs/trackball_controls";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import {
-  type AnnotationTool,
-  AnnotationToolEnum,
   type OrthoView,
   type OrthoViewMap,
   OrthoViews,
@@ -14,9 +12,13 @@ import {
 } from "oxalis/constants";
 import CameraController from "oxalis/controller/camera_controller";
 import { handleOpenContextMenu } from "oxalis/controller/combinations/skeleton_handlers";
-import { ProofreadTool, SkeletonTool } from "oxalis/controller/combinations/tool_controls";
+import {
+  ProofreadToolController,
+  SkeletonToolController,
+} from "oxalis/controller/combinations/tool_controls";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getActiveNode, getNodePosition } from "oxalis/model/accessors/skeletontracing_accessor";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import { getInputCatcherRect, getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
@@ -31,13 +33,13 @@ import {
 } from "oxalis/model/actions/view_mode_actions";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { voxelToUnit } from "oxalis/model/scaleinfo";
-import type { CameraData, OxalisState, StoreAnnotation } from "oxalis/store";
+import type { CameraData, StoreAnnotation, WebknossosState } from "oxalis/store";
 import Store from "oxalis/store";
 import type PlaneView from "oxalis/view/plane_view";
 import * as React from "react";
 import { connect } from "react-redux";
 import * as THREE from "three";
-import type { VoxelSize } from "types/api_flow_types";
+import type { VoxelSize } from "types/api_types";
 
 export function threeCameraToCameraData(camera: THREE.OrthographicCamera): CameraData {
   const { position, up, near, far, left, right, top, bottom } = camera;
@@ -65,9 +67,9 @@ function getTDViewMouseControlsSkeleton(planeView: PlaneView): Record<string, an
       isTouch: boolean,
       activeTool: AnnotationTool,
     ) =>
-      activeTool === AnnotationToolEnum.PROOFREAD
-        ? ProofreadTool.onLeftClick(planeView, pos, plane, event, isTouch)
-        : SkeletonTool.onLeftClick(
+      activeTool === AnnotationTool.PROOFREAD
+        ? ProofreadToolController.onLeftClick(planeView, pos, plane, event, isTouch)
+        : SkeletonToolController.onLeftClick(
             planeView,
             pos,
             event.shiftKey,
@@ -205,7 +207,10 @@ class TDController extends React.PureComponent<Props> {
           return;
         }
 
-        this.props.planeView.throttledPerformMeshHitTest([position.x, position.y]);
+        this.props.planeView.performMeshHitTest([position.x, position.y]);
+      },
+      out: () => {
+        this.props.planeView?.clearLastMeshHitTest();
       },
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         if (skeletonControls != null) {
@@ -232,10 +237,7 @@ class TDController extends React.PureComponent<Props> {
         }
         const { hitPosition } = intersection;
 
-        const unscaledPosition = V3.divide3(
-          hitPosition.toArray() as Vector3,
-          this.props.voxelSize.factor,
-        );
+        const unscaledPosition = V3.divide3(hitPosition, this.props.voxelSize.factor);
 
         if (event.shiftKey) {
           Store.dispatch(setPositionAction(unscaledPosition));
@@ -276,16 +278,16 @@ class TDController extends React.PureComponent<Props> {
 
   getMeshIntersection(pos: Point2) {
     if (this.props.planeView == null) return null;
-    const intersection = this.props.planeView.performMeshHitTest([pos.x, pos.y]);
-    if (intersection == null) {
+    const hitResult = this.props.planeView.performMeshHitTest([pos.x, pos.y]);
+    if (hitResult == null) {
       return null;
     }
-    const meshId: number | null = intersection
-      ? _.get(intersection.object.parent, "segmentId", null)
+    const meshId: number | null = hitResult
+      ? _.get(hitResult.node.parent, "segmentId", null)
       : null;
-    const unmappedSegmentId: number | null = _.get(intersection?.object, "unmappedSegmentId", null);
-    const meshClickedPosition = intersection ? (intersection.point.toArray() as Vector3) : null;
-    return { meshId, unmappedSegmentId, meshClickedPosition, hitPosition: intersection.point };
+    const unmappedSegmentId: number | null = hitResult?.unmappedSegmentId || null;
+    const meshClickedPosition = hitResult ? hitResult.point : null;
+    return { meshId, unmappedSegmentId, meshClickedPosition, hitPosition: hitResult.point };
   }
 
   setTargetAndFixPosition = (position?: Vector3): void => {
@@ -362,7 +364,7 @@ class TDController extends React.PureComponent<Props> {
   }
 }
 
-export function mapStateToProps(state: OxalisState): StateProps {
+export function mapStateToProps(state: WebknossosState): StateProps {
   return {
     voxelSize: state.dataset.dataSource.scale,
     activeTool: state.uiInformation.activeTool,

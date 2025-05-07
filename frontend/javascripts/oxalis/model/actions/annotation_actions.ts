@@ -17,8 +17,8 @@ import type {
   APIMeshFile,
   APIUserCompact,
   EditableLayerProperties,
-} from "types/api_flow_types";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+} from "types/api_types";
+import type { AdditionalCoordinate } from "types/api_types";
 import type { InitializeSkeletonTracingAction } from "./skeletontracing_actions";
 import type {
   InitializeEditableMappingAction,
@@ -350,7 +350,6 @@ export const addPrecomputedMeshAction = (
   seedPosition: Vector3,
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
-  areChunksMerged: boolean,
   mappingName: string | null | undefined,
 ) =>
   ({
@@ -360,7 +359,6 @@ export const addPrecomputedMeshAction = (
     seedPosition,
     seedAdditionalCoordinates,
     meshFileName,
-    areChunksMerged,
     mappingName,
   }) as const;
 

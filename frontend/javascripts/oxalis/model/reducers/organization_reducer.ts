@@ -1,8 +1,8 @@
 import update from "immutability-helper";
 import type { Action } from "oxalis/model/actions/actions";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 
-function OrganizationReducer(state: OxalisState, action: Action): OxalisState {
+function OrganizationReducer(state: WebknossosState, action: Action): WebknossosState {
   switch (action.type) {
     case "SET_ACTIVE_ORGANIZATION": {
       return update(state, {

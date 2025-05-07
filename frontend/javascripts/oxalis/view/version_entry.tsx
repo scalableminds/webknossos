@@ -16,6 +16,7 @@ import * as React from "react";
 
 import classNames from "classnames";
 import FormattedDate from "components/formatted_date";
+import { useWkSelector } from "libs/react_hooks";
 import { formatUserName, getContributorById } from "oxalis/model/accessors/user_accessor";
 import { getReadableNameByVolumeTracingId } from "oxalis/model/accessors/volumetracing_accessor";
 import type {
@@ -48,9 +49,8 @@ import type {
   UpdateTreeUpdateAction,
   UpdateTreeVisibilityUpdateAction,
 } from "oxalis/model/sagas/update_actions";
-import type { OxalisState, StoreAnnotation } from "oxalis/store";
+import type { StoreAnnotation } from "oxalis/store";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import { useSelector } from "react-redux";
 type Description = {
   description: string;
   icon: React.ReactNode;
@@ -450,10 +450,10 @@ export default function VersionEntry({
   onPreviewVersion,
 }: Props) {
   const lastTimestamp = _.max(actions.map((action) => action.value.actionTimestamp));
-  const contributors = useSelector((state: OxalisState) => state.annotation.contributors);
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  const owner = useSelector((state: OxalisState) => state.annotation.owner);
-  const annotation = useSelector((state: OxalisState) => state.annotation);
+  const contributors = useWkSelector((state) => state.annotation.contributors);
+  const activeUser = useWkSelector((state) => state.activeUser);
+  const owner = useWkSelector((state) => state.annotation.owner);
+  const annotation = useWkSelector((state) => state.annotation);
 
   const liClassName = classNames("version-entry", {
     "active-version-entry": isActive,

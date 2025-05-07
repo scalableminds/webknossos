@@ -15,7 +15,7 @@ import classNames from "classnames";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import Toast from "libs/toast";
 import memoizeOne from "memoize-one";
-import type { FolderItem } from "types/api_flow_types";
+import type { FolderItem } from "types/api_types";
 import type { ArbitraryObject } from "types/globals";
 
 const { DirectoryTree } = Tree;

@@ -91,7 +91,9 @@ export function renderToTexture(
   renderer.setViewport(0, 0 + height, width, height);
   renderer.setScissorTest(false);
   renderer.setClearColor(clearColor === 0xffffff ? getBackgroundColor() : clearColor, 1);
-  const renderTarget = new THREE.WebGLRenderTarget(width, height);
+  const renderTarget = new THREE.WebGLRenderTarget(width, height, {
+    colorSpace: THREE.SRGBColorSpace,
+  });
   const buffer = new Uint8Array(width * height * 4);
 
   if (plane !== ArbitraryViewport) {

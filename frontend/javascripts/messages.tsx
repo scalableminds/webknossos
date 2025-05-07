@@ -48,6 +48,7 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   renderWatermark: "Logo in Screenshots",
   antialiasRendering: "Antialiasing",
   colorLayerOrder: "Color Layer Order",
+  selectiveSegmentVisibility: "Selective Visibility",
 };
 export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, string>> = {
   loadingStrategy: `You can choose between loading the best quality first
@@ -81,6 +82,7 @@ export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, st
   antialiasRendering: "Antialias rendering (can impact performance)",
   colorLayerOrder:
     "Set the order in which color layers are rendered. This setting is only relevant if the cover blend mode is active.",
+  selectiveSegmentVisibility: "When enabled, only the active and hovered segments are visible.",
 };
 export const layerViewConfigurations: Partial<Record<keyof DatasetLayerConfiguration, string>> = {
   color: "Color",
@@ -475,7 +477,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "<%- userName %> is about to become a dataset manager and will be able to access and edit all datasets within this organization.",
   ),
   "users.set_admin": _.template(
-    "<%- userName %> is about to become an admin for this organization with full read/write access to all datasets and management capbilities for all users, projects, and tasks.",
+    "<%- userName %> is about to become an admin for this organization with full read/write access to all datasets and management capabilities for all users, projects, and tasks.",
   ),
   "users.change_email_title": "Do you really want to change the email?",
   "users.change_email": _.template(

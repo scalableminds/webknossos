@@ -8,13 +8,10 @@ import Constants, {
   UnitLong,
 } from "oxalis/constants";
 import constants from "oxalis/constants";
-import type { OxalisState } from "oxalis/store";
+import { AnnotationTool, Toolkit } from "oxalis/model/accessors/tool_accessor";
+import type { WebknossosState } from "oxalis/store";
 import { getSystemColorTheme } from "theme";
-import type {
-  APIAllowedMode,
-  APIAnnotationType,
-  APIAnnotationVisibility,
-} from "types/api_flow_types";
+import type { APIAllowedMode, APIAnnotationType, APIAnnotationVisibility } from "types/api_types";
 import { defaultDatasetViewConfigurationWithoutNull } from "types/schemas/dataset_view_configuration.schema";
 
 const defaultViewportRect = {
@@ -51,7 +48,7 @@ const initialAnnotationInfo = {
   meshes: [],
 };
 
-const defaultState: OxalisState = {
+const defaultState: WebknossosState = {
   datasetConfiguration: defaultDatasetViewConfigurationWithoutNull,
   userConfiguration: {
     autoSaveLayouts: true,
@@ -71,6 +68,7 @@ const defaultState: OxalisState = {
     moveValue3d: 300,
     moveValue: 300,
     newNodeNewTree: false,
+    continuousNodeCreation: false,
     centerNewNode: true,
     overrideNodeRadius: true,
     particleSize: 5,
@@ -100,6 +98,7 @@ const defaultState: OxalisState = {
     },
     renderWatermark: true,
     antialiasRendering: false,
+    activeToolkit: Toolkit.ALL_TOOLS,
   },
   temporaryConfiguration: {
     viewMode: Constants.MODE_PLANE_TRACING,
@@ -230,7 +229,7 @@ const defaultState: OxalisState = {
   activeOrganization: null,
   uiInformation: {
     globalProgress: 0,
-    activeTool: "MOVE",
+    activeTool: AnnotationTool.MOVE,
     activeUserBoundingBoxId: null,
     showDropzoneModal: false,
     showVersionRestore: false,

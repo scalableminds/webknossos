@@ -10,7 +10,7 @@ import {
   type Vector3,
   type Vector4,
 } from "oxalis/constants";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import * as THREE from "three";
 import type {
   APIDataLayer,
@@ -18,7 +18,7 @@ import type {
   APISkeletonLayer,
   AffineTransformation,
   CoordinateTransformation,
-} from "types/api_flow_types";
+} from "types/api_types";
 import type BoundingBox from "../bucket_data_handling/bounding_box";
 import {
   type Transform,
@@ -71,16 +71,23 @@ export function flatToNestedMatrix(matrix: Matrix4x4): NestedMatrix4 {
   ];
 }
 
-// This function extracts the rotation in 90 degree steps a the transformation matrix.
+const axisPositionInMatrix = { x: 0, y: 1, z: 2 };
+
+export type RotationAndMirroringSettings = {
+  rotationInDegrees: number;
+  isMirrored: boolean;
+};
+// This function extracts the rotation in 90 degree steps and whether the axis is mirrored from the transformation matrix.
 // The transformation matrix must only include a rotation around one of the main axis.
-export function getRotationFromTransformationIn90DegreeSteps(
+export function getRotationSettingsFromTransformationIn90DegreeSteps(
   transformation: CoordinateTransformation | undefined,
   axis: "x" | "y" | "z",
-) {
+): RotationAndMirroringSettings {
   if (transformation && transformation.type !== "affine") {
-    return 0;
+    return { rotationInDegrees: 0, isMirrored: false };
   }
   const matrix = transformation ? transformation.matrix : IDENTITY_MATRIX;
+  const isMirrored = matrix[axisPositionInMatrix[axis]][axisPositionInMatrix[axis]] < 0;
   const cosineLocation = cosineLocationOfRotationInMatrix[axis];
   const sinusLocation = sinusLocationOfRotationInMatrix[axis];
   const sinOfAngle = matrix[sinusLocation[0]][sinusLocation[1]];
@@ -94,7 +101,7 @@ export function getRotationFromTransformationIn90DegreeSteps(
   const rotationInDegrees = rotation * (180 / Math.PI);
   // Round to multiple of 90 degrees and keep the result positive.
   const roundedRotation = mod(Math.round((rotationInDegrees + 360) / 90) * 90, 360);
-  return roundedRotation;
+  return { rotationInDegrees: roundedRotation, isMirrored };
 }
 
 export function fromCenterToOrigin(bbox: BoundingBox): AffineTransformation {
@@ -112,13 +119,23 @@ export function fromOriginToCenter(bbox: BoundingBox): AffineTransformation {
     .transpose(); // Column-major to row-major
   return { type: "affine", matrix: flatToNestedMatrix(translationMatrix.toArray()) };
 }
+
 export function getRotationMatrixAroundAxis(
   axis: "x" | "y" | "z",
-  angleInRadians: number,
+  rotationAndMirroringSettings: RotationAndMirroringSettings,
 ): AffineTransformation {
   const euler = new THREE.Euler();
-  euler[axis] = angleInRadians;
-  const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(euler).transpose(); // Column-major to row-major
+  const rotationInRadians = rotationAndMirroringSettings.rotationInDegrees * (Math.PI / 180);
+  euler[axis] = rotationInRadians;
+  let rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(euler);
+  if (rotationAndMirroringSettings.isMirrored) {
+    const scaleVector = new THREE.Vector3(1, 1, 1);
+    scaleVector[axis] = -1;
+    rotationMatrix = rotationMatrix.multiply(
+      new THREE.Matrix4().makeScale(scaleVector.x, scaleVector.y, scaleVector.z),
+    );
+  }
+  rotationMatrix = rotationMatrix.transpose(); // Column-major to row-major
   const matrixWithoutNearlyZeroValues = rotationMatrix
     .toArray()
     // Avoid nearly zero values due to floating point arithmetic inaccuracies.
@@ -320,7 +337,7 @@ function _getTransformsPerLayer(
 export const getTransformsPerLayer = memoizeWithTwoKeys(_getTransformsPerLayer);
 
 export function getInverseSegmentationTransformer(
-  state: OxalisState,
+  state: WebknossosState,
   segmentationLayerName: string,
 ) {
   const { dataset } = state;
@@ -364,7 +381,7 @@ function isTranslationOnly(transformation?: AffineTransformation) {
   return scale.equals(NON_SCALED_VECTOR) && quaternion.equals(IDENTITY_QUATERNION);
 }
 
-function isRotationOnly(transformation?: AffineTransformation) {
+function isOnlyRotatedOrMirrored(transformation?: AffineTransformation) {
   if (!transformation) {
     return false;
   }
@@ -372,7 +389,10 @@ function isRotationOnly(transformation?: AffineTransformation) {
     .fromArray(nestedToFlatMatrix(transformation.matrix))
     .transpose();
   threeMatrix.decompose(translation, quaternion, scale);
-  return translation.length() === 0 && scale.equals(NON_SCALED_VECTOR);
+  return (
+    translation.length() === 0 &&
+    _.isEqual([Math.abs(scale.x), Math.abs(scale.y), Math.abs(scale.z)], [1, 1, 1])
+  );
 }
 
 function hasValidTransformationCount(dataLayers: Array<APIDataLayer>): boolean {
@@ -387,9 +407,9 @@ function hasOnlyAffineTransformations(dataLayers: Array<APIDataLayer>): boolean 
 
 // The transformation array consists of 5 matrices:
 // 1. Translation to coordinate system origin
-// 2. Rotation around x-axis
-// 3. Rotation around y-axis
-// 4. Rotation around z-axis
+// 2. Rotation around x-axis (potentially mirrored)
+// 3. Rotation around y-axis (potentially mirrored)
+// 4. Rotation around z-axis (potentially mirrored)
 // 5. Translation back to original position
 export const EXPECTED_TRANSFORMATION_LENGTH = 5;
 
@@ -397,9 +417,9 @@ function hasValidTransformationPattern(transformations: CoordinateTransformation
   return (
     transformations.length === EXPECTED_TRANSFORMATION_LENGTH &&
     isTranslationOnly(transformations[0] as AffineTransformation) &&
-    isRotationOnly(transformations[1] as AffineTransformation) &&
-    isRotationOnly(transformations[2] as AffineTransformation) &&
-    isRotationOnly(transformations[3] as AffineTransformation) &&
+    isOnlyRotatedOrMirrored(transformations[1] as AffineTransformation) &&
+    isOnlyRotatedOrMirrored(transformations[2] as AffineTransformation) &&
+    isOnlyRotatedOrMirrored(transformations[3] as AffineTransformation) &&
     isTranslationOnly(transformations[4] as AffineTransformation)
   );
 }
@@ -443,11 +463,32 @@ function _doAllLayersHaveTheSameRotation(dataLayers: Array<APIDataLayer>): boole
 
 export const doAllLayersHaveTheSameRotation = _.memoize(_doAllLayersHaveTheSameRotation);
 
+export function transformationEqualsAffineIdentityTransform(
+  transformations: CoordinateTransformation[],
+): boolean {
+  const hasValidTransformationCount = transformations.length === EXPECTED_TRANSFORMATION_LENGTH;
+  const hasOnlyAffineTransformations = transformations.every(
+    (transformation) => transformation.type === "affine",
+  );
+  if (!hasValidTransformationCount || !hasOnlyAffineTransformations) {
+    return false;
+  }
+  const resultingTransformation = transformations.reduce(
+    (accTransformation, currentTransformation) =>
+      chainTransforms(
+        accTransformation,
+        createAffineTransformFromMatrix(currentTransformation.matrix),
+      ),
+    IdentityTransform as Transform,
+  );
+  return _.isEqual(resultingTransformation, IdentityTransform);
+}
+
 export function globalToLayerTransformedPosition(
   globalPos: Vector3,
   layerName: string,
   layerCategory: APIDataLayer["category"] | "skeleton",
-  state: OxalisState,
+  state: WebknossosState,
 ): Vector3 {
   const layerDescriptor =
     layerCategory !== "skeleton"

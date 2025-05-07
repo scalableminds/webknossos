@@ -12,8 +12,8 @@ import type {
   BoundingBoxObject,
   DataLayerType,
   DatasetConfiguration,
-  OxalisState,
   Settings,
+  WebknossosState,
 } from "oxalis/store";
 import type {
   APIAllowedMode,
@@ -24,7 +24,7 @@ import type {
   APISegmentationLayer,
   AdditionalAxis,
   ElementClass,
-} from "types/api_flow_types";
+} from "types/api_types";
 import type { DataLayer } from "types/schemas/datasource.types";
 import BoundingBox from "../bucket_data_handling/bounding_box";
 import { getSupportedValueRangeForElementClass } from "../bucket_data_handling/data_rendering_logic";
@@ -129,7 +129,7 @@ export function getDataLayers(dataset: APIDataset): DataLayerType[] {
   return dataset.dataSource.dataLayers;
 }
 
-function _getMagInfoOfVisibleSegmentationLayer(state: OxalisState): MagInfo {
+function _getMagInfoOfVisibleSegmentationLayer(state: WebknossosState): MagInfo {
   const segmentationLayer = getVisibleSegmentationLayer(state);
 
   if (!segmentationLayer) {
@@ -426,7 +426,7 @@ export function isColorLayer(dataset: APIDataset, layerName: string): boolean {
   return getLayerByName(dataset, layerName).category === "color";
 }
 export function getVisibleSegmentationLayer(
-  state: OxalisState,
+  state: WebknossosState,
 ): APISegmentationLayer | null | undefined {
   const visibleSegmentationLayers = getVisibleSegmentationLayers(state);
 
@@ -437,7 +437,7 @@ export function getVisibleSegmentationLayer(
   return null;
 }
 export function getVisibleOrLastSegmentationLayer(
-  state: OxalisState,
+  state: WebknossosState,
 ): APISegmentationLayer | null | undefined {
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
   if (visibleSegmentationLayer != null) return visibleSegmentationLayer;
@@ -451,12 +451,12 @@ export function getVisibleOrLastSegmentationLayer(
   return null;
 }
 
-export function hasVisibleUint64Segmentation(state: OxalisState) {
+export function hasVisibleUint64Segmentation(state: WebknossosState) {
   const segmentationLayer = getVisibleSegmentationLayer(state);
   return segmentationLayer ? segmentationLayer.elementClass === "uint64" : false;
 }
 
-export function getVisibleSegmentationLayers(state: OxalisState): Array<APISegmentationLayer> {
+export function getVisibleSegmentationLayers(state: WebknossosState): Array<APISegmentationLayer> {
   const { datasetConfiguration } = state;
   const { viewMode } = state.temporaryConfiguration;
   const segmentationLayers = getSegmentationLayers(state.dataset);
@@ -467,7 +467,7 @@ export function getVisibleSegmentationLayers(state: OxalisState): Array<APISegme
 }
 
 export function getSegmentationLayerWithMappingSupport(
-  state: OxalisState,
+  state: WebknossosState,
 ): APISegmentationLayer | null | undefined {
   // Currently, webKnossos only supports one active mapping at a given time. The UI should ensure
   // that not more than one mapping is enabled (currently, this is achieved by only allowing one
@@ -681,7 +681,7 @@ export function getMappingInfo(
   // multiple segmentation layers)
   return getMappingInfoOrNull(activeMappingInfos, layerName) || dummyMapping;
 }
-export function getMappingInfoForSupportedLayer(state: OxalisState): ActiveMappingInfo {
+export function getMappingInfoForSupportedLayer(state: WebknossosState): ActiveMappingInfo {
   const layer = getSegmentationLayerWithMappingSupport(state);
   return getMappingInfo(
     state.temporaryConfiguration.activeMappingByLayer,
@@ -728,5 +728,5 @@ export function getDatasetIdOrNameFromReadableURLPart(datasetNameAndId: string) 
   const isId = /^[a-f0-9]{24}$/.test(datasetIdOrName || "");
   return isId
     ? { datasetId: datasetIdOrName, datasetName: null }
-    : { datasetId: null, datasetName: datasetIdOrName };
+    : { datasetId: null, datasetName: datasetNameAndId };
 }

@@ -1,5 +1,6 @@
-import type { AnnotationTool, OrthoView, Vector3 } from "oxalis/constants";
-import type { BorderOpenStatus, OxalisState, Theme } from "oxalis/store";
+import type { OrthoView, Vector3 } from "oxalis/constants";
+import type { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
+import type { BorderOpenStatus, Theme, WebknossosState } from "oxalis/store";
 import type { StartAIJobModalState } from "oxalis/view/action-bar/starting_job_modals";
 
 type SetDropzoneModalVisibilityAction = ReturnType<typeof setDropzoneModalVisibilityAction>;
@@ -185,7 +186,7 @@ export const escapeAction = () =>
     type: "ESCAPE",
   }) as const;
 export const setQuickSelectStateAction = (
-  state: OxalisState["uiInformation"]["quickSelectState"],
+  state: WebknossosState["uiInformation"]["quickSelectState"],
 ) =>
   ({
     type: "SET_QUICK_SELECT_STATE",

@@ -1,0 +1,74 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Teams API (E2E) > createTeam and deleteTeam 1`] = `
+{
+  "id": "fixed-team-id",
+  "messages": [
+    {
+      "success": "Team was created successfully",
+    },
+  ],
+  "name": "test-team-name",
+  "organization": "Organization_X",
+}
+`;
+
+exports[`Teams API (E2E) > createTeam and deleteTeam 2`] = `
+{
+  "messages": [
+    {
+      "success": "team.deleted",
+    },
+  ],
+}
+`;
+
+exports[`Teams API (E2E) > getEditableTeams() 1`] = `
+[
+  {
+    "id": "570b9f4b2a7c0e3b008da6ec",
+    "name": "team_X1",
+    "organization": "Organization_X",
+  },
+  {
+    "id": "69882b370d889b84020efd4f",
+    "name": "team_X2",
+    "organization": "Organization_X",
+  },
+  {
+    "id": "59882b370d889b84020efd3f",
+    "name": "team_X3",
+    "organization": "Organization_X",
+  },
+  {
+    "id": "59882b370d889b84020efd6f",
+    "name": "team_X4",
+    "organization": "Organization_X",
+  },
+]
+`;
+
+exports[`Teams API (E2E) > getTeams() 1`] = `
+[
+  {
+    "id": "570b9f4b2a7c0e3b008da6ec",
+    "name": "team_X1",
+    "organization": "Organization_X",
+  },
+  {
+    "id": "69882b370d889b84020efd4f",
+    "name": "team_X2",
+    "organization": "Organization_X",
+  },
+  {
+    "id": "59882b370d889b84020efd3f",
+    "name": "team_X3",
+    "organization": "Organization_X",
+  },
+  {
+    "id": "59882b370d889b84020efd6f",
+    "name": "team_X4",
+    "organization": "Organization_X",
+  },
+]
+`;

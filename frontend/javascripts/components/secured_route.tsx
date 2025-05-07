@@ -5,13 +5,13 @@ import {
 } from "admin/organization/pricing_plan_utils";
 import { PageUnavailableForYourPlanView } from "components/pricing_enforcers";
 import { isUserAdminOrManager } from "libs/utils";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import React from "react";
 import type { ComponentType } from "react";
 import { connect } from "react-redux";
 import { Route, withRouter } from "react-router-dom";
 import type { RouteComponentProps } from "react-router-dom";
-import type { APIOrganization, APIUser } from "types/api_flow_types";
+import type { APIOrganization, APIUser } from "types/api_types";
 import { PageNotAvailableToNormalUser } from "./permission_enforcer";
 
 type StateProps = {
@@ -108,7 +108,7 @@ class SecuredRoute extends React.PureComponent<SecuredRouteProps, State> {
     );
   }
 }
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   activeOrganization: state.activeOrganization,
   activeUser: state.activeUser,
 });

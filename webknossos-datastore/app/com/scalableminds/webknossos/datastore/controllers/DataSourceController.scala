@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.controllers
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
 import com.scalableminds.webknossos.datastore.explore.{
   ExploreRemoteDatasetRequest,
@@ -52,8 +52,7 @@ class DataSourceController @Inject()(
     val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
 )(implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext)
     extends Controller
-    with MeshMappingHelper
-    with FoxImplicits {
+    with MeshMappingHelper {
 
   override def allowRemoteOrigin: Boolean = true
 
@@ -100,7 +99,8 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDataSources(organizationName)) {
         for {
           unfinishedUploads <- dsRemoteWebknossosClient.getUnfinishedUploadsForUser(organizationName)
-          unfinishedUploadsWithUploadIds <- uploadService.addUploadIdsToUnfinishedUploads(unfinishedUploads)
+          unfinishedUploadsWithUploadIds <- Fox.fromFuture(
+            uploadService.addUploadIdsToUnfinishedUploads(unfinishedUploads))
           unfinishedUploadsWithUploadIdsWithoutDataSourceId = unfinishedUploadsWithUploadIds.map(_.withoutDataSourceId)
         } yield Ok(Json.toJson(unfinishedUploadsWithUploadIdsWithoutDataSourceId))
       }
@@ -113,20 +113,24 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.administrateDataSources(request.body.organization)) {
         for {
-          _ <- dsRemoteWebknossosClient.reserveDataSourceUpload(
+          reservedDatasetInfo <- dsRemoteWebknossosClient.reserveDataSourceUpload(
             ReserveUploadInformation(
               "aManualUpload",
               request.body.datasetName,
               request.body.organization,
               0,
-              List.empty,
+              Some(List.empty),
               None,
               None,
               request.body.initialTeamIds,
-              request.body.folderId
+              request.body.folderId,
+              Some(request.body.requireUniqueName)
             )
           ) ?~> "dataset.upload.validation.failed"
-        } yield Ok
+        } yield
+          Ok(
+            Json.obj("newDatasetId" -> reservedDatasetInfo.newDatasetId,
+                     "directoryName" -> reservedDatasetInfo.directoryName))
       }
     }
 
@@ -168,8 +172,8 @@ class DataSourceController @Inject()(
                   UserAccessRequest.writeDataSource(dataSourceId)) {
                   for {
                     isKnownUpload <- uploadService.isKnownUploadByFileId(uploadFileId)
-                    _ <- bool2Fox(isKnownUpload) ?~> "dataset.upload.validation.failed"
-                    chunkFile <- request.body.file("file") ?~> "zip.file.notFound"
+                    _ <- Fox.fromBool(isKnownUpload) ?~> "dataset.upload.validation.failed"
+                    chunkFile <- request.body.file("file").toFox ?~> "zip.file.notFound"
                     _ <- uploadService.handleUploadChunk(uploadFileId,
                                                          chunkSize,
                                                          currentChunkSize,
@@ -191,7 +195,7 @@ class DataSourceController @Inject()(
         result <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataSource(dataSourceId)) {
           for {
             isKnownUpload <- uploadService.isKnownUploadByFileId(resumableIdentifier)
-            _ <- bool2Fox(isKnownUpload) ?~> "dataset.upload.validation.failed"
+            _ <- Fox.fromBool(isKnownUpload) ?~> "dataset.upload.validation.failed"
             isPresent <- uploadService.isChunkPresent(resumableIdentifier, resumableChunkNumber)
           } yield if (isPresent) Ok else NoContent
         }
@@ -272,11 +276,9 @@ class DataSourceController @Inject()(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-        skeleton <- agglomerateService.generateSkeleton(organizationId,
-                                                        datasetDirectoryName,
-                                                        dataLayerName,
-                                                        mappingName,
-                                                        agglomerateId) ?~> "agglomerateSkeleton.failed"
+        skeleton <- agglomerateService
+          .generateSkeleton(organizationId, datasetDirectoryName, dataLayerName, mappingName, agglomerateId)
+          .toFox ?~> "agglomerateSkeleton.failed"
       } yield Ok(skeleton.toByteArray).as(protobufMimeType)
     }
   }
@@ -292,9 +294,11 @@ class DataSourceController @Inject()(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-        agglomerateGraph <- agglomerateService.generateAgglomerateGraph(
-          AgglomerateFileKey(organizationId, datasetDirectoryName, dataLayerName, mappingName),
-          agglomerateId) ?~> "agglomerateGraph.failed"
+        agglomerateGraph <- agglomerateService
+          .generateAgglomerateGraph(
+            AgglomerateFileKey(organizationId, datasetDirectoryName, dataLayerName, mappingName),
+            agglomerateId)
+          .toFox ?~> "agglomerateGraph.failed"
       } yield Ok(agglomerateGraph.toByteArray).as(protobufMimeType)
     }
   }
@@ -310,9 +314,10 @@ class DataSourceController @Inject()(
       UserAccessRequest.readDataSources(DataSourceId(datasetDirectoryName, organizationId))) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-        position <- agglomerateService.positionForSegmentId(
-          AgglomerateFileKey(organizationId, datasetDirectoryName, dataLayerName, mappingName),
-          segmentId) ?~> "getSegmentPositionFromAgglomerateFile.failed"
+        position <- agglomerateService
+          .positionForSegmentId(AgglomerateFileKey(organizationId, datasetDirectoryName, dataLayerName, mappingName),
+                                segmentId)
+          .toFox ?~> "getSegmentPositionFromAgglomerateFile.failed"
       } yield Ok(Json.toJson(position))
     }
   }
@@ -419,6 +424,7 @@ class DataSourceController @Inject()(
               layersToLink = None,
               initialTeams = List.empty,
               folderId = folderId,
+              requireUniqueName = Some(false),
             )
           ) ?~> "dataset.upload.validation.failed"
           datasourceId = DataSourceId(reservedAdditionalInfo.directoryName, organizationId)
@@ -472,14 +478,12 @@ class DataSourceController @Inject()(
           dataSourceService.dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName),
           organizationId)
         datasetErrorLoggingService.clearForDataset(organizationId, datasetDirectoryName)
+        val clearedVaultCacheEntriesOpt = dataSourceService.invalidateVaultCache(reloadedDataSource, layerName)
+        clearedVaultCacheEntriesOpt.foreach { clearedVaultCacheEntries =>
+          logger.info(
+            s"Reloading ${layerName.map(l => s"layer '$l' of ").getOrElse("")}dataset $organizationId/$datasetDirectoryName: closed $closedAgglomerateFileHandleCount agglomerate file handles and $closedMeshFileHandleCount mesh file handles, removed $clearedBucketProviderCount bucketProviders, $clearedVaultCacheEntries vault cache entries and $removedChunksCount image chunk cache entries.")
+        }
         for {
-          clearedVaultCacheEntriesBox <- dataSourceService.invalidateVaultCache(reloadedDataSource, layerName).futureBox
-          _ = clearedVaultCacheEntriesBox match {
-            case Full(clearedVaultCacheEntries) =>
-              logger.info(
-                s"Reloading ${layerName.map(l => s"layer '$l' of ").getOrElse("")}dataset $organizationId/$datasetDirectoryName: closed $closedAgglomerateFileHandleCount agglomerate file handles and $closedMeshFileHandleCount mesh file handles, removed $clearedBucketProviderCount bucketProviders, $clearedVaultCacheEntries vault cache entries and $removedChunksCount image chunk cache entries.")
-            case _ => ()
-          }
           _ <- dataSourceRepository.updateDataSource(reloadedDataSource)
         } yield Ok(Json.toJson(reloadedDataSource))
       }
@@ -490,7 +494,7 @@ class DataSourceController @Inject()(
       val dataSourceId = DataSourceId(datasetDirectoryName, organizationId)
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.deleteDataSource(dataSourceId)) {
         for {
-          _ <- binaryDataServiceHolder.binaryDataService.deleteOnDisk(
+          _ <- dataSourceService.deleteOnDisk(
             organizationId,
             datasetDirectoryName,
             reason = Some("the user wants to delete the dataset")) ?~> "dataset.delete.failed"

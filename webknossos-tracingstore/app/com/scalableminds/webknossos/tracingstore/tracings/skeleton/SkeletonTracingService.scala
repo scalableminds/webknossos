@@ -15,8 +15,7 @@ import scala.concurrent.ExecutionContext
 class SkeletonTracingService @Inject()(
     tracingDataStore: TracingDataStore,
     temporaryTracingService: TemporaryTracingService
-)(implicit val ec: ExecutionContext)
-    extends KeyValueStoreImplicits
+) extends KeyValueStoreImplicits
     with ProtoGeometryImplicits
     with BoundingBoxMerger
     with ColorGenerator
@@ -28,7 +27,7 @@ class SkeletonTracingService @Inject()(
                    version: Long,
                    tracing: SkeletonTracing,
                    flushOnlyTheseTreeIds: Option[Set[Int]] = None,
-                   toTemporaryStore: Boolean = false): Fox[Unit] =
+                   toTemporaryStore: Boolean = false)(implicit ec: ExecutionContext): Fox[Unit] =
     if (toTemporaryStore) {
       temporaryTracingService.saveSkeleton(tracingId, tracing)
     } else {
@@ -44,7 +43,7 @@ class SkeletonTracingService @Inject()(
       for {
         _ <- Fox.serialCombined(treeIdsToFlush) { treeId =>
           for {
-            treeBody <- extractTreeBody(tracing, treeId)
+            treeBody <- extractTreeBody(tracing, treeId).toFox
             _ <- skeletonTreeBodiesPutBuffer.put(f"$tracingId/$treeId", treeBody)
           } yield ()
         }

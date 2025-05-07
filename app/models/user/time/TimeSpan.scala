@@ -1,7 +1,7 @@
 package models.user.time
 
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation.AnnotationState.AnnotationState
 import models.annotation.AnnotationType.AnnotationType
@@ -104,7 +104,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           """.as[(String, Option[String], Option[String], Long, String)]
         )
         parsed = tuples.map { t =>
-          val layerStats: JsObject = Json.parse(t._5).validate[JsObject].getOrElse(Json.obj())
+          val layerStats: JsObject = JsonHelper.parseAs[JsObject](t._5).getOrElse(Json.obj())
           Json.obj(
             "annotation" -> t._1,
             "task" -> t._2,

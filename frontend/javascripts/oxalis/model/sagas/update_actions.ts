@@ -11,11 +11,7 @@ import type {
   UserBoundingBox,
   VolumeTracing,
 } from "oxalis/store";
-import type {
-  APIMagRestrictions,
-  AdditionalCoordinate,
-  MetadataEntryProto,
-} from "types/api_flow_types";
+import type { APIMagRestrictions, AdditionalCoordinate, MetadataEntryProto } from "types/api_types";
 
 export type NodeWithTreeId = {
   treeId: number;

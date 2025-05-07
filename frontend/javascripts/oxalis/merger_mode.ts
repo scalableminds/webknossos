@@ -5,6 +5,7 @@ import type { Vector3 } from "oxalis/constants";
 import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { getInverseSegmentationTransformer } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import {
+  enforceSkeletonTracing,
   getNodePosition,
   getSkeletonTracing,
   transformNodePosition,
@@ -17,9 +18,9 @@ import type {
   UpdateActionNode,
 } from "oxalis/model/sagas/update_actions";
 import { api } from "oxalis/singletons";
-import type { OxalisState, SkeletonTracing, StoreType, TreeMap } from "oxalis/store";
+import type { SkeletonTracing, StoreType, TreeMap, WebknossosState } from "oxalis/store";
 import Store from "oxalis/throttled_store";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_types";
 import type { CreateNodeAction } from "./model/actions/skeletontracing_actions";
 
 type MergerModeState = {
@@ -233,7 +234,7 @@ async function onCreateNode(
 }
 
 async function getUnmappedSegmentId(
-  state: OxalisState,
+  state: WebknossosState,
   segmentationLayerName: string,
   untransformedPosition: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | null,
@@ -475,6 +476,7 @@ function resetState(mergerModeState: Partial<MergerModeState> = {}) {
   const state = Store.getState();
   const visibleLayer = getVisibleSegmentationLayer(state);
   const segmentationLayerName = visibleLayer != null ? visibleLayer.name : null;
+
   const defaults: MergerModeState = {
     treeIdToRepresentativeSegmentId: {},
     idMapping: new Map(),
@@ -482,7 +484,7 @@ function resetState(mergerModeState: Partial<MergerModeState> = {}) {
     nodes: getAllNodesWithTreeId(),
     segmentationLayerName,
     nodeToUnmappedSegmentMap: {},
-    prevTracing: getSkeletonTracing(state.annotation).get(),
+    prevTracing: enforceSkeletonTracing(state.annotation),
   };
   // Keep the object identity when resetting
   return Object.assign(mergerModeState, defaults);
@@ -502,21 +504,23 @@ export async function enableMergerMode(
   unsubscribeFunctions.push(
     Store.subscribe(() => {
       const state = Store.getState();
-      getSkeletonTracing(state.annotation).map((skeletonTracing) => {
-        const { segmentationLayerName } = mergerModeState;
+      const skeletonTracing = getSkeletonTracing(state.annotation);
+      if (!skeletonTracing) {
+        return;
+      }
+      const { segmentationLayerName } = mergerModeState;
 
-        if (!segmentationLayerName) {
-          return;
-        }
+      if (!segmentationLayerName) {
+        return;
+      }
 
-        if (skeletonTracing.tracingId !== mergerModeState.prevTracing.tracingId) {
-          // Correctly reset merger mode state in task hotswap
-          resetState(mergerModeState);
-          api.data.setMappingEnabled(false, segmentationLayerName);
-        } else {
-          updateState(mergerModeState, skeletonTracing);
-        }
-      });
+      if (skeletonTracing.tracingId !== mergerModeState.prevTracing.tracingId) {
+        // Correctly reset merger mode state in task hotswap
+        resetState(mergerModeState);
+        api.data.setMappingEnabled(false, segmentationLayerName);
+      } else {
+        updateState(mergerModeState, skeletonTracing);
+      }
     }),
   );
   // Register for single CREATE_NODE actions to avoid setting nodes outside of segments

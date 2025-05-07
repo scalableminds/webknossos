@@ -22,12 +22,11 @@ import {
   setMappingAction,
   setMappingEnabledAction,
 } from "oxalis/model/actions/settings_actions";
-import type { EditableMapping, Mapping, MappingType, OxalisState } from "oxalis/store";
+import type { EditableMapping, Mapping, MappingType, WebknossosState } from "oxalis/store";
 import { SwitchSetting } from "oxalis/view/components/setting_input_views";
 import React from "react";
-import debounceRender from "react-debounce-render";
 import { connect } from "react-redux";
-import type { APISegmentationLayer } from "types/api_flow_types";
+import type { APISegmentationLayer } from "types/api_types";
 
 const { Option, OptGroup } = Select;
 
@@ -235,6 +234,7 @@ class MappingSettingsView extends React.Component<Props, State> {
                   onChange={this.handleChangeMapping}
                   notFoundContent="No mappings found."
                   disabled={isDisabled}
+                  popupMatchSelectWidth={false}
                 >
                   {renderCategoryOptions(availableMappings, "JSON")}
                   {renderCategoryOptions(availableAgglomerates, "HDF5")}
@@ -264,7 +264,7 @@ const mapDispatchToProps = {
   ensureLayerMappingsAreLoaded: ensureLayerMappingsAreLoadedAction,
 };
 
-function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
+function mapStateToProps(state: WebknossosState, ownProps: OwnProps) {
   const activeMappingInfo = getMappingInfo(
     state.temporaryConfiguration.activeMappingByLayer,
     ownProps.layerName,
@@ -289,12 +289,5 @@ function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
   };
 }
 
-const debounceTime = 100;
-const maxWait = 500;
-
 const connector = connect(mapStateToProps, mapDispatchToProps);
-export default connector(
-  debounceRender(MappingSettingsView, debounceTime, {
-    maxWait,
-  }),
-);
+export default connector(MappingSettingsView);

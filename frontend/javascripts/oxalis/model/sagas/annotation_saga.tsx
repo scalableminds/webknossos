@@ -1,5 +1,5 @@
-import type { EditableAnnotation } from "admin/admin_rest_api";
-import { acquireAnnotationMutex, editAnnotation } from "admin/admin_rest_api";
+import type { EditableAnnotation } from "admin/rest_api";
+import { acquireAnnotationMutex, editAnnotation } from "admin/rest_api";
 import { Button } from "antd";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
@@ -43,7 +43,7 @@ import {
   takeEvery,
   takeLatest,
 } from "typed-redux-saga";
-import type { APIUserCompact } from "types/api_flow_types";
+import type { APIUserCompact } from "types/api_types";
 import { mayEditAnnotationProperties } from "../accessors/annotation_accessor";
 import { needsLocalHdf5Mapping } from "../accessors/volumetracing_accessor";
 import { pushSaveQueueTransaction } from "../actions/save_actions";

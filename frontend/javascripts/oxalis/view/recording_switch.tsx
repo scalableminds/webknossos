@@ -1,6 +1,6 @@
 import { Switch } from "antd";
 import { setFlightmodeRecordingAction } from "oxalis/model/actions/settings_actions";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 type Props = {
@@ -27,7 +27,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
   },
 });
 
-const mapStateToProps = (state: OxalisState) => ({
+const mapStateToProps = (state: WebknossosState) => ({
   flightmodeRecording: state.temporaryConfiguration.flightmodeRecording,
 });
 

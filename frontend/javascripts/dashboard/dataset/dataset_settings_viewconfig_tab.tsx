@@ -1,5 +1,5 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
-import { getAgglomeratesForDatasetLayer, getMappingsForDatasetLayer } from "admin/admin_rest_api";
+import { getAgglomeratesForDatasetLayer, getMappingsForDatasetLayer } from "admin/rest_api";
 import {
   Alert,
   Checkbox,
@@ -25,7 +25,7 @@ import messages, {
 import { BLEND_MODES } from "oxalis/constants";
 import type { DatasetConfiguration, DatasetLayerConfiguration } from "oxalis/store";
 import { useMemo, useState } from "react";
-import type { APIDataSourceId } from "types/api_flow_types";
+import type { APIDataSourceId } from "types/api_types";
 import { getDefaultLayerViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import { syncValidator, validateLayerViewConfigurationObjectJSON } from "types/validation";
 import ColorLayerOrderingTable from "./color_layer_ordering_component";

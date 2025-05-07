@@ -1,11 +1,11 @@
-import { Button, notification } from "antd";
+import { App, Button } from "antd";
+import type { NotificationInstance } from "antd/es/notification/interface";
 import features from "features";
 import { useEffectOnlyOnce } from "libs/react_hooks";
+import { useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
-import type { OxalisState } from "oxalis/store";
-import { useSelector } from "react-redux";
 
-function showWelcomeToast() {
+function showWelcomeToast(notification: NotificationInstance) {
   notification.open({
     className: "webknossos-welcome-toast",
     duration: 0,
@@ -44,7 +44,9 @@ function showWelcomeToast() {
 }
 
 export default function WelcomeToast() {
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useWkSelector((state) => state.activeUser);
+  const { notification } = App.useApp();
+
   useEffectOnlyOnce(() => {
     if (!features().isWkorgInstance) {
       return;
@@ -56,7 +58,7 @@ export default function WelcomeToast() {
 
     if (activeUser == null && hasSeenToast == null) {
       // Only if the user is not logged in and has never seen the toast before, we show it here.
-      showWelcomeToast();
+      showWelcomeToast(notification);
     }
 
     // Even if the toast wasn't opened above, we set the hasSeen bit, since the decision to not

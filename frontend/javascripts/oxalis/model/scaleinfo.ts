@@ -1,5 +1,5 @@
 import type { Vector3 } from "oxalis/constants";
-import type { VoxelSize } from "types/api_flow_types";
+import type { VoxelSize } from "types/api_types";
 
 export function getBaseVoxelInUnit(voxelSizeFactor: Vector3): number {
   // base voxel should be a cube with highest mag

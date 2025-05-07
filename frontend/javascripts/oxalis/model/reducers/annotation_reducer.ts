@@ -7,19 +7,22 @@ import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { getDisplayedDataExtentInPlaneMode } from "oxalis/model/accessors/view_mode_accessor";
 import type { Action } from "oxalis/model/actions/actions";
 import { updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
-import type { MeshInformation, OxalisState, UserBoundingBox } from "oxalis/store";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { MeshInformation, UserBoundingBox, WebknossosState } from "oxalis/store";
+import type { AdditionalCoordinate } from "types/api_types";
 import { getDatasetBoundingBox } from "../accessors/dataset_accessor";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { getMeshesForAdditionalCoordinates } from "../accessors/volumetracing_accessor";
 import BoundingBox from "../bucket_data_handling/bounding_box";
 
 const updateAnnotation = (
-  state: OxalisState,
-  shape: Partial<OxalisState["annotation"]>,
-): OxalisState => updateKey(state, "annotation", shape);
+  state: WebknossosState,
+  shape: Partial<WebknossosState["annotation"]>,
+): WebknossosState => updateKey(state, "annotation", shape);
 
-const updateUserBoundingBoxes = (state: OxalisState, userBoundingBoxes: Array<UserBoundingBox>) => {
+const updateUserBoundingBoxes = (
+  state: WebknossosState,
+  userBoundingBoxes: Array<UserBoundingBox>,
+) => {
   const updaterObject = {
     userBoundingBoxes: {
       $set: userBoundingBoxes,
@@ -55,7 +58,7 @@ const updateUserBoundingBoxes = (state: OxalisState, userBoundingBoxes: Array<Us
 };
 
 const maybeAddAdditionalCoordinatesToMeshState = (
-  state: OxalisState,
+  state: WebknossosState,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
   layerName: string,
 ) => {
@@ -74,7 +77,7 @@ const maybeAddAdditionalCoordinatesToMeshState = (
   return state;
 };
 
-function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
+function AnnotationReducer(state: WebknossosState, action: Action): WebknossosState {
   switch (action.type) {
     case "INITIALIZE_ANNOTATION": {
       return updateAnnotation(state, {
@@ -394,7 +397,6 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         seedPosition,
         seedAdditionalCoordinates,
         meshFileName,
-        areChunksMerged,
         mappingName,
       } = action;
       const meshInfo: MeshInformation = {
@@ -406,7 +408,6 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         isPrecomputed: true,
         opacity: Constants.DEFAULT_MESH_OPACITY,
         meshFileName,
-        areChunksMerged,
         mappingName,
       };
       const additionalCoordinates = state.flycam.additionalCoordinates;

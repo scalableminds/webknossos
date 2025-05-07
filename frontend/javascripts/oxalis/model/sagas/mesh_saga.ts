@@ -1031,6 +1031,10 @@ function* loadPrecomputedMeshesInChunksForLod(
             // to distribute the workload a bit over time.
             bufferGeometry.computeVertexNormals();
 
+            // Eagerly add the chunk geometry so that they will be rendered
+            // as soon as possible. These chunks will be removed later and then
+            // replaced by a merged geometry so that we have better performance
+            // for large meshes.
             yield* call(
               {
                 context: segmentMeshController,
@@ -1039,7 +1043,7 @@ function* loadPrecomputedMeshesInChunksForLod(
               bufferGeometry,
               segmentId,
               // Apply the scale from the segment info, which includes dataset scale and mag
-              chunkScale,
+              getGlobalScale(lod),
               lod,
               layerName,
               additionalCoordinates,
@@ -1086,6 +1090,7 @@ function* loadPrecomputedMeshesInChunksForLod(
   mergedGeometry.vertexSegmentMapping = new VertexSegmentMapping(sortedBufferGeometries);
   mergedGeometry.boundsTree = yield* call(computeBvhAsync, mergedGeometry);
 
+  // Remove the eagerly added chunks (see above).
   yield* call(
     {
       context: segmentMeshController,
@@ -1096,6 +1101,7 @@ function* loadPrecomputedMeshesInChunksForLod(
     { lod },
   );
 
+  // Add the final merged geometry.
   yield* call(
     {
       context: segmentMeshController,

@@ -170,9 +170,6 @@ case class UpdateUserBoundingBoxVolumeAction(boundingBoxId: Int,
             name =
               if (updatedPropKeys.contains("name") && updatedProps.name.isDefined) updatedProps.name
               else currentBoundingBox.name,
-            isVisible =
-              if (updatedPropKeys.contains("isVisible") && updatedProps.isVisible.isDefined) updatedProps.isVisible
-              else currentBoundingBox.isVisible,
             color =
               if (updatedPropKeys.contains("color") && updatedProps.color.isDefined) updatedProps.colorOptProto
               else currentBoundingBox.color,
@@ -194,6 +191,36 @@ case class UpdateUserBoundingBoxVolumeAction(boundingBoxId: Int,
     this.copy(actionAuthorId = authorId)
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
+}
+
+case class UpdateUserBoundingBoxVisibilityVolumeAction(boundingBoxId: Option[Int],
+                                                       isVisible: Boolean,
+                                                       actionTracingId: String,
+                                                       actionTimestamp: Option[Long] = None,
+                                                       actionAuthorId: Option[String] = None,
+                                                       info: Option[String] = None)
+    extends ApplyableVolumeUpdateAction {
+  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
+
+  override def applyOn(tracing: VolumeTracing): VolumeTracing = {
+
+    def updateUserBoundingBoxes(): Seq[NamedBoundingBoxProto] =
+      tracing.userBoundingBoxes.map { boundingBox =>
+        if (boundingBoxId.forall(_ == boundingBox.id))
+          boundingBox.copy(isVisible = Some(isVisible))
+        else
+          boundingBox
+      }
+
+    tracing.withUserBoundingBoxes(updateUserBoundingBoxes())
+  }
+
+  override def isViewOnlyChange: Boolean = true
 }
 
 case class RemoveFallbackLayerVolumeAction(actionTracingId: String,
@@ -460,6 +487,9 @@ object DeleteUserBoundingBoxVolumeAction {
 object UpdateUserBoundingBoxVolumeAction {
   implicit val jsonFormat: OFormat[UpdateUserBoundingBoxVolumeAction] =
     Json.format[UpdateUserBoundingBoxVolumeAction]
+}
+object UpdateUserBoundingBoxVisibilityVolumeAction {
+  implicit val jsonFormat: OFormat[UpdateUserBoundingBoxVisibilityVolumeAction] = Json.format[UpdateUserBoundingBoxVisibilityVolumeAction]
 }
 object RemoveFallbackLayerVolumeAction {
   implicit val jsonFormat: OFormat[RemoveFallbackLayerVolumeAction] = Json.format[RemoveFallbackLayerVolumeAction]

@@ -54,20 +54,24 @@ object UpdateAction {
           case "updateTreeEdgesVisibility" => deserialize[UpdateTreeEdgesVisibilitySkeletonAction](jsonValue)
           case "updateUserBoundingBoxesInSkeletonTracing" =>
             deserialize[UpdateUserBoundingBoxesSkeletonAction](jsonValue)
-          case "addUserBoundingBoxSkeletonAction"    => deserialize[AddUserBoundingBoxSkeletonAction](jsonValue)
-          case "deleteUserBoundingBoxSkeletonAction" => deserialize[DeleteUserBoundingBoxSkeletonAction](jsonValue)
-          case "updateUserBoundingBoxSkeletonAction" =>
+          case "addUserBoundingBoxInSkeletonTracing"    => deserialize[AddUserBoundingBoxSkeletonAction](jsonValue)
+          case "deleteUserBoundingBoxInSkeletonTracing" => deserialize[DeleteUserBoundingBoxSkeletonAction](jsonValue)
+          case "updateUserBoundingBoxInSkeletonTracing" =>
             deserialize[UpdateUserBoundingBoxSkeletonAction](jsonValue)
+          case "updateUserBoundingBoxVisibilityInSkeletonTracing" =>
+            deserialize[UpdateUserBoundingBoxVisibilitySkeletonAction](jsonValue)
 
           // Volume
           case "updateBucket"        => deserialize[UpdateBucketVolumeAction](jsonValue)
           case "updateVolumeTracing" => deserialize[UpdateTracingVolumeAction](jsonValue)
-          case "updateUserBoundingBoxVolumeAction" =>
-            deserialize[UpdateUserBoundingBoxVolumeAction](jsonValue)
-          case "addUserBoundingBoxVolumeAction"    => deserialize[AddUserBoundingBoxVolumeAction](jsonValue)
-          case "deleteUserBoundingBoxVolumeAction" => deserialize[DeleteUserBoundingBoxVolumeAction](jsonValue)
           case "updateUserBoundingBoxesInVolumeTracing" =>
             deserialize[UpdateUserBoundingBoxesVolumeAction](jsonValue)
+          case "addUserBoundingBoxInVolumeTracing"    => deserialize[AddUserBoundingBoxVolumeAction](jsonValue)
+          case "deleteUserBoundingBoxInVolumeTracing" => deserialize[DeleteUserBoundingBoxVolumeAction](jsonValue)
+          case "updateUserBoundingBoxInVolumeTracing" =>
+            deserialize[UpdateUserBoundingBoxVolumeAction](jsonValue)
+          case "updateUserBoundingBoxVisibilityInVolumeTracing" =>
+            deserialize[UpdateUserBoundingBoxVisibilityVolumeAction](jsonValue)
           case "removeFallbackLayer" => deserialize[RemoveFallbackLayerVolumeAction](jsonValue)
           case "importVolumeTracing" => deserialize[ImportVolumeDataVolumeAction](jsonValue)
           case "createSegment"       => deserialize[CreateSegmentVolumeAction](jsonValue)

@@ -4,9 +4,11 @@ import constants, {
   OrthoViewColors,
   OrthoViewCrosshairColors,
   OrthoViewGrayCrosshairColor,
+  OrthoViews,
   OrthoViewValues,
 } from "oxalis/constants";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
+import { getRotationInRadian } from "oxalis/model/accessors/flycam_accessor";
 import Dimensions from "oxalis/model/dimensions";
 import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
 import Store from "oxalis/store";
@@ -35,7 +37,7 @@ class Plane {
   planeID: OrthoView;
   materialFactory!: PlaneMaterialFactory;
   displayCrosshair: boolean;
-  baseScaleVector: THREE.Vector3;
+  baseScale: THREE.Vector3;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'crosshair' has no initializer and is not... Remove this comment to see the full error message
   crosshair: Array<THREE.LineSegments>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'TDViewBorders' has no initializer and is... Remove this comment to see the full error message
@@ -53,7 +55,7 @@ class Plane {
     // --> scaleInfo.baseVoxel
     const baseVoxelFactors = getBaseVoxelFactorsInUnit(Store.getState().dataset.dataSource.scale);
     const scaleArray = Dimensions.transDim(baseVoxelFactors, this.planeID);
-    this.baseScaleVector = new THREE.Vector3(...scaleArray);
+    this.baseScale = new THREE.Vector3(...scaleArray);
     this.baseRotation = new THREE.Euler(0, 0, 0);
     this.createMeshes();
   }
@@ -149,17 +151,29 @@ class Plane {
     if (this.lastScaleFactors[0] === xFactor && this.lastScaleFactors[1] === yFactor) {
       return;
     }
+    // TODOM: This is broken when rotation is active and needs to be fixed!!!!
     this.lastScaleFactors[0] = xFactor;
     this.lastScaleFactors[1] = yFactor;
 
     const scaleVec = new THREE.Vector3().multiplyVectors(
       new THREE.Vector3(xFactor, yFactor, 1),
-      this.baseScaleVector,
+      this.baseScale,
     );
-    this.plane.scale.copy(scaleVec);
-    this.TDViewBorders.scale.copy(scaleVec);
-    this.crosshair[0].scale.copy(scaleVec);
-    this.crosshair[1].scale.copy(scaleVec);
+    this.getMeshes().map((mesh) => mesh.scale.copy(scaleVec));
+  }
+
+  private recalculateScale(): void {
+    // The baseScaleVector needs to be rotated like the current rotation settings of the plane to calculate the correct scaling vector.
+    const baseScaleCopy = new THREE.Vector3().copy(this.baseScale);
+    const rotation = getRotationInRadian(Store.getState().flycam);
+    //const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(...rotation));
+    //baseScaleCopy.applyMatrix4(rotationMatrix);
+    const rotatedBaseScale = baseScaleCopy.applyEuler(this.plane.rotation);
+    const scaleVec = new THREE.Vector3().multiplyVectors(
+      new THREE.Vector3(this.lastScaleFactors[0], this.lastScaleFactors[1], 1),
+      rotatedBaseScale,
+    );
+    this.getMeshes().map((mesh) => mesh.scale.copy(scaleVec));
   }
 
   setBaseRotation = (rotVec: THREE.Euler): void => {
@@ -170,9 +184,7 @@ class Plane {
     const baseRotationMatrix = new THREE.Matrix4().makeRotationFromEuler(this.baseRotation);
     const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(rotVec);
     const combinedMatrix = rotationMatrix.multiply(baseRotationMatrix);
-    this.getMeshes().map((mesh) =>
-      mesh.setRotationFromMatrix(combinedMatrix),
-    );
+    this.getMeshes().map((mesh) => mesh.setRotationFromMatrix(combinedMatrix));
   };
 
   // In case the plane's position was offset to make geometries

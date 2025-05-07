@@ -129,7 +129,7 @@ class CameraController extends React.PureComponent<Props> {
       // of clippingDistance. Theoretically, `far` could be set here too, however,
       // this leads to imprecision related bugs which cause the planes to not render
       // for certain clippingDistance values.
-      this.props.cameras[planeId].near = -1000000000000;
+      this.props.cameras[planeId].near = -clippingDistance;
       this.props.cameras[planeId].updateProjectionMatrix();
     }
 

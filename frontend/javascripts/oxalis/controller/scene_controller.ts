@@ -44,7 +44,11 @@ import {
   getTransformsForLayerOrNull,
   getTransformsForSkeletonLayer,
 } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
-import { getActiveMagIndicesForLayers, getPosition,   getRotationInRadian } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getActiveMagIndicesForLayers,
+  getPosition,
+  getRotationInRadian,
+} from "oxalis/model/accessors/flycam_accessor";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getSomeTracing, getTaskBoundingBoxes } from "oxalis/model/accessors/tracing_accessor";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/view_mode_accessor";
@@ -76,11 +80,9 @@ export const OrthoBaseRotations = {
   [OrthoViews.TDView]: new THREE.Euler(Math.PI / 4, Math.PI / 4, Math.PI / 4),
 };
 
-
 const getVisibleSegmentationLayerNames = reuseInstanceOnEquality((storeState: WebknossosState) =>
   getVisibleSegmentationLayers(storeState).map((l) => l.name),
 );
-
 
 class SceneController {
   skeletons: Record<number, Skeleton> = {};
@@ -383,9 +385,9 @@ class SceneController {
     // This method is called for each of the four cams. Even
     // though they are all looking at the same scene, some
     // things have to be changed for each cam.
-    const {datasetConfiguration, userConfiguration, flycam} = Store.getState();
+    const { datasetConfiguration, userConfiguration, flycam } = Store.getState();
     const { tdViewDisplayPlanes, tdViewDisplayDatasetBorders, tdViewDisplayLayerBorders } =
-    userConfiguration;
+      userConfiguration;
     // Only set the visibility of the dataset bounding box for the TDView.
     // This has to happen before updateForCam is called as otherwise cross section visibility
     // might be changed unintentionally.
@@ -438,8 +440,10 @@ class SceneController {
         this.planes[planeId].setPosition(originalPosition);
         this.planes[planeId].setGrayCrosshairColor();
         this.planes[planeId].setVisible(
-          tdViewDisplayPlanes !== TDViewDisplayModeEnum.NONE,
-          this.isPlaneVisible[planeId] && tdViewDisplayPlanes === TDViewDisplayModeEnum.DATA,
+          planeId === OrthoViews.PLANE_XZ && tdViewDisplayPlanes !== TDViewDisplayModeEnum.NONE,
+          planeId === OrthoViews.PLANE_XZ &&
+            this.isPlaneVisible[planeId] &&
+            tdViewDisplayPlanes === TDViewDisplayModeEnum.DATA,
         );
         this.planes[planeId].materialFactory.uniforms.is3DViewBeingRendered.value = true;
       }

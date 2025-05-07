@@ -331,7 +331,11 @@ class DataSourceService @Inject()(
             if (true) { // TODO Decide: Should we always rewrite the JSON file ? Never? Sometimes?
               // Rewriting the JSON in this file could e.g. remove custom fields that are not in the schema
               // Also if there is an error somewhere here, the files could get corrupted
-              JsonHelper.writeToFile(propertiesFile, dataSourceWithSpecialFiles).toOption
+              JsonHelper.writeToFile(propertiesFile, dataSourceWithSpecialFiles).toOption match {
+                case Some(_) =>
+                case None =>
+                  logger.error(s"Failed to rewrite properties file $propertiesFile")
+              }
             }
             dataSourceWithSpecialFiles.copy(id)
           } else
@@ -356,7 +360,7 @@ class DataSourceService @Inject()(
             val paths: Box[List[Path]] =
               PathUtils.listFiles(dir, silent = true, PathUtils.fileExtensionFilter(extension))
             paths match {
-              case Full(p) => p.map(path => SpecialFile(new URI(SpecialFile.localFileURIPrefix + path.toString), typ))
+              case Full(p) => p.map(path => SpecialFile(path.toUri, typ))
               case _       => logger.warn(s"Failed to list special files in $dir"); List()
             }
           } else {

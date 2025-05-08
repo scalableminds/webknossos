@@ -13,7 +13,7 @@ import type { ToastStyle } from "libs/toast";
 import Toast from "libs/toast";
 import UserLocalStorage from "libs/user_local_storage";
 import * as Utils from "libs/utils";
-import { type Writeable, coalesce, mod } from "libs/utils";
+import { coalesce, mod } from "libs/utils";
 import window, { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";

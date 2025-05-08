@@ -96,10 +96,10 @@ import {
 import { api } from "oxalis/singletons";
 import type {
   MeshInformation,
-  WebknossosState,
   Segment,
   SegmentGroup,
   TreeGroup,
+  WebknossosState,
 } from "oxalis/store";
 import Store from "oxalis/store";
 import ButtonComponent from "oxalis/view/components/button_component";

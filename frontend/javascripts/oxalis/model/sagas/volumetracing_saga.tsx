@@ -449,8 +449,8 @@ function* uncachedDiffSegmentLists(
     const segment = newSegments.getOrThrow(segmentId);
     const prevSegment = prevSegments.getOrThrow(segmentId);
 
-    const { isVisible: _prevIsVisible, ...prevSegmentWithoutIsVisible } = prevSegment;
-    const { isVisible: _isVisible, ...segmentWithoutIsVisible } = segment;
+    const { isVisible: prevIsVisible, ...prevSegmentWithoutIsVisible } = prevSegment;
+    const { isVisible: isVisible, ...segmentWithoutIsVisible } = segment;
 
     if (!_.isEqual(prevSegmentWithoutIsVisible, segmentWithoutIsVisible)) {
       yield updateSegmentVolumeAction(
@@ -466,7 +466,7 @@ function* uncachedDiffSegmentLists(
       );
     }
 
-    if (segment.isVisible !== prevSegment.isVisible) {
+    if (isVisible !== prevIsVisible) {
       yield updateSegmentVisibilityVolumeAction(segment.id, segment.isVisible, tracingId);
     }
   }

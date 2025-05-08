@@ -4,16 +4,16 @@ import classNames from "classnames";
 import { formatScale } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
 import { compareBy } from "libs/utils";
+import type React from "react";
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import type { APIDataset, APIPublication, APIPublicationAnnotation } from "types/api_types";
 import {
   getDatasetExtentAsString,
   getSegmentationThumbnailURL,
   getThumbnailURL,
   hasSegmentation,
-} from "oxalis/model/accessors/dataset_accessor";
-import type React from "react";
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import type { APIDataset, APIPublication, APIPublicationAnnotation } from "types/api_types";
+} from "viewer/model/accessors/dataset_accessor";
 
 type DatasetDetails = {
   species?: string;

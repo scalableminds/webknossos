@@ -33,8 +33,6 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
-import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import type { WebknossosState } from "oxalis/store";
 import React, { useEffect, useState } from "react";
 import { connect } from "react-redux";
 import { Link } from "react-router-dom";
@@ -45,6 +43,8 @@ import {
   type APIUserBase,
   TracingTypeEnum,
 } from "types/api_types";
+import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
+import type { WebknossosState } from "viewer/store";
 
 const { Column } = Table;
 const { Search } = Input;

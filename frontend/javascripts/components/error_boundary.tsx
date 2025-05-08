@@ -1,9 +1,9 @@
 import { Alert, ConfigProvider, Typography } from "antd";
 import ErrorHandling from "libs/error_handling";
-import { Store } from "oxalis/singletons";
 import React, { type ErrorInfo } from "react";
 import { getAntdTheme, getThemeFromUser } from "theme";
 import type { ArbitraryObject } from "types/globals";
+import { Store } from "viewer/singletons";
 
 type ErrorBoundaryProps = ArbitraryObject;
 

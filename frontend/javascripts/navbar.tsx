@@ -49,18 +49,6 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import window, { location } from "libs/window";
 import messages from "messages";
-import constants from "oxalis/constants";
-import {
-  isAnnotationFromDifferentOrganization,
-  isAnnotationOwner as isAnnotationOwnerAccessor,
-} from "oxalis/model/accessors/annotation_accessor";
-import { formatUserName } from "oxalis/model/accessors/user_accessor";
-import { setThemeAction } from "oxalis/model/actions/ui_actions";
-import { logoutUserAction, setActiveUserAction } from "oxalis/model/actions/user_actions";
-import type { WebknossosState } from "oxalis/store";
-import Store from "oxalis/store";
-import { HelpModal } from "oxalis/view/help_modal";
-import { PortalTarget } from "oxalis/view/layouting/portal_utils";
 import type { MenuClickEventHandler } from "rc-menu/lib/interface";
 import { getAntdTheme, getSystemColorTheme } from "theme";
 import type {
@@ -69,6 +57,18 @@ import type {
   APIUserCompact,
   APIUserTheme,
 } from "types/api_types";
+import constants from "viewer/constants";
+import {
+  isAnnotationFromDifferentOrganization,
+  isAnnotationOwner as isAnnotationOwnerAccessor,
+} from "viewer/model/accessors/annotation_accessor";
+import { formatUserName } from "viewer/model/accessors/user_accessor";
+import { setThemeAction } from "viewer/model/actions/ui_actions";
+import { logoutUserAction, setActiveUserAction } from "viewer/model/actions/user_actions";
+import type { WebknossosState } from "viewer/store";
+import Store from "viewer/store";
+import { HelpModal } from "viewer/view/help_modal";
+import { PortalTarget } from "viewer/view/layouting/portal_utils";
 
 const { Header } = Layout;
 

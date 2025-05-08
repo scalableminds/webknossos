@@ -15,13 +15,13 @@ import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
 import _ from "lodash";
+import { useEffect } from "react";
+import type { APIDatasetCompact, Folder } from "types/api_types";
 import {
   DatasetExtentRow,
   OwningOrganizationRow,
   VoxelSizeRow,
-} from "oxalis/view/right-border-tabs/dataset_info_tab_view";
-import { useEffect } from "react";
-import type { APIDatasetCompact, Folder } from "types/api_types";
+} from "viewer/view/right-border-tabs/dataset_info_tab_view";
 import { DatasetLayerTags, DatasetTags, TeamTags } from "../advanced_dataset/dataset_table";
 import { useDatasetCollectionContext } from "../dataset/dataset_collection_context";
 import { SEARCH_RESULTS_LIMIT, useDatasetQuery, useFolderQuery } from "../dataset/queries";

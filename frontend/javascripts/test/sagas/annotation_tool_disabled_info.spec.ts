@@ -1,8 +1,8 @@
 import update from "immutability-helper";
 import { describe, it, expect } from "vitest";
-import { getDisabledInfoForTools } from "oxalis/model/accessors/disabled_tool_accessor";
+import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
 import { initialState } from "test/fixtures/hybridtracing_object";
-import { AnnotationTool, VolumeTools } from "oxalis/model/accessors/tool_accessor";
+import { AnnotationTool, VolumeTools } from "viewer/model/accessors/tool_accessor";
 import type { CoordinateTransformation } from "types/api_types";
 
 const zoomSensitiveVolumeTools = VolumeTools.filter(

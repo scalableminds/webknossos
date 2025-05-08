@@ -1,32 +1,32 @@
-import type { Flycam, WebknossosState, SkeletonTracing, StoreAnnotation } from "oxalis/store";
+import type { Flycam, WebknossosState, SkeletonTracing, StoreAnnotation } from "viewer/store";
 import ChainReducer from "test/helpers/chainReducer";
 import DiffableMap from "libs/diffable_map";
-import EdgeCollection from "oxalis/model/edge_collection";
-import compactSaveQueue from "oxalis/model/helpers/compaction/compact_save_queue";
-import compactUpdateActions from "oxalis/model/helpers/compaction/compact_update_actions";
+import EdgeCollection from "viewer/model/edge_collection";
+import compactSaveQueue from "viewer/model/helpers/compaction/compact_save_queue";
+import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
 import { describe, it, expect, vi } from "vitest";
-import defaultState from "oxalis/default_state";
+import defaultState from "viewer/default_state";
 import update from "immutability-helper";
 import { createSaveQueueFromUpdateActions, withoutUpdateTracing } from "../helpers/saveHelpers";
 import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
-import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import { TreeTypeEnum } from "oxalis/constants";
-import type { Action } from "oxalis/model/actions/actions";
+import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import { TreeTypeEnum } from "viewer/constants";
+import type { Action } from "viewer/model/actions/actions";
 import type { ServerSkeletonTracing } from "types/api_types";
-import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
-import type { UpdateActionWithoutIsolationRequirement } from "oxalis/model/sagas/update_actions";
-import type { TracingStats } from "oxalis/model/accessors/annotation_accessor";
-import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
-import { setupSavingForTracingType } from "oxalis/model/sagas/save_saga";
-import * as SkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
-import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
-import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
+import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
+import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/update_actions";
+import type { TracingStats } from "viewer/model/accessors/annotation_accessor";
+import { diffSkeletonTracing } from "viewer/model/sagas/skeletontracing_saga";
+import { setupSavingForTracingType } from "viewer/model/sagas/save_saga";
+import * as SkeletonTracingActions from "viewer/model/actions/skeletontracing_actions";
+import { pushSaveQueueTransaction } from "viewer/model/actions/save_actions";
+import SkeletonTracingReducer from "viewer/model/reducers/skeletontracing_reducer";
 import { put } from "redux-saga/effects";
 import { TIMESTAMP } from "test/global_mocks";
 
 const actionTracingId = "tracingId";
 
-vi.mock("oxalis/model/sagas/root_saga", () => ({
+vi.mock("viewer/model/sagas/root_saga", () => ({
   default: function* () {
     yield;
   },

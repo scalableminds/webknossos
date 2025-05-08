@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import EdgeCollection, { diffEdgeCollections } from "../../oxalis/model/edge_collection";
-import type { Edge } from "oxalis/store";
+import EdgeCollection, { diffEdgeCollections } from "../../viewer/model/edge_collection";
+import type { Edge } from "viewer/store";
 
 const edgeSort = (edgeA: Edge, edgeB: Edge) => {
   if (edgeA.source !== edgeB.source) return edgeA.source - edgeB.source;

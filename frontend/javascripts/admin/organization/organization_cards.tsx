@@ -9,9 +9,9 @@ import { formatDateInLocalTimeZone } from "components/formatted_date";
 import dayjs from "dayjs";
 import { formatCountToDataAmountUnit, formatCreditsString } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
-import Constants from "oxalis/constants";
 import type React from "react";
 import type { APIOrganization } from "types/api_types";
+import Constants from "viewer/constants";
 import {
   PricingPlanEnum,
   hasPricingPlanExceededStorage,

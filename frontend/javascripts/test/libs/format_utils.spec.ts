@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { UnitShort, Unicode } from "oxalis/constants";
+import { UnitShort, Unicode } from "viewer/constants";
 import { formatNumberToArea, formatNumberToLength, formatNumberToVolume } from "libs/format_utils";
 
 const { ThinSpace } = Unicode;

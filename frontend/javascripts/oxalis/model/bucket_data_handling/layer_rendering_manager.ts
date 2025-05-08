@@ -4,7 +4,7 @@ import LatestTaskExecutor, { SKIPPED_TASK_REASON } from "libs/async/latest_task_
 import { CuckooTableVec3 } from "libs/cuckoo/cuckoo_table_vec3";
 import { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
 import DiffableMap from "libs/diffable_map";
-import { M4x4, V3, type Matrix4x4 } from "libs/mjs";
+import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import _ from "lodash";
 import memoizeOne from "memoize-one";

@@ -83,8 +83,8 @@ describe("PullQueue", () => {
     const pullQueue = new PullQueue(mockedCube as any, "layername", datastoreInfo as any);
     mockedCube.pullQueue = pullQueue;
     const buckets = [
-      new DataBucket("uint8", [0, 0, 0, 0], null as any, mockedCube as any),
-      new DataBucket("uint8", [1, 1, 1, 1], null as any, mockedCube as any),
+      new DataBucket("uint8", [0, 0, 0, 0], null as any, { type: "full" }, mockedCube as any),
+      new DataBucket("uint8", [1, 1, 1, 1], null as any, { type: "full" }, mockedCube as any),
     ];
 
     mockedCube.getBucket.mockImplementation((address: BucketAddress) => {

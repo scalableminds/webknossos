@@ -1,6 +1,6 @@
 import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
 import { tracing as volumetracingServerObject } from "test/fixtures/volumetracing_server_objects";
-import type { Vector3, Vector4 } from "oxalis/constants";
+import type { LabeledVoxelsMap, Vector3, Vector4 } from "oxalis/constants";
 import Constants from "oxalis/constants";
 import { describe, it, beforeEach, vi, expect } from "vitest";
 import datasetServerObject from "test/fixtures/dataset_server_object";
@@ -8,6 +8,10 @@ import { MagInfo } from "oxalis/model/helpers/mag_info";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type DataCubeType from "oxalis/model/bucket_data_handling/data_cube";
 import { assertNonNullBucket } from "oxalis/model/bucket_data_handling/bucket";
+import DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import sampleVoxelMapToMag, {
+  applyVoxelMap,
+} from "oxalis/model/volumetracing/volume_annotation_sampling";
 
 // Mock modules
 vi.mock("oxalis/store", () => {
@@ -39,12 +43,6 @@ vi.mock("oxalis/model/sagas/root_saga", () => {
 
 type LabeledVoxelsMapAsArray = Array<[Vector4, Uint8Array]>;
 
-// Import the modules after mocking
-import DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import sampleVoxelMapToMag, {
-  applyVoxelMap,
-} from "oxalis/model/volumetracing/volume_annotation_sampling";
-
 // Test context type
 type TestContext = {
   cube: DataCubeType;
@@ -66,6 +64,8 @@ function getVoxelMapEntry(firstDim: number, secondDim: number, voxelMap: Uint8Ar
 describe("Volume Annotation Sampling", () => {
   let context: TestContext;
 
+  const cubeBoundingBox = new BoundingBox({ min: [1, 2, 3], max: [1023, 1024, 1025] });
+
   beforeEach(() => {
     const mockedLayer = {
       resolutions: [
@@ -78,14 +78,7 @@ describe("Volume Annotation Sampling", () => {
       ] as Vector3[],
     };
     const magInfo = new MagInfo(mockedLayer.resolutions);
-    const cube = new DataCube(
-      new BoundingBox({ min: [0, 0, 0], max: [1024, 1024, 1024] }),
-      [],
-      magInfo,
-      "uint32",
-      false,
-      "layerName",
-    );
+    const cube = new DataCube(cubeBoundingBox, [], magInfo, "uint32", false, "layerName");
     const pullQueue = {
       add: vi.fn(),
       pull: vi.fn(),
@@ -603,7 +596,7 @@ describe("Volume Annotation Sampling", () => {
     const { cube } = context;
     const bucket = cube.getOrCreateBucket([0, 0, 0, 0]);
     assertNonNullBucket(bucket);
-    const labeledVoxelsMap = new Map();
+    const labeledVoxelsMap: LabeledVoxelsMap = new Map();
     const voxelMap = getEmptyVoxelMap();
     const voxelsToLabel = [
       [10, 10],
@@ -615,6 +608,7 @@ describe("Volume Annotation Sampling", () => {
       [11, 12],
       [11, 13],
     ];
+    const Z = 5;
     voxelsToLabel.forEach(([firstDim, secondDim]) =>
       labelVoxelInVoxelMap(firstDim, secondDim, voxelMap),
     );
@@ -623,12 +617,12 @@ describe("Volume Annotation Sampling", () => {
     const get3DAddress = (x: number, y: number, out: Vector3 | Float32Array) => {
       out[0] = x;
       out[1] = y;
-      out[2] = 5;
+      out[2] = Z;
     };
 
     const expectedBucketData = new Uint32Array(Constants.BUCKET_SIZE).fill(0);
     voxelsToLabel.forEach(([firstDim, secondDim]) => {
-      const addr = cube.getVoxelIndex([firstDim, secondDim, 5], 0);
+      const addr = cube.getVoxelIndex([firstDim, secondDim, Z], 0);
       expectedBucketData[addr] = 1;
     });
     applyVoxelMap(labeledVoxelsMap, cube, 1, get3DAddress, 1, 2, true);
@@ -636,7 +630,99 @@ describe("Volume Annotation Sampling", () => {
 
     for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
       for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {
-        const addr = cube.getVoxelIndex([firstDim, secondDim, 5], 0);
+        const addr = cube.getVoxelIndex([firstDim, secondDim, Z], 0);
+        expect(labeledBucketData[addr]).toBe(expectedBucketData[addr]);
+      }
+    }
+  });
+
+  it("A labeledVoxelMap should be applied correctly (ignore values outside of bbox)", () => {
+    const { cube } = context;
+    const bucket = cube.getOrCreateBucket([0, 0, 0, 0]);
+    assertNonNullBucket(bucket);
+    const labeledVoxelsMap: LabeledVoxelsMap = new Map();
+    const voxelMap = getEmptyVoxelMap();
+    const voxelsToLabel = [
+      [0, 0],
+      [0, 1],
+      [1, 0],
+      [1, 1],
+      [2, 0],
+      [2, 1],
+      [2, 2],
+      [3, 0],
+    ];
+    const Z = 5;
+    voxelsToLabel.forEach(([firstDim, secondDim]) =>
+      labelVoxelInVoxelMap(firstDim, secondDim, voxelMap),
+    );
+    labeledVoxelsMap.set(bucket.zoomedAddress, voxelMap);
+
+    const get3DAddress = (x: number, y: number, out: Vector3 | Float32Array) => {
+      out[0] = x;
+      out[1] = y;
+      out[2] = Z;
+    };
+
+    const expectedBucketData = new Uint32Array(Constants.BUCKET_SIZE).fill(0);
+    voxelsToLabel.forEach(([firstDim, secondDim]) => {
+      if (
+        firstDim < cubeBoundingBox.min[0] ||
+        secondDim < cubeBoundingBox.min[1] ||
+        firstDim >= cubeBoundingBox.max[0] ||
+        secondDim >= cubeBoundingBox.max[1]
+      ) {
+        return;
+      }
+      const addr = cube.getVoxelIndex([firstDim, secondDim, Z], 0);
+      expectedBucketData[addr] = 1;
+    });
+    applyVoxelMap(labeledVoxelsMap, cube, 1, get3DAddress, 1, 2, true);
+    const labeledBucketData = bucket.getOrCreateData();
+
+    for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
+      for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {
+        const addr = cube.getVoxelIndex([firstDim, secondDim, Z], 0);
+        expect(labeledBucketData[addr]).toBe(expectedBucketData[addr]);
+      }
+    }
+  });
+
+  it("A labeledVoxelMap should be applied correctly (ignore all values outside of z)", () => {
+    const { cube } = context;
+    const bucket = cube.getOrCreateBucket([0, 0, 0, 0]);
+    assertNonNullBucket(bucket);
+    const labeledVoxelsMap: LabeledVoxelsMap = new Map();
+    const voxelMap = getEmptyVoxelMap();
+    const voxelsToLabel = [
+      [0, 0],
+      [0, 1],
+      [1, 0],
+      [1, 1],
+      [2, 0],
+      [2, 1],
+      [2, 2],
+      [3, 0],
+    ];
+    const Z = 0;
+    voxelsToLabel.forEach(([firstDim, secondDim]) =>
+      labelVoxelInVoxelMap(firstDim, secondDim, voxelMap),
+    );
+    labeledVoxelsMap.set(bucket.zoomedAddress, voxelMap);
+
+    const get3DAddress = (x: number, y: number, out: Vector3 | Float32Array) => {
+      out[0] = x;
+      out[1] = y;
+      out[2] = Z;
+    };
+
+    const expectedBucketData = new Uint32Array(Constants.BUCKET_SIZE).fill(0);
+    applyVoxelMap(labeledVoxelsMap, cube, 1, get3DAddress, 1, 2, true);
+    const labeledBucketData = bucket.getOrCreateData();
+
+    for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
+      for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {
+        const addr = cube.getVoxelIndex([firstDim, secondDim, Z], 0);
         expect(labeledBucketData[addr]).toBe(expectedBucketData[addr]);
       }
     }

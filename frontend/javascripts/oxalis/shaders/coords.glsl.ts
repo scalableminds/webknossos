@@ -68,6 +68,8 @@ export const getWorldCoordUVW: ShaderModule = {
 export const isOutsideOfBoundingBox: ShaderModule = {
   code: `
     bool isOutsideOfBoundingBox(vec3 worldCoordUVW) {
+      // todop: remove again
+      return false;
       vec3 worldCoord = transDim(worldCoordUVW);
       return (
         worldCoord.x < bboxMin.x || worldCoord.y < bboxMin.y || worldCoord.z < bboxMin.z ||

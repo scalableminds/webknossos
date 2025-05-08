@@ -20,8 +20,8 @@ export type NestedMatrix4 = [Vector4, Vector4, Vector4, Vector4]; // Represents 
 // For 3D data BucketAddress = x, y, z, mag
 // For higher dimensional data, BucketAddress = x, y, z, mag, [{name: "t", value: t}, ...]
 export type BucketAddress =
-  | Vector4
-  | [number, number, number, number, AdditionalCoordinate[] | null];
+  | readonly [number, number, number, number]
+  | readonly [number, number, number, number, AdditionalCoordinate[] | null];
 
 export type Point2 = {
   x: number;
@@ -49,11 +49,11 @@ export type Rect = {
   height: number;
 };
 export const AnnotationContentTypes = ["skeleton", "volume", "hybrid"];
-export const Vector2Indicies = [0, 1];
-export const Vector3Indicies = [0, 1, 2];
-export const Vector4Indicies = [0, 1, 2, 3];
-export const Vector5Indicies = [0, 1, 2, 3, 4];
-export const Vector6Indicies = [0, 1, 2, 3, 4, 5];
+export const Vector2Indicies = [0, 1] as const;
+export const Vector3Indicies = [0, 1, 2] as const;
+export const Vector4Indicies = [0, 1, 2, 3] as const;
+export const Vector5Indicies = [0, 1, 2, 3, 4] as const;
+export const Vector6Indicies = [0, 1, 2, 3, 4, 5] as const;
 export enum OrthoViews {
   PLANE_XY = "PLANE_XY",
   PLANE_YZ = "PLANE_YZ",

@@ -250,12 +250,24 @@ describe("wkstore_adapter", () => {
 
   it<TestContext>("sendToStore: Request Handling should send the correct request parameters", () => {
     const data = new Uint8Array(2);
-    const bucket1 = new DataBucket("uint8", [0, 0, 0, 0], null as any, mockedCube);
+    const bucket1 = new DataBucket(
+      "uint8",
+      [0, 0, 0, 0],
+      null as any,
+      { type: "full" },
+      mockedCube,
+    );
 
     bucket1.markAsRequested();
     bucket1.receiveData(data);
 
-    const bucket2 = new DataBucket("uint8", [1, 1, 1, 1], null as any, mockedCube);
+    const bucket2 = new DataBucket(
+      "uint8",
+      [1, 1, 1, 1],
+      null as any,
+      { type: "full" },
+      mockedCube,
+    );
     bucket2.markAsRequested();
     bucket2.receiveData(data);
 

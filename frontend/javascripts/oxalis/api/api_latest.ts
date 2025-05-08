@@ -2181,7 +2181,7 @@ class DataApi {
    */
   labelVoxels(
     globalPositionsMag1: Vector3[],
-    label: number,
+    segmentId: number,
     optAdditionalCoordinates?: AdditionalCoordinate[] | null,
   ) {
     const state = Store.getState();
@@ -2210,8 +2210,8 @@ class DataApi {
     );
     const groupedByW = _.groupBy(globalPositions, (pos) => pos[thirdDim]);
 
-    for (const [wValueStr, group] of Object.entries(groupedByW)) {
-      const w = Number.parseInt(wValueStr, 10);
+    for (const group of Object.values(groupedByW)) {
+      const w = group[0][thirdDim];
       const currentLabeledVoxelMap: LabeledVoxelsMap = new Map();
 
       for (const pos of group) {
@@ -2238,7 +2238,7 @@ class DataApi {
       applyVoxelMap(
         currentLabeledVoxelMap,
         cube,
-        label,
+        segmentId,
         (x, y, out) => {
           out[0] = x;
           out[1] = y;
@@ -2258,7 +2258,7 @@ class DataApi {
         dimensionIndices,
         magInfo,
         cube,
-        label,
+        segmentId,
         thirdDimensionOfSlice,
         true,
         0,
@@ -2267,7 +2267,7 @@ class DataApi {
 
     Store.dispatch(
       updateSegmentAction(
-        label,
+        segmentId,
         {
           somePosition: globalPositionsMag1[0],
           someAdditionalCoordinates: additionalCoordinates || undefined,

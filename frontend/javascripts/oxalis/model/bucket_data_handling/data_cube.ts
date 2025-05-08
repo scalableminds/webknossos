@@ -1,5 +1,5 @@
 import ErrorHandling from "libs/error_handling";
-import { V3 } from "libs/mjs";
+import { V3, V4 } from "libs/mjs";
 import type { ProgressCallback } from "libs/progress_callback";
 import Toast from "libs/toast";
 import {
@@ -16,6 +16,7 @@ import type {
   BucketAddress,
   LabelMasksByBucketAndW,
   Vector3,
+  Vector4,
 } from "oxalis/constants";
 import constants, { MappingStatusEnum } from "oxalis/constants";
 import Constants from "oxalis/constants";
@@ -358,7 +359,10 @@ class DataCube {
       // within the bbox) which is why the check is necessary.
       // We use slice to ignore the additional coordinates (this is mostly done
       // to ignore annoying cases like null vs [] which have identical semantics).
-      if (bucket != null && _.isEqual(address.slice(0, 4), bucket.zoomedAddress.slice(0, 4))) {
+      if (
+        bucket != null &&
+        V4.isEqual(address.slice(0, 4) as Vector4, bucket.zoomedAddress.slice(0, 4) as Vector4)
+      ) {
         return bucket;
       }
     }

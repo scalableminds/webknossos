@@ -15,8 +15,6 @@ import type { BoundingBoxObject, NumberLike } from "oxalis/store";
 import type { APIDataset, APIUser } from "types/api_types";
 import type { ArbitraryObject, Comparator } from "types/globals";
 
-export type Writeable<T> = { -readonly [P in keyof T]: T[P] };
-
 type UrlParams = Record<string, string>;
 
 // Fix JS modulo bug

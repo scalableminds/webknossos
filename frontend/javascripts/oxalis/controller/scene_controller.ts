@@ -424,8 +424,10 @@ class SceneController {
 
           const ind = Dimensions.getIndices(planeId);
           // Offset the plane so the user can see the skeletonTracing behind the plane
-          pos[ind[2]] +=
-            planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
+          // TODOM: This concept is kinda broken when rotations are turned on. TODO investigate how to implement this instead.
+          //pos[ind[2]] += planeId === OrthoViews.PLANE_XY ? 1 : -1;
+          //pos[ind[2]] +=
+          //  planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
           this.planes[planeId].setPosition(pos, originalPosition);
           this.planes[planeId].setRotation(new THREE.Euler(rotation[0], rotation[1], rotation[2]));
 
@@ -440,10 +442,8 @@ class SceneController {
         this.planes[planeId].setPosition(originalPosition);
         this.planes[planeId].setGrayCrosshairColor();
         this.planes[planeId].setVisible(
-          planeId === OrthoViews.PLANE_XZ && tdViewDisplayPlanes !== TDViewDisplayModeEnum.NONE,
-          planeId === OrthoViews.PLANE_XZ &&
-            this.isPlaneVisible[planeId] &&
-            tdViewDisplayPlanes === TDViewDisplayModeEnum.DATA,
+          tdViewDisplayPlanes !== TDViewDisplayModeEnum.NONE,
+          this.isPlaneVisible[planeId] && tdViewDisplayPlanes === TDViewDisplayModeEnum.DATA,
         );
         this.planes[planeId].materialFactory.uniforms.is3DViewBeingRendered.value = true;
       }

@@ -4,12 +4,9 @@ import constants, {
   OrthoViewColors,
   OrthoViewCrosshairColors,
   OrthoViewGrayCrosshairColor,
-  OrthoViews,
   OrthoViewValues,
 } from "oxalis/constants";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
-import { getRotationInRadian } from "oxalis/model/accessors/flycam_accessor";
-import Dimensions from "oxalis/model/dimensions";
 import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
 import Store from "oxalis/store";
 import * as THREE from "three";
@@ -37,13 +34,14 @@ class Plane {
   planeID: OrthoView;
   materialFactory!: PlaneMaterialFactory;
   displayCrosshair: boolean;
-  baseScale: THREE.Vector3;
+  worldScale: THREE.Vector3;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'crosshair' has no initializer and is not... Remove this comment to see the full error message
   crosshair: Array<THREE.LineSegments>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'TDViewBorders' has no initializer and is... Remove this comment to see the full error message
   TDViewBorders: THREE.Line;
   lastScaleFactors: [number, number];
   baseRotation: THREE.Euler;
+  outerGroup: THREE.Group;
 
   constructor(planeID: OrthoView) {
     this.planeID = planeID;
@@ -54,9 +52,9 @@ class Plane {
     // is smaller in voxels, so that it is squared in nm.
     // --> scaleInfo.baseVoxel
     const baseVoxelFactors = getBaseVoxelFactorsInUnit(Store.getState().dataset.dataSource.scale);
-    const scaleArray = Dimensions.transDim(baseVoxelFactors, this.planeID);
-    this.baseScale = new THREE.Vector3(...scaleArray);
+    this.worldScale = new THREE.Vector3(...baseVoxelFactors);
     this.baseRotation = new THREE.Euler(0, 0, 0);
+    this.outerGroup = new THREE.Group();
     this.createMeshes();
   }
 
@@ -117,6 +115,17 @@ class Plane {
       this.getLineBasicMaterial(OrthoViewColors[this.planeID], 1),
     );
     this.TDViewBorders.name = `${this.planeID}-TDViewBorders`;
+
+    // For world scale (1, 1, 4), apply inverse to neutralize it in geometry
+    const invWorldScale = new THREE.Vector3(
+      1 / this.worldScale.x,
+      1 / this.worldScale.y,
+      1 / this.worldScale.z,
+    );
+
+    this.plane.geometry.applyMatrix4(
+      new THREE.Matrix4().makeScale(invWorldScale.x, invWorldScale.y, invWorldScale.z),
+    );
   }
 
   setDisplayCrosshair = (value: boolean): void => {
@@ -154,25 +163,31 @@ class Plane {
     // TODOM: This is broken when rotation is active and needs to be fixed!!!!
     this.lastScaleFactors[0] = xFactor;
     this.lastScaleFactors[1] = yFactor;
-
-    const scaleVec = new THREE.Vector3().multiplyVectors(
-      new THREE.Vector3(xFactor, yFactor, 1),
-      this.baseScale,
-    );
-    this.getMeshes().map((mesh) => mesh.scale.copy(scaleVec));
+    this.recalculateScale();
   }
 
   private recalculateScale(): void {
     // The baseScaleVector needs to be rotated like the current rotation settings of the plane to calculate the correct scaling vector.
-    const baseScaleCopy = new THREE.Vector3().copy(this.baseScale);
-    const rotation = getRotationInRadian(Store.getState().flycam);
-    //const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(...rotation));
-    //baseScaleCopy.applyMatrix4(rotationMatrix);
-    const rotatedBaseScale = baseScaleCopy.applyEuler(this.plane.rotation);
+    const localScaleFactorX = new THREE.Vector3(1, 0, 0);
+    const localScaleFactorY = new THREE.Vector3(0, 1, 0);
+    // Apply current rotation of the plane.
+    const localScaleFactorXRotated = localScaleFactorX.applyEuler(this.plane.rotation);
+    const localScaleFactorYRotated = localScaleFactorY.applyEuler(this.plane.rotation);
+    // Put scale measuring vectors into world scale to get distortion cause by potentially anisotropic voxel scale factor.
+    const scaleFactorXStrechedInSpace = localScaleFactorXRotated.multiply(this.worldScale);
+    const scaleFactorYStrechedInSpace = localScaleFactorYRotated.multiply(this.worldScale);
+    // Measure visual length (how much stretch the voxel scale factor causes)
+    const lengthX = scaleFactorXStrechedInSpace.length();
+    const lengthY = scaleFactorYStrechedInSpace.length();
+    // Calculate correction factors to neutralize the stretching caused by the scale factor.
+    const correctionX = lengthX / 1;
+    const correctionY = lengthY / 1;
+
     const scaleVec = new THREE.Vector3().multiplyVectors(
       new THREE.Vector3(this.lastScaleFactors[0], this.lastScaleFactors[1], 1),
-      rotatedBaseScale,
+      new THREE.Vector3(correctionX, correctionY, 1).multiply(this.worldScale),
     );
+    if (this.planeID === "PLANE_XZ") console.log("calculated scale", this.planeID, scaleVec);
     this.getMeshes().map((mesh) => mesh.scale.copy(scaleVec));
   }
 
@@ -185,6 +200,7 @@ class Plane {
     const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(rotVec);
     const combinedMatrix = rotationMatrix.multiply(baseRotationMatrix);
     this.getMeshes().map((mesh) => mesh.setRotationFromMatrix(combinedMatrix));
+    this.recalculateScale();
   };
 
   // In case the plane's position was offset to make geometries

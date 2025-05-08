@@ -1,5 +1,5 @@
 import { CloseOutlined, DeleteOutlined, RollbackOutlined } from "@ant-design/icons";
-import { updateUser } from "admin/admin_rest_api";
+import { updateUser } from "admin/rest_api";
 import { Badge, InputNumber, Modal, Table, Tag, Tooltip } from "antd";
 import HighlightableRow from "components/highlightable_row";
 import SelectExperienceDomain from "components/select_experience_domain";
@@ -8,7 +8,7 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import { useState } from "react";
-import type { APIUser, ExperienceDomainList } from "types/api_flow_types";
+import type { APIUser, ExperienceDomainList } from "types/api_types";
 
 const { Column } = Table;
 

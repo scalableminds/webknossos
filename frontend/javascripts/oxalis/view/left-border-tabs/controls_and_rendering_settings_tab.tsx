@@ -1,6 +1,6 @@
 import { ExclamationCircleOutlined } from "@ant-design/icons";
-import { clearCache } from "admin/admin_rest_api";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import { clearCache } from "admin/rest_api";
 import { Collapse, type CollapseProps } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { PricingEnforcedSwitchSetting } from "components/pricing_enforcers";
@@ -18,7 +18,7 @@ import {
 } from "oxalis/model/actions/settings_actions";
 import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { api } from "oxalis/singletons";
-import type { DatasetConfiguration, OxalisState, UserConfiguration } from "oxalis/store";
+import type { DatasetConfiguration, UserConfiguration, WebknossosState } from "oxalis/store";
 import {
   DropdownSetting,
   LogSliderSetting,
@@ -28,7 +28,7 @@ import {
 import React, { PureComponent } from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import type { APIDataset, APIUser } from "types/api_flow_types";
+import type { APIDataset, APIUser } from "types/api_types";
 import type { ArrayElement } from "types/globals";
 import { userSettings } from "types/schemas/user_settings.schema";
 
@@ -444,7 +444,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
   }
 }
 
-const mapStateToProps = (state: OxalisState) => ({
+const mapStateToProps = (state: WebknossosState) => ({
   activeUser: state.activeUser,
   userConfiguration: state.userConfiguration,
   zoomStep: state.flycam.zoomStep,

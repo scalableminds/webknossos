@@ -18,7 +18,7 @@ import {
   deletePrivateLink,
   getPrivateLinksByAnnotation,
   updatePrivateLink,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
 import {
   Button,
   DatePicker,
@@ -38,12 +38,11 @@ import { AsyncButton, AsyncIconButton } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import dayjs from "dayjs";
 import { makeComponentLazy } from "libs/react_helpers";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { getDataLayers } from "oxalis/model/accessors/dataset_accessor";
 import { getReadableNameByVolumeTracingId } from "oxalis/model/accessors/volumetracing_accessor";
-import type { OxalisState } from "oxalis/store";
-import { useSelector } from "react-redux";
-import type { ZarrPrivateLink } from "types/api_flow_types";
+import type { ZarrPrivateLink } from "types/api_types";
 
 // TODO Remove explicit (error) type declaration when updating to tanstack/query >= 5
 // https://github.com/TanStack/query/pull/4706
@@ -138,8 +137,8 @@ function useDeleteLinkMutation(annotationId: string) {
 }
 
 export function useZarrLinkMenu(maybeAccessToken: string | null) {
-  const dataset = useSelector((state: OxalisState) => state.dataset);
-  const annotation = useSelector((state: OxalisState) => state.annotation);
+  const dataset = useWkSelector((state) => state.dataset);
+  const annotation = useWkSelector((state) => state.annotation);
   const dataStoreURL = dataset.dataStore.url;
   const dataLayers = getDataLayers(dataset);
 

@@ -24,14 +24,14 @@ import {
   VerticalLeftOutlined,
   VerticalRightOutlined,
 } from "@ant-design/icons";
+import { withAuthentication } from "admin/auth/authentication_modal";
 import {
   createExplorational,
   duplicateAnnotation,
   editLockedState,
   finishAnnotation,
   reOpenAnnotation,
-} from "admin/admin_rest_api";
-import { withAuthentication } from "admin/auth/authentication_modal";
+} from "admin/rest_api";
 import { Button, ConfigProvider, Dropdown, Modal, Space, Tooltip } from "antd";
 import type { SubMenuType } from "antd/es/menu/interface";
 import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
@@ -62,7 +62,12 @@ import {
 } from "oxalis/model/actions/ui_actions";
 import { Model } from "oxalis/singletons";
 import { api } from "oxalis/singletons";
-import type { BusyBlockingInfo, OxalisState, RestrictionsAndSettings, Task } from "oxalis/store";
+import type {
+  BusyBlockingInfo,
+  RestrictionsAndSettings,
+  Task,
+  WebknossosState,
+} from "oxalis/store";
 import Store from "oxalis/store";
 import DownloadModalView from "oxalis/view/action-bar/download_modal_view";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
@@ -79,8 +84,8 @@ import { mapLayoutKeysToLanguage } from "oxalis/view/layouting/default_layout_co
 import * as React from "react";
 import { connect } from "react-redux";
 import { getAntdTheme, getThemeFromUser } from "theme";
-import type { APIAnnotationType, APIUser, APIUserBase } from "types/api_flow_types";
-import { APIAnnotationTypeEnum, TracingTypeEnum } from "types/api_flow_types";
+import type { APIAnnotationType, APIUser, APIUserBase } from "types/api_types";
+import { APIAnnotationTypeEnum, TracingTypeEnum } from "types/api_types";
 import CreateAnimationModal from "./create_animation_modal";
 import { PrivateLinksModal } from "./private_links_view";
 
@@ -801,7 +806,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
   }
 }
 
-function mapStateToProps(state: OxalisState): StateProps {
+function mapStateToProps(state: WebknossosState): StateProps {
   return {
     annotationType: state.annotation.annotationType,
     annotationId: state.annotation.annotationId,

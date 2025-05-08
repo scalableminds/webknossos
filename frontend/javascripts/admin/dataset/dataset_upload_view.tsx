@@ -28,17 +28,6 @@ import React from "react";
 import { connect } from "react-redux";
 
 import {
-  type UnfinishedUpload,
-  cancelDatasetUpload,
-  createResumableUpload,
-  finishDatasetUpload,
-  getUnfinishedUploads,
-  reserveDatasetUpload,
-  sendAnalyticsEvent,
-  sendFailedRequestAnalyticsEvent,
-  startConvertToWkwJob,
-} from "admin/admin_rest_api";
-import {
   AllowedTeamsFormItem,
   CardContainer,
   DatasetNameFormItem,
@@ -48,6 +37,17 @@ import {
   getLeftOverStorageBytes,
   hasPricingPlanExceededStorage,
 } from "admin/organization/pricing_plan_utils";
+import {
+  type UnfinishedUpload,
+  cancelDatasetUpload,
+  createResumableUpload,
+  finishDatasetUpload,
+  getUnfinishedUploads,
+  reserveDatasetUpload,
+  sendAnalyticsEvent,
+  sendFailedRequestAnalyticsEvent,
+  startConvertToWkwJob,
+} from "admin/rest_api";
 import type { FormInstance } from "antd/lib/form";
 import classnames from "classnames";
 import FolderSelection from "dashboard/folders/folder_selection";
@@ -61,7 +61,7 @@ import _ from "lodash";
 import messages from "messages";
 import { AllUnits, LongUnitToShortUnitMap, UnitLong, type Vector3 } from "oxalis/constants";
 import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { type FileWithPath, useDropzone } from "react-dropzone";
 import { Link, type RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
@@ -71,7 +71,7 @@ import {
   type APIOrganization,
   type APITeam,
   type APIUser,
-} from "types/api_flow_types";
+} from "types/api_types";
 import { syncValidator } from "types/validation";
 import { FormItemWithInfo, confirmAsync } from "../../dashboard/dataset/helper_components";
 
@@ -1370,7 +1370,7 @@ function FileUploadArea({
   );
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   activeUser: state.activeUser,
   organization: enforceActiveOrganization(state.activeOrganization),
 });

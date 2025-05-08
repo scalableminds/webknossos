@@ -1,8 +1,9 @@
-import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/admin_rest_api";
+import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/rest_api";
 import { Alert, Modal, Spin, Table } from "antd";
 import saveAs from "file-saver";
 import { formatNumberToVolume } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
+import { useWkSelector } from "libs/react_hooks";
 import { pluralize, transformToCSVRow } from "libs/utils";
 import { LongUnitToShortUnitMap, type Vector3 } from "oxalis/constants";
 import { getMagInfo, getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
@@ -14,9 +15,8 @@ import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_acces
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
 import { voxelToVolumeInUnit } from "oxalis/model/scaleinfo";
 import { api } from "oxalis/singletons";
-import type { OxalisState, Segment } from "oxalis/store";
-import { useSelector } from "react-redux";
-import type { APISegmentationLayer, VoxelSize } from "types/api_flow_types";
+import type { Segment } from "oxalis/store";
+import type { APISegmentationLayer, VoxelSize } from "types/api_types";
 import {
   type SegmentHierarchyGroup,
   type SegmentHierarchyNode,
@@ -104,9 +104,7 @@ export function SegmentStatisticsModal({
   parentGroup,
   groupTree,
 }: Props) {
-  const { dataset, annotation, temporaryConfiguration } = useSelector(
-    (state: OxalisState) => state,
-  );
+  const { dataset, annotation, temporaryConfiguration } = useWkSelector((state) => state);
   const magInfo = getMagInfo(visibleSegmentationLayer.resolutions);
   const layersFinestMag = magInfo.getFinestMag();
   const voxelSize = dataset.dataSource.scale;
@@ -118,9 +116,7 @@ export function SegmentStatisticsModal({
     visibleSegmentationLayer.tracingId,
     visibleSegmentationLayer,
   );
-  const additionalCoordinates = useSelector(
-    (state: OxalisState) => state.flycam.additionalCoordinates,
-  );
+  const additionalCoordinates = useWkSelector((state) => state.flycam.additionalCoordinates);
   const hasAdditionalCoords = hasAdditionalCoordinates(additionalCoordinates);
   const additionalCoordinateStringForModal = getAdditionalCoordinatesAsString(
     additionalCoordinates,

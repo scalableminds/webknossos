@@ -12,7 +12,7 @@ import {
   type Vector3,
 } from "oxalis/constants";
 
-import { sendAnalyticsEvent } from "admin/admin_rest_api";
+import { sendAnalyticsEvent } from "admin/rest_api";
 import morphology from "ball-morphology";
 import { V2, V3 } from "libs/mjs";
 import Toast from "libs/toast";
@@ -39,12 +39,12 @@ import { select } from "oxalis/model/sagas/effect-generators";
 import { api } from "oxalis/singletons";
 import type {
   DatasetLayerConfiguration,
-  OxalisState,
   QuickSelectConfig,
   VolumeTracing,
+  WebknossosState,
 } from "oxalis/store";
 import { call, put, race, take } from "typed-redux-saga";
-import type { APIDataLayer, APIDataset } from "types/api_flow_types";
+import type { APIDataLayer, APIDataset } from "types/api_types";
 import {
   getDefaultValueRangeOfLayer,
   getEnabledColorLayers,
@@ -91,7 +91,7 @@ export function* prepareQuickSelect(
   volumeTracing: VolumeTracing;
 } | null> {
   const activeViewport = yield* select(
-    (state: OxalisState) => state.viewModeData.plane.activeViewport,
+    (state: WebknossosState) => state.viewModeData.plane.activeViewport,
   );
   if (activeViewport === "TDView") {
     // Can happen when the user ends the drag action in the 3D viewport
@@ -103,7 +103,7 @@ export function* prepareQuickSelect(
   const [firstDim, secondDim, thirdDim] = Dimensions.getIndices(activeViewport);
   const quickSelectConfig = yield* select((state) => state.userConfiguration.quickSelect);
 
-  const colorLayers = yield* select((state: OxalisState) =>
+  const colorLayers = yield* select((state: WebknossosState) =>
     getEnabledColorLayers(state.dataset, state.datasetConfiguration),
   );
   if (colorLayers.length === 0) {
@@ -279,7 +279,7 @@ export default function* performQuickSelect(
   processBinaryMaskInPlaceAndAttach(thresholdField, quickSelectConfig, quickSelectGeometry);
 
   const overwriteMode = yield* select(
-    (state: OxalisState) => state.userConfiguration.overwriteMode,
+    (state: WebknossosState) => state.userConfiguration.overwriteMode,
   );
 
   if (!quickSelectConfig.showPreview) {

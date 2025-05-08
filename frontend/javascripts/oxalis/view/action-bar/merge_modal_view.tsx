@@ -2,7 +2,7 @@ import {
   getAnnotationCompoundInformation,
   getTracingForAnnotationType,
   getUnversionedAnnotationInformation,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
 import { Alert, Button, Form, Modal, Select, Spin, Tooltip } from "antd";
 import { makeComponentLazy } from "libs/react_helpers";
 import Request from "libs/request";
@@ -15,14 +15,14 @@ import { getSkeletonDescriptor } from "oxalis/model/accessors/skeletontracing_ac
 import { addTreesAndGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
 import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { api } from "oxalis/singletons";
-import type { MutableTreeMap, OxalisState, TreeGroup } from "oxalis/store";
+import type { MutableTreeMap, TreeGroup, WebknossosState } from "oxalis/store";
 import Store from "oxalis/store";
 import InputComponent from "oxalis/view/components/input_component";
 import type React from "react";
 import { PureComponent } from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import { type APIAnnotation, APIAnnotationTypeEnum } from "types/api_flow_types";
+import { type APIAnnotation, APIAnnotationTypeEnum } from "types/api_types";
 type ProjectInfo = {
   id: string;
   label: string;
@@ -296,7 +296,7 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
 
 const MergeModalView = makeComponentLazy(_MergeModalView);
 
-function mapStateToProps(state: OxalisState): StateProps {
+function mapStateToProps(state: WebknossosState): StateProps {
   return {
     annotationId: state.annotation.annotationId,
     annotationType: state.annotation.annotationType,

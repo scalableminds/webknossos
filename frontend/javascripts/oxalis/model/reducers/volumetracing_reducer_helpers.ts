@@ -15,16 +15,16 @@ import type {
   EditableMapping,
   LabelAction,
   MappingType,
-  OxalisState,
   SegmentGroup,
   SegmentMap,
   VolumeTracing,
+  WebknossosState,
 } from "oxalis/store";
 import { isInSupportedValueRangeForLayer } from "../accessors/dataset_accessor";
 import { mapGroupsToGenerator } from "../accessors/skeletontracing_accessor";
 
 export function updateVolumeTracing(
-  state: OxalisState,
+  state: WebknossosState,
   volumeTracingId: string,
   shape: Partial<VolumeTracing>,
 ) {
@@ -40,7 +40,7 @@ export function updateVolumeTracing(
   });
 }
 export function updateEditableMapping(
-  state: OxalisState,
+  state: WebknossosState,
   volumeTracingId: string,
   shape: Partial<EditableMapping>,
 ) {
@@ -56,7 +56,7 @@ export function updateEditableMapping(
   });
 }
 export function setActiveCellReducer(
-  state: OxalisState,
+  state: WebknossosState,
   volumeTracing: VolumeTracing,
   id: number,
   activeUnmappedSegmentId: number | null | undefined,
@@ -73,7 +73,7 @@ export function setActiveCellReducer(
   });
 }
 export function createCellReducer(
-  state: OxalisState,
+  state: WebknossosState,
   volumeTracing: VolumeTracing,
   newSegmentId: number,
 ) {
@@ -82,7 +82,7 @@ export function createCellReducer(
 
 const MAXIMUM_LABEL_ACTIONS_COUNT = 50;
 export function updateDirectionReducer(
-  state: OxalisState,
+  state: WebknossosState,
   volumeTracing: VolumeTracing,
   centroid: Vector3,
 ) {
@@ -111,7 +111,7 @@ export function updateDirectionReducer(
   });
 }
 export function addToLayerReducer(
-  state: OxalisState,
+  state: WebknossosState,
   volumeTracing: VolumeTracing,
   position: Vector3,
 ) {
@@ -125,12 +125,12 @@ export function addToLayerReducer(
     contourList: [...volumeTracing.contourList, position],
   });
 }
-export function resetContourReducer(state: OxalisState, volumeTracing: VolumeTracing) {
+export function resetContourReducer(state: WebknossosState, volumeTracing: VolumeTracing) {
   return updateVolumeTracing(state, volumeTracing.tracingId, {
     contourList: [],
   });
 }
-export function hideBrushReducer(state: OxalisState) {
+export function hideBrushReducer(state: WebknossosState) {
   return update(state, {
     temporaryConfiguration: {
       mousePosition: {
@@ -140,7 +140,7 @@ export function hideBrushReducer(state: OxalisState) {
   });
 }
 export function setContourTracingModeReducer(
-  state: OxalisState,
+  state: WebknossosState,
   volumeTracing: VolumeTracing,
   mode: ContourMode,
 ) {
@@ -149,7 +149,7 @@ export function setContourTracingModeReducer(
   });
 }
 export function setLargestSegmentIdReducer(
-  state: OxalisState,
+  state: WebknossosState,
   volumeTracing: VolumeTracing,
   id: number,
 ) {
@@ -158,7 +158,7 @@ export function setLargestSegmentIdReducer(
   });
 }
 export function setMappingNameReducer(
-  state: OxalisState,
+  state: WebknossosState,
   volumeTracing: VolumeTracing,
   mappingName: string | null | undefined,
   mappingType: MappingType,

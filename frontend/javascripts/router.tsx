@@ -1,8 +1,3 @@
-import {
-  createExplorational,
-  getShortLink,
-  getUnversionedAnnotationInformation,
-} from "admin/admin_rest_api";
 import AcceptInviteView from "admin/auth/accept_invite_view";
 import AuthTokenView from "admin/auth/auth_token_view";
 import ChangePasswordView from "admin/auth/change_password_view";
@@ -17,6 +12,11 @@ import OrganizationEditView from "admin/organization/organization_edit_view";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import ProjectCreateView from "admin/project/project_create_view";
 import ProjectListView from "admin/project/project_list_view";
+import {
+  createExplorational,
+  getShortLink,
+  getUnversionedAnnotationInformation,
+} from "admin/rest_api";
 import ScriptCreateView from "admin/scripts/script_create_view";
 import ScriptListView from "admin/scripts/script_list_view";
 import AvailableTasksReportView from "admin/statistic/available_tasks_report_view";
@@ -44,7 +44,7 @@ import window from "libs/window";
 import _ from "lodash";
 import Navbar from "navbar";
 import { ControlModeEnum } from "oxalis/constants";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import HelpButton from "oxalis/view/help_modal";
 import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
 import React from "react";
@@ -57,7 +57,7 @@ import {
   type APIMagRestrictions,
   type APIUser,
   TracingTypeEnum,
-} from "types/api_flow_types";
+} from "types/api_types";
 
 import {
   getDatasetIdFromNameAndOrganization,
@@ -802,7 +802,7 @@ class ReactRouter extends React.Component<Props> {
   }
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   activeUser: state.activeUser,
   pricingPlan: state.activeOrganization
     ? state.activeOrganization.pricingPlan

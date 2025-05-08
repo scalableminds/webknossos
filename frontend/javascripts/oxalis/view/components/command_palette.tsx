@@ -1,17 +1,18 @@
 import type { ItemType } from "antd/lib/menu/interface";
+import { useWkSelector } from "libs/react_hooks";
 import { capitalize, getPhraseFromCamelCaseString } from "libs/utils";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import { getAdministrationSubMenu } from "navbar";
-import { AnnotationToolEnum, AvailableToolsInViewMode } from "oxalis/constants";
-import { getLabelForTool } from "oxalis/model/accessors/tool_accessor";
+import { WkDevFlags } from "oxalis/api/wk_dev";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
+import { Toolkits } from "oxalis/model/accessors/tool_accessor";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
 import { Store } from "oxalis/singletons";
-import type { OxalisState, UserConfiguration } from "oxalis/store";
+import type { UserConfiguration } from "oxalis/store";
 import type { Command } from "react-command-palette";
 import ReactCommandPalette from "react-command-palette";
-import { useSelector } from "react-redux";
 import { getThemeFromUser } from "theme";
 import {
   type TracingViewMenuProps,
@@ -54,23 +55,17 @@ const getLabelForPath = (key: string) =>
   getPhraseFromCamelCaseString(capitalize(key.split("/")[1])) || key;
 
 export const CommandPalette = ({ label }: { label: string | JSX.Element | null }) => {
-  const userConfig = useSelector((state: OxalisState) => state.userConfiguration);
-  const isViewMode = useSelector(
-    (state: OxalisState) => state.temporaryConfiguration.controlMode === "VIEW",
-  );
-  const isInTracingView = useSelector(
-    (state: OxalisState) => state.uiInformation.isInAnnotationView,
-  );
+  const userConfig = useWkSelector((state) => state.userConfiguration);
+  const isViewMode = useWkSelector((state) => state.temporaryConfiguration.controlMode === "VIEW");
+  const isInTracingView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
 
-  const restrictions = useSelector((state: OxalisState) => state.annotation.restrictions);
-  const task = useSelector((state: OxalisState) => state.task);
-  const annotationType = useSelector((state: OxalisState) => state.annotation.annotationType);
-  const annotationId = useSelector((state: OxalisState) => state.annotation.annotationId);
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  const isAnnotationLockedByUser = useSelector(
-    (state: OxalisState) => state.annotation.isLockedByOwner,
-  );
-  const annotationOwner = useSelector((state: OxalisState) => state.annotation.owner);
+  const restrictions = useWkSelector((state) => state.annotation.restrictions);
+  const task = useWkSelector((state) => state.task);
+  const annotationType = useWkSelector((state) => state.annotation.annotationType);
+  const annotationId = useWkSelector((state) => state.annotation.annotationId);
+  const activeUser = useWkSelector((state) => state.activeUser);
+  const isAnnotationLockedByUser = useWkSelector((state) => state.annotation.isLockedByOwner);
+  const annotationOwner = useWkSelector((state) => state.annotation.owner);
 
   const props: TracingViewMenuProps = {
     restrictions,
@@ -110,6 +105,19 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     return commands;
   };
 
+  const getSuperUserItems = (): CommandWithoutId[] => {
+    if (!activeUser?.isSuperUser) {
+      return [];
+    }
+    return [
+      {
+        name: "Toggle Action Logging",
+        command: () => (WkDevFlags.logActions = !WkDevFlags.logActions),
+        color: commandEntryColor,
+      },
+    ];
+  };
+
   const getNavigationEntries = () => {
     if (activeUser == null) return [];
     const commands: CommandWithoutId[] = [];
@@ -145,7 +153,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
 
     navigationEntries.forEach((entry) => {
       commands.push({
-        name: `Navigate to ${entry.name}`,
+        name: `Go to ${entry.name}`,
         command: () => {
           window.location.href = entry.path;
         },
@@ -159,13 +167,13 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
   const getToolEntries = () => {
     if (!isInTracingView) return [];
     const commands: CommandWithoutId[] = [];
-    let availableTools = Object.keys(AnnotationToolEnum) as [keyof typeof AnnotationToolEnum];
+    let availableTools = Object.values(AnnotationTool);
     if (isViewMode || !restrictions.allowUpdate) {
-      availableTools = AvailableToolsInViewMode as [keyof typeof AnnotationToolEnum];
+      availableTools = Toolkits.READ_ONLY_TOOLS;
     }
     availableTools.forEach((tool) => {
       commands.push({
-        name: `Switch to ${getLabelForTool(tool)}`,
+        name: `Switch to ${tool.readableName}`,
         command: () => Store.dispatch(setToolAction(tool)),
         color: commandEntryColor,
       });
@@ -180,6 +188,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     ...getToolEntries(),
     ...mapMenuActionsToCommands(menuActions),
     ...getTabsAndSettingsMenuItems(),
+    ...getSuperUserItems(),
   ];
   return (
     <ReactCommandPalette

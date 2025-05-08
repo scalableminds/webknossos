@@ -11,7 +11,7 @@ import {
 import type { Action } from "oxalis/model/actions/actions";
 import Dimensions from "oxalis/model/dimensions";
 import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { getUnifiedAdditionalCoordinates } from "../accessors/dataset_accessor";
 
 function cloneMatrix(m: Matrix4x4): Matrix4x4 {
@@ -54,11 +54,11 @@ function rotateOnAxisWithDistance(
 }
 
 function rotateReducer(
-  state: OxalisState,
+  state: WebknossosState,
   angle: number,
   axis: Vector3,
   regardDistance: boolean,
-): OxalisState {
+): WebknossosState {
   if (Number.isNaN(angle)) {
     return state;
   }
@@ -110,7 +110,7 @@ function resetMatrix(matrix: Matrix4x4, voxelSize: Vector3) {
   return newMatrix;
 }
 
-function moveReducer(state: OxalisState, vector: Vector3): OxalisState {
+function moveReducer(state: WebknossosState, vector: Vector3): WebknossosState {
   const matrix = cloneMatrix(state.flycam.currentMatrix);
 
   if (!vector.includes(Number.NaN)) {
@@ -128,7 +128,7 @@ function moveReducer(state: OxalisState, vector: Vector3): OxalisState {
   });
 }
 
-export function zoomReducer(state: OxalisState, zoomStep: number): OxalisState {
+export function zoomReducer(state: WebknossosState, zoomStep: number): WebknossosState {
   const [min, max] = getValidZoomRangeForUser(state);
   let newZoomStep = Utils.clamp(min, zoomStep, max);
 
@@ -145,7 +145,7 @@ export function zoomReducer(state: OxalisState, zoomStep: number): OxalisState {
   });
   return newState;
 }
-export function setDirectionReducer(state: OxalisState, direction: Vector3) {
+export function setDirectionReducer(state: WebknossosState, direction: Vector3) {
   const previousSpaceDirectionOrtho = state.flycam.spaceDirectionOrtho;
   const spaceDirectionOrtho = Utils.map3((el, index) => {
     if (el === 0) {
@@ -166,7 +166,7 @@ export function setDirectionReducer(state: OxalisState, direction: Vector3) {
   });
 }
 
-export function setRotationReducer(state: OxalisState, rotation: Vector3) {
+export function setRotationReducer(state: WebknossosState, rotation: Vector3) {
   if (state.dataset != null) {
     const [x, y, z] = rotation;
     let matrix = resetMatrix(state.flycam.currentMatrix, state.dataset.dataSource.scale.factor);
@@ -185,7 +185,7 @@ export function setRotationReducer(state: OxalisState, rotation: Vector3) {
   return state;
 }
 
-function FlycamReducer(state: OxalisState, action: Action): OxalisState {
+function FlycamReducer(state: WebknossosState, action: Action): WebknossosState {
   switch (action.type) {
     case "SET_DATASET": {
       return update(state, {

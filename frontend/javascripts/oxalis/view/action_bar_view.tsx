@@ -1,7 +1,8 @@
-import { createExplorational } from "admin/admin_rest_api";
 import { withAuthentication } from "admin/auth/authentication_modal";
-import { Alert, Popover } from "antd";
+import { createExplorational } from "admin/rest_api";
+import { Alert, Popover, Space } from "antd";
 import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
+import { useWkSelector } from "libs/react_hooks";
 import { isUserAdminOrTeamManager } from "libs/utils";
 import { ArbitraryVectorInput } from "libs/vector_input";
 import { type ControlMode, MappingStatusEnum, type ViewMode } from "oxalis/constants";
@@ -16,11 +17,11 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { setAdditionalCoordinatesAction } from "oxalis/model/actions/flycam_actions";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import Store from "oxalis/store";
 import AddNewLayoutModal from "oxalis/view/action-bar/add_new_layout_modal";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
-import ToolbarView from "oxalis/view/action-bar/toolbar_view";
+import ToolbarView from "oxalis/view/action-bar/tools/toolbar_view";
 import TracingActionsView, {
   getLayoutMenu,
   type LayoutProps,
@@ -34,11 +35,12 @@ import {
   layoutEmitter,
 } from "oxalis/view/layouting/layout_persistence";
 import * as React from "react";
-import { connect, useDispatch, useSelector } from "react-redux";
+import { connect, useDispatch } from "react-redux";
 import { useHistory } from "react-router-dom";
-import type { APIDataset, APIUser } from "types/api_flow_types";
-import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
+import type { APIDataset, APIUser } from "types/api_types";
+import { APIJobType, type AdditionalCoordinate } from "types/api_types";
 import { StartAIJobModal, type StartAIJobModalState } from "./action-bar/starting_job_modals";
+import ToolkitView from "./action-bar/tools/toolkit_switcher_view";
 import ButtonComponent from "./components/button_component";
 import { NumberSliderSetting } from "./components/setting_input_views";
 
@@ -55,9 +57,7 @@ type StateProps = {
   dataset: APIDataset;
   activeUser: APIUser | null | undefined;
   controlMode: ControlMode;
-  hasSkeleton: boolean;
   showVersionRestore: boolean;
-  isReadOnly: boolean;
   is2d: boolean;
   viewMode: ViewMode;
   aiJobModalState: StartAIJobModalState;
@@ -71,12 +71,8 @@ type State = {
 };
 
 function AdditionalCoordinatesInputView() {
-  const additionalAxes = useSelector((state: OxalisState) =>
-    getUnifiedAdditionalCoordinates(state.dataset),
-  );
-  const additionalCoordinates = useSelector(
-    (state: OxalisState) => state.flycam.additionalCoordinates,
-  );
+  const additionalAxes = useWkSelector((state) => getUnifiedAdditionalCoordinates(state.dataset));
+  const additionalCoordinates = useWkSelector((state) => state.flycam.additionalCoordinates);
   const dispatch = useDispatch();
   const changeAdditionalCoordinates = (values: AdditionalCoordinate[] | null) => {
     if (values != null) {
@@ -142,7 +138,7 @@ function AdditionalCoordinatesInputView() {
 
 function CreateAnnotationButton() {
   const history = useHistory();
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useWkSelector((state) => state.activeUser);
 
   const onClick = async () => {
     const state = Store.getState();
@@ -189,6 +185,25 @@ function CreateAnnotationButton() {
     >
       Create Annotation
     </ButtonWithAuthentication>
+  );
+}
+
+function ModesView() {
+  const hasSkeleton = useWkSelector((state) => state.annotation.skeleton != null);
+  const is2d = useWkSelector((state) => is2dDataset(state.dataset));
+  const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
+  const isViewMode = controlMode === ControlModeEnum.VIEW;
+
+  const isArbitrarySupported = hasSkeleton || isViewMode;
+
+  // The outer div is necessary for proper spacing.
+  return (
+    <div>
+      <Space.Compact>
+        {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
+        {isViewMode ? null : <ToolkitView />}
+      </Space.Compact>
+    </div>
   );
 }
 
@@ -244,20 +259,10 @@ class ActionBarView extends React.PureComponent<Props, State> {
   }
 
   render() {
-    const {
-      dataset,
-      is2d,
-      isReadOnly,
-      showVersionRestore,
-      controlMode,
-      hasSkeleton,
-      layoutProps,
-      viewMode,
-      activeUser,
-    } = this.props;
+    const { dataset, is2d, showVersionRestore, controlMode, layoutProps, viewMode, activeUser } =
+      this.props;
     const isAdminOrDatasetManager = activeUser && isUserAdminOrTeamManager(activeUser);
     const isViewMode = controlMode === ControlModeEnum.VIEW;
-    const isArbitrarySupported = hasSkeleton || isViewMode;
     const getIsAIAnalysisEnabled = () => {
       const jobsEnabled =
         dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_NEURONS) ||
@@ -304,14 +309,12 @@ class ActionBarView extends React.PureComponent<Props, State> {
           {showVersionRestore ? VersionRestoreWarning : null}
           <DatasetPositionView />
           <AdditionalCoordinatesInputView />
-          {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
+          <ModesView />
           {getIsAIAnalysisEnabled() && isAdminOrDatasetManager
             ? this.renderStartAIJobButton(shouldDisableAIJobButton, tooltip)
             : null}
           {isViewMode ? this.renderStartTracingButton() : null}
-          {constants.MODES_PLANE.indexOf(viewMode) > -1 ? (
-            <ToolbarView isReadOnly={isReadOnly} />
-          ) : null}
+          {constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
         </div>
         <AddNewLayoutModal
           addLayout={this.addNewLayout}
@@ -328,13 +331,11 @@ class ActionBarView extends React.PureComponent<Props, State> {
   }
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   dataset: state.dataset,
   activeUser: state.activeUser,
   controlMode: state.temporaryConfiguration.controlMode,
   showVersionRestore: state.uiInformation.showVersionRestore,
-  hasSkeleton: state.annotation.skeleton != null,
-  isReadOnly: !state.annotation.restrictions.allowUpdate,
   is2d: is2dDataset(state.dataset),
   viewMode: state.temporaryConfiguration.viewMode,
   aiJobModalState: state.uiInformation.aIJobModalState,

@@ -1,16 +1,17 @@
 import { describe, it, beforeEach, expect, vi } from "vitest";
-import { AnnotationToolEnum, type AnnotationTool } from "oxalis/constants";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import { initialState } from "test/fixtures/volumetracing_object";
 
 const disabledInfoMock: { [key in any]?: any } = {};
-Object.values(AnnotationToolEnum).forEach((annotationTool) => {
-  disabledInfoMock[annotationTool] = {
+
+Object.values(AnnotationTool).forEach((annotationTool) => {
+  disabledInfoMock[annotationTool.id] = {
     isDisabled: false,
     explanation: "",
   };
 });
 
-vi.mock("oxalis/model/accessors/tool_accessor", () => ({
+vi.mock("oxalis/model/accessors/disabled_tool_accessor", () => ({
   getDisabledInfoForTools: () => disabledInfoMock,
 }));
 
@@ -31,39 +32,38 @@ vi.mock("oxalis/controller/scene_controller_provider", () => ({
 
 // Import the modules after mocking
 import {
-  MoveTool,
-  SkeletonTool,
-  BoundingBoxTool,
-  DrawTool,
-  EraseTool,
-  FillCellTool,
-  PickCellTool,
-  QuickSelectTool,
-  ProofreadTool,
-  LineMeasurementTool,
-  AreaMeasurementTool,
+  MoveToolController,
+  SkeletonToolController,
+  BoundingBoxToolController,
+  DrawToolController,
+  EraseToolController,
+  FillCellToolController,
+  PickCellToolController,
+  QuickSelectToolController,
+  ProofreadToolController,
+  LineMeasurementToolController,
+  AreaMeasurementToolController,
 } from "oxalis/controller/combinations/tool_controls";
 import UiReducer from "oxalis/model/reducers/ui_reducer";
-import { wkReadyAction } from "oxalis/model/actions/actions";
 import { cycleToolAction, setToolAction } from "oxalis/model/actions/ui_actions";
 import { watchToolDeselection } from "oxalis/model/sagas/annotation_tool_saga";
 
 describe("Annotation Tool Saga", () => {
-  const allTools = [
-    MoveTool,
-    SkeletonTool,
-    BoundingBoxTool,
-    DrawTool,
-    EraseTool,
-    FillCellTool,
-    PickCellTool,
-    QuickSelectTool,
-    ProofreadTool,
-    LineMeasurementTool,
-    AreaMeasurementTool,
+  const allToolControllers = [
+    MoveToolController,
+    SkeletonToolController,
+    BoundingBoxToolController,
+    DrawToolController,
+    EraseToolController,
+    FillCellToolController,
+    PickCellToolController,
+    QuickSelectToolController,
+    ProofreadToolController,
+    LineMeasurementToolController,
+    AreaMeasurementToolController,
   ];
 
-  const spies = allTools.map((tool) => vi.spyOn(tool, "onToolDeselected"));
+  const spies = allToolControllers.map((tool) => vi.spyOn(tool, "onToolDeselected"));
 
   beforeEach(() => {
     spies.forEach((spy) => spy.mockClear());
@@ -73,7 +73,6 @@ describe("Annotation Tool Saga", () => {
     let newState = initialState;
     const saga = watchToolDeselection();
     saga.next();
-    saga.next(wkReadyAction());
     saga.next(newState.uiInformation.activeTool);
 
     const cycleTool = () => {
@@ -84,40 +83,41 @@ describe("Annotation Tool Saga", () => {
     };
 
     cycleTool();
-    expect(MoveTool.onToolDeselected).toHaveBeenCalledTimes(1);
+
+    expect(MoveToolController.onToolDeselected).toHaveBeenCalledTimes(1);
     cycleTool();
-    expect(SkeletonTool.onToolDeselected).toHaveBeenCalledTimes(1);
+    expect(SkeletonToolController.onToolDeselected).toHaveBeenCalledTimes(1);
     cycleTool();
-    expect(DrawTool.onToolDeselected).toHaveBeenCalledTimes(1);
+    expect(DrawToolController.onToolDeselected).toHaveBeenCalledTimes(1);
     cycleTool();
-    expect(EraseTool.onToolDeselected).toHaveBeenCalledTimes(1);
+    expect(EraseToolController.onToolDeselected).toHaveBeenCalledTimes(1);
     cycleTool();
-    expect(DrawTool.onToolDeselected).toHaveBeenCalledTimes(2);
+    expect(DrawToolController.onToolDeselected).toHaveBeenCalledTimes(2);
     cycleTool();
-    expect(EraseTool.onToolDeselected).toHaveBeenCalledTimes(2);
+    expect(EraseToolController.onToolDeselected).toHaveBeenCalledTimes(2);
     cycleTool();
-    expect(FillCellTool.onToolDeselected).toHaveBeenCalledTimes(1);
+    expect(FillCellToolController.onToolDeselected).toHaveBeenCalledTimes(1);
     cycleTool();
-    expect(PickCellTool.onToolDeselected).toHaveBeenCalledTimes(1);
+    expect(PickCellToolController.onToolDeselected).toHaveBeenCalledTimes(1);
     cycleTool();
-    expect(QuickSelectTool.onToolDeselected).toHaveBeenCalledTimes(1);
+    expect(QuickSelectToolController.onToolDeselected).toHaveBeenCalledTimes(1);
     cycleTool();
-    expect(BoundingBoxTool.onToolDeselected).toHaveBeenCalledTimes(1);
+    expect(BoundingBoxToolController.onToolDeselected).toHaveBeenCalledTimes(1);
     cycleTool();
-    expect(ProofreadTool.onToolDeselected).toHaveBeenCalledTimes(1);
+    expect(ProofreadToolController.onToolDeselected).toHaveBeenCalledTimes(1);
     cycleTool();
-    expect(LineMeasurementTool.onToolDeselected).toHaveBeenCalledTimes(1);
+    expect(LineMeasurementToolController.onToolDeselected).toHaveBeenCalledTimes(1);
     cycleTool();
-    expect(AreaMeasurementTool.onToolDeselected).toHaveBeenCalledTimes(1);
+    expect(AreaMeasurementToolController.onToolDeselected).toHaveBeenCalledTimes(1);
     cycleTool();
-    expect(MoveTool.onToolDeselected).toHaveBeenCalledTimes(2);
+    expect(MoveToolController.onToolDeselected).toHaveBeenCalledTimes(2);
   });
 
   it("Selecting another tool should trigger a deselection of the previous tool.", () => {
     let newState = initialState;
+
     const saga = watchToolDeselection();
     saga.next();
-    saga.next(wkReadyAction());
     saga.next(newState.uiInformation.activeTool);
 
     const cycleTool = (nextTool: AnnotationTool) => {
@@ -127,31 +127,31 @@ describe("Annotation Tool Saga", () => {
       saga.next(newState);
     };
 
-    cycleTool(AnnotationToolEnum.SKELETON);
-    expect(MoveTool.onToolDeselected).toHaveBeenCalledTimes(1);
-    cycleTool(AnnotationToolEnum.BRUSH);
-    expect(SkeletonTool.onToolDeselected).toHaveBeenCalledTimes(1);
-    cycleTool(AnnotationToolEnum.ERASE_BRUSH);
-    expect(DrawTool.onToolDeselected).toHaveBeenCalledTimes(1);
-    cycleTool(AnnotationToolEnum.TRACE);
-    expect(EraseTool.onToolDeselected).toHaveBeenCalledTimes(1);
-    cycleTool(AnnotationToolEnum.ERASE_TRACE);
-    expect(DrawTool.onToolDeselected).toHaveBeenCalledTimes(2);
-    cycleTool(AnnotationToolEnum.FILL_CELL);
-    expect(EraseTool.onToolDeselected).toHaveBeenCalledTimes(2);
-    cycleTool(AnnotationToolEnum.PICK_CELL);
-    expect(FillCellTool.onToolDeselected).toHaveBeenCalledTimes(1);
-    cycleTool(AnnotationToolEnum.BOUNDING_BOX);
-    expect(PickCellTool.onToolDeselected).toHaveBeenCalledTimes(1);
-    cycleTool(AnnotationToolEnum.PROOFREAD);
-    expect(BoundingBoxTool.onToolDeselected).toHaveBeenCalledTimes(1);
-    cycleTool(AnnotationToolEnum.LINE_MEASUREMENT);
-    expect(ProofreadTool.onToolDeselected).toHaveBeenCalledTimes(1);
-    cycleTool(AnnotationToolEnum.AREA_MEASUREMENT);
-    expect(LineMeasurementTool.onToolDeselected).toHaveBeenCalledTimes(1);
-    cycleTool(AnnotationToolEnum.MOVE);
-    expect(AreaMeasurementTool.onToolDeselected).toHaveBeenCalledTimes(1);
-    cycleTool(AnnotationToolEnum.SKELETON);
-    expect(MoveTool.onToolDeselected).toHaveBeenCalledTimes(2);
+    cycleTool(AnnotationTool.SKELETON);
+    expect(MoveToolController.onToolDeselected).toHaveBeenCalledTimes(1);
+    cycleTool(AnnotationTool.BRUSH);
+    expect(SkeletonToolController.onToolDeselected).toHaveBeenCalledTimes(1);
+    cycleTool(AnnotationTool.ERASE_BRUSH);
+    expect(DrawToolController.onToolDeselected).toHaveBeenCalledTimes(1);
+    cycleTool(AnnotationTool.TRACE);
+    expect(EraseToolController.onToolDeselected).toHaveBeenCalledTimes(1);
+    cycleTool(AnnotationTool.ERASE_TRACE);
+    expect(DrawToolController.onToolDeselected).toHaveBeenCalledTimes(2);
+    cycleTool(AnnotationTool.FILL_CELL);
+    expect(EraseToolController.onToolDeselected).toHaveBeenCalledTimes(2);
+    cycleTool(AnnotationTool.PICK_CELL);
+    expect(FillCellToolController.onToolDeselected).toHaveBeenCalledTimes(1);
+    cycleTool(AnnotationTool.BOUNDING_BOX);
+    expect(PickCellToolController.onToolDeselected).toHaveBeenCalledTimes(1);
+    cycleTool(AnnotationTool.PROOFREAD);
+    expect(BoundingBoxToolController.onToolDeselected).toHaveBeenCalledTimes(1);
+    cycleTool(AnnotationTool.LINE_MEASUREMENT);
+    expect(ProofreadToolController.onToolDeselected).toHaveBeenCalledTimes(1);
+    cycleTool(AnnotationTool.AREA_MEASUREMENT);
+    expect(LineMeasurementToolController.onToolDeselected).toHaveBeenCalledTimes(1);
+    cycleTool(AnnotationTool.MOVE);
+    expect(AreaMeasurementToolController.onToolDeselected).toHaveBeenCalledTimes(1);
+    cycleTool(AnnotationTool.SKELETON);
+    expect(MoveToolController.onToolDeselected).toHaveBeenCalledTimes(2);
   });
 });

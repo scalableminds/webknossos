@@ -15,7 +15,7 @@ import {
 } from "oxalis/model/accessors/dataset_layer_transformation_accessor";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { useCallback, useEffect, useMemo } from "react";
-import type { APIDataLayer } from "types/api_flow_types";
+import type { APIDataLayer } from "types/api_types";
 import { FormItemWithInfo } from "./helper_components";
 
 const { Text } = Typography;

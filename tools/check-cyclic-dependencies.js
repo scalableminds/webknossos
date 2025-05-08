@@ -16,7 +16,7 @@ const KNOWN_CYCLES = [
   ],
   ["frontend/javascripts/libs/request.ts", "frontend/javascripts/admin/datastore_health_check.ts"],
   [
-    "frontend/javascripts/admin/admin_rest_api.ts",
+    "frontend/javascripts/admin/rest_api.ts",
     "frontend/javascripts/libs/request.ts",
     "frontend/javascripts/admin/datastore_health_check.ts",
   ],

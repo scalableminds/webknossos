@@ -4,8 +4,6 @@ import TrackballControls from "libs/trackball_controls";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import {
-  type AnnotationTool,
-  AnnotationToolEnum,
   type OrthoView,
   type OrthoViewMap,
   OrthoViews,
@@ -14,9 +12,13 @@ import {
 } from "oxalis/constants";
 import CameraController from "oxalis/controller/camera_controller";
 import { handleOpenContextMenu } from "oxalis/controller/combinations/skeleton_handlers";
-import { ProofreadTool, SkeletonTool } from "oxalis/controller/combinations/tool_controls";
+import {
+  ProofreadToolController,
+  SkeletonToolController,
+} from "oxalis/controller/combinations/tool_controls";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getActiveNode, getNodePosition } from "oxalis/model/accessors/skeletontracing_accessor";
+import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
 import { getInputCatcherRect, getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
@@ -31,13 +33,13 @@ import {
 } from "oxalis/model/actions/view_mode_actions";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { voxelToUnit } from "oxalis/model/scaleinfo";
-import type { CameraData, OxalisState, StoreAnnotation } from "oxalis/store";
+import type { CameraData, StoreAnnotation, WebknossosState } from "oxalis/store";
 import Store from "oxalis/store";
 import type PlaneView from "oxalis/view/plane_view";
 import * as React from "react";
 import { connect } from "react-redux";
 import * as THREE from "three";
-import type { VoxelSize } from "types/api_flow_types";
+import type { VoxelSize } from "types/api_types";
 
 export function threeCameraToCameraData(camera: THREE.OrthographicCamera): CameraData {
   const { position, up, near, far, left, right, top, bottom } = camera;
@@ -65,9 +67,9 @@ function getTDViewMouseControlsSkeleton(planeView: PlaneView): Record<string, an
       isTouch: boolean,
       activeTool: AnnotationTool,
     ) =>
-      activeTool === AnnotationToolEnum.PROOFREAD
-        ? ProofreadTool.onLeftClick(planeView, pos, plane, event, isTouch)
-        : SkeletonTool.onLeftClick(
+      activeTool === AnnotationTool.PROOFREAD
+        ? ProofreadToolController.onLeftClick(planeView, pos, plane, event, isTouch)
+        : SkeletonToolController.onLeftClick(
             planeView,
             pos,
             event.shiftKey,
@@ -362,7 +364,7 @@ class TDController extends React.PureComponent<Props> {
   }
 }
 
-export function mapStateToProps(state: OxalisState): StateProps {
+export function mapStateToProps(state: WebknossosState): StateProps {
   return {
     voxelSize: state.dataset.dataSource.scale,
     activeTool: state.uiInformation.activeTool,

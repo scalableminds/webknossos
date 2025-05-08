@@ -1,10 +1,10 @@
+import { getAnnotationsForTask } from "admin/api/tasks";
 import {
   getDataset,
   getTracingForAnnotationType,
   getUnversionedAnnotationInformation,
   runNeuronTraining,
-} from "admin/admin_rest_api";
-import { getAnnotationsForTask } from "admin/api/tasks";
+} from "admin/rest_api";
 import {
   Alert,
   Button,
@@ -22,6 +22,7 @@ import { LayerSelection, LayerSelectionFormItem } from "components/layer_selecti
 import { MagSelectionFormItem } from "components/mag_selection";
 import { formatVoxels } from "libs/format_utils";
 import { V3 } from "libs/mjs";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { computeArrayFromBoundingBox } from "libs/utils";
@@ -39,16 +40,15 @@ import { MagInfo } from "oxalis/model/helpers/mag_info";
 import { convertUserBoundingBoxesFromServerToFrontend } from "oxalis/model/reducers/reducer_helpers";
 import { serverVolumeToClientVolumeTracing } from "oxalis/model/reducers/volumetracing_reducer";
 import { Model } from "oxalis/singletons";
-import type { OxalisState, StoreAnnotation, UserBoundingBox, VolumeTracing } from "oxalis/store";
+import type { StoreAnnotation, UserBoundingBox, VolumeTracing } from "oxalis/store";
 import React, { useRef, useState } from "react";
-import { useSelector } from "react-redux";
 import {
   type APIAnnotation,
   type APIDataLayer,
   type APIDataset,
   AnnotationLayerEnum,
   type ServerVolumeTracing,
-} from "types/api_flow_types";
+} from "types/api_types";
 
 const { TextArea } = Input;
 const FormItem = Form.Item;
@@ -135,8 +135,8 @@ const AiModelCommentFormItem = () => (
 );
 
 export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void }) {
-  const annotation = useSelector((state: OxalisState) => state.annotation);
-  const dataset = useSelector((state: OxalisState) => state.dataset);
+  const annotation = useWkSelector((state) => state.annotation);
+  const dataset = useWkSelector((state) => state.dataset);
 
   const getMagsForSegmentationLayer = (_annotationId: string, layerName: string) => {
     const segmentationLayer = getSegmentationLayerByHumanReadableName(

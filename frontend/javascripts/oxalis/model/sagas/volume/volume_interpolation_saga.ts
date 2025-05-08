@@ -8,7 +8,6 @@ import {
   ContourModeEnum,
   InterpolationModeEnum,
   OrthoViews,
-  ToolsWithInterpolationCapabilities,
   type TypedArrayWithoutBigInt,
   type Vector3,
 } from "oxalis/constants";
@@ -35,7 +34,7 @@ import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
 import type { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
 import { Model, api } from "oxalis/singletons";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "oxalis/store";
 import { call, put } from "typed-redux-saga";
 import { requestBucketModificationInVolumeTracing } from "../saga_helpers";
 import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } from "./helpers";
@@ -56,7 +55,7 @@ import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } 
 
 export const MAXIMUM_INTERPOLATION_DEPTH = 100;
 
-function _getInterpolationInfo(state: OxalisState, explanationPrefix: string) {
+function _getInterpolationInfo(state: WebknossosState, explanationPrefix: string) {
   const isAllowed = state.annotation.restrictions.volumeInterpolationAllowed;
   const onlyExtrude = state.userConfiguration.interpolationMode === InterpolationModeEnum.EXTRUDE;
   const volumeTracing = getActiveSegmentationTracing(state);
@@ -267,7 +266,7 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   if (!allowUpdate) return;
 
   const activeTool = yield* select((state) => state.uiInformation.activeTool);
-  if (!ToolsWithInterpolationCapabilities.includes(activeTool)) {
+  if (!activeTool.hasInterpolationCapabilities) {
     return;
   }
 

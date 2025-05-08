@@ -1,4 +1,4 @@
-import { isDatasetAccessibleBySwitching } from "admin/admin_rest_api";
+import { isDatasetAccessibleBySwitching } from "admin/rest_api";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import type { Vector3 } from "oxalis/constants";
@@ -17,13 +17,13 @@ import type DataLayer from "oxalis/model/data_layer";
 import { getTotalSaveQueueLength } from "oxalis/model/reducers/save_reducer";
 import type { TraceOrViewCommand } from "oxalis/store";
 import Store from "oxalis/store";
-import type { APICompoundType } from "types/api_flow_types";
+import type { APICompoundType } from "types/api_types";
 
 import { globalToLayerTransformedPosition } from "./model/accessors/dataset_layer_transformation_accessor";
 import { initialize } from "./model_initialization";
 
 // TODO: Non-reactive
-export class OxalisModel {
+export class WebKnossosModel {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'dataLayers' has no initializer and is no... Remove this comment to see the full error message
   dataLayers: Record<string, DataLayer>;
   maximumTextureCountForLayer: number = 0;
@@ -365,7 +365,7 @@ export class OxalisModel {
     }
   }
 }
-const model = new OxalisModel(); // export the model as a singleton
+const model = new WebKnossosModel(); // export the model as a singleton
 
 export type ModelType = typeof model;
 

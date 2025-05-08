@@ -5,7 +5,7 @@ import PolyhedronRasterizer from "oxalis/model/bucket_data_handling/polyhedron_r
 import { AbstractPrefetchStrategy } from "oxalis/model/bucket_data_handling/prefetch_strategy_plane";
 import type { PullQueueItem } from "oxalis/model/bucket_data_handling/pullqueue";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_types";
 import type { MagInfo } from "../helpers/mag_info";
 
 export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {

@@ -4,12 +4,13 @@ import {
   getAnnotationProto,
   getNewestVersionForAnnotation,
   getUpdateActionLog,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
 import { Button, List, Spin } from "antd";
 import dayjs from "dayjs";
 import { handleGenericError } from "libs/error_handling";
 import { useFetch } from "libs/react_helpers";
 import { useEffectOnlyOnce } from "libs/react_hooks";
+import { useWkSelector } from "libs/react_hooks";
 import { chunkIntoTimeWindows } from "libs/utils";
 import _ from "lodash";
 import { getCreationTimestamp } from "oxalis/model/accessors/annotation_accessor";
@@ -26,14 +27,18 @@ import {
 } from "oxalis/model/sagas/update_actions";
 import { Model } from "oxalis/singletons";
 import { api } from "oxalis/singletons";
-import type { OxalisState, StoreAnnotation } from "oxalis/store";
+import type { StoreAnnotation } from "oxalis/store";
 import Store from "oxalis/store";
 import VersionEntryGroup from "oxalis/view/version_entry_group";
 import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
-import type { APIUpdateActionBatch } from "types/api_flow_types";
+import type { APIUpdateActionBatch } from "types/api_types";
 
-const ENTRIES_PER_PAGE = 5000;
+// This used to be 5000 but we had logs where lots of UPDATE_BUCKET
+// update actions existed in one batch. The JSON payload exceeded a length
+// of 2**29 which led to an empty JSON string because of maximum string length
+// limits by the node engine.
+// Therefore, the value was halved for now.
+const ENTRIES_PER_PAGE = 2500;
 
 type Props = {
   initialAllowUpdate: boolean;
@@ -186,10 +191,10 @@ async function getUpdateActionLogPage(
 }
 
 function VersionList() {
-  const tracingStoreUrl = useSelector((state: OxalisState) => state.annotation.tracingStore.url);
-  const annotationId = useSelector((state: OxalisState) => state.annotation.annotationId);
-  const initialAllowUpdate = useSelector(
-    (state: OxalisState) => state.annotation.restrictions.initialAllowUpdate,
+  const tracingStoreUrl = useWkSelector((state) => state.annotation.tracingStore.url);
+  const annotationId = useWkSelector((state) => state.annotation.annotationId);
+  const initialAllowUpdate = useWkSelector(
+    (state) => state.annotation.restrictions.initialAllowUpdate,
   );
   const newestVersion = useFetch(
     async () => {
@@ -214,7 +219,7 @@ function VersionList() {
 }
 
 function InnerVersionList(props: Props & { newestVersion: number; initialAllowUpdate: boolean }) {
-  const annotation = useSelector((state: OxalisState) => state.annotation);
+  const annotation = useWkSelector((state) => state.annotation);
   const queryClient = useQueryClient();
   // Remember the version with which the version view was opened (
   // the active version could change by the actions of the user).

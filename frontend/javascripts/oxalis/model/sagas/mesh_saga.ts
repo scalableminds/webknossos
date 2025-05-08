@@ -1,32 +1,29 @@
-import { saveAs } from "file-saver";
-import { mergeGeometries } from "libs/BufferGeometryUtils";
-import Deferred from "libs/async/deferred";
-import ErrorHandling from "libs/error_handling";
-import { V3 } from "libs/mjs";
-import { areVec3AlmostEqual, chunkDynamically, sleep } from "libs/utils";
-import _ from "lodash";
-import type { ActionPattern } from "redux-saga/effects";
-import type * as THREE from "three";
-import type { APIDataset, APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
-
 import {
   computeAdHocMesh,
   getBucketPositionsForAdHocMesh,
   getMeshfilesForDatasetLayer,
   meshApi,
   sendAnalyticsEvent,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
+import { saveAs } from "file-saver";
+import { mergeGeometries } from "libs/BufferGeometryUtils";
 import ThreeDMap from "libs/ThreeDMap";
+import Deferred from "libs/async/deferred";
 import processTaskWithPool from "libs/async/task_pool";
 import { computeBvhAsync } from "libs/compute_bvh_async";
 import { getDracoLoader } from "libs/draco";
+import ErrorHandling from "libs/error_handling";
+import { V3 } from "libs/mjs";
 import exportToStl from "libs/stl_exporter";
 import Toast from "libs/toast";
+import { areVec3AlmostEqual, chunkDynamically, sleep } from "libs/utils";
 import Zip from "libs/zipjs_wrapper";
+import _ from "lodash";
 import messages from "messages";
 import { WkDevFlags } from "oxalis/api/wk_dev";
 import type { Vector3 } from "oxalis/constants";
 import { MappingStatusEnum } from "oxalis/constants";
+import CustomLOD from "oxalis/controller/custom_lod";
 import {
   type BufferGeometryWithInfo,
   type UnmergedBufferGeometryWithInfo,
@@ -79,8 +76,11 @@ import { Model } from "oxalis/singletons";
 import Store from "oxalis/store";
 import { stlMeshConstants } from "oxalis/view/right-border-tabs/segments_tab/segments_view";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import type { ActionPattern } from "redux-saga/effects";
+import type * as THREE from "three";
 import { actionChannel, all, call, put, race, take, takeEvery } from "typed-redux-saga";
-import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { APIDataset, APIMeshFile, APISegmentationLayer } from "types/api_types";
+import type { AdditionalCoordinate } from "types/api_types";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import type { FlycamAction } from "../actions/flycam_actions";
 import type {
@@ -930,10 +930,18 @@ function* _getChunkLoadingDescriptors(
     availableChunksMap[lodIndex] = chunks?.chunks;
     loadingOrder.push(lodIndex);
   });
+  const currentLODGroup: CustomLOD =
+    (yield* call(
+      {
+        context: segmentMeshController,
+        fn: segmentMeshController.getLODGroupOfLayer,
+      },
+      segmentationLayer.name,
+    )) ?? new CustomLOD();
   const currentLODIndex = yield* call(
     {
-      context: segmentMeshController.meshesLODRootGroup,
-      fn: segmentMeshController.meshesLODRootGroup.getCurrentLOD,
+      context: currentLODGroup,
+      fn: currentLODGroup.getCurrentLOD,
     },
     Math.max(...loadingOrder),
   );

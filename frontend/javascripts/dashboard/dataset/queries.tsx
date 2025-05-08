@@ -1,11 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  type DatasetUpdater,
-  getDataset,
-  getDatasets,
-  updateDatasetPartial,
-} from "admin/admin_rest_api";
-import {
   createFolder,
   deleteFolder,
   getFolder,
@@ -13,6 +7,7 @@ import {
   moveFolder,
   updateFolder,
 } from "admin/api/folders";
+import { type DatasetUpdater, getDataset, getDatasets, updateDatasetPartial } from "admin/rest_api";
 import { handleGenericError } from "libs/error_handling";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
@@ -26,7 +21,7 @@ import {
   type FolderItem,
   type FolderUpdater,
   convertDatasetToCompact,
-} from "types/api_flow_types";
+} from "types/api_types";
 
 export const SEARCH_RESULTS_LIMIT = 100;
 export const MINIMUM_SEARCH_QUERY_LENGTH = 3;

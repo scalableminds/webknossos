@@ -415,15 +415,15 @@ export function getHideUnregisteredSegmentsForVisibleSegmentationLayer(
   const layer = getVisibleSegmentationLayer(state);
 
   if (layer == null) {
-    return true;
+    return false;
   }
 
   if (layer.tracingId != null) {
     const { hideUnregisteredSegments } = getVolumeTracingById(state.annotation, layer.tracingId);
-    return hideUnregisteredSegments ?? true;
+    return hideUnregisteredSegments;
   }
 
-  return true;
+  return state.localSegmentationData[layer.name].hideUnregisteredSegments;
 }
 
 export function getHideUnregisteredSegmentsForLayer(
@@ -433,9 +433,7 @@ export function getHideUnregisteredSegmentsForLayer(
   const layer = getSegmentationLayerByName(state.dataset, layerName);
 
   if (layer.tracingId != null) {
-    return (
-      getVolumeTracingById(state.annotation, layer.tracingId).hideUnregisteredSegments ?? false
-    );
+    return getVolumeTracingById(state.annotation, layer.tracingId).hideUnregisteredSegments;
   }
 
   return state.localSegmentationData[layer.name].hideUnregisteredSegments;

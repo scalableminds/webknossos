@@ -182,6 +182,8 @@ export const convertCellIdToRGB: ShaderModule = {
           // Segment should have default color, but should be (in)visible (depending on hideUnregisteredSegments)
           alpha = hideUnregisteredSegments ? 1. : 0.;
         } else {
+          // The blue channel encodes (via even/odd) the alpha value. See
+          // LayerRenderingManager.listenToCustomSegmentColors for details.
           if (mod(255. * customColor.b, 2.) - 0.5 < 0.) {
             alpha = 0.;
           }

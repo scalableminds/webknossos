@@ -4,7 +4,7 @@ import LatestTaskExecutor, { SKIPPED_TASK_REASON } from "libs/async/latest_task_
 import { CuckooTableVec3 } from "libs/cuckoo/cuckoo_table_vec3";
 import { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
 import DiffableMap from "libs/diffable_map";
-import { M4x4, type Matrix4x4 } from "libs/mjs";
+import { M4x4, V3, type Matrix4x4 } from "libs/mjs";
 import Toast from "libs/toast";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
@@ -368,31 +368,67 @@ export default class LayerRenderingManager {
             return;
           }
 
+          /*
+           * For each segment, we have to take care that it is
+           * rendered with the correct color.
+           * In general, segments have only be added to the cuckoo table,
+           * if they have a custom color and/or a custom visibility.
+           * If they have a custom visibility, but not a custom color
+           * [0, 0, 0] is used as a special value for that.
+           * If they have a custom color, the visibility is additionally encoded
+           * in the blue channel of the RGB value. See below for details.
+           */
           try {
             if (!isVisible) {
               if (color == null) {
                 if (hideUnregisteredSegments) {
-                  // remove from cuckoo
+                  // Remove from cuckoo, because the rendering defaults to
+                  // hiding unregistered segments.
                   cuckoo.unset(id);
                 } else {
-                  // set to [0, 0, 0] because it should be INVISIBLE
+                  // Explicitly set to [0, 0, 0] because it should be invisible
+                  // (default color is chosen by shader on hover).
+                  // [0, 0, 0] encodes that this segment is only listed so that
+                  // the hideUnregisteredSegments behavior does not apply for it.
+                  // No actual color is encoded so that the default color is used.
                   cuckoo.set(id, [0, 0, 0]);
                 }
               } else {
-                // set to adapted color because it should be INVISIBLE
-                const blueChannel = 2 * Math.floor((255 * color[2]) / 2);
-                cuckoo.set(id, [255 * color[0], 255 * color[1], blueChannel]);
+                // The segment has a special color. Even though, the segment should
+                // be invisible, the shader should still be able to render the segment
+                // when it's hovered. Therefore, we encode both the actual color and the
+                // invisibility state within the color attribute.
+                // This is done by effectively halving the precision of the blue channel.
+                // All even blue values encode "invisible". Odd values encode "visible".
+                if (V3.equals(color, [0, 0, 0])) {
+                  // If the user provided [0, 0, 0] as the segment's color, we have to take
+                  // care so that this does not get interpreted as "use the default color".
+                  // For that reason, we cast that color value to [0, 0, 2].
+                  cuckoo.set(id, [0, 0, 2]);
+                } else {
+                  const blueChannel = 2 * Math.floor((255 * color[2]) / 2);
+                  cuckoo.set(id, [255 * color[0], 255 * color[1], blueChannel]);
+                }
               }
             } else if (color != null) {
-              // set to adapted color because it should be VISIBLE
+              // The segment should be visible and it has a custom color.
+              // We employ the same trick as above to encode color and visibility.
+              // The special value of [0, 0, 0] won't be used here ever, because
+              // of the + 1.
               const blueChannel = 2 * Math.floor((255 * color[2]) / 2) + 1;
               cuckoo.set(id, [255 * color[0], 255 * color[1], blueChannel]);
             } else {
+              // The segment should be visible and no custom color exists for it.
               if (hideUnregisteredSegments) {
-                // set to [0, 0, 0] because it should be VISIBLE
+                // Explicitly set to [0, 0, 0] because it should be visible
+                // (default color is chosen by shader).
+                // [0, 0, 0] encodes that this segment is only listed so that
+                // the hideUnregisteredSegments behavior does not apply for it.
+                // No actual color is encoded so that the default color is used.
                 cuckoo.set(id, [0, 0, 0]);
               } else {
-                // remove from cuckoo
+                // Remove from cuckoo, because the rendering defaults to
+                // showing unregistered segments.
                 cuckoo.unset(id);
               }
             }

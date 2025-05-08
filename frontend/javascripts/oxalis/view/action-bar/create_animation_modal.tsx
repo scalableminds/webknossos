@@ -28,6 +28,7 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
+import { getSegmentColorAsRGBA } from "oxalis/model/accessors/volumetracing_accessor";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { Mesh } from "three";
 import {
@@ -250,7 +251,6 @@ function CreateAnimationModal(props: Props) {
 
     const meshes: RenderAnimationOptions["meshes"] = layerNames.flatMap((layerName) => {
       const meshInfos = state.localSegmentationData[layerName]?.meshes?.[axis] || {};
-      const segments = state.localSegmentationData[layerName]?.segments;
 
       const layer = getLayerByName(state.dataset, layerName) as APISegmentationLayer;
       const fullLayerName = layer.fallbackLayerInfo?.name || layerName;
@@ -263,12 +263,12 @@ function CreateAnimationModal(props: Props) {
       return Object.values(meshInfos)
         .filter((meshInfo: MeshInformation) => meshInfo.isVisible)
         .flatMap((meshInfo: MeshInformation) => {
-          const segment = segments?.getNullable(meshInfo.segmentId);
+          const segmentColorRGBA = getSegmentColorAsRGBA(state, meshInfo.segmentId, layerName);
           return {
             layerName: fullLayerName,
             tracingId: layer.tracingId || null,
             adhocMag,
-            color: segment?.color || null,
+            color: segmentColorRGBA,
             ...meshInfo,
           };
         });

@@ -90,9 +90,9 @@ const makeLocalMin = (min: Vector3, mag: Vector3): Vector3 => {
 };
 const makeLocalMax = (max: Vector3, mag: Vector3): Vector3 => {
   return [
-    zeroToBucketWidth(mod(Math.floor(max[0] / mag[0]), Constants.BUCKET_WIDTH)),
-    zeroToBucketWidth(mod(Math.floor(max[1] / mag[1]), Constants.BUCKET_WIDTH)),
-    zeroToBucketWidth(mod(Math.floor(max[2] / mag[2]), Constants.BUCKET_WIDTH)),
+    zeroToBucketWidth(mod(Math.ceil(max[0] / mag[0]), Constants.BUCKET_WIDTH)),
+    zeroToBucketWidth(mod(Math.ceil(max[1] / mag[1]), Constants.BUCKET_WIDTH)),
+    zeroToBucketWidth(mod(Math.ceil(max[2] / mag[2]), Constants.BUCKET_WIDTH)),
   ];
 };
 

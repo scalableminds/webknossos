@@ -401,6 +401,7 @@ export default class SegmentMeshController {
       [1, -1, -1],
       [-1, -1, -1],
     ];
+
     const directionalLights: THREE.DirectionalLight[] = [];
 
     lightPositions.forEach((pos, index) => {

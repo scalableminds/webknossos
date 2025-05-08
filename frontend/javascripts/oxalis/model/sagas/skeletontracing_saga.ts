@@ -61,6 +61,7 @@ import {
   updateTreeGroups,
   updateTreeVisibility,
   updateUserBoundingBoxesInSkeletonTracing,
+  updateUserStateSkeleton,
 } from "oxalis/model/sagas/update_actions";
 import { api } from "oxalis/singletons";
 import type {
@@ -628,13 +629,19 @@ export function* diffSkeletonTracing(
   }
 
   if (updateTracingPredicate(prevSkeletonTracing, skeletonTracing, prevFlycam, flycam)) {
+    // todop: use UpdateCameraAnnotationAction instead (somewhere else probably)
     yield updateSkeletonTracing(
-      skeletonTracing,
+      {
+        tracingId: skeletonTracing.tracingId,
+        activeNodeId: undefined,
+      },
       V3.floor(getPosition(flycam)),
       flycam.additionalCoordinates,
       getRotation(flycam),
       flycam.zoomStep,
     );
+
+    yield updateUserStateSkeleton(skeletonTracing);
   }
 
   if (!_.isEqual(prevSkeletonTracing.userBoundingBoxes, skeletonTracing.userBoundingBoxes)) {

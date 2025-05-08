@@ -1,11 +1,11 @@
+import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import {
   FillModeEnum,
   InterpolationModeEnum,
   OverwriteModeEnum,
   TDViewDisplayModeEnum,
-} from "oxalis/constants";
-import { getMaximumBrushSize } from "oxalis/model/accessors/volumetracing_accessor";
-import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
+} from "viewer/constants";
+import { getMaximumBrushSize } from "viewer/model/accessors/volumetracing_accessor";
 
 export const userSettings = {
   clippingDistance: {

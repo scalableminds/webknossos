@@ -1,6 +1,6 @@
 import Request from "libs/request";
-import type { Vector3, Vector4 } from "oxalis/constants";
 import type { APIDataSourceId } from "types/api_types";
+import type { Vector3, Vector4 } from "viewer/constants";
 import { doWithToken } from "./token";
 
 export type MeshChunk = {

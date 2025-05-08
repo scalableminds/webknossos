@@ -1,4 +1,4 @@
-import type { PartialDatasetConfiguration } from "oxalis/store";
+import type { PartialDatasetConfiguration } from "viewer/store";
 import {
   compareScreenshot,
   getUrlForScreenshotTests,

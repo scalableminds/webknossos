@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { getMagnificationUnion } from "oxalis/model/accessors/dataset_accessor";
-import type { Vector3 } from "oxalis/constants";
+import { getMagnificationUnion } from "viewer/model/accessors/dataset_accessor";
+import type { Vector3 } from "viewer/constants";
 import type { APIDataset } from "types/api_types";
-import { convertToDenseMag } from "oxalis/model/helpers/mag_info";
+import { convertToDenseMag } from "viewer/model/helpers/mag_info";
 
 describe("Model resolutions", () => {
   it("Simple convertToDenseMag", () => {

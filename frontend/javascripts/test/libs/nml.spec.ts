@@ -1,16 +1,16 @@
 import _ from "lodash";
 import update from "immutability-helper";
-import type { Node, SkeletonTracing, WebknossosState } from "oxalis/store";
-import defaultState from "oxalis/default_state";
+import type { Node, SkeletonTracing, WebknossosState } from "viewer/store";
+import defaultState from "viewer/default_state";
 import DiffableMap from "libs/diffable_map";
-import EdgeCollection from "oxalis/model/edge_collection";
-import { findGroup } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import EdgeCollection from "viewer/model/edge_collection";
+import { findGroup } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { describe, it, expect } from "vitest";
-import { TreeTypeEnum } from "oxalis/constants";
-import { addTreesAndGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
-import { serializeToNml, getNmlName, parseNml } from "oxalis/model/helpers/nml_helpers";
-import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
-import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import { TreeTypeEnum } from "viewer/constants";
+import { addTreesAndGroupsAction } from "viewer/model/actions/skeletontracing_actions";
+import { serializeToNml, getNmlName, parseNml } from "viewer/model/helpers/nml_helpers";
+import SkeletonTracingReducer from "viewer/model/reducers/skeletontracing_reducer";
+import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { annotation as TASK_ANNOTATION } from "../fixtures/tasktracing_server_objects";
 import { buildInfo as BUILD_INFO } from "../fixtures/build_info";
 

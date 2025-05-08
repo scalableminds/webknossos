@@ -5,7 +5,7 @@ import {
   tracing as TRACING,
   annotation as ANNOTATION,
 } from "../fixtures/volumetracing_server_objects";
-import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
+import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 
 // All the mocking is done in the helpers file, so it can be reused for both skeleton and volume API
 describe("API Volume", () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3 } from "viewer/constants";
 import { almostEqual } from "test/libs/transform_spec_helpers";
 import {
   chainTransforms,
@@ -7,7 +7,7 @@ import {
   createThinPlateSplineTransform,
   invertTransform,
   transformPointUnscaled,
-} from "oxalis/model/helpers/transformation_helpers";
+} from "viewer/model/helpers/transformation_helpers";
 
 const EPSILON = 0.001;
 

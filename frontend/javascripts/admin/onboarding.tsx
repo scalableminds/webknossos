@@ -22,12 +22,12 @@ import LinkButton from "components/link_button";
 import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
 import features from "features";
 import Toast from "libs/toast";
-import type { WebknossosState } from "oxalis/store";
-import Store from "oxalis/store";
 import React, { useState } from "react";
 import { connect } from "react-redux";
 import { Link, type RouteComponentProps, withRouter } from "react-router-dom";
 import type { APIDataStore, APIUser } from "types/api_types";
+import type { WebknossosState } from "viewer/store";
+import Store from "viewer/store";
 
 const { Step } = Steps;
 const FormItem = Form.Item;

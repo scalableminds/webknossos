@@ -12,11 +12,11 @@ import type { TooltipPlacement } from "antd/lib/tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import { rgbToHex } from "libs/utils";
 import _ from "lodash";
-import { PRIMARY_COLOR } from "oxalis/constants";
-import { SwitchSetting } from "oxalis/view/components/setting_input_views";
 import React from "react";
 import { Link } from "react-router-dom";
 import type { APIOrganization, APIUser } from "types/api_types";
+import { PRIMARY_COLOR } from "viewer/constants";
+import { SwitchSetting } from "viewer/view/components/setting_input_views";
 
 const PRIMARY_COLOR_HEX = rgbToHex(PRIMARY_COLOR);
 

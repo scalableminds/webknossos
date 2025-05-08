@@ -59,9 +59,6 @@ import { Vector3Input } from "libs/vector_input";
 import Zip from "libs/zipjs_wrapper";
 import _ from "lodash";
 import messages from "messages";
-import { AllUnits, LongUnitToShortUnitMap, UnitLong, type Vector3 } from "oxalis/constants";
-import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
-import type { WebknossosState } from "oxalis/store";
 import { type FileWithPath, useDropzone } from "react-dropzone";
 import { Link, type RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
@@ -73,6 +70,9 @@ import {
   type APIUser,
 } from "types/api_types";
 import { syncValidator } from "types/validation";
+import { AllUnits, LongUnitToShortUnitMap, UnitLong, type Vector3 } from "viewer/constants";
+import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
+import type { WebknossosState } from "viewer/store";
 import { FormItemWithInfo, confirmAsync } from "../../dashboard/dataset/helper_components";
 
 const FormItem = Form.Item;

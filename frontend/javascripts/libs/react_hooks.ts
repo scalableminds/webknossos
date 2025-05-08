@@ -1,9 +1,9 @@
 import _ from "lodash";
-import constants from "oxalis/constants";
-import type { WebknossosState } from "oxalis/store";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { type EqualityFn, useSelector } from "react-redux";
 import { useLocation } from "react-router-dom";
+import constants from "viewer/constants";
+import type { WebknossosState } from "viewer/store";
 import { KEYBOARD_BUTTON_LOOP_INTERVAL } from "./input";
 
 /**

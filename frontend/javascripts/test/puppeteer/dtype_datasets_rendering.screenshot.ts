@@ -1,4 +1,4 @@
-import type { DatasetLayerConfiguration, PartialDatasetConfiguration } from "oxalis/store";
+import type { DatasetLayerConfiguration, PartialDatasetConfiguration } from "viewer/store";
 import {
   createAnnotationForDatasetScreenshot,
   getNewPage,
@@ -20,15 +20,15 @@ import _ from "lodash";
 import {
   getDtypeConfigForElementClass,
   getSupportedValueRangeForElementClass,
-} from "oxalis/model/bucket_data_handling/data_rendering_logic";
+} from "viewer/model/bucket_data_handling/data_rendering_logic";
 import {
   updateLayerSettingAction,
   updateTemporarySettingAction,
-} from "oxalis/model/actions/settings_actions";
-import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
-import type { Action } from "oxalis/model/actions/actions";
+} from "viewer/model/actions/settings_actions";
+import { setPositionAction, setZoomStepAction } from "viewer/model/actions/flycam_actions";
+import type { Action } from "viewer/model/actions/actions";
 import { describe, it, beforeAll, beforeEach, afterEach, expect, test } from "vitest";
-import { setHideUnregisteredSegmentsAction } from "oxalis/model/actions/volumetracing_actions";
+import { setHideUnregisteredSegmentsAction } from "viewer/model/actions/volumetracing_actions";
 
 const testColor = true;
 const testSegmentation = true;

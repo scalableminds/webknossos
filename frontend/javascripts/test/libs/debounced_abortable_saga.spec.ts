@@ -1,4 +1,4 @@
-import type { Saga } from "oxalis/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect-generators";
 import { sleep } from "libs/utils";
 import { describe, it, expect } from "vitest";
 import _ from "lodash";

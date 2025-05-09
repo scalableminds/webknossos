@@ -4,10 +4,10 @@ import { useWkSelector } from "libs/react_hooks";
 import { ToastContextMountRoot } from "libs/toast";
 import window from "libs/window";
 import _ from "lodash";
-import type { Theme } from "oxalis/store";
 import type React from "react";
 import { useEffect } from "react";
 import type { APIUser } from "types/api_types";
+import type { Theme } from "viewer/store";
 
 const ColorWKBlue = "#5660ff"; // WK ~blue/purple
 const ColorWKLinkHover = "#a8b4ff"; // slightly brighter WK Blue

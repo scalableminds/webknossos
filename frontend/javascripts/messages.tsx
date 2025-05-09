@@ -1,10 +1,10 @@
 import _ from "lodash";
-import type { Vector4 } from "oxalis/constants";
+import type { Vector4 } from "viewer/constants";
 import type {
   DatasetConfiguration,
   DatasetLayerConfiguration,
   UserConfiguration,
-} from "oxalis/store";
+} from "viewer/store";
 
 export type RecommendedConfiguration = Partial<
   UserConfiguration &

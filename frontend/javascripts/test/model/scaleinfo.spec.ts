@@ -1,5 +1,5 @@
-import { UnitLong, UnitShort } from "oxalis/constants";
-import { convertVoxelSizeToUnit } from "oxalis/model/scaleinfo";
+import { UnitLong, UnitShort } from "viewer/constants";
+import { convertVoxelSizeToUnit } from "viewer/model/scaleinfo";
 import { describe, it, expect } from "vitest";
 
 describe("Format Utils", () => {

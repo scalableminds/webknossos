@@ -215,10 +215,17 @@ function handleUpdateSegment(state: WebknossosState, action: UpdateSegmentAction
 }
 
 function expandSegmentParents(state: WebknossosState, action: ClickSegmentAction) {
-  if (action.layerName == null) return state;
+  const maybeVolumeLayer =
+    action.layerName != null
+      ? getLayerByName(state.dataset, action.layerName)
+      : getVisibleSegmentationLayer(state);
+
+  const layerName = maybeVolumeLayer?.name;
+  if (layerName == null) return state;
+
   const getNewGroups = () => {
     const { segments, segmentGroups } = getVisibleSegments(state);
-    if (action.layerName == null || segments == null) return segmentGroups;
+    if (segments == null) return segmentGroups;
     const { segmentId } = action;
     const segmentForId = segments.getNullable(segmentId);
     if (segmentForId == null) return segmentGroups;
@@ -238,7 +245,7 @@ function expandSegmentParents(state: WebknossosState, action: ClickSegmentAction
       return group;
     });
   };
-  return setSegmentGroups(state, action.layerName, getNewGroups());
+  return setSegmentGroups(state, layerName, getNewGroups());
 }
 
 export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing): VolumeTracing {

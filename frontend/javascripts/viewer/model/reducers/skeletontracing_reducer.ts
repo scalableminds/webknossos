@@ -523,6 +523,17 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
       return setExpandedTreeGroups(state, (group: TreeGroup) => expandedGroups.has(group.groupId));
     }
 
+    case "EXPAND_CORRESPONDING_TREE_GROUP": {
+      const { tree } = action;
+      if (tree.groupId == null) {
+        return state;
+      }
+      return setExpandedTreeGroups(
+        state,
+        (group: TreeGroup) => group.isExpanded || group.groupId === tree.groupId,
+      );
+    }
+
     case "TOGGLE_ALL_TREES": {
       return toggleAllTreesReducer(state, skeletonTracing);
     }

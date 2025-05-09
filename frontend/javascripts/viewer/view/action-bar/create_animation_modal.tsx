@@ -37,6 +37,7 @@ import {
 } from "viewer/model/accessors/dataset_accessor";
 import { getAdditionalCoordinatesAsString } from "viewer/model/accessors/flycam_accessor";
 import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_accessor";
+import { getSegmentColorAsRGBA } from "viewer/model/accessors/volumetracing_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import { BoundingBoxSelection } from "./starting_job_modals";
 
@@ -262,10 +263,12 @@ function CreateAnimationModal(props: Props) {
       return Object.values(meshInfos)
         .filter((meshInfo: MeshInformation) => meshInfo.isVisible)
         .flatMap((meshInfo: MeshInformation) => {
+          const segmentColorRGBA = getSegmentColorAsRGBA(state, meshInfo.segmentId, layerName);
           return {
             layerName: fullLayerName,
             tracingId: layer.tracingId || null,
             adhocMag,
+            color: segmentColorRGBA,
             ...meshInfo,
           };
         });

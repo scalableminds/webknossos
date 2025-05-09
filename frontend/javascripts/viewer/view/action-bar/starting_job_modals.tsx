@@ -84,7 +84,6 @@ const { ThinSpace } = Unicode;
 // The following minimal bounding box extents and mean voxel sizes are based on the default model that is used for neuron and mitochondria segmentation.
 // Thus when changing the default model, consider changing these values as well.
 // See https://github.com/scalableminds/webknossos/issues/8198#issuecomment-2782684436
-
 const MIN_BBOX_EXTENT: Record<ModalJobTypes, Vector3> = {
   infer_neurons: [16, 16, 4],
   infer_nuclei: [4, 4, 4],
@@ -727,7 +726,7 @@ function useCurrentlySelectedBoundingBox(
   return currentlySelectedBoundingBox;
 }
 
-// this function mirrors the selection of the mag
+// This function mirrors the selection of the mag
 // in voxelytics/worker/job_utils/voxelytics_utils.py select_mag_for_model_prediction
 const getBestFittingMagComparedToTrainingDS = (
   colorLayer: APIDataLayer,

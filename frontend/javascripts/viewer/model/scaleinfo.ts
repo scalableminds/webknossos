@@ -56,6 +56,6 @@ export function convertVoxelSizeToUnit(
 ): Vector3 {
   const shortUnit = LongUnitToShortUnitMap[voxelSize.unit];
   const conversionFactor = UnitsMap[shortUnit] / UnitsMap[newUnit];
-  const voxelSizeInNm = voxelSize.factor.map((value) => value * conversionFactor) as Vector3;
-  return voxelSizeInNm;
+  const voxelSizeInNewUnit = voxelSize.factor.map((value) => value * conversionFactor) as Vector3;
+  return voxelSizeInNewUnit;
 }

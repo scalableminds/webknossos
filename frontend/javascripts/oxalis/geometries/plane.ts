@@ -1,3 +1,4 @@
+import { V3 } from "libs/mjs";
 import _ from "lodash";
 import type { OrthoView, Vector3 } from "oxalis/constants";
 import constants, {
@@ -43,7 +44,7 @@ class Plane {
   lastScaleFactors: [number, number];
   baseRotation: THREE.Euler;
   storePropertyUnsubscribes: Array<() => void> = [];
-  datasetScaleFactor: THREE.Vector3 = new THREE.Vector3(1, 1, 1);
+  datasetScaleFactor: Vector3 = [1, 1, 1];
 
   constructor(planeID: OrthoView) {
     this.planeID = planeID;
@@ -151,8 +152,12 @@ class Plane {
     this.lastScaleFactors[0] = xFactor;
     this.lastScaleFactors[1] = yFactor;
     // Account for the dataset scale to match one world space coordinate to one dataset scale unit.
-    const scaleVector = new THREE.Vector3(xFactor, yFactor, 1).multiply(this.datasetScaleFactor);
-    this.getMeshes().map((mesh) => mesh.scale.copy(scaleVector));
+    const scaleVector: Vector3 = [
+      xFactor * this.datasetScaleFactor[0],
+      yFactor * this.datasetScaleFactor[1],
+      1 * this.datasetScaleFactor[2],
+    ];
+    this.getMeshes().map((mesh) => mesh.scale.set(...scaleVector));
   }
 
   setBaseRotation = (rotVec: THREE.Euler): void => {
@@ -172,14 +177,14 @@ class Plane {
   // shader)
   setPosition = (pos: Vector3, originalPosition?: Vector3): void => {
     // TODOM: Write proper reasoning comment.
-    const scaledPosition = new THREE.Vector3(...pos).multiply(this.datasetScaleFactor);
-    this.TDViewBorders.position.set(scaledPosition.x, scaledPosition.y, scaledPosition.z);
-    this.crosshair[0].position.set(scaledPosition.x, scaledPosition.y, scaledPosition.z);
-    this.crosshair[1].position.set(scaledPosition.x, scaledPosition.y, scaledPosition.z);
-    this.plane.position.set(scaledPosition.x, scaledPosition.y, scaledPosition.z);
+    const scaledPosition = V3.multiply(pos, this.datasetScaleFactor);
+    this.TDViewBorders.position.set(...scaledPosition);
+    this.crosshair[0].position.set(...scaledPosition);
+    this.crosshair[1].position.set(...scaledPosition);
+    this.plane.position.set(...scaledPosition);
 
     if (originalPosition == null) {
-      this.plane.material.setGlobalPosition(scaledPosition.x, scaledPosition.y, scaledPosition.z);
+      this.plane.material.setGlobalPosition(...scaledPosition);
     } else {
       this.plane.material.setGlobalPosition(
         originalPosition[0],
@@ -211,7 +216,7 @@ class Plane {
     this.storePropertyUnsubscribes = [
       listenToStoreProperty(
         (storeState) => storeState.dataset.dataSource.scale.factor,
-        (scaleFactor) => (this.datasetScaleFactor = new THREE.Vector3(...scaleFactor)),
+        (scaleFactor) => (this.datasetScaleFactor = scaleFactor),
       ),
     ];
   }

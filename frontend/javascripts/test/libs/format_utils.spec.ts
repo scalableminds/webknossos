@@ -1,11 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { UnitShort, Unicode, UnitLong } from "oxalis/constants";
-import {
-  formatNumberToArea,
-  formatNumberToLength,
-  formatNumberToVolume,
-  convertVoxelSizeToUnit,
-} from "libs/format_utils";
+import { formatNumberToArea, formatNumberToLength, formatNumberToVolume } from "libs/format_utils";
+import { convertVoxelSizeToUnit } from "oxalis/model/scaleinfo";
 
 const { ThinSpace } = Unicode;
 

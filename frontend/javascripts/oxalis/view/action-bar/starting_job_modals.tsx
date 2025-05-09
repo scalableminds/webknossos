@@ -87,16 +87,24 @@ const { ThinSpace } = Unicode;
 const MIN_BBOX_EXTENT: Record<ModalJobTypes, Vector3> = {
   infer_neurons: [16, 16, 4],
   infer_nuclei: [4, 4, 4],
-  infer_mitochondria: [16, 16, 4], //TODO_c
+  infer_mitochondria: [4, 4, 4],
 };
 
 const MEAN_VX_SIZE: Record<APIJobType.INFER_NEURONS | APIJobType.INFER_NUCLEI, Vector3> = {
   infer_neurons: [7.96, 7.96, 31.2],
   infer_nuclei: [179.84, 179.84, 224.0],
-  // "infer_mitochondria" trained with finest available mag
+  // "infer_mitochondria" infers on finest available mag
 };
 
-const MIN_DATASET_RATIO_COMPARED_TO_MIN_BBOX = 2; // dataset needs to be x times the size of the minimal bounding box
+const getMinimumDSSize = (jobType: ModalJobTypes) => {
+  switch (jobType) {
+    case APIJobType.INFER_NEURONS:
+    case APIJobType.INFER_NUCLEI:
+      return MIN_BBOX_EXTENT[jobType].map((dim) => dim * 2);
+    case APIJobType.INFER_MITOCHONDRIA:
+      return MIN_BBOX_EXTENT[jobType].map((dim) => dim + 80);
+  }
+}
 
 type ModalJobTypes =
   | APIJobType.INFER_NEURONS
@@ -104,9 +112,7 @@ type ModalJobTypes =
   | APIJobType.INFER_MITOCHONDRIA;
 
 export type StartAIJobModalState =
-  | APIJobType.INFER_NEURONS
-  | APIJobType.INFER_NUCLEI
-  | APIJobType.INFER_MITOCHONDRIA
+  ModalJobTypes
   | "invisible";
 
 // "materialize_volume_annotation" is only used in this module
@@ -741,7 +747,6 @@ const getBestFittingMagComparedToTrainingDS = (
   ];
 
   const datasetScaleInNm = convertVoxelSizeToUnit(datasetScaleMag1);
-  console.log(datasetScaleInNm);
 
   for (const mag of colorLayer.resolutions) {
     const diff = datasetScaleInNm.map(
@@ -753,29 +758,27 @@ const getBestFittingMagComparedToTrainingDS = (
     }
   }
   const maxDistance = Math.max(...bestDifference);
-  const resultText = `Using mag [${closestMagOfCurrentDS}]. This results in an effective scale of [${datasetScaleInNm.map((scale, i) => Math.round(scale * closestMagOfCurrentDS[i]))}](compared to scale [${modelScale.map((scale) => Math.round(scale))}] used during training).`;
+  const resultText = `Using mag [${closestMagOfCurrentDS}]. This results in an effective scale of [${datasetScaleInNm.map((scale, i) => Math.round(scale * closestMagOfCurrentDS[i]))}] (compared to scale [${modelScale.map((scale) => Math.round(scale))}] used during training).`;
   if (maxDistance > Math.log2(2)) {
     Toast.warning(resultText);
   } else {
     Toast.info(resultText);
+    console.info(resultText);
   }
   return closestMagOfCurrentDS;
 };
 
 const isBBoxTooSmall = (
   bbox: Vector3,
-  segmentationType:
-    | APIJobType.INFER_NEURONS
-    | APIJobType.INFER_MITOCHONDRIA
-    | APIJobType.INFER_NUCLEI,
+  segmentationType: ModalJobTypes,
   mag: Vector3,
   bboxOrDS: "bbox" | "dataset" = "bbox",
 ) => {
-  const minBBoxExtentInModelMag = MIN_BBOX_EXTENT[segmentationType];
-  const extentFactor = bboxOrDS === "dataset" ? MIN_DATASET_RATIO_COMPARED_TO_MIN_BBOX : 1;
+  const minBBoxExtentInModelMag = bboxOrDS === "dataset" ? getMinimumDSSize(segmentationType) : MIN_BBOX_EXTENT[segmentationType];
   const minExtentInMag1 = minBBoxExtentInModelMag.map((extent, i) =>
-    Math.round(extent * mag[i] * extentFactor),
+    Math.round(extent * mag[i]),
   ) as Vector3;
+  console.log(minExtentInMag1, minBBoxExtentInModelMag)
   for (let i = 0; i < 3; i++) {
     if (bbox[i] < minExtentInMag1[i]) {
       const boundingBoxOrDSMessage = bboxOrDS === "bbox" ? "bounding box" : "dataset";
@@ -792,10 +795,7 @@ const isDatasetOrBoundingBoxTooSmall = (
   bbox: Vector6,
   mag: Vector3,
   colorLayer: APIDataLayer,
-  segmentationType:
-    | APIJobType.INFER_NEURONS
-    | APIJobType.INFER_MITOCHONDRIA
-    | APIJobType.INFER_NUCLEI,
+  segmentationType: ModalJobTypes,
 ): boolean => {
   const datasetExtent: Vector3 = [
     colorLayer.boundingBox.width,

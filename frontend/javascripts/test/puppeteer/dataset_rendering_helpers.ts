@@ -3,14 +3,14 @@ import urljoin from "url-join";
 
 import type { Browser, Page } from "puppeteer-core";
 import puppeteer from "puppeteer-core";
-import type { PartialDatasetConfiguration } from "oxalis/store";
+import type { PartialDatasetConfiguration } from "viewer/store";
 import mergeImg from "merge-img";
 import pixelmatch from "pixelmatch";
 import type { RequestOptions } from "libs/request";
 import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
-import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
+import { createExplorational, updateDatasetConfiguration } from "../../admin/rest_api";
 import { sleep } from "libs/utils";
-import type { APIAnnotation } from "types/api_flow_types";
+import type { APIAnnotation } from "types/api_types";
 import { vi, type TestContext } from "vitest";
 
 vi.mock("libs/request", async (importOriginal) => {

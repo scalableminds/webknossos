@@ -23,6 +23,15 @@ const tokenUserD =
   "4e88db86331a38c21a0b235794b9e459856490d70408bcffb767f64ade0f83d2bdb4c4e181b9a9a30cdece7cb7c65208cc43b6c1bb5987f5ece00d348b1a905502a266f8fc64f0371cd6559393d72e031d0c2d0cabad58cccf957bb258bc86f05b5dc3d4fff3d5e3d9c0389a6027d861a21e78e3222fb6c5b7944520ef21764e";
 const tokenUserE =
   "5f88db86331a38c21a0b235794b9e459856490d70408bcffb767f64ade0f83d2bdb4c4e181b9a9a30cdece7cb7c65208cc43b6c1bb5987f5ece00d348b1a905502a266f8fc64f0371cd6559393d72e031d0c2d0cabad58cccf957bb258bc86f05b5dc3d4fff3d5e3d9c0389a6027d861a21e78e3222fb6c5b7944520ef21765e";
+const tokenUserEInOrgaX =
+  "6088db86331a38c21a0b235794b9e459856490d70408bcffb767f64ade0f83d2bdb4c4e181b9a9a30cdece7cb7c65208cc43b6c1bb5987f5ece00d348b1a905502a266f8fc64f0371cd6559393d72e031d0c2d0cabad58cccf957bb258bc86f05b5dc3d4fff3d5e3d9c0389a6027d861a21e78e3222fb6c5b7944520ef21766e";
+const tokenUserF =
+  "7188db86331a38c21a0b235794b9e459856490d70408bcffb767f64ade0f83d2bdb4c4e181b9a9a30cdece7cb7c65208cc43b6c1bb5987f5ece00d348b1a905502a266f8fc64f0371cd6559393d72e031d0c2d0cabad58cccf957bb258bc86f05b5dc3d4fff3d5e3d9c0389a6027d861a21e78e3222fb6c5b7944520ef21767e";
+const tokenUserFInOrgaY =
+  "8288db86331a38c21a0b235794b9e459856490d70408bcffb767f64ade0f83d2bdb4c4e181b9a9a30cdece7cb7c65208cc43b6c1bb5987f5ece00d348b1a905502a266f8fc64f0371cd6559393d72e031d0c2d0cabad58cccf957bb258bc86f05b5dc3d4fff3d5e3d9c0389a6027d861a21e78e3222fb6c5b7944520ef21768e";
+const tokenUserFInOrgaX =
+  "9388db86331a38c21a0b235794b9e459856490d70408bcffb767f64ade0f83d2bdb4c4e181b9a9a30cdece7cb7c65208cc43b6c1bb5987f5ece00d348b1a905502a266f8fc64f0371cd6559393d72e031d0c2d0cabad58cccf957bb258bc86f05b5dc3d4fff3d5e3d9c0389a6027d861a21e78e3222fb6c5b7944520ef21769e";
+
 let currentUserAuthToken = tokenUserA;
 
 function setUserAuthToken(token: string) {
@@ -131,7 +140,7 @@ export async function writeTypeCheckingFile(
   fs.writeFileSync(
     `frontend/javascripts/test/snapshots/type-check/test-type-checking-${name}.ts`,
     `
-import type { ${typeString} } from "types/api_flow_types";
+import type { ${typeString} } from "types/api_types";
 const a: ${fullTypeAnnotation} = ${JSON.stringify(object)}`,
   );
 }
@@ -143,5 +152,15 @@ export function resetDatabase() {
   shell.config.fatal = true;
   shell.exec("tools/postgres/dbtool.js prepare-test-db", { silent: true });
 }
-
-export { tokenUserA, tokenUserB, tokenUserC, tokenUserD, tokenUserE, setUserAuthToken };
+export {
+  tokenUserA,
+  tokenUserB,
+  tokenUserC,
+  tokenUserD,
+  tokenUserE,
+  tokenUserEInOrgaX,
+  tokenUserF,
+  tokenUserFInOrgaX,
+  tokenUserFInOrgaY,
+  setUserAuthToken,
+};

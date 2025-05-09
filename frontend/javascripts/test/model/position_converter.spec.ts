@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getBaseBucketsForFallbackBucket } from "oxalis/model/helpers/position_converter";
+import { getBaseBucketsForFallbackBucket } from "viewer/model/helpers/position_converter";
 
 describe("position_converter", () => {
   it("should calculate base buckets for a given fallback bucket (isotropic)", () => {

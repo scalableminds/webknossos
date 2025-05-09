@@ -1,23 +1,22 @@
 import { DownOutlined } from "@ant-design/icons";
-import { getUsersOrganizations } from "admin/admin_rest_api";
 import {
   type AcceptanceInfo,
   acceptTermsOfService,
   getTermsOfService,
   requiresTermsOfServiceAcceptance,
 } from "admin/api/terms_of_service";
+import { getUsersOrganizations } from "admin/rest_api";
 import { Dropdown, type MenuProps, Modal, Space, Spin } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import dayjs from "dayjs";
 import { useFetch } from "libs/react_helpers";
+import { useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
 import _ from "lodash";
 import { switchTo } from "navbar";
-import type { OxalisState } from "oxalis/store";
 import type React from "react";
 import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
-import type { APIUser } from "types/api_flow_types";
+import type { APIUser } from "types/api_types";
 import { formatDateInLocalTimeZone } from "./formatted_date";
 
 const SNOOZE_DURATION_IN_DAYS = 3;
@@ -29,7 +28,7 @@ export function CheckTermsOfServices() {
     UserLocalStorage.setItem(LAST_TERMS_OF_SERVICE_WARNING_KEY, String(Date.now()));
     setIsModalOpen(false);
   };
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useWkSelector((state) => state.activeUser);
   const [recheckCounter, setRecheckCounter] = useState(0);
   const acceptanceInfo = useFetch(
     async () => {

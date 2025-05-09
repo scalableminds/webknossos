@@ -1,18 +1,18 @@
 import _ from "lodash";
-import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
-import { byteArraysToLz4Base64 } from "oxalis/workers/byte_arrays_to_lz4_base64.worker";
+import { getBitDepth } from "viewer/model/accessors/dataset_accessor";
+import { byteArraysToLz4Base64 } from "viewer/workers/byte_arrays_to_lz4_base64.worker";
 import datasetServerObject from "test/fixtures/dataset_server_object";
 import { vi, describe, it, expect, beforeEach } from "vitest";
-import { MagInfo } from "oxalis/model/helpers/mag_info";
-import type { APIDataLayer } from "types/api_flow_types";
-import type { PushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
-import { requestWithFallback } from "oxalis/model/bucket_data_handling/wkstore_adapter";
-import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
+import { MagInfo } from "viewer/model/helpers/mag_info";
+import type { APIDataLayer } from "types/api_types";
+import type { PushSaveQueueTransaction } from "viewer/model/actions/save_actions";
+import { requestWithFallback } from "viewer/model/bucket_data_handling/wkstore_adapter";
+import { DataBucket } from "viewer/model/bucket_data_handling/bucket";
+import PushQueue from "viewer/model/bucket_data_handling/pushqueue";
 import Request from "libs/request";
-import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import type { BucketAddress } from "oxalis/constants";
-import Store from "oxalis/store";
+import type DataCube from "viewer/model/bucket_data_handling/data_cube";
+import type { BucketAddress } from "viewer/constants";
+import Store from "viewer/store";
 
 const { dataSource } = datasetServerObject;
 let _fourBit = false;
@@ -32,7 +32,7 @@ const mockedCube = {
   triggerBucketDataChanged: () => {},
 } as any as DataCube;
 
-vi.mock("oxalis/store", () => ({
+vi.mock("viewer/store", () => ({
   default: {
     getState: () => ({
       dataset: {

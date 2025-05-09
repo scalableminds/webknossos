@@ -58,6 +58,29 @@ WEBKNOSSOS offers multiple ways to share your work:
 
 - **Layout**: Modify the layout of the WEBKNOSSOS user interface and resize, reorder and adjust viewports and panels to your preferences. Customize the number of columns, show or hide specific tabs, and adjust the size of the sidebar. Save and restore your preferred configurations. 
 
+## Modes and Toolkits
+
+### View Mode
+
+Datasets can be viewed in different view modes.
+Read more about these [here](../skeleton_annotation/modes.md)
+
+### Toolkits
+
+WEBKNOSSOS offers several tools that you can use to interact with your datasets.
+By default, all tools are available, but it is also possible to only show a subset of tools.
+These tool subsets are called "toolkits".
+Some of these also fine-tune the behavior of the tools so that they are tailored towards a specific use case.
+
+Currently, there are four toolkits available:
+
+- All Tools: This toolkit contains all available tools and is the default.
+- Read Only: Only tools that cannot mutate the annotation are available (i.e., move and measuring tools).
+- Volume: Only volume tools are listed here.
+- Split Segments: This toolkit allows splitting a labeled segment into two parts. Tools in this toolkit behave a bit differently to streamline this workflow. Read more about this toolkit [here](../proofreading/split_segments_toolkit.md).
+
+![Toolkit Selection](../images/toolkit_dropdown.jpg)
+
 ## Annotation Tools
 
 ### Navigation

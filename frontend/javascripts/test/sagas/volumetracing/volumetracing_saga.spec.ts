@@ -1,35 +1,35 @@
 import { vi, it, expect, describe } from "vitest";
 import { take, put, call } from "redux-saga/effects";
 import update from "immutability-helper";
-import type { APISegmentationLayer, ServerVolumeTracing } from "types/api_flow_types";
+import type { APISegmentationLayer, ServerVolumeTracing } from "types/api_types";
+import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
   OrthoViews,
-  AnnotationToolEnum,
   ContourModeEnum,
   OverwriteModeEnum,
   MappingStatusEnum,
-} from "oxalis/constants";
-import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reducer_helpers";
+} from "viewer/constants";
+import { convertFrontendBoundingBoxToServer } from "viewer/model/reducers/reducer_helpers";
 import { enforce } from "libs/utils";
-import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
-import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
-import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
-import defaultState from "oxalis/default_state";
+import { pushSaveQueueTransaction } from "viewer/model/actions/save_actions";
+import * as VolumeTracingActions from "viewer/model/actions/volumetracing_actions";
+import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
+import defaultState from "viewer/default_state";
 import { expectValueDeepEqual, execCall } from "test/helpers/sagaHelpers";
 import { withoutUpdateTracing } from "test/helpers/saveHelpers";
-import type { ActiveMappingInfo } from "oxalis/store";
-import { askUserForLockingActiveMapping } from "oxalis/model/sagas/saga_helpers";
-import { setupSavingForTracingType } from "oxalis/model/sagas/save_saga";
-import { editVolumeLayerAsync, finishLayer } from "oxalis/model/sagas/volumetracing_saga";
+import type { ActiveMappingInfo } from "viewer/store";
+import { askUserForLockingActiveMapping } from "viewer/model/sagas/saga_helpers";
+import { setupSavingForTracingType } from "viewer/model/sagas/save_saga";
+import { editVolumeLayerAsync, finishLayer } from "viewer/model/sagas/volumetracing_saga";
 import {
   requestBucketModificationInVolumeTracing,
   ensureMaybeActiveMappingIsLocked,
-} from "oxalis/model/sagas/saga_helpers";
-import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
-import { serverVolumeToClientVolumeTracing } from "oxalis/model/reducers/volumetracing_reducer";
+} from "viewer/model/sagas/saga_helpers";
+import VolumeLayer from "viewer/model/volumetracing/volumelayer";
+import { serverVolumeToClientVolumeTracing } from "viewer/model/reducers/volumetracing_reducer";
 
 // Mock dependencies
-vi.mock("oxalis/model/sagas/root_saga", () => ({
+vi.mock("viewer/model/sagas/root_saga", () => ({
   default: function* () {
     yield;
   },
@@ -177,7 +177,7 @@ describe("VolumeTracingSaga", () => {
     });
     saga.next(volumeTracing);
     saga.next(OverwriteModeEnum.OVERWRITE_ALL);
-    saga.next(AnnotationToolEnum.BRUSH);
+    saga.next(AnnotationTool.BRUSH);
     saga.next(false);
     // pass labeled mag
     saga.next({
@@ -220,7 +220,7 @@ describe("VolumeTracingSaga", () => {
     });
     saga.next(volumeTracing);
     saga.next(OverwriteModeEnum.OVERWRITE_ALL);
-    saga.next(AnnotationToolEnum.TRACE);
+    saga.next(AnnotationTool.TRACE);
     saga.next(false);
     saga.next({
       mag: [1, 1, 1],
@@ -275,7 +275,7 @@ describe("VolumeTracingSaga", () => {
     });
     saga.next(volumeTracing);
     saga.next(OverwriteModeEnum.OVERWRITE_ALL);
-    saga.next(AnnotationToolEnum.TRACE);
+    saga.next(AnnotationTool.TRACE);
     saga.next(false);
     saga.next({
       mag: [1, 1, 1],
@@ -321,7 +321,7 @@ describe("VolumeTracingSaga", () => {
       call(
         finishLayer,
         volumeLayer,
-        AnnotationToolEnum.TRACE,
+        AnnotationTool.TRACE,
         ContourModeEnum.DRAW,
         OverwriteModeEnum.OVERWRITE_ALL,
         0,
@@ -344,7 +344,7 @@ describe("VolumeTracingSaga", () => {
     });
     saga.next({ ...volumeTracing, contourTracingMode: ContourModeEnum.DELETE });
     saga.next(OverwriteModeEnum.OVERWRITE_ALL);
-    saga.next(AnnotationToolEnum.TRACE);
+    saga.next(AnnotationTool.TRACE);
     saga.next(false);
     saga.next({
       mag: [1, 1, 1],
@@ -390,7 +390,7 @@ describe("VolumeTracingSaga", () => {
       call(
         finishLayer,
         volumeLayer,
-        AnnotationToolEnum.TRACE,
+        AnnotationTool.TRACE,
         ContourModeEnum.DELETE,
         OverwriteModeEnum.OVERWRITE_ALL,
         0,
@@ -428,7 +428,7 @@ describe("VolumeTracingSaga", () => {
     });
     saga.next(volumeTracing);
     saga.next(OverwriteModeEnum.OVERWRITE_ALL);
-    saga.next(AnnotationToolEnum.BRUSH);
+    saga.next(AnnotationTool.BRUSH);
     saga.next(false);
     // pass labeled mag
     saga.next({

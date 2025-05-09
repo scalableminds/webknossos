@@ -41,7 +41,6 @@ class Plane {
   TDViewBorders: THREE.Line;
   lastScaleFactors: [number, number];
   baseRotation: THREE.Euler;
-  outerGroup: THREE.Group;
 
   constructor(planeID: OrthoView) {
     this.planeID = planeID;
@@ -54,7 +53,6 @@ class Plane {
     const baseVoxelFactors = getBaseVoxelFactorsInUnit(Store.getState().dataset.dataSource.scale);
     this.worldScale = new THREE.Vector3(...baseVoxelFactors);
     this.baseRotation = new THREE.Euler(0, 0, 0);
-    this.outerGroup = new THREE.Group();
     this.createMeshes();
   }
 
@@ -62,6 +60,7 @@ class Plane {
     const pWidth = constants.VIEWPORT_WIDTH;
     // create plane
     const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, PLANE_SUBDIVISION, PLANE_SUBDIVISION);
+
     this.materialFactory = new PlaneMaterialFactory(
       this.planeID,
       false,
@@ -71,13 +70,11 @@ class Plane {
     this.plane = new THREE.Mesh(planeGeo, textureMaterial);
     this.plane.name = `${this.planeID}-plane`;
     this.plane.material.side = THREE.DoubleSide;
-    // create crosshair
-    const crosshairGeometries = [];
+
+    // Create crosshairs
     this.crosshair = new Array(2);
-
     for (let i = 0; i <= 1; i++) {
-      crosshairGeometries.push(new THREE.BufferGeometry());
-
+      const crosshairGeometry = new THREE.BufferGeometry();
       // biome-ignore format: don't format array
       const crosshairVertices = new Float32Array([
         (-pWidth / 2) * i, (-pWidth / 2) * (1 - i), 0,
@@ -85,13 +82,10 @@ class Plane {
         25 * i, 25 * (1 - i), 0,
         (pWidth / 2) * i, (pWidth / 2) * (1 - i), 0,
       ]);
+      crosshairGeometry.setAttribute("position", new THREE.BufferAttribute(crosshairVertices, 3));
 
-      crosshairGeometries[i].setAttribute(
-        "position",
-        new THREE.BufferAttribute(crosshairVertices, 3),
-      );
       this.crosshair[i] = new THREE.LineSegments(
-        crosshairGeometries[i],
+        crosshairGeometry,
         this.getLineBasicMaterial(OrthoViewCrosshairColors[this.planeID][i], 1),
       );
       // Objects are rendered according to their renderOrder (lowest to highest).
@@ -101,31 +95,21 @@ class Plane {
       this.crosshair[i].name = `${this.planeID}-crosshair-${i}`;
     }
 
-    // create borders
-    const vertices = [];
-    vertices.push(new THREE.Vector3(-pWidth / 2, -pWidth / 2, 0));
-    vertices.push(new THREE.Vector3(-pWidth / 2, pWidth / 2, 0));
-    vertices.push(new THREE.Vector3(pWidth / 2, pWidth / 2, 0));
-    vertices.push(new THREE.Vector3(pWidth / 2, -pWidth / 2, 0));
-    vertices.push(new THREE.Vector3(-pWidth / 2, -pWidth / 2, 0));
-    const tdViewBordersGeo = new THREE.BufferGeometry().setFromPoints(vertices);
+    // Create borders
+    const vertices = [
+      new THREE.Vector3(-pWidth / 2, -pWidth / 2, 0),
+      new THREE.Vector3(-pWidth / 2, pWidth / 2, 0),
+      new THREE.Vector3(pWidth / 2, pWidth / 2, 0),
+      new THREE.Vector3(pWidth / 2, -pWidth / 2, 0),
+      new THREE.Vector3(-pWidth / 2, -pWidth / 2, 0),
+    ];
+    const tdBorderGeometry = new THREE.BufferGeometry().setFromPoints(vertices);
 
     this.TDViewBorders = new THREE.Line(
-      tdViewBordersGeo,
+      tdBorderGeometry,
       this.getLineBasicMaterial(OrthoViewColors[this.planeID], 1),
     );
     this.TDViewBorders.name = `${this.planeID}-TDViewBorders`;
-
-    // For world scale (1, 1, 4), apply inverse to neutralize it in geometry
-    const invWorldScale = new THREE.Vector3(
-      1 / this.worldScale.x,
-      1 / this.worldScale.y,
-      1 / this.worldScale.z,
-    );
-
-    this.plane.geometry.applyMatrix4(
-      new THREE.Matrix4().makeScale(invWorldScale.x, invWorldScale.y, invWorldScale.z),
-    );
   }
 
   setDisplayCrosshair = (value: boolean): void => {
@@ -171,8 +155,12 @@ class Plane {
     const localScaleFactorX = new THREE.Vector3(1, 0, 0);
     const localScaleFactorY = new THREE.Vector3(0, 1, 0);
     // Apply current rotation of the plane.
-    const localScaleFactorXRotated = localScaleFactorX.applyEuler(this.plane.rotation);
-    const localScaleFactorYRotated = localScaleFactorY.applyEuler(this.plane.rotation);
+    //const localScaleFactorXRotated = localScaleFactorX.applyEuler(this.container.rotation);
+    //const localScaleFactorYRotated = localScaleFactorY.applyEuler(this.container.rotation);
+    const quat = new THREE.Quaternion();
+    this.plane.getWorldQuaternion(quat);
+    const localScaleFactorXRotated = localScaleFactorX.applyQuaternion(quat);
+    const localScaleFactorYRotated = localScaleFactorY.applyQuaternion(quat);
     // Put scale measuring vectors into world scale to get distortion cause by potentially anisotropic voxel scale factor.
     const scaleFactorXStrechedInSpace = localScaleFactorXRotated.multiply(this.worldScale);
     const scaleFactorYStrechedInSpace = localScaleFactorYRotated.multiply(this.worldScale);
@@ -180,15 +168,19 @@ class Plane {
     const lengthX = scaleFactorXStrechedInSpace.length();
     const lengthY = scaleFactorYStrechedInSpace.length();
     // Calculate correction factors to neutralize the stretching caused by the scale factor.
-    const correctionX = lengthX / 1;
-    const correctionY = lengthY / 1;
+    const correctionX = lengthX; //!== 1 ? lengthX * 1.1 : lengthX;
+    const correctionY = lengthY; //!== 1 ? lengthY * 1.1 : lengthY;
+    //const correctionY = lengthY;
 
     const scaleVec = new THREE.Vector3().multiplyVectors(
       new THREE.Vector3(this.lastScaleFactors[0], this.lastScaleFactors[1], 1),
-      new THREE.Vector3(correctionX, correctionY, 1).multiply(this.worldScale),
+      new THREE.Vector3(correctionX, correctionY, 1),
     );
-    if (this.planeID === "PLANE_XZ") console.log("calculated scale", this.planeID, scaleVec);
+    const scaleVec2 = new THREE.Vector3().multiplyVectors(scaleVec, this.worldScale);
+    if (this.planeID === "PLANE_XZ")
+      console.log("calculated scale", this.planeID, scaleVec, scaleVec2, this.worldScale);
     this.getMeshes().map((mesh) => mesh.scale.copy(scaleVec));
+    //this.plane.scale.copy(scaleVec);
   }
 
   setBaseRotation = (rotVec: THREE.Euler): void => {

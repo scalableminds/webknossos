@@ -1,19 +1,19 @@
 import { describe, it, expect, vi } from "vitest";
-import Model from "oxalis/model";
-import constants from "oxalis/constants";
+import Model from "viewer/model";
+import constants from "viewer/constants";
 import DATASET from "../fixtures/dataset_server_object";
 import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
-import { setModel } from "oxalis/singletons";
+import { setModel } from "viewer/singletons";
 import { call } from "redux-saga/effects";
 import {
   triggerDataPrefetching,
   prefetchForArbitraryMode,
   prefetchForPlaneMode,
-} from "oxalis/model/sagas/prefetch_saga";
+} from "viewer/model/sagas/prefetch_saga";
 
 setModel(Model);
 
-vi.mock("oxalis/model/sagas/root_saga", () => {
+vi.mock("viewer/model/sagas/root_saga", () => {
   return {
     default: function* () {
       yield;

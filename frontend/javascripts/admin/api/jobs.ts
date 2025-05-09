@@ -1,6 +1,5 @@
 import Request from "libs/request";
 import { location } from "libs/window";
-import type { UnitLong, Vector3, Vector6 } from "oxalis/constants";
 import type {
   APIAnnotationType,
   APIEffectiveJobState,
@@ -11,6 +10,7 @@ import type {
   AiModel,
   RenderAnimationOptions,
 } from "types/api_types";
+import type { UnitLong, Vector3, Vector6 } from "viewer/constants";
 import { assertResponseLimit } from "./api_utils";
 
 function transformBackendJobToAPIJob(job: any): APIJob {

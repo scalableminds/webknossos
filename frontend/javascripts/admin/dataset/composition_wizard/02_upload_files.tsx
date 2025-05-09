@@ -8,8 +8,8 @@ import Toast from "libs/toast";
 import { SoftError } from "libs/utils";
 import * as Utils from "libs/utils";
 import _ from "lodash";
-import type { Vector3 } from "oxalis/constants";
-import { parseNml } from "oxalis/model/helpers/nml_helpers";
+import type { Vector3 } from "viewer/constants";
+import { parseNml } from "viewer/model/helpers/nml_helpers";
 import {
   type FileList,
   type WizardComponentProps,

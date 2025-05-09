@@ -203,10 +203,10 @@ module.exports = {
       comment: "",
       severity: "warn",
       from: {
-        path: "^(frontend/javascripts/oxalis/model/accessors/).*[.]ts$",
+        path: "^(frontend/javascripts/viewer/model/accessors/).*[.]ts$",
       },
       to: {
-        path: "^(frontend/javascripts/oxalis/model/sagas/).*[.]ts$",
+        path: "^(frontend/javascripts/viewer/model/sagas/).*[.]ts$",
         reachable: true,
       },
     },

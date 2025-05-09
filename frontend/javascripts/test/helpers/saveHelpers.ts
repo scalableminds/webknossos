@@ -1,6 +1,6 @@
-import type { TracingStats } from "oxalis/model/accessors/annotation_accessor";
-import type { UpdateActionWithoutIsolationRequirement } from "oxalis/model/sagas/update_actions";
-import type { SaveQueueEntry } from "oxalis/store";
+import type { TracingStats } from "viewer/model/accessors/annotation_accessor";
+import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/update_actions";
+import type { SaveQueueEntry } from "viewer/store";
 import dummyUser from "test/fixtures/dummy_user";
 
 export function createSaveQueueFromUpdateActions(

@@ -41,12 +41,12 @@ import { coalesce, tryToAwaitPromise } from "libs/utils";
 import { Vector3Input, Vector6Input } from "libs/vector_input";
 import _ from "lodash";
 import messages from "messages";
-import type { Vector3, Vector6 } from "oxalis/constants";
-import type { BoundingBoxObject } from "oxalis/store";
 import React, { useEffect, useState } from "react";
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import type { APIDataset, APIProject, APIScript, APITask, APITaskType } from "types/api_types";
+import type { Vector3, Vector6 } from "viewer/constants";
+import type { BoundingBoxObject } from "viewer/store";
 
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;

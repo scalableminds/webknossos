@@ -3,16 +3,16 @@ const { parseDependencyTree, parseCircular } = dpdm;
 
 const KNOWN_CYCLES = [
   [
-    "frontend/javascripts/oxalis/model/accessors/view_mode_accessor.ts",
-    "frontend/javascripts/oxalis/model/accessors/flycam_accessor.ts",
+    "frontend/javascripts/viewer/model/accessors/view_mode_accessor.ts",
+    "frontend/javascripts/viewer/model/accessors/flycam_accessor.ts",
   ],
   [
-    "frontend/javascripts/oxalis/model/accessors/flycam_accessor.ts",
-    "frontend/javascripts/oxalis/model/reducers/flycam_reducer.ts",
+    "frontend/javascripts/viewer/model/accessors/flycam_accessor.ts",
+    "frontend/javascripts/viewer/model/reducers/flycam_reducer.ts",
   ],
   [
-    "frontend/javascripts/oxalis/view/right-border-tabs/tree_hierarchy_view_helpers.ts",
-    "frontend/javascripts/oxalis/model/accessors/skeletontracing_accessor.ts",
+    "frontend/javascripts/viewer/view/right-border-tabs/tree_hierarchy_view_helpers.ts",
+    "frontend/javascripts/viewer/model/accessors/skeletontracing_accessor.ts",
   ],
   ["frontend/javascripts/libs/request.ts", "frontend/javascripts/admin/datastore_health_check.ts"],
   [
@@ -21,8 +21,8 @@ const KNOWN_CYCLES = [
     "frontend/javascripts/admin/datastore_health_check.ts",
   ],
   [
-    "frontend/javascripts/oxalis/view/action-bar/download_modal_view.tsx",
-    "frontend/javascripts/oxalis/view/action-bar/starting_job_modals.tsx",
+    "frontend/javascripts/viewer/view/action-bar/download_modal_view.tsx",
+    "frontend/javascripts/viewer/view/action-bar/starting_job_modals.tsx",
   ],
   [
     "frontend/javascripts/admin/organization/upgrade_plan_modal.tsx",
@@ -41,13 +41,13 @@ const KNOWN_CYCLES = [
     "frontend/javascripts/dashboard/folders/folder_tree.tsx",
   ],
   [
-    "frontend/javascripts/oxalis/model_initialization.ts",
-    "frontend/javascripts/oxalis/controller/url_manager.ts",
+    "frontend/javascripts/viewer/model_initialization.ts",
+    "frontend/javascripts/viewer/controller/url_manager.ts",
   ],
   [
-    "frontend/javascripts/oxalis/geometries/plane.ts",
-    "frontend/javascripts/oxalis/geometries/materials/plane_material_factory.ts",
-    "frontend/javascripts/oxalis/shaders/main_data_shaders.glsl.ts",
+    "frontend/javascripts/viewer/geometries/plane.ts",
+    "frontend/javascripts/viewer/geometries/materials/plane_material_factory.ts",
+    "frontend/javascripts/viewer/shaders/main_data_shaders.glsl.ts",
   ],
 ];
 parseDependencyTree("frontend/javascripts/main.tsx", {

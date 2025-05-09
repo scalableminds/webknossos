@@ -14,15 +14,15 @@ import { useFetch, useGuardedFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import _ from "lodash";
-import type { Vector3 } from "oxalis/constants";
-import { getMagInfo, getSegmentationLayerByName } from "oxalis/model/accessors/dataset_accessor";
-import { formatUserName } from "oxalis/model/accessors/user_accessor";
+import { useState } from "react";
+import type { Key } from "react";
+import type { Vector3 } from "viewer/constants";
+import { getMagInfo, getSegmentationLayerByName } from "viewer/model/accessors/dataset_accessor";
+import { formatUserName } from "viewer/model/accessors/user_accessor";
 import {
   type AnnotationInfoForAITrainingJob,
   TrainAiModelTab,
-} from "oxalis/view/jobs/train_ai_model";
-import { useState } from "react";
-import type { Key } from "react";
+} from "viewer/view/jobs/train_ai_model";
 
 import { Link } from "react-router-dom";
 import type { APIAnnotation, AiModel } from "types/api_types";

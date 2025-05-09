@@ -8,26 +8,6 @@ import * as Utils from "libs/utils";
 import window, { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
-import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector3 } from "oxalis/constants";
-import Constants, { ControlModeEnum, AnnotationStateFilterEnum } from "oxalis/constants";
-import type BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import {
-  parseProtoAnnotation,
-  parseProtoListOfLong,
-  parseProtoTracing,
-  serializeProtoListOfLong,
-} from "oxalis/model/helpers/proto_helpers";
-import type {
-  DatasetConfiguration,
-  Mapping,
-  MappingType,
-  NumberLike,
-  PartialDatasetConfiguration,
-  StoreAnnotation,
-  TraceOrViewCommand,
-  UserConfiguration,
-  VolumeTracing,
-} from "oxalis/store";
 import ResumableJS from "resumablejs";
 import {
   type APIAnnotation,
@@ -95,6 +75,26 @@ import {
 import type { ArbitraryObject } from "types/globals";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import type { DatasourceConfiguration } from "types/schemas/datasource.types";
+import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector3 } from "viewer/constants";
+import Constants, { ControlModeEnum, AnnotationStateFilterEnum } from "viewer/constants";
+import type BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
+import {
+  parseProtoAnnotation,
+  parseProtoListOfLong,
+  parseProtoTracing,
+  serializeProtoListOfLong,
+} from "viewer/model/helpers/proto_helpers";
+import type {
+  DatasetConfiguration,
+  Mapping,
+  MappingType,
+  NumberLike,
+  PartialDatasetConfiguration,
+  StoreAnnotation,
+  TraceOrViewCommand,
+  UserConfiguration,
+  VolumeTracing,
+} from "viewer/store";
 import { assertResponseLimit } from "./api/api_utils";
 import { getDatasetIdFromNameAndOrganization } from "./api/disambiguate_legacy_routes";
 import { doWithToken } from "./api/token";

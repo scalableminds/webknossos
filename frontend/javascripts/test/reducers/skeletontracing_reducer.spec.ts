@@ -2,19 +2,19 @@ import _ from "lodash";
 import update from "immutability-helper";
 import ChainReducer from "test/helpers/chainReducer";
 import DiffableMap from "libs/diffable_map";
-import EdgeCollection from "oxalis/model/edge_collection";
+import EdgeCollection from "viewer/model/edge_collection";
 import { describe, it, expect } from "vitest";
-import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import type { WebknossosState, Node, Tree, MutableNode } from "oxalis/store";
-import { TreeTypeEnum, type Vector3 } from "oxalis/constants";
-import type { Action } from "oxalis/model/actions/actions";
-import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import type { WebknossosState, Node, Tree, MutableNode } from "viewer/store";
+import { TreeTypeEnum, type Vector3 } from "viewer/constants";
+import type { Action } from "viewer/model/actions/actions";
+import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import {
   initialState as defaultState,
   initialSkeletonTracing,
 } from "test/fixtures/hybridtracing_object";
-import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
-import * as SkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
+import SkeletonTracingReducer from "viewer/model/reducers/skeletontracing_reducer";
+import * as SkeletonTracingActions from "viewer/model/actions/skeletontracing_actions";
 
 const initialState: WebknossosState = update(defaultState, {
   annotation: {

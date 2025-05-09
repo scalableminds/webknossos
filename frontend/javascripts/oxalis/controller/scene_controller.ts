@@ -130,14 +130,12 @@ class SceneController {
     this.scene = new THREE.Scene();
     this.highlightedBBoxId = null;
     this.rootGroup = new THREE.Group();
-    const planeMeshes = _.values(this.planes).flatMap((plane) => plane.getMeshes());
     this.scene.add(
       this.rootGroup.add(
         this.rootNode,
         this.segmentMeshController.meshesLayerLODRootGroup,
         this.segmentMeshController.lightsGroup,
       ),
-      ...planeMeshes,
     );
     // Because the voxel coordinates do not have a cube shape but are distorted,
     // we need to distort the entire scene to provide an illustration that is
@@ -259,6 +257,16 @@ class SceneController {
     this.planes[OrthoViews.PLANE_YZ].setBaseRotation(OrthoBaseRotations[OrthoViews.PLANE_YZ]);
     this.planes[OrthoViews.PLANE_XZ].setBaseRotation(OrthoBaseRotations[OrthoViews.PLANE_XZ]);
 
+    const planeGroup = new THREE.Group();
+    _.values(this.planes).forEach((plane) => planeGroup.add(...plane.getMeshes()));
+    // Apply the inverse dataset scale factor to all planes to remove the scaling of the root group
+    // to avoid shearing effects on rotated ortho viewport planes. For more info see plane.ts.
+    planeGroup.scale.copy(
+      new THREE.Vector3(1, 1, 1).divide(
+        new THREE.Vector3(...Store.getState().dataset.dataSource.scale.factor),
+      ),
+    );
+
     this.rootNode = new THREE.Group().add(
       this.userBoundingBoxGroup,
       this.layerBoundingBoxGroup,
@@ -269,6 +277,7 @@ class SceneController {
         ...this.areaMeasurementGeometry.getMeshes(),
       ),
       ...this.datasetBoundingBox.getMeshes(),
+      planeGroup,
     );
 
     if (state.annotation.skeleton != null) {

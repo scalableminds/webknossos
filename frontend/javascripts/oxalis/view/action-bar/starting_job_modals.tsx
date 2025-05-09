@@ -64,6 +64,7 @@ import {
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { MagInfo } from "oxalis/model/helpers/mag_info";
+import { convertVoxelSizeToUnit } from "oxalis/model/scaleinfo";
 import { Model, Store } from "oxalis/singletons";
 import type { OxalisState, UserBoundingBox } from "oxalis/store";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
@@ -76,7 +77,6 @@ import {
 } from "../jobs/train_ai_model";
 import DEFAULT_PREDICT_WORKFLOW from "./default-predict-workflow-template";
 import { isBoundingBoxExportable } from "./download_modal_view";
-import { convertVoxelSizeToUnit } from "oxalis/model/scaleinfo";
 
 const { ThinSpace } = Unicode;
 
@@ -104,16 +104,14 @@ const getMinimumDSSize = (jobType: ModalJobTypes) => {
     case APIJobType.INFER_MITOCHONDRIA:
       return MIN_BBOX_EXTENT[jobType].map((dim) => dim + 80);
   }
-}
+};
 
 type ModalJobTypes =
   | APIJobType.INFER_NEURONS
   | APIJobType.INFER_NUCLEI
   | APIJobType.INFER_MITOCHONDRIA;
 
-export type StartAIJobModalState =
-  ModalJobTypes
-  | "invisible";
+export type StartAIJobModalState = ModalJobTypes | "invisible";
 
 // "materialize_volume_annotation" is only used in this module
 const jobNameToImagePath = {
@@ -285,9 +283,11 @@ function BoundingBoxSelectionFormItem({
                   mag1,
                 );
                 if (isExportable) return Promise.resolve();
-                rejectionReason = `The volume of the selected bounding box is too large. The AI neuron segmentation trial is only supported for up to ${features().exportTiffMaxVolumeMVx
-                  } Megavoxels. Additionally, no bounding box edge should be longer than ${features().exportTiffMaxEdgeLengthVx
-                  }vx.`;
+                rejectionReason = `The volume of the selected bounding box is too large. The AI neuron segmentation trial is only supported for up to ${
+                  features().exportTiffMaxVolumeMVx
+                } Megavoxels. Additionally, no bounding box edge should be longer than ${
+                  features().exportTiffMaxEdgeLengthVx
+                }vx.`;
               }
               // In case no bounding box was selected, the rejectionReason will be "", because the previous rule already checks that.
               return Promise.reject(rejectionReason);
@@ -349,10 +349,10 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
     },
     isSuperUser
       ? {
-        label: "Train a model",
-        key: "trainModel",
-        children: <TrainAiModelFromAnnotationTab onClose={onClose} />,
-      }
+          label: "Train a model",
+          key: "trainModel",
+          children: <TrainAiModelFromAnnotationTab onClose={onClose} />,
+        }
       : null,
     {
       label: "Alignment",
@@ -774,11 +774,11 @@ const isBBoxTooSmall = (
   mag: Vector3,
   bboxOrDS: "bbox" | "dataset" = "bbox",
 ) => {
-  const minBBoxExtentInModelMag = bboxOrDS === "dataset" ? getMinimumDSSize(segmentationType) : MIN_BBOX_EXTENT[segmentationType];
+  const minBBoxExtentInModelMag =
+    bboxOrDS === "dataset" ? getMinimumDSSize(segmentationType) : MIN_BBOX_EXTENT[segmentationType];
   const minExtentInMag1 = minBBoxExtentInModelMag.map((extent, i) =>
     Math.round(extent * mag[i]),
   ) as Vector3;
-  console.log(minExtentInMag1, minBBoxExtentInModelMag)
   for (let i = 0; i < 3; i++) {
     if (bbox[i] < minExtentInMag1[i]) {
       const boundingBoxOrDSMessage = bboxOrDS === "bbox" ? "bounding box" : "dataset";
@@ -855,9 +855,9 @@ function StartJobForm(props: StartJobFormProps) {
     async () =>
       boundingBoxForJob && jobCreditCostPerGVx != null
         ? await getJobCreditCost(
-          jobName,
-          computeArrayFromBoundingBox(boundingBoxForJob.boundingBox),
-        )
+            jobName,
+            computeArrayFromBoundingBox(boundingBoxForJob.boundingBox),
+          )
         : undefined,
     undefined,
     [boundingBoxForJob, jobName],

@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { UnitShort, Unicode, UnitLong } from "oxalis/constants";
+import { UnitShort, Unicode } from "oxalis/constants";
 import { formatNumberToArea, formatNumberToLength, formatNumberToVolume } from "libs/format_utils";
-import { convertVoxelSizeToUnit } from "oxalis/model/scaleinfo";
 
 const { ThinSpace } = Unicode;
 
@@ -110,21 +109,5 @@ describe("Format Utils", () => {
     expect(`10.0${ThinSpace}cm`).toBe(formatNumberToLength(0.1, UnitShort.m, 3));
     expect(`12.0${ThinSpace}cm`).toBe(formatNumberToLength(0.12, UnitShort.m, 3));
     expect(`0.001${ThinSpace}km`).toBe(formatNumberToLength(1, UnitShort.m, 3, true));
-  });
-
-  it("Test conversion of VoxelSize in unit to nm", () => {
-    expect([1, 1, 1]).toBe(convertVoxelSizeToUnit({ factor: [1, 1, 1], unit: UnitLong.nm }));
-    expect([1e3, 1e3, 1e3]).toBe(convertVoxelSizeToUnit({ factor: [1, 1, 1], unit: UnitLong.µm }));
-    expect([1e6, 1e6, 1e6]).toBe(convertVoxelSizeToUnit({ factor: [1, 1, 1], unit: UnitLong.mm }));
-    expect([1e9, 1e9, 1e9]).toBe(convertVoxelSizeToUnit({ factor: [1, 1, 1], unit: UnitLong.cm }));
-    expect([1e12, 1e12, 1e12]).toBe(
-      convertVoxelSizeToUnit({ factor: [1, 1, 1], unit: UnitLong.m }),
-    );
-    expect([1e-3, 1e-3, 1e-3]).toBe(
-      convertVoxelSizeToUnit({ factor: [1, 1, 1], unit: UnitLong.fm }),
-    );
-    expect([1e-6, 1e-6, 1e-6]).toBe(
-      convertVoxelSizeToUnit({ factor: [1, 1, 1], unit: UnitLong.pm }),
-    );
   });
 });

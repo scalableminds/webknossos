@@ -6,7 +6,7 @@ object ArrayDataType extends ExtendedEnumeration {
   type ArrayDataType = Value
   val f8, f4, i8, u8, i4, u4, i2, u2, i1, u1 = Value
 
-  def bytesPerElementFor(dataType: ArrayDataType): Int =
+  def bytesPerElement(dataType: ArrayDataType): Int =
     dataType match {
       case ArrayDataType.f8 => 8
       case ArrayDataType.f4 => 4
@@ -46,5 +46,33 @@ object ArrayDataType extends ExtendedEnumeration {
       case ArrayDataType.u2 => 0
       case ArrayDataType.i1 => Byte.MinValue
       case ArrayDataType.u1 => 0
+    }
+
+  def toWKWId(dataType: ArrayDataType): Int =
+    dataType match {
+      case ArrayDataType.u1 => 1
+      case ArrayDataType.u2 => 2
+      case ArrayDataType.u4 => 3
+      case ArrayDataType.u8 => 4
+      case ArrayDataType.f4 => 5
+      case ArrayDataType.f8 => 6
+      case ArrayDataType.i1 => 7
+      case ArrayDataType.i2 => 8
+      case ArrayDataType.i4 => 9
+      case ArrayDataType.i8 => 10
+    }
+
+  def fromWKWTypeId(wkwVoxelTypeId: Int): ArrayDataType.Value =
+    wkwVoxelTypeId match {
+      case 1  => ArrayDataType.u1
+      case 2  => ArrayDataType.u2
+      case 3  => ArrayDataType.u4
+      case 4  => ArrayDataType.u8
+      case 5  => ArrayDataType.f4
+      case 6  => ArrayDataType.f8
+      case 7  => ArrayDataType.i1
+      case 8  => ArrayDataType.i2
+      case 9  => ArrayDataType.i4
+      case 10 => ArrayDataType.i8
     }
 }

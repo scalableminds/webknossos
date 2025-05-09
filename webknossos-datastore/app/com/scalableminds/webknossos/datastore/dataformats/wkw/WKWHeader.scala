@@ -7,6 +7,7 @@ import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDat
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
 import com.scalableminds.webknossos.datastore.datareaders.{
+  ArrayDataType,
   ArrayOrder,
   Compressor,
   DatasetHeader,
@@ -32,8 +33,8 @@ case class WKWHeader(
     numChunksPerShardDimension: Int,
     numVoxelsPerChunkDimension: Int,
     blockType: ChunkType.Value,
-    voxelType: VoxelType.Value,
-    numBytesPerVoxel: Int, // this encodes the channel count together with voxelType
+    dataType: ArrayDataType,
+    numChannels: Int,
     jumpTable: Array[Long]
 ) extends DatasetHeader
     with WKWDataFormatHelper {
@@ -44,10 +45,10 @@ case class WKWHeader(
 
   def numChunksPerShard: Int = numChunksPerShardDimension * numChunksPerShardDimension * numChunksPerShardDimension
 
+  private def numBytesPerVoxel = numChannels * ArrayDataType.bytesPerElement(dataType)
+
   def numBytesPerChunk: Int =
     numVoxelsPerChunkDimension * numVoxelsPerChunkDimension * numVoxelsPerChunkDimension * numBytesPerVoxel
-
-  def numChannels: Int = numBytesPerVoxel / VoxelType.bytesPerVoxelPerChannel(voxelType)
 
   def blockLengths: Iterator[Int] =
     if (isCompressed) {
@@ -64,7 +65,7 @@ case class WKWHeader(
     val sideLengths = (numChunksPerShardDimensionLog2 << 4) + numVoxelsPerChunkDimensionLog2
     output.writeByte(sideLengths)
     output.writeByte(blockType.id)
-    output.writeByte(voxelType.id)
+    output.writeByte(ArrayDataType.toWKWId(dataType))
     output.writeByte(numBytesPerVoxel)
     if (isHeaderFile) {
       output.writeLong(0L)
@@ -96,7 +97,7 @@ case class WKWHeader(
 
   override def order: ArrayOrder = ArrayOrder.F
 
-  override def resolvedDataType: ArrayDataType = VoxelType.toArrayDataType(voxelType)
+  override def resolvedDataType: ArrayDataType = dataType
 
   override def compressorImpl: Compressor = blockType match {
     case ChunkType.Raw                   => nullCompressor
@@ -146,7 +147,8 @@ object WKWHeader {
                                                                  numVoxelsPerChunkDimension,
                                                                  "[0, 1024)")
       blockType <- tryo(ChunkType(blockTypeId)) ?~! error("Specified blockType is not supported")
-      voxelType <- tryo(VoxelType(voxelTypeId)) ?~! error("Specified voxelType is not supported")
+      voxelType <- tryo(ArrayDataType.fromWKWTypeId(voxelTypeId)) ?~! error("Specified voxelType is not supported")
+      numChannels = numBytesPerVoxel / ArrayDataType.bytesPerElement(voxelType)
     } yield {
       val jumpTable = if (ChunkType.isCompressed(blockType) && readJumpTable) {
         val numChunksPerShard = numChunksPerShardDimension * numChunksPerShardDimension * numChunksPerShardDimension
@@ -159,7 +161,7 @@ object WKWHeader {
                     numVoxelsPerChunkDimension,
                     blockType,
                     voxelType,
-                    numBytesPerVoxel,
+                    numChannels,
                     jumpTable)
     }
   }
@@ -170,15 +172,15 @@ object WKWHeader {
   def apply(numChunksPerShardDimension: Int,
             numVoxelsPerChunkDimension: Int,
             blockType: ChunkType.Value,
-            voxelType: VoxelType.Value,
+            dataType: ArrayDataType,
             numChannels: Int): WKWHeader =
     new WKWHeader(
       currentVersion,
       numChunksPerShardDimension,
       numVoxelsPerChunkDimension,
       blockType,
-      voxelType,
-      VoxelType.bytesPerVoxelPerChannel(voxelType) * numChannels,
+      dataType,
+      numChannels,
       Array(0)
     )
 }

@@ -252,6 +252,8 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO)
       }
       val anchorPositionAdditionalCoordinates = parseAdditionalCoordinateValues(node)
       val metadata = parseMetadata(node \ "metadata" \ "metadataEntry")
+      val color = parseColorOpt(node)
+      val isVisible = parseVisibility(node, color)
       Segment(
         segmentId = getSingleAttribute(node, "id").toLong,
         anchorPosition = anchorPosition,
@@ -260,7 +262,8 @@ class NmlParser @Inject()(datasetDAO: DatasetDAO)
         color = parseColorOpt(node),
         groupId = getSingleAttribute(node, "groupId").toIntOpt,
         anchorPositionAdditionalCoordinates = anchorPositionAdditionalCoordinates,
-        metadata = metadata
+        metadata = metadata,
+        isVisible = isVisible
       )
     })
 

@@ -110,6 +110,7 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
   uniform bool isProofreading;
   uniform bool isUnmappedSegmentHighlighted;
   uniform float segmentationPatternOpacity;
+  uniform bool hideUnregisteredSegments;
 
   uniform bool shouldApplyMappingOnGPU;
   uniform bool mappingIsPartial;
@@ -125,7 +126,6 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
 
 uniform float sphericalCapRadius;
 uniform bool selectiveVisibilityInProofreading;
-uniform bool selectiveSegmentVisibility;
 uniform float viewMode;
 uniform float alpha;
 uniform bool renderBucketIndices;
@@ -374,14 +374,15 @@ void main() {
         isActiveCell
       );
 
+      vec4 segmentColor = convertCellIdToRGB(<%= segmentationName %>_id_high, <%= segmentationName %>_id_low);
       gl_FragColor = vec4(mix(
         data_color.rgb,
-        convertCellIdToRGB(<%= segmentationName %>_id_high, <%= segmentationName %>_id_low),
-        <%= segmentationName %>_alpha + alphaIncrement
+        segmentColor.rgb,
+        <%= segmentationName %>_alpha  * segmentColor.a + alphaIncrement
       ), 1.0);
     }
     vec4 <%= segmentationName %>_brushOverlayColor = getBrushOverlay(worldCoordUVW);
-    <%= segmentationName %>_brushOverlayColor.xyz = convertCellIdToRGB(activeCellIdHigh, activeCellIdLow);
+    <%= segmentationName %>_brushOverlayColor.xyz = convertCellIdToRGB(activeCellIdHigh, activeCellIdLow).rgb;
     gl_FragColor = mix(gl_FragColor, <%= segmentationName %>_brushOverlayColor, <%= segmentationName %>_brushOverlayColor.a);
     gl_FragColor.a = 1.0;
 

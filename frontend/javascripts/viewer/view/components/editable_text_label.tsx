@@ -131,6 +131,19 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
     return allRulesValid;
   }
 
+  onRename = (evt: React.MouseEvent) => {
+    if (this.props.disableEditing) {
+      return;
+    }
+    evt.stopPropagation();
+    this.setState({
+      isEditing: true,
+    });
+    if (this.props.onRenameStart) {
+      this.props.onRenameStart();
+    }
+  };
+
   render() {
     const iconStyle = {
       cursor: "pointer",
@@ -149,18 +162,6 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
       autoFocus: true,
     };
     const isInvalidStyleMaybe = this.props.isInvalid ? { color: "var(--ant-color-error)" } : {};
-    const onRename = (evt: React.MouseEvent) => {
-      if (this.props.disableEditing) {
-        return;
-      }
-      evt.stopPropagation();
-      this.setState({
-        isEditing: true,
-      });
-      if (this.props.onRenameStart) {
-        this.props.onRenameStart();
-      }
-    };
 
     if (this.state.isEditing) {
       return this.props.rows === 1 ? (
@@ -195,7 +196,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
           }}
           className={this.props.onClick != null ? "clickable-text" : undefined}
           onClick={this.props.onClick}
-          onDoubleClick={onRename}
+          onDoubleClick={this.onRename}
           onContextMenu={this.props.onContextMenu}
         >
           {this.props.markdown ? (
@@ -216,7 +217,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
                   display: "inline",
                   whiteSpace: "nowrap",
                 }}
-                onClick={onRename}
+                onClick={this.onRename}
               />
             </FastTooltip>
           )}

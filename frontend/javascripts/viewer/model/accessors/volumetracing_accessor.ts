@@ -409,6 +409,36 @@ export function getVisibleSegments(state: WebknossosState): {
   return { segments, segmentGroups: EMPTY_SEGMENT_GROUPS };
 }
 
+export function getHideUnregisteredSegmentsForVisibleSegmentationLayer(
+  state: WebknossosState,
+): boolean {
+  const layer = getVisibleSegmentationLayer(state);
+
+  if (layer == null) {
+    return false;
+  }
+
+  if (layer.tracingId != null) {
+    const { hideUnregisteredSegments } = getVolumeTracingById(state.annotation, layer.tracingId);
+    return hideUnregisteredSegments;
+  }
+
+  return state.localSegmentationData[layer.name].hideUnregisteredSegments;
+}
+
+export function getHideUnregisteredSegmentsForLayer(
+  state: WebknossosState,
+  layerName: string,
+): boolean {
+  const layer = getSegmentationLayerByName(state.dataset, layerName);
+
+  if (layer.tracingId != null) {
+    return getVolumeTracingById(state.annotation, layer.tracingId).hideUnregisteredSegments;
+  }
+
+  return state.localSegmentationData[layer.name].hideUnregisteredSegments;
+}
+
 // Next to returning a clean list of selected segments or group, this method returns
 // a callback function that updates the selectedIds in store if segments are stored
 // there that are not visible in the segments view tab.

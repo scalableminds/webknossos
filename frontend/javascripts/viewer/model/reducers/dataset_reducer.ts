@@ -37,6 +37,7 @@ function DatasetReducer(state: WebknossosState, action: Action): WebknossosState
             segments: [],
             group: null,
           },
+          hideUnregisteredSegments: false,
         })),
         temporaryConfiguration: {
           ...state.temporaryConfiguration,

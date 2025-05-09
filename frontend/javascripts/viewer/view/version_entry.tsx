@@ -43,8 +43,10 @@ import type {
   UpdateMappingNameUpdateAction,
   UpdateMetadataOfAnnotationUpdateAction,
   UpdateNodeUpdateAction,
+  UpdateSegmentGroupVisibilityVolumeAction,
   UpdateSegmentGroupsUpdateAction,
   UpdateSegmentUpdateAction,
+  UpdateSegmentVisibilityVolumeAction,
   UpdateTreeEdgesVisibilityUpdateAction,
   UpdateTreeGroupVisibilityUpdateAction,
   UpdateTreeUpdateAction,
@@ -177,6 +179,34 @@ const descriptionFns: Record<
     return {
       description: `Updated the segment groups of layer ${layerName}.`,
       icon: <EditOutlined />,
+    };
+  },
+  updateSegmentVisibility: (
+    firstAction: UpdateSegmentVisibilityVolumeAction,
+    _actionCount: number,
+    annotation: StoreAnnotation,
+  ): Description => {
+    const layerName = maybeGetReadableVolumeTracingName(
+      annotation,
+      firstAction.value.actionTracingId,
+    );
+    return {
+      description: `Updated the visibility of segments of layer ${layerName}.`,
+      icon: <EyeOutlined />,
+    };
+  },
+  updateSegmentGroupVisibility: (
+    firstAction: UpdateSegmentGroupVisibilityVolumeAction,
+    _actionCount: number,
+    annotation: StoreAnnotation,
+  ): Description => {
+    const layerName = maybeGetReadableVolumeTracingName(
+      annotation,
+      firstAction.value.actionTracingId,
+    );
+    return {
+      description: `Updated the visibility of segment groups of layer ${layerName}.`,
+      icon: <EyeOutlined />,
     };
   },
   updateNode: (action: UpdateNodeUpdateAction): Description => ({

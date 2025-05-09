@@ -69,13 +69,14 @@ import type { OxalisState, UserBoundingBox } from "oxalis/store";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import React, { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { type APIDataLayer, type APIJob, APIJobType } from "types/api_flow_types";
+import { type APIDataLayer, type APIJob, APIJobType, type VoxelSize } from "types/api_flow_types";
 import {
   CollapsibleWorkflowYamlEditor,
   TrainAiModelFromAnnotationTab,
 } from "../jobs/train_ai_model";
 import DEFAULT_PREDICT_WORKFLOW from "./default-predict-workflow-template";
 import { isBoundingBoxExportable } from "./download_modal_view";
+import { convertVoxelSizeToUnit } from "oxalis/model/scaleinfo";
 
 const { ThinSpace } = Unicode;
 
@@ -278,11 +279,9 @@ function BoundingBoxSelectionFormItem({
                   mag1,
                 );
                 if (isExportable) return Promise.resolve();
-                rejectionReason = `The volume of the selected bounding box is too large. The AI neuron segmentation trial is only supported for up to ${
-                  features().exportTiffMaxVolumeMVx
-                } Megavoxels. Additionally, no bounding box edge should be longer than ${
-                  features().exportTiffMaxEdgeLengthVx
-                }vx.`;
+                rejectionReason = `The volume of the selected bounding box is too large. The AI neuron segmentation trial is only supported for up to ${features().exportTiffMaxVolumeMVx
+                  } Megavoxels. Additionally, no bounding box edge should be longer than ${features().exportTiffMaxEdgeLengthVx
+                  }vx.`;
               }
               // In case no bounding box was selected, the rejectionReason will be "", because the previous rule already checks that.
               return Promise.reject(rejectionReason);
@@ -344,10 +343,10 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
     },
     isSuperUser
       ? {
-          label: "Train a model",
-          key: "trainModel",
-          children: <TrainAiModelFromAnnotationTab onClose={onClose} />,
-        }
+        label: "Train a model",
+        key: "trainModel",
+        children: <TrainAiModelFromAnnotationTab onClose={onClose} />,
+      }
       : null,
     {
       label: "Alignment",
@@ -725,7 +724,7 @@ function useCurrentlySelectedBoundingBox(
 // in voxelytics/worker/job_utils/voxelytics_utils.py select_mag_for_model_prediction
 const getBestFittingMagComparedToTrainingDS = (
   colorLayer: APIDataLayer,
-  datasetScaleMag1: Vector3,
+  datasetScaleMag1: VoxelSize,
   jobType: APIJobType.INFER_MITOCHONDRIA | APIJobType.INFER_NEURONS | APIJobType.INFER_NUCLEI,
 ) => {
   if (jobType === APIJobType.INFER_MITOCHONDRIA) {
@@ -741,8 +740,11 @@ const getBestFittingMagComparedToTrainingDS = (
     Number.POSITIVE_INFINITY,
   ];
 
+  const datasetScaleInNm = convertVoxelSizeToUnit(datasetScaleMag1);
+  console.log(datasetScaleInNm);
+
   for (const mag of colorLayer.resolutions) {
-    const diff = datasetScaleMag1.map(
+    const diff = datasetScaleInNm.map(
       (dim, i) => Math.log2(dim * mag[i]) - Math.log2(modelScale[i]),
     );
     if (Math.abs(bestDifference[0]) > Math.abs(diff[0])) {
@@ -751,7 +753,7 @@ const getBestFittingMagComparedToTrainingDS = (
     }
   }
   const maxDistance = Math.max(...bestDifference);
-  const resultText = `Using mag [${closestMagOfCurrentDS}]. This results in an effective scale of [${datasetScaleMag1.map((scale, i) => Math.round(scale * closestMagOfCurrentDS[i]))}](compared to scale [${modelScale.map((scale) => Math.round(scale))}] used during training).`;
+  const resultText = `Using mag [${closestMagOfCurrentDS}]. This results in an effective scale of [${datasetScaleInNm.map((scale, i) => Math.round(scale * closestMagOfCurrentDS[i]))}](compared to scale [${modelScale.map((scale) => Math.round(scale))}] used during training).`;
   if (maxDistance > Math.log2(2)) {
     Toast.warning(resultText);
   } else {
@@ -853,9 +855,9 @@ function StartJobForm(props: StartJobFormProps) {
     async () =>
       boundingBoxForJob && jobCreditCostPerGVx != null
         ? await getJobCreditCost(
-            jobName,
-            computeArrayFromBoundingBox(boundingBoxForJob.boundingBox),
-          )
+          jobName,
+          computeArrayFromBoundingBox(boundingBoxForJob.boundingBox),
+        )
         : undefined,
     undefined,
     [boundingBoxForJob, jobName],
@@ -1021,7 +1023,7 @@ export function NucleiDetectionForm() {
         const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
         const mag = getBestFittingMagComparedToTrainingDS(
           colorLayer,
-          dataset.dataSource.scale.factor,
+          dataset.dataSource.scale,
           APIJobType.INFER_NUCLEI,
         );
         if (isDatasetOrBoundingBoxTooSmall(bbox, mag, colorLayer, APIJobType.INFER_NUCLEI)) {
@@ -1084,7 +1086,7 @@ export function NeuronSegmentationForm() {
         const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
         const mag = getBestFittingMagComparedToTrainingDS(
           colorLayer,
-          dataset.dataSource.scale.factor,
+          dataset.dataSource.scale,
           APIJobType.INFER_NEURONS,
         );
         if (isDatasetOrBoundingBoxTooSmall(bbox, mag, colorLayer, APIJobType.INFER_NEURONS)) {
@@ -1158,7 +1160,7 @@ export function MitochondriaSegmentationForm() {
         const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
         const mag = getBestFittingMagComparedToTrainingDS(
           colorLayer,
-          dataset.dataSource.scale.factor,
+          dataset.dataSource.scale,
           APIJobType.INFER_MITOCHONDRIA,
         );
         if (isDatasetOrBoundingBoxTooSmall(bbox, mag, colorLayer, APIJobType.INFER_MITOCHONDRIA)) {

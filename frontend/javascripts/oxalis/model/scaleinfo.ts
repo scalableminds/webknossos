@@ -1,4 +1,5 @@
-import type { Vector3 } from "oxalis/constants";
+import { UnitsMap } from "libs/format_utils";
+import { LongUnitToShortUnitMap, UnitShort, type Vector3 } from "oxalis/constants";
 import type { VoxelSize } from "types/api_flow_types";
 
 export function getBaseVoxelInUnit(voxelSizeFactor: Vector3): number {
@@ -47,4 +48,14 @@ export function voxelToUnit(voxelSize: VoxelSize, posArray: Vector3): Vector3 {
     result[i] = posArray[i] * voxelSize.factor[i];
   }
   return result;
+}
+
+export function convertVoxelSizeToUnit(
+  voxelSize: VoxelSize,
+  newUnit: UnitShort = UnitShort.nm,
+): Vector3 {
+  const shortUnit = LongUnitToShortUnitMap[voxelSize.unit];
+  const conversionFactor = UnitsMap[shortUnit] / UnitsMap[newUnit];
+  const voxelSizeInNm = voxelSize.factor.map((value) => value * conversionFactor) as Vector3;
+  return voxelSizeInNm;
 }

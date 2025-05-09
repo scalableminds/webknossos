@@ -50,8 +50,12 @@ import _ from "lodash";
 import React, { useEffect, useState, useMemo } from "react";
 import { useDispatch } from "react-redux";
 import { type APIDataLayer, type APIJob, APIJobType, type VoxelSize } from "types/api_types";
-import { ControlModeEnum, Unicode, type Vector6, type Vector3 } from "viewer/constants";
-import { getColorLayers, getMagInfo, getSegmentationLayers } from "viewer/model/accessors/dataset_accessor";
+import { ControlModeEnum, Unicode, type Vector3, type Vector6 } from "viewer/constants";
+import {
+  getColorLayers,
+  getMagInfo,
+  getSegmentationLayers,
+} from "viewer/model/accessors/dataset_accessor";
 import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_accessor";
 import {
   getActiveSegmentationTracingLayer,
@@ -64,6 +68,7 @@ import {
 import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type { MagInfo } from "viewer/model/helpers/mag_info";
+import { convertVoxelSizeToUnit } from "viewer/model/scaleinfo";
 import { Model, Store } from "viewer/singletons";
 import type { UserBoundingBox } from "viewer/store";
 import { getBaseSegmentationName } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
@@ -73,7 +78,6 @@ import {
 } from "../jobs/train_ai_model";
 import DEFAULT_PREDICT_WORKFLOW from "./default-predict-workflow-template";
 import { isBoundingBoxExportable } from "./download_modal_view";
-import { convertVoxelSizeToUnit } from "viewer/model/scaleinfo";
 
 const { ThinSpace } = Unicode;
 
@@ -280,9 +284,11 @@ function BoundingBoxSelectionFormItem({
                   mag1,
                 );
                 if (isExportable) return Promise.resolve();
-                rejectionReason = `The volume of the selected bounding box is too large. The AI neuron segmentation trial is only supported for up to ${features().exportTiffMaxVolumeMVx
-                  } Megavoxels. Additionally, no bounding box edge should be longer than ${features().exportTiffMaxEdgeLengthVx
-                  }vx.`;
+                rejectionReason = `The volume of the selected bounding box is too large. The AI neuron segmentation trial is only supported for up to ${
+                  features().exportTiffMaxVolumeMVx
+                } Megavoxels. Additionally, no bounding box edge should be longer than ${
+                  features().exportTiffMaxEdgeLengthVx
+                }vx.`;
               }
               // In case no bounding box was selected, the rejectionReason will be "", because the previous rule already checks that.
               return Promise.reject(rejectionReason);
@@ -344,10 +350,10 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
     },
     isSuperUser
       ? {
-        label: "Train a model",
-        key: "trainModel",
-        children: <TrainAiModelFromAnnotationTab onClose={onClose} />,
-      }
+          label: "Train a model",
+          key: "trainModel",
+          children: <TrainAiModelFromAnnotationTab onClose={onClose} />,
+        }
       : null,
     {
       label: "Alignment",
@@ -848,9 +854,9 @@ function StartJobForm(props: StartJobFormProps) {
     async () =>
       boundingBoxForJob && jobCreditCostPerGVx != null
         ? await getJobCreditCost(
-          jobName,
-          computeArrayFromBoundingBox(boundingBoxForJob.boundingBox),
-        )
+            jobName,
+            computeArrayFromBoundingBox(boundingBoxForJob.boundingBox),
+          )
         : undefined,
     undefined,
     [boundingBoxForJob, jobName],

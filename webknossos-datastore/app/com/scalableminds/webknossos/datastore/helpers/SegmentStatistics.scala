@@ -5,6 +5,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.common.Box.tryo
 import play.api.libs.json.{Json, OFormat}
@@ -19,7 +20,7 @@ object SegmentStatisticsParameters {
   implicit val jsonFormat: OFormat[SegmentStatisticsParameters] = Json.format[SegmentStatisticsParameters]
 }
 
-trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
+trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits with LazyLogging {
 
   protected def bucketScanner: NativeBucketScanner
 
@@ -38,6 +39,7 @@ trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
       bucketPositionsInMag = bucketPositionsProtos.map(vec3IntFromProto)
       (bucketBoxes, elementClass) <- getDataForBucketPositions(bucketPositionsInMag.toSeq, mag, additionalCoordinates)
       counts <- Fox.serialCombined(bucketBoxes.toList) {
+        case Full(bucketBytes) if bucketBytes.isEmpty => Full(0L).toFox
         case Full(bucketBytes) =>
           tryo(
             bucketScanner.countSegmentVoxels(bucketBytes,
@@ -73,6 +75,7 @@ trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
                                                                mag,
                                                                additionalCoordinates)
       _ <- Fox.serialCombined(relevantBucketPositions.zip(bucketBoxes)) {
+        case (_, Full(bucketData)) if bucketData.isEmpty => Fox.successful(())
         case (bucketPosition, Full(bucketData)) =>
           Fox.successful(
             extendBoundingBoxByData(segmentId, boundingBoxMutable, bucketPosition, bucketData, elementClass))

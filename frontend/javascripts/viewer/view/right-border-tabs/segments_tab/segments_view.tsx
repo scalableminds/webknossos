@@ -43,6 +43,13 @@ import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { pluralize, sleep } from "libs/utils";
 import _, { isNumber, memoize } from "lodash";
+import type RcTree from "rc-tree";
+import React, { type Key } from "react";
+import { connect } from "react-redux";
+import AutoSizer from "react-virtualized-auto-sizer";
+import type { Dispatch } from "redux";
+import type { APIMeshFile, MetadataEntryProto } from "types/api_types";
+import { APIJobType, type AdditionalCoordinate } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { EMPTY_OBJECT, MappingStatusEnum } from "viewer/constants";
 import {
@@ -112,13 +119,6 @@ import {
   type SegmentHierarchyNode,
   getBaseSegmentationName,
 } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
-import type RcTree from "rc-tree";
-import React, { type Key } from "react";
-import { connect } from "react-redux";
-import AutoSizer from "react-virtualized-auto-sizer";
-import type { Dispatch } from "redux";
-import type { APIMeshFile, MetadataEntryProto } from "types/api_types";
-import { APIJobType, type AdditionalCoordinate } from "types/api_types";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import DeleteGroupModalView from "../delete_group_modal_view";
 import { MetadataEntryTableRows } from "../metadata_table";

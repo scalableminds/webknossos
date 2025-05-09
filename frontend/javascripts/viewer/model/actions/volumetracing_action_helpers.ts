@@ -1,6 +1,6 @@
+import type { AdditionalCoordinate } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import type { WebknossosState } from "viewer/store";
-import type { AdditionalCoordinate } from "types/api_types";
 import { getVisibleSegmentationLayer } from "../accessors/dataset_accessor";
 import {
   getHideUnregisteredSegmentsForVisibleSegmentationLayer,

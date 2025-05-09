@@ -1,5 +1,6 @@
 import { V3 } from "libs/mjs";
 import memoizeOne from "memoize-one";
+import type { AdditionalCoordinate } from "types/api_types";
 import type { OrthoView, Point2, Vector3 } from "viewer/constants";
 import { ContourModeEnum } from "viewer/constants";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
@@ -17,7 +18,6 @@ import {
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { Model, Store, api } from "viewer/singletons";
-import type { AdditionalCoordinate } from "types/api_types";
 
 export function handleDrawStart(pos: Point2, plane: OrthoView) {
   const state = Store.getState();

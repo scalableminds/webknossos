@@ -1,6 +1,7 @@
 import update from "immutability-helper";
 import DiffableMap from "libs/diffable_map";
 import * as Utils from "libs/utils";
+import type { AdditionalCoordinate, ServerVolumeTracing } from "types/api_types";
 import { ContourModeEnum } from "viewer/constants";
 import {
   getLayerByName,
@@ -60,7 +61,6 @@ import {
   findParentIdForGroupId,
   getGroupNodeKey,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import type { AdditionalCoordinate, ServerVolumeTracing } from "types/api_types";
 import { mapGroups, mapGroupsToGenerator } from "../accessors/skeletontracing_accessor";
 import { sanitizeMetadata } from "./skeletontracing_reducer";
 import { forEachGroups } from "./skeletontracing_reducer_helpers";

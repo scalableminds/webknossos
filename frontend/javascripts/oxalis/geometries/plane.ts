@@ -74,7 +74,6 @@ class Plane {
     const textureMaterial = this.materialFactory.setup().getMaterial();
     this.plane = new THREE.Mesh(planeGeo, textureMaterial);
     this.plane.name = `${this.planeID}-plane`;
-    this.plane.material.side = THREE.DoubleSide;
 
     // Create crosshairs
     this.crosshair = new Array(2);

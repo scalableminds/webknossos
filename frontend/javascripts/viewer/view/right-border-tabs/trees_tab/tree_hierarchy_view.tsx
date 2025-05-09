@@ -1,7 +1,6 @@
 import { DownOutlined } from "@ant-design/icons";
 import { type Tree as AntdTree, type GetRef, type MenuProps, Modal, type TreeProps } from "antd";
 import { SimpleRow } from "dashboard/folders/metadata_table";
-import { useWkSelector } from "libs/react_hooks";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";

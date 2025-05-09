@@ -49,6 +49,7 @@ import type {
   UpdateTreeGroupVisibilityUpdateAction,
   UpdateTreeUpdateAction,
   UpdateTreeVisibilityUpdateAction,
+  UpdateUserStateSkeletonUpdateAction,
 } from "viewer/model/sagas/update_actions";
 import type { StoreAnnotation } from "viewer/store";
 import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
@@ -309,6 +310,13 @@ const descriptionFns: Record<
     return {
       description: `Updated the description of the annotation to: ${action.value.description.slice(0, 100) || ""}`,
       icon: <EditOutlined />,
+    };
+  },
+  updateUserStateInSkeletonTracing: (action: UpdateUserStateSkeletonUpdateAction): Description => {
+    return {
+      // todop
+      description: `Updated the active node id to ${action.value.activeNode} for user ?`,
+      icon: <EditOutlined />, // todop: better icon?
     };
   },
 } as const;

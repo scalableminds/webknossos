@@ -106,6 +106,8 @@ const serverSkeletonTracing: ServerSkeletonTracing = {
   activeNodeId: undefined,
   boundingBox: undefined,
   trees: [],
+  // todop: define a proper user state?
+  userStates: [],
 };
 skeletonTracing.trees[1] = {
   treeId: 1,

@@ -345,7 +345,7 @@ export function updateUserStateSkeleton(tracing: {
   activeNodeId: number | null | undefined;
 }) {
   return {
-    // todop: this has "in" in it, but the ts and scale
+    // todop (backend first?): this has "in" in it, but the ts and scale
     // type don't have that.
     name: "updateUserStateInSkeletonTracing",
     value: {

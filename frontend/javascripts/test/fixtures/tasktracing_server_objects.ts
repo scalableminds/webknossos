@@ -66,6 +66,8 @@ export const tracing: ServerSkeletonTracing = {
   additionalAxes: [],
   zoomLevel: 2,
   id: "e90133de-b2db-4912-8261-8b6f84f7edab",
+  // todop: define a proper user state?
+  userStates: [],
 };
 export const annotation: APIAnnotation = {
   datasetId: "66f3c82966010034942e9740",

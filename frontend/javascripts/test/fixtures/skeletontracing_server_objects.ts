@@ -161,6 +161,8 @@ export const tracing: ServerSkeletonTracing = {
   },
   additionalAxes: [],
   zoomLevel: 2,
+  // todop: define a proper user state?
+  userStates: [],
 };
 export const annotation: APIAnnotation = {
   description: "",

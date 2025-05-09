@@ -130,12 +130,14 @@ class SceneController {
     this.scene = new THREE.Scene();
     this.highlightedBBoxId = null;
     this.rootGroup = new THREE.Group();
+    const planeMeshes = _.values(this.planes).flatMap((plane) => plane.getMeshes());
     this.scene.add(
       this.rootGroup.add(
         this.rootNode,
         this.segmentMeshController.meshesLayerLODRootGroup,
         this.segmentMeshController.lightsGroup,
       ),
+      ...planeMeshes,
     );
     // Because the voxel coordinates do not have a cube shape but are distorted,
     // we need to distort the entire scene to provide an illustration that is
@@ -257,7 +259,6 @@ class SceneController {
     this.planes[OrthoViews.PLANE_YZ].setBaseRotation(OrthoBaseRotations[OrthoViews.PLANE_YZ]);
     this.planes[OrthoViews.PLANE_XZ].setBaseRotation(OrthoBaseRotations[OrthoViews.PLANE_XZ]);
 
-    const planeMeshes = _.values(this.planes).flatMap((plane) => plane.getMeshes());
     this.rootNode = new THREE.Group().add(
       this.userBoundingBoxGroup,
       this.layerBoundingBoxGroup,
@@ -268,7 +269,6 @@ class SceneController {
         ...this.areaMeasurementGeometry.getMeshes(),
       ),
       ...this.datasetBoundingBox.getMeshes(),
-      ...planeMeshes,
     );
 
     if (state.annotation.skeleton != null) {

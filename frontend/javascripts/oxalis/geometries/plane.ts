@@ -7,6 +7,7 @@ import constants, {
   OrthoViewValues,
 } from "oxalis/constants";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
 import Store from "oxalis/store";
 import * as THREE from "three";
@@ -34,13 +35,15 @@ class Plane {
   planeID: OrthoView;
   materialFactory!: PlaneMaterialFactory;
   displayCrosshair: boolean;
-  worldScale: THREE.Vector3;
+  worldScaleInverse: THREE.Vector3;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'crosshair' has no initializer and is not... Remove this comment to see the full error message
   crosshair: Array<THREE.LineSegments>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'TDViewBorders' has no initializer and is... Remove this comment to see the full error message
   TDViewBorders: THREE.Line;
   lastScaleFactors: [number, number];
   baseRotation: THREE.Euler;
+  storePropertyUnsubscribes: Array<() => void> = [];
+  datasetScaleFactor: THREE.Vector3 = new THREE.Vector3(1, 1, 1);
 
   constructor(planeID: OrthoView) {
     this.planeID = planeID;
@@ -51,8 +54,9 @@ class Plane {
     // is smaller in voxels, so that it is squared in nm.
     // --> scaleInfo.baseVoxel
     const baseVoxelFactors = getBaseVoxelFactorsInUnit(Store.getState().dataset.dataSource.scale);
-    this.worldScale = new THREE.Vector3(...baseVoxelFactors);
+    this.worldScaleInverse = new THREE.Vector3(...baseVoxelFactors);
     this.baseRotation = new THREE.Euler(0, 0, 0);
+    this.bindToEvents();
     this.createMeshes();
   }
 
@@ -144,43 +148,11 @@ class Plane {
     if (this.lastScaleFactors[0] === xFactor && this.lastScaleFactors[1] === yFactor) {
       return;
     }
-    // TODOM: This is broken when rotation is active and needs to be fixed!!!!
     this.lastScaleFactors[0] = xFactor;
     this.lastScaleFactors[1] = yFactor;
-    this.recalculateScale();
-  }
-
-  private recalculateScale(): void {
-    // The baseScaleVector needs to be rotated like the current rotation settings of the plane to calculate the correct scaling vector.
-    const localScaleFactorX = new THREE.Vector3(1, 0, 0);
-    const localScaleFactorY = new THREE.Vector3(0, 1, 0);
-    // Apply current rotation of the plane.
-    //const localScaleFactorXRotated = localScaleFactorX.applyEuler(this.container.rotation);
-    //const localScaleFactorYRotated = localScaleFactorY.applyEuler(this.container.rotation);
-    const quat = new THREE.Quaternion();
-    this.plane.getWorldQuaternion(quat);
-    const localScaleFactorXRotated = localScaleFactorX.applyQuaternion(quat);
-    const localScaleFactorYRotated = localScaleFactorY.applyQuaternion(quat);
-    // Put scale measuring vectors into world scale to get distortion cause by potentially anisotropic voxel scale factor.
-    const scaleFactorXStrechedInSpace = localScaleFactorXRotated.multiply(this.worldScale);
-    const scaleFactorYStrechedInSpace = localScaleFactorYRotated.multiply(this.worldScale);
-    // Measure visual length (how much stretch the voxel scale factor causes)
-    const lengthX = scaleFactorXStrechedInSpace.length();
-    const lengthY = scaleFactorYStrechedInSpace.length();
-    // Calculate correction factors to neutralize the stretching caused by the scale factor.
-    const correctionX = lengthX; //!== 1 ? lengthX * 1.1 : lengthX;
-    const correctionY = lengthY; //!== 1 ? lengthY * 1.1 : lengthY;
-    //const correctionY = lengthY;
-
-    const scaleVec = new THREE.Vector3().multiplyVectors(
-      new THREE.Vector3(this.lastScaleFactors[0], this.lastScaleFactors[1], 1),
-      new THREE.Vector3(correctionX, correctionY, 1),
-    );
-    const scaleVec2 = new THREE.Vector3().multiplyVectors(scaleVec, this.worldScale);
-    if (this.planeID === "PLANE_XZ")
-      console.log("calculated scale", this.planeID, scaleVec, scaleVec2, this.worldScale);
-    this.getMeshes().map((mesh) => mesh.scale.copy(scaleVec));
-    //this.plane.scale.copy(scaleVec);
+    // Account for the dataset scale to match one world space coordinate to one dataset scale unit.
+    const scaleVector = new THREE.Vector3(xFactor, yFactor, 1).multiply(this.datasetScaleFactor);
+    this.getMeshes().map((mesh) => mesh.scale.copy(scaleVector));
   }
 
   setBaseRotation = (rotVec: THREE.Euler): void => {
@@ -192,7 +164,6 @@ class Plane {
     const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(rotVec);
     const combinedMatrix = rotationMatrix.multiply(baseRotationMatrix);
     this.getMeshes().map((mesh) => mesh.setRotationFromMatrix(combinedMatrix));
-    this.recalculateScale();
   };
 
   // In case the plane's position was offset to make geometries
@@ -200,14 +171,15 @@ class Plane {
   // additionally pass the originalPosition (which is necessary for the
   // shader)
   setPosition = (pos: Vector3, originalPosition?: Vector3): void => {
-    const [x, y, z] = pos;
-    this.TDViewBorders.position.set(x, y, z);
-    this.crosshair[0].position.set(x, y, z);
-    this.crosshair[1].position.set(x, y, z);
-    this.plane.position.set(x, y, z);
+    // TODOM: Write proper reasoning comment.
+    const scaledPosition = new THREE.Vector3(...pos).multiply(this.datasetScaleFactor);
+    this.TDViewBorders.position.set(scaledPosition.x, scaledPosition.y, scaledPosition.z);
+    this.crosshair[0].position.set(scaledPosition.x, scaledPosition.y, scaledPosition.z);
+    this.crosshair[1].position.set(scaledPosition.x, scaledPosition.y, scaledPosition.z);
+    this.plane.position.set(scaledPosition.x, scaledPosition.y, scaledPosition.z);
 
     if (originalPosition == null) {
-      this.plane.material.setGlobalPosition(x, y, z);
+      this.plane.material.setGlobalPosition(scaledPosition.x, scaledPosition.y, scaledPosition.z);
     } else {
       this.plane.material.setGlobalPosition(
         originalPosition[0],
@@ -231,6 +203,17 @@ class Plane {
 
   destroy() {
     this.materialFactory.destroy();
+    this.storePropertyUnsubscribes.forEach((f) => f());
+    this.storePropertyUnsubscribes = [];
+  }
+
+  bindToEvents(): void {
+    this.storePropertyUnsubscribes = [
+      listenToStoreProperty(
+        (storeState) => storeState.dataset.dataSource.scale.factor,
+        (scaleFactor) => (this.datasetScaleFactor = new THREE.Vector3(...scaleFactor)),
+      ),
+    ];
   }
 }
 

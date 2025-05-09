@@ -11,17 +11,17 @@ describe("Format Utils", () => {
     expect([1e6, 1e6, 1e6]).toEqual(
       convertVoxelSizeToUnit({ factor: [1, 1, 1], unit: UnitLong.mm }),
     );
-    expect([1e9, 1e9, 1e9]).toEqual(
+    expect([1e7, 1e7, 1e7]).toEqual(
       convertVoxelSizeToUnit({ factor: [1, 1, 1], unit: UnitLong.cm }),
     );
-    expect([1e12, 1e12, 1e12]).toEqual(
+    expect([1e9, 1e9, 1e9]).toEqual(
       convertVoxelSizeToUnit({ factor: [1, 1, 1], unit: UnitLong.m }),
     );
     expect([1e-3, 1e-3, 1e-3]).toEqual(
-      convertVoxelSizeToUnit({ factor: [1, 1, 1], unit: UnitLong.fm }),
+      convertVoxelSizeToUnit({ factor: [1, 1, 1], unit: UnitLong.pm }),
     );
     expect([1e-6, 1e-6, 1e-6]).toEqual(
-      convertVoxelSizeToUnit({ factor: [1, 1, 1], unit: UnitLong.pm }),
+      convertVoxelSizeToUnit({ factor: [1, 1, 1], unit: UnitLong.fm }),
     );
   });
 
@@ -29,14 +29,14 @@ describe("Format Utils", () => {
     expect([1, 1, 1]).toEqual(
       convertVoxelSizeToUnit({ factor: [1, 1, 1], unit: UnitLong.m }, UnitShort.m),
     );
-    expect([1, 1, 1]).toEqual(
-      convertVoxelSizeToUnit({ factor: [1e3, 1e3, 1e3], unit: UnitLong.km }, UnitShort.m),
+    expect([1e3, 1e3, 1e3]).toEqual(
+      convertVoxelSizeToUnit({ factor: [1, 1, 1], unit: UnitLong.km }, UnitShort.m),
     );
-    expect([1, 1, 1]).toEqual(
-      convertVoxelSizeToUnit({ factor: [1e-3, 1e-3, 1e-3], unit: UnitLong.mm }, UnitShort.m),
+    expect([1e-3, 1e-3, 1e-3]).toEqual(
+      convertVoxelSizeToUnit({ factor: [1, 1, 1], unit: UnitLong.mm }, UnitShort.m),
     );
-    expect([1, 1, 1]).toEqual(
-      convertVoxelSizeToUnit({ factor: [1e-6, 1e-6, 1e-6], unit: UnitLong.µm }, UnitShort.m),
+    expect([1e-6, 1e-6, 1e-6]).toEqual(
+      convertVoxelSizeToUnit({ factor: [1, 1, 1], unit: UnitLong.µm }, UnitShort.m),
     );
   });
 });

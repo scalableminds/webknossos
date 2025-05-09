@@ -6,6 +6,7 @@ import _ from "lodash";
 import type { Vector3 } from "oxalis/constants";
 import {
   ZOOM_STEP_INTERVAL,
+  getRotationInRadian,
   getValidZoomRangeForUser,
 } from "oxalis/model/accessors/flycam_accessor";
 import type { Action } from "oxalis/model/actions/actions";
@@ -13,6 +14,7 @@ import Dimensions from "oxalis/model/dimensions";
 import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
 import type { WebknossosState } from "oxalis/store";
 import { getUnifiedAdditionalCoordinates } from "../accessors/dataset_accessor";
+import * as THREE from "three";
 
 function cloneMatrix(m: Matrix4x4): Matrix4x4 {
   return [
@@ -275,7 +277,7 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
     }
 
     case "SET_ROTATION": {
-        return setRotationReducer(state, action.rotation);
+      return setRotationReducer(state, action.rotation);
     }
 
     case "SET_DIRECTION": {
@@ -314,26 +316,31 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
     }
 
     case "MOVE_PLANE_FLYCAM_ORTHO": {
-      const { dataset } = state;
+      const { dataset, flycam } = state;
 
       if (dataset != null) {
         const { planeId, increaseSpeedWithZoom } = action;
         const vector = Dimensions.transDim(action.vector, planeId);
-        const zoomFactor = increaseSpeedWithZoom ? state.flycam.zoomStep : 1;
-        const scaleFactor = getBaseVoxelFactorsInUnit(dataset.dataSource.scale);
-        const delta: Vector3 = [
-          vector[0] * zoomFactor * scaleFactor[0],
-          vector[1] * zoomFactor * scaleFactor[1],
-          vector[2] * zoomFactor * scaleFactor[2],
-        ];
+        const flycamRotation = getRotationInRadian(flycam);
 
+        const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(
+          new THREE.Euler(...flycamRotation),
+        );
+        const movementVectorInWorld = new THREE.Vector3(...vector).applyMatrix4(rotationMatrix);
+        const zoomFactor = increaseSpeedWithZoom ? flycam.zoomStep : 1;
+        const scaleFactor = getBaseVoxelFactorsInUnit(dataset.dataSource.scale);
+        const movementInWorldZoomed = movementVectorInWorld
+          .multiplyScalar(zoomFactor)
+          .multiply(new THREE.Vector3(...scaleFactor));
+
+        // TODOM: make this apply to movementInWorldZoomed
         if (planeId != null && state.userConfiguration.dynamicSpaceDirection) {
           // change direction of the value connected to space, based on the last direction
-          const dim = Dimensions.getIndices(planeId)[2];
-          delta[dim] *= state.flycam.spaceDirectionOrtho[dim];
+          // const dim = Dimensions.getIndices(planeId)[2];
+          // delta[dim] *= state.flycam.spaceDirectionOrtho[dim];
         }
 
-        return moveReducer(state, delta);
+        return moveReducer(state, movementInWorldZoomed.toArray());
       }
 
       return state;

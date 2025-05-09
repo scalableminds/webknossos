@@ -1,4 +1,5 @@
 import type { AdditionalCoordinate } from "types/api_types";
+import * as THREE from "three";
 
 export const ViewModeValues = ["orthogonal", "flight", "oblique"] as ViewMode[];
 
@@ -116,6 +117,14 @@ export const OrthoViewCrosshairColors: OrthoViewMap<[number, number]> = {
   [OrthoViews.PLANE_XZ]: [BLUE, PINK],
   [OrthoViews.TDView]: [0x000000, 0x000000],
 };
+export const OrthoBaseRotations = {
+  //[OrthoViews.PLANE_XY]: new THREE.Euler(Math.PI, 0, 0),
+  [OrthoViews.PLANE_XY]: new THREE.Euler(Math.PI, 0, 0),
+  [OrthoViews.PLANE_YZ]: new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0),
+  [OrthoViews.PLANE_XZ]: new THREE.Euler((-1 / 2) * Math.PI, 0, 0),
+  [OrthoViews.TDView]: new THREE.Euler(Math.PI / 4, Math.PI / 4, Math.PI / 4),
+};
+
 export type BorderTabType = {
   id: string;
   name: string;

@@ -2,7 +2,7 @@ import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import type { OrthoView, OrthoViewMap, OrthoViewRects, Vector3 } from "oxalis/constants";
-import { OrthoViewValuesWithoutTDView, OrthoViews } from "oxalis/constants";
+import { OrthoBaseRotations, OrthoViewValuesWithoutTDView, OrthoViews } from "oxalis/constants";
 import { getDatasetCenter, getDatasetExtentInUnit } from "oxalis/model/accessors/dataset_accessor";
 import { getPosition, getRotationInRadian } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -18,7 +18,6 @@ import Store from "oxalis/store";
 import * as React from "react";
 import * as THREE from "three";
 import TWEEN from "tween.js";
-import { OrthoBaseRotations } from "./scene_controller";
 
 type Props = {
   cameras: OrthoViewMap<THREE.OrthographicCamera>;

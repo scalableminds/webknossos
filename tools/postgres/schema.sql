@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(131);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(132);
 COMMIT TRANSACTION;
 
 
@@ -169,6 +169,14 @@ CREATE TABLE webknossos.dataset_layer_additionalAxes(
    index INT NOT NULL
 );
 
+
+CREATE TABLE webknossos.dataset_layer_special_files(
+  _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
+  layerName TEXT NOT NULL,
+  path TEXT NOT NULL,
+  type TEXT NOT NULL
+);
+
 CREATE TABLE webknossos.dataset_allowedTeams(
   _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
   _team TEXT CONSTRAINT _team_objectId CHECK (_team ~ '^[0-9a-f]{24}$') NOT NULL,
@@ -204,6 +212,7 @@ CREATE TABLE webknossos.dataset_thumbnails(
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (_dataset, dataLayerName, width, height, mappingName)
 );
+
 
 CREATE TYPE webknossos.DATASTORE_TYPE AS ENUM ('webknossos-store');
 CREATE TABLE webknossos.dataStores(

@@ -822,11 +822,11 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
 
 }
 
-class DatasetLayerDAO @Inject()(
-    sqlClient: SqlClient,
-    datasetMagsDAO: DatasetMagsDAO,
-    datasetCoordinateTransformationsDAO: DatasetCoordinateTransformationsDAO,
-    datasetLayerAdditionalAxesDAO: DatasetLayerAdditionalAxesDAO)(implicit ec: ExecutionContext)
+class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
+                                datasetMagsDAO: DatasetMagsDAO,
+                                datasetCoordinateTransformationsDAO: DatasetCoordinateTransformationsDAO,
+                                datasetLayerAdditionalAxesDAO: DatasetLayerAdditionalAxesDAO,
+                                datasetLayerSpecialFilesDAO: DatasetLayerSpecialFilesDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
   private def parseRow(row: DatasetLayersRow, datasetId: ObjectId): Fox[DataLayer] = {
@@ -943,6 +943,7 @@ class DatasetLayerDAO @Inject()(
       _ <- datasetMagsDAO.updateMags(datasetId, source.toUsable.map(_.dataLayers))
       _ <- datasetCoordinateTransformationsDAO.updateCoordinateTransformations(datasetId,
                                                                                source.toUsable.map(_.dataLayers))
+      - <- datasetLayerSpecialFilesDAO.updateSpecialFiles(datasetId, source.toUsable.map(_.dataLayers))
       _ <- datasetLayerAdditionalAxesDAO.updateAdditionalAxes(datasetId, source.toUsable.map(_.dataLayers))
     } yield ()
   }
@@ -980,6 +981,26 @@ class DatasetLastUsedTimesDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execu
                retryCount = 50,
                retryIfErrorContains = List(transactionSerializationError))
     } yield ()
+  }
+}
+
+class DatasetLayerSpecialFilesDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+    extends SimpleSQLDAO(sqlClient) {
+  def updateSpecialFiles(datasetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
+    val clearQuery =
+      q"DELETE FROM webknossos.dataset_layer_special_files WHERE _dataset = $datasetId".asUpdate
+    val insertQueries = dataLayersOpt.getOrElse(List.empty).flatMap { layer: DataLayer =>
+      layer.specialFiles.getOrElse(List.empty).map { specialFile =>
+        {
+          q"""INSERT INTO webknossos.dataset_layer_special_files(_dataset, layerName, path, type)
+              values(
+              $datasetId, ${layer.name}, ${specialFile.source.toString}, ${specialFile.typ})
+              """.asUpdate
+        }
+      }
+
+    }
+    replaceSequentiallyAsTransaction(clearQuery, insertQueries)
   }
 }
 

@@ -896,6 +896,18 @@ export type ServerTracingBase = {
   // the property.
   version?: number;
 };
+
+type SkeletonUserState = {
+  activeNodeId: number | null;
+  boundingBoxIds: number[];
+  boundingBoxVisibilities: [];
+  treeGroupExpandedStates: [];
+  treeGroupIds: [];
+  treeIds: number[];
+  treeVisibilities: [];
+  userId: string;
+};
+
 export type ServerSkeletonTracing = ServerTracingBase & {
   // The following property is added when fetching the
   // tracing from the back-end (by `getTracingForAnnotationType`)
@@ -906,6 +918,7 @@ export type ServerSkeletonTracing = ServerTracingBase & {
   trees: Array<ServerSkeletonTracingTree>;
   treeGroups: Array<TreeGroup> | null | undefined;
   storedWithExternalTreeBodies?: boolean; // unused in frontend
+  userStates: SkeletonUserState[];
 };
 export type ServerVolumeTracing = ServerTracingBase & {
   // The following property is added when fetching the

@@ -52,7 +52,8 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
   switch (action.type) {
     case "INITIALIZE_SKELETONTRACING": {
       const trees = createTreeMapFromTreeArray(action.tracing.trees);
-      let activeNodeId = action.tracing.activeNodeId;
+      // todop: replace _.first to select the proper user
+      let activeNodeId = _.first(action.tracing.userStates)?.activeNodeId;
 
       let cachedMaxNodeId = _.max(_.flatMap(trees, (__) => __.nodes.map((node) => node.id)));
 

@@ -5,9 +5,10 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.xml.Xml
+import com.scalableminds.webknossos.datastore.Annotation.{AnnotationProto, AnnotationUserStateProto}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
-import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup}
+import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing}
 import com.scalableminds.webknossos.datastore.geometry._
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayerType, FetchedAnnotationLayer}
@@ -43,6 +44,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
   private lazy val outputService = XMLOutputFactory.newInstance()
 
   def toNmlStream(name: String,
+                  annotationProto: AnnotationProto,
                   annotationLayers: List[FetchedAnnotationLayer],
                   annotation: Option[Annotation],
                   scale: Option[VoxelSize],
@@ -51,19 +53,21 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
                   wkUrl: String,
                   datasetName: String,
                   datasetId: ObjectId,
-                  annotationOwner: Option[User],
+                  annotationOwner: User,
                   annotationTask: Option[Task],
                   skipVolumeData: Boolean = false,
-                  volumeDataZipFormat: VolumeDataZipFormat): NamedFunctionStream =
+                  volumeDataZipFormat: VolumeDataZipFormat,
+                  requestingUser: Option[User]): NamedFunctionStream =
     NamedFunctionStream(
       name,
       os => {
         implicit val writer: IndentingXMLStreamWriter =
           new IndentingXMLStreamWriter(outputService.createXMLStreamWriter(os))
-
+        val annotationLayersWithAppliedUserState =
+          renderUserState(annotationProto, annotationLayers, requestingUser, annotationOwner)
         for {
           nml <- toNmlWithImplicitWriter(
-            annotationLayers,
+            annotationLayersWithAppliedUserState,
             annotation,
             scale,
             volumeFilename,
@@ -80,6 +84,135 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
       }
     )
 
+  // TODO move to trait
+  private def renderUserState(annotationProto: AnnotationProto,
+                              annotationLayers: List[FetchedAnnotationLayer],
+                              requestingUser: Option[User],
+                              annotationOwner: User): List[FetchedAnnotationLayer] = {
+    val annotationUserState = findBestUserStateFor(annotationProto, requestingUser, annotationOwner)
+    annotationLayers.map { annotationLayer =>
+      annotationLayer.copy(
+        tracing =
+          renderUserStateForTracing(annotationLayer.tracing, annotationUserState, requestingUser, annotationOwner))
+    }
+  }
+
+  // TODO move to trait
+  private def findBestUserStateFor(annotationProto: AnnotationProto,
+                                   requestingUserOpt: Option[User],
+                                   annotationOwner: User): Option[AnnotationUserStateProto] =
+    annotationProto.userStates
+      .find(_.userId == requestingUserOpt.getOrElse(annotationOwner)._id.toString)
+      .orElse(annotationProto.userStates.find(_.userId == annotationOwner._id.toString))
+
+  // TODO move to trait
+  private def renderUserStateForTracing(tracing: Either[SkeletonTracing, VolumeTracing],
+                                        annotationUserState: Option[AnnotationUserStateProto],
+                                        requestingUser: Option[User],
+                                        annotationOwner: User): Either[SkeletonTracing, VolumeTracing] = tracing match {
+    case Left(s: SkeletonTracing) =>
+      val requestingUserState = requestingUser.flatMap(u => s.userStates.find(_.userId == u._id.toString))
+      val ownerUserState = s.userStates.find(_.userId == annotationOwner._id.toString)
+      val requestingUserTreeVisibilityMap: Map[Int, Boolean] = requestingUserState
+        .map(userState => userState.treeIds.zip(userState.treeVisibilities).toMap)
+        .getOrElse(Map.empty[Int, Boolean])
+      val ownerTreeVisibilityMap: Map[Int, Boolean] =
+        ownerUserState
+          .map(userState => userState.treeIds.zip(userState.treeVisibilities).toMap)
+          .getOrElse(Map.empty[Int, Boolean])
+      val requestingUserBoundingBoxVisibilityMap: Map[Int, Boolean] = requestingUserState
+        .map(userState => userState.boundingBoxIds.zip(userState.boundingBoxVisibilities).toMap)
+        .getOrElse(Map.empty[Int, Boolean])
+      val ownerBoundingBoxVisibilityMap: Map[Int, Boolean] = ownerUserState
+        .map(userState => userState.boundingBoxIds.zip(userState.boundingBoxVisibilities).toMap)
+        .getOrElse(Map.empty[Int, Boolean])
+      val requestingUserTreeGroupExpandedMap: Map[Int, Boolean] = requestingUserState
+        .map(userState => userState.treeGroupIds.zip(userState.treeGroupExpandedStates).toMap)
+        .getOrElse(Map.empty[Int, Boolean])
+      val ownerTreeGroupExpandedMap: Map[Int, Boolean] = ownerUserState
+        .map(userState => userState.treeGroupIds.zip(userState.treeGroupExpandedStates).toMap)
+        .getOrElse(Map.empty[Int, Boolean])
+      Left(
+        s.copy(
+          editPosition = annotationUserState.map(_.editPosition).getOrElse(s.editPosition),
+          editRotation = annotationUserState.map(_.editRotation).getOrElse(s.editRotation),
+          zoomLevel = annotationUserState.map(_.zoomLevel).getOrElse(s.zoomLevel),
+          editPositionAdditionalCoordinates =
+            annotationUserState.map(_.editPositionAdditionalCoordinates).getOrElse(s.editPositionAdditionalCoordinates),
+          activeNodeId = requestingUserState
+            .flatMap(_.activeNodeId)
+            .orElse(ownerUserState.flatMap(_.activeNodeId))
+            .orElse(s.activeNodeId),
+          trees = s.trees.map { tree =>
+            tree.copy(
+              isVisible = requestingUserTreeVisibilityMap
+                .get(tree.treeId)
+                .orElse(ownerTreeVisibilityMap.get(tree.treeId))
+                .orElse(tree.isVisible)
+            )
+          },
+          userBoundingBoxes = s.userBoundingBoxes.map { bbox =>
+            bbox.copy(
+              isVisible = requestingUserBoundingBoxVisibilityMap
+                .get(bbox.id)
+                .orElse(ownerBoundingBoxVisibilityMap.get(bbox.id))
+                .orElse(bbox.isVisible)
+            )
+          },
+          treeGroups = s.treeGroups.map { treeGroup =>
+            treeGroup.copy(
+              isExpanded = requestingUserTreeGroupExpandedMap
+                .get(treeGroup.groupId)
+                .orElse(ownerTreeGroupExpandedMap.get(treeGroup.groupId).orElse(treeGroup.isExpanded))
+            )
+          }
+        )
+      )
+    case Right(v: VolumeTracing) =>
+      val requestingUserState = requestingUser.flatMap(u => v.userStates.find(_.userId == u._id.toString))
+      val ownerUserState = v.userStates.find(_.userId == annotationOwner._id.toString)
+      val requestingUserBoundingBoxVisibilityMap: Map[Int, Boolean] = requestingUserState
+        .map(userState => userState.boundingBoxIds.zip(userState.boundingBoxVisibilities).toMap)
+        .getOrElse(Map.empty[Int, Boolean])
+      val ownerBoundingBoxVisibilityMap: Map[Int, Boolean] = ownerUserState
+        .map(userState => userState.boundingBoxIds.zip(userState.boundingBoxVisibilities).toMap)
+        .getOrElse(Map.empty[Int, Boolean])
+      val requestingUserSegmentGroupExpandedMap: Map[Int, Boolean] = requestingUserState
+        .map(userState => userState.segmentGroupIds.zip(userState.segmentGroupExpandedStates).toMap)
+        .getOrElse(Map.empty[Int, Boolean])
+      val ownerSegmentGroupExpandedMap: Map[Int, Boolean] = ownerUserState
+        .map(userState => userState.segmentGroupIds.zip(userState.segmentGroupExpandedStates).toMap)
+        .getOrElse(Map.empty[Int, Boolean])
+      Right(
+        v.copy(
+          editPosition = annotationUserState.map(_.editPosition).getOrElse(v.editPosition),
+          editRotation = annotationUserState.map(_.editRotation).getOrElse(v.editRotation),
+          zoomLevel = annotationUserState.map(_.zoomLevel).getOrElse(v.zoomLevel),
+          editPositionAdditionalCoordinates =
+            annotationUserState.map(_.editPositionAdditionalCoordinates).getOrElse(v.editPositionAdditionalCoordinates),
+          activeSegmentId = requestingUserState
+            .flatMap(_.activeSegmentId)
+            .orElse(ownerUserState.flatMap(_.activeSegmentId))
+            .orElse(v.activeSegmentId),
+          userBoundingBoxes = v.userBoundingBoxes.map { bbox =>
+            bbox.copy(
+              isVisible = requestingUserBoundingBoxVisibilityMap
+                .get(bbox.id)
+                .orElse(ownerBoundingBoxVisibilityMap.get(bbox.id))
+                .orElse(bbox.isVisible)
+            )
+          },
+          segmentGroups = v.segmentGroups.map { segmentGroup =>
+            segmentGroup.copy(
+              isExpanded = requestingUserSegmentGroupExpandedMap
+                .get(segmentGroup.groupId)
+                .orElse(ownerSegmentGroupExpandedMap.get(segmentGroup.groupId).orElse(segmentGroup.isExpanded))
+            )
+          }
+        )
+      )
+  }
+
   private def toNmlWithImplicitWriter(
       annotationLayers: List[FetchedAnnotationLayer],
       annotation: Option[Annotation],
@@ -89,7 +222,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
       wkUrl: String,
       datasetName: String,
       datasetId: ObjectId,
-      annotationOwner: Option[User],
+      annotationOwner: User,
       annotationTask: Option[Task],
       skipVolumeData: Boolean,
       volumeDataZipFormat: VolumeDataZipFormat)(implicit writer: XMLStreamWriter): Fox[Unit] =
@@ -101,14 +234,16 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
           volumeLayers = annotationLayers.filter(_.typ == AnnotationLayerType.Volume)
           _ <- Fox.fromBool(skeletonLayers.length <= 1) ?~> "annotation.download.multipleSkeletons"
           _ <- Fox.fromBool(volumeFilename.isEmpty || volumeLayers.length <= 1) ?~> "annotation.download.volumeNameForMultiple"
-          parameters <- extractTracingParameters(skeletonLayers,
-                                                 volumeLayers,
-                                                 annotation: Option[Annotation],
-                                                 organizationId,
-                                                 wkUrl,
-                                                 datasetName,
-                                                 datasetId,
-                                                 voxelSize)
+          parameters <- extractTracingParameters(
+            skeletonLayers,
+            volumeLayers,
+            annotation: Option[Annotation],
+            organizationId,
+            wkUrl,
+            datasetName,
+            datasetId,
+            voxelSize
+          )
           _ = writeParameters(parameters)
           _ = annotationLayers.filter(_.typ == AnnotationLayerType.Skeleton).map(_.tracing).foreach {
             case Left(skeletonTracing) => writeSkeletonThings(skeletonTracing)
@@ -413,7 +548,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
       }
     }
 
-  private def writeMetaData(annotationOpt: Option[Annotation], userOpt: Option[User], taskOpt: Option[Task])(
+  private def writeMetaData(annotationOpt: Option[Annotation], annotationOwner: User, taskOpt: Option[Task])(
       implicit writer: XMLStreamWriter): Unit = {
     Xml.withinElementSync("meta") {
       writer.writeAttribute("name", "writer")
@@ -433,11 +568,9 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
         writer.writeAttribute("content", annotation.id)
       }
     }
-    userOpt.foreach { user =>
-      Xml.withinElementSync("meta") {
-        writer.writeAttribute("name", "username")
-        writer.writeAttribute("content", user.name)
-      }
+    Xml.withinElementSync("meta") {
+      writer.writeAttribute("name", "username")
+      writer.writeAttribute("content", annotationOwner.name)
     }
     taskOpt.foreach { task =>
       Xml.withinElementSync("meta") {

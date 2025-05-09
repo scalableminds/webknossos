@@ -29,6 +29,7 @@ export type DeleteNodeUpdateAction = ReturnType<typeof deleteNode>;
 export type CreateEdgeUpdateAction = ReturnType<typeof createEdge>;
 export type DeleteEdgeUpdateAction = ReturnType<typeof deleteEdge>;
 export type UpdateSkeletonTracingUpdateAction = ReturnType<typeof updateSkeletonTracing>;
+export type UpdateUserStateSkeletonUpdateAction = ReturnType<typeof updateUserStateSkeleton>;
 type UpdateVolumeTracingUpdateAction = ReturnType<typeof updateVolumeTracing>;
 export type CreateSegmentUpdateAction = ReturnType<typeof createSegmentVolumeAction>;
 export type UpdateSegmentUpdateAction = ReturnType<typeof updateSegmentVolumeAction>;
@@ -78,6 +79,7 @@ export type UpdateActionWithoutIsolationRequirement =
   | CreateEdgeUpdateAction
   | DeleteEdgeUpdateAction
   | UpdateSkeletonTracingUpdateAction
+  | UpdateUserStateSkeletonUpdateAction
   | UpdateVolumeTracingUpdateAction
   | UpdateUserBoundingBoxesInSkeletonTracingUpdateAction
   | UpdateUserBoundingBoxesInVolumeTracingUpdateAction
@@ -337,6 +339,22 @@ export function updateSkeletonTracing(
     },
   } as const;
 }
+
+export function updateUserStateSkeleton(tracing: {
+  tracingId: string;
+  activeNodeId: number | null | undefined;
+}) {
+  return {
+    // todop: this has "in" in it, but the ts and scale
+    // type don't have that.
+    name: "updateUserStateInSkeletonTracing",
+    value: {
+      actionTracingId: tracing.tracingId,
+      activeNode: tracing.activeNodeId,
+    },
+  } as const;
+}
+
 export function moveTreeComponent(
   sourceTreeId: number,
   targetTreeId: number,

@@ -11,5 +11,6 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 ### Postgres Evolutions:
 
 - [131-more-indices-on-users.sql](conf/evolutions/131-more-indices-on-users.sql)
-- [132-special-files.sql](conf/evolutions/132-special-files.sql)
+- [132-remove-stored-meshes.sql](conf/evolutions/132-remove-stored-meshes.sql)
+- [133-special-files.sql](conf/evolutions/133-special-files.sql)
 

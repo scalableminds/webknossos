@@ -4,7 +4,6 @@ import { usePolling, useSearchParams } from "libs/react_hooks";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import _ from "lodash";
-import TabTitle from "oxalis/view/components/tab_title_component";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
@@ -19,6 +18,7 @@ import {
   type VoxelyticsWorkflowDagNode,
   type VoxelyticsWorkflowReport,
 } from "types/api_types";
+import TabTitle from "viewer/view/components/tab_title_component";
 import TaskListView from "./task_list_view";
 import { VX_POLLING_INTERVAL } from "./utils";
 

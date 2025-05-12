@@ -3,9 +3,9 @@ import { Spin } from "antd";
 import { useFetch } from "libs/react_helpers";
 import type { ServerErrorMessage } from "libs/request";
 import Toast from "libs/toast";
-import { Store } from "oxalis/singletons";
 import { useEffect } from "react";
 import { useHistory } from "react-router-dom";
+import { Store } from "viewer/singletons";
 
 export const VERIFICATION_ERROR_TOAST_KEY = "verificationError";
 

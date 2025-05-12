@@ -8,7 +8,7 @@ import play.api.libs.json._
 package object datasource {
 
   case class DataSourceId(directoryName: String, organizationId: String) {
-    override def toString: String = s"DataSourceId($organizationId/$directoryName)"
+    override def toString: String = s"$organizationId/$directoryName"
   }
 
   object DataSourceId {

@@ -4,7 +4,7 @@ import configureMockStore from "redux-mock-store";
 import overwriteActionMiddleware, {
   overwriteAction,
   removeOverwrite,
-} from "oxalis/model/helpers/overwrite_action_middleware";
+} from "viewer/model/helpers/overwrite_action_middleware";
 
 const middlewares = [overwriteActionMiddleware];
 const mockStore = configureMockStore(middlewares);

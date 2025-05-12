@@ -2,12 +2,12 @@ import { pingMentionedDataStores } from "admin/datastore_health_check";
 import handleStatus from "libs/handle_http_status";
 import Toast from "libs/toast";
 import _ from "lodash";
-import { createWorker } from "oxalis/workers/comlink_wrapper";
-import CompressWorker from "oxalis/workers/compress.worker";
-import FetchBufferWorker from "oxalis/workers/fetch_buffer.worker";
-import FetchBufferWithHeadersWorker from "oxalis/workers/fetch_buffer_with_headers.worker";
 import type { ArbitraryObject } from "types/globals";
 import urljoin from "url-join";
+import { createWorker } from "viewer/workers/comlink_wrapper";
+import CompressWorker from "viewer/workers/compress.worker";
+import FetchBufferWorker from "viewer/workers/fetch_buffer.worker";
+import FetchBufferWithHeadersWorker from "viewer/workers/fetch_buffer_with_headers.worker";
 
 const fetchBufferViaWorker = createWorker(FetchBufferWorker);
 const fetchBufferWithHeaders = createWorker(FetchBufferWithHeadersWorker);

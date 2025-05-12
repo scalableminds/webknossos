@@ -1,6 +1,6 @@
 import { CopyOutlined, InfoCircleOutlined, RetweetOutlined } from "@ant-design/icons";
-import { getDatasetSharingToken, revokeDatasetSharingToken } from "admin/admin_rest_api";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import { getDatasetSharingToken, revokeDatasetSharingToken } from "admin/rest_api";
 import { Button, Checkbox, Collapse, type FormInstance, Input, Space, Tooltip } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import { PricingEnforcedBlur } from "components/pricing_enforcers";
@@ -9,13 +9,13 @@ import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import Toast from "libs/toast";
 import { isUserAdminOrDatasetManager, isUserAdminOrTeamManager } from "libs/utils";
 import window from "libs/window";
-import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
-import type { OxalisState } from "oxalis/store";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { connect } from "react-redux";
 import { type RouteComponentProps, withRouter } from "react-router-dom";
 import type { APIDataset, APIUser } from "types/api_types";
+import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
+import type { WebknossosState } from "viewer/store";
 import { FormItemWithInfo } from "./helper_components";
 
 type Props = {
@@ -162,7 +162,7 @@ function DatasetSettingsSharingTab({ form, datasetId, dataset, activeUser }: Pro
   ) : null;
 }
 
-const mapStateToProps = (state: OxalisState) => ({
+const mapStateToProps = (state: WebknossosState) => ({
   activeUser: state.activeUser,
 });
 

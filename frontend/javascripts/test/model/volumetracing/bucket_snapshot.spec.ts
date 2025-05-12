@@ -10,10 +10,10 @@
 import { describe, it, expect } from "vitest";
 import BucketSnapshot, {
   type PendingOperation,
-} from "oxalis/model/bucket_data_handling/bucket_snapshot";
+} from "viewer/model/bucket_data_handling/bucket_snapshot";
 import Deferred from "libs/async/deferred";
 import type { BucketDataArray, ElementClass } from "types/api_types";
-import { uint8ToTypedBuffer } from "oxalis/model/helpers/typed_buffer";
+import { uint8ToTypedBuffer } from "viewer/model/helpers/typed_buffer";
 
 /*
  * The MockCompressor provides the async compress and decompress

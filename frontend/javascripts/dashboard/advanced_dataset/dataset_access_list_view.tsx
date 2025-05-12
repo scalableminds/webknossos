@@ -1,4 +1,4 @@
-import { getDatasetAccessList } from "admin/admin_rest_api";
+import { getDatasetAccessList } from "admin/rest_api";
 import { Spin, Tag } from "antd";
 import { handleGenericError } from "libs/error_handling";
 import { stringToColor } from "libs/format_utils";

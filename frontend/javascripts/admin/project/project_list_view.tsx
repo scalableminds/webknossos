@@ -11,6 +11,8 @@ import {
   TeamOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import { getTasks } from "admin/api/tasks";
+import TransferAllTasksModal from "admin/project/transfer_all_tasks_modal";
 import {
   deleteProject as deleteProjectAPI,
   downloadAnnotation,
@@ -20,9 +22,7 @@ import {
   increaseProjectTaskInstances as increaseProjectTaskInstancesAPI,
   pauseProject,
   resumeProject,
-} from "admin/admin_rest_api";
-import { getTasks } from "admin/api/tasks";
-import TransferAllTasksModal from "admin/project/transfer_all_tasks_modal";
+} from "admin/rest_api";
 import { App, Button, Input, Spin, Table, Tooltip } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
@@ -33,8 +33,6 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
-import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import type { OxalisState } from "oxalis/store";
 import React, { useEffect, useState } from "react";
 import { connect } from "react-redux";
 import { Link } from "react-router-dom";
@@ -45,6 +43,8 @@ import {
   type APIUserBase,
   TracingTypeEnum,
 } from "types/api_types";
+import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
+import type { WebknossosState } from "viewer/store";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -475,7 +475,7 @@ function ProjectListView({ initialSearchValue, taskTypeId, activeUser }: Props) 
   );
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
 });
 

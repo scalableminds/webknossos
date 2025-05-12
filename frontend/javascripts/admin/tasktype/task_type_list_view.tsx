@@ -11,7 +11,7 @@ import {
   deleteTaskType as deleteTaskTypeAPI,
   downloadAnnotation,
   getTaskTypes,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
 import { App, Button, Input, Spin, Table, Tag } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import LinkButton from "components/link_button";

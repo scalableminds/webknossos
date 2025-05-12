@@ -1,11 +1,11 @@
 import _ from "lodash";
-import { getDefaultValueRangeOfLayer, isColorLayer } from "oxalis/model/accessors/dataset_accessor";
 import type { APIDataset, APIMaybeUnimportedDataset } from "types/api_types";
 import {
   defaultDatasetViewConfiguration,
   getDefaultLayerViewConfiguration,
 } from "types/schemas/dataset_view_configuration.schema";
 import { validateObjectWithType } from "types/validation";
+import { getDefaultValueRangeOfLayer, isColorLayer } from "viewer/model/accessors/dataset_accessor";
 
 const eliminateErrors = (
   instance: Record<string, any>,

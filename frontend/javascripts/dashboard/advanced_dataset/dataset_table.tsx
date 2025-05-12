@@ -1,5 +1,5 @@
 import { FileOutlined, FolderOpenOutlined, PlusOutlined, WarningOutlined } from "@ant-design/icons";
-import type { DatasetUpdater } from "admin/admin_rest_api";
+import type { DatasetUpdater } from "admin/rest_api";
 import { Dropdown, type MenuProps, type TableProps, Tag, Tooltip } from "antd";
 import type { FilterValue, SorterResult, TablePaginationConfig } from "antd/lib/table/interface";
 import classNames from "classnames";
@@ -18,26 +18,25 @@ import {
 } from "dashboard/folders/folder_tree";
 import { diceCoefficient as dice } from "dice-coefficient";
 import { stringToColor } from "libs/format_utils";
+import { useWkSelector } from "libs/react_hooks";
 import Shortcut from "libs/shortcut_component";
 import * as Utils from "libs/utils";
 import _ from "lodash";
-import { Unicode } from "oxalis/constants";
-import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
-import type { OxalisState } from "oxalis/store";
-import CategorizationLabel from "oxalis/view/components/categorization_label";
-import EditableTextIcon from "oxalis/view/components/editable_text_icon";
+import * as React from "react";
+import { DndProvider, DragPreviewImage, useDrag } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
+import { Link } from "react-router-dom";
+import type { APIDatasetCompact, APIMaybeUnimportedDataset, FolderItem } from "types/api_types";
+import type { EmptyObject } from "types/globals";
+import { Unicode } from "viewer/constants";
+import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
+import CategorizationLabel from "viewer/view/components/categorization_label";
+import EditableTextIcon from "viewer/view/components/editable_text_icon";
 import {
   ContextMenuContext,
   GenericContextMenuContainer,
   getContextMenuPositionFromEvent,
-} from "oxalis/view/context_menu";
-import * as React from "react";
-import { DndProvider, DragPreviewImage, useDrag } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
-import { useSelector } from "react-redux";
-import { Link } from "react-router-dom";
-import type { APIDatasetCompact, APIMaybeUnimportedDataset, FolderItem } from "types/api_types";
-import type { EmptyObject } from "types/globals";
+} from "viewer/view/context_menu";
 
 type FolderItemWithName = FolderItem & { name: string };
 export type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
@@ -232,7 +231,7 @@ const DraggableDatasetRow = ({
   ...restProps
 }: DraggableDatasetRowProps) => {
   const ref = React.useRef<HTMLTableRowElement>(null);
-  const theme = useSelector((state: OxalisState) => state.uiInformation.theme);
+  const theme = useWkSelector((state) => state.uiInformation.theme);
   // @ts-ignore
 
   const datasetId = restProps["data-row-key"];

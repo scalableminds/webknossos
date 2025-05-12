@@ -1,7 +1,7 @@
 import { CopyOutlined, DeleteOutlined } from "@ant-design/icons";
-import { startFindLargestSegmentIdJob } from "admin/admin_rest_api";
 import { getDatasetNameRules, layerNameRules } from "admin/dataset/dataset_components";
 import { useStartAndPollJob } from "admin/job/job_hooks";
+import { startFindLargestSegmentIdJob } from "admin/rest_api";
 import {
   Button,
   Col,
@@ -22,18 +22,18 @@ import {
   RetryingErrorBoundary,
   jsonEditStyle,
 } from "dashboard/dataset/helper_components";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { jsonStringify, parseMaybe } from "libs/utils";
 import { BoundingBoxInput, Vector3Input } from "libs/vector_input";
-import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "oxalis/constants";
-import { getSupportedValueRangeForElementClass } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import type { BoundingBoxObject, OxalisState } from "oxalis/store";
 import * as React from "react";
-import { useSelector } from "react-redux";
 import { type APIDataLayer, type APIDataset, APIJobType } from "types/api_types";
 import type { ArbitraryObject } from "types/globals";
 import type { DataLayer } from "types/schemas/datasource.types";
 import { isValidJSON, syncValidator, validateDatasourceJSON } from "types/validation";
+import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
+import { getSupportedValueRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
+import type { BoundingBoxObject } from "viewer/store";
 import { AxisRotationSettingForDataset } from "./dataset_rotation_form_item";
 
 const FormItem = Form.Item;
@@ -178,7 +178,7 @@ function SimpleDatasetForm({
   form: FormInstance;
   dataset: APIDataset | null | undefined;
 }) {
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useWkSelector((state) => state.activeUser);
   const onRemoveLayer = (layer: DataLayer) => {
     const oldLayers = form.getFieldValue(["dataSource", "dataLayers"]);
     const newLayers = oldLayers.filter(

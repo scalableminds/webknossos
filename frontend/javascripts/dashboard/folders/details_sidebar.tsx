@@ -7,22 +7,21 @@ import {
   SearchOutlined,
 } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
-import { getOrganization } from "admin/admin_rest_api";
+import { getOrganization } from "admin/rest_api";
 import { Result, Spin, Tag, Tooltip } from "antd";
 import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
 import _ from "lodash";
-import type { OxalisState } from "oxalis/store";
+import { useEffect } from "react";
+import type { APIDatasetCompact, Folder } from "types/api_types";
 import {
   DatasetExtentRow,
   OwningOrganizationRow,
   VoxelSizeRow,
-} from "oxalis/view/right-border-tabs/dataset_info_tab_view";
-import { useEffect } from "react";
-import { useSelector } from "react-redux";
-import type { APIDatasetCompact, Folder } from "types/api_types";
+} from "viewer/view/right-border-tabs/dataset_info_tab_view";
 import { DatasetLayerTags, DatasetTags, TeamTags } from "../advanced_dataset/dataset_table";
 import { useDatasetCollectionContext } from "../dataset/dataset_collection_context";
 import { SEARCH_RESULTS_LIMIT, useDatasetQuery, useFolderQuery } from "../dataset/queries";
@@ -93,7 +92,7 @@ function getMaybeSelectMessage(datasetCount: number) {
 function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompact }) {
   const context = useDatasetCollectionContext();
   const { data: fullDataset, isFetching } = useDatasetQuery(selectedDataset.id);
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useWkSelector((state) => state.activeUser);
   const { data: owningOrganization } = useQuery(
     ["organizations", selectedDataset.owningOrganization],
     () => getOrganization(selectedDataset.owningOrganization),

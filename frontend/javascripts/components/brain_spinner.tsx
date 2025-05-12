@@ -1,5 +1,5 @@
-import { switchToOrganization } from "admin/admin_rest_api";
 import LoginForm from "admin/auth/login_form";
+import { switchToOrganization } from "admin/rest_api";
 import { Button, Card, Col, Row } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import messages from "messages";

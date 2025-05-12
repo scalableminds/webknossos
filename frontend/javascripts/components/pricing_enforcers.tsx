@@ -9,15 +9,14 @@ import UpgradePricingPlanModal from "admin/organization/upgrade_plan_modal";
 import { Alert, Button, type ButtonProps, Col, Popover, Result, Row } from "antd";
 import type { PopoverProps } from "antd/lib";
 import type { TooltipPlacement } from "antd/lib/tooltip";
+import { useWkSelector } from "libs/react_hooks";
 import { rgbToHex } from "libs/utils";
 import _ from "lodash";
-import { PRIMARY_COLOR } from "oxalis/constants";
-import type { OxalisState } from "oxalis/store";
-import { SwitchSetting } from "oxalis/view/components/setting_input_views";
 import React from "react";
-import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import type { APIOrganization, APIUser } from "types/api_types";
+import { PRIMARY_COLOR } from "viewer/constants";
+import { SwitchSetting } from "viewer/view/components/setting_input_views";
 
 const PRIMARY_COLOR_HEX = rgbToHex(PRIMARY_COLOR);
 
@@ -47,8 +46,8 @@ function getUpgradeNowButton(
 }
 
 const useActiveUserAndOrganization = (): [APIUser | null | undefined, APIOrganization | null] => {
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  const activeOrganization = useSelector((state: OxalisState) => state.activeOrganization);
+  const activeUser = useWkSelector((state) => state.activeUser);
+  const activeOrganization = useWkSelector((state) => state.activeOrganization);
   return [activeUser, activeOrganization];
 };
 

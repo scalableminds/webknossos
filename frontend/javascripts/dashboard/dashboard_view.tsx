@@ -1,9 +1,9 @@
+import { PlanAboutToExceedAlert, PlanExceededAlert } from "admin/organization/organization_cards";
 import {
   cachedGetPricingPlanStatus,
   getUser,
   updateNovelUserExperienceInfos,
-} from "admin/admin_rest_api";
-import { PlanAboutToExceedAlert, PlanExceededAlert } from "admin/organization/organization_cards";
+} from "admin/rest_api";
 import { WhatsNextHeader } from "admin/welcome_ui";
 import { Spin, Tabs } from "antd";
 import DashboardTaskListView from "dashboard/dashboard_task_list_view";
@@ -13,12 +13,6 @@ import features from "features";
 import Request from "libs/request";
 import UserLocalStorage from "libs/user_local_storage";
 import _ from "lodash";
-import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
-import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import { setActiveUserAction } from "oxalis/model/actions/user_actions";
-import type { OxalisState } from "oxalis/store";
-import { PortalTarget } from "oxalis/view/layouting/portal_utils";
-import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import type React from "react";
 import { PureComponent } from "react";
 import { connect } from "react-redux";
@@ -26,6 +20,12 @@ import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import type { Dispatch } from "redux";
 import type { APIOrganization, APIPricingPlanStatus, APIUser } from "types/api_types";
+import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
+import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
+import { setActiveUserAction } from "viewer/model/actions/user_actions";
+import type { WebknossosState } from "viewer/store";
+import { PortalTarget } from "viewer/view/layouting/portal_utils";
+import NmlUploadZoneContainer from "viewer/view/nml_upload_zone_container";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import { DatasetFolderView } from "./dataset_folder_view";
 
@@ -299,7 +299,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
   }
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
   activeOrganization: enforceActiveOrganization(state.activeOrganization),
 });

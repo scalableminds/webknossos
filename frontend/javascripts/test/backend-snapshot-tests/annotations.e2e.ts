@@ -7,17 +7,17 @@ import {
 } from "test/e2e-setup";
 import type { APIAnnotation } from "types/api_types";
 import { AnnotationLayerEnum, APIAnnotationTypeEnum } from "types/api_types";
-import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import { diffTrees } from "oxalis/model/sagas/skeletontracing_saga";
-import { getNullableSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
-import { sendRequestWithToken, addVersionNumbers } from "oxalis/model/sagas/save_saga";
-import * as UpdateActions from "oxalis/model/sagas/update_actions";
-import * as api from "admin/admin_rest_api";
-import generateDummyTrees from "oxalis/model/helpers/generate_dummy_trees";
+import { createTreeMapFromTreeArray } from "viewer/model/reducers/skeletontracing_reducer_helpers";
+import { diffTrees } from "viewer/model/sagas/skeletontracing_saga";
+import { getNullableSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
+import { getServerVolumeTracings } from "viewer/model/accessors/volumetracing_accessor";
+import { sendRequestWithToken, addVersionNumbers } from "viewer/model/sagas/save_saga";
+import * as UpdateActions from "viewer/model/sagas/update_actions";
+import * as api from "admin/rest_api";
+import generateDummyTrees from "viewer/model/helpers/generate_dummy_trees";
 import { describe, it, beforeAll, expect } from "vitest";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
-import type { SaveQueueEntry } from "oxalis/store";
+import type { SaveQueueEntry } from "viewer/store";
 
 const datasetId = "59e9cfbdba632ac2ab8b23b3";
 

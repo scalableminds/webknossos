@@ -12,7 +12,7 @@ import {
   updateTask,
 } from "admin/api/tasks";
 import { describe, test, beforeAll, expect } from "vitest";
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3 } from "viewer/constants";
 
 describe("Task API  (E2E)", () => {
   beforeAll(async () => {

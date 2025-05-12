@@ -1,5 +1,5 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
-import { getAvailableTasksReport } from "admin/admin_rest_api";
+import { getAvailableTasksReport } from "admin/rest_api";
 import { Card, Spin, Table, Tag, Tooltip, Typography } from "antd";
 import { handleGenericError } from "libs/error_handling";
 import * as Utils from "libs/utils";

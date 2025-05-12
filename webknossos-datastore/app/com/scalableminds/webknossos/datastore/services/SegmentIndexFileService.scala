@@ -231,7 +231,7 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
                                         mappingName: Option[String])(implicit tc: TokenContext): Fox[Array[Byte]] = {
     val dataRequests = mag1BucketPositions.map { position =>
       DataServiceDataRequest(
-        dataSource = dataSource,
+        dataSourceId = Some(dataSource.id),
         dataLayer = dataLayer,
         cuboid = Cuboid(
           VoxelPosition(position.x * DataLayer.bucketLength,

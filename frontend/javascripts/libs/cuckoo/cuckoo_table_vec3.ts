@@ -1,4 +1,4 @@
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3 } from "viewer/constants";
 import { AbstractCuckooTable, EMPTY_KEY_VALUE } from "./abstract_cuckoo_table";
 
 const EMPTY_KEY = EMPTY_KEY_VALUE;

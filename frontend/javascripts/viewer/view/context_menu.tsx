@@ -33,7 +33,7 @@ import type {
   APIConnectomeFile,
   APIDataLayer,
   APIDataset,
-  APIMeshFile,
+  APIMeshFileInfo,
   VoxelSize,
 } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
@@ -162,7 +162,7 @@ type StateProps = {
   voxelSize: VoxelSize;
   visibleSegmentationLayer: APIDataLayer | null | undefined;
   dataset: APIDataset;
-  currentMeshFile: APIMeshFile | null | undefined;
+  currentMeshFile: APIMeshFileInfo | null | undefined;
   currentConnectomeFile: APIConnectomeFile | null | undefined;
   volumeTracing: VolumeTracing | null | undefined;
   activeTool: AnnotationTool;
@@ -962,7 +962,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
         segmentId,
         globalPosition,
         additionalCoordinates,
-        currentMeshFile.meshFileName,
+        currentMeshFile.name,
         undefined,
       ),
     );

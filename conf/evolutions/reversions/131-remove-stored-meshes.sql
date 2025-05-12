@@ -1,4 +1,4 @@
-do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 131, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
+do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 132, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
 
 
 CREATE TABLE webknossos.meshes(
@@ -16,4 +16,4 @@ CREATE VIEW webknossos.meshes_ AS SELECT * FROM webknossos.meshes WHERE NOT isDe
 ALTER TABLE webknossos.meshes
   ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) DEFERRABLE;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 130;
+UPDATE webknossos.releaseInformation SET schemaVersion = 131;

@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { M4x4, V3 } from "libs/mjs";
-import { UnitLong, OrthoViews } from "oxalis/constants";
+import { UnitLong, OrthoViews } from "viewer/constants";
 import update from "immutability-helper";
 import {
   getPosition,
@@ -8,9 +8,9 @@ import {
   getUp,
   getLeft,
   getZoomedMatrix,
-} from "oxalis/model/accessors/flycam_accessor";
-import * as FlycamActions from "oxalis/model/actions/flycam_actions";
-import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
+} from "viewer/model/accessors/flycam_accessor";
+import * as FlycamActions from "viewer/model/actions/flycam_actions";
+import FlycamReducer from "viewer/model/reducers/flycam_reducer";
 import { describe, it, expect } from "vitest";
 
 function equalWithEpsilon(a: number[], b: number[], epsilon = 1e-10) {

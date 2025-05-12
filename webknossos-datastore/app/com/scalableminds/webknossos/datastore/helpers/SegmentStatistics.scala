@@ -69,9 +69,7 @@ trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
                                                                     Int.MinValue,
                                                                     Int.MinValue,
                                                                     Int.MinValue) //topleft, bottomright
-      (bucketBoxes, elementClass) <- getDataForBucketPositions(relevantBucketPositions.toSeq,
-                                                               mag,
-                                                               additionalCoordinates)
+      (bucketBoxes, elementClass) <- getDataForBucketPositions(relevantBucketPositions, mag, additionalCoordinates)
       _ <- Fox.serialCombined(relevantBucketPositions.zip(bucketBoxes)) {
         case (bucketPosition, Full(bucketData)) =>
           Fox.successful(

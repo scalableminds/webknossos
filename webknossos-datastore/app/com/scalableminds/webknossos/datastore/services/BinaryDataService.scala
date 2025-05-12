@@ -53,7 +53,7 @@ class BinaryDataService(val dataBaseDir: Path,
     }
   }
 
-  def handleMultipleBucketRequests(requests: List[DataServiceDataRequest])(
+  def handleMultipleBucketRequests(requests: Seq[DataServiceDataRequest])(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[Seq[Box[Array[Byte]]]] =
     if (requests.isEmpty) Fox.successful(Seq.empty)
@@ -71,7 +71,7 @@ class BinaryDataService(val dataBaseDir: Path,
                 request.cuboid.mag) =>
             idx
         }.toSet
-        requestsSelected: List[DataServiceDataRequest] = requests.zipWithIndex.collect {
+        requestsSelected: Seq[DataServiceDataRequest] = requests.zipWithIndex.collect {
           case (request, idx) if !indicesWhereOutsideRange.contains(idx) => request
         }
         readInstructions = requestsSelected.map(r =>

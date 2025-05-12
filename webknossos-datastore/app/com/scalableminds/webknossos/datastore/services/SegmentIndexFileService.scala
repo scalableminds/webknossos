@@ -13,7 +13,7 @@ import com.scalableminds.webknossos.datastore.models.requests.{
   DataServiceDataRequest,
   DataServiceRequestSettings
 }
-import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, VoxelPosition, datasource}
+import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, VoxelPosition}
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, CachedHdf5File, Hdf5FileCache}
 import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Box, Full}
@@ -157,16 +157,34 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       mag: Vec3Int,
       additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
       implicit m: MessagesProvider,
-      tc: TokenContext): Fox[(List[Box[Array[Byte]]], ElementClass.Value)] =
+      tc: TokenContext): Fox[(Seq[Box[Array[Byte]]], ElementClass.Value)] =
     for {
       // Additional coordinates parameter ignored, see #7556
       (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                 datasetDirectoryName,
                                                                                 dataLayerName)
-      bucketData <- Fox.fromFuture(Fox.serialSequence(bucketPositions)(bucketPosition =>
-        getDataForBucketPositions(dataSource, dataLayer, mag, Seq(bucketPosition * mag), mappingName)))
+      mag1BucketPositions = bucketPositions.map(_ * mag)
+      bucketRequests = mag1BucketPositions.map(
+        mag1BucketPosition =>
+          DataServiceDataRequest(
+            dataSourceId = Some(dataSource.id),
+            dataLayer = dataLayer,
+            cuboid = Cuboid(
+              VoxelPosition(mag1BucketPosition.x * DataLayer.bucketLength,
+                            mag1BucketPosition.y * DataLayer.bucketLength,
+                            mag1BucketPosition.z * DataLayer.bucketLength,
+                            mag),
+              DataLayer.bucketLength,
+              DataLayer.bucketLength,
+              DataLayer.bucketLength
+            ),
+            settings = DataServiceRequestSettings(halfByte = false,
+                                                  appliedAgglomerate = mappingName,
+                                                  version = None,
+                                                  additionalCoordinates = None),
+        ))
+      bucketData <- binaryDataServiceHolder.binaryDataService.handleMultipleBucketRequests(bucketRequests)
     } yield (bucketData, dataLayer.elementClass)
-
   private def getBucketPositions(
       organizationId: String,
       datasetDirectoryName: String,
@@ -223,34 +241,5 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
         } yield segmentIds
       case None => Fox.successful(List(segmentOrAgglomerateId))
     }
-
-  private def getDataForBucketPositions(dataSource: datasource.DataSource,
-                                        dataLayer: DataLayer,
-                                        mag: Vec3Int,
-                                        mag1BucketPositions: Seq[Vec3Int],
-                                        mappingName: Option[String])(implicit tc: TokenContext): Fox[Array[Byte]] = {
-    val dataRequests = mag1BucketPositions.map { position =>
-      DataServiceDataRequest(
-        dataSourceId = Some(dataSource.id),
-        dataLayer = dataLayer,
-        cuboid = Cuboid(
-          VoxelPosition(position.x * DataLayer.bucketLength,
-                        position.y * DataLayer.bucketLength,
-                        position.z * DataLayer.bucketLength,
-                        mag),
-          DataLayer.bucketLength,
-          DataLayer.bucketLength,
-          DataLayer.bucketLength
-        ),
-        settings = DataServiceRequestSettings(halfByte = false,
-                                              appliedAgglomerate = mappingName,
-                                              version = None,
-                                              additionalCoordinates = None),
-      )
-    }.toList
-    for {
-      (data, _) <- binaryDataServiceHolder.binaryDataService.handleDataRequests(dataRequests)
-    } yield data
-  }
 
 }

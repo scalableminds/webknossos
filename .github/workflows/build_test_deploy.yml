@@ -13,7 +13,7 @@ on:
 env:
   USER_UID: 1001
   USER_GID: 1001
-  POSTGRES_URL: "jdbc:postgresql://localhost:5432/webknossos"
+  POSTGRES_URL: "jdbc:postgresql://localhost:5434/webknossos"
   POSTGRES_USER: "webknossos_user"
   POSTGRES_PASSWORD: "secret_password"
   CERTIFICATE: ${{ secrets.CERTIFICATE_FOR_CI_ONLY }}
@@ -115,6 +115,10 @@ jobs:
           run: |
             sbt "testOnly e2e.* -- -Dtracingstore.fossildb.address=localhost -Dtracingstore.redis.address=localhost -Ddatastore.redis.address=localhost -Ddatastore.watchFileSystem.enabled=false"
           retries: 3
+      - name: Assert non-empty e2e files
+        run: bash -c '[ $(ls -1 frontend/javascripts/test/snapshots/type-check | wc -l) -gt 0 ]'
+      - name: Check response types of e2e tests
+        run: yarn tsc
 
 
   build-smoketest-push:

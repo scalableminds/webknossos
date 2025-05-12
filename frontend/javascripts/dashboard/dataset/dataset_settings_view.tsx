@@ -9,7 +9,7 @@ import {
   updateDatasetDefaultConfiguration,
   updateDatasetPartial,
   updateDatasetTeams,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
 import { Alert, Button, Card, Form, type FormInstance, Spin, Tabs, Tooltip } from "antd";
 import dayjs from "dayjs";
 import features from "features";
@@ -23,25 +23,20 @@ import Toast from "libs/toast";
 import { diffObjects, jsonStringify } from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
-import { Unicode } from "oxalis/constants";
-import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
-import {
-  EXPECTED_TRANSFORMATION_LENGTH,
-  doAllLayersHaveTheSameRotation,
-  getRotationSettingsFromTransformationIn90DegreeSteps,
-} from "oxalis/model/accessors/dataset_layer_transformation_accessor";
-import type { DatasetConfiguration, OxalisState } from "oxalis/store";
 import * as React from "react";
 import { connect } from "react-redux";
 import type { RouteComponentProps } from "react-router-dom";
 import { Link, withRouter } from "react-router-dom";
-import type {
-  APIDataSource,
-  APIDataset,
-  APIMessage,
-  MutableAPIDataset,
-} from "types/api_flow_types";
+import type { APIDataSource, APIDataset, APIMessage, MutableAPIDataset } from "types/api_types";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
+import { Unicode } from "viewer/constants";
+import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
+import {
+  EXPECTED_TRANSFORMATION_LENGTH,
+  doAllLayersHaveTheSameRotation,
+  getRotationSettingsFromTransformationIn90DegreeSteps,
+} from "viewer/model/accessors/dataset_layer_transformation_accessor";
+import type { DatasetConfiguration, WebknossosState } from "viewer/store";
 import type { DatasetRotationAndMirroringSettings } from "./dataset_rotation_form_item";
 import DatasetSettingsDataTab, { syncDataSourceFields } from "./dataset_settings_data_tab";
 import DatasetSettingsDeleteTab from "./dataset_settings_delete_tab";
@@ -714,7 +709,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
   }
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   isUserAdmin: state.activeUser?.isAdmin || false,
 });
 

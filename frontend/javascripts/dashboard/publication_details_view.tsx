@@ -1,11 +1,11 @@
 import { ArrowLeftOutlined } from "@ant-design/icons";
-import { getPublication } from "admin/admin_rest_api";
+import { getPublication } from "admin/rest_api";
 import { Layout, Spin, Tooltip } from "antd";
 import PublicationCard from "dashboard/publication_card";
 import { handleGenericError } from "libs/error_handling";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import type { APIPublication } from "types/api_flow_types";
+import type { APIPublication } from "types/api_types";
 const { Content } = Layout;
 
 function PublicationDetailView({ publicationId }: { publicationId: string }) {

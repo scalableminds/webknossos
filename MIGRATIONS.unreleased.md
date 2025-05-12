@@ -6,6 +6,10 @@ This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/25.04.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/25.05.0...HEAD)
 
 ### Postgres Evolutions:
+<<<<<<< HEAD
+
+- [131-more-indices-on-users.sql](conf/evolutions/131-more-indices-on-users.sql)
+- [132-remove-stored-meshes.sql](conf/evolutions/132-remove-stored-meshes.sql)

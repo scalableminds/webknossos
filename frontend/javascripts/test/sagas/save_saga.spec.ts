@@ -1,26 +1,26 @@
 import { describe, expect, vi, it } from "vitest";
 import { alert } from "libs/window";
-import { setSaveBusyAction } from "oxalis/model/actions/save_actions";
+import { setSaveBusyAction } from "viewer/model/actions/save_actions";
 import DiffableMap from "libs/diffable_map";
-import compactSaveQueue from "oxalis/model/helpers/compaction/compact_save_queue";
-import { ensureWkReady } from "oxalis/model/sagas/ready_sagas";
+import compactSaveQueue from "viewer/model/helpers/compaction/compact_save_queue";
+import { ensureWkReady } from "viewer/model/sagas/ready_sagas";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 import { expectValueDeepEqual } from "../helpers/sagaHelpers";
-import { UnitLong } from "oxalis/constants";
+import { UnitLong } from "viewer/constants";
 
 import { put, take, call } from "redux-saga/effects";
-import * as SaveActions from "oxalis/model/actions/save_actions";
-import * as UpdateActions from "oxalis/model/sagas/update_actions";
+import * as SaveActions from "viewer/model/actions/save_actions";
+import * as UpdateActions from "viewer/model/sagas/update_actions";
 import {
   pushSaveQueueAsync,
   sendSaveRequestToServer,
   toggleErrorHighlighting,
   addVersionNumbers,
   sendRequestWithToken,
-} from "oxalis/model/sagas/save_saga";
+} from "viewer/model/sagas/save_saga";
 import { TIMESTAMP } from "test/global_mocks";
 
-vi.mock("oxalis/model/sagas/root_saga", () => {
+vi.mock("viewer/model/sagas/root_saga", () => {
   return {
     default: function* () {
       yield;

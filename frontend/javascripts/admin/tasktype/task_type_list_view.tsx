@@ -11,7 +11,7 @@ import {
   deleteTaskType as deleteTaskTypeAPI,
   downloadAnnotation,
   getTaskTypes,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
 import { App, Button, Input, Spin, Table, Tag } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import LinkButton from "components/link_button";
@@ -24,7 +24,7 @@ import messages from "messages";
 import * as React from "react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import type { APITaskType } from "types/api_flow_types";
+import type { APITaskType } from "types/api_types";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -238,9 +238,12 @@ function TaskTypeListView({ initialSearchValue }: Props) {
             fixed="right"
             render={(__, taskType: APITaskType) => (
               <span>
-                <Link to={`/annotations/CompoundTaskType/${taskType.id}`} title="View">
+                <Link
+                  to={`/annotations/CompoundTaskType/${taskType.id}`}
+                  title="Show a compound annotation of all finished tasks for this taskType"
+                >
                   <EyeOutlined className="icon-margin-right" />
-                  View
+                  View merged
                 </Link>
                 <br />
                 <Link to={`/taskTypes/${taskType.id}/edit`} title="Edit taskType">

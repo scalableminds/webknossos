@@ -1,10 +1,5 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
-import {
-  createTaskType,
-  getEditableTeams,
-  getTaskType,
-  updateTaskType,
-} from "admin/admin_rest_api";
+import { createTaskType, getEditableTeams, getTaskType, updateTaskType } from "admin/rest_api";
 import RecommendedConfigurationView, {
   getDefaultRecommendedConfiguration,
 } from "admin/tasktype/recommended_configuration_view";
@@ -23,7 +18,7 @@ import {
   type APITeam,
   type TracingType,
   TracingTypeEnum,
-} from "types/api_flow_types";
+} from "types/api_types";
 import { syncValidator } from "types/validation";
 
 const RadioGroup = Radio.Group;

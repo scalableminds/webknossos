@@ -1,5 +1,5 @@
 import { TagOutlined } from "@ant-design/icons";
-import { createTeam } from "admin/admin_rest_api";
+import { createTeam } from "admin/rest_api";
 import { Form, Input, Modal } from "antd";
 import Shortcut from "libs/shortcut_component";
 const FormItem = Form.Item;

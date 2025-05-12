@@ -1,6 +1,6 @@
 import Request from "libs/request";
-import type { Vector3, Vector4 } from "oxalis/constants";
-import type { APIDataSourceId } from "types/api_flow_types";
+import type { APIDataSourceId, APIMeshFileInfo } from "types/api_types";
+import type { Vector3, Vector4 } from "viewer/constants";
 import { doWithToken } from "./token";
 
 export type MeshChunk = {
@@ -10,30 +10,27 @@ export type MeshChunk = {
   unmappedSegmentId: number;
 };
 
-type MeshLodInfo = {
-  scale: number;
-  vertexOffset: Vector3;
-  chunkShape: Vector3;
+export type MeshLodInfo = {
   chunks: Array<MeshChunk>;
+  transform: [Vector4, Vector4, Vector4]; // 4x3 matrix
 };
 
 type MeshSegmentInfo = {
-  chunkShape: Vector3; // unused
-  gridOrigin: Vector3; // unused
+  meshFormat: "draco";
   lods: Array<MeshLodInfo>;
+  chunkScale: Vector3;
 };
 
-type SegmentInfo = {
-  transform: [Vector4, Vector4, Vector4]; // 4x3 matrix
-  meshFormat: "draco";
-  chunks: MeshSegmentInfo;
+type ListMeshChunksRequest = {
+  meshFile: APIMeshFileInfo;
+  segmentId: number;
 };
 
 export function getMeshfileChunksForSegment(
   dataStoreUrl: string,
   dataSourceId: APIDataSourceId,
   layerName: string,
-  meshFile: string,
+  meshFile: APIMeshFileInfo,
   segmentId: number,
   // targetMappingName is the on-disk mapping name.
   // In case of an editable mapping, this should still be the on-disk base
@@ -44,7 +41,7 @@ export function getMeshfileChunksForSegment(
   // editableMappingTracingId should be the tracing id, not the editable mapping id.
   // If this is set, it is assumed that the request is about an editable mapping.
   editableMappingTracingId: string | null | undefined,
-): Promise<SegmentInfo> {
+): Promise<MeshSegmentInfo> {
   return doWithToken((token) => {
     const params = new URLSearchParams();
     params.append("token", token);
@@ -54,13 +51,14 @@ export function getMeshfileChunksForSegment(
     if (editableMappingTracingId != null) {
       params.append("editableMappingTracingId", editableMappingTracingId);
     }
+    const payload: ListMeshChunksRequest = {
+      meshFile,
+      segmentId,
+    };
     return Request.sendJSONReceiveJSON(
       `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/meshes/chunks?${params}`,
       {
-        data: {
-          meshFile,
-          segmentId,
-        },
+        data: payload,
         showErrorToast: false,
       },
     );
@@ -70,10 +68,11 @@ export function getMeshfileChunksForSegment(
 type MeshChunkDataRequest = {
   byteOffset: number;
   byteSize: number;
+  segmentId: number | null; // Only relevant for neuroglancer precomputed meshes
 };
 
 type MeshChunkDataRequestList = {
-  meshFile: string;
+  meshFile: APIMeshFileInfo;
   requests: MeshChunkDataRequest[];
 };
 

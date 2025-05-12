@@ -2,14 +2,14 @@ import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontr
 import { sleep } from "libs/utils";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import datasetServerObject from "test/fixtures/dataset_server_object";
-import { MagInfo } from "oxalis/model/helpers/mag_info";
-import type { Vector3, Vector4 } from "oxalis/constants";
-import { assertNonNullBucket, type DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import { MagInfo } from "viewer/model/helpers/mag_info";
+import type { Vector3, Vector4 } from "viewer/constants";
+import { assertNonNullBucket, type DataBucket } from "viewer/model/bucket_data_handling/bucket";
+import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
+import DataCube from "viewer/model/bucket_data_handling/data_cube";
 import runAsync from "test/helpers/run-async";
 
-vi.mock("oxalis/store", () => ({
+vi.mock("viewer/store", () => ({
   default: {
     getState: () => ({
       dataset: datasetServerObject,
@@ -25,7 +25,7 @@ vi.mock("oxalis/store", () => ({
   },
 }));
 
-vi.mock("oxalis/model/sagas/root_saga", () => ({
+vi.mock("viewer/model/sagas/root_saga", () => ({
   default: function* () {
     yield;
   },
@@ -179,7 +179,7 @@ describe("DataCube", () => {
     ]);
   });
 
-  it<TestContext>("Voxel Labeling should only instantiate one bucket when labelling the same bucket twice", async ({
+  it<TestContext>("Voxel Labeling should only instantiate one bucket when labeling the same bucket twice", async ({
     cube,
   }) => {
     // Creates bucket

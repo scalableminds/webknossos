@@ -1,4 +1,4 @@
-import { call, type Saga } from "oxalis/model/sagas/effect-generators";
+import { call, type Saga } from "viewer/model/sagas/effect-generators";
 import { runSaga } from "redux-saga";
 import processTaskWithPool from "libs/async/task_pool";
 import * as Utils from "libs/utils";

@@ -1,4 +1,3 @@
-import { AnnotationToolEnum } from "oxalis/constants";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 import window from "libs/window";
@@ -6,9 +5,9 @@ import {
   tracing as TRACING,
   annotation as ANNOTATION,
 } from "../fixtures/volumetracing_server_objects";
+import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 
 // All the mocking is done in the helpers file, so it can be reused for both skeleton and volume API
-
 describe("API Volume", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
     await setupWebknossosForTesting(context, "volume");
@@ -30,15 +29,15 @@ describe("API Volume", () => {
   });
 
   it<WebknossosTestContext>("getAnnotationTool should get the current tool", ({ api }) => {
-    expect(api.tracing.getAnnotationTool()).toBe(AnnotationToolEnum.MOVE);
+    expect(api.tracing.getAnnotationTool()).toBe(AnnotationTool.MOVE.id);
   });
 
   it<WebknossosTestContext>("setAnnotationTool should set the current tool", ({ api }) => {
-    api.tracing.setAnnotationTool(AnnotationToolEnum.TRACE);
-    expect(api.tracing.getAnnotationTool()).toBe(AnnotationToolEnum.TRACE);
+    api.tracing.setAnnotationTool(AnnotationTool.TRACE.id);
+    expect(api.tracing.getAnnotationTool()).toBe(AnnotationTool.TRACE.id);
 
-    api.tracing.setAnnotationTool(AnnotationToolEnum.BRUSH);
-    expect(api.tracing.getAnnotationTool()).toBe(AnnotationToolEnum.BRUSH);
+    api.tracing.setAnnotationTool(AnnotationTool.BRUSH.id);
+    expect(api.tracing.getAnnotationTool()).toBe(AnnotationTool.BRUSH.id);
   });
 
   it<WebknossosTestContext>("setAnnotationTool should throw an error for an invalid tool", ({

@@ -1,5 +1,5 @@
-import { UnitLong } from "oxalis/constants";
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
+import { UnitLong } from "viewer/constants";
 
 export default {
   $schema: "http://json-schema.org/draft-06/schema#",

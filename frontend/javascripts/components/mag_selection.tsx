@@ -1,8 +1,8 @@
 import { Form, Select } from "antd";
 import { V3 } from "libs/mjs";
 import { clamp } from "libs/utils";
-import type { Vector3 } from "oxalis/constants";
-import type { MagInfo } from "oxalis/model/helpers/mag_info";
+import type { Vector3 } from "viewer/constants";
+import type { MagInfo } from "viewer/model/helpers/mag_info";
 
 export function MagSelectionFormItem({
   name,

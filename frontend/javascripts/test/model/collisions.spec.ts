@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import traverse from "oxalis/model/bucket_data_handling/bucket_traversals";
+import traverse from "viewer/model/bucket_data_handling/bucket_traversals";
 
 describe("Traversal", () => {
   it("diagonal line", () => {

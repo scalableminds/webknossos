@@ -1,12 +1,12 @@
 import update from "immutability-helper";
-import type { SkeletonTracing } from "oxalis/store";
+import type { SkeletonTracing } from "viewer/store";
 import { initialState as defaultState } from "test/fixtures/volumetracing_object";
 
 import DiffableMap from "libs/diffable_map";
-import EdgeCollection from "oxalis/model/edge_collection";
-import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import { TreeTypeEnum } from "oxalis/constants";
-import type { APIColorLayer } from "types/api_flow_types";
+import EdgeCollection from "viewer/model/edge_collection";
+import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import { TreeTypeEnum } from "viewer/constants";
+import type { APIColorLayer } from "types/api_types";
 
 const colorLayer: APIColorLayer = {
   name: "color",

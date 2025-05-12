@@ -5,7 +5,7 @@ import {
   resetDatabase,
   writeTypeCheckingFile,
 } from "test/e2e-setup";
-import * as api from "admin/admin_rest_api";
+import * as api from "admin/rest_api";
 import { describe, it, beforeAll } from "vitest";
 
 describe("Misc APIs (E2E) ", () => {
@@ -28,7 +28,7 @@ describe("Misc APIs (E2E) ", () => {
   it("activeUser()", async ({ expect }) => {
     const activeUser = await api.getActiveUser();
 
-    writeTypeCheckingFile(activeUser, "user", "APIUser");
+    writeTypeCheckingFile(activeUser, "activeUser", "APIUser");
     // replaceVolatileValues should not be needed here since the database is freshly reset
     // and the tests are executed serially. However, for unknown reasons the lastActivity
     // property still varies since ava was upgraded from v3 to v4.

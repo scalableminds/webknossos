@@ -1,7 +1,8 @@
 // This module should be used to access the window object, so it can be mocked in the unit tests
 
-import type TextureBucketManager from "oxalis/model/bucket_data_handling/texture_bucket_manager";
+import type * as THREE from "three";
 import type { ArbitraryFunction, ArbitraryObject } from "types/globals";
+import type TextureBucketManager from "viewer/model/bucket_data_handling/texture_bucket_manager";
 
 const removeEventListener = (
   _type: string,

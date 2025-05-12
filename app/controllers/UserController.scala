@@ -8,7 +8,6 @@ import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.organization.OrganizationService
 import models.team._
 import models.user._
-import models.user.time._
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -26,7 +25,6 @@ class UserController @Inject()(userService: UserService,
                                multiUserDAO: MultiUserDAO,
                                organizationService: OrganizationService,
                                annotationDAO: AnnotationDAO,
-                               timeSpanService: TimeSpanService,
                                teamMembershipService: TeamMembershipService,
                                annotationService: AnnotationService,
                                teamDAO: TeamDAO,

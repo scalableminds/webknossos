@@ -1,4 +1,4 @@
-import { finishAnnotation } from "admin/admin_rest_api";
+import { finishAnnotation } from "admin/rest_api";
 import type {
   NewNmlTask,
   NewTask,
@@ -8,13 +8,8 @@ import type { QueryObject } from "admin/task/task_search_form";
 import type { RequestOptions } from "libs/request";
 import Request from "libs/request";
 import * as Utils from "libs/utils";
-import type {
-  APIActiveUser,
-  APIAnnotation,
-  APIAnnotationWithTask,
-  APITask,
-} from "types/api_flow_types";
-import { APIAnnotationTypeEnum } from "types/api_flow_types";
+import type { APIActiveUser, APIAnnotation, APIAnnotationWithTask, APITask } from "types/api_types";
+import { APIAnnotationTypeEnum } from "types/api_types";
 import { assertResponseLimit } from "./api_utils";
 
 export function peekNextTasks(): Promise<APITask | null | undefined> {

@@ -5,24 +5,19 @@
  */
 import "test/sagas/saga_integration.mock";
 import _ from "lodash";
-import {
-  AnnotationToolEnum,
-  ContourModeEnum,
-  OrthoViews,
-  OverwriteModeEnum,
-  type Vector3,
-} from "oxalis/constants";
+import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import { ContourModeEnum, OrthoViews, OverwriteModeEnum, type Vector3 } from "viewer/constants";
 import {
   setupWebknossosForTesting,
   createBucketResponseFunction,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
-import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
-import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import Store from "oxalis/store";
+import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
+import { restartSagaAction, wkReadyAction } from "viewer/model/actions/actions";
+import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
+import Store from "viewer/store";
 import dummyUser from "test/fixtures/dummy_user";
-import { setActiveUserAction } from "oxalis/model/actions/user_actions";
+import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import {
   batchUpdateGroupsAndSegmentsAction,
   clickSegmentAction,
@@ -34,20 +29,21 @@ import {
   startEditingAction,
   finishEditingAction,
   setContourTracingModeAction,
-} from "oxalis/model/actions/volumetracing_actions";
-import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+} from "viewer/model/actions/volumetracing_actions";
+import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   dispatchUndoAsync,
   dispatchRedoAsync,
   discardSaveQueuesAction,
-} from "oxalis/model/actions/save_actions";
-import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
-import { setToolAction } from "oxalis/model/actions/ui_actions";
+} from "viewer/model/actions/save_actions";
+import { setPositionAction, setZoomStepAction } from "viewer/model/actions/flycam_actions";
+import { setToolAction } from "viewer/model/actions/ui_actions";
 
 describe("Volume Tracing", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
-    // Setup oxalis, this will execute model.fetch(...) and initialize the store with the tracing, etc.
+    // Setup Webknossos
+    // this will execute model.fetch(...) and initialize the store with the tracing, etc.
     Store.dispatch(restartSagaAction());
     Store.dispatch(discardSaveQueuesAction());
     Store.dispatch(setActiveUserAction(dummyUser));
@@ -88,7 +84,7 @@ describe("Volume Tracing", () => {
 
     Store.dispatch(updateUserSettingAction("brushSize", brushSize));
     Store.dispatch(setPositionAction([0, 0, 0]));
-    Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH));
+    Store.dispatch(setToolAction(AnnotationTool.BRUSH));
     // Brush with ${newCellId}
     Store.dispatch(setActiveCellAction(newCellId));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
@@ -145,7 +141,7 @@ describe("Volume Tracing", () => {
     Store.dispatch(updateUserSettingAction("overwriteMode", OverwriteModeEnum.OVERWRITE_EMPTY));
     Store.dispatch(updateUserSettingAction("brushSize", brushSize));
     Store.dispatch(setPositionAction([0, 0, 0]));
-    Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH));
+    Store.dispatch(setToolAction(AnnotationTool.BRUSH));
     Store.dispatch(setActiveCellAction(newCellId));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
     Store.dispatch(addToLayerAction(paintCenter));
@@ -200,7 +196,7 @@ describe("Volume Tracing", () => {
     Store.dispatch(updateUserSettingAction("overwriteMode", OverwriteModeEnum.OVERWRITE_ALL));
     Store.dispatch(updateUserSettingAction("brushSize", brushSize));
     Store.dispatch(setPositionAction([0, 0, 0]));
-    Store.dispatch(setToolAction(AnnotationToolEnum.ERASE_BRUSH));
+    Store.dispatch(setToolAction(AnnotationTool.ERASE_BRUSH));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
     Store.dispatch(addToLayerAction(paintCenter));
     Store.dispatch(finishEditingAction());
@@ -250,7 +246,7 @@ describe("Volume Tracing", () => {
     Store.dispatch(updateUserSettingAction("overwriteMode", OverwriteModeEnum.OVERWRITE_ALL));
     Store.dispatch(updateUserSettingAction("brushSize", brushSize));
     Store.dispatch(setPositionAction([0, 0, 0]));
-    Store.dispatch(setToolAction(AnnotationToolEnum.ERASE_BRUSH));
+    Store.dispatch(setToolAction(AnnotationTool.ERASE_BRUSH));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
     Store.dispatch(addToLayerAction(paintCenter));
     Store.dispatch(finishEditingAction());
@@ -296,7 +292,7 @@ describe("Volume Tracing", () => {
     Store.dispatch(updateUserSettingAction("overwriteMode", OverwriteModeEnum.OVERWRITE_ALL));
     Store.dispatch(updateUserSettingAction("brushSize", brushSize));
     Store.dispatch(setPositionAction([0, 0, 0]));
-    Store.dispatch(setToolAction(AnnotationToolEnum.ERASE_BRUSH));
+    Store.dispatch(setToolAction(AnnotationTool.ERASE_BRUSH));
     Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
     Store.dispatch(addToLayerAction(paintCenter));
     Store.dispatch(finishEditingAction());

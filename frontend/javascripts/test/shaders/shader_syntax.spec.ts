@@ -1,4 +1,4 @@
-import getMainFragmentShader from "oxalis/shaders/main_data_shaders.glsl";
+import getMainFragmentShader from "viewer/shaders/main_data_shaders.glsl";
 import mags from "test/fixtures/mags";
 import { describe, it, beforeEach, expect } from "vitest";
 import { parser } from "@shaderfrog/glsl-parser";

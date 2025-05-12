@@ -11,9 +11,9 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
-import { getEditableUsers, updateUser } from "admin/admin_rest_api";
 import { InviteUsersModal } from "admin/onboarding";
 import { getActiveUserCount } from "admin/organization/pricing_plan_utils";
+import { getEditableUsers, updateUser } from "admin/rest_api";
 import { renderTeamRolesAndPermissionsForUser } from "admin/team/team_list_view";
 import ExperienceModalView from "admin/user/experience_modal_view";
 import PermissionsAndTeamsModalView from "admin/user/permissions_and_teams_modal_view";
@@ -26,22 +26,17 @@ import * as Utils from "libs/utils";
 import { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
-import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
-import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import type { OxalisState } from "oxalis/store";
-import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import React, { type Key, useEffect, useState } from "react";
 import { connect } from "react-redux";
 import type { RouteComponentProps } from "react-router-dom";
 import { Link } from "react-router-dom";
-import type {
-  APIOrganization,
-  APITeamMembership,
-  APIUser,
-  ExperienceMap,
-} from "types/api_flow_types";
-import { logoutUserAction } from "../../oxalis/model/actions/user_actions";
-import Store from "../../oxalis/store";
+import type { APIOrganization, APITeamMembership, APIUser, ExperienceMap } from "types/api_types";
+import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
+import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
+import type { WebknossosState } from "viewer/store";
+import EditableTextLabel from "viewer/view/components/editable_text_label";
+import { logoutUserAction } from "../../viewer/model/actions/user_actions";
+import Store from "../../viewer/store";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -223,7 +218,7 @@ function UserListView({ activeUser, activeOrganization }: Props) {
     const noUsersMessage = (
       <React.Fragment>
         <a onClick={inviteUsersCallback}>Invite colleagues and collaboration partners</a>
-        {" to join your organization. Share datasets and collaboratively work on annotiatons."}
+        {" to join your organization. Share datasets and collaboratively work on annotations."}
       </React.Fragment>
     );
     return isLoading ? null : (
@@ -248,9 +243,16 @@ function UserListView({ activeUser, activeOrganization }: Props) {
     return (
       <Alert
         message="You reached the maximum number of users"
-        description={`You organization reached the maximum number of users included in your current plan. Consider upgrading your WEBKNOSSOS plan to accommodate more users or deactivate some user accounts. Email invites are disabled in the meantime. Your organization currently has ${getActiveUserCount(
-          users,
-        )} active users of ${activeOrganization.includedUsers} allowed by your plan.`}
+        description={
+          <>
+            Your organization has reached the maximum number of users allowed in your current plan.
+            Email invites are only permitted for existing users of paid organizations, who will join
+            as non-billed guests. <br />
+            Consider upgrading your WEBKNOSSOS plan to accommodate more new users or deactivate
+            existing user accounts. Your organization currently has {getActiveUserCount(users)}{" "}
+            active users out of {activeOrganization.includedUsers} allowed by your plan.
+          </>
+        }
         type="warning"
         showIcon
         style={{
@@ -304,7 +306,7 @@ function UserListView({ activeUser, activeOrganization }: Props) {
     marginRight: 20,
   };
   const noOtherUsers = users.length < 2;
-  const isUserInvitesDisabled = getActiveUserCount(users) >= activeOrganization.includedUsers;
+  const isNewUserInvitesDisabled = getActiveUserCount(users) >= activeOrganization.includedUsers;
 
   return (
     <div className="container test-UserListView">
@@ -338,11 +340,10 @@ function UserListView({ activeUser, activeOrganization }: Props) {
         </Button>
         <Button
           icon={<UserAddOutlined />}
-          disabled={isUserInvitesDisabled}
           style={marginRight}
           onClick={() => setIsInviteModalOpen(true)}
         >
-          Invite Users
+          Invite {isNewUserInvitesDisabled ? "Guests" : "Users"}
         </Button>
         <InviteUsersModal
           currentUserCount={getActiveUserCount(users)}
@@ -371,8 +372,8 @@ function UserListView({ activeUser, activeOrganization }: Props) {
         <div className="clearfix" />
       </div>
 
-      {isUserInvitesDisabled ? renderUpgradePlanAlert() : null}
-      {noOtherUsers && !isUserInvitesDisabled ? renderInviteUsersAlert() : null}
+      {isNewUserInvitesDisabled ? renderUpgradePlanAlert() : null}
+      {noOtherUsers && !isNewUserInvitesDisabled ? renderInviteUsersAlert() : null}
       {renderNewUsersAlert()}
 
       <Spin size="large" spinning={isLoading}>
@@ -649,7 +650,7 @@ function UserListView({ activeUser, activeOrganization }: Props) {
   );
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
   activeOrganization: enforceActiveOrganization(state.activeOrganization),
 });

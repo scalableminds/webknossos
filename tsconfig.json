@@ -19,7 +19,7 @@
       "dom",
     ],
     "paths": {
-      "oxalis/*": ["./oxalis/*"],
+      "viewer/*": ["./viewer/*"],
       "libs/*": ["./libs/*"],
       "dashboard/*": ["./dashboard/*"],
       "components/*": ["./components/*"],

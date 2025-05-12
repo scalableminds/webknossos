@@ -146,6 +146,8 @@ CREATE TABLE webknossos.dataset_layers(
   mappings TEXT[],
   defaultViewConfiguration JSONB,
   adminViewConfiguration JSONB,
+  numChannels INT,
+  dataFormat TEXT,
   PRIMARY KEY(_dataset, name),
   CONSTRAINT defaultViewConfigurationIsJsonObject CHECK(jsonb_typeof(defaultViewConfiguration) = 'object'),
   CONSTRAINT adminViewConfigurationIsJsonObject CHECK(jsonb_typeof(adminViewConfiguration) = 'object')
@@ -182,6 +184,10 @@ CREATE TABLE webknossos.dataset_mags(
   path TEXT,
   realPath TEXT,
   hasLocalData BOOLEAN NOT NULL DEFAULT FALSE,
+  axisOrder TEXT,
+  channelIndex INT,
+  cubeLength INT,
+  credentialId TEXT,
   PRIMARY KEY (_dataset, dataLayerName, mag)
 );
 

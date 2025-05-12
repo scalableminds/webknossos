@@ -24,6 +24,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Renamed `OxalisState`, `OxalisApplication`, and `OxalisApi` to their respective `Webknossos{State, API, Application}` equivalent [#8591](https://github.com/scalableminds/webknossos/pull/8591)
 - Renamed `frontend/javascripts/oxalis` to `frontend/javascripts/viewer`. [#8601](https://github.com/scalableminds/webknossos/pull/8601)
 - When loading data from a data layer that has data stored beyond the bounding box specified in the datasource-properties.json, data outside of the bounding box is now zeroed. (the layer is “clipped”). [#8551](https://github.com/scalableminds/webknossos/pull/8551)
+- Updated to Typescript from version `5.5` to `5.8`. [#8613](https://github.com/scalableminds/webknossos/pull/8613)
 
 ### Fixed
 - Fixed that layer bounding boxes were sometimes colored green even though this should only happen for tasks. [#8535](https://github.com/scalableminds/webknossos/pull/8535)

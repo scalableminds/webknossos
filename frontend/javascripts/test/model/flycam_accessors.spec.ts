@@ -1,10 +1,10 @@
 import update from "immutability-helper";
-import type { WebknossosState } from "oxalis/store";
-import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
-import * as accessors from "oxalis/model/accessors/flycam_accessor";
-import constants, { Identity4x4, UnitLong, type Vector3 } from "oxalis/constants";
+import type { WebknossosState } from "viewer/store";
+import { getMaxZoomStep } from "viewer/model/accessors/dataset_accessor";
+import * as accessors from "viewer/model/accessors/flycam_accessor";
+import constants, { Identity4x4, UnitLong, type Vector3 } from "viewer/constants";
 import { describe, it, expect } from "vitest";
-import defaultState from "oxalis/default_state";
+import defaultState from "viewer/default_state";
 const { GPU_FACTOR_MULTIPLIER, DEFAULT_GPU_MEMORY_FACTOR } = constants;
 const DEFAULT_REQUIRED_BUCKET_CAPACITY = GPU_FACTOR_MULTIPLIER * DEFAULT_GPU_MEMORY_FACTOR;
 const boundingBox = {

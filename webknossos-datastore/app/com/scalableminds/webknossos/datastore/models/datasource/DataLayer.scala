@@ -33,14 +33,6 @@ object DataFormat extends ExtendedEnumeration {
 
 object Category extends ExtendedEnumeration {
   val color, segmentation = Value
-
-  def guessFromElementClass(elementClass: ElementClass.Value): Category.Value =
-    elementClass match {
-      case ElementClass.uint16 => segmentation
-      case ElementClass.uint32 => segmentation
-      case ElementClass.uint64 => segmentation
-      case _                   => color
-    }
 }
 
 object ElementClass extends ExtendedEnumeration {
@@ -186,6 +178,20 @@ object ElementClass extends ExtendedEnumeration {
     case ArrayDataType.i4 => Some(ElementClass.int32)
     case ArrayDataType.i8 => Some(ElementClass.int64)
     case _                => None
+  }
+
+  def toArrayDataTypeAndChannel(elementClass: ElementClass.Value): (ArrayDataType, Int) = elementClass match {
+    case ElementClass.uint8  => (ArrayDataType.u1, 1)
+    case ElementClass.uint16 => (ArrayDataType.u2, 1)
+    case ElementClass.uint24 => (ArrayDataType.u1, 3)
+    case ElementClass.uint32 => (ArrayDataType.u4, 1)
+    case ElementClass.uint64 => (ArrayDataType.u8, 1)
+    case ElementClass.float  => (ArrayDataType.f4, 1)
+    case ElementClass.double => (ArrayDataType.f8, 1)
+    case ElementClass.int8   => (ArrayDataType.i1, 1)
+    case ElementClass.int16  => (ArrayDataType.i2, 1)
+    case ElementClass.int32  => (ArrayDataType.i4, 1)
+    case ElementClass.int64  => (ArrayDataType.i8, 1)
   }
 }
 

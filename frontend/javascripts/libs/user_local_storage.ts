@@ -1,4 +1,4 @@
-import Store from "oxalis/store";
+import Store from "viewer/store";
 
 // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'key' implicitly has an 'any' type.
 function prefixKey(key, isOrganizationSpecific) {

@@ -11,12 +11,12 @@ import utc from "dayjs/plugin/utc";
 import weekday from "dayjs/plugin/weekday";
 import * as Utils from "libs/utils";
 import _ from "lodash";
-import { LongUnitToShortUnitMap, UnitShort, type Vector3, type Vector6 } from "oxalis/constants";
-import { Unicode } from "oxalis/constants";
+import { LongUnitToShortUnitMap, UnitShort, type Vector3, type Vector6 } from "viewer/constants";
+import { Unicode } from "viewer/constants";
 
 import type { Duration } from "dayjs/plugin/duration";
-import type { BoundingBoxObject } from "oxalis/store";
 import type { VoxelSize, WkLibsNdBoundingBox } from "types/api_types";
+import type { BoundingBoxObject } from "viewer/store";
 
 dayjs.extend(updateLocale);
 dayjs.extend(duration);

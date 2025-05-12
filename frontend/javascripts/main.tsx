@@ -1,9 +1,9 @@
 import { message } from "antd";
 import window, { document } from "libs/window";
-import { warnIfEmailIsUnverified } from "oxalis/model/sagas/user_saga";
-import UnthrottledStore, { startSaga } from "oxalis/store";
 import { createRoot } from "react-dom/client";
 import { Provider } from "react-redux";
+import { warnIfEmailIsUnverified } from "viewer/model/sagas/user_saga";
+import UnthrottledStore, { startSaga } from "viewer/store";
 
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -16,16 +16,16 @@ import checkBrowserFeatures from "libs/browser_feature_check";
 import ErrorHandling from "libs/error_handling";
 import UserLocalStorage from "libs/user_local_storage";
 import { compress, decompress } from "lz-string";
-import { setupApi } from "oxalis/api/internal_api";
-import Model from "oxalis/model";
-import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
-import { setHasOrganizationsAction, setThemeAction } from "oxalis/model/actions/ui_actions";
-import { setActiveUserAction } from "oxalis/model/actions/user_actions";
-import { setModel, setStore } from "oxalis/singletons";
-import Store from "oxalis/throttled_store";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import Router from "router";
+import { setupApi } from "viewer/api/internal_api";
+import Model from "viewer/model";
+import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
+import { setHasOrganizationsAction, setThemeAction } from "viewer/model/actions/ui_actions";
+import { setActiveUserAction } from "viewer/model/actions/user_actions";
+import { setModel, setStore } from "viewer/singletons";
+import Store from "viewer/throttled_store";
 
 import "../stylesheets/main.less";
 import GlobalThemeProvider, { getThemeFromUser } from "theme";

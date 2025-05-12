@@ -1,5 +1,5 @@
 import { describe, it, beforeEach, expect, vi } from "vitest";
-import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
+import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { initialState } from "test/fixtures/volumetracing_object";
 
 const disabledInfoMock: { [key in any]?: any } = {};
@@ -11,11 +11,11 @@ Object.values(AnnotationTool).forEach((annotationTool) => {
   };
 });
 
-vi.mock("oxalis/model/accessors/disabled_tool_accessor", () => ({
+vi.mock("viewer/model/accessors/disabled_tool_accessor", () => ({
   getDisabledInfoForTools: () => disabledInfoMock,
 }));
 
-vi.mock("oxalis/controller/scene_controller_provider", () => ({
+vi.mock("viewer/controller/scene_controller_provider", () => ({
   default: () => ({
     lineMeasurementGeometry: {
       hide: vi.fn(),
@@ -43,10 +43,10 @@ import {
   ProofreadToolController,
   LineMeasurementToolController,
   AreaMeasurementToolController,
-} from "oxalis/controller/combinations/tool_controls";
-import UiReducer from "oxalis/model/reducers/ui_reducer";
-import { cycleToolAction, setToolAction } from "oxalis/model/actions/ui_actions";
-import { watchToolDeselection } from "oxalis/model/sagas/annotation_tool_saga";
+} from "viewer/controller/combinations/tool_controls";
+import UiReducer from "viewer/model/reducers/ui_reducer";
+import { cycleToolAction, setToolAction } from "viewer/model/actions/ui_actions";
+import { watchToolDeselection } from "viewer/model/sagas/annotation_tool_saga";
 
 describe("Annotation Tool Saga", () => {
   const allToolControllers = [

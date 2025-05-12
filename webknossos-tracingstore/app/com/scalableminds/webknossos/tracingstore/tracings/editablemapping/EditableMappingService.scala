@@ -22,12 +22,8 @@ import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataR
 import com.scalableminds.webknossos.datastore.models._
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.services.{
-  AdHocMeshRequest,
-  AdHocMeshService,
-  AdHocMeshServiceHolder,
-  BinaryDataService
-}
+import com.scalableminds.webknossos.datastore.services.mesh.{AdHocMeshRequest, AdHocMeshService, AdHocMeshServiceHolder}
+import com.scalableminds.webknossos.datastore.services.BinaryDataService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{ReversionHelper, TSDatasetErrorLoggingService}
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FallbackDataHelper,
@@ -210,7 +206,7 @@ class EditableMappingService @Inject()(
       implicit tc: TokenContext): Fox[(Array[Byte], List[Int])] = {
     val requests = dataRequests.map(
       r =>
-        DataServiceDataRequest(null,
+        DataServiceDataRequest(None,
                                editableMappingLayer,
                                r.cuboid(editableMappingLayer),
                                r.settings.copy(appliedAgglomerate = None)))
@@ -221,7 +217,7 @@ class EditableMappingService @Inject()(
       implicit tc: TokenContext): Fox[Seq[Box[Array[Byte]]]] = {
     val requests = dataRequests.map(
       r =>
-        DataServiceDataRequest(null,
+        DataServiceDataRequest(None,
                                editableMappingLayer,
                                r.cuboid(editableMappingLayer),
                                r.settings.copy(appliedAgglomerate = None)))
@@ -400,7 +396,7 @@ class EditableMappingService @Inject()(
   def createAdHocMesh(editableMappingLayer: EditableMappingLayer, request: WebknossosAdHocMeshRequest)(
       implicit tc: TokenContext): Fox[(Array[Float], List[Int])] = {
     val adHocMeshRequest = AdHocMeshRequest(
-      dataSource = None,
+      dataSourceId = None,
       dataLayer = editableMappingLayer,
       cuboid = request.cuboid(editableMappingLayer),
       segmentId = request.segmentId,

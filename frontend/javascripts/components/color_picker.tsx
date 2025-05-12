@@ -1,10 +1,10 @@
 import { InputNumber, Popover } from "antd";
 import useThrottledCallback from "beautiful-react-hooks/useThrottledCallback";
 import * as Utils from "libs/utils";
-import type { Vector3, Vector4 } from "oxalis/constants";
 import { useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { HexColorInput, HexColorPicker, type RgbaColor, RgbaColorPicker } from "react-colorful";
+import type { Vector3, Vector4 } from "viewer/constants";
 
 const COLOR_PICKER_WIDTH = 200;
 const RELATIVE_OPACITY_INPUT_WIDTH = 0.25;

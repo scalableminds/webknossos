@@ -7,14 +7,14 @@ import features from "features";
 import type { History } from "history";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
-import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
-import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import type { WebknossosState } from "oxalis/store";
 import React, { useState } from "react";
 import { connect } from "react-redux";
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import type { APIDataStore } from "types/api_types";
+import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
+import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
+import type { WebknossosState } from "viewer/store";
 import DatasetAddComposeView from "./dataset_add_compose_view";
 
 const { Content, Sider } = Layout;

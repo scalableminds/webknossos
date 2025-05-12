@@ -16,12 +16,12 @@ import { confirmAsync } from "dashboard/dataset/helper_components";
 import Toast from "libs/toast";
 import window from "libs/window";
 import messages from "messages";
-import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
-import { getNoActionsAvailableMenu } from "oxalis/view/context_menu";
 import type * as React from "react";
 import { useState } from "react";
 import { Link, type LinkProps } from "react-router-dom";
 import type { APIDataset, APIDatasetCompact } from "types/api_types";
+import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
+import { getNoActionsAvailableMenu } from "viewer/view/context_menu";
 
 const disabledStyle: React.CSSProperties = {
   pointerEvents: "none",

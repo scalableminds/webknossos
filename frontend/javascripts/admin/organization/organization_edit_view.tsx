@@ -15,11 +15,11 @@ import {
 import { Button, Card, Col, Form, Input, Row, Skeleton, Space, Typography } from "antd";
 import { confirmAsync } from "dashboard/dataset/helper_components";
 import Toast from "libs/toast";
-import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
-import type { WebknossosState } from "oxalis/store";
 import { useEffect, useState } from "react";
 import { connect } from "react-redux";
 import type { APIOrganization, APIPricingPlanStatus } from "types/api_types";
+import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
+import type { WebknossosState } from "viewer/store";
 import {
   PlanAboutToExceedAlert,
   PlanDashboardCard,

@@ -5,10 +5,10 @@ import UrlManager, {
   type UrlManagerState,
   getDatasetNameFromLocation,
   getUpdatedPathnameWithNewDatasetName,
-} from "oxalis/controller/url_manager";
+} from "viewer/controller/url_manager";
 import { location } from "libs/window";
-import Constants, { type Vector3, ViewModeValues } from "oxalis/constants";
-import defaultState from "oxalis/default_state";
+import Constants, { type Vector3, ViewModeValues } from "viewer/constants";
+import defaultState from "viewer/default_state";
 import update from "immutability-helper";
 import DATASET from "../fixtures/dataset_server_object";
 import _ from "lodash";

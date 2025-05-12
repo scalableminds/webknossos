@@ -427,11 +427,17 @@ class SceneController {
 
           const ind = Dimensions.getIndices(planeId);
           // Offset the plane so the user can see the skeletonTracing behind the plane
-          // TODOM: This concept is kinda broken when rotations are turned on. TODO investigate how to implement this instead.
-          //pos[ind[2]] += planeId === OrthoViews.PLANE_XY ? 1 : -1;
-          //pos[ind[2]] +=
+          // TODOM: Somehow data is rendered slightly besides the borders due to this displacement. TODO: Investigate why
+          // pos[ind[2]] +=
           //  planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
-          this.planes[planeId].setPosition(pos, originalPosition);
+          const unrotatedThirdDimOfPlane = [0, 0, 0];
+          unrotatedThirdDimOfPlane[ind[2]] =
+            planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
+          const rotatedThirdDimOfPlane = new THREE.Vector3(...unrotatedThirdDimOfPlane).applyEuler(
+            new THREE.Euler(...rotation),
+          );
+          const positionWithOffset = V3.add(pos, rotatedThirdDimOfPlane.toArray());
+          this.planes[planeId].setPosition(positionWithOffset, originalPosition);
           this.planes[planeId].setRotation(new THREE.Euler(rotation[0], rotation[1], rotation[2]));
 
           this.quickSelectGeometry.adaptVisibilityForRendering(originalPosition, ind[2]);

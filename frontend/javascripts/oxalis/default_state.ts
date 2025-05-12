@@ -259,6 +259,7 @@ const defaultState: WebknossosState = {
     measurementToolInfo: {
       lastMeasuredPosition: null,
       isMeasuring: false,
+      viewportPosition: null,
     },
     navbarHeight: constants.DEFAULT_NAVBAR_HEIGHT,
     contextInfo: {

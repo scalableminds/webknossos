@@ -182,15 +182,8 @@ class Plane {
     this.crosshair[1].position.set(...scaledPosition);
     this.plane.position.set(...scaledPosition);
 
-    if (originalPosition == null) {
-      this.plane.material.setGlobalPosition(...scaledPosition);
-    } else {
-      this.plane.material.setGlobalPosition(
-        originalPosition[0],
-        originalPosition[1],
-        originalPosition[2],
-      );
-    }
+    const scaledOriginalPosition = V3.multiply(originalPosition || pos, this.datasetScaleFactor);
+    this.plane.material.setGlobalPosition(...scaledOriginalPosition);
   };
 
   setVisible = (isVisible: boolean, isDataVisible?: boolean): void => {

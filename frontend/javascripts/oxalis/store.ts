@@ -10,6 +10,7 @@ import type {
   OrthoView,
   OrthoViewWithoutTD,
   OverwriteMode,
+  Point2,
   Rect,
   TDViewDisplayMode,
   TreeType,
@@ -567,7 +568,11 @@ type UiInformation = {
     | "drawing" // the user is currently drawing a bounding box
     | "active"; // the quick select saga is currently running (calculating as well as preview mode)
   readonly areQuickSelectSettingsOpen: boolean;
-  readonly measurementToolInfo: { lastMeasuredPosition: Vector3 | null; isMeasuring: boolean };
+  readonly measurementToolInfo: {
+    lastMeasuredPosition: Vector3 | null;
+    isMeasuring: boolean;
+    viewportPosition: Point2 | null;
+  };
   readonly navbarHeight: number;
   readonly contextInfo: {
     readonly contextMenuPosition: Readonly<[number, number]> | null | undefined;

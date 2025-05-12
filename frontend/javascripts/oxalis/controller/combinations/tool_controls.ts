@@ -48,7 +48,7 @@ import {
   hideMeasurementTooltipAction,
   setActiveUserBoundingBoxId,
   setIsMeasuringAction,
-  setLastMeasuredPositionAction,
+  setLastMeasuredAndViewportPositionAction,
   setQuickSelectStateAction,
 } from "oxalis/model/actions/ui_actions";
 import {
@@ -897,7 +897,7 @@ export class LineMeasurementToolController {
       const state = Store.getState();
       const newPos = V3.floor(calculateGlobalPos(state, pos, this.initialPlane));
       lineMeasurementGeometry.updateLatestPointPosition(newPos);
-      Store.dispatch(setLastMeasuredPositionAction(newPos));
+      Store.dispatch(setLastMeasuredAndViewportPositionAction(newPos, pos));
     };
     const rightClick = (pos: Point2, plane: OrthoView, event: MouseEvent) => {
       // In case the tool was reset by the user, abort measuring.
@@ -946,7 +946,7 @@ export class LineMeasurementToolController {
       } else {
         lineMeasurementGeometry.addPoint(position);
       }
-      Store.dispatch(setLastMeasuredPositionAction(position));
+      Store.dispatch(setLastMeasuredAndViewportPositionAction(position, pos));
     };
     return {
       mouseMove,
@@ -1017,7 +1017,7 @@ export class AreaMeasurementToolController {
         const state = Store.getState();
         const position = V3.floor(calculateGlobalPos(state, pos, this.initialPlane));
         areaMeasurementGeometry.addEdgePoint(position);
-        Store.dispatch(setLastMeasuredPositionAction(position));
+        Store.dispatch(setLastMeasuredAndViewportPositionAction(position, pos));
       },
       leftMouseUp: () => {
         if (!this.isMeasuring) {

@@ -303,9 +303,9 @@ function _getRotationInRadianFixed(flycam: Flycam): Vector3 {
   object.applyMatrix4(matrix);
   const rotation: Vector3 = [object.rotation.x, object.rotation.y - Math.PI, object.rotation.z];
   return [
-    mod(rotation[0], Math.PI*2),
-    mod(rotation[1], Math.PI*2),
-    mod(rotation[2], Math.PI*2),
+    mod(rotation[0], Math.PI * 2),
+    mod(rotation[1], Math.PI * 2),
+    mod(rotation[2], Math.PI * 2),
   ];
 }
 
@@ -315,9 +315,9 @@ function _getRotationInRadian(flycam: Flycam): Vector3 {
   object.applyMatrix4(matrix);
   const rotation: Vector3 = [object.rotation.x, object.rotation.y, object.rotation.z - Math.PI];
   return [
-    mod(rotation[0], Math.PI*2),
-    mod(rotation[1], Math.PI*2),
-    mod(rotation[2], Math.PI*2),
+    mod(rotation[0], Math.PI * 2),
+    mod(rotation[1], Math.PI * 2),
+    mod(rotation[2], Math.PI * 2),
   ];
 }
 
@@ -328,7 +328,7 @@ function _getRotationInDegrees(flycam: Flycam): Vector3 {
     (180 / Math.PI) * rotationInRadian[0],
     (180 / Math.PI) * rotationInRadian[1],
     (180 / Math.PI) * rotationInRadian[2],
-  ]
+  ];
 }
 
 function _getZoomedMatrix(flycam: Flycam): Matrix4x4 {
@@ -518,13 +518,13 @@ export function getPlaneExtentInVoxel(
   const { width, height } = rects[planeID];
   return [width * zoomStep, height * zoomStep];
 }
-export function getRotationOrtho(planeId: OrthoView): Vector3 {
+export function getRotationOrthoInRadian(planeId: OrthoView): Vector3 {
   switch (planeId) {
     case OrthoViews.PLANE_YZ:
-      return [0, 270, 0];
+      return [0, (3 / 2) * Math.PI, 0];
 
     case OrthoViews.PLANE_XZ:
-      return [90, 0, 0];
+      return [Math.PI / 2, 0, 0];
 
     case OrthoViews.PLANE_XY:
     default:

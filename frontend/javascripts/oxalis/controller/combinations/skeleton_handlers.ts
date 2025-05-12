@@ -9,7 +9,8 @@ import { getEnabledColorLayers } from "oxalis/model/accessors/dataset_accessor";
 import {
   getActiveMagIndicesForLayers,
   getPosition,
-  getRotationOrtho,
+  getRotationInRadian,
+  getRotationOrthoInRadian,
   isMagRestrictionViolated,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -285,7 +286,17 @@ export function getOptionsForCreateSkeletonNode(
   const additionalCoordinates = state.flycam.additionalCoordinates;
   const skeletonTracing = enforceSkeletonTracing(state.annotation);
   const activeNode = getActiveNode(skeletonTracing);
-  const rotation = getRotationOrtho(activeViewport || state.viewModeData.plane.activeViewport);
+  const initialViewportRotation = getRotationOrthoInRadian(
+    activeViewport || state.viewModeData.plane.activeViewport,
+  );
+  const flycamRotation = getRotationInRadian(state.flycam);
+  const totalRotationQuaternion = new THREE.Quaternion()
+    .setFromEuler(new THREE.Euler(...initialViewportRotation))
+    .multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(...flycamRotation)));
+  const rotationEuler = new THREE.Euler().setFromQuaternion(totalRotationQuaternion);
+  const rotationInDegree = [rotationEuler.x, rotationEuler.y, rotationEuler.z].map(
+    (a) => (a * 180) / Math.PI,
+  ) as Vector3;
 
   // Center node if the corresponding setting is true. Only pressing CTRL can override this.
   const center = state.userConfiguration.centerNewNode && !ctrlIsPressed;
@@ -299,10 +310,9 @@ export function getOptionsForCreateSkeletonNode(
   const activate = !ctrlIsPressed || activeNode == null;
 
   const skipCenteringAnimationInThirdDimension = true;
-
   return {
     additionalCoordinates,
-    rotation,
+    rotation: rotationInDegree,
     center,
     branchpoint,
     activate,

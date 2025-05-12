@@ -431,8 +431,9 @@ class SceneController {
           // pos[ind[2]] +=
           //  planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
           const unrotatedThirdDimOfPlane = [0, 0, 0];
-          unrotatedThirdDimOfPlane[ind[2]] =
-            planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
+          // TODO: Reenable
+          //unrotatedThirdDimOfPlane[ind[2]] =
+          //  planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
           const rotatedThirdDimOfPlane = new THREE.Vector3(...unrotatedThirdDimOfPlane).applyEuler(
             new THREE.Euler(...rotation),
           );

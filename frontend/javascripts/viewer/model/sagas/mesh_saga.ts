@@ -1,3 +1,4 @@
+import type { MeshLodInfo } from "admin/api/mesh";
 import {
   computeAdHocMesh,
   getBucketPositionsForAdHocMesh,
@@ -16,17 +17,17 @@ import ErrorHandling from "libs/error_handling";
 import { V3 } from "libs/mjs";
 import exportToStl from "libs/stl_exporter";
 import Toast from "libs/toast";
-import { areVec3AlmostEqual, chunkDynamically, sleep } from "libs/utils";
+import { chunkDynamically, sleep } from "libs/utils";
 import Zip from "libs/zipjs_wrapper";
 import _ from "lodash";
 import messages from "messages";
 import type { ActionPattern } from "redux-saga/effects";
 import type * as THREE from "three";
 import { actionChannel, all, call, put, race, take, takeEvery } from "typed-redux-saga";
-import type { APIDataset, APIMeshFile, APISegmentationLayer } from "types/api_types";
+import type { APIDataset, APIMeshFileInfo, APISegmentationLayer } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
-import type { Vector3 } from "viewer/constants";
+import type { Vector3, Vector4 } from "viewer/constants";
 import { MappingStatusEnum } from "viewer/constants";
 import CustomLOD from "viewer/controller/custom_lod";
 import {
@@ -692,7 +693,7 @@ function* _refreshMeshWithMap(
 
 // Avoid redundant fetches of mesh files for the same layer by
 // storing Deferreds per layer lazily.
-let fetchDeferredsPerLayer: Record<string, Deferred<Array<APIMeshFile>, unknown>> = {};
+let fetchDeferredsPerLayer: Record<string, Deferred<Array<APIMeshFileInfo>, unknown>> = {};
 function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
   const { segmentationLayer, dataset, mustRequest, autoActivate, callback } = action;
 
@@ -703,12 +704,12 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
 
   const layerName = segmentationLayer.name;
 
-  function* maybeActivateMeshFile(availableMeshFiles: APIMeshFile[]) {
+  function* maybeActivateMeshFile(availableMeshFiles: APIMeshFileInfo[]) {
     const currentMeshFile = yield* select(
       (state) => state.localSegmentationData[layerName].currentMeshFile,
     );
     if (!currentMeshFile && availableMeshFiles.length > 0 && autoActivate) {
-      yield* put(updateCurrentMeshFileAction(layerName, availableMeshFiles[0].meshFileName));
+      yield* put(updateCurrentMeshFileAction(layerName, availableMeshFiles[0].name));
     }
   }
 
@@ -726,7 +727,7 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
   // If mustRequest is true and an old deferred exists, a new deferred will be created which
   // replaces the old one (old references to the first Deferred will still
   // work and will be resolved by the corresponding saga execution).
-  const deferred = new Deferred<Array<APIMeshFile>, unknown>();
+  const deferred = new Deferred<Array<APIMeshFileInfo>, unknown>();
   fetchDeferredsPerLayer[layerName] = deferred;
 
   const availableMeshFiles = yield* call(
@@ -780,7 +781,7 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
 type ChunksMap = Record<number, Vector3[] | meshApi.MeshChunk[] | null | undefined>;
 
 function* loadPrecomputedMeshForSegmentId(
-  id: number,
+  segmentId: number,
   seedPosition: Vector3,
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
@@ -791,14 +792,14 @@ function* loadPrecomputedMeshForSegmentId(
   yield* put(
     addPrecomputedMeshAction(
       layerName,
-      id,
+      segmentId,
       seedPosition,
       seedAdditionalCoordinates,
       meshFileName,
       mappingName,
     ),
   );
-  yield* put(startedLoadingMeshAction(layerName, id));
+  yield* put(startedLoadingMeshAction(layerName, segmentId));
   const dataset = yield* select((state) => state.dataset);
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
 
@@ -811,39 +812,41 @@ function* loadPrecomputedMeshForSegmentId(
     false,
   );
 
-  const meshFile = availableMeshFiles.find((file) => file.meshFileName === meshFileName);
+  const meshFile = availableMeshFiles.find((file) => file.name === meshFileName);
   if (!meshFile) {
     Toast.error("Could not load mesh, since the requested mesh file was not found.");
     return;
   }
-  if (id === 0) {
+  if (segmentId === 0) {
     Toast.error("Could not load mesh, since the clicked segment ID is 0.");
     return;
   }
 
   let availableChunksMap: ChunksMap = {};
-  let scale: Vector3 | null = null;
+  let chunkScale: Vector3 | null = null;
   let loadingOrder: number[] | null = null;
+  let lods: MeshLodInfo[] | null = null;
   try {
     const chunkDescriptors = yield* call(
       _getChunkLoadingDescriptors,
-      id,
+      segmentId,
       dataset,
       segmentationLayer,
       meshFile,
     );
+    lods = chunkDescriptors.segmentInfo.lods;
     availableChunksMap = chunkDescriptors.availableChunksMap;
-    scale = chunkDescriptors.scale;
+    chunkScale = chunkDescriptors.segmentInfo.chunkScale;
     loadingOrder = chunkDescriptors.loadingOrder;
   } catch (exception) {
-    Toast.warning(messages["tracing.mesh_listing_failed"](id));
+    Toast.warning(messages["tracing.mesh_listing_failed"](segmentId));
     console.warn(
-      `Mesh chunks for segment ${id} couldn't be loaded due to`,
+      `Mesh chunks for segment ${segmentId} couldn't be loaded due to`,
       exception,
       "\nOne possible explanation could be that the segment was not included in the mesh file because it's smaller than the dust threshold that was specified for the mesh computation.",
     );
-    yield* put(finishedLoadingMeshAction(layerName, id));
-    yield* put(removeMeshAction(layerName, id));
+    yield* put(finishedLoadingMeshAction(layerName, segmentId));
+    yield* put(removeMeshAction(layerName, segmentId));
     return;
   }
 
@@ -854,16 +857,17 @@ function* loadPrecomputedMeshForSegmentId(
       layerName,
       meshFile,
       segmentationLayer,
-      id,
+      segmentId,
       seedPosition,
       availableChunksMap,
       lod,
-      scale,
+      (lod: number) => extractScaleFromMatrix(lods[lod].transform),
+      chunkScale,
       additionalCoordinates,
     );
   }
 
-  yield* put(finishedLoadingMeshAction(layerName, id));
+  yield* put(finishedLoadingMeshAction(layerName, segmentId));
 }
 
 function* getMappingName(segmentationLayer: APISegmentationLayer) {
@@ -879,18 +883,16 @@ function* getMappingName(segmentationLayer: APISegmentationLayer) {
 }
 
 function* _getChunkLoadingDescriptors(
-  id: number,
+  segmentId: number,
   dataset: APIDataset,
   segmentationLayer: APISegmentationLayer,
-  meshFile: APIMeshFile,
+  meshFile: APIMeshFileInfo,
 ) {
   const availableChunksMap: ChunksMap = {};
-  let scale: Vector3 | null = null;
   let loadingOrder: number[] = [];
 
   const { segmentMeshController } = getSceneController();
   const version = meshFile.formatVersion;
-  const { meshFileName } = meshFile;
 
   const editableMapping = yield* select((state) =>
     getEditableMappingForVolumeTracingId(state, segmentationLayer.tracingId),
@@ -916,8 +918,8 @@ function* _getChunkLoadingDescriptors(
     dataset.dataStore.url,
     dataset,
     getBaseSegmentationName(segmentationLayer),
-    meshFileName,
-    id,
+    meshFile,
+    segmentId,
     // The back-end should only receive a non-null mapping name,
     // if it should perform extra (reverse) look ups to compute a mesh
     // with a specific mapping from a mesh file that was computed
@@ -925,10 +927,10 @@ function* _getChunkLoadingDescriptors(
     meshFile.mappingName == null ? mappingName : null,
     editableMapping != null && tracing ? tracing.tracingId : null,
   );
-  scale = [segmentInfo.transform[0][0], segmentInfo.transform[1][1], segmentInfo.transform[2][2]];
-  segmentInfo.chunks.lods.forEach((chunks, lodIndex) => {
-    availableChunksMap[lodIndex] = chunks?.chunks;
+  segmentInfo.lods.forEach((meshLodInfo, lodIndex) => {
+    availableChunksMap[lodIndex] = meshLodInfo?.chunks;
     loadingOrder.push(lodIndex);
+    meshLodInfo.transform;
   });
   const currentLODGroup: CustomLOD =
     (yield* call(
@@ -950,25 +952,28 @@ function* _getChunkLoadingDescriptors(
 
   return {
     availableChunksMap,
-    scale,
     loadingOrder,
+    segmentInfo,
   };
+}
+function extractScaleFromMatrix(transform: [Vector4, Vector4, Vector4]): Vector3 {
+  return [transform[0][0], transform[1][1], transform[2][2]];
 }
 
 function* loadPrecomputedMeshesInChunksForLod(
   dataset: APIDataset,
   layerName: string,
-  meshFile: APIMeshFile,
+  meshFile: APIMeshFileInfo,
   segmentationLayer: APISegmentationLayer,
-  id: number,
+  segmentId: number,
   seedPosition: Vector3,
   availableChunksMap: ChunksMap,
   lod: number,
-  scale: Vector3 | null,
+  getGlobalScale: (lod: number) => Vector3 | null,
+  chunkScale: Vector3 | null,
   additionalCoordinates: AdditionalCoordinate[] | null,
 ) {
   const { segmentMeshController } = getSceneController();
-  const { meshFileName } = meshFile;
   const loader = getDracoLoader();
   if (availableChunksMap[lod] == null) {
     return;
@@ -993,11 +998,12 @@ function* loadPrecomputedMeshesInChunksForLod(
           dataset,
           getBaseSegmentationName(segmentationLayer),
           {
-            meshFile: meshFileName,
+            meshFile,
             // Only extract the relevant properties
             requests: chunks.map(({ byteOffset, byteSize }) => ({
               byteOffset,
               byteSize,
+              segmentId,
             })),
           },
         );
@@ -1015,6 +1021,9 @@ function* loadPrecomputedMeshesInChunksForLod(
               data,
             )) as UnmergedBufferGeometryWithInfo;
             bufferGeometry.unmappedSegmentId = chunk.unmappedSegmentId;
+            if (chunkScale != null) {
+              bufferGeometry.scale(...chunkScale);
+            }
 
             bufferGeometry.translate(position[0], position[1], position[2]);
             // Compute vertex normals to achieve smooth shading. We do this here
@@ -1022,15 +1031,19 @@ function* loadPrecomputedMeshesInChunksForLod(
             // to distribute the workload a bit over time.
             bufferGeometry.computeVertexNormals();
 
+            // Eagerly add the chunk geometry so that they will be rendered
+            // as soon as possible. These chunks will be removed later and then
+            // replaced by a merged geometry so that we have better performance
+            // for large meshes.
             yield* call(
               {
                 context: segmentMeshController,
                 fn: segmentMeshController.addMeshFromGeometry,
               },
               bufferGeometry,
-              id,
+              segmentId,
               // Apply the scale from the segment info, which includes dataset scale and mag
-              scale,
+              getGlobalScale(lod),
               lod,
               layerName,
               additionalCoordinates,
@@ -1054,7 +1067,7 @@ function* loadPrecomputedMeshesInChunksForLod(
   try {
     yield* call(processTaskWithPool, tasks, PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);
   } catch (exception) {
-    Toast.warning(`Some mesh chunks could not be loaded for segment ${id}.`);
+    Toast.warning(`Some mesh chunks could not be loaded for segment ${segmentId}.`);
     console.error(exception);
   }
 
@@ -1064,9 +1077,10 @@ function* loadPrecomputedMeshesInChunksForLod(
     (geometryWithInfo) => geometryWithInfo.unmappedSegmentId,
   );
 
-  const mergedGeometry = mergeGeometries(
-    sortedBufferGeometries,
-    false,
+  // mergeGeometries will crash if the array is empty. Even if it's not empty,
+  // the function might return null in case of another error.
+  const mergedGeometry = (
+    sortedBufferGeometries.length > 0 ? mergeGeometries(sortedBufferGeometries, false) : null
   ) as BufferGeometryWithInfo | null;
 
   if (mergedGeometry == null) {
@@ -1076,42 +1090,27 @@ function* loadPrecomputedMeshesInChunksForLod(
   mergedGeometry.vertexSegmentMapping = new VertexSegmentMapping(sortedBufferGeometries);
   mergedGeometry.boundsTree = yield* call(computeBvhAsync, mergedGeometry);
 
-  // Check if the mesh scale is different to all supported mags of the active segmentation scaled by the dataset scale and warn in the console to make debugging easier in such a case.
-  // This hint at the mesh file being computed when the dataset scale was different than currently configured.
-  const segmentationLayerMags = yield* select(
-    (state) => getVisibleSegmentationLayer(state)?.resolutions,
-  );
-  const datasetScaleFactor = dataset.dataSource.scale.factor;
-  if (segmentationLayerMags && scale) {
-    const doesSomeSegmentMagMatchMeshScale = segmentationLayerMags.some((res) =>
-      areVec3AlmostEqual(V3.scale3(datasetScaleFactor, res), scale),
-    );
-    if (!doesSomeSegmentMagMatchMeshScale) {
-      console.warn(
-        `Scale of mesh ${id} is different to dataset scale. Mesh scale: ${scale}, Dataset scale: ${dataset.dataSource.scale.factor}. This might lead to unexpected rendering results.`,
-      );
-    }
-  }
-
+  // Remove the eagerly added chunks (see above).
   yield* call(
     {
       context: segmentMeshController,
       fn: segmentMeshController.removeMeshById,
     },
-    id,
+    segmentId,
     layerName,
     { lod },
   );
 
+  // Add the final merged geometry.
   yield* call(
     {
       context: segmentMeshController,
       fn: segmentMeshController.addMeshFromGeometry,
     },
     mergedGeometry,
-    id,
+    segmentId,
     // Apply the scale from the segment info, which includes dataset scale and mag
-    scale,
+    getGlobalScale(lod),
     lod,
     layerName,
     additionalCoordinates,

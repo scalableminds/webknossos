@@ -23,22 +23,22 @@ export const tracing: ServerVolumeTracing = {
   segments: [],
   segmentGroups: [],
   createdTimestamp: 1529066010230,
-  editPosition: {
-    x: 3904,
-    y: 4282,
-    z: 2496,
-  },
-  editPositionAdditionalCoordinates: null,
-  editRotation: {
-    x: 0,
-    y: 0,
-    z: 0,
-  },
+  // editPosition: {
+  //   x: 3904,
+  //   y: 4282,
+  //   z: 2496,
+  // },
+  // editPositionAdditionalCoordinates: null,
+  // editRotation: {
+  //   x: 0,
+  //   y: 0,
+  //   z: 0,
+  // },
   additionalAxes: [],
   elementClass: "uint16",
   id: "segmentation",
   largestSegmentId: 21890,
-  zoomLevel: 0,
+  // zoomLevel: 0,
   mags: [
     {
       x: 1,
@@ -135,4 +135,5 @@ export const annotationProto: APITracingStoreAnnotation = {
       typ: AnnotationLayerEnum.Volume,
     },
   ],
+  userStates: [],
 };

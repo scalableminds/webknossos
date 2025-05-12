@@ -52,19 +52,19 @@ export const tracing: ServerSkeletonTracing = {
   createdTimestamp: 1528811983951,
   userBoundingBoxes: [],
   activeNodeId: 1,
-  editPosition: {
-    x: 0,
-    y: 0,
-    z: 0,
-  },
-  editPositionAdditionalCoordinates: null,
-  editRotation: {
-    x: 0,
-    y: 0,
-    z: 0,
-  },
+  // editPosition: {
+  //   x: 0,
+  //   y: 0,
+  //   z: 0,
+  // },
+  // editPositionAdditionalCoordinates: null,
+  // editRotation: {
+  //   x: 0,
+  //   y: 0,
+  //   z: 0,
+  // },
+  // zoomLevel: 2,
   additionalAxes: [],
-  zoomLevel: 2,
   id: "e90133de-b2db-4912-8261-8b6f84f7edab",
   // todop: define a proper user state?
   userStates: [],
@@ -195,4 +195,6 @@ export const annotationProto: APITracingStoreAnnotation = {
       typ: AnnotationLayerEnum.Skeleton,
     },
   ],
+  // todop: add one entry
+  userStates: [],
 };

@@ -88,19 +88,19 @@ const skeletonTracing: SkeletonTracing = {
 const serverSkeletonTracing: ServerSkeletonTracing = {
   ...skeletonTracing,
   id: skeletonTracing.tracingId,
-  editPosition: {
-    x: 0,
-    y: 0,
-    z: 0,
-  },
-  editPositionAdditionalCoordinates: null,
-  editRotation: {
-    x: 0,
-    y: 0,
-    z: 0,
-  },
+  // editPosition: {
+  //   x: 0,
+  //   y: 0,
+  //   z: 0,
+  // },
+  // editPositionAdditionalCoordinates: null,
+  // editRotation: {
+  //   x: 0,
+  //   y: 0,
+  //   z: 0,
+  // },
+  // zoomLevel: 2,
   additionalAxes: [],
-  zoomLevel: 2,
   userBoundingBoxes: [],
   typ: "Skeleton",
   activeNodeId: undefined,

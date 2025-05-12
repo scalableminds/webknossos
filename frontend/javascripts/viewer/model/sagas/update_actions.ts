@@ -50,6 +50,7 @@ export type RevertToVersionUpdateAction = ReturnType<typeof revertToVersion>;
 // This action is not dispatched by our code, anymore,
 // but we still need to keep it for backwards compatibility.
 export type RemoveFallbackLayerUpdateAction = ReturnType<typeof removeFallbackLayer>;
+export type UpdateCameraAnnotationAction = ReturnType<typeof updateCameraAnnotation>;
 export type UpdateTdCameraUpdateAction = ReturnType<typeof updateTdCamera>;
 export type UpdateMappingNameUpdateAction = ReturnType<typeof updateMappingName>;
 export type AddLayerToAnnotationUpdateAction = ReturnType<typeof addLayerToAnnotation>;
@@ -94,6 +95,7 @@ export type UpdateActionWithoutIsolationRequirement =
   | UpdateSegmentGroupsUpdateAction
   | UpdateTreeGroupsUpdateAction
   | RemoveFallbackLayerUpdateAction
+  | UpdateCameraAnnotationAction
   | UpdateTdCameraUpdateAction
   | UpdateMappingNameUpdateAction
   | DeleteAnnotationLayerUpdateAction
@@ -322,20 +324,20 @@ export function updateSkeletonTracing(
     tracingId: string;
     activeNodeId: number | null | undefined;
   },
-  editPosition: Vector3,
-  editPositionAdditionalCoordinates: AdditionalCoordinate[] | null,
-  rotation: Vector3,
-  zoomLevel: number,
+  // editPosition: Vector3,
+  // editPositionAdditionalCoordinates: AdditionalCoordinate[] | null,
+  // rotation: Vector3,
+  // zoomLevel: number,
 ) {
   return {
     name: "updateSkeletonTracing",
     value: {
       actionTracingId: tracing.tracingId,
       activeNode: tracing.activeNodeId,
-      editPosition,
-      editPositionAdditionalCoordinates,
-      editRotation: rotation,
-      zoomLevel,
+      // editPosition,
+      // editPositionAdditionalCoordinates,
+      // editRotation: rotation,
+      // zoomLevel,
     },
   } as const;
 }
@@ -345,7 +347,7 @@ export function updateUserStateSkeleton(tracing: {
   activeNodeId: number | null | undefined;
 }) {
   return {
-    // todop (backend first?): this has "in" in it, but the ts and scale
+    // todop (backend first?): this has "in" in it, but the ts and scala
     // type don't have that.
     name: "updateUserStateInSkeletonTracing",
     value: {
@@ -373,21 +375,21 @@ export function moveTreeComponent(
 }
 export function updateVolumeTracing(
   tracing: VolumeTracing,
-  position: Vector3,
-  editPositionAdditionalCoordinates: AdditionalCoordinate[] | null,
-  rotation: Vector3,
-  zoomLevel: number,
+  // position: Vector3,
+  // editPositionAdditionalCoordinates: AdditionalCoordinate[] | null,
+  // rotation: Vector3,
+  // zoomLevel: number,
 ) {
   return {
     name: "updateVolumeTracing",
     value: {
       actionTracingId: tracing.tracingId,
       activeSegmentId: tracing.activeCellId,
-      editPosition: position,
-      editPositionAdditionalCoordinates,
-      editRotation: rotation,
+      // editPosition: position,
+      // editPositionAdditionalCoordinates,
+      // editRotation: rotation,
       largestSegmentId: tracing.largestSegmentId,
-      zoomLevel,
+      // zoomLevel,
     },
   } as const;
 }
@@ -534,6 +536,23 @@ export function removeFallbackLayer(actionTracingId: string) {
     },
   } as const;
 }
+export function updateCameraAnnotation(
+  editPosition: Vector3,
+  editPositionAdditionalCoordinates: AdditionalCoordinate[] | null,
+  editRotation: Vector3,
+  zoomLevel: number,
+) {
+  return {
+    name: "updateCamera",
+    value: {
+      editPosition,
+      editRotation,
+      zoomLevel,
+      editPositionAdditionalCoordinates,
+    },
+  } as const;
+}
+
 export function updateTdCamera() {
   return {
     name: "updateTdCamera",

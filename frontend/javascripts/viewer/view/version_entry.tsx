@@ -40,6 +40,7 @@ import type {
   SplitAgglomerateUpdateAction,
   UpdateAnnotationLayerNameUpdateAction,
   UpdateBucketUpdateAction,
+  UpdateCameraAnnotationAction,
   UpdateMappingNameUpdateAction,
   UpdateMetadataOfAnnotationUpdateAction,
   UpdateNodeUpdateAction,
@@ -316,6 +317,13 @@ const descriptionFns: Record<
     return {
       // todop
       description: `Updated the active node id to ${action.value.activeNode} for user ?`,
+      icon: <EditOutlined />, // todop: better icon?
+    };
+  },
+  updateCamera: (_action: UpdateCameraAnnotationAction): Description => {
+    return {
+      // todop:
+      description: "Updated camera position for user ?",
       icon: <EditOutlined />, // todop: better icon?
     };
   },

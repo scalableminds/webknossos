@@ -2,7 +2,6 @@ import { getAgglomerateSkeleton, getEditableAgglomerateSkeleton } from "admin/re
 import { Modal } from "antd";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import ErrorHandling from "libs/error_handling";
-import { V3 } from "libs/mjs";
 import createProgressCallback from "libs/progress_callback";
 import type { Message } from "libs/toast";
 import Toast from "libs/toast";
@@ -24,7 +23,6 @@ import {
 import type { ServerSkeletonTracing } from "types/api_types";
 import { TreeTypeEnum } from "viewer/constants";
 import { getLayerByName } from "viewer/model/accessors/dataset_accessor";
-import { getPosition, getRotation } from "viewer/model/accessors/flycam_accessor";
 import {
   enforceSkeletonTracing,
   findTreeByName,
@@ -67,7 +65,6 @@ import {
   deleteNode,
   deleteTree,
   updateNode,
-  updateSkeletonTracing,
   updateTree,
   updateTreeEdgesVisibility,
   updateTreeGroups,
@@ -76,15 +73,7 @@ import {
   updateUserStateSkeleton,
 } from "viewer/model/sagas/update_actions";
 import { api } from "viewer/singletons";
-import type {
-  Flycam,
-  Node,
-  NodeMap,
-  SkeletonTracing,
-  Tree,
-  TreeMap,
-  WebknossosState,
-} from "viewer/store";
+import type { Node, NodeMap, SkeletonTracing, Tree, TreeMap, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import { ensureWkReady } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
@@ -527,15 +516,6 @@ function* diffEdges(
   }
 }
 
-function updateTracingPredicate(
-  prevSkeletonTracing: SkeletonTracing,
-  skeletonTracing: SkeletonTracing,
-  prevFlycam: Flycam,
-  flycam: Flycam,
-): boolean {
-  return prevSkeletonTracing.activeNodeId !== skeletonTracing.activeNodeId || prevFlycam !== flycam;
-}
-
 function updateTreePredicate(prevTree: Tree, tree: Tree): boolean {
   return (
     // branchPoints and comments are arrays and therefore checked for
@@ -611,8 +591,6 @@ export const cachedDiffTrees = memoizeOne((tracingId: string, prevTrees: TreeMap
 export function* diffSkeletonTracing(
   prevSkeletonTracing: SkeletonTracing,
   skeletonTracing: SkeletonTracing,
-  prevFlycam: Flycam,
-  flycam: Flycam,
 ): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (prevSkeletonTracing !== skeletonTracing) {
     for (const action of cachedDiffTrees(
@@ -628,19 +606,7 @@ export function* diffSkeletonTracing(
     }
   }
 
-  if (updateTracingPredicate(prevSkeletonTracing, skeletonTracing, prevFlycam, flycam)) {
-    // todop: use UpdateCameraAnnotationAction instead (somewhere else probably)
-    yield updateSkeletonTracing(
-      {
-        tracingId: skeletonTracing.tracingId,
-        activeNodeId: undefined,
-      },
-      V3.floor(getPosition(flycam)),
-      flycam.additionalCoordinates,
-      getRotation(flycam),
-      flycam.zoomStep,
-    );
-
+  if (prevSkeletonTracing.activeNodeId !== skeletonTracing.activeNodeId) {
     yield updateUserStateSkeleton(skeletonTracing);
   }
 

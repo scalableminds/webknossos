@@ -456,7 +456,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
       });
     }
 
-    case "SET_TRACING": {
+    case "SET_SKELETON_TRACING": {
       return update(state, {
         annotation: {
           skeleton: {

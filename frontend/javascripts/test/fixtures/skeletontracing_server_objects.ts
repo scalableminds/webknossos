@@ -148,19 +148,19 @@ export const tracing: ServerSkeletonTracing = {
   createdTimestamp: 1502302761387,
   userBoundingBoxes: [],
   activeNodeId: 3,
-  editPosition: {
-    x: 24,
-    y: 32,
-    z: 0,
-  },
-  editPositionAdditionalCoordinates: null,
-  editRotation: {
-    x: 79.99999570976581,
-    y: 73.99999869555745,
-    z: 4.908922051072295e-7,
-  },
+  // editPosition: {
+  //   x: 24,
+  //   y: 32,
+  //   z: 0,
+  // },
+  // editPositionAdditionalCoordinates: null,
+  // editRotation: {
+  //   x: 79.99999570976581,
+  //   y: 73.99999869555745,
+  //   z: 4.908922051072295e-7,
+  // },
+  // zoomLevel: 2,
   additionalAxes: [],
-  zoomLevel: 2,
   // todop: define a proper user state?
   userStates: [],
 };
@@ -229,4 +229,6 @@ export const annotationProto: APITracingStoreAnnotation = {
       typ: AnnotationLayerEnum.Skeleton,
     },
   ],
+  // todop: add one entry
+  userStates: [],
 };

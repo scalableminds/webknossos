@@ -64,10 +64,11 @@ describe("Saga Integration Tests", () => {
           UpdateActions.updateTree(treeWithCorrectName, skeletonTracing.tracingId),
           UpdateActions.updateSkeletonTracing(
             enforceSkeletonTracing(Store.getState().annotation),
-            [1, 2, 3],
-            [],
-            [0, 0, 0],
-            2,
+            // todop
+            // [1, 2, 3],
+            // [],
+            // [0, 0, 0],
+            // 2,
           ),
         ],
       ],

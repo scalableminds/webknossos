@@ -16,7 +16,6 @@ import {
   getSupportedValueRangeOfLayer,
   isInSupportedValueRangeForLayer,
 } from "viewer/model/accessors/dataset_accessor";
-import { getPosition, getRotation } from "viewer/model/accessors/flycam_accessor";
 import {
   isBrushTool,
   isTraceTool,
@@ -78,7 +77,7 @@ import {
 } from "viewer/model/sagas/update_actions";
 import type VolumeLayer from "viewer/model/volumetracing/volumelayer";
 import { Model, api } from "viewer/singletons";
-import type { Flycam, SegmentMap, VolumeTracing } from "viewer/store";
+import type { SegmentMap, VolumeTracing } from "viewer/store";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { ensureWkReady } from "./ready_sagas";
 import { floodFill } from "./volume/floodfill_saga";
@@ -401,13 +400,10 @@ export function* ensureToolIsAllowedInMag(): Saga<void> {
 function updateTracingPredicate(
   prevVolumeTracing: VolumeTracing,
   volumeTracing: VolumeTracing,
-  prevFlycam: Flycam,
-  flycam: Flycam,
 ): boolean {
   return (
     prevVolumeTracing.activeCellId !== volumeTracing.activeCellId ||
-    prevVolumeTracing.largestSegmentId !== volumeTracing.largestSegmentId ||
-    prevFlycam !== flycam
+    prevVolumeTracing.largestSegmentId !== volumeTracing.largestSegmentId
   );
 }
 
@@ -466,17 +462,9 @@ function* uncachedDiffSegmentLists(
 export function* diffVolumeTracing(
   prevVolumeTracing: VolumeTracing,
   volumeTracing: VolumeTracing,
-  prevFlycam: Flycam,
-  flycam: Flycam,
 ): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
-  if (updateTracingPredicate(prevVolumeTracing, volumeTracing, prevFlycam, flycam)) {
-    yield updateVolumeTracing(
-      volumeTracing,
-      V3.floor(getPosition(flycam)),
-      flycam.additionalCoordinates,
-      getRotation(flycam),
-      flycam.zoomStep,
-    );
+  if (updateTracingPredicate(prevVolumeTracing, volumeTracing)) {
+    yield updateVolumeTracing(volumeTracing);
   }
 
   if (!_.isEqual(prevVolumeTracing.userBoundingBoxes, volumeTracing.userBoundingBoxes)) {

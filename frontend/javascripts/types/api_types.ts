@@ -605,11 +605,20 @@ type APITracingStoreAnnotationLayer = {
   readonly typ: AnnotationLayerType;
 };
 
+export type APIAnnotationUserState = {
+  userId: string;
+  editPosition: Point3;
+  editPositionAdditionalCoordinates: AdditionalCoordinate[] | null;
+  editRotation: Point3;
+  zoomLevel: number;
+};
+
 export type APITracingStoreAnnotation = {
   readonly description: string;
   readonly version: number;
   readonly earliestAccessibleVersion: number;
   readonly annotationLayers: APITracingStoreAnnotationLayer[];
+  readonly userStates: APIAnnotationUserState[];
 };
 
 export type APITimeTrackingPerUser = {
@@ -885,11 +894,11 @@ export type ServerTracingBase = {
   userBoundingBoxes: Array<UserBoundingBoxFromServer>;
   userBoundingBox?: ServerBoundingBox;
   createdTimestamp: number;
-  editPosition: Point3;
-  editPositionAdditionalCoordinates: AdditionalCoordinate[] | null;
-  editRotation: Point3;
+  // editPosition: Point3;
+  // editPositionAdditionalCoordinates: AdditionalCoordinate[] | null;
+  // editRotation: Point3;
+  // zoomLevel: number;
   error?: string;
-  zoomLevel: number;
   additionalAxes: ServerAdditionalAxis[];
   // The backend sends the version property, but the front-end should
   // not care about it. To ensure this, parseProtoTracing will remove

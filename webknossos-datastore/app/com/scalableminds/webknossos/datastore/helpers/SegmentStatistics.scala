@@ -39,7 +39,6 @@ trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits with La
       bucketPositionsInMag = bucketPositionsProtos.map(vec3IntFromProto)
       (bucketBoxes, elementClass) <- getDataForBucketPositions(bucketPositionsInMag.toSeq, mag, additionalCoordinates)
       counts <- Fox.serialCombined(bucketBoxes.toList) {
-        case Full(bucketBytes) if bucketBytes.isEmpty => Full(0L).toFox
         case Full(bucketBytes) =>
           tryo(
             bucketScanner.countSegmentVoxels(bucketBytes,
@@ -71,11 +70,8 @@ trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits with La
                                                                     Int.MinValue,
                                                                     Int.MinValue,
                                                                     Int.MinValue) //topleft, bottomright
-      (bucketBoxes, elementClass) <- getDataForBucketPositions(relevantBucketPositions.toSeq,
-                                                               mag,
-                                                               additionalCoordinates)
+      (bucketBoxes, elementClass) <- getDataForBucketPositions(relevantBucketPositions, mag, additionalCoordinates)
       _ <- Fox.serialCombined(relevantBucketPositions.zip(bucketBoxes)) {
-        case (_, Full(bucketData)) if bucketData.isEmpty => Fox.successful(())
         case (bucketPosition, Full(bucketData)) =>
           Fox.successful(
             extendBoundingBoxByData(segmentId, boundingBoxMutable, bucketPosition, bucketData, elementClass))

@@ -130,24 +130,27 @@ JNIEXPORT jintArray JNICALL Java_com_scalableminds_webknossos_datastore_helpers_
     try {
 
         const size_t elementCount = getElementCount(inputLengthBytes, bytesPerElement);
+        if (elementCount != bucketLength * bucketLength * bucketLength) {
+            throw std::invalid_argument("elementCount must match exactly one bucket.");
+        }
+
         std::array<int, 6> bbox = {existingBBoxTopLeftX, existingBBoxTopLeftY, existingBBoxTopLeftZ, existingBBoxBottomRightX, existingBBoxBottomRightY, existingBBoxBottomRightZ};
-        if (elementCount > 0) {
-            int index = 0;
-            for (int z = 0; z < bucketLength; z++) {
-                for (int y = 0; y < bucketLength; y++) {
-                    for (int x = 0; x < bucketLength; x++) {
-                        int64_t currentValue = segmentIdAtIndex(bucketBytes, index, bytesPerElement, isSigned);
-                        if (currentValue == segmentId) {
-                            bbox[0] = std::min(bbox[0], x + bucketTopLeftX);
-                            bbox[1] = std::min(bbox[1], y + bucketTopLeftY);
-                            bbox[2] = std::min(bbox[2], z + bucketTopLeftZ);
-                            bbox[3] = std::max(bbox[3], x + bucketTopLeftX);
-                            bbox[4] = std::max(bbox[4], y + bucketTopLeftY);
-                            bbox[5] = std::max(bbox[5], z + bucketTopLeftZ);
-                        }
-                        // The zyx loop matches the fortran order in the bucket, so we just need to increment index by one.
-                        index++;
+
+        int index = 0;
+        for (int z = 0; z < bucketLength; z++) {
+            for (int y = 0; y < bucketLength; y++) {
+                for (int x = 0; x < bucketLength; x++) {
+                    int64_t currentValue = segmentIdAtIndex(bucketBytes, index, bytesPerElement, isSigned);
+                    if (currentValue == segmentId) {
+                        bbox[0] = std::min(bbox[0], x + bucketTopLeftX);
+                        bbox[1] = std::min(bbox[1], y + bucketTopLeftY);
+                        bbox[2] = std::min(bbox[2], z + bucketTopLeftZ);
+                        bbox[3] = std::max(bbox[3], x + bucketTopLeftX);
+                        bbox[4] = std::max(bbox[4], y + bucketTopLeftY);
+                        bbox[5] = std::max(bbox[5], z + bucketTopLeftZ);
                     }
+                    // The zyx loop matches the fortran order in the bucket, so we just need to increment index by one.
+                    index++;
                 }
             }
         }

@@ -372,7 +372,7 @@ export function performDiffAnnotation(
   let actions: Array<UpdateActionWithoutIsolationRequirement> = [];
 
   if (prevFlycam !== flycam) {
-    actions.concat(
+    actions = actions.concat(
       updateCameraAnnotation(
         getFlooredPosition(flycam),
         flycam.additionalCoordinates,
@@ -397,12 +397,17 @@ export function* saveTracingAsync(): Saga<void> {
 }
 
 function* setupSavingForAnnotation(_action: BatchedAnnotationInitializationAction): Saga<void> {
-  yield* call(ensureWkReady);
+  // todop: wouldn't it make more sense to read the prev* vars after ensureWkReady?
   let prevFlycam = yield* select((state) => state.flycam);
   let prevTdCamera = yield* select((state) => state.viewModeData.plane.tdCamera);
+  yield* call(ensureWkReady);
 
   while (true) {
-    yield* take([...FlycamActions, ...ViewModeSaveRelevantActions]);
+    yield* take([
+      ...FlycamActions,
+      ...ViewModeSaveRelevantActions,
+      ...SkeletonTracingSaveRelevantActions,
+    ]);
     const flycam = yield* select((state) => state.flycam);
     const tdCamera = yield* select((state) => state.viewModeData.plane.tdCamera);
 

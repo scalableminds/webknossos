@@ -196,5 +196,13 @@ export const annotationProto: APITracingStoreAnnotation = {
     },
   ],
   // todop: add one entry
-  userStates: [],
+  userStates: [
+    {
+      userId: "todop: insert user id here",
+      editPosition: { x: 1, y: 2, z: 3 },
+      editPositionAdditionalCoordinates: null,
+      editRotation: { x: 0, y: 0, z: 0 },
+      zoomLevel: 2,
+    },
+  ],
 };

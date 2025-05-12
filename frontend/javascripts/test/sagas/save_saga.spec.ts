@@ -74,8 +74,8 @@ describe("Save Saga", () => {
   it("should compact multiple updateTracing update actions", () => {
     const saveQueue = createSaveQueueFromUpdateActions(
       [
-        [UpdateActions.updateSkeletonTracing(initialState.annotation, [1, 2, 3], [], [0, 0, 1], 1)],
-        [UpdateActions.updateSkeletonTracing(initialState.annotation, [2, 3, 4], [], [0, 0, 1], 2)],
+        [UpdateActions.updateSkeletonTracing(initialState.annotation)],
+        [UpdateActions.updateSkeletonTracing(initialState.annotation)],
       ],
       TIMESTAMP,
     );
@@ -290,8 +290,8 @@ describe("Save Saga", () => {
   it("should remove the correct update actions", () => {
     const saveQueue = createSaveQueueFromUpdateActions(
       [
-        [UpdateActions.updateSkeletonTracing(initialState.annotation, [1, 2, 3], [], [0, 0, 1], 1)],
-        [UpdateActions.updateSkeletonTracing(initialState.annotation, [2, 3, 4], [], [0, 0, 1], 2)],
+        [UpdateActions.updateSkeletonTracing(initialState.annotation)],
+        [UpdateActions.updateSkeletonTracing(initialState.annotation)],
       ],
       TIMESTAMP,
     );
@@ -337,9 +337,9 @@ describe("Save Saga", () => {
   it("should set the correct version numbers if the save queue was compacted", () => {
     const saveQueue = createSaveQueueFromUpdateActions(
       [
-        [UpdateActions.updateSkeletonTracing(initialState.annotation, [1, 2, 3], [], [0, 0, 1], 1)],
-        [UpdateActions.updateSkeletonTracing(initialState.annotation, [2, 3, 4], [], [0, 0, 1], 2)],
-        [UpdateActions.updateSkeletonTracing(initialState.annotation, [3, 4, 5], [], [0, 0, 1], 3)],
+        [UpdateActions.updateSkeletonTracing(initialState.annotation)],
+        [UpdateActions.updateSkeletonTracing(initialState.annotation)],
+        [UpdateActions.updateSkeletonTracing(initialState.annotation)],
       ],
       TIMESTAMP,
     );

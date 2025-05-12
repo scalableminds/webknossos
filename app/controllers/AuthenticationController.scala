@@ -580,9 +580,8 @@ class AuthenticationController @Inject()(
       }
     }
 
-  private def validateNameAndEmail(firstName: String,
-                                   lastName: String,
-                                   email: String)(implicit messages: Messages): Fox[(String, String, String, List[String])] = {
+  private def validateNameAndEmail(firstName: String, lastName: String, email: String)(
+      implicit messages: Messages): Fox[(String, String, String, List[String])] = {
     var (errors, fN, lN) = normalizeName(firstName, lastName)
     for {
       nameEmailError: (String, String, String,

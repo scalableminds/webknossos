@@ -9,13 +9,13 @@ import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import Toast from "libs/toast";
 import { isUserAdminOrDatasetManager, isUserAdminOrTeamManager } from "libs/utils";
 import window from "libs/window";
-import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
-import type { WebknossosState } from "oxalis/store";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { connect } from "react-redux";
 import { type RouteComponentProps, withRouter } from "react-router-dom";
 import type { APIDataset, APIUser } from "types/api_types";
+import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
+import type { WebknossosState } from "viewer/store";
 import { FormItemWithInfo } from "./helper_components";
 
 type Props = {

@@ -5,9 +5,9 @@ import { Button, Select, Switch, message } from "antd";
 import chalk from "chalk";
 import classnames from "classnames";
 import { usePolling } from "libs/react_hooks";
-import { LOG_LEVELS } from "oxalis/constants";
 import { useMemo, useState } from "react";
 import type { VoxelyticsLogLine } from "types/api_types";
+import { LOG_LEVELS } from "viewer/constants";
 import { type Result, VX_POLLING_INTERVAL, addAfterPadding, addBeforePadding } from "./utils";
 
 type LogResult = Result<Array<VoxelyticsLogLine>>;

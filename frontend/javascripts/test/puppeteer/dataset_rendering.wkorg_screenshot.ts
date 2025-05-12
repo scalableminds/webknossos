@@ -8,7 +8,7 @@ import {
   setupBeforeEach,
   withRetry,
 } from "./dataset_rendering_helpers";
-import { encodeUrlHash } from "oxalis/controller/url_manager";
+import { encodeUrlHash } from "viewer/controller/url_manager";
 import { describe, it, beforeEach, afterEach, expect } from "vitest";
 
 process.on("unhandledRejection", (err, promise) => {

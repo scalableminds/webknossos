@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import TPS3D from "libs/thin_plate_spline";
 import { almostEqual, getPointsC555 } from "./transform_spec_helpers";
 import { V3 } from "libs/mjs";
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3 } from "viewer/constants";
 
 describe("Thin Plate Spline", () => {
   it("Basic TPS calculation", async () => {

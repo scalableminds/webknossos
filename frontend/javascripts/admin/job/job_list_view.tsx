@@ -23,11 +23,11 @@ import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import _ from "lodash";
-import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
 import type * as React from "react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { type APIJob, APIJobType, type APIUserBase } from "types/api_types";
+import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
 
 // Unfortunately, the twoToneColor (nor the style) prop don't support
 // CSS variables.

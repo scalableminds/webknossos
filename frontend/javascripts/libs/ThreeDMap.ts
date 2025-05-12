@@ -1,4 +1,4 @@
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3 } from "viewer/constants";
 
 // This is a Map data structure for which the key
 // is a Vector3.

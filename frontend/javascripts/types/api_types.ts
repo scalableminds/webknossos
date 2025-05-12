@@ -9,13 +9,13 @@ import type {
   UnitLong,
   Vector3,
   Vector6,
-} from "oxalis/constants";
+} from "viewer/constants";
 import type {
   SkeletonTracingStats,
   TracingStats,
   VolumeTracingStats,
-} from "oxalis/model/accessors/annotation_accessor";
-import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
+} from "viewer/model/accessors/annotation_accessor";
+import type { ServerUpdateAction } from "viewer/model/sagas/update_actions";
 import type {
   BoundingBoxObject,
   CommentType,
@@ -24,7 +24,7 @@ import type {
   RecommendedConfiguration,
   SegmentGroup,
   TreeGroup,
-} from "oxalis/store";
+} from "viewer/store";
 import type { EmptyObject } from "./globals";
 
 export type AdditionalCoordinate = { name: string; value: number };

@@ -125,7 +125,6 @@ case class UpdateCameraAnnotationAction(editPosition: com.scalableminds.util.geo
                                         editRotation: com.scalableminds.util.geometry.Vec3Double,
                                         zoomLevel: Double,
                                         editPositionAdditionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
-                                        actionTracingId: String,
                                         actionTimestamp: Option[Long] = None,
                                         actionAuthorId: Option[String] = None,
                                         info: Option[String] = None)

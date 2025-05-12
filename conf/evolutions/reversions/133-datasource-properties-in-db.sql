@@ -6,6 +6,8 @@ ALTER TABLE webknossos.dataset_layers
   DROP COLUMN IF EXISTS numChannels,
   DROP COLUMN IF EXISTS dataFormat;
 
+DROP TYPE IF EXISTS webknossos.DATASET_LAYER_DATAFORMAT;
+
 ALTER TABLE webknossos.dataset_mags
   DROP COLUMN IF EXISTS credentialId,
   DROP COLUMN IF EXISTS axisOrder,

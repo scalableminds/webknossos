@@ -930,6 +930,7 @@ class DatasetLayerDAO @Inject()(
               largestSegmentId = ${s.largestSegmentId},
               mappings = $mappings,
               defaultViewConfiguration = ${s.defaultViewConfiguration.map(Json.toJson(_))},
+              adminViewConfiguration = ${s.adminViewConfiguration.map(Json.toJson(_))},
               numChannels = ${s.numChannels},
               dataFormat = ${s.dataFormat} """.asUpdate
       case d: AbstractDataLayer =>
@@ -945,6 +946,7 @@ class DatasetLayerDAO @Inject()(
               elementClass = ${d.elementClass},
               boundingBox = ${d.boundingBox},
               defaultViewConfiguration = ${d.defaultViewConfiguration.map(Json.toJson(_))},
+              adminViewConfiguration = ${d.adminViewConfiguration.map(Json.toJson(_))},
               numChannels = ${d.numChannels},
               dataFormat = ${d.dataFormat}""".asUpdate
       case _ => throw new Exception("DataLayer type mismatch")

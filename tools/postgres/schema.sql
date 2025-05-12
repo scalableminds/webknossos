@@ -126,6 +126,7 @@ CREATE TABLE webknossos.datasets(
 
 CREATE TYPE webknossos.DATASET_LAYER_CATEGORY AS ENUM ('color', 'mask', 'segmentation');
 CREATE TYPE webknossos.DATASET_LAYER_ELEMENT_CLASS AS ENUM ('uint8', 'uint16', 'uint24', 'uint32', 'uint64', 'float', 'double', 'int8', 'int16', 'int32', 'int64');
+CREATE TYPE webknossos.DATASET_LAYER_DATAFORMAT AS ENUM ('wkw','zarr','zarr3','n5','neuroglancerPrecomputed','tracing');
 CREATE TABLE webknossos.dataset_layers(
   _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
   name TEXT NOT NULL,
@@ -137,7 +138,7 @@ CREATE TABLE webknossos.dataset_layers(
   defaultViewConfiguration JSONB,
   adminViewConfiguration JSONB,
   numChannels INT,
-  dataFormat TEXT,
+  dataFormat webknossos.DATASET_LAYER_DATAFORMAT,
   PRIMARY KEY(_dataset, name),
   CONSTRAINT defaultViewConfigurationIsJsonObject CHECK(jsonb_typeof(defaultViewConfiguration) = 'object'),
   CONSTRAINT adminViewConfigurationIsJsonObject CHECK(jsonb_typeof(adminViewConfiguration) = 'object')
@@ -174,7 +175,7 @@ CREATE TABLE webknossos.dataset_mags(
   path TEXT,
   realPath TEXT,
   hasLocalData BOOLEAN NOT NULL DEFAULT FALSE,
-  axisOrder TEXT,
+  axisOrder TEXT CONSTRAINT axisOrder_format CHECK (axisOrder ~ '^[xyzc]:[0-9]+(,[xyzc]:[0-9]+)+$'),
   channelIndex INT,
   cubeLength INT,
   credentialId TEXT,

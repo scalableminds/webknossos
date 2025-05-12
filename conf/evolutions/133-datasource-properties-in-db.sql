@@ -5,15 +5,17 @@ do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 1
 -- The aim of this migration is to have all properties of datasources that are saved in the datasource-properties.json
 -- file to be saved in the database.
 
+CREATE TYPE webknossos.DATASET_LAYER_DATAFORMAT AS ENUM ('wkw','zarr','zarr3','n5','neuroglancerPrecomputed','tracing');
+
 ALTER TABLE webknossos.dataset_layers
   ADD COLUMN IF NOT EXISTS numChannels INT,
-  ADD COLUMN IF NOT EXISTS dataFormat TEXT;
+  ADD COLUMN IF NOT EXISTS dataFormat webknossos.DATASET_LAYER_DATAFORMAT;
 
 ALTER TABLE webknossos.dataset_mags
   ADD COLUMN IF NOT EXISTS credentialId TEXT,
-  ADD COLUMN IF NOT EXISTS axisOrder TEXT,
+  ADD COLUMN IF NOT EXISTS axisOrder TEXT CONSTRAINT axisOrder_format CHECK (axisOrder ~ '^[xyzc]:[0-9]+(,[xyzc]:[0-9]+)+$'),
   ADD COLUMN IF NOT EXISTS channelIndex INT,
-  ADD COLUMN IF NOT EXISTS cubeLength INT; -- only for wkw datasets
+  ADD COLUMN IF NOT EXISTS cubeLength INT;
   -- legacy credentials omitted
 
 UPDATE webknossos.releaseInformation SET schemaVersion = 133;

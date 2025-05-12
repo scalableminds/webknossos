@@ -6,8 +6,8 @@ import * as Utils from "libs/utils";
 import window, { document } from "libs/window";
 import _ from "lodash";
 import { type Emitter, createNanoEvents } from "nanoevents";
-import type { Point2 } from "oxalis/constants";
-import constants from "oxalis/constants";
+import type { Point2 } from "viewer/constants";
+import constants from "viewer/constants";
 // This is the main Input implementation.
 // Although all keys, buttons and sensor are mapped in
 // the controller, this is were the magic happens.

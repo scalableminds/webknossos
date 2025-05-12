@@ -6,13 +6,13 @@ import {
   createBucketResponseFunction,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
-import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
-import Store from "oxalis/store";
-import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
+import { restartSagaAction, wkReadyAction } from "viewer/model/actions/actions";
+import Store from "viewer/store";
+import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import dummyUser from "test/fixtures/dummy_user";
-import { setActiveUserAction } from "oxalis/model/actions/user_actions";
+import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import { testLabelingManyBuckets } from "./bucket_eviction_helper";
-import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
+import { discardSaveQueuesAction } from "viewer/model/actions/save_actions";
 
 beforeEach<WebknossosTestContext>(async (context) => {
   // Setup webknossos, this will execute model.fetch(...) and initialize the store with the tracing, etc.

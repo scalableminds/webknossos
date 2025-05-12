@@ -1,10 +1,9 @@
-/* eslint-disable operator-assignment */
 // See
 //   https://github.com/imbcmdth/mjs/blob/master/index.js
 // for all functions in M4x4, V2 and V3.
 import _ from "lodash";
-import type { Vector2, Vector3, Vector4 } from "oxalis/constants";
-import { chunk3 } from "oxalis/model/helpers/chunk";
+import type { Vector2, Vector3, Vector4 } from "viewer/constants";
+import { chunk3 } from "viewer/model/helpers/chunk";
 
 import mjs from "mjs";
 

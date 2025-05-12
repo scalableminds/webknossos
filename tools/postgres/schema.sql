@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(130);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(131);
 COMMIT TRANSACTION;
 
 
@@ -44,10 +44,10 @@ CREATE TABLE webknossos.annotations(
   tags TEXT[] NOT NULL DEFAULT '{}',
   tracingTime BIGINT,
   typ webknossos.ANNOTATION_TYPE NOT NULL,
-  othersMayEdit BOOLEAN NOT NULL DEFAULT false,
+  othersMayEdit BOOLEAN NOT NULL DEFAULT FALSE,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   modified TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false,
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   CHECK ((typ IN ('TracingBase', 'Task')) = (_task IS NOT NULL))
 );
 
@@ -89,7 +89,7 @@ CREATE TABLE webknossos.meshes(
   position webknossos.VECTOR3 NOT NULL,
   data TEXT,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE webknossos.publications(
@@ -99,7 +99,7 @@ CREATE TABLE webknossos.publications(
   title TEXT,
   description TEXT,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TYPE webknossos.LENGTH_UNIT AS ENUM ('yoctometer', 'zeptometer', 'attometer', 'femtometer', 'picometer', 'nanometer', 'micrometer', 'millimeter', 'centimeter', 'decimeter', 'meter', 'hectometer', 'kilometer', 'megameter', 'gigameter', 'terameter', 'petameter', 'exameter', 'zettameter', 'yottameter', 'angstrom', 'inch', 'foot', 'yard', 'mile', 'parsec');
@@ -115,8 +115,8 @@ CREATE TABLE webknossos.datasets(
   adminViewConfiguration JSONB,
   description TEXT,
   name TEXT NOT NULL,
-  isPublic BOOLEAN NOT NULL DEFAULT false,
-  isUsable BOOLEAN NOT NULL DEFAULT false,
+  isPublic BOOLEAN NOT NULL DEFAULT FALSE,
+  isUsable BOOLEAN NOT NULL DEFAULT FALSE,
   directoryName TEXT NOT NULL,
   voxelSizeFactor webknossos.VECTOR3,
   voxelSizeUnit webknossos.LENGTH_UNIT,
@@ -127,7 +127,7 @@ CREATE TABLE webknossos.datasets(
   metadata JSONB NOT NULL DEFAULT '[]',
   tags TEXT[] NOT NULL DEFAULT '{}',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false,
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   UNIQUE (directoryName, _organization),
   CONSTRAINT defaultViewConfigurationIsJsonObject CHECK(jsonb_typeof(defaultViewConfiguration) = 'object'),
   CONSTRAINT adminViewConfigurationIsJsonObject CHECK(jsonb_typeof(adminViewConfiguration) = 'object'),
@@ -181,7 +181,7 @@ CREATE TABLE webknossos.dataset_mags(
   mag webknossos.VECTOR3 NOT NULL,
   path TEXT,
   realPath TEXT,
-  hasLocalData BOOLEAN NOT NULL DEFAULT false,
+  hasLocalData BOOLEAN NOT NULL DEFAULT FALSE,
   PRIMARY KEY (_dataset, dataLayerName, mag)
 );
 
@@ -211,11 +211,11 @@ CREATE TABLE webknossos.dataStores(
   url TEXT UNIQUE NOT NULL CHECK (url ~* '^https?://[a-z0-9\.]+.*$'),
   publicUrl TEXT UNIQUE NOT NULL CHECK (publicUrl ~* '^https?://[a-z0-9\.]+.*$'),
   key TEXT NOT NULL,
-  isScratch BOOLEAN NOT NULL DEFAULT false,
-  isDeleted BOOLEAN NOT NULL DEFAULT false,
-  allowsUpload BOOLEAN NOT NULL DEFAULT true,
+  isScratch BOOLEAN NOT NULL DEFAULT FALSE,
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
+  allowsUpload BOOLEAN NOT NULL DEFAULT TRUE,
   onlyAllowedOrganization TEXT,
-  reportUsedStorageEnabled BOOLEAN NOT NULL DEFAULT false
+  reportUsedStorageEnabled BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE webknossos.tracingStores(
@@ -223,7 +223,7 @@ CREATE TABLE webknossos.tracingStores(
   url TEXT UNIQUE NOT NULL CHECK (url ~* '^https?://[a-z0-9\.]+.*$'),
   publicUrl TEXT UNIQUE NOT NULL CHECK (publicUrl ~* '^https?://[a-z0-9\.]+.*$'),
   key TEXT NOT NULL,
-  isDeleted BOOLEAN NOT NULL DEFAULT false
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE webknossos.projects(
@@ -233,11 +233,11 @@ CREATE TABLE webknossos.projects(
   _owner TEXT CONSTRAINT _owner_objectId CHECK (_owner ~ '^[0-9a-f]{24}$') NOT NULL,
   name TEXT NOT NULL CHECK (name ~* '^.{3,}$'), -- Unique among non-deleted, enforced in scala
   priority BIGINT NOT NULL DEFAULT 100,
-  paused BOOLEAN NOT NULL DEFAULT false,
+  paused BOOLEAN NOT NULL DEFAULT FALSE,
   expectedTime BIGINT,
-  isBlacklistedFromReport BOOLEAN NOT NULL DEFAULT false,
+  isBlacklistedFromReport BOOLEAN NOT NULL DEFAULT FALSE,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE webknossos.scripts(
@@ -246,7 +246,7 @@ CREATE TABLE webknossos.scripts(
   name TEXT NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\. ß]+$'),
   gist TEXT NOT NULL,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false,
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   CHECK (gist ~* '^https?://[a-z0-9\-_\.]+.*$')
 );
 
@@ -262,14 +262,14 @@ CREATE TABLE webknossos.taskTypes(
   settings_preferredMode webknossos.TASKTYPE_MODES DEFAULT 'orthogonal',
   settings_branchPointsAllowed BOOLEAN NOT NULL,
   settings_somaClickingAllowed BOOLEAN NOT NULL,
-  settings_volumeInterpolationAllowed BOOLEAN NOT NULL DEFAULT false,
-  settings_mergerMode BOOLEAN NOT NULL DEFAULT false,
+  settings_volumeInterpolationAllowed BOOLEAN NOT NULL DEFAULT FALSE,
+  settings_mergerMode BOOLEAN NOT NULL DEFAULT FALSE,
   settings_magRestrictions_min INT DEFAULT NULL,
   settings_magRestrictions_max INT DEFAULT NULL,
   recommendedConfiguration JSONB,
   tracingType webknossos.TASKTYPE_TRACINGTYPES NOT NULL DEFAULT 'skeleton',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false,
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   CONSTRAINT recommendedConfigurationIsJsonObject CHECK(jsonb_typeof(recommendedConfiguration) = 'object'),
   UNIQUE (summary, _organization)
 );
@@ -289,7 +289,7 @@ CREATE TABLE webknossos.tasks(
   editRotation webknossos.VECTOR3 NOT NULL,
   creationInfo TEXT,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false,
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   CONSTRAINT pendingInstancesLargeEnoughCheck CHECK (pendingInstances >= 0)
 );
 
@@ -304,8 +304,8 @@ CREATE TABLE webknossos.teams(
   _organization TEXT NOT NULL,
   name TEXT NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\. ß]+$'),
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isOrganizationTeam BOOLEAN NOT NULL DEFAULT false,
-  isDeleted BOOLEAN NOT NULL DEFAULT false,
+  isOrganizationTeam BOOLEAN NOT NULL DEFAULT FALSE,
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   UNIQUE (name, _organization)
 );
 
@@ -317,7 +317,7 @@ CREATE TABLE webknossos.timespans(
   lastUpdate TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   numberOfUpdates BIGINT NOT NULL DEFAULT 1,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TYPE webknossos.PRICING_PLANS AS ENUM ('Basic', 'Team', 'Power', 'Team_Trial', 'Power_Trial', 'Custom');
@@ -329,7 +329,7 @@ CREATE TABLE webknossos.organizations(
   name TEXT NOT NULL DEFAULT '',
   _rootFolder TEXT CONSTRAINT _rootFolder_objectId CHECK (_rootFolder ~ '^[0-9a-f]{24}$') NOT NULL UNIQUE,
   newUserMailingList TEXT NOT NULL DEFAULT '',
-  enableAutoVerify BOOLEAN NOT NULL DEFAULT false,
+  enableAutoVerify BOOLEAN NOT NULL DEFAULT FALSE,
   pricingPlan webknossos.PRICING_PLANS NOT NULL DEFAULT 'Custom',
   paidUntil TIMESTAMPTZ DEFAULT NULL,
   includedUsers INTEGER DEFAULT NULL,
@@ -338,7 +338,7 @@ CREATE TABLE webknossos.organizations(
   lastTermsOfServiceAcceptanceVersion INT NOT NULL DEFAULT 0,
   lastStorageScanTime TIMESTAMPTZ NOT NULL DEFAULT '1970-01-01T00:00:00.000Z',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false,
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   CONSTRAINT validOrganizationId CHECK (_id ~* '^[A-Za-z0-9\-_. ]+$')
 );
 
@@ -393,14 +393,14 @@ CREATE TABLE webknossos.users(
   lastName TEXT NOT NULL, -- CHECK (lastName ~* '^[A-Za-z0-9\-_ ]+$'),
   lastActivity TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   userConfiguration JSONB NOT NULL,
-  isDeactivated BOOLEAN NOT NULL DEFAULT false,
-  isAdmin BOOLEAN NOT NULL DEFAULT false,
-  isOrganizationOwner BOOLEAN NOT NULL DEFAULT false,
-  isDatasetManager BOOLEAN NOT NULL DEFAULT false,
+  isDeactivated BOOLEAN NOT NULL DEFAULT FALSE,
+  isAdmin BOOLEAN NOT NULL DEFAULT FALSE,
+  isOrganizationOwner BOOLEAN NOT NULL DEFAULT FALSE,
+  isDatasetManager BOOLEAN NOT NULL DEFAULT FALSE,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   lastTaskTypeId TEXT CONSTRAINT lastTaskTypeId_objectId CHECK (lastTaskTypeId ~ '^[0-9a-f]{24}$') DEFAULT NULL,
   isUnlisted BOOLEAN NOT NULL DEFAULT FALSE,
-  isDeleted BOOLEAN NOT NULL DEFAULT false,
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   UNIQUE (_multiUser, _organization),
   CONSTRAINT userConfigurationIsJsonObject CHECK(jsonb_typeof(userConfiguration) = 'object')
 );
@@ -408,7 +408,7 @@ CREATE TABLE webknossos.users(
 CREATE TABLE webknossos.user_team_roles(
   _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
   _team TEXT CONSTRAINT _team_objectId CHECK (_team ~ '^[0-9a-f]{24}$') NOT NULL,
-  isTeamManager BOOLEAN NOT NULL DEFAULT false,
+  isTeamManager BOOLEAN NOT NULL DEFAULT FALSE,
   PRIMARY KEY (_user, _team)
 );
 
@@ -443,13 +443,13 @@ CREATE TABLE webknossos.multiUsers(
   email TEXT NOT NULL UNIQUE CHECK (email ~* '^.+@.+$'),
   passwordInfo_hasher webknossos.USER_PASSWORDINFO_HASHERS NOT NULL DEFAULT 'SCrypt',
   passwordInfo_password TEXT NOT NULL,
-  isSuperUser BOOLEAN NOT NULL DEFAULT false,
+  isSuperUser BOOLEAN NOT NULL DEFAULT FALSE,
   novelUserExperienceInfos JSONB NOT NULL DEFAULT '{}'::json,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   selectedTheme webknossos.THEME NOT NULL DEFAULT 'auto',
   _lastLoggedInIdentity TEXT CONSTRAINT _lastLoggedInIdentity_objectId CHECK (_lastLoggedInIdentity ~ '^[0-9a-f]{24}$') DEFAULT NULL,
-  isEmailVerified BOOLEAN NOT NULL DEFAULT false,
-  isDeleted BOOLEAN NOT NULL DEFAULT false,
+  isEmailVerified BOOLEAN NOT NULL DEFAULT FALSE,
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   CONSTRAINT nuxInfoIsJsonObject CHECK(jsonb_typeof(novelUserExperienceInfos) = 'object')
 );
 
@@ -466,7 +466,7 @@ CREATE TABLE webknossos.tokens(
   idleTimeout BIGINT,
   tokenType webknossos.TOKEN_TYPES NOT NULL,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE webknossos.maintenances(
@@ -476,7 +476,7 @@ CREATE TABLE webknossos.maintenances(
   endTime TIMESTAMPTZ NOT NULL,
   message TEXT NOT NULL,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE webknossos.workers(
@@ -489,7 +489,7 @@ CREATE TABLE webknossos.workers(
   supportedJobCommands TEXT[] NOT NULL DEFAULT array[]::TEXT[],
   lastHeartBeat TIMESTAMPTZ NOT NULL DEFAULT '2000-01-01T00:00:00Z',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 
@@ -507,11 +507,11 @@ CREATE TABLE webknossos.jobs(
   _voxelytics_workflowHash TEXT,
   latestRunId TEXT,
   returnValue Text,
-  retriedBySuperUser BOOLEAN NOT NULL DEFAULT false,
+  retriedBySuperUser BOOLEAN NOT NULL DEFAULT FALSE,
   started TIMESTAMPTZ,
   ended TIMESTAMPTZ,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 
@@ -522,7 +522,7 @@ CREATE TABLE webknossos.invites(
   autoActivate BOOLEAN NOT NULL,
   expirationDateTime TIMESTAMPTZ NOT NULL,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE webknossos.annotation_privateLinks(
@@ -530,7 +530,7 @@ CREATE TABLE webknossos.annotation_privateLinks(
   _annotation TEXT CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$') NOT NULL,
   accessToken Text NOT NULL UNIQUE,
   expirationDateTime TIMESTAMPTZ,
-  isDeleted BOOLEAN NOT NULL DEFAULT false
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE webknossos.shortLinks(
@@ -549,13 +549,13 @@ CREATE TABLE webknossos.credentials(
   _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
   _organization TEXT NOT NULL,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE webknossos.folders(
     _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
     name TEXT NOT NULL CHECK (name !~ '/'),
-    isDeleted BOOLEAN NOT NULL DEFAULT false,
+    isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
     metadata JSONB  NOT NULL DEFAULT '[]',
     CONSTRAINT metadataIsJsonArray CHECK(jsonb_typeof(metadata) = 'array')
 );
@@ -579,7 +579,7 @@ CREATE TABLE webknossos.emailVerificationKeys(
   email TEXT NOT NULL,
   _multiUser TEXT CONSTRAINT _multiUser_objectId CHECK (_multiUser ~ '^[0-9a-f]{24}$') NOT NULL,
   validUntil TIMESTAMPTZ,
-  isUsed BOOLEAN NOT NULL DEFAULT false
+  isUsed BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TYPE webknossos.AI_MODEL_CATEGORY AS ENUM ('em_neurons', 'em_nuclei', 'em_synapses', 'em_neuron_types', 'em_cell_organelles');
@@ -794,6 +794,10 @@ CREATE INDEX ON webknossos.tasks(_taskType);
 CREATE INDEX ON webknossos.timespans(_user);
 CREATE INDEX ON webknossos.timespans(_annotation);
 CREATE INDEX ON webknossos.users(_multiUser);
+CREATE INDEX ON webknossos.users(created);
+CREATE INDEX ON webknossos.users(_organization);
+CREATE INDEX ON webknossos.users(isDeactivated);
+CREATE INDEX ON webknossos.users(isUnlisted);
 CREATE INDEX ON webknossos.multiUsers(email);
 CREATE INDEX ON webknossos.projects(name);
 CREATE INDEX ON webknossos.projects(_team);
@@ -926,7 +930,7 @@ ALTER TABLE webknossos.aiModel_organizations
 
 CREATE FUNCTION webknossos.countsAsTaskInstance(a webknossos.annotations) RETURNS BOOLEAN AS $$
   BEGIN
-    RETURN (a.state != 'Cancelled' AND a.isDeleted = false AND a.typ = 'Task');
+    RETURN (a.state != 'Cancelled' AND a.isDeleted = FALSE AND a.typ = 'Task');
   END;
 $$ LANGUAGE plpgsql;
 
@@ -947,7 +951,7 @@ FOR EACH ROW EXECUTE PROCEDURE webknossos.onUpdateTask();
 
 CREATE FUNCTION webknossos.onInsertAnnotation() RETURNS trigger AS $$
   BEGIN
-    IF (NEW.typ = 'Task') AND (NEW.isDeleted = false) AND (NEW.state != 'Cancelled') THEN
+    IF (NEW.typ = 'Task') AND (NEW.isDeleted = FALSE) AND (NEW.state != 'Cancelled') THEN
       UPDATE webknossos.tasks SET pendingInstances = pendingInstances - 1 WHERE _id = NEW._task;
     END IF;
     RETURN NULL;
@@ -984,7 +988,7 @@ FOR EACH ROW EXECUTE PROCEDURE webknossos.onUpdateAnnotation();
 
 CREATE FUNCTION webknossos.onDeleteAnnotation() RETURNS TRIGGER AS $$
   BEGIN
-    IF (OLD.typ = 'Task') AND (OLD.isDeleted = false) AND (OLD.state != 'Cancelled') THEN
+    IF (OLD.typ = 'Task') AND (OLD.isDeleted = FALSE) AND (OLD.state != 'Cancelled') THEN
       UPDATE webknossos.tasks SET pendingInstances = pendingInstances + 1 WHERE _id = OLD._task;
     END IF;
     RETURN NULL;

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import _ from "lodash";
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3 } from "viewer/constants";
 
 import "test/mocks/updatable_texture.mock";
 import { generateRandomCuckooEntrySet } from "./cuckoo_table_helpers";

@@ -163,15 +163,16 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                 datasetDirectoryName,
                                                                                 dataLayerName)
-      bucketRequests = bucketPositions.map(
-        position =>
+      mag1BucketPositions = bucketPositions.map(_ * mag)
+      bucketRequests = mag1BucketPositions.map(
+        mag1BucketPosition =>
           DataServiceDataRequest(
             dataSourceId = Some(dataSource.id),
             dataLayer = dataLayer,
             cuboid = Cuboid(
-              VoxelPosition(position.x * DataLayer.bucketLength,
-                            position.y * DataLayer.bucketLength,
-                            position.z * DataLayer.bucketLength,
+              VoxelPosition(mag1BucketPosition.x * DataLayer.bucketLength,
+                            mag1BucketPosition.y * DataLayer.bucketLength,
+                            mag1BucketPosition.z * DataLayer.bucketLength,
                             mag),
               DataLayer.bucketLength,
               DataLayer.bucketLength,

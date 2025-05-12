@@ -5,7 +5,6 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.common.Box.tryo
 import play.api.libs.json.{Json, OFormat}
@@ -20,7 +19,7 @@ object SegmentStatisticsParameters {
   implicit val jsonFormat: OFormat[SegmentStatisticsParameters] = Json.format[SegmentStatisticsParameters]
 }
 
-trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits with LazyLogging {
+trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
 
   protected def bucketScanner: NativeBucketScanner
 

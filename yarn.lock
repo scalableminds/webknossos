@@ -3012,19 +3012,26 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/ndarray-ops@npm:^1.2.4":
-  version: 1.2.4
-  resolution: "@types/ndarray-ops@npm:1.2.4"
+"@types/ndarray-ops@npm:^1.2.7":
+  version: 1.2.7
+  resolution: "@types/ndarray-ops@npm:1.2.7"
   dependencies:
     "@types/ndarray": "npm:*"
-  checksum: 10c0/978c3a4dbf2a3dff98aa6346f9797039a83dcbefac29c3b8be729279cca222d92119cd8efe88a35bae596b91600904ec0ad21d6351fa611e0dcff30108b3f7d6
+  checksum: 10c0/51f2745337b67bbacc31fc4c914e1de9b0ec956facee2b9c8af3450e3fe35d9e3144972b6feedc331508c260dfce58d8356d742a1ca0905cf6529d7b169e1c7b
   languageName: node
   linkType: hard
 
-"@types/ndarray@npm:*, @types/ndarray@npm:^1.0.11":
+"@types/ndarray@npm:*":
   version: 1.0.11
   resolution: "@types/ndarray@npm:1.0.11"
   checksum: 10c0/ecb6389e03fb707054c71aa2a4d21b77b09272c19d4ad078bdb5c081ffc592bc68cc007eaddb892ae5a4f1232c507b675fb5862c4405e6e1d7d4a9adacba08c6
+  languageName: node
+  linkType: hard
+
+"@types/ndarray@npm:^1.0.14":
+  version: 1.0.14
+  resolution: "@types/ndarray@npm:1.0.14"
+  checksum: 10c0/c79c2b37773b7efa8c02141022c0165747b6a124f3b9bb9ea12bcb60fe1abc789fb580ff619c2415cf087e656b5380a2fcffbe0beae6f0aa1f6648227c5dd93e
   languageName: node
   linkType: hard
 
@@ -3051,10 +3058,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/pako@npm:^2.0.0":
-  version: 2.0.0
-  resolution: "@types/pako@npm:2.0.0"
-  checksum: 10c0/3cf14d21c5bc7f95bc26e910f65b0516994a7229f7f38144f811fd08efefef939855a253a60d5f9961eba6811a0a28a54e9700062b973134d029ffd70dcc7639
+"@types/pako@npm:^2.0.3":
+  version: 2.0.3
+  resolution: "@types/pako@npm:2.0.3"
+  checksum: 10c0/45119ac3c4e8a77317c35493327039b74e333562f06ce038048228918d8ddfaa7958125aab960d1565b3861046022754c414dba1eecb210c44a32c415956bee2
   languageName: node
   linkType: hard
 
@@ -14176,7 +14183,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@npm:^5.2.2, typescript@npm:^5.5.0":
+"typescript@npm:^5.2.2":
   version: 5.5.2
   resolution: "typescript@npm:5.5.2"
   bin:
@@ -14186,13 +14193,33 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@patch:typescript@npm%3A^5.2.2#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^5.5.0#optional!builtin<compat/typescript>":
+"typescript@npm:^5.8.0":
+  version: 5.8.3
+  resolution: "typescript@npm:5.8.3"
+  bin:
+    tsc: bin/tsc
+    tsserver: bin/tsserver
+  checksum: 10c0/5f8bb01196e542e64d44db3d16ee0e4063ce4f3e3966df6005f2588e86d91c03e1fb131c2581baf0fb65ee79669eea6e161cd448178986587e9f6844446dbb48
+  languageName: node
+  linkType: hard
+
+"typescript@patch:typescript@npm%3A^5.2.2#optional!builtin<compat/typescript>":
   version: 5.5.2
   resolution: "typescript@patch:typescript@npm%3A5.5.2#optional!builtin<compat/typescript>::version=5.5.2&hash=379a07"
   bin:
     tsc: bin/tsc
     tsserver: bin/tsserver
   checksum: 10c0/a7b7ede75dc7fc32a76d0d0af6b91f5fbd8620890d84c906f663d8783bf3de6d7bd50f0430b8bb55eac88a38934af847ff709e7156e5138b95ae94cbd5f73e5b
+  languageName: node
+  linkType: hard
+
+"typescript@patch:typescript@npm%3A^5.8.0#optional!builtin<compat/typescript>":
+  version: 5.8.3
+  resolution: "typescript@patch:typescript@npm%3A5.8.3#optional!builtin<compat/typescript>::version=5.8.3&hash=8c6c40"
+  bin:
+    tsc: bin/tsc
+    tsserver: bin/tsserver
+  checksum: 10c0/92ea03509e06598948559ddcdd8a4ae5a7ab475766d5589f1b796f5731b3d631a4c7ddfb86a3bd44d58d10102b132cd4b4994dda9b63e6273c66d77d6a271dbd
   languageName: node
   linkType: hard
 
@@ -14874,9 +14901,9 @@ __metadata:
     "@types/memoize-one": "npm:^5.1.2"
     "@types/merge-img": "npm:^2.1.1"
     "@types/mock-require": "npm:^2.0.1"
-    "@types/ndarray": "npm:^1.0.11"
-    "@types/ndarray-ops": "npm:^1.2.4"
-    "@types/pako": "npm:^2.0.0"
+    "@types/ndarray": "npm:^1.0.14"
+    "@types/ndarray-ops": "npm:^1.2.7"
+    "@types/pako": "npm:^2.0.3"
     "@types/pixelmatch": "npm:^5.2.4"
     "@types/pngjs": "npm:^6.0.1"
     "@types/react": "npm:^18.3.1"
@@ -14980,7 +15007,7 @@ __metadata:
     ts-loader: "npm:^9.4.1"
     tween.js: "npm:^16.3.1"
     typed-redux-saga: "npm:^1.4.0"
-    typescript: "npm:^5.5.0"
+    typescript: "npm:^5.8.0"
     typescript-coverage-report: "npm:^0.8.0"
     url: "npm:^0.11.0"
     url-join: "npm:^4.0.0"

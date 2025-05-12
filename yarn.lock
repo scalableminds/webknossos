@@ -2996,15 +2996,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/mock-require@npm:^2.0.1":
-  version: 2.0.1
-  resolution: "@types/mock-require@npm:2.0.1"
-  dependencies:
-    "@types/node": "npm:*"
-  checksum: 10c0/31935ed1f0b2339958715b492e6251195c718aadcfa9131edec0412458786676d6ce9ffbc26ab0dda239a5df1c80171de8480e094788f3fb21fba88e2d67c5d5
-  languageName: node
-  linkType: hard
-
 "@types/ms@npm:*":
   version: 0.7.31
   resolution: "@types/ms@npm:0.7.31"
@@ -14900,7 +14891,6 @@ __metadata:
     "@types/lz-string": "npm:^1.3.34"
     "@types/memoize-one": "npm:^5.1.2"
     "@types/merge-img": "npm:^2.1.1"
-    "@types/mock-require": "npm:^2.0.1"
     "@types/ndarray": "npm:^1.0.14"
     "@types/ndarray-ops": "npm:^1.2.7"
     "@types/pako": "npm:^2.0.3"

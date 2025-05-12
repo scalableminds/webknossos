@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 132, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
+do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 133, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
 
 ALTER TABLE webknossos.dataset_layers
   DROP COLUMN IF EXISTS numChannels,
@@ -12,6 +12,6 @@ ALTER TABLE webknossos.dataset_mags
   DROP COLUMN IF EXISTS channelIndex,
   DROP COLUMN IF EXISTS cubeLength;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 131;
+UPDATE webknossos.releaseInformation SET schemaVersion = 132;
 
 COMMIT TRANSACTION;

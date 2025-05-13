@@ -30,7 +30,11 @@ export type CreateEdgeUpdateAction = ReturnType<typeof createEdge>;
 export type DeleteEdgeUpdateAction = ReturnType<typeof deleteEdge>;
 export type UpdateSkeletonTracingUpdateAction = ReturnType<typeof updateSkeletonTracing>;
 export type UpdateUserStateSkeletonUpdateAction = ReturnType<typeof updateUserStateSkeleton>;
-type UpdateVolumeTracingUpdateAction = ReturnType<typeof updateVolumeTracing>;
+type LEGACY_UpdateVolumeTracingUpdateAction = ReturnType<typeof LEGACY_updateVolumeTracing>;
+export type UpdateUserStateInVolumeTracingUpdateAction = ReturnType<
+  typeof updateUserStateInVolumeTracing
+>;
+export type UpdateLargestSegmentIdVolumeAction = ReturnType<typeof updateLargestSegmentId>;
 export type CreateSegmentUpdateAction = ReturnType<typeof createSegmentVolumeAction>;
 export type UpdateSegmentUpdateAction = ReturnType<typeof updateSegmentVolumeAction>;
 export type DeleteSegmentUpdateAction = ReturnType<typeof deleteSegmentVolumeAction>;
@@ -81,7 +85,9 @@ export type UpdateActionWithoutIsolationRequirement =
   | DeleteEdgeUpdateAction
   | UpdateSkeletonTracingUpdateAction
   | UpdateUserStateSkeletonUpdateAction
-  | UpdateVolumeTracingUpdateAction
+  | LEGACY_UpdateVolumeTracingUpdateAction
+  | UpdateUserStateInVolumeTracingUpdateAction
+  | UpdateLargestSegmentIdVolumeAction
   | UpdateUserBoundingBoxesInSkeletonTracingUpdateAction
   | UpdateUserBoundingBoxesInVolumeTracingUpdateAction
   | CreateSegmentUpdateAction
@@ -319,6 +325,8 @@ export function deleteNode(treeId: number, nodeId: number, actionTracingId: stri
     },
   } as const;
 }
+
+// todop: only exists for legacy annotations. don't use it anymore
 export function updateSkeletonTracing(
   tracing: {
     tracingId: string;
@@ -347,8 +355,7 @@ export function updateUserStateSkeleton(tracing: {
   activeNodeId: number | null | undefined;
 }) {
   return {
-    // todop (backend first?): this has "in" in it, but the ts and scala
-    // type don't have that.
+    // Note the "in"
     name: "updateUserStateInSkeletonTracing",
     value: {
       actionTracingId: tracing.tracingId,
@@ -373,7 +380,9 @@ export function moveTreeComponent(
     },
   } as const;
 }
-export function updateVolumeTracing(
+
+// todop: exists only for legacy reasons. mark it as such?
+export function LEGACY_updateVolumeTracing(
   tracing: VolumeTracing,
   // position: Vector3,
   // editPositionAdditionalCoordinates: AdditionalCoordinate[] | null,
@@ -384,7 +393,7 @@ export function updateVolumeTracing(
     name: "updateVolumeTracing",
     value: {
       actionTracingId: tracing.tracingId,
-      activeSegmentId: tracing.activeCellId,
+      // activeSegmentId: tracing.activeCellId,
       // editPosition: position,
       // editPositionAdditionalCoordinates,
       // editRotation: rotation,
@@ -393,6 +402,22 @@ export function updateVolumeTracing(
     },
   } as const;
 }
+
+export function updateLargestSegmentId(largestSegmentId: number | null, actionTracingId: string) {
+  return { name: "updateLargestSegmentId", value: { largestSegmentId, actionTracingId } } as const;
+}
+
+export function updateUserStateInVolumeTracing(activeSegmentId: number, actionTracingId: string) {
+  return {
+    // Note the "in"
+    name: "updateUserStateInVolumeTracing",
+    value: {
+      actionTracingId,
+      activeSegmentId,
+    },
+  } as const;
+}
+
 export function updateUserBoundingBoxesInSkeletonTracing(
   userBoundingBoxes: Array<UserBoundingBox>,
   actionTracingId: string,

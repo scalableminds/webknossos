@@ -41,6 +41,7 @@ import type {
   UpdateAnnotationLayerNameUpdateAction,
   UpdateBucketUpdateAction,
   UpdateCameraAnnotationAction,
+  UpdateLargestSegmentIdVolumeAction,
   UpdateMappingNameUpdateAction,
   UpdateMetadataOfAnnotationUpdateAction,
   UpdateNodeUpdateAction,
@@ -50,6 +51,7 @@ import type {
   UpdateTreeGroupVisibilityUpdateAction,
   UpdateTreeUpdateAction,
   UpdateTreeVisibilityUpdateAction,
+  UpdateUserStateInVolumeTracingUpdateAction,
   UpdateUserStateSkeletonUpdateAction,
 } from "viewer/model/sagas/update_actions";
 import type { StoreAnnotation } from "viewer/store";
@@ -295,6 +297,15 @@ const descriptionFns: Record<
   }),
   updateSkeletonTracing: (): Description => updateTracingDescription,
   updateVolumeTracing: (): Description => updateTracingDescription,
+  updateUserStateInVolumeTracing: (
+    action: UpdateUserStateInVolumeTracingUpdateAction,
+  ): Description => {
+    return {
+      // todop
+      description: `Updated the active segment id to ${action.value.activeSegmentId} for user ?`,
+      icon: <EditOutlined />, // todop: better icon?
+    };
+  },
   addLayerToAnnotation: (action: AddLayerToAnnotationUpdateAction): Description => ({
     description: `Added the layer ${action.value.layerParameters.name} to the annotation.`,
     icon: <PlusOutlined />,
@@ -324,6 +335,12 @@ const descriptionFns: Record<
     return {
       // todop:
       description: "Updated camera position for user ?",
+      icon: <EditOutlined />, // todop: better icon?
+    };
+  },
+  updateLargestSegmentId: (action: UpdateLargestSegmentIdVolumeAction): Description => {
+    return {
+      description: `Set largest segment id to ${action.value.largestSegmentId}`,
       icon: <EditOutlined />, // todop: better icon?
     };
   },

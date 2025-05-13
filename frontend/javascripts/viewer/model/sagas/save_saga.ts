@@ -397,7 +397,7 @@ export function* saveTracingAsync(): Saga<void> {
 }
 
 function* setupSavingForAnnotation(_action: BatchedAnnotationInitializationAction): Saga<void> {
-  // todop: wouldn't it make more sense to read the prev* vars after ensureWkReady?
+  // todop: wouldn't it make more sense to read the prev* vars after ensureWkReady? probably changes tests
   let prevFlycam = yield* select((state) => state.flycam);
   let prevTdCamera = yield* select((state) => state.viewModeData.plane.tdCamera);
   yield* call(ensureWkReady);

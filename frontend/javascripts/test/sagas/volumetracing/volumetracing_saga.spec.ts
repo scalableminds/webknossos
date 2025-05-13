@@ -67,6 +67,11 @@ const serverVolumeTracing: ServerVolumeTracing = {
   additionalAxes: [],
   userBoundingBoxes: [],
   largestSegmentId: 0,
+  userStates: [
+    {
+      userId: "todop: proper userid",
+    },
+  ],
 };
 
 const volumeTracing = serverVolumeToClientVolumeTracing(serverVolumeTracing);

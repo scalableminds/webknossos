@@ -96,7 +96,6 @@ const serverSkeletonTracing: ServerSkeletonTracing = {
   additionalAxes: [],
   userBoundingBoxes: [],
   typ: "Skeleton",
-  activeNodeId: undefined,
   boundingBox: undefined,
   trees: [],
   // todop: define a proper user state?

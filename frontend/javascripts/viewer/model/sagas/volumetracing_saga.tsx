@@ -69,11 +69,12 @@ import {
   deleteSegmentDataVolumeAction,
   deleteSegmentVolumeAction,
   removeFallbackLayer,
+  updateLargestSegmentId,
   updateMappingName,
   updateSegmentGroups,
   updateSegmentVolumeAction,
   updateUserBoundingBoxesInVolumeTracing,
-  updateVolumeTracing,
+  updateUserStateInVolumeTracing,
 } from "viewer/model/sagas/update_actions";
 import type VolumeLayer from "viewer/model/volumetracing/volumelayer";
 import { Model, api } from "viewer/singletons";
@@ -397,16 +398,6 @@ export function* ensureToolIsAllowedInMag(): Saga<void> {
   }
 }
 
-function updateTracingPredicate(
-  prevVolumeTracing: VolumeTracing,
-  volumeTracing: VolumeTracing,
-): boolean {
-  return (
-    prevVolumeTracing.activeCellId !== volumeTracing.activeCellId ||
-    prevVolumeTracing.largestSegmentId !== volumeTracing.largestSegmentId
-  );
-}
-
 export const cachedDiffSegmentLists = memoizeOne(
   (tracingId: string, prevSegments: SegmentMap, newSegments: SegmentMap) =>
     Array.from(uncachedDiffSegmentLists(tracingId, prevSegments, newSegments)),
@@ -463,8 +454,11 @@ export function* diffVolumeTracing(
   prevVolumeTracing: VolumeTracing,
   volumeTracing: VolumeTracing,
 ): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
-  if (updateTracingPredicate(prevVolumeTracing, volumeTracing)) {
-    yield updateVolumeTracing(volumeTracing);
+  if (prevVolumeTracing.activeCellId !== volumeTracing.activeCellId) {
+    yield updateUserStateInVolumeTracing(volumeTracing.activeCellId, volumeTracing.tracingId);
+  }
+  if (prevVolumeTracing.largestSegmentId !== volumeTracing.largestSegmentId) {
+    yield updateLargestSegmentId(volumeTracing.largestSegmentId, volumeTracing.tracingId);
   }
 
   if (!_.isEqual(prevVolumeTracing.userBoundingBoxes, volumeTracing.userBoundingBoxes)) {

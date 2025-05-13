@@ -907,6 +907,7 @@ export type ServerTracingBase = {
 };
 
 type SkeletonUserState = {
+  userId: string;
   activeNodeId: number | null;
   boundingBoxIds: number[];
   boundingBoxVisibilities: [];
@@ -914,7 +915,6 @@ type SkeletonUserState = {
   treeGroupIds: [];
   treeIds: number[];
   treeVisibilities: [];
-  userId: string;
 };
 
 export type ServerSkeletonTracing = ServerTracingBase & {
@@ -922,19 +922,27 @@ export type ServerSkeletonTracing = ServerTracingBase & {
   // tracing from the back-end (by `getTracingForAnnotationType`)
   // This is done to simplify the selection for the type.
   typ: "Skeleton";
-  activeNodeId?: number;
+  activeNodeId?: number; // only use as a fallback if userStates is empty
   boundingBox?: ServerBoundingBox;
   trees: Array<ServerSkeletonTracingTree>;
   treeGroups: Array<TreeGroup> | null | undefined;
   storedWithExternalTreeBodies?: boolean; // unused in frontend
   userStates: SkeletonUserState[];
+  // todop: Exists only for legacy purposes? Or remove altogether?
+  // activeNodeId?: number;
 };
+
+type VolumeUserState = {
+  userId: string;
+  activeSegmentId?: number;
+};
+
 export type ServerVolumeTracing = ServerTracingBase & {
   // The following property is added when fetching the
   // tracing from the back-end (by `getTracingForAnnotationType`)
   // This is done to simplify the selection for the type.
   typ: "Volume";
-  activeSegmentId?: number;
+  activeSegmentId?: number; // only use as a fallback if userStates is empty
   boundingBox: ServerBoundingBox;
   elementClass: ElementClass;
   fallbackLayer?: string;
@@ -954,6 +962,10 @@ export type ServerVolumeTracing = ServerTracingBase & {
   // once a bucket was mutated. There is no need to send an explicit UpdateAction
   // for that.
   volumeBucketDataHasChanged?: boolean;
+  userStates: VolumeUserState[];
+
+  // todop: Exists only for legacy purposes? Or remove altogether?
+  // activeSegmentId?: number;
 };
 export type ServerTracing = ServerSkeletonTracing | ServerVolumeTracing;
 export type ServerEditableMapping = {

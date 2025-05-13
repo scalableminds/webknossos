@@ -62,6 +62,7 @@ import {
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { mapGroups } from "../accessors/skeletontracing_accessor";
 import { sanitizeMetadata } from "./skeletontracing_reducer";
+import _ from "lodash";
 
 type SegmentUpdateInfo =
   | {
@@ -246,6 +247,8 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
   // and cannot compute it
   const largestSegmentId = tracing.largestSegmentId;
   const userBoundingBoxes = convertUserBoundingBoxesFromServerToFrontend(tracing.userBoundingBoxes);
+  // todop: don't use _.first
+  const userState = _.first(tracing.userStates);
   const volumeTracing = {
     createdTimestamp: tracing.createdTimestamp,
     type: "volume" as const,
@@ -264,7 +267,7 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
       ]),
     ),
     segmentGroups: tracing.segmentGroups || [],
-    activeCellId: tracing.activeSegmentId ?? 0,
+    activeCellId: userState?.activeSegmentId ?? 0,
     lastLabelActions: [],
     contourTracingMode: ContourModeEnum.DRAW,
     contourList: [],

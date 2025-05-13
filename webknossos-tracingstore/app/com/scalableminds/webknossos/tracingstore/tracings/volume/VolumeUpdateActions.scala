@@ -90,25 +90,6 @@ case class UpdateBucketVolumeAction(position: Vec3Int,
   )
 }
 
-case class UpdateActiveSegmentIdVolumeAction(activeSegmentId: Long,
-                                             actionTracingId: String,
-                                             actionTimestamp: Option[Long] = None,
-                                             actionAuthorId: Option[String] = None,
-                                             info: Option[String] = None)
-    extends ApplyableVolumeUpdateAction {
-  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
-    this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
-    this.copy(actionTracingId = newTracingId)
-
-  override def isViewOnlyChange: Boolean = true
-
-  override def applyOn(tracing: VolumeTracing): VolumeTracing =
-    tracing.copy(activeSegmentId = Some(activeSegmentId))
-}
-
 case class UpdateTracingVolumeAction(
     activeSegmentId: Long,
     editPosition: Vec3Int,
@@ -534,9 +515,6 @@ object UpdateBucketVolumeAction {
 }
 object UpdateTracingVolumeAction {
   implicit val jsonFormat: OFormat[UpdateTracingVolumeAction] = Json.format[UpdateTracingVolumeAction]
-}
-object UpdateActiveSegmentIdVolumeAction {
-  implicit val jsonFormat: OFormat[UpdateActiveSegmentIdVolumeAction] = Json.format[UpdateActiveSegmentIdVolumeAction]
 }
 object UpdateUserStateVolumeAction {
   implicit val jsonFormat: OFormat[UpdateUserStateVolumeAction] = Json.format[UpdateUserStateVolumeAction]

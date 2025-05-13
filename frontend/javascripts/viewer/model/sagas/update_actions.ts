@@ -28,8 +28,10 @@ export type UpdateTreeGroupVisibilityUpdateAction = ReturnType<typeof updateTree
 export type DeleteNodeUpdateAction = ReturnType<typeof deleteNode>;
 export type CreateEdgeUpdateAction = ReturnType<typeof createEdge>;
 export type DeleteEdgeUpdateAction = ReturnType<typeof deleteEdge>;
-export type UpdateSkeletonTracingUpdateAction = ReturnType<typeof updateSkeletonTracing>;
 export type UpdateUserStateSkeletonUpdateAction = ReturnType<typeof updateUserStateSkeleton>;
+export type LEGACY_UpdateSkeletonTracingUpdateAction = ReturnType<
+  typeof LEGACY_updateSkeletonTracing
+>;
 type LEGACY_UpdateVolumeTracingUpdateAction = ReturnType<typeof LEGACY_updateVolumeTracing>;
 export type UpdateUserStateInVolumeTracingUpdateAction = ReturnType<
   typeof updateUserStateInVolumeTracing
@@ -83,9 +85,9 @@ export type UpdateActionWithoutIsolationRequirement =
   | DeleteNodeUpdateAction
   | CreateEdgeUpdateAction
   | DeleteEdgeUpdateAction
-  | UpdateSkeletonTracingUpdateAction
-  | UpdateUserStateSkeletonUpdateAction
+  | LEGACY_UpdateSkeletonTracingUpdateAction
   | LEGACY_UpdateVolumeTracingUpdateAction
+  | UpdateUserStateSkeletonUpdateAction
   | UpdateUserStateInVolumeTracingUpdateAction
   | UpdateLargestSegmentIdVolumeAction
   | UpdateUserBoundingBoxesInSkeletonTracingUpdateAction
@@ -327,7 +329,7 @@ export function deleteNode(treeId: number, nodeId: number, actionTracingId: stri
 }
 
 // todop: only exists for legacy annotations. don't use it anymore
-export function updateSkeletonTracing(
+export function LEGACY_updateSkeletonTracing(
   tracing: {
     tracingId: string;
     activeNodeId: number | null | undefined;

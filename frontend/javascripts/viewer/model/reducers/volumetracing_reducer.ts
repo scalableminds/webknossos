@@ -267,7 +267,7 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
       ]),
     ),
     segmentGroups: tracing.segmentGroups || [],
-    activeCellId: userState?.activeSegmentId ?? 0,
+    activeCellId: userState?.activeSegmentId ?? tracing.activeSegmentId ?? 0,
     lastLabelActions: [],
     contourTracingMode: ContourModeEnum.DRAW,
     contourList: [],

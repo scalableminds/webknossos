@@ -74,12 +74,17 @@ describe("Save Saga", () => {
   it("should compact multiple updateTracing update actions", () => {
     const saveQueue = createSaveQueueFromUpdateActions(
       [
-        [UpdateActions.updateSkeletonTracing(initialState.annotation)],
-        [UpdateActions.updateSkeletonTracing(initialState.annotation)],
+        [UpdateActions.updateUserStateSkeleton(initialState.annotation)],
+        [UpdateActions.updateUserStateInVolumeTracing(3, initialState.annotation.tracingId)],
+        [UpdateActions.updateCameraAnnotation([1, 2, 3], null, [1, 2, 3], 1)],
+
+        [UpdateActions.updateUserStateSkeleton(initialState.annotation)],
+        [UpdateActions.updateUserStateInVolumeTracing(4, initialState.annotation.tracingId)],
+        [UpdateActions.updateCameraAnnotation([2, 2, 3], null, [1, 2, 3], 1)],
       ],
       TIMESTAMP,
     );
-    expect(compactSaveQueue(saveQueue)).toEqual([saveQueue[1]]);
+    expect(compactSaveQueue(saveQueue)).toEqual([saveQueue[3], saveQueue[4], saveQueue[5]]);
   });
 
   it("should send update actions", () => {
@@ -290,8 +295,8 @@ describe("Save Saga", () => {
   it("should remove the correct update actions", () => {
     const saveQueue = createSaveQueueFromUpdateActions(
       [
-        [UpdateActions.updateSkeletonTracing(initialState.annotation)],
-        [UpdateActions.updateSkeletonTracing(initialState.annotation)],
+        [UpdateActions.updateUserStateSkeleton(initialState.annotation)],
+        [UpdateActions.updateUserStateSkeleton(initialState.annotation)],
       ],
       TIMESTAMP,
     );
@@ -337,9 +342,9 @@ describe("Save Saga", () => {
   it("should set the correct version numbers if the save queue was compacted", () => {
     const saveQueue = createSaveQueueFromUpdateActions(
       [
-        [UpdateActions.updateSkeletonTracing(initialState.annotation)],
-        [UpdateActions.updateSkeletonTracing(initialState.annotation)],
-        [UpdateActions.updateSkeletonTracing(initialState.annotation)],
+        [UpdateActions.updateUserStateSkeleton(initialState.annotation)],
+        [UpdateActions.updateUserStateSkeleton(initialState.annotation)],
+        [UpdateActions.updateUserStateSkeleton(initialState.annotation)],
       ],
       TIMESTAMP,
     );

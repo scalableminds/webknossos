@@ -77,7 +77,7 @@ export function renderTreeNode(
   hideContextMenu: () => void,
   node: TreeNode,
 ): React.ReactNode {
-  const tree = props.trees[node.id];
+  const tree = props.trees.getNullable(node.id);
   if (!tree) return null;
 
   const maybeProofreadingIcon =

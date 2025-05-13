@@ -658,7 +658,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     const { trees, treeGroups } = skeletonTracing;
     const isTree = selectedElement.type === GroupTypeEnum.TREE;
     const groupToExpand = isTree
-      ? trees[selectedElement.id].groupId
+      ? trees.getNullable(selectedElement.id)?.groupId
       : createGroupToParentMap(treeGroups)[selectedElement.id];
     const expandedGroups = additionallyExpandGroup(treeGroups, groupToExpand, (groupId) => groupId);
     if (expandedGroups) {

@@ -289,7 +289,7 @@ class TracingApi {
    */
   getAllNodes(): Array<Node> {
     const skeletonTracing = assertSkeleton(Store.getState().annotation);
-    return _.flatMap(skeletonTracing.trees, (tree) => Array.from(tree.nodes.values()));
+    return Array.from(skeletonTracing.trees.values().flatMap((tree) => tree.nodes.values()));
   }
 
   /**
@@ -396,7 +396,7 @@ class TracingApi {
     if (_.isNumber(nodeId)) {
       const tree =
         treeId != null
-          ? skeletonTracing.trees[treeId]
+          ? skeletonTracing.trees.getNullable(treeId)
           : findTreeByNodeId(skeletonTracing.trees, nodeId);
       assertExists(tree, `Couldn't find node ${nodeId}.`);
       Store.dispatch(createCommentAction(commentText, nodeId, tree.treeId));
@@ -422,14 +422,14 @@ class TracingApi {
     let tree = null;
 
     if (treeId != null) {
-      tree = skeletonTracing.trees[treeId];
+      tree = skeletonTracing.trees.getNullable(treeId);
       assertExists(tree, `Couldn't find tree ${treeId}.`);
       assertExists(
         tree.nodes.getOrThrow(nodeId),
         `Couldn't find node ${nodeId} in tree ${treeId}.`,
       );
     } else {
-      tree = _.values(skeletonTracing.trees).find((__) => __.nodes.has(nodeId));
+      tree = skeletonTracing.trees.values().find((__) => __.nodes.has(nodeId));
       assertExists(tree, `Couldn't find node ${nodeId}.`);
     }
 
@@ -545,7 +545,7 @@ class TracingApi {
    */
   getTreeGroups(): Array<TreeGroupTypeFlat> {
     const { annotation } = Store.getState();
-    return getFlatTreeGroups(assertSkeleton(annotation));
+    return Array.from(getFlatTreeGroups(assertSkeleton(annotation)));
   }
 
   /**
@@ -1230,7 +1230,7 @@ class TracingApi {
   measureTreeLength(treeId: number): [number, number] {
     const state = Store.getState();
     const skeletonTracing = assertSkeleton(state.annotation);
-    const tree = skeletonTracing.trees[treeId];
+    const tree = skeletonTracing.trees.getNullable(treeId);
 
     if (!tree) {
       throw new Error(`Tree with id ${treeId} not found.`);
@@ -1260,7 +1260,7 @@ class TracingApi {
     let totalLengthInUnit = 0;
     let totalLengthInVx = 0;
 
-    _.values(skeletonTracing.trees).forEach((currentTree) => {
+    skeletonTracing.trees.values().forEach((currentTree) => {
       const [lengthInUnit, lengthInVx] = this.measureTreeLength(currentTree.treeId);
       totalLengthInUnit += lengthInUnit;
       totalLengthInVx += lengthInVx;

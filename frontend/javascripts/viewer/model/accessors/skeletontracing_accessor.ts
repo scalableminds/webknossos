@@ -1,4 +1,3 @@
-import _ from "lodash";
 import {
   type APIAnnotation,
   type AnnotationLayerDescriptor,
@@ -24,6 +23,7 @@ import {
   findGroup,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { invertTransform, transformPointUnscaled } from "../helpers/transformation_helpers";
+import DiffableMap from "libs/diffable_map";
 import {
   getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull,
   getTransformsForSkeletonLayer,
@@ -76,7 +76,7 @@ export function getActiveNode(skeletonTracing: SkeletonTracing): Node | null {
   const { activeTreeId, activeNodeId } = skeletonTracing;
 
   if (activeTreeId != null && activeNodeId != null) {
-    return skeletonTracing.trees[activeTreeId].nodes.getOrThrow(activeNodeId);
+    return skeletonTracing.trees.getOrThrow(activeTreeId).nodes.getOrThrow(activeNodeId);
   }
 
   return null;
@@ -89,7 +89,7 @@ export function getActiveTree(skeletonTracing: SkeletonTracing | null | undefine
   const { activeTreeId } = skeletonTracing;
 
   if (activeTreeId != null) {
-    return skeletonTracing.trees[activeTreeId];
+    return skeletonTracing.trees.getNullable(activeTreeId) || null;
   }
 
   return null;
@@ -117,11 +117,11 @@ export function getActiveNodeFromTree(skeletonTracing: SkeletonTracing, tree: Tr
 }
 
 export function findTreeByNodeId(trees: TreeMap, nodeId: number): Tree | undefined {
-  return _.values(trees).find((tree) => tree.nodes.has(nodeId));
+  return trees.values().find((tree) => tree.nodes.has(nodeId));
 }
 
 export function findTreeByName(trees: TreeMap, treeName: string): Tree | undefined {
-  return _.values(trees).find((tree: Tree) => tree.name === treeName);
+  return trees.values().find((tree: Tree) => tree.name === treeName);
 }
 
 export function getTreesWithType(
@@ -132,7 +132,10 @@ export function getTreesWithType(
    * Returns trees of a specific type or all trees if no type is provided.
    */
   return type != null
-    ? _.pickBy(skeletonTracing.trees, (tree) => tree.type === type)
+    ? skeletonTracing.trees
+        .entries()
+        .filter(([_, tree]) => tree.type === type)
+        .reduce((newMap, [key, value]) => newMap.set(key, value), new DiffableMap<number, Tree>())
     : skeletonTracing.trees;
 }
 
@@ -147,13 +150,13 @@ export function getTree(
   const trees = getTreesWithType(skeletonTracing, type);
 
   if (treeId != null) {
-    return trees[treeId] || null;
+    return trees.getNullable(treeId) || null;
   }
 
   const { activeTreeId } = skeletonTracing;
 
   if (activeTreeId != null) {
-    return trees[activeTreeId] || null;
+    return trees.getNullable(activeTreeId) || null;
   }
 
   return null;
@@ -169,19 +172,19 @@ export function getTreeAndNode(
    * Returns a tuple of [tree, node] if the node and tree can be found, otherwise null.
    * If no nodeId is provided, the active node is used. If no treeId is provided, the active tree is used.
    */
-  let tree;
+  let tree: Tree | undefined;
 
   const trees = getTreesWithType(skeletonTracing, type);
 
   if (treeId != null) {
-    tree = trees[treeId];
+    tree = trees.getNullable(treeId);
   } else if (nodeId != null) {
-    tree = _.values(trees).find((__) => __.nodes.has(nodeId));
+    tree = trees.values().find((__) => __.nodes.has(nodeId));
   } else {
     const { activeTreeId } = skeletonTracing;
 
     if (activeTreeId != null) {
-      tree = trees[activeTreeId];
+      tree = trees.getNullable(activeTreeId);
     }
   }
 
@@ -263,52 +266,49 @@ export function untransformNodePosition(position: Vector3, state: WebknossosStat
 }
 
 export function getMaxNodeIdInTree(tree: Tree): number | null {
-  const maxNodeId = _.reduce(
-    Array.from(tree.nodes.keys()),
-    (r, nodeId) => Math.max(r, nodeId),
-    Number.NEGATIVE_INFINITY,
-  );
+  const maxNodeId = tree.nodes
+    .keys()
+    .reduce((r, nodeId) => Math.max(r, nodeId), Number.NEGATIVE_INFINITY);
 
   return maxNodeId === Number.NEGATIVE_INFINITY ? null : maxNodeId;
 }
 
 export function getMaxNodeId(skeletonTracing: SkeletonTracing): number | null {
-  const maxNodeId = _.reduce(
-    skeletonTracing.trees,
-    (r, tree) => {
-      const treeMaxId = getMaxNodeIdInTree(tree);
-      return Math.max(r, treeMaxId ?? Number.NEGATIVE_INFINITY);
-    },
-    Number.NEGATIVE_INFINITY,
-  );
+  const maxNodeId = skeletonTracing.trees.values().reduce((r, tree) => {
+    const treeMaxId = getMaxNodeIdInTree(tree);
+    return Math.max(r, treeMaxId ?? Number.NEGATIVE_INFINITY);
+  }, Number.NEGATIVE_INFINITY);
 
   return maxNodeId === Number.NEGATIVE_INFINITY ? null : maxNodeId;
 }
 
-export function getBranchPoints(annotation: StoreAnnotation): BranchPoint[] | null {
+export function getBranchPoints(annotation: StoreAnnotation): IteratorObject<BranchPoint[]> | null {
   const skeletonTracing = getSkeletonTracing(annotation);
   if (skeletonTracing == null) {
     return null;
   }
 
-  return _.flatMap(skeletonTracing.trees, (tree) => tree.branchPoints);
+  return skeletonTracing.trees.values().map((tree) => tree.branchPoints);
 }
 
-export function getFlatTreeGroups(skeletonTracing: SkeletonTracing): Array<TreeGroupTypeFlat> {
-  return Array.from(
-    mapGroupsToGenerator(
-      skeletonTracing.treeGroups,
-      ({ children: _children, ...bareTreeGroup }) => ({
-        ...bareTreeGroup,
-      }),
-    ),
+export function getFlatTreeGroups(
+  skeletonTracing: SkeletonTracing,
+): IteratorObject<TreeGroupTypeFlat> {
+  return mapGroupsToGenerator(
+    skeletonTracing.treeGroups,
+    ({ children: _children, ...bareTreeGroup }) => ({
+      ...bareTreeGroup,
+    }),
   );
 }
+
 export function getTreeGroupsMap(
   skeletonTracing: SkeletonTracing,
 ): Record<number, TreeGroupTypeFlat> {
-  return _.keyBy(getFlatTreeGroups(skeletonTracing), "groupId");
+  const flatGroups = getFlatTreeGroups(skeletonTracing);
+  return Object.fromEntries(flatGroups.map((group) => [group.groupId, group]));
 }
+
 // This is the pattern for the automatically assigned names for agglomerate skeletons
 export const getTreeNameForAgglomerateSkeleton = (
   agglomerateId: NumberLike,

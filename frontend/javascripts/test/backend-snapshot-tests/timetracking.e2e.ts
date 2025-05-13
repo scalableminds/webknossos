@@ -10,7 +10,7 @@ import {
 import * as api from "admin/rest_api";
 import { describe, test, beforeAll, expect } from "vitest";
 import type { APITeam, APIUser } from "types/api_types";
-import { AnnotationStateFilterEnum } from "oxalis/constants";
+import { AnnotationStateFilterEnum } from "viewer/constants";
 
 let activeUser: APIUser;
 let firstTeam: APITeam;

@@ -28,12 +28,12 @@ import Request from "libs/request";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
-import { getSkeletonDescriptor } from "oxalis/model/accessors/skeletontracing_accessor";
-import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
-import type { WebknossosState } from "oxalis/store";
-import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import type { APIAnnotation, APITaskWithAnnotation, APIUser } from "types/api_types";
+import { getSkeletonDescriptor } from "viewer/model/accessors/skeletontracing_accessor";
+import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
+import { getVolumeDescriptors } from "viewer/model/accessors/volumetracing_accessor";
+import type { WebknossosState } from "viewer/store";
+import { RenderToPortal } from "viewer/view/layouting/portal_utils";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 
 const pageLength: number = 1000;

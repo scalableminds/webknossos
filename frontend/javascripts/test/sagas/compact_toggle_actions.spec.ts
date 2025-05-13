@@ -1,14 +1,14 @@
 import _ from "lodash";
 import { describe, it, expect } from "vitest";
-import type { Flycam, WebknossosState, Tree, TreeGroup, TreeMap } from "oxalis/store";
-import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
-import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
-import { updateTreeGroupVisibility, updateTreeVisibility } from "oxalis/model/sagas/update_actions";
+import type { Flycam, WebknossosState, Tree, TreeGroup, TreeMap } from "viewer/store";
+import { diffSkeletonTracing } from "viewer/model/sagas/skeletontracing_saga";
+import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
+import { updateTreeGroupVisibility, updateTreeVisibility } from "viewer/model/sagas/update_actions";
 import { withoutUpdateTracing, withoutUpdateTree } from "test/helpers/saveHelpers";
 import DiffableMap from "libs/diffable_map";
-import EdgeCollection from "oxalis/model/edge_collection";
-import compactToggleActions from "oxalis/model/helpers/compaction/compact_toggle_actions";
-import defaultState from "oxalis/default_state";
+import EdgeCollection from "viewer/model/edge_collection";
+import compactToggleActions from "viewer/model/helpers/compaction/compact_toggle_actions";
+import defaultState from "viewer/default_state";
 
 const createTree = (id: number, groupId: number | null, isVisible: boolean): Tree => ({
   treeId: id,

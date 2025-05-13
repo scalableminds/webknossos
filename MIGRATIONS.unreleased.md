@@ -9,4 +9,6 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/25.05.0...HEAD)
 
 ### Postgres Evolutions:
+
 - [131-more-indices-on-users.sql](conf/evolutions/131-more-indices-on-users.sql)
+- [132-remove-stored-meshes.sql](conf/evolutions/132-remove-stored-meshes.sql)

@@ -1,9 +1,9 @@
 import { isUserAdminOrManager } from "libs/utils";
-import type { WebknossosState } from "oxalis/store";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "react-redux";
 import type { ArbitraryFunction } from "types/globals";
+import type { WebknossosState } from "viewer/store";
 import { useWkSelector } from "./react_hooks";
 import Toast from "./toast";
 

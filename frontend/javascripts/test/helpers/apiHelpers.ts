@@ -1,10 +1,10 @@
 import { vi, type TestContext as BaseTestContext } from "vitest";
 import _ from "lodash";
-import { ControlModeEnum } from "oxalis/constants";
+import { ControlModeEnum } from "viewer/constants";
 import { sleep } from "libs/utils";
 import dummyUser from "test/fixtures/dummy_user";
 import dummyOrga from "test/fixtures/dummy_organization";
-import { setSceneController } from "oxalis/controller/scene_controller_provider";
+import { setSceneController } from "viewer/controller/scene_controller_provider";
 import {
   tracing as SKELETON_TRACING,
   annotation as SKELETON_ANNOTATION,
@@ -21,21 +21,21 @@ import {
   annotationProto as VOLUME_ANNOTATION_PROTO,
 } from "../fixtures/volumetracing_server_objects";
 import DATASET from "../fixtures/dataset_server_object";
-import type { ApiInterface } from "oxalis/api/api_latest";
-import type { ModelType } from "oxalis/model";
+import type { ApiInterface } from "viewer/api/api_latest";
+import type { ModelType } from "viewer/model";
 
-import { setSlowCompression } from "oxalis/workers/slow_byte_array_lz4_compression.worker";
-import Model from "oxalis/model";
-import UrlManager from "oxalis/controller/url_manager";
+import { setSlowCompression } from "viewer/workers/slow_byte_array_lz4_compression.worker";
+import Model from "viewer/model";
+import UrlManager from "viewer/controller/url_manager";
 
-import WebknossosApi from "oxalis/api/api_loader";
-import { default as Store, startSaga } from "oxalis/store";
-import rootSaga from "oxalis/model/sagas/root_saga";
-import { setStore, setModel } from "oxalis/singletons";
-import { setupApi } from "oxalis/api/internal_api";
-import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
+import WebknossosApi from "viewer/api/api_loader";
+import { default as Store, startSaga } from "viewer/store";
+import rootSaga from "viewer/model/sagas/root_saga";
+import { setStore, setModel } from "viewer/singletons";
+import { setupApi } from "viewer/api/internal_api";
+import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import Request, { type RequestOptions } from "libs/request";
-import { parseProtoAnnotation, parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
+import { parseProtoAnnotation, parseProtoTracing } from "viewer/model/helpers/proto_helpers";
 import app from "app";
 
 const TOKEN = "secure-token";
@@ -71,7 +71,7 @@ vi.mock("libs/compute_bvh_async", () => ({
   computeBvhAsync: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("oxalis/model/helpers/proto_helpers", () => {
+vi.mock("viewer/model/helpers/proto_helpers", () => {
   return {
     parseProtoTracing: vi.fn(),
     parseProtoAnnotation: vi.fn(),
@@ -116,7 +116,7 @@ function sendJSONReceiveJSONMockImplementation(url: string, _options?: RequestOp
   return Promise.resolve({});
 }
 
-vi.mock("oxalis/model/bucket_data_handling/data_rendering_logic", async (importOriginal) => {
+vi.mock("viewer/model/bucket_data_handling/data_rendering_logic", async (importOriginal) => {
   const orginalDataRenderingLogicModule = await importOriginal();
 
   return {

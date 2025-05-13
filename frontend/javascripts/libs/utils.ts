@@ -1333,3 +1333,13 @@ export function getPhraseFromCamelCaseString(stringInCamelCase: string): string 
     .map((word) => capitalize(word.replace(/(^|\s)td/, "$13D")))
     .join(" ");
 }
+
+export function mapGroupsDeep<T extends { children: T[] }, R>(
+  groups: T[],
+  mapFn: (group: T, mappedChildren: R[]) => R,
+): R[] {
+  return groups.map((group) => {
+    const mappedChildren = mapGroupsDeep(group.children, mapFn);
+    return mapFn(group, mappedChildren);
+  });
+}

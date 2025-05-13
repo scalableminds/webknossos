@@ -53,6 +53,7 @@ import type {
   UpdateTreeVisibilityUpdateAction,
   UpdateUserStateInVolumeTracingUpdateAction,
   UpdateUserStateInSkeletonTracingUpdateAction,
+  UpdateSegmentGroupsExpandedStateUpdateAction,
 } from "viewer/model/sagas/update_actions";
 import type { StoreAnnotation } from "viewer/store";
 import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
@@ -343,6 +344,14 @@ const descriptionFns: Record<
   updateLargestSegmentId: (action: UpdateLargestSegmentIdVolumeAction): Description => {
     return {
       description: `Set largest segment id to ${action.value.largestSegmentId}`,
+      icon: <EditOutlined />, // todop: better icon?
+    };
+  },
+  updateSegmentGroupsExpandedState: (
+    action: UpdateSegmentGroupsExpandedStateUpdateAction,
+  ): Description => {
+    return {
+      description: `${action.value.areExpanded ? "Expanded" : "Collapsed"} some segment groups.`,
       icon: <EditOutlined />, // todop: better icon?
     };
   },

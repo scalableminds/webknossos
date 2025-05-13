@@ -54,6 +54,7 @@ import type {
   Segment,
   SegmentGroup,
   SegmentMap,
+  TreeGroup,
   VolumeTracing,
   WebknossosState,
 } from "viewer/store";
@@ -242,6 +243,16 @@ function expandSegmentParents(state: WebknossosState, action: ClickSegmentAction
   return setSegmentGroups(state, action.layerName, getNewGroups());
 }
 
+function mapGroupsDeep<T>(
+  groups: TreeGroup[],
+  mapFn: (group: TreeGroup, mappedChildren: T[]) => T,
+): T[] {
+  return groups.map((group) => {
+    const mappedChildren = mapGroupsDeep(group.children, mapFn);
+    return mapFn(group, mappedChildren);
+  });
+}
+
 export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing): VolumeTracing {
   // As the frontend doesn't know all cells, we have to keep track of the highest id
   // and cannot compute it
@@ -249,6 +260,21 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
   const userBoundingBoxes = convertUserBoundingBoxesFromServerToFrontend(tracing.userBoundingBoxes);
   // todop: don't use _.first
   const userState = _.first(tracing.userStates);
+
+  let segmentGroups = tracing.segmentGroups || [];
+  if (userState != null) {
+    const segmentGroupToExpanded: Record<number, boolean> = Object.fromEntries(
+      _.zip(userState.segmentGroupIds, userState.segmentGroupExpandedStates),
+    );
+    segmentGroups = mapGroupsDeep(segmentGroups, (group, children): TreeGroup => {
+      return {
+        ...group,
+        isExpanded: segmentGroupToExpanded[group.groupId] ?? group.isExpanded,
+        children,
+      };
+    });
+  }
+
   const volumeTracing = {
     createdTimestamp: tracing.createdTimestamp,
     type: "volume" as const,
@@ -266,7 +292,7 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
         } as Segment,
       ]),
     ),
-    segmentGroups: tracing.segmentGroups || [],
+    segmentGroups,
     activeCellId: userState?.activeSegmentId ?? tracing.activeSegmentId ?? 0,
     lastLabelActions: [],
     contourTracingMode: ContourModeEnum.DRAW,

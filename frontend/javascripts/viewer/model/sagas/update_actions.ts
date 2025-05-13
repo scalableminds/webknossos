@@ -51,6 +51,9 @@ type UpdateUserBoundingBoxesInVolumeTracingUpdateAction = ReturnType<
 >;
 export type UpdateBucketUpdateAction = ReturnType<typeof updateBucket>;
 export type UpdateSegmentGroupsUpdateAction = ReturnType<typeof updateSegmentGroups>;
+export type UpdateSegmentGroupsExpandedStateUpdateAction = ReturnType<
+  typeof updateSegmentGroupsExpandedState
+>;
 
 type UpdateTreeGroupsUpdateAction = ReturnType<typeof updateTreeGroups>;
 
@@ -103,6 +106,7 @@ export type UpdateActionWithoutIsolationRequirement =
   | UpdateTreeEdgesVisibilityUpdateAction
   | UpdateTreeGroupVisibilityUpdateAction
   | UpdateSegmentGroupsUpdateAction
+  | UpdateSegmentGroupsExpandedStateUpdateAction
   | UpdateTreeGroupsUpdateAction
   | RemoveFallbackLayerUpdateAction
   | UpdateCameraAnnotationAction
@@ -536,6 +540,21 @@ export function updateSegmentGroups(segmentGroups: Array<SegmentGroup>, actionTr
     value: {
       actionTracingId,
       segmentGroups,
+    },
+  } as const;
+}
+
+export function updateSegmentGroupsExpandedState(
+  groupIds: number[],
+  areExpanded: boolean,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateSegmentGroupsExpandedState",
+    value: {
+      actionTracingId,
+      groupIds,
+      areExpanded,
     },
   } as const;
 }

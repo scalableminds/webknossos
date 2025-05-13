@@ -933,6 +933,10 @@ export type ServerSkeletonTracing = ServerTracingBase & {
 type VolumeUserState = {
   userId: string;
   activeSegmentId?: number;
+  // These two properties are the dictionary entries
+  // for an id->expanded mapping.
+  segmentGroupIds: number[];
+  segmentGroupExpandedStates: boolean[];
 };
 
 export type ServerVolumeTracing = ServerTracingBase & {

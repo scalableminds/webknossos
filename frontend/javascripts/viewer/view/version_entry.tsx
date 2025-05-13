@@ -52,7 +52,7 @@ import type {
   UpdateTreeUpdateAction,
   UpdateTreeVisibilityUpdateAction,
   UpdateUserStateInVolumeTracingUpdateAction,
-  UpdateUserStateSkeletonUpdateAction,
+  UpdateUserStateInSkeletonTracingUpdateAction,
 } from "viewer/model/sagas/update_actions";
 import type { StoreAnnotation } from "viewer/store";
 import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
@@ -324,7 +324,9 @@ const descriptionFns: Record<
       icon: <EditOutlined />,
     };
   },
-  updateUserStateInSkeletonTracing: (action: UpdateUserStateSkeletonUpdateAction): Description => {
+  updateUserStateInSkeletonTracing: (
+    action: UpdateUserStateInSkeletonTracingUpdateAction,
+  ): Description => {
     return {
       // todop
       description: `Updated the active node id to ${action.value.activeNode} for user ?`,

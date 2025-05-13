@@ -70,7 +70,7 @@ import {
   updateTreeGroups,
   updateTreeVisibility,
   updateUserBoundingBoxesInSkeletonTracing,
-  updateUserStateSkeleton,
+  updateUserStateInSkeletonTracing,
 } from "viewer/model/sagas/update_actions";
 import { api } from "viewer/singletons";
 import type { Node, NodeMap, SkeletonTracing, Tree, TreeMap, WebknossosState } from "viewer/store";
@@ -607,7 +607,7 @@ export function* diffSkeletonTracing(
   }
 
   if (prevSkeletonTracing.activeNodeId !== skeletonTracing.activeNodeId) {
-    yield updateUserStateSkeleton(skeletonTracing);
+    yield updateUserStateInSkeletonTracing(skeletonTracing);
   }
 
   if (!_.isEqual(prevSkeletonTracing.userBoundingBoxes, skeletonTracing.userBoundingBoxes)) {

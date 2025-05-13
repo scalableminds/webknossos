@@ -28,7 +28,9 @@ export type UpdateTreeGroupVisibilityUpdateAction = ReturnType<typeof updateTree
 export type DeleteNodeUpdateAction = ReturnType<typeof deleteNode>;
 export type CreateEdgeUpdateAction = ReturnType<typeof createEdge>;
 export type DeleteEdgeUpdateAction = ReturnType<typeof deleteEdge>;
-export type UpdateUserStateSkeletonUpdateAction = ReturnType<typeof updateUserStateSkeleton>;
+export type UpdateUserStateInSkeletonTracingUpdateAction = ReturnType<
+  typeof updateUserStateInSkeletonTracing
+>;
 export type LEGACY_UpdateSkeletonTracingUpdateAction = ReturnType<
   typeof LEGACY_updateSkeletonTracing
 >;
@@ -87,7 +89,7 @@ export type UpdateActionWithoutIsolationRequirement =
   | DeleteEdgeUpdateAction
   | LEGACY_UpdateSkeletonTracingUpdateAction
   | LEGACY_UpdateVolumeTracingUpdateAction
-  | UpdateUserStateSkeletonUpdateAction
+  | UpdateUserStateInSkeletonTracingUpdateAction
   | UpdateUserStateInVolumeTracingUpdateAction
   | UpdateLargestSegmentIdVolumeAction
   | UpdateUserBoundingBoxesInSkeletonTracingUpdateAction
@@ -352,7 +354,7 @@ export function LEGACY_updateSkeletonTracing(
   } as const;
 }
 
-export function updateUserStateSkeleton(tracing: {
+export function updateUserStateInSkeletonTracing(tracing: {
   tracingId: string;
   activeNodeId: number | null | undefined;
 }) {

@@ -193,7 +193,7 @@ describe("Annotation API (E2E)", () => {
     };
     const [saveQueue] = addVersionNumbers(
       createSaveQueueFromUpdateActions(
-        [[UpdateActions.updateUserStateSkeleton(initialSkeleton)]],
+        [[UpdateActions.updateUserStateInSkeletonTracing(initialSkeleton)]],
         123456789,
       ),
       0,

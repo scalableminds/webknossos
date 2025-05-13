@@ -28,7 +28,7 @@ import {
   type APIMagRestrictions,
   type APIMapping,
   type APIMaybeUnimportedDataset,
-  type APIMeshFile,
+  type APIMeshFileInfo,
   type APIOrganization,
   type APIOrganizationCompact,
   type APIPricingPlanStatus,
@@ -2034,8 +2034,8 @@ export async function getMeshfilesForDatasetLayer(
   dataStoreUrl: string,
   dataSourceId: APIDataSourceId,
   layerName: string,
-): Promise<Array<APIMeshFile>> {
-  const meshFiles: Array<APIMeshFile> = await doWithToken((token) =>
+): Promise<Array<APIMeshFileInfo>> {
+  const meshFiles: Array<APIMeshFileInfo> = await doWithToken((token) =>
     Request.receiveJSON(
       `${dataStoreUrl}/data/datasets/${dataSourceId.owningOrganization}/${dataSourceId.directoryName}/layers/${layerName}/meshes?token=${token}`,
     ),

@@ -48,7 +48,7 @@ import React, { type Key } from "react";
 import { connect } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import type { Dispatch } from "redux";
-import type { APIMeshFile, MetadataEntryProto } from "types/api_types";
+import type { APIMeshFileInfo, MetadataEntryProto } from "types/api_types";
 import { APIJobType, type AdditionalCoordinate } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { EMPTY_OBJECT, MappingStatusEnum } from "viewer/constants";
@@ -154,6 +154,28 @@ export const stlMeshConstants = {
 const segmentsTabId = "segment-list";
 
 type StateProps = ReturnType<typeof mapStateToProps>;
+// type StateProps = {
+//   meshes: Record<number, MeshInformation>;
+//   dataset: APIDataset;
+//   mappingInfo: ActiveMappingInfo;
+//   hasVolumeTracing: boolean | undefined;
+//   isSegmentIndexAvailable: boolean | undefined;
+//   segments: SegmentMap | null | undefined;
+//   segmentGroups: Array<SegmentGroup>;
+//   selectedIds: { segments: number[]; group: number | null };
+//   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
+//   activeVolumeTracing: VolumeTracing | null | undefined;
+//   allowUpdate: boolean;
+//   organization: string;
+//   datasetName: string;
+//   availableMeshFiles: Array<APIMeshFileInfo> | null | undefined;
+//   currentMeshFile: APIMeshFileInfo | null | undefined;
+//   activeUser: APIUser | null | undefined;
+//   activeCellId: number | null | undefined;
+//   preferredQualityForMeshPrecomputation: number;
+//   preferredQualityForMeshAdHocComputation: number;
+//   magInfoOfVisibleSegmentationLayer: MagInfo;
+// };
 
 const mapStateToProps = (state: WebknossosState) => {
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
@@ -335,10 +357,12 @@ const formatMagWithLabel = (mag: Vector3, index: number) => {
   return `${labels[clampedIndex]} (Mag ${mag.join("-")})`;
 };
 
-const formatMeshFile = (meshFile: APIMeshFile | null | undefined): string | null | undefined => {
+const formatMeshFile = (
+  meshFile: APIMeshFileInfo | null | undefined,
+): string | null | undefined => {
   if (meshFile == null) return null;
-  if (meshFile.mappingName == null) return meshFile.meshFileName;
-  return `${meshFile.meshFileName} (${meshFile.mappingName})`;
+  if (meshFile.mappingName == null) return meshFile.name;
+  return `${meshFile.name} (${meshFile.mappingName})`;
 };
 
 function renderEmptyMeshFileSelect() {
@@ -992,17 +1016,15 @@ class SegmentsView extends React.Component<Props, State> {
               display: "inline-block",
             }}
             placeholder="Select a mesh file"
-            value={
-              this.props.currentMeshFile != null ? this.props.currentMeshFile.meshFileName : null
-            }
+            value={this.props.currentMeshFile != null ? this.props.currentMeshFile.name : null}
             onChange={this.handleMeshFileSelected}
             size="small"
             loading={this.props.availableMeshFiles == null}
             popupMatchSelectWidth={false}
           >
             {this.props.availableMeshFiles ? (
-              this.props.availableMeshFiles.map((meshFile: APIMeshFile) => (
-                <Option key={meshFile.meshFileName} value={meshFile.meshFileName}>
+              this.props.availableMeshFiles.map((meshFile: APIMeshFileInfo) => (
+                <Option key={meshFile.name} value={meshFile.name}>
                   {formatMeshFile(meshFile)}
                 </Option>
               ))
@@ -1467,7 +1489,7 @@ class SegmentsView extends React.Component<Props, State> {
         segment.id,
         segment.somePosition,
         segment.someAdditionalCoordinates,
-        this.props.currentMeshFile.meshFileName,
+        this.props.currentMeshFile.name,
       );
     });
   };

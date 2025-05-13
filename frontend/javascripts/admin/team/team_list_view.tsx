@@ -22,19 +22,13 @@ export function renderTeamRolesAndPermissionsForUser(user: APIUser) {
   //used by user list page
   const tags = [
     ...(user.isOrganizationOwner ? [["Organization Owner", "cyan"]] : []),
+    ...(user.isGuest
+      ? [["Guest User", "lime", "Guest users do not count against your organization’s user quota."]]
+      : []),
     ...(user.isAdmin
       ? [["Admin - Access to all Teams", "red"]]
       : [
           ...(user.isDatasetManager ? [["Dataset Manager - Edit all Datasets", "geekblue"]] : []),
-          ...(user.isGuest
-            ? [
-                [
-                  "Guest User",
-                  "lime",
-                  "Guest users do not count against your organization’s user quota.",
-                ],
-              ]
-            : []),
           ...user.teams.map((team) => {
             const roleName = team.isTeamManager ? "Team Manager" : "Member";
             return [`${team.name}: ${roleName}`, stringToColor(roleName)];

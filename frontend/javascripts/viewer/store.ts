@@ -13,7 +13,7 @@ import type {
   APIDataStore,
   APIDataset,
   APIHistogramData,
-  APIMeshFile,
+  APIMeshFileInfo,
   APIOrganization,
   APIRestrictions,
   APIScript,
@@ -611,8 +611,8 @@ export type LocalSegmentationData = {
   // For meshes, the string represents additional coordinates, number is the segment ID.
   // The undefined types were added to enforce null checks when using this structure.
   readonly meshes: Record<string, Record<number, MeshInformation> | undefined> | undefined;
-  readonly availableMeshFiles: Array<APIMeshFile> | null | undefined;
-  readonly currentMeshFile: APIMeshFile | null | undefined;
+  readonly availableMeshFiles: Array<APIMeshFileInfo> | null | undefined;
+  readonly currentMeshFile: APIMeshFileInfo | null | undefined;
   // Note that for a volume tracing, this information should be stored
   // in state.annotation.volume.segments, as this is also persisted on the
   // server (i.e., not "local").

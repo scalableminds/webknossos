@@ -45,15 +45,15 @@ import type {
   UpdateMappingNameUpdateAction,
   UpdateMetadataOfAnnotationUpdateAction,
   UpdateNodeUpdateAction,
+  UpdateSegmentGroupsExpandedStateUpdateAction,
   UpdateSegmentGroupsUpdateAction,
   UpdateSegmentUpdateAction,
   UpdateTreeEdgesVisibilityUpdateAction,
   UpdateTreeGroupVisibilityUpdateAction,
   UpdateTreeUpdateAction,
   UpdateTreeVisibilityUpdateAction,
-  UpdateUserStateInVolumeTracingUpdateAction,
   UpdateUserStateInSkeletonTracingUpdateAction,
-  UpdateSegmentGroupsExpandedStateUpdateAction,
+  UpdateUserStateInVolumeTracingUpdateAction,
 } from "viewer/model/sagas/update_actions";
 import type { StoreAnnotation } from "viewer/store";
 import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";

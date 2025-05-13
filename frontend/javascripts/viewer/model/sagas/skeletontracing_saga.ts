@@ -76,9 +76,9 @@ import {
 import { api } from "viewer/singletons";
 import type { Node, NodeMap, SkeletonTracing, Tree, TreeMap, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
+import { diffGroups } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { ensureWkReady } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
-import { diffGroups } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 
 function* centerActiveNode(action: Action): Saga<void> {
   if ("suppressCentering" in action && action.suppressCentering) {

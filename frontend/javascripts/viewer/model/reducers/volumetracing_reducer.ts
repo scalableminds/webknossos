@@ -55,7 +55,6 @@ import type {
   Segment,
   SegmentGroup,
   SegmentMap,
-  TreeGroup,
   VolumeTracing,
   WebknossosState,
 } from "viewer/store";

@@ -79,14 +79,13 @@ import {
 } from "viewer/model/sagas/update_actions";
 import type VolumeLayer from "viewer/model/volumetracing/volumelayer";
 import { Model, api } from "viewer/singletons";
-import type { SegmentMap, TreeGroup, VolumeTracing } from "viewer/store";
+import type { SegmentMap, VolumeTracing } from "viewer/store";
+import { diffGroups } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { ensureWkReady } from "./ready_sagas";
 import { floodFill } from "./volume/floodfill_saga";
 import { type BooleanBox, createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
-import { diffSets } from "libs/utils";
-import { diffGroups } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 

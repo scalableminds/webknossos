@@ -17,6 +17,7 @@ import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import {
   applyUserStateToGroups,
+  applyUserStateToTrees,
   convertServerAdditionalAxesToFrontEnd,
   convertServerBoundingBoxToFrontend,
   convertUserBoundingBoxesFromServerToFrontend,
@@ -52,9 +53,17 @@ import {
 function SkeletonTracingReducer(state: WebknossosState, action: Action): WebknossosState {
   switch (action.type) {
     case "INITIALIZE_SKELETONTRACING": {
-      const trees = createTreeMapFromTreeArray(action.tracing.trees);
       // todop: replace _.first to select the proper user
       const userState = _.first(action.tracing.userStates);
+
+      // Perf idea: applyUserStateToTrees could theoretically happen
+      // within createTreeMapFromTreeArray. Performance would probably
+      // be better, but priority is unclear. Would make the code a bit
+      // less separated, though.
+      const trees = applyUserStateToTrees(
+        createTreeMapFromTreeArray(action.tracing.trees),
+        userState,
+      );
       let activeNodeId = userState?.activeNodeId;
 
       const treeGroups = applyUserStateToGroups(action.tracing.treeGroups || [], userState);

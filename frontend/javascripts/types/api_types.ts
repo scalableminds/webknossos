@@ -911,8 +911,12 @@ export type SkeletonUserState = {
   activeNodeId: number | null;
   boundingBoxIds: number[];
   boundingBoxVisibilities: [];
-  treeGroupExpandedStates: [];
+  // ids and states form the entries for a
+  // id->isExpanded map
   treeGroupIds: [];
+  treeGroupExpandedStates: [];
+  // ids and visibilities form the entries for a
+  // id->isExpanded map
   treeIds: number[];
   treeVisibilities: [];
 };

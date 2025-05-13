@@ -1,4 +1,5 @@
 import * as Utils from "libs/utils";
+import _ from "lodash";
 import type {
   APIAnnotation,
   AdditionalAxis,
@@ -20,12 +21,12 @@ import type {
   Annotation,
   BoundingBoxObject,
   TreeGroup,
+  TreeMap,
   UserBoundingBox,
   UserBoundingBoxToServer,
   WebknossosState,
 } from "viewer/store";
 import { getDisabledInfoForTools } from "../accessors/disabled_tool_accessor";
-import _ from "lodash";
 
 export function convertServerBoundingBoxToBoundingBox(
   boundingBox: ServerBoundingBox,
@@ -221,6 +222,28 @@ export function applyUserStateToGroups(
       ...group,
       isExpanded: segmentGroupToExpanded[group.groupId] ?? group.isExpanded,
       children,
+    };
+  });
+}
+
+export function applyUserStateToTrees(
+  trees: TreeMap,
+  userState: SkeletonUserState | undefined,
+): TreeMap {
+  if (userState == null) {
+    return trees;
+  }
+
+  const treeIds = userState.treeIds;
+  const visibilities = userState.treeVisibilities;
+
+  const treeIdToExpanded: Record<number, boolean> = Object.fromEntries(
+    _.zip(treeIds, visibilities),
+  );
+  return _.mapValues(trees, (tree) => {
+    return {
+      ...tree,
+      isVisible: treeIdToExpanded[tree.treeId] ?? tree.isVisible,
     };
   });
 }

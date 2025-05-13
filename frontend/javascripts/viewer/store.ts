@@ -623,6 +623,7 @@ export type LocalSegmentationData = {
   // To get only available segments or group, use getSelectedIds() in volumetracing_accessor.
   readonly selectedIds: { segments: number[]; group: number | null };
   readonly connectomeData: ConnectomeData;
+  readonly hideUnregisteredSegments: boolean;
 };
 
 export type WebknossosState = {

@@ -906,7 +906,7 @@ export type ServerTracingBase = {
   version?: number;
 };
 
-type SkeletonUserState = {
+export type SkeletonUserState = {
   userId: string;
   activeNodeId: number | null;
   boundingBoxIds: number[];
@@ -930,7 +930,7 @@ export type ServerSkeletonTracing = ServerTracingBase & {
   userStates: SkeletonUserState[];
 };
 
-type VolumeUserState = {
+export type VolumeUserState = {
   userId: string;
   activeSegmentId?: number;
   // These two properties are the dictionary entries

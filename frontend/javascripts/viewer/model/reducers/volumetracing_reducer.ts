@@ -32,6 +32,7 @@ import type {
 } from "viewer/model/actions/volumetracing_actions";
 import { updateKey2 } from "viewer/model/helpers/deep_update";
 import {
+  applyUserStateToGroups,
   convertServerAdditionalAxesToFrontEnd,
   convertServerBoundingBoxToFrontend,
   convertUserBoundingBoxesFromServerToFrontend,
@@ -251,19 +252,7 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
   // todop: don't use _.first
   const userState = _.first(tracing.userStates);
 
-  let segmentGroups = tracing.segmentGroups || [];
-  if (userState != null) {
-    const segmentGroupToExpanded: Record<number, boolean> = Object.fromEntries(
-      _.zip(userState.segmentGroupIds, userState.segmentGroupExpandedStates),
-    );
-    segmentGroups = Utils.mapGroupsDeep(segmentGroups, (group, children): TreeGroup => {
-      return {
-        ...group,
-        isExpanded: segmentGroupToExpanded[group.groupId] ?? group.isExpanded,
-        children,
-      };
-    });
-  }
+  const segmentGroups = applyUserStateToGroups(tracing.segmentGroups || [], userState);
 
   const volumeTracing = {
     createdTimestamp: tracing.createdTimestamp,

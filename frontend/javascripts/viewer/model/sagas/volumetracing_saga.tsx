@@ -86,6 +86,7 @@ import { floodFill } from "./volume/floodfill_saga";
 import { type BooleanBox, createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
 import { diffSets } from "libs/utils";
+import { diffGroups } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 
@@ -453,32 +454,6 @@ function* uncachedDiffSegmentLists(
   }
 }
 
-function stripIsExpanded(groups: TreeGroup[]): TreeGroup[] {
-  return groups.map((group) => ({
-    name: group.name,
-    groupId: group.groupId,
-    children: stripIsExpanded(group.children),
-  }));
-}
-
-function gatherIdToExpandedState(
-  groups: TreeGroup[],
-  outputMap: { expanded: Set<number>; notExpanded: Set<number> } = {
-    expanded: new Set(),
-    notExpanded: new Set(),
-  },
-) {
-  for (const group of groups) {
-    if (group.isExpanded) {
-      outputMap.expanded.add(group.groupId);
-    } else {
-      outputMap.notExpanded.add(group.groupId);
-    }
-    gatherIdToExpandedState(group.children, outputMap);
-  }
-  return outputMap;
-}
-
 export function* diffVolumeTracing(
   prevVolumeTracing: VolumeTracing,
   volumeTracing: VolumeTracing,
@@ -508,32 +483,21 @@ export function* diffVolumeTracing(
       }
     }
 
-    if (prevVolumeTracing.segmentGroups !== volumeTracing.segmentGroups) {
-      if (
-        !_.isEqual(
-          stripIsExpanded(prevVolumeTracing.segmentGroups),
-          stripIsExpanded(volumeTracing.segmentGroups),
-        )
-      ) {
-        // The groups (without isExpanded) actually changed. Save them to the server.
-        yield updateSegmentGroups(volumeTracing.segmentGroups, volumeTracing.tracingId);
-      }
+    const { didContentChange, newlyExpandedIds, newlyNotExpandedIds } = diffGroups(
+      prevVolumeTracing.segmentGroups,
+      volumeTracing.segmentGroups,
+    );
 
-      const prevExpandedState = gatherIdToExpandedState(prevVolumeTracing.segmentGroups);
-      const expandedState = gatherIdToExpandedState(volumeTracing.segmentGroups);
+    if (didContentChange) {
+      // The groups (without isExpanded) actually changed. Save them to the server.
+      yield updateSegmentGroups(volumeTracing.segmentGroups, volumeTracing.tracingId);
+    }
 
-      const expandedDiff = diffSets(prevExpandedState.expanded, expandedState.expanded);
-      const notExpandedDiff = diffSets(prevExpandedState.notExpanded, expandedState.notExpanded);
-
-      const newlyExpandedIds = Array.from(expandedDiff.bWithoutA);
-      const newlyNotExpandedIds = Array.from(notExpandedDiff.bWithoutA);
-
-      if (newlyExpandedIds.length > 0) {
-        yield updateSegmentGroupsExpandedState(newlyExpandedIds, true, volumeTracing.tracingId);
-      }
-      if (newlyNotExpandedIds.length > 0) {
-        yield updateSegmentGroupsExpandedState(newlyNotExpandedIds, false, volumeTracing.tracingId);
-      }
+    if (newlyExpandedIds.length > 0) {
+      yield updateSegmentGroupsExpandedState(newlyExpandedIds, true, volumeTracing.tracingId);
+    }
+    if (newlyNotExpandedIds.length > 0) {
+      yield updateSegmentGroupsExpandedState(newlyNotExpandedIds, false, volumeTracing.tracingId);
     }
 
     if (prevVolumeTracing.fallbackLayer != null && volumeTracing.fallbackLayer == null) {

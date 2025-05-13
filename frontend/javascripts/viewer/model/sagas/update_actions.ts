@@ -56,6 +56,9 @@ export type UpdateSegmentGroupsExpandedStateUpdateAction = ReturnType<
 >;
 
 type UpdateTreeGroupsUpdateAction = ReturnType<typeof updateTreeGroups>;
+export type UpdateTreeGroupsExpandedStateSkeletonAction = ReturnType<
+  typeof updateTreeGroupsExpandedState
+>;
 
 export type RevertToVersionUpdateAction = ReturnType<typeof revertToVersion>;
 // This action is not dispatched by our code, anymore,
@@ -108,6 +111,7 @@ export type UpdateActionWithoutIsolationRequirement =
   | UpdateSegmentGroupsUpdateAction
   | UpdateSegmentGroupsExpandedStateUpdateAction
   | UpdateTreeGroupsUpdateAction
+  | UpdateTreeGroupsExpandedStateSkeletonAction
   | RemoveFallbackLayerUpdateAction
   | UpdateCameraAnnotationAction
   | UpdateTdCameraUpdateAction
@@ -551,6 +555,21 @@ export function updateSegmentGroupsExpandedState(
 ) {
   return {
     name: "updateSegmentGroupsExpandedState",
+    value: {
+      actionTracingId,
+      groupIds,
+      areExpanded,
+    },
+  } as const;
+}
+
+export function updateTreeGroupsExpandedState(
+  groupIds: number[],
+  areExpanded: boolean,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateTreeGroupsExpandedState",
     value: {
       actionTracingId,
       groupIds,

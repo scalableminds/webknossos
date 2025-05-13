@@ -4,7 +4,9 @@ import type {
   AdditionalAxis,
   ServerAdditionalAxis,
   ServerBoundingBox,
+  SkeletonUserState,
   UserBoundingBoxFromServer,
+  VolumeUserState,
 } from "types/api_types";
 import type { BoundingBoxType } from "viewer/constants";
 import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
@@ -17,11 +19,13 @@ import { updateKey } from "viewer/model/helpers/deep_update";
 import type {
   Annotation,
   BoundingBoxObject,
+  TreeGroup,
   UserBoundingBox,
   UserBoundingBoxToServer,
   WebknossosState,
 } from "viewer/store";
 import { getDisabledInfoForTools } from "../accessors/disabled_tool_accessor";
+import _ from "lodash";
 
 export function convertServerBoundingBoxToBoundingBox(
   boundingBox: ServerBoundingBox,
@@ -191,5 +195,32 @@ export function setToolReducer(state: WebknossosState, tool: AnnotationTool) {
 
   return updateKey(state, "uiInformation", {
     activeTool: tool,
+  });
+}
+
+export function applyUserStateToGroups(
+  groups: TreeGroup[],
+  userState: SkeletonUserState | VolumeUserState | undefined,
+): TreeGroup[] {
+  if (userState == null) {
+    return groups;
+  }
+
+  const groupIds =
+    "segmentGroupIds" in userState ? userState.segmentGroupIds : userState.treeGroupIds;
+  const expandedStates =
+    "segmentGroupExpandedStates" in userState
+      ? userState.segmentGroupExpandedStates
+      : userState.treeGroupExpandedStates;
+
+  const segmentGroupToExpanded: Record<number, boolean> = Object.fromEntries(
+    _.zip(groupIds, expandedStates),
+  );
+  return Utils.mapGroupsDeep(groups, (group, children): TreeGroup => {
+    return {
+      ...group,
+      isExpanded: segmentGroupToExpanded[group.groupId] ?? group.isExpanded,
+      children,
+    };
   });
 }

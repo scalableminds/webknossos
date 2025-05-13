@@ -355,6 +355,14 @@ const descriptionFns: Record<
       icon: <EditOutlined />, // todop: better icon?
     };
   },
+  updateTreeGroupsExpandedState: (
+    action: UpdateSegmentGroupsExpandedStateUpdateAction,
+  ): Description => {
+    return {
+      description: `${action.value.areExpanded ? "Expanded" : "Collapsed"} some tree groups.`,
+      icon: <EditOutlined />, // todop: better icon?
+    };
+  },
 } as const;
 
 function maybeGetReadableVolumeTracingName(annotation: StoreAnnotation, tracingId: string): string {

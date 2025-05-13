@@ -415,7 +415,9 @@ function* setupSavingForAnnotation(_action: BatchedAnnotationInitializationActio
       yield* call(performDiffAnnotation, prevFlycam, flycam, prevTdCamera, tdCamera),
     );
 
-    yield* put(pushSaveQueueTransaction(items));
+    if (items.length > 0) {
+      yield* put(pushSaveQueueTransaction(items));
+    }
 
     prevFlycam = flycam;
     prevTdCamera = tdCamera;

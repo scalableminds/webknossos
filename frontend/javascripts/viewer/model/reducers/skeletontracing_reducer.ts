@@ -16,6 +16,7 @@ import {
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import {
+  applyUserStateToGroups,
   convertServerAdditionalAxesToFrontEnd,
   convertServerBoundingBoxToFrontend,
   convertUserBoundingBoxesFromServerToFrontend,
@@ -53,10 +54,12 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
     case "INITIALIZE_SKELETONTRACING": {
       const trees = createTreeMapFromTreeArray(action.tracing.trees);
       // todop: replace _.first to select the proper user
-      let activeNodeId = _.first(action.tracing.userStates)?.activeNodeId;
+      const userState = _.first(action.tracing.userStates);
+      let activeNodeId = userState?.activeNodeId;
+
+      const treeGroups = applyUserStateToGroups(action.tracing.treeGroups || [], userState);
 
       let cachedMaxNodeId = _.max(_.flatMap(trees, (__) => __.nodes.map((node) => node.id)));
-
       cachedMaxNodeId = cachedMaxNodeId != null ? cachedMaxNodeId : Constants.MIN_NODE_ID - 1;
 
       let activeTreeId = null;
@@ -103,7 +106,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
         activeTreeId,
         activeGroupId: null,
         trees,
-        treeGroups: action.tracing.treeGroups || [],
+        treeGroups,
         tracingId: action.tracing.id,
         boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
         userBoundingBoxes,

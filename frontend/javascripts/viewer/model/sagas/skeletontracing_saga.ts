@@ -68,6 +68,7 @@ import {
   updateTree,
   updateTreeEdgesVisibility,
   updateTreeGroups,
+  updateTreeGroupsExpandedState,
   updateTreeVisibility,
   updateUserBoundingBoxesInSkeletonTracing,
   updateUserStateInSkeletonTracing,
@@ -77,6 +78,7 @@ import type { Node, NodeMap, SkeletonTracing, Tree, TreeMap, WebknossosState } f
 import Store from "viewer/store";
 import { ensureWkReady } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
+import { diffGroups } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 
 function* centerActiveNode(action: Action): Saga<void> {
   if ("suppressCentering" in action && action.suppressCentering) {
@@ -601,8 +603,21 @@ export function* diffSkeletonTracing(
       yield action;
     }
 
-    if (prevSkeletonTracing.treeGroups !== skeletonTracing.treeGroups) {
+    const { didContentChange, newlyExpandedIds, newlyNotExpandedIds } = diffGroups(
+      prevSkeletonTracing.treeGroups,
+      skeletonTracing.treeGroups,
+    );
+
+    if (didContentChange) {
+      // The groups (without isExpanded) actually changed. Save them to the server.
       yield updateTreeGroups(skeletonTracing.treeGroups, skeletonTracing.tracingId);
+    }
+
+    if (newlyExpandedIds.length > 0) {
+      yield updateTreeGroupsExpandedState(newlyExpandedIds, true, skeletonTracing.tracingId);
+    }
+    if (newlyNotExpandedIds.length > 0) {
+      yield updateTreeGroupsExpandedState(newlyNotExpandedIds, false, skeletonTracing.tracingId);
     }
   }
 

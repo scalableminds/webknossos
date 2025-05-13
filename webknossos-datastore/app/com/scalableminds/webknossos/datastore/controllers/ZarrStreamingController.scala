@@ -276,7 +276,7 @@ class ZarrStreamingController @Inject()(
       _ <- Fox.fromBool(dataLayer.containsMag(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> NOT_FOUND
       cubeSize = DataLayer.bucketLength
       request = DataServiceDataRequest(
-        dataSource,
+        Some(dataSource.id),
         dataLayer,
         Cuboid(
           topLeft = VoxelPosition(x * cubeSize * magParsed.x,

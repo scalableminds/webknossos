@@ -1,6 +1,11 @@
-package com.scalableminds.webknossos.datastore.services
+package com.scalableminds.webknossos.datastore.services.mesh
 
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.webknossos.datastore.services.{
+  BinaryDataServiceHolder,
+  DSRemoteTracingstoreClient,
+  DSRemoteWebknossosClient
+}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
 import net.liftweb.common.Full

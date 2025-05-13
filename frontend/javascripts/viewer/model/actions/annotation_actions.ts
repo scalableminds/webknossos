@@ -6,7 +6,7 @@ import type {
   APIAnnotationVisibility,
   APIDataLayer,
   APIDataset,
-  APIMeshFile,
+  APIMeshFileInfo,
   APIUserCompact,
   EditableLayerProperties,
 } from "types/api_types";
@@ -245,7 +245,7 @@ export const maybeFetchMeshFilesAction = (
   dataset: APIDataset,
   mustRequest: boolean,
   autoActivate: boolean = true,
-  callback: (meshes: Array<APIMeshFile>) => void = _.noop,
+  callback: (meshes: Array<APIMeshFileInfo>) => void = _.noop,
 ) =>
   ({
     type: "MAYBE_FETCH_MESH_FILES",
@@ -302,7 +302,7 @@ export const finishedLoadingMeshAction = (layerName: string, segmentId: number) 
     segmentId,
   }) as const;
 
-export const updateMeshFileListAction = (layerName: string, meshFiles: Array<APIMeshFile>) =>
+export const updateMeshFileListAction = (layerName: string, meshFiles: Array<APIMeshFileInfo>) =>
   ({
     type: "UPDATE_MESH_FILE_LIST",
     layerName,
@@ -374,8 +374,8 @@ export const dispatchMaybeFetchMeshFilesAsync = async (
   dataset: APIDataset,
   mustRequest: boolean,
   autoActivate: boolean = true,
-): Promise<Array<APIMeshFile>> => {
-  const readyDeferred = new Deferred<APIMeshFile[], unknown>();
+): Promise<Array<APIMeshFileInfo>> => {
+  const readyDeferred = new Deferred<APIMeshFileInfo[], unknown>();
   const action = maybeFetchMeshFilesAction(
     segmentationLayer,
     dataset,

@@ -22,7 +22,7 @@ import { V4 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import type { APIMeshFile, APISegmentationLayer } from "types/api_types";
+import type { APIMeshFileInfo, APISegmentationLayer } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { Vector3, Vector4 } from "viewer/constants";
 import Constants from "viewer/constants";
@@ -69,7 +69,7 @@ export function ColoredDotIcon({ colorRGBA }: { colorRGBA: Vector4 }) {
 
 const getLoadPrecomputedMeshMenuItem = (
   segment: Segment,
-  currentMeshFile: APIMeshFile | null | undefined,
+  currentMeshFile: APIMeshFileInfo | null | undefined,
   loadPrecomputedMesh: (
     segmentId: number,
     seedPosition: Vector3,
@@ -105,7 +105,7 @@ const getLoadPrecomputedMeshMenuItem = (
             segment.id,
             segment.somePosition,
             segment.someAdditionalCoordinates,
-            currentMeshFile?.meshFileName,
+            currentMeshFile?.name,
           ),
         );
       },
@@ -228,7 +228,7 @@ type Props = {
   setAdditionalCoordinates: (
     additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   ) => void;
-  currentMeshFile: APIMeshFile | null | undefined;
+  currentMeshFile: APIMeshFileInfo | null | undefined;
   onRenameStart: () => void;
   onRenameEnd: () => void;
   getMultiSelectMenu: () => MenuProps;

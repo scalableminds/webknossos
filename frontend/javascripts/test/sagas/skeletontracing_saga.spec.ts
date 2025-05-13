@@ -81,6 +81,7 @@ const skeletonTracing: SkeletonTracing = {
 const serverSkeletonTracing: ServerSkeletonTracing = {
   ...skeletonTracing,
   id: skeletonTracing.tracingId,
+  activeNodeId: undefined,
   // editPosition: {
   //   x: 0,
   //   y: 0,

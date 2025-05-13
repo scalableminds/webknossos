@@ -1,6 +1,7 @@
 import update from "immutability-helper";
 import DiffableMap from "libs/diffable_map";
 import * as Utils from "libs/utils";
+import _ from "lodash";
 import type { AdditionalCoordinate, ServerVolumeTracing } from "types/api_types";
 import { ContourModeEnum } from "viewer/constants";
 import {
@@ -62,7 +63,6 @@ import {
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { mapGroups } from "../accessors/skeletontracing_accessor";
 import { sanitizeMetadata } from "./skeletontracing_reducer";
-import _ from "lodash";
 
 type SegmentUpdateInfo =
   | {

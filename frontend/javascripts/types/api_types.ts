@@ -928,8 +928,6 @@ export type ServerSkeletonTracing = ServerTracingBase & {
   treeGroups: Array<TreeGroup> | null | undefined;
   storedWithExternalTreeBodies?: boolean; // unused in frontend
   userStates: SkeletonUserState[];
-  // todop: Exists only for legacy purposes? Or remove altogether?
-  // activeNodeId?: number;
 };
 
 type VolumeUserState = {

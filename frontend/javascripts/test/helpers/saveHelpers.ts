@@ -28,7 +28,8 @@ export function withoutUpdateTracing(
     (item) =>
       item.name !== "updateSkeletonTracing" &&
       item.name !== "updateVolumeTracing" &&
-      item.name !== "updateUserStateInSkeletonTracing",
+      item.name !== "updateUserStateInSkeletonTracing" &&
+      item.name !== "updateUserStateInVolumeTracing",
   );
 }
 

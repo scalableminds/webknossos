@@ -1,6 +1,6 @@
 import org.apache.pekko.actor.{ActorSystem, Props}
-import cleanup.CleanUpService
 import com.scalableminds.util.time.Instant
+import com.scalableminds.webknossos.tracingstore.cleanup.CleanUpService
 import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService
 import files.WkTempFileService

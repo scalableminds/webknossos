@@ -131,7 +131,7 @@ uniform float alpha;
 uniform bool renderBucketIndices;
 uniform vec3 bboxMin;
 uniform vec3 bboxMax;
-uniform vec3 globalPosition;
+uniform vec3 positionOffset;
 uniform vec3 activeSegmentPosition;
 uniform float zoomValue;
 uniform bool useBilinearFiltering;

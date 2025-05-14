@@ -30,6 +30,7 @@ export const getWorldCoordUVW: ShaderModule = {
   code: `
     vec3 getWorldCoordUVW() {
       vec3 worldCoordUVW = transDim(worldCoord.xyz);
+      vec3 positionOffsetUVW = transDim(positionOffset);
 
       if (isFlightMode()) {
         vec4 modelCoords = inverseMatrix(savedModelMatrix) * worldCoord;
@@ -46,21 +47,10 @@ export const getWorldCoordUVW: ShaderModule = {
 
       vec3 voxelSizeFactorUVW = transDim(voxelSizeFactor);
 
-      worldCoordUVW = vec3(
-        // For u and w we need to divide by voxelSizeFactor because the threejs scene is scaled
-        worldCoordUVW.x / voxelSizeFactorUVW.x,
-        worldCoordUVW.y / voxelSizeFactorUVW.y,
+      // We need to divide by voxelSizeFactor because the threejs scene is scaled 
+      // and then subtract the potential offset of the plane
+      worldCoordUVW = (worldCoordUVW / voxelSizeFactorUVW) - positionOffsetUVW;
 
-        // In orthogonal mode, the planes are offset in 3D space to allow skeletons to be rendered before
-        // each plane. Since w (e.g., z for xy plane) is
-        // the same for all texels computed in this shader, we simply use globalPosition[w] instead
-        // TODOM
-        //<% if (isOrthogonal) { %>
-          getW(globalPosition)
-        //<% } else { %>
-          worldCoordUVW.z / voxelSizeFactorUVW.z
-        //<% } %>
-      );
 
       return worldCoordUVW;
     }

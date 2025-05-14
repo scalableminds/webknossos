@@ -327,7 +327,7 @@ export const getCrossHairOverlay: ShaderModule = {
         return vec4(0.0);
       }
 
-      vec3 flooredGlobalPosUVW = transDim(floor(globalPosition));
+      vec3 flooredGlobalPosUVW = transDim(floor(worldCoordUVW));
       vec3 activeSegmentPosUVW = transDim(activeSegmentPosition);
 
       // Compute the anisotropy of the dataset so that the cross hair looks the same in

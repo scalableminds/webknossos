@@ -158,7 +158,7 @@ class PlaneMaterialFactory {
       is3DViewBeingRendered: {
         value: true,
       },
-      globalPosition: {
+      positionOffset: {
         value: new THREE.Vector3(0, 0, 0),
       },
       zoomValue: {
@@ -447,9 +447,9 @@ class PlaneMaterialFactory {
     };
     shaderEditor.addMaterial(this.shaderId, this.material);
 
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setGlobalPosition' does not exist on typ... Remove this comment to see the full error message
-    this.material.setGlobalPosition = (x, y, z) => {
-      this.uniforms.globalPosition.value.set(x, y, z);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setPositionOffset' does not exist on typ... Remove this comment to see the full error message
+    this.material.setPositionOffset = (x, y, z) => {
+      this.uniforms.positionOffset.value.set(x, y, z);
     };
 
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'setUseBilinearFiltering' does not exist ... Remove this comment to see the full error message

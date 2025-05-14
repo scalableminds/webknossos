@@ -28,6 +28,8 @@ import Store from "viewer/store";
 // subdivision would probably be the next step.
 export const PLANE_SUBDIVISION = 100;
 
+const DEFAULT_POSITION_OFFSET = [0, 0, 0];
+
 class Plane {
   // This class is supposed to collect all the Geometries that belong to one single plane such as
   // the plane itself, its texture, borders and crosshairs.
@@ -172,18 +174,17 @@ class Plane {
 
   // In case the plane's position was offset to make geometries
   // on the plane visible (by moving the plane to the back), one can
-  // additionally pass the originalPosition (which is necessary for the
+  // additionally pass the offset of the position (which is necessary for the
   // shader)
-  setPosition = (pos: Vector3, originalPosition?: Vector3): void => {
+  setPosition = (pos: Vector3, positionOffset?: Vector3): void => {
     // TODOM: Write proper reasoning comment.
     const scaledPosition = V3.multiply(pos, this.datasetScaleFactor);
     this.TDViewBorders.position.set(...scaledPosition);
     this.crosshair[0].position.set(...scaledPosition);
     this.crosshair[1].position.set(...scaledPosition);
     this.plane.position.set(...scaledPosition);
-
-    const scaledOriginalPosition = V3.multiply(originalPosition || pos, this.datasetScaleFactor);
-    this.plane.material.setGlobalPosition(...scaledOriginalPosition);
+    // Pass current plane offset to shader to calculate the position of the actual data that should be displayed (not the offsetted one).
+    this.plane.material.setPositionOffset(...(positionOffset || DEFAULT_POSITION_OFFSET));
   };
 
   setVisible = (isVisible: boolean, isDataVisible?: boolean): void => {

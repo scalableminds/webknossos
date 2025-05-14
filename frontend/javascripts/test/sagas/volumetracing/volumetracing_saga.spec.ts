@@ -72,6 +72,8 @@ const serverVolumeTracing: ServerVolumeTracing = {
       userId: "todop: proper userid",
       segmentGroupIds: [],
       segmentGroupExpandedStates: [],
+      boundingBoxIds: [],
+      boundingBoxVisibilities: [],
     },
   ],
 };

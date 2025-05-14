@@ -909,6 +909,8 @@ export type ServerTracingBase = {
 export type SkeletonUserState = {
   userId: string;
   activeNodeId: number | null;
+  // ids and visibilities form the entries for a
+  // id->isVisible map
   boundingBoxIds: number[];
   boundingBoxVisibilities: [];
   // ids and states form the entries for a
@@ -916,7 +918,7 @@ export type SkeletonUserState = {
   treeGroupIds: [];
   treeGroupExpandedStates: [];
   // ids and visibilities form the entries for a
-  // id->isExpanded map
+  // id->isVisible map
   treeIds: number[];
   treeVisibilities: [];
 };
@@ -937,6 +939,10 @@ export type ServerSkeletonTracing = ServerTracingBase & {
 export type VolumeUserState = {
   userId: string;
   activeSegmentId?: number;
+  // ids and visibilities form the entries for a
+  // id->isVisible map
+  boundingBoxIds: number[];
+  boundingBoxVisibilities: [];
   // These two properties are the dictionary entries
   // for an id->expanded mapping.
   segmentGroupIds: number[];

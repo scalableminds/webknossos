@@ -247,10 +247,13 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
   // As the frontend doesn't know all cells, we have to keep track of the highest id
   // and cannot compute it
   const largestSegmentId = tracing.largestSegmentId;
-  const userBoundingBoxes = convertUserBoundingBoxesFromServerToFrontend(tracing.userBoundingBoxes);
   // todop: don't use _.first
   const userState = _.first(tracing.userStates);
 
+  const userBoundingBoxes = convertUserBoundingBoxesFromServerToFrontend(
+    tracing.userBoundingBoxes,
+    userState,
+  );
   const segmentGroups = applyUserStateToGroups(tracing.segmentGroups || [], userState);
 
   const volumeTracing = {

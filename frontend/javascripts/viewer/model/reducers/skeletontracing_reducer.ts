@@ -106,6 +106,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
 
       const userBoundingBoxes = convertUserBoundingBoxesFromServerToFrontend(
         action.tracing.userBoundingBoxes,
+        userState,
       );
       const skeletonTracing: SkeletonTracing = {
         createdTimestamp: action.tracing.createdTimestamp,

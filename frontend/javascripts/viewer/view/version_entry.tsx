@@ -52,6 +52,8 @@ import type {
   UpdateTreeGroupVisibilityUpdateAction,
   UpdateTreeUpdateAction,
   UpdateTreeVisibilityUpdateAction,
+  UpdateUserBoundingBoxVisibilityInSkeletonTracingUpdateAction,
+  UpdateUserBoundingBoxVisibilityInVolumeTracingUpdateAction,
   UpdateUserStateInSkeletonTracingUpdateAction,
   UpdateUserStateInVolumeTracingUpdateAction,
 } from "viewer/model/sagas/update_actions";
@@ -361,6 +363,22 @@ const descriptionFns: Record<
     return {
       description: `${action.value.areExpanded ? "Expanded" : "Collapsed"} some tree groups.`,
       icon: <EditOutlined />, // todop: better icon?
+    };
+  },
+  updateUserBoundingBoxVisibilityInSkeletonTracing: (
+    _action: UpdateUserBoundingBoxVisibilityInSkeletonTracingUpdateAction,
+  ): Description => {
+    return {
+      description: "Changed visibility of a bounding box.",
+      icon: <EyeOutlined />,
+    };
+  },
+  updateUserBoundingBoxVisibilityInVolumeTracing: (
+    _action: UpdateUserBoundingBoxVisibilityInVolumeTracingUpdateAction,
+  ): Description => {
+    return {
+      description: "Changed visibility of a bounding box.",
+      icon: <EyeOutlined />,
     };
   },
 } as const;

@@ -46,8 +46,14 @@ export type DeleteSegmentDataUpdateAction = ReturnType<typeof deleteSegmentDataV
 type UpdateUserBoundingBoxesInSkeletonTracingUpdateAction = ReturnType<
   typeof updateUserBoundingBoxesInSkeletonTracing
 >;
-type UpdateUserBoundingBoxesInVolumeTracingUpdateAction = ReturnType<
+export type UpdateUserBoundingBoxesInVolumeTracingUpdateAction = ReturnType<
   typeof updateUserBoundingBoxesInVolumeTracing
+>;
+export type UpdateUserBoundingBoxVisibilityInSkeletonTracingUpdateAction = ReturnType<
+  typeof updateUserBoundingBoxVisibilityInSkeletonTracing
+>;
+export type UpdateUserBoundingBoxVisibilityInVolumeTracingUpdateAction = ReturnType<
+  typeof updateUserBoundingBoxVisibilityInVolumeTracing
 >;
 export type UpdateBucketUpdateAction = ReturnType<typeof updateBucket>;
 export type UpdateSegmentGroupsUpdateAction = ReturnType<typeof updateSegmentGroups>;
@@ -100,6 +106,8 @@ export type UpdateActionWithoutIsolationRequirement =
   | UpdateLargestSegmentIdVolumeAction
   | UpdateUserBoundingBoxesInSkeletonTracingUpdateAction
   | UpdateUserBoundingBoxesInVolumeTracingUpdateAction
+  | UpdateUserBoundingBoxVisibilityInSkeletonTracingUpdateAction
+  | UpdateUserBoundingBoxVisibilityInVolumeTracingUpdateAction
   | CreateSegmentUpdateAction
   | UpdateSegmentUpdateAction
   | DeleteSegmentUpdateAction
@@ -442,6 +450,18 @@ export function updateUserBoundingBoxesInSkeletonTracing(
     },
   } as const;
 }
+
+export function updateUserBoundingBoxVisibilityInSkeletonTracing(
+  boundingBoxId: number,
+  isVisible: boolean,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateUserBoundingBoxVisibilityInSkeletonTracing",
+    value: { boundingBoxId, isVisible, actionTracingId },
+  } as const;
+}
+
 export function updateUserBoundingBoxesInVolumeTracing(
   userBoundingBoxes: Array<UserBoundingBox>,
   actionTracingId: string,
@@ -454,6 +474,18 @@ export function updateUserBoundingBoxesInVolumeTracing(
     },
   } as const;
 }
+
+export function updateUserBoundingBoxVisibilityInVolumeTracing(
+  boundingBoxId: number,
+  isVisible: boolean,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateUserBoundingBoxVisibilityInVolumeTracing",
+    value: { boundingBoxId, isVisible, actionTracingId },
+  } as const;
+}
+
 export function createSegmentVolumeAction(
   id: number,
   anchorPosition: Vector3 | null | undefined,

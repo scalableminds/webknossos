@@ -39,15 +39,22 @@ export function convertServerBoundingBoxToBoundingBox(
     ]),
   );
 }
+
 export function convertServerBoundingBoxToFrontend(
   boundingBox: ServerBoundingBox | null | undefined,
 ): BoundingBoxType | null | undefined {
   if (!boundingBox) return null;
   return convertServerBoundingBoxToBoundingBox(boundingBox);
 }
+
 export function convertUserBoundingBoxesFromServerToFrontend(
   boundingBoxes: Array<UserBoundingBoxFromServer>,
+  userState: SkeletonUserState | VolumeUserState | undefined,
 ): Array<UserBoundingBox> {
+  const idToVisible = userState
+    ? Object.fromEntries(_.zip(userState.boundingBoxIds, userState.boundingBoxVisibilities))
+    : {};
+
   return boundingBoxes.map((bb) => {
     const { color, id, name, isVisible, boundingBox } = bb;
     const convertedBoundingBox = convertServerBoundingBoxToBoundingBox(boundingBox);
@@ -56,10 +63,11 @@ export function convertUserBoundingBoxesFromServerToFrontend(
       color: color ? Utils.colorObjectToRGBArray(color) : Utils.getRandomColor(),
       id,
       name: name || `Bounding box ${id}`,
-      isVisible: isVisible != null ? isVisible : true,
+      isVisible: idToVisible[id] ?? isVisible ?? true,
     };
   });
 }
+
 export function convertUserBoundingBoxesFromFrontendToServer(
   boundingBoxes: Array<UserBoundingBox>,
 ): Array<UserBoundingBoxToServer> {
@@ -68,6 +76,7 @@ export function convertUserBoundingBoxesFromFrontendToServer(
     return { ...rest, boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(boundingBox) };
   });
 }
+
 export function convertFrontendBoundingBoxToServer(
   boundingBox: BoundingBoxType,
 ): BoundingBoxObject {
@@ -88,6 +97,7 @@ export function convertPointToVecInBoundingBox(boundingBox: ServerBoundingBox): 
     topLeft: Utils.point3ToVector3(boundingBox.topLeft),
   };
 }
+
 export function convertServerAnnotationToFrontendAnnotation(
   annotation: APIAnnotation,
   version: number,
@@ -165,6 +175,7 @@ export function getNextTool(state: WebknossosState): AnnotationTool | null {
 
   return null;
 }
+
 export function getPreviousTool(state: WebknossosState): AnnotationTool | null {
   const disabledToolInfo = getDisabledInfoForTools(state);
   const tools = Toolkits[state.userConfiguration.activeToolkit];
@@ -185,6 +196,7 @@ export function getPreviousTool(state: WebknossosState): AnnotationTool | null {
 
   return null;
 }
+
 export function setToolReducer(state: WebknossosState, tool: AnnotationTool) {
   if (tool === state.uiInformation.activeTool) {
     return state;

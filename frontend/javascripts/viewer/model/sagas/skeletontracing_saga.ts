@@ -70,13 +70,14 @@ import {
   updateTreeGroups,
   updateTreeGroupsExpandedState,
   updateTreeVisibility,
+  updateUserBoundingBoxVisibilityInSkeletonTracing,
   updateUserBoundingBoxesInSkeletonTracing,
   updateUserStateInSkeletonTracing,
 } from "viewer/model/sagas/update_actions";
 import { api } from "viewer/singletons";
 import type { Node, NodeMap, SkeletonTracing, Tree, TreeMap, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
-import { diffGroups } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import { diffGroups, diffUserBoundingBoxes } from "../helpers/diff_helpers";
 import { ensureWkReady } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
 
@@ -603,33 +604,51 @@ export function* diffSkeletonTracing(
       yield action;
     }
 
-    const { didContentChange, newlyExpandedIds, newlyNotExpandedIds } = diffGroups(
-      prevSkeletonTracing.treeGroups,
-      skeletonTracing.treeGroups,
-    );
+    const groupDiff = diffGroups(prevSkeletonTracing.treeGroups, skeletonTracing.treeGroups);
 
-    if (didContentChange) {
+    if (groupDiff.didContentChange) {
       // The groups (without isExpanded) actually changed. Save them to the server.
       yield updateTreeGroups(skeletonTracing.treeGroups, skeletonTracing.tracingId);
     }
 
-    if (newlyExpandedIds.length > 0) {
-      yield updateTreeGroupsExpandedState(newlyExpandedIds, true, skeletonTracing.tracingId);
+    if (groupDiff.newlyExpandedIds.length > 0) {
+      yield updateTreeGroupsExpandedState(
+        groupDiff.newlyExpandedIds,
+        true,
+        skeletonTracing.tracingId,
+      );
     }
-    if (newlyNotExpandedIds.length > 0) {
-      yield updateTreeGroupsExpandedState(newlyNotExpandedIds, false, skeletonTracing.tracingId);
+    if (groupDiff.newlyNotExpandedIds.length > 0) {
+      yield updateTreeGroupsExpandedState(
+        groupDiff.newlyNotExpandedIds,
+        false,
+        skeletonTracing.tracingId,
+      );
     }
-  }
 
-  if (prevSkeletonTracing.activeNodeId !== skeletonTracing.activeNodeId) {
-    yield updateUserStateInSkeletonTracing(skeletonTracing);
-  }
+    if (prevSkeletonTracing.activeNodeId !== skeletonTracing.activeNodeId) {
+      yield updateUserStateInSkeletonTracing(skeletonTracing);
+    }
 
-  if (!_.isEqual(prevSkeletonTracing.userBoundingBoxes, skeletonTracing.userBoundingBoxes)) {
-    yield updateUserBoundingBoxesInSkeletonTracing(
+    const boxDiff = diffUserBoundingBoxes(
+      prevSkeletonTracing.userBoundingBoxes,
       skeletonTracing.userBoundingBoxes,
-      skeletonTracing.tracingId,
     );
+
+    if (boxDiff.didContentChange) {
+      yield updateUserBoundingBoxesInSkeletonTracing(
+        skeletonTracing.userBoundingBoxes,
+        skeletonTracing.tracingId,
+      );
+    }
+
+    for (const id of boxDiff.newlyVisibleIds) {
+      yield updateUserBoundingBoxVisibilityInSkeletonTracing(id, true, skeletonTracing.tracingId);
+    }
+
+    for (const id of boxDiff.newlyInvisibleIds) {
+      yield updateUserBoundingBoxVisibilityInSkeletonTracing(id, false, skeletonTracing.tracingId);
+    }
   }
 }
 export default [

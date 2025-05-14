@@ -731,6 +731,7 @@ function AnnotationsCsvInput({
             const skeletonTracing = await getTracingForAnnotationType(annotation, skeletonLayer);
             userBoundingBoxes = convertUserBoundingBoxesFromServerToFrontend(
               skeletonTracing.userBoundingBoxes,
+              undefined,
             );
           } else {
             throw new Error(

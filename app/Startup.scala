@@ -3,7 +3,7 @@ import cleanup.CleanUpService
 import com.scalableminds.util.time.Instant
 import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService
-import files.TempFileService
+import files.WkTempFileService
 import mail.{Mailer, MailerConfig}
 import models.annotation.AnnotationDAO
 import models.dataset.ThumbnailCachingService
@@ -29,7 +29,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
                         annotationDAO: AnnotationDAO,
                         wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                         lifecycle: ApplicationLifecycle,
-                        tempFileService: TempFileService,
+                        tempFileService: WkTempFileService,
                         inviteService: InviteService,
                         thumbnailCachingService: ThumbnailCachingService,
                         sqlClient: SqlClient,

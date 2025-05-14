@@ -19,9 +19,12 @@ import scala.util.Random
   * Avoiding Java TemporaryFiles because of seeming openJDK regression,
   * see discussion at https://github.com/scalableminds/webknossos/issues/6173
   */
-class TempFileService @Inject()(cleanUpService: CleanUpService)(implicit ec: ExecutionContext) extends LazyLogging {
+trait TempFileService extends LazyLogging {
+  protected def cleanUpService: CleanUpService
+  implicit protected def ec: ExecutionContext
+  protected def prefix: String
 
-  private val tmpDir: Path = Paths.get(System.getProperty("java.io.tmpdir")).resolve("webknossosTempFiles")
+  private val tmpDir: Path = Paths.get(System.getProperty("java.io.tmpdir")).resolve(s"${prefix}TempFiles")
 
   private val activeTempFiles = scala.collection.mutable.Set[(Path, Instant)]()
 
@@ -33,7 +36,7 @@ class TempFileService @Inject()(cleanUpService: CleanUpService)(implicit ec: Exe
   def create(prefix: String = "tmpFile", lifeTime: FiniteDuration = 2 hours): Path = {
     ensureParent()
     val path = tmpDir.resolve(f"$prefix-${Random.alphanumeric.take(15).mkString("")}")
-    logger.info(f"Creating temp file at $path")
+    logger.debug(f"Creating temp file at $path")
     Files.createFile(path)
     activeTempFiles.add((path, Instant.now + lifeTime))
     path
@@ -54,4 +57,14 @@ class TempFileService @Inject()(cleanUpService: CleanUpService)(implicit ec: Exe
   def cleanUpAll(): Unit =
     FileUtils.deleteDirectory(tmpDir.toFile)
 
+}
+
+class WkTempFileService @Inject()(val cleanUpService: CleanUpService)(implicit val ec: ExecutionContext)
+    extends TempFileService {
+  override val prefix = "webknossos"
+}
+
+class TsTempFileService @Inject()(val cleanUpService: CleanUpService)(implicit val ec: ExecutionContext)
+    extends TempFileService {
+  override val prefix = "webknossosTracingStore"
 }

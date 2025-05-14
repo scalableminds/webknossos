@@ -25,7 +25,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   VolumeTracingMags
 }
 import com.typesafe.scalalogging.LazyLogging
-import files.TempFileService
+import files.WkTempFileService
 
 import javax.inject.Inject
 import net.liftweb.common.Empty
@@ -55,25 +55,25 @@ import java.util.zip.Deflater
 import scala.concurrent.ExecutionContext
 
 class AnnotationIOController @Inject()(
-    nmlWriter: NmlWriter,
-    annotationDAO: AnnotationDAO,
-    projectDAO: ProjectDAO,
-    datasetDAO: DatasetDAO,
-    organizationDAO: OrganizationDAO,
-    datasetService: DatasetService,
-    userService: UserService,
-    taskDAO: TaskDAO,
-    taskTypeDAO: TaskTypeDAO,
-    tracingStoreService: TracingStoreService,
-    tempFileService: TempFileService,
-    annotationService: AnnotationService,
-    analyticsService: AnalyticsService,
-    conf: WkConf,
-    rpc: RPC,
-    sil: Silhouette[WkEnv],
-    dataStoreDAO: DataStoreDAO,
-    provider: AnnotationInformationProvider,
-    annotationUploadService: AnnotationUploadService)(implicit ec: ExecutionContext, val materializer: Materializer)
+                                        nmlWriter: NmlWriter,
+                                        annotationDAO: AnnotationDAO,
+                                        projectDAO: ProjectDAO,
+                                        datasetDAO: DatasetDAO,
+                                        organizationDAO: OrganizationDAO,
+                                        datasetService: DatasetService,
+                                        userService: UserService,
+                                        taskDAO: TaskDAO,
+                                        taskTypeDAO: TaskTypeDAO,
+                                        tracingStoreService: TracingStoreService,
+                                        tempFileService: WkTempFileService,
+                                        annotationService: AnnotationService,
+                                        analyticsService: AnalyticsService,
+                                        conf: WkConf,
+                                        rpc: RPC,
+                                        sil: Silhouette[WkEnv],
+                                        dataStoreDAO: DataStoreDAO,
+                                        provider: AnnotationInformationProvider,
+                                        annotationUploadService: AnnotationUploadService)(implicit ec: ExecutionContext, val materializer: Materializer)
     extends Controller
     with FoxImplicits
     with ProtoGeometryImplicits

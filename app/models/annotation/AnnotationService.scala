@@ -29,7 +29,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   VolumeTracingMags
 }
 import com.typesafe.scalalogging.LazyLogging
-import files.TempFileService
+import files.WkTempFileService
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
 import models.annotation.handler.SavedTracingInformationHandler
@@ -67,30 +67,30 @@ case class DownloadAnnotation(skeletonTracingIdOpt: Option[String],
                               datasetId: ObjectId)
 
 class AnnotationService @Inject()(
-    annotationInformationProvider: AnnotationInformationProvider,
-    savedTracingInformationHandler: SavedTracingInformationHandler,
-    annotationDAO: AnnotationDAO,
-    annotationLayerDAO: AnnotationLayerDAO,
-    userDAO: UserDAO,
-    taskTypeDAO: TaskTypeDAO,
-    taskService: TaskService,
-    datasetService: DatasetService,
-    datasetDAO: DatasetDAO,
-    dataStoreService: DataStoreService,
-    tracingStoreService: TracingStoreService,
-    tracingStoreDAO: TracingStoreDAO,
-    taskDAO: TaskDAO,
-    teamDAO: TeamDAO,
-    userService: UserService,
-    teamService: TeamService,
-    dataStoreDAO: DataStoreDAO,
-    projectDAO: ProjectDAO,
-    organizationDAO: OrganizationDAO,
-    annotationRestrictionDefaults: AnnotationRestrictionDefaults,
-    nmlWriter: NmlWriter,
-    tempFileService: TempFileService,
-    conf: WkConf,
-    rpc: RPC
+                                   annotationInformationProvider: AnnotationInformationProvider,
+                                   savedTracingInformationHandler: SavedTracingInformationHandler,
+                                   annotationDAO: AnnotationDAO,
+                                   annotationLayerDAO: AnnotationLayerDAO,
+                                   userDAO: UserDAO,
+                                   taskTypeDAO: TaskTypeDAO,
+                                   taskService: TaskService,
+                                   datasetService: DatasetService,
+                                   datasetDAO: DatasetDAO,
+                                   dataStoreService: DataStoreService,
+                                   tracingStoreService: TracingStoreService,
+                                   tracingStoreDAO: TracingStoreDAO,
+                                   taskDAO: TaskDAO,
+                                   teamDAO: TeamDAO,
+                                   userService: UserService,
+                                   teamService: TeamService,
+                                   dataStoreDAO: DataStoreDAO,
+                                   projectDAO: ProjectDAO,
+                                   organizationDAO: OrganizationDAO,
+                                   annotationRestrictionDefaults: AnnotationRestrictionDefaults,
+                                   nmlWriter: NmlWriter,
+                                   tempFileService: WkTempFileService,
+                                   conf: WkConf,
+                                   rpc: RPC
 )(implicit ec: ExecutionContext, val materializer: Materializer)
     extends FoxImplicits
     with ProtoGeometryImplicits

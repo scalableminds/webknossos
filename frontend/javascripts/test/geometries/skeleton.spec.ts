@@ -2,18 +2,18 @@
 // Ensure singletons are set up
 import "test/helpers/apiHelpers";
 import _ from "lodash";
-import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import * as Utils from "libs/utils";
 import { describe, it, beforeAll, expect } from "vitest";
-import type { Vector3 } from "oxalis/constants";
-import type { WebknossosState } from "oxalis/store";
+import type { Vector3 } from "viewer/constants";
+import type { WebknossosState } from "viewer/store";
 import { tracing, annotation } from "../fixtures/skeletontracing_server_objects";
-import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reducers/reducer_helpers";
-import { batchedAnnotationInitializationAction } from "oxalis/model/actions/annotation_actions";
+import { convertServerAnnotationToFrontendAnnotation } from "viewer/model/reducers/reducer_helpers";
+import { batchedAnnotationInitializationAction } from "viewer/model/actions/annotation_actions";
 
-import { COLOR_TEXTURE_WIDTH, NodeTypes } from "oxalis/geometries/materials/node_shader";
-import Store from "oxalis/store";
-import Skeleton from "oxalis/geometries/skeleton";
+import { COLOR_TEXTURE_WIDTH, NodeTypes } from "viewer/geometries/materials/node_shader";
+import Store from "viewer/store";
+import Skeleton from "viewer/geometries/skeleton";
 import {
   createNodeAction,
   createTreeAction,
@@ -21,8 +21,8 @@ import {
   createBranchPointAction,
   setNodeRadiusAction,
   initializeSkeletonTracingAction,
-} from "oxalis/model/actions/skeletontracing_actions";
-import { initializeAnnotationAction } from "oxalis/model/actions/annotation_actions";
+} from "viewer/model/actions/skeletontracing_actions";
+import { initializeAnnotationAction } from "viewer/model/actions/annotation_actions";
 
 const skeletonCreator = () =>
   new Skeleton((state: WebknossosState) => enforceSkeletonTracing(state.annotation), true);

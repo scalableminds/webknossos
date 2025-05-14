@@ -1,18 +1,18 @@
 import { describe, expect, it } from "vitest";
-import type { WebknossosState } from "oxalis/store";
+import type { WebknossosState } from "viewer/store";
 import { createMockTask } from "@redux-saga/testing-utils";
 import { put, call } from "redux-saga/effects";
 import dummyUser from "test/fixtures/dummy_user";
-import defaultState from "oxalis/default_state";
+import defaultState from "viewer/default_state";
 import { expectValueDeepEqual } from "test/helpers/sagaHelpers";
 import {
   setAnnotationAllowUpdateAction,
   setBlockedByUserAction,
   setOthersMayEditForAnnotationAction,
-} from "oxalis/model/actions/annotation_actions";
-import { ensureWkReady } from "oxalis/model/sagas/ready_sagas";
-import { wkReadyAction } from "oxalis/model/actions/actions";
-import { acquireAnnotationMutexMaybe } from "oxalis/model/sagas/annotation_saga";
+} from "viewer/model/actions/annotation_actions";
+import { ensureWkReady } from "viewer/model/sagas/ready_sagas";
+import { wkReadyAction } from "viewer/model/actions/actions";
+import { acquireAnnotationMutexMaybe } from "viewer/model/sagas/annotation_saga";
 
 const createInitialState = (
   othersMayEdit: boolean,

@@ -22,21 +22,21 @@ import { useWkSelector } from "libs/react_hooks";
 import Shortcut from "libs/shortcut_component";
 import * as Utils from "libs/utils";
 import _ from "lodash";
-import { Unicode } from "oxalis/constants";
-import { getReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
-import CategorizationLabel from "oxalis/view/components/categorization_label";
-import EditableTextIcon from "oxalis/view/components/editable_text_icon";
-import {
-  ContextMenuContext,
-  GenericContextMenuContainer,
-  getContextMenuPositionFromEvent,
-} from "oxalis/view/context_menu";
 import * as React from "react";
 import { DndProvider, DragPreviewImage, useDrag } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { Link } from "react-router-dom";
 import type { APIDatasetCompact, APIMaybeUnimportedDataset, FolderItem } from "types/api_types";
 import type { EmptyObject } from "types/globals";
+import { Unicode } from "viewer/constants";
+import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
+import CategorizationLabel from "viewer/view/components/categorization_label";
+import EditableTextIcon from "viewer/view/components/editable_text_icon";
+import {
+  ContextMenuContext,
+  GenericContextMenuContainer,
+  getContextMenuPositionFromEvent,
+} from "viewer/view/context_menu";
 
 type FolderItemWithName = FolderItem & { name: string };
 export type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;

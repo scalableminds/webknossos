@@ -4,9 +4,9 @@ import dayjs from "dayjs";
 import { formatMilliseconds } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
 import _ from "lodash";
-import type { AnnotationStateFilterEnum, AnnotationTypeFilterEnum } from "oxalis/constants";
-import { AnnotationStats } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import type { APITimeTrackingPerAnnotation } from "types/api_types";
+import type { AnnotationStateFilterEnum, AnnotationTypeFilterEnum } from "viewer/constants";
+import { AnnotationStats } from "viewer/view/right-border-tabs/dataset_info_tab_view";
 
 type TimeTrackingDetailViewProps = {
   userId: string;

@@ -25,11 +25,11 @@ import TransferTaskModal from "dashboard/transfer_task_modal";
 import { formatSeconds } from "libs/format_utils";
 import Toast from "libs/toast";
 import messages from "messages";
-import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
-import type { WebknossosState } from "oxalis/store";
 import { useEffect, useState } from "react";
 import { connect } from "react-redux";
 import type { APIAnnotation, APITask, APIUser } from "types/api_types";
+import { getVolumeDescriptors } from "viewer/model/accessors/volumetracing_accessor";
+import type { WebknossosState } from "viewer/store";
 
 type OwnProps = {
   task: APITask;

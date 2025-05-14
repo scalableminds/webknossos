@@ -1,12 +1,12 @@
 import { createScript, getScript, getTeamManagerOrAdminUsers, updateScript } from "admin/rest_api";
 import { Button, Card, Form, Input, Select } from "antd";
-import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import type { WebknossosState } from "oxalis/store";
 import { useEffect, useState } from "react";
 import { connect } from "react-redux";
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import type { APIUser } from "types/api_types";
+import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
+import type { WebknossosState } from "viewer/store";
 
 const FormItem = Form.Item;
 type OwnProps = {

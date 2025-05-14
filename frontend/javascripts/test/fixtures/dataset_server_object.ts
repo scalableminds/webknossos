@@ -1,4 +1,4 @@
-import { UnitLong } from "oxalis/constants";
+import { UnitLong } from "viewer/constants";
 import type { APIDataset } from "types/api_types";
 
 const apiDataset: APIDataset = {

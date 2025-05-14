@@ -38,7 +38,6 @@ import {
 } from "libs/format_utils";
 import { useSearchParams, useUpdateEvery, useWkSelector } from "libs/react_hooks";
 import { notEmpty } from "libs/utils";
-import { LOG_LEVELS } from "oxalis/constants";
 import { Link, useHistory, useLocation, useParams } from "react-router-dom";
 import {
   VoxelyticsRunState,
@@ -49,6 +48,7 @@ import {
   type VoxelyticsWorkflowReport,
 } from "types/api_types";
 import type { ArrayElement } from "types/globals";
+import { LOG_LEVELS } from "viewer/constants";
 import ArtifactsDiskUsageList from "./artifacts_disk_usage_list";
 import DAGView, { colorHasher } from "./dag_view";
 import { formatLog } from "./log_tab";

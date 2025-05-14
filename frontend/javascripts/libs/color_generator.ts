@@ -1,6 +1,6 @@
 import _ from "lodash";
-import type { Vector3 } from "oxalis/constants";
-import { chunk3 } from "oxalis/model/helpers/chunk";
+import type { Vector3 } from "viewer/constants";
+import { chunk3 } from "viewer/model/helpers/chunk";
 
 const rawRgbs = [
   173, 36, 13, 0, 0, 255, 217, 133, 18, 0, 255, 193, 255, 214, 61, 20, 102, 125, 246, 18, 97, 246,

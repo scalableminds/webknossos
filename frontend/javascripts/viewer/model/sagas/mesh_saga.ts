@@ -28,7 +28,7 @@ import type { APIDataset, APIMeshFileInfo, APISegmentationLayer } from "types/ap
 import type { AdditionalCoordinate } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3, Vector4 } from "viewer/constants";
-import { MappingStatusEnum } from "viewer/constants";
+import Constants, { MappingStatusEnum } from "viewer/constants";
 import CustomLOD from "viewer/controller/custom_lod";
 import {
   type BufferGeometryWithInfo,
@@ -50,7 +50,6 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import {
-  type FinishedLoadingMeshAction,
   type MaybeFetchMeshFilesAction,
   type RefreshMeshAction,
   type RemoveMeshAction,
@@ -66,6 +65,7 @@ import {
   startedLoadingMeshAction,
   updateCurrentMeshFileAction,
   updateMeshFileListAction,
+  updateMeshOpacityAction,
   updateMeshVisibilityAction,
 } from "viewer/model/actions/annotation_actions";
 import { saveNowAction } from "viewer/model/actions/save_actions";
@@ -607,6 +607,7 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
   const meshInfo = yield* select((state) =>
     getMeshInfoForSegment(state, additionalCoordinates, layerName, segmentId),
   );
+  console.log("opacity", meshInfo?.opacity);
 
   if (meshInfo == null) {
     throw new Error(
@@ -622,6 +623,7 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
         meshInfo.seedPosition,
         meshInfo.seedAdditionalCoordinates,
         meshInfo.meshFileName,
+        meshInfo.opacity,
         layerName,
       ),
     );
@@ -746,7 +748,8 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
 }
 
 function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
-  const { segmentId, seedPosition, seedAdditionalCoordinates, meshFileName, layerName } = action;
+  const { segmentId, seedPosition, seedAdditionalCoordinates, meshFileName, layerName, opacity } =
+    action;
   const layer = yield* select((state) =>
     layerName != null
       ? getSegmentationLayerByName(state.dataset, layerName)
@@ -769,6 +772,7 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
       seedAdditionalCoordinates,
       meshFileName,
       layer,
+      opacity || Constants.DEFAULT_MESH_OPACITY,
     ),
     cancel: take(
       ((otherAction: Action) =>
@@ -787,6 +791,7 @@ function* loadPrecomputedMeshForSegmentId(
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
   segmentationLayer: APISegmentationLayer,
+  opacity: number,
 ): Saga<void> {
   const layerName = segmentationLayer.name;
   const mappingName = yield* call(getMappingName, segmentationLayer);
@@ -865,10 +870,14 @@ function* loadPrecomputedMeshForSegmentId(
       (lod: number) => extractScaleFromMatrix(lods[lod].transform),
       chunkScale,
       additionalCoordinates,
+      opacity,
     );
   }
 
   yield* put(finishedLoadingMeshAction(layerName, segmentId));
+  if (opacity != null) {
+    yield* put(updateMeshOpacityAction(layerName, segmentId, opacity));
+  }
 }
 
 function* getMappingName(segmentationLayer: APISegmentationLayer) {
@@ -973,6 +982,7 @@ function* loadPrecomputedMeshesInChunksForLod(
   getGlobalScale: (lod: number) => Vector3 | null,
   chunkScale: Vector3 | null,
   additionalCoordinates: AdditionalCoordinate[] | null,
+  opacity: number,
 ) {
   const { segmentMeshController } = getSceneController();
   const loader = getDracoLoader();
@@ -1048,6 +1058,7 @@ function* loadPrecomputedMeshesInChunksForLod(
               lod,
               layerName,
               additionalCoordinates,
+              opacity,
               false,
             );
 
@@ -1115,6 +1126,7 @@ function* loadPrecomputedMeshesInChunksForLod(
     lod,
     layerName,
     additionalCoordinates,
+    opacity,
     true,
   );
 }
@@ -1303,18 +1315,8 @@ function* handleSegmentColorChange(action: UpdateSegmentAction): Saga<void> {
   }
 }
 
-function* maybeSetMeshOpacity(action: FinishedLoadingMeshAction): Saga<void> {
-  const { segmentMeshController } = yield* call(getSceneController);
-  const { layerName, segmentId } = action;
-  const meshInfo = yield* select((state) =>
-    getMeshInfoForSegment(state, null, layerName, segmentId),
-  );
-  if (meshInfo == null) return;
-  segmentMeshController.setMeshOpacity(segmentId, layerName, meshInfo.opacity);
-  console.log(`Set opacity of mesh ${segmentId} in layer ${layerName} to ${meshInfo.opacity}.`);
-}
-
 function* handleMeshOpacityChange(action: UpdateMeshOpacityAction): Saga<void> {
+  console.log("handleMeshOpacityChange", action);
   const { segmentMeshController } = yield* call(getSceneController);
   segmentMeshController.setMeshOpacity(action.id, action.layerName, action.opacity);
 }
@@ -1356,5 +1358,4 @@ export default function* meshSaga(): Saga<void> {
   yield* takeEvery("UPDATE_SEGMENT", handleSegmentColorChange);
   yield* takeEvery("UPDATE_MESH_OPACITY", handleMeshOpacityChange);
   yield* takeEvery("BATCH_UPDATE_GROUPS_AND_SEGMENTS", handleBatchSegmentColorChange);
-  yield* takeEvery("FINISHED_LOADING_MESH", maybeSetMeshOpacity);
 }

@@ -111,6 +111,7 @@ export default class SegmentMeshController {
     segmentId: number,
     layerName: string,
     additionalCoordinates?: AdditionalCoordinate[] | undefined | null,
+    opacity: number = 1,
   ): Promise<void> {
     // Currently, this function is only used by ad hoc meshing.
     if (vertices.length === 0) return;
@@ -129,6 +130,7 @@ export default class SegmentMeshController {
       NO_LOD_MESH_INDEX,
       layerName,
       additionalCoordinates,
+      opacity,
       false,
     );
   }
@@ -137,6 +139,7 @@ export default class SegmentMeshController {
     segmentId: number,
     layerName: string,
     geometry: BufferGeometryWithInfo,
+    opacity: number,
     isMerged: boolean,
   ): MeshSceneNode {
     const color = this.getColorObjectForSegment(segmentId, layerName);
@@ -169,7 +172,7 @@ export default class SegmentMeshController {
     tweenAnimation
       .to(
         {
-          opacity: 1,
+          opacity,
         },
         100,
       )
@@ -189,6 +192,7 @@ export default class SegmentMeshController {
     lod: number,
     layerName: string,
     additionalCoordinates: AdditionalCoordinate[] | null | undefined,
+    opacity: number,
     isMerged: boolean,
   ): void {
     const additionalCoordinatesString = getAdditionalCoordinatesAsString(additionalCoordinates);
@@ -232,7 +236,7 @@ export default class SegmentMeshController {
       ];
       targetGroup.scale.copy(new THREE.Vector3(...adaptedScale));
     }
-    const meshChunk = this.constructMesh(segmentId, layerName, geometry, isMerged);
+    const meshChunk = this.constructMesh(segmentId, layerName, geometry, opacity, isMerged);
 
     const group = new THREE.Group() as SceneGroupForMeshes;
     group.add(meshChunk);

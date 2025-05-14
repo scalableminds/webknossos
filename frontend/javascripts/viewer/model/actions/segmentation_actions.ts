@@ -34,6 +34,7 @@ export const loadPrecomputedMeshAction = (
   seedPosition: Vector3,
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
+  opacity?: number,
   layerName?: string | undefined,
 ) =>
   ({
@@ -42,5 +43,6 @@ export const loadPrecomputedMeshAction = (
     seedPosition,
     seedAdditionalCoordinates,
     meshFileName,
+    opacity,
     layerName,
   }) as const;

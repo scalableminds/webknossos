@@ -25,7 +25,7 @@ trait TempFileService extends LazyLogging {
 
   private val activeTempFiles = scala.collection.mutable.Set[(Path, Instant)]()
 
-  cleanUpService.register(s"Clean up expired temporary files ($moduleName)", 1 hour)(cleanUpExpiredFiles())
+  cleanUpService.register(s"Deleting temporary files at $tmpDir", 1 hour)(cleanUpExpiredFiles())
 
   private def ensureParent(): Path =
     Files.createDirectories(tmpDir)

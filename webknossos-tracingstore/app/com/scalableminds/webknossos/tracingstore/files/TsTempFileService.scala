@@ -7,5 +7,5 @@ import scala.concurrent.ExecutionContext
 
 class TsTempFileService @Inject()(val cleanUpService: CleanUpService)(implicit val ec: ExecutionContext)
     extends TempFileService {
-  override val moduleName = "webknossos-tracingstore"
+  override def moduleName = "webknossos-tracingstore"
 }

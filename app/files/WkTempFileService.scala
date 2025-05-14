@@ -9,5 +9,5 @@ import scala.concurrent.ExecutionContext
 
 class WkTempFileService @Inject()(val cleanUpService: CleanUpService)(implicit val ec: ExecutionContext)
     extends TempFileService {
-  override val moduleName = "webknossos"
+  override def moduleName = "webknossos"
 }

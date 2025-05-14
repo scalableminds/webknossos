@@ -154,28 +154,6 @@ export const stlMeshConstants = {
 const segmentsTabId = "segment-list";
 
 type StateProps = ReturnType<typeof mapStateToProps>;
-// type StateProps = {
-//   meshes: Record<number, MeshInformation>;
-//   dataset: APIDataset;
-//   mappingInfo: ActiveMappingInfo;
-//   hasVolumeTracing: boolean | undefined;
-//   isSegmentIndexAvailable: boolean | undefined;
-//   segments: SegmentMap | null | undefined;
-//   segmentGroups: Array<SegmentGroup>;
-//   selectedIds: { segments: number[]; group: number | null };
-//   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
-//   activeVolumeTracing: VolumeTracing | null | undefined;
-//   allowUpdate: boolean;
-//   organization: string;
-//   datasetName: string;
-//   availableMeshFiles: Array<APIMeshFileInfo> | null | undefined;
-//   currentMeshFile: APIMeshFileInfo | null | undefined;
-//   activeUser: APIUser | null | undefined;
-//   activeCellId: number | null | undefined;
-//   preferredQualityForMeshPrecomputation: number;
-//   preferredQualityForMeshAdHocComputation: number;
-//   magInfoOfVisibleSegmentationLayer: MagInfo;
-// };
 
 const mapStateToProps = (state: WebknossosState) => {
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);

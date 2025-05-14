@@ -55,25 +55,25 @@ import java.util.zip.Deflater
 import scala.concurrent.ExecutionContext
 
 class AnnotationIOController @Inject()(
-                                        nmlWriter: NmlWriter,
-                                        annotationDAO: AnnotationDAO,
-                                        projectDAO: ProjectDAO,
-                                        datasetDAO: DatasetDAO,
-                                        organizationDAO: OrganizationDAO,
-                                        datasetService: DatasetService,
-                                        userService: UserService,
-                                        taskDAO: TaskDAO,
-                                        taskTypeDAO: TaskTypeDAO,
-                                        tracingStoreService: TracingStoreService,
-                                        tempFileService: WkTempFileService,
-                                        annotationService: AnnotationService,
-                                        analyticsService: AnalyticsService,
-                                        conf: WkConf,
-                                        rpc: RPC,
-                                        sil: Silhouette[WkEnv],
-                                        dataStoreDAO: DataStoreDAO,
-                                        provider: AnnotationInformationProvider,
-                                        annotationUploadService: AnnotationUploadService)(implicit ec: ExecutionContext, val materializer: Materializer)
+    nmlWriter: NmlWriter,
+    annotationDAO: AnnotationDAO,
+    projectDAO: ProjectDAO,
+    datasetDAO: DatasetDAO,
+    organizationDAO: OrganizationDAO,
+    datasetService: DatasetService,
+    userService: UserService,
+    taskDAO: TaskDAO,
+    taskTypeDAO: TaskTypeDAO,
+    tracingStoreService: TracingStoreService,
+    tempFileService: WkTempFileService,
+    annotationService: AnnotationService,
+    analyticsService: AnalyticsService,
+    conf: WkConf,
+    rpc: RPC,
+    sil: Silhouette[WkEnv],
+    dataStoreDAO: DataStoreDAO,
+    provider: AnnotationInformationProvider,
+    annotationUploadService: AnnotationUploadService)(implicit ec: ExecutionContext, val materializer: Materializer)
     extends Controller
     with FoxImplicits
     with ProtoGeometryImplicits
@@ -527,7 +527,7 @@ class AnnotationIOController @Inject()(
       organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> "organization.notFound" ~> NOT_FOUND
       temporaryFile <- annotationToTemporaryFile(dataset, annotation, name, organization._id) ?~> "annotation.writeTemporaryFile.failed"
     } yield {
-      Ok.sendFile(new File(temporaryFile.toString), inline = false)
+      Ok.sendPath(temporaryFile, inline = false)
         .as(mimeType)
         .withHeaders(CONTENT_DISPOSITION ->
           s"attachment;filename=${'"'}$fileName${'"'}")
@@ -547,8 +547,9 @@ class AnnotationIOController @Inject()(
                                                           skipVolumeData,
                                                           volumeDataZipFormatForCompoundAnnotations)
     } yield {
-      val file = new File(zipTempFilePath.toString)
-      Ok.sendFile(file, inline = false, fileName = _ => Some(TextUtils.normalize(project.name + "_nmls.zip")))
+      Ok.sendPath(zipTempFilePath,
+                  inline = false,
+                  fileName = _ => Some(TextUtils.normalize(project.name + "_nmls.zip")))
     }
 
   private def downloadTask(taskId: ObjectId, userOpt: Option[User], skipVolumeData: Boolean)(
@@ -567,8 +568,9 @@ class AnnotationIOController @Inject()(
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, project._team)) ?~> Messages("notAllowed") ~> FORBIDDEN
       zipTempFilePath <- createTaskZip(task)
     } yield {
-      val file = new File(zipTempFilePath.toString)
-      Ok.sendFile(file, inline = false, fileName = _ => Some(TextUtils.normalize(task._id.toString + "_nmls.zip")))
+      Ok.sendPath(zipTempFilePath,
+                  inline = false,
+                  fileName = _ => Some(TextUtils.normalize(task._id.toString + "_nmls.zip")))
     }
   }
 
@@ -592,8 +594,9 @@ class AnnotationIOController @Inject()(
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, taskType._team)) ?~> "notAllowed" ~> FORBIDDEN
       zipTempFilePath <- createTaskTypeZip(taskType)
     } yield {
-      val file = new File(zipTempFilePath.toString)
-      Ok.sendFile(file, inline = false, fileName = _ => Some(TextUtils.normalize(taskType.summary + "_nmls.zip")))
+      Ok.sendPath(zipTempFilePath,
+                  inline = false,
+                  fileName = _ => Some(TextUtils.normalize(taskType.summary + "_nmls.zip")))
     }
   }
 }

@@ -1,6 +1,6 @@
 import { UnitsMap } from "libs/format_utils";
 import type { VoxelSize } from "types/api_types";
-import { LongUnitToShortUnitMap, UnitShort, type Vector3 } from "viewer/constants";
+import { LongUnitToShortUnitMap, type UnitShort, type Vector3 } from "viewer/constants";
 
 export function getBaseVoxelInUnit(voxelSizeFactor: Vector3): number {
   // base voxel should be a cube with highest mag
@@ -50,10 +50,7 @@ export function voxelToUnit(voxelSize: VoxelSize, posArray: Vector3): Vector3 {
   return result;
 }
 
-export function convertVoxelSizeToUnit(
-  voxelSize: VoxelSize,
-  newUnit: UnitShort = UnitShort.nm,
-): Vector3 {
+export function convertVoxelSizeToUnit(voxelSize: VoxelSize, newUnit: UnitShort): Vector3 {
   const shortUnit = LongUnitToShortUnitMap[voxelSize.unit];
   const conversionFactor = UnitsMap[shortUnit] / UnitsMap[newUnit];
   const voxelSizeInNewUnit = voxelSize.factor.map((value) => value * conversionFactor) as Vector3;

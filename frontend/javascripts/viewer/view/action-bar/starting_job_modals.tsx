@@ -50,7 +50,7 @@ import _ from "lodash";
 import React, { useEffect, useState, useMemo } from "react";
 import { useDispatch } from "react-redux";
 import { type APIDataLayer, type APIJob, APIJobType, type VoxelSize } from "types/api_types";
-import { ControlModeEnum, Unicode, type Vector3, type Vector6 } from "viewer/constants";
+import { ControlModeEnum, Unicode, UnitShort, type Vector3, type Vector6 } from "viewer/constants";
 import {
   getColorLayers,
   getMagInfo,
@@ -728,6 +728,7 @@ function useCurrentlySelectedBoundingBox(
 
 // This function mirrors the selection of the mag
 // in voxelytics/worker/job_utils/voxelytics_utils.py select_mag_for_model_prediction
+// Make sure to keep it in sync
 const getBestFittingMagComparedToTrainingDS = (
   colorLayer: APIDataLayer,
   datasetScaleMag1: VoxelSize,
@@ -746,20 +747,20 @@ const getBestFittingMagComparedToTrainingDS = (
     Number.POSITIVE_INFINITY,
   ];
 
-  const datasetScaleInNm = convertVoxelSizeToUnit(datasetScaleMag1);
+  const datasetScaleInNm = convertVoxelSizeToUnit(datasetScaleMag1, UnitShort.nm);
 
   for (const mag of colorLayer.resolutions) {
-    const diff = datasetScaleInNm.map(
-      (dim, i) => Math.log2(dim * mag[i]) - Math.log2(modelScale[i]),
+    const diff = datasetScaleInNm.map((dim, i) =>
+      Math.abs(Math.log(dim * mag[i]) - Math.log(modelScale[i])),
     );
-    if (Math.abs(bestDifference[0]) > Math.abs(diff[0])) {
+    if (bestDifference[0] > diff[0]) {
       bestDifference = diff;
       closestMagOfCurrentDS = mag;
     }
   }
   const maxDistance = Math.max(...bestDifference);
-  const resultText = `Using mag [${closestMagOfCurrentDS}]. This results in an effective scale of [${datasetScaleInNm.map((scale, i) => Math.round(scale * closestMagOfCurrentDS[i]))}] (compared to scale [${modelScale.map((scale) => Math.round(scale))}] used during training).`;
-  if (maxDistance > Math.log2(2)) {
+  const resultText = `Using mag [${closestMagOfCurrentDS}]. This results in an effective voxel size of [${datasetScaleInNm.map((scale, i) => Math.round(scale * closestMagOfCurrentDS[i]))}] (compared to voxel size [${modelScale.map((scale) => Math.round(scale))}] used during training).`;
+  if (maxDistance > Math.log(2)) {
     Toast.warning(resultText);
   } else {
     Toast.info(resultText);

@@ -50,6 +50,7 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import {
+  type FinishedLoadingMeshAction,
   type MaybeFetchMeshFilesAction,
   type RefreshMeshAction,
   type RemoveMeshAction,
@@ -1302,6 +1303,17 @@ function* handleSegmentColorChange(action: UpdateSegmentAction): Saga<void> {
   }
 }
 
+function* maybeSetMeshOpacity(action: FinishedLoadingMeshAction): Saga<void> {
+  const { segmentMeshController } = yield* call(getSceneController);
+  const { layerName, segmentId } = action;
+  const meshInfo = yield* select((state) =>
+    getMeshInfoForSegment(state, null, layerName, segmentId),
+  );
+  if (meshInfo == null) return;
+  segmentMeshController.setMeshOpacity(segmentId, layerName, meshInfo.opacity);
+  console.log(`Set opacity of mesh ${segmentId} in layer ${layerName} to ${meshInfo.opacity}.`);
+}
+
 function* handleMeshOpacityChange(action: UpdateMeshOpacityAction): Saga<void> {
   const { segmentMeshController } = yield* call(getSceneController);
   segmentMeshController.setMeshOpacity(action.id, action.layerName, action.opacity);
@@ -1344,4 +1356,5 @@ export default function* meshSaga(): Saga<void> {
   yield* takeEvery("UPDATE_SEGMENT", handleSegmentColorChange);
   yield* takeEvery("UPDATE_MESH_OPACITY", handleMeshOpacityChange);
   yield* takeEvery("BATCH_UPDATE_GROUPS_AND_SEGMENTS", handleBatchSegmentColorChange);
+  yield* takeEvery("FINISHED_LOADING_MESH", maybeSetMeshOpacity);
 }

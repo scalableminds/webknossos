@@ -20,7 +20,7 @@ import messages from "messages";
 import TWEEN from "tween.js";
 import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_types";
 import type { AdditionalCoordinate } from "types/api_types";
-import { Writeable } from "types/globals";
+import type { Writeable } from "types/globals";
 import type {
   BoundingBoxType,
   BucketAddress,

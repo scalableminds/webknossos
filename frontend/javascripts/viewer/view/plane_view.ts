@@ -56,6 +56,7 @@ class PlaneView {
   running: boolean;
   needsRerender: boolean;
   unsubscribeFunctions: Array<() => void> = [];
+  isOrthoPlaneView = true;
 
   constructor() {
     this.running = false;

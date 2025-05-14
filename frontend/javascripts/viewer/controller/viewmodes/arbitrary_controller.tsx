@@ -297,7 +297,9 @@ class ArbitraryController extends React.PureComponent<Props> {
       return;
     }
     // implicit cast from boolean to int
-    Store.dispatch(setActiveNodeAction(activeNode.id + 2 * Number(nextOne) - 1));
+    Store.dispatch(
+      setActiveNodeAction(activeNode.id + 2 * Number(nextOne) - 1, false, false, false),
+    );
   }
 
   move(timeFactor: number): void {

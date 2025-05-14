@@ -19,6 +19,7 @@ type Props = StateProps;
 
 const AbstractTreeTab: React.FC<Props> = () => {
   const skeletonTracing = useWkSelector((state) => state.annotation.skeleton);
+  const viewMode = useWkSelector((state) => state.temporaryConfiguration.viewMode);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const nodeListRef = useRef<Array<NodeListItem>>([]);
@@ -58,17 +59,21 @@ const AbstractTreeTab: React.FC<Props> = () => {
     drawTree();
   }, [drawTree]);
 
-  const handleClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
-    const id = AbstractTreeRenderer.getIdFromPos(
-      event.nativeEvent.offsetX,
-      event.nativeEvent.offsetY,
-      nodeListRef.current,
-    );
+  const handleClick = useCallback(
+    (event: React.MouseEvent<HTMLCanvasElement>) => {
+      const id = AbstractTreeRenderer.getIdFromPos(
+        event.nativeEvent.offsetX,
+        event.nativeEvent.offsetY,
+        nodeListRef.current,
+      );
+      const suppressRotation = viewMode === "orthogonal";
 
-    if (id != null) {
-      dispatch(setActiveNodeAction(id));
-    }
-  };
+      if (id != null) {
+        dispatch(setActiveNodeAction(id, false, false, suppressRotation));
+      }
+    },
+    [dispatch, viewMode],
+  );
 
   const onClickShow = () => setIsVisible(true);
 

@@ -278,10 +278,20 @@ class TracingApi {
   /**
    * Sets the active node given a node id.
    */
-  setActiveNode(id: number) {
-    assertSkeleton(Store.getState().annotation);
+  setActiveNode(
+    id: number,
+    suppressAnimation?: boolean,
+    suppressCentering?: boolean,
+    suppressRotation?: boolean,
+  ) {
+    const { annotation, temporaryConfiguration } = Store.getState();
+    assertSkeleton(annotation);
     assertExists(id, "Node id is missing.");
-    Store.dispatch(setActiveNodeAction(id));
+    if (suppressRotation === undefined) {
+      // Per default disable setting rotation when orthogonal view is active.
+      suppressRotation = temporaryConfiguration.viewMode === "orthogonal";
+    }
+    Store.dispatch(setActiveNodeAction(id, suppressAnimation, suppressCentering, suppressRotation));
   }
 
   /**

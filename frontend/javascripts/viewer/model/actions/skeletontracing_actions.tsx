@@ -239,12 +239,14 @@ export const setActiveNodeAction = (
   nodeId: number,
   suppressAnimation: boolean = false,
   suppressCentering: boolean = false,
+  suppressRotation: boolean = true,
 ) =>
   ({
     type: "SET_ACTIVE_NODE",
     nodeId,
     suppressAnimation,
     suppressCentering,
+    suppressRotation,
   }) as const;
 
 export const centerActiveNodeAction = (suppressAnimation: boolean = false) =>

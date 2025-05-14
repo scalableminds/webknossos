@@ -107,6 +107,7 @@ function CommentTabView(props: Props) {
 
   const allowUpdate = useWkSelector((state) => state.annotation.restrictions.allowUpdate);
   const keyboardDelay = useWkSelector((state) => state.userConfiguration.keyboardDelay);
+  const viewMode = useWkSelector((state) => state.temporaryConfiguration.viewMode);
 
   const isAnnotationLockedByUser = useWkSelector((state) => state.annotation.isLockedByOwner);
   const isOwner = useWkSelector((state) => isAnnotationOwner(state));
@@ -217,7 +218,8 @@ function CommentTabView(props: Props) {
   previousCommentRef.current = previousComment;
 
   function setActiveNode(nodeId: number) {
-    dispatch(setActiveNodeAction(nodeId));
+    const suppressRotation = viewMode === "orthogonal";
+    dispatch(setActiveNodeAction(nodeId, false, false, suppressRotation));
   }
 
   function deleteComment() {

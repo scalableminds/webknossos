@@ -99,7 +99,8 @@ export function handleSelectNode(
 
   // otherwise we have hit the background and do nothing
   if (nodeId != null && nodeId > 0) {
-    Store.dispatch(setActiveNodeAction(nodeId));
+    const suppressRotation = "isOrthoPlaneView" in view && view.isOrthoPlaneView;
+    Store.dispatch(setActiveNodeAction(nodeId, false, false, suppressRotation));
     return true;
   }
 
@@ -478,7 +479,9 @@ function getPrecedingNodeFromTree(
 }
 
 export function toSubsequentNode(): void {
-  const tracing = enforceSkeletonTracing(Store.getState().annotation);
+  const { annotation, temporaryConfiguration } = Store.getState();
+  const suppressRotation = temporaryConfiguration.viewMode === "orthogonal";
+  const tracing = enforceSkeletonTracing(annotation);
   const { navigationList, activeNodeId, activeTreeId } = tracing;
   if (activeNodeId == null) return;
   const isValidList =
@@ -490,7 +493,14 @@ export function toSubsequentNode(): void {
     isValidList
   ) {
     // navigate to subsequent node in list
-    Store.dispatch(setActiveNodeAction(navigationList.list[navigationList.activeIndex + 1]));
+    Store.dispatch(
+      setActiveNodeAction(
+        navigationList.list[navigationList.activeIndex + 1],
+        false,
+        false,
+        suppressRotation,
+      ),
+    );
     Store.dispatch(updateNavigationListAction(navigationList.list, navigationList.activeIndex + 1));
   } else {
     // search for subsequent node in tree
@@ -505,14 +515,16 @@ export function toSubsequentNode(): void {
 
     if (nextNodeId !== activeNodeId) {
       newList.push(nextNodeId);
-      Store.dispatch(setActiveNodeAction(nextNodeId));
+      Store.dispatch(setActiveNodeAction(nextNodeId, false, false, suppressRotation));
     }
 
     Store.dispatch(updateNavigationListAction(newList, newList.length - 1));
   }
 }
 export function toPrecedingNode(): void {
-  const tracing = enforceSkeletonTracing(Store.getState().annotation);
+  const { annotation, temporaryConfiguration } = Store.getState();
+  const suppressRotation = temporaryConfiguration.viewMode === "orthogonal";
+  const tracing = enforceSkeletonTracing(annotation);
   const { navigationList, activeNodeId, activeTreeId } = tracing;
   if (activeNodeId == null) return;
   const isValidList =
@@ -520,7 +532,14 @@ export function toPrecedingNode(): void {
 
   if (navigationList.activeIndex > 0 && isValidList) {
     // navigate to preceding node in list
-    Store.dispatch(setActiveNodeAction(navigationList.list[navigationList.activeIndex - 1]));
+    Store.dispatch(
+      setActiveNodeAction(
+        navigationList.list[navigationList.activeIndex - 1],
+        false,
+        false,
+        suppressRotation,
+      ),
+    );
     Store.dispatch(updateNavigationListAction(navigationList.list, navigationList.activeIndex - 1));
   } else {
     // search for preceding node in tree
@@ -535,7 +554,7 @@ export function toPrecedingNode(): void {
 
     if (nextNodeId !== activeNodeId) {
       newList.unshift(nextNodeId);
-      Store.dispatch(setActiveNodeAction(nextNodeId));
+      Store.dispatch(setActiveNodeAction(nextNodeId, false, false, suppressRotation));
     }
 
     Store.dispatch(updateNavigationListAction(newList, 0));

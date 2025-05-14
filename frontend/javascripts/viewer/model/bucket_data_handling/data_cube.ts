@@ -11,6 +11,9 @@ import {
 } from "libs/utils";
 import _ from "lodash";
 import { type Emitter, createNanoEvents } from "nanoevents";
+import * as THREE from "three";
+import type { AdditionalAxis, BucketDataArray, ElementClass } from "types/api_types";
+import type { AdditionalCoordinate } from "types/api_types";
 import type {
   BoundingBoxType,
   BucketAddress,
@@ -39,9 +42,6 @@ import { globalPositionToBucketPosition } from "viewer/model/helpers/position_co
 import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "viewer/model/volumetracing/volumelayer";
 import type { Mapping } from "viewer/store";
 import Store from "viewer/store";
-import * as THREE from "three";
-import type { AdditionalAxis, BucketDataArray, ElementClass } from "types/api_types";
-import type { AdditionalCoordinate } from "types/api_types";
 import type { MagInfo } from "../helpers/mag_info";
 
 const warnAboutTooManyAllocations = _.once(() => {

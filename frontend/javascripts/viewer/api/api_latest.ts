@@ -1702,8 +1702,8 @@ class DataApi {
         mapping instanceof Map
           ? (new Map(mapping as Map<unknown, unknown>) as Mapping)
           : new Map(
-            Object.entries(mapping).map(([key, value]) => [Number.parseInt(key, 10), value]),
-          ),
+              Object.entries(mapping).map(([key, value]) => [Number.parseInt(key, 10), value]),
+            ),
       mappingColors,
       hideUnmappedIds,
       showLoadingIndicator,

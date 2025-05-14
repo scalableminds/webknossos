@@ -9,15 +9,10 @@
     "outDir": "build",
     "jsx": "react-jsx",
     "strict": true,
-    "target": "es2021",
-    "types": [], //reconsider this later
+    "target": "es2023",
     "skipLibCheck": true, //reconsider this later
     "allowSyntheticDefaultImports": true,
     "baseUrl": "./frontend/javascripts",
-    "lib": [
-      "ES2021",
-      "dom",
-    ],
     "paths": {
       "viewer/*": ["./viewer/*"],
       "libs/*": ["./libs/*"],

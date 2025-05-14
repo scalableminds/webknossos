@@ -1,10 +1,10 @@
 import { WarningOutlined } from "@ant-design/icons";
 import FastTooltip from "components/fast_tooltip";
-import type { APIMeshFile } from "types/api_types";
+import type { APIMeshFileInfo } from "types/api_types";
 import type { VolumeTracing } from "viewer/store";
 
 type Props = {
-  currentMeshFile: APIMeshFile | null | undefined;
+  currentMeshFile: APIMeshFileInfo | null | undefined;
   volumeTracing: VolumeTracing | null | undefined;
 };
 
@@ -21,7 +21,7 @@ export function LoadMeshMenuItemLabel({ currentMeshFile, volumeTracing }: Props)
       <FastTooltip
         title={
           currentMeshFile != null
-            ? `Load mesh for centered segment from file ${currentMeshFile.meshFileName}`
+            ? `Load mesh for centered segment from file ${currentMeshFile.name}`
             : "There is no mesh file."
         }
       >

@@ -2300,7 +2300,7 @@ class DataApi {
       true,
       false,
     );
-    return meshFiles.map((meshFile) => meshFile.meshFileName);
+    return meshFiles.map((meshFile) => meshFile.name);
   }
 
   /**
@@ -2318,7 +2318,7 @@ class DataApi {
     }
 
     const { currentMeshFile } = Store.getState().localSegmentationData[effectiveLayer.name];
-    return currentMeshFile != null ? currentMeshFile.meshFileName : null;
+    return currentMeshFile != null ? currentMeshFile.name : null;
   }
 
   /**
@@ -2351,7 +2351,7 @@ class DataApi {
     if (
       state.localSegmentationData[effectiveLayerName].availableMeshFiles == null ||
       !state.localSegmentationData[effectiveLayerName].availableMeshFiles.find(
-        (el) => el.meshFileName === meshFileName,
+        (el) => el.name === meshFileName,
       )
     ) {
       throw new Error(
@@ -2403,7 +2403,7 @@ class DataApi {
       throw new Error("No segmentation layer was found.");
     }
 
-    const { mappingName, meshFileName } = currentMeshFile;
+    const { mappingName, name: meshFileName } = currentMeshFile;
 
     if (mappingName != null) {
       const activeMapping = this.getActiveMapping(effectiveLayerName);

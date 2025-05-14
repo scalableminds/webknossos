@@ -37,7 +37,7 @@ type ToggleTreeAction = ReturnType<typeof toggleTreeAction>;
 type SetTreeVisibilityAction = ReturnType<typeof setTreeVisibilityAction>;
 type SetExpandedTreeGroupsByKeysAction = ReturnType<typeof setExpandedTreeGroupsByKeysAction>;
 type SetExpandedTreeGroupsByIdsAction = ReturnType<typeof setExpandedTreeGroupsByIdsAction>;
-type ExpandCorrespondingTreeGroupAction = ReturnType<typeof expandCorrespondingTreeGroupAction>;
+type ExpandParentGroupsOfTreeAction = ReturnType<typeof expandParentGroupsOfTreeAction>;
 type ToggleAllTreesAction = ReturnType<typeof toggleAllTreesAction>;
 type ToggleInactiveTreesAction = ReturnType<typeof toggleInactiveTreesAction>;
 type ToggleTreeGroupAction = ReturnType<typeof toggleTreeGroupAction>;
@@ -126,7 +126,7 @@ export type SkeletonTracingAction =
   | SetTreeVisibilityAction
   | SetExpandedTreeGroupsByKeysAction
   | SetExpandedTreeGroupsByIdsAction
-  | ExpandCorrespondingTreeGroupAction
+  | ExpandParentGroupsOfTreeAction
   | ToggleInactiveTreesAction
   | ToggleTreeGroupAction
   | NoAction
@@ -393,9 +393,9 @@ export const setExpandedTreeGroupsByIdsAction = (expandedGroups: Set<number>) =>
     expandedGroups,
   }) as const;
 
-export const expandCorrespondingTreeGroupAction = (tree: Tree) =>
+export const expandParentGroupsOfTreeAction = (tree: Tree) =>
   ({
-    type: "EXPAND_CORRESPONDING_TREE_GROUP",
+    type: "EXPAND_PARENT_GROUPS_OF_TREE",
     tree,
   }) as const;
 

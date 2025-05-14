@@ -110,7 +110,7 @@ import {
   deleteBranchpointByIdAction,
   deleteEdgeAction,
   deleteNodeAsUserAction,
-  expandCorrespondingTreeGroupAction,
+  expandParentGroupsOfTreeAction,
   mergeTreesAction,
   setActiveNodeAction,
   setTreeVisibilityAction,
@@ -624,7 +624,7 @@ function getNodeContextMenuOptions({
       ? {
           key: "focus-tree",
           onClick: () => {
-            Store.dispatch(expandCorrespondingTreeGroupAction(clickedTree));
+            Store.dispatch(expandParentGroupsOfTreeAction(clickedTree));
           },
           label: "Focus Tree in Skeleton Tab",
         }

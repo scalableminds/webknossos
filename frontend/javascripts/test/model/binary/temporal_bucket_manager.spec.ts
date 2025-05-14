@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
+import { DataBucket } from "viewer/model/bucket_data_handling/bucket";
+import TemporalBucketManager from "viewer/model/bucket_data_handling/temporal_bucket_manager";
 import runAsync from "test/helpers/run-async";
 
 // Mock dependencies
-vi.mock("oxalis/model/sagas/root_saga", () => {
+vi.mock("viewer/model/sagas/root_saga", () => {
   return {
     default: function* () {
       yield;

@@ -64,12 +64,12 @@ vi.mock("libs/error_handling", () => {
   };
 });
 
-vi.mock("oxalis/workers/lz4_wasm_wrapper.ts", async () => {
+vi.mock("viewer/workers/lz4_wasm_wrapper.ts", async () => {
   return await vi.importActual("lz4-wasm-nodejs");
 });
 
-vi.mock("oxalis/workers/byte_array_lz4_compression.worker", async () => {
-  return await vi.importActual("oxalis/workers/slow_byte_array_lz4_compression.worker");
+vi.mock("viewer/workers/byte_array_lz4_compression.worker", async () => {
+  return await vi.importActual("viewer/workers/slow_byte_array_lz4_compression.worker");
 });
 
 vi.mock("libs/progress_callback", () => {
@@ -104,7 +104,7 @@ vi.mock("VolumeTracing.proto", () => {
   return { default: proto.toJSON() };
 });
 
-vi.mock("oxalis/model/helpers/shader_editor.ts", () => ({
+vi.mock("viewer/model/helpers/shader_editor.ts", () => ({
   default: {
     addBucketManagers: vi.fn(),
     addMaterial: vi.fn(),

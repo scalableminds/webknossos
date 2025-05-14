@@ -5,10 +5,10 @@ import { Button, Checkbox, Col, Form, Input, Row } from "antd";
 import { useFetch } from "libs/react_helpers";
 import Request from "libs/request";
 import messages from "messages";
-import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
-import { setActiveUserAction } from "oxalis/model/actions/user_actions";
-import Store from "oxalis/throttled_store";
 import { memo, useRef } from "react";
+import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
+import { setActiveUserAction } from "viewer/model/actions/user_actions";
+import Store from "viewer/throttled_store";
 import { TOSCheckFormItem } from "./tos_check_form_item";
 
 const FormItem = Form.Item;

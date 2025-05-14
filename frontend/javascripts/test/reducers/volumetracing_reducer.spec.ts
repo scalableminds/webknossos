@@ -1,14 +1,14 @@
 import update from "immutability-helper";
-import type { Vector3 } from "oxalis/constants";
-import { AnnotationTool } from "oxalis/model/accessors/tool_accessor";
-import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
-import * as UiActions from "oxalis/model/actions/ui_actions";
-import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
-import UiReducer from "oxalis/model/reducers/ui_reducer";
+import type { Vector3 } from "viewer/constants";
+import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import * as VolumeTracingActions from "viewer/model/actions/volumetracing_actions";
+import * as UiActions from "viewer/model/actions/ui_actions";
+import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
+import UiReducer from "viewer/model/reducers/ui_reducer";
 import { describe, it, expect } from "vitest";
 import { initialState } from "test/fixtures/volumetracing_object";
-import type { WebknossosState, StoreAnnotation, VolumeTracing } from "oxalis/store";
-import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
+import type { WebknossosState, StoreAnnotation, VolumeTracing } from "viewer/store";
+import { getActiveMagIndexForLayer } from "viewer/model/accessors/flycam_accessor";
 
 // biome-ignore lint/suspicious/noExportsInTest:
 export function getFirstVolumeTracingOrFail(annotation: StoreAnnotation): VolumeTracing {

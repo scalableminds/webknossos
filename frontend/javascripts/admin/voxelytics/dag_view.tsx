@@ -13,13 +13,13 @@ import { Button } from "antd";
 import ColorHash from "color-hash";
 import { useWkSelector } from "libs/react_hooks";
 import { memoize } from "lodash";
-import type { Theme } from "oxalis/store";
 import {
   VoxelyticsRunState,
   type VoxelyticsTaskConfigWithName,
   type VoxelyticsWorkflowDag,
   type VoxelyticsWorkflowDagEdge,
 } from "types/api_types";
+import type { Theme } from "viewer/store";
 
 export const colorHasher = new ColorHash({ lightness: [0.35, 0.5, 0.65] });
 

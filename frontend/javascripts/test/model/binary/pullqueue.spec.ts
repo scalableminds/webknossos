@@ -1,19 +1,19 @@
 import _ from "lodash";
 import runAsync from "test/helpers/run-async";
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
-import { requestWithFallback } from "oxalis/model/bucket_data_handling/wkstore_adapter";
-import "oxalis/model";
-import { DataBucket, BucketStateEnum } from "oxalis/model/bucket_data_handling/bucket";
-import type { BucketAddress } from "oxalis/constants";
+import PullQueue from "viewer/model/bucket_data_handling/pullqueue";
+import { requestWithFallback } from "viewer/model/bucket_data_handling/wkstore_adapter";
+import "viewer/model";
+import { DataBucket, BucketStateEnum } from "viewer/model/bucket_data_handling/bucket";
+import type { BucketAddress } from "viewer/constants";
 
-vi.mock("oxalis/model/sagas/root_saga", function () {
+vi.mock("viewer/model/sagas/root_saga", function () {
   return function* () {
     yield;
   };
 });
 
-vi.mock("oxalis/model", function () {
+vi.mock("viewer/model", function () {
   return {
     reset: vi.fn(),
     getLayerRenderingManagerByName: () => ({
@@ -22,13 +22,13 @@ vi.mock("oxalis/model", function () {
   };
 });
 
-vi.mock("oxalis/model/bucket_data_handling/wkstore_adapter", function () {
+vi.mock("viewer/model/bucket_data_handling/wkstore_adapter", function () {
   return {
     requestWithFallback: vi.fn(),
   };
 });
 
-vi.mock("oxalis/store", function () {
+vi.mock("viewer/store", function () {
   return {
     default: {
       getState: () => ({

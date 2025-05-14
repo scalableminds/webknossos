@@ -5,13 +5,13 @@ import {
 } from "admin/organization/pricing_plan_utils";
 import { PageUnavailableForYourPlanView } from "components/pricing_enforcers";
 import { isUserAdminOrManager } from "libs/utils";
-import type { WebknossosState } from "oxalis/store";
 import React from "react";
 import type { ComponentType } from "react";
 import { connect } from "react-redux";
 import { Route, withRouter } from "react-router-dom";
 import type { RouteComponentProps } from "react-router-dom";
 import type { APIOrganization, APIUser } from "types/api_types";
+import type { WebknossosState } from "viewer/store";
 import { PageNotAvailableToNormalUser } from "./permission_enforcer";
 
 type StateProps = {

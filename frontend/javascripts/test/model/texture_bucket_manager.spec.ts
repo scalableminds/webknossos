@@ -1,9 +1,9 @@
 import "test/mocks/updatable_texture.mock";
 import { describe, it, expect, beforeEach } from "vitest";
-import type { Vector4 } from "oxalis/constants";
+import type { Vector4 } from "viewer/constants";
 import { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
-import TextureBucketManager from "oxalis/model/bucket_data_handling/texture_bucket_manager";
-import { DataBucket, NULL_BUCKET } from "oxalis/model/bucket_data_handling/bucket";
+import TextureBucketManager from "viewer/model/bucket_data_handling/texture_bucket_manager";
+import { DataBucket, NULL_BUCKET } from "viewer/model/bucket_data_handling/bucket";
 
 // Mock storage for texture data
 const textureMockDataStore = {

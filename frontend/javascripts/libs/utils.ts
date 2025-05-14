@@ -2,6 +2,8 @@ import dayjs from "dayjs";
 import naturalSort from "javascript-natural-sort";
 import window, { document, location } from "libs/window";
 import _ from "lodash";
+import type { APIDataset, APIUser } from "types/api_types";
+import type { ArbitraryObject, Comparator } from "types/globals";
 import type {
   BoundingBoxType,
   ColorObject,
@@ -10,10 +12,8 @@ import type {
   Vector3,
   Vector4,
   Vector6,
-} from "oxalis/constants";
-import type { BoundingBoxObject, NumberLike } from "oxalis/store";
-import type { APIDataset, APIUser } from "types/api_types";
-import type { ArbitraryObject, Comparator } from "types/globals";
+} from "viewer/constants";
+import type { BoundingBoxObject, NumberLike } from "viewer/store";
 
 type UrlParams = Record<string, string>;
 

@@ -11,6 +11,7 @@ import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import messages from "messages";
 import type { ActionPattern } from "redux-saga/effects";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
+import { AnnotationLayerEnum } from "types/api_types";
 import {
   getSupportedValueRangeOfLayer,
   isInSupportedValueRangeForLayer,
@@ -77,7 +78,6 @@ import {
 import type VolumeLayer from "viewer/model/volumetracing/volumelayer";
 import { Model, api } from "viewer/singletons";
 import type { Flycam, SegmentMap, VolumeTracing } from "viewer/store";
-import { AnnotationLayerEnum } from "types/api_types";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { ensureWkReady } from "./ready_sagas";
 import { diffBoundingBoxes } from "./skeletontracing_saga";

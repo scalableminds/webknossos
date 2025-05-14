@@ -21,6 +21,7 @@ import {
   takeEvery,
   throttle,
 } from "typed-redux-saga";
+import { AnnotationLayerEnum, type ServerSkeletonTracing } from "types/api_types";
 import { TreeTypeEnum } from "viewer/constants";
 import { getLayerByName } from "viewer/model/accessors/dataset_accessor";
 import { getPosition, getRotation } from "viewer/model/accessors/flycam_accessor";
@@ -92,7 +93,6 @@ import type {
   WebknossosState,
 } from "viewer/store";
 import Store from "viewer/store";
-import { AnnotationLayerEnum, type ServerSkeletonTracing } from "types/api_types";
 import { ensureWkReady } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
 

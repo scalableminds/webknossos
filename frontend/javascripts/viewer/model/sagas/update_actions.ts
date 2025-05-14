@@ -1,5 +1,5 @@
 import * as Utils from "libs/utils";
-import type { AdditionalCoordinate, APIMagRestrictions, MetadataEntryProto } from "types/api_types";
+import type { APIMagRestrictions, AdditionalCoordinate, MetadataEntryProto } from "types/api_types";
 import { EMPTY_OBJECT, type Vector3 } from "viewer/constants";
 import type { SendBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { convertUserBoundingBoxesFromFrontendToServer } from "viewer/model/reducers/reducer_helpers";

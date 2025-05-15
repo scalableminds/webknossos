@@ -52,30 +52,10 @@ const serverVolumeTracing: ServerVolumeTracing = {
   },
   segments: [],
   segmentGroups: [],
-  // zoomLevel: 0,
-  // editPosition: {
-  //   x: 0,
-  //   y: 0,
-  //   z: 0,
-  // },
-  // editPositionAdditionalCoordinates: null,
-  // editRotation: {
-  //   x: 0,
-  //   y: 0,
-  //   z: 0,
-  // },
   additionalAxes: [],
   userBoundingBoxes: [],
   largestSegmentId: 0,
-  userStates: [
-    {
-      userId: "todop: proper userid",
-      segmentGroupIds: [],
-      segmentGroupExpandedStates: [],
-      boundingBoxIds: [],
-      boundingBoxVisibilities: [],
-    },
-  ],
+  userStates: [],
 };
 
 const volumeTracing = serverVolumeToClientVolumeTracing(serverVolumeTracing, null, null);

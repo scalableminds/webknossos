@@ -82,24 +82,11 @@ const serverSkeletonTracing: ServerSkeletonTracing = {
   ...skeletonTracing,
   id: skeletonTracing.tracingId,
   activeNodeId: undefined,
-  // editPosition: {
-  //   x: 0,
-  //   y: 0,
-  //   z: 0,
-  // },
-  // editPositionAdditionalCoordinates: null,
-  // editRotation: {
-  //   x: 0,
-  //   y: 0,
-  //   z: 0,
-  // },
-  // zoomLevel: 2,
   additionalAxes: [],
   userBoundingBoxes: [],
   typ: "Skeleton",
   boundingBox: undefined,
   trees: [],
-  // todop: define a proper user state?
   userStates: [],
 };
 skeletonTracing.trees[1] = {

@@ -123,11 +123,11 @@ case class UpdateTracingVolumeAction(
     )
 }
 
-case class UpdateUserStateVolumeAction(activeSegmentId: Long,
-                                       actionTracingId: String,
-                                       actionTimestamp: Option[Long] = None,
-                                       actionAuthorId: Option[String] = None,
-                                       info: Option[String] = None)
+case class UpdateActiveSegmentIdVolumeAction(activeSegmentId: Long,
+                                             actionTracingId: String,
+                                             actionTimestamp: Option[Long] = None,
+                                             actionAuthorId: Option[String] = None,
+                                             info: Option[String] = None)
     extends UserStateVolumeUpdateAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
@@ -516,8 +516,8 @@ object UpdateBucketVolumeAction {
 object UpdateTracingVolumeAction {
   implicit val jsonFormat: OFormat[UpdateTracingVolumeAction] = Json.format[UpdateTracingVolumeAction]
 }
-object UpdateUserStateVolumeAction {
-  implicit val jsonFormat: OFormat[UpdateUserStateVolumeAction] = Json.format[UpdateUserStateVolumeAction]
+object UpdateActiveSegmentIdVolumeAction {
+  implicit val jsonFormat: OFormat[UpdateActiveSegmentIdVolumeAction] = Json.format[UpdateActiveSegmentIdVolumeAction]
 }
 object UpdateLargestSegmentIdVolumeAction {
   implicit val jsonFormat: OFormat[UpdateLargestSegmentIdVolumeAction] = Json.format[UpdateLargestSegmentIdVolumeAction]

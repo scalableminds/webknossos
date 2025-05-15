@@ -497,11 +497,11 @@ case class UpdateTracingSkeletonAction(activeNode: Option[Int],
   override def isViewOnlyChange: Boolean = true
 }
 
-case class UpdateUserStateSkeletonAction(activeNode: Option[Int],
-                                         actionTracingId: String,
-                                         actionTimestamp: Option[Long] = None,
-                                         actionAuthorId: Option[String] = None,
-                                         info: Option[String] = None)
+case class UpdateActiveNode(activeNode: Option[Int],
+                            actionTracingId: String,
+                            actionTimestamp: Option[Long] = None,
+                            actionAuthorId: Option[String] = None,
+                            info: Option[String] = None)
     extends UserStateSkeletonUpdateAction {
   override def applyOnUserState(tracing: SkeletonTracing,
                                 actionUserId: String,
@@ -510,12 +510,9 @@ case class UpdateUserStateSkeletonAction(activeNode: Option[Int],
 
   override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
-
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-
   override def addAuthorId(authorId: Option[String]): UpdateAction =
     this.copy(actionAuthorId = authorId)
-
   override def withActionTracingId(newTracingId: String): LayerUpdateAction =
     this.copy(actionTracingId = newTracingId)
 
@@ -743,8 +740,8 @@ object UpdateTreeGroupsSkeletonAction {
 object UpdateTracingSkeletonAction {
   implicit val jsonFormat: OFormat[UpdateTracingSkeletonAction] = Json.format[UpdateTracingSkeletonAction]
 }
-object UpdateUserStateSkeletonAction {
-  implicit val jsonFormat: OFormat[UpdateUserStateSkeletonAction] = Json.format[UpdateUserStateSkeletonAction]
+object UpdateActiveNode {
+  implicit val jsonFormat: OFormat[UpdateActiveNode] = Json.format[UpdateActiveNode]
 }
 object UpdateTreeVisibilitySkeletonAction {
   implicit val jsonFormat: OFormat[UpdateTreeVisibilitySkeletonAction] = Json.format[UpdateTreeVisibilitySkeletonAction]

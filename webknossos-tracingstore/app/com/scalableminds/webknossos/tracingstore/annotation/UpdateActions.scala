@@ -59,7 +59,7 @@ object UpdateAction {
             deserialize[UpdateUserBoundingBoxesSkeletonAction](jsonValue)
           case "updateUserBoundingBoxVisibilityInSkeletonTracing" =>
             deserialize[UpdateUserBoundingBoxVisibilitySkeletonAction](jsonValue)
-          case "updateUserStateInSkeletonTracing" => deserialize[UpdateUserStateSkeletonAction](jsonValue)
+          case "updateActiveNode" => deserialize[UpdateActiveNode](jsonValue)
 
           // Volume
           case "updateBucket"           => deserialize[UpdateBucketVolumeAction](jsonValue)
@@ -76,11 +76,11 @@ object UpdateAction {
           case "updateSegmentGroups" => deserialize[UpdateSegmentGroupsVolumeAction](jsonValue)
           case "updateSegmentGroupsExpandedState" =>
             deserialize[UpdateSegmentGroupsExpandedStateVolumeAction](jsonValue)
-          case "deleteSegment"                  => deserialize[DeleteSegmentVolumeAction](jsonValue)
-          case "deleteSegmentData"              => deserialize[DeleteSegmentDataVolumeAction](jsonValue)
-          case "updateMappingName"              => deserialize[UpdateMappingNameVolumeAction](jsonValue)
-          case "addSegmentIndex"                => deserialize[AddSegmentIndexVolumeAction](jsonValue)
-          case "updateUserStateInVolumeTracing" => deserialize[UpdateUserStateVolumeAction](jsonValue)
+          case "deleteSegment"         => deserialize[DeleteSegmentVolumeAction](jsonValue)
+          case "deleteSegmentData"     => deserialize[DeleteSegmentDataVolumeAction](jsonValue)
+          case "updateMappingName"     => deserialize[UpdateMappingNameVolumeAction](jsonValue)
+          case "addSegmentIndex"       => deserialize[AddSegmentIndexVolumeAction](jsonValue)
+          case "updateActiveSegmentId" => deserialize[UpdateActiveSegmentIdVolumeAction](jsonValue)
 
           // Editable Mapping
           case "mergeAgglomerate" => deserialize[MergeAgglomerateUpdateAction](jsonValue)
@@ -140,9 +140,8 @@ object UpdateAction {
                  "value" -> Json.toJson(s)(UpdateTreeGroupsExpandedStateSkeletonAction.jsonFormat))
       case s: UpdateTracingSkeletonAction =>
         Json.obj("name" -> "updateSkeletonTracing", "value" -> Json.toJson(s)(UpdateTracingSkeletonAction.jsonFormat))
-      case s: UpdateUserStateSkeletonAction =>
-        Json.obj("name" -> "updateUserStateInSkeletonTracing",
-                 "value" -> Json.toJson(s)(UpdateUserStateSkeletonAction.jsonFormat))
+      case s: UpdateActiveNode =>
+        Json.obj("name" -> "updateActiveNode", "value" -> Json.toJson(s)(UpdateActiveNode.jsonFormat))
       case s: UpdateTreeVisibilitySkeletonAction =>
         Json.obj("name" -> "updateTreeVisibility",
                  "value" -> Json.toJson(s)(UpdateTreeVisibilitySkeletonAction.jsonFormat))
@@ -167,9 +166,9 @@ object UpdateAction {
       case s: UpdateLargestSegmentIdVolumeAction =>
         Json.obj("name" -> "updateLargestSegmentId",
                  "value" -> Json.toJson(s)(UpdateLargestSegmentIdVolumeAction.jsonFormat))
-      case s: UpdateUserStateVolumeAction =>
-        Json.obj("name" -> "updateUserStateInVolumeTracing",
-                 "value" -> Json.toJson(s)(UpdateUserStateVolumeAction.jsonFormat))
+      case s: UpdateActiveSegmentIdVolumeAction =>
+        Json.obj("name" -> "updateActiveSegmentId",
+                 "value" -> Json.toJson(s)(UpdateActiveSegmentIdVolumeAction.jsonFormat))
       case s: UpdateUserBoundingBoxesVolumeAction =>
         Json.obj("name" -> "updateUserBoundingBoxesInVolumeTracing",
                  "value" -> Json.toJson(s)(UpdateUserBoundingBoxesVolumeAction.jsonFormat))

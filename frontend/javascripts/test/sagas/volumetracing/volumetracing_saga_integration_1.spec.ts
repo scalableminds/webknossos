@@ -13,7 +13,7 @@ import {
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
-import { restartSagaAction, wkReadyAction } from "viewer/model/actions/actions";
+import { resetStoreAction, restartSagaAction, wkReadyAction } from "viewer/model/actions/actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import Store from "viewer/store";
 import dummyUser from "test/fixtures/dummy_user";
@@ -32,11 +32,7 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  dispatchUndoAsync,
-  dispatchRedoAsync,
-  discardSaveQueuesAction,
-} from "viewer/model/actions/save_actions";
+import { dispatchUndoAsync, dispatchRedoAsync } from "viewer/model/actions/save_actions";
 import { setPositionAction, setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { setToolAction } from "viewer/model/actions/ui_actions";
 
@@ -45,7 +41,7 @@ describe("Volume Tracing", () => {
     // Setup Webknossos
     // this will execute model.fetch(...) and initialize the store with the tracing, etc.
     Store.dispatch(restartSagaAction());
-    Store.dispatch(discardSaveQueuesAction());
+    Store.dispatch(resetStoreAction());
     Store.dispatch(setActiveUserAction(dummyUser));
 
     await setupWebknossosForTesting(context, "volume");

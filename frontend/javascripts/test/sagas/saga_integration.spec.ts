@@ -59,10 +59,7 @@ describe("Saga Integration Tests", () => {
       },
     });
     const expectedSaveQueue = createSaveQueueFromUpdateActions(
-      [
-        [UpdateActions.updateCameraAnnotation([1, 2, 3], [], [0, 0, 0], 2)],
-        [UpdateActions.updateTree(treeWithCorrectName, skeletonTracing.tracingId)],
-      ],
+      [[UpdateActions.updateTree(treeWithCorrectName, skeletonTracing.tracingId)]],
       TIMESTAMP,
       getStats(state.annotation) || undefined,
     );

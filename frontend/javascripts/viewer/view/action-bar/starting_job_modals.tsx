@@ -49,9 +49,13 @@ import {
 import _ from "lodash";
 import React, { useEffect, useState, useMemo } from "react";
 import { useDispatch } from "react-redux";
-import { type APIDataLayer, type APIJob, APIJobType } from "types/api_types";
-import { ControlModeEnum, Unicode, type Vector3 } from "viewer/constants";
-import { getColorLayers, getSegmentationLayers } from "viewer/model/accessors/dataset_accessor";
+import { type APIDataLayer, type APIJob, APIJobType, type VoxelSize } from "types/api_types";
+import { ControlModeEnum, Unicode, UnitShort, type Vector3, type Vector6 } from "viewer/constants";
+import {
+  getColorLayers,
+  getMagInfo,
+  getSegmentationLayers,
+} from "viewer/model/accessors/dataset_accessor";
 import { getUserBoundingBoxesFromState } from "viewer/model/accessors/tracing_accessor";
 import {
   getActiveSegmentationTracingLayer,
@@ -64,6 +68,7 @@ import {
 import { setAIJobModalStateAction } from "viewer/model/actions/ui_actions";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type { MagInfo } from "viewer/model/helpers/mag_info";
+import { convertVoxelSizeToUnit } from "viewer/model/scaleinfo";
 import { Model, Store } from "viewer/singletons";
 import type { UserBoundingBox } from "viewer/store";
 import { getBaseSegmentationName } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
@@ -76,11 +81,37 @@ import { isBoundingBoxExportable } from "./download_modal_view";
 
 const { ThinSpace } = Unicode;
 
-export type StartAIJobModalState =
+// The following minimal bounding box extents and mean voxel sizes are based on the default model that is used for neuron and mitochondria segmentation.
+// Thus when changing the default model, consider changing these values as well.
+// See https://github.com/scalableminds/webknossos/issues/8198#issuecomment-2782684436
+const MIN_BBOX_EXTENT: Record<ModalJobTypes, Vector3> = {
+  infer_neurons: [16, 16, 4],
+  infer_nuclei: [4, 4, 4],
+  infer_mitochondria: [4, 4, 4],
+};
+
+const MEAN_VX_SIZE: Record<APIJobType.INFER_NEURONS | APIJobType.INFER_NUCLEI, Vector3> = {
+  infer_neurons: [7.96, 7.96, 31.2],
+  infer_nuclei: [179.84, 179.84, 224.0],
+  // "infer_mitochondria" infers on finest available mag
+};
+
+const getMinimumDSSize = (jobType: ModalJobTypes) => {
+  switch (jobType) {
+    case APIJobType.INFER_NEURONS:
+    case APIJobType.INFER_NUCLEI:
+      return MIN_BBOX_EXTENT[jobType].map((dim) => dim * 2);
+    case APIJobType.INFER_MITOCHONDRIA:
+      return MIN_BBOX_EXTENT[jobType].map((dim) => dim + 80);
+  }
+};
+
+type ModalJobTypes =
   | APIJobType.INFER_NEURONS
   | APIJobType.INFER_NUCLEI
-  | APIJobType.INFER_MITOCHONDRIA
-  | "invisible";
+  | APIJobType.INFER_MITOCHONDRIA;
+
+export type StartAIJobModalState = ModalJobTypes | "invisible";
 
 // "materialize_volume_annotation" is only used in this module
 const jobNameToImagePath = {
@@ -695,6 +726,93 @@ function useCurrentlySelectedBoundingBox(
   return currentlySelectedBoundingBox;
 }
 
+// This function mirrors the selection of the mag
+// in voxelytics/worker/job_utils/voxelytics_utils.py select_mag_for_model_prediction
+// Make sure to keep it in sync
+const getBestFittingMagComparedToTrainingDS = (
+  colorLayer: APIDataLayer,
+  datasetScaleMag1: VoxelSize,
+  jobType: APIJobType.INFER_MITOCHONDRIA | APIJobType.INFER_NEURONS | APIJobType.INFER_NUCLEI,
+) => {
+  if (jobType === APIJobType.INFER_MITOCHONDRIA) {
+    // infer_mitochondria_model always infers on the finest mag of the current dataset
+    const magInfo = getMagInfo(colorLayer.resolutions);
+    return magInfo.getFinestMag();
+  }
+  const modelScale = MEAN_VX_SIZE[jobType];
+  let closestMagOfCurrentDS = colorLayer.resolutions[0];
+  let bestDifference = [
+    Number.POSITIVE_INFINITY,
+    Number.POSITIVE_INFINITY,
+    Number.POSITIVE_INFINITY,
+  ];
+
+  const datasetScaleInNm = convertVoxelSizeToUnit(datasetScaleMag1, UnitShort.nm);
+
+  for (const mag of colorLayer.resolutions) {
+    const diff = datasetScaleInNm.map((dim, i) =>
+      Math.abs(Math.log(dim * mag[i]) - Math.log(modelScale[i])),
+    );
+    if (bestDifference[0] > diff[0]) {
+      bestDifference = diff;
+      closestMagOfCurrentDS = mag;
+    }
+  }
+  const maxDistance = Math.max(...bestDifference);
+  const resultText = `Using mag [${closestMagOfCurrentDS}]. This results in an effective voxel size of [${datasetScaleInNm.map((scale, i) => Math.round(scale * closestMagOfCurrentDS[i]))}] (compared to voxel size [${modelScale.map((scale) => Math.round(scale))}] used during training).`;
+  if (maxDistance > Math.log(2)) {
+    Toast.warning(resultText);
+  } else {
+    Toast.info(resultText);
+    console.info(resultText);
+  }
+  return closestMagOfCurrentDS;
+};
+
+const isBBoxTooSmall = (
+  bbox: Vector3,
+  segmentationType: ModalJobTypes,
+  mag: Vector3,
+  bboxOrDS: "bbox" | "dataset" = "bbox",
+) => {
+  const minBBoxExtentInModelMag =
+    bboxOrDS === "dataset" ? getMinimumDSSize(segmentationType) : MIN_BBOX_EXTENT[segmentationType];
+  const minExtentInMag1 = minBBoxExtentInModelMag.map((extent, i) =>
+    Math.round(extent * mag[i]),
+  ) as Vector3;
+  for (let i = 0; i < 3; i++) {
+    if (bbox[i] < minExtentInMag1[i]) {
+      const boundingBoxOrDSMessage = bboxOrDS === "bbox" ? "bounding box" : "dataset";
+      Toast.error(
+        `The ${boundingBoxOrDSMessage} is too small. Please select a ${boundingBoxOrDSMessage} with the minimal extent ${minExtentInMag1} vx.`,
+      );
+      return true;
+    }
+  }
+  return false;
+};
+
+const isDatasetOrBoundingBoxTooSmall = (
+  bbox: Vector6,
+  mag: Vector3,
+  colorLayer: APIDataLayer,
+  segmentationType: ModalJobTypes,
+): boolean => {
+  const datasetExtent: Vector3 = [
+    colorLayer.boundingBox.width,
+    colorLayer.boundingBox.height,
+    colorLayer.boundingBox.depth,
+  ];
+  if (isBBoxTooSmall(datasetExtent, segmentationType, mag, "dataset")) {
+    return true;
+  }
+  const bboxExtent = bbox.slice(3) as Vector3;
+  if (isBBoxTooSmall(bboxExtent, segmentationType, mag)) {
+    return true;
+  }
+  return false;
+};
+
 function StartJobForm(props: StartJobFormProps) {
   const isBoundingBoxConfigurable = props.isBoundingBoxConfigurable || false;
   const isSkeletonSelectable = props.isSkeletonSelectable || false;
@@ -897,9 +1015,21 @@ export function NucleiDetectionForm() {
       jobName={APIJobType.INFER_NUCLEI}
       title="AI Nuclei Segmentation"
       suggestedDatasetSuffix="with_nuclei"
-      jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer }) =>
-        startNucleiInferralJob(dataset.id, colorLayer.name, newDatasetName)
-      }
+      jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer, selectedBoundingBox }) => {
+        if (!selectedBoundingBox) {
+          return;
+        }
+        const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
+        const mag = getBestFittingMagComparedToTrainingDS(
+          colorLayer,
+          dataset.dataSource.scale,
+          APIJobType.INFER_NUCLEI,
+        );
+        if (isDatasetOrBoundingBoxTooSmall(bbox, mag, colorLayer, APIJobType.INFER_NUCLEI)) {
+          return;
+        }
+        startNucleiInferralJob(dataset.id, colorLayer.name, newDatasetName);
+      }}
       description={
         <>
           <p>
@@ -920,6 +1050,7 @@ export function NucleiDetectionForm() {
     />
   );
 }
+
 export function NeuronSegmentationForm() {
   const dataset = useWkSelector((state) => state.dataset);
   const { neuronInferralCostPerGVx } = features();
@@ -950,6 +1081,15 @@ export function NeuronSegmentationForm() {
         }
 
         const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
+        const mag = getBestFittingMagComparedToTrainingDS(
+          colorLayer,
+          dataset.dataSource.scale,
+          APIJobType.INFER_NEURONS,
+        );
+        if (isDatasetOrBoundingBoxTooSmall(bbox, mag, colorLayer, APIJobType.INFER_NEURONS)) {
+          return;
+        }
+
         if (!doSplitMergerEvaluation) {
           return startNeuronInferralJob(
             dataset.id,
@@ -1014,8 +1154,15 @@ export function MitochondriaSegmentationForm() {
         if (!selectedBoundingBox) {
           return;
         }
-
         const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
+        const mag = getBestFittingMagComparedToTrainingDS(
+          colorLayer,
+          dataset.dataSource.scale,
+          APIJobType.INFER_MITOCHONDRIA,
+        );
+        if (isDatasetOrBoundingBoxTooSmall(bbox, mag, colorLayer, APIJobType.INFER_MITOCHONDRIA)) {
+          return;
+        }
         return startMitochondriaInferralJob(dataset.id, colorLayer.name, bbox, newDatasetName);
       }}
       description={

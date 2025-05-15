@@ -497,11 +497,11 @@ case class UpdateTracingSkeletonAction(activeNode: Option[Int],
   override def isViewOnlyChange: Boolean = true
 }
 
-case class UpdateActiveNode(activeNode: Option[Int],
-                            actionTracingId: String,
-                            actionTimestamp: Option[Long] = None,
-                            actionAuthorId: Option[String] = None,
-                            info: Option[String] = None)
+case class UpdateActiveNodeSkeletonAction(activeNode: Option[Int],
+                                          actionTracingId: String,
+                                          actionTimestamp: Option[Long] = None,
+                                          actionAuthorId: Option[String] = None,
+                                          info: Option[String] = None)
     extends UserStateSkeletonUpdateAction {
   override def applyOnUserState(tracing: SkeletonTracing,
                                 actionUserId: String,
@@ -728,8 +728,8 @@ object UpdateTreeGroupsSkeletonAction {
 object UpdateTracingSkeletonAction {
   implicit val jsonFormat: OFormat[UpdateTracingSkeletonAction] = Json.format[UpdateTracingSkeletonAction]
 }
-object UpdateActiveNode {
-  implicit val jsonFormat: OFormat[UpdateActiveNode] = Json.format[UpdateActiveNode]
+object UpdateActiveNodeSkeletonAction {
+  implicit val jsonFormat: OFormat[UpdateActiveNodeSkeletonAction] = Json.format[UpdateActiveNodeSkeletonAction]
 }
 object UpdateTreeVisibilitySkeletonAction {
   implicit val jsonFormat: OFormat[UpdateTreeVisibilitySkeletonAction] = Json.format[UpdateTreeVisibilitySkeletonAction]

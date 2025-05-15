@@ -541,8 +541,8 @@ function* maybeLoadMeshChunk(
         vertices,
         segmentId,
         layer.name,
-        additionalCoordinates,
         opacity,
+        additionalCoordinates,
       );
       return neighbors.map((neighbor) =>
         getNeighborPosition(clippedPosition, neighbor, zoomStep, magInfo),

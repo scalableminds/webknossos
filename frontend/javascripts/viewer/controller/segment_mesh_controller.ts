@@ -110,8 +110,8 @@ export default class SegmentMeshController {
     vertices: Float32Array,
     segmentId: number,
     layerName: string,
+    opacity: number,
     additionalCoordinates?: AdditionalCoordinate[] | undefined | null,
-    opacity: number = 1,
   ): Promise<void> {
     // Currently, this function is only used by ad hoc meshing.
     if (vertices.length === 0) return;
@@ -159,7 +159,6 @@ export default class SegmentMeshController {
       colorBuffer.set(colorArray, i * 3);
     }
     geometry.setAttribute("color", new THREE.BufferAttribute(colorBuffer, 3));
-    console.log("geometry", geometry, opacity);
 
     // mesh.parent is still null at this moment, but when the mesh is
     // added to the group later, parent will be set. We'll ignore

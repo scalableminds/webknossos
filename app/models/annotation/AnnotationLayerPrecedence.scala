@@ -2,8 +2,8 @@ package models.annotation
 
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonUserStateProto}
+import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeUserStateProto}
 import com.scalableminds.webknossos.datastore.geometry.{
   AdditionalCoordinateProto,
   NamedBoundingBoxProto,
@@ -27,6 +27,7 @@ case class RedundantTracingProperties(
     zoomLevel: Double,
     userBoundingBoxes: Seq[NamedBoundingBoxProto],
     editPositionAdditionalCoordinates: Seq[AdditionalCoordinateProto],
+    userStateBoundingBoxVisibilities: Map[String, (Seq[Int], Seq[Boolean])] // UserId → (bboxIds bboxVisibleStates)
 )
 
 trait AnnotationLayerPrecedence extends FoxImplicits {
@@ -54,7 +55,8 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
         editRotation = p.editRotation,
         zoomLevel = p.zoomLevel,
         userBoundingBoxes = p.userBoundingBoxes,
-        editPositionAdditionalCoordinates = p.editPositionAdditionalCoordinates
+        editPositionAdditionalCoordinates = p.editPositionAdditionalCoordinates,
+        userStates = adaptSkeletonUserStates(skeletonTracing.userStates, p)
       )
     }.getOrElse(skeletonTracing)
 
@@ -66,9 +68,18 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
         editRotation = p.editRotation,
         zoomLevel = p.zoomLevel,
         userBoundingBoxes = p.userBoundingBoxes,
-        editPositionAdditionalCoordinates = p.editPositionAdditionalCoordinates
+        editPositionAdditionalCoordinates = p.editPositionAdditionalCoordinates,
+        userStates = adaptVolumeUserStates(volumeTracing.userStates, p)
       )
     }.getOrElse(volumeTracing)
+
+  private def adaptSkeletonUserStates(
+      userStates: Seq[SkeletonUserStateProto],
+      oldPrecedenceLayerProperties: RedundantTracingProperties): Seq[SkeletonUserStateProto] = ??? // TODO
+
+  private def adaptVolumeUserStates(
+      userStates: Seq[VolumeUserStateProto],
+      oldPrecedenceLayerProperties: RedundantTracingProperties): Seq[VolumeUserStateProto] = ??? // TODO
 
   protected def getOldPrecedenceLayerProperties(existingAnnotationId: Option[ObjectId],
                                                 existingAnnotationLayers: List[AnnotationLayer],
@@ -138,7 +149,10 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
           s.zoomLevel,
           s.userBoundingBoxes ++ s.userBoundingBox.map(
             com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto(0, None, None, None, _)),
-          s.editPositionAdditionalCoordinates
+          s.editPositionAdditionalCoordinates,
+          s.userStates
+            .map(userState => (userState.userId, (userState.boundingBoxIds, userState.boundingBoxVisibilities)))
+            .toMap
         )
       case Right(v) =>
         RedundantTracingProperties(
@@ -147,7 +161,10 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
           v.zoomLevel,
           v.userBoundingBoxes ++ v.userBoundingBox.map(
             com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto(0, None, None, None, _)),
-          v.editPositionAdditionalCoordinates
+          v.editPositionAdditionalCoordinates,
+          v.userStates
+            .map(userState => (userState.userId, (userState.boundingBoxIds, userState.boundingBoxVisibilities)))
+            .toMap
         )
     }
 }

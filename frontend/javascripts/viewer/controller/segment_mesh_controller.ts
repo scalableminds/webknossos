@@ -159,6 +159,7 @@ export default class SegmentMeshController {
       colorBuffer.set(colorArray, i * 3);
     }
     geometry.setAttribute("color", new THREE.BufferAttribute(colorBuffer, 3));
+    console.log("geometry", geometry, opacity);
 
     // mesh.parent is still null at this moment, but when the mesh is
     // added to the group later, parent will be set. We'll ignore

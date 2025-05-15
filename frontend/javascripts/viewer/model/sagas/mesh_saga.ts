@@ -65,7 +65,6 @@ import {
   startedLoadingMeshAction,
   updateCurrentMeshFileAction,
   updateMeshFileListAction,
-  updateMeshOpacityAction,
   updateMeshVisibilityAction,
 } from "viewer/model/actions/annotation_actions";
 import { saveNowAction } from "viewer/model/actions/save_actions";
@@ -344,7 +343,7 @@ function* loadFullAdHocMesh(
   removeExistingMesh: boolean,
 ): Saga<void> {
   let isInitialRequest = true;
-  const { mappingName, mappingType } = meshExtraInfo;
+  const { mappingName, mappingType, opacity } = meshExtraInfo;
   const clippedPosition = clipPositionToCubeBoundary(position, zoomStep, magInfo);
   yield* put(
     addAdHocMeshAction(
@@ -354,6 +353,7 @@ function* loadFullAdHocMesh(
       additionalCoordinates,
       mappingName,
       mappingType,
+      opacity || Constants.DEFAULT_MESH_OPACITY,
     ),
   );
   yield* put(startedLoadingMeshAction(layer.name, segmentId));
@@ -528,6 +528,8 @@ function* maybeLoadMeshChunk(
         segmentMeshController.removeMeshById(segmentId, layer.name);
       }
 
+      const opacity = meshExtraInfo.opacity || Constants.DEFAULT_MESH_OPACITY;
+
       // We await addMeshFromVerticesAsync here, because the mesh saga will remove
       // an ad-hoc loaded mesh immediately if it was "empty". Since the check is
       // done by looking at the scene, we await the population of the scene.
@@ -540,6 +542,7 @@ function* maybeLoadMeshChunk(
         segmentId,
         layer.name,
         additionalCoordinates,
+        opacity,
       );
       return neighbors.map((neighbor) =>
         getNeighborPosition(clippedPosition, neighbor, zoomStep, magInfo),
@@ -607,7 +610,6 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
   const meshInfo = yield* select((state) =>
     getMeshInfoForSegment(state, additionalCoordinates, layerName, segmentId),
   );
-  console.log("opacity", meshInfo?.opacity);
 
   if (meshInfo == null) {
     throw new Error(
@@ -633,7 +635,14 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
     if (threeDMap == null) {
       return;
     }
-    yield* call(_refreshMeshWithMap, segmentId, threeDMap, layerName, additionalCoordinates);
+    yield* call(
+      _refreshMeshWithMap,
+      segmentId,
+      threeDMap,
+      layerName,
+      additionalCoordinates,
+      meshInfo.opacity,
+    );
   }
 }
 
@@ -642,6 +651,7 @@ function* _refreshMeshWithMap(
   threeDMap: ThreeDMap<boolean>,
   layerName: string,
   additionalCoordinates: AdditionalCoordinate[] | null,
+  opacity: number = Constants.DEFAULT_MESH_OPACITY,
 ): Saga<void> {
   const meshInfo = yield* select((state) =>
     getMeshInfoForSegment(state, additionalCoordinates, layerName, segmentId),
@@ -668,6 +678,10 @@ function* _refreshMeshWithMap(
   yield* call(removeMesh, removeMeshAction(layerName, segmentId), false);
   // The mesh should only be removed once after re-fetching the mesh first position.
   let shouldBeRemoved = true;
+  const meshInfo2 = yield* select((state) =>
+    getMeshInfoForSegment(state, additionalCoordinates, layerName, segmentId),
+  );
+  console.log(meshInfo2);
 
   for (const [, position] of meshPositions) {
     // Reload the mesh at the given position if it isn't already loaded there.
@@ -682,6 +696,7 @@ function* _refreshMeshWithMap(
       {
         mappingName,
         mappingType,
+        opacity,
       },
     );
     shouldBeRemoved = false;
@@ -805,6 +820,9 @@ function* loadPrecomputedMeshForSegmentId(
       mappingName,
     ),
   );
+  if (opacity != null) {
+    //yield* put(updateMeshOpacityAction(layerName, segmentId, opacity));
+  }
   yield* put(startedLoadingMeshAction(layerName, segmentId));
   const dataset = yield* select((state) => state.dataset);
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
@@ -875,9 +893,6 @@ function* loadPrecomputedMeshForSegmentId(
   }
 
   yield* put(finishedLoadingMeshAction(layerName, segmentId));
-  if (opacity != null) {
-    yield* put(updateMeshOpacityAction(layerName, segmentId, opacity));
-  }
 }
 
 function* getMappingName(segmentationLayer: APISegmentationLayer) {

@@ -7,6 +7,7 @@ export type AdHocMeshInfo = {
   mappingType: MappingType | null | undefined;
   useDataStore?: boolean | null | undefined;
   preferredQuality?: number | null | undefined;
+  opacity?: number | null | undefined;
 };
 export type LoadAdHocMeshAction = ReturnType<typeof loadAdHocMeshAction>;
 export type LoadPrecomputedMeshAction = ReturnType<typeof loadPrecomputedMeshAction>;

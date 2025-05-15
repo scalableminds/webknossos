@@ -1,7 +1,7 @@
 import com.google.inject.AbstractModule
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import controllers.{Application, InitialDataService}
-import files.TempFileService
+import files.WkTempFileService
 import mail.MailchimpTicker
 import models.analytics.AnalyticsSessionService
 import models.annotation.{AnnotationMutexService, AnnotationStore, AnnotationDataSourceTemporaryStore}
@@ -31,7 +31,7 @@ class WebknossosModule extends AbstractModule {
     bind(classOf[DatasetService]).asEagerSingleton()
     bind(classOf[TimeSpanService]).asEagerSingleton()
     bind(classOf[DataVaultService]).asEagerSingleton()
-    bind(classOf[TempFileService]).asEagerSingleton()
+    bind(classOf[WkTempFileService]).asEagerSingleton()
     bind(classOf[MailchimpTicker]).asEagerSingleton()
     bind(classOf[JobService]).asEagerSingleton()
     bind(classOf[SlackNotificationService]).asEagerSingleton()

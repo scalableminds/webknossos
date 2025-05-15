@@ -975,9 +975,6 @@ export type ServerVolumeTracing = ServerTracingBase & {
   // for that.
   volumeBucketDataHasChanged?: boolean;
   userStates: VolumeUserState[];
-
-  // todop: Exists only for legacy purposes? Or remove altogether?
-  // activeSegmentId?: number;
 };
 export type ServerTracing = ServerSkeletonTracing | ServerVolumeTracing;
 export type ServerEditableMapping = {

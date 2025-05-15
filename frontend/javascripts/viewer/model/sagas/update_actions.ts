@@ -29,9 +29,7 @@ export type DeleteNodeUpdateAction = ReturnType<typeof deleteNode>;
 export type CreateEdgeUpdateAction = ReturnType<typeof createEdge>;
 export type DeleteEdgeUpdateAction = ReturnType<typeof deleteEdge>;
 export type UpdateActiveNodeUpdateAction = ReturnType<typeof updateActiveNode>;
-export type LEGACY_UpdateSkeletonTracingUpdateAction = ReturnType<
-  typeof LEGACY_updateSkeletonTracing
->;
+type LEGACY_UpdateSkeletonTracingUpdateAction = ReturnType<typeof LEGACY_updateSkeletonTracing>;
 type LEGACY_UpdateVolumeTracingUpdateAction = ReturnType<typeof LEGACY_updateVolumeTracing>;
 export type UpdateActiveSegmentIdUpdateAction = ReturnType<typeof updateActiveSegmentId>;
 export type UpdateLargestSegmentIdVolumeAction = ReturnType<typeof updateLargestSegmentId>;
@@ -342,26 +340,27 @@ export function deleteNode(treeId: number, nodeId: number, actionTracingId: stri
   } as const;
 }
 
-// todop: only exists for legacy annotations. don't use it anymore
-export function LEGACY_updateSkeletonTracing(
+// This action only exists for legacy reasons. Old annotations may have this
+// action in the action log. Don't use it.
+function LEGACY_updateSkeletonTracing(
   tracing: {
     tracingId: string;
     activeNodeId: number | null | undefined;
   },
-  // editPosition: Vector3,
-  // editPositionAdditionalCoordinates: AdditionalCoordinate[] | null,
-  // rotation: Vector3,
-  // zoomLevel: number,
+  editPosition: Vector3,
+  editPositionAdditionalCoordinates: AdditionalCoordinate[] | null,
+  rotation: Vector3,
+  zoomLevel: number,
 ) {
   return {
     name: "updateSkeletonTracing",
     value: {
       actionTracingId: tracing.tracingId,
       activeNode: tracing.activeNodeId,
-      // editPosition,
-      // editPositionAdditionalCoordinates,
-      // editRotation: rotation,
-      // zoomLevel,
+      editPosition,
+      editPositionAdditionalCoordinates,
+      editRotation: rotation,
+      zoomLevel,
     },
   } as const;
 }
@@ -396,24 +395,25 @@ export function moveTreeComponent(
   } as const;
 }
 
-// todop: exists only for legacy reasons. mark it as such?
+// This action only exists for legacy reasons. Old annotations may have this
+// action in the action log. Don't use it.
 export function LEGACY_updateVolumeTracing(
   tracing: VolumeTracing,
-  // position: Vector3,
-  // editPositionAdditionalCoordinates: AdditionalCoordinate[] | null,
-  // rotation: Vector3,
-  // zoomLevel: number,
+  position: Vector3,
+  editPositionAdditionalCoordinates: AdditionalCoordinate[] | null,
+  rotation: Vector3,
+  zoomLevel: number,
 ) {
   return {
     name: "updateVolumeTracing",
     value: {
       actionTracingId: tracing.tracingId,
-      // activeSegmentId: tracing.activeCellId,
-      // editPosition: position,
-      // editPositionAdditionalCoordinates,
-      // editRotation: rotation,
+      activeSegmentId: tracing.activeCellId,
+      editPosition: position,
+      editPositionAdditionalCoordinates,
+      editRotation: rotation,
       largestSegmentId: tracing.largestSegmentId,
-      // zoomLevel,
+      zoomLevel,
     },
   } as const;
 }

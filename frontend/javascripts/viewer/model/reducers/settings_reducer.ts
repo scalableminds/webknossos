@@ -14,7 +14,6 @@ import {
 import type { Action } from "viewer/model/actions/actions";
 import { updateKey, updateKey2, updateKey3 } from "viewer/model/helpers/deep_update";
 import type { ActiveMappingInfo, WebknossosState } from "viewer/store";
-import { setRotationReducer } from "./flycam_reducer";
 
 //
 // Update helpers
@@ -182,13 +181,7 @@ function SettingsReducer(state: WebknossosState, action: Action): WebknossosStat
         const newState = updateTemporaryConfig(state, {
           viewMode: action.viewMode,
         });
-        if (action.viewMode !== "orthogonal") {
-          return newState;
-        }
-        // Restore rotation because it might have been changed by the user
-        // in flight/oblique mode. Since this affects the matrix (which is
-        // also used in orthogonal mode), the rotation needs to be reset.
-        return setRotationReducer(newState, [0, 0, 0]);
+        return newState;
       } else {
         return state;
       }

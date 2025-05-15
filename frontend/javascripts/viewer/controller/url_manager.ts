@@ -12,7 +12,7 @@ import type { Mutable } from "types/globals";
 import { validateUrlStateJSON } from "types/validation";
 import type { Vector3, ViewMode } from "viewer/constants";
 import constants, { ViewModeValues, MappingStatusEnum } from "viewer/constants";
-import { getPosition, getRotation } from "viewer/model/accessors/flycam_accessor";
+import { getPosition, getRotationInDegrees } from "viewer/model/accessors/flycam_accessor";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { getMeshesForCurrentAdditionalCoordinates } from "viewer/model/accessors/volumetracing_accessor";
 import {
@@ -286,7 +286,7 @@ class UrlManager {
     const zoomStep = Utils.roundTo(state.flycam.zoomStep, 3);
     const rotationOptional = constants.MODES_ARBITRARY.includes(mode)
       ? {
-          rotation: Utils.map3((e) => Utils.roundTo(e, 2), getRotation(state.flycam)),
+          rotation: Utils.map3((e) => Utils.roundTo(e, 2), getRotationInDegrees(state.flycam)),
         }
       : {};
     const activeNode = state.annotation.skeleton?.activeNodeId;

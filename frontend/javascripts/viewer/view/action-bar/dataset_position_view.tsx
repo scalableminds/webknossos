@@ -10,9 +10,8 @@ import { PureComponent } from "react";
 import { connect } from "react-redux";
 import type { APIDataset } from "types/api_types";
 import type { Vector3, ViewMode } from "viewer/constants";
-import constants from "viewer/constants";
 import { getDatasetExtentInVoxel } from "viewer/model/accessors/dataset_accessor";
-import { getPosition, getRotation } from "viewer/model/accessors/flycam_accessor";
+import { getPosition, getRotationInDegrees } from "viewer/model/accessors/flycam_accessor";
 import { setPositionAction, setRotationAction } from "viewer/model/actions/flycam_actions";
 import type { Flycam, Task, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
@@ -50,7 +49,7 @@ class DatasetPositionView extends PureComponent<Props> {
   };
 
   copyRotationToClipboard = async () => {
-    const rotation = V3.round(getRotation(this.props.flycam)).join(", ");
+    const rotation = V3.round(getRotationInDegrees(this.props.flycam)).join(", ");
     await navigator.clipboard.writeText(rotation);
     Toast.success("Rotation copied to clipboard");
   };
@@ -111,8 +110,7 @@ class DatasetPositionView extends PureComponent<Props> {
       maybeErrorMessage = message["tracing.out_of_task_bounds"];
     }
 
-    const rotation = V3.round(getRotation(this.props.flycam));
-    const isArbitraryMode = constants.MODES_ARBITRARY.includes(this.props.viewMode);
+    const rotation = V3.round(getRotationInDegrees(this.props.flycam));
     const positionView = (
       <div
         style={{
@@ -142,7 +140,7 @@ class DatasetPositionView extends PureComponent<Props> {
           />
           <ShareButton dataset={this.props.dataset} style={iconColoringStyle} />
         </Space.Compact>
-        {isArbitraryMode ? (
+        {
           <Space.Compact
             style={{
               whiteSpace: "nowrap",
@@ -170,7 +168,7 @@ class DatasetPositionView extends PureComponent<Props> {
               allowDecimals
             />
           </Space.Compact>
-        ) : null}
+        }
       </div>
     );
     return (

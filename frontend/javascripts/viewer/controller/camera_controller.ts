@@ -5,9 +5,9 @@ import * as React from "react";
 import * as THREE from "three";
 import TWEEN from "tween.js";
 import type { OrthoView, OrthoViewMap, OrthoViewRects, Vector3 } from "viewer/constants";
-import { OrthoViewValuesWithoutTDView, OrthoViews } from "viewer/constants";
+import { OrthoBaseRotations, OrthoViewValuesWithoutTDView, OrthoViews } from "viewer/constants";
 import { getDatasetCenter, getDatasetExtentInUnit } from "viewer/model/accessors/dataset_accessor";
-import { getPosition } from "viewer/model/accessors/flycam_accessor";
+import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
 import {
   getInputCatcherAspectRatio,
   getPlaneExtentInVoxelFromStore,
@@ -159,6 +159,39 @@ class CameraController extends React.PureComponent<Props> {
     this.props.cameras[OrthoViews.PLANE_XY].position.set(cPos[0], cPos[1], cPos[2]);
     this.props.cameras[OrthoViews.PLANE_YZ].position.set(cPos[0], cPos[1], cPos[2]);
     this.props.cameras[OrthoViews.PLANE_XZ].position.set(cPos[0], cPos[1], cPos[2]);
+    // Now set rotation for all cameras respecting the base rotation of each camera.
+    const gRot = getRotationInRadian(state.flycam);
+    // Copies are needed because multiply modifies the matrix in-place.
+    const rotationMatrixXY = new THREE.Matrix4().makeRotationFromEuler(
+      new THREE.Euler(gRot[0], gRot[1], gRot[2]),
+    );
+    const rotationMatrixYZ = new THREE.Matrix4().makeRotationFromEuler(
+      new THREE.Euler(gRot[0], gRot[1], gRot[2]),
+    );
+    const rotationMatrixXZ = new THREE.Matrix4().makeRotationFromEuler(
+      new THREE.Euler(gRot[0], gRot[1], gRot[2]),
+    );
+    const baseRotationMatrixXY = new THREE.Matrix4().makeRotationFromEuler(
+      OrthoBaseRotations[OrthoViews.PLANE_XY],
+    );
+    const baseRotationMatrixYZ = new THREE.Matrix4().makeRotationFromEuler(
+      OrthoBaseRotations[OrthoViews.PLANE_YZ],
+    );
+    const baseRotationMatrixXZ = new THREE.Matrix4().makeRotationFromEuler(
+      OrthoBaseRotations[OrthoViews.PLANE_XZ],
+    );
+    this.props.cameras[OrthoViews.PLANE_XY].setRotationFromMatrix(
+      rotationMatrixXY.multiply(baseRotationMatrixXY),
+    );
+    this.props.cameras[OrthoViews.PLANE_YZ].setRotationFromMatrix(
+      rotationMatrixYZ.multiply(baseRotationMatrixYZ),
+    );
+    this.props.cameras[OrthoViews.PLANE_XZ].setRotationFromMatrix(
+      rotationMatrixXZ.multiply(baseRotationMatrixXZ),
+    );
+    this.props.cameras[OrthoViews.PLANE_XY].updateProjectionMatrix();
+    this.props.cameras[OrthoViews.PLANE_YZ].updateProjectionMatrix();
+    this.props.cameras[OrthoViews.PLANE_XZ].updateProjectionMatrix();
   }
 
   bindToEvents() {
@@ -192,7 +225,7 @@ class CameraController extends React.PureComponent<Props> {
   // TD-View methods
   updateTDCamera(cameraData: CameraData): void {
     const tdCamera = this.props.cameras[OrthoViews.TDView];
-    tdCamera.position.set(...cameraData.position);
+    tdCamera.position.set(...(cameraData.position as Vector3));
     tdCamera.left = cameraData.left;
     tdCamera.right = cameraData.right;
     tdCamera.top = cameraData.top;

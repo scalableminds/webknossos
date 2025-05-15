@@ -387,6 +387,10 @@ const V3 = {
   prod(a: Vector3) {
     return a[0] * a[1] * a[2];
   },
+
+  multiply(a: Vector3, b: Vector3): Vector3 {
+    return [a[0] * b[0], a[1] * b[1], a[2] * b[2]];
+  },
 };
 
 const V4 = {

@@ -16,7 +16,7 @@ import {
   getSupportedValueRangeOfLayer,
   isInSupportedValueRangeForLayer,
 } from "viewer/model/accessors/dataset_accessor";
-import { getPosition, getRotation } from "viewer/model/accessors/flycam_accessor";
+import { getPosition, getRotationInDegrees } from "viewer/model/accessors/flycam_accessor";
 import {
   isBrushTool,
   isTraceTool,
@@ -474,7 +474,7 @@ export function* diffVolumeTracing(
       volumeTracing,
       V3.floor(getPosition(flycam)),
       flycam.additionalCoordinates,
-      getRotation(flycam),
+      getRotationInDegrees(flycam),
       flycam.zoomStep,
     );
   }

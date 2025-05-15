@@ -55,7 +55,7 @@ import { flatToNestedMatrix } from "viewer/model/accessors/dataset_layer_transfo
 import {
   getActiveMagIndexForLayer,
   getPosition,
-  getRotation,
+  getRotationInDegrees,
 } from "viewer/model/accessors/flycam_accessor";
 import {
   findTreeByNodeId,
@@ -278,10 +278,20 @@ class TracingApi {
   /**
    * Sets the active node given a node id.
    */
-  setActiveNode(id: number) {
-    assertSkeleton(Store.getState().annotation);
+  setActiveNode(
+    id: number,
+    suppressAnimation?: boolean,
+    suppressCentering?: boolean,
+    suppressRotation?: boolean,
+  ) {
+    const { annotation, temporaryConfiguration } = Store.getState();
+    assertSkeleton(annotation);
     assertExists(id, "Node id is missing.");
-    Store.dispatch(setActiveNodeAction(id));
+    if (suppressRotation === undefined) {
+      // Per default disable setting rotation when orthogonal view is active.
+      suppressRotation = temporaryConfiguration.viewMode === "orthogonal";
+    }
+    Store.dispatch(setActiveNodeAction(id, suppressAnimation, suppressCentering, suppressRotation));
   }
 
   /**
@@ -1396,7 +1406,7 @@ class TracingApi {
         ? dimensions.thirdDimensionForPlane(activeViewport)
         : null;
     const curPosition = getPosition(Store.getState().flycam);
-    const curRotation = getRotation(Store.getState().flycam);
+    const curRotation = getRotationInDegrees(Store.getState().flycam);
     if (!Array.isArray(rotation)) rotation = curRotation;
     rotation = this.getShortestRotation(curRotation, rotation);
 

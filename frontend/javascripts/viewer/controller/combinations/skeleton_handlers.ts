@@ -11,7 +11,8 @@ import { getEnabledColorLayers } from "viewer/model/accessors/dataset_accessor";
 import {
   getActiveMagIndicesForLayers,
   getPosition,
-  getRotationOrtho,
+  getRotationInRadian,
+  getRotationOrthoInRadian,
   isMagRestrictionViolated,
 } from "viewer/model/accessors/flycam_accessor";
 import {
@@ -98,7 +99,8 @@ export function handleSelectNode(
 
   // otherwise we have hit the background and do nothing
   if (nodeId != null && nodeId > 0) {
-    Store.dispatch(setActiveNodeAction(nodeId));
+    const suppressRotation = "isOrthoPlaneView" in view && view.isOrthoPlaneView;
+    Store.dispatch(setActiveNodeAction(nodeId, false, false, suppressRotation));
     return true;
   }
 
@@ -285,7 +287,17 @@ export function getOptionsForCreateSkeletonNode(
   const additionalCoordinates = state.flycam.additionalCoordinates;
   const skeletonTracing = enforceSkeletonTracing(state.annotation);
   const activeNode = getActiveNode(skeletonTracing);
-  const rotation = getRotationOrtho(activeViewport || state.viewModeData.plane.activeViewport);
+  const initialViewportRotation = getRotationOrthoInRadian(
+    activeViewport || state.viewModeData.plane.activeViewport,
+  );
+  const flycamRotation = getRotationInRadian(state.flycam);
+  const totalRotationQuaternion = new THREE.Quaternion()
+    .setFromEuler(new THREE.Euler(...initialViewportRotation))
+    .multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(...flycamRotation)));
+  const rotationEuler = new THREE.Euler().setFromQuaternion(totalRotationQuaternion);
+  const rotationInDegree = [rotationEuler.x, rotationEuler.y, rotationEuler.z].map(
+    (a) => (a * 180) / Math.PI,
+  ) as Vector3;
 
   // Center node if the corresponding setting is true. Only pressing CTRL can override this.
   const center = state.userConfiguration.centerNewNode && !ctrlIsPressed;
@@ -299,10 +311,9 @@ export function getOptionsForCreateSkeletonNode(
   const activate = !ctrlIsPressed || activeNode == null;
 
   const skipCenteringAnimationInThirdDimension = true;
-
   return {
     additionalCoordinates,
-    rotation,
+    rotation: rotationInDegree,
     center,
     branchpoint,
     activate,
@@ -468,7 +479,9 @@ function getPrecedingNodeFromTree(
 }
 
 export function toSubsequentNode(): void {
-  const tracing = enforceSkeletonTracing(Store.getState().annotation);
+  const { annotation, temporaryConfiguration } = Store.getState();
+  const suppressRotation = temporaryConfiguration.viewMode === "orthogonal";
+  const tracing = enforceSkeletonTracing(annotation);
   const { navigationList, activeNodeId, activeTreeId } = tracing;
   if (activeNodeId == null) return;
   const isValidList =
@@ -480,7 +493,14 @@ export function toSubsequentNode(): void {
     isValidList
   ) {
     // navigate to subsequent node in list
-    Store.dispatch(setActiveNodeAction(navigationList.list[navigationList.activeIndex + 1]));
+    Store.dispatch(
+      setActiveNodeAction(
+        navigationList.list[navigationList.activeIndex + 1],
+        false,
+        false,
+        suppressRotation,
+      ),
+    );
     Store.dispatch(updateNavigationListAction(navigationList.list, navigationList.activeIndex + 1));
   } else {
     // search for subsequent node in tree
@@ -495,14 +515,16 @@ export function toSubsequentNode(): void {
 
     if (nextNodeId !== activeNodeId) {
       newList.push(nextNodeId);
-      Store.dispatch(setActiveNodeAction(nextNodeId));
+      Store.dispatch(setActiveNodeAction(nextNodeId, false, false, suppressRotation));
     }
 
     Store.dispatch(updateNavigationListAction(newList, newList.length - 1));
   }
 }
 export function toPrecedingNode(): void {
-  const tracing = enforceSkeletonTracing(Store.getState().annotation);
+  const { annotation, temporaryConfiguration } = Store.getState();
+  const suppressRotation = temporaryConfiguration.viewMode === "orthogonal";
+  const tracing = enforceSkeletonTracing(annotation);
   const { navigationList, activeNodeId, activeTreeId } = tracing;
   if (activeNodeId == null) return;
   const isValidList =
@@ -510,7 +532,14 @@ export function toPrecedingNode(): void {
 
   if (navigationList.activeIndex > 0 && isValidList) {
     // navigate to preceding node in list
-    Store.dispatch(setActiveNodeAction(navigationList.list[navigationList.activeIndex - 1]));
+    Store.dispatch(
+      setActiveNodeAction(
+        navigationList.list[navigationList.activeIndex - 1],
+        false,
+        false,
+        suppressRotation,
+      ),
+    );
     Store.dispatch(updateNavigationListAction(navigationList.list, navigationList.activeIndex - 1));
   } else {
     // search for preceding node in tree
@@ -525,7 +554,7 @@ export function toPrecedingNode(): void {
 
     if (nextNodeId !== activeNodeId) {
       newList.unshift(nextNodeId);
-      Store.dispatch(setActiveNodeAction(nextNodeId));
+      Store.dispatch(setActiveNodeAction(nextNodeId, false, false, suppressRotation));
     }
 
     Store.dispatch(updateNavigationListAction(newList, 0));

@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { describe, it, expect } from "vitest";
-import type { Flycam, WebknossosState, Tree, TreeGroup, TreeMap } from "viewer/store";
+import type { WebknossosState, Tree, TreeGroup, TreeMap } from "viewer/store";
 import { diffSkeletonTracing } from "viewer/model/sagas/skeletontracing_saga";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { updateTreeGroupVisibility, updateTreeVisibility } from "viewer/model/sagas/update_actions";
@@ -52,7 +52,6 @@ const treeGroups: TreeGroup[] = [
     children: [],
   },
 ];
-const flycamMock = {} as any as Flycam;
 const tracingId = "someTracingId";
 const createState = (trees: Tree[], _treeGroups: TreeGroup[]): WebknossosState => ({
   ...defaultState,
@@ -104,8 +103,6 @@ function testDiffing(prevState: WebknossosState, nextState: WebknossosState) {
         diffSkeletonTracing(
           enforceSkeletonTracing(prevState.annotation),
           enforceSkeletonTracing(nextState.annotation),
-          flycamMock,
-          flycamMock,
         ),
       ),
     ),

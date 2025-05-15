@@ -531,8 +531,11 @@ class AnnotationService @Inject()(
                                                                                               volumeTracingIdOpt,
                                                                                               skeletonTracingOpt,
                                                                                               volumeTracingOpt)
+            // user state is not used in compound download, so the annotationProto can be a dummy one.
+            annotationProto = AnnotationProto("", 0L, Seq.empty, 0L)
             nml = nmlWriter.toNmlStream(
               name,
+              annotationProto,
               fetchedAnnotationLayersForAnnotation,
               Some(annotation),
               voxelSizeOpt,
@@ -541,10 +544,11 @@ class AnnotationService @Inject()(
               conf.Http.uri,
               datasetName,
               datasetId,
-              Some(user),
+              user,
               taskOpt,
               skipVolumeData,
-              volumeDataZipFormat
+              volumeDataZipFormat,
+              requestingUser = None
             )
           } yield (nml, volumeDataOpt)
       }

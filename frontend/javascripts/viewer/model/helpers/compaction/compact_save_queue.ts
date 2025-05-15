@@ -5,15 +5,21 @@ function removeAllButLastUpdateTracingAction(updateActionsBatches: Array<SaveQue
   // This part of the code removes all entries from the save queue that consist only of
   // one update{Skeleton,Volume}Tracing update action, except for the last one
   const updateSkeletonTracingOnlyBatches = updateActionsBatches.filter(
-    (batch) => batch.actions.length === 1 && batch.actions[0].name === "updateSkeletonTracing",
+    (batch) => batch.actions.length === 1 && batch.actions[0].name === "updateActiveNode",
   );
   const updateVolumeTracingOnlyBatches = updateActionsBatches.filter(
-    (batch) => batch.actions.length === 1 && batch.actions[0].name === "updateVolumeTracing",
+    (batch) => batch.actions.length === 1 && batch.actions[0].name === "updateActiveSegmentId",
   );
+
+  const updateCameraOnlyBatches = updateActionsBatches.filter(
+    (batch) => batch.actions.length === 1 && batch.actions[0].name === "updateCamera",
+  );
+
   return _.without(
     updateActionsBatches,
     ...updateSkeletonTracingOnlyBatches.slice(0, -1),
     ...updateVolumeTracingOnlyBatches.slice(0, -1),
+    ...updateCameraOnlyBatches.slice(0, -1),
   );
 }
 

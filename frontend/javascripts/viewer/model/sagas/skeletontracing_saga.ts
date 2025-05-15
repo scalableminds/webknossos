@@ -2,7 +2,6 @@ import { getAgglomerateSkeleton, getEditableAgglomerateSkeleton } from "admin/re
 import { Modal } from "antd";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import ErrorHandling from "libs/error_handling";
-import { V3 } from "libs/mjs";
 import createProgressCallback from "libs/progress_callback";
 import type { Message } from "libs/toast";
 import Toast from "libs/toast";
@@ -24,7 +23,6 @@ import {
 import type { ServerSkeletonTracing } from "types/api_types";
 import { TreeTypeEnum } from "viewer/constants";
 import { getLayerByName } from "viewer/model/accessors/dataset_accessor";
-import { getPosition, getRotation } from "viewer/model/accessors/flycam_accessor";
 import {
   enforceSkeletonTracing,
   findTreeByName,
@@ -66,25 +64,20 @@ import {
   deleteEdge,
   deleteNode,
   deleteTree,
+  updateActiveNode,
   updateNode,
-  updateSkeletonTracing,
   updateTree,
   updateTreeEdgesVisibility,
   updateTreeGroups,
+  updateTreeGroupsExpandedState,
   updateTreeVisibility,
+  updateUserBoundingBoxVisibilityInSkeletonTracing,
   updateUserBoundingBoxesInSkeletonTracing,
 } from "viewer/model/sagas/update_actions";
 import { api } from "viewer/singletons";
-import type {
-  Flycam,
-  Node,
-  NodeMap,
-  SkeletonTracing,
-  Tree,
-  TreeMap,
-  WebknossosState,
-} from "viewer/store";
+import type { Node, NodeMap, SkeletonTracing, Tree, TreeMap, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
+import { diffGroups, diffUserBoundingBoxes } from "../helpers/diff_helpers";
 import { ensureWkReady } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
 
@@ -526,15 +519,6 @@ function* diffEdges(
   }
 }
 
-function updateTracingPredicate(
-  prevSkeletonTracing: SkeletonTracing,
-  skeletonTracing: SkeletonTracing,
-  prevFlycam: Flycam,
-  flycam: Flycam,
-): boolean {
-  return prevSkeletonTracing.activeNodeId !== skeletonTracing.activeNodeId || prevFlycam !== flycam;
-}
-
 function updateTreePredicate(prevTree: Tree, tree: Tree): boolean {
   return (
     // branchPoints and comments are arrays and therefore checked for
@@ -610,8 +594,6 @@ export const cachedDiffTrees = memoizeOne((tracingId: string, prevTrees: TreeMap
 export function* diffSkeletonTracing(
   prevSkeletonTracing: SkeletonTracing,
   skeletonTracing: SkeletonTracing,
-  prevFlycam: Flycam,
-  flycam: Flycam,
 ): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (prevSkeletonTracing !== skeletonTracing) {
     for (const action of cachedDiffTrees(
@@ -622,26 +604,51 @@ export function* diffSkeletonTracing(
       yield action;
     }
 
-    if (prevSkeletonTracing.treeGroups !== skeletonTracing.treeGroups) {
+    const groupDiff = diffGroups(prevSkeletonTracing.treeGroups, skeletonTracing.treeGroups);
+
+    if (groupDiff.didContentChange) {
+      // The groups (without isExpanded) actually changed. Save them to the server.
       yield updateTreeGroups(skeletonTracing.treeGroups, skeletonTracing.tracingId);
     }
-  }
 
-  if (updateTracingPredicate(prevSkeletonTracing, skeletonTracing, prevFlycam, flycam)) {
-    yield updateSkeletonTracing(
-      skeletonTracing,
-      V3.floor(getPosition(flycam)),
-      flycam.additionalCoordinates,
-      getRotation(flycam),
-      flycam.zoomStep,
-    );
-  }
+    if (groupDiff.newlyExpandedIds.length > 0) {
+      yield updateTreeGroupsExpandedState(
+        groupDiff.newlyExpandedIds,
+        true,
+        skeletonTracing.tracingId,
+      );
+    }
+    if (groupDiff.newlyNotExpandedIds.length > 0) {
+      yield updateTreeGroupsExpandedState(
+        groupDiff.newlyNotExpandedIds,
+        false,
+        skeletonTracing.tracingId,
+      );
+    }
 
-  if (!_.isEqual(prevSkeletonTracing.userBoundingBoxes, skeletonTracing.userBoundingBoxes)) {
-    yield updateUserBoundingBoxesInSkeletonTracing(
+    if (prevSkeletonTracing.activeNodeId !== skeletonTracing.activeNodeId) {
+      yield updateActiveNode(skeletonTracing);
+    }
+
+    const boxDiff = diffUserBoundingBoxes(
+      prevSkeletonTracing.userBoundingBoxes,
       skeletonTracing.userBoundingBoxes,
-      skeletonTracing.tracingId,
     );
+
+    if (boxDiff.didContentChange) {
+      yield updateUserBoundingBoxesInSkeletonTracing(
+        skeletonTracing.userBoundingBoxes,
+        skeletonTracing.tracingId,
+      );
+    }
+
+    for (const id of boxDiff.newlyVisibleIds) {
+      yield updateUserBoundingBoxVisibilityInSkeletonTracing(id, true, skeletonTracing.tracingId);
+    }
+
+    for (const id of boxDiff.newlyInvisibleIds) {
+      yield updateUserBoundingBoxVisibilityInSkeletonTracing(id, false, skeletonTracing.tracingId);
+    }
   }
 }
 export default [

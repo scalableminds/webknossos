@@ -1694,14 +1694,15 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   onCheck: TreeProps<SegmentHierarchyNode>["onCheck"] = (_checkedKeysValue, info) => {
-    const visibleSegmentationLayer = getVisibleSegmentationLayer(Store.getState());
+    const state = Store.getState();
+    const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
     if (!visibleSegmentationLayer) {
       return;
     }
     const { id, type } = info.node;
 
     if (type === "segment") {
-      const action = getUpdateSegmentActionToToggleVisibility(Store.getState(), id);
+      const action = getUpdateSegmentActionToToggleVisibility(state, id);
       if (action != null) {
         Store.dispatch(action);
       }

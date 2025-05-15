@@ -15,13 +15,13 @@ export const getUpdateSegmentActionToToggleVisibility = (
   someAdditionalCoordinates?: AdditionalCoordinate[],
 ) => {
   const visibleSegmentationLayer = getVisibleSegmentationLayer(storeState);
+  if (visibleSegmentationLayer == null) {
+    return null;
+  }
   const { segments } = getVisibleSegments(storeState);
   const hideUnregisteredSegments =
     getHideUnregisteredSegmentsForVisibleSegmentationLayer(storeState);
 
-  if (visibleSegmentationLayer == null) {
-    return null;
-  }
   const oldSegment = segments?.getNullable(segmentId);
   return updateSegmentAction(
     segmentId,

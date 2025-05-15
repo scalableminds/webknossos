@@ -29,10 +29,13 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Fixed
 - When selecting a skeleton node in a viewport, its tree is focused and scrolled to in the skeleton tab, even if its parent group was collapsed before. [#8585](https://github.com/scalableminds/webknossos/pull/8585)
+- Fixed that the minimum size of bounding boxes for AI neuron and mitochondria inferral was not checked before starting the job. [#8561](https://github.com/scalableminds/webknossos/pull/8561)
 - Fixed that layer bounding boxes were sometimes colored green even though this should only happen for tasks. [#8535](https://github.com/scalableminds/webknossos/pull/8535)
 - Fixed that annotations could not be opened anymore (caused by #8535). [#8599](https://github.com/scalableminds/webknossos/pull/8599)
 - The guest tag is now also shown for guest admin users. [#8612](https://github.com/scalableminds/webknossos/pull/8612)
 - Fixed a rare bug where segment bounding box would not be displayed correctly, with the request potentially even crashing the server. [#8590](https://github.com/scalableminds/webknossos/pull/8590)
+- Fixed a rare bug where download requests would terminate without sending the whole annotation. [#8624](https://github.com/scalableminds/webknossos/pull/8624)
+
 
 ### Removed
 

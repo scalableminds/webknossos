@@ -81,7 +81,8 @@ export function getSkeletonStats(stats: TracingStats): SkeletonTracingStats | un
 }
 
 export function getVolumeStats(stats: TracingStats): [string, VolumeTracingStats][] {
-  return Array.from(Object.entries(stats)).filter(
-    ([_tracingId, stat]) => "segmentCount" in stat,
-  ) as [string, VolumeTracingStats][];
+  return Object.entries(stats).filter(([_tracingId, stat]) => "segmentCount" in stat) as [
+    string,
+    VolumeTracingStats,
+  ][];
 }

@@ -43,6 +43,7 @@ import type {
   TreeMap,
   WebknossosState,
 } from "viewer/store";
+import { max, min } from "../helpers/iterator_utils";
 
 export function generateTreeName(state: WebknossosState, timestamp: number, treeId: number) {
   let user = "";
@@ -65,38 +66,29 @@ export function generateTreeName(state: WebknossosState, timestamp: number, tree
   return `${prefix}${Utils.zeroPad(treeId, 3)}`;
 }
 function getMinimumNodeId(trees: TreeMap | MutableTreeMap): number {
-  const minNodeId = trees
-    .values()
-    .flatMap((tree) => tree.nodes.map((n) => n.id))
-    .reduce((r, n) => Math.min(r, n), Number.POSITIVE_INFINITY);
+  const minNodeId = min(trees.values().flatMap((tree) => tree.nodes.map((n) => n.id)));
 
   // TODO newMaxNodeId can not be null here
   return minNodeId != null ? minNodeId : Constants.MIN_NODE_ID;
 }
 export function getMaximumNodeId(trees: TreeMap | MutableTreeMap): number {
-  const newMaxNodeId = trees
-    .values()
-    .flatMap((tree) => tree.nodes.map((n) => n.id))
-    .reduce((r, n) => {
-      return Math.max(r, n);
-    }, Constants.MIN_TREE_ID - 1);
+  const newMaxNodeId = max(trees.values().flatMap((tree) => tree.nodes.map((n) => n.id)));
 
   // TODO newMaxNodeId can not be null here
   return newMaxNodeId != null ? newMaxNodeId : Constants.MIN_NODE_ID - 1;
 }
 export function getMaximumTreeId(trees: TreeMap | MutableTreeMap): number {
-  const maxTreeId = trees
-    .values()
-    .reduce((r, tree) => Math.max(r, tree.treeId), Constants.MIN_TREE_ID - 1);
+  const maxTreeId = max(trees.values().map((tree) => tree.treeId));
 
   // TODO maxTreeId can not be null here
   return maxTreeId != null ? maxTreeId : Constants.MIN_TREE_ID - 1;
 }
 
 function getNearestTreeId(treeId: number, trees: TreeMap): number {
-  const sortedTreeIds = Array.from(trees.keys()).sort((firstId, secId) =>
-    firstId > secId ? 1 : -1,
-  );
+  const sortedTreeIds = trees
+    .keys()
+    .toArray()
+    .sort((firstId, secId) => (firstId > secId ? 1 : -1));
 
   if (sortedTreeIds.length === 0) {
     return 0;
@@ -667,7 +659,7 @@ export function deleteTrees(
     const maximumTreeId = _.max(treeIds) || Constants.MIN_TREE_ID;
     newActiveTreeId = getNearestTreeId(maximumTreeId, newTrees);
 
-    const firstKey = _.first(Array.from(newTrees.getOrThrow(newActiveTreeId).nodes.keys()));
+    const firstKey = _.first(newTrees.getOrThrow(newActiveTreeId).nodes.keys().toArray());
     newActiveNodeId = firstKey != null ? Number(firstKey) : null;
   }
 

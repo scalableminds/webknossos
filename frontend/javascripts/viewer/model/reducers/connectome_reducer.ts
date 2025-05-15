@@ -1,5 +1,5 @@
 import update from "immutability-helper";
-import _ from "lodash";
+import DiffableMap from "libs/diffable_map";
 import Constants from "viewer/constants";
 import type { Action } from "viewer/model/actions/actions";
 import { updateKey3 } from "viewer/model/helpers/deep_update";
@@ -7,7 +7,7 @@ import {
   addTreesAndGroups,
   getMaximumNodeId,
 } from "viewer/model/reducers/skeletontracing_reducer_helpers";
-import type { SkeletonTracing, TreeMap, WebknossosState } from "viewer/store";
+import type { SkeletonTracing, Tree, TreeMap, WebknossosState } from "viewer/store";
 
 function getSkeletonTracingForConnectome(
   state: WebknossosState,
@@ -23,25 +23,23 @@ function getSkeletonTracingForConnectome(
 function setConnectomeTreesVisibilityReducer(
   state: WebknossosState,
   layerName: string,
-  treeIds: Array<number>,
+  treeIds: number[],
   visibility: boolean,
 ): WebknossosState {
-  const updateTreesObject = {};
-  const isVisibleUpdater = {
-    isVisible: {
-      $set: visibility,
-    },
-  };
+  const skeletonTracing = getSkeletonTracingForConnectome(state, layerName);
+  if (skeletonTracing == null) return state;
+
+  let newTrees = skeletonTracing.trees;
   treeIds.forEach((treeId) => {
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
-    updateTreesObject[treeId] = isVisibleUpdater;
+    newTrees.set(treeId, { ...newTrees.getOrThrow(treeId), isVisible: visibility });
   });
+
   return update(state, {
     localSegmentationData: {
       [layerName]: {
         connectomeData: {
           skeleton: {
-            trees: updateTreesObject,
+            trees: { $set: newTrees },
           },
         },
       },
@@ -51,10 +49,11 @@ function setConnectomeTreesVisibilityReducer(
 
 export function deleteConnectomeTrees(
   skeletonTracing: SkeletonTracing,
-  treeIds: Array<number>,
+  treeIds: number[],
 ): [TreeMap, number] | null {
   // Delete trees
-  const newTrees = _.omit(skeletonTracing.trees, treeIds);
+  let newTrees = skeletonTracing.trees.clone();
+  treeIds.forEach((treeId) => (newTrees = newTrees.delete(treeId)));
 
   const newMaxNodeId = getMaximumNodeId(newTrees);
   return [newTrees, newMaxNodeId];
@@ -71,7 +70,7 @@ function ConnectomeReducer(state: WebknossosState, action: Action): WebknossosSt
         cachedMaxNodeId: Constants.MIN_NODE_ID - 1,
         activeTreeId: null,
         activeGroupId: null,
-        trees: {},
+        trees: new DiffableMap<number, Tree>(),
         treeGroups: [],
         tracingId: "connectome-tracing-data",
         boundingBox: null,
@@ -83,6 +82,7 @@ function ConnectomeReducer(state: WebknossosState, action: Action): WebknossosSt
         showSkeletons: true,
         additionalAxes: [],
       };
+
       return update(state, {
         localSegmentationData: {
           [layerName]: {
@@ -119,7 +119,7 @@ function ConnectomeReducer(state: WebknossosState, action: Action): WebknossosSt
             connectomeData: {
               skeleton: {
                 trees: {
-                  $merge: updatedTrees,
+                  $set: DiffableMap.merge(skeletonTracing.trees, updatedTrees),
                 },
                 cachedMaxNodeId: {
                   $set: newMaxNodeId,

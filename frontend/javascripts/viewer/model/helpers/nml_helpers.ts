@@ -52,7 +52,7 @@ const DEFAULT_GROUP_ID = null;
 const DEFAULT_USER_BOUNDING_BOX_VISIBILITY = true;
 
 // SERIALIZE NML
-function indent(array: Array<string>): Array<string> {
+function indent(array: string[]): string[] {
   // Use forEach instead of map for performance reasons
   array.forEach((line, index) => {
     array[index] = `  ${line}`;
@@ -82,8 +82,8 @@ function mapColorToComponents(color: Vector3) {
 function serializeTagWithChildren(
   name: string,
   properties: Record<string, (string | number | boolean) | null | undefined>,
-  children: Array<string>,
-): Array<string> {
+  children: string[],
+): string[] {
   // If there are no children, the tag will be self-closing
   return _.compact([
     serializeTag(name, properties, children.length === 0),
@@ -137,7 +137,11 @@ export function serializeToNml(
   applyTransform: boolean,
 ): string {
   // Only visible trees will be serialized!
-  const visibleTrees = Utils.values(tracing.trees).filter((tree) => tree.isVisible);
+  const visibleTrees = tracing.trees
+    .values()
+    .filter((tree) => tree.isVisible)
+    .toArray();
+
   return [
     "<things>",
     ...indent(
@@ -160,7 +164,7 @@ function serializeMetaInformation(
   state: WebknossosState,
   annotation: StoreAnnotation,
   buildInfo: APIBuildInfo,
-): Array<string> {
+): string[] {
   return _.compact([
     serializeTag("meta", {
       name: "writer",
@@ -237,7 +241,7 @@ function serializeParameters(
   annotation: StoreAnnotation,
   skeletonTracing: SkeletonTracing,
   applyTransform: boolean,
-): Array<string> {
+): string[] {
   const editPosition = getPosition(state.flycam).map(Math.round);
   const editPositionAdditionalCoordinates = state.flycam.additionalCoordinates;
   const { additionalAxes } = skeletonTracing;
@@ -245,6 +249,7 @@ function serializeParameters(
   const editRotation = getRotation(state.flycam);
   const userBBoxes = skeletonTracing.userBoundingBoxes;
   const taskBB = skeletonTracing.boundingBox;
+
   return [
     "<parameters>",
     ...indent(
@@ -356,45 +361,35 @@ function serializeTransform(state: WebknossosState): string[] {
   }
 }
 
-function serializeTrees(
-  state: WebknossosState,
-  trees: Array<Tree>,
-  applyTransform: boolean,
-): Array<string> {
-  return _.flatten(
-    trees.map((tree) => {
-      const metadataString = serializeMetadata(tree.metadata);
+function serializeTrees(state: WebknossosState, trees: Tree[], applyTransform: boolean): string[] {
+  return trees.flatMap((tree) => {
+    const metadataString = serializeMetadata(tree.metadata);
 
-      return serializeTagWithChildren(
-        "thing",
-        {
-          id: tree.treeId,
-          ...mapColorToComponents(tree.color),
-          name: tree.name,
-          groupId: tree.groupId,
-          type: tree.type,
-        },
-        [
-          "<nodes>",
-          ...indent(serializeNodes(state, tree.nodes, applyTransform)),
-          "</nodes>",
-          "<edges>",
-          ...indent(serializeEdges(tree.edges)),
-          "</edges>",
-          ...(metadataString.length > 0
-            ? ["<metadata>", ...indent(metadataString), "</metadata>"]
-            : []),
-        ],
-      );
-    }),
-  );
+    return serializeTagWithChildren(
+      "thing",
+      {
+        id: tree.treeId,
+        ...mapColorToComponents(tree.color),
+        name: tree.name,
+        groupId: tree.groupId,
+        type: tree.type,
+      },
+      [
+        "<nodes>",
+        ...indent(serializeNodes(state, tree.nodes, applyTransform)),
+        "</nodes>",
+        "<edges>",
+        ...indent(serializeEdges(tree.edges)),
+        "</edges>",
+        ...(metadataString.length > 0
+          ? ["<metadata>", ...indent(metadataString), "</metadata>"]
+          : []),
+      ],
+    );
+  });
 }
 
-function serializeNodes(
-  state: WebknossosState,
-  nodes: NodeMap,
-  applyTransform: boolean,
-): Array<string> {
+function serializeNodes(state: WebknossosState, nodes: NodeMap, applyTransform: boolean): string[] {
   return nodes.map((node) => {
     const position = (
       applyTransform ? getNodePosition(node, state) : node.untransformedPosition
@@ -453,7 +448,7 @@ function additionalCoordinatesToObject(additionalCoordinates: AdditionalCoordina
   );
 }
 
-function serializeEdges(edges: EdgeCollection): Array<string> {
+function serializeEdges(edges: EdgeCollection): string[] {
   return edges.map((edge) =>
     serializeTag("edge", {
       source: edge.source,
@@ -481,8 +476,8 @@ function serializeMetadata(metadata: MetadataEntryProto[]): string[] {
   });
 }
 
-function serializeBranchPoints(trees: Array<Tree>): Array<string> {
-  const branchPoints = _.flatten(trees.map((tree) => tree.branchPoints));
+function serializeBranchPoints(trees: Tree[]): string[] {
+  const branchPoints = trees.flatMap((tree) => tree.branchPoints);
 
   return [
     "<branchpoints>",
@@ -498,8 +493,8 @@ function serializeBranchPoints(trees: Array<Tree>): Array<string> {
   ];
 }
 
-function serializeComments(trees: Array<Tree>): Array<string> {
-  const comments = _.flatten(trees.map((tree) => tree.comments));
+function serializeComments(trees: Tree[]): string[] {
+  const comments = trees.flatMap((tree) => tree.comments);
 
   return [
     "<comments>",
@@ -515,24 +510,22 @@ function serializeComments(trees: Array<Tree>): Array<string> {
   ];
 }
 
-function serializeTreeGroups(treeGroups: Array<TreeGroup>, trees: Array<Tree>): Array<string> {
+function serializeTreeGroups(treeGroups: TreeGroup[], trees: Tree[]): string[] {
   const deepFindTree = (group: TreeGroup): boolean =>
     trees.find((tree) => tree.groupId === group.groupId) != null ||
-    _.some(group.children, deepFindTree);
+    group.children.some(deepFindTree);
 
   // Only serialize treeGroups that contain at least one tree at some level in their child hierarchy
   const nonEmptyTreeGroups = treeGroups.filter(deepFindTree);
-  return _.flatten(
-    nonEmptyTreeGroups.map((treeGroup) =>
-      serializeTagWithChildren(
-        "group",
-        {
-          id: treeGroup.groupId,
-          name: treeGroup.name,
-          ...(treeGroup.isExpanded ? {} : { isExpanded: treeGroup.isExpanded }),
-        },
-        serializeTreeGroups(treeGroup.children, trees),
-      ),
+  return nonEmptyTreeGroups.flatMap((treeGroup) =>
+    serializeTagWithChildren(
+      "group",
+      {
+        id: treeGroup.groupId,
+        name: treeGroup.name,
+        ...(treeGroup.isExpanded ? {} : { isExpanded: treeGroup.isExpanded }),
+      },
+      serializeTreeGroups(treeGroup.children, trees),
     ),
   );
 }
@@ -735,7 +728,7 @@ function connectedComponentsOfTree(tree: MutableTree): Array<Array<number>> {
 
 function splitTreeIntoComponents(
   tree: MutableTree,
-  treeGroups: Array<TreeGroup>,
+  treeGroups: TreeGroup[],
   maxTreeId: number,
 ): Array<MutableTree> {
   const components = connectedComponentsOfTree(tree);
@@ -793,20 +786,23 @@ function getEdgeHash(source: number, target: number) {
 
 export function wrapInNewGroup(
   originalTrees: MutableTreeMap,
-  _originalTreeGroups: Array<TreeGroup> | null | undefined,
+  _originalTreeGroups: TreeGroup[] | null | undefined,
   wrappingGroupName: string,
-): [MutableTreeMap, Array<TreeGroup>] {
+): [MutableTreeMap, TreeGroup[]] {
   const originalTreeGroups = _originalTreeGroups || [];
   // It does not matter whether the group id is used in the active tracing, since
   // this case will be handled during import, anyway. The group id just shouldn't clash
   // with the nml itself.
   const unusedGroupId = getMaximumGroupId(originalTreeGroups) + 1;
+  const trees = originalTrees.clone();
 
-  const trees = _.mapValues(originalTrees, (tree) => ({
-    ...tree,
-    // Give parentless trees the new treeGroup as parent
-    groupId: tree.groupId != null ? tree.groupId : unusedGroupId,
-  }));
+  originalTrees.values().forEach((tree) =>
+    trees.mutableSet(tree.treeId, {
+      ...tree,
+      // Give parentless trees the new treeGroup as parent
+      groupId: tree.groupId != null ? tree.groupId : unusedGroupId,
+    }),
+  );
 
   const treeGroups = [
     // Create a new tree group which holds the old ones
@@ -876,15 +872,15 @@ function parseMetadataEntry(attr: Record<any, any>): MetadataEntryProto {
 
 export function parseNml(nmlString: string): Promise<{
   trees: MutableTreeMap;
-  treeGroups: Array<TreeGroup>;
+  treeGroups: TreeGroup[];
   containedVolumes: boolean;
   userBoundingBoxes: Array<UserBoundingBox>;
   datasetName: string | null | undefined;
 }> {
   return new Promise((resolve, reject) => {
     const parser = new Saxophone();
-    const trees: MutableTreeMap = {};
-    const treeGroups: Array<TreeGroup> = [];
+    const trees: MutableTreeMap = new DiffableMap<number, MutableTree>();
+    const treeGroups: TreeGroup[] = [];
     const existingNodeIds = new Set();
     const existingTreeGroupIds = new Set();
     const existingEdges = new Set();
@@ -929,9 +925,9 @@ export function parseNml(nmlString: string): Promise<{
               edgesAreVisible: _parseBool(attr, "edgesAreVisible", { defaultValue: true }),
               metadata: [],
             };
-            if (trees[currentTree.treeId] != null)
+            if (trees.getNullable(currentTree.treeId) != null)
               throw new NmlParseError(`${messages["nml.duplicate_tree_id"]} ${currentTree.treeId}`);
-            trees[currentTree.treeId] = currentTree;
+            trees.mutableSet(currentTree.treeId, currentTree);
             break;
           }
 
@@ -1030,7 +1026,7 @@ export function parseNml(nmlString: string): Promise<{
               nodeId: _parseInt<never>(attr, "node"),
               content: _parseEntities<never>(attr, "content"),
             };
-            const tree = trees[nodeIdToTreeId[currentComment.nodeId]];
+            const tree = trees.getNullable(nodeIdToTreeId[currentComment.nodeId]);
             if (tree == null)
               throw new NmlParseError(
                 `${messages["nml.comment_without_tree"]} ${currentComment.nodeId}`,
@@ -1044,7 +1040,7 @@ export function parseNml(nmlString: string): Promise<{
               nodeId: _parseInt<never>(attr, "id"),
               timestamp: _parseInt(attr, "time", { defaultValue: DEFAULT_TIMESTAMP }),
             };
-            const tree = trees[nodeIdToTreeId[currentBranchpoint.nodeId]];
+            const tree = trees.getNullable(nodeIdToTreeId[currentBranchpoint.nodeId]);
             if (tree == null)
               throw new NmlParseError(
                 `${messages["nml.branchpoint_without_tree"]} ${currentBranchpoint.nodeId}`,
@@ -1163,7 +1159,7 @@ export function parseNml(nmlString: string): Promise<{
 
           case "groups": {
             if (!isParsingVolumeTag) {
-              _.forEach(trees, (tree) => {
+              trees.values().forEach((tree) => {
                 if (tree.groupId != null && !existingTreeGroupIds.has(tree.groupId)) {
                   throw new NmlParseError(
                     `${messages["nml.tree_with_missing_group_id"]} ${tree.groupId}`,
@@ -1185,24 +1181,24 @@ export function parseNml(nmlString: string): Promise<{
       })
       .on("finish", () => {
         // Split potentially unconnected trees
-        const originalTrees = Utils.values(trees);
+        const originalTrees = trees.values();
         let maxTreeId = getMaximumTreeId(trees);
 
-        for (const tree of originalTrees) {
+        originalTrees.forEach((tree) => {
           const newTrees = splitTreeIntoComponents(tree, treeGroups, maxTreeId);
 
           const newTreesSize = _.size(newTrees);
 
           if (newTreesSize > 1) {
-            delete trees[tree.treeId];
+            trees = trees.delete(tree.treeId);
 
             for (const newTree of newTrees) {
-              trees[newTree.treeId] = newTree;
+              trees.mutableSet(newTree.treeId, newTree);
             }
 
             maxTreeId += newTreesSize;
           }
-        }
+        });
 
         resolve({
           trees,

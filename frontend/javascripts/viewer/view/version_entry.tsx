@@ -38,6 +38,8 @@ import type {
   RevertToVersionUpdateAction,
   ServerUpdateAction,
   SplitAgglomerateUpdateAction,
+  UpdateActiveNodeUpdateAction,
+  UpdateActiveSegmentIdUpdateAction,
   UpdateAnnotationLayerNameUpdateAction,
   UpdateBucketUpdateAction,
   UpdateCameraAnnotationAction,
@@ -54,8 +56,6 @@ import type {
   UpdateTreeVisibilityUpdateAction,
   UpdateUserBoundingBoxVisibilityInSkeletonTracingUpdateAction,
   UpdateUserBoundingBoxVisibilityInVolumeTracingUpdateAction,
-  UpdateUserStateInSkeletonTracingUpdateAction,
-  UpdateUserStateInVolumeTracingUpdateAction,
 } from "viewer/model/sagas/update_actions";
 import type { StoreAnnotation } from "viewer/store";
 import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
@@ -300,9 +300,7 @@ const descriptionFns: Record<
   }),
   updateSkeletonTracing: (): Description => updateTracingDescription,
   updateVolumeTracing: (): Description => updateTracingDescription,
-  updateUserStateInVolumeTracing: (
-    action: UpdateUserStateInVolumeTracingUpdateAction,
-  ): Description => {
+  updateActiveSegmentId: (action: UpdateActiveSegmentIdUpdateAction): Description => {
     return {
       // todop
       description: `Updated the active segment id to ${action.value.activeSegmentId} for user ?`,
@@ -327,9 +325,7 @@ const descriptionFns: Record<
       icon: <EditOutlined />,
     };
   },
-  updateUserStateInSkeletonTracing: (
-    action: UpdateUserStateInSkeletonTracingUpdateAction,
-  ): Description => {
+  updateActiveNode: (action: UpdateActiveNodeUpdateAction): Description => {
     return {
       // todop
       description: `Updated the active node id to ${action.value.activeNode} for user ?`,

@@ -28,16 +28,12 @@ export type UpdateTreeGroupVisibilityUpdateAction = ReturnType<typeof updateTree
 export type DeleteNodeUpdateAction = ReturnType<typeof deleteNode>;
 export type CreateEdgeUpdateAction = ReturnType<typeof createEdge>;
 export type DeleteEdgeUpdateAction = ReturnType<typeof deleteEdge>;
-export type UpdateUserStateInSkeletonTracingUpdateAction = ReturnType<
-  typeof updateUserStateInSkeletonTracing
->;
+export type UpdateActiveNodeUpdateAction = ReturnType<typeof updateActiveNode>;
 export type LEGACY_UpdateSkeletonTracingUpdateAction = ReturnType<
   typeof LEGACY_updateSkeletonTracing
 >;
 type LEGACY_UpdateVolumeTracingUpdateAction = ReturnType<typeof LEGACY_updateVolumeTracing>;
-export type UpdateUserStateInVolumeTracingUpdateAction = ReturnType<
-  typeof updateUserStateInVolumeTracing
->;
+export type UpdateActiveSegmentIdUpdateAction = ReturnType<typeof updateActiveSegmentId>;
 export type UpdateLargestSegmentIdVolumeAction = ReturnType<typeof updateLargestSegmentId>;
 export type CreateSegmentUpdateAction = ReturnType<typeof createSegmentVolumeAction>;
 export type UpdateSegmentUpdateAction = ReturnType<typeof updateSegmentVolumeAction>;
@@ -101,8 +97,8 @@ export type UpdateActionWithoutIsolationRequirement =
   | DeleteEdgeUpdateAction
   | LEGACY_UpdateSkeletonTracingUpdateAction
   | LEGACY_UpdateVolumeTracingUpdateAction
-  | UpdateUserStateInSkeletonTracingUpdateAction
-  | UpdateUserStateInVolumeTracingUpdateAction
+  | UpdateActiveNodeUpdateAction
+  | UpdateActiveSegmentIdUpdateAction
   | UpdateLargestSegmentIdVolumeAction
   | UpdateUserBoundingBoxesInSkeletonTracingUpdateAction
   | UpdateUserBoundingBoxesInVolumeTracingUpdateAction
@@ -370,13 +366,12 @@ export function LEGACY_updateSkeletonTracing(
   } as const;
 }
 
-export function updateUserStateInSkeletonTracing(tracing: {
+export function updateActiveNode(tracing: {
   tracingId: string;
   activeNodeId: number | null | undefined;
 }) {
   return {
-    // Note the "in"
-    name: "updateUserStateInSkeletonTracing",
+    name: "updateActiveNode",
     value: {
       actionTracingId: tracing.tracingId,
       activeNode: tracing.activeNodeId,
@@ -427,10 +422,9 @@ export function updateLargestSegmentId(largestSegmentId: number | null, actionTr
   return { name: "updateLargestSegmentId", value: { largestSegmentId, actionTracingId } } as const;
 }
 
-export function updateUserStateInVolumeTracing(activeSegmentId: number, actionTracingId: string) {
+export function updateActiveSegmentId(activeSegmentId: number, actionTracingId: string) {
   return {
-    // Note the "in"
-    name: "updateUserStateInVolumeTracing",
+    name: "updateActiveSegmentId",
     value: {
       actionTracingId,
       activeSegmentId,

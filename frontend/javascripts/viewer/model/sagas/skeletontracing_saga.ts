@@ -64,6 +64,7 @@ import {
   deleteEdge,
   deleteNode,
   deleteTree,
+  updateActiveNode,
   updateNode,
   updateTree,
   updateTreeEdgesVisibility,
@@ -72,7 +73,6 @@ import {
   updateTreeVisibility,
   updateUserBoundingBoxVisibilityInSkeletonTracing,
   updateUserBoundingBoxesInSkeletonTracing,
-  updateUserStateInSkeletonTracing,
 } from "viewer/model/sagas/update_actions";
 import { api } from "viewer/singletons";
 import type { Node, NodeMap, SkeletonTracing, Tree, TreeMap, WebknossosState } from "viewer/store";
@@ -627,7 +627,7 @@ export function* diffSkeletonTracing(
     }
 
     if (prevSkeletonTracing.activeNodeId !== skeletonTracing.activeNodeId) {
-      yield updateUserStateInSkeletonTracing(skeletonTracing);
+      yield updateActiveNode(skeletonTracing);
     }
 
     const boxDiff = diffUserBoundingBoxes(

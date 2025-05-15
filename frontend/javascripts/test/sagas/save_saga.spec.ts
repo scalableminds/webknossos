@@ -74,12 +74,12 @@ describe("Save Saga", () => {
   it("should compact multiple updateTracing update actions", () => {
     const saveQueue = createSaveQueueFromUpdateActions(
       [
-        [UpdateActions.updateUserStateInSkeletonTracing(initialState.annotation)],
-        [UpdateActions.updateUserStateInVolumeTracing(3, initialState.annotation.tracingId)],
+        [UpdateActions.updateActiveNode(initialState.annotation)],
+        [UpdateActions.updateActiveSegmentId(3, initialState.annotation.tracingId)],
         [UpdateActions.updateCameraAnnotation([1, 2, 3], null, [1, 2, 3], 1)],
 
-        [UpdateActions.updateUserStateInSkeletonTracing(initialState.annotation)],
-        [UpdateActions.updateUserStateInVolumeTracing(4, initialState.annotation.tracingId)],
+        [UpdateActions.updateActiveNode(initialState.annotation)],
+        [UpdateActions.updateActiveSegmentId(4, initialState.annotation.tracingId)],
         [UpdateActions.updateCameraAnnotation([2, 2, 3], null, [1, 2, 3], 1)],
       ],
       TIMESTAMP,
@@ -295,8 +295,8 @@ describe("Save Saga", () => {
   it("should remove the correct update actions", () => {
     const saveQueue = createSaveQueueFromUpdateActions(
       [
-        [UpdateActions.updateUserStateInSkeletonTracing(initialState.annotation)],
-        [UpdateActions.updateUserStateInSkeletonTracing(initialState.annotation)],
+        [UpdateActions.updateActiveNode(initialState.annotation)],
+        [UpdateActions.updateActiveNode(initialState.annotation)],
       ],
       TIMESTAMP,
     );
@@ -342,9 +342,9 @@ describe("Save Saga", () => {
   it("should set the correct version numbers if the save queue was compacted", () => {
     const saveQueue = createSaveQueueFromUpdateActions(
       [
-        [UpdateActions.updateUserStateInSkeletonTracing(initialState.annotation)],
-        [UpdateActions.updateUserStateInSkeletonTracing(initialState.annotation)],
-        [UpdateActions.updateUserStateInSkeletonTracing(initialState.annotation)],
+        [UpdateActions.updateActiveNode(initialState.annotation)],
+        [UpdateActions.updateActiveNode(initialState.annotation)],
+        [UpdateActions.updateActiveNode(initialState.annotation)],
       ],
       TIMESTAMP,
     );

@@ -68,6 +68,7 @@ import {
   deleteSegmentDataVolumeAction,
   deleteSegmentVolumeAction,
   removeFallbackLayer,
+  updateActiveSegmentId,
   updateLargestSegmentId,
   updateMappingName,
   updateSegmentGroups,
@@ -75,7 +76,6 @@ import {
   updateSegmentVolumeAction,
   updateUserBoundingBoxVisibilityInVolumeTracing,
   updateUserBoundingBoxesInVolumeTracing,
-  updateUserStateInVolumeTracing,
 } from "viewer/model/sagas/update_actions";
 import type VolumeLayer from "viewer/model/volumetracing/volumelayer";
 import { Model, api } from "viewer/singletons";
@@ -461,7 +461,7 @@ export function* diffVolumeTracing(
     return;
   }
   if (prevVolumeTracing.activeCellId !== volumeTracing.activeCellId) {
-    yield updateUserStateInVolumeTracing(volumeTracing.activeCellId, volumeTracing.tracingId);
+    yield updateActiveSegmentId(volumeTracing.activeCellId, volumeTracing.tracingId);
   }
   if (prevVolumeTracing.largestSegmentId !== volumeTracing.largestSegmentId) {
     yield updateLargestSegmentId(volumeTracing.largestSegmentId, volumeTracing.tracingId);

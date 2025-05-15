@@ -32,83 +32,89 @@ const initialSkeletonTracing: SkeletonTracing = {
   createdTimestamp: 0,
   tracingId: "tracingId",
   cachedMaxNodeId: 7,
-  trees: {
-    "1": {
-      treeId: 1,
-      name: "TestTree-0",
-      nodes: new DiffableMap([
-        [0, createDummyNode(0)],
-        [1, createDummyNode(1)],
-        [2, createDummyNode(2)],
-        [7, createDummyNode(7)],
-      ]),
-      timestamp: 0,
-      branchPoints: [
-        {
-          nodeId: 1,
-          timestamp: 0,
-        },
-        {
-          nodeId: 7,
-          timestamp: 0,
-        },
-      ],
-      edges: EdgeCollection.loadFromArray([
-        {
-          source: 0,
-          target: 1,
-        },
-        {
-          source: 2,
-          target: 1,
-        },
-        {
-          source: 1,
-          target: 7,
-        },
-      ]),
-      comments: [
-        {
-          content: "comment",
-          nodeId: 0,
-        },
-      ],
-      color: [0.09019607843137255, 0.09019607843137255, 0.09019607843137255],
-      isVisible: true,
-      groupId: 3,
-      type: TreeTypeEnum.DEFAULT,
-      edgesAreVisible: true,
-      metadata: [],
-    },
-    "2": {
-      treeId: 2,
-      name: "TestTree-1",
-      nodes: new DiffableMap([
-        [4, createDummyNode(4)],
-        [5, createDummyNode(5)],
-        [6, createDummyNode(6)],
-      ]),
-      timestamp: 4,
-      branchPoints: [],
-      edges: EdgeCollection.loadFromArray([
-        {
-          source: 4,
-          target: 5,
-        },
-        {
-          source: 5,
-          target: 6,
-        },
-      ]),
-      comments: [],
-      color: [0.11764705882352941, 0.11764705882352941, 0.11764705882352941],
-      isVisible: true,
-      groupId: 2,
-      type: TreeTypeEnum.DEFAULT,
-      edgesAreVisible: true,
-      metadata: [],
-    },
-  },
+  trees: new DiffableMap([
+    [
+      1,
+      {
+        treeId: 1,
+        name: "TestTree-0",
+        nodes: new DiffableMap([
+          [0, createDummyNode(0)],
+          [1, createDummyNode(1)],
+          [2, createDummyNode(2)],
+          [7, createDummyNode(7)],
+        ]),
+        timestamp: 0,
+        branchPoints: [
+          {
+            nodeId: 1,
+            timestamp: 0,
+          },
+          {
+            nodeId: 7,
+            timestamp: 0,
+          },
+        ],
+        edges: EdgeCollection.loadFromArray([
+          {
+            source: 0,
+            target: 1,
+          },
+          {
+            source: 2,
+            target: 1,
+          },
+          {
+            source: 1,
+            target: 7,
+          },
+        ]),
+        comments: [
+          {
+            content: "comment",
+            nodeId: 0,
+          },
+        ],
+        color: [0.09019607843137255, 0.09019607843137255, 0.09019607843137255],
+        isVisible: true,
+        groupId: 3,
+        type: TreeTypeEnum.DEFAULT,
+        edgesAreVisible: true,
+        metadata: [],
+      },
+    ],
+    [
+      2,
+      {
+        treeId: 2,
+        name: "TestTree-1",
+        nodes: new DiffableMap([
+          [4, createDummyNode(4)],
+          [5, createDummyNode(5)],
+          [6, createDummyNode(6)],
+        ]),
+        timestamp: 4,
+        branchPoints: [],
+        edges: EdgeCollection.loadFromArray([
+          {
+            source: 4,
+            target: 5,
+          },
+          {
+            source: 5,
+            target: 6,
+          },
+        ]),
+        comments: [],
+        color: [0.11764705882352941, 0.11764705882352941, 0.11764705882352941],
+        isVisible: true,
+        groupId: 2,
+        type: TreeTypeEnum.DEFAULT,
+        edgesAreVisible: true,
+        metadata: [],
+      },
+    ],
+  ]),
   treeGroups: [
     {
       groupId: 1,
@@ -218,20 +224,23 @@ describe("NML", () => {
   });
 
   it("serializing and parsing should yield the same state even when using special characters", async () => {
+    const intitalSkeletonTracing = enforceSkeletonTracing(initialState.annotation);
+    const firstTree = intitalSkeletonTracing.trees.getOrThrow(1);
+
     const state = update(initialState, {
       annotation: {
         skeleton: {
           trees: {
-            "1": {
-              comments: {
-                $push: [
-                  {
-                    nodeId: 1,
-                    content: "Hello\"a'b<c>d&e\"f'g<h>i&j",
-                  },
-                ],
-              },
-            },
+            $set: intitalSkeletonTracing.trees.set(1, {
+              ...firstTree,
+              comments: [
+                ...firstTree.comments,
+                {
+                  nodeId: 1,
+                  content: "Hello\"a'b<c>d&e\"f'g<h>i&j",
+                },
+              ],
+            }),
           },
         },
       },
@@ -245,25 +254,29 @@ describe("NML", () => {
     );
     const { trees, treeGroups } = await parseNml(serializedNml);
     const skeletonTracing = enforceSkeletonTracing(state.annotation);
+
     expect(skeletonTracing.trees).toEqual(trees);
     expect(skeletonTracing.treeGroups).toEqual(treeGroups);
   });
 
   it("serializing and parsing should yield the same state even when using multiline attributes", async () => {
+    const intitalSkeletonTracing = enforceSkeletonTracing(initialState.annotation);
+    const firstTree = intitalSkeletonTracing.trees.getOrThrow(1);
+
     const state = update(initialState, {
       annotation: {
         skeleton: {
           trees: {
-            "1": {
-              comments: {
-                $push: [
-                  {
-                    nodeId: 1,
-                    content: "Hello\nfrom\nthe\nother\nside.",
-                  },
-                ],
-              },
-            },
+            $set: intitalSkeletonTracing.trees.set(1, {
+              ...firstTree,
+              comments: [
+                ...firstTree.comments,
+                {
+                  nodeId: 1,
+                  content: "Hello\nfrom\nthe\nother\nside.",
+                },
+              ],
+            }),
           },
         },
       },
@@ -282,28 +295,28 @@ describe("NML", () => {
   });
 
   it("serializing and parsing should yield the same state even when additional coordinates exist", async () => {
-    const existingNodeMap = initialState.annotation.skeleton?.trees[1].nodes;
-    if (existingNodeMap == null) {
-      throw new Error("Unexpected null value.");
-    }
-    const existingNode = existingNodeMap.getOrThrow(1);
-    const newNodeMap = existingNodeMap.set(1, {
+    const intitalSkeletonTracing = enforceSkeletonTracing(initialState.annotation);
+    const firstTree = intitalSkeletonTracing.trees.getOrThrow(1);
+    const existingNode = firstTree.nodes.getOrThrow(1);
+
+    const newNodeMap = firstTree.nodes.set(1, {
       ...existingNode,
       additionalCoordinates: [{ name: "t", value: 123 }],
     });
+
     const state = update(initialState, {
       annotation: {
         skeleton: {
           trees: {
-            "1": {
-              nodes: {
-                $set: newNodeMap,
-              },
-            },
+            $set: intitalSkeletonTracing.trees.set(1, {
+              ...firstTree,
+              nodes: newNodeMap,
+            }),
           },
         },
       },
     });
+
     const serializedNml = serializeToNml(
       state,
       state.annotation,
@@ -313,20 +326,23 @@ describe("NML", () => {
     );
     const { trees, treeGroups } = await parseNml(serializedNml);
     const skeletonTracing = enforceSkeletonTracing(state.annotation);
+
     expect(skeletonTracing.trees).toEqual(trees);
     expect(skeletonTracing.treeGroups).toEqual(treeGroups);
   });
 
   it("NML Serializer should only serialize visible trees", async () => {
+    const intitalSkeletonTracing = enforceSkeletonTracing(initialState.annotation);
+    const firstTree = intitalSkeletonTracing.trees.getOrThrow(1);
+
     const state = update(initialState, {
       annotation: {
         skeleton: {
           trees: {
-            "1": {
-              isVisible: {
-                $set: false,
-              },
-            },
+            $set: intitalSkeletonTracing.trees.set(1, {
+              ...firstTree,
+              isVisible: false,
+            }),
           },
         },
       },
@@ -340,22 +356,25 @@ describe("NML", () => {
     );
     const { trees } = await parseNml(serializedNml);
     const skeletonTracing = enforceSkeletonTracing(state.annotation);
+
     // Tree 1 should not be exported as it is not visible
-    delete skeletonTracing.trees["1"];
-    expect(Object.keys(skeletonTracing.trees)).toEqual(Object.keys(trees));
-    expect(skeletonTracing.trees).toEqual(trees);
+    const treeMapWithoutTreeOne = skeletonTracing.trees.delete(1);
+    expect(Object.keys(treeMapWithoutTreeOne)).toEqual(Object.keys(trees));
+    expect(treeMapWithoutTreeOne).toEqual(trees);
   });
 
   it("NML Serializer should only serialize groups with visible trees", async () => {
+    const intitalSkeletonTracing = enforceSkeletonTracing(initialState.annotation);
+    const firstTree = intitalSkeletonTracing.trees.getOrThrow(1);
+
     const state = update(initialState, {
       annotation: {
         skeleton: {
           trees: {
-            "1": {
-              isVisible: {
-                $set: false,
-              },
-            },
+            $set: intitalSkeletonTracing.trees.set(1, {
+              ...firstTree,
+              isVisible: false,
+            }),
           },
         },
       },
@@ -396,24 +415,23 @@ describe("NML", () => {
       },
     });
 
-    const existingNodeMap = adaptedState.annotation.skeleton?.trees[1].nodes;
-    if (existingNodeMap == null) {
-      throw new Error("Unexpected null value.");
-    }
-    const existingNode = existingNodeMap.getOrThrow(1);
-    const newNodeMap = existingNodeMap.set(1, {
+    const intitalSkeletonTracing = enforceSkeletonTracing(adaptedState.annotation);
+    const firstTree = intitalSkeletonTracing.trees.getOrThrow(1);
+    const existingNode = firstTree.nodes.getOrThrow(1);
+
+    const newNodeMap = firstTree.nodes.set(1, {
       ...existingNode,
       additionalCoordinates: [{ name: "t", value: 123 }],
     });
+
     adaptedState = update(adaptedState, {
       annotation: {
         skeleton: {
           trees: {
-            "1": {
-              nodes: {
-                $set: newNodeMap,
-              },
-            },
+            $set: intitalSkeletonTracing.trees.set(1, {
+              ...firstTree,
+              nodes: newNodeMap,
+            }),
           },
         },
       },
@@ -452,15 +470,18 @@ describe("NML", () => {
         stringListValue: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"],
       },
     ];
+
+    const intitalSkeletonTracing = enforceSkeletonTracing(initialState.annotation);
+    const firstTree = intitalSkeletonTracing.trees.getOrThrow(1);
+
     const state = update(initialState, {
       annotation: {
         skeleton: {
           trees: {
-            "1": {
-              metadata: {
-                $set: properties,
-              },
-            },
+            $set: intitalSkeletonTracing.trees.set(1, {
+              ...firstTree,
+              metadata: properties,
+            }),
           },
         },
       },
@@ -488,10 +509,13 @@ describe("NML", () => {
     if (state.annotation.skeleton == null) {
       throw new Error("Unexpected null for skeleton");
     }
-    expect(state.annotation.skeleton.trees[1]).toEqual(trees[1]);
+    expect(state.annotation.skeleton.trees.getOrThrow(1)).toEqual(trees.getOrThrow(1));
   });
 
   it("NML serializer should escape special characters and multilines", () => {
+    const intitalSkeletonTracing = enforceSkeletonTracing(initialState.annotation);
+    const firstTree = intitalSkeletonTracing.trees.getOrThrow(1);
+
     const state = update(initialState, {
       annotation: {
         description: {
@@ -499,16 +523,16 @@ describe("NML", () => {
         },
         skeleton: {
           trees: {
-            "1": {
-              comments: {
-                $push: [
-                  {
-                    nodeId: 1,
-                    content: "Hello\"a'b<c>d&e\"f'g<h>i&j\nwith\nnew\nlines",
-                  },
-                ],
-              },
-            },
+            $set: intitalSkeletonTracing.trees.set(1, {
+              ...firstTree,
+              comments: [
+                ...firstTree.comments,
+                {
+                  nodeId: 1,
+                  content: "Hello\"a'b<c>d&e\"f'g<h>i&j\nwith\nnew\nlines",
+                },
+              ],
+            }),
           },
         },
       },
@@ -538,20 +562,22 @@ describe("NML", () => {
   });
 
   it("NML Parser should throw errors for invalid nmls", async () => {
+    const skeletonTracing = enforceSkeletonTracing(initialState.annotation);
+    const secondTree = skeletonTracing.trees.getOrThrow(2);
+
     const invalidCommentState = update(initialState, {
       annotation: {
         skeleton: {
           trees: {
-            "2": {
-              comments: {
-                $set: [
-                  {
-                    content: "test",
-                    nodeId: 99,
-                  },
-                ],
-              },
-            },
+            $set: skeletonTracing.trees.set(2, {
+              ...secondTree,
+              comments: [
+                {
+                  content: "test",
+                  nodeId: 99,
+                },
+              ],
+            }),
           },
         },
       },
@@ -560,16 +586,15 @@ describe("NML", () => {
       annotation: {
         skeleton: {
           trees: {
-            "2": {
-              branchPoints: {
-                $set: [
-                  {
-                    timestamp: 0,
-                    nodeId: 99,
-                  },
-                ],
-              },
-            },
+            $set: skeletonTracing.trees.set(2, {
+              ...secondTree,
+              branchPoints: [
+                {
+                  timestamp: 0,
+                  nodeId: 99,
+                },
+              ],
+            }),
           },
         },
       },
@@ -578,16 +603,15 @@ describe("NML", () => {
       annotation: {
         skeleton: {
           trees: {
-            "2": {
-              edges: {
-                $set: EdgeCollection.loadFromArray([
-                  {
-                    source: 99,
-                    target: 5,
-                  },
-                ]),
-              },
-            },
+            $set: skeletonTracing.trees.set(2, {
+              ...secondTree,
+              edges: EdgeCollection.loadFromArray([
+                {
+                  source: 99,
+                  target: 5,
+                },
+              ]),
+            }),
           },
         },
       },
@@ -596,24 +620,23 @@ describe("NML", () => {
       annotation: {
         skeleton: {
           trees: {
-            "2": {
-              edges: {
-                $set: EdgeCollection.loadFromArray([
-                  {
-                    source: 4,
-                    target: 5,
-                  },
-                  {
-                    source: 5,
-                    target: 6,
-                  },
-                  {
-                    source: 6,
-                    target: 6,
-                  },
-                ]),
-              },
-            },
+            $set: skeletonTracing.trees.set(2, {
+              ...secondTree,
+              edges: EdgeCollection.loadFromArray([
+                {
+                  source: 4,
+                  target: 5,
+                },
+                {
+                  source: 5,
+                  target: 6,
+                },
+                {
+                  source: 6,
+                  target: 6,
+                },
+              ]),
+            }),
           },
         },
       },
@@ -622,52 +645,52 @@ describe("NML", () => {
       annotation: {
         skeleton: {
           trees: {
-            "2": {
-              edges: {
-                $set: EdgeCollection.loadFromArray([
-                  {
-                    source: 4,
-                    target: 5,
-                  },
-                  {
-                    source: 4,
-                    target: 5,
-                  },
-                  {
-                    source: 5,
-                    target: 6,
-                  },
-                ]),
-              },
-            },
+            $set: skeletonTracing.trees.set(2, {
+              ...secondTree,
+              edges: EdgeCollection.loadFromArray([
+                {
+                  source: 4,
+                  target: 5,
+                },
+                {
+                  source: 4,
+                  target: 5,
+                },
+                {
+                  source: 5,
+                  target: 6,
+                },
+              ]),
+            }),
           },
         },
       },
     });
+    const firstTree = skeletonTracing.trees.getOrThrow(1);
+
     const duplicateNodeState = update(initialState, {
       annotation: {
         skeleton: {
           trees: {
-            "1": {
-              nodes: {
-                $set: new DiffableMap([
+            $set: skeletonTracing.trees
+              .set(1, {
+                ...firstTree,
+                nodes: new DiffableMap([
                   [0, createDummyNode(0)],
                   [1, createDummyNode(1)],
                   [2, createDummyNode(2)],
                   [4, createDummyNode(4)],
                   [7, createDummyNode(7)],
                 ]),
-              },
-            },
-            "2": {
-              nodes: {
-                $set: new DiffableMap([
+              })
+              .set(2, {
+                ...secondTree,
+                nodes: new DiffableMap([
                   [4, createDummyNode(4)],
                   [5, createDummyNode(5)],
                   [6, createDummyNode(6)],
                 ]),
-              },
-            },
+              }),
           },
         },
       },
@@ -676,11 +699,10 @@ describe("NML", () => {
       annotation: {
         skeleton: {
           trees: {
-            "2": {
-              treeId: {
-                $set: 1,
-              },
-            },
+            $set: skeletonTracing.trees.set(2, {
+              ...secondTree,
+              treeId: 1,
+            }),
           },
         },
       },
@@ -689,11 +711,10 @@ describe("NML", () => {
       annotation: {
         skeleton: {
           trees: {
-            "2": {
-              groupId: {
-                $set: 9999,
-              },
-            },
+            $set: skeletonTracing.trees.set(2, {
+              ...secondTree,
+              groupId: 9999,
+            }),
           },
         },
       },
@@ -713,6 +734,7 @@ describe("NML", () => {
         },
       },
     });
+
     await testThatParserThrowsWithState(invalidCommentState, "invalidComment");
     await testThatParserThrowsWithState(invalidBranchPointState, "invalidBranchPoint");
     await testThatParserThrowsWithState(invalidEdgeState, "invalidEdge");
@@ -822,15 +844,21 @@ describe("NML", () => {
     const commentWithoutValidReferences =
       "Reference to non-existing id #42 and position reference #(4,5,6)";
 
-    const newTrees = _.cloneDeep(initialSkeletonTracing.trees);
-
-    newTrees[1].comments.push({
-      nodeId: 1,
-      content: "Reference to existing id in another tree #4",
-    });
-    newTrees[1].comments.push({
-      nodeId: 2,
-      content: commentWithoutValidReferences,
+    const firstTree = initialSkeletonTracing.trees.getOrThrow(1);
+    const testComments = [
+      ...firstTree.comments,
+      {
+        nodeId: 1,
+        content: "Reference to existing id in another tree #4",
+      },
+      {
+        nodeId: 2,
+        content: commentWithoutValidReferences,
+      },
+    ];
+    const newTrees = initialSkeletonTracing.trees.set(1, {
+      ...firstTree,
+      comments: testComments,
     });
 
     const action = addTreesAndGroupsAction(newTrees, []);
@@ -849,20 +877,19 @@ describe("NML", () => {
   });
 
   it("NML Parser should split up disconnected trees", async () => {
+    const skeletonTracing = enforceSkeletonTracing(initialState.annotation);
+    const edges = EdgeCollection.loadFromArray([
+      {
+        source: 0,
+        target: 1,
+      },
+    ]);
+
     const disconnectedTreeState = update(initialState, {
       annotation: {
         skeleton: {
           trees: {
-            "1": {
-              edges: {
-                $set: EdgeCollection.loadFromArray([
-                  {
-                    source: 0,
-                    target: 1,
-                  },
-                ]),
-              },
-            },
+            $set: skeletonTracing.trees.set(1, { ...skeletonTracing.trees.getOrThrow(1), edges }),
           },
         },
       },

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { max, min, maxBy, minBy } from "viewer/model/helpers/iterator_utils";
+import { max, min, maxBy, minBy, sum } from "viewer/model/helpers/iterator_utils";
 
 // Helper function to create test number values
 function createNumberMap(): Map<number, number> {
@@ -116,6 +116,23 @@ describe("Iterator Utils", () => {
       const objects = createObjectMap();
       const result = minBy(objects.values(), "id");
       expect(result).toEqual({ id: 1, value: 10 });
+    });
+  });
+
+  describe("sum", () => {
+    it("should return the sum of all values in an array", () => {
+      const map = createNumberMap();
+      expect(sum(map.values())).toBe(19); // 1 + 5 + 2 + 8 + 3 = 19
+    });
+
+    it("should return 0 for an empty array", () => {
+      const map = new Map<number, number>();
+      expect(sum(map.values())).toBe(0);
+    });
+
+    it("should handle negative numbers", () => {
+      const map = createNegativeNumberMap();
+      expect(sum(map.values())).toBe(-36); // -10 + -5 + -20 + -1 = -36
     });
   });
 });

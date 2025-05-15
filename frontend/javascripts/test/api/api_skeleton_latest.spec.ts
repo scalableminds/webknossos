@@ -6,6 +6,7 @@ import { userSettings } from "types/schemas/user_settings.schema";
 import Store from "viewer/store";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import type { Vector3 } from "viewer/constants";
+import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 
 // All the mocking is done in the helpers file, so it can be reused for both skeleton and volume API
 describe("API Skeleton", () => {
@@ -273,9 +274,9 @@ describe("API Skeleton", () => {
     api.tracing.setTreeGroup(2, 3);
     api.tracing.setTreeGroup(1, 7);
 
-    const state = Store.getState();
-    expect(state.annotation.skeleton!.trees[2].groupId).toBe(3);
-    expect(state.annotation.skeleton!.trees[1].groupId).toBe(7);
+    const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
+    expect(skeletonTracing.trees.getOrThrow(2).groupId).toBe(3);
+    expect(skeletonTracing.trees.getOrThrow(1).groupId).toBe(7);
   });
 
   it<WebknossosTestContext>("renameSkeletonGroup should rename a tree group", ({ api }) => {
@@ -289,10 +290,12 @@ describe("API Skeleton", () => {
   });
 
   it<WebknossosTestContext>("setTreeGroup should set the visibility of a tree", ({ api }) => {
+    const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
+
     api.tracing.setTreeVisibility(2, false);
-    expect(Store.getState().annotation.skeleton!.trees[2].isVisible).toBe(false);
+    expect(skeletonTracing.trees.getOrThrow(2).isVisible).toBe(false);
 
     api.tracing.setTreeVisibility(2, true);
-    expect(Store.getState().annotation.skeleton!.trees[2].isVisible).toBe(true);
+    expect(skeletonTracing.trees.getOrThrow(2).isVisible).toBe(true);
   });
 });

@@ -20,6 +20,15 @@ export function min<T extends number>(iterator: IteratorObject<T>): number {
 }
 
 /**
+ * Returns the sum of all values in the iterator
+ * @param iterator - Iterator of numbers
+ * @returns Sum of all values in the iterator or 0 if empty
+ */
+export function sum<T extends number>(iterator: IteratorObject<T>): number {
+  return iterator.reduce((sum, value) => sum + value, 0);
+}
+
+/**
  * Returns the object with the maximum value obtained by applying the selector function to each element or
  * by selecting the specified property from each element in the iterator
  * @param iterator - Iterator of objects

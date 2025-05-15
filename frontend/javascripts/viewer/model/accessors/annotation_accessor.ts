@@ -1,6 +1,7 @@
 import _ from "lodash";
 import type { EmptyObject } from "types/globals";
 import type { StoreAnnotation, WebknossosState } from "viewer/store";
+import { sum } from "../helpers/iterator_utils";
 
 export function mayEditAnnotationProperties(state: WebknossosState) {
   const { owner, restrictions } = state.annotation;
@@ -49,10 +50,10 @@ export function getStats(annotation: StoreAnnotation): TracingStats {
   }
   if (skeleton) {
     stats[skeleton.tracingId] = {
-      treeCount: _.size(skeleton.trees),
-      nodeCount: _.reduce(skeleton.trees, (sum, tree) => sum + tree.nodes.size(), 0),
-      edgeCount: _.reduce(skeleton.trees, (sum, tree) => sum + tree.edges.size(), 0),
-      branchPointCount: _.reduce(skeleton.trees, (sum, tree) => sum + _.size(tree.branchPoints), 0),
+      treeCount: skeleton.trees.size(),
+      nodeCount: sum(skeleton.trees.values().map((tree) => tree.nodes.size())),
+      edgeCount: sum(skeleton.trees.values().map((tree) => tree.edges.size())),
+      branchPointCount: sum(skeleton.trees.values().map((tree) => _.size(tree.branchPoints))),
     };
   }
   return stats;

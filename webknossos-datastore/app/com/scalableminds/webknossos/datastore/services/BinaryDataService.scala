@@ -53,7 +53,7 @@ class BinaryDataService(val dataBaseDir: Path,
     }
   }
 
-  def handleMultipleBucketRequests(requests: List[DataServiceDataRequest])(
+  def handleMultipleBucketRequests(requests: Seq[DataServiceDataRequest])(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[Seq[Box[Array[Byte]]]] =
     if (requests.isEmpty) Fox.successful(Seq.empty)
@@ -61,10 +61,8 @@ class BinaryDataService(val dataBaseDir: Path,
       for {
         _ <- Fox.fromBool(requests.forall(_.isSingleBucket)) ?~> "data requests handed to handleMultipleBucketRequests don’t contain bucket requests"
         dataLayer <- SequenceUtils.findUniqueElement(requests.map(_.dataLayer)).toFox
-        dataSource <- SequenceUtils.findUniqueElement(requests.map(_.dataSource)).toFox
-        // dataSource is null and unused for volume tracings. Insert dummy DataSourceId (also unused in that case, except for logging)
-        dataSourceId = if (dataSource != null) dataSource.id
-        else DataSourceId("Volume Annotation Layer", dataLayer.name)
+        // dataSource is None and unused for volume tracings. Insert dummy DataSourceId (also unused in that case, except for logging)
+        dataSourceId <- SequenceUtils.findUniqueElement(requests.map(_.dataSourceIdOrVolumeDummy)).toFox
         firstRequest <- requests.headOption.toFox
         // Requests outside of the layer range can be skipped. They will be answered with Empty below.
         indicesWhereOutsideRange: Set[Int] = requests.zipWithIndex.collect {
@@ -73,11 +71,11 @@ class BinaryDataService(val dataBaseDir: Path,
                 request.cuboid.mag) =>
             idx
         }.toSet
-        requestsSelected: List[DataServiceDataRequest] = requests.zipWithIndex.collect {
+        requestsSelected: Seq[DataServiceDataRequest] = requests.zipWithIndex.collect {
           case (request, idx) if !indicesWhereOutsideRange.contains(idx) => request
         }
         readInstructions = requestsSelected.map(r =>
-          DataReadInstruction(dataBaseDir, dataSource, dataLayer, r.cuboid.topLeft.toBucket, r.settings.version))
+          DataReadInstruction(dataBaseDir, dataSourceId, dataLayer, r.cuboid.topLeft.toBucket, r.settings.version))
         bucketProvider = bucketProviderCache.getOrLoadAndPut((dataSourceId, dataLayer.bucketProviderCacheKey))(_ =>
           dataLayer.bucketProvider(remoteSourceDescriptorServiceOpt, dataSourceId, sharedChunkContentsCache))
         bucketBoxes <- datasetErrorLoggingService.withErrorLoggingMultiple(
@@ -102,22 +100,58 @@ class BinaryDataService(val dataBaseDir: Path,
                                  inputArray: Array[Byte],
                                  conversionFunc: Array[Byte] => Fox[Array[Byte]],
                                  request: DataServiceDataRequest): Fox[Array[Byte]] =
-    if (isNecessary)
-      datasetErrorLoggingService.withErrorLogging(request.dataSource.id,
+    if (isNecessary) {
+      datasetErrorLoggingService.withErrorLogging(request.dataSourceIdOrVolumeDummy,
                                                   "converting bucket data",
                                                   conversionFunc(inputArray))
-    else Fox.successful(inputArray)
+    } else Fox.successful(inputArray)
+
+  /*
+   * Everything outside of the layer bounding box is set to black (zero) so data outside of the specified
+   *  bounding box is not exposed to the user
+   */
+  private def clipToLayerBoundingBox(request: DataServiceDataRequest)(inputArray: Array[Byte]): Box[Array[Byte]] = {
+    val bytesPerElement = request.dataLayer.bytesPerElement
+    val requestBboxInMag = request.cuboid.toBoundingBoxInMag
+    val layerBboxInMag = request.dataLayer.boundingBox / request.mag // Note that this div is implemented to round to the bigger bbox so we don’t lose voxels inside.
+    val intersectionOpt = requestBboxInMag.intersection(layerBboxInMag).map(_.move(-requestBboxInMag.topLeft))
+    val outputArray = Array.fill[Byte](inputArray.length)(0)
+    intersectionOpt.foreach { intersection =>
+      for {
+        z <- intersection.topLeft.z until intersection.bottomRight.z
+        y <- intersection.topLeft.y until intersection.bottomRight.y
+        // We can bulk copy a row of voxels and do not need to iterate in the x dimension
+      } {
+        val offset =
+          (intersection.topLeft.x +
+            y * requestBboxInMag.width +
+            z * requestBboxInMag.width * requestBboxInMag.height) * bytesPerElement
+        System.arraycopy(inputArray,
+                         offset,
+                         outputArray,
+                         offset,
+                         (intersection.bottomRight.x - intersection.topLeft.x) * bytesPerElement)
+      }
+    }
+    Full(outputArray)
+  }
 
   private def convertAccordingToRequest(request: DataServiceDataRequest, inputArray: Array[Byte]): Fox[Array[Byte]] =
     for {
+      clippedData <- convertIfNecessary(
+        !request.cuboid.toMag1BoundingBox.isFullyContainedIn(request.dataLayer.boundingBox),
+        inputArray,
+        data => clipToLayerBoundingBox(request)(data).toFox,
+        request
+      )
       mappedDataFox <- agglomerateServiceOpt.map { agglomerateService =>
         convertIfNecessary(
           request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation && request.cuboid.mag.maxDim <= MaxMagForAgglomerateMapping,
-          inputArray,
+          clippedData,
           data => agglomerateService.applyAgglomerate(request)(data).toFox,
           request
         )
-      }.toFox.fillEmpty(Fox.successful(inputArray)) ?~> "Failed to apply agglomerate mapping"
+      }.toFox.fillEmpty(Fox.successful(clippedData)) ?~> "Failed to apply agglomerate mapping"
       mappedData <- mappedDataFox
       resultData <- convertIfNecessary(request.settings.halfByte, mappedData, convertToHalfByte, request)
     } yield resultData
@@ -147,11 +181,12 @@ class BinaryDataService(val dataBaseDir: Path,
       implicit tc: TokenContext): Fox[Array[Byte]] =
     if (request.dataLayer.doesContainBucket(bucket) && request.dataLayer.containsMag(bucket.mag)) {
       val readInstruction =
-        DataReadInstruction(dataBaseDir, request.dataSource, request.dataLayer, bucket, request.settings.version)
-      // dataSource is null and unused for volume tracings. Insert dummy DataSourceId (also unused in that case, except for logging)
-      val dataSourceId =
-        if (request.dataSource != null) request.dataSource.id
-        else DataSourceId("Volume Annotation Layer", request.dataLayer.name)
+        DataReadInstruction(dataBaseDir,
+                            request.dataSourceIdOrVolumeDummy,
+                            request.dataLayer,
+                            bucket,
+                            request.settings.version)
+      val dataSourceId = request.dataSourceIdOrVolumeDummy
       val bucketProvider =
         bucketProviderCache.getOrLoadAndPut((dataSourceId, request.dataLayer.bucketProviderCacheKey))(_ =>
           request.dataLayer.bucketProvider(remoteSourceDescriptorServiceOpt, dataSourceId, sharedChunkContentsCache))
@@ -168,7 +203,6 @@ class BinaryDataService(val dataBaseDir: Path,
   private def cutOutCuboid(request: DataServiceDataRequest, rs: List[(BucketPosition, Array[Byte])]): Array[Byte] = {
     val bytesPerElement = request.dataLayer.bytesPerElement
     val cuboid = request.cuboid
-    val subsamplingStrides = Vec3Int.ones
 
     val resultShape = Vec3Int(cuboid.width, cuboid.height, cuboid.depth)
     val result = new Array[Byte](cuboid.volume * bytesPerElement)
@@ -194,9 +228,9 @@ class BinaryDataService(val dataBaseDir: Path,
               y % bucketLength * bucketLength +
               z % bucketLength * bucketLength * bucketLength) * bytesPerElement
 
-          val rx = (xMin - cuboid.topLeft.voxelXInMag) / subsamplingStrides.x
-          val ry = (y - cuboid.topLeft.voxelYInMag) / subsamplingStrides.y
-          val rz = (z - cuboid.topLeft.voxelZInMag) / subsamplingStrides.z
+          val rx = xMin - cuboid.topLeft.voxelXInMag
+          val ry = y - cuboid.topLeft.voxelYInMag
+          val rz = z - cuboid.topLeft.voxelZInMag
 
           val resultOffset = (rx + ry * resultShape.x + rz * resultShape.x * resultShape.y) * bytesPerElement
           System.arraycopy(data, dataOffset, result, resultOffset, (xMax - xMin) * bytesPerElement)

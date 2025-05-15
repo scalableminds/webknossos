@@ -18,6 +18,7 @@ import com.scalableminds.webknossos.datastore.models._
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.services._
+import com.scalableminds.webknossos.datastore.services.mesh.{AdHocMeshRequest, AdHocMeshService, AdHocMeshServiceHolder}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
@@ -502,7 +503,7 @@ class VolumeTracingService @Inject()(
                                        isTemporaryTracing,
                                        includeFallbackDataIfAvailable)
       requests = dataRequests.map(r =>
-        DataServiceDataRequest(null, volumeLayer, r.cuboid(volumeLayer), r.settings.copy(appliedAgglomerate = None)))
+        DataServiceDataRequest(None, volumeLayer, r.cuboid(volumeLayer), r.settings.copy(appliedAgglomerate = None)))
       data <- binaryDataService.handleDataRequests(requests)
     } yield data
 
@@ -520,7 +521,7 @@ class VolumeTracingService @Inject()(
                                        isTemporaryTracing,
                                        includeFallbackDataIfAvailable)
       requests = dataRequests.map(r =>
-        DataServiceDataRequest(null, volumeLayer, r.cuboid(volumeLayer), r.settings.copy(appliedAgglomerate = None)))
+        DataServiceDataRequest(None, volumeLayer, r.cuboid(volumeLayer), r.settings.copy(appliedAgglomerate = None)))
       data <- binaryDataService.handleMultipleBucketRequests(requests)
     } yield data
 

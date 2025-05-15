@@ -347,6 +347,7 @@ class EditableMappingUpdater(
       agglomerateId2 <- agglomerateIdForSegmentId(segmentId2) ?~> "Failed to look up agglomerate ids for merge action segments"
       agglomerateGraph1 <- agglomerateGraphForIdWithFallback(mapping, agglomerateId1) ?~> s"Failed to get agglomerate graph for id $agglomerateId1"
       agglomerateGraph2 <- agglomerateGraphForIdWithFallback(mapping, agglomerateId2) ?~> s"Failed to get agglomerate graph for id $agglomerateId2"
+      _ <- Fox.fromBool(agglomerateGraph1.segments.contains(segmentId1)) ?~> s"Segment $segmentId1 as queried by position ${update.segmentPosition1} is not contained in fetched agglomerate graph for agglomerate $agglomerateId1. actionTimestamp: ${update.actionTimestamp}, graph segments: ${agglomerateGraph1.segments}"
       _ <- Fox.fromBool(agglomerateGraph2.segments.contains(segmentId2)) ?~> s"Segment $segmentId2 as queried by position ${update.segmentPosition2} is not contained in fetched agglomerate graph for agglomerate $agglomerateId2. actionTimestamp: ${update.actionTimestamp}, graph segments: ${agglomerateGraph2.segments}"
       mergedGraphOpt = mergeGraph(agglomerateGraph1, agglomerateGraph2, segmentId1, segmentId2)
       _ <- Fox.runOptional(mergedGraphOpt) { mergedGraph =>
@@ -376,17 +377,13 @@ class EditableMappingUpdater(
                                  affinities = newEdgeAffinity +: agglomerateGraph1.affinities))
       }
     } else {
-      val segment1IsValid = agglomerateGraph1.segments.contains(segmentId1)
-      val segment2IsValid = agglomerateGraph2.segments.contains(segmentId2)
-      if (segment1IsValid && segment2IsValid) {
-        Some(
-          AgglomerateGraph(
-            segments = agglomerateGraph1.segments ++ agglomerateGraph2.segments,
-            edges = newEdge +: (agglomerateGraph1.edges ++ agglomerateGraph2.edges),
-            affinities = newEdgeAffinity +: (agglomerateGraph1.affinities ++ agglomerateGraph2.affinities),
-            positions = agglomerateGraph1.positions ++ agglomerateGraph2.positions
-          ))
-      } else None
+      Some(
+        AgglomerateGraph(
+          segments = agglomerateGraph1.segments ++ agglomerateGraph2.segments,
+          edges = newEdge +: (agglomerateGraph1.edges ++ agglomerateGraph2.edges),
+          affinities = newEdgeAffinity +: (agglomerateGraph1.affinities ++ agglomerateGraph2.affinities),
+          positions = agglomerateGraph1.positions ++ agglomerateGraph2.positions
+        ))
     }
   }
 

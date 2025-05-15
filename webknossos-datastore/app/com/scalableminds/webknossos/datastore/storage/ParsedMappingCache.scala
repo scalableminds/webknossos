@@ -17,10 +17,12 @@ case class CachedMapping(
 object CachedMapping {
 
   def fromMappingRequest(mappingRequest: DataServiceMappingRequest): CachedMapping =
-    storage.CachedMapping(mappingRequest.dataSource.id.organizationId,
-                          mappingRequest.dataSource.id.directoryName,
-                          mappingRequest.dataLayer.name,
-                          mappingRequest.mapping)
+    storage.CachedMapping(
+      mappingRequest.dataSourceIdOrVolumeDummy.organizationId,
+      mappingRequest.dataSourceIdOrVolumeDummy.directoryName,
+      mappingRequest.dataLayer.name,
+      mappingRequest.mapping
+    )
 }
 
 class ParsedMappingCache(val maxEntries: Int)

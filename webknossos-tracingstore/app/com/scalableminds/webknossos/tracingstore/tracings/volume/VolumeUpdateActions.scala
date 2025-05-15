@@ -489,7 +489,8 @@ object UpdateUserBoundingBoxVolumeAction {
     Json.format[UpdateUserBoundingBoxVolumeAction]
 }
 object UpdateUserBoundingBoxVisibilityVolumeAction {
-  implicit val jsonFormat: OFormat[UpdateUserBoundingBoxVisibilityVolumeAction] = Json.format[UpdateUserBoundingBoxVisibilityVolumeAction]
+  implicit val jsonFormat: OFormat[UpdateUserBoundingBoxVisibilityVolumeAction] =
+    Json.format[UpdateUserBoundingBoxVisibilityVolumeAction]
 }
 object RemoveFallbackLayerVolumeAction {
   implicit val jsonFormat: OFormat[RemoveFallbackLayerVolumeAction] = Json.format[RemoveFallbackLayerVolumeAction]

@@ -215,19 +215,6 @@ case class UpdateUserBoundingBoxVisibilityVolumeAction(boundingBoxId: Option[Int
               boundingBoxVisibilities = Seq.fill[Boolean](bboxIdsToUpdate.length)(isVisible)))
   }
 
-  override def applyOn(tracing: VolumeTracing): VolumeTracing = {
-
-    def updateUserBoundingBoxes(): Seq[NamedBoundingBoxProto] =
-      tracing.userBoundingBoxes.map { boundingBox =>
-        if (boundingBoxId.forall(_ == boundingBox.id))
-          boundingBox.copy(isVisible = Some(isVisible))
-        else
-          boundingBox
-      }
-
-    tracing.withUserBoundingBoxes(updateUserBoundingBoxes())
-  }
-
   override def isViewOnlyChange: Boolean = true
 }
 

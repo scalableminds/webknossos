@@ -10,6 +10,7 @@ import com.scalableminds.webknossos.datastore.geometry.{
   Vec3DoubleProto,
   Vec3IntProto
 }
+import com.scalableminds.webknossos.datastore.helpers.SkeletonTracingDefaults
 import com.scalableminds.webknossos.datastore.models.annotation.{
   AnnotationLayer,
   AnnotationLayerType,
@@ -75,11 +76,55 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
 
   private def adaptSkeletonUserStates(
       userStates: Seq[SkeletonUserStateProto],
-      oldPrecedenceLayerProperties: RedundantTracingProperties): Seq[SkeletonUserStateProto] = ??? // TODO
+      oldPrecedenceLayerProperties: RedundantTracingProperties): Seq[SkeletonUserStateProto] = {
+    val adaptedExistingUserStates = userStates.map { userState =>
+      val userId = userState.userId
+      oldPrecedenceLayerProperties.userStateBoundingBoxVisibilities.get(userId) match {
+        case None => userState
+        case Some((precedenceBboxIds, precedenceBboxVisibilities)) =>
+          userState.copy(boundingBoxIds = precedenceBboxIds, boundingBoxVisibilities = precedenceBboxVisibilities)
+      }
+    }
+    // We also have to create new user states for the users the old precedence layer has, but the new precedence layer is missing.
+    val newUserPrecedenceProperties = oldPrecedenceLayerProperties.userStateBoundingBoxVisibilities.filter(tuple =>
+      !userStates.exists(_.userId == tuple._1))
+    val newUserStates = newUserPrecedenceProperties.map {
+      case (userId: String, (boundingBoxIds: Seq[Int], boundingBoxVisibilities: Seq[Boolean])) =>
+        SkeletonTracingDefaults
+          .emptyUserState(userId)
+          .copy(
+            boundingBoxIds = boundingBoxIds,
+            boundingBoxVisibilities = boundingBoxVisibilities
+          )
+    }
+    adaptedExistingUserStates ++ newUserStates
+  }
 
   private def adaptVolumeUserStates(
       userStates: Seq[VolumeUserStateProto],
-      oldPrecedenceLayerProperties: RedundantTracingProperties): Seq[VolumeUserStateProto] = ??? // TODO
+      oldPrecedenceLayerProperties: RedundantTracingProperties): Seq[VolumeUserStateProto] = {
+    val adaptedExistingUserStates = userStates.map { userState =>
+      val userId = userState.userId
+      oldPrecedenceLayerProperties.userStateBoundingBoxVisibilities.get(userId) match {
+        case None => userState
+        case Some((precedenceBboxIds, precedenceBboxVisibilities)) =>
+          userState.copy(boundingBoxIds = precedenceBboxIds, boundingBoxVisibilities = precedenceBboxVisibilities)
+      }
+    }
+    // We also have to create new user states for the users the old precedence layer has, but the new precedence layer is missing.
+    val newUserPrecedenceProperties = oldPrecedenceLayerProperties.userStateBoundingBoxVisibilities.filter(tuple =>
+      !userStates.exists(_.userId == tuple._1))
+    val newUserStates = newUserPrecedenceProperties.map {
+      case (userId: String, (boundingBoxIds: Seq[Int], boundingBoxVisibilities: Seq[Boolean])) =>
+        VolumeTracingDefaults
+          .emptyUserState(userId)
+          .copy(
+            boundingBoxIds = boundingBoxIds,
+            boundingBoxVisibilities = boundingBoxVisibilities
+          )
+    }
+    adaptedExistingUserStates ++ newUserStates
+  }
 
   protected def getOldPrecedenceLayerProperties(existingAnnotationId: Option[ObjectId],
                                                 existingAnnotationLayers: List[AnnotationLayer],

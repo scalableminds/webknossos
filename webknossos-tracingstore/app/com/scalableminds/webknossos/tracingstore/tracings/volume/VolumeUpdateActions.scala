@@ -2,7 +2,6 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing, VolumeUserStateProto}
-import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
 import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction, UserStateUpdateAction}
@@ -44,7 +43,6 @@ trait UserStateVolumeUpdateAction extends ApplyableVolumeUpdateAction with UserS
                        actionUserId: String,
                        existingUserStateOpt: Option[VolumeUserStateProto]): VolumeUserStateProto
 
-  // TODO make DRYer by extracting to trait?
   override def applyOn(tracing: VolumeTracing): VolumeTracing = actionAuthorId match {
     case None => tracing
     case Some(actionUserId) =>

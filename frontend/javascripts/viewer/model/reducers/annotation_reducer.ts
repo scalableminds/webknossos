@@ -327,6 +327,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         additionalCoordinates,
         layerName,
       );
+      console.log("REMOVE_MESH", maybeMeshes, state.localSegmentationData[layerName]);
       if (maybeMeshes == null || maybeMeshes[segmentId] == null) {
         // No meshes exist for the segment id. No need to do anything.
         return state;
@@ -353,6 +354,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         seedAdditionalCoordinates,
         mappingName,
         mappingType,
+        opacity,
       } = action;
       const meshInfo: MeshInformation = {
         segmentId: segmentId,
@@ -361,7 +363,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         isLoading: false,
         isVisible: true,
         isPrecomputed: false,
-        opacity: Constants.DEFAULT_MESH_OPACITY,
+        opacity,
         mappingName,
         mappingType,
       };
@@ -454,6 +456,12 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
           },
         },
       });
+      console.log(
+        "STARTED_LOADING_MESH",
+        layerName,
+        segmentId,
+        state.localSegmentationData[layerName],
+      ); //TODO_c
       return updatedKey;
     }
 
@@ -477,6 +485,12 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
           },
         },
       });
+      console.log(
+        "FINISHED_LOADING_MESH",
+        layerName,
+        segmentId,
+        state.localSegmentationData[layerName],
+      ); //TODO_c
       return updatedKey;
     }
 

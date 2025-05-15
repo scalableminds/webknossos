@@ -28,7 +28,7 @@ import Store from "viewer/store";
 // subdivision would probably be the next step.
 export const PLANE_SUBDIVISION = 100;
 
-const DEFAULT_POSITION_OFFSET = [0, 0, 0];
+const DEFAULT_POSITION_OFFSET = [0, 0, 0] as Vector3;
 
 class Plane {
   // This class is supposed to collect all the Geometries that belong to one single plane such as
@@ -176,15 +176,19 @@ class Plane {
   // on the plane visible (by moving the plane to the back), one can
   // additionally pass the offset of the position (which is necessary for the
   // shader)
-  setPosition = (pos: Vector3, positionOffset?: Vector3): void => {
+  setPosition = (pos: Vector3, originalPosition?: Vector3): void => {
     // TODOM: Write proper reasoning comment.
     const scaledPosition = V3.multiply(pos, this.datasetScaleFactor);
-    this.TDViewBorders.position.set(...scaledPosition);
-    this.crosshair[0].position.set(...scaledPosition);
-    this.crosshair[1].position.set(...scaledPosition);
-    this.plane.position.set(...scaledPosition);
-    // Pass current plane offset to shader to calculate the position of the actual data that should be displayed (not the offsetted one).
-    this.plane.material.setPositionOffset(...(positionOffset || DEFAULT_POSITION_OFFSET));
+    const scaledPositionRounded = V3.round(scaledPosition);
+    this.TDViewBorders.position.set(...scaledPositionRounded);
+    this.crosshair[0].position.set(...scaledPositionRounded);
+    this.crosshair[1].position.set(...scaledPositionRounded);
+    this.plane.position.set(...scaledPositionRounded);
+    // Pass current plane offset to shader to calculate the position of the actual data that should be displayed (not the offset position).
+    const scaledOriginalPosition = V3.multiply(originalPosition || pos, this.datasetScaleFactor);
+    const scaledOriginalPositionRounded = V3.round(scaledOriginalPosition);
+    const scaledOffset = V3.sub(scaledPositionRounded, scaledOriginalPositionRounded);
+    this.plane.material.setPositionOffset(...scaledOffset);
   };
 
   setVisible = (isVisible: boolean, isDataVisible?: boolean): void => {

@@ -49,7 +49,7 @@ export const getWorldCoordUVW: ShaderModule = {
 
       // We need to divide by voxelSizeFactor because the threejs scene is scaled 
       // and then subtract the potential offset of the plane
-      worldCoordUVW = (worldCoordUVW / voxelSizeFactorUVW) - positionOffsetUVW;
+      worldCoordUVW = (worldCoordUVW - positionOffsetUVW) / voxelSizeFactorUVW;
 
 
       return worldCoordUVW;

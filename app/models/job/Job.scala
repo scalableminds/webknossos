@@ -260,9 +260,9 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       _ <- assertUpdateAccess(id)
       _ <- run(q"""UPDATE webknossos.jobs
-             SET state = 'PENDING', retriedBySuperUser = true
+             SET state = ${JobState.PENDING}, manualState = NULL, retriedBySuperUser = true
              WHERE _id = $id
-             AND state = 'FAILURE'""".asUpdate)
+             AND state IN (${JobState.FAILURE}, ${JobState.CANCELLED})""".asUpdate)
     } yield ()
 
   def updateStatus(jobId: ObjectId, s: JobStatus): Fox[Unit] =

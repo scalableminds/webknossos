@@ -91,12 +91,6 @@ function removeSubsequentUpdateBBoxActions(updateActionsBatches: Array<SaveQueue
       _.isEqual(actions1[0].value.updatedPropKeys, actions2[0].value.updatedPropKeys)
     ) {
       obsoleteUpdateActions.push(updateActionsBatches[i]);
-      console.log(
-        actions1[0].value.boundingBoxId,
-        actions1[0].value.updatedProps,
-        actions2[0].value.boundingBoxId,
-        actions2[0].value.updatedProps,
-      ); // TODO_c remove
     }
   }
 

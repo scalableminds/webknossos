@@ -407,6 +407,12 @@ function* setupSavingForAnnotation(_action: BatchedAnnotationInitializationActio
       ...ViewModeSaveRelevantActions,
       ...SkeletonTracingSaveRelevantActions,
     ]);
+    // The allowUpdate setting could have changed in the meantime
+    const allowUpdate = yield* select(
+      (state) =>
+        state.annotation.restrictions.allowUpdate && state.annotation.restrictions.allowSave,
+    );
+    if (!allowUpdate) continue;
     const flycam = yield* select((state) => state.flycam);
     const tdCamera = yield* select((state) => state.viewModeData.plane.tdCamera);
 

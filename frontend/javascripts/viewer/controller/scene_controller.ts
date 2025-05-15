@@ -81,7 +81,7 @@ const getVisibleSegmentationLayerNames = reuseInstanceOnEquality((storeState: We
 class SceneController {
   skeletons: Record<number, Skeleton> = {};
   isPlaneVisible: OrthoViewMap<boolean>;
-  planeShift: Vector3;
+  clippingDistance: number;
   datasetBoundingBox!: Cube;
   userBoundingBoxGroup!: THREE.Group;
   layerBoundingBoxGroup!: THREE.Group;
@@ -112,7 +112,7 @@ class SceneController {
       [OrthoViews.PLANE_XZ]: true,
       [OrthoViews.TDView]: true,
     };
-    this.planeShift = [0, 0, 0];
+    this.clippingDistance = 0;
     this.segmentMeshController = new SegmentMeshController();
     this.storePropertyUnsubscribers = [];
   }
@@ -423,21 +423,17 @@ class SceneController {
           this.planes[planeId].setOriginalCrosshairColor();
           this.planes[planeId].setVisible(!hidePlanes);
 
-          const pos = _.clone(originalPosition);
-
           const ind = Dimensions.getIndices(planeId);
           // Offset the plane so the user can see the skeletonTracing behind the plane.
           // The offset is passed to the shader as a uniform to be subtracted from the position to render the correct data.
           const unrotatedPositionOffset = [0, 0, 0];
-          unrotatedPositionOffset[ind[2]] = Math.round(
-            planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]],
-          );
+          unrotatedPositionOffset[ind[2]] =
+            planeId === OrthoViews.PLANE_XY ? this.clippingDistance : -this.clippingDistance;
           const rotatedPositionOffsetVector = new THREE.Vector3(
             ...unrotatedPositionOffset,
           ).applyEuler(new THREE.Euler(...rotation));
           const rotatedPositionOffset = rotatedPositionOffsetVector.toArray();
-          const positionWithOffset = V3.add(pos, rotatedPositionOffset);
-          this.planes[planeId].setPosition(positionWithOffset, pos);
+          this.planes[planeId].setPosition(originalPosition, rotatedPositionOffset);
           this.planes[planeId].setRotation(new THREE.Euler(rotation[0], rotation[1], rotation[2]));
 
           this.quickSelectGeometry.adaptVisibilityForRendering(originalPosition, ind[2]);
@@ -499,9 +495,7 @@ class SceneController {
   }
 
   setClippingDistance(value: number): void {
-    // convert nm to voxel
-    const voxelPerNMVector = getVoxelPerUnit(Store.getState().dataset.dataSource.scale);
-    V3.scale(voxelPerNMVector, value, this.planeShift);
+    this.clippingDistance = value;
     app.vent.emit("rerender");
   }
 

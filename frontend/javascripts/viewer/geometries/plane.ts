@@ -176,19 +176,19 @@ class Plane {
   // on the plane visible (by moving the plane to the back), one can
   // additionally pass the offset of the position (which is necessary for the
   // shader)
-  setPosition = (pos: Vector3, originalPosition?: Vector3): void => {
+  setPosition = (
+    originalPosition: Vector3,
+    positionOffset: Vector3 = DEFAULT_POSITION_OFFSET,
+  ): void => {
     // TODOM: Write proper reasoning comment.
-    const scaledPosition = V3.multiply(pos, this.datasetScaleFactor);
-    const scaledPositionRounded = V3.round(scaledPosition);
-    this.TDViewBorders.position.set(...scaledPositionRounded);
-    this.crosshair[0].position.set(...scaledPositionRounded);
-    this.crosshair[1].position.set(...scaledPositionRounded);
-    this.plane.position.set(...scaledPositionRounded);
-    // Pass current plane offset to shader to calculate the position of the actual data that should be displayed (not the offset position).
-    const scaledOriginalPosition = V3.multiply(originalPosition || pos, this.datasetScaleFactor);
-    const scaledOriginalPositionRounded = V3.round(scaledOriginalPosition);
-    const scaledOffset = V3.sub(scaledPositionRounded, scaledOriginalPositionRounded);
-    this.plane.material.setPositionOffset(...scaledOffset);
+    const scaledPosition = V3.multiply(originalPosition, this.datasetScaleFactor);
+    // The offset is in screen space already so no scaling is necessary.
+    const offsetPosition = V3.add(scaledPosition, positionOffset);
+    this.TDViewBorders.position.set(...offsetPosition);
+    this.crosshair[0].position.set(...offsetPosition);
+    this.crosshair[1].position.set(...offsetPosition);
+    this.plane.position.set(...offsetPosition);
+    this.plane.material.setPositionOffset(...positionOffset);
   };
 
   setVisible = (isVisible: boolean, isDataVisible?: boolean): void => {

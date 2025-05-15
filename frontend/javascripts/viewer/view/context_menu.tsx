@@ -145,6 +145,7 @@ import {
   withMappingActivationConfirmation,
 } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
 import { LoadMeshMenuItemLabel } from "./right-border-tabs/segments_tab/load_mesh_menu_item_label";
+import DiffableMap from "libs/diffable_map";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
@@ -239,7 +240,7 @@ function extractShortestPathAsNewTree(
   const { shortestPath } = api.tracing.findShortestPathBetweenNodes(sourceNodeId, targetNodeId);
   const newTree = extractPathAsNewTree(Store.getState(), sourceTree, shortestPath);
   if (newTree != null) {
-    const treeMap = { [newTree.treeId]: newTree };
+    const treeMap = new DiffableMap([[newTree.treeId, newTree]]);
     Store.dispatch(addTreesAndGroupsAction(treeMap, null));
   }
 }

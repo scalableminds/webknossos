@@ -55,7 +55,7 @@ import {
 } from "types/api_types";
 import type { ValueOf } from "types/globals";
 import {
-  defaultDatasetViewConfigurationWithoutNull,
+  defaultDatasetViewConfiguration,
   getDefaultLayerViewConfiguration,
 } from "types/schemas/dataset_view_configuration.schema";
 import { getSpecificDefaultsForLayer } from "types/schemas/dataset_view_configuration_defaults";
@@ -934,7 +934,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         step={1}
         value={this.props.datasetConfiguration.segmentationPatternOpacity}
         onChange={_.partial(this.props.onChange, "segmentationPatternOpacity")}
-        defaultValue={defaultDatasetViewConfigurationWithoutNull.segmentationPatternOpacity}
+        defaultValue={defaultDatasetViewConfiguration.segmentationPatternOpacity}
       />
     );
 

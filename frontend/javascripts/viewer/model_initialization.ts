@@ -115,6 +115,7 @@ import type {
   UserConfiguration,
 } from "viewer/store";
 import Store from "viewer/store";
+import { getUserStateForTracing } from "./model/accessors/annotation_accessor";
 import { doAllLayersHaveTheSameRotation } from "./model/accessors/dataset_layer_transformation_accessor";
 import { setVersionNumberAction } from "./model/actions/save_actions";
 import {
@@ -155,8 +156,10 @@ export async function initialize(
         unversionedAnnotation.id,
         version,
       );
-      // todop: select by id
-      userState = annotationProto != null ? _.first(annotationProto.userStates) : null;
+      userState =
+        annotationProto != null
+          ? getUserStateForTracing(annotationProto, Store.getState().activeUser, annotation?.owner)
+          : null;
       const layersWithStats = annotationProto.annotationLayers.map((protoLayer) => {
         return {
           tracingId: protoLayer.tracingId,

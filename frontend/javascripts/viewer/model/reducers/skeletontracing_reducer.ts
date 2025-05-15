@@ -49,12 +49,16 @@ import {
   GroupTypeEnum,
   getNodeKey,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import { getUserStateForTracing } from "../accessors/annotation_accessor";
 
 function SkeletonTracingReducer(state: WebknossosState, action: Action): WebknossosState {
   switch (action.type) {
     case "INITIALIZE_SKELETONTRACING": {
-      // todop: replace _.first to select the proper user
-      const userState = _.first(action.tracing.userStates);
+      const userState = getUserStateForTracing(
+        action.tracing,
+        state.activeUser,
+        state.annotation.owner,
+      );
 
       // Perf idea: applyUserStateToTrees could theoretically happen
       // within createTreeMapFromTreeArray. Performance would probably

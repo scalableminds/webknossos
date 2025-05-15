@@ -1,4 +1,10 @@
 import _ from "lodash";
+import type {
+  APIAnnotationUserState,
+  APIUserBase,
+  SkeletonUserState,
+  VolumeUserState,
+} from "types/api_types";
 import type { EmptyObject } from "types/globals";
 import type { StoreAnnotation, WebknossosState } from "viewer/store";
 
@@ -83,4 +89,29 @@ export function getVolumeStats(stats: TracingStats): [string, VolumeTracingStats
   return Array.from(Object.entries(stats)).filter(
     ([_tracingId, stat]) => "segmentCount" in stat,
   ) as [string, VolumeTracingStats][];
+}
+
+export function getUserStateForTracing<
+  T extends APIAnnotationUserState | VolumeUserState | SkeletonUserState,
+>(
+  tracing: { userStates: T[] },
+  activeUser: APIUserBase | null | undefined,
+  owner: APIUserBase | null | undefined,
+): T | undefined {
+  let userState: T | undefined;
+  if (activeUser) {
+    userState = tracing.userStates.find((state) => state.userId === activeUser.id);
+    if (userState) {
+      return userState;
+    }
+  }
+
+  if (owner) {
+    userState = tracing.userStates.find((state) => state.userId === owner.id);
+    if (userState) {
+      return userState;
+    }
+  }
+
+  return undefined;
 }

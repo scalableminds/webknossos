@@ -78,7 +78,7 @@ const serverVolumeTracing: ServerVolumeTracing = {
   ],
 };
 
-const volumeTracing = serverVolumeToClientVolumeTracing(serverVolumeTracing);
+const volumeTracing = serverVolumeToClientVolumeTracing(serverVolumeTracing, null, null);
 const volumeTracingLayer: APISegmentationLayer = {
   name: volumeTracing.tracingId,
   category: "segmentation",

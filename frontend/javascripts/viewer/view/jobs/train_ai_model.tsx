@@ -719,7 +719,7 @@ function AnnotationsCsvInput({
             ),
         );
         const volumeTracings = volumeServerTracings.map((tracing) =>
-          serverVolumeToClientVolumeTracing(tracing),
+          serverVolumeToClientVolumeTracing(tracing, null, null),
         );
         // A copy of the user bounding boxes of an annotation is saved in every tracing. In case no volume tracing exists, the skeleton tracing is checked.
         let userBoundingBoxes = volumeTracings[0]?.userBoundingBoxes;

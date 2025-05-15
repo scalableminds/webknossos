@@ -1,8 +1,7 @@
 import update from "immutability-helper";
 import DiffableMap from "libs/diffable_map";
 import * as Utils from "libs/utils";
-import _ from "lodash";
-import type { AdditionalCoordinate, ServerVolumeTracing } from "types/api_types";
+import type { APIUserBase, AdditionalCoordinate, ServerVolumeTracing } from "types/api_types";
 import { ContourModeEnum } from "viewer/constants";
 import {
   getLayerByName,
@@ -62,6 +61,7 @@ import {
   findParentIdForGroupId,
   getGroupNodeKey,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import { getUserStateForTracing } from "../accessors/annotation_accessor";
 import { mapGroups } from "../accessors/skeletontracing_accessor";
 import { sanitizeMetadata } from "./skeletontracing_reducer";
 
@@ -243,12 +243,15 @@ function expandSegmentParents(state: WebknossosState, action: ClickSegmentAction
   return setSegmentGroups(state, action.layerName, getNewGroups());
 }
 
-export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing): VolumeTracing {
+export function serverVolumeToClientVolumeTracing(
+  tracing: ServerVolumeTracing,
+  activeUser: APIUserBase | null | undefined,
+  owner: APIUserBase | null | undefined,
+): VolumeTracing {
   // As the frontend doesn't know all cells, we have to keep track of the highest id
   // and cannot compute it
   const largestSegmentId = tracing.largestSegmentId;
-  // todop: don't use _.first
-  const userState = _.first(tracing.userStates);
+  const userState = getUserStateForTracing(tracing, activeUser, owner);
 
   const userBoundingBoxes = convertUserBoundingBoxesFromServerToFrontend(
     tracing.userBoundingBoxes,
@@ -325,7 +328,11 @@ function VolumeTracingReducer(
 ): WebknossosState {
   switch (action.type) {
     case "INITIALIZE_VOLUMETRACING": {
-      const volumeTracing = serverVolumeToClientVolumeTracing(action.tracing);
+      const volumeTracing = serverVolumeToClientVolumeTracing(
+        action.tracing,
+        state.activeUser,
+        state.annotation.owner,
+      );
       const newVolumes = state.annotation.volumes.filter(
         (tracing) => tracing.tracingId !== volumeTracing.tracingId,
       );

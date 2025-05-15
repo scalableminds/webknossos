@@ -148,15 +148,18 @@ object UpdateAction {
       case s: UpdateUserBoundingBoxesSkeletonAction =>
         Json.obj("name" -> "updateUserBoundingBoxesInSkeletonTracing",
                  "value" -> Json.toJson(s)(UpdateUserBoundingBoxesSkeletonAction.jsonFormat))
-      case s: UpdateUserBoundingBoxSkeletonAction =>
-        Json.obj("name" -> "updateUserBoundingBoxSkeletonAction",
-                 "value" -> Json.toJson(s)(UpdateUserBoundingBoxSkeletonAction.jsonFormat))
       case s: AddUserBoundingBoxSkeletonAction =>
-        Json.obj("name" -> "addUserBoundingBoxSkeletonAction",
+        Json.obj("name" -> "addUserBoundingBoxInSkeletonTracing",
                  "value" -> Json.toJson(s)(AddUserBoundingBoxSkeletonAction.jsonFormat))
       case s: DeleteUserBoundingBoxSkeletonAction =>
-        Json.obj("name" -> "deleteUserBoundingBoxSkeletonAction",
+        Json.obj("name" -> "deleteUserBoundingBoxInSkeletonTracing",
                  "value" -> Json.toJson(s)(DeleteUserBoundingBoxSkeletonAction.jsonFormat))
+      case s: UpdateUserBoundingBoxSkeletonAction =>
+        Json.obj("name" -> "updateUserBoundingBoxInSkeletonTracing",
+                 "value" -> Json.toJson(s)(UpdateUserBoundingBoxSkeletonAction.jsonFormat))
+      case s: UpdateUserBoundingBoxVisibilitySkeletonAction =>
+        Json.obj("name" -> "updateUserBoundingBoxVisibilityInSkeletonTracing",
+                 "value" -> Json.toJson(s)(UpdateUserBoundingBoxVisibilitySkeletonAction.jsonFormat))
 
       // Volume
       case s: UpdateBucketVolumeAction =>
@@ -166,15 +169,18 @@ object UpdateAction {
       case s: UpdateUserBoundingBoxesVolumeAction =>
         Json.obj("name" -> "updateUserBoundingBoxesInVolumeTracing",
                  "value" -> Json.toJson(s)(UpdateUserBoundingBoxesVolumeAction.jsonFormat))
-      case s: UpdateUserBoundingBoxVolumeAction =>
-        Json.obj("name" -> "updateUserBoundingBoxVolumeAction",
-                 "value" -> Json.toJson(s)(UpdateUserBoundingBoxVolumeAction.jsonFormat))
       case s: AddUserBoundingBoxVolumeAction =>
-        Json.obj("name" -> "addUserBoundingBoxVolumeAction",
+        Json.obj("name" -> "addUserBoundingBoxInVolumeTracing",
                  "value" -> Json.toJson(s)(AddUserBoundingBoxVolumeAction.jsonFormat))
       case s: DeleteUserBoundingBoxVolumeAction =>
-        Json.obj("name" -> "deleteUserBoundingBoxVolumeAction",
+        Json.obj("name" -> "deleteUserBoundingBoxInVolumeTracing",
                  "value" -> Json.toJson(s)(DeleteUserBoundingBoxVolumeAction.jsonFormat))
+      case s: UpdateUserBoundingBoxVolumeAction =>
+        Json.obj("name" -> "updateUserBoundingBoxInVolumeTracing",
+                 "value" -> Json.toJson(s)(UpdateUserBoundingBoxVolumeAction.jsonFormat))
+      case s: UpdateUserBoundingBoxVisibilityVolumeAction =>
+        Json.obj("name" -> "updateUserBoundingBoxVisibilityInVolumeTracing",
+                 "value" -> Json.toJson(s)(UpdateUserBoundingBoxVisibilityVolumeAction.jsonFormat))
       case s: RemoveFallbackLayerVolumeAction =>
         Json.obj("name" -> "removeFallbackLayer", "value" -> Json.toJson(s)(RemoveFallbackLayerVolumeAction.jsonFormat))
       case s: ImportVolumeDataVolumeAction =>

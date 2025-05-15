@@ -577,7 +577,7 @@ export function addTreesAndGroups(
   );
   const hasInvalidNodeIds = getMinimumNodeId(trees) < Constants.MIN_NODE_ID;
   const needsReassignedIds =
-    skeletonTracing.trees.entryCount > 0 ||
+    skeletonTracing.trees.size() > 0 ||
     skeletonTracing.treeGroups.length > 0 ||
     hasInvalidTreeIds ||
     hasInvalidNodeIds;
@@ -922,11 +922,14 @@ export function createMutableTreeMapFromTreeArray(
       metadata: tree.metadata,
     });
   });
+
   return newTreeMap;
 }
+
 export function createTreeMapFromTreeArray(trees: ServerSkeletonTracingTree[]): TreeMap {
   return createMutableTreeMapFromTreeArray(trees) as any as TreeMap;
 }
+
 export function removeMissingGroupsFromTrees(
   skeletonTracing: SkeletonTracing,
   treeGroups: TreeGroup[],
@@ -934,13 +937,16 @@ export function removeMissingGroupsFromTrees(
   // Change the groupId of trees for groups that no longer exist
   const groupIds = new Set(mapGroupsToGenerator(treeGroups, (group) => group.groupId));
   const changedTrees: TreeMap = new DiffableMap<number, Tree>();
+
   skeletonTracing.trees.entries().forEach(([treeId, tree]) => {
     if (tree.groupId != null && !groupIds.has(tree.groupId)) {
       changedTrees.mutableSet(treeId, { ...tree, groupId: null });
     }
   });
+
   return changedTrees;
 }
+
 export function extractPathAsNewTree(
   state: WebknossosState,
   sourceTree: Tree,

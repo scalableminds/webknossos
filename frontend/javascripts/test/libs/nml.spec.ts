@@ -728,24 +728,26 @@ describe("NML", () => {
     const action = addTreesAndGroupsAction(_.cloneDeep(initialSkeletonTracing.trees), []);
     const newState = SkeletonTracingReducer(initialState, action);
     expect(newState).not.toBe(initialState);
+
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
     // This should be unchanged / sanity check
     expect(newState.annotation.name).toBe(initialState.annotation.name);
     expect(newSkeletonTracing.activeTreeId).toBe(initialSkeletonTracing.activeTreeId);
+
     // New node and tree ids should have been assigned
-    expect(_.size(newSkeletonTracing.trees)).toBe(4);
-    expect(newSkeletonTracing.trees[3].treeId).toBe(3);
-    expect(newSkeletonTracing.trees[4].treeId).toBe(4);
-    expect(newSkeletonTracing.trees[3].nodes.size()).toBe(4);
-    expect(newSkeletonTracing.trees[3].nodes.getOrThrow(8).id).toBe(8);
-    expect(newSkeletonTracing.trees[3].nodes.getOrThrow(9).id).toBe(9);
-    expect(newSkeletonTracing.trees[4].nodes.size()).toBe(3);
-    expect(newSkeletonTracing.trees[4].nodes.getOrThrow(12).id).toBe(12);
+    expect(newSkeletonTracing.trees.size()).toBe(4);
+    expect(newSkeletonTracing.trees.getOrThrow(3).treeId).toBe(3);
+    expect(newSkeletonTracing.trees.getOrThrow(4).treeId).toBe(4);
+    expect(newSkeletonTracing.trees.getOrThrow(3).nodes.size()).toBe(4);
+    expect(newSkeletonTracing.trees.getOrThrow(3).nodes.getOrThrow(8).id).toBe(8);
+    expect(newSkeletonTracing.trees.getOrThrow(3).nodes.getOrThrow(9).id).toBe(9);
+    expect(newSkeletonTracing.trees.getOrThrow(4).nodes.size()).toBe(3);
+    expect(newSkeletonTracing.trees.getOrThrow(4).nodes.getOrThrow(12).id).toBe(12);
 
     const getSortedEdges = (edges: EdgeCollection) => _.sortBy(edges.asArray(), "source");
 
     // And node ids in edges, branchpoints and comments should have been replaced
-    expect(getSortedEdges(newSkeletonTracing.trees[3].edges)).toEqual([
+    expect(getSortedEdges(newSkeletonTracing.trees.getOrThrow(3).edges)).toEqual([
       {
         source: 8,
         target: 9,
@@ -759,7 +761,7 @@ describe("NML", () => {
         target: 9,
       },
     ]);
-    expect(newSkeletonTracing.trees[3].branchPoints).toEqual([
+    expect(newSkeletonTracing.trees.getOrThrow(3).branchPoints).toEqual([
       {
         nodeId: 9,
         timestamp: 0,
@@ -769,13 +771,13 @@ describe("NML", () => {
         timestamp: 0,
       },
     ]);
-    expect(newSkeletonTracing.trees[3].comments).toEqual([
+    expect(newSkeletonTracing.trees.getOrThrow(3).comments).toEqual([
       {
         content: "comment",
         nodeId: 8,
       },
     ]);
-    expect(getSortedEdges(newSkeletonTracing.trees[4].edges)).toEqual([
+    expect(getSortedEdges(newSkeletonTracing.trees.getOrThrow(4).edges)).toEqual([
       {
         source: 12,
         target: 13,
@@ -797,9 +799,11 @@ describe("NML", () => {
     const newState = SkeletonTracingReducer(initialState, action);
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
+
     // This should be unchanged / sanity check
     expect(newState.annotation.name).toBe(initialState.annotation.name);
     expect(newSkeletonTracing.activeTreeId).toBe(initialSkeletonTracing.activeTreeId);
+
     // New node and tree ids should have been assigned
     expect(_.size(newSkeletonTracing.treeGroups)).toBe(4);
     expect(newSkeletonTracing.treeGroups[2].groupId).not.toBe(
@@ -808,8 +812,10 @@ describe("NML", () => {
     expect(newSkeletonTracing.treeGroups[3].groupId).not.toBe(
       newSkeletonTracing.treeGroups[1].groupId,
     );
-    expect(newSkeletonTracing.trees[3].groupId).toBe(5);
-    expect(newSkeletonTracing.trees[4].groupId).toBe(newSkeletonTracing.treeGroups[3].groupId);
+    expect(newSkeletonTracing.trees.getOrThrow(3).groupId).toBe(5);
+    expect(newSkeletonTracing.trees.getOrThrow(4).groupId).toBe(
+      newSkeletonTracing.treeGroups[3].groupId,
+    );
   });
 
   it("addTreesAndGroups reducer should replace nodeId references in comments when changing nodeIds", () => {
@@ -826,16 +832,20 @@ describe("NML", () => {
       nodeId: 2,
       content: commentWithoutValidReferences,
     });
+
     const action = addTreesAndGroupsAction(newTrees, []);
     const newState = SkeletonTracingReducer(initialState, action);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
+
     // Comments should have been rewritten if appropriate
-    expect(_.size(newSkeletonTracing.trees)).toBe(4);
-    expect(newSkeletonTracing.trees[3].comments.length).toBe(3);
-    expect(newSkeletonTracing.trees[3].comments[1].content).toBe(
+    expect(newSkeletonTracing.trees.size()).toBe(4);
+    expect(newSkeletonTracing.trees.getOrThrow(3).comments.length).toBe(3);
+    expect(newSkeletonTracing.trees.getOrThrow(3).comments[1].content).toBe(
       "Reference to existing id in another tree #12",
     );
-    expect(newSkeletonTracing.trees[3].comments[2].content).toBe(commentWithoutValidReferences);
+    expect(newSkeletonTracing.trees.getOrThrow(3).comments[2].content).toBe(
+      commentWithoutValidReferences,
+    );
   });
 
   it("NML Parser should split up disconnected trees", async () => {
@@ -866,17 +876,19 @@ describe("NML", () => {
     );
     const { trees: parsedTrees, treeGroups: parsedTreeGroups } =
       await parseNml(nmlWithDisconnectedTree);
+
     // Check that the tree was split up into its three components
-    expect(_.size(parsedTrees)).toBe(4);
-    expect(parsedTrees[3].nodes.has(0)).toBe(true);
-    expect(parsedTrees[3].nodes.has(1)).toBe(true);
-    expect(parsedTrees[3].nodes.has(2)).toBe(false);
-    expect(parsedTrees[3].nodes.has(7)).toBe(false);
-    expect(_.size(parsedTrees[3].branchPoints)).toBe(1);
-    expect(_.size(parsedTrees[3].comments)).toBe(1);
-    expect(parsedTrees[4].nodes.has(2)).toBe(true);
-    expect(parsedTrees[5].nodes.has(7)).toBe(true);
-    expect(_.size(parsedTrees[5].branchPoints)).toBe(1);
+    expect(parsedTrees.size()).toBe(4);
+    expect(parsedTrees.getOrThrow(3).nodes.has(0)).toBe(true);
+    expect(parsedTrees.getOrThrow(3).nodes.has(1)).toBe(true);
+    expect(parsedTrees.getOrThrow(3).nodes.has(2)).toBe(false);
+    expect(parsedTrees.getOrThrow(3).nodes.has(7)).toBe(false);
+    expect(_.size(parsedTrees.getOrThrow(3).branchPoints)).toBe(1);
+    expect(_.size(parsedTrees.getOrThrow(3).comments)).toBe(1);
+    expect(parsedTrees.getOrThrow(4).nodes.has(2)).toBe(true);
+    expect(parsedTrees.getOrThrow(5).nodes.has(7)).toBe(true);
+    expect(_.size(parsedTrees.getOrThrow(5).branchPoints)).toBe(1);
+
     // Check that the split up trees were wrapped in a group
     // which was inserted into the original tree's group
     const parentGroup = findGroup(parsedTreeGroups, 3);

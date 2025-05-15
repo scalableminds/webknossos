@@ -77,8 +77,10 @@ const RELEVANT_ACTIONS_FOR_COMMENTS = [
 
 const memoizedDeriveData = memoizeOne(
   (trees: TreeMap, sortBy: SortByEnum, isSortedAscending: boolean): Tree[] => {
-    const sortedTrees = _.values(trees)
+    const sortedTrees = trees
+      .values()
       .filter((tree) => tree.comments.length > 0)
+      .toArray()
       .sort(getTreeSorter(sortBy, isSortedAscending));
 
     return sortedTrees;
@@ -192,15 +194,15 @@ function CommentTabView(props: Props) {
       const { trees } = props.skeletonTracing;
 
       // Create a sorted, flat array of all comments across all trees
-      const sortedTrees = _.values(trees).slice().sort(getTreeSorter(sortBy, sortAscending));
+      const sortedTrees = trees.values().toArray().sort(getTreeSorter(sortBy, sortAscending));
 
-      const sortedComments = _.flatMap(sortedTrees, (tree: Tree): CommentType[] =>
+      const sortedComments = sortedTrees.flatMap((tree: Tree): CommentType[] =>
         tree.comments.slice().sort(getCommentSorter(sortBy, sortAscending)),
       );
 
-      const currentCommentIndex = _.findIndex(sortedComments, {
-        nodeId: activeNode.id,
-      });
+      const currentCommentIndex = sortedComments.findIndex(
+        (comment) => comment.nodeId === activeNode.id,
+      );
 
       const nextCommentIndex = (currentCommentIndex + 1) % sortedComments.length;
 
@@ -273,9 +275,9 @@ function CommentTabView(props: Props) {
     const { activeTreeId, activeNodeId } = props.skeletonTracing;
 
     if (activeTreeId && activeNodeId) {
-      const activeComment = props.skeletonTracing.trees[activeTreeId].comments.find(
-        (comment) => comment.nodeId === activeNodeId,
-      );
+      const activeComment = props.skeletonTracing.trees
+        .getOrThrow(activeTreeId)
+        .comments.find((comment) => comment.nodeId === activeNodeId);
 
       return activeComment;
     }

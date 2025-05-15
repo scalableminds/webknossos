@@ -164,7 +164,7 @@ function TreeHierarchyView(props: Props) {
     } else if (evt.shiftKey && props.activeTreeId) {
       // SHIFT click to select a whole range of nodes.
       // Selection will only work for nodes within the same group/hierarchy level.
-      const sourceNode = props.trees[props.activeTreeId];
+      const sourceNode = props.trees.getOrThrow(props.activeTreeId);
       const sourceNodeParent = findParentGroupNode(
         UITreeData,
         sourceNode.groupId ?? MISSING_GROUP_ID,
@@ -219,7 +219,7 @@ function TreeHierarchyView(props: Props) {
     const parentGroupId =
       dragTargetNode.type === GroupTypeEnum.GROUP
         ? dragTargetNode.id
-        : (props.trees[dragTargetNode.id].groupId ?? MISSING_GROUP_ID);
+        : (props.trees.getOrThrow(dragTargetNode.id).groupId ?? MISSING_GROUP_ID);
 
     let updatedTreeGroups: TreeGroup[] = props.treeGroups;
     if (draggedNode.type === GroupTypeEnum.TREE) {
@@ -362,7 +362,8 @@ const DetailsForSelection = memo(
     activeGroupId: number | null | undefined;
   }) => {
     if (selectedTreeIds.length === 1) {
-      const tree = trees[selectedTreeIds[0]];
+      const tree = trees.getNullable(selectedTreeIds[0]);
+
       if (tree == null) {
         return <>Cannot find details for selected tree.</>;
       }

@@ -204,7 +204,9 @@ export function findTreeNode(groups: TreeNode[], id: number, callback: (arg0: Tr
 }
 
 function _createGroupToTreesMap(trees: TreeMap): Record<number, Tree[]> {
-  return _.groupBy(trees, (tree) => (tree.groupId != null ? tree.groupId : MISSING_GROUP_ID));
+  return _.groupBy(trees.values().toArray(), (tree) =>
+    tree.groupId != null ? tree.groupId : MISSING_GROUP_ID,
+  );
 }
 
 export const createGroupToTreesMap = memoizeOne(_createGroupToTreesMap);

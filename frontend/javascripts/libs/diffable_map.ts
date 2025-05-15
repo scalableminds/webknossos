@@ -56,6 +56,29 @@ class DiffableMap<K extends number, V> {
   }
 
   /**
+   * Merges two DiffableMap instances into a new one
+   * When keys exist in both maps, values from mapB take precedence
+   *
+   * @param mapA First DiffableMap to merge
+   * @param mapB Second DiffableMap to merge (its values take precedence on conflicts)
+   * @returns A new DiffableMap containing all entries from both maps
+   */
+  static merge<K extends number, V>(
+    mapA: DiffableMap<K, V>,
+    mapB: DiffableMap<K, V>,
+  ): DiffableMap<K, V> {
+    // Create a new map with mapA's entries
+    const result = mapA.clone();
+
+    // Add all entries from mapB (overwriting any duplicate keys from mapA)
+    for (const [key, value] of mapB.entries()) {
+      result.mutableSet(key, value);
+    }
+
+    return result;
+  }
+
+  /**
    * Returns the unique identifier of this DiffableMap instance
    * Used internally for diffing to determine if two maps are derived from each other
    *
@@ -284,7 +307,7 @@ class DiffableMap<K extends number, V> {
    *
    * @returns A generator yielding all values
    */
-  *values(): Generator<V, void, undefined> {
+  *values(): MapIterator<V> {
     for (const map of this.chunks) {
       yield* map.values();
     }
@@ -295,7 +318,7 @@ class DiffableMap<K extends number, V> {
    *
    * @returns A generator yielding all keys
    */
-  *keys(): Generator<K, void, undefined> {
+  *keys(): MapIterator<K> {
     for (const map of this.chunks) {
       yield* map.keys();
     }
@@ -459,4 +482,5 @@ export function diffDiffableMaps<K extends number, V>(
     onlyB,
   };
 }
+
 export default DiffableMap;

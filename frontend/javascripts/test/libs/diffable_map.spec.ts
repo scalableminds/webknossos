@@ -340,4 +340,33 @@ describe("DiffableMap", () => {
       onlyB: [],
     });
   });
+
+  it("should correctly merge two DiffableMaps", () => {
+    const mapA = new DiffableMap<number, string>([
+      [1, "one"],
+      [2, "two"],
+      [3, "three"],
+    ]);
+
+    const mapB = new DiffableMap<number, string>([
+      [2, "TWO"], // Overlapping key with different value
+      [3, "three"], // Overlapping key with same value
+      [4, "four"], // New key
+    ]);
+
+    const merged = DiffableMap.merge(mapA, mapB);
+
+    // Check size
+    expect(merged.size()).toBe(4);
+
+    // Check values
+    expect(merged.getOrThrow(1)).toBe("one");
+    expect(merged.getOrThrow(2)).toBe("TWO"); // Value from mapB should take precedence
+    expect(merged.getOrThrow(3)).toBe("three");
+    expect(merged.getOrThrow(4)).toBe("four");
+
+    // The merged map should be a new instance
+    expect(merged).not.toBe(mapA);
+    expect(merged).not.toBe(mapB);
+  });
 });

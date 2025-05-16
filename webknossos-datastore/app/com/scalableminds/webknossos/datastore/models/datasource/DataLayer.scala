@@ -227,6 +227,8 @@ trait DataLayerLike {
   // n-dimensional datasets = 3-dimensional datasets with additional coordinate axes
   def additionalAxes: Option[Seq[AdditionalAxis]]
 
+  def specialFiles: Option[Seq[SpecialFile]]
+
 }
 
 object DataLayerLike {
@@ -278,6 +280,39 @@ trait DataLayer extends DataLayerLike {
     ElementClass.bytesPerElement(elementClass)
 
   def mags: List[MagLocator]
+
+  def withSpecialFiles(specialFiles: List[SpecialFile]): DataLayer = {
+    def mergeSpecialFiles(existingSpecialFiles: Option[Seq[SpecialFile]],
+                          newSpecialFiles: Seq[SpecialFile]): Option[Seq[SpecialFile]] =
+      existingSpecialFiles match {
+        case None => Some(newSpecialFiles)
+        case Some(existingFiles) =>
+          val existingFileURIs = existingFiles.map(_.source.toString).toSet
+          val newFiles = newSpecialFiles.filterNot(file => existingFileURIs.contains(file.source.toString))
+          if (newFiles.isEmpty) {
+            existingSpecialFiles
+          } else {
+            Some(existingFiles ++ newFiles)
+          }
+      }
+    if (specialFiles.nonEmpty) {
+      this match {
+        case l: N5DataLayer                  => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
+        case l: N5SegmentationLayer          => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
+        case l: PrecomputedDataLayer         => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
+        case l: PrecomputedSegmentationLayer => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
+        case l: Zarr3DataLayer               => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
+        case l: Zarr3SegmentationLayer       => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
+        case l: ZarrDataLayer                => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
+        case l: ZarrSegmentationLayer        => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
+        case l: WKWDataLayer                 => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
+        case l: WKWSegmentationLayer         => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
+        case _                               => this
+      }
+    } else {
+      this
+    }
+  }
 }
 
 object DataLayer {
@@ -420,7 +455,8 @@ case class AbstractDataLayer(
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
-    additionalAxes: Option[Seq[AdditionalAxis]] = None
+    additionalAxes: Option[Seq[AdditionalAxis]] = None,
+    specialFiles: Option[Seq[SpecialFile]] = None
 ) extends DataLayerLike
 
 object AbstractDataLayer {
@@ -435,7 +471,8 @@ object AbstractDataLayer {
       layer.defaultViewConfiguration,
       layer.adminViewConfiguration,
       layer.coordinateTransformations,
-      layer.additionalAxes
+      layer.additionalAxes,
+      layer.specialFiles
     )
 
   implicit val jsonFormat: OFormat[AbstractDataLayer] = Json.format[AbstractDataLayer]
@@ -452,7 +489,8 @@ case class AbstractSegmentationLayer(
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
-    additionalAxes: Option[Seq[AdditionalAxis]] = None
+    additionalAxes: Option[Seq[AdditionalAxis]] = None,
+    specialFiles: Option[Seq[SpecialFile]] = None
 ) extends SegmentationLayerLike
 
 object AbstractSegmentationLayer {
@@ -469,7 +507,8 @@ object AbstractSegmentationLayer {
       layer.defaultViewConfiguration,
       layer.adminViewConfiguration,
       layer.coordinateTransformations,
-      layer.additionalAxes
+      layer.additionalAxes,
+      layer.specialFiles
     )
 
   implicit val jsonFormat: OFormat[AbstractSegmentationLayer] = Json.format[AbstractSegmentationLayer]

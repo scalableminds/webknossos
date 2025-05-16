@@ -97,7 +97,7 @@ services:
       retries: 30
 
   redis:
-    image: redis:7.4
+    image: redis:8
     command:
       - redis-server
     ports:

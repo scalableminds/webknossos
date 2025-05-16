@@ -1400,13 +1400,16 @@ class TracingApi {
     skipCenteringAnimationInThirdDimension: boolean = true,
     rotation?: Vector3,
   ): void {
-    const { activeViewport } = Store.getState().viewModeData.plane;
+    const { viewModeData, flycam } = Store.getState();
+    const { activeViewport } = viewModeData.plane;
+    const curPosition = getPosition(flycam);
+    const curRotation = getRotationInDegrees(flycam);
+    const isNotRotated = _.isEqual(curRotation, [0, 0, 0]);
+    // TODOM: Fix this 3rd dimension calculation. Otherwise centering will lead to slowly moving along the 3rd dimension and thus not staying in the slice when rotation is active and not axis aligned.
     const dimensionToSkip =
-      skipCenteringAnimationInThirdDimension && activeViewport !== OrthoViews.TDView
+      skipCenteringAnimationInThirdDimension && activeViewport !== OrthoViews.TDView && isNotRotated
         ? dimensions.thirdDimensionForPlane(activeViewport)
         : null;
-    const curPosition = getPosition(Store.getState().flycam);
-    const curRotation = getRotationInDegrees(Store.getState().flycam);
     if (!Array.isArray(rotation)) rotation = curRotation;
     rotation = this.getShortestRotation(curRotation, rotation);
 

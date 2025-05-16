@@ -385,17 +385,21 @@ class DatasetController @Inject()(userService: UserService,
         }
     }
 
-  def getOrganizationForDataset(datasetName: String): Action[AnyContent] = sil.UserAwareAction.async {
-    implicit request =>
-      for {
-        organizationId <- datasetDAO.getOrganizationIdForDataset(datasetName)
-      } yield Ok(Json.obj("organization" -> organizationId))
-  }
-
-  def getDatasetIdFromNameAndOrganization(datasetName: String, organizationId: String): Action[AnyContent] =
+  def getOrganizationForDataset(datasetName: String, sharingToken: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
+      val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
       for {
-        datasetBox <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId).futureBox
+        organizationId <- datasetDAO.getOrganizationIdForDataset(datasetName)(ctx)
+      } yield Ok(Json.obj("organization" -> organizationId))
+    }
+
+  def getDatasetIdFromNameAndOrganization(datasetName: String,
+                                          organizationId: String,
+                                          sharingToken: Option[String]): Action[AnyContent] =
+    sil.UserAwareAction.async { implicit request =>
+      val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
+      for {
+        datasetBox <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)(ctx).futureBox
         result <- (datasetBox match {
           case Full(dataset) =>
             Fox.successful(

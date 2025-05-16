@@ -1,8 +1,12 @@
 import Request, { type RequestOptions } from "libs/request";
 
-export async function getOrganizationForDataset(datasetName: string): Promise<string> {
+export async function getOrganizationForDataset(
+  datasetName: string,
+  sharingToken?: string | null | undefined,
+): Promise<string> {
+  const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
   const { organization: organizationId } = await Request.receiveJSON(
-    `/api/datasets/disambiguate/${datasetName}/toNew`,
+    `/api/datasets/disambiguate/${datasetName}/toNew${sharingTokenSuffix}`,
   );
   return organizationId;
 }

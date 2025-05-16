@@ -1,11 +1,12 @@
 import ErrorHandling from "libs/error_handling";
-import { V3 } from "libs/mjs";
+import { V3, V4 } from "libs/mjs";
 import type { ProgressCallback } from "libs/progress_callback";
 import Toast from "libs/toast";
 import {
   areBoundingBoxesOverlappingOrTouching,
   castForArrayType,
   isNumberMap,
+  mod,
   union,
 } from "libs/utils";
 import _ from "lodash";
@@ -18,12 +19,18 @@ import type {
   BucketAddress,
   LabelMasksByBucketAndW,
   Vector3,
+  Vector4,
 } from "viewer/constants";
 import constants, { MappingStatusEnum } from "viewer/constants";
+import Constants from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
-import type { Bucket } from "viewer/model/bucket_data_handling/bucket";
+import type {
+  Bucket,
+  Containment,
+  SomeContainment,
+} from "viewer/model/bucket_data_handling/bucket";
 import { DataBucket, NULL_BUCKET, NullBucket } from "viewer/model/bucket_data_handling/bucket";
 import type PullQueue from "viewer/model/bucket_data_handling/pullqueue";
 import type PushQueue from "viewer/model/bucket_data_handling/pushqueue";
@@ -47,7 +54,7 @@ const warnAboutTooManyAllocations = _.once(() => {
 });
 
 class CubeEntry {
-  data: Map<number, Bucket>;
+  data: Map<number, DataBucket>;
   boundary: Vector3;
 
   constructor(boundary: Vector3) {
@@ -67,6 +74,27 @@ class CubeEntry {
 
 const FLOODFILL_VOXEL_THRESHOLD = 5 * 1000000;
 const USE_FLOODFILL_VOXEL_THRESHOLD = false;
+
+const NoContainment = { type: "no" } as const;
+const FullContainment = { type: "full" } as const;
+
+const zeroToBucketWidth = (el: number) => {
+  return el !== 0 ? el : Constants.BUCKET_WIDTH;
+};
+const makeLocalMin = (min: Vector3, mag: Vector3): Vector3 => {
+  return [
+    mod(Math.floor(min[0] / mag[0]), Constants.BUCKET_WIDTH),
+    mod(Math.floor(min[1] / mag[1]), Constants.BUCKET_WIDTH),
+    mod(Math.floor(min[2] / mag[2]), Constants.BUCKET_WIDTH),
+  ];
+};
+const makeLocalMax = (max: Vector3, mag: Vector3): Vector3 => {
+  return [
+    zeroToBucketWidth(mod(Math.ceil(max[0] / mag[0]), Constants.BUCKET_WIDTH)),
+    zeroToBucketWidth(mod(Math.ceil(max[1] / mag[1]), Constants.BUCKET_WIDTH)),
+    zeroToBucketWidth(mod(Math.ceil(max[2] / mag[2]), Constants.BUCKET_WIDTH)),
+  ];
+};
 
 class DataCube {
   BUCKET_COUNT_SOFT_LIMIT = constants.MAXIMUM_BUCKET_COUNT_PER_LAYER;
@@ -206,27 +234,60 @@ class DataCube {
   }
 
   private getCubeKey(zoomStep: number, allCoords: AdditionalCoordinate[] | undefined | null) {
-    const relevantCoords = (allCoords ?? []).filter(
-      (coord) => this.additionalAxes[coord.name] != null,
-    );
+    if (allCoords == null) {
+      // Instead of defaulting from null to [] for allCoords, we early-out with this simple
+      // return value for performance reasons.
+      return `${zoomStep}`;
+    }
+    const relevantCoords = allCoords.filter((coord) => this.additionalAxes[coord.name] != null);
     return [zoomStep, ...relevantCoords.map((el) => el.value)].join("-");
   }
 
-  isWithinBounds([x, y, z, zoomStep, coords]: BucketAddress): boolean {
+  private checkContainment([x, y, z, zoomStep, coords]: BucketAddress): Containment {
     const cube = this.getOrCreateCubeEntry(zoomStep, coords);
     if (cube == null) {
-      return false;
+      return NoContainment;
     }
 
-    return this.boundingBox.containsBucket([x, y, z, zoomStep], this.magInfo);
+    const mag = this.magInfo.getMagByIndex(zoomStep);
+    if (mag == null) {
+      return NoContainment;
+    }
+
+    const bucketBBox = BoundingBox.fromBucketAddressFast([x, y, z, zoomStep], mag);
+    if (bucketBBox == null) {
+      return NoContainment;
+    }
+
+    const intersectionBBox = this.boundingBox.intersectedWithFast(bucketBBox);
+
+    if (
+      intersectionBBox.min[0] === intersectionBBox.max[0] ||
+      intersectionBBox.min[1] === intersectionBBox.max[1] ||
+      intersectionBBox.min[2] === intersectionBBox.max[2]
+    ) {
+      return NoContainment;
+    }
+    if (
+      V3.equals(intersectionBBox.min, bucketBBox.min) &&
+      V3.equals(intersectionBBox.max, bucketBBox.max)
+    ) {
+      return FullContainment;
+    }
+
+    const { min, max } = intersectionBBox;
+
+    return {
+      type: "partial",
+      min: makeLocalMin(min, mag),
+      max: makeLocalMax(max, mag),
+    };
   }
 
   getBucketIndexAndCube([x, y, z, zoomStep, coords]: BucketAddress): [
     number | null | undefined,
     CubeEntry | null,
   ] {
-    // Removed for performance reasons
-    // ErrorHandling.assert(this.isWithinBounds([x, y, z, zoomStep]));
     const cube = this.getOrCreateCubeEntry(zoomStep, coords);
 
     if (cube != null) {
@@ -272,31 +333,36 @@ class DataCube {
   // NULL_BUCKET if the bucket cannot possibly exist, e.g. because it is
   // outside the dataset's bounding box.
   getOrCreateBucket(address: BucketAddress): Bucket {
-    if (!this.isWithinBounds(address)) {
-      return this.getNullBucket();
-    }
-
-    let bucket = this.getBucket(address, true);
+    let bucket = this.getBucket(address);
 
     if (bucket instanceof NullBucket) {
-      bucket = this.createBucket(address);
+      const containment = this.checkContainment(address);
+      if (containment.type === "no") {
+        return this.getNullBucket();
+      }
+      bucket = this.createBucket(address, containment);
     }
 
     return bucket;
   }
 
   // Returns the Bucket object if it exists, or NULL_BUCKET otherwise.
-  getBucket(address: BucketAddress, skipBoundsCheck: boolean = false): Bucket {
-    if (!skipBoundsCheck && !this.isWithinBounds(address)) {
-      return this.getNullBucket();
-    }
-
+  getBucket(address: BucketAddress): Bucket {
     const [bucketIndex, cube] = this.getBucketIndexAndCube(address);
 
     if (bucketIndex != null && cube != null) {
       const bucket = cube.data.get(bucketIndex);
 
-      if (bucket != null) {
+      // We double-check that the address of the bucket matches the requested
+      // address. If the address is outside of the layer's bbox, the linearization
+      // of the address into one index might collide with another bucket (that is
+      // within the bbox) which is why the check is necessary.
+      // We use slice to ignore the additional coordinates (this is mostly done
+      // to ignore annoying cases like null vs [] which have identical semantics).
+      if (
+        bucket != null &&
+        V4.isEqual(address.slice(0, 4) as Vector4, bucket.zoomedAddress.slice(0, 4) as Vector4)
+      ) {
         return bucket;
       }
     }
@@ -304,8 +370,14 @@ class DataCube {
     return this.getNullBucket();
   }
 
-  createBucket(address: BucketAddress): Bucket {
-    const bucket = new DataBucket(this.elementClass, address, this.temporalBucketManager, this);
+  createBucket(address: BucketAddress, containment: SomeContainment): Bucket {
+    const bucket = new DataBucket(
+      this.elementClass,
+      address,
+      this.temporalBucketManager,
+      containment,
+      this,
+    );
     this.addBucketToGarbageCollection(bucket);
     const [bucketIndex, cube] = this.getBucketIndexAndCube(address);
 
@@ -456,33 +528,6 @@ class DataCube {
     }
   }
 
-  async _labelVoxelInAllResolutions_DEPRECATED(
-    voxel: Vector3,
-    additionalCoordinates: AdditionalCoordinate[] | null,
-    label: number,
-    activeSegmentId?: number | null | undefined,
-  ): Promise<void> {
-    // This function is only provided for the wK front-end api and should not be used internally,
-    // since it only operates on one voxel and therefore is not performance-optimized.
-    // Please make use of a LabeledVoxelsMap instead.
-    const promises = [];
-
-    for (const [magIndex] of this.magInfo.getMagsWithIndices()) {
-      promises.push(
-        this._labelVoxelInResolution_DEPRECATED(
-          voxel,
-          additionalCoordinates,
-          label,
-          magIndex,
-          activeSegmentId,
-        ),
-      );
-    }
-
-    await Promise.all(promises);
-    this.triggerPushQueue();
-  }
-
   async _labelVoxelInResolution_DEPRECATED(
     voxel: Vector3,
     additionalCoordinates: AdditionalCoordinate[] | null,
@@ -490,6 +535,10 @@ class DataCube {
     zoomStep: number,
     activeSegmentId: number | null | undefined,
   ): Promise<void> {
+    // This function is only provided for testing purposes and should not be used internally,
+    // since it only operates on one voxel and therefore is not performance-optimized. It should
+    // be refactored away.
+    // Please make use of a LabeledVoxelsMap instead.
     const voxelInCube = this.boundingBox.containsPoint(voxel);
 
     if (voxelInCube) {

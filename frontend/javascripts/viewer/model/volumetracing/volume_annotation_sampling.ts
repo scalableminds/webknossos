@@ -1,6 +1,7 @@
 import { map3 } from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
+import type { Writeable } from "types/globals";
 import type { BucketAddress, LabeledVoxelsMap, Vector3 } from "viewer/constants";
 import constants from "viewer/constants";
 import type { Bucket } from "viewer/model/bucket_data_handling/bucket";
@@ -340,12 +341,13 @@ export function applyVoxelMap(
     get3DAddress(0, 0, out);
     const thirdDimensionValueInBucket = out[2];
 
-    for (let sliceCount = 0; sliceCount < numberOfSlicesToApply; sliceCount++) {
-      const newThirdDimValue = thirdDimensionValueInBucket + sliceCount;
+    for (let sliceOffset = 0; sliceOffset < numberOfSlicesToApply; sliceOffset++) {
+      const newThirdDimValue = thirdDimensionValueInBucket + sliceOffset;
 
-      if (sliceCount > 0 && newThirdDimValue % constants.BUCKET_WIDTH === 0) {
+      if (sliceOffset > 0 && newThirdDimValue % constants.BUCKET_WIDTH === 0) {
         // The current slice is in the next bucket in the third direction.
-        const nextBucketZoomedAddress: BucketAddress = [...labeledBucketZoomedAddress];
+        const nextBucketZoomedAddress: Writeable<BucketAddress> = [...labeledBucketZoomedAddress];
+
         nextBucketZoomedAddress[thirdDimensionIndex]++;
         postprocessBucket(bucket);
         bucket = dataCube.getOrCreateBucket(nextBucketZoomedAddress);
@@ -361,7 +363,7 @@ export function applyVoxelMap(
           voxelMap,
           segmentId,
           get3DAddress,
-          sliceCount,
+          sliceOffset,
           thirdDimensionIndex,
           shouldOverwrite,
           overwritableValue,

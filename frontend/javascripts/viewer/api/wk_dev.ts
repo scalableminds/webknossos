@@ -4,7 +4,7 @@ import { V3 } from "libs/mjs";
 import { roundTo, sleep } from "libs/utils";
 import _ from "lodash";
 import { type OrthoView, OrthoViews, type Vector3 } from "viewer/constants";
-import { Store } from "viewer/singletons";
+import { Model, Store } from "viewer/singletons";
 import type { ApiInterface } from "./api_latest";
 import type ApiLoader from "./api_loader";
 
@@ -57,6 +57,11 @@ export default class WkDev {
   public get store() {
     /* Access to the store */
     return Store;
+  }
+
+  public get model() {
+    /* Access to the model */
+    return Model;
   }
 
   public get api() {

@@ -31,6 +31,7 @@ class PullQueue {
   private abortController: AbortController;
   private consecutiveErrorCount: number;
   private isRetryScheduled: boolean;
+  private isDestroyed: boolean = false;
 
   constructor(cube: DataCube, layerName: string, datastoreInfo: DataStoreInfo) {
     this.cube = cube;
@@ -105,6 +106,9 @@ class PullQueue {
         }
       }
     } catch (error) {
+      if (this.isDestroyed) {
+        return;
+      }
       for (const bucketAddress of batch) {
         const bucket = this.cube.getBucket(bucketAddress);
 
@@ -196,6 +200,12 @@ class PullQueue {
     for (const el of highestPriorityElements) {
       this.priorityQueue.queue(el);
     }
+  }
+
+  destroy() {
+    this.isDestroyed = true;
+    this.clear();
+    this.abortRequests();
   }
 }
 

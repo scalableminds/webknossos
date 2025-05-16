@@ -580,10 +580,11 @@ function getMergedDataLayersFromDatasetAndVolumeTracings(
     );
 
     const fallbackLayer = fallbackLayerIndex > -1 ? originalLayers[fallbackLayerIndex] : null;
-    const boundingBox = getDatasetBoundingBox(dataset).asServerBoundingBox();
+    const datasetBoundingBox = getDatasetBoundingBox(dataset).asServerBoundingBox();
     const mags = tracing.mags || [];
     const tracingHasMagList = mags.length > 0;
     let coordinateTransformsMaybe = {};
+    const boundingBox = fallbackLayer?.boundingBox ?? datasetBoundingBox;
     if (allLayersSameRotation) {
       coordinateTransformsMaybe = {
         coordinateTransformations: originalLayers?.[0].coordinateTransformations,

@@ -53,14 +53,14 @@ describe("TemporalBucketManager", () => {
   }
 
   it<TestContext>("should be added when bucket has not been requested", ({ manager, cube }) => {
-    const bucket = new DataBucket("uint8", [0, 0, 0, 0], manager, cube);
+    const bucket = new DataBucket("uint8", [0, 0, 0, 0], manager, { type: "full" }, cube);
 
     fakeLabel(bucket);
     expect(manager.getCount()).toBe(1);
   });
 
   it<TestContext>("should be added when bucket has not been received", ({ manager, cube }) => {
-    const bucket = new DataBucket("uint8", [0, 0, 0, 0], manager, cube);
+    const bucket = new DataBucket("uint8", [0, 0, 0, 0], manager, { type: "full" }, cube);
 
     bucket.markAsRequested();
     expect(bucket.needsRequest()).toBe(false);
@@ -70,7 +70,7 @@ describe("TemporalBucketManager", () => {
   });
 
   it<TestContext>("should not be added when bucket has been received", ({ manager, cube }) => {
-    const bucket = new DataBucket("uint8", [0, 0, 0, 0], manager, cube);
+    const bucket = new DataBucket("uint8", [0, 0, 0, 0], manager, { type: "full" }, cube);
     bucket.markAsRequested();
     bucket.receiveData(new Uint8Array(1 << 15));
 
@@ -81,7 +81,7 @@ describe("TemporalBucketManager", () => {
   });
 
   it<TestContext>("should be removed once it is loaded", ({ manager, cube }) => {
-    const bucket = new DataBucket("uint8", [0, 0, 0, 0], manager, cube);
+    const bucket = new DataBucket("uint8", [0, 0, 0, 0], manager, { type: "full" }, cube);
     fakeLabel(bucket);
 
     bucket.markAsRequested();
@@ -93,8 +93,8 @@ describe("TemporalBucketManager", () => {
   // Helper function to prepare buckets
   function prepareBuckets(manager: TemporalBucketManager, cube: any) {
     // Insert two buckets into manager
-    const bucket1 = new DataBucket("uint8", [0, 0, 0, 0], manager, cube);
-    const bucket2 = new DataBucket("uint8", [1, 0, 0, 0], manager, cube);
+    const bucket1 = new DataBucket("uint8", [0, 0, 0, 0], manager, { type: "full" }, cube);
+    const bucket2 = new DataBucket("uint8", [1, 0, 0, 0], manager, { type: "full" }, cube);
 
     for (const bucket of [bucket1, bucket2]) {
       bucket.startDataMutation();

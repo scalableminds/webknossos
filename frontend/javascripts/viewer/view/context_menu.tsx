@@ -26,6 +26,7 @@ import Toast from "libs/toast";
 import { hexToRgb, rgbToHex, roundTo, truncateStringToLength } from "libs/utils";
 import messages from "messages";
 
+import DiffableMap from "libs/diffable_map";
 import { useWkSelector } from "libs/react_hooks";
 import React, { createContext, type MouseEvent, useContext, useEffect, useState } from "react";
 import type { Dispatch } from "redux";
@@ -145,7 +146,6 @@ import {
   withMappingActivationConfirmation,
 } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
 import { LoadMeshMenuItemLabel } from "./right-border-tabs/segments_tab/load_mesh_menu_item_label";
-import DiffableMap from "libs/diffable_map";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);

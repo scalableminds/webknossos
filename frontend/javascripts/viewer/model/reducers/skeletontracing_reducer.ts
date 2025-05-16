@@ -1,5 +1,6 @@
 import update from "immutability-helper";
 import ColorGenerator from "libs/color_generator";
+import DiffableMap from "libs/diffable_map";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import _ from "lodash";
@@ -47,26 +48,19 @@ import {
   GroupTypeEnum,
   getNodeKey,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import { maxBy } from "../helpers/iterator_utils";
-import DiffableMap from "libs/diffable_map";
+import { max, maxBy } from "../helpers/iterator_utils";
 
 function SkeletonTracingReducer(state: WebknossosState, action: Action): WebknossosState {
-  if (state.annotation.skeleton == null) {
-    return state;
-  }
+  // if (state.annotation.skeleton == null) {
+  //   return state;
+  // }
 
   switch (action.type) {
     case "INITIALIZE_SKELETONTRACING": {
       const trees = createTreeMapFromTreeArray(action.tracing.trees);
       let activeNodeId = action.tracing.activeNodeId;
 
-      // TODO this converts Iterator to Array just for the sake of _.max(). This might notb be performant.
-      let cachedMaxNodeId = _.max(
-        trees
-          .values()
-          .flatMap((__) => __.nodes.map((node) => node.id))
-          .toArray(),
-      );
+      let cachedMaxNodeId = max(trees.values().flatMap((__) => __.nodes.map((node) => node.id)));
 
       cachedMaxNodeId = cachedMaxNodeId != null ? cachedMaxNodeId : Constants.MIN_NODE_ID - 1;
 
@@ -229,7 +223,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
         return state;
       }
 
-      const newActiveNodeId = maxBy(trees.getOrThrow(tree.treeId).nodes.values(), "id")?.id;
+      const newActiveNodeId = maxBy(trees.getOrThrow(tree.treeId).nodes.values(), "id")?.id || null;
       return update(state, {
         annotation: {
           skeleton: {
@@ -365,15 +359,14 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
       if (result == null) {
         return state;
       }
-
       const [updatedTree, treeId] = result;
+      const newTrees = state.annotation.skeleton.trees.set(treeId, updatedTree);
+
       return update(state, {
         annotation: {
           skeleton: {
             trees: {
-              [treeId]: {
-                $set: updatedTree,
-              },
+              $set: newTrees,
             },
           },
         },
@@ -445,7 +438,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
     }
 
     case "SHUFFLE_ALL_TREE_COLORS": {
-      const newColors = ColorGenerator.getNRandomColors(_.size(skeletonTracing.trees));
+      const newColors = ColorGenerator.getNRandomColors(skeletonTracing.trees.size());
 
       let newTrees = state.annotation.skeleton.trees;
       state.annotation.skeleton.trees.values().forEach(
@@ -841,17 +834,18 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
       if (branchPointResult == null) {
         return state;
       }
-
       const [branchPoints, treeId, newActiveNodeId] = branchPointResult;
+      const tree = state.annotation.skeleton.trees.getOrThrow(treeId);
+      const newTrees = state.annotation.skeleton.trees.set(treeId, {
+        ...tree,
+        branchPoints,
+      });
+
       return update(state, {
         annotation: {
           skeleton: {
             trees: {
-              [treeId]: {
-                branchPoints: {
-                  $set: branchPoints,
-                },
-              },
+              $set: newTrees,
             },
             activeNodeId: {
               $set: newActiveNodeId,
@@ -874,15 +868,16 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
         return state;
       }
 
+      const newTrees = state.annotation.skeleton.trees.set(tree.treeId, {
+        ...tree,
+        branchPoints: tree.branchPoints.filter((bp) => bp.nodeId !== nodeId),
+      });
+
       return update(state, {
         annotation: {
           skeleton: {
             trees: {
-              [treeId]: {
-                branchPoints: {
-                  $set: tree.branchPoints.filter((bp) => bp.nodeId !== nodeId),
-                },
-              },
+              $set: newTrees,
             },
           },
         },

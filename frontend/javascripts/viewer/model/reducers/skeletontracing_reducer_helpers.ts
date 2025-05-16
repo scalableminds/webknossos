@@ -14,6 +14,7 @@ import type { AdditionalCoordinate } from "types/api_types";
 import { type TreeType, TreeTypeEnum, type Vector3 } from "viewer/constants";
 import Constants, { NODE_ID_REF_REGEX } from "viewer/constants";
 import {
+  enforceSkeletonTracing,
   findTreeByNodeId,
   getActiveNodeFromTree,
   getActiveTree,
@@ -43,7 +44,7 @@ import type {
   TreeMap,
   WebknossosState,
 } from "viewer/store";
-import { max, min } from "../helpers/iterator_utils";
+import { max, maxBy, min } from "../helpers/iterator_utils";
 
 export function generateTreeName(state: WebknossosState, timestamp: number, treeId: number) {
   let user = "";
@@ -222,6 +223,7 @@ export function deleteNode(
   const newActiveTreeId = newActiveTree.treeId;
   return [newTrees, newActiveTreeId, newActiveNodeId, newMaxNodeId];
 }
+
 export function deleteEdge(
   state: WebknossosState,
   sourceTree: Tree,
@@ -379,14 +381,17 @@ function splitTreeByNodes(
 
           // Cast to mutable tree type since we want to mutably do the split
           // in this reducer for performance reasons.
-          newTree = immutableNewTree as any as Tree;
+          newTree = immutableNewTree as any as MutableTree;
+          const newTrees = enforceSkeletonTracing(intermediateState.annotation).trees.set(
+            newTree.treeId,
+            newTree,
+          );
+
           intermediateState = update(intermediateState, {
             annotation: {
               skeleton: {
                 trees: {
-                  [newTree.treeId]: {
-                    $set: newTree,
-                  },
+                  $set: newTrees,
                 },
               },
             },
@@ -454,29 +459,26 @@ export function deleteBranchPoint(
   const { branchPointsAllowed } = restrictions;
   const { trees } = skeletonTracing;
 
-  const hasBranchPoints = _.some(trees.values().map((tree) => !_.isEmpty(tree.branchPoints)));
-
+  const hasBranchPoints = trees.values().some((tree) => !_.isEmpty(tree.branchPoints));
   if (!branchPointsAllowed || !hasBranchPoints) return null;
 
   // Find most recent branchpoint across all trees
-  const treeIdWithLastBranchpoint = trees
-    .values()
-    .filter((tree) => !_.isEmpty(tree.branchPoints))
-    .reduce((r, tree) => {
-      return Math.max(r, tree.branchPoints[-1].timestamp);
-    }, Number.NEGATIVE_INFINITY);
+  const treeWithLastBranchpoint = maxBy(
+    trees.values().filter((tree) => !_.isEmpty(tree.branchPoints)),
+    (tree: Tree) => _.last(tree.branchPoints)?.timestamp ?? 0,
+  );
 
-  if (treeIdWithLastBranchpoint === Number.NEGATIVE_INFINITY) {
+  if (treeWithLastBranchpoint == null) {
     return null;
   }
-  const branchPoints = trees.getNullable(treeIdWithLastBranchpoint)?.branchPoints;
+  const branchPoints = treeWithLastBranchpoint.branchPoints;
   const lastBranchPoint = _.last(branchPoints);
 
   if (branchPoints && lastBranchPoint) {
     // Delete branchpoint
     const newBranchPoints = _.without(branchPoints, lastBranchPoint);
 
-    return [newBranchPoints, treeIdWithLastBranchpoint, lastBranchPoint.nodeId];
+    return [newBranchPoints, treeWithLastBranchpoint.treeId, lastBranchPoint.nodeId];
   }
 
   return null;
@@ -540,7 +542,7 @@ export function getOrCreateTree(
   // Only create a new tree if there are no trees
   // Specifically, this means that no new tree is created just because
   // the activeTreeId is temporarily null
-  if (_.size(skeletonTracing.trees) === 0) {
+  if (skeletonTracing.trees.size() === 0) {
     return createTree(state, timestamp);
   }
 
@@ -563,10 +565,9 @@ export function addTreesAndGroups(
   trees: MutableTreeMap,
   treeGroups: MutableTreeGroup[],
 ): [MutableTreeMap, TreeGroup[], number] | null {
-  const treeIds = trees.values().map((treeId) => Number(treeId));
-  const hasInvalidTreeIds = treeIds.some(
-    (treeId) => treeId < Constants.MIN_TREE_ID || treeId > Constants.MAX_TREE_ID,
-  );
+  const hasInvalidTreeIds = trees
+    .keys()
+    .some((treeId) => treeId < Constants.MIN_TREE_ID || treeId > Constants.MAX_TREE_ID);
   const hasInvalidNodeIds = getMinimumNodeId(trees) < Constants.MIN_NODE_ID;
   const needsReassignedIds =
     skeletonTracing.trees.size() > 0 ||
@@ -654,7 +655,7 @@ export function deleteTrees(
   let newActiveTreeId: number | null = null;
   let newActiveNodeId: number | null = null;
 
-  if (_.size(newTrees) > 0 && !suppressActivatingNextNode) {
+  if (newTrees.size() > 0 && !suppressActivatingNextNode) {
     // Setting the tree active whose id is the next highest compared to the ids of the deleted trees.
     const maximumTreeId = _.max(treeIds) || Constants.MIN_TREE_ID;
     newActiveTreeId = getNearestTreeId(maximumTreeId, newTrees);
@@ -770,21 +771,15 @@ export function toggleAllTreesReducer(
   // Let's make all trees visible if there is one invisible tree
   const shouldBecomeVisible = skeletonTracing.trees.values().some((tree) => !tree.isVisible);
 
-  const isVisibleUpdater = {
-    isVisible: {
-      $set: shouldBecomeVisible,
-    },
-  };
-  const updateTreeObject: Record<string, typeof isVisibleUpdater> = {};
-
-  skeletonTracing.trees.keys().forEach((treeId) => {
-    updateTreeObject[treeId] = isVisibleUpdater;
+  let newTrees = skeletonTracing.trees;
+  skeletonTracing.trees.entries().forEach(([treeId, tree]) => {
+    newTrees.set(treeId, { ...tree, isVisible: shouldBecomeVisible });
   });
 
   return update(state, {
     annotation: {
       skeleton: {
-        trees: updateTreeObject,
+        trees: { $set: newTrees },
       },
     },
   });
@@ -892,6 +887,7 @@ export function createMutableTreeMapFromTreeArray(
   trees: ServerSkeletonTracingTree[],
 ): MutableTreeMap {
   const newTreeMap = new DiffableMap<number, MutableTree>();
+
   trees.forEach((tree) => {
     newTreeMap.mutableSet(tree.treeId, {
       comments: tree.comments as any as MutableCommentType[],

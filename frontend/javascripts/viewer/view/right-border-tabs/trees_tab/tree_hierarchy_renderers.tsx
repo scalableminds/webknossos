@@ -78,7 +78,7 @@ export function renderTreeNode(
   node: TreeNode,
 ): React.ReactNode {
   const tree = props.trees.getNullable(node.id);
-  if (!tree) return null;
+  if (tree == null) return null;
 
   const maybeProofreadingIcon =
     tree.type === TreeTypeEnum.AGGLOMERATE ? (

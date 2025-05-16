@@ -31,7 +31,7 @@ function setConnectomeTreesVisibilityReducer(
 
   let newTrees = skeletonTracing.trees;
   treeIds.forEach((treeId) => {
-    newTrees.set(treeId, { ...newTrees.getOrThrow(treeId), isVisible: visibility });
+    newTrees = newTrees.set(treeId, { ...newTrees.getOrThrow(treeId), isVisible: visibility });
   });
 
   return update(state, {

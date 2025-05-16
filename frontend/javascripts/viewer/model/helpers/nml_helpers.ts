@@ -38,6 +38,7 @@ import type {
 import { findGroup } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { getTransformsForSkeletonLayer } from "../accessors/dataset_layer_transformation_accessor";
 import { getNodePosition } from "../accessors/skeletontracing_accessor";
+import { min } from "./iterator_utils";
 
 // NML Defaults
 const DEFAULT_COLOR: Vector3 = [1, 0, 0];
@@ -879,7 +880,7 @@ export function parseNml(nmlString: string): Promise<{
 }> {
   return new Promise((resolve, reject) => {
     const parser = new Saxophone();
-    const trees: MutableTreeMap = new DiffableMap<number, MutableTree>();
+    let trees: MutableTreeMap = new DiffableMap<number, MutableTree>();
     const treeGroups: TreeGroup[] = [];
     const existingNodeIds = new Set();
     const existingTreeGroupIds = new Set();
@@ -1131,10 +1132,9 @@ export function parseNml(nmlString: string): Promise<{
           case "thing": {
             if (currentTree != null) {
               if (currentTree.nodes.size() > 0) {
-                const timestamp = _.min(currentTree.nodes.map((n) => n.timestamp));
+                const timestamp = min(currentTree.nodes.values().map((n) => n.timestamp));
 
-                // @ts-expect-error ts-migrate(2322) FIXME: Type 'number | undefined' is not assignable to typ... Remove this comment to see the full error message
-                trees[currentTree.treeId].timestamp = timestamp;
+                trees.mutableSet(currentTree.treeId, { ...currentTree, timestamp });
               }
             }
 

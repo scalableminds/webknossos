@@ -359,8 +359,8 @@ describe("NML", () => {
 
     // Tree 1 should not be exported as it is not visible
     const treeMapWithoutTreeOne = skeletonTracing.trees.delete(1);
-    expect(Object.keys(treeMapWithoutTreeOne)).toEqual(Object.keys(trees));
-    expect(treeMapWithoutTreeOne).toEqual(trees);
+    expect(treeMapWithoutTreeOne.keys()).toEqual(trees.keys());
+    expect(treeMapWithoutTreeOne.toObject()).toEqual(trees.toObject());
   });
 
   it("NML Serializer should only serialize groups with visible trees", async () => {

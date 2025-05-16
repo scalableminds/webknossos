@@ -1,3 +1,4 @@
+import DiffableMap from "libs/diffable_map";
 import {
   type APIAnnotation,
   type AnnotationLayerDescriptor,
@@ -23,7 +24,6 @@ import {
   findGroup,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { invertTransform, transformPointUnscaled } from "../helpers/transformation_helpers";
-import DiffableMap from "libs/diffable_map";
 import {
   getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull,
   getTransformsForSkeletonLayer,

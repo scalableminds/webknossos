@@ -262,7 +262,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       _ <- run(q"""UPDATE webknossos.jobs
              SET state = ${JobState.PENDING}, manualState = NULL, retriedBySuperUser = true
              WHERE _id = $id
-             AND state IN (${JobState.FAILURE}, ${JobState.CANCELLED})""".asUpdate)
+             AND (state = ${JobState.FAILURE} OR manualState = ${JobState.CANCELLED})""".asUpdate)
     } yield ()
 
   def updateStatus(jobId: ObjectId, s: JobStatus): Fox[Unit] =

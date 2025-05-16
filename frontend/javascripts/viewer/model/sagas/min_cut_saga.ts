@@ -203,7 +203,7 @@ function* performMinCut(action: Action): Saga<void> {
     return;
   }
 
-  const seedTree = skeleton.trees[action.treeId];
+  const seedTree = skeleton.trees.getNullable(action.treeId);
 
   if (!seedTree) {
     throw new Error(`seedTree with id ${action.treeId} not found.`);

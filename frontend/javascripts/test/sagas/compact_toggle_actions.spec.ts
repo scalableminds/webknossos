@@ -1,4 +1,3 @@
-import _ from "lodash";
 import { describe, it, expect } from "vitest";
 import type {
   Flycam,
@@ -56,7 +55,8 @@ const createSegment = (id: number, groupId: number | null, isVisible: boolean): 
   metadata: [],
 });
 
-const makeTreesObject = (trees: Tree[]) => _.keyBy(trees, "treeId") as TreeMap;
+const makeTreesObject = (trees: Tree[]): TreeMap =>
+  new DiffableMap<number, Tree>(trees.map((tree) => [tree.treeId, tree]));
 
 const genericGroups: TreeGroup[] = [
   {

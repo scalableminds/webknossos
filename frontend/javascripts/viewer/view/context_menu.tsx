@@ -26,6 +26,7 @@ import Toast from "libs/toast";
 import { hexToRgb, rgbToHex, roundTo, truncateStringToLength } from "libs/utils";
 import messages from "messages";
 
+import DiffableMap from "libs/diffable_map";
 import { useWkSelector } from "libs/react_hooks";
 import React, { createContext, type MouseEvent, useContext, useEffect, useState } from "react";
 import type { Dispatch } from "redux";
@@ -239,7 +240,7 @@ function extractShortestPathAsNewTree(
   const { shortestPath } = api.tracing.findShortestPathBetweenNodes(sourceNodeId, targetNodeId);
   const newTree = extractPathAsNewTree(Store.getState(), sourceTree, shortestPath);
   if (newTree != null) {
-    const treeMap = { [newTree.treeId]: newTree };
+    const treeMap = new DiffableMap([[newTree.treeId, newTree]]);
     Store.dispatch(addTreesAndGroupsAction(treeMap, null));
   }
 }

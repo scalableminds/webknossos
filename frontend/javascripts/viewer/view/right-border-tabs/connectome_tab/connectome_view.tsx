@@ -488,7 +488,11 @@ class ConnectomeView extends React.Component<Props, State> {
     if (deletedSynapseIds.length > 0) {
       const treeIdsToDelete: number[] = [];
 
-      const treeNameToTree = _.keyBy(trees, "name");
+      // Create a mapping from tree name to tree object that works with DiffableMap
+      const treeNameToTree: Record<string, MutableTree> = {};
+      for (const [_, tree] of trees.entries()) {
+        treeNameToTree[tree.name] = tree;
+      }
 
       deletedSynapseIds.forEach((synapseId) => {
         const tree = treeNameToTree[getTreeNameForSynapse(synapseId)];
@@ -505,12 +509,15 @@ class ConnectomeView extends React.Component<Props, State> {
 
     if (addedSynapseIds.length > 0 && filteredConnectomeData != null) {
       const { synapses } = filteredConnectomeData;
-      const newTrees: MutableTreeMap = {};
+      const newTrees: MutableTreeMap = new DiffableMap<number, MutableTree>();
 
       for (const synapseId of addedSynapseIds) {
-        newTrees[synapseId] = synapseTreeCreator(synapseId, synapses[synapseId].type);
-        const synapseNode = synapseNodeCreator(synapseId, synapses[synapseId].position);
-        newTrees[synapseId].nodes.mutableSet(synapseId, synapseNode);
+        const synapseTree = synapseTreeCreator(synapseId, synapses[synapseId].type);
+        synapseTree.nodes.mutableSet(
+          synapseId,
+          synapseNodeCreator(synapseId, synapses[synapseId].position),
+        );
+        newTrees.mutableSet(synapseId, synapseTree);
       }
 
       Store.dispatch(addConnectomeTreesAction(newTrees, layerName));
@@ -607,7 +614,11 @@ class ConnectomeView extends React.Component<Props, State> {
     if (skeleton == null) return;
     const { trees } = skeleton;
 
-    const treeNameToTree = _.keyBy(trees, "name");
+    // Create a mapping from tree name to tree object that works with DiffableMap
+    const treeNameToTree: Record<string, MutableTree> = {};
+    for (const [_, tree] of trees.entries()) {
+      treeNameToTree[tree.name] = tree;
+    }
 
     if (hiddenAgglomerateIds.length) {
       const mappingName = getMappingNameFromConnectomeDataEnforced(prevConnectomeData);

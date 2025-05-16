@@ -6,6 +6,7 @@ import {
 } from "types/api_types";
 
 const TRACING_ID = "47e37793-d0be-4240-a371-87ce68561a13";
+
 export const tracing: ServerSkeletonTracing = {
   typ: AnnotationLayerEnum.Skeleton,
   id: "47e37793-d0be-4240-a371-87ce68561a13",
@@ -162,6 +163,7 @@ export const tracing: ServerSkeletonTracing = {
   additionalAxes: [],
   zoomLevel: 2,
 };
+
 export const annotation: APIAnnotation = {
   description: "",
   datasetId: "66f3c82966010034942e9740",

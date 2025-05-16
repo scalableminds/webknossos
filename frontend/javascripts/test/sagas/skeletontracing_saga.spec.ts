@@ -1,4 +1,4 @@
-import type { Flycam, WebknossosState, SkeletonTracing, StoreAnnotation } from "viewer/store";
+import type { Flycam, WebknossosState, SkeletonTracing, StoreAnnotation, Tree } from "viewer/store";
 import ChainReducer from "test/helpers/chainReducer";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "viewer/model/edge_collection";
@@ -65,11 +65,27 @@ function createCompactedSaveQueueFromUpdateActions(
   );
 }
 
+const skeletonTreeOne: Tree = {
+  treeId: 1,
+  name: "TestTree",
+  nodes: new DiffableMap(),
+  timestamp: 12345678,
+  branchPoints: [],
+  edges: new EdgeCollection(),
+  comments: [],
+  color: [23, 23, 23],
+  isVisible: true,
+  groupId: MISSING_GROUP_ID,
+  type: TreeTypeEnum.DEFAULT,
+  edgesAreVisible: true,
+  metadata: [],
+};
+
 const skeletonTracing: SkeletonTracing = {
   type: "skeleton",
   createdTimestamp: 0,
   tracingId: "tracingId",
-  trees: {},
+  trees: new DiffableMap<number, Tree>([[1, skeletonTreeOne]]),
   treeGroups: [],
   activeGroupId: null,
   activeTreeId: 1,
@@ -107,21 +123,7 @@ const serverSkeletonTracing: ServerSkeletonTracing = {
   boundingBox: undefined,
   trees: [],
 };
-skeletonTracing.trees[1] = {
-  treeId: 1,
-  name: "TestTree",
-  nodes: new DiffableMap(),
-  timestamp: 12345678,
-  branchPoints: [],
-  edges: new EdgeCollection(),
-  comments: [],
-  color: [23, 23, 23],
-  isVisible: true,
-  groupId: MISSING_GROUP_ID,
-  type: TreeTypeEnum.DEFAULT,
-  edgesAreVisible: true,
-  metadata: [],
-};
+
 const initialState = update(defaultState, {
   annotation: {
     restrictions: {
@@ -171,6 +173,7 @@ describe("SkeletonTracingSaga", () => {
     saga.next(true);
     saga.next(initialState.annotation.skeleton);
     saga.next(initialState.flycam);
+
     // only updateTracing
     const items = execCall(expect, saga.next(initialState.viewModeData.plane.tdCamera));
     expect(withoutUpdateTracing(items).length).toBe(0);
@@ -220,6 +223,7 @@ describe("SkeletonTracingSaga", () => {
       .apply(SkeletonTracingReducer, createNodeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
       .unpack();
+
     const updateActions = testDiffing(
       initialState.annotation,
       newState.annotation,
@@ -740,12 +744,14 @@ describe("SkeletonTracingSaga", () => {
       .apply(SkeletonTracingReducer, createTreeAction)
       .apply(SkeletonTracingReducer, createNodeAction)
       .unpack();
+
     // Create another node (a)
     const newState1 = SkeletonTracingReducer(testState, createNodeAction);
     const updateActions = [];
     updateActions.push(
       testDiffing(testState.annotation, newState1.annotation, testState.flycam, newState1.flycam),
     );
+
     // Merge the two trees (b), then create another tree and node (c)
     const newState2 = ChainReducer<WebknossosState, Action>(newState1)
       .apply(SkeletonTracingReducer, mergeTreesAction)
@@ -783,6 +789,7 @@ describe("SkeletonTracingSaga", () => {
     });
     expect(simplifiedFirstBatch.length).toBe(2);
     const simplifiedSecondBatch = simplifiedUpdateActions[1].actions;
+
     // a moved tree component of size three (b)
     expect(simplifiedSecondBatch[0]).toEqual({
       name: "moveTreeComponent",
@@ -821,6 +828,7 @@ describe("SkeletonTracingSaga", () => {
     // In this test multiple merges and diffs are performed and concatenated before compactUpdateActions is invoked
     const firstMergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 4);
     const secondMergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 6);
+
     // Create three nodes in the first tree, then create a second tree with one node
     const testState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
@@ -841,6 +849,7 @@ describe("SkeletonTracingSaga", () => {
         stateAfterFirstMerge.flycam,
       ),
     );
+
     // Create another tree and two nodes (b)
     const newState = ChainReducer<WebknossosState, Action>(stateAfterFirstMerge)
       .apply(SkeletonTracingReducer, createTreeAction)
@@ -856,6 +865,7 @@ describe("SkeletonTracingSaga", () => {
         newState.flycam,
       ),
     );
+
     // Merge the second tree into the first tree again (c)
     const stateAfterSecondMerge = SkeletonTracingReducer(newState, secondMergeTreesAction);
     updateActions.push(
@@ -866,6 +876,7 @@ describe("SkeletonTracingSaga", () => {
         stateAfterSecondMerge.flycam,
       ),
     );
+
     // compactUpdateActions is triggered by the saving, it can therefore contain the results of more than one diffing
     const simplifiedUpdateActions = createCompactedSaveQueueFromUpdateActions(
       updateActions,
@@ -911,6 +922,7 @@ describe("SkeletonTracingSaga", () => {
     expect(simplifiedSecondBatch[2].name).toBe("createNode");
     expect(simplifiedSecondBatch[3].name).toBe("createEdge");
     expect(simplifiedSecondBatch.length).toBe(4);
+
     // a second merge (c)
     const simplifiedThirdBatch = simplifiedUpdateActions[2].actions;
     expect(simplifiedThirdBatch[0]).toEqual({
@@ -1083,6 +1095,7 @@ describe("SkeletonTracingSaga", () => {
     // Detect multiple tree splits
     const deleteMiddleNodeAction = SkeletonTracingActions.deleteNodeAction(2);
     const deleteOtherMiddleNodeAction = SkeletonTracingActions.deleteNodeAction(4);
+
     // Create six nodes
     const testState = ChainReducer<WebknossosState, Action>(initialState)
       .apply(SkeletonTracingReducer, createNodeAction)
@@ -1141,6 +1154,7 @@ describe("SkeletonTracingSaga", () => {
     expect(simplifiedFirstBatch[3].name).toBe("deleteEdge");
     expect(simplifiedFirstBatch[4].name).toBe("deleteEdge");
     expect(simplifiedFirstBatch.length).toBe(5);
+
     // the creation of a new tree (b)
     const simplifiedSecondBatch = simplifiedUpdateActions[1].actions;
     expect(simplifiedSecondBatch[0]).toMatchObject({

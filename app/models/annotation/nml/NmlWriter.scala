@@ -292,6 +292,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
           s.name.foreach { n =>
             writer.writeAttribute("name", n)
           }
+          s.isVisible.foreach(isVisible => writer.writeAttribute("isVisible", isVisible.toString))
           s.creationTime.foreach { t =>
             writer.writeAttribute("created", t.toString)
           }
@@ -341,6 +342,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits wi
         writer.writeAttribute("id", t.treeId.toString)
         writeColor(t.color)
         writer.writeAttribute("name", t.name)
+        t.isVisible.foreach(isVisible => writer.writeAttribute("isVisible", isVisible.toString))
         t.groupId.foreach(groupId => writer.writeAttribute("groupId", groupId.toString))
         t.`type`.foreach(t => writer.writeAttribute("type", t.toString))
         Xml.withinElementSync("nodes")(writeNodesAsXml(t.nodes.sortBy(_.id)))

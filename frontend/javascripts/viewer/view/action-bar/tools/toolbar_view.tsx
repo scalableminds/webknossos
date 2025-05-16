@@ -6,6 +6,7 @@ import { useKeyPress } from "libs/react_hooks";
 import { useWkSelector } from "libs/react_hooks";
 import {
   AnnotationTool,
+  type AnnotationToolId,
   MeasurementTools,
   Toolkit,
   Toolkits,
@@ -60,7 +61,7 @@ function CreateNewBoundingBoxButton() {
   );
 }
 
-function toolToRadioGroupValue(adaptedActiveTool: AnnotationTool): AnnotationTool {
+function toolToRadioGroupValue(adaptedActiveTool: AnnotationTool): AnnotationToolId {
   /*
    * The tool radio buttons only contain one button for both measurement tools (area
    * and line). The selection of the "sub tool" can be done when one of them is active
@@ -69,14 +70,14 @@ function toolToRadioGroupValue(adaptedActiveTool: AnnotationTool): AnnotationToo
    * we map both measurement tools to the line tool here.
    */
   if (adaptedActiveTool === AnnotationTool.AREA_MEASUREMENT) {
-    return AnnotationTool.LINE_MEASUREMENT;
+    return AnnotationTool.LINE_MEASUREMENT.id;
   }
-  return adaptedActiveTool;
+  return adaptedActiveTool.id;
 }
 
 const handleSetTool = (event: RadioChangeEvent) => {
-  const value = event.target.value as AnnotationTool;
-  Store.dispatch(setToolAction(value));
+  const value = event.target.value as AnnotationToolId;
+  Store.dispatch(setToolAction(AnnotationTool[value]));
 };
 
 export default function ToolbarView() {

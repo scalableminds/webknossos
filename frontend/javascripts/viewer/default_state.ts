@@ -1,6 +1,6 @@
 import { getSystemColorTheme } from "theme";
 import type { APIAllowedMode, APIAnnotationType, APIAnnotationVisibility } from "types/api_types";
-import { defaultDatasetViewConfigurationWithoutNull } from "types/schemas/dataset_view_configuration.schema";
+import { defaultDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import Constants, {
   ControlModeEnum,
   OrthoViews,
@@ -49,7 +49,7 @@ const initialAnnotationInfo = {
 };
 
 const defaultState: WebknossosState = {
-  datasetConfiguration: defaultDatasetViewConfigurationWithoutNull,
+  datasetConfiguration: defaultDatasetViewConfiguration,
   userConfiguration: {
     autoSaveLayouts: true,
     autoRenderMeshInProofreading: true,

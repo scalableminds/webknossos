@@ -97,6 +97,10 @@ object GroupUtils {
   def getAllChildrenTreeGroups(rootGroup: TreeGroup): Seq[TreeGroup] =
     getAllChildrenGroups(new TreeItemGroup(rootGroup)).map((tg: TracingItemGroup) => tg.inner.asInstanceOf[TreeGroup])
 
+  def getAllChildrenSegmentGroups(rootGroup: SegmentGroup): Seq[SegmentGroup] =
+    getAllChildrenGroups(new SegmentItemGroup(rootGroup)).map((tg: TracingItemGroup) =>
+      tg.inner.asInstanceOf[SegmentGroup])
+
 }
 
 class SegmentItemGroup(segmentGroup: SegmentGroup) extends TracingItemGroup {

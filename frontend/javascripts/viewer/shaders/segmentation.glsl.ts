@@ -132,7 +132,7 @@ export const convertCellIdToRGB: ShaderModule = {
       ${permutations.useGrid.permutation.map(formatNumberAsGLSLFloat).join(", ")}
     );
 
-    vec3 convertCellIdToRGB(uint idHigh_uint, uint idLow_uint) {
+    vec4 convertCellIdToRGB(uint idHigh_uint, uint idLow_uint) {
       /*
       This function maps from a segment id to a color with a pattern.
       For the color, the jet color map is used. For the patterns, we employ the following
@@ -148,6 +148,7 @@ export const convertCellIdToRGB: ShaderModule = {
       If custom colors were provided via mappings, the color values are used from there.
       The patterns are still painted on top of these, though.
       */
+      float alpha = 1.;
 
       vec4 idHigh = uintToVec4(idHigh_uint);
       vec4 idLow = uintToVec4(idLow_uint);
@@ -165,18 +166,37 @@ export const convertCellIdToRGB: ShaderModule = {
       float colorValue = 1.;
 
       uint integerValue = vec4ToUint(idLow);
+      // 1st look up attempt
       vec3 customColor = attemptCustomColorLookUp(integerValue, custom_color_seeds[0]);
       if (customColor.r == -1.) {
+        // 2nd look up attempt (if previous failed)
         customColor = attemptCustomColorLookUp(integerValue, custom_color_seeds[1]);
       }
       if (customColor.r == -1.) {
+        // 3rd look up attempt (if previous failed)
         customColor = attemptCustomColorLookUp(integerValue, custom_color_seeds[2]);
       }
       if (customColor.r != -1.) {
-        vec3 customHSV = rgb2hsv(customColor);
-        colorHue = customHSV.x;
-        colorSaturation = customHSV.y;
-        colorValue = customHSV.z;
+        // Look up succeeded => a custom color / custom alpha value was found.
+        if (customColor == vec3(0.)) {
+          // Segment should have default color, but should be (in)visible (depending on hideUnregisteredSegments)
+          alpha = hideUnregisteredSegments ? 1. : 0.;
+        } else {
+          // The blue channel encodes (via even/odd) the alpha value. See
+          // LayerRenderingManager.listenToCustomSegmentColors for details.
+          if (mod(255. * customColor.b, 2.) - 0.5 < 0.) {
+            alpha = 0.;
+          }
+          vec3 customHSV = rgb2hsv(customColor);
+          colorHue = customHSV.x;
+          colorSaturation = customHSV.y;
+          colorValue = customHSV.z;
+        }
+      } else {
+        // Look up failed => no custom color/alpha found
+        if (hideUnregisteredSegments) {
+          alpha = 0.;
+        }
       }
 
       // The following code scales the world coordinates so that the coordinate frequency is in a "pleasant" range.
@@ -240,7 +260,7 @@ export const convertCellIdToRGB: ShaderModule = {
         1.0
       );
 
-      return hsvToRgb(HSV);
+      return vec4(hsvToRgb(HSV), alpha);
     }
   `,
 };
@@ -463,8 +483,6 @@ export const getSegmentationAlphaIncrement: ShaderModule = {
 
       if (isHoveredSegment) {
         return 0.2;
-      } else if (selectiveSegmentVisibility) {
-        return isActiveCell ? 0.15 : -alpha;
       } else {
         return 0.;
       }

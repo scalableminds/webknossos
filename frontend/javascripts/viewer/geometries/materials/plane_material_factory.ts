@@ -40,6 +40,7 @@ import {
   getActiveSegmentPosition,
   getActiveSegmentationTracing,
   getBucketRetrievalSourceFn,
+  getHideUnregisteredSegmentsForLayer,
   needsLocalHdf5Mapping,
 } from "viewer/model/accessors/volumetracing_accessor";
 import { getDtypeConfigForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
@@ -152,7 +153,7 @@ class PlaneMaterialFactory {
       selectiveVisibilityInProofreading: {
         value: true,
       },
-      selectiveSegmentVisibility: {
+      hideUnregisteredSegments: {
         value: false,
       },
       is3DViewBeingRendered: {
@@ -513,13 +514,6 @@ class PlaneMaterialFactory {
         true,
       ),
       listenToStoreProperty(
-        (storeState) => storeState.datasetConfiguration.selectiveSegmentVisibility,
-        (selectiveSegmentVisibility) => {
-          this.uniforms.selectiveSegmentVisibility.value = selectiveSegmentVisibility;
-        },
-        true,
-      ),
-      listenToStoreProperty(
         (storeState) => getMagInfoByLayer(storeState.dataset),
         (magInfosByLayer) => {
           const allDenseMags = Object.values(magInfosByLayer).map((magInfo) =>
@@ -727,6 +721,21 @@ class PlaneMaterialFactory {
           () => this.updateActiveCellId(),
           true,
         ),
+      );
+
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          (storeState) => {
+            const layer = getVisibleSegmentationLayer(storeState);
+            return layer != null
+              ? getHideUnregisteredSegmentsForLayer(storeState, layer.name)
+              : false;
+          },
+          (value) => {
+            this.uniforms.hideUnregisteredSegments.value = value;
+          },
+          true,
+        ),
         listenToStoreProperty(
           (storeState) => getActiveSegmentationTracing(storeState)?.activeUnmappedSegmentId,
           (activeUnmappedSegmentId) =>
@@ -775,9 +784,7 @@ class PlaneMaterialFactory {
             this.uniforms.mappingIsPartial.value = mappingIsPartial;
           },
         ),
-      );
 
-      this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => storeState.uiInformation.activeTool,
           (annotationTool) => {

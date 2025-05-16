@@ -17,7 +17,6 @@ POST          /maintenances                                                     
 GET           /maintenances/:id                                                                 controllers.MaintenanceController.readOne(id: ObjectId)
 PUT           /maintenances/:id                                                                 controllers.MaintenanceController.update(id: ObjectId)
 DELETE        /maintenances/:id                                                                 controllers.MaintenanceController.delete(id: ObjectId)
-POST          /maintenances                                                                     controllers.MaintenanceController.create()
 POST          /maintenances/adHoc                                                               controllers.MaintenanceController.createAdHocMaintenance()
 GET           /maintenance/revokeExpiredCredits                                                 controllers.CreditTransactionController.revokeExpiredCredits()
 

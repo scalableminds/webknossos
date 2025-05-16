@@ -1,6 +1,6 @@
-_dataSet,name,category,elementClass,boundingBox,largestSegmentId,mappings,defaultViewConfiguration,adminViewConfiguration
-'59e9cfbdba632ac2ab8b23b3','color_1','color','uint8','(0,0,0,512,512,256)',,,,
-'59e9cfbdba632ac2ab8b23b3','color_2','color','uint8','(0,0,0,512,512,256)',,,,
-'59e9cfbdba632ac2ab8b23b3','color_3','color','uint8','(0,0,0,512,512,256)',,,,
-'59e9cfbdba632ac2ab8b23b5','color','color','uint8','(3072,3072,512,1024,1024,1024)',,,,
-'59e9cfbdba632ac2ab8b23b5','segmentation','segmentation','uint32','(3072,3072,512,1024,1024,1024)',2504697,'{}',,
+_dataSet,name,category,elementClass,boundingBox,largestSegmentId,mappings,defaultViewConfiguration,adminViewConfiguration,numChannels,dataFormat
+'59e9cfbdba632ac2ab8b23b3','color_1','color','uint8','(0,0,0,512,512,256)',,,,,,wkw
+'59e9cfbdba632ac2ab8b23b3','color_2','color','uint8','(0,0,0,512,512,256)',,,,,,wkw
+'59e9cfbdba632ac2ab8b23b3','color_3','color','uint8','(0,0,0,512,512,256)',,,,,,wkw
+'59e9cfbdba632ac2ab8b23b5','color','color','uint8','(3072,3072,512,1024,1024,1024)',,,,,,wkw
+'59e9cfbdba632ac2ab8b23b5','segmentation','segmentation','uint32','(3072,3072,512,1024,1024,1024)',2504697,'{}',,,,wkw

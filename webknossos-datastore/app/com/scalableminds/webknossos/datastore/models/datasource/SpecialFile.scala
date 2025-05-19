@@ -27,7 +27,7 @@ object MeshFileInfo {
   implicit val jsonFormat: Format[MeshFileInfo] = Json.format[MeshFileInfo]
 
   val directoryName = "meshes"
-  val scanExtension = "hdf5"
+  private val scanExtension = "hdf5"
   val typ = "mesh"
 
   def scanForMeshFiles(layerDirectory: Path): Seq[MeshFileInfo] = {
@@ -35,7 +35,7 @@ object MeshFileInfo {
     if (Files.exists(dir)) {
       val paths: Box[List[Path]] =
         PathUtils.listFiles(dir, silent = true, PathUtils.fileExtensionFilter(scanExtension))
-      paths match { // TODO: Relativize path
+      paths match {
         case Full(p) => p.map(path => MeshFileInfo(path.toUri, scanExtension))
         case _       => Seq.empty
       }
@@ -55,8 +55,8 @@ object AgglomerateFileInfo {
   implicit val jsonFormat: Format[AgglomerateFileInfo] = Json.format[AgglomerateFileInfo]
 
   val directoryName = "agglomerates"
-  val scanExtension = "hdf5"
-  val cumsumFileExtension = "json"
+  private val scanExtension = "hdf5"
+  private val cumsumFileExtension = "json"
   val typ = "agglomerate"
 
   def scanForAgglomerateFiles(layerDirectory: Path): Seq[AgglomerateFileInfo] = {
@@ -70,7 +70,7 @@ object AgglomerateFileInfo {
         }
       val agglomerateFilePaths: Box[List[Path]] =
         PathUtils.listFiles(dir, silent = true, PathUtils.fileExtensionFilter(scanExtension))
-      agglomerateFilePaths match { // TODO: Relativize path
+      agglomerateFilePaths match {
         case Full(p) =>
           p.map(path => AgglomerateFileInfo(path.toUri, scanExtension, cumsumFile))
         case _ => Seq.empty
@@ -90,7 +90,7 @@ object SegmentIndexFileInfo {
   implicit val jsonFormat: Format[SegmentIndexFileInfo] = Json.format[SegmentIndexFileInfo]
 
   val directoryName = "segmentIndex"
-  val scanExtension = "hdf5"
+  private val scanExtension = "hdf5"
   val typ = "segmentIndex"
 
   def scanForSegmentIndexFiles(layerDirectory: Path): Option[SegmentIndexFileInfo] = {
@@ -118,7 +118,7 @@ object ConnectomeFileInfo {
   implicit val jsonFormat: Format[ConnectomeFileInfo] = Json.format[ConnectomeFileInfo]
 
   val directoryName = "connectomes"
-  val scanExtension = "hdf5"
+  private val scanExtension = "hdf5"
   val typ = "connectome"
 
   def scanForConnectomeFiles(layerDirectory: Path): Seq[ConnectomeFileInfo] = {

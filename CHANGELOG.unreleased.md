@@ -8,12 +8,13 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/25.05.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/25.05.1...HEAD)
 
 ### Added
 - Meshes of Neuroglancer Precomputed Datasets can now be viewed. [#8236](https://github.com/scalableminds/webknossos/pull/8236)
 - Added the possibility to join an organization without requiring a paid user slot in case an organization already pays for the same user. Such a user is called a "Guest User". [#8502](https://github.com/scalableminds/webknossos/pull/8502)
-- Added that "Create Animation" jobs will now use the correct semgent colors for rendering meshes. [#8605](https://github.com/scalableminds/webknossos/pull/8605) 
+- Added that "Create Animation" jobs will now use the correct segment colors for rendering meshes. [#8605](https://github.com/scalableminds/webknossos/pull/8605)
+- In the NML upload route, the additional form field `description` can be specified. If so, it will overwrite the description contained in the NML files. [#8631](https://github.com/scalableminds/webknossos/pull/8631)
 
 ### Changed
 - Remove `data.maybe` dependency and replaced with regular Typescript types. [#8563](https://github.com/scalableminds/webknossos/pull/8563)

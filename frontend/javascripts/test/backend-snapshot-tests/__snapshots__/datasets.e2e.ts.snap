@@ -1,5 +1,33 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`Dataset API (E2E) > Dataset Paths 1`] = `
+[
+  {
+    "layerName": "segmentation",
+    "magLinkInfos": [
+      {
+        "linkedMags": [],
+        "mag": {
+          "dataLayerName": "segmentation",
+          "dataSourceId": {
+            "name": "test-dataset",
+            "team": "Organization_X",
+          },
+          "hasLocalData": true,
+          "mag": [
+            1,
+            1,
+            1,
+          ],
+          "path": "file:///home/felix/scm/webknossos/binaryData/Organization_X/test-dataset/segmentation/1/",
+          "realPath": "file:///home/felix/scm/webknossos/binaryData/Organization_X/test-dataset/segmentation/1/",
+        },
+      },
+    ],
+  },
+]
+`;
+
 exports[`Dataset API (E2E) > Zarr 3 streaming 1`] = `"{"zarr_format":3,"node_type":"group","attributes":{"ome":{"version":"0.5","multiscales":[{"name":"segmentation","axes":[{"name":"c","type":"channel"},{"name":"x","type":"space","unit":"nanometer"},{"name":"y","type":"space","unit":"nanometer"},{"name":"z","type":"space","unit":"nanometer"}],"datasets":[{"path":"1","coordinateTransformations":[{"type":"scale","scale":[1,11.24,11.24,28]}]}]}]}}}"`;
 
 exports[`Dataset API (E2E) > Zarr 3 streaming 2`] = `"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAA="`;

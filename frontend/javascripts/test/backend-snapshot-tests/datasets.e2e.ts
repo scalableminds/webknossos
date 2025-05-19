@@ -138,6 +138,14 @@ describe("Dataset API (E2E)", () => {
     expect(base64).toMatchSnapshot();
   });
 
+  it("Dataset Paths", async () => {
+    const paths = await fetch(
+      "/api/datastores/localhost/datasources/Organization_X/test-dataset/paths?key=something-secure"
+    );
+    const pathsJson = await paths.json();
+    expect(pathsJson).toMatchSnapshot();
+  });
+
   /**
    * WARNING: This test creates a side effect by uploading and saving a dataset in your binaryData folder.
    * There is no clean up after the test, and the dataset will remain after each test run.

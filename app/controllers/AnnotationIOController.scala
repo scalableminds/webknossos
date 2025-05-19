@@ -92,6 +92,8 @@ class AnnotationIOController @Inject()(
       - As form parameter: createGroupForEachFile [String] should be one of "true" or "false"
         - If "true": in merged annotation, create tree group wrapping the trees of each file
         - If "false": in merged annotation, rename trees with the respective file name as prefix
+      - As optional form aprameter: description [String]
+        - If set, this will be the description of the resulting annotation, overwriting any description specified in NML files.
      Returns:
         JSON object containing annotation information about the newly created annotation, including the assigned id
    */

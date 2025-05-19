@@ -11,13 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/25.05.0...25.05.1)
 
 ### Fixed
-
 - Fixed viewing datasets with legacy-style links (without ids) by sharing token. [#8625](https://github.com/scalableminds/webknossos/pull/8625)
-
-### Removed
-
-### Breaking Changes
-
 
 ## [25.05.0](https://github.com/scalableminds/webknossos/releases/tag/25.05.0) - 2025-04-29
 [Commits](https://github.com/scalableminds/webknossos/compare/25.04.0...25.05.0)

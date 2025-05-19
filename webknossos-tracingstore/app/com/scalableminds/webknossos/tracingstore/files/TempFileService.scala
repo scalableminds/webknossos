@@ -1,16 +1,13 @@
-package files
+package com.scalableminds.webknossos.tracingstore.files
 
-import cleanup.CleanUpService
 import com.scalableminds.util.time.Instant
-
-import java.nio.file.{Files, Path, Paths}
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.tracingstore.cleanup.CleanUpService
 import com.typesafe.scalalogging.LazyLogging
-
-import javax.inject.Inject
 import net.liftweb.common.Box.tryo
 import org.apache.commons.io.FileUtils
 
+import java.nio.file.{Files, Path, Paths}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.util.Random
@@ -19,13 +16,16 @@ import scala.util.Random
   * Avoiding Java TemporaryFiles because of seeming openJDK regression,
   * see discussion at https://github.com/scalableminds/webknossos/issues/6173
   */
-class TempFileService @Inject()(cleanUpService: CleanUpService)(implicit ec: ExecutionContext) extends LazyLogging {
+trait TempFileService extends LazyLogging {
+  protected def cleanUpService: CleanUpService
+  implicit protected def ec: ExecutionContext
+  protected def moduleName: String
 
-  private val tmpDir: Path = Paths.get(System.getProperty("java.io.tmpdir")).resolve("webknossosTempFiles")
+  private val tmpDir: Path = Paths.get(System.getProperty("java.io.tmpdir")).resolve(s"${moduleName}-tempfiles")
 
   private val activeTempFiles = scala.collection.mutable.Set[(Path, Instant)]()
 
-  cleanUpService.register("Clean up expired temporary files", 1 hour)(cleanUpExpiredFiles())
+  cleanUpService.register(s"Deleting temporary files at $tmpDir", 1 hour)(cleanUpExpiredFiles())
 
   private def ensureParent(): Path =
     Files.createDirectories(tmpDir)
@@ -33,7 +33,7 @@ class TempFileService @Inject()(cleanUpService: CleanUpService)(implicit ec: Exe
   def create(prefix: String = "tmpFile", lifeTime: FiniteDuration = 2 hours): Path = {
     ensureParent()
     val path = tmpDir.resolve(f"$prefix-${Random.alphanumeric.take(15).mkString("")}")
-    logger.info(f"Creating temp file at $path")
+    logger.debug(f"Creating temp file at $path")
     Files.createFile(path)
     activeTempFiles.add((path, Instant.now + lifeTime))
     path

@@ -25,6 +25,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   VolumeTracingMags
 }
 import com.typesafe.scalalogging.LazyLogging
+import files.WkTempFileService
 
 import javax.inject.Inject
 import net.liftweb.common.Empty
@@ -41,7 +42,7 @@ import models.user._
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
 import play.api.i18n.{Messages, MessagesProvider}
-import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
+import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, MultipartFormData}
 import play.silhouette.api.Silhouette
@@ -49,6 +50,7 @@ import security.WkEnv
 import utils.WkConf
 
 import java.io.{BufferedOutputStream, File, FileOutputStream}
+import java.nio.file.Path
 import java.util.zip.Deflater
 import scala.concurrent.ExecutionContext
 
@@ -63,7 +65,7 @@ class AnnotationIOController @Inject()(
     taskDAO: TaskDAO,
     taskTypeDAO: TaskTypeDAO,
     tracingStoreService: TracingStoreService,
-    temporaryFileCreator: TemporaryFileCreator,
+    tempFileService: WkTempFileService,
     annotationService: AnnotationService,
     analyticsService: AnalyticsService,
     conf: WkConf,
@@ -90,6 +92,8 @@ class AnnotationIOController @Inject()(
       - As form parameter: createGroupForEachFile [String] should be one of "true" or "false"
         - If "true": in merged annotation, create tree group wrapping the trees of each file
         - If "false": in merged annotation, rename trees with the respective file name as prefix
+      - As optional form parameter: description [String]
+        - If set, this will be the description of the resulting annotation, overwriting any description specified in NML files.
      Returns:
         JSON object containing annotation information about the newly created annotation, including the assigned id
    */
@@ -100,6 +104,7 @@ class AnnotationIOController @Inject()(
           request.body.dataParts("createGroupForEachFile").headOption.contains("true")
         val overwritingDatasetId: Option[String] =
           request.body.dataParts.get("datasetId").flatMap(_.headOption)
+        val overwritingDescription: Option[String] = request.body.dataParts.get("description").flatMap(_.headOption)
         val userOrganizationId = request.identity._organization
         val attachedFiles = request.body.files.map(f => (f.ref.path.toFile, f.filename))
         for {
@@ -112,7 +117,7 @@ class AnnotationIOController @Inject()(
           _ <- Fox.fromBool(parseResultsFiltered.nonEmpty) orElse returnError(parsedFiles)
           parseSuccesses <- Fox.serialCombined(parseResultsFiltered)(r => r.toSuccessBox.toFox)
           name = nameForUploaded(parseResultsFiltered.map(_.fileName))
-          description = descriptionForNMLs(parseResultsFiltered.map(_.description))
+          description = overwritingDescription.getOrElse(descriptionForNMLs(parseResultsFiltered.map(_.description)))
           wkUrl = wkUrlsForNMLs(parseResultsFiltered.map(_.wkUrl))
           skeletonTracings = parseSuccesses.map(_.skeletonTracing)
           // Create a list of volume layers for each uploaded (non-skeleton-only) annotation.
@@ -414,7 +419,7 @@ class AnnotationIOController @Inject()(
 
     // Note: volumeVersion cannot currently be supplied per layer, see https://github.com/scalableminds/webknossos/issues/5925
 
-    def skeletonToTemporaryFile(dataset: Dataset, annotation: Annotation, organizationId: String): Fox[TemporaryFile] =
+    def skeletonToTemporaryFile(dataset: Dataset, annotation: Annotation, organizationId: String): Fox[Path] =
       for {
         tracingStoreClient <- tracingStoreService.clientFor(dataset)
         fetchedAnnotationLayers <- Fox.serialCombined(annotation.skeletonAnnotationLayers)(
@@ -436,8 +441,8 @@ class AnnotationIOController @Inject()(
           skipVolumeData,
           volumeDataZipFormat
         )
-        nmlTemporaryFile = temporaryFileCreator.create()
-        temporaryFileStream = new BufferedOutputStream(new FileOutputStream(nmlTemporaryFile))
+        nmlTemporaryFile = tempFileService.create()
+        temporaryFileStream = new BufferedOutputStream(new FileOutputStream(new File(nmlTemporaryFile.toString)))
         _ <- nmlStream.writeTo(temporaryFileStream)
         _ = temporaryFileStream.close()
       } yield nmlTemporaryFile
@@ -445,7 +450,7 @@ class AnnotationIOController @Inject()(
     def volumeOrHybridToTemporaryFile(dataset: Dataset,
                                       annotation: Annotation,
                                       name: String,
-                                      organizationId: String): Fox[TemporaryFile] =
+                                      organizationId: String): Fox[Path] =
       for {
         tracingStoreClient <- tracingStoreService.clientFor(dataset)
         fetchedVolumeLayers: List[FetchedAnnotationLayer] <- Fox.serialCombined(annotation.volumeAnnotationLayers) {
@@ -478,8 +483,8 @@ class AnnotationIOController @Inject()(
           skipVolumeData,
           volumeDataZipFormat
         )
-        temporaryFile = temporaryFileCreator.create()
-        zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(temporaryFile.path.toString))))
+        temporaryFile = tempFileService.create()
+        zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(temporaryFile.toString))))
         _ <- zipper.addFileFromNamedStream(nmlStream, suffix = ".nml") ?~> "annotation.download.zipNml.failed"
         _ = fetchedVolumeLayers.zipWithIndex.map {
           case (volumeLayer, index) =>
@@ -495,7 +500,7 @@ class AnnotationIOController @Inject()(
     def annotationToTemporaryFile(dataset: Dataset,
                                   annotation: Annotation,
                                   name: String,
-                                  organizationId: String): Fox[TemporaryFile] =
+                                  organizationId: String): Fox[Path] =
       if (annotation.tracingType == TracingType.skeleton)
         skeletonToTemporaryFile(dataset, annotation, organizationId) ?~> "annotation.download.skeletonToFile.failed"
       else
@@ -525,7 +530,7 @@ class AnnotationIOController @Inject()(
       organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> "organization.notFound" ~> NOT_FOUND
       temporaryFile <- annotationToTemporaryFile(dataset, annotation, name, organization._id) ?~> "annotation.writeTemporaryFile.failed"
     } yield {
-      Ok.sendFile(temporaryFile, inline = false)
+      Ok.sendPath(temporaryFile, inline = false)
         .as(mimeType)
         .withHeaders(CONTENT_DISPOSITION ->
           s"attachment;filename=${'"'}$fileName${'"'}")
@@ -540,23 +545,23 @@ class AnnotationIOController @Inject()(
       project <- projectDAO.findOne(projectId) ?~> Messages("project.notFound", projectId) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, project._team)) ?~> "notAllowed" ~> FORBIDDEN
       annotations <- annotationDAO.findAllFinishedForProject(projectId)
-      zip <- annotationService.zipAnnotations(annotations,
-                                              project.name,
-                                              skipVolumeData,
-                                              volumeDataZipFormatForCompoundAnnotations)
+      zipTempFilePath <- annotationService.zipAnnotations(annotations,
+                                                          project.name,
+                                                          skipVolumeData,
+                                                          volumeDataZipFormatForCompoundAnnotations)
     } yield {
-      val file = new File(zip.path.toString)
-      Ok.sendFile(file, inline = false, fileName = _ => Some(TextUtils.normalize(project.name + "_nmls.zip")))
+      Ok.sendPath(zipTempFilePath,
+                  inline = false,
+                  fileName = _ => Some(TextUtils.normalize(project.name + "_nmls.zip")))
     }
 
   private def downloadTask(taskId: ObjectId, userOpt: Option[User], skipVolumeData: Boolean)(
       implicit ctx: DBAccessContext,
       m: MessagesProvider) = {
-    def createTaskZip(task: Task): Fox[TemporaryFile] = annotationService.annotationsFor(task._id).flatMap {
-      annotations =>
-        val finished = annotations.filter(_.state == Finished)
-        annotationService
-          .zipAnnotations(finished, task._id.toString, skipVolumeData, volumeDataZipFormatForCompoundAnnotations)
+    def createTaskZip(task: Task): Fox[Path] = annotationService.annotationsFor(task._id).flatMap { annotations =>
+      val finished = annotations.filter(_.state == Finished)
+      annotationService
+        .zipAnnotations(finished, task._id.toString, skipVolumeData, volumeDataZipFormatForCompoundAnnotations)
     }
 
     for {
@@ -564,10 +569,11 @@ class AnnotationIOController @Inject()(
       task <- taskDAO.findOne(taskId) ?~> Messages("task.notFound") ~> NOT_FOUND
       project <- projectDAO.findOne(task._project) ?~> Messages("project.notFound") ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, project._team)) ?~> Messages("notAllowed") ~> FORBIDDEN
-      zip <- createTaskZip(task)
+      zipTempFilePath <- createTaskZip(task)
     } yield {
-      val file = new File(zip.path.toString)
-      Ok.sendFile(file, inline = false, fileName = _ => Some(TextUtils.normalize(task._id.toString + "_nmls.zip")))
+      Ok.sendPath(zipTempFilePath,
+                  inline = false,
+                  fileName = _ => Some(TextUtils.normalize(task._id.toString + "_nmls.zip")))
     }
   }
 
@@ -589,10 +595,11 @@ class AnnotationIOController @Inject()(
       user <- userOpt.toFox ?~> Messages("notAllowed") ~> FORBIDDEN
       taskType <- taskTypeDAO.findOne(taskTypeId) ?~> "taskType.notFound" ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, taskType._team)) ?~> "notAllowed" ~> FORBIDDEN
-      zip <- createTaskTypeZip(taskType)
+      zipTempFilePath <- createTaskTypeZip(taskType)
     } yield {
-      val file = new File(zip.path.toString)
-      Ok.sendFile(file, inline = false, fileName = _ => Some(TextUtils.normalize(taskType.summary + "_nmls.zip")))
+      Ok.sendPath(zipTempFilePath,
+                  inline = false,
+                  fileName = _ => Some(TextUtils.normalize(taskType.summary + "_nmls.zip")))
     }
   }
 }

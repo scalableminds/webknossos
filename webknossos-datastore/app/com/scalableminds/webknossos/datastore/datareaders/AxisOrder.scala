@@ -20,7 +20,6 @@ case class AxisOrder(x: Int, y: Int, z: Option[Int], c: Option[Int] = None) {
     val lengthOfC = if (c.isDefined) 1 else 0
     lengthOfC + 2 + lengthOfZ
   }
-
 }
 
 object AxisOrder {

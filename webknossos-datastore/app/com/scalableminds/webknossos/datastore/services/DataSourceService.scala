@@ -328,15 +328,6 @@ class DataSourceService @Inject()(
             val dataSourceWithSpecialFiles = dataSource.copy(
               dataLayers = scanForSpecialFiles(path, dataSource)
             )
-            if (false) { // TODO Decide: Should we always rewrite the JSON file ? Never? Sometimes?
-              // Rewriting the JSON in this file could e.g. remove custom fields that are not in the schema
-              // Also if there is an error somewhere here, the files could get corrupted
-              JsonHelper.writeToFile(propertiesFile, dataSourceWithSpecialFiles).toOption match {
-                case Some(_) =>
-                case None =>
-                  logger.error(s"Failed to rewrite properties file $propertiesFile")
-              }
-            }
             dataSourceWithSpecialFiles.copy(id)
           } else
             UnusableDataSource(id, "Error: Zero layer Dataset", Some(dataSource.scale), Some(Json.toJson(dataSource)))

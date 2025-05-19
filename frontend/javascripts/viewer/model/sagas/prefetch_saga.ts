@@ -7,6 +7,7 @@ import {
   getActiveMagIndexForLayer,
   getAreasFromState,
   getPosition,
+  getRotationInRadian,
 } from "viewer/model/accessors/flycam_accessor";
 import { FlycamActions } from "viewer/model/actions/flycam_actions";
 import { PrefetchStrategyArbitrary } from "viewer/model/bucket_data_handling/prefetch_strategy_arbitrary";
@@ -14,7 +15,7 @@ import {
   ContentTypes as PrefetchContentTypes,
   PrefetchStrategySkeleton,
   PrefetchStrategyVolume,
-} from "viewer/model/bucket_data_handling/prefetch_strategy_plane";
+} from "viewer/model/bucket_data_handling/prefetch_strategy_plane_rotated";
 import { getGlobalDataConnectionInfo } from "viewer/model/data_connection_info";
 import type DataLayer from "viewer/model/data_layer";
 import type { Saga } from "viewer/model/sagas/effect-generators";
@@ -104,6 +105,7 @@ export function* prefetchForPlaneMode(
   previousProperties: Record<string, any>,
 ): Saga<void> {
   const position = yield* select((state) => getPosition(state.flycam));
+  const rotation = yield* select((state) => getRotationInRadian(state.flycam));
   const zoomStep = yield* select((state) => getActiveMagIndexForLayer(state, layer.name));
   const magInfo = getMagInfo(layer.mags);
   const activePlane = yield* select((state) => state.viewModeData.plane.activeViewport);
@@ -134,6 +136,7 @@ export function* prefetchForPlaneMode(
         const buckets = strategy.prefetch(
           layer.cube,
           position,
+          rotation,
           direction,
           zoomStep,
           activePlane,
@@ -146,8 +149,8 @@ export function* prefetchForPlaneMode(
         if (WkDevFlags.bucketDebugging.visualizePrefetchedBuckets) {
           for (const item of buckets) {
             const bucket = layer.cube.getOrCreateBucket(item.bucket);
-
             if (bucket.type !== "null") {
+              bucket.setVisualizationColor("green");
               bucket.visualize();
             }
           }

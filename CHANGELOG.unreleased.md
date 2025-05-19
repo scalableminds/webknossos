@@ -8,12 +8,12 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/25.05.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/25.05.1...HEAD)
 
 ### Added
 - Meshes of Neuroglancer Precomputed Datasets can now be viewed. [#8236](https://github.com/scalableminds/webknossos/pull/8236)
 - Added the possibility to join an organization without requiring a paid user slot in case an organization already pays for the same user. Such a user is called a "Guest User". [#8502](https://github.com/scalableminds/webknossos/pull/8502)
-- Added that "Create Animation" jobs will now use the correct semgent colors for rendering meshes. [#8605](https://github.com/scalableminds/webknossos/pull/8605) 
+- Added that "Create Animation" jobs will now use the correct semgent colors for rendering meshes. [#8605](https://github.com/scalableminds/webknossos/pull/8605)
 
 ### Changed
 - Remove `data.maybe` dependency and replaced with regular Typescript types. [#8563](https://github.com/scalableminds/webknossos/pull/8563)
@@ -35,7 +35,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - The guest tag is now also shown for guest admin users. [#8612](https://github.com/scalableminds/webknossos/pull/8612)
 - Fixed a rare bug where segment bounding box would not be displayed correctly, with the request potentially even crashing the server. [#8590](https://github.com/scalableminds/webknossos/pull/8590)
 - Fixed a rare bug where download requests would terminate without sending the whole annotation. [#8624](https://github.com/scalableminds/webknossos/pull/8624)
-- Fixed viewing datasets with legacy-style links (without ids) by sharing token. [#8625](https://github.com/scalableminds/webknossos/pull/8625)
 
 ### Removed
 

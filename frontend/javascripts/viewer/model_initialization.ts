@@ -46,7 +46,6 @@ import UrlManager, {
 import {
   determineAllowedModes,
   getDataLayers,
-  getDatasetBoundingBox,
   getDatasetCenter,
   getLayerByName,
   getSegmentationLayerByName,
@@ -581,11 +580,9 @@ function getMergedDataLayersFromDatasetAndVolumeTracings(
     );
 
     const fallbackLayer = fallbackLayerIndex > -1 ? originalLayers[fallbackLayerIndex] : null;
-    const datasetBoundingBox = getDatasetBoundingBox(dataset).asServerBoundingBox();
     const mags = tracing.mags || [];
     const tracingHasMagList = mags.length > 0;
     let coordinateTransformsMaybe = {};
-    const boundingBox = fallbackLayer?.boundingBox ?? datasetBoundingBox;
     if (allLayersSameRotation) {
       coordinateTransformsMaybe = {
         coordinateTransformations: originalLayers?.[0].coordinateTransformations,
@@ -608,7 +605,7 @@ function getMergedDataLayersFromDatasetAndVolumeTracings(
       elementClass: tracing.elementClass,
       category: "segmentation",
       largestSegmentId: tracing.largestSegmentId,
-      boundingBox: convertPointToVecInBoundingBox(tracing.boundingBox) ?? boundingBox,
+      boundingBox: convertPointToVecInBoundingBox(tracing.boundingBox),
       resolutions: tracingMags,
       mappings:
         fallbackLayer != null && "mappings" in fallbackLayer ? fallbackLayer.mappings : undefined,

@@ -98,7 +98,7 @@ export default function ToolbarView() {
 
   return (
     <>
-      <Radio.Group onChange={handleSetTool} value={toolToRadioGroupValue(adaptedActiveTool)}>
+      <Radio.Group onChange={handleSetTool} value={toolToRadioGroupValue(adaptedActiveTool).id}>
         {Toolkits[toolkit].map((tool) => {
           const ToolButton = ToolIdToComponent[tool.id];
           return <ToolButton key={tool.id} adaptedActiveTool={adaptedActiveTool} />;

@@ -4,20 +4,12 @@ import window from "libs/window";
 import _ from "lodash";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
-import type { Dispatch } from "redux";
+import type { EmptyObject } from "types/globals";
 import { setActiveNodeAction } from "viewer/model/actions/skeletontracing_actions";
-import type { SkeletonTracing } from "viewer/store";
 import type { NodeListItem } from "viewer/view/right-border-tabs/abstract_tree_renderer";
 import AbstractTreeRenderer from "viewer/view/right-border-tabs/abstract_tree_renderer";
 
-type StateProps = {
-  dispatch: Dispatch<any>;
-  skeletonTracing: SkeletonTracing | null | undefined;
-};
-
-type Props = StateProps;
-
-const AbstractTreeTab: React.FC<Props> = () => {
+const AbstractTreeTab: React.FC<EmptyObject> = () => {
   const skeletonTracing = useWkSelector((state) => state.annotation.skeleton);
   const viewMode = useWkSelector((state) => state.temporaryConfiguration.viewMode);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);

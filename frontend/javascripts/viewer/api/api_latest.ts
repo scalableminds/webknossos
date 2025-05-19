@@ -71,6 +71,7 @@ import {
   mapGroups,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
+import type { GlobalPosition } from "viewer/model/accessors/view_mode_accessor";
 import {
   getActiveCellId,
   getActiveSegmentationTracing,
@@ -353,12 +354,14 @@ class TracingApi {
   }
 
   /**
-   * Creates a new node in the current tree. If the active tree
-   * is not empty, the node will be connected with an edge to
-   * the currently active node.
+   * Creates a new node in the current tree. If the active tree is not empty,
+   * the node will be connected with an edge to the currently active node.
+   * To keep optional the centering animation of the new node correct,
+   * the position can be passed as {rounded: [x,y,z], floating: [x,y,z]},
+   * where floating is the not rounded more accurate position for a more precise annotation.
    */
   createNode(
-    position: Vector3,
+    position: Vector3 | GlobalPosition,
     options?: {
       additionalCoordinates?: AdditionalCoordinate[];
       rotation?: Vector3;
@@ -368,10 +371,12 @@ class TracingApi {
       skipCenteringAnimationInThirdDimension?: boolean;
     },
   ) {
+    const globalPosition =
+      "rounded" in position ? position : { rounded: position, floating: position };
     assertSkeleton(Store.getState().annotation);
     const defaultOptions = getOptionsForCreateSkeletonNode();
     createSkeletonNode(
-      position,
+      globalPosition,
       options?.additionalCoordinates ?? defaultOptions.additionalCoordinates,
       options?.rotation ?? defaultOptions.rotation,
       options?.center ?? defaultOptions.center,

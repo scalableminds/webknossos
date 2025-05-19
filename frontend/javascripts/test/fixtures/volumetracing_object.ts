@@ -1,17 +1,12 @@
 import update from "immutability-helper";
-import Constants, { AnnotationToolEnum } from "oxalis/constants";
-import mockRequire from "mock-require";
-import defaultState from "oxalis/default_state";
-mockRequire("app", {
-  currentUser: {
-    firstName: "SCM",
-    lastName: "Boy",
-  },
-});
+import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import Constants from "viewer/constants";
+import defaultState from "viewer/default_state";
+
 const volumeTracing = {
   type: "volume",
   activeCellId: 0,
-  activeTool: AnnotationToolEnum.MOVE,
+  activeTool: AnnotationTool.MOVE,
   largestSegmentId: 0,
   contourList: [],
   lastLabelActions: [],
@@ -24,7 +19,7 @@ const notEmptyViewportRect = {
   height: Constants.VIEWPORT_WIDTH,
 };
 export const initialState = update(defaultState, {
-  tracing: {
+  annotation: {
     annotationType: {
       $set: "Explorational",
     },

@@ -48,7 +48,7 @@ class AiInferenceService @Inject()(dataStoreDAO: DataStoreDAO,
       dataStore <- dataStoreDAO.findOneByName(inferenceJob._dataStore)
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
       aiModel <- aiModelDAO.findOne(aiInference._aiModel)
-      aiModelJs <- aiModelService.publicWrites(aiModel)
+      aiModelJs <- aiModelService.publicWrites(aiModel, requestingUser)
       newDatasetOpt <- Fox.runOptional(aiInference._newDataset)(datasetDAO.findOne)
       newDatasetJsOpt <- Fox.runOptional(newDatasetOpt)(newDataset =>
         datasetService.publicWrites(newDataset, Some(requestingUser)))
@@ -118,7 +118,7 @@ class AiInferenceDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
   def countForModel(aiModelId: ObjectId): Fox[Long] =
     for {
       countRows <- run(q"SELECT COUNT(*) FROM webknossos.aiInferences_ WHERE _aiModel = $aiModelId".as[Long])
-      count <- countRows.headOption
+      count <- countRows.headOption.toFox
     } yield count
 
   def findOneByJobId(jobId: ObjectId): Fox[AiInference] =

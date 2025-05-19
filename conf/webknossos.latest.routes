@@ -17,8 +17,8 @@ POST          /maintenances                                                     
 GET           /maintenances/:id                                                                 controllers.MaintenanceController.readOne(id: ObjectId)
 PUT           /maintenances/:id                                                                 controllers.MaintenanceController.update(id: ObjectId)
 DELETE        /maintenances/:id                                                                 controllers.MaintenanceController.delete(id: ObjectId)
-POST          /maintenances                                                                     controllers.MaintenanceController.create()
 POST          /maintenances/adHoc                                                               controllers.MaintenanceController.createAdHocMaintenance()
+GET           /maintenance/revokeExpiredCredits                                                 controllers.CreditTransactionController.revokeExpiredCredits()
 
 # Authentication
 POST          /auth/register                                                                    controllers.AuthenticationController.register()
@@ -80,8 +80,8 @@ GET           /datasets                                                         
 POST          /datasets                                                                         controllers.DatasetController.create(typ: String)
 POST          /datasets/exploreRemote                                                           controllers.DatasetController.exploreRemoteDataset()
 POST          /datasets/exploreAndAddRemote                                                     controllers.DatasetController.exploreAndAddRemoteDataset()
-GET           /datasets/disambiguate/:datasetName/toNew                                         controllers.DatasetController.getOrganizationForDataset(datasetName: String)
-GET           /datasets/disambiguate/:organizationId/:datasetName/toId                          controllers.DatasetController.getDatasetIdFromNameAndOrganization(datasetName: String, organizationId: String)
+GET           /datasets/disambiguate/:datasetName/toNew                                         controllers.DatasetController.getOrganizationForDataset(datasetName: String, sharingToken: Option[String])
+GET           /datasets/disambiguate/:organizationId/:datasetName/toId                          controllers.DatasetController.getDatasetIdFromNameAndOrganization(datasetName: String, organizationId: String, sharingToken: Option[String])
 GET           /datasets/:datasetId/health                                                       controllers.DatasetController.health(datasetId: ObjectId, sharingToken: Option[String])
 PATCH         /datasets/:datasetId                                                              controllers.DatasetController.update(datasetId: ObjectId)
 PATCH         /datasets/:datasetId/updatePartial                                                controllers.DatasetController.updatePartial(datasetId: ObjectId)
@@ -109,6 +109,7 @@ GET           /datastores                                                       
 PUT           /datastores/:name/datasource                                                      controllers.WKRemoteDataStoreController.updateOne(name: String, key: String)
 PUT           /datastores/:name/datasources                                                     controllers.WKRemoteDataStoreController.updateAll(name: String, key: String)
 PUT           /datastores/:name/datasources/paths                                               controllers.WKRemoteDataStoreController.updatePaths(name: String, key: String)
+GET           /datastores/:name/datasources/:organizationId/:directoryName/paths                controllers.WKRemoteDataStoreController.getPaths(name: String, key: String, organizationId: String, directoryName: String)
 PATCH         /datastores/:name/status                                                          controllers.WKRemoteDataStoreController.statusUpdate(name: String, key: String)
 POST          /datastores/:name/reserveUpload                                                   controllers.WKRemoteDataStoreController.reserveDatasetUpload(name: String, key: String, token: String)
 GET           /datastores/:name/getUnfinishedUploadsForUser                                     controllers.WKRemoteDataStoreController.getUnfinishedUploadsForUser(name: String, key: String, token: String, organizationName: String)
@@ -175,14 +176,6 @@ PUT           /zarrPrivateLinks/:id                                             
 DELETE        /zarrPrivateLinks/:id                                                             controllers.AnnotationPrivateLinkController.delete(id: ObjectId)
 GET           /zarrPrivateLinks/:id                                                             controllers.AnnotationPrivateLinkController.get(id: ObjectId)
 
-# Meshes
-POST          /meshes                                                                           controllers.MeshController.create()
-PUT           /meshes/:id                                                                       controllers.MeshController.update(id: ObjectId)
-DELETE        /meshes/:id                                                                       controllers.MeshController.delete(id: ObjectId)
-GET           /meshes/:id                                                                       controllers.MeshController.get(id: ObjectId)
-PUT           /meshes/:id/data                                                                  controllers.MeshController.updateData(id: ObjectId)
-GET           /meshes/:id/data                                                                  controllers.MeshController.getData(id: ObjectId)
-
 # Tasks
 POST          /tasks                                                                            controllers.TaskController.create()
 POST          /tasks/createFromFiles                                                            controllers.TaskController.createFromFiles()
@@ -241,6 +234,7 @@ POST          /pricing/requestExtension                                         
 POST          /pricing/requestUpgrade                                                           controllers.OrganizationController.sendUpgradePricingPlanEmail(requestedPlan: String)
 POST          /pricing/requestUsers                                                             controllers.OrganizationController.sendUpgradePricingPlanUsersEmail(requestedUsers: Int)
 POST          /pricing/requestStorage                                                           controllers.OrganizationController.sendUpgradePricingPlanStorageEmail(requestedStorage: Int)
+POST          /pricing/requestCredits                                                           controllers.OrganizationController.sendOrderCreditsEmail(requestedCredits: Int)
 GET           /pricing/status                                                                   controllers.OrganizationController.pricingStatus()
 GET           /termsOfService                                                                   controllers.OrganizationController.getTermsOfService()
 POST          /termsOfService/accept                                                            controllers.OrganizationController.acceptTermsOfService(version: Int)
@@ -256,6 +250,7 @@ GET           /time/overview                                                    
 GET           /jobs/request                                                                     controllers.WKRemoteWorkerController.requestJobs(key: String)
 GET           /jobs                                                                             controllers.JobController.list()
 GET           /jobs/status                                                                      controllers.JobController.status()
+GET           /jobs/getCreditCost                                                               controllers.JobController.getJobCreditCost(command: String, boundingBoxInMag: String)
 POST          /jobs/run/convertToWkw/:datasetId                                                 controllers.JobController.runConvertToWkwJob(datasetId: ObjectId, scale: String, unit: Option[String])
 POST          /jobs/run/computeMeshFile/:datasetId                                              controllers.JobController.runComputeMeshFileJob(datasetId: ObjectId, layerName: String, mag: String, agglomerateView: Option[String])
 POST          /jobs/run/computeSegmentIndexFile/:datasetId                                      controllers.JobController.runComputeSegmentIndexFileJob(datasetId: ObjectId, layerName: String)
@@ -276,8 +271,8 @@ POST          /jobs/:id/attachDatasetToInference                                
 GET           /jobs/:id/export                                                                  controllers.JobController.redirectToExport(id: ObjectId)
 
 # AI Models
-POST          /aiModels/runTraining                                                             controllers.AiModelController.runTraining
-POST          /aiModels/inferences/runInference                                                 controllers.AiModelController.runInference
+POST          /aiModels/runNeuronTraining                                                       controllers.AiModelController.runNeuronTraining
+POST          /aiModels/inferences/runCustomNeuronInference                                     controllers.AiModelController.runCustomNeuronInference
 GET           /aiModels/inferences/:id                                                          controllers.AiModelController.readAiInferenceInfo(id: ObjectId)
 GET           /aiModels/inferences                                                              controllers.AiModelController.listAiInferences
 GET           /aiModels                                                                         controllers.AiModelController.listAiModels
@@ -285,6 +280,10 @@ POST          /aiModels/register                                                
 GET           /aiModels/:id                                                                     controllers.AiModelController.readAiModelInfo(id: ObjectId)
 PUT           /aiModels/:id                                                                     controllers.AiModelController.updateAiModelInfo(id: ObjectId)
 DELETE        /aiModels/:id                                                                     controllers.AiModelController.deleteAiModel(id: ObjectId)
+
+# CreditTransactions
+POST          /creditTransactions/addCredits                                                    controllers.CreditTransactionController.addCredits(organizationId: String, creditAmount: Int, moneySpent: String, currency: String, comment: Option[String], expiresAt: Option[String])
+PATCH         /creditTransactions/:transactionId                                                controllers.CreditTransactionController.refundCreditTransaction(organizationId: String, transactionId: String)
 
 # Publications
 GET           /publications                                                                     controllers.PublicationController.listPublications()

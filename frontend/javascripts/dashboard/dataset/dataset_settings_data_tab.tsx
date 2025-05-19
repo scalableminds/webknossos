@@ -1,7 +1,7 @@
 import { CopyOutlined, DeleteOutlined } from "@ant-design/icons";
-import { startFindLargestSegmentIdJob } from "admin/admin_rest_api";
 import { getDatasetNameRules, layerNameRules } from "admin/dataset/dataset_components";
 import { useStartAndPollJob } from "admin/job/job_hooks";
+import { startFindLargestSegmentIdJob } from "admin/rest_api";
 import {
   Button,
   Col,
@@ -22,18 +22,18 @@ import {
   RetryingErrorBoundary,
   jsonEditStyle,
 } from "dashboard/dataset/helper_components";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { jsonStringify, parseMaybe } from "libs/utils";
 import { BoundingBoxInput, Vector3Input } from "libs/vector_input";
-import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "oxalis/constants";
-import { getSupportedValueRangeForElementClass } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import type { BoundingBoxObject, OxalisState } from "oxalis/store";
 import * as React from "react";
-import { useSelector } from "react-redux";
-import { type APIDataLayer, type APIDataset, APIJobType } from "types/api_flow_types";
+import { type APIDataLayer, type APIDataset, APIJobType } from "types/api_types";
 import type { ArbitraryObject } from "types/globals";
 import type { DataLayer } from "types/schemas/datasource.types";
 import { isValidJSON, syncValidator, validateDatasourceJSON } from "types/validation";
+import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "viewer/constants";
+import { getSupportedValueRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
+import type { BoundingBoxObject } from "viewer/store";
 import { AxisRotationSettingForDataset } from "./dataset_rotation_form_item";
 
 const FormItem = Form.Item;
@@ -178,7 +178,7 @@ function SimpleDatasetForm({
   form: FormInstance;
   dataset: APIDataset | null | undefined;
 }) {
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useWkSelector((state) => state.activeUser);
   const onRemoveLayer = (layer: DataLayer) => {
     const oldLayers = form.getFieldValue(["dataSource", "dataLayers"]);
     const newLayers = oldLayers.filter(
@@ -301,7 +301,7 @@ function SimpleDatasetForm({
             </Row>
             <Row gutter={48}>
               <Col span={24} xl={12} />
-              <Col span={24} xl={6}>
+              <Col span={24} xl={12}>
                 <AxisRotationSettingForDataset form={form} />
               </Col>
             </Row>
@@ -359,6 +359,8 @@ function SimpleLayerForm({
   form: FormInstance;
   dataset: APIDataset | null | undefined;
 }) {
+  const layerCategorySavedOnServer = dataset?.dataSource.dataLayers[index]?.category;
+  const isStoredAsSegmentationLayer = layerCategorySavedOnServer === "segmentation";
   const dataLayers = Form.useWatch(["dataSource", "dataLayers"]);
   const category = Form.useWatch(["dataSource", "dataLayers", index, "category"]);
   const isSegmentation = category === "segmentation";
@@ -632,22 +634,31 @@ function SimpleLayerForm({
                     {dataset?.dataStore.jobsSupportedByAvailableWorkers.includes(
                       APIJobType.FIND_LARGEST_SEGMENT_ID,
                     ) ? (
-                      <Button
-                        type={mostRecentSuccessfulJob == null ? "primary" : "default"}
-                        title={`${
-                          activeJob != null ? "Scanning" : "Scan"
-                        } the data to derive the value automatically`}
-                        style={{ marginLeft: 8 }}
-                        loading={activeJob != null}
-                        disabled={activeJob != null || startJob == null}
-                        onClick={
-                          startJob != null && startJobFn != null
-                            ? () => startJob(startJobFn)
-                            : () => Promise.resolve()
+                      <Tooltip
+                        title={
+                          !isStoredAsSegmentationLayer
+                            ? "Before being able to detect the largest segment id you must save your changes."
+                            : `${
+                                activeJob != null ? "Scanning" : "Scan"
+                              } the data to derive the value automatically`
                         }
                       >
-                        Detect
-                      </Button>
+                        <Button
+                          type={mostRecentSuccessfulJob == null ? "primary" : "default"}
+                          style={{ marginLeft: 8 }}
+                          loading={activeJob != null}
+                          disabled={
+                            !isStoredAsSegmentationLayer || activeJob != null || startJob == null
+                          }
+                          onClick={
+                            startJob != null && startJobFn != null
+                              ? () => startJob(startJobFn)
+                              : () => Promise.resolve()
+                          }
+                        >
+                          Detect
+                        </Button>
+                      </Tooltip>
                     ) : (
                       <></>
                     )}

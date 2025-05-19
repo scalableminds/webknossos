@@ -28,6 +28,16 @@ import React from "react";
 import { connect } from "react-redux";
 
 import {
+  AllowedTeamsFormItem,
+  CardContainer,
+  DatasetNameFormItem,
+  DatastoreFormItem,
+} from "admin/dataset/dataset_components";
+import {
+  getLeftOverStorageBytes,
+  hasPricingPlanExceededStorage,
+} from "admin/organization/pricing_plan_utils";
+import {
   type UnfinishedUpload,
   cancelDatasetUpload,
   createResumableUpload,
@@ -37,14 +47,7 @@ import {
   sendAnalyticsEvent,
   sendFailedRequestAnalyticsEvent,
   startConvertToWkwJob,
-} from "admin/admin_rest_api";
-import {
-  AllowedTeamsFormItem,
-  CardContainer,
-  DatasetNameFormItem,
-  DatastoreFormItem,
-} from "admin/dataset/dataset_components";
-import { hasPricingPlanExceededStorage } from "admin/organization/pricing_plan_utils";
+} from "admin/rest_api";
 import type { FormInstance } from "antd/lib/form";
 import classnames from "classnames";
 import FolderSelection from "dashboard/folders/folder_selection";
@@ -56,9 +59,6 @@ import { Vector3Input } from "libs/vector_input";
 import Zip from "libs/zipjs_wrapper";
 import _ from "lodash";
 import messages from "messages";
-import { AllUnits, LongUnitToShortUnitMap, UnitLong, type Vector3 } from "oxalis/constants";
-import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
-import type { OxalisState } from "oxalis/store";
 import { type FileWithPath, useDropzone } from "react-dropzone";
 import { Link, type RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
@@ -68,8 +68,11 @@ import {
   type APIOrganization,
   type APITeam,
   type APIUser,
-} from "types/api_flow_types";
+} from "types/api_types";
 import { syncValidator } from "types/validation";
+import { AllUnits, LongUnitToShortUnitMap, UnitLong, type Vector3 } from "viewer/constants";
+import { enforceActiveOrganization } from "viewer/model/accessors/organization_accessors";
+import type { WebknossosState } from "viewer/store";
 import { FormItemWithInfo, confirmAsync } from "../../dashboard/dataset/helper_components";
 
 const FormItem = Form.Item;
@@ -168,6 +171,10 @@ function MultiLayerImageStackExample() {
       <pre className="dataset-import-folder-structure-hint">{description}</pre>
     </div>
   );
+}
+
+function getFileSize(files: FileWithPath[]) {
+  return files.reduce((accSize, file) => accSize + file.size, 0);
 }
 
 type UploadFormFieldTypes = {
@@ -331,6 +338,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       ? unfinishedUploadToContinue.uploadId
       : `${dayjs(Date.now()).format("YYYY-MM-DD_HH-mm")}__${newDatasetName}__${getRandomString()}`;
     const filePaths = formValues.zipFile.map((file) => file.path || "");
+    const totalFileSizeInBytes = getFileSize(formValues.zipFile);
     const reserveUploadInformation = {
       uploadId,
       name: newDatasetName,
@@ -339,6 +347,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       organization: activeUser.organization,
       totalFileCount: formValues.zipFile.length,
       filePaths: filePaths,
+      totalFileSizeInBytes,
       layersToLink: [],
       initialTeams: formValues.initialTeams.map((team: APITeam) => team.id),
       folderId: formValues.targetFolderId,
@@ -714,6 +723,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       (unfinishedUploads) => unfinishedUploads.uploadId !== unfinishedUploadToContinue?.uploadId,
     );
     const continuingUnfinishedUpload = unfinishedUploadToContinue != null;
+    const isActiveUserAdmin = this.props.activeUser?.isAdmin;
 
     return (
       <div
@@ -994,6 +1004,19 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                     // Either there are no archives, or all files are archives
                     return archives.length === 0 || archives.length === files.length;
                   }, "Archives cannot be mixed with other files."),
+                },
+                {
+                  validator: syncValidator(
+                    (files: FileWithPath[]) => {
+                      const fileSize = getFileSize(files);
+                      return getLeftOverStorageBytes(this.props.organization) >= fileSize;
+                    },
+                    `The selected files exceed the available storage of your organization. Please ${
+                      isActiveUserAdmin
+                        ? "use the organization management page to request more storage"
+                        : "ask your administrator to request more storage"
+                    }.`,
+                  ),
                 },
                 {
                   validator: syncValidator((files: FileWithPath[]) => {
@@ -1347,7 +1370,7 @@ function FileUploadArea({
   );
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   activeUser: state.activeUser,
   organization: enforceActiveOrganization(state.activeOrganization),
 });

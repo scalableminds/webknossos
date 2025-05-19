@@ -51,7 +51,7 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
             val tracing = request.body
-            skeletonTracingService.saveSkeleton(tracing, newTracingId, 0).map { _ =>
+            skeletonTracingService.saveSkeleton(newTracingId, version = 0, tracing).map { _ =>
               Ok
             }
           }
@@ -68,7 +68,7 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
             for {
               resultBoxes: List[Box[Boolean]] <- Fox.sequence(zipped.map {
                 case (SkeletonTracingOpt(Some(tracing), _), StringOpt(Some(tracingId), _)) =>
-                  skeletonTracingService.saveSkeleton(tracing, tracingId, 0).map(_ => true)
+                  skeletonTracingService.saveSkeleton(tracingId, version = 0, tracing).map(_ => true)
                 case _ => Fox.empty
               })
             } yield Ok(Json.toJson(resultBoxes))
@@ -107,9 +107,9 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           val tracings: List[Option[SkeletonTracing]] = request.body
           for {
-            mergedTracing <- Fox.box2Fox(skeletonTracingService.merge(tracings.flatten, newVersion = 0L))
+            mergedTracing <- skeletonTracingService.merge(tracings.flatten, newVersion = 0L).toFox
             processedTracing = skeletonTracingService.remapTooLargeTreeIds(mergedTracing)
-            _ <- skeletonTracingService.saveSkeleton(processedTracing, newTracingId, processedTracing.version)
+            _ <- skeletonTracingService.saveSkeleton(newTracingId, processedTracing.version, processedTracing)
           } yield Ok
         }
       }
@@ -127,9 +127,9 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
             for {
               annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-              editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
-              editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
-              boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
+              editPositionParsed <- Fox.runOptional(editPosition)(p => Vec3Int.fromUriLiteral(p).toFox)
+              editRotationParsed <- Fox.runOptional(editRotation)(r => Vec3Double.fromUriLiteral(r).toFox)
+              boundingBoxParsed <- Fox.runOptional(boundingBox)(b => BoundingBox.fromLiteral(b).toFox)
               newestSourceVersion <- annotationService.currentMaterializableVersion(annotationId)
               _ <- annotationService.duplicateSkeletonTracing(
                 annotationId,

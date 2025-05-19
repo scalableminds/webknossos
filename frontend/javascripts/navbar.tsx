@@ -25,9 +25,11 @@ import {
 import classnames from "classnames";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { connect, useSelector } from "react-redux";
-import { Link, useHistory } from "react-router-dom";
+import { connect } from "react-redux";
+import { Link, useLocation } from "react-router-dom";
 
+import LoginForm from "admin/auth/login_form";
+import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import {
   getBuildInfo,
   getUsersOrganizations,
@@ -35,31 +37,18 @@ import {
   switchToOrganization,
   updateNovelUserExperienceInfos,
   updateSelectedThemeOfUser,
-} from "admin/admin_rest_api";
-import LoginForm from "admin/auth/login_form";
-import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+} from "admin/rest_api";
 import type { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
 import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import features from "features";
 import { useFetch, useInterval } from "libs/react_helpers";
+import { useWkSelector } from "libs/react_hooks";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import window, { location } from "libs/window";
 import messages from "messages";
-import constants from "oxalis/constants";
-import {
-  isAnnotationFromDifferentOrganization,
-  isAnnotationOwner as isAnnotationOwnerAccessor,
-} from "oxalis/model/accessors/annotation_accessor";
-import { formatUserName } from "oxalis/model/accessors/user_accessor";
-import { setThemeAction } from "oxalis/model/actions/ui_actions";
-import { logoutUserAction, setActiveUserAction } from "oxalis/model/actions/user_actions";
-import type { OxalisState } from "oxalis/store";
-import Store from "oxalis/store";
-import { HelpModal } from "oxalis/view/help_modal";
-import { PortalTarget } from "oxalis/view/layouting/portal_utils";
 import type { MenuClickEventHandler } from "rc-menu/lib/interface";
 import { getAntdTheme, getSystemColorTheme } from "theme";
 import type {
@@ -67,7 +56,19 @@ import type {
   APIUser,
   APIUserCompact,
   APIUserTheme,
-} from "types/api_flow_types";
+} from "types/api_types";
+import constants from "viewer/constants";
+import {
+  isAnnotationFromDifferentOrganization,
+  isAnnotationOwner as isAnnotationOwnerAccessor,
+} from "viewer/model/accessors/annotation_accessor";
+import { formatUserName } from "viewer/model/accessors/user_accessor";
+import { setThemeAction } from "viewer/model/actions/ui_actions";
+import { logoutUserAction, setActiveUserAction } from "viewer/model/actions/user_actions";
+import type { WebknossosState } from "viewer/store";
+import Store from "viewer/store";
+import { HelpModal } from "viewer/view/help_modal";
+import { PortalTarget } from "viewer/view/layouting/portal_utils";
 
 const { Header } = Layout;
 
@@ -346,6 +347,8 @@ function getHelpSubMenu(
       ? `(Server is currently at ${polledVersion}!)`
       : "";
 
+  const { discussionBoardRequiresAdmin, discussionBoard, isWkorgInstance } = features();
+
   const helpSubMenuItems: ItemType[] = [
     {
       key: "user-documentation",
@@ -355,12 +358,11 @@ function getHelpSubMenu(
         </a>
       ),
     },
-    (!features().discussionBoardRequiresAdmin || isAdminOrManager) &&
-    features().discussionBoard !== false
+    (!discussionBoardRequiresAdmin || isAdminOrManager) && discussionBoard !== false
       ? {
           key: "discussion-board",
           label: (
-            <a href={features().discussionBoard} target="_blank" rel="noreferrer noopener">
+            <a href={discussionBoard} target="_blank" rel="noreferrer noopener">
               Community Support
             </a>
           ),
@@ -395,7 +397,7 @@ function getHelpSubMenu(
       label: "Ask a Question",
     });
 
-  if (features().isWkorgInstance) {
+  if (isWkorgInstance) {
     helpSubMenuItems.push({
       key: "contact",
       label: (
@@ -711,8 +713,8 @@ function LoggedInAvatar({
 }
 
 function AnonymousAvatar() {
-  const bannerHeight = useSelector(
-    (state: OxalisState) => state.uiInformation.navbarHeight - constants.DEFAULT_NAVBAR_HEIGHT,
+  const bannerHeight = useWkSelector(
+    (state) => state.uiInformation.navbarHeight - constants.DEFAULT_NAVBAR_HEIGHT,
   );
   return (
     <Popover
@@ -821,7 +823,7 @@ function Navbar({
   navbarHeight,
   isAnnotationOwner,
 }: Props) {
-  const history = useHistory();
+  const historyLocation = useLocation();
 
   const handleLogout = async (event: React.SyntheticEvent) => {
     event.preventDefault();
@@ -938,7 +940,7 @@ function Navbar({
   );
   // Don't highlight active menu items, when showing the narrow version of the navbar,
   // since this makes the icons appear more crowded.
-  const selectedKeys = collapseAllNavItems ? [] : [history.location.pathname];
+  const selectedKeys = collapseAllNavItems ? [] : [historyLocation.pathname];
   const separator = <div className="navbar-separator" />;
 
   return (
@@ -968,7 +970,6 @@ function Navbar({
         disabledOverflow
         items={menuItems}
       />
-
       {isInAnnotationView ? separator : null}
       <HelpModal
         isModalOpen={isHelpModalOpen}
@@ -999,7 +1000,7 @@ function Navbar({
 }
 
 function GlobalProgressBar() {
-  const globalProgress = useSelector((state: OxalisState) => state.uiInformation.globalProgress);
+  const globalProgress = useWkSelector((state) => state.uiInformation.globalProgress);
   const hide = globalProgress === 0;
   return (
     <div
@@ -1009,15 +1010,15 @@ function GlobalProgressBar() {
   );
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   activeUser: state.activeUser,
   isInAnnotationView: state.uiInformation.isInAnnotationView,
   hasOrganizations: state.uiInformation.hasOrganizations,
-  othersMayEdit: state.tracing.othersMayEdit,
-  blockedByUser: state.tracing.blockedByUser,
-  allowUpdate: state.tracing.restrictions.allowUpdate,
-  isLockedByOwner: state.tracing.isLockedByOwner,
-  annotationOwnerName: formatUserName(state.activeUser, state.tracing.owner),
+  othersMayEdit: state.annotation.othersMayEdit,
+  blockedByUser: state.annotation.blockedByUser,
+  allowUpdate: state.annotation.restrictions.allowUpdate,
+  isLockedByOwner: state.annotation.isLockedByOwner,
+  annotationOwnerName: formatUserName(state.activeUser, state.annotation.owner),
   isAnnotationOwner: isAnnotationOwnerAccessor(state),
   isAnnotationFromDifferentOrganization: isAnnotationFromDifferentOrganization(state),
   navbarHeight: state.uiInformation.navbarHeight,

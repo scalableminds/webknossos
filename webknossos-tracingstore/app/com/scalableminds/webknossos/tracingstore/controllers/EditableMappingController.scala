@@ -52,7 +52,7 @@ class EditableMappingController @Inject()(
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             agglomerateGraphBox: Box[AgglomerateGraph] <- editableMappingService
               .getAgglomerateGraphForId(tracingId, tracing.version, agglomerateId)
-              .futureBox
+              .shiftBox
             segmentIds <- agglomerateGraphBox match {
               case Full(agglomerateGraph) => Fox.successful(agglomerateGraph.segments)
               case Empty                  => Fox.successful(List.empty)
@@ -72,7 +72,7 @@ class EditableMappingController @Inject()(
             annotation <- annotationService.get(annotationId, version)
             tracing <- annotationService.findVolume(annotationId, tracingId, version)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
-            remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, annotationId)
+            remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerForVolumeTracing(tracing, annotationId)
             editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId, version)
             relevantMapping: Map[Long, Long] <- editableMappingService.generateCombinedMappingForSegmentIds(
               request.body.items.toSet,
@@ -94,7 +94,7 @@ class EditableMappingController @Inject()(
             annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
             tracing <- annotationService.findVolume(annotationId, tracingId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
-            remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, annotationId)
+            remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerForVolumeTracing(tracing, annotationId)
             editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId)
             edges <- editableMappingService.agglomerateGraphMinCut(tracingId,
                                                                    tracing.version,
@@ -114,7 +114,7 @@ class EditableMappingController @Inject()(
             annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
             tracing <- annotationService.findVolume(annotationId, tracingId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
-            remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, annotationId)
+            remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerForVolumeTracing(tracing, annotationId)
             editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId)
             (segmentId, edges) <- editableMappingService.agglomerateGraphNeighbors(tracingId,
                                                                                    editableMappingInfo,
@@ -134,7 +134,7 @@ class EditableMappingController @Inject()(
           tracing <- annotationService.findVolume(annotationId, tracingId)
           _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
           editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId)
-          remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerFromVolumeTracing(tracing, annotationId)
+          remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerForVolumeTracing(tracing, annotationId)
           agglomerateSkeletonBytes <- editableMappingService.getAgglomerateSkeletonWithFallback(tracingId,
                                                                                                 tracing.version,
                                                                                                 editableMappingInfo,

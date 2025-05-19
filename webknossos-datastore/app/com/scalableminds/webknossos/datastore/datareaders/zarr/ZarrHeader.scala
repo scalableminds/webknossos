@@ -98,7 +98,7 @@ object ZarrHeader extends JsonImplicits {
         "compressor" -> zarrHeader.compressor,
         "filters" -> None,
         "shape" -> zarrHeader.shape,
-        "dimension_seperator" -> zarrHeader.dimension_separator
+        "dimension_separator" -> zarrHeader.dimension_separator
       )
   }
 }

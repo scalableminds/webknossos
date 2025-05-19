@@ -5,10 +5,7 @@ import type React from "react";
 import type { ColumnsType } from "antd/lib/table";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
 import { localeCompareBy } from "libs/utils";
-import type {
-  VoxelyticsArtifactConfig,
-  VoxelyticsTaskConfigWithHierarchy,
-} from "types/api_flow_types";
+import type { VoxelyticsArtifactConfig, VoxelyticsTaskConfigWithHierarchy } from "types/api_types";
 import { renderArtifactPath } from "./artifacts_view";
 
 type ArtifactTableEntry = {

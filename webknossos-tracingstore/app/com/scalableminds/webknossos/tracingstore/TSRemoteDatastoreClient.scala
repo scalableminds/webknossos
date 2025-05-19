@@ -7,17 +7,19 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
+import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{
   GetMultipleSegmentIndexParameters,
   GetSegmentIndexParameters,
   MissingBucketHeaders,
+  ProtoGeometryImplicits,
   SegmentIndexData
 }
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.{VoxelSize, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSource
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.datastore.services.FullMeshRequest
+import com.scalableminds.webknossos.datastore.services.mesh.FullMeshRequest
 import com.scalableminds.webknossos.tracingstore.tracings.RemoteFallbackLayer
 import com.typesafe.scalalogging.LazyLogging
 import play.api.http.Status
@@ -32,6 +34,7 @@ class TSRemoteDatastoreClient @Inject()(
     val lifecycle: ApplicationLifecycle
 )(implicit ec: ExecutionContext)
     extends LazyLogging
+    with ProtoGeometryImplicits
     with MissingBucketHeaders {
 
   private lazy val dataStoreUriCache: AlfuCache[(String, String), String] = AlfuCache()
@@ -46,12 +49,12 @@ class TSRemoteDatastoreClient @Inject()(
       result <- rpc(s"$remoteLayerUri/agglomerates/$mappingName/skeleton/$agglomerateId").withTokenFromContext.getWithBytesResponse
     } yield result
 
-  def getData(remoteFallbackLayer: RemoteFallbackLayer, dataRequests: List[WebknossosDataRequest])(
+  def getData(remoteFallbackLayer: RemoteFallbackLayer, dataRequests: Seq[WebknossosDataRequest])(
       implicit tc: TokenContext): Fox[(Array[Byte], List[Int])] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
       response <- rpc(s"$remoteLayerUri/data").withTokenFromContext.silent.postJson(dataRequests)
-      _ <- bool2Fox(Status.isSuccessful(response.status))
+      _ <- Fox.fromBool(Status.isSuccessful(response.status))
       bytes = response.bodyAsBytes.toArray
       indices <- parseMissingBucketHeader(response.header(missingBucketsHeader)) ?~> "failed to parse missing bucket header"
     } yield (bytes, indices)
@@ -136,7 +139,7 @@ class TSRemoteDatastoreClient @Inject()(
       segmentIds: Seq[Long],
       mag: Vec3Int,
       mappingName: Option[String], // should be the baseMappingName in case of editable mappings
-      editableMappingTracingId: Option[String])(implicit tc: TokenContext): Fox[Seq[(Long, Seq[Vec3Int])]] =
+      editableMappingTracingId: Option[String])(implicit tc: TokenContext): Fox[Seq[(Long, Set[Vec3IntProto])]] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
       result <- rpc(s"$remoteLayerUri/segmentIndex").withTokenFromContext.silent
@@ -147,7 +150,7 @@ class TSRemoteDatastoreClient @Inject()(
                                             mappingName = mappingName,
                                             editableMappingTracingId = editableMappingTracingId))
 
-    } yield result.map(data => (data.segmentId, data.positions))
+    } yield result.map(data => (data.segmentId, data.positions.toSet.map(vec3IntToProto)))
 
   def loadFullMeshStl(remoteFallbackLayer: RemoteFallbackLayer, fullMeshRequest: FullMeshRequest)(
       implicit tc: TokenContext): Fox[Array[Byte]] =
@@ -167,7 +170,7 @@ class TSRemoteDatastoreClient @Inject()(
       result <- rpc(
         s"$dataStoreUri/data/datasets/${dataSourceId.organizationId}/${dataSourceId.directoryName}/readInboxDataSource").withTokenFromContext
         .getWithJsonResponse[InboxDataSource]
-      scale <- result.voxelSizeOpt ?~> "could not determine voxel size of dataset"
+      scale <- result.voxelSizeOpt.toFox ?~> "could not determine voxel size of dataset"
     } yield scale
 
   private def getRemoteLayerUri(remoteLayer: RemoteFallbackLayer): Fox[String] =

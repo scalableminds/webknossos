@@ -1,4 +1,4 @@
-import type { APIOrganization } from "types/api_flow_types";
+import type { APIOrganization } from "types/api_types";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 
 const dummyOrga: APIOrganization = {
@@ -12,6 +12,7 @@ const dummyOrga: APIOrganization = {
   includedUsers: 1,
   includedStorageBytes: 1200000,
   usedStorageBytes: 1000,
+  creditBalance: "0.0",
   ownerName: undefined,
 };
 

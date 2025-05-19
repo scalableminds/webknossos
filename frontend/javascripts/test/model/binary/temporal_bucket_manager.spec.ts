@@ -1,149 +1,164 @@
-import mockRequire from "mock-require";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { DataBucket } from "viewer/model/bucket_data_handling/bucket";
+import TemporalBucketManager from "viewer/model/bucket_data_handling/temporal_bucket_manager";
 import runAsync from "test/helpers/run-async";
-import sinon from "sinon";
-import anyTest, { type TestFn } from "ava";
-import "test/mocks/lz4";
 
-mockRequire("oxalis/model/sagas/root_saga", function* () {
-  yield;
-});
-// @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'null' is not assignable to param... Remove this comment to see the full error message
-mockRequire("libs/request", null);
-const { DataBucket } = mockRequire.reRequire("oxalis/model/bucket_data_handling/bucket");
-const TemporalBucketManager = mockRequire.reRequire(
-  "oxalis/model/bucket_data_handling/temporal_bucket_manager",
-).default;
-
-// Ava's recommendation for Typescript types
-// https://github.com/avajs/ava/blob/main/docs/recipes/typescript.md#typing-tcontext
-const test = anyTest as TestFn<{
-  cube: {
-    isSegmentation: boolean;
-    pushQueue: any;
-    pullQueue: any;
-    triggerBucketDataChanged: () => void;
+// Mock dependencies
+vi.mock("viewer/model/sagas/root_saga", () => {
+  return {
+    default: function* () {
+      yield;
+    },
   };
-  manager: typeof TemporalBucketManager;
-}>;
-
-test.beforeEach((t) => {
-  const pullQueue = {
-    add: sinon.stub(),
-    pull: sinon.stub(),
-  };
-  const pushQueue = {
-    insert: sinon.stub(),
-    push: sinon.stub(),
-  };
-  const mockedCube = {
-    isSegmentation: true,
-    pushQueue,
-    pullQueue,
-    triggerBucketDataChanged: () => {},
-  };
-  const manager = new TemporalBucketManager(pullQueue, pushQueue);
-  t.context.cube = mockedCube;
-  t.context.manager = manager;
 });
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'bucket' implicitly has an 'any' type.
-function fakeLabel(bucket) {
-  // To simulate some labeling on the bucket's data,
-  // we simply use the start and end mutation methods
-  // without any action in between.
-  bucket.startDataMutation();
-  bucket.endDataMutation();
+// Mock libs/request
+vi.mock("libs/request");
+
+interface TestContext {
+  cube: any;
+  manager: TemporalBucketManager;
 }
 
-test("Add / Remove should be added when bucket has not been requested", (t) => {
-  const { manager } = t.context;
-  const bucket = new DataBucket("uint8", [0, 0, 0, 0], manager, t.context.cube);
-  fakeLabel(bucket);
-  t.is(manager.getCount(), 1);
-});
-test("Add / Remove should be added when bucket has not been received", (t) => {
-  const { manager } = t.context;
-  const bucket = new DataBucket("uint8", [0, 0, 0, 0], manager, t.context.cube);
-  bucket.markAsPulled();
-  t.is(bucket.needsRequest(), false);
-  fakeLabel(bucket);
-  t.is(manager.getCount(), 1);
-});
-test("Add / Remove should not be added when bucket has been received", (t) => {
-  const { manager } = t.context;
-  const bucket = new DataBucket("uint8", [0, 0, 0, 0], manager, t.context.cube);
-  bucket.markAsPulled();
-  bucket.receiveData(new Uint8Array(1 << 15));
-  t.is(bucket.isLoaded(), true);
-  fakeLabel(bucket);
-  t.is(manager.getCount(), 0);
-});
-test("Add / Remove should be removed once it is loaded", (t) => {
-  const { manager } = t.context;
-  const bucket = new DataBucket("uint8", [0, 0, 0, 0], manager, t.context.cube);
-  fakeLabel(bucket);
-  bucket.markAsPulled();
-  bucket.receiveData(new Uint8Array(1 << 15));
-  t.is(manager.getCount(), 0);
-});
+describe("TemporalBucketManager", () => {
+  beforeEach<TestContext>(async (context) => {
+    const pullQueue = {
+      add: vi.fn(),
+      pull: vi.fn(),
+    };
+    const pushQueue = {
+      insert: vi.fn(),
+      push: vi.fn(),
+    };
+    const mockedCube = {
+      isSegmentation: true,
+      pushQueue,
+      pullQueue,
+      triggerBucketDataChanged: vi.fn(),
+    };
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'manager' implicitly has an 'any' type.
-function prepareBuckets(manager, cube) {
-  // Insert two buckets into manager
-  const bucket1 = new DataBucket("uint8", [0, 0, 0, 0], manager, cube);
-  const bucket2 = new DataBucket("uint8", [1, 0, 0, 0], manager, cube);
+    const manager = new TemporalBucketManager(pullQueue as any, pushQueue as any);
 
-  for (const bucket of [bucket1, bucket2]) {
+    context.cube = mockedCube;
+    context.manager = manager;
+  });
+
+  // Helper function to fake labeling
+  function fakeLabel(bucket: any) {
+    // To simulate some labeling on the bucket's data,
+    // we simply use the start and end mutation methods
+    // without any action in between.
     bucket.startDataMutation();
     bucket.endDataMutation();
-    bucket.markAsPulled();
   }
 
-  return {
-    bucket1,
-    bucket2,
-  };
-}
+  it<TestContext>("should be added when bucket has not been requested", ({ manager, cube }) => {
+    const bucket = new DataBucket("uint8", [0, 0, 0, 0], manager, cube);
 
-test("Make Loaded Promise should be initially unresolved", (t) => {
-  const { manager } = t.context;
-  prepareBuckets(manager, t.context.cube);
-  let resolved = false;
-  manager.getAllLoadedPromise().then(() => {
-    resolved = true;
+    fakeLabel(bucket);
+    expect(manager.getCount()).toBe(1);
   });
-  return runAsync([
-    () => {
-      t.is(resolved, false);
-    },
-  ]);
-});
-test("Make Loaded Promise should be unresolved when only one bucket is loaded", (t) => {
-  const { manager } = t.context;
-  const { bucket1 } = prepareBuckets(manager, t.context.cube);
-  let resolved = false;
-  manager.getAllLoadedPromise().then(() => {
-    resolved = true;
+
+  it<TestContext>("should be added when bucket has not been received", ({ manager, cube }) => {
+    const bucket = new DataBucket("uint8", [0, 0, 0, 0], manager, cube);
+
+    bucket.markAsRequested();
+    expect(bucket.needsRequest()).toBe(false);
+
+    fakeLabel(bucket);
+    expect(manager.getCount()).toBe(1);
   });
-  bucket1.receiveData(new Uint8Array(1 << 15));
-  return runAsync([
-    () => {
-      t.is(resolved, false);
-    },
-  ]);
-});
-test("Make Loaded Promise should be resolved when both buckets are loaded", (t) => {
-  const { manager } = t.context;
-  const { bucket1, bucket2 } = prepareBuckets(manager, t.context.cube);
-  let resolved = false;
-  manager.getAllLoadedPromise().then(() => {
-    resolved = true;
+
+  it<TestContext>("should not be added when bucket has been received", ({ manager, cube }) => {
+    const bucket = new DataBucket("uint8", [0, 0, 0, 0], manager, cube);
+    bucket.markAsRequested();
+    bucket.receiveData(new Uint8Array(1 << 15));
+
+    expect(bucket.isLoaded()).toBe(true);
+
+    fakeLabel(bucket);
+    expect(manager.getCount()).toBe(0);
   });
-  bucket1.receiveData(new Uint8Array(1 << 15));
-  bucket2.receiveData(new Uint8Array(1 << 15));
-  return runAsync([
-    () => {
-      t.is(resolved, true);
-    },
-  ]);
+
+  it<TestContext>("should be removed once it is loaded", ({ manager, cube }) => {
+    const bucket = new DataBucket("uint8", [0, 0, 0, 0], manager, cube);
+    fakeLabel(bucket);
+
+    bucket.markAsRequested();
+    bucket.receiveData(new Uint8Array(1 << 15));
+
+    expect(manager.getCount()).toBe(0);
+  });
+
+  // Helper function to prepare buckets
+  function prepareBuckets(manager: TemporalBucketManager, cube: any) {
+    // Insert two buckets into manager
+    const bucket1 = new DataBucket("uint8", [0, 0, 0, 0], manager, cube);
+    const bucket2 = new DataBucket("uint8", [1, 0, 0, 0], manager, cube);
+
+    for (const bucket of [bucket1, bucket2]) {
+      bucket.startDataMutation();
+      bucket.endDataMutation();
+      bucket.markAsRequested();
+    }
+
+    return {
+      bucket1,
+      bucket2,
+    };
+  }
+
+  it<TestContext>("Make Loaded Promise should be initially unresolved", async ({
+    manager,
+    cube,
+  }) => {
+    prepareBuckets(manager, cube);
+    let resolved = false;
+    manager.getAllLoadedPromise().then(() => {
+      resolved = true;
+    });
+
+    return runAsync([
+      () => {
+        expect(resolved).toBe(false);
+      },
+    ]);
+  });
+
+  it<TestContext>("Make Loaded Promise should be unresolved when only one bucket is loaded", async ({
+    manager,
+    cube,
+  }) => {
+    const { bucket1 } = prepareBuckets(manager, cube);
+    let resolved = false;
+    manager.getAllLoadedPromise().then(() => {
+      resolved = true;
+    });
+    bucket1.receiveData(new Uint8Array(1 << 15));
+
+    return runAsync([
+      () => {
+        expect(resolved).toBe(false);
+      },
+    ]);
+  });
+
+  it<TestContext>("Make Loaded Promise should be resolved when both buckets are loaded", async ({
+    manager,
+    cube,
+  }) => {
+    const { bucket1, bucket2 } = prepareBuckets(manager, cube);
+    let resolved = false;
+    manager.getAllLoadedPromise().then(() => {
+      resolved = true;
+    });
+    bucket1.receiveData(new Uint8Array(1 << 15));
+    bucket2.receiveData(new Uint8Array(1 << 15));
+
+    return runAsync([
+      () => {
+        expect(resolved).toBe(true);
+      },
+    ]);
+  });
 });

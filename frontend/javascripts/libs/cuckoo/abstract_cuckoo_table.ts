@@ -1,7 +1,7 @@
 import type UpdatableTexture from "libs/UpdatableTexture";
-import { getRenderer } from "oxalis/controller/renderer";
-import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
 import * as THREE from "three";
+import { getRenderer } from "viewer/controller/renderer";
+import { createUpdatableTexture } from "viewer/geometries/materials/plane_material_factory_helpers";
 
 const DEFAULT_LOAD_FACTOR = 0.9;
 export const EMPTY_KEY_VALUE = 2 ** 32 - 1;
@@ -32,7 +32,7 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
     return THREE.UnsignedIntType;
   }
 
-  static getTextureFormat() {
+  static getTextureFormat(): THREE.PixelFormat {
     return THREE.RGBAIntegerFormat;
   }
 

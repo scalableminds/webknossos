@@ -1,21 +1,18 @@
 package com.scalableminds.util.io
 
-import com.scalableminds.util.tools.Fox.{box2Fox, future2Fox}
-
 import java.io._
 import java.nio.file.{Files, Path, Paths}
 import java.util.zip.{GZIPOutputStream => DefaultGZIPOutputStream, _}
-import com.scalableminds.util.tools.{Fox, TextUtils}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.common.Box.tryo
 import org.apache.commons.io.IOUtils
-import play.api.libs.Files.TemporaryFile
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters.EnumerationHasAsScala
 
-object ZipIO extends LazyLogging {
+object ZipIO extends LazyLogging with FoxImplicits {
 
   /**
     * Representation of an opened zip file
@@ -30,9 +27,9 @@ object ZipIO extends LazyLogging {
       stream.closeEntry()
     }
 
-    def addFileFromTemporaryFile(name: String, data: TemporaryFile): Unit = {
+    def addFileFromTemporaryFile(name: String, tmpFilePath: Path): Unit = {
       stream.putNextEntry(new ZipEntry(name))
-      stream.write(Files.readAllBytes(data))
+      stream.write(Files.readAllBytes(tmpFilePath))
       stream.closeEntry()
     }
 
@@ -85,7 +82,7 @@ object ZipIO extends LazyLogging {
     } else {
       zip.close()
       out.close()
-      Future.successful(())
+      Fox.successful(())
     }
   }
 
@@ -194,11 +191,11 @@ object ZipIO extends LazyLogging {
     }
 
     val resultFox = zipEntries.foldLeft[Fox[List[A]]](Fox.successful(List.empty)) { (results, entry) =>
-      results.futureBox.map {
+      results.shiftBox.map {
         case Full(rs) =>
           val input: InputStream = zip.getInputStream(entry)
           val path = commonPrefix.relativize(Paths.get(entry.getName))
-          val innerResultFox: Fox[List[A]] = f(path, input).futureBox.map {
+          val innerResultFox: Fox[List[A]] = Fox.fromFutureBox(f(path, input).futureBox.map {
             case Full(result) =>
               input.close()
               Full(rs :+ result)
@@ -208,19 +205,21 @@ object ZipIO extends LazyLogging {
             case failure: Failure =>
               input.close()
               failure
-          }
+          })
           innerResultFox
         case e =>
           e.toFox
-      }.toFox.flatten
+      }.flatten
     }
 
-    for {
-      result <- resultFox.futureBox.map { resultBox =>
-        zip.close() // close even if result is not success
-        resultBox
-      }
-    } yield result
+    Fox.fromFutureBox {
+      for {
+        result <- resultFox.futureBox.map { resultBox =>
+          zip.close() // close even if result is not success
+          resultBox
+        }
+      } yield result
+    }
   }
 
   def withUnziped[A](zip: ZipFile,

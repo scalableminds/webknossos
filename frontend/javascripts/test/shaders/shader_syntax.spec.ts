@@ -1,263 +1,265 @@
-import "test/mocks/lz4";
-import getMainFragmentShader from "oxalis/shaders/main_data_shaders.glsl";
+import getMainFragmentShader from "viewer/shaders/main_data_shaders.glsl";
 import mags from "test/fixtures/mags";
-import test, { type ExecutionContext } from "ava";
+import { describe, it, beforeEach, expect } from "vitest";
 import { parser } from "@shaderfrog/glsl-parser";
 
-test.beforeEach((t: ExecutionContext<any>) => {
-  t.context.originalWarn = console.warn;
-  t.context.warningEmittedCount = 0;
-  console.warn = (...args) => {
-    t.context.warningEmittedCount++;
-    t.context.originalWarn(...args);
-  };
-});
+describe("Shader syntax", () => {
+  const originalWarn = console.warn;
 
-test.afterEach(async (t: ExecutionContext<any>) => {
-  console.warn = t.context.originalWarn;
-});
+  interface TestContext {
+    warningEmittedCount: number;
+  }
 
-test("Shader syntax: Ortho Mode", (t: ExecutionContext<any>) => {
-  const code = getMainFragmentShader({
-    globalLayerCount: 2,
-    colorLayerNames: ["color_layer_1", "color_layer_2"],
-    textureLayerInfos: {
-      ["color_layer_1"]: {
-        isColor: true,
-        packingDegree: 4.0,
-        dataTextureCount: 1,
-        isSigned: false,
-        glslPrefix: "",
-        unsanitizedName: "color_layer_1",
-        elementClass: "uint8",
-      },
-      ["color_layer_2"]: {
-        isColor: true,
-        packingDegree: 4.0,
-        dataTextureCount: 1,
-        isSigned: false,
-        glslPrefix: "",
-        unsanitizedName: "color_layer_1",
-        elementClass: "uint8",
-      },
-    },
-    orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
-    segmentationLayerNames: [],
-    magnificationsCount: mags.length,
-    voxelSizeFactor: [1, 1, 1],
-    isOrthogonal: true,
-    tpsTransformPerLayer: {},
+  beforeEach<TestContext>(async (context) => {
+    console.warn = (...args: any[]) => {
+      context.warningEmittedCount++;
+      originalWarn(...args);
+    };
+    context.warningEmittedCount = 0;
   });
 
-  /*
-   * If the code contains a syntax error, parse() will throw an exception
-   * which makes the test fail.
-   * If a warning was emitted during parsing, the `warningEmittedCount`
-   * will reflect this.
-   */
-  parser.parse(code);
-  t.true(t.context.warningEmittedCount === 0);
-});
+  it<TestContext>("Ortho Mode", ({ warningEmittedCount }) => {
+    const code = getMainFragmentShader({
+      globalLayerCount: 2,
+      colorLayerNames: ["color_layer_1", "color_layer_2"],
+      textureLayerInfos: {
+        ["color_layer_1"]: {
+          isColor: true,
+          packingDegree: 4.0,
+          dataTextureCount: 1,
+          isSigned: false,
+          glslPrefix: "",
+          unsanitizedName: "color_layer_1",
+          elementClass: "uint8",
+        },
+        ["color_layer_2"]: {
+          isColor: true,
+          packingDegree: 4.0,
+          dataTextureCount: 1,
+          isSigned: false,
+          glslPrefix: "",
+          unsanitizedName: "color_layer_1",
+          elementClass: "uint8",
+        },
+      },
+      orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
+      segmentationLayerNames: [],
+      magnificationsCount: mags.length,
+      voxelSizeFactor: [1, 1, 1],
+      isOrthogonal: true,
+      tpsTransformPerLayer: {},
+    });
 
-test("Shader syntax: Ortho Mode + Segmentation - Mapping", (t: ExecutionContext<any>) => {
-  const code = getMainFragmentShader({
-    globalLayerCount: 2,
-    colorLayerNames: ["color_layer_1", "color_layer_2"],
-    textureLayerInfos: {
-      ["color_layer_1"]: {
-        isColor: true,
-        packingDegree: 4.0,
-        dataTextureCount: 1,
-        isSigned: false,
-        glslPrefix: "",
-        unsanitizedName: "color_layer_1",
-        elementClass: "uint8",
-      },
-      ["color_layer_2"]: {
-        isColor: true,
-        packingDegree: 4.0,
-        dataTextureCount: 1,
-        isSigned: false,
-        glslPrefix: "",
-        unsanitizedName: "color_layer_1",
-        elementClass: "uint8",
-      },
-      ["segmentationLayer"]: {
-        isColor: true,
-        packingDegree: 1.0,
-        dataTextureCount: 4,
-        isSigned: false,
-        glslPrefix: "",
-        unsanitizedName: "color_layer_1",
-        elementClass: "uint8",
-      },
-    },
-    orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
-    segmentationLayerNames: ["segmentationLayer"],
-    magnificationsCount: mags.length,
-    voxelSizeFactor: [1, 1, 1],
-    isOrthogonal: true,
-    tpsTransformPerLayer: {},
-  });
-  parser.parse(code);
-  t.true(t.context.warningEmittedCount === 0);
-});
-
-test("Shader syntax: Ortho Mode + Segmentation + Mapping", (t: ExecutionContext<any>) => {
-  const code = getMainFragmentShader({
-    globalLayerCount: 2,
-    colorLayerNames: ["color_layer_1", "color_layer_2"],
-    textureLayerInfos: {
-      ["color_layer_1"]: {
-        isColor: true,
-        packingDegree: 4.0,
-        dataTextureCount: 1,
-        isSigned: false,
-        glslPrefix: "",
-        unsanitizedName: "color_layer_1",
-        elementClass: "uint8",
-      },
-      ["color_layer_2"]: {
-        isColor: true,
-        packingDegree: 4.0,
-        dataTextureCount: 1,
-        isSigned: false,
-        glslPrefix: "",
-        unsanitizedName: "color_layer_1",
-        elementClass: "uint8",
-      },
-      ["segmentationLayer"]: {
-        isColor: false,
-        packingDegree: 1.0,
-        dataTextureCount: 4,
-        isSigned: false,
-        glslPrefix: "",
-        unsanitizedName: "color_layer_1",
-        elementClass: "uint8",
-      },
-    },
-    orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
-    segmentationLayerNames: ["segmentationLayer"],
-    magnificationsCount: mags.length,
-    voxelSizeFactor: [1, 1, 1],
-    isOrthogonal: true,
-    tpsTransformPerLayer: {},
+    /*
+     * If the code contains a syntax error, parse() will throw an exception
+     * which makes the test fail.
+     * If a warning was emitted during parsing, the `warningEmittedCount`
+     * will reflect this.
+     */
+    parser.parse(code);
+    expect(warningEmittedCount).toBe(0);
   });
 
-  parser.parse(code);
-  t.true(t.context.warningEmittedCount === 0);
-});
-
-test("Shader syntax: Arbitrary Mode (no segmentation available)", (t: ExecutionContext<any>) => {
-  const code = getMainFragmentShader({
-    globalLayerCount: 2,
-    colorLayerNames: ["color_layer_1", "color_layer_2"],
-    textureLayerInfos: {
-      ["color_layer_1"]: {
-        isColor: true,
-        packingDegree: 4.0,
-        dataTextureCount: 1,
-        isSigned: false,
-        glslPrefix: "",
-        unsanitizedName: "color_layer_1",
-        elementClass: "uint8",
+  it<TestContext>("Ortho Mode + Segmentation - Mapping", ({ warningEmittedCount }) => {
+    const code = getMainFragmentShader({
+      globalLayerCount: 2,
+      colorLayerNames: ["color_layer_1", "color_layer_2"],
+      textureLayerInfos: {
+        ["color_layer_1"]: {
+          isColor: true,
+          packingDegree: 4.0,
+          dataTextureCount: 1,
+          isSigned: false,
+          glslPrefix: "",
+          unsanitizedName: "color_layer_1",
+          elementClass: "uint8",
+        },
+        ["color_layer_2"]: {
+          isColor: true,
+          packingDegree: 4.0,
+          dataTextureCount: 1,
+          isSigned: false,
+          glslPrefix: "",
+          unsanitizedName: "color_layer_1",
+          elementClass: "uint8",
+        },
+        ["segmentationLayer"]: {
+          isColor: true,
+          packingDegree: 1.0,
+          dataTextureCount: 4,
+          isSigned: false,
+          glslPrefix: "",
+          unsanitizedName: "color_layer_1",
+          elementClass: "uint8",
+        },
       },
-      ["color_layer_2"]: {
-        isColor: true,
-        packingDegree: 4.0,
-        dataTextureCount: 1,
-        isSigned: false,
-        glslPrefix: "",
-        unsanitizedName: "color_layer_1",
-        elementClass: "uint8",
-      },
-    },
-    orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
-    segmentationLayerNames: [],
-    magnificationsCount: mags.length,
-    voxelSizeFactor: [1, 1, 1],
-    isOrthogonal: false,
-    tpsTransformPerLayer: {},
+      orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
+      segmentationLayerNames: ["segmentationLayer"],
+      magnificationsCount: mags.length,
+      voxelSizeFactor: [1, 1, 1],
+      isOrthogonal: true,
+      tpsTransformPerLayer: {},
+    });
+    parser.parse(code);
+    expect(warningEmittedCount).toBe(0);
   });
-  parser.parse(code);
-  t.true(t.context.warningEmittedCount === 0);
-});
 
-test("Shader syntax: Arbitrary Mode (segmentation available)", (t: ExecutionContext<any>) => {
-  const code = getMainFragmentShader({
-    globalLayerCount: 2,
-    colorLayerNames: ["color_layer_1", "color_layer_2"],
-    textureLayerInfos: {
-      ["color_layer_1"]: {
-        isColor: true,
-        packingDegree: 4.0,
-        dataTextureCount: 1,
-        isSigned: false,
-        glslPrefix: "",
-        unsanitizedName: "color_layer_1",
-        elementClass: "uint8",
+  it<TestContext>("Ortho Mode + Segmentation + Mapping", ({ warningEmittedCount }) => {
+    const code = getMainFragmentShader({
+      globalLayerCount: 2,
+      colorLayerNames: ["color_layer_1", "color_layer_2"],
+      textureLayerInfos: {
+        ["color_layer_1"]: {
+          isColor: true,
+          packingDegree: 4.0,
+          dataTextureCount: 1,
+          isSigned: false,
+          glslPrefix: "",
+          unsanitizedName: "color_layer_1",
+          elementClass: "uint8",
+        },
+        ["color_layer_2"]: {
+          isColor: true,
+          packingDegree: 4.0,
+          dataTextureCount: 1,
+          isSigned: false,
+          glslPrefix: "",
+          unsanitizedName: "color_layer_1",
+          elementClass: "uint8",
+        },
+        ["segmentationLayer"]: {
+          isColor: false,
+          packingDegree: 1.0,
+          dataTextureCount: 4,
+          isSigned: false,
+          glslPrefix: "",
+          unsanitizedName: "color_layer_1",
+          elementClass: "uint8",
+        },
       },
-      ["color_layer_2"]: {
-        isColor: true,
-        packingDegree: 4.0,
-        dataTextureCount: 1,
-        isSigned: false,
-        glslPrefix: "",
-        unsanitizedName: "color_layer_1",
-        elementClass: "uint8",
-      },
-      ["segmentationLayer"]: {
-        isColor: false,
-        packingDegree: 1.0,
-        dataTextureCount: 4,
-        isSigned: false,
-        glslPrefix: "",
-        unsanitizedName: "color_layer_1",
-        elementClass: "uint8",
-      },
-    },
-    orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
-    segmentationLayerNames: ["segmentationLayer"],
-    magnificationsCount: mags.length,
-    voxelSizeFactor: [1, 1, 1],
-    isOrthogonal: false,
-    tpsTransformPerLayer: {},
-  });
-  parser.parse(code);
-  t.true(t.context.warningEmittedCount === 0);
-});
+      orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
+      segmentationLayerNames: ["segmentationLayer"],
+      magnificationsCount: mags.length,
+      voxelSizeFactor: [1, 1, 1],
+      isOrthogonal: true,
+      tpsTransformPerLayer: {},
+    });
 
-test("Shader syntax: Ortho Mode (rgb and float layer)", (t: ExecutionContext<any>) => {
-  const code = getMainFragmentShader({
-    globalLayerCount: 2,
-    colorLayerNames: ["color_layer_1", "color_layer_2"],
-    textureLayerInfos: {
-      ["color_layer_1"]: {
-        isColor: true,
-        packingDegree: 1.0,
-        dataTextureCount: 1,
-        isSigned: false,
-        glslPrefix: "",
-        unsanitizedName: "color_layer_1",
-        elementClass: "uint24",
-      },
-      ["color_layer_2"]: {
-        isColor: true,
-        packingDegree: 4.0,
-        dataTextureCount: 2,
-        isSigned: false,
-        glslPrefix: "",
-        unsanitizedName: "color_layer_1",
-        elementClass: "float",
-      },
-    },
-    orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
-    segmentationLayerNames: [],
-    magnificationsCount: mags.length,
-    voxelSizeFactor: [1, 1, 1],
-    isOrthogonal: true,
-    tpsTransformPerLayer: {},
+    parser.parse(code);
+    expect(warningEmittedCount).toBe(0);
   });
-  parser.parse(code);
-  t.true(t.context.warningEmittedCount === 0);
+
+  it<TestContext>("Arbitrary Mode (no segmentation available)", ({ warningEmittedCount }) => {
+    const code = getMainFragmentShader({
+      globalLayerCount: 2,
+      colorLayerNames: ["color_layer_1", "color_layer_2"],
+      textureLayerInfos: {
+        ["color_layer_1"]: {
+          isColor: true,
+          packingDegree: 4.0,
+          dataTextureCount: 1,
+          isSigned: false,
+          glslPrefix: "",
+          unsanitizedName: "color_layer_1",
+          elementClass: "uint8",
+        },
+        ["color_layer_2"]: {
+          isColor: true,
+          packingDegree: 4.0,
+          dataTextureCount: 1,
+          isSigned: false,
+          glslPrefix: "",
+          unsanitizedName: "color_layer_1",
+          elementClass: "uint8",
+        },
+      },
+      orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
+      segmentationLayerNames: [],
+      magnificationsCount: mags.length,
+      voxelSizeFactor: [1, 1, 1],
+      isOrthogonal: false,
+      tpsTransformPerLayer: {},
+    });
+    parser.parse(code);
+    expect(warningEmittedCount).toBe(0);
+  });
+
+  it<TestContext>("Arbitrary Mode (segmentation available)", ({ warningEmittedCount }) => {
+    const code = getMainFragmentShader({
+      globalLayerCount: 2,
+      colorLayerNames: ["color_layer_1", "color_layer_2"],
+      textureLayerInfos: {
+        ["color_layer_1"]: {
+          isColor: true,
+          packingDegree: 4.0,
+          dataTextureCount: 1,
+          isSigned: false,
+          glslPrefix: "",
+          unsanitizedName: "color_layer_1",
+          elementClass: "uint8",
+        },
+        ["color_layer_2"]: {
+          isColor: true,
+          packingDegree: 4.0,
+          dataTextureCount: 1,
+          isSigned: false,
+          glslPrefix: "",
+          unsanitizedName: "color_layer_1",
+          elementClass: "uint8",
+        },
+        ["segmentationLayer"]: {
+          isColor: false,
+          packingDegree: 1.0,
+          dataTextureCount: 4,
+          isSigned: false,
+          glslPrefix: "",
+          unsanitizedName: "color_layer_1",
+          elementClass: "uint8",
+        },
+      },
+      orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
+      segmentationLayerNames: ["segmentationLayer"],
+      magnificationsCount: mags.length,
+      voxelSizeFactor: [1, 1, 1],
+      isOrthogonal: false,
+      tpsTransformPerLayer: {},
+    });
+    parser.parse(code);
+    expect(warningEmittedCount).toBe(0);
+  });
+
+  it<TestContext>("Ortho Mode (rgb and float layer)", ({ warningEmittedCount }) => {
+    const code = getMainFragmentShader({
+      globalLayerCount: 2,
+      colorLayerNames: ["color_layer_1", "color_layer_2"],
+      textureLayerInfos: {
+        ["color_layer_1"]: {
+          isColor: true,
+          packingDegree: 1.0,
+          dataTextureCount: 1,
+          isSigned: false,
+          glslPrefix: "",
+          unsanitizedName: "color_layer_1",
+          elementClass: "uint24",
+        },
+        ["color_layer_2"]: {
+          isColor: true,
+          packingDegree: 4.0,
+          dataTextureCount: 2,
+          isSigned: false,
+          glslPrefix: "",
+          unsanitizedName: "color_layer_1",
+          elementClass: "float",
+        },
+      },
+      orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
+      segmentationLayerNames: [],
+      magnificationsCount: mags.length,
+      voxelSizeFactor: [1, 1, 1],
+      isOrthogonal: true,
+      tpsTransformPerLayer: {},
+    });
+    parser.parse(code);
+    expect(warningEmittedCount).toBe(0);
+  });
 });

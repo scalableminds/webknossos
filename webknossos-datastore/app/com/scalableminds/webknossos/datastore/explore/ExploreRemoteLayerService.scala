@@ -69,7 +69,7 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
         ))
       layersWithVoxelSizes = exploredLayersNested.flatten
       preferredVoxelSize = parameters.flatMap(_.preferredVoxelSize).headOption
-      _ <- bool2Fox(layersWithVoxelSizes.nonEmpty) ?~> "Detected zero layers"
+      _ <- Fox.fromBool(layersWithVoxelSizes.nonEmpty) ?~> "Detected zero layers"
       (layers, voxelSize) <- adaptLayersAndVoxelSize(layersWithVoxelSizes, preferredVoxelSize)
       dataSource = GenericDataSource[DataLayer](
         DataSourceId("", ""), // Frontend will prompt user for a good name
@@ -85,8 +85,8 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
       tc: TokenContext,
       mp: MessagesProvider): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     for {
-      uri <- tryo(new URI(removeNeuroglancerPrefixesFromUri(removeHeaderFileNamesFromUriSuffix(layerUri)))) ?~> s"Received invalid URI: $layerUri"
-      _ <- bool2Fox(uri.getScheme != null) ?~> s"Received invalid URI: $layerUri"
+      uri <- tryo(new URI(removeNeuroglancerPrefixesFromUri(removeHeaderFileNamesFromUriSuffix(layerUri)))).toFox ?~> s"Received invalid URI: $layerUri"
+      _ <- Fox.fromBool(uri.getScheme != null) ?~> s"Received invalid URI: $layerUri"
       _ <- assertLocalPathInWhitelist(uri)
       credentialOpt: Option[DataVaultCredential] <- Fox.runOptional(credentialId)(remoteWebknossosClient.getCredential)
       remoteSource = RemoteSourceDescriptor(uri, credentialOpt)
@@ -102,6 +102,7 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
           new Zarr3ArrayExplorer,
           new ZarrArrayExplorer(Vec3Int.ones),
           new N5MultiscalesExplorer,
+          new N5CompactMultiscalesExplorer,
           new N5ArrayExplorer,
           new PrecomputedExplorer,
           new NeuroglancerUriExplorer(dataVaultService)
@@ -112,7 +113,7 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
 
   private def assertLocalPathInWhitelist(uri: URI)(implicit ec: ExecutionContext): Fox[Unit] =
     if (uri.getScheme == DataVaultService.schemeFile) {
-      bool2Fox(dataStoreConfig.Datastore.localDirectoryWhitelist.exists(whitelistEntry =>
+      Fox.fromBool(dataStoreConfig.Datastore.localDirectoryWhitelist.exists(whitelistEntry =>
         uri.getPath.startsWith(whitelistEntry))) ?~> s"Absolute path ${uri.getPath} in local file system is not in path whitelist. Consider adding it to datastore.localDirectoryWhitelist"
     } else Fox.successful(())
 
@@ -133,7 +134,7 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
       case (path, searchDepth) :: remainingPaths =>
         if (searchDepth > MAX_RECURSIVE_SEARCH_DEPTH) Fox.empty
         else {
-          explorePathsWithAllExplorersAndGetFirstMatch(path, explorers, credentialId, reportMutable).futureBox.flatMap(
+          explorePathsWithAllExplorersAndGetFirstMatch(path, explorers, credentialId, reportMutable).shiftBox.flatMap(
             explorationResultOfPath =>
               handleExploreResultOfPath(explorationResultOfPath,
                                         path,
@@ -153,19 +154,14 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
       tc: TokenContext,
       mp: MessagesProvider): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     Fox
-      .sequence(explorers.map { explorer =>
+      .fromFuture(Fox.sequence(explorers.map { explorer =>
         {
-          explorer
-            .explore(path, credentialId)
-            .futureBox
-            .flatMap {
-              handleExploreResult(_, explorer, path, reportMutable)
-            }
-            .toFox
+          explorer.explore(path, credentialId).shiftBox.flatMap {
+            handleExploreResult(_, explorer, path, reportMutable)
+          }
         }
-      })
+      }))
       .map(explorationResults => Fox.firstSuccess(explorationResults.map(_.toFox)))
-      .toFox
       .flatten
 
   private def handleExploreResult(explorationResult: Box[List[(DataLayerWithMagLocators, VoxelSize)]],

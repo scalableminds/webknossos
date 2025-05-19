@@ -1,5 +1,5 @@
 import messages from "messages";
-import type { APIOrganization, APIUser } from "types/api_flow_types";
+import type { APIOrganization, APIUser } from "types/api_types";
 
 export enum PricingPlanEnum {
   Basic = "Basic",
@@ -29,7 +29,7 @@ export const powerPlanFeatures = [
 export const maxInludedUsersInBasicPlan = 3;
 
 export function getActiveUserCount(users: APIUser[]): number {
-  return users.filter((user) => user.isActive && !user.isSuperUser).length;
+  return users.filter((user) => user.isActive && !user.isUnlisted && !user.isGuest).length;
 }
 
 export function hasPricingPlanExpired(organization: APIOrganization): boolean {
@@ -45,6 +45,10 @@ export function hasPricingPlanExceededUsers(
 
 export function hasPricingPlanExceededStorage(organization: APIOrganization): boolean {
   return organization.usedStorageBytes > organization.includedStorageBytes;
+}
+
+export function getLeftOverStorageBytes(organization: APIOrganization): number {
+  return organization.includedStorageBytes - organization.usedStorageBytes;
 }
 
 export function isUserAllowedToRequestUpgrades(user: APIUser): boolean {

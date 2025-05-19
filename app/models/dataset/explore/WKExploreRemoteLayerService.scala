@@ -81,7 +81,9 @@ class WKExploreRemoteLayerService @Inject()(credentialService: CredentialService
 
   private def selectDataStore(dataStoreNames: List[Option[String]])(implicit ec: ExecutionContext): Fox[DataStore] =
     for {
-      dataStoreNameOpt <- SequenceUtils.findUniqueElement(dataStoreNames) ?~> "explore.dataStore.mustBeEqualForAll"
+      dataStoreNameOpt <- SequenceUtils
+        .findUniqueElement(dataStoreNames)
+        .toFox ?~> "explore.dataStore.mustBeEqualForAll"
       dataStore <- dataStoreNameOpt match {
         case Some(dataStoreName) => dataStoreDAO.findOneByName(dataStoreName)(GlobalAccessContext)
         case None                => dataStoreDAO.findOneWithUploadsAllowed(GlobalAccessContext)
@@ -93,13 +95,13 @@ class WKExploreRemoteLayerService @Inject()(credentialService: CredentialService
                                credentialSecret: Option[String],
                                requestingUser: User)(implicit ec: ExecutionContext): Fox[Option[ObjectId]] =
     for {
-      uri <- tryo(new URI(removeHeaderFileNamesFromUriSuffix(layerUri))) ?~> s"Received invalid URI: $layerUri"
+      uri <- tryo(new URI(removeHeaderFileNamesFromUriSuffix(layerUri))).toFox ?~> s"Received invalid URI: $layerUri"
       credentialOpt = credentialService.createCredentialOpt(uri,
                                                             credentialIdentifier,
                                                             credentialSecret,
-                                                            requestingUser._id,
-                                                            requestingUser._organization)
-      _ <- bool2Fox(uri.getScheme != null) ?~> s"Received invalid URI: $layerUri"
+                                                            Some(requestingUser._id),
+                                                            Some(requestingUser._organization))
+      _ <- Fox.fromBool(uri.getScheme != null) ?~> s"Received invalid URI: $layerUri"
       credentialId <- Fox.runOptional(credentialOpt)(c => credentialService.insertOne(c)) ?~> "dataVault.credential.insert.failed"
     } yield credentialId
 

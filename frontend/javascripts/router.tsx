@@ -1,8 +1,3 @@
-import {
-  createExplorational,
-  getShortLink,
-  getUnversionedAnnotationInformation,
-} from "admin/admin_rest_api";
 import AcceptInviteView from "admin/auth/accept_invite_view";
 import AuthTokenView from "admin/auth/auth_token_view";
 import ChangePasswordView from "admin/auth/change_password_view";
@@ -17,6 +12,11 @@ import OrganizationEditView from "admin/organization/organization_edit_view";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import ProjectCreateView from "admin/project/project_create_view";
 import ProjectListView from "admin/project/project_list_view";
+import {
+  createExplorational,
+  getShortLink,
+  getUnversionedAnnotationInformation,
+} from "admin/rest_api";
 import ScriptCreateView from "admin/scripts/script_create_view";
 import ScriptListView from "admin/scripts/script_list_view";
 import AvailableTasksReportView from "admin/statistic/available_tasks_report_view";
@@ -43,10 +43,6 @@ import { coalesce } from "libs/utils";
 import window from "libs/window";
 import _ from "lodash";
 import Navbar from "navbar";
-import { ControlModeEnum } from "oxalis/constants";
-import type { OxalisState } from "oxalis/store";
-import HelpButton from "oxalis/view/help_modal";
-import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
 import React from "react";
 import { connect } from "react-redux";
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
@@ -57,7 +53,11 @@ import {
   type APIMagRestrictions,
   type APIUser,
   TracingTypeEnum,
-} from "types/api_flow_types";
+} from "types/api_types";
+import { ControlModeEnum } from "viewer/constants";
+import type { WebknossosState } from "viewer/store";
+import HelpButton from "viewer/view/help_modal";
+import TracingLayoutView from "viewer/view/layouting/tracing_layout_view";
 
 import {
   getDatasetIdFromNameAndOrganization,
@@ -71,10 +71,10 @@ import { CheckCertificateModal } from "components/check_certificate_modal";
 import ErrorBoundary from "components/error_boundary";
 import { CheckTermsOfServices } from "components/terms_of_services_check";
 import loadable from "libs/lazy_loader";
-import { getDatasetIdOrNameFromReadableURLPart } from "oxalis/model/accessors/dataset_accessor";
-import { Store } from "oxalis/singletons";
-import { CommandPalette } from "oxalis/view/components/command_palette";
 import type { EmptyObject } from "types/globals";
+import { getDatasetIdOrNameFromReadableURLPart } from "viewer/model/accessors/dataset_accessor";
+import { Store } from "viewer/singletons";
+import { CommandPalette } from "viewer/view/components/command_palette";
 
 const { Content } = Layout;
 
@@ -156,12 +156,17 @@ class ReactRouter extends React.Component<Props> {
     if (tracingType == null) {
       return <h3>Invalid annotation URL.</h3>;
     }
+    const getParams = Utils.getUrlParamsObjectFromString(location.search);
     return (
       <AsyncRedirect
         redirectTo={async () => {
           const datasetName = match.params.datasetName || "";
           const organizationId = match.params.organizationId || "";
-          const datasetId = await getDatasetIdFromNameAndOrganization(datasetName, organizationId);
+          const datasetId = await getDatasetIdFromNameAndOrganization(
+            datasetName,
+            organizationId,
+            getParams.token,
+          );
           return `/datasets/${datasetName}-${datasetId}/sandbox/:${tracingType}${location.search}${location.hash}`;
         }}
       />
@@ -173,6 +178,7 @@ class ReactRouter extends React.Component<Props> {
     const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(
       match.params.datasetNameAndId,
     );
+    const getParams = Utils.getUrlParamsObjectFromString(location.search);
 
     if (tracingType == null) {
       return <h3>Invalid annotation URL.</h3>;
@@ -183,10 +189,11 @@ class ReactRouter extends React.Component<Props> {
       return (
         <AsyncRedirect
           redirectTo={async () => {
-            const organizationId = await getOrganizationForDataset(datasetName);
+            const organizationId = await getOrganizationForDataset(datasetName, getParams.token);
             const datasetId = await getDatasetIdFromNameAndOrganization(
               datasetName,
               organizationId,
+              getParams.token,
             );
             return `/datasets/${datasetName}-${datasetId}/sandbox/${tracingType}${location.search}${location.hash}`;
           }}
@@ -205,31 +212,40 @@ class ReactRouter extends React.Component<Props> {
     );
   };
 
-  tracingViewModeLegacy = ({ match, location }: ContextRouter) => (
-    <AsyncRedirect
-      redirectTo={async () => {
-        const datasetName = match.params.datasetName || "";
-        const organizationId = match.params.organizationId || "";
-        const datasetId = await getDatasetIdFromNameAndOrganization(datasetName, organizationId);
-        return `/datasets/${datasetName}-${datasetId}/view${location.search}${location.hash}`;
-      }}
-    />
-  );
+  tracingViewModeLegacy = ({ match, location }: ContextRouter) => {
+    const getParams = Utils.getUrlParamsObjectFromString(location.search);
+    return (
+      <AsyncRedirect
+        redirectTo={async () => {
+          const datasetName = match.params.datasetName || "";
+          const organizationId = match.params.organizationId || "";
+          const datasetId = await getDatasetIdFromNameAndOrganization(
+            datasetName,
+            organizationId,
+            getParams.token,
+          );
+          return `/datasets/${datasetName}-${datasetId}/view${location.search}${location.hash}`;
+        }}
+      />
+    );
+  };
 
   tracingViewMode = ({ match }: ContextRouter) => {
     const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(
       match.params.datasetNameAndId,
     );
+    const getParams = Utils.getUrlParamsObjectFromString(location.search);
     if (datasetName) {
       // Handle very old legacy URLs which neither have a datasetId nor an organizationId.
       // The schema is something like <authority>/datasets/:datasetName/view
       return (
         <AsyncRedirect
           redirectTo={async () => {
-            const organizationId = await getOrganizationForDataset(datasetName);
+            const organizationId = await getOrganizationForDataset(datasetName, getParams.token);
             const datasetId = await getDatasetIdFromNameAndOrganization(
               datasetName,
               organizationId,
+              getParams.token,
             );
             return `/datasets/${datasetName}-${datasetId}/view${location.search}${location.hash}`;
           }}
@@ -508,16 +524,21 @@ class ReactRouter extends React.Component<Props> {
                   const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(
                     match.params.datasetNameAndId,
                   );
+                  const getParams = Utils.getUrlParamsObjectFromString(location.search);
                   if (datasetName) {
                     // Handle very old legacy URLs which neither have a datasetId nor an organizationId.
                     // The schema is something like <authority>/datasets/:datasetName/edit
                     return (
                       <AsyncRedirect
                         redirectTo={async () => {
-                          const organizationId = await getOrganizationForDataset(datasetName);
+                          const organizationId = await getOrganizationForDataset(
+                            datasetName,
+                            getParams.token,
+                          );
                           const datasetId = await getDatasetIdFromNameAndOrganization(
                             datasetName,
                             organizationId,
+                            getParams.token,
                           );
                           return `/datasets/${datasetName}-${datasetId}/edit`;
                         }}
@@ -802,7 +823,7 @@ class ReactRouter extends React.Component<Props> {
   }
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
+const mapStateToProps = (state: WebknossosState): StateProps => ({
   activeUser: state.activeUser,
   pricingPlan: state.activeOrganization
     ? state.activeOrganization.pricingPlan

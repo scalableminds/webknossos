@@ -4,15 +4,14 @@ import {
   RocketOutlined,
   SafetyOutlined,
 } from "@ant-design/icons";
-import { Alert, Button, Card, Col, Progress, Row } from "antd";
+import { Alert, Button, Card, Col, Progress, Row, Tooltip } from "antd";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import dayjs from "dayjs";
-import { formatCountToDataAmountUnit } from "libs/format_utils";
-import Constants from "oxalis/constants";
-import type { OxalisState } from "oxalis/store";
+import { formatCountToDataAmountUnit, formatCreditsString } from "libs/format_utils";
+import { useWkSelector } from "libs/react_hooks";
 import type React from "react";
-import { useSelector } from "react-redux";
-import type { APIOrganization } from "types/api_flow_types";
+import type { APIOrganization } from "types/api_types";
+import Constants from "viewer/constants";
 import {
   PricingPlanEnum,
   hasPricingPlanExceededStorage,
@@ -103,13 +102,13 @@ export function PlanUpgradeCard({ organization }: { organization: APIOrganizatio
             Upgrading your WEBKNOSSOS plan will unlock more advanced features and increase your user
             and storage quotas.
           </p>
-          <p>
+          <span>
             <ul>
               {powerPlanFeatures.map((feature) => (
                 <li key={feature.slice(0, 10)}>{feature}</li>
               ))}
             </ul>
-          </p>
+          </span>
         </Col>
         <Col span={6}>
           <Button
@@ -252,52 +251,80 @@ export function PlanDashboardCard({
       ],
     ];
   }
+  const buyMoreCreditsAction = [
+    <Tooltip title="Disabled during testing phase" key="buyMoreCreditsAction">
+      <Button
+        type="text"
+        key="buyMoreCreditsAction"
+        onClick={UpgradePricingPlanModal.orderWebknossosCredits}
+        disabled
+      >
+        Buy more credits
+      </Button>
+    </Tooltip>,
+  ];
 
   return (
-    <Row gutter={24} justify="space-between" align="stretch" style={{ marginBottom: 20 }}>
-      <Col>
-        <Card actions={upgradeUsersAction}>
-          <Row style={{ padding: "20px 35px" }}>
-            <Progress
-              type="dashboard"
-              percent={usedUsersPercentage}
-              format={() => `${activeUsersCount}/${maxUsersCountLabel}`}
-              strokeColor={hasExceededUserLimit ? redStrokeColor : greenStrokeColor}
-              status={hasExceededUserLimit ? "exception" : "active"}
-            />
-          </Row>
-          <Row justify="center">Users</Row>
-        </Card>
-      </Col>
-      <Col>
-        <Card actions={upgradeStorageAction}>
-          <Row style={{ padding: "20px 35px" }}>
-            <Progress
-              type="dashboard"
-              percent={usedStoragePercentage}
-              format={() => storageLabel}
-              strokeColor={hasExceededStorageLimit ? redStrokeColor : greenStrokeColor}
-              status={hasExceededStorageLimit ? "exception" : "active"}
-            />
-          </Row>
-          <Row justify="center">Storage</Row>
-        </Card>
-      </Col>
-      <Col>
-        <Card actions={upgradePlanAction}>
-          <Row justify="center" align="middle" style={{ minHeight: 160, width: 188 }}>
-            <h3>{organization.pricingPlan}</h3>
-          </Row>
-          <Row justify="center">Current Plan</Row>
-        </Card>
-      </Col>
-    </Row>
+    <>
+      <Row gutter={24} justify="space-between" align="stretch" style={{ marginBottom: 20 }}>
+        <Col span={12}>
+          <Card actions={upgradeUsersAction}>
+            <Row style={{ padding: "20px 35px" }} justify="center">
+              <Progress
+                type="dashboard"
+                percent={usedUsersPercentage}
+                format={() => `${activeUsersCount}/${maxUsersCountLabel}`}
+                strokeColor={hasExceededUserLimit ? redStrokeColor : greenStrokeColor}
+                status={hasExceededUserLimit ? "exception" : "active"}
+              />
+            </Row>
+            <Row justify="center">Users</Row>
+          </Card>
+        </Col>
+        <Col span={12}>
+          <Card actions={upgradeStorageAction}>
+            <Row style={{ padding: "20px 35px" }} justify="center">
+              <Progress
+                type="dashboard"
+                percent={usedStoragePercentage}
+                format={() => storageLabel}
+                strokeColor={hasExceededStorageLimit ? redStrokeColor : greenStrokeColor}
+                status={hasExceededStorageLimit ? "exception" : "active"}
+              />
+            </Row>
+            <Row justify="center">Storage</Row>
+          </Card>
+        </Col>
+      </Row>
+      <Row gutter={24} justify="space-between" align="stretch" style={{ marginBottom: 20 }}>
+        <Col span={12}>
+          <Card actions={upgradePlanAction}>
+            <Row justify="center" align="middle" style={{ minHeight: 160 }}>
+              <h3>{organization.pricingPlan}</h3>
+            </Row>
+            <Row justify="center">Current Plan</Row>
+          </Card>
+        </Col>
+        <Col span={12}>
+          <Card actions={buyMoreCreditsAction}>
+            <Row justify="center" align="middle" style={{ minHeight: 160 }}>
+              <h3>
+                {organization.creditBalance != null
+                  ? formatCreditsString(organization.creditBalance)
+                  : "No information access"}
+              </h3>
+            </Row>
+            <Row justify="center">WEBKNOSSOS Credits</Row>
+          </Card>
+        </Col>
+      </Row>
+    </>
   );
 }
 
 export function PlanExceededAlert({ organization }: { organization: APIOrganization }) {
   const hasPlanExpired = hasPricingPlanExpired(organization);
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useWkSelector((state) => state.activeUser);
 
   const message = hasPlanExpired
     ? "Your WEBKNOSSOS plan has expired. Renew your plan now to avoid being downgraded, users being blocked, and losing access to features."
@@ -333,7 +360,7 @@ export function PlanExceededAlert({ organization }: { organization: APIOrganizat
 
 export function PlanAboutToExceedAlert({ organization }: { organization: APIOrganization }) {
   const alerts = [];
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const activeUser = useWkSelector((state) => state.activeUser);
   const isAboutToExpire =
     dayjs.duration(dayjs(organization.paidUntil).diff(dayjs())).asWeeks() <= 6 &&
     !hasPricingPlanExpired(organization);

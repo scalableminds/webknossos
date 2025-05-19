@@ -21,7 +21,6 @@ trait ColorGenerator {
 trait TracingMigrationService[T <: GeneratedMessage] extends FoxImplicits {
   implicit protected def ec: ExecutionContext
 
-  // Each migration transforms a tracing and additionally returns whether the tracing was modified
   protected def migrations: List[T => Fox[T]]
 
   def migrateTracing(tracing: T): Fox[T] = {
@@ -29,10 +28,10 @@ trait TracingMigrationService[T <: GeneratedMessage] extends FoxImplicits {
       migrations match {
         case List() => tracingFox
         case head :: tail =>
-          tracingFox.futureBox.flatMap {
+          tracingFox.shiftBox.flatMap {
             case Full(tracing) =>
               migrateIter(head(tracing), tail)
-            case x => box2Fox(x)
+            case x => x.toFox
           }
       }
 

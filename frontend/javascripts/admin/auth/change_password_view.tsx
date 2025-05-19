@@ -3,9 +3,9 @@ import { Alert, Button, Col, Form, Input, Row } from "antd";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import messages from "messages";
-import { logoutUserAction } from "oxalis/model/actions/user_actions";
-import Store from "oxalis/store";
 import { type RouteComponentProps, withRouter } from "react-router-dom";
+import { logoutUserAction } from "viewer/model/actions/user_actions";
+import Store from "viewer/store";
 const FormItem = Form.Item;
 const { Password } = Input;
 

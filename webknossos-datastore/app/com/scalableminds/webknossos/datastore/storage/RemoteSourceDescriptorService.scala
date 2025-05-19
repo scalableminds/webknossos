@@ -1,12 +1,12 @@
 package com.scalableminds.webknossos.datastore.storage
 
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.box2Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
 import net.liftweb.common.Box.tryo
 
@@ -19,7 +19,9 @@ case class RemoteSourceDescriptor(uri: URI, credential: Option[DataVaultCredenti
 
 class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemoteWebknossosClient,
                                               dataStoreConfig: DataStoreConfig,
-                                              dataVaultService: DataVaultService) {
+                                              dataVaultService: DataVaultService)
+    extends LazyLogging
+    with FoxImplicits {
 
   def vaultPathFor(baseDir: Path, datasetId: DataSourceId, layerName: String, magLocator: MagLocator)(
       implicit ec: ExecutionContext): Fox[VaultPath] =
@@ -41,7 +43,7 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
       layerName: String,
       magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[RemoteSourceDescriptor] =
     for {
-      credentialBox <- credentialFor(magLocator: MagLocator).futureBox
+      credentialBox <- credentialFor(magLocator: MagLocator).shiftBox
       uri <- uriForMagLocator(baseDir, datasetId, layerName, magLocator).toFox
       remoteSource = RemoteSourceDescriptor(uri, credentialBox.toOption)
     } yield remoteSource
@@ -97,6 +99,20 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
     }
   }
 
+  private lazy val globalCredentials = {
+    val res = dataStoreConfig.Datastore.DataVaults.credentials.flatMap { credentialConfig =>
+      new CredentialConfigReader(credentialConfig).getCredential
+    }
+    logger.info(s"Parsed ${res.length} global data vault credentials from datastore config.")
+    res
+  }
+
+  private def findGlobalCredentialFor(magLocator: MagLocator)(implicit ec: ExecutionContext) =
+    magLocator.path match {
+      case Some(magPath) => globalCredentials.find(c => magPath.startsWith(c.name)).toFox
+      case None          => Fox.empty
+    }
+
   private def credentialFor(magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[DataVaultCredential] =
     magLocator.credentialId match {
       case Some(credentialId) =>
@@ -104,7 +120,7 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
       case None =>
         magLocator.credentials match {
           case Some(credential) => Fox.successful(credential)
-          case None             => Fox.empty
+          case None             => findGlobalCredentialFor(magLocator)
         }
     }
 }

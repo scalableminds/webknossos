@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, TreeBody}
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
@@ -15,8 +15,7 @@ import scala.concurrent.ExecutionContext
 class SkeletonTracingService @Inject()(
     tracingDataStore: TracingDataStore,
     temporaryTracingService: TemporaryTracingService
-)(implicit val ec: ExecutionContext)
-    extends KeyValueStoreImplicits
+) extends KeyValueStoreImplicits
     with ProtoGeometryImplicits
     with BoundingBoxMerger
     with ColorGenerator
@@ -24,14 +23,34 @@ class SkeletonTracingService @Inject()(
 
   implicit val tracingCompanion: SkeletonTracing.type = SkeletonTracing
 
-  def saveSkeleton(tracing: SkeletonTracing,
-                   tracingId: String,
+  def saveSkeleton(tracingId: String,
                    version: Long,
-                   toTemporaryStore: Boolean = false): Fox[Unit] =
+                   tracing: SkeletonTracing,
+                   flushOnlyTheseTreeIds: Option[Set[Int]] = None,
+                   toTemporaryStore: Boolean = false)(implicit ec: ExecutionContext): Fox[Unit] =
     if (toTemporaryStore) {
       temporaryTracingService.saveSkeleton(tracingId, tracing)
     } else {
-      tracingDataStore.skeletons.put(tracingId, version, tracing)
+      val nowPresentTrees = tracing.trees.map(_.treeId).toSet
+      val wasPreviouslyStoredWithExternalTreeBodies = tracing.getStoredWithExternalTreeBodies
+      val treeIdsToFlush = flushOnlyTheseTreeIds match {
+        case Some(requestedTreeIdsToFlush) if wasPreviouslyStoredWithExternalTreeBodies =>
+          nowPresentTrees.intersect(requestedTreeIdsToFlush)
+        case _ =>
+          nowPresentTrees
+      }
+      val skeletonTreeBodiesPutBuffer = new FossilDBPutBuffer(tracingDataStore.skeletonTreeBodies, Some(version))
+      for {
+        _ <- Fox.serialCombined(treeIdsToFlush) { treeId =>
+          for {
+            treeBody <- extractTreeBody(tracing, treeId).toFox
+            _ <- skeletonTreeBodiesPutBuffer.put(f"$tracingId/$treeId", treeBody)
+          } yield ()
+        }
+        _ <- skeletonTreeBodiesPutBuffer.flush()
+        skeletonWithoutExtraTreeInfo = stripTreeBodies(tracing)
+        _ <- tracingDataStore.skeletons.put(tracingId, version, skeletonWithoutExtraTreeInfo)
+      } yield ()
     }
 
   def adaptSkeletonForDuplicate(tracing: SkeletonTracing,
@@ -54,7 +73,8 @@ class SkeletonTracingService @Inject()(
           editPosition = editPosition.map(vec3IntToProto).getOrElse(tracing.editPosition),
           editRotation = editRotation.map(vec3DoubleToProto).getOrElse(tracing.editRotation),
           boundingBox = boundingBoxOptToProto(boundingBox).orElse(tracing.boundingBox),
-          version = newVersion
+          version = newVersion,
+          storedWithExternalTreeBodies = Some(false)
         )
         .addAllUserBoundingBoxes(taskBoundingBox)
     if (fromTask) newTracing.clearBoundingBox else newTracing
@@ -67,6 +87,7 @@ class SkeletonTracingService @Inject()(
       tracing.copy(
         createdTimestamp = System.currentTimeMillis(),
         version = newVersion,
+        storedWithExternalTreeBodies = Some(false)
       )
 
   private def mergeTwo(tracingA: Box[SkeletonTracing], tracingB: Box[SkeletonTracing]): Box[SkeletonTracing] =
@@ -103,4 +124,12 @@ class SkeletonTracingService @Inject()(
 
   def dummyTracing: SkeletonTracing = SkeletonTracingDefaults.createInstance
 
+  private def extractTreeBody(tracing: SkeletonTracing, treeId: Int): Box[TreeBody] =
+    for {
+      tree <- tracing.trees.find(_.treeId == treeId)
+    } yield TreeBody(nodes = tree.nodes, edges = tree.edges)
+
+  private def stripTreeBodies(tracing: SkeletonTracing): SkeletonTracing =
+    tracing.copy(trees = tracing.trees.map(_.copy(nodes = Seq(), edges = Seq())),
+                 storedWithExternalTreeBodies = Some(true))
 }

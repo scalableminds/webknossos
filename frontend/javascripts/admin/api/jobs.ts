@@ -1,6 +1,5 @@
 import Request from "libs/request";
 import { location } from "libs/window";
-import type { UnitLong, Vector3, Vector6 } from "oxalis/constants";
 import type {
   APIAnnotationType,
   APIEffectiveJobState,
@@ -10,7 +9,8 @@ import type {
   AdditionalCoordinate,
   AiModel,
   RenderAnimationOptions,
-} from "types/api_flow_types";
+} from "types/api_types";
+import type { UnitLong, Vector3, Vector6 } from "viewer/constants";
 import { assertResponseLimit } from "./api_utils";
 
 function transformBackendJobToAPIJob(job: any): APIJob {
@@ -38,6 +38,8 @@ function transformBackendJobToAPIJob(job: any): APIJob {
     resultLink: job.resultLink,
     createdAt: job.created,
     voxelyticsWorkflowHash: job.voxelyticsWorkflowHash,
+    creditCost: job.creditCost,
+    modelId: job.commandArgs.model_id,
   };
 }
 
@@ -74,6 +76,24 @@ export async function cancelJob(jobId: string): Promise<APIJob> {
   });
 }
 
+export type JobCreditCostInfo = {
+  // The cost is encoded as a string decimal for precision reasons. The front-end should not do any arithmetic with this
+  costInCredits: string;
+  hasEnoughCredits: boolean;
+  // The organizations credits used during calculation whether the organization has enough credits for the job.
+  organizationCredits: string;
+};
+
+export async function getJobCreditCost(
+  command: string,
+  boundingBoxInMag: Vector6,
+): Promise<JobCreditCostInfo> {
+  const params = new URLSearchParams({
+    command,
+    boundingBoxInMag: boundingBoxInMag.join(","),
+  });
+  return await Request.receiveJSON(`/api/jobs/getCreditCost?${params}`);
+}
 export async function retryJob(jobId: string): Promise<APIJob> {
   return Request.receiveJSON(`/api/jobs/${jobId}/retry`, {
     method: "PATCH",
@@ -348,8 +368,8 @@ type RunTrainingParameters = {
   workflowYaml?: string;
 };
 
-export function runTraining(params: RunTrainingParameters) {
-  return Request.sendJSONReceiveJSON("/api/aiModels/runTraining", {
+export function runNeuronTraining(params: RunTrainingParameters) {
+  return Request.sendJSONReceiveJSON("/api/aiModels/runNeuronTraining", {
     method: "POST",
     data: JSON.stringify(params),
   });
@@ -367,8 +387,8 @@ type RunInferenceParameters = {
   // maskAnnotationLayerName?: string | null
 };
 
-export function runInferenceJob(params: RunInferenceParameters) {
-  return Request.sendJSONReceiveJSON("/api/aiModels/inferences/runInference", {
+export function runNeuronInferenceWithAiModelJob(params: RunInferenceParameters) {
+  return Request.sendJSONReceiveJSON("/api/aiModels/inferences/runCustomNeuronInference", {
     method: "POST",
     data: JSON.stringify({ ...params, boundingBox: params.boundingBox.join(",") }),
   });
@@ -380,4 +400,15 @@ export async function getAiModels(): Promise<AiModel[]> {
     ...model,
     trainingJob: model.trainingJob == null ? null : transformBackendJobToAPIJob(model.trainingJob),
   }));
+}
+
+export async function updateAiModel(aiModel: AiModel) {
+  return Request.sendJSONReceiveJSON(`/api/aiModels/${aiModel.id}`, {
+    method: "PUT",
+    data: {
+      name: aiModel.name,
+      comment: aiModel.comment,
+      sharedOrganizationIds: aiModel.sharedOrganizationIds,
+    },
+  });
 }

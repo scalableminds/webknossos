@@ -37,8 +37,8 @@ case class AgglomerateFileKey(
 object AgglomerateFileKey {
   def fromDataRequest(dataRequest: DataServiceDataRequest): AgglomerateFileKey =
     AgglomerateFileKey(
-      dataRequest.dataSource.id.organizationId,
-      dataRequest.dataSource.id.directoryName,
+      dataRequest.dataSourceIdOrVolumeDummy.organizationId,
+      dataRequest.dataSourceIdOrVolumeDummy.directoryName,
       dataRequest.dataLayer.name,
       dataRequest.settings.appliedAgglomerate.get
     )
@@ -176,7 +176,7 @@ class BoundingBoxCache(
       val isTransformed = Array.fill(input.length)(false)
       while (offset <= readerRange._2) {
         val agglomerateIds: Array[Long] =
-          readHDF(reader, offset, spire.math.min(maxReaderRange, readerRange._2 - offset) + 1)
+          readHDF(reader, offset, Math.min(maxReaderRange, readerRange._2 - offset) + 1)
         for (i <- input.indices) {
           val inputElement = input(i)
           if (!isTransformed(i) && inputElement >= offset && inputElement < offset + maxReaderRange) {

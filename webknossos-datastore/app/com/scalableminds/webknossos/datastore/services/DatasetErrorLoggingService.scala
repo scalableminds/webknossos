@@ -3,25 +3,20 @@ package com.scalableminds.webknossos.datastore.services
 import org.apache.pekko.actor.ActorSystem
 import com.google.inject.name.Named
 import com.scalableminds.util.mvc.Formatter
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.box2Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Failure, Full}
+import net.liftweb.common.{Box, Failure, Full}
 import play.api.inject.ApplicationLifecycle
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-class DatasetErrorLoggingService @Inject()(
-    val lifecycle: ApplicationLifecycle,
-    val applicationHealthService: ApplicationHealthService,
-    @Named("webknossos-datastore") val actorSystem: ActorSystem)(implicit val ec: ExecutionContext)
-    extends IntervalScheduler
-    with Formatter
-    with LazyLogging {
+trait DatasetErrorLoggingService extends IntervalScheduler with Formatter with LazyLogging with FoxImplicits {
+
+  protected def applicationHealthService: Option[ApplicationHealthService]
 
   private val errorCountThresholdPerDataset = 5
 
@@ -49,8 +44,20 @@ class DatasetErrorLoggingService @Inject()(
 
   override protected def tick(): Fox[Unit] = Fox.successful(recentErrors.clear())
 
+  def withErrorLoggingMultiple(dataSourceId: DataSourceId,
+                               label: String,
+                               resultFox: Fox[Seq[Box[Array[Byte]]]]): Fox[Seq[Box[Array[Byte]]]] =
+    resultFox.shiftBox.flatMap {
+      case Full(boxes) =>
+        boxes.foreach(box => withErrorLogging(dataSourceId, label, box.toFox))
+        Fox.successful(boxes)
+      case other =>
+        withErrorLogging(dataSourceId, label, resultFox.map(_ => Array[Byte]()))
+        other.toFox
+    }
+
   def withErrorLogging(dataSourceId: DataSourceId, label: String, resultFox: Fox[Array[Byte]]): Fox[Array[Byte]] =
-    resultFox.futureBox.flatMap {
+    resultFox.shiftBox.flatMap {
       case Full(data) =>
         if (data.length == 0) {
           val msg = s"Zero-length array returned while $label for $dataSourceId"
@@ -64,7 +71,7 @@ class DatasetErrorLoggingService @Inject()(
         }
       case Failure(msg, Full(e: InternalError), _) =>
         logger.error(s"Caught internal error ($msg) while $label for $dataSourceId:", e)
-        applicationHealthService.pushError(e)
+        applicationHealthService.foreach(_.pushError(e))
         Fox.failure(msg, Full(e))
       case f: Failure =>
         if (shouldLog(dataSourceId.organizationId, dataSourceId.directoryName)) {
@@ -75,4 +82,12 @@ class DatasetErrorLoggingService @Inject()(
       case other => other.toFox
     }
 
+}
+
+class DSDatasetErrorLoggingService @Inject()(
+    val lifecycle: ApplicationLifecycle,
+    dsApplicationHealthService: ApplicationHealthService,
+    @Named("webknossos-datastore") val actorSystem: ActorSystem)(implicit val ec: ExecutionContext)
+    extends DatasetErrorLoggingService {
+  protected def applicationHealthService: Option[ApplicationHealthService] = Some(dsApplicationHealthService)
 }

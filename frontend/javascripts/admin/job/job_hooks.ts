@@ -1,9 +1,9 @@
-import { getJob, getJobs } from "admin/admin_rest_api";
+import { getJob, getJobs } from "admin/rest_api";
 import features from "features";
 import { useEffectOnlyOnce, usePolling } from "libs/react_hooks";
 import _ from "lodash";
 import { useState } from "react";
-import type { APIJob } from "types/api_flow_types";
+import type { APIJob } from "types/api_types";
 
 type JobInfo = [jobKey: string, jobId: string];
 

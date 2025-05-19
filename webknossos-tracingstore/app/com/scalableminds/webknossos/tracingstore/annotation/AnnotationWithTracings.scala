@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.Annotation.{AnnotationLayerProto, AnnotationProto}
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
@@ -11,6 +10,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingUpdateAction,
   EditableMappingUpdater
 }
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTracingWithUpdatedTreeIds
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.SkeletonUpdateAction
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ApplyableVolumeUpdateAction
 import com.typesafe.scalalogging.LazyLogging
@@ -20,9 +20,10 @@ import scala.concurrent.ExecutionContext
 
 case class AnnotationWithTracings(
     annotation: AnnotationProto,
-    tracingsById: Map[String, Either[SkeletonTracing, VolumeTracing]],
+    tracingsById: Map[String, Either[SkeletonTracingWithUpdatedTreeIds, VolumeTracing]],
     editableMappingsByTracingId: Map[String, (EditableMappingInfo, EditableMappingUpdater)])
-    extends LazyLogging {
+    extends LazyLogging
+    with FoxImplicits {
 
   // Assumes that there is at most one skeleton layer per annotation. This is true as of this writing
   def getSkeletonId: Option[String] =
@@ -32,16 +33,25 @@ case class AnnotationWithTracings(
     for {
       tracingEither <- tracingsById.get(tracingId)
       skeletonTracing <- tracingEither match {
-        case Left(st: SkeletonTracing) => Full(st)
-        case _                         => Failure(f"Tried to access tracing $tracingId as skeleton, but is volume")
+        case Left(SkeletonTracingWithUpdatedTreeIds(skeletonTracing, _)) => Full(skeletonTracing)
+        case _                                                           => Failure(f"Tried to access tracing $tracingId as skeleton, but is volume")
       }
     } yield skeletonTracing
 
   def getSkeletons: List[(String, SkeletonTracing)] =
     tracingsById.view.flatMap {
-      case (id, Left(st: SkeletonTracing)) => Some(id, st)
-      case _                               => None
+      case (id, Left(SkeletonTracingWithUpdatedTreeIds(skeletonTracing, _))) => Some(id, skeletonTracing)
+      case _                                                                 => None
     }.toList
+
+  def getUpdatedTreeBodyIdsForSkeleton(tracingId: String): Box[Set[Int]] =
+    for {
+      tracingEither <- tracingsById.get(tracingId)
+      updatedTreeIds <- tracingEither match {
+        case Left(SkeletonTracingWithUpdatedTreeIds(_, updatedTreeIds)) => Full(updatedTreeIds)
+        case _                                                          => Failure(f"Tried to access tracing $tracingId as skeleton to access updated tree ids, but is volume")
+      }
+    } yield updatedTreeIds
 
   def getVolumes: List[(String, VolumeTracing)] =
     tracingsById.view.flatMap {
@@ -86,7 +96,7 @@ case class AnnotationWithTracings(
 
   def addLayer(a: AddLayerAnnotationAction,
                tracingId: String,
-               tracing: Either[SkeletonTracing, VolumeTracing]): AnnotationWithTracings =
+               tracing: Either[SkeletonTracingWithUpdatedTreeIds, VolumeTracing]): AnnotationWithTracings =
     this.copy(
       annotation = annotation.copy(
         annotationLayers = annotation.annotationLayers :+ AnnotationLayerProto(
@@ -115,8 +125,9 @@ case class AnnotationWithTracings(
 
   def withVersion(newVersion: Long): AnnotationWithTracings = {
     val tracingsUpdated = tracingsById.view.mapValues {
-      case Left(t: SkeletonTracing) => Left(t.withVersion(newVersion))
-      case Right(t: VolumeTracing)  => Right(t.withVersion(newVersion))
+      case Left(t: SkeletonTracingWithUpdatedTreeIds) =>
+        Left(t.withVersion(newVersion))
+      case Right(t: VolumeTracing) => Right(t.withVersion(newVersion))
     }
     this.copy(
       annotation = annotation.copy(version = newVersion,
@@ -139,20 +150,22 @@ case class AnnotationWithTracings(
     this.copy(editableMappingsByTracingId =
       editableMappingsByTracingId.updated(volumeTracingId, (editableMappingInfo, updater)))
 
-  def applySkeletonAction(a: SkeletonUpdateAction)(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
+  def applySkeletonAction(a: SkeletonUpdateAction): Box[AnnotationWithTracings] =
     for {
       skeletonTracing <- getSkeleton(a.actionTracingId)
+      previousUpdatedTreeIds <- getUpdatedTreeBodyIdsForSkeleton(a.actionTracingId)
       updated = a.applyOn(skeletonTracing)
-    } yield this.copy(tracingsById = tracingsById.updated(a.actionTracingId, Left(updated)))
+      newUpdatedTreeIds = previousUpdatedTreeIds.concat(a.updatedTreeBodyIds)
+    } yield
+      this.copy(
+        tracingsById =
+          tracingsById.updated(a.actionTracingId, Left(SkeletonTracingWithUpdatedTreeIds(updated, newUpdatedTreeIds))))
 
-  def applyVolumeAction(a: ApplyableVolumeUpdateAction)(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
+  def applyVolumeAction(a: ApplyableVolumeUpdateAction): Box[AnnotationWithTracings] =
     for {
       volumeTracing <- getVolume(a.actionTracingId)
       updated = a.applyOn(volumeTracing)
-    } yield
-      AnnotationWithTracings(annotation,
-                             tracingsById.updated(a.actionTracingId, Right(updated)),
-                             editableMappingsByTracingId)
+    } yield this.copy(tracingsById = tracingsById.updated(a.actionTracingId, Right(updated)))
 
   def applyEditableMappingAction(a: EditableMappingUpdateAction)(
       implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
@@ -169,6 +182,15 @@ case class AnnotationWithTracings(
     for {
       _ <- Fox.serialCombined(updaters)(updater => updater.flushBuffersToFossil())
     } yield ()
+  }
+
+  def markAllTreeBodiesAsChanged: AnnotationWithTracings = {
+    val newTracingsById = tracingsById.view.map {
+      case (id, Left(st: SkeletonTracingWithUpdatedTreeIds)) =>
+        (id, Left[SkeletonTracingWithUpdatedTreeIds, VolumeTracing](st.markAllTreeBodiesAsChanged))
+      case other => other
+    }.toMap
+    this.copy(tracingsById = newTracingsById)
   }
 
 }

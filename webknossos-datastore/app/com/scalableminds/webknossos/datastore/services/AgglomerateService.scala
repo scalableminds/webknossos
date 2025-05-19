@@ -24,7 +24,18 @@ import scala.annotation.tailrec
 import scala.collection.compat.immutable.ArraySeq
 import scala.concurrent.duration.DurationInt
 
-class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter with LazyLogging {
+class ZarrAgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter with LazyLogging {
+  def applyAgglomerateHdf5(request: DataServiceDataRequest)(data: Array[Byte]): Box[Array[Byte]] = tryo(data)
+
+}
+
+class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter with LazyLogging {
+  // TODO
+}
+
+class AgglomerateService @Inject()(config: DataStoreConfig, zarrAgglomerateService: ZarrAgglomerateService)
+    extends DataConverter
+    with LazyLogging {
   private val agglomerateDir = "agglomerates"
   private val agglomerateFileExtension = "hdf5"
   private val datasetName = "/segment_to_agglomerate"
@@ -47,7 +58,12 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
       .toSet
   }
 
-  def applyAgglomerate(request: DataServiceDataRequest)(data: Array[Byte]): Box[Array[Byte]] = tryo {
+  def applyAgglomerate(request: DataServiceDataRequest)(data: Array[Byte]): Box[Array[Byte]] =
+    if (true) {
+      zarrAgglomerateService.applyAgglomerateHdf5(request)(data)
+    } else applyAgglomerateHdf5(request)(data)
+
+  private def applyAgglomerateHdf5(request: DataServiceDataRequest)(data: Array[Byte]): Box[Array[Byte]] = tryo {
 
     val agglomerateFileKey = AgglomerateFileKey.fromDataRequest(request)
 

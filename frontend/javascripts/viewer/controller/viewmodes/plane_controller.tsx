@@ -489,14 +489,14 @@ class PlaneController extends React.PureComponent<Props> {
 
         if (mousePosition) {
           const [x, y] = mousePosition;
-          const globalMousePosition = calculateGlobalPos(Store.getState(), {
+          const globalMousePositionRounded = calculateGlobalPos(Store.getState(), {
             x,
             y,
-          });
+          }).rounded;
           const { cube } = segmentationLayer;
           const mapping = event.altKey ? cube.getMapping() : null;
           const hoveredId = cube.getDataValue(
-            globalMousePosition,
+            globalMousePositionRounded,
             additionalCoordinates,
             mapping,
             getActiveMagIndexForLayer(Store.getState(), segmentationLayer.name),

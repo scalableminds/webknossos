@@ -92,12 +92,14 @@ export function getViewportScale(state: WebknossosState, viewport: Viewport): [n
   return [xScale, yScale];
 }
 
+export type GlobalPosition = { rounded: Vector3; floating: Vector3 };
+
 function _calculateMaybeGlobalPos(
   state: WebknossosState,
   clickPos: Point2,
   planeId?: OrthoView | null | undefined,
-): Vector3 | null | undefined {
-  let position: Vector3;
+): GlobalPosition | null | undefined {
+  let roundedPosition: Vector3, floatingPosition: Vector3;
   const planeIdFilled = planeId || state.viewModeData.plane.activeViewport;
   const curGlobalPos = getPosition(state.flycam);
   const flycamRotation = getRotationInRadian(state.flycam);
@@ -123,10 +125,11 @@ function _calculateMaybeGlobalPos(
     .multiplyScalar(-1);
 
   const globalFloatingPosition = scaledRotatedPosition.applyMatrix4(flycamPositionMatrix);
+  floatingPosition = globalFloatingPosition.toArray() as Vector3;
 
   switch (planeIdFilled) {
     case OrthoViews.PLANE_XY: {
-      position = [
+      roundedPosition = [
         Math.round(globalFloatingPosition.x),
         Math.round(globalFloatingPosition.y),
         Math.floor(globalFloatingPosition.z),
@@ -135,7 +138,7 @@ function _calculateMaybeGlobalPos(
     }
 
     case OrthoViews.PLANE_YZ: {
-      position = [
+      roundedPosition = [
         Math.floor(globalFloatingPosition.x),
         Math.round(globalFloatingPosition.y),
         Math.round(globalFloatingPosition.z),
@@ -144,7 +147,7 @@ function _calculateMaybeGlobalPos(
     }
 
     case OrthoViews.PLANE_XZ: {
-      position = [
+      roundedPosition = [
         Math.round(globalFloatingPosition.x),
         Math.floor(globalFloatingPosition.y),
         Math.round(globalFloatingPosition.z),
@@ -156,7 +159,7 @@ function _calculateMaybeGlobalPos(
       return null;
   }
 
-  return position;
+  return { rounded: roundedPosition, floating: floatingPosition };
 }
 
 function _calculateMaybeGlobalDelta(
@@ -197,15 +200,15 @@ function _calculateGlobalPos(
   state: WebknossosState,
   clickPos: Point2,
   planeId?: OrthoView | null | undefined,
-): Vector3 {
-  const position = _calculateMaybeGlobalPos(state, clickPos, planeId);
+): GlobalPosition {
+  const positions = _calculateMaybeGlobalPos(state, clickPos, planeId);
 
-  if (!position) {
+  if (!positions || !positions.rounded) {
     console.error("Trying to calculate the global position, but no data viewport is active.");
-    return [0, 0, 0];
+    return { rounded: [0, 0, 0], floating: [0, 0, 0] };
   }
 
-  return position;
+  return positions;
 }
 
 function _calculateGlobalDelta(

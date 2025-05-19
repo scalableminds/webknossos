@@ -664,7 +664,7 @@ class PlaneMaterialFactory {
             const [x, y, z] = calculateGlobalPos(state, {
               x: globalMousePosition[0],
               y: globalMousePosition[1],
-            });
+            }).rounded;
             this.uniforms.globalMousePosition.value.set(x, y, z);
             this.uniforms.isMouseInCanvas.value = true;
           },

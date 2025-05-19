@@ -94,7 +94,7 @@ function getMousePosition() {
   return calculateGlobalPos(state, {
     x: mousePosition[0],
     y: mousePosition[1],
-  });
+  }).rounded;
 }
 
 export function zoomPlanes(value: number, zoomToMouse: boolean): void {

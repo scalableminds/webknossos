@@ -28,6 +28,7 @@ import {
   calculateGlobalPos,
   calculateMaybeGlobalPos,
   getInputCatcherRect,
+  type GlobalPosition,
 } from "viewer/model/accessors/view_mode_accessor";
 import { setDirectionAction } from "viewer/model/actions/flycam_actions";
 import {
@@ -146,7 +147,7 @@ export function handleOpenContextMenu(
   const state = Store.getState();
   // Use calculateMaybeGlobalPos instead of calculateGlobalPos, since calculateGlobalPos
   // only works for the data viewports, but this function is also called for the 3d viewport.
-  const globalPosition = calculateMaybeGlobalPos(state, position);
+  const globalPositions = calculateMaybeGlobalPos(state, position);
   const hoveredEdgesInfo = getClosestHoveredBoundingBox(position, plane);
   const clickedBoundingBoxId = hoveredEdgesInfo != null ? hoveredEdgesInfo[0].boxId : null;
 
@@ -162,7 +163,7 @@ export function handleOpenContextMenu(
           event.pageY,
           nodeId,
           clickedBoundingBoxId,
-          globalPosition,
+          globalPositions?.rounded,
           activeViewport,
           meshId,
           meshIntersectionPosition,
@@ -248,7 +249,7 @@ export function finishNodeMovement(nodeId: number) {
 }
 
 export function handleCreateNodeFromGlobalPosition(
-  position: Vector3,
+  nodePosition: GlobalPosition,
   activeViewport: OrthoView,
   ctrlIsPressed: boolean,
 ): void {
@@ -269,7 +270,7 @@ export function handleCreateNodeFromGlobalPosition(
     skipCenteringAnimationInThirdDimension,
   } = getOptionsForCreateSkeletonNode(activeViewport, ctrlIsPressed);
   createSkeletonNode(
-    position,
+    nodePosition,
     additionalCoordinates,
     rotation,
     center,
@@ -322,7 +323,7 @@ export function getOptionsForCreateSkeletonNode(
 }
 
 export function createSkeletonNode(
-  position: Vector3,
+  position: GlobalPosition,
   additionalCoordinates: AdditionalCoordinate[] | null,
   rotation: Vector3,
   center: boolean,
@@ -330,7 +331,7 @@ export function createSkeletonNode(
   activate: boolean,
   skipCenteringAnimationInThirdDimension: boolean,
 ): void {
-  updateTraceDirection(position);
+  updateTraceDirection(position.rounded);
 
   let state = Store.getState();
   const enabledColorLayers = getEnabledColorLayers(state.dataset, state.datasetConfiguration);
@@ -344,7 +345,7 @@ export function createSkeletonNode(
 
   Store.dispatch(
     createNodeAction(
-      untransformNodePosition(position, state),
+      untransformNodePosition(position.floating, state),
       additionalCoordinates,
       rotation,
       OrthoViewToNumber[Store.getState().viewModeData.plane.activeViewport],
@@ -369,12 +370,7 @@ export function createSkeletonNode(
     const treeAndNode = getTreeAndNode(newSkeleton, newNodeId, newSkeleton.activeTreeId);
     if (!treeAndNode) return;
 
-    const [_activeTree, newNode] = treeAndNode;
-
-    api.tracing.centerPositionAnimated(
-      getNodePosition(newNode, state),
-      skipCenteringAnimationInThirdDimension,
-    );
+    api.tracing.centerPositionAnimated(position.floating, skipCenteringAnimationInThirdDimension);
   }
 
   if (branchpoint) {

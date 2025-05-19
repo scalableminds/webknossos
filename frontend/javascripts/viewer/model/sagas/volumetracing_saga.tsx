@@ -602,7 +602,8 @@ function* getGlobalMousePosition(): Saga<Vector3 | null | undefined> {
       return calculateMaybeGlobalPos(state, {
         x,
         y,
-      });
+      })?.rounded;
+      //TODOM: Might be better to use floating variant here for more accurate results, but maybe it is even more correct as the shader also enforces rounded positions.
     }
 
     return undefined;

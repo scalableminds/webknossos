@@ -163,8 +163,8 @@ export function getClosestHoveredBoundingBox(
 ): [SelectedEdge, SelectedEdge | null | undefined] | null {
   const state = Store.getState();
   const globalPosition = calculateMaybeGlobalPos(state, pos, plane);
-
-  if (globalPosition == null) return null;
+  if (globalPosition == null || globalPosition.rounded == null) return null;
+  const roundedPosition = globalPosition.rounded;
 
   const { userBoundingBoxes } = getSomeTracing(state.annotation);
   const indices = Dimension.getIndices(plane);
@@ -178,7 +178,7 @@ export function getClosestHoveredBoundingBox(
   for (const bbox of userBoundingBoxes) {
     const { min, max } = bbox.boundingBox;
     const isCrossSectionOfViewportVisible =
-      globalPosition[thirdDim] >= min[thirdDim] && globalPosition[thirdDim] < max[thirdDim];
+      roundedPosition[thirdDim] >= min[thirdDim] && roundedPosition[thirdDim] < max[thirdDim];
 
     if (!isCrossSectionOfViewportVisible || !bbox.isVisible) {
       continue;
@@ -188,7 +188,7 @@ export function getClosestHoveredBoundingBox(
     // of how the indices of the array map to the visible bbox edges.
     const distanceArray = computeDistanceArray(
       bbox.boundingBox,
-      globalPosition,
+      globalPosition.rounded,
       indices,
       planeRatio,
     );
@@ -235,16 +235,15 @@ export function createBoundingBoxAndGetEdges(
 ): [SelectedEdge, SelectedEdge | null | undefined] | null {
   const state = Store.getState();
   const globalPosition = calculateMaybeGlobalPos(state, pos, plane);
-
-  if (globalPosition == null) return null;
+  if (globalPosition == null || globalPosition.rounded == null) return null;
 
   Store.dispatch(
     addUserBoundingBoxAction({
       boundingBox: {
-        min: globalPosition,
+        min: globalPosition.rounded,
         // The last argument ensures that a Vector3 is used and not a
         // Float32Array.
-        max: V3.add(globalPosition, [1, 1, 1], [0, 0, 0]),
+        max: V3.add(globalPosition.rounded, [1, 1, 1], [0, 0, 0]),
       },
     }),
   );
@@ -318,7 +317,7 @@ export function handleResizingBoundingBox(
   const globalMousePosition = calculateGlobalPos(state, mousePosition, planeId);
   const bboxToResize = getBoundingBoxOfPrimaryEdge(primaryEdge, state);
 
-  if (!bboxToResize) {
+  if (!bboxToResize || globalMousePosition == null || globalMousePosition.rounded == null) {
     return;
   }
 
@@ -327,10 +326,13 @@ export function handleResizingBoundingBox(
     max: [...bboxToResize.boundingBox.max] as Vector3,
   };
 
-  function updateBoundsAccordingToEdge(edge: SelectedEdge): boolean {
+  function updateBoundsAccordingToEdge(
+    edge: SelectedEdge,
+    globalPositionRounded: Vector3,
+  ): boolean {
     const { resizableDimension } = edge;
     // For a horizontal edge only consider delta.y, for vertical only delta.x
-    const newPositionValue = Math.round(globalMousePosition[resizableDimension]);
+    const newPositionValue = Math.round(globalPositionRounded[resizableDimension]);
     const minOrMax = edge.isMaxEdge ? "max" : "min";
     const oppositeOfMinOrMax = edge.isMaxEdge ? "min" : "max";
     // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
@@ -356,14 +358,20 @@ export function handleResizingBoundingBox(
     }
   }
 
-  let didMinAndMaxEdgeSwitch = updateBoundsAccordingToEdge(primaryEdge);
+  let didMinAndMaxEdgeSwitch = updateBoundsAccordingToEdge(
+    primaryEdge,
+    globalMousePosition.rounded,
+  );
 
   if (didMinAndMaxEdgeSwitch) {
     primaryEdge.isMaxEdge = !primaryEdge.isMaxEdge;
   }
 
   if (secondaryEdge) {
-    didMinAndMaxEdgeSwitch = updateBoundsAccordingToEdge(secondaryEdge);
+    didMinAndMaxEdgeSwitch = updateBoundsAccordingToEdge(
+      secondaryEdge,
+      globalMousePosition.rounded,
+    );
 
     if (didMinAndMaxEdgeSwitch) {
       secondaryEdge.isMaxEdge = !secondaryEdge.isMaxEdge;

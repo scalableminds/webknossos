@@ -102,6 +102,7 @@ class AnnotationIOController @Inject()(
           request.body.dataParts("createGroupForEachFile").headOption.contains("true")
         val overwritingDatasetId: Option[String] =
           request.body.dataParts.get("datasetId").flatMap(_.headOption)
+        val overwritingDescription: Option[String] = request.body.dataParts.get("description").flatMap(_.headOption)
         val userOrganizationId = request.identity._organization
         val attachedFiles = request.body.files.map(f => (f.ref.path.toFile, f.filename))
         for {
@@ -114,7 +115,7 @@ class AnnotationIOController @Inject()(
           _ <- Fox.fromBool(parseResultsFiltered.nonEmpty) orElse returnError(parsedFiles)
           parseSuccesses <- Fox.serialCombined(parseResultsFiltered)(r => r.toSuccessBox.toFox)
           name = nameForUploaded(parseResultsFiltered.map(_.fileName))
-          description = descriptionForNMLs(parseResultsFiltered.map(_.description))
+          description = overwritingDescription.getOrElse(descriptionForNMLs(parseResultsFiltered.map(_.description)))
           wkUrl = wkUrlsForNMLs(parseResultsFiltered.map(_.wkUrl))
           skeletonTracings = parseSuccesses.map(_.skeletonTracing)
           // Create a list of volume layers for each uploaded (non-skeleton-only) annotation.

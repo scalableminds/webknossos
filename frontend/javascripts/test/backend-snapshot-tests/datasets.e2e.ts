@@ -143,7 +143,7 @@ describe("Dataset API (E2E)", () => {
       "/api/datastores/localhost/datasources/Organization_X/test-dataset/paths?key=something-secure",
     );
     const pathsJson = await paths.json();
-    expect(pathsJson).toMatchSnapshot();
+    expect(replaceVolatileValues(pathsJson)).toMatchSnapshot();
   });
 
   /**

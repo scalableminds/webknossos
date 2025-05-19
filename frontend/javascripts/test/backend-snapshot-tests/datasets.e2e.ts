@@ -140,7 +140,7 @@ describe("Dataset API (E2E)", () => {
 
   it("Dataset Paths", async () => {
     const paths = await fetch(
-      "/api/datastores/localhost/datasources/Organization_X/test-dataset/paths?key=something-secure"
+      "/api/datastores/localhost/datasources/Organization_X/test-dataset/paths?key=something-secure",
     );
     const pathsJson = await paths.json();
     expect(pathsJson).toMatchSnapshot();

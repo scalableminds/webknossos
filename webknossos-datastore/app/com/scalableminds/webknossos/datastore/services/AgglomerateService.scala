@@ -25,7 +25,18 @@ import scala.collection.compat.immutable.ArraySeq
 import scala.concurrent.duration.DurationInt
 
 class ZarrAgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter with LazyLogging {
-  def applyAgglomerateHdf5(request: DataServiceDataRequest)(data: Array[Byte]): Box[Array[Byte]] = tryo(data)
+  private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
+  private val agglomerateDir = "agglomerates"
+  private val agglomerateFileExtension = ""
+
+  def applyAgglomerateHdf5(request: DataServiceDataRequest)(data: Array[Byte]): Box[Array[Byte]] = tryo {
+
+    val agglomerateFileKey = AgglomerateFileKey.fromDataRequest(request)
+
+    val zarrGroupPath = agglomerateFileKey.zarrGroupPath(dataBaseDir, agglomerateDir)
+
+    data
+  }
 
 }
 

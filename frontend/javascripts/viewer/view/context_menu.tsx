@@ -409,12 +409,14 @@ function getMeshItems(
   visibleSegmentationLayer: APIDataLayer | null | undefined,
   voxelSizeFactor: Vector3,
   meshFileMappingName: string | null | undefined,
+  isRotated: boolean,
 ): MenuItemType[] {
   if (
     clickedMeshId == null ||
     meshIntersectionPosition == null ||
     visibleSegmentationLayer == null ||
-    volumeTracing == null
+    volumeTracing == null ||
+    isRotated
   ) {
     return [];
   }
@@ -572,10 +574,11 @@ function getNodeContextMenuOptions({
   infoRows,
   allowUpdate,
   currentMeshFile,
+  isRotated,
 }: NodeContextMenuOptionsProps): ItemType[] {
   const state = Store.getState();
   const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
-  const isVolumeModificationAllowed = !hasEditableMapping(state);
+  const isVolumeModificationAllowed = !hasEditableMapping(state) && !isRotated;
 
   if (skeletonTracing == null) {
     throw new Error(
@@ -614,6 +617,7 @@ function getNodeContextMenuOptions({
     visibleSegmentationLayer,
     voxelSize.factor,
     currentMeshFile?.mappingName,
+    isRotated,
   );
 
   const menuItems: ItemType[] = [
@@ -649,7 +653,7 @@ function getNodeContextMenuOptions({
               </>
             ),
           },
-          isProofreadingActive
+          isProofreadingActive && !isRotated
             ? {
                 key: "min-cut-node",
                 disabled: !areInSameTree || isTheSameNode,
@@ -661,7 +665,7 @@ function getNodeContextMenuOptions({
               }
             : null,
 
-          isProofreadingActive
+          isProofreadingActive && !isRotated
             ? {
                 key: "cut-agglomerate-from-neighbors",
                 disabled: !isProofreadingActive,
@@ -951,6 +955,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     mappingInfo,
     infoRows,
     allowUpdate,
+    isRotated,
   } = props;
 
   const state = Store.getState();
@@ -1098,7 +1103,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
               </FastTooltip>
             ),
           },
-          isAgglomerateMappingEnabled.value
+          isAgglomerateMappingEnabled.value && !isRotated
             ? {
                 key: "merge-agglomerate-skeleton",
                 disabled: !isProofreadingActive,
@@ -1116,7 +1121,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                 ),
               }
             : null,
-          isAgglomerateMappingEnabled.value
+          isAgglomerateMappingEnabled.value && !isRotated
             ? {
                 key: "min-cut-agglomerate-at-position",
                 disabled: !isProofreadingActive,
@@ -1136,7 +1141,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                 ),
               }
             : null,
-          isAgglomerateMappingEnabled.value
+          isAgglomerateMappingEnabled.value && !isRotated
             ? {
                 key: "cut-agglomerate-from-neighbors",
                 disabled: !isProofreadingActive,
@@ -1268,6 +1273,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     visibleSegmentationLayer,
     voxelSize.factor,
     currentMeshFile?.mappingName,
+    isRotated,
   );
 
   if (isSkeletonToolActive) {

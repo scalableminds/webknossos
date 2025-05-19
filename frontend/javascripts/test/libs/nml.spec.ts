@@ -861,7 +861,7 @@ describe("NML", () => {
       comments: testComments,
     });
 
-    const action = addTreesAndGroupsAction(newTrees, []);
+    const action = addTreesAndGroupsAction(_.cloneDeep(newTrees), []);
     const newState = SkeletonTracingReducer(initialState, action);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
 

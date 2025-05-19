@@ -100,12 +100,13 @@ function findCommonAncestor(
 
   let commonPath: number[] | null = null;
 
-  const getAncestor =
-    "getNullable" in treeIdMap
-      ? (value: UpdateSegmentVisibilityVolumeAction["value"]) => treeIdMap.getNullable(value.id)
-      : (value: UpdateTreeVisibilityUpdateAction["value"]) => treeIdMap[value.treeId];
+  const getAncestor = (treeId: number) => treeIdMap.getNullable(treeId);
   for (const toggleAction of toggleActions) {
-    const ancestorPath = getAncestorPath(getAncestor(toggleAction.value as any)?.groupId);
+    const ancestorPath = getAncestorPath(
+      getAncestor(
+        "treeId" in toggleAction.value ? toggleAction.value.treeId : toggleAction.value.id,
+      )?.groupId,
+    );
 
     if (commonPath == null) {
       commonPath = ancestorPath;
@@ -134,6 +135,7 @@ function isCommonAncestorToggler<T extends SkeletonTracing | VolumeTracing>(
   commonAncestor: number | undefined,
 ): [boolean, Array<T extends SkeletonTracing ? Tree : Segment>, number] {
   let allItemsOfAncestor: Array<Tree | Segment> = [];
+
   if (tracing.type === "skeleton") {
     const items = tracing.trees;
     const groups = tracing.treeGroups;

@@ -695,9 +695,8 @@ function connectedComponentsOfTree(tree: MutableTree): Array<number[]> {
     visited.set(startNodeId, true);
 
     while (queue.length > 0) {
-      const nodeId = queue.shift();
+      const nodeId = queue.shift() as number;
       component.push(nodeId);
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number | undefined' is not assig... Remove this comment to see the full error message
       const curEdges = edges.getEdgesForNode(nodeId);
 
       for (const edge of curEdges) {
@@ -723,7 +722,6 @@ function connectedComponentsOfTree(tree: MutableTree): Array<number[]> {
     }
   }
 
-  // @ts-expect-error ts-migrate(2322) FIXME: Type '(number | undefined)[][]' is not assignable ... Remove this comment to see the full error message
   return components;
 }
 

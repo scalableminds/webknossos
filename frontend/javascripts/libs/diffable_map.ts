@@ -227,7 +227,7 @@ class DiffableMap<K extends number, V> {
   }
 
   /**
-   * Creates a deep copy of this DiffableMap
+   * Creates a shallow copy of this DiffableMap
    * The returned map has the same ID as the original, enabling fast diffing
    *
    * @returns A new DiffableMap instance with the same contents and ID

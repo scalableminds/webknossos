@@ -285,17 +285,18 @@ describe("API Skeleton", () => {
     );
     api.tracing.renameSkeletonGroup(7, "renamed");
 
-    const state = Store.getState();
-    expect(state.annotation.skeleton!.treeGroups[1].name).toBe("renamed");
+    expect(enforceSkeletonTracing(Store.getState().annotation).treeGroups[1].name).toBe("renamed");
   });
 
-  it<WebknossosTestContext>("setTreeGroup should set the visibility of a tree", ({ api }) => {
-    const skeletonTracing = enforceSkeletonTracing(Store.getState().annotation);
-
+  it<WebknossosTestContext>("setTreeVisibility should set the visibility of a tree", ({ api }) => {
     api.tracing.setTreeVisibility(2, false);
-    expect(skeletonTracing.trees.getOrThrow(2).isVisible).toBe(false);
+    expect(enforceSkeletonTracing(Store.getState().annotation).trees.getOrThrow(2).isVisible).toBe(
+      false,
+    );
 
     api.tracing.setTreeVisibility(2, true);
-    expect(skeletonTracing.trees.getOrThrow(2).isVisible).toBe(true);
+    expect(enforceSkeletonTracing(Store.getState().annotation).trees.getOrThrow(2).isVisible).toBe(
+      true,
+    );
   });
 });

@@ -39,9 +39,9 @@ describe("Iterator Utils", () => {
       expect(max(map.values())).toBe(8);
     });
 
-    it("should return negative infinity for an empty array", () => {
+    it("should return null for an empty array", () => {
       const map = new Map<number, number>();
-      expect(max(map.values())).toBe(Number.NEGATIVE_INFINITY);
+      expect(max(map.values())).toBeNull();
     });
 
     it("should handle negative numbers", () => {
@@ -56,9 +56,9 @@ describe("Iterator Utils", () => {
       expect(min(map.values())).toBe(1);
     });
 
-    it("should return positive infinity for an empty array", () => {
+    it("should return null for an empty array", () => {
       const map = new Map<number, number>();
-      expect(min(map.values())).toBe(Number.POSITIVE_INFINITY);
+      expect(min(map.values())).toBeNull();
     });
 
     it("should handle negative numbers", () => {

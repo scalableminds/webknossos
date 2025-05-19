@@ -141,7 +141,7 @@ function isCommonAncestorToggler<T extends SkeletonTracing | VolumeTracing>(
     const groupWithSubgroups = getGroupByIdWithSubgroups(groups, commonAncestor);
     allItemsOfAncestor =
       groupWithSubgroups.length === 0
-        ? _.values(items)
+        ? Array.from(items.values())
         : _.flatMap(
             groupWithSubgroups,
             (groupId: number): Tree[] => groupToTreesMap[groupId] || [],

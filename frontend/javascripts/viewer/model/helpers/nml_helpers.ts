@@ -686,7 +686,7 @@ function _parseEntities<T>(
   return Saxophone.parseEntities(obj[key]);
 }
 
-function connectedComponentsOfTree(tree: MutableTree): Array<Array<number>> {
+function connectedComponentsOfTree(tree: MutableTree): Array<number[]> {
   // Breadth-First Search that finds the connected component of the node with id startNodeId
   // and marks all visited nodes as true in the visited map
   const bfs = (startNodeId: number, edges: EdgeCollection, visited: Map<number, boolean>) => {
@@ -731,7 +731,7 @@ function splitTreeIntoComponents(
   tree: MutableTree,
   treeGroups: TreeGroup[],
   maxTreeId: number,
-): Array<MutableTree> {
+): MutableTree[] {
   const components = connectedComponentsOfTree(tree);
   if (components.length <= 1) return [tree];
   // If there is more than one component, split the tree into its components
@@ -747,22 +747,18 @@ function splitTreeIntoComponents(
   for (let i = 0; i < components.length; i++) {
     const nodeIds = components[i];
     const nodeIdsSet = new Set(nodeIds);
+
     // Only consider outgoing edges as otherwise each edge would be collected twice
     const edges = nodeIds.flatMap((nodeId) => tree.edges.getOutgoingEdgesForNode(nodeId));
-    const newTree = {
+    const newTree: MutableTree = {
+      ...tree,
       treeId: maxTreeId + 1 + i,
-      color: tree.color,
       name: `${tree.name}_${i}`,
       comments: tree.comments.filter((comment) => nodeIdsSet.has(comment.nodeId)),
       nodes: new DiffableMap(nodeIds.map((nodeId) => [nodeId, tree.nodes.getOrThrow(nodeId)])),
       branchPoints: tree.branchPoints.filter((bp) => nodeIdsSet.has(bp.nodeId)),
-      timestamp: tree.timestamp,
       edges: EdgeCollection.loadFromArray(edges),
-      isVisible: tree.isVisible,
       groupId: newGroupId,
-      type: tree.type,
-      edgesAreVisible: tree.edgesAreVisible,
-      metadata: tree.metadata,
     };
     newTrees.push(newTree);
   }
@@ -817,7 +813,7 @@ export function wrapInNewGroup(
 }
 
 function getUnusedUserBoundingBoxId(
-  userBoundingBoxes: Array<UserBoundingBox>,
+  userBoundingBoxes: UserBoundingBox[],
   proposedId: number = 0,
 ): number {
   const isProposedIdUsed = userBoundingBoxes.some((userBB) => userBB.id === proposedId);
@@ -875,7 +871,7 @@ export function parseNml(nmlString: string): Promise<{
   trees: MutableTreeMap;
   treeGroups: TreeGroup[];
   containedVolumes: boolean;
-  userBoundingBoxes: Array<UserBoundingBox>;
+  userBoundingBoxes: UserBoundingBox[];
   datasetName: string | null | undefined;
 }> {
   return new Promise((resolve, reject) => {
@@ -895,6 +891,7 @@ export function parseNml(nmlString: string): Promise<{
     const nodeIdToTreeId: Record<number, number> = {};
     const userBoundingBoxes: UserBoundingBox[] = [];
     let datasetName: string | null = null;
+
     parser
       .on("tagopen", (node: Record<string, string>) => {
         const attr = Saxophone.parseAttrs(node.attrs);
@@ -1183,10 +1180,9 @@ export function parseNml(nmlString: string): Promise<{
       })
       .on("finish", () => {
         // Split potentially unconnected trees
-        const originalTrees = trees.values();
         let maxTreeId = getMaximumTreeId(trees);
 
-        originalTrees.forEach((tree) => {
+        trees.values().forEach((tree) => {
           const newTrees = splitTreeIntoComponents(tree, treeGroups, maxTreeId);
 
           const newTreesSize = _.size(newTrees);

@@ -1021,12 +1021,19 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
 
   const isVolumeBasedToolActive = VolumeTools.includes(activeTool);
   const isBoundingBoxToolActive = activeTool === AnnotationTool.BOUNDING_BOX;
+  const globalPositionForNode = globalPosition
+    ? { rounded: globalPosition, floating: globalPosition }
+    : undefined;
   const skeletonActions: ItemType[] =
-    skeletonTracing != null && globalPosition != null && allowUpdate
+    skeletonTracing != null &&
+    globalPosition != null &&
+    globalPositionForNode != null &&
+    allowUpdate
       ? [
           {
             key: "create-node",
-            onClick: () => handleCreateNodeFromGlobalPosition(globalPosition, viewport, false),
+            onClick: () =>
+              handleCreateNodeFromGlobalPosition(globalPositionForNode, viewport, false),
             label: "Create Node here",
             disabled: areGeometriesTransformed(state),
           },
@@ -1034,7 +1041,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
             key: "create-node-with-tree",
             onClick: () => {
               Store.dispatch(createTreeAction());
-              handleCreateNodeFromGlobalPosition(globalPosition, viewport, false);
+              handleCreateNodeFromGlobalPosition(globalPositionForNode, viewport, false);
             },
             label: (
               <>

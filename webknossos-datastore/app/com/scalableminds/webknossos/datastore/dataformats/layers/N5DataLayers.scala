@@ -36,7 +36,7 @@ case class N5DataLayer(
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     override val numChannels: Option[Int] = Some(1),
     additionalAxes: Option[Seq[AdditionalAxis]] = None,
-    specialFiles: Option[Seq[SpecialFile]] = None,
+    specialFiles: Option[SpecialFiles] = None,
 ) extends N5Layer
 
 object N5DataLayer {
@@ -55,7 +55,7 @@ case class N5SegmentationLayer(
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     override val numChannels: Option[Int] = Some(1),
     additionalAxes: Option[Seq[AdditionalAxis]] = None,
-    specialFiles: Option[Seq[SpecialFile]] = None,
+    specialFiles: Option[SpecialFiles] = None,
 ) extends SegmentationLayer
     with N5Layer
 

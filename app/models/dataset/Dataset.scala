@@ -14,11 +14,15 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   AbstractDataLayer,
   AbstractSegmentationLayer,
   AdditionalAxis,
+  AgglomerateFileInfo,
   Category,
+  ConnectomeFileInfo,
   CoordinateTransformation,
   CoordinateTransformationType,
   DataSourceId,
   ElementClass,
+  MeshFileInfo,
+  SegmentIndexFileInfo,
   ThinPlateSplineCorrespondences,
   DataLayerLike => DataLayer
 }
@@ -1017,15 +1021,41 @@ class DatasetLayerSpecialFilesDAO @Inject()(sqlClient: SqlClient)(implicit ec: E
     val clearQuery =
       q"DELETE FROM webknossos.dataset_layer_special_files WHERE _dataset = $datasetId".asUpdate
     val insertQueries = dataLayersOpt.getOrElse(List.empty).flatMap { layer: DataLayer =>
-      layer.specialFiles.getOrElse(List.empty).map { specialFile =>
-        {
-          q"""INSERT INTO webknossos.dataset_layer_special_files(_dataset, layerName, path, type)
-              values(
-              $datasetId, ${layer.name}, ${specialFile.source.toString}, ${specialFile.typ})
-              """.asUpdate
-        }
+      layer.specialFiles match {
+        case Some(specialFiles) =>
+          specialFiles.agglomerates.map { agglomerate =>
+            q"""INSERT INTO webknossos.dataset_layer_special_files(_dataset, layerName, path, type, dataFormat, cumsumPath)
+                values(
+                $datasetId, ${layer.name}, ${agglomerate.source.toString},
+                ${AgglomerateFileInfo.typ}::webknossos.SPECIAL_FILE_TYPE,
+                ${agglomerate.dataFormat}::webknossos.SPECIAL_FILE_DATAFORMAT,
+                ${agglomerate.cumsumSource.toString})
+                """.asUpdate
+          } ++ specialFiles.connectomes.map { connectome =>
+            q"""INSERT INTO webknossos.dataset_layer_special_files(_dataset, layerName, path, type, dataFormat)
+                values(
+                $datasetId, ${layer.name}, ${connectome.source.toString},
+                ${ConnectomeFileInfo.typ}::webknossos.SPECIAL_FILE_TYPE,
+                ${connectome.dataFormat}::webknossos.SPECIAL_FILE_DATAFORMAT)
+                """.asUpdate
+          } ++ specialFiles.segmentIndex.map { segmentIndex =>
+            q"""INSERT INTO webknossos.dataset_layer_special_files(_dataset, layerName, path, type, dataFormat)
+                values(
+                $datasetId, ${layer.name}, ${segmentIndex.source.toString},
+                ${SegmentIndexFileInfo.typ}::webknossos.SPECIAL_FILE_TYPE,
+                ${segmentIndex.dataFormat}::webknossos.SPECIAL_FILE_DATAFORMAT)
+                """.asUpdate
+          } ++ specialFiles.meshes.map { mesh =>
+            q"""INSERT INTO webknossos.dataset_layer_special_files(_dataset, layerName, path, type, dataFormat)
+                values(
+                $datasetId, ${layer.name}, ${mesh.source.toString},
+                ${MeshFileInfo.typ}::webknossos.SPECIAL_FILE_TYPE,
+                ${mesh.dataFormat}::webknossos.SPECIAL_FILE_DATAFORMAT)
+                """.asUpdate
+          }
+        case None =>
+          List.empty
       }
-
     }
     replaceSequentiallyAsTransaction(clearQuery, insertQueries)
   }

@@ -35,7 +35,7 @@ case class ZarrDataLayer(
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     override val numChannels: Option[Int] = Some(1),
     override val additionalAxes: Option[Seq[AdditionalAxis]],
-    specialFiles: Option[Seq[SpecialFile]] = None,
+    specialFiles: Option[SpecialFiles] = None,
     override val dataFormat: DataFormat.Value,
 ) extends ZarrLayer
 
@@ -55,7 +55,7 @@ case class ZarrSegmentationLayer(
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     override val numChannels: Option[Int] = Some(1),
     additionalAxes: Option[Seq[AdditionalAxis]] = None,
-    specialFiles: Option[Seq[SpecialFile]] = None,
+    specialFiles: Option[SpecialFiles] = None,
     override val dataFormat: DataFormat.Value,
 ) extends SegmentationLayer
     with ZarrLayer

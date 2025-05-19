@@ -328,7 +328,7 @@ class DataSourceService @Inject()(
             val dataSourceWithSpecialFiles = dataSource.copy(
               dataLayers = scanForSpecialFiles(path, dataSource)
             )
-            if (true) { // TODO Decide: Should we always rewrite the JSON file ? Never? Sometimes?
+            if (false) { // TODO Decide: Should we always rewrite the JSON file ? Never? Sometimes?
               // Rewriting the JSON in this file could e.g. remove custom fields that are not in the schema
               // Also if there is an error somewhere here, the files could get corrupted
               JsonHelper.writeToFile(propertiesFile, dataSourceWithSpecialFiles).toOption match {
@@ -353,21 +353,15 @@ class DataSourceService @Inject()(
   private def scanForSpecialFiles(dataSourcePath: Path, dataSource: DataSource) =
     dataSource.dataLayers.map(dataLayer => {
       val dataLayerPath = dataSourcePath.resolve(dataLayer.name)
-      val discoveredSpecialFiles = SpecialFile.types.flatMap {
-        case (typ, extension, directory) =>
-          val dir = dataLayerPath.resolve(directory)
-          if (Files.exists(dir)) {
-            val paths: Box[List[Path]] =
-              PathUtils.listFiles(dir, silent = true, PathUtils.fileExtensionFilter(extension))
-            paths match {
-              case Full(p) => p.map(path => SpecialFile(path.toUri, typ))
-              case _       => logger.warn(s"Failed to list special files in $dir"); List()
-            }
-          } else {
-            List()
-          }
-      }.toList
-      dataLayer.withSpecialFiles(discoveredSpecialFiles)
+      val discoveredMeshFiles = MeshFileInfo.scanForMeshFiles(dataLayerPath)
+      val discoveredAgglomerateFiles = AgglomerateFileInfo.scanForAgglomerateFiles(dataLayerPath)
+      val discoveredSegmentIndexFile = SegmentIndexFileInfo.scanForSegmentIndexFiles(dataLayerPath)
+      val discoveredConnectomeFiles = ConnectomeFileInfo.scanForConnectomeFiles(dataLayerPath)
+      dataLayer.withSpecialFiles(
+        SpecialFiles(discoveredMeshFiles,
+                     discoveredAgglomerateFiles,
+                     discoveredSegmentIndexFile,
+                     discoveredConnectomeFiles))
     })
 
   def invalidateVaultCache(dataSource: InboxDataSource, dataLayerName: Option[String]): Option[Int] =

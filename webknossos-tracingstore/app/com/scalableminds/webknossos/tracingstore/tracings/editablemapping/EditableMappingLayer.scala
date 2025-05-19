@@ -17,7 +17,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   DataSourceId,
   ElementClass,
   SegmentationLayer,
-  SpecialFile
+  SpecialFiles
 }
 import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
@@ -105,7 +105,7 @@ case class EditableMappingLayer(name: String, // set to tracing id
 
   override def additionalAxes: Option[Seq[AdditionalAxis]] = None
 
-  override def specialFiles: Option[Seq[SpecialFile]] = None
+  override def specialFiles: Option[SpecialFiles] = None
 
   def version: Long = tracing.version
 

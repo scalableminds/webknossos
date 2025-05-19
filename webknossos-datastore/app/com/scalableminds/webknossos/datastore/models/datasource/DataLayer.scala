@@ -228,7 +228,7 @@ trait DataLayerLike {
   // n-dimensional datasets = 3-dimensional datasets with additional coordinate axes
   def additionalAxes: Option[Seq[AdditionalAxis]]
 
-  def specialFiles: Option[Seq[SpecialFile]]
+  def specialFiles: Option[SpecialFiles]
 
   // Datasets that are not in the WKW format use mags
   def magsOpt: Option[List[MagLocator]] = this match {
@@ -327,36 +327,40 @@ trait DataLayer extends DataLayerLike {
 
   def mags: List[MagLocator]
 
-  def withSpecialFiles(specialFiles: List[SpecialFile]): DataLayer = {
-    def mergeSpecialFiles(existingSpecialFiles: Option[Seq[SpecialFile]],
-                          newSpecialFiles: Seq[SpecialFile]): Option[Seq[SpecialFile]] =
+  def withSpecialFiles(specialFiles: SpecialFiles): DataLayer = {
+    def mergeSpecialFiles(existingSpecialFiles: Option[SpecialFiles],
+                          newSpecialFiles: SpecialFiles): Option[SpecialFiles] =
       existingSpecialFiles match {
         case None => Some(newSpecialFiles)
         case Some(existingFiles) =>
-          val existingFileURIs = existingFiles.map(_.source.toString).toSet
-          val newFiles = newSpecialFiles.filterNot(file => existingFileURIs.contains(file.source.toString))
-          if (newFiles.isEmpty) {
-            existingSpecialFiles
-          } else {
-            Some(existingFiles ++ newFiles)
-          }
+          val segmentIndex = newSpecialFiles.segmentIndex.orElse(existingFiles.segmentIndex)
+          val connectome = (newSpecialFiles.connectomes ++ existingFiles.connectomes).distinct
+          val agglomerateFiles =
+            (newSpecialFiles.agglomerates ++ existingFiles.agglomerates).distinct
+          val meshFiles =
+            (newSpecialFiles.meshes ++ existingFiles.meshes).distinct
+
+          Some(
+            SpecialFiles(
+              meshes = meshFiles,
+              agglomerates = agglomerateFiles,
+              segmentIndex = segmentIndex,
+              connectomes = connectome
+            ))
       }
-    if (specialFiles.nonEmpty) {
-      this match {
-        case l: N5DataLayer                  => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
-        case l: N5SegmentationLayer          => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
-        case l: PrecomputedDataLayer         => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
-        case l: PrecomputedSegmentationLayer => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
-        case l: Zarr3DataLayer               => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
-        case l: Zarr3SegmentationLayer       => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
-        case l: ZarrDataLayer                => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
-        case l: ZarrSegmentationLayer        => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
-        case l: WKWDataLayer                 => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
-        case l: WKWSegmentationLayer         => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
-        case _                               => this
-      }
-    } else {
-      this
+
+    this match {
+      case l: N5DataLayer                  => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
+      case l: N5SegmentationLayer          => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
+      case l: PrecomputedDataLayer         => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
+      case l: PrecomputedSegmentationLayer => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
+      case l: Zarr3DataLayer               => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
+      case l: Zarr3SegmentationLayer       => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
+      case l: ZarrDataLayer                => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
+      case l: ZarrSegmentationLayer        => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
+      case l: WKWDataLayer                 => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
+      case l: WKWSegmentationLayer         => l.copy(specialFiles = mergeSpecialFiles(l.specialFiles, specialFiles))
+      case _                               => this
     }
   }
 }
@@ -515,7 +519,7 @@ case class AbstractDataLayer(
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     additionalAxes: Option[Seq[AdditionalAxis]] = None,
-    specialFiles: Option[Seq[SpecialFile]] = None,
+    specialFiles: Option[SpecialFiles] = None,
     mags: Option[List[MagLocator]] = None,
     numChannels: Option[Int] = None,
     dataFormat: Option[DataFormat.Value] = None,
@@ -557,7 +561,7 @@ case class AbstractSegmentationLayer(
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     additionalAxes: Option[Seq[AdditionalAxis]] = None,
-    specialFiles: Option[Seq[SpecialFile]] = None,
+    specialFiles: Option[SpecialFiles] = None,
     mags: Option[List[MagLocator]] = None,
     numChannels: Option[Int] = None,
     dataFormat: Option[DataFormat.Value] = None,

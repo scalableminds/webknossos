@@ -36,7 +36,7 @@ case class PrecomputedDataLayer(
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     override val numChannels: Option[Int] = Some(1),
     additionalAxes: Option[Seq[AdditionalAxis]] = None,
-    specialFiles: Option[Seq[SpecialFile]] = None,
+    specialFiles: Option[SpecialFiles] = None,
 ) extends PrecomputedLayer
 
 object PrecomputedDataLayer {
@@ -55,7 +55,7 @@ case class PrecomputedSegmentationLayer(
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     override val numChannels: Option[Int] = Some(1),
     additionalAxes: Option[Seq[AdditionalAxis]] = None,
-    specialFiles: Option[Seq[SpecialFile]] = None,
+    specialFiles: Option[SpecialFiles] = None,
 ) extends SegmentationLayer
     with PrecomputedLayer
 

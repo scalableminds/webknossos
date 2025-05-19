@@ -22,10 +22,10 @@ object Zarr3Array extends LazyLogging with FoxImplicits {
            channelIndex: Option[Int],
            additionalAxes: Option[Seq[AdditionalAxis]],
            sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext,
-                                                                    tc: TokenContext): Fox[Zarr3Array] =
+                                                                    tc: TokenContext): Fox[Zarr3Array] = {
+    val headerPath = path / Zarr3ArrayHeader.FILENAME_ZARR_JSON
     for {
-      headerBytes <- (path / Zarr3ArrayHeader.FILENAME_ZARR_JSON)
-        .readBytes() ?~> s"Could not read header at ${Zarr3ArrayHeader.FILENAME_ZARR_JSON}"
+      headerBytes <- headerPath.readBytes() ?~> s"Could not read header at $headerPath"
       header <- JsonHelper.parseAs[Zarr3ArrayHeader](headerBytes).toFox ?~> "Could not parse array header"
       array <- tryo(
         new Zarr3Array(path,
@@ -37,6 +37,7 @@ object Zarr3Array extends LazyLogging with FoxImplicits {
                        additionalAxes,
                        sharedChunkContentsCache)).toFox ?~> "Could not open zarr3 array"
     } yield array
+  }
 }
 
 class Zarr3Array(vaultPath: VaultPath,

@@ -3,8 +3,13 @@ package com.scalableminds.webknossos.datastore.controllers
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.NativeBucketScanner
-import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
-import com.scalableminds.webknossos.datastore.services.ApplicationHealthService
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, ElementClass}
+import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
+import com.scalableminds.webknossos.datastore.services.{
+  AgglomerateService,
+  ApplicationHealthService,
+  ZarrAgglomerateService
+}
 import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
 import net.liftweb.common.Box.tryo
 
@@ -13,8 +18,9 @@ import play.api.mvc.{Action, AnyContent}
 
 import scala.concurrent.ExecutionContext
 
-class Application @Inject()(redisClient: DataStoreRedisStore, applicationHealthService: ApplicationHealthService)(
-    implicit ec: ExecutionContext)
+class Application @Inject()(redisClient: DataStoreRedisStore,
+                            applicationHealthService: ApplicationHealthService,
+                            agglomerateService: ZarrAgglomerateService)(implicit ec: ExecutionContext)
     extends Controller {
 
   override def allowRemoteOrigin: Boolean = true
@@ -31,6 +37,14 @@ class Application @Inject()(redisClient: DataStoreRedisStore, applicationHealthS
           s"Answering ok for Datastore health check, took ${formatDuration(afterRedis - before)} (Redis at ${redisClient.authority} ${formatDuration(
             afterRedis - before)})")
       } yield Ok("Ok")
+    }
+  }
+
+  def testAgglomerateZarr: Action[AnyContent] = Action.async { implicit request =>
+    log() {
+      for {
+        data <- agglomerateService.readFromSegmentToAgglomerate
+      } yield Ok(s"got ${data.length} bytes")
     }
   }
 

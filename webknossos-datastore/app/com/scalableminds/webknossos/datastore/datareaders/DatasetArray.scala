@@ -116,8 +116,9 @@ class DatasetArray(vaultPath: VaultPath,
   }
 
   // returns byte array in fortran-order with little-endian values
-  private def readBytes(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext,
-                                                               tc: TokenContext): Fox[Array[Byte]] =
+  // TODO should possibly be private again
+  def readBytes(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext,
+                                                       tc: TokenContext): Fox[Array[Byte]] =
     for {
       typedMultiArray <- readAsFortranOrder(shape, offset)
       asBytes <- BytesConverter.toByteArray(typedMultiArray, header.resolvedDataType, ByteOrder.LITTLE_ENDIAN).toFox

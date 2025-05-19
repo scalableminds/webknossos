@@ -2,7 +2,9 @@ import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import type { Edge } from "viewer/store";
-type EdgeMap = DiffableMap<number, Array<Edge>>;
+
+type EdgeMap = DiffableMap<number, Edge[]>;
+
 export default class EdgeCollection {
   // Edge map keyed by the source id of the edges (outgoing)
   outMap: EdgeMap;
@@ -16,19 +18,19 @@ export default class EdgeCollection {
     this.edgeCount = 0;
   }
 
-  getEdgesForNode(nodeId: number): Array<Edge> {
+  getEdgesForNode(nodeId: number): Edge[] {
     return this.getOutgoingEdgesForNode(nodeId).concat(this.getIngoingEdgesForNode(nodeId));
   }
 
-  getOutgoingEdgesForNode(nodeId: number): Array<Edge> {
+  getOutgoingEdgesForNode(nodeId: number): Edge[] {
     return this.outMap.getNullable(nodeId) || [];
   }
 
-  getIngoingEdgesForNode(nodeId: number): Array<Edge> {
+  getIngoingEdgesForNode(nodeId: number): Edge[] {
     return this.inMap.getNullable(nodeId) || [];
   }
 
-  addEdges(edges: Array<Edge>, mutate: boolean = false): EdgeCollection {
+  addEdges(edges: Edge[], mutate: boolean = false): EdgeCollection {
     const newOutgoingEdges = mutate ? this.outMap : this.outMap.clone();
     const newIngoingEdges = mutate ? this.inMap : this.inMap.clone();
     const newEdgeCount = this.edgeCount + edges.length;
@@ -96,7 +98,7 @@ export default class EdgeCollection {
     }
   }
 
-  asArray(): Array<Edge> {
+  asArray(): Edge[] {
     return Array.from(this.all());
   }
 
@@ -112,10 +114,10 @@ export default class EdgeCollection {
     return cloned;
   }
 
-  static loadFromArray(edges: Array<Edge>): EdgeCollection {
+  static loadFromArray(edges: Edge[]): EdgeCollection {
     // Build up temporary data structures for fast bulk processing
-    const rawOutMap: Record<number, Array<Edge>> = {};
-    const rawInMap: Record<number, Array<Edge>> = {};
+    const rawOutMap: Record<number, Edge[]> = {};
+    const rawInMap: Record<number, Edge[]> = {};
     edges.forEach((edge) => {
       if (rawOutMap[edge.source]) {
         rawOutMap[edge.source].push(edge);
@@ -161,8 +163,8 @@ export function diffEdgeCollections(
   edgeCollectionA: EdgeCollection,
   edgeCollectionB: EdgeCollection,
 ): {
-  onlyA: Array<Edge>;
-  onlyB: Array<Edge>;
+  onlyA: Edge[];
+  onlyB: Edge[];
 } {
   // Since inMap and outMap are symmetrical to each other, it suffices to only diff the outMaps
   const mapDiff = diffDiffableMaps(edgeCollectionA.outMap, edgeCollectionB.outMap);

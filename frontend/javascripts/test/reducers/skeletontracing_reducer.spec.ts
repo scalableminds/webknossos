@@ -1,4 +1,3 @@
-import _ from "lodash";
 import update from "immutability-helper";
 import ChainReducer from "test/helpers/chainReducer";
 import DiffableMap from "libs/diffable_map";
@@ -191,8 +190,8 @@ describe("SkeletonTracing", () => {
     expect(newStateB).not.toBe(newState);
     expect(newStateB).not.toBe(newStateA);
     expect(newStateA).not.toBe(newState);
-    expect(enforceSkeletonTracing(newStateB.annotation).trees.toObject()).toEqual(
-      enforceSkeletonTracing(newState.annotation).trees.toObject(),
+    expect(enforceSkeletonTracing(newStateB.annotation).trees).toEqual(
+      enforceSkeletonTracing(newState.annotation).trees,
     );
   });
 

@@ -24,9 +24,6 @@ class DiffableMap<K extends number, V> {
   /** Maximum number of items per chunk before creating a new chunk */
   itemsPerBatch: number;
 
-  // @ts-expect-error: Property '[idSymbol]' has no initializer and is not definitely assigned in the constructor.ts(2564)
-  private [idSymbol]: number;
-
   /**
    * Creates a new DiffableMap instance
    *
@@ -38,7 +35,7 @@ class DiffableMap<K extends number, V> {
     itemsPerBatch: number = defaultItemsPerBatch,
   ) {
     // Make the id property not enumerable so that it does not interfere with tests
-    // Ava's deepEquals uses Object.getOwnProperties() to obtain all Object keys
+    // Vitest's toEqual uses Object.getOwnProperties() to obtain all Object keys
     // Luckily "Symbols" don't count as properties
     Object.defineProperty(this, idSymbol, {
       value: idCounter++,
@@ -85,6 +82,7 @@ class DiffableMap<K extends number, V> {
    * @returns The map's unique ID
    */
   getId(): number {
+    // @ts-expect-error: Property '[idSymbol]' is defined by Object.defineProperty in constructor to avoid issues with testing
     return this[idSymbol];
   }
 
@@ -95,6 +93,7 @@ class DiffableMap<K extends number, V> {
    * @param id The ID to set
    */
   setId(id: number): void {
+    // @ts-expect-error: Property '[idSymbol]' is defined by Object.defineProperty in constructor to avoid issues with testing
     this[idSymbol] = id;
   }
 

@@ -23,6 +23,7 @@ import {
   MISSING_GROUP_ID,
   findGroup,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import { max } from "../helpers/iterator_utils";
 import { invertTransform, transformPointUnscaled } from "../helpers/transformation_helpers";
 import {
   getTransformsForLayerThatDoesNotSupportTransformationConfigOrNull,
@@ -132,10 +133,12 @@ export function getTreesWithType(
    * Returns trees of a specific type or all trees if no type is provided.
    */
   return type != null
-    ? skeletonTracing.trees
-        .entries()
-        .filter(([_, tree]) => tree.type === type)
-        .reduce((newMap, [key, value]) => newMap.set(key, value), new DiffableMap<number, Tree>())
+    ? new DiffableMap(
+        skeletonTracing.trees
+          .entries()
+          .filter(([_, tree]) => tree.type === type)
+          .toArray(),
+      )
     : skeletonTracing.trees;
 }
 
@@ -266,20 +269,15 @@ export function untransformNodePosition(position: Vector3, state: WebknossosStat
 }
 
 export function getMaxNodeIdInTree(tree: Tree): number | null {
-  const maxNodeId = tree.nodes
-    .keys()
-    .reduce((r, nodeId) => Math.max(r, nodeId), Number.NEGATIVE_INFINITY);
-
-  return maxNodeId === Number.NEGATIVE_INFINITY ? null : maxNodeId;
+  return max(tree.nodes.values().map((node) => node.id));
 }
 
 export function getMaxNodeId(skeletonTracing: SkeletonTracing): number | null {
-  const maxNodeId = skeletonTracing.trees.values().reduce((r, tree) => {
-    const treeMaxId = getMaxNodeIdInTree(tree);
-    return Math.max(r, treeMaxId ?? Number.NEGATIVE_INFINITY);
-  }, Number.NEGATIVE_INFINITY);
-
-  return maxNodeId === Number.NEGATIVE_INFINITY ? null : maxNodeId;
+  return max(
+    skeletonTracing.trees
+      .values()
+      .map((tree) => getMaxNodeIdInTree(tree) ?? Number.NEGATIVE_INFINITY),
+  );
 }
 
 export function getBranchPoints(annotation: StoreAnnotation): IteratorObject<BranchPoint[]> | null {

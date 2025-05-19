@@ -350,7 +350,7 @@ function splitTreeByNodes(
           return null;
         }
 
-        let newTree: MutableTree | null;
+        let newTree: MutableTree | null = null;
 
         if (index === 0) {
           // Reuse the properties of the original tree for the first tree

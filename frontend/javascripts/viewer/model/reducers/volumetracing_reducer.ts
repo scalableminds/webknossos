@@ -175,6 +175,9 @@ function handleRemoveSegment(state: WebknossosState, action: RemoveSegmentAction
 function handleUpdateSegment(state: WebknossosState, action: UpdateSegmentAction) {
   return updateSegments(state, action.layerName, (segments) => {
     const { segmentId, segment } = action;
+    if (segmentId === 0) {
+      return segments;
+    }
     const oldSegment = segments.getNullable(segmentId);
 
     let somePosition;

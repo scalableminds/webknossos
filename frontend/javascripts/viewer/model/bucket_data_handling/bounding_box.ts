@@ -2,26 +2,22 @@ import { V3 } from "libs/mjs";
 import { map3, mod } from "libs/utils";
 import _ from "lodash";
 import type { BoundingBoxType, OrthoView, Vector2, Vector3, Vector4 } from "viewer/constants";
-import constants, { Vector3Indicies } from "viewer/constants";
+import constants from "viewer/constants";
 import type { BoundingBoxObject } from "viewer/store";
 import Dimensions from "../dimensions";
-import type { MagInfo } from "../helpers/mag_info";
 
 class BoundingBox {
+  // Min is including, max is excluding
   min: Vector3;
   max: Vector3;
 
   constructor(boundingBox: BoundingBoxType | null | undefined) {
-    // Min is including
-    this.min = [Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY];
-    // Max is excluding
-    this.max = [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY];
-
-    if (boundingBox != null) {
-      for (const i of Vector3Indicies) {
-        this.min[i] = Math.max(this.min[i], boundingBox.min[i]);
-        this.max[i] = Math.min(this.max[i], boundingBox.max[i]);
-      }
+    if (boundingBox == null) {
+      this.min = [Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY];
+      this.max = [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY];
+    } else {
+      this.min = boundingBox.min.slice() as Vector3;
+      this.max = boundingBox.max.slice() as Vector3;
     }
   }
 
@@ -42,34 +38,33 @@ class BoundingBox {
     return [u, v];
   }
 
-  getBoxForZoomStep = _.memoize((mag: Vector3): BoundingBoxType => {
-    // No `map` for performance reasons
-    const min = [0, 0, 0] as Vector3;
-    const max = [0, 0, 0] as Vector3;
+  static fromBucketAddress(address: Vector4, mag: Vector3): BoundingBox {
+    return new BoundingBox(this.fromBucketAddressFast(address, mag));
+  }
 
-    for (let i = 0; i < 3; i++) {
-      const divisor = constants.BUCKET_WIDTH * mag[i];
-      min[i] = Math.floor(this.min[i] / divisor);
-      max[i] = Math.ceil(this.max[i] / divisor);
-    }
-
-    return {
-      min,
-      max,
-    };
-  });
-
-  containsBucket([x, y, z, zoomStep]: Vector4, magInfo: MagInfo): boolean {
-    /* Checks whether a bucket is contained in the active bounding box.
-     * If the passed magInfo does not contain the passed zoomStep, this method
-     * returns false.
+  static fromBucketAddressFast(
+    [x, y, z, _zoomStep]: Vector4,
+    mag: Vector3,
+  ): { min: Vector3; max: Vector3 } {
+    /*
+     The fast variant does not allocate a Bounding Box instance which can be helpful for tight loops.
      */
-    const magIndex = magInfo.getMagByIndex(zoomStep);
-    if (magIndex == null) {
-      return false;
-    }
-    const { min, max } = this.getBoxForZoomStep(magIndex);
-    return min[0] <= x && x < max[0] && min[1] <= y && y < max[1] && min[2] <= z && z < max[2];
+    const bucketSize = constants.BUCKET_WIDTH;
+
+    // Precompute scaled sizes once
+    const sx = bucketSize * mag[0];
+    const sy = bucketSize * mag[1];
+    const sz = bucketSize * mag[2];
+
+    // Bucket bounds in world space
+    const bxMin = x * sx;
+    const byMin = y * sy;
+    const bzMin = z * sz;
+    const bxMax = bxMin + sx;
+    const byMax = byMin + sy;
+    const bzMax = bzMin + sz;
+
+    return { min: [bxMin, byMin, bzMin], max: [bxMax, byMax, bzMax] };
   }
 
   containsPoint(vec3: Vector3) {
@@ -87,6 +82,13 @@ class BoundingBox {
   }
 
   intersectedWith(other: BoundingBox): BoundingBox {
+    return new BoundingBox(this.intersectedWithFast(other));
+  }
+
+  intersectedWithFast(other: { min: Vector3; max: Vector3 }): { min: Vector3; max: Vector3 } {
+    /*
+     The fast variant does not allocate a Bounding Box instance which can be helpful for tight loops.
+     */
     const newMin = V3.max(this.min, other.min);
     const uncheckedMax = V3.min(this.max, other.max);
 
@@ -94,10 +96,10 @@ class BoundingBox {
     // extent.
     const newMax = V3.max(newMin, uncheckedMax);
 
-    return new BoundingBox({
+    return {
       min: newMin,
       max: newMax,
-    });
+    };
   }
 
   extend(other: BoundingBox): BoundingBox {

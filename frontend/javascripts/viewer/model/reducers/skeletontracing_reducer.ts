@@ -46,6 +46,7 @@ import {
 import type { SkeletonTracing, Tree, TreeGroup, TreeMap, WebknossosState } from "viewer/store";
 import {
   GroupTypeEnum,
+  additionallyExpandGroup,
   getNodeKey,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { max, maxBy } from "../helpers/iterator_utils";
@@ -521,6 +522,22 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
     case "SET_EXPANDED_TREE_GROUPS_BY_IDS": {
       const { expandedGroups } = action;
 
+      return setExpandedTreeGroups(state, (group: TreeGroup) => expandedGroups.has(group.groupId));
+    }
+
+    case "EXPAND_PARENT_GROUPS_OF_TREE": {
+      const { tree } = action;
+      if (tree.groupId == null || state.annotation.skeleton == null) {
+        return state;
+      }
+      const expandedGroups = additionallyExpandGroup(
+        state.annotation.skeleton.treeGroups,
+        tree.groupId,
+        _.identity,
+      );
+      if (expandedGroups == null) {
+        return state;
+      }
       return setExpandedTreeGroups(state, (group: TreeGroup) => expandedGroups.has(group.groupId));
     }
 

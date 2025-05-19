@@ -52,84 +52,77 @@ import {
 import { max, maxBy } from "../helpers/iterator_utils";
 
 function SkeletonTracingReducer(state: WebknossosState, action: Action): WebknossosState {
-  // if (state.annotation.skeleton == null) {
-  //   return state;
-  // }
+  if (action.type === "INITIALIZE_SKELETONTRACING") {
+    const trees = createTreeMapFromTreeArray(action.tracing.trees);
+    let activeNodeId = action.tracing.activeNodeId;
 
-  switch (action.type) {
-    case "INITIALIZE_SKELETONTRACING": {
-      const trees = createTreeMapFromTreeArray(action.tracing.trees);
-      let activeNodeId = action.tracing.activeNodeId;
+    let cachedMaxNodeId = max(trees.values().flatMap((__) => __.nodes.map((node) => node.id)));
 
-      let cachedMaxNodeId = max(trees.values().flatMap((__) => __.nodes.map((node) => node.id)));
+    cachedMaxNodeId = cachedMaxNodeId != null ? cachedMaxNodeId : Constants.MIN_NODE_ID - 1;
 
-      cachedMaxNodeId = cachedMaxNodeId != null ? cachedMaxNodeId : Constants.MIN_NODE_ID - 1;
+    let activeTreeId = null;
 
-      let activeTreeId = null;
-
-      // Find active tree based on active node or pick the last tree
-      if (activeNodeId != null) {
-        // use activeNodeId to find active tree
-        const tree = findTreeByNodeId(trees, activeNodeId);
-        if (tree) {
-          activeTreeId = tree.treeId;
-        } else {
-          // There is an activeNodeId without a corresponding tree.
-          // Warn the user, since this shouldn't happen, but clear the activeNodeId
-          // so that wk is usable.
-          Toast.warning(
-            `Annotation was initialized with active node ID ${activeNodeId}, which is not present in the trees. Falling back to last tree instead.`,
-            {
-              timeout: 10000,
-            },
-          );
-          activeNodeId = undefined;
-        }
-      }
-
-      // If no active tree was found yet, use the last tree
-      if (activeTreeId == null) {
-        const lastTree = maxBy(trees.values(), "treeId");
-        if (lastTree) {
-          activeTreeId = lastTree.treeId;
-          // use last node for active node
-          const lastNode = _.maxBy(Array.from(lastTree.nodes.values()), (node) => node.id);
-          activeNodeId = lastNode?.id;
-        }
-      }
-
-      const userBoundingBoxes = convertUserBoundingBoxesFromServerToFrontend(
-        action.tracing.userBoundingBoxes,
-      );
-      const skeletonTracing: SkeletonTracing = {
-        createdTimestamp: action.tracing.createdTimestamp,
-        type: "skeleton",
-        activeNodeId,
-        cachedMaxNodeId,
-        activeTreeId,
-        activeGroupId: null,
-        trees,
-        treeGroups: action.tracing.treeGroups || [],
-        tracingId: action.tracing.id,
-        boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
-        userBoundingBoxes,
-        navigationList: {
-          list: [],
-          activeIndex: -1,
-        },
-        showSkeletons: true,
-        additionalAxes: convertServerAdditionalAxesToFrontEnd(action.tracing.additionalAxes),
-      };
-      return update(state, {
-        annotation: {
-          skeleton: {
-            $set: skeletonTracing,
+    // Find active tree based on active node or pick the last tree
+    if (activeNodeId != null) {
+      // use activeNodeId to find active tree
+      const tree = findTreeByNodeId(trees, activeNodeId);
+      if (tree) {
+        activeTreeId = tree.treeId;
+      } else {
+        // There is an activeNodeId without a corresponding tree.
+        // Warn the user, since this shouldn't happen, but clear the activeNodeId
+        // so that wk is usable.
+        Toast.warning(
+          `Annotation was initialized with active node ID ${activeNodeId}, which is not present in the trees. Falling back to last tree instead.`,
+          {
+            timeout: 10000,
           },
-        },
-      });
+        );
+        activeNodeId = undefined;
+      }
     }
 
-    default: // pass
+    // If no active tree was found yet, use the last tree
+    if (activeTreeId == null) {
+      const lastTree = maxBy(trees.values(), "treeId");
+      if (lastTree) {
+        activeTreeId = lastTree.treeId;
+        // use last node for active node
+        const lastNode = _.maxBy(Array.from(lastTree.nodes.values()), (node) => node.id);
+        activeNodeId = lastNode?.id;
+      }
+    }
+
+    const userBoundingBoxes = convertUserBoundingBoxesFromServerToFrontend(
+      action.tracing.userBoundingBoxes,
+    );
+    const skeletonTracing: SkeletonTracing = {
+      createdTimestamp: action.tracing.createdTimestamp,
+      type: "skeleton",
+      activeNodeId,
+      cachedMaxNodeId,
+      activeTreeId,
+      activeGroupId: null,
+      trees,
+      treeGroups: action.tracing.treeGroups || [],
+      tracingId: action.tracing.id,
+      boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
+      userBoundingBoxes,
+      navigationList: {
+        list: [],
+        activeIndex: -1,
+      },
+      showSkeletons: true,
+      additionalAxes: convertServerAdditionalAxesToFrontEnd(action.tracing.additionalAxes),
+    };
+
+    return update(state, {
+      annotation: {
+        skeleton: {
+          $set: skeletonTracing,
+        },
+      },
+    });
   }
 
   const skeletonTracing = getSkeletonTracing(state.annotation);
@@ -188,7 +181,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
           },
         }),
       );
-      const newTrees = state.annotation.skeleton.trees.set(tree.treeId, {
+      const newTrees = skeletonTracing.trees.set(tree.treeId, {
         ...tree,
         nodes: newDiffableMap,
       });
@@ -361,7 +354,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
         return state;
       }
       const [updatedTree, treeId] = result;
-      const newTrees = state.annotation.skeleton.trees.set(treeId, updatedTree);
+      const newTrees = skeletonTracing.trees.set(treeId, updatedTree);
 
       return update(state, {
         annotation: {
@@ -381,7 +374,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
         return state;
       }
 
-      const newTrees = state.annotation.skeleton.trees.set(tree.treeId, { ...tree, color: color });
+      const newTrees = skeletonTracing.trees.set(tree.treeId, { ...tree, color: color });
 
       return update(state, {
         annotation: {
@@ -405,7 +398,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
         return state;
       }
       const [updatedTree, treeId] = result;
-      const newTrees = state.annotation.skeleton.trees.set(treeId, updatedTree);
+      const newTrees = skeletonTracing.trees.set(treeId, updatedTree);
 
       return update(state, {
         annotation: {
@@ -425,7 +418,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
         return state;
       }
 
-      const newTrees = state.annotation.skeleton.trees.set(treeId, { ...tree, type: treeType });
+      const newTrees = skeletonTracing.trees.set(treeId, { ...tree, type: treeType });
 
       return update(state, {
         annotation: {
@@ -441,8 +434,8 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
     case "SHUFFLE_ALL_TREE_COLORS": {
       const newColors = ColorGenerator.getNRandomColors(skeletonTracing.trees.size());
 
-      let newTrees = state.annotation.skeleton.trees;
-      state.annotation.skeleton.trees.values().forEach(
+      let newTrees = skeletonTracing.trees;
+      skeletonTracing.trees.values().forEach(
         // @ts-ignore newColors.shift() can be undefined
         (tree) => (newTrees = newTrees.set(tree.treeId, { ...tree, color: newColors.shift() })),
       );
@@ -475,7 +468,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
         return state;
       }
 
-      const newTrees = state.annotation.skeleton.trees.set(tree.treeId, {
+      const newTrees = skeletonTracing.trees.set(tree.treeId, {
         ...tree,
         isVisible: !tree.isVisible,
       });
@@ -498,7 +491,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
         return state;
       }
 
-      const newTrees = state.annotation.skeleton.trees.set(tree.treeId, { ...tree, isVisible });
+      const newTrees = skeletonTracing.trees.set(tree.treeId, { ...tree, isVisible });
 
       return update(state, {
         annotation: {
@@ -527,11 +520,11 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
 
     case "EXPAND_PARENT_GROUPS_OF_TREE": {
       const { tree } = action;
-      if (tree.groupId == null || state.annotation.skeleton == null) {
+      if (tree.groupId == null || skeletonTracing == null) {
         return state;
       }
       const expandedGroups = additionallyExpandGroup(
-        state.annotation.skeleton.treeGroups,
+        skeletonTracing.treeGroups,
         tree.groupId,
         _.identity,
       );
@@ -570,7 +563,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
         return state;
       }
 
-      const newTrees = state.annotation.skeleton.trees.set(activeTree.treeId, {
+      const newTrees = skeletonTracing.trees.set(activeTree.treeId, {
         ...activeTree,
         isVisible: true,
       });
@@ -670,7 +663,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
       const activeNodeId = action.dontActivate ? skeletonTracing.activeNodeId : node.id;
       const activeTreeId = action.dontActivate ? skeletonTracing.activeTreeId : tree.treeId;
 
-      const newTrees = state.annotation.skeleton.trees.set(tree.treeId, newTree);
+      const newTrees = skeletonTracing.trees.set(tree.treeId, newTree);
 
       return update(state, {
         annotation: {
@@ -801,7 +794,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
         }),
       );
 
-      const newTrees = state.annotation.skeleton.trees.set(tree.treeId, {
+      const newTrees = skeletonTracing.trees.set(tree.treeId, {
         ...tree,
         nodes: newNodesMap,
       });
@@ -830,7 +823,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
         return state;
       }
 
-      const newTrees = state.annotation.skeleton.trees.set(tree.treeId, {
+      const newTrees = skeletonTracing.trees.set(tree.treeId, {
         ...tree,
         branchPoints: [...tree.branchPoints, branchPoint],
       });
@@ -852,8 +845,8 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
         return state;
       }
       const [branchPoints, treeId, newActiveNodeId] = branchPointResult;
-      const tree = state.annotation.skeleton.trees.getOrThrow(treeId);
-      const newTrees = state.annotation.skeleton.trees.set(treeId, {
+      const tree = skeletonTracing.trees.getOrThrow(treeId);
+      const newTrees = skeletonTracing.trees.set(treeId, {
         ...tree,
         branchPoints,
       });
@@ -885,7 +878,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
         return state;
       }
 
-      const newTrees = state.annotation.skeleton.trees.set(tree.treeId, {
+      const newTrees = skeletonTracing.trees.set(tree.treeId, {
         ...tree,
         branchPoints: tree.branchPoints.filter((bp) => bp.nodeId !== nodeId),
       });
@@ -911,7 +904,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
       if (action.treeIdCallback) {
         action.treeIdCallback(tree.treeId);
       }
-      const newTrees = state.annotation.skeleton.trees.set(tree.treeId, tree);
+      const newTrees = skeletonTracing.trees.set(tree.treeId, tree);
 
       return update(state, {
         annotation: {
@@ -951,7 +944,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
         );
       }
 
-      const newTrees = DiffableMap.merge(state.annotation.skeleton.trees, updatedTrees);
+      const newTrees = DiffableMap.merge(skeletonTracing.trees, updatedTrees);
 
       return update(state, {
         annotation: {
@@ -1083,7 +1076,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
       }
 
       const defaultName = `Tree${Utils.zeroPad(tree.treeId, 3)}`;
-      const newTrees = state.annotation.skeleton.trees.set(tree.treeId, {
+      const newTrees = skeletonTracing.trees.set(tree.treeId, {
         ...tree,
         name: action.name || defaultName,
       });
@@ -1105,7 +1098,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
         return state;
       }
 
-      const newTrees = state.annotation.skeleton.trees.set(tree.treeId, {
+      const newTrees = skeletonTracing.trees.set(tree.treeId, {
         ...tree,
         metadata: sanitizeMetadata(action.metadata),
       });
@@ -1127,7 +1120,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
         return state;
       }
 
-      const newTrees = state.annotation.skeleton.trees.set(tree.treeId, {
+      const newTrees = skeletonTracing.trees.set(tree.treeId, {
         ...tree,
         edgesAreVisible: action.edgesAreVisible,
       });
@@ -1156,7 +1149,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
         return state;
       }
 
-      const newTrees = state.annotation.skeleton.trees.set(tree.treeId, {
+      const newTrees = skeletonTracing.trees.set(tree.treeId, {
         ...tree,
         comments,
       });
@@ -1184,7 +1177,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
         return state;
       }
 
-      const newTrees = state.annotation.skeleton.trees.set(tree.treeId, {
+      const newTrees = skeletonTracing.trees.set(tree.treeId, {
         ...tree,
         comments,
       });
@@ -1204,7 +1197,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
       const { treeGroups } = action;
 
       const updatedTrees = removeMissingGroupsFromTrees(skeletonTracing, treeGroups);
-      const newTrees = DiffableMap.merge(state.annotation.skeleton.trees, updatedTrees);
+      const newTrees = DiffableMap.merge(skeletonTracing.trees, updatedTrees);
 
       return update(state, {
         annotation: {
@@ -1227,7 +1220,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
         return state;
       }
 
-      const newTrees = state.annotation.skeleton.trees.set(tree.treeId, {
+      const newTrees = skeletonTracing.trees.set(tree.treeId, {
         ...tree,
         groupId: groupId,
       });

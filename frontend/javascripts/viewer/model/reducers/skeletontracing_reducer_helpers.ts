@@ -104,10 +104,7 @@ function getNearestTreeId(treeId: number, trees: TreeMap): number {
 }
 
 export function getMaximumGroupId(groups: TreeGroup[]): number {
-  const maxGroupId = mapGroupsToGenerator(groups, (group) => group.groupId).reduce(
-    (r, groupId) => Math.max(r, groupId),
-    Number.NEGATIVE_INFINITY,
-  );
+  const maxGroupId = max(mapGroupsToGenerator(groups, (group) => group.groupId));
 
   return maxGroupId != null && maxGroupId >= 0 ? maxGroupId : 0;
 }
@@ -604,37 +601,41 @@ export function addTreesAndGroups(
 
   trees.values().forEach((tree) => {
     const newNodes: MutableNodeMap = new DiffableMap();
+    const newTree = { ...tree };
 
     for (const node of tree.nodes.values()) {
       node.id = idMap[node.id];
       newNodes.mutableSet(node.id, node);
     }
 
-    tree.nodes = newNodes;
-    tree.edges = EdgeCollection.loadFromArray(
+    newTree.nodes = newNodes;
+    newTree.edges = EdgeCollection.loadFromArray(
       tree.edges.map((edge) => ({
         source: idMap[edge.source],
         target: idMap[edge.target],
       })),
     );
 
-    for (const comment of tree.comments) {
+    newTree.comments = tree.comments.map((comment) => ({
+      ...comment,
       // Comments can reference other nodes, rewrite those references if the referenced id changed
-      comment.nodeId = idMap[comment.nodeId];
-      comment.content = comment.content.replace(
+      nodeId: idMap[comment.nodeId],
+      content: comment.content.replace(
         NODE_ID_REF_REGEX,
         (__, p1) => `#${idMap[Number(p1)] != null ? idMap[Number(p1)] : p1}`,
-      );
-    }
+      ),
+    }));
 
-    for (const bp of tree.branchPoints) {
-      bp.nodeId = idMap[bp.nodeId];
-    }
+    newTree.branchPoints = tree.branchPoints.map((bp) => ({
+      ...bp,
+      nodeId: idMap[bp.nodeId],
+    }));
 
     // Assign the new group id to the tree if the tree belongs to a group
-    tree.groupId = tree.groupId != null ? groupIdMap[tree.groupId] : tree.groupId;
-    tree.treeId = newTreeId;
-    newTrees.set(tree.treeId, tree);
+    newTree.groupId = tree.groupId != null ? groupIdMap[tree.groupId] : tree.groupId;
+    newTree.treeId = newTreeId;
+
+    newTrees.mutableSet(newTreeId, newTree);
     newTreeId++;
   });
 

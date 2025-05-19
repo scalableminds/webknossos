@@ -884,16 +884,19 @@ describe("NML", () => {
         target: 1,
       },
     ]);
+    const firstTree = skeletonTracing.trees.getOrThrow(1);
+    const newTrees = skeletonTracing.trees.set(1, { ...firstTree, edges });
 
     const disconnectedTreeState = update(initialState, {
       annotation: {
         skeleton: {
           trees: {
-            $set: skeletonTracing.trees.set(1, { ...skeletonTracing.trees.getOrThrow(1), edges }),
+            $set: newTrees,
           },
         },
       },
     });
+
     const nmlWithDisconnectedTree = serializeToNml(
       disconnectedTreeState,
       disconnectedTreeState.annotation,

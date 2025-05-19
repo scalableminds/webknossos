@@ -926,9 +926,11 @@ export function parseNml(nmlString: string): Promise<{
               edgesAreVisible: _parseBool(attr, "edgesAreVisible", { defaultValue: true }),
               metadata: [],
             };
+
             if (trees.getNullable(currentTree.treeId) != null)
               throw new NmlParseError(`${messages["nml.duplicate_tree_id"]} ${currentTree.treeId}`);
             trees.mutableSet(currentTree.treeId, currentTree);
+
             break;
           }
 
@@ -992,8 +994,8 @@ export function parseNml(nmlString: string): Promise<{
 
           case "edge": {
             const currentEdge = {
-              source: _parseInt<never>(attr, "source"),
-              target: _parseInt<never>(attr, "target"),
+              source: _parseInt<number>(attr, "source"),
+              target: _parseInt<number>(attr, "target"),
             };
             const edgeHash = getEdgeHash(currentEdge.source, currentEdge.target);
             if (currentTree == null)
@@ -1132,7 +1134,7 @@ export function parseNml(nmlString: string): Promise<{
           case "thing": {
             if (currentTree != null) {
               if (currentTree.nodes.size() > 0) {
-                const timestamp = min(currentTree.nodes.values().map((n) => n.timestamp));
+                const timestamp = min(currentTree.nodes.values().map((n) => n.timestamp)) ?? 0;
 
                 trees.mutableSet(currentTree.treeId, { ...currentTree, timestamp });
               }

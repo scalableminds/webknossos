@@ -10,6 +10,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, SkeletonTracing, Tree, TreeTypeProto}
+import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, SkeletonTracingDefaults}
@@ -64,7 +65,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService
       zarrArray <- Zarr3Array.open(segmentToAgglomeratePath,
                                    DataSourceId("zarr", "test"),
                                    "layer",
-                                   None,
+                                   Some(AxisOrder(0, None, None)),
                                    None,
                                    None,
                                    sharedChunkContentsCache)(ec, TokenContext(None))

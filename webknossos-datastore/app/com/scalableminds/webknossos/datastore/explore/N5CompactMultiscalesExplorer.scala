@@ -54,7 +54,7 @@ class N5CompactMultiscalesExplorer(implicit val ec: ExecutionContext) extends N5
     for {
       mag <- tryo(
         Vec3Int(downsamplingFactor(axisOrder.x),
-                downsamplingFactor(axisOrder.y),
+                downsamplingFactor(axisOrder.yWithFallback),
                 downsamplingFactor(axisOrder.zWithFallback))).toFox
       magPath = remotePath / s"s$magIndex"
       headerPath = magPath / N5Header.FILENAME_ATTRIBUTES_JSON

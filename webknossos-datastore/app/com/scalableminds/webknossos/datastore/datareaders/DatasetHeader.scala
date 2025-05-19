@@ -40,13 +40,17 @@ trait DatasetHeader {
 
   def boundingBox(axisOrder: AxisOrder): Option[BoundingBox] =
     datasetShape.flatMap { shape =>
-      if (Math.max(Math.max(axisOrder.x, axisOrder.y), axisOrder.zWithFallback) >= rank && axisOrder.hasZAxis)
+      if (Math.max(Math.max(axisOrder.x, axisOrder.yWithFallback), axisOrder.zWithFallback) >= rank && axisOrder.hasZAxis)
         None
       else {
         if (axisOrder.hasZAxis) {
-          Some(BoundingBox(Vec3Int.zeros, shape(axisOrder.x), shape(axisOrder.y), shape(axisOrder.zWithFallback)))
+          Some(
+            BoundingBox(Vec3Int.zeros,
+                        shape(axisOrder.x),
+                        shape(axisOrder.yWithFallback),
+                        shape(axisOrder.zWithFallback)))
         } else {
-          Some(BoundingBox(Vec3Int.zeros, shape(axisOrder.x), shape(axisOrder.y), 1))
+          Some(BoundingBox(Vec3Int.zeros, shape(axisOrder.x), shape(axisOrder.yWithFallback), 1))
         }
       }
     }

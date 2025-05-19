@@ -19,7 +19,7 @@ trait N5Explorer extends RemoteLayerExplorer {
       case Some(units) =>
         for {
           xUnitFactor <- spaceUnitToNmFactor(units(axisOrder.x))
-          yUnitFactor <- spaceUnitToNmFactor(units(axisOrder.y))
+          yUnitFactor <- spaceUnitToNmFactor(units(axisOrder.yWithFallback))
           zUnitFactor <- spaceUnitToNmFactor(units(axisOrder.zWithFallback))
         } yield Vec3Double(xUnitFactor, yUnitFactor, zUnitFactor)
       case None => Fox.successful(Vec3Double(1e3, 1e3, 1e3)) // assume default micrometers
@@ -52,11 +52,11 @@ trait N5Explorer extends RemoteLayerExplorer {
     val cOpt = if (c == -1) None else Some(c)
     for {
       _ <- Fox.fromBool(x >= 0 && y >= 0 && z >= 0) ?~> s"invalid xyz axis order: $x,$y,$z."
-    } yield AxisOrder(x, y, Some(z), cOpt)
+    } yield AxisOrder(x, Some(y), Some(z), cOpt)
   }
 
   protected def extractVoxelSizeInAxisUnits(scale: List[Double], axisOrder: AxisOrder): Fox[Vec3Double] =
-    tryo(Vec3Double(scale(axisOrder.x), scale(axisOrder.y), scale(axisOrder.zWithFallback))).toFox
+    tryo(Vec3Double(scale(axisOrder.x), scale(axisOrder.yWithFallback), scale(axisOrder.zWithFallback))).toFox
 
   protected def layerFromMagsWithAttributes(magsWithAttributes: List[MagWithAttributes],
                                             remotePath: VaultPath): Fox[N5Layer] =

@@ -112,7 +112,7 @@ class WKWArray(vaultPath: VaultPath,
 
   private def getChunkIndexInShardIndex(chunkIndex: Array[Int]): Box[Int] = {
     val x = chunkIndex(axisOrder.x)
-    val y = chunkIndex(axisOrder.y)
+    val y = chunkIndex(axisOrder.y.getOrElse(2))
     val z = chunkIndex(axisOrder.z.getOrElse(3))
     val chunkOffsetX = x % header.numChunksPerShardDimension
     val chunkOffsetY = y % header.numChunksPerShardDimension
@@ -122,7 +122,7 @@ class WKWArray(vaultPath: VaultPath,
 
   override protected def getChunkFilename(chunkIndex: Array[Int]): String = {
     val x = chunkIndex(axisOrder.x)
-    val y = chunkIndex(axisOrder.y)
+    val y = chunkIndex(axisOrder.y.getOrElse(2))
     val z = chunkIndex(axisOrder.z.getOrElse(3))
     wkwFilePath(x, y, z)
   }

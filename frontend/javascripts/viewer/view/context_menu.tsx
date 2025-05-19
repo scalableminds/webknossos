@@ -141,6 +141,8 @@ import {
   withMappingActivationConfirmation,
 } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
 import { LoadMeshMenuItemLabel } from "./right-border-tabs/segments_tab/load_mesh_menu_item_label";
+import { getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
+import _ from "lodash";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
@@ -171,6 +173,7 @@ type StateProps = {
   userBoundingBoxes: Array<UserBoundingBox>;
   mappingInfo: ActiveMappingInfo;
   allowUpdate: boolean;
+  isRotated: boolean;
   segments: SegmentMap | null | undefined;
 };
 type Props = OwnProps & StateProps;
@@ -780,6 +783,7 @@ function getBoundingBoxMenuOptions({
   clickedBoundingBoxId,
   userBoundingBoxes,
   allowUpdate,
+  isRotated,
 }: NoNodeContextMenuProps): ItemType[] {
   if (globalPosition == null) return [];
 
@@ -795,6 +799,8 @@ function getBoundingBoxMenuOptions({
         {isBoundingBoxToolActive ? shortcutBuilder(["C"]) : null}
       </>
     ),
+    disabled: isRotated,
+    title: isRotated ? "Not available while view is rotated." : undefined,
   };
 
   if (!allowUpdate && clickedBoundingBoxId != null) {
@@ -1432,6 +1438,7 @@ function ContextMenuInner() {
       globalPosition: contextInfo.globalPosition,
       additionalCoordinates: state.flycam.additionalCoordinates || undefined,
       contextMenuPosition: contextInfo.contextMenuPosition,
+      isRotated: _.isEqual(getRotationInRadian(state.flycam), [0, 0, 0]),
       maybeViewport: contextInfo.viewport,
       maybeClickedMeshId: contextInfo.meshId,
       maybeMeshIntersectionPosition: contextInfo.meshIntersectionPosition,

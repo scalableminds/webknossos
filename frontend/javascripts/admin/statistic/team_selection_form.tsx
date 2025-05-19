@@ -1,6 +1,6 @@
 import { Button, Col, Form, Row } from "antd";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
-import type { APITeam } from "types/api_flow_types";
+import type { APITeam } from "types/api_types";
 const FormItem = Form.Item;
 type Props = {
   value?: APITeam | null | undefined;

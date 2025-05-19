@@ -18,6 +18,8 @@ import com.scalableminds.webknossos.datastore.models._
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.services._
+import com.scalableminds.webknossos.datastore.services.mesh.{AdHocMeshRequest, AdHocMeshService, AdHocMeshServiceHolder}
+import com.scalableminds.webknossos.tracingstore.files.TsTempFileService
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
@@ -25,11 +27,9 @@ import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRem
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.i18n.{Messages, MessagesProvider}
-import play.api.libs.Files
-import play.api.libs.Files.TemporaryFileCreator
 
 import java.io._
-import java.nio.file.Paths
+import java.nio.file.{Path, Paths}
 import java.util.Base64
 import java.util.zip.Deflater
 import scala.collection.mutable
@@ -39,7 +39,7 @@ import scala.concurrent.duration._
 class VolumeTracingService @Inject()(
     tracingDataStore: TracingDataStore,
     adHocMeshServiceHolder: AdHocMeshServiceHolder,
-    temporaryFileCreator: TemporaryFileCreator,
+    tempFileService: TsTempFileService,
     volumeSegmentIndexService: VolumeSegmentIndexService,
     datasetErrorLoggingService: TSDatasetErrorLoggingService,
     val temporaryTracingService: TemporaryTracingService,
@@ -448,14 +448,13 @@ class VolumeTracingService @Inject()(
       }
     }
 
-  def allDataZip(
-      annotationId: String,
-      tracingId: String,
-      tracing: VolumeTracing,
-      volumeDataZipFormat: VolumeDataZipFormat,
-      voxelSize: Option[VoxelSize])(implicit ec: ExecutionContext, tc: TokenContext): Fox[Files.TemporaryFile] = {
-    val zipped = temporaryFileCreator.create(tracingId, ".zip")
-    val os = new BufferedOutputStream(new FileOutputStream(new File(zipped.path.toString)))
+  def allDataZip(annotationId: String,
+                 tracingId: String,
+                 tracing: VolumeTracing,
+                 volumeDataZipFormat: VolumeDataZipFormat,
+                 voxelSize: Option[VoxelSize])(implicit ec: ExecutionContext, tc: TokenContext): Fox[Path] = {
+    val zipped = tempFileService.create(tracingId)
+    val os = new BufferedOutputStream(new FileOutputStream(new File(zipped.toString)))
     allDataToOutputStream(annotationId, tracingId, tracing, volumeDataZipFormat, voxelSize, os).map(_ => zipped)
   }
 
@@ -502,7 +501,7 @@ class VolumeTracingService @Inject()(
                                        isTemporaryTracing,
                                        includeFallbackDataIfAvailable)
       requests = dataRequests.map(r =>
-        DataServiceDataRequest(null, volumeLayer, r.cuboid(volumeLayer), r.settings.copy(appliedAgglomerate = None)))
+        DataServiceDataRequest(None, volumeLayer, r.cuboid(volumeLayer), r.settings.copy(appliedAgglomerate = None)))
       data <- binaryDataService.handleDataRequests(requests)
     } yield data
 
@@ -520,7 +519,7 @@ class VolumeTracingService @Inject()(
                                        isTemporaryTracing,
                                        includeFallbackDataIfAvailable)
       requests = dataRequests.map(r =>
-        DataServiceDataRequest(null, volumeLayer, r.cuboid(volumeLayer), r.settings.copy(appliedAgglomerate = None)))
+        DataServiceDataRequest(None, volumeLayer, r.cuboid(volumeLayer), r.settings.copy(appliedAgglomerate = None)))
       data <- binaryDataService.handleMultipleBucketRequests(requests)
     } yield data
 

@@ -3,33 +3,34 @@ import { describe, it, beforeEach, afterEach, expect } from "vitest";
 import "test/sagas/saga_integration.mock";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
-import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getStats } from "oxalis/model/accessors/annotation_accessor";
-import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "oxalis/model/sagas/save_saga_constants";
-import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
-import Store from "oxalis/store";
-import generateDummyTrees from "oxalis/model/helpers/generate_dummy_trees";
-import { setActiveUserAction } from "oxalis/model/actions/user_actions";
+import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
+import { getStats } from "viewer/model/accessors/annotation_accessor";
+import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "viewer/model/sagas/save_saga_constants";
+import { restartSagaAction, wkReadyAction } from "viewer/model/actions/actions";
+import Store from "viewer/store";
+import generateDummyTrees from "viewer/model/helpers/generate_dummy_trees";
+import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import dummyUser from "test/fixtures/dummy_user";
-import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
+import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { omit } from "lodash";
 
 import {
   createTreeMapFromTreeArray,
   generateTreeName,
-} from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+} from "viewer/model/reducers/skeletontracing_reducer_helpers";
 
 import {
   addTreesAndGroupsAction,
   deleteNodeAction,
-} from "oxalis/model/actions/skeletontracing_actions";
-import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
-import * as UpdateActions from "oxalis/model/sagas/update_actions";
+} from "viewer/model/actions/skeletontracing_actions";
+import { discardSaveQueuesAction } from "viewer/model/actions/save_actions";
+import * as UpdateActions from "viewer/model/sagas/update_actions";
 import { TIMESTAMP } from "test/global_mocks";
 
 describe("Saga Integration Tests", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
-    // Setup oxalis, this will execute model.fetch(...) and initialize the store with the tracing, etc.
+    // Setup Webknossos
+    // this will execute model.fetch(...) and initialize the store with the tracing, etc.
     Store.dispatch(restartSagaAction());
     Store.dispatch(discardSaveQueuesAction());
     Store.dispatch(setActiveUserAction(dummyUser));

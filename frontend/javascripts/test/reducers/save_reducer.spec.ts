@@ -1,15 +1,15 @@
 import { vi, describe, it, expect } from "vitest";
 import dummyUser from "test/fixtures/dummy_user";
-import type { OxalisState } from "oxalis/store";
+import type { WebknossosState } from "viewer/store";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
-import type { UpdateActionWithoutIsolationRequirement } from "oxalis/model/sagas/update_actions";
+import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/update_actions";
 
-import * as SaveActions from "oxalis/model/actions/save_actions";
-import SaveReducer from "oxalis/model/reducers/save_reducer";
-import { createEdge } from "oxalis/model/sagas/update_actions";
+import * as SaveActions from "viewer/model/actions/save_actions";
+import SaveReducer from "viewer/model/reducers/save_reducer";
+import { createEdge } from "viewer/model/sagas/update_actions";
 import { TIMESTAMP } from "test/global_mocks";
 
-vi.mock("oxalis/model/accessors/annotation_accessor", () => ({
+vi.mock("viewer/model/accessors/annotation_accessor", () => ({
   getStats: () => null,
 }));
 
@@ -25,7 +25,7 @@ const initialState = {
       totalActionCount: 0,
     },
   },
-} as any as OxalisState;
+} as any as WebknossosState;
 
 describe("Save Reducer", () => {
   it("should add update actions to the queue", () => {

@@ -1,16 +1,16 @@
 import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
 import { tracing as volumetracingServerObject } from "test/fixtures/volumetracing_server_objects";
-import type { Vector3, Vector4 } from "oxalis/constants";
-import Constants from "oxalis/constants";
+import type { Vector3, Vector4 } from "viewer/constants";
+import Constants from "viewer/constants";
 import { describe, it, beforeEach, vi, expect } from "vitest";
 import datasetServerObject from "test/fixtures/dataset_server_object";
-import { MagInfo } from "oxalis/model/helpers/mag_info";
-import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import type DataCubeType from "oxalis/model/bucket_data_handling/data_cube";
-import { assertNonNullBucket } from "oxalis/model/bucket_data_handling/bucket";
+import { MagInfo } from "viewer/model/helpers/mag_info";
+import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
+import type DataCubeType from "viewer/model/bucket_data_handling/data_cube";
+import { assertNonNullBucket } from "viewer/model/bucket_data_handling/bucket";
 
 // Mock modules
-vi.mock("oxalis/store", () => {
+vi.mock("viewer/store", () => {
   return {
     default: {
       getState: () => ({
@@ -29,7 +29,7 @@ vi.mock("oxalis/store", () => {
   };
 });
 
-vi.mock("oxalis/model/sagas/root_saga", () => {
+vi.mock("viewer/model/sagas/root_saga", () => {
   return {
     default: function* () {
       yield;
@@ -40,10 +40,10 @@ vi.mock("oxalis/model/sagas/root_saga", () => {
 type LabeledVoxelsMapAsArray = Array<[Vector4, Uint8Array]>;
 
 // Import the modules after mocking
-import DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import DataCube from "viewer/model/bucket_data_handling/data_cube";
 import sampleVoxelMapToMag, {
   applyVoxelMap,
-} from "oxalis/model/volumetracing/volume_annotation_sampling";
+} from "viewer/model/volumetracing/volume_annotation_sampling";
 
 // Test context type
 type TestContext = {

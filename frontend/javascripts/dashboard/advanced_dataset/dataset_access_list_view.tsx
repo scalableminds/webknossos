@@ -1,10 +1,10 @@
-import { getDatasetAccessList } from "admin/admin_rest_api";
+import { getDatasetAccessList } from "admin/rest_api";
 import { Spin, Tag } from "antd";
 import { handleGenericError } from "libs/error_handling";
 import { stringToColor } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
 import * as React from "react";
-import type { APIDataset, APIUser } from "types/api_flow_types";
+import type { APIDataset, APIUser } from "types/api_types";
 
 type Props = {
   dataset: APIDataset;

@@ -1,12 +1,8 @@
 import { DeleteOutlined, PlusOutlined, UserOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
-import {
-  deleteTeam as deleteTeamAPI,
-  getEditableTeams,
-  getEditableUsers,
-} from "admin/admin_rest_api";
+import { deleteTeam as deleteTeamAPI, getEditableTeams, getEditableUsers } from "admin/rest_api";
 import CreateTeamModal from "admin/team/create_team_modal_view";
-import { Alert, App, Button, Input, Spin, Table, Tag } from "antd";
+import { Alert, App, Button, Input, Spin, Table, Tag, Tooltip } from "antd";
 import LinkButton from "components/link_button";
 import { handleGenericError } from "libs/error_handling";
 import { stringToColor } from "libs/format_utils";
@@ -16,7 +12,7 @@ import _ from "lodash";
 import messages from "messages";
 import * as React from "react";
 import { useEffect, useState } from "react";
-import type { APITeam, APITeamMembership, APIUser } from "types/api_flow_types";
+import type { APITeam, APITeamMembership, APIUser } from "types/api_types";
 import EditTeamModalView from "./edit_team_modal_view";
 
 const { Column } = Table;
@@ -26,6 +22,9 @@ export function renderTeamRolesAndPermissionsForUser(user: APIUser) {
   //used by user list page
   const tags = [
     ...(user.isOrganizationOwner ? [["Organization Owner", "cyan"]] : []),
+    ...(user.isGuest
+      ? [["Guest User", "lime", "Guest users do not count against your organization’s user quota."]]
+      : []),
     ...(user.isAdmin
       ? [["Admin - Access to all Teams", "red"]]
       : [
@@ -37,11 +36,23 @@ export function renderTeamRolesAndPermissionsForUser(user: APIUser) {
         ]),
   ];
 
-  return tags.map(([text, color]) => (
-    <Tag key={`${text}_${user.id}`} color={color} style={{ marginBottom: 4 }}>
-      {text}
-    </Tag>
-  ));
+  const renderTag = (text: string, color: string) => {
+    return (
+      <Tag key={`${text}_${user.id}`} color={color} style={{ marginBottom: 4 }}>
+        {text}
+      </Tag>
+    );
+  };
+
+  return tags.map(([text, color, tooltipText]) =>
+    tooltipText !== undefined ? (
+      <Tooltip title={tooltipText} key={`${text}_${user.id}`}>
+        {renderTag(text, color)}
+      </Tooltip>
+    ) : (
+      renderTag(text, color)
+    ),
+  );
 }
 
 export function filterTeamMembersOf(team: APITeam, user: APIUser): boolean {

@@ -17,7 +17,6 @@ POST          /maintenances                                                     
 GET           /maintenances/:id                                                                 controllers.MaintenanceController.readOne(id: ObjectId)
 PUT           /maintenances/:id                                                                 controllers.MaintenanceController.update(id: ObjectId)
 DELETE        /maintenances/:id                                                                 controllers.MaintenanceController.delete(id: ObjectId)
-POST          /maintenances                                                                     controllers.MaintenanceController.create()
 POST          /maintenances/adHoc                                                               controllers.MaintenanceController.createAdHocMaintenance()
 GET           /maintenance/revokeExpiredCredits                                                 controllers.CreditTransactionController.revokeExpiredCredits()
 
@@ -176,14 +175,6 @@ POST          /zarrPrivateLinks                                                 
 PUT           /zarrPrivateLinks/:id                                                             controllers.AnnotationPrivateLinkController.update(id: ObjectId)
 DELETE        /zarrPrivateLinks/:id                                                             controllers.AnnotationPrivateLinkController.delete(id: ObjectId)
 GET           /zarrPrivateLinks/:id                                                             controllers.AnnotationPrivateLinkController.get(id: ObjectId)
-
-# Meshes
-POST          /meshes                                                                           controllers.MeshController.create()
-PUT           /meshes/:id                                                                       controllers.MeshController.update(id: ObjectId)
-DELETE        /meshes/:id                                                                       controllers.MeshController.delete(id: ObjectId)
-GET           /meshes/:id                                                                       controllers.MeshController.get(id: ObjectId)
-PUT           /meshes/:id/data                                                                  controllers.MeshController.updateData(id: ObjectId)
-GET           /meshes/:id/data                                                                  controllers.MeshController.getData(id: ObjectId)
 
 # Tasks
 POST          /tasks                                                                            controllers.TaskController.create()

@@ -220,7 +220,8 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val actorSystem: ActorSyste
                         "thread_name" -> (entry \ "vx" \ "thread_name").as[String],
                         "vx_version" -> (entry \ "vx" \ "version").as[String],
                         "user" -> (entry \ "vx" \ "user").as[String],
-                        "pgid" -> (entry \ "vx" \ "process_group_id").as[Long].toString
+                        "pgid" -> (entry \ "vx" \ "process_group_id").as[Long].toString,
+                        "log_path" -> (entry \ "vx" \ "log_path").as[String]
                       ))
                   ).toFox
                 } yield

@@ -8,7 +8,6 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.common.Box.tryo
 import org.apache.commons.io.IOUtils
-import play.api.libs.Files.TemporaryFile
 
 import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters.EnumerationHasAsScala
@@ -28,9 +27,9 @@ object ZipIO extends LazyLogging with FoxImplicits {
       stream.closeEntry()
     }
 
-    def addFileFromTemporaryFile(name: String, data: TemporaryFile): Unit = {
+    def addFileFromTemporaryFile(name: String, tmpFilePath: Path): Unit = {
       stream.putNextEntry(new ZipEntry(name))
-      stream.write(Files.readAllBytes(data))
+      stream.write(Files.readAllBytes(tmpFilePath))
       stream.closeEntry()
     }
 

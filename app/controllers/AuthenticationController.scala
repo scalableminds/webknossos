@@ -233,9 +233,9 @@ class AuthenticationController @Inject()(
       organization <- organizationDAO.findOne(invite._organization)(GlobalAccessContext) ?~> "invite.invalidToken"
       _ <- userService.assertNotInOrgaYet(request.identity._multiUser, organization._id)
       requestingMultiUser <- multiUserDAO.findOne(request.identity._multiUser)
-      _ <- Fox.runIf(!requestingMultiUser.isSuperUser)(
-        organizationService
-          .assertUsersCanBeAdded(organization._id)(GlobalAccessContext, ec)) ?~> "organization.users.userLimitReached"
+      alreadyPayingOrgaForMultiUser <- userDAO.findPayingOrgaIdForMultiUser(requestingMultiUser._id)
+      _ <- Fox.runIf(!requestingMultiUser.isSuperUser && alreadyPayingOrgaForMultiUser.isEmpty)(organizationService
+        .assertUsersCanBeAdded(organization._id)(GlobalAccessContext, ec)) ?~> "organization.users.userLimitReached"
       _ <- userService.joinOrganization(request.identity,
                                         organization._id,
                                         autoActivate = invite.autoActivate,
@@ -580,15 +580,14 @@ class AuthenticationController @Inject()(
       }
     }
 
-  private def validateNameAndEmail(firstName: String,
-                                   lastName: String,
-                                   email: String): Fox[(String, String, String, List[String])] = {
+  private def validateNameAndEmail(firstName: String, lastName: String, email: String)(
+      implicit messages: Messages): Fox[(String, String, String, List[String])] = {
     var (errors, fN, lN) = normalizeName(firstName, lastName)
     for {
       nameEmailError: (String, String, String,
       List[String]) <- multiUserDAO.findOneByEmail(email.toLowerCase)(GlobalAccessContext).shiftBox.flatMap {
         case Full(_) =>
-          errors ::= "user.email.alreadyInUse"
+          errors ::= Messages("user.email.alreadyInUse")
           Fox.successful(("", "", "", errors))
         case Empty =>
           if (errors.nonEmpty) {

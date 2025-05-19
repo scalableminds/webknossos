@@ -10,7 +10,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, TreeGroup}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{SegmentGroup, VolumeTracing}
 import com.typesafe.scalalogging.LazyLogging
-import files.TempFileService
+import files.WkTempFileService
 
 import javax.inject.Inject
 import models.annotation.nml.NmlResults._
@@ -31,7 +31,7 @@ case class SharedParsingParameters(useZipName: Boolean,
                                    userOrganizationId: String,
                                    isTaskUpload: Boolean = false)
 
-class AnnotationUploadService @Inject()(tempFileService: TempFileService, nmlParser: NmlParser)
+class AnnotationUploadService @Inject()(tempFileService: WkTempFileService, nmlParser: NmlParser)
     extends LazyLogging
     with FoxImplicits
     with Formatter {

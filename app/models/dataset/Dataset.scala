@@ -750,12 +750,31 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
   def updateMags(datasetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
     val clearQuery = q"DELETE FROM webknossos.dataset_mags WHERE _dataset = $datasetId".asUpdate
     val insertQueries = dataLayersOpt.getOrElse(List.empty).flatMap { layer: DataLayer =>
-      layer.resolutions.distinct.map { mag: Vec3Int =>
-        {
-          q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag)
-                VALUES($datasetId, ${layer.name}, $mag)""".asUpdate
-        }
+      layer.magsOpt match {
+        case Some(mags) =>
+          mags.map(mag => {
+            q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, axisOrder, channelIndex, credentialId)
+                VALUES($datasetId, ${layer.name}, ${mag.mag}, ${mag.axisOrder
+              .map(Json.toJson(_))}, ${mag.channelIndex}, ${mag.credentialId})
+           """.asUpdate
+          })
+        case None =>
+          layer.wkwResolutionsOpt match {
+            case Some(resolutions) =>
+              resolutions.map(wkwResolution => {
+                q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, cubeLength)
+                 VALUES ($datasetId, ${layer.name}, ${wkwResolution.resolution}, ${wkwResolution.cubeLength})""".asUpdate
+              })
+            case None =>
+              layer.resolutions.distinct.map { mag: Vec3Int =>
+                {
+                  q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag)
+                    VALUES($datasetId, ${layer.name}, $mag)""".asUpdate
+                }
+              }
+          }
       }
+
     }
     replaceSequentiallyAsTransaction(clearQuery, insertQueries)
   }
@@ -897,11 +916,12 @@ class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
     layer match {
       case s: AbstractSegmentationLayer =>
         val mappings = s.mappings.getOrElse(Set()).toList
-        q"""INSERT INTO webknossos.dataset_layers(_dataset, name, category, elementClass, boundingBox, largestSegmentId, mappings, defaultViewConfiguration, adminViewConfiguration)
+        q"""INSERT INTO webknossos.dataset_layers(_dataset, name, category, elementClass, boundingBox, largestSegmentId, mappings, defaultViewConfiguration, adminViewConfiguration, dataFormat, numChannels)
                     VALUES($datasetId, ${s.name}, ${s.category}, ${s.elementClass},
                     ${s.boundingBox}, ${s.largestSegmentId}, $mappings,
                     ${s.defaultViewConfiguration.map(Json.toJson(_))},
-                    ${s.adminViewConfiguration.map(Json.toJson(_))})
+                    ${s.adminViewConfiguration.map(Json.toJson(_))},
+                    ${s.dataFormat}, ${s.numChannels})
             ON CONFLICT (_dataset, name) DO UPDATE
             SET
               category = ${s.category},
@@ -909,19 +929,26 @@ class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
               boundingBox = ${s.boundingBox},
               largestSegmentId = ${s.largestSegmentId},
               mappings = $mappings,
-              defaultViewConfiguration = ${s.defaultViewConfiguration.map(Json.toJson(_))}""".asUpdate
+              defaultViewConfiguration = ${s.defaultViewConfiguration.map(Json.toJson(_))},
+              adminViewConfiguration = ${s.adminViewConfiguration.map(Json.toJson(_))},
+              numChannels = ${s.numChannels},
+              dataFormat = ${s.dataFormat} """.asUpdate
       case d: AbstractDataLayer =>
-        q"""INSERT INTO webknossos.dataset_layers(_dataset, name, category, elementClass, boundingBox, defaultViewConfiguration, adminViewConfiguration)
+        q"""INSERT INTO webknossos.dataset_layers(_dataset, name, category, elementClass, boundingBox, defaultViewConfiguration, adminViewConfiguration, dataFormat, numChannels)
                     VALUES($datasetId, ${d.name}, ${d.category}, ${d.elementClass},
                     ${d.boundingBox},
                     ${d.defaultViewConfiguration.map(Json.toJson(_))},
-                    ${d.adminViewConfiguration.map(Json.toJson(_))})
+                    ${d.adminViewConfiguration.map(Json.toJson(_))},
+                    ${d.dataFormat}, ${d.numChannels})
             ON CONFLICT (_dataset, name) DO UPDATE
             SET
               category = ${d.category},
               elementClass = ${d.elementClass},
               boundingBox = ${d.boundingBox},
-              defaultViewConfiguration = ${d.defaultViewConfiguration.map(Json.toJson(_))}""".asUpdate
+              defaultViewConfiguration = ${d.defaultViewConfiguration.map(Json.toJson(_))},
+              adminViewConfiguration = ${d.adminViewConfiguration.map(Json.toJson(_))},
+              numChannels = ${d.numChannels},
+              dataFormat = ${d.dataFormat}""".asUpdate
       case _ => throw new Exception("DataLayer type mismatch")
     }
 

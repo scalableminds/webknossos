@@ -12,6 +12,7 @@ import com.scalableminds.webknossos.datastore.dataformats.layers.{
   PrecomputedDataLayer,
   PrecomputedSegmentationLayer,
   WKWDataLayer,
+  WKWResolution,
   WKWSegmentationLayer,
   Zarr3DataLayer,
   Zarr3SegmentationLayer,
@@ -229,6 +230,51 @@ trait DataLayerLike {
 
   def specialFiles: Option[Seq[SpecialFile]]
 
+  // Datasets that are not in the WKW format use mags
+  def magsOpt: Option[List[MagLocator]] = this match {
+    case layer: AbstractDataLayer         => layer.mags
+    case layer: AbstractSegmentationLayer => layer.mags
+    case layer: DataLayerWithMagLocators  => Some(layer.getMags)
+    case _                                => None
+  }
+
+  def dataFormatOpt: Option[DataFormat.Value] = this match {
+    case layer: WKWDataLayer                 => Some(layer.dataFormat)
+    case layer: WKWSegmentationLayer         => Some(layer.dataFormat)
+    case layer: ZarrDataLayer                => Some(layer.dataFormat)
+    case layer: ZarrSegmentationLayer        => Some(layer.dataFormat)
+    case layer: N5DataLayer                  => Some(layer.dataFormat)
+    case layer: N5SegmentationLayer          => Some(layer.dataFormat)
+    case layer: PrecomputedDataLayer         => Some(layer.dataFormat)
+    case layer: PrecomputedSegmentationLayer => Some(layer.dataFormat)
+    case layer: Zarr3DataLayer               => Some(layer.dataFormat)
+    case layer: Zarr3SegmentationLayer       => Some(layer.dataFormat)
+    // Abstract layers
+    case _ => None
+  }
+
+  def numChannelsOpt: Option[Int] = this match {
+    case layer: AbstractDataLayer            => layer.numChannels
+    case layer: AbstractSegmentationLayer    => layer.numChannels
+    case layer: ZarrDataLayer                => layer.numChannels
+    case layer: ZarrSegmentationLayer        => layer.numChannels
+    case layer: N5DataLayer                  => layer.numChannels
+    case layer: N5SegmentationLayer          => layer.numChannels
+    case layer: PrecomputedDataLayer         => layer.numChannels
+    case layer: PrecomputedSegmentationLayer => layer.numChannels
+    case layer: Zarr3DataLayer               => layer.numChannels
+    case layer: Zarr3SegmentationLayer       => layer.numChannels
+    case _                                   => None
+  }
+
+  def wkwResolutionsOpt: Option[List[WKWResolution]] = this match {
+    case layer: AbstractDataLayer         => layer.wkwResolutions
+    case layer: AbstractSegmentationLayer => layer.wkwResolutions
+    case layer: WKWDataLayer              => Some(layer.wkwResolutions)
+    case layer: WKWSegmentationLayer      => Some(layer.wkwResolutions)
+    case _                                => None
+  }
+
 }
 
 object DataLayerLike {
@@ -439,6 +485,19 @@ trait DataLayerWithMagLocators extends DataLayer {
       case _ => throw new Exception("Encountered unsupported layer format")
     }
 
+  def getMags: List[MagLocator] =
+    this match {
+      case layer: N5DataLayer                  => layer.mags
+      case layer: N5SegmentationLayer          => layer.mags
+      case layer: PrecomputedDataLayer         => layer.mags
+      case layer: PrecomputedSegmentationLayer => layer.mags
+      case layer: ZarrDataLayer                => layer.mags
+      case layer: ZarrSegmentationLayer        => layer.mags
+      case layer: Zarr3DataLayer               => layer.mags
+      case layer: Zarr3SegmentationLayer       => layer.mags
+      case _                                   => throw new Exception("Encountered unsupported layer format")
+    }
+
 }
 
 trait SegmentationLayer extends DataLayer with SegmentationLayerLike {
@@ -456,7 +515,11 @@ case class AbstractDataLayer(
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     additionalAxes: Option[Seq[AdditionalAxis]] = None,
-    specialFiles: Option[Seq[SpecialFile]] = None
+    specialFiles: Option[Seq[SpecialFile]] = None,
+    mags: Option[List[MagLocator]] = None,
+    numChannels: Option[Int] = None,
+    dataFormat: Option[DataFormat.Value] = None,
+    wkwResolutions: Option[List[WKWResolution]] = None,
 ) extends DataLayerLike
 
 object AbstractDataLayer {
@@ -472,7 +535,11 @@ object AbstractDataLayer {
       layer.adminViewConfiguration,
       layer.coordinateTransformations,
       layer.additionalAxes,
-      layer.specialFiles
+      layer.specialFiles,
+      layer.magsOpt,
+      layer.numChannelsOpt,
+      layer.dataFormatOpt,
+      layer.wkwResolutionsOpt
     )
 
   implicit val jsonFormat: OFormat[AbstractDataLayer] = Json.format[AbstractDataLayer]
@@ -490,7 +557,11 @@ case class AbstractSegmentationLayer(
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     additionalAxes: Option[Seq[AdditionalAxis]] = None,
-    specialFiles: Option[Seq[SpecialFile]] = None
+    specialFiles: Option[Seq[SpecialFile]] = None,
+    mags: Option[List[MagLocator]] = None,
+    numChannels: Option[Int] = None,
+    dataFormat: Option[DataFormat.Value] = None,
+    wkwResolutions: Option[List[WKWResolution]] = None,
 ) extends SegmentationLayerLike
 
 object AbstractSegmentationLayer {
@@ -508,7 +579,11 @@ object AbstractSegmentationLayer {
       layer.adminViewConfiguration,
       layer.coordinateTransformations,
       layer.additionalAxes,
-      layer.specialFiles
+      layer.specialFiles,
+      layer.magsOpt,
+      layer.numChannelsOpt,
+      layer.dataFormatOpt,
+      layer.wkwResolutionsOpt
     )
 
   implicit val jsonFormat: OFormat[AbstractSegmentationLayer] = Json.format[AbstractSegmentationLayer]

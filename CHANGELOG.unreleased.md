@@ -24,11 +24,18 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Renamed `OxalisState`, `OxalisApplication`, and `OxalisApi` to their respective `Webknossos{State, API, Application}` equivalent [#8591](https://github.com/scalableminds/webknossos/pull/8591)
 - Renamed `frontend/javascripts/oxalis` to `frontend/javascripts/viewer`. [#8601](https://github.com/scalableminds/webknossos/pull/8601)
 - When loading data from a data layer that has data stored beyond the bounding box specified in the datasource-properties.json, data outside of the bounding box is now zeroed. (the layer is “clipped”). [#8551](https://github.com/scalableminds/webknossos/pull/8551)
+- Updated to Typescript from version `5.5` to `5.8`. [#8613](https://github.com/scalableminds/webknossos/pull/8613)
+- Updated Voxelytics log streaming to also include the `log_path` attribute. [#8615](https://github.com/scalableminds/webknossos/pull/8615)
 
 ### Fixed
+- When selecting a skeleton node in a viewport, its tree is focused and scrolled to in the skeleton tab, even if its parent group was collapsed before. [#8585](https://github.com/scalableminds/webknossos/pull/8585)
+- Fixed that the minimum size of bounding boxes for AI neuron and mitochondria inferral was not checked before starting the job. [#8561](https://github.com/scalableminds/webknossos/pull/8561)
 - Fixed that layer bounding boxes were sometimes colored green even though this should only happen for tasks. [#8535](https://github.com/scalableminds/webknossos/pull/8535)
 - Fixed that annotations could not be opened anymore (caused by #8535). [#8599](https://github.com/scalableminds/webknossos/pull/8599)
+- The guest tag is now also shown for guest admin users. [#8612](https://github.com/scalableminds/webknossos/pull/8612)
 - Fixed a rare bug where segment bounding box would not be displayed correctly, with the request potentially even crashing the server. [#8590](https://github.com/scalableminds/webknossos/pull/8590)
+- Fixed a rare bug where download requests would terminate without sending the whole annotation. [#8624](https://github.com/scalableminds/webknossos/pull/8624)
+- Fixed viewing datasets with legacy-style links (without ids) by sharing token. [#8625](https://github.com/scalableminds/webknossos/pull/8625)
 
 ### Removed
 

@@ -580,15 +580,14 @@ class AuthenticationController @Inject()(
       }
     }
 
-  private def validateNameAndEmail(firstName: String,
-                                   lastName: String,
-                                   email: String): Fox[(String, String, String, List[String])] = {
+  private def validateNameAndEmail(firstName: String, lastName: String, email: String)(
+      implicit messages: Messages): Fox[(String, String, String, List[String])] = {
     var (errors, fN, lN) = normalizeName(firstName, lastName)
     for {
       nameEmailError: (String, String, String,
       List[String]) <- multiUserDAO.findOneByEmail(email.toLowerCase)(GlobalAccessContext).shiftBox.flatMap {
         case Full(_) =>
-          errors ::= "user.email.alreadyInUse"
+          errors ::= Messages("user.email.alreadyInUse")
           Fox.successful(("", "", "", errors))
         case Empty =>
           if (errors.nonEmpty) {

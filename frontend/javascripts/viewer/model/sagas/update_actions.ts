@@ -1,5 +1,6 @@
+import * as Utils from "libs/utils";
 import type { APIMagRestrictions, AdditionalCoordinate, MetadataEntryProto } from "types/api_types";
-import type { Vector3 } from "viewer/constants";
+import { EMPTY_OBJECT, type Vector3 } from "viewer/constants";
 import type { SendBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { convertUserBoundingBoxesFromFrontendToServer } from "viewer/model/reducers/reducer_helpers";
 import type {
@@ -15,6 +16,8 @@ import type {
 export type NodeWithTreeId = {
   treeId: number;
 } & Node;
+
+type PartialBoundingBoxWithoutVisibility = Partial<Omit<UserBoundingBox, "isVisible">>;
 
 export type UpdateTreeUpdateAction = ReturnType<typeof updateTree> | ReturnType<typeof createTree>;
 export type DeleteTreeUpdateAction = ReturnType<typeof deleteTree>;
@@ -34,11 +37,29 @@ export type CreateSegmentUpdateAction = ReturnType<typeof createSegmentVolumeAct
 export type UpdateSegmentUpdateAction = ReturnType<typeof updateSegmentVolumeAction>;
 export type DeleteSegmentUpdateAction = ReturnType<typeof deleteSegmentVolumeAction>;
 export type DeleteSegmentDataUpdateAction = ReturnType<typeof deleteSegmentDataVolumeAction>;
-type UpdateUserBoundingBoxesInSkeletonTracingUpdateAction = ReturnType<
-  typeof updateUserBoundingBoxesInSkeletonTracing
+export type AddUserBoundingBoxInSkeletonTracingAction = ReturnType<
+  typeof addUserBoundingBoxInSkeletonTracingAction
 >;
-type UpdateUserBoundingBoxesInVolumeTracingUpdateAction = ReturnType<
-  typeof updateUserBoundingBoxesInVolumeTracing
+export type AddUserBoundingBoxInVolumeTracingAction = ReturnType<
+  typeof addUserBoundingBoxInVolumeTracingAction
+>;
+export type DeleteUserBoundingBoxInSkeletonTracingAction = ReturnType<
+  typeof deleteUserBoundingBoxInSkeletonTracingAction
+>;
+export type DeleteUserBoundingBoxInVolumeTracingAction = ReturnType<
+  typeof deleteUserBoundingBoxInVolumeTracingAction
+>;
+export type UpdateUserBoundingBoxInSkeletonTracingAction = ReturnType<
+  typeof updateUserBoundingBoxInSkeletonTracingAction
+>;
+export type UpdateUserBoundingBoxInVolumeTracingAction = ReturnType<
+  typeof updateUserBoundingBoxInVolumeTracingAction
+>;
+export type UpdateUserBoundingBoxVisibilityInSkeletonTracingAction = ReturnType<
+  typeof updateUserBoundingBoxVisibilityInSkeletonTracingAction
+>;
+export type UpdateUserBoundingBoxVisibilityInVolumeTracingAction = ReturnType<
+  typeof updateUserBoundingBoxVisibilityInVolumeTracingAction
 >;
 export type UpdateBucketUpdateAction = ReturnType<typeof updateBucket>;
 export type UpdateSegmentGroupsUpdateAction = ReturnType<typeof updateSegmentGroups>;
@@ -79,8 +100,14 @@ export type UpdateActionWithoutIsolationRequirement =
   | DeleteEdgeUpdateAction
   | UpdateSkeletonTracingUpdateAction
   | UpdateVolumeTracingUpdateAction
-  | UpdateUserBoundingBoxesInSkeletonTracingUpdateAction
-  | UpdateUserBoundingBoxesInVolumeTracingUpdateAction
+  | AddUserBoundingBoxInSkeletonTracingAction
+  | AddUserBoundingBoxInVolumeTracingAction
+  | DeleteUserBoundingBoxInSkeletonTracingAction
+  | DeleteUserBoundingBoxInVolumeTracingAction
+  | UpdateUserBoundingBoxInSkeletonTracingAction
+  | UpdateUserBoundingBoxInVolumeTracingAction
+  | UpdateUserBoundingBoxVisibilityInSkeletonTracingAction
+  | UpdateUserBoundingBoxVisibilityInVolumeTracingAction
   | CreateSegmentUpdateAction
   | UpdateSegmentUpdateAction
   | DeleteSegmentUpdateAction
@@ -373,30 +400,137 @@ export function updateVolumeTracing(
     },
   } as const;
 }
-export function updateUserBoundingBoxesInSkeletonTracing(
-  userBoundingBoxes: Array<UserBoundingBox>,
+
+export function addUserBoundingBoxInSkeletonTracingAction(
+  boundingBox: UserBoundingBox,
   actionTracingId: string,
 ) {
   return {
-    name: "updateUserBoundingBoxesInSkeletonTracing",
+    name: "addUserBoundingBoxInSkeletonTracing",
     value: {
+      boundingBox: convertUserBoundingBoxesFromFrontendToServer(boundingBox),
       actionTracingId,
-      boundingBoxes: convertUserBoundingBoxesFromFrontendToServer(userBoundingBoxes),
     },
   } as const;
 }
-export function updateUserBoundingBoxesInVolumeTracing(
-  userBoundingBoxes: Array<UserBoundingBox>,
+
+export function addUserBoundingBoxInVolumeTracingAction(
+  boundingBox: UserBoundingBox,
   actionTracingId: string,
 ) {
   return {
-    name: "updateUserBoundingBoxesInVolumeTracing",
+    name: "addUserBoundingBoxInVolumeTracing",
     value: {
+      boundingBox: convertUserBoundingBoxesFromFrontendToServer(boundingBox),
       actionTracingId,
-      boundingBoxes: convertUserBoundingBoxesFromFrontendToServer(userBoundingBoxes),
     },
   } as const;
 }
+
+export function deleteUserBoundingBoxInSkeletonTracingAction(
+  boundingBoxId: number,
+  actionTracingId: string,
+) {
+  return {
+    name: "deleteUserBoundingBoxInSkeletonTracing",
+    value: {
+      boundingBoxId,
+      actionTracingId,
+    },
+  } as const;
+}
+
+export function deleteUserBoundingBoxInVolumeTracingAction(
+  boundingBoxId: number,
+  actionTracingId: string,
+) {
+  return {
+    name: "deleteUserBoundingBoxInVolumeTracing",
+    value: {
+      boundingBoxId,
+      actionTracingId,
+    },
+  } as const;
+}
+
+function getUpdateUserBoundingBoxAction(
+  actionName: "updateUserBoundingBoxInVolumeTracing" | "updateUserBoundingBoxInSkeletonTracing",
+  boundingBoxId: number,
+  updatedProps: PartialBoundingBoxWithoutVisibility,
+  actionTracingId: string,
+) {
+  let serverBBox = EMPTY_OBJECT;
+  const { boundingBox, ...rest } = updatedProps;
+  const updatedPropKeys = Object.keys(updatedProps);
+  if (boundingBox != null) {
+    serverBBox = { boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(boundingBox) };
+  }
+  return {
+    name: actionName,
+    value: {
+      boundingBoxId,
+      actionTracingId,
+      updatedProps: { ...serverBBox, ...rest },
+      updatedPropKeys,
+    },
+  } as const;
+}
+
+export function updateUserBoundingBoxInVolumeTracingAction(
+  boundingBoxId: number,
+  updatedProps: PartialBoundingBoxWithoutVisibility,
+  actionTracingId: string,
+) {
+  return getUpdateUserBoundingBoxAction(
+    "updateUserBoundingBoxInVolumeTracing",
+    boundingBoxId,
+    updatedProps,
+    actionTracingId,
+  );
+}
+
+export function updateUserBoundingBoxInSkeletonTracingAction(
+  boundingBoxId: number,
+  updatedProps: Partial<UserBoundingBox>,
+  actionTracingId: string,
+) {
+  return getUpdateUserBoundingBoxAction(
+    "updateUserBoundingBoxInSkeletonTracing",
+    boundingBoxId,
+    updatedProps,
+    actionTracingId,
+  );
+}
+
+export function updateUserBoundingBoxVisibilityInSkeletonTracingAction(
+  boundingBoxId: number,
+  isVisible: boolean,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateUserBoundingBoxVisibilityInSkeletonTracing",
+    value: {
+      boundingBoxId,
+      actionTracingId,
+      isVisible,
+    },
+  } as const;
+}
+export function updateUserBoundingBoxVisibilityInVolumeTracingAction(
+  boundingBoxId: number,
+  isVisible: boolean,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateUserBoundingBoxVisibilityInVolumeTracing",
+    value: {
+      boundingBoxId,
+      actionTracingId,
+      isVisible,
+    },
+  } as const;
+}
+
 export function createSegmentVolumeAction(
   id: number,
   anchorPosition: Vector3 | null | undefined,

@@ -2,7 +2,6 @@ import {
   ArrowsAltOutlined,
   BackwardOutlined,
   CodeSandboxOutlined,
-  CodepenOutlined,
   DeleteOutlined,
   EditOutlined,
   EyeOutlined,
@@ -76,13 +75,37 @@ const descriptionFns: Record<
     description: "Created the annotation.",
     icon: <RocketOutlined />,
   }),
-  updateUserBoundingBoxesInSkeletonTracing: (): Description => ({
-    description: "Updated a bounding box.",
-    icon: <CodepenOutlined />,
+  addUserBoundingBoxInSkeletonTracing: (): Description => ({
+    description: "Added a bounding box.",
+    icon: <PlusOutlined />,
   }),
-  updateUserBoundingBoxesInVolumeTracing: (): Description => ({
+  addUserBoundingBoxInVolumeTracing: (): Description => ({
+    description: "Added a bounding box.",
+    icon: <PlusOutlined />,
+  }),
+  deleteUserBoundingBoxInSkeletonTracing: (): Description => ({
+    description: "Deleted a bounding box.",
+    icon: <DeleteOutlined />,
+  }),
+  deleteUserBoundingBoxInVolumeTracing: (): Description => ({
+    description: "Deleted a bounding box.",
+    icon: <DeleteOutlined />,
+  }),
+  updateUserBoundingBoxInSkeletonTracing: (): Description => ({
     description: "Updated a bounding box.",
-    icon: <CodepenOutlined />,
+    icon: <EditOutlined />,
+  }),
+  updateUserBoundingBoxInVolumeTracing: (): Description => ({
+    description: "Updated a bounding box.",
+    icon: <EditOutlined />,
+  }),
+  updateUserBoundingBoxVisibilityInSkeletonTracing: (): Description => ({
+    description: "Toggled the visibility of a bounding box.",
+    icon: <EditOutlined />,
+  }),
+  updateUserBoundingBoxVisibilityInVolumeTracing: (): Description => ({
+    description: "Toggled the visibility of a bounding box.",
+    icon: <EditOutlined />,
   }),
   removeFallbackLayer: (): Description => ({
     description: "Removed the segmentation fallback layer.",

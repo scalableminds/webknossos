@@ -10,7 +10,7 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/25.05.0...25.05.1)
 
 ### Postgres Evolutions:
-
+None.
 
 ## [25.05.0](https://github.com/scalableminds/webknossos/releases/tag/25.05.0) - 2025-04-29
 [Commits](https://github.com/scalableminds/webknossos/compare/25.04.0...25.05.0)

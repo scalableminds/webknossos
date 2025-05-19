@@ -202,6 +202,7 @@ describe("Annotation API (E2E)", () => {
 
     const tracings = await api.getTracingsForAnnotation(createdExplorational);
     expect(replaceVolatileValues(tracings[0])).toMatchSnapshot();
+    expect(replaceVolatileValues(createdExplorational)).toMatchSnapshot();
   });
 
   it("Send complex update actions and compare resulting tracing", async () => {

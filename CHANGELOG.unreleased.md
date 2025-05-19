@@ -36,6 +36,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a rare bug where segment bounding box would not be displayed correctly, with the request potentially even crashing the server. [#8590](https://github.com/scalableminds/webknossos/pull/8590)
 - Fixed a rare bug where download requests would terminate without sending the whole annotation. [#8624](https://github.com/scalableminds/webknossos/pull/8624)
 - Fixed viewing datasets with legacy-style links (without ids) by sharing token. [#8625](https://github.com/scalableminds/webknossos/pull/8625)
+- Fixed that deletion of dataset would lead to an error. [#8639](https://github.com/scalableminds/webknossos/pull/8639)
 
 ### Removed
 

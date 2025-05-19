@@ -755,7 +755,7 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
           mags.map(mag => {
             q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, axisOrder, channelIndex, credentialId)
                 VALUES($datasetId, ${layer.name}, ${mag.mag}, ${mag.axisOrder
-              .map(_.toString)}, ${mag.channelIndex}, ${mag.credentialId})
+              .map(Json.toJson(_))}, ${mag.channelIndex}, ${mag.credentialId})
            """.asUpdate
           })
         case None =>

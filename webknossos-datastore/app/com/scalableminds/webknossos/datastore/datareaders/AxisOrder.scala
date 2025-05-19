@@ -20,22 +20,6 @@ case class AxisOrder(x: Int, y: Int, z: Option[Int], c: Option[Int] = None) {
     val lengthOfC = if (c.isDefined) 1 else 0
     lengthOfC + 2 + lengthOfZ
   }
-
-  override def toString: String = {
-    val zString = z match {
-      case Some(z) => s"z:$z"
-      case None    => ""
-    }
-    val cString = c match {
-      case Some(c) => s"c:$c"
-      case None    => ""
-    }
-    val xString = s"x:$x"
-    val yString = s"y:$y"
-    val strings = Seq(xString, yString, zString, cString).filter(_.nonEmpty)
-    strings.mkString(",")
-  }
-
 }
 
 object AxisOrder {
@@ -59,15 +43,6 @@ object AxisOrder {
   // Additional coordinates are inserted between c and xyz
   def cAdditionalxyz(rank: Int): AxisOrder = AxisOrder(c = Some(0), x = rank - 3, y = rank - 2, z = Some(rank - 1))
   implicit val jsonFormat: OFormat[AxisOrder] = Json.format[AxisOrder]
-
-  def fromString(s: String): AxisOrder = {
-    val parts = s.split(",").map(_.split(":")).map { case Array(axis, index) => axis -> index.toInt }.toMap
-    val x = parts.getOrElse("x", 0)
-    val y = parts.getOrElse("y", 1)
-    val z = parts.get("z")
-    val c = parts.get("c")
-    AxisOrder(x, y, z, c)
-  }
 }
 
 case class Axis(name: String)

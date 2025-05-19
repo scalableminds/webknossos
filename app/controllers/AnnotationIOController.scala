@@ -332,7 +332,8 @@ class AnnotationIOController @Inject()(
       case _                                                                                   => None
     }.headOption
     val bbox =
-      if (volumeTracing.boundingBox.isEmpty) boundingBoxToProto(dataSource.boundingBox)
+      if (volumeTracing.boundingBox.isEmpty)
+        boundingBoxToProto(fallbackLayerOpt.map(_.boundingBox).getOrElse(dataSource.boundingBox))
       else volumeTracing.boundingBox
 
     for {

@@ -8,7 +8,7 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/25.05.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/25.05.1...HEAD)
 
 ### Added
 

@@ -278,7 +278,6 @@ describe("Compact Toggle Actions for skeletons", () => {
       genericGroups,
     );
     const [compactedActions] = getSkeletonActions(allVisibleTrees, testState);
-
     expect(compactedActions).toEqual([updateTreeGroupVisibility(3, false, tracingId)]);
   });
 
@@ -296,7 +295,6 @@ describe("Compact Toggle Actions for skeletons", () => {
       genericGroups,
     );
     const [compactedActions] = getSkeletonActions(allVisibleTrees, testState);
-
     expect(compactedActions).toEqual([
       updateTreeGroupVisibility(undefined, false, tracingId),
       _updateTreeVisibility(3, true),
@@ -318,7 +316,6 @@ describe("Compact Toggle Actions for volume tracings", () => {
       genericGroups,
     );
     const [compactedActions, updateActions] = getVolumeActions(allVisibleSegments, testState);
-
     expect(compactedActions).toEqual(updateActions);
   });
 

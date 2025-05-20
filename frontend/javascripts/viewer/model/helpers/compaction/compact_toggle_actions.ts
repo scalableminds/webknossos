@@ -144,10 +144,7 @@ function isCommonAncestorToggler<T extends SkeletonTracing | VolumeTracing>(
     allItemsOfAncestor =
       groupWithSubgroups.length === 0
         ? Array.from(items.values())
-        : _.flatMap(
-            groupWithSubgroups,
-            (groupId: number): Tree[] => groupToTreesMap[groupId] || [],
-          );
+        : groupWithSubgroups.flatMap((groupId: number): Tree[] => groupToTreesMap[groupId] || []);
   } else {
     const items = tracing.segments;
     const groups = tracing.segmentGroups;
@@ -156,8 +153,7 @@ function isCommonAncestorToggler<T extends SkeletonTracing | VolumeTracing>(
     allItemsOfAncestor =
       groupWithSubgroups.length === 0
         ? Array.from(items.values())
-        : _.flatMap(
-            groupWithSubgroups,
+        : groupWithSubgroups.flatMap(
             (groupId: number): Segment[] => groupToTreesMap[groupId] || [],
           );
   }

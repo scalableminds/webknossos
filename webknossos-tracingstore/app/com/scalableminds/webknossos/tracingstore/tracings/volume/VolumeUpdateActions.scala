@@ -4,16 +4,8 @@ import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing, VolumeUserStateProto}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
-<<<<<<< HEAD
 import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction, UserStateUpdateAction}
-import com.scalableminds.webknossos.tracingstore.tracings.{MetadataEntry, NamedBoundingBox}
-||||||| 39c80b0e9b
-import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction}
-import com.scalableminds.webknossos.tracingstore.tracings.{MetadataEntry, NamedBoundingBox}
-=======
-import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction}
 import com.scalableminds.webknossos.tracingstore.tracings.{GroupUtils, MetadataEntry, NamedBoundingBox}
->>>>>>> 736c9ef29165178a116d89097e212126a67f5570
 import play.api.libs.json._
 
 import scala.collection.mutable
@@ -430,7 +422,6 @@ case class UpdateSegmentGroupsVolumeAction(segmentGroups: List[UpdateActionSegme
     this.copy(actionTracingId = newTracingId)
 }
 
-<<<<<<< HEAD
 case class UpdateSegmentGroupsExpandedStateVolumeAction(groupIds: List[Int],
                                                         areExpanded: Boolean,
                                                         actionTracingId: String,
@@ -467,8 +458,6 @@ case class UpdateSegmentGroupsExpandedStateVolumeAction(groupIds: List[Int],
     )
 }
 
-||||||| 39c80b0e9b
-=======
 case class UpdateSegmentVisibilityVolumeAction(id: Long,
                                                isVisible: Boolean,
                                                actionTracingId: String,
@@ -478,6 +467,7 @@ case class UpdateSegmentVisibilityVolumeAction(id: Long,
     extends ApplyableVolumeUpdateAction
     with VolumeUpdateActionHelper {
 
+  // TODO move to user state
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
     tracing.withSegments(
       tracing.segments.map(segment => if (segment.segmentId == id) segment.withIsVisible(isVisible) else segment))
@@ -499,6 +489,7 @@ case class UpdateSegmentGroupVisibilityVolumeAction(groupId: Option[Long],
     extends ApplyableVolumeUpdateAction
     with VolumeUpdateActionHelper {
 
+  // TODO move to user state
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
     def updateSegmentGroups(segmentGroups: Seq[SegmentGroup]) = {
       def segmentTransform(segment: Segment) =
@@ -527,7 +518,6 @@ case class UpdateSegmentGroupVisibilityVolumeAction(groupId: Option[Long],
     this.copy(actionTracingId = newTracingId)
 }
 
->>>>>>> 736c9ef29165178a116d89097e212126a67f5570
 // Only used to represent legacy update actions from the db where not all fields are set
 // This is from a time when volume actions were not applied lazily
 // (Before https://github.com/scalableminds/webknossos/pull/7917)
@@ -614,13 +604,10 @@ object UpdateMappingNameVolumeAction {
 object UpdateSegmentGroupsVolumeAction {
   implicit val jsonFormat: OFormat[UpdateSegmentGroupsVolumeAction] = Json.format[UpdateSegmentGroupsVolumeAction]
 }
-<<<<<<< HEAD
 object UpdateSegmentGroupsExpandedStateVolumeAction {
   implicit val jsonFormat: OFormat[UpdateSegmentGroupsExpandedStateVolumeAction] =
     Json.format[UpdateSegmentGroupsExpandedStateVolumeAction]
 }
-||||||| 39c80b0e9b
-=======
 object UpdateSegmentVisibilityVolumeAction {
   implicit val jsonFormat: OFormat[UpdateSegmentVisibilityVolumeAction] =
     Json.format[UpdateSegmentVisibilityVolumeAction]
@@ -629,4 +616,3 @@ object UpdateSegmentGroupVisibilityVolumeAction {
   implicit val jsonFormat: OFormat[UpdateSegmentGroupVisibilityVolumeAction] =
     Json.format[UpdateSegmentGroupVisibilityVolumeAction]
 }
->>>>>>> 736c9ef29165178a116d89097e212126a67f5570

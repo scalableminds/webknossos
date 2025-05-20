@@ -304,6 +304,12 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
       const vector = _.clone(action.vector);
 
       const { planeId } = action;
+      const flycamRotation = getRotationInRadian(state.flycam);
+
+      const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(
+        new THREE.Euler(...flycamRotation),
+      );
+      const movementVectorInWorld = new THREE.Vector3(...vector).applyMatrix4(rotationMatrix);
 
       // if planeID is given, use it to manipulate z
       if (planeId != null && state.userConfiguration.dynamicSpaceDirection) {
@@ -312,7 +318,7 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
         vector[dim] *= state.flycam.spaceDirectionOrtho[dim];
       }
 
-      return moveReducer(state, vector);
+      return moveReducer(state, movementVectorInWorld.toArray());
     }
 
     case "MOVE_PLANE_FLYCAM_ORTHO": {

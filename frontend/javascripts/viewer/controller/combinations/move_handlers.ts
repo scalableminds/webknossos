@@ -35,12 +35,12 @@ export const moveV = (deltaV: number): void => {
   movePlane([0, deltaV, 0]);
 };
 export const moveW = (deltaW: number, oneSlide: boolean): void => {
-  if (is2dDataset(Store.getState().dataset)) {
+  const state = Store.getState();
+  if (is2dDataset(state.dataset)) {
     return;
   }
 
-  const { activeViewport } = Store.getState().viewModeData.plane;
-
+  const { activeViewport } = state.viewModeData.plane;
   if (activeViewport === OrthoViews.TDView) {
     return;
   }
@@ -49,18 +49,17 @@ export const moveW = (deltaW: number, oneSlide: boolean): void => {
     // The following logic might not always make sense when having layers
     // that are transformed each. Todo: Rethink / adapt the logic once
     // problems occur. Tracked in #6926.
-    const { representativeMag } = getActiveMagInfo(Store.getState());
+    const { representativeMag } = getActiveMagInfo(state);
     const wDim = Dimensions.getIndices(activeViewport)[2];
     const wStep = (representativeMag || [1, 1, 1])[wDim];
     Store.dispatch(
-      movePlaneFlycamOrthoAction(
-        [0, 0, Math.sign(deltaW) * Math.max(1, wStep)],
+      moveFlycamOrthoAction(
+        Dimensions.transDim([0, 0, Math.sign(deltaW) * Math.max(1, wStep)], activeViewport),
         activeViewport,
-        false,
       ),
     );
   } else {
-    movePlane([0, 0, deltaW], false);
+    Store.dispatch(movePlaneFlycamOrthoAction([0, 0, deltaW], activeViewport, false));
   }
 };
 export function moveWhenAltIsPressed(delta: Point2, position: Point2, _id: any, event: MouseEvent) {

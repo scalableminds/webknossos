@@ -14,7 +14,7 @@ let cachedNullTexture: UpdatableTexture | undefined;
 export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
   entryCapacity: number;
   entryCount: number = 0;
-  protected table!: Uint32Array;
+  protected table!: Uint32Array<ArrayBuffer>;
   protected seeds!: number[];
   protected seedSubscribers: Array<SeedSubscriberFn> = [];
   _texture: UpdatableTexture;

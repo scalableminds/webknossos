@@ -284,7 +284,7 @@ export class DataBucket {
   getCopyOfData(): BucketDataArray {
     const bucketData = this.getOrCreateData();
     const TypedArrayClass = getConstructorForElementClass(this.elementClass)[0];
-    const dataClone = new TypedArrayClass(bucketData);
+    const dataClone = new TypedArrayClass(bucketData.buffer.slice());
     return dataClone;
   }
 
@@ -609,7 +609,10 @@ export class DataBucket {
     }
   }
 
-  receiveData(arrayBuffer: Uint8Array | null | undefined, computeValueSet: boolean = false): void {
+  receiveData(
+    arrayBuffer: Uint8Array<ArrayBuffer> | null | undefined,
+    computeValueSet: boolean = false,
+  ): void {
     const data = uint8ToTypedBuffer(arrayBuffer, this.elementClass);
     const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
 
@@ -634,7 +637,7 @@ export class DataBucket {
         if (this.dirty) {
           // Clone the data for the unmergedBucketDataLoaded event,
           // as the following merge operation is done in-place.
-          const dataClone = new TypedArrayClass(data);
+          const dataClone = new TypedArrayClass(data.buffer.slice());
           this.trigger("unmergedBucketDataLoaded", dataClone);
           this.merge(data);
         } else {

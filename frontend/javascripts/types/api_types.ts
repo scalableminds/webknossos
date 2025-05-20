@@ -46,15 +46,15 @@ export type ElementClass =
 // This type needs to be adapted when a new dtype should/element class needs
 // to be supported.
 export type BucketDataArray =
-  | Uint8Array
-  | Int8Array
-  | Uint16Array
-  | Int16Array
-  | Uint32Array
-  | Int32Array
-  | Float32Array
-  | BigUint64Array
-  | BigInt64Array;
+  | Uint8Array<ArrayBuffer>
+  | Int8Array<ArrayBuffer>
+  | Uint16Array<ArrayBuffer>
+  | Int16Array<ArrayBuffer>
+  | Uint32Array<ArrayBuffer>
+  | Int32Array<ArrayBuffer>
+  | Float32Array<ArrayBuffer>
+  | BigUint64Array<ArrayBuffer>
+  | BigInt64Array<ArrayBuffer>;
 
 export type APIMapping = {
   readonly parent?: string;

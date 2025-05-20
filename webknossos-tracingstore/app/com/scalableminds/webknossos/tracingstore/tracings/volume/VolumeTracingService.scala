@@ -8,7 +8,8 @@ import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonUserStateProto
+import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeUserStateProto}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
@@ -20,6 +21,7 @@ import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataReq
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.mesh.{AdHocMeshRequest, AdHocMeshService, AdHocMeshServiceHolder}
 import com.scalableminds.webknossos.tracingstore.files.TsTempFileService
+import com.scalableminds.webknossos.tracingstore.tracings.GroupUtils.FunctionalGroupMapping
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
@@ -739,6 +741,7 @@ class VolumeTracingService @Inject()(
                                                      tracingB.userBoundingBox,
                                                      tracingA.userBoundingBoxes,
                                                      tracingB.userBoundingBoxes)
+    val userStates = mergeUserStates(tracingA.userStates, tracingB.userStates, groupMapping)
     for {
       mergedAdditionalAxes <- AdditionalAxis.mergeAndAssertSameAdditionalAxes(
         Seq(tracingA, tracingB).map(t => AdditionalAxis.fromProtosAsOpt(t.additionalAxes)))
@@ -763,9 +766,16 @@ class VolumeTracingService @Inject()(
         userBoundingBoxes = userBoundingBoxes,
         segments = tracingA.segments.toList ::: tracingBSegments.toList,
         segmentGroups = mergedGroups,
-        additionalAxes = AdditionalAxis.toProto(mergedAdditionalAxes)
+        additionalAxes = AdditionalAxis.toProto(mergedAdditionalAxes),
+        userStates = userStates
       )
   }
+
+  private def mergeUserStates(tracingAUserStates: Seq[VolumeUserStateProto],
+                              tracingBUserStates: Seq[VolumeUserStateProto],
+                              groupMapping: FunctionalGroupMapping) =
+    // TODO merge. beware of remapped ids (group, segment, bbox)
+    tracingAUserStates
 
   private def combineLargestSegmentIdsByMaxDefined(aOpt: Option[Long], bOpt: Option[Long]): Option[Long] =
     (aOpt, bOpt) match {

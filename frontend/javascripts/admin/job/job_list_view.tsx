@@ -311,7 +311,7 @@ function JobListView() {
           Cancel
         </AsyncLink>
       );
-    } else if (job.state === "FAILURE" && isCurrentUserSuperUser) {
+    } else if ((job.state === "FAILURE" || job.state === "CANCELLED") && isCurrentUserSuperUser) {
       return (
         <Tooltip title="Restarts the workflow from the failed task, skipping and reusing artifacts from preceding tasks that were already successful.">
           <AsyncLink

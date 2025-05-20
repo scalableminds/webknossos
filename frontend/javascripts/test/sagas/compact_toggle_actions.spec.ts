@@ -187,10 +187,7 @@ function testVolumeDiffing(prevState: WebknossosState, nextState: WebknossosStat
   return withoutUpdateSegment(
     withoutUpdateTracing(
       Array.from(
-        diffVolumeTracing(
-          prevState.annotation.volumes[0],
-          nextState.annotation.volumes[0],
-        ),
+        diffVolumeTracing(prevState.annotation.volumes[0], nextState.annotation.volumes[0]),
       ),
     ),
   );

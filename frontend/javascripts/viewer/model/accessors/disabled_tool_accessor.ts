@@ -10,6 +10,7 @@ import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_acce
 import {
   getRotationInRadian,
   isMagRestrictionViolated,
+  isRotated,
 } from "viewer/model/accessors/flycam_accessor";
 import type { WebknossosState } from "viewer/store";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
@@ -95,8 +96,20 @@ const getExplanationForDisabledVolume = (
 const ALWAYS_ENABLED_TOOL_INFOS = {
   [AnnotationTool.MOVE.id]: NOT_DISABLED_INFO,
   [AnnotationTool.LINE_MEASUREMENT.id]: NOT_DISABLED_INFO,
-  [AnnotationTool.AREA_MEASUREMENT.id]: NOT_DISABLED_INFO,
 };
+
+function _getAreaMeasurementToolInfo(isFlycamRotated: boolean) {
+  return {
+    [AnnotationTool.AREA_MEASUREMENT.id]: isFlycamRotated
+      ? {
+          isDisabled: true,
+          explanation: rotationActiveDisabledExplanation,
+        }
+      : NOT_DISABLED_INFO,
+  };
+}
+
+const getAreaMeasurementToolInfo = memoizeOne(_getAreaMeasurementToolInfo);
 
 function _getSkeletonToolInfo(
   hasSkeleton: boolean,
@@ -389,8 +402,9 @@ const _getDisabledInfoForTools = (
 ): Record<AnnotationToolId, DisabledInfo> => {
   const { annotation } = state;
   const hasSkeleton = annotation.skeleton != null;
-  const isFlycamRotated = !_.isEqual(getRotationInRadian(state.flycam), [0, 0, 0]);
+  const isFlycamRotated = isRotated(state.flycam);
   const geometriesTransformed = areGeometriesTransformed(state);
+  const areaMeasurementToolInfo = getAreaMeasurementToolInfo(isFlycamRotated);
   const skeletonToolInfo = getSkeletonToolInfo(
     hasSkeleton,
     geometriesTransformed,
@@ -405,6 +419,7 @@ const _getDisabledInfoForTools = (
   const disabledVolumeInfo = getDisabledVolumeInfo(state);
   return {
     ...ALWAYS_ENABLED_TOOL_INFOS,
+    ...areaMeasurementToolInfo,
     ...skeletonToolInfo,
     ...disabledVolumeInfo,
     ...boundingBoxInfo,

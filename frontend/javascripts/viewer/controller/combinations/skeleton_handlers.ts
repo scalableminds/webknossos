@@ -196,7 +196,7 @@ export function moveNode(
   const { activeViewport } = state.viewModeData.plane;
   const vector = Dimensions.transDim([dx, dy, 0], activeViewport);
   const flycamRotation = getRotationInRadian(state.flycam);
-  const isRotated = !_.isEqual(flycamRotation, [0, 0, 0]);
+  const isRotated = V3.equals(flycamRotation, [0, 0, 0]);
 
   const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(
     new THREE.Euler(...flycamRotation),

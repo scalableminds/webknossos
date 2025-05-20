@@ -321,7 +321,7 @@ class VolumeTracingZarrStreamingController @Inject()(
                                                             magParsed,
                                                             Vec3Int(x, y, z),
                                                             cubeSize,
-                                                            additionalCoordinates) ~> NOT_FOUND
+                                                            additionalCoordinates)
           } yield Ok(dataWithFallback)
         }
       }
@@ -348,9 +348,10 @@ class VolumeTracingZarrStreamingController @Inject()(
           version = None,
           additionalCoordinates = additionalCoordinates
         )
-        (fallbackData, fallbackMissingBucketIndices) <- remoteDataStoreClient.getData(remoteFallbackLayer,
-                                                                                      List(request))
-        _ <- Fox.fromBool(fallbackMissingBucketIndices.isEmpty) ?~> "No data at coordinations in fallback layer"
+        (fallbackData, fallbackMissingBucketIndices) <- remoteDataStoreClient.getData(
+          remoteFallbackLayer,
+          List(request)) ~> BAD_REQUEST // return 400 if the request fails
+        _ <- Fox.fromBool(fallbackMissingBucketIndices.isEmpty) ?~> "No data at coordinations in fallback layer" ~> NOT_FOUND // return 404 if the request worked but data is empty
       } yield fallbackData
     } else Fox.successful(data)
 }

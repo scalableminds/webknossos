@@ -203,7 +203,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     }
     request
       .execute()
-      .map { result =>
+      .map { result: WSResponse =>
         val duration = Instant.since(before)
         val logSlow = verbose && duration > slowRequestLoggingThreshold
         if (Status.isSuccessful(result.status)) {
@@ -220,7 +220,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
           logger.error(verboseErrorMsg)
           val compactErrorMsg =
             s"Failed $debugInfo. Response: ${result.status} '$responseBodyPreview'"
-          Failure(compactErrorMsg)
+          Failure(compactErrorMsg) ~> result.status
         }
       }
       .recover {

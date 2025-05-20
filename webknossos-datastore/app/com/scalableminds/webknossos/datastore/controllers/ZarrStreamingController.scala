@@ -265,7 +265,7 @@ class ZarrStreamingController @Inject()(
     for {
       (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                 datasetDirectoryName,
-                                                                                dataLayerName) ~> NOT_FOUND
+                                                                                dataLayerName) ~> BAD_REQUEST
       reorderedAdditionalAxes = dataLayer.additionalAxes.map(reorderAdditionalAxes)
       (x, y, z, additionalCoordinates) <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates(
         coordinates,

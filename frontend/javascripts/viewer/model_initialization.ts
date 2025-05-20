@@ -674,6 +674,10 @@ function determineDefaultState(
   let position = getDatasetCenter(dataset);
   let additionalCoordinates = null;
 
+  // someTracing should only be used if no userState exists (this is the case
+  // for annotations that were not touched after #8542 was deployed).
+  const someTracing = _.first(tracings);
+
   if (defaultPosition != null) {
     position = defaultPosition;
   }
@@ -681,6 +685,9 @@ function determineDefaultState(
   if (userState) {
     position = Utils.point3ToVector3(userState.editPosition);
     additionalCoordinates = userState.editPositionAdditionalCoordinates;
+  } else if (someTracing != null) {
+    position = Utils.point3ToVector3(someTracing.editPosition);
+    additionalCoordinates = someTracing.editPositionAdditionalCoordinates;
   }
 
   if (urlStatePosition != null) {
@@ -698,6 +705,8 @@ function determineDefaultState(
 
   if (urlStateZoomStep != null) {
     zoomStep = urlStateZoomStep;
+  } else if (someTracing != null) {
+    zoomStep = someTracing.zoomLevel;
   }
 
   let rotation = undefined;
@@ -706,6 +715,8 @@ function determineDefaultState(
 
     if (userState != null) {
       rotation = Utils.point3ToVector3(userState.editRotation);
+    } else if (someTracing != null) {
+      rotation = Utils.point3ToVector3(someTracing.editRotation);
     }
 
     if (urlStateRotation != null) {

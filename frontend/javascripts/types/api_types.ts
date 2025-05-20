@@ -901,16 +901,18 @@ export type ServerTracingBase = {
   userBoundingBoxes: Array<UserBoundingBoxFromServer>;
   userBoundingBox?: ServerBoundingBox;
   createdTimestamp: number;
-  // editPosition: Point3;
-  // editPositionAdditionalCoordinates: AdditionalCoordinate[] | null;
-  // editRotation: Point3;
-  // zoomLevel: number;
   error?: string;
   additionalAxes: ServerAdditionalAxis[];
   // The backend sends the version property, but the front-end should
   // not care about it. To ensure this, parseProtoTracing will remove
   // the property.
   version?: number;
+  // The following properties should only be used if the
+  // annotation.userStates array does not contain any information.
+  editPosition: Point3;
+  editPositionAdditionalCoordinates: AdditionalCoordinate[] | null;
+  editRotation: Point3;
+  zoomLevel: number;
 };
 
 export type SkeletonUserState = {

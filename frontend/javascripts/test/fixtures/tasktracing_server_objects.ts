@@ -54,6 +54,18 @@ export const tracing: ServerSkeletonTracing = {
   additionalAxes: [],
   id: "e90133de-b2db-4912-8261-8b6f84f7edab",
   userStates: [],
+  editPosition: {
+    x: 0,
+    y: 0,
+    z: 0,
+  },
+  editPositionAdditionalCoordinates: null,
+  editRotation: {
+    x: 0,
+    y: 0,
+    z: 0,
+  },
+  zoomLevel: 2,
 };
 export const annotation: APIAnnotation = {
   datasetId: "66f3c82966010034942e9740",

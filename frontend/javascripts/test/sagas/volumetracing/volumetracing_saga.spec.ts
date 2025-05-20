@@ -56,6 +56,18 @@ const serverVolumeTracing: ServerVolumeTracing = {
   userBoundingBoxes: [],
   largestSegmentId: 0,
   userStates: [],
+  zoomLevel: 0,
+  editPosition: {
+    x: 0,
+    y: 0,
+    z: 0,
+  },
+  editPositionAdditionalCoordinates: null,
+  editRotation: {
+    x: 0,
+    y: 0,
+    z: 0,
+  },
 };
 
 const volumeTracing = serverVolumeToClientVolumeTracing(serverVolumeTracing, null, null);

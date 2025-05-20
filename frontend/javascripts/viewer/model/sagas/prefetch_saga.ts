@@ -7,7 +7,7 @@ import {
   getActiveMagIndexForLayer,
   getAreasFromState,
   getPosition,
-  getRotationInRadian,
+  isRotated,
 } from "viewer/model/accessors/flycam_accessor";
 import { FlycamActions } from "viewer/model/actions/flycam_actions";
 import { PrefetchStrategyArbitrary } from "viewer/model/bucket_data_handling/prefetch_strategy_arbitrary";
@@ -47,7 +47,7 @@ export function* watchDataRelevantChanges(): Saga<void> {
 function* shouldPrefetchForDataLayer(dataLayer: DataLayer): Saga<boolean> {
   // There is no need to prefetch data for layers that are not visible
   return yield* select((state) => {
-    const isNotRotated = _.isEqual(getRotationInRadian(state.flycam), [0, 0, 0]);
+    const isNotRotated = !isRotated(state.flycam);
     return (
       isNotRotated &&
       isLayerVisible(

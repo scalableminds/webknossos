@@ -331,6 +331,9 @@ function _getRotationInDegrees(flycam: Flycam): Vector3 {
   ];
 }
 
+function _isRotated(flycam: Flycam): boolean {
+  return !V3.equals(getRotationInRadian(flycam), [0, 0, 0]);
+}
 function _getZoomedMatrix(flycam: Flycam): Matrix4x4 {
   return M4x4.scale1(flycam.zoomStep, flycam.currentMatrix);
 }
@@ -342,6 +345,7 @@ export const getFlooredPosition = memoizeOne(_getFlooredPosition);
 export const getRotationInRadianFixed = memoizeOne(_getRotationInRadianFixed);
 export const getRotationInRadian = memoizeOne(_getRotationInRadian);
 export const getRotationInDegrees = memoizeOne(_getRotationInDegrees);
+export const isRotated = memoizeOne(_isRotated);
 export const getZoomedMatrix = memoizeOne(_getZoomedMatrix);
 
 function _getActiveMagIndicesForLayers(state: WebknossosState): { [layerName: string]: number } {

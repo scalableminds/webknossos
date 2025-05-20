@@ -141,7 +141,7 @@ import {
   withMappingActivationConfirmation,
 } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
 import { LoadMeshMenuItemLabel } from "./right-border-tabs/segments_tab/load_mesh_menu_item_label";
-import { getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
+import { isRotated } from "viewer/model/accessors/flycam_accessor";
 import _ from "lodash";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
@@ -1444,7 +1444,7 @@ function ContextMenuInner() {
       globalPosition: contextInfo.globalPosition,
       additionalCoordinates: state.flycam.additionalCoordinates || undefined,
       contextMenuPosition: contextInfo.contextMenuPosition,
-      isRotated: _.isEqual(getRotationInRadian(state.flycam), [0, 0, 0]),
+      isRotated: isRotated(state.flycam),
       maybeViewport: contextInfo.viewport,
       maybeClickedMeshId: contextInfo.meshId,
       maybeMeshIntersectionPosition: contextInfo.meshIntersectionPosition,

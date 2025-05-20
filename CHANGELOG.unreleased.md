@@ -8,12 +8,14 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/25.05.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/25.05.1...HEAD)
 
 ### Added
 - Meshes of Neuroglancer Precomputed Datasets can now be viewed. [#8236](https://github.com/scalableminds/webknossos/pull/8236)
 - Added the possibility to join an organization without requiring a paid user slot in case an organization already pays for the same user. Such a user is called a "Guest User". [#8502](https://github.com/scalableminds/webknossos/pull/8502)
-- Added that "Create Animation" jobs will now use the correct semgent colors for rendering meshes. [#8605](https://github.com/scalableminds/webknossos/pull/8605) 
+- Added that "Create Animation" jobs will now use the correct segment colors for rendering meshes. [#8605](https://github.com/scalableminds/webknossos/pull/8605)
+- In the NML upload route, the additional form field `description` can be specified. If so, it will overwrite the description contained in the NML files. [#8631](https://github.com/scalableminds/webknossos/pull/8631)
+- Added the possibility for super users to retry manually cancelled jobs from the jobs list. [#8629](https://github.com/scalableminds/webknossos/pull/8629)
 - Added checkboxes to the segments tab that allow to show/hide individual segments. The visibility of segments that are not listed in the segments list can be controlled with a new "Hide unlisted segments" toggle in the layer settings. Additionally, you can right-click a segment in a data viewport and select "Only show this segment" (and similar functionality). [#8546](https://github.com/scalableminds/webknossos/pull/8546)
 
 ### Changed
@@ -27,12 +29,18 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - When loading data from a data layer that has data stored beyond the bounding box specified in the datasource-properties.json, data outside of the bounding box is now zeroed. (the layer is “clipped”). [#8551](https://github.com/scalableminds/webknossos/pull/8551)
 - Updated to Typescript from version `5.5` to `5.8`. [#8613](https://github.com/scalableminds/webknossos/pull/8613)
 - Updated Voxelytics log streaming to also include the `log_path` attribute. [#8615](https://github.com/scalableminds/webknossos/pull/8615)
+- When creating or uploading a non-task volume annotation layer with a fallback segmentation layer, the annotation layer’s bounding box will now be limited to that layer’s, instead of the whole dataset’s. [#7580](https://github.com/scalableminds/webknossos/pull/7580)
 
 ### Fixed
+- When selecting a skeleton node in a viewport, its tree is focused and scrolled to in the skeleton tab, even if its parent group was collapsed before. [#8585](https://github.com/scalableminds/webknossos/pull/8585)
+- Fixed that the minimum size of bounding boxes for AI neuron and mitochondria inferral was not checked before starting the job. [#8561](https://github.com/scalableminds/webknossos/pull/8561)
 - Fixed that layer bounding boxes were sometimes colored green even though this should only happen for tasks. [#8535](https://github.com/scalableminds/webknossos/pull/8535)
 - Fixed that annotations could not be opened anymore (caused by #8535). [#8599](https://github.com/scalableminds/webknossos/pull/8599)
+- Voxels outside of the layer bounding box cannot be brushed, anymore. [#8602](https://github.com/scalableminds/webknossos/pull/8602)
 - The guest tag is now also shown for guest admin users. [#8612](https://github.com/scalableminds/webknossos/pull/8612)
 - Fixed a rare bug where segment bounding box would not be displayed correctly, with the request potentially even crashing the server. [#8590](https://github.com/scalableminds/webknossos/pull/8590)
+- Fixed a rare bug where download requests would terminate without sending the whole annotation. [#8624](https://github.com/scalableminds/webknossos/pull/8624)
+- Fixed that deletion of dataset would lead to an error. [#8639](https://github.com/scalableminds/webknossos/pull/8639)
 
 ### Removed
 - The old "Selective Segment Visibility" feature that allowed to only see the active and the hovered segment was removed. From now on the visibility of segments can be controlled with checkboxes in the segment list and with the "Hide unlisted segments" toggle in the layer settings. [#8546](https://github.com/scalableminds/webknossos/pull/8546)

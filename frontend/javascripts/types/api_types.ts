@@ -735,9 +735,15 @@ export type APIFeatureToggles = {
   readonly openIdConnectEnabled?: boolean;
   readonly segmentAnythingEnabled?: boolean;
 };
-export type APIJobState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | null;
+export type APIJobState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | "CANCELLED" | null;
 export type APIJobManualState = "SUCCESS" | "FAILURE" | null;
-export type APIEffectiveJobState = "UNKNOWN" | "SUCCESS" | "PENDING" | "STARTED" | "FAILURE";
+export type APIEffectiveJobState =
+  | "UNKNOWN"
+  | "SUCCESS"
+  | "PENDING"
+  | "STARTED"
+  | "FAILURE"
+  | "CANCELLED";
 export enum APIJobType {
   ALIGN_SECTIONS = "align_sections",
   CONVERT_TO_WKW = "convert_to_wkw",

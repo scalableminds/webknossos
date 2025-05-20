@@ -16,6 +16,7 @@ import type {
 import type { BoundingBoxObject, NumberLike } from "viewer/store";
 
 type UrlParams = Record<string, string>;
+
 // Fix JS modulo bug
 // http://javascript.about.com/od/problemsolving/a/modulobug.htm
 export function mod(x: number, n: number) {

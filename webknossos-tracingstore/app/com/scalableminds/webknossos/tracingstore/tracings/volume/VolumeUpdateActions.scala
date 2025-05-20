@@ -4,8 +4,16 @@ import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing, VolumeUserStateProto}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
+<<<<<<< HEAD
 import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction, UserStateUpdateAction}
 import com.scalableminds.webknossos.tracingstore.tracings.{MetadataEntry, NamedBoundingBox}
+||||||| 39c80b0e9b
+import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction}
+import com.scalableminds.webknossos.tracingstore.tracings.{MetadataEntry, NamedBoundingBox}
+=======
+import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction}
+import com.scalableminds.webknossos.tracingstore.tracings.{GroupUtils, MetadataEntry, NamedBoundingBox}
+>>>>>>> 736c9ef29165178a116d89097e212126a67f5570
 import play.api.libs.json._
 
 import scala.collection.mutable
@@ -95,6 +103,7 @@ case class UpdateTracingVolumeAction(
     largestSegmentId: Option[Long],
     zoomLevel: Double,
     editPositionAdditionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
+    hideUnregisteredSegments: Option[Boolean] = None,
     actionTracingId: String,
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[String] = None,
@@ -117,7 +126,8 @@ case class UpdateTracingVolumeAction(
       editRotation = editRotation,
       largestSegmentId = largestSegmentId,
       zoomLevel = zoomLevel,
-      editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(editPositionAdditionalCoordinates)
+      editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(editPositionAdditionalCoordinates),
+      hideUnregisteredSegments = hideUnregisteredSegments
     )
 }
 
@@ -420,6 +430,7 @@ case class UpdateSegmentGroupsVolumeAction(segmentGroups: List[UpdateActionSegme
     this.copy(actionTracingId = newTracingId)
 }
 
+<<<<<<< HEAD
 case class UpdateSegmentGroupsExpandedStateVolumeAction(groupIds: List[Int],
                                                         areExpanded: Boolean,
                                                         actionTracingId: String,
@@ -456,6 +467,67 @@ case class UpdateSegmentGroupsExpandedStateVolumeAction(groupIds: List[Int],
     )
 }
 
+||||||| 39c80b0e9b
+=======
+case class UpdateSegmentVisibilityVolumeAction(id: Long,
+                                               isVisible: Boolean,
+                                               actionTracingId: String,
+                                               actionTimestamp: Option[Long] = None,
+                                               actionAuthorId: Option[String] = None,
+                                               info: Option[String] = None)
+    extends ApplyableVolumeUpdateAction
+    with VolumeUpdateActionHelper {
+
+  override def applyOn(tracing: VolumeTracing): VolumeTracing =
+    tracing.withSegments(
+      tracing.segments.map(segment => if (segment.segmentId == id) segment.withIsVisible(isVisible) else segment))
+
+  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
+}
+
+case class UpdateSegmentGroupVisibilityVolumeAction(groupId: Option[Long],
+                                                    isVisible: Boolean,
+                                                    actionTracingId: String,
+                                                    actionTimestamp: Option[Long] = None,
+                                                    actionAuthorId: Option[String] = None,
+                                                    info: Option[String] = None)
+    extends ApplyableVolumeUpdateAction
+    with VolumeUpdateActionHelper {
+
+  override def applyOn(tracing: VolumeTracing): VolumeTracing = {
+    def updateSegmentGroups(segmentGroups: Seq[SegmentGroup]) = {
+      def segmentTransform(segment: Segment) =
+        if (segmentGroups.exists(group => segment.groupId.contains(group.groupId)))
+          segment.withIsVisible(isVisible)
+        else segment
+
+      tracing.withSegments(tracing.segments.map(segmentTransform))
+    }
+
+    groupId match {
+      case None => tracing.withSegments(tracing.segments.map(_.copy(isVisible = Some(isVisible))))
+      case Some(groupId) =>
+        tracing.segmentGroups
+          .find(_.groupId == groupId)
+          .map(group => updateSegmentGroups(GroupUtils.getAllChildrenSegmentGroups(group)))
+          .getOrElse(tracing)
+    }
+  }
+
+  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
+}
+
+>>>>>>> 736c9ef29165178a116d89097e212126a67f5570
 // Only used to represent legacy update actions from the db where not all fields are set
 // This is from a time when volume actions were not applied lazily
 // (Before https://github.com/scalableminds/webknossos/pull/7917)
@@ -542,7 +614,19 @@ object UpdateMappingNameVolumeAction {
 object UpdateSegmentGroupsVolumeAction {
   implicit val jsonFormat: OFormat[UpdateSegmentGroupsVolumeAction] = Json.format[UpdateSegmentGroupsVolumeAction]
 }
+<<<<<<< HEAD
 object UpdateSegmentGroupsExpandedStateVolumeAction {
   implicit val jsonFormat: OFormat[UpdateSegmentGroupsExpandedStateVolumeAction] =
     Json.format[UpdateSegmentGroupsExpandedStateVolumeAction]
 }
+||||||| 39c80b0e9b
+=======
+object UpdateSegmentVisibilityVolumeAction {
+  implicit val jsonFormat: OFormat[UpdateSegmentVisibilityVolumeAction] =
+    Json.format[UpdateSegmentVisibilityVolumeAction]
+}
+object UpdateSegmentGroupVisibilityVolumeAction {
+  implicit val jsonFormat: OFormat[UpdateSegmentGroupVisibilityVolumeAction] =
+    Json.format[UpdateSegmentGroupVisibilityVolumeAction]
+}
+>>>>>>> 736c9ef29165178a116d89097e212126a67f5570

@@ -3,6 +3,7 @@ import _ from "lodash";
 import memoizeOne from "memoize-one";
 import { mapGroupsWithRoot } from "viewer/model/accessors/skeletontracing_accessor";
 import type { Segment, SegmentGroup, SegmentMap, Tree, TreeGroup, TreeMap } from "viewer/store";
+import type { SegmentHierarchyNode } from "../segments_tab/segments_view_helper";
 
 export const MISSING_GROUP_ID = -1;
 
@@ -278,7 +279,7 @@ export function moveGroupsHelper(
   return newGroups;
 }
 
-export function deepFlatFilter<T extends TreeNode | TreeGroup>(
+export function deepFlatFilter<T extends TreeNode | TreeGroup | SegmentHierarchyNode>(
   nodes: T[],
   predicate: (node: T) => boolean,
 ): T[] {

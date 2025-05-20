@@ -73,6 +73,7 @@ import {
   updateMappingName,
   updateSegmentGroups,
   updateSegmentGroupsExpandedState,
+  updateSegmentVisibilityVolumeAction,
   updateSegmentVolumeAction,
   updateUserBoundingBoxVisibilityInVolumeTracing,
   updateUserBoundingBoxesInVolumeTracing,
@@ -437,7 +438,10 @@ function* uncachedDiffSegmentLists(
     const segment = newSegments.getOrThrow(segmentId);
     const prevSegment = prevSegments.getOrThrow(segmentId);
 
-    if (segment !== prevSegment) {
+    const { isVisible: prevIsVisible, ...prevSegmentWithoutIsVisible } = prevSegment;
+    const { isVisible: isVisible, ...segmentWithoutIsVisible } = segment;
+
+    if (!_.isEqual(prevSegmentWithoutIsVisible, segmentWithoutIsVisible)) {
       yield updateSegmentVolumeAction(
         segment.id,
         segment.somePosition,
@@ -449,6 +453,10 @@ function* uncachedDiffSegmentLists(
         tracingId,
         segment.creationTime,
       );
+    }
+
+    if (isVisible !== prevIsVisible) {
+      yield updateSegmentVisibilityVolumeAction(segment.id, segment.isVisible, tracingId);
     }
   }
 }

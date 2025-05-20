@@ -1,11 +1,11 @@
-package cleanup
+package com.scalableminds.webknossos.tracingstore.cleanup
 
-import org.apache.pekko.actor.{ActorSystem, Cancellable}
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
-import javax.inject.Inject
 import net.liftweb.common.{Empty, Failure, Full}
+import org.apache.pekko.actor.{ActorSystem, Cancellable}
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 

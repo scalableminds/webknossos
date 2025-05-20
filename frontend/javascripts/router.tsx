@@ -156,12 +156,17 @@ class ReactRouter extends React.Component<Props> {
     if (tracingType == null) {
       return <h3>Invalid annotation URL.</h3>;
     }
+    const getParams = Utils.getUrlParamsObjectFromString(location.search);
     return (
       <AsyncRedirect
         redirectTo={async () => {
           const datasetName = match.params.datasetName || "";
           const organizationId = match.params.organizationId || "";
-          const datasetId = await getDatasetIdFromNameAndOrganization(datasetName, organizationId);
+          const datasetId = await getDatasetIdFromNameAndOrganization(
+            datasetName,
+            organizationId,
+            getParams.token,
+          );
           return `/datasets/${datasetName}-${datasetId}/sandbox/:${tracingType}${location.search}${location.hash}`;
         }}
       />
@@ -173,6 +178,7 @@ class ReactRouter extends React.Component<Props> {
     const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(
       match.params.datasetNameAndId,
     );
+    const getParams = Utils.getUrlParamsObjectFromString(location.search);
 
     if (tracingType == null) {
       return <h3>Invalid annotation URL.</h3>;
@@ -183,10 +189,11 @@ class ReactRouter extends React.Component<Props> {
       return (
         <AsyncRedirect
           redirectTo={async () => {
-            const organizationId = await getOrganizationForDataset(datasetName);
+            const organizationId = await getOrganizationForDataset(datasetName, getParams.token);
             const datasetId = await getDatasetIdFromNameAndOrganization(
               datasetName,
               organizationId,
+              getParams.token,
             );
             return `/datasets/${datasetName}-${datasetId}/sandbox/${tracingType}${location.search}${location.hash}`;
           }}
@@ -205,31 +212,40 @@ class ReactRouter extends React.Component<Props> {
     );
   };
 
-  tracingViewModeLegacy = ({ match, location }: ContextRouter) => (
-    <AsyncRedirect
-      redirectTo={async () => {
-        const datasetName = match.params.datasetName || "";
-        const organizationId = match.params.organizationId || "";
-        const datasetId = await getDatasetIdFromNameAndOrganization(datasetName, organizationId);
-        return `/datasets/${datasetName}-${datasetId}/view${location.search}${location.hash}`;
-      }}
-    />
-  );
+  tracingViewModeLegacy = ({ match, location }: ContextRouter) => {
+    const getParams = Utils.getUrlParamsObjectFromString(location.search);
+    return (
+      <AsyncRedirect
+        redirectTo={async () => {
+          const datasetName = match.params.datasetName || "";
+          const organizationId = match.params.organizationId || "";
+          const datasetId = await getDatasetIdFromNameAndOrganization(
+            datasetName,
+            organizationId,
+            getParams.token,
+          );
+          return `/datasets/${datasetName}-${datasetId}/view${location.search}${location.hash}`;
+        }}
+      />
+    );
+  };
 
   tracingViewMode = ({ match }: ContextRouter) => {
     const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(
       match.params.datasetNameAndId,
     );
+    const getParams = Utils.getUrlParamsObjectFromString(location.search);
     if (datasetName) {
       // Handle very old legacy URLs which neither have a datasetId nor an organizationId.
       // The schema is something like <authority>/datasets/:datasetName/view
       return (
         <AsyncRedirect
           redirectTo={async () => {
-            const organizationId = await getOrganizationForDataset(datasetName);
+            const organizationId = await getOrganizationForDataset(datasetName, getParams.token);
             const datasetId = await getDatasetIdFromNameAndOrganization(
               datasetName,
               organizationId,
+              getParams.token,
             );
             return `/datasets/${datasetName}-${datasetId}/view${location.search}${location.hash}`;
           }}
@@ -508,16 +524,21 @@ class ReactRouter extends React.Component<Props> {
                   const { datasetId, datasetName } = getDatasetIdOrNameFromReadableURLPart(
                     match.params.datasetNameAndId,
                   );
+                  const getParams = Utils.getUrlParamsObjectFromString(location.search);
                   if (datasetName) {
                     // Handle very old legacy URLs which neither have a datasetId nor an organizationId.
                     // The schema is something like <authority>/datasets/:datasetName/edit
                     return (
                       <AsyncRedirect
                         redirectTo={async () => {
-                          const organizationId = await getOrganizationForDataset(datasetName);
+                          const organizationId = await getOrganizationForDataset(
+                            datasetName,
+                            getParams.token,
+                          );
                           const datasetId = await getDatasetIdFromNameAndOrganization(
                             datasetName,
                             organizationId,
+                            getParams.token,
                           );
                           return `/datasets/${datasetName}-${datasetId}/edit`;
                         }}

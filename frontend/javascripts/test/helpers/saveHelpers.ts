@@ -38,3 +38,9 @@ export function withoutUpdateTree(
 ): UpdateActionWithoutIsolationRequirement[] {
   return items.filter((item) => item.name !== "updateTree");
 }
+
+export function withoutUpdateSegment(
+  items: UpdateActionWithoutIsolationRequirement[],
+): UpdateActionWithoutIsolationRequirement[] {
+  return items.filter((item) => item.name !== "updateSegment");
+}

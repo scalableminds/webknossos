@@ -29,6 +29,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   VolumeTracingMags
 }
 import com.typesafe.scalalogging.LazyLogging
+import files.WkTempFileService
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
 import models.annotation.handler.SavedTracingInformationHandler
@@ -43,11 +44,11 @@ import net.liftweb.common.{Box, Full}
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
 import play.api.i18n.{Messages, MessagesProvider}
-import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 import play.api.libs.json.{JsNull, JsObject, JsValue, Json}
 import utils.WkConf
 
 import java.io.{BufferedOutputStream, File, FileOutputStream}
+import java.nio.file.Path
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
@@ -87,7 +88,7 @@ class AnnotationService @Inject()(
     organizationDAO: OrganizationDAO,
     annotationRestrictionDefaults: AnnotationRestrictionDefaults,
     nmlWriter: NmlWriter,
-    temporaryFileCreator: TemporaryFileCreator,
+    tempFileService: WkTempFileService,
     conf: WkConf,
     rpc: RPC
 )(implicit ec: ExecutionContext, val materializer: Materializer)
@@ -146,7 +147,7 @@ class AnnotationService @Inject()(
     } yield
       VolumeTracing(
         None,
-        boundingBoxToProto(boundingBox.getOrElse(dataSource.boundingBox)),
+        boundingBoxToProto(boundingBox.orElse(fallbackLayer.map(_.boundingBox)).getOrElse(dataSource.boundingBox)),
         System.currentTimeMillis(),
         dataSource.id.directoryName,
         vec3IntToProto(startPosition.getOrElse(dataSource.center)),
@@ -508,7 +509,7 @@ class AnnotationService @Inject()(
                      zipFileName: String,
                      skipVolumeData: Boolean,
                      volumeDataZipFormat: VolumeDataZipFormat)(implicit
-                                                               ctx: DBAccessContext): Fox[TemporaryFile] =
+                                                               ctx: DBAccessContext): Fox[Path] =
     for {
       downloadAnnotations <- getTracingsScalesAndNamesFor(annotations, skipVolumeData, volumeDataZipFormat)
       nmlsAndVolumes <- Fox.serialCombined(downloadAnnotations.flatten) {
@@ -655,17 +656,17 @@ class AnnotationService @Inject()(
     Fox.combined(tracingsGrouped.toList)
   }
 
-  private def createZip(nmls: List[(NamedStream, Option[Array[Byte]])], zipFileName: String): Fox[TemporaryFile] = {
-    val zipped = temporaryFileCreator.create(TextUtils.normalize(zipFileName), ".zip")
-    val zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(zipped.path.toString))))
+  private def createZip(nmls: List[(NamedStream, Option[Array[Byte]])], zipFileName: String): Fox[Path] = {
+    val zipped = tempFileService.create(TextUtils.normalize(zipFileName))
+    val zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(zipped.toString))))
 
     def addToZip(nmls: List[(NamedStream, Option[Array[Byte]])]): Fox[Boolean] =
       nmls match {
         case (nml, volumeDataOpt) :: tail =>
           if (volumeDataOpt.isDefined) {
-            val subZip = temporaryFileCreator.create(TextUtils.normalize(nml.name), ".zip")
+            val subZip = tempFileService.create(TextUtils.normalize(nml.name))
             val subZipper =
-              ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(subZip.path.toString))))
+              ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(subZip.toString))))
             volumeDataOpt.foreach(volumeData => subZipper.addFileFromBytes(nml.name + "_data.zip", volumeData))
             for {
               _ <- subZipper.addFileFromNamedStream(nml, suffix = ".nml")

@@ -30,11 +30,17 @@ export type CreateEdgeUpdateAction = ReturnType<typeof createEdge>;
 export type DeleteEdgeUpdateAction = ReturnType<typeof deleteEdge>;
 export type UpdateActiveNodeUpdateAction = ReturnType<typeof updateActiveNode>;
 type LEGACY_UpdateSkeletonTracingUpdateAction = ReturnType<typeof LEGACY_updateSkeletonTracing>;
-type LEGACY_UpdateVolumeTracingUpdateAction = ReturnType<typeof LEGACY_updateVolumeTracing>;
+type LEGACY_UpdateVolumeTracingUpdateAction = ReturnType<typeof LEGACY_updateVolumeTracingAction>;
 export type UpdateActiveSegmentIdUpdateAction = ReturnType<typeof updateActiveSegmentId>;
 export type UpdateLargestSegmentIdVolumeAction = ReturnType<typeof updateLargestSegmentId>;
 export type CreateSegmentUpdateAction = ReturnType<typeof createSegmentVolumeAction>;
 export type UpdateSegmentUpdateAction = ReturnType<typeof updateSegmentVolumeAction>;
+export type UpdateSegmentVisibilityVolumeAction = ReturnType<
+  typeof updateSegmentVisibilityVolumeAction
+>;
+export type UpdateSegmentGroupVisibilityVolumeAction = ReturnType<
+  typeof updateSegmentGroupVisibilityVolumeAction
+>;
 export type DeleteSegmentUpdateAction = ReturnType<typeof deleteSegmentVolumeAction>;
 export type DeleteSegmentDataUpdateAction = ReturnType<typeof deleteSegmentDataVolumeAction>;
 type UpdateUserBoundingBoxesInSkeletonTracingUpdateAction = ReturnType<
@@ -104,6 +110,7 @@ export type UpdateActionWithoutIsolationRequirement =
   | UpdateUserBoundingBoxVisibilityInVolumeTracingUpdateAction
   | CreateSegmentUpdateAction
   | UpdateSegmentUpdateAction
+  | UpdateSegmentVisibilityVolumeAction
   | DeleteSegmentUpdateAction
   | DeleteSegmentDataUpdateAction
   | UpdateBucketUpdateAction
@@ -112,6 +119,7 @@ export type UpdateActionWithoutIsolationRequirement =
   | UpdateTreeGroupVisibilityUpdateAction
   | UpdateSegmentGroupsUpdateAction
   | UpdateSegmentGroupsExpandedStateUpdateAction
+  | UpdateSegmentGroupVisibilityVolumeAction
   | UpdateTreeGroupsUpdateAction
   | UpdateTreeGroupsExpandedStateSkeletonAction
   | RemoveFallbackLayerUpdateAction
@@ -397,7 +405,7 @@ export function moveTreeComponent(
 
 // This action only exists for legacy reasons. Old annotations may have this
 // action in the action log. Don't use it.
-export function LEGACY_updateVolumeTracing(
+export function LEGACY_updateVolumeTracingAction(
   tracing: VolumeTracing,
   position: Vector3,
   editPositionAdditionalCoordinates: AdditionalCoordinate[] | null,
@@ -413,6 +421,7 @@ export function LEGACY_updateVolumeTracing(
       editPositionAdditionalCoordinates,
       editRotation: rotation,
       largestSegmentId: tracing.largestSegmentId,
+      hideUnregisteredSegments: tracing.hideUnregisteredSegments,
       zoomLevel,
     },
   } as const;
@@ -531,6 +540,22 @@ export function updateSegmentVolumeAction(
     },
   } as const;
 }
+
+export function updateSegmentVisibilityVolumeAction(
+  id: number,
+  isVisible: boolean,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateSegmentVisibility",
+    value: {
+      id,
+      actionTracingId,
+      isVisible,
+    },
+  } as const;
+}
+
 export function deleteSegmentVolumeAction(id: number, actionTracingId: string) {
   return {
     name: "deleteSegment",
@@ -600,6 +625,21 @@ export function updateTreeGroupsExpandedState(
       actionTracingId,
       groupIds,
       areExpanded,
+    },
+  } as const;
+}
+
+export function updateSegmentGroupVisibilityVolumeAction(
+  groupId: number | null,
+  isVisible: boolean,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateSegmentGroupVisibility",
+    value: {
+      actionTracingId,
+      groupId,
+      isVisible,
     },
   } as const;
 }

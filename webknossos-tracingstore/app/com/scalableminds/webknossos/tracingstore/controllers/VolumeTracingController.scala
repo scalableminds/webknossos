@@ -202,7 +202,7 @@ class VolumeTracingController @Inject()(
               volumeDataZipFormatParsed,
               voxelSize
             )
-          } yield Ok.sendFile(data)
+          } yield Ok.sendPath(data)
         }
       }
     }

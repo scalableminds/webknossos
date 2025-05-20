@@ -88,7 +88,6 @@ export function convertFrontendBoundingBoxToServer(
   };
 }
 
-// Currently unused.
 export function convertPointToVecInBoundingBox(boundingBox: ServerBoundingBox): BoundingBoxObject {
   return {
     width: boundingBox.width,

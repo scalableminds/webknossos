@@ -284,11 +284,9 @@ class UrlManager {
     const position: Vector3 = V3.floor(getPosition(state.flycam));
     const { viewMode: mode } = state.temporaryConfiguration;
     const zoomStep = Utils.roundTo(state.flycam.zoomStep, 3);
-    const rotationOptional = constants.MODES_ARBITRARY.includes(mode)
-      ? {
-          rotation: Utils.map3((e) => Utils.roundTo(e, 2), getRotationInDegrees(state.flycam)),
-        }
-      : {};
+    const rotation = {
+      rotation: Utils.map3((e) => Utils.roundTo(e, 2), getRotationInDegrees(state.flycam)),
+    };
     const activeNode = state.annotation.skeleton?.activeNodeId;
     const activeNodeOptional = activeNode != null ? { activeNode } : {};
     const stateByLayer: UrlStateByLayer = {};
@@ -375,7 +373,7 @@ class UrlManager {
       mode,
       zoomStep,
       additionalCoordinates: state.flycam.additionalCoordinates,
-      ...rotationOptional,
+      ...rotation,
       ...activeNodeOptional,
       ...stateByLayerOptional,
     };

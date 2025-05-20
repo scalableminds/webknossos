@@ -15,7 +15,7 @@ import {
   ContentTypes as PrefetchContentTypes,
   PrefetchStrategySkeleton,
   PrefetchStrategyVolume,
-} from "viewer/model/bucket_data_handling/prefetch_strategy_plane_rotated";
+} from "viewer/model/bucket_data_handling/prefetch_strategy_plane";
 import { getGlobalDataConnectionInfo } from "viewer/model/data_connection_info";
 import type DataLayer from "viewer/model/data_layer";
 import type { Saga } from "viewer/model/sagas/effect-generators";
@@ -23,6 +23,7 @@ import { select } from "viewer/model/sagas/effect-generators";
 import { Model } from "viewer/singletons";
 import type { WebknossosState } from "viewer/store";
 import { ensureWkReady } from "./ready_sagas";
+import _ from "lodash";
 
 const PREFETCH_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
@@ -45,14 +46,18 @@ export function* watchDataRelevantChanges(): Saga<void> {
 
 function* shouldPrefetchForDataLayer(dataLayer: DataLayer): Saga<boolean> {
   // There is no need to prefetch data for layers that are not visible
-  return yield* select((state) =>
-    isLayerVisible(
-      state.dataset,
-      dataLayer.name,
-      state.datasetConfiguration,
-      state.temporaryConfiguration.viewMode,
-    ),
-  );
+  return yield* select((state) => {
+    const isNotRotated = _.isEqual(getRotationInRadian(state.flycam), [0, 0, 0]);
+    return (
+      isNotRotated &&
+      isLayerVisible(
+        state.dataset,
+        dataLayer.name,
+        state.datasetConfiguration,
+        state.temporaryConfiguration.viewMode,
+      )
+    );
+  });
 }
 
 export function* triggerDataPrefetching(previousProperties: Record<string, any>): Saga<void> {
@@ -105,7 +110,6 @@ export function* prefetchForPlaneMode(
   previousProperties: Record<string, any>,
 ): Saga<void> {
   const position = yield* select((state) => getPosition(state.flycam));
-  const rotation = yield* select((state) => getRotationInRadian(state.flycam));
   const zoomStep = yield* select((state) => getActiveMagIndexForLayer(state, layer.name));
   const magInfo = getMagInfo(layer.mags);
   const activePlane = yield* select((state) => state.viewModeData.plane.activeViewport);
@@ -136,7 +140,6 @@ export function* prefetchForPlaneMode(
         const buckets = strategy.prefetch(
           layer.cube,
           position,
-          rotation,
           direction,
           zoomStep,
           activePlane,

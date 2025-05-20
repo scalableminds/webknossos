@@ -19,7 +19,7 @@ import type {
   UpdateActionNode,
 } from "viewer/model/sagas/update_actions";
 import { api } from "viewer/singletons";
-import type { SkeletonTracing, StoreType, TreeMap, WebknossosState } from "viewer/store";
+import type { SkeletonTracing, StoreType, WebknossosState } from "viewer/store";
 import Store from "viewer/throttled_store";
 import type { CreateNodeAction } from "./model/actions/skeletontracing_actions";
 

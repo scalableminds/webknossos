@@ -3,10 +3,11 @@ package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, TreeBody}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonUserStateProto, TreeBody}
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
+import com.scalableminds.webknossos.tracingstore.tracings.GroupUtils.FunctionalGroupMapping
 import com.scalableminds.webknossos.tracingstore.tracings._
 import net.liftweb.common.{Box, Full}
 
@@ -105,6 +106,7 @@ class SkeletonTracingService @Inject()(
                                                    tracingB.userBoundingBox,
                                                    tracingA.userBoundingBoxes,
                                                    tracingB.userBoundingBoxes)
+      userStates = mergeUserStates(tracingA.userStates, tracingB.userStates, groupMapping)
     } yield
       tracingA.copy(
         trees = mergedTrees,
@@ -112,8 +114,15 @@ class SkeletonTracingService @Inject()(
         boundingBox = mergedBoundingBox,
         userBoundingBox = None,
         userBoundingBoxes = userBoundingBoxes,
-        additionalAxes = AdditionalAxis.toProto(mergedAdditionalAxes)
+        additionalAxes = AdditionalAxis.toProto(mergedAdditionalAxes),
+        userStates = userStates
       )
+
+  private def mergeUserStates(tracingAUserStates: Seq[SkeletonUserStateProto],
+                              tracingBUserStates: Seq[SkeletonUserStateProto],
+                              groupMapping: FunctionalGroupMapping) =
+    // TODO merge. beware of remapped ids (group, tree, bbox)
+    tracingAUserStates
 
   // Can be removed again when https://github.com/scalableminds/webknossos/issues/5009 is fixed
   def remapTooLargeTreeIds(skeletonTracing: SkeletonTracing): SkeletonTracing =

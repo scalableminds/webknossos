@@ -25,6 +25,8 @@ message VolumeUserStateProto {
   repeated bool segmentGroupExpandedStates = 4;
   repeated int32 boundingBoxIds = 5;
   repeated bool boundingBoxVisibilities = 6;
+  repeated int64 segmentIds = 7;
+  repeated bool segmentVisibilities = 8;
 }
 
 message VolumeTracing {

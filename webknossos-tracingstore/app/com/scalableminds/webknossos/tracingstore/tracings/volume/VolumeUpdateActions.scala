@@ -464,13 +464,29 @@ case class UpdateSegmentVisibilityVolumeAction(id: Long,
                                                actionTimestamp: Option[Long] = None,
                                                actionAuthorId: Option[String] = None,
                                                info: Option[String] = None)
-    extends ApplyableVolumeUpdateAction
+    extends UserStateVolumeUpdateAction
     with VolumeUpdateActionHelper {
 
-  // TODO move to user state
-  override def applyOn(tracing: VolumeTracing): VolumeTracing =
-    tracing.withSegments(
-      tracing.segments.map(segment => if (segment.segmentId == id) segment.withIsVisible(isVisible) else segment))
+  def applyOnUserState(tracing: VolumeTracing,
+                       actionUserId: String,
+                       existingUserStateOpt: Option[VolumeUserStateProto]): VolumeUserStateProto =
+    existingUserStateOpt.map { existingUserState =>
+      val visibilityMap: mutable.Map[Long, Boolean] =
+        existingUserState.segmentIds.zip(existingUserState.segmentVisibilities).to(collection.mutable.Map)
+      visibilityMap(id) = isVisible
+      val (segmentIds, visibilities) = visibilityMap.unzip
+      existingUserState.copy(
+        segmentIds = segmentIds.toSeq,
+        segmentVisibilities = visibilities.toSeq
+      )
+    }.getOrElse(
+      VolumeTracingDefaults
+        .emptyUserState(actionUserId)
+        .copy(
+          segmentIds = Seq(id),
+          segmentVisibilities = Seq(isVisible),
+        )
+    )
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
@@ -486,28 +502,38 @@ case class UpdateSegmentGroupVisibilityVolumeAction(groupId: Option[Long],
                                                     actionTimestamp: Option[Long] = None,
                                                     actionAuthorId: Option[String] = None,
                                                     info: Option[String] = None)
-    extends ApplyableVolumeUpdateAction
+    extends UserStateVolumeUpdateAction
     with VolumeUpdateActionHelper {
 
-  // TODO move to user state
-  override def applyOn(tracing: VolumeTracing): VolumeTracing = {
-    def updateSegmentGroups(segmentGroups: Seq[SegmentGroup]) = {
-      def segmentTransform(segment: Segment) =
-        if (segmentGroups.exists(group => segment.groupId.contains(group.groupId)))
-          segment.withIsVisible(isVisible)
-        else segment
-
-      tracing.withSegments(tracing.segments.map(segmentTransform))
-    }
-
-    groupId match {
-      case None => tracing.withSegments(tracing.segments.map(_.copy(isVisible = Some(isVisible))))
+  override def applyOnUserState(tracing: VolumeTracing,
+                                actionUserId: String,
+                                existingUserStateOpt: Option[VolumeUserStateProto]): VolumeUserStateProto = {
+    val segmentIdsToUpdate: Seq[Long] = groupId match {
+      case None => tracing.segments.map(segment => segment.segmentId)
       case Some(groupId) =>
-        tracing.segmentGroups
-          .find(_.groupId == groupId)
-          .map(group => updateSegmentGroups(GroupUtils.getAllChildrenSegmentGroups(group)))
-          .getOrElse(tracing)
+        (for {
+          segmentGroup <- tracing.segmentGroups.find(_.groupId == groupId)
+          segmentGroups = GroupUtils.getAllChildrenSegmentGroups(segmentGroup)
+          segmentIds = tracing.segments
+            .filter(segment => segmentGroups.exists(group => segment.groupId.contains(group.groupId)))
+            .map(_.segmentId)
+        } yield segmentIds).getOrElse(Seq.empty)
     }
+    existingUserStateOpt.map { existingUserState =>
+      val visibilityMapMutable: mutable.Map[Long, Boolean] =
+        existingUserState.segmentIds.zip(existingUserState.segmentVisibilities).to(collection.mutable.Map)
+      segmentIdsToUpdate.foreach(visibilityMapMutable(_) = isVisible)
+      val (segmentIds, segmentVisibilities) = visibilityMapMutable.unzip
+      existingUserState.copy(
+        segmentIds = segmentIds.toSeq,
+        segmentVisibilities = segmentVisibilities.toSeq
+      )
+    }.getOrElse(
+      VolumeTracingDefaults
+        .emptyUserState(actionUserId)
+        .copy(segmentIds = segmentIdsToUpdate,
+              segmentVisibilities = Seq.fill[Boolean](segmentIdsToUpdate.length)(isVisible))
+    )
   }
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))

@@ -21,6 +21,8 @@ object VolumeTracingDefaults {
     segmentGroupIds = Seq.empty,
     segmentGroupExpandedStates = Seq.empty,
     boundingBoxIds = Seq.empty,
-    boundingBoxVisibilities = Seq.empty
+    boundingBoxVisibilities = Seq.empty,
+    segmentIds = Seq.empty,
+    segmentVisibilities = Seq.empty
   )
 }

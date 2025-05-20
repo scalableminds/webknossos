@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added that "Create Animation" jobs will now use the correct segment colors for rendering meshes. [#8605](https://github.com/scalableminds/webknossos/pull/8605)
 - In the NML upload route, the additional form field `description` can be specified. If so, it will overwrite the description contained in the NML files. [#8631](https://github.com/scalableminds/webknossos/pull/8631)
 - Added the possibility for super users to retry manually cancelled jobs from the jobs list. [#8629](https://github.com/scalableminds/webknossos/pull/8629)
+- Added checkboxes to the segments tab that allow to show/hide individual segments. The visibility of segments that are not listed in the segments list can be controlled with a new "Hide unlisted segments" toggle in the layer settings. Additionally, you can right-click a segment in a data viewport and select "Only show this segment" (and similar functionality). [#8546](https://github.com/scalableminds/webknossos/pull/8546)
 
 ### Changed
 - Remove `data.maybe` dependency and replaced with regular Typescript types. [#8563](https://github.com/scalableminds/webknossos/pull/8563)
@@ -42,5 +43,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed that deletion of dataset would lead to an error. [#8639](https://github.com/scalableminds/webknossos/pull/8639)
 
 ### Removed
+- The old "Selective Segment Visibility" feature that allowed to only see the active and the hovered segment was removed. From now on the visibility of segments can be controlled with checkboxes in the segment list and with the "Hide unlisted segments" toggle in the layer settings. [#8546](https://github.com/scalableminds/webknossos/pull/8546)
 
 ### Breaking Changes

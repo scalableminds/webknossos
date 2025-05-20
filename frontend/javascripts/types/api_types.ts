@@ -884,6 +884,7 @@ type ServerSegment = {
   creationTime: number | null | undefined;
   color: ColorObject | null;
   groupId: number | null | undefined;
+  isVisible?: boolean;
   metadata: MetadataEntryProto[];
 };
 export type ServerTracingBase = {
@@ -938,6 +939,7 @@ export type ServerVolumeTracing = ServerTracingBase & {
   // once a bucket was mutated. There is no need to send an explicit UpdateAction
   // for that.
   volumeBucketDataHasChanged?: boolean;
+  hideUnregisteredSegments?: boolean;
 };
 export type ServerTracing = ServerSkeletonTracing | ServerVolumeTracing;
 export type ServerEditableMapping = {

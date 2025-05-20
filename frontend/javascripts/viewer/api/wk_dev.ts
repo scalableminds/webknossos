@@ -43,7 +43,11 @@ export default class WkDev {
    */
   apiLoader: ApiLoader;
   _api!: ApiInterface;
-  benchmarkHistory: { MOVE: number[]; ROTATE: number[] } = { MOVE: [], ROTATE: [] };
+  benchmarkHistory: { MOVE: number[]; ROTATE: number[]; SEGMENTS_SCROLL: number[] } = {
+    MOVE: [],
+    ROTATE: [],
+    SEGMENTS_SCROLL: [],
+  };
 
   flags = WkDevFlags;
 
@@ -147,7 +151,7 @@ export default class WkDev {
   }
 
   resetBenchmarks() {
-    this.benchmarkHistory = { MOVE: [], ROTATE: [] };
+    this.benchmarkHistory = { MOVE: [], ROTATE: [], SEGMENTS_SCROLL: [] };
   }
 
   async benchmarkMove(zRange: [number, number] = [1025, 1250], repeatAmount: number = 1) {
@@ -245,5 +249,23 @@ export default class WkDev {
         _.mean(this.benchmarkHistory.ROTATE),
       );
     }
+  }
+
+  async benchmarkSegmentListScroll(n: number = 100) {
+    const then = performance.now();
+    console.time("Segment Scroll Benchmark");
+
+    app.vent.emit("benchmark:segmentlist:scroll", n, () => {
+      const duration = performance.now() - then;
+      console.timeEnd("Segment Scroll Benchmark");
+
+      this.benchmarkHistory.SEGMENTS_SCROLL.push(duration);
+      if (this.benchmarkHistory.SEGMENTS_SCROLL.length > 1) {
+        console.log(
+          `Mean of all ${this.benchmarkHistory.SEGMENTS_SCROLL.length} benchmark runs:`,
+          _.mean(this.benchmarkHistory.SEGMENTS_SCROLL),
+        );
+      }
+    });
   }
 }

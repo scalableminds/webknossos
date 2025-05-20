@@ -47,7 +47,6 @@ export default function DistanceMeasurementTooltip() {
   );
   const isMeasuring = useWkSelector((state) => state.uiInformation.measurementToolInfo.isMeasuring);
   const flycam = useWkSelector((state) => state.flycam);
-  const state = useWkSelector((state) => state);
   const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
   const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -62,6 +61,12 @@ export default function DistanceMeasurementTooltip() {
   const orthoView = activeGeometry.viewport;
   // When the flycam is moved into the third dimension, the tooltip should be hidden.
   const thirdDim = dimensions.thirdDimensionForPlane(orthoView);
+  const {
+    left: viewportLeft,
+    top: viewportTop,
+    width: viewportWidth,
+    height: viewportHeight,
+  } = useWkSelector((state) => getInputCatcherRect(state, orthoView));
 
   // biome-ignore lint/correctness/useExhaustiveDependencies(thirdDim): thirdDim is more or less a constant
   // biome-ignore lint/correctness/useExhaustiveDependencies(lastMeasuredGlobalPosition[thirdDim]):
@@ -107,13 +112,6 @@ export default function DistanceMeasurementTooltip() {
       LongUnitToShortUnitMap[voxelSize.unit],
     );
   }
-
-  const {
-    left: viewportLeft,
-    top: viewportTop,
-    width: viewportWidth,
-    height: viewportHeight,
-  } = getInputCatcherRect(state, orthoView);
 
   const tooltipWidth = tooltipRef.current?.offsetWidth ?? 0;
   const left =

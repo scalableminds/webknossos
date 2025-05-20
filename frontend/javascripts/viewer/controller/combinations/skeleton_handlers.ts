@@ -184,7 +184,8 @@ export function moveNode(
   useFloat: boolean = false,
 ) {
   // dx and dy are measured in pixel.
-  const skeletonTracing = getSkeletonTracing(Store.getState().annotation);
+  const state = Store.getState();
+  const skeletonTracing = getSkeletonTracing(state.annotation);
   if (!skeletonTracing) return;
 
   const treeAndNode = getTreeAndNode(skeletonTracing, nodeId);
@@ -192,14 +193,21 @@ export function moveNode(
 
   const [activeTree, activeNode] = treeAndNode;
 
-  const state = Store.getState();
   const { activeViewport } = state.viewModeData.plane;
   const vector = Dimensions.transDim([dx, dy, 0], activeViewport);
+  const flycamRotation = getRotationInRadian(state.flycam);
+  const isRotated = !_.isEqual(flycamRotation, [0, 0, 0]);
+
+  const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(
+    new THREE.Euler(...flycamRotation),
+  );
+  const vectorRotated = new THREE.Vector3(...vector).applyMatrix4(rotationMatrix);
+
   const zoomFactor = state.flycam.zoomStep;
   const scaleFactor = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
 
   const op = (val: number) => {
-    if (useFloat) {
+    if (useFloat || isRotated) {
       return val;
     }
     // Zero diffs should stay zero.
@@ -215,9 +223,9 @@ export function moveNode(
   };
 
   const delta = [
-    op(vector[0] * zoomFactor * scaleFactor[0]),
-    op(vector[1] * zoomFactor * scaleFactor[1]),
-    op(vector[2] * zoomFactor * scaleFactor[2]),
+    op(vectorRotated.x * zoomFactor * scaleFactor[0]),
+    op(vectorRotated.y * zoomFactor * scaleFactor[1]),
+    op(vectorRotated.z * zoomFactor * scaleFactor[2]),
   ];
   const [x, y, z] = getNodePosition(activeNode, state);
 

@@ -770,7 +770,6 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
 
   // Remove older mesh instance if it exists already.
   yield* put(removeMeshAction(layer.name, action.segmentId));
-  console.log("Loading precomputed mesh for segment", segmentId, opacity);
 
   // If a REMOVE_MESH action is dispatched and consumed
   // here before loadPrecomputedMeshForSegmentId is finished, the latter saga

@@ -55,7 +55,7 @@ import {
 } from "types/api_types";
 import type { ValueOf } from "types/globals";
 import {
-  defaultDatasetViewConfigurationWithoutNull,
+  defaultDatasetViewConfiguration,
   getDefaultLayerViewConfiguration,
 } from "types/schemas/dataset_view_configuration.schema";
 import { getSpecificDefaultsForLayer } from "types/schemas/dataset_view_configuration_defaults";
@@ -87,7 +87,6 @@ import {
   enforceSkeletonTracing,
   getActiveNode,
 } from "viewer/model/accessors/skeletontracing_accessor";
-import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
   getAllReadableLayerNames,
   getReadableNameByVolumeTracingId,
@@ -112,8 +111,7 @@ import {
   setShowSkeletonsAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import { addLayerToAnnotation, deleteAnnotationLayer } from "viewer/model/sagas/update_actions";
-import { Model } from "viewer/singletons";
-import { api } from "viewer/singletons";
+import { Model, api } from "viewer/singletons";
 import type {
   DatasetConfiguration,
   DatasetLayerConfiguration,
@@ -134,6 +132,7 @@ import {
   SwitchSetting,
 } from "viewer/view/components/setting_input_views";
 import { confirmAsync } from "../../../dashboard/dataset/helper_components";
+import { HideUnregisteredSegmentsSwitch } from "./hide_unregistered_segments_switch";
 import Histogram, { isHistogramSupported } from "./histogram_view";
 import MappingSettingsView from "./mapping_settings_view";
 import AddVolumeLayerModal, { validateReadableLayerName } from "./modals/add_volume_layer_modal";
@@ -935,40 +934,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         step={1}
         value={this.props.datasetConfiguration.segmentationPatternOpacity}
         onChange={_.partial(this.props.onChange, "segmentationPatternOpacity")}
-        defaultValue={defaultDatasetViewConfigurationWithoutNull.segmentationPatternOpacity}
+        defaultValue={defaultDatasetViewConfiguration.segmentationPatternOpacity}
       />
-    );
-
-    const isProofreadingMode = this.props.activeTool === AnnotationTool.PROOFREAD;
-    const isSelectiveVisibilityDisabled = isProofreadingMode;
-
-    const selectiveVisibilitySwitch = (
-      <FastTooltip
-        title={
-          isSelectiveVisibilityDisabled
-            ? "This behavior is overridden by the 'selective segment visibility' button in the toolbar, because the proofreading tool is active."
-            : "When enabled, only hovered or active segments will be shown."
-        }
-      >
-        <div
-          style={{
-            marginBottom: 6,
-          }}
-        >
-          <SwitchSetting
-            onChange={_.partial(this.props.onChange, "selectiveSegmentVisibility")}
-            value={this.props.datasetConfiguration.selectiveSegmentVisibility}
-            label={settings.selectiveSegmentVisibility}
-            disabled={isSelectiveVisibilityDisabled}
-          />
-        </div>
-      </FastTooltip>
     );
 
     return (
       <div>
         {segmentationOpacitySetting}
-        {selectiveVisibilitySwitch}
+        <HideUnregisteredSegmentsSwitch layerName={layerName} />
         <MappingSettingsView layerName={layerName} />
       </div>
     );
@@ -1370,7 +1343,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         "loadingStrategy",
         "segmentationPatternOpacity",
         "blendMode",
-        "selectiveSegmentVisibility",
       ] as Array<keyof RecommendedConfiguration>
     ).map((key) => ({
       name: settings[key] as string,
@@ -1610,7 +1582,6 @@ const mapStateToProps = (state: WebknossosState) => ({
     state.activeUser != null ? Utils.isUserAdminOrDatasetManager(state.activeUser) : false,
   isAdminOrManager: state.activeUser != null ? Utils.isUserAdminOrManager(state.activeUser) : false,
   isSuperUser: state.activeUser?.isSuperUser || false,
-  activeTool: state.uiInformation.activeTool,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

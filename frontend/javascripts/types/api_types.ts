@@ -735,9 +735,15 @@ export type APIFeatureToggles = {
   readonly openIdConnectEnabled?: boolean;
   readonly segmentAnythingEnabled?: boolean;
 };
-export type APIJobState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | null;
+export type APIJobState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | "CANCELLED" | null;
 export type APIJobManualState = "SUCCESS" | "FAILURE" | null;
-export type APIEffectiveJobState = "UNKNOWN" | "SUCCESS" | "PENDING" | "STARTED" | "FAILURE";
+export type APIEffectiveJobState =
+  | "UNKNOWN"
+  | "SUCCESS"
+  | "PENDING"
+  | "STARTED"
+  | "FAILURE"
+  | "CANCELLED";
 export enum APIJobType {
   ALIGN_SECTIONS = "align_sections",
   CONVERT_TO_WKW = "convert_to_wkw",
@@ -878,6 +884,7 @@ type ServerSegment = {
   creationTime: number | null | undefined;
   color: ColorObject | null;
   groupId: number | null | undefined;
+  isVisible?: boolean;
   metadata: MetadataEntryProto[];
 };
 export type ServerTracingBase = {
@@ -932,6 +939,7 @@ export type ServerVolumeTracing = ServerTracingBase & {
   // once a bucket was mutated. There is no need to send an explicit UpdateAction
   // for that.
   volumeBucketDataHasChanged?: boolean;
+  hideUnregisteredSegments?: boolean;
 };
 export type ServerTracing = ServerSkeletonTracing | ServerVolumeTracing;
 export type ServerEditableMapping = {

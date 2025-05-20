@@ -41,6 +41,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a rare bug where segment bounding box would not be displayed correctly, with the request potentially even crashing the server. [#8590](https://github.com/scalableminds/webknossos/pull/8590)
 - Fixed a rare bug where download requests would terminate without sending the whole annotation. [#8624](https://github.com/scalableminds/webknossos/pull/8624)
 - Fixed that deletion of dataset would lead to an error. [#8639](https://github.com/scalableminds/webknossos/pull/8639)
+- Fixed a bug where merging annotations with large tree IDs could lead to an error. [#8643](https://github.com/scalableminds/webknossos/pull/8643)
 - Fixed a bug in zarr streaming where directly after the datastore startup, chunk responses would have status 404 (leading zarr clients to fill with fill_value). Now it will yield status 400, so that clients can escalate this as an error. [#8644](https://github.com/scalableminds/webknossos/pull/8644)
 
 ### Removed

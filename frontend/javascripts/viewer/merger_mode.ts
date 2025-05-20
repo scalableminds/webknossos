@@ -30,7 +30,7 @@ type MergerModeState = {
 
   // Unmapped Segment Id -> Count
   nodesPerUnmappedSegment: Record<number, number>;
-  nodes: Array<NodeWithTreeId>;
+  nodes: NodeWithTreeId[];
 
   // A properly initialized merger mode should always
   // have a segmentationLayerName. However, some edge cases
@@ -137,12 +137,12 @@ function decreaseNodesOfUnmappedSegment(
 }
 
 function getAllNodesWithTreeId(): Array<NodeWithTreeId> {
-  const trees: TreeMap = api.tracing.getAllTrees();
+  const trees = api.tracing.getAllTrees();
   const nodes: Array<NodeWithTreeId> = [];
   // Create an array of all nodes, but with the additional treeId Property
   Object.keys(trees).forEach((treeId) => {
     const currentTreeId = Number.parseInt(treeId);
-    const currentTree = trees.getOrThrow(currentTreeId);
+    const currentTree = trees[currentTreeId];
 
     for (const node of currentTree.nodes.values()) {
       const nodeWithTreeId: NodeWithTreeId = Object.assign({}, node, {

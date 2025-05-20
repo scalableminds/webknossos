@@ -174,8 +174,8 @@ import type {
   SegmentGroup,
   SkeletonTracing,
   StoreAnnotation,
+  Tree,
   TreeGroupTypeFlat,
-  TreeMap,
   UserConfiguration,
   VolumeTracing,
   WebknossosState,
@@ -303,9 +303,9 @@ class TracingApi {
   /**
    * Returns all trees belonging to a tracing.
    */
-  getAllTrees(): TreeMap {
+  getAllTrees(): Record<number, Tree> {
     const skeletonTracing = assertSkeleton(Store.getState().annotation);
-    return skeletonTracing.trees;
+    return skeletonTracing.trees.toObject();
   }
 
   /**

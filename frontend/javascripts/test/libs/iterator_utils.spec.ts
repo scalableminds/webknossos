@@ -23,7 +23,7 @@ function createNegativeNumberMap(): Map<number, number> {
 }
 
 // Helper function to create test objects
-function createObjectMap(): Map<number, Record<string, number>> {
+function createObjectMap() {
   return new Map([
     [1, { id: 1, value: 10 }],
     [2, { id: 2, value: 5 }],
@@ -81,7 +81,7 @@ describe("Iterator Utils", () => {
     });
 
     it("should return undefined for an empty collection", () => {
-      const empty = new Map<number, Record<string, number>>().values();
+      const empty = new Map().values();
       expect(maxBy(empty, (obj) => obj.value)).toBeNull();
       expect(maxBy(empty, "value")).toBeNull();
     });
@@ -107,7 +107,7 @@ describe("Iterator Utils", () => {
     });
 
     it("should return undefined for an empty collection", () => {
-      const empty = new Map<number, Record<string, number>>().values();
+      const empty = new Map().values();
       expect(minBy(empty, (obj) => obj.value)).toBeNull();
       expect(minBy(empty, "value")).toBeNull();
     });

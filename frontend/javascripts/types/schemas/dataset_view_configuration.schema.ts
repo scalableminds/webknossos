@@ -79,7 +79,7 @@ export const layerViewConfiguration = {
     additionalProperties: false,
   },
 };
-export const defaultDatasetViewConfigurationWithoutNull: DatasetConfiguration = {
+export const defaultDatasetViewConfiguration: DatasetConfiguration = {
   fourBit: false,
   interpolation: false,
   renderMissingDataBlack: false,
@@ -89,12 +89,6 @@ export const defaultDatasetViewConfigurationWithoutNull: DatasetConfiguration = 
   blendMode: BLEND_MODES.Additive,
   colorLayerOrder: [],
   nativelyRenderedLayerName: null,
-};
-export const defaultDatasetViewConfiguration = {
-  ...defaultDatasetViewConfigurationWithoutNull,
-  zoom: null,
-  position: null,
-  rotation: null,
 };
 export const baseDatasetViewConfiguration = {
   fourBit: {

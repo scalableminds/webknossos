@@ -387,7 +387,7 @@ case class UpdateSegmentGroupVisibilityVolumeAction(groupId: Option[Long],
     def updateSegmentGroups(segmentGroups: Seq[SegmentGroup]) = {
       def segmentTransform(segment: Segment) =
         if (segmentGroups.exists(group => segment.groupId.contains(group.groupId)))
-          segment.copy(isVisible = Some(isVisible))
+          segment.withIsVisible(isVisible)
         else segment
 
       tracing.withSegments(tracing.segments.map(segmentTransform))

@@ -345,6 +345,12 @@ export default class LayerRenderingManager {
       ),
     );
 
+    function extractAdaptedBlueChannel(color: Vector3, isVisible: boolean) {
+      // See the comments on the callee sites for an explanation of this logic.
+      const increment = isVisible ? 1 : 0;
+      return 2 * Math.floor((255 * color[2]) / 2) + increment;
+    }
+
     const updateToNewSegments = (newSegments: SegmentMap) => {
       const cuckoo = this.getCustomColorCuckooTable();
       const hideUnregisteredSegments = getHideUnregisteredSegmentsForLayer(
@@ -371,9 +377,9 @@ export default class LayerRenderingManager {
           /*
            * For each segment, we have to take care that it is
            * rendered with the correct color.
-           * In general, segments have only be added to the cuckoo table,
+           * In general, segments only need to be added to the cuckoo table,
            * if they have a custom color and/or a custom visibility.
-           * If they have a custom visibility, but not a custom color
+           * If they have a custom visibility, but not a custom color,
            * [0, 0, 0] is used as a special value for that.
            * If they have a custom color, the visibility is additionally encoded
            * in the blue channel of the RGB value. See below for details.
@@ -406,7 +412,7 @@ export default class LayerRenderingManager {
                   // For that reason, we cast that color value to [0, 0, 2].
                   cuckoo.set(id, [0, 0, 2]);
                 } else {
-                  const blueChannel = 2 * Math.floor((255 * color[2]) / 2);
+                  const blueChannel = extractAdaptedBlueChannel(color, false);
                   cuckoo.set(id, [255 * color[0], 255 * color[1], blueChannel]);
                 }
               }
@@ -415,7 +421,7 @@ export default class LayerRenderingManager {
               // We employ the same trick as above to encode color and visibility.
               // The special value of [0, 0, 0] won't be used here ever, because
               // of the + 1.
-              const blueChannel = 2 * Math.floor((255 * color[2]) / 2) + 1;
+              const blueChannel = extractAdaptedBlueChannel(color, true);
               cuckoo.set(id, [255 * color[0], 255 * color[1], blueChannel]);
             } else {
               // The segment should be visible and no custom color exists for it.

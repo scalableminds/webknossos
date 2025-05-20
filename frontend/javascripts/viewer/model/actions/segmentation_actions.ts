@@ -35,7 +35,7 @@ export const loadPrecomputedMeshAction = (
   seedPosition: Vector3,
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
-  opacity?: number,
+  opacity: number,
   layerName?: string | undefined,
 ) =>
   ({

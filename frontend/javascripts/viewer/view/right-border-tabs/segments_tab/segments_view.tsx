@@ -54,7 +54,7 @@ import type {
 } from "types/api_types";
 import { APIJobType, type AdditionalCoordinate } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
-import { EMPTY_OBJECT, MappingStatusEnum } from "viewer/constants";
+import Constants, { EMPTY_OBJECT, MappingStatusEnum } from "viewer/constants";
 import {
   getMagInfoOfVisibleSegmentationLayer,
   getMappingInfo,
@@ -261,7 +261,13 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     meshFileName: string,
   ) {
     dispatch(
-      loadPrecomputedMeshAction(segmentId, seedPosition, seedAdditionalCoordinates, meshFileName),
+      loadPrecomputedMeshAction(
+        segmentId,
+        seedPosition,
+        seedAdditionalCoordinates,
+        meshFileName,
+        Constants.DEFAULT_MESH_OPACITY,
+      ),
     );
   },
 

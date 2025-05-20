@@ -678,10 +678,6 @@ function* _refreshMeshWithMap(
   yield* call(removeMesh, removeMeshAction(layerName, segmentId), false);
   // The mesh should only be removed once after re-fetching the mesh first position.
   let shouldBeRemoved = true;
-  const meshInfo2 = yield* select((state) =>
-    getMeshInfoForSegment(state, additionalCoordinates, layerName, segmentId),
-  );
-  console.log(meshInfo2);
 
   for (const [, position] of meshPositions) {
     // Reload the mesh at the given position if it isn't already loaded there.
@@ -774,6 +770,7 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
 
   // Remove older mesh instance if it exists already.
   yield* put(removeMeshAction(layer.name, action.segmentId));
+  console.log("Loading precomputed mesh for segment", segmentId, opacity);
 
   // If a REMOVE_MESH action is dispatched and consumed
   // here before loadPrecomputedMeshForSegmentId is finished, the latter saga
@@ -818,11 +815,9 @@ function* loadPrecomputedMeshForSegmentId(
       seedAdditionalCoordinates,
       meshFileName,
       mappingName,
+      opacity,
     ),
   );
-  if (opacity != null) {
-    //yield* put(updateMeshOpacityAction(layerName, segmentId, opacity));
-  }
   yield* put(startedLoadingMeshAction(layerName, segmentId));
   const dataset = yield* select((state) => state.dataset);
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
@@ -1331,7 +1326,6 @@ function* handleSegmentColorChange(action: UpdateSegmentAction): Saga<void> {
 }
 
 function* handleMeshOpacityChange(action: UpdateMeshOpacityAction): Saga<void> {
-  console.log("handleMeshOpacityChange", action);
   const { segmentMeshController } = yield* call(getSceneController);
   segmentMeshController.setMeshOpacity(action.id, action.layerName, action.opacity);
 }

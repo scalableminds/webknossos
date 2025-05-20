@@ -354,6 +354,7 @@ export const addPrecomputedMeshAction = (
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
   mappingName: string | null | undefined,
+  opacity: number,
 ) =>
   ({
     type: "ADD_PRECOMPUTED_MESH",
@@ -363,6 +364,7 @@ export const addPrecomputedMeshAction = (
     seedAdditionalCoordinates,
     meshFileName,
     mappingName,
+    opacity,
   }) as const;
 
 export const setOthersMayEditForAnnotationAction = (othersMayEdit: boolean) =>

@@ -854,15 +854,15 @@ exports[`Annotation API (E2E) > Send update actions and compare resulting tracin
   "additionalAxes": [],
   "createdTimestamp": "createdTimestamp",
   "editPosition": {
-    "x": 2,
-    "y": 3,
-    "z": 4,
+    "x": 256,
+    "y": 256,
+    "z": 128,
   },
   "editPositionAdditionalCoordinates": [],
   "editRotation": {
-    "x": 1,
-    "y": 2,
-    "z": 3,
+    "x": 0,
+    "y": 0,
+    "z": 0,
   },
   "id": "id",
   "storedWithExternalTreeBodies": true,
@@ -870,8 +870,34 @@ exports[`Annotation API (E2E) > Send update actions and compare resulting tracin
   "trees": [],
   "typ": "Skeleton",
   "userBoundingBoxes": [],
-  "userStates": [],
+  "userStates": [
+    {
+      "boundingBoxIds": [],
+      "boundingBoxVisibilities": [],
+      "treeGroupExpandedStates": [],
+      "treeGroupIds": [],
+      "treeIds": [],
+      "treeVisibilities": [],
+      "userId": "dummy-user-id",
+    },
+  ],
   "zoomLevel": 2,
+}
+`;
+
+exports[`Annotation API (E2E) > Send update actions and compare resulting tracing 2`] = `
+{
+  "annotationLayers": [
+    {
+      "name": "Skeleton",
+      "tracingId": "tracingId",
+      "typ": "Skeleton",
+    },
+  ],
+  "description": "",
+  "earliestAccessibleVersion": 0,
+  "userStates": [],
+  "version": 1,
 }
 `;
 
@@ -2555,127 +2581,6 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ta
       },
       {
         "id": "id",
-        "isTeamManager": true,
-        "name": "team_X4",
-      },
-    ],
-  },
-  "viewConfiguration": null,
-  "visibility": "Internal",
-}
-`;
-
-exports[`Annotation API (E2E) > getAnnotationInformation() 1`] = `
-{
-  "annotationLayers": [
-    {
-      "name": "Skeleton",
-      "stats": {
-        "branchPointCount": 0,
-        "edgeCount": 28965,
-        "nodeCount": 28967,
-        "treeCount": 2,
-      },
-      "tracingId": "ae417175-f7bb-4a34-8187-d9c3b50143ae",
-      "typ": "Skeleton",
-    },
-  ],
-  "contributors": [],
-  "dataSetName": "2012-06-28_Cortex",
-  "dataStore": {
-    "allowsUpload": true,
-    "jobsEnabled": false,
-    "jobsSupportedByAvailableWorkers": [],
-    "name": "localhost",
-    "url": "http://localhost:9000",
-  },
-  "datasetId": "570b9f4e4bb848d0885ee711",
-  "description": "",
-  "id": "570ba0092a7c0e980056fe9b",
-  "isLockedByOwner": false,
-  "modified": 0,
-  "name": "",
-  "organization": "Organization_X",
-  "othersMayEdit": false,
-  "owner": {
-    "email": "user_A@scalableminds.com",
-    "firstName": "user_A",
-    "id": "570b9f4d2a7c0e4d008da6ef",
-    "isAdmin": true,
-    "isAnonymous": false,
-    "isDatasetManager": true,
-    "lastName": "last_A",
-    "teams": [
-      {
-        "id": "570b9f4b2a7c0e3b008da6ec",
-        "isTeamManager": true,
-        "name": "team_X1",
-      },
-      {
-        "id": "59882b370d889b84020efd3f",
-        "isTeamManager": false,
-        "name": "team_X3",
-      },
-      {
-        "id": "59882b370d889b84020efd6f",
-        "isTeamManager": true,
-        "name": "team_X4",
-      },
-    ],
-  },
-  "restrictions": {
-    "allowAccess": true,
-    "allowDownload": true,
-    "allowFinish": true,
-    "allowUpdate": true,
-  },
-  "settings": {
-    "allowedModes": [
-      "orthogonal",
-      "oblique",
-      "flight",
-    ],
-    "branchPointsAllowed": true,
-    "magRestrictions": {},
-    "mergerMode": false,
-    "somaClickingAllowed": true,
-    "volumeInterpolationAllowed": true,
-  },
-  "state": "Active",
-  "stats": {},
-  "tags": [
-    "2012-06-28_Cortex",
-    "skeleton",
-  ],
-  "task": null,
-  "teams": [],
-  "tracingStore": {
-    "name": "localhost",
-    "url": "http://localhost:9000",
-  },
-  "tracingTime": null,
-  "typ": "Explorational",
-  "user": {
-    "email": "user_A@scalableminds.com",
-    "firstName": "user_A",
-    "id": "570b9f4d2a7c0e4d008da6ef",
-    "isAdmin": true,
-    "isAnonymous": false,
-    "isDatasetManager": true,
-    "lastName": "last_A",
-    "teams": [
-      {
-        "id": "570b9f4b2a7c0e3b008da6ec",
-        "isTeamManager": true,
-        "name": "team_X1",
-      },
-      {
-        "id": "59882b370d889b84020efd3f",
-        "isTeamManager": false,
-        "name": "team_X3",
-      },
-      {
-        "id": "59882b370d889b84020efd6f",
         "isTeamManager": true,
         "name": "team_X4",
       },

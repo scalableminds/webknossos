@@ -5,7 +5,7 @@ import {
   tokenUserA,
   writeTypeCheckingFile,
 } from "test/e2e-setup";
-import type { APIAnnotation } from "types/api_types";
+import type { APIAnnotation, SkeletonUserState } from "types/api_types";
 import { AnnotationLayerEnum, APIAnnotationTypeEnum } from "types/api_types";
 import { createTreeMapFromTreeArray } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import { diffTrees } from "viewer/model/sagas/skeletontracing_saga";
@@ -187,13 +187,16 @@ describe("Annotation API (E2E)", () => {
     const createdExplorational = await api.createExplorational(datasetId, "skeleton", false, null);
     const tracingId = createdExplorational.annotationLayers[0].tracingId;
     const initialSkeleton = {
-      activeNodeId: undefined,
+      activeNodeId: 3,
       userBoundingBoxes: [],
       tracingId,
     };
     const [saveQueue] = addVersionNumbers(
       createSaveQueueFromUpdateActions(
-        [[UpdateActions.updateActiveNode(initialSkeleton)]],
+        [
+          [UpdateActions.updateActiveNode(initialSkeleton)],
+          [UpdateActions.updateCameraAnnotation([2, 3, 4], null, [1, 2, 3], 2)],
+        ],
         123456789,
       ),
       0,
@@ -201,8 +204,17 @@ describe("Annotation API (E2E)", () => {
     await sendUpdateActions(createdExplorational, saveQueue);
 
     const tracings = await api.getTracingsForAnnotation(createdExplorational);
-    expect(replaceVolatileValues(tracings[0])).toMatchSnapshot();
-    expect(replaceVolatileValues(createdExplorational)).toMatchSnapshot();
+    const annotationProto = await api.getAnnotationProto(
+      createdExplorational.tracingStore.url,
+      createdExplorational.id,
+    );
+
+    expect((tracings[0].userStates[0] as SkeletonUserState).activeNodeId).toEqual(
+      initialSkeleton.activeNodeId,
+    );
+    expect(annotationProto.userStates[0].editPosition).toEqual({ x: 2, y: 3, z: 4 });
+    expect(annotationProto.userStates[0].editRotation).toEqual({ x: 1, y: 2, z: 3 });
+    expect(annotationProto.userStates[0].zoomLevel).toEqual(2);
   });
 
   it("Send complex update actions and compare resulting tracing", async () => {

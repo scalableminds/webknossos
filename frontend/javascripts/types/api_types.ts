@@ -949,13 +949,17 @@ export type VolumeUserState = {
   userId: string;
   activeSegmentId?: number;
   // ids and visibilities form the entries for a
-  // id->isVisible map
+  // bbox id -> isVisible map
   boundingBoxIds: number[];
   boundingBoxVisibilities: [];
   // These two properties are the dictionary entries
-  // for an id->expanded mapping.
+  // for an segment group id -> expanded mapping.
   segmentGroupIds: number[];
   segmentGroupExpandedStates: boolean[];
+  // These two properties are the dictionary entries
+  // for an segment id -> isVisible mapping.
+  segmentIds: number[];
+  segmentVisibilities: boolean[];
 };
 
 export type ServerVolumeTracing = ServerTracingBase & {

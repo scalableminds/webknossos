@@ -1,4 +1,4 @@
-import { PushpinOutlined, ReloadOutlined } from "@ant-design/icons";
+import { PushpinOutlined, RollbackOutlined } from "@ant-design/icons";
 import { Space } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { V3 } from "libs/mjs";
@@ -46,12 +46,6 @@ class DatasetPositionView extends PureComponent<Props> {
     const position = V3.floor(getPosition(this.props.flycam)).join(", ");
     await navigator.clipboard.writeText(position);
     Toast.success("Position copied to clipboard");
-  };
-
-  copyRotationToClipboard = async () => {
-    const rotation = V3.round(getRotationInDegrees(this.props.flycam)).join(", ");
-    await navigator.clipboard.writeText(rotation);
-    Toast.success("Rotation copied to clipboard");
   };
 
   handleChangePosition = (position: Vector3) => {
@@ -147,15 +141,15 @@ class DatasetPositionView extends PureComponent<Props> {
               marginLeft: 10,
             }}
           >
-            <FastTooltip title={message["tracing.copy_rotation"]} placement="bottom-start">
+            <FastTooltip title={message["tracing.reset_rotation"]} placement="bottom-start">
               <ButtonComponent
-                onClick={this.copyRotationToClipboard}
+                onClick={() => this.handleChangeRotation([0, 0, 0])}
                 style={{
                   padding: "0 10px",
                 }}
                 className="hide-on-small-screen"
               >
-                <ReloadOutlined />
+                <RollbackOutlined />
               </ButtonComponent>
             </FastTooltip>
             <Vector3Input

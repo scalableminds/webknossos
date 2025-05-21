@@ -45,11 +45,11 @@ export const getWorldCoordUVW: ShaderModule = {
         worldCoordUVW = (savedModelMatrix * modelCoords).xyz;
       }
 
-      vec3 voxelSizeFactorUVW = transDim(voxelSizeFactor);
+      vec3 voxelSizeFactorInvertedUVW = transDim(voxelSizeFactorInverted);
 
-      // We need to divide by voxelSizeFactor because the threejs scene is scaled 
-      // and then subtract the potential offset of the plane
-      worldCoordUVW = (worldCoordUVW - positionOffsetUVW) / voxelSizeFactorUVW;
+      // We subtract the potential offset of the plane and then
+      // need to multiply by voxelSizeFactorInvertedUVW because the threejs scene is scaled.
+      worldCoordUVW = (worldCoordUVW - positionOffsetUVW) * voxelSizeFactorInvertedUVW;
 
 
       return worldCoordUVW;

@@ -2,7 +2,7 @@ import * as Utils from "libs/utils";
 import type { APIMagRestrictions, AdditionalCoordinate, MetadataEntryProto } from "types/api_types";
 import { EMPTY_OBJECT, type Vector3 } from "viewer/constants";
 import type { SendBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
-import { convertUserBoundingBoxesFromFrontendToServer } from "viewer/model/reducers/reducer_helpers";
+import { convertUserBoundingBoxFromFrontendToServer } from "viewer/model/reducers/reducer_helpers";
 import type {
   Node,
   NumberLike,
@@ -17,6 +17,7 @@ export type NodeWithTreeId = {
   treeId: number;
 } & Node;
 
+// This type is meant to contain only the properties that have changed
 type PartialBoundingBoxWithoutVisibility = Partial<Omit<UserBoundingBox, "isVisible">>;
 
 export type UpdateTreeUpdateAction = ReturnType<typeof updateTree> | ReturnType<typeof createTree>;
@@ -38,28 +39,28 @@ export type UpdateSegmentUpdateAction = ReturnType<typeof updateSegmentVolumeAct
 export type DeleteSegmentUpdateAction = ReturnType<typeof deleteSegmentVolumeAction>;
 export type DeleteSegmentDataUpdateAction = ReturnType<typeof deleteSegmentDataVolumeAction>;
 export type AddUserBoundingBoxInSkeletonTracingAction = ReturnType<
-  typeof addUserBoundingBoxInSkeletonTracingAction
+  typeof addUserBoundingBoxInSkeletonTracing
 >;
 export type AddUserBoundingBoxInVolumeTracingAction = ReturnType<
-  typeof addUserBoundingBoxInVolumeTracingAction
+  typeof addUserBoundingBoxInVolumeTracing
 >;
 export type DeleteUserBoundingBoxInSkeletonTracingAction = ReturnType<
-  typeof deleteUserBoundingBoxInSkeletonTracingAction
+  typeof deleteUserBoundingBoxInSkeletonTracing
 >;
 export type DeleteUserBoundingBoxInVolumeTracingAction = ReturnType<
-  typeof deleteUserBoundingBoxInVolumeTracingAction
+  typeof deleteUserBoundingBoxInVolumeTracing
 >;
 export type UpdateUserBoundingBoxInSkeletonTracingAction = ReturnType<
-  typeof updateUserBoundingBoxInSkeletonTracingAction
+  typeof updateUserBoundingBoxInSkeletonTracing
 >;
 export type UpdateUserBoundingBoxInVolumeTracingAction = ReturnType<
-  typeof updateUserBoundingBoxInVolumeTracingAction
+  typeof updateUserBoundingBoxInVolumeTracing
 >;
 export type UpdateUserBoundingBoxVisibilityInSkeletonTracingAction = ReturnType<
-  typeof updateUserBoundingBoxVisibilityInSkeletonTracingAction
+  typeof updateUserBoundingBoxVisibilityInSkeletonTracing
 >;
 export type UpdateUserBoundingBoxVisibilityInVolumeTracingAction = ReturnType<
-  typeof updateUserBoundingBoxVisibilityInVolumeTracingAction
+  typeof updateUserBoundingBoxVisibilityInVolumeTracing
 >;
 export type UpdateBucketUpdateAction = ReturnType<typeof updateBucket>;
 export type UpdateSegmentGroupsUpdateAction = ReturnType<typeof updateSegmentGroups>;
@@ -401,33 +402,33 @@ export function updateVolumeTracing(
   } as const;
 }
 
-export function addUserBoundingBoxInSkeletonTracingAction(
+export function addUserBoundingBoxInSkeletonTracing(
   boundingBox: UserBoundingBox,
   actionTracingId: string,
 ) {
   return {
     name: "addUserBoundingBoxInSkeletonTracing",
     value: {
-      boundingBox: convertUserBoundingBoxesFromFrontendToServer(boundingBox),
+      boundingBox: convertUserBoundingBoxFromFrontendToServer(boundingBox),
       actionTracingId,
     },
   } as const;
 }
 
-export function addUserBoundingBoxInVolumeTracingAction(
+export function addUserBoundingBoxInVolumeTracing(
   boundingBox: UserBoundingBox,
   actionTracingId: string,
 ) {
   return {
     name: "addUserBoundingBoxInVolumeTracing",
     value: {
-      boundingBox: convertUserBoundingBoxesFromFrontendToServer(boundingBox),
+      boundingBox: convertUserBoundingBoxFromFrontendToServer(boundingBox),
       actionTracingId,
     },
   } as const;
 }
 
-export function deleteUserBoundingBoxInSkeletonTracingAction(
+export function deleteUserBoundingBoxInSkeletonTracing(
   boundingBoxId: number,
   actionTracingId: string,
 ) {
@@ -440,7 +441,7 @@ export function deleteUserBoundingBoxInSkeletonTracingAction(
   } as const;
 }
 
-export function deleteUserBoundingBoxInVolumeTracingAction(
+export function deleteUserBoundingBoxInVolumeTracing(
   boundingBoxId: number,
   actionTracingId: string,
 ) {
@@ -453,7 +454,7 @@ export function deleteUserBoundingBoxInVolumeTracingAction(
   } as const;
 }
 
-function getUpdateUserBoundingBoxAction(
+function getUpdateUserBoundingBox(
   actionName: "updateUserBoundingBoxInVolumeTracing" | "updateUserBoundingBoxInSkeletonTracing",
   boundingBoxId: number,
   updatedProps: PartialBoundingBoxWithoutVisibility,
@@ -476,12 +477,12 @@ function getUpdateUserBoundingBoxAction(
   } as const;
 }
 
-export function updateUserBoundingBoxInVolumeTracingAction(
+export function updateUserBoundingBoxInVolumeTracing(
   boundingBoxId: number,
   updatedProps: PartialBoundingBoxWithoutVisibility,
   actionTracingId: string,
 ) {
-  return getUpdateUserBoundingBoxAction(
+  return getUpdateUserBoundingBox(
     "updateUserBoundingBoxInVolumeTracing",
     boundingBoxId,
     updatedProps,
@@ -489,12 +490,12 @@ export function updateUserBoundingBoxInVolumeTracingAction(
   );
 }
 
-export function updateUserBoundingBoxInSkeletonTracingAction(
+export function updateUserBoundingBoxInSkeletonTracing(
   boundingBoxId: number,
   updatedProps: Partial<UserBoundingBox>,
   actionTracingId: string,
 ) {
-  return getUpdateUserBoundingBoxAction(
+  return getUpdateUserBoundingBox(
     "updateUserBoundingBoxInSkeletonTracing",
     boundingBoxId,
     updatedProps,
@@ -502,7 +503,7 @@ export function updateUserBoundingBoxInSkeletonTracingAction(
   );
 }
 
-export function updateUserBoundingBoxVisibilityInSkeletonTracingAction(
+export function updateUserBoundingBoxVisibilityInSkeletonTracing(
   boundingBoxId: number,
   isVisible: boolean,
   actionTracingId: string,
@@ -516,7 +517,7 @@ export function updateUserBoundingBoxVisibilityInSkeletonTracingAction(
     },
   } as const;
 }
-export function updateUserBoundingBoxVisibilityInVolumeTracingAction(
+export function updateUserBoundingBoxVisibilityInVolumeTracing(
   boundingBoxId: number,
   isVisible: boolean,
   actionTracingId: string,

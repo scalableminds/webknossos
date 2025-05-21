@@ -22,6 +22,8 @@ import { getReadableNameByVolumeTracingId } from "viewer/model/accessors/volumet
 import type {
   AddLayerToAnnotationUpdateAction,
   AddSegmentIndexUpdateAction,
+  AddUserBoundingBoxInSkeletonTracingAction,
+  AddUserBoundingBoxInVolumeTracingAction,
   CreateEdgeUpdateAction,
   CreateNodeUpdateAction,
   CreateSegmentUpdateAction,
@@ -31,6 +33,8 @@ import type {
   DeleteSegmentDataUpdateAction,
   DeleteSegmentUpdateAction,
   DeleteTreeUpdateAction,
+  DeleteUserBoundingBoxInSkeletonTracingAction,
+  DeleteUserBoundingBoxInVolumeTracingAction,
   MergeAgglomerateUpdateAction,
   MergeTreeUpdateAction,
   MoveTreeComponentUpdateAction,
@@ -48,6 +52,9 @@ import type {
   UpdateTreeGroupVisibilityUpdateAction,
   UpdateTreeUpdateAction,
   UpdateTreeVisibilityUpdateAction,
+  UpdateUserBoundingBoxInSkeletonTracingAction,
+  UpdateUserBoundingBoxInVolumeTracingAction,
+  UpdateUserBoundingBoxVisibilityInSkeletonTracingAction,
 } from "viewer/model/sagas/update_actions";
 import type { StoreAnnotation } from "viewer/store";
 import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
@@ -75,36 +82,52 @@ const descriptionFns: Record<
     description: "Created the annotation.",
     icon: <RocketOutlined />,
   }),
-  addUserBoundingBoxInSkeletonTracing: (): Description => ({
-    description: "Added a bounding box.",
+  addUserBoundingBoxInSkeletonTracing: (
+    firstAction: AddUserBoundingBoxInSkeletonTracingAction,
+  ): Description => ({
+    description: `Created bounding box ${firstAction.value.boundingBox.id}.`,
     icon: <PlusOutlined />,
   }),
-  addUserBoundingBoxInVolumeTracing: (): Description => ({
-    description: "Added a bounding box.",
+  addUserBoundingBoxInVolumeTracing: (
+    firstAction: AddUserBoundingBoxInVolumeTracingAction,
+  ): Description => ({
+    description: `Created bounding box ${firstAction.value.boundingBox.id}.`,
     icon: <PlusOutlined />,
   }),
-  deleteUserBoundingBoxInSkeletonTracing: (): Description => ({
-    description: "Deleted a bounding box.",
+  deleteUserBoundingBoxInSkeletonTracing: (
+    firstAction: DeleteUserBoundingBoxInSkeletonTracingAction,
+  ): Description => ({
+    description: `Deleted bounding box ${firstAction.value.boundingBoxId}.`,
     icon: <DeleteOutlined />,
   }),
-  deleteUserBoundingBoxInVolumeTracing: (): Description => ({
-    description: "Deleted a bounding box.",
+  deleteUserBoundingBoxInVolumeTracing: (
+    firstAction: DeleteUserBoundingBoxInVolumeTracingAction,
+  ): Description => ({
+    description: `Deleted bounding box ${firstAction.value.boundingBoxId}.`,
     icon: <DeleteOutlined />,
   }),
-  updateUserBoundingBoxInSkeletonTracing: (): Description => ({
-    description: "Updated a bounding box.",
+  updateUserBoundingBoxInSkeletonTracing: (
+    firstAction: UpdateUserBoundingBoxInSkeletonTracingAction,
+  ): Description => ({
+    description: `Updated bounding box ${firstAction.value.boundingBoxId}.`,
     icon: <EditOutlined />,
   }),
-  updateUserBoundingBoxInVolumeTracing: (): Description => ({
-    description: "Updated a bounding box.",
+  updateUserBoundingBoxInVolumeTracing: (
+    firstAction: UpdateUserBoundingBoxInVolumeTracingAction,
+  ): Description => ({
+    description: `Updated bounding box ${firstAction.value.boundingBoxId}.`,
     icon: <EditOutlined />,
   }),
-  updateUserBoundingBoxVisibilityInSkeletonTracing: (): Description => ({
-    description: "Toggled the visibility of a bounding box.",
+  updateUserBoundingBoxVisibilityInSkeletonTracing: (
+    firstAction: UpdateUserBoundingBoxVisibilityInSkeletonTracingAction,
+  ): Description => ({
+    description: `Toggled the visibility of bounding box ${firstAction.value.boundingBoxId}.`,
     icon: <EditOutlined />,
   }),
-  updateUserBoundingBoxVisibilityInVolumeTracing: (): Description => ({
-    description: "Toggled the visibility of a bounding box.",
+  updateUserBoundingBoxVisibilityInVolumeTracing: (
+    firstAction: UpdateUserBoundingBoxInVolumeTracingAction,
+  ): Description => ({
+    description: `Toggled the visibility of bounding box ${firstAction.value.boundingBoxId}.`,
     icon: <EditOutlined />,
   }),
   removeFallbackLayer: (): Description => ({

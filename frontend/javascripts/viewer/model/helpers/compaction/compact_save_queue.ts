@@ -74,6 +74,7 @@ function removeSubsequentUpdateBBoxActions(updateActionsBatches: Array<SaveQueue
   const obsoleteUpdateActions = [];
 
   // Actions are obsolete, if they are for the same bounding box and for the same prop.
+  // E.g. when rezising a bounding box, multiple updateActions are sent during the resize, while only the last one is needed.
   // The given action is always compared to the next next one, as usually an
   // updateUserBoundingBoxInSkeletonTracingAction and updateUserBoundingBoxInVolumeTracingAction
   // is sent at the same time.
@@ -119,6 +120,15 @@ function removeSubsequentUpdateSegmentActions(updateActionsBatches: Array<SaveQu
   return _.without(updateActionsBatches, ...obsoleteUpdateActions);
 }
 
+const compactAll = _.flow([
+  removeAllButLastUpdateTracingAction,
+  removeAllButLastUpdateTdCameraAction,
+  removeSubsequentUpdateNodeActions,
+  removeSubsequentUpdateTreeActions,
+  removeSubsequentUpdateSegmentActions,
+  removeSubsequentUpdateBBoxActions,
+]);
+
 export default function compactSaveQueue(
   updateActionsBatches: Array<SaveQueueEntry>,
 ): Array<SaveQueueEntry> {
@@ -127,13 +137,5 @@ export default function compactSaveQueue(
     (updateActionsBatch) => updateActionsBatch.actions.length > 0,
   );
 
-  return removeSubsequentUpdateBBoxActions(
-    removeSubsequentUpdateSegmentActions(
-      removeSubsequentUpdateTreeActions(
-        removeSubsequentUpdateNodeActions(
-          removeAllButLastUpdateTdCameraAction(removeAllButLastUpdateTracingAction(result)),
-        ),
-      ),
-    ),
-  );
+  return compactAll(result);
 }

@@ -46,6 +46,7 @@ describe("Shader syntax", () => {
       segmentationLayerNames: [],
       magnificationsCount: mags.length,
       voxelSizeFactor: [1, 1, 1],
+      voxelSizeFactorInverted: [1, 1, 1],
       isOrthogonal: true,
       tpsTransformPerLayer: {},
     });
@@ -97,6 +98,7 @@ describe("Shader syntax", () => {
       segmentationLayerNames: ["segmentationLayer"],
       magnificationsCount: mags.length,
       voxelSizeFactor: [1, 1, 1],
+      voxelSizeFactorInverted: [1, 1, 1],
       isOrthogonal: true,
       tpsTransformPerLayer: {},
     });
@@ -141,6 +143,7 @@ describe("Shader syntax", () => {
       segmentationLayerNames: ["segmentationLayer"],
       magnificationsCount: mags.length,
       voxelSizeFactor: [1, 1, 1],
+      voxelSizeFactorInverted: [1, 1, 1],
       isOrthogonal: true,
       tpsTransformPerLayer: {},
     });
@@ -177,6 +180,7 @@ describe("Shader syntax", () => {
       segmentationLayerNames: [],
       magnificationsCount: mags.length,
       voxelSizeFactor: [1, 1, 1],
+      voxelSizeFactorInverted: [1, 1, 1],
       isOrthogonal: false,
       tpsTransformPerLayer: {},
     });
@@ -221,6 +225,7 @@ describe("Shader syntax", () => {
       segmentationLayerNames: ["segmentationLayer"],
       magnificationsCount: mags.length,
       voxelSizeFactor: [1, 1, 1],
+      voxelSizeFactorInverted: [1, 1, 1],
       isOrthogonal: false,
       tpsTransformPerLayer: {},
     });
@@ -256,6 +261,7 @@ describe("Shader syntax", () => {
       segmentationLayerNames: [],
       magnificationsCount: mags.length,
       voxelSizeFactor: [1, 1, 1],
+      voxelSizeFactorInverted: [1, 1, 1],
       isOrthogonal: true,
       tpsTransformPerLayer: {},
     });

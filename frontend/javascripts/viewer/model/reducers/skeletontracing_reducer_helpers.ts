@@ -816,7 +816,7 @@ export function toggleTreeGroupReducer(
   let newTreeMap = skeletonTracing.trees;
   skeletonTracing.trees.values().forEach((tree) => {
     if (typeof tree.groupId === "number" && affectedGroupIds.has(tree.groupId)) {
-      newTreeMap.set(tree.treeId, { ...tree, isVisible: shouldBecomeVisible });
+      newTreeMap = newTreeMap.set(tree.treeId, { ...tree, isVisible: shouldBecomeVisible });
     }
   });
 

@@ -11,7 +11,7 @@ trait BoundingBoxMerger extends ProtoGeometryImplicits {
   private val BBOX_SOURCE_USER_B = 3
 
   protected type UserBboxIdMap = Map[Int, Int]
-  protected type BboxSource = Int
+  private type BboxSource = Int // TODO use enum?
 
   protected def combineBoundingBoxes(boundingBoxAOpt: Option[ProtoBoundingBox],
                                      boundingBoxBOpt: Option[ProtoBoundingBox]): Option[ProtoBoundingBox] =

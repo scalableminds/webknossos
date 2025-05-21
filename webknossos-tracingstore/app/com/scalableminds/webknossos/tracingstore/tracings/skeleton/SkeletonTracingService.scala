@@ -131,15 +131,15 @@ class SkeletonTracingService @Inject()(
                               treeMapping: FunctionalTreeMapping,
                               bboxIdMapA: UserBboxIdMap,
                               bboxIdMapB: UserBboxIdMap): Seq[SkeletonUserStateProto] = {
-    // TODO merge. beware of remapped ids (group, tree, bbox)
-    // TODO do the id mappings apply on both tracingA and tracingB?
-    val tracingAUserStatesMapped = tracingAUserStates.map(appylIdMappingsOnUserState(_, groupMapping, treeMapping))
+    val tracingAUserStatesMapped =
+      tracingAUserStates.map(appylIdMappingsOnUserState(_, groupMapping, treeMapping, bboxIdMapA))
+    val tracingBUserStatesMapped = tracingBUserStates.map(applyBboxIdMapOnUserState(_, bboxIdMapB))
 
     val byUserId = scala.collection.mutable.Map[String, SkeletonUserStateProto]()
     tracingAUserStatesMapped.foreach { userState =>
       byUserId.put(userState.userId, userState)
     }
-    tracingBUserStates.foreach { userState =>
+    tracingBUserStatesMapped.foreach { userState =>
       byUserId.get(userState.userId) match {
         case Some(existingUserState) => byUserId.put(userState.userId, mergeTwoUserStates(existingUserState, userState))
         case None                    => byUserId.put(userState.userId, userState)
@@ -151,7 +151,6 @@ class SkeletonTracingService @Inject()(
 
   private def mergeTwoUserStates(tracingAUserState: SkeletonUserStateProto,
                                  tracingBUserState: SkeletonUserStateProto): SkeletonUserStateProto =
-    // TODO ensure no duplicates
     SkeletonUserStateProto(
       userId = tracingAUserState.userId,
       activeNodeId = tracingAUserState.activeNodeId,
@@ -165,13 +164,30 @@ class SkeletonTracingService @Inject()(
 
   private def appylIdMappingsOnUserState(userState: SkeletonUserStateProto,
                                          groupMapping: FunctionalGroupMapping,
-                                         treeMapping: FunctionalTreeMapping) =
-    userState.copy(
-      treeGroupIds = userState.treeGroupIds.map(groupMapping)
-      // TODO other id mappings
+                                         treeMapping: FunctionalTreeMapping,
+                                         bboxIdMapA: Map[Int, Int]): SkeletonUserStateProto =
+    applyBboxIdMapOnUserState(userState, bboxIdMapA).copy(
+      treeGroupIds = userState.treeGroupIds.map(groupMapping),
+      treeIds = userState.treeIds.map(treeMapping)
     )
 
+  private def applyBboxIdMapOnUserState(userState: SkeletonUserStateProto,
+                                        bboxIdMap: Map[Int, Int]): SkeletonUserStateProto = {
+    val newIdsAndVisibilities = userState.boundingBoxIds.zip(userState.boundingBoxVisibilities).flatMap {
+      case (boundingBoxId, boundingBoxVisibility) =>
+        bboxIdMap.get(boundingBoxId) match {
+          case Some(newId) => Some((newId, boundingBoxVisibility))
+          case None        => None
+        }
+    }
+    userState.copy(
+      boundingBoxIds = newIdsAndVisibilities.map(_._1),
+      boundingBoxVisibilities = newIdsAndVisibilities.map(_._2)
+    )
+  }
+
   // Can be removed again when https://github.com/scalableminds/webknossos/issues/5009 is fixed
+  // Note that this is only used for freshly uploaded annotations, so there is no user state that would have to be mapped with the id changes
   def remapTooLargeTreeIds(skeletonTracing: SkeletonTracing): SkeletonTracing =
     if (skeletonTracing.trees.exists(_.treeId > 1048576)) {
       val newTrees = for ((tree, index) <- skeletonTracing.trees.zipWithIndex) yield tree.withTreeId(index + 1)

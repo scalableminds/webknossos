@@ -732,12 +732,14 @@ class VolumeTracingService @Inject()(
       tracingA: VolumeTracing,
       tracingB: VolumeTracing,
       indexB: Int, // TODO what about this indexB? should be respected when adapting segment ids in user state?
+      // TODO test with proofreading, what happens to segment ids?
       mergedVolumeStats: MergedVolumeStats): Box[VolumeTracing] = {
     val largestSegmentId = combineLargestSegmentIdsByMaxDefined(tracingA.largestSegmentId, tracingB.largestSegmentId)
     val groupMapping = GroupUtils.calculateSegmentGroupMapping(tracingA.segmentGroups, tracingB.segmentGroups)
     val mergedGroups = GroupUtils.mergeSegmentGroups(tracingA.segmentGroups, tracingB.segmentGroups, groupMapping)
     val mergedBoundingBox = combineBoundingBoxes(Some(tracingA.boundingBox), Some(tracingB.boundingBox))
-    val segmentIdMapB = mergedVolumeStats.labelMaps(indexB)
+    val segmentIdMapB =
+      if (indexB >= mergedVolumeStats.labelMaps.length) Map.empty[Long, Long] else mergedVolumeStats.labelMaps(indexB)
     val (userBoundingBoxes, bboxIdMapA, bboxIdMapB) = combineUserBoundingBoxes(tracingA.userBoundingBox,
                                                                                tracingB.userBoundingBox,
                                                                                tracingA.userBoundingBoxes,

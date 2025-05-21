@@ -43,6 +43,13 @@ const initialState = {
     viewMode: "oblique",
   },
 };
+const initialStateWithNoConceptualRotation = {
+  ...initialState,
+  flycam: {
+    ...initialState.flycam,
+    currentMatrix: M4x4.rotate(Math.PI, [0, 0, 1], M4x4.identity(), []),
+  },
+};
 
 describe("Flycam", () => {
   it("should calculate zoomed matrix", () => {
@@ -131,12 +138,16 @@ describe("Flycam", () => {
 
   it("should move in ortho mode", () => {
     const moveAction = FlycamActions.moveFlycamOrthoAction([2, 0, 0], OrthoViews.PLANE_XY);
-    const newState = FlycamReducer(initialState, moveAction);
+    const newState = FlycamReducer(initialStateWithNoConceptualRotation, moveAction);
+    console.error(newState.flycam);
     equalWithEpsilon(getPosition(newState.flycam), [2, 0, 0]);
   });
 
   it("should move in ortho mode with dynamicSpaceDirection", () => {
-    let newState = FlycamReducer(initialState, FlycamActions.setDirectionAction([0, 0, -2]));
+    let newState = FlycamReducer(
+      initialStateWithNoConceptualRotation,
+      FlycamActions.setDirectionAction([0, 0, -2]),
+    );
     newState = FlycamReducer(
       newState,
       FlycamActions.moveFlycamOrthoAction([2, 0, 2], OrthoViews.PLANE_XY),
@@ -150,7 +161,7 @@ describe("Flycam", () => {
       OrthoViews.PLANE_XY,
       true,
     );
-    const newState = FlycamReducer(initialState, moveAction);
+    const newState = FlycamReducer(initialStateWithNoConceptualRotation, moveAction);
     expect(getPosition(newState.flycam)).toEqual([4, 0, 0]);
   });
 
@@ -160,7 +171,7 @@ describe("Flycam", () => {
       OrthoViews.PLANE_XZ,
       true,
     );
-    const newState = FlycamReducer(initialState, moveAction);
+    const newState = FlycamReducer(initialStateWithNoConceptualRotation, moveAction);
     expect(getPosition(newState.flycam)).toEqual([4, 0, 2]);
   });
 
@@ -170,12 +181,15 @@ describe("Flycam", () => {
       OrthoViews.PLANE_XZ,
       false,
     );
-    const newState = FlycamReducer(initialState, moveAction);
+    const newState = FlycamReducer(initialStateWithNoConceptualRotation, moveAction);
     expect(getPosition(newState.flycam)).toEqual([2, 0, 1]);
   });
 
   it("should move by plane in ortho mode with dynamicSpaceDirection", () => {
-    let newState = FlycamReducer(initialState, FlycamActions.setDirectionAction([0, 0, -2]));
+    let newState = FlycamReducer(
+      initialStateWithNoConceptualRotation,
+      FlycamActions.setDirectionAction([0, 0, -2]),
+    );
     newState = FlycamReducer(
       newState,
       FlycamActions.movePlaneFlycamOrthoAction([0, 0, 2], OrthoViews.PLANE_XY, true),

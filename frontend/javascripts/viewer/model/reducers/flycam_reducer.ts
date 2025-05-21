@@ -1,6 +1,6 @@
 import update from "immutability-helper";
 import type { Matrix4x4 } from "libs/mjs";
-import { M4x4 } from "libs/mjs";
+import { M4x4, V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import * as THREE from "three";
@@ -309,16 +309,20 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
       const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(
         new THREE.Euler(...flycamRotation),
       );
-      const movementVectorInWorld = new THREE.Vector3(...vector).applyMatrix4(rotationMatrix);
+      let movementVectorInWorld = new THREE.Vector3(...vector)
+        .applyMatrix4(rotationMatrix)
+        .toArray();
 
       // if planeID is given, use it to manipulate z
       if (planeId != null && state.userConfiguration.dynamicSpaceDirection) {
         // change direction of the value connected to space, based on the last direction
-        const dim = Dimensions.getIndices(planeId)[2];
-        vector[dim] *= state.flycam.spaceDirectionOrtho[dim];
+        movementVectorInWorld = V3.multiply(
+          movementVectorInWorld,
+          state.flycam.spaceDirectionOrtho,
+        );
       }
 
-      return moveReducer(state, movementVectorInWorld.toArray());
+      return moveReducer(state, movementVectorInWorld);
     }
 
     case "MOVE_PLANE_FLYCAM_ORTHO": {
@@ -335,18 +339,23 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
         const movementVectorInWorld = new THREE.Vector3(...vector).applyMatrix4(rotationMatrix);
         const zoomFactor = increaseSpeedWithZoom ? flycam.zoomStep : 1;
         const scaleFactor = getBaseVoxelFactorsInUnit(dataset.dataSource.scale);
-        const movementInWorldZoomed = movementVectorInWorld
+        let movementInWorldZoomed = movementVectorInWorld
           .multiplyScalar(zoomFactor)
-          .multiply(new THREE.Vector3(...scaleFactor));
+          .multiply(new THREE.Vector3(...scaleFactor))
+          .toArray();
 
         // TODOM: make this apply to movementInWorldZoomed
         if (planeId != null && state.userConfiguration.dynamicSpaceDirection) {
           // change direction of the value connected to space, based on the last direction
+          movementInWorldZoomed = V3.multiply(
+            movementInWorldZoomed,
+            state.flycam.spaceDirectionOrtho,
+          );
           // const dim = Dimensions.getIndices(planeId)[2];
           // delta[dim] *= state.flycam.spaceDirectionOrtho[dim];
         }
 
-        return moveReducer(state, movementInWorldZoomed.toArray());
+        return moveReducer(state, movementInWorldZoomed);
       }
 
       return state;

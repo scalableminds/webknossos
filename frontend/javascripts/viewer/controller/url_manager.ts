@@ -167,6 +167,7 @@ class UrlManager {
 
   parseUrlHash(): PartialUrlManagerState {
     const urlHash = decodeURIComponent(location.hash.slice(1));
+    console.error("Parsing URL hash:", urlHash);
 
     if (urlHash.includes("{")) {
       // The hash is in json format
@@ -287,6 +288,7 @@ class UrlManager {
     const rotation = {
       rotation: Utils.map3((e) => Utils.roundTo(e, 2), getRotationInDegrees(state.flycam)),
     };
+    console.error("rotation:", rotation, getRotationInDegrees(state.flycam));
     const activeNode = state.annotation.skeleton?.activeNodeId;
     const activeNodeOptional = activeNode != null ? { activeNode } : {};
     const stateByLayer: UrlStateByLayer = {};
@@ -404,6 +406,7 @@ class UrlManager {
 
   buildUrl(): string {
     const state = Store.getState();
+    console.error("Building URL hash:", state.flycam);
     const hash = this.buildUrlHashCsv(state);
     const newBaseUrl = updateTypeAndId(
       this.baseUrl,

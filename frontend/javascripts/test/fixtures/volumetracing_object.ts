@@ -2,6 +2,7 @@ import update from "immutability-helper";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import Constants from "viewer/constants";
 import defaultState from "viewer/default_state";
+import { M4x4 } from "libs/mjs";
 
 const volumeTracing = {
   type: "volume",
@@ -103,6 +104,11 @@ export const initialState = update(defaultState, {
       $set: {
         inputCatcherRect: notEmptyViewportRect,
       },
+    },
+  },
+  flycam: {
+    currentMatrix: {
+      $set: M4x4.rotate(Math.PI, [0, 0, 1], M4x4.identity(), []),
     },
   },
 });

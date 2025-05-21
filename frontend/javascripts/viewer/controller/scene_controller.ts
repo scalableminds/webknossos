@@ -1,5 +1,4 @@
 import app from "app";
-import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import window from "libs/window";
@@ -59,7 +58,6 @@ import { sceneControllerReadyAction } from "viewer/model/actions/actions";
 import Dimensions from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import type { Transform } from "viewer/model/helpers/transformation_helpers";
-import { getVoxelPerUnit } from "viewer/model/scaleinfo";
 import { Model } from "viewer/singletons";
 import type { SkeletonTracing, UserBoundingBox, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
@@ -428,7 +426,9 @@ class SceneController {
           // The offset is passed to the shader as a uniform to be subtracted from the position to render the correct data.
           const unrotatedPositionOffset = [0, 0, 0];
           unrotatedPositionOffset[ind[2]] =
-            planeId === OrthoViews.PLANE_XY ? this.clippingDistance : -this.clippingDistance;
+            planeId === OrthoViews.PLANE_XY
+              ? Math.floor(this.clippingDistance)
+              : Math.floor(-this.clippingDistance);
           const rotatedPositionOffsetVector = new THREE.Vector3(
             ...unrotatedPositionOffset,
           ).applyEuler(new THREE.Euler(...rotation));

@@ -248,6 +248,7 @@ export type Segment = {
   readonly creationTime: number | null | undefined;
   readonly color: Vector3 | null;
   readonly groupId: number | null | undefined;
+  readonly isVisible: boolean;
   readonly metadata: MetadataEntryProto[];
 };
 export type SegmentMap = DiffableMap<number, Segment>;
@@ -277,6 +278,7 @@ export type VolumeTracing = TracingBase & {
   readonly mappingIsLocked?: boolean;
   readonly hasSegmentIndex: boolean;
   readonly volumeBucketDataHasChanged?: boolean;
+  readonly hideUnregisteredSegments: boolean;
 };
 export type ReadOnlyTracing = TracingBase & {
   readonly type: "readonly";
@@ -340,7 +342,6 @@ export type DatasetConfiguration = {
   readonly renderMissingDataBlack: boolean;
   readonly loadingStrategy: LoadingStrategy;
   readonly segmentationPatternOpacity: number;
-  readonly selectiveSegmentVisibility: boolean;
   readonly blendMode: BLEND_MODES;
   // If nativelyRenderedLayerName is not-null, the layer with
   // that name (or id) should be rendered without any transforms.
@@ -541,6 +542,16 @@ export type BusyBlockingInfo = {
   isBusy: boolean;
   reason?: string;
 };
+export type ContextMenuInfo = {
+  readonly contextMenuPosition: Readonly<[number, number]> | null | undefined;
+  readonly clickedNodeId: number | null | undefined;
+  readonly meshId: number | null | undefined;
+  readonly meshIntersectionPosition: Vector3 | null | undefined;
+  readonly clickedBoundingBoxId: number | null | undefined;
+  readonly globalPosition: Vector3 | null | undefined;
+  readonly viewport: OrthoView | null | undefined;
+  readonly unmappedSegmentId?: number | null;
+};
 type UiInformation = {
   readonly globalProgress: number; // 0 to 1
   readonly showDropzoneModal: boolean;
@@ -574,16 +585,7 @@ type UiInformation = {
     viewportPosition: Point2 | null;
   };
   readonly navbarHeight: number;
-  readonly contextInfo: {
-    readonly contextMenuPosition: Readonly<[number, number]> | null | undefined;
-    readonly clickedNodeId: number | null | undefined;
-    readonly meshId: number | null | undefined;
-    readonly meshIntersectionPosition: Vector3 | null | undefined;
-    readonly clickedBoundingBoxId: number | null | undefined;
-    readonly globalPosition: Vector3 | null | undefined;
-    readonly viewport: OrthoView | null | undefined;
-    readonly unmappedSegmentId?: number | null;
-  };
+  readonly contextInfo: ContextMenuInfo;
 };
 type BaseMeshInformation = {
   readonly segmentId: number;
@@ -610,6 +612,25 @@ export type ConnectomeData = {
   readonly activeAgglomerateIds: Array<number>;
   readonly skeleton: SkeletonTracing | null | undefined;
 };
+export type LocalSegmentationData = {
+  // For meshes, the string represents additional coordinates, number is the segment ID.
+  // The undefined types were added to enforce null checks when using this structure.
+  readonly meshes: Record<string, Record<number, MeshInformation> | undefined> | undefined;
+  readonly availableMeshFiles: Array<APIMeshFileInfo> | null | undefined;
+  readonly currentMeshFile: APIMeshFileInfo | null | undefined;
+  // Note that for a volume tracing, this information should be stored
+  // in state.annotation.volume.segments, as this is also persisted on the
+  // server (i.e., not "local").
+  // The `segments` here should only be used for non-annotation volume
+  // layers.
+  readonly segments: SegmentMap;
+  // Note that segments that are not in the segment tab could be stored as selected.
+  // To get only available segments or group, use getSelectedIds() in volumetracing_accessor.
+  readonly selectedIds: { segments: number[]; group: number | null };
+  readonly connectomeData: ConnectomeData;
+  readonly hideUnregisteredSegments: boolean;
+};
+
 export type WebknossosState = {
   readonly datasetConfiguration: DatasetConfiguration;
   readonly userConfiguration: UserConfiguration;
@@ -627,24 +648,8 @@ export type WebknossosState = {
   readonly activeOrganization: APIOrganization | null;
   readonly uiInformation: UiInformation;
   readonly localSegmentationData: Record<
-    string, //layerName
-    {
-      // For meshes, the string represents additional coordinates, number is the segment ID.
-      // The undefined types were added to enforce null checks when using this structure.
-      readonly meshes: Record<string, Record<number, MeshInformation> | undefined> | undefined;
-      readonly availableMeshFiles: Array<APIMeshFileInfo> | null | undefined;
-      readonly currentMeshFile: APIMeshFileInfo | null | undefined;
-      // Note that for a volume tracing, this information should be stored
-      // in state.annotation.volume.segments, as this is also persisted on the
-      // server (i.e., not "local").
-      // The `segments` here should only be used for non-annotation volume
-      // layers.
-      readonly segments: SegmentMap;
-      // Note that segments that are not in the segment tab could be stored as selected.
-      // To get only available segments or group, use getSelectedIds() in volumetracing_accessor.
-      readonly selectedIds: { segments: number[]; group: number | null };
-      readonly connectomeData: ConnectomeData;
-    }
+    string, // layerName
+    LocalSegmentationData
   >;
 };
 const sagaMiddleware = createSagaMiddleware();

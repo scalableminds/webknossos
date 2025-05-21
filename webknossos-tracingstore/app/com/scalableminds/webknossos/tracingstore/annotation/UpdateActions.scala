@@ -64,15 +64,17 @@ object UpdateAction {
             deserialize[UpdateUserBoundingBoxesVolumeAction](jsonValue)
           case "updateUserBoundingBoxVisibilityInVolumeTracing" =>
             deserialize[UpdateUserBoundingBoxVisibilityVolumeAction](jsonValue)
-          case "removeFallbackLayer" => deserialize[RemoveFallbackLayerVolumeAction](jsonValue)
-          case "importVolumeTracing" => deserialize[ImportVolumeDataVolumeAction](jsonValue)
-          case "createSegment"       => deserialize[CreateSegmentVolumeAction](jsonValue)
-          case "updateSegment"       => deserialize[UpdateSegmentVolumeAction](jsonValue)
-          case "updateSegmentGroups" => deserialize[UpdateSegmentGroupsVolumeAction](jsonValue)
-          case "deleteSegment"       => deserialize[DeleteSegmentVolumeAction](jsonValue)
-          case "deleteSegmentData"   => deserialize[DeleteSegmentDataVolumeAction](jsonValue)
-          case "updateMappingName"   => deserialize[UpdateMappingNameVolumeAction](jsonValue)
-          case "addSegmentIndex"     => deserialize[AddSegmentIndexVolumeAction](jsonValue)
+          case "removeFallbackLayer"          => deserialize[RemoveFallbackLayerVolumeAction](jsonValue)
+          case "importVolumeTracing"          => deserialize[ImportVolumeDataVolumeAction](jsonValue)
+          case "createSegment"                => deserialize[CreateSegmentVolumeAction](jsonValue)
+          case "updateSegment"                => deserialize[UpdateSegmentVolumeAction](jsonValue)
+          case "updateSegmentGroups"          => deserialize[UpdateSegmentGroupsVolumeAction](jsonValue)
+          case "updateSegmentGroupVisibility" => deserialize[UpdateSegmentGroupVisibilityVolumeAction](jsonValue)
+          case "updateSegmentVisibility"      => deserialize[UpdateSegmentVisibilityVolumeAction](jsonValue)
+          case "deleteSegment"                => deserialize[DeleteSegmentVolumeAction](jsonValue)
+          case "deleteSegmentData"            => deserialize[DeleteSegmentDataVolumeAction](jsonValue)
+          case "updateMappingName"            => deserialize[UpdateMappingNameVolumeAction](jsonValue)
+          case "addSegmentIndex"              => deserialize[AddSegmentIndexVolumeAction](jsonValue)
 
           // Editable Mapping
           case "mergeAgglomerate" => deserialize[MergeAgglomerateUpdateAction](jsonValue)
@@ -169,6 +171,12 @@ object UpdateAction {
         Json.obj("name" -> "deleteSegmentData", "value" -> Json.toJson(s)(DeleteSegmentDataVolumeAction.jsonFormat))
       case s: UpdateSegmentGroupsVolumeAction =>
         Json.obj("name" -> "updateSegmentGroups", "value" -> Json.toJson(s)(UpdateSegmentGroupsVolumeAction.jsonFormat))
+      case s: UpdateSegmentVisibilityVolumeAction =>
+        Json.obj("name" -> "updateSegmentVisibility",
+                 "value" -> Json.toJson(s)(UpdateSegmentVisibilityVolumeAction.jsonFormat))
+      case s: UpdateSegmentGroupVisibilityVolumeAction =>
+        Json.obj("name" -> "updateSegmentGroupVisibility",
+                 "value" -> Json.toJson(s)(UpdateSegmentGroupVisibilityVolumeAction.jsonFormat))
       case s: UpdateMappingNameVolumeAction =>
         Json.obj("name" -> "updateMappingName", "value" -> Json.toJson(s)(UpdateMappingNameVolumeAction.jsonFormat))
       case s: AddSegmentIndexVolumeAction =>

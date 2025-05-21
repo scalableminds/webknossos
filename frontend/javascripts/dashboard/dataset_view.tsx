@@ -26,6 +26,7 @@ import {
   Tooltip,
 } from "antd";
 import type { ItemType } from "antd/es/menu/interface";
+import FastTooltip from "components/fast_tooltip";
 import FormattedDate from "components/formatted_date";
 import { PricingEnforcedButton } from "components/pricing_enforcers";
 import DatasetTable from "dashboard/advanced_dataset/dataset_table";
@@ -302,7 +303,7 @@ export function DatasetRefreshButton({ context }: { context: DatasetCollectionCo
   const showLoadingIndicator = context.isLoading || context.isChecking;
 
   return (
-    <Tooltip
+    <FastTooltip
       title={showLoadingIndicator ? "Refreshing the dataset list." : "Refresh the dataset list."}
     >
       <Dropdown.Button
@@ -313,7 +314,7 @@ export function DatasetRefreshButton({ context }: { context: DatasetCollectionCo
       >
         {showLoadingIndicator ? <LoadingOutlined /> : <ReloadOutlined />} Refresh
       </Dropdown.Button>
-    </Tooltip>
+    </FastTooltip>
   );
 }
 

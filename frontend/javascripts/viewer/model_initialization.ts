@@ -46,7 +46,6 @@ import UrlManager, {
 import {
   determineAllowedModes,
   getDataLayers,
-  getDatasetBoundingBox,
   getDatasetCenter,
   getLayerByName,
   getSegmentationLayerByName,
@@ -118,6 +117,7 @@ import Store from "viewer/store";
 import { doAllLayersHaveTheSameRotation } from "./model/accessors/dataset_layer_transformation_accessor";
 import { setVersionNumberAction } from "./model/actions/save_actions";
 import {
+  convertPointToVecInBoundingBox,
   convertServerAdditionalAxesToFrontEnd,
   convertServerAnnotationToFrontendAnnotation,
 } from "./model/reducers/reducer_helpers";
@@ -580,7 +580,6 @@ function getMergedDataLayersFromDatasetAndVolumeTracings(
     );
 
     const fallbackLayer = fallbackLayerIndex > -1 ? originalLayers[fallbackLayerIndex] : null;
-    const boundingBox = getDatasetBoundingBox(dataset).asServerBoundingBox();
     const mags = tracing.mags || [];
     const tracingHasMagList = mags.length > 0;
     let coordinateTransformsMaybe = {};
@@ -606,7 +605,7 @@ function getMergedDataLayersFromDatasetAndVolumeTracings(
       elementClass: tracing.elementClass,
       category: "segmentation",
       largestSegmentId: tracing.largestSegmentId,
-      boundingBox,
+      boundingBox: convertPointToVecInBoundingBox(tracing.boundingBox),
       resolutions: tracingMags,
       mappings:
         fallbackLayer != null && "mappings" in fallbackLayer ? fallbackLayer.mappings : undefined,

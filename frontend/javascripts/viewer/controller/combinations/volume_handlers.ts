@@ -3,6 +3,7 @@ import memoizeOne from "memoize-one";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { OrthoView, Point2, Vector3 } from "viewer/constants";
 import { ContourModeEnum } from "viewer/constants";
+import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
 import { globalToLayerTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { calculateGlobalPos } from "viewer/model/accessors/view_mode_accessor";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
@@ -14,6 +15,7 @@ import {
   setActiveCellAction,
   setContourTracingModeAction,
   startEditingAction,
+  updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { Model, Store, api } from "viewer/singletons";
 
@@ -119,9 +121,26 @@ export function handlePickCellFromGlobalPosition(
 ) {
   const segmentId = getSegmentIdForPosition(globalPos);
 
-  if (segmentId !== 0) {
-    Store.dispatch(setActiveCellAction(segmentId, globalPos, additionalCoordinates));
+  if (segmentId === 0) {
+    return;
   }
+  Store.dispatch(setActiveCellAction(segmentId, globalPos, additionalCoordinates));
+
+  const visibleSegmentationLayer = getVisibleSegmentationLayer(Store.getState());
+  if (visibleSegmentationLayer == null) {
+    return;
+  }
+  Store.dispatch(
+    updateSegmentAction(
+      segmentId,
+      {
+        isVisible: true,
+      },
+      visibleSegmentationLayer.name,
+      undefined,
+      true,
+    ),
+  );
 }
 export function handleFloodFill(pos: Point2, plane: OrthoView) {
   const globalPosRounded = calculateGlobalPos(Store.getState(), pos).rounded;

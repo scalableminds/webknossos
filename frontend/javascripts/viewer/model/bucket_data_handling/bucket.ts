@@ -16,6 +16,7 @@ import type TemporalBucketManager from "viewer/model/bucket_data_handling/tempor
 import { bucketPositionToGlobalAddress } from "viewer/model/helpers/position_converter";
 import Store from "viewer/store";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
+import Dimensions from "../dimensions";
 import { getConstructorForElementClass, uint8ToTypedBuffer } from "../helpers/typed_buffer";
 import BucketSnapshot, { type PendingOperation } from "./bucket_snapshot";
 
@@ -76,6 +77,21 @@ export function markVolumeTransactionEnd() {
   bucketsAlreadyInUndoState.clear();
 }
 
+export type SomeContainment =
+  | { type: "full" }
+  | {
+      type: "partial";
+      // min is inclusive
+      min: Vector3;
+      // max is exclusive
+      max: Vector3;
+    };
+export type Containment =
+  | SomeContainment
+  | {
+      type: "no";
+    };
+
 export class DataBucket {
   readonly type = "data" as const;
   readonly elementClass: ElementClass;
@@ -112,6 +128,7 @@ export class DataBucket {
     elementClass: ElementClass,
     zoomedAddress: BucketAddress,
     temporalBucketManager: TemporalBucketManager,
+    public containment: SomeContainment,
     cube: DataCube,
   ) {
     this.emitter = createNanoEvents();
@@ -454,7 +471,7 @@ export class DataBucket {
     voxelMap: Uint8Array,
     segmentId: number,
     get3DAddress: (arg0: number, arg1: number, arg2: Vector3 | Float32Array) => void,
-    sliceCount: number,
+    sliceOffset: number,
     thirdDimensionIndex: 0 | 1 | 2, // If shouldOverwrite is false, a voxel is only overwritten if
     // its old value is equal to overwritableValue.
     shouldOverwrite: boolean = true,
@@ -473,7 +490,7 @@ export class DataBucket {
           voxelMap,
           segmentId,
           get3DAddress,
-          sliceCount,
+          sliceOffset,
           thirdDimensionIndex,
           shouldOverwrite,
           overwritableValue,
@@ -486,7 +503,7 @@ export class DataBucket {
       voxelMap,
       segmentId,
       get3DAddress,
-      sliceCount,
+      sliceOffset,
       thirdDimensionIndex,
       shouldOverwrite,
       overwritableValue,
@@ -498,8 +515,9 @@ export class DataBucket {
     voxelMap: Uint8Array,
     uncastSegmentId: number,
     get3DAddress: (arg0: number, arg1: number, arg2: Vector3 | Float32Array) => void,
-    sliceCount: number,
-    thirdDimensionIndex: 0 | 1 | 2, // If shouldOverwrite is false, a voxel is only overwritten if
+    sliceOffset: number,
+    thirdDimensionIndex: 0 | 1 | 2,
+    // If shouldOverwrite is false, a voxel is only overwritten if
     // its old value is equal to overwritableValue.
     shouldOverwrite: boolean = true,
     overwritableValue: number = 0,
@@ -509,13 +527,42 @@ export class DataBucket {
 
     const segmentId = castForArrayType(uncastSegmentId, data);
 
-    for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
-      for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {
+    const limits = {
+      u: { min: 0, max: Constants.BUCKET_WIDTH },
+      v: { min: 0, max: Constants.BUCKET_WIDTH },
+      w: { min: 0, max: Constants.BUCKET_WIDTH },
+    };
+
+    if (this.containment.type === "partial") {
+      const plane = Dimensions.planeForThirdDimension(thirdDimensionIndex);
+      const [u, v, w] = Dimensions.getIndices(plane);
+      limits.u.min = this.containment.min[u];
+      limits.u.max = this.containment.max[u];
+
+      limits.v.min = this.containment.min[v];
+      limits.v.max = this.containment.max[v];
+
+      limits.w.min = this.containment.min[w];
+      limits.w.max = this.containment.max[w];
+    }
+
+    for (let firstDim = limits.u.min; firstDim < limits.u.max; firstDim++) {
+      for (let secondDim = limits.v.min; secondDim < limits.v.max; secondDim++) {
         if (voxelMap[firstDim * Constants.BUCKET_WIDTH + secondDim] === 1) {
           get3DAddress(firstDim, secondDim, out);
           const voxelToLabel = out;
           voxelToLabel[thirdDimensionIndex] =
-            (voxelToLabel[thirdDimensionIndex] + sliceCount) % Constants.BUCKET_WIDTH;
+            (voxelToLabel[thirdDimensionIndex] + sliceOffset) % Constants.BUCKET_WIDTH;
+
+          if (
+            // The is-partial check is only done as a performance improvement.
+            this.containment.type === "partial" &&
+            (voxelToLabel[thirdDimensionIndex] < limits.w.min ||
+              voxelToLabel[thirdDimensionIndex] >= limits.w.max)
+          ) {
+            continue;
+          }
+
           // The voxelToLabel is already within the bucket and in the correct magnification.
           const voxelAddress = this.cube.getVoxelIndexByVoxelOffset(voxelToLabel);
           const currentSegmentId = Number(data[voxelAddress]);

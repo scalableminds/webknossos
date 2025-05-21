@@ -736,10 +736,10 @@ class VolumeTracingService @Inject()(
     val groupMapping = GroupUtils.calculateSegmentGroupMapping(tracingA.segmentGroups, tracingB.segmentGroups)
     val mergedGroups = GroupUtils.mergeSegmentGroups(tracingA.segmentGroups, tracingB.segmentGroups, groupMapping)
     val mergedBoundingBox = combineBoundingBoxes(Some(tracingA.boundingBox), Some(tracingB.boundingBox))
-    val userBoundingBoxes = combineUserBoundingBoxes(tracingA.userBoundingBox,
-                                                     tracingB.userBoundingBox,
-                                                     tracingA.userBoundingBoxes,
-                                                     tracingB.userBoundingBoxes)
+    val (userBoundingBoxes, bboxIdMapA, bboxIdMapB) = combineUserBoundingBoxes(tracingA.userBoundingBox,
+                                                                               tracingB.userBoundingBox,
+                                                                               tracingA.userBoundingBoxes,
+                                                                               tracingB.userBoundingBoxes)
     val userStates = mergeUserStates(tracingA.userStates, tracingB.userStates, groupMapping)
     for {
       mergedAdditionalAxes <- AdditionalAxis.mergeAndAssertSameAdditionalAxes(

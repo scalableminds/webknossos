@@ -9,6 +9,7 @@ import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, S
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.webknossos.tracingstore.tracings.GroupUtils.FunctionalGroupMapping
 import com.scalableminds.webknossos.tracingstore.tracings._
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.TreeUtils.FunctionalTreeMapping
 import net.liftweb.common.{Box, Full}
 
 import scala.concurrent.ExecutionContext
@@ -98,15 +99,21 @@ class SkeletonTracingService @Inject()(
       mergedAdditionalAxes <- AdditionalAxis.mergeAndAssertSameAdditionalAxes(
         Seq(tracingA, tracingB).map(t => AdditionalAxis.fromProtosAsOpt(t.additionalAxes)))
       nodeMapping = TreeUtils.calculateNodeMapping(tracingA.trees, tracingB.trees)
+      treeMapping = TreeUtils.calculateTreeMapping(tracingB.trees)
       groupMapping = GroupUtils.calculateTreeGroupMapping(tracingA.treeGroups, tracingB.treeGroups)
-      mergedTrees = TreeUtils.mergeTrees(tracingA.trees, tracingB.trees, nodeMapping, groupMapping)
+      mergedTrees = TreeUtils.mergeTrees(tracingA.trees, tracingB.trees, treeMapping, nodeMapping, groupMapping)
       mergedGroups = GroupUtils.mergeTreeGroups(tracingA.treeGroups, tracingB.treeGroups, groupMapping)
       mergedBoundingBox = combineBoundingBoxes(tracingA.boundingBox, tracingB.boundingBox)
-      userBoundingBoxes = combineUserBoundingBoxes(tracingA.userBoundingBox,
-                                                   tracingB.userBoundingBox,
-                                                   tracingA.userBoundingBoxes,
-                                                   tracingB.userBoundingBoxes)
-      userStates = mergeUserStates(tracingA.userStates, tracingB.userStates, groupMapping)
+      (userBoundingBoxes, bboxIdMapA, bboxIdMapB) = combineUserBoundingBoxes(tracingA.userBoundingBox,
+                                                                             tracingB.userBoundingBox,
+                                                                             tracingA.userBoundingBoxes,
+                                                                             tracingB.userBoundingBoxes)
+      userStates = mergeUserStates(tracingA.userStates,
+                                   tracingB.userStates,
+                                   groupMapping,
+                                   treeMapping,
+                                   bboxIdMapA,
+                                   bboxIdMapB)
     } yield
       tracingA.copy(
         trees = mergedTrees,
@@ -120,9 +127,49 @@ class SkeletonTracingService @Inject()(
 
   private def mergeUserStates(tracingAUserStates: Seq[SkeletonUserStateProto],
                               tracingBUserStates: Seq[SkeletonUserStateProto],
-                              groupMapping: FunctionalGroupMapping) =
+                              groupMapping: FunctionalGroupMapping,
+                              treeMapping: FunctionalTreeMapping,
+                              bboxIdMapA: UserBboxIdMap,
+                              bboxIdMapB: UserBboxIdMap): Seq[SkeletonUserStateProto] = {
     // TODO merge. beware of remapped ids (group, tree, bbox)
-    tracingAUserStates
+    // TODO do the id mappings apply on both tracingA and tracingB?
+    val tracingAUserStatesMapped = tracingAUserStates.map(appylIdMappingsOnUserState(_, groupMapping, treeMapping))
+
+    val byUserId = scala.collection.mutable.Map[String, SkeletonUserStateProto]()
+    tracingAUserStatesMapped.foreach { userState =>
+      byUserId.put(userState.userId, userState)
+    }
+    tracingBUserStates.foreach { userState =>
+      byUserId.get(userState.userId) match {
+        case Some(existingUserState) => byUserId.put(userState.userId, mergeTwoUserStates(existingUserState, userState))
+        case None                    => byUserId.put(userState.userId, userState)
+      }
+    }
+
+    byUserId.values.toSeq
+  }
+
+  private def mergeTwoUserStates(tracingAUserState: SkeletonUserStateProto,
+                                 tracingBUserState: SkeletonUserStateProto): SkeletonUserStateProto =
+    // TODO ensure no duplicates
+    SkeletonUserStateProto(
+      userId = tracingAUserState.userId,
+      activeNodeId = tracingAUserState.activeNodeId,
+      treeGroupIds = tracingAUserState.treeGroupIds ++ tracingBUserState.treeGroupIds,
+      treeGroupExpandedStates = tracingAUserState.treeGroupExpandedStates ++ tracingBUserState.treeGroupExpandedStates,
+      boundingBoxIds = tracingAUserState.boundingBoxIds ++ tracingBUserState.boundingBoxIds,
+      boundingBoxVisibilities = tracingAUserState.boundingBoxVisibilities ++ tracingBUserState.boundingBoxVisibilities,
+      treeIds = tracingAUserState.treeIds ++ tracingBUserState.treeIds,
+      treeVisibilities = tracingAUserState.treeVisibilities ++ tracingBUserState.treeVisibilities
+    )
+
+  private def appylIdMappingsOnUserState(userState: SkeletonUserStateProto,
+                                         groupMapping: FunctionalGroupMapping,
+                                         treeMapping: FunctionalTreeMapping) =
+    userState.copy(
+      treeGroupIds = userState.treeGroupIds.map(groupMapping)
+      // TODO other id mappings
+    )
 
   // Can be removed again when https://github.com/scalableminds/webknossos/issues/5009 is fixed
   def remapTooLargeTreeIds(skeletonTracing: SkeletonTracing): SkeletonTracing =

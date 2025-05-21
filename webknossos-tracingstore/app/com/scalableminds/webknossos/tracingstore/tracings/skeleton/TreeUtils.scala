@@ -8,6 +8,7 @@ import scala.util.matching.Regex.Match
 object TreeUtils {
   type FunctionalNodeMapping = Function[Int, Int]
   type FunctionalGroupMapping = Function[Int, Int]
+  type FunctionalTreeMapping = Function[Int, Int]
 
   val nodeIdReferenceRegex: Regex = "#([0-9]+)" r
 
@@ -35,15 +36,14 @@ object TreeUtils {
 
   def mergeTrees(sourceTrees: Seq[Tree],
                  targetTrees: Seq[Tree],
+                 treeMapping: FunctionalTreeMapping,
                  nodeMapping: FunctionalNodeMapping,
                  groupMapping: FunctionalGroupMapping): Seq[Tree] = {
-    val treeMaxId = maxTreeId(targetTrees)
-
     val sourceNodeIds: Set[Int] = sourceTrees.flatMap(_.nodes.map(_.id)).toSet
 
     val mappedSourceTrees = sourceTrees.map(
       tree =>
-        applyNodeMapping(tree.withTreeId(tree.treeId + treeMaxId), nodeMapping, sourceNodeIds)
+        applyNodeMapping(tree.withTreeId(treeMapping(tree.treeId)), nodeMapping, sourceNodeIds)
           .copy(groupId = tree.groupId.map(groupMapping(_))))
 
     targetTrees ++ mappedSourceTrees
@@ -70,6 +70,12 @@ object TreeUtils {
     val nodeIdOffset = calculateNodeOffset(sourceTrees, targetTrees)
     (nodeId: Int) =>
       nodeId + nodeIdOffset
+  }
+
+  def calculateTreeMapping(targetTrees: Seq[Tree]): Int => Int = {
+    val treeMaxId = maxTreeId(targetTrees)
+    (treeId: Int) =>
+      treeId + treeMaxId
   }
 
   private def calculateNodeOffset(sourceTrees: Seq[Tree], targetTrees: Seq[Tree]) =

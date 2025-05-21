@@ -1,4 +1,6 @@
+import { V3 } from "libs/mjs";
 import _ from "lodash";
+import * as THREE from "three";
 import type { AdditionalCoordinate } from "types/api_types";
 import type { OrthoView, OrthoViewMap, Vector3, Vector4 } from "viewer/constants";
 import constants, { OrthoViewValuesWithoutTDView } from "viewer/constants";
@@ -9,8 +11,6 @@ import type { PullQueueItem } from "viewer/model/bucket_data_handling/pullqueue"
 import Dimensions from "viewer/model/dimensions";
 import { zoomedAddressToAnotherZoomStep } from "viewer/model/helpers/position_converter";
 import type { MagInfo } from "../helpers/mag_info";
-import * as THREE from "three";
-import { V3 } from "libs/mjs";
 
 const { MAX_ZOOM_STEP_DIFF_PREFETCH } = constants;
 

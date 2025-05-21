@@ -21,6 +21,7 @@ import ButtonComponent, { ToggleButton } from "viewer/view/components/button_com
 
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
+import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
 import { ChangeBrushSizePopover } from "./brush_presets";
 import { SkeletonSpecificButtons } from "./skeleton_specific_ui";
 import { ToolIdToComponent } from "./tool_buttons";
@@ -37,7 +38,6 @@ import {
   QuickSelectSettingsPopover,
   VolumeInterpolationButton,
 } from "./volume_specific_ui";
-import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
 
 const handleAddNewUserBoundingBox = () => {
   Store.dispatch(addUserBoundingBoxAction());

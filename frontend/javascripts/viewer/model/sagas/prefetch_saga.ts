@@ -23,7 +23,6 @@ import { select } from "viewer/model/sagas/effect-generators";
 import { Model } from "viewer/singletons";
 import type { WebknossosState } from "viewer/store";
 import { ensureWkReady } from "./ready_sagas";
-import _ from "lodash";
 
 const PREFETCH_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;

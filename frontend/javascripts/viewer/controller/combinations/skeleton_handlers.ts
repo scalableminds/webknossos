@@ -25,10 +25,10 @@ import {
   untransformNodePosition,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import {
+  type GlobalPosition,
   calculateGlobalPos,
   calculateMaybeGlobalPos,
   getInputCatcherRect,
-  type GlobalPosition,
 } from "viewer/model/accessors/view_mode_accessor";
 import { setDirectionAction } from "viewer/model/actions/flycam_actions";
 import {

@@ -62,6 +62,7 @@ import {
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
+import { isRotated } from "viewer/model/accessors/flycam_accessor";
 import {
   areGeometriesTransformed,
   getActiveNode,
@@ -146,8 +147,6 @@ import {
   withMappingActivationConfirmation,
 } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
 import { LoadMeshMenuItemLabel } from "./right-border-tabs/segments_tab/load_mesh_menu_item_label";
-import { isRotated } from "viewer/model/accessors/flycam_accessor";
-import _ from "lodash";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);

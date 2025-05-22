@@ -60,13 +60,18 @@ class SkeletonTracingService @Inject()(
                                 editPosition: Option[Vec3Int],
                                 editRotation: Option[Vec3Double],
                                 boundingBox: Option[BoundingBox],
-                                newVersion: Long): SkeletonTracing = {
+                                newVersion: Long,
+                                ownerId: Option[String],
+                                requestingUserId: Option[String]): SkeletonTracing = {
     val taskBoundingBox = if (fromTask) {
       tracing.boundingBox.map { bb =>
         val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
         NamedBoundingBoxProto(newId, Some("task bounding box"), Some(true), Some(getRandomColor), bb)
       }
     } else None
+
+    val userStates = Seq( // TODO get rid of getOrElse(""), pass ids here for all cases
+      renderUserStateForSkeletonTracingIntoUserState(tracing, requestingUserId.getOrElse(""), ownerId.getOrElse("")))
 
     val newTracing =
       tracing
@@ -76,10 +81,58 @@ class SkeletonTracingService @Inject()(
           editRotation = editRotation.map(vec3DoubleToProto).getOrElse(tracing.editRotation),
           boundingBox = boundingBoxOptToProto(boundingBox).orElse(tracing.boundingBox),
           version = newVersion,
-          storedWithExternalTreeBodies = Some(false)
+          storedWithExternalTreeBodies = Some(false),
+          userStates = userStates
         )
         .addAllUserBoundingBoxes(taskBoundingBox)
     if (fromTask) newTracing.clearBoundingBox else newTracing
+  }
+
+  // Since the owner may change in duplicate, we need to render what they would see into a single user state for them
+  // TODO find good spot for this function
+  private def renderUserStateForSkeletonTracingIntoUserState(s: SkeletonTracing,
+                                                             requestingUserId: String,
+                                                             ownerId: String): SkeletonUserStateProto = {
+    val ownerUserState = s.userStates.find(_.userId == ownerId).map(_.copy(userId = requestingUserId))
+
+    if (requestingUserId == ownerId)
+      ownerUserState.getOrElse(SkeletonTracingDefaults.emptyUserState(requestingUserId))
+    else {
+      val requestingUserState = s.userStates.find(_.userId == requestingUserId)
+      val requestingUserTreeVisibilityMap: Map[Int, Boolean] = requestingUserState
+        .map(userState => userState.treeIds.zip(userState.treeVisibilities).toMap)
+        .getOrElse(Map.empty[Int, Boolean])
+      val ownerTreeVisibilityMap: Map[Int, Boolean] =
+        ownerUserState
+          .map(userState => userState.treeIds.zip(userState.treeVisibilities).toMap)
+          .getOrElse(Map.empty[Int, Boolean])
+      val mergedTreeVisibilityMap = (requestingUserTreeVisibilityMap ++ ownerTreeVisibilityMap).toSeq
+      val requestingUserBoundingBoxVisibilityMap: Map[Int, Boolean] = requestingUserState
+        .map(userState => userState.boundingBoxIds.zip(userState.boundingBoxVisibilities).toMap)
+        .getOrElse(Map.empty[Int, Boolean])
+      val ownerBoundingBoxVisibilityMap: Map[Int, Boolean] = ownerUserState
+        .map(userState => userState.boundingBoxIds.zip(userState.boundingBoxVisibilities).toMap)
+        .getOrElse(Map.empty[Int, Boolean])
+      val mergedBoundingBoxVisibilityMap =
+        (requestingUserBoundingBoxVisibilityMap ++ ownerBoundingBoxVisibilityMap).toSeq
+      val requestingUserTreeGroupExpandedMap: Map[Int, Boolean] = requestingUserState
+        .map(userState => userState.treeGroupIds.zip(userState.treeGroupExpandedStates).toMap)
+        .getOrElse(Map.empty[Int, Boolean])
+      val ownerTreeGroupExpandedMap: Map[Int, Boolean] = ownerUserState
+        .map(userState => userState.treeGroupIds.zip(userState.treeGroupExpandedStates).toMap)
+        .getOrElse(Map.empty[Int, Boolean])
+      val mergedTreeGroupExpandedMap = (requestingUserTreeGroupExpandedMap ++ ownerTreeGroupExpandedMap).toSeq
+      SkeletonUserStateProto(
+        userId = requestingUserId,
+        activeNodeId = requestingUserState.flatMap(_.activeNodeId).orElse(ownerUserState.flatMap(_.activeNodeId)),
+        treeGroupIds = mergedTreeGroupExpandedMap.map(_._1),
+        treeGroupExpandedStates = mergedTreeGroupExpandedMap.map(_._2),
+        boundingBoxIds = mergedBoundingBoxVisibilityMap.map(_._1),
+        boundingBoxVisibilities = mergedBoundingBoxVisibilityMap.map(_._2),
+        treeIds = mergedTreeVisibilityMap.map(_._1),
+        treeVisibilities = mergedTreeVisibilityMap.map(_._2)
+      )
+    }
   }
 
   def merge(tracings: Seq[SkeletonTracing], newVersion: Long, requestingUserId: Option[String]): Box[SkeletonTracing] =

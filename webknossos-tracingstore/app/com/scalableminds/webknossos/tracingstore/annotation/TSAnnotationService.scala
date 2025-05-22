@@ -908,7 +908,9 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         magRestrictions,
         editPosition,
         editRotation,
-        newVersion
+        newVersion,
+        ownerId,
+        requestingUserId
       )
       _ <- volumeTracingService.saveVolume(newTracingId, newVersion, newTracing)
       _ <- Fox.runIf(!newTracing.getHasEditableMapping)(
@@ -944,7 +946,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       newTracingId: String,
       newVersion: Long,
       ownerId: Option[String],
-      requestingUserId: Option[String], // TODO use
+      requestingUserId: Option[String],
       isFromTask: Boolean,
       editPosition: Option[Vec3Int],
       editRotation: Option[Vec3Double],
@@ -956,7 +958,9 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                                                                          editPosition,
                                                                          editRotation,
                                                                          boundingBox,
-                                                                         newVersion)
+                                                                         newVersion,
+                                                                         ownerId,
+                                                                         requestingUserId)
       _ <- skeletonTracingService.saveSkeleton(newTracingId, newVersion, adaptedSkeleton)
     } yield ()
 

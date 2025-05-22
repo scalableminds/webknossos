@@ -76,10 +76,10 @@ class DiffableMap<K extends number, V> {
   }
 
   /**
-   * Returns the unique identifier of this DiffableMap instance
-   * Used internally for diffing to determine if two maps are derived from each other
+   * Returns an identifier that can be used to check whether two DiffableMap instances
+   * were derived from each other. This is used internally when diffing.
    *
-   * @returns The map's unique ID
+   * @returns The map's derivation ID
    */
   getId(): number {
     // @ts-expect-error: Property '[idSymbol]' is defined by Object.defineProperty in constructor to avoid issues with testing

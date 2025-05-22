@@ -87,7 +87,7 @@ class DiffableMap<K extends number, V> {
   }
 
   /**
-   * Sets the unique identifier of this DiffableMap instance
+   * Sets the identifier of this DiffableMap instance
    * Used internally when creating derived maps
    *
    * @param id The ID to set

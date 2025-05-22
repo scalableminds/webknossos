@@ -1,4 +1,4 @@
-import { doWithToken, getNewestVersionForAnnotation } from "admin/rest_api";
+import { doWithToken, getNewestVersionForAnnotation, getUpdateActionLog } from "admin/rest_api";
 import Date from "libs/date";
 import ErrorHandling from "libs/error_handling";
 import type { RequestOptionsWithData } from "libs/request";
@@ -10,8 +10,13 @@ import _ from "lodash";
 import memoizeOne from "memoize-one";
 import messages from "messages";
 import { call, delay, fork, put, race, take, takeEvery } from "typed-redux-saga";
+import type { APIUpdateActionBatch } from "types/api_types";
 import { ControlModeEnum } from "viewer/constants";
-import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
+import {
+  getLayerByName,
+  getMagInfo,
+  getMappingInfo,
+} from "viewer/model/accessors/dataset_accessor";
 import { selectTracing } from "viewer/model/accessors/tracing_accessor";
 import { FlycamActions } from "viewer/model/actions/flycam_actions";
 import {
@@ -22,15 +27,22 @@ import {
   shiftSaveQueueAction,
 } from "viewer/model/actions/save_actions";
 import type { InitializeSkeletonTracingAction } from "viewer/model/actions/skeletontracing_actions";
-import { SkeletonTracingSaveRelevantActions } from "viewer/model/actions/skeletontracing_actions";
+import {
+  SkeletonTracingSaveRelevantActions,
+  applySkeletonUpdateActionsFromServerAction,
+} from "viewer/model/actions/skeletontracing_actions";
 import { ViewModeSaveRelevantActions } from "viewer/model/actions/view_mode_actions";
 import {
   type InitializeVolumeTracingAction,
   VolumeTracingSaveRelevantActions,
+  applyVolumeUpdateActionsFromServerAction,
 } from "viewer/model/actions/volumetracing_actions";
 import compactSaveQueue from "viewer/model/helpers/compaction/compact_save_queue";
 import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
-import { globalPositionToBucketPosition } from "viewer/model/helpers/position_converter";
+import {
+  globalPositionToBucketPosition,
+  globalPositionToBucketPositionWithMag,
+} from "viewer/model/helpers/position_converter";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import { ensureWkReady } from "viewer/model/sagas/ready_sagas";
@@ -57,6 +69,8 @@ import type {
 } from "viewer/store";
 import { getFlooredPosition, getRotation } from "../accessors/flycam_accessor";
 import type { BatchedAnnotationInitializationAction } from "../actions/annotation_actions";
+import { updateLocalHdf5Mapping } from "./mapping_saga";
+import { updateMappingWithMerge, updateMappingWithOmittedSplitPartners } from "./proofread_saga";
 import { takeEveryWithBatchActionSupport } from "./saga_helpers";
 
 const ONE_YEAR_MS = 365 * 24 * 3600 * 1000;
@@ -476,12 +490,20 @@ export function* setupSavingForTracingType(
   }
 }
 
-const VERSION_POLL_INTERVAL_COLLAB = 10 * 1000;
-const VERSION_POLL_INTERVAL_READ_ONLY = 60 * 1000;
-const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 30 * 1000;
+// todop: restore to 10, 60, 30 ?
+const VERSION_POLL_INTERVAL_COLLAB = 1 * 1000;
+const VERSION_POLL_INTERVAL_READ_ONLY = 1 * 1000;
+const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 1 * 1000;
 
 function* watchForSaveConflicts(): Saga<never> {
-  function* checkForNewVersion() {
+  function* checkForNewVersion(): Saga<boolean> {
+    /*
+     * Checks whether there is a newer version on the server. If so,
+     * the saga tries to also update the current annotation to the newest
+     * state.
+     * If the update is not possible, the user will be notified that a newer
+     * version exists on the server. In that case, true will be returned (`didAskUserToRefreshPage`).
+     */
     const allowSave = yield* select(
       (state) =>
         state.annotation.restrictions.allowSave && state.annotation.restrictions.allowUpdate,
@@ -504,7 +526,7 @@ function* watchForSaveConflicts(): Saga<never> {
       //   b) checking for newer versions when the active user may update the annotation introduces
       //      a race condition between this saga and the actual save saga. Synchronizing these sagas
       //      would be possible, but would add further complexity to the mission critical save saga.
-      return;
+      return false;
     }
 
     const maybeSkeletonTracing = yield* select((state) => state.annotation.skeleton);
@@ -518,7 +540,7 @@ function* watchForSaveConflicts(): Saga<never> {
     ]);
 
     if (tracings.length === 0) {
-      return;
+      return false;
     }
 
     const versionOnServer = yield* call(
@@ -535,9 +557,31 @@ function* watchForSaveConflicts(): Saga<never> {
     });
 
     const toastKey = "save_conflicts_warning";
-    if (versionOnServer > versionOnClient) {
+    const newerVersionCount = versionOnServer - versionOnClient;
+    if (newerVersionCount > 0) {
       // The latest version on the server is greater than the most-recently
       // stored version.
+
+      const { url: tracingStoreUrl } = yield* select((state) => state.annotation.tracingStore);
+
+      const newerActions = yield* call(
+        getUpdateActionLog,
+        tracingStoreUrl,
+        annotationId,
+        versionOnClient + 1,
+      );
+
+      if (newerActions.length !== newerVersionCount) {
+        // todop: maybe default to showing the "please reload" toast
+        // as it's not critical here?
+        throw new Error("unexpected error");
+      }
+
+      console.log("newerActions", newerActions);
+
+      if (yield* tryToIncorporateActions(newerActions)) {
+        return false;
+      }
 
       const saveQueue = yield* select((state) => state.save.queue);
 
@@ -556,9 +600,11 @@ function* watchForSaveConflicts(): Saga<never> {
         sticky: true,
         key: toastKey,
       });
+      return true;
     } else {
       Toast.close(toastKey);
     }
+    return false;
   }
 
   function* getPollInterval(): Saga<number> {
@@ -587,15 +633,194 @@ function* watchForSaveConflicts(): Saga<never> {
       continue;
     }
     try {
-      yield* call(checkForNewVersion);
+      const didAskUserToRefreshPage = yield* call(checkForNewVersion);
+      if (didAskUserToRefreshPage) {
+        // The user was already notified about the current annotation being outdated.
+        // There is not much else we can do now. Sleep for 5 minutes.
+        yield* call(sleep, 5 * 60 * 1000);
+      }
     } catch (exception) {
       // If the version check fails for some reason, we don't want to crash the entire
       // saga.
       console.warn(exception);
       // @ts-ignore
       ErrorHandling.notify(exception);
+      // todop: remove again?
+      Toast.error(`${exception}`);
     }
   }
+}
+
+function* tryToIncorporateActions(newerActions: APIUpdateActionBatch[]): Saga<boolean> {
+  const refreshFunctionByTracing: Record<string, () => Saga<void>> = {};
+  function* finalize() {
+    for (const fn of Object.values(refreshFunctionByTracing)) {
+      yield* call(fn);
+    }
+  }
+  for (const actionBatch of newerActions) {
+    for (const action of actionBatch.value) {
+      switch (action.name) {
+        // Updates to user-specific state can be ignored:
+        //   Camera
+        case "updateCamera":
+        case "updateTdCamera":
+        //   Active items
+        case "updateActiveNode":
+        case "updateActiveSegmentId":
+        //   Visibilities
+        case "updateTreeVisibility":
+        case "updateTreeGroupVisibility":
+        case "updateSegmentVisibility":
+        case "updateSegmentGroupVisibility":
+        case "updateUserBoundingBoxVisibilityInSkeletonTracing":
+        case "updateUserBoundingBoxVisibilityInVolumeTracing":
+        //   Group expansion
+        case "updateTreeGroupsExpandedState":
+        case "updateSegmentGroupsExpandedState": {
+          break;
+        }
+        case "createNode":
+        case "createEdge": {
+          yield* put(applySkeletonUpdateActionsFromServerAction([action]));
+          break;
+        }
+
+        // Volume
+        case "updateBucket": {
+          const { value } = action;
+          const cube = Model.getCubeByLayerName(value.actionTracingId);
+
+          const dataLayer = Model.getLayerByName(value.actionTracingId);
+          const bucketAddress = globalPositionToBucketPositionWithMag(
+            value.position,
+            value.mag,
+            value.additionalCoordinates,
+          );
+
+          const bucket = cube.getBucket(bucketAddress);
+          if (bucket != null && bucket.type !== "null") {
+            cube.collectBucket(bucket);
+            dataLayer.layerRenderingManager.refresh();
+          }
+          break;
+        }
+        case "deleteSegmentData": {
+          const { value } = action;
+          const { actionTracingId, id } = value;
+          const cube = Model.getCubeByLayerName(actionTracingId);
+          const dataLayer = Model.getLayerByName(actionTracingId);
+
+          cube.collectBucketsIf((bucket) => bucket.containsValue(id));
+          dataLayer.layerRenderingManager.refresh();
+          break;
+        }
+        case "updateLargestSegmentId":
+        case "createSegment":
+        case "deleteSegment":
+        case "updateSegment": {
+          yield* put(applyVolumeUpdateActionsFromServerAction([action]));
+          break;
+        }
+
+        // Proofreading
+        case "mergeAgglomerate": {
+          const activeMapping = yield* select(
+            (store) =>
+              store.temporaryConfiguration.activeMappingByLayer[action.value.actionTracingId],
+          );
+          yield* call(
+            updateMappingWithMerge,
+            action.value.actionTracingId,
+            activeMapping,
+            action.value.agglomerateId2,
+            action.value.agglomerateId1,
+          );
+          break;
+        }
+        case "splitAgglomerate": {
+          const activeMapping = yield* select(
+            (store) =>
+              store.temporaryConfiguration.activeMappingByLayer[action.value.actionTracingId],
+          );
+          yield* call(
+            updateMappingWithOmittedSplitPartners,
+            action.value.actionTracingId,
+            activeMapping,
+            action.value.agglomerateId,
+          );
+
+          const layerName = action.value.actionTracingId;
+
+          const mappingInfo = yield* select((state) =>
+            getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
+          );
+          const { mappingName } = mappingInfo;
+
+          if (mappingName == null) {
+            throw new Error(
+              "Could not apply splitAgglomerate because no active mapping was found.",
+            );
+          }
+
+          const dataset = yield* select((state) => state.dataset);
+          const layerInfo = getLayerByName(dataset, layerName);
+
+          refreshFunctionByTracing[layerName] = function* (): Saga<void> {
+            yield* call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName);
+          };
+
+          break;
+        }
+
+        /*
+         * Currently not supported:
+         */
+
+        // High-level annotation specific
+        case "addLayerToAnnotation":
+        case "addSegmentIndex":
+        case "createTracing":
+        case "deleteLayerFromAnnotation":
+        case "importVolumeTracing":
+        case "revertToVersion":
+        case "updateLayerMetadata":
+        case "updateMetadataOfAnnotation":
+
+        // Volume
+        case "removeFallbackLayer":
+        case "updateSegmentGroups":
+        case "updateUserBoundingBoxesInVolumeTracing": // Wait for #8492 first.
+        case "updateMappingName": // Refactor mapping activation first before implementing this.
+
+        // Skeleton
+        case "createTree":
+        case "deleteEdge":
+        case "deleteNode":
+        case "deleteTree":
+        case "mergeTree": // todop: is this really skeleton?
+        case "updateSkeletonTracing":
+        case "updateTree":
+        case "updateTreeEdgesVisibility":
+        case "updateTreeGroups":
+        case "moveTreeComponent":
+        case "updateNode":
+        case "updateUserBoundingBoxesInSkeletonTracing": // Wait for #8492 first.
+
+        case "updateVolumeTracing": {
+          console.log("cannot apply action", action.name);
+          yield* call(finalize);
+          return false;
+        }
+        default: {
+          action satisfies never;
+        }
+      }
+    }
+    yield* put(setVersionNumberAction(actionBatch.version));
+  }
+  yield* call(finalize);
+  return true;
 }
 
 export default [saveTracingAsync, watchForSaveConflicts];

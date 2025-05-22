@@ -92,34 +92,3 @@ export type MutableTreeGroup = {
 
 export class MutableTreeMap extends DiffableMap<number, MutableTree> {}
 export class TreeMap extends DiffableMap<number, Tree> {}
-
-// export type MutableCommentType = {
-//   content: string;
-//   nodeId: number;
-// };
-// export type CommentType = Readonly<MutableCommentType>;
-// export type MutableEdge = {
-//   source: number;
-//   target: number;
-// };
-// export type Edge = Readonly<MutableEdge>;
-// export type MutableNode = {
-//   id: number;
-//   untransformedPosition: Vector3;
-//   additionalCoordinates: AdditionalCoordinate[] | null;
-//   rotation: Vector3;
-//   bitDepth: number;
-//   viewport: number;
-//   mag: number;
-//   radius: number;
-//   timestamp: number;
-//   interpolation: boolean;
-// };
-// export type Node = Readonly<MutableNode>;
-// export type MutableBranchPoint = {
-//   timestamp: number;
-//   nodeId: number;
-// };
-// export type BranchPoint = Readonly<MutableBranchPoint>;
-// export type MutableNodeMap = DiffableMap<number, MutableNode>;
-// export type NodeMap = DiffableMap<number, Node>;

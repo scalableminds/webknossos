@@ -786,7 +786,7 @@ class VolumeTracingService @Inject()(
   private def mergeTwo(tracingA: VolumeTracing,
                        tracingB: VolumeTracing,
                        indexB: Int, // Index of tracingB in the labelMaps of the mergedVolumeStats.
-                       // TODO test with proofreading, what happens to segment ids?
+                       // TODO test with proofreading, what happens to segment ids? also, volume annotations did not apply
                        mergedVolumeStats: MergedVolumeStats): Box[VolumeTracing] = {
     val largestSegmentId = combineLargestSegmentIdsByMaxDefined(tracingA.largestSegmentId, tracingB.largestSegmentId)
     val groupMapping = GroupUtils.calculateSegmentGroupMapping(tracingA.segmentGroups, tracingB.segmentGroups)
@@ -871,7 +871,7 @@ class VolumeTracingService @Inject()(
                                          bboxIdMapA: Map[Int, Int]): VolumeUserStateProto =
     applyBboxIdMapOnUserState(userState, bboxIdMapA).copy(
       segmentGroupIds = userState.segmentGroupIds.map(groupMapping),
-      segmentIds = userState.segmentIds.map(segmentMapping)
+      segmentIds = userState.segmentIds.map(segmentMapping) // TODO what if segments are not in id mappings?
     )
 
   private def applyBboxIdMapOnUserState(userState: VolumeUserStateProto,

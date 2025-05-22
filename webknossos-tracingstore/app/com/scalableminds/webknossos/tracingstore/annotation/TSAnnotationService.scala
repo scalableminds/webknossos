@@ -889,7 +889,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       newTracingId: String,
       newVersion: Long,
       ownerId: Option[String],
-      requestingUserId: Option[String], // TODO use
+      requestingUserId: Option[String],
       isFromTask: Boolean,
       boundingBox: Option[BoundingBox],
       datasetBoundingBox: Option[BoundingBox],

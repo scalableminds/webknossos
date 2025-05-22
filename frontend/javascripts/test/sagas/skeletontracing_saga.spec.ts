@@ -1,11 +1,4 @@
-import {
-  type Flycam,
-  type WebknossosState,
-  type SkeletonTracing,
-  type StoreAnnotation,
-  type Tree,
-  TreeMap,
-} from "viewer/store";
+import type { Flycam, WebknossosState, SkeletonTracing, StoreAnnotation } from "viewer/store";
 import ChainReducer from "test/helpers/chainReducer";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "viewer/model/edge_collection";
@@ -30,6 +23,7 @@ import { pushSaveQueueTransaction } from "viewer/model/actions/save_actions";
 import SkeletonTracingReducer from "viewer/model/reducers/skeletontracing_reducer";
 import { put } from "redux-saga/effects";
 import { TIMESTAMP } from "test/global_mocks";
+import { type Tree, TreeMap } from "viewer/model/types/tree_types";
 
 const actionTracingId = "tracingId";
 

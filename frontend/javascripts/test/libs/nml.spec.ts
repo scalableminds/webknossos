@@ -1,6 +1,7 @@
 import _ from "lodash";
 import update from "immutability-helper";
-import type { Node, SkeletonTracing, WebknossosState } from "viewer/store";
+import type { SkeletonTracing, WebknossosState } from "viewer/store";
+import type { Node } from "viewer/model/types/tree_types";
 import defaultState from "viewer/default_state";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "viewer/model/edge_collection";

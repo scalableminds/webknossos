@@ -12,7 +12,8 @@ import { getZoomValue } from "viewer/model/accessors/flycam_accessor";
 import { sum } from "viewer/model/helpers/iterator_utils";
 import { cachedDiffTrees } from "viewer/model/sagas/skeletontracing_saga";
 import type { CreateActionNode, UpdateActionNode } from "viewer/model/sagas/update_actions";
-import type { Edge, Node, SkeletonTracing, Tree, WebknossosState } from "viewer/store";
+import type { Edge, Node, Tree } from "viewer/model/types/tree_types";
+import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import Store from "viewer/throttled_store";
 
 const MAX_CAPACITY = 1000;

@@ -74,16 +74,9 @@ import {
   updateUserBoundingBoxesInSkeletonTracing,
 } from "viewer/model/sagas/update_actions";
 import { api } from "viewer/singletons";
-import type {
-  Flycam,
-  Node,
-  NodeMap,
-  SkeletonTracing,
-  Tree,
-  TreeMap,
-  WebknossosState,
-} from "viewer/store";
+import type { Flycam, SkeletonTracing, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
+import type { Node, NodeMap, Tree, TreeMap } from "../types/tree_types";
 import { ensureWkReady } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
 

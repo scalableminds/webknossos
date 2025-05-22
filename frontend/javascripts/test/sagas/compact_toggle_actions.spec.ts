@@ -1,13 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  type Flycam,
-  type WebknossosState,
-  type Segment,
-  type SegmentGroup,
-  type Tree,
-  type TreeGroup,
-  TreeMap,
-} from "viewer/store";
+import type { Flycam, WebknossosState, Segment, SegmentGroup } from "viewer/store";
 import { diffSkeletonTracing } from "viewer/model/sagas/skeletontracing_saga";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import {
@@ -26,6 +18,7 @@ import EdgeCollection from "viewer/model/edge_collection";
 import compactToggleActions from "viewer/model/helpers/compaction/compact_toggle_actions";
 import defaultState from "viewer/default_state";
 import { diffVolumeTracing } from "viewer/model/sagas/volumetracing_saga";
+import { type Tree, TreeMap, type TreeGroup } from "viewer/model/types/tree_types";
 
 const createTree = (id: number, groupId: number | null, isVisible: boolean): Tree => ({
   treeId: id,

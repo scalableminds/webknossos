@@ -9,15 +9,12 @@ import { IdentityTransform, type TreeType, type Vector3 } from "viewer/constants
 import {
   type BranchPoint,
   type Node,
-  type NumberLike,
-  type SkeletonTracing,
-  type StoreAnnotation,
   type Tree,
   type TreeGroup,
   type TreeGroupTypeFlat,
   TreeMap,
-  type WebknossosState,
-} from "viewer/store";
+} from "viewer/model/types/tree_types";
+import type { NumberLike, SkeletonTracing, StoreAnnotation, WebknossosState } from "viewer/store";
 import {
   MISSING_GROUP_ID,
   findGroup,

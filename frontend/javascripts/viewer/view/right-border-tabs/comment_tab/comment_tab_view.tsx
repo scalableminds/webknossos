@@ -30,7 +30,8 @@ import {
   setActiveNodeAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import { cachedDiffTrees } from "viewer/model/sagas/skeletontracing_saga";
-import type { CommentType, MutableCommentType, SkeletonTracing, Tree, TreeMap } from "viewer/store";
+import type { CommentType, MutableCommentType, Tree, TreeMap } from "viewer/model/types/tree_types";
+import type { SkeletonTracing } from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
 import InputComponent from "viewer/view/components/input_component";

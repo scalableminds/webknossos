@@ -15,15 +15,8 @@ import {
   updateTreeGroupVisibility,
   updateTreeVisibility,
 } from "viewer/model/sagas/update_actions";
-import type {
-  Segment,
-  SegmentMap,
-  SkeletonTracing,
-  Tree,
-  TreeGroup,
-  TreeMap,
-  VolumeTracing,
-} from "viewer/store";
+import type { Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
+import type { Segment, SegmentMap, SkeletonTracing, VolumeTracing } from "viewer/store";
 import {
   MISSING_GROUP_ID,
   createGroupToSegmentsMap,

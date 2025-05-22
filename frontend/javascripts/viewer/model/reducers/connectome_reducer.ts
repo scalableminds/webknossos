@@ -7,7 +7,8 @@ import {
   addTreesAndGroups,
   getMaximumNodeId,
 } from "viewer/model/reducers/skeletontracing_reducer_helpers";
-import { type SkeletonTracing, TreeMap, type WebknossosState } from "viewer/store";
+import { TreeMap } from "viewer/model/types/tree_types";
+import type { SkeletonTracing, WebknossosState } from "viewer/store";
 
 function getSkeletonTracingForConnectome(
   state: WebknossosState,

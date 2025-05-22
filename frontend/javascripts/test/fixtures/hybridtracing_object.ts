@@ -1,5 +1,6 @@
 import update from "immutability-helper";
-import { TreeMap, type SkeletonTracing, type Tree } from "viewer/store";
+import { TreeMap, type Tree } from "viewer/model/types/tree_types";
+import type { SkeletonTracing } from "viewer/store";
 import { initialState as defaultState } from "test/fixtures/volumetracing_object";
 
 import DiffableMap from "libs/diffable_map";

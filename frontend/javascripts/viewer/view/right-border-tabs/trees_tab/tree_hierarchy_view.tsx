@@ -15,9 +15,9 @@ import {
   toggleTreeAction,
   toggleTreeGroupAction,
 } from "viewer/model/actions/skeletontracing_actions";
+import type { Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import { api } from "viewer/singletons";
 import { Store } from "viewer/singletons";
-import type { Tree, TreeGroup, TreeMap } from "viewer/store";
 import {
   GroupTypeEnum,
   MISSING_GROUP_ID,

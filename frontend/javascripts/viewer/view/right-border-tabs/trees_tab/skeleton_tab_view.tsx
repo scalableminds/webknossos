@@ -69,17 +69,10 @@ import {
 } from "viewer/model/helpers/nml_helpers";
 import { parseProtoTracing } from "viewer/model/helpers/proto_helpers";
 import { createMutableTreeMapFromTreeArray } from "viewer/model/reducers/skeletontracing_reducer_helpers";
+import type { MutableTreeMap, Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import { Model } from "viewer/singletons";
 import { api } from "viewer/singletons";
-import type {
-  MutableTreeMap,
-  Tree,
-  TreeGroup,
-  TreeMap,
-  UserBoundingBox,
-  WebknossosState,
-} from "viewer/store";
-import Store from "viewer/store";
+import Store, { type UserBoundingBox, type WebknossosState } from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
 import InputComponent from "viewer/view/components/input_component";

@@ -2,7 +2,8 @@ import type { DataNode } from "antd/es/tree";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import { mapGroupsWithRoot } from "viewer/model/accessors/skeletontracing_accessor";
-import type { Segment, SegmentGroup, SegmentMap, Tree, TreeGroup, TreeMap } from "viewer/store";
+import type { Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
+import type { Segment, SegmentGroup, SegmentMap } from "viewer/store";
 import type { SegmentHierarchyNode } from "../segments_tab/segments_view_helper";
 
 export const MISSING_GROUP_ID = -1;

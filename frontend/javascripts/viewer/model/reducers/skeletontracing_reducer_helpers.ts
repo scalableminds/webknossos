@@ -25,24 +25,23 @@ import {
   mapGroupsToGenerator,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import EdgeCollection from "viewer/model/edge_collection";
-import type {
-  BranchPoint,
-  CommentType,
-  Edge,
-  MutableBranchPoint,
-  MutableCommentType,
-  MutableNode,
-  MutableNodeMap,
-  MutableTree,
-  MutableTreeGroup,
-  Node,
-  RestrictionsAndSettings,
-  SkeletonTracing,
-  Tree,
-  TreeGroup,
-  WebknossosState,
-} from "viewer/store";
-import { TreeMap, MutableTreeMap } from "viewer/store";
+import {
+  type BranchPoint,
+  type CommentType,
+  type Edge,
+  type MutableBranchPoint,
+  type MutableCommentType,
+  type MutableNode,
+  type MutableNodeMap,
+  type MutableTree,
+  type MutableTreeGroup,
+  MutableTreeMap,
+  type Node,
+  type Tree,
+  type TreeGroup,
+  TreeMap,
+} from "viewer/model/types/tree_types";
+import type { RestrictionsAndSettings, SkeletonTracing, WebknossosState } from "viewer/store";
 
 import { max, maxBy, min } from "../helpers/iterator_utils";
 
@@ -598,22 +597,21 @@ export function addTreesAndGroups(
 
   for (const tree of trees.values()) {
     const newNodes: MutableNodeMap = new DiffableMap();
-    const newTree = { ...tree };
 
     for (const node of tree.nodes.values()) {
       node.id = idMap[node.id];
       newNodes.mutableSet(node.id, node);
     }
 
-    newTree.nodes = newNodes;
-    newTree.edges = EdgeCollection.loadFromArray(
+    tree.nodes = newNodes;
+    tree.edges = EdgeCollection.loadFromArray(
       tree.edges.map((edge) => ({
         source: idMap[edge.source],
         target: idMap[edge.target],
       })),
     );
 
-    newTree.comments = tree.comments.map((comment) => ({
+    tree.comments = tree.comments.map((comment) => ({
       ...comment,
       // Comments can reference other nodes, rewrite those references if the referenced id changed
       nodeId: idMap[comment.nodeId],
@@ -623,16 +621,16 @@ export function addTreesAndGroups(
       ),
     }));
 
-    newTree.branchPoints = tree.branchPoints.map((bp) => ({
+    tree.branchPoints = tree.branchPoints.map((bp) => ({
       ...bp,
       nodeId: idMap[bp.nodeId],
     }));
 
     // Assign the new group id to the tree if the tree belongs to a group
-    newTree.groupId = tree.groupId != null ? groupIdMap[tree.groupId] : tree.groupId;
-    newTree.treeId = newTreeId;
+    tree.groupId = tree.groupId != null ? groupIdMap[tree.groupId] : tree.groupId;
+    tree.treeId = newTreeId;
 
-    trees.mutableSet(newTreeId, newTree);
+    trees.mutableSet(newTreeId, tree);
     newTreeId++;
   }
 

@@ -39,13 +39,8 @@ import {
 } from "viewer/model/actions/connectome_actions";
 import { setMappingAction } from "viewer/model/actions/settings_actions";
 import EdgeCollection from "viewer/model/edge_collection";
-import {
-  type ActiveMappingInfo,
-  type MutableNode,
-  type MutableTree,
-  MutableTreeMap,
-  type WebknossosState,
-} from "viewer/store";
+import { type MutableNode, type MutableTree, MutableTreeMap } from "viewer/model/types/tree_types";
+import type { ActiveMappingInfo, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import InputComponent from "viewer/view/components/input_component";

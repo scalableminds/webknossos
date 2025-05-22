@@ -43,7 +43,8 @@ import {
   toggleAllTreesReducer,
   toggleTreeGroupReducer,
 } from "viewer/model/reducers/skeletontracing_reducer_helpers";
-import { type SkeletonTracing, type TreeGroup, TreeMap, type WebknossosState } from "viewer/store";
+import { type TreeGroup, TreeMap } from "viewer/model/types/tree_types";
+import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import {
   GroupTypeEnum,
   additionallyExpandGroup,
@@ -880,7 +881,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
 
       const newTrees = skeletonTracing.trees.set(tree.treeId, {
         ...tree,
-        branchPoints: tree.branchPoints.filter((bp) => bp.nodeId !== nodeId),
+        branchPoints: tree.branchPoints.filter((bp: any) => bp.nodeId !== nodeId),
       });
 
       return update(state, {

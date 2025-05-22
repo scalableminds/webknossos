@@ -162,20 +162,17 @@ import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer
 import { getMaximumGroupId } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import { getHalfViewportExtentsInUnitFromState } from "viewer/model/sagas/saga_selectors";
 import { applyLabeledVoxelMapToAllMissingMags } from "viewer/model/sagas/volume/helpers";
+import type { MutableNode, Node, Tree, TreeGroupTypeFlat } from "viewer/model/types/tree_types";
 import { applyVoxelMap } from "viewer/model/volumetracing/volume_annotation_sampling";
 import { Model, api } from "viewer/singletons";
 import type {
   DatasetConfiguration,
   Mapping,
   MappingType,
-  MutableNode,
-  Node,
   Segment,
   SegmentGroup,
   SkeletonTracing,
   StoreAnnotation,
-  Tree,
-  TreeGroupTypeFlat,
   UserConfiguration,
   VolumeTracing,
   WebknossosState,

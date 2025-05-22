@@ -100,14 +100,9 @@ import {
   toggleSegmentGroupAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
+import type { TreeGroup } from "viewer/model/types/tree_types";
 import { api } from "viewer/singletons";
-import type {
-  MeshInformation,
-  Segment,
-  SegmentGroup,
-  TreeGroup,
-  WebknossosState,
-} from "viewer/store";
+import type { MeshInformation, Segment, SegmentGroup, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";

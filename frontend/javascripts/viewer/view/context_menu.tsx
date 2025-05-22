@@ -132,14 +132,14 @@ import { api } from "viewer/singletons";
 import type {
   ActiveMappingInfo,
   ContextMenuInfo,
-  MutableNode,
   SegmentMap,
   SkeletonTracing,
-  Tree,
   UserBoundingBox,
   VolumeTracing,
 } from "viewer/store";
-import Store, { TreeMap } from "viewer/store";
+
+import { type MutableNode, type Tree, TreeMap } from "viewer/model/types/tree_types";
+import Store from "viewer/store";
 import {
   getVolumeRequestUrl,
   withMappingActivationConfirmation,

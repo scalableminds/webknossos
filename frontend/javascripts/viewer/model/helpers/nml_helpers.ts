@@ -23,17 +23,19 @@ import {
   getMaximumTreeId,
 } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import {
-  type BoundingBoxObject,
   type MutableNode,
   type MutableTree,
   MutableTreeMap,
   type NodeMap,
-  type SkeletonTracing,
-  type StoreAnnotation,
   type Tree,
   type TreeGroup,
-  type UserBoundingBox,
-  type WebknossosState,
+} from "viewer/model/types/tree_types";
+import type {
+  BoundingBoxObject,
+  SkeletonTracing,
+  StoreAnnotation,
+  UserBoundingBox,
+  WebknossosState,
 } from "viewer/store";
 import { findGroup } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { getTransformsForSkeletonLayer } from "../accessors/dataset_layer_transformation_accessor";

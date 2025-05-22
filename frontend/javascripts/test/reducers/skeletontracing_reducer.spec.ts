@@ -4,13 +4,7 @@ import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "viewer/model/edge_collection";
 import { describe, it, expect } from "vitest";
 import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import {
-  type WebknossosState,
-  type Node,
-  type Tree,
-  type MutableNode,
-  TreeMap,
-} from "viewer/store";
+import type { WebknossosState } from "viewer/store";
 import { TreeTypeEnum, type Vector3 } from "viewer/constants";
 import type { Action } from "viewer/model/actions/actions";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
@@ -21,6 +15,7 @@ import {
 import SkeletonTracingReducer from "viewer/model/reducers/skeletontracing_reducer";
 import * as SkeletonTracingActions from "viewer/model/actions/skeletontracing_actions";
 import { max } from "viewer/model/helpers/iterator_utils";
+import { type Node, TreeMap, type MutableNode, type Tree } from "viewer/model/types/tree_types";
 
 const initialState: WebknossosState = update(defaultState, {
   annotation: {

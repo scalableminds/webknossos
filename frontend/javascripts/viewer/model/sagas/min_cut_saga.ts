@@ -20,8 +20,8 @@ import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import { takeEveryUnlessBusy } from "viewer/model/sagas/saga_helpers";
+import type { MutableNode, Node } from "viewer/model/types/tree_types";
 import { api } from "viewer/singletons";
-import type { MutableNode, Node } from "viewer/store";
 import type { MagInfo } from "../helpers/mag_info";
 
 // By default, a new bounding box is created around

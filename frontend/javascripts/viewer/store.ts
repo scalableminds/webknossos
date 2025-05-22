@@ -1,8 +1,10 @@
-import DiffableMap from "libs/diffable_map";
-import type { Matrix4x4 } from "libs/mjs";
+import type DiffableMap from "libs/diffable_map";
 import { type Middleware, applyMiddleware, createStore } from "redux";
 import { enableBatching } from "redux-batched-actions";
 import createSagaMiddleware, { type Saga } from "redux-saga";
+
+// Type imports
+import type { Matrix4x4 } from "libs/mjs";
 import type {
   APIAllowedMode,
   APIAnnotationType,
@@ -42,17 +44,25 @@ import type {
   OverwriteMode,
   Rect,
   TDViewDisplayMode,
-  TreeType,
   Vector2,
   Vector3,
   ViewMode,
 } from "viewer/constants";
 import type { BLEND_MODES, ControlModeEnum } from "viewer/constants";
-import defaultState from "viewer/default_state";
 import type { TracingStats } from "viewer/model/accessors/annotation_accessor";
 import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import type { Action } from "viewer/model/actions/actions";
-import type EdgeCollection from "viewer/model/edge_collection";
+import type { UpdateAction } from "viewer/model/sagas/update_actions";
+import type { Toolkit } from "./model/accessors/tool_accessor";
+import type {
+  MutableTreeGroup,
+  TreeGroup,
+  TreeGroupTypeFlat,
+  TreeMap,
+} from "./model/types/tree_types";
+
+// Value imports
+import defaultState from "viewer/default_state";
 import actionLoggerMiddleware from "viewer/model/helpers/action_logger_middleware";
 import overwriteActionMiddleware from "viewer/model/helpers/overwrite_action_middleware";
 import reduceReducers from "viewer/model/helpers/reduce_reducers";
@@ -68,42 +78,10 @@ import UiReducer from "viewer/model/reducers/ui_reducer";
 import UserReducer from "viewer/model/reducers/user_reducer";
 import ViewModeReducer from "viewer/model/reducers/view_mode_reducer";
 import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
-import type { UpdateAction } from "viewer/model/sagas/update_actions";
-import type { Toolkit } from "./model/accessors/tool_accessor";
 import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import type { StartAIJobModalState } from "./view/action-bar/starting_job_modals";
 
-export type MutableCommentType = {
-  content: string;
-  nodeId: number;
-};
-export type CommentType = Readonly<MutableCommentType>;
-export type MutableEdge = {
-  source: number;
-  target: number;
-};
-export type Edge = Readonly<MutableEdge>;
-export type MutableNode = {
-  id: number;
-  untransformedPosition: Vector3;
-  additionalCoordinates: AdditionalCoordinate[] | null;
-  rotation: Vector3;
-  bitDepth: number;
-  viewport: number;
-  mag: number;
-  radius: number;
-  timestamp: number;
-  interpolation: boolean;
-};
-export type Node = Readonly<MutableNode>;
-export type MutableBranchPoint = {
-  timestamp: number;
-  nodeId: number;
-};
-export type BranchPoint = Readonly<MutableBranchPoint>;
-export type MutableNodeMap = DiffableMap<number, MutableNode>;
-export type NodeMap = DiffableMap<number, Node>;
 export type BoundingBoxObject = {
   readonly topLeft: Vector3;
   readonly width: number;
@@ -132,52 +110,6 @@ export type UserBoundingBoxWithoutId = {
 export type UserBoundingBox = UserBoundingBoxWithoutId & {
   id: number;
 };
-// When changing MutableTree, remember to also update Tree
-export type MutableTree = {
-  treeId: number;
-  groupId: number | null | undefined;
-  color: Vector3;
-  name: string;
-  timestamp: number;
-  comments: MutableCommentType[];
-  branchPoints: MutableBranchPoint[];
-  edges: EdgeCollection;
-  isVisible: boolean;
-  nodes: MutableNodeMap;
-  type: TreeType;
-  edgesAreVisible: boolean;
-  metadata: MetadataEntryProto[];
-};
-// When changing Tree, remember to also update MutableTree
-export type Tree = {
-  readonly treeId: number;
-  readonly groupId: number | null | undefined;
-  readonly color: Vector3;
-  readonly name: string;
-  readonly timestamp: number;
-  readonly comments: CommentType[];
-  readonly branchPoints: BranchPoint[];
-  readonly edges: EdgeCollection;
-  readonly isVisible: boolean;
-  readonly nodes: NodeMap;
-  readonly type: TreeType;
-  readonly edgesAreVisible: boolean;
-  readonly metadata: MetadataEntryProto[];
-};
-export type TreeGroupTypeFlat = {
-  readonly name: string;
-  readonly groupId: number;
-  readonly isExpanded?: boolean;
-};
-export type TreeGroup = TreeGroupTypeFlat & {
-  readonly children: TreeGroup[];
-};
-export type MutableTreeGroup = {
-  name: string;
-  groupId: number;
-  children: MutableTreeGroup[];
-};
-
 export type SegmentGroupTypeFlat = TreeGroupTypeFlat;
 export type SegmentGroup = TreeGroup;
 export type MutableSegmentGroup = MutableTreeGroup;
@@ -187,8 +119,6 @@ export type Restrictions = APIRestrictions & { initialAllowUpdate: boolean };
 export type AllowedMode = APIAllowedMode;
 export type Settings = APISettings;
 export type DataStoreInfo = APIDataStore;
-export class MutableTreeMap extends DiffableMap<number, MutableTree> {}
-export class TreeMap extends DiffableMap<number, Tree> {}
 export type AnnotationVisibility = APIAnnotationVisibility;
 export type RestrictionsAndSettings = Restrictions & Settings;
 export type Annotation = {

@@ -1,7 +1,7 @@
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import * as Utils from "libs/utils";
 import _ from "lodash";
-import type { Edge } from "viewer/store";
+import type { Edge } from "./types/tree_types";
 
 type EdgeMap = DiffableMap<number, Edge[]>;
 

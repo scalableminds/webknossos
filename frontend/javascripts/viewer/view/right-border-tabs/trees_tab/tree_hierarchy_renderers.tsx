@@ -39,8 +39,8 @@ import {
   toggleInactiveTreesAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import { getMaximumGroupId } from "viewer/model/reducers/skeletontracing_reducer_helpers";
+import type { Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import { Store, api } from "viewer/singletons";
-import type { Tree, TreeGroup, TreeMap } from "viewer/store";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
 import {
   GroupTypeEnum,

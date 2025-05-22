@@ -161,12 +161,17 @@ class UrlManager {
   }
 
   onHashChange = () => {
-    const urlState = this.parseUrlHash();
-    applyState(urlState);
+    this.updateToHash();
   };
 
-  parseUrlHash(): PartialUrlManagerState {
-    const urlHash = decodeURIComponent(location.hash.slice(1));
+  updateToHash(optionalHash?: string) {
+    const urlState = this.parseUrlHash(optionalHash);
+    applyState(urlState);
+  }
+
+  parseUrlHash(optionalHash?: string): PartialUrlManagerState {
+    // Cut off the #
+    const urlHash = decodeURIComponent(optionalHash ?? location.hash.slice(1));
 
     if (urlHash.includes("{")) {
       // The hash is in json format

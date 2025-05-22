@@ -13,7 +13,7 @@ import type { Dispatch } from "redux";
 import { NavAndStatusBarTheme } from "theme";
 import type { APICompoundType } from "types/api_types";
 import CrossOriginApi from "viewer/api/cross_origin_api";
-import Constants from "viewer/constants";
+import Constants, { type Vector3 } from "viewer/constants";
 import type { ControllerStatus } from "viewer/controller";
 import WebKnossosController from "viewer/controller";
 import MergerModeController from "viewer/controller/merger_mode_controller";
@@ -24,6 +24,7 @@ import { cancelSagaAction } from "viewer/model/actions/actions";
 import { resetStoreAction } from "viewer/model/actions/actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import rootSaga from "viewer/model/sagas/root_saga";
+import { applyState } from "viewer/model_initialization";
 import { Store } from "viewer/singletons";
 import { Model } from "viewer/singletons";
 import { type Theme, type TraceOrViewCommand, type WebknossosState, startSaga } from "viewer/store";
@@ -114,9 +115,11 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
   componentDidMount() {
     startSaga(rootSaga);
+    document.addEventListener("paste", this.onPaste);
   }
 
   componentWillUnmount() {
+    document.removeEventListener("paste", this.onPaste);
     UrlManager.stopUrlUpdater();
     Model.reset();
     destroySceneController();
@@ -260,6 +263,38 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'layoutKey' implicitly has an 'any' type... Remove this comment to see the full error message
   getLayoutNamesFromCurrentView = (layoutKey): Array<string> =>
     this.props.storedLayouts[layoutKey] ? Object.keys(this.props.storedLayouts[layoutKey]) : [];
+
+  onPaste = (event: ClipboardEvent) => {
+    const target = event.target as HTMLElement;
+
+    // Check if the target is an editable input or textarea
+    const isFormField =
+      target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.isContentEditable;
+
+    if (isFormField) {
+      // Let the browser handle the paste normally
+      return;
+    }
+
+    // Otherwise, prevent default and handle paste
+    event.preventDefault();
+
+    const pastedText = event.clipboardData?.getData("text");
+
+    if (!pastedText) {
+      return;
+    }
+
+    const hashPos = pastedText.indexOf("#");
+    if (hashPos > -1) {
+      UrlManager.updateToHash(pastedText.slice(hashPos + 1));
+    } else {
+      const numbers = pastedText.split(",").map(Number);
+      if (numbers.length === 3 && !numbers.some(isNaN)) {
+        applyState({ position: numbers as Vector3 });
+      }
+    }
+  };
 
   render() {
     if (this.state.hasError) {

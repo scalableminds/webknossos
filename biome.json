@@ -78,7 +78,7 @@
         "noArrayIndexKey": "off",
         "noConstEnum": "off",
         "noRedeclare": "off",
-        "noFallthroughSwitchClause": "off",
+        "noFallthroughSwitchClause": "error",
         "noAssignInExpressions": "off"
       }
     }

@@ -435,7 +435,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
     case "SHUFFLE_ALL_TREE_COLORS": {
       const newColors = ColorGenerator.getNRandomColors(skeletonTracing.trees.size());
 
-      const newTrees = skeletonTracing.trees;
+      const newTrees = skeletonTracing.trees.clone();
       for (const tree of skeletonTracing.trees.values()) {
         // @ts-ignore newColors.shift() can be undefined
         newTrees.mutableSet(tree.treeId, { ...tree, color: newColors.shift() });

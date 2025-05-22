@@ -1182,7 +1182,9 @@ export function parseNml(nmlString: string): Promise<{
         // Split potentially unconnected trees
         let maxTreeId = getMaximumTreeId(trees);
 
-        trees.values().forEach((tree) => {
+        // Materialize the trees before iterating over them
+        // because we are also deleting from the collection.
+        Array.from(trees.values()).forEach((tree) => {
           const newTrees = splitTreeIntoComponents(tree, treeGroups, maxTreeId);
 
           const newTreesSize = _.size(newTrees);

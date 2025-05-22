@@ -595,7 +595,9 @@ export function addTreesAndGroups(
     }
   }
 
-  for (const tree of trees.values()) {
+  // Materialize with Array.from because we are mutating
+  // the collection within the loop.
+  for (const tree of Array.from(trees.values())) {
     const newNodes: MutableNodeMap = new DiffableMap();
 
     for (const node of tree.nodes.values()) {

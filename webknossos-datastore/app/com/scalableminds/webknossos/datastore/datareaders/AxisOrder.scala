@@ -5,19 +5,14 @@ import play.api.libs.json.{JsValue, Json, OFormat}
 
 // Defines the axis order of a DatasetArray. Note that this ignores transpose codecs/ArrayOrder.F/C.
 // Those will have to be applied on individual chunk’s contents.
-case class AxisOrder(x: Int, y: Option[Int], z: Option[Int], c: Option[Int] = None) {
+case class AxisOrder(x: Int, y: Int, z: Option[Int], c: Option[Int] = None) {
 
   def hasZAxis: Boolean = z.isDefined
-
-  def yWithFallback: Int = y match {
-    case Some(value) => value
-    case None        => Math.max(x, c.getOrElse(-1)) + 1
-  }
 
   def zWithFallback: Int = z match {
     case Some(value) => value
     // z is appended to the end of the array (this is reflected in DatasetArray adding 1 at the end of header datasetShape and chunkShape)
-    case None => Math.max(Math.max(x, yWithFallback), c.getOrElse(-1)) + 1
+    case None => Math.max(Math.max(x, y), c.getOrElse(-1)) + 1
   }
 
   def length: Int = {
@@ -32,22 +27,21 @@ object AxisOrder {
   // assumes that the last three elements of the shape are z,y,x (standard in OME NGFF)
   def asZyxFromRank(rank: Int): AxisOrder = AxisOrder.xyz(rank - 1, rank - 2, rank - 3)
 
-  def xyz(x: Int, y: Int, z: Int): AxisOrder = AxisOrder(x, Some(y), Some(z))
+  def xyz(x: Int, y: Int, z: Int): AxisOrder = AxisOrder(x, y, Some(z))
 
-  def xyz: AxisOrder = AxisOrder(0, Some(1), Some(2))
+  def xyz: AxisOrder = AxisOrder(0, 1, Some(2))
 
   // assumes that the last three elements of the shape are (c),x,y,z (which is what WEBKNOSSOS sends to the frontend)
   def asCxyzFromRank(rank: Int): AxisOrder =
     if (rank == 3)
       AxisOrder.xyz(rank - 3, rank - 2, rank - 1)
     else
-      AxisOrder(rank - 3, Some(rank - 2), Some(rank - 1), Some(rank - 4))
+      AxisOrder(rank - 3, rank - 2, Some(rank - 1), Some(rank - 4))
 
   def cxyz: AxisOrder = asCxyzFromRank(rank = 4)
 
   // Additional coordinates are inserted between c and xyz
-  def cAdditionalxyz(rank: Int): AxisOrder =
-    AxisOrder(c = Some(0), x = rank - 3, y = Some(rank - 2), z = Some(rank - 1))
+  def cAdditionalxyz(rank: Int): AxisOrder = AxisOrder(c = Some(0), x = rank - 3, y = rank - 2, z = Some(rank - 1))
   implicit val jsonFormat: OFormat[AxisOrder] = Json.format[AxisOrder]
 }
 
@@ -117,9 +111,7 @@ object FullAxisOrder {
                                      additionalAxes: Option[Seq[AdditionalAxis]]): FullAxisOrder = {
     val asArray: Array[Axis] = Array.fill(rank)(Axis(""))
     asArray(axisOrder.x) = Axis("x")
-    axisOrder.y.foreach { y =>
-      asArray(y) = Axis("y")
-    }
+    asArray(axisOrder.y) = Axis("y")
     axisOrder.c.foreach { c =>
       asArray(c) = Axis("c")
     }

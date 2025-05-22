@@ -106,9 +106,9 @@ trait NgffExplorationUtils extends FoxImplicits {
       _ <- Fox.fromBool(x >= 0 && y >= 0) ?~> s"invalid xyz axis order: $x,$y,$z. ${x >= 0 && y >= 0}"
     } yield
       if (z >= 0) {
-        AxisOrder(x, Some(y), Some(z), cOpt)
+        AxisOrder(x, y, Some(z), cOpt)
       } else {
-        AxisOrder(x, Some(y), None, cOpt)
+        AxisOrder(x, y, None, cOpt)
       }
   }
 
@@ -116,7 +116,7 @@ trait NgffExplorationUtils extends FoxImplicits {
       implicit ec: ExecutionContext): Fox[LengthUnit] =
     for {
       xUnit <- axes(axisOrder.x).lengthUnit.toFox
-      yUnit <- axes(axisOrder.yWithFallback).lengthUnit.toFox
+      yUnit <- axes(axisOrder.y).lengthUnit.toFox
       zUnitOpt <- Fox.runIf(axisOrder.hasZAxis)(axes(axisOrder.zWithFallback).lengthUnit.toFox)
       units: List[LengthUnit] = List(Some(xUnit), Some(yUnit), zUnitOpt).flatten
     } yield units.minBy(LengthUnit.toNanometer)
@@ -125,7 +125,7 @@ trait NgffExplorationUtils extends FoxImplicits {
       implicit ec: ExecutionContext): Fox[Vec3Double] =
     for {
       xUnitToNm <- axes(axisOrder.x).lengthUnit.map(LengthUnit.toNanometer).toFox
-      yUnitToNm <- axes(axisOrder.yWithFallback).lengthUnit.map(LengthUnit.toNanometer).toFox
+      yUnitToNm <- axes(axisOrder.y).lengthUnit.map(LengthUnit.toNanometer).toFox
       zUnitToNmOpt <- Fox.runIf(axisOrder.hasZAxis)(
         axes(axisOrder.zWithFallback).lengthUnit.map(LengthUnit.toNanometer).toFox)
       xUnitToTarget = xUnitToNm / LengthUnit.toNanometer(unifiedAxisUnit)
@@ -177,7 +177,7 @@ trait NgffExplorationUtils extends FoxImplicits {
     val filtered = coordinateTransforms.filter(_.`type` == "scale")
     val scalesFromTransforms = filtered.flatMap(_.scale)
     val xFactors = scalesFromTransforms.map(_(axisOrder.x))
-    val yFactors = scalesFromTransforms.map(_(axisOrder.yWithFallback))
+    val yFactors = scalesFromTransforms.map(_(axisOrder.y))
     val zFactors = if (axisOrder.hasZAxis) scalesFromTransforms.map(_(axisOrder.zWithFallback)) else Seq(1.0, 1.0)
     Vec3Double(xFactors.product, yFactors.product, zFactors.product)
   }

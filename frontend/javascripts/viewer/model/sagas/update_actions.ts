@@ -105,6 +105,14 @@ export type UpdateAction =
   | UpdateActionWithoutIsolationRequirement
   | UpdateActionWithIsolationRequirement;
 
+export type ApplicableSkeletonUpdateAction = CreateNodeUpdateAction | CreateEdgeUpdateAction;
+
+export type ApplicableVolumeUpdateAction =
+  | UpdateLargestSegmentIdVolumeAction
+  | UpdateSegmentUpdateAction
+  | CreateSegmentUpdateAction
+  | DeleteSegmentUpdateAction;
+
 export type UpdateActionWithIsolationRequirement =
   | RevertToVersionUpdateAction
   | AddLayerToAnnotationUpdateAction;

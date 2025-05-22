@@ -31,6 +31,7 @@ import type { StoreAnnotation, Task, WebknossosState } from "viewer/store";
 
 import { getOrganization } from "admin/rest_api";
 import FastTooltip from "components/fast_tooltip";
+import { useWkSelector } from "libs/react_hooks";
 import { mayUserEditDataset, pluralize, safeNumberToStr } from "libs/utils";
 import messages from "messages";
 import type { EmptyObject } from "types/globals";
@@ -624,6 +625,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
 
     return (
       <div className="flex-overflow padded-tab-content">
+        <DebugInfo />
         {this.getAnnotationName()}
         {this.getAnnotationDescription()}
         {this.getDatasetName()}
@@ -651,6 +653,14 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
       </div>
     );
   }
+}
+
+// todop: remove again
+function DebugInfo() {
+  const versionOnClient = useWkSelector((state) => {
+    return state.annotation.version;
+  });
+  return <>Version: {versionOnClient}</>;
 }
 
 const mapStateToProps = (state: WebknossosState): StateProps => ({

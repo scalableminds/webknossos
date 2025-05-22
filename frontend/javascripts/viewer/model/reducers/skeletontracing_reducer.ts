@@ -629,6 +629,106 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
       });
     }
 
+    case "APPLY_SKELETON_UPDATE_ACTIONS_FROM_SERVER": {
+      const { actions } = action;
+      let newState = state;
+      for (const ua of actions) {
+        switch (ua.name) {
+          // case "createTree": {
+          //   const { id, color, name, comments, timestamp, branchPoints, isVisible, groupId } =
+          //     ua.value;
+          //   newState = update(newState, {
+          //     tracing: {
+          //       skeleton: {
+          //         trees: {
+          //           [id]: {
+          //             $set: {
+          //               name,
+          //               treeId: id,
+          //               nodes: new DiffableMap(),
+          //               timestamp,
+          //               color,
+          //               branchPoints,
+          //               edges: new EdgeCollection(),
+          //               comments,
+          //               isVisible,
+          //               groupId,
+          //             },
+          //           },
+          //         },
+          //       },
+          //     },
+          //   });
+          //   break;
+          // }
+          case "createNode": {
+            if (state.annotation.skeleton == null) {
+              continue;
+            }
+
+            const { treeId, ...serverNode } = ua.value;
+            // eslint-disable-next-line no-loop-func
+
+            const { position: untransformedPosition, resolution: mag, ...node } = serverNode;
+            const clientNode = { untransformedPosition, mag, ...node };
+
+            const tree = getTree(state.annotation.skeleton, treeId);
+            if (tree == null) {
+              // todop: escalate error?
+              continue;
+            }
+            const diffableNodeMap = tree.nodes;
+            const newDiffableMap = diffableNodeMap.set(node.id, clientNode);
+            const newTree = update(tree, {
+              nodes: { $set: newDiffableMap },
+            });
+            newState = update(newState, {
+              annotation: {
+                skeleton: {
+                  trees: {
+                    [tree.treeId]: { $set: newTree },
+                  },
+                  cachedMaxNodeId: { $set: node.id },
+                },
+              },
+            });
+            break;
+          }
+          case "createEdge": {
+            const { treeId, source, target } = ua.value;
+            // eslint-disable-next-line no-loop-func
+            if (state.annotation.skeleton == null) {
+              continue;
+            }
+
+            const tree = getTree(state.annotation.skeleton, treeId);
+            if (tree == null) {
+              // todop: escalate error?
+              continue;
+            }
+            const newEdge = {
+              source,
+              target,
+            };
+            const edges = tree.edges.addEdge(newEdge);
+            const newTree = update(tree, { edges: { $set: edges } });
+            newState = update(newState, {
+              annotation: {
+                skeleton: {
+                  trees: {
+                    [tree.treeId]: { $set: newTree },
+                  },
+                },
+              },
+            });
+            break;
+          }
+          default:
+        }
+      }
+      return newState;
+    }
+
     default: // pass
   }
 
@@ -645,6 +745,8 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
         // Don't create nodes if the skeleton layer is rendered with transforms.
         return state;
       }
+
+      // use this code as template
       const { position, rotation, viewport, mag, treeId, timestamp, additionalCoordinates } =
         action;
       const tree = getOrCreateTree(state, skeletonTracing, treeId, timestamp, TreeTypeEnum.DEFAULT);

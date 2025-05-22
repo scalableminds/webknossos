@@ -1120,6 +1120,7 @@ export function parseNml(nmlString: string): Promise<{
           case "volume": {
             isParsingVolumeTag = true;
             containedVolumes = true;
+            break;
           }
 
           default:
@@ -1172,6 +1173,7 @@ export function parseNml(nmlString: string): Promise<{
 
           case "volume": {
             isParsingVolumeTag = false;
+            break;
           }
 
           default:

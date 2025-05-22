@@ -22,12 +22,14 @@ import type {
   SetMappingEnabledAction,
   SetMappingNameAction,
 } from "viewer/model/actions/settings_actions";
-import type {
-  ClickSegmentAction,
-  RemoveSegmentAction,
-  SetSegmentsAction,
-  UpdateSegmentAction,
-  VolumeTracingAction,
+import {
+  removeSegmentAction,
+  updateSegmentAction,
+  type ClickSegmentAction,
+  type RemoveSegmentAction,
+  type SetSegmentsAction,
+  type UpdateSegmentAction,
+  type VolumeTracingAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { updateKey2 } from "viewer/model/helpers/deep_update";
 import {
@@ -674,6 +676,42 @@ function VolumeTracingReducer(
       return updateVolumeTracing(state, volumeTracing.tracingId, {
         mappingIsLocked: true,
       });
+    }
+
+    case "APPLY_VOLUME_UPDATE_ACTIONS_FROM_SERVER": {
+      const { actions } = action;
+      let newState = state;
+      for (const ua of actions) {
+        switch (ua.name) {
+          case "updateLargestSegmentId": {
+            const volumeTracing = getVolumeTracingById(state.annotation, ua.value.actionTracingId);
+            newState = setLargestSegmentIdReducer(
+              newState,
+              volumeTracing,
+              // todop: can this really be null? if so, what should we do?
+              ua.value.largestSegmentId ?? 0,
+            );
+            break;
+          }
+          case "createSegment":
+          case "updateSegment": {
+            const { actionTracingId, ...segment } = ua.value;
+            return VolumeTracingReducer(
+              state,
+              updateSegmentAction(segment.id, segment, actionTracingId),
+            );
+          }
+          case "deleteSegment": {
+            return VolumeTracingReducer(
+              state,
+              removeSegmentAction(ua.value.id, ua.value.actionTracingId),
+            );
+          }
+          default: {
+            ua satisfies never;
+          }
+        }
+      }
     }
 
     default:

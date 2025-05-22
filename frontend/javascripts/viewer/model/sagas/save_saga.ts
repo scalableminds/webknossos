@@ -12,7 +12,11 @@ import messages from "messages";
 import { call, delay, fork, put, race, take, takeEvery } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
 import { ControlModeEnum } from "viewer/constants";
-import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
+import {
+  getLayerByName,
+  getMagInfo,
+  getMappingInfo,
+} from "viewer/model/accessors/dataset_accessor";
 import { selectTracing } from "viewer/model/accessors/tracing_accessor";
 import { FlycamActions } from "viewer/model/actions/flycam_actions";
 import {
@@ -29,9 +33,9 @@ import {
 } from "viewer/model/actions/skeletontracing_actions";
 import { ViewModeSaveRelevantActions } from "viewer/model/actions/view_mode_actions";
 import {
-  applyVolumeUpdateActionsFromServerAction,
   type InitializeVolumeTracingAction,
   VolumeTracingSaveRelevantActions,
+  applyVolumeUpdateActionsFromServerAction,
 } from "viewer/model/actions/volumetracing_actions";
 import compactSaveQueue from "viewer/model/helpers/compaction/compact_save_queue";
 import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
@@ -65,6 +69,8 @@ import type {
 } from "viewer/store";
 import { getFlooredPosition, getRotation } from "../accessors/flycam_accessor";
 import type { BatchedAnnotationInitializationAction } from "../actions/annotation_actions";
+import { updateLocalHdf5Mapping } from "./mapping_saga";
+import { updateMappingWithMerge, updateMappingWithOmittedSplitPartners } from "./proofread_saga";
 import { takeEveryWithBatchActionSupport } from "./saga_helpers";
 
 const ONE_YEAR_MS = 365 * 24 * 3600 * 1000;
@@ -490,7 +496,7 @@ const VERSION_POLL_INTERVAL_READ_ONLY = 1 * 1000;
 const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 1 * 1000;
 
 function* watchForSaveConflicts(): Saga<never> {
-  function* checkForNewVersion(): boolean {
+  function* checkForNewVersion(): Saga<boolean> {
     /*
      * Checks whether there is a newer version on the server. If so,
      * the saga tries to also update the current annotation to the newest
@@ -573,8 +579,7 @@ function* watchForSaveConflicts(): Saga<never> {
 
       console.log("newerActions", newerActions);
 
-      if (yield* canActionsBeIncorporated(newerActions)) {
-        yield* put(setVersionNumberAction(versionOnServer));
+      if (yield* tryToIncorporateActions(newerActions)) {
         return false;
       }
 
@@ -641,12 +646,18 @@ function* watchForSaveConflicts(): Saga<never> {
       // @ts-ignore
       ErrorHandling.notify(exception);
       // todop: remove again?
-      Toast.error(exception);
+      Toast.error(`${exception}`);
     }
   }
 }
 
-function* canActionsBeIncorporated(newerActions: APIUpdateActionBatch[]): Saga<boolean> {
+function* tryToIncorporateActions(newerActions: APIUpdateActionBatch[]): Saga<boolean> {
+  const refreshFunctionByTracing: Record<string, () => Saga<void>> = {};
+  function* finalize() {
+    for (const fn of Object.values(refreshFunctionByTracing)) {
+      yield* call(fn);
+    }
+  }
   for (const actionBatch of newerActions) {
     for (const action of actionBatch.value) {
       switch (action.name) {
@@ -712,6 +723,60 @@ function* canActionsBeIncorporated(newerActions: APIUpdateActionBatch[]): Saga<b
           break;
         }
 
+        // Proofreading
+        case "mergeAgglomerate": {
+          const activeMapping = yield* select(
+            (store) =>
+              store.temporaryConfiguration.activeMappingByLayer[action.value.actionTracingId],
+          );
+          yield* call(
+            updateMappingWithMerge,
+            action.value.actionTracingId,
+            activeMapping,
+            action.value.agglomerateId2,
+            action.value.agglomerateId1,
+          );
+          break;
+        }
+        case "splitAgglomerate": {
+          const activeMapping = yield* select(
+            (store) =>
+              store.temporaryConfiguration.activeMappingByLayer[action.value.actionTracingId],
+          );
+          yield* call(
+            updateMappingWithOmittedSplitPartners,
+            action.value.actionTracingId,
+            activeMapping,
+            action.value.agglomerateId,
+          );
+
+          const layerName = action.value.actionTracingId;
+
+          const mappingInfo = yield* select((state) =>
+            getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
+          );
+          const { mappingName } = mappingInfo;
+
+          if (mappingName == null) {
+            throw new Error(
+              "Could not apply splitAgglomerate because no active mapping was found.",
+            );
+          }
+
+          const dataset = yield* select((state) => state.dataset);
+          const layerInfo = getLayerByName(dataset, layerName);
+
+          refreshFunctionByTracing[layerName] = function* (): Saga<void> {
+            yield* call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName);
+          };
+
+          break;
+        }
+
+        /*
+         * Currently not supported:
+         */
+
         // High-level annotation specific
         case "addLayerToAnnotation":
         case "addSegmentIndex":
@@ -725,12 +790,8 @@ function* canActionsBeIncorporated(newerActions: APIUpdateActionBatch[]): Saga<b
         // Volume
         case "removeFallbackLayer":
         case "updateSegmentGroups":
-        case "updateUserBoundingBoxesInVolumeTracing":
+        case "updateUserBoundingBoxesInVolumeTracing": // Wait for #8492 first.
         case "updateMappingName": // Refactor mapping activation first before implementing this.
-
-        // Proofreading
-        case "mergeAgglomerate":
-        case "splitAgglomerate":
 
         // Skeleton
         case "createTree":
@@ -744,10 +805,11 @@ function* canActionsBeIncorporated(newerActions: APIUpdateActionBatch[]): Saga<b
         case "updateTreeGroups":
         case "moveTreeComponent":
         case "updateNode":
-        case "updateUserBoundingBoxesInSkeletonTracing":
+        case "updateUserBoundingBoxesInSkeletonTracing": // Wait for #8492 first.
 
         case "updateVolumeTracing": {
           console.log("cannot apply action", action.name);
+          yield* call(finalize);
           return false;
         }
         default: {
@@ -755,7 +817,9 @@ function* canActionsBeIncorporated(newerActions: APIUpdateActionBatch[]): Saga<b
         }
       }
     }
+    yield* put(setVersionNumberAction(actionBatch.version));
   }
+  yield* call(finalize);
   return true;
 }
 

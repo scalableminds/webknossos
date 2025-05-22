@@ -60,7 +60,7 @@ object GroupUtils {
   }
 
   @tailrec
-  final private def getAllGroupIds(tracingItemGroups: Seq[TracingItemGroup], ids: Seq[Int] = Seq[Int]()): Seq[Int] =
+  final private def getAllGroupIds(tracingItemGroups: Seq[TracingItemGroup], ids: Seq[Int]): Seq[Int] =
     tracingItemGroups match {
       case head :: tail => getAllGroupIds(tail ++ head.children, head.groupId +: ids)
       case _            => ids

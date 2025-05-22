@@ -821,7 +821,7 @@ class VolumeTracingService @Inject()(
             0,
             0)), // should never be empty for volumes
         userBoundingBoxes = mergedUserBoundingBoxes,
-        segments = tracingA.segments.toList ::: tracingBSegments.toList,
+        segments = (tracingA.segments ++ tracingBSegments).distinctBy(_.segmentId),
         segmentGroups = mergedGroups,
         additionalAxes = AdditionalAxis.toProto(mergedAdditionalAxes),
         userStates = userStates

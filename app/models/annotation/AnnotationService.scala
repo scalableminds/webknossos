@@ -363,6 +363,8 @@ class AnnotationService @Inject()(
       duplicatedAnnotationProto <- tracingStoreClient.duplicateAnnotation(
         annotationBaseId,
         initializingAnnotationId,
+        annotationBase._user,
+        user._id,
         version = None,
         isFromTask = false, // isFromTask is when duplicate is called on a task annotation, not when a task is assigned
         datasetBoundingBox = None

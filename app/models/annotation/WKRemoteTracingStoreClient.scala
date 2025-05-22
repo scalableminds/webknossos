@@ -109,6 +109,8 @@ class WKRemoteTracingStoreClient(
   // Used in duplicate route. History and version are kept
   def duplicateAnnotation(annotationId: ObjectId,
                           newAnnotationId: ObjectId,
+                          ownerId: ObjectId,
+                          requestingUserId: ObjectId,
                           version: Option[Long],
                           isFromTask: Boolean,
                           datasetBoundingBox: Option[BoundingBox]): Fox[AnnotationProto] = {
@@ -119,6 +121,8 @@ class WKRemoteTracingStoreClient(
       .addQueryStringOptional("version", version.map(_.toString))
       .addQueryStringOptional("datasetBoundingBox", datasetBoundingBox.map(_.toLiteral))
       .addQueryString("isFromTask" -> isFromTask.toString)
+      .addQueryString("ownerId" -> ownerId.toString)
+      .addQueryString("requestingUserId" -> requestingUserId.toString)
       .postEmptyWithProtoResponse[AnnotationProto]()(AnnotationProto)
   }
 

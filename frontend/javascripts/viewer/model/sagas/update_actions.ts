@@ -1,6 +1,6 @@
 import * as Utils from "libs/utils";
 import type { APIMagRestrictions, AdditionalCoordinate, MetadataEntryProto } from "types/api_types";
-import { EMPTY_OBJECT, type Vector3 } from "viewer/constants";
+import type { Vector3 } from "viewer/constants";
 import type { SendBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { convertUserBoundingBoxFromFrontendToServer } from "viewer/model/reducers/reducer_helpers";
 import type {
@@ -495,19 +495,21 @@ function getUpdateUserBoundingBox(
   updatedProps: PartialBoundingBoxWithoutVisibility,
   actionTracingId: string,
 ) {
-  let serverBBox = EMPTY_OBJECT;
   const { boundingBox, ...rest } = updatedProps;
-  const updatedPropKeys = Object.keys(updatedProps);
-  if (boundingBox != null) {
-    serverBBox = { boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(boundingBox) };
-  }
+  const updatedPropsForServer =
+    boundingBox != null
+      ? { ...rest, boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(boundingBox) }
+      : updatedProps;
+  const updatedPropsKeys = Object.keys(updatedPropsForServer);
   return {
     name: actionName,
     value: {
       boundingBoxId,
       actionTracingId,
-      updatedProps: { ...serverBBox, ...rest },
-      updatedPropKeys,
+      updatedProps: updatedPropsForServer,
+      hasUpdatedBoundingBox: updatedPropsKeys.includes("boundingBox"),
+      hasUpdatedName: updatedPropsKeys.includes("name"),
+      haUpdatedColor: updatedPropsKeys.includes("color"),
     },
   } as const;
 }

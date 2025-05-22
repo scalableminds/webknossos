@@ -1222,7 +1222,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
 
       const newTrees = skeletonTracing.trees.set(tree.treeId, {
         ...tree,
-        groupId: groupId,
+        groupId,
       });
 
       return update(state, {

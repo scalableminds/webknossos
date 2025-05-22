@@ -1598,7 +1598,12 @@ function ContextMenuInner() {
     isLoadingVolumeAndBB,
     // Update segment infos when opening the context menu, in case the annotation was saved since the context menu was last opened.
     // Of course the info should also be updated when the menu is opened for another segment, or after the refresh button was pressed.
-    [contextMenuPosition, clickedSegmentOrMeshId, lastTimeSegmentInfoShouldBeFetched],
+    [
+      contextMenuPosition,
+      isSegmentIndexAvailable,
+      clickedSegmentOrMeshId,
+      lastTimeSegmentInfoShouldBeFetched,
+    ],
   );
 
   let nodeContextMenuTree: Tree | null = null;

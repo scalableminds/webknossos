@@ -54,10 +54,10 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService
     AlfuCache(maxSizeKiloBytes, weighFn = Some(cacheWeight))
   }
 
-  def readFromSegmentToAgglomerate(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
+  def readFromSegmentToAgglomerate(implicit ec: ExecutionContext): Fox[ucar.ma2.Array] = {
     val zarrGroupPath =
       dataBaseDir
-        .resolve("sample_organization/test-agglomerate-file-zarr/segmentation/agglomerates/agglomerate_view_5")
+        .resolve("sample_organization/test-agglomerate-file-zarr/segmentation/agglomerates/agglomerate_view_55")
         .toAbsolutePath
     for {
       groupVaultPath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(new URI(s"file://$zarrGroupPath"), None))
@@ -65,12 +65,12 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService
       zarrArray <- Zarr3Array.open(segmentToAgglomeratePath,
                                    DataSourceId("zarr", "test"),
                                    "layer",
-                                   Some(AxisOrder(0, None, None)),
+                                   None,
                                    None,
                                    None,
                                    sharedChunkContentsCache)(ec, TokenContext(None))
-      read <- zarrArray.readBytes(Array(5), Array(0))(ec, TokenContext(None))
-      _ = logger.info(s"read ${read.length} bytes from agglomerate file")
+      read <- zarrArray.readAsMultiArray(Array(10), Array(2))(ec, TokenContext(None))
+      _ = logger.info(s"read ${read.getSize} bytes from agglomerate file")
     } yield read
   }
 

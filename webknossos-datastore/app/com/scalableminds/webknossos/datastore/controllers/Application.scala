@@ -44,7 +44,7 @@ class Application @Inject()(redisClient: DataStoreRedisStore,
     log() {
       for {
         data <- agglomerateService.readFromSegmentToAgglomerate
-      } yield Ok(s"got ${data.length} bytes")
+      } yield Ok(s"got ${data.getSize} elements of type ${data.getDataType}: ${data.toString}")
     }
   }
 

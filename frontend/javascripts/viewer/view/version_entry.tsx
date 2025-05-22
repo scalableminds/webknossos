@@ -2,6 +2,7 @@ import {
   ArrowsAltOutlined,
   BackwardOutlined,
   CodeSandboxOutlined,
+  CodepenOutlined,
   DeleteOutlined,
   EditOutlined,
   EyeOutlined,
@@ -35,6 +36,8 @@ import type {
   DeleteTreeUpdateAction,
   DeleteUserBoundingBoxInSkeletonTracingAction,
   DeleteUserBoundingBoxInVolumeTracingAction,
+  LEGACY_UpdateUserBoundingBoxesInSkeletonTracingUpdateAction,
+  LEGACY_UpdateUserBoundingBoxesInVolumeTracingUpdateAction,
   MergeAgglomerateUpdateAction,
   MergeTreeUpdateAction,
   MoveTreeComponentUpdateAction,
@@ -55,6 +58,7 @@ import type {
   UpdateUserBoundingBoxInSkeletonTracingAction,
   UpdateUserBoundingBoxInVolumeTracingAction,
   UpdateUserBoundingBoxVisibilityInSkeletonTracingAction,
+  UpdateUserBoundingBoxVisibilityInVolumeTracingAction,
 } from "viewer/model/sagas/update_actions";
 import type { StoreAnnotation } from "viewer/store";
 import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
@@ -81,6 +85,18 @@ const descriptionFns: Record<
   createTracing: (): Description => ({
     description: "Created the annotation.",
     icon: <RocketOutlined />,
+  }),
+  updateUserBoundingBoxesInSkeletonTracing: (
+    firstAction: LEGACY_UpdateUserBoundingBoxesInSkeletonTracingUpdateAction,
+  ): Description => ({
+    description: `Updated bounding boxes ${firstAction.value.boundingBoxes.map((bbox) => bbox.id).join()}.`,
+    icon: <CodepenOutlined />,
+  }),
+  updateUserBoundingBoxesInVolumeTracing: (
+    firstAction: LEGACY_UpdateUserBoundingBoxesInVolumeTracingUpdateAction,
+  ): Description => ({
+    description: `Updated bounding boxes ${firstAction.value.boundingBoxes.map((bbox) => bbox.id).join()}.`,
+    icon: <CodepenOutlined />,
   }),
   addUserBoundingBoxInSkeletonTracing: (
     firstAction: AddUserBoundingBoxInSkeletonTracingAction,
@@ -125,7 +141,7 @@ const descriptionFns: Record<
     icon: <EditOutlined />,
   }),
   updateUserBoundingBoxVisibilityInVolumeTracing: (
-    firstAction: UpdateUserBoundingBoxInVolumeTracingAction,
+    firstAction: UpdateUserBoundingBoxVisibilityInVolumeTracingAction,
   ): Description => ({
     description: `Toggled the visibility of bounding box ${firstAction.value.boundingBoxId}.`,
     icon: <EditOutlined />,

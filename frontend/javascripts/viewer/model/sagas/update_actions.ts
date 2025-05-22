@@ -38,6 +38,12 @@ export type CreateSegmentUpdateAction = ReturnType<typeof createSegmentVolumeAct
 export type UpdateSegmentUpdateAction = ReturnType<typeof updateSegmentVolumeAction>;
 export type DeleteSegmentUpdateAction = ReturnType<typeof deleteSegmentVolumeAction>;
 export type DeleteSegmentDataUpdateAction = ReturnType<typeof deleteSegmentDataVolumeAction>;
+export type LEGACY_UpdateUserBoundingBoxesInSkeletonTracingUpdateAction = ReturnType<
+  typeof LEGACY_updateUserBoundingBoxesInSkeletonTracing
+>;
+export type LEGACY_UpdateUserBoundingBoxesInVolumeTracingUpdateAction = ReturnType<
+  typeof LEGACY_updateUserBoundingBoxesInVolumeTracing
+>;
 export type AddUserBoundingBoxInSkeletonTracingAction = ReturnType<
   typeof addUserBoundingBoxInSkeletonTracing
 >;
@@ -101,6 +107,8 @@ export type UpdateActionWithoutIsolationRequirement =
   | DeleteEdgeUpdateAction
   | UpdateSkeletonTracingUpdateAction
   | UpdateVolumeTracingUpdateAction
+  | LEGACY_UpdateUserBoundingBoxesInSkeletonTracingUpdateAction
+  | LEGACY_UpdateUserBoundingBoxesInVolumeTracingUpdateAction
   | AddUserBoundingBoxInSkeletonTracingAction
   | AddUserBoundingBoxInVolumeTracingAction
   | DeleteUserBoundingBoxInSkeletonTracingAction
@@ -401,7 +409,34 @@ export function updateVolumeTracing(
     },
   } as const;
 }
-
+export function LEGACY_updateUserBoundingBoxesInSkeletonTracing(
+  userBoundingBoxes: Array<UserBoundingBox>,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateUserBoundingBoxesInSkeletonTracing",
+    value: {
+      actionTracingId,
+      boundingBoxes: userBoundingBoxes.map((bbox) =>
+        convertUserBoundingBoxFromFrontendToServer(bbox),
+      ),
+    },
+  } as const;
+}
+export function LEGACY_updateUserBoundingBoxesInVolumeTracing(
+  userBoundingBoxes: Array<UserBoundingBox>,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateUserBoundingBoxesInVolumeTracing",
+    value: {
+      actionTracingId,
+      boundingBoxes: userBoundingBoxes.map((bbox) =>
+        convertUserBoundingBoxFromFrontendToServer(bbox),
+      ),
+    },
+  } as const;
+}
 export function addUserBoundingBoxInSkeletonTracing(
   boundingBox: UserBoundingBox,
   actionTracingId: string,
@@ -492,7 +527,7 @@ export function updateUserBoundingBoxInVolumeTracing(
 
 export function updateUserBoundingBoxInSkeletonTracing(
   boundingBoxId: number,
-  updatedProps: Partial<UserBoundingBox>,
+  updatedProps: PartialBoundingBoxWithoutVisibility,
   actionTracingId: string,
 ) {
   return getUpdateUserBoundingBox(

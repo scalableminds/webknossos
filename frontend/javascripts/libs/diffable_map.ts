@@ -147,7 +147,7 @@ class DiffableMap<K extends number, V> {
 
   /**
    * Creates a new DiffableMap with the specified key-value pair added or updated
-   * Does not modify the original map (immutable operation)
+   * Does not modify the original map (immutable operation) because it creates a shallow copy.
    *
    * @param key The key to set
    * @param value The value to associate with the key
@@ -192,7 +192,26 @@ class DiffableMap<K extends number, V> {
 
   /**
    * Adds or updates a key-value pair in the current map instance
-   * Modifies the original map (mutable operation)
+   * Modifies the original map (mutable operation).
+   *
+   * WARNING: Only use this method if you are sure that
+   * it will mutate the current object without unwanted side effects.
+   * To ensure this, it should only be called on new maps OR on cloned ones.
+   * It should *not* be called on maps that were created by an immutable
+   * operation (set/delete), because these operations use shallow copies for
+   * the chunks that don't need modification.
+   *
+   * For example:
+   *   const map1 = new DiffableMap(
+   *     [
+   *       [1, 1],
+   *       [2, 2],
+   *       [3, 3],
+   *     ],
+   *     1,
+   *   );
+   *   const map2 = map1.set(4, 4);
+   *   map2.mutableSet(1, 100); <-- this will also mutate map1 because it was only shallowly copied.
    *
    * @param key The key to set
    * @param value The value to associate with the key
@@ -247,7 +266,7 @@ class DiffableMap<K extends number, V> {
 
   /**
    * Creates a new DiffableMap with the specified key removed
-   * Does not modify the original map (immutable operation)
+   * Does not modify the original map (immutable operation) because it creates a shallow copy.
    * If the key doesn't exist, returns the original map
    *
    * @param key The key to delete
@@ -275,7 +294,9 @@ class DiffableMap<K extends number, V> {
   /**
    * Deletes a key-value pair from the current map instance
    * Modifies the original map (mutable operation)
-   * If the key doesn't exist, no changes are made
+   * If the key doesn't exist, no changes are made.
+   *
+   * WARNING: See the warning for mutableSet which also applies here.
    *
    * @param key The key to delete
    */

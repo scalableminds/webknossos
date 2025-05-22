@@ -8,7 +8,7 @@ import scala.util.matching.Regex.Match
 object TreeUtils {
   type FunctionalNodeMapping = Function[Int, Int]
   type FunctionalGroupMapping = Function[Int, Int]
-  type FunctionalTreeMapping = Function[Int, Int]
+  type TreeIdMap = Map[Int, Int]
 
   val nodeIdReferenceRegex: Regex = "#([0-9]+)" r
 
@@ -28,25 +28,22 @@ object TreeUtils {
       nodes.map(_.id).max
   }
 
-  private def maxTreeId(trees: Seq[Tree]) =
-    if (trees.isEmpty)
-      0
-    else
-      trees.map(_.treeId).max
-
   def mergeTrees(sourceTrees: Seq[Tree],
                  targetTrees: Seq[Tree],
-                 treeMapping: FunctionalTreeMapping,
+                 treeMappingSource: Map[Int, Int],
+                 treeMappingTarget: Map[Int, Int],
                  nodeMapping: FunctionalNodeMapping,
                  groupMapping: FunctionalGroupMapping): Seq[Tree] = {
     val sourceNodeIds: Set[Int] = sourceTrees.flatMap(_.nodes.map(_.id)).toSet
 
     val mappedSourceTrees = sourceTrees.map(
       tree =>
-        applyNodeMapping(tree.withTreeId(treeMapping(tree.treeId)), nodeMapping, sourceNodeIds)
+        applyNodeMapping(tree.withTreeId(treeMappingSource(tree.treeId)), nodeMapping, sourceNodeIds)
           .copy(groupId = tree.groupId.map(groupMapping(_))))
 
-    targetTrees ++ mappedSourceTrees
+    val mappedTargetTrees = targetTrees.map(tree => tree.withTreeId(treeMappingTarget(tree.treeId)))
+
+    mappedTargetTrees ++ mappedSourceTrees
   }
 
   private def applyNodeMapping(tree: Tree, f: Int => Int, sourceNodeIds: Set[Int]) =
@@ -72,11 +69,19 @@ object TreeUtils {
       nodeId + nodeIdOffset
   }
 
-  def calculateTreeMapping(targetTrees: Seq[Tree]): Int => Int = {
-    val treeMaxId = maxTreeId(targetTrees)
-    (treeId: Int) =>
-      treeId + treeMaxId
-  }
+  def calculateTreeMappings(sourceTrees: Seq[Tree], targetTrees: Seq[Tree]): (TreeIdMap, TreeIdMap) =
+    (calculateTreeMapping(sourceTrees, targetTrees.length), calculateTreeMapping(targetTrees, 0))
+
+  // We’re densifying the tree ids to avoid sparse ids growing too fast
+  private def calculateTreeMapping(trees: Seq[Tree], offset: Int): Map[Int, Int] =
+    trees
+      .map(_.treeId)
+      .sorted
+      .zipWithIndex
+      .map {
+        case (treeId, index) => (treeId, index + 1 + offset)
+      }
+      .toMap
 
   private def calculateNodeOffset(sourceTrees: Seq[Tree], targetTrees: Seq[Tree]) =
     if (targetTrees.isEmpty)

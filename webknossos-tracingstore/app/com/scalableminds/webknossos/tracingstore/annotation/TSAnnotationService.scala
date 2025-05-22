@@ -856,8 +856,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
             newAnnotationId,
             newTracingId,
             version,
-            ownerId,
-            requestingUserId,
+            Some(ownerId),
+            Some(requestingUserId),
             isFromTask,
             None,
             datasetBoundingBox,
@@ -871,8 +871,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                                    version,
                                    newTracingId,
                                    version,
-                                   ownerId,
-                                   requestingUserId,
+                                   Some(ownerId),
+                                   Some(requestingUserId),
                                    isFromTask,
                                    None,
                                    None,
@@ -888,8 +888,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       newAnnotationId: String,
       newTracingId: String,
       newVersion: Long,
-      ownerId: String,
-      requestingUserId: String, // TODO use
+      ownerId: Option[String],
+      requestingUserId: Option[String], // TODO use
       isFromTask: Boolean,
       boundingBox: Option[BoundingBox],
       datasetBoundingBox: Option[BoundingBox],
@@ -943,8 +943,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       sourceVersion: Long,
       newTracingId: String,
       newVersion: Long,
-      ownerId: String,
-      requestingUserId: String, // TODO use
+      ownerId: Option[String],
+      requestingUserId: Option[String], // TODO use
       isFromTask: Boolean,
       editPosition: Option[Vec3Int],
       editRotation: Option[Vec3Double],

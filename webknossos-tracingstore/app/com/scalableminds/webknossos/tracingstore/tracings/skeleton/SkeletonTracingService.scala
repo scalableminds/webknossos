@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, S
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.webknossos.tracingstore.tracings.GroupUtils.FunctionalGroupMapping
 import com.scalableminds.webknossos.tracingstore.tracings._
-import com.scalableminds.webknossos.tracingstore.tracings.skeleton.TreeUtils.FunctionalTreeMapping
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.TreeUtils.TreeIdMap
 import net.liftweb.common.{Box, Full}
 
 import scala.concurrent.ExecutionContext
@@ -100,9 +100,14 @@ class SkeletonTracingService @Inject()(
       mergedAdditionalAxes <- AdditionalAxis.mergeAndAssertSameAdditionalAxes(
         Seq(tracingA, tracingB).map(t => AdditionalAxis.fromProtosAsOpt(t.additionalAxes)))
       nodeMapping = TreeUtils.calculateNodeMapping(tracingA.trees, tracingB.trees)
-      treeMapping = TreeUtils.calculateTreeMapping(tracingB.trees)
+      (treeMappingA, treeMappingB) = TreeUtils.calculateTreeMappings(tracingA.trees, tracingB.trees)
       groupMapping = GroupUtils.calculateTreeGroupMapping(tracingA.treeGroups, tracingB.treeGroups)
-      mergedTrees = TreeUtils.mergeTrees(tracingA.trees, tracingB.trees, treeMapping, nodeMapping, groupMapping)
+      mergedTrees = TreeUtils.mergeTrees(tracingA.trees,
+                                         tracingB.trees,
+                                         treeMappingA,
+                                         treeMappingB,
+                                         nodeMapping,
+                                         groupMapping)
       mergedGroups = GroupUtils.mergeTreeGroups(tracingA.treeGroups, tracingB.treeGroups, groupMapping)
       mergedBoundingBox = combineBoundingBoxes(tracingA.boundingBox, tracingB.boundingBox)
       (userBoundingBoxes, bboxIdMapA, bboxIdMapB) = combineUserBoundingBoxes(tracingA.userBoundingBox,
@@ -112,7 +117,8 @@ class SkeletonTracingService @Inject()(
       userStates = mergeUserStates(tracingA.userStates,
                                    tracingB.userStates,
                                    groupMapping,
-                                   treeMapping,
+                                   treeMappingA,
+                                   treeMappingB,
                                    bboxIdMapA,
                                    bboxIdMapB)
     } yield
@@ -129,12 +135,15 @@ class SkeletonTracingService @Inject()(
   private def mergeUserStates(tracingAUserStates: Seq[SkeletonUserStateProto],
                               tracingBUserStates: Seq[SkeletonUserStateProto],
                               groupMapping: FunctionalGroupMapping,
-                              treeMapping: FunctionalTreeMapping,
+                              treeIdMapA: TreeIdMap,
+                              treeIdMapB: TreeIdMap,
                               bboxIdMapA: UserBboxIdMap,
                               bboxIdMapB: UserBboxIdMap): Seq[SkeletonUserStateProto] = {
     val tracingAUserStatesMapped =
-      tracingAUserStates.map(appylIdMappingsOnUserState(_, groupMapping, treeMapping, bboxIdMapA))
-    val tracingBUserStatesMapped = tracingBUserStates.map(applyBboxIdMapOnUserState(_, bboxIdMapB))
+      tracingAUserStates.map(appylIdMappingsOnUserState(_, groupMapping, treeIdMapA, bboxIdMapA))
+    val tracingBUserStatesMapped = tracingBUserStates
+      .map(userState => userState.copy(treeIds = userState.treeIds.map(treeIdMapB)))
+      .map(applyBboxIdMapOnUserState(_, bboxIdMapB))
 
     val byUserId = scala.collection.mutable.Map[String, SkeletonUserStateProto]()
     tracingAUserStatesMapped.foreach { userState =>
@@ -165,11 +174,11 @@ class SkeletonTracingService @Inject()(
 
   private def appylIdMappingsOnUserState(userState: SkeletonUserStateProto,
                                          groupMapping: FunctionalGroupMapping,
-                                         treeMapping: FunctionalTreeMapping,
+                                         treeIdMapA: TreeIdMap,
                                          bboxIdMapA: Map[Int, Int]): SkeletonUserStateProto =
     applyBboxIdMapOnUserState(userState, bboxIdMapA).copy(
       treeGroupIds = userState.treeGroupIds.map(groupMapping),
-      treeIds = userState.treeIds.map(treeMapping)
+      treeIds = userState.treeIds.map(treeIdMapA)
     )
 
   private def applyBboxIdMapOnUserState(userState: SkeletonUserStateProto,

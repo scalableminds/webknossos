@@ -138,6 +138,8 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
                 sourceTracingId = tracingId,
                 sourceVersion = newestSourceVersion,
                 newTracingId = newTracingId,
+                ownerId = None,
+                requestingUserId = None,
                 newVersion = 0,
                 editPosition = editPositionParsed,
                 editRotation = editRotationParsed,

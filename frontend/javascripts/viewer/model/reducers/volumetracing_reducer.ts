@@ -23,13 +23,13 @@ import type {
   SetMappingNameAction,
 } from "viewer/model/actions/settings_actions";
 import {
-  removeSegmentAction,
-  updateSegmentAction,
   type ClickSegmentAction,
   type RemoveSegmentAction,
   type SetSegmentsAction,
   type UpdateSegmentAction,
   type VolumeTracingAction,
+  removeSegmentAction,
+  updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { updateKey2 } from "viewer/model/helpers/deep_update";
 import {
@@ -712,6 +712,7 @@ function VolumeTracingReducer(
           }
         }
       }
+      break;
     }
 
     default:

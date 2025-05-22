@@ -257,7 +257,7 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<never> {
     const mappingInfo = yield* select((state) =>
       getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
     );
-    const { mappingName, mappingType, mappingStatus } = mappingInfo;
+    const { mappingName, mappingStatus } = mappingInfo;
 
     if (mappingName == null || mappingStatus !== MappingStatusEnum.ENABLED) {
       return;
@@ -271,7 +271,7 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<never> {
       let isBusy = yield* select((state) => state.uiInformation.busyBlockingInfo.isBusy);
       if (!isBusy) {
         const { cancel } = yield* race({
-          updateHdf5: call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName, mappingType),
+          updateHdf5: call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName),
           cancel: take(
             ((action: Action) =>
               action.type === "SET_BUSY_BLOCKING_INFO_ACTION" &&
@@ -397,7 +397,6 @@ function* handleSetMapping(
       layerName,
       layerInfo,
       mappingName,
-      mappingType,
       action,
       oldActiveMappingByLayer,
     );
@@ -408,23 +407,21 @@ function* handleSetHdf5Mapping(
   layerName: string,
   layerInfo: APIDataLayer,
   mappingName: string,
-  mappingType: MappingType,
   action: SetMappingAction,
   oldActiveMappingByLayer: Container<Record<string, ActiveMappingInfo>>,
 ): Saga<void> {
   if (yield* select((state) => getNeedsLocalHdf5Mapping(state, layerName))) {
-    yield* call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName, mappingType);
+    yield* call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName);
   } else {
     // An HDF5 mapping was set that is applied remotely. A reload is necessary.
     yield* call(reloadData, oldActiveMappingByLayer, action);
   }
 }
 
-function* updateLocalHdf5Mapping(
+export function* updateLocalHdf5Mapping(
   layerName: string,
   layerInfo: APIDataLayer,
   mappingName: string,
-  mappingType: MappingType,
 ): Saga<void> {
   const dataset = yield* select((state) => state.dataset);
   const annotation = yield* select((state) => state.annotation);
@@ -490,7 +487,7 @@ function* updateLocalHdf5Mapping(
     onlyB: newSegmentIds,
   });
 
-  yield* put(setMappingAction(layerName, mappingName, mappingType, { mapping }));
+  yield* put(setMappingAction(layerName, mappingName, "HDF5", { mapping }));
 }
 
 function* handleSetJsonMapping(

@@ -1336,9 +1336,8 @@ export function* updateMappingWithOmittedSplitPartners(
   sourceAgglomerateId: number,
 ) {
   /*
-   * sourceAgglomerateId was split. All segment ids that were mapped to sourceAgglomerateId,
+   * When sourceAgglomerateId was split, all segment ids that were mapped to sourceAgglomerateId,
    * are removed from the activeMapping by this function.
-   * The return value of this function is the list of segment ids that were removed.
    */
 
   const mappingEntries = Array.from(activeMapping.mapping as NumberLikeMap);

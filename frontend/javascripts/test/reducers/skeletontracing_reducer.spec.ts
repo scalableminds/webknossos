@@ -538,7 +538,7 @@ describe("SkeletonTracing", () => {
     const state1 = SkeletonTracingReducer(state0, deleteEdgeAction);
 
     const newTrees = enforceSkeletonTracing(state1.annotation).trees;
-    expect(Object.keys(newTrees).length).toBe(3);
+    expect(newTrees.size()).toBe(3);
     expect(newTrees.getOrThrow(0).nodes.getOrThrow(0).id).toBe(0);
     expect(newTrees.getOrThrow(0).nodes.size()).toBe(2);
     expect(newTrees.getOrThrow(0).branchPoints[0].nodeId).toBe(1);

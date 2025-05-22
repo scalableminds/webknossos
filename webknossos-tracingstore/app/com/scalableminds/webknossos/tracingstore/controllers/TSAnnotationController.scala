@@ -26,10 +26,16 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTraci
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import net.liftweb.common.{Empty, Failure, Full}
 import play.api.i18n.Messages
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import scala.concurrent.ExecutionContext
+
+case class MergedFromIdsRequest(annotationIds: Seq[String], ownerIds: Seq[String])
+
+object MergedFromIdsRequest {
+  implicit val jsonFormat: OFormat[MergedFromIdsRequest] = Json.format[MergedFromIdsRequest]
+}
 
 class TSAnnotationController @Inject()(
     accessTokenService: TracingStoreAccessTokenService,
@@ -106,6 +112,8 @@ class TSAnnotationController @Inject()(
 
   def duplicate(annotationId: String,
                 newAnnotationId: String,
+                ownerId: String,
+                requestingUserId: String,
                 version: Option[Long],
                 isFromTask: Boolean,
                 datasetBoundingBox: Option[String]): Action[AnyContent] =
@@ -117,6 +125,8 @@ class TSAnnotationController @Inject()(
               datasetBoundingBoxParsed <- Fox.runOptional(datasetBoundingBox)(b => BoundingBox.fromLiteral(b).toFox)
               annotationProto <- annotationService.duplicate(annotationId,
                                                              newAnnotationId,
+                                                             ownerId,
+                                                             requestingUserId,
                                                              version,
                                                              isFromTask,
                                                              datasetBoundingBoxParsed) ?~> "annotation.duplicate.failed"
@@ -142,12 +152,14 @@ class TSAnnotationController @Inject()(
       }
     }
 
-  def mergedFromIds(toTemporaryStore: Boolean, newAnnotationId: String): Action[List[String]] =
-    Action.async(validateJson[List[String]]) { implicit request =>
+  def mergedFromIds(toTemporaryStore: Boolean,
+                    newAnnotationId: String,
+                    requestingUserId: String): Action[MergedFromIdsRequest] =
+    Action.async(validateJson[MergedFromIdsRequest]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           for {
-            annotations: Seq[AnnotationProto] <- annotationService.getMultiple(request.body) ?~> Messages(
+            annotations: Seq[AnnotationProto] <- annotationService.getMultiple(request.body.annotationIds) ?~> Messages(
               "annotation.notFound")
             skeletonLayers = annotations.flatMap(_.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Skeleton))
             volumeLayers = annotations.flatMap(_.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Volume))
@@ -164,12 +176,13 @@ class TSAnnotationController @Inject()(
                 Some(TracingSelector(l.tracingId))
               })
               .map(_.flatten)
+            // TODO adapt user state for all volume tracings (before flatten so we can zip with owner ids)
             firstVolumeAnnotationIndex = annotations.indexWhere(
               _.annotationLayers.exists(_.typ == AnnotationLayerTypeProto.Volume))
             firstVolumeAnnotationId = if (firstVolumeAnnotationIndex < 0) None
-            else Some(request.body(firstVolumeAnnotationIndex))
+            else Some(request.body.annotationIds(firstVolumeAnnotationIndex))
             mergeEditableMappingsResultBox <- editableMappingMergeService
-              .mergeEditableMappings(request.body,
+              .mergeEditableMappings(request.body.annotationIds,
                                      firstVolumeAnnotationId,
                                      newAnnotationId,
                                      newVolumeId,
@@ -198,8 +211,11 @@ class TSAnnotationController @Inject()(
                 Some(TracingSelector(l.tracingId))
               })
               .map(_.flatten)
+            // TODO adapt user state for all skelton tracings (before flatten so we can zip with owner ids)
             mergedSkeletonOpt <- Fox.runIf(skeletonTracings.nonEmpty)(
-              skeletonTracingService.merge(skeletonTracings, newVersion = newTargetVersion).toFox)
+              skeletonTracingService
+                .merge(skeletonTracings, newVersion = newTargetVersion, Some(requestingUserId))
+                .toFox)
             _ <- Fox.runOptional(mergedSkeletonOpt)(
               skeletonTracingService
                 .saveSkeleton(newSkeletonId, version = newTargetVersion, _, toTemporaryStore = toTemporaryStore))

@@ -82,9 +82,9 @@ class SkeletonTracingService @Inject()(
     if (fromTask) newTracing.clearBoundingBox else newTracing
   }
 
-  def merge(tracings: Seq[SkeletonTracing], newVersion: Long): Box[SkeletonTracing] =
+  def merge(tracings: Seq[SkeletonTracing], newVersion: Long, requestingUserId: Option[String]): Box[SkeletonTracing] =
     for {
-      tracing <- tracings.map(Full(_)).reduceLeft(mergeTwo)
+      tracing <- tracings.map(Full(_)).reduceLeft(mergeTwo(requestingUserId))
     } yield
       tracing.copy(
         createdTimestamp = System.currentTimeMillis(),
@@ -92,7 +92,8 @@ class SkeletonTracingService @Inject()(
         storedWithExternalTreeBodies = Some(false)
       )
 
-  private def mergeTwo(tracingA: Box[SkeletonTracing], tracingB: Box[SkeletonTracing]): Box[SkeletonTracing] =
+  private def mergeTwo(requestingUserId: Option[String])(tracingA: Box[SkeletonTracing],
+                                                         tracingB: Box[SkeletonTracing]): Box[SkeletonTracing] =
     for {
       tracingA <- tracingA
       tracingB <- tracingB

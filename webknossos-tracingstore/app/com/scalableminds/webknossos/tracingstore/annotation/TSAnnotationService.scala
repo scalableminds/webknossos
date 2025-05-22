@@ -730,6 +730,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
   def duplicate(
       annotationId: String,
       newAnnotationId: String,
+      ownerId: String,
+      requestingUserId: String,
       version: Option[Long],
       isFromTask: Boolean,
       datasetBoundingBox: Option[BoundingBox])(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationProto] =
@@ -748,6 +750,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         layer =>
           duplicateLayer(annotationId,
                          newAnnotationId,
+                         ownerId,
+                         requestingUserId,
                          layer,
                          tracingIdMap,
                          v0Annotation.version,
@@ -765,6 +769,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
             layer =>
               duplicateLayer(annotationId,
                              newAnnotationId,
+                             ownerId,
+                             requestingUserId,
                              layer,
                              tracingIdMap,
                              currentAnnotation.version,
@@ -831,6 +837,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
 
   private def duplicateLayer(annotationId: String,
                              newAnnotationId: String,
+                             ownerId: String,
+                             requestingUserId: String,
                              layer: AnnotationLayerProto,
                              tracingIdMap: Map[String, String],
                              version: Long,
@@ -841,24 +849,30 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       newTracingId <- tracingIdMap.get(layer.tracingId).toFox ?~> "duplicate unknown layer"
       _ <- layer.typ match {
         case AnnotationLayerTypeProto.Volume =>
-          duplicateVolumeTracing(annotationId,
-                                 layer.tracingId,
-                                 version,
-                                 newAnnotationId,
-                                 newTracingId,
-                                 version,
-                                 isFromTask,
-                                 None,
-                                 datasetBoundingBox,
-                                 MagRestrictions.empty,
-                                 None,
-                                 None)
+          duplicateVolumeTracing(
+            annotationId,
+            layer.tracingId,
+            version,
+            newAnnotationId,
+            newTracingId,
+            version,
+            ownerId,
+            requestingUserId,
+            isFromTask,
+            None,
+            datasetBoundingBox,
+            MagRestrictions.empty,
+            None,
+            None
+          )
         case AnnotationLayerTypeProto.Skeleton =>
           duplicateSkeletonTracing(annotationId,
                                    layer.tracingId,
                                    version,
                                    newTracingId,
                                    version,
+                                   ownerId,
+                                   requestingUserId,
                                    isFromTask,
                                    None,
                                    None,
@@ -874,6 +888,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       newAnnotationId: String,
       newTracingId: String,
       newVersion: Long,
+      ownerId: String,
+      requestingUserId: String, // TODO use
       isFromTask: Boolean,
       boundingBox: Option[BoundingBox],
       datasetBoundingBox: Option[BoundingBox],
@@ -927,6 +943,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       sourceVersion: Long,
       newTracingId: String,
       newVersion: Long,
+      ownerId: String,
+      requestingUserId: String, // TODO use
       isFromTask: Boolean,
       editPosition: Option[Vec3Int],
       editRotation: Option[Vec3Double],

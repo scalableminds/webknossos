@@ -10,9 +10,9 @@ GET         /annotation/:annotationId                                           
 POST        /annotation/:annotationId/update                                        @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.update(annotationId: String)
 GET         /annotation/:annotationId/updateActionLog                               @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.updateActionLog(annotationId: String, newestVersion: Option[Long], oldestVersion: Option[Long])
 GET         /annotation/:annotationId/newestVersion                                 @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.newestVersion(annotationId: String)
-POST        /annotation/:annotationId/duplicate                                     @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.duplicate(annotationId: String, newAnnotationId: String, version: Option[Long], isFromTask: Boolean, datasetBoundingBox: Option[String])
+POST        /annotation/:annotationId/duplicate                                     @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.duplicate(annotationId: String, newAnnotationId: String, ownerId: String, requestingUserId: String, version: Option[Long], isFromTask: Boolean, datasetBoundingBox: Option[String])
 POST        /annotation/:annotationId/resetToBase                                   @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.resetToBase(annotationId: String)
-POST        /annotation/mergedFromIds                                               @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.mergedFromIds(toTemporaryStore: Boolean, newAnnotationId: String)
+POST        /annotation/mergedFromIds                                               @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.mergedFromIds(toTemporaryStore: Boolean, newAnnotationId: String, mergedFromIds: String)
 
 # Volume tracings
 POST        /volume/save                                                            @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.save(newTracingId: String)

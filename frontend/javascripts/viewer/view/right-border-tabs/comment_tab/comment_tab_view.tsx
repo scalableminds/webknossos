@@ -75,13 +75,21 @@ const RELEVANT_ACTIONS_FOR_COMMENTS = [
   "revertToVersion",
 ];
 
+function getSortedTreesWithComments(
+  trees: TreeMap,
+  sortBy: SortByEnum,
+  isSortedAscending: boolean,
+): Tree[] {
+  return trees
+    .values()
+    .filter((tree) => tree.comments.length > 0)
+    .toArray()
+    .sort(getTreeSorter(sortBy, isSortedAscending));
+}
+
 const memoizedDeriveData = memoizeOne(
   (trees: TreeMap, sortBy: SortByEnum, isSortedAscending: boolean): Tree[] => {
-    const sortedTrees = trees
-      .values()
-      .filter((tree) => tree.comments.length > 0)
-      .toArray()
-      .sort(getTreeSorter(sortBy, isSortedAscending));
+    const sortedTrees = getSortedTreesWithComments(trees, sortBy, isSortedAscending);
 
     return sortedTrees;
   },
@@ -194,7 +202,7 @@ function CommentTabView(props: Props) {
       const { trees } = props.skeletonTracing;
 
       // Create a sorted, flat array of all comments across all trees
-      const sortedTrees = trees.values().toArray().sort(getTreeSorter(sortBy, sortAscending));
+      const sortedTrees = getSortedTreesWithComments(trees, sortBy, sortAscending);
 
       const sortedComments = sortedTrees.flatMap((tree: Tree): CommentType[] =>
         tree.comments.slice().sort(getCommentSorter(sortBy, sortAscending)),

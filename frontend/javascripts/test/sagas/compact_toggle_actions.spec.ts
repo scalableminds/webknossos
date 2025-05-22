@@ -1,11 +1,11 @@
 import { describe, it, expect } from "vitest";
-import type {
-  Flycam,
-  WebknossosState,
-  Segment,
-  SegmentGroup,
-  Tree,
-  TreeGroup,
+import {
+  type Flycam,
+  type WebknossosState,
+  type Segment,
+  type SegmentGroup,
+  type Tree,
+  type TreeGroup,
   TreeMap,
 } from "viewer/store";
 import { diffSkeletonTracing } from "viewer/model/sagas/skeletontracing_saga";
@@ -56,7 +56,7 @@ const createSegment = (id: number, groupId: number | null, isVisible: boolean): 
 });
 
 const createTreeMap = (trees: Tree[]): TreeMap =>
-  new DiffableMap<number, Tree>(trees.map((tree) => [tree.treeId, tree]));
+  new TreeMap(trees.map((tree) => [tree.treeId, tree]));
 
 const genericGroups: TreeGroup[] = [
   {

@@ -35,15 +35,15 @@ import type {
   MutableNodeMap,
   MutableTree,
   MutableTreeGroup,
-  MutableTreeMap,
   Node,
   RestrictionsAndSettings,
   SkeletonTracing,
   Tree,
   TreeGroup,
-  TreeMap,
   WebknossosState,
 } from "viewer/store";
+import { TreeMap, MutableTreeMap } from "viewer/store";
+
 import { max, maxBy, min } from "../helpers/iterator_utils";
 
 export function generateTreeName(state: WebknossosState, timestamp: number, treeId: number) {
@@ -69,19 +69,16 @@ export function generateTreeName(state: WebknossosState, timestamp: number, tree
 function getMinimumNodeId(trees: TreeMap | MutableTreeMap): number {
   const minNodeId = min(trees.values().flatMap((tree) => tree.nodes.map((n) => n.id)));
 
-  // TODO newMaxNodeId can not be null here
   return minNodeId != null ? minNodeId : Constants.MIN_NODE_ID;
 }
 export function getMaximumNodeId(trees: TreeMap | MutableTreeMap): number {
   const newMaxNodeId = max(trees.values().flatMap((tree) => tree.nodes.map((n) => n.id)));
 
-  // TODO newMaxNodeId can not be null here
   return newMaxNodeId != null ? newMaxNodeId : Constants.MIN_NODE_ID - 1;
 }
 export function getMaximumTreeId(trees: TreeMap | MutableTreeMap): number {
   const maxTreeId = max(trees.values().map((tree) => tree.treeId));
 
-  // TODO maxTreeId can not be null here
   return maxTreeId != null ? maxTreeId : Constants.MIN_TREE_ID - 1;
 }
 
@@ -548,11 +545,11 @@ export function getOrCreateTree(
 
 export function ensureTreeNames(state: WebknossosState, trees: MutableTreeMap) {
   // Assign a new tree name for trees without a name
-  trees.values().forEach((tree) => {
+  for (const tree of trees.values()) {
     if (tree.name === "") {
       tree.name = generateTreeName(state, tree.timestamp, tree.treeId);
     }
-  });
+  }
 
   return trees;
 }
@@ -593,13 +590,13 @@ export function addTreesAndGroups(
   // Create a map from old node ids to new node ids
   // This needs to be done in advance to replace nodeId references in comments
   const idMap: Record<number, number> = {};
-  trees.values().forEach((tree) => {
-    tree.nodes.values().forEach((node) => (idMap[node.id] = newNodeId++));
-  });
+  for (const tree of trees.values()) {
+    for (const node of tree.nodes.values()) {
+      idMap[node.id] = newNodeId++;
+    }
+  }
 
-  const newTrees: MutableTreeMap = new DiffableMap();
-
-  trees.values().forEach((tree) => {
+  for (const tree of trees.values()) {
     const newNodes: MutableNodeMap = new DiffableMap();
     const newTree = { ...tree };
 
@@ -635,11 +632,11 @@ export function addTreesAndGroups(
     newTree.groupId = tree.groupId != null ? groupIdMap[tree.groupId] : tree.groupId;
     newTree.treeId = newTreeId;
 
-    newTrees.mutableSet(newTreeId, newTree);
+    trees.mutableSet(newTreeId, newTree);
     newTreeId++;
-  });
+  }
 
-  return [newTrees, treeGroups, newNodeId - 1];
+  return [trees, treeGroups, newNodeId - 1];
 }
 
 export function deleteTrees(
@@ -882,9 +879,9 @@ function serverBranchPointToMutableBranchPoint(b: ServerBranchPoint): MutableBra
 export function createMutableTreeMapFromTreeArray(
   trees: ServerSkeletonTracingTree[],
 ): MutableTreeMap {
-  const newTreeMap = new DiffableMap<number, MutableTree>();
+  const newTreeMap = new MutableTreeMap();
 
-  trees.forEach((tree) => {
+  for (const tree of trees) {
     newTreeMap.mutableSet(tree.treeId, {
       comments: tree.comments as any as MutableCommentType[],
       edges: EdgeCollection.loadFromArray(tree.edges),
@@ -905,7 +902,7 @@ export function createMutableTreeMapFromTreeArray(
       edgesAreVisible: tree.edgesAreVisible != null ? tree.edgesAreVisible : true,
       metadata: tree.metadata,
     });
-  });
+  }
 
   return newTreeMap;
 }
@@ -920,13 +917,13 @@ export function removeMissingGroupsFromTrees(
 ): TreeMap {
   // Change the groupId of trees for groups that no longer exist
   const groupIds = new Set(mapGroupsToGenerator(treeGroups, (group) => group.groupId));
-  const changedTrees: TreeMap = new DiffableMap<number, Tree>();
+  const changedTrees: TreeMap = new TreeMap();
 
-  skeletonTracing.trees.entries().forEach(([treeId, tree]) => {
+  for (const [treeId, tree] of skeletonTracing.trees.entries()) {
     if (tree.groupId != null && !groupIds.has(tree.groupId)) {
       changedTrees.mutableSet(treeId, { ...tree, groupId: null });
     }
-  });
+  }
 
   return changedTrees;
 }

@@ -52,6 +52,27 @@ describe("DiffableMap", () => {
     expect(map1.itemsPerBatch).toBe(map2.itemsPerBatch);
   });
 
+  it("should handle mutable deletion correctly", () => {
+    const map = new DiffableMap<number, string>([
+      [1, "one"],
+      [2, "two"],
+      [3, "three"],
+    ]);
+
+    // Delete an existing key
+    map.mutableDelete(2);
+    expect(map.has(2)).toBe(false);
+    expect(map.size()).toBe(2);
+    expect(map.getOrThrow(1)).toBe("one");
+    expect(map.getOrThrow(3)).toBe("three");
+
+    // Try to delete a non-existent key
+    map.mutableDelete(4);
+    expect(map.size()).toBe(2);
+    expect(map.has(1)).toBe(true);
+    expect(map.has(3)).toBe(true);
+  });
+
   it("should be instantiable with Array<[key, value]>", () => {
     const map = new DiffableMap([
       [1, 2],

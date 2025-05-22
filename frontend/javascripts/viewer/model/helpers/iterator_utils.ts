@@ -6,7 +6,7 @@
  * @param iterator - Iterator of numbers
  * @returns Maximum value in the iterator or null if empty
  */
-export function max<T extends number>(iterator: IteratorObject<T>): number | null {
+export function max(iterator: IteratorObject<number>): number | null {
   const maxValue = iterator.reduce((max, value) => Math.max(max, value), Number.NEGATIVE_INFINITY);
   return maxValue !== Number.NEGATIVE_INFINITY ? maxValue : null;
 }
@@ -16,7 +16,7 @@ export function max<T extends number>(iterator: IteratorObject<T>): number | nul
  * @param iterator - Iterator of numbers
  * @returns Minimum value in the iterator or null if empty
  */
-export function min<T extends number>(iterator: IteratorObject<T>): number | null {
+export function min(iterator: IteratorObject<number>): number | null {
   const minValue = iterator.reduce((min, value) => Math.min(min, value), Number.POSITIVE_INFINITY);
   return minValue !== Number.POSITIVE_INFINITY ? minValue : null;
 }
@@ -35,20 +35,22 @@ export function sum<T extends number>(iterator: IteratorObject<T>): number {
  * by selecting the specified property from each element in the iterator
  * @param iterator - Iterator of objects
  * @param selector - Function or property name to get numeric values from objects
- * @returns The object with maximum selected value or null if empty
+ * @returns The object with maximum selected value or undefined if empty
  */
 export function maxBy<T extends { [key in K]: unknown }, K extends string>(
   iterator: IteratorObject<T>,
   selector: ((value: T) => number) | K,
-): T | null {
+): T | undefined {
   const first = iterator.next();
-  if (first.done) return null;
+  if (first.done) return undefined;
+
+  const valueSelector = typeof selector === "string" ? (value: T) => value[selector] : selector;
 
   return iterator.reduce((result: T, entry: T) => {
-    const entryValue = typeof selector === "string" ? entry[selector] : selector(entry);
-    const resultValue = typeof selector === "string" ? result[selector] : selector(result);
+    const entryValue = valueSelector(entry);
+    const resultValue = valueSelector(result);
 
-    if (entryValue != null && resultValue != null && entryValue > resultValue) {
+    if (entryValue > resultValue) {
       return entry;
     }
     return result;
@@ -60,20 +62,22 @@ export function maxBy<T extends { [key in K]: unknown }, K extends string>(
  * by selecting the specified property from each element in the iterator
  * @param iterator - Iterator of objects
  * @param selector - Function or property name to get numeric values from objects
- * @returns The object with minimum selected value or null if empty
+ * @returns The object with minimum selected value or undefined if empty
  */
 export function minBy<T extends { [key in K]: unknown }, K extends string>(
   iterator: IteratorObject<T>,
   selector: ((value: T) => number) | K,
-): T | null {
+): T | undefined {
   const first = iterator.next();
-  if (first.done) return null;
+  if (first.done) return undefined;
+
+  const valueSelector = typeof selector === "string" ? (value: T) => value[selector] : selector;
 
   return iterator.reduce((result: T, entry: T) => {
-    const entryValue = typeof selector === "string" ? entry[selector] : selector(entry);
-    const resultValue = typeof selector === "string" ? result[selector] : selector(result);
+    const entryValue = valueSelector(entry);
+    const resultValue = valueSelector(result);
 
-    if (entryValue != null && resultValue != null && entryValue < resultValue) {
+    if (entryValue < resultValue) {
       return entry;
     }
     return result;

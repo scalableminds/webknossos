@@ -1,4 +1,4 @@
-import type DiffableMap from "libs/diffable_map";
+import DiffableMap from "libs/diffable_map";
 import type { Matrix4x4 } from "libs/mjs";
 import { type Middleware, applyMiddleware, createStore } from "redux";
 import { enableBatching } from "redux-batched-actions";
@@ -187,8 +187,8 @@ export type Restrictions = APIRestrictions & { initialAllowUpdate: boolean };
 export type AllowedMode = APIAllowedMode;
 export type Settings = APISettings;
 export type DataStoreInfo = APIDataStore;
-export type MutableTreeMap = DiffableMap<number, MutableTree>;
-export type TreeMap = DiffableMap<number, Tree>;
+export class MutableTreeMap extends DiffableMap<number, MutableTree> {}
+export class TreeMap extends DiffableMap<number, Tree> {}
 export type AnnotationVisibility = APIAnnotationVisibility;
 export type RestrictionsAndSettings = Restrictions & Settings;
 export type Annotation = {

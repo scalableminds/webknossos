@@ -43,7 +43,7 @@ import {
   toggleAllTreesReducer,
   toggleTreeGroupReducer,
 } from "viewer/model/reducers/skeletontracing_reducer_helpers";
-import type { SkeletonTracing, Tree, TreeGroup, TreeMap, WebknossosState } from "viewer/store";
+import { type SkeletonTracing, type TreeGroup, TreeMap, type WebknossosState } from "viewer/store";
 import {
   GroupTypeEnum,
   additionallyExpandGroup,
@@ -88,7 +88,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
       if (lastTree) {
         activeTreeId = lastTree.treeId;
         // use last node for active node
-        const lastNode = _.maxBy(Array.from(lastTree.nodes.values()), (node) => node.id);
+        const lastNode = maxBy(lastTree.nodes.values(), "id");
         activeNodeId = lastNode?.id;
       }
     }
@@ -245,7 +245,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
         return state;
       }
 
-      const newActiveNodeId = _.max(treeWithMatchingName.nodes.map((el) => el.id)) || null;
+      const newActiveNodeId = max(treeWithMatchingName.nodes.values().map((el) => el.id)) || null;
       return update(state, {
         annotation: {
           skeleton: {
@@ -434,11 +434,11 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
     case "SHUFFLE_ALL_TREE_COLORS": {
       const newColors = ColorGenerator.getNRandomColors(skeletonTracing.trees.size());
 
-      let newTrees = skeletonTracing.trees;
-      skeletonTracing.trees.values().forEach(
+      const newTrees = skeletonTracing.trees;
+      for (const tree of skeletonTracing.trees.values()) {
         // @ts-ignore newColors.shift() can be undefined
-        (tree) => (newTrees = newTrees.set(tree.treeId, { ...tree, color: newColors.shift() })),
-      );
+        newTrees.mutableSet(tree.treeId, { ...tree, color: newColors.shift() });
+      }
 
       return update(state, {
         annotation: {
@@ -1012,7 +1012,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
         return state;
       }
 
-      const newTreeMap: TreeMap = new DiffableMap<number, Tree>([[newTree.treeId, newTree]]);
+      const newTreeMap: TreeMap = new TreeMap([[newTree.treeId, newTree]]);
 
       return update(state, {
         annotation: {

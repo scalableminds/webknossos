@@ -1,4 +1,11 @@
-import type { Flycam, WebknossosState, SkeletonTracing, StoreAnnotation, Tree } from "viewer/store";
+import {
+  type Flycam,
+  type WebknossosState,
+  type SkeletonTracing,
+  type StoreAnnotation,
+  type Tree,
+  TreeMap,
+} from "viewer/store";
 import ChainReducer from "test/helpers/chainReducer";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "viewer/model/edge_collection";
@@ -85,7 +92,7 @@ const skeletonTracing: SkeletonTracing = {
   type: "skeleton",
   createdTimestamp: 0,
   tracingId: "tracingId",
-  trees: new DiffableMap<number, Tree>([[1, skeletonTreeOne]]),
+  trees: new TreeMap([[1, skeletonTreeOne]]),
   treeGroups: [],
   activeGroupId: null,
   activeTreeId: 1,

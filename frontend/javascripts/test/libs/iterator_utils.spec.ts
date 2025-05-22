@@ -82,8 +82,8 @@ describe("Iterator Utils", () => {
 
     it("should return undefined for an empty collection", () => {
       const empty = new Map().values();
-      expect(maxBy(empty, (obj) => obj.value)).toBeNull();
-      expect(maxBy(empty, "value")).toBeNull();
+      expect(maxBy(empty, (obj) => obj.value)).toBeUndefined();
+      expect(maxBy(empty, "value")).toBeUndefined();
     });
 
     it("should handle ID properties", () => {
@@ -108,8 +108,8 @@ describe("Iterator Utils", () => {
 
     it("should return undefined for an empty collection", () => {
       const empty = new Map().values();
-      expect(minBy(empty, (obj) => obj.value)).toBeNull();
-      expect(minBy(empty, "value")).toBeNull();
+      expect(minBy(empty, (obj) => obj.value)).toBeUndefined();
+      expect(minBy(empty, "value")).toBeUndefined();
     });
 
     it("should handle ID properties", () => {

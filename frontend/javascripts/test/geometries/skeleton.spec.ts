@@ -54,9 +54,9 @@ describe("Skeleton", () => {
     const trees = skeletonTracing.trees;
     expect(trees.size()).toBe(20);
 
-    trees.values().forEach((tree) => {
+    for (const tree of trees.values()) {
       expect(tree.nodes.size()).toBe(100);
-    });
+    }
   });
 
   it("should initialize correctly using the store's state", () => {
@@ -77,18 +77,18 @@ describe("Skeleton", () => {
     const edgeTreeIds: number[] = [];
     let treeColors = [0, 0, 0, 0]; // tree ids start at index 1 so add one bogus RGB value
 
-    trees.values().forEach((tree) => {
+    for (const tree of trees.values()) {
       treeColors = treeColors.concat(
         skeleton.getTreeRGBA(tree.color, tree.isVisible, tree.edgesAreVisible),
       );
 
-      tree.nodes.values().forEach((node) => {
+      for (const node of tree.nodes.values()) {
         nodePositions = nodePositions.concat(node.untransformedPosition);
         nodeTreeIds.push(tree.treeId);
         nodeRadii.push(node.radius);
         nodeIds.push(node.id);
         nodeTypes.push(NodeTypes.NORMAL);
-      });
+      }
 
       for (const edge of tree.edges.all()) {
         const sourcePosition = tree.nodes.getOrThrow(edge.source).untransformedPosition;
@@ -97,7 +97,7 @@ describe("Skeleton", () => {
         edgePositions = edgePositions.concat(sourcePosition).concat(targetPosition);
         edgeTreeIds.push(tree.treeId, tree.treeId);
       }
-    });
+    }
 
     const nodeBufferGeometryAttributes = skeleton.nodes.buffers[0].geometry.attributes;
     expect(nodeBufferGeometryAttributes.position.array.length).toBe(3 * nodeCapacity);

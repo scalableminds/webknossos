@@ -177,25 +177,23 @@ function* watchTracingConsistency(): Saga<void> {
   const state = yield* select((_state) => _state);
   const invalidTreeDetails: Array<Record<string, any>> = [];
 
-  enforceSkeletonTracing(state.annotation)
-    .trees.values()
-    .forEach((tree) => {
-      const edgeCount = tree.edges.size();
-      const nodeCount = tree.nodes.size();
+  for (const tree of enforceSkeletonTracing(state.annotation).trees.values()) {
+    const edgeCount = tree.edges.size();
+    const nodeCount = tree.nodes.size();
 
-      // For a tree, edge_count = node_count - 1 should hold true. For graphs, the edge count
-      // would be even higher.
-      if (edgeCount < nodeCount - 1) {
-        invalidTreeDetails.push({
-          treeId: tree.treeId,
-          name: tree.name,
-          timestamp: tree.timestamp,
-          isVisible: tree.isVisible,
-          edgeCount,
-          nodeCount,
-        });
-      }
-    });
+    // For a tree, edge_count = node_count - 1 should hold true. For graphs, the edge count
+    // would be even higher.
+    if (edgeCount < nodeCount - 1) {
+      invalidTreeDetails.push({
+        treeId: tree.treeId,
+        name: tree.name,
+        timestamp: tree.timestamp,
+        isVisible: tree.isVisible,
+        edgeCount,
+        nodeCount,
+      });
+    }
+  }
 
   if (invalidTreeDetails.length > 0) {
     const error = new Error("Corrupted tracing. See the action log for details.");

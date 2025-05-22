@@ -200,7 +200,9 @@ class Skeleton {
     );
 
     // fill buffers with data
-    trees.values().forEach((tree) => this.createTree(tree));
+    for (const tree of trees.values()) {
+      this.createTree(tree);
+    }
 
     // compute bounding sphere to make ThreeJS happy
     for (const nodes of this.nodes.buffers) {

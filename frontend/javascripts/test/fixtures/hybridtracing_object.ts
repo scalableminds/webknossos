@@ -1,5 +1,5 @@
 import update from "immutability-helper";
-import type { SkeletonTracing, Tree } from "viewer/store";
+import { TreeMap, type SkeletonTracing, type Tree } from "viewer/store";
 import { initialState as defaultState } from "test/fixtures/volumetracing_object";
 
 import DiffableMap from "libs/diffable_map";
@@ -45,7 +45,7 @@ const initalTreeOne: Tree = {
   metadata: [],
 };
 
-const initalTteeTwo: Tree = {
+const initialTreeTwo: Tree = {
   treeId: 2,
   name: "TestAgglomerateTree",
   nodes: new DiffableMap(),
@@ -65,9 +65,9 @@ export const initialSkeletonTracing: SkeletonTracing = {
   type: "skeleton",
   createdTimestamp: 0,
   tracingId: "tracingId",
-  trees: new DiffableMap<number, Tree>([
+  trees: new TreeMap([
     [1, initalTreeOne],
-    [2, initalTteeTwo],
+    [2, initialTreeTwo],
   ]),
   treeGroups: [],
   activeGroupId: null,

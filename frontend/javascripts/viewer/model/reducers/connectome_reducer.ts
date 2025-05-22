@@ -7,7 +7,7 @@ import {
   addTreesAndGroups,
   getMaximumNodeId,
 } from "viewer/model/reducers/skeletontracing_reducer_helpers";
-import type { SkeletonTracing, Tree, TreeMap, WebknossosState } from "viewer/store";
+import { type SkeletonTracing, TreeMap, type WebknossosState } from "viewer/store";
 
 function getSkeletonTracingForConnectome(
   state: WebknossosState,
@@ -70,7 +70,7 @@ function ConnectomeReducer(state: WebknossosState, action: Action): WebknossosSt
         cachedMaxNodeId: Constants.MIN_NODE_ID - 1,
         activeTreeId: null,
         activeGroupId: null,
-        trees: new DiffableMap<number, Tree>(),
+        trees: new TreeMap(),
         treeGroups: [],
         tracingId: "connectome-tracing-data",
         boundingBox: null,

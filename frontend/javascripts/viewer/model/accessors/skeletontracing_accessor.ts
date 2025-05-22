@@ -1,4 +1,3 @@
-import DiffableMap from "libs/diffable_map";
 import {
   type APIAnnotation,
   type AnnotationLayerDescriptor,
@@ -7,17 +6,17 @@ import {
   type ServerTracing,
 } from "types/api_types";
 import { IdentityTransform, type TreeType, type Vector3 } from "viewer/constants";
-import type {
-  BranchPoint,
-  Node,
-  NumberLike,
-  SkeletonTracing,
-  StoreAnnotation,
-  Tree,
-  TreeGroup,
-  TreeGroupTypeFlat,
+import {
+  type BranchPoint,
+  type Node,
+  type NumberLike,
+  type SkeletonTracing,
+  type StoreAnnotation,
+  type Tree,
+  type TreeGroup,
+  type TreeGroupTypeFlat,
   TreeMap,
-  WebknossosState,
+  type WebknossosState,
 } from "viewer/store";
 import {
   MISSING_GROUP_ID,
@@ -133,7 +132,7 @@ export function getTreesWithType(
    * Returns trees of a specific type or all trees if no type is provided.
    */
   return type != null
-    ? new DiffableMap(
+    ? new TreeMap(
         skeletonTracing.trees
           .entries()
           .filter(([_, tree]) => tree.type === type)

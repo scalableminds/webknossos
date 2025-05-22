@@ -22,18 +22,18 @@ import {
   getMaximumGroupId,
   getMaximumTreeId,
 } from "viewer/model/reducers/skeletontracing_reducer_helpers";
-import type {
-  BoundingBoxObject,
-  MutableNode,
-  MutableTree,
+import {
+  type BoundingBoxObject,
+  type MutableNode,
+  type MutableTree,
   MutableTreeMap,
-  NodeMap,
-  SkeletonTracing,
-  StoreAnnotation,
-  Tree,
-  TreeGroup,
-  UserBoundingBox,
-  WebknossosState,
+  type NodeMap,
+  type SkeletonTracing,
+  type StoreAnnotation,
+  type Tree,
+  type TreeGroup,
+  type UserBoundingBox,
+  type WebknossosState,
 } from "viewer/store";
 import { findGroup } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { getTransformsForSkeletonLayer } from "../accessors/dataset_layer_transformation_accessor";
@@ -874,7 +874,7 @@ export function parseNml(nmlString: string): Promise<{
 }> {
   return new Promise((resolve, reject) => {
     const parser = new Saxophone();
-    let trees: MutableTreeMap = new DiffableMap<number, MutableTree>();
+    const trees: MutableTreeMap = new MutableTreeMap();
     const treeGroups: TreeGroup[] = [];
     const existingNodeIds = new Set();
     const existingTreeGroupIds = new Set();
@@ -1186,7 +1186,7 @@ export function parseNml(nmlString: string): Promise<{
           const newTreesSize = _.size(newTrees);
 
           if (newTreesSize > 1) {
-            trees = trees.delete(tree.treeId);
+            trees.mutableDelete(tree.treeId);
 
             for (const newTree of newTrees) {
               trees.mutableSet(newTree.treeId, newTree);

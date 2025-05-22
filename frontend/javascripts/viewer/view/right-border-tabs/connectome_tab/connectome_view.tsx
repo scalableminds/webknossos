@@ -39,12 +39,12 @@ import {
 } from "viewer/model/actions/connectome_actions";
 import { setMappingAction } from "viewer/model/actions/settings_actions";
 import EdgeCollection from "viewer/model/edge_collection";
-import type {
-  ActiveMappingInfo,
-  MutableNode,
-  MutableTree,
+import {
+  type ActiveMappingInfo,
+  type MutableNode,
+  type MutableTree,
   MutableTreeMap,
-  WebknossosState,
+  type WebknossosState,
 } from "viewer/store";
 import Store from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
@@ -509,7 +509,7 @@ class ConnectomeView extends React.Component<Props, State> {
 
     if (addedSynapseIds.length > 0 && filteredConnectomeData != null) {
       const { synapses } = filteredConnectomeData;
-      const newTrees: MutableTreeMap = new DiffableMap<number, MutableTree>();
+      const newTrees = new MutableTreeMap();
 
       for (const synapseId of addedSynapseIds) {
         const synapseTree = synapseTreeCreator(synapseId, synapses[synapseId].type);

@@ -21,13 +21,11 @@ import FastTooltip from "components/fast_tooltip";
 import { formatLengthAsVx, formatNumberToLength, formatNumberToVolume } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { useFetch } from "libs/react_helpers";
+import { useWkSelector } from "libs/react_hooks";
 import Shortcut from "libs/shortcut_component";
 import Toast from "libs/toast";
 import { hexToRgb, rgbToHex, roundTo, truncateStringToLength } from "libs/utils";
 import messages from "messages";
-
-import DiffableMap from "libs/diffable_map";
-import { useWkSelector } from "libs/react_hooks";
 import React, { createContext, type MouseEvent, useContext, useEffect, useState } from "react";
 import type { Dispatch } from "redux";
 import type {
@@ -141,7 +139,7 @@ import type {
   UserBoundingBox,
   VolumeTracing,
 } from "viewer/store";
-import Store from "viewer/store";
+import Store, { TreeMap } from "viewer/store";
 import {
   getVolumeRequestUrl,
   withMappingActivationConfirmation,
@@ -241,7 +239,7 @@ function extractShortestPathAsNewTree(
   const { shortestPath } = api.tracing.findShortestPathBetweenNodes(sourceNodeId, targetNodeId);
   const newTree = extractPathAsNewTree(Store.getState(), sourceTree, shortestPath);
   if (newTree != null) {
-    const treeMap = new DiffableMap([[newTree.treeId, newTree]]);
+    const treeMap = new TreeMap([[newTree.treeId, newTree]]);
     Store.dispatch(addTreesAndGroupsAction(treeMap, null));
   }
 }

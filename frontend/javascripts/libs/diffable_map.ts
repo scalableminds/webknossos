@@ -273,6 +273,27 @@ class DiffableMap<K extends number, V> {
   }
 
   /**
+   * Deletes a key-value pair from the current map instance
+   * Modifies the original map (mutable operation)
+   * If the key doesn't exist, no changes are made
+   *
+   * @param key The key to delete
+   */
+  mutableDelete(key: K): void {
+    let idx = 0;
+
+    while (this.chunks[idx] != null) {
+      if (this.chunks[idx].has(key)) {
+        this.chunks[idx].delete(key);
+        this.entryCount--;
+        return;
+      }
+
+      idx++;
+    }
+  }
+
+  /**
    * Maps over all values in the DiffableMap and applies a transformation function
    *
    * @param fn The transformation function to apply to each value

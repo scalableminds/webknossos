@@ -77,7 +77,7 @@ function buildTreeGroupHashMap(
 
 // Finds the id of the common group for the used trees in the toggleActions
 function findCommonAncestor(
-  treeIdMap: TreeMap | SegmentMap,
+  itemIdMap: TreeMap | SegmentMap,
   groupIdMap: Record<number, GroupNode>,
   toggleActions: Array<UpdateTreeVisibilityUpdateAction | UpdateSegmentVisibilityVolumeAction>,
 ): number | undefined {
@@ -100,7 +100,7 @@ function findCommonAncestor(
 
   let commonPath: number[] | null = null;
 
-  const getAncestor = (treeId: number) => treeIdMap.getNullable(treeId);
+  const getAncestor = (itemId: number) => itemIdMap.getNullable(itemId);
   for (const toggleAction of toggleActions) {
     const ancestorPath = getAncestorPath(
       getAncestor(

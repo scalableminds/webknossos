@@ -517,7 +517,14 @@ const VERSION_POLL_INTERVAL_READ_ONLY = 1 * 1000;
 const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 1 * 1000;
 
 function* watchForSaveConflicts(): Saga<never> {
-  function* checkForNewVersion() {
+  function* checkForNewVersion(): boolean {
+    /*
+     * Checks whether there is a newer version on the server. If so,
+     * the saga tries to also update the current annotation to the newest
+     * state.
+     * If the update is not possible, the user will be notified that a newer
+     * version exists on the server. In that case, true will be returned (`didAskUserToRefreshPage`).
+     */
     const allowSave = yield* select(
       (state) =>
         state.annotation.restrictions.allowSave && state.annotation.restrictions.allowUpdate,
@@ -540,7 +547,7 @@ function* watchForSaveConflicts(): Saga<never> {
       //   b) checking for newer versions when the active user may update the annotation introduces
       //      a race condition between this saga and the actual save saga. Synchronizing these sagas
       //      would be possible, but would add further complexity to the mission critical save saga.
-      return;
+      return false;
     }
 
     const maybeSkeletonTracing = yield* select((state) => state.annotation.skeleton);
@@ -554,7 +561,7 @@ function* watchForSaveConflicts(): Saga<never> {
     ]);
 
     if (tracings.length === 0) {
-      return;
+      return false;
     }
 
     const versionOnServer = yield* call(
@@ -595,7 +602,7 @@ function* watchForSaveConflicts(): Saga<never> {
 
       if (yield* canActionsBeIncorporated(newerActions)) {
         yield* put(setVersionNumberAction(versionOnServer));
-        return;
+        return false;
       }
 
       const saveQueue = yield* select((state) => state.save.queue);
@@ -615,9 +622,11 @@ function* watchForSaveConflicts(): Saga<never> {
         sticky: true,
         key: toastKey,
       });
+      return true;
     } else {
       Toast.close(toastKey);
     }
+    return false;
   }
 
   function* getPollInterval(): Saga<number> {
@@ -646,7 +655,12 @@ function* watchForSaveConflicts(): Saga<never> {
       continue;
     }
     try {
-      yield* call(checkForNewVersion);
+      const didAskUserToRefreshPage = yield* call(checkForNewVersion);
+      if (didAskUserToRefreshPage) {
+        // The user was already notified about the current annotation being outdated.
+        // There is not much else we can do now. Sleep for 5 minutes.
+        yield* call(sleep, 5 * 60 * 1000);
+      }
     } catch (exception) {
       // If the version check fails for some reason, we don't want to crash the entire
       // saga.
@@ -687,6 +701,8 @@ function* canActionsBeIncorporated(newerActions: APIUpdateActionBatch[]): Saga<b
           yield* put(applySkeletonUpdateActionsFromServerAction([action]));
           break;
         }
+
+        // Volume
         case "updateBucket": {
           const { value } = action;
           const cube = Model.getCubeByLayerName(value.actionTracingId);
@@ -731,13 +747,13 @@ function* canActionsBeIncorporated(newerActions: APIUpdateActionBatch[]): Saga<b
         case "importVolumeTracing":
         case "revertToVersion":
         case "updateLayerMetadata":
-        case "updateMappingName":
         case "updateMetadataOfAnnotation":
 
         // Volume
         case "removeFallbackLayer":
         case "updateSegmentGroups":
         case "updateUserBoundingBoxesInVolumeTracing":
+        case "updateMappingName": // Refactor mapping activation first before implementing this.
 
         // Proofreading
         case "mergeAgglomerate":

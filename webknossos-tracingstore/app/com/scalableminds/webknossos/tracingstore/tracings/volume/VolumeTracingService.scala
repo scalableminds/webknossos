@@ -789,17 +789,17 @@ class VolumeTracingService @Inject()(
                        // TODO test with proofreading, what happens to segment ids? also, volume annotations did not apply
                        mergedVolumeStats: MergedVolumeStats): Box[VolumeTracing] = {
     val largestSegmentId = combineLargestSegmentIdsByMaxDefined(tracingA.largestSegmentId, tracingB.largestSegmentId)
-    val groupMapping = GroupUtils.calculateSegmentGroupMapping(tracingA.segmentGroups, tracingB.segmentGroups)
-    val mergedGroups = GroupUtils.mergeSegmentGroups(tracingA.segmentGroups, tracingB.segmentGroups, groupMapping)
+    val groupMappingA = GroupUtils.calculateSegmentGroupMapping(tracingA.segmentGroups, tracingB.segmentGroups)
+    val mergedGroups = GroupUtils.mergeSegmentGroups(tracingA.segmentGroups, tracingB.segmentGroups, groupMappingA)
     val mergedBoundingBox = combineBoundingBoxes(Some(tracingA.boundingBox), Some(tracingB.boundingBox))
     val segmentIdMapB =
       if (indexB >= mergedVolumeStats.labelMaps.length) Map.empty[Long, Long] else mergedVolumeStats.labelMaps(indexB)
-    val (userBoundingBoxes, bboxIdMapA, bboxIdMapB) = combineUserBoundingBoxes(tracingA.userBoundingBox,
-                                                                               tracingB.userBoundingBox,
-                                                                               tracingA.userBoundingBoxes,
-                                                                               tracingB.userBoundingBoxes)
+    val (mergedUserBoundingBoxes, bboxIdMapA, bboxIdMapB) = combineUserBoundingBoxes(tracingA.userBoundingBox,
+                                                                                     tracingB.userBoundingBox,
+                                                                                     tracingA.userBoundingBoxes,
+                                                                                     tracingB.userBoundingBoxes)
     val userStates =
-      mergeUserStates(tracingA.userStates, tracingB.userStates, groupMapping, segmentIdMapB, bboxIdMapA, bboxIdMapB)
+      mergeUserStates(tracingA.userStates, tracingB.userStates, groupMappingA, segmentIdMapB, bboxIdMapA, bboxIdMapB)
     for {
       mergedAdditionalAxes <- AdditionalAxis.mergeAndAssertSameAdditionalAxes(
         Seq(tracingA, tracingB).map(t => AdditionalAxis.fromProtosAsOpt(t.additionalAxes)))
@@ -820,7 +820,7 @@ class VolumeTracingService @Inject()(
             0,
             0,
             0)), // should never be empty for volumes
-        userBoundingBoxes = userBoundingBoxes,
+        userBoundingBoxes = mergedUserBoundingBoxes,
         segments = tracingA.segments.toList ::: tracingBSegments.toList,
         segmentGroups = mergedGroups,
         additionalAxes = AdditionalAxis.toProto(mergedAdditionalAxes),
@@ -831,12 +831,15 @@ class VolumeTracingService @Inject()(
   private def mergeUserStates(tracingAUserStates: Seq[VolumeUserStateProto],
                               tracingBUserStates: Seq[VolumeUserStateProto],
                               groupMapping: FunctionalGroupMapping,
-                              segmentMapping: Map[Long, Long],
+                              segmentIdMapB: Map[Long, Long],
                               bboxIdMapA: UserBboxIdMap,
                               bboxIdMapB: UserBboxIdMap): Seq[VolumeUserStateProto] = {
     val tracingAUserStatesMapped =
-      tracingAUserStates.map(appylIdMappingsOnUserState(_, groupMapping, segmentMapping, bboxIdMapA))
-    val tracingBUserStatesMapped = tracingBUserStates.map(applyBboxIdMapOnUserState(_, bboxIdMapB))
+      tracingAUserStates.map(appylIdMappingsOnUserState(_, groupMapping, bboxIdMapA))
+    val tracingBUserStatesMapped =
+      tracingBUserStates
+        .map(userState => userState.copy(segmentIds = userState.segmentIds.map(segmentIdMapB))) // TODO what if segments are not in id mappings?
+        .map(applyBboxIdMapOnUserState(_, bboxIdMapB))
 
     val byUserId = scala.collection.mutable.Map[String, VolumeUserStateProto]()
     tracingAUserStatesMapped.foreach { userState =>
@@ -867,11 +870,9 @@ class VolumeTracingService @Inject()(
 
   private def appylIdMappingsOnUserState(userState: VolumeUserStateProto,
                                          groupMapping: FunctionalGroupMapping,
-                                         segmentMapping: Map[Long, Long],
                                          bboxIdMapA: Map[Int, Int]): VolumeUserStateProto =
     applyBboxIdMapOnUserState(userState, bboxIdMapA).copy(
-      segmentGroupIds = userState.segmentGroupIds.map(groupMapping),
-      segmentIds = userState.segmentIds.map(segmentMapping) // TODO what if segments are not in id mappings?
+      segmentGroupIds = userState.segmentGroupIds.map(groupMapping)
     )
 
   private def applyBboxIdMapOnUserState(userState: VolumeUserStateProto,

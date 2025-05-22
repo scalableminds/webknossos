@@ -152,16 +152,16 @@ class SkeletonTracingService @Inject()(
       tracingB <- tracingB
       mergedAdditionalAxes <- AdditionalAxis.mergeAndAssertSameAdditionalAxes(
         Seq(tracingA, tracingB).map(t => AdditionalAxis.fromProtosAsOpt(t.additionalAxes)))
-      nodeMapping = TreeUtils.calculateNodeMapping(tracingA.trees, tracingB.trees)
+      nodeMappingA = TreeUtils.calculateNodeMapping(tracingA.trees, tracingB.trees)
       (treeMappingA, treeMappingB) = TreeUtils.calculateTreeMappings(tracingA.trees, tracingB.trees)
-      groupMapping = GroupUtils.calculateTreeGroupMapping(tracingA.treeGroups, tracingB.treeGroups)
+      groupMappingA = GroupUtils.calculateTreeGroupMapping(tracingA.treeGroups, tracingB.treeGroups)
       mergedTrees = TreeUtils.mergeTrees(tracingA.trees,
                                          tracingB.trees,
                                          treeMappingA,
                                          treeMappingB,
-                                         nodeMapping,
-                                         groupMapping)
-      mergedGroups = GroupUtils.mergeTreeGroups(tracingA.treeGroups, tracingB.treeGroups, groupMapping)
+                                         nodeMappingA,
+                                         groupMappingA)
+      mergedGroups = GroupUtils.mergeTreeGroups(tracingA.treeGroups, tracingB.treeGroups, groupMappingA)
       mergedBoundingBox = combineBoundingBoxes(tracingA.boundingBox, tracingB.boundingBox)
       (userBoundingBoxes, bboxIdMapA, bboxIdMapB) = combineUserBoundingBoxes(tracingA.userBoundingBox,
                                                                              tracingB.userBoundingBox,
@@ -169,7 +169,7 @@ class SkeletonTracingService @Inject()(
                                                                              tracingB.userBoundingBoxes)
       userStates = mergeUserStates(tracingA.userStates,
                                    tracingB.userStates,
-                                   groupMapping,
+                                   groupMappingA,
                                    treeMappingA,
                                    treeMappingB,
                                    bboxIdMapA,

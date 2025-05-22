@@ -490,7 +490,7 @@ class ConnectomeView extends React.Component<Props, State> {
 
       // Create a mapping from tree name to tree object that works with DiffableMap
       const treeNameToTree: Record<string, MutableTree> = {};
-      for (const [_, tree] of trees.entries()) {
+      for (const tree of trees.values()) {
         treeNameToTree[tree.name] = tree;
       }
 

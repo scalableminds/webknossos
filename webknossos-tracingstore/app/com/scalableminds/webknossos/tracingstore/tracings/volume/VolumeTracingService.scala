@@ -8,7 +8,7 @@ import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeUserStateProto}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
@@ -20,6 +20,7 @@ import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataReq
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.mesh.{AdHocMeshRequest, AdHocMeshService, AdHocMeshServiceHolder}
 import com.scalableminds.webknossos.tracingstore.files.TsTempFileService
+import com.scalableminds.webknossos.tracingstore.tracings.GroupUtils.FunctionalGroupMapping
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
@@ -523,21 +524,28 @@ class VolumeTracingService @Inject()(
       data <- binaryDataService.handleMultipleBucketRequests(requests)
     } yield data
 
-  def adaptVolumeForDuplicate(sourceAnnotationId: String,
-                              newTracingId: String,
-                              sourceTracing: VolumeTracing,
-                              isFromTask: Boolean,
-                              boundingBox: Option[BoundingBox],
-                              datasetBoundingBox: Option[BoundingBox],
-                              magRestrictions: MagRestrictions,
-                              editPosition: Option[Vec3Int],
-                              editRotation: Option[Vec3Double],
-                              newVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[VolumeTracing] = {
+  def adaptVolumeForDuplicate(
+      sourceAnnotationId: String,
+      newTracingId: String,
+      sourceTracing: VolumeTracing,
+      isFromTask: Boolean,
+      boundingBox: Option[BoundingBox],
+      datasetBoundingBox: Option[BoundingBox],
+      magRestrictions: MagRestrictions,
+      editPosition: Option[Vec3Int],
+      editRotation: Option[Vec3Double],
+      newVersion: Long,
+      ownerId: Option[String],
+      requestingUserId: Option[String])(implicit ec: ExecutionContext, tc: TokenContext): Fox[VolumeTracing] = {
     val tracingWithBB = addBoundingBoxFromTaskIfRequired(sourceTracing, isFromTask, datasetBoundingBox)
     val tracingWithMagRestrictions = VolumeTracingMags.restrictMagList(tracingWithBB, magRestrictions)
     for {
       fallbackLayer <- getFallbackLayer(sourceAnnotationId, tracingWithMagRestrictions)
       hasSegmentIndex <- VolumeSegmentIndexService.canHaveSegmentIndex(remoteDatastoreClient, fallbackLayer)
+      userStates = Seq(
+        renderUserStateForVolumeTracingIntoUserState(tracingWithMagRestrictions,
+                                                     ownerId.getOrElse(""), // TODO get rid of getOrElse("")
+                                                     requestingUserId.getOrElse("")))
       newTracing = tracingWithMagRestrictions.copy(
         createdTimestamp = System.currentTimeMillis(),
         editPosition = editPosition.map(vec3IntToProto).getOrElse(tracingWithMagRestrictions.editPosition),
@@ -548,10 +556,58 @@ class VolumeTracingService @Inject()(
           else tracingWithMagRestrictions.mappingName,
         version = newVersion,
         // Adding segment index on duplication if the volume tracing allows it. This will be used in duplicateData
-        hasSegmentIndex = Some(hasSegmentIndex)
+        hasSegmentIndex = Some(hasSegmentIndex),
+        userStates = userStates
       )
       _ <- Fox.fromBool(newTracing.mags.nonEmpty) ?~> "magRestrictions.tooTight"
     } yield newTracing
+  }
+
+  // Since the owner may change in duplicate, we need to render what they would see into a single user state for them
+  private def renderUserStateForVolumeTracingIntoUserState(s: VolumeTracing,
+                                                           requestingUserId: String,
+                                                           ownerId: String): VolumeUserStateProto = {
+    val ownerUserState = s.userStates.find(_.userId == ownerId).map(_.copy(userId = requestingUserId))
+
+    if (requestingUserId == ownerId)
+      ownerUserState.getOrElse(VolumeTracingDefaults.emptyUserState(requestingUserId))
+    else {
+      val requestingUserState = s.userStates.find(_.userId == requestingUserId)
+      val requestingUserSegmentVisibilityMap: Map[Long, Boolean] = requestingUserState
+        .map(userState => userState.segmentIds.zip(userState.segmentVisibilities).toMap)
+        .getOrElse(Map.empty[Long, Boolean])
+      val ownerSegmentVisibilityMap: Map[Long, Boolean] =
+        ownerUserState
+          .map(userState => userState.segmentIds.zip(userState.segmentVisibilities).toMap)
+          .getOrElse(Map.empty[Long, Boolean])
+      val mergedSegmentVisibilityMap = (requestingUserSegmentVisibilityMap ++ ownerSegmentVisibilityMap).toSeq
+      val requestingUserBoundingBoxVisibilityMap: Map[Int, Boolean] = requestingUserState
+        .map(userState => userState.boundingBoxIds.zip(userState.boundingBoxVisibilities).toMap)
+        .getOrElse(Map.empty[Int, Boolean])
+      val ownerBoundingBoxVisibilityMap: Map[Int, Boolean] = ownerUserState
+        .map(userState => userState.boundingBoxIds.zip(userState.boundingBoxVisibilities).toMap)
+        .getOrElse(Map.empty[Int, Boolean])
+      val mergedBoundingBoxVisibilityMap =
+        (requestingUserBoundingBoxVisibilityMap ++ ownerBoundingBoxVisibilityMap).toSeq
+      val requestingUserSegmentGroupExpandedMap: Map[Int, Boolean] = requestingUserState
+        .map(userState => userState.segmentGroupIds.zip(userState.segmentGroupExpandedStates).toMap)
+        .getOrElse(Map.empty[Int, Boolean])
+      val ownerSegmentGroupExpandedMap: Map[Int, Boolean] = ownerUserState
+        .map(userState => userState.segmentGroupIds.zip(userState.segmentGroupExpandedStates).toMap)
+        .getOrElse(Map.empty[Int, Boolean])
+      val mergedSegmentGroupExpandedMap = (requestingUserSegmentGroupExpandedMap ++ ownerSegmentGroupExpandedMap).toSeq
+      VolumeUserStateProto(
+        userId = requestingUserId,
+        activeSegmentId =
+          requestingUserState.flatMap(_.activeSegmentId).orElse(ownerUserState.flatMap(_.activeSegmentId)),
+        segmentGroupIds = mergedSegmentGroupExpandedMap.map(_._1),
+        segmentGroupExpandedStates = mergedSegmentGroupExpandedMap.map(_._2),
+        boundingBoxIds = mergedBoundingBoxVisibilityMap.map(_._1),
+        boundingBoxVisibilities = mergedBoundingBoxVisibilityMap.map(_._2),
+        segmentIds = mergedSegmentVisibilityMap.map(_._1),
+        segmentVisibilities = mergedSegmentVisibilityMap.map(_._2)
+      )
+    }
   }
 
   private def addBoundingBoxFromTaskIfRequired(tracing: VolumeTracing,
@@ -729,25 +785,29 @@ class VolumeTracingService @Inject()(
 
   private def mergeTwo(tracingA: VolumeTracing,
                        tracingB: VolumeTracing,
-                       indexB: Int,
+                       indexB: Int, // Index of tracingB in the labelMaps of the mergedVolumeStats.
+                       // TODO test with proofreading, what happens to segment ids? also, volume annotations did not apply
                        mergedVolumeStats: MergedVolumeStats): Box[VolumeTracing] = {
     val largestSegmentId = combineLargestSegmentIdsByMaxDefined(tracingA.largestSegmentId, tracingB.largestSegmentId)
-    val groupMapping = GroupUtils.calculateSegmentGroupMapping(tracingA.segmentGroups, tracingB.segmentGroups)
-    val mergedGroups = GroupUtils.mergeSegmentGroups(tracingA.segmentGroups, tracingB.segmentGroups, groupMapping)
+    val groupMappingA = GroupUtils.calculateSegmentGroupMapping(tracingA.segmentGroups, tracingB.segmentGroups)
+    val mergedGroups = GroupUtils.mergeSegmentGroups(tracingA.segmentGroups, tracingB.segmentGroups, groupMappingA)
     val mergedBoundingBox = combineBoundingBoxes(Some(tracingA.boundingBox), Some(tracingB.boundingBox))
-    val userBoundingBoxes = combineUserBoundingBoxes(tracingA.userBoundingBox,
-                                                     tracingB.userBoundingBox,
-                                                     tracingA.userBoundingBoxes,
-                                                     tracingB.userBoundingBoxes)
+    val segmentIdMapB =
+      if (indexB >= mergedVolumeStats.labelMaps.length) Map.empty[Long, Long] else mergedVolumeStats.labelMaps(indexB)
+    val (mergedUserBoundingBoxes, bboxIdMapA, bboxIdMapB) = combineUserBoundingBoxes(tracingA.userBoundingBox,
+                                                                                     tracingB.userBoundingBox,
+                                                                                     tracingA.userBoundingBoxes,
+                                                                                     tracingB.userBoundingBoxes)
+    val userStates =
+      mergeUserStates(tracingA.userStates, tracingB.userStates, groupMappingA, segmentIdMapB, bboxIdMapA, bboxIdMapB)
     for {
       mergedAdditionalAxes <- AdditionalAxis.mergeAndAssertSameAdditionalAxes(
         Seq(tracingA, tracingB).map(t => AdditionalAxis.fromProtosAsOpt(t.additionalAxes)))
-      tracingBSegments = if (indexB >= mergedVolumeStats.labelMaps.length) tracingB.segments
+      tracingBSegments = if (segmentIdMapB.isEmpty) tracingB.segments
       else {
-        val labelMap = mergedVolumeStats.labelMaps(indexB)
         tracingB.segments.map { segment =>
           segment.copy(
-            segmentId = labelMap.getOrElse(segment.segmentId, segment.segmentId)
+            segmentId = segmentIdMapB.getOrElse(segment.segmentId, segment.segmentId)
           )
         }
       }
@@ -760,11 +820,74 @@ class VolumeTracingService @Inject()(
             0,
             0,
             0)), // should never be empty for volumes
-        userBoundingBoxes = userBoundingBoxes,
-        segments = tracingA.segments.toList ::: tracingBSegments.toList,
+        userBoundingBoxes = mergedUserBoundingBoxes,
+        segments = (tracingA.segments ++ tracingBSegments).distinctBy(_.segmentId),
         segmentGroups = mergedGroups,
-        additionalAxes = AdditionalAxis.toProto(mergedAdditionalAxes)
+        additionalAxes = AdditionalAxis.toProto(mergedAdditionalAxes),
+        userStates = userStates
       )
+  }
+
+  private def mergeUserStates(tracingAUserStates: Seq[VolumeUserStateProto],
+                              tracingBUserStates: Seq[VolumeUserStateProto],
+                              groupMapping: FunctionalGroupMapping,
+                              segmentIdMapB: Map[Long, Long],
+                              bboxIdMapA: UserBboxIdMap,
+                              bboxIdMapB: UserBboxIdMap): Seq[VolumeUserStateProto] = {
+    val tracingAUserStatesMapped =
+      tracingAUserStates.map(appylIdMappingsOnUserState(_, groupMapping, bboxIdMapA))
+    val tracingBUserStatesMapped =
+      tracingBUserStates
+        .map(userState => userState.copy(segmentIds = userState.segmentIds.map(segmentIdMapB))) // TODO what if segments are not in id mappings?
+        .map(applyBboxIdMapOnUserState(_, bboxIdMapB))
+
+    val byUserId = scala.collection.mutable.Map[String, VolumeUserStateProto]()
+    tracingAUserStatesMapped.foreach { userState =>
+      byUserId.put(userState.userId, userState)
+    }
+    tracingBUserStatesMapped.foreach { userState =>
+      byUserId.get(userState.userId) match {
+        case Some(existingUserState) => byUserId.put(userState.userId, mergeTwoUserStates(existingUserState, userState))
+        case None                    => byUserId.put(userState.userId, userState)
+      }
+    }
+
+    byUserId.values.toSeq
+  }
+
+  private def mergeTwoUserStates(tracingAUserState: VolumeUserStateProto,
+                                 tracingBUserState: VolumeUserStateProto): VolumeUserStateProto =
+    VolumeUserStateProto(
+      userId = tracingAUserState.userId,
+      activeSegmentId = tracingAUserState.activeSegmentId,
+      segmentGroupIds = tracingAUserState.segmentGroupIds ++ tracingBUserState.segmentGroupIds,
+      segmentGroupExpandedStates = tracingAUserState.segmentGroupExpandedStates ++ tracingBUserState.segmentGroupExpandedStates,
+      boundingBoxIds = tracingAUserState.boundingBoxIds ++ tracingBUserState.boundingBoxIds,
+      boundingBoxVisibilities = tracingAUserState.boundingBoxVisibilities ++ tracingBUserState.boundingBoxVisibilities,
+      segmentIds = tracingAUserState.segmentIds ++ tracingBUserState.segmentIds,
+      segmentVisibilities = tracingAUserState.segmentVisibilities ++ tracingBUserState.segmentVisibilities
+    )
+
+  private def appylIdMappingsOnUserState(userState: VolumeUserStateProto,
+                                         groupMapping: FunctionalGroupMapping,
+                                         bboxIdMapA: Map[Int, Int]): VolumeUserStateProto =
+    applyBboxIdMapOnUserState(userState, bboxIdMapA).copy(
+      segmentGroupIds = userState.segmentGroupIds.map(groupMapping)
+    )
+
+  private def applyBboxIdMapOnUserState(userState: VolumeUserStateProto,
+                                        bboxIdMap: Map[Int, Int]): VolumeUserStateProto = {
+    val newIdsAndVisibilities = userState.boundingBoxIds.zip(userState.boundingBoxVisibilities).flatMap {
+      case (boundingBoxId, boundingBoxVisibility) =>
+        bboxIdMap.get(boundingBoxId) match {
+          case Some(newId) => Some((newId, boundingBoxVisibility))
+          case None        => None
+        }
+    }
+    userState.copy(
+      boundingBoxIds = newIdsAndVisibilities.map(_._1),
+      boundingBoxVisibilities = newIdsAndVisibilities.map(_._2)
+    )
   }
 
   private def combineLargestSegmentIdsByMaxDefined(aOpt: Option[Long], bOpt: Option[Long]): Option[Long] =

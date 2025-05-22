@@ -399,6 +399,8 @@ class VolumeTracingController @Inject()(
                 newAnnotationId = newAnnotationId,
                 newTracingId = newTracingId,
                 newVersion = 0,
+                ownerId = None,
+                requestingUserId = None,
                 editPosition = editPositionParsed,
                 editRotation = editRotationParsed,
                 boundingBox = boundingBoxParsed,

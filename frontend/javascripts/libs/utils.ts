@@ -1112,6 +1112,32 @@ export function diffObjects(
   return changes(object, base);
 }
 
+export function diffSets<T>(setA: Set<T>, setB: Set<T>) {
+  const aWithoutB = new Set<T>();
+  const bWithoutA = new Set<T>();
+  const intersection = new Set<T>();
+
+  for (const item of setA) {
+    if (setB.has(item)) {
+      intersection.add(item);
+    } else {
+      aWithoutB.add(item);
+    }
+  }
+
+  for (const item of setB) {
+    if (!setA.has(item)) {
+      bWithoutA.add(item);
+    }
+  }
+
+  return {
+    aWithoutB: aWithoutB,
+    bWithoutA: bWithoutA,
+    intersection: intersection,
+  };
+}
+
 export function fastDiffSetAndMap<T>(setA: Set<T>, mapB: Map<T, T>) {
   /*
    * This function was designed for a special use case within the mapping saga,
@@ -1307,4 +1333,14 @@ export function getPhraseFromCamelCaseString(stringInCamelCase: string): string 
     .split(/(?=[A-Z])/)
     .map((word) => capitalize(word.replace(/(^|\s)td/, "$13D")))
     .join(" ");
+}
+
+export function mapGroupsDeep<T extends { children: T[] }, R>(
+  groups: T[],
+  mapFn: (group: T, mappedChildren: R[]) => R,
+): R[] {
+  return groups.map((group) => {
+    const mappedChildren = mapGroupsDeep(group.children, mapFn);
+    return mapFn(group, mappedChildren);
+  });
 }

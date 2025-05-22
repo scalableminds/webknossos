@@ -21,7 +21,7 @@ import type { SkeletonTracingAction } from "viewer/model/actions/skeletontracing
 import {
   SkeletonTracingSaveRelevantActions,
   centerActiveNodeAction,
-  setTracingAction,
+  setSkeletonTracingAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import { setBusyBlockingInfoAction } from "viewer/model/actions/ui_actions";
 import {
@@ -586,7 +586,7 @@ function* applyStateOfStack(
     }
 
     const newTracing = stateToRestore.data;
-    yield* put(setTracingAction(newTracing));
+    yield* put(setSkeletonTracingAction(newTracing));
     yield* put(centerActiveNodeAction());
   } else if (stateToRestore.type === "volume") {
     const isMergerModeEnabled = yield* select(

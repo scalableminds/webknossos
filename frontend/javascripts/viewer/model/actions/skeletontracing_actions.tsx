@@ -64,7 +64,7 @@ type ShuffleAllTreeColorsAction = ReturnType<typeof shuffleAllTreeColorsAction>;
 type SetTreeTypeAction = ReturnType<typeof setTreeTypeAction>;
 type CreateCommentAction = ReturnType<typeof createCommentAction>;
 type DeleteCommentAction = ReturnType<typeof deleteCommentAction>;
-type SetTracingAction = ReturnType<typeof setTracingAction>;
+type SetSkeletonTracingAction = ReturnType<typeof setSkeletonTracingAction>;
 type SetTreeGroupsAction = ReturnType<typeof setTreeGroupsAction>;
 type SetTreeGroupAction = ReturnType<typeof setTreeGroupAction>;
 type SetShowSkeletonsAction = ReturnType<typeof setShowSkeletonsAction>;
@@ -130,7 +130,7 @@ export type SkeletonTracingAction =
   | ToggleInactiveTreesAction
   | ToggleTreeGroupAction
   | NoAction
-  | SetTracingAction
+  | SetSkeletonTracingAction
   | SetTreeGroupsAction
   | SetTreeGroupAction
   | SetShowSkeletonsAction
@@ -532,9 +532,9 @@ export const deleteCommentAction = (nodeId?: number, treeId?: number) =>
     treeId,
   }) as const;
 
-export const setTracingAction = (tracing: SkeletonTracing) =>
+export const setSkeletonTracingAction = (tracing: SkeletonTracing) =>
   ({
-    type: "SET_TRACING",
+    type: "SET_SKELETON_TRACING",
     tracing,
   }) as const;
 

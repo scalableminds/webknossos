@@ -38,12 +38,17 @@ import type {
   RevertToVersionUpdateAction,
   ServerUpdateAction,
   SplitAgglomerateUpdateAction,
+  UpdateActiveNodeUpdateAction,
+  UpdateActiveSegmentIdUpdateAction,
   UpdateAnnotationLayerNameUpdateAction,
   UpdateBucketUpdateAction,
+  UpdateCameraAnnotationAction,
+  UpdateLargestSegmentIdVolumeAction,
   UpdateMappingNameUpdateAction,
   UpdateMetadataOfAnnotationUpdateAction,
   UpdateNodeUpdateAction,
   UpdateSegmentGroupVisibilityVolumeAction,
+  UpdateSegmentGroupsExpandedStateUpdateAction,
   UpdateSegmentGroupsUpdateAction,
   UpdateSegmentUpdateAction,
   UpdateSegmentVisibilityVolumeAction,
@@ -51,6 +56,8 @@ import type {
   UpdateTreeGroupVisibilityUpdateAction,
   UpdateTreeUpdateAction,
   UpdateTreeVisibilityUpdateAction,
+  UpdateUserBoundingBoxVisibilityInSkeletonTracingUpdateAction,
+  UpdateUserBoundingBoxVisibilityInVolumeTracingUpdateAction,
 } from "viewer/model/sagas/update_actions";
 import type { StoreAnnotation } from "viewer/store";
 import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
@@ -323,6 +330,13 @@ const descriptionFns: Record<
   }),
   updateSkeletonTracing: (): Description => updateTracingDescription,
   updateVolumeTracing: (): Description => updateTracingDescription,
+  updateActiveSegmentId: (action: UpdateActiveSegmentIdUpdateAction): Description => {
+    return {
+      // todop
+      description: `Updated the active segment id to ${action.value.activeSegmentId} for user ?`,
+      icon: <EditOutlined />, // todop: better icon?
+    };
+  },
   addLayerToAnnotation: (action: AddLayerToAnnotationUpdateAction): Description => ({
     description: `Added the layer ${action.value.layerParameters.name} to the annotation.`,
     icon: <PlusOutlined />,
@@ -339,6 +353,58 @@ const descriptionFns: Record<
     return {
       description: `Updated the description of the annotation to: ${action.value.description.slice(0, 100) || ""}`,
       icon: <EditOutlined />,
+    };
+  },
+  updateActiveNode: (action: UpdateActiveNodeUpdateAction): Description => {
+    return {
+      // todop
+      description: `Updated the active node id to ${action.value.activeNode} for user ?`,
+      icon: <EditOutlined />, // todop: better icon?
+    };
+  },
+  updateCamera: (_action: UpdateCameraAnnotationAction): Description => {
+    return {
+      // todop:
+      description: "Updated camera position for user ?",
+      icon: <EditOutlined />, // todop: better icon?
+    };
+  },
+  updateLargestSegmentId: (action: UpdateLargestSegmentIdVolumeAction): Description => {
+    return {
+      description: `Set largest segment id to ${action.value.largestSegmentId}`,
+      icon: <EditOutlined />, // todop: better icon?
+    };
+  },
+  updateSegmentGroupsExpandedState: (
+    action: UpdateSegmentGroupsExpandedStateUpdateAction,
+  ): Description => {
+    return {
+      description: `${action.value.areExpanded ? "Expanded" : "Collapsed"} some segment groups.`,
+      icon: <EditOutlined />, // todop: better icon?
+    };
+  },
+  updateTreeGroupsExpandedState: (
+    action: UpdateSegmentGroupsExpandedStateUpdateAction,
+  ): Description => {
+    return {
+      description: `${action.value.areExpanded ? "Expanded" : "Collapsed"} some tree groups.`,
+      icon: <EditOutlined />, // todop: better icon?
+    };
+  },
+  updateUserBoundingBoxVisibilityInSkeletonTracing: (
+    _action: UpdateUserBoundingBoxVisibilityInSkeletonTracingUpdateAction,
+  ): Description => {
+    return {
+      description: "Changed visibility of a bounding box.",
+      icon: <EyeOutlined />,
+    };
+  },
+  updateUserBoundingBoxVisibilityInVolumeTracing: (
+    _action: UpdateUserBoundingBoxVisibilityInVolumeTracingUpdateAction,
+  ): Description => {
+    return {
+      description: "Changed visibility of a bounding box.",
+      icon: <EyeOutlined />,
     };
   },
 } as const;

@@ -159,8 +159,9 @@ export const tracing: ServerSkeletonTracing = {
     y: 73.99999869555745,
     z: 4.908922051072295e-7,
   },
-  additionalAxes: [],
   zoomLevel: 2,
+  additionalAxes: [],
+  userStates: [],
 };
 export const annotation: APIAnnotation = {
   description: "",
@@ -227,4 +228,5 @@ export const annotationProto: APITracingStoreAnnotation = {
       typ: AnnotationLayerEnum.Skeleton,
     },
   ],
+  userStates: [],
 };

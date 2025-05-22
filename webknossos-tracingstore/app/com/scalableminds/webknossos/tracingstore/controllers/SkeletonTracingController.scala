@@ -107,7 +107,9 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           val tracings: List[Option[SkeletonTracing]] = request.body
           for {
-            mergedTracing <- skeletonTracingService.merge(tracings.flatten, newVersion = 0L).toFox
+            mergedTracing <- skeletonTracingService
+              .merge(tracings.flatten, newVersion = 0L, requestingUserId = None)
+              .toFox
             processedTracing = skeletonTracingService.remapTooLargeTreeIds(mergedTracing)
             _ <- skeletonTracingService.saveSkeleton(newTracingId, processedTracing.version, processedTracing)
           } yield Ok
@@ -136,6 +138,8 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
                 sourceTracingId = tracingId,
                 sourceVersion = newestSourceVersion,
                 newTracingId = newTracingId,
+                ownerId = None,
+                requestingUserId = None,
                 newVersion = 0,
                 editPosition = editPositionParsed,
                 editRotation = editRotationParsed,

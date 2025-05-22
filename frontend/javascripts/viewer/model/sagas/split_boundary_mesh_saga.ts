@@ -108,7 +108,7 @@ export function* splitBoundaryMeshSaga(): Saga<void> {
       "SET_ACTIVE_TREE",
       "SET_ACTIVE_TREE_BY_NAME",
       "SET_NODE_POSITION",
-      "SET_TRACING",
+      "SET_SKELETON_TRACING",
       "SET_TREE_VISIBILITY",
       "TOGGLE_ALL_TREES",
       "TOGGLE_INACTIVE_TREES",

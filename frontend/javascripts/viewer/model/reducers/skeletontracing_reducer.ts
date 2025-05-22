@@ -16,6 +16,8 @@ import {
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import {
+  applyUserStateToGroups,
+  applyUserStateToTrees,
   convertServerAdditionalAxesToFrontEnd,
   convertServerBoundingBoxToFrontend,
   convertUserBoundingBoxesFromServerToFrontend,
@@ -48,15 +50,30 @@ import {
   additionallyExpandGroup,
   getNodeKey,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import { getUserStateForTracing } from "../accessors/annotation_accessor";
 
 function SkeletonTracingReducer(state: WebknossosState, action: Action): WebknossosState {
   switch (action.type) {
     case "INITIALIZE_SKELETONTRACING": {
-      const trees = createTreeMapFromTreeArray(action.tracing.trees);
-      let activeNodeId = action.tracing.activeNodeId;
+      const userState = getUserStateForTracing(
+        action.tracing,
+        state.activeUser,
+        state.annotation.owner,
+      );
+
+      // Perf idea: applyUserStateToTrees could theoretically happen
+      // within createTreeMapFromTreeArray. Performance would probably
+      // be better, but priority is unclear. Would make the code a bit
+      // less separated, though.
+      const trees = applyUserStateToTrees(
+        createTreeMapFromTreeArray(action.tracing.trees),
+        userState,
+      );
+      let activeNodeId = userState?.activeNodeId;
+
+      const treeGroups = applyUserStateToGroups(action.tracing.treeGroups || [], userState);
 
       let cachedMaxNodeId = _.max(_.flatMap(trees, (__) => __.nodes.map((node) => node.id)));
-
       cachedMaxNodeId = cachedMaxNodeId != null ? cachedMaxNodeId : Constants.MIN_NODE_ID - 1;
 
       let activeTreeId = null;
@@ -94,6 +111,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
 
       const userBoundingBoxes = convertUserBoundingBoxesFromServerToFrontend(
         action.tracing.userBoundingBoxes,
+        userState,
       );
       const skeletonTracing: SkeletonTracing = {
         createdTimestamp: action.tracing.createdTimestamp,
@@ -103,7 +121,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
         activeTreeId,
         activeGroupId: null,
         trees,
-        treeGroups: action.tracing.treeGroups || [],
+        treeGroups,
         tracingId: action.tracing.id,
         boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
         userBoundingBoxes,
@@ -456,7 +474,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
       });
     }
 
-    case "SET_TRACING": {
+    case "SET_SKELETON_TRACING": {
       return update(state, {
         annotation: {
           skeleton: {

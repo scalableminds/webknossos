@@ -59,18 +59,7 @@ describe("Saga Integration Tests", () => {
       },
     });
     const expectedSaveQueue = createSaveQueueFromUpdateActions(
-      [
-        [
-          UpdateActions.updateTree(treeWithCorrectName, skeletonTracing.tracingId),
-          UpdateActions.updateSkeletonTracing(
-            enforceSkeletonTracing(Store.getState().annotation),
-            [1, 2, 3],
-            [],
-            [0, 0, 0],
-            2,
-          ),
-        ],
-      ],
+      [[UpdateActions.updateTree(treeWithCorrectName, skeletonTracing.tracingId)]],
       TIMESTAMP,
       getStats(state.annotation) || undefined,
     );
@@ -111,7 +100,7 @@ describe("Saga Integration Tests", () => {
   });
 
   it("Save actions should be chunked after compacting (3/3)", () => {
-    const nodeCount = 20000;
+    const nodeCount = 20_000;
     // Test that a tree split is detected even when the involved node count is above the chunk limit
     const trees = generateDummyTrees(1, nodeCount);
 
@@ -125,8 +114,8 @@ describe("Saga Integration Tests", () => {
     const skeletonSaveQueue = Store.getState().save.queue;
 
     // There should only be one chunk
-    expect(skeletonSaveQueue.length).toBe(1);
-    expect(skeletonSaveQueue[0].actions.length).toBeLessThan(MAXIMUM_ACTION_COUNT_PER_BATCH);
-    expect(skeletonSaveQueue[0].actions[1].name).toBe("moveTreeComponent");
+    expect(skeletonSaveQueue.length).toBe(2);
+    expect(skeletonSaveQueue[1].actions.length).toBeLessThan(MAXIMUM_ACTION_COUNT_PER_BATCH);
+    expect(skeletonSaveQueue[1].actions[1].name).toBe("moveTreeComponent");
   });
 });

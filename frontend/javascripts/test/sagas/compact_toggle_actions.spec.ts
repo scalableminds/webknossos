@@ -1,7 +1,6 @@
 import _ from "lodash";
 import { describe, it, expect } from "vitest";
 import type {
-  Flycam,
   WebknossosState,
   Segment,
   SegmentGroup,
@@ -82,7 +81,6 @@ const genericGroups: TreeGroup[] = [
     children: [],
   },
 ];
-const flycamMock = {} as any as Flycam;
 const tracingId = "someTracingId";
 const createStateWithTrees = (trees: Tree[], genericGroups: TreeGroup[]): WebknossosState => ({
   ...defaultState,
@@ -175,8 +173,6 @@ function testSkeletonDiffing(prevState: WebknossosState, nextState: WebknossosSt
         diffSkeletonTracing(
           enforceSkeletonTracing(prevState.annotation),
           enforceSkeletonTracing(nextState.annotation),
-          flycamMock,
-          flycamMock,
         ),
       ),
     ),
@@ -191,12 +187,7 @@ function testVolumeDiffing(prevState: WebknossosState, nextState: WebknossosStat
   return withoutUpdateSegment(
     withoutUpdateTracing(
       Array.from(
-        diffVolumeTracing(
-          prevState.annotation.volumes[0],
-          nextState.annotation.volumes[0],
-          flycamMock,
-          flycamMock,
-        ),
+        diffVolumeTracing(prevState.annotation.volumes[0], nextState.annotation.volumes[0]),
       ),
     ),
   );

@@ -534,7 +534,7 @@ function AlignmentTab() {
 
 function ShouldUseTreesFormItem() {
   const annotation = useWkSelector((state) => state.annotation);
-  const trees = annotation.skeleton ? Object.values(annotation.skeleton.trees) : [];
+  const trees = annotation.skeleton ? Array.from(annotation.skeleton.trees.values()) : [];
   return (
     <div>
       <Form.Item

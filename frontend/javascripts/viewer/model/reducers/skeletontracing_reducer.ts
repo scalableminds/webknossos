@@ -375,7 +375,7 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
         return state;
       }
 
-      const newTrees = skeletonTracing.trees.set(tree.treeId, { ...tree, color: color });
+      const newTrees = skeletonTracing.trees.set(tree.treeId, { ...tree, color });
 
       return update(state, {
         annotation: {

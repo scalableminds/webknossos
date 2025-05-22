@@ -28,7 +28,7 @@ import type { APIDataset, APIMeshFileInfo, APISegmentationLayer } from "types/ap
 import type { AdditionalCoordinate } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3, Vector4 } from "viewer/constants";
-import { MappingStatusEnum } from "viewer/constants";
+import Constants, { MappingStatusEnum } from "viewer/constants";
 import CustomLOD from "viewer/controller/custom_lod";
 import {
   type BufferGeometryWithInfo,
@@ -343,7 +343,7 @@ function* loadFullAdHocMesh(
   removeExistingMesh: boolean,
 ): Saga<void> {
   let isInitialRequest = true;
-  const { mappingName, mappingType } = meshExtraInfo;
+  const { mappingName, mappingType, opacity } = meshExtraInfo;
   const clippedPosition = clipPositionToCubeBoundary(position, zoomStep, magInfo);
   yield* put(
     addAdHocMeshAction(
@@ -353,6 +353,7 @@ function* loadFullAdHocMesh(
       additionalCoordinates,
       mappingName,
       mappingType,
+      opacity || Constants.DEFAULT_MESH_OPACITY,
     ),
   );
   yield* put(startedLoadingMeshAction(layer.name, segmentId));
@@ -527,6 +528,8 @@ function* maybeLoadMeshChunk(
         segmentMeshController.removeMeshById(segmentId, layer.name);
       }
 
+      const opacity = meshExtraInfo.opacity || Constants.DEFAULT_MESH_OPACITY;
+
       // We await addMeshFromVerticesAsync here, because the mesh saga will remove
       // an ad-hoc loaded mesh immediately if it was "empty". Since the check is
       // done by looking at the scene, we await the population of the scene.
@@ -538,6 +541,7 @@ function* maybeLoadMeshChunk(
         vertices,
         segmentId,
         layer.name,
+        opacity,
         additionalCoordinates,
       );
       return neighbors.map((neighbor) =>
@@ -621,6 +625,7 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
         meshInfo.seedPosition,
         meshInfo.seedAdditionalCoordinates,
         meshInfo.meshFileName,
+        meshInfo.opacity,
         layerName,
       ),
     );
@@ -630,7 +635,14 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
     if (threeDMap == null) {
       return;
     }
-    yield* call(_refreshMeshWithMap, segmentId, threeDMap, layerName, additionalCoordinates);
+    yield* call(
+      _refreshMeshWithMap,
+      segmentId,
+      threeDMap,
+      layerName,
+      additionalCoordinates,
+      meshInfo.opacity,
+    );
   }
 }
 
@@ -639,6 +651,7 @@ function* _refreshMeshWithMap(
   threeDMap: ThreeDMap<boolean>,
   layerName: string,
   additionalCoordinates: AdditionalCoordinate[] | null,
+  opacity: number = Constants.DEFAULT_MESH_OPACITY,
 ): Saga<void> {
   const meshInfo = yield* select((state) =>
     getMeshInfoForSegment(state, additionalCoordinates, layerName, segmentId),
@@ -679,6 +692,7 @@ function* _refreshMeshWithMap(
       {
         mappingName,
         mappingType,
+        opacity,
       },
     );
     shouldBeRemoved = false;
@@ -745,7 +759,8 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
 }
 
 function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
-  const { segmentId, seedPosition, seedAdditionalCoordinates, meshFileName, layerName } = action;
+  const { segmentId, seedPosition, seedAdditionalCoordinates, meshFileName, layerName, opacity } =
+    action;
   const layer = yield* select((state) =>
     layerName != null
       ? getSegmentationLayerByName(state.dataset, layerName)
@@ -768,6 +783,7 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
       seedAdditionalCoordinates,
       meshFileName,
       layer,
+      opacity || Constants.DEFAULT_MESH_OPACITY,
     ),
     cancel: take(
       ((otherAction: Action) =>
@@ -786,6 +802,7 @@ function* loadPrecomputedMeshForSegmentId(
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
   segmentationLayer: APISegmentationLayer,
+  opacity: number,
 ): Saga<void> {
   const layerName = segmentationLayer.name;
   const mappingName = yield* call(getMappingName, segmentationLayer);
@@ -797,6 +814,7 @@ function* loadPrecomputedMeshForSegmentId(
       seedAdditionalCoordinates,
       meshFileName,
       mappingName,
+      opacity,
     ),
   );
   yield* put(startedLoadingMeshAction(layerName, segmentId));
@@ -864,6 +882,7 @@ function* loadPrecomputedMeshForSegmentId(
       (lod: number) => extractScaleFromMatrix(lods[lod].transform),
       chunkScale,
       additionalCoordinates,
+      opacity,
     );
   }
 
@@ -972,6 +991,7 @@ function* loadPrecomputedMeshesInChunksForLod(
   getGlobalScale: (lod: number) => Vector3 | null,
   chunkScale: Vector3 | null,
   additionalCoordinates: AdditionalCoordinate[] | null,
+  opacity: number,
 ) {
   const { segmentMeshController } = getSceneController();
   const loader = getDracoLoader();
@@ -1047,6 +1067,7 @@ function* loadPrecomputedMeshesInChunksForLod(
               lod,
               layerName,
               additionalCoordinates,
+              opacity,
               false,
             );
 
@@ -1114,6 +1135,7 @@ function* loadPrecomputedMeshesInChunksForLod(
     lod,
     layerName,
     additionalCoordinates,
+    opacity,
     true,
   );
 }

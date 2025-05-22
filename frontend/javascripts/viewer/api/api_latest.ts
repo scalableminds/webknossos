@@ -2521,6 +2521,7 @@ class DataApi {
         seedPosition,
         seedAdditionalCoordinates,
         meshFileName,
+        Constants.DEFAULT_MESH_OPACITY,
         effectiveLayerName,
       ),
     );

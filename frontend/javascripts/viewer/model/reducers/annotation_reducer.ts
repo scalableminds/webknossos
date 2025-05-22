@@ -353,6 +353,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         seedAdditionalCoordinates,
         mappingName,
         mappingType,
+        opacity,
       } = action;
       const meshInfo: MeshInformation = {
         segmentId: segmentId,
@@ -361,7 +362,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         isLoading: false,
         isVisible: true,
         isPrecomputed: false,
-        opacity: Constants.DEFAULT_MESH_OPACITY,
+        opacity,
         mappingName,
         mappingType,
       };
@@ -398,6 +399,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         seedAdditionalCoordinates,
         meshFileName,
         mappingName,
+        opacity,
       } = action;
       const meshInfo: MeshInformation = {
         segmentId: segmentId,
@@ -406,7 +408,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
         isLoading: false,
         isVisible: true,
         isPrecomputed: true,
-        opacity: Constants.DEFAULT_MESH_OPACITY,
+        opacity: opacity || Constants.DEFAULT_MESH_OPACITY,
         meshFileName,
         mappingName,
       };

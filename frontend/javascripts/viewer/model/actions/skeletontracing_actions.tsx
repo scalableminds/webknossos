@@ -16,6 +16,7 @@ import type { MutableTreeMap, Tree, TreeGroup } from "viewer/model/types/tree_ty
 import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import RemoveTreeModal from "viewer/view/remove_tree_modal";
+import type { ApplicableSkeletonUpdateAction } from "../sagas/update_actions";
 
 export type InitializeSkeletonTracingAction = ReturnType<typeof initializeSkeletonTracingAction>;
 export type CreateNodeAction = ReturnType<typeof createNodeAction>;
@@ -65,6 +66,9 @@ type SetTreeGroupAction = ReturnType<typeof setTreeGroupAction>;
 type SetShowSkeletonsAction = ReturnType<typeof setShowSkeletonsAction>;
 type SetMergerModeEnabledAction = ReturnType<typeof setMergerModeEnabledAction>;
 type UpdateNavigationListAction = ReturnType<typeof updateNavigationListAction>;
+type ApplySkeletonUpdateActionsFromServerAction = ReturnType<
+  typeof applySkeletonUpdateActionsFromServerAction
+>;
 export type LoadAgglomerateSkeletonAction = ReturnType<typeof loadAgglomerateSkeletonAction>;
 type NoAction = ReturnType<typeof noAction>;
 
@@ -131,7 +135,8 @@ export type SkeletonTracingAction =
   | SetShowSkeletonsAction
   | SetMergerModeEnabledAction
   | UpdateNavigationListAction
-  | LoadAgglomerateSkeletonAction;
+  | LoadAgglomerateSkeletonAction
+  | ApplySkeletonUpdateActionsFromServerAction;
 
 export const SkeletonTracingSaveRelevantActions = [
   "INITIALIZE_SKELETONTRACING",
@@ -173,6 +178,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "SET_TREE_COLOR",
   "BATCH_UPDATE_GROUPS_AND_TREES", // Composited actions, only dispatched using `batchActions`
   ...AllUserBoundingBoxActions,
+  "APPLY_UPDATE_ACTIONS_FROM_SERVER",
 ];
 
 const noAction = () =>
@@ -637,6 +643,18 @@ export const updateNavigationListAction = (list: Array<number>, activeIndex: num
     type: "UPDATE_NAVIGATION_LIST",
     list,
     activeIndex,
+  }) as const;
+
+export const applySkeletonUpdateActionsFromServerAction = (
+  actions: Array<ApplicableSkeletonUpdateAction>,
+  // version: number,
+  // author: string,
+) =>
+  ({
+    type: "APPLY_SKELETON_UPDATE_ACTIONS_FROM_SERVER",
+    actions,
+    // version,
+    // author,
   }) as const;
 
 export const loadAgglomerateSkeletonAction = (

@@ -8,6 +8,7 @@ import type { QuickSelectGeometry } from "viewer/geometries/helper_geometries";
 import { AllUserBoundingBoxActions } from "viewer/model/actions/annotation_actions";
 import type { NumberLike, Segment, SegmentGroup, SegmentMap } from "viewer/store";
 import type BucketSnapshot from "../bucket_data_handling/bucket_snapshot";
+import type { ApplicableVolumeUpdateAction } from "../sagas/update_actions";
 
 export type InitializeVolumeTracingAction = ReturnType<typeof initializeVolumeTracingAction>;
 export type InitializeEditableMappingAction = ReturnType<typeof initializeEditableMappingAction>;
@@ -52,6 +53,9 @@ export type SetHasEditableMappingAction = ReturnType<typeof setHasEditableMappin
 export type SetMappingIsLockedAction = ReturnType<typeof setMappingIsLockedAction>;
 export type SetVolumeBucketDataHasChangedAction = ReturnType<
   typeof setVolumeBucketDataHasChangedAction
+>;
+export type ApplyVolumeUpdateActionsFromServerAction = ReturnType<
+  typeof applyVolumeUpdateActionsFromServerAction
 >;
 
 export type ComputeQuickSelectForRectAction = ReturnType<typeof computeQuickSelectForRectAction>;
@@ -111,7 +115,8 @@ export type VolumeTracingAction =
   | CancelQuickSelectAction
   | ConfirmQuickSelectAction
   | SetVolumeBucketDataHasChangedAction
-  | BatchUpdateGroupsAndSegmentsAction;
+  | BatchUpdateGroupsAndSegmentsAction
+  | ApplyVolumeUpdateActionsFromServerAction;
 
 export const VolumeTracingSaveRelevantActions = [
   "CREATE_CELL",
@@ -133,6 +138,7 @@ export const VolumeTracingSaveRelevantActions = [
   "TOGGLE_SEGMENT_GROUP",
   "TOGGLE_ALL_SEGMENTS",
   "SET_HIDE_UNREGISTERED_SEGMENTS",
+  "APPLY_VOLUME_UPDATE_ACTIONS_FROM_SERVER",
 ];
 
 export const VolumeTracingUndoRelevantActions = ["START_EDITING", "COPY_SEGMENTATION_LAYER"];
@@ -470,4 +476,14 @@ export const setVolumeBucketDataHasChangedAction = (tracingId: string) =>
   ({
     type: "SET_VOLUME_BUCKET_DATA_HAS_CHANGED",
     tracingId,
+  }) as const;
+
+export const applyVolumeUpdateActionsFromServerAction = (
+  actions: Array<ApplicableVolumeUpdateAction>,
+) =>
+  ({
+    type: "APPLY_VOLUME_UPDATE_ACTIONS_FROM_SERVER",
+    actions,
+    // version,
+    // author,
   }) as const;

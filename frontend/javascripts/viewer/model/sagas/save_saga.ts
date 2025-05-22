@@ -1,4 +1,8 @@
-import { getNewestVersionForAnnotation, sendSaveRequestWithToken } from "admin/rest_api";
+import {
+  getNewestVersionForAnnotation,
+  sendSaveRequestWithToken,
+  getUpdateActionLog,
+} from "admin/rest_api";
 import Date from "libs/date";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
@@ -9,6 +13,7 @@ import memoizeOne from "memoize-one";
 import messages from "messages";
 import { buffers } from "redux-saga";
 import { actionChannel, call, delay, fork, put, race, take, takeEvery } from "typed-redux-saga";
+import type { APIUpdateActionBatch } from "types/api_types";
 import { ControlModeEnum } from "viewer/constants";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import { selectTracing } from "viewer/model/accessors/tracing_accessor";
@@ -22,15 +27,22 @@ import {
   shiftSaveQueueAction,
 } from "viewer/model/actions/save_actions";
 import type { InitializeSkeletonTracingAction } from "viewer/model/actions/skeletontracing_actions";
-import { SkeletonTracingSaveRelevantActions } from "viewer/model/actions/skeletontracing_actions";
+import {
+  SkeletonTracingSaveRelevantActions,
+  applySkeletonUpdateActionsFromServerAction,
+} from "viewer/model/actions/skeletontracing_actions";
 import { ViewModeSaveRelevantActions } from "viewer/model/actions/view_mode_actions";
 import {
+  applyVolumeUpdateActionsFromServerAction,
   type InitializeVolumeTracingAction,
   VolumeTracingSaveRelevantActions,
 } from "viewer/model/actions/volumetracing_actions";
 import compactSaveQueue from "viewer/model/helpers/compaction/compact_save_queue";
 import compactUpdateActions from "viewer/model/helpers/compaction/compact_update_actions";
-import { globalPositionToBucketPosition } from "viewer/model/helpers/position_converter";
+import {
+  globalPositionToBucketPosition,
+  globalPositionToBucketPositionWithMag,
+} from "viewer/model/helpers/position_converter";
 import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import { ensureWkReady } from "viewer/model/sagas/ready_sagas";
@@ -499,9 +511,10 @@ export function* setupSavingForTracingType(
   }
 }
 
-const VERSION_POLL_INTERVAL_COLLAB = 10 * 1000;
-const VERSION_POLL_INTERVAL_READ_ONLY = 60 * 1000;
-const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 30 * 1000;
+// todop: restore to 10, 60, 30 ?
+const VERSION_POLL_INTERVAL_COLLAB = 1 * 1000;
+const VERSION_POLL_INTERVAL_READ_ONLY = 1 * 1000;
+const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 1 * 1000;
 
 function* watchForSaveConflicts(): Saga<never> {
   function* checkForNewVersion() {
@@ -558,9 +571,32 @@ function* watchForSaveConflicts(): Saga<never> {
     });
 
     const toastKey = "save_conflicts_warning";
-    if (versionOnServer > versionOnClient) {
+    const newerVersionCount = versionOnServer - versionOnClient;
+    if (newerVersionCount > 0) {
       // The latest version on the server is greater than the most-recently
       // stored version.
+
+      const { url: tracingStoreUrl } = yield* select((state) => state.annotation.tracingStore);
+
+      const newerActions = yield* call(
+        getUpdateActionLog,
+        tracingStoreUrl,
+        annotationId,
+        versionOnClient + 1,
+      );
+
+      if (newerActions.length !== newerVersionCount) {
+        // todop: maybe default to showing the "please reload" toast
+        // as it's not critical here?
+        throw new Error("unexpected error");
+      }
+
+      console.log("newerActions", newerActions);
+
+      if (yield* canActionsBeIncorporated(newerActions)) {
+        yield* put(setVersionNumberAction(versionOnServer));
+        return;
+      }
 
       const saveQueue = yield* select((state) => state.save.queue);
 
@@ -617,8 +653,121 @@ function* watchForSaveConflicts(): Saga<never> {
       console.warn(exception);
       // @ts-ignore
       ErrorHandling.notify(exception);
+      // todop: remove again?
+      Toast.error(exception);
     }
   }
+}
+
+function* canActionsBeIncorporated(newerActions: APIUpdateActionBatch[]): Saga<boolean> {
+  for (const actionBatch of newerActions) {
+    for (const action of actionBatch.value) {
+      switch (action.name) {
+        // Updates to user-specific state can be ignored:
+        //   Camera
+        case "updateCamera":
+        case "updateTdCamera":
+        //   Active items
+        case "updateActiveNode":
+        case "updateActiveSegmentId":
+        //   Visibilities
+        case "updateTreeVisibility":
+        case "updateTreeGroupVisibility":
+        case "updateSegmentVisibility":
+        case "updateSegmentGroupVisibility":
+        case "updateUserBoundingBoxVisibilityInSkeletonTracing":
+        case "updateUserBoundingBoxVisibilityInVolumeTracing":
+        //   Group expansion
+        case "updateTreeGroupsExpandedState":
+        case "updateSegmentGroupsExpandedState": {
+          break;
+        }
+        case "createNode":
+        case "createEdge": {
+          yield* put(applySkeletonUpdateActionsFromServerAction([action]));
+          break;
+        }
+        case "updateBucket": {
+          const { value } = action;
+          const cube = Model.getCubeByLayerName(value.actionTracingId);
+
+          const dataLayer = Model.getLayerByName(value.actionTracingId);
+          const bucketAddress = globalPositionToBucketPositionWithMag(
+            value.position,
+            value.mag,
+            value.additionalCoordinates,
+          );
+
+          const bucket = cube.getBucket(bucketAddress);
+          if (bucket != null && bucket.type !== "null") {
+            cube.collectBucket(bucket);
+            dataLayer.layerRenderingManager.refresh();
+          }
+          break;
+        }
+        case "deleteSegmentData": {
+          const { value } = action;
+          const { actionTracingId, id } = value;
+          const cube = Model.getCubeByLayerName(actionTracingId);
+          const dataLayer = Model.getLayerByName(actionTracingId);
+
+          cube.collectBucketsIf((bucket) => bucket.containsValue(id));
+          dataLayer.layerRenderingManager.refresh();
+          break;
+        }
+        case "updateLargestSegmentId":
+        case "createSegment":
+        case "deleteSegment":
+        case "updateSegment": {
+          yield* put(applyVolumeUpdateActionsFromServerAction([action]));
+          break;
+        }
+
+        // High-level annotation specific
+        case "addLayerToAnnotation":
+        case "addSegmentIndex":
+        case "createTracing":
+        case "deleteLayerFromAnnotation":
+        case "importVolumeTracing":
+        case "revertToVersion":
+        case "updateLayerMetadata":
+        case "updateMappingName":
+        case "updateMetadataOfAnnotation":
+
+        // Volume
+        case "removeFallbackLayer":
+        case "updateSegmentGroups":
+        case "updateUserBoundingBoxesInVolumeTracing":
+
+        // Proofreading
+        case "mergeAgglomerate":
+        case "splitAgglomerate":
+
+        // Skeleton
+        case "createTree":
+        case "deleteEdge":
+        case "deleteNode":
+        case "deleteTree":
+        case "mergeTree": // todop: is this really skeleton?
+        case "updateSkeletonTracing":
+        case "updateTree":
+        case "updateTreeEdgesVisibility":
+        case "updateTreeGroups":
+        case "moveTreeComponent":
+        case "updateNode":
+        case "updateUserBoundingBoxesInSkeletonTracing":
+
+        case "updateVolumeTracing": {
+          console.log("cannot apply action", action.name);
+          return false;
+        }
+        default: {
+          action satisfies never;
+        }
+      }
+    }
+  }
+  return true;
 }
 
 export default [saveTracingAsync, watchForSaveConflicts];

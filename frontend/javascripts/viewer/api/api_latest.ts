@@ -379,8 +379,9 @@ class TracingApi {
       skipCenteringAnimationInThirdDimension?: boolean;
     },
   ) {
-    const globalPosition =
-      "rounded" in position ? position : { rounded: position, floating: position };
+    const globalPosition = Array.isArray(position)
+      ? { rounded: Utils.map3(Math.round, position), floating: position }
+      : position;
     assertSkeleton(Store.getState().annotation);
     const defaultOptions = getOptionsForCreateSkeletonNode();
     createSkeletonNode(

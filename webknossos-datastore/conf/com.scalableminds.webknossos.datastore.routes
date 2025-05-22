@@ -3,6 +3,7 @@
 
 # Health endpoint
 GET           /health                                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.Application.health
+GET           /testAgglomerateZarr                                                                                                                    @com.scalableminds.webknossos.datastore.controllers.Application.testAgglomerateZarr
 
 # Read image data
 POST          /datasets/:organizationId/:datasetDirectoryName/layers/:dataLayerName/data                                                              @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestViaWebknossos(organizationId: String, datasetDirectoryName: String, dataLayerName: String)

@@ -32,6 +32,14 @@ case class AgglomerateFileKey(
       .resolve(layerName)
       .resolve(agglomerateDir)
       .resolve(s"$mappingName.$agglomerateFileExtension")
+
+  def zarrGroupPath(dataBaseDir: Path, agglomerateDir: String): Path =
+    dataBaseDir
+      .resolve(organizationId)
+      .resolve(datasetDirectoryName)
+      .resolve(layerName)
+      .resolve(agglomerateDir)
+      .resolve(mappingName)
 }
 
 object AgglomerateFileKey {

@@ -1,30 +1,102 @@
 package com.scalableminds.webknossos.datastore.services
 
 import ch.systemsx.cisd.hdf5._
+import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.time.Instant
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, SkeletonTracing, Tree, TreeTypeProto}
+import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, SkeletonTracingDefaults}
-import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Failure, Full}
 import net.liftweb.common.Box.tryo
 import org.apache.commons.io.FilenameUtils
+import ucar.ma2.{Array => MultiArray}
 
+import java.net.URI
 import java.nio._
 import java.nio.file.{Files, Paths}
 import javax.inject.Inject
 import scala.annotation.tailrec
 import scala.collection.compat.immutable.ArraySeq
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
-class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter with LazyLogging {
+class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService: DataVaultService)
+    extends DataConverter
+    with LazyLogging {
+  private val dataBaseDir = Paths.get(config.Datastore.baseDirectory)
+  private val agglomerateDir = "agglomerates"
+  private val agglomerateFileExtension = ""
+
+  private lazy val sharedChunkContentsCache: AlfuCache[String, MultiArray] = {
+    // Used by DatasetArray-based datasets. Measure item weight in kilobytes because the weigher can only return int, not long
+
+    val maxSizeKiloBytes = Math.floor(config.Datastore.Cache.ImageArrayChunks.maxSizeBytes.toDouble / 1000.0).toInt
+
+    def cacheWeight(key: String, arrayBox: Box[MultiArray]): Int =
+      arrayBox match {
+        case Full(array) =>
+          (array.getSizeBytes / 1000L).toInt
+        case _ => 0
+      }
+
+    AlfuCache(maxSizeKiloBytes, weighFn = Some(cacheWeight))
+  }
+
+  def readFromSegmentToAgglomerate(implicit ec: ExecutionContext): Fox[ucar.ma2.Array] = {
+    val zarrGroupPath =
+      dataBaseDir
+        .resolve("sample_organization/test-agglomerate-file-zarr/segmentation/agglomerates/agglomerate_view_55")
+        .toAbsolutePath
+    for {
+      groupVaultPath <- dataVaultService.getVaultPath(RemoteSourceDescriptor(new URI(s"file://$zarrGroupPath"), None))
+      segmentToAgglomeratePath = groupVaultPath / "segment_to_agglomerate"
+      zarrArray <- Zarr3Array.open(segmentToAgglomeratePath,
+                                   DataSourceId("zarr", "test"),
+                                   "layer",
+                                   None,
+                                   None,
+                                   None,
+                                   sharedChunkContentsCache)(ec, TokenContext(None))
+      read <- zarrArray.readAsMultiArray(Array(10), Array(2))(ec, TokenContext(None))
+      _ = logger.info(s"read ${read.getSize} bytes from agglomerate file")
+    } yield read
+  }
+
+  def applyAgglomerateHdf5(request: DataServiceDataRequest)(data: Array[Byte])(
+      implicit ec: ExecutionContext): Fox[Array[Byte]] = {
+
+    val agglomerateFileKey = AgglomerateFileKey.fromDataRequest(request)
+
+    val zarrGroupPath = agglomerateFileKey.zarrGroupPath(dataBaseDir, agglomerateDir).toAbsolutePath
+
+    for {
+      _ <- readFromSegmentToAgglomerate
+    } yield data
+
+  }
+
+}
+
+class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter with LazyLogging {
+  // TODO
+}
+
+class AgglomerateService @Inject()(config: DataStoreConfig, zarrAgglomerateService: ZarrAgglomerateService)
+    extends DataConverter
+    with LazyLogging
+    with FoxImplicits {
   private val agglomerateDir = "agglomerates"
   private val agglomerateFileExtension = "hdf5"
   private val datasetName = "/segment_to_agglomerate"
@@ -44,10 +116,16 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
       }
       .toOption
       .getOrElse(Nil)
-      .toSet
+      .toSet ++ Set("agglomerate_view_5") // TODO
   }
 
-  def applyAgglomerate(request: DataServiceDataRequest)(data: Array[Byte]): Box[Array[Byte]] = tryo {
+  def applyAgglomerate(request: DataServiceDataRequest)(data: Array[Byte])(
+      implicit ec: ExecutionContext): Fox[Array[Byte]] =
+    if (true) {
+      zarrAgglomerateService.applyAgglomerateHdf5(request)(data)
+    } else applyAgglomerateHdf5(request)(data).toFox
+
+  private def applyAgglomerateHdf5(request: DataServiceDataRequest)(data: Array[Byte]): Box[Array[Byte]] = tryo {
 
     val agglomerateFileKey = AgglomerateFileKey.fromDataRequest(request)
 

@@ -148,7 +148,7 @@ class BinaryDataService(val dataBaseDir: Path,
         convertIfNecessary(
           request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation && request.cuboid.mag.maxDim <= MaxMagForAgglomerateMapping,
           clippedData,
-          data => agglomerateService.applyAgglomerate(request)(data).toFox,
+          data => agglomerateService.applyAgglomerate(request)(data),
           request
         )
       }.toFox.fillEmpty(Fox.successful(clippedData)) ?~> "Failed to apply agglomerate mapping"

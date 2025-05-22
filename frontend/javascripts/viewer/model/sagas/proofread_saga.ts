@@ -396,16 +396,12 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
         volumeTracingId,
       ),
     );
-    const mergedMapping = yield* call(
-      mergeAgglomeratesInMapping,
+    yield* call(
+      updateMappingWithMerge,
+      volumeTracingId,
       activeMapping,
       targetAgglomerateId,
       sourceAgglomerateId,
-    );
-    yield* put(
-      setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {
-        mapping: mergedMapping,
-      }),
     );
   } else if (action.type === "DELETE_EDGE") {
     if (sourceAgglomerateId !== targetAgglomerateId) {
@@ -741,17 +737,12 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       sourceInfo.unmappedId,
       targetInfo.unmappedId,
     );
-    const mergedMapping = yield* call(
-      mergeAgglomeratesInMapping,
+    yield* call(
+      updateMappingWithMerge,
+      volumeTracingId,
       activeMapping,
       targetAgglomerateId,
       sourceAgglomerateId,
-    );
-
-    yield* put(
-      setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {
-        mapping: mergedMapping,
-      }),
     );
   } else if (action.type === "MIN_CUT_AGGLOMERATE") {
     if (sourceInfo.unmappedId === targetInfo.unmappedId) {
@@ -1249,10 +1240,9 @@ function* getPositionForSegmentId(volumeTracing: VolumeTracing, segmentId: numbe
   return position;
 }
 
-function* splitAgglomerateInMapping(
+function getSegmentIdsThatMapToAgglomerate(
   activeMapping: ActiveMappingInfo,
   sourceAgglomerateId: number,
-  volumeTracingId: string,
 ) {
   // Obtain all segment ids that map to sourceAgglomerateId
   const mappingEntries = Array.from(activeMapping.mapping as NumberLikeMap);
@@ -1264,10 +1254,17 @@ function* splitAgglomerateInMapping(
 
   // If the mapping contains BigInts, we need a BigInt for the filtering
   const comparableSourceAgglomerateId = adaptToType(sourceAgglomerateId);
-  const splitSegmentIds = mappingEntries
+  return mappingEntries
     .filter(([_segmentId, agglomerateId]) => agglomerateId === comparableSourceAgglomerateId)
     .map(([segmentId, _agglomerateId]) => segmentId);
+}
 
+function* splitAgglomerateInMapping(
+  activeMapping: ActiveMappingInfo,
+  sourceAgglomerateId: number,
+  volumeTracingId: string,
+) {
+  const splitSegmentIds = getSegmentIdsThatMapToAgglomerate(activeMapping, sourceAgglomerateId);
   const annotationId = yield* select((state) => state.annotation.annotationId);
   const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
   // Ask the server to map the (split) segment ids. This creates a partial mapping
@@ -1312,6 +1309,61 @@ function mergeAgglomeratesInMapping(
       value === typedTargetAgglomerateId ? [key, typedSourceAgglomerateId] : [key, value],
     ),
   ) as Mapping;
+}
+
+export function* updateMappingWithMerge(
+  volumeTracingId: string,
+  activeMapping: ActiveMappingInfo,
+  targetAgglomerateId: number,
+  sourceAgglomerateId: number,
+) {
+  const mergedMapping = yield* call(
+    mergeAgglomeratesInMapping,
+    activeMapping,
+    targetAgglomerateId,
+    sourceAgglomerateId,
+  );
+  yield* put(
+    setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {
+      mapping: mergedMapping,
+    }),
+  );
+}
+
+export function* updateMappingWithOmittedSplitPartners(
+  volumeTracingId: string,
+  activeMapping: ActiveMappingInfo,
+  sourceAgglomerateId: number,
+) {
+  /*
+   * sourceAgglomerateId was split. All segment ids that were mapped to sourceAgglomerateId,
+   * are removed from the activeMapping by this function.
+   * The return value of this function is the list of segment ids that were removed.
+   */
+
+  const mappingEntries = Array.from(activeMapping.mapping as NumberLikeMap);
+
+  const adaptToType =
+    mappingEntries.length > 0 && isBigInt(mappingEntries[0][0])
+      ? (el: number) => BigInt(el)
+      : (el: number) => el;
+  // If the mapping contains BigInts, we need a BigInt for the filtering
+  const comparableSourceAgglomerateId = adaptToType(sourceAgglomerateId);
+
+  const newMapping = new Map();
+
+  for (const entry of mappingEntries) {
+    const [key, value] = entry;
+    if (value !== comparableSourceAgglomerateId) {
+      newMapping.set(key, value);
+    }
+  }
+
+  yield* put(
+    setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {
+      mapping: newMapping,
+    }),
+  );
 }
 
 function* gatherInfoForOperation(

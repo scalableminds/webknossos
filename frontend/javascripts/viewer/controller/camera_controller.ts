@@ -163,13 +163,13 @@ class CameraController extends React.PureComponent<Props> {
     const gRot = getRotationInRadian(state.flycam);
     // Copies are needed because multiply modifies the matrix in-place.
     const rotationMatrixXY = new THREE.Matrix4().makeRotationFromEuler(
-      new THREE.Euler(gRot[0], gRot[1], gRot[2]),
+      new THREE.Euler(gRot[0], gRot[1], gRot[2], "ZYX"),
     );
     const rotationMatrixYZ = new THREE.Matrix4().makeRotationFromEuler(
-      new THREE.Euler(gRot[0], gRot[1], gRot[2]),
+      new THREE.Euler(gRot[0], gRot[1], gRot[2], "ZYX"),
     );
     const rotationMatrixXZ = new THREE.Matrix4().makeRotationFromEuler(
-      new THREE.Euler(gRot[0], gRot[1], gRot[2]),
+      new THREE.Euler(gRot[0], gRot[1], gRot[2], "ZYX"),
     );
     const baseRotationMatrixXY = new THREE.Matrix4().makeRotationFromEuler(
       OrthoBaseRotations[OrthoViews.PLANE_XY],

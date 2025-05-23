@@ -199,7 +199,7 @@ export function moveNode(
   const isRotated = V3.equals(flycamRotation, [0, 0, 0]);
 
   const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(
-    new THREE.Euler(...flycamRotation),
+    new THREE.Euler(...flycamRotation, "ZYX"),
   );
   const vectorRotated = new THREE.Vector3(...vector).applyMatrix4(rotationMatrix);
 
@@ -302,7 +302,7 @@ export function getOptionsForCreateSkeletonNode(
   const flycamRotation = getRotationInRadian(state.flycam);
   const totalRotationQuaternion = new THREE.Quaternion()
     .setFromEuler(new THREE.Euler(...initialViewportRotation))
-    .multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(...flycamRotation)));
+    .multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(...flycamRotation, "ZYX")));
   const rotationEuler = new THREE.Euler().setFromQuaternion(totalRotationQuaternion);
   const rotationInDegree = [rotationEuler.x, rotationEuler.y, rotationEuler.z].map(
     (a) => (a * 180) / Math.PI,

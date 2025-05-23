@@ -7,11 +7,7 @@ import memoizeOne from "memoize-one";
 import type { APIOrganization, APIUser } from "types/api_types";
 import { IdentityTransform } from "viewer/constants";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
-import {
-  getRotationInRadian,
-  isMagRestrictionViolated,
-  isRotated,
-} from "viewer/model/accessors/flycam_accessor";
+import { isMagRestrictionViolated, isRotated } from "viewer/model/accessors/flycam_accessor";
 import type { WebknossosState } from "viewer/store";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 import { getTransformsPerLayer } from "./dataset_layer_transformation_accessor";
@@ -332,7 +328,7 @@ function getDisabledVolumeInfo(state: WebknossosState) {
   const { activeMappingByLayer } = state.temporaryConfiguration;
   const isZoomInvalidForTracing = isMagRestrictionViolated(state);
   const hasVolume = state.annotation.volumes.length > 0;
-  const isFlycamRotated = !_.isEqual(getRotationInRadian(state.flycam), [0, 0, 0]);
+  const isFlycamRotated = isRotated(state.flycam);
   const hasSkeleton = state.annotation.skeleton != null;
   const segmentationTracingLayer = getActiveSegmentationTracing(state);
   const labeledMag = getRenderableMagForSegmentationTracing(state, segmentationTracingLayer)?.mag;

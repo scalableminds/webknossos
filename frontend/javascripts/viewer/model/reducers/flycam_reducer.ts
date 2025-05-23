@@ -307,7 +307,7 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
       const flycamRotation = getRotationInRadian(state.flycam);
 
       const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(
-        new THREE.Euler(...flycamRotation),
+        new THREE.Euler(...flycamRotation, "ZYX"),
       );
       let movementVectorInWorld = new THREE.Vector3(...vector)
         .applyMatrix4(rotationMatrix)
@@ -334,7 +334,7 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
         const flycamRotation = getRotationInRadian(flycam);
 
         const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(
-          new THREE.Euler(...flycamRotation),
+          new THREE.Euler(...flycamRotation, "ZYX"),
         );
         const movementVectorInWorld = new THREE.Vector3(...vector).applyMatrix4(rotationMatrix);
         const zoomFactor = increaseSpeedWithZoom ? flycam.zoomStep : 1;

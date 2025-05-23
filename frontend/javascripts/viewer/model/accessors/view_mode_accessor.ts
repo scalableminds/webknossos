@@ -112,7 +112,7 @@ function _calculateMaybeGlobalPos(
   const positionInPlane = [diffX, diffY, 0] as Vector3;
   const positionPlaneDefaultRotation = Dimensions.transDim(positionInPlane, planeIdFilled);
   const flycamRotationMatrix = new THREE.Matrix4().makeRotationFromEuler(
-    new THREE.Euler(...flycamRotation),
+    new THREE.Euler(...flycamRotation, "ZYX"),
   );
   const flycamPositionMatrix = new THREE.Matrix4().makeTranslation(
     new THREE.Vector3(...curGlobalPos),

@@ -297,23 +297,20 @@ function _getFlooredPosition(flycam: Flycam): Vector3 {
   return map3((x) => Math.floor(x), _getPosition(flycam));
 }
 
-function _getRotationInRadianFixed(flycam: Flycam): Vector3 {
+// Returns the current rotation of the flycam in radians as an euler xyz tuple.
+// As the order in which the angles are applied is zyx (see flycam_reducer),
+// this order must be followed when this euler angle is applied to 2d computations.
+function _getRotationInRadian(flycam: Flycam, invertZ: boolean = true): Vector3 {
+  // Somehow z rotation is inverted but the others are not.
+  const zInvertFactor = invertZ ? -1 : 1;
   const object = new THREE.Object3D();
   const matrix = new THREE.Matrix4().fromArray(flycam.currentMatrix).transpose();
   object.applyMatrix4(matrix);
-  const rotation: Vector3 = [object.rotation.x, object.rotation.y - Math.PI, object.rotation.z];
-  return [
-    mod(rotation[0], Math.PI * 2),
-    mod(rotation[1], Math.PI * 2),
-    mod(rotation[2], Math.PI * 2),
+  const rotation: Vector3 = [
+    object.rotation.x,
+    object.rotation.y,
+    (object.rotation.z - Math.PI) * zInvertFactor,
   ];
-}
-
-function _getRotationInRadian(flycam: Flycam): Vector3 {
-  const object = new THREE.Object3D();
-  const matrix = new THREE.Matrix4().fromArray(flycam.currentMatrix).transpose();
-  object.applyMatrix4(matrix);
-  const rotation: Vector3 = [object.rotation.x, object.rotation.y, object.rotation.z - Math.PI];
   return [
     mod(rotation[0], Math.PI * 2),
     mod(rotation[1], Math.PI * 2),
@@ -322,7 +319,7 @@ function _getRotationInRadian(flycam: Flycam): Vector3 {
 }
 
 function _getRotationInDegrees(flycam: Flycam): Vector3 {
-  const rotationInRadian = getRotationInRadian(flycam);
+  const rotationInRadian = getRotationInRadian(flycam, false);
   // Modulo operation not needed as already done in getRotationInRadian.
   return [
     (180 / Math.PI) * rotationInRadian[0],
@@ -342,7 +339,6 @@ export const getUp = memoizeOne(_getUp);
 export const getLeft = memoizeOne(_getLeft);
 export const getPosition = memoizeOne(_getPosition);
 export const getFlooredPosition = memoizeOne(_getFlooredPosition);
-export const getRotationInRadianFixed = memoizeOne(_getRotationInRadianFixed);
 export const getRotationInRadian = memoizeOne(_getRotationInRadian);
 export const getRotationInDegrees = memoizeOne(_getRotationInDegrees);
 export const isRotated = memoizeOne(_isRotated);

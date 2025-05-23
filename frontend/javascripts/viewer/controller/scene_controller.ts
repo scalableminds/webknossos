@@ -431,10 +431,12 @@ class SceneController {
               : Math.floor(-this.clippingDistance);
           const rotatedPositionOffsetVector = new THREE.Vector3(
             ...unrotatedPositionOffset,
-          ).applyEuler(new THREE.Euler(...rotation));
+          ).applyEuler(new THREE.Euler(...rotation, "ZYX"));
           const rotatedPositionOffset = rotatedPositionOffsetVector.toArray();
           this.planes[planeId].setPosition(originalPosition, rotatedPositionOffset);
-          this.planes[planeId].setRotation(new THREE.Euler(rotation[0], rotation[1], rotation[2]));
+          this.planes[planeId].setRotation(
+            new THREE.Euler(rotation[0], rotation[1], rotation[2], "ZYX"),
+          );
 
           this.quickSelectGeometry.adaptVisibilityForRendering(originalPosition, ind[2]);
         } else {

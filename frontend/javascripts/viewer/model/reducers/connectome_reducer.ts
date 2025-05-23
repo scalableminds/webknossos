@@ -30,9 +30,9 @@ function setConnectomeTreesVisibilityReducer(
   const skeletonTracing = getSkeletonTracingForConnectome(state, layerName);
   if (skeletonTracing == null) return state;
 
-  let newTrees = skeletonTracing.trees;
+  let newTrees = skeletonTracing.trees.clone();
   for (const treeId of treeIds) {
-    newTrees = newTrees.set(treeId, { ...newTrees.getOrThrow(treeId), isVisible: visibility });
+    newTrees.mutableSet(treeId, { ...newTrees.getOrThrow(treeId), isVisible: visibility });
   }
 
   return update(state, {

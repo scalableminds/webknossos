@@ -769,9 +769,9 @@ export function toggleAllTreesReducer(
   // Let's make all trees visible if there is one invisible tree
   const shouldBecomeVisible = skeletonTracing.trees.values().some((tree) => !tree.isVisible);
 
-  let newTrees = skeletonTracing.trees;
+  const newTrees = skeletonTracing.trees.clone();
   for (const [treeId, tree] of skeletonTracing.trees.entries()) {
-    newTrees = newTrees.set(treeId, { ...tree, isVisible: shouldBecomeVisible });
+    newTrees.mutableSet(treeId, { ...tree, isVisible: shouldBecomeVisible });
   }
 
   return update(state, {
@@ -810,10 +810,10 @@ export function toggleTreeGroupReducer(
               !tree.isVisible,
           );
 
-  let newTreeMap = skeletonTracing.trees;
+  const newTreeMap = skeletonTracing.trees.clone();
   for (const tree of skeletonTracing.trees.values()) {
     if (typeof tree.groupId === "number" && affectedGroupIds.has(tree.groupId)) {
-      newTreeMap = newTreeMap.set(tree.treeId, { ...tree, isVisible: shouldBecomeVisible });
+      newTreeMap.mutableSet(tree.treeId, { ...tree, isVisible: shouldBecomeVisible });
     }
   }
 

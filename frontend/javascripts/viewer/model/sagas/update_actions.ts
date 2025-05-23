@@ -2,15 +2,8 @@ import type { APIMagRestrictions, AdditionalCoordinate, MetadataEntryProto } fro
 import type { Vector3 } from "viewer/constants";
 import type { SendBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { convertUserBoundingBoxesFromFrontendToServer } from "viewer/model/reducers/reducer_helpers";
-import type {
-  Node,
-  NumberLike,
-  SegmentGroup,
-  Tree,
-  TreeGroup,
-  UserBoundingBox,
-  VolumeTracing,
-} from "viewer/store";
+import type { Node, Tree, TreeGroup } from "viewer/model/types/tree_types";
+import type { NumberLike, SegmentGroup, UserBoundingBox, VolumeTracing } from "viewer/store";
 
 export type NodeWithTreeId = {
   treeId: number;

@@ -15,9 +15,9 @@ import {
   toggleTreeAction,
   toggleTreeGroupAction,
 } from "viewer/model/actions/skeletontracing_actions";
+import type { Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import { api } from "viewer/singletons";
 import { Store } from "viewer/singletons";
-import type { Tree, TreeGroup, TreeMap } from "viewer/store";
 import {
   GroupTypeEnum,
   MISSING_GROUP_ID,
@@ -167,7 +167,7 @@ function TreeHierarchyView(props: Props) {
     } else if (evt.shiftKey && activeTreeId) {
       // SHIFT click to select a whole range of nodes.
       // Selection will only work for nodes within the same group/hierarchy level.
-      const sourceNode = props.trees[activeTreeId];
+      const sourceNode = props.trees.getOrThrow(activeTreeId);
       const sourceNodeParent = findParentGroupNode(
         UITreeData,
         sourceNode.groupId ?? MISSING_GROUP_ID,
@@ -222,7 +222,7 @@ function TreeHierarchyView(props: Props) {
     const parentGroupId =
       dragTargetNode.type === GroupTypeEnum.GROUP
         ? dragTargetNode.id
-        : (props.trees[dragTargetNode.id].groupId ?? MISSING_GROUP_ID);
+        : (props.trees.getOrThrow(dragTargetNode.id).groupId ?? MISSING_GROUP_ID);
 
     let updatedTreeGroups: TreeGroup[] = props.treeGroups;
     if (draggedNode.type === GroupTypeEnum.TREE) {
@@ -271,7 +271,7 @@ function TreeHierarchyView(props: Props) {
   useEffect(() => {
     // maybe expand group of the active tree
     if (activeTreeId == null) return;
-    const activeTree = props.trees[activeTreeId];
+    const activeTree = props.trees.getOrThrow(activeTreeId);
     if (activeTree.groupId == null) return; // tree is a direct child of the root group which is always expanded
     const expandedGroups = additionallyExpandGroup(props.treeGroups, activeTree.groupId, (id) =>
       getNodeKey(GroupTypeEnum.GROUP, id),
@@ -385,7 +385,8 @@ const DetailsForSelection = memo(
     activeGroupId: number | null | undefined;
   }) => {
     if (selectedTreeIds.length === 1) {
-      const tree = trees[selectedTreeIds[0]];
+      const tree = trees.getNullable(selectedTreeIds[0]);
+
       if (tree == null) {
         return <>Cannot find details for selected tree.</>;
       }

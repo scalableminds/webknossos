@@ -42,9 +42,9 @@ import {
 import { showContextMenuAction } from "viewer/model/actions/ui_actions";
 import Dimensions from "viewer/model/dimensions";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
+import type { Edge, Node, Tree } from "viewer/model/types/tree_types";
 import { api } from "viewer/singletons";
 import Store from "viewer/store";
-import type { Edge, Node, Tree } from "viewer/store";
 import type ArbitraryView from "viewer/view/arbitrary_view";
 import type PlaneView from "viewer/view/plane_view";
 import { renderToTexture } from "viewer/view/rendering_utils";

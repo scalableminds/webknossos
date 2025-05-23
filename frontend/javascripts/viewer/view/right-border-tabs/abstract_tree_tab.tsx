@@ -8,6 +8,7 @@ import { setActiveNodeAction } from "viewer/model/actions/skeletontracing_action
 import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import type { NodeListItem } from "viewer/view/right-border-tabs/abstract_tree_renderer";
 import AbstractTreeRenderer from "viewer/view/right-border-tabs/abstract_tree_renderer";
+
 type StateProps = {
   dispatch: Dispatch<any>;
   skeletonTracing: SkeletonTracing | null | undefined;
@@ -48,7 +49,7 @@ class AbstractTreeTab extends Component<Props, State> {
     if (canvas != null) {
       this.nodeList = AbstractTreeRenderer.drawTree(
         canvas,
-        activeTreeId != null ? trees[activeTreeId] : null,
+        activeTreeId != null ? trees.getNullable(activeTreeId) : null,
         activeNodeId,
         [canvas.offsetWidth, canvas.offsetHeight],
       );

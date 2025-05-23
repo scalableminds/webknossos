@@ -20,6 +20,7 @@ vi.mock("libs/toast", () => ({
     warning: vi.fn(),
     close: vi.fn(),
     success: vi.fn(),
+    info: vi.fn(),
   },
 }));
 

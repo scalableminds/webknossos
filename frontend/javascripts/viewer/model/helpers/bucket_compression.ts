@@ -6,13 +6,16 @@ import { uint8ToTypedBuffer } from "./typed_buffer";
 const _byteArrayToLz4Array = createWorker(compressLz4Block);
 
 export const decompressToTypedArray = async (
-  compressedData: Uint8Array,
+  compressedData: Uint8Array<ArrayBuffer>,
   elementClass: ElementClass,
 ): Promise<BucketDataArray> => {
   const decompressedBackendData = await _byteArrayToLz4Array(compressedData, false);
   return uint8ToTypedBuffer(decompressedBackendData, elementClass);
 };
-export const compressTypedArray = async (bucketData: BucketDataArray): Promise<Uint8Array> => {
+
+export const compressTypedArray = async (
+  bucketData: BucketDataArray,
+): Promise<Uint8Array<ArrayBuffer>> => {
   const bucketDataAsByteArray = new Uint8Array(
     bucketData.buffer,
     bucketData.byteOffset,

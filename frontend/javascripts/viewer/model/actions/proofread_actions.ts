@@ -1,6 +1,6 @@
 import type { AdditionalCoordinate } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
-import type { Tree } from "viewer/store";
+import type { Tree } from "viewer/model/types/tree_types";
 
 export type ProofreadAtPositionAction = ReturnType<typeof proofreadAtPosition>;
 export type ClearProofreadingByProductsAction = ReturnType<typeof clearProofreadingByProducts>;

@@ -16,14 +16,12 @@ import type {
   VolumeTracingStats,
 } from "viewer/model/accessors/annotation_accessor";
 import type { ServerUpdateAction } from "viewer/model/sagas/update_actions";
+import type { CommentType, Edge, TreeGroup } from "viewer/model/types/tree_types";
 import type {
   BoundingBoxObject,
-  CommentType,
-  Edge,
   MeshInformation,
   RecommendedConfiguration,
   SegmentGroup,
-  TreeGroup,
 } from "viewer/store";
 import type { EmptyObject } from "./globals";
 
@@ -46,15 +44,15 @@ export type ElementClass =
 // This type needs to be adapted when a new dtype should/element class needs
 // to be supported.
 export type BucketDataArray =
-  | Uint8Array
-  | Int8Array
-  | Uint16Array
-  | Int16Array
-  | Uint32Array
-  | Int32Array
-  | Float32Array
-  | BigUint64Array
-  | BigInt64Array;
+  | Uint8Array<ArrayBuffer>
+  | Int8Array<ArrayBuffer>
+  | Uint16Array<ArrayBuffer>
+  | Int16Array<ArrayBuffer>
+  | Uint32Array<ArrayBuffer>
+  | Int32Array<ArrayBuffer>
+  | Float32Array<ArrayBuffer>
+  | BigUint64Array<ArrayBuffer>
+  | BigInt64Array<ArrayBuffer>;
 
 export type APIMapping = {
   readonly parent?: string;

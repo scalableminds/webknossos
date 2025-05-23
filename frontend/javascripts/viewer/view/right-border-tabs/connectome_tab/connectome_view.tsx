@@ -39,13 +39,8 @@ import {
 } from "viewer/model/actions/connectome_actions";
 import { setMappingAction } from "viewer/model/actions/settings_actions";
 import EdgeCollection from "viewer/model/edge_collection";
-import type {
-  ActiveMappingInfo,
-  MutableNode,
-  MutableTree,
-  MutableTreeMap,
-  WebknossosState,
-} from "viewer/store";
+import { type MutableNode, type MutableTree, MutableTreeMap } from "viewer/model/types/tree_types";
+import type { ActiveMappingInfo, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import InputComponent from "viewer/view/components/input_component";
@@ -488,7 +483,11 @@ class ConnectomeView extends React.Component<Props, State> {
     if (deletedSynapseIds.length > 0) {
       const treeIdsToDelete: number[] = [];
 
-      const treeNameToTree = _.keyBy(trees, "name");
+      // Create a mapping from tree name to tree object that works with DiffableMap
+      const treeNameToTree: Record<string, MutableTree> = {};
+      for (const tree of trees.values()) {
+        treeNameToTree[tree.name] = tree;
+      }
 
       deletedSynapseIds.forEach((synapseId) => {
         const tree = treeNameToTree[getTreeNameForSynapse(synapseId)];
@@ -505,12 +504,15 @@ class ConnectomeView extends React.Component<Props, State> {
 
     if (addedSynapseIds.length > 0 && filteredConnectomeData != null) {
       const { synapses } = filteredConnectomeData;
-      const newTrees: MutableTreeMap = {};
+      const newTrees = new MutableTreeMap();
 
       for (const synapseId of addedSynapseIds) {
-        newTrees[synapseId] = synapseTreeCreator(synapseId, synapses[synapseId].type);
-        const synapseNode = synapseNodeCreator(synapseId, synapses[synapseId].position);
-        newTrees[synapseId].nodes.mutableSet(synapseId, synapseNode);
+        const synapseTree = synapseTreeCreator(synapseId, synapses[synapseId].type);
+        synapseTree.nodes.mutableSet(
+          synapseId,
+          synapseNodeCreator(synapseId, synapses[synapseId].position),
+        );
+        newTrees.mutableSet(synapseId, synapseTree);
       }
 
       Store.dispatch(addConnectomeTreesAction(newTrees, layerName));
@@ -607,7 +609,11 @@ class ConnectomeView extends React.Component<Props, State> {
     if (skeleton == null) return;
     const { trees } = skeleton;
 
-    const treeNameToTree = _.keyBy(trees, "name");
+    // Create a mapping from tree name to tree object that works with DiffableMap
+    const treeNameToTree: Record<string, MutableTree> = {};
+    for (const tree of trees.values()) {
+      treeNameToTree[tree.name] = tree;
+    }
 
     if (hiddenAgglomerateIds.length) {
       const mappingName = getMappingNameFromConnectomeDataEnforced(prevConnectomeData);

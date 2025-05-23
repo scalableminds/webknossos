@@ -27,16 +27,16 @@ class MockCompressor {
   resolveCompressionCounter: number = 0;
   resolveDecompressionCounter: number = 0;
 
-  async compressTypedArray(bucketData: BucketDataArray): Promise<Uint8Array> {
+  async compressTypedArray(bucketData: BucketDataArray): Promise<Uint8Array<ArrayBuffer>> {
     const deferred = new Deferred<void, void>();
     this.compressionQueue.push(deferred);
     this.updateQueues();
     await deferred.promise();
-    return new Uint8Array(bucketData);
+    return new Uint8Array(bucketData.buffer.slice());
   }
 
   async decompressToTypedArray(
-    compressedData: Uint8Array,
+    compressedData: Uint8Array<ArrayBuffer>,
     elementClass: ElementClass,
   ): Promise<BucketDataArray> {
     const deferred = new Deferred<void, void>();

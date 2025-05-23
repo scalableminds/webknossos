@@ -230,7 +230,11 @@ export default function* performQuickSelect(
   );
   const dataset = yield* select((state) => state.dataset);
   const inputData = normalizeToUint8(colorLayer, inputDataRaw, layerConfiguration, dataset);
-  const inputNdUvw = ndarray(inputData, size, stride).transpose(firstDim, secondDim, thirdDim);
+  const inputNdUvw = ndarray(inputData, size, stride).transpose(
+    firstDim,
+    secondDim,
+    thirdDim,
+  ) as ndarray.NdArray<Uint8Array<ArrayBuffer>>;
 
   const centerUV = take2(V3.floor(V3.scale(inputNdUvw.shape as Vector3, 0.5)));
   // Two fields are computed (one for the dark segment scenario, and one for the light segment)
@@ -332,16 +336,14 @@ export default function* performQuickSelect(
         throw new Error("Unthresholded fields are not available");
       }
       if (finetuneAction.segmentMode === "dark") {
-        thresholdField = copyNdArray(
-          Uint8Array,
-          unthresholdedDarkCopy,
-        ) as ndarray.NdArray<Uint8Array>;
+        thresholdField = copyNdArray(Uint8Array, unthresholdedDarkCopy) as ndarray.NdArray<
+          Uint8Array<ArrayBuffer>
+        >;
         ops.ltseq(thresholdField, finetuneAction.threshold);
       } else {
-        thresholdField = copyNdArray(
-          Uint8Array,
-          unthresholdedLightCopy,
-        ) as ndarray.NdArray<Uint8Array>;
+        thresholdField = copyNdArray(Uint8Array, unthresholdedLightCopy) as ndarray.NdArray<
+          Uint8Array<ArrayBuffer>
+        >;
         ops.gtseq(thresholdField, finetuneAction.threshold);
       }
 
@@ -385,9 +387,9 @@ function getExtremeValueAtBorders(arr: ndarray.NdArray, mode: "min" | "max") {
 }
 
 function determineThresholds(
-  darkThresholdField: ndarray.NdArray<Uint8Array>,
-  lightThresholdField: ndarray.NdArray<Uint8Array>,
-  inputNdUvw: ndarray.NdArray<Uint8Array>,
+  darkThresholdField: ndarray.NdArray<Uint8Array<ArrayBuffer>>,
+  lightThresholdField: ndarray.NdArray<Uint8Array<ArrayBuffer>>,
+  inputNdUvw: ndarray.NdArray<Uint8Array<ArrayBuffer>>,
 ) {
   // For dark segments, we are interested in the smallest threshold at the border
   // of the field.
@@ -428,7 +430,7 @@ function determineThresholds(
   return { initialDetectDarkSegment, darkMaxEffectiveThresh, lightMinEffectiveThresh };
 }
 
-function getCenterSubview(inputNdUvw: ndarray.NdArray<Uint8Array>) {
+function getCenterSubview(inputNdUvw: ndarray.NdArray<Uint8Array<ArrayBuffer>>) {
   const rectCenterExtentUV = V3.floor(
     V3.scale(inputNdUvw.shape as Vector3, CENTER_RECT_SIZE_PERCENTAGE),
   );
@@ -444,7 +446,7 @@ function getCenterSubview(inputNdUvw: ndarray.NdArray<Uint8Array>) {
 }
 
 function processBinaryMaskInPlaceAndAttach(
-  mask: ndarray.NdArray<Uint8Array>,
+  mask: ndarray.NdArray<Uint8Array<ArrayBuffer>>,
   quickSelectConfig: Omit<QuickSelectConfig, "showPreview" | "useHeuristic" | "predictionDepth">,
   quickSelectGeometry: QuickSelectGeometry,
 ) {
@@ -554,7 +556,7 @@ export function* finalizeQuickSelectForSlice(
   );
 }
 
-function maskToRGBA(mask: ndarray.NdArray<Uint8Array>) {
+function maskToRGBA(mask: ndarray.NdArray<Uint8Array<ArrayBuffer>>) {
   // Create an RGBA mask from the single-channel input, since this is needed
   // to create a texture for the rectangle preview.
   const channelCount = 4;
@@ -602,10 +604,10 @@ const NEIGHBOR_OFFSETS = [
 ];
 
 function getThresholdField(
-  inputNdUvw: ndarray.NdArray<Uint8Array>,
+  inputNdUvw: ndarray.NdArray<Uint8Array<ArrayBuffer>>,
   centerUV: Vector2,
   mode: "light" | "dark",
-): ndarray.NdArray<Uint8Array> {
+): ndarray.NdArray<Uint8Array<ArrayBuffer>> {
   // Computes a threshold field starting from the center
   // so that there is a value for each voxel that indicates
   // which threshold is necessary so that a floodfill operation
@@ -677,7 +679,7 @@ function getThresholdField(
   return thresholdField;
 }
 
-function fillHolesInPlace(arr: ndarray.NdArray<Uint8Array>) {
+function fillHolesInPlace(arr: ndarray.NdArray<Uint8Array<ArrayBuffer>>) {
   // Execute a flood-fill on the "outside" of the segment
   // and afterwards, invert the image to get a segment
   // within which all holes are filled.

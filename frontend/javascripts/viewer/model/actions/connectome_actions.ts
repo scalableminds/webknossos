@@ -1,5 +1,5 @@
 import type { APIConnectomeFile } from "types/api_types";
-import type { MutableTreeMap } from "viewer/store";
+import type { MutableTreeMap } from "viewer/model/types/tree_types";
 export type InitializeConnectomeTracingAction = ReturnType<
   typeof initializeConnectomeTracingAction
 >;

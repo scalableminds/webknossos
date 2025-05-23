@@ -95,7 +95,7 @@ function getNullIndices<T>(arr: Array<T | null | undefined>): Array<number> {
 export async function requestWithFallback(
   layerInfo: DataLayerType,
   batch: Array<BucketAddress>,
-): Promise<Array<Uint8Array | null | undefined>> {
+): Promise<Array<Uint8Array<ArrayBuffer> | null | undefined>> {
   const state = Store.getState();
   const datasetDirectoryName = state.dataset.directoryName;
   const organization = state.dataset.owningOrganization;
@@ -179,7 +179,7 @@ export async function requestFromStore(
   maybeVolumeTracing: VolumeTracing | null | undefined,
   maybeAnnotationId: string | undefined,
   isVolumeFallback: boolean = false,
-): Promise<Array<Uint8Array | null | undefined>> {
+): Promise<Array<Uint8Array<ArrayBuffer> | null | undefined>> {
   const state = Store.getState();
   const isSegmentation = isSegmentationLayer(state.dataset, layerInfo.name);
   const fourBit = state.datasetConfiguration.fourBit && !isSegmentation;
@@ -273,8 +273,8 @@ function sliceBufferIntoPieces(
   layerInfo: DataLayerType,
   batch: Array<BucketAddress>,
   missingBuckets: Array<number>,
-  buffer: Uint8Array,
-): Array<Uint8Array | null | undefined> {
+  buffer: Uint8Array<ArrayBuffer>,
+): Array<Uint8Array<ArrayBuffer> | null | undefined> {
   let offset = 0;
   const BUCKET_BYTE_LENGTH = constants.BUCKET_SIZE * getByteCountFromLayer(layerInfo);
   const bucketBuffers = batch.map((_bucketAddress, index) => {

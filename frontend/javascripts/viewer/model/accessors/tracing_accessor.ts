@@ -3,12 +3,12 @@ import type { ServerTracing, TracingType } from "types/api_types";
 import { TracingTypeEnum } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import type { SaveQueueType } from "viewer/model/actions/save_actions";
+import type { UserBoundingBox } from "viewer/store";
 import type {
   EditableMapping,
   ReadOnlyTracing,
   SkeletonTracing,
   StoreAnnotation,
-  UserBoundingBox,
   VolumeTracing,
   WebknossosState,
 } from "viewer/store";

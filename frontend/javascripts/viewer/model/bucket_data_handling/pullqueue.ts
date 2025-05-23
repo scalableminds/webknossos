@@ -159,7 +159,10 @@ class PullQueue {
     return Math.min(exponentialBackOff, MAX_RETRY_DELAY);
   }
 
-  private handleBucket(bucket: DataBucket, bucketData: Uint8Array | null | undefined): void {
+  private handleBucket(
+    bucket: DataBucket,
+    bucketData: Uint8Array<ArrayBuffer> | null | undefined,
+  ): void {
     if (this.cube.shouldEagerlyMaintainUsedValueSet()) {
       // If we assume that the value set of the bucket is needed often (for proofreading),
       // we compute it here eagerly and then send the data to the bucket.

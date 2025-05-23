@@ -2,7 +2,7 @@ module.exports = function (env = {}) {
   /* eslint import/no-extraneous-dependencies:0, global-require:0, func-names:0 */
   const webpack = require("webpack");
   const { EsbuildPlugin } = require("esbuild-loader");
-  const path = require("path");
+  const path = require("node:path");
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
   const browserslistToEsbuild = require("browserslist-to-esbuild");
   const CopyPlugin = require("copy-webpack-plugin");

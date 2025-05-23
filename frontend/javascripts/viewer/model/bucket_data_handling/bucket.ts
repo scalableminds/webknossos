@@ -283,9 +283,7 @@ export class DataBucket {
 
   getCopyOfData(): BucketDataArray {
     const bucketData = this.getOrCreateData();
-    const TypedArrayClass = getConstructorForElementClass(this.elementClass)[0];
-    const dataClone = new TypedArrayClass(bucketData);
-    return dataClone;
+    return bucketData.slice();
   }
 
   async label_DEPRECATED(labelFunc: PendingOperation): Promise<void> {
@@ -609,9 +607,12 @@ export class DataBucket {
     }
   }
 
-  receiveData(arrayBuffer: Uint8Array | null | undefined, computeValueSet: boolean = false): void {
+  receiveData(
+    arrayBuffer: Uint8Array<ArrayBuffer> | null | undefined,
+    computeValueSet: boolean = false,
+  ): void {
     const data = uint8ToTypedBuffer(arrayBuffer, this.elementClass);
-    const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
+    const [_TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
 
     if (data.length !== channelCount * Constants.BUCKET_SIZE) {
       const debugInfo = // Disable this conditional if you need verbose output here.
@@ -634,7 +635,7 @@ export class DataBucket {
         if (this.dirty) {
           // Clone the data for the unmergedBucketDataLoaded event,
           // as the following merge operation is done in-place.
-          const dataClone = new TypedArrayClass(data);
+          const dataClone = data.slice();
           this.trigger("unmergedBucketDataLoaded", dataClone);
           this.merge(data);
         } else {

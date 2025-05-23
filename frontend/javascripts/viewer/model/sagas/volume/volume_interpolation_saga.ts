@@ -160,7 +160,7 @@ const isEqual = cwise({
 
 const isEqualFromBigUint64: (
   output: NdArray<TypedArrayWithoutBigInt>,
-  a: NdArray<BigUint64Array>,
+  a: NdArray<BigUint64Array<ArrayBuffer>>,
   b: bigint,
 ) => void = cwise({
   args: ["array", "array", "scalar"],
@@ -407,9 +407,17 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
 
     const activeCellIdBig = BigInt(activeCellId);
     // Calculate firstSlice = firstSliceBigInt[...] == activeCellId
-    isEqualFromBigUint64(firstSlice, firstSliceBigInt as NdArray<BigUint64Array>, activeCellIdBig);
+    isEqualFromBigUint64(
+      firstSlice,
+      firstSliceBigInt as NdArray<BigUint64Array<ArrayBuffer>>,
+      activeCellIdBig,
+    );
     // Calculate lastSlice = lastSliceBigInt[...] == activeCellId
-    isEqualFromBigUint64(lastSlice, lastSliceBigInt as NdArray<BigUint64Array>, activeCellIdBig);
+    isEqualFromBigUint64(
+      lastSlice,
+      lastSliceBigInt as NdArray<BigUint64Array<ArrayBuffer>>,
+      activeCellIdBig,
+    );
   } else {
     firstSlice = inputNd.pick(null, null, 0) as NdArray<TypedArrayWithoutBigInt>;
     lastSlice = inputNd.pick(null, null, interpolationDepth) as NdArray<TypedArrayWithoutBigInt>;

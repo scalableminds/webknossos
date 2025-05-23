@@ -8,6 +8,7 @@ export default function checkBrowserFeatures() {
     Object.fromEntries([]);
     new BigUint64Array(1);
     "hello".replaceAll("l", "k");
+    new Map([[1, 2]]).values().map((v) => v);
     [].at(0);
   } catch (exception) {
     Toast.warning(

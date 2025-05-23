@@ -21,12 +21,11 @@ import FastTooltip from "components/fast_tooltip";
 import { formatLengthAsVx, formatNumberToLength, formatNumberToVolume } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { useFetch } from "libs/react_helpers";
+import { useWkSelector } from "libs/react_hooks";
 import Shortcut from "libs/shortcut_component";
 import Toast from "libs/toast";
 import { hexToRgb, rgbToHex, roundTo, truncateStringToLength } from "libs/utils";
 import messages from "messages";
-
-import { useWkSelector } from "libs/react_hooks";
 import React, { createContext, type MouseEvent, useContext, useEffect, useState } from "react";
 import type { Dispatch } from "redux";
 import type {
@@ -133,13 +132,13 @@ import { api } from "viewer/singletons";
 import type {
   ActiveMappingInfo,
   ContextMenuInfo,
-  MutableNode,
   SegmentMap,
   SkeletonTracing,
-  Tree,
   UserBoundingBox,
   VolumeTracing,
 } from "viewer/store";
+
+import { type MutableNode, type Tree, TreeMap } from "viewer/model/types/tree_types";
 import Store from "viewer/store";
 import {
   getVolumeRequestUrl,
@@ -240,7 +239,7 @@ function extractShortestPathAsNewTree(
   const { shortestPath } = api.tracing.findShortestPathBetweenNodes(sourceNodeId, targetNodeId);
   const newTree = extractPathAsNewTree(Store.getState(), sourceTree, shortestPath);
   if (newTree != null) {
-    const treeMap = { [newTree.treeId]: newTree };
+    const treeMap = new TreeMap([[newTree.treeId, newTree]]);
     Store.dispatch(addTreesAndGroupsAction(treeMap, null));
   }
 }

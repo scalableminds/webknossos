@@ -103,7 +103,7 @@ describe("wkstore_adapter", () => {
       .sendJSONReceiveArraybufferWithHeaders.mockReset()
       .mockReturnValue(
         Promise.resolve({
-          buffer: responseBuffer,
+          buffer: responseBuffer.buffer,
           headers: {
             "missing-buckets": "[]",
           },
@@ -135,7 +135,7 @@ describe("wkstore_adapter", () => {
       .mockReturnValueOnce(
         // second call
         Promise.resolve({
-          buffer: responseBuffer,
+          buffer: responseBuffer.buffer,
           headers: {
             "missing-buckets": "[]",
           },

@@ -124,8 +124,11 @@ function* getMask(
   // a.lo(x,y) => a[x:, y:]
   return [
     maskBoxInMag,
-    _.range(0, depth).map((zOffset) =>
-      ndarr.hi(ndarr.shape[0], ndarr.shape[1], zOffset + 1).lo(0, 0, zOffset),
+    _.range(0, depth).map(
+      (zOffset) =>
+        ndarr.hi(ndarr.shape[0], ndarr.shape[1], zOffset + 1).lo(0, 0, zOffset) as NdArray<
+          Uint8Array<ArrayBuffer>
+        >,
     ),
   ];
 }

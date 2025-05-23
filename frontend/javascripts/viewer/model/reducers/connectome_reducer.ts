@@ -31,9 +31,9 @@ function setConnectomeTreesVisibilityReducer(
   if (skeletonTracing == null) return state;
 
   let newTrees = skeletonTracing.trees;
-  treeIds.forEach((treeId) => {
+  for (const treeId of treeIds) {
     newTrees = newTrees.set(treeId, { ...newTrees.getOrThrow(treeId), isVisible: visibility });
-  });
+  }
 
   return update(state, {
     localSegmentationData: {
@@ -54,7 +54,9 @@ export function deleteConnectomeTrees(
 ): [TreeMap, number] | null {
   // Delete trees
   let newTrees = skeletonTracing.trees.clone();
-  treeIds.forEach((treeId) => (newTrees = newTrees.delete(treeId)));
+  for (const treeId of treeIds) {
+    newTrees = newTrees.delete(treeId);
+  }
 
   const newMaxNodeId = getMaximumNodeId(newTrees);
   return [newTrees, newMaxNodeId];

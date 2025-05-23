@@ -26,7 +26,7 @@ export function min(iterator: IteratorObject<number>): number | null {
  * @param iterator - Iterator of numbers
  * @returns Sum of all values in the iterator or 0 if empty
  */
-export function sum<T extends number>(iterator: IteratorObject<T>): number {
+export function sum(iterator: IteratorObject<number>): number {
   return iterator.reduce((sum, value) => sum + value, 0);
 }
 

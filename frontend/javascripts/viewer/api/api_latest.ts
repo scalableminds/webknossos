@@ -1269,11 +1269,11 @@ class TracingApi {
     let totalLengthInUnit = 0;
     let totalLengthInVx = 0;
 
-    skeletonTracing.trees.values().forEach((currentTree) => {
+    for (const currentTree of skeletonTracing.trees.values()) {
       const [lengthInUnit, lengthInVx] = this.measureTreeLength(currentTree.treeId);
       totalLengthInUnit += lengthInUnit;
       totalLengthInVx += lengthInVx;
-    });
+    }
 
     return [totalLengthInUnit, totalLengthInVx];
   }

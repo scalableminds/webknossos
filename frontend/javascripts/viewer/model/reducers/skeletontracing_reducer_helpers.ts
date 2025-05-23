@@ -770,9 +770,9 @@ export function toggleAllTreesReducer(
   const shouldBecomeVisible = skeletonTracing.trees.values().some((tree) => !tree.isVisible);
 
   let newTrees = skeletonTracing.trees;
-  skeletonTracing.trees.entries().forEach(([treeId, tree]) => {
+  for (const [treeId, tree] of skeletonTracing.trees.entries()) {
     newTrees = newTrees.set(treeId, { ...tree, isVisible: shouldBecomeVisible });
-  });
+  }
 
   return update(state, {
     annotation: {
@@ -811,11 +811,11 @@ export function toggleTreeGroupReducer(
           );
 
   let newTreeMap = skeletonTracing.trees;
-  skeletonTracing.trees.values().forEach((tree) => {
+  for (const tree of skeletonTracing.trees.values()) {
     if (typeof tree.groupId === "number" && affectedGroupIds.has(tree.groupId)) {
       newTreeMap = newTreeMap.set(tree.treeId, { ...tree, isVisible: shouldBecomeVisible });
     }
-  });
+  }
 
   return update(state, {
     annotation: {

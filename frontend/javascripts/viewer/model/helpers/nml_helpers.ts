@@ -793,13 +793,13 @@ export function wrapInNewGroup(
   const unusedGroupId = getMaximumGroupId(originalTreeGroups) + 1;
   const trees = originalTrees.clone();
 
-  originalTrees.values().forEach((tree) =>
+  for (const tree of originalTrees.values()) {
     trees.mutableSet(tree.treeId, {
       ...tree,
       // Give parentless trees the new treeGroup as parent
       groupId: tree.groupId != null ? tree.groupId : unusedGroupId,
-    }),
-  );
+    });
+  }
 
   const treeGroups = [
     // Create a new tree group which holds the old ones
@@ -1158,13 +1158,13 @@ export function parseNml(nmlString: string): Promise<{
 
           case "groups": {
             if (!isParsingVolumeTag) {
-              trees.values().forEach((tree) => {
+              for (const tree of trees.values()) {
                 if (tree.groupId != null && !existingTreeGroupIds.has(tree.groupId)) {
                   throw new NmlParseError(
                     `${messages["nml.tree_with_missing_group_id"]} ${tree.groupId}`,
                   );
                 }
-              });
+              }
             }
 
             break;

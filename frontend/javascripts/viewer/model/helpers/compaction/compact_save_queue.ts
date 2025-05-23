@@ -1,4 +1,8 @@
 import _ from "lodash";
+import type {
+  UpdateUserBoundingBoxInSkeletonTracingAction,
+  UpdateUserBoundingBoxInVolumeTracingAction,
+} from "viewer/model/sagas/update_actions";
 import type { SaveQueueEntry } from "viewer/store";
 
 function removeAllButLastUpdateTracingAction(updateActionsBatches: Array<SaveQueueEntry>) {
@@ -70,32 +74,43 @@ function removeSubsequentUpdateNodeActions(updateActionsBatches: Array<SaveQueue
   return _.without(updateActionsBatches, ...obsoleteUpdateActions);
 }
 
-function removeSubsequentUpdateBBoxActions(updateActionsBatches: Array<SaveQueueEntry>) {
-  const obsoleteUpdateActions = [];
-
+export function removeSubsequentUpdateBBoxActions(updateActionsBatches: Array<SaveQueueEntry>) {
   // Actions are obsolete, if they are for the same bounding box and for the same prop.
   // E.g. when rezising a bounding box, multiple updateActions are sent during the resize, while only the last one is needed.
-  // The given action is always compared to the next next one, as usually an
-  // updateUserBoundingBoxInSkeletonTracingAction and updateUserBoundingBoxInVolumeTracingAction
-  // is sent at the same time.
-  for (let i = 0; i < updateActionsBatches.length - 2; i++) {
-    const actions1 = updateActionsBatches[i].actions;
-    const actions2 = updateActionsBatches[i + 2].actions;
-
+  const previousActionsById: Record<
+    string,
+    UpdateUserBoundingBoxInSkeletonTracingAction | UpdateUserBoundingBoxInVolumeTracingAction
+  > = {};
+  const relevantActions = [];
+  for (let i = updateActionsBatches.length - 1; i >= 0; i--) {
+    const currentActions = updateActionsBatches[i].actions;
     if (
-      actions1.length === 1 &&
-      actions2.length === 1 &&
-      (actions1[0].name === "updateUserBoundingBoxInSkeletonTracing" ||
-        actions1[0].name === "updateUserBoundingBoxInVolumeTracing") &&
-      actions1[0].name === actions2[0].name &&
-      actions1[0].value.boundingBoxId === actions2[0].value.boundingBoxId &&
-      _.isEqual(actions1[0].value.updatedPropKeys, actions2[0].value.updatedPropKeys)
+      currentActions.length === 1 &&
+      ["updateUserBoundingBoxInSkeletonTracing", "updateUserBoundingBoxInVolumeTracing"].includes(
+        currentActions[0].name,
+      )
     ) {
-      obsoleteUpdateActions.push(updateActionsBatches[i]);
+      const currentAction = currentActions[0] as
+        | UpdateUserBoundingBoxInSkeletonTracingAction
+        | UpdateUserBoundingBoxInVolumeTracingAction;
+      const previousActionForTracing = previousActionsById[currentAction.value.actionTracingId];
+      if (
+        previousActionForTracing != null &&
+        previousActionForTracing.name === currentAction.name &&
+        previousActionForTracing.value.boundingBoxId === currentAction.value.boundingBoxId &&
+        previousActionForTracing.value.hasUpdatedColor === currentAction.value.hasUpdatedColor &&
+        previousActionForTracing.value.hasUpdatedName === currentAction.value.hasUpdatedName &&
+        previousActionForTracing.value.hasUpdatedBoundingBox ===
+          currentAction.value.hasUpdatedBoundingBox
+      ) {
+        relevantActions.unshift(updateActionsBatches[i]);
+      }
+      previousActionsById[currentAction.value.actionTracingId] = currentAction;
+    } else {
+      relevantActions.unshift(updateActionsBatches[i]);
     }
   }
-
-  return _.without(updateActionsBatches, ...obsoleteUpdateActions);
+  return relevantActions;
 }
 
 function removeSubsequentUpdateSegmentActions(updateActionsBatches: Array<SaveQueueEntry>) {

@@ -509,7 +509,7 @@ function getUpdateUserBoundingBox(
       updatedProps: updatedPropsForServer,
       hasUpdatedBoundingBox: updatedPropsKeys.includes("boundingBox"),
       hasUpdatedName: updatedPropsKeys.includes("name"),
-      haUpdatedColor: updatedPropsKeys.includes("color"),
+      hasUpdatedColor: updatedPropsKeys.includes("color"),
     },
   } as const;
 }

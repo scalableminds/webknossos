@@ -1,12 +1,11 @@
 import update from "immutability-helper";
-import ChainReducer from "test/helpers/chainReducer";
+import { chainReduce } from "test/helpers/chainReducer";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "viewer/model/edge_collection";
 import { describe, it, expect } from "vitest";
 import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import type { WebknossosState } from "viewer/store";
 import { TreeTypeEnum, type Vector3 } from "viewer/constants";
-import type { Action } from "viewer/model/actions/actions";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import {
   initialState as defaultState,
@@ -42,6 +41,8 @@ const position = [10, 10, 10] as Vector3;
 const rotation = [0.5, 0.5, 0.5] as Vector3;
 const viewport = 0;
 const mag = 0;
+
+const applyActions = chainReduce(SkeletonTracingReducer);
 
 describe("SkeletonTracing", () => {
   it("should add a new node", () => {
@@ -163,13 +164,10 @@ describe("SkeletonTracing", () => {
 
   it("should delete the tree if 'delete node as user' is initiated for an empty tree", () => {
     const { createTreeAction, deleteNodeAsUserAction } = SkeletonTracingActions;
-    const newState = ChainReducer<WebknossosState, Action>(
-      initialStateWithActiveTreeId2,
-      SkeletonTracingReducer,
-    )
-      .apply(createTreeAction())
-      .apply((currentState: WebknossosState) => deleteNodeAsUserAction(currentState))
-      .unpack();
+    const newState = applyActions(initialStateWithActiveTreeId2, [
+      createTreeAction(),
+      (currentState: WebknossosState) => deleteNodeAsUserAction(currentState),
+    ]);
 
     expect(newState).toEqual(initialStateWithActiveTreeId2);
   });
@@ -240,12 +238,12 @@ describe("SkeletonTracing", () => {
     );
 
     const emptySkeletonTracing = enforceSkeletonTracing(emptyTreeState.annotation);
-    const newState = ChainReducer<WebknossosState, Action>(emptyTreeState, SkeletonTracingReducer)
-      .apply(createNodeAction)
-      .apply(createNodeAction)
-      .apply(deleteNodeAction)
-      .apply(deleteNodeAction)
-      .unpack();
+    const newState = applyActions(emptyTreeState, [
+      createNodeAction,
+      createNodeAction,
+      deleteNodeAction,
+      deleteNodeAction,
+    ]);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
     expect(emptySkeletonTracing.trees.values().map((tree) => tree.nodes.size())).toEqual(
@@ -386,12 +384,12 @@ describe("SkeletonTracing", () => {
     );
     const deleteEdgeAction = SkeletonTracingActions.deleteEdgeAction(0, 3);
     // Create a couple of nodes
-    const newState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
-      .apply(createNodeAction)
-      .apply(createNodeAction)
-      .apply(createNodeAction)
-      .apply(createNodeAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createNodeAction,
+      createNodeAction,
+      createNodeAction,
+      createNodeAction,
+    ]);
 
     const newStateA = SkeletonTracingReducer(newState, deleteEdgeAction);
     expect(newState).toEqual(newStateA);
@@ -416,12 +414,12 @@ describe("SkeletonTracing", () => {
     const deleteEdgeAction = SkeletonTracingActions.deleteEdgeAction(0, 2);
 
     // Create a couple of nodes
-    const newState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
-      .apply(createNodeAction)
-      .apply(createTreeAction)
-      .apply(createNodeAction)
-      .apply(createNodeAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createNodeAction,
+      createTreeAction,
+      createNodeAction,
+      createNodeAction,
+    ]);
 
     const newStateA = SkeletonTracingReducer(newState, deleteEdgeAction);
     expect(newState).toEqual(newStateA);
@@ -886,11 +884,11 @@ describe("SkeletonTracing", () => {
   it("should add a several new trees", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     // create three trees
-    const newState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
-      .apply(createTreeAction)
-      .apply(createTreeAction)
-      .apply(createTreeAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createTreeAction,
+      createTreeAction,
+      createTreeAction,
+    ]);
 
     expect(newState).not.toBe(initialState);
 
@@ -906,13 +904,10 @@ describe("SkeletonTracing", () => {
     const deleteTreeAction = SkeletonTracingActions.deleteTreeAction();
 
     // create a tree and delete it again
-    const newState = ChainReducer<WebknossosState, Action>(
-      initialStateWithActiveTreeId2,
-      SkeletonTracingReducer,
-    )
-      .apply(createTreeAction)
-      .apply(deleteTreeAction)
-      .unpack();
+    const newState = applyActions(initialStateWithActiveTreeId2, [
+      createTreeAction,
+      deleteTreeAction,
+    ]);
 
     expect(newState).not.toBe(initialStateWithActiveTreeId2);
     expect(newState).toEqual(initialStateWithActiveTreeId2);
@@ -923,12 +918,12 @@ describe("SkeletonTracing", () => {
     const deleteTreeAction = SkeletonTracingActions.deleteTreeAction();
 
     // create trees and delete them
-    const newState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
-      .apply(createTreeAction)
-      .apply(deleteTreeAction)
-      .apply(deleteTreeAction)
-      .apply(deleteTreeAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createTreeAction,
+      deleteTreeAction,
+      deleteTreeAction,
+      deleteTreeAction,
+    ]);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -940,11 +935,11 @@ describe("SkeletonTracing", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     const deleteTreesAction = SkeletonTracingActions.deleteTreesAction([1, 2, 3, 4]);
     // create trees and delete them
-    const newState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
-      .apply(createTreeAction)
-      .apply(createTreeAction)
-      .apply(deleteTreesAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createTreeAction,
+      createTreeAction,
+      deleteTreesAction,
+    ]);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -955,10 +950,7 @@ describe("SkeletonTracing", () => {
   it("should set a new active tree", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     const setActiveTreeAction = SkeletonTracingActions.setActiveTreeAction(2);
-    const newState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
-      .apply(createTreeAction)
-      .apply(setActiveTreeAction)
-      .unpack();
+    const newState = applyActions(initialState, [createTreeAction, setActiveTreeAction]);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -978,13 +970,13 @@ describe("SkeletonTracing", () => {
     const setActiveTreeAction = SkeletonTracingActions.setActiveTreeAction(3);
 
     // create a second tree with two nodes and set it active
-    const newState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
-      .apply(createTreeAction)
-      .apply(createNodeAction)
-      .apply(createNodeAction)
-      .apply(createTreeAction)
-      .apply(setActiveTreeAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createTreeAction,
+      createNodeAction,
+      createNodeAction,
+      createTreeAction,
+      setActiveTreeAction,
+    ]);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -1011,14 +1003,14 @@ describe("SkeletonTracing", () => {
     const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(3, 1);
 
     // create a node in first tree, then create a second tree with three nodes and merge them
-    const newState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
-      .apply(createNodeAction)
-      .apply(createTreeAction)
-      .apply(createNodeAction)
-      .apply(createNodeAction)
-      .apply(createNodeAction)
-      .apply(mergeTreesAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createNodeAction,
+      createTreeAction,
+      createNodeAction,
+      createNodeAction,
+      createNodeAction,
+      mergeTreesAction,
+    ]);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -1050,11 +1042,11 @@ describe("SkeletonTracing", () => {
     );
     const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 3);
     // create a node in first tree, then create a second tree with three nodes and merge them
-    const testState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
-      .apply(createNodeAction)
-      .apply(createNodeAction)
-      .apply(createNodeAction)
-      .unpack();
+    const testState = applyActions(initialState, [
+      createNodeAction,
+      createNodeAction,
+      createNodeAction,
+    ]);
 
     const newState = SkeletonTracingReducer(testState, mergeTreesAction);
     expect(newState).toBe(testState);
@@ -1074,17 +1066,17 @@ describe("SkeletonTracing", () => {
     const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
 
     // create a node in first tree, then create a second tree with three nodes and merge them
-    const newState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
-      .apply(createNodeAction)
-      .apply(createCommentAction)
-      .apply(createBranchPointAction)
-      .apply(createTreeAction)
-      .apply(createNodeAction)
-      .apply(createNodeAction)
-      .apply(createCommentAction)
-      .apply(createNodeAction)
-      .apply(mergeTreesAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createNodeAction,
+      createCommentAction,
+      createBranchPointAction,
+      createTreeAction,
+      createNodeAction,
+      createNodeAction,
+      createCommentAction,
+      createNodeAction,
+      mergeTreesAction,
+    ]);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -1195,14 +1187,11 @@ describe("SkeletonTracing", () => {
     );
 
     // Create a new agglomerate tree with 3 nodes; then add two nodes to the first tree of type default.
-    const newState = ChainReducer<WebknossosState, Action>(
-      initialStateWithAgglomerateNodes,
-      SkeletonTracingReducer,
-    )
+    const newState = applyActions(initialStateWithAgglomerateNodes, [
       // Add two more nodes to tree with id 1.
-      .apply(createNodeAction) // For tree 1
-      .apply(createNodeAction) // For tree 1
-      .unpack();
+      createNodeAction, // For tree 1,
+      createNodeAction, // For tree 1,
+    ]);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -1239,11 +1228,11 @@ describe("SkeletonTracing", () => {
     const selectNextTreeAction = SkeletonTracingActions.selectNextTreeAction();
 
     // create a second tree, set first tree active then increase activeTreeId
-    const newState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
-      .apply(createTreeAction)
-      .apply(setActiveTreeAction)
-      .apply(selectNextTreeAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createTreeAction,
+      setActiveTreeAction,
+      selectNextTreeAction,
+    ]);
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
     expect(newSkeletonTracing.activeTreeId).toBe(2);
@@ -1254,11 +1243,11 @@ describe("SkeletonTracing", () => {
     const selectNextTreeAction = SkeletonTracingActions.selectNextTreeAction(false);
 
     // create a second tree then decrease activeTreeId
-    const newState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
-      .apply(createTreeAction)
-      .apply(selectNextTreeAction)
-      .apply(selectNextTreeAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createTreeAction,
+      selectNextTreeAction,
+      selectNextTreeAction,
+    ]);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -1270,12 +1259,12 @@ describe("SkeletonTracing", () => {
     const selectNextTreeAction = SkeletonTracingActions.selectNextTreeAction(false);
 
     // create a second tree then decrease activeTreeId twice
-    const newState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
-      .apply(createTreeAction)
-      .apply(selectNextTreeAction)
-      .apply(selectNextTreeAction)
-      .apply(selectNextTreeAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createTreeAction,
+      selectNextTreeAction,
+      selectNextTreeAction,
+      selectNextTreeAction,
+    ]);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -1288,14 +1277,14 @@ describe("SkeletonTracing", () => {
     const selectNextTreeAction = SkeletonTracingActions.selectNextTreeAction();
 
     // create a second tree then decrease activeTreeId twice
-    const newState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
-      .apply(createTreeAction)
-      .apply(createTreeAction)
-      .apply(deleteTreeAction)
-      .apply(selectNextTreeAction)
-      .apply(selectNextTreeAction)
-      .apply(selectNextTreeAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createTreeAction,
+      createTreeAction,
+      deleteTreeAction,
+      selectNextTreeAction,
+      selectNextTreeAction,
+      selectNextTreeAction,
+    ]);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -1323,10 +1312,7 @@ describe("SkeletonTracing", () => {
     const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
 
     // create a single node with a comment
-    const newState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
-      .apply(createNodeAction)
-      .apply(createCommentAction)
-      .unpack();
+    const newState = applyActions(initialState, [createNodeAction, createCommentAction]);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -1357,12 +1343,12 @@ describe("SkeletonTracing", () => {
     const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
 
     // create a node and add the same comment three times
-    const newState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
-      .apply(createNodeAction)
-      .apply(createCommentAction)
-      .apply(createCommentAction)
-      .apply(createCommentAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createNodeAction,
+      createCommentAction,
+      createCommentAction,
+      createCommentAction,
+    ]);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -1381,12 +1367,12 @@ describe("SkeletonTracing", () => {
     );
 
     // create two nodes with a different comment each
-    const newState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
-      .apply(createNodeAction)
-      .apply(SkeletonTracingActions.createCommentAction(commentText1))
-      .apply(createNodeAction)
-      .apply(SkeletonTracingActions.createCommentAction(commentText2))
-      .unpack();
+    const newState = applyActions(initialState, [
+      createNodeAction,
+      SkeletonTracingActions.createCommentAction(commentText1),
+      createNodeAction,
+      SkeletonTracingActions.createCommentAction(commentText2),
+    ]);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -1408,11 +1394,11 @@ describe("SkeletonTracing", () => {
     );
     const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
     const createTreeAction = SkeletonTracingActions.createTreeAction();
-    const newState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
-      .apply(createTreeAction)
-      .apply(createNodeAction)
-      .apply(createCommentAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createTreeAction,
+      createNodeAction,
+      createCommentAction,
+    ]);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -1434,11 +1420,11 @@ describe("SkeletonTracing", () => {
     const deleteCommentAction = SkeletonTracingActions.deleteCommentAction();
 
     // create a node with a comment, then delete it
-    const newState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
-      .apply(createNodeAction)
-      .apply(createCommentAction)
-      .apply(deleteCommentAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createNodeAction,
+      createCommentAction,
+      deleteCommentAction,
+    ]);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -1458,13 +1444,13 @@ describe("SkeletonTracing", () => {
     const deleteCommentAction = SkeletonTracingActions.deleteCommentAction();
 
     // create two nodes with a comment each and delete the comment for the last node
-    const newState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
-      .apply(createNodeAction)
-      .apply(createCommentAction)
-      .apply(createNodeAction)
-      .apply(createCommentAction)
-      .apply(deleteCommentAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createNodeAction,
+      createCommentAction,
+      createNodeAction,
+      createCommentAction,
+      deleteCommentAction,
+    ]);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -1485,11 +1471,11 @@ describe("SkeletonTracing", () => {
     );
 
     // create a few trees and add a node to a specific one
-    const newState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
-      .apply(createTreeAction)
-      .apply(createTreeAction)
-      .apply(createNodeAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createTreeAction,
+      createTreeAction,
+      createNodeAction,
+    ]);
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
 
@@ -1509,12 +1495,12 @@ describe("SkeletonTracing", () => {
     const deleteNodeAction = SkeletonTracingActions.deleteNodeAction(2, 1);
 
     // create three nodes and delete a specific one
-    const newState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
-      .apply(createNodeAction)
-      .apply(createNodeAction)
-      .apply(createNodeAction)
-      .apply(deleteNodeAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createNodeAction,
+      createNodeAction,
+      createNodeAction,
+      deleteNodeAction,
+    ]);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -1537,12 +1523,12 @@ describe("SkeletonTracing", () => {
     const deleteNodeAction = SkeletonTracingActions.deleteNodeAction(2);
 
     // create three nodes and delete a specific one
-    const newState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
-      .apply(createNodeAction)
-      .apply(createNodeAction)
-      .apply(createNodeAction)
-      .apply(deleteNodeAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createNodeAction,
+      createNodeAction,
+      createNodeAction,
+      deleteNodeAction,
+    ]);
 
     expect(newState).not.toBe(initialState);
 
@@ -1566,12 +1552,12 @@ describe("SkeletonTracing", () => {
     const createBranchPointAction = SkeletonTracingActions.createBranchPointAction(2, 1);
 
     // create some nodes and then set a specific one as branchpoint
-    const newState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
-      .apply(createNodeAction)
-      .apply(createNodeAction)
-      .apply(createNodeAction)
-      .apply(createBranchPointAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createNodeAction,
+      createNodeAction,
+      createNodeAction,
+      createBranchPointAction,
+    ]);
     expect(newState).not.toBe(initialState);
 
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -1590,12 +1576,12 @@ describe("SkeletonTracing", () => {
     const createBranchPointAction = SkeletonTracingActions.createBranchPointAction(2, 1);
 
     // create some nodes and then set a specific one as branchpoint
-    const newState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
-      .apply(createNodeAction)
-      .apply(createNodeAction)
-      .apply(createNodeAction)
-      .apply(createBranchPointAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createNodeAction,
+      createNodeAction,
+      createNodeAction,
+      createBranchPointAction,
+    ]);
 
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -1608,11 +1594,11 @@ describe("SkeletonTracing", () => {
     const deleteTreeAction = SkeletonTracingActions.deleteTreeAction(2);
 
     // create some trees and delete a specific one
-    const newState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
-      .apply(createTreeAction)
-      .apply(createTreeAction)
-      .apply(deleteTreeAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createTreeAction,
+      createTreeAction,
+      deleteTreeAction,
+    ]);
 
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -1626,11 +1612,11 @@ describe("SkeletonTracing", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
     const setTreeNameAction = SkeletonTracingActions.setTreeNameAction(newName, 2);
 
-    const newState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
-      .apply(createTreeAction)
-      .apply(createTreeAction)
-      .apply(setTreeNameAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createTreeAction,
+      createTreeAction,
+      setTreeNameAction,
+    ]);
 
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -1651,12 +1637,12 @@ describe("SkeletonTracing", () => {
     const createCommentAction = SkeletonTracingActions.createCommentAction(commentText, 2);
 
     // create a few nodes and adds one comment
-    const newState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
-      .apply(createNodeAction)
-      .apply(createNodeAction)
-      .apply(createNodeAction)
-      .apply(createCommentAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createNodeAction,
+      createNodeAction,
+      createNodeAction,
+      createCommentAction,
+    ]);
 
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -1678,15 +1664,15 @@ describe("SkeletonTracing", () => {
     const deleteCommentAction = SkeletonTracingActions.deleteCommentAction(2);
 
     // create nodes with comments, then delete a specific comment
-    const newState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
-      .apply(createNodeAction)
-      .apply(createCommentAction)
-      .apply(createNodeAction)
-      .apply(createCommentAction)
-      .apply(createNodeAction)
-      .apply(createCommentAction)
-      .apply(deleteCommentAction)
-      .unpack();
+    const newState = applyActions(initialState, [
+      createNodeAction,
+      createCommentAction,
+      createNodeAction,
+      createCommentAction,
+      createNodeAction,
+      createCommentAction,
+      deleteCommentAction,
+    ]);
 
     expect(newState).not.toBe(initialState);
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
@@ -1709,13 +1695,7 @@ describe("SkeletonTracing", () => {
 
   it("should toggle inactive trees", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
-    const stateWithFourTrees = ChainReducer<WebknossosState, Action>(
-      initialState,
-      SkeletonTracingReducer,
-    )
-      .apply(createTreeAction)
-      .apply(createTreeAction)
-      .unpack();
+    const stateWithFourTrees = applyActions(initialState, [createTreeAction, createTreeAction]);
 
     const toggledState = SkeletonTracingReducer(
       stateWithFourTrees,
@@ -1742,13 +1722,7 @@ describe("SkeletonTracing", () => {
 
   it("should toggle all trees", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
-    const stateWithFourTrees = ChainReducer<WebknossosState, Action>(
-      initialState,
-      SkeletonTracingReducer,
-    )
-      .apply(createTreeAction)
-      .apply(createTreeAction)
-      .unpack();
+    const stateWithFourTrees = applyActions(initialState, [createTreeAction, createTreeAction]);
 
     const toggledState = SkeletonTracingReducer(
       stateWithFourTrees,
@@ -1775,21 +1749,18 @@ describe("SkeletonTracing", () => {
 
   it("should toggle inactive trees when a group is active", () => {
     const createTreeAction = SkeletonTracingActions.createTreeAction();
-    const stateWithFourTrees = ChainReducer<WebknossosState, Action>(
-      initialState,
-      SkeletonTracingReducer,
-    )
-      .apply(createTreeAction)
-      .apply(createTreeAction)
-      .apply(
-        SkeletonTracingActions.setTreeGroupsAction([
-          { groupId: 1, name: "Some Group", children: [] },
-        ]),
-      )
-      .apply(SkeletonTracingActions.setTreeGroupAction(1, 1))
-      .apply(SkeletonTracingActions.setTreeGroupAction(1, 2))
-      .apply(SkeletonTracingActions.setTreeGroupAction(1, 3))
-      .unpack();
+    const stateWithFourTrees = applyActions(initialState, [
+      createTreeAction,
+      createTreeAction,
+
+      SkeletonTracingActions.setTreeGroupsAction([
+        { groupId: 1, name: "Some Group", children: [] },
+      ]),
+
+      SkeletonTracingActions.setTreeGroupAction(1, 1),
+      SkeletonTracingActions.setTreeGroupAction(1, 2),
+      SkeletonTracingActions.setTreeGroupAction(1, 3),
+    ]);
 
     const toggledState = SkeletonTracingReducer(
       stateWithFourTrees,

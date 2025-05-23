@@ -295,9 +295,10 @@ const createMenuForTreeGroup = (
   }
 
   function setAllTreesColor(color: Vector3) {
-    const setTreeColorActions = Array.from(
-      props.trees.values().map((tree) => setTreeColorAction(tree.treeId, color)),
-    );
+    const setTreeColorActions = props.trees
+      .values()
+      .map((tree) => setTreeColorAction(tree.treeId, color))
+      .toArray();
     onBatchActions(setTreeColorActions, "SET_TREE_COLOR");
   }
 

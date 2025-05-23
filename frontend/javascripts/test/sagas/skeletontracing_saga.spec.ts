@@ -220,9 +220,9 @@ describe("SkeletonTracingSaga", () => {
   });
 
   it("should emit createNode and createEdge update actions", () => {
-    const newState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
+    const newState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
+      .apply(createNodeAction)
+      .apply(createNodeAction)
       .unpack();
 
     const updateActions = testDiffing(
@@ -259,10 +259,10 @@ describe("SkeletonTracingSaga", () => {
   });
 
   it("should emit createNode and createTree update actions", () => {
-    const newState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
+    const newState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
+      .apply(createNodeAction)
+      .apply(createTreeAction)
+      .apply(createNodeAction)
       .unpack();
 
     const updateActions = testDiffing(
@@ -299,10 +299,10 @@ describe("SkeletonTracingSaga", () => {
 
   it("should emit first deleteNode and then createNode update actions", () => {
     const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 2);
-    const testState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
+    const testState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
+      .apply(createNodeAction)
+      .apply(createTreeAction)
+      .apply(createNodeAction)
       .unpack();
 
     const newState = SkeletonTracingReducer(testState, mergeTreesAction);
@@ -368,9 +368,9 @@ describe("SkeletonTracingSaga", () => {
   });
 
   it("should emit a deleteEdge update action", () => {
-    const testState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
+    const testState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
+      .apply(createNodeAction)
+      .apply(createNodeAction)
       .unpack();
     const newState = SkeletonTracingReducer(testState, deleteNodeAction);
     const updateActions = testDiffing(
@@ -438,9 +438,9 @@ describe("SkeletonTracingSaga", () => {
   });
 
   it("should emit an updateNode update action 2", () => {
-    const testState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, setNodeRadiusAction)
+    const testState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
+      .apply(createNodeAction)
+      .apply(setNodeRadiusAction)
       .unpack();
 
     const newState = SkeletonTracingReducer(testState, setNodeRadiusAction);
@@ -480,9 +480,9 @@ describe("SkeletonTracingSaga", () => {
   });
 
   it("shouldn't emit an updateTree update actions (comments)", () => {
-    const testState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createCommentAction)
+    const testState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
+      .apply(createNodeAction)
+      .apply(createCommentAction)
       .unpack();
 
     const newState = SkeletonTracingReducer(testState, createCommentAction);
@@ -524,12 +524,12 @@ describe("SkeletonTracingSaga", () => {
   it("should emit update actions on merge tree", () => {
     const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(3, 1);
     // create a node in first tree, then create a second tree with three nodes and merge them
-    const testState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
+    const testState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
+      .apply(createNodeAction)
+      .apply(createTreeAction)
+      .apply(createNodeAction)
+      .apply(createNodeAction)
+      .apply(createNodeAction)
       .unpack();
 
     const newState = SkeletonTracingReducer(testState, mergeTreesAction);
@@ -577,13 +577,13 @@ describe("SkeletonTracingSaga", () => {
   it("should emit update actions on split tree", () => {
     const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(3, 1);
     // create a node in first tree, then create a second tree with three nodes and merge them
-    const testState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, mergeTreesAction)
+    const testState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
+      .apply(createNodeAction)
+      .apply(createTreeAction)
+      .apply(createNodeAction)
+      .apply(createNodeAction)
+      .apply(createNodeAction)
+      .apply(mergeTreesAction)
       .unpack();
 
     // Node 3 will be deleted since it is active in testState.
@@ -681,12 +681,12 @@ describe("SkeletonTracingSaga", () => {
   it("compactUpdateActions should detect a tree merge (1/3)", () => {
     const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(4, 1);
     // Create three nodes in the first tree, then create a second tree with one node and merge them
-    const testState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
+    const testState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
+      .apply(createNodeAction)
+      .apply(createNodeAction)
+      .apply(createNodeAction)
+      .apply(createTreeAction)
+      .apply(createNodeAction)
       .unpack();
 
     const newState = SkeletonTracingReducer(testState, mergeTreesAction);
@@ -738,12 +738,12 @@ describe("SkeletonTracingSaga", () => {
     // In this test multiple diffs are performed and concatenated before compactUpdateActions is invoked
     const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(5, 1);
     // Create three nodes in the first tree, then create a second tree with one node
-    const testState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
+    const testState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
+      .apply(createNodeAction)
+      .apply(createNodeAction)
+      .apply(createNodeAction)
+      .apply(createTreeAction)
+      .apply(createNodeAction)
       .unpack();
 
     // Create another node (a)
@@ -754,10 +754,10 @@ describe("SkeletonTracingSaga", () => {
     );
 
     // Merge the two trees (b), then create another tree and node (c)
-    const newState2 = ChainReducer<WebknossosState, Action>(newState1)
-      .apply(SkeletonTracingReducer, mergeTreesAction)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
+    const newState2 = ChainReducer<WebknossosState, Action>(newState1, SkeletonTracingReducer)
+      .apply(mergeTreesAction)
+      .apply(createTreeAction)
+      .apply(createNodeAction)
       .unpack();
     updateActions.push(
       testDiffing(newState1.annotation, newState2.annotation, newState1.flycam, newState2.flycam),
@@ -831,12 +831,12 @@ describe("SkeletonTracingSaga", () => {
     const secondMergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 6);
 
     // Create three nodes in the first tree, then create a second tree with one node
-    const testState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
+    const testState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
+      .apply(createNodeAction)
+      .apply(createNodeAction)
+      .apply(createNodeAction)
+      .apply(createTreeAction)
+      .apply(createNodeAction)
       .unpack();
 
     // Merge the second tree into the first tree (a)
@@ -852,10 +852,13 @@ describe("SkeletonTracingSaga", () => {
     );
 
     // Create another tree and two nodes (b)
-    const newState = ChainReducer<WebknossosState, Action>(stateAfterFirstMerge)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
+    const newState = ChainReducer<WebknossosState, Action>(
+      stateAfterFirstMerge,
+      SkeletonTracingReducer,
+    )
+      .apply(createTreeAction)
+      .apply(createNodeAction)
+      .apply(createNodeAction)
       .unpack();
 
     updateActions.push(
@@ -957,11 +960,11 @@ describe("SkeletonTracingSaga", () => {
   it("compactUpdateActions should detect a tree split (1/3)", () => {
     const deleteMiddleNodeAction = SkeletonTracingActions.deleteNodeAction(2);
     // Create four nodes
-    const testState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
+    const testState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
+      .apply(createNodeAction)
+      .apply(createNodeAction)
+      .apply(createNodeAction)
+      .apply(createNodeAction)
       .unpack();
 
     // Delete the second node to split the tree
@@ -1018,15 +1021,15 @@ describe("SkeletonTracingSaga", () => {
     const setActiveNodeAction = SkeletonTracingActions.setActiveNodeAction(2);
     // Create four nodes, then set node 2 as active and create another three nodes
     // Node 2 now has three neighbors
-    const testState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, setActiveNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
+    const testState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
+      .apply(createNodeAction)
+      .apply(createNodeAction)
+      .apply(createNodeAction)
+      .apply(createNodeAction)
+      .apply(setActiveNodeAction)
+      .apply(createNodeAction)
+      .apply(createNodeAction)
+      .apply(createNodeAction)
       .unpack();
 
     // Delete node 2 to split the tree into three parts
@@ -1098,13 +1101,13 @@ describe("SkeletonTracingSaga", () => {
     const deleteOtherMiddleNodeAction = SkeletonTracingActions.deleteNodeAction(4);
 
     // Create six nodes
-    const testState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
+    const testState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
+      .apply(createNodeAction)
+      .apply(createNodeAction)
+      .apply(createNodeAction)
+      .apply(createNodeAction)
+      .apply(createNodeAction)
+      .apply(createNodeAction)
       .unpack();
 
     // Delete the second node to split the tree (a)
@@ -1198,15 +1201,15 @@ describe("SkeletonTracingSaga", () => {
     // it could however exist in the future and this test makes sure things won't break then
     const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(2, 1);
     // Create three nodes in the first tree, then create a second tree with one node and merge them
-    const testState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createNodeAction)
+    const testState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
+      .apply(createNodeAction)
       .unpack();
 
     // Create the tree that is merged to and merge the trees at the same time
-    const newState = ChainReducer<WebknossosState, Action>(testState)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, mergeTreesAction)
+    const newState = ChainReducer<WebknossosState, Action>(testState, SkeletonTracingReducer)
+      .apply(createTreeAction)
+      .apply(createNodeAction)
+      .apply(mergeTreesAction)
       .unpack();
 
     // This will currently never be the result of one diff (see description of the test)
@@ -1232,16 +1235,16 @@ describe("SkeletonTracingSaga", () => {
   });
 
   it("compactUpdateActions should detect a deleted tree", () => {
-    const testState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
+    const testState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
+      .apply(createTreeAction)
+      .apply(createNodeAction)
+      .apply(createNodeAction)
+      .apply(createNodeAction)
       .unpack();
 
     // Delete the tree
-    const newState = ChainReducer<WebknossosState, Action>(testState)
-      .apply(SkeletonTracingReducer, deleteTreeAction)
+    const newState = ChainReducer<WebknossosState, Action>(testState, SkeletonTracingReducer)
+      .apply(deleteTreeAction)
       .unpack();
 
     const updateActions = testDiffing(
@@ -1268,17 +1271,17 @@ describe("SkeletonTracingSaga", () => {
   });
 
   it("compactUpdateActions should not detect a deleted tree if there is no deleted tree", () => {
-    const testState = ChainReducer<WebknossosState, Action>(initialState)
-      .apply(SkeletonTracingReducer, createTreeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
-      .apply(SkeletonTracingReducer, createNodeAction)
+    const testState = ChainReducer<WebknossosState, Action>(initialState, SkeletonTracingReducer)
+      .apply(createTreeAction)
+      .apply(createNodeAction)
+      .apply(createNodeAction)
+      .apply(createNodeAction)
       .unpack();
 
     // Delete almost all nodes from the tree
-    const newState = ChainReducer<WebknossosState, Action>(testState)
-      .apply(SkeletonTracingReducer, deleteNodeAction)
-      .apply(SkeletonTracingReducer, deleteNodeAction)
+    const newState = ChainReducer<WebknossosState, Action>(testState, SkeletonTracingReducer)
+      .apply(deleteNodeAction)
+      .apply(deleteNodeAction)
       .unpack();
 
     const updateActions = testDiffing(

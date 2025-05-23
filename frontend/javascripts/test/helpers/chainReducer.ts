@@ -1,17 +1,13 @@
 class ChainReducerClass<S, A> {
-  state: S;
+  constructor(
+    public state: S,
+    public reducer: (arg0: S, arg1: A) => S,
+  ) {}
 
-  constructor(state: S) {
-    this.state = state;
-  }
-
-  apply(
-    reducer: (arg0: S, arg1: A) => S,
-    actionGetter: A | ((arg0: S) => A),
-  ): ChainReducerClass<S, A> {
+  apply(actionGetter: A | ((arg0: S) => A)): ChainReducerClass<S, A> {
     // @ts-expect-error ts-migrate(2349) FIXME: This expression is not callable.
     const action: A = typeof actionGetter === "function" ? actionGetter(this.state) : actionGetter;
-    return new ChainReducerClass(reducer(this.state, action));
+    return new ChainReducerClass(this.reducer(this.state, action), this.reducer);
   }
 
   applyAll(
@@ -31,6 +27,9 @@ class ChainReducerClass<S, A> {
   }
 }
 
-export default function ChainReducer<S, A>(state: S): ChainReducerClass<S, A> {
-  return new ChainReducerClass(state);
+export default function ChainReducer<S, A>(
+  state: S,
+  reducer: (arg0: S, arg1: A) => S,
+): ChainReducerClass<S, A> {
+  return new ChainReducerClass(state, reducer);
 }

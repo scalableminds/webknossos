@@ -5,12 +5,14 @@ import type { Edge } from "./types/tree_types";
 
 type EdgeMap = DiffableMap<number, Edge[]>;
 
-export default class EdgeCollection {
+export default class EdgeCollection implements NotEnumerableByObject {
   // Edge map keyed by the source id of the edges (outgoing)
   outMap: EdgeMap;
   // Edge map keyed by the target id of the edges (ingoing)
   inMap: EdgeMap;
   edgeCount: number;
+
+  __notEnumerableByObject: true = true;
 
   constructor(itemsPerBatch?: number) {
     this.outMap = new DiffableMap(null, itemsPerBatch);

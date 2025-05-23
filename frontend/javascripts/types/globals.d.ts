@@ -9,6 +9,20 @@ declare global {
       apiReady: ApiType["apiReady"]
     };
   }
+
+  // This is a helper interface that can be implemented by custom collections
+  // to ensure that Object.{keys,values,entries} is not used on them (as TS
+  // will happily allow this while being most likely not what was intended).
+  interface NotEnumerableByObject {
+    __notEnumerableByObject: true;
+  }
+
+  interface ObjectConstructor {
+    keys<T extends NotEnumerableByObject>(obj: T): never;
+    values<T extends NotEnumerableByObject>(obj: T): never;
+    entries<T extends NotEnumerableByObject>(obj: T): never;
+  }
+
 }
 
 // Typescript utility types:
@@ -23,3 +37,4 @@ export type Mutable<T> = {
   -readonly [K in keyof T]: T[K];
 };
 export type Writeable<T> = { -readonly [P in keyof T]: T[P] };
+

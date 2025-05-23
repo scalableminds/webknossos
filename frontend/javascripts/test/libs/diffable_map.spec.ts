@@ -6,6 +6,13 @@ function sort(arr: Array<number>) {
   return arr.sort((a, b) => a - b);
 }
 
+// @ts-expect-error This is type test that ensures that one must not use Object.keys with a DiffableMap.
+Object.keys(new DiffableMap()).length;
+// @ts-expect-error This is type test that ensures that one must not use Object.values with a DiffableMap.
+Object.values(new DiffableMap()).length;
+// @ts-expect-error This is type test that ensures that one must not use Object.entries with a DiffableMap.
+Object.entries(new DiffableMap()).length;
+
 describe("DiffableMap", () => {
   it("should be empty", () => {
     const emptyMap = new DiffableMap<number, number>();

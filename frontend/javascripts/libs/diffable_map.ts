@@ -16,13 +16,15 @@ const idSymbol = Symbol("id");
  * @template K The key type (must extend number)
  * @template V The value type for each map entry
  */
-class DiffableMap<K extends number, V> {
+class DiffableMap<K extends number, V> implements NotEnumerableByObject {
   /** Internal array of Map chunks for storing data */
   chunks: Array<Map<K, V>>;
   /** Total number of entries across all chunks */
   entryCount: number;
   /** Maximum number of items per chunk before creating a new chunk */
   itemsPerBatch: number;
+
+  __notEnumerableByObject: true = true;
 
   /**
    * Creates a new DiffableMap instance

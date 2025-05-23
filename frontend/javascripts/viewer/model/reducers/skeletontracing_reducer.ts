@@ -564,12 +564,17 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
         return state;
       }
 
-      const newTrees = skeletonTracing.trees.set(activeTree.treeId, {
+      const toggledTreeState = toggleAllTreesReducer(state, skeletonTracing);
+      if (toggledTreeState.annotation.skeleton == null) {
+        // Skeleton should not have become null in the meantime
+        throw new Error("Skeleton must not be null");
+      }
+      const newTrees = toggledTreeState.annotation.skeleton.trees.set(activeTree.treeId, {
         ...activeTree,
         isVisible: true,
       });
 
-      return update(toggleAllTreesReducer(state, skeletonTracing), {
+      return update(toggledTreeState, {
         annotation: {
           skeleton: {
             trees: {

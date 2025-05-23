@@ -1706,4 +1706,111 @@ describe("SkeletonTracing", () => {
     const newSkeletonTracing = enforceSkeletonTracing(newState.annotation);
     expect(newSkeletonTracing.trees.getOrThrow(1).color).not.toEqual([23, 23, 23]);
   });
+
+  it("should toggle inactive trees", () => {
+    const createTreeAction = SkeletonTracingActions.createTreeAction();
+    const stateWithFourTrees = ChainReducer<WebknossosState, Action>(
+      initialState,
+      SkeletonTracingReducer,
+    )
+      .apply(createTreeAction)
+      .apply(createTreeAction)
+      .unpack();
+
+    const toggledState = SkeletonTracingReducer(
+      stateWithFourTrees,
+      SkeletonTracingActions.toggleInactiveTreesAction(),
+    );
+
+    let trees = enforceSkeletonTracing(toggledState.annotation).trees;
+    expect(trees.getOrThrow(1).isVisible).toBe(false);
+    expect(trees.getOrThrow(2).isVisible).toBe(false);
+    expect(trees.getOrThrow(3).isVisible).toBe(false);
+    expect(trees.getOrThrow(4).isVisible).toBe(true);
+
+    const retoggledState = SkeletonTracingReducer(
+      toggledState,
+      SkeletonTracingActions.toggleInactiveTreesAction(),
+    );
+    trees = enforceSkeletonTracing(retoggledState.annotation).trees;
+
+    expect(trees.getOrThrow(1).isVisible).toBe(true);
+    expect(trees.getOrThrow(2).isVisible).toBe(true);
+    expect(trees.getOrThrow(3).isVisible).toBe(true);
+    expect(trees.getOrThrow(4).isVisible).toBe(true);
+  });
+
+  it("should toggle all trees", () => {
+    const createTreeAction = SkeletonTracingActions.createTreeAction();
+    const stateWithFourTrees = ChainReducer<WebknossosState, Action>(
+      initialState,
+      SkeletonTracingReducer,
+    )
+      .apply(createTreeAction)
+      .apply(createTreeAction)
+      .unpack();
+
+    const toggledState = SkeletonTracingReducer(
+      stateWithFourTrees,
+      SkeletonTracingActions.toggleAllTreesAction(),
+    );
+
+    let trees = enforceSkeletonTracing(toggledState.annotation).trees;
+    expect(trees.getOrThrow(1).isVisible).toBe(false);
+    expect(trees.getOrThrow(2).isVisible).toBe(false);
+    expect(trees.getOrThrow(3).isVisible).toBe(false);
+    expect(trees.getOrThrow(4).isVisible).toBe(false);
+
+    const retoggledState = SkeletonTracingReducer(
+      toggledState,
+      SkeletonTracingActions.toggleInactiveTreesAction(),
+    );
+    trees = enforceSkeletonTracing(retoggledState.annotation).trees;
+
+    expect(trees.getOrThrow(1).isVisible).toBe(true);
+    expect(trees.getOrThrow(2).isVisible).toBe(true);
+    expect(trees.getOrThrow(3).isVisible).toBe(true);
+    expect(trees.getOrThrow(4).isVisible).toBe(true);
+  });
+
+  it("should toggle inactive trees when a group is active", () => {
+    const createTreeAction = SkeletonTracingActions.createTreeAction();
+    const stateWithFourTrees = ChainReducer<WebknossosState, Action>(
+      initialState,
+      SkeletonTracingReducer,
+    )
+      .apply(createTreeAction)
+      .apply(createTreeAction)
+      .apply(
+        SkeletonTracingActions.setTreeGroupsAction([
+          { groupId: 1, name: "Some Group", children: [] },
+        ]),
+      )
+      .apply(SkeletonTracingActions.setTreeGroupAction(1, 1))
+      .apply(SkeletonTracingActions.setTreeGroupAction(1, 2))
+      .apply(SkeletonTracingActions.setTreeGroupAction(1, 3))
+      .unpack();
+
+    const toggledState = SkeletonTracingReducer(
+      stateWithFourTrees,
+      SkeletonTracingActions.toggleInactiveTreesAction(),
+    );
+
+    let trees = enforceSkeletonTracing(toggledState.annotation).trees;
+    expect(trees.getOrThrow(1).isVisible).toBe(false);
+    expect(trees.getOrThrow(2).isVisible).toBe(false);
+    expect(trees.getOrThrow(3).isVisible).toBe(false);
+    expect(trees.getOrThrow(4).isVisible).toBe(true);
+
+    const retoggledState = SkeletonTracingReducer(
+      toggledState,
+      SkeletonTracingActions.toggleInactiveTreesAction(),
+    );
+    trees = enforceSkeletonTracing(retoggledState.annotation).trees;
+
+    expect(trees.getOrThrow(1).isVisible).toBe(true);
+    expect(trees.getOrThrow(2).isVisible).toBe(true);
+    expect(trees.getOrThrow(3).isVisible).toBe(true);
+    expect(trees.getOrThrow(4).isVisible).toBe(true);
+  });
 });

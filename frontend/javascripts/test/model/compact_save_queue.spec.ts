@@ -1,9 +1,10 @@
 import { removeSubsequentUpdateBBoxActions } from "viewer/model/helpers/compaction/compact_save_queue";
+import type { SaveQueueEntry } from "viewer/store";
 import { describe, expect, it } from "vitest";
 
 describe("Compact Save Queue", () => {
   it("UpdateUserBoundingBoxActions of the same tracing should be compacted", () => {
-    const actions = [
+    const actions: SaveQueueEntry[] = [
       {
         version: -1,
         transactionId: "eq3scfgvoa",
@@ -245,7 +246,6 @@ describe("Compact Save Queue", () => {
         info: '["INITIALIZE_CONNECTOME_TRACING","SET_TD_CAMERA_WITHOUT_TIME_TRACKING * 5","SET_INPUT_CATCHER_RECTS","SET_TD_CAMERA_WITHOUT_TIME_TRACKING","UPDATE_CONNECTOME_FILE_LIST","SET_MAXIMUM_ZOOM_FOR_ALL_MAGS_FOR_LAYER * 4","SET_TOOL","CHANGE_USER_BOUNDING_BOX * 2","SET_TD_CAMERA_WITHOUT_TIME_TRACKING","CHANGE_USER_BOUNDING_BOX * 3"]',
       },
     ];
-    // @ts-ignore
     const compactedActions = removeSubsequentUpdateBBoxActions(actions);
     expect(compactedActions).toHaveLength(2);
     const latestSkeletonTracingAction = compactedActions.find(
@@ -254,9 +254,8 @@ describe("Compact Save Queue", () => {
     expect(latestSkeletonTracingAction).toBeDefined();
     const volumeActionValue = latestSkeletonTracingAction?.actions[0].value;
     expect(volumeActionValue).not.toBeNull();
-    volumeActionValue;
     expect(volumeActionValue).toHaveProperty("updatedProps");
-    // @ts-ignore
+    // @ts-ignore we checked before that voluemActionValue is not null and that is has the property updatedProps
     expect(volumeActionValue.updatedProps.boundingBox).toEqual({
       topLeft: [3224, 3955, 944],
       width: 1,
@@ -270,7 +269,7 @@ describe("Compact Save Queue", () => {
     const skeletonActionValue = latestVolumeTracingAction?.actions[0].value;
     expect(skeletonActionValue).not.toBeNull();
     expect(skeletonActionValue).toHaveProperty("updatedProps");
-    // @ts-ignore
+    // @ts-ignore checked before
     expect(skeletonActionValue.updatedProps.boundingBox).toEqual({
       topLeft: [3224, 3955, 900],
       width: 1,
@@ -280,7 +279,7 @@ describe("Compact Save Queue", () => {
   });
 
   it("UpdateUserBoundingBoxActions should be not compacted for different props", () => {
-    const actions = [
+    const actions: SaveQueueEntry[] = [
       {
         version: -1,
         transactionId: "eq3scfgvoa",

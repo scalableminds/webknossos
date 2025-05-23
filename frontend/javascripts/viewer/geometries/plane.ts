@@ -70,12 +70,10 @@ class Plane {
 
     this.materialFactory = new PlaneMaterialFactory(
       this.planeID,
-      false,
       OrthoViewValues.indexOf(this.planeID),
     );
     const textureMaterial = this.materialFactory.setup().getMaterial();
     this.plane = new THREE.Mesh(planeGeo, textureMaterial);
-    this.plane.name = `${this.planeID}-plane`;
 
     // Create crosshairs
     this.crosshair = new Array(2);
@@ -98,7 +96,6 @@ class Plane {
       // The default renderOrder is 0. In order for the crosshairs to be shown
       // render them AFTER the plane has been rendered.
       this.crosshair[i].renderOrder = 1;
-      this.crosshair[i].name = `${this.planeID}-crosshair-${i}`;
     }
 
     // Create borders
@@ -115,7 +112,6 @@ class Plane {
       tdBorderGeometry,
       this.getLineBasicMaterial(OrthoViewColors[this.planeID], 1),
     );
-    this.TDViewBorders.name = `${this.planeID}-TDViewBorders`;
   }
 
   setDisplayCrosshair = (value: boolean): void => {
@@ -166,6 +162,7 @@ class Plane {
   };
 
   setRotation = (rotVec: THREE.Euler): void => {
+    // rotVec must be in "ZYX" order as this is how the flycam operates (see flycam_reducer setRotationReducer)
     const baseRotationMatrix = new THREE.Matrix4().makeRotationFromEuler(this.baseRotation);
     const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(rotVec);
     const combinedMatrix = rotationMatrix.multiply(baseRotationMatrix);
@@ -180,7 +177,9 @@ class Plane {
     originalPosition: Vector3,
     positionOffset: Vector3 = DEFAULT_POSITION_OFFSET,
   ): void => {
-    // TODOM: Write proper reasoning comment.
+    // As the world scaling by the dataset scale factor is inverted by the scene group
+    // containing all planes to avoid sheering in anisotropic scaled datasets.
+    // Thus, this scale needs to be applied manually to the position here.
     const scaledPosition = V3.multiply(originalPosition, this.datasetScaleFactor);
     // The offset is in screen space already so no scaling is necessary.
     const offsetPosition = V3.add(scaledPosition, positionOffset);

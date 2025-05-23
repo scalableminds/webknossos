@@ -108,6 +108,8 @@ export const initialState = update(defaultState, {
   },
   flycam: {
     currentMatrix: {
+      // Apply the default 180 z axis rotation to get correct result in ortho related tests.
+      // This makes the calculated flycam rotation to  [0, 0, 0]. Otherwise it would be  [0, 0, 180].
       $set: M4x4.rotate(Math.PI, [0, 0, 1], M4x4.identity(), []),
     },
   },

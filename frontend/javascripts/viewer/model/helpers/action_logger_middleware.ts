@@ -20,7 +20,7 @@ const actionBlacklist = [
   "SET_INPUT_CATCHER_RECT",
   "SET_MOUSE_POSITION",
   "SET_POSITION",
-  //"SET_ROTATION",
+  "SET_ROTATION",
   "SET_TD_CAMERA",
   "SET_VIEWPORT",
   "ZOOM_TD_VIEW",

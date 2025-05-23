@@ -209,7 +209,7 @@ describe("UrlManager", () => {
   it("should build default url in csv format", () => {
     UrlManager.initialize();
     const url = UrlManager.buildUrl();
-    // TODOM: Investigate why the rotation of z is 180.
+    // There is a default rotation of 180 around z which needs to be accounted for here.
     expect(url).toBe("#0,0,0,0,1.3,0,0,180");
   });
 

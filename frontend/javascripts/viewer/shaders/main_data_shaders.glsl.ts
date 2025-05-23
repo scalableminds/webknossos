@@ -59,7 +59,6 @@ export type Params = {
   magnificationsCount: number;
   voxelSizeFactor: Vector3;
   voxelSizeFactorInverted: Vector3;
-  isOrthogonal: boolean;
   tpsTransformPerLayer: Record<string, TPS3D>;
 };
 

@@ -13,7 +13,6 @@ import { reuseInstanceOnEquality } from "./accessor_helpers";
 import { getTransformsPerLayer } from "./dataset_layer_transformation_accessor";
 import { areGeometriesTransformed, isSkeletonLayerVisible } from "./skeletontracing_accessor";
 
-import _ from "lodash";
 import {
   type AgglomerateState,
   getActiveSegmentationTracing,

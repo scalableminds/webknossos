@@ -90,11 +90,7 @@ const getMaybeFilteredColor: ShaderModule = {
     ) {
       vec4 color;
       if (!suppressBilinearFiltering && useBilinearFiltering) {
-        <% if (isOrthogonal) { %>
-          color = getBilinearColorFor(layerIndex, d_texture_width, packingDegree, worldPositionUVW);
-        <% } else { %>
-          color = getTrilinearColorFor(layerIndex, d_texture_width, packingDegree, worldPositionUVW);
-        <% } %>
+        color = getTrilinearColorFor(layerIndex, d_texture_width, packingDegree, worldPositionUVW);
       } else {
         color = getColorForCoords(layerIndex, d_texture_width, packingDegree, worldPositionUVW, supportsPrecomputedBucketAddress);
       }

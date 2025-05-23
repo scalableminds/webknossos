@@ -298,7 +298,7 @@ function _getFlooredPosition(flycam: Flycam): Vector3 {
 }
 
 // Returns the current rotation of the flycam in radians as an euler xyz tuple.
-// As the order in which the angles are applied is zyx (see flycam_reducer),
+// As the order in which the angles are applied is zyx (see flycam_reducer setRotationReducer),
 // this order must be followed when this euler angle is applied to 2d computations.
 function _getRotationInRadian(flycam: Flycam, invertZ: boolean = true): Vector3 {
   // Somehow z rotation is inverted but the others are not.
@@ -518,6 +518,8 @@ export function getPlaneExtentInVoxel(
   const { width, height } = rects[planeID];
   return [width * zoomStep, height * zoomStep];
 }
+
+// TODOM: Investigate why these values are different to OrthoBaseRotations.
 export function getRotationOrthoInRadian(planeId: OrthoView): Vector3 {
   switch (planeId) {
     case OrthoViews.PLANE_YZ:

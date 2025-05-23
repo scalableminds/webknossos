@@ -151,8 +151,8 @@ export function* prefetchForPlaneMode(
         if (WkDevFlags.bucketDebugging.visualizePrefetchedBuckets) {
           for (const item of buckets) {
             const bucket = layer.cube.getOrCreateBucket(item.bucket);
+
             if (bucket.type !== "null") {
-              bucket.setVisualizationColor("green");
               bucket.visualize();
             }
           }

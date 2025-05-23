@@ -112,7 +112,6 @@ function getTextureLayerInfos(): Params["textureLayerInfos"] {
 
 class PlaneMaterialFactory {
   planeID: OrthoView;
-  isOrthogonal: boolean;
   material: THREE.ShaderMaterial | undefined | null;
   uniforms: Uniforms = {};
   attributes: Record<string, any> = {};
@@ -126,9 +125,8 @@ class PlaneMaterialFactory {
 
   scaledTpsInvPerLayer: Record<string, TPS3D> = {};
 
-  constructor(planeID: OrthoView, isOrthogonal: boolean, shaderId: number) {
+  constructor(planeID: OrthoView, shaderId: number) {
     this.planeID = planeID;
-    this.isOrthogonal = isOrthogonal;
     this.shaderId = shaderId;
     this.leastRecentlyVisibleLayers = [];
   }
@@ -1091,7 +1089,6 @@ class PlaneMaterialFactory {
       magnificationsCount: this.getTotalMagCount(),
       voxelSizeFactor,
       voxelSizeFactorInverted,
-      isOrthogonal: this.isOrthogonal,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
     });
     return [
@@ -1128,7 +1125,6 @@ class PlaneMaterialFactory {
       magnificationsCount: this.getTotalMagCount(),
       voxelSizeFactor,
       voxelSizeFactorInverted,
-      isOrthogonal: this.isOrthogonal,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
     });
   }

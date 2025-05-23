@@ -101,7 +101,7 @@ class ArbitraryPlane {
       return _plane;
     };
 
-    this.materialFactory = new PlaneMaterialFactory(OrthoViews.PLANE_XY, false, 4);
+    this.materialFactory = new PlaneMaterialFactory(OrthoViews.PLANE_XY, 4);
     const textureMaterial = this.materialFactory.setup().getMaterial();
     const mainPlane = adaptPlane(
       new THREE.Mesh(

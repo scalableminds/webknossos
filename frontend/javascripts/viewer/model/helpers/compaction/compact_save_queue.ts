@@ -95,12 +95,12 @@ export function removeSubsequentUpdateBBoxActions(updateActionsBatches: Array<Sa
         | UpdateUserBoundingBoxInVolumeTracingAction;
       const previousActionForTracing = previousActionsById[currentAction.value.actionTracingId];
       if (
-        previousActionForTracing != null &&
-        previousActionForTracing.name === currentAction.name &&
-        previousActionForTracing.value.boundingBoxId === currentAction.value.boundingBoxId &&
-        previousActionForTracing.value.hasUpdatedColor === currentAction.value.hasUpdatedColor &&
-        previousActionForTracing.value.hasUpdatedName === currentAction.value.hasUpdatedName &&
-        previousActionForTracing.value.hasUpdatedBoundingBox ===
+        previousActionForTracing == null ||
+        previousActionForTracing.name !== currentAction.name ||
+        previousActionForTracing.value.boundingBoxId !== currentAction.value.boundingBoxId ||
+        previousActionForTracing.value.hasUpdatedColor !== currentAction.value.hasUpdatedColor ||
+        previousActionForTracing.value.hasUpdatedName !== currentAction.value.hasUpdatedName ||
+        previousActionForTracing.value.hasUpdatedBoundingBox !==
           currentAction.value.hasUpdatedBoundingBox
       ) {
         relevantActions.unshift(updateActionsBatches[i]);

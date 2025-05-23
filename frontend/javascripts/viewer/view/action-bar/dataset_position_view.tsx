@@ -1,4 +1,4 @@
-import { PushpinOutlined, ReloadOutlined } from "@ant-design/icons";
+import { PushpinOutlined, RollbackOutlined } from "@ant-design/icons";
 import { Space } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { V3 } from "libs/mjs";
@@ -10,9 +10,8 @@ import { PureComponent } from "react";
 import { connect } from "react-redux";
 import type { APIDataset } from "types/api_types";
 import type { Vector3, ViewMode } from "viewer/constants";
-import constants from "viewer/constants";
 import { getDatasetExtentInVoxel } from "viewer/model/accessors/dataset_accessor";
-import { getPosition, getRotation } from "viewer/model/accessors/flycam_accessor";
+import { getPosition, getRotationInDegrees } from "viewer/model/accessors/flycam_accessor";
 import { setPositionAction, setRotationAction } from "viewer/model/actions/flycam_actions";
 import type { Flycam, Task, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
@@ -47,12 +46,6 @@ class DatasetPositionView extends PureComponent<Props> {
     const position = V3.floor(getPosition(this.props.flycam)).join(", ");
     await navigator.clipboard.writeText(position);
     Toast.success("Position copied to clipboard");
-  };
-
-  copyRotationToClipboard = async () => {
-    const rotation = V3.round(getRotation(this.props.flycam)).join(", ");
-    await navigator.clipboard.writeText(rotation);
-    Toast.success("Rotation copied to clipboard");
   };
 
   handleChangePosition = (position: Vector3) => {
@@ -111,8 +104,7 @@ class DatasetPositionView extends PureComponent<Props> {
       maybeErrorMessage = message["tracing.out_of_task_bounds"];
     }
 
-    const rotation = V3.round(getRotation(this.props.flycam));
-    const isArbitraryMode = constants.MODES_ARBITRARY.includes(this.props.viewMode);
+    const rotation = V3.round(getRotationInDegrees(this.props.flycam));
     const positionView = (
       <div
         style={{
@@ -142,22 +134,22 @@ class DatasetPositionView extends PureComponent<Props> {
           />
           <ShareButton dataset={this.props.dataset} style={iconColoringStyle} />
         </Space.Compact>
-        {isArbitraryMode ? (
+        {
           <Space.Compact
             style={{
               whiteSpace: "nowrap",
               marginLeft: 10,
             }}
           >
-            <FastTooltip title={message["tracing.copy_rotation"]} placement="bottom-start">
+            <FastTooltip title={message["tracing.reset_rotation"]} placement="bottom-start">
               <ButtonComponent
-                onClick={this.copyRotationToClipboard}
+                onClick={() => this.handleChangeRotation([0, 0, 0])}
                 style={{
                   padding: "0 10px",
                 }}
                 className="hide-on-small-screen"
               >
-                <ReloadOutlined />
+                <RollbackOutlined />
               </ButtonComponent>
             </FastTooltip>
             <Vector3Input
@@ -170,7 +162,7 @@ class DatasetPositionView extends PureComponent<Props> {
               allowDecimals
             />
           </Space.Compact>
-        ) : null}
+        }
       </div>
     );
     return (

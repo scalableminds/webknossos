@@ -1,5 +1,4 @@
 import app from "app";
-import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import window from "libs/window";
@@ -15,6 +14,7 @@ import type {
   Vector3,
 } from "viewer/constants";
 import constants, {
+  OrthoBaseRotations,
   OrthoViews,
   OrthoViewValuesWithoutTDView,
   TDViewDisplayModeEnum,
@@ -46,7 +46,11 @@ import {
   getTransformsForLayerOrNull,
   getTransformsForSkeletonLayer,
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
-import { getActiveMagIndicesForLayers, getPosition } from "viewer/model/accessors/flycam_accessor";
+import {
+  getActiveMagIndicesForLayers,
+  getPosition,
+  getRotationInRadian,
+} from "viewer/model/accessors/flycam_accessor";
 import { getSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { getSomeTracing, getTaskBoundingBoxes } from "viewer/model/accessors/tracing_accessor";
 import { getPlaneScalingFactor } from "viewer/model/accessors/view_mode_accessor";
@@ -54,7 +58,6 @@ import { sceneControllerReadyAction } from "viewer/model/actions/actions";
 import Dimensions from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import type { Transform } from "viewer/model/helpers/transformation_helpers";
-import { getVoxelPerUnit } from "viewer/model/scaleinfo";
 import { Model } from "viewer/singletons";
 import type { SkeletonTracing, UserBoundingBox, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
@@ -76,7 +79,7 @@ const getVisibleSegmentationLayerNames = reuseInstanceOnEquality((storeState: We
 class SceneController {
   skeletons: Record<number, Skeleton> = {};
   isPlaneVisible: OrthoViewMap<boolean>;
-  planeShift: Vector3;
+  clippingDistance: number;
   datasetBoundingBox!: Cube;
   userBoundingBoxGroup!: THREE.Group;
   layerBoundingBoxGroup!: THREE.Group;
@@ -107,7 +110,7 @@ class SceneController {
       [OrthoViews.PLANE_XZ]: true,
       [OrthoViews.TDView]: true,
     };
-    this.planeShift = [0, 0, 0];
+    this.clippingDistance = 0;
     this.segmentMeshController = new SegmentMeshController();
     this.storePropertyUnsubscribers = [];
   }
@@ -242,11 +245,20 @@ class SceneController {
       [OrthoViews.PLANE_YZ]: new Plane(OrthoViews.PLANE_YZ),
       [OrthoViews.PLANE_XZ]: new Plane(OrthoViews.PLANE_XZ),
     };
-    this.planes[OrthoViews.PLANE_XY].setRotation(new THREE.Euler(Math.PI, 0, 0));
-    this.planes[OrthoViews.PLANE_YZ].setRotation(new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0));
-    this.planes[OrthoViews.PLANE_XZ].setRotation(new THREE.Euler((-1 / 2) * Math.PI, 0, 0));
+    this.planes[OrthoViews.PLANE_XY].setBaseRotation(OrthoBaseRotations[OrthoViews.PLANE_XY]);
+    this.planes[OrthoViews.PLANE_YZ].setBaseRotation(OrthoBaseRotations[OrthoViews.PLANE_YZ]);
+    this.planes[OrthoViews.PLANE_XZ].setBaseRotation(OrthoBaseRotations[OrthoViews.PLANE_XZ]);
 
-    const planeMeshes = _.values(this.planes).flatMap((plane) => plane.getMeshes());
+    const planeGroup = new THREE.Group();
+    _.values(this.planes).forEach((plane) => planeGroup.add(...plane.getMeshes()));
+    // Apply the inverse dataset scale factor to all planes to remove the scaling of the root group
+    // to avoid shearing effects on rotated ortho viewport planes. For more info see plane.ts.
+    planeGroup.scale.copy(
+      new THREE.Vector3(1, 1, 1).divide(
+        new THREE.Vector3(...Store.getState().dataset.dataSource.scale.factor),
+      ),
+    );
+
     this.rootNode = new THREE.Group().add(
       this.userBoundingBoxGroup,
       this.layerBoundingBoxGroup,
@@ -257,7 +269,7 @@ class SceneController {
         ...this.areaMeasurementGeometry.getMeshes(),
       ),
       ...this.datasetBoundingBox.getMeshes(),
-      ...planeMeshes,
+      planeGroup,
     );
 
     if (state.annotation.skeleton != null) {
@@ -374,15 +386,16 @@ class SceneController {
     // This method is called for each of the four cams. Even
     // though they are all looking at the same scene, some
     // things have to be changed for each cam.
+    const { datasetConfiguration, userConfiguration, flycam } = Store.getState();
     const { tdViewDisplayPlanes, tdViewDisplayDatasetBorders, tdViewDisplayLayerBorders } =
-      Store.getState().userConfiguration;
+      userConfiguration;
     // Only set the visibility of the dataset bounding box for the TDView.
     // This has to happen before updateForCam is called as otherwise cross section visibility
     // might be changed unintentionally.
     this.datasetBoundingBox.setVisibility(id !== OrthoViews.TDView || tdViewDisplayDatasetBorders);
     this.datasetBoundingBox.updateForCam(id);
     this.userBoundingBoxes.forEach((bbCube) => bbCube.updateForCam(id));
-    const layerNameToIsDisabled = getLayerNameToIsDisabled(Store.getState().datasetConfiguration);
+    const layerNameToIsDisabled = getLayerNameToIsDisabled(datasetConfiguration);
     Object.keys(this.layerBoundingBoxes).forEach((layerName) => {
       const bbCube = this.layerBoundingBoxes[layerName];
       const visible =
@@ -400,20 +413,30 @@ class SceneController {
     this.annotationToolsGeometryGroup.visible = id !== OrthoViews.TDView;
     this.lineMeasurementGeometry.updateForCam(id);
 
-    const originalPosition = getPosition(Store.getState().flycam);
+    const originalPosition = getPosition(flycam);
+    const rotation = getRotationInRadian(flycam);
     if (id !== OrthoViews.TDView) {
       for (const planeId of OrthoViewValuesWithoutTDView) {
         if (planeId === id) {
           this.planes[planeId].setOriginalCrosshairColor();
           this.planes[planeId].setVisible(!hidePlanes);
 
-          const pos = _.clone(originalPosition);
-
           const ind = Dimensions.getIndices(planeId);
-          // Offset the plane so the user can see the skeletonTracing behind the plane
-          pos[ind[2]] +=
-            planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
-          this.planes[planeId].setPosition(pos, originalPosition);
+          // Offset the plane so the user can see the skeletonTracing behind the plane.
+          // The offset is passed to the shader as a uniform to be subtracted from the position to render the correct data.
+          const unrotatedPositionOffset = [0, 0, 0];
+          unrotatedPositionOffset[ind[2]] =
+            planeId === OrthoViews.PLANE_XY
+              ? Math.floor(this.clippingDistance)
+              : Math.floor(-this.clippingDistance);
+          const rotatedPositionOffsetVector = new THREE.Vector3(
+            ...unrotatedPositionOffset,
+          ).applyEuler(new THREE.Euler(...rotation, "ZYX"));
+          const rotatedPositionOffset = rotatedPositionOffsetVector.toArray();
+          this.planes[planeId].setPosition(originalPosition, rotatedPositionOffset);
+          this.planes[planeId].setRotation(
+            new THREE.Euler(rotation[0], rotation[1], rotation[2], "ZYX"),
+          );
 
           this.quickSelectGeometry.adaptVisibilityForRendering(originalPosition, ind[2]);
         } else {
@@ -439,7 +462,7 @@ class SceneController {
     const { flycam } = state;
     const globalPosition = getPosition(flycam);
 
-    const magIndices = getActiveMagIndicesForLayers(Store.getState());
+    const magIndices = getActiveMagIndicesForLayers(state);
     for (const dataLayer of Model.getAllLayers()) {
       dataLayer.layerRenderingManager.updateDataTextures(
         globalPosition,
@@ -474,9 +497,7 @@ class SceneController {
   }
 
   setClippingDistance(value: number): void {
-    // convert nm to voxel
-    const voxelPerNMVector = getVoxelPerUnit(Store.getState().dataset.dataSource.scale);
-    V3.scale(voxelPerNMVector, value, this.planeShift);
+    this.clippingDistance = value;
     app.vent.emit("rerender");
   }
 

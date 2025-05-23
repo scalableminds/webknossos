@@ -11,7 +11,8 @@ import { getEnabledColorLayers } from "viewer/model/accessors/dataset_accessor";
 import {
   getActiveMagIndicesForLayers,
   getPosition,
-  getRotationOrtho,
+  getRotationInRadian,
+  getRotationOrthoInRadian,
   isMagRestrictionViolated,
 } from "viewer/model/accessors/flycam_accessor";
 import {
@@ -24,6 +25,7 @@ import {
   untransformNodePosition,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import {
+  type GlobalPosition,
   calculateGlobalPos,
   calculateMaybeGlobalPos,
   getInputCatcherRect,
@@ -98,7 +100,8 @@ export function handleSelectNode(
 
   // otherwise we have hit the background and do nothing
   if (nodeId != null && nodeId > 0) {
-    Store.dispatch(setActiveNodeAction(nodeId));
+    const suppressRotation = "isOrthoPlaneView" in view && view.isOrthoPlaneView;
+    Store.dispatch(setActiveNodeAction(nodeId, false, false, suppressRotation));
     return true;
   }
 
@@ -144,7 +147,7 @@ export function handleOpenContextMenu(
   const state = Store.getState();
   // Use calculateMaybeGlobalPos instead of calculateGlobalPos, since calculateGlobalPos
   // only works for the data viewports, but this function is also called for the 3d viewport.
-  const globalPosition = calculateMaybeGlobalPos(state, position);
+  const globalPositions = calculateMaybeGlobalPos(state, position);
   const hoveredEdgesInfo = getClosestHoveredBoundingBox(position, plane);
   const clickedBoundingBoxId = hoveredEdgesInfo != null ? hoveredEdgesInfo[0].boxId : null;
 
@@ -160,7 +163,7 @@ export function handleOpenContextMenu(
           event.pageY,
           nodeId,
           clickedBoundingBoxId,
-          globalPosition,
+          globalPositions?.rounded,
           activeViewport,
           meshId,
           meshIntersectionPosition,
@@ -181,7 +184,8 @@ export function moveNode(
   useFloat: boolean = false,
 ) {
   // dx and dy are measured in pixel.
-  const skeletonTracing = getSkeletonTracing(Store.getState().annotation);
+  const state = Store.getState();
+  const skeletonTracing = getSkeletonTracing(state.annotation);
   if (!skeletonTracing) return;
 
   const treeAndNode = getTreeAndNode(skeletonTracing, nodeId);
@@ -189,14 +193,21 @@ export function moveNode(
 
   const [activeTree, activeNode] = treeAndNode;
 
-  const state = Store.getState();
   const { activeViewport } = state.viewModeData.plane;
   const vector = Dimensions.transDim([dx, dy, 0], activeViewport);
+  const flycamRotation = getRotationInRadian(state.flycam);
+  const isRotated = V3.equals(flycamRotation, [0, 0, 0]);
+
+  const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(
+    new THREE.Euler(...flycamRotation, "ZYX"),
+  );
+  const vectorRotated = new THREE.Vector3(...vector).applyMatrix4(rotationMatrix);
+
   const zoomFactor = state.flycam.zoomStep;
   const scaleFactor = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
 
   const op = (val: number) => {
-    if (useFloat) {
+    if (useFloat || isRotated) {
       return val;
     }
     // Zero diffs should stay zero.
@@ -212,9 +223,9 @@ export function moveNode(
   };
 
   const delta = [
-    op(vector[0] * zoomFactor * scaleFactor[0]),
-    op(vector[1] * zoomFactor * scaleFactor[1]),
-    op(vector[2] * zoomFactor * scaleFactor[2]),
+    op(vectorRotated.x * zoomFactor * scaleFactor[0]),
+    op(vectorRotated.y * zoomFactor * scaleFactor[1]),
+    op(vectorRotated.z * zoomFactor * scaleFactor[2]),
   ];
   const [x, y, z] = getNodePosition(activeNode, state);
 
@@ -246,7 +257,7 @@ export function finishNodeMovement(nodeId: number) {
 }
 
 export function handleCreateNodeFromGlobalPosition(
-  position: Vector3,
+  nodePosition: GlobalPosition,
   activeViewport: OrthoView,
   ctrlIsPressed: boolean,
 ): void {
@@ -267,7 +278,7 @@ export function handleCreateNodeFromGlobalPosition(
     skipCenteringAnimationInThirdDimension,
   } = getOptionsForCreateSkeletonNode(activeViewport, ctrlIsPressed);
   createSkeletonNode(
-    position,
+    nodePosition,
     additionalCoordinates,
     rotation,
     center,
@@ -285,7 +296,17 @@ export function getOptionsForCreateSkeletonNode(
   const additionalCoordinates = state.flycam.additionalCoordinates;
   const skeletonTracing = enforceSkeletonTracing(state.annotation);
   const activeNode = getActiveNode(skeletonTracing);
-  const rotation = getRotationOrtho(activeViewport || state.viewModeData.plane.activeViewport);
+  const initialViewportRotation = getRotationOrthoInRadian(
+    activeViewport || state.viewModeData.plane.activeViewport,
+  );
+  const flycamRotation = getRotationInRadian(state.flycam);
+  const totalRotationQuaternion = new THREE.Quaternion()
+    .setFromEuler(new THREE.Euler(...initialViewportRotation))
+    .multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(...flycamRotation, "ZYX")));
+  const rotationEuler = new THREE.Euler().setFromQuaternion(totalRotationQuaternion);
+  const rotationInDegree = [rotationEuler.x, rotationEuler.y, rotationEuler.z].map(
+    (a) => (a * 180) / Math.PI,
+  ) as Vector3;
 
   // Center node if the corresponding setting is true. Only pressing CTRL can override this.
   const center = state.userConfiguration.centerNewNode && !ctrlIsPressed;
@@ -299,10 +320,9 @@ export function getOptionsForCreateSkeletonNode(
   const activate = !ctrlIsPressed || activeNode == null;
 
   const skipCenteringAnimationInThirdDimension = true;
-
   return {
     additionalCoordinates,
-    rotation,
+    rotation: rotationInDegree,
     center,
     branchpoint,
     activate,
@@ -311,7 +331,7 @@ export function getOptionsForCreateSkeletonNode(
 }
 
 export function createSkeletonNode(
-  position: Vector3,
+  position: GlobalPosition,
   additionalCoordinates: AdditionalCoordinate[] | null,
   rotation: Vector3,
   center: boolean,
@@ -319,7 +339,7 @@ export function createSkeletonNode(
   activate: boolean,
   skipCenteringAnimationInThirdDimension: boolean,
 ): void {
-  updateTraceDirection(position);
+  updateTraceDirection(position.rounded);
 
   let state = Store.getState();
   const enabledColorLayers = getEnabledColorLayers(state.dataset, state.datasetConfiguration);
@@ -333,7 +353,7 @@ export function createSkeletonNode(
 
   Store.dispatch(
     createNodeAction(
-      untransformNodePosition(position, state),
+      untransformNodePosition(position.floating, state),
       additionalCoordinates,
       rotation,
       OrthoViewToNumber[Store.getState().viewModeData.plane.activeViewport],
@@ -358,12 +378,7 @@ export function createSkeletonNode(
     const treeAndNode = getTreeAndNode(newSkeleton, newNodeId, newSkeleton.activeTreeId);
     if (!treeAndNode) return;
 
-    const [_activeTree, newNode] = treeAndNode;
-
-    api.tracing.centerPositionAnimated(
-      getNodePosition(newNode, state),
-      skipCenteringAnimationInThirdDimension,
-    );
+    api.tracing.centerPositionAnimated(position.floating, skipCenteringAnimationInThirdDimension);
   }
 
   if (branchpoint) {
@@ -468,7 +483,9 @@ function getPrecedingNodeFromTree(
 }
 
 export function toSubsequentNode(): void {
-  const tracing = enforceSkeletonTracing(Store.getState().annotation);
+  const { annotation, temporaryConfiguration } = Store.getState();
+  const suppressRotation = temporaryConfiguration.viewMode === "orthogonal";
+  const tracing = enforceSkeletonTracing(annotation);
   const { navigationList, activeNodeId, activeTreeId } = tracing;
   if (activeNodeId == null) return;
   const isValidList =
@@ -480,7 +497,14 @@ export function toSubsequentNode(): void {
     isValidList
   ) {
     // navigate to subsequent node in list
-    Store.dispatch(setActiveNodeAction(navigationList.list[navigationList.activeIndex + 1]));
+    Store.dispatch(
+      setActiveNodeAction(
+        navigationList.list[navigationList.activeIndex + 1],
+        false,
+        false,
+        suppressRotation,
+      ),
+    );
     Store.dispatch(updateNavigationListAction(navigationList.list, navigationList.activeIndex + 1));
   } else {
     // search for subsequent node in tree
@@ -495,14 +519,16 @@ export function toSubsequentNode(): void {
 
     if (nextNodeId !== activeNodeId) {
       newList.push(nextNodeId);
-      Store.dispatch(setActiveNodeAction(nextNodeId));
+      Store.dispatch(setActiveNodeAction(nextNodeId, false, false, suppressRotation));
     }
 
     Store.dispatch(updateNavigationListAction(newList, newList.length - 1));
   }
 }
 export function toPrecedingNode(): void {
-  const tracing = enforceSkeletonTracing(Store.getState().annotation);
+  const { annotation, temporaryConfiguration } = Store.getState();
+  const suppressRotation = temporaryConfiguration.viewMode === "orthogonal";
+  const tracing = enforceSkeletonTracing(annotation);
   const { navigationList, activeNodeId, activeTreeId } = tracing;
   if (activeNodeId == null) return;
   const isValidList =
@@ -510,7 +536,14 @@ export function toPrecedingNode(): void {
 
   if (navigationList.activeIndex > 0 && isValidList) {
     // navigate to preceding node in list
-    Store.dispatch(setActiveNodeAction(navigationList.list[navigationList.activeIndex - 1]));
+    Store.dispatch(
+      setActiveNodeAction(
+        navigationList.list[navigationList.activeIndex - 1],
+        false,
+        false,
+        suppressRotation,
+      ),
+    );
     Store.dispatch(updateNavigationListAction(navigationList.list, navigationList.activeIndex - 1));
   } else {
     // search for preceding node in tree
@@ -525,7 +558,7 @@ export function toPrecedingNode(): void {
 
     if (nextNodeId !== activeNodeId) {
       newList.unshift(nextNodeId);
-      Store.dispatch(setActiveNodeAction(nextNodeId));
+      Store.dispatch(setActiveNodeAction(nextNodeId, false, false, suppressRotation));
     }
 
     Store.dispatch(updateNavigationListAction(newList, 0));

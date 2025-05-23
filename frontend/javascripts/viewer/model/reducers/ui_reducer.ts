@@ -178,7 +178,8 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
 
     case "SET_LAST_MEASURED_POSITION": {
       return updateKey2(state, "uiInformation", "measurementToolInfo", {
-        lastMeasuredPosition: action.position,
+        lastMeasuredPosition: action.lastMeasuredPosition,
+        viewportPosition: action.viewportPosition,
       });
     }
     case "SET_IS_MEASURING": {

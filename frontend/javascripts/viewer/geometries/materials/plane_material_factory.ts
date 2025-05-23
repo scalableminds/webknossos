@@ -112,7 +112,6 @@ function getTextureLayerInfos(): Params["textureLayerInfos"] {
 
 class PlaneMaterialFactory {
   planeID: OrthoView;
-  isOrthogonal: boolean;
   material: THREE.ShaderMaterial | undefined | null;
   uniforms: Uniforms = {};
   attributes: Record<string, any> = {};
@@ -126,9 +125,8 @@ class PlaneMaterialFactory {
 
   scaledTpsInvPerLayer: Record<string, TPS3D> = {};
 
-  constructor(planeID: OrthoView, isOrthogonal: boolean, shaderId: number) {
+  constructor(planeID: OrthoView, shaderId: number) {
     this.planeID = planeID;
-    this.isOrthogonal = isOrthogonal;
     this.shaderId = shaderId;
     this.leastRecentlyVisibleLayers = [];
   }
@@ -159,7 +157,7 @@ class PlaneMaterialFactory {
       is3DViewBeingRendered: {
         value: true,
       },
-      globalPosition: {
+      positionOffset: {
         value: new THREE.Vector3(0, 0, 0),
       },
       zoomValue: {
@@ -448,9 +446,9 @@ class PlaneMaterialFactory {
     };
     shaderEditor.addMaterial(this.shaderId, this.material);
 
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setGlobalPosition' does not exist on typ... Remove this comment to see the full error message
-    this.material.setGlobalPosition = (x, y, z) => {
-      this.uniforms.globalPosition.value.set(x, y, z);
+    // @ts-expect-error ts-migrate(2339) FIXME: Property 'setPositionOffset' does not exist on typ... Remove this comment to see the full error message
+    this.material.setPositionOffset = (x, y, z) => {
+      this.uniforms.positionOffset.value.set(x, y, z);
     };
 
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'setUseBilinearFiltering' does not exist ... Remove this comment to see the full error message
@@ -658,7 +656,7 @@ class PlaneMaterialFactory {
             const [x, y, z] = calculateGlobalPos(state, {
               x: globalMousePosition[0],
               y: globalMousePosition[1],
-            });
+            }).rounded;
             this.uniforms.globalMousePosition.value.set(x, y, z);
             this.uniforms.isMouseInCanvas.value = true;
           },
@@ -1081,6 +1079,7 @@ class PlaneMaterialFactory {
     const textureLayerInfos = getTextureLayerInfos();
     const { dataset } = Store.getState();
     const voxelSizeFactor = dataset.dataSource.scale.factor;
+    const voxelSizeFactorInverted = V3.divide3([1, 1, 1], voxelSizeFactor);
     const code = getMainFragmentShader({
       globalLayerCount,
       orderedColorLayerNames,
@@ -1089,7 +1088,7 @@ class PlaneMaterialFactory {
       textureLayerInfos,
       magnificationsCount: this.getTotalMagCount(),
       voxelSizeFactor,
-      isOrthogonal: this.isOrthogonal,
+      voxelSizeFactorInverted,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
     });
     return [
@@ -1115,6 +1114,7 @@ class PlaneMaterialFactory {
     const textureLayerInfos = getTextureLayerInfos();
     const { dataset } = Store.getState();
     const voxelSizeFactor = dataset.dataSource.scale.factor;
+    const voxelSizeFactorInverted = V3.divide3([1, 1, 1], voxelSizeFactor);
 
     return getMainVertexShader({
       globalLayerCount,
@@ -1124,7 +1124,7 @@ class PlaneMaterialFactory {
       textureLayerInfos,
       magnificationsCount: this.getTotalMagCount(),
       voxelSizeFactor,
-      isOrthogonal: this.isOrthogonal,
+      voxelSizeFactorInverted,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
     });
   }

@@ -79,6 +79,7 @@ export const getTrilinearColorFor: ShaderModule = {
 const getMaybeFilteredColor: ShaderModule = {
   requirements: [getColorForCoords, getBilinearColorFor, getTrilinearColorFor],
   code: `
+    // TODOM: Consider passing an argument like "isRotated" to determine whether bilinear or trilinear filtering should be used.
     vec4 getMaybeFilteredColor(
       float layerIndex,
       float d_texture_width,
@@ -89,11 +90,7 @@ const getMaybeFilteredColor: ShaderModule = {
     ) {
       vec4 color;
       if (!suppressBilinearFiltering && useBilinearFiltering) {
-        <% if (isOrthogonal) { %>
-          color = getBilinearColorFor(layerIndex, d_texture_width, packingDegree, worldPositionUVW);
-        <% } else { %>
-          color = getTrilinearColorFor(layerIndex, d_texture_width, packingDegree, worldPositionUVW);
-        <% } %>
+        color = getTrilinearColorFor(layerIndex, d_texture_width, packingDegree, worldPositionUVW);
       } else {
         color = getColorForCoords(layerIndex, d_texture_width, packingDegree, worldPositionUVW, supportsPrecomputedBucketAddress);
       }

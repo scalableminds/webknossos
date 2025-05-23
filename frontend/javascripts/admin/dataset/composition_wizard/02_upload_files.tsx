@@ -174,7 +174,7 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
     throw new SoftError("Could not extract dataset names.");
   }
 
-  if (Array.from(trees1.keys()).length !== Array.from(trees2.keys()).length) {
+  if (trees1.keys().toArray().length !== trees2.keys().toArray().length) {
     throw new SoftError("The two NML files should have the same tree count.");
   }
 

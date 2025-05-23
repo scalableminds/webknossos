@@ -1182,23 +1182,26 @@ export function parseNml(nmlString: string): Promise<{
         // Split potentially unconnected trees
         let maxTreeId = getMaximumTreeId(trees);
 
-        // Materialize the trees before iterating over them
-        // because we are also deleting from the collection.
-        Array.from(trees.values()).forEach((tree) => {
-          const newTrees = splitTreeIntoComponents(tree, treeGroups, maxTreeId);
+        trees
+          .values()
+          // Materialize the trees before iterating over them
+          // because we are also deleting from the collection.
+          .toArray()
+          .forEach((tree) => {
+            const newTrees = splitTreeIntoComponents(tree, treeGroups, maxTreeId);
 
-          const newTreesSize = _.size(newTrees);
+            const newTreesSize = _.size(newTrees);
 
-          if (newTreesSize > 1) {
-            trees.mutableDelete(tree.treeId);
+            if (newTreesSize > 1) {
+              trees.mutableDelete(tree.treeId);
 
-            for (const newTree of newTrees) {
-              trees.mutableSet(newTree.treeId, newTree);
+              for (const newTree of newTrees) {
+                trees.mutableSet(newTree.treeId, newTree);
+              }
+
+              maxTreeId += newTreesSize;
             }
-
-            maxTreeId += newTreesSize;
-          }
-        });
+          });
 
         resolve({
           trees,

@@ -388,7 +388,10 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
     if (groupId === MISSING_GROUP_ID) {
       // special case: delete Root group and all children (aka everything)
-      treeIdsToDelete = Array.from(this.props.skeletonTracing.trees.values().map((t) => t.treeId));
+      treeIdsToDelete = this.props.skeletonTracing.trees
+        .values()
+        .map((t) => t.treeId)
+        .toArray();
       newTreeGroups = [];
     }
 

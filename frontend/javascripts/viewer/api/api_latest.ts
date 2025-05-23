@@ -938,7 +938,10 @@ class TracingApi {
 
     if (groupId === MISSING_GROUP_ID) {
       // special case: delete Root group and all children (aka everything)
-      segmentIdsToDelete = Array.from(segments.values()).map((t) => t.id);
+      segmentIdsToDelete = segments
+        .values()
+        .map((t) => t.id)
+        .toArray();
       newSegmentGroups = [];
     }
 

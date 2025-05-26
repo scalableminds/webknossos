@@ -595,9 +595,8 @@ export function addTreesAndGroups(
     }
   }
 
-  // Materialize with toArray because we are mutating
-  // the collection within the loop.
-  for (const tree of trees.values().toArray()) {
+  const newTrees = new MutableTreeMap();
+  for (const tree of trees.values()) {
     const newNodes: MutableNodeMap = new DiffableMap();
 
     for (const node of tree.nodes.values()) {
@@ -632,11 +631,11 @@ export function addTreesAndGroups(
     tree.groupId = tree.groupId != null ? groupIdMap[tree.groupId] : tree.groupId;
     tree.treeId = newTreeId;
 
-    trees.mutableSet(newTreeId, tree);
+    newTrees.mutableSet(newTreeId, tree);
     newTreeId++;
   }
 
-  return [trees, treeGroups, newNodeId - 1];
+  return [newTrees, treeGroups, newNodeId - 1];
 }
 
 export function deleteTrees(

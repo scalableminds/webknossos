@@ -9,12 +9,19 @@ import { TreeTypeEnum, type Vector3 } from "viewer/constants";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import {
   initialState as defaultState,
+  initialTreeOne,
   initialSkeletonTracing,
 } from "test/fixtures/hybridtracing_object";
 import SkeletonTracingReducer from "viewer/model/reducers/skeletontracing_reducer";
 import * as SkeletonTracingActions from "viewer/model/actions/skeletontracing_actions";
 import { max } from "viewer/model/helpers/iterator_utils";
-import { type Node, TreeMap, type MutableNode, type Tree } from "viewer/model/types/tree_types";
+import {
+  type Node,
+  TreeMap,
+  type MutableNode,
+  type Tree,
+  MutableTreeMap,
+} from "viewer/model/types/tree_types";
 
 const initialState: WebknossosState = update(defaultState, {
   annotation: {
@@ -1783,5 +1790,51 @@ describe("SkeletonTracing", () => {
     expect(trees.getOrThrow(2).isVisible).toBe(true);
     expect(trees.getOrThrow(3).isVisible).toBe(true);
     expect(trees.getOrThrow(4).isVisible).toBe(true);
+  });
+
+  it("should add a new tree with addTreesAndGroupsAction (without relabeling)", () => {
+    expect(initialState.annotation.skeleton?.trees.size()).toBe(2);
+    let ids: number[] | null = null;
+    const treeIdCallback = (_ids: number[]) => (ids = _ids);
+
+    const state = applyActions(initialState, [
+      // Id-relabeling is only done if the skeleton is not empty.
+      // Therefore, delete the two existing trees so that the new tree will
+      // be added without id-relabeling.
+      SkeletonTracingActions.deleteTreeAction(1),
+      SkeletonTracingActions.deleteTreeAction(2),
+      SkeletonTracingActions.addTreesAndGroupsAction(
+        new MutableTreeMap([[4, { ...initialTreeOne, treeId: 4 }]]),
+        [],
+        treeIdCallback,
+      ),
+    ]);
+
+    // The original tree id 4 should have survived.
+    expect(ids).toEqual([4]);
+    expect(state.annotation.skeleton?.trees.size()).toBe(1);
+    expect(state.annotation.skeleton?.trees.getNullable(4)).toBeDefined();
+    expect(state.annotation.skeleton?.trees.getNullable(4)?.treeId).toBe(4);
+  });
+
+  it("should add a new tree with addTreesAndGroupsAction (with id relabeling)", () => {
+    expect(initialState.annotation.skeleton?.trees.size()).toBe(2);
+    let ids: number[] | null = null;
+    const treeIdCallback = (_ids: number[]) => (ids = _ids);
+
+    const state = applyActions(initialState, [
+      SkeletonTracingActions.addTreesAndGroupsAction(
+        new MutableTreeMap([[8_000_000, { ...initialTreeOne, treeId: 8_000_000 }]]),
+        [],
+        treeIdCallback,
+      ),
+    ]);
+
+    // The original tree id 8_000_000 should have been changed to the next free id (3).
+    expect(ids).toEqual([3]);
+    expect(state.annotation.skeleton?.trees.size()).toBe(3);
+    expect(state.annotation.skeleton?.trees.getNullable(3)).toBeDefined();
+    expect(state.annotation.skeleton?.trees.getNullable(3)?.treeId).toBe(3);
+    expect(state.annotation.skeleton?.trees.getNullable(8_000_000)).toBeUndefined();
   });
 });

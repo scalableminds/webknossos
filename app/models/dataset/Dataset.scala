@@ -15,6 +15,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   AbstractSegmentationLayer,
   AdditionalAxis,
   AgglomerateFileInfo,
+  AttachedFile,
   Category,
   ConnectomeFileInfo,
   CoordinateTransformation,
@@ -1019,46 +1020,25 @@ class DatasetLastUsedTimesDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execu
 class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
   def updateAttachments(datasetId: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
+    def insertQuery(attachment: AttachedFile, layerName: String, fileType: String) =
+      q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, path, type, dataFormat)
+          VALUES($datasetId, $layerName, ${attachment.path.toString}, $fileType::webknossos.ATTACHMENT_FILE_TYPE,
+          ${attachment.dataFormat}::webknossos.ATTACHMENT_DATAFORMAT)""".asUpdate
     val clearQuery =
       q"DELETE FROM webknossos.dataset_layer_attachments WHERE _dataset = $datasetId".asUpdate
     val insertQueries = dataLayersOpt.getOrElse(List.empty).flatMap { layer: DataLayer =>
       layer.attachments match {
         case Some(attachments) =>
           attachments.agglomerates.map { agglomerate =>
-            q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, path, type, dataFormat)
-                values(
-                $datasetId, ${layer.name}, ${agglomerate.path.toString},
-                ${AgglomerateFileInfo.typ}::webknossos.ATTACHMENT_FILE_TYPE,
-                ${agglomerate.dataFormat}::webknossos.ATTACHMENT_DATAFORMAT)
-                """.asUpdate
+            insertQuery(agglomerate, layer.name, AgglomerateFileInfo.typ)
           } ++ attachments.connectomes.map { connectome =>
-            q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, path, type, dataFormat)
-                values(
-                $datasetId, ${layer.name}, ${connectome.path.toString},
-                ${ConnectomeFileInfo.typ}::webknossos.ATTACHMENT_FILE_TYPE,
-                ${connectome.dataFormat}::webknossos.ATTACHMENT_DATAFORMAT)
-                """.asUpdate
+            insertQuery(connectome, layer.name, ConnectomeFileInfo.typ)
           } ++ attachments.segmentIndex.map { segmentIndex =>
-            q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, path, type, dataFormat)
-                values(
-                $datasetId, ${layer.name}, ${segmentIndex.path.toString},
-                ${SegmentIndexFileInfo.typ}::webknossos.ATTACHMENT_FILE_TYPE,
-                ${segmentIndex.dataFormat}::webknossos.ATTACHMENT_DATAFORMAT)
-                """.asUpdate
+            insertQuery(segmentIndex, layer.name, SegmentIndexFileInfo.typ)
           } ++ attachments.meshes.map { mesh =>
-            q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, path, type, dataFormat)
-                values(
-                $datasetId, ${layer.name}, ${mesh.path.toString},
-                ${MeshFileInfo.typ}::webknossos.ATTACHMENT_FILE_TYPE,
-                ${mesh.dataFormat}::webknossos.ATTACHMENT_DATAFORMAT)
-                """.asUpdate
+            insertQuery(mesh, layer.name, MeshFileInfo.typ)
           } ++ attachments.cumsum.map { cumsumFile =>
-            q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, path, type, dataFormat)
-                          values(
-                          $datasetId, ${layer.name}, ${cumsumFile.path.toString},
-                          ${CumsumFileInfo.typ}::webknossos.ATTACHMENT_FILE_TYPE,
-                          ${cumsumFile.dataFormat}::webknossos.ATTACHMENT_DATAFORMAT)
-                          """.asUpdate
+            insertQuery(cumsumFile, layer.name, CumsumFileInfo.typ)
           }
         case None =>
           List.empty

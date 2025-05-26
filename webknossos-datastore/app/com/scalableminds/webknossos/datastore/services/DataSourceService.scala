@@ -344,17 +344,14 @@ class DataSourceService @Inject()(
   private def scanForAttachedFiles(dataSourcePath: Path, dataSource: DataSource) =
     dataSource.dataLayers.map(dataLayer => {
       val dataLayerPath = dataSourcePath.resolve(dataLayer.name)
-      val discoveredMeshFiles = MeshFileInfo.scanForMeshFiles(dataLayerPath)
-      val discoveredAgglomerateFiles = AgglomerateFileInfo.scanForAgglomerateFiles(dataLayerPath)
-      val discoveredSegmentIndexFile = SegmentIndexFileInfo.scanForSegmentIndexFiles(dataLayerPath)
-      val discoveredConnectomeFiles = ConnectomeFileInfo.scanForConnectomeFiles(dataLayerPath)
-      val discoveredCumsumFiles = CumsumFileInfo.scanForCumsumFiles(dataLayerPath)
       dataLayer.withAttachments(
-        DatasetAttachments(discoveredMeshFiles,
-                    discoveredAgglomerateFiles,
-                    discoveredSegmentIndexFile,
-                    discoveredConnectomeFiles,
-                    discoveredCumsumFiles))
+        DatasetAttachments(
+          MeshFileInfo.scanForMeshFiles(dataLayerPath),
+          AgglomerateFileInfo.scanForAgglomerateFiles(dataLayerPath),
+          SegmentIndexFileInfo.scanForSegmentIndexFile(dataLayerPath),
+          ConnectomeFileInfo.scanForConnectomeFiles(dataLayerPath),
+          CumsumFileInfo.scanForCumsumFile(dataLayerPath)
+        ))
     })
 
   def invalidateVaultCache(dataSource: InboxDataSource, dataLayerName: Option[String]): Option[Int] =

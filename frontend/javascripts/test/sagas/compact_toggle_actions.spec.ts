@@ -1,13 +1,5 @@
-import _ from "lodash";
 import { describe, it, expect } from "vitest";
-import type {
-  WebknossosState,
-  Segment,
-  SegmentGroup,
-  Tree,
-  TreeGroup,
-  TreeMap,
-} from "viewer/store";
+import type { WebknossosState, Segment, SegmentGroup } from "viewer/store";
 import { diffSkeletonTracing } from "viewer/model/sagas/skeletontracing_saga";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import {
@@ -26,6 +18,7 @@ import EdgeCollection from "viewer/model/edge_collection";
 import compactToggleActions from "viewer/model/helpers/compaction/compact_toggle_actions";
 import defaultState from "viewer/default_state";
 import { diffVolumeTracing } from "viewer/model/sagas/volumetracing_saga";
+import { type Tree, TreeMap, type TreeGroup } from "viewer/model/types/tree_types";
 
 const createTree = (id: number, groupId: number | null, isVisible: boolean): Tree => ({
   treeId: id,
@@ -55,7 +48,8 @@ const createSegment = (id: number, groupId: number | null, isVisible: boolean): 
   metadata: [],
 });
 
-const makeTreesObject = (trees: Tree[]) => _.keyBy(trees, "treeId") as TreeMap;
+const createTreeMap = (trees: Tree[]): TreeMap =>
+  new TreeMap(trees.map((tree) => [tree.treeId, tree]));
 
 const genericGroups: TreeGroup[] = [
   {
@@ -94,7 +88,7 @@ const createStateWithTrees = (trees: Tree[], genericGroups: TreeGroup[]): Webkno
       userBoundingBoxes: [],
       type: "skeleton",
       treeGroups: genericGroups,
-      trees: makeTreesObject(trees),
+      trees: createTreeMap(trees),
       activeTreeId: 1,
       activeNodeId: null,
       cachedMaxNodeId: 0,
@@ -250,6 +244,7 @@ describe("Compact Toggle Actions for skeletons", () => {
       genericGroups,
     );
     const [compactedActions] = getSkeletonActions(allVisibleTrees, testState);
+
     // Root group should be toggled
     expect(compactedActions).toEqual([updateTreeGroupVisibility(undefined, false, tracingId)]);
   });
@@ -322,6 +317,7 @@ describe("Compact Toggle Actions for volume tracings", () => {
       genericGroups,
     );
     const [compactedActions] = getVolumeActions(allVisibleSegments, testState);
+
     // Root group should be toggled
     expect(compactedActions).toEqual([
       updateSegmentGroupVisibilityVolumeAction(null, false, tracingId),
@@ -342,6 +338,7 @@ describe("Compact Toggle Actions for volume tracings", () => {
       genericGroups,
     );
     const [compactedActions] = getVolumeActions(allVisibleSegments, testState);
+
     expect(compactedActions).toEqual([
       updateSegmentGroupVisibilityVolumeAction(3, false, tracingId),
     ]);
@@ -361,6 +358,7 @@ describe("Compact Toggle Actions for volume tracings", () => {
       genericGroups,
     );
     const [compactedActions] = getVolumeActions(allVisibleSegments, testState);
+
     expect(compactedActions).toEqual([
       updateSegmentGroupVisibilityVolumeAction(null, false, tracingId),
       updateSegmentVisibilityVolumeAction(3, true, tracingId),

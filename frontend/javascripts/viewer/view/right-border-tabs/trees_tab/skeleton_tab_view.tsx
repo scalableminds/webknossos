@@ -69,17 +69,10 @@ import {
 } from "viewer/model/helpers/nml_helpers";
 import { parseProtoTracing } from "viewer/model/helpers/proto_helpers";
 import { createMutableTreeMapFromTreeArray } from "viewer/model/reducers/skeletontracing_reducer_helpers";
+import type { MutableTreeMap, Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import { Model } from "viewer/singletons";
 import { api } from "viewer/singletons";
-import type {
-  MutableTreeMap,
-  Tree,
-  TreeGroup,
-  TreeMap,
-  UserBoundingBox,
-  WebknossosState,
-} from "viewer/store";
-import Store from "viewer/store";
+import Store, { type UserBoundingBox, type WebknossosState } from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
 import InputComponent from "viewer/view/components/input_component";
@@ -395,7 +388,10 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
     if (groupId === MISSING_GROUP_ID) {
       // special case: delete Root group and all children (aka everything)
-      treeIdsToDelete = Object.values(this.props.skeletonTracing.trees).map((t) => t.treeId);
+      treeIdsToDelete = this.props.skeletonTracing.trees
+        .values()
+        .map((t) => t.treeId)
+        .toArray();
       newTreeGroups = [];
     }
 
@@ -658,7 +654,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     const { trees, treeGroups } = skeletonTracing;
     const isTree = selectedElement.type === GroupTypeEnum.TREE;
     const groupToExpand = isTree
-      ? trees[selectedElement.id].groupId
+      ? trees.getNullable(selectedElement.id)?.groupId
       : createGroupToParentMap(treeGroups)[selectedElement.id];
     const expandedGroups = additionallyExpandGroup(treeGroups, groupToExpand, (groupId) => groupId);
     if (expandedGroups) {
@@ -814,7 +810,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     const { showSkeletons, trees, treeGroups } = skeletonTracing;
     const activeTreeName = getActiveTree(skeletonTracing)?.name ?? "";
     const activeGroupName = getActiveTreeGroup(skeletonTracing)?.name ?? "";
-    const noTreesAndGroups = _.size(trees) === 0 && _.size(treeGroups) === 0;
+    const noTreesAndGroups = trees.size() === 0 && _.size(treeGroups) === 0;
     const orderAttribute = this.props.userConfiguration.sortTreesByName ? "name" : "timestamp";
     // Avoid that the title switches to the other title during the fadeout of the Modal
     let title = "";

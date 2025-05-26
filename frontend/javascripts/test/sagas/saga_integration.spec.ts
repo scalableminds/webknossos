@@ -1,4 +1,3 @@
-import update from "immutability-helper";
 import { describe, it, beforeEach, afterEach, expect } from "vitest";
 import "test/sagas/saga_integration.mock";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
@@ -52,12 +51,11 @@ describe("Saga Integration Tests", () => {
   it("watchTreeNames saga should rename empty trees in tasks and these updates should be persisted", () => {
     const state = Store.getState();
     const skeletonTracing = enforceSkeletonTracing(state.annotation);
-    const treeWithEmptyName = skeletonTracing.trees[1];
-    const treeWithCorrectName = update(treeWithEmptyName, {
-      name: {
-        $set: generateTreeName(state, treeWithEmptyName.timestamp, treeWithEmptyName.treeId),
-      },
-    });
+    const treeWithEmptyName = skeletonTracing.trees.getOrThrow(1);
+    const treeWithCorrectName = {
+      ...treeWithEmptyName,
+      name: generateTreeName(state, treeWithEmptyName.timestamp, treeWithEmptyName.treeId),
+    };
     const expectedSaveQueue = createSaveQueueFromUpdateActions(
       [[UpdateActions.updateTree(treeWithCorrectName, skeletonTracing.tracingId)]],
       TIMESTAMP,

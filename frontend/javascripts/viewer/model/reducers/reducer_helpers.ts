@@ -20,13 +20,12 @@ import { updateKey } from "viewer/model/helpers/deep_update";
 import type {
   Annotation,
   BoundingBoxObject,
-  TreeGroup,
-  TreeMap,
   UserBoundingBox,
   UserBoundingBoxToServer,
   WebknossosState,
 } from "viewer/store";
 import { getDisabledInfoForTools } from "../accessors/disabled_tool_accessor";
+import type { TreeGroup, TreeMap } from "../types/tree_types";
 
 export function convertServerBoundingBoxToBoundingBox(
   boundingBox: ServerBoundingBox,

@@ -55,7 +55,6 @@ import type {
   Segment,
   SegmentGroup,
   SegmentMap,
-  TreeGroup,
   VolumeTracing,
   WebknossosState,
 } from "viewer/store";
@@ -65,6 +64,7 @@ import {
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
 import { getUserStateForTracing } from "../accessors/annotation_accessor";
 import { mapGroups, mapGroupsToGenerator } from "../accessors/skeletontracing_accessor";
+import type { TreeGroup } from "../types/tree_types";
 import { sanitizeMetadata } from "./skeletontracing_reducer";
 import { forEachGroups } from "./skeletontracing_reducer_helpers";
 

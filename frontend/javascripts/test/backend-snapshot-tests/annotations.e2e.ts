@@ -18,6 +18,7 @@ import generateDummyTrees from "viewer/model/helpers/generate_dummy_trees";
 import { describe, it, beforeAll, expect } from "vitest";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 import type { SaveQueueEntry } from "viewer/store";
+import DiffableMap from "libs/diffable_map";
 
 const datasetId = "59e9cfbdba632ac2ab8b23b3";
 
@@ -239,7 +240,7 @@ describe("Annotation API (E2E)", () => {
         ],
       },
     ];
-    const createTreesUpdateActions = Array.from(diffTrees(tracingId, {}, trees));
+    const createTreesUpdateActions = Array.from(diffTrees(tracingId, new DiffableMap(), trees));
     const updateTreeGroupsUpdateAction = UpdateActions.updateTreeGroups(treeGroups, tracingId);
     const [saveQueue] = addVersionNumbers(
       createSaveQueueFromUpdateActions(
@@ -260,8 +261,8 @@ describe("Annotation API (E2E)", () => {
   it("Update Metadata for Skeleton Tracing", async () => {
     const createdExplorational = await api.createExplorational(datasetId, "skeleton", false, null);
     const { tracingId } = createdExplorational.annotationLayers[0];
-    const trees = createTreeMapFromTreeArray(generateDummyTrees(5, 6));
-    const createTreesUpdateActions = Array.from(diffTrees(tracingId, {}, trees));
+    let trees = createTreeMapFromTreeArray(generateDummyTrees(5, 6));
+    const createTreesUpdateActions = Array.from(diffTrees(tracingId, new DiffableMap(), trees));
     const metadata = [
       {
         key: "city",
@@ -276,12 +277,12 @@ describe("Annotation API (E2E)", () => {
         stringListValue: ["tagA", "tagB"],
       },
     ];
-    trees[1] = {
-      ...trees[1],
+    trees = trees.set(1, {
+      ...trees.getOrThrow(1),
       metadata,
-    };
+    });
 
-    const updateTreeAction = UpdateActions.updateTree(trees[1], tracingId);
+    const updateTreeAction = UpdateActions.updateTree(trees.getOrThrow(1), tracingId);
     const [saveQueue] = addVersionNumbers(
       createSaveQueueFromUpdateActions([createTreesUpdateActions, [updateTreeAction]], 123456789),
       0,

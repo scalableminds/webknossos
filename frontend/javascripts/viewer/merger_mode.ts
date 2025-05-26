@@ -19,7 +19,7 @@ import type {
   UpdateActionNode,
 } from "viewer/model/sagas/update_actions";
 import { api } from "viewer/singletons";
-import type { SkeletonTracing, StoreType, TreeMap, WebknossosState } from "viewer/store";
+import type { SkeletonTracing, StoreType, WebknossosState } from "viewer/store";
 import Store from "viewer/throttled_store";
 import type { CreateNodeAction } from "./model/actions/skeletontracing_actions";
 
@@ -30,7 +30,7 @@ type MergerModeState = {
 
   // Unmapped Segment Id -> Count
   nodesPerUnmappedSegment: Record<number, number>;
-  nodes: Array<NodeWithTreeId>;
+  nodes: NodeWithTreeId[];
 
   // A properly initialized merger mode should always
   // have a segmentationLayerName. However, some edge cases
@@ -137,7 +137,7 @@ function decreaseNodesOfUnmappedSegment(
 }
 
 function getAllNodesWithTreeId(): Array<NodeWithTreeId> {
-  const trees: TreeMap = api.tracing.getAllTrees();
+  const trees = api.tracing.getAllTrees();
   const nodes: Array<NodeWithTreeId> = [];
   // Create an array of all nodes, but with the additional treeId Property
   Object.keys(trees).forEach((treeId) => {

@@ -1,4 +1,5 @@
 import update from "immutability-helper";
+import { TreeMap, type Tree } from "viewer/model/types/tree_types";
 import type { SkeletonTracing } from "viewer/store";
 import { initialState as defaultState } from "test/fixtures/volumetracing_object";
 
@@ -29,26 +30,7 @@ const colorLayer: APIColorLayer = {
   additionalAxes: [],
 };
 
-export const initialSkeletonTracing: SkeletonTracing = {
-  type: "skeleton",
-  createdTimestamp: 0,
-  tracingId: "tracingId",
-  trees: {},
-  treeGroups: [],
-  activeGroupId: null,
-  activeTreeId: 1,
-  activeNodeId: null,
-  cachedMaxNodeId: 0,
-  boundingBox: null,
-  userBoundingBoxes: [],
-  navigationList: {
-    list: [],
-    activeIndex: -1,
-  },
-  showSkeletons: true,
-  additionalAxes: [],
-};
-initialSkeletonTracing.trees[1] = {
+const initalTreeOne: Tree = {
   treeId: 1,
   name: "TestTree",
   nodes: new DiffableMap(),
@@ -63,7 +45,8 @@ initialSkeletonTracing.trees[1] = {
   edgesAreVisible: true,
   metadata: [],
 };
-initialSkeletonTracing.trees[2] = {
+
+const initialTreeTwo: Tree = {
   treeId: 2,
   name: "TestAgglomerateTree",
   nodes: new DiffableMap(),
@@ -77,6 +60,29 @@ initialSkeletonTracing.trees[2] = {
   type: TreeTypeEnum.AGGLOMERATE,
   edgesAreVisible: true,
   metadata: [],
+};
+
+export const initialSkeletonTracing: SkeletonTracing = {
+  type: "skeleton",
+  createdTimestamp: 0,
+  tracingId: "tracingId",
+  trees: new TreeMap([
+    [1, initalTreeOne],
+    [2, initialTreeTwo],
+  ]),
+  treeGroups: [],
+  activeGroupId: null,
+  activeTreeId: 1,
+  activeNodeId: null,
+  cachedMaxNodeId: 0,
+  boundingBox: null,
+  userBoundingBoxes: [],
+  navigationList: {
+    list: [],
+    activeIndex: -1,
+  },
+  showSkeletons: true,
+  additionalAxes: [],
 };
 
 export const initialState = update(defaultState, {

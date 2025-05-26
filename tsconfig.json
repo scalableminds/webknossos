@@ -9,7 +9,7 @@
     "outDir": "build",
     "jsx": "react-jsx",
     "strict": true,
-    "target": "es2023",
+    "target": "esnext",
     "skipLibCheck": true, //reconsider this later
     "allowSyntheticDefaultImports": true,
     "baseUrl": "./frontend/javascripts",

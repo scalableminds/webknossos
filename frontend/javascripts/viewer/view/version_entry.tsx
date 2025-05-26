@@ -140,13 +140,13 @@ const descriptionFns: Record<
     firstAction: UpdateUserBoundingBoxVisibilityInSkeletonTracingAction,
   ): Description => ({
     description: `Toggled the visibility of bounding box ${firstAction.value.boundingBoxId}.`,
-    icon: <EditOutlined />,
+    icon: <EyeOutlined />,
   }),
   updateUserBoundingBoxVisibilityInVolumeTracing: (
     firstAction: UpdateUserBoundingBoxVisibilityInVolumeTracingAction,
   ): Description => ({
     description: `Toggled the visibility of bounding box ${firstAction.value.boundingBoxId}.`,
-    icon: <EditOutlined />,
+    icon: <EyeOutlined />,
   }),
   removeFallbackLayer: (): Description => ({
     description: "Removed the segmentation fallback layer.",

@@ -535,8 +535,8 @@ class VolumeTracingService @Inject()(
       editPosition: Option[Vec3Int],
       editRotation: Option[Vec3Double],
       newVersion: Long,
-      ownerId: Option[String],
-      requestingUserId: Option[String])(implicit ec: ExecutionContext, tc: TokenContext): Fox[VolumeTracing] = {
+      ownerId: String,
+      requestingUserId: String)(implicit ec: ExecutionContext, tc: TokenContext): Fox[VolumeTracing] = {
     val tracingWithBB = addBoundingBoxFromTaskIfRequired(sourceTracing, isFromTask, datasetBoundingBox)
     val tracingWithMagRestrictions = VolumeTracingMags.restrictMagList(tracingWithBB, magRestrictions)
     for {
@@ -544,8 +544,8 @@ class VolumeTracingService @Inject()(
       hasSegmentIndex <- VolumeSegmentIndexService.canHaveSegmentIndex(remoteDatastoreClient, fallbackLayer)
       userStates = Seq(
         renderUserStateForVolumeTracingIntoUserState(tracingWithMagRestrictions,
-                                                     ownerId.getOrElse(""), // TODO get rid of getOrElse("")
-                                                     requestingUserId.getOrElse("")))
+                                                     ownerId,
+                                                     requestingUserId))
       newTracing = tracingWithMagRestrictions.copy(
         createdTimestamp = System.currentTimeMillis(),
         editPosition = editPosition.map(vec3IntToProto).getOrElse(tracingWithMagRestrictions.editPosition),
@@ -564,9 +564,9 @@ class VolumeTracingService @Inject()(
   }
 
   // Since the owner may change in duplicate, we need to render what they would see into a single user state for them
-  private def renderUserStateForVolumeTracingIntoUserState(s: VolumeTracing,
-                                                           requestingUserId: String,
-                                                           ownerId: String): VolumeUserStateProto = {
+  def renderUserStateForVolumeTracingIntoUserState(s: VolumeTracing,
+                                                   requestingUserId: String,
+                                                   ownerId: String): VolumeUserStateProto = {
     val ownerUserState = s.userStates.find(_.userId == ownerId).map(_.copy(userId = requestingUserId))
 
     if (requestingUserId == ownerId)
@@ -901,7 +901,7 @@ class VolumeTracingService @Inject()(
   def mergeVolumeData(
       firstVolumeAnnotationIdOpt: Option[String],
       volumeTracingIds: Seq[String],
-      volumeTracings: List[VolumeTracing],
+      volumeTracings: Seq[VolumeTracing],
       newVolumeTracingId: String,
       newVersion: Long,
       toTemporaryStore: Boolean)(implicit mp: MessagesProvider, tc: TokenContext): Fox[MergedVolumeStats] = {

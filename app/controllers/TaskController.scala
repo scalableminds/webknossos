@@ -67,7 +67,8 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
         taskParametersFull <- taskCreationService.createTracingsFromBaseAnnotations(taskParametersWithIds,
                                                                                     taskType,
                                                                                     dataset,
-                                                                                    dataSource)
+                                                                                    dataSource,
+                                                                                    request.identity._id)
         skeletonBaseOpts: List[Option[SkeletonTracing]] = taskCreationService.createTaskSkeletonTracingBases(
           taskParametersFull)
         volumeBaseOpts: List[Option[(VolumeTracing, Option[File])]] <- taskCreationService.createTaskVolumeTracingBases(

@@ -41,7 +41,7 @@ class EditableMappingMergeService @Inject()(val tracingDataStore: TracingDataSto
                             firstVolumeAnnotationIdOpt: Option[String],
                             newAnnotationId: String,
                             newVolumeTracingId: String,
-                            tracingsWithIds: List[(VolumeTracing, String)],
+                            tracingsWithIds: Seq[(VolumeTracing, String)],
                             toTemporaryStore: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     if (tracingsWithIds.nonEmpty && tracingsWithIds.forall(tracingWithId => tracingWithId._1.getHasEditableMapping)) {
       for {

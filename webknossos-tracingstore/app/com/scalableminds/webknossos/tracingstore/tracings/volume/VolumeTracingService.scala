@@ -564,9 +564,9 @@ class VolumeTracingService @Inject()(
   }
 
   // Since the owner may change in duplicate, we need to render what they would see into a single user state for them
-  private def renderUserStateForVolumeTracingIntoUserState(s: VolumeTracing,
-                                                           requestingUserId: String,
-                                                           ownerId: String): VolumeUserStateProto = {
+  def renderUserStateForVolumeTracingIntoUserState(s: VolumeTracing,
+                                                   requestingUserId: String,
+                                                   ownerId: String): VolumeUserStateProto = {
     val ownerUserState = s.userStates.find(_.userId == ownerId).map(_.copy(userId = requestingUserId))
 
     if (requestingUserId == ownerId)
@@ -901,7 +901,7 @@ class VolumeTracingService @Inject()(
   def mergeVolumeData(
       firstVolumeAnnotationIdOpt: Option[String],
       volumeTracingIds: Seq[String],
-      volumeTracings: List[VolumeTracing],
+      volumeTracings: Seq[VolumeTracing],
       newVolumeTracingId: String,
       newVersion: Long,
       toTemporaryStore: Boolean)(implicit mp: MessagesProvider, tc: TokenContext): Fox[MergedVolumeStats] = {

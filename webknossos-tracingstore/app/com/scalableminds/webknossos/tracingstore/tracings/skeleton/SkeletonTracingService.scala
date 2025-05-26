@@ -90,9 +90,9 @@ class SkeletonTracingService @Inject()(
 
   // Since the owner may change in duplicate, we need to render what they would see into a single user state for them
   // TODO find good spot for this function
-  private def renderUserStateForSkeletonTracingIntoUserState(s: SkeletonTracing,
-                                                             requestingUserId: String,
-                                                             ownerId: String): SkeletonUserStateProto = {
+  def renderUserStateForSkeletonTracingIntoUserState(s: SkeletonTracing,
+                                                     requestingUserId: String,
+                                                     ownerId: String): SkeletonUserStateProto = {
     val ownerUserState = s.userStates.find(_.userId == ownerId).map(_.copy(userId = requestingUserId))
 
     if (requestingUserId == ownerId)

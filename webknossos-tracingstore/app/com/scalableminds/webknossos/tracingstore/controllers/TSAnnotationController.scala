@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.controllers
 
 import collections.SequenceUtils
 import com.google.inject.Inject
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.Annotation.{
@@ -9,6 +10,8 @@ import com.scalableminds.webknossos.datastore.Annotation.{
   AnnotationLayerTypeProto,
   AnnotationProto
 }
+import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
@@ -152,6 +155,40 @@ class TSAnnotationController @Inject()(
       }
     }
 
+  private def findAndAdaptVolumesForAnnotation(annotation: AnnotationProto, requestingUserId: String, ownerId: String)(
+      implicit tc: TokenContext): Fox[Seq[VolumeTracing]] = {
+    val volumeLayersOfAnnotation = annotation.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Volume)
+    for {
+      volumeTracings <- annotationService
+        .findMultipleVolumes(volumeLayersOfAnnotation.map { l =>
+          Some(TracingSelector(l.tracingId))
+        })
+        .map(_.flatten)
+      volumeTracingsAdapted = volumeTracings.map(
+        tracing =>
+          tracing.copy(userStates =
+            Seq(volumeTracingService.renderUserStateForVolumeTracingIntoUserState(tracing, requestingUserId, ownerId))))
+    } yield volumeTracingsAdapted
+  }
+
+  private def findAndAdaptSkeletonsForAnnotation(
+      annotation: AnnotationProto,
+      requestingUserId: String,
+      ownerId: String)(implicit tc: TokenContext): Fox[Seq[SkeletonTracing]] = {
+    val volumeLayersOfAnnotation = annotation.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Skeleton)
+    for {
+      skeletonTracings <- annotationService
+        .findMultipleSkeletons(volumeLayersOfAnnotation.map { l =>
+          Some(TracingSelector(l.tracingId))
+        })
+        .map(_.flatten)
+      skeletonTracingsAdapted = skeletonTracings.map(
+        tracing =>
+          tracing.copy(userStates = Seq(
+            skeletonTracingService.renderUserStateForSkeletonTracingIntoUserState(tracing, requestingUserId, ownerId))))
+    } yield skeletonTracingsAdapted
+  }
+
   def mergedFromIds(toTemporaryStore: Boolean,
                     newAnnotationId: String,
                     requestingUserId: String): Action[MergedFromIdsRequest] =
@@ -171,12 +208,12 @@ class TSAnnotationController @Inject()(
             mergedVolumeName = SequenceUtils
               .findUniqueElement(volumeLayers.map(_.name))
               .getOrElse(AnnotationLayer.defaultVolumeLayerName)
-            volumeTracings <- annotationService
-              .findMultipleVolumes(volumeLayers.map { l =>
-                Some(TracingSelector(l.tracingId))
-              })
-              .map(_.flatten)
-            // TODO adapt user state for all volume tracings (before flatten so we can zip with owner ids)
+            volumeTracingsAdaptedNested: Seq[Seq[VolumeTracing]] <- Fox.serialCombined(
+              annotations.zip(request.body.ownerIds)) {
+              case (annotation, ownerId) =>
+                findAndAdaptVolumesForAnnotation(annotation, requestingUserId, ownerId)
+            }
+            volumeTracings = volumeTracingsAdaptedNested.flatten
             firstVolumeAnnotationIndex = annotations.indexWhere(
               _.annotationLayers.exists(_.typ == AnnotationLayerTypeProto.Volume))
             firstVolumeAnnotationId = if (firstVolumeAnnotationIndex < 0) None
@@ -206,12 +243,12 @@ class TSAnnotationController @Inject()(
                 .toFox) ?~> "mergeVolume.failed"
             _ <- Fox.runOptional(mergedVolumeOpt)(
               volumeTracingService.saveVolume(newVolumeId, version = newTargetVersion, _, toTemporaryStore))
-            skeletonTracings <- annotationService
-              .findMultipleSkeletons(skeletonLayers.map { l =>
-                Some(TracingSelector(l.tracingId))
-              })
-              .map(_.flatten)
-            // TODO adapt user state for all skelton tracings (before flatten so we can zip with owner ids)
+            skeletonTracingsAdaptedNested: Seq[Seq[SkeletonTracing]] <- Fox.serialCombined(
+              annotations.zip(request.body.ownerIds)) {
+              case (annotation, ownerId) =>
+                findAndAdaptSkeletonsForAnnotation(annotation, requestingUserId, ownerId)
+            }
+            skeletonTracings = skeletonTracingsAdaptedNested.flatten
             mergedSkeletonOpt <- Fox.runIf(skeletonTracings.nonEmpty)(
               skeletonTracingService
                 .merge(skeletonTracings, newVersion = newTargetVersion, Some(requestingUserId))

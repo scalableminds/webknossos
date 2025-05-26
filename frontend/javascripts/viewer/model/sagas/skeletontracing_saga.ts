@@ -60,26 +60,26 @@ import type { Saga } from "viewer/model/sagas/effect-generators";
 import { select } from "viewer/model/sagas/effect-generators";
 import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/update_actions";
 import {
-  addUserBoundingBoxInSkeletonTracingAction,
-  addUserBoundingBoxInVolumeTracingAction,
+  addUserBoundingBoxInSkeletonTracing,
+  addUserBoundingBoxInVolumeTracing,
   createEdge,
   createNode,
   createTree,
   deleteEdge,
   deleteNode,
   deleteTree,
-  deleteUserBoundingBoxInSkeletonTracingAction,
-  deleteUserBoundingBoxInVolumeTracingAction,
+  deleteUserBoundingBoxInSkeletonTracing,
+  deleteUserBoundingBoxInVolumeTracing,
   updateNode,
   updateSkeletonTracing,
   updateTree,
   updateTreeEdgesVisibility,
   updateTreeGroups,
   updateTreeVisibility,
-  updateUserBoundingBoxInSkeletonTracingAction,
-  updateUserBoundingBoxInVolumeTracingAction,
-  updateUserBoundingBoxVisibilityInSkeletonTracingAction,
-  updateUserBoundingBoxVisibilityInVolumeTracingAction,
+  updateUserBoundingBoxInSkeletonTracing,
+  updateUserBoundingBoxInVolumeTracing,
+  updateUserBoundingBoxVisibilityInSkeletonTracing,
+  updateUserBoundingBoxVisibilityInVolumeTracing,
 } from "viewer/model/sagas/update_actions";
 import { api } from "viewer/singletons";
 import type {
@@ -621,30 +621,31 @@ export function* diffBoundingBoxes(
   tracingId: string,
   tracingType: AnnotationLayerEnum,
 ) {
+  if (prevBoundingBoxes === currentBoundingBoxes) return;
   const {
     onlyA: deletedBBoxIds,
     onlyB: addedBBoxIds,
     both: maybeChangedBBoxIds,
   } = Utils.diffArrays(
-    _.map(prevBoundingBoxes, (bbox) => bbox.id),
-    _.map(currentBoundingBoxes, (bbox) => bbox.id),
+    prevBoundingBoxes.map((bbox) => bbox.id),
+    currentBoundingBoxes.map((bbox) => bbox.id),
   );
   const addBBoxAction =
     tracingType === AnnotationLayerEnum.Skeleton
-      ? addUserBoundingBoxInSkeletonTracingAction
-      : addUserBoundingBoxInVolumeTracingAction;
+      ? addUserBoundingBoxInSkeletonTracing
+      : addUserBoundingBoxInVolumeTracing;
   const deleteBBoxAction =
     tracingType === AnnotationLayerEnum.Skeleton
-      ? deleteUserBoundingBoxInSkeletonTracingAction
-      : deleteUserBoundingBoxInVolumeTracingAction;
+      ? deleteUserBoundingBoxInSkeletonTracing
+      : deleteUserBoundingBoxInVolumeTracing;
   const updateBBoxAction =
     tracingType === AnnotationLayerEnum.Skeleton
-      ? updateUserBoundingBoxInSkeletonTracingAction
-      : updateUserBoundingBoxInVolumeTracingAction;
+      ? updateUserBoundingBoxInSkeletonTracing
+      : updateUserBoundingBoxInVolumeTracing;
   const updateBBoxVisibilityAction =
     tracingType === AnnotationLayerEnum.Skeleton
-      ? updateUserBoundingBoxVisibilityInSkeletonTracingAction
-      : updateUserBoundingBoxVisibilityInVolumeTracingAction;
+      ? updateUserBoundingBoxVisibilityInSkeletonTracing
+      : updateUserBoundingBoxVisibilityInVolumeTracing;
   const getErrorMessage = (id: number) =>
     `User bounding box with id ${id} not found in ${tracingType} tracing.`;
   for (const id of deletedBBoxIds) {
@@ -655,16 +656,16 @@ export function* diffBoundingBoxes(
     if (bbox) {
       yield addBBoxAction(bbox, tracingId);
     } else {
-      Toast.error(getErrorMessage(id));
+      throw new Error(getErrorMessage(id));
     }
   }
   for (const id of maybeChangedBBoxIds) {
     const currentBbox = currentBoundingBoxes.find((bbox) => bbox.id === id);
     const prevBbox = prevBoundingBoxes.find((bbox) => bbox.id === id);
     if (currentBbox == null || prevBbox == null) {
-      Toast.error(getErrorMessage(id));
-      continue;
+      throw new Error(getErrorMessage(id));
     }
+    if (currentBbox === prevBbox) continue;
     const diffBBox = Utils.diffObjects(currentBbox, prevBbox);
     if (_.isEmpty(diffBBox)) continue;
     const changedKeys = Object.keys(diffBBox);

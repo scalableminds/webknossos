@@ -56,7 +56,7 @@ export function convertUserBoundingBoxesFromServerToFrontend(
   });
 }
 
-export function convertUserBoundingBoxesFromFrontendToServer(
+export function convertUserBoundingBoxFromFrontendToServer(
   boundingBox: UserBoundingBox,
 ): UserBoundingBoxToServer {
   const { boundingBox: bb, ...rest } = boundingBox;

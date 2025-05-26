@@ -976,7 +976,7 @@ class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
       _ <- datasetMagsDAO.updateMags(datasetId, source.toUsable.map(_.dataLayers))
       _ <- datasetCoordinateTransformationsDAO.updateCoordinateTransformations(datasetId,
                                                                                source.toUsable.map(_.dataLayers))
-      - <- datasetLayerAttachmentsDAO.updateAttachments(datasetId, source.toUsable.map(_.dataLayers))
+      _ <- datasetLayerAttachmentsDAO.updateAttachments(datasetId, source.toUsable.map(_.dataLayers))
       _ <- datasetLayerAdditionalAxesDAO.updateAdditionalAxes(datasetId, source.toUsable.map(_.dataLayers))
     } yield ()
   }

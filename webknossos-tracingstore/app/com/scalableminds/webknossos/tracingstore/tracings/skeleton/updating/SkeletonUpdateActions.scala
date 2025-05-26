@@ -1,7 +1,9 @@
 package com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating
 
 import com.scalableminds.webknossos.tracingstore.tracings._
-import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.image.Color
+import com.scalableminds.util.tools.TristateOptionJsonHelper
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, Node, SkeletonTracing, Tree, TreeGroup}
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
@@ -576,28 +578,25 @@ case class DeleteUserBoundingBoxSkeletonAction(boundingBoxId: Int,
 }
 
 case class UpdateUserBoundingBoxSkeletonAction(boundingBoxId: Int,
-                                               updatedPropKeys: List[String],
-                                               updatedProps: NamedBoundingBoxUpdate,
+                                               name: Option[Option[String]],
+                                               color: Option[Option[Color]],
+                                               boundingBox: Option[Option[BoundingBox]],
                                                actionTracingId: String,
                                                actionTimestamp: Option[Long] = None,
                                                actionAuthorId: Option[String] = None,
                                                info: Option[String] = None)
-    extends SkeletonUpdateAction {
+    extends SkeletonUpdateAction
+    with ProtoGeometryImplicits {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
     def updateUserBoundingBoxes() =
       tracing.userBoundingBoxes.map { currentBoundingBox =>
         if (boundingBoxId == currentBoundingBox.id) {
           currentBoundingBox.copy(
-            id = updatedProps.id.getOrElse(currentBoundingBox.id),
-            name =
-              if (updatedPropKeys.contains("name") && updatedProps.name.isDefined) updatedProps.name
-              else currentBoundingBox.name,
-            color =
-              if (updatedPropKeys.contains("color") && updatedProps.color.isDefined) updatedProps.colorOptProto
-              else currentBoundingBox.color,
+            name = name.getOrElse(currentBoundingBox.name),
+            color = if (color.isDefined) color.flatMap(colorOptToProto) else currentBoundingBox.color,
             boundingBox =
-              if (updatedPropKeys.contains("boundingBox"))
-                updatedProps.boundingBoxProto.getOrElse(currentBoundingBox.boundingBox)
+              if (boundingBox.isDefined)
+                boundingBox.flatMap(boundingBoxOptToProto).getOrElse(currentBoundingBox.boundingBox)
               else currentBoundingBox.boundingBox
           )
         } else
@@ -704,9 +703,9 @@ object DeleteUserBoundingBoxSkeletonAction {
   implicit val jsonFormat: OFormat[DeleteUserBoundingBoxSkeletonAction] =
     Json.format[DeleteUserBoundingBoxSkeletonAction]
 }
-object UpdateUserBoundingBoxSkeletonAction {
+object UpdateUserBoundingBoxSkeletonAction extends TristateOptionJsonHelper {
   implicit val jsonFormat: OFormat[UpdateUserBoundingBoxSkeletonAction] =
-    Json.format[UpdateUserBoundingBoxSkeletonAction]
+    Json.configured(tristateOptionParsing).format[UpdateUserBoundingBoxSkeletonAction]
 }
 object UpdateUserBoundingBoxVisibilitySkeletonAction {
   implicit val jsonFormat: OFormat[UpdateUserBoundingBoxVisibilitySkeletonAction] =

@@ -1,6 +1,8 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
-import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.image.Color
+import com.scalableminds.util.tools.TristateOptionJsonHelper
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing}
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
@@ -154,28 +156,25 @@ case class DeleteUserBoundingBoxVolumeAction(boundingBoxId: Int,
 }
 
 case class UpdateUserBoundingBoxVolumeAction(boundingBoxId: Int,
-                                             updatedPropKeys: List[String],
-                                             updatedProps: NamedBoundingBoxUpdate,
+                                             name: Option[Option[String]],
+                                             color: Option[Option[Color]],
+                                             boundingBox: Option[Option[BoundingBox]],
                                              actionTracingId: String,
                                              actionTimestamp: Option[Long] = None,
                                              actionAuthorId: Option[String] = None,
                                              info: Option[String] = None)
-    extends ApplyableVolumeUpdateAction {
+    extends ApplyableVolumeUpdateAction
+    with ProtoGeometryImplicits {
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
     def updateUserBoundingBoxes() =
       tracing.userBoundingBoxes.map { currentBoundingBox =>
         if (boundingBoxId == currentBoundingBox.id) {
           currentBoundingBox.copy(
-            id = updatedProps.id.getOrElse(currentBoundingBox.id),
-            name =
-              if (updatedPropKeys.contains("name") && updatedProps.name.isDefined) updatedProps.name
-              else currentBoundingBox.name,
-            color =
-              if (updatedPropKeys.contains("color") && updatedProps.color.isDefined) updatedProps.colorOptProto
-              else currentBoundingBox.color,
+            name = name.getOrElse(currentBoundingBox.name),
+            color = if (color.isDefined) color.flatMap(colorOptToProto) else currentBoundingBox.color,
             boundingBox =
-              if (updatedPropKeys.contains("boundingBox"))
-                updatedProps.boundingBoxProto.getOrElse(currentBoundingBox.boundingBox)
+              if (boundingBox.isDefined)
+                boundingBox.flatMap(boundingBoxOptToProto).getOrElse(currentBoundingBox.boundingBox)
               else currentBoundingBox.boundingBox
           )
         } else
@@ -484,9 +483,9 @@ object DeleteUserBoundingBoxVolumeAction {
   implicit val jsonFormat: OFormat[DeleteUserBoundingBoxVolumeAction] =
     Json.format[DeleteUserBoundingBoxVolumeAction]
 }
-object UpdateUserBoundingBoxVolumeAction {
+object UpdateUserBoundingBoxVolumeAction extends TristateOptionJsonHelper {
   implicit val jsonFormat: OFormat[UpdateUserBoundingBoxVolumeAction] =
-    Json.format[UpdateUserBoundingBoxVolumeAction]
+    Json.configured(tristateOptionParsing).format[UpdateUserBoundingBoxVolumeAction]
 }
 object UpdateUserBoundingBoxVisibilityVolumeAction {
   implicit val jsonFormat: OFormat[UpdateUserBoundingBoxVisibilityVolumeAction] =

@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
 import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction}
-import com.scalableminds.webknossos.tracingstore.tracings.{MetadataEntry, NamedBoundingBox, NamedBoundingBoxUpdate}
+import com.scalableminds.webknossos.tracingstore.tracings.{MetadataEntry, NamedBoundingBox}
 import play.api.libs.json._
 
 trait VolumeUpdateActionHelper {

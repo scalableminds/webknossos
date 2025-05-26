@@ -543,9 +543,7 @@ class VolumeTracingService @Inject()(
       fallbackLayer <- getFallbackLayer(sourceAnnotationId, tracingWithMagRestrictions)
       hasSegmentIndex <- VolumeSegmentIndexService.canHaveSegmentIndex(remoteDatastoreClient, fallbackLayer)
       userStates = Seq(
-        renderUserStateForVolumeTracingIntoUserState(tracingWithMagRestrictions,
-                                                     ownerId,
-                                                     requestingUserId))
+        renderUserStateForVolumeTracingIntoUserState(tracingWithMagRestrictions, ownerId, requestingUserId))
       newTracing = tracingWithMagRestrictions.copy(
         createdTimestamp = System.currentTimeMillis(),
         editPosition = editPosition.map(vec3IntToProto).getOrElse(tracingWithMagRestrictions.editPosition),
@@ -786,7 +784,6 @@ class VolumeTracingService @Inject()(
   private def mergeTwo(tracingA: VolumeTracing,
                        tracingB: VolumeTracing,
                        indexB: Int, // Index of tracingB in the labelMaps of the mergedVolumeStats.
-                       // TODO test with proofreading, what happens to segment ids? also, volume annotations did not apply
                        mergedVolumeStats: MergedVolumeStats): Box[VolumeTracing] = {
     val largestSegmentId = combineLargestSegmentIdsByMaxDefined(tracingA.largestSegmentId, tracingB.largestSegmentId)
     val groupMappingA = GroupUtils.calculateSegmentGroupMapping(tracingA.segmentGroups, tracingB.segmentGroups)
@@ -838,7 +835,9 @@ class VolumeTracingService @Inject()(
       tracingAUserStates.map(appylIdMappingsOnUserState(_, groupMapping, bboxIdMapA))
     val tracingBUserStatesMapped =
       tracingBUserStates
-        .map(userState => userState.copy(segmentIds = userState.segmentIds.map(segmentIdMapB))) // TODO what if segments are not in id mappings?
+        .map(userState =>
+          userState.copy(segmentIds = userState.segmentIds.map(segmentId =>
+            segmentIdMapB.getOrElse(segmentId, segmentId))))
         .map(applyBboxIdMapOnUserState(_, bboxIdMapB))
 
     val byUserId = scala.collection.mutable.Map[String, VolumeUserStateProto]()

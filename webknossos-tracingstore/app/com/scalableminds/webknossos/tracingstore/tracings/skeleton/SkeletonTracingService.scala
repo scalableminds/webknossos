@@ -88,7 +88,6 @@ class SkeletonTracingService @Inject()(
   }
 
   // Since the owner may change in duplicate, we need to render what they would see into a single user state for them
-  // TODO find good spot for this function
   def renderUserStateForSkeletonTracingIntoUserState(s: SkeletonTracing,
                                                      requestingUserId: String,
                                                      ownerId: String): SkeletonUserStateProto = {
@@ -194,7 +193,7 @@ class SkeletonTracingService @Inject()(
     val tracingAUserStatesMapped =
       tracingAUserStates.map(appylIdMappingsOnUserState(_, groupMapping, treeIdMapA, bboxIdMapA))
     val tracingBUserStatesMapped = tracingBUserStates
-      .map(userState => userState.copy(treeIds = userState.treeIds.map(treeIdMapB)))
+      .map(userState => userState.copy(treeIds = userState.treeIds.map(treeId => treeIdMapB.getOrElse(treeId, treeId))))
       .map(applyBboxIdMapOnUserState(_, bboxIdMapB))
 
     val byUserId = scala.collection.mutable.Map[String, SkeletonUserStateProto]()
@@ -230,7 +229,7 @@ class SkeletonTracingService @Inject()(
                                          bboxIdMapA: Map[Int, Int]): SkeletonUserStateProto =
     applyBboxIdMapOnUserState(userState, bboxIdMapA).copy(
       treeGroupIds = userState.treeGroupIds.map(groupMapping),
-      treeIds = userState.treeIds.map(treeIdMapA)
+      treeIds = userState.treeIds.map(treeId => treeIdMapA.getOrElse(treeId, treeId))
     )
 
   private def applyBboxIdMapOnUserState(userState: SkeletonUserStateProto,

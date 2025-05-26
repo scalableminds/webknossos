@@ -9,7 +9,7 @@ import { TreeTypeEnum, type Vector3 } from "viewer/constants";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import {
   initialState as defaultState,
-  initalTreeOne,
+  initialTreeOne,
   initialSkeletonTracing,
 } from "test/fixtures/hybridtracing_object";
 import SkeletonTracingReducer from "viewer/model/reducers/skeletontracing_reducer";
@@ -1804,7 +1804,7 @@ describe("SkeletonTracing", () => {
       SkeletonTracingActions.deleteTreeAction(1),
       SkeletonTracingActions.deleteTreeAction(2),
       SkeletonTracingActions.addTreesAndGroupsAction(
-        new MutableTreeMap([[4, { ...initalTreeOne, treeId: 4 }]]),
+        new MutableTreeMap([[4, { ...initialTreeOne, treeId: 4 }]]),
         [],
         treeIdCallback,
       ),
@@ -1823,7 +1823,7 @@ describe("SkeletonTracing", () => {
 
     const state = applyActions(initialState, [
       SkeletonTracingActions.addTreesAndGroupsAction(
-        new MutableTreeMap([[8_000_000, { ...initalTreeOne, treeId: 8_000_000 }]]),
+        new MutableTreeMap([[8_000_000, { ...initialTreeOne, treeId: 8_000_000 }]]),
         [],
         treeIdCallback,
       ),

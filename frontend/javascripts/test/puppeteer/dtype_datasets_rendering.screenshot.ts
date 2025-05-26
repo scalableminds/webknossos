@@ -22,13 +22,13 @@ import {
   getSupportedValueRangeForElementClass,
 } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import {
-  updateDatasetSettingAction,
   updateLayerSettingAction,
   updateTemporarySettingAction,
 } from "viewer/model/actions/settings_actions";
 import { setPositionAction, setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import type { Action } from "viewer/model/actions/actions";
 import { describe, it, beforeAll, beforeEach, afterEach, expect, test } from "vitest";
+import { setHideUnregisteredSegmentsAction } from "viewer/model/actions/volumetracing_actions";
 
 const testColor = true;
 const testSegmentation = true;
@@ -225,7 +225,7 @@ describe("DType Dataset Rendering", () => {
               .map((el) => Number.parseFloat(el));
 
             const actions: Action[] = [
-              updateDatasetSettingAction("selectiveSegmentVisibility", false),
+              setHideUnregisteredSegmentsAction(false),
               updateTemporarySettingAction("hoveredSegmentId", null),
               setPositionAction([x, y, z]),
               setZoomStepAction(zoomValue),
@@ -274,7 +274,7 @@ describe("DType Dataset Rendering", () => {
           let success = true;
           if (spec.alsoTestSelectiveSegmentId && selectiveSegmentIdByDtype[spec.dtype] != null) {
             const actions = [
-              updateDatasetSettingAction("selectiveSegmentVisibility", true),
+              setHideUnregisteredSegmentsAction(true),
               updateTemporarySettingAction(
                 "hoveredSegmentId",
                 selectiveSegmentIdByDtype[spec.dtype] ?? null,

@@ -33,20 +33,27 @@ object TreeUtils {
     else
       trees.map(_.treeId).max
 
+  private def densifyTreeIds(trees: Seq[Tree]): Seq[Tree] =
+    trees.sortBy(_.treeId).zipWithIndex.map {
+      case (tree, index) => tree.withTreeId(index + 1)
+    }
+
   def mergeTrees(sourceTrees: Seq[Tree],
                  targetTrees: Seq[Tree],
                  nodeMapping: FunctionalNodeMapping,
                  groupMapping: FunctionalGroupMapping): Seq[Tree] = {
-    val treeMaxId = maxTreeId(targetTrees)
+    val targetTreesDensified = densifyTreeIds(targetTrees)
+    val sourceTreesDensified = densifyTreeIds(sourceTrees)
+    val treeMaxId = maxTreeId(targetTreesDensified)
 
-    val sourceNodeIds: Set[Int] = sourceTrees.flatMap(_.nodes.map(_.id)).toSet
+    val sourceNodeIds: Set[Int] = sourceTreesDensified.flatMap(_.nodes.map(_.id)).toSet
 
-    val mappedSourceTrees = sourceTrees.map(
+    val mappedSourceTrees = sourceTreesDensified.map(
       tree =>
         applyNodeMapping(tree.withTreeId(tree.treeId + treeMaxId), nodeMapping, sourceNodeIds)
           .copy(groupId = tree.groupId.map(groupMapping(_))))
 
-    targetTrees ++ mappedSourceTrees
+    targetTreesDensified ++ mappedSourceTrees
   }
 
   private def applyNodeMapping(tree: Tree, f: Int => Int, sourceNodeIds: Set[Int]) =

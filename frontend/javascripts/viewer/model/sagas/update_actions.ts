@@ -3,15 +3,8 @@ import type { APIMagRestrictions, AdditionalCoordinate, MetadataEntryProto } fro
 import type { Vector3 } from "viewer/constants";
 import type { SendBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { convertUserBoundingBoxFromFrontendToServer } from "viewer/model/reducers/reducer_helpers";
-import type {
-  Node,
-  NumberLike,
-  SegmentGroup,
-  Tree,
-  TreeGroup,
-  UserBoundingBox,
-  VolumeTracing,
-} from "viewer/store";
+import type { Node, Tree, TreeGroup } from "viewer/model/types/tree_types";
+import type { NumberLike, SegmentGroup, UserBoundingBox, VolumeTracing } from "viewer/store";
 
 export type NodeWithTreeId = {
   treeId: number;
@@ -33,9 +26,15 @@ export type DeleteNodeUpdateAction = ReturnType<typeof deleteNode>;
 export type CreateEdgeUpdateAction = ReturnType<typeof createEdge>;
 export type DeleteEdgeUpdateAction = ReturnType<typeof deleteEdge>;
 export type UpdateSkeletonTracingUpdateAction = ReturnType<typeof updateSkeletonTracing>;
-type UpdateVolumeTracingUpdateAction = ReturnType<typeof updateVolumeTracing>;
+type UpdateVolumeTracingUpdateAction = ReturnType<typeof updateVolumeTracingAction>;
 export type CreateSegmentUpdateAction = ReturnType<typeof createSegmentVolumeAction>;
 export type UpdateSegmentUpdateAction = ReturnType<typeof updateSegmentVolumeAction>;
+export type UpdateSegmentVisibilityVolumeAction = ReturnType<
+  typeof updateSegmentVisibilityVolumeAction
+>;
+export type UpdateSegmentGroupVisibilityVolumeAction = ReturnType<
+  typeof updateSegmentGroupVisibilityVolumeAction
+>;
 export type DeleteSegmentUpdateAction = ReturnType<typeof deleteSegmentVolumeAction>;
 export type DeleteSegmentDataUpdateAction = ReturnType<typeof deleteSegmentDataVolumeAction>;
 export type LEGACY_UpdateUserBoundingBoxesInSkeletonTracingUpdateAction = ReturnType<
@@ -119,6 +118,7 @@ export type UpdateActionWithoutIsolationRequirement =
   | UpdateUserBoundingBoxVisibilityInVolumeTracingAction
   | CreateSegmentUpdateAction
   | UpdateSegmentUpdateAction
+  | UpdateSegmentVisibilityVolumeAction
   | DeleteSegmentUpdateAction
   | DeleteSegmentDataUpdateAction
   | UpdateBucketUpdateAction
@@ -126,6 +126,7 @@ export type UpdateActionWithoutIsolationRequirement =
   | UpdateTreeEdgesVisibilityUpdateAction
   | UpdateTreeGroupVisibilityUpdateAction
   | UpdateSegmentGroupsUpdateAction
+  | UpdateSegmentGroupVisibilityVolumeAction
   | UpdateTreeGroupsUpdateAction
   | RemoveFallbackLayerUpdateAction
   | UpdateTdCameraUpdateAction
@@ -389,7 +390,7 @@ export function moveTreeComponent(
     },
   } as const;
 }
-export function updateVolumeTracing(
+export function updateVolumeTracingAction(
   tracing: VolumeTracing,
   position: Vector3,
   editPositionAdditionalCoordinates: AdditionalCoordinate[] | null,
@@ -405,6 +406,7 @@ export function updateVolumeTracing(
       editPositionAdditionalCoordinates,
       editRotation: rotation,
       largestSegmentId: tracing.largestSegmentId,
+      hideUnregisteredSegments: tracing.hideUnregisteredSegments,
       zoomLevel,
     },
   } as const;
@@ -620,6 +622,22 @@ export function updateSegmentVolumeAction(
     },
   } as const;
 }
+
+export function updateSegmentVisibilityVolumeAction(
+  id: number,
+  isVisible: boolean,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateSegmentVisibility",
+    value: {
+      id,
+      actionTracingId,
+      isVisible,
+    },
+  } as const;
+}
+
 export function deleteSegmentVolumeAction(id: number, actionTracingId: string) {
   return {
     name: "deleteSegment",
@@ -659,6 +677,21 @@ export function updateSegmentGroups(segmentGroups: Array<SegmentGroup>, actionTr
     value: {
       actionTracingId,
       segmentGroups,
+    },
+  } as const;
+}
+
+export function updateSegmentGroupVisibilityVolumeAction(
+  groupId: number | null,
+  isVisible: boolean,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateSegmentGroupVisibility",
+    value: {
+      actionTracingId,
+      groupId,
+      isVisible,
     },
   } as const;
 }

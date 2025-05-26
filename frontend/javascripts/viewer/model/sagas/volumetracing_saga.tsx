@@ -1,6 +1,7 @@
 import { diffDiffableMaps } from "libs/diffable_map";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
+import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type { ContourMode, OrthoView, OverwriteMode, Vector3 } from "viewer/constants";
 import { ContourModeEnum, OrthoViews, OverwriteModeEnum } from "viewer/constants";
@@ -72,8 +73,9 @@ import {
   removeFallbackLayer,
   updateMappingName,
   updateSegmentGroups,
+  updateSegmentVisibilityVolumeAction,
   updateSegmentVolumeAction,
-  updateVolumeTracing,
+  updateVolumeTracingAction,
 } from "viewer/model/sagas/update_actions";
 import type VolumeLayer from "viewer/model/volumetracing/volumelayer";
 import { Model, api } from "viewer/singletons";
@@ -448,7 +450,10 @@ function* uncachedDiffSegmentLists(
     const segment = newSegments.getOrThrow(segmentId);
     const prevSegment = prevSegments.getOrThrow(segmentId);
 
-    if (segment !== prevSegment) {
+    const { isVisible: prevIsVisible, ...prevSegmentWithoutIsVisible } = prevSegment;
+    const { isVisible: isVisible, ...segmentWithoutIsVisible } = segment;
+
+    if (!_.isEqual(prevSegmentWithoutIsVisible, segmentWithoutIsVisible)) {
       yield updateSegmentVolumeAction(
         segment.id,
         segment.somePosition,
@@ -461,6 +466,10 @@ function* uncachedDiffSegmentLists(
         segment.creationTime,
       );
     }
+
+    if (isVisible !== prevIsVisible) {
+      yield updateSegmentVisibilityVolumeAction(segment.id, segment.isVisible, tracingId);
+    }
   }
 }
 export function* diffVolumeTracing(
@@ -470,7 +479,7 @@ export function* diffVolumeTracing(
   flycam: Flycam,
 ): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (updateTracingPredicate(prevVolumeTracing, volumeTracing, prevFlycam, flycam)) {
-    yield updateVolumeTracing(
+    yield updateVolumeTracingAction(
       volumeTracing,
       V3.floor(getPosition(flycam)),
       flycam.additionalCoordinates,

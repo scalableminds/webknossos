@@ -2,7 +2,9 @@ import type { DataNode } from "antd/es/tree";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import { mapGroupsWithRoot } from "viewer/model/accessors/skeletontracing_accessor";
-import type { Segment, SegmentGroup, SegmentMap, Tree, TreeGroup, TreeMap } from "viewer/store";
+import type { Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
+import type { Segment, SegmentGroup, SegmentMap } from "viewer/store";
+import type { SegmentHierarchyNode } from "../segments_tab/segments_view_helper";
 
 export const MISSING_GROUP_ID = -1;
 
@@ -203,7 +205,9 @@ export function findTreeNode(groups: TreeNode[], id: number, callback: (arg0: Tr
 }
 
 function _createGroupToTreesMap(trees: TreeMap): Record<number, Tree[]> {
-  return _.groupBy(trees, (tree) => (tree.groupId != null ? tree.groupId : MISSING_GROUP_ID));
+  return _.groupBy(trees.values().toArray(), (tree) =>
+    tree.groupId != null ? tree.groupId : MISSING_GROUP_ID,
+  );
 }
 
 export const createGroupToTreesMap = memoizeOne(_createGroupToTreesMap);
@@ -278,7 +282,7 @@ export function moveGroupsHelper(
   return newGroups;
 }
 
-export function deepFlatFilter<T extends TreeNode | TreeGroup>(
+export function deepFlatFilter<T extends TreeNode | TreeGroup | SegmentHierarchyNode>(
   nodes: T[],
   predicate: (node: T) => boolean,
 ): T[] {

@@ -60,17 +60,23 @@ import {
   findParentIdForGroupId,
   getGroupNodeKey,
 } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
-import { mapGroups } from "../accessors/skeletontracing_accessor";
+import { mapGroups, mapGroupsToGenerator } from "../accessors/skeletontracing_accessor";
+import type { TreeGroup } from "../types/tree_types";
 import { sanitizeMetadata } from "./skeletontracing_reducer";
+import { forEachGroups } from "./skeletontracing_reducer_helpers";
 
 type SegmentUpdateInfo =
   | {
       readonly type: "UPDATE_VOLUME_TRACING";
       readonly volumeTracing: VolumeTracing;
+      readonly segments: SegmentMap;
+      readonly segmentGroups: TreeGroup[];
     }
   | {
       readonly type: "UPDATE_LOCAL_SEGMENTATION_DATA";
       readonly layerName: string;
+      readonly segments: SegmentMap;
+      readonly segmentGroups: [];
     }
   | {
       readonly type: "NOOP";
@@ -94,11 +100,15 @@ function getSegmentUpdateInfo(
     return {
       type: "UPDATE_VOLUME_TRACING",
       volumeTracing,
+      segments: volumeTracing.segments,
+      segmentGroups: volumeTracing.segmentGroups,
     };
   } else {
     return {
       type: "UPDATE_LOCAL_SEGMENTATION_DATA",
       layerName: layer.name,
+      segments: state.localSegmentationData[layer.name].segments,
+      segmentGroups: [],
     };
   }
 }
@@ -175,6 +185,9 @@ function handleRemoveSegment(state: WebknossosState, action: RemoveSegmentAction
 function handleUpdateSegment(state: WebknossosState, action: UpdateSegmentAction) {
   return updateSegments(state, action.layerName, (segments) => {
     const { segmentId, segment } = action;
+    if (segmentId === 0) {
+      return segments;
+    }
     const oldSegment = segments.getNullable(segmentId);
 
     let somePosition;
@@ -200,6 +213,7 @@ function handleUpdateSegment(state: WebknossosState, action: UpdateSegmentAction
       creationTime: action.timestamp,
       name: null,
       color: null,
+      isVisible: true,
       groupId: getSelectedIds(state)[0].group,
       someAdditionalCoordinates: someAdditionalCoordinates,
       ...oldSegment,
@@ -215,10 +229,17 @@ function handleUpdateSegment(state: WebknossosState, action: UpdateSegmentAction
 }
 
 function expandSegmentParents(state: WebknossosState, action: ClickSegmentAction) {
-  if (action.layerName == null) return state;
+  const maybeVolumeLayer =
+    action.layerName != null
+      ? getLayerByName(state.dataset, action.layerName)
+      : getVisibleSegmentationLayer(state);
+
+  const layerName = maybeVolumeLayer?.name;
+  if (layerName == null) return state;
+
   const getNewGroups = () => {
     const { segments, segmentGroups } = getVisibleSegments(state);
-    if (action.layerName == null || segments == null) return segmentGroups;
+    if (segments == null) return segmentGroups;
     const { segmentId } = action;
     const segmentForId = segments.getNullable(segmentId);
     if (segmentForId == null) return segmentGroups;
@@ -238,7 +259,7 @@ function expandSegmentParents(state: WebknossosState, action: ClickSegmentAction
       return group;
     });
   };
-  return setSegmentGroups(state, action.layerName, getNewGroups());
+  return setSegmentGroups(state, layerName, getNewGroups());
 }
 
 export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing): VolumeTracing {
@@ -250,9 +271,8 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
     createdTimestamp: tracing.createdTimestamp,
     type: "volume" as const,
     segments: new DiffableMap(
-      tracing.segments.map((segment) => [
-        segment.segmentId,
-        {
+      tracing.segments.map((segment) => {
+        const clientSegment: Segment = {
           ...segment,
           id: segment.segmentId,
           somePosition: segment.anchorPosition
@@ -260,8 +280,10 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
             : undefined,
           someAdditionalCoordinates: segment.additionalCoordinates,
           color: segment.color != null ? Utils.colorObjectToRGBArray(segment.color) : null,
-        } as Segment,
-      ]),
+          isVisible: segment.isVisible ?? true,
+        };
+        return [segment.segmentId, clientSegment];
+      }),
     ),
     segmentGroups: tracing.segmentGroups || [],
     activeCellId: tracing.activeSegmentId ?? 0,
@@ -279,6 +301,7 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
     volumeBucketDataHasChanged: tracing.volumeBucketDataHasChanged,
     hasSegmentIndex: tracing.hasSegmentIndex || false,
     additionalAxes: convertServerAdditionalAxesToFrontEnd(tracing.additionalAxes),
+    hideUnregisteredSegments: tracing.hideUnregisteredSegments ?? false,
   };
   return volumeTracing;
 }
@@ -307,6 +330,74 @@ function getVolumeTracingFromAction(state: WebknossosState, action: VolumeTracin
     return null;
   }
   return getVolumeTracingById(state.annotation, maybeVolumeLayer.tracingId);
+}
+
+export function toggleSegmentGroupReducer(
+  state: WebknossosState,
+  layerName: string,
+  groupId: number,
+  targetVisibility?: boolean,
+): WebknossosState {
+  const updateInfo = getSegmentUpdateInfo(state, layerName);
+
+  if (updateInfo.type === "NOOP") {
+    return state;
+  }
+  const { segments, segmentGroups } = updateInfo;
+
+  let toggledGroup;
+  forEachGroups(segmentGroups, (group) => {
+    if (group.groupId === groupId) toggledGroup = group;
+  });
+  if (toggledGroup == null) return state;
+  // Assemble a list that contains the toggled groupId and the groupIds of all child groups
+  const affectedGroupIds = new Set(mapGroupsToGenerator([toggledGroup], (group) => group.groupId));
+  // Let's make all segments visible if there is one invisible segment in one of the affected groups
+  const shouldBecomeVisible =
+    targetVisibility != null
+      ? targetVisibility
+      : Array.from(segments.values()).some(
+          (segment) =>
+            typeof segment.groupId === "number" &&
+            affectedGroupIds.has(segment.groupId) &&
+            !segment.isVisible,
+        );
+
+  const newSegments = segments.clone();
+
+  Array.from(segments.values()).forEach((segment) => {
+    if (typeof segment.groupId === "number" && affectedGroupIds.has(segment.groupId)) {
+      newSegments.mutableSet(segment.id, { ...segment, isVisible: shouldBecomeVisible });
+    }
+  });
+
+  return updateSegments(state, layerName, (_oldSegments) => newSegments);
+}
+
+export function toggleAllSegmentsReducer(
+  state: WebknossosState,
+  layerName: string,
+  isVisible: boolean | undefined,
+): WebknossosState {
+  const updateInfo = getSegmentUpdateInfo(state, layerName);
+
+  if (updateInfo.type === "NOOP") {
+    return state;
+  }
+  const { segments } = updateInfo;
+
+  const shouldBecomeVisible =
+    isVisible ?? Array.from(segments.values()).some((segment) => !segment.isVisible);
+
+  const newSegments = segments.clone();
+
+  Array.from(segments.values()).forEach((segment) => {
+    if (segment.isVisible !== shouldBecomeVisible) {
+      newSegments.mutableSet(segment.id, { ...segment, isVisible: shouldBecomeVisible });
+    }
+  });
+
+  return updateSegments(state, layerName, (_oldSegments) => newSegments);
 }
 
 function VolumeTracingReducer(
@@ -397,9 +488,42 @@ function VolumeTracingReducer(
       return setSegmentGroups(state, layerName, newGroups);
     }
 
+    case "TOGGLE_SEGMENT_GROUP": {
+      return toggleSegmentGroupReducer(state, action.layerName, action.groupId);
+    }
+
+    case "TOGGLE_ALL_SEGMENTS": {
+      return toggleAllSegmentsReducer(state, action.layerName, action.isVisible);
+    }
+
     case "SET_SEGMENT_GROUPS": {
       const { segmentGroups } = action;
       return setSegmentGroups(state, action.layerName, segmentGroups);
+    }
+
+    case "SET_HIDE_UNREGISTERED_SEGMENTS": {
+      const volumeTracing = getVolumeTracingFromAction(state, action);
+      if (volumeTracing) {
+        return updateVolumeTracing(state, volumeTracing.tracingId, {
+          hideUnregisteredSegments: action.value,
+        });
+      } else {
+        const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
+        const layerName = action.layerName ?? visibleSegmentationLayer?.name;
+        if (layerName == null) {
+          return state;
+        }
+
+        return update(state, {
+          localSegmentationData: {
+            [layerName]: {
+              hideUnregisteredSegments: {
+                $set: action.value,
+              },
+            },
+          },
+        });
+      }
     }
 
     case "CLICK_SEGMENT": {

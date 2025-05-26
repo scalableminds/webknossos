@@ -39,6 +39,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class DataSourceController @Inject()(
     dataSourceRepository: DataSourceRepository,
     dataSourceService: DataSourceService,
+    datasetCache: DatasetCache,
     accessTokenService: DataStoreAccessTokenService,
     val binaryDataServiceHolder: BinaryDataServiceHolder,
     connectomeFileService: ConnectomeFileService,
@@ -401,7 +402,6 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.writeDataSource(DataSourceId(datasetDirectoryName, organizationId))) {
         for {
-          _ <- Fox.successful(())
           dataSource <- dataSourceRepository.get(DataSourceId(datasetDirectoryName, organizationId)).toFox ?~> Messages(
             "dataSource.notFound") ~> NOT_FOUND
           _ <- dataSourceService.updateDataSource(request.body.copy(id = dataSource.id), expectExisting = true)
@@ -618,6 +618,7 @@ class DataSourceController @Inject()(
 
   /**
     * Query the segment index file for a single segment
+    *
     * @return List of bucketPositions as positions (not indices) of 32³ buckets in mag
     */
   def getSegmentIndex(organizationId: String,
@@ -656,6 +657,7 @@ class DataSourceController @Inject()(
 
   /**
     * Query the segment index file for multiple segments
+    *
     * @return List of bucketPositions as indices of 32³ buckets
     */
   def querySegmentIndex(organizationId: String,
@@ -761,6 +763,15 @@ class DataSourceController @Inject()(
               None
           }
         } yield Ok(Json.toJson(ExploreRemoteDatasetResponse(dataSourceOpt, reportMutable.mkString("\n"))))
+      }
+    }
+
+  def updateCache(organizationId: String, datasetId: String): Action[DataSource] =
+    Action.async(validateJson[DataSource]) { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
+        for {
+          _ <- datasetCache.updateById(organizationId, datasetId, request.body)
+        } yield Ok
       }
     }
 

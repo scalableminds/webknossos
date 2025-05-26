@@ -17,6 +17,7 @@ import controllers.RpcTokenHolder
 import play.api.libs.json.JsObject
 import play.utils.UriEncoding
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSourceLike
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
@@ -114,5 +115,12 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       .addQueryString("token" -> userToken)
       .postJsonWithJsonResponse[ExploreRemoteDatasetRequest, ExploreRemoteDatasetResponse](
         ExploreRemoteDatasetRequest(layerParameters, organizationId))
+
+  def updateDatasetInDSCache(organizationId: String, datasetId: String, dataSource: InboxDataSourceLike): Fox[Unit] =
+    for {
+      _ <- rpc(s"${dataStore.url}/data/datasets/$organizationId/byId/$datasetId")
+        .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+        .putJson(dataSource)
+    } yield ()
 
 }

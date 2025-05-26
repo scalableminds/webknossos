@@ -45,6 +45,9 @@ object UserAccessRequest {
   def writeDataSource(dataSourceId: DataSourceId): UserAccessRequest =
     UserAccessRequest(dataSourceId, AccessResourceType.datasource, AccessMode.write)
 
+  def writeDataset(datasetId: String): UserAccessRequest =
+    UserAccessRequest(DataSourceId(datasetId, ""), AccessResourceType.dataset, AccessMode.write)
+
   def readTracing(tracingId: String): UserAccessRequest =
     UserAccessRequest(DataSourceId(tracingId, ""), AccessResourceType.tracing, AccessMode.read)
 

@@ -118,6 +118,7 @@ POST          /datasets/:organizationId/:datasetName                            
 DELETE        /datasets/:organizationId/:datasetDirectoryName/deleteOnDisk                                                                            @com.scalableminds.webknossos.datastore.controllers.DataSourceController.deleteOnDisk(organizationId: String, datasetDirectoryName: String)
 POST          /datasets/compose                                                                                                                       @com.scalableminds.webknossos.datastore.controllers.DataSourceController.compose()
 POST          /datasets/exploreRemote                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.DataSourceController.exploreRemoteDataset()
+PUT           /datasets/:organizationId/byId/:datasetId                                                                                               @com.scalableminds.webknossos.datastore.controllers.DataSourceController.updateCache(organizationId: String, datasetId: String)
 
 # Actions
 POST          /triggers/checkInboxBlocking                                                                                                            @com.scalableminds.webknossos.datastore.controllers.DataSourceController.triggerInboxCheckBlocking()

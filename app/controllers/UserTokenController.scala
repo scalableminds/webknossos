@@ -174,8 +174,17 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
           case _       => UserAccessAnswer(granted = false, Some("No read access on dataset"))
         }
 
+    def tryWrite: Fox[UserAccessAnswer] =
+      for {
+        datasetId <- ObjectId.fromString(id)
+        dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> "dataset.notFound"
+        user <- userBox.toFox ?~> "auth.token.noUser"
+        isAllowed <- datasetService.isEditableBy(dataset, Some(user))
+      } yield UserAccessAnswer(isAllowed)
+
     mode match {
       case AccessMode.read => tryRead
+      case AccessMode.write => tryWrite
       case _               => Fox.successful(UserAccessAnswer(granted = false, Some("invalid access token")))
     }
   }

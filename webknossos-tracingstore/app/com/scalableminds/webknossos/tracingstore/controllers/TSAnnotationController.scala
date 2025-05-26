@@ -175,10 +175,10 @@ class TSAnnotationController @Inject()(
       annotation: AnnotationProto,
       requestingUserId: String,
       ownerId: String)(implicit tc: TokenContext): Fox[Seq[SkeletonTracing]] = {
-    val volumeLayersOfAnnotation = annotation.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Skeleton)
+    val skeletonLayersOfAnnotation = annotation.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Skeleton)
     for {
       skeletonTracings <- annotationService
-        .findMultipleSkeletons(volumeLayersOfAnnotation.map { l =>
+        .findMultipleSkeletons(skeletonLayersOfAnnotation.map { l =>
           Some(TracingSelector(l.tracingId))
         })
         .map(_.flatten)
@@ -196,6 +196,7 @@ class TSAnnotationController @Inject()(
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           for {
+            _ <- Fox.fromBool(request.body.annotationIds.length == request.body.ownerIds.length) ?~> "annotationIds and ownerIds must have the same length"
             annotations: Seq[AnnotationProto] <- annotationService.getMultiple(request.body.annotationIds) ?~> Messages(
               "annotation.notFound")
             skeletonLayers = annotations.flatMap(_.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Skeleton))

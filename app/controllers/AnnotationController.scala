@@ -419,9 +419,9 @@ class AnnotationController @Inject()(
       newAnnotationId = ObjectId.generate
       newAnnotationProto <- tracingStoreClient.duplicateAnnotation(
         annotation._id,
+        newAnnotationId,
         annotation._user,
         user._id,
-        newAnnotationId,
         version = None,
         isFromTask = annotation._task.isDefined,
         datasetBoundingBox = dataSource.map(_.boundingBox)

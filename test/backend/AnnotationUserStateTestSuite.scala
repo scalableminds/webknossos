@@ -38,26 +38,27 @@ class AnnotationUserStateTestSuite extends PlaySpec with AnnotationUserStateUtil
       assert(renderedUserState.treeGroupIds == Seq(1))
       assert(renderedUserState.treeGroupExpandedStates == Seq(true))
     }
-  }
 
-  "be rendered into new skeleton user state correctly for userB (owner)" in {
-    val renderedUserState =
-      renderSkeletonUserStateIntoUserState(dummySkeletonWithUserState, "userB", "userB")
-    assert(renderedUserState.treeIds == Seq(1, 2))
-    assert(renderedUserState.treeVisibilities == Seq(true, true))
-    assert(renderedUserState.activeNodeId == Some(2))
-    assert(renderedUserState.treeGroupIds == Seq.empty)
-    assert(renderedUserState.treeGroupExpandedStates == Seq.empty)
-  }
+    "be rendered into new skeleton user state correctly for userB (owner)" in {
+      val renderedUserState =
+        renderSkeletonUserStateIntoUserState(dummySkeletonWithUserState, "userB", "userB")
+      assert(renderedUserState.treeIds == Seq(1, 2))
+      assert(renderedUserState.treeVisibilities == Seq(true, true))
+      assert(renderedUserState.activeNodeId == Some(2))
+      assert(renderedUserState.treeGroupIds == Seq.empty)
+      assert(renderedUserState.treeGroupExpandedStates == Seq.empty)
+    }
 
-  "be rendered into new skeleton user state correctly for userC (no user state present for them)" in {
-    val renderedUserState =
-      renderSkeletonUserStateIntoUserState(dummySkeletonWithUserState, "userC", "userB")
-    assert(renderedUserState.treeIds == Seq(1, 2))
-    assert(renderedUserState.treeVisibilities == Seq(true, true))
-    assert(renderedUserState.activeNodeId == Some(2))
-    assert(renderedUserState.treeGroupIds == Seq.empty)
-    assert(renderedUserState.treeGroupExpandedStates == Seq.empty)
+    "be rendered into new skeleton user state correctly for userC (no user state present for them)" in {
+      val renderedUserState =
+        renderSkeletonUserStateIntoUserState(dummySkeletonWithUserState, "userC", "userB")
+      assert(renderedUserState.treeIds == Seq(1, 2))
+      assert(renderedUserState.treeVisibilities == Seq(true, true))
+      assert(renderedUserState.activeNodeId == Some(2))
+      assert(renderedUserState.treeGroupIds == Seq.empty)
+      assert(renderedUserState.treeGroupExpandedStates == Seq.empty)
+    }
+
   }
 
   "volume user states merging" should {

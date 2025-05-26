@@ -199,7 +199,7 @@ trait AnnotationUserStateUtils extends BoundingBoxMerger {
         ownerUserState
           .map(userState => userState.segmentIds.zip(userState.segmentVisibilities).toMap)
           .getOrElse(Map.empty[Long, Boolean])
-      val mergedSegmentVisibilityMap = (requestingUserSegmentVisibilityMap ++ ownerSegmentVisibilityMap).toSeq
+      val mergedSegmentVisibilityMap = (ownerSegmentVisibilityMap ++ requestingUserSegmentVisibilityMap).toSeq
       val requestingUserBoundingBoxVisibilityMap: Map[Int, Boolean] = requestingUserState
         .map(userState => userState.boundingBoxIds.zip(userState.boundingBoxVisibilities).toMap)
         .getOrElse(Map.empty[Int, Boolean])
@@ -207,14 +207,14 @@ trait AnnotationUserStateUtils extends BoundingBoxMerger {
         .map(userState => userState.boundingBoxIds.zip(userState.boundingBoxVisibilities).toMap)
         .getOrElse(Map.empty[Int, Boolean])
       val mergedBoundingBoxVisibilityMap =
-        (requestingUserBoundingBoxVisibilityMap ++ ownerBoundingBoxVisibilityMap).toSeq
+        (ownerBoundingBoxVisibilityMap ++ requestingUserBoundingBoxVisibilityMap).toSeq
       val requestingUserSegmentGroupExpandedMap: Map[Int, Boolean] = requestingUserState
         .map(userState => userState.segmentGroupIds.zip(userState.segmentGroupExpandedStates).toMap)
         .getOrElse(Map.empty[Int, Boolean])
       val ownerSegmentGroupExpandedMap: Map[Int, Boolean] = ownerUserState
         .map(userState => userState.segmentGroupIds.zip(userState.segmentGroupExpandedStates).toMap)
         .getOrElse(Map.empty[Int, Boolean])
-      val mergedSegmentGroupExpandedMap = (requestingUserSegmentGroupExpandedMap ++ ownerSegmentGroupExpandedMap).toSeq
+      val mergedSegmentGroupExpandedMap = (ownerSegmentGroupExpandedMap ++ requestingUserSegmentGroupExpandedMap).toSeq
       VolumeUserStateProto(
         userId = requestingUserId,
         activeSegmentId =
@@ -238,7 +238,7 @@ trait AnnotationUserStateUtils extends BoundingBoxMerger {
                                         bboxIdMapA: UserBboxIdMap,
                                         bboxIdMapB: UserBboxIdMap): Seq[SkeletonUserStateProto] = {
     val tracingAUserStatesMapped =
-      tracingAUserStates.map(appylIdMappingsOnSkeletonUserState(_, groupMapping, treeIdMapA, bboxIdMapA))
+      tracingAUserStates.map(applyIdMappingsOnSkeletonUserState(_, groupMapping, treeIdMapA, bboxIdMapA))
     val tracingBUserStatesMapped = tracingBUserStates
       .map(userState => userState.copy(treeIds = userState.treeIds.map(treeId => treeIdMapB.getOrElse(treeId, treeId))))
       .map(applyBboxIdMapOnSkeletonUserState(_, bboxIdMapB))
@@ -271,7 +271,7 @@ trait AnnotationUserStateUtils extends BoundingBoxMerger {
       treeVisibilities = tracingAUserState.treeVisibilities ++ tracingBUserState.treeVisibilities
     )
 
-  private def appylIdMappingsOnSkeletonUserState(userState: SkeletonUserStateProto,
+  private def applyIdMappingsOnSkeletonUserState(userState: SkeletonUserStateProto,
                                                  groupMapping: FunctionalGroupMapping,
                                                  treeIdMapA: TreeIdMap,
                                                  bboxIdMapA: Map[Int, Int]): SkeletonUserStateProto =
@@ -303,7 +303,7 @@ trait AnnotationUserStateUtils extends BoundingBoxMerger {
                                       bboxIdMapA: UserBboxIdMap,
                                       bboxIdMapB: UserBboxIdMap): Seq[VolumeUserStateProto] = {
     val tracingAUserStatesMapped =
-      tracingAUserStates.map(appylIdMappingsOnVolumeUserState(_, groupMappingA, bboxIdMapA))
+      tracingAUserStates.map(applyIdMappingsOnVolumeUserState(_, groupMappingA, bboxIdMapA))
     val tracingBUserStatesMapped =
       tracingBUserStates
         .map(userState =>
@@ -339,7 +339,7 @@ trait AnnotationUserStateUtils extends BoundingBoxMerger {
       segmentVisibilities = tracingAUserState.segmentVisibilities ++ tracingBUserState.segmentVisibilities
     )
 
-  private def appylIdMappingsOnVolumeUserState(userStateA: VolumeUserStateProto,
+  private def applyIdMappingsOnVolumeUserState(userStateA: VolumeUserStateProto,
                                                groupMappingA: FunctionalGroupMapping,
                                                bboxIdMapA: Map[Int, Int]): VolumeUserStateProto =
     applyBboxIdMapOnVolumeUserState(userStateA, bboxIdMapA).copy(

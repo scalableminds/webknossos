@@ -10,7 +10,7 @@ object TreeUtils {
   type FunctionalGroupMapping = Function[Int, Int]
   type TreeIdMap = Map[Int, Int]
 
-  val nodeIdReferenceRegex: Regex = "#([0-9]+)" r
+  private val nodeIdReferenceRegex: Regex = "#([0-9]+)" r
 
   private def minNodeId(trees: Seq[Tree]) = {
     val nodes = trees.flatMap(_.nodes)

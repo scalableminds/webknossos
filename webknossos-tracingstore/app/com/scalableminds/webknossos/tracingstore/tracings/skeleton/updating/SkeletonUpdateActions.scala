@@ -544,7 +544,7 @@ case class UpdateTreeVisibilitySkeletonAction(treeId: Int,
         .emptyUserState(actionUserId)
         .copy(
           treeIds = Seq(treeId),
-          treeVisibilities = Seq(isVisible),
+          treeVisibilities = Seq(isVisible)
         )
     )
 
@@ -588,7 +588,7 @@ case class UpdateTreeGroupVisibilitySkeletonAction(treeGroupId: Option[Int],
       treeIdsToUpdate.foreach(visibilityMapMutable(_) = isVisible)
       val (treeIds, treeVisibilities) = visibilityMapMutable.unzip
       existingUserState.copy(
-        treeGroupIds = treeIds.toSeq,
+        treeIds = treeIds.toSeq,
         treeVisibilities = treeVisibilities.toSeq
       )
     }.getOrElse(

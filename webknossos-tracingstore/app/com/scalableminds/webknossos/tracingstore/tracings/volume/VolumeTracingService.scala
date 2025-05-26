@@ -55,6 +55,7 @@ class VolumeTracingService @Inject()(
     with BoundingBoxMerger
     with VolumeDataZipHelper
     with ProtoGeometryImplicits
+    with AnnotationUserStateUtils
     with FoxImplicits
     with Formatter
     with LazyLogging {
@@ -542,8 +543,7 @@ class VolumeTracingService @Inject()(
     for {
       fallbackLayer <- getFallbackLayer(sourceAnnotationId, tracingWithMagRestrictions)
       hasSegmentIndex <- VolumeSegmentIndexService.canHaveSegmentIndex(remoteDatastoreClient, fallbackLayer)
-      userStates = Seq(
-        renderUserStateForVolumeTracingIntoUserState(tracingWithMagRestrictions, ownerId, requestingUserId))
+      userStates = Seq(renderVolumeUserStateIntoUserState(tracingWithMagRestrictions, ownerId, requestingUserId))
       newTracing = tracingWithMagRestrictions.copy(
         createdTimestamp = System.currentTimeMillis(),
         editPosition = editPosition.map(vec3IntToProto).getOrElse(tracingWithMagRestrictions.editPosition),
@@ -559,53 +559,6 @@ class VolumeTracingService @Inject()(
       )
       _ <- Fox.fromBool(newTracing.mags.nonEmpty) ?~> "magRestrictions.tooTight"
     } yield newTracing
-  }
-
-  // Since the owner may change in duplicate, we need to render what they would see into a single user state for them
-  def renderUserStateForVolumeTracingIntoUserState(s: VolumeTracing,
-                                                   requestingUserId: String,
-                                                   ownerId: String): VolumeUserStateProto = {
-    val ownerUserState = s.userStates.find(_.userId == ownerId).map(_.copy(userId = requestingUserId))
-
-    if (requestingUserId == ownerId)
-      ownerUserState.getOrElse(VolumeTracingDefaults.emptyUserState(requestingUserId))
-    else {
-      val requestingUserState = s.userStates.find(_.userId == requestingUserId)
-      val requestingUserSegmentVisibilityMap: Map[Long, Boolean] = requestingUserState
-        .map(userState => userState.segmentIds.zip(userState.segmentVisibilities).toMap)
-        .getOrElse(Map.empty[Long, Boolean])
-      val ownerSegmentVisibilityMap: Map[Long, Boolean] =
-        ownerUserState
-          .map(userState => userState.segmentIds.zip(userState.segmentVisibilities).toMap)
-          .getOrElse(Map.empty[Long, Boolean])
-      val mergedSegmentVisibilityMap = (requestingUserSegmentVisibilityMap ++ ownerSegmentVisibilityMap).toSeq
-      val requestingUserBoundingBoxVisibilityMap: Map[Int, Boolean] = requestingUserState
-        .map(userState => userState.boundingBoxIds.zip(userState.boundingBoxVisibilities).toMap)
-        .getOrElse(Map.empty[Int, Boolean])
-      val ownerBoundingBoxVisibilityMap: Map[Int, Boolean] = ownerUserState
-        .map(userState => userState.boundingBoxIds.zip(userState.boundingBoxVisibilities).toMap)
-        .getOrElse(Map.empty[Int, Boolean])
-      val mergedBoundingBoxVisibilityMap =
-        (requestingUserBoundingBoxVisibilityMap ++ ownerBoundingBoxVisibilityMap).toSeq
-      val requestingUserSegmentGroupExpandedMap: Map[Int, Boolean] = requestingUserState
-        .map(userState => userState.segmentGroupIds.zip(userState.segmentGroupExpandedStates).toMap)
-        .getOrElse(Map.empty[Int, Boolean])
-      val ownerSegmentGroupExpandedMap: Map[Int, Boolean] = ownerUserState
-        .map(userState => userState.segmentGroupIds.zip(userState.segmentGroupExpandedStates).toMap)
-        .getOrElse(Map.empty[Int, Boolean])
-      val mergedSegmentGroupExpandedMap = (requestingUserSegmentGroupExpandedMap ++ ownerSegmentGroupExpandedMap).toSeq
-      VolumeUserStateProto(
-        userId = requestingUserId,
-        activeSegmentId =
-          requestingUserState.flatMap(_.activeSegmentId).orElse(ownerUserState.flatMap(_.activeSegmentId)),
-        segmentGroupIds = mergedSegmentGroupExpandedMap.map(_._1),
-        segmentGroupExpandedStates = mergedSegmentGroupExpandedMap.map(_._2),
-        boundingBoxIds = mergedBoundingBoxVisibilityMap.map(_._1),
-        boundingBoxVisibilities = mergedBoundingBoxVisibilityMap.map(_._2),
-        segmentIds = mergedSegmentVisibilityMap.map(_._1),
-        segmentVisibilities = mergedSegmentVisibilityMap.map(_._2)
-      )
-    }
   }
 
   private def addBoundingBoxFromTaskIfRequired(tracing: VolumeTracing,

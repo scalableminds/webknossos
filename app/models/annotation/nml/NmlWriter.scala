@@ -12,6 +12,7 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGro
 import com.scalableminds.webknossos.datastore.geometry._
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayerType, FetchedAnnotationLayer}
+import com.scalableminds.webknossos.tracingstore.tracings.AnnotationUserStateUtils
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.sun.xml.txw2.output.IndentingXMLStreamWriter
 import models.annotation.{Annotation, AnnotationLayerPrecedence}
@@ -67,7 +68,10 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext)
         implicit val writer: IndentingXMLStreamWriter =
           new IndentingXMLStreamWriter(outputService.createXMLStreamWriter(os))
         val annotationLayersWithAppliedUserState =
-          renderUserState(annotationProto, annotationLayers, requestingUser, annotationOwner)
+          renderUserState(annotationProto,
+                          annotationLayers,
+                          requestingUser.map(_._id.toString),
+                          annotationOwner._id.toString)
         for {
           nml <- toNmlWithImplicitWriter(
             annotationLayersWithAppliedUserState,

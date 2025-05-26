@@ -167,7 +167,7 @@ class TSAnnotationController @Inject()(
       volumeTracingsAdapted = volumeTracings.map(
         tracing =>
           tracing.copy(userStates =
-            Seq(volumeTracingService.renderUserStateForVolumeTracingIntoUserState(tracing, requestingUserId, ownerId))))
+            Seq(volumeTracingService.renderVolumeUserStateIntoUserState(tracing, requestingUserId, ownerId))))
     } yield volumeTracingsAdapted
   }
 
@@ -184,8 +184,8 @@ class TSAnnotationController @Inject()(
         .map(_.flatten)
       skeletonTracingsAdapted = skeletonTracings.map(
         tracing =>
-          tracing.copy(userStates = Seq(
-            skeletonTracingService.renderUserStateForSkeletonTracingIntoUserState(tracing, requestingUserId, ownerId))))
+          tracing.copy(userStates =
+            Seq(skeletonTracingService.renderSkeletonUserStateIntoUserState(tracing, requestingUserId, ownerId))))
     } yield skeletonTracingsAdapted
   }
 
@@ -250,9 +250,7 @@ class TSAnnotationController @Inject()(
             }
             skeletonTracings = skeletonTracingsAdaptedNested.flatten
             mergedSkeletonOpt <- Fox.runIf(skeletonTracings.nonEmpty)(
-              skeletonTracingService
-                .merge(skeletonTracings, newVersion = newTargetVersion, Some(requestingUserId))
-                .toFox)
+              skeletonTracingService.merge(skeletonTracings, newVersion = newTargetVersion).toFox)
             _ <- Fox.runOptional(mergedSkeletonOpt)(
               skeletonTracingService
                 .saveSkeleton(newSkeletonId, version = newTargetVersion, _, toTemporaryStore = toTemporaryStore))

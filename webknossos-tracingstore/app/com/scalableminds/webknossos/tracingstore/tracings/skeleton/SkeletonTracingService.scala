@@ -21,6 +21,7 @@ class SkeletonTracingService @Inject()(
     with ProtoGeometryImplicits
     with BoundingBoxMerger
     with ColorGenerator
+    with AnnotationUserStateUtils
     with FoxImplicits {
 
   implicit val tracingCompanion: SkeletonTracing.type = SkeletonTracing
@@ -70,7 +71,7 @@ class SkeletonTracingService @Inject()(
       }
     } else None
 
-    val userStates = Seq(renderUserStateForSkeletonTracingIntoUserState(tracing, requestingUserId, ownerId))
+    val userStates = Seq(renderSkeletonUserStateIntoUserState(tracing, requestingUserId, ownerId))
 
     val newTracing =
       tracing
@@ -87,55 +88,9 @@ class SkeletonTracingService @Inject()(
     if (fromTask) newTracing.clearBoundingBox else newTracing
   }
 
-  // Since the owner may change in duplicate, we need to render what they would see into a single user state for them
-  def renderUserStateForSkeletonTracingIntoUserState(s: SkeletonTracing,
-                                                     requestingUserId: String,
-                                                     ownerId: String): SkeletonUserStateProto = {
-    val ownerUserState = s.userStates.find(_.userId == ownerId).map(_.copy(userId = requestingUserId))
-
-    if (requestingUserId == ownerId)
-      ownerUserState.getOrElse(SkeletonTracingDefaults.emptyUserState(requestingUserId))
-    else {
-      val requestingUserState = s.userStates.find(_.userId == requestingUserId)
-      val requestingUserTreeVisibilityMap: Map[Int, Boolean] = requestingUserState
-        .map(userState => userState.treeIds.zip(userState.treeVisibilities).toMap)
-        .getOrElse(Map.empty[Int, Boolean])
-      val ownerTreeVisibilityMap: Map[Int, Boolean] =
-        ownerUserState
-          .map(userState => userState.treeIds.zip(userState.treeVisibilities).toMap)
-          .getOrElse(Map.empty[Int, Boolean])
-      val mergedTreeVisibilityMap = (requestingUserTreeVisibilityMap ++ ownerTreeVisibilityMap).toSeq
-      val requestingUserBoundingBoxVisibilityMap: Map[Int, Boolean] = requestingUserState
-        .map(userState => userState.boundingBoxIds.zip(userState.boundingBoxVisibilities).toMap)
-        .getOrElse(Map.empty[Int, Boolean])
-      val ownerBoundingBoxVisibilityMap: Map[Int, Boolean] = ownerUserState
-        .map(userState => userState.boundingBoxIds.zip(userState.boundingBoxVisibilities).toMap)
-        .getOrElse(Map.empty[Int, Boolean])
-      val mergedBoundingBoxVisibilityMap =
-        (requestingUserBoundingBoxVisibilityMap ++ ownerBoundingBoxVisibilityMap).toSeq
-      val requestingUserTreeGroupExpandedMap: Map[Int, Boolean] = requestingUserState
-        .map(userState => userState.treeGroupIds.zip(userState.treeGroupExpandedStates).toMap)
-        .getOrElse(Map.empty[Int, Boolean])
-      val ownerTreeGroupExpandedMap: Map[Int, Boolean] = ownerUserState
-        .map(userState => userState.treeGroupIds.zip(userState.treeGroupExpandedStates).toMap)
-        .getOrElse(Map.empty[Int, Boolean])
-      val mergedTreeGroupExpandedMap = (requestingUserTreeGroupExpandedMap ++ ownerTreeGroupExpandedMap).toSeq
-      SkeletonUserStateProto(
-        userId = requestingUserId,
-        activeNodeId = requestingUserState.flatMap(_.activeNodeId).orElse(ownerUserState.flatMap(_.activeNodeId)),
-        treeGroupIds = mergedTreeGroupExpandedMap.map(_._1),
-        treeGroupExpandedStates = mergedTreeGroupExpandedMap.map(_._2),
-        boundingBoxIds = mergedBoundingBoxVisibilityMap.map(_._1),
-        boundingBoxVisibilities = mergedBoundingBoxVisibilityMap.map(_._2),
-        treeIds = mergedTreeVisibilityMap.map(_._1),
-        treeVisibilities = mergedTreeVisibilityMap.map(_._2)
-      )
-    }
-  }
-
-  def merge(tracings: Seq[SkeletonTracing], newVersion: Long, requestingUserId: Option[String]): Box[SkeletonTracing] =
+  def merge(tracings: Seq[SkeletonTracing], newVersion: Long): Box[SkeletonTracing] =
     for {
-      tracing <- tracings.map(Full(_)).reduceLeft(mergeTwo(requestingUserId))
+      tracing <- tracings.map(Full(_)).reduceLeft(mergeTwo)
     } yield
       tracing.copy(
         createdTimestamp = System.currentTimeMillis(),
@@ -143,8 +98,7 @@ class SkeletonTracingService @Inject()(
         storedWithExternalTreeBodies = Some(false)
       )
 
-  private def mergeTwo(requestingUserId: Option[String])(tracingA: Box[SkeletonTracing],
-                                                         tracingB: Box[SkeletonTracing]): Box[SkeletonTracing] =
+  private def mergeTwo(tracingA: Box[SkeletonTracing], tracingB: Box[SkeletonTracing]): Box[SkeletonTracing] =
     for {
       tracingA <- tracingA
       tracingB <- tracingB

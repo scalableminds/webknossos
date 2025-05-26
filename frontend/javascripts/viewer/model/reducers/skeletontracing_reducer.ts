@@ -18,10 +18,10 @@ import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import {
   applyUserStateToGroups,
-  applyUserStateToTrees,
   convertServerAdditionalAxesToFrontEnd,
   convertServerBoundingBoxToFrontend,
   convertUserBoundingBoxesFromServerToFrontend,
+  getApplyUserStateToTreeFn,
 } from "viewer/model/reducers/reducer_helpers";
 import {
   addTreesAndGroups,
@@ -63,18 +63,11 @@ function SkeletonTracingReducer(state: WebknossosState, action: Action): Webknos
       state.annotation.owner,
     );
 
-    // Perf idea: applyUserStateToTrees could theoretically happen
-    // within createTreeMapFromTreeArray. Performance would probably
-    // be better, but priority is unclear. Would make the code a bit
-    // less separated, though.
-    const trees = applyUserStateToTrees(
-      createTreeMapFromTreeArray(action.tracing.trees),
-      userState,
-    );
+    const applyUserStateToTreeFn = getApplyUserStateToTreeFn(userState);
+    const trees = createTreeMapFromTreeArray(action.tracing.trees, applyUserStateToTreeFn);
     let activeNodeId = userState?.activeNodeId;
 
     const treeGroups = applyUserStateToGroups(action.tracing.treeGroups || [], userState);
-
     let cachedMaxNodeId = max(trees.values().flatMap((__) => __.nodes.map((node) => node.id)));
 
     cachedMaxNodeId = cachedMaxNodeId != null ? cachedMaxNodeId : Constants.MIN_NODE_ID - 1;

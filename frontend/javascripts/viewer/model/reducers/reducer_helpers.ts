@@ -25,7 +25,7 @@ import type {
   WebknossosState,
 } from "viewer/store";
 import { getDisabledInfoForTools } from "../accessors/disabled_tool_accessor";
-import type { TreeGroup, TreeMap } from "../types/tree_types";
+import type { Tree, TreeGroup } from "../types/tree_types";
 
 export function convertServerBoundingBoxToBoundingBox(
   boundingBox: ServerBoundingBox,
@@ -236,12 +236,11 @@ export function applyUserStateToGroups(
   });
 }
 
-export function applyUserStateToTrees(
-  trees: TreeMap,
+export function getApplyUserStateToTreeFn(
   userState: SkeletonUserState | undefined,
-): TreeMap {
+): ((tree: Tree) => Tree) | undefined {
   if (userState == null) {
-    return trees;
+    return undefined;
   }
 
   const treeIds = userState.treeIds;
@@ -250,10 +249,10 @@ export function applyUserStateToTrees(
   const treeIdToExpanded: Record<number, boolean> = Object.fromEntries(
     _.zip(treeIds, visibilities),
   );
-  return _.mapValues(trees, (tree) => {
+  return (tree) => {
     return {
       ...tree,
       isVisible: treeIdToExpanded[tree.treeId] ?? tree.isVisible,
     };
-  });
+  };
 }

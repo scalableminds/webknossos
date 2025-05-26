@@ -22,7 +22,7 @@ import SkeletonTracingReducer from "viewer/model/reducers/skeletontracing_reduce
 import { put } from "redux-saga/effects";
 import { TIMESTAMP } from "test/global_mocks";
 import { type Tree, TreeMap } from "viewer/model/types/tree_types";
-import type { StoreAnnotation } from "viewer/store";
+import type { SkeletonTracing, StoreAnnotation } from "viewer/store";
 
 const actionTracingId = "tracingId";
 

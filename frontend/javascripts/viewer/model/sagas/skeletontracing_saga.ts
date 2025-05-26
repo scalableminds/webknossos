@@ -620,22 +620,20 @@ export function* diffBoundingBoxes(
     prevBoundingBoxes.map((bbox) => bbox.id),
     currentBoundingBoxes.map((bbox) => bbox.id),
   );
-  const addBBoxAction =
+  const [addBBoxAction, deleteBBoxAction, updateBBoxAction, updateBBoxVisibilityAction] =
     tracingType === AnnotationLayerEnum.Skeleton
-      ? addUserBoundingBoxInSkeletonTracing
-      : addUserBoundingBoxInVolumeTracing;
-  const deleteBBoxAction =
-    tracingType === AnnotationLayerEnum.Skeleton
-      ? deleteUserBoundingBoxInSkeletonTracing
-      : deleteUserBoundingBoxInVolumeTracing;
-  const updateBBoxAction =
-    tracingType === AnnotationLayerEnum.Skeleton
-      ? updateUserBoundingBoxInSkeletonTracing
-      : updateUserBoundingBoxInVolumeTracing;
-  const updateBBoxVisibilityAction =
-    tracingType === AnnotationLayerEnum.Skeleton
-      ? updateUserBoundingBoxVisibilityInSkeletonTracing
-      : updateUserBoundingBoxVisibilityInVolumeTracing;
+      ? [
+          addUserBoundingBoxInSkeletonTracing,
+          deleteUserBoundingBoxInSkeletonTracing,
+          updateUserBoundingBoxInSkeletonTracing,
+          updateUserBoundingBoxVisibilityInSkeletonTracing,
+        ]
+      : [
+          addUserBoundingBoxInVolumeTracing,
+          deleteUserBoundingBoxInVolumeTracing,
+          updateUserBoundingBoxInVolumeTracing,
+          updateUserBoundingBoxVisibilityInVolumeTracing,
+        ];
   const getErrorMessage = (id: number) =>
     `User bounding box with id ${id} not found in ${tracingType} tracing.`;
   for (const id of deletedBBoxIds) {

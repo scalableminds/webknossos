@@ -27,7 +27,7 @@ import messages from "messages";
 import * as React from "react";
 import { connect } from "react-redux";
 import type { APISegmentationLayer } from "types/api_types";
-import type { Vector3, Vector6 } from "viewer/constants";
+import type { Vector3, Vector4, Vector6 } from "viewer/constants";
 import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
 import { api } from "viewer/singletons";
 import type { WebknossosState } from "viewer/store";
@@ -54,9 +54,10 @@ type NumberSliderSettingProps = {
   min: number;
   step: number;
   disabled: boolean;
-  spans: Vector3;
+  spans: Vector3 | Vector4;
   defaultValue?: number;
   wheelFactor?: number;
+  postComponent?: React.ReactNode;
 };
 export class NumberSliderSetting extends React.PureComponent<NumberSliderSettingProps> {
   static defaultProps = {
@@ -86,6 +87,7 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
       disabled,
       defaultValue,
       wheelFactor: stepSize,
+      postComponent,
     } = this.props;
     // Validate the provided value. If it's not valid, fallback to the midpoint between min and max.
     // This check guards against broken settings which could be introduced before this component
@@ -123,6 +125,9 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
             variant="borderless"
           />
         </Col>
+        {postComponent && this.props.spans.length > 3 ? (
+          <Col span={this.props.spans[3]}>{postComponent}</Col>
+        ) : null}
       </Row>
     );
   }

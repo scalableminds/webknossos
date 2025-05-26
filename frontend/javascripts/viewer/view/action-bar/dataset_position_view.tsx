@@ -1,29 +1,23 @@
-import { PushpinOutlined, RollbackOutlined } from "@ant-design/icons";
+import { PushpinOutlined } from "@ant-design/icons";
 import { Space } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { V3 } from "libs/mjs";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { Vector3Input } from "libs/vector_input";
 import message from "messages";
 import type React from "react";
-import { PureComponent } from "react";
-import { connect } from "react-redux";
-import type { APIDataset } from "types/api_types";
-import type { Vector3, ViewMode } from "viewer/constants";
+import { useCallback, useMemo } from "react";
+import type { EmptyObject } from "types/globals";
+import type { Vector3 } from "viewer/constants";
 import { getDatasetExtentInVoxel } from "viewer/model/accessors/dataset_accessor";
-import { getPosition, getRotationInDegrees } from "viewer/model/accessors/flycam_accessor";
-import { setPositionAction, setRotationAction } from "viewer/model/actions/flycam_actions";
-import type { Flycam, Task, WebknossosState } from "viewer/store";
+import { getPosition } from "viewer/model/accessors/flycam_accessor";
+import { setPositionAction } from "viewer/model/actions/flycam_actions";
 import Store from "viewer/store";
 import { ShareButton } from "viewer/view/action-bar/share_modal_view";
 import ButtonComponent from "viewer/view/components/button_component";
+import DatasetRotationPopoverButtonView from "./dataset_rotation_popover_view";
 
-type Props = {
-  flycam: Flycam;
-  viewMode: ViewMode;
-  dataset: APIDataset;
-  task: Task | null | undefined;
-};
 const positionIconStyle: React.CSSProperties = {
   transform: "rotate(-45deg)",
   marginRight: 0,
@@ -41,146 +35,107 @@ const positionInputErrorStyle: React.CSSProperties = {
   ...warningColors,
 };
 
-class DatasetPositionView extends PureComponent<Props> {
-  copyPositionToClipboard = async () => {
-    const position = V3.floor(getPosition(this.props.flycam)).join(", ");
-    await navigator.clipboard.writeText(position);
+const DatasetPositionAndRotationView: React.FC<EmptyObject> = () => {
+  const flycam = useWkSelector((state) => state.flycam);
+  const dataset = useWkSelector((state) => state.dataset);
+  const task = useWkSelector((state) => state.task);
+
+  const position = useMemo(() => V3.floor(getPosition(flycam)), [flycam]);
+
+  const isPositionOutOfBounds = useCallback(
+    (position: Vector3) => {
+      const { min: datasetMin, max: datasetMax } = getDatasetExtentInVoxel(dataset);
+
+      const isPositionOutOfBounds = (min: Vector3, max: Vector3) =>
+        position[0] < min[0] ||
+        position[1] < min[1] ||
+        position[2] < min[2] ||
+        position[0] >= max[0] ||
+        position[1] >= max[1] ||
+        position[2] >= max[2];
+
+      const isOutOfDatasetBounds = isPositionOutOfBounds(datasetMin, datasetMax);
+      let isOutOfTaskBounds = false;
+
+      if (task?.boundingBox) {
+        const bbox = task.boundingBox;
+        const bboxMax = [
+          bbox.topLeft[0] + bbox.width,
+          bbox.topLeft[1] + bbox.height,
+          bbox.topLeft[2] + bbox.depth,
+        ];
+        // @ts-expect-error ts-migrate(2345)
+        isOutOfTaskBounds = isPositionOutOfBounds(bbox.topLeft, bboxMax);
+      }
+
+      return {
+        isOutOfDatasetBounds,
+        isOutOfTaskBounds,
+      };
+    },
+    [dataset, task],
+  );
+
+  const { isOutOfDatasetBounds, isOutOfTaskBounds } = isPositionOutOfBounds(position);
+  const iconColoringStyle = isOutOfDatasetBounds || isOutOfTaskBounds ? iconErrorStyle : {};
+  const positionInputStyle =
+    isOutOfDatasetBounds || isOutOfTaskBounds ? positionInputErrorStyle : positionInputDefaultStyle;
+
+  let maybeErrorMessage = null;
+  if (isOutOfDatasetBounds) {
+    maybeErrorMessage = message["tracing.out_of_dataset_bounds"];
+  } else if (!maybeErrorMessage && isOutOfTaskBounds) {
+    maybeErrorMessage = message["tracing.out_of_task_bounds"];
+  }
+
+  const copyPositionToClipboard = useCallback(async () => {
+    const posStr = V3.floor(getPosition(flycam)).join(", ");
+    await navigator.clipboard.writeText(posStr);
     Toast.success("Position copied to clipboard");
-  };
+  }, [flycam]);
 
-  handleChangePosition = (position: Vector3) => {
+  const handleChangePosition = useCallback((position: Vector3) => {
     Store.dispatch(setPositionAction(position));
-  };
+  }, []);
 
-  handleChangeRotation = (rotation: Vector3) => {
-    Store.dispatch(setRotationAction(rotation));
-  };
-
-  isPositionOutOfBounds = (position: Vector3) => {
-    const { dataset, task } = this.props;
-    const { min: datasetMin, max: datasetMax } = getDatasetExtentInVoxel(dataset);
-
-    const isPositionOutOfBounds = (min: Vector3, max: Vector3) =>
-      position[0] < min[0] ||
-      position[1] < min[1] ||
-      position[2] < min[2] ||
-      position[0] >= max[0] ||
-      position[1] >= max[1] ||
-      position[2] >= max[2];
-
-    const isOutOfDatasetBounds = isPositionOutOfBounds(datasetMin, datasetMax);
-    let isOutOfTaskBounds = false;
-
-    if (task?.boundingBox) {
-      const bbox = task.boundingBox;
-      const bboxMax = [
-        bbox.topLeft[0] + bbox.width,
-        bbox.topLeft[1] + bbox.height,
-        bbox.topLeft[2] + bbox.depth,
-      ];
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
-      isOutOfTaskBounds = isPositionOutOfBounds(bbox.topLeft, bboxMax);
-    }
-
-    return {
-      isOutOfDatasetBounds,
-      isOutOfTaskBounds,
-    };
-  };
-
-  render() {
-    const position = V3.floor(getPosition(this.props.flycam));
-    const { isOutOfDatasetBounds, isOutOfTaskBounds } = this.isPositionOutOfBounds(position);
-    const iconColoringStyle = isOutOfDatasetBounds || isOutOfTaskBounds ? iconErrorStyle : {};
-    const positionInputStyle =
-      isOutOfDatasetBounds || isOutOfTaskBounds
-        ? positionInputErrorStyle
-        : positionInputDefaultStyle;
-    let maybeErrorMessage = null;
-
-    if (isOutOfDatasetBounds) {
-      maybeErrorMessage = message["tracing.out_of_dataset_bounds"];
-    } else if (!maybeErrorMessage && isOutOfTaskBounds) {
-      maybeErrorMessage = message["tracing.out_of_task_bounds"];
-    }
-
-    const rotation = V3.round(getRotationInDegrees(this.props.flycam));
-    const positionView = (
-      <div
+  const positionView = (
+    <div
+      style={{
+        display: "flex",
+      }}
+    >
+      <Space.Compact
         style={{
-          display: "flex",
+          whiteSpace: "nowrap",
         }}
       >
-        <Space.Compact
-          style={{
-            whiteSpace: "nowrap",
-          }}
-        >
-          <FastTooltip title={message["tracing.copy_position"]} placement="bottom-start">
-            <ButtonComponent
-              onClick={this.copyPositionToClipboard}
-              style={{ padding: "0 10px", ...iconColoringStyle }}
-              className="hide-on-small-screen"
-            >
-              <PushpinOutlined style={positionIconStyle} />
-            </ButtonComponent>
-          </FastTooltip>
-          <Vector3Input
-            value={position}
-            onChange={this.handleChangePosition}
-            autoSize
-            style={positionInputStyle}
-            allowDecimals
-          />
-          <ShareButton dataset={this.props.dataset} style={iconColoringStyle} />
-        </Space.Compact>
-        {
-          <Space.Compact
-            style={{
-              whiteSpace: "nowrap",
-              marginLeft: 10,
-            }}
+        <FastTooltip title={message["tracing.copy_position"]} placement="bottom-start">
+          <ButtonComponent
+            onClick={copyPositionToClipboard}
+            style={{ padding: "0 10px", ...iconColoringStyle }}
+            className="hide-on-small-screen"
           >
-            <FastTooltip title={message["tracing.reset_rotation"]} placement="bottom-start">
-              <ButtonComponent
-                onClick={() => this.handleChangeRotation([0, 0, 0])}
-                style={{
-                  padding: "0 10px",
-                }}
-                className="hide-on-small-screen"
-              >
-                <RollbackOutlined />
-              </ButtonComponent>
-            </FastTooltip>
-            <Vector3Input
-              value={rotation}
-              onChange={this.handleChangeRotation}
-              style={{
-                textAlign: "center",
-                width: 120,
-              }}
-              allowDecimals
-            />
-          </Space.Compact>
-        }
-      </div>
-    );
-    return (
-      <FastTooltip title={maybeErrorMessage || null} wrapper="div">
-        {positionView}
-      </FastTooltip>
-    );
-  }
-}
+            <PushpinOutlined style={positionIconStyle} />
+          </ButtonComponent>
+        </FastTooltip>
+        <Vector3Input
+          value={position}
+          onChange={handleChangePosition}
+          autoSize
+          style={positionInputStyle}
+          allowDecimals
+        />
+        <DatasetRotationPopoverButtonView />
+        <ShareButton dataset={dataset} style={iconColoringStyle} />
+      </Space.Compact>
+    </div>
+  );
 
-function mapStateToProps(state: WebknossosState): Props {
-  return {
-    flycam: state.flycam,
-    viewMode: state.temporaryConfiguration.viewMode,
-    dataset: state.dataset,
-    task: state.task,
-  };
-}
+  return (
+    <FastTooltip title={maybeErrorMessage || null} wrapper="div">
+      {positionView}
+    </FastTooltip>
+  );
+};
 
-const connector = connect(mapStateToProps);
-export default connector(DatasetPositionView);
+export default DatasetPositionAndRotationView;

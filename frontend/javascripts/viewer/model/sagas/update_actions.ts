@@ -491,7 +491,7 @@ export function deleteUserBoundingBoxInVolumeTracing(
   } as const;
 }
 
-function getUpdateUserBoundingBox(
+function _updateUserBoundingBoxHelper(
   actionName: "updateUserBoundingBoxInVolumeTracing" | "updateUserBoundingBoxInSkeletonTracing",
   boundingBoxId: number,
   updatedProps: PartialBoundingBoxWithoutVisibility,
@@ -502,16 +502,12 @@ function getUpdateUserBoundingBox(
     boundingBox != null
       ? { ...rest, boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(boundingBox) }
       : updatedProps;
-  const updatedPropsKeys = Object.keys(updatedPropsForServer);
   return {
     name: actionName,
     value: {
       boundingBoxId,
       actionTracingId,
-      updatedProps: updatedPropsForServer,
-      hasUpdatedBoundingBox: updatedPropsKeys.includes("boundingBox"),
-      hasUpdatedName: updatedPropsKeys.includes("name"),
-      hasUpdatedColor: updatedPropsKeys.includes("color"),
+      ...updatedPropsForServer,
     },
   } as const;
 }
@@ -521,7 +517,7 @@ export function updateUserBoundingBoxInVolumeTracing(
   updatedProps: PartialBoundingBoxWithoutVisibility,
   actionTracingId: string,
 ) {
-  return getUpdateUserBoundingBox(
+  return _updateUserBoundingBoxHelper(
     "updateUserBoundingBoxInVolumeTracing",
     boundingBoxId,
     updatedProps,
@@ -534,7 +530,7 @@ export function updateUserBoundingBoxInSkeletonTracing(
   updatedProps: PartialBoundingBoxWithoutVisibility,
   actionTracingId: string,
 ) {
-  return getUpdateUserBoundingBox(
+  return _updateUserBoundingBoxHelper(
     "updateUserBoundingBoxInSkeletonTracing",
     boundingBoxId,
     updatedProps,

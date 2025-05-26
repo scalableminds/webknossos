@@ -12,36 +12,51 @@ class AnnotationUserStateTestSuite extends PlaySpec with AnnotationUserStateUtil
         userId = "userA",
         treeIds = Seq(1),
         treeVisibilities = Seq(false),
+        treeGroupIds = Seq(1),
+        treeGroupExpandedStates = Seq(true),
+        activeNodeId = Some(5)
       ),
       SkeletonTracing.SkeletonUserStateProto(
         userId = "userB",
         treeIds = Seq(1, 2),
         treeVisibilities = Seq(true, true),
+        treeGroupIds = Seq.empty,
+        treeGroupExpandedStates = Seq.empty,
+        activeNodeId = Some(2)
       )
     )
   )
 
   "Skeleton user state" should {
-    "be rendered into new skeleton user state correctly for userA" in {
+    "be rendered into new skeleton user state correctly for userA (sparse user state present for them)" in {
       val renderedUserState =
         renderSkeletonUserStateIntoUserState(dummySkeletonWithUserState, "userA", "userB")
-      println(s"rendered: $renderedUserState")
-      assert(renderedUserState.treeIds.length == 2)
-      assert(renderedUserState.treeIds(0) == 1)
-      assert(renderedUserState.treeVisibilities(0) == false)
-      assert(renderedUserState.treeIds(1) == 2)
-      assert(renderedUserState.treeVisibilities(1) == true)
+      assert(renderedUserState.treeIds == Seq(1, 2))
+      assert(renderedUserState.treeVisibilities == Seq(false, true))
+      assert(renderedUserState.activeNodeId == Some(5))
+      assert(renderedUserState.treeGroupIds == Seq(1))
+      assert(renderedUserState.treeGroupExpandedStates == Seq(true))
     }
   }
 
   "be rendered into new skeleton user state correctly for userB (owner)" in {
     val renderedUserState =
       renderSkeletonUserStateIntoUserState(dummySkeletonWithUserState, "userB", "userB")
-    assert(renderedUserState.treeIds.length == 2)
-    assert(renderedUserState.treeIds(0) == 1)
-    assert(renderedUserState.treeVisibilities(0) == true)
-    assert(renderedUserState.treeIds(1) == 2)
-    assert(renderedUserState.treeVisibilities(1) == true)
+    assert(renderedUserState.treeIds == Seq(1, 2))
+    assert(renderedUserState.treeVisibilities == Seq(true, true))
+    assert(renderedUserState.activeNodeId == Some(2))
+    assert(renderedUserState.treeGroupIds == Seq.empty)
+    assert(renderedUserState.treeGroupExpandedStates == Seq.empty)
+  }
+
+  "be rendered into new skeleton user state correctly for userC (no user state present for them)" in {
+    val renderedUserState =
+      renderSkeletonUserStateIntoUserState(dummySkeletonWithUserState, "userC", "userB")
+    assert(renderedUserState.treeIds == Seq(1, 2))
+    assert(renderedUserState.treeVisibilities == Seq(true, true))
+    assert(renderedUserState.activeNodeId == Some(2))
+    assert(renderedUserState.treeGroupIds == Seq.empty)
+    assert(renderedUserState.treeGroupExpandedStates == Seq.empty)
   }
 
 }

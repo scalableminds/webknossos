@@ -30,7 +30,7 @@ const colorLayer: APIColorLayer = {
   additionalAxes: [],
 };
 
-const initalTreeOne: Tree = {
+export const initalTreeOne: Tree = {
   treeId: 1,
   name: "TestTree",
   nodes: new DiffableMap(),

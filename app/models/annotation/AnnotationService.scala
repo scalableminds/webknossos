@@ -147,7 +147,7 @@ class AnnotationService @Inject()(
     } yield
       VolumeTracing(
         None,
-        boundingBoxToProto(boundingBox.getOrElse(dataSource.boundingBox)),
+        boundingBoxToProto(boundingBox.orElse(fallbackLayer.map(_.boundingBox)).getOrElse(dataSource.boundingBox)),
         System.currentTimeMillis(),
         dataSource.id.directoryName,
         vec3IntToProto(startPosition.getOrElse(dataSource.center)),

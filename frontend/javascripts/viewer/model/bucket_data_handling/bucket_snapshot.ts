@@ -17,7 +17,7 @@ export default class BucketSnapshot {
   // uncompressed:
   private dataClone: BucketDataArray | null;
   // ... or compressed:
-  private compressedData: Uint8Array | null = null;
+  private compressedData: Uint8Array<ArrayBuffer> | null = null;
 
   // A pending promise of the unmerged backend data. Once the promise
   // is fulfilled, it will be set to null.
@@ -32,7 +32,7 @@ export default class BucketSnapshot {
   // uncompressed:
   private backendBucketData: BucketDataArray | null = null;
   // ... or compressed:
-  private compressedBackendData: Uint8Array | null = null;
+  private compressedBackendData: Uint8Array<ArrayBuffer> | null = null;
 
   constructor(
     readonly zoomedAddress: BucketAddress,

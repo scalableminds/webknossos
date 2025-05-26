@@ -21,12 +21,11 @@ import FastTooltip from "components/fast_tooltip";
 import { formatLengthAsVx, formatNumberToLength, formatNumberToVolume } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { useFetch } from "libs/react_helpers";
+import { useWkSelector } from "libs/react_hooks";
 import Shortcut from "libs/shortcut_component";
 import Toast from "libs/toast";
 import { hexToRgb, rgbToHex, roundTo, truncateStringToLength } from "libs/utils";
 import messages from "messages";
-
-import { useWkSelector } from "libs/react_hooks";
 import React, { createContext, type MouseEvent, useContext, useEffect, useState } from "react";
 import type { Dispatch } from "redux";
 import type {
@@ -116,10 +115,14 @@ import {
   setTreeVisibilityAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import { hideContextMenuAction, setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
+import { getUpdateSegmentActionToToggleVisibility } from "viewer/model/actions/volumetracing_action_helpers";
 import {
   clickSegmentAction,
   performMinCutAction,
   setActiveCellAction,
+  setHideUnregisteredSegmentsAction,
+  toggleAllSegmentsAction,
+  updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { extractPathAsNewTree } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import { isBoundingBoxUsableForMinCut } from "viewer/model/sagas/min_cut_saga";
@@ -128,13 +131,14 @@ import { voxelToVolumeInUnit } from "viewer/model/scaleinfo";
 import { api } from "viewer/singletons";
 import type {
   ActiveMappingInfo,
-  MutableNode,
+  ContextMenuInfo,
   SegmentMap,
   SkeletonTracing,
-  Tree,
   UserBoundingBox,
   VolumeTracing,
 } from "viewer/store";
+
+import { type MutableNode, type Tree, TreeMap } from "viewer/model/types/tree_types";
 import Store from "viewer/store";
 import {
   getVolumeRequestUrl,
@@ -145,20 +149,9 @@ import { LoadMeshMenuItemLabel } from "./right-border-tabs/segments_tab/load_mes
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
 
-// The newest eslint version thinks the props listed below aren't used.
-type OwnProps = {
-  contextMenuPosition: Readonly<[number, number]> | null | undefined;
-  maybeClickedNodeId: number | null | undefined;
-  maybeClickedMeshId: number | null | undefined;
-  maybeUnmappedSegmentId: number | null | undefined;
-  maybeMeshIntersectionPosition: Vector3 | null | undefined;
-  clickedBoundingBoxId: number | null | undefined;
-  globalPosition: Vector3 | null | undefined;
+type Props = {
+  contextInfo: ContextMenuInfo;
   additionalCoordinates: AdditionalCoordinate[] | undefined;
-  maybeViewport: OrthoView | null | undefined;
-};
-
-type StateProps = {
   skeletonTracing: SkeletonTracing | null | undefined;
   voxelSize: VoxelSize;
   visibleSegmentationLayer: APIDataLayer | null | undefined;
@@ -173,7 +166,6 @@ type StateProps = {
   allowUpdate: boolean;
   segments: SegmentMap | null | undefined;
 };
-type Props = OwnProps & StateProps;
 
 type NodeContextMenuOptionsProps = Props & {
   viewport: OrthoView;
@@ -247,7 +239,7 @@ function extractShortestPathAsNewTree(
   const { shortestPath } = api.tracing.findShortestPathBetweenNodes(sourceNodeId, targetNodeId);
   const newTree = extractPathAsNewTree(Store.getState(), sourceTree, shortestPath);
   if (newTree != null) {
-    const treeMap = { [newTree.treeId]: newTree };
+    const treeMap = new TreeMap([[newTree.treeId, newTree]]);
     Store.dispatch(addTreesAndGroupsAction(treeMap, null));
   }
 }
@@ -400,13 +392,16 @@ function getMaybeMinCutItem(
 
 function getMeshItems(
   volumeTracing: VolumeTracing | null | undefined,
-  clickedMeshId: number | null | undefined,
-  meshIntersectionPosition: Vector3 | null | undefined,
-  maybeUnmappedSegmentId: number | null | undefined,
+  contextInfo: ContextMenuInfo,
   visibleSegmentationLayer: APIDataLayer | null | undefined,
   voxelSizeFactor: Vector3,
   meshFileMappingName: string | null | undefined,
 ): MenuItemType[] {
+  const {
+    meshId: clickedMeshId,
+    meshIntersectionPosition,
+    unmappedSegmentId: maybeUnmappedSegmentId,
+  } = contextInfo;
   if (
     clickedMeshId == null ||
     meshIntersectionPosition == null ||
@@ -559,9 +554,7 @@ function getMeshItems(
 function getNodeContextMenuOptions({
   skeletonTracing,
   clickedNodeId,
-  maybeClickedMeshId,
-  maybeMeshIntersectionPosition,
-  maybeUnmappedSegmentId,
+  contextInfo,
   visibleSegmentationLayer,
   voxelSize,
   useLegacyBindings,
@@ -605,9 +598,7 @@ function getNodeContextMenuOptions({
 
   const meshItems = getMeshItems(
     volumeTracing,
-    maybeClickedMeshId,
-    maybeMeshIntersectionPosition,
-    maybeUnmappedSegmentId,
+    contextInfo,
     visibleSegmentationLayer,
     voxelSize.factor,
     currentMeshFile?.mappingName,
@@ -775,12 +766,12 @@ function getNodeContextMenuOptions({
 }
 
 function getBoundingBoxMenuOptions({
-  globalPosition,
+  contextInfo,
   activeTool,
-  clickedBoundingBoxId,
   userBoundingBoxes,
   allowUpdate,
 }: NoNodeContextMenuProps): ItemType[] {
+  const { globalPosition, clickedBoundingBoxId } = contextInfo;
   if (globalPosition == null) return [];
 
   const isBoundingBoxToolActive = activeTool === AnnotationTool.BOUNDING_BOX;
@@ -927,14 +918,11 @@ function getBoundingBoxMenuOptions({
 
 function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] {
   const {
+    contextInfo,
     skeletonTracing,
     volumeTracing,
     activeTool,
-    globalPosition,
     additionalCoordinates,
-    maybeClickedMeshId,
-    maybeMeshIntersectionPosition,
-    maybeUnmappedSegmentId,
     viewport,
     visibleSegmentationLayer,
     segmentIdAtPosition,
@@ -946,6 +934,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     infoRows,
     allowUpdate,
   } = props;
+  const { globalPosition } = contextInfo;
 
   const state = Store.getState();
   const disabledVolumeInfo = getDisabledInfoForTools(state);
@@ -994,6 +983,63 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     Store.dispatch(
       clickSegmentAction(clickedSegmentId, globalPosition, additionalCoordinates, layerName),
     );
+  };
+
+  const onlyShowSegment = () => {
+    if (!visibleSegmentationLayer || globalPosition == null) {
+      return;
+    }
+    const clickedSegmentId = getSegmentIdForPosition(globalPosition);
+    if (clickedSegmentId === 0) {
+      Toast.info("No segment found at the clicked position");
+      return;
+    }
+
+    Store.dispatch(setHideUnregisteredSegmentsAction(true, visibleSegmentationLayer.name));
+    Store.dispatch(toggleAllSegmentsAction(visibleSegmentationLayer.name, false));
+    Store.dispatch(
+      updateSegmentAction(
+        clickedSegmentId,
+        {
+          isVisible: true,
+          somePosition: globalPosition,
+          someAdditionalCoordinates: additionalCoordinates,
+        },
+        visibleSegmentationLayer.name,
+        undefined,
+        true,
+      ),
+    );
+  };
+
+  const showAllSegments = () => {
+    if (!visibleSegmentationLayer) {
+      return;
+    }
+
+    Store.dispatch(setHideUnregisteredSegmentsAction(false, visibleSegmentationLayer.name));
+    Store.dispatch(toggleAllSegmentsAction(visibleSegmentationLayer.name, true));
+  };
+
+  const toggleSegmentVisibility = () => {
+    if (!visibleSegmentationLayer || globalPosition == null) {
+      return;
+    }
+    const clickedSegmentId = getSegmentIdForPosition(globalPosition);
+    if (clickedSegmentId === 0) {
+      Toast.info("No segment found at the clicked position");
+      return;
+    }
+
+    const action = getUpdateSegmentActionToToggleVisibility(
+      Store.getState(),
+      clickedSegmentId,
+      globalPosition,
+      additionalCoordinates,
+    );
+    if (action != null) {
+      Store.dispatch(action);
+    }
   };
 
   const computeMeshAdHoc = () => {
@@ -1187,6 +1233,21 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     onClick: maybeFocusSegment,
     label: "Focus in Segment List",
   };
+  const onlyShowThisSegmentItem: MenuItemType = {
+    key: "only-show-this-segment",
+    onClick: onlyShowSegment,
+    label: "Only show this Segment",
+  };
+  const toggleSegmentVisibilityItem: MenuItemType = {
+    key: "toggle-segment-visibility",
+    onClick: toggleSegmentVisibility,
+    label: "Toggle visibility of this Segment",
+  };
+  const showAllSegmentsItem: MenuItemType = {
+    key: "show-all-segments",
+    onClick: showAllSegments,
+    label: "Show all Segments",
+  };
   const loadPrecomputedMeshItem: MenuItemType = {
     key: "load-precomputed-mesh",
     disabled: !currentMeshFile,
@@ -1230,6 +1291,9 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                 ),
               }
             : null,
+          segmentIdAtPosition > 0 ? onlyShowThisSegmentItem : null,
+          segmentIdAtPosition > 0 ? toggleSegmentVisibilityItem : null,
+          segmentIdAtPosition > 0 ? showAllSegmentsItem : null,
           focusInSegmentListItem,
           loadPrecomputedMeshItem,
           computeMeshAdHocItem,
@@ -1249,9 +1313,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
 
   const meshRelatedItems = getMeshItems(
     volumeTracing,
-    maybeClickedMeshId,
-    maybeMeshIntersectionPosition,
-    maybeUnmappedSegmentId,
+    contextInfo,
     visibleSegmentationLayer,
     voxelSize.factor,
     currentMeshFile?.mappingName,
@@ -1388,66 +1450,77 @@ function getInfoMenuItem(
 }
 
 function ContextMenuInner() {
-  const props = useWkSelector((state) => {
-    const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
-    const mappingInfo = getMappingInfo(
-      state.temporaryConfiguration.activeMappingByLayer,
-      visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
-    );
+  const visibleSegmentationLayer = useWkSelector(getVisibleSegmentationLayer);
+  const activeMappingByLayer = useWkSelector(
+    (state) => state.temporaryConfiguration.activeMappingByLayer,
+  );
+  const mappingInfo = getMappingInfo(
+    activeMappingByLayer,
+    visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
+  );
+  const skeletonTracing = useWkSelector((state) => state.annotation.skeleton);
+  const volumeTracing = useWkSelector(getActiveSegmentationTracing);
+  const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
+  const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
+  const dataset = useWkSelector((state) => state.dataset);
+  const allowUpdate = useWkSelector((state) => state.annotation.restrictions.allowUpdate);
+  const currentMeshFile = useWkSelector((state) =>
+    visibleSegmentationLayer != null
+      ? state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile
+      : null,
+  );
+  const currentConnectomeFile = useWkSelector((state) =>
+    visibleSegmentationLayer != null
+      ? state.localSegmentationData[visibleSegmentationLayer.name].connectomeData
+          .currentConnectomeFile
+      : null,
+  );
+
+  const userBoundingBoxes = useWkSelector((state) => {
     const someTracing = maybeGetSomeTracing(state.annotation);
-    const { contextInfo } = state.uiInformation;
-    return {
-      skeletonTracing: state.annotation.skeleton,
-      volumeTracing: getActiveSegmentationTracing(state),
-      voxelSize: state.dataset.dataSource.scale,
-      activeTool: state.uiInformation.activeTool,
-      dataset: state.dataset,
-      allowUpdate: state.annotation.restrictions.allowUpdate,
-      visibleSegmentationLayer,
-      currentMeshFile:
-        visibleSegmentationLayer != null
-          ? state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile
-          : null,
-      currentConnectomeFile:
-        visibleSegmentationLayer != null
-          ? state.localSegmentationData[visibleSegmentationLayer.name].connectomeData
-              .currentConnectomeFile
-          : null,
-      useLegacyBindings: state.userConfiguration.useLegacyBindings,
-      userBoundingBoxes: someTracing != null ? someTracing.userBoundingBoxes : [],
-      segments:
-        visibleSegmentationLayer != null
-          ? getSegmentsForLayer(state, visibleSegmentationLayer.name)
-          : null,
-      mappingInfo,
-      maybeClickedNodeId: contextInfo.clickedNodeId,
-      clickedBoundingBoxId: contextInfo.clickedBoundingBoxId,
-      globalPosition: contextInfo.globalPosition,
-      additionalCoordinates: state.flycam.additionalCoordinates || undefined,
-      contextMenuPosition: contextInfo.contextMenuPosition,
-      maybeViewport: contextInfo.viewport,
-      maybeClickedMeshId: contextInfo.meshId,
-      maybeMeshIntersectionPosition: contextInfo.meshIntersectionPosition,
-      maybeUnmappedSegmentId: contextInfo.unmappedSegmentId,
-    };
+    return someTracing != null ? someTracing.userBoundingBoxes : [];
   });
+  const segments = useWkSelector((state) =>
+    visibleSegmentationLayer != null
+      ? getSegmentsForLayer(state, visibleSegmentationLayer.name)
+      : null,
+  );
+  const useLegacyBindings = useWkSelector((state) => state.userConfiguration.useLegacyBindings);
+  const additionalCoordinates = useWkSelector(
+    (state) => state.flycam.additionalCoordinates || undefined,
+  );
+  const contextInfo = useWkSelector((state) => state.uiInformation.contextInfo);
+
+  const props: Props = {
+    skeletonTracing,
+    visibleSegmentationLayer,
+    volumeTracing,
+    voxelSize,
+    activeTool,
+    dataset,
+    allowUpdate,
+    currentMeshFile,
+    currentConnectomeFile,
+    useLegacyBindings,
+    userBoundingBoxes,
+    segments,
+    mappingInfo,
+    additionalCoordinates,
+    contextInfo,
+  };
+
+  const {
+    globalPosition,
+    contextMenuPosition,
+    meshId: maybeClickedMeshId,
+    clickedNodeId: maybeClickedNodeId,
+    viewport: maybeViewport,
+  } = contextInfo;
 
   const [lastTimeSegmentInfoShouldBeFetched, setLastTimeSegmentInfoShouldBeFetched] = useState(
     new Date(),
   );
   const inputRef = useContext(ContextMenuContext);
-  const {
-    skeletonTracing,
-    maybeClickedNodeId,
-    maybeClickedMeshId,
-    contextMenuPosition,
-    segments,
-    voxelSize,
-    globalPosition,
-    maybeViewport,
-    visibleSegmentationLayer,
-    volumeTracing,
-  } = props;
 
   const segmentIdAtPosition = globalPosition != null ? getSegmentIdForPosition(globalPosition) : 0;
 
@@ -1459,7 +1532,6 @@ function ContextMenuInner() {
     maybeClickedMeshId != null ? maybeClickedMeshId : segmentIdAtPosition;
   const wasSegmentOrMeshClicked = clickedSegmentOrMeshId !== 0;
 
-  const dataset = useWkSelector((state) => state.dataset);
   useEffect(() => {
     Store.dispatch(ensureSegmentIndexIsLoadedAction(visibleSegmentationLayer?.name));
   }, [visibleSegmentationLayer]);
@@ -1526,7 +1598,12 @@ function ContextMenuInner() {
     isLoadingVolumeAndBB,
     // Update segment infos when opening the context menu, in case the annotation was saved since the context menu was last opened.
     // Of course the info should also be updated when the menu is opened for another segment, or after the refresh button was pressed.
-    [contextMenuPosition, clickedSegmentOrMeshId, lastTimeSegmentInfoShouldBeFetched],
+    [
+      contextMenuPosition,
+      isSegmentIndexAvailable,
+      clickedSegmentOrMeshId,
+      lastTimeSegmentInfoShouldBeFetched,
+    ],
   );
 
   let nodeContextMenuTree: Tree | null = null;

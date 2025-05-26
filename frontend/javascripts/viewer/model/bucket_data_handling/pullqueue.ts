@@ -31,6 +31,7 @@ class PullQueue {
   private abortController: AbortController;
   private consecutiveErrorCount: number;
   private isRetryScheduled: boolean;
+  private isDestroyed: boolean = false;
 
   constructor(cube: DataCube, layerName: string, datastoreInfo: DataStoreInfo) {
     this.cube = cube;
@@ -105,6 +106,9 @@ class PullQueue {
         }
       }
     } catch (error) {
+      if (this.isDestroyed) {
+        return;
+      }
       for (const bucketAddress of batch) {
         const bucket = this.cube.getBucket(bucketAddress);
 
@@ -155,7 +159,10 @@ class PullQueue {
     return Math.min(exponentialBackOff, MAX_RETRY_DELAY);
   }
 
-  private handleBucket(bucket: DataBucket, bucketData: Uint8Array | null | undefined): void {
+  private handleBucket(
+    bucket: DataBucket,
+    bucketData: Uint8Array<ArrayBuffer> | null | undefined,
+  ): void {
     if (this.cube.shouldEagerlyMaintainUsedValueSet()) {
       // If we assume that the value set of the bucket is needed often (for proofreading),
       // we compute it here eagerly and then send the data to the bucket.
@@ -196,6 +203,12 @@ class PullQueue {
     for (const el of highestPriorityElements) {
       this.priorityQueue.queue(el);
     }
+  }
+
+  destroy() {
+    this.isDestroyed = true;
+    this.clear();
+    this.abortRequests();
   }
 }
 

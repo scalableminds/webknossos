@@ -20,8 +20,8 @@ export type NestedMatrix4 = [Vector4, Vector4, Vector4, Vector4]; // Represents 
 // For 3D data BucketAddress = x, y, z, mag
 // For higher dimensional data, BucketAddress = x, y, z, mag, [{name: "t", value: t}, ...]
 export type BucketAddress =
-  | Vector4
-  | [number, number, number, number, AdditionalCoordinate[] | null];
+  | readonly [number, number, number, number]
+  | readonly [number, number, number, number, AdditionalCoordinate[] | null];
 
 export type Point2 = {
   x: number;
@@ -49,11 +49,11 @@ export type Rect = {
   height: number;
 };
 export const AnnotationContentTypes = ["skeleton", "volume", "hybrid"];
-export const Vector2Indicies = [0, 1];
-export const Vector3Indicies = [0, 1, 2];
-export const Vector4Indicies = [0, 1, 2, 3];
-export const Vector5Indicies = [0, 1, 2, 3, 4];
-export const Vector6Indicies = [0, 1, 2, 3, 4, 5];
+export const Vector2Indicies = [0, 1] as const;
+export const Vector3Indicies = [0, 1, 2] as const;
+export const Vector4Indicies = [0, 1, 2, 3] as const;
+export const Vector5Indicies = [0, 1, 2, 3, 4] as const;
+export const Vector6Indicies = [0, 1, 2, 3, 4, 5] as const;
 export enum OrthoViews {
   PLANE_XY = "PLANE_XY",
   PLANE_YZ = "PLANE_YZ",
@@ -307,17 +307,17 @@ const Constants = {
 export default Constants;
 
 export type TypedArray =
-  | Uint8Array
-  | Uint8ClampedArray
-  | Int8Array
-  | Uint16Array
-  | Int16Array
-  | Uint32Array
-  | Int32Array
-  | Float32Array
-  | Float64Array
-  | BigUint64Array
-  | BigInt64Array;
+  | Uint8Array<ArrayBuffer>
+  | Uint8ClampedArray<ArrayBuffer>
+  | Int8Array<ArrayBuffer>
+  | Uint16Array<ArrayBuffer>
+  | Int16Array<ArrayBuffer>
+  | Uint32Array<ArrayBuffer>
+  | Int32Array<ArrayBuffer>
+  | Float32Array<ArrayBuffer>
+  | Float64Array<ArrayBuffer>
+  | BigUint64Array<ArrayBuffer>
+  | BigInt64Array<ArrayBuffer>;
 
 export type TypedArrayWithoutBigInt = Exclude<TypedArray, BigUint64Array | BigInt64Array>;
 

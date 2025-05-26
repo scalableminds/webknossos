@@ -14,13 +14,8 @@ import {
   isVolumeTool,
 } from "viewer/model/accessors/volumetracing_accessor";
 import { updateKey } from "viewer/model/helpers/deep_update";
-import type {
-  Annotation,
-  BoundingBoxObject,
-  UserBoundingBox,
-  UserBoundingBoxToServer,
-  WebknossosState,
-} from "viewer/store";
+import type { BoundingBoxObject, UserBoundingBox, UserBoundingBoxToServer } from "viewer/store";
+import type { Annotation, WebknossosState } from "viewer/store";
 import { getDisabledInfoForTools } from "../accessors/disabled_tool_accessor";
 
 export function convertServerBoundingBoxToBoundingBox(
@@ -74,7 +69,6 @@ export function convertFrontendBoundingBoxToServer(
   };
 }
 
-// Currently unused.
 export function convertPointToVecInBoundingBox(boundingBox: ServerBoundingBox): BoundingBoxObject {
   return {
     width: boundingBox.width,

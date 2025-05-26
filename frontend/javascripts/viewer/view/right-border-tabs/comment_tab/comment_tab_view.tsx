@@ -30,7 +30,8 @@ import {
   setActiveNodeAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import { cachedDiffTrees } from "viewer/model/sagas/skeletontracing_saga";
-import type { CommentType, MutableCommentType, SkeletonTracing, Tree, TreeMap } from "viewer/store";
+import type { CommentType, MutableCommentType, Tree, TreeMap } from "viewer/model/types/tree_types";
+import type { SkeletonTracing } from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
 import InputComponent from "viewer/view/components/input_component";
@@ -75,11 +76,21 @@ const RELEVANT_ACTIONS_FOR_COMMENTS = [
   "revertToVersion",
 ];
 
+function getSortedTreesWithComments(
+  trees: TreeMap,
+  sortBy: SortByEnum,
+  isSortedAscending: boolean,
+): Tree[] {
+  return trees
+    .values()
+    .filter((tree) => tree.comments.length > 0)
+    .toArray()
+    .sort(getTreeSorter(sortBy, isSortedAscending));
+}
+
 const memoizedDeriveData = memoizeOne(
   (trees: TreeMap, sortBy: SortByEnum, isSortedAscending: boolean): Tree[] => {
-    const sortedTrees = _.values(trees)
-      .filter((tree) => tree.comments.length > 0)
-      .sort(getTreeSorter(sortBy, isSortedAscending));
+    const sortedTrees = getSortedTreesWithComments(trees, sortBy, isSortedAscending);
 
     return sortedTrees;
   },
@@ -192,15 +203,15 @@ function CommentTabView(props: Props) {
       const { trees } = props.skeletonTracing;
 
       // Create a sorted, flat array of all comments across all trees
-      const sortedTrees = _.values(trees).slice().sort(getTreeSorter(sortBy, sortAscending));
+      const sortedTrees = getSortedTreesWithComments(trees, sortBy, sortAscending);
 
-      const sortedComments = _.flatMap(sortedTrees, (tree: Tree): CommentType[] =>
+      const sortedComments = sortedTrees.flatMap((tree: Tree): CommentType[] =>
         tree.comments.slice().sort(getCommentSorter(sortBy, sortAscending)),
       );
 
-      const currentCommentIndex = _.findIndex(sortedComments, {
-        nodeId: activeNode.id,
-      });
+      const currentCommentIndex = sortedComments.findIndex(
+        (comment) => comment.nodeId === activeNode.id,
+      );
 
       const nextCommentIndex = (currentCommentIndex + 1) % sortedComments.length;
 
@@ -273,9 +284,9 @@ function CommentTabView(props: Props) {
     const { activeTreeId, activeNodeId } = props.skeletonTracing;
 
     if (activeTreeId && activeNodeId) {
-      const activeComment = props.skeletonTracing.trees[activeTreeId].comments.find(
-        (comment) => comment.nodeId === activeNodeId,
-      );
+      const activeComment = props.skeletonTracing.trees
+        .getOrThrow(activeTreeId)
+        .comments.find((comment) => comment.nodeId === activeNodeId);
 
       return activeComment;
     }

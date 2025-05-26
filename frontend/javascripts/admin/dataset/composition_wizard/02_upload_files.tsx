@@ -6,7 +6,6 @@ import ErrorHandling from "libs/error_handling";
 import { readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
 import { SoftError } from "libs/utils";
-import * as Utils from "libs/utils";
 import _ from "lodash";
 import type { Vector3 } from "viewer/constants";
 import { parseNml } from "viewer/model/helpers/nml_helpers";
@@ -175,13 +174,19 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
     throw new SoftError("Could not extract dataset names.");
   }
 
-  if (Object.keys(trees1).length !== Object.keys(trees2).length) {
+  if (trees1.keys().toArray().length !== trees2.keys().toArray().length) {
     throw new SoftError("The two NML files should have the same tree count.");
   }
 
   for (const [tree1, tree2] of _.zip(
-    Utils.values(trees1).sort((a, b) => a.treeId - b.treeId),
-    Utils.values(trees2).sort((a, b) => a.treeId - b.treeId),
+    trees1
+      .values()
+      .toArray()
+      .sort((a, b) => a.treeId - b.treeId),
+    trees2
+      .values()
+      .toArray()
+      .sort((a, b) => a.treeId - b.treeId),
   )) {
     if (tree1 == null || tree2 == null) {
       // Satisfy TS. This should not happen, as we checked before that both tree collections

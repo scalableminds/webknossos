@@ -2,26 +2,42 @@ const defaultItemsPerBatch = 1000;
 let idCounter = 0;
 const idSymbol = Symbol("id");
 
-// DiffableMap is an immutable key-value data structure which supports fast diffing.
-// Updating a DiffableMap returns a new DiffableMap, in which case the Maps are
-// derived from each other ("dependent").
-// Diffing is very fast when the given Maps are dependent, since the separate chunks
-// can be compared shallowly.
-// The insertion order of the DiffableMap is not guaranteed.
-// Stored values may be null. However, be careful when dealing with `undefined`, as
-// it's interpreted as "does not exist", but can still be listed during enumeration.
-
-class DiffableMap<K extends number, V> {
+/**
+ * DiffableMap is an immutable key-value data structure which supports fast diffing.
+ *
+ * Key features:
+ * - Updating a DiffableMap returns a new DiffableMap, in which Maps are derived from each other ("dependent")
+ * - Diffing is very fast when Maps are dependent, since chunks can be compared shallowly
+ * - The insertion order is not guaranteed
+ * - Stored values may be null
+ * - Be careful with `undefined` - it's interpreted as "does not exist" but can still appear during enumeration
+ * - Internally uses multiple Map chunks for efficient storage and comparison
+ *
+ * @template K The key type (must extend number)
+ * @template V The value type for each map entry
+ */
+class DiffableMap<K extends number, V> implements NotEnumerableByObject {
+  /** Internal array of Map chunks for storing data */
   chunks: Array<Map<K, V>>;
+  /** Total number of entries across all chunks */
   entryCount: number;
+  /** Maximum number of items per chunk before creating a new chunk */
   itemsPerBatch: number;
 
+  __notEnumerableByObject: true = true;
+
+  /**
+   * Creates a new DiffableMap instance
+   *
+   * @param optKeyValueArray Optional array of key-value pairs to initialize the map
+   * @param itemsPerBatch Optional number of items per chunk (defaults to 1000)
+   */
   constructor(
     optKeyValueArray?: Array<[K, V]> | null | undefined,
-    itemsPerBatch?: number | null | undefined,
+    itemsPerBatch: number = defaultItemsPerBatch,
   ) {
     // Make the id property not enumerable so that it does not interfere with tests
-    // Ava's deepEquals uses Object.getOwnProperties() to obtain all Object keys
+    // Vitest's toEqual uses Object.getOwnProperties() to obtain all Object keys
     // Luckily "Symbols" don't count as properties
     Object.defineProperty(this, idSymbol, {
       value: idCounter++,
@@ -29,7 +45,7 @@ class DiffableMap<K extends number, V> {
     });
     this.chunks = [];
     this.entryCount = 0;
-    this.itemsPerBatch = itemsPerBatch != null ? itemsPerBatch : defaultItemsPerBatch;
+    this.itemsPerBatch = itemsPerBatch;
 
     if (optKeyValueArray != null) {
       for (const [key, value] of optKeyValueArray) {
@@ -38,16 +54,58 @@ class DiffableMap<K extends number, V> {
     }
   }
 
-  getId() {
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
+  /**
+   * Merges two DiffableMap instances into a new one
+   * When keys exist in both maps, values from mapB take precedence
+   *
+   * @param mapA First DiffableMap to merge
+   * @param mapB Second DiffableMap to merge (its values take precedence on conflicts)
+   * @returns A new DiffableMap containing all entries from both maps
+   */
+  static merge<K extends number, V>(
+    mapA: DiffableMap<K, V>,
+    mapB: DiffableMap<K, V>,
+  ): DiffableMap<K, V> {
+    // Create a new map with mapA's entries
+    const result = mapA.clone();
+
+    // Add all entries from mapB (overwriting any duplicate keys from mapA)
+    for (const [key, value] of mapB.entries()) {
+      result.mutableSet(key, value);
+    }
+
+    return result;
+  }
+
+  /**
+   * Returns an identifier that can be used to check whether two DiffableMap instances
+   * were derived from each other. This is used internally when diffing.
+   *
+   * @returns The map's derivation ID
+   */
+  getId(): number {
+    // @ts-expect-error: Property '[idSymbol]' is defined by Object.defineProperty in constructor to avoid issues with testing
     return this[idSymbol];
   }
 
-  setId(id: number) {
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
+  /**
+   * Sets the identifier of this DiffableMap instance
+   * Used internally when creating derived maps
+   *
+   * @param id The ID to set
+   */
+  setId(id: number): void {
+    // @ts-expect-error: Property '[idSymbol]' is defined by Object.defineProperty in constructor to avoid issues with testing
     this[idSymbol] = id;
   }
 
+  /**
+   * Gets a value by key, throwing an error if the key doesn't exist
+   *
+   * @param key The key to look up
+   * @returns The value associated with the key
+   * @throws Error if the key doesn't exist in the map
+   */
   getOrThrow(key: K): V {
     const value = this.getNullable(key);
 
@@ -58,10 +116,13 @@ class DiffableMap<K extends number, V> {
     }
   }
 
-  // The return type cannot be ?V since this would also include null.
-  // In order to allow storing null values in this data structure,
-  // the typing makes it explicit by just using undefined as a place holder for
-  // "not existing".
+  /**
+   * Gets a value by key, returning undefined if the key doesn't exist
+   * Note: This allows storing null values in the map, which are distinct from "not existing"
+   *
+   * @param key The key to look up
+   * @returns The value associated with the key, or undefined if the key doesn't exist
+   */
   getNullable(key: K): V | typeof undefined {
     let idx = 0;
 
@@ -76,10 +137,24 @@ class DiffableMap<K extends number, V> {
     return undefined;
   }
 
+  /**
+   * Checks if a key exists in the map
+   *
+   * @param key The key to check
+   * @returns True if the key exists, false otherwise
+   */
   has(key: K): boolean {
     return this.getNullable(key) !== undefined;
   }
 
+  /**
+   * Creates a new DiffableMap with the specified key-value pair added or updated
+   * Does not modify the original map (immutable operation) because it creates a shallow copy.
+   *
+   * @param key The key to set
+   * @param value The value to associate with the key
+   * @returns A new DiffableMap instance with the updated key-value pair
+   */
   set(key: K, value: V): DiffableMap<K, V> {
     let idx = 0;
 
@@ -98,6 +173,7 @@ class DiffableMap<K extends number, V> {
     const isTooFull = this.entryCount / this.chunks.length > this.itemsPerBatch;
     const nonFullMapIdx =
       isTooFull || this.chunks.length === 0 ? -1 : Math.floor(Math.random() * this.chunks.length);
+
     // Key didn't exist. Add it.
     const newDiffableMap = shallowCopy(this);
     newDiffableMap.entryCount = this.entryCount + 1;
@@ -105,15 +181,43 @@ class DiffableMap<K extends number, V> {
     if (nonFullMapIdx > -1) {
       newDiffableMap.chunks[nonFullMapIdx] = new Map(this.chunks[nonFullMapIdx]);
       newDiffableMap.chunks[nonFullMapIdx].set(key, value);
+
       return newDiffableMap;
     } else {
       const freshMap = new Map();
       freshMap.set(key, value);
       newDiffableMap.chunks.push(freshMap);
+
       return newDiffableMap;
     }
   }
 
+  /**
+   * Adds or updates a key-value pair in the current map instance
+   * Modifies the original map (mutable operation).
+   *
+   * WARNING: Only use this method if you are sure that
+   * it will mutate the current object without unwanted side effects.
+   * To ensure this, it should only be called on new maps OR on cloned ones.
+   * It should *not* be called on maps that were created by an immutable
+   * operation (set/delete), because these operations use shallow copies for
+   * the chunks that don't need modification.
+   *
+   * For example:
+   *   const map1 = new DiffableMap(
+   *     [
+   *       [1, 1],
+   *       [2, 2],
+   *       [3, 3],
+   *     ],
+   *     1,
+   *   );
+   *   const map2 = map1.set(4, 4);
+   *   map2.mutableSet(1, 100); <-- this will also mutate map1 because it was only shallowly copied.
+   *
+   * @param key The key to set
+   * @param value The value to associate with the key
+   */
   mutableSet(key: K, value: V): void {
     let idx = 0;
 
@@ -130,6 +234,7 @@ class DiffableMap<K extends number, V> {
     const isTooFull = this.entryCount / this.chunks.length > this.itemsPerBatch;
     const nonFullMapIdx =
       isTooFull || this.chunks.length === 0 ? -1 : Math.floor(Math.random() * this.chunks.length);
+
     // Key didn't exist. Add it.
     this.entryCount++;
 
@@ -142,6 +247,12 @@ class DiffableMap<K extends number, V> {
     }
   }
 
+  /**
+   * Creates a shallow copy of this DiffableMap
+   * The returned map has the same ID as the original, enabling fast diffing
+   *
+   * @returns A new DiffableMap instance with the same contents and ID
+   */
   clone(): DiffableMap<K, V> {
     const newDiffableMap = new DiffableMap<K, V>();
     // Clone all chunks
@@ -155,6 +266,14 @@ class DiffableMap<K extends number, V> {
     return newDiffableMap;
   }
 
+  /**
+   * Creates a new DiffableMap with the specified key removed
+   * Does not modify the original map (immutable operation) because it creates a shallow copy.
+   * If the key doesn't exist, returns the original map
+   *
+   * @param key The key to delete
+   * @returns A new DiffableMap instance with the key removed
+   */
   delete(key: K): DiffableMap<K, V> {
     let idx = 0;
 
@@ -174,6 +293,35 @@ class DiffableMap<K extends number, V> {
     return this;
   }
 
+  /**
+   * Deletes a key-value pair from the current map instance
+   * Modifies the original map (mutable operation)
+   * If the key doesn't exist, no changes are made.
+   *
+   * WARNING: See the warning for mutableSet which also applies here.
+   *
+   * @param key The key to delete
+   */
+  mutableDelete(key: K): void {
+    let idx = 0;
+
+    while (this.chunks[idx] != null) {
+      if (this.chunks[idx].has(key)) {
+        this.chunks[idx].delete(key);
+        this.entryCount--;
+        return;
+      }
+
+      idx++;
+    }
+  }
+
+  /**
+   * Maps over all values in the DiffableMap and applies a transformation function
+   *
+   * @param fn The transformation function to apply to each value
+   * @returns An array of transformed values
+   */
   map<T>(fn: (value: V) => T): Array<T> {
     const returnValue = [];
 
@@ -186,24 +334,44 @@ class DiffableMap<K extends number, V> {
     return returnValue;
   }
 
+  /**
+   * Returns an iterator over all key-value pairs in the DiffableMap
+   *
+   * @returns A generator yielding key-value pairs as [key, value] tuples
+   */
   *entries(): Generator<[K, V], void, undefined> {
     for (const map of this.chunks) {
       yield* map;
     }
   }
 
-  *values(): Generator<V, void, undefined> {
+  /**
+   * Returns an iterator over all values in the DiffableMap
+   *
+   * @returns A generator yielding all values
+   */
+  *values(): MapIterator<V> {
     for (const map of this.chunks) {
       yield* map.values();
     }
   }
 
-  *keys(): Generator<K, void, undefined> {
+  /**
+   * Returns an iterator over all keys in the DiffableMap
+   *
+   * @returns A generator yielding all keys
+   */
+  *keys(): MapIterator<K> {
     for (const map of this.chunks) {
       yield* map.keys();
     }
   }
 
+  /**
+   * Returns the total number of key-value pairs in the DiffableMap
+   *
+   * @returns The number of entries
+   */
   size(): number {
     let size = 0;
 
@@ -214,6 +382,11 @@ class DiffableMap<K extends number, V> {
     return size;
   }
 
+  /**
+   * Converts the DiffableMap to a plain JavaScript object
+   *
+   * @returns A record object with the same key-value pairs
+   */
   toObject(): Record<K, V> {
     const result = {} as Record<K, V>;
 
@@ -225,11 +398,15 @@ class DiffableMap<K extends number, V> {
   }
 }
 
-// This function should only be used internally by this module.
-// It creates a new DiffableMap on the basis of another one, while
-// shallowly copying the internal chunks.
-// When modifying a chunk, that chunk should be manually cloned.
-
+/**
+ * Internal helper function to create a shallow copy of a DiffableMap
+ * Creates a new DiffableMap that shares the same ID and references the same chunks
+ * Used by immutable operations when creating a new derived map
+ *
+ * @param template The source DiffableMap to copy
+ * @returns A new DiffableMap with references to the same chunks
+ * @private
+ */
 function shallowCopy<K extends number, V>(template: DiffableMap<K, V>): DiffableMap<K, V> {
   const newMap = new DiffableMap();
   newMap.setId(template.getId());
@@ -240,13 +417,21 @@ function shallowCopy<K extends number, V>(template: DiffableMap<K, V>): Diffable
   return newMap;
 }
 
-// Given two DiffableMaps, this function returns an object holding:
-// changed: An array of keys, which both Maps hold, but **which do not have the same value**
-// onlyA: An array of keys, which only exists in mapA
-// onlyB: An array of keys, which only exists in mapB
-// Note: Unlike the Utils.diffArrays function, this function will return
-// { changed: [], onlyA: [], onlyB: []}
-// if mapA === mapB
+/**
+ * Calculates the difference between two DiffableMap instances
+ * Performance is optimized when maps are derived from each other ("dependent")
+ *
+ * @param mapA First DiffableMap to compare
+ * @param mapB Second DiffableMap to compare
+ * @returns An object with three arrays:
+ *   - changed: Keys present in both maps with different values
+ *   - onlyA: Keys present only in mapA
+ *   - onlyB: Keys present only in mapB
+ *
+ * Note: Unlike the Utils.diffArrays function, this function will return
+ * { changed: [], onlyA: [], onlyB: []}
+ * if mapA === mapB
+ */
 export function diffDiffableMaps<K extends number, V>(
   mapA: DiffableMap<K, V>,
   mapB: DiffableMap<K, V>,
@@ -340,4 +525,5 @@ export function diffDiffableMaps<K extends number, V>(
     onlyB,
   };
 }
+
 export default DiffableMap;

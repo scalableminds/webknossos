@@ -180,10 +180,6 @@ describe("Compact Save Queue", () => {
       height: 92,
       depth: 12,
     });
-
-    if (skeletonActionValue == null) {
-      throw new Error("skeletonActionValue must not be null");
-    }
   });
 
   it("UpdateUserBoundingBoxActions should be not compacted for different props", () => {

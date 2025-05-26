@@ -130,6 +130,8 @@ class WKRemoteTracingStoreClient(
   def duplicateSkeletonTracing(skeletonTracingId: String,
                                newAnnotationId: ObjectId,
                                newTracingId: String,
+                               ownerId: ObjectId,
+                               requestingUserId: ObjectId,
                                editPosition: Option[Vec3Int] = None,
                                editRotation: Option[Vec3Double] = None,
                                boundingBox: Option[BoundingBox] = None): Fox[Unit] =
@@ -137,6 +139,8 @@ class WKRemoteTracingStoreClient(
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .addQueryString("newAnnotationId" -> newAnnotationId.toString)
       .addQueryString("newTracingId" -> newTracingId)
+      .addQueryString("ownerId" -> ownerId.toString)
+      .addQueryString("requestingUserId" -> requestingUserId.toString)
       .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
       .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
       .addQueryStringOptional("boundingBox", boundingBox.map(_.toLiteral))
@@ -146,6 +150,8 @@ class WKRemoteTracingStoreClient(
   def duplicateVolumeTracing(volumeTracingId: String,
                              newAnnotationId: ObjectId,
                              newTracingId: String,
+                             ownerId: ObjectId,
+                             requestingUserId: ObjectId,
                              magRestrictions: MagRestrictions = MagRestrictions.empty,
                              editPosition: Option[Vec3Int] = None,
                              editRotation: Option[Vec3Double] = None,
@@ -156,6 +162,8 @@ class WKRemoteTracingStoreClient(
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .addQueryString("newAnnotationId" -> newAnnotationId.toString)
       .addQueryString("newTracingId" -> newTracingId)
+      .addQueryString("ownerId" -> ownerId.toString)
+      .addQueryString("requestingUserId" -> requestingUserId.toString)
       .addQueryStringOptional("editPosition", editPosition.map(_.toUriLiteral))
       .addQueryStringOptional("editRotation", editRotation.map(_.toUriLiteral))
       .addQueryStringOptional("boundingBox", boundingBox.map(_.toLiteral))

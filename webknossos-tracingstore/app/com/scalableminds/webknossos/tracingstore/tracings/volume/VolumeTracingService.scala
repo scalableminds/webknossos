@@ -535,8 +535,8 @@ class VolumeTracingService @Inject()(
       editPosition: Option[Vec3Int],
       editRotation: Option[Vec3Double],
       newVersion: Long,
-      ownerId: Option[String],
-      requestingUserId: Option[String])(implicit ec: ExecutionContext, tc: TokenContext): Fox[VolumeTracing] = {
+      ownerId: String,
+      requestingUserId: String)(implicit ec: ExecutionContext, tc: TokenContext): Fox[VolumeTracing] = {
     val tracingWithBB = addBoundingBoxFromTaskIfRequired(sourceTracing, isFromTask, datasetBoundingBox)
     val tracingWithMagRestrictions = VolumeTracingMags.restrictMagList(tracingWithBB, magRestrictions)
     for {
@@ -544,8 +544,8 @@ class VolumeTracingService @Inject()(
       hasSegmentIndex <- VolumeSegmentIndexService.canHaveSegmentIndex(remoteDatastoreClient, fallbackLayer)
       userStates = Seq(
         renderUserStateForVolumeTracingIntoUserState(tracingWithMagRestrictions,
-                                                     ownerId.getOrElse(""), // TODO get rid of getOrElse("")
-                                                     requestingUserId.getOrElse("")))
+                                                     ownerId,
+                                                     requestingUserId))
       newTracing = tracingWithMagRestrictions.copy(
         createdTimestamp = System.currentTimeMillis(),
         editPosition = editPosition.map(vec3IntToProto).getOrElse(tracingWithMagRestrictions.editPosition),

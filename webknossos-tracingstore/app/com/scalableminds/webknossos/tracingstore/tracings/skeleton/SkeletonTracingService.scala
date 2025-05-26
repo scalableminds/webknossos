@@ -61,8 +61,8 @@ class SkeletonTracingService @Inject()(
                                 editRotation: Option[Vec3Double],
                                 boundingBox: Option[BoundingBox],
                                 newVersion: Long,
-                                ownerId: Option[String],
-                                requestingUserId: Option[String]): SkeletonTracing = {
+                                ownerId: String,
+                                requestingUserId: String): SkeletonTracing = {
     val taskBoundingBox = if (fromTask) {
       tracing.boundingBox.map { bb =>
         val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
@@ -70,8 +70,7 @@ class SkeletonTracingService @Inject()(
       }
     } else None
 
-    val userStates = Seq( // TODO get rid of getOrElse(""), pass ids here for all cases
-      renderUserStateForSkeletonTracingIntoUserState(tracing, requestingUserId.getOrElse(""), ownerId.getOrElse("")))
+    val userStates = Seq(renderUserStateForSkeletonTracingIntoUserState(tracing, requestingUserId, ownerId))
 
     val newTracing =
       tracing

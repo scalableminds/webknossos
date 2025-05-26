@@ -15,15 +15,8 @@ import {
   updateTreeGroupVisibility,
   updateTreeVisibility,
 } from "viewer/model/sagas/update_actions";
-import type {
-  Segment,
-  SegmentMap,
-  SkeletonTracing,
-  Tree,
-  TreeGroup,
-  TreeMap,
-  VolumeTracing,
-} from "viewer/store";
+import type { Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
+import type { Segment, SegmentMap, SkeletonTracing, VolumeTracing } from "viewer/store";
 import {
   MISSING_GROUP_ID,
   createGroupToSegmentsMap,
@@ -77,7 +70,7 @@ function buildTreeGroupHashMap(
 
 // Finds the id of the common group for the used trees in the toggleActions
 function findCommonAncestor(
-  treeIdMap: TreeMap | SegmentMap,
+  itemIdMap: TreeMap | SegmentMap,
   groupIdMap: Record<number, GroupNode>,
   toggleActions: Array<UpdateTreeVisibilityUpdateAction | UpdateSegmentVisibilityVolumeAction>,
 ): number | undefined {
@@ -100,12 +93,13 @@ function findCommonAncestor(
 
   let commonPath: number[] | null = null;
 
-  const getAncestor =
-    "getNullable" in treeIdMap
-      ? (value: UpdateSegmentVisibilityVolumeAction["value"]) => treeIdMap.getNullable(value.id)
-      : (value: UpdateTreeVisibilityUpdateAction["value"]) => treeIdMap[value.treeId];
+  const getAncestor = (itemId: number) => itemIdMap.getNullable(itemId);
   for (const toggleAction of toggleActions) {
-    const ancestorPath = getAncestorPath(getAncestor(toggleAction.value as any)?.groupId);
+    const ancestorPath = getAncestorPath(
+      getAncestor(
+        "treeId" in toggleAction.value ? toggleAction.value.treeId : toggleAction.value.id,
+      )?.groupId,
+    );
 
     if (commonPath == null) {
       commonPath = ancestorPath;
@@ -134,6 +128,7 @@ function isCommonAncestorToggler<T extends SkeletonTracing | VolumeTracing>(
   commonAncestor: number | undefined,
 ): [boolean, Array<T extends SkeletonTracing ? Tree : Segment>, number] {
   let allItemsOfAncestor: Array<Tree | Segment> = [];
+
   if (tracing.type === "skeleton") {
     const items = tracing.trees;
     const groups = tracing.treeGroups;
@@ -141,11 +136,8 @@ function isCommonAncestorToggler<T extends SkeletonTracing | VolumeTracing>(
     const groupWithSubgroups = getGroupByIdWithSubgroups(groups, commonAncestor);
     allItemsOfAncestor =
       groupWithSubgroups.length === 0
-        ? _.values(items)
-        : _.flatMap(
-            groupWithSubgroups,
-            (groupId: number): Tree[] => groupToTreesMap[groupId] || [],
-          );
+        ? Array.from(items.values())
+        : groupWithSubgroups.flatMap((groupId: number): Tree[] => groupToTreesMap[groupId] || []);
   } else {
     const items = tracing.segments;
     const groups = tracing.segmentGroups;
@@ -154,8 +146,7 @@ function isCommonAncestorToggler<T extends SkeletonTracing | VolumeTracing>(
     allItemsOfAncestor =
       groupWithSubgroups.length === 0
         ? Array.from(items.values())
-        : _.flatMap(
-            groupWithSubgroups,
+        : groupWithSubgroups.flatMap(
             (groupId: number): Segment[] => groupToTreesMap[groupId] || [],
           );
   }

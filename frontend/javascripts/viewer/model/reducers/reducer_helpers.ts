@@ -20,13 +20,12 @@ import { updateKey } from "viewer/model/helpers/deep_update";
 import type {
   Annotation,
   BoundingBoxObject,
-  TreeGroup,
-  TreeMap,
   UserBoundingBox,
   UserBoundingBoxToServer,
   WebknossosState,
 } from "viewer/store";
 import { getDisabledInfoForTools } from "../accessors/disabled_tool_accessor";
+import type { Tree, TreeGroup } from "../types/tree_types";
 
 export function convertServerBoundingBoxToBoundingBox(
   boundingBox: ServerBoundingBox,
@@ -237,12 +236,11 @@ export function applyUserStateToGroups(
   });
 }
 
-export function applyUserStateToTrees(
-  trees: TreeMap,
+export function getApplyUserStateToTreeFn(
   userState: SkeletonUserState | undefined,
-): TreeMap {
+): ((tree: Tree) => Tree) | undefined {
   if (userState == null) {
-    return trees;
+    return undefined;
   }
 
   const treeIds = userState.treeIds;
@@ -251,10 +249,10 @@ export function applyUserStateToTrees(
   const treeIdToExpanded: Record<number, boolean> = Object.fromEntries(
     _.zip(treeIds, visibilities),
   );
-  return _.mapValues(trees, (tree) => {
+  return (tree) => {
     return {
       ...tree,
       isVisible: treeIdToExpanded[tree.treeId] ?? tree.isVisible,
     };
-  });
+  };
 }

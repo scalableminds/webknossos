@@ -19,8 +19,9 @@ import Constants from "viewer/constants";
 import { getSkeletonDescriptor } from "viewer/model/accessors/skeletontracing_accessor";
 import { addTreesAndGroupsAction } from "viewer/model/actions/skeletontracing_actions";
 import { createMutableTreeMapFromTreeArray } from "viewer/model/reducers/skeletontracing_reducer_helpers";
+import type { MutableTreeMap, TreeGroup } from "viewer/model/types/tree_types";
 import { api } from "viewer/singletons";
-import type { MutableTreeMap, TreeGroup, WebknossosState } from "viewer/store";
+import type { WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import InputComponent from "viewer/view/components/input_component";
 type ProjectInfo = {

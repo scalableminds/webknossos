@@ -12,13 +12,8 @@ import {
   getTreeAndNode,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import { AllUserBoundingBoxActions } from "viewer/model/actions/annotation_actions";
-import type {
-  MutableTreeMap,
-  SkeletonTracing,
-  Tree,
-  TreeGroup,
-  WebknossosState,
-} from "viewer/store";
+import type { MutableTreeMap, Tree, TreeGroup } from "viewer/model/types/tree_types";
+import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import RemoveTreeModal from "viewer/view/remove_tree_modal";
 

@@ -1,6 +1,7 @@
 import { diffSets } from "libs/utils";
 import _ from "lodash";
-import type { TreeGroup, UserBoundingBox } from "viewer/store";
+import type { UserBoundingBox } from "viewer/store";
+import type { TreeGroup } from "../types/tree_types";
 
 function stripIsExpanded(groups: TreeGroup[]): TreeGroup[] {
   return groups.map((group) => ({

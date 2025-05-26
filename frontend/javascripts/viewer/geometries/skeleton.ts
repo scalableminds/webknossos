@@ -9,9 +9,11 @@ import NodeShader, {
   COLOR_TEXTURE_WIDTH,
 } from "viewer/geometries/materials/node_shader";
 import { getZoomValue } from "viewer/model/accessors/flycam_accessor";
+import { sum } from "viewer/model/helpers/iterator_utils";
 import { cachedDiffTrees } from "viewer/model/sagas/skeletontracing_saga";
 import type { CreateActionNode, UpdateActionNode } from "viewer/model/sagas/update_actions";
-import type { Edge, Node, SkeletonTracing, Tree, WebknossosState } from "viewer/store";
+import type { Edge, Node, Tree } from "viewer/model/types/tree_types";
+import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import Store from "viewer/throttled_store";
 
 const MAX_CAPACITY = 1000;
@@ -160,9 +162,8 @@ class Skeleton {
     this.pickingNode.remove(...this.pickingNode.children);
     const { trees } = skeletonTracing;
 
-    const nodeCount = _.sum(_.map(trees, (tree) => tree.nodes.size()));
-
-    const edgeCount = _.sum(_.map(trees, (tree) => tree.edges.size()));
+    const nodeCount = sum(trees.values().map((tree) => tree.nodes.size()));
+    const edgeCount = sum(trees.values().map((tree) => tree.edges.size()));
 
     this.treeColorTexture = new THREE.DataTexture(
       new Float32Array(COLOR_TEXTURE_WIDTH * COLOR_TEXTURE_WIDTH * 4),
@@ -200,7 +201,7 @@ class Skeleton {
     );
 
     // fill buffers with data
-    for (const tree of _.values(trees)) {
+    for (const tree of trees.values()) {
       this.createTree(tree);
     }
 
@@ -350,7 +351,7 @@ class Skeleton {
         case "createNode": {
           const { treeId, id: nodeId } = update.value;
           this.createNode(treeId, update.value);
-          const tree = skeletonTracing.trees[treeId];
+          const tree = skeletonTracing.trees.getOrThrow(treeId);
           const isBranchpoint = tree.branchPoints.find((bp) => bp.nodeId === nodeId) != null;
 
           if (isBranchpoint) {
@@ -372,7 +373,7 @@ class Skeleton {
         }
 
         case "createEdge": {
-          const tree = skeletonTracing.trees[update.value.treeId];
+          const tree = skeletonTracing.trees.getOrThrow(update.value.treeId);
           const source = tree.nodes.getOrThrow(update.value.source);
           const target = tree.nodes.getOrThrow(update.value.target);
           this.createEdge(tree.treeId, source, target);
@@ -387,7 +388,7 @@ class Skeleton {
         case "updateNode": {
           const { treeId, id, radius, position, additionalCoordinates } = update.value;
           this.updateNodeRadius(treeId, id, radius);
-          const tree = skeletonTracing.trees[treeId];
+          const tree = skeletonTracing.trees.getOrThrow(treeId);
           this.updateNodePosition(tree, id, position, additionalCoordinates);
           break;
         }
@@ -405,7 +406,7 @@ class Skeleton {
         case "updateTreeVisibility":
         case "updateTreeEdgesVisibility": {
           const { treeId } = update.value;
-          const tree = skeletonTracing.trees[treeId];
+          const tree = skeletonTracing.trees.getOrThrow(treeId);
           this.updateTreeColor(treeId, tree.color, tree.isVisible, tree.edgesAreVisible);
           break;
         }
@@ -429,11 +430,13 @@ class Skeleton {
           };
 
           const treeId = update.value.id;
-          const tree = skeletonTracing.trees[treeId];
-          const prevTree = this.prevTracing.trees[treeId];
+          const tree = skeletonTracing.trees.getOrThrow(treeId);
+          const prevTree = this.prevTracing.trees.getOrThrow(treeId);
+
           forEachCreatedOrDeletedId(prevTree.branchPoints, tree.branchPoints, (id, isCreated) => {
             this.updateNodeType(treeId, id, isCreated ? NodeTypes.BRANCH_POINT : NodeTypes.NORMAL);
           });
+
           forEachCreatedOrDeletedId(prevTree.comments, tree.comments, (id, isCreated) => {
             this.updateIsCommented(treeId, id, isCreated);
           });
@@ -471,14 +474,17 @@ class Skeleton {
     const { particleSize, overrideNodeRadius } = state.userConfiguration;
     let { activeNodeId } = skeletonTracing;
     activeNodeId = activeNodeId == null ? -1 : activeNodeId;
+
     let { activeTreeId } = skeletonTracing;
     activeTreeId = activeTreeId == null ? -1 : activeTreeId;
+
     const nodeUniforms = this.nodes.material.uniforms;
     nodeUniforms.planeZoomFactor.value = getZoomValue(state.flycam);
     nodeUniforms.overrideParticleSize.value = particleSize;
     nodeUniforms.overrideNodeRadius.value = overrideNodeRadius;
     nodeUniforms.activeTreeId.value = activeTreeId;
     nodeUniforms.activeNodeId.value = activeNodeId;
+
     const edgeUniforms = this.edges.material.uniforms;
     edgeUniforms.activeTreeId.value = activeTreeId;
     this.edges.material.linewidth = state.userConfiguration.particleSize / 4;

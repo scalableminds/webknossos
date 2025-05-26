@@ -27,17 +27,17 @@ trait Zarr3Layer extends DataLayerWithMagLocators {
 }
 
 case class Zarr3DataLayer(
-    name: String,
-    category: Category.Value,
-    boundingBox: BoundingBox,
-    elementClass: ElementClass.Value,
-    mags: List[MagLocator],
-    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-    adminViewConfiguration: Option[LayerViewConfiguration] = None,
-    coordinateTransformations: Option[List[CoordinateTransformation]] = None,
-    override val numChannels: Option[Int] = Some(1),
-    additionalAxes: Option[Seq[AdditionalAxis]] = None,
-    specialFiles: Option[SpecialFiles] = None
+                           name: String,
+                           category: Category.Value,
+                           boundingBox: BoundingBox,
+                           elementClass: ElementClass.Value,
+                           mags: List[MagLocator],
+                           defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+                           adminViewConfiguration: Option[LayerViewConfiguration] = None,
+                           coordinateTransformations: Option[List[CoordinateTransformation]] = None,
+                           override val numChannels: Option[Int] = Some(1),
+                           additionalAxes: Option[Seq[AdditionalAxis]] = None,
+                           attachments: Option[DatasetAttachments] = None
 ) extends Zarr3Layer
 
 object Zarr3DataLayer {
@@ -45,18 +45,18 @@ object Zarr3DataLayer {
 }
 
 case class Zarr3SegmentationLayer(
-    name: String,
-    boundingBox: BoundingBox,
-    elementClass: ElementClass.Value,
-    mags: List[MagLocator],
-    largestSegmentId: Option[Long] = None,
-    mappings: Option[Set[String]] = None,
-    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-    adminViewConfiguration: Option[LayerViewConfiguration] = None,
-    coordinateTransformations: Option[List[CoordinateTransformation]] = None,
-    override val numChannels: Option[Int] = Some(1),
-    additionalAxes: Option[Seq[AdditionalAxis]] = None,
-    specialFiles: Option[SpecialFiles] = None
+                                   name: String,
+                                   boundingBox: BoundingBox,
+                                   elementClass: ElementClass.Value,
+                                   mags: List[MagLocator],
+                                   largestSegmentId: Option[Long] = None,
+                                   mappings: Option[Set[String]] = None,
+                                   defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+                                   adminViewConfiguration: Option[LayerViewConfiguration] = None,
+                                   coordinateTransformations: Option[List[CoordinateTransformation]] = None,
+                                   override val numChannels: Option[Int] = Some(1),
+                                   additionalAxes: Option[Seq[AdditionalAxis]] = None,
+                                   attachments: Option[DatasetAttachments] = None
 ) extends SegmentationLayer
     with Zarr3Layer
 

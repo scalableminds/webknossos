@@ -325,10 +325,10 @@ class DataSourceService @Inject()(
       JsonHelper.parseFromFileAs[DataSource](propertiesFile, path) match {
         case Full(dataSource) =>
           if (dataSource.dataLayers.nonEmpty) {
-            val dataSourceWithSpecialFiles = dataSource.copy(
-              dataLayers = scanForSpecialFiles(path, dataSource)
+            val dataSourceWithAttachments = dataSource.copy(
+              dataLayers = scanForAttachedFiles(path, dataSource)
             )
-            dataSourceWithSpecialFiles.copy(id)
+            dataSourceWithAttachments.copy(id)
           } else
             UnusableDataSource(id, "Error: Zero layer Dataset", Some(dataSource.scale), Some(Json.toJson(dataSource)))
         case e =>
@@ -341,18 +341,20 @@ class DataSourceService @Inject()(
     }
   }
 
-  private def scanForSpecialFiles(dataSourcePath: Path, dataSource: DataSource) =
+  private def scanForAttachedFiles(dataSourcePath: Path, dataSource: DataSource) =
     dataSource.dataLayers.map(dataLayer => {
       val dataLayerPath = dataSourcePath.resolve(dataLayer.name)
       val discoveredMeshFiles = MeshFileInfo.scanForMeshFiles(dataLayerPath)
       val discoveredAgglomerateFiles = AgglomerateFileInfo.scanForAgglomerateFiles(dataLayerPath)
       val discoveredSegmentIndexFile = SegmentIndexFileInfo.scanForSegmentIndexFiles(dataLayerPath)
       val discoveredConnectomeFiles = ConnectomeFileInfo.scanForConnectomeFiles(dataLayerPath)
-      dataLayer.withSpecialFiles(
-        SpecialFiles(discoveredMeshFiles,
-                     discoveredAgglomerateFiles,
-                     discoveredSegmentIndexFile,
-                     discoveredConnectomeFiles))
+      val discoveredCumsumFiles = CumsumFileInfo.scanForCumsumFiles(dataLayerPath)
+      dataLayer.withAttachments(
+        DatasetAttachments(discoveredMeshFiles,
+                    discoveredAgglomerateFiles,
+                    discoveredSegmentIndexFile,
+                    discoveredConnectomeFiles,
+                    discoveredCumsumFiles))
     })
 
   def invalidateVaultCache(dataSource: InboxDataSource, dataLayerName: Option[String]): Option[Int] =

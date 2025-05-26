@@ -75,17 +75,17 @@ class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit v
 }
 
 case class VolumeTracingLayer(
-    name: String,
-    annotationId: String,
-    volumeTracingService: VolumeTracingService,
-    temporaryTracingService: TemporaryTracingService,
-    isTemporaryTracing: Boolean = false,
-    includeFallbackDataIfAvailable: Boolean = false,
-    tracing: VolumeTracing,
-    tokenContext: TokenContext,
-    additionalAxes: Option[Seq[AdditionalAxis]],
-    specialFiles: Option[SpecialFiles] = None,
-    volumeDataStore: FossilDBClient,
+                               name: String,
+                               annotationId: String,
+                               volumeTracingService: VolumeTracingService,
+                               temporaryTracingService: TemporaryTracingService,
+                               isTemporaryTracing: Boolean = false,
+                               includeFallbackDataIfAvailable: Boolean = false,
+                               tracing: VolumeTracing,
+                               tokenContext: TokenContext,
+                               additionalAxes: Option[Seq[AdditionalAxis]],
+                               attachments: Option[DatasetAttachments] = None,
+                               volumeDataStore: FossilDBClient,
 )(implicit val ec: ExecutionContext)
     extends SegmentationLayer
     with ProtoGeometryImplicits

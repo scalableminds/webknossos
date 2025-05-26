@@ -162,15 +162,14 @@ CREATE TABLE webknossos.dataset_layer_additionalAxes(
    index INT NOT NULL
 );
 
-CREATE TYPE webknossos.SPECIAL_FILE_TYPE AS ENUM ('agglomerate', 'connectome', 'segmentIndex', 'mesh');
-CREATE TYPE webknossos.SPECIAL_FILE_DATAFORMAT AS ENUM ('hdf5', 'zarr3');
-CREATE TABLE webknossos.dataset_layer_special_files(
+CREATE TYPE webknossos.ATTACHMENT_FILE_TYPE AS ENUM ('agglomerate', 'connectome', 'segmentIndex', 'mesh');
+CREATE TYPE webknossos.ATTACHMENT_DATAFORMAT AS ENUM ('hdf5', 'zarr3', 'json');
+CREATE TABLE webknossos.dataset_layer_attachments(
   _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
    layerName TEXT NOT NULL,
    path TEXT NOT NULL,
-   type webknossos.SPECIAL_FILE_TYPE NOT NULL,
-   dataFormat webknossos.SPECIAL_FILE_DATAFORMAT NOT NULL,
-   cumsumPath TEXT
+   type webknossos.ATTACHMENT_FILE_TYPE NOT NULL,
+   dataFormat webknossos.ATTACHMENT_DATAFORMAT NOT NULL
 );
 
 CREATE TABLE webknossos.dataset_allowedTeams(

@@ -91,13 +91,13 @@ const descriptionFns: Record<
   updateUserBoundingBoxesInSkeletonTracing: (
     firstAction: LEGACY_UpdateUserBoundingBoxesInSkeletonTracingUpdateAction,
   ): Description => ({
-    description: `Updated bounding boxes ${firstAction.value.boundingBoxes.map((bbox) => bbox.id).join()}.`,
+    description: `Updated bounding boxes ${firstAction.value.boundingBoxes.map((bbox) => bbox.id).join(", ")}.`,
     icon: <CodepenOutlined />,
   }),
   updateUserBoundingBoxesInVolumeTracing: (
     firstAction: LEGACY_UpdateUserBoundingBoxesInVolumeTracingUpdateAction,
   ): Description => ({
-    description: `Updated bounding boxes ${firstAction.value.boundingBoxes.map((bbox) => bbox.id).join()}.`,
+    description: `Updated bounding boxes ${firstAction.value.boundingBoxes.map((bbox) => bbox.id).join(", ")}.`,
     icon: <CodepenOutlined />,
   }),
   addUserBoundingBoxInSkeletonTracing: (

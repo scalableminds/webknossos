@@ -20,7 +20,7 @@ object AccessMode extends ExtendedEnumeration {
 
 object AccessResourceType extends ExtendedEnumeration {
   type AccessResourceType = Value
-  val datasource, tracing, annotation, webknossos, jobExport = Value
+  val datasource, dataset, tracing, annotation, webknossos, jobExport = Value
 }
 
 case class UserAccessAnswer(granted: Boolean, msg: Option[String] = None)
@@ -38,6 +38,10 @@ object UserAccessRequest {
     UserAccessRequest(DataSourceId("", organizationId), AccessResourceType.datasource, AccessMode.administrate)
   def readDataSources(dataSourceId: DataSourceId): UserAccessRequest =
     UserAccessRequest(dataSourceId, AccessResourceType.datasource, AccessMode.read)
+
+  def readDataset(datasetId: String): UserAccessRequest =
+    UserAccessRequest(DataSourceId(datasetId, ""), AccessResourceType.dataset, AccessMode.read)
+
   def writeDataSource(dataSourceId: DataSourceId): UserAccessRequest =
     UserAccessRequest(dataSourceId, AccessResourceType.datasource, AccessMode.write)
 

@@ -260,6 +260,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     }
   }
 
+  // TODO: This needs to be extended to include new properties, also mags
   def dataSourceFor(dataset: Dataset): Fox[InboxDataSource] =
     (for {
       dataLayers <- datasetDataLayerDAO.findAllForDataset(dataset._id)
@@ -272,6 +273,23 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       else
         Fox.successful(UnusableDataSource[DataLayer](dataSourceId, dataset.status, dataset.voxelSize))
     }).flatten
+
+
+  // Returns a JSON that includes all properties of the data source and of data layers to read the dataset
+  def fullDataSourceFor(dataset: Dataset) : Fox[InboxDataSource] =
+    (for {
+      dataLayers <- datasetDataLayerDAO.findAllForDatasetWithMags(dataset._id)
+      dataSourceId = DataSourceId(dataset.directoryName, dataset._organization)
+    } yield {
+      if (dataset.isUsable)
+        for {
+          scale <- dataset.voxelSize.toFox ?~> "dataset.source.usableButNoScale"
+        } yield GenericDataSource[DataLayer](dataSourceId, dataLayers, scale)
+      else
+        Fox.successful(UnusableDataSource[DataLayer](dataSourceId, dataset.status, dataset.voxelSize))
+    }
+
+  ).flatten
 
   private def logoUrlFor(dataset: Dataset, organization: Option[Organization]): Fox[String] =
     dataset.logoUrl match {

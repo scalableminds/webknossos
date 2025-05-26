@@ -1814,6 +1814,7 @@ describe("SkeletonTracing", () => {
     expect(ids).toEqual([4]);
     expect(state.annotation.skeleton?.trees.size()).toBe(1);
     expect(state.annotation.skeleton?.trees.getNullable(4)).toBeDefined();
+    expect(state.annotation.skeleton?.trees.getNullable(4)?.treeId).toBe(4);
   });
 
   it("should add a new tree with addTreesAndGroupsAction (with id relabeling)", () => {
@@ -1833,6 +1834,7 @@ describe("SkeletonTracing", () => {
     expect(ids).toEqual([3]);
     expect(state.annotation.skeleton?.trees.size()).toBe(3);
     expect(state.annotation.skeleton?.trees.getNullable(3)).toBeDefined();
+    expect(state.annotation.skeleton?.trees.getNullable(3)?.treeId).toBe(3);
     expect(state.annotation.skeleton?.trees.getNullable(8_000_000)).toBeUndefined();
   });
 });

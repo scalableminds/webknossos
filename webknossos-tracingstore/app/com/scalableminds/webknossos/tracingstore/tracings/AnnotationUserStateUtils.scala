@@ -5,9 +5,11 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, 
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeUserStateProto}
 import com.scalableminds.webknossos.datastore.helpers.SkeletonTracingDefaults
 import com.scalableminds.webknossos.datastore.models.annotation.FetchedAnnotationLayer
+import com.scalableminds.webknossos.tracingstore.tracings.GroupUtils.FunctionalGroupMapping
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.TreeUtils.TreeIdMap
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
 
-trait AnnotationUserStateUtils {
+trait AnnotationUserStateUtils extends BoundingBoxMerger {
 
   protected def renderUserState(annotationProto: AnnotationProto,
                                 annotationLayers: List[FetchedAnnotationLayer],
@@ -225,5 +227,137 @@ trait AnnotationUserStateUtils {
         segmentVisibilities = mergedSegmentVisibilityMap.map(_._2)
       )
     }
+  }
+
+  // Merges user states of multiple skeleton tracings, respecting mapped ids of the tracing elements. The user set is preserved
+  protected def mergeSkeletonUserStates(tracingAUserStates: Seq[SkeletonUserStateProto],
+                                        tracingBUserStates: Seq[SkeletonUserStateProto],
+                                        groupMapping: FunctionalGroupMapping,
+                                        treeIdMapA: TreeIdMap,
+                                        treeIdMapB: TreeIdMap,
+                                        bboxIdMapA: UserBboxIdMap,
+                                        bboxIdMapB: UserBboxIdMap): Seq[SkeletonUserStateProto] = {
+    val tracingAUserStatesMapped =
+      tracingAUserStates.map(appylIdMappingsOnSkeletonUserState(_, groupMapping, treeIdMapA, bboxIdMapA))
+    val tracingBUserStatesMapped = tracingBUserStates
+      .map(userState => userState.copy(treeIds = userState.treeIds.map(treeId => treeIdMapB.getOrElse(treeId, treeId))))
+      .map(applyBboxIdMapOnSkeletonUserState(_, bboxIdMapB))
+
+    val byUserId = scala.collection.mutable.Map[String, SkeletonUserStateProto]()
+    tracingAUserStatesMapped.foreach { userState =>
+      byUserId.put(userState.userId, userState)
+    }
+    tracingBUserStatesMapped.foreach { userState =>
+      byUserId.get(userState.userId) match {
+        case Some(existingUserState) =>
+          byUserId.put(userState.userId, mergeTwoSkeletonUserStates(existingUserState, userState))
+        case None => byUserId.put(userState.userId, userState)
+      }
+    }
+
+    byUserId.values.toSeq
+  }
+
+  private def mergeTwoSkeletonUserStates(tracingAUserState: SkeletonUserStateProto,
+                                         tracingBUserState: SkeletonUserStateProto): SkeletonUserStateProto =
+    SkeletonUserStateProto(
+      userId = tracingAUserState.userId,
+      activeNodeId = tracingAUserState.activeNodeId,
+      treeGroupIds = tracingAUserState.treeGroupIds ++ tracingBUserState.treeGroupIds,
+      treeGroupExpandedStates = tracingAUserState.treeGroupExpandedStates ++ tracingBUserState.treeGroupExpandedStates,
+      boundingBoxIds = tracingAUserState.boundingBoxIds ++ tracingBUserState.boundingBoxIds,
+      boundingBoxVisibilities = tracingAUserState.boundingBoxVisibilities ++ tracingBUserState.boundingBoxVisibilities,
+      treeIds = tracingAUserState.treeIds ++ tracingBUserState.treeIds,
+      treeVisibilities = tracingAUserState.treeVisibilities ++ tracingBUserState.treeVisibilities
+    )
+
+  private def appylIdMappingsOnSkeletonUserState(userState: SkeletonUserStateProto,
+                                                 groupMapping: FunctionalGroupMapping,
+                                                 treeIdMapA: TreeIdMap,
+                                                 bboxIdMapA: Map[Int, Int]): SkeletonUserStateProto =
+    applyBboxIdMapOnSkeletonUserState(userState, bboxIdMapA).copy(
+      treeGroupIds = userState.treeGroupIds.map(groupMapping),
+      treeIds = userState.treeIds.map(treeId => treeIdMapA.getOrElse(treeId, treeId))
+    )
+
+  private def applyBboxIdMapOnSkeletonUserState(userState: SkeletonUserStateProto,
+                                                bboxIdMap: Map[Int, Int]): SkeletonUserStateProto = {
+    val newIdsAndVisibilities = userState.boundingBoxIds.zip(userState.boundingBoxVisibilities).flatMap {
+      case (boundingBoxId, boundingBoxVisibility) =>
+        bboxIdMap.get(boundingBoxId) match {
+          case Some(newId) => Some((newId, boundingBoxVisibility))
+          case None        => None
+        }
+    }
+    userState.copy(
+      boundingBoxIds = newIdsAndVisibilities.map(_._1),
+      boundingBoxVisibilities = newIdsAndVisibilities.map(_._2)
+    )
+  }
+
+  // Merges user states of multiple skeleton tracings, respecting mapped ids of the tracing elements. The user set is preserved
+  protected def mergeVolumeUserStates(tracingAUserStates: Seq[VolumeUserStateProto],
+                                      tracingBUserStates: Seq[VolumeUserStateProto],
+                                      groupMappingA: FunctionalGroupMapping,
+                                      segmentIdMapB: Map[Long, Long],
+                                      bboxIdMapA: UserBboxIdMap,
+                                      bboxIdMapB: UserBboxIdMap): Seq[VolumeUserStateProto] = {
+    val tracingAUserStatesMapped =
+      tracingAUserStates.map(appylIdMappingsOnVolumeUserState(_, groupMappingA, bboxIdMapA))
+    val tracingBUserStatesMapped =
+      tracingBUserStates
+        .map(userState =>
+          userState.copy(segmentIds = userState.segmentIds.map(segmentId =>
+            segmentIdMapB.getOrElse(segmentId, segmentId))))
+        .map(applyBboxIdMapOnVolumeUserState(_, bboxIdMapB))
+
+    val byUserId = scala.collection.mutable.Map[String, VolumeUserStateProto]()
+    tracingAUserStatesMapped.foreach { userState =>
+      byUserId.put(userState.userId, userState)
+    }
+    tracingBUserStatesMapped.foreach { userState =>
+      byUserId.get(userState.userId) match {
+        case Some(existingUserState) =>
+          byUserId.put(userState.userId, mergeTwoVolumeUserStates(existingUserState, userState))
+        case None => byUserId.put(userState.userId, userState)
+      }
+    }
+
+    byUserId.values.toSeq
+  }
+
+  private def mergeTwoVolumeUserStates(tracingAUserState: VolumeUserStateProto,
+                                       tracingBUserState: VolumeUserStateProto): VolumeUserStateProto =
+    VolumeUserStateProto(
+      userId = tracingAUserState.userId,
+      activeSegmentId = tracingAUserState.activeSegmentId,
+      segmentGroupIds = tracingAUserState.segmentGroupIds ++ tracingBUserState.segmentGroupIds,
+      segmentGroupExpandedStates = tracingAUserState.segmentGroupExpandedStates ++ tracingBUserState.segmentGroupExpandedStates,
+      boundingBoxIds = tracingAUserState.boundingBoxIds ++ tracingBUserState.boundingBoxIds,
+      boundingBoxVisibilities = tracingAUserState.boundingBoxVisibilities ++ tracingBUserState.boundingBoxVisibilities,
+      segmentIds = tracingAUserState.segmentIds ++ tracingBUserState.segmentIds,
+      segmentVisibilities = tracingAUserState.segmentVisibilities ++ tracingBUserState.segmentVisibilities
+    )
+
+  private def appylIdMappingsOnVolumeUserState(userStateA: VolumeUserStateProto,
+                                               groupMappingA: FunctionalGroupMapping,
+                                               bboxIdMapA: Map[Int, Int]): VolumeUserStateProto =
+    applyBboxIdMapOnVolumeUserState(userStateA, bboxIdMapA).copy(
+      segmentGroupIds = userStateA.segmentGroupIds.map(groupMappingA)
+    )
+
+  private def applyBboxIdMapOnVolumeUserState(userState: VolumeUserStateProto,
+                                              bboxIdMap: Map[Int, Int]): VolumeUserStateProto = {
+    val newIdsAndVisibilities = userState.boundingBoxIds.zip(userState.boundingBoxVisibilities).flatMap {
+      case (boundingBoxId, boundingBoxVisibility) =>
+        bboxIdMap.get(boundingBoxId) match {
+          case Some(newId) => Some((newId, boundingBoxVisibility))
+          case None        => None
+        }
+    }
+    userState.copy(
+      boundingBoxIds = newIdsAndVisibilities.map(_._1),
+      boundingBoxVisibilities = newIdsAndVisibilities.map(_._2)
+    )
   }
 }

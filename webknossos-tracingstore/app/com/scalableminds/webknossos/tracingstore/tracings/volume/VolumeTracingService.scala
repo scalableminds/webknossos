@@ -8,7 +8,7 @@ import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeUserStateProto}
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
@@ -20,7 +20,6 @@ import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataReq
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.mesh.{AdHocMeshRequest, AdHocMeshService, AdHocMeshServiceHolder}
 import com.scalableminds.webknossos.tracingstore.files.TsTempFileService
-import com.scalableminds.webknossos.tracingstore.tracings.GroupUtils.FunctionalGroupMapping
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
@@ -749,7 +748,12 @@ class VolumeTracingService @Inject()(
                                                                                      tracingA.userBoundingBoxes,
                                                                                      tracingB.userBoundingBoxes)
     val userStates =
-      mergeUserStates(tracingA.userStates, tracingB.userStates, groupMappingA, segmentIdMapB, bboxIdMapA, bboxIdMapB)
+      mergeVolumeUserStates(tracingA.userStates,
+                            tracingB.userStates,
+                            groupMappingA,
+                            segmentIdMapB,
+                            bboxIdMapA,
+                            bboxIdMapB)
     for {
       mergedAdditionalAxes <- AdditionalAxis.mergeAndAssertSameAdditionalAxes(
         Seq(tracingA, tracingB).map(t => AdditionalAxis.fromProtosAsOpt(t.additionalAxes)))
@@ -776,70 +780,6 @@ class VolumeTracingService @Inject()(
         additionalAxes = AdditionalAxis.toProto(mergedAdditionalAxes),
         userStates = userStates
       )
-  }
-
-  private def mergeUserStates(tracingAUserStates: Seq[VolumeUserStateProto],
-                              tracingBUserStates: Seq[VolumeUserStateProto],
-                              groupMapping: FunctionalGroupMapping,
-                              segmentIdMapB: Map[Long, Long],
-                              bboxIdMapA: UserBboxIdMap,
-                              bboxIdMapB: UserBboxIdMap): Seq[VolumeUserStateProto] = {
-    val tracingAUserStatesMapped =
-      tracingAUserStates.map(appylIdMappingsOnUserState(_, groupMapping, bboxIdMapA))
-    val tracingBUserStatesMapped =
-      tracingBUserStates
-        .map(userState =>
-          userState.copy(segmentIds = userState.segmentIds.map(segmentId =>
-            segmentIdMapB.getOrElse(segmentId, segmentId))))
-        .map(applyBboxIdMapOnUserState(_, bboxIdMapB))
-
-    val byUserId = scala.collection.mutable.Map[String, VolumeUserStateProto]()
-    tracingAUserStatesMapped.foreach { userState =>
-      byUserId.put(userState.userId, userState)
-    }
-    tracingBUserStatesMapped.foreach { userState =>
-      byUserId.get(userState.userId) match {
-        case Some(existingUserState) => byUserId.put(userState.userId, mergeTwoUserStates(existingUserState, userState))
-        case None                    => byUserId.put(userState.userId, userState)
-      }
-    }
-
-    byUserId.values.toSeq
-  }
-
-  private def mergeTwoUserStates(tracingAUserState: VolumeUserStateProto,
-                                 tracingBUserState: VolumeUserStateProto): VolumeUserStateProto =
-    VolumeUserStateProto(
-      userId = tracingAUserState.userId,
-      activeSegmentId = tracingAUserState.activeSegmentId,
-      segmentGroupIds = tracingAUserState.segmentGroupIds ++ tracingBUserState.segmentGroupIds,
-      segmentGroupExpandedStates = tracingAUserState.segmentGroupExpandedStates ++ tracingBUserState.segmentGroupExpandedStates,
-      boundingBoxIds = tracingAUserState.boundingBoxIds ++ tracingBUserState.boundingBoxIds,
-      boundingBoxVisibilities = tracingAUserState.boundingBoxVisibilities ++ tracingBUserState.boundingBoxVisibilities,
-      segmentIds = tracingAUserState.segmentIds ++ tracingBUserState.segmentIds,
-      segmentVisibilities = tracingAUserState.segmentVisibilities ++ tracingBUserState.segmentVisibilities
-    )
-
-  private def appylIdMappingsOnUserState(userState: VolumeUserStateProto,
-                                         groupMapping: FunctionalGroupMapping,
-                                         bboxIdMapA: Map[Int, Int]): VolumeUserStateProto =
-    applyBboxIdMapOnUserState(userState, bboxIdMapA).copy(
-      segmentGroupIds = userState.segmentGroupIds.map(groupMapping)
-    )
-
-  private def applyBboxIdMapOnUserState(userState: VolumeUserStateProto,
-                                        bboxIdMap: Map[Int, Int]): VolumeUserStateProto = {
-    val newIdsAndVisibilities = userState.boundingBoxIds.zip(userState.boundingBoxVisibilities).flatMap {
-      case (boundingBoxId, boundingBoxVisibility) =>
-        bboxIdMap.get(boundingBoxId) match {
-          case Some(newId) => Some((newId, boundingBoxVisibility))
-          case None        => None
-        }
-    }
-    userState.copy(
-      boundingBoxIds = newIdsAndVisibilities.map(_._1),
-      boundingBoxVisibilities = newIdsAndVisibilities.map(_._2)
-    )
   }
 
   private def combineLargestSegmentIdsByMaxDefined(aOpt: Option[Long], bOpt: Option[Long]): Option[Long] =

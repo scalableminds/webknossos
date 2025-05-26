@@ -3,13 +3,11 @@ package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonUserStateProto, TreeBody}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, TreeBody}
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
-import com.scalableminds.webknossos.tracingstore.tracings.GroupUtils.FunctionalGroupMapping
 import com.scalableminds.webknossos.tracingstore.tracings._
-import com.scalableminds.webknossos.tracingstore.tracings.skeleton.TreeUtils.TreeIdMap
 import net.liftweb.common.{Box, Full}
 
 import scala.concurrent.ExecutionContext
@@ -119,13 +117,13 @@ class SkeletonTracingService @Inject()(
                                                                              tracingB.userBoundingBox,
                                                                              tracingA.userBoundingBoxes,
                                                                              tracingB.userBoundingBoxes)
-      userStates = mergeUserStates(tracingA.userStates,
-                                   tracingB.userStates,
-                                   groupMappingA,
-                                   treeMappingA,
-                                   treeMappingB,
-                                   bboxIdMapA,
-                                   bboxIdMapB)
+      userStates = mergeSkeletonUserStates(tracingA.userStates,
+                                           tracingB.userStates,
+                                           groupMappingA,
+                                           treeMappingA,
+                                           treeMappingB,
+                                           bboxIdMapA,
+                                           bboxIdMapB)
     } yield
       tracingA.copy(
         trees = mergedTrees,
@@ -136,70 +134,6 @@ class SkeletonTracingService @Inject()(
         additionalAxes = AdditionalAxis.toProto(mergedAdditionalAxes),
         userStates = userStates
       )
-
-  private def mergeUserStates(tracingAUserStates: Seq[SkeletonUserStateProto],
-                              tracingBUserStates: Seq[SkeletonUserStateProto],
-                              groupMapping: FunctionalGroupMapping,
-                              treeIdMapA: TreeIdMap,
-                              treeIdMapB: TreeIdMap,
-                              bboxIdMapA: UserBboxIdMap,
-                              bboxIdMapB: UserBboxIdMap): Seq[SkeletonUserStateProto] = {
-    val tracingAUserStatesMapped =
-      tracingAUserStates.map(appylIdMappingsOnUserState(_, groupMapping, treeIdMapA, bboxIdMapA))
-    val tracingBUserStatesMapped = tracingBUserStates
-      .map(userState => userState.copy(treeIds = userState.treeIds.map(treeId => treeIdMapB.getOrElse(treeId, treeId))))
-      .map(applyBboxIdMapOnUserState(_, bboxIdMapB))
-
-    val byUserId = scala.collection.mutable.Map[String, SkeletonUserStateProto]()
-    tracingAUserStatesMapped.foreach { userState =>
-      byUserId.put(userState.userId, userState)
-    }
-    tracingBUserStatesMapped.foreach { userState =>
-      byUserId.get(userState.userId) match {
-        case Some(existingUserState) => byUserId.put(userState.userId, mergeTwoUserStates(existingUserState, userState))
-        case None                    => byUserId.put(userState.userId, userState)
-      }
-    }
-
-    byUserId.values.toSeq
-  }
-
-  private def mergeTwoUserStates(tracingAUserState: SkeletonUserStateProto,
-                                 tracingBUserState: SkeletonUserStateProto): SkeletonUserStateProto =
-    SkeletonUserStateProto(
-      userId = tracingAUserState.userId,
-      activeNodeId = tracingAUserState.activeNodeId,
-      treeGroupIds = tracingAUserState.treeGroupIds ++ tracingBUserState.treeGroupIds,
-      treeGroupExpandedStates = tracingAUserState.treeGroupExpandedStates ++ tracingBUserState.treeGroupExpandedStates,
-      boundingBoxIds = tracingAUserState.boundingBoxIds ++ tracingBUserState.boundingBoxIds,
-      boundingBoxVisibilities = tracingAUserState.boundingBoxVisibilities ++ tracingBUserState.boundingBoxVisibilities,
-      treeIds = tracingAUserState.treeIds ++ tracingBUserState.treeIds,
-      treeVisibilities = tracingAUserState.treeVisibilities ++ tracingBUserState.treeVisibilities
-    )
-
-  private def appylIdMappingsOnUserState(userState: SkeletonUserStateProto,
-                                         groupMapping: FunctionalGroupMapping,
-                                         treeIdMapA: TreeIdMap,
-                                         bboxIdMapA: Map[Int, Int]): SkeletonUserStateProto =
-    applyBboxIdMapOnUserState(userState, bboxIdMapA).copy(
-      treeGroupIds = userState.treeGroupIds.map(groupMapping),
-      treeIds = userState.treeIds.map(treeId => treeIdMapA.getOrElse(treeId, treeId))
-    )
-
-  private def applyBboxIdMapOnUserState(userState: SkeletonUserStateProto,
-                                        bboxIdMap: Map[Int, Int]): SkeletonUserStateProto = {
-    val newIdsAndVisibilities = userState.boundingBoxIds.zip(userState.boundingBoxVisibilities).flatMap {
-      case (boundingBoxId, boundingBoxVisibility) =>
-        bboxIdMap.get(boundingBoxId) match {
-          case Some(newId) => Some((newId, boundingBoxVisibility))
-          case None        => None
-        }
-    }
-    userState.copy(
-      boundingBoxIds = newIdsAndVisibilities.map(_._1),
-      boundingBoxVisibilities = newIdsAndVisibilities.map(_._2)
-    )
-  }
 
   // Can be removed again when https://github.com/scalableminds/webknossos/issues/5009 is fixed
   // Note that this is only used for freshly uploaded annotations, so there is no user state that would have to be mapped with the id changes

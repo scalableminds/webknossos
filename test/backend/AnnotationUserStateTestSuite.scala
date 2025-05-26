@@ -2,6 +2,7 @@ package backend
 
 import com.scalableminds.webknossos.datastore.SkeletonTracing
 import com.scalableminds.webknossos.tracingstore.tracings.AnnotationUserStateUtils
+import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
 import org.scalatestplus.play.PlaySpec
 
 class AnnotationUserStateTestSuite extends PlaySpec with AnnotationUserStateUtils {
@@ -59,4 +60,44 @@ class AnnotationUserStateTestSuite extends PlaySpec with AnnotationUserStateUtil
     assert(renderedUserState.treeGroupExpandedStates == Seq.empty)
   }
 
+  "volume user states merging" should {
+    "respect id mapping" in {
+      val tracingAUserStates = Seq(
+        VolumeTracingDefaults
+          .emptyUserState("userA")
+          .copy(
+            segmentIds = Seq(1),
+            segmentVisibilities = Seq(true),
+            segmentGroupIds = Seq(1),
+            segmentGroupExpandedStates = Seq(true)
+          ))
+      val tracingBUserStates = Seq(
+        VolumeTracingDefaults
+          .emptyUserState("userA")
+          .copy(
+            segmentIds = Seq(1),
+            segmentVisibilities = Seq(false),
+            segmentGroupIds = Seq(1),
+            segmentGroupExpandedStates = Seq(false)
+          ))
+
+      val segmentIdMapB = Map((1L, 2L))
+      val mergedUserStates = mergeVolumeUserStates(tracingAUserStates,
+                                                   tracingBUserStates,
+                                                   groupMappingA = (groupId: Int) => groupId + 5,
+                                                   segmentIdMapB,
+                                                   Map.empty,
+                                                   Map.empty)
+      assert(
+        mergedUserStates == Seq(
+          VolumeTracingDefaults
+            .emptyUserState("userA")
+            .copy(
+              segmentIds = Seq(1L, 2L),
+              segmentVisibilities = Seq(true, false),
+              segmentGroupIds = Seq(6, 1),
+              segmentGroupExpandedStates = Seq(true, false),
+            )))
+    }
+  }
 }

@@ -39,8 +39,8 @@ import {
   toggleInactiveTreesAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import { getMaximumGroupId } from "viewer/model/reducers/skeletontracing_reducer_helpers";
+import type { Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import { Store, api } from "viewer/singletons";
-import type { Tree, TreeGroup, TreeMap } from "viewer/store";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
 import {
   GroupTypeEnum,
@@ -77,8 +77,8 @@ export function renderTreeNode(
   hideContextMenu: () => void,
   node: TreeNode,
 ): React.ReactNode {
-  const tree = props.trees[node.id];
-  if (!tree) return null;
+  const tree = props.trees.getNullable(node.id);
+  if (tree == null) return null;
 
   const maybeProofreadingIcon =
     tree.type === TreeTypeEnum.AGGLOMERATE ? (
@@ -295,9 +295,10 @@ const createMenuForTreeGroup = (
   }
 
   function setAllTreesColor(color: Vector3) {
-    const setTreeColorActions = Object.values(props.trees).map((tree) =>
-      setTreeColorAction(tree.treeId, color),
-    );
+    const setTreeColorActions = props.trees
+      .values()
+      .map((tree) => setTreeColorAction(tree.treeId, color))
+      .toArray();
     onBatchActions(setTreeColorActions, "SET_TREE_COLOR");
   }
 

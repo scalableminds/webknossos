@@ -31,6 +31,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Updated to Typescript from version `5.5` to `5.8`. [#8613](https://github.com/scalableminds/webknossos/pull/8613)
 - Updated Voxelytics log streaming to also include the `log_path` attribute. [#8615](https://github.com/scalableminds/webknossos/pull/8615)
 - When creating or uploading a non-task volume annotation layer with a fallback segmentation layer, the annotation layer’s bounding box will now be limited to that layer’s, instead of the whole dataset’s. [#7580](https://github.com/scalableminds/webknossos/pull/7580)
+- Refactored the `skeletonTracing.TreeMap` structure to use `DiffableMap` type. [#8626](https://github.com/scalableminds/webknossos/pull/8626)
 
 ### Fixed
 - When selecting a skeleton node in a viewport, its tree is focused and scrolled to in the skeleton tab, even if its parent group was collapsed before. [#8585](https://github.com/scalableminds/webknossos/pull/8585)
@@ -43,6 +44,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a rare bug where download requests would terminate without sending the whole annotation. [#8624](https://github.com/scalableminds/webknossos/pull/8624)
 - Fixed that deletion of dataset would lead to an error. [#8639](https://github.com/scalableminds/webknossos/pull/8639)
 - Fixed a bug where merging annotations with large tree IDs could lead to an error. [#8643](https://github.com/scalableminds/webknossos/pull/8643)
+- Fixed that the segment stats were sometimes not displayed in the context menu. [#8645](https://github.com/scalableminds/webknossos/pull/8645)
+- Fixed a bug in zarr streaming where directly after the datastore startup, chunk responses would have status 404 (leading zarr clients to fill with fill_value). Now it will yield status 503, so that clients can retry or escalate this as an error. [#8644](https://github.com/scalableminds/webknossos/pull/8644)
 
 ### Removed
 - The old "Selective Segment Visibility" feature that allowed to only see the active and the hovered segment was removed. From now on the visibility of segments can be controlled with checkboxes in the segment list and with the "Hide unlisted segments" toggle in the layer settings. [#8546](https://github.com/scalableminds/webknossos/pull/8546)

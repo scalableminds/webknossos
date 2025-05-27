@@ -7,7 +7,7 @@ import { document } from "libs/window";
 import { useCallback } from "react";
 import { NODE_ID_REF_REGEX, POSITION_REF_REGEX } from "viewer/constants";
 import { setActiveNodeAction } from "viewer/model/actions/skeletontracing_actions";
-import type { CommentType } from "viewer/store";
+import type { CommentType } from "viewer/model/types/tree_types";
 import Store from "viewer/store";
 import { MarkdownWrapper } from "viewer/view/components/markdown_modal";
 

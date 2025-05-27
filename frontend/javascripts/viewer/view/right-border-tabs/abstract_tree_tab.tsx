@@ -29,7 +29,7 @@ const AbstractTreeTab: React.FC<EmptyObject> = () => {
       if (canvas) {
         nodeListRef.current = AbstractTreeRenderer.drawTree(
           canvas,
-          activeTreeId != null ? trees[activeTreeId] : null,
+          activeTreeId != null ? trees.getNullable(activeTreeId) : null,
           activeNodeId,
           [canvas.offsetWidth, canvas.offsetHeight],
         );

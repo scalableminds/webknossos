@@ -51,7 +51,7 @@ export const getConstructorForElementClass = (
 };
 
 export function uint8ToTypedBuffer(
-  arrayBuffer: Uint8Array | null | undefined,
+  arrayBuffer: Uint8Array<ArrayBuffer> | null | undefined,
   elementClass: ElementClass,
 ) {
   const [TypedArrayClass, channelCount] = getConstructorForElementClass(elementClass);

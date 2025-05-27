@@ -163,20 +163,17 @@ import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer
 import { getMaximumGroupId } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import { getHalfViewportExtentsInUnitFromState } from "viewer/model/sagas/saga_selectors";
 import { applyLabeledVoxelMapToAllMissingMags } from "viewer/model/sagas/volume/helpers";
+import type { MutableNode, Node, Tree, TreeGroupTypeFlat } from "viewer/model/types/tree_types";
 import { applyVoxelMap } from "viewer/model/volumetracing/volume_annotation_sampling";
 import { Model, api } from "viewer/singletons";
 import type {
   DatasetConfiguration,
   Mapping,
   MappingType,
-  MutableNode,
-  Node,
   Segment,
   SegmentGroup,
   SkeletonTracing,
   StoreAnnotation,
-  TreeGroupTypeFlat,
-  TreeMap,
   UserConfiguration,
   VolumeTracing,
   WebknossosState,
@@ -308,15 +305,15 @@ class TracingApi {
    */
   getAllNodes(): Array<Node> {
     const skeletonTracing = assertSkeleton(Store.getState().annotation);
-    return _.flatMap(skeletonTracing.trees, (tree) => Array.from(tree.nodes.values()));
+    return Array.from(skeletonTracing.trees.values().flatMap((tree) => tree.nodes.values()));
   }
 
   /**
    * Returns all trees belonging to a tracing.
    */
-  getAllTrees(): TreeMap {
+  getAllTrees(): Record<number, Tree> {
     const skeletonTracing = assertSkeleton(Store.getState().annotation);
-    return skeletonTracing.trees;
+    return skeletonTracing.trees.toObject();
   }
 
   /**
@@ -420,7 +417,7 @@ class TracingApi {
     if (_.isNumber(nodeId)) {
       const tree =
         treeId != null
-          ? skeletonTracing.trees[treeId]
+          ? skeletonTracing.trees.getNullable(treeId)
           : findTreeByNodeId(skeletonTracing.trees, nodeId);
       assertExists(tree, `Couldn't find node ${nodeId}.`);
       Store.dispatch(createCommentAction(commentText, nodeId, tree.treeId));
@@ -447,14 +444,14 @@ class TracingApi {
     let tree = null;
 
     if (treeId != null) {
-      tree = skeletonTracing.trees[treeId];
+      tree = skeletonTracing.trees.getNullable(treeId);
       assertExists(tree, `Couldn't find tree ${treeId}.`);
       assertExists(
         tree.nodes.getOrThrow(nodeId),
         `Couldn't find node ${nodeId} in tree ${treeId}.`,
       );
     } else {
-      tree = _.values(skeletonTracing.trees).find((__) => __.nodes.has(nodeId));
+      tree = skeletonTracing.trees.values().find((__) => __.nodes.has(nodeId));
       assertExists(tree, `Couldn't find node ${nodeId}.`);
     }
 
@@ -570,7 +567,7 @@ class TracingApi {
    */
   getTreeGroups(): Array<TreeGroupTypeFlat> {
     const { annotation } = Store.getState();
-    return getFlatTreeGroups(assertSkeleton(annotation));
+    return Array.from(getFlatTreeGroups(assertSkeleton(annotation)));
   }
 
   /**
@@ -957,7 +954,10 @@ class TracingApi {
 
     if (groupId === MISSING_GROUP_ID) {
       // special case: delete Root group and all children (aka everything)
-      segmentIdsToDelete = Array.from(segments.values()).map((t) => t.id);
+      segmentIdsToDelete = segments
+        .values()
+        .map((t) => t.id)
+        .toArray();
       newSegmentGroups = [];
     }
 
@@ -1255,7 +1255,7 @@ class TracingApi {
   measureTreeLength(treeId: number): [number, number] {
     const state = Store.getState();
     const skeletonTracing = assertSkeleton(state.annotation);
-    const tree = skeletonTracing.trees[treeId];
+    const tree = skeletonTracing.trees.getNullable(treeId);
 
     if (!tree) {
       throw new Error(`Tree with id ${treeId} not found.`);
@@ -1285,11 +1285,11 @@ class TracingApi {
     let totalLengthInUnit = 0;
     let totalLengthInVx = 0;
 
-    _.values(skeletonTracing.trees).forEach((currentTree) => {
+    for (const currentTree of skeletonTracing.trees.values()) {
       const [lengthInUnit, lengthInVx] = this.measureTreeLength(currentTree.treeId);
       totalLengthInUnit += lengthInUnit;
       totalLengthInVx += lengthInVx;
-    });
+    }
 
     return [totalLengthInUnit, totalLengthInVx];
   }

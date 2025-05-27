@@ -5,7 +5,7 @@ import messages from "messages";
 import { all, call, debounce, put, retry, takeEvery } from "typed-redux-saga";
 import { ControlModeEnum } from "viewer/constants";
 import {
-  SetViewModeAction,
+  type SetViewModeAction,
   type UpdateUserSettingAction,
   updateUserSettingAction,
 } from "viewer/model/actions/settings_actions";

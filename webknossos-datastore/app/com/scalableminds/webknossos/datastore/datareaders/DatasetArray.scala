@@ -158,7 +158,7 @@ class DatasetArray(vaultPath: VaultPath,
     val chunkIndices = ChunkUtils.computeChunkIndices(datasetShape.map(fullAxisOrder.permuteIndicesArrayToWk),
                                                       fullAxisOrder.permuteIndicesArrayToWk(chunkShape),
                                                       shape,
-                                                      totalOffset)
+                                                      totalOffset.map(_.toLong))
     if (partialCopyingIsNotNeededForWkOrder(shape, totalOffset, chunkIndices)) {
       for {
         chunkIndex <- chunkIndices.headOption.toFox
@@ -186,9 +186,9 @@ class DatasetArray(vaultPath: VaultPath,
     }
   }
 
-  def readAsMultiArray(shape: Array[Int], offset: Array[Int])(implicit ec: ExecutionContext,
-                                                              tc: TokenContext): Fox[MultiArray] = {
-    val totalOffset: Array[Int] = offset.zip(header.voxelOffset).map { case (o, v) => o - v }.padTo(offset.length, 0)
+  def readAsMultiArray(shape: Array[Int], offset: Array[Long])(implicit ec: ExecutionContext,
+                                                               tc: TokenContext): Fox[MultiArray] = {
+    val totalOffset: Array[Long] = offset.zip(header.voxelOffset).map { case (o, v) => o - v }.padTo(offset.length, 0)
     val chunkIndices = ChunkUtils.computeChunkIndices(datasetShape, chunkShape, shape, totalOffset)
     if (partialCopyingIsNotNeededForMultiArray(shape, totalOffset, chunkIndices)) {
       for {
@@ -262,7 +262,7 @@ class DatasetArray(vaultPath: VaultPath,
     }
 
   private def partialCopyingIsNotNeededForMultiArray(bufferShape: Array[Int],
-                                                     globalOffset: Array[Int],
+                                                     globalOffset: Array[Long],
                                                      chunkIndices: List[Array[Int]]): Boolean =
     chunkIndices match {
       case chunkIndex :: Nil =>
@@ -296,9 +296,9 @@ class DatasetArray(vaultPath: VaultPath,
       globalOffset(dim) - (chunkIndex(dim) * fullAxisOrder.permuteIndicesArrayToWk(chunkShape)(dim))
     }.toArray
 
-  private def computeOffsetInChunkIgnoringAxisOrder(chunkIndex: Array[Int], globalOffset: Array[Int]): Array[Int] =
+  private def computeOffsetInChunkIgnoringAxisOrder(chunkIndex: Array[Int], globalOffset: Array[Long]): Array[Int] =
     chunkIndex.indices.map { dim =>
-      globalOffset(dim) - (chunkIndex(dim) * chunkShape(dim))
+      (globalOffset(dim) - (chunkIndex(dim).toLong * chunkShape(dim).toLong)).toInt
     }.toArray
 
   override def toString: String =

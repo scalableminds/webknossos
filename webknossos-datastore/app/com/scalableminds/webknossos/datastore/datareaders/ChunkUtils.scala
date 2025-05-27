@@ -4,7 +4,7 @@ object ChunkUtils {
   def computeChunkIndices(arrayShapeOpt: Option[Array[Int]],
                           arrayChunkShape: Array[Int],
                           selectedShape: Array[Int],
-                          selectedOffset: Array[Int]): List[Array[Int]] = {
+                          selectedOffset: Array[Long]): List[Array[Int]] = {
     val nDims = arrayChunkShape.length
     val start = new Array[Int](nDims)
     val end = new Array[Int](nDims)
@@ -12,10 +12,10 @@ object ChunkUtils {
     for (dim <- 0 until nDims) {
       val largestPossibleIndex = arrayShapeOpt.map(arrayShape => (arrayShape(dim) - 1) / arrayChunkShape(dim))
       val smallestPossibleIndex = 0
-      val startIndexRaw = selectedOffset(dim) / arrayChunkShape(dim)
+      val startIndexRaw = (selectedOffset(dim) / arrayChunkShape(dim)).toInt
       val startIndexClamped =
         Math.max(smallestPossibleIndex, Math.min(largestPossibleIndex.getOrElse(startIndexRaw), startIndexRaw))
-      val endIndexRaw = (selectedOffset(dim) + selectedShape(dim) - 1) / arrayChunkShape(dim)
+      val endIndexRaw = ((selectedOffset(dim) + selectedShape(dim) - 1) / arrayChunkShape(dim)).toInt
       val endIndexClampedToBbox =
         Math.max(smallestPossibleIndex, Math.min(largestPossibleIndex.getOrElse(endIndexRaw), endIndexRaw))
       val endIndexClamped = Math.max(startIndexClamped, endIndexClampedToBbox) // end index must be greater or equal to start index

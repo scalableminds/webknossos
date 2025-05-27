@@ -67,8 +67,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService
   private def mapSingleSegment(segmentId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     for {
       zarrArray <- openZarrArrayCached("segment_to_agglomerate")
-      // TODO remove the toInt
-      asMultiArray <- zarrArray.readAsMultiArray(offset = Array(segmentId.toInt), shape = Array(1))
+      asMultiArray <- zarrArray.readAsMultiArray(offset = Array(segmentId), shape = Array(1))
     } yield asMultiArray.getLong(0)
 
   private def openZarrArrayCached(zarrArrayName: String)(implicit ec: ExecutionContext, tc: TokenContext) =
@@ -169,10 +168,10 @@ class AgglomerateService @Inject()(config: DataStoreConfig, zarrAgglomerateServi
       .toSet ++ Set("agglomerate_view_5") // TODO
   }
 
-  def applyAgglomerate(request: DataServiceDataRequest)(data: Array[Byte])(
-      implicit ec: ExecutionContext): Fox[Array[Byte]] =
+  def applyAgglomerate(request: DataServiceDataRequest)(data: Array[Byte])(implicit ec: ExecutionContext,
+                                                                           tc: TokenContext): Fox[Array[Byte]] =
     if (true) {
-      zarrAgglomerateService.applyAgglomerate(request)(data)(ec, TokenContext(None))
+      zarrAgglomerateService.applyAgglomerate(request)(data)
     } else applyAgglomerateHdf5(request)(data).toFox
 
   private def applyAgglomerateHdf5(request: DataServiceDataRequest)(data: Array[Byte]): Box[Array[Byte]] = tryo {

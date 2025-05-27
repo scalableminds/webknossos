@@ -136,7 +136,8 @@ class BinaryDataService(val dataBaseDir: Path,
     Full(outputArray)
   }
 
-  private def convertAccordingToRequest(request: DataServiceDataRequest, inputArray: Array[Byte]): Fox[Array[Byte]] =
+  private def convertAccordingToRequest(request: DataServiceDataRequest, inputArray: Array[Byte])(
+      implicit tc: TokenContext): Fox[Array[Byte]] =
     for {
       clippedData <- convertIfNecessary(
         !request.cuboid.toMag1BoundingBox.isFullyContainedIn(request.dataLayer.boundingBox),

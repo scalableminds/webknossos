@@ -6,10 +6,13 @@ import {
   DeleteOutlined,
   EditOutlined,
   EyeOutlined,
+  FolderOpenOutlined,
+  NumberOutlined,
   PictureOutlined,
   PlusOutlined,
   RocketOutlined,
   ShrinkOutlined,
+  VideoCameraOutlined,
 } from "@ant-design/icons";
 import { Avatar, Button, List } from "antd";
 import _ from "lodash";
@@ -25,6 +28,7 @@ import type {
   AddSegmentIndexUpdateAction,
   AddUserBoundingBoxInSkeletonTracingAction,
   AddUserBoundingBoxInVolumeTracingAction,
+  AsServerAction,
   CreateEdgeUpdateAction,
   CreateNodeUpdateAction,
   CreateSegmentUpdateAction,
@@ -83,7 +87,11 @@ const updateTracingDescription = {
 // of the `getDescriptionForBatch` function.
 const descriptionFns: Record<
   ServerUpdateAction["name"],
-  (firstAction: any, actionCount: number, annotation: StoreAnnotation) => Description
+  (
+    firstAction: AsServerAction<any>,
+    actionCount: number,
+    annotation: StoreAnnotation,
+  ) => Description
 > = {
   importVolumeTracing: (): Description => ({
     description: "Imported a volume tracing.",
@@ -94,49 +102,49 @@ const descriptionFns: Record<
     icon: <RocketOutlined />,
   }),
   updateUserBoundingBoxesInSkeletonTracing: (
-    firstAction: LEGACY_UpdateUserBoundingBoxesInSkeletonTracingUpdateAction,
+    firstAction: AsServerAction<LEGACY_UpdateUserBoundingBoxesInSkeletonTracingUpdateAction>,
   ): Description => ({
     description: `Updated bounding boxes ${firstAction.value.boundingBoxes.map((bbox) => bbox.id).join(", ")}.`,
     icon: <CodepenOutlined />,
   }),
   updateUserBoundingBoxesInVolumeTracing: (
-    firstAction: LEGACY_UpdateUserBoundingBoxesInVolumeTracingUpdateAction,
+    firstAction: AsServerAction<LEGACY_UpdateUserBoundingBoxesInVolumeTracingUpdateAction>,
   ): Description => ({
     description: `Updated bounding boxes ${firstAction.value.boundingBoxes.map((bbox) => bbox.id).join(", ")}.`,
     icon: <CodepenOutlined />,
   }),
   addUserBoundingBoxInSkeletonTracing: (
-    firstAction: AddUserBoundingBoxInSkeletonTracingAction,
+    firstAction: AsServerAction<AddUserBoundingBoxInSkeletonTracingAction>,
   ): Description => ({
     description: `Created bounding box ${firstAction.value.boundingBox.id}.`,
     icon: <PlusOutlined />,
   }),
   addUserBoundingBoxInVolumeTracing: (
-    firstAction: AddUserBoundingBoxInVolumeTracingAction,
+    firstAction: AsServerAction<AddUserBoundingBoxInVolumeTracingAction>,
   ): Description => ({
     description: `Created bounding box ${firstAction.value.boundingBox.id}.`,
     icon: <PlusOutlined />,
   }),
   deleteUserBoundingBoxInSkeletonTracing: (
-    firstAction: DeleteUserBoundingBoxInSkeletonTracingAction,
+    firstAction: AsServerAction<DeleteUserBoundingBoxInSkeletonTracingAction>,
   ): Description => ({
     description: `Deleted bounding box ${firstAction.value.boundingBoxId}.`,
     icon: <DeleteOutlined />,
   }),
   deleteUserBoundingBoxInVolumeTracing: (
-    firstAction: DeleteUserBoundingBoxInVolumeTracingAction,
+    firstAction: AsServerAction<DeleteUserBoundingBoxInVolumeTracingAction>,
   ): Description => ({
     description: `Deleted bounding box ${firstAction.value.boundingBoxId}.`,
     icon: <DeleteOutlined />,
   }),
   updateUserBoundingBoxInSkeletonTracing: (
-    firstAction: UpdateUserBoundingBoxInSkeletonTracingAction,
+    firstAction: AsServerAction<UpdateUserBoundingBoxInSkeletonTracingAction>,
   ): Description => ({
     description: `Updated bounding box ${firstAction.value.boundingBoxId}.`,
     icon: <EditOutlined />,
   }),
   updateUserBoundingBoxInVolumeTracing: (
-    firstAction: UpdateUserBoundingBoxInVolumeTracingAction,
+    firstAction: AsServerAction<UpdateUserBoundingBoxInVolumeTracingAction>,
   ): Description => ({
     description: `Updated bounding box ${firstAction.value.boundingBoxId}.`,
     icon: <EditOutlined />,
@@ -145,14 +153,14 @@ const descriptionFns: Record<
     description: "Removed the segmentation fallback layer.",
     icon: <DeleteOutlined />,
   }),
-  updateMappingName: (action: UpdateMappingNameUpdateAction): Description => ({
+  updateMappingName: (action: AsServerAction<UpdateMappingNameUpdateAction>): Description => ({
     description:
       action.value.mappingName != null
         ? `Activated mapping ${action.value.mappingName}.`
         : "Deactivated the active mapping.",
     icon: <EyeOutlined />,
   }),
-  splitAgglomerate: (action: SplitAgglomerateUpdateAction): Description => {
+  splitAgglomerate: (action: AsServerAction<SplitAgglomerateUpdateAction>): Description => {
     const segment1Description =
       action.value.segmentPosition1 != null
         ? `at position ${action.value.segmentPosition1}`
@@ -165,7 +173,7 @@ const descriptionFns: Record<
       icon: <DeleteOutlined />,
     };
   },
-  mergeAgglomerate: (action: MergeAgglomerateUpdateAction): Description => {
+  mergeAgglomerate: (action: AsServerAction<MergeAgglomerateUpdateAction>): Description => {
     const segment1Description =
       action.value.segmentPosition1 != null
         ? `at position ${action.value.segmentPosition1}`
@@ -178,25 +186,25 @@ const descriptionFns: Record<
       icon: <PlusOutlined />,
     };
   },
-  deleteTree: (action: DeleteTreeUpdateAction, count: number): Description => ({
+  deleteTree: (action: AsServerAction<DeleteTreeUpdateAction>, count: number): Description => ({
     description:
       count > 1 ? `Deleted ${count} trees.` : `Deleted the tree with id ${action.value.id}.`,
     icon: <DeleteOutlined />,
   }),
-  deleteNode: (action: DeleteNodeUpdateAction, count: number): Description => ({
+  deleteNode: (action: AsServerAction<DeleteNodeUpdateAction>, count: number): Description => ({
     description:
       count > 1 ? `Deleted ${count} nodes.` : `Deleted the node with id ${action.value.nodeId}.`,
     icon: <DeleteOutlined />,
   }),
-  revertToVersion: (action: RevertToVersionUpdateAction): Description => ({
+  revertToVersion: (action: AsServerAction<RevertToVersionUpdateAction>): Description => ({
     description: `Reverted to version ${action.value.sourceVersion}.`,
     icon: <BackwardOutlined />,
   }),
-  createNode: (action: CreateNodeUpdateAction): Description => ({
+  createNode: (action: AsServerAction<CreateNodeUpdateAction>): Description => ({
     description: `Created the node with id ${action.value.id}.`,
     icon: <PlusOutlined />,
   }),
-  createTree: (action: UpdateTreeUpdateAction): Description => ({
+  createTree: (action: AsServerAction<UpdateTreeUpdateAction>): Description => ({
     description: `Created the tree with id ${action.value.id}.`,
     icon: <PlusOutlined />,
   }),
@@ -204,12 +212,12 @@ const descriptionFns: Record<
     description: "Updated the tree groups.",
     icon: <EditOutlined />,
   }),
-  updateTree: (action: UpdateTreeUpdateAction): Description => ({
+  updateTree: (action: AsServerAction<UpdateTreeUpdateAction>): Description => ({
     description: `Updated the tree with id ${action.value.id}.`,
     icon: <EditOutlined />,
   }),
   updateBucket: (
-    firstAction: UpdateBucketUpdateAction,
+    firstAction: AsServerAction<UpdateBucketUpdateAction>,
     _actionCount: number,
     annotation: StoreAnnotation,
   ): Description => {
@@ -223,7 +231,7 @@ const descriptionFns: Record<
     };
   },
   updateSegmentGroups: (
-    firstAction: UpdateSegmentGroupsUpdateAction,
+    firstAction: AsServerAction<UpdateSegmentGroupsUpdateAction>,
     _actionCount: number,
     annotation: StoreAnnotation,
   ): Description => {
@@ -237,7 +245,7 @@ const descriptionFns: Record<
     };
   },
   updateSegmentVisibility: (
-    firstAction: UpdateSegmentVisibilityVolumeAction,
+    firstAction: AsServerAction<UpdateSegmentVisibilityVolumeAction>,
     _actionCount: number,
     annotation: StoreAnnotation,
   ): Description => {
@@ -251,7 +259,7 @@ const descriptionFns: Record<
     };
   },
   updateSegmentGroupVisibility: (
-    firstAction: UpdateSegmentGroupVisibilityVolumeAction,
+    firstAction: AsServerAction<UpdateSegmentGroupVisibilityVolumeAction>,
     _actionCount: number,
     annotation: StoreAnnotation,
   ): Description => {
@@ -264,29 +272,35 @@ const descriptionFns: Record<
       icon: <EyeOutlined />,
     };
   },
-  updateNode: (action: UpdateNodeUpdateAction): Description => ({
+  updateNode: (action: AsServerAction<UpdateNodeUpdateAction>): Description => ({
     description: `Updated the node with id ${action.value.id}.`,
     icon: <EditOutlined />,
   }),
-  updateTreeVisibility: (action: UpdateTreeVisibilityUpdateAction): Description => ({
+  updateTreeVisibility: (
+    action: AsServerAction<UpdateTreeVisibilityUpdateAction>,
+  ): Description => ({
     description: `Updated the visibility of the tree with id ${action.value.treeId}.`,
     icon: <EyeOutlined />,
   }),
-  updateTreeEdgesVisibility: (action: UpdateTreeEdgesVisibilityUpdateAction): Description => ({
+  updateTreeEdgesVisibility: (
+    action: AsServerAction<UpdateTreeEdgesVisibilityUpdateAction>,
+  ): Description => ({
     description: `Updated the visibility of the edges of the tree with id ${action.value.treeId}.`,
     icon: <img src="/assets/images/hide-skeleton-edges-icon.svg" alt="Hide Tree Edges Icon" />,
   }),
-  updateTreeGroupVisibility: (action: UpdateTreeGroupVisibilityUpdateAction): Description => ({
+  updateTreeGroupVisibility: (
+    action: AsServerAction<UpdateTreeGroupVisibilityUpdateAction>,
+  ): Description => ({
     description: `Updated the visibility of the group with id ${
       action.value.treeGroupId != null ? action.value.treeGroupId : MISSING_GROUP_ID
     }.`,
     icon: <EyeOutlined />,
   }),
-  createEdge: (action: CreateEdgeUpdateAction): Description => ({
+  createEdge: (action: AsServerAction<CreateEdgeUpdateAction>): Description => ({
     description: `Created the edge between node ${action.value.source} and node ${action.value.target}.`,
     icon: <PlusOutlined />,
   }),
-  deleteEdge: (action: DeleteEdgeUpdateAction): Description => ({
+  deleteEdge: (action: AsServerAction<DeleteEdgeUpdateAction>): Description => ({
     description: `Deleted the edge between node ${action.value.source} and node ${action.value.target}.`,
     icon: <DeleteOutlined />,
   }),
@@ -295,7 +309,7 @@ const descriptionFns: Record<
     icon: <CodeSandboxOutlined />,
   }),
   createSegment: (
-    firstAction: CreateSegmentUpdateAction,
+    firstAction: AsServerAction<CreateSegmentUpdateAction>,
     _actionCount: number,
     annotation: StoreAnnotation,
   ): Description => {
@@ -309,7 +323,7 @@ const descriptionFns: Record<
     };
   },
   updateSegment: (
-    firstAction: UpdateSegmentUpdateAction,
+    firstAction: AsServerAction<UpdateSegmentUpdateAction>,
     _actionCount: number,
     annotation: StoreAnnotation,
   ): Description => {
@@ -323,7 +337,7 @@ const descriptionFns: Record<
     };
   },
   deleteSegment: (
-    firstAction: DeleteSegmentUpdateAction,
+    firstAction: AsServerAction<DeleteSegmentUpdateAction>,
     _actionCount: number,
     annotation: StoreAnnotation,
   ): Description => {
@@ -337,7 +351,7 @@ const descriptionFns: Record<
     };
   },
   deleteSegmentData: (
-    firstAction: DeleteSegmentDataUpdateAction,
+    firstAction: AsServerAction<DeleteSegmentDataUpdateAction>,
     _actionCount: number,
     annotation: StoreAnnotation,
   ): Description => {
@@ -351,7 +365,7 @@ const descriptionFns: Record<
     };
   },
   addSegmentIndex: (
-    firstAction: AddSegmentIndexUpdateAction,
+    firstAction: AsServerAction<AddSegmentIndexUpdateAction>,
     _actionCount: number,
     annotation: StoreAnnotation,
   ): Description => {
@@ -367,86 +381,95 @@ const descriptionFns: Record<
   // This should never be shown since currently this update action can only be triggered
   // by merging or splitting trees which is recognized separately, before this description
   // is accessed.
-  moveTreeComponent: (action: MoveTreeComponentUpdateAction): Description => ({
+  moveTreeComponent: (action: AsServerAction<MoveTreeComponentUpdateAction>): Description => ({
     description: `Moved ${action.value.nodeIds.length} nodes from tree with id ${action.value.sourceId} to tree with id ${action.value.targetId}.`,
     icon: <EditOutlined />,
   }),
   // This should never be shown since currently this update action is never dispatched.
-  mergeTree: (action: MergeTreeUpdateAction): Description => ({
+  mergeTree: (action: AsServerAction<MergeTreeUpdateAction>): Description => ({
     description: `Merged the trees with id ${action.value.sourceId} and ${action.value.targetId}.`,
     icon: <EditOutlined />,
   }),
   updateSkeletonTracing: (): Description => updateTracingDescription,
   updateVolumeTracing: (): Description => updateTracingDescription,
-  updateActiveSegmentId: (action: UpdateActiveSegmentIdUpdateAction): Description => {
+  updateActiveSegmentId: (
+    action: AsServerAction<UpdateActiveSegmentIdUpdateAction>,
+  ): Description => {
     return {
-      // todop
-      description: `Updated the active segment id to ${action.value.activeSegmentId} for user ?`,
-      icon: <EditOutlined />, // todop: better icon?
+      description: `Activated segment id ${action.value.activeSegmentId}`,
+      icon: <EditOutlined />,
     };
   },
-  addLayerToAnnotation: (action: AddLayerToAnnotationUpdateAction): Description => ({
+  addLayerToAnnotation: (
+    action: AsServerAction<AddLayerToAnnotationUpdateAction>,
+  ): Description => ({
     description: `Added the layer ${action.value.layerParameters.name} to the annotation.`,
     icon: <PlusOutlined />,
   }),
-  deleteLayerFromAnnotation: (action: DeleteAnnotationLayerUpdateAction): Description => ({
+  deleteLayerFromAnnotation: (
+    action: AsServerAction<DeleteAnnotationLayerUpdateAction>,
+  ): Description => ({
     description: `Deleted the layer with id ${action.value.layerName} (${action.value.tracingId}) from the annotation.`,
     icon: <DeleteOutlined />,
   }),
-  updateLayerMetadata: (action: UpdateAnnotationLayerNameUpdateAction): Description => ({
+  updateLayerMetadata: (
+    action: AsServerAction<UpdateAnnotationLayerNameUpdateAction>,
+  ): Description => ({
     description: `Updated the name of the layer with id ${action.value.tracingId} to ${action.value.layerName}.`,
     icon: <EditOutlined />,
   }),
-  updateMetadataOfAnnotation: (action: UpdateMetadataOfAnnotationUpdateAction): Description => {
+  updateMetadataOfAnnotation: (
+    action: AsServerAction<UpdateMetadataOfAnnotationUpdateAction>,
+  ): Description => {
     return {
       description: `Updated the description of the annotation to: ${action.value.description.slice(0, 100) || ""}`,
       icon: <EditOutlined />,
     };
   },
-  updateActiveNode: (action: UpdateActiveNodeUpdateAction): Description => {
+  updateActiveNode: (action: AsServerAction<UpdateActiveNodeUpdateAction>): Description => {
     return {
-      // todop
-      description: `Updated the active node id to ${action.value.activeNode} for user ?`,
-      icon: <EditOutlined />, // todop: better icon?
+      description: `Updated the active node id to ${action.value.activeNode}`,
+      icon: <EditOutlined />,
     };
   },
-  updateCamera: (_action: UpdateCameraAnnotationAction): Description => {
+  updateCamera: (_action: AsServerAction<UpdateCameraAnnotationAction>): Description => {
     return {
-      // todop:
-      description: "Updated camera position for user ?",
-      icon: <EditOutlined />, // todop: better icon?
+      description: "Updated the camera position",
+      icon: <VideoCameraOutlined />,
     };
   },
-  updateLargestSegmentId: (action: UpdateLargestSegmentIdVolumeAction): Description => {
+  updateLargestSegmentId: (
+    action: AsServerAction<UpdateLargestSegmentIdVolumeAction>,
+  ): Description => {
     return {
       description: `Set largest segment id to ${action.value.largestSegmentId}`,
-      icon: <EditOutlined />, // todop: better icon?
+      icon: <NumberOutlined />,
     };
   },
   updateSegmentGroupsExpandedState: (
-    action: UpdateSegmentGroupsExpandedStateUpdateAction,
+    action: AsServerAction<UpdateSegmentGroupsExpandedStateUpdateAction>,
   ): Description => {
     return {
       description: `${action.value.areExpanded ? "Expanded" : "Collapsed"} some segment groups.`,
-      icon: <EditOutlined />, // todop: better icon?
+      icon: <FolderOpenOutlined />,
     };
   },
   updateTreeGroupsExpandedState: (
-    action: UpdateSegmentGroupsExpandedStateUpdateAction,
+    action: AsServerAction<UpdateSegmentGroupsExpandedStateUpdateAction>,
   ): Description => {
     return {
-      description: `${action.value.areExpanded ? "Expanded" : "Collapsed"} some tree groups.`,
-      icon: <EditOutlined />, // todop: better icon?
+      description: `${action.value.areExpanded ? "Expanded" : "Collapsed"} some tree groups..`,
+      icon: <FolderOpenOutlined />,
     };
   },
   updateUserBoundingBoxVisibilityInSkeletonTracing: (
-    firstAction: UpdateUserBoundingBoxVisibilityInSkeletonTracingAction,
+    firstAction: AsServerAction<UpdateUserBoundingBoxVisibilityInSkeletonTracingAction>,
   ): Description => ({
     description: `Toggled the visibility of bounding box ${firstAction.value.boundingBoxId}.`,
     icon: <EyeOutlined />,
   }),
   updateUserBoundingBoxVisibilityInVolumeTracing: (
-    firstAction: UpdateUserBoundingBoxVisibilityInVolumeTracingAction,
+    firstAction: AsServerAction<UpdateUserBoundingBoxVisibilityInVolumeTracingAction>,
   ): Description => ({
     description: `Toggled the visibility of bounding box ${firstAction.value.boundingBoxId}.`,
     icon: <EyeOutlined />,

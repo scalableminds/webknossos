@@ -188,7 +188,7 @@ type AddServerValuesFn<T extends { value: any }> = (arg0: T) => T & {
   };
 };
 
-type AsServerAction<A extends { value: any }> = ReturnType<AddServerValuesFn<A>>;
+export type AsServerAction<A extends { value: any }> = ReturnType<AddServerValuesFn<A>>;
 
 // When the server delivers update actions (e.g., when requesting the version history
 // of an annotation), ServerUpdateActions are sent which include some additional information.

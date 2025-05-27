@@ -12,7 +12,7 @@ import { Toolkits } from "viewer/model/accessors/tool_accessor";
 import { updateKey } from "viewer/model/helpers/deep_update";
 import type { BoundingBoxObject, UserBoundingBox, UserBoundingBoxToServer } from "viewer/store";
 import type { Annotation, WebknossosState } from "viewer/store";
-import { getDisabledInfoForTools } from "../accessors/disabled_tool_accessor";
+import { type DisabledInfo, getDisabledInfoForTools } from "../accessors/disabled_tool_accessor";
 
 export function convertServerBoundingBoxToBoundingBox(
   boundingBox: ServerBoundingBox,

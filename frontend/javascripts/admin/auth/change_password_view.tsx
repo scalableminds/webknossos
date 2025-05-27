@@ -13,7 +13,7 @@ import {
   listWebAuthnKeys,
   removeWebAuthnKey,
   revokeAuthToken,
-} from "admin/admin_rest_api";
+} from "admin/rest_api";
 import { useEffect, useState } from "react";
 import type { WebAuthnKeyDescriptor } from "types/api_flow_types";
 

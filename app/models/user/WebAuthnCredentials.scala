@@ -74,10 +74,10 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
     val converter = objectConverter.getCborConverter
     val attestedCredentialDataConverter = new AttestedCredentialDataConverter(objectConverter)
     for {
-      envelope <- tryo(converter.readValue(r.serializedattestationstatement, new TypeReference[AttestationStatementEnvelope] {}))
+      envelope <- tryo(converter.readValue(r.serializedattestationstatement, new TypeReference[AttestationStatementEnvelope] {})).toFox
       attestationStatement = envelope.attestationStatement
-      attestedCredential <- tryo(attestedCredentialDataConverter.convert(r.serializedattestedcredential))
-      authenticatorExtensions <- tryo(converter.readValue(r.serializedextensions, new TypeReference[AuthenticationExtensionsAuthenticatorOutputs[RegistrationExtensionAuthenticatorOutput]] {}))
+      attestedCredential <- tryo(attestedCredentialDataConverter.convert(r.serializedattestedcredential)).toFox
+      authenticatorExtensions <- tryo(converter.readValue(r.serializedextensions, new TypeReference[AuthenticationExtensionsAuthenticatorOutputs[RegistrationExtensionAuthenticatorOutput]] {})).toFox
       record = new CredentialRecordImpl(
         attestationStatement,
         null,

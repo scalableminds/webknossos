@@ -4,8 +4,6 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper, TextUtils}
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
-import com.yubico.webauthn._
-import com.yubico.webauthn.data._
 import com.webauthn4j.data.attestation.statement.COSEAlgorithmIdentifier
 import com.webauthn4j.data.client.Origin
 import com.webauthn4j.data.client.challenge.Challenge
@@ -580,15 +578,15 @@ class AuthenticationController @Inject()(
   def webauthnAuthFinalize(): Action[WebAuthnAuthentication] = Action.async(validateJson[WebAuthnAuthentication]) {
     implicit request =>
         for {
-          cookie <- Fox.option2Fox(request.cookies.get("webauthn-session"))
+          cookie <- request.cookies.get("webauthn-session").toFox
           sessionId = cookie.value
           challengeData <- {
             val challengeData = temporaryAssertionStore.get(sessionId)
             temporaryAssertionStore.remove(sessionId)
-            Fox.option2Fox(challengeData)
+            challengeData.toFox
           }
           challenge = WebAuthnChallenge(challengeData.challenge)
-          authData <- Fox.box2Fox(tryo(webAuthnManager.parseAuthenticationResponseJSON(Json.stringify(request.body.key))))
+          authData <- tryo(webAuthnManager.parseAuthenticationResponseJSON(Json.stringify(request.body.key))).toFox
           credentialId = authData.getCredentialId
           multiUserId = ObjectId(new String(authData.getUserHandle))
           multiUser <- multiUserDAO.findOne(multiUserId)(GlobalAccessContext)
@@ -602,14 +600,14 @@ class AuthenticationController @Inject()(
             true, // TODO
             false // TODO
           )
-          _ <- Fox.box2Fox(tryo(webAuthnManager.verify(authData, params)))
+          _ <- tryo(webAuthnManager.verify(authData, params)).toFox
           _ = credential.credentialRecord.setCounter(authData.getAuthenticatorData.getSignCount)
           _ <- webAuthnCredentialDAO.updateSignCount(credential)
 
           // TODO: Validate
-          userId <- Fox.option2Fox(multiUser._lastLoggedInIdentity)
+          userId <- multiUser._lastLoggedInIdentity.toFox
           loginInfo = LoginInfo("credentials", userId.toString)
-          result <- authenticateInner(loginInfo)
+          result <- Fox.fromFuture(authenticateInner(loginInfo))
         } yield result
   }
 
@@ -656,12 +654,12 @@ class AuthenticationController @Inject()(
   def webauthnRegisterFinalize(): Action[WebAuthnRegistration] = sil.SecuredAction.async(validateJson[WebAuthnRegistration]) { implicit request =>
     for {
       registrationData <- tryo(webAuthnManager.parseRegistrationResponseJSON(Json.stringify(request.body.key))).toFox
-      cookie <- Fox.option2Fox(request.cookies.get("webauthn-registration"))
+      cookie <- request.cookies.get("webauthn-registration").toFox
       sessionId = cookie.value
       challenge <- {
         val challenge = temporaryRegistrationStore.get(sessionId)
         temporaryRegistrationStore.remove(sessionId)
-        Fox.option2Fox(challenge)
+        challenge.toFox
       }
       serverProperty = new ServerProperty(origin, origin.getHost, challenge)
       publicKeyParams = webAuthnPubKeyParams.map(k => new PublicKeyCredentialParameters(PublicKeyCredentialType.PUBLIC_KEY, COSEAlgorithmIdentifier.create(k.alg)))

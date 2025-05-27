@@ -223,7 +223,7 @@ export function PlanDashboardCard({
             : UpgradePricingPlanModal.upgradeUserQuota
         }
       >
-        <PlusCircleOutlined /> Upgrade
+        <PlusCircleOutlined /> Buy Upgrade
       </span>,
     ];
     upgradeStorageAction = [
@@ -235,7 +235,7 @@ export function PlanDashboardCard({
             : UpgradePricingPlanModal.upgradeStorageQuota
         }
       >
-        <PlusCircleOutlined /> Upgrade
+        <PlusCircleOutlined /> Buy Upgrade
       </span>,
     ];
     upgradePlanAction = [

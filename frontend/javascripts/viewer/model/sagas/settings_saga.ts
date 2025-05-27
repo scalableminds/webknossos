@@ -5,6 +5,7 @@ import messages from "messages";
 import { all, call, debounce, put, retry, takeEvery } from "typed-redux-saga";
 import { ControlModeEnum } from "viewer/constants";
 import {
+  SetViewModeAction,
   type UpdateUserSettingAction,
   updateUserSettingAction,
 } from "viewer/model/actions/settings_actions";
@@ -127,6 +128,12 @@ function* ensureValidToolkit(): Saga<void> {
   if (isViewMode || isReadOnly) {
     yield* put(updateUserSettingAction("activeToolkit", Toolkit.ALL_TOOLS));
   }
+
+  yield* takeEvery("SET_VIEW_MODE", function* (action: SetViewModeAction) {
+    if (action.viewMode !== "orthogonal") {
+      yield* put(updateUserSettingAction("activeToolkit", Toolkit.ALL_TOOLS));
+    }
+  });
 }
 
 export default function* watchPushSettingsAsync(): Saga<void> {

@@ -373,6 +373,16 @@ function _MeshInfoItem(props: {
 
 const MeshInfoItem = React.memo(_MeshInfoItem);
 
+function SegmentIdAddendum({ id }: { id: number }) {
+  return (
+    <FastTooltip title="Segment ID">
+      <span className="deemphasized italic" style={{ marginLeft: 4 }}>
+        {id}
+      </span>
+    </FastTooltip>
+  );
+}
+
 function _SegmentListItem({
   segment,
   mappingInfo,
@@ -568,15 +578,6 @@ function _SegmentListItem({
     };
   };
 
-  function getSegmentIdDetails() {
-    // Only if segment.name is truthy, render additional info.
-    return segment.name ? (
-      <FastTooltip title="Segment ID">
-        <span className="deemphasized italic">{segment.id}</span>
-      </FastTooltip>
-    ) : null;
-  }
-
   const onOpenContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
     event.preventDefault();
 
@@ -637,8 +638,8 @@ function _SegmentListItem({
           <FastTooltip title="Open context menu (also available via right-click)">
             <EllipsisOutlined onClick={onOpenContextMenu} />
           </FastTooltip>
-          {/* Show Default Segment Name if another one is already defined*/}
-          {getSegmentIdDetails()}
+          {/* Show Segment ID if the segment has a name. Otherwise, the id will already be rendered. */}
+          {segment.name != null ? <SegmentIdAddendum id={segment.id} /> : null}
           {isCentered ? (
             <FastTooltip title="This segment is currently centered in the data viewports.">
               <i

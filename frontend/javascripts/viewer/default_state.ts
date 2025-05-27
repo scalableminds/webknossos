@@ -197,6 +197,7 @@ const defaultState: WebknossosState = {
     spaceDirectionOrtho: [1, 1, 1],
     direction: [0, 0, 0],
     additionalCoordinates: [],
+    rotation: [0, 0, 0],
   },
   flycamInfoCache: {
     maximumZoomForAllMags: {},

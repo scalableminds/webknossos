@@ -424,6 +424,7 @@ export type Flycam = {
   readonly additionalCoordinates: AdditionalCoordinate[] | null;
   readonly spaceDirectionOrtho: [-1 | 1, -1 | 1, -1 | 1];
   readonly direction: Vector3;
+  readonly rotation: Vector3;
 };
 export type CameraData = {
   readonly near: number;

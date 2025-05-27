@@ -60,7 +60,7 @@ import {
   createCellAction,
   interpolateSegmentationLayerAction,
 } from "viewer/model/actions/volumetracing_actions";
-import dimensions from "viewer/model/dimensions";
+import dimensions, { type DimensionIndices } from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import { Model, api } from "viewer/singletons";
 import type { BrushPresets, StoreAnnotation, WebknossosState } from "viewer/store";
@@ -70,6 +70,12 @@ import { showToastWarningForLargestSegmentIdMissing } from "viewer/view/largest_
 import PlaneView from "viewer/view/plane_view";
 import { downloadScreenshot } from "viewer/view/rendering_utils";
 import { highlightAndSetCursorOnHoveredBoundingBox } from "../combinations/bounding_box_handlers";
+import {
+  pitchFlycamAction,
+  rollFlycamAction,
+  yawFlycamAction,
+} from "viewer/model/actions/flycam_actions";
+import Dimensions from "viewer/model/dimensions";
 
 function ensureNonConflictingHandlers(
   skeletonControls: Record<string, any>,
@@ -377,6 +383,25 @@ class PlaneController extends React.PureComponent<Props> {
 
   initKeyboard(): void {
     // avoid scrolling while pressing space
+    const axisIndexToRotation = {
+      0: pitchFlycamAction,
+      1: yawFlycamAction,
+      2: rollFlycamAction,
+    };
+    const rotateViewportAware = (
+      timeFactor: number,
+      dimensionIndex: DimensionIndices,
+      oppositeDirection: boolean,
+    ) => {
+      const state = Store.getState();
+      const invertingFactor = oppositeDirection ? -1 : 1;
+      const rotationAngle = state.userConfiguration.rotateValue * timeFactor * invertingFactor;
+      const { activeViewport } = state.viewModeData.plane;
+      const viewportIndices = Dimensions.getIndices(activeViewport);
+      const rotationAction = axisIndexToRotation[viewportIndices[dimensionIndex]];
+      Store.dispatch(rotationAction(rotationAngle));
+    };
+
     document.addEventListener("keydown", (event: KeyboardEvent) => {
       if (
         (event.which === 32 || event.which === 18 || (event.which >= 37 && event.which <= 40)) &&
@@ -391,6 +416,12 @@ class PlaneController extends React.PureComponent<Props> {
       right: (timeFactor) => MoveHandlers.moveU(getMoveOffset(Store.getState(), timeFactor)),
       up: (timeFactor) => MoveHandlers.moveV(-getMoveOffset(Store.getState(), timeFactor)),
       down: (timeFactor) => MoveHandlers.moveV(getMoveOffset(Store.getState(), timeFactor)),
+      "shift + left": (timeFactor: number) => rotateViewportAware(timeFactor, 1, false),
+      "shift + right": (timeFactor: number) => rotateViewportAware(timeFactor, 1, true),
+      "shift + up": (timeFactor: number) => rotateViewportAware(timeFactor, 0, false),
+      "shift + down": (timeFactor: number) => rotateViewportAware(timeFactor, 0, true),
+      "alt + left": (timeFactor: number) => rotateViewportAware(timeFactor, 2, false),
+      "alt + right": (timeFactor: number) => rotateViewportAware(timeFactor, 2, true),
     });
     const {
       baseControls: notLoopedKeyboardControls,

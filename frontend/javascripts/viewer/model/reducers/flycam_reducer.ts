@@ -7,6 +7,7 @@ import * as THREE from "three";
 import type { Vector3 } from "viewer/constants";
 import {
   ZOOM_STEP_INTERVAL,
+  getRotationInDegrees,
   getRotationInRadian,
   getValidZoomRangeForUser,
 } from "viewer/model/accessors/flycam_accessor";
@@ -55,38 +56,57 @@ function rotateOnAxisWithDistance(
   return M4x4.translate(distanceVecPositive, matrix, []);
 }
 
+const AxisToDimensionMap = {
+  x: 0,
+  y: 1,
+  z: 2,
+};
+
+function rotateAroundMainAxis(
+  state: WebknossosState,
+  angleInRadian: number,
+  axis: "x" | "y" | "z",
+  regardDistance: boolean,
+): WebknossosState {
+  const dimIndex = AxisToDimensionMap[axis];
+  const updatedRotation = [...state.flycam.rotation] as Vector3;
+  const angleInDegrees = (angleInRadian * 180) / Math.PI;
+  updatedRotation[dimIndex] = Utils.mod(updatedRotation[dimIndex] + angleInDegrees, 360);
+  const rotationAxis = [0, 0, 0] as Vector3;
+  rotationAxis[dimIndex] = 1;
+  return rotateReducer(state, angleInRadian, rotationAxis, regardDistance, updatedRotation);
+}
+
 function rotateReducer(
   state: WebknossosState,
   angle: number,
   axis: Vector3,
   regardDistance: boolean,
+  maybeUpdatedRotation?: Vector3,
 ): WebknossosState {
   if (Number.isNaN(angle)) {
     return state;
   }
 
   const { flycam } = state;
-
-  if (regardDistance) {
-    return update(state, {
-      flycam: {
-        currentMatrix: {
-          $set: rotateOnAxisWithDistance(
-            flycam.zoomStep,
-            state.userConfiguration.sphericalCapRadius,
-            flycam.currentMatrix,
-            angle,
-            axis,
-          ),
-        },
-      },
-    });
-  }
+  const updatedMatrix = regardDistance
+    ? rotateOnAxisWithDistance(
+        flycam.zoomStep,
+        state.userConfiguration.sphericalCapRadius,
+        flycam.currentMatrix,
+        angle,
+        axis,
+      )
+    : rotateOnAxis(flycam.currentMatrix, angle, axis);
+  const updatedRotation = maybeUpdatedRotation ?? getRotationInDegrees(updatedMatrix);
 
   return update(state, {
     flycam: {
       currentMatrix: {
-        $set: rotateOnAxis(flycam.currentMatrix, angle, axis),
+        $set: updatedMatrix,
+      },
+      rotation: {
+        $set: updatedRotation,
       },
     },
   });
@@ -180,6 +200,9 @@ export function setRotationReducer(state: WebknossosState, rotation: Vector3) {
         currentMatrix: {
           $set: matrix,
         },
+        rotation: {
+          $set: rotation,
+        },
       },
     });
   }
@@ -194,6 +217,9 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
         flycam: {
           currentMatrix: {
             $set: resetMatrix(state.flycam.currentMatrix, action.dataset.dataSource.scale.factor),
+          },
+          rotation: {
+            $set: [0, 0, 0],
           },
         },
       });
@@ -304,10 +330,9 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
       const vector = _.clone(action.vector);
 
       const { planeId } = action;
-      const flycamRotation = getRotationInRadian(state.flycam);
 
       const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(
-        new THREE.Euler(...flycamRotation, "ZYX"),
+        new THREE.Euler(...state.flycam.rotation, "ZYX"),
       );
       let movementVectorInWorld = new THREE.Vector3(...vector)
         .applyMatrix4(rotationMatrix)
@@ -344,15 +369,12 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
           .multiply(new THREE.Vector3(...scaleFactor))
           .toArray();
 
-        // TODOM: make this apply to movementInWorldZoomed
         if (planeId != null && state.userConfiguration.dynamicSpaceDirection) {
           // change direction of the value connected to space, based on the last direction
           movementInWorldZoomed = V3.multiply(
             movementInWorldZoomed,
             state.flycam.spaceDirectionOrtho,
           );
-          // const dim = Dimensions.getIndices(planeId)[2];
-          // delta[dim] *= state.flycam.spaceDirectionOrtho[dim];
         }
 
         return moveReducer(state, movementInWorldZoomed);
@@ -362,13 +384,13 @@ function FlycamReducer(state: WebknossosState, action: Action): WebknossosState 
     }
 
     case "YAW_FLYCAM":
-      return rotateReducer(state, action.angle, [0, 1, 0], action.regardDistance);
+      return rotateAroundMainAxis(state, action.angle, "y", action.regardDistance);
 
     case "ROLL_FLYCAM":
-      return rotateReducer(state, action.angle, [0, 0, 1], action.regardDistance);
+      return rotateAroundMainAxis(state, action.angle, "z", action.regardDistance);
 
     case "PITCH_FLYCAM":
-      return rotateReducer(state, action.angle, [1, 0, 0], action.regardDistance);
+      return rotateAroundMainAxis(state, action.angle, "x", action.regardDistance);
 
     case "ROTATE_FLYCAM":
       return rotateReducer(state, action.angle, action.axis, action.regardDistance);

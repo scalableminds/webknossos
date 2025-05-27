@@ -313,7 +313,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
   }
 
   didDatasourceChange(dataSource: Record<string, any>) {
-    return _.isEqual(dataSource, this.state.savedDataSourceOnServer || {});
+    return !_.isEqual(dataSource, this.state.savedDataSourceOnServer || {});
   }
 
   didDatasourceIdChange(dataSource: Record<string, any>) {

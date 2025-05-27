@@ -40,14 +40,6 @@ class Application @Inject()(redisClient: DataStoreRedisStore,
     }
   }
 
-  def testAgglomerateZarr: Action[AnyContent] = Action.async { implicit request =>
-    log() {
-      for {
-        data <- agglomerateService.readFromSegmentToAgglomerate
-      } yield Ok(s"got ${data.getSize} elements of type ${data.getDataType}: ${data.toString}")
-    }
-  }
-
   // Test that the NativeBucketScanner works.
   // The result is stored in a val because we expect that this continues to work if it works on startup.
   private lazy val testNativeBucketScanner = tryo {

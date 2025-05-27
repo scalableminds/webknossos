@@ -59,13 +59,6 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService
 
   protected lazy val bucketScanner = new NativeBucketScanner()
 
-  def readFromSegmentToAgglomerate(implicit ec: ExecutionContext, tc: TokenContext): Fox[ucar.ma2.Array] =
-    for {
-      zarrArray <- openZarrArrayCached("segment_to_agglomerate")
-      read <- zarrArray.readAsMultiArray(Array(10), Array(2))
-      _ = logger.info(s"read ${read.getSize} elements from agglomerate file segmentToAgglomerate")
-    } yield read
-
   private def mapSingleSegment(zarrArray: DatasetArray, segmentId: Long)(implicit ec: ExecutionContext,
                                                                          tc: TokenContext): Fox[Long] =
     for {
@@ -153,10 +146,10 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig, dataVaultService
       agglomerateToSegmentsOffsets <- openZarrArrayCached("agglomerate_to_segments_offsets")
       agglomerateToEdgesOffsets <- openZarrArrayCached("agglomerate_to_edges_offsets")
 
-      positionsRange: MultiArray <- agglomerateToSegmentsOffsets.readAsMultiArray(shape = Array(2),
-                                                                                  offset = Array(agglomerateId))
-      edgesRange: MultiArray <- agglomerateToEdgesOffsets.readAsMultiArray(shape = Array(2),
-                                                                           offset = Array(agglomerateId))
+      positionsRange: MultiArray <- agglomerateToSegmentsOffsets.readAsMultiArray(offset = Array(agglomerateId),
+                                                                                  shape = Array(2))
+      edgesRange: MultiArray <- agglomerateToEdgesOffsets.readAsMultiArray(offset = Array(agglomerateId),
+                                                                           shape = Array(2))
       nodeCount = positionsRange.getLong(1) - positionsRange.getLong(0)
       edgeCount = edgesRange.getLong(1) - edgesRange.getLong(0)
       edgeLimit = config.Datastore.AgglomerateSkeleton.maxEdges
